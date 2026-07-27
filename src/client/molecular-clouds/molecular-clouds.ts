@@ -22,6 +22,7 @@ import {
   SHELL_RIM_BLUE,
   SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
+import { setRawChromeColour } from '../hdr/chrome-colour';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
 // (1.03) to cover tessellation sag — its raymarch clips to the analytic
@@ -304,7 +305,7 @@ export class MolecularClouds {
     this.rimMaterial.uniforms.uOpacity.value = this.rimGain;
   }
   setColor(hex: number) {
-    (this.rimMaterial.uniforms.uColour.value as THREE.Color).setHex(hex);
+    setRawChromeColour(this.rimMaterial.uniforms.uColour.value as THREE.Color, hex);
   }
   setMonoOpacity(x: number) {
     this.rimMaterial.uniforms.uInkAlpha.value = Math.max(0, x);
@@ -500,7 +501,7 @@ export class MolecularClouds {
       // cloud (absorption keeps working from inside — it is BackSide).
       side: THREE.FrontSide,
       uniforms: {
-        uColour: { value: new THREE.Color(SHELL_RIM_BLUE) },
+        uColour: { value: setRawChromeColour(new THREE.Color(), SHELL_RIM_BLUE) },
         uAlphaLimb: { value: SHELL_RIM_ALPHA_LIMB },
         uFaceOnFloor: { value: DEFAULT_FACE_ON_FLOOR },
         uFresnelPower: { value: DEFAULT_FRESNEL_POWER },

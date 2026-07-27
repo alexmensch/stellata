@@ -3,6 +3,7 @@
 // constellation figure layer.
 
 import * as THREE from 'three';
+import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 
 // Vertices per ellipse. The binding requirement is body-on-the-line at
 // resolved-disc zoom under fast scrub: the polyline's max sagitta is
@@ -58,12 +59,12 @@ export function makeOrbitLineMaterial(
   localPass = false,
 ): THREE.LineBasicMaterial {
   const mat = new THREE.LineBasicMaterial({
-    color,
     transparent: true,
     opacity,
     depthTest: true,
     depthWrite: false,
   });
+  setBuiltinChromeColour(mat.color, color);
   if (localPass) {
     mat.onBeforeCompile = (shader) => {
       shader.vertexShader = shader.vertexShader

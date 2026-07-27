@@ -47,7 +47,11 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   camera sits inside it (the common near view). It appears only from
   beyond the boundary. Consumers also set `frustumCulled = false` on the
   mesh — bounding-sphere culling is unreliable with the camera interior.
-- **Uniforms.** `uColour`, `uAlphaLimb` (limb alpha, the peak),
+- **Uniforms.** `uColour` — set from the factory's `colourHex` option,
+  which is mapped through the tone-map inverse (`../hdr/README.md`
+  § Chrome) so the shell resolves at its tuned appearance; pass an
+  authored sRGB hex, never a pre-built `THREE.Color`. Then
+  `uAlphaLimb` (limb alpha, the peak),
   `uFaceOnFloor` (face-on multiplier — 0 = pure rim, 1 = flat shell;
   default 0.04), `uFresnelPower` (rim tightness — ~2 soft halo, ~5 thin
   edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that

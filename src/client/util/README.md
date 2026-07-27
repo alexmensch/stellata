@@ -41,7 +41,10 @@ build scripts, tests, and shader uniforms.
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
   traversed path with two ends) / `makeOrbitLineSegments` +
-  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`) and
+  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
+  `color` is an authored sRGB hex, mapped through the tone-map inverse so
+  the line resolves at that appearance out of the HDR pass —
+  `../hdr/README.md` § Chrome) and
   the on-screen-size helpers `pixelsPerRadian` (+ `pixelsPerRadianFromFovRad`
   for callers holding the FOV in radians) / `angularRadiusPx` the orbit
   layers use for their pixel-size visibility gate, plus the shared

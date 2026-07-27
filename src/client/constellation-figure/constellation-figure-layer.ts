@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { type Constellation } from '../loaders/catalog-loader';
 import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';
+import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 import { collectFigureSegmentEndpoints } from './constellation-figure-pure';
 
 // Above the galactic disc/grid (−1) and Local Bubble shell (−1), below the
@@ -85,7 +86,7 @@ export class ConstellationFigureLayer {
   }
 
   setMonochrome(on: boolean): void {
-    this.material.color.setHex(on ? CHART_COLOUR : REALISTIC_COLOUR);
+    setBuiltinChromeColour(this.material.color, on ? CHART_COLOUR : REALISTIC_COLOUR, on);
     this.material.depthTest = !on;
   }
 

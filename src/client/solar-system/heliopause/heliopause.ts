@@ -56,7 +56,7 @@ const SPHERE_H_SEGMENTS = 32;
 // (silhouette) alpha is the peak; face-on geometry receives only a
 // small fraction of it so the upwind apex region doesn't paint the
 // shell as a flat disc against the starfield.
-const COLOUR = new THREE.Color(0xc8d6ff);
+const COLOUR_HEX = 0xc8d6ff;
 const ALPHA_LIMB = 0.45;
 
 /** Upwind apex point relative to SOL (parsecs). Sol is the catalog
@@ -128,7 +128,7 @@ export class Heliopause extends FresnelShell {
   constructor() {
     // renderOrder = 1: shares the slot with star glow (both are dim
     // chrome). src/client/README.md carries the full cross-layer ladder.
-    super(createFresnelShellMaterial({ colour: COLOUR, alphaLimb: ALPHA_LIMB }), 1);
+    super(createFresnelShellMaterial({ colourHex: COLOUR_HEX, alphaLimb: ALPHA_LIMB }), 1);
     // Rotate the entire group so its local +Z aligns with the antiapex
     // direction in ICRS. The mesh inside scales + translates within
     // that rotated frame.

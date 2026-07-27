@@ -16,7 +16,6 @@ import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresne
 
 const LOCAL_BUBBLE_SHELL_IDX = SHELL_KEYS.indexOf('local_bubble');
 
-const COLOUR = new THREE.Color(SHELL_RIM_BLUE);
 
 /** DOM id of the SVG `<text>` node for the label. */
 export const LOCAL_BUBBLE_LABEL_ELEMENT_ID = 'local-bubble-label';
@@ -48,7 +47,7 @@ export class LocalBubbleShell extends FresnelShell {
     // § Full render stack.
     super(
       createFresnelShellMaterial({
-        colour: COLOUR,
+        colourHex: SHELL_RIM_BLUE,
         alphaLimb: SHELL_RIM_ALPHA_LIMB,
         blending: THREE.AdditiveBlending,
       }),

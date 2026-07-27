@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from './galactic-fade';
+import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 
 // 15 kpc midplane radius — outer reference rim of the MW disc wireframe.
 // Exported so the MW SVG label (`createMilkyWayLabel` in local-group.ts)
@@ -55,12 +56,12 @@ export class GalacticDisc {
     this.group.renderOrder = -1;
 
     this.material = new THREE.LineBasicMaterial({
-      color: DARK_COLOUR,
       transparent: true,
       opacity: 0,
       depthTest: true,
       depthWrite: false,
     });
+    setBuiltinChromeColour(this.material.color, DARK_COLOUR);
 
     const midplane = this.makeRing(
       MIDPLANE_RADIUS_PC,

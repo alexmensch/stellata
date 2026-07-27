@@ -9,6 +9,7 @@ import { LABEL_OFFSET_PX } from '../solar-system/planets/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
+import { setRawChromeColour } from '../hdr/chrome-colour';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
 import fresnelRimChunk from './fresnel-rim.glsl?raw';
@@ -30,7 +31,9 @@ export const SHELL_RIM_BLUE = 0x5a7a9c;
 export const SHELL_RIM_ALPHA_LIMB = 0.5;
 
 export interface FresnelShellMaterialOptions {
-  colour: THREE.Color;
+  /** Authored sRGB hex; mapped through the tone-map inverse here so the
+   *  shell resolves at its tuned appearance (../hdr/README.md § Chrome). */
+  colourHex: number;
   /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */
   alphaLimb: number;
   /** Defaults to `NormalBlending`; pass `AdditiveBlending` for a glow. */
@@ -55,7 +58,7 @@ export function createFresnelShellMaterial(
     blending: opts.blending ?? THREE.NormalBlending,
     side: THREE.FrontSide,
     uniforms: {
-      uColour: { value: opts.colour },
+      uColour: { value: setRawChromeColour(new THREE.Color(), opts.colourHex) },
       uAlphaLimb: { value: opts.alphaLimb },
       uFaceOnFloor: { value: opts.faceOnFloor ?? DEFAULT_FACE_ON_FLOOR },
       uFresnelPower: { value: opts.fresnelPower ?? DEFAULT_FRESNEL_POWER },

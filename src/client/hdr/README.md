@@ -105,12 +105,19 @@ gamut matrix, nowhere else.
 ## Chrome — non-physical layers keep their authored look
 
 Galactic disc + grid, LG wireframes, the constellation figure, orbit
-rings, binary orbit paths, probe trails, the heliopause and Local Bubble
-fresnel shells, and the cloud rim shells all render **into the target**
-(they must depth-test against the scene) but **never multiply
-exposure**. Their authored colours are mapped through
+rings, binary orbit paths, probe trails and markers, the heliopause and
+Local Bubble fresnel shells, and the cloud rim shells all render **into
+the target** (they must depth-test against the scene) but **never
+multiply exposure**. Their authored colours are mapped through
 `inverseTonemapConstant` at material set-time, so the resolve pass
 returns them at their authored appearance at any exposure.
+
+A probe marker counts as chrome for the same reason its own README gives
+for the glyph — the spacecraft subtends no angle at any range, so the
+marker stands in for it rather than depicting its light. The
+dust-particle layer is the one chrome layer left unmapped: it is shelved
+at strength 0 and carries no colour uniform to map, so unshelving it
+owes this pass a look.
 
 `chrome-colour.ts` exposes two setters, and **which one a call site
 wants depends on how its shader emits colour** — this is the one part
