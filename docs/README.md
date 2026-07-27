@@ -27,6 +27,14 @@ extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         policy, morphology palette, selection-bias
                         handling. Spans scripts/, data/, and the
                         future src/client/extragalactic/.
+catalog-driver.md       Design gate for the AT-HYG-retirement epic:
+                        Gaia-native membership (inherited spine +
+                        magnitude floor), frozen-CDS classic-ID label
+                        overlay, HD→Gaia join route, bright / no-Gaia
+                        rescue tiers, record-parity contract, SID
+                        migration policy. Spans scripts/catalog/,
+                        scripts/refresh/, data/, url-state, and the
+                        SID ledger.
 sid.md                  Design gate for the Stellata ID epic:
                         three-layer identity model, designation
                         namespaces, append-only SID ledger + CI guard,
