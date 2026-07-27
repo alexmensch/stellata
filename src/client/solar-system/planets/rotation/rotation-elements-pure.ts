@@ -2,8 +2,8 @@
 // Sol planets, evaluated at model time `t`. Sources + dropped-terms
 // rationale in README.md § Planet rotation.
 
-import { J2000_JD } from '../../util/astronomy-constants';
-import { tToJdTdb } from '../time/time';
+import { J2000_JD } from '../../../util/astronomy-constants';
+import { tToJdTdb } from '../../time/time';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;

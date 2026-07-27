@@ -120,7 +120,7 @@ every interaction contract iterate that one array, so a moon inherits
 Target / focus / click / POI / hover / search as an ordinary body — no
 moon-specific path. `solPositionsAt` writes positions in `SOL_BODIES`
 order (planets first). Every moon carries IAU rotation elements
-(`MOON_ROTATION_BY_NAME` in `planets/rotation-elements-pure.ts`) —
+(`MOON_ROTATION_BY_NAME` in `planets/rotation/rotation-elements-pure.ts`) —
 tidally locked, so each `Ẇ` equals the orbital mean motion (test-pinned
 against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 
