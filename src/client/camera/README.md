@@ -6,11 +6,11 @@ across all five.
 
 ## Subsystems
 
-- `controls/` — TrackballControls subclass, mode-toggle pill, the
-  pointer input controller (click FSM + gesture roll), click / hover
-  picker, aim slerps, `camera.up` re-anchor, and the angular
-  star-geometry / star-physics helpers. The "steady-state geometry +
-  cross-mode plumbing" layer.
+- `controls/` — mode-toggle pill, click / hover picker, aim slerps, and
+  the angular star-geometry / star-physics helpers. The "steady-state
+  geometry + cross-mode plumbing" layer. Its `input/` subfolder owns
+  every canvas gesture: click FSM, roll (reference up axis +
+  galactic-north lock), pinch-to-zoom, and TrackballControls' tuning.
 - `focus/` — focus FSM (`focus-controller` + `focus-target` +
   focus-park lerp) and the `uPinFocusToCenter` shader-pin contract.
   What it means to "focus" an object; how warp and overlays read
@@ -101,6 +101,12 @@ file — they mirror real coupling and don't generalise.
   `observe/observe-transition.ts` (close-zoom unfocus).
 
 ## Camera-activity predicates
+
+Roll state is deliberately absent from this table: the reference-up
+correction runs on every navigate frame regardless of which animation
+owns the camera, because it only writes `camera.up` and a captured
+slerp endpoint already agrees with it (`controls/input/README.md`
+§ Reference up axis).
 
 Six overlapping "is the camera doing something" predicates exist, and
 picking the wrong one is the standing risk every new camera feature

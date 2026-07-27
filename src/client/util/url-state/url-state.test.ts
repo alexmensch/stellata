@@ -19,6 +19,7 @@ import type { Target } from '../../camera/focus/focus-target';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
 // Round-trips the view through the wire format and returns the decoded
 // view + version. Anything the encoder omits (e.g. default values) reads
@@ -74,6 +75,25 @@ function buildV2Blob(mask: number, payload: Uint8Array): string {
   let s = '';
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// The `up` wire slot carries the camera's reference axis, whose canonical
+// default is galactic north. Duck-typed like every other vector here so the
+// wire-format suite stays independent of THREE.
+const GN_UP: [number, number, number] = [
+  GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
+];
+
+function referenceUpStub(up: [number, number, number] = GN_UP) {
+  const vec = { x: up[0], y: up[1], z: up[2] };
+  return {
+    get: () => vec,
+    set: (x: number, y: number, z: number) => {
+      const len = Math.hypot(x, y, z) || 1;
+      vec.x = x / len; vec.y = y / len; vec.z = z / len;
+    },
+    correct: () => 0,
+  };
 }
 
 describe('url-state', () => {
@@ -177,11 +197,11 @@ describe('url-state', () => {
       expect(out.cam![2]).toBeCloseTo(3.95e-5, 9);
     });
 
-    it('elides up when it matches the default [0, 1, 0]', () => {
+    it('elides up when it matches the default (galactic north)', () => {
       // v3 sub-mask: components matching the per-key default are
       // omitted, and a vec3 with all components default has isPresent=
       // false → the field doesn't even claim its outer presence bit.
-      const { view } = roundtrip({ up: [0, 1, 0] });
+      const { view } = roundtrip({ up: GN_UP });
       expect(view.up).toBeUndefined();
     });
 
@@ -760,7 +780,7 @@ describe('url-state', () => {
       const mode = opts.mode ?? 'navigate';
       const camPos = opts.camPos ?? [0, 0, 30];
       const tgt = opts.target ?? [0, 0, 0];
-      const up = opts.up ?? [0, 1, 0];
+      const up = opts.up ?? GN_UP;
       const stub: Partial<Stellata> = {
         getFilter: () => ({ ...DEFAULT_FILTER }),
         getCameraFov: () => DEFAULT_FOV,
@@ -781,6 +801,8 @@ describe('url-state', () => {
           position: { x: camPos[0], y: camPos[1], z: camPos[2] },
           up: { x: up[0], y: up[1], z: up[2] },
         } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        referenceUp: referenceUpStub(up) as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         controls: {
           target: { x: tgt[0], y: tgt[1], z: tgt[2] },
@@ -925,13 +947,14 @@ describe('url-state', () => {
       expect(view.tgt).toEqual([5, 0, 0]);
     });
 
-    it('emits two f32s for up=[1,1,1] (default y elided)', () => {
-      // up's per-key default is [0,1,0] — y matches, x and z diverge.
+    it('emits two f32s for an up matching the default in y only', () => {
+      // up's per-key default is galactic north — y matches, x and z diverge.
       // 1 ver + 1 mask (bit 2) + 1 sub + 8 (x,z) = 11 bytes → 15 chars.
-      const blob = encodeBlob({ up: [1, 1, 1] });
+      const up: [number, number, number] = [1, GN_UP[1], 1];
+      const blob = encodeBlob({ up });
       expect(blobBytes(blob)).toBe(11);
       const { view } = decodeBlob(blob);
-      expect(view.up).toEqual([1, 1, 1]);
+      expect(view.up).toEqual(up);
     });
 
     it('emits one f32 for worldOffset=[100,0,0] (default y/z elided)', () => {
@@ -1294,7 +1317,9 @@ describe('url-state', () => {
         },
         setPois: (l) => { state.pois = [...l]; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        camera: { position: migrationVec3(0, 0, 30), up: migrationVec3(0, 1, 0) } as any,
+        camera: { position: migrationVec3(0, 0, 30), up: migrationVec3(...GN_UP) } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        referenceUp: referenceUpStub() as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         controls: { target: migrationVec3(), update() {} } as any,
       };
@@ -1657,8 +1682,9 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       pois: [] as Target[],
       transition: false,
     };
-    const cam = { position: vec3(0, 0, 30), up: vec3(0, 1, 0) };
+    const cam = { position: vec3(0, 0, 30), up: vec3(...GN_UP) };
     const controls = { target: vec3(0, 0, 0), update() {} };
+    const referenceUp = referenceUpStub();
     const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
     const stub: Partial<Stellata> = {
       getFilter: () => ({ ...DEFAULT_FILTER }),
@@ -1688,6 +1714,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       camera: cam as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       controls: controls as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      referenceUp: referenceUp as any,
     };
     stub.on = ((name: string, h: (p: unknown) => void) => {
       handlers[name].push(h);
@@ -1695,7 +1723,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     }) as unknown as Stellata['on'];
     return {
       stellata: stub as Stellata,
-      state, cam, controls,
+      state, cam, controls, referenceUp,
       frame: () => handlers.frame.forEach((h) => h(undefined)),
     };
   }

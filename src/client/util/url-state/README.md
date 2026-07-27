@@ -111,16 +111,26 @@ bit order, so mode isn't known until the field loop completes).
   `setOrbitTarget` so the explicit camera wins.
 - Camera changes are tracked via the `'frame'` event with a per-component
   epsilon comparison (no per-frame allocations) feeding a 1 s debounced
-  writer. The comparison covers position, target, **and** `camera.up` — so
-  two-finger roll (which only mutates `up`) still triggers a URL update.
+  writer. The comparison covers position, target, **and** the reference up
+  axis — so a roll gesture (which moves neither position nor target) still
+  triggers a URL update.
   The same frame check also watches the **pinned `t`** (`isLive(t) ? null
   : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
   `getT()` directly without a `'state'` event, so without this a time
   scrub on a still camera would never reach the URL.
-- `camera.up` round-trips when it differs from `(0, 1, 0)` and is
-  applied **before** focus/orbit dispatch because `focusStar` /
-  `setOrbitTarget` call `controls.update()` which reads `camera.up` to
-  derive orientation.
+- The `up` slot carries the camera's **reference up axis**
+  (`src/client/camera/controls/input/README.md` § Reference up axis), not the
+  live `camera.up` — the live vector is derived per frame, so serialising
+  it would round-trip a value the next frame overwrites. It round-trips
+  when it differs from **galactic north**, the canonical reference, so a
+  share from a level camera omits the field entirely; and it is applied
+  **before** focus/orbit dispatch because `focusStar` / `setOrbitTarget`
+  call `controls.update()`, which reads the `camera.up` derived from it.
+  `DEFAULT_UP_V3` keeps world `+Y` as the v3 fill value: a v3 blob was
+  written when that was the reference, and a frozen decoder has to stay
+  the one v3 meant (the golden corpus pins it). Either value restores the
+  same view, since both only ever reached the camera through a `lookAt`
+  projection — v4's default is what buys the free bytes.
 - `mode=observe` is applied **after** camera params + `controls.update()`
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and

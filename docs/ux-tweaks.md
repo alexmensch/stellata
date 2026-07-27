@@ -11,7 +11,19 @@ for the surrounding context.
 
 - **Orbit feel** — `rotateSpeed` / `dynamicDampingFactor` in
   `stellata.ts` constructor.
-- **Right-click pan on/off** — `noPan` flag.
+- **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
+- **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
+  `camera/controls/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it is
+  the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
+  is `ROLL_DEADZONE_PX` in `input-controller.ts`.
+- **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
+  `camera/controls/input/pinch-zoom-pure.ts`: how many scroll notches a
+  full two-finger pinch is worth, on both browser pinch signals.
+  `PINCH_SCALE_DELTA_PX` beside it only balances WebKit's `scale` report
+  against Blink's wheel report — adjust that one if Safari and Chrome
+  disagree on rate, and `PINCH_NOTCH_GAIN` if they agree but both feel
+  wrong. Scroll rate itself stays `zoomSpeed` (navigate) /
+  `FOV_STEP_PER_WHEEL` (observe).
 - **Chevron density** — `CHEVRON_SPACING_PX` / `_HALF_WIDTH` / `_DEPTH` in
   `distance-vector-overlay.ts`.
 - **Focus ring size** — `RADIUS_PX` in `focus-ring-overlay.ts`.
