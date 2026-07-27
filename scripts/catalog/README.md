@@ -7,6 +7,9 @@ Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/search-index.json` + `public/catalog-row-index-map.json`.
 Run via `pnpm run build:catalog`.
 
+The AT-HYG-retirement plan (Gaia-native membership + classic-ID label
+overlay) is designed in `docs/catalog-driver.md`.
+
 `build-catalog.ts` is the orchestrator; `catalog-pure.ts` is the single
 source of truth for the v9 binary layout, the override math, and the
 spectral resolver — every subfolder imports it, and so do twelve
