@@ -52,6 +52,9 @@ The HUD is an opt-in dev tool, not a user feature. Activation paths:
   stubs and clears the ring buffers, so a re-open starts fresh with an
   empty histogram. While the panel stays open, collapsing the Perf
   section gates per-tick DOM writes but not the ring-buffer fills.
+  **Every section opens collapsed** and each remembers its own state in
+  `sessionStorage` (`stellata.debug.collapsed.<key>`), so expand what you
+  need once and it stays expanded for the tab's lifetime.
 
 There is **no URL param and no keyboard shortcut.** Both paths existed
 during the original profiling work and were removed deliberately —
