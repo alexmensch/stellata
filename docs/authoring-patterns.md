@@ -99,6 +99,23 @@ When the test fails:
   allowlist entry unless the file is genuinely out-of-scope to fix in
   this PR.
 
+CI catches the forbidden patterns; it can't catch a comment that merely
+restates something already written elsewhere. That one is caught by
+write order:
+
+- **Write the folder README prose first, code comments last.** A comment
+  restating README content written minutes earlier is the dominant
+  failure mode — one code-side statement of a contract maximum, usually
+  the type or field docstring, with the prose in the README.
+- **Re-run the gate at commit time**, diffing for comment lines you
+  added. Comments written early in a diff predate the README update and
+  need the re-audit; the gate is naming the concrete wrong action a
+  future reader takes *without* the comment.
+- **Test files carry intent in the `it()` / `describe()` title.** Add a
+  fixture comment only where a non-obvious fixture choice would
+  otherwise be "simplified" away in a later pass. The comment density
+  in the existing binaries and test files reads as licence; it isn't.
+
 ## When to apply
 
 These are write-time rules, not review-time rules:
