@@ -17,9 +17,13 @@ for the surrounding context.
   the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
   is `ROLL_DEADZONE_PX` in `input-controller.ts`.
 - **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
-  `camera/controls/pinch-zoom-pure.ts`: how many scroll notches a full
-  two-finger pinch is worth. Scroll rate itself stays `zoomSpeed`
-  (navigate) / `FOV_STEP_PER_WHEEL` (observe).
+  `camera/controls/input/pinch-zoom-pure.ts`: how many scroll notches a
+  full two-finger pinch is worth, on both browser pinch signals.
+  `PINCH_SCALE_DELTA_PX` beside it only balances WebKit's `scale` report
+  against Blink's wheel report — adjust that one if Safari and Chrome
+  disagree on rate, and `PINCH_NOTCH_GAIN` if they agree but both feel
+  wrong. Scroll rate itself stays `zoomSpeed` (navigate) /
+  `FOV_STEP_PER_WHEEL` (observe).
 - **Chevron density** — `CHEVRON_SPACING_PX` / `_HALF_WIDTH` / `_DEPTH` in
   `distance-vector-overlay.ts`.
 - **Focus ring size** — `RADIUS_PX` in `focus-ring-overlay.ts`.

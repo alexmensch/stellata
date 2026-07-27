@@ -873,6 +873,14 @@ describe('InputController Shift as a live modifier', () => {
 });
 
 describe('InputController pinch-to-zoom', () => {
+  function handlers(canvas: ReturnType<typeof makeHarness>['canvas']) {
+    const byType = new Map<string, (e: Event) => void>();
+    for (const [type, fn] of canvas.addEventListener.mock.calls) {
+      byType.set(type as string, fn as (e: Event) => void);
+    }
+    return byType;
+  }
+
   function wheel(over: { ctrlKey?: boolean; deltaY?: number } = {}) {
     const e = new Event('wheel', { cancelable: true });
     Object.assign(e, { ctrlKey: true, deltaY: 0, ...over });
@@ -933,6 +941,49 @@ describe('InputController pinch-to-zoom', () => {
     pinch(wheel({ deltaY: 100 }));
 
     expect(canvas.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it('zooms from a WebKit gesture scale — Safari never sends a ctrlKey wheel', () => {
+    const { canvas } = makeHarness();
+    const gestureHandlers = handlers(canvas);
+    const gesture = (type: string, over: Record<string, number> = {}) => {
+      const e = new Event(type, { cancelable: true });
+      Object.assign(e, { rotation: 0, scale: 1, ...over });
+      return e;
+    };
+
+    gestureHandlers.get('gesturestart')!(gesture('gesturestart'));
+    // Spreading the fingers: scale climbs, camera zooms in (negative delta).
+    gestureHandlers.get('gesturechange')!(gesture('gesturechange', { scale: 1.5 }));
+
+    expect(canvas.dispatchEvent).toHaveBeenCalled();
+    const emitted = canvas.dispatchEvent.mock.calls[0][0] as WheelEvent;
+    expect(emitted.type).toBe('wheel');
+    expect(emitted.deltaY).toBe(-WHEEL_NOTCH_DELTA_PX);
+  });
+
+  it('stands the wheel path down while a WebKit gesture owns the pinch', () => {
+    const { canvas } = makeHarness();
+    const h = handlers(canvas);
+    const gesture = (type: string, over: Record<string, number> = {}) => {
+      const e = new Event(type, { cancelable: true });
+      Object.assign(e, { rotation: 0, scale: 1, ...over });
+      return e;
+    };
+
+    h.get('gesturestart')!(gesture('gesturestart'));
+    const consumed = wheel({ deltaY: 100 });
+    const prevented = vi.spyOn(consumed, 'preventDefault');
+    pinch(consumed);
+
+    // Still consumed (no page zoom, no TC nudge) but not counted twice.
+    expect(prevented).toHaveBeenCalled();
+    expect(canvas.dispatchEvent).not.toHaveBeenCalled();
+
+    // Once the gesture ends the wheel path takes over again.
+    h.get('gestureend')!(gesture('gestureend'));
+    pinch(wheel({ deltaY: 100 }));
+    expect(canvas.dispatchEvent).toHaveBeenCalledTimes(1);
   });
 
   it('zooms out on the opposite pinch direction', () => {

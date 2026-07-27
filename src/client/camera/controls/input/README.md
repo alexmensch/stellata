@@ -156,8 +156,8 @@ tilt persistent through subsequent orbit / dolly.
 - **Desktop Safari** — the non-standard `gesturestart` /
   `gesturechange` / `gestureend` trio (WebKit only). `event.rotation` is
   cumulative degrees since gesture start, positive clockwise; we
-  `preventDefault` to suppress Safari's page zoom, and TrackballControls
-  still gets the wheel events for pinch-zoom. Chrome / Firefox expose no
+  `preventDefault` to suppress Safari's page zoom. The same events carry
+  pinch as `event.scale` — see § Pinch-to-zoom. Chrome / Firefox expose no
   rotate gesture — Shift-drag is the roll path there. Do not try to
   polyfill.
 
@@ -221,8 +221,15 @@ axis would drift back off level as soon as the orbit moved.
 
 ## Pinch-to-zoom
 
-Trackpad pinch arrives as a **`ctrlKey` wheel event** on every desktop
-browser. It reached TrackballControls already, but a pinch reports
+Two browser signals, one path. **Blink** (Chrome / Edge / Firefox)
+synthesises a **`ctrlKey` wheel event** for trackpad pinch. **WebKit**
+does not — Safari reports pinch *only* through `GestureEvent.scale`, which
+is why the `gesture*` listeners are not roll-only. Getting this wrong is
+what shipped a Safari build where pinch did nothing: an earlier note in
+this README claimed Safari's pinch also arrived as wheel events, so the
+`scale` was left unread.
+
+On Blink the signal did reach TrackballControls, but a pinch reports
 single-digit `deltaY` per event where a notch reports 100, and TC scales
 pixel-mode deltas by `0.00025` — so pinch registered as ~1/30th of a
 notch: present in the code, absent in the hand.
@@ -245,10 +252,16 @@ zoom rate to keep in sync, and no mode branch here.
   carry building a backlog that fires after the fingers stop.
 - **The re-emitted event drops `ctrlKey`**, or the capture listener
   re-enters on its own output.
+- **The two signals are mutually exclusive.** `gestureActive` (set between
+  `gesturestart` and `gestureend`) stands the wheel path down, so a browser
+  reporting both can't count one gesture twice. The wheel is still
+  `preventDefault`ed while standing down — page zoom has to stay suppressed
+  either way.
 
-Safari's pinch also fires `gesturechange` with a `scale`, deliberately
-unused: it emits the `ctrlKey` wheel too, so reading both would double the
-zoom rate. `gesture*` stays roll-only.
+`scaleStepDeltaPx` converts a step of WebKit's cumulative `scale` into the
+wheel-pixel delta the Blink path speaks (logarithmically, so equal ratios
+are equal deltas at any zoom), which is what lets both platforms share
+`PINCH_NOTCH_GAIN` as the single feel knob.
 
 **Touch needs none of this** — TrackballControls' native two-finger
 `TOUCH_ZOOM_PAN` drives the same zoom, which is why pinch works on iPhone

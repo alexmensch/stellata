@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   PINCH_NOTCH_GAIN,
+  PINCH_SCALE_DELTA_PX,
   WHEEL_NOTCH_DELTA_PX,
   pinchStep,
+  scaleStepDeltaPx,
 } from './pinch-zoom-pure';
 
 describe('pinchStep', () => {
@@ -59,5 +61,41 @@ describe('pinchStep', () => {
     const outward = pinchStep(inward.carriedPx, -7);
     expect(outward.notch).toBe(0);
     expect(outward.carriedPx).toBe(0);
+  });
+});
+
+describe('scaleStepDeltaPx', () => {
+  it('pins the scale conversion', () => {
+    expect(PINCH_SCALE_DELTA_PX).toBe(200);
+  });
+
+  it('reads a spreading pinch as zoom-in, matching a negative wheel delta', () => {
+    expect(scaleStepDeltaPx(1, 1.2)).toBeLessThan(0);
+    expect(scaleStepDeltaPx(1.2, 1)).toBeGreaterThan(0);
+  });
+
+  it('is logarithmic, so equal ratios are equal deltas at any scale', () => {
+    const low = scaleStepDeltaPx(1, 1.1);
+    const high = scaleStepDeltaPx(2, 2.2);
+    expect(low).toBeCloseTo(high, 12);
+  });
+
+  it('composes across steps to the same delta as one big step', () => {
+    const stepped = scaleStepDeltaPx(1, 1.5) + scaleStepDeltaPx(1.5, 2);
+    expect(stepped).toBeCloseTo(scaleStepDeltaPx(1, 2), 12);
+  });
+
+  it('is worth a usable number of notches for a span-doubling pinch', () => {
+    // A full pinch has to move the camera perceptibly or the gesture reads
+    // as dead — the failure this whole path exists to fix.
+    const notches = Math.abs(scaleStepDeltaPx(1, 2)) * PINCH_NOTCH_GAIN / WHEEL_NOTCH_DELTA_PX;
+    expect(notches).toBeGreaterThan(10);
+    expect(notches).toBeLessThan(30);
+  });
+
+  it('guards against a zero or negative scale', () => {
+    expect(scaleStepDeltaPx(0, 1)).toBe(0);
+    expect(scaleStepDeltaPx(1, 0)).toBe(0);
+    expect(scaleStepDeltaPx(1, -1)).toBe(0);
   });
 });

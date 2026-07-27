@@ -13,6 +13,24 @@ export const WHEEL_NOTCH_DELTA_PX = 100;
  *  a full two-finger pinch is worth; the one knob for pinch-zoom feel. */
 export const PINCH_NOTCH_GAIN = 12;
 
+/** Wheel-pixel delta per unit of `ln(scale)`, for the WebKit gesture path.
+ *  Sized so a pinch that doubles the finger span is worth a comparable
+ *  delta to the same gesture's `ctrlKey`-wheel report on Blink, letting both
+ *  platforms share `PINCH_NOTCH_GAIN` as the single feel knob. */
+export const PINCH_SCALE_DELTA_PX = 200;
+
+/** One step of WebKit's cumulative `GestureEvent.scale`, expressed as the
+ *  wheel-pixel delta the `ctrlKey`-wheel path speaks. Spreading a fingers →
+ *  scale > 1 → zoom in, matching a negative wheel delta (scroll up).
+ *
+ *  Safari is the reason this exists: it reports trackpad pinch ONLY through
+ *  the non-standard `gesture*` events, never as the `ctrlKey` wheel every
+ *  Blink-based browser synthesises. */
+export function scaleStepDeltaPx(previousScale: number, scale: number): number {
+  if (!(previousScale > 0) || !(scale > 0)) return 0;
+  return -Math.log(scale / previousScale) * PINCH_SCALE_DELTA_PX;
+}
+
 /** Fold one pinch event into at most one notch-equivalent, carrying the
  *  remainder to the next event.
  *

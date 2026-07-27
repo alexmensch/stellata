@@ -15,7 +15,7 @@ import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
 import type { ReferenceUpController } from './reference-up';
 import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
-import { WHEEL_NOTCH_DELTA_PX, pinchStep } from './pinch-zoom-pure';
+import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
 export interface InputControllerDeps {
   canvas: HTMLCanvasElement;
@@ -50,6 +50,11 @@ export class InputController {
   private pointerDownAt: { x: number; y: number; t: number } | null = null;
   private twoFingerAngle: number | null = null;
   private gestureLastRotation = 0;
+  private gestureLastScale = 1;
+  // True between gesturestart and gestureend. WebKit owns pinch for that
+  // window, so the ctrlKey-wheel path stands down rather than risk counting
+  // the same gesture twice on a browser that reports both.
+  private gestureActive = false;
   // Shift-drag roll. `angle` is null while the pointer sits inside the
   // dead-zone at screen centre, where the atan2 bearing is unstable — the
   // next sample outside it re-seeds instead of rolling by a jump.
@@ -404,19 +409,28 @@ export class InputController {
   private onGestureStart = (e: Event) => {
     e.preventDefault();
     this.gestureLastRotation = 0;
+    this.gestureLastScale = (e as Event & { scale?: number }).scale ?? 1;
+    this.gestureActive = true;
     this.clearRollSnap();
   };
 
   private onGestureChange = (e: Event) => {
     e.preventDefault();
-    const rot = (e as Event & { rotation: number }).rotation;
-    const delta = ((rot - this.gestureLastRotation) * Math.PI) / 180;
-    this.gestureLastRotation = rot;
+    const gesture = e as Event & { rotation: number; scale?: number };
+    const delta = ((gesture.rotation - this.gestureLastRotation) * Math.PI) / 180;
+    this.gestureLastRotation = gesture.rotation;
     this.applyRollDelta(-delta);
+    // The same gesture carries pinch as a cumulative `scale`. Route it
+    // through the shared notch normaliser so WebKit and the ctrlKey-wheel
+    // path drive zoom identically.
+    if (gesture.scale === undefined) return;
+    this.applyPinchDelta(scaleStepDeltaPx(this.gestureLastScale, gesture.scale));
+    this.gestureLastScale = gesture.scale;
   };
 
   private onGestureEnd = (e: Event) => {
     e.preventDefault();
+    this.gestureActive = false;
     this.settleRollSnap();
   };
 
@@ -473,11 +487,17 @@ export class InputController {
     // this event — unamplified it would add a ~1/30th-notch nudge on top.
     e.preventDefault();
     e.stopPropagation();
-    const step = pinchStep(this.pinchCarryPx, wheel.deltaY);
-    this.pinchCarryPx = step.carriedPx;
-    if (step.notch === 0) return;
-    this.emitWheelNotch(step.notch * WHEEL_NOTCH_DELTA_PX);
+    // A live WebKit gesture already owns this pinch.
+    if (this.gestureActive) return;
+    this.applyPinchDelta(wheel.deltaY);
   };
+
+  /** Accumulate a pinch delta and re-emit whole notch-equivalents. */
+  private applyPinchDelta(deltaYPx: number): void {
+    const step = pinchStep(this.pinchCarryPx, deltaYPx);
+    this.pinchCarryPx = step.carriedPx;
+    if (step.notch !== 0) this.emitWheelNotch(step.notch * WHEEL_NOTCH_DELTA_PX);
+  }
 
   /** `WheelEvent` is not constructible in the test environment, and the two
    *  consumers read only `deltaY` / `deltaMode` and call `preventDefault`. */
