@@ -1745,16 +1745,19 @@ export class Stellata implements FrameAnchor {
   }
 
   /** Dev-console A/B switch for the HDR seam. false parks every layer on
-   *  the pre-HDR path (direct to canvas, no target, no tone-map) — the
-   *  same path a context without a float-renderable buffer takes.
-   *  See src/client/hdr/README.md § Dev switches. */
+   *  the pre-HDR path (direct to canvas, no target, no tone-map, chrome
+   *  back to authored colours) — the same path a context without a
+   *  float-renderable buffer takes, so this is the whole-frame
+   *  comparison. See src/client/hdr/README.md § Dev switches. */
   setHdrEnabled(on: boolean) {
     this.hdr.setEnabled(on);
   }
 
   /** Dev-console A/B switch for the tone-map operator alone, keeping the
-   *  HDR target bound. false is straight pass-through, which isolates a
-   *  render-target regression from a calibration one. */
+   *  HDR target bound, to isolate the target from the operator. Built-in
+   *  material chrome renders dark in this mode — the linear target, not
+   *  the resolve, is what drops its sRGB encode; use setHdrEnabled for a
+   *  whole-frame comparison. */
   setTonemapEnabled(on: boolean) {
     this.hdr.setTonemapEnabled(on);
   }

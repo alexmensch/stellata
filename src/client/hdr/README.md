@@ -144,6 +144,22 @@ of the mapping that is easy to get silently wrong:
 Both setters write via `Color.setRGB(..., LinearSRGBColorSpace)` so
 ColorManagement doesn't convert the mapped value a second time.
 
+**The mapping is only correct paired with the operator it inverts.** Left
+in place with the operator off, chrome renders badly wrong — a rim shell
+drops to a tenth of its authored brightness, a near-white probe marker
+clips to flat white. So every call is recorded in a module-level registry
+and `setChromeOperatorActive(false)` re-authors all of it back to plain
+`setHex`, which is exactly the pre-HDR Color state for both variants.
+`HdrPipeline` drives that flag from three places: the float-support check
+in its constructor (**before any layer is built**, so a context without a
+float-renderable target never registers a mapped colour), and both dev
+switches. Getting this wrong is not a dev-only concern — the
+float-support path is what real fallback hardware takes.
+
+The registry is keyed by the live `Color`, so a re-attachable layer
+(clouds, Local Group) adds an entry per attach; `HdrPipeline.dispose`
+clears it.
+
 Two consequences worth knowing before touching this:
 
 - **Chrome blending is now linear.** Additive and alpha-blended chrome
@@ -193,14 +209,27 @@ than inside the fullscreen shader.
 ## Dev switches
 
 - `stellata.setHdrEnabled(false)` — parks on the fallback path entirely
-  (no target, no tone-map), mirroring `setExtinctionPrepassEnabled`.
+  (no target, no tone-map, chrome back to authored colours), mirroring
+  `setExtinctionPrepassEnabled`. **This is the full A/B**: it should match
+  a pre-HDR build, and it exercises the same path as hardware without a
+  float-renderable target.
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
-  the resolve straight pass-through. This is the A/B that separates a
-  render-target regression from a calibration one: with the operator
-  parked, the frame should match a pre-HDR build.
+  the resolve straight pass-through. Narrower: it isolates the target
+  itself (depth, alpha, blend precision, pass order) from the operator.
 
-Pass-through is **visually** identical, not bit-identical, and the two
-reasons are worth knowing before chasing a diff:
+**Pass-through cannot reproduce built-in-material chrome, by
+construction.** What disables their `colorspace_fragment` encode is the
+target's linear colour space, not the resolve — so with the operator
+parked, `LineBasicMaterial` / `LineMaterial` chrome (grids, orbit paths,
+the constellation figure) renders un-encoded and therefore dark. No
+resolve setting fixes it: the emitting layers write display-encoded
+values and need no encode, while built-in materials need one, and a
+single fullscreen pass can't do both. Custom-shader chrome and every
+emitting layer *are* exact in this mode. Use `setHdrEnabled(false)` when
+you want a whole-frame comparison.
+
+Neither switch is bit-identical to a pre-HDR build, for two further
+reasons worth knowing before chasing a diff:
 
 - Blending intermediates no longer round-trip through 8 bits, so faint
   gradients differ by up to a quantisation step.
@@ -209,6 +238,15 @@ reasons are worth knowing before chasing a diff:
   max blends are unaffected (both are clamp-commutative), but a
   region that additively saturated to white *before* a later
   alpha-blended draw composites differently.
+
+One more inherent limit on the chrome mapping: it is exact for a chrome
+fragment landing alone at full alpha over black. Translucent and additive
+chrome contributes `L · α` into the target, and the operator is
+non-linear, so `tonemap(L·α) ≠ α · tonemap(L)`. Dim chrome sits in the
+toe where the operator is ~linear and the error is negligible; bright
+near-white chrome (the heliopause limb) shifts visibly. This is the
+linear-space-blending trade the design gate accepted
+(`docs/science-hdr-pipeline.md` § 4).
 
 Perf rows: `submit.tonemap` (CPU submission) and, where the driver
 exposes a timer query, `gpu.tonemap` — see `../debug/README.md`

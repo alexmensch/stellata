@@ -7,6 +7,7 @@ import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
+import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 
@@ -24,6 +25,7 @@ export class HdrPipeline {
   private material: THREE.RawShaderMaterial | null = null;
   private geometry: THREE.BufferGeometry | null = null;
   private forceDisabled = false;
+  private tonemapOn = true;
   private chart = false;
 
   constructor(renderer: THREE.WebGLRenderer) {
@@ -32,6 +34,9 @@ export class HdrPipeline {
     this.supported =
       gl.getExtension('EXT_color_buffer_float') !== null ||
       gl.getExtension('EXT_color_buffer_half_float') !== null;
+    // Before any layer is constructed, so chrome registers its colours
+    // against the right mode on a context that can't take the target.
+    setChromeOperatorActive(this.supported);
     if (!this.supported) return;
 
     renderer.getDrawingBufferSize(this.size);
@@ -96,17 +101,27 @@ export class HdrPipeline {
 
   setEnabled(on: boolean): void {
     this.forceDisabled = !on;
+    this.syncChrome();
   }
 
   /** Park the resolve on straight pass-through, keeping the target. The
    *  A/B that isolates a plumbing regression from a calibration one. */
   setTonemapEnabled(on: boolean): void {
-    if (this.material === null) return;
-    this.material.uniforms.uTonemapEnabled.value = on ? 1 : 0;
+    this.tonemapOn = on;
+    if (this.material !== null) {
+      this.material.uniforms.uTonemapEnabled.value = on ? 1 : 0;
+    }
+    this.syncChrome();
   }
 
   private active(): boolean {
     return this.rt !== null && !this.forceDisabled && !this.chart;
+  }
+
+  /** Chrome's inverse mapping is only correct while the operator it
+   *  inverts is running. */
+  private syncChrome(): void {
+    setChromeOperatorActive(this.supported && !this.forceDisabled && this.tonemapOn);
   }
 
   dispose(): void {
@@ -118,6 +133,8 @@ export class HdrPipeline {
     this.material = null;
     this.geometry = null;
     this.forceDisabled = false;
+    this.tonemapOn = true;
     this.chart = false;
+    clearChromeBindings();
   }
 }
