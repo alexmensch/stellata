@@ -916,6 +916,15 @@ export class Stellata implements FrameAnchor {
       warpActive: false,
     };
     this.registerSceneLayers();
+    // Seed the declutter cycle so the imperative-push layers receive their
+    // initial permission. `detailPermitted` starts all-true for the
+    // per-frame readers, but a layer that only learns its permission from
+    // a bind (both boundary shells, the orbit/probe overlays) would sit at
+    // whatever its constructor guessed until the user cycled the level —
+    // which is how the heliopause shell rendered nothing on a fresh load
+    // while its label, a per-frame reader, showed. `resetOverrides: false`
+    // so a later `?v=` restore still owns the within-scene toggles.
+    this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
     this.attachEvents();
     this.animate();
   }

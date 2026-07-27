@@ -74,7 +74,13 @@ export abstract class FresnelShell {
   readonly group: THREE.Group;
   protected readonly material: THREE.ShaderMaterial;
   private mono = false;
-  private permitted = true;
+  /** Starts false so it agrees with `group.visible` below: the shell shows
+   *  only once the declutter cycle has actually pushed a permission, which
+   *  `Stellata`'s constructor seeds. Starting it true left the two fields
+   *  disagreeing, and a shell whose `shellReady` needs no attach step (the
+   *  heliopause) then rendered nothing until the user cycled the detail
+   *  level. */
+  private permitted = false;
 
   protected constructor(material: THREE.ShaderMaterial, renderOrder: number) {
     this.group = new THREE.Group();

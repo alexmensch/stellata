@@ -64,6 +64,21 @@ describe('Heliopause', () => {
     h.dispose();
   });
 
+  // Regression: `permitted` used to default true while the group started
+  // hidden, so any unrelated refreshVisibility() call revealed a shell that
+  // had never been permitted — which is what masked the missing boot-time
+  // declutter seed for the Local Bubble (its attach path calls
+  // setMonochrome) while leaving the heliopause invisible on a fresh load.
+  it('a mono round-trip does not substitute for a permission push', () => {
+    const h = new Heliopause();
+    h.setMonochrome(true);
+    h.setMonochrome(false);
+    expect(h.group.visible).toBe(false);
+    h.setPermitted(true);
+    expect(h.group.visible).toBe(true);
+    h.dispose();
+  });
+
   it('setMonochrome hides the group even when permitted', () => {
     const h = new Heliopause();
     h.setPermitted(true);
