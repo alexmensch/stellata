@@ -14,6 +14,7 @@ import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
 // URL state is a single opaque base64url blob carried in a `/v/<blob>/`
 // path segment (canonical) or a legacy `?v=<blob>` query param (still
@@ -58,7 +59,19 @@ export function frameTriggerEps(magnitude: number): number {
 // Default values that the encoder uses to decide whether to omit a field.
 const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
-const DEFAULT_UP: [number, number, number] = [0, 1, 0];
+// The `up` slot carries the camera's REFERENCE axis (camera/controls/README.md
+// § Reference up axis), whose canonical value is galactic north — so a share
+// from a level camera omits the field entirely.
+const DEFAULT_UP: [number, number, number] = [
+  GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
+];
+// v3's frozen default. A v3 blob was written when world +Y was the reference,
+// so its elided components have to fill from that value or the decode isn't
+// the one v3 meant — the axis then applies as a reference and reproduces the
+// roll the link always had, since either value only ever reached the camera
+// through a `lookAt` projection.
+const DEFAULT_UP_V3: [number, number, number] = [0, 1, 0];
+const DEFAULT_WORLD_OFFSET: [number, number, number] = [0, 0, 0];
 // In observe mode the camera is parked AT the focal star (origin in the
 // local frame), so the canonical default is [0,0,0] rather than DEFAULT_CAM.
 // Encoder elides cam against this; decoder snaps to it when restoring an
@@ -261,18 +274,6 @@ function vec3Field(bit: number, key: Vec3Key): FieldSpec {
   };
 }
 
-// Per-key static defaults for the v3 vec3 sub-mask elision. cam's
-// "real" default is mode-dependent (DEFAULT_CAM in navigate, [0,0,0]
-// in observe) but the decoder uses the static navigate value here and
-// fixes up missing components in cam's postDecode hook once view.mode
-// is known — flags decodes after cam in FIELDS bit order.
-const VEC3_DEFAULTS: Record<Vec3Key, readonly [number, number, number]> = {
-  cam: DEFAULT_CAM,
-  tgt: DEFAULT_TGT,
-  up: DEFAULT_UP,
-  worldOffset: [0, 0, 0],
-};
-
 // v3 vec3 — 1-byte sub-mask (low 3 bits = which components diverge
 // from default) + per-set-bit float32 LE. A vec3 matching its default
 // in all three components has isPresent=false and is omitted from the
@@ -301,7 +302,6 @@ function vec3FieldV3(
   getDefault: ComponentDefaults,
   postDecode?: ApplyMode,
 ): FieldSpec {
-  const def = VEC3_DEFAULTS[key];
   // Captured during decode so the optional postDecode hook can
   // distinguish "z was on the wire" from "z came from the static def".
   // Module-singleton FieldSpec is safe under synchronous decode; the
@@ -356,7 +356,12 @@ function vec3FieldV3(
       // bits correctly.
       const sub = dv.getUint8(o);
       lastSub = sub;
-      const out: [number, number, number] = [def[0], def[1], def[2]];
+      // `getDefault` rather than a captured record: `up`'s default differs
+      // per schema version (v3 predates the galactic reference axis), and
+      // cam's mode-dependent default resolves to its navigate value here
+      // because `v.mode` decodes later — which is what postDecode fixes.
+      const d = getDefault(v);
+      const out: [number, number, number] = [d[0], d[1], d[2]];
       let p = o + 1;
       if (sub & 1) { out[0] = dv.getFloat32(p, true); p += 4; }
       if (sub & 2) { out[1] = dv.getFloat32(p, true); p += 4; }
@@ -769,7 +774,7 @@ const FIELDS_V2: FieldSpec[] = [
 const FIELDS_V3: FieldSpec[] = [
   vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
   vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
-  vec3FieldV3(2, 'up', () => DEFAULT_UP),
+  vec3FieldV3(2, 'up', () => DEFAULT_UP_V3),
   u8Field(3,  'fov',  { min: 10, max: 120, step: 1   }),
   u8Field(4,  'mag',  { min: -2, max: 15,  step: 0.1 }),
   u16Field(5, 'dmin'),
@@ -793,7 +798,7 @@ const FIELDS_V3: FieldSpec[] = [
   // its expected offset and the missing worldOffset gracefully degrades
   // to "Sol-anchored". Future additions follow the same append-only
   // pattern.
-  vec3FieldV3(20, 'worldOffset', () => VEC3_DEFAULTS.worldOffset),
+  vec3FieldV3(20, 'worldOffset', () => DEFAULT_WORLD_OFFSET),
   tField(21),
 ];
 
@@ -824,7 +829,7 @@ const FIELDS_V4: FieldSpec[] = [
   sidRefField(15, 'to'),
   focusClearedField(18),
   poiSidsField(19),
-  vec3FieldV3(20, 'worldOffset', () => VEC3_DEFAULTS.worldOffset),
+  vec3FieldV3(20, 'worldOffset', () => DEFAULT_WORLD_OFFSET),
   tField(21),
   lgEmissionDisabledField(22),
   detailLevelField(23),
@@ -1056,7 +1061,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   const c = stellata.camera.position;
   const t = stellata.controls.target;
-  const u = stellata.camera.up;
+  const u = stellata.referenceUp.get();
   // Skip each independently. Under floating origin, a focused-orbit URL
   // has tgt=[0,0,0] (the focal star's local position) and observe-mode
   // has cam=[0,0,0] (camera is parked *at* the focal star), so omitting
@@ -1214,13 +1219,14 @@ export function applyDecodedView(
 
   // Single dirty flag for everything that requires controls.update() at
   // the end of the camera-touching block. Each branch below that mutates
-  // camera.position / controls.target / camera.up sets this so the final
+  // camera.position / controls.target / the reference axis sets this so the final
   // update() reads as "if any of those happened, refresh" — replaces
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
 
   if (view.up) {
-    stellata.camera.up.set(view.up[0], view.up[1], view.up[2]).normalize();
+    stellata.referenceUp.set(view.up[0], view.up[1], view.up[2]);
+    stellata.referenceUp.correct(stellata.camera);
     controlsDirty = true;
   }
 
@@ -1419,13 +1425,13 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
 
 // Write the live camera/target/up triple into `out` at the canonical
 // layout the per-frame change detector reads from:
-//   [0..2] camera.position, [3..5] controls.target, [6..8] camera.up
+//   [0..2] camera.position, [3..5] controls.target, [6..8] reference up
 // Single source of truth for that layout so seed and per-frame update
 // can't drift apart on index.
 function snapshotCam(stellata: Stellata, out: Float64Array): void {
   const c = stellata.camera.position;
   const t = stellata.controls.target;
-  const u = stellata.camera.up;
+  const u = stellata.referenceUp.get();
   out[0] = c.x; out[1] = c.y; out[2] = c.z;
   out[3] = t.x; out[4] = t.y; out[5] = t.z;
   out[6] = u.x; out[7] = u.y; out[8] = u.z;
@@ -1482,7 +1488,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
 
     const c = stellata.camera.position;
     const tg = stellata.controls.target;
-    const u = stellata.camera.up;
+    const u = stellata.referenceUp.get();
     // Component-wise epsilon comparison on the steady-state path. The
     // per-vector threshold scales with magnitude (frameTriggerEps) so
     // a zoom-out from solar-system scale trips at AU-resolution rather
