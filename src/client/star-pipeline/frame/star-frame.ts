@@ -14,7 +14,7 @@ import {
 import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJDE } from '../../solar-system/time/time';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { bestApsisTeff } from '../star-color-routing-pure';
-import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../star-local-cluster-pure';
+import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';
 import type { StarSharedUniforms } from './star-shared-uniforms';
 
 export interface StarFrameOptions {

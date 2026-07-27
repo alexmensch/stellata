@@ -88,8 +88,8 @@ initialises the buffer to 1.0 at allocation and on every re-attach.
 
 A resolved pair's overlapping disc cores order **geometrically in the
 local depth pass**: both members mirror into the bracketed pass
-(chain membership — `star-pipeline/README.md` § Local-pass mirror
-draw), whose standard-depth bracket resolves the pair's sub-AU
+(chain membership — `star-pipeline/local-pass/README.md`), whose
+standard-depth bracket resolves the pair's sub-AU
 line-of-sight separation natively. The main pass never has to order
 them — the retired `iDepthBias` mechanism did that with a per-frame
 float64 front/back nudge before the pass existed.

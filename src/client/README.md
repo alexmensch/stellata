@@ -282,7 +282,7 @@ SVG mask (`constellation-figure/README.md`).
 | Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
-| Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
+| Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/local-pass/](star-pipeline/local-pass/README.md), [local-depth/](local-depth/README.md) |
 | Probe marker mirror (cluster active)              | WebGL   | local depth pass (3.3 in-pass)                     |       | [solar-system/probes/](solar-system/probes/README.md), [local-depth/](local-depth/README.md) |
 | Probe trail mirror (cluster active)               | WebGL   | local depth pass (3.25 in-pass)                    |       | [solar-system/probes/](solar-system/probes/README.md), [local-depth/](local-depth/README.md) |
 | Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/ephemerides/](solar-system/ephemerides/README.md), [local-depth/](local-depth/README.md) |
@@ -291,8 +291,8 @@ SVG mask (`constellation-figure/README.md`).
 | Planet atmosphere shell (Venus/Earth/Mars/Titan) | WebGL   | local depth pass; additive (2.82 in-pass)          |       | [solar-system/atmosphere/](solar-system/atmosphere/README.md), [local-depth/](local-depth/README.md) |
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
-| Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
-| Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/](star-pipeline/README.md), [local-depth/](local-depth/README.md) |
+| Member-star disc mirror                          | WebGL   | local depth pass (0 in-pass)                       |       | [star-pipeline/local-pass/](star-pipeline/local-pass/README.md), [local-depth/](local-depth/README.md) |
+| Member-star core mask (depth-only)               | WebGL   | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/local-pass/](star-pipeline/local-pass/README.md), [local-depth/](local-depth/README.md) |
 | *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
 | Planet glow (inactive-cluster hosts)             | WebGL   | `renderOrder: 4`                                   |       | [solar-system/planets/](solar-system/planets/README.md) |
 | Probe markers (cluster inactive)                  | WebGL   | `renderOrder: 3.5`                                 |       | [solar-system/probes/](solar-system/probes/README.md) |
@@ -332,7 +332,7 @@ The two cross-layer pinning rules `stellata.ts` is responsible for:
   transits, near-side orbit-ring arcs). Star membership extends
   beyond the host: the focal binary chain (with its orbit-path
   ellipses) and any resolved-disc star near the camera mirror the
-  same way (`star-pipeline/star-local-cluster.ts`). The
+  same way (`star-pipeline/local-pass/star-local-cluster.ts`). The
   `planet-body-field` test pins the pass renderOrders; a reorder
   fails CI rather than silently regressing.
   See [local-depth/](local-depth/README.md).

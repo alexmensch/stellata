@@ -14,7 +14,7 @@ architecture, precision analysis, cluster API, and migration plan
 (mesh LOD + ring annuli, planet billboard mirrors, orbit rings —
 `../solar-system/local-cluster.ts`) and the star cluster (host-star +
 binary-chain + resolved-disc mirror draws, binary orbit-path
-ellipses — `../star-pipeline/star-local-cluster.ts`).
+ellipses — `../star-pipeline/local-pass/star-local-cluster.ts`).
 
 ## Files
 
@@ -84,7 +84,7 @@ retiring `iDepthBias`.
 Billboards use **mirror draws**, sharing the main pipeline's uniform
 objects with cloned materials that set `LOCAL_DEPTH_PASS`:
 
-- Stars: `../star-pipeline/star-local-mirror.ts` — a small
+- Stars: `../star-pipeline/local-pass/star-local-mirror.ts` — a small
   `InstancedBufferGeometry` whose slots re-copy member attributes per
   frame, with an `iSourceIdx` indirection for star-indexed lookups
   (extinction texelFetch, hide/pin compares).
@@ -210,7 +210,7 @@ Live providers:
   passes together — a probe is a Sol-system object whenever the cluster
   is active, so there is no per-instance suppression range
   (`../solar-system/probes/README.md` § Which pass draws them).
-- **star cluster** (`../star-pipeline/star-local-cluster.ts`) — star
+- **star cluster** (`../star-pipeline/local-pass/star-local-cluster.ts`) — star
   mirror draws for the active host, the focal star's Kepler chain
   (engaged by drawn orbit paths or any member resolving as a disc),
   and any resolved-disc star near the camera; plus
@@ -292,8 +292,8 @@ iOccluder/familyOccluders).
    passes, never paint-over — the disc pass's MaxEquation blend can't
    cover a brighter fragment, so a member keeps its main-pass core
    depth-mask (stamping nearest depth) and the mirror carries its own
-   depth-only core prepass; see `../star-pipeline/README.md`
-   § Local-pass mirror draw. The halo annulus stays translucent
+   depth-only core prepass; see
+   `../star-pipeline/local-pass/README.md`. The halo annulus stays translucent
    (background max-blends under it — dim stars wash into the glare).
 
 ## Current wiring
@@ -304,7 +304,7 @@ locally active" decision — any attached host inside its cull
 distance, or its orbit rings drawing — and, while active, writes the
 planet suppression range, reports the host star to the star cluster,
 and reports body/ring/mesh spheres. `StarLocalCluster`
-(`../star-pipeline/star-local-cluster.ts`) unions the star members
+(`../star-pipeline/local-pass/star-local-cluster.ts`) unions the star members
 (host, focal Kepler chain, resolved-disc scan), writes the
 `uLocalMemberIdx` slots, syncs the mirror, and reports star + orbit-
 path spheres. Both `update`s run in the scene-layer registry — the

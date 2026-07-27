@@ -76,12 +76,12 @@ import type { ProbeTrajectory } from './solar-system/probes/probe-trajectory';
 import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
-import { StarLocalMirror } from './star-pipeline/star-local-mirror';
-import { StarLocalCluster } from './star-pipeline/star-local-cluster';
+import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
+import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
 import {
   PHYS_RATIO_THRESHOLD,
   RESOLVED_DISC_MIN_PX,
-} from './star-pipeline/star-local-cluster-pure';
+} from './star-pipeline/local-pass/star-local-cluster-pure';
 import {
   Heliopause,
   HELIOPAUSE_LABEL,

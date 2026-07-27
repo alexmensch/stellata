@@ -8,7 +8,7 @@ import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeColorLutTexture } from '../blackbody-lut';
 import type { PerceptualDiscUniforms } from '../perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from '../star-local-mirror';
+import { MIRROR_CAPACITY } from '../local-pass/star-local-mirror';
 
 export interface StarSharedUniformsOptions {
   pixelRatio: number;

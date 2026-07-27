@@ -366,7 +366,7 @@ system draws, never every catalog pair.
   fallback, so the ellipse *orientation* is not physical — size and
   timing are.
 - **Renders in the local depth pass.** The layer's group lives in the
-  star cluster's pass group (`../star-pipeline/star-local-cluster.ts`),
+  star cluster's pass group (`../star-pipeline/local-pass/star-local-cluster.ts`),
   drawn after the member-star disc mirror so the bracket z-buffer hides
   far-side arcs behind a resolved disc and passes near-side arcs over
   it. The line material strips the log-depth chunks

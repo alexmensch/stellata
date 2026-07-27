@@ -3,7 +3,7 @@
 // See src/client/local-depth/README.md § Full membership.
 
 import * as THREE from 'three';
-import { applyDiscBlendDefaults, applyGlowBlendDefaults } from './star-pipeline';
+import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
 
 export const MIRROR_CAPACITY = 8;
 
