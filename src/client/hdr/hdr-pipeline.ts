@@ -11,6 +11,15 @@ import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 
+/** Ship gate for the HDR epic. The seam is inert until the emitting
+ *  layers actually carry physical luminance (H3 stars, H4 Milky Way,
+ *  H5 planets) — with them still on their old encodings, turning it on
+ *  changes brightness for no gain. Flip to true in the bead that lands
+ *  the last conversion; `hdr-pipeline.test.ts` pins the current value so
+ *  the flip has to be deliberate. `stellata.setHdrEnabled(true)` turns
+ *  it on at runtime for development in the meantime. */
+export const HDR_DEFAULT_ENABLED = false;
+
 export class HdrPipeline {
   /** False when no float-renderable colour buffer exists. The instance
    *  is inert and every layer renders straight to the canvas —
@@ -24,7 +33,7 @@ export class HdrPipeline {
   private rt: THREE.WebGLRenderTarget | null = null;
   private material: THREE.RawShaderMaterial | null = null;
   private geometry: THREE.BufferGeometry | null = null;
-  private forceDisabled = false;
+  private enabled = HDR_DEFAULT_ENABLED;
   private tonemapOn = true;
   private chart = false;
 
@@ -36,10 +45,18 @@ export class HdrPipeline {
       gl.getExtension('EXT_color_buffer_half_float') !== null;
     // Before any layer is constructed, so chrome registers its colours
     // against the right mode on a context that can't take the target.
-    setChromeOperatorActive(this.supported);
-    if (!this.supported) return;
+    this.syncChrome();
+  }
 
-    renderer.getDrawingBufferSize(this.size);
+  /** The target is a full drawing-buffer RGBA16F plus a 24-bit depth
+   *  attachment — a couple of hundred MB of VRAM at 2x DPR on a large
+   *  display. Allocate it on first use so a build shipping with
+   *  HDR_DEFAULT_ENABLED false costs nothing. */
+  private ensureResources(): boolean {
+    if (this.rt !== null) return true;
+    if (!this.supported) return false;
+
+    this.renderer.getDrawingBufferSize(this.size);
     this.rt = new THREE.WebGLRenderTarget(this.size.x, this.size.y, {
       type: THREE.HalfFloatType,
       format: THREE.RGBAFormat,
@@ -58,7 +75,7 @@ export class HdrPipeline {
         uHdrTexture: { value: this.rt.texture },
         uWhitePoint: { value: tonemapWhitePoint() },
         uHighlightDesat: { value: HIGHLIGHT_DESAT },
-        uTonemapEnabled: { value: 1 },
+        uTonemapEnabled: { value: this.tonemapOn ? 1 : 0 },
       },
       vertexShader: fullscreenVert,
       fragmentShader: tonemapFrag,
@@ -69,18 +86,20 @@ export class HdrPipeline {
     const mesh = new THREE.Mesh(this.geometry, this.material);
     mesh.frustumCulled = false;
     this.scene.add(mesh);
+    return true;
   }
 
   /** Bind the surface the scene draws into. Call immediately before the
    *  main render; the local depth pass inherits the binding, which is
    *  what puts its repaint into the same target. */
   bind(): void {
-    this.renderer.setRenderTarget(this.active() ? this.rt : null);
+    const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
+    this.renderer.setRenderTarget(target);
   }
 
   /** Tone-map the target onto the canvas. Must pair with every `bind()`. */
   resolve(): void {
-    if (!this.active()) return;
+    if (!this.wantsTarget() || this.rt === null) return;
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
   }
@@ -100,7 +119,7 @@ export class HdrPipeline {
   }
 
   setEnabled(on: boolean): void {
-    this.forceDisabled = !on;
+    this.enabled = on;
     this.syncChrome();
   }
 
@@ -108,20 +127,24 @@ export class HdrPipeline {
    *  A/B that isolates a plumbing regression from a calibration one. */
   setTonemapEnabled(on: boolean): void {
     this.tonemapOn = on;
+    // May run before the target exists (HDR off at boot); ensureResources
+    // seeds the uniform from this field, so it is the single source.
     if (this.material !== null) {
       this.material.uniforms.uTonemapEnabled.value = on ? 1 : 0;
     }
     this.syncChrome();
   }
 
-  private active(): boolean {
-    return this.rt !== null && !this.forceDisabled && !this.chart;
+  /** Whether the scene should render into the target this frame. Does not
+   *  imply the target exists yet — `bind()` allocates on demand. */
+  private wantsTarget(): boolean {
+    return this.supported && this.enabled && !this.chart;
   }
 
   /** Chrome's inverse mapping is only correct while the operator it
    *  inverts is running. */
   private syncChrome(): void {
-    setChromeOperatorActive(this.supported && !this.forceDisabled && this.tonemapOn);
+    setChromeOperatorActive(this.supported && this.enabled && this.tonemapOn);
   }
 
   dispose(): void {
@@ -132,7 +155,7 @@ export class HdrPipeline {
     this.rt = null;
     this.material = null;
     this.geometry = null;
-    this.forceDisabled = false;
+    this.enabled = HDR_DEFAULT_ENABLED;
     this.tonemapOn = true;
     this.chart = false;
     clearChromeBindings();

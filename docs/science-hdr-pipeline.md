@@ -313,12 +313,20 @@ day one — the fullscreen pass and the inline path can never drift.
   (there is no `colorspace_fragment` include anywhere; the star pass is
   `RawShaderMaterial` and the blackbody LUT loads `NoColorSpace`), so
   today's authored values are already display-encoded and the pass's
-  encode re-encodes them. The two effects are large and opposed. So H2
-  ships the operator live, the scene comes out uniformly mis-calibrated
-  until H3–H5 convert the emitters, and the *plumbing* is verified
-  separately by `stellata.setTonemapEnabled(false)` — a pass-through
-  resolve that should match a pre-HDR build. Acceptance is that
-  pass-through diff, not the operator-on frame.
+  encode re-encodes them. The two effects are large and opposed.
+- **So the seam ships dormant.** `HDR_DEFAULT_ENABLED` (in
+  `src/client/hdr/hdr-pipeline.ts`) is false: the default path stays the
+  pre-HDR one, and turning the seam on is a dev switch
+  (`stellata.setHdrEnabled(true)`) until H3–H5 have converted the
+  emitters. Enabling it earlier would only trade a correct-looking scene
+  for a mis-calibrated one. The render target allocates lazily so a
+  dormant seam costs no VRAM. Flip the constant in the bead that lands
+  the last conversion.
+  **Consequence for H3 onward:** with the seam off, an emitter's physical
+  luminance would reach the canvas with no operator, so the inline
+  `stellata_tonemap` fallback (§ 6) stops being an exotic-hardware
+  concern and becomes a requirement of the *default* path. Every bead
+  from H3 keeps both paths working.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
   `Ω_px` / `arcsecPerPx` land with their first consumer — stars (H3),
   the Milky Way (H4), the exposure wiring (H6) — rather than in the

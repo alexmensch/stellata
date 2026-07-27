@@ -37,3 +37,21 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants
 belong here.
+
+## Suite-wide timeouts
+
+`vitest.config.ts` pins `testTimeout` / `hookTimeout` to **30 s**, not
+vitest's 5 s default. The artifact-backed corpus suites
+(`multi-star-regression`, `known-stars`, `sky-position`) each sweep the
+full 313k-record catalog and its derived buffers, so their tests are
+seconds long even solo — and their wall time scales with machine load:
+under a full-suite run the slowest sit at 2.5–3.5 s locally, and CI's
+corpus job runs three of those files concurrently on a 2-core runner.
+At the 5 s default they went intermittently red on unrelated PRs, which
+trains readers to re-run rather than read failures.
+
+The timeout is a hang detector, not a perf gate — `slowTestThreshold`
+is what surfaces slowness. Raise a test's own `{ timeout }` for a
+deliberate outlier (`local-group-emission-calibration.test.ts` renders
+every viewpoint × object and takes ~9 s) rather than lifting the
+global.

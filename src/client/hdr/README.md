@@ -16,9 +16,12 @@ switches.
 
 ```
 src/client/hdr/
-  hdr-pipeline.ts            HdrPipeline — target lifecycle, bind/resolve,
-                             chart bypass, float-support detection, the
-                             stellata_tonemap ShaderChunk registration.
+  hdr-pipeline.ts            HdrPipeline — target lifecycle (lazy alloc),
+    (+ test)                 bind/resolve, chart bypass, float-support
+                             detection, the stellata_tonemap ShaderChunk
+                             registration, and HDR_DEFAULT_ENABLED. The
+                             class needs a live GL context, so the test
+                             pins only the ship gate (§ Ship gate).
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and (from H3) inline by
                              each emitting shader on the fallback path.
@@ -206,13 +209,36 @@ same-chunk-two-paths strategy (`../star-pipeline/extinction/README.md`
 The fallback is why the operator lives in the chunk from day one rather
 than inside the fullscreen shader.
 
+## Ship gate — the seam is off by default
+
+`HDR_DEFAULT_ENABLED` is **false**. Every emitting layer still writes its
+old display-encoded values, so turning the seam on today changes
+brightness (bright stars dimmer, the Milky Way band brighter) for no
+gain — the payoff arrives only once H3–H5 convert the emitters. So the
+shipped default path is the pre-HDR one and the seam rides along dormant.
+
+- Flip the constant in the bead that lands the last conversion.
+  `hdr-pipeline.test.ts` pins the current value, so enabling it is a
+  deliberate two-line change.
+- `stellata.setHdrEnabled(true)` turns it on at runtime for development.
+- **The target allocates lazily**, on first `bind()` that wants it — a
+  full drawing-buffer RGBA16F plus its 24-bit depth attachment is a
+  couple of hundred MB of VRAM at 2× DPR on a large display, and a
+  dormant seam must not cost that. Don't move the allocation back into
+  the constructor.
+- Each intervening bead has to keep **both** paths working. Note the
+  consequence for H3 onward: with the seam off, physical luminance would
+  reach the canvas with no operator at all, so the inline
+  `stellata_tonemap` fallback (§ Fallback) stops being an
+  exotic-hardware concern and becomes the default path's requirement.
+
 ## Dev switches
 
-- `stellata.setHdrEnabled(false)` — parks on the fallback path entirely
-  (no target, no tone-map, chrome back to authored colours), mirroring
-  `setExtinctionPrepassEnabled`. **This is the full A/B**: it should match
-  a pre-HDR build, and it exercises the same path as hardware without a
-  float-renderable target.
+- `stellata.setHdrEnabled(true/false)` — the seam itself. False (the
+  shipped default, § Ship gate) is the pre-HDR path entirely: no target,
+  no tone-map, chrome back to authored colours. It is also the path
+  hardware without a float-renderable target takes. **This is the full
+  A/B**, and while the ship gate stays false it is what users get.
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through. Narrower: it isolates the target
   itself (depth, alpha, blend precision, pass order) from the operator.
@@ -254,9 +280,8 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 ## What this bead does not do
 
-Layers still emit their current display-encoded values, so the scene is
-uniformly mis-calibrated until H3–H5 convert them (bright stars come out
-dimmer, the faint Milky Way brighter). The exposure uniform, `LUMA_CEIL`,
+Layers still emit their current display-encoded values, which is why the
+seam ships dormant (§ Ship gate). The exposure uniform, `LUMA_CEIL`,
 and the `Ω_px` / `arcsecPerPx` pixel-solid-angle uniforms are **not**
 introduced here — nothing consumes them until stars (H3), the Milky Way
 (H4), and the exposure wiring (H6), and an unconsumed uniform plus its
