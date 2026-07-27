@@ -2,7 +2,7 @@
 // math and brightness → disc-radius mapping the star and planet vertex
 // shaders use. Shader is the source of truth; this mirror is test-pinned.
 
-import { AU_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
 // Magnitudes below the slider cutoff a body still renders: the vertex
 // shaders fade the disc out over this soft taper rather than hard-cutting
@@ -92,38 +92,53 @@ export function perceptualAppSizePx(
  * Distances and the reflectance product floor at 1e-30 to match the
  * shader's defensive clamps at the singular zero-distance point.
  */
-/** Display-compression exponent on the host-irradiance ratio: raw
- *  1/d² spans ~4 decades Mercury→Pluto, unrenderable in LDR; the
- *  quarter power maps it to ~[0.16, 1.6]. */
-export const HOST_IRRADIANCE_DISPLAY_EXPONENT = 0.25;
-export const HOST_INTENSITY_MIN = 0.12;
-export const HOST_INTENSITY_MAX = 1.6;
-
-/** Apparent magnitude of the reference source (a solar-luminosity host)
- *  at the reference distance (1 AU) — the irradiance anchor for
- *  `hostIntensityScale`. `E_body / E_ref = 10^(0.4·(this − m_host@body))`
- *  so a body 1 AU from Sol reads a ratio of exactly 1. */
-export const HOST_IRRADIANCE_REF_MAG = SUN_ABSMAG_V + 5 * (Math.log10(AU_PC) - 1);
+/**
+ * V-band apparent magnitude of the host **as seen from the body** — the
+ * irradiance the host delivers there, on the magnitude scale.
+ * `M_host + 5·(log10(d_hp) − 1)`. Folding the host's absolute magnitude is
+ * what makes an O-class host light its bodies far brighter than Sol does at
+ * the same distance.
+ *
+ * Deliberately independent of viewer distance: fixed for a given orbital
+ * position, so nothing derived from it can blow out as the camera
+ * approaches — the failure mode that rules out any viewer-distance term in
+ * surface brightness.
+ */
+export function hostIrradianceMagnitude(hostAbsmag: number, dHpPc: number): number {
+  return hostAbsmag + 5 * (Math.log10(Math.max(dHpPc, 1e-30)) - 1);
+}
 
 /**
- * Mesh-regime lighting intensity from the host's irradiance at the body:
- * `(E_body / E_ref)^HOST_IRRADIANCE_DISPLAY_EXPONENT`, clamped to
- * [HOST_INTENSITY_MIN, HOST_INTENSITY_MAX]. `E_body` is the host flux at
- * the body, folding the host's absolute magnitude — so an O-class host
- * lights its bodies far brighter than Sol does at the same distance. The
- * ratio is `10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` with
- * `m_host@body = M_host + 5·(log10(d_hp) − 1)`; for Sol it reduces exactly
- * to the old `(d_AU)^(−0.5)` law. Deliberately independent of viewer
- * distance: fixed for a given orbital position, so it cannot blow out as
- * the camera approaches — the failure mode that rules out any
- * viewer-distance term in mesh brightness.
+ * Mean surface brightness of a body's lit disc at full phase, in
+ * mag/arcsec² — what the mesh emits through the scene-wide unit
+ * (`../hdr/README.md` § Unit).
+ *
+ * Both the body's radius and the viewer distance cancel out of
+ * `m_disc + 2.5·log10(Ω_disc)`, leaving host irradiance and geometric
+ * albedo: surface brightness is distance-invariant, so a body does not
+ * brighten per-pixel as the camera closes in.
+ *
+ * ```
+ * S₀ = m_host@body + 2.5·log10( π / (ARCSEC_TO_RAD² · p) )
+ * ```
+ *
+ * Full-Moon check (`m_host@body` = −26.74, p = 0.12): +3.4 mag/arcsec²,
+ * the measured value — vitest-pinned alongside the −12.7 flux anchor.
+ *
+ * `phaseFactor` is deliberately absent: the mesh's own Lambert terminator
+ * redistributes light across the disc and integrates to φ(α) on its own,
+ * so folding φ here would count the phase twice.
  */
-export function hostIntensityScale(hostAbsmag: number, dHpPc: number): number {
-  const dPc = Math.max(dHpPc, 1e-30);
-  const mHostAtBody = hostAbsmag + 5 * (Math.log10(dPc) - 1);
-  const irradianceRatio = 10 ** (0.4 * (HOST_IRRADIANCE_REF_MAG - mHostAtBody));
-  const scale = irradianceRatio ** HOST_IRRADIANCE_DISPLAY_EXPONENT;
-  return Math.min(HOST_INTENSITY_MAX, Math.max(HOST_INTENSITY_MIN, scale));
+export function bodySurfaceBrightnessMagArcsec2(
+  hostAbsmag: number,
+  dHpPc: number,
+  albedo: number,
+): number {
+  const p = Math.max(albedo, 1e-30);
+  return (
+    hostIrradianceMagnitude(hostAbsmag, dHpPc) +
+    2.5 * Math.log10(Math.PI / (ARCSEC_TO_RAD * ARCSEC_TO_RAD * p))
+  );
 }
 
 export function planetApparentMagnitude(
