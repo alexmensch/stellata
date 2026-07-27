@@ -92,6 +92,8 @@
   "companionRepositionedCollocatedDouble": 1,
   "companionConstellationInherited": 11429,
   "componentLettersStamped": 148,
+  "componentNameCollisionsResolved": 1,
+  "componentNameCollisionsUnresolved": 0,
   "gaiaAstrometryEntries": 315050,
   "hip2Entries": 117955,
   "nssSourceIdEntries": 437275,
