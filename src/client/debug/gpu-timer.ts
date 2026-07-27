@@ -1,6 +1,11 @@
 // Real GPU-side timing via EXT_disjoint_timer_query_webgl2.
 // See src/client/debug/README.md § GPU timing.
 
+/** The scope that brackets a frame's entire GL cost. Summing the other
+ *  scopes cannot substitute for it: they sample on different frames, so
+ *  their sum is not a frame total and can exceed the frame period. */
+export const GPU_WHOLE_FRAME_SCOPE = 'frame';
+
 /** Minimal shape of the extension this module uses. */
 interface DisjointTimerExt {
   TIME_ELAPSED_EXT: number;
