@@ -9,7 +9,6 @@ import { PoiStore } from '../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import { ReferenceUpController } from './reference-up';
-import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
@@ -633,14 +632,26 @@ describe('InputController.rollCamera', () => {
 });
 
 describe('InputController Shift-drag roll', () => {
+  const CENTRE_X = 400;
+  const CENTRE_Y = 300;
+  const RADIUS = 200;
+
   const pointer = (over: Partial<PointerEvent> = {}) => ({
-    button: 0, pointerId: 1, shiftKey: false, clientX: 0, clientY: 0, ...over,
+    button: 0, pointerId: 1, shiftKey: false, clientX: CENTRE_X + RADIUS, clientY: CENTRE_Y, ...over,
   } as PointerEvent);
 
+  /** Pointer at `bearing` rad around screen centre. A move from b0 to b1
+   *  requests a roll of −(b1 − b0) (finger CW on screen → world CW). */
+  const at = (bearing: number, over: Partial<PointerEvent> = {}) => pointer({
+    clientX: CENTRE_X + RADIUS * Math.cos(bearing),
+    clientY: CENTRE_Y + RADIUS * Math.sin(bearing),
+    ...over,
+  });
+
   function handlers(canvas: ReturnType<typeof makeHarness>['canvas']) {
-    const byType = new Map<string, (e: PointerEvent) => void>();
+    const byType = new Map<string, (e: Event) => void>();
     for (const [type, fn] of canvas.addEventListener.mock.calls) {
-      byType.set(type as string, fn as (e: PointerEvent) => void);
+      byType.set(type as string, fn as (e: Event) => void);
     }
     return byType;
   }
@@ -649,10 +660,10 @@ describe('InputController Shift-drag roll', () => {
     const { canvas, controls } = makeHarness();
     const h = handlers(canvas);
 
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
+    h.get('pointerdown')!(pointer({ shiftKey: true }) as unknown as Event);
     expect(controls.noRotate).toBe(true);
 
-    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+    h.get('pointerup')!(pointer() as unknown as Event);
     expect(controls.noRotate).toBe(false);
   });
 
@@ -662,10 +673,10 @@ describe('InputController Shift-drag roll', () => {
     referenceUp.correct(camera);
     const upBefore = camera.up.clone();
 
-    // Quarter-turn of pointer bearing about screen centre (400, 300).
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 600, clientY: 300 }));
-    h.get('pointermove')!(pointer({ clientX: 400, clientY: 500 }));
-    h.get('pointerup')!(pointer({ clientX: 400, clientY: 500 }));
+    // Quarter turn of bearing, well outside the snap band.
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
+    h.get('pointermove')!(at(Math.PI / 2) as unknown as Event);
+    h.get('pointerup')!(at(Math.PI / 2) as unknown as Event);
 
     expect(camera.up.angleTo(upBefore)).toBeCloseTo(Math.PI / 2, 6);
     expect(deps.flyTo).not.toHaveBeenCalled();
@@ -678,58 +689,175 @@ describe('InputController Shift-drag roll', () => {
     referenceUp.correct(camera);
     const upBefore = camera.up.clone();
 
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 405, clientY: 300 }));
-    h.get('pointermove')!(pointer({ clientX: 400, clientY: 305 }));
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: CENTRE_X + 5, clientY: CENTRE_Y }) as unknown as Event);
+    h.get('pointermove')!(pointer({ clientX: CENTRE_X, clientY: CENTRE_Y + 5 }) as unknown as Event);
 
     expect(camera.up.angleTo(upBefore)).toBeCloseTo(0, 9);
   });
 
-  it('snaps exactly to galactic level when the release lands within the threshold', () => {
+  // The alignment guide has to be felt DURING the drag — that's the whole
+  // affordance. Sticking at level, holding through small further motion, then
+  // breaking out is the Keynote/PowerPoint behaviour.
+  it('sticks to galactic level mid-drag, holds, then releases past the band', () => {
     const { canvas, camera, referenceUp } = makeHarness();
     const h = handlers(canvas);
     referenceUp.correct(camera);
-    const level = camera.up.clone();
+    // 0.05 rad off level — outside the 1° (0.0175 rad) band.
+    referenceUp.roll(camera, 0.05);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(-0.05, 9);
 
-    // Roll a hair off level, then release: the snap re-anchors the
-    // reference on galactic north rather than leaving the residual.
-    referenceUp.roll(camera, SNAP_TO_LEVEL_RAD * 0.5);
-    expect(camera.up.angleTo(level)).toBeGreaterThan(0);
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
 
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
-    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+    // A move requesting exactly the residual roll lands on the guide.
+    h.get('pointermove')!(at(0.05) as unknown as Event);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
 
-    expect(camera.up.angleTo(level)).toBeCloseTo(0, 9);
+    // Further motion inside the band is absorbed — the view stays level.
+    h.get('pointermove')!(at(0.06) as unknown as Event);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+
+    // Past the band the gesture resumes where the pointer actually is.
+    h.get('pointermove')!(at(0.08) as unknown as Event);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0.03, 6);
+  });
+
+  it('re-anchors the reference on north exactly when a snapped gesture ends', () => {
+    const { canvas, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+
+    // An axis that renders level from THIS view direction but isn't north —
+    // anything in the forward/north plane does. Reachable in practice by
+    // rolling from one viewpoint and orbiting to another, or by adopting a
+    // roll out of observe mode.
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const leaning = GALACTIC_NORTH_POLE_ICRS.clone().addScaledVector(forward, 0.4).normalize();
+    referenceUp.set(leaning.x, leaning.y, leaning.z);
+    referenceUp.correct(camera);
+    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+    expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeGreaterThan(0.1);
+
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
+    h.get('pointermove')!(at(0.005) as unknown as Event);
+    h.get('pointerup')!(at(0.005) as unknown as Event);
+
     expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
   });
 
-  it('snaps the rendered roll in observe, where the quaternion carries it', () => {
-    const { canvas, camera, referenceUp, state } = makeHarness();
-    state.cameraMode = 'observe';
-    const h = handlers(canvas);
-    // Land exactly level first, then tilt a hair off it.
-    referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera));
-    const qLevel = camera.quaternion.clone();
-    referenceUp.rollQuaternion(camera, SNAP_TO_LEVEL_RAD * 0.5);
-    expect(camera.quaternion.angleTo(qLevel)).toBeGreaterThan(0);
-
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
-    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
-
-    expect(camera.quaternion.angleTo(qLevel)).toBeCloseTo(0, 8);
-  });
-
-  it('leaves a deliberate tilt alone when the release is outside the threshold', () => {
+  it('leaves a deliberate tilt alone when no move reaches the band', () => {
     const { canvas, camera, referenceUp } = makeHarness();
     const h = handlers(canvas);
     referenceUp.correct(camera);
     const level = camera.up.clone();
-
     referenceUp.roll(camera, 0.3);
 
-    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
-    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
+    h.get('pointerup')!(at(0) as unknown as Event);
 
     expect(camera.up.angleTo(level)).toBeCloseTo(0.3, 6);
+  });
+
+  it('sticks the rendered roll in observe, where the quaternion carries it', () => {
+    const { canvas, camera, referenceUp, state } = makeHarness();
+    state.cameraMode = 'observe';
+    const h = handlers(canvas);
+    // Land exactly level first, then tilt off it by more than the band.
+    referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera));
+    const qLevel = camera.quaternion.clone();
+    referenceUp.rollQuaternion(camera, 0.05);
+    expect(camera.quaternion.angleTo(qLevel)).toBeGreaterThan(0.01);
+
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
+    h.get('pointermove')!(at(0.05) as unknown as Event);
+
+    expect(camera.quaternion.angleTo(qLevel)).toBeCloseTo(0, 7);
+  });
+});
+
+describe('InputController Shift as a live modifier', () => {
+  const pointer = (over: Partial<PointerEvent> = {}) => ({
+    button: 0, pointerId: 1, shiftKey: false, clientX: 600, clientY: 300, ...over,
+  } as PointerEvent);
+
+  function handlers(canvas: ReturnType<typeof makeHarness>['canvas']) {
+    const byType = new Map<string, (e: Event) => void>();
+    for (const [type, fn] of canvas.addEventListener.mock.calls) {
+      byType.set(type as string, fn as (e: Event) => void);
+    }
+    return byType;
+  }
+
+  function shift(type: 'keydown' | 'keyup', code = 'ShiftLeft') {
+    const e = new Event(type, { bubbles: true });
+    Object.assign(e, { key: 'Shift', code });
+    window.dispatchEvent(e);
+  }
+
+  it.each(['ShiftLeft', 'ShiftRight'])('starts rolling mid-drag when %s goes down', (code) => {
+    const { canvas, controls, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    const upBefore = camera.up.clone();
+
+    // Plain drag first: orbit is TrackballControls', and no roll happens.
+    h.get('pointerdown')!(pointer() as unknown as Event);
+    h.get('pointermove')!(pointer({ clientX: 400, clientY: 500 }) as unknown as Event);
+    expect(controls.noRotate).toBe(false);
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(0, 9);
+
+    shift('keydown', code);
+    expect(controls.noRotate).toBe(true);
+
+    // Bearing from (400,500) back to (600,300): a quarter turn.
+    h.get('pointermove')!(pointer({ clientX: 600, clientY: 300 }) as unknown as Event);
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it.each(['ShiftLeft', 'ShiftRight'])('stops rolling the moment %s is released mid-drag', (code) => {
+    const { canvas, controls, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true }) as unknown as Event);
+    expect(controls.noRotate).toBe(true);
+
+    shift('keyup', code);
+    expect(controls.noRotate).toBe(false);
+
+    // Still dragging, but the pointer stream belongs to orbit again.
+    const upBefore = camera.up.clone();
+    h.get('pointermove')!(pointer({ clientX: 400, clientY: 500 }) as unknown as Event);
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(0, 9);
+  });
+
+  it('re-arms on a second Shift press within the same drag', () => {
+    const { canvas, controls } = makeHarness();
+    const h = handlers(canvas);
+
+    h.get('pointerdown')!(pointer() as unknown as Event);
+    shift('keydown');
+    shift('keyup');
+    expect(controls.noRotate).toBe(false);
+    shift('keydown');
+    expect(controls.noRotate).toBe(true);
+  });
+
+  it('does not claim the drag when Shift is pressed with no pointer down', () => {
+    const { canvas, controls } = makeHarness();
+    handlers(canvas);
+    shift('keydown');
+    expect(controls.noRotate).toBe(false);
+  });
+
+  it('releases the roll on window blur, so a missed keyup cannot latch it', () => {
+    const { canvas, controls } = makeHarness();
+    const h = handlers(canvas);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true }) as unknown as Event);
+    expect(controls.noRotate).toBe(true);
+
+    window.dispatchEvent(new Event('blur'));
+    expect(controls.noRotate).toBe(false);
   });
 });
 

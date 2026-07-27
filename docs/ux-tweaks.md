@@ -13,9 +13,9 @@ for the surrounding context.
   `stellata.ts` constructor.
 - **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
 - **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
-  `camera/controls/reference-up-pure.ts`; snap threshold is
-  `SNAP_TO_LEVEL_DEG` beside it, roll dead-zone is `ROLL_DEADZONE_PX` in
-  `input-controller.ts`.
+  `camera/controls/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it is
+  the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
+  is `ROLL_DEADZONE_PX` in `input-controller.ts`.
 - **Chevron density** — `CHEVRON_SPACING_PX` / `_HALF_WIDTH` / `_DEPTH` in
   `distance-vector-overlay.ts`.
 - **Focus ring size** — `RADIUS_PX` in `focus-ring-overlay.ts`.

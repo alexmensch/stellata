@@ -54,6 +54,16 @@ export class InputController {
   // dead-zone at screen centre, where the atan2 bearing is unstable — the
   // next sample outside it re-seeds instead of rolling by a jump.
   private rollDrag: { pointerId: number; angle: number | null } | null = null;
+  // Live pointer, tracked independently of the click FSM's `pointerDownAt`
+  // so a Shift press mid-drag can start a roll from the current position.
+  private activePointer: { id: number; x: number; y: number } | null = null;
+  private shiftHeld = false;
+  // Alignment-guide state: while `rollSnapped`, the view is held exactly at
+  // galactic level and `rollSnapExcursion` accumulates the roll the pointer
+  // asked for. The gesture leaves the guide when that virtual roll passes
+  // the band — tracking it separately is what stops the boundary chattering.
+  private rollSnapped = false;
+  private rollSnapExcursion = 0;
 
   // Canvas clicks in BOTH modes are held for DBL_CLICK_MS so single
   // (per-mode click semantics) and double (aim-at in observe, travel in
@@ -92,6 +102,16 @@ export class InputController {
     canvas.addEventListener('touchcancel', this.onTouchEnd);
     canvas.addEventListener('gesturestart', this.onGestureStart as EventListener);
     canvas.addEventListener('gesturechange', this.onGestureChange as EventListener);
+    canvas.addEventListener('gestureend', this.onGestureEnd as EventListener);
+    // Shift toggles roll mid-drag in both directions, so the modifier is
+    // watched on its own rather than sampled at pointerdown. Capture phase
+    // for the same reason the retired pan binding used it: TrackballControls
+    // reads key state in a bubble-phase handler.
+    window.addEventListener('keydown', this.onKeyDown, { capture: true });
+    window.addEventListener('keyup', this.onKeyUp, { capture: true });
+    // A Shift release that never reaches us (Cmd-Tab, app switcher) would
+    // otherwise leave the roll latched and orbit dead — the sticky state.
+    window.addEventListener('blur', this.onWindowBlur);
   }
 
   dispose(): void {
@@ -106,19 +126,23 @@ export class InputController {
     canvas.removeEventListener('touchcancel', this.onTouchEnd);
     canvas.removeEventListener('gesturestart', this.onGestureStart as EventListener);
     canvas.removeEventListener('gesturechange', this.onGestureChange as EventListener);
+    canvas.removeEventListener('gestureend', this.onGestureEnd as EventListener);
+    window.removeEventListener('keydown', this.onKeyDown, { capture: true });
+    window.removeEventListener('keyup', this.onKeyUp, { capture: true });
+    window.removeEventListener('blur', this.onWindowBlur);
     this.clickDispatcher.dispose();
-    this.endRollDrag();
+    this.endRoll();
   }
 
   private onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
-    // Shift decides the gesture at press time and holds for its duration:
-    // TrackballControls seeds its drag deltas on pointerdown and only
-    // advances them inside the rotate step this suppresses, so handing the
-    // drag back mid-gesture would resume orbit against a stale delta.
-    if (e.shiftKey) {
-      this.deps.controls.noRotate = true;
-      this.rollDrag = { pointerId: e.pointerId, angle: this.screenBearing(e) };
+    this.activePointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    // `shiftHeld` covers a Shift already down before this canvas saw a
+    // keydown (window focused mid-press); `e.shiftKey` is the same state
+    // read off the pointer event, and covers either physical Shift.
+    if (e.shiftKey || this.shiftHeld) {
+      this.shiftHeld = true;
+      this.beginRoll();
       return;
     }
     this.pointerDownAt = { x: e.clientX, y: e.clientY, t: performance.now() };
@@ -126,14 +150,15 @@ export class InputController {
 
   private onPointerCancel = () => {
     this.pointerDownAt = null;
-    this.endRollDrag();
+    this.activePointer = null;
+    this.endRoll();
   };
 
   private onPointerUp = (e: PointerEvent) => {
     if (e.button !== 0) return;
+    this.activePointer = null;
     if (this.rollDrag !== null) {
-      this.endRollDrag();
-      this.snapRollToLevel();
+      this.endRoll();
       return;
     }
     const down = this.pointerDownAt;
@@ -338,6 +363,7 @@ export class InputController {
   private onTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
       this.twoFingerAngle = this.touchAngle(e.touches);
+      this.clearRollSnap();
     } else {
       this.twoFingerAngle = null;
     }
@@ -350,11 +376,14 @@ export class InputController {
     if (d > Math.PI) d -= 2 * Math.PI;
     else if (d < -Math.PI) d += 2 * Math.PI;
     this.twoFingerAngle = a;
-    this.rollCamera(-d);
+    this.applyRollDelta(-d);
   };
 
   private onTouchEnd = (e: TouchEvent) => {
-    if (e.touches.length !== 2) this.twoFingerAngle = null;
+    if (e.touches.length !== 2 && this.twoFingerAngle !== null) {
+      this.twoFingerAngle = null;
+      this.settleRollSnap();
+    }
   };
 
   private touchAngle(t: TouchList): number {
@@ -367,6 +396,7 @@ export class InputController {
   private onGestureStart = (e: Event) => {
     e.preventDefault();
     this.gestureLastRotation = 0;
+    this.clearRollSnap();
   };
 
   private onGestureChange = (e: Event) => {
@@ -374,13 +404,22 @@ export class InputController {
     const rot = (e as Event & { rotation: number }).rotation;
     const delta = ((rot - this.gestureLastRotation) * Math.PI) / 180;
     this.gestureLastRotation = rot;
-    this.rollCamera(-delta);
+    this.applyRollDelta(-delta);
+  };
+
+  private onGestureEnd = (e: Event) => {
+    e.preventDefault();
+    this.settleRollSnap();
   };
 
   private onPointerMove = (e: PointerEvent) => {
+    if (this.activePointer?.id === e.pointerId) {
+      this.activePointer.x = e.clientX;
+      this.activePointer.y = e.clientY;
+    }
     const drag = this.rollDrag;
     if (drag === null || drag.pointerId !== e.pointerId) return;
-    const bearing = this.screenBearing(e);
+    const bearing = this.screenBearing(e.clientX, e.clientY);
     if (bearing === null) {
       drag.angle = null;
       return;
@@ -389,39 +428,111 @@ export class InputController {
       let d = bearing - drag.angle;
       if (d > Math.PI) d -= 2 * Math.PI;
       else if (d < -Math.PI) d += 2 * Math.PI;
-      this.rollCamera(-d);
+      this.applyRollDelta(-d);
     }
     drag.angle = bearing;
   };
 
+  private onKeyDown = (e: Event) => {
+    if ((e as KeyboardEvent).key !== 'Shift' || this.shiftHeld) return;
+    this.shiftHeld = true;
+    if (this.activePointer !== null) this.beginRoll();
+  };
+
+  private onKeyUp = (e: Event) => {
+    if ((e as KeyboardEvent).key !== 'Shift') return;
+    this.shiftHeld = false;
+    this.endRoll();
+  };
+
+  private onWindowBlur = () => {
+    this.shiftHeld = false;
+    this.endRoll();
+  };
+
   /** Pointer bearing about screen centre, or null inside the dead-zone. */
-  private screenBearing(e: PointerEvent): number | null {
-    const dx = e.clientX - window.innerWidth / 2;
-    const dy = e.clientY - window.innerHeight / 2;
+  private screenBearing(x: number, y: number): number | null {
+    const dx = x - window.innerWidth / 2;
+    const dy = y - window.innerHeight / 2;
     if (dx * dx + dy * dy < ROLL_DEADZONE_PX * ROLL_DEADZONE_PX) return null;
     return Math.atan2(dy, dx);
   }
 
-  private endRollDrag(): void {
+  /** Claim the live drag for roll. Safe mid-gesture in both directions:
+   *  TrackballControls advances its drag delta inside its own pointermove,
+   *  so the frames `noRotate` skips are discarded rather than accumulated
+   *  and orbit resumes from the next move, not from where Shift went down. */
+  private beginRoll(): void {
+    const pointer = this.activePointer;
+    if (pointer === null || this.rollDrag !== null) return;
+    // A drag that becomes a roll must not also dispatch a click.
+    this.pointerDownAt = null;
+    this.deps.controls.noRotate = true;
+    this.clearRollSnap();
+    this.rollDrag = {
+      pointerId: pointer.id,
+      angle: this.screenBearing(pointer.x, pointer.y),
+    };
+  }
+
+  private endRoll(): void {
     if (this.rollDrag === null) return;
     this.rollDrag = null;
     this.deps.controls.noRotate = false;
+    this.settleRollSnap();
   }
 
-  /** Alignment-guide snap: a release that leaves the view within
-   *  `SNAP_TO_LEVEL_RAD` of galactic level lands exactly level. Evaluated on
-   *  release only — a per-frame test would chatter at the boundary. */
-  private snapRollToLevel(): void {
-    const camera = this.deps.camera;
-    const refUp = this.deps.referenceUp;
-    if (this.deps.getCameraMode() === 'observe') {
-      const err = refUp.renderedRollError(camera);
-      if (Math.abs(err) <= SNAP_TO_LEVEL_RAD) refUp.rollQuaternion(camera, err);
+  private clearRollSnap(): void {
+    this.rollSnapped = false;
+    this.rollSnapExcursion = 0;
+  }
+
+  /** Leaving a roll gesture while held at the guide re-anchors the reference
+   *  on galactic north exactly. Snapping only rolled the axis until it
+   *  *renders* level from here; any axis in the forward/north plane does
+   *  that, and would drift back off level as soon as the orbit moves. */
+  private settleRollSnap(): void {
+    if (!this.rollSnapped) return;
+    this.clearRollSnap();
+    if (this.deps.getCameraMode() !== 'observe') {
+      this.deps.referenceUp.snapReferenceToNorth(this.deps.camera);
+    }
+  }
+
+  /** Apply one gesture step of roll through the alignment guide: the view
+   *  sticks to galactic level while the requested roll stays inside
+   *  `SNAP_TO_LEVEL_RAD` of it, so the user *feels* the level axis mid-drag
+   *  instead of being told about it on release. The stick is tracked against
+   *  a virtual roll that keeps advancing, so the band can't chatter and the
+   *  gesture resumes exactly where the pointer says on the way out. */
+  private applyRollDelta(delta: number): void {
+    if (this.rollSnapped) {
+      this.rollSnapExcursion += delta;
+      if (Math.abs(this.rollSnapExcursion) <= SNAP_TO_LEVEL_RAD) return;
+      const resume = this.rollSnapExcursion;
+      this.clearRollSnap();
+      this.rollCamera(resume);
       return;
     }
-    if (Math.abs(refUp.referenceRollError(camera)) <= SNAP_TO_LEVEL_RAD) {
-      refUp.snapReferenceToNorth(camera);
+    const toLevel = this.levelRollError();
+    const residual = delta - toLevel;
+    if (Math.abs(residual) <= SNAP_TO_LEVEL_RAD) {
+      this.rollCamera(toLevel);
+      this.rollSnapped = true;
+      this.rollSnapExcursion = residual;
+      return;
     }
+    this.rollCamera(delta);
+  }
+
+  /** Roll still needed to reach galactic level. Read off the reference axis
+   *  in navigate (the quaternion trails `camera.up` by a frame there) and off
+   *  the rendered quaternion in observe, which is the authority in that
+   *  mode. See `README.md` § Reference up axis. */
+  private levelRollError(): number {
+    return this.deps.getCameraMode() === 'observe'
+      ? this.deps.referenceUp.renderedRollError(this.deps.camera)
+      : this.deps.referenceUp.referenceRollError(this.deps.camera);
   }
 
   /** Rotate the view around its own axis. NAVIGATE re-tilts the reference up

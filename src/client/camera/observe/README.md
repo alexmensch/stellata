@@ -144,8 +144,11 @@ to.
   per-frame correction derives `camera.up` from it (TrackballControls
   rebuilds the quaternion from `camera.up` on every `update()`). In
   observe-mode it rotates `camera.quaternion` — the rendered roll — and
-  the reference re-adopts from it. Shift+drag fires in both modes;
-  `../controls/README.md` § Roll gestures carries the input paths.
+  the reference re-adopts from it. Shift+drag fires in both modes — armed
+  and disarmed live by the Shift key, mid-drag — and the look-around drag
+  bails out of a shifted pointerdown so the two never process the same
+  gesture. `../controls/README.md` § Roll gestures carries the input paths
+  and the mid-roll snap-to-level guide.
 
 **HUD locators:** Sol and Galactic-Centre arrows are part of the HUD
 (`hud-overlay.ts`, gated by `filter.showHud`). In observe their anchor

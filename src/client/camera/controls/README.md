@@ -280,44 +280,77 @@ tilt persistent through subsequent orbit / dolly.
 - **Shift+drag (desktop, both modes)** — the roll gesture that replaced
   Shift-pan. Roll follows the pointer's *bearing about screen centre*, so
   it reads as twisting the image; `ROLL_DEADZONE_PX` (40 px) suppresses
-  sampling near centre where the bearing is unstable. Shift is sampled at
-  **pointerdown** and holds for the whole gesture: TrackballControls
-  seeds its drag deltas on pointerdown and only advances them inside the
-  rotate step we suppress, so handing a drag back mid-gesture would
-  resume orbit against a stale delta. A roll gesture never sets
-  `pointerDownAt`, so it can't dispatch a click.
+  sampling near centre where the bearing is unstable. A roll gesture
+  clears `pointerDownAt`, so it can't also dispatch a click.
 - **Mobile / touch two-finger twist** — `atan2` angle between two
   touches, delta applied per move. Single-finger drags are ignored
   (TrackballControls handles them through pointer events, a separate
   stream).
-- **Desktop Safari** — the non-standard `gesturestart` / `gesturechange`
-  pair (WebKit only). `event.rotation` is cumulative degrees since
-  gesture start, positive clockwise; we `preventDefault` to suppress
-  Safari's page zoom, and TrackballControls still gets the wheel events
-  for pinch-zoom. Chrome / Firefox expose no rotate gesture — Shift-drag
-  is the roll path there. Do not try to polyfill.
+- **Desktop Safari** — the non-standard `gesturestart` /
+  `gesturechange` / `gestureend` trio (WebKit only). `event.rotation` is
+  cumulative degrees since gesture start, positive clockwise; we
+  `preventDefault` to suppress Safari's page zoom, and TrackballControls
+  still gets the wheel events for pinch-zoom. Chrome / Firefox expose no
+  rotate gesture — Shift-drag is the roll path there. Do not try to
+  polyfill.
+
+### Shift is a live modifier, not a gesture mode
+
+Roll arms the instant either Shift goes down and disarms the instant it
+comes up, **mid-drag, in both directions** — an orbit drag becomes a roll
+and back again without releasing the mouse. `keydown`/`keyup` on
+`window` (capture phase, matching `e.key === 'Shift'` so either physical
+key works) drive it; `InputController` tracks the live pointer separately
+from the click FSM's `pointerDownAt` so a mid-drag arm can seed its
+bearing from the current position.
+
+This is safe only because of how TrackballControls advances its drag
+delta: `onMouseMove` does `_movePrev.copy(_moveCurr)` before storing the
+new position, so the frames `noRotate` skips are **discarded, not
+accumulated**. Orbit resumes from the next move rather than snapping
+through the whole roll excursion. (`rotateCamera` also advances
+`_movePrev`, which is what an earlier read of the library suggested was
+the only place — hence an initial design that sampled Shift once at
+pointerdown and stuck with it for the gesture. That stickiness was
+unnecessary and read as a bug.)
+
+`window`'s `blur` also disarms: a Shift release that never reaches us
+(Cmd-Tab, app switcher) would otherwise latch the roll and leave orbit
+dead — the worst version of sticky.
 
 Sign convention: pointer/finger rotation CW on screen → world rotates CW.
 `rollCamera(-delta)` achieves this because `applyAxisAngle(forward, θ)`
 rotates CCW viewed from behind the forward vector (right-hand rule), and
 rotating the reference CCW in world space makes content appear CW.
 
-### Snap-to-level
+### Snap-to-level — an alignment guide, not a release-time fixup
 
-Releasing a Shift-drag within `SNAP_TO_LEVEL_DEG` (1°) of galactic level
-snaps exactly level — the Keynote alignment-guide affordance. Evaluated
-**on release only**, which is why no hysteresis band is needed: a
-per-frame test is what would chatter at the boundary.
+While rolling, the view **sticks** to galactic level for as long as the
+requested roll stays inside `SNAP_TO_LEVEL_DEG` (1°) of it: the image
+visibly stops rotating at level, then breaks free on the way out. That
+stick *is* the feedback — the same affordance as Keynote / PowerPoint
+alignment guides. A release-only snap gives the user no way to feel where
+level is, which is the point of having it.
+
+`applyRollDelta` implements it against a **virtual roll**: while snapped,
+`rollSnapExcursion` keeps accumulating what the pointer asked for while
+the camera holds still, and the gesture leaves the guide once that
+virtual roll passes the band — resuming exactly where the pointer says,
+not where it entered. Tracking the virtual position separately is what
+makes the band un-chatterable with one threshold instead of two.
 
 The residual is measured differently per mode, and the split is
 load-bearing. NAVIGATE reads `referenceRollError` (reference vs galactic
 north, about the view axis) because there the quaternion trails
 `camera.up` by a frame — `lookAt` hasn't consumed the newest roll yet.
 OBSERVE reads `renderedRollError` (the quaternion's own screen-up),
-because that is what the user sees. The navigate snap then re-anchors the
-reference on north *exactly*, not by rolling back the residual: an axis
-merely rotated until it renders level from here is still off-north, and
-would drift as soon as the orbit moves.
+because that is what the user sees.
+
+Leaving a gesture *while still on the guide* re-anchors the reference on
+north **exactly** (`settleRollSnap` → `snapReferenceToNorth`). Snapping
+only rolled the axis until it *renders* level from the current view
+direction, and every axis in the forward/north plane does that — such an
+axis would drift back off level as soon as the orbit moved.
 
 ## Aim controller (`camera/aim-controller.ts`)
 
