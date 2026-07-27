@@ -1128,9 +1128,21 @@ describe('promoteCompanions', () => {
       expect(stripBlendedSiblingLetter('Alula Australis', 'C', 'Alula')).toBe('Alula Australis');
       expect(stripBlendedSiblingLetter('Acrab B', 'E', 'Sirius')).toBe('Acrab B');
     });
-    it('only fires for a top-level canonical letter', () => {
-      // A sub-letter (Cb) routes through stripDoubledParentToken instead.
-      expect(stripBlendedSiblingLetter('Acrab B', 'Cb', 'Acrab')).toBe('Acrab B');
+    it('strips for a sub-letter too (Acrab Eb)', () => {
+      // The Ea,Eb rows inherit β² Sco's "Acrab B" name cell, and Eb's own
+      // parent token is "E" — so stripDoubledParentToken never matches the
+      // inherited " B" and the name composed as "Acrab B Eb".
+      expect(stripBlendedSiblingLetter('Acrab B', 'Eb', 'Acrab')).toBe('Acrab');
+      expect(stripBlendedSiblingLetter('Acrab B', 'Cb', 'Acrab')).toBe('Acrab');
+    });
+    it('agrees with stripDoubledParentToken where both apply', () => {
+      // Castor's inner pair: the local anchor IS the "Castor C" record, so
+      // either guard has to land on the same base.
+      expect(stripBlendedSiblingLetter('Castor C', 'Cb', 'Castor')).toBe('Castor');
+      expect(stripDoubledParentToken('Castor C', 'Cb')).toBe('Castor');
+    });
+    it('leaves a lower-case-led comp alone', () => {
+      expect(stripBlendedSiblingLetter('Acrab B', 'ab', 'Acrab')).toBe('Acrab B');
     });
     it('is a no-op without a resolved system base', () => {
       expect(stripBlendedSiblingLetter('Acrab B', 'E', null)).toBe('Acrab B');

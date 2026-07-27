@@ -89,6 +89,8 @@ function baseCounts(): BuildCounts {
     companionRepositionedCollocatedDouble: 1,
     companionConstellationInherited: 0,
     componentLettersStamped: 2,
+    componentNameCollisionsResolved: 0,
+    componentNameCollisionsUnresolved: 0,
     gaiaAstrometryEntries: 315000,
     hip2Entries: 117000,
     nssSourceIdEntries: 356000,
