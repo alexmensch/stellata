@@ -37,6 +37,7 @@ class EventTargetShim {
 // objects are sufficient — no need to drag in jsdom.
 function pe(type: string, opts: {
   pointerId?: number; clientX?: number; clientY?: number; button?: number;
+  shiftKey?: boolean;
 } = {}): PointerEvent {
   return {
     type,
@@ -44,6 +45,7 @@ function pe(type: string, opts: {
     clientX: opts.clientX ?? 0,
     clientY: opts.clientY ?? 0,
     button: opts.button ?? 0,
+    shiftKey: opts.shiftKey ?? false,
     preventDefault() {},
   } as unknown as PointerEvent;
 }
@@ -90,6 +92,16 @@ describe('ObserveControls / drag lifecycle', () => {
     // Quaternion should have changed under a non-trivial drag — one of
     // the components must differ from the starting orientation.
     expect(camera.quaternion.equals(q0)).toBe(false);
+  });
+
+  it('ignores a Shift-drag — that pointer stream is the roll gesture', () => {
+    const { ctrl, canvas, camera } = makeController();
+    ctrl.enable();
+    const q0 = camera.quaternion.clone();
+    canvas.dispatchEvent('pointerdown', pe('pointerdown', { pointerId: 1, clientX: 400, clientY: 300, shiftKey: true }));
+    canvas.dispatchEvent('pointermove', pe('pointermove', { pointerId: 1, clientX: 600, clientY: 300 }));
+    expect(camera.quaternion.equals(q0)).toBe(true);
+    expect(canvas.hasPointerCapture(1)).toBe(false);
   });
 
   it('ignores pointermove events without a preceding pointerdown', () => {

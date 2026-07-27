@@ -8,6 +8,9 @@ import type { Picker } from './picker';
 import { PoiStore } from '../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
+import { ReferenceUpController } from './reference-up';
+import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
@@ -50,6 +53,8 @@ interface Harness {
   cancelled: string[];
   emitted: string[];
   camera: THREE.PerspectiveCamera;
+  controls: TrackballControls;
+  referenceUp: ReferenceUpController;
   canvas: {
     addEventListener: ReturnType<typeof vi.fn>;
     removeEventListener: ReturnType<typeof vi.fn>;
@@ -90,9 +95,11 @@ function makeHarness(): Harness {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
   const controls = {
     target: new THREE.Vector3(0, 0, -1),
-    noPan: false,
+    noPan: true,
+    noRotate: false,
     keys: ['', '', ''] as string[],
   } as unknown as TrackballControls;
+  const referenceUp = new ReferenceUpController();
   const deps = {
     flyTo: vi.fn(),
     unfocus: vi.fn(),
@@ -146,6 +153,7 @@ function makeHarness(): Harness {
       has: (t: Target) => state.pinned.some((p) => targetsEqual(p, t)),
       atCap: () => false,
     } as unknown as PoiStore,
+    referenceUp,
     getCameraMode: () => state.cameraMode,
     getFilter: () => state.filter,
     getFocusedTarget: () => state.focused,
@@ -162,7 +170,7 @@ function makeHarness(): Harness {
     togglePoi: deps.togglePoi,
     aimAt: deps.aimAt,
   } satisfies InputControllerDeps);
-  return { input, deps, state, emitted, cancelled, camera, canvas: canvasMock };
+  return { input, deps, state, emitted, cancelled, camera, controls, referenceUp, canvas: canvasMock };
 }
 
 type WithPrivates = {
@@ -172,7 +180,10 @@ type WithPrivates = {
 };
 
 beforeEach(() => {
-  vi.stubGlobal('window', new EventTarget());
+  const win = new EventTarget() as EventTarget & { innerWidth: number; innerHeight: number };
+  win.innerWidth = 800;
+  win.innerHeight = 600;
+  vi.stubGlobal('window', win);
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -590,12 +601,20 @@ describe('InputController probe clicks — navigate mode', () => {
 });
 
 describe('InputController.rollCamera', () => {
-  it('rolls camera.up around the forward axis without per-event allocation drift', () => {
-    const { input, camera } = makeHarness();
+  it('rolls the rendered up by the requested angle, and the roll persists', () => {
+    const { input, camera, referenceUp } = makeHarness();
+    referenceUp.correct(camera);
     const upBefore = camera.up.clone();
+
     (input as unknown as WithPrivates).rollCamera(Math.PI / 2);
+
     expect(camera.up.length()).toBeCloseTo(1, 12);
-    expect(Math.abs(camera.up.angleTo(upBefore))).toBeCloseTo(Math.PI / 2, 6);
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(Math.PI / 2, 6);
+    // The tilt lives on the reference axis, so the next frame's correction
+    // is a fixed point rather than an unwind back to level.
+    const upRolled = camera.up.clone();
+    referenceUp.correct(camera);
+    expect(camera.up.angleTo(upRolled)).toBeCloseTo(0, 9);
   });
 
   it('also rolls the camera quaternion in observe mode (rendered-image roll)', () => {
@@ -603,11 +622,114 @@ describe('InputController.rollCamera', () => {
     state.cameraMode = 'observe';
     const upBefore = camera.up.clone();
     const quatBefore = camera.quaternion.clone();
+
     (input as unknown as WithPrivates).rollCamera(Math.PI / 2);
+
     expect(camera.quaternion.length()).toBeCloseTo(1, 12);
     expect(camera.quaternion.angleTo(quatBefore)).toBeCloseTo(Math.PI / 2, 6);
-    // up rolls in both modes — URL state encodes it, so observe can't skip it.
-    expect(Math.abs(camera.up.angleTo(upBefore))).toBeCloseTo(Math.PI / 2, 6);
+    // up tracks the quaternion in observe — the URL encodes the axis.
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(Math.PI / 2, 6);
+  });
+});
+
+describe('InputController Shift-drag roll', () => {
+  const pointer = (over: Partial<PointerEvent> = {}) => ({
+    button: 0, pointerId: 1, shiftKey: false, clientX: 0, clientY: 0, ...over,
+  } as PointerEvent);
+
+  function handlers(canvas: ReturnType<typeof makeHarness>['canvas']) {
+    const byType = new Map<string, (e: PointerEvent) => void>();
+    for (const [type, fn] of canvas.addEventListener.mock.calls) {
+      byType.set(type as string, fn as (e: PointerEvent) => void);
+    }
+    return byType;
+  }
+
+  it('suppresses TrackballControls rotation for the gesture, and restores it on release', () => {
+    const { canvas, controls } = makeHarness();
+    const h = handlers(canvas);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
+    expect(controls.noRotate).toBe(true);
+
+    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+    expect(controls.noRotate).toBe(false);
+  });
+
+  it('rolls on drag and never dispatches a click', () => {
+    const { canvas, camera, referenceUp, deps } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    const upBefore = camera.up.clone();
+
+    // Quarter-turn of pointer bearing about screen centre (400, 300).
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 600, clientY: 300 }));
+    h.get('pointermove')!(pointer({ clientX: 400, clientY: 500 }));
+    h.get('pointerup')!(pointer({ clientX: 400, clientY: 500 }));
+
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(Math.PI / 2, 6);
+    expect(deps.flyTo).not.toHaveBeenCalled();
+    expect(deps.togglePoi).not.toHaveBeenCalled();
+  });
+
+  it('ignores bearing samples inside the centre dead-zone', () => {
+    const { canvas, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    const upBefore = camera.up.clone();
+
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 405, clientY: 300 }));
+    h.get('pointermove')!(pointer({ clientX: 400, clientY: 305 }));
+
+    expect(camera.up.angleTo(upBefore)).toBeCloseTo(0, 9);
+  });
+
+  it('snaps exactly to galactic level when the release lands within the threshold', () => {
+    const { canvas, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    const level = camera.up.clone();
+
+    // Roll a hair off level, then release: the snap re-anchors the
+    // reference on galactic north rather than leaving the residual.
+    referenceUp.roll(camera, SNAP_TO_LEVEL_RAD * 0.5);
+    expect(camera.up.angleTo(level)).toBeGreaterThan(0);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
+    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+
+    expect(camera.up.angleTo(level)).toBeCloseTo(0, 9);
+    expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
+  });
+
+  it('snaps the rendered roll in observe, where the quaternion carries it', () => {
+    const { canvas, camera, referenceUp, state } = makeHarness();
+    state.cameraMode = 'observe';
+    const h = handlers(canvas);
+    // Land exactly level first, then tilt a hair off it.
+    referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera));
+    const qLevel = camera.quaternion.clone();
+    referenceUp.rollQuaternion(camera, SNAP_TO_LEVEL_RAD * 0.5);
+    expect(camera.quaternion.angleTo(qLevel)).toBeGreaterThan(0);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
+    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+
+    expect(camera.quaternion.angleTo(qLevel)).toBeCloseTo(0, 8);
+  });
+
+  it('leaves a deliberate tilt alone when the release is outside the threshold', () => {
+    const { canvas, camera, referenceUp } = makeHarness();
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    const level = camera.up.clone();
+
+    referenceUp.roll(camera, 0.3);
+
+    h.get('pointerdown')!(pointer({ shiftKey: true, clientX: 400, clientY: 300 }));
+    h.get('pointerup')!(pointer({ clientX: 400, clientY: 300 }));
+
+    expect(camera.up.angleTo(level)).toBeCloseTo(0.3, 6);
   });
 });
 
