@@ -6,15 +6,6 @@ import {
   packPositionsRgba,
   movedBeyondEpsilon,
 } from './extinction-prepass-pure';
-import { fullscreenTriangleGeometry } from './extinction-prepass';
-
-describe('fullscreenTriangleGeometry', () => {
-  it('is indexed — without an index or a position attribute the renderer resolves draw count to 0', () => {
-    const geometry = fullscreenTriangleGeometry();
-    expect(geometry.attributes.position).toBeUndefined();
-    expect(geometry.index?.count).toBe(3);
-  });
-});
 
 describe('avTexHeight', () => {
   it('covers the shipping catalog in 306 rows of 1024', () => {

@@ -25,6 +25,13 @@ build scripts, tests, and shader uniforms.
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
   quaternion and picks a canonical orientation at the pole, which this
   helper leaves to the caller's ra.
+- `fullscreen-pass.ts` (+ test) + `fullscreen-pass.vert.glsl` —
+  `fullscreenTriangleGeometry()` and the matrix-free vertex stage every
+  fullscreen shader pass shares (the extinction A_V prepass, the HDR
+  tone-map resolve). The geometry carries `aPosition` and **must stay
+  indexed**: with no `position` attribute the renderer derives its draw
+  count from `index.count`, so an un-indexed geometry silently draws
+  nothing.
 - `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.

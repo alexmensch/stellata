@@ -1,4 +1,4 @@
-// Fullscreen triangle for the extinction prepass — no matrices.
+// Fullscreen triangle — no matrices. Pair with fullscreenTriangleGeometry.
 precision highp float;
 
 in vec2 aPosition;
