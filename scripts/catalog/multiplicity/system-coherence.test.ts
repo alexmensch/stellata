@@ -5,6 +5,7 @@ import {
   type CoherenceSources,
 } from './system-coherence';
 import type { Star } from '../parse/stars-parse';
+import { makeStar } from '../parse/star-fixture';
 import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
@@ -12,16 +13,9 @@ import type {
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 
 function star(overrides: Partial<Star>): Star {
-  return {
-    x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    absmag: 5, ci: 0.65, spectClass: 4, lumClass: 2,
-    physicalRadius: 1, conIndex: 0, flags: 0,
-    proper: null, bayer: null, hip: null, hd: null, hr: null,
-    flam: null, gl: null, gaiaSourceId: null, spectDisplay: null,
-    companionIdx: -1, periodDays: 0, amplitudeMag: 0, varType: 0,
-    gcvsName: null, athygDist: null, athygDistSrc: null, syntheticId: null,
-    ...overrides,
-  };
+  return makeStar({
+    absmag: 5, ci: 0.65, spectClass: 4, lumClass: 2, conIndex: 0, ...overrides,
+  });
 }
 
 function pairRow(

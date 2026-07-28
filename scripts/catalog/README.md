@@ -35,6 +35,9 @@ subfolders.
 - `classic-ids/` — the frozen-CDS classic-designation overlay build
   (`pnpm run build:classic-ids` → `data/classic-ids/`). Not part of
   `build:catalog`; no consumer here yet.
+- `spine/` — the one-shot inherited-spine generator
+  (`pnpm run build:spine` → `data/athyg/inherited-spine.tsv`). Not part of
+  `build:catalog`; no consumer here yet.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -283,7 +286,9 @@ the pure comparator + formatter and has its own vitest coverage; the
 assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
-snapshot.
+snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus
+`scripts/util/` and `scripts/sid/`, so editing any build module — not just a
+top-level one — invalidates the artifact.
 
 ## SID allocation
 

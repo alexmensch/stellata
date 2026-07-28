@@ -33,33 +33,12 @@ import {
 import { CONSTELLATIONS } from '../parse/constellations';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import type { Star } from '../parse/stars-parse';
+import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
-  return {
-    x: 0, y: 0, z: 0,
-    vx: 0, vy: 0, vz: 0,
-    absmag: 5.0,
-    ci: 0.65,
-    spectClass: 4,
-    lumClass: 2,
-    physicalRadius: 1.0,
-    conIndex: 255,
-    flags: 0,
-    proper: null,
-    bayer: null,
-    hip: null, hd: null, hr: null, flam: null, gl: null,
-    gaiaSourceId: null,
-    spectDisplay: null,
-    companionIdx: -1,
-    periodDays: 0,
-    amplitudeMag: 0,
-    varType: 0,
-    gcvsName: null,
-    athygDist: null,
-    athygDistSrc: null,
-    syntheticId: null,
-    ...overrides,
-  };
+  return makeStarWithDefaults({
+    absmag: 5.0, ci: 0.65, spectClass: 4, lumClass: 2, ...overrides,
+  });
 }
 
 export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {

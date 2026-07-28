@@ -8,16 +8,11 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  parseBailerJonesTsv,
-  parseGaiaApsisTsv,
-  parseSimbadSptypeTsv,
   resolveSpectralInfo,
   resolveApsisTeff,
   resolveSpectDisplay,
   physicalRadius,
   UNKNOWN_CLASS_IDX,
-  parseSimbadWdsXidsTsv,
-  type SimbadWdsXidIndex,
   buildHipToIndex,
   inferBinaries,
   FLAG_IS_SOL,
@@ -45,10 +40,8 @@ import {
   catalogChunkFilename,
   planCatalogChunks,
   buildSearchEntry,
-  type ApsisRow,
   type SearchEntry,
   emptyDistSrcPartition,
-  type SimbadSpectralIndex,
   type CatalogManifest,
 } from './catalog-pure';
 import {
@@ -93,17 +86,16 @@ import {
   bridgeGcvsByGaia,
   applyVariability,
 } from './parse/gcvs-parse';
-import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import {
-  parseGaiaAstrometryCatalogTsv,
-  parseHip2Tsv,
-  parseNssSourceIdSet,
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
-  type DirectionSources,
 } from './distance/direction-cascade';
 import { readStars, type Star } from './parse/stars-parse';
-import { loadDustGrid } from './distance/dust-deextinction';
+import {
+  ATHYG_CSV as SRC_CSV,
+  READ_STARS_INPUT_PATHS,
+  loadReadStarsInputs,
+} from './parse/read-stars-inputs';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
 import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
@@ -119,23 +111,12 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SRC_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 const SRC_STELLARIUM = resolve(ROOT, 'data/stellarium/stellarium-modern-skyculture.json');
 const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
 const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
-const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
-const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
-const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
-const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
-const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
-const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
-const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
-const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
-const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
-const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
@@ -152,15 +133,20 @@ function isUpToDate(): boolean {
   if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
   if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
-  // This file is an orchestration shell — the build logic lives in the
-  // sibling scripts/catalog modules plus scripts/util and scripts/sid,
-  // so any of them must invalidate the artifact.
+  // This file is an orchestration shell — the build logic lives across the
+  // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
+  // them must invalidate the artifact.
   const scriptFiles: string[] = [];
-  for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
-    for (const name of readdirSync(dir)) {
-      if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue;
-      scriptFiles.push(resolve(dir, name));
+  const collectScripts = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) collectScripts(resolve(dir, entry.name));
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+        scriptFiles.push(resolve(dir, entry.name));
+      }
     }
+  };
+  for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
+    collectScripts(dir);
   }
   // Every build input: source catalogues, the dust manifest, and the SID
   // registry (a fresh sid:allocate mint or overrides/retirements edit must
@@ -168,10 +154,9 @@ function isUpToDate(): boolean {
   // documented build → allocate → rebuild bootstrap skips its final step).
   // Adding a new source is one array entry.
   const newest = maxMtimeOfSources([
-    SRC_CSV, SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM,
-    SRC_BAILER_JONES, SRC_GAIA_HIP_XMATCH, SRC_GAIA_APSIS, SRC_GAIA_ASTROMETRY,
-    SRC_GAIA_NSS, SRC_HIP2, SRC_SIMBAD_SPTYPE, SRC_SIMBAD_WDS_XIDS,
-    SRC_SIMBAD_SAMPLE, SRC_MULTIPLES, SRC_DUST_MANIFEST,
+    ...READ_STARS_INPUT_PATHS,
+    SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM,
+    SRC_SIMBAD_SAMPLE, SRC_MULTIPLES,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...scriptFiles,
   ]);
@@ -311,142 +296,16 @@ async function main() {
     velocityRvApplied: 0,
   };
 
-  // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
-  // builds where the LFS file hasn't pulled yet — without it every star
-  // keeps its naive 1/π AT-HYG distance.
-  let bjMap = new Map<string, number>();
-  if (existsSync(SRC_BAILER_JONES)) {
-    console.log('Parsing Bailer-Jones DR3 distance posteriors...');
-    const tBj = Date.now();
-    bjMap = parseBailerJonesTsv(readFileSync(SRC_BAILER_JONES, 'utf8'));
-    console.log(`  ${bjMap.size} entries in ${Date.now() - tBj}ms`);
-    counts.bjEntries = bjMap.size;
-  } else {
-    console.log('Bailer-Jones DR3 file not found; skipping distance override.');
-  }
-
-  // Gaia DR3 Apsis (gspphot ∪ gspspec) astrophysical parameters. Optional
-  // in CI / fresh-clone builds where the LFS file hasn't pulled yet —
-  // without it every record gets the NO_APSIS sentinel.
-  let apsisMap = new Map<string, ApsisRow>();
-  if (existsSync(SRC_GAIA_APSIS)) {
-    console.log('Parsing Gaia DR3 Apsis astrophysical parameters...');
-    const tApsis = Date.now();
-    apsisMap = parseGaiaApsisTsv(readFileSync(SRC_GAIA_APSIS, 'utf8'));
-    console.log(`  ${apsisMap.size} entries in ${Date.now() - tApsis}ms`);
-    counts.apsisEntries = apsisMap.size;
-  } else {
-    console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
-  }
-
-  // SIMBAD sp_type indexed by Gaia DR3 source_id and by HIP. First tier
-  // of the spectral resolver; the binary defaults to GSP-Spec + unknown
-  // sentinel without it.
-  let simbadSpectral: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() };
-  if (existsSync(SRC_SIMBAD_SPTYPE)) {
-    console.log('Parsing SIMBAD sp_type catalogue...');
-    const tSimbad = Date.now();
-    simbadSpectral = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
-    console.log(`  ${simbadSpectral.bySource.size} entries in ${Date.now() - tSimbad}ms`);
-    counts.simbadSptypeEntries = simbadSpectral.bySource.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_SIMBAD_SPTYPE} not found — spectral classification will\n` +
-      `         fall through to Gaia DR3 GSP-Spec and the unknown sentinel.\n` +
-      `         Re-run scripts/refresh/refresh-simbad-sptype.py to restore\n` +
-      `         the SIMBAD tier.`,
-    );
-  }
-
-  // SIMBAD WDS cross-IDs — the sibling-letter gate's attribution source.
-  // Optional: without it the gate never fires and a mis-keyed blend row
-  // keeps its cross-walk source (pre-gate behaviour).
-  let wdsXids: SimbadWdsXidIndex | null = null;
-  if (existsSync(SRC_SIMBAD_WDS_XIDS)) {
-    console.log('Parsing SIMBAD WDS cross-IDs...');
-    const tXids = Date.now();
-    wdsXids = parseSimbadWdsXidsTsv(readFileSync(SRC_SIMBAD_WDS_XIDS, 'utf8'));
-    console.log(`  ${wdsXids.bySource.size} sources in ${Date.now() - tXids}ms`);
-    counts.simbadWdsXidsEntries = wdsXids.bySource.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_SIMBAD_WDS_XIDS} not found — the sibling-letter\n` +
-      `         attribution gate is disabled. Re-run\n` +
-      `         scripts/refresh/refresh-simbad-wds-xids.py to restore it.`,
-    );
-  }
-
-  // HIP → Gaia DR3 source_id cross-walk: loaded once and shared between
-  // the AT-HYG single-star backfill in readStars and the GCVS byGaia
-  // bridge below.
-  let hipToGaia: Map<number, string> | null = null;
-  if (existsSync(SRC_GAIA_HIP_XMATCH)) {
-    console.log('Parsing Gaia DR3 ↔ HIP cross-walk...');
-    const tHx = Date.now();
-    hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
-    console.log(`  ${hipToGaia.size} entries in ${Date.now() - tHx}ms`);
-  } else {
-    console.log('Gaia DR3 ↔ HIP cross-walk not found; backfill + GCVS bridge skipped.');
-  }
-
-  // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen,
-  // and the NSS two-body source_id set. Each optional in CI / fresh-clone
-  // builds — a missing file degrades that tier and the cascade falls
-  // through (ultimately to AT-HYG's printed ra/dec), which the
-  // build-counts assertion then flags.
-  const directions: DirectionSources = {
-    gaiaAstrometry: new Map(),
-    hip2: new Map(),
-    nssSourceIds: new Set(),
-  };
-  if (existsSync(SRC_GAIA_ASTROMETRY)) {
-    console.log('Parsing Gaia DR3 5p astrometry (full catalog)...');
-    const tAstro = Date.now();
-    directions.gaiaAstrometry = parseGaiaAstrometryCatalogTsv(readFileSync(SRC_GAIA_ASTROMETRY, 'utf8'));
-    console.log(`  ${directions.gaiaAstrometry.size} entries in ${Date.now() - tAstro}ms`);
-    counts.gaiaAstrometryEntries = directions.gaiaAstrometry.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GAIA_ASTROMETRY} not found — direction cascade tier 1\n` +
-      `         unavailable; sky directions fall back to HIP2 / AT-HYG printed\n` +
-      `         ra/dec. Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.`,
-    );
-  }
-  if (existsSync(SRC_HIP2)) {
-    console.log('Parsing HIP2 van Leeuwen astrometry...');
-    const tHip2 = Date.now();
-    directions.hip2 = parseHip2Tsv(readFileSync(SRC_HIP2, 'utf8'));
-    console.log(`  ${directions.hip2.size} entries in ${Date.now() - tHip2}ms`);
-    counts.hip2Entries = directions.hip2.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_HIP2} not found — direction cascade tier 2 unavailable\n` +
-      `         and dist_src=HIP rows keep AT-HYG's 4-dp distance print.`,
-    );
-  }
-  if (existsSync(SRC_GAIA_NSS)) {
-    console.log('Parsing Gaia DR3 NSS two-body source_ids...');
-    const tNss = Date.now();
-    directions.nssSourceIds = parseNssSourceIdSet(readFileSync(SRC_GAIA_NSS, 'utf8'));
-    console.log(`  ${directions.nssSourceIds.size} source_ids in ${Date.now() - tNss}ms`);
-    counts.nssSourceIdEntries = directions.nssSourceIds.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GAIA_NSS} not found — NSS-systemic tagging disabled\n` +
-      `         (affects routing counts only; positions stay Gaia 5p).`,
-    );
-  }
-
-  // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
-  // the Bailer-Jones soft-continue): a soft-continue would carry
-  // extincted absmags into a runtime that assumes de-extincted, silently
-  // reintroducing the double-count the runtime raymarch fixes.
-  console.log('Loading dust grid for build-time de-extinction...');
-  const tDust = Date.now();
-  const dustGrid = loadDustGrid(SRC_DUST_DIR);
-  console.log(
-    `  loaded ${dustGrid.gridSize}³ voxel grid in ${Date.now() - tDust}ms`,
-  );
+  const {
+    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid, sizes,
+  } = loadReadStarsInputs();
+  counts.bjEntries = sizes.bjEntries;
+  counts.apsisEntries = sizes.apsisEntries;
+  counts.simbadSptypeEntries = sizes.simbadSptypeEntries;
+  counts.simbadWdsXidsEntries = sizes.simbadWdsXidsEntries;
+  counts.gaiaAstrometryEntries = sizes.gaiaAstrometryEntries;
+  counts.hip2Entries = sizes.hip2Entries;
+  counts.nssSourceIdEntries = sizes.nssSourceIdEntries;
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
