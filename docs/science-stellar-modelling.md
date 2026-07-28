@@ -83,28 +83,33 @@ retired `exposureMul` / `angularMag` multipliers are
 **Exaggeration K — two factors, and only one of them is physics.**
 Literal physics at 50° vertical FOV / 1080 px puts the threshold disc at
 ~0.25 px and Sirius (Δm = 8) at ~1 px, both invisible. K scales σ up so
-the threshold disc lands at a readable 1–2 px. It is a
-sub-pixel-visibility hack, so it must retire as it stops being needed:
+the threshold disc lands on a readable pixel size. It is a
+sub-pixel-visibility hack, so it must retire as it stops being needed —
+which is exactly what stating it as *the factor that hits a target pixel
+size* accomplishes:
 
 ```
-K(fov) = K_density(instrument) × max(1, K_BASE × fov / DEFAULT_FOV)
+arcsec_per_px = FOV_deg × 3600 / viewport_height_css_px
+K = K_density(instrument) × max(1, TARGET_PX × arcsec_per_px / σ)
 ```
 
-- **The plate-scale factor** `max(1, K_BASE · fov/50)` is the one that
-  earns its keep. `K_BASE = 12` reproduces the shipped naked-eye value at
-  the default 50° FOV exactly, so the default look does not move, and K
-  decays to 1 — the true PSF — at ≈ 4.2° FOV. Because
-  `σ·K ∝ fov` while `arcsec/px ∝ fov`, **star pixel size is
-  FOV-invariant** until K floors, after which stars shrink with FOV as
-  true physics takes over. What narrowing the FOV buys is therefore
-  *separation, not size*: a close pair that merged into one blob at 50°
-  resolves at 10°, because the exaggeration inflating both has shrunk.
-  The merged blob was never physics — it was K.
+- **The plate-scale factor** is the one that earns its keep. Since
+  `sizeMinArcsec = σ·K`, the rendered size is
+  `σ·K / arcsec_per_px = TARGET_PX` identically — **star pixel size is
+  invariant in both FOV and viewport size**, until K floors at 1 (the
+  true PSF, at ≈ 4.2° FOV on a 1080-px viewport) and stars begin
+  shrinking as real physics takes over. What narrowing the FOV buys is
+  therefore *separation, not size*: a close pair that merged into one
+  blob at 50° resolves at 10°, because the exaggeration inflating both has
+  shrunk. The merged blob was never physics — it was K.
 - **`K_density`** is the instrument's half. The retired per-preset values
   (12 / 9 / 5) conflated the two factors: a deeper limit needs a smaller
   footprint or a dense field washes into a solid sheet. `K_density` = 1
-  for the unaided eye, so today's value falls out of the formula; it is a
-  per-instrument calibration for anything deeper.
+  for the unaided eye; it is a per-instrument calibration for anything
+  deeper.
+- **`TARGET_PX`** is the calibration this introduces. 3.84 preserves the
+  rendered size on a 1920×1080 desktop; 2.16 preserves K = 12 at 50° and
+  1080 px of height. Ship 3.84, settle in smoke.
 
 Critically, the √Δm shape is preserved between stars at any K, so
 *ratios* — including against the volumetric Milky Way bulge, rendered at
@@ -118,13 +123,20 @@ across that band; the disc pass keeps the hard limit since resolved
 discs at threshold would render as a sub-pixel speck.
 
 **Viewport calibration.** Sizes are stored in arcsec internally and
-converted to pixels per-frame via
-`arcsec_per_px = (FOV × 3600) / max(viewport_w, viewport_h)`. Using
-the larger viewport dimension as the reference gives consistent
-absolute pixel sizes across portrait/landscape orientations, at the
-cost of strict angular fidelity in the secondary axis. Three.js's
-`camera.fov` is the *vertical* FOV; horizontal arcsec/px would be
-identical only for square viewports.
+converted to pixels per frame against the viewport **height**, because
+three.js's `camera.fov` is the *vertical* FOV — that is the axis the
+angle actually maps to, and the axis `physSize` and the HDR unit's `Ω_px`
+already project through.
+
+The earlier convention divided by `max(viewport_w, viewport_h)` to keep
+absolute pixel sizes consistent across portrait and landscape. It bought
+that at the cost of two defects: widening a desktop window *grew the
+stars*, when a fixed vertical FOV should simply reveal more sky (≈ 2.9 px
+at 1440 wide against ≈ 6.9 px at 3440), and the secondary axis lost
+angular fidelity outright. The K derivation above subsumes the problem
+`max(w, h)` was solving — a coarser plate scale raises K, so a threshold
+star still lands on `TARGET_PX` even at a 390-px landscape-mobile
+height — so the compromise retires rather than being re-tuned.
 
 Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
 brightness curve + smoothstep taper) and `src/client/filters/`

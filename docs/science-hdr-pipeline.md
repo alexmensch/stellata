@@ -446,31 +446,56 @@ constant-f-ratio zoom, which means aperture grows as you zoom —
 smuggling light collection in through the FOV control and re-tangling
 the two axes.*
 
-**The exaggeration K becomes FOV-derived.** K exists because σ = 30″ is
-sub-pixel at 50° FOV; it is a sub-pixel-visibility hack, not physics, so
-it must retire as it stops being needed:
+**The exaggeration K becomes plate-scale-derived.** K exists because
+σ = 30″ is sub-pixel at 50° FOV; it is a sub-pixel-visibility hack, not
+physics, so it must retire as it stops being needed. Express it as *the
+factor that lands a threshold star on a target pixel size*:
 
 ```
-K(fov) = K_density(instrument) · max(1, K_BASE · fov / DEFAULT_FOV)
+arcsec_per_px = fov_deg · 3600 / viewport_height_css_px
+K = K_density(instrument) · max(1, TARGET_PX · arcsec_per_px / σ)
 ```
 
-`K_BASE = 12` reproduces the shipped naked-eye value at the default 50°
-exactly, so the default look does not move. K decays to 1 — the true
-PSF — at ≈ 4.2° FOV. Two consequences:
+Then `sizeMinPx = σ·K / arcsec_per_px = TARGET_PX` identically —
+**star pixel size is invariant in both FOV and viewport size**, until K
+floors at 1 and true physics takes over. Three problems close at once:
 
-- `sizeMinArcsec = σ·K ∝ fov` while `arcsec/px ∝ fov`, so **star pixel
-  size is FOV-invariant** until K floors, after which stars shrink with
-  FOV as true physics takes over. What zooming buys is **separation, not
-  size**: two stars that merged into one blob at 50° resolve at 10°,
-  because the exaggeration inflating them has shrunk. The merged blob was
-  never physics — it was K.
-- **`K_density` is the instrument's half of K.** The shipped per-preset
-  values (12 / 9 / 5) conflated the plate-scale term with a *crowding*
-  term: a deeper limit needs a smaller footprint or a dense field washes
-  into a solid sheet. `K_density` is 1 for the unaided eye — so today's
-  value falls out of the formula — and is a per-instrument calibration
-  for anything deeper. Derivation:
-  `docs/science-stellar-modelling.md` § Stellar perception model.
+- **FOV.** What zooming buys is **separation, not size**: two stars that
+  merged into one blob at 50° resolve at 10°, because the exaggeration
+  inflating them has shrunk. The merged blob was never physics — it was K.
+- **Viewport width.** Stars currently grow when the window widens, which
+  is wrong: a fixed *vertical* FOV means widening the window should show
+  more sky at the same scale. The cause is `presetPxSizes` dividing by
+  `max(w, h)` rather than by height, which inflated the plate scale on
+  wide displays (≈ 2.9 px at 1440 wide vs ≈ 6.9 px at 3440). Deriving K
+  from **height** — the axis `camera.fov` actually maps to — removes it,
+  and incidentally puts K on the same reference dimension `Ω_px` already
+  uses, so the two plate-scale conventions stop differing.
+- **Small viewports.** `max(w, h)` existed to stop stars vanishing on
+  landscape mobile (height 390 px). That is now solved by construction:
+  a coarser plate scale raises K, so a threshold star still lands on
+  `TARGET_PX`. The apologetic refDim compromise retires rather than being
+  re-tuned.
+
+`TARGET_PX` is the one calibration this introduces. Two defensible
+anchors: **3.84** preserves the rendered size on a 1920×1080 desktop (the
+most common config, so the least disruptive), while **2.16** preserves
+`K = 12` at 50° / 1080 px height. Either way every viewport converges on
+one size instead of scattering — ultrawides shrink toward it, small
+laptops grow toward it. Ship 3.84 and settle it in smoke.
+
+**`K_density` is the instrument's half of K.** The shipped per-preset
+values (12 / 9 / 5) conflated the plate-scale term with a *crowding*
+term: a deeper limit needs a smaller footprint or a dense field washes
+into a solid sheet. `K_density` is 1 for the unaided eye and is a
+per-instrument calibration for anything deeper. Derivation:
+`docs/science-stellar-modelling.md` § Stellar perception model.
+
+One consequence for § 1's accepted flux over-count: K is now large on
+small viewports and ~1 at narrow FOV, so the over-count varies with both.
+It never affects per-pixel luminance (the peak stays flux-anchored), which
+is why § 8 compares peaks and never integrals — but any comparison must
+record the FOV and viewport it was made at.
 
 The honest simplification: in reality, summing a point source's PSF over
 a larger aperture improves limiting magnitude even at fixed f-ratio —
