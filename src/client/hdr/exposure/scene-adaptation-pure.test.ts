@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { angularToPx } from '../../camera/controls/star-geometry';
+import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import {
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
@@ -37,6 +38,10 @@ const VIEWPORT_AREA_PX = VIEWPORT_W * VIEWPORT_H;
 const FOV_Y_RAD = (50 * Math.PI) / 180;
 const EXPOSURE = exposureForMagLimit(7.8);
 const OMEGA_PX = pixelSolidAngleArcsec2(angularToPx(VIEWPORT_H, FOV_Y_RAD));
+/** Share of the sphere this frame covers — what turns a whole-sky
+ *  population into a per-frame one. */
+const FRAME_SKY_FRACTION =
+  (VIEWPORT_AREA_PX * OMEGA_PX) / (4 * Math.PI / (ARCSEC_TO_RAD * ARCSEC_TO_RAD));
 
 /** L_THRESH by construction: a source at the instrument's limit. */
 const THRESHOLD_STAR_L = luminanceForMagnitude(EXPOSURE, 7.8);
@@ -76,12 +81,19 @@ describe('scene-adaptation constants', () => {
     expect(2.5 * Math.log10(0.272 / L_TARGET)).toBeCloseTo(-1.29, 2);
   });
 
-  it('keeps the diffuse field two decades below the anchor', () => {
-    const thresholdStars = (1e5 * THRESHOLD_STAR_L) / VIEWPORT_AREA_PX;
-    const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, 22, OMEGA_PX);
-    expect(thresholdStars).toBeCloseTo(9.6e-4, 5);
-    expect(milkyWayBand).toBeCloseTo(1.2e-3, 4);
-    expect(DIFFUSE_FIELD_L).toBeCloseTo(thresholdStars + milkyWayBand, 4);
+  it('builds the diffuse field from one frame of sky, not the whole sky', () => {
+    // A 50° frame is a tenth of the sphere, so the whole-sky
+    // threshold-star population is an order of magnitude too many for it.
+    expect(FRAME_SKY_FRACTION).toBeCloseTo(0.1077, 4);
+    const thresholdStars =
+      (1e5 * FRAME_SKY_FRACTION * THRESHOLD_STAR_L) / VIEWPORT_AREA_PX;
+    // The band's anticentre-plane surface brightness (milkyway/README.md's
+    // gradient: GC 20.0, anticentre plane 22.55, NGP 25.08).
+    const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, 22.55, OMEGA_PX);
+    expect(thresholdStars).toBeCloseTo(1.04e-4, 5);
+    expect(milkyWayBand).toBeCloseTo(7.0e-4, 5);
+    expect(milkyWayBand / thresholdStars).toBeCloseTo(6.7, 1);
+    expect(DIFFUSE_FIELD_L).toBeCloseTo(thresholdStars + milkyWayBand, 5);
     // Inert by construction: it can never reach the anchor on its own.
     expect(DIFFUSE_FIELD_L * 50).toBeLessThan(L_ADAPT);
   });
@@ -129,10 +141,10 @@ describe('§ 3.1 contribution table', () => {
     expect(adaptationDm(venusFromEarth + DIFFUSE_FIELD_L)).toBe(0);
   });
 
-  it('separates the two regimes by seven and a half decades', () => {
+  it('separates the two regimes by nearly eight decades', () => {
     const mustAdapt = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX) * 0.2;
     const mustNot = contribution(sample({ appMag: -4.4 })) + DIFFUSE_FIELD_L;
-    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.4, 1);
+    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.7, 1);
   });
 });
 

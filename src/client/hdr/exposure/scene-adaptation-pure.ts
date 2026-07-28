@@ -21,14 +21,15 @@ export const ADAPT_REF_COVERAGE = 0.15;
 export const L_ADAPT = L_TARGET * ADAPT_REF_COVERAGE;
 
 /**
- * The whole diffuse field as one term: ~100 000 threshold-magnitude
- * stars at 1 px each (9.6e-4) plus the Milky Way band at 22 mag/arcsec²
- * over a full 50°-FOV frame (1.2e-3), both at the base instrument
- * exposure. Two decades below `L_ADAPT`, so it can never produce a cut
- * on its own — it exists so `L̄` is never exactly zero and the debug
- * readout has a floor to show.
+ * The whole diffuse field as one term, for **one frame** rather than the
+ * whole sky: the frame's share of the threshold-star population (1.0e-4
+ * — a 50°-FOV frame is 10.8% of the sky) plus the Milky Way band at its
+ * anticentre-plane 22.55 mag/arcsec² (7.0e-4), both at the base
+ * instrument exposure. Milky-Way-dominated, and inert by construction —
+ * it exists so `L̄` is never exactly zero and the debug readout has a
+ * floor to show. `docs/science-hdr-pipeline.md` § 3.1 carries the rows.
  */
-export const DIFFUSE_FIELD_L = 2.1e-3;
+export const DIFFUSE_FIELD_L = 8.0e-4;
 
 /** A source contributing less than this fraction of `L_ADAPT` is dropped
  *  — worth at most 0.03 mag of cut, and below the fraction any single

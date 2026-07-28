@@ -331,15 +331,27 @@ Contributions on a 1920×1080 viewport at the unaided eye's 50° FOV, so
 | --- | --- |
 | resolved Venus filling 20% of the frame (`S₀` = +0.78, so `L_surf` 3.6e5) | 7.1e4 |
 | Sol's disc at 1 AU (m −26.74; 0.53° = 11.4 px across, 103 px² of 2.07e6) | 6.3e5 |
-| 100 000 threshold-magnitude stars, 1 px each | 9.6e-4 |
-| Milky Way band at 22 mag/arcsec² over the full frame | 1.2e-3 |
+| the frame's share of 100 000 threshold-magnitude stars, 1 px each | 1.0e-4 |
+| Milky Way band at 22.55 mag/arcsec² over the full frame | 7.0e-4 |
 | Venus unresolved from Earth (m −4.4, on the 1 px floor) | 7.3e-4 |
 
-Seven and a half decades separate the cases that must adapt from the
-cases that must not — and the aggregate faint field sits **two** decades
-below `L_ADAPT`, not four as an earlier draft of this table had it. The
-margin is still ample: `dm` is exactly 0 for any `L̄ ≤ L_ADAPT`, so the
-diffuse term can never produce a cut on its own.
+**The two aggregate rows are per-frame, and an earlier draft of this
+table had them whole-sky.** The statistic is a mean over *this frame's*
+pixels, so a whole-sky star count belongs in it only through the fraction
+of the sphere the frame covers — 10.8% at 50° on a 16:9 viewport, so
+100 000 threshold stars contribute 1.0e-4 rather than 9.6e-4. The band's
+surface brightness is the anticentre-plane 22.55 mag/arcsec² the Milky
+Way layer's own gradient derives (`src/client/milkyway/README.md`), not a
+round 22: the band is what a frame pointed at it actually contains, and
+the layer is the authority on how bright that is. The diffuse field is
+therefore **Milky-Way-dominated by 6.7×**, where the earlier rows had the
+two within 25% of each other.
+
+Nearly eight decades separate the cases that must adapt from the cases
+that must not, and the aggregate field sits **two** decades below
+`L_ADAPT` — not four as that same draft had it. The margin is ample
+either way: `dm` is exactly 0 for any `L̄ ≤ L_ADAPT`, so the diffuse term
+can never produce a cut on its own.
 
 **Frustum-edge continuity is free.** A source sliding into frame
 contributes in proportion to its covered pixels, which ramps
@@ -424,7 +436,7 @@ when adaptation matters most.
   can never pop the exposure. Walking the whole catalogue per frame would
   cost ~3M flops for a term the diffuse floor already covers.
 - **One constant for the diffuse field** — the two aggregate rows of the
-  table above summed (2.1e-3). Inert by construction, and honest
+  table above summed (8.0e-4). Inert by construction, and honest
   bookkeeping rather than a live measurement.
 
 The statistic is measured at the **base instrument exposure**, never the

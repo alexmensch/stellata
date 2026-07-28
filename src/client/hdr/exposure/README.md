@@ -128,9 +128,11 @@ anchor (8.9 pc on a 1080p frame at 50°), which covers every fainter star
 exactly — a fainter one cannot reach the gate from further out. Only ~120
 catalogue stars are brighter than that reference, and a **taper over the
 outer fifth of the window** carries them out continuously, so crossing
-the bound can never pop the exposure. The diffuse field (aggregate faint
-stars + the Milky Way band) is one constant two decades below the anchor,
-and therefore inert by construction.
+the bound can never pop the exposure. The diffuse field is one constant two
+decades below the anchor, and therefore inert by construction: the
+frame's **share** of the aggregate faint-star population (a 50° frame is
+10.8% of the sphere) plus the Milky Way band at its anticentre-plane
+surface brightness, which dominates it 6.7×.
 
 `LuminanceSample` is filled from a **scratch object owned by the
 producer** and is valid only inside one `visit` call — read it, don't
