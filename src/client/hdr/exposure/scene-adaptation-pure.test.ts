@@ -9,6 +9,7 @@ import {
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
 import { tonemapWhitePoint } from '../tonemap-pure';
 import {
+  ADAPT_EDGE_RAMP_PX,
   ADAPT_NEGLIGIBLE_FRACTION,
   ADAPT_REF_COVERAGE,
   ADAPT_STAR_ABSMAG_REF,
@@ -21,7 +22,6 @@ import {
   type LuminanceSample,
   meanSceneLuminance,
   negligibleAppMag,
-  POINT_SOURCE_RADIUS_PX,
   sampleFluxL,
   sourceVisibleFraction,
   starAdaptationWindowPc,
@@ -195,9 +195,26 @@ describe('viewport coverage', () => {
   });
 
   it('drops an off-screen source and halves one on the edge', () => {
-    expect(sourceVisibleFraction(0, -5, 540, VIEWPORT_W, VIEWPORT_H)).toBe(0);
+    const ramp = 0.5 * ADAPT_EDGE_RAMP_PX;
+    expect(sourceVisibleFraction(0, -ramp, 540, VIEWPORT_W, VIEWPORT_H)).toBe(0);
     expect(sourceVisibleFraction(0, 0, 540, VIEWPORT_W, VIEWPORT_H)).toBeCloseTo(0.5, 12);
     expect(sourceVisibleFraction(0, 0, 0, VIEWPORT_W, VIEWPORT_H)).toBeCloseTo(0.25, 12);
+  });
+
+  it('ramps a sub-pixel point over the edge band instead of stepping', () => {
+    // A point's own 1.1 px footprint would take it 0 → 1 inside one
+    // frame's worth of camera jitter; the ramp spreads it over 12 px.
+    const at = (cx: number) => sourceVisibleFraction(0, cx, 540, VIEWPORT_W, VIEWPORT_H);
+    const ramp = 0.5 * ADAPT_EDGE_RAMP_PX;
+    expect(at(-ramp)).toBe(0);
+    expect(at(ramp)).toBeCloseTo(1, 12);
+    let prev = 0;
+    for (let cx = -ramp; cx <= ramp; cx += 0.25) {
+      const f = at(cx);
+      expect(f).toBeGreaterThanOrEqual(prev - 1e-12);
+      expect(f - prev).toBeLessThan(0.05);
+      prev = f;
+    }
   });
 
   it('ramps continuously as a disc slides in — no frustum-edge pop', () => {
@@ -230,10 +247,6 @@ describe('viewport coverage', () => {
     // A quadrant, from a disc centred on a corner.
     expect(discViewportOverlapArea(300, 0, 0, VIEWPORT_W, VIEWPORT_H))
       .toBeCloseTo(0.25 * Math.PI * 300 * 300, 6);
-  });
-
-  it('spreads an unresolved point over exactly one pixel', () => {
-    expect(Math.PI * POINT_SOURCE_RADIUS_PX ** 2).toBeCloseTo(1, 12);
   });
 });
 

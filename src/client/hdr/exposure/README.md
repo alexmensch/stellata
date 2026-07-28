@@ -103,6 +103,14 @@ centre weighting — adding one would re-introduce the gaze dependence the
 scanned-observer premise rejects) and why a body the camera has flown
 inside of contributes its *surface brightness*.
 
+**The clipping disc is floored at `ADAPT_EDGE_RAMP_PX` across.** A
+sub-pixel source's own footprint would take its fraction 0 → 1 inside one
+frame of camera jitter, which reads as exposure flicker; the floor spreads
+that crossing over 12 px without touching the fully-inside or
+fully-outside answer. It is deliberately not a hysteresis pair — that
+would need per-source state, still step, and make the statistic depend on
+the camera's approach direction.
+
 Three invariants a change here must not break:
 
 - **Measure at the base instrument exposure**, never the live scalar.

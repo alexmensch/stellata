@@ -353,14 +353,27 @@ that must not, and the aggregate field sits **two** decades below
 either way: `dm` is exactly 0 for any `L̄ ≤ L_ADAPT`, so the diffuse term
 can never produce a cut on its own.
 
-**Frustum-edge continuity is free.** A source sliding into frame
-contributes in proportion to its covered pixels, which ramps
-continuously from zero, and coverage of a disc crossing a straight
-frustum edge is smooth. No radial taper, no centre weighting, no new
-constant. (An earlier draft proposed a fovea-like radial weight; the
-coverage term already does its job, and a camera-centred weight would
-also re-introduce the gaze dependence the scanned-observer premise
-rejects.)
+**Frustum-edge continuity is free for a resolved source.** A source
+sliding into frame contributes in proportion to its covered pixels, which
+ramps continuously from zero, and coverage of a disc crossing a straight
+frustum edge is smooth. No radial taper, no centre weighting. (An earlier
+draft proposed a fovea-like radial weight; the coverage term already does
+its job, and a camera-centred weight would also re-introduce the gaze
+dependence the scanned-observer premise rejects.)
+
+**It is not free for a point, and that is what needed a constant.** A
+sub-pixel source's own footprint is 1.1 px across, so its clipping
+fraction runs 0 → 1 inside a single frame's worth of camera jitter and a
+bright star parked on the frame edge flickers the whole exposure. The fix
+is to evaluate the clipping against a disc floored at
+`ADAPT_EDGE_RAMP_PX` (12 px) across: the fraction is still exactly 1 well
+inside the frame and 0 well outside it, so the floor sets only how wide
+the crossing band is. **Deliberately not hysteresis** — a threshold pair
+with per-source state would need a store keyed on identity across frames,
+would still step (twice, at two positions), and would make the statistic
+depend on which direction the camera arrived from. The cost is that a
+source up to 6 px outside the frame contributes a little of its flux,
+which is the honest reading of "partly in frame" at that scale.
 
 **`dm ≤ 0` is an invariant.** A fully dark-adapted eye at the
 instrument's `m_lim` is the ceiling — nothing adapts to see fainter than

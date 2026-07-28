@@ -49,10 +49,16 @@ export const ADAPT_STAR_ABSMAG_REF = -6;
  *  pop the exposure. */
 export const ADAPT_WINDOW_TAPER_FRACTION = 0.2;
 
-/** Radius of a source occupying the 1 px² floor — the area an unresolved
- *  point spreads its flux over (`pointSourcePeakLuminance`'s
- *  `max(1, π·r²)`). */
-export const POINT_SOURCE_RADIUS_PX = Math.sqrt(1 / Math.PI);
+/**
+ * Width of the frustum-edge ramp, in px of centre travel. A source's
+ * clipping fraction is evaluated against a disc at least this wide, so a
+ * sub-pixel point crossing the frame edge fades over ~12 px instead of
+ * stepping 0 → 1 within its own 1.1 px footprint. That step is what a
+ * point jittering on the edge reads as flicker; widening the ramp is the
+ * whole fix, and it needs no per-source state (which is what makes it
+ * preferable to hysteresis — see `README.md` § Adaptation).
+ */
+export const ADAPT_EDGE_RAMP_PX = 12;
 
 /**
  * One light source's frame footprint. `diameterPx` is TRUE angular
@@ -118,8 +124,10 @@ export function discViewportOverlapArea(
  * whatever its size; clipping at the frame edge is what this measures,
  * and it ramps continuously as a source slides in.
  *
- * An unresolved source is floored at the 1 px² area its flux is spread
- * over, which makes the same formula carry both regimes.
+ * The disc the clipping runs against is floored at `ADAPT_EDGE_RAMP_PX`
+ * across, which is what makes the ramp legible for a source smaller than
+ * that: the fraction is 1 well inside the frame and 0 well outside it
+ * either way, so the floor only sets how wide the crossing band is.
  */
 export function sourceVisibleFraction(
   diameterPx: number,
@@ -128,7 +136,7 @@ export function sourceVisibleFraction(
   w: number,
   h: number,
 ): number {
-  const r = Math.max(0.5 * diameterPx, POINT_SOURCE_RADIUS_PX);
+  const r = Math.max(0.5 * diameterPx, 0.5 * ADAPT_EDGE_RAMP_PX);
   return discViewportOverlapArea(r, cx, cy, w, h) / (Math.PI * r * r);
 }
 
