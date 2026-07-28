@@ -14,6 +14,7 @@ import {
   type SimbadSpectralIndex,
   type SimbadWdsXidIndex,
 } from '../catalog-pure';
+import type { BuildCounts } from '../build-counts';
 import {
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
@@ -45,16 +46,18 @@ export const READ_STARS_INPUT_PATHS: readonly string[] = [
   SRC_SIMBAD_WDS_XIDS, SRC_DUST_MANIFEST,
 ];
 
-/** Upstream table sizes, for the consumer's count snapshot. */
-export interface ReadStarsInputSizes {
-  bjEntries: number;
-  apsisEntries: number;
-  simbadSptypeEntries: number;
-  simbadWdsXidsEntries: number;
-  gaiaAstrometryEntries: number;
-  hip2Entries: number;
-  nssSourceIdEntries: number;
-}
+/** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
+ *  consumer folds them in wholesale rather than field by field. */
+export type ReadStarsInputSizes = Pick<
+  BuildCounts,
+  | 'bjEntries'
+  | 'apsisEntries'
+  | 'simbadSptypeEntries'
+  | 'simbadWdsXidsEntries'
+  | 'gaiaAstrometryEntries'
+  | 'hip2Entries'
+  | 'nssSourceIdEntries'
+>;
 
 export interface ReadStarsInputs {
   bjMap: Map<string, number>;

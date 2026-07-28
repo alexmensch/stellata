@@ -45,6 +45,7 @@ import {
   type CatalogManifest,
 } from './catalog-pure';
 import {
+  BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,
   formatCountDiff,
   formatDistSrcPartition,
@@ -122,7 +123,7 @@ const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
-const EXPECTED_COUNTS = resolve(__dirname, 'build-catalog-expected.json');
+const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
   __dirname,
   'distance/build-distance-outliers-expected.json',
@@ -299,13 +300,7 @@ async function main() {
   const {
     bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid, sizes,
   } = loadReadStarsInputs();
-  counts.bjEntries = sizes.bjEntries;
-  counts.apsisEntries = sizes.apsisEntries;
-  counts.simbadSptypeEntries = sizes.simbadSptypeEntries;
-  counts.simbadWdsXidsEntries = sizes.simbadWdsXidsEntries;
-  counts.gaiaAstrometryEntries = sizes.gaiaAstrometryEntries;
-  counts.hip2Entries = sizes.hip2Entries;
-  counts.nssSourceIdEntries = sizes.nssSourceIdEntries;
+  Object.assign(counts, sizes);
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();

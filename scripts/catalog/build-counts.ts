@@ -3,6 +3,11 @@
 // scripts/catalog/README.md § Validation harness.
 import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
 
+/** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
+ *  build and every consumer that reads the shipped figures back resolve one
+ *  path. The generic comparator below is reused with other snapshots. */
+export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expected.json';
+
 export interface BuildCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
