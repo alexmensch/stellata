@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  applyBindingGate,
   athygIdOrNull,
+  bindingEvidence,
   buildClassicIdOverlay,
   glieseNumber,
   measureAthygLabelParity,
@@ -13,6 +15,11 @@ import {
 const VEGA_SRC = '2101372160809792';
 const SIRIUS_SRC = '2947050466531873024';
 
+/** No printed V and no G, so every row is unvettable and the gate is inert —
+ *  the baseline for the join assertions below. Gate behaviour gets its own
+ *  block with real photometry. */
+const NO_EVIDENCE = bindingEvidence(new Map(), new Map(), null);
+
 function input(overrides: Partial<OverlayInput> = {}): OverlayInput {
   return {
     tyc2Hd: [
@@ -20,8 +27,8 @@ function input(overrides: Partial<OverlayInput> = {}): OverlayInput {
       { tyc: '5949-2777-1', hd: 48915, nHd: 1, nTyc: 1 },
     ],
     crossIndex: [
-      { hd: 172167, hr: 7001, hip: 91262, bayer: 'alf', flamsteed: 3, cst: 'Lyr' },
-      { hd: 48915, hr: 2491, hip: 32349, bayer: 'alf', flamsteed: 9, cst: 'CMa' },
+      { hd: 172167, hip: 91262, bayer: 'alf', flamsteed: 3, cst: 'Lyr' },
+      { hd: 48915, hip: 32349, bayer: 'alf', flamsteed: 9, cst: 'CMa' },
     ],
     bsc5: [
       { hr: 7001, hd: 172167, name: '3Alp Lyr' },
@@ -33,6 +40,7 @@ function input(overrides: Partial<OverlayInput> = {}): OverlayInput {
       ['5949-2777-1', SIRIUS_SRC],
     ]),
     hipToSource: new Map([[91262, VEGA_SRC]]),
+    evidence: NO_EVIDENCE,
     ...overrides,
   };
 }
@@ -113,6 +121,112 @@ describe('buildClassicIdOverlay', () => {
       }),
     );
     expect(counts.cns5GjUnkeyed).toBe(1);
+  });
+});
+
+describe('applyBindingGate', () => {
+  // The real α Cen B case: both best-neighbour walks land on the G=20.95
+  // background source beside the saturated star, so the overlay would key
+  // HD 128621 / HR 5460 / HIP 71681 / "alf Cen" on a 20th-magnitude star.
+  const TOLIMAN_BAD_SRC = '5877748442128924544';
+  const TOLIMAN_HIP = 71681;
+
+  function tolimanOverlay(evidenceOverride?: Parameters<typeof applyBindingGate>[1]) {
+    return buildClassicIdOverlay(input({
+      tyc2Hd: [{ tyc: '9007-5849-1', hd: 128621, nHd: 1, nTyc: 1 }],
+      crossIndex: [{ hd: 128621, hip: TOLIMAN_HIP, bayer: 'alf', flamsteed: null, cst: 'Cen' }],
+      bsc5: [{ hr: 5460, hd: 128621, name: 'Alp2Cen' }],
+      tycToSource: new Map([['9007-5849-1', TOLIMAN_BAD_SRC]]),
+      hipToSource: new Map([[TOLIMAN_HIP, TOLIMAN_BAD_SRC]]),
+      evidence: evidenceOverride ?? bindingEvidence(
+        new Map([[TOLIMAN_BAD_SRC, 20.95]]),
+        new Map([[TOLIMAN_HIP, 1.33]]),
+        null,
+      ),
+    }));
+  }
+
+  it('drops the whole row, not just its hip, when G−V rejects the binding', () => {
+    const { overlay, counts, rejectedBindings } = tolimanOverlay();
+    expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(false);
+    expect(counts.overlayRows).toBe(0);
+    expect(counts.gateRejectedMag).toBe(1);
+    expect(counts.gateRejectedSibling).toBe(0);
+    expect(rejectedBindings).toEqual([{
+      sourceId: TOLIMAN_BAD_SRC,
+      hip: TOLIMAN_HIP,
+      vMag: 1.33,
+      gMag: 20.95,
+      reason: 'mag',
+      designations: 'HD 128621 · HR 5460 · alf Cen',
+    }]);
+  });
+
+  it('keeps the row when the bound source matches the star it names', () => {
+    const { overlay, counts } = tolimanOverlay(bindingEvidence(
+      new Map([[TOLIMAN_BAD_SRC, 1.7]]),
+      new Map([[TOLIMAN_HIP, 1.33]]),
+      null,
+    ));
+    expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
+    expect(counts.gateRejectedMag).toBe(0);
+  });
+
+  it('prunes hdOnMultipleSources so the count describes the gated artifact', () => {
+    // One HD reaching two sources, one of which the gate rejects: what ships
+    // is an unambiguous HD, so the ambiguity count must not still claim two.
+    const good = '111111111111111111';
+    const bad = '222222222222222222';
+    const { counts } = buildClassicIdOverlay(input({
+      tyc2Hd: [
+        { tyc: 'a-1-1', hd: 99, nHd: 1, nTyc: 2 },
+        { tyc: 'b-1-1', hd: 99, nHd: 1, nTyc: 2 },
+      ],
+      crossIndex: [],
+      bsc5: [],
+      tycToSource: new Map([['a-1-1', good], ['b-1-1', bad]]),
+      hipToSource: new Map([[7, good], [8, bad]]),
+      evidence: bindingEvidence(
+        new Map([[good, 5.1], [bad, 19.0]]),
+        new Map([[7, 5.0], [8, 5.0]]),
+        null,
+      ),
+    }));
+    expect(counts.gateRejectedMag).toBe(1);
+    expect(counts.hdOnMultipleSources).toBe(0);
+    expect(counts.overlayHd).toBe(1);
+  });
+
+  it('counts a row with no printed V as unvettable rather than passing it', () => {
+    const { counts } = tolimanOverlay(bindingEvidence(
+      new Map([[TOLIMAN_BAD_SRC, 20.95]]),
+      new Map(),
+      null,
+    ));
+    expect(counts.gateRejectedMag).toBe(0);
+    expect(counts.gateSkippedNoHipVMag).toBe(1);
+  });
+
+  it('rejects a similar-brightness sibling the G−V gate cannot see', () => {
+    // HIP 41098's cell holds HD 70492 B's source: same brightness, so only
+    // SIMBAD's per-component attribution refutes it.
+    const src = '663434291018997248';
+    const hip = 41098;
+    const overlay = new Map([[src, {
+      hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
+    }]]);
+    const { rejected } = applyBindingGate(overlay, bindingEvidence(
+      new Map([[src, 5.9]]),
+      new Map([[hip, 5.7]]),
+      {
+        bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
+        byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
+        primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
+      },
+    ));
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBe('sibling');
+    expect(overlay.has(src)).toBe(false);
   });
 });
 

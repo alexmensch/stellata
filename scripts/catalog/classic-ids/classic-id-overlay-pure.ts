@@ -2,6 +2,7 @@
 // Routes, ambiguity policy and precedence: docs/catalog-driver.md § 2, § 4.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../export-astrometry-request-pure';
+import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
 import { nonEmpty } from '../parse/corpus-tsv';
 
 /** Multi-value separator inside an overlay cell. A designation that names a
@@ -42,6 +43,103 @@ export interface OverlayInput {
   cns5: readonly Cns5Row[];
   tycToSource: ReadonlyMap<string, string>;
   hipToSource: ReadonlyMap<number, string>;
+  evidence: BindingEvidence;
+}
+
+/** Per-source photometry the binding gate below needs. `gMagOf` is Gaia's
+ *  own G for the candidate source; `vMagOfHip` is the printed Hipparcos V
+ *  of a HIP the overlay row claims. Both cross-walks feeding this join are
+ *  best-neighbour tables, so an unvetted row can assert that a saturated
+ *  star's designations belong to the faint companion Gaia actually fitted. */
+export interface BindingEvidence {
+  gMagOf: (sourceId: string) => number | null;
+  vMagOfHip: (hip: number) => number | null;
+  wdsXids: SimbadWdsXidIndex | null;
+}
+
+export function bindingEvidence(
+  sourceGMag: ReadonlyMap<string, number>,
+  hipVMag: ReadonlyMap<number, number>,
+  wdsXids: SimbadWdsXidIndex | null,
+): BindingEvidence {
+  return {
+    gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
+    vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
+    wdsXids,
+  };
+}
+
+/** An overlay row dropped because the source_id it keys is not the star its
+ *  designations name. Emitted to `data/classic-ids/rejected_bindings.tsv` so
+ *  the parity ledger can review what the gate removed. */
+export interface RejectedBinding {
+  sourceId: string;
+  hip: number;
+  vMag: number;
+  gMag: number | null;
+  reason: 'mag' | 'sibling';
+  designations: string;
+}
+
+function designationSummary(entry: OverlayEntry): string {
+  const parts: string[] = [];
+  if (entry.hd.length) parts.push(`HD ${entry.hd.join('/')}`);
+  if (entry.hr.length) parts.push(`HR ${entry.hr.join('/')}`);
+  if (entry.gj.length) parts.push(`GJ ${entry.gj.join('/')}`);
+  for (const b of entry.bayer) parts.push(b);
+  for (const f of entry.flamsteed) parts.push(f);
+  return parts.join(' · ');
+}
+
+/** Drop every overlay row whose source_id the record build would refuse to
+ *  bind, running the SAME `resolveGaiaSourceId` gates `stars-parse.ts` applies
+ *  rather than a second implementation of them.
+ *
+ *  The row's own HIP supplies the printed V the magnitude gate compares
+ *  against Gaia's G, so only HIP-bearing rows with a printed V are gateable —
+ *  `skippedNoHipVMag` counts the rest (see `data/classic-ids/README.md`
+ *  § Coverage for the residual that bound leaves). Dropping the WHOLE row
+ *  rather than just its `hip` cell is the point: both walks routinely land on
+ *  the same wrong source, so if the source is not the star then every
+ *  designation keyed on it is misattributed. The labels then ride the
+ *  inherited spine, exactly as they do for the record build's rejected rows. */
+export function applyBindingGate(
+  overlay: ClassicIdOverlay,
+  evidence: BindingEvidence,
+): { rejected: RejectedBinding[]; skippedNoHipVMag: number } {
+  const rejected: RejectedBinding[] = [];
+  let skippedNoHipVMag = 0;
+  for (const [sourceId, entry] of overlay) {
+    // A row carrying several HIPs is a blend; saturation is a property of the
+    // brightest of them, so that is the V the gate has to answer for.
+    let vMag: number | null = null;
+    let hip = 0;
+    for (const candidate of entry.hip) {
+      const v = evidence.vMagOfHip(candidate);
+      if (v !== null && (vMag === null || v < vMag)) {
+        vMag = v;
+        hip = candidate;
+      }
+    }
+    if (vMag === null) {
+      skippedNoHipVMag++;
+      continue;
+    }
+    const verdict = resolveGaiaSourceId(
+      sourceId, hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
+    );
+    if (verdict.gaiaSourceId !== null) continue;
+    rejected.push({
+      sourceId,
+      hip,
+      vMag,
+      gMag: evidence.gMagOf(sourceId),
+      reason: verdict.magRejected ? 'mag' : 'sibling',
+      designations: designationSummary(entry),
+    });
+  }
+  for (const r of rejected) overlay.delete(r.sourceId);
+  return { rejected, skippedNoHipVMag };
 }
 
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
@@ -76,8 +174,17 @@ export interface OverlayJoinCounts {
 
   sourcesWithMultipleHd: number;
   sourcesWithMultipleHr: number;
+  sourcesWithMultipleGj: number;
   sourcesWithMultipleBayer: number;
+  sourcesWithMultipleFlamsteed: number;
   hdOnMultipleSources: number;
+
+  /** Rows the binding gate dropped, split by which gate fired, plus the rows
+   *  it could not evaluate for want of a printed V under any HIP they carry.
+   *  Every `overlay*` count above is post-gate — it describes the artifact. */
+  gateRejectedMag: number;
+  gateRejectedSibling: number;
+  gateSkippedNoHipVMag: number;
 
   hdHipRouteAgree: number;
   hdHipRouteDisagree: number;
@@ -99,6 +206,7 @@ export interface OverlayJoin {
   overlay: ClassicIdOverlay;
   counts: OverlayJoinCounts;
   disagreements: HdHipRouteDisagreement[];
+  rejectedBindings: RejectedBinding[];
 }
 
 function entryFor(overlay: ClassicIdOverlay, sourceId: string): OverlayEntry {
@@ -115,7 +223,7 @@ function addValue<T>(list: T[], value: T): void {
 }
 
 export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
-  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource } = input;
+  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource, evidence } = input;
   const overlay: ClassicIdOverlay = new Map();
 
   // HD → TYC → source_id is the primary route: every HD-bearing AT-HYG row
@@ -213,6 +321,17 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
     entry.flamsteed.sort();
   }
 
+  // Gate before counting, so every overlay* count describes the artifact
+  // rather than the pre-vetting routing. The route counters above keep
+  // describing upstream reachability and are deliberately left pre-gate.
+  const gate = applyBindingGate(overlay, evidence);
+  for (const [hd, sources] of hdToSources) {
+    const kept = sources.filter((s) => overlay.has(s));
+    if (kept.length === sources.length) continue;
+    if (kept.length === 0) hdToSources.delete(hd);
+    else hdToSources.set(hd, kept);
+  }
+
   const withValues = (pick: (e: OverlayEntry) => unknown[]): number => {
     let n = 0;
     for (const entry of overlay.values()) if (pick(entry).length > 0) n++;
@@ -227,6 +346,7 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
   return {
     overlay,
     disagreements,
+    rejectedBindings: gate.rejected,
     counts: {
       tyc2HdRows: tyc2Hd.length,
       tyc2HdDistinctTyc: distinctTyc.size,
@@ -248,8 +368,14 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
 
       sourcesWithMultipleHd: withMultiple((e) => e.hd),
       sourcesWithMultipleHr: withMultiple((e) => e.hr),
+      sourcesWithMultipleGj: withMultiple((e) => e.gj),
       sourcesWithMultipleBayer: withMultiple((e) => e.bayer),
+      sourcesWithMultipleFlamsteed: withMultiple((e) => e.flamsteed),
       hdOnMultipleSources: [...hdToSources.values()].filter((s) => s.length > 1).length,
+
+      gateRejectedMag: gate.rejected.filter((r) => r.reason === 'mag').length,
+      gateRejectedSibling: gate.rejected.filter((r) => r.reason === 'sibling').length,
+      gateSkippedNoHipVMag: gate.skippedNoHipVMag,
 
       hdHipRouteAgree: hipRouteAgree,
       hdHipRouteDisagree: disagreements.length,
@@ -282,10 +408,11 @@ export function serializeOverlay(overlay: ClassicIdOverlay): string {
   return `${lines.join('\n')}\n`;
 }
 
-/** AT-HYG stores a missing classical identifier as either an empty cell or
- *  the literal "0" — the TS mirror of `refresh_lib.athyg_int_or_none`. A
- *  plain integer parse would return a sentinel-0 that then matches nothing
- *  and inflates the "keyed" side of label parity. */
+/** TS mirror of `refresh_lib.athyg_int_or_none`: an empty cell and a literal
+ *  "0" both mean "no identifier". v3.3 uses the empty cell throughout — no
+ *  `hd`/`hr`/`hip`/`flam` cell in the committed CSV is "0" — so the sentinel
+ *  branch is defensive against an upstream that changes convention, which is
+ *  why it mirrors the Python rule rather than trusting today's data. */
 export function athygIdOrNull(cell: string | undefined): number | null {
   const t = nonEmpty(cell);
   if (t === null || t === '0') return null;
@@ -321,7 +448,9 @@ export const BRIGHT_TIER_MAG_CEILING = 3;
  *  Gl-vs-GJ prefix and component suffix are display forms). `bayer`
  *  compares presence only: IV/27A spells Bayer letters "alf" where AT-HYG
  *  spells them "Alp", and reconciling the two is the naming-authority
- *  ladder's job, not this join's. */
+ *  ladder's job, not this join's. `flam` compares the number and ignores
+ *  the constellation — the row is already keyed on one source_id, so a
+ *  matching number in a different constellation is not a reachable state. */
 export interface AthygLabelParity {
   hdKeyed: number;
   hdCovered: number;
@@ -441,6 +570,8 @@ export function measureAthygLabelParity(
 
 export interface ClassicIdOverlayCounts extends OverlayJoinCounts {
   athygRows: number;
+  /** Rows that reach no source_id the record build would accept — including
+   *  the ones whose only candidate binding its gates scrub. */
   athygRowsWithoutSourceId: number;
   athygRowsWithoutOverlayEntry: number;
   athygBrightRows: number;
