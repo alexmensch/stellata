@@ -4,7 +4,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { compareBuildCounts } from '../build-counts';
 import { REPO_ROOT } from '../../util/paths';
@@ -16,6 +16,7 @@ import {
   spineCounts,
   spineDesignations,
   type SpineCounts,
+  type SpineRow,
 } from './inherited-spine-pure';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
@@ -28,12 +29,15 @@ const text = existsSync(SPINE_PATH) ? readFileSync(SPINE_PATH, 'utf-8') : null;
 const available = text !== null && !isLfsPointer(text);
 
 describe.skipIf(!available)('committed inherited spine', () => {
-  const rows = parseSpineTsv(text!);
-  const counts = spineCounts(rows);
-  const expected = JSON.parse(readFileSync(EXPECTED_PATH, 'utf-8')) as SpineCounts;
+  // Parsed in beforeAll, not in the describe body: a skipped suite still runs
+  // its body to collect tests, so parsing there would hit the pointer stub the
+  // skip exists to avoid — and it keeps the 40 MB parse to once per run.
+  let rows: SpineRow[];
+  beforeAll(() => { rows = parseSpineTsv(text!); });
 
   it('matches the pinned row + per-column counts', () => {
-    const mismatches = compareBuildCounts(expected, counts)
+    const expected = JSON.parse(readFileSync(EXPECTED_PATH, 'utf-8')) as SpineCounts;
+    const mismatches = compareBuildCounts(expected, spineCounts(rows))
       .filter((d) => d.status === 'mismatch');
     expect(mismatches).toEqual([]);
   });
