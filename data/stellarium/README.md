@@ -2,6 +2,12 @@
 
 HIP-indexed polylines for the 88 IAU constellation stick figures.
 
+The file also carries a `common_names` block — 659 HIP-keyed folk names
+with per-name literature references. **Nothing reads it**, and it is
+rejected as a naming authority (`docs/star-naming.md` § 2); it carries
+**no Bayer designations and no Greek glyphs**, so it is not a glyph
+source either. It stays an optional alias candidate only.
+
 ```
 stellarium-modern-skyculture.json   ~200 KB, regular git.
 ```

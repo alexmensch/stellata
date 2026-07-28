@@ -8,8 +8,7 @@ covers everything else. The decision record — audit empirics, per-child
 traceability, phase sequencing — lives in bd (epic `stellata-3bsf`,
 design gate `stellata-3bsf.1`). External tables verified against
 VizieR TAP 2026-07-27. The naming-authority ladder (proper/Bayer
-display names, search aliases) has its own design gate and is not
-covered here.
+display names, search aliases) is `docs/star-naming.md`.
 
 ## 1. The driver model
 
@@ -64,11 +63,14 @@ cross-IDs), as today. The authoritative source per identifier:
 Caveats verified at the gate:
 
 - **IV/27A as served by TAP is the Bayer/Flamsteed-bearing subset**
-  (3,690 rows; HR 8832 absent). Sufficient as the Bayer/Flamsteed
-  designation source; used for nothing else — HR routes via V/50, HD
-  via IV/25, HIP natively. Bayer *display* rendering (Greek glyphs)
-  belongs to the naming-ladder gate, which consumes these
-  designations.
+  (3,690 rows; HR 8832 absent). Used for nothing else — HR routes via
+  V/50, HD via IV/25, HIP natively. It is the Bayer/Flamsteed source
+  for the **V > 6.5 tail only**: the naming gate adopted the IAU
+  WGSN naked-eye catalogue as the primary designation source, since it
+  ships the Greek glyph natively and covers 1,494 of our 1,522 Bayer
+  records (`docs/star-naming.md` § 2). IV/27A's own ASCII conventions
+  and its 111 GCVS-style contaminants are normaliser inputs there,
+  never a stored form.
 - **CNS5 beats hand-rolling Gliese**: modern, curated, carries
   GJ ↔ Gaia EDR3 (same source_id space as DR3) ↔ HIP directly, plus
   component structure. V/70A (CNS3) is not ingested. **CNS5 is
@@ -205,7 +207,7 @@ select per-field sourcing:
 | spectral string | SIMBAD sp_type (in-tree, source_id-keyed) → spine `spect` |
 | radial velocity | Gaia DR3 `radial_velocity` (added to the astrometry-catalog pull schema) → spine `rv` |
 | constellation | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
-| proper / Bayer display | naming-authority ladder (its own gate) |
+| proper / Bayer display | naming-authority ladder (`docs/star-naming.md`) |
 
 - **Bright tier** = rows the direction cascade already routes to
   HIP2/printed, plus rows whose Gaia photometry is missing or outside

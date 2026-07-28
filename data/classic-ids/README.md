@@ -43,8 +43,13 @@ all four; cite the paper per table.
   absent), which is all we ask of it — HR routes via `bsc5.tsv`, HD via
   `tyc2_hd.tsv`. 2,185 rows carry a Bayer letter, 2,757 a Flamsteed
   number. `bayer` is IV/27A's own lowercase three-letter form (`alf`,
-  `kap`), **not** AT-HYG's (`Alp`); reconciling the two, and rendering
-  Greek glyphs, belongs to the naming-authority ladder. `cst` is the
+  `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
+  `docs/star-naming.md` § 4 stores the Unicode glyph, sourced from the
+  IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5
+  tail; both ASCII conventions are normaliser inputs there. 111 of
+  these cells are GCVS-style variable designations (`R And`, `RZ Cas`,
+  `V380 Cyg`), not Bayer letters, and the ladder rejects them from the
+  Bayer tier. `cst` is the
   constellation the Bayer / Flamsteed designation belongs to — never the
   IAU-positional constellation the catalogue assigns per record
   (`docs/catalog-driver.md` § 5).
