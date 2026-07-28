@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseGaiaHipXmatchTsv } from './gaia-xmatch';
+import { parseGaiaHipXmatchTsv, parseGaiaTycXmatchTsv } from './gaia-xmatch';
 
 describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
   it('parses a minimal TSV with header + one row', () => {
@@ -78,5 +78,37 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
   it('throws if a required column is missing from the header', () => {
     const text = ['hip\tangular_distance', '2\t0.04'].join('\n');
     expect(() => parseGaiaHipXmatchTsv(text)).toThrow(/gaia_source_id/);
+  });
+});
+
+describe('gaia-xmatch / parseGaiaTycXmatchTsv', () => {
+  const TEXT = [
+    'tyc\tgaia_source_id\tangular_distance\tnumber_of_neighbours\txm_flag',
+    '1-381-1\t111\t0.500',
+    '1-381-1\t222\t0.050',
+    '3105-2070-1\t333\t0.010',
+    '\t444\t0.010',
+    '9-9-9\t000\t0.010',
+  ].join('\n');
+
+  it('keys on the unpadded tyc string and keeps the nearest match', () => {
+    const m = parseGaiaTycXmatchTsv(TEXT);
+    expect(m.get('1-381-1')).toBe('222');
+    expect(m.get('3105-2070-1')).toBe('333');
+  });
+
+  it('skips empty tyc and the all-zero gaia_source_id sentinel', () => {
+    expect(parseGaiaTycXmatchTsv(TEXT).size).toBe(2);
+  });
+
+  it('admits only the keep set, so the 2.5 M-row table stays a small map', () => {
+    const m = parseGaiaTycXmatchTsv(TEXT, new Set(['3105-2070-1']));
+    expect([...m.keys()]).toEqual(['3105-2070-1']);
+  });
+
+  it('throws if a required column is missing from the header', () => {
+    expect(() => parseGaiaTycXmatchTsv('tyc\tangular_distance\n1-1-1\t0.1')).toThrow(
+      /gaia_source_id/,
+    );
   });
 });
