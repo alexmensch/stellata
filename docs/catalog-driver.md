@@ -132,7 +132,12 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
 - Per-column counts are pinned in build-counts, and asserted against the
   **committed** file rather than a regeneration: the spine is a snapshot of
   a build that no longer exists after the swap, so a rebuild-and-diff gate
-  would demand rewriting the one file whose purpose is to stop moving.
+  would demand rewriting the one file whose purpose is to stop moving. The
+  file's byte length + sha256 are pinned in test source instead, and two
+  parity gates hold it to the build it stands in for — row count against
+  `recordCount` − `companionPromoted`, and the per-record designation
+  multiset against the built artifacts
+  (`scripts/catalog/spine/README.md` § Parity with the shipped build).
   `data/athyg/README.md` documents it as *generated provenance
   data* (source: AT-HYG v3.3 final build, dated), distinct from the
   upstream CSV, which stays committed but leaves the build's input

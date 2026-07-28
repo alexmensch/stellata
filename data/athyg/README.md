@@ -62,5 +62,6 @@ AT-HYG release lands. Reference epoch J2000.0; proper-motion columns
 are ingested but not applied (no T-axis animation today).
 
 `inherited-spine.tsv` has no build consumer yet — wiring it in as the
-membership term is `stellata-3bsf.4`. `scripts/catalog/spine/
-inherited-spine-guard.test.ts` reads it to pin the committed counts.
+membership term is `stellata-3bsf.4`. Two test files in
+`scripts/catalog/spine/` read it: the guard pins its bytes and committed
+counts, the parity gate holds it to the build it snapshots.
