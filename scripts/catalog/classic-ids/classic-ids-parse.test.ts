@@ -4,6 +4,7 @@ import {
   parseBsc5Tsv,
   parseCns5Tsv,
   parseCrossIndexTsv,
+  parseHipVmagTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
 
@@ -45,13 +46,27 @@ describe('classic-ids-parse / parseTyc2HdTsv', () => {
   it('throws when a required column is absent', () => {
     expect(() => parseTyc2HdTsv('tyc1\ttyc2\thd\n1\t2\t3')).toThrow(/tyc3/);
   });
+
+  it('throws on an empty or headerless file rather than reporting zero rows', () => {
+    // Every input here is a committed LFS artifact: "no rows" means truncated,
+    // and answering [] would leave the join silently keyed on nothing until
+    // the count snapshot flagged the drift a layer later.
+    expect(() => parseTyc2HdTsv('')).toThrow(/missing required columns/);
+    expect(() => parseTyc2HdTsv('\n\n')).toThrow(/missing required columns/);
+  });
+
+  it('returns no rows for a valid header with no data rows', () => {
+    expect(parseTyc2HdTsv('tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc\n')).toEqual([]);
+  });
 });
 
 describe('classic-ids-parse / parseCrossIndexTsv', () => {
   it('reads Bayer in IV/27A\'s own lowercase form and nulls empty cells', () => {
     const rows = parseCrossIndexTsv(CROSS_INDEX);
+    // No `hr`: HR reaches the overlay through V/50's own HR↔HD mapping, so
+    // IV/27A's column is present in the committed slice but never parsed.
     expect(rows[0]).toEqual({
-      hd: 172167, hr: 7001, hip: 91262, bayer: 'alf', flamsteed: 3, cst: 'Lyr',
+      hd: 172167, hip: 91262, bayer: 'alf', flamsteed: 3, cst: 'Lyr',
     });
     expect(rows[1].bayer).toBeNull();
     expect(rows[1].flamsteed).toBe(33);
@@ -78,5 +93,30 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
     expect(rows[1].gj).toBe('Sun');
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
+  });
+});
+
+describe('classic-ids-parse / parseHipVmagTsv', () => {
+  const HIP_VMAG = [
+    'hip\tvmag',
+    '32349\t-1.440',
+    '71681\t1.330',
+    '99999\t',
+    '0\t4.000',
+  ].join('\n');
+
+  it('maps HIP to printed V, dropping null-V and non-positive HIP rows', () => {
+    const m = parseHipVmagTsv(HIP_VMAG);
+    expect(m.get(32349)).toBe(-1.44);
+    expect(m.get(71681)).toBe(1.33);
+    expect(m.has(99999)).toBe(false);
+    expect(m.has(0)).toBe(false);
+    expect(m.size).toBe(2);
+  });
+
+  it('throws on an empty file rather than yielding an empty gate', () => {
+    // An empty map would silently disable the binding gate, which is the
+    // failure this parser exists to make loud.
+    expect(() => parseHipVmagTsv('')).toThrow(/missing required columns/);
   });
 });
