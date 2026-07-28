@@ -233,15 +233,27 @@ are renderer-local with small magnitudes.
 
 ## Chart mode + warp
 
-Chart mode swaps the volumetric raymarch for a single-line **isobar
-contour** along the magnitude limit (a thin ink line tracking "where
-the integrated MW would equal the visible magnitude limit" reads as a
-paper-atlas equivalent of the volumetric band). The contour rendering
-is handled by chart-mode wiring; this layer's `setIsobar(true)` simply
-hides the meshes. The band↔isobar swap is driven by the `milkyWayIsobar`
-detail bind (chart floor), not chart-mode.ts directly — the group stays
-enabled in chart because `applyMilkywayEnabled` permits either the band
-or the isobar (`../scene/README.md` § Chart-content wiring).
+**Chart mode currently renders no Milky Way at all.** `setIsobar(true)`
+sets `uChartIsobar = 1`, switches both materials to `NormalBlending`, and
+then hides both meshes — so the fragment shader's isobar branch
+(`milkyway.frag.glsl`, the `fwidth`-normalised contour at
+`magPx == uMaxAppMag`) is unreachable. The branch is written and the
+uniforms are plumbed; only the draw is suppressed, pending the contour
+treatment.
+
+Two things a future session needs before re-enabling it, both in
+`stellata-xypg.22`: the contour must be evaluated on **surface brightness
+`S`**, not on the Ω_px-dependent `magPx`, or the line moves when the
+camera zooms — wrong for a chart. And the threshold it compares against
+is an *extended-source* limit (~21.5–22 mag/arcsec² for a dark-adapted
+eye), which is a different quantity from the instrument's point-source
+`m_lim`, because rod spatial summation integrates an extended source over
+many receptors.
+
+The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
+floor), not chart-mode.ts directly — the group stays enabled in chart
+because `applyMilkywayEnabled` permits either the band or the isobar
+(`../scene/README.md` § Chart-content wiring).
 
 Warp keeps the layer visible in dark mode — the band reorienting as
 the camera flies past the GC is the realism payoff.
