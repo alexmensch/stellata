@@ -31,12 +31,17 @@ describe('parseSimbadSampleRows', () => {
 
   it('throws naming the column when a required header is absent', () => {
     expect(() => parseSimbadSampleRows('simbad_oid\thip\n1\t100\n')).toThrow(
-      /missing required column: simbad_main_id/,
+      /missing required columns: simbad_main_id/,
     );
   });
 
-  it('returns no rows for an empty file or a header with no data rows', () => {
-    expect(parseSimbadSampleRows('')).toEqual([]);
+  it('throws on an empty file instead of reporting zero sample rows', () => {
+    // The sample gates the build's distance-regression check, so a truncated
+    // file must not read as "nothing to cross-check".
+    expect(() => parseSimbadSampleRows('')).toThrow(/missing required columns/);
+  });
+
+  it('returns no rows for a valid header with no data rows', () => {
     expect(parseSimbadSampleRows(
       'simbad_oid\tsimbad_main_id\thip\tgaia_source_id\tplx_value\tplx_err\tpmra\tpmdec\tv_mag\tdistance_pc\tabsmag\n',
     )).toEqual([]);

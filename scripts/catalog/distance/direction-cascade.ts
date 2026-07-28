@@ -7,6 +7,7 @@ import {
   unitVectorFromRaDec,
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
+import { headerIndex } from '../parse/corpus-tsv';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
@@ -316,28 +317,6 @@ export function resolveDirection(
 }
 
 // ---- TSV parsers ----------------------------------------------------------
-
-function headerIndex(
-  headerLine: string,
-  cols: readonly string[],
-  fileLabel: string,
-  refreshHint: string,
-): Record<string, number> {
-  const header = headerLine.split('\t').map((h) => h.trim());
-  const idx: Record<string, number> = Object.create(null);
-  const missing: string[] = [];
-  for (const c of cols) {
-    const i = header.indexOf(c);
-    if (i < 0) missing.push(c);
-    idx[c] = i;
-  }
-  if (missing.length) {
-    throw new Error(
-      `${fileLabel} is missing required columns: ${missing.join(', ')}. ${refreshHint}`,
-    );
-  }
-  return idx;
-}
 
 function floatCell(cells: string[], i: number): number | null {
   const s = (cells[i] ?? '').trim();

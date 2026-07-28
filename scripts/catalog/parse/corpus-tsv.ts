@@ -1,5 +1,35 @@
-// Shared cell + record-ref parsing for the Tier A corpus TSVs
-// (known-stars.tsv, multi-star-regression.tsv, system-pair-topology.tsv).
+// Shared TSV header, cell and record-ref parsing for the build's committed
+// tables and the Tier A corpora. See README.md § TSV header resolution.
+
+/** Resolve a header line to a column → index map, throwing when any required
+ *  column is absent.
+ *
+ *  An empty or headerless file therefore throws rather than reading as a
+ *  zero-row table. Every caller's input is a committed (usually LFS) artifact,
+ *  so "no rows" means truncated or unsmudged, never an empty dataset — and a
+ *  parser that answers with an empty map turns a missing file into a silently
+ *  zeroed join that only surfaces as a count drift much later. */
+export function headerIndex(
+  headerLine: string,
+  cols: readonly string[],
+  fileLabel: string,
+  refreshHint: string,
+): Record<string, number> {
+  const header = headerLine.split('\t').map((h) => h.trim());
+  const idx: Record<string, number> = Object.create(null);
+  const missing: string[] = [];
+  for (const c of cols) {
+    const i = header.indexOf(c);
+    if (i < 0) missing.push(c);
+    idx[c] = i;
+  }
+  if (missing.length) {
+    throw new Error(
+      `${fileLabel} is missing required columns: ${missing.join(', ')}. ${refreshHint}`,
+    );
+  }
+  return idx;
+}
 
 export function nonEmpty(s: string | undefined): string | null {
   const t = (s ?? '').trim();

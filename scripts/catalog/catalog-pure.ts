@@ -3,6 +3,7 @@
 // parsing, Stefan-Boltzmann radius, GCVS field extraction.
 
 import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
+import { headerIndex } from './parse/corpus-tsv';
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or
@@ -1772,32 +1773,21 @@ export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
   const byHip = new Map<number, WdsComponentAttribution[]>();
   const primarySourceLetterByWds = new Map<string, string>();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return { bySource, byHip, primarySourceLetterByWds };
-  const header = lines[0].split('\t').map((h) => h.trim());
-  const wdsIdx = header.indexOf('wds_id');
-  const compIdx = header.indexOf('component');
-  const gaiaIdx = header.indexOf('gaia_source_id');
-  const hipIdx = header.indexOf('hip');
-  const missing: string[] = [];
-  if (wdsIdx < 0) missing.push('wds_id');
-  if (compIdx < 0) missing.push('component');
-  if (gaiaIdx < 0) missing.push('gaia_source_id');
-  if (hipIdx < 0) missing.push('hip');
-  if (missing.length) {
-    throw new Error(
-      `SIMBAD WDS xids TSV is missing required columns: ${missing.join(', ')}. ` +
-        `Re-run scripts/refresh/refresh-simbad-wds-xids.py.`,
-    );
-  }
+  const idx = headerIndex(
+    lines[0] ?? '',
+    ['wds_id', 'component', 'gaia_source_id', 'hip'],
+    'SIMBAD WDS xids TSV',
+    'Re-run scripts/refresh/refresh-simbad-wds-xids.py.',
+  );
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
     const cells = line.split('\t');
-    const wdsId = (cells[wdsIdx] ?? '').trim();
-    const component = (cells[compIdx] ?? '').trim();
+    const wdsId = (cells[idx.wds_id] ?? '').trim();
+    const component = (cells[idx.component] ?? '').trim();
     if (!wdsId || !component) continue;
     const attr: WdsComponentAttribution = { wdsId, component };
-    const src = parseGaiaSourceIdStr(cells[gaiaIdx]);
+    const src = parseGaiaSourceIdStr(cells[idx.gaia_source_id]);
     if (src) {
       const list = bySource.get(src);
       if (list) list.push(attr);
@@ -1807,7 +1797,7 @@ export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
         primarySourceLetterByWds.set(wdsId, component);
       }
     }
-    const hip = parseInt((cells[hipIdx] ?? '').trim(), 10);
+    const hip = parseInt((cells[idx.hip] ?? '').trim(), 10);
     if (Number.isFinite(hip) && hip > 0) {
       const list = byHip.get(hip);
       if (list) list.push(attr);
@@ -1945,28 +1935,20 @@ export function resolveGaiaSourceId(
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
   const lines = text.split(/\r?\n/);
-  const header = lines[0].split('\t').map((h) => h.trim());
-  const idIdx = header.indexOf('source_id');
-  const geoIdx = header.indexOf('r_med_geo');
-  const photogeoIdx = header.indexOf('r_med_photogeo');
-  const missing: string[] = [];
-  if (idIdx < 0) missing.push('source_id');
-  if (geoIdx < 0) missing.push('r_med_geo');
-  if (photogeoIdx < 0) missing.push('r_med_photogeo');
-  if (missing.length) {
-    throw new Error(
-      `Bailer-Jones TSV is missing required columns: ${missing.join(', ')}. ` +
-        `Re-run scripts/refresh/refresh-bailer-jones.py.`,
-    );
-  }
+  const idx = headerIndex(
+    lines[0] ?? '',
+    ['source_id', 'r_med_geo', 'r_med_photogeo'],
+    'Bailer-Jones TSV',
+    'Re-run scripts/refresh/refresh-bailer-jones.py.',
+  );
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
     const cells = line.split('\t');
-    const sourceId = (cells[idIdx] ?? '').trim();
+    const sourceId = (cells[idx.source_id] ?? '').trim();
     if (!sourceId) continue;
-    const photogeo = parseFloat((cells[photogeoIdx] ?? '').trim());
-    const geo = parseFloat((cells[geoIdx] ?? '').trim());
+    const photogeo = parseFloat((cells[idx.r_med_photogeo] ?? '').trim());
+    const geo = parseFloat((cells[idx.r_med_geo] ?? '').trim());
     const d = Number.isFinite(photogeo)
       ? photogeo
       : Number.isFinite(geo) ? geo : NaN;
