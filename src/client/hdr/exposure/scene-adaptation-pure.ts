@@ -1,5 +1,6 @@
-// Scene-driven exposure adaptation: mean visible flux per viewport
-// pixel, and the exposure cut it implies. See README.md § Adaptation.
+// Scene-driven exposure adaptation: mean visible flux per viewport pixel,
+// the frame's brightest visible pixel, and the cut the two imply. See
+// README.md § Adaptation.
 
 import { circleCircleLensArea } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { smoothstep } from '../../galactic/galactic-fade';
@@ -18,9 +19,10 @@ export const L_TARGET = 0.89;
 /**
  * Reference coverage: the frame fraction a body lands exactly on
  * `L_TARGET` at, and the one free parameter of the perception branch. It
- * is the **park coverage** — a focused body is parked filling 0.3 of the
- * viewport's minor axis, so its disc covers `π·0.15²·min(w,h)²/(w·h)`,
- * which is 6.85% on the calibration viewport. Landing the measured
+ * is the **park coverage** — a focused body is parked filling
+ * `PLANET_PARK_FILL_FRACTION` of the viewport's minor axis, so its disc
+ * covers `π·(f/2)²·min(w,h)²/(w·h)`, which is 6.85% on the calibration
+ * viewport (portrait, so its minor axis is the width). Landing the measured
  * `L_TARGET` on the framing the user actually sees a body in is what
  * makes the trim a correction rather than a permanent offset.
  */
