@@ -5,9 +5,11 @@ import { luminanceForMagnitude } from '../emission-pure';
 import { exposureForMagLimit } from './exposure-epoch';
 import { SceneAdaptation, type SceneAdaptationDeps } from './scene-adaptation';
 import {
-  adaptationDm,
   DIFFUSE_FIELD_L,
+  eyeAdaptationDm,
+  highlightGuardDm,
   L_ADAPT,
+  L_CAP,
   type LuminanceSample,
   negligibleAppMag,
   starAdaptationWindowPc,
@@ -87,8 +89,12 @@ describe('SceneAdaptation', () => {
     const appMag = -2.5 * Math.log10((surfaceL * coverage * W * H) / EXPOSURE);
     const { adaptation, camera } = harness([body({ appMag, diameterPx, label: 'Venus' })]);
     const dm = adaptation.measure(camera, false);
-    expect(dm).toBeCloseTo(adaptationDm(surfaceL * coverage + DIFFUSE_FIELD_L), 9);
-    expect(dm).toBeCloseTo(-14.32, 2);
+    // Well over the handover coverage, so the guard governs and the disc
+    // lands on L_CAP rather than on the perception branch's L_ADAPT/f.
+    expect(adaptation.getPeakLuminance()).toBeCloseTo(surfaceL, -1);
+    expect(dm).toBeCloseTo(highlightGuardDm(surfaceL), 9);
+    expect(dm).toBeGreaterThan(eyeAdaptationDm(surfaceL * coverage + DIFFUSE_FIELD_L));
+    expect(surfaceL * 10 ** (0.4 * dm)).toBeCloseTo(L_CAP, 9);
     expect(adaptation.getDominantLabel()).toBe('Venus');
   });
 
@@ -161,13 +167,16 @@ describe('SceneAdaptation', () => {
   });
 
   it('adapts to a close star — the flux gate, not resolvedness', () => {
-    // Sol at 100 AU: a third of a pixel wide, 473× over the anchor.
+    // Sol at 100 AU: a third of a pixel wide, 1036× over the anchor.
     const sol = { pc: 100 * 4.8481368e-6, appMag: -16.74, label: 'Sol' };
     const { adaptation, camera } = harness([], [sol]);
     const dm = adaptation.measure(camera, false);
     const expected = luminanceForMagnitude(EXPOSURE, sol.appMag) / (W * H);
-    expect(expected / L_ADAPT).toBeCloseTo(473, 0);
-    expect(dm).toBeCloseTo(adaptationDm(expected + DIFFUSE_FIELD_L), 9);
+    expect(expected / L_ADAPT).toBeCloseTo(1036, 0);
+    // A point source is below the handover coverage by construction, so
+    // the perception branch governs and the star is allowed to clip.
+    expect(dm).toBeCloseTo(eyeAdaptationDm(expected + DIFFUSE_FIELD_L), 9);
+    expect(dm).toBeGreaterThan(highlightGuardDm(adaptation.getPeakLuminance()));
     expect(adaptation.getDominantLabel()).toBe('Sol');
   });
 

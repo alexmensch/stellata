@@ -15,12 +15,33 @@ import { luminanceForMagnitude } from '../emission-pure';
  */
 export const L_TARGET = 0.89;
 
-/** Reference coverage: the frame fraction a body lands exactly on
- *  `L_TARGET` at. The one free parameter of the model. */
-export const ADAPT_REF_COVERAGE = 0.15;
+/**
+ * Reference coverage: the frame fraction a body lands exactly on
+ * `L_TARGET` at, and the one free parameter of the perception branch. It
+ * is the **park coverage** — a focused body is parked filling 0.3 of the
+ * viewport's minor axis, so its disc covers `π·0.15²·min(w,h)²/(w·h)`,
+ * which is 6.85% on the calibration viewport. Landing the measured
+ * `L_TARGET` on the framing the user actually sees a body in is what
+ * makes the trim a correction rather than a permanent offset.
+ */
+export const ADAPT_REF_COVERAGE = 0.0685;
 
-/** Adaptation anchor — `L̄` at which the cut is exactly zero. */
+/** Adaptation anchor — `L̄` at which the perception branch's cut is
+ *  exactly zero. */
 export const L_ADAPT = L_TARGET * ADAPT_REF_COVERAGE;
+
+/**
+ * Ceiling the highlight guard holds the frame's brightest **visible
+ * pixel** at. This is a display compensation and not a perceptual claim
+ * (`docs/science-hdr-pipeline.md` § 3.2 — The highlight guard): a
+ * resolved surface really would be far brighter, and a monitor cannot
+ * show that, so the guard shows what can be perceived instead of clipping
+ * it to flat white. It sits well under the operator's own clipping onset
+ * (~8–20), which is the headroom that keeps a disc's real peak — up to
+ * ~0.4 mag over the mean this statistic measures — off the white point.
+ * The one knob smoke-tuning moves.
+ */
+export const L_CAP = 1.2;
 
 /**
  * The whole diffuse field as one term, for **one frame** rather than the
@@ -228,26 +249,76 @@ export function meanSceneLuminance(fluxL: number, w: number, h: number): number 
 }
 
 /**
- * The automatic exposure cut, in magnitudes. `dm ≤ 0` is an invariant: a
- * dark-adapted eye at the instrument's limit is the ceiling, so
- * adaptation only ever cuts.
+ * Per-pixel luminance of a sample's brightest pixel — its flux over the
+ * footprint it is spread across, which is exactly
+ * `stellataPointSourcePeak`'s rule. Unclamped, deliberately: `LUMA_CEIL`
+ * would understate a very bright source's peak, and the guard reads the
+ * peak to decide whether it can protect it at all.
  */
-export function adaptationDm(meanL: number): number {
+export function samplePeakL(s: LuminanceSample, exposure: number): number {
+  const r = footprintRadiusPx(s.diameterPx);
+  return (luminanceForMagnitude(exposure, s.appMag) * s.fluxScale) / (Math.PI * r * r);
+}
+
+/**
+ * The perception branch: retinal illuminance drives the cut. `dm ≤ 0` is
+ * an invariant — a dark-adapted eye at the instrument's limit is the
+ * ceiling, so adaptation only ever cuts.
+ */
+export function eyeAdaptationDm(meanL: number): number {
   if (meanL <= L_ADAPT) return 0;
   return -2.5 * Math.log10(meanL / L_ADAPT);
 }
 
+/**
+ * The display branch: hold the frame's brightest visible pixel at
+ * `L_CAP`. Also clamped at 0 — it is a *limit* on saturation, never a
+ * licence to expose past threshold.
+ */
+export function highlightGuardDm(peakL: number): number {
+  if (peakL <= L_CAP) return 0;
+  return -2.5 * Math.log10(peakL / L_CAP);
+}
+
+/**
+ * The frame's cut: whichever branch asks for less of one. Since both are
+ * clamped at 0 the result is too, and since it is a maximum **the guard
+ * can only ever raise the exposure** — which is what stops it from being
+ * the maximum statistic § 3.1 rejects.
+ *
+ * The two branches are equal at the coverage `L_ADAPT / L_CAP`, so the
+ * handover is a pure coverage threshold, independent of how bright the
+ * source is, and continuous across it: no fade band, no state, and an
+ * occluded source hands back smoothly as its visible coverage falls
+ * through it.
+ */
+export function adaptationDm(meanL: number, peakL: number): number {
+  return Math.max(eyeAdaptationDm(meanL), highlightGuardDm(peakL));
+}
+
+/** Coverage at which the two branches agree — above it the guard governs
+ *  and a resolved surface reads `L_CAP`, below it the perception model
+ *  does and a small bright source is allowed to clip. */
+export function guardHandoverCoverage(): number {
+  return L_ADAPT / L_CAP;
+}
+
 /** Disc-mean luminance a body of frame coverage `f` reads at once
- *  adaptation has settled — `L_TARGET` exactly at `ADAPT_REF_COVERAGE`,
- *  drifting by the coverage ratio away from it (§ 3.2's sensitivity). */
+ *  adaptation has settled: `L_ADAPT / f` under the perception branch —
+ *  `L_TARGET` exactly at `ADAPT_REF_COVERAGE`, drifting by the coverage
+ *  ratio away from it (§ 3.2's sensitivity) — and flat at `L_CAP`
+ *  wherever the guard governs, which is what makes brightness invariant
+ *  in zoom above the handover coverage. The guard raises exposure, so the
+ *  brighter of the two is the one that happens. */
 export function adaptedDiscMeanL(coverage: number): number {
-  return L_ADAPT / coverage;
+  return Math.max(L_ADAPT / coverage, L_CAP);
 }
 
 /** Stops of manual trim a body of coverage `f` needs to land its disc
- *  mean back on `L_TARGET`. Zero at the reference coverage. */
+ *  mean back on `L_TARGET`. Zero at the reference coverage; constant
+ *  wherever the guard governs, since the guard already pins the level. */
 export function trimStopsForCoverage(coverage: number): number {
-  return Math.log2(coverage / ADAPT_REF_COVERAGE);
+  return Math.log2(L_TARGET / adaptedDiscMeanL(coverage));
 }
 
 /** Apparent magnitude at which a point source stops mattering — the

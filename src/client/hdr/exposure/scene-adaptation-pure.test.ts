@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { angularToPx } from '../../camera/controls/star-geometry';
+import { PLANET_PARK_FILL_FRACTION } from '../../camera/controls/star-physics';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import {
   luminanceForMagnitude,
@@ -16,15 +17,20 @@ import {
   ADAPT_STAR_ABSMAG_REF,
   adaptationDm,
   adaptedDiscMeanL,
+  eyeAdaptationDm,
+  guardHandoverCoverage,
+  highlightGuardDm,
   DIFFUSE_FIELD_L,
   discViewportOverlapArea,
   L_ADAPT,
+  L_CAP,
   L_TARGET,
   type LuminanceSample,
   meanSceneLuminance,
   negligibleAppMag,
   occludedFraction,
   sampleFluxL,
+  samplePeakL,
   sampleVisibleFraction,
   sourceVisibleFraction,
   starAdaptationWindowPc,
@@ -71,8 +77,18 @@ function contribution(s: LuminanceSample): number {
 describe('scene-adaptation constants', () => {
   it('pins the measured target and the anchor derived from it', () => {
     expect(L_TARGET).toBe(0.89);
-    expect(ADAPT_REF_COVERAGE).toBe(0.15);
-    expect(L_ADAPT).toBeCloseTo(0.1335, 12);
+    expect(ADAPT_REF_COVERAGE).toBe(0.0685);
+    expect(L_ADAPT).toBeCloseTo(0.060965, 12);
+    expect(L_CAP).toBe(1.2);
+  });
+
+  it('derives the reference coverage from the park framing', () => {
+    // A parked body fills PARK_FILL of the viewport's MINOR axis, so its
+    // disc area over the frame area is what the anchor is calibrated on.
+    const parkCoverage = (w: number, h: number) =>
+      (Math.PI * (0.5 * PLANET_PARK_FILL_FRACTION * Math.min(w, h)) ** 2) / (w * h);
+    // The calibration viewport was portrait, so its minor axis is width.
+    expect(parkCoverage(1280, 1320)).toBeCloseTo(ADAPT_REF_COVERAGE, 3);
   });
 
   it('lands the three independently-judged planets within 0.15 mag of L_TARGET', () => {
@@ -117,7 +133,7 @@ describe('§ 3.1 contribution table', () => {
     const diameterPx = 2 * Math.sqrt((coverage * VIEWPORT_AREA_PX) / Math.PI);
     const appMag = -2.5 * Math.log10((surfaceL * coverage * VIEWPORT_AREA_PX) / EXPOSURE);
     expect(contribution(sample({ appMag, diameterPx }))).toBeCloseTo(7.1e4, -3);
-    expect(adaptationDm(surfaceL * coverage)).toBeCloseTo(-14.32, 2);
+    expect(eyeAdaptationDm(surfaceL * coverage)).toBeCloseTo(-15.17, 2);
   });
 
   it('adapts hardest to Sol at 1 AU, and still cannot expose its disc', () => {
@@ -126,25 +142,25 @@ describe('§ 3.1 contribution table', () => {
     expect(Math.PI * (0.5 * solDiameterPx) ** 2).toBeCloseTo(103, 0);
     const mean = contribution(sample({ appMag: -26.74, diameterPx: solDiameterPx }));
     expect(mean).toBeCloseTo(6.3e5, -4);
-    const dm = adaptationDm(mean);
-    expect(dm).toBeCloseTo(-16.69, 2);
+    const dm = eyeAdaptationDm(mean);
+    expect(dm).toBeCloseTo(-17.54, 2);
     // § 3.2's accepted exception. Sol's disc reads −10.59 mag/arcsec², so
     // bringing it under the white point takes −22 mag; adaptation plus a
-    // full negative trim reaches −18.9 and the disc stays clipped white.
+    // full negative trim reaches −19.8 and the disc stays clipped white.
     const discL = surfaceBrightnessLuminance(EXPOSURE, -10.59, OMEGA_PX);
     const neededCut = -2.5 * Math.log10(discL / tonemapWhitePoint());
     expect(neededCut).toBeCloseTo(-22.0, 1);
     const reach = dm - EV_MAX_STOPS * MAG_PER_STOP;
-    expect(reach).toBeCloseTo(-18.94, 2);
-    expect(reach - neededCut).toBeCloseTo(3.05, 1);
+    expect(reach).toBeCloseTo(-19.80, 2);
+    expect(reach - neededCut).toBeCloseTo(2.20, 1);
   });
 
   it('ignores the cases that must not adapt', () => {
     // Venus from Earth: brilliant, and a third of a pixel wide.
     const venusFromEarth = contribution(sample({ appMag: -4.4 }));
     expect(venusFromEarth).toBeCloseTo(7.3e-4, 5);
-    expect(adaptationDm(meanSceneLuminance(0, VIEWPORT_W, VIEWPORT_H))).toBe(0);
-    expect(adaptationDm(venusFromEarth + DIFFUSE_FIELD_L)).toBe(0);
+    expect(eyeAdaptationDm(meanSceneLuminance(0, VIEWPORT_W, VIEWPORT_H))).toBe(0);
+    expect(eyeAdaptationDm(venusFromEarth + DIFFUSE_FIELD_L)).toBe(0);
   });
 
   it('separates the two regimes by nearly eight decades', () => {
@@ -156,39 +172,103 @@ describe('§ 3.1 contribution table', () => {
 
 describe('dm', () => {
   it('is exactly zero on an empty dark frame', () => {
-    expect(adaptationDm(meanSceneLuminance(0, VIEWPORT_W, VIEWPORT_H))).toBe(0);
-    expect(adaptationDm(0)).toBe(0);
-    expect(adaptationDm(L_ADAPT)).toBe(0);
+    expect(eyeAdaptationDm(meanSceneLuminance(0, VIEWPORT_W, VIEWPORT_H))).toBe(0);
+    expect(eyeAdaptationDm(0)).toBe(0);
+    expect(eyeAdaptationDm(L_ADAPT)).toBe(0);
   });
 
   it('never goes positive — nothing adapts to see fainter than threshold', () => {
     for (const l of [0, 1e-9, DIFFUSE_FIELD_L, 0.5 * L_ADAPT, L_ADAPT, 1e6]) {
-      expect(adaptationDm(l)).toBeLessThanOrEqual(0);
+      expect(eyeAdaptationDm(l)).toBeLessThanOrEqual(0);
     }
   });
 
   it('cuts one magnitude per magnitude of overshoot', () => {
-    expect(adaptationDm(L_ADAPT * 10 ** 0.4)).toBeCloseTo(-1, 12);
-    expect(adaptationDm(L_ADAPT * 100)).toBeCloseTo(-5, 12);
+    expect(eyeAdaptationDm(L_ADAPT * 10 ** 0.4)).toBeCloseTo(-1, 12);
+    expect(eyeAdaptationDm(L_ADAPT * 100)).toBeCloseTo(-5, 12);
+  });
+});
+
+describe('the highlight guard', () => {
+  it('hands over at a pure coverage threshold, and continuously', () => {
+    const handover = guardHandoverCoverage();
+    expect(handover).toBeCloseTo(0.0508, 4);
+    // A body of coverage f: L̄ is its surface brightness × f, its peak is
+    // the surface brightness itself. The two cuts agree at the handover
+    // whatever that surface brightness is — the threshold is coverage
+    // alone, and there is no fade band because the branches are equal.
+    for (const surfaceL of [12, 3.6e5, 1.3e12]) {
+      expect(eyeAdaptationDm(surfaceL * handover))
+        .toBeCloseTo(highlightGuardDm(surfaceL), 9);
+      expect(eyeAdaptationDm(surfaceL * handover * 0.999))
+        .toBeGreaterThan(highlightGuardDm(surfaceL));
+      expect(eyeAdaptationDm(surfaceL * handover * 1.001))
+        .toBeLessThan(highlightGuardDm(surfaceL));
+    }
+  });
+
+  it('only ever raises the exposure', () => {
+    for (const meanL of [0, 1e-3, L_ADAPT, 1, 1e4, 1e9]) {
+      for (const peakL of [0, L_CAP, 1e3, 1e12]) {
+        const dm = adaptationDm(meanL, peakL);
+        expect(dm).toBeGreaterThanOrEqual(eyeAdaptationDm(meanL));
+        expect(dm).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
+  it('holds a resolved surface at L_CAP whatever it fills', () => {
+    // The zoom-invariance the guard buys: one body, three framings, the
+    // same reading. A resolved disc's peak does not change with zoom.
+    const surfaceL = 3.6e5;
+    for (const f of [0.1, 0.4, 0.95]) {
+      const dm = adaptationDm(surfaceL * f, surfaceL);
+      expect(surfaceL * 10 ** (0.4 * dm)).toBeCloseTo(L_CAP, 9);
+      expect(adaptedDiscMeanL(f)).toBe(L_CAP);
+    }
+  });
+
+  it('leaves a point source clipped — it protects surfaces, not points', () => {
+    // Sol's disc at 1 AU is 103 px of 2.07e6, far below the handover, so
+    // the perception branch governs and § 3.2's accepted exception stands.
+    const sol = sample({ appMag: -26.74, diameterPx: 11.45 });
+    const peak = samplePeakL(sol, EXPOSURE);
+    const meanL = contribution(sol);
+    expect(adaptationDm(meanL, peak)).toBe(eyeAdaptationDm(meanL));
+    expect(peak * 10 ** (0.4 * eyeAdaptationDm(meanL))).toBeGreaterThan(tonemapWhitePoint());
+  });
+
+  it('takes a real flux loss out of the peak too', () => {
+    const lit = sample({ appMag: -20, diameterPx: 400 });
+    const dimmed = sample({ appMag: -20, diameterPx: 400, fluxScale: 0.1 });
+    expect(samplePeakL(dimmed, EXPOSURE)).toBeCloseTo(0.1 * samplePeakL(lit, EXPOSURE), 6);
   });
 });
 
 describe('coverage sensitivity (§ 3.2)', () => {
-  it('lands the reference coverage exactly on L_TARGET', () => {
-    expect(adaptedDiscMeanL(ADAPT_REF_COVERAGE)).toBeCloseTo(L_TARGET, 12);
-    expect(trimStopsForCoverage(ADAPT_REF_COVERAGE)).toBe(0);
+  it('lands the reference coverage on L_TARGET under the perception branch', () => {
+    expect(L_ADAPT / ADAPT_REF_COVERAGE).toBeCloseTo(L_TARGET, 12);
+    // Park coverage sits ABOVE the handover, though, so what actually
+    // happens there is the guard — 0.43 stops over the measured target.
+    expect(ADAPT_REF_COVERAGE).toBeGreaterThan(guardHandoverCoverage());
+    expect(adaptedDiscMeanL(ADAPT_REF_COVERAGE)).toBe(L_CAP);
+    expect(trimStopsForCoverage(ADAPT_REF_COVERAGE)).toBeCloseTo(-0.431, 3);
   });
 
-  it('drifts by the coverage ratio, and the trim spans 8× either way', () => {
-    // Half the reference coverage reads one octave (2.26/3 mag) bright.
+  it('drifts by the coverage ratio below the handover, and is flat above', () => {
+    // Half the reference coverage is under the handover, so the
+    // perception branch governs and the trim buys back log2(f/f_ref).
     expect(trimStopsForCoverage(0.5 * ADAPT_REF_COVERAGE)).toBeCloseTo(-1, 12);
-    expect(trimStopsForCoverage(2 * ADAPT_REF_COVERAGE)).toBeCloseTo(1, 12);
     // ±3 stops = ±2.26 mag = a factor 8 in coverage, so the envelope the
-    // trim can pull back to L_TARGET starts at 1.9% of the frame.
+    // trim can pull back to L_TARGET starts at 0.86% of the frame.
     const floor = ADAPT_REF_COVERAGE / 2 ** EV_MAX_STOPS;
-    expect(floor).toBeCloseTo(0.01875, 5);
+    expect(floor).toBeCloseTo(0.008563, 6);
     expect(trimStopsForCoverage(floor)).toBeCloseTo(-EV_MAX_STOPS, 12);
-    expect(Math.abs(trimStopsForCoverage(0.02))).toBeLessThan(EV_MAX_STOPS);
+    // Above the handover the guard pins the level, so the trim a body
+    // needs stops depending on how much of the frame it fills.
+    for (const f of [2 * ADAPT_REF_COVERAGE, 0.3, 0.9]) {
+      expect(trimStopsForCoverage(f)).toBeCloseTo(Math.log2(L_TARGET / L_CAP), 12);
+    }
   });
 });
 
@@ -317,14 +397,14 @@ describe('occlusion by nearer discs', () => {
 describe('star window', () => {
   it('gates on flux, at the magnitude worth 3% of the anchor', () => {
     const mag = negligibleAppMag(EXPOSURE, VIEWPORT_AREA_PX);
-    expect(mag).toBeCloseTo(-6.246, 3);
+    expect(mag).toBeCloseTo(-5.395, 3);
     const gateFlux = luminanceForMagnitude(EXPOSURE, mag) / VIEWPORT_AREA_PX;
     expect(gateFlux).toBeCloseTo(ADAPT_NEGLIGIBLE_FRACTION * L_ADAPT, 12);
   });
 
   it('covers every star fainter than the reference absolute magnitude', () => {
     const windowPc = starAdaptationWindowPc(EXPOSURE, VIEWPORT_AREA_PX);
-    expect(windowPc).toBeCloseTo(8.93, 2);
+    expect(windowPc).toBeCloseTo(13.21, 2);
     const mag = negligibleAppMag(EXPOSURE, VIEWPORT_AREA_PX);
     // A star of the reference absolute magnitude is exactly negligible at
     // the bound, so anything fainter can never reach the gate from

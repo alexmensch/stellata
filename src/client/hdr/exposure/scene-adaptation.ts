@@ -13,6 +13,7 @@ import {
   meanSceneLuminance,
   negligibleAppMag,
   sampleFluxL,
+  samplePeakL,
   sampleVisibleFraction,
   starAdaptationWindowPc,
   windowTaper,
@@ -80,6 +81,7 @@ export class SceneAdaptation {
 
   private dm = 0;
   private meanL = 0;
+  private peakL = 0;
   private dominantLabel: string | null = null;
   private dominantFluxL = 0;
   private fluxL = 0;
@@ -108,7 +110,7 @@ export class SceneAdaptation {
     this.collectStars(camera);
     this.reduce();
     this.meanL = meanSceneLuminance(this.fluxL, this.w, this.h);
-    this.dm = adaptationDm(this.meanL);
+    this.dm = adaptationDm(this.meanL, this.peakL);
     perfMeasure('adaptation');
     return this.dm;
   }
@@ -121,6 +123,12 @@ export class SceneAdaptation {
   /** `L̄` itself — the debug panel's row. */
   getMeanLuminance(): number {
     return this.meanL;
+  }
+
+  /** The frame's brightest visible per-pixel luminance — the statistic
+   *  the highlight guard reads, and the debug row beside `L̄`. */
+  getPeakLuminance(): number {
+    return this.peakL;
   }
 
   /**
@@ -136,6 +144,7 @@ export class SceneAdaptation {
   private reset(): number {
     this.dm = 0;
     this.meanL = 0;
+    this.peakL = 0;
     this.fluxL = 0;
     this.count = 0;
     this.dominantFluxL = 0;
@@ -160,11 +169,14 @@ export class SceneAdaptation {
     this.count++;
   };
 
-  /** Reduce the collected pool to the frame's total flux and the source
-   *  carrying most of it. */
+  /** Reduce the collected pool to the frame's total flux, its brightest
+   *  visible pixel, and the source carrying most of the flux. The peak is
+   *  a plain maximum beside the sum, over the **visible** sources only, so
+   *  occlusion and frame clipping remove a source from it. */
   private reduce(): void {
     const { pool, count, w, h, exposure } = this;
     this.fluxL = 0;
+    this.peakL = 0;
     this.dominantFluxL = 0;
     this.dominantLabel = null;
     for (let i = 0; i < count; i++) {
@@ -173,6 +185,7 @@ export class SceneAdaptation {
       if (visible <= 0) continue;
       const fluxL = sampleFluxL(s, exposure, visible);
       this.fluxL += fluxL;
+      this.peakL = Math.max(this.peakL, samplePeakL(s, exposure));
       if (fluxL > this.dominantFluxL) {
         this.dominantFluxL = fluxL;
         this.dominantLabel = s.label;
@@ -182,7 +195,7 @@ export class SceneAdaptation {
 
   /**
    * Stars close enough to matter. The gate is flux, not resolvedness:
-   * Sol at 100 AU is a third of a pixel wide and 473× over `L_ADAPT`, so
+   * Sol at 100 AU is a third of a pixel wide and 1036× over `L_ADAPT`, so
    * "is it a disc yet?" is the wrong question. Every star fainter than
    * `ADAPT_STAR_ABSMAG_REF` is covered exactly by the window; brighter
    * ones fade out through the taper instead of popping at the bound.

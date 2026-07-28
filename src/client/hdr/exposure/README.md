@@ -22,8 +22,10 @@ src/client/hdr/exposure/
     (+ test)                 uExposure and the three magnitude bounds,
                              and the effective-limit readout's source.
   scene-adaptation-pure.ts   The adaptation statistic: mean visible flux
-    (+ test)                 per pixel, the measured L_TARGET / L_ADAPT
-                             pair, exact disc↔viewport clipping, and the
+    (+ test)                 per pixel, the brightest visible pixel and
+                             the highlight guard's L_CAP, the measured
+                             L_TARGET / L_ADAPT pair, exact disc↔viewport
+                             clipping, nearer-disc occlusion, and the
                              star-window derivation.
   scene-adaptation.ts        SceneAdaptation — the per-frame collector
     (+ test)                 that walks the frame's light sources.
@@ -90,9 +92,27 @@ cut it writes can never be a frame behind the frame it measured.
 
 ```
 visibleFractionᵢ = max(0, clippedᵢ − occludedᵢ)
-L̄  = Σᵢ L(mᵢ)·fluxScaleᵢ·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
-dm = min(0, −2.5·log10(L̄ / L_ADAPT))
+L̄        = Σᵢ L(mᵢ)·fluxScaleᵢ·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
+peak_max = maxᵢ  L(mᵢ)·fluxScaleᵢ / max(1, π·r_pxᵢ²)     (visible only)
+dm       = max( min(0, −2.5·log10(L̄ / L_ADAPT)),
+                min(0, −2.5·log10(peak_max / L_CAP)) )
 ```
+
+**Two branches, and only the first is a perception model.** `L̄` drives
+the eye branch; `peak_max` drives the **highlight guard**, which is a
+display compensation — `docs/science-hdr-pipeline.md` § 3.2 (*The
+highlight guard*) is the design gate and the only place the reasoning
+lives. Three properties the implementation must keep, because callers
+depend on them rather than on the formula:
+
+- **`max` of two ≤ 0 cuts, so the guard can only raise exposure.** No
+  source entering the frame can darken it through the guard.
+- **The branches are equal at coverage `L_ADAPT / L_CAP` (5.1%)**, so the
+  handover is continuous and stateless. Nothing here caches which branch
+  governed last frame, and nothing may start to.
+- **The guard reads the peak over VISIBLE sources only.** Occlusion and
+  frame clipping remove a source from it, which is why `reduce()` computes
+  the visible fraction before touching the peak accumulator.
 
 **It is mean flux per pixel, and that is not an approximation.** A
 source's per-pixel luminance is its flux over `max(1, π·r_px²)` — the
@@ -143,11 +163,11 @@ overlapping occluders double-count, always toward over-occluding.
 **Sources.** Every drawn solar-system body
 (`PlanetBodyField.forEachDrawnBody`, gated by the same visibility rule
 `pick()` uses) plus stars near the camera, gated on **flux rather than
-resolvedness** — Sol at 100 AU is a third of a pixel wide and 473× over
+resolvedness** — Sol at 100 AU is a third of a pixel wide and 1036× over
 `L_ADAPT`, so "is it a disc yet?" is the wrong question. The star window
 is derived, not tuned: it is the distance at which a star of
 `ADAPT_STAR_ABSMAG_REF` falls to `ADAPT_NEGLIGIBLE_FRACTION` of the
-anchor (8.9 pc on a 1080p frame at 50°), which covers every fainter star
+anchor (13.2 pc on a 1080p frame at 50°), which covers every fainter star
 exactly — a fainter one cannot reach the gate from further out. Only ~120
 catalogue stars are brighter than that reference, and a **taper over the
 outer fifth of the window** carries them out continuously, so crossing
@@ -169,6 +189,9 @@ Perf row: `adaptation`. The dominant cost is the star walk's
 sorted-distance window — thousands of squared-distance tests at
 mid-catalogue camera distances, a few hundred `renderedSizeComponents`
 calls inside the window, and single digits of sources past the flux gate.
+The window is a function of `L_ADAPT`, so a lower anchor widens it
+cubically in cost; the occlusion pass is O(n²) over what survives the
+gate, which is ~27 bodies plus single-digit stars.
 
 ## Not here yet
 

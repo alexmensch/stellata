@@ -291,9 +291,16 @@ dependence on which object is focused.
 viewport** — retinal illuminance across the attended region:
 
 ```
-L̄  = Σᵢ (Lᵢ · Aᵢ) / A_viewport
-dm = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
+L̄       = Σᵢ (Lᵢ · Aᵢ) / A_viewport
+dm_eye  = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
 ```
+
+This section derives `dm_eye`, the **perception branch**. What the frame
+applies is `max(dm_eye, dm_guard)`, where the second term is a display
+compensation with no perceptual claim behind it at all — § 3.2's
+subsection *The highlight guard* owns it, and it governs whenever a
+resolved surface covers more than `L_ADAPT / L_CAP` of the frame. Nothing
+below changes: the guard is a separate maximum taken afterwards.
 
 `Aᵢ` is source *i*'s **true angular coverage** in pixels — never the
 K-exaggerated kernel, or the footprint exaggeration would drive
@@ -343,7 +350,12 @@ alternatives:
   resolved planet stays blown out — it fails the exact case the
   mechanism exists for.
 - **Not a maximum or a high percentile.** One bright pixel would crater
-  the frame: Sirius in view would dim the star field around it.
+  the frame: Sirius in view would dim the star field around it. (The
+  highlight guard *is* a maximum statistic, and this objection does not
+  reach it — a `max` of the two cuts can only ever raise the exposure, so
+  a bright source entering the frame can never darken it through that
+  branch. Sirius, Venus from Earth, the full Moon and Sol at 1 AU all
+  stay on the perception branch and behave exactly as they do without it.)
 - **The discriminator is angular extent, not luminance.** Venus filling
   the frame adapts the eye; Sirius as a point does not. Area weighting
   *is* that discriminator, and it is what pupil response physically
@@ -431,16 +443,32 @@ too dark**. A correctly-exposed sunlit disc is not a mid-grey card.
 `dm` so a body of coverage `f` lands its disc mean on `L_TARGET` gives
 
 ```
-L_ADAPT = L_TARGET · f_ref        ⇒  0.089 (f_ref 0.10)
-                                     0.134 (f_ref 0.15)
-                                     0.179 (f_ref 0.20)
+L_ADAPT = L_TARGET · f_ref
 ```
 
-**`f_ref` — the reference coverage — is the honest remaining choice**, and
-it is where § 3.2's coverage sensitivity enters: the model lands exactly at
-`f_ref` and drifts by the coverage ratio away from it. Ship `f_ref` = 0.15
-(`L_ADAPT` = 0.134), which sits mid-band and inside the ±3-stop trim for
-coverages from ~4% to ~55%. Expose it on the debug panel (H8).
+**`f_ref` — the reference coverage — was the honest remaining choice, and
+smoke settled it: it is the park coverage.** A focused body parks filling
+`PLANET_PARK_FILL_FRACTION` (0.3) of the viewport's *minor* axis, so its
+disc covers `π·0.15²·min(w,h)²/(w·h)` — **6.85%** on the calibration
+viewport (1280×1320, portrait, so the minor axis is the width). Landing
+the measured `L_TARGET` on the framing a body is actually *seen* in is
+what makes the trim a correction rather than a standing offset, and it
+retires the earlier mid-band guess of 0.15. Ship `L_ADAPT` = **0.061**.
+
+Two consequences worth stating rather than discovering:
+
+- **The park framing is above the guard's handover**, so what actually
+  happens at park is the guard pinning the peak to `L_CAP` — 0.43 stops
+  over `L_TARGET`. `f_ref` therefore sets the *handover coverage* and the
+  behaviour below it, not the level at park (§ 3.2's subsection).
+- **The star walk's window widens with the anchor.** The bound is where a
+  star of `ADAPT_STAR_ABSMAG_REF` falls to `ADAPT_NEGLIGIBLE_FRACTION` of
+  `L_ADAPT`, so dropping the anchor 0.85 mag pushes it 8.9 pc → **13.2 pc**
+  and roughly triples the squared-distance tests the walk runs. The
+  taper, the flux gate and the coverage guarantee are all unchanged; only
+  the cost moves.
+
+Expose `f_ref` and `L̄` on the debug panel (H8).
 
 Two rows from the same pass bound the other end, and both are consistent
 with the model rather than with a tuning error: Saturn at `L` = 0.259 and
@@ -462,11 +490,12 @@ when adaptation matters most.
 
 - **Every drawn solar-system body**, through the same visibility gate
   `pick()` uses, at its true angular diameter with eclipse dim folded in
-  as the real flux loss it is.
+  as the real flux loss it is, and with its camera distance so the
+  occlusion pass can order it.
 - **Stars gated on flux, not on resolvedness.** Sol at 100 AU is a third
-  of a pixel wide and 473× over `L_ADAPT`, so "is it a disc yet?" is the
+  of a pixel wide and 1036× over `L_ADAPT`, so "is it a disc yet?" is the
   wrong question. The camera window is *derived*: it is the distance at
-  which a star of absolute magnitude −6 falls to 3% of `L_ADAPT` (8.9 pc
+  which a star of absolute magnitude −6 falls to 3% of `L_ADAPT` (13.2 pc
   on the frame above), which covers every fainter star exactly, since a
   fainter one cannot reach the gate from further out. Only 120 catalogue
   stars are brighter than that reference and the 22 brighter than −8 all
@@ -486,23 +515,30 @@ compensating cut.
 ### 3.2 What the model does and does not fix
 
 Adaptation is driven by **coverage**; correct exposure depends on
-**surface brightness**. The two meet only over a band of coverages:
+**surface brightness**. On the perception branch alone the two meet only
+over a band of coverages:
 
 - A body's adapted disc mean is `L_ADAPT / f`, so it lands on `L_TARGET`
   exactly at `f_ref` and drifts by the coverage ratio away from it.
-- At 2% of frame it sits ~2.2 mag over and stays a small brilliant
+- At 2% of frame it sits ~1.4 mag over and stays a small brilliant
   clipped dot. That is the right answer; a brilliant dot should read as
   a brilliant dot.
 - The trim buys back `log2(f_ref/f)` stops, so ±3 stops covers coverages
-  from **1.9% of the frame upward** — a factor 8 either side of `f_ref`,
+  from **0.86% of the frame upward** — a factor 8 either side of `f_ref`,
   not the 4%–55% band an earlier draft quoted (that was 2.26 read as
   stops rather than magnitudes). Pinned in
   `scene-adaptation-pure.test.ts`.
 
+**Above `f_ref / 8` the drift stops being a drift and becomes a hard
+ceiling, which the perception branch cannot fix at all** — that is what the
+highlight guard below is for. Everything in this list describes the
+perception branch in isolation, and it is what still happens *below* the
+handover coverage.
+
 **Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
-0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 gives `dm` = −16.7 mag while
+0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 gives `dm` = −17.5 mag while
 the disc's own −10.59 mag/arcsec² surface needs −22.0 to fall under the
-white point, and −3 stops closes only 2.26 more: **3.1 mag short**. The
+white point, and −3 stops closes only 2.26 more: **2.2 mag short**. The
 Sun stays clipped white unless the camera is close enough to fill the
 frame. Phenomenologically that is correct: you cannot resolve granulation
 with an unaided eye at 1 AU. The affordance that fixes it is **an
@@ -546,6 +582,84 @@ EV row carries it: *"0 EV · adapted to Venus · stars to m 1.2"*, where the
 magnitude is `uThresholdMag + dm` — the one place adaptation is allowed to
 move a magnitude — and the adapted-to clause names the source carrying
 most of the frame's flux, dropped entirely while `dm` is 0.
+
+#### The highlight guard — a display concession, not a perceptual claim
+
+Everything above this point in § 3 is a claim about an observer. This one
+is not, and it is the first thing in the pipeline that isn't:
+
+> We optimise for the dynamic range the monitor can output, and at the top
+> of that range — where optimising for the ideal range would clip — we
+> limit saturation. It is not accurate: it really would be much brighter.
+> But we can't show that on a monitor, so we show what you can perceive
+> without blowing it out.
+
+The perception branch alone leaves a resolved surface at `L_ADAPT / f`, and
+smoke measured what that costs. Retreating from Betelgeuse at EV 0, the
+centre begins to saturate at a **65 px** disc and all colour is gone by
+**40 px** — the display's graceful highlight band is **1.05 magnitudes
+wide**, and any coverage above `f_ref` walks straight out of it.
+(`perceptualDiscProfile`'s normalisation was checked clean over the same
+pass — the centre is 1.0 exactly — so this is the operator's top end, not
+a stray amplitude.) So:
+
+```
+dm       = max(dm_eye, dm_guard),  both ≤ 0
+dm_guard = −2.5·log10(peak_max / L_CAP)
+peak_max = max over VISIBLE sources of  L(m)·fluxScale / max(1, π·r_px²)
+```
+
+`peak_max` is the frame's brightest per-pixel luminance at the base
+exposure, over true angular sizes, counting only sources whose visible
+fraction is positive — so occlusion and frame clipping both remove a
+source from it. `L_CAP` ships at **1.2**, the geometric mean of the two
+smoke readings that bracket it (Jupiter at park wanted −1.33 EV, i.e.
+0.775; Betelgeuse at the zoom floor wanted +3.00 EV with the trim maxed
+out and still asked for more headroom, i.e. ≥ 1.73). It is the one knob
+smoke-tuning moves.
+
+Three structural properties, in the sense that no refactor may lose them:
+
+- **It can only ever raise the exposure**, being a `max` of two cuts each
+  clamped at 0. That is why § 3.1's rejection of a maximum statistic does
+  not reach it, and it is verified: Sirius, Venus from Earth, the full
+  Moon, and Sol at 1 AU all stay on the perception branch and behave
+  exactly as they did.
+- **The handover is a pure coverage threshold.** The two branches are
+  equal at `f* = L_ADAPT / L_CAP` = **5.1%** of the frame, independently of
+  how bright the source is, and being equal there the crossing is
+  continuous — no fade band, no hysteresis, no state. An occluded source
+  hands back to the perception branch smoothly as its *visible* coverage
+  falls through `f*`.
+- **It protects surfaces, not points.** Below `f*` the perception model
+  governs and a small bright source clips on purpose: a point of light
+  should read as blinding and has no detail to protect. Sol at 1 AU stays
+  clipped white, and § 3.2's accepted exception above survives intact.
+
+And it **pins the peak, not the disc mean**, which is what keeps any part
+of a disc off the white point rather than just its average. One caveat on
+that: `L(m)/max(1, π·r_px²)` is the true brightest pixel for a star, but
+for a planet mesh it is the disc *mean* — limb darkening plus the
+sub-solar point put the real peak up to ~0.4 mag higher. Harmless at
+`L_CAP` = 1.2, which has 2+ magnitudes of margin to the operator's own
+clipping onset (~8–20); account for it before tuning `L_CAP` upward.
+
+**The known cost, stated rather than quietly fixed: every resolved surface
+now reads the same level.** A stellar photosphere and a planet disc become
+indistinguishable in brightness, where the two smoke anchors say a star
+should sit ~0.87 mag over a planet. If smoke says that ordering is missed,
+the fallback is an incomplete-adaptation exponent on the perception branch
+— `dm_eye = −2.5·k·log10(L̄/L_ADAPT)` with `k` = 0.776 and `L_ADAPT` =
+4.65e-3 fits both anchors exactly — but it over-dims the full Moon to
+−5.06 against a real sky's −2.5 to −3, so it is a fallback and not the
+ship. The second cost is that **in the guard-governed regime the star
+field sits brighter than the perception model alone would put it.** That is
+the display compensation doing its job, not a claim about the observer.
+
+This change **demotes** the operator-shoulder work from load-bearing to
+optional: a longer shoulder would widen the 1.05-mag band the guard
+currently works around. It does not remove the constraint that any new
+curve stay analytically invertible (§ 2 / `chrome/README.md`).
 
 ### 3.3 FOV is magnification; the instrument is aperture
 
@@ -852,11 +966,13 @@ day one — the fullscreen pass and the inline path can never drift.
   within the trim's ±3 stops, or the trim range is wrong. That is a
   requirement on the model, not a discovery for smoke: fly to Venus,
   Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
-  reaches surface detail within ±3 stops of EV 0. Since the envelope is a
-  *coverage* band (§ 3.2, ≥ 1.9% of the frame), a case that fails is a
-  case flown from too far out — check the disc's frame fraction before
-  concluding `L_ADAPT` is wrong. The known exception is Sol at 1 AU,
-  3.1 mag out of reach by design.
+  reaches surface detail within ±3 stops of EV 0. Above the handover
+  coverage (§ 3.2, 5.1% of the frame) the highlight guard pins every one
+  of them at `L_CAP` and the case is trivially inside the trim; below it
+  the *coverage* band applies (≥ 0.86% of the frame), so a case that fails
+  is a case flown from too far out — check the disc's frame fraction
+  before concluding `L_ADAPT` is wrong. The known exception is Sol at
+  1 AU, 2.2 mag out of reach by design.
 - **FOV invariants (H16)** — star pixel size constant from 120° down to
   the `K = 1` crossover (2.34° on a 1080-px viewport at `TARGET_PX` 3.84),
   below which the resolved 30″ PSF makes the disc *grow*; a close pair

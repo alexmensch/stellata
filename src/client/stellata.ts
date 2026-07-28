@@ -2160,8 +2160,13 @@ export class Stellata implements FrameAnchor {
   /** The source the frame is adapted to, or null while nothing is
    *  adapting — the readout's "adapted to Venus" clause. */
   getAdaptedToLabel(): string | null { return this.adaptation.getDominantLabel(); }
-  /** Area-weighted mean scene luminance, the statistic behind the cut. */
+  /** Area-weighted mean scene luminance, the statistic behind the
+   *  perception branch of the cut. */
   getSceneMeanLuminance(): number { return this.adaptation.getMeanLuminance(); }
+  /** Brightest visible per-pixel luminance, the statistic behind the
+   *  highlight guard. Meaningless without its sibling above — which
+   *  branch governs is `max` of the two cuts they imply. */
+  getScenePeakLuminance(): number { return this.adaptation.getPeakLuminance(); }
   setStarRenderParams(patch: Partial<StarRenderParams>) {
     this.filters.setStarRenderParams(patch);
   }
