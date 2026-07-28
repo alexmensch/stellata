@@ -112,9 +112,16 @@ function mockVec3(x = 0, y = 0, z = 0) {
 // Fixture catalog: idx 0 = Sol (sid 100); idx 1 = HIP 32349 / sid 101;
 // idx 2 = no-HIP / sid 102; idx 3 = HIP 91262 / sid 103. Two clouds with
 // sids 201/202.
-const STAR_SIDS = [100, 101, 102, 103];
+const SOL_SID = 100;
+const STAR_SIDS = [SOL_SID, 101, 102, 103];
 const STAR_HIPS = [0, 32349, 0, 91262];
 const CLOUD_SIDS = [201, 202];
+
+// A rebuild re-sorts the catalog by absolute magnitude, so every row
+// index moves while the sids ride along. Build-B row → build-A row.
+const REINDEX = [2, 3, 0, 1];
+const REINDEXED_STAR_SIDS = REINDEX.map((a) => STAR_SIDS[a]);
+const REINDEXED_STAR_HIPS = REINDEX.map((a) => STAR_HIPS[a]);
 
 type PlanetTranslation = Pick<IdMaps, 'planetDomainIndexOf' | 'planetTargetIndexOf'>;
 
@@ -160,18 +167,18 @@ function makeIdMaps({
     hipToIndex,
     indexToHip,
     starCount: starSids.length,
-    solIndex: 0,
+    solIndex: starSids.indexOf(SOL_SID),
     sidResolver,
     ...planet,
   };
 }
 
 /** The fixture build: 4 stars with HIPs + 2 clouds, both domains settled. */
-function makeFixtureBuild(starSids = STAR_SIDS): IdMaps {
+function makeFixtureBuild(starSids = STAR_SIDS, hips = STAR_HIPS): IdMaps {
   const sidResolver = new SidResolver(['star', 'cloud']);
   sidResolver.attach('star', arrayDomain(starSids));
   sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
-  return makeIdMaps({ starSids, hips: STAR_HIPS, sidResolver });
+  return makeIdMaps({ starSids, hips, sidResolver });
 }
 
 // Mock Stellata that records what the URL layer dispatched onto it —
@@ -1578,6 +1585,69 @@ describe('url-state', () => {
       applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
       expect(state.focusedPlanet).toBeNull();
       expect(state.focusedStar).toBe(0); // untouched default
+    });
+  });
+
+  describe('membership re-index survival', () => {
+    // The catalogue-driver swap (docs/catalog-driver.md) re-drives
+    // membership from Gaia DR3, which re-sorts every row. A shared link
+    // has to land on the same STAR across that, not the same row — the
+    // property SIDs exist for and the reason star refs stopped encoding
+    // row indices. Build A shares the link, build B receives it.
+    const buildA = () => makeFixtureBuild();
+    const buildB = () => makeFixtureBuild(REINDEXED_STAR_SIDS, REINDEXED_STAR_HIPS);
+
+    // Share the live state of a build-A session, as writeUrl would.
+    function shareFrom(setup: (s: ReturnType<typeof makeStatefulStellata>['state']) => void) {
+      const tx = makeStatefulStellata();
+      setup(tx.state);
+      return encodeBlob(currentStateOf(tx.stellata, buildA()));
+    }
+
+    it('a no-HIP star focus lands on the same star after a re-index', () => {
+      // Row 2 in build A, row 0 in build B — and no HIP, so v1–v3 had
+      // nothing but the row index to encode it with.
+      const blob = shareFrom((s) => { s.focusedStar = 2; });
+      expect(decodeBlob(blob).view.focus).toEqual({ kind: 'sid', id: 102 });
+      const { state } = migrate(blob, buildB());
+      expect(state.focusedStar).toBe(0);
+    });
+
+    it('the legacy index ref it replaced lands on a DIFFERENT star', () => {
+      // Same star, encoded the pre-v4 way: a bare row index. Build B's
+      // row 2 is Sol, so the link silently retargets — the drift the SID
+      // ref removes.
+      const legacy = buildV2Blob(1 << 14, new Uint8Array(u24(2)));
+      const { state } = migrate(legacy, buildB());
+      expect(state.focusedStar).toBe(2);
+      expect(REINDEXED_STAR_SIDS[2]).toBe(SOL_SID);
+    });
+
+    it('vector-to and POIs survive the same re-index', () => {
+      const blob = shareFrom((s) => {
+        s.focusedStar = null;
+        s.vectorTo = 3;
+        s.pois = [{ kind: 'star', idx: 2 }, { kind: 'star', idx: 3 }];
+      });
+      const { state } = migrate(blob, buildB());
+      expect(state.vectorTo).toBe(1);
+      expect(state.pois).toEqual([{ kind: 'star', idx: 0 }, { kind: 'star', idx: 1 }]);
+    });
+
+    it('a star dropped from the new membership expires without moving the rest', () => {
+      // Build C drops sid 102 entirely (a record the swap retires). Its
+      // focus ref resolves to nothing, so the focus is skipped rather
+      // than landing on whatever now occupies the row — and the POI whose
+      // sid survived still applies.
+      const blob = shareFrom((s) => {
+        s.focusedStar = 2;
+        s.pois = [{ kind: 'star', idx: 3 }];
+      });
+      const buildC = makeFixtureBuild([SOL_SID, 101, 103], [0, 32349, 91262]);
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, decodeBlob(blob).view, buildC);
+      expect(state.focusedStar).toBe(0); // untouched Sol default
+      expect(state.pois).toEqual([{ kind: 'star', idx: 2 }]);
     });
   });
 
