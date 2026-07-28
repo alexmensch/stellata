@@ -79,6 +79,13 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
     const text = ['hip\tangular_distance', '2\t0.04'].join('\n');
     expect(() => parseGaiaHipXmatchTsv(text)).toThrow(/gaia_source_id/);
   });
+
+  it('throws on an empty file rather than reporting zero entries', () => {
+    // A truncated or unsmudged-LFS input must not read as "the cross-walk
+    // has no rows" — that would silently zero every HIP backfill.
+    expect(() => parseGaiaHipXmatchTsv('')).toThrow(/no header row/);
+    expect(() => parseGaiaHipXmatchTsv('\n\n')).toThrow(/no header row/);
+  });
 });
 
 describe('gaia-xmatch / parseGaiaTycXmatchTsv', () => {

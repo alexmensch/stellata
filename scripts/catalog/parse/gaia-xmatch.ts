@@ -77,6 +77,14 @@ function bestNeighbourAccumulator<K>(
       if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
     },
     result(): Map<K, string> {
+      // A file that never yielded a header is a truncated or unsmudged LFS
+      // input, not an empty cross-walk. Returning an empty map instead would
+      // silently zero every backfill this table feeds.
+      if (keyIdx < 0) {
+        throw new Error(
+          `gaia xmatch: no header row — expected columns ${spec.keyColumn} + ${GAIA_COL}`,
+        );
+      }
       const out = new Map<K, string>();
       for (const [key, { src }] of best) out.set(key, src);
       return out;
