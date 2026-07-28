@@ -22,8 +22,12 @@ scripts/catalog/spine/
     (+ test)                      per-column counts, and the designation
                                   recovery (spineDesignations). Pure.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
-                                  counts, keyless rows, Sol, duplicate
-                                  source_ids (§ Why a guard, not a rebuild).
+                                  byte identity, counts, keyless rows, Sol,
+                                  duplicate source_ids (§ Why a guard, not a
+                                  rebuild).
+  inherited-spine-parity.test.ts  Assertions against the BUILD the spine is a
+                                  snapshot of — record count and designation
+                                  multiset (§ Parity with the shipped build).
   inherited-spine-expected.json   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var
                                   build-catalog.ts uses).
@@ -60,7 +64,12 @@ grow a column later, so they ship now.
 
 The generator calls `readStars` with the same inputs `build-catalog.ts`
 uses — `loadReadStarsInputs` (`../parse/read-stars-inputs.ts`) is shared by
-both for exactly that reason. Membership depends on the distance stack
+both for exactly that reason. Every one of those inputs is **required**
+here, materialised, before the walk starts: the loader itself degrades
+softly on an absent table (warn, cascade falls through), which the record
+build's count snapshot catches but a first spine generation has nothing to
+catch it with — and a degraded walk changes both membership and the
+resolved designation set. Membership depends on the distance stack
 (a Bailer-Jones or LMC override can push a row past `MAX_DIST_PC`) and on
 the direction cascade (a row no tier resolves is dropped), so re-deriving
 the drop conditions here would be a second implementation of the thing the
@@ -72,11 +81,6 @@ of minting a twin, and which only recognises that record by finding it
 sitting exactly on its anchor, which is what makes the coherence pass
 load-bearing here. Promotion's minted records are discarded; they are not
 AT-HYG-derived.
-
-Verified at authoring time against the built catalog: over all 313,257
-AT-HYG-derived records, the `starDesignations` multiset from
-`catalog.bin` + `search-index.json` and the `spineDesignations` multiset
-from the committed TSV agree exactly.
 
 The join back to the printed cells keys on AT-HYG's own `id`, carried
 through as `Star.athygRowId`. Non-null `athygRowId` is also the
@@ -94,9 +98,34 @@ pull moving one row past the distance cutoff) would make a regeneration
 gate demand rewriting a file whose whole purpose is to stop moving.
 
 `inherited-spine-guard.test.ts` is the substitute: it reads the committed
-TSV and pins the row count, the per-column fill rates, one Sol record, no
-keyless row, and no duplicate source_id. Determinism itself was verified at
-authoring time by generating twice and comparing bytes.
+TSV and pins its byte length + sha256, the row count, the per-column fill
+rates, one Sol record, no keyless row, and no duplicate source_id.
+Determinism itself was verified at authoring time by generating twice and
+comparing bytes.
+
+The byte pin lives in the **test source**, not in
+`inherited-spine-expected.json`: `UPDATE_BUILD_COUNTS=1` rewrites that
+snapshot, so a regeneration would otherwise refresh its own guard. Editing
+the two literals is what unfreezes the spine, and it shows up in review as
+a diff in a test rather than in a 40 MB LFS blob.
+
+## Parity with the shipped build
+
+The spine is only worth freezing if it stands in for the build exactly, so
+`inherited-spine-parity.test.ts` asserts that on both axes:
+
+- **Record count**, from the two committed snapshots — `rows` here equals
+  `recordCount` − `companionPromoted` in
+  `../build-catalog-expected.json`. No artifacts and no LFS, so it runs in
+  every job; a record-build change that moves `recordCount` without
+  regenerating the spine fails here.
+- **Designation multiset**, against the built artifacts — the
+  `catalogRecordDesignations` walk (`../../sid/catalog-designations.ts`,
+  the same one `sid:allocate` resolves against the ledger) over every
+  non-`FLAG_BINARY_COMPANION_ONLY` record must tally identically to
+  `spineDesignations` over the committed TSV. That is what makes every SID
+  preserved by construction. Needs a built catalogue, so it runs in the
+  `build-catalog` job and locally.
 
 The generator retires with the driver swap — after `stellata-3bsf.4`
 rewrites the AT-HYG row walk there is nothing for it to read, and

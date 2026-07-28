@@ -1,13 +1,18 @@
 // Emit data/athyg/inherited-spine.tsv — one row per AT-HYG-derived record of
 // the final AT-HYG-driven build. One-shot; see README.md.
-import { createReadStream, existsSync, writeFileSync } from 'node:fs';
+import { closeSync, createReadStream, existsSync, openSync, readSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { CONSTELLATIONS, CON_INDEX } from '../parse/constellations';
 import { readStars, type Star } from '../parse/stars-parse';
-import { ATHYG_CSV, loadReadStarsInputs } from '../parse/read-stars-inputs';
+import {
+  ATHYG_CSV,
+  READ_STARS_INPUT_PATHS,
+  loadReadStarsInputs,
+} from '../parse/read-stars-inputs';
+import { isLfsPointer } from '../../sid/sid-pure';
 import {
   backfillPrimaryIdentifiers,
   promoteCompanions,
@@ -15,6 +20,7 @@ import {
 } from '../companions/companion-promotion';
 import { applySystemDistanceCoherence } from '../multiplicity/system-coherence';
 import {
+  INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,
   SPINE_PRINTED_COLUMNS,
   buildSpineRow,
@@ -29,10 +35,47 @@ import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const OUT_SPINE = resolve(ROOT, INHERITED_SPINE_FILE);
-const EXPECTED_COUNTS = resolve(
-  ROOT,
-  'scripts/catalog/spine/inherited-spine-expected.json',
-);
+const EXPECTED_COUNTS = resolve(ROOT, INHERITED_SPINE_EXPECTED_FILE);
+
+/** Enough bytes to recognise a Git-LFS pointer header without reading a
+ *  multi-hundred-MB reference table into memory to do it. */
+const LFS_PROBE_BYTES = 128;
+
+function readHead(path: string): string {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(LFS_PROBE_BYTES);
+    return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0)).toString('utf-8');
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** `loadReadStarsInputs` degrades softly on an absent table — it warns and
+ *  the cascade falls through, which the record build's count snapshot then
+ *  flags. The spine has no prior snapshot to drift against on a first
+ *  generation, and a degraded walk changes both membership (the distance
+ *  stack and direction cascade decide which rows survive) and the resolved
+ *  designation set. So every input is required here, materialised, before the
+ *  walk starts. */
+function requireMaterialisedInputs(): void {
+  const unusable = [...READ_STARS_INPUT_PATHS, SRC_MULTIPLES]
+    .map((path) => {
+      if (!existsSync(path)) return `${path} — absent`;
+      if (isLfsPointer(readHead(path))) return `${path} — Git-LFS pointer stub`;
+      return null;
+    })
+    .filter((problem): problem is string => problem !== null);
+  if (unusable.length === 0) return;
+  console.error(
+    `Cannot generate the spine — ${unusable.length} input(s) unusable:\n` +
+      unusable.map((u) => `  ${u}`).join('\n') +
+      `\nRun \`git lfs pull\` (and the scripts/refresh/ puller for any input ` +
+      `genuinely missing). A degraded walk would freeze a membership and ` +
+      `designation set the shipped build does not have.`,
+  );
+  process.exit(1);
+}
 
 /** Printed cells for every AT-HYG row, keyed by the row's `id`. A second pass
  *  over the CSV rather than extra fields on `Star`: the build's record type
@@ -42,9 +85,23 @@ async function readPrintedCells(): Promise<Map<number, SpinePrintedCells>> {
     parse({ columns: true, skip_empty_lines: true, cast: false }),
   ) as AsyncIterable<Record<string, string>>;
   const byRowId = new Map<number, SpinePrintedCells>();
+  let headerChecked = false;
   for await (const row of parser) {
+    if (!headerChecked) {
+      // An absent column would otherwise copy through as a silently empty
+      // one, and the only thing pinning it is the snapshot this run writes.
+      const absent = SPINE_PRINTED_COLUMNS.filter((column) => !(column in row));
+      if (absent.length > 0) {
+        throw new Error(
+          `${ATHYG_CSV} carries no ${absent.join(', ')} column — the spine ` +
+            `copies these verbatim, so a rename upstream must be resolved, ` +
+            `not emitted as blank cells`,
+        );
+      }
+      headerChecked = true;
+    }
     const cells = {} as SpinePrintedCells;
-    for (const column of SPINE_PRINTED_COLUMNS) cells[column] = row[column] ?? '';
+    for (const column of SPINE_PRINTED_COLUMNS) cells[column] = row[column];
     byRowId.set(Number(row.id), cells);
   }
   return byRowId;
@@ -55,6 +112,7 @@ async function readPrintedCells(): Promise<Map<number, SpinePrintedCells>> {
  *  those records before SID resolution sees them — so the frozen designation
  *  set is the one `starDesignations` extracts today. */
 async function readAthygDerivedRecords(): Promise<Star[]> {
+  requireMaterialisedInputs();
   const inputs = loadReadStarsInputs();
   console.log(`Reading ${ATHYG_CSV}...`);
   const { stars, stats } = await readStars(
@@ -64,14 +122,6 @@ async function readAthygDerivedRecords(): Promise<Star[]> {
   console.log(`  parsed ${stats.total} rows, kept ${stars.length}`);
   console.log('  dropped:', stats.dropped);
 
-  if (!existsSync(SRC_MULTIPLES)) {
-    console.error(
-      `Missing ${SRC_MULTIPLES}. Confirm git LFS is pulled (\`git lfs pull\`) — ` +
-        `without it the identifier passes are skipped and the spine would ` +
-        `freeze a designation set the shipped build does not have.`,
-    );
-    process.exit(1);
-  }
   const multiplesRows = readMultiplesTsv(SRC_MULTIPLES);
   const backfilled = backfillPrimaryIdentifiers(multiplesRows, stars);
   console.log(`  backfilled identifiers onto ${backfilled} HD-only primaries`);
