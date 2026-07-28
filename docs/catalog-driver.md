@@ -72,18 +72,21 @@ Caveats verified at the gate:
 - **CNS5 beats hand-rolling Gliese**: modern, curated, carries
   GJ ↔ Gaia EDR3 (same source_id space as DR3) ↔ HIP directly, plus
   component structure. V/70A (CNS3) is not ingested. **CNS5 is
-  volume-limited to 25 pc**, which bounds it to ~61% of AT-HYG's `gl`
-  labels (measured at ingest, 2026-07-28): 97% of the misses lie beyond
-  25 pc, in the Gliese-Jahreiß / NLTT supplement numbering CNS5 does not
-  enumerate. Those labels come from the spine backstop, not a second
-  Gliese source.
+  volume-limited to 25 pc**, which bounds it to ~62% of AT-HYG's `gl`
+  labels (measured at ingest, 2026-07-28): 91% of the 1,126 misses lie
+  beyond 25 pc (median 31 pc, p90 89 pc), in the Gliese-Jahreiß / NLTT
+  supplement numbering CNS5 does not enumerate. Those labels come from the
+  spine backstop, not a second Gliese source. Only the keyed/covered pair
+  behind that ~62% is pinned in build-counts — the distance figures are
+  derived prose, so recompute before gating on them
+  (`data/classic-ids/README.md` § Coverage).
 - V/50's 14 HD-less HR entries resolve through the spine backstop or
   are listed in the parity ledger.
 
 The frozen files landed in `data/classic-ids/` (plus the `I/239` V slice
 in `data/hipparcos/`), joined into a source_id-keyed overlay by
-`pnpm run build:classic-ids`. **The overlay covers 61–96% of AT-HYG's
-labels per identifier and has no row at all for 112 of the 178 stars at
+`pnpm run build:classic-ids`. **The overlay covers 62–96% of AT-HYG's
+labels per identifier and has no row at all for 115 of the 178 stars at
 V ≤ 3** — Gaia saturates near G ≈ 3, so a source_id-keyed table
 structurally cannot carry Vega, Sirius or Betelgeuse. The spine backstop
 in § 1 is therefore load-bearing for a double-digit fraction of every
@@ -135,6 +138,18 @@ HD+HIP-bearing rows, 2,637 agree, **21 disagree**, 74 are HIP-only
 source_id digits — resolved close pairs where the two walks pick
 different components. They are enumerated in
 `data/classic-ids/hd_hip_route_disagreements.tsv`.
+
+**Route agreement is not binding correctness.** Both walks are unvetted
+best-neighbour tables and routinely land on the *same* wrong source for a
+saturated star, so a mis-binding shows up as an agreement: the G = 20.95
+background source beside α Cen B agreed on both routes while carrying
+HD 128621 · HR 5460 · HIP 71681 · `alf Cen`. The assembled overlay is
+therefore gated through the record build's own `resolveGaiaSourceId` checks
+(G − V ≥ 1.0, sibling-letter attribution) before any count is taken, and
+187 rows are dropped to `data/classic-ids/rejected_bindings.tsv`. **A
+consumer keying labels off the overlay inherits this gate for free; one that
+re-derives bindings from the raw cross-walks must re-apply it** —
+`data/classic-ids/README.md` § The binding gate carries the reach bound.
 
 **Ambiguity policy** (IV/25 `n_HD`/`n_TYC` > 1, and any designation
 covering two records): mirrors `docs/sid.md` § 4.1 — such a

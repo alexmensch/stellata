@@ -23,15 +23,39 @@ scripts/catalog/parse/
                                   variability cross-match.
   constellations.ts               Stellarium stick figures → constellation
                                   line segments + public/constellations.json.
-  corpus-tsv.ts                   Shared TSV reader for the frozen
-                                  regression corpora (known-stars.tsv,
-                                  multi-star-regression.tsv,
+  corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
+                                  is the one header walk for every committed
+                                  table (see § TSV header resolution); the
+                                  cell + record-ref helpers additionally serve
+                                  the frozen regression corpora
+                                  (known-stars.tsv, multi-star-regression.tsv,
                                   system-pair-topology.tsv).
   star-fixture.ts                 Test-only star-record builder.
   spectral-encoding-parity.test.ts
                                   Pins the spectral encode/decode round-trip
                                   against the runtime decoder.
 ```
+
+## TSV header resolution
+
+`headerIndex(headerLine, cols, fileLabel, refreshHint)` in `corpus-tsv.ts` is
+the single header walk for every committed table the build reads:
+`parseGaiaAstrometryCatalogTsv` / `parseHip2Tsv` / `parseNssSourceIdSet`
+(`../distance/direction-cascade.ts`), `parseBailerJonesTsv` and
+`parseSimbadWdsXidsTsv` (`../catalog-pure.ts`), `parseSimbadSampleRows`
+(`../validate/simbad-sample-parse.ts`), and the classic-ID parsers
+(`../classic-ids/classic-ids-parse.ts`).
+
+**It throws on a missing column AND on an empty or headerless file.** Every
+input is a committed, usually LFS-tracked artifact, so zero rows means
+truncated or unsmudged, never an empty dataset — a parser answering with an
+empty map turns a missing file into a silently zeroed join that only surfaces
+as a count drift much later. A valid header with no data rows is a different
+thing and legitimately yields no rows.
+
+`gaia-xmatch.ts` is the deliberate exception: it streams a 2.5 M-row table
+line-by-line and dedups on angular distance, so it carries its own accumulator
+with the same header strictness rather than a second copy of this one.
 
 ## Per-row pipeline
 

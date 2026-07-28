@@ -51,7 +51,12 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 - **Role**: printed Johnson V for the bright / printed tier of the
   V-magnitude cascade (`docs/catalog-driver.md` § 5) — the rows whose Gaia
   photometry is missing or outside the Riello+ 2021 transform's validity
-  range. Ingested ahead of that consumer; nothing reads it yet.
+  range. That consumer has not landed yet.
+- **Read by**: the classic-ID overlay's binding gate
+  (`scripts/catalog/classic-ids/`, `parseHipVmagTsv`) — it needs a V keyed by
+  a designation the overlay itself carries, not by an AT-HYG row, so the gate
+  survives AT-HYG's retirement. `data/classic-ids/README.md` § The binding
+  gate.
 - **Refresh**: `pnpm run refresh:hip-vmag`.
 
 ## `hip2_van_leeuwen.tsv`
