@@ -2,7 +2,8 @@
 
 Design gate for the HDR epic (stellata-xypg). Every implementation child
 (H2 plumbing, H3 stars, H4 Milky Way, H5 planets, H6 exposure wiring,
-H7 validation, H8 debug panel) builds against this document. The problem
+H7 validation, H8 debug panel, then H15 instrument epoch, H16 FOV,
+H17 adaptation, H18 EV trim) builds against this document. The problem
 it solves: today every light-emitting layer invents its own squash into
 the 8-bit [0,1] canvas — star peak-1/appSize encoding, the Milky Way's
 `1 − exp(−colorAccum · 5.35e-6)`, the planet mesh's `^0.25` clamp to
@@ -20,8 +21,8 @@ doc carries the unit, the operator, and the calibration contract.
 ## 1. The unit — threshold-anchored display luminance
 
 The HDR render target stores **linear relative luminance `L`, anchored
-so that a point source exactly at the magnitude-slider limit
-`m_lim` (= `uMaxAppMag`) carries `L = L_THRESH`**:
+so that a point source exactly at the instrument's limiting magnitude
+`m_lim` (= `uLimitMag`) carries `L = L_THRESH`**:
 
 ```
 L(m) = L_THRESH · 10^(0.4 · (m_lim − m))
@@ -32,10 +33,12 @@ L(m) = L_THRESH · 10^(0.4 · (m_lim − m))
   threshold star renders at ≈ 0.15 of full scale — dim but present,
   matching the current soft-taper feel at the cutoff.
 - The exposure is *inside* the formula: the shared uniform is
-  `uExposure = L_THRESH · 10^(0.4 · m_lim)`, and every emitting shader
-  computes `L = uExposure · 10^(−0.4 · m)` from its physical apparent
-  magnitude `m`. Moving the slider moves every layer identically — that
-  is the entire cross-layer calibration mechanism.
+  `uExposure`, and every emitting shader computes
+  `L = uExposure · 10^(−0.4 · m)` from its physical apparent magnitude
+  `m`. One write moves every layer identically — that is the entire
+  cross-layer calibration mechanism. `uExposure` is the instrument's
+  `L_THRESH · 10^(0.4 · m_lim)` times the adaptation and manual-trim
+  terms (§ 3).
 - `m` is V-band apparent magnitude, the scale all three calibrated
   inputs already share: catalog `absmag` + distance modulus for stars,
   `planetApparentMagnitude` (validated against the −12.7 full-Moon
@@ -55,16 +58,21 @@ nothing is lost by folding it in early.
 ### Range budget (RGBA16F)
 
 fp16 max ≈ 6.5e4, min normal ≈ 6.1e-5 (subnormals to 6e-8). Worked
-values at the naked-eye preset (`m_lim = 6.5`, `uExposure ≈ 7.96`):
+values for the unaided eye at `dm = 0`, EV 0 (`m_lim = 7.8`,
+`uExposure ≈ 26.4`):
 
 | Source | m | L | tone-mapped (Lw = 20) |
 | --- | --- | --- | --- |
-| threshold star | 6.5 | 0.02 | 0.02 → faint |
-| Vega | 0.0 | 8.0 | 0.90 |
-| Sirius | −1.46 | 30.5 | ≈ 1.0 (white) |
-| Venus (max) | −4.7 | 605 | white + bloom |
-| MW band pixel (S ≈ 20 mag/″², 94″/px) | ≈ 10.1 | 7e-4 | barely visible |
+| threshold star | 7.8 | 0.02 | 0.02 → faint |
+| Vega | 0.0 | 26.4 | 1.03 → clips white |
+| Sirius | −1.46 | 101 | 1.24 → white |
+| Venus (max) | −4.7 | 2.0e3 | white |
+| MW band pixel (S ≈ 20 mag/″², 94″/px) | ≈ 10.1 | 2.4e-3 | barely visible |
 | Sun disc at 1 AU | −26.7 | ceiling clamp | white |
+
+Adaptation only ever *cuts* from this table (§ 3.1), so these are the
+brightest values any source reaches — the budget is an upper bound, not
+a typical frame.
 
 Every emission clamps at **`LUMA_CEIL = 4096`** before write. Extended
 Reinhard maps everything past ~10× the white point to visually
@@ -85,11 +93,12 @@ peak_L = L(m) / max(1, π · r_phys_px²)
 ```
 
 - **Physically unresolved** (`r_phys_px < 1`, the overwhelmingly common
-  case — the real 30″ PSF is sub-pixel at practical FOVs): the star's
-  entire flux lands at its peak, `peak_L = L(m)`. The super-Gaussian
-  footprint (appSize, √Δm, per-preset exaggeration K, soft-knee) is
-  retained unchanged as a **display kernel normalized to peak 1** — it
-  spreads the light for legibility but no longer encodes brightness.
+  case — the real 30″ PSF is sub-pixel at every FOV wide enough to hold
+  a constellation): the star's entire flux lands at its peak,
+  `peak_L = L(m)`. The super-Gaussian footprint (appSize, √Δm,
+  exaggeration K, soft-knee) is retained unchanged as a **display kernel
+  normalized to peak 1** — it spreads the light for legibility but no
+  longer encodes brightness.
 - **Physically resolving** (`r_phys_px ≥ 1`): the emission becomes true
   surface brightness — flux over the physical disc area. A star
   approached at close range dims per-pixel toward its finite surface
@@ -116,7 +125,9 @@ renders bright stars as dim smears. Consequence for validation (§ 8):
 star-vs-MW comparisons are made on **per-pixel luminance** (peak vs
 band), never on integrals across the exaggerated footprint. K's role
 narrows to pure legibility (footprint size); it has no brightness
-effect and stops being a calibration knob.
+effect and stops being a calibration knob. The over-count therefore
+shrinks as the camera zooms in, because K itself shrinks with FOV
+(§ 3.3) — at the true PSF it is gone.
 
 Existing magnitude-domain modifiers survive unchanged and become
 photometrically real: extinction A_V adds to `m`, `iEclipseDim` folds in
@@ -157,11 +168,18 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   `Lw = L_THRESH · 10^(0.4 · DR_MAG)` with **`DR_MAG` default 7.5**
   (≈ 1000:1, the usable dynamic range of an 8-bit sRGB display). A
   source `DR_MAG` magnitudes brighter than the threshold star maps to
-  exactly 1.0. `DR_MAG` is *the* faint-end calibration lever: strict
-  physicality (7.5) renders the MW band as faint as the real
-  suburban-sky band; H7's eso0932a comparison is expected to tune it
-  into the 5–8 range (the panorama is itself a long exposure). Defaults
-  `L_THRESH = 0.02`, `DR_MAG = 7.5` ⇒ `Lw = 20`.
+  exactly 1.0. Defaults `L_THRESH = 0.02`, `DR_MAG = 7.5` ⇒ `Lw = 20`.
+  **`DR_MAG` is pinned at 7.5 by physiology, not tuned.** A human eye
+  does not resolve a large magnitude range in one scene at one instant:
+  instantaneous range at a fixed adaptation state is ~2–3 log units,
+  i.e. ≈ 5.0–7.5 magnitudes. The eye's ~10^14 total range is achieved
+  over *time* and *across the retina*, never simultaneously in one
+  glance — which is why § 3.1's moving window, not a wider `DR_MAG`, is
+  the mechanism that shows a bright disc and a faint field. H7 still
+  compares against eso0932a, but as *validation* of 7.5 rather than as a
+  search over 5–8; raising it would be an explicit exaggeration on the
+  luminance axis (the same move K makes on the size axis) and must be
+  recorded as one.
 - **Scaling luminance and preserving the RGB ratio keeps hue exact** —
   the calibrated Ballesteros/blackbody star colours and the CCM
   reddening ratios survive the operator untouched. ACES/filmic was
@@ -202,48 +220,310 @@ fields, not noise that cancels. H3 split `stellataTonemapUndithered`
 out for emitters that overlap; the resolve and any single-coverage
 volume keep the dithered call.
 
-## 3. Exposure model — slider and epochs
+## 3. Exposure model — instrument, adaptation, and the EV trim
 
-*Shipped as designed (H6): `src/client/hdr/exposure-epoch.ts` owns
-`epochExposure` + `InstrumentEpoch`, and `FilterController.setFilter`
-writes `uExposure` — `src/client/hdr/README.md` § Exposure epochs.*
+*Design, not yet shipped. H6 shipped "the magnitude slider is the single
+exposure control"; H15–H18 replace that with the model below. The
+`exposureForMagLimit` / `InstrumentEpoch` machinery in
+`src/client/hdr/exposure-epoch.ts` survives — what changes is what feeds
+it and what the magnitude limit means.*
 
-**The magnitude slider is the single exposure control.** `m_lim` sets
-`uExposure = L_THRESH · 10^(0.4·m_lim)`; every layer reads the same
-uniform. The presets become exposure presets:
+Four things were welded onto one slider. They separate as:
 
-| Preset | m_lim | uExposure | white-point mag (m_lim − DR_MAG) |
+| Knob | Meaning | Default | Moves visibility? |
 | --- | --- | --- | --- |
-| naked-eye | 6.5 | ≈ 7.96 | −1.0 (Sirius just saturates) |
-| binoculars | 10.5 | ≈ 317 | 3.0 |
-| all | 15.0 | 2.0e4 | 7.5 |
-
-**Population cutoff and exposure agree by construction.** The vertex
-cull at `m_lim` (+ 0.5-mag taper) is retained — but as a *performance*
-cull that coincides with the visibility threshold: a star fainter than
-`m_lim` would render below `L_THRESH`, i.e. at or under the
-just-noticeable floor the unit is anchored to. The slider therefore
-keeps its population semantics *and* gains photometric meaning, with no
-divergence between the two. (This resolves the old
-slider-as-cutoff-vs-slider-as-exposure tension: they are the same
-number on the same scale.)
-
-**Epoch model.** The naked-eye preset is the **base exposure epoch** —
-the grounding for all light decisions (its `uExposure`, its PSF/K
-angular targets). A future instrument preset (binoculars, telescope) is
-authored as a pair of multipliers *on top of* the base epoch:
+| **Instrument** | the observing model: aperture, plus the limiting magnitude, PSF width, sky background and passband derived from it | unaided eye, 7 mm, `m_lim` 7.8 | yes |
+| **Adaptation** | automatic exposure cut driven by scene luminance | on, `dm ≤ 0` | yes |
+| **EV trim** | manual, ±3 stops in 1/3 steps | 0 | yes |
+| **FOV** | plate scale — how finely the sky is sampled | the instrument's default, 50° | no (§ 3.3) |
 
 ```
-uExposure   = baseExposure(m_lim) · instrument.exposureMul     // aperture gain
-angular σ,K = base targets        / instrument.angularMag      // resolution gain
+uExposure = exposureForMagLimit(instrument.mLim) · 10^(0.4·dm_adapt) · 2^(ev)
 ```
 
-`epochExposure()` in the exposure module takes the instrument record
-(identity today) so the accommodation is structural, not speculative.
-Physical sanity check the model already passes: 50 mm binoculars gain
-≈ (50/7)² ≈ 51× ≈ 4.3 mag — the existing naked-eye→binoculars preset
-step is 4.0 mag. Instrument presets themselves are out of scope
-(future epic); only this shape is mandated.
+**There is no data-magnitude filter.** The user-facing "max apparent
+magnitude" slider is *deleted*, not re-scoped: under this model "show me
+fainter stars" is a request for a larger aperture — i.e. a different
+instrument — so a second control expressing it in magnitudes is a
+second, contradictory answer to the same question.
+
+`uLimitMag` (was `uMaxAppMag`) is the instrument's limiting magnitude,
+and it correctly carries every meaning that uniform already had, because
+all four are instrument-scoped:
+
+- the vertex cull (a performance cull — see below),
+- the exposure anchor,
+- the `√Δm` footprint window `perceptualDmEff` reads,
+- chart-mode disc sizing and the Milky Way chart isobar contour.
+
+That four-way overload was only a defect while one of the four carried
+*data-filter* semantics. Removing the filter makes the weld correct.
+
+**The cull bound is derived, and is not the limit itself.** A star
+between `m_lim` and `m_lim + EV_MAX_STOPS · 0.753 + 0.5` is invisible at
+EV 0 but reachable at +3 stops, so the cull sits at that bound and the
+visible faint edge can never be a *population* edge. (1 stop = 0.753
+magnitudes — a conversion this section needs constantly; the 0.5 is the
+existing soft taper.) Adaptation only ever cuts, so it never widens the
+bound. At `m_lim` 7.8 the bound is ≈ 10.6.
+
+**This retracts H6's claim that population cutoff and exposure agree by
+construction.** They agreed only while one number served both. The claim
+was true as shipped and is false under this model: exposure is now a
+product of three terms, and the cull is a derived bound on one of them.
+
+### 3.1 Adaptation — what drives the cut
+
+The reference observer is **optimistic best case**: fully dark-adapted,
+no adaptation delay, and presumed to have scanned the whole field. So
+adaptation is a function of frame content with no time constant and no
+dependence on which object is focused.
+
+**The statistic is the area-weighted mean linear luminance over the
+viewport** — retinal illuminance across the attended region:
+
+```
+L̄  = Σᵢ (Lᵢ · Aᵢ) / A_viewport
+dm = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
+```
+
+`Aᵢ` is source *i*'s **true angular coverage** in pixels — never the
+K-exaggerated kernel, or the footprint exaggeration would drive
+adaptation. Unresolved sources floor at 1 px.
+
+Why an area-weighted arithmetic mean, and not the two obvious
+alternatives:
+
+- **Not a log-average** (the standard Reinhard key). On a sky that is
+  99.9% black the log-average sits at the floor, `dm` pins at 0, and a
+  resolved planet stays blown out — it fails the exact case the
+  mechanism exists for.
+- **Not a maximum or a high percentile.** One bright pixel would crater
+  the frame: Sirius in view would dim the star field around it.
+- **The discriminator is angular extent, not luminance.** Venus filling
+  the frame adapts the eye; Sirius as a point does not. Area weighting
+  *is* that discriminator, and it is what pupil response physically
+  integrates.
+
+Contributions at FOV 50° / 900 px, `m_lim` 7.8:
+
+| in frame | contribution to `L̄` |
+| --- | --- |
+| resolved Venus filling 20% of frame | 3.1e4 |
+| Sol's disc at 1 AU (0.53°, ≈ 71 px) | 2.6e5 |
+| 100 000 threshold-magnitude stars | ≈ 1e-2 |
+| Milky Way band at 22 mag/arcsec² | 5e-4 |
+| Venus unresolved from Earth (0.33 px) | 3.5e-4 |
+
+Seven decades separate the cases that must adapt from the cases that
+must not.
+
+**Frustum-edge continuity is free.** A source sliding into frame
+contributes in proportion to its covered pixels, which ramps
+continuously from zero, and coverage of a disc crossing a straight
+frustum edge is smooth. No radial taper, no centre weighting, no new
+constant. (An earlier draft proposed a fovea-like radial weight; the
+coverage term already does its job, and a camera-centred weight would
+also re-introduce the gaze dependence the scanned-observer premise
+rejects.)
+
+**`dm ≤ 0` is an invariant.** A fully dark-adapted eye at the
+instrument's `m_lim` is the ceiling — nothing adapts to see fainter than
+threshold. Automatic compensation only cuts; the manual trim is the one
+term that may go positive.
+
+**`L_ADAPT` is an invented constant**, like `L_THRESH` — the scene
+luminance at which adaptation begins to bite. It must sit far above the
+diffuse-field rows of the table above and far below the resolved-body
+rows; anywhere in ≈ 0.02–0.2 satisfies that. Ship a default, expose it
+on the debug panel (H8), settle it in smoke.
+
+**Measure on the CPU, analytically.** The inputs are all to hand —
+every resolved body's `S₀` and its projected coverage, plus the brightest
+in-frame point sources — so the statistic is a pure function, stall-free
+and unit-testable. A GPU mip-reduce is *not* needed for v1 and would be
+actively wrong on approach: `LUMA_CEIL = 4096` clamps at emission, so a
+GPU measurement reads Venus's 1.56e5 as 4096, a 38× underestimate
+precisely when adaptation matters most. The diffuse field (Milky Way
+band, aggregate faint stars) sits four decades below `L_ADAPT` by the
+table above, so a constant floor term covers it.
+
+### 3.2 What the model does and does not fix
+
+Adaptation is driven by **coverage**; correct exposure depends on
+**surface brightness**. The two meet only over a band of coverages:
+
+- A body filling ~10–20% of the frame lands correctly exposed by
+  construction — that is what `L_ADAPT` is solved against.
+- At 2% of frame it sits ~2.5 mag over and stays a small brilliant
+  clipped dot. That is the right answer; a brilliant dot should read as
+  a brilliant dot.
+- ±3 stops of trim spans 2.26 mag ≈ a 5× coverage range, so the usable
+  envelope is roughly "fills 4% of the frame or more".
+
+**Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
+0.53° — ≈ 71 px of 1.4e6 — so `L̄` = 2.6e5 gives `dm` = −16.0 mag
+against the ≈ −21 the disc needs, and −3 stops closes only 2.26 more.
+The Sun stays clipped white unless the camera is close enough to fill
+the frame. Phenomenologically that is correct: you cannot resolve
+granulation with an unaided eye at 1 AU. The affordance that fixes it is
+**an instrument** — a filtered solar telescope is a small effective
+aperture with a deep negative exposure — not a separate neutral-density
+control.
+
+**The operator stays GLOBAL, and the statistic does not breach that.**
+`stellata_tonemap` is a pure function of one pixel's luminance and one
+scene-wide scalar. Adaptation moves the scalar; nothing makes the
+operator depend on screen position or on which object a fragment belongs
+to. The *measurement* is weighted by coverage; the *application* is not
+weighted at all. Keep that boundary crisp, or it becomes the loophole
+every cinematic effect walks through:
+
+- **Per-layer and per-object exposure are out** by this rule rather than
+  by preference. "Render planets dimmer than the stars" is per-object
+  exposure — the same per-layer squash H5 deleted.
+- **Spatially-varying (local) tone mapping is out.** It is the only
+  thing that *would* show 17 magnitudes at once, it is the cinematic
+  HDR-photograph look, and nothing in the physical chain does it —
+  not the eye at an instant, not any instrument.
+- **Veiling glare is in scope later, and does not breach the rule.**
+  Ocular scatter is real light redistributed in the optics *before*
+  detection, so it belongs on the emission side as a convolution
+  upstream of the operator. It is the mechanism that makes a bright
+  source destroy *nearby* faint detail — which a single global scalar
+  cannot express. Standard model: the Vos & van den Berg glare-spread
+  function (CIE 135/1, valid 0.1°–100°); the simple form is
+  Stiles–Holladay, `L_veil ≈ 10·E/θ²` with θ in degrees. Deferred to
+  its own bead.
+
+**Apply compensation at emission, never at the resolve.** `uExposure`
+already multiplies at emission and `LUMA_CEIL` clamps there, so a lower
+exposure yields a lower pre-clamp value and the ceiling is harmless.
+Resolve-side gain would make that clamp lossy *and* would scale the
+pre-inverse-mapped chrome colours (`src/client/hdr/chrome/README.md`).
+
+**A limiting-magnitude readout is mandatory**, distinct from any slider
+value — e.g. *"adapted to Venus · stars to m 1.2"*. Without it, a star
+field correctly vanishing reads as a bug.
+
+### 3.3 FOV is magnification; the instrument is aperture
+
+An optical system carries three quantities, and real instruments bundle
+two of them — which is exactly why FOV and instrument feel tangled:
+
+- **Aperture `D`** — collecting area ∝ D². Sets how *faint* you can go.
+- **Magnification / focal length** — sets plate scale, hence FOV on a
+  fixed detector. Sets how *finely* you sample.
+- **f-ratio `f/D`** — derived; governs extended-source brightness.
+
+Point and extended sources respond differently, and that asymmetry is
+the whole answer:
+
+| | bigger aperture, same FOV | narrower FOV, same aperture |
+| --- | --- | --- |
+| point source | brighter → fainter stars appear | total flux flat; per-pixel peak dims once resolved |
+| extended source | brighter | **dims ∝ FOV²** |
+
+**The split: the instrument owns aperture, the FOV slider owns
+magnification.** Narrowing the FOV is therefore a constant-aperture
+telephoto, with three honest consequences:
+
+1. **Point-source limiting magnitude is FOV-invariant.** An unresolved
+   star's peak is `L(m)` at any plate scale. Zooming reveals no star
+   that was not already there.
+2. **Extended sources dim quadratically.** `Ω_px` falls as FOV², so the
+   Milky Way band fades as the camera zooms into it and a marginal
+   planet disc can drop under the floor. This is real — you cannot
+   magnify nebulosity into visibility — and it is what makes changing
+   *instrument* the answer rather than zooming further. +3 stops of trim
+   recovers roughly 50° → 18°.
+3. **Only aperture moves depth**, and aperture belongs to the
+   instrument.
+
+*Rejected alternative: evaluate photometry at a fixed reference plate
+scale so extended sources stay FOV-invariant. It is numerically a
+constant-f-ratio zoom, which means aperture grows as you zoom —
+smuggling light collection in through the FOV control and re-tangling
+the two axes.*
+
+**The exaggeration K becomes FOV-derived.** K exists because σ = 30″ is
+sub-pixel at 50° FOV; it is a sub-pixel-visibility hack, not physics, so
+it must retire as it stops being needed:
+
+```
+K(fov) = K_density(instrument) · max(1, K_BASE · fov / DEFAULT_FOV)
+```
+
+`K_BASE = 12` reproduces the shipped naked-eye value at the default 50°
+exactly, so the default look does not move. K decays to 1 — the true
+PSF — at ≈ 4.2° FOV. Two consequences:
+
+- `sizeMinArcsec = σ·K ∝ fov` while `arcsec/px ∝ fov`, so **star pixel
+  size is FOV-invariant** until K floors, after which stars shrink with
+  FOV as true physics takes over. What zooming buys is **separation, not
+  size**: two stars that merged into one blob at 50° resolve at 10°,
+  because the exaggeration inflating them has shrunk. The merged blob was
+  never physics — it was K.
+- **`K_density` is the instrument's half of K.** The shipped per-preset
+  values (12 / 9 / 5) conflated the plate-scale term with a *crowding*
+  term: a deeper limit needs a smaller footprint or a dense field washes
+  into a solid sheet. `K_density` is 1 for the unaided eye — so today's
+  value falls out of the formula — and is a per-instrument calibration
+  for anything deeper. Derivation:
+  `docs/science-stellar-modelling.md` § Stellar perception model.
+
+The honest simplification: in reality, summing a point source's PSF over
+a larger aperture improves limiting magnitude even at fixed f-ratio —
+photon statistics, which is why aperture buys depth regardless of
+f-number. Visibility here is per-pixel luminance against a *perceptual*
+floor, not a photon-noise floor, so aperture reaches `m_lim` only
+through the instrument record. That is precisely the simplification that
+keeps the two axes independent instead of tangled.
+
+### 3.4 The instrument record — aperture is the single number
+
+An instrument is **one physical parameter plus derived quantities**, not
+a bag of tuned multipliers:
+
+```
+{ apertureMm, defaultFovDeg, skyBackgroundMagArcsec2, passband }
+   → mLim, PSF width (λ/D + aberration), K_density
+```
+
+`InstrumentEpoch.exposureMul` **retires as redundant**: aperture gain
+and a limiting-magnitude shift are the same fact stated twice. 50 mm
+over a 7 mm pupil is (50/7)² = 51× = 4.3 mag, and the shipped
+naked-eye→binoculars preset step was 4.0 mag — the preset was already
+expressing aperture gain *as* an `m_lim` change. Specify both and it
+double-counts. Aperture is primary; `m_lim` derives from it.
+
+`InstrumentEpoch.angularMag` retires too: FOV owns plate scale (§ 3.3),
+so an instrument supplies a *default* FOV, never a magnification.
+
+The unaided eye is `apertureMm = 7` — the dark-adapted pupil the σ = 30″
+PSF is already derived at — with **`m_lim` = 7.8**: Bortle-1 best case,
+in vacuum, fully night-adapted, which is the observer this whole model
+assumes. That is 1.3 mag deeper than the shipped 6.5, and it is not
+free. The visible window runs `m_lim` → `m_lim − DR_MAG`, so full white
+moves from m −1.0 to **m +0.3**, and most of the first-magnitude list
+(Canopus, α Cen A, Arcturus, Vega, Capella, Rigel) clips where only
+Sirius did.
+
+**Accepted, and arguably more correct:** a dark-adapted eye is
+rod-dominated and genuinely sees bright stars as colourless white.
+Stellar chromaticity returns the way it does in nature — by flying close
+enough that adaptation drives the observer photopic, at which point
+cones carry the colour. `DR_MAG` stays **7.5**; H7 inherits no retune
+from this change.
+
+**The three axes a future preset needs, named here so the record does
+not have to be reopened per preset:** aperture/resolution (above),
+sky-background luminance (`skyBackgroundMagArcsec2` — no consumer yet;
+it lands as an additive floor on `L`), and passband (no consumer yet; it
+substitutes for V in `L(m)`, alongside `BC_photopic`). The presets
+themselves — binoculars, telescope, filtered solar telescope,
+light-polluted city, JWST — stay out of scope; only the record shape is
+mandated here.
 
 ## 4. Per-layer mapping — every current squash and its replacement
 
@@ -291,6 +571,13 @@ wrong for it. The chart↔realistic flip re-targets the renderer
 `chart-mode.ts`. This is cheaper and more honest than an identity
 tone-map path, and it keeps chart snapshots pixel-identical across the
 epic.
+
+**Chart depth follows the instrument, and nothing else.** Its
+magnitude-linear disc sizing reads `uLimitMag`, so a chart shows what the
+current instrument can perceive — a paper chart of the naked-eye sky
+under the unaided eye, a telescopic atlas under a telescope. It inherits
+neither adaptation nor the EV trim, and that is correct rather than a
+gap: paper has no exposure state.
 
 ## 6. Float-RT fallback
 
@@ -382,14 +669,24 @@ day one — the fullscreen pass and the inline path can never drift.
   offset. The known gap it leaves is a latitude gradient steeper than the
   real sky's — the model puts NGP near 25.1 mag/arcsec² against a real
   ~23.5–24. Fixing that is a density-profile question, not an offset one.
-- **`DR_MAG` is the tunable** reconciling strict physicality with the
-  panorama's long-exposure look; land its shipped default in H7 and
-  record the chosen value here.
-- Cross-layer smoke per preset: threshold stars at the just-visible
-  floor; Sirius/Vega ordering; Venus > Sirius; MW band rises with
-  m_lim in step with the star field (not just population); planet
-  resolve-step continuity (glare↔mesh at equal `L(m)`); moon vs
+- **`DR_MAG` is validated, not tuned** (§ 2): H7 confirms 7.5 against the
+  panorama rather than searching 5–8, and records any departure as an
+  explicit exaggeration.
+- Cross-layer smoke at the unaided eye: threshold stars at the
+  just-visible floor; Sirius/Vega ordering *pre-clip*; Venus > Sirius;
+  planet resolve-step continuity (glare↔mesh at equal `L(m)`); moon vs
   dim-surfaced parent ordering at true flux.
+- **Adaptation acceptance (H17)** — the auto model must land every case
+  within the trim's ±3 stops, or the trim range is wrong. That is a
+  requirement on the model, not a discovery for smoke: fly to Venus,
+  Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
+  reaches surface detail within ±3 stops of EV 0. The known exception is
+  § 3.2's coverage floor — Sol at 1 AU is out of reach by ~5 mag by
+  design.
+- **FOV invariants (H16)** — star pixel size constant from 120° to
+  ≈ 4.2° FOV, then shrinking; a close pair merged at 50° resolving at
+  10°; no new star appearing at any FOV; the MW band dimming
+  quadratically (the accepted § 3.3 consequence, not a regression).
 
 ## 9. Bead-shape decisions
 
@@ -409,14 +706,28 @@ day one — the fullscreen pass and the inline path can never drift.
   params (`DR_MAG`, `L_THRESH`, desaturation), exposure + active-preset
   readout, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.
+- **§ 3 splits four ways, and the order is forced.** H15 (instrument
+  epoch replaces the presets, `uMaxAppMag` → `uLimitMag`, filter deleted)
+  → H16 (FOV-derived K) → H17 (adaptation) → H18 (EV trim). H16 precedes
+  H17 because it changes the `Ω_px` and footprint scale H17's statistic
+  is computed against; H18 follows H17 because a trim needs an automatic
+  term to trim. H15 is the only one that is independently shippable —
+  the others each leave a visible gap until the next lands.
 - **Deliverable placement:** this doc (cross-cutting) + a
   `src/client/hdr/README.md` from H2 for RT/pass implementation detail.
+  The K derivation belongs to
+  `docs/science-stellar-modelling.md` § Stellar perception model, which
+  already owns σ and the √Δm curve; § 3.3 states the rule and points
+  there.
 
 ## Out of scope
 
-Instrument presets (only the epoch accommodation is mandated) ·
-Display-P3 output (zsr.2 — plugs into the § 2 encode) · BC_photopic
-(a7d.2.10 — substitutes into `L(m)` when it lands) · scotopic/mesopic
+Instrument *presets* (§ 3.4 mandates the record shape and names the three
+axes; the presets themselves are a future epic) · veiling glare (§ 3.2 —
+own bead, deferred) · Display-P3 output (zsr.2 — plugs into the § 2
+encode) · BC_photopic (a7d.2.10 — substitutes into `L(m)` when it lands)
+· time-domain adaptation dynamics (§ 3.1 is deliberately instantaneous:
+no light/dark-adapt time constants, no feedback loop) · scotopic/mesopic
 eye modelling (rod spatial summation can't be reproduced on a display;
 `DR_MAG` absorbs the compression) · bloom/lens-flare post effects (the
 existing PSF footprint is the bloom).

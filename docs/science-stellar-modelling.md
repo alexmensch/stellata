@@ -72,21 +72,44 @@ aberrations + diffraction at a 7 mm dark-adapted pupil). No atmospheric
 seeing, no spike-rendering — the camera is in space and we model a
 clean PSF.
 
-**Magnitude limits per preset.** `naked-eye` = 6.5 (Bortle-1 dark sky);
-`binoculars` = 10.5 (typical 7×50 dark sky, derived from
-m_lim_eye + 5·log₁₀(50/7) ≈ +4.3 mag aperture gain); `all` = 15
-(matches the catalog/UI slider ceiling, no physical motivation).
+**Where m_lim comes from.** It is the *instrument's* limiting magnitude,
+derived from aperture — not a user-set data filter. The unaided eye is
+7 mm (the same dark-adapted pupil σ is derived at) giving m_lim = 7.8:
+Bortle-1 best case, in vacuum, fully night-adapted. Deeper instruments
+derive theirs from aperture the same way; the record shape and the
+retired `exposureMul` / `angularMag` multipliers are
+`docs/science-hdr-pipeline.md` § 3.4.
 
-**Exaggeration K.** Literal physics at 50° vertical FOV / 1080 px
-puts the threshold disc at ~0.25 px and Sirius (Δm = 8) at ~1 px —
-both invisible. `starExaggerationK` scales σ up so the threshold disc
-lands at a readable 1–2 px. K is per-preset because the population
-mix changes with the magnitude limit: defaults are `naked-eye` 12,
-`binoculars` 9, `all` 5 — wider catalogs use a smaller K so the dense
-star population doesn't wash the field out. Critically, the √Δm shape
-is preserved between stars within a preset, so *ratios* against the
-volumetric Milky Way bulge (rendered at its real angular size) stay
-correct.
+**Exaggeration K — two factors, and only one of them is physics.**
+Literal physics at 50° vertical FOV / 1080 px puts the threshold disc at
+~0.25 px and Sirius (Δm = 8) at ~1 px, both invisible. K scales σ up so
+the threshold disc lands at a readable 1–2 px. It is a
+sub-pixel-visibility hack, so it must retire as it stops being needed:
+
+```
+K(fov) = K_density(instrument) × max(1, K_BASE × fov / DEFAULT_FOV)
+```
+
+- **The plate-scale factor** `max(1, K_BASE · fov/50)` is the one that
+  earns its keep. `K_BASE = 12` reproduces the shipped naked-eye value at
+  the default 50° FOV exactly, so the default look does not move, and K
+  decays to 1 — the true PSF — at ≈ 4.2° FOV. Because
+  `σ·K ∝ fov` while `arcsec/px ∝ fov`, **star pixel size is
+  FOV-invariant** until K floors, after which stars shrink with FOV as
+  true physics takes over. What narrowing the FOV buys is therefore
+  *separation, not size*: a close pair that merged into one blob at 50°
+  resolves at 10°, because the exaggeration inflating both has shrunk.
+  The merged blob was never physics — it was K.
+- **`K_density`** is the instrument's half. The retired per-preset values
+  (12 / 9 / 5) conflated the two factors: a deeper limit needs a smaller
+  footprint or a dense field washes into a solid sheet. `K_density` = 1
+  for the unaided eye, so today's value falls out of the formula; it is a
+  per-instrument calibration for anything deeper.
+
+Critically, the √Δm shape is preserved between stars at any K, so
+*ratios* — including against the volumetric Milky Way bulge, rendered at
+its real angular size — stay correct. That is what makes rescaling the
+absolute mapping legitimate while the physical relationships hold.
 
 **Soft taper.** Real stars near the detection threshold fade across
 ~0.5 mag rather than popping at the limit. The shader extends
@@ -104,9 +127,10 @@ cost of strict angular fidelity in the secondary axis. Three.js's
 identical only for square viewports.
 
 Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
-brightness curve + smoothstep taper) and `src/client/stellata.ts`
-(`MAG_PRESETS`, `applyMagnitudePreset`, `computePresetPxSizes`).
-Live tuning via `debug.panel()` in the browser console.
+brightness curve + smoothstep taper) and `src/client/filters/`
+(`filter-state.ts` for the angular targets and `presetPxSizes`,
+`filter-controller.ts` for every mutation path). Live tuning via
+`debug.panel()` in the browser console.
 
 ## Star colour calibration
 
