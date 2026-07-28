@@ -334,9 +334,13 @@ These are the science-flavoured items from the project-wide scope list
 in `CLAUDE.md`. Restated here so the rationale lives alongside the
 science it relates to.
 
-- **IAU constellation boundary datasets.** Only the asterism lines are
-  included — boundaries would be a separate Stellarium dataset and
-  carry no visual benefit at the camera scales the app operates in.
+- **Constellation boundaries as 3D structures.** The IAU (Delporte
+  1930) boundary arcs are modelled — they resolve the constellation of
+  any position, catalogued or not
+  (`src/client/constellation-boundaries/README.md`) — but only as a
+  Sol-frame projection. An asterism line's endpoints are real stars and
+  distort correctly as the camera flies; a boundary has no 3D referent
+  and describes nothing from another star, so it is never given depth.
 - **Spiral-arm overdensities** in the Milky Way volumetric background.
   The Reid et al. masers offer a maser-anchored spiral model that could
   ride atop the smooth disc profile, but the smooth band reads
