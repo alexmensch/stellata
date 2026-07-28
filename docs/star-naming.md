@@ -73,23 +73,44 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved, identical spelling | **442** | name tier, unchanged |
-| discovery / eponymous designation | 20 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Kruger 60`, `Struve 2398 A`) |
-| IAU name + invented component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
+| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once § 4's normaliser splits it |
+| discovery / eponymous designation | 21 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`) |
+| IAU name + AT-HYG component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
 | Gould designation | 3 | designation tier (`268 G. Cet`) |
 | catalogue designation filed as a name | 2 | designation tier (`Cygnus X-1`, `EZ Aqr`) |
 | Latin-letter Bayer filed as a name | 1 | Bayer tier (`p Eridani` → `p Eri A` / `p Eri B`, per NEC) |
-| genuinely unattributed | ~15 raw, ~8 after alias-parsing IAU alternates | **alias only** — the star displays its designation |
+| unattributed | **10** | **alias only** — the star displays its designation |
 | `Sol` | 1 | hand-emitted record, exempt |
 
-The residual cost of strict authority is ~8 names, not 495. Seven stars
+The residual cost of strict authority is 10 names, not 495. Seven stars
 **gain** a name AT-HYG never carried (`Unurgunite`, `Alrakis`, `Phoenicia`,
 …), and spellings the IAU superseded are corrected rather than dropped
 (β Cet is `Diphda`, not AT-HYG's `Deneb Kaitos`).
 
-The residual is enumerated in the ingest (`stellata-wgp3.2`) as a committed
-list, not left implicit: an unattributed name that later gains IAU approval
-must move tiers by a data refresh, never by a code edit.
+The 10 are enumerated here because the count is otherwise soft in both
+directions, and because they are **not** data errors — each is a real name
+from pre-IAU atlas literature, applied to a star the WGSN has not named:
+
+| Name | Star | What it actually is |
+|---|---|---|
+| `Cih` | γ Cas (HIP 4427) | traditional name; in NEC, no IAU name |
+| `Ras Elased Australis` | ε Leo (HIP 47908) | traditional name; in NEC, no IAU name |
+| `Udkadua` | λ And (HIP 116584) | non-Western star name |
+| `Tusizuo` | 109 Her (HIP 90139) | non-Western star name |
+| `Bodu` | 95 Her B (HIP 88267) | non-Western star name, component-specific |
+| `Honores` | 7 And (HIP 114570) | obsolete asterism (Bode's *Honores Friderici*) |
+| `Ramus` | 102 Her (HIP 88886) | obsolete asterism (*Ramus Pomifer*) |
+| `Deltoton` | δ Tri (HD 13974) | ancient name of the **constellation** Triangulum |
+| `Red Rectangle` | HD 44179 | the name of the **nebula**, not the star |
+| `Onkaria` | no HIP, no HD | AT-HYG row addressable by neither |
+
+So the pattern in AT-HYG's column is not typos: it mixes star names with
+constellation, asterism and nebula names, plus non-Western names, all
+unattributed. Alias-only disposes of every row without judging any of them.
+
+Any name here that later gains IAU approval must move tiers through a data
+refresh, never a code edit — which is why the list is committed at ingest
+(`stellata-wgp3.2`) rather than expressed as a code exception.
 
 ## 3. The ladder
 
@@ -173,6 +194,25 @@ The dividing line, and the reason the search index does not grow much:
   displaced AT-HYG names (`Acrab B`, `Deltoton`), IAU alternates split out
   of a multi-name cell, and — optionally, `stellata-wgp3.2`'s call —
   Stellarium's 659 folk names with their reference provenance.
+
+**An alias must have been published outside this repository.** Its purpose
+is to keep resolving a string a user could have encountered elsewhere; a
+string *our own build composed* has no external existence, so it gets no
+alias and disappears with the composition that made it. The distinction is
+provenance, not plausibility:
+
+| String | Origin | Alias? |
+|---|---|---|
+| `Acrab B` | AT-HYG's own `proper` cell, on β² Sco | **yes** — published upstream |
+| `Acrab C` | our `resolveComponentNameCollisions`, rewriting the above | **no** |
+| `The-1 Ori C`, `3 Gem B`, `HIP 81702 Ab` | our build's composition (536 + 517 + 7,967 records) | **no** |
+| `p Eridani B` | our promotion pass; AT-HYG has only `p Eridani` ×2 | **no** |
+
+Worth stating because β² Sco shows both halves at once: AT-HYG ships
+`Acrab B` on a star WDS calls component **C**, and our collision resolver
+already rewrote that to `Acrab C`, so today's shipped display name is ours
+layered on AT-HYG's mistake. The ladder keeps the upstream string
+searchable, drops ours, and displays `β² Sco`.
 
 `V/50`'s `name` column (`3Alp Lyr`, 3,157 rows, committed and read by
 nothing) is **rejected**: it is Flamsteed + Bayer + constellation, fully
