@@ -43,10 +43,17 @@ export function distToSlider(pc: number, isMin: boolean): number {
 
 /** Photography convention: signed stops with a sign on non-zero values,
  *  plus what the observer can actually perceive at that trim — a
- *  correctly-vanishing star field otherwise reads as a bug. */
-function evLabel(ev: number, effectiveLimitMag: number): string {
+ *  correctly-vanishing star field otherwise reads as a bug. The
+ *  adapted-to clause names what took the exposure down, which is the
+ *  other half of that explanation. */
+export function evLabel(
+  ev: number,
+  effectiveLimitMag: number,
+  adaptedTo: string | null,
+): string {
   const stops = ev === 0 ? '0' : `${ev > 0 ? '+' : '−'}${Math.abs(ev).toFixed(2)}`;
-  return `${stops} EV · stars to m ${effectiveLimitMag.toFixed(1)}`;
+  const adapted = adaptedTo === null ? '' : ` · adapted to ${adaptedTo}`;
+  return `${stops} EV${adapted} · stars to m ${effectiveLimitMag.toFixed(1)}`;
 }
 
 export function bindControls(stellata: Stellata) {
@@ -262,7 +269,19 @@ export function bindControls(stellata: Stellata) {
 
     const evVal = stellata.getEv();
     if (Math.abs(Number(ev.value) - evVal) > 1e-6) ev.value = String(evVal);
-    evReadout.textContent = evLabel(evVal, stellata.getEffectiveLimitMag());
+    syncEvReadout();
+  };
+
+  // Adaptation moves every frame, so the readout can't ride the discrete
+  // mutation events the rest of the panel syncs on. Write-on-change keeps
+  // it off the per-frame DOM path.
+  const syncEvReadout = () => {
+    const text = evLabel(
+      stellata.getEv(),
+      stellata.getEffectiveLimitMag(),
+      stellata.getAdaptedToLabel(),
+    );
+    if (evReadout.textContent !== text) evReadout.textContent = text;
   };
 
   // The equatorial stop is disabled (not hidden) beyond its Sol-distance fade
@@ -283,6 +302,7 @@ export function bindControls(stellata: Stellata) {
 
   stellata.on('filter', syncFromFilter);
   stellata.on('cameraMode', syncFromFilter);
+  stellata.on('frame', syncEvReadout);
   onUnitChange(() => {
     if (distUnitLabel) distUnitLabel.textContent = getUnit();
     syncFromFilter();
