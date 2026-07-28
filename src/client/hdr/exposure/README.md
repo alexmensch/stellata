@@ -114,6 +114,24 @@ depend on them rather than on the formula:
   frame clipping remove a source from it, which is why `reduce()` computes
   the visible fraction before touching the peak accumulator.
 
+**The measurement is instantaneous; the applied cut is slew-limited.**
+`measure()` returns a one-pole filter of the measurement with
+`ADAPT_SLEW_TAU_S` (300 ms), reusing `dimBlendFactor` from the eclipse
+photometry — so `nowMs` is wall-clock and a time-warped frame does not
+slew faster. Three things this has to get right:
+
+- **It filters `dm`, in magnitudes**, so the ramp is a constant number of
+  stops per second whatever the frame's absolute level.
+- **Warp snaps** (`blend = 1`). The camera is somewhere else by the next
+  frame, so ramping from the old scene's cut is just a flash.
+- **It settles.** `slewDm` snaps inside `ADAPT_SLEW_SETTLE_MAG`, because
+  `dm === 0` is the sentinel `getDominantLabel()` and `setAdaptation`'s
+  skip-if-unchanged both read, and an exponential never arrives. Chart's
+  `reset()` drops `lastNowMs` too, so re-entering the scene snaps.
+
+The readout follows the **applied** cut, not the measurement, so the
+number on screen always describes the frame on screen.
+
 **It is mean flux per pixel, and that is not an approximation.** A
 source's per-pixel luminance is its flux over `max(1, π·r_px²)` — the
 same denominator `stellataPointSourcePeak` uses — so `L·A` collapses to

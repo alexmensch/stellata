@@ -84,6 +84,30 @@ export const ADAPT_WINDOW_TAPER_FRACTION = 0.2;
 export const ADAPT_EDGE_RAMP_PX = 12;
 
 /**
+ * Time constant of the slew limit on the **applied** cut, in real
+ * seconds. The measurement stays instantaneous — this filters only what
+ * reaches `uExposure`, so a source appearing, an occluder clearing, or the
+ * guard handing back to the perception branch ramps instead of snapping.
+ * It runs in magnitudes rather than in luminance, so the ramp is a
+ * constant number of stops per second whatever the frame's absolute level.
+ */
+export const ADAPT_SLEW_TAU_S = 0.3;
+
+/** The slew snaps to its target inside this many magnitudes, the way the
+ *  eclipse dim snaps at `DIM_SETTLED`. An exponential never arrives, and
+ *  without a snap `dm` would never reach exactly 0 — which is the
+ *  sentinel the adapted-to label and the uniform's skip-if-unchanged both
+ *  read. 0.001 mag is a tenth of a percent in luminance. */
+export const ADAPT_SLEW_SETTLE_MAG = 1e-3;
+
+/** One frame of the slew limit: blend the applied cut toward the frame's
+ *  measurement, snapping once inside `ADAPT_SLEW_SETTLE_MAG`. */
+export function slewDm(applied: number, measured: number, blend: number): number {
+  if (Math.abs(measured - applied) <= ADAPT_SLEW_SETTLE_MAG) return measured;
+  return applied + (measured - applied) * blend;
+}
+
+/**
  * True diameter below which a source stops acting as an occluder. It is
  * the mesh-presence floor: a body this small draws no surface at all, so
  * there is nothing for a source behind it to hide behind.

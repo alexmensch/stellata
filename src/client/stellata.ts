@@ -2686,7 +2686,9 @@ export class Stellata implements FrameAnchor {
     // Also after the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
-    this.exposure.setAdaptation(this.adaptation.measure(this.camera, this.filter.chart));
+    this.exposure.setAdaptation(this.adaptation.measure(
+      this.camera, this.filter.chart, performance.now(), this.frameCtx.warpActive,
+    ));
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');

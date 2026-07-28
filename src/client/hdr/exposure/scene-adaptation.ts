@@ -7,14 +7,17 @@ import type { RenderedSizeComponents } from '../../camera/controls/star-physics'
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import { luminanceForMagnitude } from '../emission-pure';
+import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
 import {
   adaptationDm,
+  ADAPT_SLEW_TAU_S,
   type LuminanceSample,
   meanSceneLuminance,
   negligibleAppMag,
   sampleFluxL,
   samplePeakL,
   sampleVisibleFraction,
+  slewDm,
   starAdaptationWindowPc,
   windowTaper,
 } from './scene-adaptation-pure';
@@ -82,6 +85,7 @@ export class SceneAdaptation {
   private dm = 0;
   private meanL = 0;
   private peakL = 0;
+  private lastNowMs: number | null = null;
   private dominantLabel: string | null = null;
   private dominantFluxL = 0;
   private fluxL = 0;
@@ -97,8 +101,19 @@ export class SceneAdaptation {
    * Measure this frame and return the exposure cut in magnitudes. Chart
    * mode bypasses the whole HDR seam, so it measures nothing and reports
    * no cut rather than leaving the last scene's value standing.
+   *
+   * `nowMs` is wall-clock (`performance.now()`) — the slew limit is a
+   * render filter, not sim time, so a time-warped frame must not slew any
+   * faster. Warp itself **snaps**: the camera is somewhere else entirely
+   * by the next frame, so ramping from the old scene's cut would just be a
+   * flash.
    */
-  measure(camera: THREE.PerspectiveCamera, chart: boolean): number {
+  measure(
+    camera: THREE.PerspectiveCamera,
+    chart: boolean,
+    nowMs: number,
+    warpActive: boolean,
+  ): number {
     if (chart) return this.reset();
     perfMark('adaptation');
     const viewport = this.deps.viewport.value;
@@ -110,12 +125,17 @@ export class SceneAdaptation {
     this.collectStars(camera);
     this.reduce();
     this.meanL = meanSceneLuminance(this.fluxL, this.w, this.h);
-    this.dm = adaptationDm(this.meanL, this.peakL);
+    const measured = adaptationDm(this.meanL, this.peakL);
+    const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, ADAPT_SLEW_TAU_S);
+    this.lastNowMs = nowMs;
+    this.dm = slewDm(this.dm, measured, blend);
     perfMeasure('adaptation');
     return this.dm;
   }
 
-  /** The cut this frame's measurement produced. */
+  /** The cut actually applied this frame — slew-limited, so it trails the
+   *  measurement by ~`ADAPT_SLEW_TAU_S`. The readout reports this and not
+   *  the raw measurement, so the number on screen matches the frame. */
   getDm(): number {
     return this.dm;
   }
@@ -141,12 +161,16 @@ export class SceneAdaptation {
     return this.dm === 0 ? null : this.dominantLabel;
   }
 
+  /** Chart's bypass, and the slew's own first-frame state: dropping
+   *  `lastNowMs` makes the frame that re-enters the scene snap rather than
+   *  ramp up from chart's zero cut. */
   private reset(): number {
     this.dm = 0;
     this.meanL = 0;
     this.peakL = 0;
     this.fluxL = 0;
     this.count = 0;
+    this.lastNowMs = null;
     this.dominantFluxL = 0;
     this.dominantLabel = null;
     return 0;

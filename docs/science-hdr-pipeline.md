@@ -283,9 +283,20 @@ product of three terms, and the cull is a derived bound on one of them.
 ### 3.1 Adaptation — what drives the cut
 
 The reference observer is **optimistic best case**: fully dark-adapted,
-no adaptation delay, and presumed to have scanned the whole field. So
-adaptation is a function of frame content with no time constant and no
+no adaptation delay, and presumed to have scanned the whole field. So the
+*measurement* is a function of frame content with no time constant and no
 dependence on which object is focused.
+
+**The applied cut does carry a time constant, and it is not a claim about
+the eye.** `dm` is slew-limited by a one-pole filter at 300 ms before it
+reaches `uExposure`. The reason is that the statistic is genuinely
+discontinuous in places the observer model has nothing to say about: a
+body crossing the frame edge, an occluder clearing, a brighter source
+entering and taking `peak_max` off the guard. Filtering the applied value
+rather than the measurement keeps the model's claim intact — the
+measurement is still instantaneous best-case — while stopping a
+one-frame geometry change from reading as a flash. Warp bypasses it,
+since the camera is somewhere else by the next frame.
 
 **The statistic is the area-weighted mean linear luminance over the
 viewport** — retinal illuminance across the attended region:
