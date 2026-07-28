@@ -288,7 +288,11 @@ assert-or-rewrite side is `../util/snapshot-assert.ts`.
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus
 `scripts/util/` and `scripts/sid/`, so editing any build module — not just a
-top-level one — invalidates the artifact.
+top-level one — invalidates the artifact. `classic-ids/` and `spine/` are
+skipped: no `build:catalog` path imports either one-shot generator, so
+enrolling them would force a full rebuild for an edit that cannot move a
+byte. `validate/` stays in (the distance-regression check reads
+`simbad-sample-parse.ts`).
 
 ## SID allocation
 

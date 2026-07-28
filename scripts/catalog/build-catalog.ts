@@ -136,13 +136,18 @@ function isUpToDate(): boolean {
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
   // This file is an orchestration shell — the build logic lives across the
   // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
-  // them must invalidate the artifact.
+  // them must invalidate the artifact. The two one-shot generators are the
+  // exception: nothing on a build:catalog path imports them, so enrolling
+  // them would force a full rebuild for an edit that cannot move a byte.
+  const nonBuildDirs = ['classic-ids', 'spine'].map((d) => resolve(__dirname, d));
   const scriptFiles: string[] = [];
   const collectScripts = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) collectScripts(resolve(dir, entry.name));
-      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
-        scriptFiles.push(resolve(dir, entry.name));
+      const path = resolve(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!nonBuildDirs.includes(path)) collectScripts(path);
+      } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+        scriptFiles.push(path);
       }
     }
   };
