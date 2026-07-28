@@ -35,6 +35,13 @@ catalog-driver.md       Design gate for the AT-HYG-retirement epic:
                         migration policy. Spans scripts/catalog/,
                         scripts/refresh/, data/, url-state, and the
                         SID ledger.
+star-naming.md          Design gate for the naming-authority epic:
+                        the IAU WGSN authority ladder, canonical
+                        designation forms + their normalisers, the
+                        derive-vs-ship alias model, glyph policy, the
+                        SID-keyed curation seam, naming parity gate.
+                        Spans scripts/catalog/, data/, typeahead,
+                        chart-mode and the focus card.
 sid.md                  Design gate for the Stellata ID epic:
                         three-layer identity model, designation
                         namespaces, append-only SID ledger + CI guard,
