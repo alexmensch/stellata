@@ -17,10 +17,6 @@ import { toggleControlsHidden } from './controls-hidden';
 // behavioural changes propagate automatically — see CLAUDE.md and the
 // plan for the rationale.
 
-const MAG_STEP = 0.5;
-const MAG_MIN = -2;
-const MAG_MAX = 15;
-
 // Keys that drive the time scrubber while it's open → the widget method
 // each fires. Handled ahead of the main switch since they share one
 // open-gate (and Space defers to an active warp).
@@ -231,18 +227,6 @@ export function bindKeyboardShortcuts(
         help.open();
         e.preventDefault();
         break;
-      case '+':
-        adjustMag(stellata, +MAG_STEP);
-        e.preventDefault();
-        break;
-      case '-':
-        adjustMag(stellata, -MAG_STEP);
-        e.preventDefault();
-        break;
-      case '=':
-        stellata.applyMagnitudePreset('naked-eye');
-        e.preventDefault();
-        break;
     }
   }, { capture: true });
 }
@@ -262,20 +246,15 @@ function cycleDetailLevel(stellata: Stellata) {
   stellata.applyDetailPreset(next);
 }
 
-function adjustMag(stellata: Stellata, delta: number) {
-  const cur = stellata.getFilter().maxAppMag;
-  const next = clamp(cur + delta, MAG_MIN, MAG_MAX);
-  stellata.setFilter({ maxAppMag: next });
-}
-
 // R: reset only the sliders living under the panel's "Camera" section —
-// star size min/max, dynamic range, FOV, exaggeration. Mirrors the
-// per-row "reset" buttons wired in controls.ts:159-176.
+// star size min/max, dynamic range, FOV, EV trim, exaggeration. Mirrors
+// the per-row "reset" buttons wired in controls.ts.
 function resetCameraSection(stellata: Stellata) {
   stellata.clearSizeOverrides(['sizeMin', 'sizeMax']);
   stellata.clearSizeOverrides(['sizeSpan']);
   stellata.setCameraFov(DEFAULT_FOV);
-  stellata.setStarExaggerationK(stellata.getStarExaggerationKDefault());
+  stellata.setEv(0);
+  stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());
 }
 
 // ESC progression: observe→navigate (keep focus, animated exit), then
@@ -415,8 +394,4 @@ function anyVisibleSelector(selector: string): boolean {
     if (!nodes[i].hidden) return true;
   }
   return false;
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
 }

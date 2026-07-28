@@ -7,7 +7,7 @@ const keysOf = (list: { keys: string[] }[]): string[] =>
 describe('helpModalShortcuts', () => {
   it('lists every non-debug shortcut in registry order', () => {
     expect(keysOf(helpModalShortcuts())).toEqual([
-      'G', 'F', 'O', 'M', 'V', 'W', 'C', 'S', 'H', 'R', 'T', '←→', 'Space', 'Backspace', 'FF', 'U', '+−', '=', 'Esc', '?',
+      'G', 'F', 'O', 'M', 'V', 'W', 'C', 'S', 'H', 'R', 'T', '←→', 'Space', 'Backspace', 'FF', 'U', 'Esc', '?',
     ]);
   });
 
