@@ -33,6 +33,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     gcvsName: null,
     athygDist: null,
     athygDistSrc: null,
+    athygRowId: null,
     syntheticId: null,
     ...overrides,
   };

@@ -1452,6 +1452,7 @@ function promoteRow(
     gcvsName: null,
     athygDist: null,
     athygDistSrc: null,
+    athygRowId: null,
     syntheticId: usesSynth ? synthId : null,
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
