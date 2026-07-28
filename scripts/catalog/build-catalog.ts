@@ -62,6 +62,7 @@ import {
 import {
   CONSTELLATIONS,
   CON_INDEX,
+  STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
   buildFigureLines,
 } from './parse/constellations';
 import {
@@ -112,7 +113,6 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SRC_STELLARIUM = resolve(ROOT, 'data/stellarium/stellarium-modern-skyculture.json');
 const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
 const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');

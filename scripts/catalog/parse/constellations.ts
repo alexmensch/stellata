@@ -1,6 +1,15 @@
-// IAU-88 constellation table and Stellarium stick-figure pipeline.
-// See scripts/catalog/README.md § Stick figures from Stellarium.
+// IAU-88 constellation table, Stellarium stick-figure pipeline, and the IAU
+// boundary edge records that file also carries.
+// See README.md § Stick figures from Stellarium.
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { REPO_ROOT } from '../../util/paths';
+
+export const STELLARIUM_SKYCULTURE_JSON = resolve(
+  REPO_ROOT,
+  'data/stellarium/stellarium-modern-skyculture.json',
+);
 
 export const CONSTELLATIONS: { code: string; name: string }[] = [
   { code: 'And', name: 'Andromeda' },
@@ -110,6 +119,26 @@ export const KNOWN_MISSING_HIPS: Map<number, string> = new Map([
   [5165, 'α Phoenicis (Ankaa) — HYG lacks parallax for this multiple-star system; upstream data gap'],
   [89341, 'μ Sagittarii (Polis) — HYG lacks parallax; upstream data gap'],
 ]);
+
+// The `edges` block of Stellarium's modern sky culture: the 781 IAU
+// (Delporte 1930) boundary segments at equinox B1875, parsed by
+// `src/client/constellation-boundaries/iau-boundaries-pure.ts`.
+export function readIauEdgeRecords(
+  srcStellariumPath: string = STELLARIUM_SKYCULTURE_JSON,
+): string[] {
+  const raw = JSON.parse(readFileSync(srcStellariumPath, 'utf8'));
+  const edges: unknown = raw.edges;
+  if (!Array.isArray(edges) || edges.length === 0) {
+    throw new Error(`Stellarium sky culture carries no edges array: ${srcStellariumPath}`);
+  }
+  if (raw.edges_epoch !== 'B1875') {
+    throw new Error(
+      `Stellarium edges are at epoch ${raw.edges_epoch}, expected B1875 — the boundary `
+      + 'assignment precesses positions to B1875 before testing against them.',
+    );
+  }
+  return edges as string[];
+}
 
 // Extracts classical stick-figure lines per IAU constellation from
 // Stellarium's modern sky culture `index.json`. Each polyline in the source

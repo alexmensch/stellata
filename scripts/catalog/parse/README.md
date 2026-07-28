@@ -27,8 +27,14 @@ scripts/catalog/parse/
                                   in ../validate/.
   gcvs-parse.ts (+ test)          GCVS main + crossref parsing and the
                                   variability cross-match.
-  constellations.ts               Stellarium stick figures → constellation
-                                  line segments + public/constellations.json.
+  constellations.ts               The IAU-88 table (CONSTELLATIONS /
+                                  CON_INDEX), the Stellarium source path, and
+                                  the two things read out of that file:
+                                  stick figures → constellation line segments
+                                  + public/constellations.json, and
+                                  readIauEdgeRecords → the B1875 IAU boundary
+                                  segments consumed by
+                                  src/client/constellation-boundaries/.
   corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
                                   is the one header walk for every committed
                                   table (see § TSV header resolution); the
