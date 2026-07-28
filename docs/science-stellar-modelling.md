@@ -97,8 +97,9 @@ K = K_density(instrument) × max(1, TARGET_PX × arcsec_per_px / σ)
   `sizeMinArcsec = σ·K`, the rendered size is
   `σ·K / arcsec_per_px = TARGET_PX` identically — **star pixel size is
   invariant in both FOV and viewport size**, until K floors at 1 (the
-  true PSF, at ≈ 4.2° FOV on a 1080-px viewport) and stars begin
-  shrinking as real physics takes over. What narrowing the FOV buys is
+  true PSF, at 2.34° FOV on a 1080-px viewport at `TARGET_PX` 3.84) and
+  the disc begins *growing* as the 30″ PSF resolves and real physics
+  takes over. What narrowing the FOV buys is
   therefore *separation, not size*: a close pair that merged into one
   blob at 50° resolves at 10°, because the exaggeration inflating both has
   shrunk. The merged blob was never physics — it was K.

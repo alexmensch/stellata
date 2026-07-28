@@ -120,7 +120,7 @@ mirror keeps deterministic midpoints).
 **Tone map is magnitude-domain, deliberately diverging from
 milkyway.frag.** Each column converts to a per-pixel
 surface-brightness magnitude via `uGlowMagOffset − 2.5·log10(column)`
-and gates against the star pipeline's shared `uMaxAppMag` /
+and gates against the star pipeline's shared `uLimitMag` /
 `uSizeSpan`; displayed intensity is `1 − exp(−color · brightness ·
 gate)` — the gate alone, never linear column flux, drives the pixel.
 The bulge-to-disc-edge column range spans ~7 mag ≈ 1000× linear; a

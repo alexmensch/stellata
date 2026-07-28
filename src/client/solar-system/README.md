@@ -190,7 +190,7 @@ Closed-form bound on the visibility distance for the brightest
 planet of an attached host:
 
 ```
-d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
+d_cull = 10 pc · √(p · (R/a)²) · 10^((uCullMag − M_host) / 5)
 ```
 
 where `(R/a)` for the brightest planet (proxy for "roundtrip flux")

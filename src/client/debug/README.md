@@ -258,7 +258,7 @@ encodes them, and the cheap remaining work (magnitude gate +
 projection) only runs against the pruned set. Restrictive filters
 typically cut the eligible set by 80–90%.
 
-This pass also reordered the loops so the `appMag > maxAppMag`
+This pass also reordered the loops so the `appMag > drawCutoffMag`
 test runs *before* projection (free win — pure reorder).
 
 ### Chart-labels: dirty-tracked SVG attribute writes

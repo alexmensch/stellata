@@ -26,6 +26,10 @@ src/client/solar-system/planets/
                                   glow footprints); pick() drops
                                   collapsed bodies so the parent's pick
                                   surface owns the point.
+                                  forEachDrawnBody feeds the exposure-
+                                  adaptation statistic (true angular size
+                                  and flux, never the glare kernel —
+                                  ../../hdr/exposure/README.md).
                                   Also the identity table for Target
                                   {kind:'planet'}: flat instance index ↔
                                   (host, planet-within-host), plus local/
@@ -86,7 +90,7 @@ src/client/solar-system/planets/
 
   1. Skip the work entirely if the camera is past the host's
      `cullDistancePc` — the closed-form distance at which its
-     brightest planet would just cross the magnitude slider
+     brightest planet would just cross the population cull bound
      (`../README.md` § Per-host distance cull).
   2. Otherwise call `positionsAt(t, scratch)` to refresh local-frame
      positions, apply the per-host orientation quaternion, and write
@@ -197,7 +201,7 @@ so it is deliberately not modelled.
 Both planet layers emit into the scene-wide HDR unit
 (`../../hdr/README.md` § Unit) — the glare through the point-source rule,
 the mesh through the surface-brightness rule. There is no per-layer
-brightness encoding left: the magnitude slider is the one exposure, and
+brightness encoding left: `uExposure` is the one exposure, and
 `uGlareGain` is a debug multiplier rather than a calibration knob.
 
 **The mesh anchor is a closed form.** A body's mean disc surface

@@ -244,11 +244,12 @@ every relation resets from `catalog.positions` instead — see § Composition
 with proper-motion propagation for why the whole focused scene must ride
 the absolute.
 
-Two filters on top of the magnitude slider gate per-frame Kepler
+Two filters on top of the instrument's visibility bound gate per-frame Kepler
 evaluation:
 
-1. Primary's apparent magnitude vs slider (`maxAppMag + 0.5` matches
-   the star shader's soft-taper kill condition).
+1. Primary's apparent magnitude vs `uThresholdMag + 0.5` — the star
+   shader's soft-taper kill condition, mirrored through
+   `drawCutoffMag`.
 2. Primary's camera distance vs `VISIBILITY_HORIZON_PC` (= 1000 pc).
    Past that the orbit subtends a fraction of a milliarcsecond even
    for wide-separation pairs.

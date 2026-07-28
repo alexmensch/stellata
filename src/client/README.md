@@ -24,14 +24,17 @@ themselves.
   (`local-group/local-group-loader.ts`) is the shape for shape errors.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `util/` — project-agnostic plumbing (event bus, URL state).
-- `filters/` — `FilterState` + magnitude presets + render knobs and
-  the `FilterController` that owns every mutation.
+- `filters/` — `FilterState` + the instrument record (aperture-derived
+  limiting magnitude, plate-scale star sizing) + render knobs and the
+  `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
   per-layer update / monochrome / recenter / dispose fan-outs.
 - `hdr/` — the float render target every light-emitting layer draws
   into and the fullscreen tone-map that resolves it to the canvas.
   Owns the shared operator chunk, its CPU mirror, and the chrome
-  colour inverse-mapping. Chart mode bypasses it entirely.
+  colour inverse-mapping. `hdr/exposure/` owns the scalar they run on —
+  instrument limit, per-frame scene adaptation, EV trim. Chart mode
+  bypasses all of it.
 - `local-depth/` — the bracketed local depth pass: camera-relative
   depth slices giving close bodies (moons, rings, binary pairs) true
   z-buffer occlusion the main pass's log depth cannot. The planet

@@ -125,7 +125,7 @@ landing rather than ~half a warp duration early.
 
 **Chart-mode plateau-trigger.** Chart mode renders stars as
 magnitude-driven discs (`pxSize = mix(maxPx, minPx, chartT)` with
-`chartT = clamp((appMag − magBright)/(maxAppMag − magBright), 0, 1)`).
+`chartT = clamp((appMag − magBright)/(uLimitMag − magBright), 0, 1)`).
 Once the camera is close enough that `appMag ≤ uChartMagBright`,
 `chartT` floors to 0 and the disc plateaus at `uChartDiscMaxPx`.
 Under both the hybrid inner regime and the cubic-Hermite fallback,

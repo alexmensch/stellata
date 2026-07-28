@@ -98,12 +98,13 @@ and exactly how a resolved stellar disc behaves under the point-source
 peak rule. `HdrPipeline.setPixelSolidAngle` owns the uniform; the shell
 drives it from FOV changes and resize.
 
-`uMaxAppMag` still arrives by reference from the star pipeline's shared
+`uLimitMag` still arrives by reference from the star pipeline's shared
 uniform map, but **only the chart-mode isobar reads it** — the band's
-brightness is photometric now, so the magnitude slider reaches it
-through `uExposure` instead (`../hdr/README.md` § Exposure epochs). The
-band therefore brightens in lockstep with the star field across the
-preset range: ≈ 2500× more exposure at "all" than at naked-eye.
+brightness is photometric now, so the exposure model reaches it through
+`uExposure` instead (`../hdr/exposure/README.md`). The band therefore
+brightens and dims in lockstep with the star field: a deeper instrument,
+the automatic adaptation cut and the manual EV trim all move it and the
+stars together, by construction.
 
 ### Calibration
 
@@ -237,7 +238,7 @@ are renderer-local with small magnitudes.
 sets `uChartIsobar = 1`, switches both materials to `NormalBlending`, and
 then hides both meshes — so the fragment shader's isobar branch
 (`milkyway.frag.glsl`, the `fwidth`-normalised contour at
-`magPx == uMaxAppMag`) is unreachable. The branch is written and the
+`magPx == uLimitMag`) is unreachable. The branch is written and the
 uniforms are plumbed; only the draw is suppressed, pending the contour
 treatment.
 

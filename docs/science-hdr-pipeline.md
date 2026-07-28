@@ -222,11 +222,10 @@ volume keep the dithered call.
 
 ## 3. Exposure model — instrument, adaptation, and the EV trim
 
-*Design, not yet shipped. H6 shipped "the magnitude slider is the single
-exposure control"; H15–H18 replace that with the model below. The
-`exposureForMagLimit` / `InstrumentEpoch` machinery in
-`src/client/hdr/exposure-epoch.ts` survives — what changes is what feeds
-it and what the magnitude limit means.*
+*Shipped in H15–H18, replacing H6's "the magnitude slider is the single
+exposure control". `exposureForMagLimit` survives in
+`src/client/hdr/exposure-epoch.ts`; `InstrumentEpoch` and its multiplier
+pair do not (§ 3.4).*
 
 Four things were welded onto one slider. They separate as:
 
@@ -247,25 +246,34 @@ fainter stars" is a request for a larger aperture — i.e. a different
 instrument — so a second control expressing it in magnitudes is a
 second, contradictory answer to the same question.
 
-`uLimitMag` (was `uMaxAppMag`) is the instrument's limiting magnitude,
-and it correctly carries every meaning that uniform already had, because
-all four are instrument-scoped:
+**`uMaxAppMag` splits three ways, and the split is what makes each
+consumer's cache honest.** The old uniform carried four meanings at once,
+which was only a defect while one of them was a *data filter*. Removing
+the filter left three genuinely different magnitudes:
 
-- the vertex cull (a performance cull — see below),
-- the exposure anchor,
-- the `√Δm` footprint window `perceptualDmEff` reads,
-- chart-mode disc sizing and the Milky Way chart isobar contour.
+| uniform | value | who reads it |
+| --- | --- | --- |
+| `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s `√Δm` footprint window, chart disc sizing, the MW chart isobar |
+| `uThresholdMag` | `m_lim + 0.753·ev` | the fragment taper, every "is it drawn?" CPU mirror |
+| `uCullMag` | `m_lim + 3·0.753 + 0.5` | the vertex cull, nothing else |
 
-That four-way overload was only a defect while one of the four carried
-*data-filter* semantics. Removing the filter makes the weld correct.
+`uThresholdMag` is where a source lands exactly on `L_THRESH`, so the
+fragment taper anchors **there** and not on the cull bound — a star at
+the threshold carries the just-visible floor at any trim, which is the
+property the taper exists to express. **Adaptation is deliberately absent
+from all three.** It moves every frame; keying a cull, a footprint window
+or a dirty-tracked cache on it would thrash them, and the eye's
+dark-adapted limit is a property of the instrument rather than of what
+happens to be in frame. What adaptation moves is the *effective* limiting
+magnitude the readout reports (§ 3.2).
 
 **The cull bound is derived, and is not the limit itself.** A star
-between `m_lim` and `m_lim + EV_MAX_STOPS · 0.753 + 0.5` is invisible at
-EV 0 but reachable at +3 stops, so the cull sits at that bound and the
-visible faint edge can never be a *population* edge. (1 stop = 0.753
-magnitudes — a conversion this section needs constantly; the 0.5 is the
-existing soft taper.) Adaptation only ever cuts, so it never widens the
-bound. At `m_lim` 7.8 the bound is ≈ 10.6.
+between `m_lim` and `uCullMag` is invisible at EV 0 but reachable at +3
+stops, so the cull sits at that bound and the visible faint edge can
+never be a *population* edge. (1 stop = 0.753 magnitudes — a conversion
+this section needs constantly; the 0.5 is the existing soft taper.)
+Adaptation only ever cuts, so it never widens the bound, which is exactly
+why the bound can be static. At `m_lim` 7.8 it is 10.56.
 
 **This retracts H6's claim that population cutoff and exposure agree by
 construction.** They agreed only while one number served both. The claim
@@ -291,6 +299,16 @@ dm = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
 K-exaggerated kernel, or the footprint exaggeration would drive
 adaptation. Unresolved sources floor at 1 px.
 
+**Coverage cancels, and that is the whole reason this is cheap.** A
+source's per-pixel luminance is its flux over `max(1, π·r_px²)` — the
+same denominator `stellataPointSourcePeak` uses — so `Lᵢ·Aᵢ` is `L(mᵢ)`
+whether the source is resolved or sub-pixel, and the statistic is
+literally **mean visible flux per viewport pixel**. Coverage survives in
+exactly one place: the fraction of a source's own footprint that lands
+inside the frame. That is what makes frustum-edge continuity free
+(below), and it is why a body the camera has flown inside of contributes
+its surface brightness rather than its whole flux.
+
 Why an area-weighted arithmetic mean, and not the two obvious
 alternatives:
 
@@ -305,18 +323,23 @@ alternatives:
   *is* that discriminator, and it is what pupil response physically
   integrates.
 
-Contributions at FOV 50° / 900 px, `m_lim` 7.8:
+Contributions on a 1920×1080 viewport at the unaided eye's 50° FOV, so
+`uExposure` = 26.365 and `Ω_px` = 27 778 arcsec². Every row is pinned in
+`src/client/hdr/scene-adaptation-pure.test.ts` from exactly these inputs:
 
 | in frame | contribution to `L̄` |
 | --- | --- |
-| resolved Venus filling 20% of frame | 3.1e4 |
-| Sol's disc at 1 AU (0.53°, ≈ 71 px) | 2.6e5 |
-| 100 000 threshold-magnitude stars | ≈ 1e-2 |
-| Milky Way band at 22 mag/arcsec² | 5e-4 |
-| Venus unresolved from Earth (0.33 px) | 3.5e-4 |
+| resolved Venus filling 20% of the frame (`S₀` = +0.78, so `L_surf` 3.6e5) | 7.1e4 |
+| Sol's disc at 1 AU (m −26.74; 0.53° = 11.4 px across, 103 px² of 2.07e6) | 6.3e5 |
+| 100 000 threshold-magnitude stars, 1 px each | 9.6e-4 |
+| Milky Way band at 22 mag/arcsec² over the full frame | 1.2e-3 |
+| Venus unresolved from Earth (m −4.4, on the 1 px floor) | 7.3e-4 |
 
-Seven decades separate the cases that must adapt from the cases that
-must not.
+Seven and a half decades separate the cases that must adapt from the
+cases that must not — and the aggregate faint field sits **two** decades
+below `L_ADAPT`, not four as an earlier draft of this table had it. The
+margin is still ample: `dm` is exactly 0 for any `L̄ ≤ L_ADAPT`, so the
+diffuse term can never produce a cut on its own.
 
 **Frustum-edge continuity is free.** A source sliding into frame
 contributes in proportion to its covered pixels, which ramps
@@ -377,37 +400,63 @@ Mars all remained over the white point even at the slider's floor — the
 precisely the gap automatic adaptation exists to close.
 
 **Measure on the CPU, analytically.** The inputs are all to hand —
-every resolved body's `S₀` and its projected coverage, plus the brightest
-in-frame point sources — so the statistic is a pure function, stall-free
-and unit-testable. A GPU mip-reduce is *not* needed for v1 and would be
-actively wrong on approach: `LUMA_CEIL = 4096` clamps at emission, so a
-GPU measurement reads Venus's 1.56e5 as 4096, a 38× underestimate
-precisely when adaptation matters most. The diffuse field (Milky Way
-band, aggregate faint stars) sits four decades below `L_ADAPT` by the
-table above, so a constant floor term covers it.
+every drawn body's magnitude and true projected size, plus the stars near
+the camera — so the statistic is a pure function, stall-free and
+unit-testable. A GPU mip-reduce is *not* needed and would be actively
+wrong on approach: `LUMA_CEIL = 4096` clamps at emission, so a GPU
+measurement reads a resolved Venus as 4096, a 38× underestimate precisely
+when adaptation matters most.
+
+**What the shipped collector walks** (`src/client/hdr/scene-adaptation.ts`):
+
+- **Every drawn solar-system body**, through the same visibility gate
+  `pick()` uses, at its true angular diameter with eclipse dim folded in
+  as the real flux loss it is.
+- **Stars gated on flux, not on resolvedness.** Sol at 100 AU is a third
+  of a pixel wide and 473× over `L_ADAPT`, so "is it a disc yet?" is the
+  wrong question. The camera window is *derived*: it is the distance at
+  which a star of absolute magnitude −6 falls to 3% of `L_ADAPT` (8.9 pc
+  on the frame above), which covers every fainter star exactly, since a
+  fainter one cannot reach the gate from further out. Only 120 catalogue
+  stars are brighter than that reference and the 22 brighter than −8 all
+  sit at extragalactic distances; a **taper over the outer fifth of the
+  window** carries any of them out continuously, so crossing the bound
+  can never pop the exposure. Walking the whole catalogue per frame would
+  cost ~3M flops for a term the diffuse floor already covers.
+- **One constant for the diffuse field** — the two aggregate rows of the
+  table above summed (2.1e-3). Inert by construction, and honest
+  bookkeeping rather than a live measurement.
+
+The statistic is measured at the **base instrument exposure**, never the
+live scalar it then writes: feeding the adapted, trimmed value back in
+would close a loop, and would make +3 stops of trim provoke a
+compensating cut.
 
 ### 3.2 What the model does and does not fix
 
 Adaptation is driven by **coverage**; correct exposure depends on
 **surface brightness**. The two meet only over a band of coverages:
 
-- A body filling ~10–20% of the frame lands correctly exposed by
-  construction — that is what `L_ADAPT` is solved against.
-- At 2% of frame it sits ~2.5 mag over and stays a small brilliant
+- A body's adapted disc mean is `L_ADAPT / f`, so it lands on `L_TARGET`
+  exactly at `f_ref` and drifts by the coverage ratio away from it.
+- At 2% of frame it sits ~2.2 mag over and stays a small brilliant
   clipped dot. That is the right answer; a brilliant dot should read as
   a brilliant dot.
-- ±3 stops of trim spans 2.26 mag ≈ a 5× coverage range, so the usable
-  envelope is roughly "fills 4% of the frame or more".
+- The trim buys back `log2(f_ref/f)` stops, so ±3 stops covers coverages
+  from **1.9% of the frame upward** — a factor 8 either side of `f_ref`,
+  not the 4%–55% band an earlier draft quoted (that was 2.26 read as
+  stops rather than magnitudes). Pinned in
+  `scene-adaptation-pure.test.ts`.
 
 **Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
-0.53° — ≈ 71 px of 1.4e6 — so `L̄` = 2.6e5 gives `dm` = −16.0 mag
-against the ≈ −21 the disc needs, and −3 stops closes only 2.26 more.
-The Sun stays clipped white unless the camera is close enough to fill
-the frame. Phenomenologically that is correct: you cannot resolve
-granulation with an unaided eye at 1 AU. The affordance that fixes it is
-**an instrument** — a filtered solar telescope is a small effective
-aperture with a deep negative exposure — not a separate neutral-density
-control.
+0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 gives `dm` = −16.7 mag while
+the disc's own −10.59 mag/arcsec² surface needs −22.0 to fall under the
+white point, and −3 stops closes only 2.26 more: **3.1 mag short**. The
+Sun stays clipped white unless the camera is close enough to fill the
+frame. Phenomenologically that is correct: you cannot resolve granulation
+with an unaided eye at 1 AU. The affordance that fixes it is **an
+instrument** — a filtered solar telescope is a small effective aperture
+with a deep negative exposure — not a separate neutral-density control.
 
 **The operator stays GLOBAL, and the statistic does not breach that.**
 `stellata_tonemap` is a pure function of one pixel's luminance and one
@@ -441,8 +490,11 @@ Resolve-side gain would make that clamp lossy *and* would scale the
 pre-inverse-mapped chrome colours (`src/client/hdr/chrome/README.md`).
 
 **A limiting-magnitude readout is mandatory**, distinct from any slider
-value — e.g. *"adapted to Venus · stars to m 1.2"*. Without it, a star
-field correctly vanishing reads as a bug.
+value. Without it, a star field correctly vanishing reads as a bug. The
+EV row carries it: *"0 EV · adapted to Venus · stars to m 1.2"*, where the
+magnitude is `uThresholdMag + dm` — the one place adaptation is allowed to
+move a magnitude — and the adapted-to clause names the source carrying
+most of the frame's flux, dropped entirely while `dm` is 0.
 
 ### 3.3 FOV is magnification; the instrument is aperture
 
@@ -501,26 +553,32 @@ floors at 1 and true physics takes over. Three problems close at once:
 - **FOV.** What zooming buys is **separation, not size**: two stars that
   merged into one blob at 50° resolve at 10°, because the exaggeration
   inflating them has shrunk. The merged blob was never physics — it was K.
-- **Viewport width.** Stars currently grow when the window widens, which
+- **Viewport width.** Stars used to grow when the window widened, which
   is wrong: a fixed *vertical* FOV means widening the window should show
-  more sky at the same scale. The cause is `presetPxSizes` dividing by
-  `max(w, h)` rather than by height, which inflated the plate scale on
-  wide displays (≈ 2.9 px at 1440 wide vs ≈ 6.9 px at 3440). Deriving K
-  from **height** — the axis `camera.fov` actually maps to — removes it,
-  and incidentally puts K on the same reference dimension `Ω_px` already
-  uses, so the two plate-scale conventions stop differing.
+  more sky at the same scale. The cause was the arcsec-to-px conversion
+  dividing by `max(w, h)` rather than by height, which inflated the plate
+  scale on wide displays (≈ 2.9 px at 1440 wide vs ≈ 6.9 px at 3440).
+  Deriving K from **height** — the axis `camera.fov` actually maps to -
+  removed it, and put K on the same reference dimension `Ω_px` already
+  uses, so the two plate-scale conventions stopped differing.
 - **Small viewports.** `max(w, h)` existed to stop stars vanishing on
   landscape mobile (height 390 px). That is now solved by construction:
   a coarser plate scale raises K, so a threshold star still lands on
   `TARGET_PX`. The apologetic refDim compromise retires rather than being
   re-tuned.
 
-`TARGET_PX` is the one calibration this introduces. Two defensible
-anchors: **3.84** preserves the rendered size on a 1920×1080 desktop (the
-most common config, so the least disruptive), while **2.16** preserves
-`K = 12` at 50° / 1080 px height. Either way every viewport converges on
-one size instead of scattering — ultrawides shrink toward it, small
-laptops grow toward it. Ship 3.84 and settle it in smoke.
+`TARGET_PX` is the one calibration this introduces, and **3.84 shipped**:
+it preserves the rendered size on a 1920×1080 desktop, the most common
+config and so the least disruptive. (2.16 was the other defensible anchor
+— it preserves `K = 12` at 50° / 1080 px height.) Either way every
+viewport converges on one size instead of scattering — ultrawides shrink
+toward it, small laptops grow toward it.
+
+**Where K floors depends on `TARGET_PX`.** `K = 1` at
+`arcsec_per_px = σ/TARGET_PX`, so on a 1080-px viewport the crossover is
+**2.34°** at 3.84 (it would be 4.17° at 2.16). Below it the true 30″ PSF
+is wider than a pixel and the disc **grows** as the FOV narrows — the
+honest angular size, no exaggeration left to shrink.
 
 **`K_density` is the instrument's half of K.** The shipped per-preset
 values (12 / 9 / 5) conflated the plate-scale term with a *crowding*
@@ -726,7 +784,7 @@ day one — the fullscreen pass and the inline path can never drift.
 - **MW anchor:** re-derive `uGlowMagOffset` so a chosen sightline
   matches published V-band surface photometry (GC bulge / Baade's
   window and an anticentre point), then confirm against eso0932a
-  stretches per preset. The offset is **derived** from a single-point
+  stretches per instrument. The offset is **derived** from a single-point
   anchor (`GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` → `uGlowMagOffset ≈
   31.054`), so H7's job is to replace the *anchor*, not to tune the
   offset. The known gap it leaves is a latitude gradient steeper than the
@@ -743,13 +801,17 @@ day one — the fullscreen pass and the inline path can never drift.
   within the trim's ±3 stops, or the trim range is wrong. That is a
   requirement on the model, not a discovery for smoke: fly to Venus,
   Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
-  reaches surface detail within ±3 stops of EV 0. The known exception is
-  § 3.2's coverage floor — Sol at 1 AU is out of reach by ~5 mag by
-  design.
-- **FOV invariants (H16)** — star pixel size constant from 120° to
-  ≈ 4.2° FOV, then shrinking; a close pair merged at 50° resolving at
-  10°; no new star appearing at any FOV; the MW band dimming
-  quadratically (the accepted § 3.3 consequence, not a regression).
+  reaches surface detail within ±3 stops of EV 0. Since the envelope is a
+  *coverage* band (§ 3.2, ≥ 1.9% of the frame), a case that fails is a
+  case flown from too far out — check the disc's frame fraction before
+  concluding `L_ADAPT` is wrong. The known exception is Sol at 1 AU,
+  3.1 mag out of reach by design.
+- **FOV invariants (H16)** — star pixel size constant from 120° down to
+  the `K = 1` crossover (2.34° on a 1080-px viewport at `TARGET_PX` 3.84),
+  below which the resolved 30″ PSF makes the disc *grow*; a close pair
+  merged at 50° resolving at 10°; no new star appearing at any FOV; the MW
+  band dimming quadratically (the accepted § 3.3 consequence, not a
+  regression).
 
 ## 9. Bead-shape decisions
 
@@ -766,10 +828,11 @@ day one — the fullscreen pass and the inline path can never drift.
   + gate (*deleted in H4*), planet-disc floor/exponent constants
   (*deleted in H5*), dynamic-range exponent — from the tuning surface
   entirely (they stop existing in code, not just in the panel). The panel gains: operator
-  params (`DR_MAG`, `L_THRESH`, desaturation), exposure + active-preset
-  readout, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
+  params (`DR_MAG`, `L_THRESH`, desaturation), the exposure + instrument
+  + mean-luminance readouts, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.
-- **§ 3 splits four ways, and the order is forced.** H15 (instrument
+- **§ 3 splits four ways, and the order is forced.** *All four shipped.*
+  H15 (instrument
   epoch replaces the presets, `uMaxAppMag` → `uLimitMag`, filter deleted)
   → H16 (FOV-derived K) → H17 (adaptation) → H18 (EV trim). H16 precedes
   H17 because it changes the `Ω_px` and footprint scale H17's statistic
