@@ -353,6 +353,24 @@ setting fixes it: a single fullscreen pass can't both encode and not
 encode. Custom-shader chrome *is* exact. Use `setHdrEnabled(false)` when
 you want a whole-frame comparison.
 
+**What the A/B is and is not for.** It compares *compositing*, not
+calibration: the peak of any source matches exactly on both paths by
+construction, so it cannot reveal a mis-calibrated emitter. What it shows
+is accumulation and blend-order differences (below). Since the gate went
+live it is a developer tool for the fallback path, not a look comparison a
+reader should reach for to judge whether the scene is right.
+
+**Expected on the A/B, and not a bug: chrome line work reads visibly
+brighter with the seam ON.** Grids, the galactic coordinate sphere, orbit
+rings and binary paths are authored colours pre-mapped through the
+operator's inverse, and § Chrome's mapping is exact only for *a lone
+full-alpha fragment over black*. Line work is neither — antialiased edges
+are partial-alpha, and lines cross each other — so the round trip does not
+return them to authored, and the residual lands on the bright side. The
+"slight look shift accepted in H2" wording undersells it; the shift on thin
+line work is plainly visible. Nothing downstream depends on it, and no
+resolve setting fixes it.
+
 Neither switch is bit-identical to a pre-HDR build, for two further
 reasons worth knowing before chasing a diff:
 

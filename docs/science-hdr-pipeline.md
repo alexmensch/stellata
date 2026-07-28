@@ -332,11 +332,49 @@ instrument's `m_lim` is the ceiling — nothing adapts to see fainter than
 threshold. Automatic compensation only cuts; the manual trim is the one
 term that may go positive.
 
-**`L_ADAPT` is an invented constant**, like `L_THRESH` — the scene
-luminance at which adaptation begins to bite. It must sit far above the
-diffuse-field rows of the table above and far below the resolved-body
-rows; anywhere in ≈ 0.02–0.2 satisfies that. Ship a default, expose it
-on the debug panel (H8), settle it in smoke.
+**`L_ADAPT` is measured, not invented.** It was going to be a constant of
+taste like `L_THRESH`, and the principled guess was mid-grey. A smoke pass
+settled it empirically instead, by using the pre-H15 magnitude slider as a
+manual exposure control and recording the setting at which each planet's
+disc read as correctly exposed:
+
+| body | slider `m_lim` | disc-mean `L` | output sRGB |
+| --- | --- | --- | --- |
+| Neptune | 2.0 | 0.919 | 0.722 |
+| Uranus | 0.8 | 0.824 | 0.703 |
+| Jupiter | −2.0 | 0.940 | 0.726 |
+
+**`L_TARGET` ≈ 0.89, i.e. output sRGB ≈ 0.72** — a bright grey. The three
+judgements span **0.14 magnitudes** across bodies covering a 40× range in
+intrinsic surface brightness, which is a far tighter agreement than a
+taste constant has any right to show, and it is the strongest evidence in
+this document that the perception model is well-posed.
+
+It also retires the mid-grey proposal: mid-grey is `L` = 0.272, **1.29 mag
+too dark**. A correctly-exposed sunlit disc is not a mid-grey card.
+
+`L_ADAPT` then follows from `L_TARGET` and one free parameter. Solving
+`dm` so a body of coverage `f` lands its disc mean on `L_TARGET` gives
+
+```
+L_ADAPT = L_TARGET · f_ref        ⇒  0.089 (f_ref 0.10)
+                                     0.134 (f_ref 0.15)
+                                     0.179 (f_ref 0.20)
+```
+
+**`f_ref` — the reference coverage — is the honest remaining choice**, and
+it is where § 3.2's coverage sensitivity enters: the model lands exactly at
+`f_ref` and drifts by the coverage ratio away from it. Ship `f_ref` = 0.15
+(`L_ADAPT` = 0.134), which sits mid-band and inside the ±3-stop trim for
+coverages from ~4% to ~55%. Expose it on the debug panel (H8).
+
+Two rows from the same pass bound the other end, and both are consistent
+with the model rather than with a tuning error: Saturn at `L` = 0.259 and
+Pluto at 0.148 were judged acceptable but were not independently optimised
+(Saturn shared Jupiter's slider setting), and Mercury / Venus / Earth /
+Mars all remained over the white point even at the slider's floor — the
+8.5 magnitudes of cut it offers is short of the ~10.5 Venus needs, which is
+precisely the gap automatic adaptation exists to close.
 
 **Measure on the CPU, analytically.** The inputs are all to hand —
 every resolved body's `S₀` and its projected coverage, plus the brightest
