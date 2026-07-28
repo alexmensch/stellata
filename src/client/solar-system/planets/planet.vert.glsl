@@ -53,8 +53,12 @@ uniform vec2 uViewport;       // CSS pixels
 uniform float uPixelRatio;
 uniform float uFovYRad;
 
-// Visibility cutoff (mag slider); shared with stars.
-uniform float uMaxAppMag;
+// Magnitude bounds, shared with the star pipeline
+// (../../hdr/README.md § Exposure epochs): uCullMag is the population
+// bound, uLimitMag the instrument limit chart sizing and the footprint
+// window read. The fragment shader owns the taper against uThresholdMag.
+uniform float uLimitMag;
+uniform float uCullMag;
 
 // The one exposure control, bound by reference from
 // HdrPipeline.emitterUniforms (../../hdr/README.md § Exposure epochs).
@@ -237,10 +241,10 @@ void main() {
     eclipseFactor = iEclipseDim;
   }
 
-  // Soft taper: pass a 0.5-mag overshoot so the glare can fade
-  // intensity to zero across the threshold band — same hysteresis
-  // the star pipeline uses to avoid pop-in/out as the slider moves.
-  if (appMag > uMaxAppMag + 0.5) {
+  // Population cull — the star pipeline's uCullMag, so the glare fades
+  // out on the fragment taper rather than on a population edge, at any
+  // EV trim.
+  if (appMag > uCullMag) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vAppMag = appMag;
     vColor = vec3(0.0);
@@ -264,7 +268,7 @@ void main() {
     // flat ink disc; no phase morphology on paper.
     float chartT = clamp(
         (appMag - uChartMagBright)
-            / max(uMaxAppMag - uChartMagBright, 0.001),
+            / max(uLimitMag - uChartMagBright, 0.001),
         0.0, 1.0);
     pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
     // Chart is deliberately non-photometric and the frag returns before it
@@ -278,7 +282,7 @@ void main() {
     // already folds the phase factor φ(α), so brightness needs no
     // illumFrac. The mesh, when resolved, writes depth and occludes the
     // glare core to a lit-limb halo. See README § Planet mesh LOD.
-    float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
+    float dMEff = perceptualDmEff(appMag, uLimitMag, uSizeSpan, uSizeKnee);
     pxSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
     // Emitted luminance in the scene-wide unit. The radius is the body's
     // TRUE angular radius in CSS px — unclamped, and the same quantity the

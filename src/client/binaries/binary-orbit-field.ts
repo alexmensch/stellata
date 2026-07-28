@@ -82,7 +82,7 @@ export class BinaryOrbitField {
   private lastKeplerCount = -1;
   private lastActiveCount = 0;
   private lastCamPos = new THREE.Vector3(NaN, NaN, NaN);
-  private lastMaxAppMag = NaN;
+  private lastThresholdMag = NaN;
   private lastViewportPx = NaN;
   private lastFovYRad = NaN;
   private lastFocalIdx: number | null = null;
@@ -124,8 +124,8 @@ export class BinaryOrbitField {
 
   /** Per-frame walk + perturbation pass.
    *
-   *  - `maxAppMag` is the magnitude slider — relations whose primary
-   *    sits below it (m_app > maxAppMag + 0.5, matching the shader's
+   *  - `thresholdMag` is the just-visible floor — relations whose primary
+   *    sits below it (m_app > thresholdMag + 0.5, matching the shader's
    *    soft-taper kill) skip Kepler eval entirely.
    *  - `viewportPx` is the GL canvas's pixel height; `fovYRad` the
    *    camera's vertical field of view. Together they convert an angle
@@ -138,7 +138,7 @@ export class BinaryOrbitField {
   update(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
-    maxAppMag: number,
+    thresholdMag: number,
     viewportPx: number,
     fovYRad: number,
     focalIdx: number | null = null,
@@ -147,7 +147,7 @@ export class BinaryOrbitField {
       !this.baselinesDirty
       && this.lastKeplerCount === 0
       && focalIdx === this.lastFocalIdx
-      && maxAppMag === this.lastMaxAppMag
+      && thresholdMag === this.lastThresholdMag
       && viewportPx === this.lastViewportPx
       && fovYRad === this.lastFovYRad
       && cameraPos.equals(this.lastCamPos)
@@ -232,7 +232,7 @@ export class BinaryOrbitField {
         const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dCamPc > VISIBILITY_HORIZON_PC) continue;
         const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
-        if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) continue;
+        if (appMag > thresholdMag + SOFT_TAPER_MARGIN_MAG) continue;
         activeCount++;
         // Peak angular separation envelope. AU / pc converts to arcsec
         // because 1 AU subtends 1″ at 1 pc by definition.
@@ -280,7 +280,7 @@ export class BinaryOrbitField {
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;
     this.lastCamPos.copy(cameraPos);
-    this.lastMaxAppMag = maxAppMag;
+    this.lastThresholdMag = thresholdMag;
     this.lastViewportPx = viewportPx;
     this.lastFovYRad = fovYRad;
     this.lastFocalIdx = focalIdx;

@@ -10,7 +10,7 @@ import {
   bodySurfaceBrightnessMagArcsec2,
   planetApparentMagnitude,
 } from '../perceptual-magnitude';
-import { pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../hdr/emission-pure';
+import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../hdr/emission-pure';
 import { BASE_EPOCH_EXPOSURE } from '../../hdr/exposure-epoch';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../../util/astronomy-constants';
 import meshFrag from './planet-mesh.frag.glsl?raw';
@@ -102,7 +102,12 @@ describe('meshSurfaceLuminance', () => {
     // body crossing the handoff does not jump. Both sides are built from the
     // same p and irradiance, which is what makes this hold rather than tune.
     const dVpPc = 0.002 * AU_PC;
-    const pxPerRad = 1 / (ARCSEC_TO_RAD * Math.sqrt(omegaPx));
+    // A narrower plate scale than the § 1 band reference: continuity is a
+    // claim about the PRE-clamp quantity, and the glare side clamps at
+    // LUMA_CEIL while the mesh scalar does not — at 94 arcsec/px the
+    // full-Moon disc already sits above the ceiling.
+    const omegaPxUnclipped = omegaPx / 4;
+    const pxPerRad = 1 / (ARCSEC_TO_RAD * Math.sqrt(omegaPxUnclipped));
     const rPhysPx = (moon.radiusPc / dVpPc) * pxPerRad;
     expect(rPhysPx).toBeGreaterThan(1);
 
@@ -110,8 +115,9 @@ describe('meshSurfaceLuminance', () => {
       SUN_ABSMAG_V, dVpPc, AU_PC, moon.albedo, moon.radiusPc, 1,
     );
     const glarePeak = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, m, rPhysPx);
+    expect(glarePeak).toBeLessThan(LUMA_CEIL);
     const meshMean = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 1, false,
+      BASE_EPOCH_EXPOSURE, omegaPxUnclipped, SUN_ABSMAG_V, AU_PC, moon.albedo, 1, false,
     ) * lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
 
     // Relative, not absolute: the two sides reach the same number through

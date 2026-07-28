@@ -97,12 +97,12 @@ uniform float uExposure;
 uniform float uOmegaPxArcsec2; // pixel solid angle, arcsec²
 
 // Output controls.
-uniform float uMaxAppMag;     // shared with star pipeline (chart isobar)
+uniform float uLimitMag;      // shared with star pipeline (chart isobar)
 uniform float uGlowMagOffset; // V surface brightness at colorAccum = 1
 
 // Chart-mode isobar pass. When > 0.5 the fragment renders only a thin
 // outline at the iso-line where the integrated apparent magnitude crosses
-// uMaxAppMag — giving the galactic glow a topographic-contour treatment
+// uLimitMag — giving the galactic glow a topographic-contour treatment
 // that follows the user's "minimally visible magnitude" slider.
 uniform float uChartIsobar;
 uniform vec3  uChartInkColor;
@@ -284,7 +284,7 @@ void main() {
     // steep the local gradient is — flat regions of the band would
     // otherwise paint a wide smudge and steep regions a hairline.
     float fw = max(fwidth(magPx), 1e-5);
-    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uMaxAppMag));
+    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uLimitMag));
     if (line <= 0.0) {
       fragColor = vec4(0.0);
       return;

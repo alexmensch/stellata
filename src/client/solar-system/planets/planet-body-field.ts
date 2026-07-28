@@ -36,8 +36,8 @@ import {
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
-  SOFT_TAPER_MARGIN_MAG,
 } from '../perceptual-magnitude';
+import { drawCutoffMag } from '../../hdr/exposure-epoch';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -134,10 +134,10 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
  *
  *   m_planet ≈ M_host + 5·log10(d/10) − 2.5·log10(p · (R/a)²)
  *
- * Set m_planet = maxAppMag and solve for d:
+ * Set m_planet = cullMag and solve for d:
  *
- *   d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
- *         = 10 pc · sqrt(p) · (R/a) · 10^((maxAppMag − M_host) / 5)
+ *   d_cull = 10 pc · √(p · (R/a)²) · 10^((cullMag − M_host) / 5)
+ *         = 10 pc · sqrt(p) · (R/a) · 10^((cullMag − M_host) / 5)
  *
  * The caller folds `alphaZeroPhaseFactor(coefs)` into
  * `brightestReflectance` before passing it in (see `attachHost`). For
@@ -152,10 +152,10 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
 export function cullDistancePc(
   hostAbsmag: number,
   brightestReflectance: number,
-  maxAppMag: number,
+  cullMag: number,
 ): number {
   if (brightestReflectance <= 0) return 0;
-  const distanceFactor = 10 ** ((maxAppMag - hostAbsmag) / 5);
+  const distanceFactor = 10 ** ((cullMag - hostAbsmag) / 5);
   return 10 * Math.sqrt(brightestReflectance) * distanceFactor;
 }
 
@@ -182,7 +182,7 @@ interface AttachedHost {
    *  c0 lifts its term above the globe-only reflectance; for every
    *  other planet alphaZeroPhaseFactor = 1. */
   brightestReflectance: number;
-  /** Cached cull distance for the current maxAppMag. */
+  /** Cached cull distance for the current uCullMag. */
   cullDistance: number;
   /** Slot range in the global instanced buffer. */
   startInstance: number;
@@ -209,7 +209,7 @@ export class PlanetBodyField {
   private capacity = INITIAL_CAPACITY;
   private liveCount = 0;
   private worldOffset = new THREE.Vector3();
-  private maxAppMag: number;
+  private cullMag: number;
   // Shared uniform bundle — references, not copies. The picker reads
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
@@ -254,7 +254,7 @@ export class PlanetBodyField {
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
   ) {
     this.magShared = magnitudeShared;
-    this.maxAppMag = magnitudeShared.uMaxAppMag.value;
+    this.cullMag = magnitudeShared.uCullMag.value;
     this.group = new THREE.Group();
     this.group.visible = false;
     // PlanetBodyField sits in the renderer's local frame (no group
@@ -321,7 +321,7 @@ export class PlanetBodyField {
       positionsAt: ps.positionsAt ?? null,
       positionsScratch: ps.positionsAt ? new Float64Array(n * 3) : null,
       brightestReflectance,
-      cullDistance: cullDistancePc(hostAbsmag, brightestReflectance, this.maxAppMag),
+      cullDistance: cullDistancePc(hostAbsmag, brightestReflectance, this.cullMag),
       startInstance: this.liveCount,
       count: n,
     };
@@ -392,15 +392,15 @@ export class PlanetBodyField {
   }
 
   /**
-   * Recompute per-host cull distances when the magnitude slider
-   * moves. Stellata.ts calls this from `setFilter` whenever
-   * `maxAppMag` changes.
+   * Recompute per-host cull distances when the population bound moves —
+   * an instrument change. Static in the EV trim and in adaptation, so
+   * the cache can't thrash per frame.
    */
-  setMaxAppMag(maxAppMag: number): void {
-    if (this.maxAppMag === maxAppMag) return;
-    this.maxAppMag = maxAppMag;
+  setCullMag(cullMag: number): void {
+    if (this.cullMag === cullMag) return;
+    this.cullMag = cullMag;
     for (const host of this.hosts.values()) {
-      host.cullDistance = cullDistancePc(host.hostAbsmag, host.brightestReflectance, maxAppMag);
+      host.cullDistance = cullDistancePc(host.hostAbsmag, host.brightestReflectance, cullMag);
     }
   }
 
@@ -581,7 +581,7 @@ export class PlanetBodyField {
    *
    * Returns null if the host isn't attached or planetIdx is out of
    * range. Callers should treat null the same way the shader treats
-   * `appMag > uMaxAppMag + 0.5` — the planet isn't a viable hover target.
+   * past `drawCutoffMag()` — the planet isn't a viable hover target.
    */
   appMagFor(
     hostStarIdx: number,
@@ -764,6 +764,20 @@ export class PlanetBodyField {
     return this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal).appMag;
   }
 
+  /** The faintest magnitude that still puts pixels on screen — the CPU
+   *  mirror of the fragment shader's taper. Chart hard-clips at the
+   *  instrument limit (no taper, and it inherits no exposure state);
+   *  everything else fades out over the taper past the just-visible
+   *  threshold. Every "is this drawn, so is it pickable?" gate reads
+   *  this, so none of them can drift from the shader. */
+  private drawCutoffMag(): number {
+    return drawCutoffMag(
+      this.magShared.uLimitMag.value,
+      this.magShared.uThresholdMag.value,
+      this.mono,
+    );
+  }
+
   /** Rendered disc diameter in px at `cameraPosLocal` — the CPU mirror
    *  of the shader's `max(appSize, physSize)`, shared with `pick`.
    *  0 when the instance is unattached or below the soft-taper kill. */
@@ -772,7 +786,7 @@ export class PlanetBodyField {
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    if (dVp <= 0 || appMag > this.drawCutoffMag()) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
@@ -786,7 +800,7 @@ export class PlanetBodyField {
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    if (dVp <= 0 || appMag > this.drawCutoffMag()) return 0;
     return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
   }
 
@@ -816,8 +830,7 @@ export class PlanetBodyField {
     if (this.hidden) return false;
     const camPos = camera.position;
     const { appMag, planetX, planetY, planetZ, dVp } = view;
-    const cutoff = this.magShared.uMaxAppMag.value + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
-    if (dVp <= 0 || appMag > cutoff) return false;
+    if (dVp <= 0 || appMag > this.drawCutoffMag()) return false;
 
     const planet = host.ps.planets[i];
     const pi = planet.parentName ? parentIndexOf(host.ps.planets, planet.parentName) : -1;
@@ -878,7 +891,7 @@ export class PlanetBodyField {
     const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
     const dMEff = perceptualDmEff(
       appMag,
-      this.magShared.uMaxAppMag.value,
+      this.magShared.uLimitMag.value,
       this.magShared.uSizeSpan.value,
       this.magShared.uSizeKnee.value,
     );
@@ -902,7 +915,7 @@ export class PlanetBodyField {
           minPx: this.magShared.uChartDiscMinPx.value,
           magBright: this.magShared.uChartMagBright.value,
         },
-        this.magShared.uMaxAppMag.value,
+        this.magShared.uLimitMag.value,
       );
     }
     // Rendered footprint = the wider of the true disc (mesh) and the
@@ -948,7 +961,7 @@ export class PlanetBodyField {
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
     const viewportH = rect.height;
-    const maxAppMag = this.magShared.uMaxAppMag.value;
+    const cutoff = this.drawCutoffMag();
     const camPos = camera.position;
 
     // Walk every host × planet and collect candidates that qualify for
@@ -970,7 +983,6 @@ export class PlanetBodyField {
         // cutoff the GPU emits no quad and the hover can't pick what
         // isn't drawn. Chart mode hard-clips (no soft taper) — same
         // rule Picker.pickStar applies there.
-        const cutoff = maxAppMag + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
         if (appMag > cutoff) continue;
         // A body collapsed onto its parent renders as one point with
         // it — that point's pick belongs to the parent (the star

@@ -35,7 +35,7 @@ export interface StarLocalClusterDeps {
 export interface StarLocalClusterFrame {
   monochrome: boolean;
   focalIdx: number | null;
-  maxAppMag: number;
+  thresholdMag: number;
 }
 
 /**
@@ -125,13 +125,13 @@ export class StarLocalCluster implements LocalCluster {
         // over-painted.
         let engage = this.pathLayer.anyOrbitRingVisible();
         for (let i = 0; !engage && i < chain.length; i++) {
-          engage = this.isMemberEligible(chain[i], frame.maxAppMag);
+          engage = this.isMemberEligible(chain[i], frame.thresholdMag);
         }
         if (engage) for (const idx of chain) this.addMember(idx);
       }
 
       this.deps.forEachStarNearCamera(this.deps.scanWindowPc(), (idx) => {
-        if (!this.memberSet.has(idx) && this.isMemberEligible(idx, frame.maxAppMag)) {
+        if (!this.memberSet.has(idx) && this.isMemberEligible(idx, frame.thresholdMag)) {
           this.addMember(idx);
         }
         return this.members.length >= MIRROR_CAPACITY;
@@ -184,11 +184,11 @@ export class StarLocalCluster implements LocalCluster {
     this.memberSet.add(idx);
   }
 
-  private isMemberEligible(idx: number, maxAppMag: number): boolean {
+  private isMemberEligible(idx: number, thresholdMag: number): boolean {
     const c = this.deps.renderedSizeComponents(idx, this.sizeScratch);
     // The disc pass hard-discards past the magnitude limit, so a
     // slider-hidden star has no disc to mirror.
-    return c.appMag <= maxAppMag
+    return c.appMag <= thresholdMag
       && isResolvedDiscStar(c.appSizePx, c.physSizePx);
   }
 

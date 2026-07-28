@@ -122,12 +122,14 @@ export {
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import {
+  DEFAULT_FILTER,
   DEFAULT_FOV,
   type FilterState,
-  type MagPresetName,
+  type InstrumentName,
   type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
+import { ExposureController } from './hdr/exposure-controller';
 import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
@@ -287,6 +289,10 @@ export class Stellata implements FrameAnchor {
   // state through this getter for per-frame gates and dep closures.
   private filters!: FilterController;
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
+  // Owns the exposure scalar and the three magnitude bounds derived from
+  // it — instrument limit, just-visible threshold, population cull
+  // (hdr/README.md § Exposure epochs).
+  private exposure!: ExposureController;
 
   // Declutter cycle (scene/README.md § Detail-level declutter cycle).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
@@ -474,6 +480,22 @@ export class Stellata implements FrameAnchor {
       viewportH: window.innerHeight,
       hdr: this.hdr.emitterUniforms,
     });
+    // Constructed before every consumer of the magnitude bounds: it
+    // rewrites all four slots from its own constructor, so the seeds in
+    // buildStarSharedUniforms never reach a shader.
+    this.exposure = new ExposureController({
+      uniforms: {
+        uExposure: this.hdr.emitterUniforms.uExposure,
+        uLimitMag: sharedUniforms.uLimitMag,
+        uThresholdMag: sharedUniforms.uThresholdMag,
+        uCullMag: sharedUniforms.uCullMag,
+      },
+      onChange: () => {
+        this.bus.emit('filter', this.filter);
+        this.bus.emit('state');
+      },
+    }, DEFAULT_FILTER.instrument);
+
     // Advances catalog.positions to the model clock and derives every
     // per-instance buffer off the result, so the pipeline attributes
     // below and every consumer downstream read current-epoch positions
@@ -642,6 +664,7 @@ export class Stellata implements FrameAnchor {
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
+      drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
       fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
       viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
@@ -880,7 +903,7 @@ export class Stellata implements FrameAnchor {
     // through its volume. renderOrder = -3 keeps it behind every other
     // layer.
     this.milkyway = new MilkyWay({
-      uMaxAppMag: sharedUniforms.uMaxAppMag,
+      uLimitMag: sharedUniforms.uLimitMag,
       hdr: this.hdr.emitterUniforms,
     });
     this.scene.add(this.milkyway.group);
@@ -890,10 +913,11 @@ export class Stellata implements FrameAnchor {
       uniforms: sharedUniforms,
       bus: this.bus,
       onFilterApplied: (f) => {
+        this.exposure.setInstrument(f.instrument);
         // Per-host distance cull on the planet body field is closed-form
-        // in maxAppMag — refresh the cached cullDistancePc whenever the
-        // slider moves so distant hosts stay culled at the new threshold.
-        this.planetBodyField.setMaxAppMag(f.maxAppMag);
+        // in the population bound — refresh the cached cullDistancePc
+        // whenever the instrument moves it.
+        this.planetBodyField.setCullMag(sharedUniforms.uCullMag.value);
         // Effective = detail permission AND the user's own toggle.
         this.applyMilkywayEnabled();
         this.applyLgEmissionEnabled();
@@ -922,10 +946,10 @@ export class Stellata implements FrameAnchor {
     // first-load.ts (`applyFirstLoadView`) and `?v=` URLs apply their
     // own cam — both run before first paint in main.ts.
 
-    // Compute initial pixel sizes for the active preset against the real
+    // Compute initial pixel sizes for the instrument against the real
     // viewport. DEFAULT_FILTER carries placeholder pixel values; this call
     // replaces them with the right numbers before the first frame.
-    this.filters.recomputePresetPxSizes();
+    this.filters.recomputeStarPxSizes();
     this.syncPixelSolidAngle();
 
     this.poiStore = new PoiStore({
@@ -1120,7 +1144,7 @@ export class Stellata implements FrameAnchor {
       update: (ctx) => this.starLocalCluster.update(ctx.camera, {
         monochrome: this.monochrome,
         focalIdx: this.focus.getFocusedStar(),
-        maxAppMag: this.filter.maxAppMag,
+        thresholdMag: this.exposure.getThresholdMag(),
       }),
       dispose: () => this.starLocalCluster.dispose(),
     });
@@ -1652,7 +1676,7 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField.update(
       this.getT(),
       this.camera.position,
-      this.filter.maxAppMag,
+      this.exposure.getThresholdMag(),
       viewport.y,
       fovYRad,
       this.focus.getFocusedStar(),
@@ -1665,7 +1689,7 @@ export class Stellata implements FrameAnchor {
     this.eclipsePhotometryField?.update(
       this.getT(),
       this.camera.position,
-      this.filter.maxAppMag,
+      this.exposure.getThresholdMag(),
       performance.now(),
     );
   }
@@ -1761,7 +1785,7 @@ export class Stellata implements FrameAnchor {
     return this.eclipsePhotometryField?.debugRows(
       this.getT(),
       this.camera.position,
-      this.filter.maxAppMag,
+      this.exposure.getThresholdMag(),
       starIdx,
     ) ?? [];
   }
@@ -1868,7 +1892,7 @@ export class Stellata implements FrameAnchor {
     if (!LG_EMISSION_SHELVED) {
       const u = this.starPipeline.discMaterial.uniforms;
       this.lgEmission = new LocalGroupEmission(catalog.objects, {
-        uMaxAppMag: u.uMaxAppMag as { value: number },
+        uLimitMag: u.uLimitMag as { value: number },
         uSizeSpan: u.uSizeSpan as { value: number },
       });
       this.lgEmission.setChartHidden(this.monochrome);
@@ -2098,21 +2122,23 @@ export class Stellata implements FrameAnchor {
   // for controls.ts, url-state, keyboard shortcuts, and the debug panel.
   setFilter(patch: Partial<FilterState>) { this.filters.setFilter(patch); }
   getFilter(): Readonly<FilterState> { return this.filters.getFilter(); }
-  applyMagnitudePreset(name: MagPresetName) { this.filters.applyMagnitudePreset(name); }
+  setInstrument(name: InstrumentName) { this.filters.setInstrument(name); }
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
   }
   getCameraFov(): number { return this.filters.getCameraFov(); }
-  setStarExaggerationK(k: number, preset?: MagPresetName) {
-    this.filters.setStarExaggerationK(k, preset);
-  }
-  getStarExaggerationK(preset?: MagPresetName): number {
-    return this.filters.getStarExaggerationK(preset);
-  }
-  getStarExaggerationKDefault(preset?: MagPresetName): number {
-    return this.filters.getStarExaggerationKDefault(preset);
-  }
+  setStarKMultiplier(m: number) { this.filters.setStarKMultiplier(m); }
+  getStarKMultiplier(): number { return this.filters.getStarKMultiplier(); }
+  getStarKMultiplierDefault(): number { return this.filters.getStarKMultiplierDefault(); }
+  /** Manual EV trim, ±EV_MAX_STOPS in stops (hdr/README.md
+   *  § Exposure epochs). */
+  setEv(ev: number) { this.exposure.setEv(ev); }
+  getEv(): number { return this.exposure.getEv(); }
+  /** What the observer can perceive right now — instrument limit,
+   *  adaptation and trim together. The panel's readout. */
+  getEffectiveLimitMag(): number { return this.exposure.getEffectiveLimitMag(); }
+  getAdaptationDm(): number { return this.exposure.getAdaptationDm(); }
   setStarRenderParams(patch: Partial<StarRenderParams>) {
     this.filters.setStarRenderParams(patch);
   }
@@ -2460,12 +2486,11 @@ export class Stellata implements FrameAnchor {
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       this.coordSpheres[frame].setResolution(w, h);
     }
-    // Recompute pixel sizes from the active preset so non-overridden
-    // fields stay proportional to the bulge across screen sizes and
-    // orientation changes. maxAppMag/sizeSpan don't depend on viewport
-    // and are deliberately untouched here so a user's manual magnitude
-    // slider value survives a window resize.
-    this.filters.recomputePresetPxSizes();
+    // Recompute pixel sizes from the instrument's plate scale so
+    // non-overridden fields stay proportional to the bulge across screen
+    // sizes and orientation changes. sizeSpan doesn't depend on the
+    // viewport and is deliberately untouched here.
+    this.filters.recomputeStarPxSizes();
   };
 
   // Every surface-brightness emitter scales by the pixel's solid angle,

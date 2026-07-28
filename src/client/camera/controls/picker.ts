@@ -11,7 +11,7 @@ import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { PROBE_MARKER_PX, type ProbeField } from '../../solar-system/probes/probe-field';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -49,6 +49,10 @@ export interface PickerDeps {
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
+  // Faintest drawn magnitude, so a pick can never disagree with the
+  // fragment shader's taper. Chart hard-clips; navigate fades over the
+  // soft taper. `ExposureController.drawCutoffMag`.
+  drawCutoffMagFn: (chart: boolean) => number;
   // Collapsed-cluster lead resolver: when the winning star renders as
   // one point with other members of its system (composite-suppressed),
   // every pick surface resolves to the cluster's primary — hover card,
@@ -255,6 +259,7 @@ export class Picker {
     const locPos = this.deps.getLocalPositions();
     const { absmag, spectClass, amplitudeMag, periodDays } = catalog;
     const f = this.deps.getFilter();
+    const cutoff = this.deps.drawCutoffMagFn(f.chart);
     const v = new THREE.Vector3();
 
     // Window the scan to the slice of sortedDistFromSol that lies inside
@@ -285,11 +290,8 @@ export class Picker {
       // its disc whenever magMod swings negative.
       const amp = periodDays[i] > 0 ? amplitudeMag[i] : 0;
       const filterMag = appMag - amp * 0.5;
-      // Pickable exactly where the disc renders: the shader fades over the
-      // soft taper in navigate/normal (cutoff + margin), and hard-clips at
-      // the bare cutoff in chart mode. Matching this here closes the
-      // renders-but-unpickable band at the visibility edge.
-      const cutoff = f.maxAppMag + (f.chart ? 0 : SOFT_TAPER_MARGIN_MAG);
+      // Pickable exactly where the disc renders — the shared cutoff rule
+      // closes the renders-but-unpickable band at the visibility edge.
       if (filterMag > cutoff) continue;
 
       v.set(x, y, z);

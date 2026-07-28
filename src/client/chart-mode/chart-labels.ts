@@ -8,6 +8,7 @@ import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/controls/star-physics';
 import { chartDiscPxForAppMag } from './chart-disc-pure';
 import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
+import { limitMagOf } from '../filters/filter-state';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,
@@ -418,7 +419,7 @@ export class ChartLabels {
     // the GPU disc uses).
     const discParams = getChartDiscParams(stellata.uniforms);
     const discPxFor = (mag: number): number =>
-      chartDiscPxForAppMag(mag, discParams, f.maxAppMag);
+      chartDiscPxForAppMag(mag, discParams, limitMagOf(f));
 
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.
@@ -441,7 +442,7 @@ export class ChartLabels {
       const xy = this.projectStar(idx, positions, camera, w, h);
       if (!xy) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
-      if (appMag > f.maxAppMag) continue;
+      if (appMag > limitMagOf(f)) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
       candidates.push({
         kind: 'name',
@@ -468,7 +469,7 @@ export class ChartLabels {
       const xy = this.projectStar(idx, positions, camera, w, h);
       if (!xy) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
-      if (appMag > f.maxAppMag) continue;
+      if (appMag > limitMagOf(f)) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
       candidates.push({
         kind: 'bayer',
@@ -533,7 +534,7 @@ export class ChartLabels {
       const worldOffset = stellata.getWorldOffset();
       for (const anchor of stellata.constellationLabelAnchors) {
         const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
-        if (minAppMag > f.maxAppMag) continue;
+        if (minAppMag > limitMagOf(f)) continue;
         const xy = projectVec(this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h);
         if (!xy) continue;
         candidates.push({
@@ -589,7 +590,7 @@ export class ChartLabels {
       const xy = projectVec(this.tmpPlanetLocal, camera, w, h);
       if (!xy) continue;
       const appMag = planetField.appMagForInstance(i, camera.position);
-      if (appMag === null || appMag > f.maxAppMag) continue;
+      if (appMag === null || appMag > limitMagOf(f)) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
       candidates.push({
         kind: 'planet',
@@ -670,7 +671,7 @@ export class ChartLabels {
     // Spectral mask + Sol-distance bounds are encoded in this.variableEligible
     // and this.binaryEligible (rebuilt on filter change), so the per-frame loops
     // below only need to compute the camera-relative apparent magnitude
-    // and apply the maxAppMag gate. Dust extinction is the one shader
+    // and apply the limit-magnitude gate. Dust extinction is the one shader
     // filter we don't replicate (per-star raymarch is too expensive on
     // CPU) — see BINARY_WING_MIN_EXTENSION_PX for the visual margin that
     // covers the resulting CPU/GPU disc-size mismatch.
@@ -694,7 +695,7 @@ export class ChartLabels {
         // Magnitude gate hoisted above the projection — projectStar's
         // matrix-multiply is the expensive part, so pre-rejecting saves
         // it for stars over the brightness limit.
-        if (ringMag > f.maxAppMag) continue;
+        if (ringMag > limitMagOf(f)) continue;
         const xy = this.projectStar(idx, positions, camera, w, h);
         if (!xy) continue;
         // Ring sits one VARIABLE_RING_MIN_GAP_PX outside the peak disc
@@ -740,7 +741,7 @@ export class ChartLabels {
       for (const idx of this.binaryEligible) {
         const appMag = computeAppMag(idx, positions, absmag);
         // Magnitude gate before the projection — same reasoning as above.
-        if (appMag > f.maxAppMag) continue;
+        if (appMag > limitMagOf(f)) continue;
         const discPx = discPxFor(appMag);
         const ext = discPx * BINARY_WING_EXTENSION_RATIO;
         if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;

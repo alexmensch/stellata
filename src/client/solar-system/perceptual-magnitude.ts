@@ -4,14 +4,15 @@
 
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
-// Magnitudes below the slider cutoff a body still renders: the vertex
-// shaders fade the disc out over this soft taper rather than hard-cutting
-// at `uMaxAppMag`, so a body is drawn (and therefore pickable) while
-// `appMag <= uMaxAppMag + SOFT_TAPER_MARGIN_MAG`. Every CPU mirror that
-// gates on "is this drawn?" — pick paths, orbit-walk LOD, eclipse LOD —
-// reads this so the CPU cutoff can't drift from the shader's. Chart mode
-// hard-clips at `uMaxAppMag` instead (no taper); callers add the margin
-// only in the non-chart path.
+// Magnitudes past the just-visible threshold a body still renders: the
+// fragment shaders fade it out over this soft taper rather than
+// hard-cutting at `uThresholdMag`, so a body is drawn (and therefore
+// pickable) while `appMag <= uThresholdMag + SOFT_TAPER_MARGIN_MAG`.
+// Every CPU mirror that gates on "is this drawn?" — pick paths,
+// orbit-walk LOD, eclipse LOD — reads this so the CPU cutoff can't drift
+// from the shader's. Chart mode hard-clips at `uLimitMag` instead (no
+// taper, and no exposure state); callers add the margin only in the
+// non-chart path.
 export const SOFT_TAPER_MARGIN_MAG = 0.5;
 
 /**
@@ -29,8 +30,8 @@ export function apparentMagnitude(absmag: number, dPc: number): number {
 }
 
 /**
- * Soft-knee `dM_eff` curve. `dM = maxAppMag − appMag` is "magnitudes
- * brighter than the visibility cutoff."
+ * Soft-knee `dM_eff` curve. `dM = limitMag − appMag` is "magnitudes
+ * brighter than the instrument's limit."
  *
  * - For `dM ≤ sizeSpan`, returns `max(dM, 0)` — the linear region.
  * - For `dM > sizeSpan`, bends through a Michaelis-Menten asymptote
@@ -43,11 +44,11 @@ export function apparentMagnitude(absmag: number, dPc: number): number {
  */
 export function perceptualDmEff(
   appMag: number,
-  maxAppMag: number,
+  limitMag: number,
   sizeSpan: number,
   sizeKnee: number,
 ): number {
-  const dM = maxAppMag - appMag;
+  const dM = limitMag - appMag;
   if (dM <= sizeSpan) return Math.max(dM, 0);
   const over = dM - sizeSpan;
   return sizeSpan + (sizeKnee * over) / Math.max(sizeKnee + over, 1e-6);

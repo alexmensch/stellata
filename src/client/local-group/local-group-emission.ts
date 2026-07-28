@@ -38,7 +38,7 @@ const SPHERE_HEIGHT_SEGMENTS = 24;
 /** Uniforms shared by-reference with the star pipeline, as MilkyWay
  *  does — the magnitude slider gates stars and LG glow together. */
 export interface LgEmissionSharedUniforms {
-  uMaxAppMag: { value: number };
+  uLimitMag: { value: number };
   uSizeSpan: { value: number };
 }
 
@@ -125,7 +125,7 @@ export class LocalGroupEmission {
       uniforms: {
         uWorldOffset: this.uWorldOffset,
         ...this.sharedTone,
-        uMaxAppMag: shared.uMaxAppMag,
+        uLimitMag: shared.uLimitMag,
         uSizeSpan: shared.uSizeSpan,
       },
     });

@@ -18,7 +18,8 @@ uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
 uniform float uWhitePoint;
 uniform float uHighlightDesat;
 
-uniform float uMaxAppMag;
+uniform float uLimitMag;
+uniform float uThresholdMag;
 uniform float uMonochrome;
 uniform float uVisibleThreshold;
 uniform float uVisibleK;
@@ -49,7 +50,7 @@ void main() {
   // mono branch. The single glare material carries it — no phase glare on
   // paper.
   if (uMonochrome > 0.5) {
-    if (vAppMag > uMaxAppMag) discard;
+    if (vAppMag > uLimitMag) discard;
     float aa = max(vAaWidth, 1e-3);
     float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
     if (disc <= 0.0) discard;
@@ -62,13 +63,13 @@ void main() {
   // planet reads as a star of its magnitude. The profile is a unit-peak
   // display kernel and vPeakL the body's physical luminance, so the
   // product is linear light in the scene-wide unit. The tap fades emitted
-  // luminance to zero across the slider threshold band.
+  // luminance to zero across the just-visible threshold band.
   float glow = perceptualDiscProfile(
       r, vSoftness, 0.0,
       uVisibleThreshold, uVisibleK,
       uDistNMin, uDistNMax,
       uLumBiasMin, uLumBiasMax);
-  float tap = 1.0 - smoothstep(uMaxAppMag, uMaxAppMag + 0.5, vAppMag);
+  float tap = 1.0 - smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag);
   glow *= tap;
   if (glow <= 0.0) discard;
 

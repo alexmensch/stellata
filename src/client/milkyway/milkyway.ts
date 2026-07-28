@@ -67,10 +67,10 @@ export const GLOW_MAG_OFFSET =
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
 export interface MilkywayDeps {
-  /** The star pipeline's `uMaxAppMag`, by reference. Only the chart-mode
+  /** The star pipeline's `uLimitMag`, by reference. Only the chart-mode
    *  isobar contour reads it — the band's brightness is photometric, so
    *  the magnitude slider reaches it through `uExposure` instead. */
-  uMaxAppMag: { value: number };
+  uLimitMag: { value: number };
   /** `HdrPipeline.emitterUniforms`, spread in by reference so exposure,
    *  pixel solid angle and the inline-operator branch reach both
    *  components with one write. */
@@ -227,7 +227,7 @@ export class MilkyWay {
         // Exposure, pixel solid angle, and the inline-operator branch.
         // Owned by HdrPipeline; this layer only reads them.
         ...opts.deps.hdr,
-        uMaxAppMag: opts.deps.uMaxAppMag,
+        uLimitMag: opts.deps.uLimitMag,
 
         // Per-component.
         uIsBulge: { value: opts.isBulge },

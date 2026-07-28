@@ -15,7 +15,9 @@ import * as THREE from 'three';
  * runtime side of the same list.
  */
 export interface PerceptualDiscUniforms {
-  uMaxAppMag: { value: number };
+  uLimitMag: { value: number };
+  uThresholdMag: { value: number };
+  uCullMag: { value: number };
   uSizeMin: { value: number };
   uSizeMax: { value: number };
   uSizeSpan: { value: number };
@@ -34,7 +36,9 @@ export interface PerceptualDiscUniforms {
 }
 
 export const PERCEPTUAL_DISC_UNIFORM_KEYS = [
-  'uMaxAppMag',
+  'uLimitMag',
+  'uThresholdMag',
+  'uCullMag',
   'uSizeMin',
   'uSizeMax',
   'uSizeSpan',

@@ -29,9 +29,13 @@ import {
   makeHdrEmitterUniforms,
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { cullMagFor } from '../../hdr/exposure-epoch';
+
+const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
 function makeSharedUniforms(
-  maxAppMag = 6.5,
+  limitMag = STUB_LIMIT_MAG,
 ): PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms {
   return {
     ...makeHdrEmitterUniforms(),
@@ -39,7 +43,9 @@ function makeSharedUniforms(
     uChartDiscMaxPx: { value: 28 },
     uChartDiscMinPx: { value: 1.5 },
     uChartMagBright: { value: -2 },
-    uMaxAppMag: { value: maxAppMag },
+    uLimitMag: { value: limitMag },
+    uThresholdMag: { value: limitMag },
+    uCullMag: { value: cullMagFor(limitMag) },
     uSizeMin: { value: 2 },
     uSizeMax: { value: 24 },
     uSizeSpan: { value: 8 },
@@ -225,11 +231,11 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('setMaxAppMag is a no-op smoke (cull distances refresh internally)', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+  it('setCullMag is a no-op smoke (cull distances refresh internally)', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
-    f.setMaxAppMag(15);
-    f.setMaxAppMag(6.5);
+    f.setCullMag(15);
+    f.setCullMag(cullMagFor(STUB_LIMIT_MAG));
     expect(f.group.visible).toBe(true);
     f.dispose();
   });
@@ -423,7 +429,7 @@ describe('PlanetBodyField lifecycle', () => {
     expect(expectedRatio).toBeLessThan(1.35);
     // And the cull derivation matches `cullDistancePc` directly.
     expect(dSaturn).toBeCloseTo(
-      cullDistancePc(4.83, baseRefl * alphaZeroPhaseFactor(SATURN_PHASE), 6.5),
+      cullDistancePc(4.83, baseRefl * alphaZeroPhaseFactor(SATURN_PHASE), cullMagFor(6.5)),
       6,
     );
     f.dispose();
@@ -1010,13 +1016,13 @@ describe('PlanetBodyField.pick', () => {
     const expected = chartDiscPxForAppMag(
       appMag,
       { maxPx: 28, minPx: 1.5, magBright: -2 },
-      shared.uMaxAppMag.value,
+      shared.uLimitMag.value,
     );
     expect(f.renderedPlanetSizePx(0, camera.position)).toBeCloseTo(expected, 10);
 
     // Hard clip: a limit just below appMag drops the pick immediately —
     // the navigate-mode soft-taper margin must not apply in chart.
-    shared.uMaxAppMag.value = appMag - 0.01;
+    shared.uLimitMag.value = appMag - 0.01;
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
     f.setMonochrome(false);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();

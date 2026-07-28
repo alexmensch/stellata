@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
-import type { FilterState } from '../../filters/filter-state';
+import { limitMagOf, type FilterState } from '../../filters/filter-state';
 import {
   physSizePx,
   distAtFillFraction,
@@ -220,7 +220,7 @@ export function renderedSizeComponents(
   // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local
   // reimplementation here previously hard-clamped brightness at sizeMax
   // and undersized the focus ring / pick radius on the brightest stars.
-  const dMEff = perceptualDmEff(appMag, filter.maxAppMag, filter.sizeSpan, u.uSizeKnee.value);
+  const dMEff = perceptualDmEff(appMag, limitMagOf(filter), filter.sizeSpan, u.uSizeKnee.value);
   const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, filter.sizeSpan);
 
   // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.

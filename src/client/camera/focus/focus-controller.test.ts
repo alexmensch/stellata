@@ -17,6 +17,10 @@ import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { cullMagFor } from '../../hdr/exposure-epoch';
+
+const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
@@ -246,7 +250,9 @@ function makeHarness(opts: {
     uChartDiscMaxPx: { value: 28 },
     uChartDiscMinPx: { value: 1.5 },
     uChartMagBright: { value: -2 },
-    uMaxAppMag: { value: 6.5 },
+    uLimitMag: { value: STUB_LIMIT_MAG },
+    uThresholdMag: { value: STUB_LIMIT_MAG },
+    uCullMag: { value: cullMagFor(STUB_LIMIT_MAG) },
     uSizeMin: { value: 2 },
     uSizeMax: { value: 24 },
     uSizeSpan: { value: 8 },

@@ -56,7 +56,7 @@ interface Fixture {
   sizes: Map<number, RenderedSizeComponents>;
   pathsVisible: { value: boolean };
   pathSpheres: MemberSphere[];
-  frame: { monochrome: boolean; focalIdx: number | null; maxAppMag: number };
+  frame: { monochrome: boolean; focalIdx: number | null; thresholdMag: number };
 }
 
 function makeFixture(): Fixture {
@@ -97,7 +97,7 @@ function makeFixture(): Fixture {
     sizes,
     pathsVisible,
     pathSpheres,
-    frame: { monochrome: false, focalIdx: null, maxAppMag: 6.5 },
+    frame: { monochrome: false, focalIdx: null, thresholdMag: 6.5 },
   };
 }
 
