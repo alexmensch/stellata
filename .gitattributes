@@ -3,6 +3,7 @@ data/gaia/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/hipparcos/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/gcvs/*.txt filter=lfs diff=lfs merge=lfs -text
 data/athyg/*.csv filter=lfs diff=lfs merge=lfs -text
+data/athyg/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/bailer-jones/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/simbad/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/simbad/wds_xids_overrides.tsv !filter !diff !merge text=auto
