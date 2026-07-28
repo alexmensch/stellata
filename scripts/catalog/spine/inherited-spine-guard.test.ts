@@ -2,6 +2,7 @@
 // frozen, so nothing regenerates it in CI — these assertions are what keeps
 // the artifact honest instead. See README.md § Why a guard, not a rebuild.
 
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -10,6 +11,7 @@ import { compareBuildCounts } from '../build-counts';
 import { REPO_ROOT } from '../../util/paths';
 import { isLfsPointer } from '../../sid/sid-pure';
 import {
+  INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,
   SPINE_COLUMNS,
   parseSpineTsv,
@@ -20,9 +22,17 @@ import {
 } from './inherited-spine-pure';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
-const EXPECTED_PATH = resolve(REPO_ROOT, 'scripts/catalog/spine/inherited-spine-expected.json');
+const EXPECTED_PATH = resolve(REPO_ROOT, INHERITED_SPINE_EXPECTED_FILE);
 
-const text = existsSync(SPINE_PATH) ? readFileSync(SPINE_PATH, 'utf-8') : null;
+/** The frozen artifact's byte identity, pinned in test source rather than in
+ *  the count snapshot: `UPDATE_BUILD_COUNTS=1` rewrites that snapshot, so a
+ *  regeneration would otherwise refresh its own guard. Changing these two
+ *  literals is the deliberate act that unfreezes the spine. */
+const FROZEN_BYTES = 42_426_957;
+const FROZEN_SHA256 = '1036074d24d902ebedc0ff40fc3302821988b9be079adc3f60cfc1a8d8cc1a1a';
+
+const bytes = existsSync(SPINE_PATH) ? readFileSync(SPINE_PATH) : null;
+const text = bytes?.toString('utf-8') ?? null;
 // The spine rides LFS: a checkout without LFS smudging (the bare CI `test`
 // job) sees a pointer stub. This runs for real in the build-catalog job
 // (lfs: true) and in any local clone.
@@ -34,6 +44,11 @@ describe.skipIf(!available)('committed inherited spine', () => {
   // skip exists to avoid — and it keeps the 40 MB parse to once per run.
   let rows: SpineRow[];
   beforeAll(() => { rows = parseSpineTsv(text!); });
+
+  it('is byte-for-byte the frozen artifact', () => {
+    expect(bytes!.byteLength).toBe(FROZEN_BYTES);
+    expect(createHash('sha256').update(bytes!).digest('hex')).toBe(FROZEN_SHA256);
+  });
 
   it('matches the pinned row + per-column counts', () => {
     const expected = JSON.parse(readFileSync(EXPECTED_PATH, 'utf-8')) as SpineCounts;
