@@ -356,26 +356,26 @@ export type CountDiff =
 /** Compare actual counts against an expected manifest and emit a per-key
  *  diff. Partition-valued entries (a `DistSrcPartition`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
- *  Pure — no I/O. The caller decides whether mismatches are fatal. */
-export function compareBuildCounts(
-  expected: BuildCounts,
-  actual: BuildCounts,
+ *  Pure — no I/O. The caller decides whether mismatches are fatal.
+ *
+ *  Generic over the count record so any build script's snapshot can use it
+ *  (`BuildCounts` here, `ClassicIdOverlayCounts` in `classic-ids/`); the
+ *  walk only needs each value to be a number or a flat number partition. */
+export function compareBuildCounts<T extends object>(
+  expected: T,
+  actual: T,
 ): CountDiff[] {
   const diff: CountDiff[] = [];
-  for (const key of Object.keys(actual) as (keyof BuildCounts)[]) {
-    const a = actual[key];
-    const e = expected[key];
+  const expectedByKey = expected as Record<string, unknown>;
+  for (const [key, a] of Object.entries(actual as Record<string, unknown>)) {
+    const e = expectedByKey[key];
     if (typeof a === 'number') {
       diff.push(compareOne(key, typeof e === 'number' ? e : NaN, a));
       continue;
     }
-    for (const bucket of Object.keys(a)) {
-      const ea = (e ?? {}) as Partial<Record<string, number>>;
-      diff.push(compareOne(
-        `${key}.${bucket}`,
-        ea[bucket] ?? NaN,
-        (a as Record<string, number>)[bucket],
-      ));
+    const ea = (e ?? {}) as Partial<Record<string, number>>;
+    for (const [bucket, value] of Object.entries(a as Record<string, number>)) {
+      diff.push(compareOne(`${key}.${bucket}`, ea[bucket] ?? NaN, value));
     }
   }
   return diff;
