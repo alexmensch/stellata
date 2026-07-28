@@ -46,7 +46,10 @@ src/client/util/url-state/
                                   / query→path rewrite, startUrlSync
                                   subscription. The test file carries the
                                   golden-blob corpus pinning the frozen
-                                  v1/v2/v3 decoders byte-for-byte.
+                                  v1/v2/v3 decoders byte-for-byte, plus the
+                                  re-index survival block: a link shared
+                                  from one build must land on the same
+                                  star under a build whose rows re-sorted.
 ```
 
 Four wire formats coexist. **v4** (current) replaces every parallel
