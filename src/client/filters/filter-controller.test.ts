@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilterController, type FilterUniforms } from './filter-controller';
 import {
   DEFAULT_FILTER,
-  MAG_PRESETS,
-  presetPxSizes,
-  resetStarExaggerationK,
+  INSTRUMENTS,
+  STAR_PHYSICS_FACTOR,
+  starExaggerationK,
+  resetStarKMultiplier,
   STAR_RENDER_DEFAULTS,
+  starPxSizes,
+  TARGET_PX,
 } from './filter-state';
-import { BASE_EPOCH_EXPOSURE, epochExposure } from '../hdr/exposure-epoch';
 import {
   type SceneElementBinds,
   type SceneElementId,
@@ -33,8 +35,6 @@ function permittedSet(permitted: Record<SceneElementId, boolean>): Set<SceneElem
 
 function makeUniforms(): FilterUniforms {
   return {
-    uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },
-    uExposure: { value: BASE_EPOCH_EXPOSURE },
     uMinDistSol: { value: DEFAULT_FILTER.minDistSol },
     uMaxDistSol: { value: DEFAULT_FILTER.maxDistSol },
     uSpectMask: { value: DEFAULT_FILTER.spectMask },
@@ -83,82 +83,48 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  resetStarExaggerationK();
+  resetStarKMultiplier();
 });
 
 describe('FilterController', () => {
   it('setFilter writes the shader uniforms and fires filter + state + the layer hook', () => {
     const { ctrl, uniforms, emitted, onFilterApplied } = makeHarness();
-    ctrl.setFilter({ maxAppMag: 12, spectMask: 0b101, sizeMin: 2.5 });
-    expect(uniforms.uMaxAppMag.value).toBe(12);
+    ctrl.setFilter({ spectMask: 0b101, sizeMin: 2.5 });
     expect(uniforms.uSpectMask.value).toBe(0b101);
     expect(uniforms.uSizeMin.value).toBe(2.5);
     expect(onFilterApplied).toHaveBeenCalledWith(ctrl.getFilter());
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 
-  it('the magnitude limit is the single tone-map exposure', () => {
-    const { ctrl, uniforms } = makeHarness();
-    expect(uniforms.uExposure.value).toBe(BASE_EPOCH_EXPOSURE);
-
-    ctrl.setFilter({ maxAppMag: 12 });
-    expect(uniforms.uExposure.value).toBe(epochExposure(12));
-
-    // Dragging the slider one magnitude fainter is 10^0.4 of exposure —
-    // the same step every emitter sees, since they share the object.
-    const before = uniforms.uExposure.value;
-    ctrl.setFilter({ maxAppMag: 13 });
-    expect(uniforms.uExposure.value / before).toBeCloseTo(10 ** 0.4, 9);
-  });
-
-  it('each magnitude preset lands its own documented exposure', () => {
-    const { ctrl, uniforms } = makeHarness();
-    const seen = new Set<number>();
-    for (const name of ['naked-eye', 'binoculars', 'all'] as const) {
-      ctrl.applyMagnitudePreset(name);
-      expect(uniforms.uExposure.value).toBe(epochExposure(MAG_PRESETS[name].maxAppMag));
-      seen.add(uniforms.uExposure.value);
-    }
-    expect(seen.size).toBe(3);
-  });
-
-  it('a size-override reset leaves the exposure on the manual magnitude', () => {
-    const { ctrl, uniforms } = makeHarness();
-    ctrl.setFilter({ maxAppMag: 9.25 });
-    ctrl.clearSizeOverrides(['sizeMin', 'sizeMax', 'sizeSpan']);
-    expect(uniforms.uExposure.value).toBe(epochExposure(9.25));
-  });
-
-  it('applyMagnitudePreset sets preset fields but respects override flags', () => {
+  it('setInstrument sets its fields but respects override flags', () => {
     const { ctrl } = makeHarness();
     ctrl.setFilter({ sizeSpanOverridden: true, sizeSpan: 3 });
-    ctrl.applyMagnitudePreset('all');
+    ctrl.setInstrument('unaided-eye');
     const f = ctrl.getFilter();
-    expect(f.activePreset).toBe('all');
-    expect(f.maxAppMag).toBe(MAG_PRESETS.all.maxAppMag);
+    expect(f.instrument).toBe('unaided-eye');
     expect(f.sizeSpan).toBe(3);
-    const sizes = presetPxSizes('all', 50, 1920);
+    const sizes = starPxSizes('unaided-eye', 50, 1080);
     expect(f.sizeMin).toBe(sizes.sizeMinPx);
     expect(f.sizeMax).toBe(sizes.sizeMaxPx);
   });
 
-  it('recomputePresetPxSizes clamps sizeMax up to a user-overridden sizeMin', () => {
+  it('recomputeStarPxSizes clamps sizeMax up to a user-overridden sizeMin', () => {
     const { ctrl } = makeHarness();
-    ctrl.setStarExaggerationK(0.01);
+    ctrl.setStarKMultiplier(0.01);
     ctrl.setFilter({ sizeMinOverridden: true, sizeMin: 50 });
-    ctrl.recomputePresetPxSizes();
+    ctrl.recomputeStarPxSizes();
     const f = ctrl.getFilter();
     expect(f.sizeMax).toBe(50);
   });
 
-  it('setCameraFov updates the projection, uFovYRad, orbit floor, and preset sizes', () => {
+  it('setCameraFov updates the projection, uFovYRad, orbit floor, and star sizes', () => {
     const { ctrl, uniforms, camera, refreshOrbitFloor } = makeHarness();
     ctrl.setCameraFov(80);
     expect(camera.fov).toBe(80);
     expect(camera.updateProjectionMatrix).toHaveBeenCalled();
     expect(uniforms.uFovYRad.value).toBeCloseTo((80 * Math.PI) / 180, 12);
     expect(refreshOrbitFloor).toHaveBeenCalledOnce();
-    expect(ctrl.getFilter().sizeMin).toBe(presetPxSizes('naked-eye', 80, 1920).sizeMinPx);
+    expect(ctrl.getFilter().sizeMin).toBe(starPxSizes('unaided-eye', 80, 1080).sizeMinPx);
   });
 
   it('setCameraFov is a no-op at the current FOV', () => {
@@ -169,14 +135,14 @@ describe('FilterController', () => {
     expect(emitted).toEqual([]);
   });
 
-  it('setStarExaggerationK re-derives MAG_PRESETS and always emits', () => {
+  it('setStarKMultiplier scales the derived footprint and always emits', () => {
     const { ctrl, emitted } = makeHarness();
-    const before = MAG_PRESETS['naked-eye'].sizeMinArcsec;
+    const before = starPxSizes('unaided-eye', 50, 1080).sizeMinPx;
     ctrl.setFilter({ sizeMinOverridden: true, sizeMaxOverridden: true });
     emitted.length = 0;
-    ctrl.setStarExaggerationK(24, 'naked-eye');
-    expect(ctrl.getStarExaggerationK('naked-eye')).toBe(24);
-    expect(MAG_PRESETS['naked-eye'].sizeMinArcsec).toBe(before * 2);
+    ctrl.setStarKMultiplier(2);
+    expect(ctrl.getStarKMultiplier()).toBe(2);
+    expect(starPxSizes('unaided-eye', 50, 1080).sizeMinPx).toBeCloseTo(before * 2, 12);
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 
@@ -241,7 +207,7 @@ describe('FilterController', () => {
     expect(ctrl.getFilter().showLgEmission).toBe(false);
   });
 
-  it('clearSizeOverrides drops the flags and restores preset values', () => {
+  it('clearSizeOverrides drops the flags and restores the derived values', () => {
     const { ctrl } = makeHarness();
     ctrl.setFilter({
       sizeMinOverridden: true, sizeMin: 42,
@@ -251,15 +217,60 @@ describe('FilterController', () => {
     const f = ctrl.getFilter();
     expect(f.sizeMinOverridden).toBe(false);
     expect(f.sizeSpanOverridden).toBe(false);
-    expect(f.sizeMin).toBe(presetPxSizes('naked-eye', 50, 1920).sizeMinPx);
-    expect(f.sizeSpan).toBe(MAG_PRESETS['naked-eye'].sizeSpan);
+    expect(f.sizeMin).toBe(starPxSizes('unaided-eye', 50, 1080).sizeMinPx);
+    expect(f.sizeSpan).toBe(INSTRUMENTS['unaided-eye'].sizeSpan);
   });
 });
 
-describe('presetPxSizes', () => {
+describe('starPxSizes — plate-scale-derived K', () => {
+  const EYE = INSTRUMENTS['unaided-eye'];
+  // K floors at 1 where the true PSF already lands on TARGET_PX; below
+  // that plate scale, real physics takes over.
+  const CROSSOVER_ARCSEC_PER_PX = EYE.psfArcsec / TARGET_PX;
+
+  it('lands a threshold star on TARGET_PX at every FOV above the crossover', () => {
+    for (const fovDeg of [10, 20, 50, 80, 120]) {
+      expect(starPxSizes('unaided-eye', fovDeg, 1080).sizeMinPx)
+        .toBeCloseTo(TARGET_PX, 12);
+    }
+  });
+
+  it('lands a threshold star on TARGET_PX at every viewport height', () => {
+    // 390 = landscape mobile, the case the retired max(w, h) refDim
+    // compromise existed for.
+    for (const heightPx of [390, 720, 1080, 1440, 2160]) {
+      expect(starPxSizes('unaided-eye', 50, heightPx).sizeMinPx)
+        .toBeCloseTo(TARGET_PX, 12);
+    }
+  });
+
+  it('pins the crossover: K = 1 exactly, and the disc grows below it', () => {
+    const fovAtCrossover = (CROSSOVER_ARCSEC_PER_PX * 1080) / 3600;
+    expect(fovAtCrossover).toBeCloseTo(2.3438, 4);
+    expect(starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX)).toBe(1);
+    // Narrower still: K stays floored, so the disc tracks the true PSF.
+    const narrower = starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX / 4);
+    expect(narrower).toBe(1);
+    expect(starPxSizes('unaided-eye', fovAtCrossover / 4, 1080).sizeMinPx)
+      .toBeCloseTo(TARGET_PX * 4, 10);
+  });
+
+  it('is invariant in window WIDTH — a wider window only reveals more sky', () => {
+    // The reported defect: presetPxSizes divided by max(w, h), so
+    // 1440 → 3440 wide grew every star. Width is no longer an input.
+    const at1440 = starPxSizes('unaided-eye', 50, 1440);
+    vi.stubGlobal('window', { innerWidth: 3440, innerHeight: 1440 });
+    expect(starPxSizes('unaided-eye', 50, 1440)).toEqual(at1440);
+  });
+
+  it('scales the saturation disc off the threshold disc, floored at it', () => {
+    const { sizeMinPx, sizeMaxPx } = starPxSizes('unaided-eye', 50, 1080);
+    expect(sizeMaxPx / sizeMinPx)
+      .toBeCloseTo(Math.sqrt(STAR_PHYSICS_FACTOR * EYE.sizeSpan), 12);
+  });
+
   it('floors both sizes at 1 px and keeps max >= min', () => {
-    resetStarExaggerationK();
-    const tiny = presetPxSizes('all', 120, 400);
+    const tiny = starPxSizes('unaided-eye', 120, 400, 0.001);
     expect(tiny.sizeMinPx).toBeGreaterThanOrEqual(1);
     expect(tiny.sizeMaxPx).toBeGreaterThanOrEqual(tiny.sizeMinPx);
   });

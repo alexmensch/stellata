@@ -7,15 +7,14 @@ import type { StellataEventMap } from '../stellata';
 import {
   DEFAULT_FILTER,
   type FilterState,
-  MAG_PRESETS,
-  type MagPresetName,
-  presetPxSizes,
-  STAR_EXAGGERATION_K_DEFAULTS,
+  INSTRUMENTS,
+  type InstrumentName,
+  starPxSizes,
+  STAR_K_MULTIPLIER_DEFAULT,
   type StarRenderParams,
-  getStarExaggerationK as readExaggerationK,
-  setStarExaggerationK as patchExaggerationK,
+  getStarKMultiplier,
+  setStarKMultiplier,
 } from './filter-state';
-import { epochExposure } from '../hdr/exposure-epoch';
 import {
   type DetailLevel,
   type RenderStyle,
@@ -28,12 +27,10 @@ import {
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
- *  propagates to every pass. `uExposure` arrives from
- *  `HdrPipeline.emitterUniforms` and reaches every physical emitter, not
- *  just the star passes — see `../hdr/README.md` § Exposure epochs. */
+ *  propagates to every pass. The magnitude bounds and `uExposure` are
+ *  NOT here — `ExposureController` owns those (`../hdr/README.md`
+ *  § Exposure epochs). */
 export interface FilterUniforms {
-  uMaxAppMag: { value: number };
-  uExposure: { value: number };
   uMinDistSol: { value: number };
   uMaxDistSol: { value: number };
   uSpectMask: { value: number };
@@ -117,8 +114,6 @@ export class FilterController {
   setFilter(patch: Partial<FilterState>): void {
     Object.assign(this.filter, patch);
     const u = this.deps.uniforms;
-    u.uMaxAppMag.value = this.filter.maxAppMag;
-    u.uExposure.value = epochExposure(this.filter.maxAppMag);
     u.uMinDistSol.value = this.filter.minDistSol;
     u.uMaxDistSol.value = this.filter.maxDistSol;
     u.uSpectMask.value = this.filter.spectMask;
@@ -130,29 +125,23 @@ export class FilterController {
     this.deps.bus.emit('state');
   }
 
-  // Apply a magnitude preset (preset-button click). Always sets
-  // activePreset + maxAppMag + sizeSpan; sizeMin/Max only if their override
-  // flags are false. Use this for explicit user-driven preset changes.
-  applyMagnitudePreset(name: MagPresetName): void {
-    const p = MAG_PRESETS[name];
-    const patch: Partial<FilterState> = {
-      activePreset: name,
-      maxAppMag: p.maxAppMag,
-    };
-    if (!this.filter.sizeSpanOverridden) patch.sizeSpan = p.sizeSpan;
-    const sizes = this.computePresetPxSizes(name);
+  // Switch observing instrument. Always sets instrument + sizeSpan;
+  // sizeMin/Max only if their override flags are false.
+  setInstrument(name: InstrumentName): void {
+    const patch: Partial<FilterState> = { instrument: name };
+    if (!this.filter.sizeSpanOverridden) patch.sizeSpan = INSTRUMENTS[name].sizeSpan;
+    const sizes = this.computeStarPxSizes(name);
     if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
     if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
     this.setFilter(patch);
   }
 
-  // Recompute non-overridden pixel sizes from the active preset's angular
-  // targets. Called on viewport resize and at construction — only touches
-  // sizeMin/Max (the viewport-dependent fields), not maxAppMag or
-  // sizeSpan, so a user's manual magnitude-slider value is preserved
-  // through resize.
-  recomputePresetPxSizes(): void {
-    const sizes = this.computePresetPxSizes(this.filter.activePreset);
+  // Recompute non-overridden pixel sizes from the instrument's angular
+  // targets. Called on viewport resize, FOV change, and at construction —
+  // only touches sizeMin/Max (the plate-scale-dependent fields), not
+  // sizeSpan.
+  recomputeStarPxSizes(): void {
+    const sizes = this.computeStarPxSizes(this.filter.instrument);
     const patch: Partial<FilterState> = {};
     if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
     if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
@@ -166,12 +155,8 @@ export class FilterController {
     if (Object.keys(patch).length > 0) this.setFilter(patch);
   }
 
-  private computePresetPxSizes(name: MagPresetName) {
-    return presetPxSizes(
-      name,
-      this.deps.camera.fov,
-      Math.max(window.innerWidth, window.innerHeight),
-    );
+  private computeStarPxSizes(name: InstrumentName) {
+    return starPxSizes(name, this.deps.camera.fov, window.innerHeight);
   }
 
   // Camera FOV setter. Updates the projection matrix, mirrors the new FOV
@@ -185,30 +170,25 @@ export class FilterController {
     this.deps.camera.updateProjectionMatrix();
     this.deps.uniforms.uFovYRad.value = (fov * Math.PI) / 180;
     this.deps.refreshOrbitFloor();
-    this.recomputePresetPxSizes();
+    this.recomputeStarPxSizes();
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }
   getCameraFov(): number { return this.deps.camera.fov; }
 
-  // Star exaggeration K setter for the debug panel. Patches the K for one
-  // preset (defaulting to the active preset), recomputes MAG_PRESETS (their
-  // size targets scale with K) and writes new pixel sizes into any
-  // non-overridden fields so the change shows live.
-  setStarExaggerationK(k: number, preset?: MagPresetName): void {
-    patchExaggerationK(preset ?? this.filter.activePreset, k);
-    this.recomputePresetPxSizes();
+  // Multiplier on the plate-scale-derived exaggeration K (debug panel).
+  // Writes new pixel sizes into any non-overridden field so the change
+  // shows live.
+  setStarKMultiplier(m: number): void {
+    setStarKMultiplier(m);
+    this.recomputeStarPxSizes();
     // Fire even when recompute patched nothing (e.g. sizes overridden) so
-    // the debug readout reflects the new K.
+    // the debug readout reflects the new multiplier.
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }
-  getStarExaggerationK(preset?: MagPresetName): number {
-    return readExaggerationK(preset ?? this.filter.activePreset);
-  }
-  getStarExaggerationKDefault(preset?: MagPresetName): number {
-    return STAR_EXAGGERATION_K_DEFAULTS[preset ?? this.filter.activePreset];
-  }
+  getStarKMultiplier(): number { return getStarKMultiplier(); }
+  getStarKMultiplierDefault(): number { return STAR_K_MULTIPLIER_DEFAULT; }
 
   // Star-disc rendering knobs (debug panel). Patch any subset; uVisibleK
   // is recomputed whenever uVisibleThreshold changes. Both materials share
@@ -241,13 +221,11 @@ export class FilterController {
     };
   }
 
-  // Clear override flags for the named fields and write the active
-  // preset's value into them. Used by the size and span reset buttons.
-  // Only touches the named fields — a manual maxAppMag-slider tweak
-  // survives intact.
+  // Clear override flags for the named fields and write the instrument's
+  // derived value into them. Used by the size and span reset buttons.
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>): void {
-    const p = MAG_PRESETS[this.filter.activePreset];
-    const sizes = this.computePresetPxSizes(this.filter.activePreset);
+    const inst = INSTRUMENTS[this.filter.instrument];
+    const sizes = this.computeStarPxSizes(this.filter.instrument);
     const patch: Partial<FilterState> = {};
     for (const f of fields) {
       if (f === 'sizeMin') {
@@ -258,7 +236,7 @@ export class FilterController {
         patch.sizeMax = sizes.sizeMaxPx;
       } else if (f === 'sizeSpan') {
         patch.sizeSpanOverridden = false;
-        patch.sizeSpan = p.sizeSpan;
+        patch.sizeSpan = inst.sizeSpan;
       }
     }
     this.setFilter(patch);
