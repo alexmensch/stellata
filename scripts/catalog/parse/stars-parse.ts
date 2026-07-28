@@ -23,6 +23,7 @@ import {
   spectralClassCi,
   spectralClassColorIsDerivable,
   SOLAR_BV_FALLBACK,
+  SOL_PROPER_NAME,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -86,6 +87,11 @@ export interface Star {
   // and NOT written to the binary.
   athygDist: number | null;     // AT-HYG `dist` column, pre-override
   athygDistSrc: string | null;  // AT-HYG `dist_src` column
+  /** AT-HYG `id` — the source row's primary key, null on records this build
+   *  minted rather than read (promoted companions). Non-null is the
+   *  AT-HYG-derived predicate the inherited-spine generator selects on, and
+   *  its join key back to the printed CSV cells. */
+  athygRowId: number | null;
   /** Build-time-only synthetic identifier. See
    *  scripts/catalog/README.md § Companion promotion. */
   syntheticId: string | null;
@@ -114,6 +120,7 @@ export function nonEmpty(s: string | undefined | null): string | null {
 // `cast: false` keeps every cell as a string; the parseFloat/parseInt
 // helpers below normalise them.
 export interface AthygRow {
+  id: string;
   absmag: string;
   dist: string;
   dist_src: string;
@@ -347,7 +354,7 @@ export async function readStars(
     const z = dirRes.dir.z * dist;
 
     const proper = nonEmpty(row.proper);
-    const isSol = proper === 'Sol';
+    const isSol = proper === SOL_PROPER_NAME;
 
     // Space-motion velocity from the SAME tier's solution + the final
     // stack distance + AT-HYG RV. Sol carries no PM row and sits at the
@@ -477,6 +484,7 @@ export async function readStars(
       gcvsName: null,
       athygDist,
       athygDistSrc,
+      athygRowId: parseIntOrNull(row.id),
       syntheticId: null,
     });
   }

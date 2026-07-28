@@ -12,6 +12,12 @@ land in is `../README.md` § Binary catalog format.
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
                                   every other subfolder imports.
+  read-stars-inputs.ts            Source paths + loaders for every reference
+                                  table readStars consumes, plus the mtime
+                                  set derived artifacts invalidate against.
+                                  Shared by build-catalog.ts and the
+                                  inherited-spine generator so both walk the
+                                  CSV against identical inputs.
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
                                   Apsis and 5p astrometry side-tables. The TYC
@@ -119,6 +125,11 @@ Each AT-HYG row walks through, inside `readStars`:
    the class-table value; BC always class-table. White dwarfs
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
    models neither). Clamped to [0.08, 2500] R☉.
+
+Each kept record carries `athygRowId` — AT-HYG's own `id`, build-time-only
+like `athygDist`/`athygDistSrc`. Non-null is the AT-HYG-derived predicate
+(promoted companions get `null`) and the join key back to printed CSV cells;
+`../spine/README.md` is its consumer.
 
 AT-HYG's stored `x0/y0/z0` is never consumed: it is a mixed-epoch
 merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally

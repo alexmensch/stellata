@@ -9,7 +9,7 @@ this file carries only the cross-folder policies.
 
 | Folder | Topic |
 |---|---|
-| [`athyg/`](athyg/README.md) | AT-HYG v3.3 base stellar catalogue (classic-IDs subset). |
+| [`athyg/`](athyg/README.md) | AT-HYG v3.3 base stellar catalogue (classic-IDs subset) + the frozen inherited spine derived from it. |
 | [`classic-ids/`](classic-ids/README.md) | Frozen CDS HD/HR/Bayer/Flamsteed/GJ cross indexes + the source_id-keyed overlay joined from them. |
 | [`bailer-jones/`](bailer-jones/README.md) | Bailer-Jones 2021 Bayesian distance posteriors. |
 | [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis. |

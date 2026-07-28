@@ -99,29 +99,52 @@ Per-identifier figures and the three structural bounds behind them:
 
 One committed TSV (`data/athyg/inherited-spine.tsv`, LFS), generated
 **once** by a one-shot script from the final AT-HYG-driven build plus
-the AT-HYG CSV, then frozen. One row per AT-HYG-derived record:
+the AT-HYG CSV, then frozen. **313,257 rows**, one per AT-HYG-derived
+record (shipped 2026-07-28; `scripts/catalog/spine/`):
 
 ```
-tyc  hip  hd  hr  gl  flam  bayer  proper  gaia_source_id  ra  dec  dist  mag  ci  spect  rv  *_src
+tyc  hip  hd  hr  gl  flam  bayer  proper  gaia_source_id
+ra  dec  dist  mag  ci  spect  rv  pm_ra  pm_dec
+pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
 ```
 
-- `gaia_source_id` may be empty (the no-Gaia residual). Ids are
+- The identifier columns carry the values the **build resolved**, not the
+  raw cells: `gaia_source_id` has been through the native → HIP-cross-walk
+  precedence and both binding gates; the three `multiples.tsv` HD-only
+  primaries carry their backfilled HIP + source_id; and ξ UMa B, the one
+  collocated AT-HYG double promotion merges rather than twins, carries the
+  source_id that merge writes. That is what makes each record's designation
+  set — and so its SID — identical by construction. Every other column is
+  the AT-HYG cell verbatim.
+- `gaia_source_id` is empty on 1,371 rows (the no-Gaia residual). Ids are
   DR3-namespace; under DR4 they remain valid designations and bridge
   via SID DR-reconciliation (`docs/sid.md` § 6) — the spine never
   rewrites.
 - Printed columns are consumed **only** where a per-field cascade
   (§ 5) bottoms out. For everything else the spine contributes
-  membership + designations only.
+  membership + designations only. `pm_ra`/`pm_dec` are there because two
+  cascades bottom out at AT-HYG's printed proper motion — the direction
+  cascade's `athyg_printed` tier (65 records) and the space-motion
+  velocity's `athyg_pm` tier (64) — and a frozen artifact cannot grow a
+  column later.
 - There is no separate keep-list file: no-Gaia rows are ordinary
   spine rows with an empty `gaia_source_id`.
-- The generator pins per-column counts in build-counts;
-  `data/athyg/README.md` documents the file as *generated provenance
+- Per-column counts are pinned in build-counts, and asserted against the
+  **committed** file rather than a regeneration: the spine is a snapshot of
+  a build that no longer exists after the swap, so a rebuild-and-diff gate
+  would demand rewriting the one file whose purpose is to stop moving. The
+  file's byte length + sha256 are pinned in test source instead, and two
+  parity gates hold it to the build it stands in for — row count against
+  `recordCount` − `companionPromoted`, and the per-record designation
+  multiset against the built artifacts
+  (`scripts/catalog/spine/README.md` § Parity with the shipped build).
+  `data/athyg/README.md` documents it as *generated provenance
   data* (source: AT-HYG v3.3 final build, dated), distinct from the
   upstream CSV, which stays committed but leaves the build's input
   set.
 
-Sol remains the hand-emitted special record — a spine row like any
-other.
+Sol is an AT-HYG row (`id` 1, addressable only by `proper = "Sol"`), so it
+is a spine row like any other — no hand-emitted special case.
 
 ## 4. How HD reaches Gaia
 
@@ -174,6 +197,7 @@ select per-field sourcing:
 | Field | Cascade (first hit wins) |
 |---|---|
 | direction / xyz | Gaia DR3 5p → HIP2 → printed (shipped direction cascade, unchanged) |
+| space-motion velocity | PM from whichever tier direction selected → spine printed `pm_ra`/`pm_dec` + `rv` (shipped assembly, unchanged) |
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → spine printed (shipped stack, unchanged) |
 | V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside the transform's validity → printed HIP V (`I/239` Vmag) → spine `mag` |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |

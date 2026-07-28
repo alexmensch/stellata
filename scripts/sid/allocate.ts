@@ -5,8 +5,13 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { loadCatalog } from '../catalog/catalog-lookup';
+import {
+  DEFAULT_ROW_INDEX_MAP,
+  DEFAULT_SEARCH_INDEX,
+  loadCatalog,
+} from '../catalog/catalog-lookup';
 import { FLAG_IS_SOL, type SearchEntry } from '../catalog/catalog-pure';
+import { catalogRecordDesignations } from './catalog-designations';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   LEDGER_HEADER,
@@ -21,7 +26,6 @@ import {
   parseSolObjectsTsv,
   parseShellObjectsTsv,
   serializeLedgerRow,
-  starDesignations,
   validateLedger,
   validateReinstatements,
   validateRetirements,
@@ -47,37 +51,18 @@ function requireFile(path: string, hint: string): string {
 async function collectObjects(): Promise<{ objects: SidObject[]; starCount: number }> {
   const catalog = await loadCatalog();
   const searchIndex = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'search-index.json'), 'run pnpm run build:catalog'),
+    requireFile(DEFAULT_SEARCH_INDEX, 'run pnpm run build:catalog'),
   ) as SearchEntry[];
   const rowIndexMap = JSON.parse(
-    requireFile(resolve(PUBLIC_DIR, 'catalog-row-index-map.json'), 'run pnpm run build:catalog'),
+    requireFile(DEFAULT_ROW_INDEX_MAP, 'run pnpm run build:catalog'),
   ) as { bySynth: Record<string, number> };
-
-  const hd = new Map<number, number>();
-  const hr = new Map<number, number>();
-  const gl = new Map<number, string>();
-  for (const e of searchIndex) {
-    if (e.hd !== undefined) hd.set(e.i, e.hd);
-    if (e.hr !== undefined) hr.set(e.i, e.hr);
-    if (e.gl !== undefined) gl.set(e.i, e.gl);
-  }
-  const synthByIndex = new Map<number, string>();
-  for (const [key, i] of Object.entries(rowIndexMap.bySynth)) synthByIndex.set(i, key);
 
   const objects: SidObject[] = [];
   let solRecords = 0;
-  for (const r of catalog.records()) {
+  for (const r of catalogRecordDesignations(catalog, searchIndex, rowIndexMap.bySynth)) {
     if (r.flags & FLAG_IS_SOL) solRecords++;
     objects.push({
-      designations: starDesignations({
-        isSol: (r.flags & FLAG_IS_SOL) !== 0,
-        hip: r.hip,
-        hd: hd.get(r.i) ?? null,
-        hr: hr.get(r.i) ?? null,
-        gl: gl.get(r.i) ?? null,
-        gaiaSourceId: r.gaiaSourceId !== null ? r.gaiaSourceId.toString() : null,
-        syntheticId: synthByIndex.get(r.i) ?? null,
-      }),
+      designations: r.designations,
       kind: 'star',
       label: `record ${r.i}${r.name ? ` (${r.name})` : ''}`,
     });

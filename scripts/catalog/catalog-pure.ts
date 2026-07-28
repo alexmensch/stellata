@@ -1316,6 +1316,11 @@ export const FLAG_BINARY_COMPANION_ONLY = FLAGS.binaryCompanionOnly;
 export const FLAG_BINARY_PRIMARY = FLAGS.binaryPrimary;
 export const FLAG_BINARY_COMPANION_SYNTHETIC = FLAGS.binaryCompanionSynthetic;
 
+/** Sol is the one record addressable only by its proper name — it carries no
+ *  HIP, Gaia source_id, or SIMBAD row — so `FLAG_IS_SOL` and its `sol:sun`
+ *  designation both key off this exact string. */
+export const SOL_PROPER_NAME = 'Sol';
+
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.
  *  The reservation is pinned by a regression test: drifting RESERVED into
