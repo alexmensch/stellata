@@ -8,8 +8,9 @@ inverts is `../tonemap.glsl`.
 ```
 src/client/hdr/chrome/
   chrome-colour.ts (+ test)  The two setters, the module-level registry of
-                             live bindings, and the operator-active flag
-                             that re-authors all of them.
+                             live bindings, and the two pieces of operator
+                             state — active flag and white point — that
+                             re-author all of them on change.
 ```
 
 Galactic disc, the coordinate spheres, LG wireframes, the constellation
@@ -75,9 +76,10 @@ Two consequences worth knowing before touching this:
   composite in linear light instead of display space, so a translucent
   line over a non-black background lands slightly differently even
   though the line-over-black case is exact. Accepted by the design gate.
-- **The mapping is baked at set-time against the default white point.**
-  When H8 makes `DR_MAG` live on the debug panel, every chrome colour
-  must be re-mapped on change or chrome will drift while the physical
-  layers track. That re-application is H8's, not something this module
-  does today.
+- **The mapping is baked at set-time against a white point this module
+  holds**, and `setChromeWhitePoint` is what keeps it honest: `DR_MAG` is
+  a live dev knob (`../README.md` § Dev switches), it moves the curve
+  every physical layer runs through, and chrome left on the old white
+  point would drift against them. `HdrPipeline.syncMode` writes it
+  alongside the operator-active flag, so the two can never disagree.
 

@@ -1885,6 +1885,15 @@ export class Stellata implements FrameAnchor {
     this.hdr.setTonemapEnabled(on);
   }
 
+  /** The operator's two shape knobs, live, for probing the display axis by
+   *  eye — `DR_MAG` (magnitudes from the threshold floor to full white)
+   *  and the highlight desaturation strength. Both re-author chrome, since
+   *  its mapping inverts against the white point `DR_MAG` sets. */
+  setDynamicRangeMag(drMag: number) { this.hdr.setDynamicRangeMag(drMag); }
+  getDynamicRangeMag(): number { return this.hdr.getDynamicRangeMag(); }
+  setHighlightDesat(desat: number) { this.hdr.setHighlightDesat(desat); }
+  getHighlightDesat(): number { return this.hdr.getHighlightDesat(); }
+
   /** Direct access to the Milky Way layer for dev-console tuning
    *  (e.g. `stellata.milkywayLayer.setGlowMagOffset(30)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }

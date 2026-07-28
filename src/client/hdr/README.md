@@ -310,6 +310,19 @@ the default path and the operator runs once, at the resolve.
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through. Narrower: it isolates the target
   itself (depth, alpha, blend precision, pass order) from the operator.
+- `stellata.setDynamicRangeMag(x)` / `stellata.setHighlightDesat(x)` — the
+  operator's two shape knobs, live, for probing the display axis by eye.
+  Both route through `syncMode`, which is what re-authors every chrome
+  colour against the new white point (`chrome/README.md`).
+
+**What `DR_MAG` does and does not buy.** Extended Reinhard is
+`L(1 + L/Lw²)/(1 + L)`, which is already at 0.95 of full scale by `L` = 20
+*whatever* `Lw` is — so raising `DR_MAG` buys hue survival at the top end
+and almost no visible gradient. Detail up there needs a longer
+**shoulder**, not a higher white point, and any replacement curve must
+stay analytically invertible: `tonemap-pure.ts` carries the exact inverse
+and `chrome/` depends on it, which rules out ACES and filmic fits. A
+piecewise log shoulder is invertible; that is the shape to reach for.
 
 **Pass-through shows the scene blown out, and that is the point of it** —
 `uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
@@ -365,10 +378,10 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 ## Not here yet
 
-`DR_MAG`, `L_THRESH` and the desaturation strength become live panel
-knobs in H8, which then has to re-apply the chrome mapping on every
-change (`chrome/README.md`). `DR_MAG` is also the faint-end lever H7 tunes against
-the eso0932a panorama — it moves the star field and the Milky Way band
+`DR_MAG` and the desaturation strength are live **dev-console** setters
+(§ Dev switches); H8 puts them on the panel, alongside `L_THRESH`, which
+is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
+eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
 The one emitter still outside the scale is the shelved Local Group

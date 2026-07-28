@@ -9,8 +9,6 @@ import {
   type Rgb,
 } from '../tonemap-pure';
 
-const WHITE_POINT = tonemapWhitePoint();
-
 type ChromeVariant = 'builtin' | 'raw';
 
 interface ChromeBinding {
@@ -26,6 +24,12 @@ interface ChromeBinding {
 const bindings = new Map<THREE.Color, ChromeBinding>();
 
 let operatorActive = true;
+/** The white point the mapping inverts against. It has to track the
+ *  operator's live value, not the default: a `DR_MAG` change moves the
+ *  curve every physical layer runs through, and chrome mapped against a
+ *  stale white point drifts against them. `HdrPipeline.syncMode` is the
+ *  only writer. */
+let whitePoint = tonemapWhitePoint();
 
 function srgbFromHex(hex: number): Rgb {
   return [((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255];
@@ -40,8 +44,12 @@ function apply(target: THREE.Color, binding: ChromeBinding): THREE.Color {
   const authored = srgbFromHex(binding.hex);
   const linearDisplay =
     binding.variant === 'raw' ? decode(decode(authored)) : decode(authored);
-  const [r, g, b] = inverseTonemapConstant(linearDisplay, WHITE_POINT);
+  const [r, g, b] = inverseTonemapConstant(linearDisplay, whitePoint);
   return target.setRGB(r, g, b, THREE.LinearSRGBColorSpace);
+}
+
+function reauthorAll(): void {
+  for (const [target, binding] of bindings) apply(target, binding);
 }
 
 function bind(
@@ -87,7 +95,17 @@ export function setRawChromeColour(
 export function setChromeOperatorActive(on: boolean): void {
   if (operatorActive === on) return;
   operatorActive = on;
-  for (const [target, binding] of bindings) apply(target, binding);
+  reauthorAll();
+}
+
+/** Re-author every registered chrome colour against a new white point.
+ *  The mapping is baked at set-time, so a live `DR_MAG` change has to
+ *  reach every existing binding or chrome drifts while the physical
+ *  layers track the new curve. */
+export function setChromeWhitePoint(lw: number): void {
+  if (whitePoint === lw) return;
+  whitePoint = lw;
+  reauthorAll();
 }
 
 /** Test seam — the module-level registry otherwise leaks state between
@@ -95,4 +113,5 @@ export function setChromeOperatorActive(on: boolean): void {
 export function clearChromeBindings(): void {
   bindings.clear();
   operatorActive = true;
+  whitePoint = tonemapWhitePoint();
 }
