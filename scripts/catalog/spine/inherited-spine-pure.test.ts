@@ -78,7 +78,8 @@ describe('serializeSpine / parseSpineTsv', () => {
 
   it('rejects a row whose cell count disagrees with the header', () => {
     const text = `${SPINE_COLUMNS.join('\t')}\n1\t2\n`;
-    expect(() => parseSpineTsv(text)).toThrow(/expected 24/);
+    expect(() => parseSpineTsv(text))
+      .toThrow(new RegExp(`expected ${SPINE_COLUMNS.length}`));
   });
 });
 

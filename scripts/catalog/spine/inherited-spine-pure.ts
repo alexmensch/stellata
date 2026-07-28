@@ -8,6 +8,8 @@ import type { Star } from '../parse/stars-parse';
 /** Repo-relative, so the generator and the committed-artifact guard resolve
  *  one path against REPO_ROOT rather than spelling it twice. */
 export const INHERITED_SPINE_FILE = 'data/athyg/inherited-spine.tsv';
+export const INHERITED_SPINE_EXPECTED_FILE =
+  'scripts/catalog/spine/inherited-spine-expected.json';
 
 /** Identifier fields the build resolved — the designation set
  *  `starDesignations` reads, plus the label columns the naming ladder will. */
