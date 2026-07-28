@@ -96,6 +96,173 @@ function referenceUpStub(up: [number, number, number] = GN_UP) {
   };
 }
 
+// Duck-typed THREE.Vector3 — url-state only ever reads x/y/z and calls
+// set/normalize, so the wire suite stays independent of THREE.
+function mockVec3(x = 0, y = 0, z = 0) {
+  return {
+    x, y, z,
+    set(nx: number, ny: number, nz: number) {
+      this.x = nx; this.y = ny; this.z = nz;
+      return this;
+    },
+    normalize() { return this; },
+  };
+}
+
+// Fixture catalog: idx 0 = Sol (sid 100); idx 1 = HIP 32349 / sid 101;
+// idx 2 = no-HIP / sid 102; idx 3 = HIP 91262 / sid 103. Two clouds with
+// sids 201/202.
+const STAR_SIDS = [100, 101, 102, 103];
+const STAR_HIPS = [0, 32349, 0, 91262];
+const CLOUD_SIDS = [201, 202];
+
+type PlanetTranslation = Pick<IdMaps, 'planetDomainIndexOf' | 'planetTargetIndexOf'>;
+
+const NO_PLANET_HOST: PlanetTranslation = {
+  planetDomainIndexOf: () => null,
+  planetTargetIndexOf: () => null,
+};
+
+// Planet SID domain indices offset from the flat PlanetBodyField Target
+// indices, so a test that passes this exercises both translation legs
+// rather than an identity mapping that would hide a missing one.
+function planetTranslation(domainCount: number, flatOffset: number): PlanetTranslation {
+  return {
+    planetDomainIndexOf: (t) =>
+      t - flatOffset >= 0 && t - flatOffset < domainCount ? t - flatOffset : null,
+    planetTargetIndexOf: (d) => (d >= 0 && d < domainCount ? d + flatOffset : null),
+  };
+}
+
+// Fixture IdMaps over a star catalog. `sidResolver` defaults to a settled
+// star-only resolver; pass one to add domains (planet / probe / cloud) or
+// to leave a rostered domain unattached. `hips` is the row→HIP column
+// (0 = no HIP) and seeds both directions of the legacy HIP maps.
+function makeIdMaps({
+  starSids = STAR_SIDS,
+  hips = [],
+  sidResolver = makeResolver(starSids),
+  planet = NO_PLANET_HOST,
+}: {
+  starSids?: number[];
+  hips?: number[];
+  sidResolver?: SidResolver;
+  planet?: PlanetTranslation;
+} = {}): IdMaps {
+  const indexToHip = new Uint32Array(starSids.length);
+  const hipToIndex = new Map<number, number>();
+  hips.forEach((hip, i) => {
+    if (hip === 0) return;
+    indexToHip[i] = hip;
+    hipToIndex.set(hip, i);
+  });
+  return {
+    hipToIndex,
+    indexToHip,
+    starCount: starSids.length,
+    solIndex: 0,
+    sidResolver,
+    ...planet,
+  };
+}
+
+/** The fixture build: 4 stars with HIPs + 2 clouds, both domains settled. */
+function makeFixtureBuild(starSids = STAR_SIDS): IdMaps {
+  const sidResolver = new SidResolver(['star', 'cloud']);
+  sidResolver.attach('star', arrayDomain(starSids));
+  sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+  return makeIdMaps({ starSids, hips: STAR_HIPS, sidResolver });
+}
+
+// Mock Stellata that records what the URL layer dispatched onto it —
+// enough for the apply → re-encode round-trips (focus / vector / POI /
+// mode), which the getter-only mock in the cam-omission block can't drive.
+function makeStatefulStellata() {
+  const state = {
+    focusedStar: 0 as number | null, // Sol default focus
+    focusedCloud: null as number | null,
+    focusedPlanet: null as number | null,
+    focusedProbe: null as number | null,
+    vectorTo: null as number | null,
+    vectorToCloud: null as number | null,
+    pois: [] as Target[],
+    mode: 'navigate' as 'navigate' | 'observe',
+  };
+  const clearFocus = () => {
+    state.focusedStar = null;
+    state.focusedCloud = null;
+    state.focusedPlanet = null;
+    state.focusedProbe = null;
+  };
+  const setFocusSlot = (t: Target) => {
+    if (t.kind === 'star') state.focusedStar = t.idx;
+    else if (t.kind === 'planet') state.focusedPlanet = t.idx;
+    else if (t.kind === 'probe') state.focusedProbe = t.idx;
+    else state.focusedCloud = t.idx;
+  };
+  const stub: Partial<Stellata> = {
+    getFilter: () => ({ ...DEFAULT_FILTER }),
+    setFilter: () => {},
+    applyMagnitudePreset: () => {},
+    getCameraFov: () => DEFAULT_FOV,
+    setCameraFov: () => {},
+    getT: () => Date.now() / 1000,
+    setT: () => {},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getWorldOffset: () => mockVec3() as any,
+    setWorldOffset: () => {},
+    getFocusedStar: () => state.focusedStar,
+    getFocusedTarget: () => {
+      if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
+      if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
+      if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
+      if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
+      return null;
+    },
+    getVectorTarget: () => {
+      if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
+      if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
+      return null;
+    },
+    getPois: () => state.pois,
+    getCameraMode: () => state.mode,
+    setCameraMode: (m) => { state.mode = m; },
+    focusStar: (idx) => { clearFocus(); state.focusedStar = idx; },
+    setOrbitTarget: (t) => { clearFocus(); setFocusSlot(t); },
+    unfocus: () => {
+      state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
+    },
+    flyTo: (t) => { clearFocus(); setFocusSlot(t); },
+    setVector: (t) => {
+      if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
+      else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
+      else { state.vectorToCloud = t.idx; state.vectorTo = null; }
+    },
+    setPois: (l) => { state.pois = [...l]; },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    camera: { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    referenceUp: referenceUpStub() as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    controls: { target: mockVec3(), update() {} } as any,
+  };
+  return { stellata: stub as Stellata, state };
+}
+
+// Decode a blob, apply it, re-encode the resulting live state — the
+// applyFromUrl upgrade path minus the debounce.
+function migrate(blob: string, idMaps = makeFixtureBuild()) {
+  const { stellata, state } = makeStatefulStellata();
+  applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+  const re = decodeBlob(encodeBlob(currentStateOf(stellata, idMaps)));
+  return { state, re };
+}
+
+/** v1/v2's 3-byte little-endian star ref / POI id. */
+function u24(val: number): number[] {
+  return [val & 0xff, (val >>> 8) & 0xff, (val >>> 16) & 0xff];
+}
+
 describe('url-state', () => {
   describe('empty view', () => {
     it('encodes to a 2-byte (version + 1-byte LEB128 mask) blob', () => {
@@ -811,15 +978,7 @@ describe('url-state', () => {
       return stub as Stellata;
     }
 
-    const idMaps: IdMaps = {
-      hipToIndex: new Map(),
-      indexToHip: new Uint32Array(1),
-      starCount: 1,
-      solIndex: 0,
-      sidResolver: makeResolver(),
-      planetDomainIndexOf: () => null,
-      planetTargetIndexOf: () => null,
-    };
+    const idMaps = makeIdMaps({ starSids: [100] });
 
     it('omits cam when observe-mode camera is parked at the focal-star origin', () => {
       // PR #1's optimisation: cam=[0,0,0] is the floating-origin local
@@ -1222,123 +1381,6 @@ describe('url-state', () => {
     // mock Stellata: decode a legacy blob, applyDecodedView, then
     // currentStateOf → encodeBlob and assert the v4 wire.
 
-    function migrationVec3(x = 0, y = 0, z = 0) {
-      return {
-        x, y, z,
-        set(nx: number, ny: number, nz: number) {
-          this.x = nx; this.y = ny; this.z = nz;
-          return this;
-        },
-        normalize() { return this; },
-      };
-    }
-
-    // Fixture catalog: idx 0 = Sol (sid 100); idx 1 = HIP 32349 / sid
-    // 101; idx 2 = no-HIP / sid 102; idx 3 = HIP 91262 / sid 103. Two
-    // clouds with sids 201/202.
-    const STAR_SIDS = [100, 101, 102, 103];
-    const CLOUD_SIDS = [201, 202];
-
-    function makeMigrationIdMaps(): IdMaps {
-      const sidResolver = new SidResolver(['star', 'cloud']);
-      sidResolver.attach('star', arrayDomain(STAR_SIDS));
-      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
-      return {
-        hipToIndex: new Map([[32349, 1], [91262, 3]]),
-        indexToHip: new Uint32Array([0, 32349, 0, 91262]),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
-        sidResolver,
-        planetDomainIndexOf: () => null,
-        planetTargetIndexOf: () => null,
-      };
-    }
-
-    function makeStatefulStellata() {
-      const state = {
-        focusedStar: 0 as number | null, // Sol default focus
-        focusedCloud: null as number | null,
-        focusedPlanet: null as number | null,
-        focusedProbe: null as number | null,
-        vectorTo: null as number | null,
-        vectorToCloud: null as number | null,
-        pois: [] as Target[],
-        mode: 'navigate' as 'navigate' | 'observe',
-      };
-      const clearFocus = () => {
-        state.focusedStar = null;
-        state.focusedCloud = null;
-        state.focusedPlanet = null;
-        state.focusedProbe = null;
-      };
-      const setFocusSlot = (t: Target) => {
-        if (t.kind === 'star') state.focusedStar = t.idx;
-        else if (t.kind === 'planet') state.focusedPlanet = t.idx;
-        else if (t.kind === 'probe') state.focusedProbe = t.idx;
-        else state.focusedCloud = t.idx;
-      };
-      const stub: Partial<Stellata> = {
-        getFilter: () => ({ ...DEFAULT_FILTER }),
-        setFilter: () => {},
-        applyMagnitudePreset: () => {},
-        getCameraFov: () => DEFAULT_FOV,
-        setCameraFov: () => {},
-        getT: () => Date.now() / 1000,
-        setT: () => {},
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getWorldOffset: () => migrationVec3() as any,
-        setWorldOffset: () => {},
-        getFocusedStar: () => state.focusedStar,
-        getFocusedTarget: () => {
-          if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
-          if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
-          if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
-          if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
-          return null;
-        },
-        getVectorTarget: () => {
-          if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
-          if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
-          return null;
-        },
-        getPois: () => state.pois,
-        getCameraMode: () => state.mode,
-        setCameraMode: (m) => { state.mode = m; },
-        focusStar: (idx) => { clearFocus(); state.focusedStar = idx; },
-        setOrbitTarget: (t) => { clearFocus(); setFocusSlot(t); },
-        unfocus: () => {
-          state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
-        },
-        flyTo: (t) => { clearFocus(); setFocusSlot(t); },
-        setVector: (t) => {
-          if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
-          else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
-          else { state.vectorToCloud = t.idx; state.vectorTo = null; }
-        },
-        setPois: (l) => { state.pois = [...l]; },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        camera: { position: migrationVec3(0, 0, 30), up: migrationVec3(...GN_UP) } as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        referenceUp: referenceUpStub() as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        controls: { target: migrationVec3(), update() {} } as any,
-      };
-      return { stellata: stub as Stellata, state };
-    }
-
-    // Decode a legacy blob, apply it, re-encode the resulting live
-    // state — the applyFromUrl upgrade path minus the debounce.
-    function migrate(blob: string, idMaps = makeMigrationIdMaps()) {
-      const { stellata, state } = makeStatefulStellata();
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
-      const re = decodeBlob(encodeBlob(currentStateOf(stellata, idMaps)));
-      return { state, re };
-    }
-
-    function u24(val: number): number[] {
-      return [val & 0xff, (val >>> 8) & 0xff, (val >>> 16) & 0xff];
-    }
-
     it('HIP focus migrates exactly: hip → index → sid', () => {
       const blob = buildV2Blob(1 << 14, new Uint8Array(u24((32349 | 0x800000) >>> 0)));
       const { state, re } = migrate(blob);
@@ -1429,15 +1471,7 @@ describe('url-state', () => {
       // fire on the attach, not throw or drop.
       const sidResolver = new SidResolver(['star', 'cloud']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
-      const idMaps: IdMaps = {
-        hipToIndex: new Map(),
-        indexToHip: new Uint32Array(STAR_SIDS.length),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
-        sidResolver,
-        planetDomainIndexOf: () => null,
-        planetTargetIndexOf: () => null,
-      };
+      const idMaps = makeIdMaps({ sidResolver });
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
       applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
@@ -1448,27 +1482,16 @@ describe('url-state', () => {
 
     it('planet focus round-trips: sid on the wire, flat Target index in the runtime', () => {
       // The planet SID domain is keyed planet-within-host; the Target
-      // currency is the body field's flat instance index. A deliberate
-      // offset between the two spaces pins that both directions of the
-      // IdMaps translation actually run.
+      // currency is the body field's flat instance index.
       const PLANET_SIDS = [901, 902, 903];
       const FLAT_OFFSET = 5;
       const sidResolver = new SidResolver(['star', 'planet']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
       sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
-      const idMaps: IdMaps = {
-        hipToIndex: new Map(),
-        indexToHip: new Uint32Array(STAR_SIDS.length),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
+      const idMaps = makeIdMaps({
         sidResolver,
-        planetDomainIndexOf: (t) =>
-          t - FLAT_OFFSET >= 0 && t - FLAT_OFFSET < PLANET_SIDS.length
-            ? t - FLAT_OFFSET
-            : null,
-        planetTargetIndexOf: (d) =>
-          d >= 0 && d < PLANET_SIDS.length ? d + FLAT_OFFSET : null,
-      };
+        planet: planetTranslation(PLANET_SIDS.length, FLAT_OFFSET),
+      });
       // Encoder: focused planet at flat idx 7 → domain 2 → sid 903.
       const tx = makeStatefulStellata();
       tx.state.focusedStar = null;
@@ -1491,15 +1514,7 @@ describe('url-state', () => {
       const sidResolver = new SidResolver(['star', 'probe']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
       sidResolver.attach('probe', arrayDomain(PROBE_SIDS));
-      const idMaps: IdMaps = {
-        hipToIndex: new Map(),
-        indexToHip: new Uint32Array(STAR_SIDS.length),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
-        sidResolver,
-        planetDomainIndexOf: () => null,
-        planetTargetIndexOf: () => null,
-      };
+      const idMaps = makeIdMaps({ sidResolver });
       const tx = makeStatefulStellata();
       tx.state.focusedStar = null;
       tx.state.focusedProbe = 1;
@@ -1529,19 +1544,10 @@ describe('url-state', () => {
       const sidResolver = new SidResolver(['star', 'planet']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
       sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
-      const idMaps: IdMaps = {
-        hipToIndex: new Map(),
-        indexToHip: new Uint32Array(STAR_SIDS.length),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
+      const idMaps = makeIdMaps({
         sidResolver,
-        planetDomainIndexOf: (t) =>
-          t - FLAT_OFFSET >= 0 && t - FLAT_OFFSET < PLANET_SIDS.length
-            ? t - FLAT_OFFSET
-            : null,
-        planetTargetIndexOf: (d) =>
-          d >= 0 && d < PLANET_SIDS.length ? d + FLAT_OFFSET : null,
-      };
+        planet: planetTranslation(PLANET_SIDS.length, FLAT_OFFSET),
+      });
       // Encoder: star idx 1 → its sid; planet flat idx 6 → domain 1 →
       // sid 902. Order preserved.
       const tx = makeStatefulStellata();
@@ -1566,15 +1572,7 @@ describe('url-state', () => {
       const sidResolver = new SidResolver(['star', 'planet']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
       sidResolver.attach('planet', arrayDomain(PLANET_SIDS));
-      const idMaps: IdMaps = {
-        hipToIndex: new Map(),
-        indexToHip: new Uint32Array(STAR_SIDS.length),
-        starCount: STAR_SIDS.length,
-        solIndex: 0,
-        sidResolver,
-        planetDomainIndexOf: () => null,
-        planetTargetIndexOf: () => null, // host never attached
-      };
+      const idMaps = makeIdMaps({ sidResolver }); // host never attached
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 901 }, mag: 9 });
       applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
@@ -1646,27 +1644,7 @@ describe('url-state', () => {
 // scrub on a still camera exercises. Needs mocked location/history/window
 // because url-state.ts reads/writes them directly in the node test env.
 describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () => {
-  function vec3(x = 0, y = 0, z = 0) {
-    return {
-      x, y, z,
-      set(nx: number, ny: number, nz: number) { this.x = nx; this.y = ny; this.z = nz; return this; },
-      normalize() { return this; },
-    };
-  }
-
-  function makeIdMaps(): IdMaps {
-    const sidResolver = new SidResolver(['star']);
-    sidResolver.attach('star', arrayDomain([100]));
-    return {
-      hipToIndex: new Map(),
-      indexToHip: new Uint32Array([0]),
-      starCount: 1,
-      solIndex: 0,
-      sidResolver,
-      planetDomainIndexOf: () => null,
-      planetTargetIndexOf: () => null,
-    };
-  }
+  const syncIdMaps = () => makeIdMaps({ starSids: [100] });
 
   // Live wall-clock t (isLive ⇒ omitted from the blob); a scrubbed t sits
   // well outside the 1 s live tolerance.
@@ -1682,8 +1660,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       pois: [] as Target[],
       transition: false,
     };
-    const cam = { position: vec3(0, 0, 30), up: vec3(...GN_UP) };
-    const controls = { target: vec3(0, 0, 0), update() {} };
+    const cam = { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) };
+    const controls = { target: mockVec3(0, 0, 0), update() {} };
     const referenceUp = referenceUpStub();
     const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
     const stub: Partial<Stellata> = {
@@ -1695,7 +1673,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       getT: () => state.t,
       setT: (t) => { if (t !== null) state.t = t; },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getWorldOffset: () => vec3() as any,
+      getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
       getFocusedStar: () => state.focusedStar,
       getFocusedTarget: () => (state.focusedStar !== null ? { kind: 'star', idx: state.focusedStar } : null),
@@ -1755,7 +1733,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('strips a bogus non-share path back to bare /', () => {
       const { loc, replaceState } = installUrl('/garbage');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(replaceState).toHaveBeenCalledWith(null, '', '/');
       expect(loc.pathname).toBe('/');
     });
@@ -1764,7 +1742,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
       const { loc } = installUrl('/v/_w/');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(loc.pathname).toBe('/');
       expect(loc.search).toBe('');
     });
@@ -1772,7 +1750,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('strips a stray/undecodable ?v= query', () => {
       const { loc } = installUrl('/?v=_w');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(loc.pathname).toBe('/');
       expect(loc.search).toBe('');
     });
@@ -1780,7 +1758,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('leaves a clean / untouched (no history write)', () => {
       const { replaceState } = installUrl('/');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, makeIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(replaceState).not.toHaveBeenCalled();
     });
   });
@@ -1790,7 +1768,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       const blob = encodeBlob({ fov: 90 }); // non-default (DEFAULT_FOV = 50)
       const { loc, replaceState } = installUrl(`/?v=${blob}`);
       const { stellata, state } = makeSyncStellata();
-      expect(applyFromUrl(stellata, makeIdMaps())).toBe(true);
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
       expect(state.fov).toBe(90);
       // Address-bar rewrite is deferred to the shared debounce window.
       expect(replaceState).not.toHaveBeenCalled();
@@ -1805,7 +1783,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('writes a /v/<blob>/ when time is scrubbed on a still camera', () => {
       const { loc } = installUrl('/');
       const { stellata, state, frame } = makeSyncStellata();
-      startUrlSync(stellata, makeIdMaps());
+      startUrlSync(stellata, syncIdMaps());
       state.t = scrubbedT();        // scrub without moving the camera
       frame();
       vi.advanceTimersByTime(1000);
@@ -1815,7 +1793,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('does not write while the live clock advances (t stays live)', () => {
       const { replaceState } = installUrl('/');
       const { stellata, state, frame } = makeSyncStellata();
-      startUrlSync(stellata, makeIdMaps());
+      startUrlSync(stellata, syncIdMaps());
       state.t = liveT();            // still within the 1 s live tolerance
       frame();
       vi.advanceTimersByTime(1000);
@@ -1825,7 +1803,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('does not write scrubbed time while a camera transition is active', () => {
       const { replaceState } = installUrl('/');
       const { stellata, state, frame } = makeSyncStellata();
-      startUrlSync(stellata, makeIdMaps());
+      startUrlSync(stellata, syncIdMaps());
       state.transition = true;
       state.t = scrubbedT();
       frame();
@@ -1836,7 +1814,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('still writes on a camera move (detector refactor intact)', () => {
       const { loc } = installUrl('/');
       const { stellata, cam, frame } = makeSyncStellata();
-      startUrlSync(stellata, makeIdMaps());
+      startUrlSync(stellata, syncIdMaps());
       cam.position.set(0, 0, 0);    // off the [0,0,30] navigate default
       frame();
       vi.advanceTimersByTime(1000);
