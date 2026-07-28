@@ -38,6 +38,7 @@ import {
   planetApparentMagnitude,
 } from '../perceptual-magnitude';
 import { drawCutoffMag } from '../../hdr/exposure-epoch';
+import type { LuminanceSample } from '../../hdr/scene-adaptation-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -46,7 +47,7 @@ import {
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
-import { projectToScreen } from '../../overlays/overlay-project';
+import { projectToScreen, projectToScreenInto } from '../../overlays/overlay-project';
 import {
   blendDimBuffer,
   dimBlendFactor,
@@ -249,6 +250,13 @@ export class PlanetBodyField {
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
+  // Scratch owned by forEachDrawnBody: valid only inside one `visit`
+  // call, which is why the sample is documented as read-then-drop.
+  private sampleTmp = new THREE.Vector3();
+  private screenTmp: [number, number] = [0, 0];
+  private adaptationSample: LuminanceSample = {
+    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0, fluxScale: 1, label: null,
+  };
 
   constructor(
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
@@ -961,7 +969,6 @@ export class PlanetBodyField {
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
     const viewportH = rect.height;
-    const cutoff = this.drawCutoffMag();
     const camPos = camera.position;
 
     // Walk every host × planet and collect candidates that qualify for
@@ -974,41 +981,32 @@ export class PlanetBodyField {
     // returned HoverHit; no post-reduce re-projection.
     const candidates: CrossHostCandidate[] = [];
     const v = new THREE.Vector3();
-    for (const host of this.hosts.values()) {
-      for (let i = 0; i < host.count; i++) {
-        const view = this.evalPlanetView(host, i, camPos);
-        const { appMag, planetX, planetY, planetZ, dVp } = view;
-        if (dVp <= 0) continue;
-        // Same kill condition as the planet vertex shader: past the
-        // cutoff the GPU emits no quad and the hover can't pick what
-        // isn't drawn. Chart mode hard-clips (no soft taper) — same
-        // rule Picker.pickStar applies there.
-        if (appMag > cutoff) continue;
-        // A body collapsed onto its parent renders as one point with
-        // it — that point's pick belongs to the parent (the star
-        // picker for a host, the parent planet's own candidacy for a
-        // moon), so the member is not individually pickable.
-        if (this.isViewCollapsedOntoParent(host, i, view, camera)) continue;
+    this.forEachDrawnBodyView(camPos, (host, i, view) => {
+      const { appMag, planetX, planetY, planetZ, dVp } = view;
+      // A body collapsed onto its parent renders as one point with
+      // it — that point's pick belongs to the parent (the star
+      // picker for a host, the parent planet's own candidacy for a
+      // moon), so the member is not individually pickable.
+      if (this.isViewCollapsedOntoParent(host, i, view, camera)) return;
 
-        v.set(planetX, planetY, planetZ);
-        const screen = projectToScreen(v, camera, viewportW, viewportH);
-        if (!screen) continue;
-        const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
+      v.set(planetX, planetY, planetZ);
+      const screen = projectToScreen(v, camera, viewportW, viewportH);
+      if (!screen) return;
+      const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
-        const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
-        const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
+      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+      const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
+      const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
-        if (pxDist > hitRadius && pxDist > pxThreshold) continue;
-        candidates.push({
-          idx: i,
-          pxDist,
-          hitRadius,
-          hostStarIdx: host.hostStarIdx,
-          cameraDistancePc: dVp,
-        });
-      }
-    }
+      if (pxDist > hitRadius && pxDist > pxThreshold) return;
+      candidates.push({
+        idx: i,
+        pxDist,
+        hitRadius,
+        hostStarIdx: host.hostStarIdx,
+        cameraDistancePc: dVp,
+      });
+    });
 
     const winner = pickFromCandidates(candidates, pxThreshold);
     if (winner === null) return null;
@@ -1018,6 +1016,62 @@ export class PlanetBodyField {
       cameraDistancePc: winner.candidate.cameraDistancePc,
       tier: winner.tier,
     };
+  }
+
+  /**
+   * Every body the GPU emits a quad for this frame, with the view the
+   * shader derives from. The gate is the vertex shader's own kill
+   * condition — a positive viewer distance and `appMag` inside the soft
+   * taper (chart hard-clips instead) — so no consumer can pick, light,
+   * or measure a body that isn't drawn. The whole field is skipped while
+   * it renders nothing at all.
+   */
+  private forEachDrawnBodyView(
+    cameraPosLocal: Readonly<THREE.Vector3>,
+    visit: (host: AttachedHost, planetIdx: number, view: PlanetView) => void,
+  ): void {
+    if (this.hidden) return;
+    const cutoff = this.drawCutoffMag();
+    for (const host of this.hosts.values()) {
+      for (let i = 0; i < host.count; i++) {
+        const view = this.evalPlanetView(host, i, cameraPosLocal);
+        if (view.dVp <= 0 || view.appMag > cutoff) continue;
+        visit(host, i, view);
+      }
+    }
+  }
+
+  /**
+   * The body term of the exposure-adaptation statistic
+   * (`../../hdr/README.md` § Adaptation): each drawn body's true flux and
+   * TRUE angular footprint. `physSize` deliberately, never the rendered
+   * `max(appSize, physSize)` — the perceptual glare kernel is a display
+   * exaggeration and must not drive exposure. Eclipse dim rides
+   * `fluxScale` because an eclipse is a real light loss.
+   */
+  forEachDrawnBody(
+    camera: THREE.PerspectiveCamera,
+    viewportW: number,
+    viewportH: number,
+    visit: (sample: LuminanceSample) => void,
+  ): void {
+    const s = this.adaptationSample;
+    this.forEachDrawnBodyView(camera.position, (host, i, view) => {
+      const idx = host.startInstance + i;
+      if (idx === this.hideIdxUniform.value) return;
+      this.sampleTmp.set(view.planetX, view.planetY, view.planetZ);
+      if (!projectToScreenInto(this.sampleTmp, camera, viewportW, viewportH, this.screenTmp)) {
+        return;
+      }
+      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+      s.appMag = view.appMag;
+      s.diameterPx = this.discSizeTerms(radiusPc, view.dVp, view.appMag).physSize;
+      s.screenX = this.screenTmp[0];
+      s.screenY = this.screenTmp[1];
+      s.fluxScale = this.eclipseDimForInstance(idx);
+      s.label = host.ps.planets[i].name;
+      visit(s);
+    });
   }
 
   /** Local-depth-pass mirror draws (disc + glow over the active
