@@ -30,7 +30,7 @@ import {
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure-epoch';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 

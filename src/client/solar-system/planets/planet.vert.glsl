@@ -54,14 +54,14 @@ uniform float uPixelRatio;
 uniform float uFovYRad;
 
 // Magnitude bounds, shared with the star pipeline
-// (../../hdr/README.md § Exposure epochs): uCullMag is the population
+// (../../hdr/exposure/README.md § One writer, four slots): uCullMag is the population
 // bound, uLimitMag the instrument limit chart sizing and the footprint
 // window read. The fragment shader owns the taper against uThresholdMag.
 uniform float uLimitMag;
 uniform float uCullMag;
 
 // The one exposure control, bound by reference from
-// HdrPipeline.emitterUniforms (../../hdr/README.md § Exposure epochs).
+// HdrPipeline.emitterUniforms (../../hdr/README.md § Unit).
 uniform float uExposure;
 
 // Flat instance index to hide (-1 = none). The planet sibling of the

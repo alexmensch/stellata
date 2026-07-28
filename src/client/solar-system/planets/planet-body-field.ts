@@ -37,8 +37,8 @@ import {
   perceptualDmEff,
   planetApparentMagnitude,
 } from '../perceptual-magnitude';
-import { drawCutoffMag } from '../../hdr/exposure-epoch';
-import type { LuminanceSample } from '../../hdr/scene-adaptation-pure';
+import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
+import type { LuminanceSample } from '../../hdr/exposure/scene-adaptation-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,

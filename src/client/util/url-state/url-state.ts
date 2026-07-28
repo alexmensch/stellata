@@ -4,7 +4,7 @@ import {
   DEFAULT_FOV,
   ALL_SPECT_MASK,
 } from '../../filters/filter-state';
-import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure-epoch';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 
 /** The retired v1–v3 magnitude presets. Frozen decoders still emit these
  *  names; nothing downstream acts on them. */

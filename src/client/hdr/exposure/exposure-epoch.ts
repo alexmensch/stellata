@@ -1,10 +1,10 @@
 // The exposure model: instrument limit, scene adaptation, and the manual
 // EV trim collapsed into one scalar, plus the two magnitude bounds the
-// shaders derive from it. See README.md § Exposure epochs.
+// shaders derive from it. See README.md § The three terms.
 
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../filters/filter-state';
-import { SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
-import { L_THRESH } from './tonemap-pure';
+import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
+import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { L_THRESH } from '../tonemap-pure';
 
 /** One photographic stop in magnitudes: 2.5·log10(2). */
 export const MAG_PER_STOP = 2.5 * Math.log10(2);

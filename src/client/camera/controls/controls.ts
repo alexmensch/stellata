@@ -4,7 +4,7 @@ import {
   DEFAULT_FOV,
 } from '../../filters/filter-state';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
-import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure-epoch';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindStopControl, syncStopControl } from '../../ui/stop-control';

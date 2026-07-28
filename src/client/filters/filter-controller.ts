@@ -29,7 +29,7 @@ import {
  *  three star passes share the value objects, so a single write here
  *  propagates to every pass. The magnitude bounds and `uExposure` are
  *  NOT here — `ExposureController` owns those (`../hdr/README.md`
- *  § Exposure epochs). */
+ *  § The three terms). */
 export interface FilterUniforms {
   uMinDistSol: { value: number };
   uMaxDistSol: { value: number };

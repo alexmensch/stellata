@@ -129,9 +129,9 @@ import {
   type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
-import { ExposureController } from './hdr/exposure-controller';
-import { exposureForMagLimit } from './hdr/exposure-epoch';
-import { SceneAdaptation } from './hdr/scene-adaptation';
+import { ExposureController } from './hdr/exposure/exposure-controller';
+import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
+import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
@@ -293,7 +293,7 @@ export class Stellata implements FrameAnchor {
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
   // Owns the exposure scalar and the three magnitude bounds derived from
   // it — instrument limit, just-visible threshold, population cull
-  // (hdr/README.md § Exposure epochs).
+  // (hdr/exposure/README.md § One writer, four slots).
   private exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
@@ -2150,7 +2150,7 @@ export class Stellata implements FrameAnchor {
   getStarKMultiplier(): number { return this.filters.getStarKMultiplier(); }
   getStarKMultiplierDefault(): number { return this.filters.getStarKMultiplierDefault(); }
   /** Manual EV trim, ±EV_MAX_STOPS in stops (hdr/README.md
-   *  § Exposure epochs). */
+   *  § The three terms). */
   setEv(ev: number) { this.exposure.setEv(ev); }
   getEv(): number { return this.exposure.getEv(); }
   /** What the observer can perceive right now — instrument limit,

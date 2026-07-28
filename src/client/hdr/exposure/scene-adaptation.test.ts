@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { RenderedSizeComponents } from '../camera/controls/star-physics';
-import { luminanceForMagnitude } from './emission-pure';
+import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
+import { luminanceForMagnitude } from '../emission-pure';
 import { exposureForMagLimit } from './exposure-epoch';
 import { SceneAdaptation, type SceneAdaptationDeps } from './scene-adaptation';
 import {

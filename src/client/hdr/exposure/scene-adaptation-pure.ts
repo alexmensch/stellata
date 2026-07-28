@@ -1,8 +1,8 @@
 // Scene-driven exposure adaptation: mean visible flux per viewport
 // pixel, and the exposure cut it implies. See README.md § Adaptation.
 
-import { smoothstep } from '../galactic/galactic-fade';
-import { luminanceForMagnitude } from './emission-pure';
+import { smoothstep } from '../../galactic/galactic-fade';
+import { luminanceForMagnitude } from '../emission-pure';
 
 /**
  * Display luminance a correctly-exposed sunlit disc reads at — measured,

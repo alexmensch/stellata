@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { drawCutoffMag } from '../../hdr/exposure-epoch';
+import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';

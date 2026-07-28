@@ -10,14 +10,14 @@ import {
   sceneExposure,
   thresholdMagFor,
 } from './exposure-epoch';
-import { luminanceForMagnitude } from './emission-pure';
-import { L_THRESH } from './tonemap-pure';
+import { luminanceForMagnitude } from '../emission-pure';
+import { L_THRESH } from '../tonemap-pure';
 import {
   DEFAULT_FILTER,
   instrumentLimitMag,
   limitMagForAperture,
-} from '../filters/filter-state';
-import { SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
+} from '../../filters/filter-state';
+import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 

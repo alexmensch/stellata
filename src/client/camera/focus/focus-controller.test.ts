@@ -18,7 +18,7 @@ import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure-epoch';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';

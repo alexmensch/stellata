@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { angularToPx } from '../camera/controls/star-geometry';
+import { angularToPx } from '../../camera/controls/star-geometry';
 import {
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from './emission-pure';
+} from '../emission-pure';
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
-import { tonemapWhitePoint } from './tonemap-pure';
+import { tonemapWhitePoint } from '../tonemap-pure';
 import {
   ADAPT_NEGLIGIBLE_FRACTION,
   ADAPT_REF_COVERAGE,

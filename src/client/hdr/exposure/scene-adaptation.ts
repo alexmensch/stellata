@@ -3,10 +3,10 @@
 // § Adaptation.
 
 import * as THREE from 'three';
-import type { RenderedSizeComponents } from '../camera/controls/star-physics';
-import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
-import { projectToScreenInto } from '../overlays/overlay-project';
-import { luminanceForMagnitude } from './emission-pure';
+import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import { projectToScreenInto } from '../../overlays/overlay-project';
+import { luminanceForMagnitude } from '../emission-pure';
 import {
   adaptationDm,
   type LuminanceSample,

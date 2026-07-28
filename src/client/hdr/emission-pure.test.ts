@@ -6,7 +6,7 @@ import {
   pointSourcePeakLuminance,
   surfaceBrightnessLuminance,
 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DR_MAG, reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';

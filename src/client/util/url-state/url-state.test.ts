@@ -17,7 +17,7 @@ import {
 import type { Stellata } from '../../stellata';
 import type { Target } from '../../camera/focus/focus-target';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
-import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure-epoch';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';

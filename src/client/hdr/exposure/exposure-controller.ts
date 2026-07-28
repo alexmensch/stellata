@@ -1,10 +1,10 @@
 // Owns every write to the scene's exposure scalar and the two magnitude
-// bounds derived from it. See README.md § Exposure epochs.
+// bounds derived from it. See README.md § One writer, four slots.
 
 import {
   type InstrumentName,
   instrumentLimitMag,
-} from '../filters/filter-state';
+} from '../../filters/filter-state';
 import {
   cullMagFor,
   drawCutoffMag,

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
 import { DEFAULT_FILTER, instrumentLimitMag, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure-epoch';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeColorLutTexture } from '../blackbody-lut';
@@ -47,7 +47,7 @@ export function buildStarSharedUniforms(opts: StarSharedUniformsOptions) {
     // window, chart disc sizing and the MW chart isobar; uThresholdMag is
     // where a source lands on the just-visible floor, and is the taper
     // anchor; uCullMag is the static population bound the vertex stage
-    // culls at. `../../hdr/README.md` § Exposure epochs.
+    // culls at. `../../hdr/exposure/README.md` § One writer, four slots.
     uLimitMag: { value: baseLimitMag },
     uThresholdMag: { value: baseLimitMag },
     uCullMag: { value: cullMagFor(baseLimitMag) },
