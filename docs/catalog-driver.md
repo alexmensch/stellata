@@ -71,13 +71,26 @@ Caveats verified at the gate:
   designations.
 - **CNS5 beats hand-rolling Gliese**: modern, curated, carries
   GJ ↔ Gaia EDR3 (same source_id space as DR3) ↔ HIP directly, plus
-  component structure. V/70A (CNS3) is not ingested.
+  component structure. V/70A (CNS3) is not ingested. **CNS5 is
+  volume-limited to 25 pc**, which bounds it to ~61% of AT-HYG's `gl`
+  labels (measured at ingest, 2026-07-28): 97% of the misses lie beyond
+  25 pc, in the Gliese-Jahreiß / NLTT supplement numbering CNS5 does not
+  enumerate. Those labels come from the spine backstop, not a second
+  Gliese source.
 - V/50's 14 HD-less HR entries resolve through the spine backstop or
   are listed in the parity ledger.
 
-New frozen files land per `data/README.md`'s recipe (folder per
-source, README, refresh script under `scripts/refresh/`), with
-SCIENCE.md § Data sources rows added in the ingest PR.
+The frozen files landed in `data/classic-ids/` (plus the `I/239` V slice
+in `data/hipparcos/`), joined into a source_id-keyed overlay by
+`pnpm run build:classic-ids`. **The overlay covers 61–96% of AT-HYG's
+labels per identifier and has no row at all for 112 of the 178 stars at
+V ≤ 3** — Gaia saturates near G ≈ 3, so a source_id-keyed table
+structurally cannot carry Vega, Sirius or Betelgeuse. The spine backstop
+in § 1 is therefore load-bearing for a double-digit fraction of every
+identifier, not a rare fallback: label parity (§ 6.2) is a property of
+overlay ∪ spine and can only be gated once the spine ships.
+Per-identifier figures and the three structural bounds behind them:
+`data/classic-ids/README.md` § Coverage.
 
 ## 3. The inherited spine
 
@@ -116,12 +129,20 @@ The HIP route (IV/27A → `hipparcos2_best_neighbour`) is the
 **cross-check**, not a second authority: where both routes resolve,
 disagreement goes to the parity ledger's review queue.
 
+The cross-check is measurably small and coherent: over IV/27A's
+HD+HIP-bearing rows, 2,637 agree, **21 disagree**, 74 are HIP-only
+(measured 2026-07-28). Every disagreeing pair differs only in its low
+source_id digits — resolved close pairs where the two walks pick
+different components. They are enumerated in
+`data/classic-ids/hd_hip_route_disagreements.tsv`.
+
 **Ambiguity policy** (IV/25 `n_HD`/`n_TYC` > 1, and any designation
 covering two records): mirrors `docs/sid.md` § 4.1 — such a
 designation names a catalogue granularity, not one object. The overlay
 attaches the label to every matching record; search dispatch resolves
 to the brightest; such designations key no SID ledger row. Counts
-pinned in build-counts.
+pinned in build-counts (394 IV/25 rows flag `n_HD` > 1, 16 `n_TYC` > 1;
+after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 
 **Precedence:** mechanical overlay wins over spine designations on
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
