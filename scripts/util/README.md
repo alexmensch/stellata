@@ -18,7 +18,12 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` and
   `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
   missing) for build-idempotency checks against optional inputs.
-  `paths.test.ts` pins the `maxMtimeOfSources` cases.
+  `isLfsPointerFile(path)` probes an LFS-tracked input's head for a
+  pointer stub — the state the bare CI test job leaves it in — without
+  reading the tens of megabytes behind it; consumers are the spine
+  generator's required-inputs gate and the artifact-backed suites that
+  skip when LFS hasn't smudged. `paths.test.ts` pins the
+  `maxMtimeOfSources` cases.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
   JSON when the spec's env var is `1`. Exits non-zero on drift, since a
