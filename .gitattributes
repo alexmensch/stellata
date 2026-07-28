@@ -18,3 +18,4 @@ data/local-bubble/*.bin filter=lfs diff=lfs merge=lfs -text
 data/molecular-clouds/*.bin filter=lfs diff=lfs merge=lfs -text
 data/classic-ids/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/classic-ids/hd_hip_route_disagreements.tsv !filter !diff !merge text=auto
+data/classic-ids/rejected_bindings.tsv !filter !diff !merge text=auto

@@ -4,26 +4,37 @@ import { createReadStream, existsSync, readFileSync, writeFileSync } from 'node:
 import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 
-import { parseGaiaSourceIdStr, resolveGaiaSourceId } from '../catalog-pure';
+import {
+  parseGaiaSourceIdStr,
+  parseSimbadWdsXidsTsv,
+  resolveGaiaSourceId,
+  type SimbadWdsXidIndex,
+} from '../catalog-pure';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
+import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
 import { nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import {
   parseBsc5Tsv,
   parseCns5Tsv,
   parseCrossIndexTsv,
+  parseHipVmagTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
 import {
   athygIdOrNull,
+  bindingEvidence,
   BRIGHT_TIER_MAG_CEILING,
+  OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
   measureAthygLabelParity,
   serializeOverlay,
   type AthygLabelRow,
+  type BindingEvidence,
   type ClassicIdOverlay,
   type ClassicIdOverlayCounts,
   type HdHipRouteDisagreement,
+  type RejectedBinding,
 } from './classic-id-overlay-pure';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
@@ -35,12 +46,16 @@ const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
 const SRC_TYC_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_tyc_xmatch.tsv');
 const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_ATHYG = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
+const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
+const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
+const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_DISAGREEMENTS = resolve(
   ROOT,
   'data/classic-ids/hd_hip_route_disagreements.tsv',
 );
+const OUT_REJECTED = resolve(ROOT, 'data/classic-ids/rejected_bindings.tsv');
 const EXPECTED_COUNTS = resolve(
   ROOT,
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
@@ -62,23 +77,31 @@ function readRequired(path: string): string {
 
 async function readAthygLabelRows(
   hipToSource: ReadonlyMap<number, string>,
+  evidence: BindingEvidence,
 ): Promise<AthygLabelRow[]> {
   const parser = createReadStream(SRC_ATHYG).pipe(
     parse({ columns: true, skip_empty_lines: true, cast: false }),
   );
   const rows: AthygLabelRow[] = [];
   for await (const row of parser) {
-    // The same native-gaia → HIP-cross-walk precedence build-catalog.ts and
-    // export-astrometry-request.ts use, so parity is measured against the
-    // source_id the shipped pipeline would key this row on.
+    // The FULL resolution build-catalog.ts applies — native-gaia → HIP
+    // cross-walk precedence *and* both vetting gates. Passing the row's V and
+    // the two evidence tables is what makes this the source_id the shipped
+    // record would key on: a magnitude- or sibling-scrubbed row ships
+    // gaia_source_id = 0 and takes its labels from the spine, so measuring it
+    // against an ungated binding would score a label the record never carries.
+    const vMag = parseFloatOrNull(row.mag);
     const { gaiaSourceId } = resolveGaiaSourceId(
       parseGaiaSourceIdStr(row.gaia),
       athygIdOrNull(row.hip),
       hipToSource as Map<number, string>,
+      vMag,
+      evidence.gMagOf,
+      evidence.wdsXids,
     );
     rows.push({
       sourceId: gaiaSourceId,
-      mag: parseFloatOrNull(row.mag),
+      mag: vMag,
       hd: athygIdOrNull(row.hd),
       hip: athygIdOrNull(row.hip),
       hr: athygIdOrNull(row.hr),
@@ -90,12 +113,36 @@ async function readAthygLabelRows(
   return rows;
 }
 
+function writeTsv(path: string, header: string, rows: readonly string[]): void {
+  writeFileSync(path, `${[header, ...rows].join('\n')}\n`);
+}
+
 function writeDisagreements(rows: readonly HdHipRouteDisagreement[]): void {
-  const lines = ['hd\thip\thd_route_source_ids\thip_route_source_id'];
-  for (const d of [...rows].sort((a, b) => a.hd - b.hd)) {
-    lines.push(`${d.hd}\t${d.hip}\t${d.hdRouteSourceIds.join('|')}\t${d.hipRouteSourceId}`);
-  }
-  writeFileSync(OUT_DISAGREEMENTS, `${lines.join('\n')}\n`);
+  const sep = OVERLAY_VALUE_SEPARATOR;
+  writeTsv(
+    OUT_DISAGREEMENTS,
+    'hd\thip\thd_route_source_ids\thip_route_source_id',
+    [...rows]
+      .sort((a, b) => a.hd - b.hd)
+      .map((d) => `${d.hd}\t${d.hip}\t${d.hdRouteSourceIds.join(sep)}\t${d.hipRouteSourceId}`),
+  );
+}
+
+function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
+  writeTsv(
+    OUT_REJECTED,
+    'gaia_source_id\thip\tv_mag\tg_mag\treason\tdesignations',
+    [...rows]
+      .sort((a, b) => a.hip - b.hip)
+      .map((r) => [
+        r.sourceId,
+        r.hip,
+        r.vMag.toFixed(3),
+        r.gMag === null ? '' : r.gMag.toFixed(3),
+        r.reason,
+        r.designations,
+      ].join('\t')),
+  );
 }
 
 function reportCoverage(counts: ClassicIdOverlayCounts): void {
@@ -138,6 +185,12 @@ function logOverlay(overlay: ClassicIdOverlay, counts: ClassicIdOverlayCounts): 
       `best-neighbour walk); HIP-route cross-check ${counts.hdHipRouteAgree} agree, ` +
       `${counts.hdHipRouteDisagree} disagree, ${counts.hdHipRouteHipOnly} HIP-only`,
   );
+  console.log(
+    `binding gate: dropped ${counts.gateRejectedMag} rows on G−V, ` +
+      `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
+      `${counts.gateSkippedNoHipVMag} rows carry no printed V under any HIP and ` +
+      `cannot be vetted`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -149,22 +202,43 @@ async function main(): Promise<void> {
   requireExists(SRC_TYC_XMATCH);
   requireExists(SRC_HIP_XMATCH);
   requireExists(SRC_ATHYG);
+
+  // Both best-neighbour walks below are unvetted, so the gate's evidence is a
+  // required input, not an enrichment: without it the join would key labels on
+  // sources the record build refuses. Hard-fail rather than degrade.
+  const gaiaAstrometry = parseGaiaAstrometryCatalogTsv(readRequired(SRC_GAIA_ASTROMETRY));
+  const hipVMag = parseHipVmagTsv(readRequired(SRC_HIP_VMAG));
+  const wdsXids: SimbadWdsXidIndex = parseSimbadWdsXidsTsv(
+    readRequired(SRC_SIMBAD_WDS_XIDS),
+  );
+  const sourceGMag = new Map<string, number>();
+  for (const [sourceId, row] of gaiaAstrometry) {
+    if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
+  }
+  const evidence = bindingEvidence(sourceGMag, hipVMag, wdsXids);
+
   const hipToSource = readGaiaHipXmatch(SRC_HIP_XMATCH);
   const tycToSource = await readGaiaTycXmatch(
     SRC_TYC_XMATCH,
     new Set(tyc2Hd.map((r) => r.tyc)),
   );
 
-  const { overlay, counts: joinCounts, disagreements } = buildClassicIdOverlay({
+  const {
+    overlay,
+    counts: joinCounts,
+    disagreements,
+    rejectedBindings,
+  } = buildClassicIdOverlay({
     tyc2Hd,
     crossIndex,
     bsc5,
     cns5,
     tycToSource,
     hipToSource,
+    evidence,
   });
 
-  const athygRows = await readAthygLabelRows(hipToSource);
+  const athygRows = await readAthygLabelRows(hipToSource, evidence);
   const parity = measureAthygLabelParity(athygRows, overlay);
 
   const counts: ClassicIdOverlayCounts = {
@@ -179,10 +253,12 @@ async function main(): Promise<void> {
 
   writeFileSync(OUT_OVERLAY, serializeOverlay(overlay));
   writeDisagreements(disagreements);
+  writeRejectedBindings(rejectedBindings);
   logOverlay(overlay, counts);
   reportCoverage(counts);
   console.log(`wrote ${OUT_OVERLAY}`);
   console.log(`wrote ${OUT_DISAGREEMENTS} (${disagreements.length} rows)`);
+  console.log(`wrote ${OUT_REJECTED} (${rejectedBindings.length} rows)`);
 
   await assertOrUpdateSnapshot<ClassicIdOverlayCounts>({
     envVar: 'UPDATE_BUILD_COUNTS',

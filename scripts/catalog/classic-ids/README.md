@@ -16,13 +16,16 @@ in `stellata-3bsf.4`.
 
 ```
 scripts/catalog/classic-ids/
-  build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables +
-                                  both Gaia cross-walks, writes the overlay,
-                                  the route-disagreement queue, and asserts
-                                  the count snapshot.
-  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers.
-  classic-id-overlay-pure.ts      The join, its counts, the TSV serializer, and
-    (+ test)                      the AT-HYG label-parity measurement. Pure.
+  build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
+                                  both Gaia cross-walks and the gate's three
+                                  evidence tables, writes the overlay and its
+                                  two review queues, and asserts the count
+                                  snapshot.
+  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers plus the
+                                  HIP → printed-V slice the gate reads.
+  classic-id-overlay-pure.ts      The join, the binding gate, its counts, the
+    (+ test)                      TSV serializer, and the AT-HYG label-parity
+                                  measurement. Pure.
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var
@@ -47,6 +50,15 @@ the label and the row is appended to
 `data/classic-ids/hd_hip_route_disagreements.tsv` for the parity
 ledger's review queue rather than resolved mechanically.
 
+**Every route above is an unvetted best-neighbour walk, so the assembled
+overlay is then gated** — `applyBindingGate` re-runs the record build's own
+`resolveGaiaSourceId` checks and drops any row whose source_id is not the
+star its designations name (187 rows today). It runs BEFORE the counts, so
+every `overlay*` count and `hdOnMultipleSources` describe the artifact while
+the route counters above stay pre-gate and keep describing upstream
+reachability. Rationale, the two canonical cases, and the bound on the
+gate's reach: `data/classic-ids/README.md` § The binding gate.
+
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
 `|`-separated lists and `sourcesWithMultipleHd` / `hdOnMultipleSources`
@@ -61,25 +73,34 @@ as one string peaks near a gigabyte alongside the join's own maps.
 
 ## Counts and the parity measurement
 
-`classic-id-overlay-expected.json` pins 45 counts through the same
+`classic-id-overlay-expected.json` pins 50 counts through the same
 `compareBuildCounts` / `UPDATE_BUILD_COUNTS` machinery
 `build-catalog.ts` uses (`assertOrUpdateSnapshot` in
-`../../util/snapshot-assert.ts`). Three groups:
+`../../util/snapshot-assert.ts`). Four groups:
 
 - **Input + route sizes** — upstream row counts, how many Tycho ids
-  resolve, the HIP-route agree / disagree / HIP-only split.
+  resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.
 - **Overlay sizes** — rows, and per-identifier how many sources carry
-  each designation, plus the multi-valued cardinalities.
-- **`athygLabelParity`** — per identifier, AT-HYG rows that resolve to a
-  source_id and carry the identifier (`*Keyed`) versus those the overlay
-  reproduces under that same source_id (`*Covered`). This is the
+  each designation, plus the multi-valued cardinalities. Post-gate.
+- **`gate*`** — rows dropped per gate, and `gateSkippedNoHipVMag`, the
+  population carrying no printed V under any HIP and so unvettable. That
+  last one is the count to watch alongside
+  `athygBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
+  mis-bindings live.
+- **`athygLabelParity`** — per identifier, AT-HYG rows that resolve to an
+  accepted source_id and carry the identifier (`*Keyed`) versus those the
+  overlay reproduces under that same source_id (`*Covered`). Both sides run
+  the FULL gated resolution, so a row the gates scrub counts as unkeyed
+  rather than scoring a label its record will not carry. This is the
   transitional acceptance measurement: it moves to the inherited spine
   when AT-HYG leaves the build's input set.
 
 `hd` / `hip` / `hr` compare values; `gl` compares the bare GJ number
-(the `Gl`/`GJ` prefix and component suffix are display forms);
-**`bayer` compares presence only** — IV/27A spells Bayer letters `alf`
-where AT-HYG spells them `Alp`, and reconciling the two is the
+(the `Gl`/`GJ` prefix and component suffix are display forms); `flam`
+compares the number and ignores the constellation (the row is already keyed
+on one source_id, so a same-number-different-constellation match is not
+reachable); **`bayer` compares presence only** — IV/27A spells Bayer letters
+`alf` where AT-HYG spells them `Alp`, and reconciling the two is the
 naming-authority ladder's gate, not this join's.
 
 `athygBrightRowsWithoutOverlayEntry` is the count to watch: Gaia

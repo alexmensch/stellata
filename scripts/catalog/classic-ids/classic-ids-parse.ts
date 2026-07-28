@@ -1,31 +1,24 @@
-// Parsers for the four frozen CDS classic-designation tables under
-// data/classic-ids/. See README.md § Frozen inputs.
-import { nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
+// Parsers for the frozen CDS classic-designation tables under
+// data/classic-ids/, plus the printed-V slice the binding gate reads.
+// See data/classic-ids/README.md § Provenance.
+import { headerIndex, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 
-/** Header-keyed TSV rows. Blank lines are dropped; short rows yield
- *  undefined cells, which every `nonEmpty` / `parseIntOrNull` call below
- *  already treats as absent. */
-function tsvRecords(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
-  if (lines.length === 0) return [];
-  const header = lines[0].split('\t');
-  return lines.slice(1).map((line) => {
-    const fields = line.split('\t');
-    const row: Record<string, string> = {};
-    header.forEach((col, i) => (row[col] = fields[i] ?? ''));
-    return row;
-  });
-}
+const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
 
-function requireColumns(
-  rows: Record<string, string>[],
-  file: string,
-  columns: readonly string[],
-): void {
-  if (rows.length === 0) return;
-  const missing = columns.filter((c) => !(c in rows[0]));
-  if (missing.length > 0) {
-    throw new Error(`${file}: missing columns ${missing.join(', ')}`);
+/** Walk a committed TSV's data rows as raw cell arrays, with the header
+ *  resolved once. `headerIndex` hard-fails an empty or headerless file, so a
+ *  truncated input can never read as a zero-row table. */
+function* dataRows(
+  text: string,
+  cols: readonly string[],
+  fileLabel: string,
+  refreshHint: string,
+): Generator<{ cells: string[]; idx: Record<string, number> }> {
+  const lines = text.split(/\r?\n/);
+  const idx = headerIndex(lines[0] ?? '', cols, fileLabel, refreshHint);
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    yield { cells: lines[i].split('\t'), idx };
   }
 }
 
@@ -42,21 +35,21 @@ export interface Tyc2HdRow {
 const TYC2_HD_COLUMNS = ['tyc1', 'tyc2', 'tyc3', 'hd', 'n_hd', 'n_tyc'] as const;
 
 export function parseTyc2HdTsv(text: string): Tyc2HdRow[] {
-  const rows = tsvRecords(text);
-  requireColumns(rows, 'tyc2_hd.tsv', TYC2_HD_COLUMNS);
   const out: Tyc2HdRow[] = [];
-  for (const row of rows) {
-    const tyc1 = parseIntOrNull(row.tyc1);
-    const tyc2 = parseIntOrNull(row.tyc2);
-    const tyc3 = parseIntOrNull(row.tyc3);
-    const hd = parseIntOrNull(row.hd);
+  for (const { cells, idx } of dataRows(
+    text, TYC2_HD_COLUMNS, 'tyc2_hd.tsv', REFRESH_CLASSIC_IDS,
+  )) {
+    const tyc1 = parseIntOrNull(cells[idx.tyc1]);
+    const tyc2 = parseIntOrNull(cells[idx.tyc2]);
+    const tyc3 = parseIntOrNull(cells[idx.tyc3]);
+    const hd = parseIntOrNull(cells[idx.hd]);
     if (tyc1 === null || tyc2 === null || tyc3 === null || hd === null) continue;
     out.push({
       // Unpadded, matching gaia_dr3_tyc_xmatch.tsv's `tyc` key ("1-381-1").
       tyc: `${tyc1}-${tyc2}-${tyc3}`,
       hd,
-      nHd: parseIntOrNull(row.n_hd) ?? 1,
-      nTyc: parseIntOrNull(row.n_tyc) ?? 1,
+      nHd: parseIntOrNull(cells[idx.n_hd]) ?? 1,
+      nTyc: parseIntOrNull(cells[idx.n_tyc]) ?? 1,
     });
   }
   return out;
@@ -65,32 +58,33 @@ export function parseTyc2HdTsv(text: string): Tyc2HdRow[] {
 /** One IV/27A cross-index row. `bayer` is IV/27A's own lowercase
  *  three-letter form ("alf"), not AT-HYG's ("Alp"); `cst` is the
  *  constellation the Bayer / Flamsteed designation belongs to, never the
- *  IAU-positional constellation the catalogue assigns per record. */
+ *  IAU-positional constellation the catalogue assigns per record.
+ *
+ *  IV/27A's own `hr` is deliberately not carried: HR reaches the overlay
+ *  through V/50, whose HR↔HD mapping is the Bright Star Catalogue's own. */
 export interface CrossIndexRow {
   hd: number;
-  hr: number | null;
   hip: number | null;
   bayer: string | null;
   flamsteed: number | null;
   cst: string | null;
 }
 
-const CROSS_INDEX_COLUMNS = ['hd', 'hr', 'hip', 'bayer', 'flamsteed', 'cst'] as const;
+const CROSS_INDEX_COLUMNS = ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const;
 
 export function parseCrossIndexTsv(text: string): CrossIndexRow[] {
-  const rows = tsvRecords(text);
-  requireColumns(rows, 'cross_index.tsv', CROSS_INDEX_COLUMNS);
   const out: CrossIndexRow[] = [];
-  for (const row of rows) {
-    const hd = parseIntOrNull(row.hd);
+  for (const { cells, idx } of dataRows(
+    text, CROSS_INDEX_COLUMNS, 'cross_index.tsv', REFRESH_CLASSIC_IDS,
+  )) {
+    const hd = parseIntOrNull(cells[idx.hd]);
     if (hd === null) continue;
     out.push({
       hd,
-      hr: parseIntOrNull(row.hr),
-      hip: parseIntOrNull(row.hip),
-      bayer: nonEmpty(row.bayer),
-      flamsteed: parseIntOrNull(row.flamsteed),
-      cst: nonEmpty(row.cst),
+      hip: parseIntOrNull(cells[idx.hip]),
+      bayer: nonEmpty(cells[idx.bayer]),
+      flamsteed: parseIntOrNull(cells[idx.flamsteed]),
+      cst: nonEmpty(cells[idx.cst]),
     });
   }
   return out;
@@ -108,13 +102,17 @@ export interface Bsc5Row {
 const BSC5_COLUMNS = ['hr', 'hd', 'name'] as const;
 
 export function parseBsc5Tsv(text: string): Bsc5Row[] {
-  const rows = tsvRecords(text);
-  requireColumns(rows, 'bsc5.tsv', BSC5_COLUMNS);
   const out: Bsc5Row[] = [];
-  for (const row of rows) {
-    const hr = parseIntOrNull(row.hr);
+  for (const { cells, idx } of dataRows(
+    text, BSC5_COLUMNS, 'bsc5.tsv', REFRESH_CLASSIC_IDS,
+  )) {
+    const hr = parseIntOrNull(cells[idx.hr]);
     if (hr === null) continue;
-    out.push({ hr, hd: parseIntOrNull(row.hd), name: nonEmpty(row.name) });
+    out.push({
+      hr,
+      hd: parseIntOrNull(cells[idx.hd]),
+      name: nonEmpty(cells[idx.name]),
+    });
   }
   return out;
 }
@@ -132,21 +130,40 @@ export interface Cns5Row {
 const CNS5_COLUMNS = ['cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip'] as const;
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
-  const rows = tsvRecords(text);
-  requireColumns(rows, 'cns5.tsv', CNS5_COLUMNS);
   const out: Cns5Row[] = [];
-  for (const row of rows) {
-    const cns5 = parseIntOrNull(row.cns5);
-    const gj = nonEmpty(row.gj);
+  for (const { cells, idx } of dataRows(
+    text, CNS5_COLUMNS, 'cns5.tsv', REFRESH_CLASSIC_IDS,
+  )) {
+    const cns5 = parseIntOrNull(cells[idx.cns5]);
+    const gj = nonEmpty(cells[idx.gj]);
     if (cns5 === null || gj === null) continue;
-    const src = nonEmpty(row.gaia_source_id);
+    const src = nonEmpty(cells[idx.gaia_source_id]);
     out.push({
       cns5,
       gj,
-      gjComp: nonEmpty(row.gj_comp),
+      gjComp: nonEmpty(cells[idx.gj_comp]),
       gaiaSourceId: src !== null && /^\d+$/.test(src) ? src : null,
-      hip: parseIntOrNull(row.hip),
+      hip: parseIntOrNull(cells[idx.hip]),
     });
+  }
+  return out;
+}
+
+const HIP_VMAG_COLUMNS = ['hip', 'vmag'] as const;
+
+/** `data/hipparcos/hip_main_vmag.tsv` → HIP → printed Johnson V. The V side
+ *  of the binding gate: Gaia's G for a saturated star's mis-bound source sits
+ *  well below the star's catalogued V, and this V is keyed by a designation
+ *  the overlay itself carries rather than by an AT-HYG row. */
+export function parseHipVmagTsv(text: string): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const { cells, idx } of dataRows(
+    text, HIP_VMAG_COLUMNS, 'hip_main_vmag.tsv', 'Re-run `pnpm run refresh:hip-vmag`.',
+  )) {
+    const hip = parseIntOrNull(cells[idx.hip]);
+    const vmag = parseFloatOrNull(cells[idx.vmag]);
+    if (hip === null || hip <= 0 || vmag === null) continue;
+    if (!out.has(hip)) out.set(hip, vmag);
   }
   return out;
 }

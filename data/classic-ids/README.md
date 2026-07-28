@@ -15,9 +15,12 @@ cns5.tsv                           ~182 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP
                                    (5,909 rows).
 classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
-                                   source_id (357,725 rows).
+                                   source_id (357,538 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
                                    (§ HD-route cross-check below).
+rejected_bindings.tsv              187 rows. Pipeline-derived review queue —
+                                   the bindings the gate dropped
+                                   (§ The binding gate).
 ```
 
 ## Provenance
@@ -88,26 +91,72 @@ the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
 resolution.
 
+## The binding gate
+
+Both cross-walks the join routes through are **unvetted best-neighbour
+tables**. Gaia's 5p fit fails on saturated stars, so a bright star's TYC or
+HIP can land on a resolvable companion or a background source — and the
+overlay would then assert that star's classic designations on a source that
+is not the star. `applyBindingGate`
+(`scripts/catalog/classic-ids/classic-id-overlay-pure.ts`) runs the SAME
+`resolveGaiaSourceId` gates the record build applies in
+`scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
+counts as a bad binding:
+
+- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 102 rows. The
+  canonical case is the G = 20.95 background source beside α Cen B, which
+  carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
+- **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 85 rows. Catches
+  the similar-brightness sibling that slips the magnitude gate: HD 70492 B's
+  source carried HD 70492 · HIP 41098.
+
+A firing gate drops the **whole row**, not just its `hip` cell: if the source
+is not the star then every designation keyed on it is misattributed, and the
+labels ride the inherited spine exactly as they do for a record the build
+scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
+(`gaia_source_id`, `hip`, `v_mag`, `g_mag`, `reason`, `designations`; a blank
+`designations` means the HIP was the row's only label, and a blank `g_mag`
+means the sibling gate fired without needing one).
+
+The HD/HIP route cross-check above cannot substitute for this. Both walks
+routinely land on the *same* wrong source, so α Cen B counted among the 2,637
+route agreements, not the 21 disagreements.
+
+**The gate's reach is bounded by where a printed V exists.** The V comes from
+`data/hipparcos/hip_main_vmag.tsv` keyed on a HIP the overlay row itself
+carries — deliberately not from AT-HYG, which the overlay has to outlive. A
+row with no HIP, or whose HIPs carry no printed V, cannot be vetted:
+`gateSkippedNoHipVMag` pins that population at 257,926 rows, overwhelmingly
+Tycho-only HD rows. 126 known mis-bindings sit inside it, reachable by no
+committed table — only 9 have an HD in V/50, so a `Vmag` column on the BSC5
+slice would not close the gap; the rest are faint-on-faint mismatches where
+no magnitude signal separates the two sources. Resolving those is the spine's
+own identity work (`stellata-3bsf.4`), not a photometric gate's.
+
 ## Coverage — the overlay is a union term, not the label authority
 
 Measured 2026-07-28 against the 317,175 AT-HYG rows, counting only rows
-that resolve to a source_id AND carry the identifier (counts pinned in
-`scripts/catalog/classic-ids/classic-id-overlay-expected.json`):
+that resolve to a source_id the record build accepts AND carry the
+identifier (counts pinned in
+`scripts/catalog/classic-ids/classic-id-overlay-expected.json`). Both sides
+run the gated resolution — a row whose only candidate binding the gates
+scrub ships `gaia_source_id = 0`, so scoring it against an ungated binding
+would credit a label no record carries:
 
 | Identifier | AT-HYG rows keyed | Overlay reproduces | |
 |---|---|---|---|
-| hd | 295,181 | 283,431 | 96.0% |
-| hip | 116,758 | 99,277 | 85.0% |
-| hr | 8,709 | 7,307 | 83.9% |
-| gl | 2,943 | 1,807 | 61.4% |
-| bayer | 1,367 | 1,099 | 80.4% |
-| flam | 2,560 | 2,034 | 79.5% |
+| hd | 294,969 | 283,279 | 96.0% |
+| hip | 116,581 | 99,273 | 85.2% |
+| hr | 8,675 | 7,287 | 84.0% |
+| gl | 2,931 | 1,805 | 61.6% |
+| bayer | 1,357 | 1,092 | 80.5% |
+| flam | 2,551 | 2,030 | 79.6% |
 
-**15,876 AT-HYG rows get no overlay entry at all** — 2,119 reach no
-source_id, and the rest resolve to one that neither best-neighbour walk
-carries. That population is concentrated at the bright end exactly as
-`docs/catalog-driver.md` § 5's bright tier predicts: **112 of the 178
-rows at V ≤ 3 have no overlay row**, Vega, Sirius, Procyon and
+**16,032 AT-HYG rows get no overlay entry at all** — 2,387 reach no
+accepted source_id, and the rest resolve to one that neither
+best-neighbour walk carries. That population is concentrated at the bright
+end exactly as `docs/catalog-driver.md` § 5's bright tier predicts: **115 of
+the 178 rows at V ≤ 3 have no overlay row**, Vega, Sirius, Procyon and
 Betelgeuse among them. Gaia saturates near G ≈ 3, so the most famous
 stars in the catalogue are absent from a source_id-keyed table by
 construction, not by a join defect.
@@ -123,11 +172,16 @@ Three structural bounds behind the shortfalls:
 2. **The HIP cross-walk holds 99,525 entries against AT-HYG's 117,961
    HIP-bearing rows.** HIP is a designation, so a HIP the walk omits is a
    label the overlay cannot attach.
-3. **CNS5's 25 pc volume limit** caps the Gliese label: 97% of the 1,057
-   `gl` misses sit beyond 25 pc (median 32 pc, p90 98 pc) while 99% of
+3. **CNS5's 25 pc volume limit** caps the Gliese label: **91% of the 1,126
+   `gl` misses sit beyond 25 pc (median 31 pc, p90 89 pc)** while 99% of
    the hits sit inside it. AT-HYG's `gl` column carries GJ numbers from
    the wider Gliese-Jahreiß and NLTT supplements that CNS5 does not
    enumerate.
+
+   These four figures are derived, not pinned — recompute them from
+   `classic_id_overlay.tsv` + AT-HYG's `dist` column rather than trusting
+   the prose, and correct it here if it has drifted. The pinned
+   `glKeyed` / `glCovered` pair is the only gated number.
 
 None of this loses a record or a label: `docs/catalog-driver.md` § 1
 defines labels as *overlay + spine backstop*, and the inherited spine
@@ -140,10 +194,16 @@ replace AT-HYG's label columns (`stellata-3bsf.4`), and the parity gate
 ## Consumed by
 
 `scripts/catalog/classic-ids/build-classic-id-overlay.ts` reads the four
-frozen tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv` and
-`data/athyg/athyg_33_classic_ids.csv` (the latter only to measure label
-parity). No runtime or `catalog.bin` consumer yet — wiring the overlay
-into the record build is `stellata-3bsf.4`.
+frozen tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv`, the gate's
+evidence (`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
+`data/hipparcos/hip_main_vmag.tsv` for printed V,
+`data/simbad/simbad_wds_xids.tsv` for component attribution), and
+`data/athyg/athyg_33_classic_ids.csv` (the last only to measure label
+parity). The three evidence files are **required, not optional** — without
+them the join would key labels on sources the record build refuses, so a
+missing one hard-fails rather than degrading. No runtime or `catalog.bin`
+consumer yet — wiring the overlay into the record build is
+`stellata-3bsf.4`.
 
 ## Refresh
 
