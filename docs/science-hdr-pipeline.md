@@ -571,6 +571,17 @@ every cinematic effect walks through:
   thing that *would* show 17 magnitudes at once, it is the cinematic
   HDR-photograph look, and nothing in the physical chain does it —
   not the eye at an instant, not any instrument.
+
+  **This rejection rests on a premise § 3.1 contradicts, and the
+  contradiction is open rather than resolved.** § 3.1 justifies having no
+  radial weighting by assuming a *scanning* observer; a scanning observer
+  whose fovea re-adapts per fixation is exactly a locally-tone-mapped
+  percept. § 3.2 here evaluates the eye at an **instant** while § 3.1
+  evaluates it **over a scan**, and the two need the same observer. The
+  observation that opened it: an eye resolves detail in something very
+  bright if the fovea spends time on it, where the monitor washes out into
+  saturation — and 8-bit sRGB at a ~1% JND carries only ~6 magnitudes at
+  once whatever the operator does. Its own design bead owns the verdict.
 - **Veiling glare is in scope later, and does not breach the rule.**
   Ocular scatter is real light redistributed in the optics *before*
   detection, so it belongs on the emission side as a convolution
