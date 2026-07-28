@@ -5,10 +5,17 @@ Two distinct Hipparcos-derived pulls:
 ```
 hip_ccdm.tsv              ~2.2 MB, LFS. HIP↔CCDM cross-reference +
                           MultFlag — the curated visual-doubles flag.
+hip_main_vmag.tsv         ~1.4 MB, LFS. Printed Johnson V per HIP —
+                          the bright/printed tier of the V-magnitude
+                          cascade.
 hip2_van_leeuwen.tsv      ~8.5 MB, LFS. Hipparcos-2 reduction —
                           long-baseline astrometry for Gaia-saturated
                           bright primaries.
 ```
+
+`hip_ccdm.tsv` and `hip_main_vmag.tsv` are two disjoint column slices of
+the same VizieR table (`I/239/hip_main`), kept separate because their
+consumers and refresh cadences differ.
 
 ## `hip_ccdm.tsv`
 
@@ -35,6 +42,18 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 [`scripts/catalog/README.md`](../../scripts/catalog/README.md)
 § CCDM double-star cross-match for the gate semantics.
 
+## `hip_main_vmag.tsv`
+
+- **Source**: VizieR `I/239/hip_main`, two-column slice (`HIP`, `Vmag`),
+  118,218 rows (one with a null `Vmag`). Rounded to 3 dp on write so the
+  committed file is byte-stable across numpy versions.
+- **Licence**: Public domain via CDS.
+- **Role**: printed Johnson V for the bright / printed tier of the
+  V-magnitude cascade (`docs/catalog-driver.md` § 5) — the rows whose Gaia
+  photometry is missing or outside the Riello+ 2021 transform's validity
+  range. Ingested ahead of that consumer; nothing reads it yet.
+- **Refresh**: `pnpm run refresh:hip-vmag`.
+
 ## `hip2_van_leeuwen.tsv`
 
 - **Citation**: van Leeuwen F. 2007, *A&A* 474, 653.
@@ -59,6 +78,6 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 ## Refresh
 
 `pnpm run refresh:hip2` →
-[`scripts/refresh/refresh-hipparcos2.py`](../../scripts/refresh/README.md).
-The CCDM slice updates rarely; refetch from VizieR by hand when
-needed.
+[`scripts/refresh/refresh-hipparcos2.py`](../../scripts/refresh/README.md);
+`pnpm run refresh:hip-vmag` → `refresh-hipparcos-vmag.py`. The CCDM slice
+has no script — refetch from VizieR by hand when needed.

@@ -32,6 +32,9 @@ subfolders.
 - `distance/` — direction resolution, build-time de-extinction, and the
   multi-layer distance-refinement override stack with its
   authoring discipline and post-build regression check.
+- `classic-ids/` — the frozen-CDS classic-designation overlay build
+  (`pnpm run build:classic-ids` → `data/classic-ids/`). Not part of
+  `build:catalog`; no consumer here yet.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -51,8 +54,10 @@ scripts/catalog/
                                   the shared reader for verify-catalog,
                                   validate-simbad-sample, and sid:allocate.
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
-                                  writer, pinned by
-                                  build-catalog-expected.json.
+                                  comparator, pinned by
+                                  build-catalog-expected.json. Generic over
+                                  the count record — classic-ids/ pins its
+                                  own snapshot through the same helper.
   export-astrometry-request.ts    Emits the full-catalog Gaia astrometry
     (+ -pure, + pure test)        request (§ Full-catalog astrometry
                                   request). sortSourceIdsNumeric is also
@@ -274,7 +279,8 @@ search-index entries, etc.) against
 deliberate change refreshes the manifest with
 `UPDATE_BUILD_COUNTS=1 pnpm run build:catalog`; an unintended drift
 exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
-the pure comparator + formatter and has its own vitest coverage.
+the pure comparator + formatter and has its own vitest coverage; the
+assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot.

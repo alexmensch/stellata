@@ -45,6 +45,8 @@ venv binary) in the shell that runs them.
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
 | `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id. |
 | `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
+| `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V per HIP from `I/239/hip_main` — the printed tier of the V-magnitude cascade. |
+| `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
@@ -65,6 +67,29 @@ pinning (`validate_spot_rows`, `check_spot_rows_tolerant`), and
 partial-write protection so a mid-run failure never leaves a
 half-written TSV under `data/`. `assert_row_count` is also imported by
 `scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
+
+### VizieR column slices
+
+`vizier_slice.py` runs the declarative case: whole VizieR table, column
+subset, committed TSV. A `VizierSlice` carries the table id, the
+VizieR→canonical column map (which also fixes the TSV column order), the
+dtype schema, a row-count band, and pinned spot rows; `pull_slices()`
+executes a list of them, folding its own mtime into each slice's
+idempotency check the way `is_up_to_date` folds in `refresh_lib`'s.
+`refresh-classic-ids.py` (four slices) and `refresh-hipparcos-vmag.py`
+(one) are then spec files with no query logic of their own — the same
+split `gaia_astrometry_pull.py` uses for the 5p pulls.
+
+**MAXREC is not load-bearing on CDS.** VizieR's TAP default MAXREC is
+~1e9, so a whole-table slice needs none of the sizing the Gaia sync
+endpoints demand (next section); the row-count band is what catches an
+upstream row loss here. Coverage of the pull is asserted downstream
+instead — `pnpm run build:classic-ids` pins per-identifier counts.
+
+Non-network dependency: `vizier_slice.test.py` covers the ADQL shape, the
+row-count / spot-row gates, the `--only` selector, and the
+no-partial-write guarantee against an in-memory TAP backend. Run it with
+`python3 scripts/refresh/vizier_slice.test.py`.
 
 ### Gaia TAP: synchronous endpoints only
 

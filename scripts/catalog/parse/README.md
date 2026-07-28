@@ -12,11 +12,13 @@ land in is `../README.md` § Binary catalog format.
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
                                   every other subfolder imports.
-  gaia-xmatch.ts (+ test)         Gaia DR3 HIP cross-walk parsing
-                                  (parseGaiaHipXmatchTsv) + the Apsis and
-                                  5p astrometry side-tables. Cross-language
-                                  parity with scripts/binaries/parsers.py is
-                                  pinned in ../validate/.
+  gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
+                                  (HIP + TYC, one shared accumulator) plus the
+                                  Apsis and 5p astrometry side-tables. The TYC
+                                  reader streams and takes a keep-set — its
+                                  table is 2.5 M rows. Cross-language parity
+                                  with scripts/binaries/parsers.py is pinned
+                                  in ../validate/.
   gcvs-parse.ts (+ test)          GCVS main + crossref parsing and the
                                   variability cross-match.
   constellations.ts               Stellarium stick figures → constellation

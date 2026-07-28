@@ -105,6 +105,7 @@ import {
 import { readStars, type Star } from './parse/stars-parse';
 import { loadDustGrid } from './distance/dust-deextinction';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
+import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
 import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
 import {
   HEAD_PATH,
@@ -1069,40 +1070,6 @@ async function main() {
 
   await assertOrUpdateBuildCounts(counts);
   await assertOrUpdateDistanceOutliers(stars);
-}
-
-async function assertOrUpdateSnapshot<T>(opts: {
-  envVar: string;
-  snapshotPath: string;
-  actual: T;
-  compare: (expected: T, actual: T) => { drifted: boolean; report: string };
-  refreshTransform?: (expected: T, actual: T) => T;
-  failureLabel: string;
-  refreshCommand: string;
-}): Promise<void> {
-  const shouldUpdate = process.env[opts.envVar] === '1';
-  const expected = existsSync(opts.snapshotPath)
-    ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
-    : null;
-
-  if (shouldUpdate || !expected) {
-    const toWrite = expected && opts.refreshTransform
-      ? opts.refreshTransform(expected, opts.actual)
-      : opts.actual;
-    await writeFile(opts.snapshotPath, JSON.stringify(toWrite, null, 2) + '\n');
-    console.log(`${shouldUpdate ? 'Updated' : 'Wrote initial'} ${opts.snapshotPath}`);
-    return;
-  }
-
-  const { drifted, report } = opts.compare(expected, opts.actual);
-  console.log(report);
-  if (drifted) {
-    console.error(
-      `\n${opts.failureLabel} assertion failed. If the change is intentional,\n` +
-        `refresh the snapshot with: ${opts.refreshCommand}`,
-    );
-    process.exit(1);
-  }
 }
 
 async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {

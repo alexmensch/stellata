@@ -92,6 +92,15 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # Same reproducibility contract as multiples.tsv above: the committed
+      # overlay must be exactly what the committed join produces.
+      - run: pnpm run build:classic-ids
+      - run: |
+          git diff --exit-code -- data/classic-ids/ || {
+            echo "::error::committed classic-ID overlay is stale — run" \
+              "'pnpm run build:classic-ids' and commit the regenerated files";
+            exit 1;
+          }
       # Hard-fails on any record the SID ledger doesn't cover (the mint
       # side of ledger consistency; the drop side is the job below).
       - run: pnpm run build:catalog

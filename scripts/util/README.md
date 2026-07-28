@@ -19,6 +19,14 @@ need the same thing — single-use helpers stay with their consumer.
   `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
   missing) for build-idempotency checks against optional inputs.
   `paths.test.ts` pins the `maxMtimeOfSources` cases.
+- `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
+  script's computed snapshot against its committed JSON, or rewrite the
+  JSON when the spec's env var is `1`. Exits non-zero on drift, since a
+  drifted snapshot must not ship an artifact; a missing snapshot writes
+  itself, which is what bootstraps a new one. Shared by
+  `build-catalog.ts` (build counts, distance outliers) and
+  `catalog/classic-ids/build-classic-id-overlay.ts` — all three under
+  `UPDATE_BUILD_COUNTS` / `UPDATE_DISTANCE_OUTLIERS`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed

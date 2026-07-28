@@ -103,6 +103,32 @@ enough to see it.
   `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
   carries at least one classical designation: IAU proper name, Bayer,
   Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0.
+- **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
+  Gliese), the identifier half of the AT-HYG retirement — four frozen
+  VizieR tables under `data/classic-ids/`, joined onto Gaia DR3
+  source_ids by `pnpm run build:classic-ids`. Per-table provenance,
+  licences and the measured per-identifier coverage are in
+  `data/classic-ids/README.md`; the sourcing decision is
+  `docs/catalog-driver.md` § 2. Retrieved 2026-07-28, public domain via
+  CDS:
+    - `IV/25/tyc2_hd` — Fabricius, Makarov, Knude & Wycoff 2002,
+      *A&A* 386, 709. HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
+      ambiguity flags.
+    - `IV/27A/catalog` — Kostjuk N.D. 2004. Bayer + Flamsteed ↔
+      HD/HR/HIP (as TAP serves it, the Bayer/Flamsteed-bearing subset).
+    - `V/50/catalog` — Hoffleit & Warren 1991, Bright Star Catalogue 5th
+      revised ed. HR ↔ HD.
+    - `J/A+A/670/A19/cns5` — Golovin, Reffert, Just, Jordan, Vani &
+      Jahreiß 2023, *A&A* 670, A19. GJ ↔ Gaia EDR3 source_id ↔ HIP,
+      volume-limited to 25 pc.
+  Live SIMBAD/VizieR resolution is deliberately **not** used for the
+  identifier spine — the build never touches the network, and
+  component-level cross-IDs churn between queries.
+- **Hipparcos printed V** (`I/239/hip_main`, `HIP`+`Vmag` slice at
+  `data/hipparcos/hip_main_vmag.tsv`): ESA 1997, SP-1200. The printed
+  tier of the V-magnitude cascade for stars whose Gaia photometry is
+  saturated or outside the Riello+ 2021 transform's validity range.
+  Public domain via CDS.
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
   http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
   Institute. `data/gcvs/gcvs5.txt` (main file) + `data/gcvs/crossid.txt`
