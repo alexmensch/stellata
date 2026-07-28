@@ -1,7 +1,9 @@
 // Scene-driven exposure adaptation: mean visible flux per viewport
 // pixel, and the exposure cut it implies. See README.md § Adaptation.
 
+import { circleCircleLensArea } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { smoothstep } from '../../galactic/galactic-fade';
+import { MESH_FADE_MIN_PX } from '../../solar-system/planets/mesh-crossfade';
 import { luminanceForMagnitude } from '../emission-pure';
 
 /**
@@ -61,19 +63,39 @@ export const ADAPT_WINDOW_TAPER_FRACTION = 0.2;
 export const ADAPT_EDGE_RAMP_PX = 12;
 
 /**
+ * True diameter below which a source stops acting as an occluder. It is
+ * the mesh-presence floor: a body this small draws no surface at all, so
+ * there is nothing for a source behind it to hide behind.
+ */
+export const ADAPT_OCCLUDER_MIN_PX = MESH_FADE_MIN_PX;
+
+/**
  * One light source's frame footprint. `diameterPx` is TRUE angular
  * extent in CSS pixels — never the K-exaggerated kernel, or the
  * footprint hack would drive adaptation. `fluxScale` carries real
  * losses (eclipse dim, window taper), never a display weight.
+ * `cameraDistancePc` orders the occlusion pass and nothing else.
  */
 export interface LuminanceSample {
   appMag: number;
   diameterPx: number;
   screenX: number;
   screenY: number;
+  cameraDistancePc: number;
   fluxScale: number;
   label: string | null;
 }
+
+/** Radius of the footprint a source's flux is actually spread over,
+ *  floored at the 1 px² an unresolved point occupies — the same
+ *  `max(1, π·r²)` denominator `stellataPointSourcePeak` uses. Occlusion
+ *  and the peak both run against this TRUE footprint, never against the
+ *  widened edge-ramp disc. */
+export function footprintRadiusPx(diameterPx: number): number {
+  return Math.max(0.5 * diameterPx, POINT_SOURCE_RADIUS_PX);
+}
+
+const POINT_SOURCE_RADIUS_PX = Math.sqrt(1 / Math.PI);
 
 /** Area of a disc of radius `r` centred at the origin intersected with
  *  the axis-aligned quadrant `[0,x] × [0,y]`, for `x, y ≥ 0`. */
@@ -136,8 +158,56 @@ export function sourceVisibleFraction(
   w: number,
   h: number,
 ): number {
-  const r = Math.max(0.5 * diameterPx, 0.5 * ADAPT_EDGE_RAMP_PX);
+  const r = Math.max(footprintRadiusPx(diameterPx), 0.5 * ADAPT_EDGE_RAMP_PX);
   return discViewportOverlapArea(r, cx, cy, w, h) / (Math.PI * r * r);
+}
+
+/**
+ * Fraction of `subject`'s footprint hidden behind the nearer drawn discs
+ * in `samples` — the camera-path light loss the eclipse dim does not
+ * carry (that one is a lighting loss, and the two compose
+ * multiplicatively). Screen-space circle-circle lens area per occluder,
+ * summed, so two occluders overlapping each other double-count: the
+ * error is always in the over-occluding direction and cannot invent
+ * light. Occluders below `ADAPT_OCCLUDER_MIN_PX` are skipped, and rings
+ * never occlude — they are not sources, so they never enter `samples`.
+ */
+export function occludedFraction(
+  subject: LuminanceSample,
+  samples: readonly LuminanceSample[],
+  count: number,
+): number {
+  const r = footprintRadiusPx(subject.diameterPx);
+  const area = Math.PI * r * r;
+  let hidden = 0;
+  for (let i = 0; i < count; i++) {
+    const o = samples[i];
+    if (o === subject) continue;
+    if (o.cameraDistancePc >= subject.cameraDistancePc) continue;
+    if (o.diameterPx < ADAPT_OCCLUDER_MIN_PX) continue;
+    const dx = o.screenX - subject.screenX;
+    const dy = o.screenY - subject.screenY;
+    hidden += circleCircleLensArea(r, 0.5 * o.diameterPx, Math.hypot(dx, dy));
+    if (hidden >= area) return 1;
+  }
+  return hidden / area;
+}
+
+/** What fraction of a source's light reaches the camera: frame clipping
+ *  and occlusion by nearer discs, which are independent losses off the
+ *  same footprint and so subtract. */
+export function sampleVisibleFraction(
+  subject: LuminanceSample,
+  samples: readonly LuminanceSample[],
+  count: number,
+  w: number,
+  h: number,
+): number {
+  const clipped = sourceVisibleFraction(
+    subject.diameterPx, subject.screenX, subject.screenY, w, h,
+  );
+  if (clipped <= 0) return 0;
+  return Math.max(0, clipped - occludedFraction(subject, samples, count));
 }
 
 /** A sample's contribution to the frame's total flux, in luminance × px.
@@ -146,14 +216,9 @@ export function sourceVisibleFraction(
 export function sampleFluxL(
   s: LuminanceSample,
   exposure: number,
-  w: number,
-  h: number,
+  visibleFraction: number,
 ): number {
-  return (
-    luminanceForMagnitude(exposure, s.appMag)
-    * s.fluxScale
-    * sourceVisibleFraction(s.diameterPx, s.screenX, s.screenY, w, h)
-  );
+  return luminanceForMagnitude(exposure, s.appMag) * s.fluxScale * visibleFraction;
 }
 
 /** Area-weighted mean luminance over the viewport: total visible flux

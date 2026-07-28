@@ -309,6 +309,32 @@ inside the frame. That is what makes frustum-edge continuity free
 (below), and it is why a body the camera has flown inside of contributes
 its surface brightness rather than its whole flux.
 
+**A source hidden behind a nearer disc is not in the frame.** Coverage
+alone counted a body's flux whether or not anything was in front of it, so
+Sol behind the night side of Saturn still dimmed the star field — the one
+contributing source in that frame was light that never reached the camera.
+Each sample therefore loses, in addition to its frame clipping, the
+screen-space lens overlap of every *nearer* drawn disc
+(`circleCircleLensArea`, the same closed form the binary eclipse
+photometry runs). Four properties of that pass:
+
+- **It composes multiplicatively with the eclipse dim, because they are
+  different losses.** The eclipse dim is light the body never received —
+  a lighting loss, folded into `fluxScale`. Occlusion is light it emitted
+  and the camera never saw — a camera-path loss on the visible fraction.
+- **Occluders are gated at the mesh-presence floor** (~1 px true
+  diameter): a body drawing no surface cannot hide anything behind it.
+  Every star is below that gate except at solar-system range, where it
+  correctly is not.
+- **Rings do not occlude.** They are not sources, so they never enter the
+  sample set, and a ring plane's own opacity is a per-radius texture the
+  statistic has no access to. A body behind Saturn's rings keeps its flux.
+- **Overlapping occluders double-count**, since the lens areas are summed
+  rather than unioned. The error is always in the over-occluding
+  direction, so it can shave light off the statistic but never invent it —
+  and it takes two occluders both covering the same part of one third
+  body to appear at all.
+
 Why an area-weighted arithmetic mean, and not the two obvious
 alternatives:
 

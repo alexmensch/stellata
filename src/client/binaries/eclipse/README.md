@@ -25,9 +25,12 @@ src/client/binaries/eclipse/
                                   float32-line-of-sight immunity.
 ```
 
-Second consumer of the pure half: the planet field's true-eclipse dim
-(`../../solar-system/planets/README.md` § True-eclipse dim) reuses all of
-it for planet-behind-host-disc occlusion.
+Two further consumers of the pure half. The planet field's true-eclipse
+dim (`../../solar-system/planets/README.md` § True-eclipse dim) reuses all
+of it for planet-behind-host-disc occlusion; the exposure-adaptation
+statistic (`../../hdr/exposure/README.md` § Adaptation) takes
+`circleCircleLensArea` alone, in **screen pixels** rather than angular
+units, for its nearer-disc occlusion pass.
 
 `EclipsePhotometryField` runs after `BinaryOrbitField` each frame
 and writes a per-instance dim multiplier on the back component's

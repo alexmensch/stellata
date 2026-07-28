@@ -89,7 +89,8 @@ runs every frame, and the URL sync and panel listen to that event.
 cut it writes can never be a frame behind the frame it measured.
 
 ```
-L̄  = Σᵢ L(mᵢ)·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
+visibleFractionᵢ = max(0, clippedᵢ − occludedᵢ)
+L̄  = Σᵢ L(mᵢ)·fluxScaleᵢ·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
 dm = min(0, −2.5·log10(L̄ / L_ADAPT))
 ```
 
@@ -123,7 +124,21 @@ Three invariants a change here must not break:
   perceptual glare kernel is a display exaggeration and must not drive
   exposure.
 - **`fluxScale` carries real light losses only** — eclipse dim, the
-  window taper. It is not a display weight.
+  window taper. It is not a display weight, and it is not where occlusion
+  goes: the eclipse dim is a *lighting* loss and occlusion is a
+  *camera-path* loss, so they multiply rather than share a slot.
+
+**Occlusion is why the walk buffers.** Every sample is copied out of its
+producer's scratch into a pool, and nothing is reduced until the walk
+finishes — the last body visited can occlude the first, so no streaming
+formulation exists. Each sample then loses the screen-space lens overlap
+(`circleCircleLensArea`, shared with the binary eclipse photometry) of
+every **nearer** drawn disc, which is what stops Sol behind Saturn's night
+side from dimming the star field. Occluders are gated at
+`ADAPT_OCCLUDER_MIN_PX` — the mesh-presence floor, so a body drawing no
+surface hides nothing — rings never occlude (they are not sources), and
+overlapping occluders double-count, always toward over-occluding.
+`docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
 
 **Sources.** Every drawn solar-system body
 (`PlanetBodyField.forEachDrawnBody`, gated by the same visibility rule

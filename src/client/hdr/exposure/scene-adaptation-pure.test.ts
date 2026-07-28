@@ -11,6 +11,7 @@ import { tonemapWhitePoint } from '../tonemap-pure';
 import {
   ADAPT_EDGE_RAMP_PX,
   ADAPT_NEGLIGIBLE_FRACTION,
+  ADAPT_OCCLUDER_MIN_PX,
   ADAPT_REF_COVERAGE,
   ADAPT_STAR_ABSMAG_REF,
   adaptationDm,
@@ -22,7 +23,9 @@ import {
   type LuminanceSample,
   meanSceneLuminance,
   negligibleAppMag,
+  occludedFraction,
   sampleFluxL,
+  sampleVisibleFraction,
   sourceVisibleFraction,
   starAdaptationWindowPc,
   trimStopsForCoverage,
@@ -52,14 +55,17 @@ function sample(patch: Partial<LuminanceSample>): LuminanceSample {
     diameterPx: 0,
     screenX: 0.5 * VIEWPORT_W,
     screenY: 0.5 * VIEWPORT_H,
+    cameraDistancePc: 1,
     fluxScale: 1,
     label: null,
     ...patch,
   };
 }
 
+/** One unoccluded source's share of the frame's mean luminance. */
 function contribution(s: LuminanceSample): number {
-  return sampleFluxL(s, EXPOSURE, VIEWPORT_W, VIEWPORT_H) / VIEWPORT_AREA_PX;
+  const visible = sampleVisibleFraction(s, [s], 1, VIEWPORT_W, VIEWPORT_H);
+  return sampleFluxL(s, EXPOSURE, visible) / VIEWPORT_AREA_PX;
 }
 
 describe('scene-adaptation constants', () => {
@@ -247,6 +253,64 @@ describe('viewport coverage', () => {
     // A quadrant, from a disc centred on a corner.
     expect(discViewportOverlapArea(300, 0, 0, VIEWPORT_W, VIEWPORT_H))
       .toBeCloseTo(0.25 * Math.PI * 300 * 300, 6);
+  });
+});
+
+describe('occlusion by nearer discs', () => {
+  const near = (patch: Partial<LuminanceSample>) =>
+    sample({ cameraDistancePc: 1, ...patch });
+  const far = (patch: Partial<LuminanceSample>) =>
+    sample({ cameraDistancePc: 100, ...patch });
+
+  it('hides a point behind a nearer disc entirely', () => {
+    const sol = far({ appMag: -26.74, diameterPx: 0.4, label: 'Sol' });
+    const saturn = near({ diameterPx: 600, label: 'Saturn' });
+    expect(occludedFraction(sol, [sol, saturn], 2)).toBe(1);
+    expect(sampleVisibleFraction(sol, [sol, saturn], 2, VIEWPORT_W, VIEWPORT_H)).toBe(0);
+    // And with the same two bodies swapped in depth, nothing is hidden.
+    const solNear = near({ appMag: -26.74, diameterPx: 0.4 });
+    const saturnFar = far({ diameterPx: 600 });
+    expect(occludedFraction(solNear, [solNear, saturnFar], 2)).toBe(0);
+  });
+
+  it('takes half a disc that a nearer limb cuts across', () => {
+    const back = far({ diameterPx: 200 });
+    // The occluder's limb passes through the back disc's centre, and is
+    // 200× wider, so it reads as a straight edge across it.
+    const front = near({ diameterPx: 40000, screenX: 0.5 * VIEWPORT_W - 20000 });
+    expect(occludedFraction(back, [back, front], 2)).toBeCloseTo(0.5, 2);
+  });
+
+  it('ignores an occluder below the mesh-presence floor', () => {
+    const back = far({ diameterPx: 0.4 });
+    const tiny = near({ diameterPx: 0.99 * ADAPT_OCCLUDER_MIN_PX });
+    const drawn = near({ diameterPx: ADAPT_OCCLUDER_MIN_PX });
+    expect(occludedFraction(back, [back, tiny], 2)).toBe(0);
+    expect(occludedFraction(back, [back, drawn], 2)).toBeGreaterThan(0);
+  });
+
+  it('composes multiplicatively with the eclipse dim', () => {
+    // Two independent losses: the eclipse is light the body never
+    // received, occlusion is light that never reached the camera.
+    const half = far({ appMag: -20, diameterPx: 200, fluxScale: 0.5 });
+    const front = near({ diameterPx: 40000, screenX: 0.5 * VIEWPORT_W - 20000 });
+    const visible = sampleVisibleFraction(half, [half, front], 2, VIEWPORT_W, VIEWPORT_H);
+    expect(visible).toBeCloseTo(0.5, 2);
+    const full = luminanceForMagnitude(EXPOSURE, -20);
+    expect(sampleFluxL(half, EXPOSURE, visible) / full).toBeCloseTo(0.5 * visible, 12);
+  });
+
+  it('ramps a disc out continuously as a nearer one slides over it', () => {
+    const back = far({ diameterPx: 200 });
+    let prev = 1;
+    for (let cx = -300; cx <= 0; cx += 5) {
+      const front = near({ diameterPx: 400, screenX: 0.5 * VIEWPORT_W + cx });
+      const f = 1 - occludedFraction(back, [back, front], 2);
+      expect(f).toBeLessThanOrEqual(prev + 1e-12);
+      prev = f;
+    }
+    // Concentric and twice as wide: the back disc is gone.
+    expect(prev).toBe(0);
   });
 });
 

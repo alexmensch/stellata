@@ -255,7 +255,8 @@ export class PlanetBodyField {
   private sampleTmp = new THREE.Vector3();
   private screenTmp: [number, number] = [0, 0];
   private adaptationSample: LuminanceSample = {
-    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0, fluxScale: 1, label: null,
+    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
+    cameraDistancePc: 0, fluxScale: 1, label: null,
   };
 
   constructor(
@@ -1047,7 +1048,9 @@ export class PlanetBodyField {
    * TRUE angular footprint. `physSize` deliberately, never the rendered
    * `max(appSize, physSize)` — the perceptual glare kernel is a display
    * exaggeration and must not drive exposure. Eclipse dim rides
-   * `fluxScale` because an eclipse is a real light loss.
+   * `fluxScale` because an eclipse is a real light loss; the camera-path
+   * loss of one body sitting in front of another is the statistic's own
+   * occlusion pass, which `cameraDistancePc` orders.
    */
   forEachDrawnBody(
     camera: THREE.PerspectiveCamera,
@@ -1068,6 +1071,7 @@ export class PlanetBodyField {
       s.diameterPx = this.discSizeTerms(radiusPc, view.dVp, view.appMag).physSize;
       s.screenX = this.screenTmp[0];
       s.screenY = this.screenTmp[1];
+      s.cameraDistancePc = view.dVp;
       s.fluxScale = this.eclipseDimForInstance(idx);
       s.label = host.ps.planets[i].name;
       visit(s);

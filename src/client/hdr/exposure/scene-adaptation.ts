@@ -13,9 +13,17 @@ import {
   meanSceneLuminance,
   negligibleAppMag,
   sampleFluxL,
+  sampleVisibleFraction,
   starAdaptationWindowPc,
   windowTaper,
 } from './scene-adaptation-pure';
+
+function blankSample(): LuminanceSample {
+  return {
+    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
+    cameraDistancePc: 0, fluxScale: 1, label: null,
+  };
+}
 
 /** Solar-system bodies drawn this frame, visited as flux samples.
  *  Implemented by `PlanetBodyField`. */
@@ -63,9 +71,12 @@ export class SceneAdaptation {
   };
   private readonly starPos = new THREE.Vector3();
   private readonly screen: [number, number] = [0, 0];
-  private readonly starSample: LuminanceSample = {
-    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0, fluxScale: 1, label: null,
-  };
+  private readonly starSample: LuminanceSample = blankSample();
+  /** Every source this frame, copied out of the producers' scratch so the
+   *  occlusion pass can see them all at once. Grows to the frame's high
+   *  water mark and is reused; `count` is the live prefix. */
+  private readonly pool: LuminanceSample[] = [];
+  private count = 0;
 
   private dm = 0;
   private meanL = 0;
@@ -92,11 +103,10 @@ export class SceneAdaptation {
     this.w = viewport.x;
     this.h = viewport.y;
     this.exposure = this.deps.baseExposure();
-    this.fluxL = 0;
-    this.dominantFluxL = 0;
-    this.dominantLabel = null;
-    this.deps.bodies.forEachDrawnBody(camera, this.w, this.h, this.accumulate);
+    this.count = 0;
+    this.deps.bodies.forEachDrawnBody(camera, this.w, this.h, this.collect);
     this.collectStars(camera);
+    this.reduce();
     this.meanL = meanSceneLuminance(this.fluxL, this.w, this.h);
     this.dm = adaptationDm(this.meanL);
     perfMeasure('adaptation');
@@ -127,19 +137,48 @@ export class SceneAdaptation {
     this.dm = 0;
     this.meanL = 0;
     this.fluxL = 0;
+    this.count = 0;
     this.dominantFluxL = 0;
     this.dominantLabel = null;
     return 0;
   }
 
-  private accumulate = (sample: LuminanceSample): void => {
-    const fluxL = sampleFluxL(sample, this.exposure, this.w, this.h);
-    this.fluxL += fluxL;
-    if (fluxL > this.dominantFluxL) {
-      this.dominantFluxL = fluxL;
-      this.dominantLabel = sample.label;
-    }
+  /** Copy a producer's scratch sample into the pool. Nothing can be
+   *  reduced while the walk is still running: occlusion needs every
+   *  source's depth and footprint, and the last one visited can occlude
+   *  the first. */
+  private collect = (sample: LuminanceSample): void => {
+    const slot = this.pool[this.count] ?? blankSample();
+    this.pool[this.count] = slot;
+    slot.appMag = sample.appMag;
+    slot.diameterPx = sample.diameterPx;
+    slot.screenX = sample.screenX;
+    slot.screenY = sample.screenY;
+    slot.cameraDistancePc = sample.cameraDistancePc;
+    slot.fluxScale = sample.fluxScale;
+    slot.label = sample.label;
+    this.count++;
   };
+
+  /** Reduce the collected pool to the frame's total flux and the source
+   *  carrying most of it. */
+  private reduce(): void {
+    const { pool, count, w, h, exposure } = this;
+    this.fluxL = 0;
+    this.dominantFluxL = 0;
+    this.dominantLabel = null;
+    for (let i = 0; i < count; i++) {
+      const s = pool[i];
+      const visible = sampleVisibleFraction(s, pool, count, w, h);
+      if (visible <= 0) continue;
+      const fluxL = sampleFluxL(s, exposure, visible);
+      this.fluxL += fluxL;
+      if (fluxL > this.dominantFluxL) {
+        this.dominantFluxL = fluxL;
+        this.dominantLabel = s.label;
+      }
+    }
+  }
 
   /**
    * Stars close enough to matter. The gate is flux, not resolvedness:
@@ -157,7 +196,8 @@ export class SceneAdaptation {
     this.deps.stars.forEachStarNearCamera(windowPc, (idx) => {
       const j = idx * 3;
       this.starPos.set(local[j], local[j + 1], local[j + 2]);
-      const taper = windowTaper(this.starPos.distanceTo(camera.position), windowPc);
+      const dPc = this.starPos.distanceTo(camera.position);
+      const taper = windowTaper(dPc, windowPc);
       if (taper <= 0) return false;
       const c = this.deps.stars.renderedSizeComponents(idx, this.sizeScratch);
       if (luminanceForMagnitude(exposure, c.appMag) * taper < gateFluxL) return false;
@@ -166,9 +206,10 @@ export class SceneAdaptation {
       s.diameterPx = c.physSizePx;
       s.screenX = this.screen[0];
       s.screenY = this.screen[1];
+      s.cameraDistancePc = dPc;
       s.fluxScale = taper;
       s.label = this.deps.stars.starLabel(idx);
-      this.accumulate(s);
+      this.collect(s);
       return false;
     });
   }

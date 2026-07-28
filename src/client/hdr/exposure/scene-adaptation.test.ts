@@ -63,6 +63,7 @@ function body(patch: Partial<LuminanceSample>): LuminanceSample {
     diameterPx: 0,
     screenX: 0.5 * W,
     screenY: 0.5 * H,
+    cameraDistancePc: 1,
     fluxScale: 1,
     label: null,
     ...patch,
@@ -99,6 +100,31 @@ describe('SceneAdaptation', () => {
     const dmLit = a.adaptation.measure(a.camera, false);
     const dmEclipsed = b.adaptation.measure(b.camera, false);
     expect(dmLit - dmEclipsed).toBeCloseTo(-5, 3);
+  });
+
+  it('drops a source hidden behind a nearer body', () => {
+    // Sol behind the night side of Saturn: the one contributing source in
+    // the frame is light that never reached the camera.
+    const sol = body({ appMag: -26, diameterPx: 11, cameraDistancePc: 1e-4, label: 'Sol' });
+    // Night side, so the occluder contributes no flux of its own.
+    const saturn = body({
+      appMag: 30, diameterPx: 900, cameraDistancePc: 1e-5, label: 'Saturn',
+    });
+    const open = harness([sol]);
+    const blocked = harness([sol, saturn]);
+    expect(open.adaptation.measure(open.camera, false)).toBeLessThan(-15);
+    expect(blocked.adaptation.measure(blocked.camera, false)).toBe(0);
+    expect(blocked.adaptation.getMeanLuminance()).toBeCloseTo(DIFFUSE_FIELD_L, 12);
+  });
+
+  it('lets an occluder be occluded in turn without reordering the walk', () => {
+    // Visited nearest-last, so a streaming reduce would have missed it.
+    const back = body({ appMag: -26, diameterPx: 11, cameraDistancePc: 1, label: 'Sol' });
+    const mid = body({ appMag: -20, diameterPx: 900, cameraDistancePc: 0.5, label: 'Saturn' });
+    const front = body({ appMag: -15, diameterPx: 4000, cameraDistancePc: 0.1, label: 'Titan' });
+    const { adaptation, camera } = harness([back, mid, front]);
+    adaptation.measure(camera, false);
+    expect(adaptation.getDominantLabel()).toBe('Titan');
   });
 
   it('drops a body that has slid off-frame', () => {
