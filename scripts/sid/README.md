@@ -17,6 +17,10 @@ sid-pure.ts               Pure algebra: designation grammar (§ 3),
                           snapshot + append-only checks (§§ 4.3, 4.5).
                           Tests import its constants — never redefine
                           them.
+catalog-designations.ts   Designation set per BUILT catalog record, from
+                          catalog.bin + the two public/ sidecars (§
+                          Designation extraction). Shared by allocate and
+                          the inherited spine's parity gate.
 registry-io.ts            Filesystem access to the committed registry:
                           canonical data/sid/ paths, loadStoredEdges, and
                           loadRegistry (validated read; throws
@@ -66,6 +70,11 @@ it guards committed data, not this folder's code). It self-skips where
 for real in the `build-catalog` job (`lfs: true`) and locally.
 
 ## Designation extraction — where each namespace comes from
+
+`catalogRecordDesignations` (`catalog-designations.ts`) owns the catalog
+half of this, so `sid:allocate` and
+`scripts/catalog/spine/inherited-spine-parity.test.ts` cannot derive
+different sets from the same artifacts.
 
 Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
 `hd:`/`hr:`/`gl:` from its `search-index.json` entry, `synth:` from

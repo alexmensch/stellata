@@ -29,6 +29,10 @@ import type { RecordRef } from './parse/corpus-tsv';
 
 export const DEFAULT_CATALOG_MANIFEST = resolve(REPO_ROOT, 'public', CATALOG_MANIFEST_FILENAME);
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');
+/** The two sidecars a record's full designation set needs beyond the binary —
+ *  `hd`/`hr`/`gl` and the synthetic keys. */
+export const DEFAULT_SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
+export const DEFAULT_ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
 /** Read + reassemble the transport-chunked catalog binary from a manifest
  *  path. The client loader's Node-side twin — same `assembleCatalogChunks`
