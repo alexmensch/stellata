@@ -27,7 +27,7 @@ scripts/catalog/parse/
                                   in ../validate/.
   gcvs-parse.ts (+ test)          GCVS main + crossref parsing and the
                                   variability cross-match.
-  constellations.ts               The IAU-88 table (CONSTELLATIONS /
+  constellations.ts (+ test)      The IAU-88 table (CONSTELLATIONS /
                                   CON_INDEX), the Stellarium source path, the
                                   two things read out of that file — stick
                                   figures → constellation line segments +

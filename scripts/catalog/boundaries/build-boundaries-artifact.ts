@@ -3,11 +3,11 @@
 
 import { writeFile } from 'node:fs/promises';
 
-import {
-  createIauConstellationLookup,
+import type {
+  IauConstellationLookup,
 } from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
-import { readIauEdgeRecords } from '../parse/constellations';
+import { absoluteToApparentMagnitude } from '../catalog-pure';
 import {
   buildBoundaryArtifact,
   countDirections,
@@ -47,7 +47,7 @@ export function collectFadeSamples(
     }));
     samples.push({
       offsetPc: misplacementOffsetPc(nearestDeg, distPc),
-      appMag: s.absmag + 5 * Math.log10(distPc / 10),
+      appMag: absoluteToApparentMagnitude(s.absmag, distPc),
     });
   }
   return samples;
@@ -56,8 +56,8 @@ export function collectFadeSamples(
 export async function writeBoundaryArtifact(
   outPath: string,
   stars: readonly BoundaryFadeStar[],
+  lookup: IauConstellationLookup,
 ): Promise<BoundaryArtifactReport> {
-  const lookup = createIauConstellationLookup(readIauEdgeRecords());
   const samples = collectFadeSamples(stars, lookup.distanceToNearestEdgeDeg);
   const artifact = buildBoundaryArtifact(lookup.edges, samples);
   const json = JSON.stringify(artifact) + '\n';

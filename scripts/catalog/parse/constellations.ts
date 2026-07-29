@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import {
   constellationKey,
   createIauConstellationLookup,
+  type IauConstellationLookup,
 } from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
 import { REPO_ROOT } from '../../util/paths';
@@ -164,6 +165,11 @@ export interface ConstellationAssignment {
    *  boundaries partition the whole sphere, so this always resolves — there
    *  is no unclassified direction and no sentinel return. */
   indexAt(x: number, y: number, z: number): number;
+  /** The bound lookup this wraps. Exposed so the boundary artifact draws its
+   *  arcs and measures its nearest-wall distances against the same
+   *  decomposition byte 34 was resolved from, rather than building a second
+   *  one from the same file. */
+  readonly lookup: IauConstellationLookup;
 }
 
 /** Binds the boundary lookup to the IAU-88 table's indices. The origin has no
@@ -183,6 +189,7 @@ export function createConstellationAssignment(
     );
   }
   return {
+    lookup,
     indexAt(x, y, z) {
       const norm = Math.hypot(x, y, z);
       if (norm === 0) {

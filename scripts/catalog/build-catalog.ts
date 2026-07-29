@@ -882,7 +882,9 @@ async function main() {
   // Boundary polylines + the fade-quantile table. The quantiles are keyed to
   // the magnitude slider and measured over the shipped population, so this
   // runs against the same `stars` the binary was written from.
-  const boundaries = await writeBoundaryArtifact(OUT_BOUNDARIES, stars);
+  const boundaries = await writeBoundaryArtifact(
+    OUT_BOUNDARIES, stars, conAssignment.lookup,
+  );
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);

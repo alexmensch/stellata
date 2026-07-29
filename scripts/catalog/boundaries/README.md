@@ -16,9 +16,10 @@ scripts/catalog/boundaries/
   boundaries-artifact-pure.ts     Wire shape, direction quantisation, the
     (+ test)                      misplacement-offset formula, and the fade
                                   quantiles. Pure.
-  build-boundaries-artifact.ts    Reads the edge records, sweeps the shipped
-                                  star population for fade samples, writes
-                                  the JSON. Called from ../build-catalog.ts.
+  build-boundaries-artifact.ts    Sweeps the shipped star population for fade
+                                  samples and writes the JSON. Called from
+                                  ../build-catalog.ts, which hands it the
+                                  lookup (§ Cost).
 ```
 
 ## Wire shape
@@ -125,3 +126,9 @@ quarter-billion arc evaluations and minutes of build time, so
 which prunes on a declination-band lower bound. Exact, not approximate,
 and pinned against the linear scan across a sphere-wide sampling grid.
 The whole stage costs under a second.
+
+`writeBoundaryArtifact` takes the lookup rather than building one:
+`loadReadStarsInputs` already decomposed the edge set for byte 34
+(`../parse/README.md` § Positional constellation membership), and one
+instance means the drawn arcs cannot disagree with the membership the
+catalogue shipped.

@@ -2150,6 +2150,12 @@ export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number
   return mag - 5 * Math.log10(distPc / 10);
 }
 
+/** Absolute magnitude → apparent magnitude at given distance.
+ *  m = M + 5·log₁₀(d / 10 pc). */
+export function absoluteToApparentMagnitude(absmag: number, distPc: number): number {
+  return absmag + 5 * Math.log10(distPc / 10);
+}
+
 /** Shared shape produced by every distance-override layer (Bailer-Jones,
  *  LMC kinematic, and future SMC kinematic / structural-disc / OGLE
  *  Cepheid layers). Each `apply*Override` returns one of these or null.
