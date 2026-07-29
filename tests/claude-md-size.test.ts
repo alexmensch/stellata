@@ -2,8 +2,8 @@ import { describe, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const MAX_LINES = 380;
-const MAX_BYTES = 18 * 1024;
+const MAX_LINES = 330;
+const MAX_BYTES = 16 * 1024;
 
 const claudeMdPath = resolve(process.cwd(), 'CLAUDE.md');
 const content = readFileSync(claudeMdPath, 'utf8');
@@ -35,12 +35,16 @@ function failureMessage(): string {
     '     authoring-patterns.md (write-time rules), ux-tweaks.md (knob',
     '     reference across many files). Default is still a folder',
     '     README — only fall back to docs/ if no folder fits.',
-    '  3. If it is a new top-level convention that the existing wiki',
+    '  3. If it is a universal preference rather than a stellata fact',
+    '     (how to write comments, PR bodies, git flow), it belongs in',
+    '     the user-level CLAUDE.md, not here — this file carries only',
+    '     what is specific to this project.',
+    '  4. If it is a new top-level convention that the existing wiki',
     '     shape cannot host, STOP and consult the user before',
     '     expanding CLAUDE.md or restructuring the wiki. A larger reorg',
     '     (new top-level folder surface, threshold bump, re-shaping the',
     '     wiki) is a deliberate decision the user wants in on.',
-    '  4. Otherwise, trim or compress to fit the budget.',
+    '  5. Otherwise, trim or compress to fit the budget.',
     '',
   ].join('\n');
 }
