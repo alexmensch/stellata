@@ -45,9 +45,10 @@ override (`setSceneElementVisible`) writes one cache slot directly and
 supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.
 
-**The preset is authoritative — overrides are within-scene only.** Three
+**The preset is authoritative — overrides are within-scene only.** Four
 elements also carry a legacy user toggle that ANDs with the floor:
-`constellationFigures`←`showConstellation` (`C`), `milkyWayBand`/
+`constellationFigures` and `constellationBoundaries`←`showConstellation`
+(`C` — one switch for every piece of constellation chrome), `milkyWayBand`/
 `milkyWayIsobar`←`showMilkyway`, `lgEmissionGlow`←`showLgEmission`.
 `applyDetailPreset` resets those toggles to `on` so a per-element hide
 does **not** outlive a detail-level change — pick a new mode and the
@@ -90,7 +91,9 @@ sit at `physical`, not `representational`. `constellationFigures`, the
 molecular-cloud silhouette (`molecularCloudEllipsoids`), and cloud names
 (`chartCloudNames`) enter together at `representational` — a cloud's name
 never appears before its outline; constellation Latin names
-(`chartConstellationNames`) at `all`.
+(`chartConstellationNames`) and the IAU boundary arcs
+(`constellationBoundaries`, the one chart-only element that is WebGL
+geometry rather than a `chart-labels` tier) at `all`.
 
 ## How the shell uses it
 

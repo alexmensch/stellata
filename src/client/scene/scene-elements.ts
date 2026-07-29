@@ -54,7 +54,9 @@ export type SceneElementId =
   | 'chartBayerGlyphs'
   | 'chartVariableRings'
   | 'chartConstellationNames'
-  | 'chartCloudNames';
+  | 'chartCloudNames'
+  // Chart-only geometry (constellation-boundaries/).
+  | 'constellationBoundaries';
 
 export interface ElementFloors {
   readonly realistic: Floor;
@@ -94,6 +96,7 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   chartVariableRings:        { realistic: 'never',            chart: 'physical' },
   chartConstellationNames:   { realistic: 'never',            chart: 'all' },
   chartCloudNames:           { realistic: 'never',            chart: 'representational' },
+  constellationBoundaries:   { realistic: 'never',            chart: 'all' },
 };
 
 /** Iteration order for applyDetailPreset — the SceneElementId union as a
