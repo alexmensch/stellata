@@ -138,6 +138,8 @@ import {
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
+import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
+import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
   EclipsePhotometryField,
   type EclipseRelationDebugRow,
@@ -318,6 +320,7 @@ export class Stellata implements FrameAnchor {
   private orbitRingsLayer: OrbitRingsLayer;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
+  private constellationBoundaryLayer: ConstellationBoundaryLayer;
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
@@ -533,6 +536,8 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.register(this.starLocalCluster);
     this.constellationFigureLayer = new ConstellationFigureLayer();
     this.scene.add(this.constellationFigureLayer.group);
+    this.constellationBoundaryLayer = new ConstellationBoundaryLayer();
+    this.scene.add(this.constellationBoundaryLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);
     this.planetMeshLayer = new PlanetMeshLayer(
@@ -789,7 +794,14 @@ export class Stellata implements FrameAnchor {
     // highlighted figure, chart ↔ navigate (chart draws all 88), or the
     // showConstellation master toggle. Detail-cycle permission is a separate
     // push (buildSceneElementBinds).
-    this.on('filter', () => this.refreshConstellationFigure());
+    // The boundary fade window rides the same emit: it is a function of the
+    // magnitude limit — a fainter limit admits stars nearer their walls —
+    // pushed rather than read per frame so the table interpolation runs once
+    // per slider change.
+    this.on('filter', () => {
+      this.refreshConstellationFigure();
+      this.constellationBoundaryLayer.setMagnitudeLimit(this.filter.maxAppMag);
+    });
     this.on('cameraMode', () => this.refreshConstellationFigure());
     // Attach Sol's planet system to the global body field once at
     // startup. Bodies render from now on independent of focus, gated
@@ -1096,6 +1108,15 @@ export class Stellata implements FrameAnchor {
       update: () => this.constellationFigureLayer.update(this.localPositions),
       setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
       dispose: () => this.constellationFigureLayer.dispose(),
+    });
+    this.layers.register({
+      // Chart-only (floor 'never' in the realistic column), and the
+      // showConstellation toggle covers every piece of constellation chrome.
+      update: (ctx) => this.updateWarpGatedRefLayer(
+        this.constellationBoundaryLayer, ctx,
+        this.detailPermits('constellationBoundaries') && this.filter.showConstellation),
+      setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
+      dispose: () => this.constellationBoundaryLayer.dispose(),
     });
     this.layers.register({
       update: (ctx) => this.updateWarpGatedRefLayer(
@@ -1834,6 +1855,14 @@ export class Stellata implements FrameAnchor {
     });
   }
 
+  /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
+   *  already in the scene; this builds its geometry and seeds the fade window
+   *  once the async load resolves. */
+  attachConstellationBoundaries(artifact: BoundaryArtifact): void {
+    this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
+    this.constellationBoundaryLayer.setMonochrome(this.monochrome);
+  }
+
   /** Attach the loaded probe trajectories. Both layers are constructed in
    *  the ctor and already in the scene (Sol-anchored, like the heliopause);
    *  this binds the roster once the async load resolves. An empty roster
@@ -2078,6 +2107,7 @@ export class Stellata implements FrameAnchor {
       chartVariableRings: set('chartVariableRings'),
       chartConstellationNames: set('chartConstellationNames'),
       chartCloudNames: set('chartCloudNames'),
+      constellationBoundaries: set('constellationBoundaries'),
     };
   }
 

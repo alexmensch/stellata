@@ -16,7 +16,7 @@ describe('SCENE_ELEMENT_FLOORS contract', () => {
       stars: { realistic: 'physical', chart: 'physical' },
     };
     expect(partial).toBeDefined();
-    expect(SCENE_ELEMENT_IDS.length).toBe(28);
+    expect(SCENE_ELEMENT_IDS.length).toBe(29);
   });
 
   it('SCENE_ELEMENT_IDS matches the floor-table keys exactly', () => {
@@ -51,10 +51,11 @@ describe('visibleSet — cumulative floor derivation', () => {
   it('chart cumulative sizes are pinned', () => {
     // Chart 'physical' carries star + planet names (chartStarNameLabels) —
     // chart mode has no true naked-eye tier, so the base chart is legible.
-    // Cloud names + outlines both enter at 'representational'.
+    // Cloud names + outlines both enter at 'representational'; the IAU
+    // boundary arcs join the constellation Latin names at 'all'.
     expect(visibleSet('physical', 'chart').size).toBe(6);
     expect(visibleSet('representational', 'chart').size).toBe(9);
-    expect(visibleSet('all', 'chart').size).toBe(10);
+    expect(visibleSet('all', 'chart').size).toBe(11);
   });
 
   it('each level is a superset of the level below (cumulativeness)', () => {
@@ -91,6 +92,14 @@ describe('visibleSet — cumulative floor derivation', () => {
     for (const id of ['probeMarkers', 'probeTrails', 'probeLabels'] as const) {
       expect(elementPermitted(id, 'all', 'chart')).toBe(false);
     }
+  });
+
+  // The IAU boundary partition has no 3D referent — it is only meaningful on
+  // the chart, and only as the last thing added to it.
+  it('constellation boundaries are chart-only at the top tier', () => {
+    expect(elementPermitted('constellationBoundaries', 'representational', 'chart')).toBe(false);
+    expect(elementPermitted('constellationBoundaries', 'all', 'chart')).toBe(true);
+    expect(elementPermitted('constellationBoundaries', 'all', 'realistic')).toBe(false);
   });
 
   it('chart floors exclude realistic-only chrome and vice versa', () => {
