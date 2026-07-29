@@ -39,8 +39,9 @@ interface Disagreement {
   positionalCon: string;
 }
 
-// The CSV rides LFS: the bare CI `test` job sees a pointer stub, so the sweep
-// runs in the build-catalog job (lfs: true) and in any local clone.
+// The CSV rides LFS, so the bare CI `test` job sees a pointer stub and skips.
+// The sweep runs smudged in the `tier-a-corpus` job, which names this file
+// explicitly — a skipIf suite that no job names runs nowhere.
 const available = !isLfsPointerFile(ATHYG_CSV);
 
 describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column', () => {

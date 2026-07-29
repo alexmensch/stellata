@@ -138,6 +138,9 @@ jobs:
   # Tier-A validation against the built artifacts: the known-stars
   # corpus plus the multi-star render-geometry regression (which needs
   # public/binaries.bin, built here from the committed multiples.tsv).
+  # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
+  # the bare `test` job — every such suite must be named in the vitest
+  # invocation below, or it never runs smudged anywhere.
   tier-a-corpus:
     name: Tier-A star corpus
     runs-on: ubuntu-latest
@@ -156,7 +159,7 @@ jobs:
           name: public-artifacts
           path: public/
       - run: pnpm run build:binaries-runtime
-      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts
+      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-athyg-agreement.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
   # read) + the DR-reconciliation classifier against its committed

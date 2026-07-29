@@ -140,6 +140,11 @@ wall, where an editorial cell has no nomenclature to answer to. The
 count is pinned as an exact number rather than a rate because it is the
 sharpest signal available on the precession epoch (§ B1875).
 
+The CSV rides LFS, so the suite self-skips in the bare CI `test` job and
+runs smudged in **`tier-a-corpus`**, which names the file explicitly.
+A `describe.skipIf` suite that no job names runs nowhere: check
+`.github/workflows/test.yml` when adding another.
+
 AT-HYG shares no input with the edge set, so this is external
 validation of both the epoch and the decomposition. It is also why the
 positional assignment can replace the editorial column outright:
