@@ -54,10 +54,17 @@ case "$abs" in
 esac
 
 # Reading a README.md marks its folder as seen and is always allowed.
+# Write / Edit mark it too: the harness refuses to overwrite or edit a
+# file the session hasn't Read, so a call reaching here either authored
+# the README this session or already read it.
 basename="$(basename "$abs")"
-if [ "$tool" = "Read" ] && [ "$basename" = "README.md" ]; then
-  printf '%s\n' "$abs" >> "$STATE_FILE"
-  exit 0
+if [ "$basename" = "README.md" ]; then
+  case "$tool" in
+    Read|Write|Edit)
+      printf '%s\n' "$abs" >> "$STATE_FILE"
+      exit 0
+      ;;
+  esac
 fi
 
 # Grep over a directory is a broad search — gating it would block
@@ -67,8 +74,18 @@ if [ "$tool" = "Grep" ] && [ -d "$abs" ]; then
   exit 0
 fi
 
-# Find the closest README.md by walking up from the file's directory.
 dir="$(dirname "$abs")"
+
+# A folder whose README has never existed — none on disk, nothing tracked
+# in git — is one this session is creating, so there is no prior context to
+# scout. folder-readme-coverage.test.ts owns requiring the README exists;
+# commit-sweep-guard owns the commit-time update.
+if [ ! -f "$dir/README.md" ] &&
+   [ -z "$(git -C "$toplevel" ls-files -- "$dir" 2>/dev/null || true)" ]; then
+  exit 0
+fi
+
+# Find the closest README.md by walking up from the file's directory.
 readme=""
 while [ "$dir" != "$toplevel" ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
   if [ -f "$dir/README.md" ]; then

@@ -12,9 +12,10 @@ scripts/hooks/
   readme-guard.sh          Blocks Read / Grep / Edit / Write /
                            NotebookEdit against files under src/**,
                            scripts/**, data/**, docs/** until the
-                           containing folder's README.md has been Read
+                           containing folder's README.md has been seen
                            this session. Enforces CLAUDE.md § Folder
                            READMEs (the scout pass) as a hard gate.
+                           Behaviour pinned by tests/readme-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
                            without updating its README.md (CLAUDE.md
@@ -40,9 +41,24 @@ seen-set, the call passes through. If not, the hook returns a
 `permissionDecision: "deny"` with a message naming the README to
 read and quoting the rule.
 
-Read of a `README.md` itself is always allowed and adds the README
-to the seen-set — so the natural flow ("Read the folder's README,
-then read its files") works without intervention.
+A `Read` / `Write` / `Edit` of a `README.md` itself is always allowed
+and adds it to the seen-set — so both the reading flow ("Read the
+folder's README, then read its files") and the authoring flow ("write
+the new folder's README, then its files") work without intervention.
+`Write` / `Edit` count as seen because the harness already refuses to
+overwrite or edit a file the session hasn't Read: a call reaching the
+hook either authored that README or read it earlier.
+
+A folder whose README has **never** existed — none on disk *and*
+nothing tracked in git under it — is exempt: the session is creating
+it, so there is no prior context to scout, and charging the *parent*
+folder's README for a new subsystem's first file was a false positive.
+Both conditions are required, so an untracked folder that already
+carries a README (one an earlier session left behind) is still gated,
+and a committed folder missing a README is still charged to its
+nearest ancestor. Requiring the README to exist at all stays with
+`tests/folder-readme-coverage.test.ts`; the commit-time update stays
+with `commit-sweep-guard`.
 
 Grep over a *directory* (the broad-search case) is allowed; Grep
 into a single file is gated like Read. Glob isn't gated at all
