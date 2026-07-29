@@ -415,10 +415,16 @@ consume it in two complementary ways:
    **Blend light conservation.** A minted member's brightness comes
    from the WDS pair row's own published magnitudes (`wds_mag`:
    `M = m − 5·log₁₀(d_pc/10)` at the system distance) or from the
-   anchor's magnitude plus the WDS Δmag — and in either case its light
-   is already inside the anchor's AT-HYG magnitude when the catalogues
-   fit one photocentre over the pair. The anchor therefore dims so
-   total system light stays what was measured. For Δmag-imputed
+   anchor's magnitude plus the WDS Δmag. Its light is inside the
+   anchor's magnitude only when the catalogue that produced that
+   magnitude fit one photocentre over the pair — which is a property of
+   that catalogue, not of the pair: a printed Hipparcos V holds one
+   value per entry and so blends everything Hipparcos could not split,
+   while a V transformed from Gaia G excludes any component Gaia gave
+   its own source_id (HD 18455's Riello V is component A at 8.04, not
+   the AB blend SIMBAD prints as 7.33). Where the light IS inside, the
+   anchor dims so total system light stays what was measured. For
+   Δmag-imputed
    members the pair is re-split jointly:
    `M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4·Δm))`, `M_B = M_A + Δm` —
    exact flux conservation for any Δm, reducing to "anchor barely

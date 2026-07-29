@@ -439,6 +439,15 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
 });
 
 describe('anchor flux dimming', () => {
+  // A structural member only bypasses the subset fit when the anchor's V is the
+  // system blend, so every fixture below that exercises the bypass pins the
+  // anchor to a printed tier.
+  const blendAnchor = (overrides: Partial<Star> = {}) =>
+    makeStar({
+      hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0,
+      vVia: 'printed_hip', ...overrides,
+    });
+
   const dimRows = (dmag: number | null, magSec: number | null = null) => [
     multiplesRow({
       systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
@@ -459,7 +468,7 @@ describe('anchor flux dimming', () => {
   ];
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(newStars).toHaveLength(1);
     expect(stats.blendDimmedAnchors).toBe(1);
@@ -472,7 +481,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimSkipped).toBe(0);
@@ -482,7 +491,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('skips the wds_mag subtraction when the member is as bright as the blend (guard)', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
     // the blend itself — subtracting it would zero the residual.
     const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -492,7 +501,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('does not dim when the member keeps its own distinct identifier', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
     const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -501,12 +510,144 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBe(1.0);
   });
 
-  // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
-  // WDS pair blend (or the primary alone), distPc=10 so distance modulus
-  // and de-extinction both vanish and observed = absolute magnitudes.
   const blendMag = (...mags: number[]) =>
     -2.5 * Math.log10(mags.reduce((f, m) => f + Math.pow(10, -0.4 * m), 0));
 
+  // HD 18455's shape: a sub-arcsec pair whose secondary row carries the
+  // anchor's HIP and Gaia source, so promotion strips both and mints a synth
+  // record. The anchor's V comes from Gaia (the fixture default), which is what
+  // makes the shared identifier stop implying the light is shared.
+  const gaiaAnchorRows = (magPri: number, magSec: number, distPc: number) => [
+    multiplesRow({
+      systemId: '02572-2458-AB', comp: 'A', hip: 13772,
+      gaiaSourceId: '5076269164798851712',
+      x_pc: distPc, y_pc: 0, z_pc: 0, distPc,
+      absmag: 0, name: 'Gaian', source: 'athyg',
+      photometryVia: 'athyg_own',
+      astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+      sepArcsec: 0.1, paDeg: 110.0, dmag: magSec - magPri, magPri, magSec,
+    }),
+    multiplesRow({
+      systemId: '02572-2458-AB', comp: 'B', hip: 13772,
+      gaiaSourceId: '5076269164798851712',
+      x_pc: distPc, y_pc: 0, z_pc: 0, distPc,
+      absmag: 0,
+      photometryVia: 'athyg_system_inherited',
+      astrometryVia: 'hip2_long_baseline', orbitRole: 'secondary',
+      sepArcsec: 0.1, paDeg: 110.0, dmag: magSec - magPri, magPri, magSec,
+    }),
+  ];
+
+  it('no dim when the Gaia-derived anchor V already reads as one component (HD 18455)', () => {
+    // Gaia DR3 5076269164798851712 → Riello V 8.040 at 22.467 pc, which is
+    // WDS's component A (8.06), not the AB blend (7.37) SIMBAD prints as
+    // V = 7.331. B's light was never in it, so the pre-cascade dim of
+    // +0.684 mag would subtract the companion a second time.
+    const anchor = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      absmag: 8.040 - 5 * Math.log10(22.466861 / 10),
+      x: 22.466861, y: 0, z: 0,
+    });
+    const rows = gaiaAnchorRows(8.06, 8.20, 22.466861);
+    const untouched = anchor.absmag;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].syntheticId).toBe('synth-02572-2458-B');
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBe(untouched);
+    expect(anchor.absmag).toBeCloseTo(6.2823, 4);
+  });
+
+  it('still dims when the Gaia-derived anchor V reads as the blend (unresolved pair)', () => {
+    // Same identifier shape, same 0.1″ separation — but here Gaia fit the pair
+    // as one photocentre, so the transformed V lands on the A+B blend and the
+    // companion's light IS being double-counted.
+    const anchor = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      absmag: blendMag(10.50, 10.50), x: 10, y: 0, z: 0,
+    });
+    const rows = gaiaAnchorRows(10.50, 10.50, 10);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimGaiaResolved).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(10.50, 3);
+    expect(newStars[0].absmag).toBeCloseTo(10.50, 3);
+  });
+
+  it("a member with its own Gaia source never dims a Gaia-derived anchor (HD 153557's 5″ B)", () => {
+    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello V is 7.806,
+    // which the pair blend (7.859) fits better than A alone — so the subset
+    // solve WOULD dim it. Gaia gave B its own source at 5″ separation, which
+    // settles it: B's light is not in the anchor's G, whatever the fit prefers.
+    const rows = () => {
+      const r = gaiaAnchorRows(7.93, 10.85, 17.93);
+      r[1].gaiaSourceId = '1408029509583934464';
+      r[1].hip = null;
+      r[1].photometryVia = 'gaia_photometry';
+      r[1].absmag = 10.0316;
+      return r;
+    };
+    const absmag = 7.806 - 5 * Math.log10(17.93 / 10);
+    const gaia = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
+      x: 17.93, y: 0, z: 0,
+    });
+    const gaiaStats = promoteCompanions(
+      rows(), [gaia], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(gaiaStats.blendDimGaiaResolved).toBe(1);
+    expect(gaiaStats.blendDimmedAnchors).toBe(0);
+    expect(gaia.absmag).toBe(absmag);
+
+    // Under a printed V the same 5″ member is still a candidate: Hipparcos
+    // published one magnitude for the entry whether or not Gaia later split it.
+    const printed = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
+      x: 17.93, y: 0, z: 0, vVia: 'printed_hip',
+    });
+    const printedStats = promoteCompanions(
+      rows(), [printed], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(printedStats.blendDimGaiaResolved).toBe(0);
+    expect(printedStats.blendDimmedAnchors).toBe(1);
+    expect(printed.absmag).toBeGreaterThan(absmag);
+  });
+
+  it('an unfittable structural member dims only under a printed anchor V', () => {
+    // No WDS magnitudes reach the fit, so nothing can test membership. Under a
+    // printed V the blend claim holds by construction and the member dims the
+    // anchor; under a Gaia V there is no evidence its light is in there.
+    const noWdsMags = () => {
+      const rows = gaiaAnchorRows(0, 0, 10);
+      for (const r of rows) { r.magPri = null; r.magSec = null; r.dmag = 2.0; }
+      return rows;
+    };
+    const printed = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
+      x: 10, y: 0, z: 0, vVia: 'printed_hip',
+    });
+    const printedStats = promoteCompanions(
+      noWdsMags(), [printed], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(printedStats.blendDimmedAnchors).toBe(1);
+    expect(printed.absmag).toBeCloseTo(1.15973, 4);
+
+    const gaia = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
+      x: 10, y: 0, z: 0,
+    });
+    const gaiaStats = promoteCompanions(
+      noWdsMags(), [gaia], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(gaiaStats.blendDimmedAnchors).toBe(0);
+    expect(gaiaStats.blendDimMembersUnfit).toBe(1);
+    expect(gaia.absmag).toBe(1.0);
+  });
+
+  // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
+  // WDS pair blend (or the primary alone), distPc=10 so distance modulus
+  // and de-extinction both vanish and observed = absolute magnitudes.
   const solveRows = (over1: Partial<MultiplesTsvRow>, over2?: Partial<MultiplesTsvRow>) => {
     const rows = [
       multiplesRow({
@@ -551,7 +692,7 @@ describe('anchor flux dimming', () => {
 
   it('subset solve dims via an identifier-less synth member when the anchor mag reads as the blend (Polaris Ab shape)', () => {
     const blend = blendMag(2.1, 4.1);
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
     const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -565,7 +706,7 @@ describe('anchor flux dimming', () => {
 
   it('subset solve attributes the blend to the fitting member only (36 Oph D shape)', () => {
     const blend = blendMag(2.0, 3.0); // anchor blends A+B; D is NOT inside
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows(
       // B: own gaia + own photometry — independent brightness.
       {
@@ -587,7 +728,7 @@ describe('anchor flux dimming', () => {
 
   it('no dim when the blend hypothesis is degenerate with anchor-alone (Sirius Δmag≈10 shape)', () => {
     const blend = blendMag(2.0, 12.0); // differs from magPri by ~1e-4 mag
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({
       gaiaSourceId: '999900001111', photometryVia: 'athyg_own',
       absmag: 12.0, dmag: 10.0, magPri: 2.0, magSec: 12.0,
@@ -601,7 +742,7 @@ describe('anchor flux dimming', () => {
 
   it('joint N-member split conserves total flux across two blend-relative members', () => {
     const blend = blendMag(2.0, 3.0, 4.0);
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows(
       { dmag: 1.0, magPri: 2.0, magSec: 3.0 },
       { dmag: 2.0, magPri: 2.0, magSec: 4.0 },
@@ -2181,6 +2322,7 @@ describe('promoteCompanions', () => {
     const acrux: Star = makeStar({
       hip: 60718, absmag: -3.77, proper: 'Acrux',
       x: 100, y: 0, z: 0,
+      vVia: 'printed_hip',  // Gaia-saturated, so its V is the printed blend
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({

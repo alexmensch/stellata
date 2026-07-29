@@ -195,38 +195,50 @@ Per-row gates and resolution:
   brightness (`companionAbsmagAnchorCollocated`) rather than a
   corrupted A+Δmag.
 - **Anchor flux conservation (post-pass).** A member whose light is
-  embedded in an `athyg_own` anchor's AT-HYG magnitude double-counts
-  the flux if minted without dimming the anchor. Membership is decided
-  per anchor by a **joint subset solve** over every own-brightness
-  member (`dmag_imputed` / `own` / `wds_mag` — identifier-carrying and
-  identifier-less synth alike): the hypothesis
+  embedded in an `athyg_own` anchor's record magnitude double-counts the flux
+  if minted without dimming the anchor. **Which members CAN be in there is set
+  by the catalogue the anchor's V came from, not by identifiers.** A printed
+  tier publishes one magnitude per catalogue entry, so every member sharing the
+  entry is inside it; a `gaia_riello` V resolves per source, so a member Gaia
+  handed its OWN source_id is separated by measurement and cannot be in the
+  anchor's G (`blendDimGaiaResolved` — HD 153557's B at 5″, σ Ori's E at 42″,
+  both of which the fit alone would have dimmed). `vTierIsSystemBlend` owns
+  that split (`../photometry/README.md` § Which tiers give a system blend).
+  Every remaining own-brightness member (`dmag_imputed` / `own` / `wds_mag`)
+  is decided per anchor by a **joint subset solve**: the hypothesis
   `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` over observed-frame WDS
-  magnitudes that lands closest to the anchor's observed apparent
-  magnitude wins, decisive only when it beats "anchor alone" by
-  ≥0.01 mag (hypotheses within 0.01 mag of the best are an equivalence
-  class — the smallest subset in it wins, so a negligible-flux member
-  never flips the outcome, and Sirius' Δmag≈10 float-noise shape never
-  dims). A synth member whose ids were inherited-then-stripped from
-  the anchor is structurally in the blend and skips the fit. The joint
-  fit is what a pairwise test couldn't do: 36 Oph D cannot claim
-  A+B's blend (any subset containing D fits worse than {A,B}), while
-  Polaris Ab (inside the 1.98 blend, Δmag 2.0) dims its anchor
-  ~0.16 mag. Apply, once per anchor with exact conservation: members
-  with independent brightness (`own` / `wds_mag`) subtract their
-  actual flux, guarded against a member as bright as the blend itself
-  (`blendDimSkipped`); blend-relative members (`dmag_imputed`)
-  re-split the residual by Δmag —
-  `F_A · (1 + Σ 10^(−0.4Δᵢ)) = F_blend − Σ F_own`, the N-member
-  generalisation of `M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ))`
-  (exact for any Δ; a naive subtraction would gut a near-equal
-  anchor, Capella −0.51 → +2.1). Counted `blendDimmedAnchors` (per
-  anchor); members the fit leaves outside the blend are
-  `blendDimMembersOutside`, members with no usable WDS magnitudes are
-  `blendDimMembersUnfit`. Caveat: WDS pair magnitudes are taken at
-  face value, and speckle-band (non-V) pairs overstate a member's V
-  share (Achernar's Δm 1.4 is H-band) — a data-curation tail, visible
-  in the known-stars notes. The equal-split gaia_photometry blend pass
-  above stays for the N-way no-WDS-mag case.
+  magnitudes landing closest to the anchor's observed apparent magnitude wins,
+  decisive only when it beats "anchor alone" by ≥`RIELLO_G_MINUS_V_SIGMA` =
+  0.03017 mag — the published scatter of the relation that V came through, so the
+  margin never sits below the noise in its own input. Hypotheses within it are an
+  equivalence class and its SMALLEST subset wins, so a negligible-flux
+  member never flips the outcome and Sirius' Δmag≈10 float-noise shape never
+  dims. The joint fit is what a pairwise test couldn't do: 36 Oph D cannot
+  claim A+B's blend (any subset containing D fits worse than {A,B}), while
+  Polaris Ab (inside the 1.98 blend, Δmag 2.0) dims its anchor ~0.16 mag.
+  Two references the solve needs, both easy to get wrong. The anchor's
+  **observed magnitude** comes from its own `absmag` at its own `|xyz|`, never a
+  multiples.tsv `dist_pc` — that can predate a distance override the record took
+  (HD 64315: 12.7 kpc vs 6.2) or a coherence reposition (σ Ori 328.9 → 399.8 pc),
+  both safe here because coherence moves records at fixed apparent brightness.
+  And **"anchor alone"** is the FAINTEST `mag_pri` across the anchor's rows, since
+  WDS's `mag_pri` covers the whole subtree of whatever letter its row pairs (AR
+  Cas prints 4.87 for A, 5.02 for Aa); that value is also the Δ reference for
+  every `dmag_imputed` member, putting Ab 2.40 off Aa, not 2.55 off the A blend.
+  Apply, once per anchor with exact conservation: members with independent
+  brightness (`own` / `wds_mag`) subtract their actual flux, guarded against a
+  member as bright as the blend itself (`blendDimSkipped`); blend-relative
+  members (`dmag_imputed`) re-split the residual by Δmag — the N-member
+  generalisation of the split derived in `docs/science-multiple-star-pipeline.md`
+  § Blend light conservation. Counted `blendDimmedAnchors`
+  (per anchor); members the fit leaves outside are
+  `blendDimMembersOutside`, members with no usable WDS magnitudes
+  `blendDimMembersUnfit`. Caveats: WDS pair magnitudes are taken at face value,
+  and speckle-band (non-V) pairs overstate a member's V share (Achernar's Δm 1.4
+  is H-band) — a data-curation tail, visible in the known-stars notes; and the fit
+  judges only which hypothesis is CLOSEST, never how close, so an anchor matching
+  neither still dims by the nearer one. The equal-split gaia_photometry blend
+  pass above stays for the N-way no-WDS-mag case.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
   surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair
@@ -335,15 +347,6 @@ companion never gets one without the other.
 | `companionIdx` | post-pass | set by geometric binary inference (`../multiplicity/README.md` § Geometric binary inference). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl` | unset | not carried on multiples.tsv rows. |
-
-Position flows from the anchor because a promoted companion usually sits
-sub-arcsec off it — well below the catalog's positional precision. Its
-constellation does not: the boundaries classify whatever position the
-projection produced, which is what makes the WDS-wide pairs (Fomalhaut C
-is 5.7° from Fomalhaut) come out right. The per-component fields are
-precisely the ones the promotion exists to surface: the companion is a
-distinct row because its brightness, colour, and type differ from the
-blended primary.
 
 ### Renderable-companion wings
 

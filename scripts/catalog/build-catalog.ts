@@ -288,6 +288,7 @@ async function main() {
     companionBlendDimSkipped: 0,
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
+    companionBlendDimGaiaResolved: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
     componentLettersStamped: 0,
@@ -511,7 +512,8 @@ async function main() {
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
         `blend-split=${ps.blendSplitRecords}, ` +
         `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
-        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}), ` +
+        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
+        `gaia-resolved ${ps.blendDimGaiaResolved}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
         `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
         `in ${Date.now() - tProm}ms`,
@@ -536,6 +538,7 @@ async function main() {
     counts.companionBlendDimSkipped = ps.blendDimSkipped;
     counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
     counts.companionBlendDimOutside = ps.blendDimMembersOutside;
+    counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
 

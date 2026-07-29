@@ -292,9 +292,13 @@ export interface BuildCounts {
    *  observed WDS mags / distance) — left un-dimmed. */
   companionBlendDimUnfit: number;
   /** Non-structural dim candidates the winning subset left out, or whose
-   *  fit was indecisive within 0.01 mag — their light is not in the
-   *  anchor's blend. */
+   *  fit was indecisive within the decisive margin — their light is not in
+   *  the anchor's blend. */
   companionBlendDimOutside: number;
+  /** Dim candidates Gaia had already resolved out of the anchor's magnitude:
+   *  the member carries its own DR3 source_id and the anchor's V came from
+   *  Gaia's, so its light was never in there. Rises with Gaia coverage. */
+  companionBlendDimGaiaResolved: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in
