@@ -1187,8 +1187,6 @@ interface PromotionState {
   existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
-  /** Rides the state rather than a sixth positional argument through the
-   *  three call layers `dustGrid` already crosses. */
   readonly conAssignment: ConstellationAssignment;
   promotedByGaia: Map<string, number>;
   promotedByHip: Map<number, number>;

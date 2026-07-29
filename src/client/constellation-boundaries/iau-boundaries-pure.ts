@@ -439,8 +439,8 @@ function resample(
  *  named, so the flat list is already deduped: there are no per-constellation
  *  polygons to build and no shared arc drawn twice. */
 export function buildBoundaryPolylines(edges: IauBoundaryEdges): BoundaryPolyline[] {
-  const toJ2000 = precessionRotationFromJ2000(B1875_JD);
-  const toIcrs = (v: UnitVector) => unprecessDirection(toJ2000, v);
+  const toB1875 = precessionRotationFromJ2000(B1875_JD);
+  const toIcrs = (v: UnitVector) => unprecessDirection(toB1875, v);
   const out: BoundaryPolyline[] = [];
   for (const edge of edges.meridians) {
     const count = sampleCount(edge.decHiDeg - edge.decLoDeg);

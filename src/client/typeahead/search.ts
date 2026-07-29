@@ -571,7 +571,7 @@ export function createSearchRunner(
 
   const directResult = (idx: number, label: string): FuzzyEntry => {
     const conIdx = catalog.constellation[idx];
-    const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
+    const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
     const name = catalog.names.get(idx);
     return {
       kind: 'star',

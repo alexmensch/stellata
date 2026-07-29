@@ -48,9 +48,11 @@ cross-script policy and pointers.
 `scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if
 `catalog-manifest.json` (+ its first chunk), `constellations.json`,
 `search-index.json`, `catalog-row-index-map.json`, **and**
-`constellation-boundaries.json` are newer than all source inputs
+`constellation-boundaries.json` all exist *and*
+`catalog-manifest.json` is newer than all source inputs
 (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos CCDM TSV,
-`data/binaries/multiples.tsv`, and the script itself). If you change
+`data/binaries/multiples.tsv`, and the script itself) — the other four
+are checked for existence only, since one build writes them all. If you change
 field mapping but not the script mtime (e.g. edit in a way that
 updates atime only), you may need to `touch
 scripts/catalog/build-catalog.ts` or delete the generated files.
