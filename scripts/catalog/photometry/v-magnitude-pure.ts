@@ -45,8 +45,8 @@ export interface GaiaPhotometry {
   rpMag: number | null;
 }
 
-/** `G − V` from the Riello cubic. Callers gate on
- *  {@link isRielloTransformable} first; this is the algebra alone. */
+/** `G − V` from the Riello cubic — the algebra alone, ungated. Callers want
+ *  {@link rielloVMagnitude}, which applies the relation's validity range. */
 export function rielloGMinusV(bpMinusRp: number): number {
   let gMinusV = 0;
   for (let i = RIELLO_G_MINUS_V_COEFFS.length - 1; i >= 0; i--) {
@@ -55,18 +55,25 @@ export function rielloGMinusV(bpMinusRp: number): number {
   return gMinusV;
 }
 
-/** Whether the Riello relation applies: all three bands present, G above the
- *  saturation bound, and the colour inside the published range. */
-export function isRielloTransformable(photometry: GaiaPhotometry | null): boolean {
-  if (!photometry) return false;
+/** Johnson V transformed from a Gaia photometry row, or null when the Riello
+ *  relation does not apply to it: a band missing or non-finite, G below the
+ *  saturation bound, or the colour outside the published range.
+ *
+ *  Gate and transform are one function so the algebra reads the very values the
+ *  gate accepted — a separate boolean predicate leaves the caller re-deriving
+ *  the colour behind non-null assertions, where a later edit to either half
+ *  silently stops matching the other. */
+export function rielloVMagnitude(photometry: GaiaPhotometry | null): number | null {
+  if (!photometry) return null;
   const { gMag, bpMag, rpMag } = photometry;
-  if (gMag === null || bpMag === null || rpMag === null) return false;
+  if (gMag === null || bpMag === null || rpMag === null) return null;
   if (!Number.isFinite(gMag) || !Number.isFinite(bpMag) || !Number.isFinite(rpMag)) {
-    return false;
+    return null;
   }
-  if (gMag < GAIA_PHOTOMETRY_SATURATION_G) return false;
+  if (gMag < GAIA_PHOTOMETRY_SATURATION_G) return null;
   const bpMinusRp = bpMag - rpMag;
-  return bpMinusRp >= RIELLO_BP_RP_MIN && bpMinusRp <= RIELLO_BP_RP_MAX;
+  if (bpMinusRp < RIELLO_BP_RP_MIN || bpMinusRp > RIELLO_BP_RP_MAX) return null;
+  return gMag - rielloGMinusV(bpMinusRp);
 }
 
 /** V through the cascade: Riello-transformed Gaia photometry, else the printed
@@ -80,9 +87,9 @@ export function resolveVMagnitude(
   printedV: number | null,
   cataloguedV: number | null,
 ): VMagnitudeResolution {
-  if (photometry && isRielloTransformable(photometry)) {
-    const bpMinusRp = photometry.bpMag! - photometry.rpMag!;
-    return { v: photometry.gMag! - rielloGMinusV(bpMinusRp), via: 'gaia_riello' };
+  const transformed = rielloVMagnitude(photometry);
+  if (transformed !== null) {
+    return { v: transformed, via: 'gaia_riello' };
   }
   if (printedV !== null && Number.isFinite(printedV)) {
     return { v: printedV, via: 'printed_hip' };

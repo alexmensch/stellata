@@ -6,7 +6,7 @@ import {
   RIELLO_BP_RP_MIN,
   RIELLO_G_MINUS_V_COEFFS,
   RIELLO_G_MINUS_V_SIGMA,
-  isRielloTransformable,
+  rielloVMagnitude,
   resolveVMagnitude,
   rielloGMinusV,
   vTierIsSystemBlend,
@@ -49,33 +49,40 @@ describe('Riello+ 2021 G−V relation', () => {
   });
 });
 
-describe('isRielloTransformable', () => {
-  it('accepts a well-measured unsaturated source inside the colour range', () => {
-    expect(isRielloTransformable(photometry())).toBe(true);
+describe('rielloVMagnitude', () => {
+  it('transforms a well-measured unsaturated source inside the colour range', () => {
+    // G = 10, BP-RP = 0.8: the gate's own inputs, so the returned V proves the
+    // transform ran on the values the gate accepted rather than a re-derivation.
+    expect(rielloVMagnitude(photometry())).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
   });
 
   it('rejects a missing band', () => {
-    expect(isRielloTransformable(photometry({ bpMag: null }))).toBe(false);
-    expect(isRielloTransformable(photometry({ rpMag: null }))).toBe(false);
-    expect(isRielloTransformable(photometry({ gMag: null }))).toBe(false);
+    expect(rielloVMagnitude(photometry({ bpMag: null }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ rpMag: null }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ gMag: null }))).toBeNull();
   });
 
-  it('rejects a source Gaia saturates', () => {
-    expect(isRielloTransformable(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.01 })))
-      .toBe(false);
-    expect(isRielloTransformable(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G })))
-      .toBe(true);
+  it('rejects a non-finite band rather than returning NaN', () => {
+    expect(rielloVMagnitude(photometry({ gMag: Number.NaN }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: Number.POSITIVE_INFINITY }))).toBeNull();
+  });
+
+  it('rejects a source Gaia saturates, accepting exactly at the bound', () => {
+    expect(rielloVMagnitude(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.01 })))
+      .toBeNull();
+    expect(rielloVMagnitude(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G })))
+      .not.toBeNull();
   });
 
   it('rejects colours outside the published range at both ends', () => {
-    expect(isRielloTransformable(photometry({ bpMag: 10, rpMag: 10.6 }))).toBe(false);
-    expect(isRielloTransformable(photometry({ bpMag: 16, rpMag: 10.9 }))).toBe(false);
-    expect(isRielloTransformable(photometry({ bpMag: 10, rpMag: 10.5 }))).toBe(true);
-    expect(isRielloTransformable(photometry({ bpMag: 15.5, rpMag: 10.5 }))).toBe(true);
+    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.6 }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: 16, rpMag: 10.9 }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.5 }))).not.toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: 15.5, rpMag: 10.5 }))).not.toBeNull();
   });
 
   it('rejects a null photometry row outright', () => {
-    expect(isRielloTransformable(null)).toBe(false);
+    expect(rielloVMagnitude(null)).toBeNull();
   });
 });
 
