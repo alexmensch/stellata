@@ -91,7 +91,7 @@ function baseCounts(): BuildCounts {
     designationConMismatch: 1,
     boundarySegments: 781,
     boundaryDirections: 12000,
-    boundaryArtifactBytes: 400000,
+    boundaryArtifactKb: 391,
     conPositionalDisagreement: 61,
     componentLettersStamped: 2,
     componentNameCollisionsResolved: 0,

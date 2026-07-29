@@ -107,10 +107,14 @@ export interface BuildCounts {
   /** Precessed ICRS sample directions across all boundary arcs. Set by the
    *  subdivision step, and the artifact's whole wire cost. */
   boundaryDirections: number;
-  /** public/constellation-boundaries.json size in bytes. Pinned because the
-   *  subdivision step and the direction quantisation are both wire-size
-   *  choices, and neither has any other visible signal. */
-  boundaryArtifactBytes: number;
+  /** public/constellation-boundaries.json size, rounded to KiB. Pinned
+   *  because the direction quantisation is a wire-size choice with no other
+   *  visible signal — dropping `DIRECTION_DECIMALS` by one moves ~30k values
+   *  a character each, ~30 KiB. Rounded rather than exact: the file is 30k
+   *  decimal-formatted floats, so a last-bit difference in one trig call
+   *  (V8 differs across Node versions and architectures — CI is Node 24
+   *  x64) changes its byte length while changing nothing that matters. */
+  boundaryArtifactKb: number;
   /** Search entries carrying `dc` — a designation constellation that
    *  differs from the record's positional one, so its Bayer / Flamsteed /
    *  GCVS aliases are built against the editorial constellation instead

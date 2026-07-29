@@ -14,6 +14,14 @@ import {
  *  test holds the artifact to, and it halves the JSON against full float64. */
 export const DIRECTION_DECIMALS = 7;
 
+/** Decimals kept per fade offset. 1e-4 pc ≈ 20 AU against a smallest emitted
+ *  offset near 0.02 pc, so three significant figures survive on the tightest
+ *  row. Rounding also keeps the emitted width fixed: unrounded, these are the
+ *  only float64s in the artifact, they derive from a 330k-star sweep, and a
+ *  last-bit difference in one star's trig moves the file size — which
+ *  `boundaryArtifactKb` would then report as a change. */
+export const FADE_OFFSET_DECIMALS = 4;
+
 /** Angular slack before a star reads as sitting on the wrong side of a wall.
  *  Half a degree is roughly where a boundary–star mismatch becomes legible
  *  rather than arguable. */
@@ -64,13 +72,19 @@ export interface BoundaryArtifact {
   fade: BoundaryFadeTableWire;
 }
 
-function quantise(value: number): number {
-  return Number(value.toFixed(DIRECTION_DECIMALS));
+function quantise(value: number, decimals: number): number {
+  return Number(value.toFixed(decimals));
 }
 
 export function toSegmentWire(polyline: BoundaryPolyline): BoundarySegmentWire {
   const d: number[] = [];
-  for (const v of polyline.directions) d.push(quantise(v.x), quantise(v.y), quantise(v.z));
+  for (const v of polyline.directions) {
+    d.push(
+      quantise(v.x, DIRECTION_DECIMALS),
+      quantise(v.y, DIRECTION_DECIMALS),
+      quantise(v.z, DIRECTION_DECIMALS),
+    );
+  }
   return { k: polyline.kind, c: [polyline.conA, polyline.conB], d };
 }
 
@@ -116,7 +130,7 @@ export function buildFadeTable(
       seen++;
       for (let j = 0; j < ranks.length; j++) {
         if (Number.isNaN(row[j]) && seen >= ranks[j]) {
-          row[j] = sample.offsetPc;
+          row[j] = quantise(sample.offsetPc, FADE_OFFSET_DECIMALS);
           filled++;
         }
       }

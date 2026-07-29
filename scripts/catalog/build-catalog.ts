@@ -242,7 +242,7 @@ async function main() {
     designationConMismatch: 0,
     boundarySegments: 0,
     boundaryDirections: 0,
-    boundaryArtifactBytes: 0,
+    boundaryArtifactKb: 0,
     solIndex: -1,
     figureCount: 0,
     figureConstellations: 0,
@@ -883,7 +883,7 @@ async function main() {
   const boundaries = await writeBoundaryArtifact(OUT_BOUNDARIES, stars);
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
-  counts.boundaryArtifactBytes = boundaries.bytes;
+  counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
     `Wrote ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `

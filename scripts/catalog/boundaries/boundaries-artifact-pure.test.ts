@@ -4,6 +4,7 @@ import { parseIauEdges } from '../../../src/client/constellation-boundaries/iau-
 import {
   DIRECTION_DECIMALS,
   FADE_MIN_SAMPLES,
+  FADE_OFFSET_DECIMALS,
   MISPLACEMENT_TOLERANCE_DEG,
   buildBoundaryArtifact,
   buildFadeTable,
@@ -98,6 +99,23 @@ describe('fade table', () => {
     // rather than ship a fade that ignores the slider.
     expect(() => buildFadeTable(samples(FADE_MIN_SAMPLES, (i) => i + 1, 5), [0, 5], [50]))
       .toThrow(/at least two magnitude rows/);
+  });
+
+  it('rounds every offset to the declared decimals', () => {
+    // Unrounded, these are the only full-precision floats in the artifact and
+    // its byte length becomes a function of their last bit — which differs
+    // between Node versions, so the size pin drifts for no real reason.
+    const table = buildFadeTable(
+      samples(FADE_MIN_SAMPLES * 2, (i) => (i + 1) * Math.PI / 7, 4), [4, 5], [1, 50],
+    );
+    for (const row of table.offsetsPc) {
+      for (const v of row) expect(v).toBe(Number(v.toFixed(FADE_OFFSET_DECIMALS)));
+    }
+    // 128 samples, so the 1% rank is the 2nd and the 50% the 64th.
+    expect(table.offsetsPc[0]).toEqual([
+      Number((2 * Math.PI / 7).toFixed(FADE_OFFSET_DECIMALS)),
+      Number((64 * Math.PI / 7).toFixed(FADE_OFFSET_DECIMALS)),
+    ]);
   });
 
   it('is monotonic in the percentile rank within a row', () => {

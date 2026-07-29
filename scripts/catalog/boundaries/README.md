@@ -37,9 +37,27 @@ assume the samples still sit at constant RA / Dec.
 `d` is flat x,y,z triples in arc order, quantised to
 `DIRECTION_DECIMALS = 7` — 1e-7 rad ≈ 0.02″, two orders under the
 arcsecond the round-trip test holds, and roughly half the bytes of full
-float64. 781 arcs → ~10.1k directions → ~335 KB (`boundarySegments` /
-`boundaryDirections` / `boundaryArtifactBytes` in build-counts; nowhere
+float64. 781 arcs → ~10.1k directions → ~334 KiB (`boundarySegments` /
+`boundaryDirections` / `boundaryArtifactKb` in build-counts; nowhere
 near the 25 MiB Workers asset limit, so no chunking).
+
+**Every number in the file is rounded, and the size is pinned in KiB, not
+bytes.** The artifact is ~30k decimal-formatted floats, so its byte length
+is a function of the last digit of every one of them — and V8's trig
+differs in the last bit across Node versions and architectures (local dev
+runs Node 26 / arm64, CI Node 24 / x64). An exact byte pin therefore
+fails on a difference that changes nothing: it drifted 343047 → 343049
+between the two. KiB keeps the signal the pin exists for — dropping
+`DIRECTION_DECIMALS` by one moves ~30k values a character each, ~30 KiB —
+while ignoring last-digit noise.
+
+The rounding is not a wide moat: 342,434 bytes sits ~94 bytes below the
+334/335 KiB edge, because `Number(v.toFixed(7))` strips trailing zeros
+and ~16.6k of the 30k geometry values are therefore shorter than full
+width. That absorbs the last-digit drift this replaced with ~47× headroom,
+but a genuine wire change (a new field, a different step) will move the
+pin by a KiB or more — which is the point. A ±1 KiB flip means re-pin,
+not bug.
 
 `c` carries the two constellations the arc separates, in source order,
 which carries **no side convention** — see the geometry README.
@@ -78,6 +96,11 @@ is the camera offset at which that star becomes visibly misplaced
 relative to its own cell. `offsetsPc[i][j]` is the `quantilePcts[j]`
 percentile of that over every star with apparent V ≤ `magLimits[i]`, so
 the runtime lerps a window out of the live magnitude slider.
+
+Offsets are rounded to `FADE_OFFSET_DECIMALS = 4` — 1e-4 pc ≈ 20 AU
+against a smallest emitted offset near 0.02 pc, so three significant
+figures survive the tightest row, and the width stays fixed (see § Wire
+shape on why that matters).
 
 Rows are emitted only where ≥ `FADE_MIN_SAMPLES` (64) stars qualify — a
 percentile over a handful of naked-eye stars is sampling noise — and the
