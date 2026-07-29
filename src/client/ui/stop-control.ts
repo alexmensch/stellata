@@ -1,5 +1,5 @@
-// The settings panel's segmented "stop" controls — magnitude preset, detail
-// level, coordinate sphere. See ui/README.md § Stop controls.
+// The settings panel's segmented "stop" controls — detail level, coordinate
+// sphere. See ui/README.md § Stop controls.
 
 /**
  * Wire one segmented control: each button carries its value in

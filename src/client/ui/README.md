@@ -1,7 +1,7 @@
 # UI and panel
 
 The right-side settings panel, layout containers, keyboard shortcuts,
-magnitude / FOV / exaggeration / theme controls, scale bar, and CSS
+exposure / FOV / exaggeration / theme controls, scale bar, and CSS
 gotchas.
 
 ## Keyboard shortcuts
@@ -164,16 +164,13 @@ regardless of rule order in the stylesheet.
 
 ## Stop controls
 
-Three segmented controls in the panel — magnitude preset, detail level,
-coordinate sphere — share `stop-control.ts`: `bindStopControl` wires the
+Two segmented controls in the panel — detail level, coordinate sphere —
+share `stop-control.ts`: `bindStopControl` wires the
 clicks (reading each button's value from its `data-*` attribute and dropping
 anything not in the allowed list, so a markup typo is inert), `syncStopControl`
 lights the active stop. Both are **value-driven**: the highlight follows state,
-so `V` / `S` / a URL restore light the same stop a click would.
-
-The magnitude preset is the odd one — its active stop isn't a state field but
-"whichever preset the slider currently sits on", resolved in `controls.ts`
-before the shared sync call; an in-between magnitude lights nothing.
+so `V` / `S` / a URL restore light the same stop a click would. Each stop maps
+to a state field, so the sync call passes that field directly.
 
 A stop that the current camera can't reach is **disabled, not hidden**
 (`.link-btn:disabled`), and its explanatory `title` goes on the **row**, never

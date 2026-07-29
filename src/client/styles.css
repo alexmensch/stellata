@@ -918,7 +918,6 @@ input[type="range"]::-moz-range-thumb {
 .link-btn:disabled { opacity: 0.4; cursor: default; }
 .link-btn:disabled:hover { color: var(--fg-dim); }
 .row-actions .sep { opacity: 0.4; margin: 0 4px; }
-.mag-preset.on,
 .detail-stop.on,
 .coord-sphere-stop.on {
   color: var(--accent);
