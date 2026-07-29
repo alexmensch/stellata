@@ -49,7 +49,10 @@ html, body {
 #find-home,
 .ui-top-left,
 .ui-top,
-.ui-bottom {
+.ui-bottom,
+/* Calibration numbers are read off the debug panel to be copied out, so it
+   opts in wholesale; its drag header re-suppresses selection inline. */
+#debug-panel {
   user-select: text;
   -webkit-user-select: text;
 }
