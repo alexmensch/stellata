@@ -23,6 +23,13 @@ claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
                          explains the wiki convention and the
                          CLAUDE.md → folder-README → docs/ decision
                          flow.
+readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
+                         drives the hook's PreToolUse JSON contract over a
+                         throwaway git repo in os.tmpdir(). Covers the
+                         never-existed-README exemption for a folder the
+                         session is creating, and the neighbouring cases
+                         that must stay gated (unread README on disk,
+                         committed folder missing one).
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          § 4.5): structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
