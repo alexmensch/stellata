@@ -47,6 +47,7 @@ import {
   type SearchEntrySource,
   buildSearchEntry,
   NO_CONSTELLATION_INDEX,
+  designationConIndex,
   buildHipToIndex,
   BINARY_MAX_SEP_PC,
   FLAG_HAS_NAME,
@@ -1789,14 +1790,14 @@ describe('catalog-pure / search-index wire contract', () => {
   // key strings so a rename trips here, mirroring the binary
   // record-layout pin above.
   const SEARCH_ENTRY_KEYS = [
-    'i', 'p', 'b', 'f', 'c', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
+    'i', 'p', 'b', 'f', 'c', 'dc', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
   ];
 
   it('SearchEntry exposes exactly the documented wire keys', () => {
     // Excess-property checking makes a renamed or dropped interface key a
     // compile error on this literal; the runtime assertion pins the names.
     const full: Required<SearchEntry> = {
-      i: 0, p: 'Sirius', b: 'Alp', f: 9, c: 34, s: 'A1V', g: 'R CrB',
+      i: 0, p: 'Sirius', b: 'Alp', f: 9, c: 34, dc: 3, s: 'A1V', g: 'R CrB',
       hip: 32349, hd: 48915, hr: 2491, gl: 'GJ 244', cl: 'B', cp: 5,
     };
     expect(Object.keys(full).sort()).toEqual([...SEARCH_ENTRY_KEYS].sort());
@@ -1805,7 +1806,7 @@ describe('catalog-pure / search-index wire contract', () => {
   const source = (over: Partial<SearchEntrySource>): SearchEntrySource => ({
     proper: null, bayer: null, flam: null, hip: null, hd: null, hr: null,
     gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
-    spectDisplay: null, ...over,
+    desigConIndex: NO_CONSTELLATION_INDEX, spectDisplay: null, ...over,
   });
 
   it('buildSearchEntry emits every populated wire key', () => {
@@ -1813,7 +1814,7 @@ describe('catalog-pure / search-index wire contract', () => {
       source({
         proper: 'Sirius', bayer: 'Alp', flam: 9, hip: 32349, hd: 48915,
         hr: 2491, gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
-        spectDisplay: 'A1V',
+        desigConIndex: 3, spectDisplay: 'A1V',
       }),
       0,
       { comp: 'B', primaryIdx: 5 },
@@ -1838,6 +1839,51 @@ describe('catalog-pure / search-index wire contract', () => {
 
   it('buildSearchEntry returns null for a star with no typable identifier', () => {
     expect(buildSearchEntry(source({ conIndex: 34 }), 0, undefined)).toBeNull();
+  });
+
+  it('buildSearchEntry emits dc only where the designation constellation differs', () => {
+    // Agreeing (the overwhelming majority) and unknown-designation records
+    // both ride the reader's `dc ?? c` fallback, so neither pays wire cost.
+    const agreeing = buildSearchEntry(
+      source({ flam: 67, conIndex: 34, desigConIndex: 34 }), 0, undefined,
+    );
+    expect(agreeing).not.toHaveProperty('dc');
+    const unknown = buildSearchEntry(
+      source({ flam: 67, conIndex: 34, desigConIndex: NO_CONSTELLATION_INDEX }), 0, undefined,
+    );
+    expect(unknown).not.toHaveProperty('dc');
+    // ρ Aql's shape: positional Delphinus, designation Aquila.
+    const diverging = buildSearchEntry(
+      source({ bayer: 'Rho', flam: 67, hip: 99742, conIndex: 31, desigConIndex: 3 }),
+      0, undefined,
+    );
+    expect(diverging?.c).toBe(31);
+    expect(diverging?.dc).toBe(3);
+  });
+
+  it('buildSearchEntry withholds dc from an entry with no constellation-relative designation', () => {
+    // A star findable only by HIP/HD/HR/Gl never renders "<designation>
+    // <Con>", so carrying the field would be 60-odd bytes of wire for a
+    // reader that cannot consult it.
+    const byNumber = buildSearchEntry(
+      source({ hip: 7, hd: 9, conIndex: 31, desigConIndex: 3 }), 0, undefined,
+    );
+    expect(byNumber).not.toHaveProperty('dc');
+    // A component alias composes "<primary designation> <letter>" against
+    // this entry's constellation, so it does need it (Fomalhaut C sits in
+    // Aquarius but is "α PsA C").
+    const component = buildSearchEntry(
+      source({ proper: 'Fomalhaut C', conIndex: 4, desigConIndex: 65 }),
+      0, { comp: 'C', primaryIdx: 5 },
+    );
+    expect(component?.dc).toBe(65);
+  });
+
+  it('designationConIndex prefers the editorial index and falls back to the positional one', () => {
+    expect(designationConIndex(3, 31)).toBe(3);
+    expect(designationConIndex(NO_CONSTELLATION_INDEX, 31)).toBe(31);
+    expect(designationConIndex(undefined, 31)).toBe(31);
+    expect(designationConIndex(undefined, undefined)).toBe(NO_CONSTELLATION_INDEX);
   });
 });
 

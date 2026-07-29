@@ -4,7 +4,8 @@ Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
-`public/search-index.json` + `public/catalog-row-index-map.json`.
+`public/search-index.json` + `public/catalog-row-index-map.json` +
+`public/constellation-boundaries.json`.
 Run via `pnpm run build:catalog`.
 
 The AT-HYG-retirement plan (Gaia-native membership + classic-ID label
@@ -23,6 +24,9 @@ subfolders.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, spectral/radius resolution, the GCVS
   variability cross-match, and Stellarium stick figures.
+- `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
+  arcs resampled and precessed to ICRS, plus the magnitude-keyed
+  fade-quantile table the chart-mode layer derives its fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records, plus the renderable-companion wings
   and component-letter stamping passes.
@@ -127,7 +131,14 @@ Ballesteros(B–V) → Apsis-direct).
   - 28–31 `uint32`       nameOffset (into name table, valid when flag bit 0 set; `0` = none)
   - 32    `uint8`        spectClass (0=O 1=B 2=A 3=F 4=G 5=K 6=M 7=C/S/W 8=?)
   - 33    `uint8`        luminosityClass (0=VII/D … 9=Ia+/0, 255=unknown — see below)
-  - 34    `uint8`        constellation index (0–87 into `constellations.json`; 255=none)
+  - 34    `uint8`        constellation index (0–87 into `constellations.json`;
+                          255=none). **Positional**, resolved from the record's
+                          own xyz against the IAU boundaries — see
+                          `parse/README.md` § Positional constellation
+                          membership. Sol is the only record carrying 255, and
+                          the build asserts it. The constellation a
+                          designation is *named* for is a separate field,
+                          search-index `dc` (§ Search index).
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer, 4=is_binary_primary)
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
@@ -327,7 +338,7 @@ decoding it.
 Separate from `catalog.bin` so the main binary stays rendering-focused.
 One JSON array entry per star that has at least one searchable identifier
 (proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
-Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/s/cl/cp`) to keep wire size down — file is
+Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/dc/s/cl/cp`) to keep wire size down — file is
 ~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
 AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip
@@ -352,6 +363,18 @@ search. The base designation expands from the PRIMARY (`cp`), not the
 component's own name: Proxima has no Bayer, and "Rigil Kentaurus C" (the
 primary's proper) would be wrong. Coverage is bounded by what decomposes
 in `multiples.tsv` (`componentDesignations` in build-counts pins the total).
+
+`c` is the record's **positional** constellation (byte 34) and drives the
+dropdown's context line; `dc` is the constellation its Bayer / Flamsteed /
+GCVS designation is *named* for, and is the one every alias and display
+label is built against. `dc` is emitted only where the two diverge AND
+the entry carries a constellation-relative designation (`b`/`f`/`g`/`cl`)
+— 10 entries today, `designationConMismatch` in build-counts, so the
+reader's `designationConIndex(dc, c)` fallback carries everything else at
+no wire cost. The ten are ρ Aql, three GCVS variables named for a
+constellation they do not sit in (CM Ind → Pavo, RY Cen → Lupus,
+EQ Vul → Lyra), and six promoted companions wide enough to straddle a
+boundary (Fomalhaut C sits in Aquarius but is "α PsA C").
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader

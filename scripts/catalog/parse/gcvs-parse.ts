@@ -6,10 +6,12 @@ import {
   classifyGcvsVarType,
   isPlanetaryTransitOnly,
   normalizeGcvsName,
+  NO_CONSTELLATION_INDEX,
   parseGcvsNumber,
   splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
 } from '../catalog-pure';
+import { CON_INDEX } from './constellations';
 import type { Star } from './stars-parse';
 
 export interface VarStarData {
@@ -140,6 +142,16 @@ export function bridgeGcvsByGaia(
   }
 }
 
+/** The constellation a GCVS designation is named for, read off the designation
+ *  itself: "LT Vul" is named for Vulpecula whatever any catalogue's editorial
+ *  column says. `NO_CONSTELLATION_INDEX` for the designations that carry no
+ *  constellation at all — NSV numbers, `LMC V0471` — which is why the caller
+ *  treats it as "no opinion" rather than "no constellation". */
+export function gcvsDesignationConIndex(gcvsName: string): number {
+  const suffix = gcvsName.trim().split(/\s+/).pop() ?? '';
+  return CON_INDEX.get(suffix.toLowerCase()) ?? NO_CONSTELLATION_INDEX;
+}
+
 export interface ApplyVariabilityResult {
   matched: number;
   matchedByGaia: number;
@@ -150,6 +162,9 @@ export interface ApplyVariabilityResult {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   named: number;
+  /** Stars whose `desigConIndex` the GCVS designation overrode, because the
+   *  designation names a different constellation than AT-HYG's `con` cell. */
+  desigConOverridden: number;
 }
 
 // Cross-match each star against GCVS via gaia_source_id (first; bridged
@@ -171,6 +186,7 @@ export function applyVariability(
   let matchedByHip = 0;
   let matchedByHd = 0;
   let named = 0;
+  let desigConOverridden = 0;
   for (const s of stars) {
     let gcvsName: string | undefined;
     let source: 'gaia' | 'hip' | 'hd' | null = null;
@@ -189,6 +205,14 @@ export function applyVariability(
     if (!gcvsName || !source) continue;
     s.gcvsName = gcvsName;
     named++;
+    // A GCVS designation names its own constellation, so it outranks AT-HYG's
+    // editorial `con` cell for this star's designation — the cell is stale on
+    // LT Vul (Sge) and misses RY Cen / EQ Vul entirely.
+    const desigCon = gcvsDesignationConIndex(gcvsName);
+    if (desigCon !== NO_CONSTELLATION_INDEX && desigCon !== s.desigConIndex) {
+      s.desigConIndex = desigCon;
+      desigConOverridden++;
+    }
     const data = gcvsData.get(gcvsName);
     if (!data) continue;
     s.periodDays = data.periodDays;
@@ -204,5 +228,6 @@ export function applyVariability(
     matchedByHip,
     matchedByHd,
     named,
+    desigConOverridden,
   };
 }

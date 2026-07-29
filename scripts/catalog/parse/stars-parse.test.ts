@@ -4,9 +4,14 @@ import { join } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
+import { CONSTELLATIONS, createConstellationAssignment } from './constellations';
 import { readStars } from './stars-parse';
+
+const CON_ASSIGNMENT = createConstellationAssignment();
+const conIndexOf = (code: string): number =>
+  CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
 const ATHYG_HEADER =
   'absmag,dist,dist_src,ci,spect,con,proper,bayer,flam,hip,hd,hr,gl,ra,dec,mag,gaia,pm_ra,pm_dec';
@@ -41,7 +46,7 @@ describe('readStars build-time de-extinction of ci', () => {
       '5.0,100,OTHER,0.5,K0V,,ObservedCi,,,,,,,0,0,10.0,,,',
     ]);
     const { stars } = await readStars(
-      csv, new Map(), new Map(), null,
+      csv, CON_ASSIGNMENT, new Map(), null,
       undefined, undefined, undefined, grid,
     );
     expect(stars).toHaveLength(2);
@@ -57,5 +62,50 @@ describe('readStars build-time de-extinction of ci', () => {
     // absmag is observed-convention on both rows and always de-extincts.
     expect(blank.absmag).toBeCloseTo(5.0 - av, 12);
     expect(observed.absmag).toBeCloseTo(5.0 - av, 12);
+  });
+});
+
+describe('readStars constellation assignment', () => {
+  // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
+  // proper motion is the whole reason the two constellations are separate
+  // fields. See src/client/constellation-boundaries/README.md § ρ Aquilae.
+  const RHO_AQL_ROW = '2.17,46.5,OTHER,0.08,A2V,Aql,,Rho,67,99742,192425,7724,,20.23796,15.1975,4.94,,,';
+
+  it('resolves byte 34 positionally while the designation keeps AT-HYG con', async () => {
+    const { stars, stats } = await readStars(
+      writeAthygCsv([RHO_AQL_ROW]), CON_ASSIGNMENT, new Map(),
+    );
+    expect(stars).toHaveLength(1);
+    expect(stars[0].conIndex).toBe(conIndexOf('del'));
+    expect(stars[0].desigConIndex).toBe(conIndexOf('aql'));
+    expect(stats.conPositionalDisagreement).toBe(1);
+  });
+
+  it('assigns a row AT-HYG left unclassified and counts no disagreement', async () => {
+    // ra=0 h / dec=0° is in Pisces. An empty editorial cell is not a
+    // disagreement — there is nothing to disagree with.
+    const { stars, stats } = await readStars(
+      writeAthygCsv(['5.0,100,OTHER,0.5,K0V,,Anon,,,,,,,0,0,10.0,,,']),
+      CON_ASSIGNMENT, new Map(),
+    );
+    expect(stars[0].conIndex).toBe(conIndexOf('psc'));
+    expect(stars[0].desigConIndex).toBe(NO_CONSTELLATION_INDEX);
+    expect(stats.conPositionalDisagreement).toBe(0);
+  });
+
+  it('leaves Sol unclassified — the origin has no sky direction', async () => {
+    const { stars } = await readStars(
+      writeAthygCsv(['4.85,0,OTHER,0.656,G2V,,Sol,,,,,,,0,0,-26.7,,,']),
+      CON_ASSIGNMENT, new Map(),
+    );
+    expect(stars).toHaveLength(1);
+    expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
+  });
+
+  it('rejects an AT-HYG con cell absent from the IAU-88 table', async () => {
+    await expect(readStars(
+      writeAthygCsv(['5.0,100,OTHER,0.5,K0V,Zzz,Anon,,,,,,,0,0,10.0,,,']),
+      CON_ASSIGNMENT, new Map(),
+    )).rejects.toThrow(/not in the IAU-88 table/);
   });
 });

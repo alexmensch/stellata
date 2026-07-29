@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { CON_INDEX, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
+import { raDecFromUnitVector } from '../util/equatorial-basis';
 import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
 import {
   IAU_REGION_COUNT,
+  POLYLINE_MAX_STEP_DEG,
   angularDistanceToNearestEdgeDeg,
+  buildBoundaryPolylines,
   constellationEdgeCodeAt,
   constellationKey,
   createIauConstellationLookup,
+  createNearestEdgeIndex,
   parseIauEdges,
 } from './iau-boundaries-pure';
 
@@ -219,5 +223,150 @@ describe('distance to the nearest boundary', () => {
     { name: 'Polaris', raDeg: 37.95456067, decDeg: 89.26410897, nearestDeg: 0.642569 },
   ])('puts $name $nearestDeg° inside its nearest wall', ({ raDeg, decDeg, nearestDeg }) => {
     expect(lookup.distanceToNearestEdgeDeg({ raDeg, decDeg })).toBeCloseTo(nearestDeg, 6);
+  });
+});
+
+describe('the dec-banded nearest-edge index', () => {
+  // The index prunes on a lower bound, so it must be exactly equivalent to the
+  // linear scan — not merely close. A sampling grid rather than spot checks:
+  // the pruning bug that matters is an arc a band short of where it belongs,
+  // which only shows up for queries in that band.
+  it('agrees with the linear scan everywhere on the sphere', () => {
+    const index = createNearestEdgeIndex(edges);
+    let worstDelta = 0;
+    for (let decDeg = -89.5; decDeg <= 89.5; decDeg += 1.7) {
+      for (let raDeg = 0; raDeg < 360; raDeg += 3.1) {
+        const at = { raDeg, decDeg };
+        worstDelta = Math.max(
+          worstDelta,
+          Math.abs(index.distanceDeg(at) - angularDistanceToNearestEdgeDeg(edges, at)),
+        );
+      }
+    }
+    expect(worstDelta).toBe(0);
+  });
+
+  it('reaches an arc bucketed several bands from the query', () => {
+    // One short arc near the pole and a query 20° of declination away: the
+    // walk has to keep expanding past 20 empty bands rather than stopping at
+    // the first that holds nothing.
+    const single = parseIauEdges(['1:2 P+ 00:00:00 +80:00:00 06:00:00 +80:00:00 AAA BBB']);
+    expect(createNearestEdgeIndex(single).distanceDeg({ raDeg: 45, decDeg: 60 }))
+      .toBeCloseTo(20, 9);
+  });
+});
+
+describe('boundary polylines', () => {
+  const polylines = buildBoundaryPolylines(edges);
+
+  it('emits one flat, deduped arc per edge record', () => {
+    expect(polylines).toHaveLength(edges.meridians.length + edges.parallels.length);
+    expect(polylines.filter((p) => p.kind === 'M')).toHaveLength(edges.meridians.length);
+    expect(polylines.filter((p) => p.kind === 'P')).toHaveLength(edges.parallels.length);
+    expect(polylines.every((p) => p.directions.length >= 2)).toBe(true);
+  });
+
+  it('round-trips every sample back onto its source arc', () => {
+    // Un-precessing a sample must land it back on the constant-RA or
+    // constant-Dec line it was drawn from. A wrong rotation direction still
+    // produces a plausible sphere-covering curve set, so this is the check
+    // that the emitted frame really is ICRS.
+    const arcsecTolerance = 1 / 3600;
+    let worstOffAxisDeg = 0;
+    polylines.forEach((polyline, i) => {
+      const source = polyline.kind === 'M'
+        ? { axis: 'ra' as const, value: edges.meridians[i].raDeg }
+        : { axis: 'dec' as const, value: edges.parallels[i - edges.meridians.length].decDeg };
+      for (const dir of polyline.directions) {
+        const back = precessRaDec(B1875, raDecFromUnitVector(dir));
+        const got = source.axis === 'ra' ? back.raDeg : back.decDeg;
+        // An arc at RA 0 comes back at 359.999…, so RA compares modulo a turn.
+        const delta = source.axis === 'ra'
+          ? Math.abs(((got - source.value + 540) % 360) - 180)
+          : Math.abs(got - source.value);
+        worstOffAxisDeg = Math.max(worstOffAxisDeg, delta);
+      }
+    });
+    expect(worstOffAxisDeg).toBeLessThan(arcsecTolerance);
+  });
+
+  it('keeps every sample step under the subdivision cap', () => {
+    let worstStepDeg = 0;
+    for (const polyline of polylines) {
+      for (let i = 1; i < polyline.directions.length; i++) {
+        const a = polyline.directions[i - 1];
+        const b = polyline.directions[i];
+        const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z));
+        worstStepDeg = Math.max(worstStepDeg, Math.acos(dot) * (180 / Math.PI));
+      }
+    }
+    expect(worstStepDeg).toBeLessThanOrEqual(POLYLINE_MAX_STEP_DEG + 1e-9);
+  });
+
+  // Subdivision is load-bearing, not a smoothness nicety: a constant-Dec arc
+  // is a SMALL circle in B1875, and precession maps it to a curve that leaves
+  // the straight chord between its precessed endpoints. Dropping subdivision
+  // as an "optimisation" would cut the drawn boundary inside the real one by
+  // this much.
+  it('puts a parallel midpoint measurably off the chord between its endpoints', () => {
+    const widest = polylines
+      .filter((p) => p.kind === 'P')
+      .reduce((best, p) => (p.directions.length > best.directions.length ? p : best));
+    const first = widest.directions[0];
+    const last = widest.directions[widest.directions.length - 1];
+    const mid = widest.directions[(widest.directions.length - 1) >> 1];
+    // Angle from the mid sample to the plane of the two endpoints.
+    const normal = {
+      x: first.y * last.z - first.z * last.y,
+      y: first.z * last.x - first.x * last.z,
+      z: first.x * last.y - first.y * last.x,
+    };
+    const norm = Math.hypot(normal.x, normal.y, normal.z);
+    const outOfPlane = Math.abs(
+      (mid.x * normal.x + mid.y * normal.y + mid.z * normal.z) / norm,
+    );
+    const departureDeg = Math.asin(Math.min(1, outOfPlane)) * (180 / Math.PI);
+    expect(departureDeg).toBeGreaterThan(1);
+  });
+
+  it('does not smooth a meridian off its own great circle', () => {
+    // Meridians ARE great circles and precession is a pure rotation, so every
+    // sample of one shares a plane. This is the contrast case: the parallel
+    // departure above is geometry, not a subdivision artifact.
+    const widest = polylines
+      .filter((p) => p.kind === 'M')
+      .reduce((best, p) => (p.directions.length > best.directions.length ? p : best));
+    const first = widest.directions[0];
+    const last = widest.directions[widest.directions.length - 1];
+    const mid = widest.directions[(widest.directions.length - 1) >> 1];
+    const normal = {
+      x: first.y * last.z - first.z * last.y,
+      y: first.z * last.x - first.x * last.z,
+      z: first.x * last.y - first.y * last.x,
+    };
+    const norm = Math.hypot(normal.x, normal.y, normal.z);
+    expect(Math.abs((mid.x * normal.x + mid.y * normal.y + mid.z * normal.z) / norm))
+      .toBeLessThan(1e-12);
+  });
+
+  it('emits unit directions', () => {
+    for (const polyline of polylines) {
+      for (const d of polyline.directions) {
+        expect(Math.hypot(d.x, d.y, d.z)).toBeCloseTo(1, 12);
+      }
+    }
+  });
+
+  it('starts the Aql/Del meridian on its own wall', () => {
+    const idx = edges.meridians.findIndex(
+      (e) => Math.abs(e.raDeg - AQL_DEL_WALL_RA_DEG) < 1e-9 && e.conA === 'DEL' && e.conB === 'AQL',
+    );
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const head = polylines[idx].directions[0];
+    const b1875 = precessRaDec(B1875, raDecFromUnitVector(head));
+    expect(b1875.raDeg).toBeCloseTo(AQL_DEL_WALL_RA_DEG, 6);
+    // And the ICRS direction is NOT at the B1875 RA — precession moved it.
+    expect(Math.abs(raDecFromUnitVector(head).raDeg - AQL_DEL_WALL_RA_DEG))
+      .toBeGreaterThan(1.5);
   });
 });

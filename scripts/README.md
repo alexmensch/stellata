@@ -12,7 +12,9 @@ cross-script policy and pointers.
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
   under Cloudflare Workers' 25 MiB limit; see `catalog/README.md`
-  § Binary catalog format.
+  § Binary catalog format. Also emits
+  `public/constellation-boundaries.json` (IAU boundary arcs precessed to
+  ICRS + the fade-quantile table; `catalog/boundaries/README.md`).
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
@@ -45,10 +47,12 @@ cross-script policy and pointers.
 
 `scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if
 `catalog-manifest.json` (+ its first chunk), `constellations.json`,
-`search-index.json`, **and** `catalog-row-index-map.json` are newer
-than all source inputs
+`search-index.json`, `catalog-row-index-map.json`, **and**
+`constellation-boundaries.json` all exist *and*
+`catalog-manifest.json` is newer than all source inputs
 (AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos CCDM TSV,
-`data/binaries/multiples.tsv`, and the script itself). If you change
+`data/binaries/multiples.tsv`, and the script itself) — the other four
+are checked for existence only, since one build writes them all. If you change
 field mapping but not the script mtime (e.g. edit in a way that
 updates atime only), you may need to `touch
 scripts/catalog/build-catalog.ts` or delete the generated files.

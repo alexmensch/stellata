@@ -23,6 +23,11 @@ import {
 } from '../distance/direction-cascade';
 import { loadDustGrid } from '../distance/dust-deextinction';
 import type { DustGrid } from '../distance/dust-deextinction-pure';
+import {
+  createConstellationAssignment,
+  STELLARIUM_SKYCULTURE_JSON,
+  type ConstellationAssignment,
+} from './constellations';
 import { readGaiaHipXmatch } from './gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -43,7 +48,7 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
   ATHYG_CSV, SRC_BAILER_JONES, SRC_GAIA_HIP_XMATCH, SRC_GAIA_APSIS,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_SIMBAD_SPTYPE,
-  SRC_SIMBAD_WDS_XIDS, SRC_DUST_MANIFEST,
+  SRC_SIMBAD_WDS_XIDS, SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
@@ -68,6 +73,9 @@ export interface ReadStarsInputs {
   hipToGaia: Map<number, string> | null;
   directions: DirectionSources;
   dustGrid: DustGrid;
+  /** Also feeds companion promotion, which assigns its minted records from
+   *  their own positions rather than inheriting the anchor's index. */
+  conAssignment: ConstellationAssignment;
   sizes: ReadStarsInputSizes;
 }
 
@@ -214,5 +222,16 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   const dustGrid = loadDustGrid(SRC_DUST_DIR);
   console.log(`  loaded ${dustGrid.gridSize}³ voxel grid in ${Date.now() - tDust}ms`);
 
-  return { bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid, sizes };
+  // IAU boundary decomposition. Committed alongside the stick figures and
+  // never optional: it is the sole source of catalog byte 34, and its own
+  // 89-region invariant throws rather than resolving a partial sky.
+  console.log('Decomposing the IAU B1875 constellation boundaries...');
+  const tCon = Date.now();
+  const conAssignment = createConstellationAssignment();
+  console.log(`  built the region grid in ${Date.now() - tCon}ms`);
+
+  return {
+    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid,
+    conAssignment, sizes,
+  };
 }

@@ -11,7 +11,11 @@ import type { ProbeField } from '../solar-system/probes/probe-field';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
-import type { SearchEntry } from '../../../scripts/catalog/catalog-pure';
+import {
+  designationConIndex,
+  NO_CONSTELLATION_INDEX,
+  type SearchEntry,
+} from '../../../scripts/catalog/catalog-pure';
 
 export type { SearchEntry };
 
@@ -176,8 +180,8 @@ export function buildStarLabels(
 
   for (const entry of raw) {
     if (labels.has(entry.i)) continue;
-    const conIdx = entry.c ?? 255;
-    const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
+    const conIdx = designationConIndex(entry.dc, entry.c);
+    const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
     const conCode = con?.code ?? '';
     if (entry.b && conCode) {
       labels.set(entry.i, formatBayerDisplay(entry.b, conCode));
@@ -222,8 +226,9 @@ export function starDesignations(
   constellations: { code: string }[],
   gaiaSourceId: bigint,
 ): string[] {
-  const conIdx = entry.c ?? 255;
-  const conCode = conIdx !== 255 ? constellations[conIdx]?.code ?? '' : '';
+  const conIdx = designationConIndex(entry.dc, entry.c);
+  const conCode = conIdx !== NO_CONSTELLATION_INDEX
+    ? constellations[conIdx]?.code ?? '' : '';
   const out: string[] = [];
   if (entry.p) out.push(entry.p);
   if (entry.b && conCode) out.push(formatBayerDisplay(entry.b, conCode));
@@ -247,23 +252,22 @@ export interface BayerInfo {
   greek: string;
   /** Optional unicode-superscript suffix for A/B components, e.g. "¹". */
   suffix: string;
-  /** Constellation index from the catalog (255 = none). */
-  conIdx: number;
 }
 
 // Map star idx → its Bayer designation parts. Used by chart mode to render
 // Greek-letter labels alongside proper names. Entries without a parseable
-// Bayer string or a constellation are skipped — chart labels need both.
+// Bayer string or a designation constellation are skipped — a Bayer letter
+// only means anything paired with one.
 export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
   const out = new Map<number, BayerInfo>();
   for (const entry of raw) {
     if (!entry.b) continue;
-    if (entry.c === undefined || entry.c === 255) continue;
+    if (designationConIndex(entry.dc, entry.c) === NO_CONSTELLATION_INDEX) continue;
     const split = splitBayer(entry.b);
     if (!split) continue;
     const greek = BAYER_GREEK[split.letter3];
     const suffix = split.suffix ? superscript(split.suffix.slice(1)) : '';
-    out.set(entry.i, { greek, suffix, conIdx: entry.c });
+    out.set(entry.i, { greek, suffix });
   }
   return out;
 }
@@ -317,10 +321,17 @@ export function buildSearchIndex(
       if (norm) glMap.set(norm, entry.i);
     }
 
-    const conIdx = entry.c ?? 255;
-    const con = conIdx !== 255 ? constellations[conIdx] : null;
+    // Every alias below is a DESIGNATION, so it is built against the
+    // designation's constellation; `displayCon` is the dropdown's context
+    // line and stays positional. The two differ only where a boundary has
+    // moved past a named star (ρ Aql reads Delphinus, searches as 67 Aql).
+    const desigConIdx = designationConIndex(entry.dc, entry.c);
+    const con = desigConIdx !== NO_CONSTELLATION_INDEX ? constellations[desigConIdx] : null;
     const conCode = con?.code ?? '';
     const conName = con?.name ?? '';
+    const posConIdx = entry.c ?? NO_CONSTELLATION_INDEX;
+    const displayCon = posConIdx !== NO_CONSTELLATION_INDEX
+      ? constellations[posConIdx]?.name ?? '' : '';
 
     const isConExpansion = (label: string): boolean =>
       conName !== '' && label.includes(conName);
@@ -332,7 +343,6 @@ export function buildSearchIndex(
     else if (properName) primary = properName;
     else if (bayerDisplay) primary = bayerDisplay;
     else primary = null;
-    const displayCon = con?.name ?? '';
 
     if (primary !== null) {
       if (properName) {
@@ -561,7 +571,7 @@ export function createSearchRunner(
 
   const directResult = (idx: number, label: string): FuzzyEntry => {
     const conIdx = catalog.constellation[idx];
-    const con = conIdx !== 255 ? catalog.constellations[conIdx] : null;
+    const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
     const name = catalog.names.get(idx);
     return {
       kind: 'star',

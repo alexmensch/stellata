@@ -27,6 +27,7 @@ import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
+  NO_CONSTELLATION_INDEX,
   type ApsisRow,
   type DistSrcPartition,
   type SimbadSpectralIndex,
@@ -43,6 +44,7 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import { CON_INDEX, type ConstellationAssignment } from './constellations';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -66,7 +68,16 @@ export interface Star {
   spectClass: number;
   lumClass: number;
   physicalRadius: number;  // solar radii
+  /** IAU-positional membership, computed from this record's own resolved
+   *  position — catalog byte 34. Only Sol carries
+   *  `NO_CONSTELLATION_INDEX`: it sits at the origin and has no direction. */
   conIndex: number;
+  /** The constellation this star's Bayer / Flamsteed / GCVS designation is
+   *  named for, which is editorial rather than positional and diverges from
+   *  `conIndex` where a boundary has since moved past the star (ρ Aql).
+   *  `NO_CONSTELLATION_INDEX` when no designation constellation is known, in
+   *  which case designations fall back to `conIndex`. */
+  desigConIndex: number;
   flags: number;
   proper: string | null;
   bayer: string | null;
@@ -150,7 +161,7 @@ const HIP_DIST_MATCH_TOLERANCE_PC = 1e-3;
 
 export async function readStars(
   srcCsvPath: string,
-  conIndexLookup: Map<string, number>,
+  conAssignment: ConstellationAssignment,
   bjMap: Map<string, number>,
   hipToGaia: Map<number, string> | null = null,
   simbad: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() },
@@ -189,6 +200,7 @@ export async function readStars(
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciSpectralDerived: number;     // no-Apsis-Teff ∩ no-observed-B−V rows whose ci is baked from the spectral class (tier 4/5) instead of the solar fallback
+    conPositionalDisagreement: number; // rows whose IAU-positional index differs from AT-HYG's editorial con cell
   };
 }> {
   const parser = createReadStream(srcCsvPath).pipe(
@@ -202,8 +214,8 @@ export async function readStars(
     noDist: 0,
     noDirection: 0,
     tooFar: 0,
-    unknownCon: 0,
   };
+  let conPositionalDisagreement = 0;
   let total = 0;
   let bjEligible = 0;
   let bjOverridden = 0;
@@ -443,15 +455,26 @@ export async function readStars(
 
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
 
-    const conCode: string = (row.con ?? '').trim();
-    let conIndex = 255;
-    if (conCode) {
-      const idx = conIndexLookup.get(conCode.toLowerCase());
+    // Byte 34 is positional: the IAU boundaries partition the whole sphere,
+    // so it resolves for any direction, catalogued or not. Sol is the one
+    // record with no direction to resolve.
+    const conIndex = isSol
+      ? NO_CONSTELLATION_INDEX
+      : conAssignment.indexAt(x, y, z);
+    // AT-HYG's editorial `con` cell stays the DESIGNATION's constellation —
+    // "67 Aql" keeps its name after the boundary moved past the star.
+    const desigConCode: string = (row.con ?? '').trim();
+    let desigConIndex = NO_CONSTELLATION_INDEX;
+    if (desigConCode) {
+      const idx = CON_INDEX.get(desigConCode.toLowerCase());
       if (idx === undefined) {
-        dropped.unknownCon++;
-      } else {
-        conIndex = idx;
+        throw new Error(
+          `AT-HYG row ${row.id} carries constellation code '${desigConCode}', `
+          + 'which is not in the IAU-88 table',
+        );
       }
+      desigConIndex = idx;
+      if (idx !== conIndex) conPositionalDisagreement++;
     }
 
     const bayer = nonEmpty(row.bayer);
@@ -473,7 +496,7 @@ export async function readStars(
       spectClass: spectInfo.classIdx,
       lumClass: spectInfo.lumClass,
       physicalRadius: physRadius,
-      conIndex, flags,
+      conIndex, desigConIndex, flags,
       proper, bayer, hip, hd, hr, flam, gl,
       gaiaSourceId,
       spectDisplay,
@@ -516,6 +539,7 @@ export async function readStars(
       spectralByGspspec,
       spectralFallback,
       ciSpectralDerived,
+      conPositionalDisagreement,
     },
   };
 }

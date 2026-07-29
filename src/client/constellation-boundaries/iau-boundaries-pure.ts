@@ -3,8 +3,17 @@
 // See README.md.
 
 import { RA_HOURS_TO_DEG } from '../util/astronomy-constants';
-import { unitVectorFromRaDec, type SkyPosition } from '../util/equatorial-basis';
-import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
+import {
+  unitVectorFromRaDec,
+  type SkyPosition,
+  type UnitVector,
+} from '../util/equatorial-basis';
+import {
+  B1875_JD,
+  precessRaDec,
+  precessionRotationFromJ2000,
+  unprecessDirection,
+} from '../util/precession';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -362,10 +371,9 @@ function distanceToParallelDeg(edge: ParallelEdge, at: SkyPosition): number {
   });
 }
 
-/** Angular distance from a B1875 position to the nearest boundary arc. Feeds
- *  the boundary-shell fade window: a star this far inside its own cell wall
- *  tolerates a camera offset of `(this + tolerance) × its distance` before it
- *  reads as sitting in the wrong constellation. */
+/** Angular distance from a B1875 position to the nearest boundary arc, by
+ *  linear scan. The reference implementation `createNearestEdgeIndex` is
+ *  pinned against; `createIauConstellationLookup` uses the index. */
 export function angularDistanceToNearestEdgeDeg(
   edges: IauBoundaryEdges,
   b1875: SkyPosition,
@@ -378,6 +386,152 @@ export function angularDistanceToNearestEdgeDeg(
     nearest = Math.min(nearest, distanceToParallelDeg(edge, b1875));
   }
   return nearest;
+}
+
+/** A boundary arc resampled into ICRS unit directions, in arc order. */
+export interface BoundaryPolyline {
+  /** `M` for a constant-RA meridian, `P` for a constant-Dec parallel. */
+  kind: 'M' | 'P';
+  conA: string;
+  conB: string;
+  directions: UnitVector[];
+}
+
+/** Every sample within this much of its neighbours along the arc. A chord this
+ *  long departs from the sphere by `(step²/8)` radians ≈ 2″ of sky as seen
+ *  from the centre, well under a pixel at any chart-mode framing. */
+export const POLYLINE_MAX_STEP_DEG = 0.5;
+
+function meridianSampleAt(edge: MeridianEdge, t: number): SkyPosition {
+  return { raDeg: edge.raDeg, decDeg: edge.decLoDeg + t * (edge.decHiDeg - edge.decLoDeg) };
+}
+
+function parallelSampleAt(edge: ParallelEdge, t: number): SkyPosition {
+  return { raDeg: wrapDeg(edge.raStartDeg + t * parallelSpanDeg(edge)), decDeg: edge.decDeg };
+}
+
+function sampleCount(arcLengthDeg: number): number {
+  return Math.max(2, Math.ceil(arcLengthDeg / POLYLINE_MAX_STEP_DEG) + 1);
+}
+
+function resample(
+  count: number,
+  at: (t: number) => SkyPosition,
+  toJ2000: (v: UnitVector) => UnitVector,
+): UnitVector[] {
+  const out: UnitVector[] = [];
+  for (let i = 0; i < count; i++) {
+    const { raDeg, decDeg } = at(i / (count - 1));
+    out.push(toJ2000(unitVectorFromRaDec(raDeg, decDeg)));
+  }
+  return out;
+}
+
+/** Resamples every arc along its own B1875 geometry, then carries each sample
+ *  to ICRS. **Subdividing is not an optimisation.** A constant-Dec arc is a
+ *  SMALL circle, which precession maps to neither a straight line nor a great
+ *  circle, so a two-endpoint parallel renders as a chord cutting up to a
+ *  degree inside the true boundary. Meridians are great circles and precession
+ *  is a pure rotation, so they would survive two endpoints — they subdivide
+ *  anyway to keep one code path and a uniform tessellation.
+ *
+ *  Each arc appears exactly once in the edge set with both its neighbours
+ *  named, so the flat list is already deduped: there are no per-constellation
+ *  polygons to build and no shared arc drawn twice. */
+export function buildBoundaryPolylines(edges: IauBoundaryEdges): BoundaryPolyline[] {
+  const toB1875 = precessionRotationFromJ2000(B1875_JD);
+  const toIcrs = (v: UnitVector) => unprecessDirection(toB1875, v);
+  const out: BoundaryPolyline[] = [];
+  for (const edge of edges.meridians) {
+    const count = sampleCount(edge.decHiDeg - edge.decLoDeg);
+    out.push({
+      kind: 'M',
+      conA: edge.conA,
+      conB: edge.conB,
+      directions: resample(count, (t) => meridianSampleAt(edge, t), toIcrs),
+    });
+  }
+  for (const edge of edges.parallels) {
+    const arcLengthDeg = parallelSpanDeg(edge) * Math.cos(edge.decDeg * DEG_TO_RAD);
+    out.push({
+      kind: 'P',
+      conA: edge.conA,
+      conB: edge.conB,
+      directions: resample(sampleCount(arcLengthDeg), (t) => parallelSampleAt(edge, t), toIcrs),
+    });
+  }
+  return out;
+}
+
+/** Nearest-boundary distance for a B1875 position. Same answer as
+ *  `angularDistanceToNearestEdgeDeg`, which scans all 781 arcs with 2–4 trig
+ *  calls each — a catalogue sweep is ~313k × 781 of those. */
+export interface NearestEdgeIndex {
+  distanceDeg(b1875: SkyPosition): number;
+}
+
+/** Declination band width of the pruning index. Any point on an arc lies
+ *  within the arc's own declination range, and angular separation is at least
+ *  the declination difference, so a band's distance from the query's band is a
+ *  valid lower bound on every arc bucketed there — once it exceeds the best
+ *  distance found so far, no remaining band can improve on it. */
+const NEAREST_EDGE_BAND_DEG = 1;
+
+/** Buckets the edge set by declination band so a per-star sweep prunes instead
+ *  of scanning every arc. Answers exactly what
+ *  `angularDistanceToNearestEdgeDeg` answers — the bound above is a lower
+ *  bound, never an approximation. */
+export function createNearestEdgeIndex(edges: IauBoundaryEdges): NearestEdgeIndex {
+  const bandCount = Math.ceil(180 / NEAREST_EDGE_BAND_DEG);
+  const bandOf = (decDeg: number) => Math.min(
+    bandCount - 1,
+    Math.max(0, Math.floor((decDeg + 90) / NEAREST_EDGE_BAND_DEG)),
+  );
+  // Meridians take ids [0, meridians.length), parallels the rest, so the
+  // per-arc dispatch is one comparison rather than 781 stored closures.
+  const meridianCount = edges.meridians.length;
+  const arcCount = meridianCount + edges.parallels.length;
+  const bands: number[][] = Array.from({ length: bandCount }, () => []);
+  const bucket = (id: number, loDeg: number, hiDeg: number) => {
+    for (let band = bandOf(loDeg); band <= bandOf(hiDeg); band++) bands[band].push(id);
+  };
+  edges.meridians.forEach((e, i) => bucket(i, e.decLoDeg, e.decHiDeg));
+  edges.parallels.forEach((e, i) => bucket(meridianCount + i, e.decDeg, e.decDeg));
+  const distanceOf = (id: number, at: SkyPosition): number => (
+    id < meridianCount
+      ? distanceToMeridianDeg(edges.meridians[id], at)
+      : distanceToParallelDeg(edges.parallels[id - meridianCount], at)
+  );
+
+  // An arc spanning several bands is reachable from several rounds; the stamp
+  // keeps it to one evaluation per query without reallocating a Set each time.
+  const stamp = new Int32Array(arcCount).fill(-1);
+  let query = 0;
+
+  return {
+    distanceDeg(b1875) {
+      const home = bandOf(b1875.decDeg);
+      const q = query++;
+      let nearest = Infinity;
+      for (let step = 0; step <= bandCount; step++) {
+        // A band `step` away shares an edge with the query's band at
+        // `step − 1` bands of declination, so that is the lower bound.
+        if (step > 1 && (step - 1) * NEAREST_EDGE_BAND_DEG >= nearest) break;
+        let anyBand = false;
+        for (const band of step === 0 ? [home] : [home - step, home + step]) {
+          if (band < 0 || band >= bandCount) continue;
+          anyBand = true;
+          for (const id of bands[band]) {
+            if (stamp[id] === q) continue;
+            stamp[id] = q;
+            nearest = Math.min(nearest, distanceOf(id, b1875));
+          }
+        }
+        if (!anyBand) break;
+      }
+      return nearest;
+    },
+  };
 }
 
 /** The edge set with the B1875 precession bound in, so callers pass ICRS/J2000
@@ -403,6 +557,7 @@ export function createIauConstellationLookup(
 ): IauConstellationLookup {
   const edges = parseIauEdges(records);
   const grid = buildConstellationRegions(edges);
+  const nearestEdge = createNearestEdgeIndex(edges);
   const toB1875 = precessionRotationFromJ2000(B1875_JD);
   const at = (j2000: SkyPosition) => precessRaDec(toB1875, j2000);
   return {
@@ -410,6 +565,6 @@ export function createIauConstellationLookup(
     grid,
     edgeCodeAt: (j2000) => constellationEdgeCodeAt(grid, at(j2000)),
     keyAt: (j2000) => constellationKey(constellationEdgeCodeAt(grid, at(j2000))),
-    distanceToNearestEdgeDeg: (j2000) => angularDistanceToNearestEdgeDeg(edges, at(j2000)),
+    distanceToNearestEdgeDeg: (j2000) => nearestEdge.distanceDeg(at(j2000)),
   };
 }

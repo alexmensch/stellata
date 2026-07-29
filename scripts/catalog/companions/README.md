@@ -320,7 +320,8 @@ companion never gets one without the other.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |
-| `conIndex` | inherited | anchor's index — constellations ship no boundary polygons, so a position can't be classified. Rows whose anchor is absent or itself unclassified keep `NO_CONSTELLATION_INDEX`. Counted `companionConstellationInherited`. |
+| `conIndex` | per-component | the IAU boundary region the minted position falls in (`../parse/README.md` § Positional constellation membership) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
+| `desigConIndex` | inherited | anchor's editorial index — a composed name ("Xi Boo B") is named for whatever the primary's designation is, so Fomalhaut C stays "α PsA C" while sitting positionally in Aquarius. |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (`../parse/README.md` § Space-motion velocity, Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `proper` | system-derived | `<primary_proper> <comp>` (own `name` cell wins when present). |
@@ -335,12 +336,14 @@ companion never gets one without the other.
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl` | unset | not carried on multiples.tsv rows. |
 
-Position and constellation both flow from the anchor because a
-promoted companion sits sub-arcsec off it — well below the catalog's
-positional precision — so the pair shares one sky patch. The
-per-component fields are precisely the ones the promotion exists to
-surface: the companion is a distinct row because its brightness,
-colour, and type differ from the blended primary.
+Position flows from the anchor because a promoted companion usually sits
+sub-arcsec off it — well below the catalog's positional precision. Its
+constellation does not: the boundaries classify whatever position the
+projection produced, which is what makes the WDS-wide pairs (Fomalhaut C
+is 5.7° from Fomalhaut) come out right. The per-component fields are
+precisely the ones the promotion exists to surface: the companion is a
+distinct row because its brightness, colour, and type differ from the
+blended primary.
 
 ### Renderable-companion wings
 
