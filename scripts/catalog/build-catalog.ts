@@ -295,6 +295,7 @@ async function main() {
     componentNameCollisionsUnresolved: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
+    hipVMagEntries: 0,
     nssSourceIdEntries: 0,
     hipDistFullPrecision: 0,
     directionGaia5p: 0,
@@ -302,6 +303,10 @@ async function main() {
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
     directionAthygPrinted: 0,
+    vGaiaRiello: 0,
+    vPrintedHip: 0,
+    vCatalogued: 0,
+    vNone: 0,
     velocityGaiaPm: 0,
     velocityHip2Pm: 0,
     velocityAthygPm: 0,
@@ -312,8 +317,8 @@ async function main() {
   };
 
   const {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid,
-    conAssignment, sizes,
+    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, hipVMag,
+    dustGrid, conAssignment, sizes,
   } = loadReadStarsInputs();
   Object.assign(counts, sizes);
 
@@ -321,7 +326,7 @@ async function main() {
   const t0 = Date.now();
   const { stars, stats } = await readStars(
     SRC_CSV, conAssignment, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
-    dustGrid, wdsXids,
+    dustGrid, wdsXids, hipVMag,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
@@ -358,6 +363,11 @@ async function main() {
       `hip2_saturated ${dv.hip2_saturated}, ` +
       `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
       `athyg_printed ${dv.athyg_printed}`,
+  );
+  const mv = stats.vVia;
+  console.log(
+    `  V cascade: gaia_riello ${mv.gaia_riello}, printed_hip ${mv.printed_hip}, ` +
+      `catalogued ${mv.catalogued}, none ${mv.none}`,
   );
   const vv = stats.velocityVia;
   console.log(
@@ -396,6 +406,10 @@ async function main() {
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
   counts.directionAthygPrinted = dv.athyg_printed;
+  counts.vGaiaRiello = stats.vVia.gaia_riello;
+  counts.vPrintedHip = stats.vVia.printed_hip;
+  counts.vCatalogued = stats.vVia.catalogued;
+  counts.vNone = stats.vVia.none;
   counts.velocityGaiaPm = vv.gaia_pm;
   counts.velocityHip2Pm = vv.hip2_pm;
   counts.velocityAthygPm = vv.athyg_pm;

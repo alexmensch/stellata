@@ -23,6 +23,7 @@ import {
   spectralClassCi,
   spectralClassColorIsDerivable,
   SOLAR_BV_FALLBACK,
+  SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_PROPER_NAME,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -44,6 +45,11 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import {
+  emptyVViaPartition,
+  resolveVMagnitude,
+  type VVia,
+} from '../photometry/v-magnitude-pure';
 import { CON_INDEX, type ConstellationAssignment } from './constellations';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
@@ -173,6 +179,7 @@ export async function readStars(
   },
   dustGrid: DustGrid | null = null,
   wdsXids: SimbadWdsXidIndex | null = null,
+  hipVMag: Map<number, number> = new Map(),
 ): Promise<{
   stars: Star[];
   stats: {
@@ -189,6 +196,7 @@ export async function readStars(
     gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
     gaiaBindingSiblingRejected: number; // rows whose binding SIMBAD attributes to a sibling WDS letter
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
+    vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
@@ -214,6 +222,10 @@ export async function readStars(
     noDist: 0,
     noDirection: 0,
     tooFar: 0,
+    // Unreachable while the absmag cell gates membership: every row carrying
+    // one also carries `mag`, the cascade's last tier. Pinned at 0 so a future
+    // membership change that breaks the coupling surfaces here.
+    noVMagnitude: 0,
   };
   let conPositionalDisagreement = 0;
   let total = 0;
@@ -234,6 +246,7 @@ export async function readStars(
     hip2_pm_discrepant: 0,
     athyg_printed: 0,
   };
+  const vVia = emptyVViaPartition();
   const velocityVia: Record<VelocityVia, number> = {
     gaia_pm: 0,
     hip2_pm: 0,
@@ -259,8 +272,11 @@ export async function readStars(
       dropped.noRaDec++;
       continue;
     }
-    let absmag = parseFloatOrNull(row.absmag);
-    if (absmag === null) {
+    // A presence gate, not a value read: absmag is derived from the V cascade
+    // below. AT-HYG's cell still decides membership because 3,917 rows carry
+    // `mag` without it, and admitting them here would be a membership change
+    // — that belongs to the magnitude-floor phase, not the field cascades.
+    if (parseFloatOrNull(row.absmag) === null) {
       dropped.noAbsmag++;
       continue;
     }
@@ -306,10 +322,9 @@ export async function readStars(
     let dist = athygDist;
     if (bjEligibleRow) bjEligible++;
     if (bjEligibleRow && bjMap.size > 0 && mag !== null) {
-      const ovr = applyBailerJonesOverride(mag, gaiaSourceId, bjMap);
-      if (ovr) {
-        absmag = ovr.absmag;
-        dist = ovr.dist;
+      const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
+      if (ovr !== null) {
+        dist = ovr;
         bjOverridden++;
         tallyDistSrc(bjOverriddenByDistSrc, athygDistSrc);
       }
@@ -323,7 +338,6 @@ export async function readStars(
         const hip2Dist = 1000 / hip2.plxMas;
         if (Math.abs(hip2Dist - athygDist) <= HIP_DIST_MATCH_TOLERANCE_PC) {
           dist = hip2Dist;
-          if (mag !== null) absmag = apparentToAbsoluteMagnitude(mag, dist);
           hipDistFullPrecision++;
         }
       }
@@ -336,10 +350,9 @@ export async function readStars(
     // mis-anchored value on the same rows.
     if (mag !== null && isInLmcCone(ra, dec)) {
       lmcCandidates++;
-      const ovr = applyLmcKinematicOverride(ra, dec, mag, athygPmRa, athygPmDec);
-      if (ovr) {
-        absmag = ovr.absmag;
-        dist = ovr.dist;
+      const ovr = applyLmcKinematicOverride(ra, dec, athygPmRa, athygPmDec);
+      if (ovr !== null) {
+        dist = ovr;
         lmcOverridden++;
         tallyDistSrc(lmcOverriddenByDistSrc, athygDistSrc);
       }
@@ -367,6 +380,24 @@ export async function readStars(
 
     const proper = nonEmpty(row.proper);
     const isSol = proper === SOL_PROPER_NAME;
+
+    // V through the Riello transform → printed HIP V → catalogued cell, then
+    // absmag from that V and the distance the whole override stack settled on.
+    // See ../photometry/README.md. Sol is the one record this cannot reach:
+    // it sits at distance zero, where the modulus is undefined.
+    const vRes = resolveVMagnitude(
+      gaiaSourceId ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null : null,
+      hip !== null ? hipVMag.get(hip) ?? null : null,
+      mag,
+    );
+    vVia[vRes.via]++;
+    if (vRes.v === null) {
+      dropped.noVMagnitude++;
+      continue;
+    }
+    let absmag = isSol
+      ? SOL_ABSOLUTE_V_MAGNITUDE
+      : apparentToAbsoluteMagnitude(vRes.v, dist);
 
     // Space-motion velocity from the SAME tier's solution + the final
     // stack distance + AT-HYG RV. Sol carries no PM row and sits at the
@@ -528,6 +559,7 @@ export async function readStars(
       gaiaBindingMagRejected,
       gaiaBindingSiblingRejected,
       directionVia,
+      vVia,
       velocityVia,
       velocityClamped,
       velocityClampedSample,

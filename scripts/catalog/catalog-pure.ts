@@ -1349,6 +1349,17 @@ export const FLAG_BINARY_COMPANION_SYNTHETIC = FLAGS.binaryCompanionSynthetic;
  *  designation both key off this exact string. */
 export const SOL_PROPER_NAME = 'Sol';
 
+/** Sol's absolute V magnitude, curated because it cannot be derived: absmag
+ *  comes from (V, distance) for every other record, and Sol sits at distance
+ *  zero where that expression is undefined.
+ *
+ *  4.85 is the value the AT-HYG-driven build carried, kept so the swap does
+ *  not move the Stefan-Boltzmann chain's calibration point (known-stars.tsv
+ *  pins Sol's radius at 1.035 R☉ against it). The IAU 2015 Resolution B2
+ *  nominal value is 4.83; adopting it is a deliberate recalibration, not a
+ *  drift fix, and moves the pinned radius. */
+export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
+
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.
  *  The reservation is pinned by a regression test: drifting RESERVED into
@@ -2156,38 +2167,22 @@ export function absoluteToApparentMagnitude(absmag: number, distPc: number): num
   return absmag + 5 * Math.log10(distPc / 10);
 }
 
-/** Shared shape produced by every distance-override layer (Bailer-Jones,
- *  LMC kinematic, and future SMC kinematic / structural-disc / OGLE
- *  Cepheid layers). Each `apply*Override` returns one of these or null.
- *  Recomputing absmag with the snapped distance is essential — without
- *  it, stars get placed at the new distance but lit for the old one.
- *  xyz is NOT part of the shape: position is direction × distance, with
+/** When `gaiaSourceId` has a Bailer-Jones entry, returns the snapped distance
+ *  in parsecs; otherwise null.
+ *
+ *  Every distance-override layer (Bailer-Jones, LMC kinematic, and future SMC
+ *  kinematic / structural-disc / OGLE Cepheid layers) returns a bare distance:
+ *  absmag is derived once from the V cascade and the distance the whole stack
+ *  settled on (`photometry/README.md` § The V cascade), so a layer cannot
+ *  place a star at a new distance while lighting it for the old one. xyz is
+ *  likewise not a layer's business — position is direction × distance, with
  *  the direction resolved independently by the direction cascade. */
-export interface DistanceOverride {
-  dist: number;
-  absmag: number;
-}
-
-/** Single source of truth for assembling a `DistanceOverride` from a
- *  snapped distance. */
-export function buildDistanceOverride(mag: number, distPc: number): DistanceOverride {
-  return {
-    dist: distPc,
-    absmag: apparentToAbsoluteMagnitude(mag, distPc),
-  };
-}
-
-/** When `gaiaSourceId` has a Bailer-Jones entry, returns the override
- *  for that star; otherwise null. */
 export function applyBailerJonesOverride(
-  mag: number,
   gaiaSourceId: string | null,
   bjMap: Map<string, number>,
-): DistanceOverride | null {
+): number | null {
   if (!gaiaSourceId) return null;
-  const dist = bjMap.get(gaiaSourceId);
-  if (dist === undefined) return null;
-  return buildDistanceOverride(mag, dist);
+  return bjMap.get(gaiaSourceId) ?? null;
 }
 
 // ---- LMC kinematic distance override -------------------------------------
@@ -2251,21 +2246,20 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
 }
 
 /** When (raHours, decDegrees) is inside the LMC sky cone AND (pmRa, pmDec)
- *  lies within tolerance of the LMC bulk-PM centre, returns the override
- *  snapped to Pietrzyński 2019's distance. Otherwise null — the caller
- *  leaves the row's existing values in place (which after B-J is either the
- *  B-J posterior or AT-HYG's 1/π). Every gate is evaluated here, so no
- *  caller can produce an override by forgetting one. */
+ *  lies within tolerance of the LMC bulk-PM centre, returns Pietrzyński 2019's
+ *  distance. Otherwise null — the caller leaves the row's existing distance in
+ *  place (which after B-J is either the B-J posterior or AT-HYG's 1/π). Every
+ *  gate is evaluated here, so no caller can produce an override by forgetting
+ *  one. */
 export function applyLmcKinematicOverride(
   raHours: number,
   decDegrees: number,
-  mag: number,
   pmRa: number | null,
   pmDec: number | null,
-): DistanceOverride | null {
+): number | null {
   if (pmRa === null || pmDec === null) return null;
   if (!isInLmcCone(raHours, decDegrees)) return null;
   if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
   if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
-  return buildDistanceOverride(mag, LMC_DISTANCE_PC);
+  return LMC_DISTANCE_PC;
 }

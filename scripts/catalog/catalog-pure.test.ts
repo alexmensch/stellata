@@ -100,7 +100,6 @@ import {
   type DoublesStar,
   parseBailerJonesTsv,
   apparentToAbsoluteMagnitude,
-  buildDistanceOverride,
   applyBailerJonesOverride,
   isBailerJonesEligible,
   resolveGaiaSourceId,
@@ -2019,17 +2018,6 @@ describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
   });
 });
 
-describe('catalog-pure / buildDistanceOverride', () => {
-  it('threads dist into the result', () => {
-    expect(buildDistanceOverride(10, 250).dist).toBe(250);
-  });
-
-  it('uses the same absmag formula as apparentToAbsoluteMagnitude', () => {
-    expect(buildDistanceOverride(12.029, LMC_DISTANCE_PC).absmag)
-      .toBe(apparentToAbsoluteMagnitude(12.029, LMC_DISTANCE_PC));
-  });
-});
-
 describe('catalog-pure / applyBailerJonesOverride', () => {
   // Tier-A fixtures: real AT-HYG + Bailer-Jones DR3 values for the
   // four catastrophic parallax-inversion supergiants and a
@@ -2052,16 +2040,16 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
   const bjMap = new Map(FIVE_HIPS.map((f) => [f.sourceId, f.bjDist] as const));
 
   it('returns null when source_id is missing or absent from the map', () => {
-    expect(applyBailerJonesOverride(10, null, bjMap)).toBeNull();
-    expect(applyBailerJonesOverride(10, '', bjMap)).toBeNull();
-    expect(applyBailerJonesOverride(10, '0000', bjMap)).toBeNull();
+    expect(applyBailerJonesOverride(null, bjMap)).toBeNull();
+    expect(applyBailerJonesOverride('', bjMap)).toBeNull();
+    expect(applyBailerJonesOverride('0000', bjMap)).toBeNull();
   });
 
   it('pins the BJ distance', () => {
     for (const f of FIVE_HIPS) {
-      const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap);
+      const out = applyBailerJonesOverride(f.sourceId, bjMap);
       expect(out, f.label).not.toBeNull();
-      expect(out!.dist, f.label).toBe(f.bjDist);
+      expect(out, f.label).toBe(f.bjDist);
     }
   });
 
@@ -2072,24 +2060,24 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     // and HIP 46144's pullback is asserted separately below.
     for (const label of ['HIP 22365', 'HIP 25733', 'HIP 38430']) {
       const f = FIVE_HIPS.find((x) => x.label === label)!;
-      const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
-      const drop = (f.athygDist - out.dist) / f.athygDist;
+      const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+      const drop = (f.athygDist - out) / f.athygDist;
       expect(drop, `${label} drop ratio`).toBeGreaterThan(0.25);
     }
   });
 
   it('HIP 46144 pulls back ~18% (lower-S/N outlier)', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 46144')!;
-    const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
-    const drop = (f.athygDist - out.dist) / f.athygDist;
+    const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+    const drop = (f.athygDist - out) / f.athygDist;
     expect(drop).toBeGreaterThan(0.15);
     expect(drop).toBeLessThan(0.20);
   });
 
   it('leaves the well-measured F-dwarf HIP 23785 within 5%', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 23785')!;
-    const out = applyBailerJonesOverride(f.mag, f.sourceId, bjMap)!;
-    expect(Math.abs(f.athygDist - out.dist) / f.athygDist).toBeLessThan(0.05);
+    const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+    expect(Math.abs(f.athygDist - out) / f.athygDist).toBeLessThan(0.05);
   });
 
 });
@@ -2586,17 +2574,14 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('LMC-direction + LMC-PM star is snapped to 49.594 kpc', () => {
     for (const f of LMC_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
-      expect(out, f.label).not.toBeNull();
-      expect(out!.dist, f.label).toBe(LMC_DISTANCE_PC);
-      // Absolute magnitude recomputed at the new distance.
-      expect(out!.absmag).toBeCloseTo(f.mag - 5 * Math.log10(LMC_DISTANCE_PC / 10), 10);
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
+      expect(out, f.label).toBe(LMC_DISTANCE_PC);
     }
   });
 
   it('LMC-direction + non-LMC-PM star is unchanged (null override)', () => {
     for (const f of LMC_PM_NON_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
       expect(out, f.label).toBeNull();
     }
   });
@@ -2607,7 +2592,7 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // LMC gets no override. Snapping it would teleport a Galactic star to
     // 49.6 kpc.
     expect(applyLmcKinematicOverride(
-      12, 0, 8, LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE,
+      12, 0, LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE,
     )).toBeNull();
   });
 
@@ -2616,10 +2601,10 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // overridden. AT-HYG carries blank pm_ra/pm_dec for pre-Hipparcos
     // entries; treat them as ineligible for the kinematic gate.
     expect(applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, null, 0,
+      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, null, 0,
     )).toBeNull();
     expect(applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10, 0, null,
+      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 0, null,
     )).toBeNull();
   });
 
@@ -2631,19 +2616,19 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     const f = LMC_HITS[0]; // HD 268749
     const sourceId = 'fake-lmc-source-id';
     const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
-    const bj = applyBailerJonesOverride(f.mag, sourceId, bjMap);
-    expect(bj!.dist).toBe(8000);
-    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.mag, f.pmRa, f.pmDec);
-    expect(lmc!.dist).toBe(LMC_DISTANCE_PC);
+    const bj = applyBailerJonesOverride(sourceId, bjMap);
+    expect(bj).toBe(8000);
+    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
+    expect(lmc).toBe(LMC_DISTANCE_PC);
     // Final state mirrors what build-catalog.ts ends up with.
-    expect(lmc!.dist).not.toBe(bj!.dist);
+    expect(lmc).not.toBe(bj);
   });
 
   it('boundary: PM tolerance is per-component, not radial', () => {
     // |Δpm_ra| at the tolerance, |Δpm_dec| at 0 → pass. Mirror case → pass.
     // Both at the tolerance → still pass (per-component, not Euclidean).
     const eps = 1e-9;
-    const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 10] as const;
+    const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG] as const;
     const passEdgeRa = applyLmcKinematicOverride(
       ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
     );
