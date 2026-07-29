@@ -5,8 +5,6 @@ import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isLfsPointer } from '../sid/sid-pure';
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // scripts/util/paths.ts sits two levels below the repo root
@@ -18,6 +16,12 @@ export function mtimeIfExists(path: string): number {
 }
 
 const LFS_PROBE_BYTES = 128;
+
+/** Git-LFS pointer stub — the file content is elsewhere; content checks
+ *  must skip rather than "validate" the stub. */
+export function isLfsPointer(text: string): boolean {
+  return text.startsWith('version https://git-lfs.github.com/spec/');
+}
 
 /** Whether an LFS-tracked input is still an unsmudged pointer stub — the state
  *  a checkout without `git lfs pull` (the bare CI test job) leaves it in.

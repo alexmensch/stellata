@@ -14,8 +14,7 @@ import {
 } from '../catalog-lookup';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../catalog-pure';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { isLfsPointer } from '../../sid/sid-pure';
-import { REPO_ROOT } from '../../util/paths';
+import { REPO_ROOT, isLfsPointer } from '../../util/paths';
 import {
   INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,

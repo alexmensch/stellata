@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../scripts/util/paths';
+import { REPO_ROOT, isLfsPointer } from '../scripts/util/paths';
 import {
   EMPTY_HEAD_TRIPLE,
   LEDGER_HEADER,
@@ -17,7 +17,6 @@ import {
   RETIREMENTS_HEADER,
   checkAppendOnly,
   computeLedgerHead,
-  isLfsPointer,
   parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,

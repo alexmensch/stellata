@@ -5,12 +5,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
 import {
   LEDGER_HEADER,
   REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
-  isLfsPointer,
   parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
