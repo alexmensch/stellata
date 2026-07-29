@@ -327,7 +327,7 @@ export async function readStars(
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, athygDistSrc);
     let dist = athygDist;
     if (bjEligibleRow) bjEligible++;
-    if (bjEligibleRow && bjMap.size > 0 && mag !== null) {
+    if (bjEligibleRow && bjMap.size > 0) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
       if (ovr !== null) {
         dist = ovr;
@@ -354,7 +354,7 @@ export async function readStars(
     // filter snaps the ~60 affected AT-HYG rows back to Pietrzyński 2019's
     // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
     // mis-anchored value on the same rows.
-    if (mag !== null && isInLmcCone(ra, dec)) {
+    if (isInLmcCone(ra, dec)) {
       lmcCandidates++;
       const ovr = applyLmcKinematicOverride(ra, dec, athygPmRa, athygPmDec);
       if (ovr !== null) {
