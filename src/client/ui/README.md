@@ -143,6 +143,26 @@ with an `<h3>` title and a chevron `<button class="group-toggle">`.
 `.row-actions` (reset / all / none) live inside `.group-body`, not
 the header, so their clicks don't bubble into the toggle.
 
+## Vertical rhythm inside a section: `.group-block`
+
+A settings section stacks **control blocks** — a `.sub-label` (or
+`.sub-label-row`) plus the inputs it governs. Inside a block the label's own
+6px is the whole gap and the controls sit tight against it; *between* blocks
+the gap is 12px, and it comes from `.group-block` on the element that starts
+the next block. One CSS rule owns that number; it replaced a scatter of
+inline `style="margin-top: …"` attributes that had already drifted (one row
+was 10px).
+
+**Which children start a block cannot be inferred from the element type** —
+the Camera section has `.sub-label-row`s ("Dynamic range") that deliberately
+sit tight *inside* the star-size block, sharing its readout. So a block start
+is marked, not derived, and a fully automatic per-child rule would need a
+spacing scale that distinguishes the two cases.
+
+The rule is scoped `.group-body > .group-block` rather than bare
+`.group-block`: at (0,2,0) it outranks `.sub-label`'s own (0,1,0) `margin-top`
+regardless of rule order in the stylesheet.
+
 ## Disabled-control styling
 
 `controls.ts` toggles native `.disabled` on inputs whose state is

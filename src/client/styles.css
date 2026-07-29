@@ -733,6 +733,15 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   gap: 12px;
 }
 
+/* Clearance between the control blocks inside a settings section. Scoped to
+   direct children of .group-body so it outranks .sub-label's own 6px
+   intra-block margin regardless of rule order. Which children are block
+   starts can't be derived from the element type — the Camera section has
+   .sub-label-rows that deliberately sit tight inside a block — so a block
+   start is marked, not inferred. */
+.group-body > .group-block { margin-top: 12px; }
+.group-body > .group-block:first-child { margin-top: 0; }
+
 /* Block-level so each row stacks vertically — `inline-flex` was causing
  * neighbouring rows to flow on the same line when the labels were short
  * enough to fit. Modal-dismiss kept inline-flex because it sits next to
