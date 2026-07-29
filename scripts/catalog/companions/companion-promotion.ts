@@ -6,7 +6,6 @@ import { readFileSync } from 'node:fs';
 
 import {
   FLAG_HAS_NAME,
-  FLAG_BINARY_PRIMARY,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   SPECTRAL_UNKNOWN,
@@ -23,6 +22,10 @@ import {
   type SpectralInfo,
 } from '../catalog-pure';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import {
+  RIELLO_G_MINUS_V_SIGMA,
+  vTierIsSystemBlend,
+} from '../photometry/v-magnitude-pure';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations';
@@ -382,14 +385,19 @@ export interface PromotionStats {
    *  a member as bright as (or brighter than) its anchor's blend would
    *  zero or invert the residual flux. */
   blendDimSkipped: number;
-  /** Non-structural dim candidates the subset solve could not fit — no
-   *  observed WDS magnitude for the member or the anchor, no system
-   *  distance, or a pathologically large fit group. Left un-dimmed. */
+  /** Dim candidates no magnitude comparison could reach — no observed WDS
+   *  magnitude for the member or the anchor, no distance, or a pathologically
+   *  large fit group. Left un-dimmed. */
   blendDimMembersUnfit: number;
   /** Non-structural dim candidates the winning subset left OUT (or the
-   *  whole fit was indecisive within 0.01 mag): their light is not in
-   *  the anchor's blend, so no dim. 36 Oph D vs A+B's blend. */
+   *  whole fit was indecisive within the decisive margin): their light is
+   *  not in the anchor's blend, so no dim. 36 Oph D vs A+B's blend. */
   blendDimMembersOutside: number;
+  /** Dim candidates dropped before the fit because Gaia had already resolved
+   *  them out of the anchor's magnitude — the member carries its own DR3
+   *  source_id and the anchor's V came from Gaia's, so its light was never in
+   *  there and dimming would subtract it twice. */
+  blendDimGaiaResolved: number;
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
@@ -420,6 +428,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimSkipped: 0,
     blendDimMembersUnfit: 0,
     blendDimMembersOutside: 0,
+    blendDimGaiaResolved: 0,
     constellationSplitFromAnchor: 0,
   };
 }
@@ -554,7 +563,7 @@ function findExistingPrimary(
   return null;
 }
 
-interface PairCursor {
+export interface PairCursor {
   primary: MultiplesTsvRow | null;
   secondaries: MultiplesTsvRow[];
 }
@@ -811,7 +820,17 @@ const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
 // both "anchor alone" and the runner-up subset by this margin —
 // near-degenerate cases (Sirius, Δmag≈10: hypotheses differ by ~10⁻⁴ mag)
 // must not flip pinned values on float noise.
-const ANCHOR_DIM_DECISIVE_MAG = 0.01;
+//
+// A FLOOR, not the error budget. It sits at the Riello G−V scatter because a
+// gaia_riello anchor's magnitude is only good to that σ, and no margin may
+// discriminate below the noise in its own input. Two things it does NOT model:
+// a printed-tier anchor never went through that relation (its σ is Hipparcos'
+// printed precision), and the hypotheses are built from WDS observed-frame
+// magnitudes whose error dominates both — face-value pair mags, some in
+// non-V bands, at the ~0.1 mag level (README § Anchor flux conservation).
+// Raising the margin toward that term is a calibration with count movement,
+// not a constant swap.
+const ANCHOR_DIM_DECISIVE_MAG = RIELLO_G_MINUS_V_SIGMA;
 
 // 2^N subset enumeration cap. Real anchors carry ≤ ~6 fitted members; a
 // larger group is pathological input, not a solvable attribution.
@@ -1211,8 +1230,10 @@ interface AnchorDimCandidate {
    *  subtraction). */
   source: 'wds_mag' | 'dmag_imputed' | 'own';
   dmag: number | null;
-  /** ids inherited-then-stripped from the anchor: blend membership is
-   *  structural, so the member skips the subset fit and is always in. */
+  /** ids inherited-then-stripped from the anchor — the cross-match could not
+   *  separate them. Skips the subset fit only where the anchor's magnitude is a
+   *  system blend by construction; against a Gaia-derived V the shared
+   *  identifier carries no photometric claim and the member is fitted. */
   structural: boolean;
   /** Member's own observed-frame WDS magnitude (mag_sec; mag_pri for a
    *  pair-row primary escape). */
@@ -1221,7 +1242,6 @@ interface AnchorDimCandidate {
    *  mag_pri when the member is its direct secondary; null on an escape
    *  row (its mag_pri is the member's own light). */
   anchorWdsMag: number | null;
-  distPc: number | null;
   av: number;
 }
 
@@ -1459,6 +1479,7 @@ function promoteRow(
     athygDist: null,
     athygDistSrc: null,
     athygRowId: null,
+    vVia: null,
     syntheticId: usesSynth ? synthId : null,
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
@@ -1484,7 +1505,6 @@ function promoteRow(
       structural: idsInheritedFromAnchor,
       memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
       anchorWdsMag: isPairRowPrimary ? null : row.magPri,
-      distPc: row.distPc,
       av,
     });
   }
@@ -1928,28 +1948,75 @@ export function promoteCompanions(
   }
   for (const cands of dimByAnchor.values()) {
     const anchor = getStarAt(cands[0].anchorIdx);
-    const anchorWdsMag = cands.find((c) => c.anchorWdsMag !== null)?.anchorWdsMag ?? null;
-    const distPc = cands.find((c) => c.distPc !== null && c.distPc > 0)?.distPc ?? null;
-    // Members sit sub-arcsec off the anchor, so any candidate's sightline
-    // de-extinction re-adds the same observed frame.
+    // The anchor's own light, once every member is out: the FAINTEST mag_pri
+    // its candidate rows offer. WDS's `mag_pri` covers the whole subtree of
+    // whatever letter the row pairs, so a top-level row's value already sums
+    // sub-letter members (AR Cas lists 4.87 for A, 5.02 for Aa) and only the
+    // most-decomposed one names what the re-split's residual represents.
+    //
+    // Faintest is a PROXY for most-decomposed, exact only while the rows agree
+    // on one component's photometry. Two top-level rows disagreeing by band or
+    // epoch make this pick the fainter measurement of the same letter and claim
+    // a decomposition that is not there — silently, since the fit still solves.
+    // Keying on the paired letter's depth is the real rule; see README
+    // § Anchor flux conservation.
+    const anchorAloneMag = cands.reduce<number | null>(
+      (m, c) => (c.anchorWdsMag !== null && (m === null || c.anchorWdsMag > m)
+        ? c.anchorWdsMag : m),
+      null,
+    );
+    // One A_V for the whole group: the dust grid is voxelised far coarser than
+    // even the widest member's offset (σ Ori's E at 42″, AR Cas I at 234″), so
+    // every candidate's sightline integral returns the same value and any of
+    // them re-adds the same observed frame.
     const av = cands[0].av;
+    // The anchor's own position, never a row's dist_pc: the record's absmag was
+    // derived at exactly this distance, while a multiples.tsv row can carry a
+    // system distance the record's override stack later replaced (HD 64315's
+    // rows say 12.7 kpc against the record's B-J 6.2 kpc, a 1.5 mag error in
+    // the observed frame every hypothesis below is compared against).
+    const distPc = Math.hypot(anchor.x, anchor.y, anchor.z);
+    const mObs = distPc > 0 ? anchor.absmag + av + 5 * Math.log10(distPc / 10) : null;
     const obsMag = (c: AnchorDimCandidate): number | null =>
       c.memberWdsMag !== null ? c.memberWdsMag
-        : anchorWdsMag !== null && c.dmag !== null ? anchorWdsMag + c.dmag
+        : c.anchorWdsMag !== null && c.dmag !== null ? c.anchorWdsMag + c.dmag
           : null;
 
-    const structural = cands.filter((c) => c.structural);
-    const fitted = cands.filter((c) => !c.structural);
+    // An anchor's magnitude holds exactly what the catalogue behind it could
+    // not resolve. A printed tier resolves nothing inside one entry, so every
+    // member sharing that entry is in it and skips the fit. A Gaia-derived V
+    // resolves per source: a member Gaia handed its OWN source_id is separated
+    // from the anchor by measurement (HD 153557's B at 5″, σ Ori's E at 42″)
+    // and cannot be in its G, while a member with no own source is one Gaia
+    // could not split — including one whose ids were the anchor's, where the
+    // shared identifier now says only that the cross-match could not separate
+    // them. Those go to the subset solve rather than straight into the blend.
+    //
+    // "OWN source_id" needs no comparison against the anchor's: promoteRow
+    // nulls a minted member's gaiaSourceId whenever the row's source is the
+    // anchor row's or the anchor record's, so non-null here already means
+    // different. A member sharing the anchor's source arrives with null.
+    const anchorMagIsSystemBlend = vTierIsSystemBlend(anchor.vVia);
+    const structural: AnchorDimCandidate[] = [];
+    const fitted: AnchorDimCandidate[] = [];
+    for (const c of cands) {
+      if (anchorMagIsSystemBlend) {
+        (c.structural ? structural : fitted).push(c);
+      } else if (c.member.gaiaSourceId !== null) {
+        stats.blendDimGaiaResolved++;
+      } else {
+        fitted.push(c);
+      }
+    }
     let chosen: AnchorDimCandidate[] = [];
     if (fitted.length > 0) {
       const participants = fitted.filter((c) => obsMag(c) !== null);
       stats.blendDimMembersUnfit += fitted.length - participants.length;
-      if (anchorWdsMag === null || distPc === null || participants.length === 0
+      if (anchorAloneMag === null || mObs === null || participants.length === 0
           || participants.length > ANCHOR_DIM_MAX_FIT_MEMBERS) {
         stats.blendDimMembersUnfit += participants.length;
       } else {
-        const mObs = anchor.absmag + av + 5 * Math.log10(distPc / 10);
-        const baseFlux = Math.pow(10, -0.4 * anchorWdsMag)
+        const baseFlux = Math.pow(10, -0.4 * anchorAloneMag)
           + structural.reduce((f, c) => {
             const m = obsMag(c);
             return m !== null ? f + Math.pow(10, -0.4 * m) : f;
@@ -2000,7 +2067,8 @@ export function promoteCompanions(
     for (const c of applied) {
       if (c.source === 'dmag_imputed') {
         const m = obsMag(c);
-        const delta = anchorWdsMag !== null && m !== null ? m - anchorWdsMag : c.dmag;
+        const delta = anchorAloneMag !== null && m !== null
+          ? m - anchorAloneMag : c.dmag;
         if (delta !== null) relatives.push({ cand: c, delta });
         continue;
       }
@@ -2288,225 +2356,4 @@ export function resolveComponentNameCollisions(
     }
   }
   return stats;
-}
-
-// ---- Catalog row-index map sidecar -------------------------------------
-
-export interface CatalogRowIndexMap {
-  /** Gaia DR3 source_id (decimal string) → catalog.bin record index. */
-  byGaia: Record<string, number>;
-  /** Hipparcos catalog number → catalog.bin record index. */
-  byHip: Record<string, number>;
-  /** Synthetic identifier → catalog.bin record index. See
-   *  scripts/catalog/README.md § Companion promotion. */
-  bySynth: Record<string, number>;
-}
-
-// Build the lookup sidecar after the final absmag sort. The runtime
-// binaries loader resolves multiples.tsv rows to catalog.bin records
-// through this map; the build script writes it next to catalog.bin /
-// search-index.json.
-export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
-  const byGaia: Record<string, number> = {};
-  const byHip: Record<string, number> = {};
-  const bySynth: Record<string, number> = {};
-  for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    if (s.gaiaSourceId && !(s.gaiaSourceId in byGaia)) {
-      byGaia[s.gaiaSourceId] = i;
-    }
-    if (s.hip !== null && s.hip > 0 && !(`${s.hip}` in byHip)) {
-      byHip[`${s.hip}`] = i;
-    }
-    if (s.syntheticId && !(s.syntheticId in bySynth)) {
-      bySynth[s.syntheticId] = i;
-    }
-  }
-  return { byGaia, byHip, bySynth };
-}
-
-// ---- Wings for renderable-companion primaries --------------------------
-
-/** gaia → hip → synth catalog-row resolution — the TS twin of
- *  build-runtime-binaries.py's `resolve_idx`. Kept faithful so the winged
- *  set matches binaries.bin's rendered pairs; the invariant is pinned by
- *  multi-star-regression.test.ts against the real artifacts. */
-function resolveMultiplesIdx(
-  gaia: string | null,
-  hip: number | null,
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-): number | null {
-  if (gaia) {
-    const hit = rowIndexMap.byGaia[gaia];
-    if (hit !== undefined) return hit;
-  }
-  if (hip !== null && hip > 0) {
-    const hit = rowIndexMap.byHip[`${hip}`];
-    if (hit !== undefined) return hit;
-  }
-  if (synthKey !== null) {
-    const hit = rowIndexMap.bySynth[synthKey];
-    if (hit !== undefined) return hit;
-  }
-  return null;
-}
-
-/** The catalog row a component's synth key addresses, or null when no synth
- *  record exists or it aliases `exclude`. TS twin of the Python `synth_slot`;
- *  a hit is the truer slot than an id-first resolve that blended onto a
- *  system anchor. */
-function synthSlotIdx(
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-  exclude: number | null = null,
-): number | null {
-  if (synthKey === null) return null;
-  const hit = rowIndexMap.bySynth[synthKey];
-  return hit === undefined || hit === exclude ? null : hit;
-}
-
-interface ResolvedComponent {
-  idx: number;
-  /** Canonical WDS component letter (`canonicalCompLetter` applied). */
-  comp: string;
-}
-
-interface ResolvedSystem {
-  systemId: string;
-  primaryIdx: number;
-  /** The primary (its own comp letter) followed by every secondary that
-   *  resolves to a record distinct from the primary. */
-  components: ResolvedComponent[];
-}
-
-/** Resolve a pair cursor's primary + secondaries to catalog record indices
- *  through the gaia → hip → synth priority + both-ends synth re-home that
- *  build-runtime-binaries.py's `resolve_idx` uses, so both consumers below
- *  (wings, component designations) track binaries.bin's rendered pairs. A
- *  blended component (its id resolves onto another member's row) has its own
- *  distinct synth slot minted by promotion, and that slot is the truer end.
- *  Null when the primary itself doesn't resolve. */
-function resolvePairComponents(
-  cursor: PairCursor,
-  rowIndexMap: CatalogRowIndexMap,
-): ResolvedSystem | null {
-  const primary = cursor.primary;
-  if (primary === null) return null;
-  const primarySynth = composeSyntheticId(primary.systemId, primary.comp);
-  const priId = resolveMultiplesIdx(
-    primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
-  );
-  if (priId === null) return null;
-  const primaryIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
-  const components: ResolvedComponent[] = [{ idx: primaryIdx, comp: primary.comp }];
-  for (const sec of cursor.secondaries) {
-    if (sec.orbitRole !== 'secondary') continue;
-    const comp = canonicalCompLetter(primary.comp, sec.comp);
-    const secondarySynth = composeSyntheticId(sec.systemId, comp);
-    let secIdx = resolveMultiplesIdx(
-      sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
-    );
-    if (secIdx !== null) {
-      secIdx = synthSlotIdx(secondarySynth, rowIndexMap, secIdx) ?? secIdx;
-    }
-    if (secIdx === null || secIdx === primaryIdx) continue;
-    components.push({ idx: secIdx, comp });
-  }
-  return { systemId: primary.systemId, primaryIdx, components };
-}
-
-/** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
- *  physical system that renders a companion but which build-catalog's three
- *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
- *  A pair renders a companion when its sides resolve to DISTINCT catalog
- *  records under the same `resolve_idx` + blended-sibling synth retries
- *  build-runtime-binaries.py runs to emit binaries.bin, so the winged set
- *  tracks binaries.bin's primaries (both retries mirrored; the writer's
- *  post-resolution override / relation dedup can't change the distinct-pair
- *  boolean this pass keys on, only which index, which root-grouping and the
- *  brightest-participant pick below already absorb). Invariants: one glyph
- *  per WDS system, on the brightest participant (skips a system any earlier
- *  pass already flagged); additive only, so eclipsing / iconic doubles with
- *  no rendered companion keep their wings. Returns the count newly winged
- *  plus every resolved multiples.tsv member index — the record set the
- *  MULTIPLICITY_RESOLVED status covers (a blended primary whose members all
- *  collapse onto it counts: the row exists for it even with nothing
- *  rendered apart). See scripts/catalog/README.md § Renderable-companion
- *  wings. */
-export function wingRenderablePrimaries(
-  rows: MultiplesTsvRow[],
-  stars: Star[],
-  rowIndexMap: CatalogRowIndexMap,
-): { winged: number; memberIndices: Set<number> } {
-  const memberIndices = new Set<number>();
-  // Catalog indices participating in a rendered pair, grouped by WDS root.
-  const perSystem = new Map<string, Set<number>>();
-  for (const cursor of groupBySystem(rows).values()) {
-    const resolved = resolvePairComponents(cursor, rowIndexMap);
-    if (resolved === null) continue;
-    for (const c of resolved.components) memberIndices.add(c.idx);
-    const root = wdsRootOf(resolved.systemId);
-    if (root === null) continue;
-    const secIdxs = resolved.components
-      .filter((c) => c.idx !== resolved.primaryIdx)
-      .map((c) => c.idx);
-    if (secIdxs.length === 0) continue;
-    let set = perSystem.get(root);
-    if (!set) { set = new Set(); perSystem.set(root, set); }
-    set.add(resolved.primaryIdx);
-    for (const idx of secIdxs) set.add(idx);
-  }
-
-  let winged = 0;
-  for (const indices of perSystem.values()) {
-    let anchor = -1;
-    let alreadyWinged = false;
-    for (const idx of indices) {
-      if ((stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0) {
-        alreadyWinged = true;
-        break;
-      }
-      if (anchor < 0 || stars[idx].absmag < stars[anchor].absmag) anchor = idx;
-    }
-    if (alreadyWinged || anchor < 0) continue;
-    stars[anchor].flags |= FLAG_BINARY_PRIMARY;
-    winged++;
-  }
-  return { winged, memberIndices };
-}
-
-// ---- Component-letter search designations ------------------------------
-
-export interface ComponentDesignation {
-  /** Canonical WDS component letter, e.g. "A", "B", "C", "Ab". */
-  comp: string;
-  /** Catalog record index of the system primary. The runtime search index
-   *  expands "<primary designation> <comp>" (Bayer / Flamsteed forms) from
-   *  this record so "Alpha Centauri C" / "α Cen C" focus Proxima. */
-  primaryIdx: number;
-}
-
-/** Map each multiples.tsv component to a system-relative designation so the
- *  runtime can offer "<base> <letter>" search aliases (Alpha Centauri A/B/C).
- *  Base comes from the SYSTEM PRIMARY's own designation, not the component's:
- *  Proxima carries no Bayer, yet "α Cen C" must resolve to it. The primary is
- *  included with its own comp letter (so "α Cen A" focuses it). Resolution
- *  mirrors binaries.bin (`resolvePairComponents`); coverage is bounded by what
- *  decomposes in multiples.tsv. First-write-wins on a record shared across
- *  pairs (α Cen A appears in both the AB and AC rows). */
-export function buildComponentDesignations(
-  rows: MultiplesTsvRow[],
-  rowIndexMap: CatalogRowIndexMap,
-): Map<number, ComponentDesignation> {
-  const out = new Map<number, ComponentDesignation>();
-  for (const cursor of groupBySystem(rows).values()) {
-    const resolved = resolvePairComponents(cursor, rowIndexMap);
-    if (resolved === null) continue;
-    for (const c of resolved.components) {
-      if (out.has(c.idx)) continue;
-      out.set(c.idx, { comp: c.comp, primaryIdx: resolved.primaryIdx });
-    }
-  }
-  return out;
 }

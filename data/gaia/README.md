@@ -41,6 +41,12 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 - **Mission citation**: Gaia Collaboration, Vallenari A. et al. 2023,
   *A&A* 674, A1 (Gaia DR3 overview).
   DOI: [10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940).
+- **Photometry citation**: Riello M., De Angeli F., Evans D. W. et al. 2021,
+  *A&A* 649, A3 (Gaia EDR3 photometric content and validation). DOI:
+  [10.1051/0004-6361/202039587](https://doi.org/10.1051/0004-6361/202039587).
+  Its § *Photometric relationships with other photometric systems* gives the
+  `G − V` cubic in `BP − RP` the V cascade transforms through; DR3 ships EDR3's
+  photometry unchanged, so the EDR3 calibration is the one that applies.
 - **Upstream tables**: ESA Gaia Archive at
   https://gea.esac.esa.int/archive/.
 - **Licence**: CC-BY-4.0 (Gaia data release policy).
@@ -66,7 +72,10 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   `spectraltype_esphs` for the six-tier spectral resolver;
   `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
   the NSS source_id set for the `gaia_nss_systemic` routing tag
-  (`scripts/catalog/distance/README.md` § Direction resolution).
+  (`scripts/catalog/distance/README.md` § Direction resolution). That same
+  table's `phot_{g,bp,rp}_mean_mag` columns are the top tier of the Johnson V
+  cascade every record's absmag is derived from — 310,939 of 313,257 stars
+  (`scripts/catalog/photometry/README.md`).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays

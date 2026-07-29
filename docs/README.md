@@ -27,7 +27,10 @@ extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         policy, morphology palette, selection-bias
                         handling. Spans scripts/, data/, and the
                         future src/client/extragalactic/.
-catalog-driver.md       Design gate for the AT-HYG-retirement epic:
+catalog-driver.md       DURABLE CONTRACT for how membership,
+                        identifiers, and per-field values are sourced
+                        once AT-HYG is retired as the driver — read it
+                        before designing anything in that space:
                         Gaia-native membership (inherited spine +
                         magnitude floor), frozen-CDS classic-ID label
                         overlay, HD→Gaia join route, bright / no-Gaia
@@ -71,7 +74,9 @@ science-hdr-pipeline.md Design gate for the HDR epic: the
 science-catalog-ingestion.md   Split out of SCIENCE.md: AT-HYG/Gaia/
                         Hipparcos merge, Bailer-Jones + LMC-kinematic
                         distance overrides, driver astrometry,
-                        current-epoch space-motion propagation.
+                        current-epoch space-motion propagation. Its
+                        AT-HYG-framed sections are superseded by
+                        catalog-driver.md; it says which and why.
 science-stellar-modelling.md   Split out of SCIENCE.md: physical
                         radius, brightness/size perception model,
                         colour temperature routing + Teff calibration,

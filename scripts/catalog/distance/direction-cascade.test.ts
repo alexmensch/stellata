@@ -39,7 +39,7 @@ function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrome
     parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 10, pmdecMasyr: -10,
     ruwe: 1.0, ipdFracMultiPeak: 0,
-    gMag: null,
+    gMag: null, bpMag: null, rpMag: null,
     ...overrides,
   };
 }
@@ -308,9 +308,9 @@ describe('direction-cascade / resolveDirection routing', () => {
 describe('direction-cascade / TSV parsers', () => {
   it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
     const tsv = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0',
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t',
       '',
     ].join('\n');
     const map = parseGaiaAstrometryCatalogTsv(tsv);
@@ -320,14 +320,14 @@ describe('direction-cascade / TSV parsers', () => {
       parallaxMas: 50.0, parallaxErrorMas: 0.1,
       pmraMasyr: 10.5, pmdecMasyr: -3.5,
       ruwe: 1.2, ipdFracMultiPeak: 0,
-      gMag: 8.0,
+      gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
       parallaxMas: null, parallaxErrorMas: null,
       pmraMasyr: null, pmdecMasyr: null,
       ruwe: null, ipdFracMultiPeak: null,
-      gMag: 9.0,
+      gMag: 9.0, bpMag: null, rpMag: null,
     });
   });
 
@@ -450,6 +450,7 @@ describe('resolveDirection velocity solution', () => {
   const gaiaRow: GaiaAstrometryCatalogRow = {
     raDeg: 10, decDeg: 20, parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 100, pmdecMasyr: -40, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
+    bpMag: null, rpMag: null,
   };
 
   it('carries the Gaia solution + gaia_pm velVia on the gaia_5p tier', () => {

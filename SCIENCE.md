@@ -24,11 +24,11 @@ below should be consistent with these.
 ### Data fidelity — "best possible model based on current observational data and knowledge"
 
 Stellata is a physical-accuracy project, not a stylised visualisation.
-The catalog grows in well-defined releases (Gaia DR4 expected late 2026,
-periodic AT-HYG refreshes), not continuously, so one-time data-
-processing investment pays off forever. There is no manual review path
-— 300k+ stars cannot be hand-checked, so the data-processing
-infrastructure itself has to be correct.
+The catalog grows in well-defined releases (Gaia DR4 expected late 2026;
+until the driver swap lands, periodic AT-HYG refreshes), not
+continuously, so one-time data-processing investment pays off forever.
+There is no manual review path — 300k+ stars cannot be hand-checked, so
+the data-processing infrastructure itself has to be correct.
 
 When scoping data-processing / cross-match / catalog-ingest work:
 
@@ -98,11 +98,33 @@ enough to see it.
 
 ## Data sources
 
+- **Gaia DR3** (astrometry, photometry, astrophysical parameters,
+  non-single-star orbits): ESA / DPAC, https://gea.esac.esa.int/archive/ —
+  Gaia Collaboration, Vallenari A. et al. 2023, *A&A* 674, A1. Licence
+  CC-BY-4.0. Per-source ADQL pulls under `data/gaia/`; per-table provenance in
+  `data/gaia/README.md`. Three roles the rest of the model rests on:
+    - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
+      direction cascade and the input Bailer-Jones inverts (below).
+    - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
+      Angeli F., Evans D. W. et al. 2021, *A&A* 649, A3** § *Photometric
+      relationships with other photometric systems* (`G − V` as a cubic in
+      `BP − RP`, σ = 0.03017 mag over −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
+      absolute magnitude is derived from this V, so it sets what the whole
+      scene looks like; DR3 ships EDR3's photometry unchanged, so the EDR3
+      calibration applies. Gaia's CCDs saturate below `G` = 4.0, where the
+      printed Hipparcos tier below takes over — the bound is calibrated
+      against the printed-vs-transformed |ΔV| distribution rather than
+      assumed (`scripts/catalog/photometry/README.md`).
+    - **Astrophysical parameters** — `gspphot ∪ gspspec` Teff / log g / [M/H]
+      feed the spectral resolver and the Stefan-Boltzmann radii.
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
   — maintained by David Nash. The classic-IDs subset at
   `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
   carries at least one classical designation: IAU proper name, Bayer,
-  Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0.
+  Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0. **Being
+  retired as the driver**: it is already down to membership, identifiers
+  and names, with the frozen `data/athyg/inherited-spine.tsv` standing in
+  for it after the swap. Contract: `docs/catalog-driver.md`.
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
   Gliese), the identifier half of the AT-HYG retirement — four frozen
   VizieR tables under `data/classic-ids/`, joined onto Gaia DR3
@@ -303,7 +325,11 @@ docs/science-catalog-ingestion.md      AT-HYG/Gaia/Hipparcos merge,
                                         Bailer-Jones + LMC-kinematic
                                         distance overrides, driver
                                         astrometry, current-epoch
-                                        space-motion propagation.
+                                        space-motion propagation. Where
+                                        the row set is HEADED is
+                                        docs/catalog-driver.md, the
+                                        durable contract for retiring
+                                        AT-HYG as the driver.
 docs/science-stellar-modelling.md      Physical radius, brightness/
                                         size perception model, colour
                                         temperature routing + Teff

@@ -292,9 +292,13 @@ export interface BuildCounts {
    *  observed WDS mags / distance) — left un-dimmed. */
   companionBlendDimUnfit: number;
   /** Non-structural dim candidates the winning subset left out, or whose
-   *  fit was indecisive within 0.01 mag — their light is not in the
-   *  anchor's blend. */
+   *  fit was indecisive within the decisive margin — their light is not in
+   *  the anchor's blend. */
   companionBlendDimOutside: number;
+  /** Dim candidates Gaia had already resolved out of the anchor's magnitude:
+   *  the member carries its own DR3 source_id and the anchor's V came from
+   *  Gaia's, so its light was never in there. Rises with Gaia coverage. */
+  companionBlendDimGaiaResolved: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in
@@ -327,6 +331,9 @@ export interface BuildCounts {
    *  direction-cascade tier 2 coverage + dist_src=HIP full-precision
    *  distances. */
   hip2Entries: number;
+  /** Total entries in the printed-V slice of I/239/hip_main (parsed map
+   *  size) — the V cascade's bright-tier coverage. */
+  hipVMagEntries: number;
   /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
    *  input to the gaia_nss_systemic routing tag. */
   nssSourceIdEntries: number;
@@ -352,6 +359,21 @@ export interface BuildCounts {
    *  ra/dec as-is (no Gaia astrometry row, no HIP2 row; ξ UMa
    *  canonical, plus Sol). */
   directionAthygPrinted: number;
+  /** V cascade: rows whose Johnson V came from the Riello+ 2021 G,BP−RP
+   *  transform — unsaturated Gaia photometry inside the relation's
+   *  validity range. See scripts/catalog/photometry/README.md. */
+  vGaiaRiello: number;
+  /** V cascade: the bright rescue tier. Rows whose Gaia photometry is
+   *  saturated (G < 4), incomplete, or outside the transform's colour
+   *  range, resolved against printed I/239 Vmag instead. */
+  vPrintedHip: number;
+  /** V cascade: rows no Gaia photometry and no printed V reached, left on
+   *  the driver's own catalogued magnitude cell. */
+  vCatalogued: number;
+  /** V cascade: rows no tier supplied a V for, and so no absmag either —
+   *  readStars drops them. Pinned at 0, which is the assertion that the
+   *  absmag-cell membership gate still implies a usable magnitude. */
+  vNone: number;
   /** Space-motion velocity: rows whose tangential velocity came from
    *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
    *  directionGaiaNssSystemic minus PM-less 2p rows). */

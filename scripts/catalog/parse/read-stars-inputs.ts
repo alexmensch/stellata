@@ -26,8 +26,9 @@ import type { DustGrid } from '../distance/dust-deextinction-pure';
 import {
   createConstellationAssignment,
   STELLARIUM_SKYCULTURE_JSON,
-  type ConstellationAssignment,
 } from './constellations';
+import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import type { ReadStarsOptions } from './stars-parse';
 import { readGaiaHipXmatch } from './gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -38,6 +39,7 @@ const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
 const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
+const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
@@ -47,7 +49,7 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
  *  from that walk must invalidate against. */
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
   ATHYG_CSV, SRC_BAILER_JONES, SRC_GAIA_HIP_XMATCH, SRC_GAIA_APSIS,
-  SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_SIMBAD_SPTYPE,
+  SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
   SRC_SIMBAD_WDS_XIDS, SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
 
@@ -61,21 +63,20 @@ export type ReadStarsInputSizes = Pick<
   | 'simbadWdsXidsEntries'
   | 'gaiaAstrometryEntries'
   | 'hip2Entries'
+  | 'hipVMagEntries'
   | 'nssSourceIdEntries'
 >;
 
-export interface ReadStarsInputs {
-  bjMap: Map<string, number>;
-  apsisMap: Map<string, ApsisRow>;
-  simbadSpectral: SimbadSpectralIndex;
-  wdsXids: SimbadWdsXidIndex | null;
+/** The loaded form of `ReadStarsOptions`: every table present, none optional,
+ *  so passing this bundle to `readStars` cannot omit one. Extends the walk's
+ *  own option shape rather than restating it — a new table added there is a
+ *  compile error here until this loader supplies it. */
+export interface ReadStarsInputs extends Required<ReadStarsOptions> {
+  /** Loaded unconditionally: absent dust is a hard fail below, not a
+   *  soft-continue, so consumers never see the nullable form. */
+  dustGrid: DustGrid;
   /** Also feeds build-catalog's GCVS byGaia bridge. */
   hipToGaia: Map<number, string> | null;
-  directions: DirectionSources;
-  dustGrid: DustGrid;
-  /** Also feeds companion promotion, which assigns its minted records from
-   *  their own positions rather than inheriting the anchor's index. */
-  conAssignment: ConstellationAssignment;
   sizes: ReadStarsInputSizes;
 }
 
@@ -87,6 +88,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     simbadWdsXidsEntries: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
+    hipVMagEntries: 0,
     nssSourceIdEntries: 0,
   };
 
@@ -213,6 +215,25 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
+  // Printed Johnson V per HIP — the V cascade's bright tier. Optional on the
+  // same terms as the direction-cascade tables: without it every saturated or
+  // out-of-range row falls through to the catalogued magnitude, which is the
+  // pre-cascade behaviour and shows up as a vVia drift in the count snapshot.
+  let hipVMag = new Map<number, number>();
+  if (existsSync(SRC_HIP_VMAG)) {
+    console.log('Parsing printed Hipparcos V magnitudes...');
+    const t = Date.now();
+    hipVMag = parseHipVmagTsv(readFileSync(SRC_HIP_VMAG, 'utf8'));
+    console.log(`  ${hipVMag.size} entries in ${Date.now() - t}ms`);
+    sizes.hipVMagEntries = hipVMag.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_HIP_VMAG} not found — the V cascade's bright tier is\n` +
+      `         unavailable; saturated rows keep the catalogued magnitude.\n` +
+      `         Re-run \`pnpm run refresh:hip-vmag\`.`,
+    );
+  }
+
   // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
   // the Bailer-Jones soft-continue): a soft-continue would carry
   // extincted absmags into a runtime that assumes de-extincted, silently
@@ -231,7 +252,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   console.log(`  built the region grid in ${Date.now() - tCon}ms`);
 
   return {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid,
-    conAssignment, sizes,
+    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, hipVMag,
+    dustGrid, conAssignment, sizes,
   };
 }

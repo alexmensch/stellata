@@ -291,9 +291,14 @@ Data sources retain their own licences:
   [Codeberg](https://codeberg.org/astronexus/athyg), CC-BY-SA-4.0.
   The generated `catalog.bin` and `search-index.json` are
   derivatives and carry the same licence.
-- **Gaia DR3** (astrometry, astrophysical parameters, NSS orbits) —
+- **Gaia DR3** (astrometry, broadband photometry, astrophysical
+  parameters, NSS orbits) —
   ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
   CC-BY-4.0 (Gaia data-release policy).
+- **Riello et al. 2021** (Gaia EDR3 photometric relations — the
+  `G` → Johnson `V` transform every star's brightness is derived
+  through) — cite the paper
+  ([10.1051/0004-6361/202039587](https://doi.org/10.1051/0004-6361/202039587)).
 - **Bailer-Jones et al. 2021** (Gaia DR3 geometric distances) — via
   [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/352); cite
   the paper ([10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806)).
@@ -305,7 +310,9 @@ Data sources retain their own licences:
   Astronomical Institute, [http://www.sai.msu.su/gcvs/gcvs/](http://www.sai.msu.su/gcvs/gcvs/).
   Free for research and educational use with attribution.
 - **Hipparcos Main Catalogue + CCDM** (ESA SP-1200, 1997; Dommanget
-  & Nys 1994) — public domain via [CDS](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239).
+  & Nys 1994) — printed Johnson `V` for the stars Gaia's detectors
+  saturate on, plus the double-star cross-match. Public domain via
+  [CDS](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239).
 - **Washington Double Star Catalog + ORB6** (double-star geometry and
   visual orbits) — U.S. Naval Observatory,
   [astro.gsu.edu/wds](http://www.astro.gsu.edu/wds/); public domain

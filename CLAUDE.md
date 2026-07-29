@@ -69,6 +69,9 @@ here is the always-loaded hook pointing to which section to open.
   confidence in PR body; flag manual-smoke paths. § Large-PR honesty.
 - **Multi-concern diff** → split into topical commits, one concept
   each, committed along the way. § Commit granularity.
+- **A frozen table lacks a column you need** → run the re-pull; you
+  have network access. Never scope a design around it or hand the
+  fetch back. `scripts/refresh/README.md` § Who runs a refresh.
 
 ## Folder READMEs — read before editing, debugging, planning; update at commit
 

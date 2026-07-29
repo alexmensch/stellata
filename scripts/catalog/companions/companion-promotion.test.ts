@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildCatalogRowIndexMap,
-  buildComponentDesignations,
   canonicalCompLetter,
   composeSyntheticId,
   groupBySystem,
@@ -17,13 +15,11 @@ import {
   stampComponentLetters,
   stripBlendedSiblingLetter,
   stripDoubledParentToken,
-  wingRenderablePrimaries,
   type MultiplesTsvRow,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  FLAG_BINARY_PRIMARY,
   FLAG_HAS_NAME,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
@@ -34,6 +30,7 @@ import { CONSTELLATIONS, createConstellationAssignment } from '../parse/constell
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
+import { multiplesRow } from './multiples-fixture';
 
 // The real IAU decomposition, not a stub: the fixtures below carry real
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a
@@ -46,40 +43,6 @@ function makeStar(overrides: Partial<Star> = {}): Star {
   });
 }
 
-export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
-  return {
-    systemId: 'WDS-1-AB',
-    comp: 'B',
-    hip: null,
-    gaiaSourceId: null,
-    hd: null,
-    x_pc: 100, y_pc: 0, z_pc: 0,
-    absmag: 5.0, ci: 0.6, spect: '',
-    name: '',
-    source: 'wds',
-    astrometryVia: 'gaia_5p',
-    spectVia: 'none',
-    photometryVia: 'athyg_own',
-    orbitRole: 'secondary',
-    distPc: 100,
-    pDays: null,
-    tJd: null,
-    e: null,
-    aAU: null,
-    iRad: null,
-    omegaRad: null,
-    q: null,
-    sepArcsec: null,
-    paDeg: null,
-    sepPaEpochJd: null,
-    dmag: null,
-    anchorSepArcsec: null,
-    anchorPaDeg: null,
-    magPri: null,
-    magSec: null,
-    ...overrides,
-  };
-}
 
 /** Complete Tier-1 element set — hasRenderableOrbit(row) === true. */
 const ORBIT_ELEMENTS = {
@@ -439,6 +402,15 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
 });
 
 describe('anchor flux dimming', () => {
+  // A structural member only bypasses the subset fit when the anchor's V is the
+  // system blend, so every fixture below that exercises the bypass pins the
+  // anchor to a printed tier.
+  const blendAnchor = (overrides: Partial<Star> = {}) =>
+    makeStar({
+      hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0,
+      vVia: 'printed_hip', ...overrides,
+    });
+
   const dimRows = (dmag: number | null, magSec: number | null = null) => [
     multiplesRow({
       systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
@@ -459,7 +431,7 @@ describe('anchor flux dimming', () => {
   ];
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(newStars).toHaveLength(1);
     expect(stats.blendDimmedAnchors).toBe(1);
@@ -472,7 +444,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimSkipped).toBe(0);
@@ -482,7 +454,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('skips the wds_mag subtraction when the member is as bright as the blend (guard)', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
     // the blend itself — subtracting it would zero the residual.
     const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -492,7 +464,7 @@ describe('anchor flux dimming', () => {
   });
 
   it('does not dim when the member keeps its own distinct identifier', () => {
-    const anchor = makeStar({ hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor();
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
     const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -501,12 +473,144 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBe(1.0);
   });
 
-  // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
-  // WDS pair blend (or the primary alone), distPc=10 so distance modulus
-  // and de-extinction both vanish and observed = absolute magnitudes.
   const blendMag = (...mags: number[]) =>
     -2.5 * Math.log10(mags.reduce((f, m) => f + Math.pow(10, -0.4 * m), 0));
 
+  // HD 18455's shape: a sub-arcsec pair whose secondary row carries the
+  // anchor's HIP and Gaia source, so promotion strips both and mints a synth
+  // record. The anchor's V comes from Gaia (the fixture default), which is what
+  // makes the shared identifier stop implying the light is shared.
+  const gaiaAnchorRows = (magPri: number, magSec: number, distPc: number) => [
+    multiplesRow({
+      systemId: '02572-2458-AB', comp: 'A', hip: 13772,
+      gaiaSourceId: '5076269164798851712',
+      x_pc: distPc, y_pc: 0, z_pc: 0, distPc,
+      absmag: 0, name: 'Gaian', source: 'athyg',
+      photometryVia: 'athyg_own',
+      astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
+      sepArcsec: 0.1, paDeg: 110.0, dmag: magSec - magPri, magPri, magSec,
+    }),
+    multiplesRow({
+      systemId: '02572-2458-AB', comp: 'B', hip: 13772,
+      gaiaSourceId: '5076269164798851712',
+      x_pc: distPc, y_pc: 0, z_pc: 0, distPc,
+      absmag: 0,
+      photometryVia: 'athyg_system_inherited',
+      astrometryVia: 'hip2_long_baseline', orbitRole: 'secondary',
+      sepArcsec: 0.1, paDeg: 110.0, dmag: magSec - magPri, magPri, magSec,
+    }),
+  ];
+
+  it('no dim when the Gaia-derived anchor V already reads as one component (HD 18455)', () => {
+    // Gaia DR3 5076269164798851712 → Riello V 8.040 at 22.467 pc, which is
+    // WDS's component A (8.06), not the AB blend (7.37) SIMBAD prints as
+    // V = 7.331. B's light was never in it, so the pre-cascade dim of
+    // +0.684 mag would subtract the companion a second time.
+    const anchor = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      absmag: 8.040 - 5 * Math.log10(22.466861 / 10),
+      x: 22.466861, y: 0, z: 0,
+    });
+    const rows = gaiaAnchorRows(8.06, 8.20, 22.466861);
+    const untouched = anchor.absmag;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].syntheticId).toBe('synth-02572-2458-B');
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBe(untouched);
+    expect(anchor.absmag).toBeCloseTo(6.2823, 4);
+  });
+
+  it('still dims when the Gaia-derived anchor V reads as the blend (unresolved pair)', () => {
+    // Same identifier shape, same 0.1″ separation — but here Gaia fit the pair
+    // as one photocentre, so the transformed V lands on the A+B blend and the
+    // companion's light IS being double-counted.
+    const anchor = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      absmag: blendMag(10.50, 10.50), x: 10, y: 0, z: 0,
+    });
+    const rows = gaiaAnchorRows(10.50, 10.50, 10);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimGaiaResolved).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(10.50, 3);
+    expect(newStars[0].absmag).toBeCloseTo(10.50, 3);
+  });
+
+  it("a member with its own Gaia source never dims a Gaia-derived anchor (HD 153557's 5″ B)", () => {
+    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello V is 7.806,
+    // which the pair blend (7.859) fits better than A alone — so the subset
+    // solve WOULD dim it. Gaia gave B its own source at 5″ separation, which
+    // settles it: B's light is not in the anchor's G, whatever the fit prefers.
+    const rows = () => {
+      const r = gaiaAnchorRows(7.93, 10.85, 17.93);
+      r[1].gaiaSourceId = '1408029509583934464';
+      r[1].hip = null;
+      r[1].photometryVia = 'gaia_photometry';
+      r[1].absmag = 10.0316;
+      return r;
+    };
+    const absmag = 7.806 - 5 * Math.log10(17.93 / 10);
+    const gaia = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
+      x: 17.93, y: 0, z: 0,
+    });
+    const gaiaStats = promoteCompanions(
+      rows(), [gaia], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(gaiaStats.blendDimGaiaResolved).toBe(1);
+    expect(gaiaStats.blendDimmedAnchors).toBe(0);
+    expect(gaia.absmag).toBe(absmag);
+
+    // Under a printed V the same 5″ member is still a candidate: Hipparcos
+    // published one magnitude for the entry whether or not Gaia later split it.
+    const printed = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
+      x: 17.93, y: 0, z: 0, vVia: 'printed_hip',
+    });
+    const printedStats = promoteCompanions(
+      rows(), [printed], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(printedStats.blendDimGaiaResolved).toBe(0);
+    expect(printedStats.blendDimmedAnchors).toBe(1);
+    expect(printed.absmag).toBeGreaterThan(absmag);
+  });
+
+  it('an unfittable structural member dims only under a printed anchor V', () => {
+    // No WDS magnitudes reach the fit, so nothing can test membership. Under a
+    // printed V the blend claim holds by construction and the member dims the
+    // anchor; under a Gaia V there is no evidence its light is in there.
+    const noWdsMags = () => {
+      const rows = gaiaAnchorRows(0, 0, 10);
+      for (const r of rows) { r.magPri = null; r.magSec = null; r.dmag = 2.0; }
+      return rows;
+    };
+    const printed = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
+      x: 10, y: 0, z: 0, vVia: 'printed_hip',
+    });
+    const printedStats = promoteCompanions(
+      noWdsMags(), [printed], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(printedStats.blendDimmedAnchors).toBe(1);
+    expect(printed.absmag).toBeCloseTo(1.15973, 4);
+
+    const gaia = makeStar({
+      hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
+      x: 10, y: 0, z: 0,
+    });
+    const gaiaStats = promoteCompanions(
+      noWdsMags(), [gaia], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(gaiaStats.blendDimmedAnchors).toBe(0);
+    expect(gaiaStats.blendDimMembersUnfit).toBe(1);
+    expect(gaia.absmag).toBe(1.0);
+  });
+
+  // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
+  // WDS pair blend (or the primary alone), distPc=10 so distance modulus
+  // and de-extinction both vanish and observed = absolute magnitudes.
   const solveRows = (over1: Partial<MultiplesTsvRow>, over2?: Partial<MultiplesTsvRow>) => {
     const rows = [
       multiplesRow({
@@ -551,7 +655,7 @@ describe('anchor flux dimming', () => {
 
   it('subset solve dims via an identifier-less synth member when the anchor mag reads as the blend (Polaris Ab shape)', () => {
     const blend = blendMag(2.1, 4.1);
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
     const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
@@ -565,7 +669,7 @@ describe('anchor flux dimming', () => {
 
   it('subset solve attributes the blend to the fitting member only (36 Oph D shape)', () => {
     const blend = blendMag(2.0, 3.0); // anchor blends A+B; D is NOT inside
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows(
       // B: own gaia + own photometry — independent brightness.
       {
@@ -587,7 +691,7 @@ describe('anchor flux dimming', () => {
 
   it('no dim when the blend hypothesis is degenerate with anchor-alone (Sirius Δmag≈10 shape)', () => {
     const blend = blendMag(2.0, 12.0); // differs from magPri by ~1e-4 mag
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({
       gaiaSourceId: '999900001111', photometryVia: 'athyg_own',
       absmag: 12.0, dmag: 10.0, magPri: 2.0, magSec: 12.0,
@@ -601,7 +705,7 @@ describe('anchor flux dimming', () => {
 
   it('joint N-member split conserves total flux across two blend-relative members', () => {
     const blend = blendMag(2.0, 3.0, 4.0);
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows(
       { dmag: 1.0, magPri: 2.0, magSec: 3.0 },
       { dmag: 2.0, magPri: 2.0, magSec: 4.0 },
@@ -614,6 +718,66 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBeCloseTo(2.0, 3);
     const total = blendMag(anchor.absmag, newStars[0].absmag, newStars[1].absmag);
     expect(total).toBeCloseTo(blend, 6);
+  });
+
+  // AR Cas' shape: WDS prints mag_pri per row for the whole subtree of the
+  // letter that row pairs, so the top-level A,C row's 4.87 already sums the
+  // sub-letters while the Aa,Ab row's 5.02 is A's own light. Only the faintest
+  // — most-decomposed — value names what the re-split's residual represents,
+  // and it is also the Δ reference every dmag_imputed member is measured from.
+  it('anchor-alone is the faintest mag_pri across the anchor rows, not the first', () => {
+    const blend = blendMag(5.02, 7.42);
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows(
+      // A,C FIRST — a top-level row whose mag_pri is the brighter A blend. The
+      // ordering is the point: taking whichever row comes first picks this one.
+      { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
+      // Aa,Ab: the decomposed row. Ab is Δ2.40 off Aa's own 5.02.
+      { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(newStars).toHaveLength(2);
+    // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
+    // and nothing dims at all; against 5.02 the {Ab} subset lands exactly on
+    // the anchor's magnitude.
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(5.02, 3);
+    // The Δ reference is that same faintest value: 7.42 − 5.02, never 7.42 − 4.87.
+    expect(newStars[1].absmag - anchor.absmag).toBeCloseTo(2.40, 9);
+  });
+
+  // HD 64315's shape: multiples.tsv carries a system distance that predates the
+  // record's own override stack (its rows say 12.66 kpc against a Bailer-Jones
+  // 6.2 kpc), and the observed frame every hypothesis is compared against has
+  // to be the one the anchor's absmag was actually derived at.
+  it('the observed frame comes from the anchor position, not the row dist_pc', () => {
+    const blend = blendMag(2.1, 4.1);
+    const rows = (rowDistPc: number | null) => {
+      const r = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+      r[0].absmag = blend;
+      for (const row of r) row.distPc = rowDistPc;
+      return r;
+    };
+    // A row distance 10× the record's would put the observed frame 5 mag off,
+    // where every subset fits worse than leaving the anchor alone.
+    const stale = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const staleStats = promoteCompanions(
+      rows(100), [stale], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(staleStats.blendDimmedAnchors).toBe(1);
+    expect(stale.absmag).toBeCloseTo(2.1, 3);
+
+    // And a row with no distance at all no longer strands the fit as unfittable.
+    const absent = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const absentStats = promoteCompanions(
+      rows(null), [absent], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(absentStats.blendDimMembersUnfit).toBe(0);
+    expect(absentStats.blendDimmedAnchors).toBe(1);
+    expect(absent.absmag).toBeCloseTo(2.1, 3);
   });
 });
 
@@ -2181,6 +2345,7 @@ describe('promoteCompanions', () => {
     const acrux: Star = makeStar({
       hip: 60718, absmag: -3.77, proper: 'Acrux',
       x: 100, y: 0, z: 0,
+      vVia: 'printed_hip',  // Gaia-saturated, so its V is the printed blend
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -2342,43 +2507,6 @@ describe('promoteCompanions', () => {
     const { stats } = promoteCompanions(rows, [], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(stats.promoted).toBe(0);
     expect(stats.pairRowsScanned).toBe(0);
-  });
-});
-
-describe('buildCatalogRowIndexMap', () => {
-  it('indexes by gaia and hip, first occurrence wins on collision', () => {
-    const stars: Star[] = [
-      makeStar({ gaiaSourceId: 'g1', hip: 100 }),
-      makeStar({ gaiaSourceId: 'g2', hip: 100 }),  // hip collision
-      makeStar({ gaiaSourceId: null, hip: 101 }),
-    ];
-    const map = buildCatalogRowIndexMap(stars);
-    expect(map.byGaia.g1).toBe(0);
-    expect(map.byGaia.g2).toBe(1);
-    expect(map.byHip['100']).toBe(0);  // first occurrence
-    expect(map.byHip['101']).toBe(2);
-  });
-
-  it('omits records with no gaia and no hip', () => {
-    const stars: Star[] = [makeStar(), makeStar({ gaiaSourceId: 'g1' })];
-    const map = buildCatalogRowIndexMap(stars);
-    expect(Object.keys(map.byGaia)).toEqual(['g1']);
-    expect(Object.keys(map.byHip)).toHaveLength(0);
-    expect(Object.keys(map.bySynth)).toHaveLength(0);
-  });
-
-  it('indexes synthetic-ID records into bySynth', () => {
-    const stars: Star[] = [
-      makeStar({ gaiaSourceId: 'g1', hip: 100 }),
-      makeStar({ syntheticId: 'synth-03082+4057-Ab' }),
-      makeStar({ syntheticId: 'synth-03082+4057-Aa2' }),
-    ];
-    const map = buildCatalogRowIndexMap(stars);
-    expect(map.bySynth['synth-03082+4057-Ab']).toBe(1);
-    expect(map.bySynth['synth-03082+4057-Aa2']).toBe(2);
-    // Synthetic-only records carry no gaia/hip key.
-    expect(Object.keys(map.byGaia)).toEqual(['g1']);
-    expect(Object.keys(map.byHip)).toEqual(['100']);
   });
 });
 
@@ -2544,171 +2672,5 @@ describe('stampComponentLetters', () => {
     expect(stats.systemsStamped).toBe(0);
     expect(stats.rowsStamped).toBe(0);
     expect(blend.proper).toBeNull();
-  });
-});
-
-describe('wingRenderablePrimaries', () => {
-  const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).winged;
-  const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
-
-  it('wings the brightest member of a physical pair with a distinct companion', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [a, b])).toBe(1);
-    expect(isWinged(a)).toBe(true);
-    expect(isWinged(b)).toBe(false);
-  });
-
-  it('adds exactly one glyph per hierarchical system, on the system anchor', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0 });
-    const c = makeStar({ hip: 300, absmag: 3.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
-      multiplesRow({ systemId: 'W1-AC', comp: 'A', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-AC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [a, b, c])).toBe(1);
-    expect(isWinged(a)).toBe(true);
-    expect(isWinged(b)).toBe(false);
-    expect(isWinged(c)).toBe(false);
-  });
-
-  it('skips a system that a prior pass already flagged (no second glyph)', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0, flags: FLAG_BINARY_PRIMARY });
-    const rows = [
-      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [a, b])).toBe(0);
-    expect(isWinged(a)).toBe(false);
-  });
-
-  it('resolves a blended secondary through its synth slot (id-first collides on the primary)', () => {
-    // Aa and Ab share the primary's Gaia source; promotion minted a synth
-    // record for Ab. id-first resolve lands on Aa, the synth retry recovers
-    // the distinct companion.
-    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
-    const ab = makeStar({ syntheticId: 'synth-W1-Ab', absmag: 12.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [aa, ab])).toBe(1);
-    expect(isWinged(aa)).toBe(true);
-    expect(isWinged(ab)).toBe(false);
-  });
-
-  it('canonicalises a WDS-truncated digit secondary to its synth slot', () => {
-    // Stage 6 emits comp="2" for the secondary side of an "Aa1,2" pair;
-    // the synth key is minted from the canonical "Aa2".
-    const aa1 = makeStar({ hip: 100, absmag: 1.0 });
-    const aa2 = makeStar({ syntheticId: 'synth-W1-Aa2', absmag: 8.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Aa1,2', comp: 'Aa1', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Aa1,2', comp: '2', hip: 100, orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [aa1, aa2])).toBe(1);
-    expect(isWinged(aa1)).toBe(true);
-  });
-
-  it('re-homes a blended non-anchor primary through its synth slot (secondary stays on the anchor)', () => {
-    // Castor BC pattern: the pair's primary (Ca) carries the system anchor's
-    // gaia, so its id-first resolve lands on the anchor; its own synth slot is
-    // the true companion end. The secondary (Cb) blends onto the anchor too but
-    // was never promoted (no synth). Without the primary synth retry the pair
-    // reads pri == sec == anchor and the system is wrongly left unwinged.
-    const anchor = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
-    const caSynth = makeStar({ syntheticId: 'synth-W1-Ca', absmag: 5.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Ca', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Ca,Cb', comp: 'Cb', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [anchor, caSynth])).toBe(1);
-    expect(isWinged(anchor)).toBe(true);
-    expect(isWinged(caSynth)).toBe(false);
-  });
-
-  it('leaves a degenerate pair (secondary collapses onto the primary, no synth slot) unwinged', () => {
-    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5', absmag: 1.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [aa])).toBe(0);
-    expect(isWinged(aa)).toBe(false);
-  });
-
-  it('ignores standalone rows (not a side of a rendered pair)', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-_A', comp: 'A', hip: 100, orbitRole: 'standalone' }),
-    ];
-    expect(wing(rows, [a])).toBe(0);
-    expect(isWinged(a)).toBe(false);
-  });
-});
-
-describe('buildComponentDesignations', () => {
-  const designate = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars));
-
-  it('maps every component (including the primary) to the primary as base', () => {
-    // α Cen shape: A (the Bayer-bearing primary) + B resolve by HIP, C by
-    // Gaia; A recurs across the AB and AC rows and dedups to one designation.
-    const a = makeStar({ hip: 71683 });
-    const b = makeStar({ hip: 71681 });
-    const c = makeStar({ hip: 70890, gaiaSourceId: '5853498713190525696' });
-    const rows = [
-      multiplesRow({ systemId: 'W-AB', comp: 'A', hip: 71683, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W-AB', comp: 'B', hip: 71681, orbitRole: 'secondary' }),
-      multiplesRow({ systemId: 'W-AC', comp: 'A', hip: 71683, orbitRole: 'primary' }),
-      multiplesRow({
-        systemId: 'W-AC', comp: 'C', hip: 70890,
-        gaiaSourceId: '5853498713190525696', orbitRole: 'secondary',
-      }),
-    ];
-    const m = designate(rows, [a, b, c]);
-    expect(m.get(0)).toEqual({ comp: 'A', primaryIdx: 0 });
-    expect(m.get(1)).toEqual({ comp: 'B', primaryIdx: 0 });
-    expect(m.get(2)).toEqual({ comp: 'C', primaryIdx: 0 });
-  });
-
-  it('resolves a blended secondary through its synth slot', () => {
-    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5' });
-    const ab = makeStar({ syntheticId: 'synth-W1-Ab' });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
-    ];
-    const m = designate(rows, [aa, ab]);
-    expect(m.get(1)).toEqual({ comp: 'Ab', primaryIdx: 0 });
-  });
-
-  it('omits a secondary that collapses onto the primary (no distinct record)', () => {
-    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5' });
-    const rows = [
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
-    ];
-    const m = designate(rows, [aa]);
-    expect(m.get(0)).toEqual({ comp: 'Aa', primaryIdx: 0 });
-    expect(m.size).toBe(1);
-  });
-
-  it('skips a system whose primary does not resolve', () => {
-    const b = makeStar({ hip: 200 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
-      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
-    ];
-    expect(designate(rows, [b]).size).toBe(0);
   });
 });

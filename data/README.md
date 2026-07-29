@@ -45,6 +45,13 @@ explicit, manual, infrequent step in
 [`scripts/refresh/`](../scripts/refresh/README.md), not a build
 dependency.
 
+**"Manual" scopes the build, not the operator.** It means no refresh is
+wired into `pnpm run build` — not that a pull is unavailable mid-session.
+Agents run these targets directly, so a frozen table missing a column is
+a re-pull to execute rather than a design constraint:
+[`scripts/refresh/README.md`](../scripts/refresh/README.md) § Who runs a
+refresh.
+
 LFS coverage is per-folder via `.gitattributes`; `stellarium/`,
 `local-group/`, `molecular-clouds/`, `distance-validation/` stay on
 regular git as the files are small.

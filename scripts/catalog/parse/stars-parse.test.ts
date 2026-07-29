@@ -46,8 +46,7 @@ describe('readStars build-time de-extinction of ci', () => {
       '5.0,100,OTHER,0.5,K0V,,ObservedCi,,,,,,,0,0,10.0,,,',
     ]);
     const { stars } = await readStars(
-      csv, CON_ASSIGNMENT, new Map(), null,
-      undefined, undefined, undefined, grid,
+      csv, { conAssignment: CON_ASSIGNMENT, dustGrid: grid },
     );
     expect(stars).toHaveLength(2);
     const av = avSolToStar(grid, 100, 0, 0);
@@ -73,7 +72,7 @@ describe('readStars constellation assignment', () => {
 
   it('resolves byte 34 positionally while the designation keeps AT-HYG con', async () => {
     const { stars, stats } = await readStars(
-      writeAthygCsv([RHO_AQL_ROW]), CON_ASSIGNMENT, new Map(),
+      writeAthygCsv([RHO_AQL_ROW]), { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
@@ -86,7 +85,7 @@ describe('readStars constellation assignment', () => {
     // disagreement — there is nothing to disagree with.
     const { stars, stats } = await readStars(
       writeAthygCsv(['5.0,100,OTHER,0.5,K0V,,Anon,,,,,,,0,0,10.0,,,']),
-      CON_ASSIGNMENT, new Map(),
+      { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars[0].conIndex).toBe(conIndexOf('psc'));
     expect(stars[0].desigConIndex).toBe(NO_CONSTELLATION_INDEX);
@@ -96,7 +95,7 @@ describe('readStars constellation assignment', () => {
   it('leaves Sol unclassified — the origin has no sky direction', async () => {
     const { stars } = await readStars(
       writeAthygCsv(['4.85,0,OTHER,0.656,G2V,,Sol,,,,,,,0,0,-26.7,,,']),
-      CON_ASSIGNMENT, new Map(),
+      { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
@@ -105,7 +104,7 @@ describe('readStars constellation assignment', () => {
   it('rejects an AT-HYG con cell absent from the IAU-88 table', async () => {
     await expect(readStars(
       writeAthygCsv(['5.0,100,OTHER,0.5,K0V,Zzz,Anon,,,,,,,0,0,10.0,,,']),
-      CON_ASSIGNMENT, new Map(),
+      { conAssignment: CON_ASSIGNMENT },
     )).rejects.toThrow(/not in the IAU-88 table/);
   });
 });

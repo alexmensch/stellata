@@ -48,15 +48,21 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   118,218 rows (one with a null `Vmag`). Rounded to 3 dp on write so the
   committed file is byte-stable across numpy versions.
 - **Licence**: Public domain via CDS.
+- **Citation**: ESA 1997, *The Hipparcos and Tycho Catalogues*, ESA SP-1200.
+  The `Vmag` column is Johnson V on the catalogue's own photometric system;
+  for a resolved double it is the entry's combined magnitude, which is what
+  makes this tier a system blend where a Gaia-derived V is not
+  (`scripts/catalog/photometry/README.md` § Which tiers give a system blend).
 - **Role**: printed Johnson V for the bright / printed tier of the
   V-magnitude cascade (`docs/catalog-driver.md` § 5) — the rows whose Gaia
   photometry is missing or outside the Riello+ 2021 transform's validity
-  range. That consumer has not landed yet.
-- **Read by**: the classic-ID overlay's binding gate
-  (`scripts/catalog/classic-ids/`, `parseHipVmagTsv`) — it needs a V keyed by
-  a designation the overlay itself carries, not by an AT-HYG row, so the gate
-  survives AT-HYG's retirement. `data/classic-ids/README.md` § The binding
-  gate.
+  range. 2,174 records take it in the current build.
+- **Read by**: `scripts/catalog/photometry/` (`resolveVMagnitude`, via
+  `parseHipVmagTsv`) as that tier, and the classic-ID overlay's binding gate
+  (`scripts/catalog/classic-ids/`) — which needs a V keyed by a designation
+  the overlay itself carries, not by an AT-HYG row, so the gate survives
+  AT-HYG's retirement. `data/classic-ids/README.md` § The binding gate. Both
+  share the one parser.
 - **Refresh**: `pnpm run refresh:hip-vmag`.
 
 ## `hip2_van_leeuwen.tsv`

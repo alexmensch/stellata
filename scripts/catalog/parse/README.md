@@ -25,8 +25,9 @@ scripts/catalog/parse/
                                   table is 2.5 M rows. Cross-language parity
                                   with scripts/binaries/parsers.py is pinned
                                   in ../validate/.
-  gcvs-parse.ts (+ test)          GCVS main + crossref parsing and the
-                                  variability cross-match.
+  gcvs/                           GCVS variable-star parsing and the
+                                  variability cross-match, with its own
+                                  README. Read by build-catalog only.
   constellations.ts (+ test)      The IAU-88 table (CONSTELLATIONS /
                                   CON_INDEX), the Stellarium source path, the
                                   two things read out of that file — stick
@@ -39,7 +40,8 @@ scripts/catalog/parse/
                                   (§ Positional constellation membership).
   corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
                                   is the one header walk for every committed
-                                  table (see § TSV header resolution); the
+                                  table (see § TSV header resolution) and
+                                  dataRows is the row iterator over it; the
                                   cell + record-ref helpers additionally serve
                                   the frozen regression corpora
                                   (known-stars.tsv, multi-star-regression.tsv,
@@ -130,7 +132,14 @@ Each AT-HYG row walks through, inside `readStars`:
 8. **Constellation** — positional, from the resolved xyz
    (§ Positional constellation membership). AT-HYG's `con` cell is read
    separately, as the DESIGNATION's constellation only.
-9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+9. **Johnson V and absmag** (`resolveVMagnitude`, then
+   `apparentToAbsoluteMagnitude` on the distance the whole override stack
+   settled). See `../photometry/README.md` § The V cascade. The tier that
+   won is kept on the record as `vVia`, because it decides whether the
+   magnitude is the system's blend or one component's — companion
+   promotion's flux conservation may only subtract a companion's light
+   from a blend (`../companions/README.md` § Anchor flux conservation).
+10. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
@@ -138,7 +147,7 @@ Each AT-HYG row walks through, inside `readStars`:
    models neither). Clamped to [0.08, 2500] R☉.
 
 Each kept record carries `athygRowId` — AT-HYG's own `id`, build-time-only
-like `athygDist`/`athygDistSrc`. Non-null is the AT-HYG-derived predicate
+like `athygDist`/`athygDistSrc`/`vVia`. Non-null is the AT-HYG-derived predicate
 (promoted companions get `null`) and the join key back to printed CSV cells;
 `../spine/README.md` is its consumer.
 
@@ -382,58 +391,3 @@ corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
 sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
 absmag doesn't translate reliably for them); Wolf-Rayets ride their
 own Teff/BC ramps and ignore Apsis.
-
-## GCVS variability cross-match
-
-`parseGcvsMain` + `parseGcvsCrossref` in `build-catalog.ts` read two
-files from `data/`:
-
-- `gcvs5.txt` — pipe-delimited fixed-width; we pull the GCVS designation,
-  period (days), and magnitude amplitude (from max-mag / min-mag-I).
-  Rows without a parseable period, or with zero amplitude, are skipped
-  (constant stars, supernovae, irregular variables we can't render
-  periodically).
-- `crossid.txt` — maps foreign-catalogue IDs (`Hip nnnn`, `HD nnnn`, …)
-  to GCVS designations. Only `Hip` and `HD` are extracted since AT-HYG
-  carries those.
-
-`applyVariability` then walks the post-sort catalog and for each star
-resolves a GCVS name (gaia_source_id first, then HIP, then HD), then
-looks up the period+amp. Two independent gates:
-
-- **Naming** (search) — the resolved designation is attached as
-  `gcvsName` whenever a name resolves (~14.1k stars, `gcvsNamed`). This
-  is the `search-index.json` `g` field. The designation's trailing
-  abbreviation also sets `desigConIndex` where it disagrees with AT-HYG's
-  `con` cell (§ Positional constellation membership).
-- **Rendering** (pulsation) — period / amplitude / varType apply only
-  when the GCVS main table gave that name a parseable period+amplitude
-  (~4.1k, `gcvsMatched`). Aperiodic variables — flare stars
-  (Proxima = V0645 Cen), RCB (R CrB), irregular (T Tau), novae
-  (V1500 Cyg) — are named for search but never pulsate.
-
-Most catalog stars aren't variable, but the ones that are tend to be the
-astronomically interesting ones (Betelgeuse, Mira, Algol, Cepheids, etc.).
-
-Each row's `varType` comes from `classifyGcvsVarType` (`catalog-pure.ts`):
-GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →
-`VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. A bare
-transiting-planet host (GCVS EP with no superimposed intrinsic
-pulsator, `isPlanetaryTransitOnly`) is dropped from the cross-match
-entirely — its dip is extrinsic occlusion by a planet, not the star's
-own output, and it is not a stellar multiple, so it earns neither an
-intrinsic-variable ring/pulse nor multi-star wings and renders as an
-ordinary star. `EP+DSCT` and the like keep the pulsator's ring.
-Eclipsing binaries are extrinsically variable, so after the CCDM pass a
-sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
-every `VAR_TYPE_ECLIPSING` record not already flagged
-(`eclipsingWinged` in build-counts); the runtime also suppresses their
-cosmetic pulsation by this byte alone. They surface as multi-star
-systems, never intrinsic-variable rings. (A fourth wings pass,
-`wingRenderablePrimaries`, then covers physical pairs none of these
-three reach — see `../companions/README.md` § Companion promotion, Renderable-companion wings.)
-
-Both GCVS files are tracked via Git LFS rather than downloaded at build
-time — they update rarely (yearly-ish). If bumping to a new GCVS
-version, re-download from http://www.sai.msu.su/gcvs/ and replace the
-existing files; LFS handles the large-blob storage on push.

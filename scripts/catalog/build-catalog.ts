@@ -72,23 +72,25 @@ import {
   collectPhysicalPairKeys,
 } from './multiplicity/visual-doubles';
 import {
-  buildCatalogRowIndexMap,
-  buildComponentDesignations,
   backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
   resolveComponentNameCollisions,
   stampComponentLetters,
+} from './companions/companion-promotion';
+import {
+  buildCatalogRowIndexMap,
+  buildComponentDesignations,
   wingRenderablePrimaries,
   type ComponentDesignation,
-} from './companions/companion-promotion';
+} from './companions/record-index/record-index';
 import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
 import {
   parseGcvsMain,
   parseGcvsCrossref,
   bridgeGcvsByGaia,
   applyVariability,
-} from './parse/gcvs-parse';
+} from './parse/gcvs/gcvs-parse';
 import {
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
@@ -288,6 +290,7 @@ async function main() {
     companionBlendDimSkipped: 0,
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
+    companionBlendDimGaiaResolved: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
     componentLettersStamped: 0,
@@ -295,6 +298,7 @@ async function main() {
     componentNameCollisionsUnresolved: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
+    hipVMagEntries: 0,
     nssSourceIdEntries: 0,
     hipDistFullPrecision: 0,
     directionGaia5p: 0,
@@ -302,6 +306,10 @@ async function main() {
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
     directionAthygPrinted: 0,
+    vGaiaRiello: 0,
+    vPrintedHip: 0,
+    vCatalogued: 0,
+    vNone: 0,
     velocityGaiaPm: 0,
     velocityHip2Pm: 0,
     velocityAthygPm: 0,
@@ -311,18 +319,16 @@ async function main() {
     velocityRvApplied: 0,
   };
 
+  const inputs = loadReadStarsInputs();
   const {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid,
-    conAssignment, sizes,
-  } = loadReadStarsInputs();
+    bjMap, apsisMap, simbadSpectral, hipToGaia, directions,
+    dustGrid, conAssignment, sizes,
+  } = inputs;
   Object.assign(counts, sizes);
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(
-    SRC_CSV, conAssignment, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
-    dustGrid, wdsXids,
-  );
+  const { stars, stats } = await readStars(SRC_CSV, inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
@@ -358,6 +364,11 @@ async function main() {
       `hip2_saturated ${dv.hip2_saturated}, ` +
       `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
       `athyg_printed ${dv.athyg_printed}`,
+  );
+  const mv = stats.vVia;
+  console.log(
+    `  V cascade: gaia_riello ${mv.gaia_riello}, printed_hip ${mv.printed_hip}, ` +
+      `catalogued ${mv.catalogued}, none ${mv.none}`,
   );
   const vv = stats.velocityVia;
   console.log(
@@ -396,6 +407,10 @@ async function main() {
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
   counts.directionAthygPrinted = dv.athyg_printed;
+  counts.vGaiaRiello = stats.vVia.gaia_riello;
+  counts.vPrintedHip = stats.vVia.printed_hip;
+  counts.vCatalogued = stats.vVia.catalogued;
+  counts.vNone = stats.vVia.none;
   counts.velocityGaiaPm = vv.gaia_pm;
   counts.velocityHip2Pm = vv.hip2_pm;
   counts.velocityAthygPm = vv.athyg_pm;
@@ -497,7 +512,8 @@ async function main() {
         `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
         `blend-split=${ps.blendSplitRecords}, ` +
         `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
-        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}), ` +
+        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
+        `gaia-resolved ${ps.blendDimGaiaResolved}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
         `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
         `in ${Date.now() - tProm}ms`,
@@ -522,6 +538,7 @@ async function main() {
     counts.companionBlendDimSkipped = ps.blendDimSkipped;
     counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
     counts.companionBlendDimOutside = ps.blendDimMembersOutside;
+    counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
 
@@ -642,7 +659,7 @@ async function main() {
   // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
   // ECLIPSING record the geometric / CCDM passes didn't already flag —
   // eclipsers surface as multi-star systems, not intrinsic-variable rings
-  // (see scripts/catalog/README.md § GCVS variability cross-match).
+  // (see scripts/catalog/parse/gcvs/README.md).
   // companionIdx stays unset where inference found no partner; the
   // renderer guards on companionIdx >= 0, so a flagged-but-companionless
   // primary is safe.

@@ -5,7 +5,41 @@ AT-HYG/Gaia/Hipparcos merge, the Bailer-Jones and LMC-kinematic
 distance overrides, driver-astrometry precision, and current-epoch
 space-motion propagation. Spans `scripts/catalog/`, `data/athyg/`,
 `data/gaia/`, `data/bailer-jones/`. See `SCIENCE.md` for scope
-principles and data-source policy that apply across the whole catalog.
+principles and data-source policy that apply across the whole catalog,
+and `docs/catalog-driver.md` for where the row set itself is going.
+
+## AT-HYG is being retired as the driver — read this first
+
+**A decision taken 2026-07-27 supersedes the "keep AT-HYG as the driver"
+call this document records below.** Catalogue accuracy settled it: Gaia
+DR3 becomes the membership driver, the classic identifiers (HD / HR /
+Bayer / Flamsteed / HIP / Gl) become a label overlay joined onto it
+rather than a membership source, and each remaining field moves to its
+own source cascade. The durable contract — driver model, identifier
+sources, rescue tiers, per-field cascades, and the parity gate any
+membership change must pass — is **`docs/catalog-driver.md`**. Phase
+sequencing, per-child scope, and the audit empirics live in bd (epic
+`stellata-3bsf`, then magnitude completeness, then Gaia DR4); this
+document deliberately carries none of that.
+
+What that means for reading the rest of this file:
+
+- **Still current.** The distance stack (Bailer-Jones → LMC kinematic →
+  bounded-scope cutoff), the direction cascade, Apsis parameters, and
+  space-motion propagation are all driver-independent — they key on
+  `gaia_source_id`, and the swap does not touch them. That is why the
+  astrometry decision below is a *scoped* decision that survives.
+- **Historical at the swap.** Everything framed on AT-HYG's own columns
+  — the `*_src` provenance survey, the Tycho/HIP magnitude-family split,
+  the cross-match completeness artefact — describes the input set the
+  shipped build reads. Membership becomes a frozen *inherited spine*
+  (one committed enumeration of every AT-HYG-derived record, already
+  shipped) unioned with a Gaia-native magnitude pull, and AT-HYG the
+  catalogue leaves the input set entirely.
+- **Already moved.** Johnson V and absolute magnitude no longer come
+  from AT-HYG at all: V is transformed from Gaia photometry with a
+  printed-Hipparcos rescue tier, and absmag is always derived from
+  (V, distance) — `scripts/catalog/photometry/README.md`.
 
 AT-HYG is not a single survey — it's a heterogeneous merge that David
 Nash maintains across Tycho-2 (bulk positions and photometry, ~2.5M
@@ -24,22 +58,33 @@ which underlying catalog supplied each piece of data:
   from HIP / Gaia DR2 / Gliese.
 - `mag_src` — origin of apparent `mag`. ~62.5% Tycho-2 V_T (`T`),
   ~37.2% Hipparcos (`HIP`), <1% Gliese.
-- `pm_src` — origin of proper motion (we ingest the columns but don't
-  apply T-axis animation, so `pm_src` is unused).
+- `pm_src` — origin of proper motion. Read by the space-motion cascade's
+  bottom tier (§ Current-epoch star positions), which is why the inherited
+  spine carries `pm_ra`/`pm_dec` forward past the swap.
 
 The two source families have meaningfully different magnitude
 distributions: HIP-sourced rows average `mag ≈ 8.4`, while Tycho-sourced
 rows average `mag ≈ 10.2` and reach the Tycho-2 completeness limit at
-V_T ≈ 11.5. This matters because rendering decisions like the
-`naked-eye` (m_lim = 6.5) preset draw essentially only from the HIP
-family, while widening to `binoculars` (10.5) or `all` (15) progressively
-exposes the Tycho-dominated population.
+V_T ≈ 11.5. This is a statement about **which rows exist**, and it
+outlives the driver swap — the spine inherits exactly this population, so
+the `naked-eye` (m_lim = 6.5) preset still draws essentially only from
+the HIP family while `binoculars` (10.5) and `all` (15) progressively
+expose the Tycho-dominated one. What each of those rows is *rendered* at
+is no longer AT-HYG's `mag`: the V cascade resolves it per record
+(`scripts/catalog/photometry/README.md`). Pushing the population itself
+deeper — a Gaia-native V ≤ 11 floor — is the completeness phase, not this
+document.
 
 **What we keep at build time.** `scripts/catalog/build-catalog.ts` (`readStars`)
 applies three filters and nothing else:
 
 1. Drop rows missing `ra`/`dec` or `dist` (no usable 3D position).
-2. Drop rows missing `absmag` (can't size or shade them).
+2. Drop rows missing `absmag` — a **presence** gate, not a value read:
+   the shipped absmag is derived from the V cascade
+   (`scripts/catalog/photometry/README.md`), never AT-HYG's cell. The cell
+   still decides membership because 3,917 rows carry `mag` without it, and
+   admitting them would be a membership change rather than a field-cascade
+   one. Rows no cascade tier can give a V to drop as well.
 3. Drop rows with `dist > 50,000 pc`. This is a **bounded-scope
    statement about which populations the model represents**, not a
    primary include/exclude filter. The cutoff is positioned just past
@@ -118,13 +163,13 @@ collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
 — i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we swap `dist` and `absmag` for the Bailer-Jones-derived values
-(photogeometric `r_med_photogeo` preferred, geometric `r_med_geo` as
-fallback when photogeo is absent); position follows as the
-direction-cascade unit vector × the new distance (§ Driver
-astrometry). Recomputing `absmag` matters as much as the distance
-update — without it, stars get *placed* at the new distance but
-*lit* for the old one, breaking the disc/glow size chain.
+rows we take the Bailer-Jones distance (photogeometric `r_med_photogeo`
+preferred, geometric `r_med_geo` as fallback when photogeo is absent);
+position follows as the direction-cascade unit vector × the new distance
+(§ Driver astrometry). Brightness needs no separate correction here:
+absmag is derived once, from the cascade's V at whatever distance the
+whole override stack settled on, so a star placed at a new distance and
+*lit* for the old one is unreachable rather than guarded against.
 
 Rows whose `dist_src` is `HIP` / `GJ` / `N` / `OTHER` are deliberately
 excluded from the override even when they also carry a Gaia DR3
@@ -260,16 +305,25 @@ binary) while adjacent patches don't. Those boundaries surface in the
 rendered scene as axis-aligned rectangular regions of denser, fainter
 stars — invisible at `maxAppMag` ≤ ~9 (the Tycho-mag population is
 filtered out anyway), increasingly obvious from there to `all` at
-mag 15. A denser future ingest from the same AT-HYG pipeline will likely
+mag 15. A denser ingest that inherits this population will likely
 make the rectangles *more* prominent before they smooth out, since the
 Tycho+Gaia-DR3 composite rows are the bulk of the new population.
 Treatment (filter by source, wait for Gaia DR4, or live with it) is
 deferred until a denser-than-mag-11 ingest makes the call necessary.
 
+The driver swap neither fixes nor worsens this: the inherited spine
+enumerates exactly the rows AT-HYG's cross-match luck admitted, so the
+artefact is carried forward verbatim. What changes its shape is the
+completeness phase's Gaia-native magnitude pull, which selects on `V`
+rather than on whether a Tycho row found a DR3 distance — a different
+selection function over the same sky, so the rectangles dilute rather
+than move. Judging that is a job for the parity ledger the swap and every
+floor move run through (`docs/catalog-driver.md` § Parity).
+
 Implementation: `scripts/catalog/build-catalog.ts` (filters live in `readStars`,
 binary schema in the `pack*` helpers); see `scripts/README.md` for
 the per-record byte layout and the GCVS / CCDM cross-match passes that
-run after the AT-HYG read.
+run after the row read.
 
 ## Driver astrometry — AT-HYG precision findings and the direct-sourcing decision
 
@@ -346,14 +400,19 @@ viewpoint, not Sol — a camera can sit inside any of these systems):
   primary record, as companion promotion already does). Source
   precision beyond ~1 mas buys nothing the container can keep.
 
-**Decision — re-source the direction, keep AT-HYG as the driver,
-keep the distance stack. Implemented in
-`scripts/catalog/distance/direction-cascade.ts`.** AT-HYG remains the
-membership, identifier, name, and magnitude driver (its curated
-classical-ID merge is the value; replacing it wholesale re-litigates
-membership for no gain — the deep-tier driver question is separate
-and stays with the far-catalog work). Each row's *sky direction* is
-resolved at build time through the same trust cascade the
+**Decision — re-source the direction, keep the distance stack, and leave
+membership out of scope. Implemented in
+`scripts/catalog/distance/direction-cascade.ts`.** This was a decision
+about *astrometry only*, and it holds unchanged: directions and distances
+are resolved per record from Gaia / HIP2 / printed sources keyed on
+`gaia_source_id`, so nothing here depends on which catalogue decides the
+row set. Membership was explicitly deferred rather than settled — the
+research above found no astrometric reason to re-drive it, and the later
+catalogue-accuracy decision that AT-HYG *does* leave the driver seat is
+`docs/catalog-driver.md` (see the framing at the top of this file). The
+direction cascade is what that swap inherits, not something it revisits.
+Each row's *sky direction* is resolved at build time through the same
+trust cascade the
 multiple-star pipeline already implements
 (`scripts/binaries/stage3_astrometry.py`), sharing its thresholds:
 
