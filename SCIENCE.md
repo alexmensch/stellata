@@ -24,9 +24,9 @@ below should be consistent with these.
 ### Data fidelity — "best possible model based on current observational data and knowledge"
 
 Stellata is a physical-accuracy project, not a stylised visualisation.
-The catalog grows in well-defined releases (Gaia DR4 expected late 2026,
-periodic AT-HYG refreshes), not continuously, so one-time data-
-processing investment pays off forever. There is no manual review path
+The catalog grows in well-defined releases (Gaia DR4 expected late 2026;
+until the driver swap lands, periodic AT-HYG refreshes), not
+continuously, so one-time data-processing investment pays off forever. There is no manual review path
 — 300k+ stars cannot be hand-checked, so the data-processing
 infrastructure itself has to be correct.
 
@@ -121,7 +121,10 @@ enough to see it.
   — maintained by David Nash. The classic-IDs subset at
   `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
   carries at least one classical designation: IAU proper name, Bayer,
-  Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0.
+  Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0. **Being
+  retired as the driver**: it is already down to membership, identifiers
+  and names, with the frozen `data/athyg/inherited-spine.tsv` standing in
+  for it after the swap. Contract: `docs/catalog-driver.md`.
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
   Gliese), the identifier half of the AT-HYG retirement — four frozen
   VizieR tables under `data/classic-ids/`, joined onto Gaia DR3
@@ -322,7 +325,11 @@ docs/science-catalog-ingestion.md      AT-HYG/Gaia/Hipparcos merge,
                                         Bailer-Jones + LMC-kinematic
                                         distance overrides, driver
                                         astrometry, current-epoch
-                                        space-motion propagation.
+                                        space-motion propagation. Where
+                                        the row set is HEADED is
+                                        docs/catalog-driver.md, the
+                                        durable contract for retiring
+                                        AT-HYG as the driver.
 docs/science-stellar-modelling.md      Physical radius, brightness/
                                         size perception model, colour
                                         temperature routing + Teff
