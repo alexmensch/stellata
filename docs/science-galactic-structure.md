@@ -108,6 +108,6 @@ and μ Sgr (HIP 89341), both stars Stellarium references that have empty
 position columns in the AT-HYG CSV.
 
 Implementation: `scripts/catalog/build-catalog.ts`; see
-`scripts/README.md` §Stick figures from Stellarium for the
-pipeline + missing-HIP policy.
+`scripts/catalog/parse/README.md` § Stick figures from Stellarium for
+the pipeline + missing-HIP policy.
 

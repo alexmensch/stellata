@@ -1,6 +1,6 @@
 // Emit data/athyg/inherited-spine.tsv — one row per AT-HYG-derived record of
 // the final AT-HYG-driven build. One-shot; see README.md.
-import { closeSync, createReadStream, existsSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 
@@ -12,7 +12,6 @@ import {
   READ_STARS_INPUT_PATHS,
   loadReadStarsInputs,
 } from '../parse/read-stars-inputs';
-import { isLfsPointer } from '../../sid/sid-pure';
 import {
   backfillPrimaryIdentifiers,
   promoteCompanions,
@@ -30,26 +29,12 @@ import {
   type SpinePrintedCells,
   type SpineRow,
 } from './inherited-spine-pure';
-import { REPO_ROOT as ROOT } from '../../util/paths';
+import { REPO_ROOT as ROOT, isLfsPointerFile } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const OUT_SPINE = resolve(ROOT, INHERITED_SPINE_FILE);
 const EXPECTED_COUNTS = resolve(ROOT, INHERITED_SPINE_EXPECTED_FILE);
-
-/** Enough bytes to recognise a Git-LFS pointer header without reading a
- *  multi-hundred-MB reference table into memory to do it. */
-const LFS_PROBE_BYTES = 128;
-
-function readHead(path: string): string {
-  const fd = openSync(path, 'r');
-  try {
-    const buf = Buffer.alloc(LFS_PROBE_BYTES);
-    return buf.subarray(0, readSync(fd, buf, 0, buf.length, 0)).toString('utf-8');
-  } finally {
-    closeSync(fd);
-  }
-}
 
 /** `loadReadStarsInputs` degrades softly on an absent table — it warns and
  *  the cascade falls through, which the record build's count snapshot then
@@ -62,7 +47,7 @@ function requireMaterialisedInputs(): void {
   const unusable = [...READ_STARS_INPUT_PATHS, SRC_MULTIPLES]
     .map((path) => {
       if (!existsSync(path)) return `${path} — absent`;
-      if (isLfsPointer(readHead(path))) return `${path} — Git-LFS pointer stub`;
+      if (isLfsPointerFile(path)) return `${path} — Git-LFS pointer stub`;
       return null;
     })
     .filter((problem): problem is string => problem !== null);

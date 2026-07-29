@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../util/paths';
+import { REPO_ROOT, isLfsPointer } from '../util/paths';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
@@ -11,7 +11,6 @@ import {
   readRiskIds,
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
-import { isLfsPointer } from './sid-pure';
 
 describe('classifyDrTransition', () => {
   const row = (

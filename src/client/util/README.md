@@ -17,7 +17,9 @@ build scripts, tests, and shader uniforms.
   (from an equatorial Cartesian position, `null` at the origin) return
   `{u, east, north}` with east = ∂u/∂α / cos δ — never divided by cos δ,
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
-  the `u` component alone. Shared by the catalog build's PM propagation +
+  the `u` component alone and `raDecFromUnitVector` its inverse (ra
+  wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
+  sides speak. Shared by the catalog build's PM propagation +
   space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection
@@ -59,6 +61,19 @@ build scripts, tests, and shader uniforms.
   drifts past `LINE_ANCHOR_MAX_DRIFT_PC` — otherwise the shader cancels
   two large float32 quantities per vertex and the line visibly jitters
   under camera motion at close framings (the Pluto-focus wobble).
+- `precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
+  of another epoch: the IAU 1976 (Lieske) angles
+  (`precessionAnglesFromJ2000`), the rotation they compose
+  (`precessionRotationFromJ2000`), and its forward / inverse application
+  to a direction or a `SkyPosition`. `besselianEpochToJd` supplies
+  `B1875_JD`, the equinox the IAU constellation boundaries are drawn at —
+  the θ sign and the epoch are both silent-failure modes, documented in
+  `../constellation-boundaries/README.md` § B1875.
+- `astronomy-constants.ts` — canonical values, one definition each, so
+  client / build-script / shader consumers can't drift on precision.
+  `RA_HOURS_TO_DEG` is the hours→degrees factor every catalogue RA column
+  and sexagesimal boundary coordinate goes through; tests import it
+  rather than restating 15.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.

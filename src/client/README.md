@@ -35,6 +35,9 @@ themselves.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/`,
   `local-bubble/`, `constellation-figure/` — render layers.
+- `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
+  the B1875 edge set and the positional lookup answering which
+  constellation any position falls in. No render layer yet.
 - `fresnel-shell/` — shared translucent-boundary-shell primitive
   (material + shader pair + gating base) used by the heliopause and the
   Local Bubble.

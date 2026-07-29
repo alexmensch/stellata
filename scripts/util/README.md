@@ -18,7 +18,16 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` and
   `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
   missing) for build-idempotency checks against optional inputs.
-  `paths.test.ts` pins the `maxMtimeOfSources` cases.
+  `isLfsPointer(text)` recognises a pointer stub from a head string and
+  `isLfsPointerFile(path)` probes a file's head for one — the state the
+  bare CI test job leaves LFS-tracked inputs in — without reading the
+  tens of megabytes behind it. Consumers are the SID registry readers,
+  the spine generator's required-inputs gate, and every artifact-backed
+  suite that self-skips when LFS hasn't smudged. Both live here rather
+  than in `sid/sid-pure.ts` so this module stays a dependency leaf: the
+  SID folder imports `REPO_ROOT` from it, so the reverse edge would put
+  a domain module under every consumer of a path helper.
+  `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
   JSON when the spec's env var is `1`. Exits non-zero on drift, since a

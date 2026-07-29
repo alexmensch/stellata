@@ -535,12 +535,6 @@ export function checkAppendOnly(
   return errors;
 }
 
-/** Git-LFS pointer stub — the file content is elsewhere; content checks
- *  must skip rather than "validate" the stub. */
-export function isLfsPointer(text: string): boolean {
-  return text.startsWith('version https://git-lfs.github.com/spec/');
-}
-
 // ---- Same-as classes + allocation (docs/sid.md §§ 4.1, 4.4, 5) -----------
 
 class UnionFind {

@@ -1,7 +1,7 @@
 // Repo-root path + mtime helper shared by TypeScript build scripts.
 // See scripts/util/README.md.
 
-import { existsSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,6 +13,28 @@ export const REPO_ROOT = resolve(__dirname, '..', '..');
 
 export function mtimeIfExists(path: string): number {
   return existsSync(path) ? statSync(path).mtimeMs : 0;
+}
+
+const LFS_PROBE_BYTES = 128;
+
+/** Git-LFS pointer stub — the file content is elsewhere; content checks
+ *  must skip rather than "validate" the stub. */
+export function isLfsPointer(text: string): boolean {
+  return text.startsWith('version https://git-lfs.github.com/spec/');
+}
+
+/** Whether an LFS-tracked input is still an unsmudged pointer stub — the state
+ *  a checkout without `git lfs pull` (the bare CI test job) leaves it in.
+ *  Probes the head rather than reading the file, which for these inputs runs
+ *  to tens of megabytes. */
+export function isLfsPointerFile(path: string): boolean {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(LFS_PROBE_BYTES);
+    return isLfsPointer(buf.subarray(0, readSync(fd, buf, 0, buf.length, 0)).toString('utf-8'));
+  } finally {
+    closeSync(fd);
+  }
 }
 
 export function maxMtimeOfSources(paths: string[]): number {

@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
@@ -13,7 +13,6 @@ import {
   readNeighbourhoodRows,
   readRiskIds,
 } from './dr-reconcile-pure';
-import { isLfsPointer } from './sid-pure';
 
 interface CliArgs {
   request: string;

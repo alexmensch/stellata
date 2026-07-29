@@ -17,7 +17,13 @@ export interface TangentBasis {
   north: UnitVector;
 }
 
+export interface SkyPosition {
+  raDeg: number;
+  decDeg: number;
+}
+
 const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
 
 export function equatorialTangentBasisRad(raRad: number, decRad: number): TangentBasis {
   const sinRa = Math.sin(raRad);
@@ -56,4 +62,13 @@ export function equatorialTangentBasisAt(
  *  pole). Multiplying by a distance in pc yields a record's xyz. */
 export function unitVectorFromRaDec(raDeg: number, decDeg: number): UnitVector {
   return equatorialTangentBasis(raDeg, decDeg).u;
+}
+
+/** The inverse of `unitVectorFromRaDec`, with ra wrapped to [0, 360). */
+export function raDecFromUnitVector(v: UnitVector): SkyPosition {
+  const raDeg = Math.atan2(v.y, v.x) * RAD_TO_DEG;
+  return {
+    raDeg: raDeg < 0 ? raDeg + 360 : raDeg,
+    decDeg: Math.asin(Math.max(-1, Math.min(1, v.z))) * RAD_TO_DEG,
+  };
 }

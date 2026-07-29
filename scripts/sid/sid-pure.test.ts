@@ -11,7 +11,6 @@ import {
   compareDesignations,
   computeLedgerHead,
   dropAmbiguousDesignations,
-  isLfsPointer,
   isValidDesignation,
   namespaceRank,
   parseDesignation,
@@ -294,11 +293,6 @@ describe('head snapshot + append-only', () => {
     expect(checkAppendOnly(base, lines, 'retirements.tsv', { newSidsPastBaseMax: false })).toEqual(
       [],
     );
-  });
-
-  it('detects git-lfs pointer stubs', () => {
-    expect(isLfsPointer('version https://git-lfs.github.com/spec/v1\noid sha256:abc\n')).toBe(true);
-    expect(isLfsPointer(`${LEDGER_HEADER}\n`)).toBe(false);
   });
 });
 

@@ -8,8 +8,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { compareBuildCounts } from '../build-counts';
-import { REPO_ROOT } from '../../util/paths';
-import { isLfsPointer } from '../../sid/sid-pure';
+import { REPO_ROOT, isLfsPointer } from '../../util/paths';
 import {
   INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,
