@@ -98,6 +98,11 @@ relative to its own cell. `offsetsPc[i][j]` is the `quantilePcts[j]`
 percentile of that over every star with apparent V ≤ `magLimits[i]`, so
 the runtime lerps a window out of the live magnitude slider.
 
+The layer fades from the **1%** column to the **5%** column and rejects an
+artifact that carries neither — dropping a quantile here is a wire change
+that breaks a consumer, not a statistics tweak
+(`src/client/constellation-boundaries/README.md` § Chart-mode layer).
+
 Offsets are rounded to `FADE_OFFSET_DECIMALS = 4` — 1e-4 pc ≈ 20 AU
 against a smallest emitted offset near 0.02 pc, so three significant
 figures survive the tightest row, and the width stays fixed (see § Wire

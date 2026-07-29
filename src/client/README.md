@@ -36,8 +36,9 @@ themselves.
   `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/`,
   `local-bubble/`, `constellation-figure/` — render layers.
 - `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
-  the B1875 edge set and the positional lookup answering which
-  constellation any position falls in. No render layer yet.
+  the B1875 edge set, the positional lookup answering which constellation
+  any position falls in, and the chart-mode layer that draws the
+  partition on a Sol-centred sphere.
 - `fresnel-shell/` — shared translucent-boundary-shell primitive
   (material + shader pair + gating base) used by the heliopause and the
   Local Bubble.
@@ -305,6 +306,7 @@ SVG mask (`constellation-figure/README.md`).
 | Star glow + heliopause shell                     | WebGL   | `renderOrder: 1`                                   |       | [star-pipeline/](star-pipeline/README.md), [solar-system/heliopause/](solar-system/heliopause/README.md) |
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
+| IAU constellation boundaries (chart only)        | WebGL   | `renderOrder: -0.8`                                |       | [constellation-boundaries/](constellation-boundaries/README.md) |
 | Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud rim shells                       | WebGL   | `renderOrder: -1`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
