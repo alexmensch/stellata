@@ -100,11 +100,7 @@ async function readAthygDerivedRecords(): Promise<Star[]> {
   requireMaterialisedInputs();
   const inputs = loadReadStarsInputs();
   console.log(`Reading ${ATHYG_CSV}...`);
-  const { stars, stats } = await readStars(
-    ATHYG_CSV, inputs.conAssignment, inputs.bjMap, inputs.hipToGaia,
-    inputs.simbadSpectral, inputs.apsisMap, inputs.directions, inputs.dustGrid,
-    inputs.wdsXids,
-  );
+  const { stars, stats } = await readStars(ATHYG_CSV, inputs);
   console.log(`  parsed ${stats.total} rows, kept ${stars.length}`);
   console.log('  dropped:', stats.dropped);
 

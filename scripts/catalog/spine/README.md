@@ -64,7 +64,11 @@ grow a column later, so they ship now.
 
 The generator calls `readStars` with the same inputs `build-catalog.ts`
 uses — `loadReadStarsInputs` (`../parse/read-stars-inputs.ts`) is shared by
-both for exactly that reason. Every one of those inputs is **required**
+both for exactly that reason, and both hand the loader's bundle over whole
+rather than spreading it argument by argument, so "the same inputs" is a
+type-checked property instead of two lists that have to be kept in step.
+(They were not: the spread form here silently omitted the V cascade's
+printed-V table, which the record build passed.) Every one of those inputs is **required**
 here, materialised, before the walk starts: the loader itself degrades
 softly on an absent table (warn, cascade falls through), which the record
 build's count snapshot catches but a first spine generation has nothing to

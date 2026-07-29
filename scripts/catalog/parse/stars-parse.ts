@@ -174,21 +174,45 @@ export interface AthygRow {
 // see scripts/catalog/README.md § Per-row pipeline (HIP 57146).
 const HIP_DIST_MATCH_TOLERANCE_PC = 1e-3;
 
+/** Every reference table a readStars walk consumes, as one bundle.
+ *
+ *  `loadReadStarsInputs` assembles the production set and satisfies this whole
+ *  interface, so no caller can drop a table by miscounting arguments — which a
+ *  positional list did let the inherited-spine generator do, running the walk
+ *  with the V cascade's bright tier absent. A test supplies the subset its case
+ *  needs and the rest degrade to empty. */
+export interface ReadStarsOptions {
+  conAssignment: ConstellationAssignment;
+  bjMap?: Map<string, number>;
+  hipToGaia?: Map<number, string> | null;
+  simbadSpectral?: SimbadSpectralIndex;
+  apsisMap?: Map<string, ApsisRow>;
+  directions?: DirectionSources;
+  /** Printed Johnson V per HIP — the V cascade's bright tier. Absent leaves
+   *  every saturated row on the catalogued cell, which shows up as vVia drift
+   *  against the pinned count snapshot. */
+  hipVMag?: Map<number, number>;
+  dustGrid?: DustGrid | null;
+  wdsXids?: SimbadWdsXidIndex | null;
+}
+
 export async function readStars(
   srcCsvPath: string,
-  conAssignment: ConstellationAssignment,
-  bjMap: Map<string, number>,
-  hipToGaia: Map<number, string> | null = null,
-  simbad: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() },
-  apsisMap: Map<string, ApsisRow> = new Map(),
-  directions: DirectionSources = {
-    gaiaAstrometry: new Map(),
-    hip2: new Map(),
-    nssSourceIds: new Set(),
-  },
-  dustGrid: DustGrid | null = null,
-  wdsXids: SimbadWdsXidIndex | null = null,
-  hipVMag: Map<number, number> = new Map(),
+  {
+    conAssignment,
+    bjMap = new Map(),
+    hipToGaia = null,
+    simbadSpectral = { bySource: new Map(), byHip: new Map() },
+    apsisMap = new Map(),
+    directions = {
+      gaiaAstrometry: new Map(),
+      hip2: new Map(),
+      nssSourceIds: new Set(),
+    },
+    hipVMag = new Map(),
+    dustGrid = null,
+    wdsXids = null,
+  }: ReadStarsOptions,
 ): Promise<{
   stars: Star[];
   stats: {
@@ -440,7 +464,7 @@ export async function readStars(
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
     const spectral = isSol
       ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
-      : resolveSpectralInfo(gaiaSourceId, hip, simbad, apsisMap);
+      : resolveSpectralInfo(gaiaSourceId, hip, simbadSpectral, apsisMap);
     const spectInfo = spectral.info;
     if (spectral.source === 'curated') spectralByCurated++;
     else if (spectral.source === 'simbad') spectralBySimbad++;

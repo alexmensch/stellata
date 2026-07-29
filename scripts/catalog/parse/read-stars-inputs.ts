@@ -26,9 +26,9 @@ import type { DustGrid } from '../distance/dust-deextinction-pure';
 import {
   createConstellationAssignment,
   STELLARIUM_SKYCULTURE_JSON,
-  type ConstellationAssignment,
 } from './constellations';
 import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import type { ReadStarsOptions } from './stars-parse';
 import { readGaiaHipXmatch } from './gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -67,20 +67,16 @@ export type ReadStarsInputSizes = Pick<
   | 'nssSourceIdEntries'
 >;
 
-export interface ReadStarsInputs {
-  bjMap: Map<string, number>;
-  apsisMap: Map<string, ApsisRow>;
-  simbadSpectral: SimbadSpectralIndex;
-  wdsXids: SimbadWdsXidIndex | null;
+/** The loaded form of `ReadStarsOptions`: every table present, none optional,
+ *  so passing this bundle to `readStars` cannot omit one. Extends the walk's
+ *  own option shape rather than restating it — a new table added there is a
+ *  compile error here until this loader supplies it. */
+export interface ReadStarsInputs extends Required<ReadStarsOptions> {
+  /** Loaded unconditionally: absent dust is a hard fail below, not a
+   *  soft-continue, so consumers never see the nullable form. */
+  dustGrid: DustGrid;
   /** Also feeds build-catalog's GCVS byGaia bridge. */
   hipToGaia: Map<number, string> | null;
-  directions: DirectionSources;
-  /** Printed Johnson V per HIP — the V cascade's bright tier. */
-  hipVMag: Map<number, number>;
-  dustGrid: DustGrid;
-  /** Also feeds companion promotion, which assigns its minted records from
-   *  their own positions rather than inheriting the anchor's index. */
-  conAssignment: ConstellationAssignment;
   sizes: ReadStarsInputSizes;
 }
 

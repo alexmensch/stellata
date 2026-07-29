@@ -317,18 +317,16 @@ async function main() {
     velocityRvApplied: 0,
   };
 
+  const inputs = loadReadStarsInputs();
   const {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, hipVMag,
+    bjMap, apsisMap, simbadSpectral, hipToGaia, directions,
     dustGrid, conAssignment, sizes,
-  } = loadReadStarsInputs();
+  } = inputs;
   Object.assign(counts, sizes);
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(
-    SRC_CSV, conAssignment, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
-    dustGrid, wdsXids, hipVMag,
-  );
+  const { stars, stats } = await readStars(SRC_CSV, inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
