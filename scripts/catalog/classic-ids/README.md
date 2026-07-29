@@ -21,8 +21,10 @@ scripts/catalog/classic-ids/
                                   evidence tables, writes the overlay and its
                                   two review queues, and asserts the count
                                   snapshot.
-  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers plus the
-                                  HIP → printed-V slice the gate reads.
+  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
+                                  HIP → printed-V slice is
+                                  ../photometry/hip-vmag-parse.ts, shared
+                                  with the V cascade's bright tier.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, the
     (+ test)                      TSV serializer, and the AT-HYG label-parity
                                   measurement. Pure.

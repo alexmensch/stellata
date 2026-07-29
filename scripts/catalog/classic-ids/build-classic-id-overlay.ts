@@ -14,11 +14,11 @@ import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
 import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
 import { nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
 import {
   parseBsc5Tsv,
   parseCns5Tsv,
   parseCrossIndexTsv,
-  parseHipVmagTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
 import {

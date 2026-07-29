@@ -11,6 +11,10 @@ consumes this is `../parse/README.md` § Per-row pipeline.
 scripts/catalog/photometry/
   v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, its validity
                                  gate, and the three-tier V cascade. Pure.
+  hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
+                                 printed Johnson V. Shared by the cascade's
+                                 bright tier and ../classic-ids/'s binding
+                                 gate, which need the same HIP-keyed V.
 ```
 
 ## The V cascade

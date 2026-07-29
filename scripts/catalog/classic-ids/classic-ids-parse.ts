@@ -1,26 +1,8 @@
 // Parsers for the frozen CDS classic-designation tables under
-// data/classic-ids/, plus the printed-V slice the binding gate reads.
-// See data/classic-ids/README.md § Provenance.
-import { headerIndex, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+// data/classic-ids/. See data/classic-ids/README.md § Provenance.
+import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
 
 const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
-
-/** Walk a committed TSV's data rows as raw cell arrays, with the header
- *  resolved once. `headerIndex` hard-fails an empty or headerless file, so a
- *  truncated input can never read as a zero-row table. */
-function* dataRows(
-  text: string,
-  cols: readonly string[],
-  fileLabel: string,
-  refreshHint: string,
-): Generator<{ cells: string[]; idx: Record<string, number> }> {
-  const lines = text.split(/\r?\n/);
-  const idx = headerIndex(lines[0] ?? '', cols, fileLabel, refreshHint);
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i]) continue;
-    yield { cells: lines[i].split('\t'), idx };
-  }
-}
 
 /** One IV/25 HD↔TYC identification. `nHd` / `nTyc` > 1 mark the upstream
  *  ambiguity flags the overlay's label-attachment policy keys on
@@ -145,25 +127,6 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
       gaiaSourceId: src !== null && /^\d+$/.test(src) ? src : null,
       hip: parseIntOrNull(cells[idx.hip]),
     });
-  }
-  return out;
-}
-
-const HIP_VMAG_COLUMNS = ['hip', 'vmag'] as const;
-
-/** `data/hipparcos/hip_main_vmag.tsv` → HIP → printed Johnson V. The V side
- *  of the binding gate: Gaia's G for a saturated star's mis-bound source sits
- *  well below the star's catalogued V, and this V is keyed by a designation
- *  the overlay itself carries rather than by an AT-HYG row. */
-export function parseHipVmagTsv(text: string): Map<number, number> {
-  const out = new Map<number, number>();
-  for (const { cells, idx } of dataRows(
-    text, HIP_VMAG_COLUMNS, 'hip_main_vmag.tsv', 'Re-run `pnpm run refresh:hip-vmag`.',
-  )) {
-    const hip = parseIntOrNull(cells[idx.hip]);
-    const vmag = parseFloatOrNull(cells[idx.vmag]);
-    if (hip === null || hip <= 0 || vmag === null) continue;
-    if (!out.has(hip)) out.set(hip, vmag);
   }
   return out;
 }

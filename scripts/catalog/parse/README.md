@@ -39,7 +39,8 @@ scripts/catalog/parse/
                                   (§ Positional constellation membership).
   corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
                                   is the one header walk for every committed
-                                  table (see § TSV header resolution); the
+                                  table (see § TSV header resolution) and
+                                  dataRows is the row iterator over it; the
                                   cell + record-ref helpers additionally serve
                                   the frozen regression corpora
                                   (known-stars.tsv, multi-star-regression.tsv,

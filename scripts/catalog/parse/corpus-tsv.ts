@@ -31,6 +31,23 @@ export function headerIndex(
   return idx;
 }
 
+/** Walk a committed TSV's data rows as raw cell arrays, with the header
+ *  resolved once. Inherits `headerIndex`'s hard fail, so a truncated input can
+ *  never read as a zero-row table. */
+export function* dataRows(
+  text: string,
+  cols: readonly string[],
+  fileLabel: string,
+  refreshHint: string,
+): Generator<{ cells: string[]; idx: Record<string, number> }> {
+  const lines = text.split(/\r?\n/);
+  const idx = headerIndex(lines[0] ?? '', cols, fileLabel, refreshHint);
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    yield { cells: lines[i].split('\t'), idx };
+  }
+}
+
 export function nonEmpty(s: string | undefined): string | null {
   const t = (s ?? '').trim();
   return t.length === 0 ? null : t;
