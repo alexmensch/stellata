@@ -820,10 +820,17 @@ const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
 // The subset solve dims only when the winning membership hypothesis beats
 // both "anchor alone" and the runner-up subset by this margin —
 // near-degenerate cases (Sirius, Δmag≈10: hypotheses differ by ~10⁻⁴ mag)
-// must not flip pinned values on float noise. Pinned to the V transform's
-// published scatter: the hypotheses are compared against a magnitude the
-// cascade derives through that relation, so a margin below its σ discriminates
-// on the noise in its own input. See README § Anchor flux conservation.
+// must not flip pinned values on float noise.
+//
+// A FLOOR, not the error budget. It sits at the Riello G−V scatter because a
+// gaia_riello anchor's magnitude is only good to that σ, and no margin may
+// discriminate below the noise in its own input. Two things it does NOT model:
+// a printed-tier anchor never went through that relation (its σ is Hipparcos'
+// printed precision), and the hypotheses are built from WDS observed-frame
+// magnitudes whose error dominates both — face-value pair mags, some in
+// non-V bands, at the ~0.1 mag level (README § Anchor flux conservation).
+// Raising the margin toward that term is a calibration with count movement,
+// not a constant swap.
 const ANCHOR_DIM_DECISIVE_MAG = RIELLO_G_MINUS_V_SIGMA;
 
 // 2^N subset enumeration cap. Real anchors carry ≤ ~6 fitted members; a
@@ -1947,13 +1954,22 @@ export function promoteCompanions(
     // whatever letter the row pairs, so a top-level row's value already sums
     // sub-letter members (AR Cas lists 4.87 for A, 5.02 for Aa) and only the
     // most-decomposed one names what the re-split's residual represents.
+    //
+    // Faintest is a PROXY for most-decomposed, exact only while the rows agree
+    // on one component's photometry. Two top-level rows disagreeing by band or
+    // epoch make this pick the fainter measurement of the same letter and claim
+    // a decomposition that is not there — silently, since the fit still solves.
+    // Keying on the paired letter's depth is the real rule; see README
+    // § Anchor flux conservation.
     const anchorAloneMag = cands.reduce<number | null>(
       (m, c) => (c.anchorWdsMag !== null && (m === null || c.anchorWdsMag > m)
         ? c.anchorWdsMag : m),
       null,
     );
-    // Members sit sub-arcsec off the anchor, so any candidate's sightline
-    // de-extinction re-adds the same observed frame.
+    // One A_V for the whole group: the dust grid is voxelised far coarser than
+    // even the widest member's offset (σ Ori's E at 42″, AR Cas I at 234″), so
+    // every candidate's sightline integral returns the same value and any of
+    // them re-adds the same observed frame.
     const av = cands[0].av;
     // The anchor's own position, never a row's dist_pc: the record's absmag was
     // derived at exactly this distance, while a multiples.tsv row can carry a
@@ -1976,6 +1992,11 @@ export function promoteCompanions(
     // could not split — including one whose ids were the anchor's, where the
     // shared identifier now says only that the cross-match could not separate
     // them. Those go to the subset solve rather than straight into the blend.
+    //
+    // "OWN source_id" needs no comparison against the anchor's: promoteRow
+    // nulls a minted member's gaiaSourceId whenever the row's source is the
+    // anchor row's or the anchor record's, so non-null here already means
+    // different. A member sharing the anchor's source arrives with null.
     const anchorMagIsSystemBlend = vTierIsSystemBlend(anchor.vVia);
     const structural: AnchorDimCandidate[] = [];
     const fitted: AnchorDimCandidate[] = [];
