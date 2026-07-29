@@ -14,8 +14,7 @@ in both navigate and observe modes.
   § Stop controls), not open-coded here. Reverse-sync runs off
   `'filter'` / `'cameraMode'`; the one exception is the coordinate-sphere
   control's disabled state, which tracks camera distance and so rides
-  `'frame'` behind a cached flag (`../../galactic/README.md`
-  § Coordinate spheres).
+  `'frame'` behind a cached flag (`../../galactic/coord-spheres/README.md`).
 - `input/` — canvas gestures + the camera state they drive: the click
   FSM, the reference up axis (galactic-north roll lock), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its

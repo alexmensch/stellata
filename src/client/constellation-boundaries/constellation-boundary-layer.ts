@@ -7,7 +7,7 @@ import type {
   BoundaryFadeTableWire,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
-import { SPHERE_RADIUS_PC } from '../galactic/coord-sphere';
+import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';

@@ -1,7 +1,7 @@
 // Filter / magnitude-preset / star-render-knob state: types, defaults,
 // and the preset derivation math. See src/client/filters/README.md.
 
-import type { CoordSphereFrame } from '../galactic/coord-sphere';
+import type { CoordSphereFrame } from '../galactic/coord-spheres/coord-sphere';
 import type { DetailLevel } from '../scene/scene-elements';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';

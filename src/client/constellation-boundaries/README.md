@@ -80,7 +80,7 @@ from the galactic coordinate sphere, which does track the camera: the
 partition is a Sol-frame construct, and pinning it to Sol is what keeps a
 star assigned to Orion drawn inside Orion's cell. The arcs bake once into
 absolute ICRS at `SPHERE_RADIUS_PC` (50 kpc, imported from
-`../galactic/coord-sphere.ts` — the same sphere the coordinate grids use)
+`../galactic/coord-spheres/coord-sphere.ts` — the same sphere the coordinate grids use)
 and the group rebases to `−worldOffset` each frame, exactly like
 `../galactic/galactic-disc.ts`.
 

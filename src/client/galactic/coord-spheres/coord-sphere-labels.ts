@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 import {
   SPHERE_RADIUS_PC,
   LATITUDES_DEG,
   meridianMaxAbsLatDeg,
   type CoordSphereSpec,
 } from './coord-sphere';
-import { projectToScreenInto } from '../overlays/overlay-project';
-import { setNumAttr, setStrAttr, setStyle, setText } from '../overlays/dirty-attr';
+import { projectToScreenInto } from '../../overlays/overlay-project';
+import { setNumAttr, setStrAttr, setStyle, setText } from '../../overlays/dirty-attr';
 
 // Orientation labels for a coordinate sphere, one per grid line, riding each
 // line to its viewport-edge exit. See galactic/README.md § Grid orientation

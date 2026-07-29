@@ -3,14 +3,14 @@
 // See galactic/README.md § Coordinate spheres.
 
 import type * as THREE from 'three';
-import { equatorialTangentBasisRad } from '../util/equatorial-basis';
+import { equatorialTangentBasisRad } from '../../util/equatorial-basis';
 import type {
   CoordSphereFrame,
   CoordSphereSpec,
   DrawnCoordSphereFrame,
 } from './coord-sphere';
-import { solFrameFadeFactor, type SolFrameFadeWindow } from './galactic-fade';
-import { galacticDirToIcrs } from './galactic-coords';
+import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic-fade';
+import { galacticDirToIcrs } from '../galactic-coords';
 
 /**
  * ICRS (α, δ) in radians → the ICRS unit direction, written into `out`.

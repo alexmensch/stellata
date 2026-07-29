@@ -5,7 +5,7 @@ import {
   MAG_PRESETS,
   MAG_PRESET_NAMES,
 } from '../../filters/filter-state';
-import { COORD_SPHERE_FRAMES } from '../../galactic/coord-sphere-frames';
+import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
 import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindStopControl, syncStopControl } from '../../ui/stop-control';

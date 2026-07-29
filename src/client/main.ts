@@ -26,11 +26,11 @@ import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { tToJDE } from './solar-system/time/time';
 import { bindUnitToggle } from './ui/unit-toggle';
-import { createCoordSphereLabels } from './galactic/coord-sphere-labels';
+import { createCoordSphereLabels } from './galactic/coord-spheres/coord-sphere-labels';
 import {
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
-} from './galactic/coord-sphere-frames';
+} from './galactic/coord-spheres/coord-sphere-frames';
 import { registerThemeStellata } from './ui/theme-toggle';
 import { bindChartMode } from './chart-mode/chart-mode';
 import { bindPanelLayout } from './ui/panel-layout';

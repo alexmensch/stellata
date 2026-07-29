@@ -15,7 +15,7 @@ import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
-import type { CoordSphereFrame } from '../../galactic/coord-sphere';
+import type { CoordSphereFrame } from '../../galactic/coord-spheres/coord-sphere';
 
 // URL state is a single opaque base64url blob carried in a `/v/<blob>/`
 // path segment (canonical) or a legacy `?v=<blob>` query param (still

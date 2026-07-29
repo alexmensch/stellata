@@ -28,13 +28,13 @@ import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-lo
 import { LG_EMISSION_SHELVED, LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
-import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-sphere';
+import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
 import {
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
   coordSphereFadeAt,
   coordSphereReachableAt,
-} from './galactic/coord-sphere-frames';
+} from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { SPHERE_RADIUS_PC } from '../galactic/coord-sphere';
+import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { ConstellationBoundaryLayer } from './constellation-boundary-layer';
 
 const ARTIFACT: BoundaryArtifact = {

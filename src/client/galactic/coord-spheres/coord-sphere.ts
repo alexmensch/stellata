@@ -6,9 +6,9 @@ import * as THREE from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
-import type { SolFrameFadeWindow } from './galactic-fade';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
+import { CHART_REFERENCE_INK } from '../../chart-mode/chart-palette';
+import type { SolFrameFadeWindow } from '../galactic-fade';
+import { setBuiltinChromeColour } from '../../hdr/chrome-colour';
 
 export const SPHERE_RADIUS_PC = 50_000;
 const EQUATOR_SEGMENTS = 256;
