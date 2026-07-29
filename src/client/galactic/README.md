@@ -65,7 +65,9 @@ orientation.
 
 **Galactic coordinate sphere** (`galactic-grid.ts`, toggleable) —
 equator + 16 latitude rings every 10° (range −80° to +80°) + 36
-meridians every 10°, radius 50 kpc.
+meridians every 10°, radius 50 kpc. `SPHERE_RADIUS_PC` is exported and
+reused by the grid labels and by the IAU boundary layer
+(`../constellation-boundaries/README.md`), so all three sit on one sphere.
 
 - The **equator** is a `Line2` with `LineMaterial` (from
   `three/examples/jsm/lines/`) at 2.4 px screen-space width — basic
@@ -87,7 +89,9 @@ meridians every 10°, radius 50 kpc.
   (`gridGroup.position.copy(camera.position)`), so it conceptually
   represents "the sky from here". Orientation is fixed in absolute
   galactic space so b=0 / l=0 stay correctly aimed through any camera
-  move including warp.
+  move including warp. The IAU boundary layer sits on the same sphere and
+  deliberately does **not** track the camera — its partition is only true
+  from Sol, so it stays pinned there and fades out instead.
 
 **Grid orientation labels** (`galactic-grid-labels.ts`) — SVG `<text>`
 under `#gal-grid-labels`, pooled once (one per line) and positioned +
@@ -314,9 +318,11 @@ anyway. It is part of the declutter cycle, though: the detail level
 **Chart mode**:
 - Disc layer hides entirely (the 15 kpc reference ring reads as
   visual noise on a paper-chart background).
-- Sphere + grid swap stroke colour to dark grey (`#3a3530`), no
-  transparency, no blending. The equator/line opacity split is dropped
-  in chart mode (paper-chart aesthetic doesn't fade).
+- Sphere + grid swap stroke colour to `CHART_REFERENCE_INK` (`#3a3530`,
+  `../chart-mode/chart-palette.ts` — shared with the IAU constellation
+  boundaries, which draw the same ink at half weight), no transparency, no
+  blending. The equator/line opacity split is dropped in chart mode
+  (paper-chart aesthetic doesn't fade).
 - Sol/GC arrows + HUD ring + POI ring/arrow/labels all flip to a deep
   saturated blue palette (`rgba(30, 64, 175, 0.85)`, the existing
   `--accent` token) with white halos on labels — distinct from

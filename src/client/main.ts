@@ -7,6 +7,7 @@ import { createMolecularCloudLabels } from './molecular-clouds/cloud-labels';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
+import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
 import { createLocalBubbleLabel } from './local-bubble/local-bubble';
 import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
@@ -73,7 +74,7 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, probes] = await Promise.all([
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, boundaries, probes] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -107,6 +108,11 @@ async function main() {
       // missing (fresh checkout without `pnpm run build:local-bubble`).
       // The scene renders fine without it — the shell simply doesn't draw.
       loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
+      // IAU constellation boundary arcs + the fade-quantile table. ~334 KB;
+      // null when the artifact is missing or invalid (a checkout that never
+      // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
+      // Never rejects — inside this Promise.all a rejection blanks the app.
+      loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
       // Deep-space probe trajectories. ~450 KB of JSON across the five
       // Sun-escape probes; each one that's missing (a checkout that never
       // ran the public/ sync) simply drops its marker and trail.
@@ -141,6 +147,10 @@ async function main() {
     // Local Bubble shell — the dust-wall cavity the Sun sits inside.
     // A representational declutter element; absent artifact = no shell.
     if (localBubble) stellata.attachLocalBubble(localBubble);
+
+    // IAU constellation boundaries — a chart-only declutter element at floor
+    // 'all'; absent artifact = no arcs.
+    if (boundaries) stellata.attachConstellationBoundaries(boundaries);
 
     // Deep-space probes — markers + traversed trails on the model clock.
     stellata.attachProbes(probes);

@@ -1,9 +1,10 @@
 # IAU constellation boundaries
 
 The Delporte (1930) boundary arcs: the B1875 edge set, its decomposition
-into named sky regions, and the positional lookup that answers "which
+into named sky regions, the positional lookup that answers "which
 constellation is this position in" for **any** position — catalogued
-star, anonymous Gaia row, galaxy, cloud, or planet.
+star, anonymous Gaia row, galaxy, cloud, or planet — and the chart-mode
+layer that draws the partition.
 
 Assignment is purely positional and epoch-independent: precess the
 position to B1875.0, test it against arcs that are constant-RA /
@@ -21,6 +22,12 @@ src/client/constellation-boundaries/
                                   createIauConstellationLookup. Pure.
   iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
                                   editorial con column (§ Agreement).
+  constellation-boundary-layer.ts The chart-mode layer (§ Chart-mode layer).
+    (+ test)
+  boundary-artifact-loader.ts     Fetch + validate the shipped artifact.
+    (+ test)
+  boundary-layer-pure.ts          Polyline → line-segment vertex expansion
+    (+ test)                      and the fade window. Pure.
 ```
 
 **Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
@@ -38,8 +45,10 @@ precession is `../util/precession.ts`.
 
 ## How each consumer gets this
 
-Node-side only, today. `readIauEdgeRecords` is a `readFileSync` against
-`data/`, which is not served, so nothing in the browser can call it:
+**The edge set is Node-side only.** `readIauEdgeRecords` is a
+`readFileSync` against `data/`, which is not served, so nothing in the
+browser can call it — the runtime layer below reads the built artifact,
+never the edges:
 
 - **Assignment** runs at **build time**, through
   `createConstellationAssignment`
@@ -54,9 +63,90 @@ Node-side only, today. `readIauEdgeRecords` is a `readFileSync` against
   the wire shape and the fade table. That artifact, not this module, is
   what the runtime layer loads.
 
-So a client-side caller needs an artifact first. Adding one here without
-that is how the edge set ends up parsed in the browser from a file that
-isn't deployed.
+So any *further* client-side consumer needs an artifact of its own first.
+Reaching for `iau-boundaries-pure` from a browser module is how the edge
+set ends up parsed in the browser from a file that isn't deployed.
+
+## Chart-mode layer
+
+`ConstellationBoundaryLayer` draws the artifact's arcs as one
+`THREE.LineSegments` — every arc in a single draw call, ~18.6k vertices,
+built once on attach. `boundarySegmentVertices` expands each polyline into
+its own endpoint pairs, so consecutive edge records never join across the
+seam between them.
+
+**Sol-centred, not camera-tracked.** This is the deliberate difference
+from the galactic coordinate sphere, which does track the camera: the
+partition is a Sol-frame construct, and pinning it to Sol is what keeps a
+star assigned to Orion drawn inside Orion's cell. The arcs bake once into
+absolute ICRS at `SPHERE_RADIUS_PC` (50 kpc, imported from
+`../galactic/galactic-grid.ts` — the same sphere the coordinate grid uses)
+and the group rebases to `−worldOffset` each frame, exactly like
+`../galactic/galactic-disc.ts`.
+
+**Distance-from-Sol fade — the inverse of `../galactic/galactic-fade.ts`.**
+A drawn boundary is a pure Sol-frame projection with no 3D referent, so it
+must *self-hide* as the camera leaves the neighbourhood rather than reveal
+as the camera pulls back. The window is not taste-picked: it interpolates
+the artifact's quantile table against the live magnitude limit
+(`resolveBoundaryFadeWindowPc`), fading from the offset where **1%** of the
+visible population reads as misplaced to where **5%** does. Both
+percentiles must be columns of the artifact's own `quantilePcts` — the
+loader rejects an artifact that dropped either rather than silently using
+a neighbouring column. `setMagnitudeLimit` is *pushed* from the shell's
+filter handler (folded into the same `filter` subscription that rebuilds
+the figure), so the interpolation runs once per slider change rather than
+per frame.
+
+`boundaryFadeFactor` tests its window as `!(outerPc > innerPc)`, not
+`outerPc <= innerPc`. The negated form is what routes a **NaN** window into
+the step branch and hides the layer: a NaN opacity never reads as ≤ 0, so
+passing one through draws the partition at full strength from every
+distance — the fade silently not firing at all, which is the one failure
+this layer cannot tolerate.
+
+The resulting window is sub-parsec to a few parsecs, so the arcs vanish
+well before the camera reaches α Cen — pinned in the layer test. That is
+the correct outcome, not a limitation: from another star, Earth's
+constellation boundaries do not describe the sky. The derivation and the
+quantile numbers live in `scripts/catalog/boundaries/README.md` § Fade
+table.
+
+**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
+anything but `frame: "ICRS"`, because B1875 directions rendered as if they
+were ICRS produce a plausible-looking sky sitting ~1.4° off every star —
+the failure mode § B1875 describes, and one no spot check catches. It also
+pins the fade table's shape: ascending `magLimits` (the bracketing walks
+forwards), one offset row per magnitude row, and every row exactly as wide
+as `quantilePcts` — a short row resolves a quantile to `undefined`, which
+reaches the fade factor as NaN.
+
+`loadBoundaries` wraps all of that and **cannot reject**: `main.ts` loads it
+inside a `Promise.all` alongside the catalog, so a rejection blanks the
+whole app rather than dropping one optional layer. A missing asset can't be
+detected by status alone either — `not_found_handling =
+"single-page-application"` (`wrangler.toml`) answers it with index.html at
+200, so an undeployed artifact arrives as a JSON parse error, not a 404.
+Absent resolves null silently; present-but-invalid warns and resolves null,
+the contract `../local-group/local-group-loader.ts` uses for a stale
+artifact. Dropping the layer still honours the frame check — a B1875-framed
+artifact never reaches the GPU.
+
+**Gates.** A chart-only declutter element, `constellationBoundaries` at
+floor `{ realistic: 'never', chart: 'all' }` (`../scene/README.md`), which
+also puts it behind the `showConstellation` master toggle (`C`) with the
+figures and the Latin names — one switch for every piece of constellation
+chrome. The shell's registry entry ANDs that with the shared warp gate.
+
+**Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
+with the coordinate sphere, at half its weight so both reference layers
+stay distinguishable when drawn together. `renderOrder −0.8` puts the
+partition under the constellation figure (−0.75) and over the galactic
+disc / grid (−1); `depthTest` is off because the chart starfield renders
+depth-disabled, the same treatment the figure takes in chart mode. The
+material is bound through `setBuiltinChromeColour`'s **chart** variant —
+chart mode bypasses the HDR resolve, so the tone-map inverse must not be
+applied (`../hdr/README.md`).
 
 ## The edge set
 
