@@ -15,6 +15,7 @@ import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import type { CoordSphereFrame } from '../../galactic/coord-sphere';
 
 // URL state is a single opaque base64url blob carried in a `/v/<blob>/`
 // path segment (canonical) or a legacy `?v=<blob>` query param (still
@@ -106,9 +107,11 @@ const PRESET_TO_INDEX: Record<MagPresetName, number> = {
 const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
 
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
-//   0 = grid on, 1 = HUD on, 2 = reserved, 3 = MW disabled,
+//   0 = a coordinate sphere is up, 1 = HUD on, 2 = reserved, 3 = MW disabled,
 //   4 = unit pc, 5 = mode observe, 6 = chart on (only set when also
 //   mode=observe — chart is observe-gated), 7 = constellations disabled.
+// Which sphere is up rides presence bit 24 on top of bit 0 — see
+// coordSphereEquatorialField.
 const FLAG_GRID         = 1 << 0;
 const FLAG_HUD          = 1 << 1;
 // bit 2 reserved (formerly FLAG_MC_DISABLED — retired; molecular-cloud
@@ -164,7 +167,10 @@ export interface DecodedView {
   smin?: number;
   smax?: number;
   span?: number;
-  showGalacticGrid?: boolean;
+  /** Which coordinate sphere is up. Default 'none'; 'galactic' is FLAG_GRID
+   *  alone, 'equatorial' is FLAG_GRID plus presence bit 24 (so a client
+   *  predating the equatorial sphere still shows *a* sphere). */
+  coordSphere?: CoordSphereFrame;
   showHud?: boolean;
   showConstellation?: boolean;
   showMilkyway?: boolean;
@@ -596,6 +602,24 @@ function lgEmissionDisabledField(bit: number): FieldSpec {
   };
 }
 
+// Which coordinate sphere FLAG_GRID means — another zero-byte presence bit,
+// since the flags byte is full. Set = equatorial, clear = galactic.
+//
+// Layering it over FLAG_GRID rather than replacing that bit with a 1-byte enum
+// is what keeps both directions of compatibility free: a pre-equatorial link
+// (FLAG_GRID alone) still decodes to the galactic sphere, and a stale client
+// reading a new link ignores the unknown high mask bit and shows the galactic
+// sphere instead of none. Decodes after flagsField (bit 13 < 24), so it
+// overwrites the 'galactic' that unpackFlags wrote.
+function coordSphereEquatorialField(bit: number): FieldSpec {
+  return {
+    bit, key: 'coordSphereEquatorial', ...fixed(0),
+    isPresent: v => v.coordSphere === 'equatorial',
+    encode: () => 0,
+    decode: v => { v.coordSphere = 'equatorial'; },
+  };
+}
+
 // Variable-length POI-HIP list: 1-byte count + count × fixed-width HIP
 // IDs (4 bytes in v1, 3 in v2/v3 — HIP space is < 2^17 so 24 bits is
 // plenty). Hard-capped at POI_MAX_COUNT both at encode time (defensive
@@ -833,11 +857,12 @@ const FIELDS_V4: FieldSpec[] = [
   tField(21),
   lgEmissionDisabledField(22),
   detailLevelField(23),
+  coordSphereEquatorialField(24),
 ];
 
 function packFlags(v: DecodedView): number {
   let f = 0;
-  if (v.showGalacticGrid) f |= FLAG_GRID;
+  if (v.coordSphere !== undefined && v.coordSphere !== 'none') f |= FLAG_GRID;
   if (v.showHud) f |= FLAG_HUD;
   if (v.showConstellation === false) f |= FLAG_CON_DISABLED;
   if (v.showMilkyway === false) f |= FLAG_MW_DISABLED;
@@ -851,7 +876,7 @@ function packFlags(v: DecodedView): number {
 }
 
 function unpackFlags(v: DecodedView, f: number): void {
-  if (f & FLAG_GRID) v.showGalacticGrid = true;
+  if (f & FLAG_GRID) v.coordSphere = 'galactic';
   if (f & FLAG_HUD) v.showHud = true;
   if (f & FLAG_CON_DISABLED) v.showConstellation = false;
   if (f & FLAG_MW_DISABLED) v.showMilkyway = false;
@@ -1007,7 +1032,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (f.sizeMinOverridden) view.smin = f.sizeMin;
   if (f.sizeMaxOverridden) view.smax = f.sizeMax;
   if (f.sizeSpanOverridden) view.span = f.sizeSpan;
-  if (f.showGalacticGrid) view.showGalacticGrid = true;
+  if (f.coordSphere !== 'none') view.coordSphere = f.coordSphere;
   if (f.showHud) view.showHud = true;
   if (!f.showConstellation) view.showConstellation = false;
   if (!f.showMilkyway) view.showMilkyway = false;
@@ -1203,7 +1228,7 @@ export function applyDecodedView(
   if (view.smin !== undefined) { patch.sizeMin = view.smin; patch.sizeMinOverridden = true; }
   if (view.smax !== undefined) { patch.sizeMax = view.smax; patch.sizeMaxOverridden = true; }
   if (view.span !== undefined) { patch.sizeSpan = view.span; patch.sizeSpanOverridden = true; }
-  if (view.showGalacticGrid !== undefined) patch.showGalacticGrid = view.showGalacticGrid;
+  if (view.coordSphere !== undefined) patch.coordSphere = view.coordSphere;
   if (view.showHud !== undefined) patch.showHud = view.showHud;
   if (view.showConstellation !== undefined) patch.showConstellation = view.showConstellation;
   if (view.showMilkyway !== undefined) patch.showMilkyway = view.showMilkyway;

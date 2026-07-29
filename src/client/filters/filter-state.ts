@@ -1,6 +1,7 @@
 // Filter / magnitude-preset / star-render-knob state: types, defaults,
 // and the preset derivation math. See src/client/filters/README.md.
 
+import type { CoordSphereFrame } from '../galactic/coord-sphere';
 import type { DetailLevel } from '../scene/scene-elements';
 
 export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
@@ -31,9 +32,11 @@ export interface FilterState {
   // so re-enabling restores the prior selection); the picker UI is also
   // disabled and the C shortcut is suppressed by their own gates.
   showConstellation: boolean;
-  // Galactic coordinate sphere (grid lines on a 50 kpc sphere). Disc is
+  // Which coordinate sphere is up (grid lines on a 50 kpc sphere) — galactic
+  // l/b, equatorial RA/Dec, or none. Mutually exclusive by construction; the
+  // equatorial one additionally self-hides away from Sol. The galactic disc is
   // always-on (fades by zoom) so it isn't gated here.
-  showGalacticGrid: boolean;
+  coordSphere: CoordSphereFrame;
   // HUD: Sol/GC locator arrows in both navigate + observe modes, plus the
   // OBSERVE-mode screen-centred ring. Future HUD widgets hang off this flag.
   showHud: boolean;
@@ -179,7 +182,7 @@ export const DEFAULT_FILTER: FilterState = {
   sizeMaxOverridden: false,
   sizeSpanOverridden: false,
   showConstellation: true,
-  showGalacticGrid: false,
+  coordSphere: 'none',
   showHud: false,
   showMilkyway: true,
   showLgEmission: true,

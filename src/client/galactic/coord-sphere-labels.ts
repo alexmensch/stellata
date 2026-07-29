@@ -1,13 +1,17 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { galacticDirToIcrs } from './galactic-coords';
-import { SPHERE_RADIUS_PC, MERIDIAN_COUNT, LATITUDES_DEG, meridianMaxAbsBDeg } from './galactic-grid';
+import {
+  SPHERE_RADIUS_PC,
+  LATITUDES_DEG,
+  meridianMaxAbsBDeg,
+  type CoordSphereSpec,
+} from './coord-sphere';
 import { projectToScreenInto } from '../overlays/overlay-project';
 import { setNumAttr, setStrAttr, setStyle, setText } from '../overlays/dirty-attr';
 
-// Whole-degree l/b orientation labels for the galactic coordinate sphere, one
-// per grid line, riding each line to its viewport-edge exit. See
-// galactic/README.md § "Grid orientation labels".
+// Orientation labels for a coordinate sphere, one per grid line, riding each
+// line to its viewport-edge exit. See galactic/README.md § Grid orientation
+// labels.
 
 const DEG = Math.PI / 180;
 const LAT_RING_DEGS = [0, ...LATITUDES_DEG];
@@ -198,17 +202,8 @@ export function separateLabels(
   }
 }
 
-// Whole-degree label. Longitude wraps to [0, 360); latitude stays signed.
-export function fmtDeg(deg: number, wrap360: boolean): string {
-  let d = Math.round(deg);
-  if (wrap360) d = ((d % 360) + 360) % 360;
-  return `${d}°`;
-}
-
 interface Entry {
   el: SVGTextElement;
-  kind: 'lon' | 'lat';
-  valueDeg: number;
   text: string;
   halfW: number;
   /** ICRS unit directions along the line (fixed in absolute space). */
@@ -221,31 +216,34 @@ interface Entry {
   lastTransform: string;
 }
 
-function buildEntries(): Array<Pick<Entry, 'kind' | 'valueDeg' | 'text' | 'halfW' | 'dirs'>> {
-  const out: Array<Pick<Entry, 'kind' | 'valueDeg' | 'text' | 'halfW' | 'dirs'>> = [];
-  const push = (kind: 'lon' | 'lat', valueDeg: number, dirs: THREE.Vector3[]) => {
-    const text = fmtDeg(valueDeg, kind === 'lon');
-    out.push({ kind, valueDeg, text, halfW: (text.length * CHAR_W_PX) / 2, dirs });
+type EntrySpec = Pick<Entry, 'text' | 'halfW' | 'dirs'>;
+
+function buildEntries(spec: CoordSphereSpec): EntrySpec[] {
+  const { dirToIcrs, meridianCount } = spec;
+  const out: EntrySpec[] = [];
+  const push = (text: string, dirs: THREE.Vector3[]) => {
+    out.push({ text, halfW: (text.length * CHAR_W_PX) / 2, dirs });
   };
 
-  for (let i = 0; i < MERIDIAN_COUNT; i++) {
-    const lonRad = ((i * 360) / MERIDIAN_COUNT) * DEG;
-    const maxBDeg = Math.min(MERIDIAN_MAX_B_DEG, meridianMaxAbsBDeg(i));
+  for (let i = 0; i < meridianCount; i++) {
+    const lonDeg = (i * 360) / meridianCount;
+    const lonRad = lonDeg * DEG;
+    const maxLatDeg = Math.min(MERIDIAN_MAX_B_DEG, meridianMaxAbsBDeg(i));
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < MERIDIAN_SAMPLES; s++) {
-      const bDeg = -maxBDeg + (s / (MERIDIAN_SAMPLES - 1)) * (2 * maxBDeg);
-      dirs.push(galacticDirToIcrs(lonRad, bDeg * DEG, new THREE.Vector3()));
+      const latDeg = -maxLatDeg + (s / (MERIDIAN_SAMPLES - 1)) * (2 * maxLatDeg);
+      dirs.push(dirToIcrs(lonRad, latDeg * DEG, new THREE.Vector3()));
     }
-    push('lon', (i * 360) / MERIDIAN_COUNT, dirs);
+    push(spec.lonLabel(lonDeg), dirs);
   }
 
-  for (const bDeg of LAT_RING_DEGS) {
-    const bRad = bDeg * DEG;
+  for (const latDeg of LAT_RING_DEGS) {
+    const latRad = latDeg * DEG;
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < RING_SAMPLES; s++) {
-      dirs.push(galacticDirToIcrs((s / (RING_SAMPLES - 1)) * 2 * Math.PI, bRad, new THREE.Vector3()));
+      dirs.push(dirToIcrs((s / (RING_SAMPLES - 1)) * 2 * Math.PI, latRad, new THREE.Vector3()));
     }
-    push('lat', bDeg, dirs);
+    push(spec.latLabel(latDeg), dirs);
   }
 
   return out;
@@ -268,12 +266,21 @@ function gatherExcludeRects(): Rect[] {
   return rects;
 }
 
-export function createGalacticGridLabels(stellata: Stellata): void {
-  const group = document.getElementById('gal-grid-labels') as unknown as SVGGElement | null;
+/**
+ * Pool one SVG label per grid line of `spec`'s sphere and place them every
+ * frame while `isActive` holds. Both spheres run one instance each; only one
+ * is ever active, so the repulsion pass never mixes two frames' labels.
+ */
+export function createCoordSphereLabels(
+  stellata: Stellata,
+  spec: CoordSphereSpec,
+  isActive: () => boolean,
+): void {
+  const group = document.getElementById(spec.labelGroupId) as unknown as SVGGElement | null;
   if (!group) return;
 
   const NS = 'http://www.w3.org/2000/svg';
-  const pool: Entry[] = buildEntries().map((spec) => {
+  const pool: Entry[] = buildEntries(spec).map((entry) => {
     const el = document.createElementNS(NS, 'text') as SVGTextElement;
     el.setAttribute('class', 'gal-grid-label');
     el.setAttribute('text-anchor', 'middle');
@@ -281,7 +288,7 @@ export function createGalacticGridLabels(stellata: Stellata): void {
     el.style.display = 'none';
     group.appendChild(el);
     return {
-      ...spec,
+      ...entry,
       el,
       placement: null,
       lastDisplay: 'none',
@@ -306,7 +313,7 @@ export function createGalacticGridLabels(stellata: Stellata): void {
   };
 
   stellata.on('frame', () => {
-    if (!stellata.getFilter().showGalacticGrid) {
+    if (!isActive()) {
       setGroupVisible(false);
       return;
     }

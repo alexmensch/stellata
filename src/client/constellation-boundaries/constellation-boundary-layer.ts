@@ -7,14 +7,13 @@ import type {
   BoundaryFadeTableWire,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
-import { SPHERE_RADIUS_PC } from '../galactic/galactic-grid';
+import { SPHERE_RADIUS_PC } from '../galactic/coord-sphere';
+import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';
 import {
-  boundaryFadeFactor,
   boundarySegmentVertices,
   resolveBoundaryFadeWindowPc,
-  type BoundaryFadeWindow,
 } from './boundary-layer-pure';
 
 // Under the constellation figure (−0.75) and over the galactic disc / grid
@@ -47,7 +46,7 @@ export class ConstellationBoundaryLayer {
   private readonly material: THREE.LineBasicMaterial;
   private lineSegments: THREE.LineSegments | null = null;
   private fade: BoundaryFadeTableWire | null = null;
-  private fadeWindow: BoundaryFadeWindow | null = null;
+  private fadeWindow: SolFrameFadeWindow | null = null;
   // NaN so the first setMagnitudeLimit always misses and recomputes.
   private magLimit = NaN;
 
@@ -97,7 +96,7 @@ export class ConstellationBoundaryLayer {
       this.group.visible = false;
       return;
     }
-    const opacity = BOUNDARY_OPACITY * boundaryFadeFactor(distFromSolPc, this.fadeWindow);
+    const opacity = BOUNDARY_OPACITY * solFrameFadeFactor(distFromSolPc, this.fadeWindow);
     if (opacity <= 0) {
       this.group.visible = false;
       return;

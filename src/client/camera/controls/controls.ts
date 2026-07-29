@@ -5,6 +5,7 @@ import {
   MAG_PRESETS,
   type MagPresetName,
 } from '../../filters/filter-state';
+import { COORD_SPHERE_FRAMES, type CoordSphereFrame } from '../../galactic/coord-sphere';
 import type { DetailLevel } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
@@ -48,6 +49,7 @@ export function bindControls(stellata: Stellata) {
   const appMagReadout = document.getElementById('app-mag-readout')!;
   const magPresets = document.querySelectorAll<HTMLButtonElement>('.mag-preset');
   const detailStops = document.querySelectorAll<HTMLButtonElement>('.detail-stop');
+  const coordSphereStops = document.querySelectorAll<HTMLButtonElement>('.coord-sphere-stop');
   const chipsHost = document.getElementById('spect-chips')!;
   const spectAllBtn = document.getElementById('spect-all')!;
   const spectNoneBtn = document.getElementById('spect-none')!;
@@ -61,7 +63,6 @@ export function bindControls(stellata: Stellata) {
   const conInput = document.getElementById('con-input') as HTMLInputElement | null;
   const conPicker = document.getElementById('con-picker');
   const showMilkyway = document.getElementById('show-milkyway') as HTMLInputElement;
-  const showGalacticGrid = document.getElementById('show-galactic-grid') as HTMLInputElement;
   const showChart = document.getElementById('show-chart') as HTMLInputElement;
   const fov = document.getElementById('fov') as HTMLInputElement;
   const fovReadout = document.getElementById('fov-readout')!;
@@ -135,6 +136,14 @@ export function bindControls(stellata: Stellata) {
       }
     });
   }
+  for (const btn of Array.from(coordSphereStops)) {
+    btn.addEventListener('click', () => {
+      const frame = btn.dataset.coordSphere as CoordSphereFrame | undefined;
+      if (frame && COORD_SPHERE_FRAMES.includes(frame)) {
+        stellata.setFilter({ coordSphere: frame });
+      }
+    });
+  }
   // Size sliders set their override flag so the value sticks across
   // preset changes and viewport resizes until the reset button clears it.
   // Min/Max are coupled — dragging one past the other pushes the other
@@ -170,9 +179,6 @@ export function bindControls(stellata: Stellata) {
   });
   showMilkyway.addEventListener('change', () => {
     stellata.setFilter({ showMilkyway: showMilkyway.checked });
-  });
-  showGalacticGrid.addEventListener('change', () => {
-    stellata.setFilter({ showGalacticGrid: showGalacticGrid.checked });
   });
   showChart.addEventListener('change', () => {
     stellata.setFilter({ chart: showChart.checked });
@@ -259,8 +265,10 @@ export function bindControls(stellata: Stellata) {
     if (showMilkyway.checked !== f.showMilkyway) {
       showMilkyway.checked = f.showMilkyway;
     }
-    if (showGalacticGrid.checked !== f.showGalacticGrid) {
-      showGalacticGrid.checked = f.showGalacticGrid;
+    // Coordinate-sphere 3-stop: value-driven like the detail stops, so `S`
+    // and a URL restore light the right stop.
+    for (const btn of Array.from(coordSphereStops)) {
+      btn.classList.toggle('on', btn.dataset.coordSphere === f.coordSphere);
     }
     // Chart toggle is observe-gated. Disable when not in observe so the
     // user sees why it can't be enabled (the title attribute on the row
@@ -281,6 +289,22 @@ export function bindControls(stellata: Stellata) {
     const kStr = stellata.getStarExaggerationK().toString();
     if (exag.value !== kStr) exag.value = kStr;
   };
+
+  // The equatorial stop is disabled (not hidden) beyond its Sol-distance fade
+  // — an Earth-referenced frame that would render invisible from there. This
+  // rides 'frame' rather than syncFromFilter because it tracks camera distance,
+  // which no discrete state event announces; the cached flag keeps it to one
+  // DOM write per crossing.
+  const equatorialStop = Array.from(coordSphereStops)
+    .find(btn => btn.dataset.coordSphere === 'equatorial');
+  let equatorialReachable: boolean | null = null;
+  stellata.on('frame', () => {
+    if (!equatorialStop) return;
+    const reachable = stellata.equatorialSphereReachable();
+    if (reachable === equatorialReachable) return;
+    equatorialReachable = reachable;
+    equatorialStop.disabled = !reachable;
+  });
 
   stellata.on('filter', syncFromFilter);
   stellata.on('cameraMode', syncFromFilter);

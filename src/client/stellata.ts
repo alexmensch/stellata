@@ -28,7 +28,9 @@ import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-lo
 import { LG_EMISSION_SHELVED, LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
-import { GalacticGrid } from './galactic/galactic-grid';
+import { CoordSphere } from './galactic/coord-sphere';
+import { GALACTIC_SPHERE_SPEC } from './galactic/coord-sphere-frames';
+import { EquatorialSphere, equatorialSphereReachable } from './galactic/equatorial-sphere';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
@@ -311,7 +313,8 @@ export class Stellata implements FrameAnchor {
   private input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
-  // from Sol and is always-on. Grid is gated by `filter.showGalacticGrid`.
+  // from Sol and is always-on. The coordinate spheres are gated by
+  // `filter.coordSphere`, which admits only one of them at a time.
   // The HUD (Sol/GC arrows + OBSERVE-mode ring) is gated by
   // `filter.showHud`. Mono mode swaps strokes to a paper-chart palette via
   // setMonochrome on each layer (HUD is CSS-only).
@@ -344,7 +347,8 @@ export class Stellata implements FrameAnchor {
    *  Populated by each shell's attach; the kind-agnostic shell dispatch
    *  reads it. See fresnel-shell/shell-registry.ts. */
   readonly shells = new ShellRegistry();
-  private galacticGrid: GalacticGrid;
+  private galacticSphere: CoordSphere;
+  private equatorialSphere: EquatorialSphere;
   private hudOverlay: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
    *  the chart activation predicate; the shell owns its lifetime. */
@@ -833,8 +837,10 @@ export class Stellata implements FrameAnchor {
     } else {
       this.planetSystemsReady = Promise.resolve();
     }
-    this.galacticGrid = new GalacticGrid();
-    this.scene.add(this.galacticGrid.group);
+    this.galacticSphere = new CoordSphere(GALACTIC_SPHERE_SPEC);
+    this.scene.add(this.galacticSphere.group);
+    this.equatorialSphere = new EquatorialSphere();
+    this.scene.add(this.equatorialSphere.group);
     const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
     const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
     const solBg = document.getElementById('sol-arrow-bg') as unknown as SVGPathElement;
@@ -1132,15 +1138,28 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       update: (ctx) => {
-        if (!ctx.warpActive && this.filter.showGalacticGrid) {
-          this.galacticGrid.group.visible = true;
-          this.galacticGrid.update(ctx.camera.position);
+        if (!ctx.warpActive && this.filter.coordSphere === 'galactic') {
+          this.galacticSphere.group.visible = true;
+          this.galacticSphere.update(ctx.camera.position);
         } else {
-          this.galacticGrid.group.visible = false;
+          this.galacticSphere.group.visible = false;
         }
       },
-      setMonochrome: (on) => this.galacticGrid.setMonochrome(on),
-      dispose: () => this.galacticGrid.dispose(),
+      setMonochrome: (on) => this.galacticSphere.setMonochrome(on),
+      dispose: () => this.galacticSphere.dispose(),
+    });
+    this.layers.register({
+      // Camera-tracked like its galactic sibling; the Sol-distance fade the
+      // layer applies on top is the only distance-dependent behaviour.
+      update: (ctx) => {
+        if (!ctx.warpActive && this.filter.coordSphere === 'equatorial') {
+          this.equatorialSphere.update(ctx.camera.position, ctx.distFromSol);
+        } else {
+          this.equatorialSphere.group.visible = false;
+        }
+      },
+      setMonochrome: (on) => this.equatorialSphere.setMonochrome(on),
+      dispose: () => this.equatorialSphere.dispose(),
     });
     this.layers.register({
       update: (ctx) => this.updateHud(ctx.warpActive),
@@ -2056,6 +2075,13 @@ export class Stellata implements FrameAnchor {
     this.filters.clearSizeOverrides(fields);
   }
 
+  /** Is the equatorial coordinate sphere visible at the camera's current
+   *  distance from Sol? The `S` cycle and the panel's 3-stop control both gate
+   *  on this so neither can select a sphere that has faded to nothing. */
+  equatorialSphereReachable(): boolean {
+    return equatorialSphereReachable(this.frameCtx.distFromSol);
+  }
+
   // Declutter cycle. detailPermits is the per-frame read path layers gate
   // on (effective = permitted AND the layer's instance gates).
   getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
@@ -2368,7 +2394,8 @@ export class Stellata implements FrameAnchor {
     this.focus.refreshOrbitFloor();
     this.syncPixelSolidAngle();
     // Line2 needs the canvas resolution for its screen-space line width.
-    this.galacticGrid.setResolution(w, h);
+    this.galacticSphere.setResolution(w, h);
+    this.equatorialSphere.setResolution(w, h);
     // Recompute pixel sizes from the active preset so non-overridden
     // fields stay proportional to the bulge across screen sizes and
     // orientation changes. maxAppMag/sizeSpan don't depend on viewport

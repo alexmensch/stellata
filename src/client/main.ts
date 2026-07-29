@@ -26,7 +26,11 @@ import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { tToJDE } from './solar-system/time/time';
 import { bindUnitToggle } from './ui/unit-toggle';
-import { createGalacticGridLabels } from './galactic/galactic-grid-labels';
+import { createCoordSphereLabels } from './galactic/coord-sphere-labels';
+import {
+  GALACTIC_SPHERE_SPEC,
+  EQUATORIAL_SPHERE_SPEC,
+} from './galactic/coord-sphere-frames';
 import { registerThemeStellata } from './ui/theme-toggle';
 import { bindChartMode } from './chart-mode/chart-mode';
 import { bindPanelLayout } from './ui/panel-layout';
@@ -260,7 +264,11 @@ async function main() {
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
     createClickRipple(stellata);
-    createGalacticGridLabels(stellata);
+    createCoordSphereLabels(stellata, GALACTIC_SPHERE_SPEC,
+      () => stellata.getFilter().coordSphere === 'galactic');
+    createCoordSphereLabels(stellata, EQUATORIAL_SPHERE_SPEC,
+      () => stellata.getFilter().coordSphere === 'equatorial'
+        && stellata.equatorialSphereReachable());
     createPlanetLabels(stellata);
     createProbeLabels(stellata);
     createHeliopauseLabel(stellata);

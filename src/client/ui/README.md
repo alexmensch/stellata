@@ -31,7 +31,7 @@ registry only describes what to display.
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
-| `S` | Toggle `showGalacticGrid` |
+| `S` | Cycle `coordSphere`: none → galactic → equatorial → none. The equatorial stop is skipped whenever the camera sits beyond its Sol-distance fade (`../galactic/README.md` § Coordinate spheres), so `S` never leaves an enabled-but-invisible sphere |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |

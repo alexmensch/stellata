@@ -1,10 +1,10 @@
-# Galactic reference system
+# Sky reference system
 
-Three layers anchor the local star clump against the Milky Way's
-geometry: the galactic disc outline (always-on midplane ring + bulge
-wireframe), the toggleable galactic coordinate sphere, and the HUD
-layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they give
-the user "which way is out, how far am I from the centre" without
+Layers that anchor the local star clump against the sky: the galactic
+disc outline (always-on midplane ring + bulge wireframe), the two
+toggleable coordinate spheres (galactic l/b and equatorial RA/Dec), and
+the HUD layer (Sol/GC arrows plus the OBSERVE-mode ring). Together they
+give the user "which way is out, how far am I from the centre" without
 obscuring the local stars.
 
 ## Files in this area
@@ -19,13 +19,23 @@ src/client/galactic/
                                   thickness rings + 3 × 1.5 kpc bulge
                                   wireframe; always-on in dark mode,
                                   hidden in chart mode.
-  galactic-fade.ts                Shared FADE_INNER_PC / FADE_OUTER_PC
-                                  smoothstep curve. Imported by
-                                  galactic-disc + local-group so both
-                                  layers reveal in lockstep.
-  galactic-grid.ts                Toggleable b/l coordinate sphere.
-  galactic-grid-labels.ts (+ test) SVG whole-degree l/b labels that drop
-                                  to the viewport edge of each grid line.
+  galactic-fade.ts (+ test)       Both distance-from-Sol curves
+                                  (§ Distance fades): the far-field
+                                  reveal FADE_INNER_PC / FADE_OUTER_PC
+                                  smoothstep, and its inverse
+                                  solFrameFadeFactor.
+  coord-sphere.ts                 The CoordSphere grid geometry, shared
+                                  by both frames, plus SPHERE_RADIUS_PC,
+                                  the CoordSphereFrame tri-state and its
+                                  `S`-cycle step.
+  coord-sphere-frames.ts (+ test) The two CoordSphereSpecs — frame
+                                  rotation, meridian spacing, label
+                                  formatters, SVG label group.
+  coord-sphere-labels.ts (+ test) SVG edge labels for either sphere:
+                                  one per grid line, dropped to the
+                                  viewport edge that line exits.
+  equatorial-sphere.ts (+ test)   The RA/Dec sphere = CoordSphere +
+                                  Sol-distance self-hide.
 
 src/client/overlays/                  (full overlay roster in src/client/overlays/README.md)
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
@@ -63,11 +73,44 @@ hidden entirely — a 15 kpc reference ring reads as visual noise on a
 paper-chart aesthetic, and the arrows + sphere already provide
 orientation.
 
-**Galactic coordinate sphere** (`galactic-grid.ts`, toggleable) —
-equator + 16 latitude rings every 10° (range −80° to +80°) + 36
-meridians every 10°, radius 50 kpc. `SPHERE_RADIUS_PC` is exported and
-reused by the grid labels and by the IAU boundary layer
-(`../constellation-boundaries/README.md`), so all three sit on one sphere.
+## Distance fades
+
+`galactic-fade.ts` owns both directions, so no layer writes its own curve:
+
+- **Far-field reveal** — `smoothstep(FADE_INNER_PC = 500,
+  FADE_OUTER_PC = 5000, distFromSol)`. Shared by the galactic disc and the
+  Local Group wireframe so both reveal in lockstep.
+- **Sol-frame self-hide** — `solFrameFadeFactor(distFromSol, window)`, the
+  inverse, for layers that only describe the sky *from Sol* and so must
+  vanish as the camera leaves. Shared by the IAU boundary arcs and the
+  equatorial sphere. The two consumers pass **different windows** — the
+  curve is what's shared, not the band. Its `!(outerPc > innerPc)` guard is
+  load-bearing (`../constellation-boundaries/README.md` § Chart-mode layer):
+  a NaN window has to hide the layer, because a NaN opacity never reads as
+  ≤ 0 and would draw a Sol-frame layer at full strength from everywhere.
+
+## Coordinate spheres
+
+Two toggleable spheres, **mutually exclusive** — `filter.coordSphere` is a
+`'none' | 'galactic' | 'equatorial'` tri-state, not a pair of booleans. Two
+grids drawn together are illegible, and their edge labels would fight in one
+`separateLabels` pass.
+
+`CoordSphere` (`coord-sphere.ts`) is the geometry, built once per frame from
+a `CoordSphereSpec`: equator + 16 latitude rings every 10° (range −80° to
++80°) + `meridianCount` meridians, radius 50 kpc. `SPHERE_RADIUS_PC` is
+exported and reused by the edge labels and by the IAU boundary layer
+(`../constellation-boundaries/README.md`), so everything sits on one sphere.
+
+The spec (`coord-sphere-frames.ts`) is the single record pairing a frame's
+rotation with its meridian spacing, label formatters, and SVG label group —
+so the geometry and its labels cannot disagree about either:
+
+| | galactic | equatorial |
+| --- | --- | --- |
+| `dirToIcrs` | `galacticDirToIcrs` (GAL_TO_ICRS) | `equatorialDirToIcrs` (identity — catalog.bin's basis already has x at α 0h, z at the NCP) |
+| meridians | 36, every 10° of *l* | **24, every 15°** — an equatorial grid's meridians ARE the hour circles, which is also what makes every label a whole hour |
+| labels | `l` / `b` in whole degrees | RA in whole hours (`0h`…`23h`), dec signed (`+80°`) so a dec label never reads as a longitude |
 
 - The **equator** is a `Line2` with `LineMaterial` (from
   `three/examples/jsm/lines/`) at 2.4 px screen-space width — basic
@@ -76,33 +119,74 @@ reused by the grid labels and by the IAU boundary layer
   256 segments around the full loop; the small joint-wedge "ticks" you
   may notice are an inherent artefact of fat-line miters at non-trivial
   angles. `LineMaterial` requires its `resolution` uniform to track the
-  canvas, so `Stellata.onResize` calls `galacticGrid.setResolution(w, h)`.
+  canvas, so `Stellata.onResize` calls `setResolution(w, h)` on both spheres.
   Bumping segment count to 1024 hides the ticks but was rejected as
   visually similar; we kept 256.
 - **Latitude rings + meridians** are basic `LineLoop` / `Line` at 0.45
-  opacity. The polar bunching of 36 meridians is eased by trimming
-  every other meridian (l = 10°, 30°, …) to ±80° latitude — the
-  every-20° set still goes pole-to-pole unbroken.
+  opacity. Polar bunching is eased by trimming every *odd-indexed*
+  meridian to ±80° latitude (`meridianMaxAbsBDeg`) — the even set still
+  goes pole-to-pole unbroken, so 36 galactic lines ease to 18 and 24
+  equatorial ones to 12.
 - **No pole markers.** Earlier iterations had small + crosses at
   NGP/SGP; they read as visual clutter and were dropped.
-- The whole sphere tracks the camera each frame
-  (`gridGroup.position.copy(camera.position)`), so it conceptually
-  represents "the sky from here". Orientation is fixed in absolute
-  galactic space so b=0 / l=0 stay correctly aimed through any camera
-  move including warp. The IAU boundary layer sits on the same sphere and
-  deliberately does **not** track the camera — its partition is only true
-  from Sol, so it stays pinned there and fades out instead.
+- Both spheres track the camera each frame
+  (`group.position.copy(camera.position)`), so each conceptually
+  represents "the sky from here". Orientation is fixed in absolute space
+  — the geometry is already in ICRS — so b=0 / l=0 and α 0h / δ 0° stay
+  correctly aimed through any camera move including warp. The IAU boundary
+  layer sits on the same sphere and deliberately does **not** track the
+  camera: its partition is only true from Sol, so it stays pinned there and
+  fades out instead.
+- **Chart-mode alpha is the one asymmetry.** `setMonochrome` runs the
+  strokes opaque with blending off for the paper aesthetic, which would
+  discard a fade entirely — so `setOpacityScale` keeps alpha blending on
+  whenever the scale is below 1, in both styles. The scale writes are plain
+  uniform assignments; the blend-state reconfigure (a program recompile via
+  `needsUpdate`) fires only when the sphere crosses into or out of being
+  faded, never per frame.
 
-**Grid orientation labels** (`galactic-grid-labels.ts`) — SVG `<text>`
-under `#gal-grid-labels`, pooled once (one per line) and positioned +
-rotated each frame, gated by `filter.showGalacticGrid` alongside the 3D
-sphere (and hidden in warp by the shared `body.warping #overlay` rule).
-**One label per grid line** — every meridian (longitude l) and every
-latitude ring (b, incl. the equator; no ring at the ±90° poles). Each line's
-sample directions are precomputed once (`galacticDirToIcrs`, the same l/b→ICRS
-formula the grid geometry uses — fixed in absolute space); per frame they
-project through `camera.position + dir × SPHERE_RADIUS_PC` so labels track
-the camera exactly like the grid.
+### The equatorial sphere is Sol-only
+
+Declination is measured from Earth's rotational axis and right ascension
+from the vernal equinox, so — unlike galactic coordinates, defined by the
+Milky Way's actual disc plane and centre and therefore meaningful from
+anywhere in the galaxy (CLAUDE.md § Camera-anywhere perception) — the RA/Dec
+frame carries no meaning away from the solar system. So `EquatorialSphere`
+applies `solFrameFadeFactor` over `EQUATORIAL_FADE_WINDOW_PC` = **0.4 pc →
+2.0 pc**: full strength across the whole solar system, gone before the first
+star.
+
+That window is the fixed pair `stellata-sp4q` derived; the boundary layer's
+magnitude-keyed quantile table is deliberately **not** reused, because its
+criterion (a star reading as misplaced relative to its cell *wall*) has no
+analogue for a camera-tracked frame grid, which has no walls. Both land in
+the same sub-parsec-to-a-few-parsecs band.
+
+Note what does and doesn't fade: the sphere is **camera-tracked, not
+Sol-pinned**. RA/Dec axes are fixed in absolute space, so the geometry stays
+correctly aimed from anywhere — the fade is a *relevance* boundary, not a
+precision one.
+
+`equatorialSphereReachable(distFromSol)` is the gate both affordances share
+(`Stellata.equatorialSphereReachable()` binds it to the live frame): `S`
+skips the equatorial stop in its cycle, and the panel *disables* that stop,
+so neither can leave an enabled-but-invisible sphere. It is defined as
+"`solFrameFadeFactor` > 0" rather than a separate threshold, pinned by test,
+so it can never call a sphere reachable that the layer then declines to draw.
+
+**Grid orientation labels** (`coord-sphere-labels.ts`) — SVG `<text>` under
+`#gal-grid-labels` / `#eq-grid-labels`, one pool per sphere, pooled once (one
+per line) and positioned + rotated each frame. `main.ts` passes each pool its
+own `isActive` predicate, so only the selected sphere's labels ever place —
+the equatorial predicate also ANDs in `equatorialSphereReachable`, since the
+3D lines self-hide by opacity and an SVG label has no alpha to inherit. Both
+groups are hidden in warp by the shared `body.warping #overlay` rule.
+**One label per grid line** — every meridian and every latitude ring (incl.
+the equator; no ring at the ±90° poles). Each line's sample directions are
+precomputed once through the spec's own `dirToIcrs`, the same frame the grid
+geometry uses — fixed in absolute space; per frame they project through
+`camera.position + dir × SPHERE_RADIUS_PC` so labels track the camera exactly
+like the grid.
 
 Rather than sit on the l/b node (where the text would cross the orthogonal
 line), each label **drops along its own line to where the line exits the
@@ -117,8 +201,8 @@ lines converge near an edge, a **deterministic repulsion pass**
 (`separateLabels`) spreads overlapping labels apart (fixed-order pairwise
 push + shove-out-of-chrome + re-clamp — no randomness, so a static camera is
 stable). Edge placement and repulsion are the pure, tested `edgeLabelPlacement`
-/ `separateLabels`. Values are whole degrees (`fmtDeg`) since every grid line
-is on an integer degree — longitude wraps to [0, 360), latitude stays signed.
+/ `separateLabels`. Values are whole degrees / whole hours because every grid
+line lands on one — the per-frame formatters are in the spec table above.
 
 **Sol + Galactic Centre arrows** (part of the HUD — `hud-overlay.ts`,
 toggled by `filter.showHud`, separately from the sphere/grid). Rendered
@@ -301,14 +385,23 @@ the same offset as the Sol/GC labels rather than at the vector
 midpoint. Clicking it aims the camera at the destination, matching
 the Sol/GC label affordance (warp stays on the `W` key).
 
-**State + UI:** two independent FilterState booleans:
+**State + UI:** two independent FilterState fields:
 
-- `showGalacticGrid` — gates the 3D grid sphere only. URL `grid=1`,
-  default-omitted. Panel checkbox lives under **Overlays**.
+- `coordSphere` — which sphere is up (`'none'` default). Panel 3-stop
+  control under **Overlays**, mirroring the detail-level stops; `S` cycles
+  it (`../ui/README.md`). On the wire it is FLAG_GRID plus zero-byte
+  presence bit 24 (`../util/url-state/README.md`): FLAG_GRID alone means
+  galactic, so a pre-equatorial shared link still restores a sphere and a
+  client predating bit 24 ignores it and shows the galactic one rather than
+  none.
 - `showHud` — gates the HUD: Sol/GC arrows in both modes, plus the
   OBSERVE-mode ring. URL `hud=1`, default-omitted. Panel checkbox lives
   under **Navigation** ("Head up display (HUD)") since the HUD's role is
   navigational orientation. Future HUD widgets hang off the same flag.
+
+Neither sphere is in the declutter cycle — both are user-owned chrome
+(`galacticCoordSphere` / `equatorialCoordSphere` in `USER_OWNED_IDS`,
+`../scene/README.md`), too many lines to sweep with a detail level.
 
 The disc has no *dedicated* checkbox by design — it's the orientation
 primitive the catalog itself was missing, and is hidden in chart mode
@@ -318,11 +411,12 @@ anyway. It is part of the declutter cycle, though: the detail level
 **Chart mode**:
 - Disc layer hides entirely (the 15 kpc reference ring reads as
   visual noise on a paper-chart background).
-- Sphere + grid swap stroke colour to `CHART_REFERENCE_INK` (`#3a3530`,
+- Either sphere swaps stroke colour to `CHART_REFERENCE_INK` (`#3a3530`,
   `../chart-mode/chart-palette.ts` — shared with the IAU constellation
   boundaries, which draw the same ink at half weight), no transparency, no
   blending. The equator/line opacity split is dropped in chart mode
-  (paper-chart aesthetic doesn't fade).
+  (paper-chart aesthetic doesn't fade) — except under an active
+  Sol-distance fade, which keeps blending on (§ Coordinate spheres).
 - Sol/GC arrows + HUD ring + POI ring/arrow/labels all flip to a deep
   saturated blue palette (`rgba(30, 64, 175, 0.85)`, the existing
   `--accent` token) with white halos on labels — distinct from
@@ -335,7 +429,7 @@ anyway. It is part of the declutter cycle, though: the detail level
   intentionally empty since the SVG class routing handles it.
 
 **Warp visibility:** each layer's registry entry
-(`src/client/scene/README.md`) hides the 3D disc + grid groups while
+(`src/client/scene/README.md`) hides the 3D disc + both sphere groups while
 `ctx.warpActive`; SVG arrow paths and labels are
 hidden via the existing `body.warping #overlay { display: none }` rule.
 

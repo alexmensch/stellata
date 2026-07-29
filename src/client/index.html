@@ -131,11 +131,13 @@
     </noscript>
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
-           rotated each frame by galactic-grid-labels.ts. Drawn early so the
-           background orientation grid sits behind the HUD / POI / star-name
-           overlays. -->
+      <!-- Coordinate-sphere edge labels — galactic l/b and equatorial RA/Dec,
+           one group each, only ever one populated (the spheres are mutually
+           exclusive). Pooled <text> positioned + rotated each frame by
+           coord-sphere-labels.ts. Drawn early so the background orientation
+           grid sits behind the HUD / POI / star-name overlays. -->
       <g id="gal-grid-labels"></g>
+      <g id="eq-grid-labels"></g>
       <!-- HUD ring — translucent screen-centred guide visible in OBSERVE mode
            when the HUD is on. Sized and positioned each frame by
            hud-overlay.ts. Drawn before the Sol/GC arrows so the arrow strokes
@@ -566,10 +568,21 @@
               <input id="show-milkyway" type="checkbox" checked />
               <span>Galactic background glow</span>
             </label>
-            <label class="checkbox-row">
-              <input id="show-galactic-grid" type="checkbox" />
-              <span>Galactic sphere</span>
-            </label>
+            <div class="sub-label-row" id="coord-sphere-row">
+              <label class="sub-label">Coordinate sphere</label>
+              <span class="row-actions" id="coord-sphere">
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="none" type="button">none</button>
+                <span class="sep">·</span>
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="galactic" type="button">galactic</button>
+                <span class="sep">·</span>
+                <button
+                  class="link-btn coord-sphere-stop"
+                  data-coord-sphere="equatorial"
+                  type="button"
+                  title="Earth-referenced — available near Sol only"
+                >equatorial</button>
+              </span>
+            </div>
             <label class="checkbox-row" id="show-chart-row" title="Available in observe mode">
               <input id="show-chart" type="checkbox" disabled />
               <span>Star chart mode</span>

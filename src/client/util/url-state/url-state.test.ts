@@ -562,9 +562,23 @@ describe('url-state', () => {
   });
 
   describe('flag byte (packFlags/unpackFlags)', () => {
-    it('round-trips showGalacticGrid', () => {
-      const { view } = roundtrip({ showGalacticGrid: true });
-      expect(view.showGalacticGrid).toBe(true);
+    it('round-trips a galactic coordinate sphere as FLAG_GRID alone', () => {
+      const { view } = roundtrip({ coordSphere: 'galactic' });
+      expect(view.coordSphere).toBe('galactic');
+    });
+
+    // Bit 24 layers over FLAG_GRID rather than replacing it, so a client
+    // predating the equatorial sphere ignores the unknown mask bit and still
+    // shows a sphere. Which means the equatorial blob is strictly longer.
+    it('round-trips an equatorial coordinate sphere via presence bit 24', () => {
+      const { view } = roundtrip({ coordSphere: 'equatorial' });
+      expect(view.coordSphere).toBe('equatorial');
+      expect(encodeBlob({ coordSphere: 'equatorial' }).length)
+        .toBeGreaterThan(encodeBlob({ coordSphere: 'galactic' }).length);
+    });
+
+    it('encodes no sphere for the default', () => {
+      expect(encodeBlob({ coordSphere: 'none' })).toBe(encodeBlob({}));
     });
 
     it('round-trips showHud', () => {
@@ -617,12 +631,12 @@ describe('url-state', () => {
 
     it('round-trips multiple flags simultaneously', () => {
       const { view } = roundtrip({
-        showGalacticGrid: true,
+        coordSphere: 'galactic',
         showHud: true,
         showConstellation: false,
         unit: 'pc',
       });
-      expect(view.showGalacticGrid).toBe(true);
+      expect(view.coordSphere).toBe('galactic');
       expect(view.showHud).toBe(true);
       expect(view.showConstellation).toBe(false);
       expect(view.unit).toBe('pc');
@@ -631,7 +645,7 @@ describe('url-state', () => {
     it('default flags are not encoded (no flags byte)', () => {
       // No flag bits → flags field is absent → smaller blob than +1 byte
       const empty = encodeBlob({});
-      const withFlag = encodeBlob({ showGalacticGrid: true });
+      const withFlag = encodeBlob({ coordSphere: 'galactic' });
       expect(withFlag.length).toBeGreaterThan(empty.length);
     });
   });
@@ -754,7 +768,7 @@ describe('url-state', () => {
         smin: 2.5,
         smax: 18,
         span: 8,
-        showGalacticGrid: true,
+        coordSphere: 'galactic',
         showConstellation: false,
         unit: 'pc',
         focus: { kind: 'sid', id: 101 },
@@ -777,7 +791,7 @@ describe('url-state', () => {
       expect(out.smin).toBeCloseTo(2.5, 1);
       expect(out.smax).toBeCloseTo(18, 1);
       expect(out.span).toBeCloseTo(8, 1);
-      expect(out.showGalacticGrid).toBe(true);
+      expect(out.coordSphere).toBe('galactic');
       expect(out.showConstellation).toBe(false);
       expect(out.unit).toBe('pc');
       expect(out.focus).toEqual(view.focus);
@@ -1035,7 +1049,7 @@ describe('url-state', () => {
     it('single-flag state is small', () => {
       // 1 version + 2-byte LEB128 mask (bit 13) + 1 flags byte = 4
       // bytes → 6 base64url chars. v2 was 5 bytes / 7 chars.
-      expect(encodeBlob({ showGalacticGrid: true }).length).toBeLessThanOrEqual(6);
+      expect(encodeBlob({ coordSphere: 'galactic' }).length).toBeLessThanOrEqual(6);
     });
 
     it('encodes shorter than v1 would for the same scalar fields', () => {
@@ -1066,7 +1080,7 @@ describe('url-state', () => {
     it('mid-bit mask (flags, bit 13) needs 2 bytes', () => {
       // bit 13 = 0x002000; LEB128 groups bits 0-6 (=0) and 7-13 (=64)
       // → 2 bytes (0x80, 0x40). 1 ver + 2 mask + 1 flags = 4 bytes.
-      const blob = encodeBlob({ showGalacticGrid: true });
+      const blob = encodeBlob({ coordSphere: 'galactic' });
       expect(blobBytes(blob)).toBe(4);
     });
 
@@ -1295,7 +1309,7 @@ describe('url-state', () => {
         version: 3,
         label: 'realistic share: cam + fov + mag + HIP focus + grid',
         blob: 'A5nAAQcAAEhCAACgwQAAyEIjVQFdfoA',
-        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, showGalacticGrid: true, focus: { kind: 'hip', id: 32349 } },
+        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, coordSphere: 'galactic', focus: { kind: 'hip', id: 32349 } },
       },
       {
         version: 3,

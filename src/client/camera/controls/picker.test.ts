@@ -128,7 +128,7 @@ function defaultFilter(overrides: Partial<FilterState> = {}): FilterState {
     sizeMaxOverridden: false,
     sizeSpanOverridden: false,
     showConstellation: true,
-    showGalacticGrid: false,
+    coordSphere: 'none',
     showHud: false,
     showMilkyway: true,
     showLgEmission: true,
