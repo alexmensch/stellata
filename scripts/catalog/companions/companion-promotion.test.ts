@@ -756,6 +756,66 @@ describe('anchor flux dimming', () => {
     const total = blendMag(anchor.absmag, newStars[0].absmag, newStars[1].absmag);
     expect(total).toBeCloseTo(blend, 6);
   });
+
+  // AR Cas' shape: WDS prints mag_pri per row for the whole subtree of the
+  // letter that row pairs, so the top-level A,C row's 4.87 already sums the
+  // sub-letters while the Aa,Ab row's 5.02 is A's own light. Only the faintest
+  // — most-decomposed — value names what the re-split's residual represents,
+  // and it is also the Δ reference every dmag_imputed member is measured from.
+  it('anchor-alone is the faintest mag_pri across the anchor rows, not the first', () => {
+    const blend = blendMag(5.02, 7.42);
+    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const rows = solveRows(
+      // A,C FIRST — a top-level row whose mag_pri is the brighter A blend. The
+      // ordering is the point: taking whichever row comes first picks this one.
+      { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
+      // Aa,Ab: the decomposed row. Ab is Δ2.40 off Aa's own 5.02.
+      { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(newStars).toHaveLength(2);
+    // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
+    // and nothing dims at all; against 5.02 the {Ab} subset lands exactly on
+    // the anchor's magnitude.
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(5.02, 3);
+    // The Δ reference is that same faintest value: 7.42 − 5.02, never 7.42 − 4.87.
+    expect(newStars[1].absmag - anchor.absmag).toBeCloseTo(2.40, 9);
+  });
+
+  // HD 64315's shape: multiples.tsv carries a system distance that predates the
+  // record's own override stack (its rows say 12.66 kpc against a Bailer-Jones
+  // 6.2 kpc), and the observed frame every hypothesis is compared against has
+  // to be the one the anchor's absmag was actually derived at.
+  it('the observed frame comes from the anchor position, not the row dist_pc', () => {
+    const blend = blendMag(2.1, 4.1);
+    const rows = (rowDistPc: number | null) => {
+      const r = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+      r[0].absmag = blend;
+      for (const row of r) row.distPc = rowDistPc;
+      return r;
+    };
+    // A row distance 10× the record's would put the observed frame 5 mag off,
+    // where every subset fits worse than leaving the anchor alone.
+    const stale = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const staleStats = promoteCompanions(
+      rows(100), [stale], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(staleStats.blendDimmedAnchors).toBe(1);
+    expect(stale.absmag).toBeCloseTo(2.1, 3);
+
+    // And a row with no distance at all no longer strands the fit as unfittable.
+    const absent = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const absentStats = promoteCompanions(
+      rows(null), [absent], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    expect(absentStats.blendDimMembersUnfit).toBe(0);
+    expect(absentStats.blendDimmedAnchors).toBe(1);
+    expect(absent.absmag).toBeCloseTo(2.1, 3);
+  });
 });
 
 describe('hasRenderableOrbit', () => {
