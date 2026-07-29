@@ -268,13 +268,15 @@ function gatherExcludeRects(): Rect[] {
 
 /**
  * Pool one SVG label per grid line of `spec`'s sphere and place them every
- * frame while `isActive` holds. Both spheres run one instance each; only one
- * is ever active, so the repulsion pass never mixes two frames' labels.
+ * frame while `groupOpacity` returns a positive value — which is also the
+ * alpha the labels draw at, so text dims in step with a sphere that fades.
+ * Both spheres run one instance each; only one is ever active, so the
+ * repulsion pass never mixes two frames' labels.
  */
 export function createCoordSphereLabels(
   stellata: Stellata,
   spec: CoordSphereSpec,
-  isActive: () => boolean,
+  groupOpacity: () => number,
 ): void {
   const group = document.getElementById(spec.labelGroupId) as unknown as SVGGElement | null;
   if (!group) return;
@@ -311,13 +313,26 @@ export function createCoordSphereLabels(
     group.style.display = on ? '' : 'none';
     groupVisible = on;
   };
+  // Poison so the first frame always writes, whatever opacity it resolves.
+  // A full-strength sphere *removes* the attribute rather than writing "1", so
+  // the never-fading galactic grid keeps exactly the CSS alpha it had before —
+  // an empty presentation attribute is invalid and its handling isn't uniform.
+  let lastOpacity = NaN;
+  const setGroupOpacity = (o: number) => {
+    if (o === lastOpacity) return;
+    lastOpacity = o;
+    if (o >= 1) group.removeAttribute('opacity');
+    else group.setAttribute('opacity', o.toFixed(3));
+  };
 
   stellata.on('frame', () => {
-    if (!isActive()) {
+    const opacity = groupOpacity();
+    if (!(opacity > 0)) {
       setGroupVisible(false);
       return;
     }
     setGroupVisible(true);
+    setGroupOpacity(opacity);
 
     const camera = stellata.camera;
     const camPos = camera.position;

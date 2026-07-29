@@ -96,15 +96,15 @@ Two toggleable spheres, **mutually exclusive** — `filter.coordSphere` is a
 grids drawn together are illegible, and their edge labels would fight in one
 `separateLabels` pass.
 
-`CoordSphere` (`coord-sphere.ts`) is the geometry, built once per frame from
-a `CoordSphereSpec`: equator + 16 latitude rings every 10° (range −80° to
-+80°) + `meridianCount` meridians, radius 50 kpc. `SPHERE_RADIUS_PC` is
-exported and reused by the edge labels and by the IAU boundary layer
+`CoordSphere` (`coord-sphere.ts`) is the geometry, built once from a
+`CoordSphereSpec`: equator + 16 latitude rings every 10° (−80° to +80°) +
+`meridianCount` meridians, radius 50 kpc. `SPHERE_RADIUS_PC` is exported and
+reused by the edge labels and the IAU boundary layer
 (`../constellation-boundaries/README.md`), so everything sits on one sphere.
 
-The spec (`coord-sphere-frames.ts`) is the single record pairing a frame's
-rotation with its meridian spacing, label formatters, and SVG label group —
-so the geometry and its labels cannot disagree about either:
+The spec (`coord-sphere-frames.ts`) pairs a frame's rotation with its meridian
+spacing, label formatters, and SVG label group in one record, so the geometry
+and its labels cannot disagree about either:
 
 | | galactic | equatorial |
 | --- | --- | --- |
@@ -156,31 +156,38 @@ applies `solFrameFadeFactor` over `EQUATORIAL_FADE_WINDOW_PC` = **0.4 pc →
 2.0 pc**: full strength across the whole solar system, gone before the first
 star.
 
-That window is the fixed pair `stellata-sp4q` derived; the boundary layer's
-magnitude-keyed quantile table is deliberately **not** reused, because its
-criterion (a star reading as misplaced relative to its cell *wall*) has no
-analogue for a camera-tracked frame grid, which has no walls. Both land in
-the same sub-parsec-to-a-few-parsecs band.
+The boundary layer's magnitude-keyed quantile table is deliberately **not**
+reused: its criterion (a star reading as misplaced relative to its cell
+*wall*) has no analogue for a frame grid, which has no walls. Both land in the
+same band anyway. And note what does *not* fade — the sphere is camera-tracked,
+not Sol-pinned, and RA/Dec axes are fixed in absolute space, so the geometry
+stays correctly aimed from anywhere. The fade is a *relevance* boundary.
 
-Note what does and doesn't fade: the sphere is **camera-tracked, not
-Sol-pinned**. RA/Dec axes are fixed in absolute space, so the geometry stays
-correctly aimed from anywhere — the fade is a *relevance* boundary, not a
-precision one.
+`equatorialSphereFadeAt(distFromSol)` is the alpha, and
+`equatorialSphereReachableAt` is just "that alpha > 0" — a separate threshold
+could disagree with the layer, and this pairing is pinned by test so it can't.
+`Stellata` binds both to the live frame.
 
-`equatorialSphereReachable(distFromSol)` is the gate both affordances share
-(`Stellata.equatorialSphereReachable()` binds it to the live frame): `S`
-skips the equatorial stop in its cycle, and the panel *disables* that stop,
-so neither can leave an enabled-but-invisible sphere. It is defined as
-"`solFrameFadeFactor` > 0" rather than a separate threshold, pinned by test,
-so it can never call a sphere reachable that the layer then declines to draw.
+**`coordSphere` never names a sphere that can't draw.** The layer's update
+deselects the equatorial sphere (`setFilter({ coordSphere: 'none' })`) on the
+frame the camera leaves the window — once, since the demotion clears its own
+trigger. Without it the panel's stop sits highlighted *and* disabled, reading
+as nothing selected. So travelling out and back does **not** restore the
+sphere: deliberate, and the same shape as chart mode auto-clearing on
+observe→navigate. The affordances then only have to block *entering* the state
+— `S` skips the stop (`nextCoordSphereFrame`), the panel disables it. That
+disabled flag rides `'frame'` with a cached boolean, not `syncFromFilter`,
+since camera distance is what changes and no state event announces it.
 
 **Grid orientation labels** (`coord-sphere-labels.ts`) — SVG `<text>` under
 `#gal-grid-labels` / `#eq-grid-labels`, one pool per sphere, pooled once (one
-per line) and positioned + rotated each frame. `main.ts` passes each pool its
-own `isActive` predicate, so only the selected sphere's labels ever place —
-the equatorial predicate also ANDs in `equatorialSphereReachable`, since the
-3D lines self-hide by opacity and an SVG label has no alpha to inherit. Both
-groups are hidden in warp by the shared `body.warping #overlay` rule.
+per line) and positioned + rotated each frame. `main.ts` passes each pool a
+`groupOpacity` closure — **an alpha, not a boolean**: 0 hides the group, and
+anything below 1 lands on the group's `opacity` so the equatorial labels dim
+in step with the lines they annotate (a boolean would leave mid-fade text
+crisp over a nearly-gone grid). At full strength the attribute is *removed*
+rather than set to `1`, so the galactic grid keeps exactly the CSS alpha it
+always had. Both groups hide in warp via `body.warping #overlay`.
 **One label per grid line** — every meridian and every latitude ring (incl.
 the equator; no ring at the ±90° poles). Each line's sample directions are
 precomputed once through the spec's own `dirToIcrs`, the same frame the grid

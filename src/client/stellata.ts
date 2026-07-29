@@ -30,7 +30,11 @@ import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { CoordSphere } from './galactic/coord-sphere';
 import { GALACTIC_SPHERE_SPEC } from './galactic/coord-sphere-frames';
-import { EquatorialSphere, equatorialSphereReachable } from './galactic/equatorial-sphere';
+import {
+  EquatorialSphere,
+  equatorialSphereFadeAt,
+  equatorialSphereReachableAt,
+} from './galactic/equatorial-sphere';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
@@ -1152,6 +1156,15 @@ export class Stellata implements FrameAnchor {
       // Camera-tracked like its galactic sibling; the Sol-distance fade the
       // layer applies on top is the only distance-dependent behaviour.
       update: (ctx) => {
+        // `coordSphere` must never name a sphere that can't draw — travelling
+        // out of the equatorial fade deselects it rather than leaving the
+        // panel's stop highlighted-yet-disabled, which reads as nothing
+        // selected. Fires once per crossing, since the demotion clears the
+        // condition that triggered it.
+        if (this.filter.coordSphere === 'equatorial'
+            && !equatorialSphereReachableAt(ctx.distFromSol)) {
+          this.setFilter({ coordSphere: 'none' });
+        }
         if (!ctx.warpActive && this.filter.coordSphere === 'equatorial') {
           this.equatorialSphere.update(ctx.camera.position, ctx.distFromSol);
         } else {
@@ -2075,11 +2088,17 @@ export class Stellata implements FrameAnchor {
     this.filters.clearSizeOverrides(fields);
   }
 
-  /** Is the equatorial coordinate sphere visible at the camera's current
-   *  distance from Sol? The `S` cycle and the panel's 3-stop control both gate
-   *  on this so neither can select a sphere that has faded to nothing. */
+  /** Stroke alpha the equatorial coordinate sphere draws at from the camera's
+   *  current distance from Sol. Its SVG edge labels ride the same value. */
+  equatorialSphereFade(): number {
+    return equatorialSphereFadeAt(this.frameCtx.distFromSol);
+  }
+
+  /** Is the equatorial coordinate sphere visible at all from here? The `S`
+   *  cycle and the panel's 3-stop control both gate on this so neither can
+   *  select a sphere that has faded to nothing. */
   equatorialSphereReachable(): boolean {
-    return equatorialSphereReachable(this.frameCtx.distFromSol);
+    return this.equatorialSphereFade() > 0;
   }
 
   // Declutter cycle. detailPermits is the per-frame read path layers gate

@@ -7,8 +7,13 @@ in both navigate and observe modes.
 ## Files
 
 - `controls.ts` — settings-panel bindings (distance / magnitude / size
-  sliders, spectral chips, overlay toggles) + the slider↔distance log
-  mapping (`sliderToDist` / `distToSlider`).
+  sliders, spectral chips, overlay toggles, the detail-level and
+  coordinate-sphere 3-stop controls) + the slider↔distance log
+  mapping (`sliderToDist` / `distToSlider`). Reverse-sync runs off
+  `'filter'` / `'cameraMode'`; the one exception is the coordinate-sphere
+  control's disabled state, which tracks camera distance and so rides
+  `'frame'` behind a cached flag (`../../galactic/README.md`
+  § Coordinate spheres).
 - `input/` — canvas gestures + the camera state they drive: the click
   FSM, the reference up axis (galactic-north roll lock), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its

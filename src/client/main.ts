@@ -265,10 +265,10 @@ async function main() {
     createPoiOverlay(stellata, starLabels);
     createClickRipple(stellata);
     createCoordSphereLabels(stellata, GALACTIC_SPHERE_SPEC,
-      () => stellata.getFilter().coordSphere === 'galactic');
+      () => stellata.getFilter().coordSphere === 'galactic' ? 1 : 0);
     createCoordSphereLabels(stellata, EQUATORIAL_SPHERE_SPEC,
       () => stellata.getFilter().coordSphere === 'equatorial'
-        && stellata.equatorialSphereReachable());
+        ? stellata.equatorialSphereFade() : 0);
     createPlanetLabels(stellata);
     createProbeLabels(stellata);
     createHeliopauseLabel(stellata);

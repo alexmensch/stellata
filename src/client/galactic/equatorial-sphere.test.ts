@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { solFrameFadeFactor } from './galactic-fade';
-import { EQUATORIAL_FADE_WINDOW_PC, equatorialSphereReachable } from './equatorial-sphere';
+import {
+  EQUATORIAL_FADE_WINDOW_PC,
+  equatorialSphereFadeAt,
+  equatorialSphereReachableAt,
+} from './equatorial-sphere';
 
 const ALPHA_CEN_PC = 1.34;
 // Neptune's semi-major axis, as a stand-in for "still inside the planets".
@@ -22,21 +26,40 @@ describe('EQUATORIAL_FADE_WINDOW_PC', () => {
   });
 });
 
-describe('equatorialSphereReachable', () => {
+describe('equatorialSphereReachableAt', () => {
   it('holds inside the window and fails at or past the outer edge', () => {
-    expect(equatorialSphereReachable(0)).toBe(true);
-    expect(equatorialSphereReachable(EQUATORIAL_FADE_WINDOW_PC.innerPc)).toBe(true);
-    expect(equatorialSphereReachable(ALPHA_CEN_PC)).toBe(true);
-    expect(equatorialSphereReachable(EQUATORIAL_FADE_WINDOW_PC.outerPc)).toBe(false);
-    expect(equatorialSphereReachable(1e6)).toBe(false);
+    expect(equatorialSphereReachableAt(0)).toBe(true);
+    expect(equatorialSphereReachableAt(EQUATORIAL_FADE_WINDOW_PC.innerPc)).toBe(true);
+    expect(equatorialSphereReachableAt(ALPHA_CEN_PC)).toBe(true);
+    expect(equatorialSphereReachableAt(EQUATORIAL_FADE_WINDOW_PC.outerPc)).toBe(false);
+    expect(equatorialSphereReachableAt(1e6)).toBe(false);
   });
 
   // The `S` cycle and the panel stop both gate on this, so it must never call a
   // sphere reachable that the layer would then decline to draw.
   it('agrees with the layer’s own visibility cut', () => {
     for (const d of [0, 0.2, 0.4, 1, 1.9, 2, 2.1, 10]) {
-      expect(equatorialSphereReachable(d))
+      expect(equatorialSphereReachableAt(d))
         .toBe(solFrameFadeFactor(d, EQUATORIAL_FADE_WINDOW_PC) > 0);
+    }
+  });
+});
+
+describe('equatorialSphereFadeAt', () => {
+  // The SVG edge labels ride this same value, so a mid-fade grid whose text
+  // stayed crisp would be the one visible inconsistency the fade can produce.
+  it('is the stroke alpha, not just a visibility flag', () => {
+    const mid = (EQUATORIAL_FADE_WINDOW_PC.innerPc + EQUATORIAL_FADE_WINDOW_PC.outerPc) / 2;
+    const f = equatorialSphereFadeAt(mid);
+    expect(f).toBeGreaterThan(0);
+    expect(f).toBeLessThan(1);
+  });
+
+  it('bounds to [0, 1] across the whole travel range', () => {
+    for (const d of [0, 0.4, 1, 2, 10, 1e6]) {
+      const f = equatorialSphereFadeAt(d);
+      expect(f).toBeGreaterThanOrEqual(0);
+      expect(f).toBeLessThanOrEqual(1);
     }
   });
 });

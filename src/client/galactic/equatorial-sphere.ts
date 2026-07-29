@@ -23,11 +23,19 @@ import { solFrameFadeFactor, type SolFrameFadeWindow } from './galactic-fade';
  */
 export const EQUATORIAL_FADE_WINDOW_PC: SolFrameFadeWindow = { innerPc: 0.4, outerPc: 2.0 };
 
-/** Is the sphere visible at all at this distance from Sol? The `S` cycle skips
- *  the equatorial stop when false, so the key never leaves an
- *  enabled-but-invisible sphere. */
-export function equatorialSphereReachable(distFromSolPc: number): boolean {
-  return solFrameFadeFactor(distFromSolPc, EQUATORIAL_FADE_WINDOW_PC) > 0;
+/** Stroke-opacity multiplier at this distance from Sol. Also what the SVG edge
+ *  labels ride, so text dims in step with the lines it annotates rather than
+ *  staying crisp over a nearly-faded grid. */
+export function equatorialSphereFadeAt(distFromSolPc: number): number {
+  return solFrameFadeFactor(distFromSolPc, EQUATORIAL_FADE_WINDOW_PC);
+}
+
+/** Is the sphere visible at all at this distance from Sol? Both affordances
+ *  gate on this — the `S` cycle skips the equatorial stop and the panel
+ *  disables it — and the shell deselects the sphere outright on the crossing,
+ *  so nothing can leave it enabled-but-invisible. */
+export function equatorialSphereReachableAt(distFromSolPc: number): boolean {
+  return equatorialSphereFadeAt(distFromSolPc) > 0;
 }
 
 /**
@@ -42,7 +50,7 @@ export class EquatorialSphere {
   readonly group = this.sphere.group;
 
   update(cameraPosition: THREE.Vector3, distFromSolPc: number): void {
-    const scale = solFrameFadeFactor(distFromSolPc, EQUATORIAL_FADE_WINDOW_PC);
+    const scale = equatorialSphereFadeAt(distFromSolPc);
     if (scale <= 0) {
       this.group.visible = false;
       return;
