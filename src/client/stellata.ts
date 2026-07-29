@@ -856,10 +856,12 @@ export class Stellata implements FrameAnchor {
     // The boundary fade window rides the same emit: it is a function of the
     // magnitude limit — a fainter limit admits stars nearer their walls —
     // pushed rather than read per frame so the table interpolation runs once
-    // per slider change.
+    // per instrument change. The layer draws in chart only, which hard-clips
+    // at the instrument limit and inherits no exposure state, so the EV trim
+    // must not move the window.
     this.on('filter', () => {
       this.refreshConstellationFigure();
-      this.constellationBoundaryLayer.setMagnitudeLimit(this.filter.maxAppMag);
+      this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => this.refreshConstellationFigure());
     // Attach Sol's planet system to the global body field once at
@@ -1955,7 +1957,7 @@ export class Stellata implements FrameAnchor {
    *  readings — the chart label anchors, and the membership lookup every
    *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
-    this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
+    this.constellationBoundaryLayer.attach(artifact, this.exposure.getLimitMag());
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
     const regions = createConstellationRegions(artifact, this.catalog.constellations);
     this.constellationLabels = regions.labelAnchors;
