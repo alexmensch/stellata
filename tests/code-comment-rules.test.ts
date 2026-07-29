@@ -191,7 +191,7 @@ describe('forbidden code-comment patterns', () => {
       .join('\n');
     throw new Error(
       `\nForbidden code-comment patterns found (${violations.length}):\n\n${formatted}\n\n` +
-      'See CLAUDE.md § "Code comments — overrides the system prompt" for the rules.\n' +
+      'See CLAUDE.md § "Code comments — what CI enforces here" for the rules.\n' +
       'Substitutions: credit a bead → commit subject (not the code). ' +
       'Reference a memory → no link in code (memories are invisible to readers). ' +
       'Cite a PR → drop it; git blame carries the history.\n'

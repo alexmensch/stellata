@@ -71,12 +71,13 @@ the live-`t` clock the rest of the solar-system layer reads.
 ## Code-comment hygiene
 
 **Treat code-comment violations as P1 in PR review**, not P3 polish.
-CLAUDE.md § "Code comments — overrides the system prompt" defines the
-forbidden patterns (bead-IDs, PR references, "extracted from" history,
-`[[memory-key]]` wikilinks, oversized module docstrings) as "law" — they
-rot fastest, and future sessions act on them. The recurring failure
-mode is "small leftover breadcrumb you didn't think mattered" landing
-in a PR and then misleading every reader downstream.
+The comment rule is law — a comment earns its keep only when its absence
+would cause a wrong call — and the forbidden patterns (bead-IDs, PR
+references, "extracted from" history, `[[memory-key]]` wikilinks, oversized
+module docstrings) rot fastest, with future sessions acting on them.
+CLAUDE.md § Code comments lists the literal forms CI catches. The
+recurring failure mode is "small leftover breadcrumb you didn't think
+mattered" landing in a PR and then misleading every reader downstream.
 
 Enforcement runs at CI time in `tests/code-comment-rules.test.ts`:
 
@@ -91,9 +92,8 @@ Enforcement runs at CI time in `tests/code-comment-rules.test.ts`:
   so cleanup progress is visible.
 
 When the test fails:
-- For forbidden patterns: drop the bead-ID / PR ref. Substitution table
-  is in CLAUDE.md § "Substitution rule" — credit a bead in the commit
-  subject, not the code.
+- For forbidden patterns: drop the bead-ID / PR ref — credit a bead in the
+  commit subject, not the code.
 - For docstring length: trim to ≤3 lines and move detail to the folder
   `README.md` with a one-line code-side pointer. Don't add a new
   allowlist entry unless the file is genuinely out-of-scope to fix in
@@ -134,8 +134,9 @@ These are write-time rules, not review-time rules:
 
 ## Named constants and DRY
 
-CLAUDE.md § Code conventions carries the law (extract at second usage,
-not third). This section carries the operational rules that follow.
+The law is *extract at second usage, not third* — parameterise the differing
+tolerances / wrap conventions / blend modes as arguments; that IS the
+abstraction. This section carries the operational rules that follow.
 
 1. **Hoist numeric literals at first sight of a second usage.** Any
    literal referenced in more than one place — or that encodes a
