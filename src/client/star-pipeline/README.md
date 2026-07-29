@@ -327,7 +327,7 @@ arcsec_per_px = fov_deg · 3600 / viewport_height_css_px
 K = kDensity · kMultiplier · max(1, TARGET_PX · arcsec_per_px / psfArcsec)
 ```
 
-so `sizeMinPx = σ·K / arcsec_per_px = TARGET_PX` (2.16 px) identically:
+so `sizeMinPx = σ·K / arcsec_per_px = TARGET_PX` (2.592 px) identically:
 **star pixel size is invariant in FOV and in viewport size**, until K
 floors at 1 and the true 30″ PSF resolves, past which the disc grows with
 the plate scale. What zooming buys is *separation, not size* — a close

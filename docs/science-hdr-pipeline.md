@@ -754,18 +754,20 @@ floors at 1 and true physics takes over. Three problems close at once:
   `TARGET_PX`. The apologetic refDim compromise retires rather than being
   re-tuned.
 
-`TARGET_PX` is the one calibration this introduces, and **2.16 shipped**:
-it preserves `K = 12` at 50° / 1080 px height — the *angular* exaggeration
-the retired per-preset model applied — rather than its rendered pixel
-size. (3.84 was the other defensible anchor; it would have held rendered
-size fixed on a 1920×1080 desktop, at the cost of stars reading larger
-than the model warrants, which smoke confirmed.) Either way every
+`TARGET_PX` is the one calibration this introduces, and **2.592 shipped**,
+set by eye against the real sky in smoke. The two derived candidates both
+missed: 2.16 (preserving the retired `K = 12`'s angular exaggeration at
+50° / 1080 px) read slightly small, and 3.84 (preserving its rendered
+pixel size on 1920×1080) clearly large. 2.592 is 1.2× the former. Note it
+must be `TARGET_PX` that carries this calibration and not the debug
+multiplier or `K_density`, which multiply the *floored* term and so would
+hold K above 1 at every zoom — see § the floor below. Either way every
 viewport converges on one size instead of scattering — ultrawides shrink
 toward it, small laptops grow toward it.
 
 **Where K floors depends on `TARGET_PX`.** `K = 1` at
 `arcsec_per_px = σ/TARGET_PX`, so on a 1080-px viewport the crossover is
-**4.17°** at 2.16 (it would be 2.34° at 3.84). Below it the true 30″ PSF
+**3.47°** at 2.592 (4.17° at 2.16, 2.34° at 3.84). Below it the true 30″ PSF
 is wider than a pixel and the disc **grows** as the FOV narrows — the
 honest angular size, no exaggeration left to shrink.
 
@@ -998,7 +1000,7 @@ day one — the fullscreen pass and the inline path can never drift.
   before concluding `L_ADAPT` is wrong. The known exception is Sol at
   1 AU, 2.2 mag out of reach by design.
 - **FOV invariants (H16)** — star pixel size constant from 120° down to
-  the `K = 1` crossover (4.17° on a 1080-px viewport at `TARGET_PX` 2.16),
+  the `K = 1` crossover (3.47° on a 1080-px viewport at `TARGET_PX` 2.592),
   below which the resolved 30″ PSF makes the disc *grow*; a close pair
   merged at 50° resolving at 10°; no new star appearing at any FOV; the MW
   band dimming quadratically (the accepted § 3.3 consequence, not a

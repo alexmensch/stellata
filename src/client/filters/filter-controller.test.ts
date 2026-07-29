@@ -4,6 +4,10 @@ import {
   arcsecPerPx,
   DEFAULT_FILTER,
   INSTRUMENTS,
+  STAR_K_MULTIPLIER_DEFAULT,
+  STAR_K_MULTIPLIER_MAX,
+  STAR_K_MULTIPLIER_MIN,
+  STAR_K_MULTIPLIER_STEP,
   STAR_PHYSICS_FACTOR,
   starExaggerationK,
   resetStarKMultiplier,
@@ -134,6 +138,15 @@ describe('FilterController', () => {
     expect(camera.updateProjectionMatrix).not.toHaveBeenCalled();
     expect(refreshOrbitFloor).not.toHaveBeenCalled();
     expect(emitted).toEqual([]);
+  });
+
+  it('centres the multiplier slider on the calibrated default', () => {
+    // controls.ts drives the slider's bounds from these, so the default
+    // landing mid-track is a property of the constants, not the markup.
+    expect((STAR_K_MULTIPLIER_MIN + STAR_K_MULTIPLIER_MAX) / 2)
+      .toBeCloseTo(STAR_K_MULTIPLIER_DEFAULT, 12);
+    expect((STAR_K_MULTIPLIER_DEFAULT - STAR_K_MULTIPLIER_MIN) / STAR_K_MULTIPLIER_STEP)
+      .toBe(10);
   });
 
   it('getStarExaggerationK reports the derived K, not the slider term', () => {
@@ -267,10 +280,13 @@ describe('starPxSizes — plate-scale-derived K', () => {
     }
   });
 
-  it('pins the crossover: K = 1 exactly, and the disc grows below it', () => {
+  it('pins the crossover: K floors at 1, and the disc grows below it', () => {
     const fovAtCrossover = (CROSSOVER_ARCSEC_PER_PX * 1080) / 3600;
-    expect(fovAtCrossover).toBeCloseTo(4.1667, 4);
-    expect(starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX)).toBe(1);
+    expect(fovAtCrossover).toBeCloseTo(3.4722, 4);
+    // The boundary itself is a float knife-edge — σ/TARGET_PX back through
+    // TARGET_PX/σ round-trips to 1 ± an epsilon, so the exact-equality
+    // claim belongs below the crossover, where the floor is unambiguous.
+    expect(starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX)).toBeCloseTo(1, 12);
     // Narrower still: K stays floored, so the disc tracks the true PSF.
     const narrower = starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX / 4);
     expect(narrower).toBe(1);

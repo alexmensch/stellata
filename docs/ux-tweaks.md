@@ -42,14 +42,15 @@ for the surrounding context.
   ring in observe) and the start of the Sol/GC arrow shafts.
 - **Constellation polygon prominence** — `#con-polygon` stroke/fill in
   `styles.css` (currently deliberately subtle).
-- **Star size target** — `TARGET_PX` (2.16 px) in
+- **Star size target** — `TARGET_PX` (2.592 px) in
   `filters/filter-state.ts`: the pixel size a threshold star lands on at
   every FOV and every viewport height. sizeMin/Max are derived from it
   through `starPxSizes` (with the √Δm factor for max), so this is the one
-  number that moves absolute star size. 2.16 preserves the old K = 12 at
-  50° / 1080 px — the pre-plate-scale *angular* exaggeration; 3.84 is the
-  other defensible anchor (it would preserve rendered pixel size on
-  1920×1080 instead, and stars read noticeably larger).
+  number that moves absolute star size, and the only one that should be
+  used for it — the debug multiplier and `kDensity` multiply the floored
+  plate-scale term, so a non-unit default keeps K above 1 at every zoom.
+  2.592 was set by eye against the real sky (2.16 read small, 3.84
+  large).
 - **Star exaggeration multiplier** — the "Star size exaggeration" slider
   is a multiplier on the plate-scale-derived K (default 1, range
   0.25–4·). Higher = bolder, more cartoonish stars; lower = more literal

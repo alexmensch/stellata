@@ -119,14 +119,21 @@ export const ALL_SPECT_MASK = 0b111111111;
 export const STAR_PHYSICS_FACTOR = 1.84;
 
 /** Pixel size a threshold star lands on, at every FOV and every
- *  viewport height. 2.16 preserves the pre-plate-scale *angular*
- *  exaggeration (the old K = 12 at 50° on 1080 px) rather than its
- *  rendered pixel size, so stars read smaller than they used to. */
-export const TARGET_PX = 2.16;
+ *  viewport height — the one number that moves absolute star size.
+ *  Calibrated by eye against the real sky (docs/science-stellar-modelling.md
+ *  § Stellar perception model), not derived. */
+export const TARGET_PX = 2.592;
 
 // Debug-panel multiplier on the derived exaggeration K. 1 = the
 // plate-scale derivation untouched.
 export const STAR_K_MULTIPLIER_DEFAULT = 1;
+
+/** Multiplier slider bounds, kept symmetric about
+ *  `STAR_K_MULTIPLIER_DEFAULT` so the calibrated value sits mid-track and
+ *  a drag either way reads as an equal-sized departure from it. */
+export const STAR_K_MULTIPLIER_MIN = 0.5;
+export const STAR_K_MULTIPLIER_MAX = 1.5;
+export const STAR_K_MULTIPLIER_STEP = 0.05;
 let starKMultiplier = STAR_K_MULTIPLIER_DEFAULT;
 
 export function getStarKMultiplier(): number { return starKMultiplier; }

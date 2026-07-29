@@ -2,6 +2,9 @@ import type { Stellata } from '../../stellata';
 import {
   ALL_SPECT_MASK,
   DEFAULT_FOV,
+  STAR_K_MULTIPLIER_MAX,
+  STAR_K_MULTIPLIER_MIN,
+  STAR_K_MULTIPLIER_STEP,
 } from '../../filters/filter-state';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
@@ -187,6 +190,11 @@ export function bindControls(stellata: Stellata) {
   document.getElementById('fov-reset')!.addEventListener('click', () => {
     stellata.setCameraFov(DEFAULT_FOV);
   });
+  // Bounds come from the constants so the calibrated default stays
+  // mid-track (`filters/filter-state.ts`).
+  exag.min = String(STAR_K_MULTIPLIER_MIN);
+  exag.max = String(STAR_K_MULTIPLIER_MAX);
+  exag.step = String(STAR_K_MULTIPLIER_STEP);
   exag.addEventListener('input', () => {
     stellata.setStarKMultiplier(Number(exag.value));
   });
