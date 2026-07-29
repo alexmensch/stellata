@@ -131,7 +131,14 @@ Each AT-HYG row walks through, inside `readStars`:
 8. **Constellation** — positional, from the resolved xyz
    (§ Positional constellation membership). AT-HYG's `con` cell is read
    separately, as the DESIGNATION's constellation only.
-9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+9. **Johnson V and absmag** (`resolveVMagnitude`, then
+   `apparentToAbsoluteMagnitude` on the distance the whole override stack
+   settled). See `../photometry/README.md` § The V cascade. The tier that
+   won is kept on the record as `vVia`, because it decides whether the
+   magnitude is the system's blend or one component's — companion
+   promotion's flux conservation may only subtract a companion's light
+   from a blend (`../companions/README.md` § Anchor flux conservation).
+10. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
@@ -139,7 +146,7 @@ Each AT-HYG row walks through, inside `readStars`:
    models neither). Clamped to [0.08, 2500] R☉.
 
 Each kept record carries `athygRowId` — AT-HYG's own `id`, build-time-only
-like `athygDist`/`athygDistSrc`. Non-null is the AT-HYG-derived predicate
+like `athygDist`/`athygDistSrc`/`vVia`. Non-null is the AT-HYG-derived predicate
 (promoted companions get `null`) and the join key back to printed CSV cells;
 `../spine/README.md` is its consumer.
 

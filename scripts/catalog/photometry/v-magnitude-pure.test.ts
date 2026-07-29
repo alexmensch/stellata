@@ -11,6 +11,7 @@ import {
   isRielloTransformable,
   resolveVMagnitude,
   rielloGMinusV,
+  vTierIsSystemBlend,
   type GaiaPhotometry,
 } from './v-magnitude-pure';
 
@@ -126,5 +127,18 @@ describe('emptyVViaPartition', () => {
     const partition = emptyVViaPartition();
     expect(Object.keys(partition).sort()).toEqual([...V_VIA_VALUES].sort());
     expect(Object.values(partition).every((n) => n === 0)).toBe(true);
+  });
+});
+
+describe('vTierIsSystemBlend', () => {
+  // Companion promotion may only subtract a companion's flux from a magnitude
+  // that sums the system, so a tier wrongly reported here double-counts or
+  // strands the companion's light.
+  it('is true for the printed tiers and false for Gaia and for no cascade', () => {
+    expect(vTierIsSystemBlend('printed_hip')).toBe(true);
+    expect(vTierIsSystemBlend('catalogued')).toBe(true);
+    expect(vTierIsSystemBlend('gaia_riello')).toBe(false);
+    expect(vTierIsSystemBlend('none')).toBe(false);
+    expect(vTierIsSystemBlend(null)).toBe(false);
   });
 });

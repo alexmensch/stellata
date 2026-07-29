@@ -109,6 +109,12 @@ export interface Star {
    *  AT-HYG-derived predicate the inherited-spine generator selects on, and
    *  its join key back to the printed CSV cells. */
   athygRowId: number | null;
+  /** Which cascade tier supplied the V this record's absmag was derived from,
+   *  `null` on records minted rather than read (promoted companions). Read by
+   *  companion promotion's flux conservation, which may only subtract a
+   *  companion's light from a magnitude that blends the system —
+   *  `vTierIsSystemBlend` in ../photometry/v-magnitude-pure.ts. */
+  vVia: VVia | null;
   /** Build-time-only synthetic identifier. See
    *  scripts/catalog/README.md § Companion promotion. */
   syntheticId: string | null;
@@ -539,6 +545,7 @@ export async function readStars(
       athygDist,
       athygDistSrc,
       athygRowId: parseIntOrNull(row.id),
+      vVia: vRes.via,
       syntheticId: null,
     });
   }

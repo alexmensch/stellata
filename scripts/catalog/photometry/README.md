@@ -10,7 +10,8 @@ consumes this is `../parse/README.md` § Per-row pipeline.
 ```
 scripts/catalog/photometry/
   v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, its validity
-                                 gate, and the three-tier V cascade. Pure.
+                                 gate, the three-tier V cascade, and which
+                                 tiers yield a system blend. Pure.
   hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
                                  printed Johnson V. Shared by the cascade's
                                  bright tier and ../classic-ids/'s binding
@@ -27,7 +28,24 @@ V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
 
 `resolveVMagnitude` returns the value **and** the tier that produced it, so
 `vVia` routing counts are pinned in build-counts the same way the direction
-cascade pins `directionVia`.
+cascade pins `directionVia`. The tier also rides on the record, because it
+answers a question no consumer can answer from the magnitude alone.
+
+## Which tiers give a system blend — `vTierIsSystemBlend`
+
+A printed tier publishes one magnitude per catalogue entry, and a close pair is
+one entry, so `printed_hip` and `catalogued` V sum every component the
+catalogue failed to split. `gaia_riello` does not: Gaia deblends a large part of
+the sub-arcsec population into per-component sources, and on 2,971 of the pairs
+whose secondary row carries the primary's source_id the transformed V lands
+nearer WDS's component-A magnitude than the pair blend in ~46% of cases —
+against ~13% for the printed tier, which is the signature of Gaia having
+resolved the pair the cross-match could not.
+
+Anything subtracting a companion's flux from a record must gate on this or it
+double-counts: `../companions/README.md` § Anchor flux conservation is the
+consumer, and `RIELLO_G_MINUS_V_SIGMA` is the decisive margin its subset solve
+compares hypotheses at, since a Gaia-derived V is only good to that σ.
 
 **absmag is derived from this V, never tabulated.** `apparentToAbsoluteMagnitude`
 runs once on the final distance the override stack settled, so a distance

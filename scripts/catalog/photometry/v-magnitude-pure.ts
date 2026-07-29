@@ -93,6 +93,19 @@ export function resolveVMagnitude(
   return { v: null, via: 'none' };
 }
 
+/** Whether a V from this tier is the whole SYSTEM's blended magnitude — every
+ *  component the source catalogue failed to resolve, summed into one value.
+ *  True for the printed tiers, which carry one magnitude per catalogue entry
+ *  and hold a close pair as one entry. `gaia_riello` is not: Gaia deblends much
+ *  of the sub-arcsec population into per-component sources, so a G-derived V
+ *  may already exclude a companion. `null` is a record no cascade ran on (a
+ *  minted companion), whose magnitude is per-component by construction.
+ *  Subtracting a companion's flux from a record double-counts unless gated on
+ *  this — see ../companions/README.md § Anchor flux conservation. */
+export function vTierIsSystemBlend(via: VVia | null): boolean {
+  return via === 'printed_hip' || via === 'catalogued';
+}
+
 export function emptyVViaPartition(): Record<VVia, number> {
   return { gaia_riello: 0, printed_hip: 0, catalogued: 0, none: 0 };
 }

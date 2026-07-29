@@ -36,6 +36,9 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     athygDist: null,
     athygDistSrc: null,
     athygRowId: null,
+    // The production majority (310,939 of 313,257), so a test whose star must
+    // read as a system blend has to opt into a printed tier explicitly.
+    vVia: 'gaia_riello',
     syntheticId: null,
     ...overrides,
   };
