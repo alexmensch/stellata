@@ -120,6 +120,9 @@ export const KNOWN_MISSING_HIPS: Map<number, string> = new Map([
   [89341, 'μ Sagittarii (Polis) — HYG lacks parallax; upstream data gap'],
 ]);
 
+const IAU_EDGES_EPOCH = 'B1875';
+const IAU_EDGES_SOURCE = 'https://pbarbier.com/constellations/edges_18.txt';
+
 // The `edges` block of Stellarium's modern sky culture: the 781 IAU
 // (Delporte 1930) boundary segments at equinox B1875, parsed by
 // `src/client/constellation-boundaries/iau-boundaries-pure.ts`.
@@ -131,13 +134,23 @@ export function readIauEdgeRecords(
   if (!Array.isArray(edges) || edges.length === 0) {
     throw new Error(`Stellarium sky culture carries no edges array: ${srcStellariumPath}`);
   }
-  if (raw.edges_epoch !== 'B1875') {
+  if (raw.edges_epoch !== IAU_EDGES_EPOCH) {
     throw new Error(
-      `Stellarium edges are at epoch ${raw.edges_epoch}, expected B1875 — the boundary `
-      + 'assignment precesses positions to B1875 before testing against them.',
+      `Stellarium edges are at epoch ${raw.edges_epoch}, expected ${IAU_EDGES_EPOCH} — the `
+      + 'boundary assignment precesses positions to that equinox before testing against them.',
     );
   }
-  return edges as string[];
+  // A different upstream table can share the epoch while differing in side
+  // conventions or segment count, both of which the region walk depends on.
+  if (raw.edges_source !== IAU_EDGES_SOURCE) {
+    throw new Error(
+      `Stellarium edges came from ${raw.edges_source}, expected ${IAU_EDGES_SOURCE}`,
+    );
+  }
+  if (!edges.every((record): record is string => typeof record === 'string')) {
+    throw new Error(`Stellarium edges array holds a non-string record: ${srcStellariumPath}`);
+  }
+  return edges;
 }
 
 // Extracts classical stick-figure lines per IAU constellation from

@@ -205,3 +205,10 @@ the *wrong* cell is `(distance to its wall + tolerance) × its distance
 from Sol` — sub-parsec for the naked-eye population, which is what
 makes the drawn boundaries a Sol-neighbourhood affordance that
 self-hides before the first star.
+
+**Cost.** It is a linear scan of all 781 arcs with 2–4 trig calls each,
+so it suits per-position queries, not per-star sweeps. sp4q.3 wants the
+fade quantiles over the full catalogue: ~313k × 781 is a quarter-billion
+arc evaluations, minutes of build time in the naive loop. Bucket the
+edges by Dec band (or reuse the cell grid, whose cells already know
+which arcs bound them) before reaching for that.
