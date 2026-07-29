@@ -1,6 +1,6 @@
 # URL state
 
-All Stellata UI state — camera pose, focus, magnitude settings, overlay
+All Stellata UI state — camera pose, focus, exposure trim, overlay
 toggles, observe-mode flag, POIs — is a single opaque base64url blob.
 The blob is a binary, versioned envelope —
 `[1 byte version] [LEB128 presence mask, 1–4 bytes] [payload]` in
@@ -59,7 +59,10 @@ cloud focus is just a cloud-kind SID — and POIs are a count byte plus
 one LEB128 SID per entry. No type tag rides the wire; kind comes from
 the runtime resolver (`../sid-resolver/README.md`) at apply time.
 Bits 16/17 (the v1–v3 1-byte cloud refs) are retired — leave them
-unclaimed for ~6 months of deploy overlap. SIDs are frozen forever in
+unclaimed for ~6 months of deploy overlap. Bits 4 (`mag`) and 8
+(`preset`) join them: the instrument owns the limiting magnitude, so a
+v1–v3 blob carrying either **decodes and is ignored** rather than
+failing, and the link lands on the instrument limit. SIDs are frozen forever in
 `data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild —
 the failure mode v1–v3's row-index fallback couldn't avoid. **v3**
 introduced the LEB128 presence mask and per-component vec3 sub-masks
@@ -162,6 +165,12 @@ bit and shows the galactic sphere instead of none. Bit 24 decodes *after*
 `flagsField` (bit 13), so it overwrites the `'galactic'` that `unpackFlags`
 wrote; a new enum field would have cost the galactic case a payload byte
 where it currently costs zero.
+
+The manual **EV trim** rides bit 25 as a 1-byte field quantised to the
+slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
+0. The instrument's limiting magnitude is *not* on the wire — it is derived
+from the aperture, so a receiver on a different build gets that build's
+limit and the trim applies on top.
 
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see
