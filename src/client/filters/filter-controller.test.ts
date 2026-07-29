@@ -246,7 +246,7 @@ describe('starPxSizes — plate-scale-derived K', () => {
 
   it('pins the crossover: K = 1 exactly, and the disc grows below it', () => {
     const fovAtCrossover = (CROSSOVER_ARCSEC_PER_PX * 1080) / 3600;
-    expect(fovAtCrossover).toBeCloseTo(2.3438, 4);
+    expect(fovAtCrossover).toBeCloseTo(4.1667, 4);
     expect(starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX)).toBe(1);
     // Narrower still: K stays floored, so the disc tracks the true PSF.
     const narrower = starExaggerationK('unaided-eye', CROSSOVER_ARCSEC_PER_PX / 4);

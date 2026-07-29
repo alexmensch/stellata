@@ -119,8 +119,10 @@ export const ALL_SPECT_MASK = 0b111111111;
 export const STAR_PHYSICS_FACTOR = 1.84;
 
 /** Pixel size a threshold star lands on, at every FOV and every
- *  viewport height. 3.84 preserves the rendered size on 1920×1080. */
-export const TARGET_PX = 3.84;
+ *  viewport height. 2.16 preserves the pre-plate-scale *angular*
+ *  exaggeration (the old K = 12 at 50° on 1080 px) rather than its
+ *  rendered pixel size, so stars read smaller than they used to. */
+export const TARGET_PX = 2.16;
 
 // Debug-panel multiplier on the derived exaggeration K. 1 = the
 // plate-scale derivation untouched.

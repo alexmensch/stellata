@@ -54,7 +54,7 @@ arcsec_per_px = fov_deg · 3600 / viewport_height_css_px
 K = kDensity · kMultiplier · max(1, TARGET_PX · arcsec_per_px / psfArcsec)
 ```
 
-so a threshold star lands on `TARGET_PX` (3.84 px) identically — **star
+so a threshold star lands on `TARGET_PX` (2.16 px) identically — **star
 pixel size is invariant in FOV and in viewport size** — until K floors at
 1 and the true 30″ PSF takes over and the disc grows. The reference
 dimension is viewport **height**, the axis a vertical FOV maps to and the

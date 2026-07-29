@@ -97,7 +97,7 @@ K = K_density(instrument) × max(1, TARGET_PX × arcsec_per_px / σ)
   `sizeMinArcsec = σ·K`, the rendered size is
   `σ·K / arcsec_per_px = TARGET_PX` identically — **star pixel size is
   invariant in both FOV and viewport size**, until K floors at 1 (the
-  true PSF, at 2.34° FOV on a 1080-px viewport at `TARGET_PX` 3.84) and
+  true PSF, at 4.17° FOV on a 1080-px viewport at `TARGET_PX` 2.16) and
   the disc begins *growing* as the 30″ PSF resolves and real physics
   takes over. What narrowing the FOV buys is
   therefore *separation, not size*: a close pair that merged into one
@@ -108,9 +108,14 @@ K = K_density(instrument) × max(1, TARGET_PX × arcsec_per_px / σ)
   footprint or a dense field washes into a solid sheet. `K_density` = 1
   for the unaided eye; it is a per-instrument calibration for anything
   deeper.
-- **`TARGET_PX`** is the calibration this introduces. 3.84 preserves the
-  rendered size on a 1920×1080 desktop; 2.16 preserves K = 12 at 50° and
-  1080 px of height. Ship 3.84, settle in smoke.
+- **`TARGET_PX`** is the calibration this introduces, and **2.16
+  shipped**: it preserves the retired `K = 12` at 50° on 1080 px of
+  height — the *angular* exaggeration the old model applied — rather than
+  its rendered pixel size. The alternative, 3.84, would have held
+  rendered size fixed on a 1920×1080 desktop, at the cost of stars
+  reading larger than they physically warrant. Preserving the angular
+  quantity is the more defensible anchor for a physical model, and it
+  buys a wider zoom range before K floors (4.17° against 2.34°).
 
 Critically, the √Δm shape is preserved between stars at any K, so
 *ratios* — including against the volumetric Milky Way bulge, rendered at
