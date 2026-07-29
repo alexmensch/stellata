@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilterController, type FilterUniforms } from './filter-controller';
 import {
+  arcsecPerPx,
   DEFAULT_FILTER,
   INSTRUMENTS,
   STAR_PHYSICS_FACTOR,
@@ -133,6 +134,28 @@ describe('FilterController', () => {
     expect(camera.updateProjectionMatrix).not.toHaveBeenCalled();
     expect(refreshOrbitFloor).not.toHaveBeenCalled();
     expect(emitted).toEqual([]);
+  });
+
+  it('getStarExaggerationK reports the derived K, not the slider term', () => {
+    const { ctrl } = makeHarness();
+    // The multiplier is 1 by default, so any difference between the two is
+    // the plate-scale factor — the whole reason the readout shows both.
+    expect(ctrl.getStarKMultiplier()).toBe(1);
+    expect(ctrl.getStarExaggerationK())
+      .toBeCloseTo(starExaggerationK('unaided-eye', arcsecPerPx(50, 1080)), 12);
+
+    ctrl.setStarKMultiplier(2);
+    expect(ctrl.getStarExaggerationK())
+      .toBeCloseTo(starExaggerationK('unaided-eye', arcsecPerPx(50, 1080)), 12);
+  });
+
+  it('getStarExaggerationK tracks FOV, and getArcsecPerPx tracks it with it', () => {
+    const { ctrl } = makeHarness();
+    const wide = ctrl.getStarExaggerationK();
+    ctrl.setCameraFov(10);
+    expect(ctrl.getArcsecPerPx()).toBeCloseTo(arcsecPerPx(10, 1080), 12);
+    // A finer plate scale shrinks the plate-scale factor toward its floor.
+    expect(ctrl.getStarExaggerationK()).toBeLessThan(wide);
   });
 
   it('setStarKMultiplier scales the derived footprint and always emits', () => {

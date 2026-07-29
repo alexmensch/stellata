@@ -2160,6 +2160,10 @@ export class Stellata implements FrameAnchor {
   setStarKMultiplier(m: number) { this.filters.setStarKMultiplier(m); }
   getStarKMultiplier(): number { return this.filters.getStarKMultiplier(); }
   getStarKMultiplierDefault(): number { return this.filters.getStarKMultiplierDefault(); }
+  /** The derived exaggeration K in effect now — the multiplier above is
+   *  only its middle term (`filters/README.md` § Star pixel size). */
+  getStarExaggerationK(): number { return this.filters.getStarExaggerationK(); }
+  getArcsecPerPx(): number { return this.filters.getArcsecPerPx(); }
   /** Manual EV trim, ±EV_MAX_STOPS in stops (hdr/README.md
    *  § The three terms). */
   setEv(ev: number) { this.exposure.setEv(ev); }

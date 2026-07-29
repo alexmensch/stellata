@@ -5,10 +5,12 @@ import type * as THREE from 'three';
 import type { EventBus } from '../util/event-bus';
 import type { StellataEventMap } from '../stellata';
 import {
+  arcsecPerPx,
   DEFAULT_FILTER,
   type FilterState,
   INSTRUMENTS,
   type InstrumentName,
+  starExaggerationK,
   starPxSizes,
   STAR_K_MULTIPLIER_DEFAULT,
   type StarRenderParams,
@@ -189,6 +191,21 @@ export class FilterController {
   }
   getStarKMultiplier(): number { return getStarKMultiplier(); }
   getStarKMultiplierDefault(): number { return STAR_K_MULTIPLIER_DEFAULT; }
+
+  /** The *derived* K in effect right now — instrument density × the debug
+   *  multiplier × the plate-scale factor at the live FOV and viewport.
+   *  `getStarKMultiplier` is only the middle term. */
+  getStarExaggerationK(): number {
+    return starExaggerationK(
+      this.filter.instrument,
+      arcsecPerPx(this.deps.camera.fov, window.innerHeight),
+    );
+  }
+
+  /** Plate scale the derivation above keys on, for the same readout. */
+  getArcsecPerPx(): number {
+    return arcsecPerPx(this.deps.camera.fov, window.innerHeight);
+  }
 
   // Star-disc rendering knobs (debug panel). Patch any subset; uVisibleK
   // is recomputed whenever uVisibleThreshold changes. Both materials share

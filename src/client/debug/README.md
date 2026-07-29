@@ -27,8 +27,9 @@ src/client/debug/
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
                                   geometry readout (focused star, or all
                                   active dims when unfocused).
-  star-tuning.ts                  Live-tunable star exaggeration /
-                                  magnitude / size knobs.
+  star-tuning.ts                  Live-tunable star-disc knobs, plus the
+                                  derived-K readout (K, plate scale, FOV,
+                                  resulting sizeMin/Max).
   planet-tuning.ts                Reflected-planet-glare peak slider
                                   (uGlareGain — planet glare brightness
                                   vs a star of the same magnitude).

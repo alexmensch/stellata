@@ -24,6 +24,10 @@ star-disc render knobs, and the controller that owns every mutation.
   (`../scene/README.md` § Detail-level declutter cycle). `FilterState`
   carries `detailLevel` (default `all`); the effective permitted set is a
   runtime cache on `Stellata`, not part of `FilterState`.
+  `getStarExaggerationK` / `getArcsecPerPx` read the *derived* K and the
+  plate scale it keys on at the live FOV and viewport —
+  `getStarKMultiplier` is only that product's middle term, which is why
+  the debug readout shows both.
 - `filter-controller.test.ts` — instrument/override/clamp semantics
   against stub uniforms + camera.
 
