@@ -39,7 +39,12 @@ exposes the Tycho-dominated population.
 applies three filters and nothing else:
 
 1. Drop rows missing `ra`/`dec` or `dist` (no usable 3D position).
-2. Drop rows missing `absmag` (can't size or shade them).
+2. Drop rows missing `absmag` — a **presence** gate, not a value read:
+   the shipped absmag is derived from the V cascade
+   (`scripts/catalog/photometry/README.md`), never AT-HYG's cell. The cell
+   still decides membership because 3,917 rows carry `mag` without it, and
+   admitting them would be a membership change rather than a field-cascade
+   one. Rows no cascade tier can give a V to drop as well.
 3. Drop rows with `dist > 50,000 pc`. This is a **bounded-scope
    statement about which populations the model represents**, not a
    primary include/exclude filter. The cutoff is positioned just past
@@ -118,13 +123,13 @@ collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
 — i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we swap `dist` and `absmag` for the Bailer-Jones-derived values
-(photogeometric `r_med_photogeo` preferred, geometric `r_med_geo` as
-fallback when photogeo is absent); position follows as the
-direction-cascade unit vector × the new distance (§ Driver
-astrometry). Recomputing `absmag` matters as much as the distance
-update — without it, stars get *placed* at the new distance but
-*lit* for the old one, breaking the disc/glow size chain.
+rows we take the Bailer-Jones distance (photogeometric `r_med_photogeo`
+preferred, geometric `r_med_geo` as fallback when photogeo is absent);
+position follows as the direction-cascade unit vector × the new distance
+(§ Driver astrometry). Brightness needs no separate correction here:
+absmag is derived once, from the cascade's V at whatever distance the
+whole override stack settled on, so a star placed at a new distance and
+*lit* for the old one is unreachable rather than guarded against.
 
 Rows whose `dist_src` is `HIP` / `GJ` / `N` / `OTHER` are deliberately
 excluded from the override even when they also carry a Gaia DR3
@@ -349,7 +354,7 @@ viewpoint, not Sol — a camera can sit inside any of these systems):
 **Decision — re-source the direction, keep AT-HYG as the driver,
 keep the distance stack. Implemented in
 `scripts/catalog/distance/direction-cascade.ts`.** AT-HYG remains the
-membership, identifier, name, and magnitude driver (its curated
+membership, identifier, and name driver (its curated
 classical-ID merge is the value; replacing it wholesale re-litigates
 membership for no gain — the deep-tier driver question is separate
 and stays with the far-catalog work). Each row's *sky direction* is

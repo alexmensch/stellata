@@ -13,9 +13,9 @@ The flowchart renders natively in GitHub's markdown viewer.
 flowchart TD
 
   subgraph SRC["Published astronomical datasets — frozen local copies"]
-    ATHYG["AT-HYG star catalogue<br/>the base list: ~313,000 stars with<br/>names, identifiers, brightness"]
-    GAIA["Gaia DR3<br/>positions · parallaxes · motions ·<br/>binary-orbit fits · temperatures"]
-    HIP["Hipparcos (van Leeuwen)<br/>astrometry for stars too bright for Gaia<br/>+ historical double-star annotations"]
+    ATHYG["AT-HYG star catalogue<br/>the base list: ~313,000 stars with<br/>names and identifiers"]
+    GAIA["Gaia DR3<br/>positions · parallaxes · motions ·<br/>brightness (G, BP, RP) ·<br/>binary-orbit fits · temperatures"]
+    HIP["Hipparcos<br/>astrometry and brightness for stars<br/>too bright for Gaia<br/>+ historical double-star annotations"]
     BJ["Bailer-Jones et al.<br/>probabilistic distances from Gaia parallaxes"]
     SIMBAD["SIMBAD<br/>spectral types · cross-identifications"]
     GCVS["GCVS<br/>variable-star periods and amplitudes"]
@@ -169,9 +169,19 @@ as a table of physically bound systems.
 
 ## Star-catalogue assembly
 
-The base list contributes identity: which stars exist, their names and
-designations, and their observed brightness. Almost everything else is
-re-derived from better sources.
+The base list contributes identity: which stars exist, and their names
+and designations. Almost everything else is re-derived from better
+sources.
+
+**Brightness.** A star's visual (Johnson V) magnitude is transformed
+from Gaia's own broadband measurements through a published relation
+(Riello et al. 2021) — that covers 310,939 of the 313,257 stars. Gaia's
+detectors saturate on the brightest stars, so those fall back to
+Hipparcos' printed V, and a residual 144 take the base catalogue's
+printed magnitude. Intrinsic brightness is always *derived* from that
+magnitude and the distance the refinements below settled on, never read
+from a table, so a star cannot be placed at one distance and lit for
+another.
 
 **Distances.** A star's naive distance (one over its parallax) is
 biased and noisy, so distances are refined in a fixed order: the
@@ -181,9 +191,9 @@ re-derived at full precision from the original parallax; stars in the
 direction of the Large Magellanic Cloud that also share its motion are
 snapped to its precisely known distance of 49.6 kpc (from eclipsing
 binaries — parallax is useless that far out); and anything still
-beyond 50 kpc is out of scope and dropped. Every refinement also
-recomputes the star's intrinsic brightness, so a star moved to a new
-distance is lit correctly for it.
+beyond 50 kpc is out of scope and dropped. Because intrinsic brightness
+is derived from the final distance rather than tabulated, a star moved
+to a new distance is lit correctly for it by construction.
 
 **Directions.** Sky positions use the same trust ladder as the
 multiple-star pipeline: Gaia by default, Gaia's centre-of-mass
@@ -229,8 +239,11 @@ multiple-star table, positioned from the measured separation and angle
 off their primary, and given an honest brightness: a companion never
 inherits its primary's full brightness, and a row with no defensible
 brightness source is dropped rather than faked. A conservation pass
-then dims each primary whose catalogued magnitude actually included a
-now-separate companion's light, so no photon is counted twice.
+then dims each primary whose measured magnitude actually included a
+now-separate companion's light, so no photon is counted twice — and
+only where it really did: where the primary's brightness came from
+Gaia, a companion Gaia resolved as its own source was never in there to
+begin with, and subtracting it would make the primary too faint.
 
 **Permanent identity.** Every object receives a permanent identifier,
 allocated once in a frozen registry, so links and shared views survive

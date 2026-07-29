@@ -98,6 +98,25 @@ enough to see it.
 
 ## Data sources
 
+- **Gaia DR3** (astrometry, photometry, astrophysical parameters,
+  non-single-star orbits): ESA / DPAC, https://gea.esac.esa.int/archive/ —
+  Gaia Collaboration, Vallenari A. et al. 2023, *A&A* 674, A1. Licence
+  CC-BY-4.0. Per-source ADQL pulls under `data/gaia/`; per-table provenance in
+  `data/gaia/README.md`. Three roles the rest of the model rests on:
+    - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
+      direction cascade and the input Bailer-Jones inverts (below).
+    - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
+      Angeli F., Evans D. W. et al. 2021, *A&A* 649, A3** § *Photometric
+      relationships with other photometric systems* (`G − V` as a cubic in
+      `BP − RP`, σ = 0.03017 mag over −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
+      absolute magnitude is derived from this V, so it sets what the whole
+      scene looks like; DR3 ships EDR3's photometry unchanged, so the EDR3
+      calibration applies. Gaia's CCDs saturate below `G` = 4.0, where the
+      printed Hipparcos tier below takes over — the bound is calibrated
+      against the printed-vs-transformed |ΔV| distribution rather than
+      assumed (`scripts/catalog/photometry/README.md`).
+    - **Astrophysical parameters** — `gspphot ∪ gspspec` Teff / log g / [M/H]
+      feed the spectral resolver and the Stefan-Boltzmann radii.
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
   — maintained by David Nash. The classic-IDs subset at
   `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star

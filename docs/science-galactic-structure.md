@@ -71,7 +71,9 @@ the Sol→star integral through this same voxel grid at write time (see
 raymarch *restores* the observer-relative extinction instead of adding
 it a second time. Because both sides integrate the same model, at
 camera=Sol the build subtraction and the runtime addition cancel and a
-dusty-sightline star renders at its AT-HYG observed magnitude. This is
+dusty-sightline star renders at its catalogued observed magnitude — the V
+the cascade resolved (`scripts/catalog/photometry/README.md`), which for
+99% of stars is Gaia's `G` transformed, not AT-HYG's printed cell. This is
 what makes the "no double-counting" statements below true across **all**
 tiers (previously the magnitude channel was double-counted in every tier
 and the colour channel in the ~15% tier-3 stars that read `iCi`

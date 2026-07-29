@@ -16,9 +16,11 @@ Every object is placed from a published observational catalogue or direct measur
 
 ### Stars
 
-- [Gaia DR3](https://gea.esac.esa.int/archive/): ESA / DPAC — raw astrometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits.
+- [Gaia DR3](https://gea.esac.esa.int/archive/): ESA / DPAC — raw astrometry, broadband photometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits.
 - [AT-HYG v3.3](https://codeberg.org/astronexus/athyg): David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue — the star backbone.
 - [SIMBAD](https://simbad.cds.unistra.fr/simbad/): CDS Strasbourg — cross-identifications and catalogue validation.
+- [Riello et al. 2021](https://doi.org/10.1051/0004-6361/202039587): Gaia photometric relations — the G → Johnson V transform every star's brightness is derived through.
+- [Hipparcos catalogue](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA SP-1200 — printed Johnson V for stars too bright for Gaia's detectors.
 - [Bailer-Jones et al. 2021](https://doi.org/10.3847/1538-3881/abd806): geometric distances from Gaia DR3 parallaxes.
 - [GCVS 5.1](http://www.sai.msu.su/gcvs/gcvs/): Samus et al. — variable-star periods.
 - [Stellarium](https://github.com/Stellarium/stellarium): constellation lines.
@@ -28,7 +30,7 @@ Every object is placed from a published observational catalogue or direct measur
 - [Washington Double Star Catalog](http://www.astro.gsu.edu/wds/): USNO — resolved pair geometry.
 - [Sixth Orbit Catalog (ORB6)](http://www.astro.gsu.edu/wds/orb6.html): USNO — computed visual orbits.
 - [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa7d9): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
-- [Hipparcos CCDM](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA — HIP double-star cross-match.
+- [Hipparcos CCDM](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA — HIP double-star cross-match (Dommanget & Nys 1994 component register).
 
 ### Interstellar medium
 
