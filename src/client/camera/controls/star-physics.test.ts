@@ -42,7 +42,7 @@ function makeFilter(overrides: Partial<FilterState> = {}): FilterState {
     sizeMaxOverridden: false,
     sizeSpanOverridden: false,
     showConstellation: true,
-    showGalacticGrid: true,
+    coordSphere: 'galactic',
     showHud: true,
     showMilkyway: true,
     showLgEmission: true,

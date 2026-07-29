@@ -131,11 +131,13 @@
     </noscript>
 
     <svg id="overlay" class="overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <!-- Galactic coordinate sphere l/b labels. Pooled <text> positioned +
-           rotated each frame by galactic-grid-labels.ts. Drawn early so the
-           background orientation grid sits behind the HUD / POI / star-name
-           overlays. -->
+      <!-- Coordinate-sphere edge labels — galactic l/b and equatorial RA/Dec,
+           one group each, only ever one populated (the spheres are mutually
+           exclusive). Pooled <text> positioned + rotated each frame by
+           coord-sphere-labels.ts. Drawn early so the background orientation
+           grid sits behind the HUD / POI / star-name overlays. -->
       <g id="gal-grid-labels"></g>
+      <g id="eq-grid-labels"></g>
       <!-- HUD ring — translucent screen-centred guide visible in OBSERVE mode
            when the HUD is on. Sized and positioned each frame by
            hud-overlay.ts. Drawn before the Sol/GC arrows so the arrow strokes
@@ -482,7 +484,7 @@
               <button class="toggle-btn" data-unit="pc" type="button">parsecs</button>
               <button class="toggle-btn on" data-unit="ly" type="button">lightyears</button>
             </div>
-            <label class="checkbox-row" style="margin-top: 10px;">
+            <label class="checkbox-row group-block">
               <input id="show-hud" type="checkbox" />
               <span>Head up display (HUD)</span>
             </label>
@@ -502,7 +504,7 @@
             </div>
             <div class="readout" id="dist-readout">0 – 50000</div>
 
-            <label class="sub-label" style="margin-top: 12px;">Max apparent magnitude</label>
+            <label class="sub-label group-block">Max apparent magnitude</label>
             <input id="app-mag" type="range" min="-2" max="15" step="0.1" value="6.5" />
             <div class="row-split">
               <div class="readout" id="app-mag-readout">≤ 6.5</div>
@@ -515,7 +517,7 @@
               </div>
             </div>
 
-            <div class="sub-label-row" style="margin-top: 12px;">
+            <div class="sub-label-row group-block">
               <label class="sub-label">Spectral class</label>
               <span class="row-actions">
                 <button id="spect-all" class="link-btn" type="button">all</button>
@@ -544,7 +546,7 @@
               </span>
             </div>
 
-            <label class="checkbox-row" style="margin-top: 12px;">
+            <label class="checkbox-row group-block">
               <input id="show-constellation" type="checkbox" checked />
               <span>Show constellations</span>
             </label>
@@ -562,15 +564,28 @@
               </div>
             </div>
 
-            <label class="checkbox-row" style="margin-top: 12px;">
+            <label class="checkbox-row group-block">
               <input id="show-milkyway" type="checkbox" checked />
               <span>Galactic background glow</span>
             </label>
-            <label class="checkbox-row">
-              <input id="show-galactic-grid" type="checkbox" />
-              <span>Galactic sphere</span>
-            </label>
-            <label class="checkbox-row" id="show-chart-row" title="Available in observe mode">
+            <!-- Tooltip on the row, not the equatorial button: that button is
+                 the one that gets disabled, and a disabled control's own title
+                 doesn't reliably surface. Same reason as #show-chart-row. -->
+            <div
+              class="sub-label-row group-block"
+              id="coord-sphere-row"
+              title="Equatorial is Earth-referenced — available near Sol only"
+            >
+              <label class="sub-label">Coordinate sphere</label>
+              <span class="row-actions" id="coord-sphere">
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="none" type="button">none</button>
+                <span class="sep">·</span>
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="galactic" type="button">galactic</button>
+                <span class="sep">·</span>
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="equatorial" type="button">equatorial</button>
+              </span>
+            </div>
+            <label class="checkbox-row group-block" id="show-chart-row" title="Available in observe mode">
               <input id="show-chart" type="checkbox" disabled />
               <span>Star chart mode</span>
             </label>
@@ -602,7 +617,7 @@
             <input id="size-span" type="range" min="2" max="20" step="0.5" value="6" />
             <div class="readout" id="size-readout">2.0 – 24.0px · span 6mag</div>
 
-            <div class="sub-label-row" style="margin-top: 12px;">
+            <div class="sub-label-row group-block">
               <label class="sub-label">Field of view <span class="unit">°</span></label>
               <span class="row-actions">
                 <button id="fov-reset" class="link-btn" type="button">reset</button>
@@ -611,7 +626,7 @@
             <input id="fov" type="range" min="10" max="120" step="1" value="50" />
             <div class="readout" id="fov-readout">50°</div>
 
-            <div class="sub-label-row" style="margin-top: 12px;">
+            <div class="sub-label-row group-block">
               <label class="sub-label">Star size exaggeration</label>
               <span class="row-actions">
                 <button id="exag-reset" class="link-btn" type="button">reset</button>

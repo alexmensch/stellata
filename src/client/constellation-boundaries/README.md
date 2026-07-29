@@ -80,14 +80,16 @@ from the galactic coordinate sphere, which does track the camera: the
 partition is a Sol-frame construct, and pinning it to Sol is what keeps a
 star assigned to Orion drawn inside Orion's cell. The arcs bake once into
 absolute ICRS at `SPHERE_RADIUS_PC` (50 kpc, imported from
-`../galactic/galactic-grid.ts` — the same sphere the coordinate grid uses)
+`../galactic/coord-spheres/coord-sphere.ts` — the same sphere the coordinate grids use)
 and the group rebases to `−worldOffset` each frame, exactly like
 `../galactic/galactic-disc.ts`.
 
-**Distance-from-Sol fade — the inverse of `../galactic/galactic-fade.ts`.**
-A drawn boundary is a pure Sol-frame projection with no 3D referent, so it
-must *self-hide* as the camera leaves the neighbourhood rather than reveal
-as the camera pulls back. The window is not taste-picked: it interpolates
+**Distance-from-Sol fade — `solFrameFadeFactor`, the inverse of the far-field
+reveal in `../galactic/galactic-fade.ts` and shared with the equatorial
+coordinate sphere.** A drawn boundary is a pure Sol-frame projection with no
+3D referent, so it must *self-hide* as the camera leaves the neighbourhood
+rather than reveal as the camera pulls back. Only the **curve** is shared;
+this layer's **window** is its own, and is not taste-picked: it interpolates
 the artifact's quantile table against the live magnitude limit
 (`resolveBoundaryFadeWindowPc`), fading from the offset where **1%** of the
 visible population reads as misplaced to where **5%** does. Both
@@ -98,7 +100,7 @@ filter handler (folded into the same `filter` subscription that rebuilds
 the figure), so the interpolation runs once per slider change rather than
 per frame.
 
-`boundaryFadeFactor` tests its window as `!(outerPc > innerPc)`, not
+`solFrameFadeFactor` tests its window as `!(outerPc > innerPc)`, not
 `outerPc <= innerPc`. The negated form is what routes a **NaN** window into
 the step branch and hides the layer: a NaN opacity never reads as ≤ 0, so
 passing one through draws the partition at full strength from every

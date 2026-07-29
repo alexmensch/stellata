@@ -6,7 +6,7 @@ import type {
   BoundaryFadeTableWire,
   BoundarySegmentWire,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { smoothstep } from '../galactic/galactic-fade';
+import type { SolFrameFadeWindow } from '../galactic/galactic-fade';
 
 /** Share of the magnitude-limited population that may read as misplaced
  *  before the boundaries start fading, and where they reach zero. Both must
@@ -14,13 +14,6 @@ import { smoothstep } from '../galactic/galactic-fade';
  *  artifact that dropped either, rather than silently picking a neighbour. */
 export const FADE_START_MISPLACED_PCT = 1;
 export const FADE_END_MISPLACED_PCT = 5;
-
-export interface BoundaryFadeWindow {
-  /** Camera distance from Sol, pc, at which opacity starts dropping. */
-  innerPc: number;
-  /** Camera distance from Sol, pc, at which opacity reaches zero. */
-  outerPc: number;
-}
 
 /** Flat x,y,z endpoint pairs for `THREE.LineSegments`, each direction scaled
  *  to `radiusPc`. A polyline of n samples contributes n−1 segments, so
@@ -57,7 +50,7 @@ export function boundarySegmentVertices(
 export function resolveBoundaryFadeWindowPc(
   fade: BoundaryFadeTableWire,
   maxAppMag: number,
-): BoundaryFadeWindow {
+): SolFrameFadeWindow {
   const innerCol = quantileColumn(fade, FADE_START_MISPLACED_PCT);
   const outerCol = quantileColumn(fade, FADE_END_MISPLACED_PCT);
   const { lo, hi, t } = bracketMagRow(fade.magLimits, maxAppMag);
@@ -65,28 +58,6 @@ export function resolveBoundaryFadeWindowPc(
     innerPc: lerpOffset(fade.offsetsPc, lo, hi, t, innerCol),
     outerPc: lerpOffset(fade.offsetsPc, lo, hi, t, outerCol),
   };
-}
-
-/**
- * Opacity multiplier at `distFromSolPc` — 1 inside the window, 0 beyond it.
- * The inverse of the far-field reveal in `galactic/galactic-fade.ts`: a drawn
- * boundary is a Sol-frame projection with no 3D referent, so it must
- * self-hide as the camera leaves the neighbourhood rather than appear as the
- * camera pulls back.
- */
-export function boundaryFadeFactor(
-  distFromSolPc: number,
-  fadeWindow: BoundaryFadeWindow,
-): number {
-  // A table row whose two quantiles round to the same offset would make
-  // smoothstep divide by zero; step at the window instead. Negated rather
-  // than `outerPc <= innerPc` so a NaN window lands here too and hides the
-  // layer — smoothstep would pass NaN through as an opacity that never
-  // reads as ≤ 0, leaving a wrong partition drawn at every distance.
-  if (!(fadeWindow.outerPc > fadeWindow.innerPc)) {
-    return distFromSolPc < fadeWindow.outerPc ? 1 : 0;
-  }
-  return 1 - smoothstep(fadeWindow.innerPc, fadeWindow.outerPc, distFromSolPc);
 }
 
 function quantileColumn(fade: BoundaryFadeTableWire, pct: number): number {

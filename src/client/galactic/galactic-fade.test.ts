@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from './galactic-fade';
+import {
+  FADE_INNER_PC,
+  FADE_OUTER_PC,
+  smoothstep,
+  solFrameFadeFactor,
+} from './galactic-fade';
 
 describe('galactic-fade', () => {
   it('fade band brackets the local-browsing-to-context-overlay transition', () => {
@@ -39,6 +44,48 @@ describe('galactic-fade', () => {
       const v = smoothstep(FADE_INNER_PC, FADE_OUTER_PC, d);
       expect(v).toBeGreaterThanOrEqual(prev);
       prev = v;
+    }
+  });
+});
+
+describe('solFrameFadeFactor', () => {
+  const win = { innerPc: 0.4, outerPc: 2 };
+
+  it('is fully opaque out to the inner edge and gone at the outer', () => {
+    expect(solFrameFadeFactor(0, win)).toBe(1);
+    expect(solFrameFadeFactor(0.4, win)).toBe(1);
+    expect(solFrameFadeFactor(2, win)).toBe(0);
+    expect(solFrameFadeFactor(1.34, win)).toBeCloseTo(0.370090, 6);
+  });
+
+  it('decreases monotonically across the window', () => {
+    let prev = Infinity;
+    for (let d = 0; d <= 2.5; d += 0.1) {
+      const f = solFrameFadeFactor(d, win);
+      expect(f).toBeLessThanOrEqual(prev);
+      prev = f;
+    }
+  });
+
+  it('steps rather than dividing by zero on a collapsed window', () => {
+    const collapsed = { innerPc: 0.5, outerPc: 0.5 };
+    expect(solFrameFadeFactor(0.49, collapsed)).toBe(1);
+    expect(solFrameFadeFactor(0.5, collapsed)).toBe(0);
+  });
+
+  // Hiding is the only safe answer to a window that isn't a number: a NaN
+  // opacity never reads as ≤ 0, so passing it through would draw a Sol-frame
+  // layer at full strength from every distance.
+  it('hides on a NaN window rather than passing NaN through as opacity', () => {
+    expect(solFrameFadeFactor(0, { innerPc: 0.4, outerPc: NaN })).toBe(0);
+    expect(solFrameFadeFactor(1e9, { innerPc: NaN, outerPc: NaN })).toBe(0);
+  });
+
+  it('is the inverse of the far-field reveal on the same band', () => {
+    const band = { innerPc: FADE_INNER_PC, outerPc: FADE_OUTER_PC };
+    for (const d of [0, 500, 2750, 5000, 10_000]) {
+      expect(solFrameFadeFactor(d, band))
+        .toBeCloseTo(1 - smoothstep(FADE_INNER_PC, FADE_OUTER_PC, d), 12);
     }
   });
 });

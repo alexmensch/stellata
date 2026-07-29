@@ -40,7 +40,8 @@ themselves.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
-  `galactic/`, `molecular-clouds/`, `chart-mode/`, `dust/`,
+  `galactic/` (galactic reference geometry + both coordinate
+  spheres), `molecular-clouds/`, `chart-mode/`, `dust/`,
   `local-bubble/`, `constellation-figure/` — render layers.
 - `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
   the B1875 edge set, the positional lookup answering which constellation
@@ -290,7 +291,7 @@ SVG mask (`constellation-figure/README.md`).
 | Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
-| Galactic grid l/b labels                         | SVG     | source order (first SVG child)                     |       | [galactic/](galactic/README.md) |
+| Coordinate-sphere edge labels                    | SVG     | source order (first SVG children)                  |       | [galactic/coord-spheres/](galactic/coord-spheres/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
 | Member-star glow mirror                          | WebGL   | local depth pass (3.5 in-pass)                     |       | [star-pipeline/local-pass/](star-pipeline/local-pass/README.md), [local-depth/](local-depth/README.md) |
@@ -314,7 +315,7 @@ SVG mask (`constellation-figure/README.md`).
 | Star disc                                        | WebGL   | `renderOrder: 0`                                   |       | [star-pipeline/](star-pipeline/README.md) |
 | Constellation figure                             | WebGL   | `renderOrder: -0.75`                               |       | [constellation-figure/](constellation-figure/README.md) |
 | IAU constellation boundaries (chart only)        | WebGL   | `renderOrder: -0.8`                                |       | [constellation-boundaries/](constellation-boundaries/README.md) |
-| Galactic disc + grid                             | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [local-group/](local-group/README.md) |
+| Galactic disc + coordinate spheres               | WebGL   | `renderOrder: -1`                                  |       | [galactic/](galactic/README.md), [galactic/coord-spheres/](galactic/coord-spheres/README.md), [local-group/](local-group/README.md) |
 | Local Bubble shell                               | WebGL   | `renderOrder: -1`                                  |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud rim shells                       | WebGL   | `renderOrder: -1`                                  |       | [molecular-clouds/](molecular-clouds/README.md) |
 | Molecular cloud absorption                       | WebGL   | `renderOrder: -2`                                  | back  | [molecular-clouds/](molecular-clouds/README.md) |

@@ -29,7 +29,7 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
     keys: ['C'],
     label: 'Show a constellation (double-tap to toggle constellation lines)',
   },
-  { keys: ['S'], label: 'Toggle the galactic-coordinate sphere' },
+  { keys: ['S'], label: 'Cycle the coordinate sphere: none → galactic → equatorial' },
   { keys: ['H'], label: 'Toggle the head-up display (HUD)' },
   { keys: ['R'], label: 'Reset camera size, range, FOV & exaggeration' },
   { keys: ['T'], label: 'Open the time scrubber' },

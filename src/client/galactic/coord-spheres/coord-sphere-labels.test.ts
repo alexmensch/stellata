@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { edgeLabelPlacement, separateLabels, fmtDeg, type Rect, type EdgeLabel } from './galactic-grid-labels';
+import { edgeLabelPlacement, separateLabels, type Rect, type EdgeLabel } from './coord-sphere-labels';
 
 const W = 800;
 const H = 600;
@@ -52,25 +52,6 @@ describe('edgeLabelPlacement', () => {
     expect(p.x).toBeCloseTo(W - PAD - HW);
     expect(p.y).toBeCloseTo(200);
     expect(p.rotDeg).toBeCloseTo(0);
-  });
-});
-
-describe('fmtDeg', () => {
-  it('wraps longitude into [0, 360)', () => {
-    expect(fmtDeg(0, true)).toBe('0°');
-    expect(fmtDeg(350, true)).toBe('350°');
-    expect(fmtDeg(360, true)).toBe('0°');
-    expect(fmtDeg(-10, true)).toBe('350°');
-  });
-
-  it('keeps latitude signed', () => {
-    expect(fmtDeg(-80, false)).toBe('-80°');
-    expect(fmtDeg(80, false)).toBe('80°');
-    expect(fmtDeg(0, false)).toBe('0°');
-  });
-
-  it('rounds to whole degrees', () => {
-    expect(fmtDeg(29.6, false)).toBe('30°');
   });
 });
 
