@@ -3,10 +3,10 @@ import type {
   BoundaryFadeTableWire,
   BoundarySegmentWire,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import { solFrameFadeFactor } from '../galactic/galactic-fade';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
-  boundaryFadeFactor,
   boundarySegmentVertices,
   resolveBoundaryFadeWindowPc,
 } from './boundary-layer-pure';
@@ -89,41 +89,17 @@ describe('resolveBoundaryFadeWindowPc', () => {
   });
 });
 
-describe('boundaryFadeFactor', () => {
-  const win = { innerPc: 0.4, outerPc: 2 };
-
-  it('is fully opaque out to the inner edge and gone at the outer', () => {
-    expect(boundaryFadeFactor(0, win)).toBe(1);
-    expect(boundaryFadeFactor(0.4, win)).toBe(1);
-    expect(boundaryFadeFactor(2, win)).toBe(0);
-    expect(boundaryFadeFactor(1.34, win)).toBeLessThan(0.5);
-  });
-
+describe('the resolved window against solFrameFadeFactor', () => {
   it('has completed well before α Cen at the naked-eye limit', () => {
     const alphaCenPc = 1.34;
-    expect(boundaryFadeFactor(alphaCenPc, resolveBoundaryFadeWindowPc(FADE, 6.5))).toBe(0);
+    expect(solFrameFadeFactor(alphaCenPc, resolveBoundaryFadeWindowPc(FADE, 6.5))).toBe(0);
   });
 
-  it('decreases monotonically across the window', () => {
-    let prev = Infinity;
-    for (let d = 0; d <= 2.5; d += 0.1) {
-      const f = boundaryFadeFactor(d, win);
-      expect(f).toBeLessThanOrEqual(prev);
-      prev = f;
-    }
-  });
-
-  it('steps rather than dividing by zero on a collapsed window', () => {
-    const collapsed = { innerPc: 0.5, outerPc: 0.5 };
-    expect(boundaryFadeFactor(0.49, collapsed)).toBe(1);
-    expect(boundaryFadeFactor(0.5, collapsed)).toBe(0);
-  });
-
-  // Hiding is the only safe answer to a window that isn't a number: a NaN
-  // opacity never reads as ≤ 0, so passing it through would draw the partition
-  // at full strength from every distance.
-  it('hides on a NaN window rather than passing NaN through as opacity', () => {
-    expect(boundaryFadeFactor(0, { innerPc: 0.4, outerPc: NaN })).toBe(0);
-    expect(boundaryFadeFactor(1e9, { innerPc: NaN, outerPc: NaN })).toBe(0);
+  it('widens with a fainter limit rather than narrowing', () => {
+    const bright = resolveBoundaryFadeWindowPc(FADE, 6);
+    const faint = resolveBoundaryFadeWindowPc(FADE, 8);
+    const d = bright.outerPc;
+    expect(solFrameFadeFactor(d, bright)).toBe(0);
+    expect(solFrameFadeFactor(d, faint)).toBeGreaterThan(0);
   });
 });
