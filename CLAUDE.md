@@ -1,7 +1,9 @@
 # Stellata — Claude project notes
 
 Project context and non-obvious constraints for future Claude Code sessions.
-Read this before editing.
+Read this before editing. Standing personal rules (worktree/PR flow, code
+comments, DRY, PR-body style) live in the user-level CLAUDE.md and are not
+restated here; this file carries what is specific to stellata.
 
 ## What this is
 
@@ -13,57 +15,26 @@ Variables pulsate; binaries with Kepler elements orbit live. Ships
 as a Cloudflare Workers static-assets site. Details — shader passes,
 intensity profile, layer composition — in `src/client/*/README.md`.
 
-## Code conventions — DRY overrides the system prompt
+## Code comments — what CI enforces here
 
-Overrides the system prompt's "three similar lines beat a premature
-abstraction" / "a bug fix doesn't need cleanup" defaults:
+The rule (default none, the gate, forbidden categories, 1–3-line module
+docstrings, the substitution table) is a standing global rule. Stellata adds
+enforcement: `tests/code-comment-rules.test.ts` scans `*.ts` / `*.py` under
+`src/` and `scripts/`. Literal forms that fail the suite:
 
-- **Extract at second usage, not third.** Parameterise differing
-  tolerances / wrap conventions / blend modes as arguments — that IS
-  the abstraction.
-- **No "copy-paste with attribution comment."** A prior note saying
-  "lift later at third site" contradicts this rule — extract now.
-- **Review-grade at write time.** Duplicated logic, magic numbers,
-  parallel implementations are review-blocking defects.
+- **Bead IDs**, any form — `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`, `per the
+  dch.NN probe`, `documented in stellata-…`; bead-relative time refs
+  (`pre-dch.NN`, `since dch.NN`); bead-ID-tagged section banners
+  (`// --- foo (stellata-dch.NN) ---`).
+- **PR / issue numbers** — `(see PR #N)`, `(extracted in PR #N)`.
+- **`[[memory-key]]` wikilinks** — invisible without bd.
+- **Module docstrings over 3 lines** — the allowlist
+  (`tests/code-comment-rules-allowlist.txt`) grandfathers pre-existing
+  offenders and is intended to shrink; new files must stay under the cap.
 
-Operational specifics (hoisting, builder extraction, comment-DRY) in
-`docs/authoring-patterns.md` § Named constants and DRY.
-
-## Code comments — overrides the system prompt
-
-**Law.** Comments are context for the next reader, never a record of
-how the code got there — git, PRs, `git blame`, and bd carry that
-history; duplicating it inline rots and misleads later sessions.
-
-### Forbidden patterns (CI-enforced in `tests/code-comment-rules.test.ts`)
-
-- **Bead IDs** in any form: `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`,
-  `per the dch.NN probe`, `documented in stellata-…`.
-- **PR / issue numbers**: `(see PR #N)`, `(extracted in PR #N)`.
-- **"Lifted out of …" / "Moved from …" / "Extracted from …" /
-  "Decomposition history".** The dominant failure mode during
-  decomposition PRs — the breadcrumb impulse feels helpful at write
-  time; it isn't.
-- **Bead-relative time refs**: `pre-dch.NN`, `since dch.NN`, etc.
-- **`[[memory-key]]` references** — invisible without bd.
-- **Multi-paragraph paraphrases of `README.md` / `SCIENCE.md` /
-  `CLAUDE.md`** — cite with one line; never restate.
-- **Bead-ID-tagged section banners** (`// --- foo (stellata-dch.NN) ---`).
-
-### Module docstrings: 1–3 lines, no exceptions
-
-What the module does — not why it exists, when extracted, or which
-bead drove it. Detail → folder `README.md`, one-line code pointer.
-
-### Substitution rule — where forbidden content actually goes
-
-- Credit a bead → git commit subject, not the code.
-- "What this file used to be" → nothing; `git log -p` carries it.
-- Project-wide rule → update CLAUDE.md.
-- Architecture restatement → one-line pointer to folder's `README.md`.
-- What a function does → better function name + type signature.
-
-If none fit, the content is noise. Delete.
+CI can't catch a comment that merely restates `README.md` / `SCIENCE.md` /
+`CLAUDE.md` prose. Write order catches that one:
+`docs/authoring-patterns.md` § Code-comment hygiene.
 
 ## Write-time discipline — triggers and pointers
 
@@ -81,8 +52,7 @@ here is the always-loaded hook pointing to which section to open.
   input dimension. § Sentinel-init.
 - **Wall-clock time mid-animation** → route through
   `Stellata.getT()`, never `Date.now()`. § Single source of truth.
-- **Code comment violations** → P1 in PR review. § Code comments
-  above + authoring-patterns § Code comment hygiene.
+- **Code comment violations** → P1 in PR review. § Code-comment hygiene.
 - **Renaming an API OR changing semantics** → `grep -rn` old name +
   sweep every folder README in the diff. § Rename + stale-prose sweep.
 - **Writing new code** → tests in the SAME PR; pure helpers in
@@ -91,10 +61,8 @@ here is the always-loaded hook pointing to which section to open.
 - **Refactor framed "apply pattern X to all Y"** → enumerate peer set
   in PR description; verify zero remaining call sites of old pattern.
   § Pattern coverage across peers.
-- **Numeric literals + DRY specifics** → § Code conventions above
-  carries the law (2-call-site override); authoring-patterns § Named
-  constants and DRY carries detail (hoisting, tests-import-never-
-  redefine, builder extraction).
+- **Numeric literals** → hoist at the second usage; tests import the
+  constant and never redefine it. § Named constants and DRY.
 - **Mid-implementation doc-edit impulse** → defer to commit-time
   sweep. § Defer doc updates.
 - **Large PR (~10+ beads)** → distinguish High / Medium / Low test
@@ -177,7 +145,7 @@ these rules govern *where* new code goes.
   hand-written wrapper module so regen doesn't clobber it.
 - **No multi-paragraph in-code prose.** Physics derivations,
   calibration rationale → `SCIENCE.md` or folder `README.md` with a
-  one-line code-side pointer. See § Code comments above.
+  one-line code-side pointer.
 
 **Recursive split rule:** a folder's README is FOCUSED on its one
 topic. If tempted to add a second sibling doc — or the README grew
@@ -254,40 +222,38 @@ and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
 are documented in `scripts/refresh/README.md` and `RELEASING.md`
 § Catalogue refresh policy.
 
-## Git workflow — worktree, PR, merge
+## Git workflow — stellata gates
 
-**Never push or commit to main.** Diff size is never a justification.
-Every change goes through:
+The worktree → feature branch → `push -u` → PR → approval-gated-merge flow is
+a standing global rule; **never push or commit to main**, and diff size is
+never a justification. What this project adds:
 
-1. Fresh git worktree (call `EnterWorktree`).
-2. Feature branch.
-3. Push with `-u`.
-4. `gh pr create` (attach `skip-version-bump` for pure docs / CI /
-   `.beads` / repo-config — see `RELEASING.md` § Version policy, the
-   "live-app consumer" test).
-5. **Merge only via explicit per-PR approval — never `gh pr merge`
-   unprompted, even when CI is green.** Opening the PR is authorised
-   by the standing worktree-PR flow; merging is a separate decision.
-   After CI passes, stop and report "ready to merge when you are."
+- **`skip-version-bump` label** on `gh pr create` for pure docs / CI /
+  `.beads` / repo-config changes — see `RELEASING.md` § Version policy, the
+  "live-app consumer" test.
+- **`## Release notes` is required whenever the version bumps.** Every PR with
+  a `package.json` version bump fills that block in the PR body (Summary /
+  New features / Bugfixes / Changes). The deploy workflow extracts it and
+  publishes it to the GitHub release page for the version this PR ships,
+  replacing the flat auto-generated notes. `release-notes-guard` CI fails the
+  PR if the section is empty (HTML comments don't count); `skip-version-bump`
+  PRs are exempt. Detail in `RELEASING.md`.
+- **bd state isn't carried in git.** Writes persist to local Dolt immediately
+  and sync to `refs/dolt/*` automatically — the pre-push hook runs
+  `bd dolt push` on every `git push`, so no manual sync and no bd-sync PR.
+  JSONL export is off (`export.auto: false`); `.beads/issues.jsonl` isn't
+  written, and any stale copy is gitignored — never stage, commit, or revert
+  it.
 
-bd state isn't carried in git. Writes persist to local Dolt
-immediately and sync to `refs/dolt/*` automatically — the pre-push
-hook runs `bd dolt push` on every `git push`, no manual sync or
-bd-sync PR needed. JSONL export is off (`export.auto: false`);
-`.beads/issues.jsonl` isn't written, and any stale copy is gitignored
-— never stage, commit, or revert it.
+---
 
-### PR body — `## Release notes` is required when version bumps
-
-Every PR with a `package.json` version bump must fill the
-`## Release notes` block in the PR body (Summary / New features /
-Bugfixes / Changes). The deploy workflow extracts that block and
-publishes it to the GitHub release page for the version this PR
-ships, replacing the previous flat auto-generated notes. The
-`release-notes-guard` CI check fails the PR if the section is empty
-(HTML comments don't count). PRs labelled `skip-version-bump` are
-exempt. See `RELEASING.md` for detail.
-
+**Everything below this line is generated and rewritten in place by `bd`, and
+has the LOWEST precedence in this file.** Where it conflicts with a rule above
+or with a standing global rule, the rule above wins. Specifically, its
+"Session Completion" checklist does **not** override § Git workflow: the push
+it mandates is to the session's feature branch (never `main`), merging still
+needs explicit per-PR approval, and its manual `bd dolt push` step is already
+handled by the pre-push hook.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
