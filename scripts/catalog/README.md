@@ -4,7 +4,8 @@ Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
-`public/search-index.json` + `public/catalog-row-index-map.json`.
+`public/search-index.json` + `public/catalog-row-index-map.json` +
+`public/constellation-boundaries.json`.
 Run via `pnpm run build:catalog`.
 
 The AT-HYG-retirement plan (Gaia-native membership + classic-ID label
@@ -23,6 +24,9 @@ subfolders.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, spectral/radius resolution, the GCVS
   variability cross-match, and Stellarium stick figures.
+- `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
+  arcs resampled and precessed to ICRS, plus the magnitude-keyed
+  fade-quantile table the chart-mode layer derives its fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records, plus the renderable-companion wings
   and component-letter stamping passes.

@@ -14,6 +14,7 @@ public/catalog.bin.*
 public/catalog-manifest.json
 public/catalog-row-index-map.json
 public/constellations.json
+public/constellation-boundaries.json
 public/search-index.json
 public/clouds.json
 public/local-group.json

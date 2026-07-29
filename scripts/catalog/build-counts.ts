@@ -101,6 +101,16 @@ export interface BuildCounts {
   /** Entries in search-index.json (stars with at least one searchable
    *  identifier). */
   searchEntries: number;
+  /** Boundary arcs in public/constellation-boundaries.json — one per IAU
+   *  edge record, so a drift means the edge set changed. */
+  boundarySegments: number;
+  /** Precessed ICRS sample directions across all boundary arcs. Set by the
+   *  subdivision step, and the artifact's whole wire cost. */
+  boundaryDirections: number;
+  /** public/constellation-boundaries.json size in bytes. Pinned because the
+   *  subdivision step and the direction quantisation are both wire-size
+   *  choices, and neither has any other visible signal. */
+  boundaryArtifactBytes: number;
   /** Search entries carrying `dc` — a designation constellation that
    *  differs from the record's positional one, so its Bayer / Flamsteed /
    *  GCVS aliases are built against the editorial constellation instead

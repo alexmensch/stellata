@@ -65,6 +65,7 @@ import {
   STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
   buildFigureLines,
 } from './parse/constellations';
+import { writeBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   parseHipCcdm,
   applyDoublesFlag,
@@ -122,6 +123,7 @@ const PUBLIC_DIR = resolve(ROOT, 'public');
 const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
+const OUT_BOUNDARIES = resolve(ROOT, 'public/constellation-boundaries.json');
 const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
@@ -131,6 +133,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 function isUpToDate(): boolean {
   if (!existsSync(OUT_MANIFEST) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
+  if (!existsSync(OUT_BOUNDARIES)) return false;
   if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
   if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
@@ -237,6 +240,9 @@ async function main() {
     variableCount: 0,
     searchEntries: 0,
     designationConMismatch: 0,
+    boundarySegments: 0,
+    boundaryDirections: 0,
+    boundaryArtifactBytes: 0,
     solIndex: -1,
     figureCount: 0,
     figureConstellations: 0,
@@ -870,6 +876,24 @@ async function main() {
     return lines ? { ...c, lines } : { ...c };
   });
   await writeFile(OUT_CON, JSON.stringify(constellationsOut) + '\n');
+
+  // Boundary polylines + the fade-quantile table. The quantiles are keyed to
+  // the magnitude slider and measured over the shipped population, so this
+  // runs against the same `stars` the binary was written from.
+  const boundaries = await writeBoundaryArtifact(OUT_BOUNDARIES, stars);
+  counts.boundarySegments = boundaries.segments;
+  counts.boundaryDirections = boundaries.directions;
+  counts.boundaryArtifactBytes = boundaries.bytes;
+  const fade = boundaries.artifact.fade;
+  console.log(
+    `Wrote ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
+      + `${boundaries.directions} directions, `
+      + `${(boundaries.bytes / 1024).toFixed(1)} KB); fade window at `
+      + `V<=${fade.magLimits[fade.magLimits.length - 1]}: `
+      + fade.quantilePcts
+        .map((pct, j) => `${pct}%=${fade.offsetsPc[fade.offsetsPc.length - 1][j].toFixed(2)} pc`)
+        .join(', '),
+  );
 
   // Search index — one entry per star with at least one identifier the
   // user might type. buildSearchEntry owns the wire shape (catalog-pure.ts).
