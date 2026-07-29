@@ -1,6 +1,7 @@
 import type { Stellata } from '../stellata';
 import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
+import { nextCoordSphereFrame } from '../galactic/coord-spheres/coord-sphere-frames';
 import { DETAIL_LEVELS } from '../scene/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
@@ -183,9 +184,7 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 's': case 'S':
-        stellata.setFilter({
-          showGalacticGrid: !stellata.getFilter().showGalacticGrid,
-        });
+        cycleCoordSphere(stellata);
         e.preventDefault();
         break;
       case 'f': case 'F':
@@ -246,6 +245,15 @@ export function bindKeyboardShortcuts(
         break;
     }
   }, { capture: true });
+}
+
+function cycleCoordSphere(stellata: Stellata) {
+  stellata.setFilter({
+    coordSphere: nextCoordSphereFrame(
+      stellata.getFilter().coordSphere,
+      (frame) => stellata.coordSphereReachable(frame),
+    ),
+  });
 }
 
 function cycleDetailLevel(stellata: Stellata) {

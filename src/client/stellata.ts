@@ -28,7 +28,13 @@ import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-lo
 import { LG_EMISSION_SHELVED, LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
-import { GalacticGrid } from './galactic/galactic-grid';
+import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
+import {
+  COORD_SPHERE_SPECS,
+  DRAWN_COORD_SPHERE_FRAMES,
+  coordSphereFadeAt,
+  coordSphereReachableAt,
+} from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
@@ -311,7 +317,8 @@ export class Stellata implements FrameAnchor {
   private input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
-  // from Sol and is always-on. Grid is gated by `filter.showGalacticGrid`.
+  // from Sol and is always-on. The coordinate spheres are gated by
+  // `filter.coordSphere`, which admits only one of them at a time.
   // The HUD (Sol/GC arrows + OBSERVE-mode ring) is gated by
   // `filter.showHud`. Mono mode swaps strokes to a paper-chart palette via
   // setMonochrome on each layer (HUD is CSS-only).
@@ -344,7 +351,7 @@ export class Stellata implements FrameAnchor {
    *  Populated by each shell's attach; the kind-agnostic shell dispatch
    *  reads it. See fresnel-shell/shell-registry.ts. */
   readonly shells = new ShellRegistry();
-  private galacticGrid: GalacticGrid;
+  private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   private hudOverlay: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
    *  the chart activation predicate; the shell owns its lifetime. */
@@ -833,8 +840,13 @@ export class Stellata implements FrameAnchor {
     } else {
       this.planetSystemsReady = Promise.resolve();
     }
-    this.galacticGrid = new GalacticGrid();
-    this.scene.add(this.galacticGrid.group);
+    this.coordSpheres = {
+      galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic),
+      equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial),
+    };
+    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
+      this.scene.add(this.coordSpheres[frame].group);
+    }
     const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
     const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
     const solBg = document.getElementById('sol-arrow-bg') as unknown as SVGPathElement;
@@ -1131,16 +1143,36 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.localGroupLayer?.dispose(),
     });
     this.layers.register({
+      // Both spheres are camera-tracked; a spec's optional fade window is the
+      // only distance-dependent behaviour, and only the equatorial frame has
+      // one (galactic/README.md § Coordinate spheres).
       update: (ctx) => {
-        if (!ctx.warpActive && this.filter.showGalacticGrid) {
-          this.galacticGrid.group.visible = true;
-          this.galacticGrid.update(ctx.camera.position);
-        } else {
-          this.galacticGrid.group.visible = false;
+        // `coordSphere` must never name a sphere that can't draw — travelling
+        // out of a frame's fade deselects it rather than leaving the panel's
+        // stop highlighted-yet-disabled, which reads as nothing selected.
+        // Fires once per crossing, since the demotion clears its own trigger,
+        // and it is the single owner of the gone-at-zero-alpha cut.
+        const selected = this.filter.coordSphere;
+        if (selected !== 'none' && !coordSphereReachableAt(selected, ctx.distFromSol)) {
+          this.setFilter({ coordSphere: 'none' });
+        }
+        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
+          const sphere = this.coordSpheres[frame];
+          const on = !ctx.warpActive && this.filter.coordSphere === frame;
+          sphere.group.visible = on;
+          if (!on) continue;
+          sphere.setOpacityScale(coordSphereFadeAt(frame, ctx.distFromSol));
+          sphere.update(ctx.camera.position);
         }
       },
-      setMonochrome: (on) => this.galacticGrid.setMonochrome(on),
-      dispose: () => this.galacticGrid.dispose(),
+      setMonochrome: (on) => {
+        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
+          this.coordSpheres[frame].setMonochrome(on);
+        }
+      },
+      dispose: () => {
+        for (const frame of DRAWN_COORD_SPHERE_FRAMES) this.coordSpheres[frame].dispose();
+      },
     });
     this.layers.register({
       update: (ctx) => this.updateHud(ctx.warpActive),
@@ -2056,6 +2088,19 @@ export class Stellata implements FrameAnchor {
     this.filters.clearSizeOverrides(fields);
   }
 
+  /** Stroke alpha `frame`'s sphere draws at from the camera's current distance
+   *  from Sol. Its SVG edge labels ride the same value. */
+  coordSphereFade(frame: DrawnCoordSphereFrame): number {
+    return coordSphereFadeAt(frame, this.frameCtx.distFromSol);
+  }
+
+  /** Is `frame`'s sphere visible at all from here? The `S` cycle and the
+   *  panel's 3-stop control both gate on this so neither can select a sphere
+   *  that has faded to nothing. */
+  coordSphereReachable(frame: DrawnCoordSphereFrame): boolean {
+    return this.coordSphereFade(frame) > 0;
+  }
+
   // Declutter cycle. detailPermits is the per-frame read path layers gate
   // on (effective = permitted AND the layer's instance gates).
   getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
@@ -2368,7 +2413,9 @@ export class Stellata implements FrameAnchor {
     this.focus.refreshOrbitFloor();
     this.syncPixelSolidAngle();
     // Line2 needs the canvas resolution for its screen-space line width.
-    this.galacticGrid.setResolution(w, h);
+    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
+      this.coordSpheres[frame].setResolution(w, h);
+    }
     // Recompute pixel sizes from the active preset so non-overridden
     // fields stay proportional to the bulge across screen sizes and
     // orientation changes. maxAppMag/sizeSpan don't depend on viewport

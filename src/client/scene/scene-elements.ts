@@ -135,13 +135,14 @@ export function visibleSet(level: DetailLevel, style: RenderStyle): Set<SceneEle
 /** Don't-care chrome the detail cycle NEVER writes — HUD + navigation
  *  feedback + app overlays, each toggled by its own affordance (H, S, U,
  *  T). Its own closed union so the boundary is explicit and testable; the
- *  galactic coordinate sphere (lines + l/b labels, coupled) lives here —
- *  too many lines to sweep in the cycle. */
+ *  coordinate spheres (lines + edge labels, coupled) live here — too many
+ *  lines to sweep in the cycle. */
 export type UserOwnedElementId =
   | 'hudArrows'
   | 'hudRing'
   | 'poiOverlay'
   | 'galacticCoordSphere'
+  | 'equatorialCoordSphere'
   | 'focusRing'
   | 'distanceVector'
   | 'clickRipple'
@@ -153,7 +154,8 @@ export type UserOwnedElementId =
   | 'modePill';
 
 export const USER_OWNED_IDS: readonly UserOwnedElementId[] = [
-  'hudArrows', 'hudRing', 'poiOverlay', 'galacticCoordSphere', 'focusRing',
+  'hudArrows', 'hudRing', 'poiOverlay', 'galacticCoordSphere',
+  'equatorialCoordSphere', 'focusRing',
   'distanceVector', 'clickRipple', 'scaleBar', 'timeReadout', 'focusCards',
   'hoverTooltip', 'warpPill', 'modePill',
 ];

@@ -733,6 +733,15 @@ body.monochrome .scrubber-jump input { background: rgba(255, 255, 255, 0.92); }
   gap: 12px;
 }
 
+/* Clearance between the control blocks inside a settings section. Scoped to
+   direct children of .group-body so it outranks .sub-label's own 6px
+   intra-block margin regardless of rule order. Which children are block
+   starts can't be derived from the element type — the Camera section has
+   .sub-label-rows that deliberately sit tight inside a block — so a block
+   start is marked, not inferred. */
+.group-body > .group-block { margin-top: 12px; }
+.group-body > .group-block:first-child { margin-top: 0; }
+
 /* Block-level so each row stacks vertically — `inline-flex` was causing
  * neighbouring rows to flow on the same line when the labels were short
  * enough to fit. Modal-dismiss kept inline-flex because it sits next to
@@ -906,9 +915,12 @@ input[type="range"]::-moz-range-thumb {
   text-transform: inherit;
 }
 .link-btn:hover { color: var(--accent); }
+.link-btn:disabled { opacity: 0.4; cursor: default; }
+.link-btn:disabled:hover { color: var(--fg-dim); }
 .row-actions .sep { opacity: 0.4; margin: 0 4px; }
 .mag-preset.on,
-.detail-stop.on {
+.detail-stop.on,
+.coord-sphere-stop.on {
   color: var(--accent);
   background: rgba(125, 211, 252, 0.12);
   padding: 1px 6px;
@@ -991,8 +1003,8 @@ input[type="range"]::-moz-range-thumb {
   stroke: none;
 }
 
-/* Focus ring + HUD ring + GC arrow share the galactic-grid hue (the slate
-   blue used by the 3D galactic-coordinate sphere) so the orientation
+/* Focus ring + HUD ring + GC arrow share the coordinate-sphere hue (the
+   slate blue used by the 3D grid lines) so the orientation
    layers all read as one palette. Sol arrow and the distance vector keep
    their distinct hues to stay individually identifiable. */
 .focus-ring {
@@ -1170,11 +1182,11 @@ body.monochrome .hud-ring {
   stroke-linejoin: round;
   pointer-events: none;
 }
-/* Galactic coordinate sphere l/b labels — fill matches the grid-line stroke
-   (0x6688aa) a touch more opaque for legibility, with a faint dark halo. In
-   chart mode they flip to the grid's mono ink (0x3a3530) with a white halo,
-   matching the grid's own dark-to-mono swap in galactic-grid.ts. */
-.gal-grid-label {
+/* Coordinate-sphere edge labels, both frames — fill matches the grid-line
+   stroke (0x6688aa) a touch more opaque for legibility, with a faint dark
+   halo. In chart mode they flip to the grid's mono ink (0x3a3530) with a
+   white halo, matching CoordSphere's own dark-to-mono swap. */
+.coord-sphere-label {
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.04em;
@@ -1185,7 +1197,7 @@ body.monochrome .hud-ring {
   stroke-linejoin: round;
   pointer-events: none;
 }
-body.monochrome .gal-grid-label {
+body.monochrome .coord-sphere-label {
   fill: rgba(58, 53, 48, 0.95);
   stroke: rgba(255, 255, 255, 0.85);
 }

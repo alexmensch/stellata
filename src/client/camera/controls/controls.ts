@@ -3,10 +3,12 @@ import {
   ALL_SPECT_MASK,
   DEFAULT_FOV,
   MAG_PRESETS,
-  type MagPresetName,
+  MAG_PRESET_NAMES,
 } from '../../filters/filter-state';
-import type { DetailLevel } from '../../scene/scene-elements';
+import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
+import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
+import { bindStopControl, syncStopControl } from '../../ui/stop-control';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
 
 const SPECT_LABELS: { key: string; label: string; bit: number }[] = [
@@ -48,6 +50,7 @@ export function bindControls(stellata: Stellata) {
   const appMagReadout = document.getElementById('app-mag-readout')!;
   const magPresets = document.querySelectorAll<HTMLButtonElement>('.mag-preset');
   const detailStops = document.querySelectorAll<HTMLButtonElement>('.detail-stop');
+  const coordSphereStops = document.querySelectorAll<HTMLButtonElement>('.coord-sphere-stop');
   const chipsHost = document.getElementById('spect-chips')!;
   const spectAllBtn = document.getElementById('spect-all')!;
   const spectNoneBtn = document.getElementById('spect-none')!;
@@ -61,7 +64,6 @@ export function bindControls(stellata: Stellata) {
   const conInput = document.getElementById('con-input') as HTMLInputElement | null;
   const conPicker = document.getElementById('con-picker');
   const showMilkyway = document.getElementById('show-milkyway') as HTMLInputElement;
-  const showGalacticGrid = document.getElementById('show-galactic-grid') as HTMLInputElement;
   const showChart = document.getElementById('show-chart') as HTMLInputElement;
   const fov = document.getElementById('fov') as HTMLInputElement;
   const fovReadout = document.getElementById('fov-readout')!;
@@ -119,22 +121,12 @@ export function bindControls(stellata: Stellata) {
   appMag.addEventListener('input', () => {
     stellata.setFilter({ maxAppMag: Number(appMag.value) });
   });
-  for (const btn of Array.from(magPresets)) {
-    btn.addEventListener('click', () => {
-      const preset = btn.dataset.preset as MagPresetName | undefined;
-      if (preset === 'naked-eye' || preset === 'binoculars' || preset === 'all') {
-        stellata.applyMagnitudePreset(preset);
-      }
-    });
-  }
-  for (const btn of Array.from(detailStops)) {
-    btn.addEventListener('click', () => {
-      const d = btn.dataset.detail as DetailLevel | undefined;
-      if (d === 'physical' || d === 'representational' || d === 'all') {
-        stellata.applyDetailPreset(d);
-      }
-    });
-  }
+  bindStopControl(magPresets, 'preset', MAG_PRESET_NAMES,
+    (preset) => stellata.applyMagnitudePreset(preset));
+  bindStopControl(detailStops, 'detail', DETAIL_LEVELS,
+    (level) => stellata.applyDetailPreset(level));
+  bindStopControl(coordSphereStops, 'coordSphere', COORD_SPHERE_FRAMES,
+    (frame) => stellata.setFilter({ coordSphere: frame }));
   // Size sliders set their override flag so the value sticks across
   // preset changes and viewport resizes until the reset button clears it.
   // Min/Max are coupled — dragging one past the other pushes the other
@@ -170,9 +162,6 @@ export function bindControls(stellata: Stellata) {
   });
   showMilkyway.addEventListener('change', () => {
     stellata.setFilter({ showMilkyway: showMilkyway.checked });
-  });
-  showGalacticGrid.addEventListener('change', () => {
-    stellata.setFilter({ showGalacticGrid: showGalacticGrid.checked });
   });
   showChart.addEventListener('change', () => {
     stellata.setFilter({ chart: showChart.checked });
@@ -211,23 +200,15 @@ export function bindControls(stellata: Stellata) {
     if (appMag.value !== magStr) appMag.value = magStr;
     appMagReadout.textContent = `≤ ${f.maxAppMag.toFixed(1)}`;
 
-    // Highlight whichever preset button matches the current slider value.
-    // Value-driven (not click-driven) so dragging the slider to 6.5 still
-    // lights up "naked eye".
-    for (const btn of Array.from(magPresets)) {
-      const preset = btn.dataset.preset as MagPresetName | undefined;
-      const matches =
-        preset === 'naked-eye' || preset === 'binoculars' || preset === 'all'
-          ? Math.abs(f.maxAppMag - MAG_PRESETS[preset].maxAppMag) < 0.05
-          : false;
-      btn.classList.toggle('on', matches);
-    }
+    // Unlike the other two stop controls the active preset isn't a state
+    // field — it's whichever one the magnitude slider currently sits on, so
+    // dragging to 6.5 lights "naked eye" without a click. No stop matches an
+    // in-between value.
+    const activePreset = MAG_PRESET_NAMES.find(
+      (name) => Math.abs(f.maxAppMag - MAG_PRESETS[name].maxAppMag) < 0.05);
+    syncStopControl(magPresets, 'preset', activePreset ?? '');
 
-    // Detail-level 3-stop: highlight the active level (value-driven, so V
-    // and URL restore light the right stop the same as a click).
-    for (const btn of Array.from(detailStops)) {
-      btn.classList.toggle('on', btn.dataset.detail === f.detailLevel);
-    }
+    syncStopControl(detailStops, 'detail', f.detailLevel);
 
     for (const el of chipEls) {
       const bit = Number(el.dataset.bit);
@@ -259,9 +240,7 @@ export function bindControls(stellata: Stellata) {
     if (showMilkyway.checked !== f.showMilkyway) {
       showMilkyway.checked = f.showMilkyway;
     }
-    if (showGalacticGrid.checked !== f.showGalacticGrid) {
-      showGalacticGrid.checked = f.showGalacticGrid;
-    }
+    syncStopControl(coordSphereStops, 'coordSphere', f.coordSphere);
     // Chart toggle is observe-gated. Disable when not in observe so the
     // user sees why it can't be enabled (the title attribute on the row
     // explains it).
@@ -281,6 +260,22 @@ export function bindControls(stellata: Stellata) {
     const kStr = stellata.getStarExaggerationK().toString();
     if (exag.value !== kStr) exag.value = kStr;
   };
+
+  // The equatorial stop is disabled (not hidden) beyond its Sol-distance fade
+  // — an Earth-referenced frame that would render invisible from there. This
+  // rides 'frame' rather than syncFromFilter because it tracks camera distance,
+  // which no discrete state event announces; the cached flag keeps it to one
+  // DOM write per crossing.
+  const equatorialStop = Array.from(coordSphereStops)
+    .find(btn => btn.dataset.coordSphere === 'equatorial');
+  let equatorialReachable: boolean | null = null;
+  stellata.on('frame', () => {
+    if (!equatorialStop) return;
+    const reachable = stellata.coordSphereReachable('equatorial');
+    if (reachable === equatorialReachable) return;
+    equatorialReachable = reachable;
+    equatorialStop.disabled = !reachable;
+  });
 
   stellata.on('filter', syncFromFilter);
   stellata.on('cameraMode', syncFromFilter);

@@ -152,6 +152,17 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `detailLevelField`), present only when the user cycled below the default
 `all` — a fully-cluttered share stays byte-identical to before.
 
+`coordSphere` is a **tri-state carried across two places**, not one field:
+FLAG_GRID (flags bit 0) means "a coordinate sphere is up", and zero-byte
+presence bit 24 (`coordSphereEquatorialField`) says which. Layering rather
+than replacing FLAG_GRID with an enum is what makes both compatibility
+directions free — a pre-equatorial link (FLAG_GRID alone) decodes to the
+galactic sphere, and a client predating bit 24 ignores the unknown high mask
+bit and shows the galactic sphere instead of none. Bit 24 decodes *after*
+`flagsField` (bit 13), so it overwrites the `'galactic'` that `unpackFlags`
+wrote; a new enum field would have cost the galactic case a payload byte
+where it currently costs zero.
+
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see
 `src/client/README.md` § Floating origin for the precision-anchor
