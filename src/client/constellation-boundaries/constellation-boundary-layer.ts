@@ -107,10 +107,11 @@ export class ConstellationBoundaryLayer {
     this.group.visible = true;
   }
 
-  /** The layer only ever draws in chart mode, so both branches carry the same
-   *  ink — what differs is the binding. Chart mode bypasses the HDR resolve,
-   *  so the chart variant must skip the inverse tone-map or the ink lands at
-   *  the wrong value on paper. */
+  /** The layer only ever draws in chart mode, so the ink never changes — what
+   *  differs is the binding, and both bindings are written so the colour stays
+   *  correct if the layer ever gains a realistic floor. Chart mode bypasses
+   *  the HDR resolve, so the chart variant must skip the inverse tone-map or
+   *  the ink lands at the wrong value on paper (`../hdr/README.md` § Chrome). */
   setMonochrome(on: boolean): void {
     setBuiltinChromeColour(this.material.color, CHART_REFERENCE_INK, on);
   }

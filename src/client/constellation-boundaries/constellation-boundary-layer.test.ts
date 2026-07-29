@@ -96,14 +96,26 @@ describe('ConstellationBoundaryLayer', () => {
     layer.dispose();
   });
 
-  it('dispose drops the geometry and re-arms the magnitude sentinel', () => {
+  it('dispose drops the geometry and the fade window', () => {
     const layer = attached();
     layer.dispose();
     expect(layer.group.children.length).toBe(0);
-    // The sentinel was reset, so the same limit pushes through rather than
-    // being swallowed as unchanged — and with no table there is no window.
+    // The window went with the table, so a later push cannot revive the layer:
+    // setMagnitudeLimit's no-table guard swallows it before the sentinel is
+    // ever consulted.
     layer.setMagnitudeLimit(6);
     layer.update(ORIGIN, 0);
     expect(layer.group.visible).toBe(false);
+  });
+
+  // The fade is the layer's whole correctness property — a window that reads
+  // as NaN would leave a wrong partition drawn from everywhere, since a NaN
+  // opacity never trips the `<= 0` hide.
+  it('hides rather than drawing at NaN opacity on an unusable window', () => {
+    const layer = attached();
+    layer.setMagnitudeLimit(NaN);
+    layer.update(ORIGIN, 1e9);
+    expect(layer.group.visible).toBe(false);
+    layer.dispose();
   });
 });
