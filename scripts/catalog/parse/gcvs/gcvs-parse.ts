@@ -1,5 +1,5 @@
-// GCVS variable-star catalogue parsing and per-Star cross-match. See
-// scripts/catalog/README.md § GCVS variability cross-match.
+// GCVS variable-star catalogue parsing and per-Star cross-match.
+// See README.md.
 import { readFileSync } from 'node:fs';
 
 import {
@@ -10,9 +10,9 @@ import {
   parseGcvsNumber,
   splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
-} from '../catalog-pure';
-import { CON_INDEX } from './constellations';
-import type { Star } from './stars-parse';
+} from '../../catalog-pure';
+import { CON_INDEX } from '../constellations';
+import type { Star } from '../stars-parse';
 
 export interface VarStarData {
   periodDays: number;

@@ -90,7 +90,7 @@ import {
   parseGcvsCrossref,
   bridgeGcvsByGaia,
   applyVariability,
-} from './parse/gcvs-parse';
+} from './parse/gcvs/gcvs-parse';
 import {
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
@@ -659,7 +659,7 @@ async function main() {
   // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
   // ECLIPSING record the geometric / CCDM passes didn't already flag —
   // eclipsers surface as multi-star systems, not intrinsic-variable rings
-  // (see scripts/catalog/README.md § GCVS variability cross-match).
+  // (see scripts/catalog/parse/gcvs/README.md).
   // companionIdx stays unset where inference found no partner; the
   // renderer guards on companionIdx >= 0, so a flagged-but-companionless
   // primary is safe.

@@ -22,8 +22,9 @@ subfolders.
 ## Subfolders
 
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
-  parsers, space-motion velocity, spectral/radius resolution, the GCVS
-  variability cross-match, and Stellarium stick figures.
+  parsers, space-motion velocity, spectral/radius resolution, and
+  Stellarium stick figures. Its `gcvs/` subfolder owns the variable-star
+  parsing and the variability cross-match.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
   arcs resampled and precessed to ICRS, plus the magnitude-keyed
   fade-quantile table the chart-mode layer derives its fade window from.
@@ -347,7 +348,7 @@ Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/dc/s/cl/cp`) to keep wire size down — fi
 AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip
 display. The `g` field carries the GCVS variable-star designation
 (`R CrB`, `VY CMa`, `V0645 Cen`) attached during the GCVS cross-match
-(`parse/README.md` § GCVS variability cross-match) — the lookup key the cross-match already
+(`parse/gcvs/README.md`) — the lookup key the cross-match already
 computes, now also emitted so variables become searchable by their
 familiar variable name rather than only HIP/HD. ~14.1k stars are named
 (`gcvsNamed`); this is a superset of the ~4.1k with a renderable period
