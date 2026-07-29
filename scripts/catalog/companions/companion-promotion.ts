@@ -14,6 +14,7 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
   classifyFromSimbad,
+  designationConIndex,
   spectralClassCi,
   spectralFromAbsmag,
   parseGaiaSourceIdStr,
@@ -24,6 +25,7 @@ import {
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
+import type { ConstellationAssignment } from '../parse/constellations';
 import type { Star } from '../parse/stars-parse';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
@@ -388,11 +390,9 @@ export interface PromotionStats {
    *  whole fit was indecisive within 0.01 mag): their light is not in
    *  the anchor's blend, so no dim. 36 Oph D vs A+B's blend. */
   blendDimMembersOutside: number;
-  /** Promoted companions that inherited a classified constellation index
-   *  from their anchor. The residual (promoted − this) is the rows whose
-   *  resolved anchor is absent or itself unclassified, keeping
-   *  NO_CONSTELLATION_INDEX. */
-  constellationInherited: number;
+  /** Promoted companions whose own positional constellation differs from
+   *  their anchor's — a pair wide enough to straddle an IAU boundary. */
+  constellationSplitFromAnchor: number;
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -420,7 +420,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimSkipped: 0,
     blendDimMembersUnfit: 0,
     blendDimMembersOutside: 0,
-    constellationInherited: 0,
+    constellationSplitFromAnchor: 0,
   };
 }
 
@@ -937,7 +937,9 @@ function starNameBase(
   if (star === null) return null;
   const proper = (star.proper ?? '').trim();
   if (proper) return proper;
-  const conCode = constellationCode(star.conIndex, constellations);
+  const conCode = constellationCode(
+    designationConIndex(star.desigConIndex, star.conIndex), constellations,
+  );
   if (conCode !== null) {
     const bayer = (star.bayer ?? '').trim();
     if (bayer) return `${bayer} ${conCode}`;
@@ -1185,6 +1187,9 @@ interface PromotionState {
   existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
+  /** Rides the state rather than a sixth positional argument through the
+   *  three call layers `dustGrid` already crosses. */
+  readonly conAssignment: ConstellationAssignment;
   promotedByGaia: Map<string, number>;
   promotedByHip: Map<number, number>;
   promotedBySynth: Map<string, number>;
@@ -1401,6 +1406,7 @@ function promoteRow(
         dup.x = position.x;
         dup.y = position.y;
         dup.z = position.z;
+        dup.conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
         dup.vx = anchorVel.x;
         dup.vy = anchorVel.y;
         dup.vz = anchorVel.z;
@@ -1418,14 +1424,15 @@ function promoteRow(
   if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
-  // Constellation: inherit from the same anchor. The companion sits
-  // sub-arcsec off it, and a position can't be classified directly —
-  // constellations ship no boundary polygons. Anchor-less escapes keep
-  // NO_CONSTELLATION_INDEX.
-  const conIndex = inheritAnchor !== null
-    ? inheritAnchor.conIndex
-    : NO_CONSTELLATION_INDEX;
-  if (conIndex !== NO_CONSTELLATION_INDEX) stats.constellationInherited++;
+  // Constellation: positional from the companion's own placement, so a pair
+  // straddling a boundary lands its members on the correct sides. The
+  // designation constellation is still the anchor's — a composed name
+  // ("Xi Boo B") is named for whatever the primary's designation is.
+  const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
+  const desigConIndex = inheritAnchor?.desigConIndex ?? NO_CONSTELLATION_INDEX;
+  if (inheritAnchor !== null && conIndex !== inheritAnchor.conIndex) {
+    stats.constellationSplitFromAnchor++;
+  }
 
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
@@ -1435,6 +1442,7 @@ function promoteRow(
     lumClass: spectral.info.lumClass,
     physicalRadius: physicalRadius(absmag, spectral.info),
     conIndex,
+    desigConIndex,
     flags,
     proper: properName,
     bayer: null,
@@ -1574,6 +1582,7 @@ export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
   constellations: { code: string; name: string }[],
+  conAssignment: ConstellationAssignment,
   dustGrid: DustGrid | null = null,
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
@@ -1594,6 +1603,7 @@ export function promoteCompanions(
     existingStars,
     existingStarsLength: existingStars.length,
     newStars,
+    conAssignment,
     promotedByGaia: new Map(),
     promotedByHip: new Map(),
     promotedBySynth: new Map(),

@@ -228,14 +228,14 @@ describe('search / buildBayerMap', () => {
     ];
     const map = buildBayerMap(raw);
     expect(map.size).toBe(2);
-    expect(map.get(0)).toEqual({ greek: 'α', suffix: '', conIdx: 1 });
-    expect(map.get(1)).toEqual({ greek: 'β', suffix: '', conIdx: 2 });
+    expect(map.get(0)).toEqual({ greek: 'α', suffix: '' });
+    expect(map.get(1)).toEqual({ greek: 'β', suffix: '' });
   });
 
   it('encodes -1/-2 component suffix as a unicode superscript', () => {
     const raw: SearchEntry[] = [{ i: 0, b: 'Alp-1', c: 5 }];
     const map = buildBayerMap(raw);
-    expect(map.get(0)).toEqual({ greek: 'α', suffix: '¹', conIdx: 5 });
+    expect(map.get(0)).toEqual({ greek: 'α', suffix: '¹' });
   });
 
   it('skips entries with no Bayer string', () => {
@@ -248,12 +248,25 @@ describe('search / buildBayerMap', () => {
     expect(map.has(1)).toBe(true);
   });
 
-  it('skips entries with no constellation (chart label needs both)', () => {
+  it('skips entries with no constellation (a Bayer letter needs one)', () => {
     const raw: SearchEntry[] = [
       { i: 0, b: 'Alp', c: 255 },
       { i: 1, b: 'Bet' /* no c */ },
     ];
     expect(buildBayerMap(raw).size).toBe(0);
+  });
+
+  it('takes the designation constellation over the positional one', () => {
+    // ρ Aql's shape: positionally in Delphinus, designated in Aquila. The
+    // glyph is the same either way, but the gate must read the field the
+    // Bayer letter belongs to.
+    const raw: SearchEntry[] = [
+      { i: 0, b: 'Rho', c: 31, dc: 3 },
+      { i: 1, b: 'Alp', c: 255, dc: 3 },
+    ];
+    const map = buildBayerMap(raw);
+    expect(map.get(0)).toEqual({ greek: 'ρ', suffix: '' });
+    expect(map.has(1)).toBe(true);
   });
 
   it('skips entries whose Bayer letter is unknown', () => {
@@ -403,6 +416,23 @@ describe('search / buildSearchIndex', () => {
     expect(glMap.get('559a')).toBe(1);
   });
 
+  it('builds designations from dc while the dropdown context line stays positional', () => {
+    // ρ Aql: positionally in Delphinus (byte 34), designated in Aquila. Every
+    // alias must be Aquila's; the row's constellation line must read
+    // Delphinus, which is where the star actually is.
+    const CONS_RHO = [
+      { code: 'Aql', name: 'Aquila' },
+      { code: 'Del', name: 'Delphinus' },
+    ];
+    const raw: SearchEntry[] = [{ i: 0, b: 'Rho', f: 67, c: 1, dc: 0 }];
+    const { fuzzyEntries, flamMap } = buildSearchIndex(raw, CONS_RHO);
+    expect(fuzzyEntries.map((e) => e.label).sort())
+      .toEqual(['67 Aql', '67 Aquila', 'Rho Aql', 'Rho Aquila', 'ρ Aql', 'ρ Aquila']);
+    expect(flamMap.get('67 aql')?.[0].index).toBe(0);
+    expect(flamMap.get('67 del')).toBeUndefined();
+    expect(new Set(fuzzyEntries.map((e) => e.displayCon))).toEqual(new Set(['Delphinus']));
+  });
+
   it('normalizes any Gl/GJ/Gliese prefix to the same lookup key', () => {
     // AT-HYG stores "Gl 551", but "GJ 551" / "Gliese 551" must resolve the
     // same star — the prefix is stripped so all three land on key "551".
@@ -439,6 +469,13 @@ describe('search / buildStarLabels', () => {
     const labels = buildStarLabels(makeEmptyCatalog(2), raw);
     expect(labels.get(0)).toBe('Gl 195A');
     expect(labels.get(1)).toBe('GJ 9581');
+  });
+
+  it('renders the display label against the designation constellation', () => {
+    const catalog = makeEmptyCatalog(1);
+    catalog.constellations = [{ code: 'Aql', name: 'Aquila' }, { code: 'Del', name: 'Delphinus' }];
+    const raw: SearchEntry[] = [{ i: 0, f: 67, c: 1, dc: 0 }];
+    expect(buildStarLabels(catalog, raw).get(0)).toBe('67 Aql');
   });
 
   it('labels an otherwise-anonymous variable by its GCVS designation, in preference to HIP', () => {
@@ -481,6 +518,12 @@ describe('search / starDesignations', () => {
   it('keeps uppercase GCVS letter-sequence designations (not Bayer forms)', () => {
     const entry: SearchEntry = { i: 0, g: 'MU Lyr' };
     expect(starDesignations(entry, constellations, 0n)).toEqual(['MU Lyr']);
+  });
+
+  it('takes the designation constellation over the positional one', () => {
+    const entry: SearchEntry = { i: 0, b: 'Rho', f: 67, c: 1, dc: 0, hip: 99742 };
+    expect(starDesignations(entry, [{ code: 'Aql' }, { code: 'Del' }], 0n))
+      .toEqual(['ρ Aql', '67 Aql', 'HIP 99742']);
   });
 
   it('drops Bayer/Flamsteed forms when the constellation is unknown', () => {

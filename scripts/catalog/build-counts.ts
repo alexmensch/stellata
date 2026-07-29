@@ -101,6 +101,11 @@ export interface BuildCounts {
   /** Entries in search-index.json (stars with at least one searchable
    *  identifier). */
   searchEntries: number;
+  /** Search entries carrying `dc` — a designation constellation that
+   *  differs from the record's positional one, so its Bayer / Flamsteed /
+   *  GCVS aliases are built against the editorial constellation instead
+   *  (ρ Aql / 67 Aql). */
+  designationConMismatch: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
   solIndex: number;
   /** Total stick-figure polylines across all constellations. */
@@ -162,6 +167,11 @@ export interface BuildCounts {
    *  parsed spectral class (tier 4/5) instead of the solar fallback — the
    *  population that would otherwise render solar-yellow. */
   ciSpectralDerived: number;
+  /** AT-HYG rows whose IAU-positional constellation differs from their
+   *  editorial `con` cell. Pinned exactly, not as a rate: it is the
+   *  sharpest available signal on the B1875 precession epoch — see
+   *  src/client/constellation-boundaries/README.md § Agreement with AT-HYG. */
+  conPositionalDisagreement: number;
   /** Identifier-less catalog primaries that gained HIP / Gaia source_id
    *  from a multiples.tsv pair-primary row, joined by HD
    *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */
@@ -269,10 +279,10 @@ export interface BuildCounts {
   /** Existing AT-HYG blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
-  /** Promoted companions that inherited a classified constellation index
-   *  from their anchor (all but the rows whose anchor is absent or itself
-   *  unclassified). */
-  companionConstellationInherited: number;
+  /** Promoted companions whose own IAU-positional constellation differs from
+   *  their anchor's — a pair wide enough to straddle a boundary, which
+   *  inheriting the anchor's index used to hide. */
+  companionConstellationSplitFromAnchor: number;
   /** First-class AT-HYG records given a composed component name by the
    *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
    *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */

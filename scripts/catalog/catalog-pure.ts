@@ -1230,7 +1230,8 @@ export interface SearchEntry {
   p?: string;    // proper name (Sol, Sirius, …)
   b?: string;    // Bayer designation as in AT-HYG (Alp, Alp-1, …)
   f?: number;    // Flamsteed number
-  c?: number;    // constellation index (255 = none, omitted)
+  c?: number;    // positional constellation index (255 = none, omitted)
+  dc?: number;   // designation's constellation index, only when it differs from c
   s?: string;    // spectral designation, cleaned for display
   g?: string;    // GCVS variable-star designation (R CrB, VY CMa, V0645 Cen)
   hip?: number;  // Hipparcos catalogue number
@@ -1253,7 +1254,24 @@ export interface SearchEntrySource {
   gl: string | null;
   gcvsName: string | null;
   conIndex: number;
+  desigConIndex: number;
   spectDisplay: string | null;
+}
+
+/** Which constellation a Bayer / Flamsteed / GCVS designation is rendered
+ *  against. Byte 34 is positional, and the two diverge once a boundary moves
+ *  past a named star (ρ Aql / 67 Aql is Delphinus but keeps its Aquila
+ *  designation), so the editorial index wins wherever one is known. Shared by
+ *  the build (`Star`) and the wire reader (`SearchEntry.dc ?? .c`) so the
+ *  precedence is stated once. */
+export function designationConIndex(
+  desigConIndex: number | undefined,
+  positionalConIndex: number | undefined,
+): number {
+  if (desigConIndex !== undefined && desigConIndex !== NO_CONSTELLATION_INDEX) {
+    return desigConIndex;
+  }
+  return positionalConIndex ?? NO_CONSTELLATION_INDEX;
 }
 
 // Sole writer of the SearchEntry wire shape (build-catalog.ts calls it);
@@ -1284,6 +1302,16 @@ export function buildSearchEntry(
   if (component) {
     entry.cl = component.comp;
     entry.cp = component.primaryIdx;
+  }
+  // Only the constellation-relative designations read `dc`, so an entry
+  // findable solely by catalogue number gains nothing from carrying it. Every
+  // other star rides the reader's `dc ?? c` fallback at no wire cost.
+  const hasConRelativeDesignation =
+    Boolean(entry.b) || entry.f !== undefined || Boolean(entry.g) || component !== undefined;
+  if (hasConRelativeDesignation
+      && s.desigConIndex !== NO_CONSTELLATION_INDEX
+      && s.desigConIndex !== s.conIndex) {
+    entry.dc = s.desigConIndex;
   }
   return entry;
 }

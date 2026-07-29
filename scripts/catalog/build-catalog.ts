@@ -26,6 +26,7 @@ import {
   NO_COMPANION,
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
+  NO_CONSTELLATION_INDEX,
   MULTIPLICITY_SINGLE,
   MULTIPLICITY_RESOLVED,
   MULTIPLICITY_UNRESOLVED,
@@ -61,7 +62,6 @@ import {
 } from './distance/distance-regression-check';
 import {
   CONSTELLATIONS,
-  CON_INDEX,
   STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
   buildFigureLines,
 } from './parse/constellations';
@@ -236,6 +236,7 @@ async function main() {
     nameTableEntries: 0,
     variableCount: 0,
     searchEntries: 0,
+    designationConMismatch: 0,
     solIndex: -1,
     figureCount: 0,
     figureConstellations: 0,
@@ -253,6 +254,7 @@ async function main() {
     spectralByGspspec: 0,
     spectralFallback: 0,
     ciSpectralDerived: 0,
+    conPositionalDisagreement: 0,
     multiplesIdentifierBackfill: 0,
     systemCoherenceSystems: 0,
     systemCoherenceRepositioned: 0,
@@ -280,7 +282,7 @@ async function main() {
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
     companionRepositionedCollocatedDouble: 0,
-    companionConstellationInherited: 0,
+    companionConstellationSplitFromAnchor: 0,
     componentLettersStamped: 0,
     componentNameCollisionsResolved: 0,
     componentNameCollisionsUnresolved: 0,
@@ -303,14 +305,15 @@ async function main() {
   };
 
   const {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid, sizes,
+    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, dustGrid,
+    conAssignment, sizes,
   } = loadReadStarsInputs();
   Object.assign(counts, sizes);
 
   console.log(`Reading ${SRC_CSV}...`);
   const t0 = Date.now();
   const { stars, stats } = await readStars(
-    SRC_CSV, CON_INDEX, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
+    SRC_CSV, conAssignment, bjMap, hipToGaia, simbadSpectral, apsisMap, directions,
     dustGrid, wdsXids,
   );
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
@@ -398,6 +401,7 @@ async function main() {
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciSpectralDerived = stats.ciSpectralDerived;
+  counts.conPositionalDisagreement = stats.conPositionalDisagreement;
 
   const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
@@ -465,7 +469,9 @@ async function main() {
       coherence.anchorPlacementInconsistent;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps, groups } = promoteCompanions(multiplesRows, stars, CONSTELLATIONS, dustGrid);
+    const { newStars, stats: ps, groups } = promoteCompanions(
+      multiplesRows, stars, CONSTELLATIONS, conAssignment, dustGrid,
+    );
     for (const ns of newStars) stars.push(ns);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
@@ -485,7 +491,8 @@ async function main() {
         `blend-split=${ps.blendSplitRecords}, ` +
         `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
         `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}), ` +
-        `repositioned-collocated-double=${ps.repositionedCollocatedDouble} ` +
+        `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
+        `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
         `in ${Date.now() - tProm}ms`,
     );
     counts.companionRowsScanned = ps.pairRowsScanned;
@@ -509,7 +516,7 @@ async function main() {
     counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
     counts.companionBlendDimOutside = ps.blendDimMembersOutside;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
-    counts.companionConstellationInherited = ps.constellationInherited;
+    counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
 
     // Stamp component letters onto pairs AT-HYG left anonymous — both
     // halves first-class but printing the same Bayer/Flamsteed label
@@ -758,6 +765,7 @@ async function main() {
   // Records.
   let off = HEADER_SIZE;
   let solIndex = -1;
+  const unclassifiedCon: number[] = [];
   let variableCount = 0;
   let gaiaSourceIdResolved = 0;
   let apsisMatched = 0;
@@ -810,7 +818,21 @@ async function main() {
     });
 
     if (s.flags & FLAG_IS_SOL) solIndex = i;
+    if (s.conIndex === NO_CONSTELLATION_INDEX) unclassifiedCon.push(i);
     off += RECORD_SIZE;
+  }
+
+  // The IAU boundaries partition the whole sphere, so byte 34's sentinel is
+  // unreachable for anything with a direction. Sol sits at the origin and is
+  // the one record that has none — any other holder means an assignment path
+  // was skipped, which surfaces downstream as a blank constellation row
+  // rather than an error.
+  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== solIndex) {
+    throw new Error(
+      `Expected Sol (record ${solIndex}) to be the only record without a `
+      + `constellation; got ${unclassifiedCon.length}: `
+      + `${unclassifiedCon.slice(0, 10).join(', ')}`,
+    );
   }
 
   // Name table.
@@ -895,6 +917,7 @@ async function main() {
 
   counts.variableCount = variableCount;
   counts.searchEntries = searchEntries.length;
+  counts.designationConMismatch = searchEntries.filter((e) => e.dc !== undefined).length;
   counts.solIndex = solIndex;
   counts.figureCount = figureCount;
   counts.figureConstellations = figureLines.size;

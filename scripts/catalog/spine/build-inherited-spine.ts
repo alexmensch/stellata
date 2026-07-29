@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
-import { CONSTELLATIONS, CON_INDEX } from '../parse/constellations';
+import { CONSTELLATIONS } from '../parse/constellations';
 import { readStars, type Star } from '../parse/stars-parse';
 import {
   ATHYG_CSV,
@@ -101,8 +101,9 @@ async function readAthygDerivedRecords(): Promise<Star[]> {
   const inputs = loadReadStarsInputs();
   console.log(`Reading ${ATHYG_CSV}...`);
   const { stars, stats } = await readStars(
-    ATHYG_CSV, CON_INDEX, inputs.bjMap, inputs.hipToGaia, inputs.simbadSpectral,
-    inputs.apsisMap, inputs.directions, inputs.dustGrid, inputs.wdsXids,
+    ATHYG_CSV, inputs.conAssignment, inputs.bjMap, inputs.hipToGaia,
+    inputs.simbadSpectral, inputs.apsisMap, inputs.directions, inputs.dustGrid,
+    inputs.wdsXids,
   );
   console.log(`  parsed ${stats.total} rows, kept ${stars.length}`);
   console.log('  dropped:', stats.dropped);
@@ -121,7 +122,7 @@ async function readAthygDerivedRecords(): Promise<Star[]> {
     bjMap: inputs.bjMap,
   });
   const { stats: promotion } = promoteCompanions(
-    multiplesRows, stars, CONSTELLATIONS, inputs.dustGrid,
+    multiplesRows, stars, CONSTELLATIONS, inputs.conAssignment, inputs.dustGrid,
   );
   console.log(
     `  promotion repositioned ${promotion.repositionedCollocatedDouble} ` +
