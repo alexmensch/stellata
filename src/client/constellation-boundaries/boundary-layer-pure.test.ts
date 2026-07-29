@@ -100,6 +100,6 @@ describe('the resolved window against solFrameFadeFactor', () => {
     const faint = resolveBoundaryFadeWindowPc(FADE, 8);
     const d = bright.outerPc;
     expect(solFrameFadeFactor(d, bright)).toBe(0);
-    expect(solFrameFadeFactor(d, faint)).toBeGreaterThan(0);
+    expect(solFrameFadeFactor(d, faint)).toBeCloseTo(0.740741, 6);
   });
 });

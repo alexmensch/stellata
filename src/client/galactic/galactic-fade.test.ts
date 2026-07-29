@@ -55,7 +55,7 @@ describe('solFrameFadeFactor', () => {
     expect(solFrameFadeFactor(0, win)).toBe(1);
     expect(solFrameFadeFactor(0.4, win)).toBe(1);
     expect(solFrameFadeFactor(2, win)).toBe(0);
-    expect(solFrameFadeFactor(1.34, win)).toBeLessThan(0.5);
+    expect(solFrameFadeFactor(1.34, win)).toBeCloseTo(0.370090, 6);
   });
 
   it('decreases monotonically across the window', () => {
