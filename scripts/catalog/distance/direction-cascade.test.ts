@@ -39,7 +39,7 @@ function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrome
     parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 10, pmdecMasyr: -10,
     ruwe: 1.0, ipdFracMultiPeak: 0,
-    gMag: null,
+    gMag: null, bpMag: null, rpMag: null,
     ...overrides,
   };
 }
@@ -450,6 +450,7 @@ describe('resolveDirection velocity solution', () => {
   const gaiaRow: GaiaAstrometryCatalogRow = {
     raDeg: 10, decDeg: 20, parallaxMas: 50, parallaxErrorMas: null,
     pmraMasyr: 100, pmdecMasyr: -40, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
+    bpMag: null, rpMag: null,
   };
 
   it('carries the Gaia solution + gaia_pm velVia on the gaia_5p tier', () => {

@@ -43,6 +43,8 @@ export interface GaiaAstrometryCatalogRow {
   ruwe: number | null;
   ipdFracMultiPeak: number | null;
   gMag: number | null;
+  bpMag: number | null;
+  rpMag: number | null;
 }
 
 /** van Leeuwen 2007 reduction row from
@@ -336,7 +338,7 @@ export function parseGaiaAstrometryCatalogTsv(
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag'],
+    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'],
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
@@ -359,6 +361,8 @@ export function parseGaiaAstrometryCatalogTsv(
       ruwe: floatCell(cells, idx.ruwe),
       ipdFracMultiPeak: floatCell(cells, idx.ipd_frac_multi_peak),
       gMag: floatCell(cells, idx.phot_g_mean_mag),
+      bpMag: floatCell(cells, idx.phot_bp_mean_mag),
+      rpMag: floatCell(cells, idx.phot_rp_mean_mag),
     });
   }
   return out;
