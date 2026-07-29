@@ -105,7 +105,3 @@ export function resolveVMagnitude(
 export function vTierIsSystemBlend(via: VVia | null): boolean {
   return via === 'printed_hip' || via === 'catalogued';
 }
-
-export function emptyVViaPartition(): Record<VVia, number> {
-  return { gaia_riello: 0, printed_hip: 0, catalogued: 0, none: 0 };
-}

@@ -37,6 +37,8 @@ import {
 import {
   resolveDirection,
   velocityPcPerYr,
+  DIRECTION_VIA_VALUES,
+  VELOCITY_VIA_VALUES,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
@@ -46,10 +48,11 @@ import {
 } from '../distance/direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import {
-  emptyVViaPartition,
   resolveVMagnitude,
+  V_VIA_VALUES,
   type VVia,
 } from '../photometry/v-magnitude-pure';
+import { emptyTallyPartition } from '../../util/tally';
 import { CON_INDEX, type ConstellationAssignment } from './constellations';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
@@ -245,20 +248,9 @@ export async function readStars(
   let gaiaSourceIdBackfilled = 0;
   let gaiaBindingMagRejected = 0;
   let gaiaBindingSiblingRejected = 0;
-  const directionVia: Record<DirectionVia, number> = {
-    gaia_5p: 0,
-    gaia_nss_systemic: 0,
-    hip2_saturated: 0,
-    hip2_pm_discrepant: 0,
-    athyg_printed: 0,
-  };
-  const vVia = emptyVViaPartition();
-  const velocityVia: Record<VelocityVia, number> = {
-    gaia_pm: 0,
-    hip2_pm: 0,
-    athyg_pm: 0,
-    zero: 0,
-  };
+  const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
+  const vVia = emptyTallyPartition(V_VIA_VALUES);
+  const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
   let rvApplied = 0;
   let velocityClamped = 0;
   const velocityClampedSample: string[] = [];

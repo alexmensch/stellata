@@ -6,8 +6,6 @@ import {
   RIELLO_BP_RP_MIN,
   RIELLO_G_MINUS_V_COEFFS,
   RIELLO_G_MINUS_V_SIGMA,
-  V_VIA_VALUES,
-  emptyVViaPartition,
   isRielloTransformable,
   resolveVMagnitude,
   rielloGMinusV,
@@ -119,14 +117,6 @@ describe('resolveVMagnitude cascade', () => {
     expect(resolveVMagnitude(null, Number.NaN, 8.4)).toEqual({ v: 8.4, via: 'catalogued' });
     expect(resolveVMagnitude(photometry({ gMag: Number.NaN }), null, 8.4).via)
       .toBe('catalogued');
-  });
-});
-
-describe('emptyVViaPartition', () => {
-  it('carries a zeroed bucket for every declared tier', () => {
-    const partition = emptyVViaPartition();
-    expect(Object.keys(partition).sort()).toEqual([...V_VIA_VALUES].sort());
-    expect(Object.values(partition).every((n) => n === 0)).toBe(true);
   });
 });
 

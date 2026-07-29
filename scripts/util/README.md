@@ -28,6 +28,13 @@ need the same thing — single-use helpers stay with their consumer.
   SID folder imports `REPO_ROOT` from it, so the reverse edge would put
   a domain module under every consumer of a path helper.
   `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
+- `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
+  counting record every routing cascade in the catalog build tallies
+  into (direction, velocity, V, `dist_src`). Buckets are derived from
+  the string-literal tuple that DEFINES each tier set, so a new tier
+  cannot tally onto an absent key — `undefined + 1` is NaN, which
+  reaches the pinned count snapshot as a hole instead of a drift
+  failure. `tally.test.ts` pins all four cascades' key coverage.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
   JSON when the spec's env var is `1`. Exits non-zero on drift, since a

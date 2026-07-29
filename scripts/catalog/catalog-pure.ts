@@ -3,6 +3,7 @@
 // parsing, Stefan-Boltzmann radius, GCVS field extraction.
 
 import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
+import { emptyTallyPartition } from '../util/tally';
 import { headerIndex } from './parse/corpus-tsv';
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
@@ -1744,9 +1745,7 @@ export function distSrcBucket(distSrc: string | null): DistSrcBucket {
 }
 
 export function emptyDistSrcPartition(): DistSrcPartition {
-  return Object.fromEntries(
-    DIST_SRC_BUCKETS.map((b) => [b, 0]),
-  ) as DistSrcPartition;
+  return emptyTallyPartition(DIST_SRC_BUCKETS);
 }
 
 export function tallyDistSrc(
