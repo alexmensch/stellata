@@ -794,13 +794,15 @@ export class Stellata implements FrameAnchor {
     // highlighted figure, chart ↔ navigate (chart draws all 88), or the
     // showConstellation master toggle. Detail-cycle permission is a separate
     // push (buildSceneElementBinds).
-    this.on('filter', () => this.refreshConstellationFigure());
+    // The boundary fade window rides the same emit: it is a function of the
+    // magnitude limit — a fainter limit admits stars nearer their walls —
+    // pushed rather than read per frame so the table interpolation runs once
+    // per slider change.
+    this.on('filter', () => {
+      this.refreshConstellationFigure();
+      this.constellationBoundaryLayer.setMagnitudeLimit(this.filter.maxAppMag);
+    });
     this.on('cameraMode', () => this.refreshConstellationFigure());
-    // The boundary fade window is a function of the magnitude limit — a
-    // fainter limit admits stars nearer their walls. Pushed rather than read
-    // per frame so the table interpolation runs once per slider change.
-    this.on('filter', () =>
-      this.constellationBoundaryLayer.setMagnitudeLimit(this.filter.maxAppMag));
     // Attach Sol's planet system to the global body field once at
     // startup. Bodies render from now on independent of focus, gated
     // only by apparent-mag visibility + the per-host distance cull.
