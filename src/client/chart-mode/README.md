@@ -25,7 +25,24 @@ src/client/chart-mode/
                                   optimised.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
                                   pixel-size mapping in chart mode.
+  chart-palette.ts                Authored ink values of the paper palette,
+                                  shared by the layers that swap into it
+                                  (§ Chart palette).
 ```
+
+## Chart palette
+
+`CHART_REFERENCE_INK` (`#3a3530`) is the ink for chart-mode *reference*
+geometry — the galactic coordinate sphere (`../galactic/README.md`) and the
+IAU constellation boundaries (`../constellation-boundaries/README.md`),
+which take it at half weight. It sits deliberately lighter than the
+near-black figure / label ink so reference lines read as a layer under the
+chart's content. One token, because two modules authoring the same hex is
+how the two drift apart.
+
+Colours reach the GPU through `setBuiltinChromeColour`'s **chart** variant:
+chart mode bypasses the HDR resolve, so the tone-map inverse the realistic
+path applies must not be (`../hdr/README.md` § Chrome).
 
 `chart-mode.ts` toggles four things on entry:
 

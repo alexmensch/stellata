@@ -3,6 +3,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { galacticDirToIcrs } from './galactic-coords';
+import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 
 export const SPHERE_RADIUS_PC = 50_000;
@@ -32,7 +33,6 @@ export function meridianMaxAbsBDeg(index: number): number {
 const EQUATOR_LINEWIDTH_PX = 2.4;
 
 const DARK_COLOUR = 0x6688aa;
-const MONO_COLOUR = 0x3a3530;
 
 // Equator visually marked: stronger opacity than ordinary lat/meridian lines
 // so the b=0 plane reads as the "spine" of the grid.
@@ -120,7 +120,7 @@ export class GalacticGrid {
   setMonochrome(on: boolean) {
     if (this.mono === on) return;
     this.mono = on;
-    const colour = on ? MONO_COLOUR : DARK_COLOUR;
+    const colour = on ? CHART_REFERENCE_INK : DARK_COLOUR;
 
     setBuiltinChromeColour(this.equatorMaterial.color, colour, on);
     setBuiltinChromeColour(this.lineMaterial.color, colour, on);
