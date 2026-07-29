@@ -1186,7 +1186,7 @@ body.monochrome .hud-ring {
    stroke (0x6688aa) a touch more opaque for legibility, with a faint dark
    halo. In chart mode they flip to the grid's mono ink (0x3a3530) with a
    white halo, matching CoordSphere's own dark-to-mono swap. */
-.gal-grid-label {
+.coord-sphere-label {
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.04em;
@@ -1197,7 +1197,7 @@ body.monochrome .hud-ring {
   stroke-linejoin: round;
   pointer-events: none;
 }
-body.monochrome .gal-grid-label {
+body.monochrome .coord-sphere-label {
   fill: rgba(58, 53, 48, 0.95);
   stroke: rgba(255, 255, 255, 0.85);
 }

@@ -1,9 +1,15 @@
-// The two coordinate-sphere frames: galactic l/b and equatorial RA/Dec.
+// The two coordinate-sphere frames — galactic l/b and equatorial RA/Dec — and
+// the reachability + `S`-cycle rules that read off them.
 // See galactic/README.md § Coordinate spheres.
 
 import type * as THREE from 'three';
 import { equatorialTangentBasisRad } from '../util/equatorial-basis';
-import type { CoordSphereSpec } from './coord-sphere';
+import type {
+  CoordSphereFrame,
+  CoordSphereSpec,
+  DrawnCoordSphereFrame,
+} from './coord-sphere';
+import { solFrameFadeFactor, type SolFrameFadeWindow } from './galactic-fade';
 import { galacticDirToIcrs } from './galactic-coords';
 
 /**
@@ -46,6 +52,12 @@ export function fmtDecDeg(deg: number): string {
   return `${d > 0 ? '+' : ''}${d}°`;
 }
 
+/** Where the RA/Dec sphere starts fading and where it is gone, as camera
+ *  distance from Sol. Full strength across the solar system, gone before the
+ *  first star — see galactic/README.md § The equatorial sphere is Sol-only for
+ *  why an Earth-referenced frame needs one at all. */
+export const EQUATORIAL_FADE_WINDOW_PC: SolFrameFadeWindow = { innerPc: 0.4, outerPc: 2.0 };
+
 export const GALACTIC_SPHERE_SPEC: CoordSphereSpec = {
   dirToIcrs: galacticDirToIcrs,
   meridianCount: 36,   // every 10° of l
@@ -63,4 +75,57 @@ export const EQUATORIAL_SPHERE_SPEC: CoordSphereSpec = {
   labelGroupId: 'eq-grid-labels',
   lonLabel: fmtRaHours,
   latLabel: fmtDecDeg,
+  fadeWindow: EQUATORIAL_FADE_WINDOW_PC,
 };
+
+export const COORD_SPHERE_SPECS: Record<DrawnCoordSphereFrame, CoordSphereSpec> = {
+  galactic: GALACTIC_SPHERE_SPEC,
+  equatorial: EQUATORIAL_SPHERE_SPEC,
+};
+
+/** Every frame that draws something, in panel order. Each consumer — the
+ *  scene layer, the resize hook, the label pools — iterates this rather than
+ *  naming the two spheres, so a third frame is a table entry. */
+export const DRAWN_COORD_SPHERE_FRAMES: readonly DrawnCoordSphereFrame[] =
+  ['galactic', 'equatorial'];
+
+/** Cycle order for the `S` key and the panel's 3-stop control. */
+export const COORD_SPHERE_FRAMES: readonly CoordSphereFrame[] =
+  ['none', ...DRAWN_COORD_SPHERE_FRAMES];
+
+/** Stroke alpha `frame` draws at from this distance from Sol — 1 for a frame
+ *  with no fade window. The SVG edge labels ride the same value, so text dims
+ *  in step with the lines it annotates. */
+export function coordSphereFadeAt(
+  frame: DrawnCoordSphereFrame,
+  distFromSolPc: number,
+): number {
+  const { fadeWindow } = COORD_SPHERE_SPECS[frame];
+  return fadeWindow ? solFrameFadeFactor(distFromSolPc, fadeWindow) : 1;
+}
+
+/** Does `frame` draw anything at all from here? The single cut: the `S` cycle
+ *  skips an unreachable stop, the panel disables it, and the scene layer
+ *  deselects a sphere that crosses out. */
+export function coordSphereReachableAt(
+  frame: DrawnCoordSphereFrame,
+  distFromSolPc: number,
+): boolean {
+  return coordSphereFadeAt(frame, distFromSolPc) > 0;
+}
+
+/** The next frame in the `S` cycle, skipping any sphere `reachable` rejects —
+ *  pressing `S` must never leave an enabled-but-invisible sphere. `none` is
+ *  always in the cycle, so this always terminates. */
+export function nextCoordSphereFrame(
+  cur: CoordSphereFrame,
+  reachable: (frame: DrawnCoordSphereFrame) => boolean,
+): CoordSphereFrame {
+  const n = COORD_SPHERE_FRAMES.length;
+  const from = COORD_SPHERE_FRAMES.indexOf(cur);
+  for (let step = 1; step <= n; step++) {
+    const next = COORD_SPHERE_FRAMES[(from + step) % n];
+    if (next === 'none' || reachable(next)) return next;
+  }
+  return 'none';
+}

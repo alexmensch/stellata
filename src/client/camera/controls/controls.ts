@@ -5,7 +5,8 @@ import {
   MAG_PRESETS,
   type MagPresetName,
 } from '../../filters/filter-state';
-import { COORD_SPHERE_FRAMES, type CoordSphereFrame } from '../../galactic/coord-sphere';
+import type { CoordSphereFrame } from '../../galactic/coord-sphere';
+import { COORD_SPHERE_FRAMES } from '../../galactic/coord-sphere-frames';
 import type { DetailLevel } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
@@ -300,7 +301,7 @@ export function bindControls(stellata: Stellata) {
   let equatorialReachable: boolean | null = null;
   stellata.on('frame', () => {
     if (!equatorialStop) return;
-    const reachable = stellata.equatorialSphereReachable();
+    const reachable = stellata.coordSphereReachable('equatorial');
     if (reachable === equatorialReachable) return;
     equatorialReachable = reachable;
     equatorialStop.disabled = !reachable;

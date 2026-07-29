@@ -1,7 +1,7 @@
 import type { Stellata } from '../stellata';
 import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
-import { nextCoordSphereFrame } from '../galactic/coord-sphere';
+import { nextCoordSphereFrame } from '../galactic/coord-sphere-frames';
 import { DETAIL_LEVELS } from '../scene/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
@@ -251,7 +251,7 @@ function cycleCoordSphere(stellata: Stellata) {
   stellata.setFilter({
     coordSphere: nextCoordSphereFrame(
       stellata.getFilter().coordSphere,
-      stellata.equatorialSphereReachable(),
+      (frame) => stellata.coordSphereReachable(frame),
     ),
   });
 }

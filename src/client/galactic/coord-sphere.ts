@@ -7,6 +7,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
+import type { SolFrameFadeWindow } from './galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome-colour';
 
 export const SPHERE_RADIUS_PC = 50_000;
@@ -15,19 +16,17 @@ const LATITUDE_SEGMENTS = 192;
 const MERIDIAN_SEGMENTS = 96;
 // Latitudes every 10° (excluding 0° = equator, which is the fat Line2).
 export const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
-// Meridians whose longitude is a multiple of 20° run pole-to-pole; the
-// off-by-10° meridians stop at ±MERIDIAN_TRIM_LATITUDE_DEG so that the
-// every-20° set near the poles stays uncluttered while the in-between
-// lines fade out before they bunch up.
+// Alternate meridians stop at ±MERIDIAN_TRIM_LATITUDE_DEG so half the set
+// thins out before the lines bunch up at the poles, whatever the spacing.
 const MERIDIAN_TRIM_LATITUDE_DEG = 80;
 
-/** Which coordinate sphere the user has up. Mutually exclusive: two 36-meridian
- *  grids drawn together are illegible, and their edge labels would fight in one
+/** Which coordinate sphere the user has up. Mutually exclusive: two grids
+ *  drawn together are illegible, and their edge labels would fight in one
  *  repulsion pass. */
 export type CoordSphereFrame = 'none' | 'galactic' | 'equatorial';
 
-/** Cycle order for the `S` key and the panel's 3-stop control. */
-export const COORD_SPHERE_FRAMES: readonly CoordSphereFrame[] = ['none', 'galactic', 'equatorial'];
+/** A frame that has a sphere behind it — every `CoordSphereFrame` but `none`. */
+export type DrawnCoordSphereFrame = Exclude<CoordSphereFrame, 'none'>;
 
 /**
  * Longitude/latitude (radians) in some sky frame → the ICRS unit direction,
@@ -48,26 +47,17 @@ export interface CoordSphereSpec {
   labelGroupId: string;
   lonLabel: (deg: number) => string;
   latLabel: (deg: number) => string;
+  /** Sol-distance self-hide, for a frame that only describes the sky *from*
+   *  Sol. Absent means the frame is meaningful from anywhere and never fades. */
+  fadeWindow?: SolFrameFadeWindow;
 }
 
 /** Absolute latitude extent (degrees) a meridian is drawn to: even indices
- *  reach the pole, odd ones stop at the trim so 36 lines ease to 18 near the
- *  poles. Shared with coord-sphere-labels so labels never anchor past the
- *  drawn line end. */
-export function meridianMaxAbsBDeg(index: number): number {
+ *  reach the pole, odd ones stop at the trim, halving the count that runs
+ *  into the polar convergence. Shared with coord-sphere-labels so labels
+ *  never anchor past the drawn line end. */
+export function meridianMaxAbsLatDeg(index: number): number {
   return index % 2 === 0 ? 90 : MERIDIAN_TRIM_LATITUDE_DEG;
-}
-
-/** The next frame in the `S` cycle. `equatorialReachable` false drops the
- *  equatorial stop from the cycle entirely — pressing `S` from outside its
- *  Sol-distance fade must never leave an enabled-but-invisible sphere. */
-export function nextCoordSphereFrame(
-  cur: CoordSphereFrame,
-  equatorialReachable: boolean,
-): CoordSphereFrame {
-  if (cur === 'none') return 'galactic';
-  if (cur === 'galactic') return equatorialReachable ? 'equatorial' : 'none';
-  return 'none';
 }
 
 // Equator gets the fat-line treatment (Line2 + LineMaterial) for genuine
@@ -84,10 +74,10 @@ const DARK_LINE_OPACITY = 0.45;
 
 /**
  * A toggleable coordinate sphere — a "sky from here" reference grid. Equator +
- * 16 latitude rings every 10° (±10°…±80°) + 36 meridians every 10° of
- * longitude, no pole markers. All baked once through `dirToIcrs`, so the
- * geometry is already in ICRS and the frame's axes stay correctly aimed
- * through any camera move including warp.
+ * 16 latitude rings every 10° (±10°…±80°) + `spec.meridianCount` meridians
+ * evenly spaced over the longitude turn, no pole markers. All baked once
+ * through `spec.dirToIcrs`, so the geometry is already in ICRS and the frame's
+ * axes stay correctly aimed through any camera move including warp.
  *
  * Per frame the group's position tracks `camera.position` (in local frame) so
  * the sphere is always centred on the observer — the grid lines feel fixed
@@ -141,7 +131,7 @@ export class CoordSphere {
     for (let i = 0; i < meridianCount; i++) {
       const lonRad = (i / meridianCount) * Math.PI * 2;
       this.group.add(
-        this.makeMeridian(dirToIcrs, lonRad, (meridianMaxAbsBDeg(i) * Math.PI) / 180),
+        this.makeMeridian(dirToIcrs, lonRad, (meridianMaxAbsLatDeg(i) * Math.PI) / 180),
       );
     }
   }

@@ -3,7 +3,7 @@ import type { Stellata } from '../stellata';
 import {
   SPHERE_RADIUS_PC,
   LATITUDES_DEG,
-  meridianMaxAbsBDeg,
+  meridianMaxAbsLatDeg,
   type CoordSphereSpec,
 } from './coord-sphere';
 import { projectToScreenInto } from '../overlays/overlay-project';
@@ -18,8 +18,8 @@ const LAT_RING_DEGS = [0, ...LATITUDES_DEG];
 const MERIDIAN_SAMPLES = 19;
 // Label sampling stops short of the pole (where all meridians converge) even
 // for pole-to-pole lines; per-meridian this is further capped at the drawn
-// trim via meridianMaxAbsBDeg so a label never anchors past the visible end.
-const MERIDIAN_MAX_B_DEG = 84;
+// trim via meridianMaxAbsLatDeg so a label never anchors past the visible end.
+const MERIDIAN_MAX_LAT_DEG = 84;
 const RING_SAMPLES = 37; // over l ∈ [0°, 360°], last repeats the first to close
 
 // Standard orthogonal padding kept between a label's box and both the viewport
@@ -228,7 +228,7 @@ function buildEntries(spec: CoordSphereSpec): EntrySpec[] {
   for (let i = 0; i < meridianCount; i++) {
     const lonDeg = (i * 360) / meridianCount;
     const lonRad = lonDeg * DEG;
-    const maxLatDeg = Math.min(MERIDIAN_MAX_B_DEG, meridianMaxAbsBDeg(i));
+    const maxLatDeg = Math.min(MERIDIAN_MAX_LAT_DEG, meridianMaxAbsLatDeg(i));
     const dirs: THREE.Vector3[] = [];
     for (let s = 0; s < MERIDIAN_SAMPLES; s++) {
       const latDeg = -maxLatDeg + (s / (MERIDIAN_SAMPLES - 1)) * (2 * maxLatDeg);
@@ -284,7 +284,7 @@ export function createCoordSphereLabels(
   const NS = 'http://www.w3.org/2000/svg';
   const pool: Entry[] = buildEntries(spec).map((entry) => {
     const el = document.createElementNS(NS, 'text') as SVGTextElement;
-    el.setAttribute('class', 'gal-grid-label');
+    el.setAttribute('class', 'coord-sphere-label');
     el.setAttribute('text-anchor', 'middle');
     el.setAttribute('dominant-baseline', 'central');
     el.style.display = 'none';
