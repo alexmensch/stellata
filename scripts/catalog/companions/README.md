@@ -18,13 +18,25 @@ scripts/catalog/companions/
   companion-promotion.ts          promoteCompanions +
     (+ test)                      backfillPrimaryIdentifiers +
                                   stampComponentLetters +
-                                  wingRenderablePrimaries. Runs before the
-                                  absmag sort so promoted records take the
-                                  same final indexing as everything else.
+                                  resolveComponentNameCollisions. Runs
+                                  before the absmag sort so promoted records
+                                  take the same final indexing as
+                                  everything else.
+  multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
+                                  A module, NOT an export from
+                                  companion-promotion.test.ts: importing one
+                                  test file from another re-executes every
+                                  describe in it, so this suite silently ran
+                                  a second time inside the multiplicity and
+                                  record-index suites.
   multi-star-regression.test.ts   Frozen corpus pinning promoted-companion
   multi-star-regression.tsv       records against the built catalog and the
                                   real binaries.bin — catches drift on
                                   either side of the wings correspondence.
+  record-index/                   Post-sort record addressing: the row-index
+                                  sidecar, the wings bit, component
+                                  designations. Downstream of promotion,
+                                  never read by it.
 ```
 
 ## Companion promotion from `data/binaries/multiples.tsv`
@@ -225,6 +237,12 @@ Per-row gates and resolution:
   WDS's `mag_pri` covers the whole subtree of whatever letter its row pairs (AR
   Cas prints 4.87 for A, 5.02 for Aa); that value is also the Δ reference for
   every `dmag_imputed` member, putting Ab 2.40 off Aa, not 2.55 off the A blend.
+  Faintest is a **proxy** for most-decomposed and holds only while the rows agree
+  on one component's photometry — two top-level rows differing by band or epoch
+  make it pick the fainter measurement of the same letter and claim a
+  decomposition that is not there, silently, since the fit still solves. The real
+  rule is the paired letter's depth; carrying that onto the candidate is filed
+  work, not shipped.
   Apply, once per anchor with exact conservation: members with independent
   brightness (`own` / `wds_mag`) subtract their actual flux, guarded against a
   member as bright as the blend itself (`blendDimSkipped`); blend-relative
@@ -304,11 +322,10 @@ additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a
 `synth-<wds_id>-<comp>` key. They're pushed onto `stars` before
 the absmag sort so they receive the same final record indexing as
-everything else. The post-sort `buildCatalogRowIndexMap` emits
-`public/catalog-row-index-map.json` with three sections —
-`byGaia`, `byHip`, `bySynth` — which lets the runtime binaries
-layer resolve multiples.tsv rows back to catalog.bin records in
-that priority order.
+everything else. Addressing those records afterwards — the
+`byGaia` / `byHip` / `bySynth` sidecar, the chart-mode wings bit, and the
+component-letter search designations — is `record-index/README.md`;
+nothing in this file reads back from it.
 
 The companion-promotion path is the seam where bugs in the
 binaries pipeline become user-visible. The Tier A regression
@@ -347,54 +364,6 @@ companion never gets one without the other.
 | `companionIdx` | post-pass | set by geometric binary inference (`../multiplicity/README.md` § Geometric binary inference). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl` | unset | not carried on multiples.tsv rows. |
-
-### Renderable-companion wings
-
-The three passes below that set `FLAG_BINARY_PRIMARY` (the chart-mode
-wings bit) — geometric `inferBinaries`, the CCDM pass, the eclipsing
-sweep — are all keyed on evidence that is unaligned with the
-*presence of a rendered companion*. A physical pair wider than the
-`0.005 pc` geometric cell, not CCDM `C/G/O`, and not eclipsing
-(16 Cyg A, whose promoted placement exceeds the geometric cell) shows a
-companion or a live orbit with no wings on the anchor.
-`wingRenderablePrimaries` (run after those three passes, over the
-post-sort `buildCatalogRowIndexMap`) closes that gap:
-
-- **Renders-a-companion gate.** For each non-standalone
-  multiples.tsv pair, primary and secondary resolve to catalog records
-  through the same `gaia → hip → synth` priority
-  `build-runtime-binaries.py`'s `resolve_idx` uses, plus both of that
-  writer's blended-sibling synth retries: each pair end re-homes onto
-  its own distinct synth slot whenever promotion minted one (a synth
-  slot exists only for rows whose ids were inherited then stripped,
-  so it is always the truer target — Castor Ca inside the outer pair,
-  04049-3527's pair-mate-inherited C). A pair whose two sides resolve
-  to DISTINCT records
-  renders a companion, so the winged set tracks `binaries.bin`'s
-  primaries. The writer's post-resolution steps
-  (`override_inner_primary_indices`, the relation-winner dedup) are not
-  replicated: they change *which* index anchors a pair, never the
-  distinct-pair boolean this gate keys on, and root-grouping plus the
-  brightest-participant pick below absorb the difference. The
-  correspondence is pinned against the real `binaries.bin` by
-  `multi-star-regression.test.ts` (every rendered system carries the
-  wings bit), which catches drift on either side.
-- **One glyph per WDS system.** Records participating in a rendered
-  pair are grouped by WDS root; the bit lands on the brightest
-  participant only (the mutual-primary / CCDM brightest-member
-  contract). A hierarchical system (Castor Ca,Cb inside the outer
-  pairs) gets one glyph on the system anchor, never one per inner
-  pair. A system any earlier pass already flagged is skipped, so it
-  keeps its single glyph.
-- **Additive only.** The pass never clears wings, so the
-  reverse-direction cases stay correct: eclipsing binaries (an
-  eclipsed star is a binary by convention even with a
-  spectroscopically-unresolved companion) and iconic CCDM / Hipparcos
-  doubles whose faint secondary isn't in the classic-IDs catalog
-  (ν³ CMa = HDS 915, the Sirius-B pattern) keep their wings whether or
-  not a second star renders.
-
-`renderableCompanionWinged` in build-counts pins the count.
 
 ### Component-letter stamping
 

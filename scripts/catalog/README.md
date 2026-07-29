@@ -28,8 +28,11 @@ subfolders.
   arcs resampled and precessed to ICRS, plus the magnitude-keyed
   fade-quantile table the chart-mode layer derives its fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
-  into first-class catalog records, plus the renderable-companion wings
-  and component-letter stamping passes.
+  into first-class catalog records, plus component-letter stamping and
+  display-name collision resolution. Its `record-index/` subfolder holds
+  everything that addresses records *after* the absmag sort: the row-index
+  sidecar, the renderable-companion wings bit, and the component-letter
+  search designations.
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
@@ -354,7 +357,7 @@ searchable but never pulsate.
 
 Multiple-star components additionally carry `cl` (canonical WDS component
 letter) + `cp` (the system primary's record index), emitted by
-`buildComponentDesignations` (`companion-promotion.ts`) after the
+`buildComponentDesignations` (`companions/record-index/`) after the
 row-index map is built — resolving each `multiples.tsv` component through
 the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
 These drive the runtime "<system> <letter>" aliases ("Alpha Centauri C" /

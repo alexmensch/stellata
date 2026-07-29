@@ -72,16 +72,18 @@ import {
   collectPhysicalPairKeys,
 } from './multiplicity/visual-doubles';
 import {
-  buildCatalogRowIndexMap,
-  buildComponentDesignations,
   backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
   resolveComponentNameCollisions,
   stampComponentLetters,
+} from './companions/companion-promotion';
+import {
+  buildCatalogRowIndexMap,
+  buildComponentDesignations,
   wingRenderablePrimaries,
   type ComponentDesignation,
-} from './companions/companion-promotion';
+} from './companions/record-index/record-index';
 import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
 import {
   parseGcvsMain,
