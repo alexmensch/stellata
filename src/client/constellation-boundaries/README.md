@@ -39,12 +39,16 @@ precession is `../util/precession.ts`.
 Node-side only, today. `readIauEdgeRecords` is a `readFileSync` against
 `data/`, which is not served, so nothing in the browser can call it:
 
-- **Assignment** (sp4q.2) runs at **build time** — `stars-parse.ts`
-  resolves each record's constellation into catalog byte 34. The browser
-  reads the answer, never the edge set.
-- **Drawing** (sp4q.3) ships `public/constellation-boundaries.json`:
-  subdivided, precessed-to-ICRS polylines plus the fade table. That
-  artifact, not this module, is what the runtime layer loads.
+- **Assignment** runs at **build time**, through
+  `createConstellationAssignment`
+  (`scripts/catalog/parse/constellations.ts`), which binds this module's
+  lookup to the IAU-88 index space. Every record's own position resolves
+  into catalog byte 34; the browser reads the answer, never the edge set.
+  See `scripts/catalog/parse/README.md` § Positional constellation
+  membership.
+- **Drawing** ships `public/constellation-boundaries.json`: subdivided,
+  precessed-to-ICRS polylines plus the fade table. That artifact, not
+  this module, is what the runtime layer loads.
 
 So a client-side caller needs an artifact first. Adding one here without
 that is how the edge set ends up parsed in the browser from a file that
@@ -144,10 +148,11 @@ margin back through the star's own proper motion (55.4 mas/yr in
 corroboration that the B1875 epoch and the rotation are both right. A
 wrong epoch moves the implied date by centuries.
 
-This is why positional membership and the designation's constellation
-have to be carried as separate fields — making the catalogue's
-constellation positional would otherwise rewrite this star's search
-aliases from "Rho Aql" to "Rho Del".
+This is why positional membership and the designation's constellation are
+carried as separate fields (byte 34 and search-index `dc`) — making the
+catalogue's constellation positional would otherwise have rewritten this
+star's search aliases from "Rho Aql" to "Rho Del". See
+`scripts/catalog/README.md` § Search index for the split.
 
 ## Agreement with AT-HYG
 
@@ -159,12 +164,26 @@ computed assignment against that editorial column:
 | --- | --- |
 | Agreement | 99.98% |
 | Disagreements | **61**, pinned exactly |
-| Of those, carrying a designation | 1 — ρ Aql |
+| Of those, carrying a Bayer / Flamsteed designation | 1 — ρ Aql |
 
-The other 60 are anonymous rows sitting within an arcsecond or so of a
-wall, where an editorial cell has no nomenclature to answer to. The
-count is pinned as an exact number rather than a rate because it is the
-sharpest signal available on the precession epoch (§ B1875).
+Almost all of the other 60 are anonymous rows sitting within an arcsecond
+or so of a wall, where an editorial cell has no nomenclature to answer
+to. Two are not: CM Ind and LT Vul carry **GCVS** designations naming a
+constellation they do not sit in (Pavo and Vulpecula respectively). The
+CSV has no GCVS column — that cross-match happens later in the build — so
+this suite cannot see them; `designationConMismatch` in build-counts is
+where all three designated movers are pinned.
+
+The count is pinned as an exact number rather than a rate because it is
+the sharpest signal available on the precession epoch (§ B1875).
+
+**This suite measures AT-HYG's printed ra/dec; the build measures the
+resolved position.** They are not the same number: the build's
+`conPositionalDisagreement` is **63**, because the direction cascade
+(Gaia 5p → HIP2 → printed) moves six anonymous sub-arcsecond-from-a-wall
+rows, four across into disagreement and two back out. Both are correct
+for what they measure — this one isolates the epoch and the
+decomposition, which is why it stays on the printed column.
 
 The CSV rides LFS, so the suite self-skips in the bare CI `test` job and
 runs smudged in **`tier-a-corpus`**, which names the file explicitly.

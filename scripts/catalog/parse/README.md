@@ -28,13 +28,15 @@ scripts/catalog/parse/
   gcvs-parse.ts (+ test)          GCVS main + crossref parsing and the
                                   variability cross-match.
   constellations.ts               The IAU-88 table (CONSTELLATIONS /
-                                  CON_INDEX), the Stellarium source path, and
-                                  the two things read out of that file:
-                                  stick figures → constellation line segments
-                                  + public/constellations.json, and
+                                  CON_INDEX), the Stellarium source path, the
+                                  two things read out of that file — stick
+                                  figures → constellation line segments +
+                                  public/constellations.json, and
                                   readIauEdgeRecords → the B1875 IAU boundary
-                                  segments consumed by
-                                  src/client/constellation-boundaries/.
+                                  segments — plus
+                                  createConstellationAssignment, which binds
+                                  the boundary lookup to the table's indices
+                                  (§ Positional constellation membership).
   corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
                                   is the one header walk for every committed
                                   table (see § TSV header resolution); the
@@ -125,7 +127,10 @@ Each AT-HYG row walks through, inside `readStars`:
 7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See § Physical radius and spectral parsing.
-8. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+8. **Constellation** — positional, from the resolved xyz
+   (§ Positional constellation membership). AT-HYG's `con` cell is read
+   separately, as the DESIGNATION's constellation only.
+9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
@@ -213,6 +218,47 @@ record write per star including the seven `float32` Apsis fields, the
 `uint32` `sid`, the three `float32` velocity components, plus the
 `uint8` multiplicity status. See sections
 below.
+
+## Positional constellation membership
+
+Catalog byte 34 is **positional**: `createConstellationAssignment`
+(`constellations.ts`) resolves the IAU (Delporte 1930) boundary region a
+record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
+space. The geometry — the B1875 precession, the edge decomposition, and
+its self-validating 89-region invariant — is
+`src/client/constellation-boundaries/README.md`; this module owns only
+the index mapping, and throws at construction if a region names a
+constellation the IAU-88 table doesn't carry.
+
+Two properties follow from the boundaries partitioning the whole sphere:
+
+- **`NO_CONSTELLATION_INDEX` is unreachable for anything with a
+  direction.** Sol sits at the origin and has none, so it is the sole
+  holder — asserted at the record write in `../build-catalog.ts`. Every
+  other record, including the promoted companions that used to inherit
+  the anchor's index (and the ~5.0k whose anchor had none to give),
+  carries a real constellation.
+- **A row needs no catalogue entry to be classified.** The uncatalogued
+  Gaia fill tier resolves on position like everything else.
+
+**AT-HYG's `con` cell is not retired — it is repurposed.** It is the
+constellation a star's *designation* is named for, which is editorial and
+diverges from position once a boundary moves past a named star: ρ Aql /
+67 Aql (HIP 99742) is positionally in **Delphinus** since 1992. Each
+record therefore carries two fields, `conIndex` (positional, byte 34) and
+`desigConIndex` (editorial, search-index `dc`), and
+`designationConIndex(dc, c)` in `../catalog-pure.ts` is the single
+statement of which one a Bayer / Flamsteed / GCVS designation reads.
+An AT-HYG `con` code absent from the IAU-88 table is a hard build error,
+not a silent fall-back — the input is frozen, so it can only mean the
+table drifted.
+
+`conPositionalDisagreement` (build-counts) pins the divergence at **63**
+rows. Note this is measured on the **resolved** position, not AT-HYG's
+printed ra/dec, which the boundaries module's own cross-check pins at 61
+— six anonymous rows sit within an arcsecond of a wall and the direction
+cascade moves them across it. `designationConMismatch` pins the 9 search
+entries that actually carry `dc`.
 
 ## Stick figures from Stellarium
 
