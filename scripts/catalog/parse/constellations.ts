@@ -1,9 +1,14 @@
-// IAU-88 constellation table, Stellarium stick-figure pipeline, and the IAU
-// boundary edge records that file also carries.
-// See README.md § Stick figures from Stellarium.
+// IAU-88 constellation table, the Stellarium stick-figure and boundary-edge
+// readers, and positional membership in the table's index space.
+// See README.md § Positional constellation membership.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import {
+  constellationKey,
+  createIauConstellationLookup,
+} from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
+import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
 import { REPO_ROOT } from '../../util/paths';
 
 export const STELLARIUM_SKYCULTURE_JSON = resolve(
@@ -151,6 +156,44 @@ export function readIauEdgeRecords(
     throw new Error(`Stellarium edges array holds a non-string record: ${srcStellariumPath}`);
   }
   return edges;
+}
+
+/** IAU-positional membership in the `CONSTELLATIONS` index space. */
+export interface ConstellationAssignment {
+  /** Index into `CONSTELLATIONS` for an equatorial Cartesian position. The
+   *  boundaries partition the whole sphere, so this always resolves — there
+   *  is no unclassified direction and no sentinel return. */
+  indexAt(x: number, y: number, z: number): number;
+}
+
+/** Binds the boundary lookup to the IAU-88 table's indices. The origin has no
+ *  direction, so `indexAt` throws there rather than answering for Sol. */
+export function createConstellationAssignment(
+  records: readonly string[] = readIauEdgeRecords(),
+): ConstellationAssignment {
+  const lookup = createIauConstellationLookup(records);
+  // The edge set and the table above are independent sources: a region naming
+  // a constellation the table doesn't carry would ship the sentinel over a
+  // real patch of sky.
+  const unmapped = [...new Set(lookup.grid.cellCon)]
+    .filter((code) => !CON_INDEX.has(constellationKey(code)));
+  if (unmapped.length) {
+    throw new Error(
+      `IAU boundary regions absent from the IAU-88 table: ${unmapped.join(', ')}`,
+    );
+  }
+  return {
+    indexAt(x, y, z) {
+      const norm = Math.hypot(x, y, z);
+      if (norm === 0) {
+        throw new Error('The origin has no sky direction to assign a constellation from');
+      }
+      const key = lookup.keyAt(
+        raDecFromUnitVector({ x: x / norm, y: y / norm, z: z / norm }),
+      );
+      return CON_INDEX.get(key)!;
+    },
+  };
 }
 
 // Extracts classical stick-figure lines per IAU constellation from
