@@ -1,6 +1,8 @@
-// Tap-timing helpers for keyboard-shortcuts.ts — DOM- and Stellata-free
-// so the production binding and the vitest suite share a single source of
-// truth.
+// Tap-timing and trim-stepping helpers for keyboard-shortcuts.ts — DOM-
+// and Stellata-free so the production binding and the vitest suite share a
+// single source of truth.
+
+import { EV_STEP_STOPS } from '../hdr/exposure/exposure-epoch';
 
 /** Window inside which three D presses count as a triple-tap. */
 export const D_TRIPLE_TAP_MS = 500;
@@ -38,6 +40,17 @@ export function pushTapAndCheckTriple(
     return true;
   }
   return false;
+}
+
+/**
+ * The EV trim `deltaSteps` grid stops away from `ev`, snapping onto the
+ * grid on the way — so a value that arrived off it (a hand-edited URL)
+ * returns to the step the slider and the URL field share instead of
+ * carrying its offset forward. Range clamping is
+ * `ExposureController.setEv`'s.
+ */
+export function steppedEv(ev: number, deltaSteps: number): number {
+  return (Math.round(ev / EV_STEP_STOPS) + deltaSteps) * EV_STEP_STOPS;
 }
 
 /**

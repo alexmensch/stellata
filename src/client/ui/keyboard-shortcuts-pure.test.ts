@@ -6,7 +6,9 @@ import {
   DOUBLE_TAP_MS,
   makeDoubleTapGate,
   pushTapAndCheckTriple,
+  steppedEv,
 } from './keyboard-shortcuts-pure';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../hdr/exposure/exposure-epoch';
 
 describe('pushTapAndCheckTriple', () => {
   it('fires when three taps land inside the window', () => {
@@ -144,5 +146,33 @@ describe('makeDoubleTapGate', () => {
     expect(single).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(single).toHaveBeenCalledOnce();
+  });
+});
+
+describe('steppedEv', () => {
+  it('moves one grid stop per call, in both directions', () => {
+    expect(steppedEv(0, +1)).toBeCloseTo(EV_STEP_STOPS, 12);
+    expect(steppedEv(0, -1)).toBeCloseTo(-EV_STEP_STOPS, 12);
+  });
+
+  it('stays exactly on the grid across a full-range run of presses', () => {
+    // Bit-identical to the canonical grid value at every stop, so the
+    // ceiling press lands on EV_MAX_STOPS exactly rather than near it.
+    let ev = 0;
+    for (let i = 1; i <= 9; i++) {
+      ev = steppedEv(ev, +1);
+      expect(ev).toBe(i * EV_STEP_STOPS);
+    }
+    expect(ev).toBe(EV_MAX_STOPS);
+  });
+
+  it('snaps an off-grid value onto the grid before stepping', () => {
+    // 0.2 is nearest grid index 1, so one step up lands on index 2.
+    expect(steppedEv(0.2, +1)).toBeCloseTo(2 * EV_STEP_STOPS, 12);
+    expect(steppedEv(0.45, -1)).toBe(0);
+  });
+
+  it("does not clamp — that is the controller's job", () => {
+    expect(steppedEv(EV_MAX_STOPS, +1)).toBeGreaterThan(EV_MAX_STOPS);
   });
 });

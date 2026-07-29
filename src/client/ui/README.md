@@ -35,6 +35,8 @@ registry only describes what to display.
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
+| `+` / `-` | EV trim ± one 1/3-stop grid step (`steppedEv`; clamped to ±`EV_MAX_STOPS` by `ExposureController.setEv`) |
+| `=` | Reset the EV trim to 0 |
 | `?` | Open the keyboard-shortcuts help modal (the full shortcut list) |
 | `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus, uniform across focusable kinds) |
 
