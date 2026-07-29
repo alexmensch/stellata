@@ -26,9 +26,9 @@ below should be consistent with these.
 Stellata is a physical-accuracy project, not a stylised visualisation.
 The catalog grows in well-defined releases (Gaia DR4 expected late 2026;
 until the driver swap lands, periodic AT-HYG refreshes), not
-continuously, so one-time data-processing investment pays off forever. There is no manual review path
-— 300k+ stars cannot be hand-checked, so the data-processing
-infrastructure itself has to be correct.
+continuously, so one-time data-processing investment pays off forever.
+There is no manual review path — 300k+ stars cannot be hand-checked, so
+the data-processing infrastructure itself has to be correct.
 
 When scoping data-processing / cross-match / catalog-ingest work:
 
