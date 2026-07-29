@@ -7,12 +7,17 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   applyVariability,
   bridgeGcvsByGaia,
+  gcvsDesignationConIndex,
   parseGcvsMain,
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
-import { VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX, VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../catalog-pure';
+import { CONSTELLATIONS } from './constellations';
 import { makeStar } from './star-fixture';
+
+const conIndexOf = (code: string): number =>
+  CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
 const GCVS: Map<string, VarStarData> = new Map([
   ['R And', { periodDays: 409.2, amplitudeMag: 9.4, varType: 1 }],
@@ -274,5 +279,69 @@ describe('gcvs-parse / applyVariability priority', () => {
     expect(r.matchedByHip).toBe(1);
     expect(r.matchedByHd).toBe(1);
     expect(r.matched).toBe(3);
+  });
+});
+
+describe('gcvs-parse / the designation as its own constellation authority', () => {
+  it('reads the constellation off the trailing abbreviation', () => {
+    expect(gcvsDesignationConIndex('LT Vul')).toBe(conIndexOf('vul'));
+    expect(gcvsDesignationConIndex('V0645 Cen')).toBe(conIndexOf('cen'));
+    expect(gcvsDesignationConIndex('R CrB')).toBe(conIndexOf('crb'));
+  });
+
+  it('has no opinion on a designation that names no constellation', () => {
+    // 6.1k of the 14.1k named variables are these: an NSV serial or an
+    // LMC/SMC field number, where the trailing token is a number.
+    expect(gcvsDesignationConIndex('NSV 04199')).toBe(NO_CONSTELLATION_INDEX);
+    expect(gcvsDesignationConIndex('LMC V0471')).toBe(NO_CONSTELLATION_INDEX);
+    expect(gcvsDesignationConIndex('')).toBe(NO_CONSTELLATION_INDEX);
+  });
+
+  it('overrides a stale editorial con cell with the designation (LT Vul)', () => {
+    // AT-HYG files HIP 93603 under Sagitta; it sits in Vulpecula and GCVS
+    // named it for Vulpecula. Two independent authorities against the cell —
+    // without this the star searches as "LT Sagitta".
+    const star = makeStar({ hip: 93603, desigConIndex: conIndexOf('sge') });
+    const r = applyVariability([star], new Map<string, VarStarData>(), {
+      byHip: new Map([[93603, 'LT Vul']]), byHd: new Map(), byGaia: new Map(),
+    });
+    expect(star.desigConIndex).toBe(conIndexOf('vul'));
+    expect(r.desigConOverridden).toBe(1);
+  });
+
+  it('surfaces a designated mover the editorial cell agrees with position on', () => {
+    // RY Cen / EQ Vul shape: AT-HYG's cell and the IAU position both say
+    // Lupus, but the designation names Centaurus. Deriving the designation
+    // constellation from the cell misses these entirely.
+    const star = makeStar({ hip: 71, desigConIndex: conIndexOf('lup') });
+    const r = applyVariability([star], new Map<string, VarStarData>(), {
+      byHip: new Map([[71, 'RY Cen']]), byHd: new Map(), byGaia: new Map(),
+    });
+    expect(star.desigConIndex).toBe(conIndexOf('cen'));
+    expect(r.desigConOverridden).toBe(1);
+  });
+
+  it('fills an absent designation constellation rather than only correcting one', () => {
+    // A promoted companion with no anchor to inherit a cell from carries the
+    // sentinel; its own designation is the only source it has.
+    const orphan = makeStar({ hip: 74, desigConIndex: NO_CONSTELLATION_INDEX });
+    const r = applyVariability([orphan], new Map<string, VarStarData>(), {
+      byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
+    });
+    expect(orphan.desigConIndex).toBe(conIndexOf('aqr'));
+    expect(r.desigConOverridden).toBe(1);
+  });
+
+  it('leaves the editorial cell alone when the designation agrees or is silent', () => {
+    const agreeing = makeStar({ hip: 72, desigConIndex: conIndexOf('and') });
+    const silent = makeStar({ hip: 73, desigConIndex: conIndexOf('dor') });
+    const r = applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
+      byHip: new Map([[72, 'R And'], [73, 'LMC V0471']]),
+      byHd: new Map(),
+      byGaia: new Map(),
+    });
+    expect(agreeing.desigConIndex).toBe(conIndexOf('and'));
+    expect(silent.desigConIndex).toBe(conIndexOf('dor'));
+    expect(r.desigConOverridden).toBe(0);
   });
 });

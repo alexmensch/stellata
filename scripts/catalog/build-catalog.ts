@@ -240,6 +240,7 @@ async function main() {
     variableCount: 0,
     searchEntries: 0,
     designationConMismatch: 0,
+    gcvsDesignationConOverride: 0,
     boundarySegments: 0,
     boundaryDirections: 0,
     boundaryArtifactKb: 0,
@@ -608,6 +609,7 @@ async function main() {
     counts.gcvsMatchedByHip = m.matchedByHip;
     counts.gcvsMatchedByHd = m.matchedByHd;
     counts.gcvsNamed = m.named;
+    counts.gcvsDesignationConOverride = m.desigConOverridden;
   } else {
     console.log('GCVS files not found; skipping variability cross-match.');
   }

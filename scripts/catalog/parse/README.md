@@ -241,7 +241,7 @@ Two properties follow from the boundaries partitioning the whole sphere:
 - **A row needs no catalogue entry to be classified.** The uncatalogued
   Gaia fill tier resolves on position like everything else.
 
-**AT-HYG's `con` cell is not retired — it is repurposed.** It is the
+**AT-HYG's `con` cell is not retired — it is repurposed.** It seeds the
 constellation a star's *designation* is named for, which is editorial and
 diverges from position once a boundary moves past a named star: ρ Aql /
 67 Aql (HIP 99742) is positionally in **Delphinus** since 1992. Each
@@ -253,12 +253,31 @@ An AT-HYG `con` code absent from the IAU-88 table is a hard build error,
 not a silent fall-back — the input is frozen, so it can only mean the
 table drifted.
 
-`conPositionalDisagreement` (build-counts) pins the divergence at **63**
-rows. Note this is measured on the **resolved** position, not AT-HYG's
-printed ra/dec, which the boundaries module's own cross-check pins at 61
-— six anonymous rows sit within an arcsecond of a wall and the direction
-cascade moves them across it. `designationConMismatch` pins the 9 search
-entries that actually carry `dc`.
+**A GCVS designation outranks the cell for its own star.** "LT Vul" names
+Vulpecula whatever a catalogue column says, so `applyVariability`
+(`gcvs-parse.ts`) sets `desigConIndex` from the designation's trailing
+abbreviation where the two disagree — `gcvsDesignationConOverride` pins
+**4**. The cell is not a nomenclature field and fails both ways:
+
+- **Stale** — LT Vul is filed under Sagitta, but sits in Vulpecula *and*
+  is named for it, so designation and boundaries agree against the cell.
+- **Right on position, wrong on the name** — RY Cen (cell and position
+  both Lupus, named for Centaurus) and EQ Vul (both Lyra, named for
+  Vulpecula) are genuine ρ Aql-shaped movers, and **invisible** to any
+  check that reads the designation constellation off the cell.
+
+The fourth is a fill: a GCVS-named companion with no anchor to inherit a
+cell from holds the sentinel until its own designation supplies one.
+Designations naming no constellation (NSV serials, `LMC V0471`) leave the
+field alone.
+
+`conPositionalDisagreement` (build-counts) pins the divergence between
+the cell and the position at **63** rows. Note this is measured on the
+**resolved** position, not AT-HYG's printed ra/dec, which the boundaries
+module's own cross-check pins at 61 — six anonymous rows sit within an
+arcsecond of a wall and the direction cascade moves them across it.
+`designationConMismatch` pins the 10 search entries that actually carry
+`dc`.
 
 ## Stick figures from Stellarium
 
@@ -384,7 +403,9 @@ looks up the period+amp. Two independent gates:
 
 - **Naming** (search) — the resolved designation is attached as
   `gcvsName` whenever a name resolves (~14.1k stars, `gcvsNamed`). This
-  is the `search-index.json` `g` field.
+  is the `search-index.json` `g` field. The designation's trailing
+  abbreviation also sets `desigConIndex` where it disagrees with AT-HYG's
+  `con` cell (§ Positional constellation membership).
 - **Rendering** (pulsation) — period / amplitude / varType apply only
   when the GCVS main table gave that name a parseable period+amplitude
   (~4.1k, `gcvsMatched`). Aperiodic variables — flare stars

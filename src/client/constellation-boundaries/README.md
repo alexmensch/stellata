@@ -172,11 +172,21 @@ computed assignment against that editorial column:
 
 Almost all of the other 60 are anonymous rows sitting within an arcsecond
 or so of a wall, where an editorial cell has no nomenclature to answer
-to. Two are not: CM Ind and LT Vul carry **GCVS** designations naming a
-constellation they do not sit in (Pavo and Vulpecula respectively). The
-CSV has no GCVS column — that cross-match happens later in the build — so
-this suite cannot see them; `designationConMismatch` in build-counts is
-where all three designated movers are pinned.
+to. Two carry **GCVS** designations, and they are different cases:
+
+- **CM Ind** is a genuine mover — named for Indus, positionally in
+  **Pavo**, the same shape as ρ Aql.
+- **LT Vul** is not. It is named for Vulpecula and it *sits* in
+  Vulpecula; AT-HYG's cell says **Sagitta** and is simply wrong. The
+  designation and the boundaries agree with each other against the
+  catalogue column, which is why the designation — not the column — is
+  the authority for `desigConIndex`
+  (`scripts/catalog/parse/README.md` § Positional constellation
+  membership).
+
+The CSV has no GCVS column — that cross-match happens later in the build
+— so this suite sees neither; `designationConMismatch` in build-counts is
+where the designated movers are pinned.
 
 The count is pinned as an exact number rather than a rate because it is
 the sharpest signal available on the precession epoch (§ B1875).

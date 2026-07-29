@@ -89,6 +89,7 @@ function baseCounts(): BuildCounts {
     companionRepositionedCollocatedDouble: 1,
     companionConstellationSplitFromAnchor: 0,
     designationConMismatch: 1,
+    gcvsDesignationConOverride: 4,
     boundarySegments: 781,
     boundaryDirections: 12000,
     boundaryArtifactKb: 391,

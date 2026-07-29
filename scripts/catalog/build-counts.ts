@@ -117,9 +117,16 @@ export interface BuildCounts {
   boundaryArtifactKb: number;
   /** Search entries carrying `dc` — a designation constellation that
    *  differs from the record's positional one, so its Bayer / Flamsteed /
-   *  GCVS aliases are built against the editorial constellation instead
+   *  GCVS aliases are built against the designation's constellation instead
    *  (ρ Aql / 67 Aql). */
   designationConMismatch: number;
+  /** Stars whose designation constellation came from their GCVS designation
+   *  rather than AT-HYG's `con` cell, because the two disagree — three
+   *  corrections plus one anchor-less companion that had no cell to inherit.
+   *  The designation is self-describing and wins; see `parse/README.md`
+   *  § Positional constellation membership for why the cell cannot be
+   *  trusted as a nomenclature field. */
+  gcvsDesignationConOverride: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
   solIndex: number;
   /** Total stick-figure polylines across all constellations. */
