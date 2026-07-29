@@ -568,19 +568,21 @@
               <input id="show-milkyway" type="checkbox" checked />
               <span>Galactic background glow</span>
             </label>
-            <div class="sub-label-row group-block" id="coord-sphere-row">
+            <!-- Tooltip on the row, not the equatorial button: that button is
+                 the one that gets disabled, and a disabled control's own title
+                 doesn't reliably surface. Same reason as #show-chart-row. -->
+            <div
+              class="sub-label-row group-block"
+              id="coord-sphere-row"
+              title="Equatorial is Earth-referenced — available near Sol only"
+            >
               <label class="sub-label">Coordinate sphere</label>
               <span class="row-actions" id="coord-sphere">
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="none" type="button">none</button>
                 <span class="sep">·</span>
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="galactic" type="button">galactic</button>
                 <span class="sep">·</span>
-                <button
-                  class="link-btn coord-sphere-stop"
-                  data-coord-sphere="equatorial"
-                  type="button"
-                  title="Earth-referenced — available near Sol only"
-                >equatorial</button>
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="equatorial" type="button">equatorial</button>
               </span>
             </div>
             <label class="checkbox-row group-block" id="show-chart-row" title="Available in observe mode">

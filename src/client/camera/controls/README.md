@@ -7,9 +7,11 @@ in both navigate and observe modes.
 ## Files
 
 - `controls.ts` — settings-panel bindings (distance / magnitude / size
-  sliders, spectral chips, overlay toggles, the detail-level and
-  coordinate-sphere 3-stop controls) + the slider↔distance log
-  mapping (`sliderToDist` / `distToSlider`). Reverse-sync runs off
+  sliders, spectral chips, overlay toggles) + the slider↔distance log
+  mapping (`sliderToDist` / `distToSlider`). The three segmented stop
+  controls (magnitude preset, detail level, coordinate sphere) are bound
+  and synced through `../../ui/stop-control.ts` (`../../ui/README.md`
+  § Stop controls), not open-coded here. Reverse-sync runs off
   `'filter'` / `'cameraMode'`; the one exception is the coordinate-sphere
   control's disabled state, which tracks camera distance and so rides
   `'frame'` behind a cached flag (`../../galactic/README.md`

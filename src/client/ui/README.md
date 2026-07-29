@@ -163,6 +163,23 @@ The rule is scoped `.group-body > .group-block` rather than bare
 `.group-block`: at (0,2,0) it outranks `.sub-label`'s own (0,1,0) `margin-top`
 regardless of rule order in the stylesheet.
 
+## Stop controls
+
+Three segmented controls in the panel — magnitude preset, detail level,
+coordinate sphere — share `stop-control.ts`: `bindStopControl` wires the
+clicks (reading each button's value from its `data-*` attribute and dropping
+anything not in the allowed list, so a markup typo is inert), `syncStopControl`
+lights the active stop. Both are **value-driven**: the highlight follows state,
+so `V` / `S` / a URL restore light the same stop a click would.
+
+The magnitude preset is the odd one — its active stop isn't a state field but
+"whichever preset the slider currently sits on", resolved in `controls.ts`
+before the shared sync call; an in-between magnitude lights nothing.
+
+A stop that the current camera can't reach is **disabled, not hidden**
+(`.link-btn:disabled`), and its explanatory `title` goes on the **row**, never
+on the disabled button — see § Disabled-control styling.
+
 ## Disabled-control styling
 
 `controls.ts` toggles native `.disabled` on inputs whose state is
@@ -180,7 +197,7 @@ preserved-but-frozen, and the panel CSS leans on the standard
 - `.con-typeahead input:disabled` + `#con-picker.disabled .sub-label`
   — same fade on the typeahead row when the master toggle is off.
 
-Two specific freezes use this:
+Three specific freezes use this:
 
 - **Star chart mode** disables `#show-milkyway` (the Milky Way layer is
   hidden under chart anyway, see
@@ -188,6 +205,13 @@ Two specific freezes use this:
   the toggle restores its prior state on chart-off.
 - **`showConstellation === false`** disables `#con-input` and the
   surrounding `#con-picker` styling.
+- **Camera too far from Sol** disables the coordinate sphere's `equatorial`
+  stop (`../galactic/README.md` § Coordinate spheres).
+
+**Put the explanatory `title` on the row, not the disabled control.** Both
+`#show-chart-row` and `#coord-sphere-row` carry it on the wrapper: a disabled
+form control suppresses pointer events in some engines, so a tooltip attached
+to it goes quiet exactly when it is the only thing explaining the state.
 
 ## Reverse-sync (DOM ← FilterState)
 

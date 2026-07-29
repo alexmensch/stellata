@@ -125,6 +125,10 @@ const PRESET_BASE: Record<MagPresetName, { maxAppMag: number; sizeSpan: number }
   'all':        { maxAppMag: 15,   sizeSpan: 17 },
 };
 
+/** Preset order, for the panel's stop control. Derived from `PRESET_BASE` so
+ *  a fourth preset can't be added to one list and missed in the other. */
+export const MAG_PRESET_NAMES = Object.keys(PRESET_BASE) as readonly MagPresetName[];
+
 function computeMagPresets(): Record<MagPresetName, MagPreset> {
   const result = {} as Record<MagPresetName, MagPreset>;
   for (const name of Object.keys(PRESET_BASE) as MagPresetName[]) {

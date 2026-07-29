@@ -3,12 +3,12 @@ import {
   ALL_SPECT_MASK,
   DEFAULT_FOV,
   MAG_PRESETS,
-  type MagPresetName,
+  MAG_PRESET_NAMES,
 } from '../../filters/filter-state';
-import type { CoordSphereFrame } from '../../galactic/coord-sphere';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-sphere-frames';
-import type { DetailLevel } from '../../scene/scene-elements';
+import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
+import { bindStopControl, syncStopControl } from '../../ui/stop-control';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';
 
 const SPECT_LABELS: { key: string; label: string; bit: number }[] = [
@@ -121,30 +121,12 @@ export function bindControls(stellata: Stellata) {
   appMag.addEventListener('input', () => {
     stellata.setFilter({ maxAppMag: Number(appMag.value) });
   });
-  for (const btn of Array.from(magPresets)) {
-    btn.addEventListener('click', () => {
-      const preset = btn.dataset.preset as MagPresetName | undefined;
-      if (preset === 'naked-eye' || preset === 'binoculars' || preset === 'all') {
-        stellata.applyMagnitudePreset(preset);
-      }
-    });
-  }
-  for (const btn of Array.from(detailStops)) {
-    btn.addEventListener('click', () => {
-      const d = btn.dataset.detail as DetailLevel | undefined;
-      if (d === 'physical' || d === 'representational' || d === 'all') {
-        stellata.applyDetailPreset(d);
-      }
-    });
-  }
-  for (const btn of Array.from(coordSphereStops)) {
-    btn.addEventListener('click', () => {
-      const frame = btn.dataset.coordSphere as CoordSphereFrame | undefined;
-      if (frame && COORD_SPHERE_FRAMES.includes(frame)) {
-        stellata.setFilter({ coordSphere: frame });
-      }
-    });
-  }
+  bindStopControl(magPresets, 'preset', MAG_PRESET_NAMES,
+    (preset) => stellata.applyMagnitudePreset(preset));
+  bindStopControl(detailStops, 'detail', DETAIL_LEVELS,
+    (level) => stellata.applyDetailPreset(level));
+  bindStopControl(coordSphereStops, 'coordSphere', COORD_SPHERE_FRAMES,
+    (frame) => stellata.setFilter({ coordSphere: frame }));
   // Size sliders set their override flag so the value sticks across
   // preset changes and viewport resizes until the reset button clears it.
   // Min/Max are coupled — dragging one past the other pushes the other
@@ -218,23 +200,15 @@ export function bindControls(stellata: Stellata) {
     if (appMag.value !== magStr) appMag.value = magStr;
     appMagReadout.textContent = `≤ ${f.maxAppMag.toFixed(1)}`;
 
-    // Highlight whichever preset button matches the current slider value.
-    // Value-driven (not click-driven) so dragging the slider to 6.5 still
-    // lights up "naked eye".
-    for (const btn of Array.from(magPresets)) {
-      const preset = btn.dataset.preset as MagPresetName | undefined;
-      const matches =
-        preset === 'naked-eye' || preset === 'binoculars' || preset === 'all'
-          ? Math.abs(f.maxAppMag - MAG_PRESETS[preset].maxAppMag) < 0.05
-          : false;
-      btn.classList.toggle('on', matches);
-    }
+    // Unlike the other two stop controls the active preset isn't a state
+    // field — it's whichever one the magnitude slider currently sits on, so
+    // dragging to 6.5 lights "naked eye" without a click. No stop matches an
+    // in-between value.
+    const activePreset = MAG_PRESET_NAMES.find(
+      (name) => Math.abs(f.maxAppMag - MAG_PRESETS[name].maxAppMag) < 0.05);
+    syncStopControl(magPresets, 'preset', activePreset ?? '');
 
-    // Detail-level 3-stop: highlight the active level (value-driven, so V
-    // and URL restore light the right stop the same as a click).
-    for (const btn of Array.from(detailStops)) {
-      btn.classList.toggle('on', btn.dataset.detail === f.detailLevel);
-    }
+    syncStopControl(detailStops, 'detail', f.detailLevel);
 
     for (const el of chipEls) {
       const bit = Number(el.dataset.bit);
@@ -266,11 +240,7 @@ export function bindControls(stellata: Stellata) {
     if (showMilkyway.checked !== f.showMilkyway) {
       showMilkyway.checked = f.showMilkyway;
     }
-    // Coordinate-sphere 3-stop: value-driven like the detail stops, so `S`
-    // and a URL restore light the right stop.
-    for (const btn of Array.from(coordSphereStops)) {
-      btn.classList.toggle('on', btn.dataset.coordSphere === f.coordSphere);
-    }
+    syncStopControl(coordSphereStops, 'coordSphere', f.coordSphere);
     // Chart toggle is observe-gated. Disable when not in observe so the
     // user sees why it can't be enabled (the title attribute on the row
     // explains it).
