@@ -327,19 +327,25 @@ function angularSeparationDeg(a: SkyPosition, b: SkyPosition): number {
   return Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y + u.z * v.z))) * RAD_TO_DEG;
 }
 
+// The perpendicular foot onto a constant-RA great circle does NOT keep the
+// point's own declination — it sits at `atan2(sin δ, cos δ·cos Δα)`, which
+// leaves ±90° once the point is more than a quarter turn away in RA, putting
+// the foot on the antimeridian half of the circle and off this arc entirely.
+// Gating on the point's declination instead measures to that far half: it
+// reports 0° for a wall 20° away.
 function distanceToMeridianDeg(edge: MeridianEdge, at: SkyPosition): number {
-  if (at.decDeg >= edge.decLoDeg && at.decDeg <= edge.decHiDeg) {
-    // The foot of the perpendicular onto a constant-RA great circle keeps the
-    // point's own dec, so an in-span point drops onto the arc itself and the
-    // distance is the point's angle out of that circle's plane.
-    const outOfPlane = Math.cos(at.decDeg * DEG_TO_RAD)
-      * Math.sin((at.raDeg - edge.raDeg) * DEG_TO_RAD);
+  const decRad = at.decDeg * DEG_TO_RAD;
+  const deltaRaRad = (at.raDeg - edge.raDeg) * DEG_TO_RAD;
+  const cosDec = Math.cos(decRad);
+  const footDecDeg = Math.atan2(Math.sin(decRad), cosDec * Math.cos(deltaRaRad)) * RAD_TO_DEG;
+  if (footDecDeg >= edge.decLoDeg && footDecDeg <= edge.decHiDeg) {
+    const outOfPlane = cosDec * Math.sin(deltaRaRad);
     return Math.abs(Math.asin(Math.max(-1, Math.min(1, outOfPlane))) * RAD_TO_DEG);
   }
-  return angularSeparationDeg(at, {
-    raDeg: edge.raDeg,
-    decDeg: at.decDeg < edge.decLoDeg ? edge.decLoDeg : edge.decHiDeg,
-  });
+  return Math.min(
+    angularSeparationDeg(at, { raDeg: edge.raDeg, decDeg: edge.decLoDeg }),
+    angularSeparationDeg(at, { raDeg: edge.raDeg, decDeg: edge.decHiDeg }),
+  );
 }
 
 function distanceToParallelDeg(edge: ParallelEdge, at: SkyPosition): number {

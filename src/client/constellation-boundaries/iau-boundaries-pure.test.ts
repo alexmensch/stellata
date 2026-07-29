@@ -146,6 +146,24 @@ describe('distance to the nearest boundary', () => {
       .toBeCloseTo(3, 9);
   });
 
+  // A constant-RA arc lies in a great circle that also carries the
+  // antimeridian and both poles. Gating the perpendicular-foot branch on the
+  // point's own declination measures to that far half, which reports a wall as
+  // touching when it is a fifth of the sky away.
+  it('never measures to the antimeridian half of a meridian great circle', () => {
+    const single = parseIauEdges(['1:2 M+ 00:00:00 +70:00:00 00:00:00 +85:00:00 AAA BBB']);
+    // Same great circle, opposite side: 180 − 75 − 85 of arc between them.
+    expect(angularDistanceToNearestEdgeDeg(single, { raDeg: 180, decDeg: 75 }))
+      .toBeCloseTo(20, 9);
+    // A quarter turn away in RA, dec inside the arc's span: the foot is at the
+    // pole, so the dec-85 endpoint wins.
+    expect(angularDistanceToNearestEdgeDeg(single, { raDeg: 90, decDeg: 84.9 }))
+      .toBeCloseTo(7.1375, 4);
+    // Foot just past the arc's end — the endpoint, not the great circle.
+    expect(angularDistanceToNearestEdgeDeg(single, { raDeg: 30, decDeg: 84.99 }))
+      .toBeCloseTo(2.5877, 4);
+  });
+
   it('measures a parallel along the meridian of the point inside the span', () => {
     const single = parseIauEdges(['1:2 P+ 02:00:00 +30:00:00 04:00:00 +30:00:00 AAA BBB']);
     expect(angularDistanceToNearestEdgeDeg(single, { raDeg: 45, decDeg: 34 }))
@@ -163,15 +181,17 @@ describe('distance to the nearest boundary', () => {
       .toBeCloseTo(3, 9);
   });
 
-  it('stays inside the boundary that owns each named star', () => {
-    for (const star of [
-      { raDeg: 88.79293899, decDeg: 7.40706400 },
-      { raDeg: 101.28715533, decDeg: -16.71611586 },
-      { raDeg: 279.23473479, decDeg: 38.78368896 },
-    ]) {
-      const at = precessRaDec(B1875, star);
-      expect(angularDistanceToNearestEdgeDeg(edges, at)).toBeGreaterThan(0);
-      expect(angularDistanceToNearestEdgeDeg(edges, at)).toBeLessThan(30);
-    }
+  // Pinned exactly rather than bounded: these values agree with a brute-force
+  // sample of every arc to 1e-6°, so a drift is a geometry regression. A range
+  // check passes just as well when the meridian branch measures to the wrong
+  // half of its great circle.
+  it.each([
+    { name: 'Betelgeuse', raDeg: 88.79293899, decDeg: 7.40706400, nearestDeg: 5.152051 },
+    { name: 'Sirius', raDeg: 101.28715533, decDeg: -16.71611586, nearestDeg: 5.588200 },
+    { name: 'Vega', raDeg: 279.23473479, decDeg: 38.78368896, nearestDeg: 4.338363 },
+    { name: 'Polaris', raDeg: 37.95456067, decDeg: 89.26410897, nearestDeg: 0.642569 },
+  ])('puts $name $nearestDeg° inside its nearest wall', ({ raDeg, decDeg, nearestDeg }) => {
+    const at = precessRaDec(B1875, { raDeg, decDeg });
+    expect(angularDistanceToNearestEdgeDeg(edges, at)).toBeCloseTo(nearestDeg, 6);
   });
 });

@@ -151,13 +151,22 @@ position, including the uncatalogued fill tier.
 `angularDistanceToNearestEdgeDeg` gives the angular distance from a
 B1875 position to the closest boundary arc, measured across the sphere:
 
-- **Meridian** — a constant-RA great circle, so the perpendicular foot
-  keeps the point's own declination. In-span, the distance is the
-  point's angle out of that circle's plane (a 1° RA offset at dec 80 is
-  0.17° of sky); out of span, the nearer endpoint wins.
+- **Meridian** — a constant-RA great circle. The perpendicular foot does
+  **not** keep the point's own declination: it sits at
+  `atan2(sin δ, cos δ·cos Δα)`, which leaves ±90° once the point is more
+  than a quarter turn away in RA. Past that the foot is on the
+  *antimeridian* half of the circle, off the arc, so the branch is gated
+  on the **foot's** declination, never the point's. With the foot inside
+  the span the distance is the point's angle out of the circle's plane
+  (a 1° RA offset at dec 80 is 0.17° of sky); otherwise the nearer of the
+  two endpoints wins. Gating on the point's declination instead reports
+  0° for a wall 20° away and under-reports by up to 4.6° over the real
+  edge set — pinned by exact per-star values, since a range check passes
+  either way.
 - **Parallel** — a constant-Dec small circle, so the shortest path runs
   along the point's own meridian and an in-span point is |Δdec| away;
-  out of span, the nearer endpoint again.
+  out of span, the nearer endpoint again. No antimeridian trap here: the
+  arc parameter *is* RA, so the in-span test and the nearest point agree.
 
 This feeds the fade window for drawing the boundaries. A boundary is a
 Sol-frame projection, so the offset at which a star reads as being in
