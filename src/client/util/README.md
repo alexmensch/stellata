@@ -69,6 +69,11 @@ build scripts, tests, and shader uniforms.
   `B1875_JD`, the equinox the IAU constellation boundaries are drawn at —
   the θ sign and the epoch are both silent-failure modes, documented in
   `../constellation-boundaries/README.md` § B1875.
+- `astronomy-constants.ts` — canonical values, one definition each, so
+  client / build-script / shader consumers can't drift on precision.
+  `RA_HOURS_TO_DEG` is the hours→degrees factor every catalogue RA column
+  and sexagesimal boundary coordinate goes through; tests import it
+  rather than restating 15.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.

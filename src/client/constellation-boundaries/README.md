@@ -15,14 +15,40 @@ enters into it.
 ```
 src/client/constellation-boundaries/
   iau-boundaries-pure.ts          Edge parsing, the cell decomposition,
-    (+ test)                      point lookup, nearest-edge distance. Pure.
+    (+ test)                      point lookup, nearest-edge distance, and
+                                  createIauConstellationLookup. Pure.
   iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
                                   editorial con column (§ Agreement).
 ```
 
+**Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
+decomposes, and binds the B1875 rotation, so its `edgeCodeAt` / `keyAt` /
+`distanceToNearestEdgeDeg` all take **J2000** positions. The lower-level
+`constellationEdgeCodeAt(grid, …)` and
+`angularDistanceToNearestEdgeDeg(edges, …)` expect input already at B1875
+— handing them a J2000 position resolves to a real constellation, just
+the wrong one (`(20, −60)` reads Hydrus instead of Tucana), which is why
+the composition lives in one place rather than at each call site.
+
 The edge records are read from the committed Stellarium file by
 `readIauEdgeRecords` (`scripts/catalog/parse/constellations.ts`); B1875
 precession is `../util/precession.ts`.
+
+## How each consumer gets this
+
+Node-side only, today. `readIauEdgeRecords` is a `readFileSync` against
+`data/`, which is not served, so nothing in the browser can call it:
+
+- **Assignment** (sp4q.2) runs at **build time** — `stars-parse.ts`
+  resolves each record's constellation into catalog byte 34. The browser
+  reads the answer, never the edge set.
+- **Drawing** (sp4q.3) ships `public/constellation-boundaries.json`:
+  subdivided, precessed-to-ICRS polylines plus the fade table. That
+  artifact, not this module, is what the runtime layer loads.
+
+So a client-side caller needs an artifact first. Adding one here without
+that is how the edge set ends up parsed in the browser from a file that
+isn't deployed.
 
 ## The edge set
 

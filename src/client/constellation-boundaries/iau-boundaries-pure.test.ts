@@ -1,23 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
-import { readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
+import { CON_INDEX, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
 import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
 import {
   IAU_REGION_COUNT,
   angularDistanceToNearestEdgeDeg,
-  buildConstellationRegions,
   constellationEdgeCodeAt,
   constellationKey,
+  createIauConstellationLookup,
   parseIauEdges,
 } from './iau-boundaries-pure';
 
 const records = readIauEdgeRecords();
-const edges = parseIauEdges(records);
-const grid = buildConstellationRegions(edges);
+const lookup = createIauConstellationLookup(records);
+const { edges, grid } = lookup;
 const B1875 = precessionRotationFromJ2000(B1875_JD);
 
-const constellationAtJ2000 = (raDeg: number, decDeg: number) =>
-  constellationEdgeCodeAt(grid, precessRaDec(B1875, { raDeg, decDeg }));
+/** The 20h08m30s Aquila/Delphinus meridian — the wall rho Aql crossed. */
+const AQL_DEL_WALL_RA_DEG = 302.125;
 
 describe('IAU edge records', () => {
   it('decompose into meridians and parallels', () => {
@@ -81,6 +81,12 @@ describe('region decomposition', () => {
     expect(constellationKey('CMA')).toBe('cma');
   });
 
+  it('resolves every assignment into the IAU-88 table', () => {
+    const keys = new Set(grid.cellCon.map(constellationKey));
+    expect(keys.size).toBe(88);
+    for (const key of keys) expect(CON_INDEX.get(key)).toBeTypeOf('number');
+  });
+
   it('resolves a position given in unwrapped RA', () => {
     const orion = { raDeg: 87.2826, decDeg: 7.4309 };
     expect(constellationEdgeCodeAt(grid, orion)).toBe('ORI');
@@ -101,7 +107,7 @@ describe('named-star assignment', () => {
     { name: 'Unukalhai (Ser Caput)', raDeg: 236.06699, decDeg: 6.42562, con: 'SER1' },
     { name: 'Eta Serpentis (Ser Cauda)', raDeg: 275.32665, decDeg: -2.89880, con: 'SER2' },
   ])('places $name in $con', ({ raDeg, decDeg, con }) => {
-    expect(constellationAtJ2000(raDeg, decDeg)).toBe(con);
+    expect(lookup.edgeCodeAt({ raDeg, decDeg })).toBe(con);
   });
 
   // ρ Aquilae is the documented boundary-crossing case and the reason the
@@ -110,25 +116,46 @@ describe('named-star assignment', () => {
   // Delphinus. See README.md § ρ Aquilae.
   it('places rho Aql (HIP 99742) in Delphinus, not Aquila', () => {
     const rhoAql = { raDeg: 303.5692452, decDeg: 15.19760993 };
-    expect(constellationAtJ2000(rhoAql.raDeg, rhoAql.decDeg)).toBe('DEL');
+    expect(lookup.edgeCodeAt(rhoAql)).toBe('DEL');
 
     const b1875 = precessRaDec(B1875, rhoAql);
     expect(b1875.raDeg).toBeCloseTo(302.1251, 4);
     expect(b1875.decDeg).toBeCloseTo(14.8200, 4);
 
-    // The margin past the 20h08m30s wall, walked back through the star's own
-    // proper motion, dates the crossing — which is published as 1992.
-    const marginArcsec = (b1875.raDeg - 302.125) * 3600;
+    // The margin past the wall, walked back through the star's own proper
+    // motion, dates the crossing — which is published as 1992.
+    const marginArcsec = (b1875.raDeg - AQL_DEL_WALL_RA_DEG) * 3600;
     expect(marginArcsec).toBeCloseTo(0.381, 3);
     const raMotionArcsecPerYear = 0.055446 / Math.cos((15.19760993 * Math.PI) / 180);
     expect(2000 - marginArcsec / raMotionArcsecPerYear).toBeCloseTo(1993.4, 1);
   });
 });
 
+describe('the J2000-bound lookup', () => {
+  // Skipping the rotation and querying the B1875 grid with a J2000 position
+  // resolves to a real constellation — the wrong one. That is why the epoch is
+  // bound into the lookup instead of left to each caller.
+  it.each([
+    { raDeg: 20, decDeg: -60, precessed: 'TUC', unprecessed: 'HYI' },
+    { raDeg: 178, decDeg: -60, precessed: 'CEN', unprecessed: 'CRU' },
+    { raDeg: 264, decDeg: -60, precessed: 'ARA', unprecessed: 'PAV' },
+  ])('reads $precessed at ($raDeg, $decDeg), not the unprecessed $unprecessed', (c) => {
+    const at = { raDeg: c.raDeg, decDeg: c.decDeg };
+    expect(lookup.edgeCodeAt(at)).toBe(c.precessed);
+    expect(constellationEdgeCodeAt(grid, at)).toBe(c.unprecessed);
+  });
+
+  it('collapses Serpens onto the IAU-88 key while edgeCodeAt keeps the part', () => {
+    const unukalhai = { raDeg: 236.06699, decDeg: 6.42562 };
+    expect(lookup.edgeCodeAt(unukalhai)).toBe('SER1');
+    expect(lookup.keyAt(unukalhai)).toBe('ser');
+  });
+});
+
 describe('distance to the nearest boundary', () => {
   it('is zero on a wall and grows inward', () => {
-    // The 20h08m30s Aql/Del meridian, mid-span.
-    expect(angularDistanceToNearestEdgeDeg(edges, { raDeg: 302.125, decDeg: 12 }))
+    // The Aql/Del meridian, mid-span.
+    expect(angularDistanceToNearestEdgeDeg(edges, { raDeg: AQL_DEL_WALL_RA_DEG, decDeg: 12 }))
       .toBeCloseTo(0, 9);
     // The +8°30' Aql/Del parallel, mid-span.
     expect(angularDistanceToNearestEdgeDeg(edges, { raDeg: 304, decDeg: 8.5 }))
@@ -191,7 +218,6 @@ describe('distance to the nearest boundary', () => {
     { name: 'Vega', raDeg: 279.23473479, decDeg: 38.78368896, nearestDeg: 4.338363 },
     { name: 'Polaris', raDeg: 37.95456067, decDeg: 89.26410897, nearestDeg: 0.642569 },
   ])('puts $name $nearestDeg° inside its nearest wall', ({ raDeg, decDeg, nearestDeg }) => {
-    const at = precessRaDec(B1875, { raDeg, decDeg });
-    expect(angularDistanceToNearestEdgeDeg(edges, at)).toBeCloseTo(nearestDeg, 6);
+    expect(lookup.distanceToNearestEdgeDeg({ raDeg, decDeg })).toBeCloseTo(nearestDeg, 6);
   });
 });

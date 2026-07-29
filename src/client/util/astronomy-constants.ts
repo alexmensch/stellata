@@ -52,6 +52,11 @@ export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 // Days in a Julian year (used by WDS year-of-observation → JD conversion).
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 
+// Right ascension in hours → degrees. Catalogue RA columns (AT-HYG's `ra`)
+// and sexagesimal `hh:mm:ss` boundary coordinates both arrive in hours;
+// everything downstream of the parse works in degrees.
+export const RA_HOURS_TO_DEG = 15;
+
 // Light travel time over one AU, seconds (IAU 2009). Two consumers: the
 // light-time correction any comparison against an observer-frame astrometric
 // position needs (0.03° at Mercury), and the probe card's signal round-trip.

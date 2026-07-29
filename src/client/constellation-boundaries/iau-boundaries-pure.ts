@@ -2,7 +2,9 @@
 // its decomposition into named regions, and positional lookup against them.
 // See README.md.
 
+import { RA_HOURS_TO_DEG } from '../util/astronomy-constants';
 import { unitVectorFromRaDec, type SkyPosition } from '../util/equatorial-basis';
+import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -38,7 +40,6 @@ export interface IauBoundaryEdges {
  *  half-resolved sky. */
 export const IAU_REGION_COUNT = 89;
 
-const HOURS_TO_DEG = 15;
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -73,8 +74,8 @@ export function parseIauEdges(records: readonly string[]): IauBoundaryEdges {
       throw new Error(`IAU edge record has ${fields.length} fields, expected 8: ${record}`);
     }
     const [, kind, ra1, dec1, ra2, dec2, conA, conB] = fields;
-    const raStartDeg = parseSexagesimal(ra1) * HOURS_TO_DEG;
-    const raEndRawDeg = parseSexagesimal(ra2) * HOURS_TO_DEG;
+    const raStartDeg = parseSexagesimal(ra1) * RA_HOURS_TO_DEG;
+    const raEndRawDeg = parseSexagesimal(ra2) * RA_HOURS_TO_DEG;
     const decStartDeg = parseSexagesimal(dec1);
     const decEndDeg = parseSexagesimal(dec2);
 
@@ -377,4 +378,38 @@ export function angularDistanceToNearestEdgeDeg(
     nearest = Math.min(nearest, distanceToParallelDeg(edge, b1875));
   }
   return nearest;
+}
+
+/** The edge set with the B1875 precession bound in, so callers pass ICRS/J2000
+ *  positions. Every method below precesses; the `edges` / `grid` fields are
+ *  exposed for the geometry itself and expect B1875 input. */
+export interface IauConstellationLookup {
+  readonly edges: IauBoundaryEdges;
+  readonly grid: ConstellationRegionGrid;
+  /** Edge-set code (`AND`, `SER1`, …) for a J2000 position. */
+  edgeCodeAt(j2000: SkyPosition): string;
+  /** Lowercase IAU-88 table key; Serpens' two parts collapse to `ser`. */
+  keyAt(j2000: SkyPosition): string;
+  /** Degrees from a J2000 position to the nearest boundary arc. */
+  distanceToNearestEdgeDeg(j2000: SkyPosition): number;
+}
+
+/** Parses, decomposes, and binds the epoch in one step — the entry point every
+ *  consumer outside this module should use. Skipping the precession and
+ *  querying a J2000 position against the B1875 grid directly is a silent wrong
+ *  answer, not an error: it still resolves, ~1.4° out. */
+export function createIauConstellationLookup(
+  records: readonly string[],
+): IauConstellationLookup {
+  const edges = parseIauEdges(records);
+  const grid = buildConstellationRegions(edges);
+  const toB1875 = precessionRotationFromJ2000(B1875_JD);
+  const at = (j2000: SkyPosition) => precessRaDec(toB1875, j2000);
+  return {
+    edges,
+    grid,
+    edgeCodeAt: (j2000) => constellationEdgeCodeAt(grid, at(j2000)),
+    keyAt: (j2000) => constellationKey(constellationEdgeCodeAt(grid, at(j2000))),
+    distanceToNearestEdgeDeg: (j2000) => angularDistanceToNearestEdgeDeg(edges, at(j2000)),
+  };
 }
