@@ -15,6 +15,13 @@ themselves.
   crawler/GEO fallback describing the app. The referenced static assets
   (`og-image.jpg`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
   `manifest.webmanifest`) live in `public/`.
+  **No loader in `main.ts`'s boot `Promise.all` may reject.** One rejection
+  blanks the whole app, so an optional artifact must resolve null instead —
+  including on a parse error, since `not_found_handling =
+  "single-page-application"` (`wrangler.toml`) answers a missing asset with
+  index.html at 200 rather than a 404. `solar-system/probes/probe-loader.ts`
+  is the pattern to copy; warn-then-null on a present-but-invalid artifact
+  (`local-group/local-group-loader.ts`) is the shape for shape errors.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `util/` — project-agnostic plumbing (event bus, URL state).
 - `filters/` — `FilterState` + magnitude presets + render knobs and

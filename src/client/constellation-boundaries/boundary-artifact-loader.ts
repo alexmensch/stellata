@@ -32,11 +32,37 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   if (!Array.isArray(fade?.magLimits) || fade.magLimits.length === 0) {
     throw new Error('constellation-boundaries.json: fade table has no magnitude rows');
   }
-  if (fade.offsetsPc.length !== fade.magLimits.length) {
+  // resolveBoundaryFadeWindowPc brackets a magnitude against this column by
+  // walking it forwards; out of order it silently returns the wrong window.
+  for (let i = 1; i < fade.magLimits.length; i++) {
+    if (fade.magLimits[i] <= fade.magLimits[i - 1]) {
+      throw new Error(
+        `constellation-boundaries.json: fade magLimits must ascend (row ${i} is `
+        + `${fade.magLimits[i]} after ${fade.magLimits[i - 1]})`,
+      );
+    }
+  }
+  if (!Array.isArray(fade.quantilePcts) || fade.quantilePcts.length === 0) {
+    throw new Error('constellation-boundaries.json: fade table has no quantile columns');
+  }
+  if (!Array.isArray(fade.offsetsPc) || fade.offsetsPc.length !== fade.magLimits.length) {
     throw new Error(
       `constellation-boundaries.json: fade table has ${fade.magLimits.length} magnitude rows `
-      + `but ${fade.offsetsPc.length} offset rows`,
+      + `but ${Array.isArray(fade.offsetsPc) ? fade.offsetsPc.length : 'no'} offset rows`,
     );
+  }
+  // A row narrower than the column header resolves a quantile to undefined,
+  // which carries NaN all the way to the fade factor and stops the layer ever
+  // hiding itself — the silent mis-draw this whole function exists to catch.
+  for (let i = 0; i < fade.offsetsPc.length; i++) {
+    const row = fade.offsetsPc[i];
+    if (!Array.isArray(row) || row.length !== fade.quantilePcts.length) {
+      throw new Error(
+        `constellation-boundaries.json: fade row ${i} carries `
+        + `${Array.isArray(row) ? row.length : 'no'} offsets for `
+        + `${fade.quantilePcts.length} quantile columns`,
+      );
+    }
   }
   for (const pct of [FADE_START_MISPLACED_PCT, FADE_END_MISPLACED_PCT]) {
     if (!fade.quantilePcts.includes(pct)) {
@@ -49,11 +75,34 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   return artifact;
 }
 
-/** Fetch + validate the boundary artifact. Resolves null when the asset is
- *  absent (a checkout that never ran `build:catalog`) — the layer is
- *  optional and the chart renders without it. */
+/**
+ * Fetch + validate the boundary artifact, or null for no layer at all — the
+ * chart renders without it.
+ *
+ * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
+ * alongside the catalog, so a rejection takes the whole app's boot with it,
+ * which is never the proportionate answer for an optional layer. Absence
+ * can't be detected by status alone either: `not_found_handling =
+ * "single-page-application"` (`wrangler.toml`) answers a missing asset with
+ * index.html at 200, so a deployed build that never ran `build:catalog`
+ * arrives here as a JSON parse error rather than a 404.
+ */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return validateBoundaryArtifact(await res.json());
+  let raw: unknown;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    raw = await res.json();
+  } catch {
+    return null;
+  }
+  try {
+    return validateBoundaryArtifact(raw);
+  } catch (err) {
+    // Present but wrong shape: warn and draw nothing, the contract
+    // local-group-loader uses for a stale artifact. Dropping the layer still
+    // honours the frame check — a B1875-framed artifact never reaches the GPU.
+    console.warn(`${(err as Error).message} — rebuild with \`pnpm run build:catalog\``);
+    return null;
+  }
 }

@@ -79,8 +79,11 @@ export function boundaryFadeFactor(
   fadeWindow: BoundaryFadeWindow,
 ): number {
   // A table row whose two quantiles round to the same offset would make
-  // smoothstep divide by zero; step at the window instead.
-  if (fadeWindow.outerPc <= fadeWindow.innerPc) {
+  // smoothstep divide by zero; step at the window instead. Negated rather
+  // than `outerPc <= innerPc` so a NaN window lands here too and hides the
+  // layer — smoothstep would pass NaN through as an opacity that never
+  // reads as ≤ 0, leaving a wrong partition drawn at every distance.
+  if (!(fadeWindow.outerPc > fadeWindow.innerPc)) {
     return distFromSolPc < fadeWindow.outerPc ? 1 : 0;
   }
   return 1 - smoothstep(fadeWindow.innerPc, fadeWindow.outerPc, distFromSolPc);

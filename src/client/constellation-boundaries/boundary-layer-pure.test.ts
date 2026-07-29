@@ -118,4 +118,12 @@ describe('boundaryFadeFactor', () => {
     expect(boundaryFadeFactor(0.49, collapsed)).toBe(1);
     expect(boundaryFadeFactor(0.5, collapsed)).toBe(0);
   });
+
+  // Hiding is the only safe answer to a window that isn't a number: a NaN
+  // opacity never reads as ≤ 0, so passing it through would draw the partition
+  // at full strength from every distance.
+  it('hides on a NaN window rather than passing NaN through as opacity', () => {
+    expect(boundaryFadeFactor(0, { innerPc: 0.4, outerPc: NaN })).toBe(0);
+    expect(boundaryFadeFactor(1e9, { innerPc: NaN, outerPc: NaN })).toBe(0);
+  });
 });

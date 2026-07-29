@@ -94,8 +94,16 @@ visible population reads as misplaced to where **5%** does. Both
 percentiles must be columns of the artifact's own `quantilePcts` — the
 loader rejects an artifact that dropped either rather than silently using
 a neighbouring column. `setMagnitudeLimit` is *pushed* from the shell's
-filter handler, so the interpolation runs once per slider change rather
-than per frame.
+filter handler (folded into the same `filter` subscription that rebuilds
+the figure), so the interpolation runs once per slider change rather than
+per frame.
+
+`boundaryFadeFactor` tests its window as `!(outerPc > innerPc)`, not
+`outerPc <= innerPc`. The negated form is what routes a **NaN** window into
+the step branch and hides the layer: a NaN opacity never reads as ≤ 0, so
+passing one through draws the partition at full strength from every
+distance — the fade silently not firing at all, which is the one failure
+this layer cannot tolerate.
 
 The resulting window is sub-parsec to a few parsecs, so the arcs vanish
 well before the camera reaches α Cen — pinned in the layer test. That is
@@ -104,10 +112,25 @@ constellation boundaries do not describe the sky. The derivation and the
 quantile numbers live in `scripts/catalog/boundaries/README.md` § Fade
 table.
 
-**Frame is validated at load.** `validateBoundaryArtifact` rejects
+**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
 anything but `frame: "ICRS"`, because B1875 directions rendered as if they
 were ICRS produce a plausible-looking sky sitting ~1.4° off every star —
-the failure mode § B1875 describes, and one no spot check catches.
+the failure mode § B1875 describes, and one no spot check catches. It also
+pins the fade table's shape: ascending `magLimits` (the bracketing walks
+forwards), one offset row per magnitude row, and every row exactly as wide
+as `quantilePcts` — a short row resolves a quantile to `undefined`, which
+reaches the fade factor as NaN.
+
+`loadBoundaries` wraps all of that and **cannot reject**: `main.ts` loads it
+inside a `Promise.all` alongside the catalog, so a rejection blanks the
+whole app rather than dropping one optional layer. A missing asset can't be
+detected by status alone either — `not_found_handling =
+"single-page-application"` (`wrangler.toml`) answers it with index.html at
+200, so an undeployed artifact arrives as a JSON parse error, not a 404.
+Absent resolves null silently; present-but-invalid warns and resolves null,
+the contract `../local-group/local-group-loader.ts` uses for a stale
+artifact. Dropping the layer still honours the frame check — a B1875-framed
+artifact never reaches the GPU.
 
 **Gates.** A chart-only declutter element, `constellationBoundaries` at
 floor `{ realistic: 'never', chart: 'all' }` (`../scene/README.md`), which

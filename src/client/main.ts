@@ -109,8 +109,9 @@ async function main() {
       // The scene renders fine without it — the shell simply doesn't draw.
       loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
       // IAU constellation boundary arcs + the fade-quantile table. ~334 KB;
-      // null when the artifact is missing (a checkout that never ran
-      // `pnpm run build:catalog`). Chart mode then draws no boundaries.
+      // null when the artifact is missing or invalid (a checkout that never
+      // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
+      // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
       // Deep-space probe trajectories. ~450 KB of JSON across the five
       // Sun-escape probes; each one that's missing (a checkout that never
