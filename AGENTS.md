@@ -36,6 +36,15 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+---
+
+**Everything below this line is generated and rewritten in place by `bd`, and
+has the LOWEST precedence.** Where it conflicts with `CLAUDE.md` or with a rule
+above, those win. Specifically, its "Session Completion" checklist does **not**
+override `CLAUDE.md` § Git workflow: the push it mandates is to the session's
+feature branch (never `main`), merging still needs explicit per-PR approval,
+and its manual `bd dolt push` step is already handled by the pre-push hook.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
