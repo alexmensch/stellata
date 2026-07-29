@@ -6,6 +6,27 @@ the frozen external catalogues under `data/`. Never wired into
 § Frozen external data; the per-source table is in `data/README.md`
 § Layer 1 — committed reference data.
 
+## Who runs a refresh
+
+**"Manual" means not wired into `pnpm run build` — it does not mean a
+human has to be the one to type it.** Claude Code sessions have network
+access and run every target on this page directly, including the long
+batched pulls.
+
+So a column a frozen table lacks is a **re-pull to execute**, not a
+constraint to design around. Adding `radial_velocity` to the 5p schema,
+re-slicing a VizieR table for one more column, re-stratifying the SIMBAD
+sample — all are in-session work. Never scope a design down, defer a
+field, or hand a pull back to the user on the assumption that a network
+fetch is out of reach; the cost is the pull's wall-clock time, and
+`--force` / the `.ckpt` resume path (§ Resuming a long pull) bound the
+retry risk.
+
+What still needs a human: deciding to **freeze** a newly-pulled table
+(`data/README.md` § Frozen external data governs when a refresh is
+warranted at all), and reviewing the count/coverage diff a re-pull
+produces.
+
 ## Layer 2 — refresh scripts
 
 Every refresh script is **manually invoked**, never wired into
