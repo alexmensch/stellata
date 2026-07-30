@@ -162,7 +162,7 @@ additive point that needs no depth occlusion (like a star).
 A planet crossing behind its host's *physical disc* (superior
 conjunction inside the host's angular radius) dims by the occluded area
 fraction — the same camera-anywhere geometry the binaries eclipse
-photometry runs (`../../binaries/eclipse-photometry-pure.ts`:
+photometry runs (`../../binaries/eclipse/eclipse-photometry-pure.ts`:
 `eclipseDimFromOffsets` + the shared anti-strobe blend helpers).
 `PlanetBodyField.update` evaluates each in-range host's planets per
 frame (the pair-relative offset is `iLocalRel` itself — small values, no
