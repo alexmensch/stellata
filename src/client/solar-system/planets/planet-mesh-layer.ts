@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/slice-pure';
-import type { RingOccluder } from '../../hdr/exposure/coverage/coverage-pass';
+import type { RingOccluder } from '../../hdr/exposure/coverage/coverage-pack-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';

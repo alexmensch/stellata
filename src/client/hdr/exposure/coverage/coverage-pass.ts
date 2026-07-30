@@ -6,9 +6,17 @@ import { angularToPx } from '../../../camera/controls/star-geometry';
 import { fullscreenTriangleGeometry } from '../../../util/fullscreen-pass';
 import fullscreenVert from '../../../util/fullscreen-pass.vert.glsl?raw';
 import type { MemberSphere } from '../../../local-depth/slice-pure';
-import { footprintRadiusPx } from '../scene-adaptation-pure';
 import coverageFrag from './coverage.frag.glsl?raw';
 import { CoverageReadback } from './coverage-readback';
+import {
+  clearRingSlot,
+  type CoverageRingSources,
+  type CoverageSource,
+  landTransmission,
+  measuredSourceCount,
+  packRingSlot,
+  packSourceTexels,
+} from './coverage-pack-pure';
 import {
   COVERAGE_DEPTH_SCALE,
   COVERAGE_MAX_RINGS,
@@ -16,37 +24,7 @@ import {
   coverageBracket,
 } from './coverage-pure';
 
-/** What the measurement needs of a light source — a structural subset of
- *  `LuminanceSample`, so the walk's own pool satisfies it unchanged. */
-export interface CoverageSource {
-  readonly sourceKey: number;
-  readonly screenX: number;
-  readonly screenY: number;
-  readonly diameterPx: number;
-  readonly cameraDistancePc: number;
-}
-
-/** One ring annulus drawn this frame, in **view space**. Filled from a
- *  scratch object owned by the producer and valid only inside one `visit`
- *  call — read it, don't retain it. */
-export interface RingOccluder {
-  centreView: THREE.Vector3;
-  poleView: THREE.Vector3;
-  outerPc: number;
-  innerRatio: number;
-  /** Crossfade weight on the strip's authored alpha, so the extinction
-   *  tracks the alpha actually composited. */
-  alphaScale: number;
-  strip: THREE.Texture;
-}
-
-/** Ring annuli drawn this frame. Implemented by `PlanetMeshLayer`. */
-export interface CoverageRingSources {
-  forEachRingOccluder(
-    camera: THREE.PerspectiveCamera,
-    visit: (ring: RingOccluder) => void,
-  ): void;
-}
+export type { CoverageRingSources, CoverageSource, RingOccluder } from './coverage-pack-pure';
 
 export interface CoveragePassDeps {
   /** The scene the occluders come from — the local depth pass's own, so
@@ -74,6 +52,9 @@ export class CoveragePass {
     { length: COVERAGE_MAX_RINGS }, () => new THREE.Vector4());
   private readonly ringAlphaScale = new Float32Array(COVERAGE_MAX_RINGS);
 
+  /** Null until the first `ensureResources`; false parks the pass for the
+   *  session on hardware with no float-renderable target. */
+  private supported: boolean | null = null;
   private sourceTexture: THREE.DataTexture | null = null;
   private placeholder: THREE.DataTexture | null = null;
   private depthRt: THREE.WebGLRenderTarget | null = null;
@@ -118,7 +99,7 @@ export class CoveragePass {
       return;
     }
     if (!this.ensureResources(renderer)) return;
-    const n = Math.min(count, COVERAGE_MAX_SOURCES);
+    const n = measuredSourceCount(count);
     this.writeSources(sources, n);
     this.writeRings(camera);
     this.writeUniforms(camera, bracket, n);
@@ -135,43 +116,26 @@ export class CoveragePass {
   private consume(): void {
     const done = this.readback?.poll();
     if (!done) return;
-    this.transmission.clear();
-    for (let i = 0; i < done.count; i++) {
-      this.transmission.set(this.keys[i], done.pixels[i * 4]);
-    }
+    landTransmission(this.keys, done.pixels, done.count, this.transmission);
   }
 
   private writeSources(sources: readonly CoverageSource[], n: number): void {
-    for (let i = 0; i < n; i++) {
-      const s = sources[i];
-      const o = i * 4;
-      this.sourceTexels[o] = s.screenX;
-      this.sourceTexels[o + 1] = s.screenY;
-      this.sourceTexels[o + 2] = footprintRadiusPx(s.diameterPx);
-      this.sourceTexels[o + 3] = s.cameraDistancePc;
-      this.keys[i] = s.sourceKey;
-    }
+    packSourceTexels(sources, n, this.sourceTexels, this.keys);
     if (this.sourceTexture !== null) this.sourceTexture.needsUpdate = true;
   }
 
-  /** Slots past the reported rings are zeroed — a zero outer radius is the
-   *  shader's unused-slot sentinel. */
   private writeRings(camera: THREE.PerspectiveCamera): void {
     let slot = 0;
     this.deps.rings.forEachRingOccluder(camera, (ring) => {
       if (slot >= COVERAGE_MAX_RINGS) return;
-      const c = ring.centreView;
-      const p = ring.poleView;
-      this.ringCentre[slot].set(c.x, c.y, c.z, ring.outerPc);
-      this.ringPole[slot].set(p.x, p.y, p.z, ring.innerRatio);
+      packRingSlot(ring, this.ringCentre[slot], this.ringPole[slot]);
       this.ringAlphaScale[slot] = ring.alphaScale;
       const u = this.material?.uniforms;
       if (u) u[`uRingStrip${slot}`].value = ring.strip;
       slot++;
     });
     for (let i = slot; i < COVERAGE_MAX_RINGS; i++) {
-      this.ringCentre[i].set(0, 0, 0, 0);
-      this.ringPole[i].set(0, 0, 1, 0);
+      clearRingSlot(this.ringCentre[i], this.ringPole[i]);
       this.ringAlphaScale[i] = 0;
     }
   }
@@ -218,8 +182,12 @@ export class CoveragePass {
   /** Lazy, and re-derived from the renderer every frame so window resize
    *  and pixel-ratio changes need no hook of their own. */
   private ensureResources(renderer: THREE.WebGLRenderer): boolean {
+    if (this.supported === false) return false;
     const gl = renderer.getContext();
-    if (!(gl instanceof WebGL2RenderingContext)) return false;
+    if (!(gl instanceof WebGL2RenderingContext)) {
+      this.supported = false;
+      return false;
+    }
     renderer.getDrawingBufferSize(this.size);
     const w = Math.max(1, Math.floor(this.size.x * COVERAGE_DEPTH_SCALE));
     const h = Math.max(1, Math.floor(this.size.y * COVERAGE_DEPTH_SCALE));
@@ -227,7 +195,11 @@ export class CoveragePass {
       this.depthRt.setSize(w, h);
       return true;
     }
-    if (gl.getExtension('EXT_color_buffer_float') === null) return false;
+    if (gl.getExtension('EXT_color_buffer_float') === null) {
+      this.supported = false;
+      return false;
+    }
+    this.supported = true;
 
     // A depth TEXTURE so the shader can sample it, at DEPTH_COMPONENT24 —
     // the local pass's own attachment stays untouched (README.md § The
@@ -308,6 +280,7 @@ export class CoveragePass {
     this.placeholder = null;
     this.material = null;
     this.geometry = null;
+    this.supported = null;
     this.transmission.clear();
   }
 }

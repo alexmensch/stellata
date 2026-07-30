@@ -27,21 +27,31 @@ does not rule out counting in a shader, which is what this does.
 
 ```
 src/client/hdr/exposure/coverage/
-  coverage-pure.ts (+ test)  The math both sides share: the perspective
-                             depth inverse and its forward mirror, the two
-                             distance conventions (§ Axis depth), the
-                             per-source self-occlusion slack, the
-                             deterministic tap set and its mean, ring
-                             slant transmission and the ray/annulus test,
-                             the single-bracket depth range, and the
-                             visible-fraction composition. Pinned against
-                             the reported Saturn-vs-Sol geometry and the
-                             real ring strip values.
+  coverage-pure.ts (+ test)  The math. Only `coverageBracket` and
+                             `visibleFraction` are called at runtime; the
+                             rest is the EXECUTABLE SPEC the shader is
+                             pinned against, not a CPU mirror anything
+                             invokes — don't go looking for the caller.
+                             Covers the perspective depth inverse and its
+                             forward mirror, the two distance conventions
+                             (§ Axis depth), the per-source self-occlusion
+                             slack, the deterministic tap set and its
+                             mean, ring slant transmission and the
+                             ray/annulus test, and the single-bracket
+                             depth range. Pinned against the reported
+                             Saturn-vs-Sol geometry and the real ring
+                             strip values.
+  coverage-pack-pure.ts      The round trip's bookkeeping: source texels
+    (+ test)                 out, throughput keys back, ring-slot packing
+                             and the unused-slot sentinel. Split from the
+                             pass so the key↔texel correspondence
+                             (§ Latency) is testable with no GL context.
   coverage.frag.glsl         The measurement — one fragment per source.
                              Re-declares every constant and formula above;
                              nothing here is reachable from vitest, so
                              coverage-glsl-drift.test.ts pins the literals
-                             and the expression shapes against the TS.
+                             and the expression shapes against the TS,
+                             including § Reading textures here.
   coverage-pass.ts           CoveragePass — the occluder-depth target, the
                              source upload, the two renders, and the
                              transmission map the statistic reads. Needs a
@@ -52,7 +62,10 @@ src/client/hdr/exposure/coverage/
 ## The measurement
 
 One fragment per source. Each takes `COVERAGE_TAPS` (64) equal-area taps
-over that source's screen footprint, and each tap asks two questions:
+over that source's **visibility disc** — `visibilityDiscRadiusPx`, the
+same disc the CPU clipping term integrates (§ Composition), which is the
+flux footprint widened to `ADAPT_EDGE_RAMP_PX` across. Each tap asks two
+questions:
 
 1. **Is an opaque surface nearer than the source?** Sample the
    occluder-depth texture, invert the bracket's projection to recover a
@@ -102,6 +115,28 @@ radius once resolved, and floors it at `SELF_OCCLUSION_SLACK` of the
 depth for anything that isn't. `uPxPerRadian` is the same `angularToPx`
 the sample's `diameterPx` was measured with, so the shader inverts it
 exactly.
+
+### Reading textures here — two rules a normal shader doesn't need
+
+This pass rasterises **one fragment per source**, so neighbouring
+fragments are unrelated sources rather than neighbouring pixels of one
+surface. Both consequences are invisible until they aren't:
+
+- **Every sample is `textureLod(..., 0.0)`.** `dFdx` of a strip `U` or a
+  tap `uv` is a difference between two *different sources*, so the
+  implicit-derivative mip choice is arbitrary — and the ring strips ship
+  through `THREE.TextureLoader`'s defaults, mipmapped with a
+  trilinear min filter. An implicit read lands on a level that averages
+  the whole radial profile, collapsing Saturn's C ring, Cassini Division
+  and B ring to one mean alpha. (The sampling also sits in non-uniform
+  control flow, where implicit LOD is undefined outright.)
+- **Precision is declared for `int` and `sampler2D`, not just `float`.**
+  The GLSL ES 3.00 fragment defaults are `mediump int` and **`lowp
+  sampler2D`**. `uSources` carries parsec distances near `1e-8` and CSS-px
+  centres past `1e3`; lowp spans ±2 at ~2⁻⁸ and mediump float bottoms out
+  near `6e-5`, so any implementation that honours them reads zero
+  distances and clamped centres. Desktop drivers promote silently, mobile
+  ones frequently don't.
 
 ## The depth bracket — a dedicated pass, deliberately
 
@@ -191,9 +226,21 @@ Two consequences worth stating, because they look like bugs otherwise:
 `visibleFraction(clipped, transmission)` multiplies. The old
 `max(0, clipped − occluded)` subtracted because it did not know *where*
 an occluder sat relative to the frame edge; measuring transmission over
-the on-screen part of the footprint makes the product exact — `clipped`
-is what fraction of the footprint is in frame, `transmission` the mean
-throughput over exactly that part.
+the on-screen part of the disc makes the product exact — `clipped` is
+what fraction of the disc is in frame, `transmission` the mean throughput
+over exactly that part.
+
+**Both terms must run over the SAME disc, and that is `visibilityDiscRadiusPx`.**
+The clipping term is floored at `ADAPT_EDGE_RAMP_PX` across
+(`../README.md` § Adaptation — a sub-pixel source's own 1.1 px footprint
+would otherwise take its fraction 0 → 1 inside one frame of camera
+jitter), so the taps carry the same floor: `tapRadiusPx` in the shader.
+Give them different radii and the product stops being a fraction of one
+region — a sub-pixel source sitting in the ramp band just off the frame
+edge reads `clipped ≈ 0.25` with every tap out of frame, so it keeps all
+its flux and its occlusion is never evaluated at all. The **self-occlusion
+slack keeps the true footprint radius** (§ The slack): that one is the
+source's own body, not the ramp.
 
 Frame clipping stays on the CPU (`sourceVisibleFraction`): it is exact
 analytic geometry with no scene dependence, so there is nothing for the
