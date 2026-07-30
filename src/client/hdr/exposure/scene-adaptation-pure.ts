@@ -67,12 +67,9 @@ export function highlightGuardDm(peakL: number): number {
   return -2.5 * Math.log10(peakL / L_CAP);
 }
 
-/**
- * The frame's cut: a `max` of two ≤ 0 branches, so the guard can only
- * ever raise the exposure, and the branches are equal at coverage
- * `L_ADAPT / L_CAP` — a continuous, stateless handover (README.md
- * § Adaptation).
- */
+/** The frame's cut: a `max` of two ≤ 0 branches, so the guard can only
+ *  ever raise the exposure and no source entering the frame can darken it
+ *  through the guard. */
 export function adaptationDm(meanL: number, peakL: number): number {
   return Math.max(eyeAdaptationDm(meanL), highlightGuardDm(peakL));
 }
