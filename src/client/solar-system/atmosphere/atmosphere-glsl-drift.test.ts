@@ -5,12 +5,13 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MS_STRENGTH } from './atmosphere-scattering-pure';
+import { MS_STRENGTH, TWILIGHT_SCATTER_FRAC } from './atmosphere-scattering-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
 const scatter = read('./atmosphere-scatter.glsl');
+const meshFrag = read('../planets/planet-mesh.frag.glsl');
 
 function glslFloat(src: string, name: string): number {
   const m = src.match(new RegExp(`const float ${name} = ([-\\d.e]+);`));
@@ -23,6 +24,10 @@ describe('constants mirrored from the CPU model', () => {
     expect(glslFloat(scatter, 'STELLATA_MS_STRENGTH')).toBe(MS_STRENGTH);
   });
 
+  it('twilight scatter fraction', () => {
+    expect(glslFloat(scatter, 'STELLATA_TWILIGHT_SCATTER_FRAC'))
+      .toBe(TWILIGHT_SCATTER_FRAC);
+  });
 });
 
 describe('the airlight has no gain', () => {
@@ -70,5 +75,27 @@ describe('the shadow is solved along the ray, not sampled across it', () => {
 
   it('carries no fixed shadow-softness constant any more', () => {
     expect(scatter).not.toMatch(/SHADOW_SOFT[^_]/);
+  });
+});
+
+describe('twilight on the night-side surface', () => {
+  it('is the shadow-edge altitude over the scale height', () => {
+    expect(scatter).toContain(
+      'return 1.0 / sqrt(max(1.0 - sunCos * sunCos, 1e-12)) - 1.0;');
+    expect(scatter).toContain(
+      'exp(-stellata_shadowEdgeAltitude(sunCos) / hR)');
+  });
+
+  it('rides the surface scalar, added to the direct term rather than the airlight', () => {
+    // It is light reflected off the ground, so it needs the albedo-bearing
+    // scalar; folding it into the airlight would skip the surface entirely.
+    expect(meshFrag).toContain(
+      'vec3 col = base * (dayside * limb * uPhaseScale + twilight) * uSurfaceLuminance * shadow;');
+  });
+
+  it('takes the scattering optical depth only — absorption removes light', () => {
+    expect(scatter).toContain('return betaRs * hR + vec3(betaMs * hM);');
+    expect(meshFrag).toContain(
+      'stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM)');
   });
 });

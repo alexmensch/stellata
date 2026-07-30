@@ -111,6 +111,42 @@ export function litFraction(t: number, h: number, span: readonly [number, number
   return 1 - overlap / (2 * h);
 }
 
+/** Altitude (planet-radius units) of the planetary shadow's upper edge
+ *  directly above a surface point whose sun-cosine is `sunCos`: 0 on the lit
+ *  side, `1/cos(Δ) − 1` for a point Δ past the geometric terminator. Only the
+ *  column above it still sees the host, so this is the depth the ground's
+ *  twilight illumination has to reach out of. */
+export function shadowEdgeAltitude(sunCos: number): number {
+  if (sunCos >= 0) return 0;
+  return 1 / Math.sqrt(Math.max(1 - sunCos * sunCos, 1e-12)) - 1;
+}
+
+/** Vertical scattering optical depth per channel — Rayleigh plus grey Mie,
+ *  each coefficient over its own scale height. Absorption is excluded: this
+ *  is what redirects light, not what removes it. */
+export function verticalScatterOpticalDepth(p: AtmosphereParams): Vec3 {
+  const mie = p.betaMs * p.hM;
+  return [p.betaRs[0] * p.hR + mie, p.betaRs[1] * p.hR + mie, p.betaRs[2] * p.hR + mie];
+}
+
+/** Share of the host's perpendicular irradiance that a unit vertical
+ *  scattering optical depth delivers to the ground as skylight: ¼ from the
+ *  hemispheric average of an isotropic in-scatter, times the ≈0.22 slant
+ *  transmission a horizon sun reaches the scattering column through.
+ *  Calibrated on Earth at the geometric terminator, where twilight measures
+ *  ~400 lx against full sun's ~100 klx. */
+export const TWILIGHT_SCATTER_FRAC = 0.055;
+
+/** Twilight: the fraction of host irradiance the lit atmosphere scatters
+ *  down onto the surface below it, per channel. Its angular reach is the
+ *  body's own scale height — the shadow edge climbing out of the scattering
+ *  column is what extinguishes it, a few degrees on Earth and ~10° on
+ *  Titan. Mirrors stellata_twilightIrradiance in the GLSL. */
+export function twilightIrradianceFrac(sunCos: number, hR: number, tauScatter: Vec3): Vec3 {
+  const f = TWILIGHT_SCATTER_FRAC * Math.exp(-shadowEdgeAltitude(sunCos) / hR);
+  return [tauScatter[0] * f, tauScatter[1] * f, tauScatter[2] * f];
+}
+
 export interface AtmosphereParams {
   /** Atmosphere top radius, R-units (1 + heightKm/radiusKm). */
   readonly rAtmo: number;

@@ -3,13 +3,18 @@ import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
   type AtmosphereParams,
+  TWILIGHT_SCATTER_FRAC,
   type Vec3,
   litFraction,
   miePhase,
   rayleighPhase,
   scatterAlongRay,
+  shadowEdgeAltitude,
   shadowSpan,
+  twilightIrradianceFrac,
+  verticalScatterOpticalDepth,
 } from './atmosphere-scattering-pure';
+import { SOL_PLANETS } from '../planet-system';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -225,6 +230,62 @@ describe('how far past the terminator sunlight reaches', () => {
     expect(coarse).toBeGreaterThan(0);
     expect(fine).toBeLessThan(coarse / 5);
     expect(fine).toBeLessThan(0.1);
+  });
+});
+
+describe('twilight on the night-side surface', () => {
+  const earth = SOL_PLANETS.find((p) => p.name === 'Earth')!;
+  const atmo = earth.atmosphere!;
+  const hR = atmo.rayleighHeightKm / earth.radiusKm;
+  const params: AtmosphereParams = {
+    rAtmo: (earth.radiusKm + atmo.heightKm) / earth.radiusKm,
+    hR,
+    hM: atmo.mieHeightKm / earth.radiusKm,
+    betaRs: [
+      atmo.rayleighCoeff[0] / hR,
+      atmo.rayleighCoeff[1] / hR,
+      atmo.rayleighCoeff[2] / hR,
+    ],
+    betaMs: atmo.mieCoeff / (atmo.mieHeightKm / earth.radiusKm),
+    betaA: [0, 0, 0],
+    g: 0.76,
+  };
+  const LUMA: Vec3 = [0.2126, 0.7152, 0.0722];
+  const tau = verticalScatterOpticalDepth(params);
+  const frac = (deltaDeg: number) =>
+    dot(LUMA, twilightIrradianceFrac(-Math.sin((deltaDeg * Math.PI) / 180), hR, tau));
+
+  it('recovers the vertical scattering optical depth from the per-body row', () => {
+    // βRs·hR undoes the /hR the mesh layer applies, so the table's authored
+    // vertical optical depths come straight back out.
+    expect(tau[2]).toBeCloseTo(atmo.rayleighCoeff[2] + atmo.mieCoeff, 12);
+  });
+
+  it('lands on the measured 400 lx / 100 klx at the geometric terminator', () => {
+    expect(frac(0)).toBeCloseTo(4.0e-3, 4);
+  });
+
+  it('matches measured civil-twilight illuminance 6° past the terminator', () => {
+    // Sun 6° below the horizon: ~4 lx against the terminator's ~400, so 1 %.
+    expect(frac(6) / frac(0)).toBeCloseTo(0.0124, 4);
+  });
+
+  it('is blue on Earth — the twilight carries the air\'s own hue', () => {
+    const t = twilightIrradianceFrac(0, hR, tau);
+    expect(t[2]).toBeGreaterThan(t[0]);
+  });
+
+  it('holds its terminator value across the whole lit side', () => {
+    // No shadow to climb out of on the day side, so skylight is flat there —
+    // a small honest ambient rather than a term that switches on at the edge.
+    expect(shadowEdgeAltitude(0.5)).toBe(0);
+    expect(frac(-30)).toBe(frac(0));
+  });
+
+  it('scales with the scattering optical depth, so thick air means bright dusk', () => {
+    const venus = SOL_PLANETS.find((p) => p.name === 'Venus')!.atmosphere!;
+    const venusTau = venus.rayleighCoeff[1] + venus.mieCoeff;
+    expect(TWILIGHT_SCATTER_FRAC * venusTau).toBeGreaterThan(frac(0));
   });
 });
 

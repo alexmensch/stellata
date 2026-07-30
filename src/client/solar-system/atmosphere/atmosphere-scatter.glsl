@@ -6,10 +6,11 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE in
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_SCATTER_FRAC in
 // atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
 const float STELLATA_MS_STRENGTH = 0.2;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
+const float STELLATA_TWILIGHT_SCATTER_FRAC = 0.055;
 // Stands in for an unbounded shadow span; only ever min/maxed against a ray
 // parameter, never multiplied, so it just has to dwarf one.
 const float STELLATA_SHADOW_FAR = 1e20;
@@ -114,6 +115,28 @@ void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1
 float stellata_litFraction(float t, float h, float s0, float s1) {
   float overlap = max(min(t + h, s1) - max(t - h, s0), 0.0);
   return 1.0 - overlap / (2.0 * h);
+}
+
+// Altitude of the planetary shadow's upper edge directly above a surface
+// point with sun-cosine sunCos — 0 on the lit side, 1/cos(delta) − 1 delta
+// past the geometric terminator. Only the column above it still sees the host.
+float stellata_shadowEdgeAltitude(float sunCos) {
+  if (sunCos >= 0.0) return 0.0;
+  return 1.0 / sqrt(max(1.0 - sunCos * sunCos, 1e-12)) - 1.0;
+}
+
+// Vertical scattering optical depth per channel (absorption excluded).
+vec3 stellata_verticalScatterTau(vec3 betaRs, float betaMs, float hR, float hM) {
+  return betaRs * hR + vec3(betaMs * hM);
+}
+
+// Twilight: the fraction of host irradiance the lit atmosphere scatters down
+// onto the surface below it. The shadow edge climbing out of the scattering
+// column is what extinguishes it, so its angular reach is the body's own
+// scale height.
+vec3 stellata_twilightIrradiance(float sunCos, float hR, vec3 tauScatter) {
+  return tauScatter * (STELLATA_TWILIGHT_SCATTER_FRAC
+    * exp(-stellata_shadowEdgeAltitude(sunCos) / hR));
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along

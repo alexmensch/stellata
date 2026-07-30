@@ -24,13 +24,13 @@ src/client/solar-system/atmosphere/
                                   miss the disc.
   atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
     (+ test)                      calibration constants + phase functions,
-                                  and the analytic shadow span.
-                                  Vitest-pinned. The TS sample-count
+                                  the analytic shadow span, and the twilight
+                                  term. Vitest-pinned. The TS sample-count
                                   constants seed the GLSL #defines.
   atmosphere-glsl-drift.test.ts   Pins the GLSL literals against their TS
                                   constants, and the expression shapes the
-                                  shadow-span fix turns on — no GL context
-                                  under vitest.
+                                  shadow-span / twilight fixes turn on —
+                                  no GL context under vitest.
 ```
 
 Per-body params live in `../planet-system.ts` as `PlanetAtmosphere`
@@ -82,6 +82,42 @@ carries no occlusion test of its own.
   near-limb chord that scatters no light toward the eye (its base in the body's
   own shadow) still extincts the stars behind it. Additive left that base
   transparent — stars leaked through the ring gap, worst on thick-haze Titan.
+
+## Twilight — the lit air scattering light back down
+
+The airlight above is what the atmosphere sends toward the **eye**. A separate
+term sends it toward the **ground**: without it the lit shell floats over a
+black surface, because a night-side fragment's own Lambert term is zero and
+nothing else reaches it.
+
+Analytic, and view-independent (irradiance must not depend on where you look
+from, so the phase-weighted view-ray in-scatter cannot stand in for it):
+
+```
+E_sky/E_host = TWILIGHT_SCATTER_FRAC · τ_scatter · exp(−h_shadow/H)
+h_shadow = 1/cos(Δ) − 1        (0 on the lit side)
+```
+
+`h_shadow` is the altitude of the shadow's upper edge directly overhead, so
+only the column above it still sees the host — and **the body's own scale
+height is therefore what sets the angular reach**: a few degrees on Earth,
+~10° on Titan, no global constant involved. `τ_scatter` is the vertical
+scattering optical depth (`stellata_verticalScatterTau`, absorption excluded),
+which also gives the twilight the air's own hue — blue on Earth — for free.
+
+`TWILIGHT_SCATTER_FRAC` = 0.055 is ¼ (hemispheric average of an isotropic
+in-scatter) × the ≈0.22 slant transmission a horizon sun reaches the column
+through, **calibrated against Earth**: 4e-3 of full sun at the geometric
+terminator (~400 lx against ~100 klx), decaying to 1.2 % of that by 6° of solar
+depression, where civil twilight measures ~4 lx. Both are pinned.
+
+It rides `uSurfaceLuminance`, not `uAirlightLuminance` — this is light
+*reflected off the ground*, so it needs the albedo-bearing scalar, and the
+p/π relation above means it needs no extra factor. Being ~6 stops below full
+sun it is **subtle at a day-side exposure and correct to be**: it reads when
+the adaptation follows a night-side-dominated frame. `Planet.terminatorSoftness`
+is the older by-eye widening of the Lambert edge and is deliberately untouched
+here (`../planets/README.md` § Lighting).
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.

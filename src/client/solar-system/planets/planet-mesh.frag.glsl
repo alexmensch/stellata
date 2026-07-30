@@ -102,7 +102,16 @@ void main() {
   // linear before it multiplies a physical luminance. uColour is already
   // linear (Planet.colour), so only the sampled branch decodes.
   vec3 base = mix(uColour, stellataSrgbDecode(texture(uMap, vUvM).rgb), uHasMap);
-  vec3 col = base * dayside * limb * uPhaseScale * uSurfaceLuminance * shadow;
+  // Twilight — the lit atmosphere overhead scattering host light down onto
+  // the ground, which is the only illumination the night side past the
+  // terminator has. Rides uSurfaceLuminance because it is reflected off the
+  // surface, so no extra albedo factor: the direct term's own scale is
+  // already reflected-per-unit-irradiance.
+  vec3 twilight = uHasAtmosphere > 0.5
+    ? stellata_twilightIrradiance(sunCos, uScaleHeightR,
+        stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM))
+    : vec3(0.0);
+  vec3 col = base * (dayside * limb * uPhaseScale + twilight) * uSurfaceLuminance * shadow;
 
   if (uHasAtmosphere > 0.5) {
     // Airlight in front of this surface fragment + the transmittance the

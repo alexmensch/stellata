@@ -363,10 +363,10 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
     (whose strip RGB supplies its own reflectance). Splitting it from
     `uSurfaceLuminance` is what fixes the airlight-to-surface and
     ring-to-body ratios by physics instead of by eye.
-  - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
-    half-width carrying twilight past the geometric terminator on
-    atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
-    band; undefined = airless hard cut).
+  - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
+    the terminator (Venus 0.08 widest; Titan the one moon with a band;
+    undefined = airless hard cut). What actually lights the night side
+    is a separate physical term — `../atmosphere/README.md` § Twilight.
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward
