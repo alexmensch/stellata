@@ -133,7 +133,7 @@ NOISE_MODEL = {
 }
 
 # IAU/Hipparcos J2000 galactic-frame definition (must match
-# src/client/galactic-coords.ts so all coordinate transforms agree).
+# src/client/galactic/galactic-coords.ts so all coordinate transforms agree).
 ALPHA_GC = math.radians(266.4051)
 DELTA_GC = math.radians(-28.93617)
 ALPHA_NGP = math.radians(192.85948)

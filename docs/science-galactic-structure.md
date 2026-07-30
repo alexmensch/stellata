@@ -3,12 +3,12 @@
 Split out of `SCIENCE.md`. Covers the shared galactic coordinate
 frame, Milky Way stellar density profiles, interstellar dust
 extinction, and constellation stick-figure geometry. Spans
-`src/client/galactic-coords.ts`, `src/client/milkyway/`,
+`src/client/galactic/galactic-coords.ts`, `src/client/milkyway/`,
 `src/client/dust/`, `scripts/dust/`, `src/client/overlays/`.
 
 ## Galactic coordinate system
 
-The shared module `src/client/galactic-coords.ts` exports two constants
+The shared module `src/client/galactic/galactic-coords.ts` exports two constants
 used wherever the code needs to anchor in galactic geometry:
 
 - `GAL_TO_ICRS` — a `Matrix4` rotation built from the J2000 IAU
