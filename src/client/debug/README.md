@@ -101,7 +101,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then an O(n²) occlusion pass over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Zero in chart mode. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then an O(n²) occlusion pass over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
