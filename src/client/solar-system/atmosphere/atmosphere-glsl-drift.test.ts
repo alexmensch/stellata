@@ -66,11 +66,18 @@ describe('the shadow is solved along the ray, not sampled across it', () => {
     // t is the ray parameter from the camera, so t ± h are large and nearly
     // equal and 1/(2h) amplifies what float32 loses between them. Taking both
     // bounds as offsets from t is what keeps deep shadow exactly 0 instead of
-    // jitter-patterned sunlight on the anti-solar face.
-    expect(scatter).toContain('float lo = max(s0 - t, -h);');
-    expect(scatter).toContain('float hi = min(s1 - t, h);');
-    expect(scatter).toContain('return 1.0 - max(hi - lo, 0.0) / (2.0 * h);');
-    expect(scatter).not.toContain('min(t + h');
+    // jitter-patterned sunlight on the anti-solar face. The CPU mirror's
+    // float32 simulation is the load-bearing pin (vitest has no GL); this side
+    // only has the source text, so assert the whole function body at once —
+    // t may appear ONLY as a subtrahend, never summed with h.
+    const body = scatter.match(
+      /float stellata_litFraction\(float t, float h, float s0, float s1\) \{([^}]*)\}/,
+    );
+    expect(body).not.toBeNull();
+    const normalised = body![1].replace(/\s+/g, '');
+    expect(normalised).toBe(
+      'floatlo=max(s0-t,-h);floathi=min(s1-t,h);return1.0-max(hi-lo,0.0)/(2.0*h);',
+    );
   });
 
   it('leaves the empty span inverted and unbounded, not [1, 0]', () => {
