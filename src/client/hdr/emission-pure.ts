@@ -37,32 +37,6 @@ export function pointSourcePeakLuminance(
 }
 
 /**
- * Peak of the same kernel renormalised to carry the source's true **flux**
- * rather than its true peak — what the adaptation statistic's flux channel
- * needs (`exposure/README.md` § What the statistic measures).
- *
- * `pointSourcePeakLuminance` spreads flux over `max(1, π·r_phys²)` while the
- * quad drawn is `quadDiameterPx` across, so the kernel preserves peak and
- * inflates energy — up to 29× for a knee-saturated source. Dividing by the
- * kernel's own area integral `Φ(n)·D²` makes the integral come back to
- * `L(m)` instead.
- *
- * Clamped at `LUMA_CEIL` for the same reason the display peak is: the
- * measurement is rendered at the live exposure, so a clamped read is a lower
- * bound that the adaptation loop closes from above.
- */
-export function kernelFluxPeakLuminance(
-  exposure: number,
-  m: number,
-  quadDiameterPx: number,
-  fluxIntegral: number,
-): number {
-  const area = fluxIntegral * quadDiameterPx * quadDiameterPx;
-  const flux = luminanceForMagnitude(exposure, m);
-  return Math.min(flux / Math.max(area, 1e-9), LUMA_CEIL);
-}
-
-/**
  * Solid angle one **CSS** pixel subtends, in arcsec² — what converts a
  * surface brightness (mag/arcsec²) into the flux inside one pixel.
  *
