@@ -222,6 +222,13 @@ frame-blind guide never engages on the sphere in front of them. Only the snap
 *target* is frame-aware: the reference default, the pole-cone correction, and
 the band are unchanged.
 
+`rollSnapPole` is that pole **captured at the moment the guide engaged**, and
+doubles as the "snapped" flag. `filter.coordSphere` can change *during* a roll
+with no user input: a dolly (the wheel path is not blocked mid-drag) past the
+RA/Dec fade demotes the selection to `none`, and `S` is live too. Re-reading
+the pole on release would then settle against a frame the view never stuck to
+and rotate the image by up to the ~63° between them.
+
 Leaving a gesture *while still on the guide* re-anchors the reference on
 that pole **exactly** (`settleRollSnap` → `snapReferenceTo`). Snapping
 only rolled the axis until it *renders* level from the current view

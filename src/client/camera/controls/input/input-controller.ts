@@ -64,11 +64,15 @@ export class InputController {
   // so a Shift press mid-drag can start a roll from the current position.
   private activePointer: { id: number; x: number; y: number } | null = null;
   private shiftHeld = false;
-  // Alignment-guide state: while `rollSnapped`, the view is held exactly at
-  // the level pole and `rollSnapExcursion` accumulates the roll the pointer
-  // asked for. The gesture leaves the guide when that virtual roll passes
-  // the band — tracking it separately is what stops the boundary chattering.
-  private rollSnapped = false;
+  // Alignment-guide state: while `rollSnapPole` is set, the view is held
+  // exactly level against that pole and `rollSnapExcursion` accumulates the
+  // roll the pointer asked for. The gesture leaves the guide when that virtual
+  // roll passes the band — tracking it separately is what stops the boundary
+  // chattering. The pole is CAPTURED here rather than re-read on release: the
+  // displayed sphere can change mid-gesture on its own (travelling out of the
+  // RA/Dec fade demotes it), and settling against a pole the view never stuck
+  // to would rotate the image on release.
+  private rollSnapPole: THREE.Vector3 | null = null;
   private rollSnapExcursion = 0;
   // Sub-notch pinch remainder, carried between wheel events.
   private pinchCarryPx = 0;
@@ -548,19 +552,20 @@ export class InputController {
   }
 
   private clearRollSnap(): void {
-    this.rollSnapped = false;
+    this.rollSnapPole = null;
     this.rollSnapExcursion = 0;
   }
 
   /** Leaving a roll gesture while held at the guide re-anchors the reference
-   *  on the level pole exactly. Snapping only rolled the axis until it
-   *  *renders* level from here; any axis in the forward/pole plane does
-   *  that, and would drift back off level as soon as the orbit moves. */
+   *  on the pole the guide stuck to, exactly. Snapping only rolled the axis
+   *  until it *renders* level from here; any axis in the forward/pole plane
+   *  does that, and would drift back off level as soon as the orbit moves. */
   private settleRollSnap(): void {
-    if (!this.rollSnapped) return;
+    const pole = this.rollSnapPole;
+    if (pole === null) return;
     this.clearRollSnap();
     if (this.deps.getCameraMode() !== 'observe') {
-      this.deps.referenceUp.snapReferenceTo(this.deps.camera, this.levelPole());
+      this.deps.referenceUp.snapReferenceTo(this.deps.camera, pole);
     }
   }
 
@@ -571,7 +576,7 @@ export class InputController {
    *  a virtual roll that keeps advancing, so the band can't chatter and the
    *  gesture resumes exactly where the pointer says on the way out. */
   private applyRollDelta(delta: number): void {
-    if (this.rollSnapped) {
+    if (this.rollSnapPole !== null) {
       this.rollSnapExcursion += delta;
       if (Math.abs(this.rollSnapExcursion) <= SNAP_TO_LEVEL_RAD) return;
       const resume = this.rollSnapExcursion;
@@ -579,25 +584,26 @@ export class InputController {
       this.rollCamera(resume);
       return;
     }
-    const toLevel = this.levelRollError();
+    const pole = this.levelPole();
+    const toLevel = this.levelRollError(pole);
     const residual = delta - toLevel;
     if (Math.abs(residual) <= SNAP_TO_LEVEL_RAD) {
       this.rollCamera(toLevel);
-      this.rollSnapped = true;
+      this.rollSnapPole = pole;
       this.rollSnapExcursion = residual;
       return;
     }
     this.rollCamera(delta);
   }
 
-  /** Roll still needed to reach level. Read off the reference axis in navigate
-   *  (the quaternion trails `camera.up` by a frame there) and off the rendered
-   *  quaternion in observe, which is the authority in that mode. See
-   *  `README.md` § Reference up axis. */
-  private levelRollError(): number {
+  /** Roll still needed to reach level against `pole`. Read off the reference
+   *  axis in navigate (the quaternion trails `camera.up` by a frame there) and
+   *  off the rendered quaternion in observe, which is the authority in that
+   *  mode. See `README.md` § Reference up axis. */
+  private levelRollError(pole: THREE.Vector3): number {
     return this.deps.getCameraMode() === 'observe'
-      ? this.deps.referenceUp.renderedRollError(this.deps.camera, this.levelPole())
-      : this.deps.referenceUp.referenceRollError(this.deps.camera, this.levelPole());
+      ? this.deps.referenceUp.renderedRollError(this.deps.camera, pole)
+      : this.deps.referenceUp.referenceRollError(this.deps.camera, pole);
   }
 
   /** What "level" means right now: the displayed coordinate sphere's own north
