@@ -364,7 +364,7 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     // ¼·τ_s·T̄(τ_ext·Ch): the ¼ is the hemispheric down-flux of an isotropic
     // in-scatter over the half-dome the horizon sun still lights; T̄ is the
     // column-mean transmission of a horizon sun through Chapman airmass —
-    // README.md § Twilight. Residual +75 % is the un-modelled ozone Chappuis
+    // README.md § Skylight. Residual +75 % is the un-modelled ozone Chappuis
     // absorption and up-scatter loss, both of which only push down.
     const measured = MEASURED_LX[0] / FULL_SUN_LX;
     expect(frac(0)).toBeCloseTo(7.0e-3, 4);

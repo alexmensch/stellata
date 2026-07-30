@@ -174,7 +174,7 @@ export const TWILIGHT_TAIL_REACH = 8.95;
  * Skylight: the fraction of host irradiance the atmosphere scatters down
  * onto the surface, per channel — one derived model covering the lit
  * hemisphere and the twilight band. Mirrors stellata_skyIrradiance in the
- * GLSL; derivation and measured anchors: README.md § Twilight.
+ * GLSL; derivation and measured anchors: README.md § Skylight.
  */
 export function skyIrradianceFrac(
   sunCos: number,

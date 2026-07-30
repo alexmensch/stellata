@@ -236,7 +236,7 @@ crossfade.
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; an airless night side is black (no
   ambient term), an atmospheric one is lit by twilight
-  (`../atmosphere/README.md` § Twilight). Three scalars refine it, all
+  (`../atmosphere/README.md` § Skylight). Three scalars refine it, all
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
@@ -260,7 +260,7 @@ crossfade.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
     the terminator (Venus 0.08 widest; Titan the one moon with a band;
     undefined = airless hard cut). What actually lights the night side
-    is a separate physical term — `../atmosphere/README.md` § Twilight.
+    is a separate physical term — `../atmosphere/README.md` § Skylight.
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward

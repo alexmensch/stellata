@@ -24,7 +24,7 @@ src/client/solar-system/atmosphere/
                                   miss the disc.
   atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
     (+ test)                      calibration constants + phase functions,
-                                  the analytic shadow span, and the twilight
+                                  the analytic shadow span, and the skylight
                                   term. Vitest-pinned. The TS sample-count
                                   constants seed the GLSL #defines.
   atmosphere-glsl-drift.test.ts   Pins the GLSL literals against their TS
@@ -69,7 +69,7 @@ carries no occlusion test of its own.
 What this bounds is the **direct beam**: the shadow cylinder IS the airless
 terminator, and no sample inside it sees the host, full stop. Light past that
 line is the atmosphere's own doing, and it has two routes — the shell above the
-shadow edge, lit out to `acos(1/r)` for a sample at radius r, and § Twilight
+shadow edge, lit out to `acos(1/r)` for a sample at radius r, and § Skylight
 onto the ground below. So the *illuminated* terminator is soft and reaches
 further than the geometric one; the *lit* one is exact and does not.
 
@@ -354,7 +354,7 @@ thickness, which is what an atmosphere does. (Near: polar thickness comes out
 the 21 % error being fixed here.) The map is linear about the centre,
 so ray parameters are unchanged and only directions need renormalising. **The
 sun direction has to be deflattened too** or the shadow cylinder tilts against
-the body casting it; **`sunCos` for § Twilight must not be**, since solar
+the body casting it; **`sunCos` for § Skylight must not be**, since solar
 depression is measured against the true local horizontal.
 
 The shell MESH stays a real-space sphere: it equals the deflattened shell at the
