@@ -103,14 +103,23 @@ export function starSourceKey(starIdx: number): number {
 
 /** Radius of the footprint a source's flux is actually spread over,
  *  floored at the 1 px² an unresolved point occupies — the same
- *  `max(1, π·r²)` denominator `stellataPointSourcePeak` uses. Occlusion
- *  and the peak both run against this TRUE footprint, never against the
- *  widened edge-ramp disc. */
+ *  `max(1, π·r²)` denominator `stellataPointSourcePeak` uses. The peak
+ *  and the coverage pass's self-occlusion slack run against this TRUE
+ *  footprint; the two visibility terms take the widened disc below. */
 export function footprintRadiusPx(diameterPx: number): number {
   return Math.max(0.5 * diameterPx, POINT_SOURCE_RADIUS_PX);
 }
 
 const POINT_SOURCE_RADIUS_PX = Math.sqrt(1 / Math.PI);
+
+/** The disc BOTH visibility terms are evaluated over — the flux footprint
+ *  widened to `ADAPT_EDGE_RAMP_PX` across. Frame clipping integrates it and
+ *  the coverage taps spread over it, which is what makes their product
+ *  exact rather than two fractions of different regions. Mirrored in
+ *  `coverage.frag.glsl` as `tapRadiusPx`. */
+export function visibilityDiscRadiusPx(diameterPx: number): number {
+  return Math.max(footprintRadiusPx(diameterPx), 0.5 * ADAPT_EDGE_RAMP_PX);
+}
 
 /** Area of a disc of radius `r` centred at the origin intersected with
  *  the axis-aligned quadrant `[0,x] × [0,y]`, for `x, y ≥ 0`. */
@@ -168,7 +177,7 @@ export function sourceVisibleFraction(
   w: number,
   h: number,
 ): number {
-  const r = Math.max(footprintRadiusPx(diameterPx), 0.5 * ADAPT_EDGE_RAMP_PX);
+  const r = visibilityDiscRadiusPx(diameterPx);
   return discViewportOverlapArea(r, cx, cy, w, h) / (Math.PI * r * r);
 }
 

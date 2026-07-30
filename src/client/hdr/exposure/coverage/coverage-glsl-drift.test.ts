@@ -14,6 +14,7 @@ import {
   RING_MIN_SIN_OPENING,
   SELF_OCCLUSION_SLACK,
 } from './coverage-pure';
+import { ADAPT_EDGE_RAMP_PX } from '../scene-adaptation-pure';
 
 const chunk = readFileSync(
   fileURLToPath(new URL('./coverage.frag.glsl', import.meta.url)), 'utf8');
@@ -32,6 +33,17 @@ describe('coverage.frag.glsl constants', () => {
     expect(constant('CLEAR_DEPTH_EPS', 'float')).toBe(CLEAR_DEPTH_EPS);
     expect(constant('RING_MIN_SIN_OPENING', 'float')).toBe(RING_MIN_SIN_OPENING);
     expect(constant('COVERAGE_MAX_RINGS', 'int')).toBe(COVERAGE_MAX_RINGS);
+    expect(constant('ADAPT_EDGE_RAMP_PX', 'float')).toBe(ADAPT_EDGE_RAMP_PX);
+  });
+
+  it('raises every sampler and int off the ES 3.00 fragment defaults', () => {
+    // The defaults are `mediump int` and `lowp sampler2D`. uSources carries
+    // parsec distances near 1e-8 and CSS-px centres past 1e3 — lowp's range
+    // is +/-2 and mediump float bottoms out around 6e-5, so an
+    // implementation that honours either reads zeros and clamped centres.
+    expect(chunk).toContain('precision highp float;');
+    expect(chunk).toContain('precision highp int;');
+    expect(chunk).toContain('precision highp sampler2D;');
   });
 
   it('carries the golden angle to enough digits to keep the tap set equal-area', () => {
@@ -74,6 +86,23 @@ describe('coverage.frag.glsl formulas', () => {
   it('takes the slack from the source own footprint, floored relatively', () => {
     expect(chunk).toContain(
       'max(radiusPx / uPxPerRadian, SELF_OCCLUSION_SLACK) * sourceDepthPc');
+  });
+
+  it('spreads the taps over the disc the clipping term integrates', () => {
+    // visibilityDiscRadiusPx is the CPU half. Two different discs and the
+    // product stops being a fraction of one region — a sub-pixel source at
+    // the frame edge then reads clipped > 0 with every tap out of frame.
+    expect(chunk).toContain('float tapRadiusPx = max(radiusPx, 0.5 * ADAPT_EDGE_RAMP_PX);');
+    expect(chunk).toContain('coverageTap(k) * tapRadiusPx');
+  });
+
+  it('reads every texture through textureLod, never an implicit derivative', () => {
+    // Neighbouring fragments are unrelated sources, so dFdx of a strip U or
+    // a tap uv is meaningless — the ring strips ship mipmapped, and the
+    // implicit LOD lands on a level that averages the whole radial profile.
+    expect(chunk).toContain('textureLod(strip, vec2(u, 0.5), 0.0).a * alphaScale');
+    expect(chunk).toContain('textureLod(uOccluderDepth, uv, 0.0).r');
+    expect(chunk).not.toMatch(/[^A-Za-z]texture\(/);
   });
 
   it('raises 1 - alpha to the slant path, matching ringTransmission', () => {

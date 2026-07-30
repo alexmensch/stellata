@@ -21,6 +21,7 @@ import {
   highlightGuardDm,
   DIFFUSE_FIELD_L,
   discViewportOverlapArea,
+  footprintRadiusPx,
   L_ADAPT,
   L_CAP,
   L_TARGET,
@@ -34,6 +35,7 @@ import {
   starAdaptationWindowPc,
   starSourceKey,
   trimStopsForCoverage,
+  visibilityDiscRadiusPx,
   windowTaper,
 } from './scene-adaptation-pure';
 
@@ -269,6 +271,23 @@ describe('coverage sensitivity (§ 3.2)', () => {
     for (const f of [2 * ADAPT_REF_COVERAGE, 0.3, 0.9]) {
       expect(trimStopsForCoverage(f)).toBeCloseTo(Math.log2(L_TARGET / L_CAP), 12);
     }
+  });
+});
+
+describe('visibilityDiscRadiusPx', () => {
+  it('is the flux footprint once that clears the edge ramp', () => {
+    expect(visibilityDiscRadiusPx(400)).toBe(footprintRadiusPx(400));
+  });
+
+  it('widens a sub-ramp source to the ramp, which is what makes the product exact', () => {
+    // Frame clipping integrates this disc and the coverage taps spread over
+    // it. Two different discs and `clipped × transmission` stops being a
+    // fraction of one region: a sub-pixel source inside the ramp band off
+    // the frame edge reads clipped > 0 with every tap out of frame, so its
+    // occlusion is never evaluated and it keeps all its flux.
+    expect(visibilityDiscRadiusPx(0)).toBe(0.5 * ADAPT_EDGE_RAMP_PX);
+    expect(visibilityDiscRadiusPx(4)).toBe(0.5 * ADAPT_EDGE_RAMP_PX);
+    expect(footprintRadiusPx(0)).toBeLessThan(0.5 * ADAPT_EDGE_RAMP_PX);
   });
 });
 
