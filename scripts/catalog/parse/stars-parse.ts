@@ -137,6 +137,18 @@ export function nonEmpty(s: string | undefined | null): string | null {
 // see scripts/catalog/README.md § Per-row pipeline (HIP 57146).
 const HIP_DIST_MATCH_TOLERANCE_PC = 1e-3;
 
+/** The membership gates a spine row can still fail. Every one is pinned at 0
+ *  in build-catalog-expected.json, so a non-zero entry fails the build rather
+ *  than dropping a record the spine promised — see ../spine/README.md
+ *  § The membership gates still run, and must stay at zero. */
+export interface ReadStarsDrops {
+  noRaDec: number;
+  noDist: number;
+  noDirection: number;
+  tooFar: number;
+  noVMagnitude: number;
+}
+
 /** Every reference table a readStars walk consumes, as one bundle.
  *
  *  `loadReadStarsInputs` assembles the production set and satisfies this whole
@@ -176,7 +188,7 @@ export function readStars(
   stars: Star[];
   stats: {
     total: number;
-    dropped: Record<string, number>;
+    dropped: ReadStarsDrops;
     bjEligible: number;            // rows with a Gaia DR3 source_id
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
     bjOverriddenByDistSrc: DistSrcPartition;   // bjOverridden split by AT-HYG dist_src
@@ -205,8 +217,9 @@ export function readStars(
   // Every spine row already passed each of these in the build it snapshots,
   // so all five are zero by construction. They stay as the assertion that the
   // spine and the reference tables it was frozen against still agree — a
-  // refreshed table that moves a row past MAX_DIST_PC surfaces here.
-  const dropped: Record<string, number> = {
+  // refreshed table that moves a row past MAX_DIST_PC would otherwise drop a
+  // record the spine promised.
+  const dropped: ReadStarsDrops = {
     noRaDec: 0,
     noDist: 0,
     noDirection: 0,

@@ -64,11 +64,14 @@ grow a column later, so they ship now.
 
 Every spine row already passed `readStars`' five drop gates in the build it
 snapshots — no ra/dec, no distance, no direction, past `MAX_DIST_PC`, no V.
-The walk keeps them, and `build-catalog-expected.json` pins all five at
-**0**: a refreshed Bailer-Jones or LMC input that moves a row past the
-distance cutoff, or an astrometry table that stops resolving a direction,
-is a disagreement between the spine and the tables it was frozen against,
-and it surfaces there rather than as a silent record drop.
+The walk keeps them, and each is pinned at **0** in
+`build-catalog-expected.json` as `spineDroppedNoRaDec` / `…NoDist` /
+`…NoDirection` / `…TooFar` / `…NoVMagnitude`: a refreshed Bailer-Jones or LMC
+input that moves a row past the distance cutoff, or an astrometry table that
+stops resolving a direction, is a disagreement between the spine and the
+tables it was frozen against, and it fails the count assertion by name
+instead of dropping a record the spine promised. `recordCount` would move
+too, but it names the symptom rather than the gate.
 
 ## The identifier columns are read, never re-derived
 

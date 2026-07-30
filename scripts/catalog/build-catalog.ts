@@ -235,6 +235,11 @@ async function main() {
     multiplicityResolved: 0,
     multiplicityUnresolved: 0,
     componentDesignations: 0,
+    spineDroppedNoRaDec: 0,
+    spineDroppedNoDist: 0,
+    spineDroppedNoDirection: 0,
+    spineDroppedTooFar: 0,
+    spineDroppedNoVMagnitude: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -387,6 +392,11 @@ async function main() {
   }
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
+  counts.spineDroppedNoRaDec = stats.dropped.noRaDec;
+  counts.spineDroppedNoDist = stats.dropped.noDist;
+  counts.spineDroppedNoDirection = stats.dropped.noDirection;
+  counts.spineDroppedTooFar = stats.dropped.tooFar;
+  counts.spineDroppedNoVMagnitude = stats.dropped.noVMagnitude;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.bjOverriddenByDistSrc = stats.bjOverriddenByDistSrc;

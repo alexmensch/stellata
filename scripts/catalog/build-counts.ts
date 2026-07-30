@@ -64,6 +64,18 @@ export interface BuildCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
+  /** Spine rows `readStars` dropped, per gate. **All five must stay 0.** Each
+   *  row cleared every one of them in the build the spine snapshots, so a
+   *  non-zero entry is the spine disagreeing with a reference table that has
+   *  moved under it — a refreshed Bailer-Jones or LMC input pushing a row past
+   *  MAX_DIST_PC, or an astrometry table that stopped resolving a direction.
+   *  Pinning them here is what turns that into a build failure instead of a
+   *  record silently leaving the catalogue (docs/catalog-driver.md § 6.1). */
+  spineDroppedNoRaDec: number;
+  spineDroppedNoDist: number;
+  spineDroppedNoDirection: number;
+  spineDroppedTooFar: number;
+  spineDroppedNoVMagnitude: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
   /** AT-HYG rows the Bailer-Jones override is allowed to fire on:
