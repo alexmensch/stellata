@@ -113,3 +113,10 @@ attachment 1 is therefore part of its contract, not a free slot.**
 - **A point source's G over-reads in the kernel's wings** under an additive
   blend, because alpha 1 drops the second `glow` factor attachment 0 gets.
   Exact at the peak, which is the only place a frame `max` reads it.
+- **A ring annulus extinguishes at face-on opacity.** A rasterised fragment
+  carries no opening angle, so the slant-path term the source walk applied
+  analytically — `T = (1 − α)^(1/|sin B|)`, opaque edge-on — is gone. It
+  under-dims a source seen through a near-edge-on ring; edge-on is also
+  where the zero-thickness annulus thins to a line and covers almost no
+  texels, so the case it matters in is the case it barely arises in
+  (`../../solar-system/planets/rings/README.md`).

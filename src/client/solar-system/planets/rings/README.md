@@ -38,8 +38,10 @@ pass cannot do this) — new close-range geometry belongs in the local pass,
 not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
 
-**Rings do dim a source behind them in the exposure statistic**, by
-authored optical depth at the ray's opening angle — no z-test could, they
-write no depth. The annulus dims a source behind it by compositing over
-its statistic texel like any other alpha-blended emitter
-(`../../../hdr/statistic/README.md`).
+**Rings do dim a source behind them in the exposure statistic** — no
+z-test could, they write no depth. The annulus composites over its
+statistic texel like any other alpha-blended emitter, at the strip's
+**face-on** opacity: a rasterised fragment carries no opening angle, so
+the slant-path enhancement the source walk applied analytically
+(`T = (1 − α)^(1/|sin B|)`, opaque edge-on) is gone
+(`../../../hdr/statistic/README.md` § Known residuals).
