@@ -24,8 +24,10 @@ src/client/solar-system/atmosphere/
                                   miss the disc.
   atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
     (+ test)                      calibration constants + phase functions,
-                                  the analytic shadow span, and the skylight
-                                  term. Vitest-pinned. The TS sample-count
+                                  the analytic shadow span, the skylight
+                                  term, and the full-phase disc means that
+                                  keep the drawn disc on the body's flux.
+                                  Vitest-pinned. The TS sample-count
                                   constants seed the GLSL #defines.
   atmosphere-glsl-drift.test.ts   Pins the GLSL literals against their TS
                                   constants, and the expression shapes the
@@ -35,8 +37,10 @@ src/client/solar-system/atmosphere/
 
 Per-body params live in `../planet-system.ts` as `PlanetAtmosphere`
 rows: scale heights + **vertical optical depths** (`rayleighCoeff`,
-`mieCoeff`, `absorbCoeff`). The mesh layer divides by H/R to get the
-surface extinction the integrator wants.
+`mieCoeff`, `absorbCoeff`). `atmosphereParamsOf` is the one place that
+divides by H/R to get the surface extinction the integrator wants —
+both the uniform write and the flux normaliser go through it, so they
+cannot disagree about what a row means.
 
 ## The model
 
@@ -182,13 +186,41 @@ by-eye widening of the Lambert edge and is deliberately untouched here
 
 **Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
-true flux (`../planets/emission/mesh-surface-pure.ts`). The skylight is ADDED
-inside that product, so its full-phase disc mean
-(`skyIrradianceDiscMeanLuma` — Earth ≈ 0.07 of host irradiance, Titan ≈ 0.16)
-joins the divisor via `AtmoBase.skyDiscMean`: the term redistributes the
-body's flux instead of overshooting it. The fold is a luma scalar at full
-phase, so per-channel hue and phase-angle residuals remain, each bounded by
-the term's own few-percent size.
+true flux (`../planets/emission/mesh-surface-pure.ts`). At physical depths the
+atmosphere is not a small correction to that mean, so all three of the things
+it does to the disc are measured — `atmoDiscMeans`, one full-phase quadrature
+running the **same march the shader runs**, not an analytic stand-in:
+
+| | ⟨μ·T_view⟩ | ⟨E_sky·T_view⟩ | π/p·⟨airlight⟩ |
+|---|---|---|---|
+| Venus | 0.553 | 0.047 | 0.082 |
+| Earth | 0.566 | 0.054 | 0.220 |
+| Mars | 0.485 | 0.058 | 0.453 |
+| Titan | 0.006 | 0.002 | **1.137** |
+
+- **The view path DIMS the surface**, so `⟨μ·T_view⟩` *replaces* the Lambert
+  2/3 rather than adding to it — it is 2/3 only in the transparent limit
+  (pinned), and lower for every real row.
+- **The skylight is ADDED inside the same product**, so it joins that divisor.
+- **The airlight is added OUTSIDE it**, on `uAirlightLuminance`, where no
+  surface scalar can reach it. It takes its share of the body's flux off the
+  top — `π/p·⟨airlight⟩`, a fifth of Earth's disc and near half of Mars's —
+  and the reflected terms get the remainder. Geometric albedo already counts
+  the light a body's air scatters, so leaving that share in the surface term
+  draws it twice: before this, Earth's disc ran +7 % over its Mallama flux,
+  Mars +18 %, Titan +15 %.
+
+**Titan is over its measured flux and the clamp says so.** Its share is 1.137
+— the haze model alone is 14 % brighter than the measured body, and its
+⟨μ·T_view⟩ = 0.006 means the ground supplies nothing to trade against it. The
+surface scalar clamps to zero and the residual stands: that is a per-body
+optical-depth error (§ Per-body sources — τ_Mie 2.5 sits mid-range in the
+measured 2–5), not something to absorb into a gain on a calibrated airlight.
+
+The fold is a luma scalar at full phase, so per-channel hue and phase-angle
+residuals remain, each bounded by its own term's size. The disc means follow
+the debug panel's multipliers (`setAtmosphereTuning` refreshes them), or the
+flux would drift off the row every time a slider moved.
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.
@@ -237,9 +269,11 @@ block and the shell multiply `uAirlightLuminance`
 host's irradiance at the body in the scene-wide HDR unit, carrying no surface
 albedo, because scattered sunlight doesn't depend on the ground's
 reflectance. The surface multiplies a *different* scalar that does
-(`uSurfaceLuminance`), and the two sit **exactly p/π apart**
-(`mesh-surface-pure.test.ts`). That is what closes the calibration: the
-integrator's `∫β_s·P·T dl` is already a dimensionless fraction of incident
+(`uSurfaceLuminance`), and in the transparent limit the two sit **exactly p/π
+apart** (`mesh-surface-pure.test.ts`); at real depths the surface scalar also
+carries the flux share the airlight has taken (§ Flux bookkeeping), which is
+the general form of the same statement. That is what closes the calibration:
+the integrator's `∫β_s·P·T dl` is already a dimensionless fraction of incident
 irradiance, so the product IS the physical airlight radiance and the only
 correct overall gain is 1. The `AIRLIGHT_GAIN = 3` that used to scale it was
 read off the slider back when both terms shared one display-compressed scalar
@@ -284,9 +318,11 @@ black rim).
 Every real image (Blue Marble included) is exposure- and
 white-balance-processed, so pixel-matching is a trap. Instead:
 
-- The mesh *surface* already renders at the Mallama-correct apparent magnitude,
-  so absolute brightness is anchored; the atmosphere only supplies *hue* + limb
-  behaviour + (for thick hazes) the multiscatter disc.
+- The drawn *disc* renders at the Mallama-correct apparent magnitude — surface,
+  skylight and airlight together, § Flux bookkeeping — so absolute brightness is
+  anchored and the optical depths only move *hue*, limb behaviour, and how the
+  flux splits between ground and air. Titan is the exception: its airlight
+  alone overshoots, so raising its τ raises its total brightness.
 - **Relative brightness** follows geometric albedo (`Planet.albedo`: Venus 0.69
   > Earth 0.43 > Titan 0.22 ≈ Mars 0.17) — Venus should read brightest.
 - **Rayleigh `rayleighCoeff`** is the body's TRUE molecular vertical optical

@@ -247,7 +247,9 @@ crossfade.
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
     unit, pre-divided by the disc means of everything the shader
-    multiplies on top (§ Physical-luminance emission). Surface-only: the
+    multiplies on top (§ Physical-luminance emission) and, for an
+    atmospheric body, less the share of that flux its airlight already
+    supplies (`../atmosphere/README.md` § Flux bookkeeping). Surface-only: the
     reflected glare is the star-perceptual point (driven by appMag,
     above), so this shades the mesh, not the glare. Body-kind-agnostic —
     planets, moons, and future lit bodies all read the one scalar.

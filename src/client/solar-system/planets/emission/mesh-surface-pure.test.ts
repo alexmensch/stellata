@@ -85,7 +85,7 @@ describe('meshSurfaceLuminance', () => {
     // flux with no other symptom.
     const baseMean = 0.25;
     const scalar = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, baseMean, false,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, baseMean,
     );
     const shadingMean = lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
     const meanL = surfaceBrightnessLuminance(
@@ -117,7 +117,7 @@ describe('meshSurfaceLuminance', () => {
     const glarePeak = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, m, rPhysPx);
     expect(glarePeak).toBeLessThan(LUMA_CEIL);
     const meshMean = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPxUnclipped, SUN_ABSMAG_V, AU_PC, moon.albedo, 1, false,
+      BASE_EPOCH_EXPOSURE, omegaPxUnclipped, SUN_ABSMAG_V, AU_PC, moon.albedo, 1,
     ) * lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
 
     // Relative, not absolute: the two sides reach the same number through
@@ -132,10 +132,10 @@ describe('meshSurfaceLuminance', () => {
     // emits is invariant, which is what makes the texture arriving
     // mid-approach flux-neutral instead of a brightness pop.
     const dim = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.1, false,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.1,
     );
     const bright = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.4, false,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.4,
     );
     expect(dim * 0.1).toBeCloseTo(bright * 0.4, 12);
   });
@@ -147,10 +147,16 @@ describe('meshSurfaceLuminance', () => {
     // already the physical radiance, which is why the single-scatter
     // integrator's output is complete as it stands and any overall airlight
     // gain is a display fudge on a calibrated quantity.
+    //
+    // Stated in the transparent limit, where the disc means reduce to the
+    // Lambert 2/3 and the airlight takes no share of the flux. At real optical
+    // depths the surface scalar carries that share as well — the closure test
+    // below is the general statement.
     const baseMean = 0.25;
     const albedo = 0.43;
     const surface = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean, true,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean,
+      { surface: 2 / 3, sky: 0, airlight: 0 },
     );
     const airlight = hostIrradianceLuminance(
       BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC,
@@ -158,26 +164,48 @@ describe('meshSurfaceLuminance', () => {
     expect((surface * baseMean * (2 / 3)) / airlight).toBeCloseTo(albedo / Math.PI, 12);
   });
 
-  it('folds the skylight disc mean into the divisor, keeping the flux fixed', () => {
-    // The shader ADDS the skylight inside the surfaceScale product, so its
-    // full-phase disc mean has to join the shading mean or every atmospheric
-    // body overshoots its Mallama flux by the skylight share.
-    const sky = 0.07;
-    const withSky = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.43, 1, true, sky,
+  it('closes the disc flux over transmittance, skylight and airlight', () => {
+    // The general contract. What the shader emits, disc-averaged at full
+    // phase, is
+    //   uSurface·baseMean·(⟨μ·T⟩ + ⟨sky·T⟩) + uAirlight·⟨inscatter⟩
+    // and that has to come out at the body's true mean surface brightness,
+    // p/π·E·Ω — which is uAirlight·p/π, since uAirlight IS E·Ω. Every term
+    // the atmosphere adds or removes is therefore a redistribution of the
+    // measured flux, not a change to it.
+    const atmo = { surface: 0.5657, sky: 0.0581, airlight: 0.0304 };
+    const baseMean = 0.25;
+    const albedo = 0.43;
+    const surface = meshSurfaceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean, atmo,
     );
-    const withoutSky = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.43, 1, true,
+    const airlight = hostIrradianceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC,
     );
-    expect((withSky * (2 / 3 + sky)) / (withoutSky * (2 / 3))).toBeCloseTo(1, 12);
+    const emitted =
+      surface * baseMean * (atmo.surface + atmo.sky) + airlight * atmo.airlight;
+    // Relative: the two sides reach the same number through different
+    // log/pow round-trips, as in the glare-continuity test above.
+    expect(Math.abs(emitted / (airlight * (albedo / Math.PI)) - 1)).toBeLessThan(1e-12);
   });
 
-  it('uses the pure-Lambert mean for atmospheric bodies (no limb term)', () => {
+  it('clamps to zero when the airlight alone exceeds the body flux', () => {
+    // Titan's row: π/p·⟨inscatter⟩ = 1.14, so the model's haze is already
+    // brighter than the measured body and there is no flux left for the
+    // ground. Reading that off the clamp beats hiding it behind a gain on a
+    // calibrated quantity — atmosphere/README.md § Flux bookkeeping.
+    const titanish = { surface: 0.0062, sky: 0.0016, airlight: 0.0796 };
+    expect(meshSurfaceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.22, 1, titanish,
+    )).toBe(0);
+  });
+
+  it('drops the limb term for atmospheric bodies (the scattering governs it)', () => {
     const airless = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1, false,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
     );
     const atmospheric = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1, true,
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
+      { surface: 2 / 3, sky: 0, airlight: 0 },
     );
     expect(airless / atmospheric)
       .toBeCloseTo((2 / 3) / lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP), 12);

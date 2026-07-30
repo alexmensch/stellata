@@ -7,13 +7,14 @@ import {
   TWILIGHT_TAIL_AMP,
   TWILIGHT_TAIL_REACH,
   type Vec3,
+  atmoDiscMeans,
+  atmosphereParamsOf,
   litFraction,
   miePhase,
   rayleighPhase,
   scalePolarComponent,
   scatterAlongRay,
   shadowSpan,
-  skyIrradianceDiscMeanLuma,
   skyIrradianceFrac,
   verticalAbsorptionOpticalDepth,
   verticalScatterOpticalDepth,
@@ -321,19 +322,15 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
 
   const rowOf = (name: string) => {
     const body = SOL_BODIES.find((b) => b.name === name)!;
-    const atmo = body.atmosphere!;
-    const hR = atmo.rayleighHeightKm / body.radiusKm;
-    const hM = atmo.mieHeightKm / body.radiusKm;
-    const params: AtmosphereParams = {
-      rAtmo: (body.radiusKm + atmo.heightKm) / body.radiusKm,
-      hR,
-      hM,
-      betaRs: [atmo.rayleighCoeff[0] / hR, atmo.rayleighCoeff[1] / hR, atmo.rayleighCoeff[2] / hR],
-      betaMs: atmo.mieCoeff / hM,
-      betaA: [atmo.absorbCoeff[0] / hM, atmo.absorbCoeff[1] / hM, atmo.absorbCoeff[2] / hM],
-      g: 0.76,
+    const params = atmosphereParamsOf(body.atmosphere!, body.radiusKm);
+    return {
+      body,
+      atmo: body.atmosphere!,
+      params,
+      hR: params.hR,
+      tauS: verticalScatterOpticalDepth(params),
+      tauA: verticalAbsorptionOpticalDepth(params),
     };
-    return { atmo, hR, tauS: verticalScatterOpticalDepth(params), tauA: verticalAbsorptionOpticalDepth(params) };
   };
 
   const LUMA: Vec3 = [0.2126, 0.7152, 0.0722];
@@ -429,20 +426,78 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     expect(titanDusk).toBeGreaterThan(frac(0));
   });
 
-  it('pins the full-phase disc mean the flux divisor folds in', () => {
-    // ~7 % of host irradiance on Earth — the size of the overshoot the
-    // meshSurfaceLuminance divisor now cancels (emission/mesh-surface-pure.ts).
-    expect(skyIrradianceDiscMeanLuma(hR, tauS, tauA)).toBeCloseTo(0.0658, 3);
-    const titan = rowOf('Titan');
-    expect(skyIrradianceDiscMeanLuma(titan.hR, titan.tauS, titan.tauA)).toBeCloseTo(0.148, 2);
-  });
-
   it('reaches further past the terminator on Titan — the scale height sets the band', () => {
     const titan = rowOf('Titan');
     const titanTail = (d: number) =>
       dot(LUMA, skyIrradianceFrac(-Math.sin((d * Math.PI) / 180), titan.hR, titan.tauS, titan.tauA))
       / dot(LUMA, skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
     expect(titanTail(12)).toBeGreaterThan(100 * (frac(12) / frac(0)));
+  });
+
+  describe('full-phase disc means — what keeps the drawn disc on the body flux', () => {
+    // Measured through the same march the shader runs, per body, at physical
+    // depths. `share` = π/p·⟨inscatter⟩ is the fraction of the body's own flux
+    // the airlight claims; the reflected terms get 1 − share
+    // (emission/mesh-surface-pure.ts). README.md § Flux bookkeeping.
+    const EXPECTED: Record<string, { surface: number; sky: number; share: number }> = {
+      Venus: { surface: 0.5528, sky: 0.0467, share: 0.0816 },
+      Earth: { surface: 0.5657, sky: 0.0541, share: 0.2198 },
+      Mars: { surface: 0.4846, sky: 0.0582, share: 0.4531 },
+      Titan: { surface: 0.0062, sky: 0.0015, share: 1.1370 },
+    };
+
+    it('recovers the airless Lambert 2/3 when the atmosphere is transparent', () => {
+      // The seam against lambertLimbDiscMean: with nothing to extinct or
+      // scatter, the marched mean IS the analytic pure-Lambert disc mean, so
+      // an atmospheric body's normaliser is continuous with an airless one's.
+      const clear = {
+        ...rowOf('Earth').params,
+        betaRs: [0, 0, 0] as Vec3, betaMs: 0, betaA: [0, 0, 0] as Vec3,
+      };
+      const m = atmoDiscMeans(clear);
+      expect(m.surface).toBeCloseTo(2 / 3, 4);
+      expect(m.sky).toBe(0);
+      expect(m.airlight).toBe(0);
+    });
+
+    for (const [name, want] of Object.entries(EXPECTED)) {
+      it(`pins ${name}`, () => {
+        const row = rowOf(name);
+        const m = atmoDiscMeans(row.params);
+        expect(m.surface).toBeCloseTo(want.surface, 4);
+        expect(m.sky).toBeCloseTo(want.sky, 4);
+        expect((Math.PI / row.body.albedo) * m.airlight).toBeCloseTo(want.share, 4);
+        // The column always dims the ground it lights, so the surface mean
+        // sits below the airless 2/3 — never above it.
+        expect(m.surface).toBeLessThan(2 / 3);
+      });
+    }
+
+    it('rides the illuminant on the airlight and not on the surface', () => {
+      // The shader multiplies uSunColour into the march and nothing else.
+      const row = rowOf('Earth');
+      const plain = atmoDiscMeans(row.params);
+      const dimmed = atmoDiscMeans(row.params, 0.5);
+      expect(dimmed.airlight).toBeCloseTo(plain.airlight * 0.5, 12);
+      expect(dimmed.surface).toBe(plain.surface);
+      expect(dimmed.sky).toBe(plain.sky);
+    });
+
+    it('leaves Titan over its measured flux — the one body the clamp catches', () => {
+      // Titan's disc IS its haze (⟨μ·T_view⟩ = 0.006, so the ground supplies
+      // nothing), and the haze model alone runs 14 % brighter than the
+      // measured body. That is a per-body optical-depth error, deliberately
+      // left visible here instead of absorbed into a gain on the airlight.
+      const titan = rowOf('Titan');
+      const share = (Math.PI / titan.body.albedo) * atmoDiscMeans(titan.params).airlight;
+      expect(share).toBeGreaterThan(1);
+      expect(share).toBeLessThan(1.2);
+      for (const name of ['Venus', 'Earth', 'Mars']) {
+        const row = rowOf(name);
+        expect((Math.PI / row.body.albedo) * atmoDiscMeans(row.params).airlight)
+          .toBeLessThan(1);
+      }
+    });
   });
 });
 

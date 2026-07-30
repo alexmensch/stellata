@@ -2,6 +2,9 @@
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § Atmospheres.
 
+import { relativeLuminance } from '../../hdr/tonemap-pure';
+import type { PlanetAtmosphere } from '../planet-system';
+
 export const ATMO_N_VIEW = 16;
 export const ATMO_N_LIGHT = 10;
 export const MIE_G_DEFAULT = 0.76;
@@ -206,24 +209,6 @@ export function skyIrradianceFrac(
   return out;
 }
 
-const LUMA_WEIGHTS: Vec3 = [0.2126, 0.7152, 0.0722];
-
-/** Full-phase disc mean (luma) of the skylight fraction — the extra disc
- *  mean `meshSurfaceLuminance` divides out so the added skylight stays a
- *  redistribution of the body's true flux rather than an overshoot. At full
- *  phase a disc point's sun cosine equals its emission cosine μ, area-weighted
- *  2μ dμ. */
-export function skyIrradianceDiscMeanLuma(hR: number, tauScatter: Vec3, tauAbsorb: Vec3): number {
-  const N = 64;
-  let mean = 0;
-  for (let i = 0; i < N; i++) {
-    const mu = (i + 0.5) / N;
-    const s = skyIrradianceFrac(mu, hR, tauScatter, tauAbsorb);
-    mean += (LUMA_WEIGHTS[0] * s[0] + LUMA_WEIGHTS[1] * s[1] + LUMA_WEIGHTS[2] * s[2]) * (2 * mu) / N;
-  }
-  return mean;
-}
-
 export interface AtmosphereParams {
   /** Atmosphere top radius, R-units (1 + heightKm/radiusKm). */
   readonly rAtmo: number;
@@ -238,6 +223,35 @@ export interface AtmosphereParams {
   readonly betaA: Vec3;
   /** Henyey-Greenstein asymmetry. */
   readonly g: number;
+}
+
+/** March params for one authored per-body row. The table carries **vertical
+ *  optical depths**; dividing each by its own scale height is what turns them
+ *  into the surface extinction coefficients the integrator marches, and this
+ *  is the only place that conversion happens. */
+export function atmosphereParamsOf(
+  atmo: PlanetAtmosphere,
+  radiusKm: number,
+): AtmosphereParams {
+  const hR = atmo.rayleighHeightKm / radiusKm;
+  const hM = atmo.mieHeightKm / radiusKm;
+  return {
+    rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
+    hR,
+    hM,
+    betaRs: [
+      atmo.rayleighCoeff[0] / hR,
+      atmo.rayleighCoeff[1] / hR,
+      atmo.rayleighCoeff[2] / hR,
+    ],
+    betaMs: atmo.mieCoeff / hM,
+    betaA: [
+      atmo.absorbCoeff[0] / hM,
+      atmo.absorbCoeff[1] / hM,
+      atmo.absorbCoeff[2] / hM,
+    ],
+    g: atmo.mieG ?? MIE_G_DEFAULT,
+  };
 }
 
 export interface ScatterResult {
@@ -333,4 +347,55 @@ export function scatterAlongRay(
     inscatter[c] += ms;
   }
   return { inscatter, transmittance };
+}
+
+/** Full-phase disc means (luma) of everything the mesh shader lays over the
+ *  body's flux — the normalisers that keep the drawn disc integrating to the
+ *  body's true flux. README.md § Flux bookkeeping. */
+export interface AtmoDiscMeans {
+  /** ⟨μ · luma(T_view)⟩ — the Lambert disc mean of what survives the view
+   *  path. The airless 2/3 in the transparent limit, and *less* than that
+   *  whenever the column extincts: the atmosphere dims the ground it lights. */
+  readonly surface: number;
+  /** ⟨luma(E_sky) · luma(T_view)⟩ — skylight reflected off the ground, out
+   *  through the same column. Rides the same scalar as `surface`. */
+  readonly sky: number;
+  /** ⟨luma(inscatter)⟩ · luma(illuminant) — the airlight in front of the
+   *  disc, as a fraction of host irradiance and carrying no albedo, so the
+   *  caller scales it by π/p to compare against the body's own flux. */
+  readonly airlight: number;
+}
+
+const DISC_MEAN_N = 64;
+
+/**
+ * Measure the disc means through the same march the shader runs, at full
+ * phase — where a disc point's sun cosine equals its emission cosine μ and
+ * the area weight is 2μ dμ. `illuminantLuma` is luma(uSunColour): the
+ * airlight rides the illuminant, the surface does not.
+ *
+ * Orthographic-limit geometry, as `lambertLimbDiscMean` also assumes: the
+ * view ray drops from the shell top onto the surface point along the
+ * sun-facing axis. Converged to 5 digits by `DISC_MEAN_N`.
+ */
+export function atmoDiscMeans(p: AtmosphereParams, illuminantLuma = 1): AtmoDiscMeans {
+  const tauScatter = verticalScatterOpticalDepth(p);
+  const tauAbsorb = verticalAbsorptionOpticalDepth(p);
+  const sunDir: Vec3 = [0, 0, 1];
+  const dir: Vec3 = [0, 0, -1];
+  let surface = 0;
+  let sky = 0;
+  let airlight = 0;
+  for (let i = 0; i < DISC_MEAN_N; i++) {
+    const mu = (i + 0.5) / DISC_MEAN_N;
+    const off = Math.sqrt(Math.max(1 - mu * mu, 0));
+    const zTop = Math.sqrt(Math.max(p.rAtmo * p.rAtmo - off * off, 0));
+    const march = scatterAlongRay([off, 0, zTop], dir, 0, zTop - mu, sunDir, p);
+    const tView = relativeLuminance(march.transmittance);
+    const weight = (2 * mu) / DISC_MEAN_N;
+    surface += mu * tView * weight;
+    sky += relativeLuminance(skyIrradianceFrac(mu, p.hR, tauScatter, tauAbsorb)) * tView * weight;
+    airlight += relativeLuminance(march.inscatter) * weight;
+  }
+  return { surface, sky, airlight: airlight * illuminantLuma };
 }
