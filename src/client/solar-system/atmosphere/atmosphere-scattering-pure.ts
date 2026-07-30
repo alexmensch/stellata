@@ -156,22 +156,74 @@ export function verticalScatterOpticalDepth(p: AtmosphereParams): Vec3 {
   return [p.betaRs[0] * p.hR + mie, p.betaRs[1] * p.hR + mie, p.betaRs[2] * p.hR + mie];
 }
 
-/** Share of the host's perpendicular irradiance that a unit vertical
- *  scattering optical depth delivers to the ground as skylight: ¼ from the
- *  hemispheric average of an isotropic in-scatter, times the ≈0.22 slant
- *  transmission a horizon sun reaches the scattering column through.
- *  Calibrated on Earth at the geometric terminator, where twilight measures
- *  ~400 lx against full sun's ~100 klx. */
-export const TWILIGHT_SCATTER_FRAC = 0.055;
+/** Vertical absorption optical depth per channel — the aerosol absorption
+ *  coefficient over its own (Mie) scale height. */
+export function verticalAbsorptionOpticalDepth(p: AtmosphereParams): Vec3 {
+  return [p.betaA[0] * p.hM, p.betaA[1] * p.hM, p.betaA[2] * p.hM];
+}
 
-/** Twilight: the fraction of host irradiance the lit atmosphere scatters
- *  down onto the surface below it, per channel. Its angular reach is the
- *  body's own scale height — the shadow edge climbing out of the scattering
- *  column is what extinguishes it, a few degrees on Earth and ~10° on
- *  Titan. Mirrors stellata_twilightIrradiance in the GLSL. */
-export function twilightIrradianceFrac(sunCos: number, hR: number, tauScatter: Vec3): Vec3 {
-  const f = TWILIGHT_SCATTER_FRAC * Math.exp(-shadowEdgeAltitude(sunCos) / hR);
-  return [tauScatter[0] * f, tauScatter[1] * f, tauScatter[2] * f];
+/** Chapman airmass of a horizon sun for an exponential atmosphere of scale
+ *  height `hR` (planet-radius units): √(π/(2·hR)) — ~35 on Earth. */
+export function chapmanHorizon(hR: number): number {
+  return Math.sqrt(Math.PI / (2 * hR));
+}
+
+/** Multiple-scattering twilight tail: relative amplitude and reach (in
+ *  Rayleigh scale heights) of the second exponential, fit through the
+ *  measured Earth horizontal illuminance at 12° and 18° of solar depression
+ *  (0.008 lx and 0.0006 lx against ~400 lx at the geometric terminator).
+ *  The pure test re-derives both from that table. */
+export const TWILIGHT_TAIL_AMP = 1.459e-4;
+export const TWILIGHT_TAIL_REACH = 8.95;
+
+/**
+ * Skylight: the fraction of host irradiance the atmosphere scatters down
+ * onto the surface, per channel — one derived model covering the lit
+ * hemisphere and the twilight band. Mirrors stellata_skyIrradiance in the
+ * GLSL; derivation and measured anchors: README.md § Twilight.
+ */
+export function skyIrradianceFrac(
+  sunCos: number,
+  hR: number,
+  tauScatter: Vec3,
+  tauAbsorb: Vec3,
+): Vec3 {
+  const ch = chapmanHorizon(hR);
+  const h = shadowEdgeAltitude(sunCos);
+  const tail =
+    Math.exp(-h / hR) + TWILIGHT_TAIL_AMP * Math.exp(-h / (TWILIGHT_TAIL_REACH * hR));
+  const mu = Math.max(sunCos, 0);
+  const muSafe = Math.max(mu, 1e-4);
+  const out: [number, number, number] = [0, 0, 0];
+  for (let c = 0; c < 3; c++) {
+    const tauExt = Math.max(tauScatter[c] + tauAbsorb[c], 1e-6);
+    const x = tauExt * ch;
+    const tBar = (1 - Math.exp(-x)) / x;
+    const fTerm = 0.25 * tauScatter[c] * tBar * Math.exp(-tauAbsorb[c]);
+    const beam =
+      0.5 * mu * (tauScatter[c] / tauExt) *
+      (1 - Math.exp(-tauExt / muSafe)) * Math.exp(-tauAbsorb[c] / muSafe);
+    out[c] = fTerm * tail + beam;
+  }
+  return out;
+}
+
+const LUMA_WEIGHTS: Vec3 = [0.2126, 0.7152, 0.0722];
+
+/** Full-phase disc mean (luma) of the skylight fraction — the extra disc
+ *  mean `meshSurfaceLuminance` divides out so the added skylight stays a
+ *  redistribution of the body's true flux rather than an overshoot. At full
+ *  phase a disc point's sun cosine equals its emission cosine μ, area-weighted
+ *  2μ dμ. */
+export function skyIrradianceDiscMeanLuma(hR: number, tauScatter: Vec3, tauAbsorb: Vec3): number {
+  const N = 64;
+  let mean = 0;
+  for (let i = 0; i < N; i++) {
+    const mu = (i + 0.5) / N;
+    const s = skyIrradianceFrac(mu, hR, tauScatter, tauAbsorb);
+    mean += (LUMA_WEIGHTS[0] * s[0] + LUMA_WEIGHTS[1] * s[1] + LUMA_WEIGHTS[2] * s[2]) * (2 * mu) / N;
+  }
+  return mean;
 }
 
 export interface AtmosphereParams {

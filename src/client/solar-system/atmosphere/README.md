@@ -98,25 +98,56 @@ alone, and at `α → 180°` — exactly where the Mie forward peak paints the
 Cassini ring this model was built for — the two disagreed by ~11
 magnitudes and a backlit Titan blew out.
 
-## Twilight — the lit air scattering light back down
+## Skylight — the lit air scattering light back down
 
 The airlight above is what the atmosphere sends toward the **eye**. A separate
 term sends it toward the **ground**: without it the lit shell floats over a
 black surface, because a night-side fragment's own Lambert term is zero and
-nothing else reaches it.
+nothing else reaches it — and the day side gets its diffuse skylight from the
+same term.
 
 Analytic, and view-independent (irradiance must not depend on where you look
-from, so the phase-weighted view-ray in-scatter cannot stand in for it):
+from, so the phase-weighted view-ray in-scatter cannot stand in for it). One
+model, `stellata_skyIrradiance` / `skyIrradianceFrac`, three derived pieces:
 
 ```
-E_sky/E_host = TWILIGHT_SCATTER_FRAC · τ_scatter · exp(−h_shadow/H)
-h_shadow = 1/cos(Δ) − 1        (0 on the lit side)
+E_sky/E_host = F_term · tail(h_shadow)  +  beam(μ_s)
+
+F_term  = ¼ · τ_s · T̄(τ_ext·Ch) · exp(−τ_a)          (terminator anchor)
+tail(h) = exp(−h/H) + B·exp(−h/(K·H))                 (twilight falloff)
+beam(μ) = ½ · μ · ω̃ · (1 − exp(−τ_ext/μ)) · exp(−τ_a/μ)   (day side)
+
+h_shadow = 1/cos(Δ) − 1  (0 on the lit side) · Ch = √(π/2H), Chapman airmass
+of a horizon sun · T̄(x) = (1−e⁻ˣ)/x, the column-mean transmission that sun
+reaches the scattering column through · ω̃ = τ_s/τ_ext
 ```
 
-`h_shadow` is the altitude of the shadow's upper edge directly overhead, so
-only the column above it still sees the host — and **the body's own scale
-height is therefore what sets the angular reach**: a few degrees on Earth,
-~10° on Titan, no global constant involved.
+- **The terminator anchor is a derivation, not a fraction read off a table.**
+  ¼ is the hemispheric down-flux of an isotropic in-scatter over the half-dome
+  a horizon sun still lights; T̄ self-saturates — thicker air lights its column
+  through *less* transmission — which is what lets the same expression hold
+  from Mars's thin CO₂ to Titan's τ ≈ 5 haze. On Earth at physical depths it
+  lands 1.75× over the measured ~400 lx / ~100 klx; the residual is the
+  un-modelled ozone Chappuis absorption and up-scatter loss, both of which
+  only push down. The factor-2 band is pinned.
+- **The tail is two exponentials, because the measured curve is.** The first,
+  over the body's own scale height, is the single-scatter reach: the shadow
+  edge climbing out of the scattering column. The second is multiple
+  scattering — the reason real twilight persists to ~18° — with amplitude
+  `TWILIGHT_TAIL_AMP` = 1.459e-4 and reach `TWILIGHT_TAIL_REACH` = 8.95 scale
+  heights, the closed-form fit through measured Earth horizontal illuminance
+  at 12° and 18° of solar depression (0.008 lx / 0.0006 lx, Allen's
+  Astrophysical Quantities). The test re-derives both from the table; civil
+  twilight at 6° falls out within 1.5×. Both terms scale with the body's own
+  `H`, so Venus / Mars / Titan follow with **no per-body constant** — Titan's
+  band is ~10× Earth's angular width because its scale height is.
+- **The day side is beam interception, anchored at noon.** Of the direct flux
+  crossing a horizontal surface (`μ_s`), the column scatters out
+  `ω̃·(1−e^(−τ_ext/μ))`; half of that reaches the ground as diffuse skylight,
+  less what the absorbing species eat on the way down. On Earth it gives
+  diffuse/direct ≈ 9 % at noon against the measured clear-sky 10–15 % (the
+  gap is ground-albedo bounce and aerosol multiple scattering). It vanishes
+  ∝ μ_s at the terminator, where `F_term` takes over continuously.
 
 The variable is **solar depression angle, not distance along the ground**, and
 that is what makes the *projected* twilight band widen wherever the terminator
@@ -124,55 +155,32 @@ crosses the surface obliquely — high latitude near solstice, where iso-`sunCos
 contours spread out and polar twilight runs for weeks. It falls out of the
 parameterisation; there is no obliquity term and there should not be one.
 
-`τ_scatter` is the vertical scattering optical depth
-(`stellata_verticalScatterTau`, absorption excluded), which also gives the
-twilight the air's own hue — blue on Earth — for free.
-
-`TWILIGHT_SCATTER_FRAC` = 0.055 is ¼ (hemispheric average of an isotropic
-in-scatter) × the ≈0.22 slant transmission a horizon sun reaches the column
-through, **calibrated against Earth**: 4e-3 of full sun at the geometric
-terminator (~400 lx against ~100 klx), decaying to 1.2 % of that by 6° of solar
-depression, where civil twilight measures ~4 lx. Both are pinned.
+`τ_s` is the vertical scattering optical depth
+(`stellata_verticalScatterTau`, absorption excluded), which gives the skylight
+the air's own hue — though at physical depths the T̄ saturation nearly
+flattens Earth's twilight channels (the strong zenith-blue of real twilight is
+ozone, which this model does not carry). `τ_a` is the absorption column
+(`uBetaAbsorb · uScaleHeightM`), which is what keeps Titan's ground light
+orange and ~10 % of incident — matching the measured surface flux — instead
+of the ~40 % a conservative-scattering model would claim.
 
 It rides `uSurfaceLuminance`, not `uAirlightLuminance` — this is light
 *reflected off the ground*, so it needs the albedo-bearing scalar, and the
-p/π relation above means it needs no extra factor. Being ~6 stops below full
-sun it is subtle at a day-side exposure: it reads when the adaptation follows a
-night-side-dominated frame. `Planet.terminatorSoftness` is the older by-eye
-widening of the Lambert edge and is deliberately untouched here
+p/π relation above means it needs no extra factor. The twilight band reads
+when the adaptation follows a night-side-dominated frame; the day-side term
+is a ~9 % lift under the direct sun. `Planet.terminatorSoftness` is the older
+by-eye widening of the Lambert edge and is deliberately untouched here
 (`../planets/README.md` § Lighting).
-
-### Where this model is wrong — `stellata-2f6.38`
-
-Two calibration anchors is two, and the form fails outside them. Both failures
-are the same missing physics (multiple scattering), and both are that bead:
-
-- **The tail collapses.** Against measured Earth horizontal illuminance the
-  single exponential holds at the terminator and at 6° (5.0 lx modelled against
-  ~4 lx civil), then falls off a cliff: **1000× too dark at 12°** (7.6e-6 lx
-  against 0.008 lx nautical) and hopeless by 18°. Real twilight persists to ~18°
-  because the light has bounced; this term is a single scatter out of a lit
-  column and has no route to it. Visually the band ends 7–8° past the terminator
-  instead of fading over ~18 — a crescent where there should be a gradient, and
-  ~9 % of the disc radius on Earth. The measured curve is not one exponential
-  either: the effective scale height grows from ~2H between 6° and 12° to ~9H
-  between 12° and 18°.
-- **The day side is a floor, not a derivation.** `h_shadow` is 0 for any
-  `sunCos ≥ 0`, so the whole lit hemisphere receives the *terminator's*
-  skylight, flat. Real skylight is strongest at local noon — ~10–15 % of direct
-  sun on Earth against this model's 0.6 %, so ~20× under across the day side.
-  Invisible next to direct sun, which is why it stands for now, but it is not
-  what the parameterisation claims.
 
 **Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
-true flux (`../planets/emission/mesh-surface-pure.ts`), and this term is added
-inside that product without being in the divisor. The day-side value is flat
-`0.055·τ_scatter`, so the overshoot is Earth +0.6 %, Venus +1.0 %, Mars +0.5 %
-of the direct term — and **Titan +21 %**, its τ_Mie being 2.5. Titan's surface
-sits behind τ ≈ 2.5 of haze so little of it reaches the image, and the airlight
-has always been additive over a flux-correct disc, so this is bounded rather
-than fixed. Anything that raises τ (`stellata-2f6.37`) raises it too.
+true flux (`../planets/emission/mesh-surface-pure.ts`). The skylight is ADDED
+inside that product, so its full-phase disc mean
+(`skyIrradianceDiscMeanLuma` — Earth ≈ 0.07 of host irradiance, Titan ≈ 0.16)
+joins the divisor via `AtmoBase.skyDiscMean`: the term redistributes the
+body's flux instead of overshooting it. The fold is a luma scalar at full
+phase, so per-channel hue and phase-angle residuals remain, each bounded by
+the term's own few-percent size.
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.

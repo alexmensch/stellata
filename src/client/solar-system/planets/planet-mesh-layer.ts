@@ -40,6 +40,7 @@ import {
   ATMO_N_VIEW,
   MIE_G_DEFAULT,
   SUN_COLOUR,
+  skyIrradianceDiscMeanLuma,
 } from '../atmosphere/atmosphere-scattering-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
@@ -95,6 +96,9 @@ interface AtmoBase {
   betaA0: readonly [number, number, number];
   g: number;
   sunColour: readonly [number, number, number];
+  /** Full-phase disc mean of the skylight term, folded into
+   *  meshSurfaceLuminance's divisor so the added skylight stays flux-neutral. */
+  skyDiscMean: number;
 }
 
 function computeAtmoBase(
@@ -114,6 +118,11 @@ function computeAtmoBase(
     betaA0: [atmo.absorbCoeff[0] / hM0, atmo.absorbCoeff[1] / hM0, atmo.absorbCoeff[2] / hM0],
     g: atmo.mieG ?? MIE_G_DEFAULT,
     sunColour: atmo.sunColour ?? SUN_COLOUR,
+    skyDiscMean: skyIrradianceDiscMeanLuma(
+      hR0,
+      [atmo.rayleighCoeff[0] + atmo.mieCoeff, atmo.rayleighCoeff[1] + atmo.mieCoeff, atmo.rayleighCoeff[2] + atmo.mieCoeff],
+      atmo.absorbCoeff,
+    ),
   };
 }
 
@@ -352,6 +361,7 @@ export class PlanetMeshLayer {
             exposure, omegaPx, hostAbsmag, dHpPc, planet.albedo,
             this.baseMeanLuminance(planet, texState),
             entry.atmoBase !== undefined,
+            entry.atmoBase?.skyDiscMean ?? 0,
           )
         : 0;
       if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);

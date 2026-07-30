@@ -158,6 +158,20 @@ describe('meshSurfaceLuminance', () => {
     expect((surface * baseMean * (2 / 3)) / airlight).toBeCloseTo(albedo / Math.PI, 12);
   });
 
+  it('folds the skylight disc mean into the divisor, keeping the flux fixed', () => {
+    // The shader ADDS the skylight inside the surfaceScale product, so its
+    // full-phase disc mean has to join the shading mean or every atmospheric
+    // body overshoots its Mallama flux by the skylight share.
+    const sky = 0.07;
+    const withSky = meshSurfaceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.43, 1, true, sky,
+    );
+    const withoutSky = meshSurfaceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.43, 1, true,
+    );
+    expect((withSky * (2 / 3 + sky)) / (withoutSky * (2 / 3))).toBeCloseTo(1, 12);
+  });
+
   it('uses the pure-Lambert mean for atmospheric bodies (no limb term)', () => {
     const airless = meshSurfaceLuminance(
       BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1, false,

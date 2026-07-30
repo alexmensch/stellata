@@ -4,19 +4,21 @@ import {
   ATMO_N_VIEW,
   type AtmosphereParams,
   MS_STRENGTH,
-  TWILIGHT_SCATTER_FRAC,
+  TWILIGHT_TAIL_AMP,
+  TWILIGHT_TAIL_REACH,
   type Vec3,
   litFraction,
   miePhase,
   rayleighPhase,
   scalePolarComponent,
   scatterAlongRay,
-  shadowEdgeAltitude,
   shadowSpan,
-  twilightIrradianceFrac,
+  skyIrradianceDiscMeanLuma,
+  skyIrradianceFrac,
+  verticalAbsorptionOpticalDepth,
   verticalScatterOpticalDepth,
 } from './atmosphere-scattering-pure';
-import { SOL_BODIES, SOL_PLANETS } from '../planet-system';
+import { SOL_BODIES } from '../planet-system';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -310,76 +312,126 @@ describe('how far past the terminator sunlight reaches', () => {
   });
 });
 
-describe('twilight on the night-side surface', () => {
-  const earth = SOL_PLANETS.find((p) => p.name === 'Earth')!;
-  const atmo = earth.atmosphere!;
-  const hR = atmo.rayleighHeightKm / earth.radiusKm;
-  const params: AtmosphereParams = {
-    rAtmo: (earth.radiusKm + atmo.heightKm) / earth.radiusKm,
-    hR,
-    hM: atmo.mieHeightKm / earth.radiusKm,
-    betaRs: [
-      atmo.rayleighCoeff[0] / hR,
-      atmo.rayleighCoeff[1] / hR,
-      atmo.rayleighCoeff[2] / hR,
-    ],
-    betaMs: atmo.mieCoeff / (atmo.mieHeightKm / earth.radiusKm),
-    betaA: [0, 0, 0],
-    g: 0.76,
+describe('skylight on the surface — derived, anchored to measured Earth twilight', () => {
+  // Measured Earth horizontal illuminance (lx) against ~100 klx full sun,
+  // by solar depression angle (Allen's Astrophysical Quantities): the
+  // geometric terminator, then civil / nautical / astronomical twilight.
+  const MEASURED_LX: Record<number, number> = { 0: 400, 6: 3.4, 12: 0.008, 18: 0.0006 };
+  const FULL_SUN_LX = 100000;
+
+  const rowOf = (name: string) => {
+    const body = SOL_BODIES.find((b) => b.name === name)!;
+    const atmo = body.atmosphere!;
+    const hR = atmo.rayleighHeightKm / body.radiusKm;
+    const hM = atmo.mieHeightKm / body.radiusKm;
+    const params: AtmosphereParams = {
+      rAtmo: (body.radiusKm + atmo.heightKm) / body.radiusKm,
+      hR,
+      hM,
+      betaRs: [atmo.rayleighCoeff[0] / hR, atmo.rayleighCoeff[1] / hR, atmo.rayleighCoeff[2] / hR],
+      betaMs: atmo.mieCoeff / hM,
+      betaA: [atmo.absorbCoeff[0] / hM, atmo.absorbCoeff[1] / hM, atmo.absorbCoeff[2] / hM],
+      g: 0.76,
+    };
+    return { atmo, hR, tauS: verticalScatterOpticalDepth(params), tauA: verticalAbsorptionOpticalDepth(params) };
   };
+
   const LUMA: Vec3 = [0.2126, 0.7152, 0.0722];
-  const tau = verticalScatterOpticalDepth(params);
+  const earth = rowOf('Earth');
+  const { hR, tauS, tauA } = earth;
   const frac = (deltaDeg: number) =>
-    dot(LUMA, twilightIrradianceFrac(-Math.sin((deltaDeg * Math.PI) / 180), hR, tau));
+    dot(LUMA, skyIrradianceFrac(-Math.sin((deltaDeg * Math.PI) / 180), hR, tauS, tauA));
 
   it('recovers the vertical scattering optical depth from the per-body row', () => {
     // βRs·hR undoes the /hR the mesh layer applies, so the table's authored
     // vertical optical depths come straight back out.
-    expect(tau[2]).toBeCloseTo(atmo.rayleighCoeff[2] + atmo.mieCoeff, 12);
+    expect(tauS[2]).toBeCloseTo(earth.atmo.rayleighCoeff[2] + earth.atmo.mieCoeff, 12);
   });
 
-  it('over-reads the measured 400 lx / 100 klx terminator value 2x at physical depths', () => {
-    // TWILIGHT_SCATTER_FRAC's ¼ × 0.22 derivation only landed on the measured
-    // 4.0e-3 because the depths were 5x low; restoring them exposes the
-    // over-read. Deriving the fraction properly is stellata-2f6.38.
-    expect(frac(0)).toBeCloseTo(8.0e-3, 4);
+  it('re-derives the tail constants from the measured illuminance table', () => {
+    // The second exponential runs through the 12° and 18° points exactly;
+    // the constants are that closed-form fit, nothing judged.
+    const h = (d: number) => 1 / Math.cos((d * Math.PI) / 180) - 1;
+    const r12 = MEASURED_LX[12] / MEASURED_LX[0];
+    const r18 = MEASURED_LX[18] / MEASURED_LX[0];
+    const reach = (h(18) - h(12)) / Math.log(r12 / r18) / hR;
+    const amp = r12 * Math.exp(h(12) / (reach * hR));
+    expect(TWILIGHT_TAIL_REACH).toBeCloseTo(reach, 1);
+    expect(TWILIGHT_TAIL_AMP / amp).toBeCloseTo(1, 2);
   });
 
-  it('matches measured civil-twilight illuminance 6° past the terminator', () => {
-    // Sun 6° below the horizon: ~4 lx against the terminator's ~400, so 1 %.
-    expect(frac(6) / frac(0)).toBeCloseTo(0.0124, 4);
+  it('holds the measured terminator anchor within a factor of 2', () => {
+    // ¼·τ_s·T̄(τ_ext·Ch): the ¼ is the hemispheric down-flux of an isotropic
+    // in-scatter over the half-dome the horizon sun still lights; T̄ is the
+    // column-mean transmission of a horizon sun through Chapman airmass —
+    // README.md § Twilight. Residual +75 % is the un-modelled ozone Chappuis
+    // absorption and up-scatter loss, both of which only push down.
+    const measured = MEASURED_LX[0] / FULL_SUN_LX;
+    expect(frac(0)).toBeCloseTo(7.0e-3, 4);
+    expect(frac(0) / measured).toBeGreaterThan(1);
+    expect(frac(0) / measured).toBeLessThan(2);
+  });
+
+  it('holds civil twilight (6°) within a factor of 1.5', () => {
+    const measured = MEASURED_LX[6] / MEASURED_LX[0];
+    expect(frac(6) / frac(0) / measured).toBeGreaterThan(1 / 1.5);
+    expect(frac(6) / frac(0) / measured).toBeLessThan(1.5);
+  });
+
+  it('follows the measured tail through nautical (12°) and astronomical (18°) twilight', () => {
+    // The old single exponential sat 1000x dark at 12° and ~1e12x at 18°.
+    expect(frac(12) / frac(0) / (MEASURED_LX[12] / MEASURED_LX[0])).toBeCloseTo(1.0, 1);
+    expect(frac(18) / frac(0) / (MEASURED_LX[18] / MEASURED_LX[0])).toBeCloseTo(1.0, 1);
   });
 
   it('is blue on Earth — the twilight carries the air\'s own hue', () => {
-    const t = twilightIrradianceFrac(0, hR, tau);
+    const t = skyIrradianceFrac(0, hR, tauS, tauA);
     expect(t[2]).toBeGreaterThan(t[0]);
   });
 
-  it('floors the whole lit side at its terminator value', () => {
-    // Deliberate floor, NOT the physics: real skylight peaks at local noon
-    // (~10-15 % of direct sun on Earth against the 0.6 % here). See
-    // README.md § Where this model is wrong.
-    expect(shadowEdgeAltitude(0.5)).toBe(0);
-    expect(frac(-30)).toBe(frac(0));
+  it('day-side skylight rises with solar elevation to the measured noon share', () => {
+    // Noon diffuse-to-direct on clear Earth measures ~10-15 %; the beam-
+    // interception term (single scatter, no ground bounce) lands just under.
+    const noon = dot(LUMA, skyIrradianceFrac(1, hR, tauS, tauA));
+    const directHoriz = dot(LUMA, [
+      Math.exp(-(tauS[0] + tauA[0])), Math.exp(-(tauS[1] + tauA[1])), Math.exp(-(tauS[2] + tauA[2])),
+    ] as Vec3);
+    expect(noon).toBeCloseTo(0.0745, 3);
+    expect(noon / directHoriz).toBeGreaterThan(0.05);
+    expect(noon / directHoriz).toBeLessThan(0.15);
+    const at = (mu: number) => dot(LUMA, skyIrradianceFrac(mu, hR, tauS, tauA));
+    expect(at(1)).toBeGreaterThan(at(0.5));
+    expect(at(0.5)).toBeGreaterThan(at(0.1));
+    expect(at(0.1)).toBeGreaterThan(at(0));
   });
 
-  it('under-reads the measured tail past 6°, which is the documented gap', () => {
-    // Pinning the shortfall so closing it registers as a deliberate change
-    // rather than a silent one. The single exponential tracks the anchor above
-    // and then falls off a cliff: nautical twilight measures ~0.008 lx against
-    // the terminator's ~400, and past ~6° the light reaching the ground has
-    // bounced, which a single scatter out of a lit column cannot produce.
-    // README.md § Where this model is wrong.
-    const measuredRatio12 = 0.008 / 400;
-    expect(frac(12) / frac(0)).toBeLessThan(measuredRatio12 / 100);
+  it('is continuous across the terminator', () => {
+    expect(dot(LUMA, skyIrradianceFrac(1e-7, hR, tauS, tauA)))
+      .toBeCloseTo(dot(LUMA, skyIrradianceFrac(-1e-7, hR, tauS, tauA)), 6);
   });
 
   it('scales with the scattering optical depth, so thick air means bright dusk', () => {
-    // At physical depths Venus's above-cloud column sits below Earth's full
-    // one, so Titan — the thickest row — carries the comparison.
-    const titan = SOL_BODIES.find((b) => b.name === 'Titan')!.atmosphere!;
-    const titanTau = titan.rayleighCoeff[1] + titan.mieCoeff;
-    expect(TWILIGHT_SCATTER_FRAC * titanTau).toBeGreaterThan(frac(0));
+    // Titan — the thickest row — outshines Earth at its own terminator even
+    // through its blue-absorbing haze.
+    const titan = rowOf('Titan');
+    const titanDusk = dot(LUMA, skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
+    expect(titanDusk).toBeGreaterThan(frac(0));
+  });
+
+  it('pins the full-phase disc mean the flux divisor folds in', () => {
+    // ~7 % of host irradiance on Earth — the size of the overshoot the
+    // meshSurfaceLuminance divisor now cancels (emission/mesh-surface-pure.ts).
+    expect(skyIrradianceDiscMeanLuma(hR, tauS, tauA)).toBeCloseTo(0.0705, 3);
+    const titan = rowOf('Titan');
+    expect(skyIrradianceDiscMeanLuma(titan.hR, titan.tauS, titan.tauA)).toBeCloseTo(0.157, 2);
+  });
+
+  it('reaches further past the terminator on Titan — the scale height sets the band', () => {
+    const titan = rowOf('Titan');
+    const titanTail = (d: number) =>
+      dot(LUMA, skyIrradianceFrac(-Math.sin((d * Math.PI) / 180), titan.hR, titan.tauS, titan.tauA))
+      / dot(LUMA, skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
+    expect(titanTail(12)).toBeGreaterThan(100 * (frac(12) / frac(0)));
   });
 });
 
