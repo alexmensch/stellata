@@ -46,17 +46,10 @@ export function distToSlider(pc: number, isMin: boolean): number {
 
 /** Photography convention: signed stops with a sign on non-zero values,
  *  plus what the observer can actually perceive at that trim — a
- *  correctly-vanishing star field otherwise reads as a bug. The
- *  adapted-to clause names what took the exposure down, which is the
- *  other half of that explanation. */
-export function evLabel(
-  ev: number,
-  effectiveLimitMag: number,
-  adaptedTo: string | null,
-): string {
+ *  correctly-vanishing star field otherwise reads as a bug. */
+export function evLabel(ev: number, effectiveLimitMag: number): string {
   const stops = ev === 0 ? '0' : `${ev > 0 ? '+' : '−'}${Math.abs(ev).toFixed(2)}`;
-  const adapted = adaptedTo === null ? '' : ` · adapted to ${adaptedTo}`;
-  return `${stops} EV${adapted} · stars to m ${effectiveLimitMag.toFixed(1)}`;
+  return `${stops} EV · stars to m ${effectiveLimitMag.toFixed(1)}`;
 }
 
 export function bindControls(stellata: Stellata) {
@@ -287,11 +280,7 @@ export function bindControls(stellata: Stellata) {
   // mutation events the rest of the panel syncs on. Write-on-change keeps
   // it off the per-frame DOM path.
   const syncEvReadout = () => {
-    const text = evLabel(
-      stellata.getEv(),
-      stellata.getEffectiveLimitMag(),
-      stellata.getAdaptedToLabel(),
-    );
+    const text = evLabel(stellata.getEv(), stellata.getEffectiveLimitMag());
     if (evReadout.textContent !== text) evReadout.textContent = text;
   };
 

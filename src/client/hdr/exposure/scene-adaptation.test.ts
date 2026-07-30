@@ -1,277 +1,152 @@
-import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
-import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
-import { luminanceForMagnitude } from '../emission-pure';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { exposureForMagLimit } from './exposure-epoch';
-import { SceneAdaptation, type SceneAdaptationDeps } from './scene-adaptation';
+import type { ReducedStatistic } from './reduction/reduction-pass';
+import { SceneAdaptation } from './scene-adaptation';
 import {
+  adaptationDm,
   ADAPT_SLEW_TAU_S,
-  DIFFUSE_FIELD_L,
+  DISC_PEAK_OVER_MEAN,
   eyeAdaptationDm,
-  highlightGuardDm,
   L_ADAPT,
   L_CAP,
-  type LuminanceSample,
-  negligibleAppMag,
-  starAdaptationWindowPc,
-  starSourceKey,
 } from './scene-adaptation-pure';
 
-const W = 1920;
-const H = 1080;
-const EXPOSURE = exposureForMagLimit(7.8);
+const BASE_EXPOSURE = exposureForMagLimit(7.8);
 
-interface Star {
-  pc: number;
-  appMag: number;
-  physSizePx?: number;
-  label?: string;
-}
-
-function harness(
-  bodies: LuminanceSample[],
-  stars: Star[] = [],
-  transmission: (sourceKey: number) => number = () => 1,
-) {
-  const camera = new THREE.PerspectiveCamera(50, W / H, 1e-12, 1e9);
-  camera.position.set(0, 0, 0);
-  camera.updateMatrixWorld();
-  // Stars sit straight down −Z, the default look direction, so every one
-  // of them projects to the centre of the frame.
-  const positions = new Float32Array(stars.length * 3);
-  stars.forEach((s, i) => { positions[i * 3 + 2] = -s.pc; });
-  const deps: SceneAdaptationDeps = {
-    viewport: { value: new THREE.Vector2(W, H) },
-    baseExposure: () => EXPOSURE,
-    bodies: {
-      forEachDrawnBody: (_camera, _w, _h, visit) => { for (const b of bodies) visit(b); },
-    },
-    stars: {
-      forEachStarNearCamera: (dPc, cb) => {
-        for (let i = 0; i < stars.length; i++) {
-          if (stars[i].pc <= dPc && cb(i)) return;
-        }
-      },
-      renderedSizeComponents: (idx, out): RenderedSizeComponents => {
-        out.appMag = stars[idx].appMag;
-        out.appSizePx = 1;
-        out.physSizePx = stars[idx].physSizePx ?? 0;
-        return out;
-      },
-      localPositions: () => positions,
-      starLabel: (idx) => stars[idx].label ?? null,
-    },
-    transmission,
-  };
-  return { adaptation: new SceneAdaptation(deps), camera };
-}
-
-function body(patch: Partial<LuminanceSample>): LuminanceSample {
+/** A frame holding one body of disc-mean luminance `discMeanL` over
+ *  `coverage` of the pixels, as the reduction would return it. The peak
+ *  rides the mean rather than being free: a buffer max cannot come out
+ *  below the buffer mean, so the two branches are never fed a pair the
+ *  frame could not produce. */
+function frame(discMeanL: number, coverage: number): ReducedStatistic {
   return {
-    appMag: 0,
-    diameterPx: 0,
-    screenX: 0.5 * W,
-    screenY: 0.5 * H,
-    cameraDistancePc: 1,
-    fluxScale: 1,
-    sourceKey: 0,
-    label: null,
-    ...patch,
+    meanL: discMeanL * coverage,
+    peakL: discMeanL * DISC_PEAK_OVER_MEAN,
+    renderExposure: BASE_EXPOSURE,
   };
 }
+
+/** Coverage far under the guard handover, so the perception branch is the
+ *  one being exercised. */
+const POINT_COVERAGE = 1e-3;
+
+let reduced: ReducedStatistic | null;
+let base: number;
+
+function makeAdaptation(): SceneAdaptation {
+  return new SceneAdaptation({
+    baseExposure: () => base,
+    reduced: () => reduced,
+  });
+}
+
+const SETTLE_FRAMES = 200;
+const SETTLE_STEP_MS = 1000 * ADAPT_SLEW_TAU_S;
+/** Wall clock the last `settle` frame ran at, so a follow-up frame can
+ *  hand the slew a realistic dt rather than the clamp. */
+const SETTLED_MS = (SETTLE_FRAMES - 1) * SETTLE_STEP_MS;
+
+/** Run the one-pole slew out to its settle band — an exponential never
+ *  arrives, so what lands the value is `ADAPT_SLEW_SETTLE_MAG`. */
+function settle(adaptation: SceneAdaptation, chart = false): number {
+  let dm = 0;
+  for (let i = 0; i < SETTLE_FRAMES; i++) {
+    dm = adaptation.measure(chart, i * SETTLE_STEP_MS, false);
+  }
+  return dm;
+}
+
+beforeEach(() => {
+  reduced = null;
+  base = BASE_EXPOSURE;
+});
 
 describe('SceneAdaptation', () => {
-  it('reports no cut on an empty dark frame', () => {
-    const { adaptation, camera } = harness([]);
-    expect(adaptation.measure(camera, false, 0, false)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBe(DIFFUSE_FIELD_L);
-    expect(adaptation.getDominantLabel()).toBeNull();
-  });
-
-  it('cuts on a resolved body and names what it adapted to', () => {
-    // Coverage cancels: a disc's surface brightness × its area is its
-    // flux, so the cut follows the flux whatever the disc's size.
-    const coverage = 0.2;
-    const diameterPx = 2 * Math.sqrt((coverage * W * H) / Math.PI);
-    const surfaceL = 3.57e5;
-    const appMag = -2.5 * Math.log10((surfaceL * coverage * W * H) / EXPOSURE);
-    const { adaptation, camera } = harness([body({ appMag, diameterPx, label: 'Venus' })]);
-    const dm = adaptation.measure(camera, false, 0, false);
-    // Well over the handover coverage, so the guard governs and the disc
-    // lands on L_CAP rather than on the perception branch's L_ADAPT/f.
-    expect(adaptation.getPeakLuminance()).toBeCloseTo(surfaceL, -1);
-    expect(dm).toBeCloseTo(highlightGuardDm(surfaceL), 9);
-    expect(dm).toBeGreaterThan(eyeAdaptationDm(surfaceL * coverage + DIFFUSE_FIELD_L));
-    expect(surfaceL * 10 ** (0.4 * dm)).toBeCloseTo(L_CAP, 9);
-    expect(adaptation.getDominantLabel()).toBe('Venus');
-  });
-
-  it('takes the eclipse dim as a real flux loss', () => {
-    const lit = body({ appMag: -20, label: 'Io' });
-    const eclipsed = body({ appMag: -20, fluxScale: 0.01, label: 'Io' });
-    const a = harness([lit]);
-    const b = harness([eclipsed]);
-    const dmLit = a.adaptation.measure(a.camera, false, 0, false);
-    const dmEclipsed = b.adaptation.measure(b.camera, false, 0, false);
-    expect(dmLit - dmEclipsed).toBeCloseTo(-5, 3);
-  });
-
-  it('drops a source the coverage pass measured as fully blocked', () => {
-    // Sol behind the night side of Saturn: the one contributing source in
-    // the frame is light that never reached the camera.
-    const sol = body({
-      appMag: -26, diameterPx: 11, cameraDistancePc: 1e-4, sourceKey: 7, label: 'Sol',
-    });
-    const open = harness([sol]);
-    const blocked = harness([sol], [], (key) => (key === 7 ? 0 : 1));
-    expect(open.adaptation.measure(open.camera, false, 0, false)).toBeLessThan(-15);
-    expect(blocked.adaptation.measure(blocked.camera, false, 0, false)).toBe(0);
-    expect(blocked.adaptation.getMeanLuminance()).toBeCloseTo(DIFFUSE_FIELD_L, 12);
-  });
-
-  it('buffers the whole walk, since the coverage pass reads it afterwards', () => {
-    // Nothing reduces until the walk ends and the pool outlives it: the
-    // measurement the next frame consumes is uploaded from these slots.
-    const bodies = [
-      body({ appMag: -26, diameterPx: 11, sourceKey: 1, label: 'Sol' }),
-      body({ appMag: -20, diameterPx: 900, sourceKey: 2, label: 'Saturn' }),
-      body({ appMag: -15, diameterPx: 4000, sourceKey: 3, label: 'Titan' }),
-    ];
-    const { adaptation, camera } = harness(bodies);
-    adaptation.measure(camera, false, 0, false);
-    expect(adaptation.sourceCount()).toBe(3);
-    expect(adaptation.sources().slice(0, 3).map((b) => b.sourceKey)).toEqual([1, 2, 3]);
-    expect(adaptation.getDominantLabel()).toBe('Sol');
-  });
-
-  it('keys stars clear of the bodies, so neither reads the other\'s throughput', () => {
-    const { adaptation, camera } = harness(
-      [body({ appMag: -20, sourceKey: 0, label: 'Mercury' })],
-      [{ pc: 1e-5, appMag: -26, physSizePx: 20, label: 'Sol' }],
-    );
-    adaptation.measure(camera, false, 0, false);
-    const keys = adaptation.sources()
-      .slice(0, adaptation.sourceCount()).map((b) => b.sourceKey);
-    expect(keys).toEqual([0, starSourceKey(0)]);
-  });
-
-  it('snaps on the first frame — a fresh scene must not fade up', () => {
-    const bodies = [body({ appMag: -25, diameterPx: 600, label: 'Venus' })];
-    const { adaptation, camera } = harness(bodies);
-    const first = adaptation.measure(camera, false, 0, false);
-    expect(first).toBeLessThan(-10);
-    // And the same on re-entry from chart, which drops the slew's state.
-    adaptation.measure(camera, true, 16, false);
-    expect(adaptation.measure(camera, false, 32, false)).toBeCloseTo(first, 9);
-  });
-
-  it('ramps over the time constant, settles, and snaps through a warp', () => {
-    const bodies = [body({ appMag: -25, diameterPx: 600, label: 'Venus' })];
-    const { adaptation, camera } = harness(bodies);
-    const deep = adaptation.measure(camera, false, 0, false);
-    bodies.length = 0;
-    // One τ of 60 Hz frames covers 1 − 1/e of the way back to zero, and
-    // never overshoots on the way.
-    let t = 0;
-    let prev = deep;
-    for (; t < ADAPT_SLEW_TAU_S * 1000; t += 1000 / 60) {
-      const dm = adaptation.measure(camera, false, t, false);
-      expect(dm).toBeGreaterThanOrEqual(prev);
-      prev = dm;
-    }
-    expect(adaptation.getDm() / deep).toBeCloseTo(Math.exp(-1), 1);
-    // It reaches exactly 0 rather than approaching it forever, which is
-    // what lets the adapted-to label drop.
-    for (let i = 0; i < 600; i++) {
-      t += 1000 / 60;
-      adaptation.measure(camera, false, t, false);
-    }
-    expect(adaptation.getDm()).toBe(0);
-    expect(adaptation.getDominantLabel()).toBeNull();
-  });
-
-  it('bypasses the slew while warping', () => {
-    const bodies = [body({ appMag: -25, diameterPx: 600, label: 'Venus' })];
-    const { adaptation, camera } = harness(bodies);
-    expect(adaptation.measure(camera, false, 0, false)).toBeLessThan(-10);
-    bodies.length = 0;
-    // The camera is somewhere else entirely by the next frame, so ramping
-    // from the old scene's cut would read as a flash.
-    expect(adaptation.measure(camera, false, 16, true)).toBe(0);
-  });
-
-  it('drops a body that has slid off-frame', () => {
-    const off = body({ appMag: -20, screenX: -50, screenY: -50 });
-    const { adaptation, camera } = harness([off]);
-    expect(adaptation.measure(camera, false, 0, false)).toBe(0);
-  });
-
-  it('names the brightest source, not the last one seen', () => {
-    const { adaptation, camera } = harness([
-      body({ appMag: -20, label: 'Jupiter' }),
-      body({ appMag: -25, label: 'Venus' }),
-      body({ appMag: -10, label: 'Mars' }),
-    ]);
-    adaptation.measure(camera, false, 0, false);
-    expect(adaptation.getDominantLabel()).toBe('Venus');
-  });
-
-  it('withholds the label while nothing is adapting', () => {
-    // Bright enough to be the dominant source, far too faint to cut.
-    const { adaptation, camera } = harness([body({ appMag: -4.4, label: 'Venus' })]);
-    expect(adaptation.measure(camera, false, 0, false)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBeGreaterThan(DIFFUSE_FIELD_L);
-    expect(adaptation.getDominantLabel()).toBeNull();
-  });
-
-  it('measures nothing in chart mode and leaves no stale cut behind', () => {
-    const { adaptation, camera } = harness([body({ appMag: -25, label: 'Venus' })]);
-    expect(adaptation.measure(camera, false, 0, false)).toBeLessThan(-10);
-    expect(adaptation.measure(camera, true, 0, false)).toBe(0);
-    expect(adaptation.getDm()).toBe(0);
+  it('reports no cut before the first measurement lands', () => {
+    const adaptation = makeAdaptation();
+    expect(settle(adaptation)).toBe(0);
     expect(adaptation.getMeanLuminance()).toBe(0);
-    expect(adaptation.getDominantLabel()).toBeNull();
+    expect(adaptation.getPeakLuminance()).toBe(0);
   });
 
-  it('adapts to a close star — the flux gate, not resolvedness', () => {
-    // Sol at 100 AU: a third of a pixel wide, 1036× over the anchor.
-    const sol = { pc: 100 * 4.8481368e-6, appMag: -16.74, label: 'Sol' };
-    const { adaptation, camera } = harness([], [sol]);
-    const dm = adaptation.measure(camera, false, 0, false);
-    const expected = luminanceForMagnitude(EXPOSURE, sol.appMag) / (W * H);
-    expect(expected / L_ADAPT).toBeCloseTo(1036, 0);
-    // A point source is below the handover coverage by construction, so
-    // the perception branch governs and the star is allowed to clip.
-    expect(dm).toBeCloseTo(eyeAdaptationDm(expected + DIFFUSE_FIELD_L), 9);
-    expect(dm).toBeGreaterThan(highlightGuardDm(adaptation.getPeakLuminance()));
-    expect(adaptation.getDominantLabel()).toBe('Sol');
+  it('cuts on the reduced mean once it does', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(settle(adaptation)).toBeCloseTo(eyeAdaptationDm(100 * L_ADAPT), 6);
+    expect(adaptation.getMeanLuminance()).toBeCloseTo(100 * L_ADAPT, 9);
   });
 
-  it('skips every star below the flux gate', () => {
-    const windowPc = starAdaptationWindowPc(EXPOSURE, W * H);
-    const gateMag = negligibleAppMag(EXPOSURE, W * H);
-    const field = Array.from({ length: 200 }, (_, i) => ({
-      pc: 0.1 + 0.01 * i,
-      appMag: gateMag + 0.5,
-      label: `star ${i}`,
-    }));
-    expect(field.every((s) => s.pc < windowPc)).toBe(true);
-    const { adaptation, camera } = harness([], field);
-    expect(adaptation.measure(camera, false, 0, false)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBe(DIFFUSE_FIELD_L);
-  });
-
-  it('fades a star out at the window bound instead of popping', () => {
-    const windowPc = starAdaptationWindowPc(EXPOSURE, W * H);
-    const magAt = (pc: number) => -14 + 5 * (Math.log10(pc) - 1);
-    const dmAt = (pc: number) => {
-      const { adaptation, camera } = harness([], [{ pc, appMag: magAt(pc), label: 'giant' }]);
-      return adaptation.measure(camera, false, 0, false);
+  it('divides out the exposure the frame was rendered with', () => {
+    // The attachment carries the live adapted scalar; the statistic has to
+    // read at the base one, or the loop feeds itself. Four magnitudes of
+    // cut in the render exposure must leave the measurement unmoved.
+    const adaptation = makeAdaptation();
+    const cutExposure = BASE_EXPOSURE * 10 ** (0.4 * -4);
+    reduced = {
+      meanL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
+      peakL: L_CAP * (cutExposure / BASE_EXPOSURE),
+      renderExposure: cutExposure,
     };
-    // A source bright enough to matter at the bound leaves continuously.
-    expect(dmAt(windowPc * 0.999)).toBeCloseTo(0, 6);
-    expect(dmAt(windowPc * 1.001)).toBe(0);
-    expect(dmAt(windowPc * 0.9)).toBeLessThan(dmAt(windowPc * 0.95));
-    expect(dmAt(windowPc * 0.7)).toBeLessThan(dmAt(windowPc * 0.9));
+    expect(adaptation.measure(false, 0, false)).toBe(0);
+    expect(adaptation.getMeanLuminance()).toBeCloseTo(L_ADAPT, 9);
+  });
+
+  it('lets the guard raise the exposure but never lower it', () => {
+    const adaptation = makeAdaptation();
+    // A body filling most of the frame: coverage is above the handover, so
+    // the guard governs and the cut is SHALLOWER than the eye branch alone.
+    reduced = frame(100 * L_ADAPT, 0.9);
+    const withPeak = settle(adaptation);
+    expect(withPeak).toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 6);
+    expect(withPeak).toBeGreaterThan(eyeAdaptationDm(reduced.meanL));
+  });
+
+  it('leaves a peak under the cap alone', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(0.5 * L_CAP / DISC_PEAK_OVER_MEAN, 1);
+    expect(settle(adaptation)).toBe(0);
+  });
+
+  it('slews toward a changed measurement rather than stepping to it', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(settle(adaptation)).toBe(0);
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    const target = eyeAdaptationDm(1e4 * L_ADAPT);
+    const first = adaptation.measure(false, SETTLED_MS + 16, false);
+    expect(first).toBeLessThan(0);
+    expect(first).toBeGreaterThan(target);
+    expect(settle(adaptation)).toBeCloseTo(target, 6);
+  });
+
+  it('snaps under warp instead of ramping from the old scene', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    adaptation.measure(false, 0, false);
+    expect(adaptation.measure(false, 16, true))
+      .toBeCloseTo(eyeAdaptationDm(1e4 * L_ADAPT), 9);
+  });
+
+  it('measures nothing in chart mode, and re-enters the scene snapped', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    settle(adaptation);
+    expect(adaptation.measure(true, 1e6, false)).toBe(0);
+    expect(adaptation.getMeanLuminance()).toBe(0);
+    // lastNowMs dropped with the reset, so the first scene frame back is a
+    // full blend rather than a ramp up from chart's zero cut.
+    expect(adaptation.measure(false, 1e6 + 16, false))
+      .toBeCloseTo(eyeAdaptationDm(1e4 * L_ADAPT), 9);
+  });
+
+  it('reads against the live instrument exposure, not a fixed one', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    settle(adaptation);
+    const atDefault = adaptation.getMeanLuminance();
+    base = exposureForMagLimit(12.8);
+    adaptation.measure(false, 1e6, false);
+    expect(adaptation.getMeanLuminance() / atDefault)
+      .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
   });
 });

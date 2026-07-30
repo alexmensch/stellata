@@ -185,16 +185,7 @@ interface LocalCluster {
 
 localDepthPass.register(cluster): () => void   // unregister
 localDepthPass.render(renderer, camera)        // after the main render
-localDepthPass.memberSpheres(): readonly MemberSphere[]
 ```
-
-`memberSpheres()` replays what the last `render()` partitioned. The
-exposure statistic's coverage pass reads it — and re-renders `scene`
-itself — to derive a single bracket over the same members, which is what
-keeps the occlusion measurement on the geometry this pass drew rather
-than a CPU mirror of it
-(`../hdr/exposure/coverage/README.md`). Empty means no cluster
-reported members, and therefore nothing to occlude.
 
 - `collectSpheres` runs per frame; appending nothing marks the
   cluster inactive (the pass no-ops, zero cost). Spheres cover every
