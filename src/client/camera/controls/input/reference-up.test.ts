@@ -78,7 +78,7 @@ describe('ReferenceUpController', () => {
 
     // The regression this feature exists for: parallel transport around a
     // loop returns the camera to its starting pose with a net roll.
-    expect(Math.abs(refUp.renderedRollError(camera))).toBeGreaterThan(0.01);
+    expect(Math.abs(refUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS))).toBeGreaterThan(0.01);
   });
 
   it('holds the view level across the same circuit when corrected per frame', () => {
@@ -89,7 +89,7 @@ describe('ReferenceUpController', () => {
 
     circuit(refUp, camera, target, true);
 
-    expect(refUp.renderedRollError(camera)).toBeCloseTo(0, 6);
+    expect(refUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 6);
     expect(refUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
   });
 
@@ -101,7 +101,7 @@ describe('ReferenceUpController', () => {
 
     refUp.roll(camera, 0.3);
     camera.lookAt(target);
-    expect(refUp.renderedRollError(camera)).toBeCloseTo(-0.3, 6);
+    expect(refUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(-0.3, 6);
     const tilted = refUp.get().clone();
 
     circuit(refUp, camera, target, true);
@@ -112,7 +112,7 @@ describe('ReferenceUpController', () => {
     // direction — it only reads 0.3 from where the roll was applied.
     expect(refUp.get().angleTo(tilted)).toBeCloseTo(0, 9);
     expect(refUp.correct(camera)).toBeCloseTo(0, 9);
-    expect(Math.abs(refUp.renderedRollError(camera))).toBeGreaterThan(0.01);
+    expect(Math.abs(refUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS))).toBeGreaterThan(0.01);
   });
 
   it('snaps the reference exactly back onto galactic north', () => {
@@ -123,12 +123,12 @@ describe('ReferenceUpController', () => {
 
     refUp.roll(camera, 0.01);
     expect(refUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeGreaterThan(0);
-    expect(refUp.referenceRollError(camera)).toBeCloseTo(-0.01, 6);
+    expect(refUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(-0.01, 6);
 
-    refUp.snapReferenceToNorth(camera);
+    refUp.snapReferenceTo(camera, GALACTIC_NORTH_POLE_ICRS);
 
     expect(refUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
-    expect(refUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+    expect(refUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 9);
   });
 
   it('adopts the rendered roll into the reference on the observe seam', () => {
@@ -142,7 +142,7 @@ describe('ReferenceUpController', () => {
 
     // adoptFromCamera ran inside rollQuaternion, so the reference now IS the
     // rendered screen-up — the handover back to navigate is a no-op.
-    expect(refUp.renderedRollError(camera)).toBeCloseTo(-0.4, 6);
+    expect(refUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(-0.4, 6);
     const upBefore = camera.up.clone();
     refUp.correct(camera);
     expect(camera.up.angleTo(upBefore)).toBeCloseTo(0, 9);

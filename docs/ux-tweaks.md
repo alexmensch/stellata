@@ -13,8 +13,10 @@ for the surrounding context.
   `stellata.ts` constructor.
 - **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
 - **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
-  `camera/controls/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it is
-  the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
+  `camera/controls/input/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it
+  is the alignment-guide band the roll sticks inside mid-drag; which frame it
+  sticks to follows the displayed coordinate sphere
+  (`coordSphereNorthPole`, `galactic/coord-spheres/README.md`). Roll dead-zone
   is `ROLL_DEADZONE_PX` in `input-controller.ts`.
 - **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
   `camera/controls/input/pinch-zoom-pure.ts`: how many scroll notches a
@@ -81,6 +83,11 @@ for the surrounding context.
   `uChartDiscMinPx` (1.5 px) defaults set in the shared-uniforms map
   in `stellata.ts`; spread linearly across the visible magnitude
   range. `uChartMagBright` (−2.0) is the magnitude that maps to MAX.
+- **Constellation-boundary stipple** — `BOUNDARY_DOT_PX` (1.5 px) /
+  `BOUNDARY_GAP_PX` (3 px) in `constellation-boundary-layer.ts`, the Sky
+  Atlas 2000.0 dotted rule. Screen pixels, not degrees of sky — the dots hold
+  their size through zoom. `BOUNDARY_OPACITY` (0.5) is the weight it shares
+  with the solid coordinate grid.
 - **Variable-ring gap** — `VARIABLE_RING_MIN_GAP_PX` (1.0 px) in
   `chart-labels.ts`. Minimum radial gap between the outer ring and
   the peak inner disc; raise if low-amplitude variables look

@@ -543,7 +543,7 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.register(this.starLocalCluster);
     this.constellationFigureLayer = new ConstellationFigureLayer();
     this.scene.add(this.constellationFigureLayer.group);
-    this.constellationBoundaryLayer = new ConstellationBoundaryLayer();
+    this.constellationBoundaryLayer = new ConstellationBoundaryLayer(sharedUniforms);
     this.scene.add(this.constellationBoundaryLayer.group);
     this.planetBodyField = new PlanetBodyField(sharedUniforms);
     this.scene.add(this.planetBodyField.group);

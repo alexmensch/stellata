@@ -35,7 +35,7 @@ src/client/chart-mode/
 `CHART_REFERENCE_INK` (`#3a3530`) is the ink for chart-mode *reference*
 geometry — the galactic coordinate sphere (`../galactic/coord-spheres/README.md`) and the
 IAU constellation boundaries (`../constellation-boundaries/README.md`),
-which take it at half weight. It sits deliberately lighter than the
+which take it at half weight and dotted. It sits deliberately lighter than the
 near-black figure / label ink so reference lines read as a layer under the
 chart's content. One token, because two modules authoring the same hex is
 how the two drift apart.

@@ -7,7 +7,7 @@ import { solFrameFadeFactor } from '../galactic/galactic-fade';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
-  boundarySegmentVertices,
+  boundaryLineAttributes,
   resolveBoundaryFadeWindowPc,
 } from './boundary-layer-pure';
 
@@ -28,32 +28,64 @@ const FADE: BoundaryFadeTableWire = {
   sampleCounts: [3000, 20000],
 };
 
-describe('boundarySegmentVertices', () => {
+/** Element-wise phase check — the attribute is float32, so exact equality
+ *  against float64 arithmetic fails on the last few digits. */
+function expectPhase(actual: Float32Array, expected: number[]): void {
+  expect(Array.from(actual).length).toBe(expected.length);
+  expected.forEach((v, i) => expect(actual[i]).toBeCloseTo(v, 4));
+}
+
+describe('boundaryLineAttributes', () => {
   it('expands an n-sample polyline into n−1 scaled endpoint pairs', () => {
-    const out = boundarySegmentVertices(
+    const { positions } = boundaryLineAttributes(
       [segment([1, 0, 0, 0, 1, 0, 0, 0, 1])],
       RADIUS,
     );
-    expect(out.length).toBe(12);
-    expect(Array.from(out)).toEqual([
+    expect(positions.length).toBe(12);
+    expect(Array.from(positions)).toEqual([
       100, 0, 0, 0, 100, 0,
       0, 100, 0, 0, 0, 100,
     ]);
   });
 
   it('never joins consecutive arcs — each record contributes its own segments', () => {
-    const out = boundarySegmentVertices(
+    const { positions } = boundaryLineAttributes(
       [segment([1, 0, 0, 0, 1, 0]), segment([0, 0, 1, 0, 0, -1])],
       1,
     );
     // 2 arcs × 1 segment × 2 endpoints × 3 components; the last vertex of arc
     // one and the first of arc two never pair.
-    expect(out.length).toBe(12);
-    expect(Array.from(out.slice(6))).toEqual([0, 0, 1, 0, 0, -1]);
+    expect(positions.length).toBe(12);
+    expect(Array.from(positions.slice(6))).toEqual([0, 0, 1, 0, 0, -1]);
   });
 
   it('drops a degenerate single-sample arc rather than emitting a stub', () => {
-    expect(boundarySegmentVertices([segment([1, 0, 0])], RADIUS).length).toBe(0);
+    const { positions, lineDistances } = boundaryLineAttributes([segment([1, 0, 0])], RADIUS);
+    expect(positions.length).toBe(0);
+    expect(lineDistances.length).toBe(0);
+  });
+
+  // The dash phase has to run along the whole polyline: a per-pair phase (what
+  // computeLineDistances writes) restarts at every subdivision node, so any
+  // node closer together than one dot draws that stretch solid.
+  it('accumulates the dash phase across a polyline’s subdivision nodes', () => {
+    const chord = Math.SQRT2 * RADIUS;
+    const { lineDistances } = boundaryLineAttributes(
+      [segment([1, 0, 0, 0, 1, 0, 0, 0, 1])],
+      RADIUS,
+    );
+    expect(lineDistances.length).toBe(4);
+    // Shared node: the first segment's end and the second's start are the same
+    // point at the same phase, so the pattern crosses the seam unbroken.
+    expectPhase(lineDistances, [0, chord, chord, 2 * chord]);
+  });
+
+  it('restarts the phase per arc, matching the segment split', () => {
+    const { lineDistances } = boundaryLineAttributes(
+      [segment([1, 0, 0, 0, 1, 0]), segment([0, 0, 1, 0, 0, -1])],
+      1,
+    );
+    expectPhase(lineDistances, [0, Math.SQRT2, 0, 2]);
   });
 });
 
