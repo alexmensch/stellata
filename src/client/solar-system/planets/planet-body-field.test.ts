@@ -30,7 +30,7 @@ import {
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { cullMagFor, drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
@@ -1185,44 +1185,6 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
     f.dispose();
   });
 
-  it('an eclipsing body still reaches the adaptation walk, as a zero-flux occluder', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(20));
-    f.attachHost(
-      0,
-      {
-        hostStarIdx: 0,
-        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
-        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
-      },
-      4.83, R_SUN_PC, new THREE.Vector3(0, 0, 0), 0, 0,
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (f as any).hosts.get(0)!.orientation.identity();
-    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
-    const KM_PC_LOCAL = 1 / 3.0857e13;
-    camera.position.set(0, 0, -1 * AU_PC - 20 * 6000 * KM_PC_LOCAL);
-    camera.lookAt(0, 0, 1);
-    camera.updateMatrixWorld();
-    camera.updateProjectionMatrix();
-    f.update(camera, 0, 0);
-
-    // Glare dead (φ(α) → 0 at phase angle 180°) but the surface is
-    // resolved, so the body must still be visited: it is what keeps the
-    // star behind it out of the adaptation mean.
-    expect(f.renderedPlanetSizePx(0, camera.position)).toBe(0);
-    const seen: Array<{ appMag: number; diameterPx: number }> = [];
-    f.forEachDrawnBody(camera, 800, 600, (s) => {
-      seen.push({ appMag: s.appMag, diameterPx: s.diameterPx });
-    });
-    expect(seen).toHaveLength(1);
-    // Fainter than the just-visible floor — that IS the condition which
-    // used to drop it from the walk — yet visited, and large enough that
-    // its mesh draws and therefore writes occluder depth. Emitting under
-    // threshold, it can only remove flux from the statistic, never add any.
-    expect(seen[0].appMag).toBeGreaterThan(drawCutoffMag(20, 20, false));
-    expect(seen[0].diameterPx).toBeGreaterThan(MESH_FADE_MIN_PX);
-    f.dispose();
-  });
 });
 
 describe('PlanetBodyField flat-instance identity + geometry accessors', () => {

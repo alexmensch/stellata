@@ -81,6 +81,11 @@ uniform float uSizeMin;
 uniform float uSizeMax;
 uniform float uSizeSpan;
 uniform float uSizeKnee;
+// The fragment stage's profile-shaping knobs, read here only to recover
+// the exponent the kernel's area integral needs.
+uniform float uDistNMin;
+uniform float uLumBiasMin;
+uniform float uLumBiasMax;
 
 // Mesh resolvedness band in physical CSS px (MESH_FADE_MIN/FULL_PX from
 // mesh-crossfade.ts): res = smoothstep(x, y, physSize) fades in the
@@ -106,6 +111,9 @@ out vec2 vUv;
 out float vAppMag;
 out float vSoftness;
 out float vPeakL;
+// The same kernel renormalised to carry the body's true flux — the
+// adaptation statistic's channel. Per instance, like vPeakL.
+out float vFluxPeakL;
 out float vAaWidth;
 
 const float LOG10 = 2.302585093;
@@ -159,6 +167,7 @@ void main() {
     vUv = aCorner;
     vSoftness = 0.0;
     vPeakL = 0.0;
+    vFluxPeakL = 0.0;
     vAaWidth = 0.0;
     return;
   }
@@ -235,6 +244,7 @@ void main() {
       vUv = aCorner;
       vSoftness = 0.0;
       vPeakL = 0.0;
+      vFluxPeakL = 0.0;
       vAaWidth = 0.0;
       return;
     }
@@ -251,9 +261,15 @@ void main() {
     vUv = aCorner;
     vSoftness = 1.0 - iSolidity;
     vPeakL = 0.0;
+    vFluxPeakL = 0.0;
     vAaWidth = 0.0;
     return;
   }
+
+  // Solidity → softness: rocky (1) reads crisp like a white dwarf
+  // (softness 0); gas-giant (0) reads fuzzy like a hypergiant
+  // (softness 1). Same shaping the star pipeline uses for lumClass.
+  float softness = clamp(1.0 - iSolidity, 0.0, 1.0);
 
   // Physical disc size in CSS pixels. θ = 2·atan(R/d_vp).
   float angularToPx = uViewport.y / max(uFovYRad, 1e-9);
@@ -274,6 +290,7 @@ void main() {
     // Chart is deliberately non-photometric and the frag returns before it
     // touches luminance; the assignment only keeps the varying defined.
     vPeakL = 0.0;
+    vFluxPeakL = 0.0;
   } else {
     // Reflected glare = the shared star-perceptual point. A planet reads
     // EXACTLY like a star of its apparent magnitude — same footprint curve,
@@ -290,6 +307,16 @@ void main() {
     // resolve step continuous: past 1 px both sides are the disc's mean
     // surface brightness rather than two unrelated peak-1 encodings.
     vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
+        * uGlareGain * eclipseFactor;
+
+    // The statistic's flux channel. The frag shader shapes the kernel at
+    // physRatio 0, so the exponent is uDistNMin alone; pxSize is CSS px,
+    // which is what keeps the frame mean devicePixelRatio-independent
+    // (../../../hdr/exposure/reduction/README.md § Pixel units). uGlareGain
+    // rides it so the debug knob cannot desynchronise the two channels.
+    vFluxPeakL = stellataKernelFluxPeak(uExposure, appMag, pxSize,
+        perceptualDiscFluxIntegral(perceptualDiscExponent(
+            softness, 0.0, uDistNMin, uDistNMin, uLumBiasMin, uLumBiasMax)))
         * uGlareGain * eclipseFactor;
 
     // Photocentre shift toward the lit limb on a resolved crescent —
@@ -312,10 +339,7 @@ void main() {
   vAppMag = appMag;
   vColor = iColour;
   vUv = aCorner;
-  // Solidity → softness: rocky (1) reads crisp like a white dwarf
-  // (softness 0); gas-giant (0) reads fuzzy like a hypergiant
-  // (softness 1). Same shaping the star pipeline uses for lumClass.
-  vSoftness = clamp(1.0 - iSolidity, 0.0, 1.0);
+  vSoftness = softness;
 
   // Project the planet centre, then offset each corner in screen
   // space by aCorner × pxSize plus the photocentre shift. Mirrors the

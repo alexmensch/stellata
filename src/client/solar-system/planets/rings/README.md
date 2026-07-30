@@ -40,5 +40,6 @@ to a line, which is the physically honest look.
 
 **Rings do dim a source behind them in the exposure statistic**, by
 authored optical depth at the ray's opening angle — no z-test could, they
-write no depth. Seam `forEachRingOccluder`, contract
-`../../../hdr/exposure/coverage/README.md` § Rings.
+write no depth. The annulus dims a source behind it by compositing over
+its statistic texel like any other alpha-blended emitter
+(`../../../hdr/statistic/README.md`).

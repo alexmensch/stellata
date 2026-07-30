@@ -26,10 +26,6 @@ src/client/solar-system/planets/
                                   glow footprints); pick() drops
                                   collapsed bodies so the parent's pick
                                   surface owns the point.
-                                  forEachDrawnBody feeds the exposure-
-                                  adaptation statistic (true angular size
-                                  and flux, never the glare kernel —
-                                  ../../hdr/exposure/README.md).
                                   Also the identity table for Target
                                   {kind:'planet'}: flat instance index ↔
                                   (host, planet-within-host), plus local/

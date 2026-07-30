@@ -38,7 +38,6 @@ import {
   planetApparentMagnitude,
 } from '../perceptual-magnitude';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
-import type { LuminanceSample } from '../../hdr/exposure/scene-adaptation-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -47,7 +46,7 @@ import {
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
-import { projectToScreen, projectToScreenInto } from '../../overlays/overlay-project';
+import { projectToScreen } from '../../overlays/overlay-project';
 import {
   blendDimBuffer,
   dimBlendFactor,
@@ -58,6 +57,7 @@ import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './glare/planet.vert.glsl?raw';
 import planetFrag from './glare/planet.frag.glsl?raw';
+import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
 
 /** Screen separation below which a body reads as one point with its
  *  parent (host star / parent planet). Deliberately looser than the
@@ -250,14 +250,6 @@ export class PlanetBodyField {
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
-  // Scratch owned by forEachDrawnBody: valid only inside one `visit`
-  // call, which is why the sample is documented as read-then-drop.
-  private sampleTmp = new THREE.Vector3();
-  private screenTmp: [number, number] = [0, 0];
-  private adaptationSample: LuminanceSample = {
-    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
-    cameraDistancePc: 0, fluxScale: 1, sourceKey: 0, label: null,
-  };
 
   constructor(
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
@@ -1065,43 +1057,6 @@ export class PlanetBodyField {
     }
   }
 
-  /**
-   * The body term of the exposure-adaptation statistic
-   * (`../../hdr/README.md` § Adaptation): each drawn body's true flux and
-   * TRUE angular footprint. `physSize` deliberately, never the rendered
-   * `max(appSize, physSize)` — the perceptual glare kernel is a display
-   * exaggeration and must not drive exposure. Eclipse dim rides
-   * `fluxScale` because an eclipse is a real light loss; the camera-path
-   * loss of one body sitting in front of another is the statistic's own
-   * occlusion pass, which `cameraDistancePc` orders.
-   */
-  forEachDrawnBody(
-    camera: THREE.PerspectiveCamera,
-    viewportW: number,
-    viewportH: number,
-    visit: (sample: LuminanceSample) => void,
-  ): void {
-    const s = this.adaptationSample;
-    this.forEachDrawnBodyView(camera.position, (host, i, view) => {
-      const idx = host.startInstance + i;
-      if (idx === this.hideIdxUniform.value) return;
-      this.sampleTmp.set(view.planetX, view.planetY, view.planetZ);
-      if (!projectToScreenInto(this.sampleTmp, camera, viewportW, viewportH, this.screenTmp)) {
-        return;
-      }
-      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-      s.appMag = view.appMag;
-      s.diameterPx = this.discSizeTerms(radiusPc, view.dVp, view.appMag).physSize;
-      s.screenX = this.screenTmp[0];
-      s.screenY = this.screenTmp[1];
-      s.cameraDistancePc = view.dVp;
-      s.fluxScale = this.eclipseDimForInstance(idx);
-      s.sourceKey = idx;
-      s.label = host.ps.planets[i].name;
-      visit(s);
-    });
-  }
-
   /** Local-depth-pass mirror draws (disc + glow over the active
    *  cluster's slot range). The solar-system cluster parents this into
    *  the pass scene; it renders nothing while no range is set. */
@@ -1275,6 +1230,7 @@ export class PlanetBodyField {
       m.name = name;
       m.frustumCulled = false;
       m.renderOrder = order;
+      markStatisticEmitter(m);
       return m;
     };
 

@@ -22,7 +22,8 @@ uniform float uFade;
 in vec3 vPosV;
 in vec3 vNormalV;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outStatistic;
 
 void main() {
   // Reconstruct the shell-surface point on the SMOOTH sphere from the
@@ -58,6 +59,11 @@ void main() {
   // operator sees. Undithered: the shell overlaps the body mesh's own
   // fragments at the limb (../../hdr/README.md § Operator).
   vec3 col = min(inscatter * uSunColour * uAirlightLuminance, vec3(STELLATA_LUMA_CEIL));
+  // Premultiplied over, exactly as attachment 0 is: this is the one blend
+  // whose source factor is One, so the fade has to ride the channels as
+  // well as the alpha.
+  float airL = dot(col, STELLATA_LUMA_WEIGHTS) * uFade;
+  outStatistic = stellataStatisticTexel(airL, airL, opacity * uFade);
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }

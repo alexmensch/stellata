@@ -50,6 +50,11 @@ star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
 That occlusion is the local depth pass; the old core mask is gone.
 
+The billboard also carries `vFluxPeakL` — the same kernel renormalised so
+its integral is the body's true flux, for the exposure statistic's flux
+channel (`../../../hdr/statistic/README.md`). `uGlareGain` rides both, so
+the debug knob cannot desynchronise them.
+
 `uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
 multiplier: planet-glare brightness against a star of the same magnitude
 (1 = identical). It is a debug knob, not a calibration one — the
