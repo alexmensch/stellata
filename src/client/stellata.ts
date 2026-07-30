@@ -2737,7 +2737,7 @@ export class Stellata implements FrameAnchor {
    *  rather than run over a stale attachment. */
   private measureAdaptationStatistic() {
     const statistic = this.hdr.statisticTexture();
-    if (!this.hdr.statisticAvailable() || statistic === null) {
+    if (statistic === null) {
       this.reduction.reset();
       return;
     }

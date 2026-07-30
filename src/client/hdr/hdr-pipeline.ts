@@ -201,18 +201,15 @@ export class HdrPipeline {
   }
 
   /** The statistic attachment — flux-correct luminance in R, peak-correct
-   *  in G, written only by the emitters `markStatisticEmitter` admitted.
-   *  Null until the target exists. `exposure/reduction/README.md` reduces
-   *  it. */
+   *  in G, written only by the emitters `markStatisticEmitter` admitted,
+   *  and reduced by `exposure/reduction/README.md`.
+   *
+   *  Null whenever it does not carry this frame's light: before the target
+   *  exists, under the fallback path, and in chart mode, where nothing
+   *  renders into the target at all. */
   statisticTexture(): THREE.Texture | null {
-    return this.rt === null ? null : this.rt.texture[1];
-  }
-
-  /** Whether the statistic attachment carries this frame's light — false
-   *  under the fallback path and in chart mode, where nothing renders
-   *  into the target at all. */
-  statisticAvailable(): boolean {
-    return this.wantsTarget() && this.rt !== null;
+    if (this.rt === null || !this.wantsTarget()) return null;
+    return this.rt.texture[1];
   }
 
   /** Attachment 1 is NONE at rest, so a draw that never asks for it can
