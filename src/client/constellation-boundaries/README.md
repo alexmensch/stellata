@@ -27,7 +27,7 @@ src/client/constellation-boundaries/
   boundary-artifact-loader.ts     Fetch + validate the shipped artifact.
     (+ test)
   boundary-layer-pure.ts          Polyline → line-segment vertex expansion
-    (+ test)                      and the fade window. Pure.
+    (+ test)                      + dash phase, and the fade window. Pure.
 ```
 
 **Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
@@ -71,9 +71,34 @@ set ends up parsed in the browser from a file that isn't deployed.
 
 `ConstellationBoundaryLayer` draws the artifact's arcs as one
 `THREE.LineSegments` — every arc in a single draw call, ~18.6k vertices,
-built once on attach. `boundarySegmentVertices` expands each polyline into
+built once on attach. `boundaryLineAttributes` expands each polyline into
 its own endpoint pairs, so consecutive edge records never join across the
 seam between them.
+
+**Dotted, and the dash phase is ours.** Sky Atlas 2000.0 draws the partition
+as a fine dotted line at the same stroke weight as its solid coordinate grid,
+which is the convention this follows: `BOUNDARY_DOT_PX` / `BOUNDARY_GAP_PX`
+(1.5 px / 3 px) on a `LineDashedMaterial`.
+
+**Sized in screen pixels, not degrees of sky.** The paper pattern is ~0.1° per
+dot; at any FOV reachable here that is sub-pixel, and a sub-pixel stipple reads
+as a faint *solid* line — the failure mode to expect from an angular pattern.
+So the dots hold their pixel size and the sky spacing rides the zoom. The
+conversion is `material.scale` (three shades on `scale × lineDistance`), set
+per frame in `update` from the shared `uFovYRad` / `uViewport` slots:
+`pixelsPerRadian / SPHERE_RADIUS_PC`. One scale covers the whole sphere — the
+arcs sit 50 kpc out and the camera never leaves Sol's neighbourhood while they
+draw, so every vertex is at effectively the same range. `scale` left at its
+default 1 would make each dot 1.5 **parsecs** long on a 50 kpc sphere: nothing
+drawn at all.
+
+`boundaryLineAttributes` emits the `lineDistance` attribute itself, accumulated
+along each polyline. `THREE.Line.computeLineDistances()` cannot be used here:
+on a `LineSegments` it restarts the phase at every *pair*, so each subdivision
+node begins a fresh dot and any node closer together than `dashSize` draws that
+stretch solid — a subdivided arc set comes out looking like a solid line, with
+nothing in the material to point at. Each arc still restarts at 0, matching the
+segment split above.
 
 **Sol-centred, not camera-tracked.** This is the deliberate difference
 from the galactic coordinate sphere, which does track the camera: the
@@ -141,8 +166,9 @@ figures and the Latin names — one switch for every piece of constellation
 chrome. The shell's registry entry ANDs that with the shared warp gate.
 
 **Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
-with the coordinate sphere, at half its weight so both reference layers
-stay distinguishable when drawn together. `renderOrder −0.8` puts the
+with the coordinate sphere, at half its weight — and dotted where the grid is
+solid (§ Chart-mode layer), so the two reference layers stay distinguishable
+when drawn together. `renderOrder −0.8` puts the
 partition under the constellation figure (−0.75) and over the galactic
 disc / grid (−1); `depthTest` is off because the chart starfield renders
 depth-disabled, the same treatment the figure takes in chart mode. The

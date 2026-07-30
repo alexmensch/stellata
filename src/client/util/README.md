@@ -46,7 +46,13 @@ build scripts, tests, and shader uniforms.
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
   `color` is an authored sRGB hex, mapped through the tone-map inverse so
   the line resolves at that appearance out of the HDR pass —
-  `../hdr/README.md` § Chrome) and
+  `../hdr/README.md` § Chrome), its dashed sibling
+  `makeDashedOrbitLineMaterial(color, dash, gap, opacity?)` — dash lengths in
+  whatever unit the consumer's `material.scale` maps world distance into (so a
+  pattern can be authored in screen pixels), and the consumer owns the
+  cumulative `lineDistance` attribute because `computeLineDistances` resets the
+  phase per segment pair (`../constellation-boundaries/README.md`
+  § Chart-mode layer) — and
   the on-screen-size helpers `pixelsPerRadian` (+ `pixelsPerRadianFromFovRad`
   for callers holding the FOV in radians) / `angularRadiusPx` the orbit
   layers use for their pixel-size visibility gate, plus the shared

@@ -303,7 +303,8 @@ anyway. It is part of the declutter cycle, though: the detail level
   visual noise on a paper-chart background).
 - Either sphere swaps stroke colour to `CHART_REFERENCE_INK` (`#3a3530`,
   `../chart-mode/chart-palette.ts` — shared with the IAU constellation
-  boundaries, which draw the same ink at half weight), no transparency, no
+  boundaries, which draw the same ink at half weight, dotted — the grid stays
+  solid), no transparency, no
   blending. The equator/line opacity split is dropped in chart mode
   (paper-chart aesthetic doesn't fade) — except under an active
   Sol-distance fade, which keeps blending on

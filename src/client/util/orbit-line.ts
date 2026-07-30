@@ -53,17 +53,16 @@ export function isFeatureLegible(sizePc: number, distancePc: number, pxPerRad: n
 /** `localPass` strips the built-in log-depth chunks so fragments keep
  *  standard bracket depth — required for any line rendered in the
  *  local depth pass (src/client/local-depth/README.md). */
+function lineMaterialParams(opacity: number) {
+  return { transparent: true, opacity, depthTest: true, depthWrite: false };
+}
+
 export function makeOrbitLineMaterial(
   color: number,
   opacity: number = ORBIT_LINE_OPACITY,
   localPass = false,
 ): THREE.LineBasicMaterial {
-  const mat = new THREE.LineBasicMaterial({
-    transparent: true,
-    opacity,
-    depthTest: true,
-    depthWrite: false,
-  });
+  const mat = new THREE.LineBasicMaterial(lineMaterialParams(opacity));
   setBuiltinChromeColour(mat.color, color);
   if (localPass) {
     mat.onBeforeCompile = (shader) => {
@@ -76,6 +75,30 @@ export function makeOrbitLineMaterial(
     };
     mat.customProgramCacheKey = () => 'orbit-line-local-depth';
   }
+  return mat;
+}
+
+/** Dashed sibling of `makeOrbitLineMaterial`. `dash` / `gap` are lengths in
+ *  whatever unit `material.scale` maps world distance into (three shades on
+ *  `scale × lineDistance`), so a layer can author its pattern in **screen
+ *  pixels** and drive `scale` from the live FOV rather than re-authoring the
+ *  pattern per zoom.
+ *
+ *  The consumer must also supply the `lineDistance` attribute itself: three's
+ *  `computeLineDistances` restarts the phase at every segment pair, which on a
+ *  `LineSegments` draws solid wherever a pair is shorter than one dash. */
+export function makeDashedOrbitLineMaterial(
+  color: number,
+  dash: number,
+  gap: number,
+  opacity: number = ORBIT_LINE_OPACITY,
+): THREE.LineDashedMaterial {
+  const mat = new THREE.LineDashedMaterial({
+    ...lineMaterialParams(opacity),
+    dashSize: dash,
+    gapSize: gap,
+  });
+  setBuiltinChromeColour(mat.color, color);
   return mat;
 }
 
