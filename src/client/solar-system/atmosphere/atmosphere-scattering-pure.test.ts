@@ -16,7 +16,7 @@ import {
   twilightIrradianceFrac,
   verticalScatterOpticalDepth,
 } from './atmosphere-scattering-pure';
-import { SOL_PLANETS } from '../planet-system';
+import { SOL_BODIES, SOL_PLANETS } from '../planet-system';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -338,8 +338,11 @@ describe('twilight on the night-side surface', () => {
     expect(tau[2]).toBeCloseTo(atmo.rayleighCoeff[2] + atmo.mieCoeff, 12);
   });
 
-  it('lands on the measured 400 lx / 100 klx at the geometric terminator', () => {
-    expect(frac(0)).toBeCloseTo(4.0e-3, 4);
+  it('over-reads the measured 400 lx / 100 klx terminator value 2x at physical depths', () => {
+    // TWILIGHT_SCATTER_FRAC's ¼ × 0.22 derivation only landed on the measured
+    // 4.0e-3 because the depths were 5x low; restoring them exposes the
+    // over-read. Deriving the fraction properly is stellata-2f6.38.
+    expect(frac(0)).toBeCloseTo(8.0e-3, 4);
   });
 
   it('matches measured civil-twilight illuminance 6° past the terminator', () => {
@@ -372,9 +375,11 @@ describe('twilight on the night-side surface', () => {
   });
 
   it('scales with the scattering optical depth, so thick air means bright dusk', () => {
-    const venus = SOL_PLANETS.find((p) => p.name === 'Venus')!.atmosphere!;
-    const venusTau = venus.rayleighCoeff[1] + venus.mieCoeff;
-    expect(TWILIGHT_SCATTER_FRAC * venusTau).toBeGreaterThan(frac(0));
+    // At physical depths Venus's above-cloud column sits below Earth's full
+    // one, so Titan — the thickest row — carries the comparison.
+    const titan = SOL_BODIES.find((b) => b.name === 'Titan')!.atmosphere!;
+    const titanTau = titan.rayleighCoeff[1] + titan.mieCoeff;
+    expect(TWILIGHT_SCATTER_FRAC * titanTau).toBeGreaterThan(frac(0));
   });
 });
 

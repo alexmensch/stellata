@@ -290,9 +290,11 @@ export const SOL_PLANETS: readonly Planet[] = [
     // The cloud-top texture carries the visible disc; the atmosphere stays
     // optically thin over it (a limb/airlight overlay, not a second cloud
     // layer that would double-count), mild blue absorption → pale-yellow tint.
+    // Rayleigh: the CO₂ column above the τ=1 cloud tops. Sources:
+    // atmosphere/README.md § Calibrating per-body values.
     atmosphere: {
       heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
-      rayleighCoeff: [0.002, 0.004, 0.010], mieCoeff: 0.12,
+      rayleighCoeff: [0.0035, 0.0068, 0.0156], mieCoeff: 0.12,
       absorbCoeff: [0.003, 0.008, 0.020], mieG: 0.70,
     },
   },
@@ -309,12 +311,12 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
-    // Rayleigh (1/λ⁴) gives the blue airlight; a real aerosol/haze Mie term
-    // (τ ≈ 0.05, grey) desaturates it toward the grey-blue limb seen from
-    // orbit rather than a vivid pure-Rayleigh blue.
+    // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999); the
+    // Mie term is the clean maritime background aerosol column. Sources +
+    // derivations: atmosphere/README.md § Calibrating per-body values.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
-      rayleighCoeff: [0.010, 0.023, 0.050], mieCoeff: 0.05,
+      rayleighCoeff: [0.049, 0.097, 0.221], mieCoeff: 0.05,
       absorbCoeff: [0, 0, 0],
     },
   },
@@ -330,13 +332,14 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
-    // Dust-dominated: negligible molecular Rayleigh, thin Mie dust scatter,
-    // blue-absorbing dust → butterscotch sky (blue forward-sunset falls out
-    // of the Mie phase).
+    // Dust-dominated: the 6.1 hPa CO₂ column's near-zero Rayleigh, the
+    // measured background dust column as grey Mie, and blue-absorbing dust
+    // (measured single-scattering albedo) → butterscotch sky. Sources:
+    // atmosphere/README.md § Calibrating per-body values.
     atmosphere: {
       heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
-      rayleighCoeff: [0.0012, 0.0027, 0.006], mieCoeff: 0.06,
-      absorbCoeff: [0.008, 0.03, 0.08],
+      rayleighCoeff: [0.0013, 0.0025, 0.0057], mieCoeff: 0.2,
+      absorbCoeff: [0.006, 0.022, 0.067],
     },
   },
   {
@@ -466,9 +469,12 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // enough to hide the (near-IR) texture and read as a featureless orange
     // ball: strong grey Mie scatter + heavy blue absorption. Independent of
     // the other bodies (per-row params); do not invert the absorption.
+    // Rayleigh: the full 1.5-bar N₂ column, ~11x Earth's — mostly hidden
+    // beneath the absorbing haze, but its top is Titan's real high-altitude
+    // blue limb. Sources: atmosphere/README.md § Calibrating per-body values.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
-      rayleighCoeff: [0.004, 0.008, 0.016], mieCoeff: 2.5,
+      rayleighCoeff: [0.51, 1.01, 2.31], mieCoeff: 2.5,
       absorbCoeff: [0.15, 0.6, 1.4], mieG: 0.80,
     } },
   { name: 'Iapetus', parentName: 'Saturn', radiusKm: 734.5, albedo: 0.25, type: 'icy', colour: [0.42, 0.35, 0.28] },
