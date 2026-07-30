@@ -78,11 +78,17 @@ export interface Star {
    *  position — catalog byte 34. Only Sol carries
    *  `NO_CONSTELLATION_INDEX`: it sits at the origin and has no direction. */
   conIndex: number;
-  /** The constellation this star's Bayer / Flamsteed / GCVS designation is
-   *  named for, which is editorial rather than positional and diverges from
-   *  `conIndex` where a boundary has since moved past the star (ρ Aql).
-   *  `NO_CONSTELLATION_INDEX` when no designation constellation is known, in
-   *  which case designations fall back to `conIndex`. */
+  /** The constellation this star's designation is named for — editorial, not
+   *  positional, so it diverges from `conIndex` where a boundary has since
+   *  moved past the star. `NO_CONSTELLATION_INDEX` when unknown, in which case
+   *  designations fall back to `conIndex`.
+   *
+   *  Only a GCVS name supplies it today. Bayer and Flamsteed designations no
+   *  longer reach it — their source was AT-HYG's editorial `con` cell, which
+   *  left with the driver — so ρ Aql, the star the field exists for, takes the
+   *  fallback and searches under Delphinus. Known regression, not the intended
+   *  rule: ./README.md § Positional constellation membership has the standing
+   *  behaviour and who restores it. */
   desigConIndex: number;
   flags: number;
   proper: string | null;

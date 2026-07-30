@@ -162,9 +162,11 @@ export interface ApplyVariabilityResult {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   named: number;
-  /** Stars whose `desigConIndex` came from their GCVS designation. Nothing
-   *  upstream sets the field, so this is every named star whose designation
-   *  carries a constellation abbreviation. */
+  /** Stars whose `desigConIndex` came from their GCVS designation. No pass
+   *  upstream sets the field today, so this is currently every named star
+   *  whose designation carries a constellation abbreviation — but the
+   *  disagreement check below stays: it is what keeps the designation
+   *  outranking any editorial index a later pass reinstates. */
   desigConSupplied: number;
 }
 
