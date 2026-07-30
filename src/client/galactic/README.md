@@ -87,7 +87,10 @@ Both grids and their edge labels live in `coord-spheres/` — see
 What matters from out here: they are **mutually exclusive**
 (`filter.coordSphere` is a `'none' | 'galactic' | 'equatorial'` tri-state),
 both sit at `SPHERE_RADIUS_PC` = 50 kpc, and the equatorial one is the sole
-consumer of `solFrameFadeFactor` besides the IAU boundary arcs.
+consumer of `solFrameFadeFactor` besides the IAU boundary arcs. One consumer
+sits outside the layer entirely: the camera's roll snap-to-level reads
+`coordSphereNorthPole(filter.coordSphere)`, so the alignment guide sticks to
+whichever grid is up (`../camera/controls/input/README.md` § Snap-to-level).
 
 ## HUD
 

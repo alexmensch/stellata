@@ -192,7 +192,7 @@ rotating the reference CCW in world space makes content appear CW.
 
 ### Snap-to-level — an alignment guide, not a release-time fixup
 
-While rolling, the view **sticks** to galactic level for as long as the
+While rolling, the view **sticks** to level for as long as the
 requested roll stays inside `SNAP_TO_LEVEL_DEG` (2°) of it: the image
 visibly stops rotating at level, then breaks free on the way out. That
 stick *is* the feedback — the same affordance as Keynote / PowerPoint
@@ -207,16 +207,25 @@ not where it entered. Tracking the virtual position separately is what
 makes the band un-chatterable with one threshold instead of two.
 
 The residual is measured differently per mode, and the split is
-load-bearing. NAVIGATE reads `referenceRollError` (reference vs galactic
-north, about the view axis) because there the quaternion trails
+load-bearing. NAVIGATE reads `referenceRollError` (reference vs the level
+pole, about the view axis) because there the quaternion trails
 `camera.up` by a frame — `lookAt` hasn't consumed the newest roll yet.
 OBSERVE reads `renderedRollError` (the quaternion's own screen-up),
 because that is what the user sees.
 
+**Which frame is level follows the displayed coordinate sphere.** The pole
+comes from `coordSphereNorthPole(filter.coordSphere)`
+(`../../../galactic/coord-spheres/README.md`) — the RA/Dec sphere's own NCP
+while that grid is up, galactic north otherwise. The guide has to stick to
+the grid the user is levelling against; the two poles are ~63° apart, so a
+frame-blind guide never engages on the sphere in front of them. Only the snap
+*target* is frame-aware: the reference default, the pole-cone correction, and
+the band are unchanged.
+
 Leaving a gesture *while still on the guide* re-anchors the reference on
-north **exactly** (`settleRollSnap` → `snapReferenceToNorth`). Snapping
+that pole **exactly** (`settleRollSnap` → `snapReferenceTo`). Snapping
 only rolled the axis until it *renders* level from the current view
-direction, and every axis in the forward/north plane does that — such an
+direction, and every axis in the forward/pole plane does that — such an
 axis would drift back off level as soon as the orbit moved.
 
 ## Pinch-to-zoom

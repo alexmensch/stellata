@@ -58,6 +58,13 @@ one record, so the geometry and its labels cannot disagree about any of them:
 | labels | `l` / `b` in whole degrees | RA in whole hours (`0h`…`23h`), dec signed (`+80°`) so a dec label never reads as a longitude |
 | `fadeWindow` | **absent** — meaningful from anywhere | 0.4 → 2.0 pc (§ below) |
 
+`coordSphereNorthPole(frame)` is the same table read for the frame's **pole** —
+`dirToIcrs` at latitude +90°, precomputed once per frame (the roll guide reads
+it per gesture event and the input path allocates nothing). Deriving it through
+the spec is what keeps the camera's roll snap-to-level from disagreeing with the
+grid it sticks to: the guide levels against the displayed sphere's pole, `none`
+→ galactic (`../../camera/controls/input/README.md` § Snap-to-level).
+
 **Nothing outside the table names a sphere.** `DRAWN_COORD_SPHERE_FRAMES` is
 the peer set; the scene layer, the resize hook, and the label pools all iterate
 it and index `COORD_SPHERE_SPECS`, so a third frame is a table entry rather
