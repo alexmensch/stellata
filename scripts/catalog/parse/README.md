@@ -69,9 +69,16 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-`gaia-xmatch.ts` is the deliberate exception: it streams a 2.5 M-row table
-line-by-line and dedups on angular distance, so it carries its own accumulator
-with the same header strictness rather than a second copy of this one.
+Two deliberate exceptions, both streaming walks that carry their own header
+strictness rather than a second copy of this one:
+
+- `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
+  angular distance, so it needs its own accumulator.
+- `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) demands the header be
+  the column list **byte for byte, in order**, where `headerIndex` resolves
+  columns by name in any order. That is the stricter contract on purpose: the
+  spine is frozen and its codec writes the header, so a header that merely
+  parses is already a file nobody meant to ship.
 
 ## Per-row pipeline
 

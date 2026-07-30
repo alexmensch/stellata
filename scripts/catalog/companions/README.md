@@ -257,6 +257,18 @@ Per-row gates and resolution:
   judges only which hypothesis is CLOSEST, never how close, so an anchor matching
   neither still dims by the nearer one. The equal-split gaia_photometry blend
   pass above stays for the N-way no-WDS-mag case.
+  **The solve only reaches MINTED members**, which is a reach bound, not a
+  detail: a member that is already its own catalog record is never a candidate
+  subset, so an anchor on a printed blend tier keeps the pair's combined light
+  and ships too bright. Three records are in that state today — ξ UMa 0.54 mag,
+  ξ Sco 0.84, HIP 43820 0.65 — because the driver swap put their HIP on the
+  record at walk time and the V cascade took the printed `I/239` entry, which
+  is the unresolved pair. Registering already-in-catalog members is the right
+  shape but needs a separation term (unconditional registration subtracts
+  siblings at 26″–258″ on δ Cep / GJ 570 / AU Mic); `stellata-3bsf.15` owns it
+  and carries the fix-attempt writeup. Pinned per-star in
+  `../validate/known-stars.tsv` at the emitted value, per
+  `../validate/README.md` § adding a star.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
   surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair
