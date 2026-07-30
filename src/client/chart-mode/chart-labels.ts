@@ -500,18 +500,23 @@ export class ChartLabels {
     // The Latin-name labels follow the constellation lines — when the
     // master toggle is off, both disappear together.
     perfMark('chart.constellations');
-    // ~88 regions × ~30 members of transcendentals per frame is the largest
-    // single chart-mode CPU cost, and apparent magnitude barely moves under a
-    // small camera nudge, so the walk skips on a near-stationary camera.
+    // ~88 regions × ~30 members of transcendentals is the largest single
+    // chart-mode CPU cost, so it is skipped two ways: entirely when no name is
+    // drawn, and on a near-stationary camera, since apparent magnitude barely
+    // moves under a small nudge. The sentinels are stamped only where the walk
+    // actually runs — stamping them on a skipped walk would serve the stale
+    // magnitudes for up to 0.5 pc of camera travel once names came back on.
+    const showNames = f.showConstellation && showConNames;
     const camDx = camera.position.x - this.lastBrightestCamPos.x;
     const camDy = camera.position.y - this.lastBrightestCamPos.y;
     const camDz = camera.position.z - this.lastBrightestCamPos.z;
     const camMovedSq = camDx * camDx + camDy * camDy + camDz * camDz;
     // NaN propagates through the comparison so the initial sentinel value
     // forces a recompute on first use after chart-mode entry.
-    const recompute =
+    const recompute = showNames && (
       !(camMovedSq < BRIGHTEST_RECOMPUTE_DIST_SQ) ||
-      this.filterVersion !== this.lastBrightestVersion;
+      this.filterVersion !== this.lastBrightestVersion
+    );
     if (recompute) {
       this.lastBrightestCamPos.copy(camera.position);
       this.lastBrightestVersion = this.filterVersion;
@@ -524,8 +529,8 @@ export class ChartLabels {
         m.minAppMag = minAppMag;
       }
     }
-    const worldOffset = stellata.getWorldOffset();
-    if (f.showConstellation && showConNames) {
+    if (showNames) {
+      const worldOffset = stellata.getWorldOffset();
       for (const anchor of stellata.constellationLabelAnchors) {
         const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > f.maxAppMag) continue;
