@@ -62,18 +62,12 @@ never the edges:
   into catalog byte 34; the browser reads the answer, never the edge set.
   See `scripts/catalog/parse/README.md` § Positional constellation
   membership.
-- **Drawing, labelling and runtime membership** all ship in
-  `public/constellation-boundaries.json`: `buildBoundaryPolylines`
-  supplies the subdivided precessed-to-ICRS arcs,
-  `buildRegionLabelAnchors` the per-region label anchors, and the
-  **resolved cell grid** rides along for positions the catalogue never
-  classified (§ Runtime membership).
-  `scripts/catalog/boundaries/README.md` owns the wire shape.
-
-`buildBoundaryArtifact` takes the whole lookup, not just its edges, so
-the arcs, the labels and the shipped grid come from **one**
-decomposition — the same one byte 34 was assigned from. Three readings
-of one partition; nothing to disagree.
+- **Drawing, labelling and runtime membership** all ride
+  `public/constellation-boundaries.json` — arcs, label anchors
+  (§ Label anchors), and the resolved cell grid (§ Runtime membership).
+  `buildBoundaryArtifact` takes the whole lookup, not just its edges, so
+  all three come from **one** decomposition: the same one byte 34 was
+  assigned from. `scripts/catalog/boundaries/README.md` owns the wire.
 
 Importing `iau-boundaries-pure` from a browser module is fine for the
 pure geometry (that is how `constellation-regions.ts` gets its lookup),
@@ -84,29 +78,25 @@ up parsed in the browser from a file that isn't deployed.
 
 `createConstellationNamer` (`constellation-regions.ts`) answers "which
 constellation is this position in" in the browser: it decodes the
-artifact's run-length cell grid, binds the B1875 precession through
-`createGridConstellationLookup`, and maps the region key onto the
-IAU-88 table the catalog artifact already carries. Absolute
-(Sol-centred ICRS) position in, constellation name out; **null at the
-origin**, the one hole byte 34 leaves too.
+artifact's run-length cell grid, binds B1875 through
+`createGridConstellationLookup`, and maps the region key onto the IAU-88
+table the catalog artifact already carries. Absolute (Sol-centred ICRS)
+position in, name out; **null at the origin**, the one hole byte 34
+leaves too.
 
-**The grid is shipped rather than re-derived, and its bounds are the
+**The grid ships rather than being re-derived, and its bounds are the
 only unrounded numbers in the artifact.** `constellationEdgeCodeAt`
-bisects those bounds, so a rounded bound is a moved wall and the
-runtime would answer a different constellation from byte 34 for a
-position near one. Full precision costs ~2 KiB and buys one answer
-instead of two that mostly agree — pinned across a sphere-wide sampling
-grid in `constellation-regions.test.ts`.
+bisects them, so a rounded bound is a moved wall and the runtime would
+answer a different constellation from byte 34 near one — pinned across a
+sphere-wide sampling grid in `constellation-regions.test.ts`.
 
 Consumers are the objects the build never classified, all through
-`Stellata.constellationOf(kind, idx)`: Local Group galaxies, molecular
-clouds, boundary-crossing probes, and the planets, whose answer is a
-**time-varying ephemeris statement** rather than a property of the body
-— it tracks `getT()` because the position does. Sol-frame for every
-kind, matching the star card (`../focus-card/README.md`
-§ Frame-of-reference principle). **Stars do not route here**: byte 34 is
-the shipped authority, survives a missing artifact, and carries the
-designation-constellation split beside it.
+`Stellata.constellationOf(kind, idx)`: LG galaxies, clouds, probes, and
+the planets, whose answer is a **time-varying ephemeris statement**
+rather than a property — it tracks `getT()` because the position does.
+Sol-frame for every kind (`../focus-card/README.md` § Constellation row).
+**Stars do not route here**: byte 34 is the shipped authority, survives a
+missing artifact, and carries the designation split beside it.
 
 ## Label anchors
 
@@ -137,6 +127,20 @@ plausible:
 The anchors are emitted in ICRS and baked to `SPHERE_RADIUS_PC` at
 attach, exactly as the arcs are, so a label rides the block it names
 from any camera position instead of drifting off it.
+
+**The trade this makes, stated plainly.** A label is now Sol-frame
+chrome rather than a position among its stars, so it tracks the
+*partition* and no longer tracks the *stars*. At 50 kpc the anchor's
+parallax is ~1° per kpc of camera offset, and the member stars sit at
+tens to hundreds of parsecs, so inside the Sol neighbourhood the two
+readings are indistinguishable; past a few hundred parsecs the label
+holds Earth's sky position while its stars have swung away. That is the
+right way round — the label names the block, and Earth's constellations
+describe nothing from elsewhere — but note the labels do **not** share
+the arcs' distance fade, whose window is sub-parsec (§ Chart-mode
+layer). Between the fade-out and a few hundred parsecs the names are
+drawn over a partition that isn't. Deliberate: tying them to that
+window would delete every constellation name before α Cen.
 
 ## Chart-mode layer
 
