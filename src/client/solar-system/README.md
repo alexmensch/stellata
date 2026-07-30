@@ -148,7 +148,7 @@ via a same-as edge, so that record's in-record sid and
 ## Reflected-light magnitude model
 
 `perceptual-magnitude.ts` + `phase-function.ts` are the CPU side of the
-shared reflected-light model; `planets/planet.vert.glsl` carries the
+shared reflected-light model; `planets/glare/planet.vert.glsl` carries the
 GPU mirror. Both must stay in step — the pure helpers are vitest-pinned
 and the full-Moon calibration (−12.7) anchors the underlying flux.
 

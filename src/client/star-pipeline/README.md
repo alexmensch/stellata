@@ -28,10 +28,10 @@ subfolders.
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `perceptual-disc.glsl` — super-Gaussian disc/glow chunk, shared with
-  `../solar-system/planets/planet.frag.glsl` so stars and planet bodies
-  run the same brightness-PSF saturation physics. Stars use the full
+  `../solar-system/planets/glare/planet.frag.glsl` so stars and planet
+  bodies run the same brightness-PSF saturation physics. Stars use the full
   disc + glow + core-mask trio; planet bodies use the **glow profile
-  only**. See `../solar-system/planets/README.md` § Planet mesh LOD.
+  only**. See `../solar-system/planets/glare/README.md`.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. `buildStarSharedUniforms` `satisfies` this
   interface, and

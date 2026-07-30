@@ -1,4 +1,4 @@
-# Planet emission — into the scene-wide HDR unit
+# Physical-luminance emission — into the scene-wide HDR unit
 
 The normalisers that put a planet's mesh and glare on the one physical
 luminance scale, and the reason a body does not brighten per-pixel on
