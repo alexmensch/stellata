@@ -7,7 +7,7 @@ import {
   STAR_K_MULTIPLIER_STEP,
 } from '../../filters/filter-state';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
-import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
+import { EV_MAX_STOPS, EV_STEP_STOPS, steppedEv } from '../../hdr/exposure/exposure-epoch';
 import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindStopControl, syncStopControl } from '../../ui/stop-control';
@@ -206,8 +206,11 @@ export function bindControls(stellata: Stellata) {
   ev.min = String(-EV_MAX_STOPS);
   ev.max = String(EV_MAX_STOPS);
   ev.step = String(EV_STEP_STOPS);
+  // Snapped, not raw: a range input's own step arithmetic can drift off
+  // the grid (stepUp accumulation), and 0 is the value the readout
+  // formats without a sign.
   ev.addEventListener('input', () => {
-    stellata.setEv(Number(ev.value));
+    stellata.setEv(steppedEv(Number(ev.value), 0));
   });
   document.getElementById('ev-reset')!.addEventListener('click', () => {
     stellata.setEv(0);

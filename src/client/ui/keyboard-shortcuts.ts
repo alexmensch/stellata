@@ -8,8 +8,8 @@ import { bindHelpModal } from '../modals/help-modal';
 import {
   pushTapAndCheckTriple,
   makeDoubleTapGate,
-  steppedEv,
 } from './keyboard-shortcuts-pure';
+import { steppedEv } from '../hdr/exposure/exposure-epoch';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
 

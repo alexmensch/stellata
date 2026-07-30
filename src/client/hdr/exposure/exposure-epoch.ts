@@ -16,6 +16,18 @@ export const EV_MAX_STOPS = 3;
  *  quantisation are the same grid, so a shared URL round-trips exactly. */
 export const EV_STEP_STOPS = 1 / 3;
 
+/**
+ * The EV trim `deltaSteps` grid stops away from `ev`, snapping onto the
+ * grid on the way — so a value that arrived off it (a hand-edited URL, or
+ * a range input whose steps accumulate float error from its own min)
+ * returns to the step the slider and the URL field share instead of
+ * carrying its offset forward. Range clamping is
+ * `ExposureController.setEv`'s.
+ */
+export function steppedEv(ev: number, deltaSteps: number): number {
+  return (Math.round(ev / EV_STEP_STOPS) + deltaSteps) * EV_STEP_STOPS;
+}
+
 /** `uExposure` for a magnitude limit — the luminance a source at m = 0
  *  carries, fixed so a source at `magLimit` lands exactly on
  *  `L_THRESH`. */

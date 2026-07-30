@@ -8,6 +8,7 @@ import {
   MAG_PER_STOP,
   exposureForMagLimit,
   sceneExposure,
+  steppedEv,
   thresholdMagFor,
 } from './exposure-epoch';
 import { luminanceForMagnitude } from '../emission-pure';
@@ -135,5 +136,43 @@ describe('drawCutoffMag', () => {
     expect(drawCutoffMag(limit, threshold, false))
       .toBe(threshold + SOFT_TAPER_MARGIN_MAG);
     expect(drawCutoffMag(limit, threshold, true)).toBe(limit);
+  });
+});
+
+describe('steppedEv', () => {
+  it('moves one grid stop per call, in both directions', () => {
+    expect(steppedEv(0, +1)).toBeCloseTo(EV_STEP_STOPS, 12);
+    expect(steppedEv(0, -1)).toBeCloseTo(-EV_STEP_STOPS, 12);
+  });
+
+  it('stays exactly on the grid across a full-range run of presses', () => {
+    // Bit-identical to the canonical grid value at every stop, so the
+    // ceiling press lands on EV_MAX_STOPS exactly rather than near it.
+    let ev = 0;
+    for (let i = 1; i <= 9; i++) {
+      ev = steppedEv(ev, +1);
+      expect(ev).toBe(i * EV_STEP_STOPS);
+    }
+    expect(ev).toBe(EV_MAX_STOPS);
+  });
+
+  it('snaps an off-grid value onto the grid before stepping', () => {
+    // 0.2 is nearest grid index 1, so one step up lands on index 2.
+    expect(steppedEv(0.2, +1)).toBeCloseTo(2 * EV_STEP_STOPS, 12);
+    expect(steppedEv(0.45, -1)).toBe(0);
+  });
+
+  it('snaps accumulated step arithmetic back onto exactly 0', () => {
+    // Repeatedly adding the 1/3 step (how some engines implement a range
+    // input's stepUp) drifts off the grid; 0 is the value the EV readout
+    // formats without a sign, so it has to be reachable exactly.
+    let ev = -EV_MAX_STOPS;
+    for (let i = 0; i < 9; i++) ev += EV_STEP_STOPS;
+    expect(ev).not.toBe(0);
+    expect(steppedEv(ev, 0)).toBe(0);
+  });
+
+  it("does not clamp — that is the controller's job", () => {
+    expect(steppedEv(EV_MAX_STOPS, +1)).toBeGreaterThan(EV_MAX_STOPS);
   });
 });
