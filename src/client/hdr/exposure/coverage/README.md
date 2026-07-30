@@ -25,11 +25,29 @@ does not rule out counting in a shader, which is what this does.
 
 ## Files
 
-- `coverage-pure.ts` (+ test) — the math both sides share: the
-  perspective depth inverse and its forward mirror, the deterministic
-  disc tap set, ring slant transmission, the single-bracket depth range,
-  and the visible-fraction composition. Vitest-pinned against the
-  reported Saturn-vs-Sol geometry and against the real ring strip values.
+```
+src/client/hdr/exposure/coverage/
+  coverage-pure.ts (+ test)  The math both sides share: the perspective
+                             depth inverse and its forward mirror, the two
+                             distance conventions (§ Axis depth), the
+                             per-source self-occlusion slack, the
+                             deterministic tap set and its mean, ring
+                             slant transmission and the ray/annulus test,
+                             the single-bracket depth range, and the
+                             visible-fraction composition. Pinned against
+                             the reported Saturn-vs-Sol geometry and the
+                             real ring strip values.
+  coverage.frag.glsl         The measurement — one fragment per source.
+                             Re-declares every constant and formula above;
+                             nothing here is reachable from vitest, so
+                             coverage-glsl-drift.test.ts pins the literals
+                             and the expression shapes against the TS.
+  coverage-pass.ts           CoveragePass — the occluder-depth target, the
+                             source upload, the two renders, and the
+                             transmission map the statistic reads. Needs a
+                             live GL context, hence no test of its own.
+  coverage-readback.ts       The pixel-pack buffer + fence (§ Latency).
+```
 
 ## The measurement
 
@@ -52,11 +70,45 @@ Equal-area stratification puts the sampling error on a fraction at
 ~`1/(2√K)` = 6% at 64 taps, against the 10% the circle got wrong on
 Saturn's flattening alone.
 
+Taps that fall outside the frame leave **both** sides of the mean. The
+clipping term already owns them, and counting them here would charge the
+same loss to the product twice.
+
+### Axis depth, not radial distance
+
+`LuminanceSample.cameraDistancePc` is a **radial** camera distance; a
+depth buffer stores the **view-axis** one. Off-axis the two differ by
+`1/cos`, which at the corner of a 16:9 frame with a 50° vertical FOV is
+28% — against a slack of 0.1%. Compare them directly and every
+off-centre source reads as occluded by its own depth stamp, which is the
+original bug with the sign flipped.
+
+`viewRayLength` is the whole conversion (`axialFromRadial` /
+`radialFromAxial` are the two directions), and the shader derives it from
+the same `uTanHalfFov` it builds tap rays with. The ring pass needs the
+radial form back, because a ray parameter is a radial distance.
+
+### The slack is the source's own radius
+
+A source drawn into the occluder scene stamps its own depth, so a tap has
+to reject surfaces that *are* the source. A fixed relative slack cannot
+do it: **a resolved body's near surface sits a full radius in front of
+its centre** — 20% of the distance at a 5-radius framing — so the frame's
+dominant source would occlude itself and vanish from the mean.
+
+`selfOcclusionSlackPc` therefore takes the source's own angular radius,
+`footprintRadiusPx / pxPerRadian · depth`, which **is** its physical
+radius once resolved, and floors it at `SELF_OCCLUSION_SLACK` of the
+depth for anything that isn't. `uPxPerRadian` is the same `angularToPx`
+the sample's `diameterPx` was measured with, so the shader inverts it
+exactly.
+
 ## The depth bracket — a dedicated pass, deliberately
 
-The occluders are rendered into **their own quarter-resolution target
-with a single `[near, far]` bracket**, not sampled from the local depth
-pass's attachment. Three reasons, each load-bearing:
+The occluders are rendered into **their own target at
+`COVERAGE_DEPTH_SCALE` (½) per axis — a quarter of the pixels — under a
+single `[near, far]` bracket**, not sampled from the local depth pass's
+attachment. Three reasons, each load-bearing:
 
 - **The local pass clears depth between slices.** It renders far→near
   with `clearDepth()` between brackets (`../../../local-depth/README.md`
@@ -75,9 +127,27 @@ pass's attachment. Three reasons, each load-bearing:
   slicing exists to buy. `coverage-pure.test.ts` pins the reported
   Saturn-vs-Sol case at six orders of margin over one depth quantum.
 
-Quarter resolution costs nothing the statistic cares about: it is a
+The reduced resolution costs nothing the statistic cares about: it is a
 frame-wide mean, and depth *values* are resolution-independent — only the
-taps get coarser.
+taps get coarser. Screen-space sizing in the mirror materials rides
+`uViewport` in CSS px and resolves to an NDC extent, so a billboard
+covers the same **fraction** of the smaller target and the taps stay
+aligned with it.
+
+**The occluder scene IS `LocalDepthPass.scene`**, re-rendered under the
+one bracket, and the bracket comes from `localDepthPass.memberSpheres()`
+— the same list that pass just partitioned. That is what makes the
+measurement run against the geometry the frame actually drew rather than
+a CPU mirror of it. Two consequences:
+
+- **No members means no measurement.** An empty sphere list gives a null
+  bracket, and every source keeps its full flux (§ Latency). Correct: a
+  body only draws a surface while its cluster is active, so with no
+  cluster there is nothing close enough to occlude anything.
+- The colour attachment is a throwaway three requires. The mirror
+  materials shade into it and the result is discarded; overriding them
+  with a depth-only material is **not** available, because the billboard
+  members build their own vertex positions in their vertex stage.
 
 ## Rings are translucent, and the shipped data says so
 
@@ -103,6 +173,14 @@ Two consequences worth stating, because they look like bugs otherwise:
   Saturn is the Jónsson radial reconstruction over 74,510–140,390 km, so
   the C ring, Cassini Division and Encke gap are genuinely translucent
   while the B ring is near-opaque.
+- **The crossfade weight rides the alpha, not the geometry.**
+  `RingOccluder.alphaScale` is the annulus's live `uFade`, so the
+  extinction tracks the alpha actually composited — a ring half-way
+  through its crossfade dims a source behind it half as much as the
+  authored strip would. `PlanetMeshLayer.forEachRingOccluder` reports one
+  slot per visible annulus, in view space, capped at
+  `COVERAGE_MAX_RINGS`; the shader unrolls the slots because GLSL ES 3.0
+  cannot index a sampler array by a loop variable.
 - **This supersedes "rings never dim a body behind them."** That was the
   circle era's deliberate exclusion (rings are not *sources*, so they
   never entered the sample list) and it shipped in v3.7.0's release
@@ -121,9 +199,41 @@ Frame clipping stays on the CPU (`sourceVisibleFraction`): it is exact
 analytic geometry with no scene dependence, so there is nothing for the
 GPU to tell us.
 
-## Latency
+## Latency, and what an unmeasured source reads as
 
-The readback lands one frame late, which the statistic already tolerates:
-the applied cut is slew-limited over `ADAPT_SLEW_TAU_S` (300 ms), so a
-16 ms lag is far inside the ramp it feeds. Do not make it synchronous to
-"fix" a lag nobody can see — that trades a stall for nothing.
+The readback lands a frame late, which the statistic already tolerates:
+the applied cut is slew-limited over `ADAPT_SLEW_TAU_S` (300 ms), so tens
+of ms are far inside the ramp it feeds. Do not make it synchronous to
+"fix" a lag nobody can see — `getBufferSubData` on an unsignalled fence
+stalls the pipeline, which is the whole thing the fence exists to avoid.
+
+**One readback in flight.** A frame whose predecessor has not landed does
+no GPU work at all rather than queueing a second, so the measurement
+refreshes every other frame at worst (~33 ms at 60 Hz). That also caps
+the cost: the extra scene render happens on half the frames.
+
+**The lag is why the result is keyed, not indexed.** The pool the walk
+produced is gone by the time its measurement returns, so each sample
+carries a `sourceKey` — bodies their flat instance index, stars
+`-1 - starIdx`, disjoint by construction — and `CoveragePass` maps key →
+throughput. Pool order would hand one source another's answer the moment
+a body left the frame.
+
+**An unmeasured source reads as throughput 1**, and that direction is
+deliberate: a source not yet covered keeps all its flux, so it can only
+ever provoke a *cut*. The opposite default would let a frame go dark
+because a measurement had not arrived — and under-occluding is also the
+safe side of the defect this replaces, which was Sol blazing at full
+brightness because the statistic had dropped it.
+
+## Where it runs in the frame
+
+`stellata.ts` `animate()`, after `localDepthPass.render` (its spheres set
+the bracket, its scene supplies the occluders) and after `hdr.resolve`, so
+the measurement never delays the frame it measured. It leaves the render
+target at the canvas and restores `camera.near` / `camera.far`, the same
+contract the local pass keeps.
+
+Perf rows: `submit.coverage` (CPU submission) and, where the driver
+exposes a timer query, `gpu.coverage` — `../../../debug/README.md`
+§ GPU timing.

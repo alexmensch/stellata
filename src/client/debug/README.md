@@ -101,14 +101,16 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then an O(n²) occlusion pass over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then a linear reduce over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
+| `submit.coverage`       | `stellata.ts` `animate()`       | CPU wall-time around the occluder-coverage measurement. Zero on frames whose readback has not landed, and while no local cluster is active (`../hdr/exposure/coverage/README.md` § Latency). |
 | `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning every pass. The headline's source, and the only row that prices anything. |
 | `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
 | `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
 | `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope (`../hdr/README.md`). Same caveat. |
+| `gpu.coverage`          | timer query                      | Occluder-depth re-render plus the one-fragment-per-source pass. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |

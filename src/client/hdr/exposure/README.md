@@ -25,10 +25,12 @@ src/client/hdr/exposure/
     (+ test)                 per pixel, the brightest visible pixel and
                              the highlight guard's L_CAP, the measured
                              L_TARGET / L_ADAPT pair, exact disc↔viewport
-                             clipping, nearer-disc occlusion, and the
-                             star-window derivation.
+                             clipping, and the star-window derivation.
   scene-adaptation.ts        SceneAdaptation — the per-frame collector
     (+ test)                 that walks the frame's light sources.
+  coverage/                  How much of a source the camera can actually
+                             see, measured on the GPU against the geometry
+                             rendered. Its own README.
 ```
 
 ## The three terms
@@ -91,7 +93,7 @@ runs every frame, and the URL sync and panel listen to that event.
 cut it writes can never be a frame behind the frame it measured.
 
 ```
-visibleFractionᵢ = max(0, clippedᵢ − occludedᵢ)
+visibleFractionᵢ = clippedᵢ · transmissionᵢ
 L̄        = Σᵢ L(mᵢ)·fluxScaleᵢ·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
 peak_max = maxᵢ  L(mᵢ)·fluxScaleᵢ / max(1, π·r_pxᵢ²)     (visible only)
 dm       = max( min(0, −2.5·log10(L̄ / L_ADAPT)),
@@ -166,24 +168,27 @@ Three invariants a change here must not break:
   goes: the eclipse dim is a *lighting* loss and occlusion is a
   *camera-path* loss, so they multiply rather than share a slot.
 
-**Occlusion is why the walk buffers.** Every sample is copied out of its
-producer's scratch into a pool, and nothing is reduced until the walk
-finishes — the last body visited can occlude the first, so no streaming
-formulation exists. Each sample then loses the screen-space lens overlap
-(`circleCircleLensArea`, shared with the binary eclipse photometry) of
-every **nearer** drawn disc, which is what stops Sol behind Saturn's night
-side from dimming the star field. Occluders are gated at
-`ADAPT_OCCLUDER_MIN_PX` (= `MESH_FADE_MIN_PX`) so a body too small to
-draw a surface hides nothing; rings never occlude (they are not sources),
-and overlapping occluders double-count, always toward over-occluding.
-**The occluder list IS the sample list**, which is what makes the
-candidate gate load-bearing: `forEachDrawnBody` admits a body on EITHER
-render path — glare above the photometric cutoff, or a resolved surface —
-because at eclipse alignment φ(α) → 0 kills the glare while the body
-still fills the frame with opaque surface. Admitting it costs nothing on
-the source side (under threshold, it emits less than the floor) and is
-the only thing that keeps the star behind it out of the mean.
-`docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
+**Occlusion is measured on the GPU, and `coverage/README.md` owns it.**
+`transmissionᵢ` is the mean throughput over source *i*'s footprint, taken
+against the depth of the geometry that was actually rendered — so it
+follows an oblate limb, a moon in transit, and a translucent ring
+annulus, none of which a CPU mirror expressed. Two things this folder is
+responsible for:
+
+- **The walk buffers.** Every sample is copied out of its producer's
+  scratch into a pool, and nothing is reduced until the walk finishes:
+  the measurement lands a frame late, so the coverage pass reads that
+  pool *after* the walk has ended. `sourceKey` is what survives the gap
+  — pool order does not.
+- **The candidate gate stays load-bearing.** `forEachDrawnBody` admits a
+  body on EITHER render path — glare above the photometric cutoff, or a
+  resolved surface — because at eclipse alignment φ(α) → 0 kills the
+  glare while the body still fills the frame with opaque surface.
+  Admitting it costs nothing on the source side (under threshold, it
+  emits less than the floor), and a body that draws no surface writes no
+  occluder depth, so the mesh-presence floor is now the rasteriser's
+  business rather than a separate gate.
+  `docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
 
 **Sources.** Every drawn solar-system body
 (`PlanetBodyField.forEachDrawnBody`, gated by the same visibility rule
@@ -210,13 +215,15 @@ retain it.
 the last scene's cut standing; chart bypasses the whole seam
 (`../README.md` § Chart mode).
 
-Perf row: `adaptation`. The dominant cost is the star walk's
-sorted-distance window — thousands of squared-distance tests at
+Perf row: `adaptation`, plus `submit.coverage` / `gpu.coverage` for the
+measurement (`coverage/README.md`). The dominant CPU cost is the star
+walk's sorted-distance window — thousands of squared-distance tests at
 mid-catalogue camera distances, a few hundred `renderedSizeComponents`
 calls inside the window, and single digits of sources past the flux gate.
 The window is a function of `L_ADAPT`, so a lower anchor widens it
-cubically in cost; the occlusion pass is O(n²) over what survives the
-gate, which is ~27 bodies plus single-digit stars.
+cubically in cost. The reduce is now linear in the ~27 bodies plus
+single-digit stars that survive the gate, where the circle-era occlusion
+pass was O(n²).
 
 ## Not here yet
 
