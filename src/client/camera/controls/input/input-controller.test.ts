@@ -12,6 +12,9 @@ import { ReferenceUpController } from './reference-up';
 import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
 import { PINCH_NOTCH_GAIN, WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
+import { coordSphereNorthPole } from '../../../galactic/coord-spheres/coord-sphere-frames';
+
+const EQUATORIAL_NORTH_POLE = coordSphereNorthPole('equatorial');
 
 const star = (idx: number): Target => ({ kind: 'star', idx });
 const planet = (idx: number): Target => ({ kind: 'planet', idx });
@@ -712,22 +715,22 @@ describe('InputController Shift-drag roll', () => {
     // Start outside the band, so the first move has somewhere to snap from.
     const tilt = SNAP_TO_LEVEL_RAD * 3;
     referenceUp.roll(camera, tilt);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(-tilt, 9);
+    expect(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(-tilt, 9);
 
     h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
 
     // A move requesting exactly the residual roll lands on the guide.
     h.get('pointermove')!(at(tilt) as unknown as Event);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+    expect(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 9);
 
     // Further motion inside the band is absorbed — the view stays level.
     h.get('pointermove')!(at(tilt + SNAP_TO_LEVEL_RAD * 0.5) as unknown as Event);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+    expect(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 9);
 
     // Past the band the gesture resumes where the pointer actually is.
     const beyond = SNAP_TO_LEVEL_RAD * 1.5;
     h.get('pointermove')!(at(tilt + beyond) as unknown as Event);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(beyond, 6);
+    expect(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(beyond, 6);
   });
 
   it('re-anchors the reference on north exactly when a snapped gesture ends', () => {
@@ -743,7 +746,7 @@ describe('InputController Shift-drag roll', () => {
     const leaning = GALACTIC_NORTH_POLE_ICRS.clone().addScaledVector(forward, 0.4).normalize();
     referenceUp.set(leaning.x, leaning.y, leaning.z);
     referenceUp.correct(camera);
-    expect(referenceUp.referenceRollError(camera)).toBeCloseTo(0, 9);
+    expect(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 9);
     expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeGreaterThan(0.1);
 
     const inside = SNAP_TO_LEVEL_RAD * 0.25;
@@ -752,6 +755,30 @@ describe('InputController Shift-drag roll', () => {
     h.get('pointerup')!(at(inside) as unknown as Event);
 
     expect(referenceUp.get().angleTo(GALACTIC_NORTH_POLE_ICRS)).toBe(0);
+  });
+
+  // With the RA/Dec sphere up, level means ITS equator — the grid the user is
+  // looking at. The two poles are ~63° apart, so galactic level is nowhere near
+  // the band here and a frame-blind guide would refuse to stick at all.
+  it('sticks to the displayed sphere’s frame, not always galactic', () => {
+    const { canvas, camera, referenceUp, state } = makeHarness();
+    state.filter = { ...state.filter, coordSphere: 'equatorial' };
+    const h = handlers(canvas);
+    referenceUp.correct(camera);
+    // Land the reference exactly `tilt` off RA/Dec level, outside the band.
+    const tilt = SNAP_TO_LEVEL_RAD * 3;
+    referenceUp.roll(camera, referenceUp.referenceRollError(camera, EQUATORIAL_NORTH_POLE) + tilt);
+
+    h.get('pointerdown')!(at(0, { shiftKey: true }) as unknown as Event);
+    h.get('pointermove')!(at(tilt) as unknown as Event);
+
+    expect(referenceUp.referenceRollError(camera, EQUATORIAL_NORTH_POLE)).toBeCloseTo(0, 9);
+    expect(Math.abs(referenceUp.referenceRollError(camera, GALACTIC_NORTH_POLE_ICRS)))
+      .toBeGreaterThan(SNAP_TO_LEVEL_RAD);
+
+    // Releasing on the guide re-anchors on the NCP exactly, not on north.
+    h.get('pointerup')!(at(tilt) as unknown as Event);
+    expect(referenceUp.get().angleTo(EQUATORIAL_NORTH_POLE)).toBe(0);
   });
 
   it('leaves a deliberate tilt alone when no move reaches the band', () => {
@@ -772,7 +799,7 @@ describe('InputController Shift-drag roll', () => {
     state.cameraMode = 'observe';
     const h = handlers(canvas);
     // Land exactly level first, then tilt off it by more than the band.
-    referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera));
+    referenceUp.rollQuaternion(camera, referenceUp.renderedRollError(camera, GALACTIC_NORTH_POLE_ICRS));
     const qLevel = camera.quaternion.clone();
     const tilt = SNAP_TO_LEVEL_RAD * 3;
     referenceUp.rollQuaternion(camera, tilt);

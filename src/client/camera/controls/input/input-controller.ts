@@ -13,6 +13,7 @@ import { PendingClickDispatcher } from '../../../util/pending-click';
 import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
+import { coordSphereNorthPole } from '../../../galactic/coord-spheres/coord-sphere-frames';
 import type { ReferenceUpController } from './reference-up';
 import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
@@ -64,7 +65,7 @@ export class InputController {
   private activePointer: { id: number; x: number; y: number } | null = null;
   private shiftHeld = false;
   // Alignment-guide state: while `rollSnapped`, the view is held exactly at
-  // galactic level and `rollSnapExcursion` accumulates the roll the pointer
+  // the level pole and `rollSnapExcursion` accumulates the roll the pointer
   // asked for. The gesture leaves the guide when that virtual roll passes
   // the band — tracking it separately is what stops the boundary chattering.
   private rollSnapped = false;
@@ -552,19 +553,19 @@ export class InputController {
   }
 
   /** Leaving a roll gesture while held at the guide re-anchors the reference
-   *  on galactic north exactly. Snapping only rolled the axis until it
-   *  *renders* level from here; any axis in the forward/north plane does
+   *  on the level pole exactly. Snapping only rolled the axis until it
+   *  *renders* level from here; any axis in the forward/pole plane does
    *  that, and would drift back off level as soon as the orbit moves. */
   private settleRollSnap(): void {
     if (!this.rollSnapped) return;
     this.clearRollSnap();
     if (this.deps.getCameraMode() !== 'observe') {
-      this.deps.referenceUp.snapReferenceToNorth(this.deps.camera);
+      this.deps.referenceUp.snapReferenceTo(this.deps.camera, this.levelPole());
     }
   }
 
   /** Apply one gesture step of roll through the alignment guide: the view
-   *  sticks to galactic level while the requested roll stays inside
+   *  sticks to level while the requested roll stays inside
    *  `SNAP_TO_LEVEL_RAD` of it, so the user *feels* the level axis mid-drag
    *  instead of being told about it on release. The stick is tracked against
    *  a virtual roll that keeps advancing, so the band can't chatter and the
@@ -589,14 +590,21 @@ export class InputController {
     this.rollCamera(delta);
   }
 
-  /** Roll still needed to reach galactic level. Read off the reference axis
-   *  in navigate (the quaternion trails `camera.up` by a frame there) and off
-   *  the rendered quaternion in observe, which is the authority in that
-   *  mode. See `README.md` § Reference up axis. */
+  /** Roll still needed to reach level. Read off the reference axis in navigate
+   *  (the quaternion trails `camera.up` by a frame there) and off the rendered
+   *  quaternion in observe, which is the authority in that mode. See
+   *  `README.md` § Reference up axis. */
   private levelRollError(): number {
     return this.deps.getCameraMode() === 'observe'
-      ? this.deps.referenceUp.renderedRollError(this.deps.camera)
-      : this.deps.referenceUp.referenceRollError(this.deps.camera);
+      ? this.deps.referenceUp.renderedRollError(this.deps.camera, this.levelPole())
+      : this.deps.referenceUp.referenceRollError(this.deps.camera, this.levelPole());
+  }
+
+  /** What "level" means right now: the displayed coordinate sphere's own north
+   *  pole, so the guide sticks to the grid the user is levelling against.
+   *  Galactic when no sphere is up. */
+  private levelPole(): THREE.Vector3 {
+    return coordSphereNorthPole(this.deps.getFilter().coordSphere);
   }
 
   /** Rotate the view around its own axis. NAVIGATE re-tilts the reference up
