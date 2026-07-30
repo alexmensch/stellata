@@ -30,9 +30,16 @@ void main() {
   // is exactly radial) — avoids the faceting grid the interpolated position
   // would introduce into the analytic march.
   vec3 shellPoint = uCenterView + (uRadiusPc * uAtmoRadius) * normalize(vNormalV);
-  vec3 dir = normalize(shellPoint);
+  // Everything below is in the frame where the oblate body is a unit sphere,
+  // which is what the shell entry, body-strike and density geometry all assume.
+  // The shell MESH stays a real-space sphere: it equals the deflattened shell
+  // at the equator and over-covers it toward the poles, so nothing is left
+  // uncovered and the excess discards on the shell-entry test.
+  float invPolar = 1.0 / uPolarRadiusR;
+  vec3 dir = normalize(stellata_scalePolar(normalize(shellPoint), uPoleView, invPolar));
   // Camera (origin) relative to the planet centre, planet-radius units.
-  vec3 o = -uCenterView / uRadiusPc;
+  vec3 o = stellata_scalePolar(-uCenterView / uRadiusPc, uPoleView, invPolar);
+  vec3 sunDir = normalize(stellata_scalePolar(uSunDirView, uPoleView, invPolar));
 
   float t0, t1;
   if (stellata_shellEntry(o, dir, uAtmoRadius, t0, t1) <= 0.0 || t1 <= 0.0) discard;
@@ -43,7 +50,7 @@ void main() {
   vec3 inscatter;
   vec3 transmittance;
   stellata_atmosphereRadiance(
-    o, dir, max(t0, 0.0), t1, uAtmoRadius, uSunDirView,
+    o, dir, max(t0, 0.0), t1, uAtmoRadius, sunDir,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);

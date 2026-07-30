@@ -67,6 +67,17 @@ bool stellata_hitsBodyAhead(vec3 o, vec3 dir) {
   return disc > 0.0 && -b - sqrt(disc) > 0.0;
 }
 
+// Scale a vector's component along `pole` by s, leaving the equatorial part
+// alone — the seam between an oblate body and a march that assumes a unit
+// sphere. s = 1/polarR maps a spheroid of polar radius polarR (equatorial
+// radii) onto the unit sphere, s = polarR inverts it. Linear about the body
+// centre, so a ray maps to a ray with its parameter unchanged; callers
+// renormalise directions. Normals scale by the inverse transpose, which for
+// this diagonal map is the inverse.
+vec3 stellata_scalePolar(vec3 v, vec3 pole, float s) {
+  return v + pole * (dot(v, pole) * (s - 1.0));
+}
+
 // The planetary shadow along o + t·d as the single t-interval it always is:
 // inside the infinite shadow cylinder (a quadratic in t) and anti-sunward of
 // the terminator plane (a half-space). s0 > s1 means the ray never enters it.

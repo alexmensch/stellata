@@ -92,6 +92,43 @@ describe('the shadow is solved along the ray, not sampled across it', () => {
   });
 });
 
+describe('the march runs in the frame where the oblate body is a unit sphere', () => {
+  const shell = read('./planet-atmosphere.frag.glsl');
+
+  it('scales only the polar component, and inverts by scaling back', () => {
+    expect(scatter).toContain('return v + pole * (dot(v, pole) * (s - 1.0));');
+  });
+
+  it('deflattens the ray and the sun direction in both shaders', () => {
+    // Miss the sun direction and the shadow cylinder tilts against the body it
+    // is cast by; miss either ray term and the unit-sphere geometry describes a
+    // body that is not the one drawn.
+    for (const src of [shell, meshFrag]) {
+      expect(src).toContain('float invPolar = 1.0 / uPolarRadiusR;');
+      expect(src).toContain(
+        'stellata_scalePolar(-uCenterView / uRadiusPc, uPoleView, invPolar)');
+      expect(src).toContain(
+        'normalize(stellata_scalePolar(uSunDirView, uPoleView, invPolar))');
+    }
+  });
+
+  it('reads the mesh fragment’s surface point off the SQUASHED normal', () => {
+    // uRadiusPc·normal is a point on the equatorial-radius SPHERE, up to f·R
+    // outside the spheroid fragment being shaded — at the limb that collapsed
+    // the airlight chord and left a dark seam against the halo.
+    expect(meshFrag).toContain(
+      'vec3 surf = normalize(stellata_scalePolar(nrm, uPoleView, uPolarRadiusR));');
+    expect(meshFrag).not.toContain('uCenterView + uRadiusPc * nrm');
+  });
+
+  it('keeps the twilight term on the REAL-space sun cosine', () => {
+    // Solar depression is measured against the true local horizontal, so the
+    // twilight term must not be handed the deflattened sun direction.
+    expect(meshFrag).toContain('stellata_twilightIrradiance(sunCos, uScaleHeightR,');
+    expect(meshFrag).toContain('float sunCos = dot(n, uSunDirView);');
+  });
+});
+
 describe('twilight on the night-side surface', () => {
   it('is the shadow-edge altitude over the scale height', () => {
     expect(scatter).toContain(

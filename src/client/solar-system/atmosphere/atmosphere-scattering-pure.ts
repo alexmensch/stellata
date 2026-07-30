@@ -48,6 +48,24 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
+/**
+ * Scale a vector's component along `pole` by `s`, leaving the equatorial part
+ * untouched. Mirrors stellata_scalePolar in the GLSL.
+ *
+ * This is the seam between an oblate body and a march that assumes a unit
+ * sphere. `s = 1/polarR` maps a spheroid of polar radius `polarR` (equatorial
+ * radii) onto the unit sphere; `s = polarR` is the inverse. The map is linear
+ * about the body centre, so a ray maps to a ray with its parameter unchanged —
+ * callers renormalise directions and are otherwise unaffected. A surface
+ * *normal* scales by the inverse transpose, which for this diagonal map is the
+ * inverse: squashing an ellipsoid normal by `polarR` and renormalising gives
+ * the unit-sphere point the fragment corresponds to.
+ */
+export function scalePolarComponent(v: Vec3, pole: Vec3, s: number): Vec3 {
+  const along = (v[0] * pole[0] + v[1] * pole[1] + v[2] * pole[2]) * (s - 1);
+  return [v[0] + pole[0] * along, v[1] + pole[1] * along, v[2] + pole[2] * along];
+}
+
 const FAR = 1e20;
 
 /** Sentinel span standing for "this ray never enters the shadow": inverted

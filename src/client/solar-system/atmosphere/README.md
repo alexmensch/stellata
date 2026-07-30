@@ -237,14 +237,34 @@ haze tops, Mars 60 km dust haze, Titan 300 km detached haze), never
 exaggerated: at the planet focus park (30 %-fill framing) Earth's shell reads
 ≈ 3 px — deliberately subtle, per the camera-anywhere honesty rule.
 
-The shell is spherical even on oblate bodies, and **"flattening is far below
-shell thickness" is wrong** — measure it against the shell rather than against
-the radius. Earth's f = 0.0034 is **21 % of its 0.0157-radius shell**, Mars's
-0.0059 is **33 % of its 0.0177**. That gap shows: the shell frag discards rays
-that hit a body of radius 1 while the mesh draws a spheroid whose polar radius
-is 1 − f, so toward the poles there is a band the shell suppresses and the mesh
-never covers — a dark seam between disc and halo, widest at the poles and zero
-at the equator.
+**Flattening is not negligible against the shell, only against the radius**, and
+both shaders now handle it. Earth's f = 0.0034 is **21 % of its 0.0157-radius
+shell**, Mars's 0.0059 is **33 % of its 0.0177**. Treating it as zero showed as
+a dark seam between disc and halo — widest at the poles, gone at the equator,
+because both mechanisms scale with f:
+
+- the shell discarded rays striking a body of radius **1** while the mesh drew
+  a spheroid of polar radius **1 − f**, leaving a band the shell suppressed and
+  the mesh never covered;
+- the mesh read its airlight surface point as `uRadiusPc · normal` — a point on
+  the equatorial-radius *sphere*, up to f·R outside the spheroid fragment it was
+  shading, which at the limb collapsed the chord to nothing.
+
+Both are one fix: each shader scales the ray's polar component by
+`1/uPolarRadiusR` (`stellata_scalePolar`, with `uPoleView` from the mesh's local
++Y — the axis `mesh.scale` flattens) **before** any of the geometry above runs.
+In that frame the body IS the unit sphere the march assumes, so shell entry,
+body-strike, the shadow cylinder and `h = |p| − 1` all describe the body
+actually drawn — and the atmosphere becomes a spheroidal shell of constant
+thickness, which is what an atmosphere does. The map is linear about the centre,
+so ray parameters are unchanged and only directions need renormalising. **The
+sun direction has to be deflattened too** or the shadow cylinder tilts against
+the body casting it; **`sunCos` for § Twilight must not be**, since solar
+depression is measured against the true local horizontal.
+
+The shell MESH stays a real-space sphere: it equals the deflattened shell at the
+equator and over-covers toward the poles, so nothing is uncovered and the excess
+discards on shell entry.
 
 **Gas giants deliberately carry no shell**: their
 fuzzy limb is already carried by the solidity-soft billboard edge at distance

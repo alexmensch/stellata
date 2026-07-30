@@ -8,6 +8,7 @@ import {
   litFraction,
   miePhase,
   rayleighPhase,
+  scalePolarComponent,
   scatterAlongRay,
   shadowEdgeAltitude,
   shadowSpan,
@@ -120,6 +121,52 @@ describe('scatterAlongRay', () => {
     expect(a.inscatter[2]).toBeGreaterThan(0);
     expect(b.inscatter[2]).toBeGreaterThan(0);
     expect(a.inscatter[2]).not.toBe(b.inscatter[2]);
+  });
+});
+
+describe('scalePolarComponent — the oblate body → unit sphere frame', () => {
+  const POLE: Vec3 = [0, 0, 1];
+  const EARTH_POLAR = 1 - 0.00335;
+
+  it('leaves the equatorial plane alone', () => {
+    expect(scalePolarComponent([1, 0, 0], POLE, 1 / EARTH_POLAR)).toEqual([1, 0, 0]);
+  });
+
+  it('lifts the body’s pole onto the unit sphere', () => {
+    // A point at the spheroid's pole sits at 1 − f; the deflattened frame is
+    // where the march's rPlanet = 1 is true of the body actually drawn.
+    const p = scalePolarComponent([0, 0, EARTH_POLAR], POLE, 1 / EARTH_POLAR);
+    expect(p[2]).toBeCloseTo(1, 12);
+  });
+
+  it('round-trips through its own inverse', () => {
+    const v: Vec3 = [0.3, -0.5, 0.81];
+    const there = scalePolarComponent(v, POLE, 1 / EARTH_POLAR);
+    const back = scalePolarComponent(there, POLE, EARTH_POLAR);
+    for (let i = 0; i < 3; i++) expect(back[i]).toBeCloseTo(v[i], 12);
+  });
+
+  it('maps an ellipsoid normal to the surface point it belongs to', () => {
+    // Normals scale by the inverse transpose, which for this diagonal map is
+    // the inverse: squash, renormalise, and you have the unit-sphere point.
+    // Reading uRadiusPc·normal as the point instead is what put the mesh's
+    // airlight chord up to f·R off at the limb.
+    const a = 1;
+    const c = EARTH_POLAR;
+    const th = 0.7;
+    // Surface point of x²/a² + z²/c² = 1, and its outward normal.
+    const p: Vec3 = [a * Math.cos(th), 0, c * Math.sin(th)];
+    const nLen = Math.hypot(p[0] / (a * a), p[2] / (c * c));
+    const n: Vec3 = [p[0] / (a * a) / nLen, 0, p[2] / (c * c) / nLen];
+
+    const squashed = scalePolarComponent(n, POLE, c);
+    const len = Math.hypot(...squashed);
+    const unitPoint: Vec3 = [squashed[0] / len, squashed[1] / len, squashed[2] / len];
+    // Deflattening the true surface point must land on the same place.
+    const viaPoint = scalePolarComponent(p, POLE, 1 / c);
+    for (let i = 0; i < 3; i++) expect(unitPoint[i]).toBeCloseTo(viaPoint[i], 12);
+    // And the naive reading is off by ~f at this latitude — the defect's size.
+    expect(Math.abs(n[2] - viaPoint[2])).toBeGreaterThan(0.001);
   });
 });
 

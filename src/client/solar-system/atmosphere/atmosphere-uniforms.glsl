@@ -5,6 +5,12 @@
 uniform vec3 uCenterView;
 uniform float uRadiusPc;
 uniform float uAtmoRadius;
+// The body's north pole in VIEW space, and its polar radius in equatorial
+// radii (1 − flattening). Both shaders scale the ray's polar component by
+// 1/uPolarRadiusR before marching, which is the only thing that makes the
+// unit-sphere geometry downstream describe the oblate body actually drawn.
+uniform vec3 uPoleView;
+uniform float uPolarRadiusR;
 uniform float uScaleHeightR;
 uniform float uScaleHeightM;
 uniform vec3 uBetaRayleigh;
