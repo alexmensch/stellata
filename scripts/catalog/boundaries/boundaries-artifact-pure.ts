@@ -30,8 +30,9 @@ export const FADE_OFFSET_DECIMALS = 4;
  *  rather than arguable. */
 export const MISPLACEMENT_TOLERANCE_DEG = 0.5;
 
-/** Apparent-magnitude limits the fade quantiles are keyed by. Spans the
- *  magnitude slider's 0–15 range at 1 mag; the runtime lerps between rows. */
+/** Apparent-magnitude limits the fade quantiles are keyed by. Spans 0–15 at
+ *  1 mag, wide enough for any instrument's limit; the runtime lerps between
+ *  rows. */
 export const FADE_MAG_LIMITS: readonly number[] = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 ];
@@ -245,7 +246,7 @@ export interface FadeSample {
   /** `(angular distance to the nearest wall + tolerance) × distance from Sol`
    *  — the camera offset at which this star reads as misplaced. */
   offsetPc: number;
-  /** Apparent V from Sol, which is what the magnitude slider gates on. */
+  /** Apparent V from Sol, which is what the instrument's limit gates on. */
   appMag: number;
 }
 

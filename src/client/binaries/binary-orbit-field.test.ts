@@ -1054,7 +1054,7 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
   it.each([
     ['camera moves', (f: BinaryOrbitField) =>
       f.update(t0, new THREE.Vector3(0.1, 0, 0), 15, 1080, 0.8)],
-    ['magnitude slider moves', (f: BinaryOrbitField) =>
+    ['threshold magnitude moves', (f: BinaryOrbitField) =>
       f.update(t0, idleCamera, 14, 1080, 0.8)],
     ['viewport changes', (f: BinaryOrbitField) =>
       f.update(t0, idleCamera, 15, 2160, 0.8)],

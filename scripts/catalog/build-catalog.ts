@@ -905,7 +905,7 @@ async function main() {
   await writeFile(OUT_CON, JSON.stringify(constellationsOut) + '\n');
 
   // Boundary polylines, region label anchors, the runtime membership grid and
-  // the fade-quantile table. The quantiles are keyed to the magnitude slider
+  // the fade-quantile table. The quantiles are keyed to apparent magnitude
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
   const boundaries = await writeBoundaryArtifact(

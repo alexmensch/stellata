@@ -83,10 +83,11 @@ describe('cullDistancePc', () => {
     expect(cullDistancePc(4.83, 0, 6.5)).toBe(0);
   });
 
-  it('reproduces Jupiter-from-Sol naked-eye threshold (~290 AU)', () => {
-    // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. Naked-eye
-    // cutoff 6.5. 290 AU is comfortably sub-parsec (Sol's naked-eye
-    // preset stays sub-pc) and within the Standard-mode focus zoom range.
+  it('reproduces Jupiter-from-Sol at a 6.5 cull bound (~290 AU)', () => {
+    // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. 6.5 is an
+    // arbitrary bound for exercising the closed form, not the shipped
+    // one; 290 AU is comfortably sub-parsec and within the focus zoom
+    // range.
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
@@ -96,7 +97,7 @@ describe('cullDistancePc', () => {
     expect(dAu).toBeLessThan(400);
   });
 
-  it('grows with the magnitude slider (more sensitivity → see further)', () => {
+  it('grows with the cull magnitude (deeper bound → see further)', () => {
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
