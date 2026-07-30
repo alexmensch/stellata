@@ -176,11 +176,13 @@ side from dimming the star field. Occluders are gated at
 `ADAPT_OCCLUDER_MIN_PX` (= `MESH_FADE_MIN_PX`) so a body too small to
 draw a surface hides nothing; rings never occlude (they are not sources),
 and overlapping occluders double-count, always toward over-occluding.
-**Known gap:** the candidate set is `forEachDrawnBody`, which is gated
-photometrically, while the *mesh* is gated geometrically — so a body at
-eclipse alignment (φ(α) → 0) occludes visually but not in this statistic,
-and the star it hides keeps its full flux here. Same root cause as the
-mesh-presence gate; tracked in `bd show stellata-xypg.25`.
+**The occluder list IS the sample list**, which is what makes the
+candidate gate load-bearing: `forEachDrawnBody` admits a body on EITHER
+render path — glare above the photometric cutoff, or a resolved surface —
+because at eclipse alignment φ(α) → 0 kills the glare while the body
+still fills the frame with opaque surface. Admitting it costs nothing on
+the source side (under threshold, it emits less than the floor) and is
+the only thing that keeps the star behind it out of the mean.
 `docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
 
 **Sources.** Every drawn solar-system body

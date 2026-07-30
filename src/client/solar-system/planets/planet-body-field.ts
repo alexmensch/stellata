@@ -1033,12 +1033,18 @@ export class PlanetBodyField {
   }
 
   /**
-   * Every body the GPU emits a quad for this frame, with the view the
-   * shader derives from. The gate is the vertex shader's own kill
-   * condition — a positive viewer distance and `appMag` inside the soft
-   * taper (chart hard-clips instead) — so no consumer can pick, light,
-   * or measure a body that isn't drawn. The whole field is skipped while
-   * it renders nothing at all.
+   * Every body that puts pixels on screen this frame, with the view the
+   * shader derives from — so no consumer can pick, light, or measure a
+   * body that isn't drawn. Two render paths, and **either alone is
+   * enough**: the reflected glare rides the photometric cutoff (the
+   * vertex shader's own kill condition, chart hard-clipping instead),
+   * the resolved surface rides its own geometric presence band. They
+   * part company at exactly one alignment — a body in front of its own
+   * host reflects nothing toward the camera while filling the frame with
+   * opaque surface — and taking only the glare's gate there dropped the
+   * body out of the occluder set, so the star it hides kept its full
+   * flux in the adaptation statistic. The whole field is skipped while it
+   * renders nothing at all.
    */
   private forEachDrawnBodyView(
     cameraPosLocal: Readonly<THREE.Vector3>,
@@ -1049,7 +1055,11 @@ export class PlanetBodyField {
     for (const host of this.hosts.values()) {
       for (let i = 0; i < host.count; i++) {
         const view = this.evalPlanetView(host, i, cameraPosLocal);
-        if (view.dVp <= 0 || view.appMag > cutoff) continue;
+        if (view.dVp <= 0) continue;
+        if (view.appMag > cutoff
+          && this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, view.dVp) < MESH_FADE_MIN_PX) {
+          continue;
+        }
         visit(host, i, view);
       }
     }
