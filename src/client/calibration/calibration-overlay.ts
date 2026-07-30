@@ -4,11 +4,9 @@
 
 import { bindModalDismissal, type ModalHandle } from '../modals/modal-dismiss';
 import {
-  ASSUMED_DISPLAY_GAMMA,
   BLACK_POINT_CODES,
-  GAMMA_STOPS,
   HIGHLIGHT_CODES,
-  gammaMatchCode,
+  gammaCells,
   greyCss,
   greyWedgeCodes,
 } from './calibration-ladders-pure';
@@ -106,20 +104,17 @@ function renderGammaRow(host: HTMLElement | null): () => void {
   if (!host) return () => {};
   const canvases: { canvas: HTMLCanvasElement; code: number }[] = [];
   const frag = document.createDocumentFragment();
-  for (const gamma of GAMMA_STOPS) {
+  for (const stop of gammaCells()) {
     const cell = document.createElement('div');
     cell.className = 'calib-cell';
     const canvas = document.createElement('canvas');
     canvas.className = 'calib-gamma-cell';
     const label = document.createElement('span');
     label.className = 'calib-cell-label';
-    label.textContent = gamma.toFixed(1);
-    if (gamma === ASSUMED_DISPLAY_GAMMA) {
-      cell.classList.add('is-target');
-      label.textContent += ' ·';
-    }
+    label.textContent = stop.label;
+    if (stop.isReference) cell.classList.add('is-target');
     cell.append(canvas, label);
-    canvases.push({ canvas, code: gammaMatchCode(gamma) });
+    canvases.push({ canvas, code: stop.code });
     frag.append(cell);
   }
   host.replaceChildren(frag);

@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ASSUMED_DISPLAY_GAMMA,
   BLACK_POINT_CODES,
   GAMMA_STOPS,
   GREY_WEDGE_STEPS,
   HIGHLIGHT_CODES,
   HIGHLIGHT_SURROUND_CODE,
   MAX_CODE,
+  gammaCells,
   gammaMatchCode,
   greyCss,
   greyWedgeCodes,
+  srgbMatchCode,
 } from './calibration-ladders-pure';
+import { srgbDecode } from '../hdr/tonemap-pure';
 
 describe('black-point ladder', () => {
   it('starts one code value above black and stays in the shadow toe', () => {
@@ -77,8 +79,42 @@ describe('gammaMatchCode', () => {
     }
   });
 
-  it('includes the transfer the tone-map targets', () => {
-    expect(GAMMA_STOPS).toContain(ASSUMED_DISPLAY_GAMMA);
+});
+
+describe('srgbMatchCode', () => {
+  it('pins the reference patch', () => {
+    expect(srgbMatchCode()).toBe(188);
+  });
+
+  it('round-trips through the shipped decode to 0.5 linear', () => {
+    expect(srgbDecode(srgbMatchCode() / MAX_CODE)).toBeCloseTo(0.5, 2);
+  });
+
+  it('is not any power-law stop — marking one as the target misreports', () => {
+    const powerLaw = GAMMA_STOPS.map(gammaMatchCode);
+    expect(powerLaw).not.toContain(srgbMatchCode());
+  });
+
+  it('lands between the 2.2 and 2.4 stops', () => {
+    expect(srgbMatchCode()).toBeGreaterThan(gammaMatchCode(2.2));
+    expect(srgbMatchCode()).toBeLessThan(gammaMatchCode(2.4));
+  });
+});
+
+describe('gammaCells', () => {
+  it('interleaves the reference into the power-law scale, ascending', () => {
+    const cells = gammaCells();
+    expect(cells).toHaveLength(GAMMA_STOPS.length + 1);
+    expect(cells.map((c) => c.code)).toEqual([174, 180, 186, 188, 191, 195]);
+    expect(cells.map((c) => c.label)).toEqual([
+      '1.8', '2.0', '2.2', 'sRGB', '2.4', '2.6',
+    ]);
+  });
+
+  it('marks exactly one cell as the reference, and it is the sRGB one', () => {
+    const refs = gammaCells().filter((c) => c.isReference);
+    expect(refs).toHaveLength(1);
+    expect(refs[0].code).toBe(srgbMatchCode());
   });
 });
 

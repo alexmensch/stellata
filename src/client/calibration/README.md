@@ -78,9 +78,26 @@ a still-hidden canvas measures zero and is skipped, so the cells are cut
 covers both a viewport change and a window dragged between displays of
 different pixel ratios.
 
-The stops bracket `ASSUMED_DISPLAY_GAMMA` (2.2), the transfer
-`../hdr/tonemap.glsl`'s sRGB encode targets. Moving that encode means
-moving this constant.
+### The reference is sRGB, not γ2.2
+
+**sRGB is not a 2.2 power law**, and treating it as one is the trap this
+section is built to avoid. It is a 2.4 exponent on a shifted curve with a
+linear toe, so solving `../hdr/tonemap.glsl`'s actual encode for linear
+0.5 gives code value **188** — between the 2.2 stop (186) and the 2.4 one
+(191), equal to neither. A screen that marks γ2.2 as the target therefore
+tells a correctly behaving display that it is wrong.
+
+So `srgbMatchCode()` derives the reference patch from `srgbEncode` itself
+(`../hdr/tonemap-pure.ts`, the CPU mirror of the shipped chunk) rather
+than restating a power-law approximation of it. Change the output
+transfer and the calibration target follows; there is no second constant
+to keep in step. `GAMMA_STOPS` stays as a *scale* for reading how far a
+display sits from the reference — the stops are not targets, and
+`gammaCells()` is what interleaves the two and flags the one reference.
+
+A reading one stop off the reference is not much of a signal: the stops
+are ~5 code values apart at that end of the range, which is at the edge
+of what this test resolves.
 
 ## Sizing
 
