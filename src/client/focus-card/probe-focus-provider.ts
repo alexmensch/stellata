@@ -24,9 +24,7 @@ export interface ProbeFocusProviderConfig {
   speedPcPerSec: (idx: number) => number | null;
   /** Whether the model clock has passed this probe's last contact. */
   signalLost: (idx: number) => boolean;
-  /** Positional IAU constellation, Sol-frame — the way a mission's sky
-   *  position is quoted, and LIVE because the probe moves. Null without the
-   *  artifact. */
+  /** § Constellation row. */
   constellationName: (idx: number) => string | null;
 }
 

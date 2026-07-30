@@ -13,8 +13,8 @@ export interface CloudFocusProviderConfig {
   clouds: readonly Cloud[] | null;
   /** Live camera→centroid distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
-  /** Positional IAU constellation of the centroid, Sol-frame; null without
-   *  the artifact. A cloud genuinely spans several — see ./README.md. */
+  /** § Constellation row. Answers for the centroid, though a cloud genuinely
+   *  spans several — `../molecular-clouds/README.md`. */
   constellationName: (idx: number) => string | null;
 }
 

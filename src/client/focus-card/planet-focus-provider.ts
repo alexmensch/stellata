@@ -40,8 +40,7 @@ export interface PlanetFocusProviderConfig {
    *  and moonless bodies) — same source the hover card reads; the
    *  focus card shows the uncapped list. */
   moonNamesOf: (idx: number) => readonly string[];
-  /** Positional IAU constellation, Sol-frame — an ephemeris statement, so the
-   *  row is LIVE and tracks the time scrubber. Null without the artifact. */
+  /** § Constellation row. */
   constellationName: (idx: number) => string | null;
 }
 

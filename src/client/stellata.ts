@@ -71,6 +71,7 @@ import {
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
 import type { FocusableProviders, Target, TargetKind } from './camera/focus/focus-target';
+import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
@@ -146,8 +147,7 @@ import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {
-  buildConstellationLabelAnchors,
-  createConstellationNamer,
+  createConstellationRegions,
   type ConstellationLabelAnchor,
   type ConstellationNamer,
 } from './constellation-boundaries/constellation-regions';
@@ -1900,16 +1900,14 @@ export class Stellata implements FrameAnchor {
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
    *  once the async load resolves, then binds the artifact's other two
-   *  readings — the chart label anchors and the membership lookup every
-   *  chart label anchors and the membership lookup every non-stellar focus
-   *  card resolves through. */
+   *  readings — the chart label anchors, and the membership lookup every
+   *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
     this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
-    this.constellationLabels = buildConstellationLabelAnchors(
-      artifact, this.catalog.constellations,
-    );
-    this.constellationNamer = createConstellationNamer(artifact, this.catalog.constellations);
+    const regions = createConstellationRegions(artifact, this.catalog.constellations);
+    this.constellationLabels = regions.labelAnchors;
+    this.constellationNamer = regions.namer;
   }
 
   /** Latin-name anchors for the chart-mode label engine — one per IAU region,
@@ -1925,10 +1923,13 @@ export class Stellata implements FrameAnchor {
    *  property: a planet's answer tracks `getT()` because its position does.
    *
    *  Null before the boundary artifact loads, for Sol at the origin, and for
-   *  an object with no resolvable position this frame. **Stars do not route
-   *  here** — byte 34 is the shipped authority, survives a missing artifact,
-   *  and carries the designation-constellation split beside it. */
-  constellationOf(kind: keyof FocusableProviders, idx: number): string | null {
+   *  an object with no resolvable position this frame.
+   *
+   *  `star` is excluded because byte 34 is the shipped authority there — it
+   *  survives a missing artifact and carries the designation-constellation
+   *  split beside it — and `shell` because the Local Bubble and the heliopause
+   *  are centred on Sol, so a direction from Sol says nothing about them. */
+  constellationOf(kind: ConstellationOfKind, idx: number): string | null {
     const namer = this.constellationNamer;
     if (!namer) return null;
     const abs = this.tmpConstellationAbs;

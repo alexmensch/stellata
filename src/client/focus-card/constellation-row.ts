@@ -1,7 +1,13 @@
 // The Constellation row every non-stellar card carries.
 // See ./README.md § Constellation row.
 
+import type { TargetKind } from '../camera/focus/focus-target';
 import type { FocusCardRow } from './focus-card-types';
+
+/** The kinds that resolve the row positionally. `star` and `shell` are
+ *  excluded at the type level rather than by convention — see
+ *  `Stellata.constellationOf`. */
+export type ConstellationOfKind = Exclude<TargetKind, 'star' | 'shell'>;
 
 /**
  * Zero rows or one, so a provider spreads the result instead of branching:
