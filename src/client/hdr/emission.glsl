@@ -50,6 +50,21 @@ float stellataKernelFluxPeak(
     return min(flux / max(area, 1e-9), STELLATA_LUMA_CEIL);
 }
 
+/** One texel of the statistic attachment: flux-correct luminance in R,
+ *  peak-correct in G. `alpha` must be whatever the same fragment writes to
+ *  attachment 0, because one blend equation runs over both attachments —
+ *  an emitter that wants its flux SUMMED under an alpha-scaled additive
+ *  blend passes a pre-divided R. Both channels clamp at the ceiling for the
+ *  reason the display peak does: a clamped read is a lower bound the
+ *  adaptation loop closes from above (../hdr/exposure/README.md). */
+vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
+    return vec4(
+        min(fluxL, STELLATA_LUMA_CEIL),
+        min(peakL, STELLATA_LUMA_CEIL),
+        0.0,
+        alpha);
+}
+
 /** Luminance one pixel receives from an extended source of surface
  *  brightness `magPerArcsec2`. The pixel's flux magnitude is
  *  `magPerArcsec2 - 2.5*log10(omegaPxArcsec2)`, and feeding that through

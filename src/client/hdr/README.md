@@ -19,10 +19,13 @@ src/client/hdr/
   hdr-pipeline.ts            HdrPipeline — target lifecycle (lazy alloc),
     (+ test)                 bind/resolve, chart bypass, float-support
                              detection, both ShaderChunk registrations,
-                             HDR_DEFAULT_ENABLED, and the emitter uniform
-                             seam (§ Unit). The class needs a live GL
-                             context, so the test pins only the ship gate
-                             (§ Ship gate).
+                             HDR_DEFAULT_ENABLED, the emitter uniform
+                             seam (§ Unit), and the statistic attachment's
+                             draw-buffer gate (§ Statistic attachment).
+                             The class needs a live GL context, so the test
+                             pins only the ship gate (§ Ship gate).
+  statistic/                 The target's second attachment: what may
+                             write it, in what unit — its own README.
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and inline by each
                              emitting shader when the target isn't bound.
@@ -38,7 +41,9 @@ src/client/hdr/
                              derivation and LUMA_CEIL.
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
-                             scene adaptation, EV trim. Its own README.
+                             scene adaptation, EV trim, and the reduction
+                             that measures the statistic attachment. Its
+                             own README.
   chrome/                    Authored chrome colours pre-mapped through
                              the inverse — its own README (§ Chrome).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
@@ -131,14 +136,29 @@ adaptation measurement lives too. Nothing in this README's operator or
 target discussion depends on how that scalar was arrived at: emitters
 read it, the resolve never sees it.
 
+## Statistic attachment — a second, physical-luminance target
+
+The target is MRT. **Attachment 0 is unchanged** — display luminance, same
+look. **Attachment 1 is RG16F**, carrying flux-correct luminance in R and
+peak-correct luminance in G for the exposure statistic to reduce, and it is
+gated per draw so only physical emitters reach it. Why attachment 0 cannot
+serve, the texel rule, the blend contract and the residuals are
+**`statistic/README.md`**; the reduction itself is
+`exposure/reduction/README.md`.
+
+`bind()` clears with the gate open, deliberately: the renderer's own
+auto-clear runs after `bind()` returns with the gate shut, so without an
+explicit both-attachment clear the statistic would accumulate across frames
+forever. It costs a redundant clear of attachment 0.
+
 ## Pass ordering — one target, two passes into it
 
 ```
-hdr.bind()                 → setRenderTarget(rt)     (or null when parked)
+hdr.bind()                 → setRenderTarget(rt) + clear both attachments
 renderer.render(scene)     → the whole main stack
 localDepthPass.render()    → repaints over the same target
 hdr.resolve()              → setRenderTarget(null) + fullscreen tone-map
-coveragePass.measure()     → own targets, then back to the canvas
+reduction.measure()        → own targets, then back to the canvas
 ```
 
 `bind()` and `resolve()` are called from `stellata.ts` `animate()` and
@@ -148,10 +168,10 @@ which is exactly why its repaint lands in the same target for free —
 the canvas's. Depth semantics, core masks, and the log-depth split are
 untouched: depth encoding is orthogonal to colour encoding.
 
-`coveragePass.measure()` runs last and touches neither this target nor
-the canvas — it binds its own, re-renders the local pass's scene for
-occluder depth, and restores. It is after the resolve so the measurement
-never delays the frame it measured (`exposure/coverage/README.md`).
+`reduction.measure()` runs last and touches neither this target nor the
+canvas — it binds its own chain of ever-smaller targets and restores. It
+is after the resolve so the measurement never delays the frame it measured
+(`exposure/reduction/README.md`).
 
 **The target's depth is 24-bit.** `depthBuffer: true` with
 `stencilBuffer: false` gives `DEPTH_COMPONENT24` on WebGL2 (three
@@ -161,7 +181,8 @@ depth pass derives its slice-ratio bound from a 24-bit buffer
 attachment to a 16-bit renderbuffer or a depth *texture* of the wrong
 type would silently coarsen every close-range z-test by 256×.
 
-The target is `RGBA16F`, sized to the renderer's **drawing buffer**
+The target is `RGBA16F` plus its `RG16F` statistic attachment
+(§ Statistic attachment), sized to the renderer's **drawing buffer**
 (canvas × pixelRatio, existing cap 2). `syncSize()` re-derives from the
 renderer rather than taking a width/height, so window resize and any
 future pixel-ratio change are the same code path.
@@ -295,8 +316,9 @@ the default path and the operator runs once, at the resolve.
 - `stellata.setHdrEnabled(false)` is the whole-frame A/B (§ Dev switches).
   It is no longer "what users get" — it is the comparison path.
 - **The target allocates lazily**, on first `bind()` that wants it — a
-  full drawing-buffer RGBA16F plus its 24-bit depth attachment is a
-  couple of hundred MB of VRAM at 2x DPR on a large display. The gate
+  full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
+  24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
+  large display. The gate
   being live means it now allocates on the first frame in practice; keep
   the laziness anyway, because `setHdrEnabled(false)` and chart mode both
   want a build that never pays for it.
