@@ -147,7 +147,9 @@ import { ConstellationFigureLayer } from './constellation-figure/constellation-f
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {
   buildConstellationLabelAnchors,
+  createConstellationNamer,
   type ConstellationLabelAnchor,
+  type ConstellationNamer,
 } from './constellation-boundaries/constellation-regions';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
@@ -332,9 +334,10 @@ export class Stellata implements FrameAnchor {
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
-  // Empty until attachConstellationBoundaries lands the artifact, which is
-  // optional — every consumer must read it as "not yet".
+  // Empty / null until attachConstellationBoundaries lands the artifact, which
+  // is optional — every consumer must read them as "not yet".
   private constellationLabels: readonly ConstellationLabelAnchor[] = [];
+  private constellationNamer: ConstellationNamer | null = null;
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
@@ -1898,19 +1901,39 @@ export class Stellata implements FrameAnchor {
    *  already in the scene; this builds its geometry and seeds the fade window
    *  once the async load resolves, then binds the artifact's other two
    *  readings — the chart label anchors and the membership lookup every
-   *  chart label anchors. */
+   *  chart label anchors and the membership lookup every non-stellar focus
+   *  card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
     this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
     this.constellationLabels = buildConstellationLabelAnchors(
       artifact, this.catalog.constellations,
     );
+    this.constellationNamer = createConstellationNamer(artifact, this.catalog.constellations);
   }
 
   /** Latin-name anchors for the chart-mode label engine — one per IAU region,
    *  so Serpens carries two. Empty until the boundary artifact loads. */
   get constellationLabelAnchors(): readonly ConstellationLabelAnchor[] {
     return this.constellationLabels;
+  }
+
+  /** The IAU constellation a focusable object's own position falls in, in the
+   *  Sol frame — the convention every catalogue, almanac and observing guide
+   *  reports, and one of the two exceptions the focus card's camera-relative
+   *  rule admits. For the bodies that move it is an ephemeris statement, not a
+   *  property: a planet's answer tracks `getT()` because its position does.
+   *
+   *  Null before the boundary artifact loads, for Sol at the origin, and for
+   *  an object with no resolvable position this frame. **Stars do not route
+   *  here** — byte 34 is the shipped authority, survives a missing artifact,
+   *  and carries the designation-constellation split beside it. */
+  constellationOf(kind: keyof FocusableProviders, idx: number): string | null {
+    const namer = this.constellationNamer;
+    if (!namer) return null;
+    const abs = this.tmpConstellationAbs;
+    if (!this.focusables[kind].localPositionInto(idx, abs)) return null;
+    return namer.nameAt(abs.add(this.worldOffset));
   }
 
   /** Attach the loaded probe trajectories. Both layers are constructed in
@@ -1995,6 +2018,7 @@ export class Stellata implements FrameAnchor {
 
   private tmpVec3b = new THREE.Vector3();
   private tmpHostLocal = new THREE.Vector3();
+  private tmpConstellationAbs = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */

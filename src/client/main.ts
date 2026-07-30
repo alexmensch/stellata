@@ -399,6 +399,7 @@ async function main() {
           cameraDistancePc: (idx) => stellata.planetCameraDistancePc(idx),
           appMagFor: (idx) =>
             stellata.planetField.appMagForInstance(idx, stellata.camera.position),
+          constellationName: (idx) => stellata.constellationOf('planet', idx),
           moonNamesOf: (idx) => {
             const host = stellata.planetField.hostPlanetOf(idx);
             const ps = host
@@ -422,6 +423,7 @@ async function main() {
             return s === null || !s.sampled ? null : s.velPcPerSec.length();
           },
           signalLost: (idx) => stellata.probeField.sampleFor(idx)?.signalLost ?? false,
+          constellationName: (idx) => stellata.constellationOf('probe', idx),
         }),
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,
@@ -435,6 +437,7 @@ async function main() {
               cloud.centerAbs.z - w.z - c.z,
             );
           },
+          constellationName: (idx) => stellata.constellationOf('cloud', idx),
         }),
         lg: createLgFocusProvider({
           objects: lgCatalog?.objects ?? null,
@@ -448,6 +451,7 @@ async function main() {
               obj.centerAbs.z - w.z - c.z,
             );
           },
+          constellationName: (idx) => stellata.constellationOf('lg', idx),
         }),
         shell: createShellFocusProvider({
           shellAt: (idx) => stellata.shells.at(idx),

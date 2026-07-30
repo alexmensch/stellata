@@ -3,6 +3,7 @@
 import type { Cloud } from '../molecular-clouds/cloud-loader';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatAxisPair, formatThousands } from '../format/physical-format';
+import { constellationRows } from './constellation-row';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 export interface CloudFocusProviderConfig {
@@ -12,6 +13,9 @@ export interface CloudFocusProviderConfig {
   clouds: readonly Cloud[] | null;
   /** Live camera→centroid distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
+  /** Positional IAU constellation of the centroid, Sol-frame; null without
+   *  the artifact. A cloud genuinely spans several — see ./README.md. */
+  constellationName: (idx: number) => string | null;
 }
 
 const SOURCE_LABEL: Record<Cloud['source'], string> = {
@@ -38,6 +42,7 @@ export function createCloudFocusProvider(
         rows.push({ label: 'Mass', value: `${formatThousands(cloud.massMsun)} M☉` });
       }
       rows.push({ label: 'Known from', value: SOURCE_LABEL[cloud.source] });
+      rows.push(...constellationRows(() => config.constellationName(idx)));
       // One dot-separated alias line below the type, matching the LG /
       // star card designation-line convention.
       const identityLines = ['Molecular cloud'];

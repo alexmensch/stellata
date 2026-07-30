@@ -29,6 +29,33 @@ row sits beside it so the two frames stay visibly distinct. This is not
 a general licence to add Sol-relative rows: a new one needs the same
 argument, not this precedent.
 
+## Constellation row
+
+Every kind with a real sky position carries one, and it is **Sol-frame
+for all of them** — that is the whole point of the exception: the
+constellation is how catalogues, SIMBAD, and every observing reference
+tag an object, and an almanac's "Mars in Taurus" means as seen from the
+inner solar system, not from wherever the camera drifted. Shell cards
+(Local Bubble, heliopause) are the exception on merit: both are centred
+on Sol, so a direction from Sol is meaningless for them.
+
+- **Stars** read catalog byte 34 (`star-focus-provider.ts`) — baked,
+  survives a missing boundary artifact, and the designation
+  constellation lives beside it
+  (`../constellation-boundaries/README.md` § ρ Aquilae).
+- **Every other kind** resolves through `Stellata.constellationOf(kind,
+  idx)`, one grid lookup against the shipped IAU partition, so a galaxy
+  and the stars around it are answered by the same boundaries.
+  `constellation-row.ts` owns the row: zero rows or one, so a provider
+  spreads it instead of branching, and **LIVE for every kind** because
+  for planets, moons and probes it is a time-varying ephemeris
+  statement — scrub the clock and it changes at a boundary crossing.
+
+A **cloud** answers for its centroid only. Literature freely says a
+cloud "spans Taurus and Perseus", and the overlap set is the more
+faithful answer, but it needs the isosurface rather than a point — see
+`../molecular-clouds/README.md`.
+
 ## Rolodex behaviour
 
 All tier-2 cards — the focus card plus one card per pinned object — form
@@ -81,6 +108,8 @@ so the whole unit stays card-sized regardless of pin count.
   guarantee is the point of the registry shape, don't weaken it to a
   partial map. `focus-card-contract.test.ts` pins it with
   `@ts-expect-error`.
+- `constellation-row.ts` (+ test) — the shared `Constellation` row for
+  every non-stellar kind (§ Constellation row).
 - `card-body.ts` — the shared content renderer: fills a card's title +
   body from `FocusCardContent`, tracks LIVE rows (function-valued
   `FocusCardRow.value`), and re-evaluates them on `tick()` while the

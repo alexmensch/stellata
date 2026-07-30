@@ -51,6 +51,7 @@ describe('createLgFocusProvider', () => {
     const provider = createLgFocusProvider({
       objects: [M31],
       cameraDistancePc: () => camDist,
+      constellationName: () => 'Andromeda',
     });
     const card = provider.format(0);
     expect(card.name).toBe('M31');
@@ -61,11 +62,15 @@ describe('createLgFocusProvider', () => {
     expect((byLabel.get('Apparent mag') as () => string)()).toBe('-1.6');
     expect(byLabel.get('Absolute mag')).toBe('-21.0');
     expect(byLabel.get('Known from')).toBe('Curated (SCIENCE.md)');
+    // Sol-frame by convention — M31's common name IS its constellation.
+    expect((byLabel.get('Constellation') as () => string)()).toBe('Andromeda');
     expect(typeof byLabel.get('Distance')).toBe('function');
   });
 
   it('returns an empty card when the layer is absent', () => {
-    const provider = createLgFocusProvider({ objects: null, cameraDistancePc: () => 0 });
+    const provider = createLgFocusProvider({
+      objects: null, cameraDistancePc: () => 0, constellationName: () => null,
+    });
     expect(provider.format(0)).toEqual({ name: '', identityLines: [], rows: [], lines: [] });
   });
 });

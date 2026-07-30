@@ -9,6 +9,7 @@ import {
   formatSolDistance,
 } from '../format/probe-format';
 import type { ProbeTrajectory } from '../solar-system/probes/probe-trajectory';
+import { constellationRows } from './constellation-row';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 export interface ProbeFocusProviderConfig {
@@ -23,6 +24,10 @@ export interface ProbeFocusProviderConfig {
   speedPcPerSec: (idx: number) => number | null;
   /** Whether the model clock has passed this probe's last contact. */
   signalLost: (idx: number) => boolean;
+  /** Positional IAU constellation, Sol-frame — the way a mission's sky
+   *  position is quoted, and LIVE because the probe moves. Null without the
+   *  artifact. */
+  constellationName: (idx: number) => string | null;
 }
 
 export function createProbeFocusProvider(
@@ -60,6 +65,7 @@ export function createProbeFocusProvider(
         // Live because it is a function of the model clock, not of the
         // probe: scrubbing back before last contact restores the signal.
         { label: 'Signal', value: () => formatProbeSignal(config.signalLost(idx), traj.lastContactT) },
+        ...constellationRows(() => config.constellationName(idx)),
       ];
 
       return {

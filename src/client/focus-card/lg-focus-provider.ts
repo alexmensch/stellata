@@ -4,6 +4,7 @@ import type { LgObject } from '../local-group/local-group-loader';
 import { maxSemiAxisPc, minSemiAxisPc } from '../local-group/local-group-loader';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatAxisPair } from '../format/physical-format';
+import { constellationRows } from './constellation-row';
 import type { FocusCardContent, FocusCardProvider, FocusCardRow } from './focus-card-types';
 
 export interface LgFocusProviderConfig {
@@ -13,6 +14,8 @@ export interface LgFocusProviderConfig {
   objects: readonly LgObject[] | null;
   /** Live camera→centroid distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
+  /** Positional IAU constellation, Sol-frame; null without the artifact. */
+  constellationName: (idx: number) => string | null;
 }
 
 const SOURCE_LABEL: Record<LgObject['source'], string> = {
@@ -55,6 +58,7 @@ export function createLgFocusProvider(
         { label: 'Absolute mag', value: lgAbsoluteMag(mV, obj.distanceFromSol).toFixed(1) },
         { label: 'Size', value: formatAxisPair(maxSemiAxisPc(obj), minSemiAxisPc(obj)) },
         { label: 'Known from', value: SOURCE_LABEL[obj.source] },
+        ...constellationRows(() => config.constellationName(idx)),
       ];
       // One dot-separated alias line, matching the star card's
       // designation-line convention.
