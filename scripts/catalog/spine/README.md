@@ -86,15 +86,29 @@ set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
 `build:catalog` path; it survives for `../export-astrometry-request.ts`
 and the classic-ID overlay's own gate.
 
-Three of these rows carry identifiers the frozen build resolved **after**
-its walk: the `multiples.tsv` HD-only primaries backfilled by
-`backfillPrimaryIdentifiers`, plus ξ UMa B's source_id, written by
-companion promotion's collocated-double merge. Feeding them into the walk
-is what makes each record's designation set — and so its SID — identical
-by construction, and it also routes those records differently from the
-build the spine snapshots, since a HIP now reaches the direction cascade
-and the V cascade's printed tier. `../companions/README.md` § Anchor flux
-conservation carries the consequence.
+**Four rows carry identifiers the frozen build resolved *after* its walk**:
+the three `multiples.tsv` HD-only primaries `backfillPrimaryIdentifiers`
+wrote (ξ UMa / HD 98231, ξ Sco / HD 144069, HD 75632), plus ξ UMa B's
+source_id, written by companion promotion's collocated-double merge. Feeding
+them into the walk is what makes each record's designation set — and so its
+SID — identical by construction. It also routes those four records
+differently from the build the spine snapshots, and **every count the swap
+moved that is not a retired gate traces to these four**:
+
+| Count | Δ | Which of the four, and why |
+|---|---|---|
+| `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of via the backfill's reclassify callback |
+| `ciSpectralDerived` | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplies the colour where classIdx=8 had fallen through to solar |
+| `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
+| `multiplesIdentifierBackfill` | 3 → 0 | the three primaries: the pass finds its work already done |
+| `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
+| `companionRepositionedCollocatedDouble` | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
+| `companionAbsmagWdsMagDerived` | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |
+| `systemCoherenceSystems` | +1 | ξ UMa B: the coherence pass resolves members by source_id then HIP, so B used to collapse onto A's record on the shared HIP 55203 and the root never reached two members |
+| `bjEligible` | −1 | none of the four — the one `tooFar` row the old walk counted as eligible before dropping it; the spine never carried it |
+
+`../companions/README.md` § Anchor flux conservation carries the
+consequence of the V-tier move: three records ship as unsplit blends.
 
 ## Why a guard, not a rebuild
 
