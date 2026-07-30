@@ -125,13 +125,11 @@ export interface BuildCounts {
    *  GCVS aliases are built against the designation's constellation instead
    *  (ρ Aql / 67 Aql). */
   designationConMismatch: number;
-  /** Stars whose designation constellation came from their GCVS designation
-   *  rather than AT-HYG's `con` cell, because the two disagree — three
-   *  corrections plus one anchor-less companion that had no cell to inherit.
-   *  The designation is self-describing and wins; see `parse/README.md`
-   *  § Positional constellation membership for why the cell cannot be
-   *  trusted as a nomenclature field. */
-  gcvsDesignationConOverride: number;
+  /** Stars whose designation constellation came from their own GCVS
+   *  designation — the only nomenclature source the build has left, since the
+   *  spine carries no editorial `con` cell. See `parse/README.md`
+   *  § Positional constellation membership. */
+  gcvsDesignationCon: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
   solIndex: number;
   /** Total stick-figure polylines across all constellations. */
@@ -139,32 +137,10 @@ export interface BuildCounts {
   /** Constellations that carry at least one stick-figure polyline. */
   figureConstellations: number;
   /** Records emitted with a non-zero Gaia DR3 source_id at
-   *  RECORD_LAYOUT.gaiaSourceId. AT-HYG carries `gaia` for ~98% of
-   *  rows; a sharp drop here means the AT-HYG column changed or the
-   *  builder lost the plumbing. */
+   *  RECORD_LAYOUT.gaiaSourceId. The spine carries one on all but its
+   *  no-Gaia residual; a sharp drop here means the builder lost the
+   *  plumbing, since nothing re-derives the binding. */
   gaiaSourceIdResolved: number;
-  /** AT-HYG rows whose `gaia` cell was blank but whose `hip` resolved
-   *  through `gaia_dr3_hip_xmatch.tsv` — surfaced as `gaia_source_id`
-   *  in the binary via the HIP→Gaia cross-walk fallback. Counted as
-   *  part of `gaiaSourceIdResolved`. Gaia-saturated bright binaries
-   *  (Sirius, Vega, …) are excluded from both AT-HYG.gaia and the
-   *  cross-walk, so they remain unresolved and are not counted here. */
-  gaiaSourceIdBackfilled: number;
-  /** AT-HYG rows whose native `gaia` cell or HIP cross-walk hit was
-   *  scrubbed by the G−V magnitude gate
-   *  (GAIA_BINDING_G_MINUS_V_REJECT_MAG) — saturated bright stars
-   *  best-matched to a resolvable companion or background source
-   *  (Toliman, Castor). Mirrors the binaries pipeline's gate in
-   *  scripts/binaries/indices.py. */
-  gaiaBindingMagRejected: number;
-  /** AT-HYG rows whose binding was scrubbed by the sibling-letter
-   *  attribution gate (isSiblingLetterAttribution) — SIMBAD's WDS
-   *  cross-IDs give a sibling component sole ownership of the bound
-   *  source (μ Dra A carrying B's source). The catalog-boundary mirror
-   *  of the binaries pipeline's identity refutation. */
-  gaiaBindingSiblingRejected: number;
-  /** Sources indexed from the SIMBAD WDS cross-IDs TSV (bySource size). */
-  simbadWdsXidsEntries: number;
   /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
   apsisEntries: number;
   /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
@@ -193,12 +169,6 @@ export interface BuildCounts {
    *  parsed spectral class (tier 4/5) instead of the solar fallback — the
    *  population that would otherwise render solar-yellow. */
   ciSpectralDerived: number;
-  /** AT-HYG rows whose IAU-positional constellation differs from their
-   *  editorial `con` cell. Pinned exactly, not as a rate: it is the
-   *  sharpest available signal on the B1875 precession epoch — see
-   *  src/client/constellation-boundaries/iau-geometry/README.md
-   *  § Agreement with AT-HYG. */
-  conPositionalDisagreement: number;
   /** Identifier-less catalog primaries that gained HIP / Gaia source_id
    *  from a multiples.tsv pair-primary row, joined by HD
    *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */

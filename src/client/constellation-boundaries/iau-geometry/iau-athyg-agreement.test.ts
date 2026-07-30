@@ -2,12 +2,12 @@
 // own editorial `con` column. See README.md § Agreement with AT-HYG.
 
 import { createReadStream } from 'node:fs';
+import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
-import { ATHYG_CSV } from '../../../../scripts/catalog/parse/read-stars-inputs';
-import { isLfsPointerFile } from '../../../../scripts/util/paths';
+import { REPO_ROOT, isLfsPointerFile } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
@@ -18,6 +18,11 @@ const ROWS_WITH_CON = 317_174;
  *  Pinned exactly, not as a rate: this count is the sharpest available signal
  *  on the precession epoch — dating B1875.0 six months late triples it. */
 const DISAGREEMENTS = 61;
+
+// Declared here rather than imported from the build: the catalogue left the
+// record build's input set with the driver swap, and this suite is the one
+// consumer that still walks it.
+const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 
 const lookup = createIauConstellationLookup(readIauEdgeRecords());
 

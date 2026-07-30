@@ -162,9 +162,10 @@ export interface ApplyVariabilityResult {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   named: number;
-  /** Stars whose `desigConIndex` the GCVS designation overrode, because the
-   *  designation names a different constellation than AT-HYG's `con` cell. */
-  desigConOverridden: number;
+  /** Stars whose `desigConIndex` came from their GCVS designation. Nothing
+   *  upstream sets the field, so this is every named star whose designation
+   *  carries a constellation abbreviation. */
+  desigConSupplied: number;
 }
 
 // Cross-match each star against GCVS via gaia_source_id (first; bridged
@@ -186,7 +187,7 @@ export function applyVariability(
   let matchedByHip = 0;
   let matchedByHd = 0;
   let named = 0;
-  let desigConOverridden = 0;
+  let desigConSupplied = 0;
   for (const s of stars) {
     let gcvsName: string | undefined;
     let source: 'gaia' | 'hip' | 'hd' | null = null;
@@ -205,13 +206,14 @@ export function applyVariability(
     if (!gcvsName || !source) continue;
     s.gcvsName = gcvsName;
     named++;
-    // A GCVS designation names its own constellation, so it outranks AT-HYG's
-    // editorial `con` cell for this star's designation — the cell is stale on
-    // LT Vul (Sge) and misses RY Cen / EQ Vul entirely.
+    // A GCVS designation names its own constellation, which is what makes it
+    // the designation authority: it is right where an editorial cell was
+    // stale (LT Vul, filed under Sge) and where one missed the mover outright
+    // (RY Cen, EQ Vul).
     const desigCon = gcvsDesignationConIndex(gcvsName);
     if (desigCon !== NO_CONSTELLATION_INDEX && desigCon !== s.desigConIndex) {
       s.desigConIndex = desigCon;
-      desigConOverridden++;
+      desigConSupplied++;
     }
     const data = gcvsData.get(gcvsName);
     if (!data) continue;
@@ -228,6 +230,6 @@ export function applyVariability(
     matchedByHip,
     matchedByHd,
     named,
-    desigConOverridden,
+    desigConSupplied,
   };
 }

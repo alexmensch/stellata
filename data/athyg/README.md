@@ -1,13 +1,15 @@
 # AT-HYG v3.3 — stellar catalogue (classic-IDs subset)
 
-The base stellar catalogue Stellata renders, plus the frozen spine derived
-from it. Every row in the subset carries at least one classical designation
-(proper name, Bayer, Flamsteed, HIP, HD, HR, or Gliese).
+The catalogue Stellata's membership descends from, plus the frozen spine
+that now carries it. Every row in the subset carries at least one classical
+designation (proper name, Bayer, Flamsteed, HIP, HD, HR, or Gliese).
 
 ```
-athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows.
-inherited-spine.tsv        ~40 MB, LFS. Generated provenance data —
-                           see § The inherited spine. 313,257 rows.
+athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows. NOT a build
+                           input — see § Consumed by.
+inherited-spine.tsv        ~40 MB, LFS. Generated provenance data, and the
+                           record build's membership term — see § The
+                           inherited spine. 313,257 rows.
 ```
 
 The two are different kinds of file: the CSV is frozen **external** data
@@ -36,7 +38,7 @@ beside it.
 `inherited-spine.tsv` is **generated provenance data**, not an upstream
 table: one row per AT-HYG-derived record of the AT-HYG-driven build of
 **2026-07-28** (`athyg_33_classic_ids.csv` v3.3 + that day's reference
-tables), written once by `pnpm run build:spine` and then frozen. It carries
+tables), written once by a generator that has since retired, and frozen. It carries
 each record's resolved designation set (`hip` `hd` `hr` `gl` `flam` `bayer`
 `proper` `gaia_source_id`) plus AT-HYG's printed cells verbatim (`tyc` `ra`
 `dec` `dist` `mag` `ci` `spect` `rv` `pm_ra` `pm_dec` and the six `*_src`
@@ -44,8 +46,8 @@ provenance columns). `gaia_source_id` is empty on 1,371 rows — the no-Gaia
 residual; there is no separate keep-list file.
 
 It exists so catalogue membership and labels survive AT-HYG's retirement as
-the build driver: after the swap, membership is the spine and AT-HYG the
-catalogue is not consulted. Contract:
+the build driver, which has happened: membership is the spine, and AT-HYG
+the catalogue is not consulted. Contract:
 [`docs/catalog-driver.md`](../../docs/catalog-driver.md) § 3. Generator,
 column origins, and why nothing regenerates it in CI:
 [`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md).
@@ -53,15 +55,18 @@ Licence follows the CSV it derives from (CC-BY-SA-4.0).
 
 ## Consumed by
 
-`athyg_33_classic_ids.csv` → `scripts/catalog/build-catalog.ts` (`readStars`
-in `scripts/catalog/parse/stars-parse.ts`) and
-`scripts/catalog/spine/build-inherited-spine.ts`. The build does NOT consult
-the network — refresh of the CSV is a manual swap, see
-[`scripts/refresh/`](../../scripts/refresh/README.md) when a new
-AT-HYG release lands. Reference epoch J2000.0; proper-motion columns
-are ingested but not applied (no T-axis animation today).
+`inherited-spine.tsv` → `scripts/catalog/build-catalog.ts` (`readStars` in
+`scripts/catalog/parse/stars-parse.ts`), as the membership term: every row
+is a record, and no other source adds one. Two test files in
+`scripts/catalog/spine/` also read it — the guard pins its bytes and
+committed counts, the parity gate holds it to the build it snapshots.
+Reference epoch J2000.0.
 
-`inherited-spine.tsv` has no build consumer yet — wiring it in as the
-membership term is `stellata-3bsf.4`. Two test files in
-`scripts/catalog/spine/` read it: the guard pins its bytes and committed
-counts, the parity gate holds it to the build it snapshots.
+`athyg_33_classic_ids.csv` is **no longer a build input.** It stays
+committed as the spine's provenance and for two consumers that walk the
+upstream cells directly: `scripts/catalog/export-astrometry-request.ts` (the
+Gaia pull list) and
+`src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
+(the boundary-epoch cross-check against the editorial `con` column). A new
+AT-HYG release therefore no longer moves the catalogue — replacing the spine
+is `stellata-3bsf.8`.

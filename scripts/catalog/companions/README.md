@@ -350,7 +350,7 @@ companion never gets one without the other.
 | Field(s) | Origin | Source |
 | --- | --- | --- |
 | `conIndex` | per-component | the IAU boundary region the minted position falls in (`../parse/README.md` § Positional constellation membership) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
-| `desigConIndex` | inherited | anchor's editorial index — a composed name ("Xi Boo B") is named for whatever the primary's designation is, so Fomalhaut C stays "α PsA C" while sitting positionally in Aquarius. |
+| `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Empty on all but GCVS-named anchors since the spine dropped AT-HYG's editorial `con` cell, so a boundary-straddling companion (Fomalhaut C, positionally in Aquarius) now composes against its own positional index rather than the primary's "α PsA"; `stellata-3bsf.11` decides where the field is re-sourced from (`../parse/README.md` § Positional constellation membership). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (`../parse/README.md` § Space-motion velocity, Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `proper` | system-derived | `<primary_proper> <comp>` (own `name` cell wins when present). |

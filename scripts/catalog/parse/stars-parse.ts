@@ -1,8 +1,7 @@
-// AT-HYG CSV reader: per-row distance stack (Bailer-Jones / HIP2
+// Inherited-spine reader: per-row distance stack (Bailer-Jones / HIP2
 // parallax / LMC overrides) × direction cascade → in-memory Star
 // records for every downstream builder step. See scripts/catalog/README.md.
-import { createReadStream } from 'node:fs';
-import { parse } from 'csv-parse';
+import { readFileSync } from 'node:fs';
 
 import {
   classifyFromSimbad,
@@ -18,8 +17,6 @@ import {
   emptyDistSrcPartition,
   tallyDistSrc,
   DIST_SRC_HIP,
-  resolveGaiaSourceId,
-  parseGaiaSourceIdStr,
   spectralClassCi,
   spectralClassColorIsDerivable,
   SOLAR_BV_FALLBACK,
@@ -32,7 +29,6 @@ import {
   type ApsisRow,
   type DistSrcPartition,
   type SimbadSpectralIndex,
-  type SimbadWdsXidIndex,
 } from '../catalog-pure';
 import {
   resolveDirection,
@@ -53,7 +49,8 @@ import {
   type VVia,
 } from '../photometry/v-magnitude-pure';
 import { emptyTallyPartition } from '../../util/tally';
-import { CON_INDEX, type ConstellationAssignment } from './constellations';
+import { parseSpineTsv } from '../spine/inherited-spine-pure';
+import { type ConstellationAssignment } from './constellations';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -102,16 +99,11 @@ export interface Star {
   amplitudeMag: number;     // 0 if not variable
   varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
   gcvsName: string | null;  // GCVS designation attached by applyVariability (R CrB, VY CMa, V0645 Cen); null when not cross-matched
-  // Build-time-only diagnostic fields. Captured from the AT-HYG row before
-  // any override fires; consumed by the post-build distance-regression check
-  // and NOT written to the binary.
-  athygDist: number | null;     // AT-HYG `dist` column, pre-override
-  athygDistSrc: string | null;  // AT-HYG `dist_src` column
-  /** AT-HYG `id` — the source row's primary key, null on records this build
-   *  minted rather than read (promoted companions). Non-null is the
-   *  AT-HYG-derived predicate the inherited-spine generator selects on, and
-   *  its join key back to the printed CSV cells. */
-  athygRowId: number | null;
+  // Build-time-only diagnostic fields. The spine's printed AT-HYG cells,
+  // captured before any override fires; consumed by the post-build
+  // distance-regression check and NOT written to the binary.
+  athygDist: number | null;     // printed `dist`, pre-override
+  athygDistSrc: string | null;  // printed `dist_src`
   /** Which cascade tier supplied the V this record's absmag was derived from,
    *  `null` on records minted rather than read (promoted companions). Read by
    *  companion promotion's flux conservation, which may only subtract a
@@ -140,35 +132,6 @@ export function nonEmpty(s: string | undefined | null): string | null {
   return t ? t : null;
 }
 
-// Subset of AT-HYG v3.3 columns this build script reads. Every column we
-// touch must be declared here; a typo on `row.foo` then becomes a compile
-// error rather than a silent `undefined` that corrupts the binary.
-// `cast: false` keeps every cell as a string; the parseFloat/parseInt
-// helpers below normalise them.
-export interface AthygRow {
-  id: string;
-  absmag: string;
-  dist: string;
-  dist_src: string;
-  ci: string;
-  spect: string;
-  con: string;
-  proper: string;
-  bayer: string;
-  flam: string;
-  hip: string;
-  hd: string;
-  hr: string;
-  gl: string;
-  ra: string;
-  dec: string;
-  mag: string;
-  gaia: string;
-  pm_ra: string;
-  pm_dec: string;
-  rv: string;
-}
-
 // A gap beyond 4-dp print rounding (≤ 5e-5 pc) means AT-HYG's HIP
 // distance is NOT this HIP2 parallax and the curated value wins —
 // see scripts/catalog/README.md § Per-row pipeline (HIP 57146).
@@ -184,7 +147,6 @@ const HIP_DIST_MATCH_TOLERANCE_PC = 1e-3;
 export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   bjMap?: Map<string, number>;
-  hipToGaia?: Map<number, string> | null;
   simbadSpectral?: SimbadSpectralIndex;
   apsisMap?: Map<string, ApsisRow>;
   directions?: DirectionSources;
@@ -193,15 +155,13 @@ export interface ReadStarsOptions {
    *  against the pinned count snapshot. */
   hipVMag?: Map<number, number>;
   dustGrid?: DustGrid | null;
-  wdsXids?: SimbadWdsXidIndex | null;
 }
 
-export async function readStars(
-  srcCsvPath: string,
+export function readStars(
+  spineTsvPath: string,
   {
     conAssignment,
     bjMap = new Map(),
-    hipToGaia = null,
     simbadSpectral = { bySource: new Map(), byHip: new Map() },
     apsisMap = new Map(),
     directions = {
@@ -211,9 +171,8 @@ export async function readStars(
     },
     hipVMag = new Map(),
     dustGrid = null,
-    wdsXids = null,
   }: ReadStarsOptions,
-): Promise<{
+): {
   stars: Star[];
   stats: {
     total: number;
@@ -225,9 +184,6 @@ export async function readStars(
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
     lmcOverriddenByDistSrc: DistSrcPartition;  // lmcOverridden split by AT-HYG dist_src
-    gaiaSourceIdBackfilled: number; // gaia-blank AT-HYG rows resolved via HIP→Gaia cross-walk
-    gaiaBindingMagRejected: number; // rows whose native/cross-walk binding failed the G−V gate
-    gaiaBindingSiblingRejected: number; // rows whose binding SIMBAD attributes to a sibling WDS letter
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
@@ -241,26 +197,22 @@ export async function readStars(
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciSpectralDerived: number;     // no-Apsis-Teff ∩ no-observed-B−V rows whose ci is baked from the spectral class (tier 4/5) instead of the solar fallback
-    conPositionalDisagreement: number; // rows whose IAU-positional index differs from AT-HYG's editorial con cell
   };
-}> {
-  const parser = createReadStream(srcCsvPath).pipe(
-    parse({ columns: true, skip_empty_lines: true, cast: false })
-  ) as AsyncIterable<AthygRow>;
+} {
+  const spineRows = parseSpineTsv(readFileSync(spineTsvPath, 'utf8'));
 
   const stars: Star[] = [];
+  // Every spine row already passed each of these in the build it snapshots,
+  // so all five are zero by construction. They stay as the assertion that the
+  // spine and the reference tables it was frozen against still agree — a
+  // refreshed table that moves a row past MAX_DIST_PC surfaces here.
   const dropped: Record<string, number> = {
     noRaDec: 0,
-    noAbsmag: 0,
     noDist: 0,
     noDirection: 0,
     tooFar: 0,
-    // Unreachable while the absmag cell gates membership: every row carrying
-    // one also carries `mag`, the cascade's last tier. Pinned at 0 so a future
-    // membership change that breaks the coupling surfaces here.
     noVMagnitude: 0,
   };
-  let conPositionalDisagreement = 0;
   let total = 0;
   let bjEligible = 0;
   let bjOverridden = 0;
@@ -269,9 +221,6 @@ export async function readStars(
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   const lmcOverriddenByDistSrc = emptyDistSrcPartition();
-  let gaiaSourceIdBackfilled = 0;
-  let gaiaBindingMagRejected = 0;
-  let gaiaBindingSiblingRejected = 0;
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
   const vVia = emptyTallyPartition(V_VIA_VALUES);
   const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
@@ -286,20 +235,12 @@ export async function readStars(
   let spectralFallback = 0;
   let ciSpectralDerived = 0;
 
-  for await (const row of parser) {
+  for (const row of spineRows) {
     total++;
     const ra = parseFloatOrNull(row.ra);   // hours
     const dec = parseFloatOrNull(row.dec); // degrees
     if (ra === null || dec === null) {
       dropped.noRaDec++;
-      continue;
-    }
-    // A presence gate, not a value read: absmag is derived from the V cascade
-    // below. AT-HYG's cell still decides membership because 3,917 rows carry
-    // `mag` without it, and admitting them here would be a membership change
-    // — that belongs to the magnitude-floor phase, not the field cascades.
-    if (parseFloatOrNull(row.absmag) === null) {
-      dropped.noAbsmag++;
       continue;
     }
     const athygDist = parseFloatOrNull(row.dist);
@@ -308,28 +249,19 @@ export async function readStars(
       continue;
     }
 
-    // Resolve the Gaia DR3 source_id: AT-HYG native > HIP cross-walk,
-    // both vetted against the G−V magnitude gate. See
-    // resolveGaiaSourceId for the precedence + Gaia-saturated
-    // bright-binary handling.
     const hip = parseIntOrNull(row.hip);
     const mag = parseFloatOrNull(row.mag);
-    // AT-HYG proper motion (mas/yr, cos δ-applied) + radial velocity
-    // (km/s). Feed the LMC PM gate, the athyg_printed velocity tier, and
-    // the space-motion velocity's radial term. rv is Gaia RVS on 258k
-    // rows (rv_src=G_R3); used directly, zero when blank.
+    // Printed proper motion (mas/yr, cos δ-applied) + radial velocity (km/s).
+    // Feed the LMC PM gate, the athyg_printed velocity tier, and the
+    // space-motion velocity's radial term. rv is Gaia RVS on 258k rows
+    // (rv_src=G_R3); used directly, zero when blank.
     const athygPmRa = parseFloatOrNull(row.pm_ra);
     const athygPmDec = parseFloatOrNull(row.pm_dec);
     const rvKmS = parseFloatOrNull(row.rv);
-    const resolved = resolveGaiaSourceId(
-      parseGaiaSourceIdStr(row.gaia), hip, hipToGaia, mag,
-      (id) => directions.gaiaAstrometry.get(id)?.gMag ?? null,
-      wdsXids,
-    );
-    const gaiaSourceId = resolved.gaiaSourceId;
-    if (resolved.backfilled) gaiaSourceIdBackfilled++;
-    if (resolved.magRejected) gaiaBindingMagRejected++;
-    if (resolved.siblingRejected) gaiaBindingSiblingRejected++;
+    // Read off the spine column, never re-derived: the native → HIP-cross-walk
+    // precedence and both binding gates ran when the spine was generated, and
+    // re-running them here would re-decide a binding the spine froze.
+    const gaiaSourceId = nonEmpty(row.gaia_source_id);
 
     // Bailer-Jones (DR3) override fires when (a) the row resolves to a
     // Gaia source_id by either path above and (b) dist_src marks the
@@ -514,21 +446,6 @@ export async function readStars(
     const conIndex = isSol
       ? NO_CONSTELLATION_INDEX
       : conAssignment.indexAt(x, y, z);
-    // AT-HYG's editorial `con` cell stays the DESIGNATION's constellation —
-    // "67 Aql" keeps its name after the boundary moved past the star.
-    const desigConCode: string = (row.con ?? '').trim();
-    let desigConIndex = NO_CONSTELLATION_INDEX;
-    if (desigConCode) {
-      const idx = CON_INDEX.get(desigConCode.toLowerCase());
-      if (idx === undefined) {
-        throw new Error(
-          `AT-HYG row ${row.id} carries constellation code '${desigConCode}', `
-          + 'which is not in the IAU-88 table',
-        );
-      }
-      desigConIndex = idx;
-      if (idx !== conIndex) conPositionalDisagreement++;
-    }
 
     const bayer = nonEmpty(row.bayer);
     const flam = parseIntOrNull(row.flam);
@@ -549,7 +466,12 @@ export async function readStars(
       spectClass: spectInfo.classIdx,
       lumClass: spectInfo.lumClass,
       physicalRadius: physRadius,
-      conIndex, desigConIndex, flags,
+      conIndex,
+      // The spine carries no editorial `con` cell, so nothing here names a
+      // designation's constellation. The GCVS pass supplies it downstream
+      // where a designation carries one; everything else reads `conIndex`.
+      desigConIndex: NO_CONSTELLATION_INDEX,
+      flags,
       proper, bayer, hip, hd, hr, flam, gl,
       gaiaSourceId,
       spectDisplay,
@@ -560,7 +482,6 @@ export async function readStars(
       gcvsName: null,
       athygDist,
       athygDistSrc,
-      athygRowId: parseIntOrNull(row.id),
       vVia: vRes.via,
       syntheticId: null,
     });
@@ -578,9 +499,6 @@ export async function readStars(
       lmcCandidates,
       lmcOverridden,
       lmcOverriddenByDistSrc,
-      gaiaSourceIdBackfilled,
-      gaiaBindingMagRejected,
-      gaiaBindingSiblingRejected,
       directionVia,
       vVia,
       velocityVia,
@@ -594,7 +512,6 @@ export async function readStars(
       spectralByGspspec,
       spectralFallback,
       ciSpectralDerived,
-      conPositionalDisagreement,
     },
   };
 }

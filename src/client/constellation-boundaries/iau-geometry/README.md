@@ -178,10 +178,14 @@ corroboration that the B1875 epoch and the rotation are both right. A
 wrong epoch moves the implied date by centuries.
 
 This is why positional membership and the designation's constellation are
-carried as separate fields (byte 34 and search-index `dc`) — making the
-catalogue's constellation positional would otherwise have rewritten this
-star's search aliases from "Rho Aql" to "Rho Del". See
-`scripts/catalog/README.md` § Search index for the split.
+carried as separate fields (byte 34 and search-index `dc`). The split
+survives, but its AT-HYG-sourced half did not: with the editorial `con` cell
+out of the build, ρ Aql has no designation constellation and its aliases do
+build against Delphinus today — the one regression the driver swap took
+knowingly, pending `stellata-3bsf.11`. See `scripts/catalog/README.md`
+§ Search index for the split and
+`scripts/catalog/parse/README.md` § Positional constellation membership for
+what still supplies `dc`.
 
 ## Agreement with AT-HYG
 
@@ -216,13 +220,14 @@ where the designated movers are pinned.
 The count is pinned as an exact number rather than a rate because it is
 the sharpest signal available on the precession epoch (§ B1875).
 
-**This suite measures AT-HYG's printed ra/dec; the build measures the
-resolved position.** They are not the same number: the build's
-`conPositionalDisagreement` is **63**, because the direction cascade
-(Gaia 5p → HIP2 → printed) moves six anonymous sub-arcsecond-from-a-wall
-rows, four across into disagreement and two back out. Both are correct
-for what they measure — this one isolates the epoch and the
-decomposition, which is why it stays on the printed column.
+**This suite is now the only place the comparison is made.** The build used
+to run its own copy over the resolved position — `conPositionalDisagreement`,
+63 rather than 61, because the direction cascade moves six anonymous
+sub-arcsecond-from-a-wall rows, four across into disagreement and two back
+out. That count retired with the `con` cell when the record build moved onto
+the inherited spine (`scripts/catalog/spine/README.md`). This suite is
+unaffected: it reads the CSV directly, on AT-HYG's printed ra/dec, which is
+what isolates the epoch and the decomposition from the cascade.
 
 The CSV rides LFS, so the suite self-skips in the bare CI `test` job and
 runs smudged in **`tier-a-corpus`**, which names the file explicitly.

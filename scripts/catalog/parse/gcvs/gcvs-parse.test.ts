@@ -297,42 +297,43 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     expect(gcvsDesignationConIndex('')).toBe(NO_CONSTELLATION_INDEX);
   });
 
-  it('overrides a stale editorial con cell with the designation (LT Vul)', () => {
-    // AT-HYG files HIP 93603 under Sagitta; it sits in Vulpecula and GCVS
-    // named it for Vulpecula. Two independent authorities against the cell —
-    // without this the star searches as "LT Sagitta".
+  it('overrides a stale designation constellation (LT Vul)', () => {
+    // AT-HYG filed HIP 93603 under Sagitta; it sits in Vulpecula and GCVS
+    // named it for Vulpecula. Anything that reinstates a per-record editorial
+    // cell has to lose to the designation, or the star searches as
+    // "LT Sagitta".
     const star = makeStar({ hip: 93603, desigConIndex: conIndexOf('sge') });
     const r = applyVariability([star], new Map<string, VarStarData>(), {
       byHip: new Map([[93603, 'LT Vul']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(star.desigConIndex).toBe(conIndexOf('vul'));
-    expect(r.desigConOverridden).toBe(1);
+    expect(r.desigConSupplied).toBe(1);
   });
 
-  it('surfaces a designated mover the editorial cell agrees with position on', () => {
+  it('surfaces a designated mover whose position agrees with the stale cell', () => {
     // RY Cen / EQ Vul shape: AT-HYG's cell and the IAU position both say
     // Lupus, but the designation names Centaurus. Deriving the designation
-    // constellation from the cell misses these entirely.
+    // constellation from either misses these entirely.
     const star = makeStar({ hip: 71, desigConIndex: conIndexOf('lup') });
     const r = applyVariability([star], new Map<string, VarStarData>(), {
       byHip: new Map([[71, 'RY Cen']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(star.desigConIndex).toBe(conIndexOf('cen'));
-    expect(r.desigConOverridden).toBe(1);
+    expect(r.desigConSupplied).toBe(1);
   });
 
   it('fills an absent designation constellation rather than only correcting one', () => {
-    // A promoted companion with no anchor to inherit a cell from carries the
-    // sentinel; its own designation is the only source it has.
+    // The shape every spine-driven record now arrives in: the walk sets no
+    // designation constellation, so the GCVS name is the only source there is.
     const orphan = makeStar({ hip: 74, desigConIndex: NO_CONSTELLATION_INDEX });
     const r = applyVariability([orphan], new Map<string, VarStarData>(), {
       byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(orphan.desigConIndex).toBe(conIndexOf('aqr'));
-    expect(r.desigConOverridden).toBe(1);
+    expect(r.desigConSupplied).toBe(1);
   });
 
-  it('leaves the editorial cell alone when the designation agrees or is silent', () => {
+  it('leaves an already-set index alone when the designation agrees or is silent', () => {
     const agreeing = makeStar({ hip: 72, desigConIndex: conIndexOf('and') });
     const silent = makeStar({ hip: 73, desigConIndex: conIndexOf('dor') });
     const r = applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
@@ -342,6 +343,6 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     });
     expect(agreeing.desigConIndex).toBe(conIndexOf('and'));
     expect(silent.desigConIndex).toBe(conIndexOf('dor'));
-    expect(r.desigConOverridden).toBe(0);
+    expect(r.desigConSupplied).toBe(0);
   });
 });
