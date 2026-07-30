@@ -338,7 +338,7 @@ followed: a body's sample carried reflected host light through the Mallama
 phase curve and nothing else, so a backlit Titan's forward-scattered Mie
 ring — of order the host's irradiance, against the ~1e-4 the sample
 reported — was **~11 magnitudes** of light the exposure never knew about.
-Ring annuli, the twilight term and every future emitter had the same hole.
+Ring annuli, the skylight term and every future emitter had the same hole.
 
 The frame already contains all of it. Mechanism, units, latency and the
 clamp argument are `src/client/hdr/exposure/reduction/README.md`; what
