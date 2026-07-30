@@ -50,13 +50,13 @@ export function isFeatureLegible(sizePc: number, distancePc: number, pxPerRad: n
   return angularRadiusPx(sizePc, distancePc, pxPerRad) >= FEATURE_LEGIBILITY_MIN_PX;
 }
 
-/** `localPass` strips the built-in log-depth chunks so fragments keep
- *  standard bracket depth — required for any line rendered in the
- *  local depth pass (src/client/local-depth/README.md). */
 function lineMaterialParams(opacity: number) {
   return { transparent: true, opacity, depthTest: true, depthWrite: false };
 }
 
+/** `localPass` strips the built-in log-depth chunks so fragments keep
+ *  standard bracket depth — required for any line rendered in the
+ *  local depth pass (src/client/local-depth/README.md). */
 export function makeOrbitLineMaterial(
   color: number,
   opacity: number = ORBIT_LINE_OPACITY,
