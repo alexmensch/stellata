@@ -352,11 +352,23 @@ describe('twilight on the night-side surface', () => {
     expect(t[2]).toBeGreaterThan(t[0]);
   });
 
-  it('holds its terminator value across the whole lit side', () => {
-    // No shadow to climb out of on the day side, so skylight is flat there —
-    // a small honest ambient rather than a term that switches on at the edge.
+  it('floors the whole lit side at its terminator value', () => {
+    // Deliberate floor, NOT the physics: real skylight peaks at local noon
+    // (~10-15 % of direct sun on Earth against the 0.6 % here). See
+    // README.md § Where this model is wrong.
     expect(shadowEdgeAltitude(0.5)).toBe(0);
     expect(frac(-30)).toBe(frac(0));
+  });
+
+  it('under-reads the measured tail past 6°, which is the documented gap', () => {
+    // Pinning the shortfall so closing it registers as a deliberate change
+    // rather than a silent one. The single exponential tracks the anchor above
+    // and then falls off a cliff: nautical twilight measures ~0.008 lx against
+    // the terminator's ~400, and past ~6° the light reaching the ground has
+    // bounced, which a single scatter out of a lit column cannot produce.
+    // README.md § Where this model is wrong.
+    const measuredRatio12 = 0.008 / 400;
+    expect(frac(12) / frac(0)).toBeLessThan(measuredRatio12 / 100);
   });
 
   it('scales with the scattering optical depth, so thick air means bright dusk', () => {

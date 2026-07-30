@@ -116,9 +116,9 @@ crosses the surface obliquely — high latitude near solstice, where iso-`sunCos
 contours spread out and polar twilight runs for weeks. It falls out of the
 parameterisation; there is no obliquity term and there should not be one.
 
-`τ_scatter` is the vertical
-scattering optical depth (`stellata_verticalScatterTau`, absorption excluded),
-which also gives the twilight the air's own hue — blue on Earth — for free.
+`τ_scatter` is the vertical scattering optical depth
+(`stellata_verticalScatterTau`, absorption excluded), which also gives the
+twilight the air's own hue — blue on Earth — for free.
 
 `TWILIGHT_SCATTER_FRAC` = 0.055 is ¼ (hemispheric average of an isotropic
 in-scatter) × the ≈0.22 slant transmission a horizon sun reaches the column
@@ -129,10 +129,42 @@ depression, where civil twilight measures ~4 lx. Both are pinned.
 It rides `uSurfaceLuminance`, not `uAirlightLuminance` — this is light
 *reflected off the ground*, so it needs the albedo-bearing scalar, and the
 p/π relation above means it needs no extra factor. Being ~6 stops below full
-sun it is **subtle at a day-side exposure and correct to be**: it reads when
-the adaptation follows a night-side-dominated frame. `Planet.terminatorSoftness`
-is the older by-eye widening of the Lambert edge and is deliberately untouched
-here (`../planets/README.md` § Lighting).
+sun it is subtle at a day-side exposure: it reads when the adaptation follows a
+night-side-dominated frame. `Planet.terminatorSoftness` is the older by-eye
+widening of the Lambert edge and is deliberately untouched here
+(`../planets/README.md` § Lighting).
+
+### Where this model is wrong — `stellata-2f6.38`
+
+Two calibration anchors is two, and the form fails outside them. Both failures
+are the same missing physics (multiple scattering), and both are that bead:
+
+- **The tail collapses.** Against measured Earth horizontal illuminance the
+  single exponential holds at the terminator and at 6° (5.0 lx modelled against
+  ~4 lx civil), then falls off a cliff: **1000× too dark at 12°** (7.6e-6 lx
+  against 0.008 lx nautical) and hopeless by 18°. Real twilight persists to ~18°
+  because the light has bounced; this term is a single scatter out of a lit
+  column and has no route to it. Visually the band ends 7–8° past the terminator
+  instead of fading over ~18 — a crescent where there should be a gradient, and
+  ~9 % of the disc radius on Earth. The measured curve is not one exponential
+  either: the effective scale height grows from ~2H between 6° and 12° to ~9H
+  between 12° and 18°.
+- **The day side is a floor, not a derivation.** `h_shadow` is 0 for any
+  `sunCos ≥ 0`, so the whole lit hemisphere receives the *terminator's*
+  skylight, flat. Real skylight is strongest at local noon — ~10–15 % of direct
+  sun on Earth against this model's 0.6 %, so ~20× under across the day side.
+  Invisible next to direct sun, which is why it stands for now, but it is not
+  what the parameterisation claims.
+
+**Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
+everything the shader multiplies on top so the disc integrates to the body's
+true flux (`../planets/mesh-surface-pure.ts`), and this term is added inside
+that product without being in the divisor. The day-side value is flat
+`0.055·τ_scatter`, so the overshoot is Earth +0.6 %, Venus +1.0 %, Mars +0.5 %
+of the direct term — and **Titan +21 %**, its τ_Mie being 2.5. Titan's surface
+sits behind τ ≈ 2.5 of haze so little of it reaches the image, and the airlight
+has always been additive over a flux-correct disc, so this is bounded rather
+than fixed. Anything that raises τ (`stellata-2f6.37`) raises it too.
 
 **The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.
@@ -272,8 +304,10 @@ Both are one fix: each shader scales the ray's polar component by
 +Y — the axis `mesh.scale` flattens) **before** any of the geometry above runs.
 In that frame the body IS the unit sphere the march assumes, so shell entry,
 body-strike, the shadow cylinder and `h = |p| − 1` all describe the body
-actually drawn — and the atmosphere becomes a spheroidal shell of constant
-thickness, which is what an atmosphere does. The map is linear about the centre,
+actually drawn — and the atmosphere becomes a spheroidal shell of near-constant
+thickness, which is what an atmosphere does. (Near: polar thickness comes out
+`uPolarRadiusR ×` equatorial, so 0.34 % thinner on Earth — three orders below
+the 21 % error being fixed here.) The map is linear about the centre,
 so ray parameters are unchanged and only directions need renormalising. **The
 sun direction has to be deflattened too** or the shadow cylinder tilts against
 the body casting it; **`sunCos` for § Twilight must not be**, since solar
@@ -283,7 +317,7 @@ The shell MESH stays a real-space sphere: it equals the deflattened shell at the
 equator and over-covers toward the poles, so nothing is uncovered and the excess
 discards on shell entry.
 
-**Gas giants deliberately carry no shell**: their
-fuzzy limb is already carried by the solidity-soft billboard edge at distance
+**Gas giants deliberately carry no shell**: their fuzzy
+limb is already carried by the solidity-soft billboard edge at distance
 and the cloud-deck maps up close, and none has a detached haze layer distinct
 from the cloud deck at render scale.
