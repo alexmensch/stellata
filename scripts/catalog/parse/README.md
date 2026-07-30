@@ -230,10 +230,19 @@ it; the spine carries no such column, so `desigConIndex` (search-index `dc`)
 now starts at `NO_CONSTELLATION_INDEX` on every record and
 `designationConIndex(dc, c)` in `../catalog-pure.ts` — the single statement
 of which field a Bayer / Flamsteed / GCVS designation reads — falls back to
-the positional `conIndex` for all but the GCVS cases below. ρ Aql's aliases
-therefore build against Delphinus today. Re-sourcing the field from the
-classic-ID overlay's IV/27A constellation, or retiring it, is
-`stellata-3bsf.11`.
+the positional `conIndex` for all but the GCVS cases below.
+
+**That fallback is WRONG for 7 entries, and knowingly shipped.** A Bayer or
+Flamsteed designation is fixed by nomenclature: it was assigned before the
+1930 Delporte boundaries and does not migrate when proper motion carries the
+star across one. ρ Aql is ρ **Aquilae** permanently, and today it searches as
+"Rho Del" / "67 Del" — the exact rewrite the `desigConIndex` / `conIndex`
+split exists to prevent. The other six are promoted companions wide enough to
+straddle a boundary, whose composed names now take their own positional
+constellation instead of the primary's designation (Fomalhaut C).
+Re-sourcing the field from the classic-ID overlay's IV/27A constellation, or
+retiring it, is `stellata-3bsf.11` — until then, do not read the positional
+fallback as the intended rule.
 
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`gcvs-parse.ts`)

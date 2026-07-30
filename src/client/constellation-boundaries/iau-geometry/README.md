@@ -181,8 +181,9 @@ This is why positional membership and the designation's constellation are
 carried as separate fields (byte 34 and search-index `dc`). The split
 survives, but its AT-HYG-sourced half did not: with the editorial `con` cell
 out of the build, ρ Aql has no designation constellation and its aliases do
-build against Delphinus today — the one regression the driver swap took
-knowingly, pending `stellata-3bsf.11`. See `scripts/catalog/README.md`
+build against Delphinus today. That is a REGRESSION, not a policy — the
+designation is fixed by nomenclature and never migrates with the star —
+knowingly shipped pending `stellata-3bsf.11`. See `scripts/catalog/README.md`
 § Search index for the split and
 `scripts/catalog/parse/README.md` § Positional constellation membership for
 what still supplies `dc`.
