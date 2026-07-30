@@ -4,9 +4,12 @@
 
 import {
   buildBoundaryPolylines,
+  buildRegionLabelAnchors,
   POLYLINE_MAX_STEP_DEG,
   type BoundaryPolyline,
+  type ConstellationRegionGrid,
   type IauBoundaryEdges,
+  type RegionLabelAnchor,
 } from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
 
 /** Decimals kept per direction component. One unit in the last place is
@@ -50,6 +53,39 @@ export interface BoundarySegmentWire {
   d: number[];
 }
 
+/** Decimals kept per region area. Published IAU areas are quoted to 2. */
+export const AREA_DECIMALS = 2;
+
+/** One region's chart label anchor: `c` its edge-set code (`SER1`/`SER2` stay
+ *  split, so Serpens gets two), `d` the ICRS direction of its equal-surface-
+ *  weight centre of mass, `a` its area in square degrees. */
+export interface BoundaryLabelWire {
+  c: string;
+  d: [number, number, number];
+  a: number;
+}
+
+/** The B1875 cell grid resolved to region codes, for the runtime membership
+ *  lookup any position — planet, galaxy, cloud — resolves through.
+ *
+ *  **The bounds are emitted at full precision, unlike every other number in
+ *  this artifact.** `constellationEdgeCodeAt` bisects them, so a rounded bound
+ *  is a moved wall: the runtime would answer a different constellation from
+ *  the byte 34 this same grid assigned, for positions near it. Rounding here
+ *  buys ~2 KiB and costs the one property that makes two answers one answer. */
+export interface RegionGridWire {
+  /** RA column bounds, degrees ascending. The last column wraps past RA 0. */
+  raDeg: number[];
+  /** Dec band bounds, degrees ascending; ±90 close the outermost bands. */
+  decDeg: number[];
+  /** Region codes the runs index into. */
+  codes: string[];
+  /** Band-major run-length pairs `[cellCount, codeIndex, …]`. Runs never
+   *  straddle a band, so each band's counts sum to the column count — which is
+   *  what `decodeRegionGrid` checks rather than trusting a total. */
+  runs: number[];
+}
+
 export interface BoundaryFadeTableWire {
   magLimits: number[];
   quantilePcts: number[];
@@ -69,6 +105,8 @@ export interface BoundaryArtifact {
   /** Maximum angular gap between consecutive samples, degrees. */
   stepDeg: number;
   segments: BoundarySegmentWire[];
+  labels: BoundaryLabelWire[];
+  regions: RegionGridWire;
   fade: BoundaryFadeTableWire;
 }
 
@@ -86,6 +124,94 @@ export function toSegmentWire(polyline: BoundaryPolyline): BoundarySegmentWire {
     );
   }
   return { k: polyline.kind, c: [polyline.conA, polyline.conB], d };
+}
+
+export function toLabelWire(anchor: RegionLabelAnchor): BoundaryLabelWire {
+  return {
+    c: anchor.code,
+    d: [
+      quantise(anchor.direction.x, DIRECTION_DECIMALS),
+      quantise(anchor.direction.y, DIRECTION_DECIMALS),
+      quantise(anchor.direction.z, DIRECTION_DECIMALS),
+    ],
+    a: quantise(anchor.areaSquareDeg, AREA_DECIMALS),
+  };
+}
+
+/** Run-length the resolved cell grid along RA. Regions are contiguous blocks
+ *  of columns, so 47,200 cells collapse to a few thousand runs. */
+export function encodeRegionGrid(grid: ConstellationRegionGrid): RegionGridWire {
+  const codes = [...new Set(grid.cellCon)].sort();
+  const codeIndex = new Map(codes.map((code, i) => [code, i]));
+  const columns = grid.raBoundsDeg.length;
+  const runs: number[] = [];
+  for (let cell = 0; cell < grid.cellCon.length; cell += columns) {
+    let i = 0;
+    while (i < columns) {
+      const code = grid.cellCon[cell + i];
+      let end = i + 1;
+      while (end < columns && grid.cellCon[cell + end] === code) end++;
+      runs.push(end - i, codeIndex.get(code)!);
+      i = end;
+    }
+  }
+  return {
+    raDeg: [...grid.raBoundsDeg],
+    decDeg: [...grid.decBoundsDeg],
+    codes,
+    runs,
+  };
+}
+
+/** Throws unless the runs tile the exact `columns × bands` grid the bounds
+ *  describe. **Checked without allocating the grid**, so the load-time
+ *  validator can run it and `decodeRegionGrid` can then fill without a failure
+ *  path: a run list that stops short otherwise decodes to a grid holding
+ *  `undefined` cells, and those resolve as a constellation named "undefined"
+ *  rather than as an error. */
+export function validateRegionGridWire(wire: RegionGridWire): void {
+  const columns = wire.raDeg?.length ?? 0;
+  if (columns === 0 || !wire.decDeg?.length || !wire.codes?.length || !wire.runs) {
+    throw new Error('region grid is missing bounds, codes, or runs');
+  }
+  const bands = wire.decDeg.length + 1;
+  let at = 0;
+  for (let band = 0; band < bands; band++) {
+    let column = 0;
+    while (column < columns) {
+      const count = wire.runs[at];
+      if (!Number.isInteger(count) || count < 1 || wire.codes[wire.runs[at + 1]] === undefined) {
+        throw new Error(`region grid run ${at / 2} is malformed`);
+      }
+      if (column + count > columns) {
+        throw new Error(
+          `region grid band ${band} overruns ${columns} columns at run ${at / 2}`,
+        );
+      }
+      column += count;
+      at += 2;
+    }
+  }
+  if (at !== wire.runs.length) {
+    throw new Error(
+      `region grid carries ${wire.runs.length / 2} runs, ${at / 2} tile the grid`,
+    );
+  }
+}
+
+/** Rebuild the cell grid from the wire, in the band-major order
+ *  `constellationEdgeCodeAt` indexes. */
+export function decodeRegionGrid(wire: RegionGridWire): ConstellationRegionGrid {
+  validateRegionGridWire(wire);
+  const columns = wire.raDeg.length;
+  const cellCon = new Array<string>(columns * (wire.decDeg.length + 1));
+  let cell = 0;
+  for (let at = 0; at < wire.runs.length; at += 2) {
+    const count = wire.runs[at];
+    cellCon.fill(wire.codes[wire.runs[at + 1]], cell, cell + count);
+    cell += count;
+  }
+  return { raBoundsDeg: wire.raDeg, decBoundsDeg: wire.decDeg, cellCon };
 }
 
 /** One star's contribution to the fade table. */
@@ -154,15 +280,20 @@ export function buildFadeTable(
   };
 }
 
+/** Arcs, labels, region grid and fade table from ONE decomposition of the edge
+ *  set, so the drawn partition, the labels written on it, and the membership
+ *  the catalogue shipped in byte 34 cannot disagree with each other. */
 export function buildBoundaryArtifact(
-  edges: IauBoundaryEdges,
+  geometry: { edges: IauBoundaryEdges; grid: ConstellationRegionGrid },
   samples: readonly FadeSample[],
 ): BoundaryArtifact {
   return {
     epoch: 'B1875',
     frame: 'ICRS',
     stepDeg: POLYLINE_MAX_STEP_DEG,
-    segments: buildBoundaryPolylines(edges).map(toSegmentWire),
+    segments: buildBoundaryPolylines(geometry.edges).map(toSegmentWire),
+    labels: buildRegionLabelAnchors(geometry.grid).map(toLabelWire),
+    regions: encodeRegionGrid(geometry.grid),
     fade: buildFadeTable(samples),
   };
 }

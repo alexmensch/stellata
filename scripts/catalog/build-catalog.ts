@@ -245,6 +245,7 @@ async function main() {
     gcvsDesignationConOverride: 0,
     boundarySegments: 0,
     boundaryDirections: 0,
+    boundaryRegionRuns: 0,
     boundaryArtifactKb: 0,
     solIndex: -1,
     figureCount: 0,
@@ -896,19 +897,23 @@ async function main() {
   });
   await writeFile(OUT_CON, JSON.stringify(constellationsOut) + '\n');
 
-  // Boundary polylines + the fade-quantile table. The quantiles are keyed to
-  // the magnitude slider and measured over the shipped population, so this
-  // runs against the same `stars` the binary was written from.
+  // Boundary polylines, region label anchors, the runtime membership grid and
+  // the fade-quantile table. The quantiles are keyed to the magnitude slider
+  // and measured over the shipped population, so this runs against the same
+  // `stars` the binary was written from.
   const boundaries = await writeBoundaryArtifact(
     OUT_BOUNDARIES, stars, conAssignment.lookup,
   );
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
+  counts.boundaryRegionRuns = boundaries.regionRuns;
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
     `Wrote ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
+      + `${boundaries.artifact.labels.length} labels, `
+      + `${boundaries.regionRuns} region runs, `
       + `${(boundaries.bytes / 1024).toFixed(1)} KB); fade window at `
       + `V<=${fade.magLimits[fade.magLimits.length - 1]}: `
       + fade.quantilePcts

@@ -18,7 +18,8 @@ src/client/constellation-boundaries/
   iau-boundaries-pure.ts          Edge parsing, the cell decomposition,
     (+ test)                      point lookup, nearest-edge distance (linear
                                   scan + the banded index), the ICRS polyline
-                                  resampling, and
+                                  resampling, the per-region label anchors
+                                  (§ Label anchors), and
                                   createIauConstellationLookup. Pure.
   iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
                                   editorial con column (§ Agreement).
@@ -28,6 +29,10 @@ src/client/constellation-boundaries/
     (+ test)
   boundary-layer-pure.ts          Polyline → line-segment vertex expansion
     (+ test)                      + dash phase, and the fade window. Pure.
+  constellation-regions.ts        The two readings of the shipped region set:
+    (+ test)                      the runtime membership namer
+                                  (§ Runtime membership) and the chart label
+                                  anchors baked to the boundary sphere.
 ```
 
 **Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
@@ -47,25 +52,91 @@ precession is `../util/precession.ts`.
 
 **The edge set is Node-side only.** `readIauEdgeRecords` is a
 `readFileSync` against `data/`, which is not served, so nothing in the
-browser can call it — the runtime layer below reads the built artifact,
+browser can call it — every runtime consumer reads the built artifact,
 never the edges:
 
-- **Assignment** runs at **build time**, through
+- **Star assignment** runs at **build time**, through
   `createConstellationAssignment`
   (`scripts/catalog/parse/constellations.ts`), which binds this module's
   lookup to the IAU-88 index space. Every record's own position resolves
   into catalog byte 34; the browser reads the answer, never the edge set.
   See `scripts/catalog/parse/README.md` § Positional constellation
   membership.
-- **Drawing** ships `public/constellation-boundaries.json`:
-  `buildBoundaryPolylines` here supplies the subdivided,
-  precessed-to-ICRS arcs, and `scripts/catalog/boundaries/README.md` owns
-  the wire shape and the fade table. That artifact, not this module, is
-  what the runtime layer loads.
+- **Drawing, labelling and runtime membership** all ship in
+  `public/constellation-boundaries.json`: `buildBoundaryPolylines`
+  supplies the subdivided precessed-to-ICRS arcs,
+  `buildRegionLabelAnchors` the per-region label anchors, and the
+  **resolved cell grid** rides along for positions the catalogue never
+  classified (§ Runtime membership).
+  `scripts/catalog/boundaries/README.md` owns the wire shape.
 
-So any *further* client-side consumer needs an artifact of its own first.
-Reaching for `iau-boundaries-pure` from a browser module is how the edge
-set ends up parsed in the browser from a file that isn't deployed.
+`buildBoundaryArtifact` takes the whole lookup, not just its edges, so
+the arcs, the labels and the shipped grid come from **one**
+decomposition — the same one byte 34 was assigned from. Three readings
+of one partition; nothing to disagree.
+
+Importing `iau-boundaries-pure` from a browser module is fine for the
+pure geometry (that is how `constellation-regions.ts` gets its lookup),
+but reaching for `readIauEdgeRecords` from one is how the edge set ends
+up parsed in the browser from a file that isn't deployed.
+
+## Runtime membership
+
+`createConstellationNamer` (`constellation-regions.ts`) answers "which
+constellation is this position in" in the browser: it decodes the
+artifact's run-length cell grid, binds the B1875 precession through
+`createGridConstellationLookup`, and maps the region key onto the
+IAU-88 table the catalog artifact already carries. Absolute
+(Sol-centred ICRS) position in, constellation name out; **null at the
+origin**, the one hole byte 34 leaves too.
+
+**The grid is shipped rather than re-derived, and its bounds are the
+only unrounded numbers in the artifact.** `constellationEdgeCodeAt`
+bisects those bounds, so a rounded bound is a moved wall and the
+runtime would answer a different constellation from byte 34 for a
+position near one. Full precision costs ~2 KiB and buys one answer
+instead of two that mostly agree — pinned across a sphere-wide sampling
+grid in `constellation-regions.test.ts`.
+
+Consumers are the objects the build never classified, all through
+`Stellata.constellationOf(kind, idx)`: Local Group galaxies, molecular
+clouds, boundary-crossing probes, and the planets, whose answer is a
+**time-varying ephemeris statement** rather than a property of the body
+— it tracks `getT()` because the position does. Sol-frame for every
+kind, matching the star card (`../focus-card/README.md`
+§ Frame-of-reference principle). **Stars do not route here**: byte 34 is
+the shipped authority, survives a missing artifact, and carries the
+designation-constellation split beside it.
+
+## Label anchors
+
+`buildRegionLabelAnchors` gives each region the **equal-surface-weight
+centre of mass** of its own cells — where the chart writes the Latin
+name (`../chart-mode/README.md` § Label engine). Each cell is a
+spherical rectangle in B1875, so its area and its integral of the unit
+direction both close in elementary functions: no sampling, and the
+vector sum over a region is exactly its centre of mass.
+
+Two properties make this externally checkable rather than merely
+plausible:
+
+- **The areas reproduce the published IAU constellation areas** to three
+  decimals (Hydra 1302.844, Virgo 1294.428, Crux 68.447, Serpens
+  636.928 across its two parts) and sum to the full sphere. Nothing in
+  the pipeline supplies those numbers — the edge set alone determines
+  them, so agreement corroborates the decomposition the same way the
+  89-region count does.
+- **Every anchor is asserted to land inside the region it names**, and
+  the walk throws rather than emit one that doesn't. A centre of mass
+  is only guaranteed inside a convex region, and this is the exact
+  failure the flux-weighted centroid it replaced had: Serpens' label
+  sat in the Caput/Cauda gap, which is Ophiuchus. Keeping SER1/SER2
+  split is what keeps the assertion true — a merged Serpens anchor
+  would fail it, not slip past it.
+
+The anchors are emitted in ICRS and baked to `SPHERE_RADIUS_PC` at
+attach, exactly as the arcs are, so a label rides the block it names
+from any camera position instead of drifting off it.
 
 ## Chart-mode layer
 
@@ -253,8 +324,14 @@ genuinely disconnected regions. `constellationEdgeCodeAt` returns
 whichever one the position is in; `constellationKey` collapses both to
 `ser`, the lowercase key `CON_INDEX`
 (`scripts/catalog/parse/constellations.ts`) indexes the IAU-88 table
-by. Keep the split when the two halves must be placed separately — a
-flux-weighted centroid over the union lands in the gap between them.
+by.
+
+**Membership collapses them; placement must not.** A star in either
+half is in Serpens, full stop — that is the IAU answer and what byte 34
+carries. But anything *placed* per region keeps the split: the chart
+draws two "SERPENS" labels, one per part, because any single point
+representing the union lands in the gap between them, which is
+Ophiuchus (§ Label anchors).
 
 ## ρ Aquilae
 

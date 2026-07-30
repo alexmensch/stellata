@@ -1,13 +1,15 @@
 // Fetch + validate public/constellation-boundaries.json.
 // See README.md § Chart-mode layer.
 
-import type {
-  BoundaryArtifact,
+import {
+  validateRegionGridWire,
+  type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
 } from './boundary-layer-pure';
+import { IAU_REGION_COUNT } from './iau-boundaries-pure';
 
 /**
  * Narrow a parsed wire object to `BoundaryArtifact`, throwing on anything the
@@ -27,6 +29,28 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   }
   if (!Array.isArray(artifact.segments) || artifact.segments.length === 0) {
     throw new Error('constellation-boundaries.json: no boundary segments');
+  }
+  // One label per region, not "at least one": a short list is a partial sky
+  // whose missing names read as a declutter decision rather than a stale file.
+  if (!Array.isArray(artifact.labels) || artifact.labels.length !== IAU_REGION_COUNT) {
+    throw new Error(
+      `constellation-boundaries.json: ${Array.isArray(artifact.labels) ? artifact.labels.length : 'no'} `
+      + `label anchors for ${IAU_REGION_COUNT} regions`,
+    );
+  }
+  for (const label of artifact.labels) {
+    if (!label.c || !Array.isArray(label.d) || label.d.length !== 3) {
+      throw new Error(
+        `constellation-boundaries.json: label ${String(label?.c)} carries no direction`,
+      );
+    }
+  }
+  // Checked here rather than at the decode so the membership lookup the focus
+  // cards build off this grid has no failure path of its own.
+  try {
+    validateRegionGridWire(artifact.regions);
+  } catch (err) {
+    throw new Error(`constellation-boundaries.json: ${(err as Error).message}`);
   }
   const fade = artifact.fade;
   if (!Array.isArray(fade?.magLimits) || fade.magLimits.length === 0) {

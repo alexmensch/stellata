@@ -28,6 +28,7 @@ export interface BoundaryFadeStar {
 export interface BoundaryArtifactReport {
   segments: number;
   directions: number;
+  regionRuns: number;
   bytes: number;
   artifact: BoundaryArtifact;
 }
@@ -59,12 +60,13 @@ export async function writeBoundaryArtifact(
   lookup: IauConstellationLookup,
 ): Promise<BoundaryArtifactReport> {
   const samples = collectFadeSamples(stars, lookup.distanceToNearestEdgeDeg);
-  const artifact = buildBoundaryArtifact(lookup.edges, samples);
+  const artifact = buildBoundaryArtifact(lookup, samples);
   const json = JSON.stringify(artifact) + '\n';
   await writeFile(outPath, json);
   return {
     segments: artifact.segments.length,
     directions: countDirections(artifact.segments),
+    regionRuns: artifact.regions.runs.length / 2,
     bytes: Buffer.byteLength(json),
     artifact,
   };

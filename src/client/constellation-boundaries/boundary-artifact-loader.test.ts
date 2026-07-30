@@ -1,21 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import { boundaryArtifactFixture as artifact } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
 import { loadBoundaries, validateBoundaryArtifact } from './boundary-artifact-loader';
-
-function artifact(): BoundaryArtifact {
-  return {
-    epoch: 'B1875',
-    frame: 'ICRS',
-    stepDeg: 0.5,
-    segments: [{ k: 'M', c: ['DEL', 'AQL'], d: [1, 0, 0, 0, 1, 0] }],
-    fade: {
-      magLimits: [6, 8],
-      quantilePcts: [0.1, 1, 5, 50],
-      offsetsPc: [[0.14, 0.4, 0.9, 7], [0.31, 0.6, 1.5, 10]],
-      sampleCounts: [3000, 20000],
-    },
-  };
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -38,6 +23,33 @@ describe('validateBoundaryArtifact', () => {
   it('rejects an empty segment list', () => {
     expect(() => validateBoundaryArtifact({ ...artifact(), segments: [] }))
       .toThrow(/no boundary segments/);
+  });
+
+  // A short label list is a partial sky: the missing names read as a
+  // declutter decision rather than as a stale artifact.
+  it('rejects a label list that does not cover every region', () => {
+    expect(() => validateBoundaryArtifact(artifact({ labels: [] })))
+      .toThrow(/0 label anchors for 89 regions/);
+    const truncated = { c: 'AND', d: [1, 0] as unknown as [number, number, number], a: 1 };
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: [...artifact().labels.slice(1), truncated],
+    }))).toThrow(/label AND carries no direction/);
+  });
+
+  // The runtime membership lookup decodes this grid without a failure path of
+  // its own, so a run list that stops short has to die here — decoded, its
+  // unfilled cells resolve as a constellation named "undefined".
+  it('rejects a region grid whose runs do not tile it', () => {
+    const regions = artifact().regions;
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: regions.runs.slice(0, 2) },
+    }))).toThrow(/region grid run 1 is malformed/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: [...regions.runs, 1, 0] },
+    }))).toThrow(/carries 4 runs, 3 tile the grid/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: [3, 0, 1, 1, 2, 0] },
+    }))).toThrow(/band 0 overruns 2 columns/);
   });
 
   it('rejects a fade table with no rows', () => {

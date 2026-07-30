@@ -107,6 +107,11 @@ export interface BuildCounts {
   /** Precessed ICRS sample directions across all boundary arcs. Set by the
    *  subdivision step, and the artifact's whole wire cost. */
   boundaryDirections: number;
+  /** RA runs the resolved cell grid collapses to, band-major. The wire cost
+   *  of the runtime membership lookup, and the one dimension of that grid no
+   *  other pin covers — the 89 regions and their areas are pinned in
+   *  src/client/constellation-boundaries/. */
+  boundaryRegionRuns: number;
   /** public/constellation-boundaries.json size, rounded to KiB. Pinned
    *  because the direction quantisation is a wire-size choice with no other
    *  visible signal — dropping `DIRECTION_DECIMALS` by one moves ~30k values

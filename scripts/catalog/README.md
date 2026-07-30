@@ -26,8 +26,10 @@ subfolders.
   Stellarium stick figures. Its `gcvs/` subfolder owns the variable-star
   parsing and the variability cross-match.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
-  arcs resampled and precessed to ICRS, plus the magnitude-keyed
-  fade-quantile table the chart-mode layer derives its fade window from.
+  arcs resampled and precessed to ICRS, the per-region label anchors, the
+  resolved cell grid the runtime resolves membership against, and the
+  magnitude-keyed fade-quantile table the chart-mode layer derives its
+  fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records, plus component-letter stamping and
   display-name collision resolution. Its `record-index/` subfolder holds
