@@ -608,7 +608,14 @@ async function main() {
     const gcvsData = parseGcvsMain(SRC_GCVS);
     const xref = parseGcvsCrossref(SRC_GCVS_XREF);
     if (existsSync(SRC_GAIA_HIP_XMATCH)) {
-      bridgeGcvsByGaia(xref, readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH));
+      const tX = Date.now();
+      const hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
+      console.log(
+        `  Gaia DR3 ↔ HIP cross-walk: ${hipToGaia.size} entries in ${Date.now() - tX}ms`,
+      );
+      bridgeGcvsByGaia(xref, hipToGaia);
+    } else {
+      console.log('  Gaia DR3 ↔ HIP cross-walk not found; GCVS byGaia bridge skipped.');
     }
     const m = applyVariability(stars, gcvsData, xref);
     console.log(

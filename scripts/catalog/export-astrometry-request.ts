@@ -9,9 +9,8 @@ import { resolveGaiaSourceId, parseGaiaSourceIdStr } from './catalog-pure';
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { parseIntOrNull } from './parse/stars-parse';
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { ATHYG_CSV as SRC_CSV, REPO_ROOT as ROOT } from '../util/paths';
 
-const SRC_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const OUT = resolve(ROOT, 'data/gaia/gaia_catalog_source_id_request.tsv');
 
