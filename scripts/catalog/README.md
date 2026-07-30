@@ -86,8 +86,8 @@ numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved through
 `resolveGaiaSourceId`'s native-`gaia`-column → HIP-cross-walk precedence.
 This is the last script reading the AT-HYG CSV and the last caller of that
 function here; the record build takes the binding off the spine column
-instead (`spine/README.md`), so rebasing the pull list onto the spine is open
-work. The pure `sortSourceIdsNumeric` helper does the BigInt sort matching
+instead (`spine/README.md`); rebasing the pull list onto the spine is
+`stellata-3bsf.18`. The pure `sortSourceIdsNumeric` helper does the BigInt sort matching
 the binaries request file's ordering. ~315k source_ids.
 
 The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py`,
