@@ -219,6 +219,12 @@ carries a `sourceKey` — bodies their flat instance index, stars
 throughput. Pool order would hand one source another's answer the moment
 a body left the frame.
 
+**Hardware without `EXT_color_buffer_float` gets no measurement at all**,
+and therefore no occlusion — the whole pass declines to allocate. That is
+the same fallback tier `HdrPipeline` parks on when it finds only
+half-float, and it degrades to the pre-measurement behaviour rather than
+to a wrong one.
+
 **An unmeasured source reads as throughput 1**, and that direction is
 deliberate: a source not yet covered keeps all its flux, so it can only
 ever provoke a *cut*. The opposite default would let a frame go dark

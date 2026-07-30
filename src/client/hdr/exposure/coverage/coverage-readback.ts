@@ -25,7 +25,12 @@ export class CoverageReadback {
   }
 
   /** Read `count`×1 RGBA float texels out of the **currently bound**
-   *  framebuffer. No-op while one is already in flight. */
+   *  framebuffer. No-op while one is already in flight.
+   *
+   *  RGBA rather than a single-channel target: WebGL2 guarantees only
+   *  RGBA/UNSIGNED_BYTE plus the implementation's own reported pair, and
+   *  RGBA/FLOAT is that pair for RGBA32F everywhere R32F is not. Four
+   *  floats over 128 texels is not worth the portability. */
   request(count: number): void {
     const gl = this.gl;
     if (this.buffer === null || this.fence !== null || count <= 0) return;
