@@ -1150,6 +1150,39 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
     expect(f.physicalPlanetSizePx(99, camera.position)).toBe(0); // unattached
     f.dispose();
   });
+
+  it('keeps the resolved size at eclipse alignment, where the glare dies', () => {
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, R_SUN_PC, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0, 0);
+
+    // Camera BEYOND the body on the host→body line: phase angle 180°, so
+    // φ(α) = 0 and appMag runs past the draw cutoff. The reflected glare
+    // correctly dies — there is no lit face to see — but the body is a
+    // 20-radii-away opaque surface and must still mesh, or it stops
+    // occluding the host it is sitting in front of.
+    const KM_PC_LOCAL = 1 / 3.0857e13;
+    camera.position.set(0, 0, -1 * AU_PC - 20 * 6000 * KM_PC_LOCAL);
+    expect(f.renderedPlanetSizePx(0, camera.position)).toBe(0);
+    const eclipsePx = f.physicalPlanetSizePx(0, camera.position);
+    expect(eclipsePx).toBeGreaterThan(MESH_FADE_FULL_PX);
+    expect(meshFadeFromPhysPx(eclipsePx)).toBe(1);
+    f.dispose();
+  });
 });
 
 describe('PlanetBodyField flat-instance identity + geometry accessors', () => {

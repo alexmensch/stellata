@@ -152,8 +152,9 @@ Bodies render as the spheroid mesh (resolved surface) plus **one
 additive reflected-glare billboard** — no opaque disc / core-mask
 pass. Apparent magnitude is computed in the vertex shader from
 reflected host-star light through a per-planet phase function. The
-slider visibility cutoff applies — sub-cutoff planets fade naturally,
-no unconditional pixel floor. The glare is one pass (main-pass draw +
+visibility cutoff applies **to the glare** — sub-cutoff planets fade
+naturally, no unconditional pixel floor — and never to the mesh
+(§ Planet mesh LOD). The glare is one pass (main-pass draw +
 **local-pass mirror draw** over the active cluster's slot range, gated
 by the shared `uLocalPassRange` uniform — opposite sense under the
 `LOCAL_DEPTH_PASS` define). While the system is locally active
@@ -289,6 +290,15 @@ crossfade.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.
+  Presence is **purely geometric** — `physicalPlanetSizePx` is the one
+  size accessor NOT gated on `drawCutoffMag()`, unlike its sibling
+  `renderedPlanetSizePx`. A surface is opaque whatever its reflected
+  flux, and the alignment where that matters most is the one the
+  photometric gate kills: at α → 180° a body sits in front of its own
+  host with φ(α) → 0, so gating presence on appMag deleted the mesh —
+  and with it the host's occlusion — at exactly the eclipse. The mesh
+  correctly renders black there (no ambient term); atmospheric bodies
+  keep an airlight limb ring.
 - **Reflected glare** is the **shared star-perceptual point** — a planet
   reads *exactly* like a star of its apparent magnitude: size =
   `perceptualAppSizePx(appMag)`, peak =

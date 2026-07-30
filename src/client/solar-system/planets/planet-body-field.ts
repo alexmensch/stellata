@@ -802,15 +802,19 @@ export class PlanetBodyField {
   /** Physical (true angular-diameter) disc size in px, excluding the
    *  perceptual brightness floor that keeps faint bodies visible as dots —
    *  the "is this a resolved body?" measure driving the mesh LOD's
-   *  presence band. 0 when unattached, degenerate, or below the
-   *  soft-taper kill (mesh and billboard die together). */
+   *  presence band. 0 only when unattached or degenerate. Deliberately
+   *  NOT gated on `drawCutoffMag()` the way `renderedPlanetSizePx` above
+   *  is: a surface is opaque whatever its reflected flux, and φ(α) → 0
+   *  at α → 180° pushes an eclipsing body's appMag past the cutoff, so
+   *  gating here deleted the occluding mesh at exactly the alignment
+   *  where a body sits in front of its own host. */
   physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
     const host = this.hostOfInstance(instanceIdx);
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
-    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.drawCutoffMag()) return 0;
-    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
+    const { dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0) return 0;
+    return this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, dVp);
   }
 
   /** True when the body currently renders as one on-screen point with
@@ -887,6 +891,17 @@ export class PlanetBodyField {
     }
   }
 
+  /** True angular diameter in CSS px at the live plate scale — the
+   *  geometric half of `discSizeTerms`, carrying no magnitude term. */
+  private physDiscPx(radiusPc: number, dVp: number): number {
+    return physSizePx(
+      radiusPc,
+      dVp,
+      this.magShared.uViewport.value.y,
+      this.magShared.uFovYRad.value,
+    );
+  }
+
   /** Shader-mirroring physical + perceptual disc sizes in CSS px,
    *  reading the live shared uniforms so debug-panel writes stay in
    *  lockstep. */
@@ -895,9 +910,7 @@ export class PlanetBodyField {
     dVp: number,
     appMag: number,
   ): { physSize: number; appSize: number } {
-    const viewportH = this.magShared.uViewport.value.y;
-    const fovYRad = this.magShared.uFovYRad.value;
-    const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
+    const physSize = this.physDiscPx(radiusPc, dVp);
     const dMEff = perceptualDmEff(
       appMag,
       this.magShared.uLimitMag.value,
