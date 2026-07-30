@@ -205,21 +205,23 @@ phase function and no directionality** — a veil, not a structured glow, which 
 why its *share* of the airlight is the thing to watch: too much of it and the
 surface texture greys out.
 
-**It is not the small correction the name suggests.** Measured through the CPU
-mirror on a limb chord (`atmosphere-scattering-pure.ts`), the fill's share of
-total airlight is **53 % on Earth, 61 % on Venus, 83 % on Mars** with the sun at
-90°, falling to 36 / 8 / 4 % back-lit where the Mie forward peak takes over. So
-single scatter leads only in back-lit geometry.
+`MS_STRENGTH = 1/(4π)` is derived, not judged: treat the light the sunlit
+column has scattered as an isotropic source function — the scattered
+irradiance spread over 4π sr — and the radiance a view path collects from a
+uniform source is source × emergent opacity, which is exactly this term's
+shape with weight 1/(4π). It is the same isotropic-redistribution
+approximation the skylight terminator anchor's ¼ comes from (¼ = π·(1/4π),
+the hemispheric down-flux of that source), so § Skylight and this fill are one
+model pointed at the ground and at the eye. The eye-approved slider value was
+0.0667 — 19 % under the derivation, which is how close the by-eye pass had
+already landed.
 
-`MS_STRENGTH = 0.0667` is `0.2/3`, and the `/3` is the interesting part: the 0.2
-was read off the slider while single scatter still carried the 3× gain that
-§ Airlight rides host irradiance describes deleting. Carried through unchanged
-it would have tripled the shares above (77 / 82 / 94 %) and washed the textures
-out. Rescaling preserves the ratio the eye had approved — it does **not** derive
-it. This weight and the per-body optical depths are both still by eye:
-`stellata-2f6.38` replaces this term with the physics it stands in for (and the
-twilight tail below, which is the same missing physics), `stellata-2f6.37`
-anchors the depths.
+**It is not the small correction the name suggests.** Measured through the CPU
+mirror on a mid-shell limb chord (`atmosphere-scattering-pure.ts`, physical
+depths, sun at 90°), the fill's share of total airlight is **57 % on Earth,
+59 % on Venus, 83 % on Mars, 85 % on Titan**, falling to 41 / 17 / 6 / 67 %
+back-lit where the Mie forward peak takes over. So single scatter leads only
+in back-lit geometry.
 
 **Airlight rides host irradiance, and there is no gain on it.** Both the disc
 block and the shell multiply `uAirlightLuminance`

@@ -25,7 +25,8 @@ function glslFloat(src: string, name: string): number {
 
 describe('constants mirrored from the CPU model', () => {
   it('multiple-scattering fill weight', () => {
-    expect(glslFloat(scatter, 'STELLATA_MS_STRENGTH')).toBe(MS_STRENGTH);
+    // The TS side is the exact 1/(4π); the GLSL literal carries 7 digits.
+    expect(glslFloat(scatter, 'STELLATA_MS_STRENGTH')).toBeCloseTo(MS_STRENGTH, 7);
   });
 
   it('twilight tail amplitude and reach', () => {

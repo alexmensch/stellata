@@ -11,17 +11,11 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Isotropic multiple-scattering fill weight. Single scattering alone leaves
- *  optically thick hazes (Venus, Titan) far too dark — most of their light
- *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
- *  opacity × sunlit.
- *
- *  0.0667 is 0.2/3, and the /3 is load-bearing: the 0.2 was judged by eye
- *  while single scatter still carried a 3× gain, so carrying it unchanged
- *  past that gain's deletion would triple this term's share of the airlight
- *  and grey out the surface texture the weight exists to stay under.
- *  README.md § Multiple-scattering fill has the shares. */
-export const MS_STRENGTH = 0.0667;
+/** Isotropic multiple-scattering fill weight: 1/(4π) — the isotropic
+ *  source-function approximation, the same redistribution the skylight
+ *  terminator anchor's ¼ comes from. Derivation + measured shares:
+ *  README.md § Multiple-scattering fill. */
+export const MS_STRENGTH = 1 / (4 * Math.PI);
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
