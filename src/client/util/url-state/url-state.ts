@@ -158,16 +158,16 @@ export interface DecodedView {
   tgt?: [number, number, number];
   up?: [number, number, number];
   fov?: number;
-  /** v1–v3 only: the retired app-magnitude filter. Decode-and-ignore,
-   *  same as `preset`. */
+  /** Legacy blobs only (v1–v3, and v4 shared before the field retired):
+   *  the app-magnitude filter. Decode-and-ignore, same as `preset`. */
   mag?: number;
   /** Manual EV trim, in stops. Default 0, omitted when default. */
   ev?: number;
   dmin?: number;
   dmax?: number;
   spect?: number;
-  /** v1–v3 only: the retired magnitude preset. Decoded so old links
-   *  still load, then ignored — the instrument owns the limit. */
+  /** Legacy blobs only: the retired magnitude preset. Decoded so old
+   *  links still load, then ignored — the instrument owns the limit. */
   preset?: LegacyPresetName;
   /** Declutter detail level. Default 'all' (fully cluttered) — encoded
    *  only when the user cycled below it. */
@@ -543,6 +543,13 @@ function u8CloudField(bit: number, key: 'cloud' | 'toc'): FieldSpec {
 // — per-version FIELDS arrays below compose them; the golden-blob
 // corpus in url-state.test.ts pins the resulting byte behaviour.
 
+/** Retire a field without breaking blobs that already carry it: the
+ *  encoder never emits the bit, but the decoder still consumes the
+ *  payload bytes so every later field keeps its offset. */
+function decodeOnly(spec: FieldSpec): FieldSpec {
+  return { ...spec, isPresent: () => false };
+}
+
 function presetField(bit: number): FieldSpec {
   return {
     bit, key: 'preset', ...fixed(1),
@@ -843,17 +850,22 @@ const FIELDS_V3: FieldSpec[] = [
 // unclaimed for ~6 months of deploy overlap before any reuse.
 // Everything else is byte-identical to v3. Append-only bit policy
 // continues: unknown high mask bits are ignored by the decoder.
-// Bits 4 (app-magnitude filter) and 8 (magnitude preset) are RETIRED
-// with 16/17 — the instrument owns the limiting magnitude, so a v1–v3
-// blob carrying either decodes and is ignored rather than failing.
+// Bits 4 (app-magnitude filter) and 8 (magnitude preset) are RETIRED —
+// the instrument owns the limiting magnitude, so a blob carrying either
+// decodes and is ignored rather than failing. They stay in this table as
+// decode-only specs, NOT just as unclaimed bits: v4 blobs shipped by
+// v3.6.0 have them set with payload bytes, and a spec-less bit would
+// leave those bytes unconsumed, shifting every later field's offset.
 const FIELDS_V4: FieldSpec[] = [
   vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
   vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
   vec3FieldV3(2, 'up', () => DEFAULT_UP),
   u8Field(3,  'fov',  { min: 10, max: 120, step: 1   }),
+  decodeOnly(u8Field(4, 'mag', { min: -2, max: 15, step: 0.1 })),
   u16Field(5, 'dmin'),
   u16Field(6, 'dmax'),
   u16Field(7, 'spect'),
+  decodeOnly(presetField(8)),
   conField(9),
   u8Field(10, 'smin', { min: 1, max: 6,  step: 0.1 }),
   u8Field(11, 'smax', { min: 2, max: 32, step: 0.5 }),
@@ -1020,8 +1032,7 @@ function fromBase64Url(blob: string): Uint8Array {
 }
 
 // Build a DecodedView from current Stellata state. Default-equality is
-// computed against canonical defaults (and the active preset for
-// preset-relative fields like `mag`) so omitted fields keep the blob
+// computed against canonical defaults so omitted fields keep the blob
 // minimal.
 export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView {
   const f = stellata.getFilter();

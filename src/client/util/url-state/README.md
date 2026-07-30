@@ -60,9 +60,13 @@ one LEB128 SID per entry. No type tag rides the wire; kind comes from
 the runtime resolver (`../sid-resolver/README.md`) at apply time.
 Bits 16/17 (the v1–v3 1-byte cloud refs) are retired — leave them
 unclaimed for ~6 months of deploy overlap. Bits 4 (`mag`) and 8
-(`preset`) join them: the instrument owns the limiting magnitude, so a
-v1–v3 blob carrying either **decodes and is ignored** rather than
-failing, and the link lands on the instrument limit. SIDs are frozen forever in
+(`preset`) are retired differently: the instrument owns the limiting
+magnitude, so any blob carrying either **decodes and is ignored** and the
+link lands on the instrument limit — but v4 blobs shared before the
+retirement have those bits set with payload bytes, so their specs stay in
+`FIELDS_V4` as decode-only entries (never encoded). Dropping a spec whose
+bit is in the wild shifts every later field's byte offset; retiring a
+field is an encoder-side change only. SIDs are frozen forever in
 `data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild —
 the failure mode v1–v3's row-index fallback couldn't avoid. **v3**
 introduced the LEB128 presence mask and per-component vec3 sub-masks

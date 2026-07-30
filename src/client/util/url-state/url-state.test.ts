@@ -499,6 +499,24 @@ describe('url-state', () => {
       expect(view.mag).toBeUndefined();
     });
 
+    it('consumes the retired mag/preset bytes in a v3.6.0-era v4 blob', () => {
+      // v3.6.0 shipped v4 blobs with u8Field(4, 'mag') and presetField(8)
+      // live. Their specs must survive as decode-only entries: dropped
+      // outright, the unconsumed payload bytes shift every later field
+      // (dmax here would read the mag byte and decode as 62549).
+      // Bytes: version 4 · LEB128 mask bits 3+4+6+8 · fov 45 · mag 6.5 ·
+      // dmax 500 (u16 LE) · preset 1 (binoculars).
+      const bytes = new Uint8Array([4, 0xd8, 0x02, 35, 85, 0xf4, 0x01, 1]);
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const { view } = decodeBlob(blob);
+      expect(view.fov).toBe(45);
+      expect(view.dmax).toBe(500);
+      expect(view.mag).toBeCloseTo(6.5, 6);
+      expect(view.preset).toBe('binoculars');
+    });
+
     it('round-trips smin at 0.1 step boundaries', () => {
       for (const smin of [1, 1.5, 3.7, 6]) {
         const { view } = roundtrip({ smin });
