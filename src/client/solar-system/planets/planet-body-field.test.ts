@@ -31,7 +31,6 @@ import {
 } from '../../hdr/hdr-pipeline';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor, drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
-import { ADAPT_OCCLUDER_MIN_PX } from '../../hdr/exposure/scene-adaptation-pure';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
@@ -1217,11 +1216,11 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
     });
     expect(seen).toHaveLength(1);
     // Fainter than the just-visible floor — that IS the condition which
-    // used to drop it from the walk — yet visited, and occluder-eligible
-    // by true angular size. Emitting under threshold, it can only remove
-    // flux from the statistic, never add any.
+    // used to drop it from the walk — yet visited, and large enough that
+    // its mesh draws and therefore writes occluder depth. Emitting under
+    // threshold, it can only remove flux from the statistic, never add any.
     expect(seen[0].appMag).toBeGreaterThan(drawCutoffMag(20, 20, false));
-    expect(seen[0].diameterPx).toBeGreaterThan(ADAPT_OCCLUDER_MIN_PX);
+    expect(seen[0].diameterPx).toBeGreaterThan(MESH_FADE_MIN_PX);
     f.dispose();
   });
 });

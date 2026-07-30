@@ -132,6 +132,7 @@ import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
+import { CoveragePass } from './hdr/exposure/coverage/coverage-pass';
 import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
@@ -298,6 +299,7 @@ export class Stellata implements FrameAnchor {
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
   private adaptation!: SceneAdaptation;
+  private coverage!: CoveragePass;
 
   // Declutter cycle (scene/README.md § Detail-level declutter cycle).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
@@ -589,6 +591,15 @@ export class Stellata implements FrameAnchor {
       import.meta.env.BASE_URL,
       this.hdr.emitterUniforms,
     );
+    // The occlusion half of the statistic, measured on the GPU against the
+    // geometry the local depth pass draws and read back one frame late
+    // (hdr/exposure/coverage/README.md).
+    this.coverage = new CoveragePass({
+      occluderScene: this.localDepthPass.scene,
+      spheres: () => this.localDepthPass.memberSpheres(),
+      rings: this.planetMeshLayer,
+      viewport: sharedUniforms.uViewport as { value: THREE.Vector2 },
+    });
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
@@ -601,6 +612,7 @@ export class Stellata implements FrameAnchor {
         localPositions: () => this.localPositions,
         starLabel: (idx) => this.catalog.names.get(idx) ?? null,
       },
+      transmission: (key) => this.coverage.transmissionFor(key),
     });
     this.probeMarkerField = new ProbeField(sharedUniforms);
     this.scene.add(this.probeMarkerField.group);
@@ -2722,6 +2734,17 @@ export class Stellata implements FrameAnchor {
     this.hdr.resolve();
     perfGpuEnd('tonemap');
     perfMeasure('submit.tonemap');
+    // After the local depth pass — its spheres set the bracket and its
+    // scene supplies the occluders — and after the resolve, so the
+    // measurement never delays the frame it measures.
+    perfMark('submit.coverage');
+    perfGpuBegin('coverage');
+    this.coverage.measure(
+      this.renderer, this.camera,
+      this.adaptation.sources(), this.adaptation.sourceCount(),
+    );
+    perfGpuEnd('coverage');
+    perfMeasure('submit.coverage');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     perfMark('frame.handlers');
     this.bus.emit('frame');
@@ -2805,6 +2828,7 @@ export class Stellata implements FrameAnchor {
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
     this.localDepthPass.dispose();
+    this.coverage.dispose();
     this.hdr.dispose();
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app

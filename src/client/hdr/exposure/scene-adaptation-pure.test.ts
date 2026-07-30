@@ -12,7 +12,6 @@ import { tonemapWhitePoint } from '../tonemap-pure';
 import {
   ADAPT_EDGE_RAMP_PX,
   ADAPT_NEGLIGIBLE_FRACTION,
-  ADAPT_OCCLUDER_MIN_PX,
   ADAPT_REF_COVERAGE,
   ADAPT_STAR_ABSMAG_REF,
   adaptationDm,
@@ -28,12 +27,12 @@ import {
   type LuminanceSample,
   meanSceneLuminance,
   negligibleAppMag,
-  occludedFraction,
   sampleFluxL,
   samplePeakL,
   sampleVisibleFraction,
   sourceVisibleFraction,
   starAdaptationWindowPc,
+  starSourceKey,
   trimStopsForCoverage,
   windowTaper,
 } from './scene-adaptation-pure';
@@ -63,6 +62,7 @@ function sample(patch: Partial<LuminanceSample>): LuminanceSample {
     screenY: 0.5 * VIEWPORT_H,
     cameraDistancePc: 1,
     fluxScale: 1,
+    sourceKey: 0,
     label: null,
     ...patch,
   };
@@ -70,7 +70,7 @@ function sample(patch: Partial<LuminanceSample>): LuminanceSample {
 
 /** One unoccluded source's share of the frame's mean luminance. */
 function contribution(s: LuminanceSample): number {
-  const visible = sampleVisibleFraction(s, [s], 1, VIEWPORT_W, VIEWPORT_H);
+  const visible = sampleVisibleFraction(s, 1, VIEWPORT_W, VIEWPORT_H);
   return sampleFluxL(s, EXPOSURE, visible) / VIEWPORT_AREA_PX;
 }
 
@@ -336,61 +336,39 @@ describe('viewport coverage', () => {
   });
 });
 
-describe('occlusion by nearer discs', () => {
-  const near = (patch: Partial<LuminanceSample>) =>
-    sample({ cameraDistancePc: 1, ...patch });
-  const far = (patch: Partial<LuminanceSample>) =>
-    sample({ cameraDistancePc: 100, ...patch });
-
-  it('hides a point behind a nearer disc entirely', () => {
-    const sol = far({ appMag: -26.74, diameterPx: 0.4, label: 'Sol' });
-    const saturn = near({ diameterPx: 600, label: 'Saturn' });
-    expect(occludedFraction(sol, [sol, saturn], 2)).toBe(1);
-    expect(sampleVisibleFraction(sol, [sol, saturn], 2, VIEWPORT_W, VIEWPORT_H)).toBe(0);
-    // And with the same two bodies swapped in depth, nothing is hidden.
-    const solNear = near({ appMag: -26.74, diameterPx: 0.4 });
-    const saturnFar = far({ diameterPx: 600 });
-    expect(occludedFraction(solNear, [solNear, saturnFar], 2)).toBe(0);
+describe('visible fraction', () => {
+  it('multiplies frame clipping by the measured throughput', () => {
+    // Half the footprint off the left edge, half of the rest let through.
+    const edge = sample({ diameterPx: 200, screenX: 0 });
+    expect(sampleVisibleFraction(edge, 1, VIEWPORT_W, VIEWPORT_H)).toBeCloseTo(0.5, 6);
+    expect(sampleVisibleFraction(edge, 0.5, VIEWPORT_W, VIEWPORT_H)).toBeCloseTo(0.25, 6);
   });
 
-  it('takes half a disc that a nearer limb cuts across', () => {
-    const back = far({ diameterPx: 200 });
-    // The occluder's limb passes through the back disc's centre, and is
-    // 200× wider, so it reads as a straight edge across it.
-    const front = near({ diameterPx: 40000, screenX: 0.5 * VIEWPORT_W - 20000 });
-    expect(occludedFraction(back, [back, front], 2)).toBeCloseTo(0.5, 2);
-  });
-
-  it('ignores an occluder below the mesh-presence floor', () => {
-    const back = far({ diameterPx: 0.4 });
-    const tiny = near({ diameterPx: 0.99 * ADAPT_OCCLUDER_MIN_PX });
-    const drawn = near({ diameterPx: ADAPT_OCCLUDER_MIN_PX });
-    expect(occludedFraction(back, [back, tiny], 2)).toBe(0);
-    expect(occludedFraction(back, [back, drawn], 2)).toBeGreaterThan(0);
+  it('a fully occluded source is invisible however much is in frame', () => {
+    const centred = sample({ diameterPx: 200 });
+    expect(sampleVisibleFraction(centred, 1, VIEWPORT_W, VIEWPORT_H)).toBeCloseTo(1, 12);
+    expect(sampleVisibleFraction(centred, 0, VIEWPORT_W, VIEWPORT_H)).toBe(0);
   });
 
   it('composes multiplicatively with the eclipse dim', () => {
     // Two independent losses: the eclipse is light the body never
     // received, occlusion is light that never reached the camera.
-    const half = far({ appMag: -20, diameterPx: 200, fluxScale: 0.5 });
-    const front = near({ diameterPx: 40000, screenX: 0.5 * VIEWPORT_W - 20000 });
-    const visible = sampleVisibleFraction(half, [half, front], 2, VIEWPORT_W, VIEWPORT_H);
-    expect(visible).toBeCloseTo(0.5, 2);
+    const half = sample({ appMag: -20, diameterPx: 200, fluxScale: 0.5 });
+    const visible = sampleVisibleFraction(half, 0.5, VIEWPORT_W, VIEWPORT_H);
+    expect(visible).toBeCloseTo(0.5, 12);
     const full = luminanceForMagnitude(EXPOSURE, -20);
     expect(sampleFluxL(half, EXPOSURE, visible) / full).toBeCloseTo(0.5 * visible, 12);
   });
+});
 
-  it('ramps a disc out continuously as a nearer one slides over it', () => {
-    const back = far({ diameterPx: 200 });
-    let prev = 1;
-    for (let cx = -300; cx <= 0; cx += 5) {
-      const front = near({ diameterPx: 400, screenX: 0.5 * VIEWPORT_W + cx });
-      const f = 1 - occludedFraction(back, [back, front], 2);
-      expect(f).toBeLessThanOrEqual(prev + 1e-12);
-      prev = f;
-    }
-    // Concentric and twice as wide: the back disc is gone.
-    expect(prev).toBe(0);
+describe('source keys', () => {
+  it('keeps stars out of the bodies\' half of the key space', () => {
+    // The coverage measurement lands a frame after the walk, so a collision
+    // between a body's flat instance index and a star's would hand one
+    // source the other's throughput.
+    expect(starSourceKey(0)).toBeLessThan(0);
+    expect(starSourceKey(312_000)).toBeLessThan(0);
+    expect(starSourceKey(4)).not.toBe(starSourceKey(5));
   });
 });
 

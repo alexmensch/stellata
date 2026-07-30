@@ -256,7 +256,7 @@ export class PlanetBodyField {
   private screenTmp: [number, number] = [0, 0];
   private adaptationSample: LuminanceSample = {
     appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
-    cameraDistancePc: 0, fluxScale: 1, label: null,
+    cameraDistancePc: 0, fluxScale: 1, sourceKey: 0, label: null,
   };
 
   constructor(
@@ -1096,6 +1096,7 @@ export class PlanetBodyField {
       s.screenY = this.screenTmp[1];
       s.cameraDistancePc = view.dVp;
       s.fluxScale = this.eclipseDimForInstance(idx);
+      s.sourceKey = idx;
       s.label = host.ps.planets[i].name;
       visit(s);
     });
