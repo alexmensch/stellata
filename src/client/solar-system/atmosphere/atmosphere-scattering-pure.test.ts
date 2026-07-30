@@ -14,11 +14,13 @@ import {
   rayleighPhase,
   scalePolarComponent,
   scatterAlongRay,
+  shadowEdgeAltitude,
   shadowSpan,
   skyIrradianceFrac,
   verticalAbsorptionOpticalDepth,
   verticalScatterOpticalDepth,
 } from './atmosphere-scattering-pure';
+import { relativeLuminance } from '../../hdr/tonemap-pure';
 import { SOL_BODIES } from '../planet-system';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -333,22 +335,32 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     };
   };
 
-  const LUMA: Vec3 = [0.2126, 0.7152, 0.0722];
   const earth = rowOf('Earth');
   const { hR, tauS, tauA } = earth;
   const frac = (deltaDeg: number) =>
-    dot(LUMA, skyIrradianceFrac(-Math.sin((deltaDeg * Math.PI) / 180), hR, tauS, tauA));
+    relativeLuminance(skyIrradianceFrac(-Math.sin((deltaDeg * Math.PI) / 180), hR, tauS, tauA));
 
-  it('recovers the vertical scattering optical depth from the per-body row', () => {
-    // βRs·hR undoes the /hR the mesh layer applies, so the table's authored
-    // vertical optical depths come straight back out.
-    expect(tauS[2]).toBeCloseTo(earth.atmo.rayleighCoeff[2] + earth.atmo.mieCoeff, 12);
+  it('recovers every authored vertical optical depth from the march params', () => {
+    // atmosphereParamsOf divides each coefficient by its own scale height and
+    // these two multiply it back, so this pins the whole ÷H/×H seam — the one
+    // place a table row becomes an extinction coefficient — for every body and
+    // channel at once. Anywhere else needing a row's τ goes through here.
+    for (const name of ['Venus', 'Earth', 'Mars', 'Titan']) {
+      const row = rowOf(name);
+      for (let c = 0; c < 3; c++) {
+        expect(row.tauS[c])
+          .toBeCloseTo(row.atmo.rayleighCoeff[c] + row.atmo.mieCoeff, 12);
+        expect(row.tauA[c]).toBeCloseTo(row.atmo.absorbCoeff[c], 12);
+      }
+    }
   });
 
   it('re-derives the tail constants from the measured illuminance table', () => {
     // The second exponential runs through the 12° and 18° points exactly;
-    // the constants are that closed-form fit, nothing judged.
-    const h = (d: number) => 1 / Math.cos((d * Math.PI) / 180) - 1;
+    // the constants are that closed-form fit, nothing judged. `h` is the
+    // model's own shadow-edge altitude, so the fit cannot outlive a change to
+    // the parameterisation it is fitted against.
+    const h = (d: number) => shadowEdgeAltitude(-Math.sin((d * Math.PI) / 180));
     const r12 = MEASURED_LX[12] / MEASURED_LX[0];
     const r18 = MEASURED_LX[18] / MEASURED_LX[0];
     const reach = (h(18) - h(12)) / Math.log(r12 / r18) / hR;
@@ -393,44 +405,44 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     // same photons at opposite elevations — README.md § Skylight.
     const thin: Vec3 = [1e-4, 1e-4, 1e-4];
     const none: Vec3 = [0, 0, 0];
-    expect(dot(LUMA, skyIrradianceFrac(1, hR, thin, none)) / 1e-4).toBeCloseTo(0.5, 3);
-    expect(dot(LUMA, skyIrradianceFrac(0, hR, thin, none)) / 1e-4).toBeCloseTo(0.25, 2);
+    expect(relativeLuminance(skyIrradianceFrac(1, hR, thin, none)) / 1e-4).toBeCloseTo(0.5, 3);
+    expect(relativeLuminance(skyIrradianceFrac(0, hR, thin, none)) / 1e-4).toBeCloseTo(0.25, 2);
   });
 
   it('day-side skylight rises with solar elevation to the measured noon share', () => {
     // Noon diffuse-to-direct on clear Earth measures ~10-15 %; the beam-
     // interception term (single scatter, no ground bounce) lands just under.
-    const noon = dot(LUMA, skyIrradianceFrac(1, hR, tauS, tauA));
-    const directHoriz = dot(LUMA, [
+    const noon = relativeLuminance(skyIrradianceFrac(1, hR, tauS, tauA));
+    const directHoriz = relativeLuminance([
       Math.exp(-(tauS[0] + tauA[0])), Math.exp(-(tauS[1] + tauA[1])), Math.exp(-(tauS[2] + tauA[2])),
     ] as Vec3);
     expect(noon).toBeCloseTo(0.0675, 3);
     expect(noon / directHoriz).toBeGreaterThan(0.05);
     expect(noon / directHoriz).toBeLessThan(0.15);
-    const at = (mu: number) => dot(LUMA, skyIrradianceFrac(mu, hR, tauS, tauA));
+    const at = (mu: number) => relativeLuminance(skyIrradianceFrac(mu, hR, tauS, tauA));
     expect(at(1)).toBeGreaterThan(at(0.5));
     expect(at(0.5)).toBeGreaterThan(at(0.1));
     expect(at(0.1)).toBeGreaterThan(at(0));
   });
 
   it('is continuous across the terminator', () => {
-    expect(dot(LUMA, skyIrradianceFrac(1e-7, hR, tauS, tauA)))
-      .toBeCloseTo(dot(LUMA, skyIrradianceFrac(-1e-7, hR, tauS, tauA)), 6);
+    expect(relativeLuminance(skyIrradianceFrac(1e-7, hR, tauS, tauA)))
+      .toBeCloseTo(relativeLuminance(skyIrradianceFrac(-1e-7, hR, tauS, tauA)), 6);
   });
 
   it('scales with the scattering optical depth, so thick air means bright dusk', () => {
     // Titan — the thickest row — outshines Earth at its own terminator even
     // through its blue-absorbing haze.
     const titan = rowOf('Titan');
-    const titanDusk = dot(LUMA, skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
+    const titanDusk = relativeLuminance(skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
     expect(titanDusk).toBeGreaterThan(frac(0));
   });
 
   it('reaches further past the terminator on Titan — the scale height sets the band', () => {
     const titan = rowOf('Titan');
     const titanTail = (d: number) =>
-      dot(LUMA, skyIrradianceFrac(-Math.sin((d * Math.PI) / 180), titan.hR, titan.tauS, titan.tauA))
-      / dot(LUMA, skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
+      relativeLuminance(skyIrradianceFrac(-Math.sin((d * Math.PI) / 180), titan.hR, titan.tauS, titan.tauA))
+      / relativeLuminance(skyIrradianceFrac(0, titan.hR, titan.tauS, titan.tauA));
     expect(titanTail(12)).toBeGreaterThan(100 * (frac(12) / frac(0)));
   });
 

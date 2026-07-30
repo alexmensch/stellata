@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
 import {
   MS_STRENGTH,
   TWILIGHT_TAIL_AMP,
@@ -24,9 +25,19 @@ function glslFloat(src: string, name: string): number {
 }
 
 describe('constants mirrored from the CPU model', () => {
-  it('multiple-scattering fill weight', () => {
-    // The TS side is the exact 1/(4π); the GLSL literal carries 7 digits.
-    expect(glslFloat(scatter, 'STELLATA_MS_STRENGTH')).toBeCloseTo(MS_STRENGTH, 7);
+  it('multiple-scattering fill weight, as 1/(4π) on both sides', () => {
+    // A rounded literal here would be a second, drifting statement of a
+    // derived quantity the file already declares exactly.
+    expect(scatter).toContain('const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);');
+    expect(scatter).toContain('const float STELLATA_MS_STRENGTH = STELLATA_INV_4PI;');
+    expect(MS_STRENGTH).toBe(1 / (4 * Math.PI));
+  });
+
+  it('Rec.709 luma weights', () => {
+    // Its own const because the hdr chunks spliced alongside declare theirs;
+    // same numbers, and this is what keeps them the same numbers.
+    const [r, g, b] = LUMA_WEIGHTS;
+    expect(scatter).toContain(`const vec3 STELLATA_LUMA = vec3(${r}, ${g}, ${b});`);
   });
 
   it('twilight tail amplitude and reach', () => {

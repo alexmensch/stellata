@@ -14,17 +14,17 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Isotropic multiple-scattering fill weight: 1/(4π) — the isotropic
- *  source-function approximation, the same redistribution the skylight
+const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
+const INV_4PI = 1 / (4 * Math.PI);
+
+/** Isotropic multiple-scattering fill weight — the isotropic source-function
+ *  approximation, so it IS 1/(4π): the same redistribution the skylight
  *  terminator anchor's ¼ comes from. Derivation + measured shares:
  *  README.md § Multiple-scattering fill. */
-export const MS_STRENGTH = 1 / (4 * Math.PI);
+export const MS_STRENGTH = INV_4PI;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
-
-const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
-const INV_4PI = 1 / (4 * Math.PI);
 
 export type Vec3 = readonly [number, number, number];
 
@@ -160,8 +160,9 @@ export function verticalAbsorptionOpticalDepth(p: AtmosphereParams): Vec3 {
 }
 
 /** Chapman airmass of a horizon sun for an exponential atmosphere of scale
- *  height `hR` (planet-radius units): √(π/(2·hR)) — ~35 on Earth. */
-export function chapmanHorizon(hR: number): number {
+ *  height `hR` (planet-radius units): √(π/(2·hR)) — ~35 on Earth. Inlined as
+ *  the same expression in the GLSL mirror, which the drift test pins. */
+function chapmanHorizon(hR: number): number {
   return Math.sqrt(Math.PI / (2 * hR));
 }
 
