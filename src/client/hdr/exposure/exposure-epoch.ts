@@ -16,14 +16,10 @@ export const EV_MAX_STOPS = 3;
  *  quantisation are the same grid, so a shared URL round-trips exactly. */
 export const EV_STEP_STOPS = 1 / 3;
 
-/**
- * The EV trim `deltaSteps` grid stops away from `ev`, snapping onto the
- * grid on the way — so a value that arrived off it (a hand-edited URL, or
- * a range input whose steps accumulate float error from its own min)
- * returns to the step the slider and the URL field share instead of
- * carrying its offset forward. Range clamping is
- * `ExposureController.setEv`'s.
- */
+/** The EV trim `deltaSteps` grid stops away from `ev`, snapping onto
+ *  the grid on the way — a value that arrived off it (hand-edited URL,
+ *  range-input float drift) must not carry its offset forward. Range
+ *  clamping is `ExposureController.setEv`'s. */
 export function steppedEv(ev: number, deltaSteps: number): number {
   return (Math.round(ev / EV_STEP_STOPS) + deltaSteps) * EV_STEP_STOPS;
 }
@@ -47,11 +43,9 @@ export function sceneExposure(limitMag: number, dm = 0, ev = 0): number {
 
 /**
  * The magnitude a source lands on `L_THRESH` at — the visible faint
- * edge. Adaptation is deliberately absent: a dark-adapted eye at the
- * instrument's limit is the ceiling, and dimming the field is what the
- * operator does with the exposure it already has. Only the instrument
- * and the manual trim move where "just visible" sits, which is why the
- * cull bound below can be static.
+ * edge. Adaptation is deliberately absent: only the instrument and the
+ * manual trim move where "just visible" sits, which is why the cull
+ * bound below can be static.
  */
 export function thresholdMagFor(limitMag: number, ev = 0): number {
   return limitMag + MAG_PER_STOP * ev;

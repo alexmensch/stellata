@@ -7,53 +7,31 @@ import { smoothstep } from '../../galactic/galactic-fade';
 import { MESH_FADE_MIN_PX } from '../../solar-system/planets/mesh-crossfade';
 import { luminanceForMagnitude } from '../emission-pure';
 
-/**
- * Display luminance a correctly-exposed sunlit disc reads at — measured,
- * not chosen. Three independently-judged planets (Neptune 0.919, Uranus
- * 0.824, Jupiter 0.940) agree to 0.14 mag across a 40× range in
- * intrinsic surface brightness; this is their geometric mean.
- * `docs/science-hdr-pipeline.md` § 3.1 carries the smoke pass.
- */
+/** Display luminance a correctly-exposed sunlit disc reads at —
+ *  measured, not chosen: the geometric mean of three independently
+ *  judged planets (`docs/science-hdr-pipeline.md` § 3.1). */
 export const L_TARGET = 0.89;
 
-/**
- * Reference coverage: the frame fraction a body lands exactly on
- * `L_TARGET` at, and the one free parameter of the perception branch. It
- * is the **park coverage** — a focused body is parked filling
- * `PLANET_PARK_FILL_FRACTION` of the viewport's minor axis, so its disc
- * covers `π·(f/2)²·min(w,h)²/(w·h)`, which is 6.85% on the calibration
- * viewport (portrait, so its minor axis is the width). Landing the measured
- * `L_TARGET` on the framing the user actually sees a body in is what
- * makes the trim a correction rather than a permanent offset.
- */
+/** Reference coverage — the frame fraction a body lands exactly on
+ *  `L_TARGET` at. Not free: it is the park coverage, derived from
+ *  `PLANET_PARK_FILL_FRACTION` on the calibration viewport's minor axis
+ *  (§ 3.1 carries the derivation). */
 export const ADAPT_REF_COVERAGE = 0.0685;
 
 /** Adaptation anchor — `L̄` at which the perception branch's cut is
  *  exactly zero. */
 export const L_ADAPT = L_TARGET * ADAPT_REF_COVERAGE;
 
-/**
- * Ceiling the highlight guard holds the frame's brightest **visible
- * pixel** at. This is a display compensation and not a perceptual claim
- * (`docs/science-hdr-pipeline.md` § 3.2 — The highlight guard): a
- * resolved surface really would be far brighter, and a monitor cannot
- * show that, so the guard shows what can be perceived instead of clipping
- * it to flat white. It sits well under the operator's own clipping onset
- * (~8–20), which is the headroom that keeps a disc's real peak — up to
- * ~0.4 mag over the mean this statistic measures — off the white point.
- * The one knob smoke-tuning moves.
- */
+/** Ceiling the highlight guard holds the frame's brightest **visible
+ *  pixel** at — a display compensation, not a perceptual claim; § 3.2
+ *  (The highlight guard) carries the reasoning and the ~0.4 mag
+ *  peak-over-mean margin to account for before raising it. The one knob
+ *  smoke-tuning moves. */
 export const L_CAP = 1.2;
 
-/**
- * The whole diffuse field as one term, for **one frame** rather than the
- * whole sky: the frame's share of the threshold-star population (1.0e-4
- * — a 50°-FOV frame is 10.8% of the sky) plus the Milky Way band at its
- * anticentre-plane 22.55 mag/arcsec² (7.0e-4), both at the base
- * instrument exposure. Milky-Way-dominated, and inert by construction —
- * it exists so `L̄` is never exactly zero and the debug readout has a
- * floor to show. `docs/science-hdr-pipeline.md` § 3.1 carries the rows.
- */
+/** The whole diffuse field as one term, for **one frame** of sky rather
+ *  than the whole sphere (§ 3.1 carries the rows). Inert by construction
+ *  — it exists so `L̄` is never exactly zero. */
 export const DIFFUSE_FIELD_L = 8.0e-4;
 
 /** A source contributing less than this fraction of `L_ADAPT` is dropped
@@ -61,12 +39,9 @@ export const DIFFUSE_FIELD_L = 8.0e-4;
  *  faint star can reach. */
 export const ADAPT_NEGLIGIBLE_FRACTION = 0.03;
 
-/**
- * Absolute magnitude the star window is derived against. Only 120 of the
- * catalogue's 313k stars are brighter, and the 22 brighter than −8 all
- * sit at extragalactic distances — so a star this window drops is
- * always one the taper has already faded to nothing.
- */
+/** Absolute magnitude the star window is derived against — fainter
+ *  stars are covered exactly, brighter ones leave through the window
+ *  taper (README.md § Adaptation). */
 export const ADAPT_STAR_ABSMAG_REF = -6;
 
 /** Fraction of the star window the edge taper spans. Any source the
@@ -74,32 +49,20 @@ export const ADAPT_STAR_ABSMAG_REF = -6;
  *  pop the exposure. */
 export const ADAPT_WINDOW_TAPER_FRACTION = 0.2;
 
-/**
- * Width of the frustum-edge ramp, in px of centre travel. A source's
- * clipping fraction is evaluated against a disc at least this wide, so a
- * sub-pixel point crossing the frame edge fades over ~12 px instead of
- * stepping 0 → 1 within its own 1.1 px footprint. That step is what a
- * point jittering on the edge reads as flicker; widening the ramp is the
- * whole fix, and it needs no per-source state (which is what makes it
- * preferable to hysteresis — see `README.md` § Adaptation).
- */
+/** Width of the frustum-edge ramp, in px of centre travel — the floor
+ *  on the clipping disc that keeps a sub-pixel source from flickering
+ *  the exposure on the frame edge. README.md § Adaptation owns the
+ *  hysteresis rejection. */
 export const ADAPT_EDGE_RAMP_PX = 12;
 
-/**
- * Time constant of the slew limit on the **applied** cut, in real
- * seconds. The measurement stays instantaneous — this filters only what
- * reaches `uExposure`, so a source appearing, an occluder clearing, or the
- * guard handing back to the perception branch ramps instead of snapping.
- * It runs in magnitudes rather than in luminance, so the ramp is a
- * constant number of stops per second whatever the frame's absolute level.
- */
+/** Time constant of the slew limit on the **applied** cut, in real
+ *  seconds. The measurement stays instantaneous, and the filter runs in
+ *  magnitudes so the ramp is stops-per-second at any absolute level. */
 export const ADAPT_SLEW_TAU_S = 0.3;
 
-/** The slew snaps to its target inside this many magnitudes, the way the
- *  eclipse dim snaps at `DIM_SETTLED`. An exponential never arrives, and
- *  without a snap `dm` would never reach exactly 0 — which is the
- *  sentinel the adapted-to label and the uniform's skip-if-unchanged both
- *  read. 0.001 mag is a tenth of a percent in luminance. */
+/** The slew snaps to its target inside this many magnitudes — an
+ *  exponential never arrives, and exactly 0 is the sentinel the
+ *  adapted-to label and the uniform's skip-if-unchanged both read. */
 export const ADAPT_SLEW_SETTLE_MAG = 1e-3;
 
 /** One frame of the slew limit: blend the applied cut toward the frame's
@@ -109,11 +72,9 @@ export function slewDm(applied: number, measured: number, blend: number): number
   return applied + (measured - applied) * blend;
 }
 
-/**
- * True diameter below which a source stops acting as an occluder. It is
- * the mesh-presence floor: a body this small draws no surface at all, so
- * there is nothing for a source behind it to hide behind.
- */
+/** True diameter below which a source stops occluding — the
+ *  mesh-presence floor: a body this small draws no surface to hide
+ *  behind. */
 export const ADAPT_OCCLUDER_MIN_PX = MESH_FADE_MIN_PX;
 
 /**
@@ -187,16 +148,11 @@ export function discViewportOverlapArea(
 }
 
 /**
- * Fraction of a source's own footprint that lands inside the viewport —
- * the only place coverage enters the statistic. Surface brightness ×
- * area is flux, so a fully on-screen source contributes its flux
- * whatever its size; clipping at the frame edge is what this measures,
- * and it ramps continuously as a source slides in.
- *
- * The disc the clipping runs against is floored at `ADAPT_EDGE_RAMP_PX`
- * across, which is what makes the ramp legible for a source smaller than
- * that: the fraction is 1 well inside the frame and 0 well outside it
- * either way, so the floor only sets how wide the crossing band is.
+ * Fraction of a source's own footprint inside the viewport — the only
+ * place coverage enters the statistic (surface brightness × area is
+ * flux). The disc is floored at `ADAPT_EDGE_RAMP_PX` across; fully
+ * inside and fully outside are unchanged, so the floor only sets how
+ * wide the crossing band is.
  */
 export function sourceVisibleFraction(
   diameterPx: number,
@@ -210,14 +166,11 @@ export function sourceVisibleFraction(
 }
 
 /**
- * Fraction of `subject`'s footprint hidden behind the nearer drawn discs
- * in `samples` — the camera-path light loss the eclipse dim does not
- * carry (that one is a lighting loss, and the two compose
- * multiplicatively). Screen-space circle-circle lens area per occluder,
- * summed, so two occluders overlapping each other double-count: the
- * error is always in the over-occluding direction and cannot invent
- * light. Occluders below `ADAPT_OCCLUDER_MIN_PX` are skipped, and rings
- * never occlude — they are not sources, so they never enter `samples`.
+ * Fraction of `subject`'s footprint hidden behind the **nearer** drawn
+ * discs in `samples` — a camera-path loss, composing multiplicatively
+ * with the eclipse dim in `fluxScale`. Lens areas are summed, so
+ * overlapping occluders double-count: the error is always toward
+ * over-occluding and cannot invent light.
  */
 export function occludedFraction(
   subject: LuminanceSample,
@@ -274,13 +227,9 @@ export function meanSceneLuminance(fluxL: number, w: number, h: number): number 
   return fluxL / Math.max(1, w * h) + DIFFUSE_FIELD_L;
 }
 
-/**
- * Per-pixel luminance of a sample's brightest pixel — its flux over the
- * footprint it is spread across, which is exactly
- * `stellataPointSourcePeak`'s rule. Unclamped, deliberately: `LUMA_CEIL`
- * would understate a very bright source's peak, and the guard reads the
- * peak to decide whether it can protect it at all.
- */
+/** Per-pixel luminance of a sample's brightest pixel — flux over
+ *  footprint, `stellataPointSourcePeak`'s rule. Deliberately unclamped:
+ *  `LUMA_CEIL` would understate a very bright source's peak. */
 export function samplePeakL(s: LuminanceSample, exposure: number): number {
   const r = footprintRadiusPx(s.diameterPx);
   return (luminanceForMagnitude(exposure, s.appMag) * s.fluxScale) / (Math.PI * r * r);
@@ -307,16 +256,10 @@ export function highlightGuardDm(peakL: number): number {
 }
 
 /**
- * The frame's cut: whichever branch asks for less of one. Since both are
- * clamped at 0 the result is too, and since it is a maximum **the guard
- * can only ever raise the exposure** — which is what stops it from being
- * the maximum statistic § 3.1 rejects.
- *
- * The two branches are equal at the coverage `L_ADAPT / L_CAP`, so the
- * handover is a pure coverage threshold, independent of how bright the
- * source is, and continuous across it: no fade band, no state, and an
- * occluded source hands back smoothly as its visible coverage falls
- * through it.
+ * The frame's cut: a `max` of two ≤ 0 branches, so the guard can only
+ * ever raise the exposure, and the branches are equal at coverage
+ * `L_ADAPT / L_CAP` — a continuous, stateless handover (README.md
+ * § Adaptation).
  */
 export function adaptationDm(meanL: number, peakL: number): number {
   return Math.max(eyeAdaptationDm(meanL), highlightGuardDm(peakL));
@@ -329,13 +272,9 @@ export function guardHandoverCoverage(): number {
   return L_ADAPT / L_CAP;
 }
 
-/** Disc-mean luminance a body of frame coverage `f` reads at once
- *  adaptation has settled: `L_ADAPT / f` under the perception branch —
- *  `L_TARGET` exactly at `ADAPT_REF_COVERAGE`, drifting by the coverage
- *  ratio away from it (§ 3.2's sensitivity) — and flat at `L_CAP`
- *  wherever the guard governs, which is what makes brightness invariant
- *  in zoom above the handover coverage. The guard raises exposure, so the
- *  brighter of the two is the one that happens. */
+/** Disc-mean luminance a body of coverage `f` settles at: `L_ADAPT / f`
+ *  under the perception branch, flat at `L_CAP` where the guard governs
+ *  (§ 3.2's sensitivity analysis). */
 export function adaptedDiscMeanL(coverage: number): number {
   return Math.max(L_ADAPT / coverage, L_CAP);
 }

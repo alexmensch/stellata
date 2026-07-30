@@ -62,11 +62,9 @@ export interface SceneAdaptationDeps {
 
 /**
  * The area-weighted mean-luminance measurement
- * (`docs/science-hdr-pipeline.md` § 3.1), evaluated on the CPU from the
- * same magnitudes and true angular sizes the shaders derive their
- * emission from. Analytic rather than a GPU reduce because `LUMA_CEIL`
- * clamps at emission — a mip-reduce reads a resolved Venus 38× too dim,
- * exactly when adaptation matters most.
+ * (`docs/science-hdr-pipeline.md` § 3.1), evaluated analytically on the
+ * CPU — a GPU reduce would read `LUMA_CEIL`-clamped emission and
+ * understate a resolved disc exactly when adaptation matters most.
  */
 export class SceneAdaptation {
   private readonly deps: SceneAdaptationDeps;
@@ -98,15 +96,10 @@ export class SceneAdaptation {
   }
 
   /**
-   * Measure this frame and return the exposure cut in magnitudes. Chart
-   * mode bypasses the whole HDR seam, so it measures nothing and reports
-   * no cut rather than leaving the last scene's value standing.
-   *
-   * `nowMs` is wall-clock (`performance.now()`) — the slew limit is a
-   * render filter, not sim time, so a time-warped frame must not slew any
-   * faster. Warp itself **snaps**: the camera is somewhere else entirely
-   * by the next frame, so ramping from the old scene's cut would just be a
-   * flash.
+   * Measure this frame and return the applied cut in magnitudes. Chart
+   * measures nothing and reports no cut. `nowMs` is wall-clock — the
+   * slew limit is a render filter, not sim time, so a time-warped frame
+   * must not slew faster; warp itself snaps.
    */
   measure(
     camera: THREE.PerspectiveCamera,
@@ -176,10 +169,9 @@ export class SceneAdaptation {
     return 0;
   }
 
-  /** Copy a producer's scratch sample into the pool. Nothing can be
-   *  reduced while the walk is still running: occlusion needs every
-   *  source's depth and footprint, and the last one visited can occlude
-   *  the first. */
+  /** Copy a producer's scratch sample into the pool — nothing reduces
+   *  until the walk ends, since the last body visited can occlude the
+   *  first. */
   private collect = (sample: LuminanceSample): void => {
     const slot = this.pool[this.count] ?? blankSample();
     this.pool[this.count] = slot;
@@ -217,13 +209,9 @@ export class SceneAdaptation {
     }
   }
 
-  /**
-   * Stars close enough to matter. The gate is flux, not resolvedness:
-   * Sol at 100 AU is a third of a pixel wide and 1036× over `L_ADAPT`, so
-   * "is it a disc yet?" is the wrong question. Every star fainter than
-   * `ADAPT_STAR_ABSMAG_REF` is covered exactly by the window; brighter
-   * ones fade out through the taper instead of popping at the bound.
-   */
+  /** Stars close enough to matter — gated on flux, not resolvedness;
+   *  brighter-than-reference stars leave through the window taper
+   *  instead of popping at the bound. */
   private collectStars(camera: THREE.PerspectiveCamera): void {
     const { w, h, exposure } = this;
     const windowPc = starAdaptationWindowPc(exposure, w * h);
