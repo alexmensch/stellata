@@ -102,36 +102,29 @@ void main() {
   // linear before it multiplies a physical luminance. uColour is already
   // linear (Planet.colour), so only the sampled branch decodes.
   vec3 base = mix(uColour, stellataSrgbDecode(texture(uMap, vUvM).rgb), uHasMap);
-  // Twilight — the lit atmosphere overhead scattering host light down onto
-  // the ground, which is the only illumination the night side past the
-  // terminator has. Rides uSurfaceLuminance because it is reflected off the
-  // surface, so no extra albedo factor: the direct term's own scale is
-  // already reflected-per-unit-irradiance. Takes the REAL-space sunCos, unlike
-  // the march below: solar depression is what a ground observer measures
-  // against their true local horizontal, i.e. the ellipsoid normal.
-  vec3 twilight = uHasAtmosphere > 0.5
-    ? stellata_twilightIrradiance(sunCos, uScaleHeightR,
-        stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM))
-    : vec3(0.0);
-  vec3 col = base * (dayside * limb * uPhaseScale + twilight) * uSurfaceLuminance * shadow;
+  // Everything reflected off the ground shares this scale, so a term added to
+  // it needs no albedo factor of its own.
+  vec3 surfaceScale = base * uSurfaceLuminance * shadow;
+  vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
-    // Airlight in front of this surface fragment + the transmittance the
-    // surface radiance loses on its way out. Marched in the frame where the
-    // oblate body is a unit sphere, which is what the shell entry and density
-    // geometry assume. The fragment's smooth surface point IS its unit-sphere
-    // direction there: normals scale by the inverse transpose, so squashing the
-    // ellipsoid normal's polar component and renormalising lands on it. Taking
-    // uRadiusPc·normal instead put the point up to f·R outside the fragment,
-    // which at the limb collapsed this chord to nothing.
-    float invPolar = 1.0 / uPolarRadiusR;
-    vec3 nrm = normalize(vNormalV);
-    vec3 surf = normalize(stellata_scalePolar(nrm, uPoleView, uPolarRadiusR));
-    vec3 o = stellata_scalePolar(-uCenterView / uRadiusPc, uPoleView, invPolar);
+    // Twilight: the lit air overhead scattering host light down. sunCos is the
+    // REAL-space cosine, unlike the march below — solar depression is measured
+    // against the ground observer's true local horizontal, the ellipsoid normal.
+    col += surfaceScale * stellata_twilightIrradiance(sunCos, uScaleHeightR,
+      stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM));
+
+    // Airlight in front of this fragment + the transmittance the surface
+    // radiance loses on its way out, marched in the unit-sphere frame. The
+    // fragment's smooth surface point IS its direction there: normals scale by
+    // the inverse transpose, which for this diagonal map is the inverse, so
+    // squashing the normal's polar component and renormalising lands on it.
+    vec3 surf = normalize(stellata_scalePolar(normalize(vNormalV), uPoleView, uPolarRadiusR));
+    vec3 o = stellata_deflattenedCamera(uCenterView, uRadiusPc, uPoleView, uPolarRadiusR);
     vec3 toSurf = surf - o;
     float tStop = length(toSurf);
     vec3 dir = toSurf / tStop;
-    vec3 sunDirR = normalize(stellata_scalePolar(uSunDirView, uPoleView, invPolar));
+    vec3 sunDirR = stellata_deflattenedDir(uSunDirView, uPoleView, uPolarRadiusR);
     float t0, t1;
     float discA = stellata_shellEntry(o, dir, uAtmoRadius, t0, t1);
     float tStart = discA > 0.0 ? max(t0, 0.0) : 0.0;

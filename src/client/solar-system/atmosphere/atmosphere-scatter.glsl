@@ -78,6 +78,20 @@ vec3 stellata_scalePolar(vec3 v, vec3 pole, float s) {
   return v + pole * (dot(v, pole) * (s - 1.0));
 }
 
+// The camera — at the view-space origin — relative to the body centre in
+// planet-radius units, in the unit-sphere frame. Both frags must enter the
+// march through this and stellata_deflattenedDir, sun direction included: a
+// sun left in real space tilts the shadow cylinder against the body casting it.
+vec3 stellata_deflattenedCamera(vec3 centreView, float radiusPc, vec3 pole, float polarR) {
+  return stellata_scalePolar(-centreView / radiusPc, pole, 1.0 / polarR);
+}
+
+// A unit direction in the same frame. The map is not a similarity, so the
+// result needs renormalising even though v arrives unit.
+vec3 stellata_deflattenedDir(vec3 v, vec3 pole, float polarR) {
+  return normalize(stellata_scalePolar(v, pole, 1.0 / polarR));
+}
+
 // The planetary shadow along o + t·d as the single t-interval it always is:
 // inside the infinite shadow cylinder (a quadratic in t) and anti-sunward of
 // the terminator plane (a half-space). s0 > s1 means the ray never enters it.

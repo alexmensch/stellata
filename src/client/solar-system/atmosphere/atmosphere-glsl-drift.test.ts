@@ -99,25 +99,28 @@ describe('the march runs in the frame where the oblate body is a unit sphere', (
     expect(scatter).toContain('return v + pole * (dot(v, pole) * (s - 1.0));');
   });
 
-  it('deflattens the ray and the sun direction in both shaders', () => {
+  it('deflattens the camera and the sun direction in both shaders', () => {
     // Miss the sun direction and the shadow cylinder tilts against the body it
-    // is cast by; miss either ray term and the unit-sphere geometry describes a
-    // body that is not the one drawn.
+    // is cast by; miss the camera and the unit-sphere geometry describes a body
+    // that is not the one drawn. Both go through the shared helpers so neither
+    // frag can drift from the other.
     for (const src of [shell, meshFrag]) {
-      expect(src).toContain('float invPolar = 1.0 / uPolarRadiusR;');
-      expect(src).toContain(
-        'stellata_scalePolar(-uCenterView / uRadiusPc, uPoleView, invPolar)');
-      expect(src).toContain(
-        'normalize(stellata_scalePolar(uSunDirView, uPoleView, invPolar))');
+      expect(src).toMatch(
+        /stellata_deflattenedCamera\(uCenterView, uRadiusPc, uPoleView, uPolarRadiusR\)/);
+      expect(src).toMatch(
+        /stellata_deflattenedDir\(uSunDirView, uPoleView, uPolarRadiusR\)/);
+      // The arithmetic these replaced, open-coded at either call site.
+      expect(src).not.toMatch(/1\.0\s*\/\s*uPolarRadiusR/);
     }
   });
 
   it('reads the mesh fragment’s surface point off the SQUASHED normal', () => {
     // uRadiusPc·normal is a point on the equatorial-radius SPHERE, up to f·R
     // outside the spheroid fragment being shaded — at the limb that collapsed
-    // the airlight chord and left a dark seam against the halo.
-    expect(meshFrag).toContain(
-      'vec3 surf = normalize(stellata_scalePolar(nrm, uPoleView, uPolarRadiusR));');
+    // the airlight chord and left a dark seam against the halo. Squashing by
+    // uPolarRadiusR (not its reciprocal) is the inverse-transpose direction.
+    expect(meshFrag).toMatch(
+      /vec3 surf = normalize\(stellata_scalePolar\(normalize\(vNormalV\), uPoleView, uPolarRadiusR\)\);/);
     expect(meshFrag).not.toContain('uCenterView + uRadiusPc * nrm');
   });
 
@@ -140,8 +143,10 @@ describe('twilight on the night-side surface', () => {
   it('rides the surface scalar, added to the direct term rather than the airlight', () => {
     // It is light reflected off the ground, so it needs the albedo-bearing
     // scalar; folding it into the airlight would skip the surface entirely.
-    expect(meshFrag).toContain(
-      'vec3 col = base * (dayside * limb * uPhaseScale + twilight) * uSurfaceLuminance * shadow;');
+    expect(meshFrag).toMatch(/vec3 surfaceScale = base \* uSurfaceLuminance \* shadow;/);
+    expect(meshFrag).toMatch(/col \+= surfaceScale \* stellata_twilightIrradiance\(/);
+    // uAirlightLuminance scales the march and nothing else.
+    expect(meshFrag.match(/uAirlightLuminance/g)).toHaveLength(2); // declaration + use
   });
 
   it('takes the scattering optical depth only — absorption removes light', () => {
