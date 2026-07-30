@@ -6,8 +6,8 @@ import type { MemberSphere } from '../../local-depth/slice-pure';
 import type { RingOccluder } from '../../hdr/exposure/coverage/coverage-pack-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
-import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';
-import { measureMapMeanLuminance } from './map-mean-luminance';
+import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
+import { measureMapMeanLuminance } from './emission/map-mean-luminance';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
   pickHdrEmitterUniforms,
@@ -30,8 +30,8 @@ import {
 } from './rotation/rotation-elements-pure';
 import meshVert from './planet-mesh.vert.glsl?raw';
 import meshFrag from './planet-mesh.frag.glsl?raw';
-import ringsVert from './planet-rings.vert.glsl?raw';
-import ringsFrag from './planet-rings.frag.glsl?raw';
+import ringsVert from './rings/planet-rings.vert.glsl?raw';
+import ringsFrag from './rings/planet-rings.frag.glsl?raw';
 import atmoVert from '../atmosphere/planet-atmosphere.vert.glsl?raw';
 import atmoFrag from '../atmosphere/planet-atmosphere.frag.glsl?raw';
 import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
