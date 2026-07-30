@@ -95,10 +95,7 @@ vec3 stellata_deflattenedDir(vec3 v, vec3 pole, float polarR) {
 // The planetary shadow along o + t·d as the single t-interval it always is:
 // inside the infinite shadow cylinder (a quadratic in t) and anti-sunward of
 // the terminator plane (a half-space). s0 > s1 means the ray never enters it.
-// Solving the shadow beats sampling it — a point-per-segment lit/unlit test
-// quantises the lit sample count into ATMO_N_VIEW contours across the
-// terminator, and the fixed 0.15-radius smoothing that used to hide them was
-// 956 km on Earth: sunlight in the densest layers 32° past the terminator.
+// Solve once per ray, never per sample — README.md § Anti-banding.
 void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1) {
   // Inverted and unbounded, so it reads as empty against any ray parameter.
   s0 = STELLATA_SHADOW_FAR;
@@ -139,11 +136,10 @@ void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1
 // outside the shadow span — the exact quadrature weight for a hard shadow,
 // and continuous in the ray's geometry, so the lit sample count cannot step.
 //
-// Both bounds are offsets FROM t, which is load-bearing: t is the ray
-// parameter from the camera, so t ± h are large and nearly equal, and 1/(2h)
-// amplifies whatever their float32 difference loses — full-strength sunlight
-// speckling the anti-solar face, patterned by the march jitter. Clamped
-// first, a segment wholly inside or outside the shadow returns exactly 0 or 1.
+// Both bounds MUST stay offsets from t. t is the ray parameter from the
+// camera, so t ± h are large and nearly equal and the 1/(2h) amplifies
+// whatever float32 loses between them; clamping first is what makes a segment
+// wholly inside or outside the shadow return exactly 0 or 1.
 float stellata_litFraction(float t, float h, float s0, float s1) {
   float lo = max(s0 - t, -h);
   float hi = min(s1 - t, h);

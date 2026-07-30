@@ -84,14 +84,7 @@ const NO_SHADOW: readonly [number, number] = [FAR, -FAR];
  * anti-sunward of the terminator plane (a half-space). `s0 > s1` when the
  * ray never enters it. Equivalent to asking whether the ray from each point
  * toward the host strikes the body, which is why the light march below never
- * needs its own occlusion test.
- *
- * Solving the shadow beats sampling it: a point-per-segment lit/unlit test
- * quantises the lit sample count into `ATMO_N_VIEW` brightness contours
- * across the terminator, and the fixed 0.15-radius smoothing that used to
- * hide them was 956 km on Earth — sunlight in the densest layers 32° past
- * the terminator, an airglow arc tens of degrees wide. Mirrors
- * stellata_shadowSpan in the GLSL.
+ * needs its own occlusion test. Mirrors stellata_shadowSpan in the GLSL.
  */
 export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, number] {
   const oS = o[0] * sunDir[0] + o[1] * sunDir[1] + o[2] * sunDir[2];
@@ -133,12 +126,11 @@ export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, nu
  * continuous in the ray's geometry, so the lit sample count cannot step.
  * Mirrors stellata_litFraction in the GLSL.
  *
- * Both bounds are taken as **offsets from t**, and that is load-bearing rather
- * than tidy: `t` is the ray parameter measured from the camera, so `t ± h` are
- * large and nearly equal, and `1/(2h)` amplifies whatever their float32
- * difference loses — full-strength sunlight speckling the anti-solar face,
- * patterned by the march jitter. Clamping to the segment first makes a segment
- * wholly inside or outside the shadow return exactly 0 or 1.
+ * Both bounds MUST stay **offsets from `t`**. `t` is the ray parameter measured
+ * from the camera, so `t ± h` are large and nearly equal and the `1/(2h)`
+ * amplifies whatever float32 loses between them; clamping to the segment first
+ * is what makes a segment wholly inside or outside the shadow return exactly
+ * 0 or 1.
  */
 export function litFraction(t: number, h: number, span: readonly [number, number]): number {
   const lo = Math.max(span[0] - t, -h);

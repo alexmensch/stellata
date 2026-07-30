@@ -6,9 +6,10 @@ uniform vec3 uCenterView;
 uniform float uRadiusPc;
 uniform float uAtmoRadius;
 // The body's north pole in VIEW space, and its polar radius in equatorial
-// radii (1 − flattening). Both shaders scale the ray's polar component by
-// 1/uPolarRadiusR before marching, which is the only thing that makes the
-// unit-sphere geometry downstream describe the oblate body actually drawn.
+// radii — ../planets/spheroid-pure.ts:polarRadiusRatio, which the mesh scale
+// reads too and must agree with. Both frags map through
+// stellata_deflattenedCamera / …Dir before marching; without that the
+// unit-sphere geometry downstream describes a body that is not the one drawn.
 uniform vec3 uPoleView;
 uniform float uPolarRadiusR;
 uniform float uScaleHeightR;
