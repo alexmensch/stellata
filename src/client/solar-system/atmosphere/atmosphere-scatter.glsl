@@ -75,8 +75,9 @@ bool stellata_hitsBodyAhead(vec3 o, vec3 dir) {
 // terminator, and the fixed 0.15-radius smoothing that used to hide them was
 // 956 km on Earth: sunlight in the densest layers 32° past the terminator.
 void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1) {
-  s0 = 1.0;
-  s1 = 0.0;
+  // Inverted and unbounded, so it reads as empty against any ray parameter.
+  s0 = STELLATA_SHADOW_FAR;
+  s1 = -STELLATA_SHADOW_FAR;
   float oS = dot(o, sunDir);
   float dS = dot(d, sunDir);
   vec3 oP = o - oS * sunDir;
@@ -112,9 +113,16 @@ void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1
 // Fraction of the march segment centred on t with half-width h that falls
 // outside the shadow span — the exact quadrature weight for a hard shadow,
 // and continuous in the ray's geometry, so the lit sample count cannot step.
+//
+// Both bounds are offsets FROM t, which is load-bearing: t is the ray
+// parameter from the camera, so t ± h are large and nearly equal, and 1/(2h)
+// amplifies whatever their float32 difference loses — full-strength sunlight
+// speckling the anti-solar face, patterned by the march jitter. Clamped
+// first, a segment wholly inside or outside the shadow returns exactly 0 or 1.
 float stellata_litFraction(float t, float h, float s0, float s1) {
-  float overlap = max(min(t + h, s1) - max(t - h, s0), 0.0);
-  return 1.0 - overlap / (2.0 * h);
+  float lo = max(s0 - t, -h);
+  float hi = min(s1 - t, h);
+  return 1.0 - max(hi - lo, 0.0) / (2.0 * h);
 }
 
 // Altitude of the planetary shadow's upper edge directly above a surface

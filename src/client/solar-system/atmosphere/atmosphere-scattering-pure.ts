@@ -48,10 +48,12 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
-/** Sentinel span standing for "this ray never enters the shadow" — any
- *  interval whose start is past its end, so every overlap comes out 0. */
-const NO_SHADOW: readonly [number, number] = [1, 0];
 const FAR = 1e20;
+
+/** Sentinel span standing for "this ray never enters the shadow": inverted
+ *  and unbounded, so it reads as empty against any ray parameter rather than
+ *  only against ones outside [1, 0]. */
+const NO_SHADOW: readonly [number, number] = [FAR, -FAR];
 
 /**
  * The planetary shadow along `o + t·d`, as the single t-interval `[s0, s1]`
@@ -102,13 +104,23 @@ export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, nu
   return [lo, hi];
 }
 
-/** Fraction of the march segment centred on `t` with half-width `h` that
- *  falls outside the shadow span — the exact quadrature weight for a hard
- *  shadow, and continuous in the ray's geometry, so the lit sample count
- *  cannot step. Mirrors stellata_litFraction in the GLSL. */
+/**
+ * Fraction of the march segment centred on `t` with half-width `h` that falls
+ * outside the shadow span — the exact quadrature weight for a hard shadow, and
+ * continuous in the ray's geometry, so the lit sample count cannot step.
+ * Mirrors stellata_litFraction in the GLSL.
+ *
+ * Both bounds are taken as **offsets from t**, and that is load-bearing rather
+ * than tidy: `t` is the ray parameter measured from the camera, so `t ± h` are
+ * large and nearly equal, and `1/(2h)` amplifies whatever their float32
+ * difference loses — full-strength sunlight speckling the anti-solar face,
+ * patterned by the march jitter. Clamping to the segment first makes a segment
+ * wholly inside or outside the shadow return exactly 0 or 1.
+ */
 export function litFraction(t: number, h: number, span: readonly [number, number]): number {
-  const overlap = Math.max(Math.min(t + h, span[1]) - Math.max(t - h, span[0]), 0);
-  return 1 - overlap / (2 * h);
+  const lo = Math.max(span[0] - t, -h);
+  const hi = Math.min(span[1] - t, h);
+  return 1 - Math.max(hi - lo, 0) / (2 * h);
 }
 
 /** Altitude (planet-radius units) of the planetary shadow's upper edge

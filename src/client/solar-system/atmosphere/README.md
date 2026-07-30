@@ -66,6 +66,13 @@ fraction of its segment outside it. That is the same question as "does the ray
 from this sample toward the host strike the body", which is why the light march
 carries no occlusion test of its own.
 
+What this bounds is the **direct beam**: the shadow cylinder IS the airless
+terminator, and no sample inside it sees the host, full stop. Light past that
+line is the atmosphere's own doing, and it has two routes — the shell above the
+shadow edge, lit out to `acos(1/r)` for a sample at radius r, and § Twilight
+onto the ground below. So the *illuminated* terminator is soft and reaches
+further than the geometric one; the *lit* one is exact and does not.
+
 ## Airlight is applied on both surfaces
 
 - **Disc** (`../planets/planet-mesh.frag.glsl`) — `final = surface·T_view + L_air`.
@@ -101,7 +108,15 @@ h_shadow = 1/cos(Δ) − 1        (0 on the lit side)
 `h_shadow` is the altitude of the shadow's upper edge directly overhead, so
 only the column above it still sees the host — and **the body's own scale
 height is therefore what sets the angular reach**: a few degrees on Earth,
-~10° on Titan, no global constant involved. `τ_scatter` is the vertical
+~10° on Titan, no global constant involved.
+
+The variable is **solar depression angle, not distance along the ground**, and
+that is what makes the *projected* twilight band widen wherever the terminator
+crosses the surface obliquely — high latitude near solstice, where iso-`sunCos`
+contours spread out and polar twilight runs for weeks. It falls out of the
+parameterisation; there is no obliquity term and there should not be one.
+
+`τ_scatter` is the vertical
 scattering optical depth (`stellata_verticalScatterTau`, absorption excluded),
 which also gives the twilight the air's own hue — blue on Earth — for free.
 
@@ -220,9 +235,18 @@ the slider and bake it into the per-body table.
 Shell heights are TRUE scattering extents (Earth 100 km ≈ Kármán, Venus 90 km
 haze tops, Mars 60 km dust haze, Titan 300 km detached haze), never
 exaggerated: at the planet focus park (30 %-fill framing) Earth's shell reads
-≈ 3 px — deliberately subtle, per the camera-anywhere honesty rule. The shell
-is spherical even on oblate bodies (flattening ≤ 0.6 % for these four, far
-below shell thickness). **Gas giants deliberately carry no shell**: their
+≈ 3 px — deliberately subtle, per the camera-anywhere honesty rule.
+
+The shell is spherical even on oblate bodies, and **"flattening is far below
+shell thickness" is wrong** — measure it against the shell rather than against
+the radius. Earth's f = 0.0034 is **21 % of its 0.0157-radius shell**, Mars's
+0.0059 is **33 % of its 0.0177**. That gap shows: the shell frag discards rays
+that hit a body of radius 1 while the mesh draws a spheroid whose polar radius
+is 1 − f, so toward the poles there is a band the shell suppresses and the mesh
+never covers — a dark seam between disc and halo, widest at the poles and zero
+at the equator.
+
+**Gas giants deliberately carry no shell**: their
 fuzzy limb is already carried by the solidity-soft billboard edge at distance
 and the cloud-deck maps up close, and none has a detached haze layer distinct
 from the cloud deck at render scale.

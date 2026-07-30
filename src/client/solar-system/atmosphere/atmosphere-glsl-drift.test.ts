@@ -59,10 +59,24 @@ describe('the shadow is solved along the ray, not sampled across it', () => {
 
   it('weights each sample by its segment’s coverage, at half the march step', () => {
     expect(scatter).toContain(
-      'float overlap = max(min(t + h, s1) - max(t - h, s0), 0.0);');
-    expect(scatter).toContain('return 1.0 - overlap / (2.0 * h);');
-    expect(scatter).toContain(
       'float lit = stellata_litFraction(t, 0.5 * segLen, shadow0, shadow1);');
+  });
+
+  it('clamps the coverage bounds to the segment BEFORE differencing them', () => {
+    // t is the ray parameter from the camera, so t ± h are large and nearly
+    // equal and 1/(2h) amplifies what float32 loses between them. Taking both
+    // bounds as offsets from t is what keeps deep shadow exactly 0 instead of
+    // jitter-patterned sunlight on the anti-solar face.
+    expect(scatter).toContain('float lo = max(s0 - t, -h);');
+    expect(scatter).toContain('float hi = min(s1 - t, h);');
+    expect(scatter).toContain('return 1.0 - max(hi - lo, 0.0) / (2.0 * h);');
+    expect(scatter).not.toContain('min(t + h');
+  });
+
+  it('leaves the empty span inverted and unbounded, not [1, 0]', () => {
+    // A [1, 0] sentinel only reads as empty for ray parameters outside it.
+    expect(scatter).toContain('s0 = STELLATA_SHADOW_FAR;');
+    expect(scatter).toContain('s1 = -STELLATA_SHADOW_FAR;');
   });
 
   it('solves the span once per ray, outside the march', () => {

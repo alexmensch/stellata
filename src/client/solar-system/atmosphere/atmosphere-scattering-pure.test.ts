@@ -165,6 +165,32 @@ describe('litFraction', () => {
     expect(litFraction(4, 0.5, [4, 6])).toBeCloseTo(0.5, 12);
     expect(litFraction(3.9, 0.5, [4, 6])).toBeCloseTo(0.6, 12);
   });
+
+  it('is exactly 0 deep in shadow, at any camera distance, in float32', () => {
+    // The anti-solar face. t is the ray parameter from the CAMERA, so t ± h
+    // are large and nearly equal; differencing them before clamping loses
+    // float32 bits that 1/(2h) then amplifies ~1/h — full-strength sunlight
+    // speckling the dark side, patterned by the march jitter because the
+    // jitter is what varies t between neighbouring fragments.
+    const f = Math.fround;
+    const h = 4.9e-4; // half a nadir march step through Earth's 100 km
+    const span: readonly [number, number] = [-1e20, 60];
+    let worstNaive = 0;
+    for (let k = 0; k < 64; k++) {
+      const t = 50 + (k / 64) * h * 8; // the jitter sliding the lattice
+      const naive = 1 - (f(f(t) + f(h)) - f(f(t) - f(h))) / (2 * h);
+      worstNaive = Math.max(worstNaive, Math.abs(naive));
+      expect(litFraction(t, h, span)).toBe(0);
+    }
+    expect(worstNaive).toBeGreaterThan(1e-3);
+  });
+
+  it('is exactly 1 where the ray never enters the shadow at all', () => {
+    // The empty-span sentinel has to read as empty against ANY ray parameter,
+    // not just ones outside it.
+    expect(litFraction(0, 1e-3, shadowSpan([0, 5, 0], [0, 0, 1], [1, 0, 0]))).toBe(1);
+    expect(litFraction(1e4, 1e-3, shadowSpan([0, 5, 0], [0, 0, 1], [1, 0, 0]))).toBe(1);
+  });
 });
 
 describe('how far past the terminator sunlight reaches', () => {
