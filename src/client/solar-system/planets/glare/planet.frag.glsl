@@ -13,7 +13,7 @@ precision highp float;
 // texel rule and LUMA_CEIL (../../../hdr/README.md § Unit).
 #include <stellata_hdr_emission>
 // The scene-wide operator, applied inline whenever the frame is not
-// rendering into the HDR target — see ../../hdr/README.md § Fallback.
+// rendering into the HDR target — see ../../../hdr/README.md § Fallback.
 #include <stellata_tonemap>
 
 // HDR seam, bound by reference from HdrPipeline.emitterUniforms.

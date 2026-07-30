@@ -38,7 +38,7 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
  *  integral `fluxIntegral * D^2` (perceptualDiscFluxIntegral) makes the
  *  integral return stellataLuminanceForMag instead. Clamped like the display
  *  peak: a clamped read is a lower bound the adaptation loop closes from
- *  above. See ../hdr/exposure/README.md § What the statistic measures. */
+ *  above. See statistic/README.md § The unit. */
 float stellataKernelFluxPeak(
     float exposure,
     float appMag,
@@ -56,7 +56,8 @@ float stellataKernelFluxPeak(
  *  an emitter that wants its flux SUMMED under an alpha-scaled additive
  *  blend passes a pre-divided R. Both channels clamp at the ceiling for the
  *  reason the display peak does: a clamped read is a lower bound the
- *  adaptation loop closes from above (../hdr/exposure/README.md). */
+ *  adaptation loop closes from above
+ *  (exposure/reduction/README.md § Measure at the base exposure). */
 vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
     return vec4(
         min(fluxL, STELLATA_LUMA_CEIL),

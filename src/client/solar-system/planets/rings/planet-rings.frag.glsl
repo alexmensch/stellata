@@ -83,7 +83,7 @@ void main() {
   float ringL = dot(col, STELLATA_LUMA_WEIGHTS);
   outStatistic = stellataStatisticTexel(ringL, ringL, strip.a * uFade);
   // Undithered — the annulus alpha-blends over the body mesh, so a pixel
-  // can take both fragments (../../hdr/README.md § Operator).
+  // can take both fragments (../../../hdr/README.md § Operator).
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
