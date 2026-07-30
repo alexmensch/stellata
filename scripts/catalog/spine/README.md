@@ -21,8 +21,10 @@ scripts/catalog/spine/
   inherited-spine-pure.ts         Column layout, row assembly, TSV codec,
     (+ test)                      per-column counts, and the designation
                                   recovery (spineDesignations). Pure, and on
-                                  the build:catalog path — ../parse/ reads
-                                  the walk's rows through parseSpineTsv.
+                                  the build:catalog path — ../parse/ streams
+                                  the walk's rows through iterSpineTsv;
+                                  parseSpineTsv is the materialising form the
+                                  two gates below need.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (§ Why a guard, not a

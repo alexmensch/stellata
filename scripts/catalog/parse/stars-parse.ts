@@ -49,7 +49,7 @@ import {
   type VVia,
 } from '../photometry/v-magnitude-pure';
 import { emptyTallyPartition } from '../../util/tally';
-import { parseSpineTsv } from '../spine/inherited-spine-pure';
+import { iterSpineTsv } from '../spine/inherited-spine-pure';
 import { type ConstellationAssignment } from './constellations';
 
 // Drop stars farther than this from Sol. AT-HYG carries a handful of
@@ -211,7 +211,7 @@ export function readStars(
     ciSpectralDerived: number;     // no-Apsis-Teff ∩ no-observed-B−V rows whose ci is baked from the spectral class (tier 4/5) instead of the solar fallback
   };
 } {
-  const spineRows = parseSpineTsv(readFileSync(spineTsvPath, 'utf8'));
+  const spineRows = iterSpineTsv(readFileSync(spineTsvPath, 'utf8'));
 
   const stars: Star[] = [];
   // Every spine row already passed each of these in the build it snapshots,

@@ -48,7 +48,7 @@ subfolders.
   `build:catalog`; no consumer here yet.
 - `spine/` — the membership term: the frozen
   `data/athyg/inherited-spine.tsv`, its codec, and the two gates holding it
-  to the build it snapshots. `parse/` walks it through `parseSpineTsv`.
+  to the build it snapshots. `parse/` streams it through `iterSpineTsv`.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
