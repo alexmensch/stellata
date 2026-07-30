@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
+import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 
 // Disc-pass blending state. Applied at material construction and re-applied
 // on chart-mode -> colour-mode swap-back, since chart mode swaps the disc
@@ -233,11 +234,13 @@ export class StarPipeline {
     this.discMesh = new THREE.Mesh(this.geometry, this.discMaterial);
     this.discMesh.frustumCulled = false;
     this.discMesh.renderOrder = 0;
+    markStatisticEmitter(this.discMesh);
     scene.add(this.discMesh);
 
     this.glowMesh = new THREE.Mesh(this.geometry, this.glowMaterial);
     this.glowMesh.frustumCulled = false;
     this.glowMesh.renderOrder = 1;
+    markStatisticEmitter(this.glowMesh);
     scene.add(this.glowMesh);
   }
 

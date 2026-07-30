@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
+import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
 
 export const MIRROR_CAPACITY = 8;
 
@@ -94,6 +95,8 @@ export class StarLocalMirror {
     // it wholesale instead of it depth-failing per fragment. Planet
     // glare (4) still adds over everything.
     glowMesh.renderOrder = 3.5;
+    markStatisticEmitter(discMesh);
+    markStatisticEmitter(glowMesh);
     this.group.add(maskMesh);
     this.group.add(discMesh);
     this.group.add(glowMesh);

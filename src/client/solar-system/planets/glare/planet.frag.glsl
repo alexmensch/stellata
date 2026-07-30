@@ -9,8 +9,11 @@ precision highp float;
 // resolved surface is the spheroid mesh, so this billboard is glare
 // only — never an opaque disc.
 #include <stellata_perceptual_disc>
+// The luminance unit — read here only for the statistic attachment's
+// texel rule and LUMA_CEIL (../../../hdr/README.md § Unit).
+#include <stellata_hdr_emission>
 // The scene-wide operator, applied inline whenever the frame is not
-// rendering into the HDR target — see ../../hdr/README.md § Fallback.
+// rendering into the HDR target — see ../../../hdr/README.md § Fallback.
 #include <stellata_tonemap>
 
 // HDR seam, bound by reference from HdrPipeline.emitterUniforms.
@@ -33,9 +36,11 @@ in vec2 vUv;
 in float vAppMag;
 in float vSoftness;
 in float vPeakL;
+in float vFluxPeakL;
 in float vAaWidth;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outStatistic;
 
 void main() {
   float r = length(vUv);
@@ -55,6 +60,7 @@ void main() {
     float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
     if (disc <= 0.0) discard;
     outColor = vec4(vec3(1.0 - disc), 1.0);
+    outStatistic = vec4(0.0);
     return;
   }
 
@@ -78,6 +84,10 @@ void main() {
   // squared falloff. Undithered — glare quads overlap each other and the
   // star field, and the dither is a function of fragCoord alone.
   vec3 emitted = vColor * (vPeakL * glow);
+  // Alpha 1 on the statistic attachment: one blend equation runs over both,
+  // so the additive pass's SrcAlpha factor would scale the flux channel a
+  // second time and its integral would come out short.
+  outStatistic = stellataStatisticTexel(vFluxPeakL * glow, vPeakL * glow, 1.0);
   if (uHdrTarget > 0.5) {
     outColor = vec4(emitted, glow);
     return;

@@ -132,7 +132,7 @@ import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
-import { CoveragePass } from './hdr/exposure/coverage/coverage-pass';
+import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
@@ -299,7 +299,8 @@ export class Stellata implements FrameAnchor {
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
   private adaptation!: SceneAdaptation;
-  private coverage!: CoveragePass;
+  private readonly reduction = new LuminanceReduction();
+  private readonly drawingBufferSize = new THREE.Vector2();
 
   // Declutter cycle (scene/README.md § Detail-level declutter cycle).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
@@ -591,28 +592,11 @@ export class Stellata implements FrameAnchor {
       import.meta.env.BASE_URL,
       this.hdr.emitterUniforms,
     );
-    // The occlusion half of the statistic, measured on the GPU against the
-    // geometry the local depth pass draws and read back one frame late
-    // (hdr/exposure/coverage/README.md).
-    this.coverage = new CoveragePass({
-      occluderScene: this.localDepthPass.scene,
-      spheres: () => this.localDepthPass.memberSpheres(),
-      rings: this.planetMeshLayer,
-      viewport: sharedUniforms.uViewport as { value: THREE.Vector2 },
-    });
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
-      viewport: sharedUniforms.uViewport as { value: THREE.Vector2 },
       baseExposure: () => exposureForMagLimit(this.exposure.getLimitMag()),
-      bodies: this.planetBodyField,
-      stars: {
-        forEachStarNearCamera: (d, cb) => this.starFrame.forEachStarNearCamera(d, cb),
-        renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
-        localPositions: () => this.localPositions,
-        starLabel: (idx) => this.catalog.names.get(idx) ?? null,
-      },
-      transmission: (key) => this.coverage.transmissionFor(key),
+      reduced: () => this.reduction.current(),
     });
     this.probeMarkerField = new ProbeField(sharedUniforms);
     this.scene.add(this.probeMarkerField.group);
@@ -2184,9 +2168,6 @@ export class Stellata implements FrameAnchor {
    *  adaptation and trim together. The panel's readout. */
   getEffectiveLimitMag(): number { return this.exposure.getEffectiveLimitMag(); }
   getAdaptationDm(): number { return this.exposure.getAdaptationDm(); }
-  /** The source the frame is adapted to, or null while nothing is
-   *  adapting — the readout's "adapted to Venus" clause. */
-  getAdaptedToLabel(): string | null { return this.adaptation.getDominantLabel(); }
   /** Area-weighted mean scene luminance, the statistic behind the
    *  perception branch of the cut. */
   getSceneMeanLuminance(): number { return this.adaptation.getMeanLuminance(); }
@@ -2714,7 +2695,7 @@ export class Stellata implements FrameAnchor {
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
     this.exposure.setAdaptation(this.adaptation.measure(
-      this.camera, this.filter.chart, performance.now(), this.frameCtx.warpActive,
+      this.filter.chart, performance.now(), this.frameCtx.warpActive,
     ));
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
@@ -2734,17 +2715,14 @@ export class Stellata implements FrameAnchor {
     this.hdr.resolve();
     perfGpuEnd('tonemap');
     perfMeasure('submit.tonemap');
-    // After the local depth pass — its spheres set the bracket and its
-    // scene supplies the occluders — and after the resolve, so the
-    // measurement never delays the frame it measures.
-    perfMark('submit.coverage');
-    perfGpuBegin('coverage');
-    this.coverage.measure(
-      this.renderer, this.camera,
-      this.adaptation.sources(), this.adaptation.sourceCount(),
-    );
-    perfGpuEnd('coverage');
-    perfMeasure('submit.coverage');
+    // After the resolve, so reducing the statistic attachment never delays
+    // the frame it measures. The readback lands a frame or two later, far
+    // inside the slew (hdr/exposure/reduction/README.md § Latency).
+    perfMark('submit.reduction');
+    perfGpuBegin('reduction');
+    this.measureAdaptationStatistic();
+    perfGpuEnd('reduction');
+    perfMeasure('submit.reduction');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     perfMark('frame.handlers');
     this.bus.emit('frame');
@@ -2753,6 +2731,23 @@ export class Stellata implements FrameAnchor {
     perfFrame();
     requestAnimationFrame(this.animate);
   };
+
+  /** Reduce the statistic attachment the frame just wrote. Chart and the
+   *  fallback path render nothing into it, so the reduction is dropped
+   *  rather than run over a stale attachment. */
+  private measureAdaptationStatistic() {
+    const statistic = this.hdr.statisticTexture();
+    if (statistic === null) {
+      this.reduction.reset();
+      return;
+    }
+    this.renderer.getDrawingBufferSize(this.drawingBufferSize);
+    this.reduction.measure(
+      this.renderer, statistic,
+      this.drawingBufferSize.x, this.drawingBufferSize.y,
+      this.hdr.emitterUniforms.uExposure.value,
+    );
+  }
 
   // HUD projection — hidden during warp (the camera is in motion and
   // its reference function is exactly the context warp suppresses,
@@ -2828,7 +2823,7 @@ export class Stellata implements FrameAnchor {
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
     this.localDepthPass.dispose();
-    this.coverage.dispose();
+    this.reduction.dispose();
     this.hdr.dispose();
     this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app

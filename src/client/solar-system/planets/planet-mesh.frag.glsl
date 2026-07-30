@@ -57,7 +57,8 @@ in vec3 vNormalV;
 in vec3 vPosV;
 in vec2 vUvM;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outStatistic;
 
 // Limb darkening: full brightness face-on, dimming toward the
 // silhouette. Carries the whole visual character of texture-less
@@ -139,6 +140,11 @@ void main() {
   }
 
   col = min(col, vec3(STELLATA_LUMA_CEIL));
+  // True surface brightness, so the statistic's two channels are the same
+  // quantity, and the alpha mirrors attachment 0's so the LOD crossfade
+  // composites both attachments alike.
+  float surfaceL = dot(col, STELLATA_LUMA_WEIGHTS);
+  outStatistic = stellataStatisticTexel(surfaceL, surfaceL, uFade);
   // Undithered: the ring annulus and the atmosphere shell alpha-blend over
   // this surface, so a pixel can take more than one planet fragment and the
   // fragCoord-keyed dither would bias it once per layer.

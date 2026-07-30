@@ -131,15 +131,8 @@ describe('controls / round-trip slider ↔ dist', () => {
 
 describe('controls / evLabel', () => {
   it('centres 0 without a sign and signs everything else', () => {
-    expect(evLabel(0, 7.8, null)).toBe('0 EV · stars to m 7.8');
-    expect(evLabel(1 / 3, 8.05, null)).toBe('+0.33 EV · stars to m 8.1');
-    expect(evLabel(-1 / 3, 7.54, null)).toBe('−0.33 EV · stars to m 7.5');
-  });
-
-  it('names what the frame adapted to, and drops the clause otherwise', () => {
-    // Without this clause a correctly-vanishing star field reads as a bug
-    // (docs/science-hdr-pipeline.md § 3.2 — the readout is mandatory).
-    expect(evLabel(0, 1.2, 'Venus')).toBe('0 EV · adapted to Venus · stars to m 1.2');
-    expect(evLabel(0, 1.2, null)).toBe('0 EV · stars to m 1.2');
+    expect(evLabel(0, 7.8)).toBe('0 EV · stars to m 7.8');
+    expect(evLabel(1 / 3, 8.05)).toBe('+0.33 EV · stars to m 8.1');
+    expect(evLabel(-1 / 3, 7.54)).toBe('−0.33 EV · stars to m 7.5');
   });
 });

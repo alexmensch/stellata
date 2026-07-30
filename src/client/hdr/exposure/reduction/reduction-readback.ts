@@ -1,7 +1,7 @@
-// Non-blocking readback of the coverage target: a pixel-pack buffer plus a
-// fence, polled once a frame. See README.md § Latency.
+// Non-blocking readback of the reduction's 1x1 level: a pixel-pack buffer
+// plus a fence, polled once a frame. See README.md § Latency.
 
-export class CoverageReadback {
+export class ReductionReadback {
   private readonly gl: WebGL2RenderingContext;
   private readonly buffer: WebGLBuffer | null;
   private readonly pixels: Float32Array;
@@ -27,10 +27,8 @@ export class CoverageReadback {
   /** Read `count`×1 RGBA float texels out of the **currently bound**
    *  framebuffer. No-op while one is already in flight.
    *
-   *  RGBA rather than a single-channel target: WebGL2 guarantees only
-   *  RGBA/UNSIGNED_BYTE plus the implementation's own reported pair, and
-   *  RGBA/FLOAT is that pair for RGBA32F everywhere R32F is not. Four
-   *  floats over 128 texels is not worth the portability. */
+   *  RGBA/FLOAT is guaranteed only for an RGBA32F attachment, which is why
+   *  the chain's last level alone is 32-bit (README.md § The chain). */
   request(count: number): void {
     const gl = this.gl;
     if (this.buffer === null || this.fence !== null || count <= 0) return;

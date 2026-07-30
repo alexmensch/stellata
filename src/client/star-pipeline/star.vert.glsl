@@ -58,6 +58,12 @@ uniform float uSizeSpan;
 // linear ceiling. See the perceptual-disc chunk for the formula and
 // the rationale (Sol-vs-Barnard ratio at close approach).
 uniform float uSizeKnee;
+// The fragment stage's profile-shaping knobs, read here only to recover
+// the exponent the kernel's area integral needs.
+uniform float uDistNMin;
+uniform float uDistNMax;
+uniform float uLumBiasMin;
+uniform float uLumBiasMax;
 // Chart-mode disc sizing. Stars render as flat hard-edged discs whose
 // pixel diameter spreads linearly between [Min, Max] across the visible
 // magnitude range [Bright, LimitMag]. Linear in mag = log10 in flux,
@@ -201,6 +207,11 @@ out float vLocalMember; // 1 = local-depth-cluster member (main variant only)
 // Linear luminance at the centre of this star's display kernel. Constant
 // per instance, so the interpolation across the quad is exact.
 out float vPeakL;
+// The same kernel renormalised so its integral is the star's true flux —
+// the adaptation statistic's channel. Derived here rather than in the
+// fragment stage because the exponent morphs on vSoftness and vPhysRatio,
+// both of which are per instance.
+out float vFluxPeakL;
 
 const float LOG10 = 2.302585093;
 
@@ -246,6 +257,7 @@ void emitOffscreenSentinel(float appMag, float softness) {
     vSoftness = softness;
     vAaWidth = 0.0;
     vPeakL = 0.0;
+    vFluxPeakL = 0.0;
 }
 
 void main() {
@@ -445,6 +457,7 @@ void main() {
         // frag shader touches luminance; the assignment only keeps the
         // varying defined.
         vPeakL = 0.0;
+        vFluxPeakL = 0.0;
     } else {
         // Apparent-magnitude size term — the perceptual-disc abstraction.
         // Same √Δm + soft-knee mapping a planet would use (3re.16); the
@@ -479,6 +492,18 @@ void main() {
 
         pxSize = max(appSize, physSize);
         vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+
+        // The statistic's flux channel. `pxSize` is CSS pixels, which is
+        // what makes the frame mean devicePixelRatio-independent: the
+        // reduction runs over device pixels, so a CSS-px kernel area puts
+        // the star's whole flux over exactly one CSS pixel's worth of the
+        // frame mean, matching how an extended source's surface brightness
+        // already reads (../hdr/exposure/reduction/README.md § Pixel units).
+        vFluxPeakL = stellataKernelFluxPeak(
+            uExposure, appMag, pxSize,
+            perceptualDiscFluxIntegral(perceptualDiscExponent(
+                vSoftness, vPhysRatio, uDistNMin, uDistNMax,
+                uLumBiasMin, uLumBiasMax)));
     }
 
     // Edge AA in vUv units. The quad spans pxSize CSS pixels; vUv ranges

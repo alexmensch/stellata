@@ -3,6 +3,7 @@ import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 import type { DustField } from '../loaders/dust-loader';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
@@ -257,6 +258,7 @@ export class MilkyWay {
     // mis-cull when the camera is offset far from Sol.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
+    markStatisticEmitter(mesh);
     return mesh;
   }
 

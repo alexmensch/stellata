@@ -10,7 +10,11 @@ bracket. Pass mechanics and the other member layers are
 
 - `star-local-mirror.ts` — `StarLocalMirror`: the mirror draw. Owns
   `MIRROR_CAPACITY`, which is tied to the `uLocalMemberIdx` uniform
-  array size (pinned in `../star-pipeline.test.ts`).
+  array size (pinned in `../star-pipeline.test.ts`). Its disc and glow
+  meshes are statistic emitters like the main-pass pair — a member
+  collapses in the main pass, so the mirror is the only draw that would
+  reach the exposure statistic (`../../hdr/statistic/README.md`). The
+  depth-only mask mesh is not, writing no colour anywhere.
 - `star-local-cluster.ts` — `StarLocalCluster`: per-frame star
   membership, the `uLocalMemberIdx` slot writes, and the binary
   orbit-path group.

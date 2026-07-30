@@ -310,7 +310,8 @@ This section derives `dm_eye`, the **perception branch**. What the frame
 applies is `max(dm_eye, dm_guard)`, where the second term is a display
 compensation with no perceptual claim behind it at all — § 3.2's
 subsection *The highlight guard* owns it, and it governs whenever a
-resolved surface covers more than `L_ADAPT / L_CAP` of the frame. Nothing
+resolved surface covers more than `L_ADAPT · (3/2) / L_CAP` of the frame.
+Nothing
 below changes: the guard is a separate maximum taken afterwards.
 
 `Aᵢ` is source *i*'s **true angular coverage** in pixels — never the
@@ -327,39 +328,38 @@ inside the frame. That is what makes frustum-edge continuity free
 (below), and it is why a body the camera has flown inside of contributes
 its surface brightness rather than its whole flux.
 
-**A source hidden behind a nearer body is not in the frame.** Coverage
+**A source hidden behind a nearer body is not in the frame, and neither
+is one the model cannot represent.** Both are the same defect, and both
+are why the statistic is now a **reduction over what the frame drew**
+rather than a walk over a per-source model. Occlusion went first: coverage
 alone counted a body's flux whether or not anything was in front of it, so
-Sol behind the night side of Saturn still dimmed the star field — the one
-contributing source in that frame was light that never reached the camera.
-Each sample therefore carries, in addition to its frame clipping, a
-**throughput measured on the GPU against the geometry the frame actually
-drew**: the mean over its visibility disc of what reaches the camera,
-sampled from the local depth pass's own scene re-rendered under one
-bracket. Mechanism, latency, keying and fallbacks are
-`src/client/hdr/exposure/coverage/README.md`; four properties of the
-statistic itself:
+Sol behind the night side of Saturn still dimmed the star field. Emission
+followed: a body's sample carried reflected host light through the Mallama
+phase curve and nothing else, so a backlit Titan's forward-scattered Mie
+ring — of order the host's irradiance, against the ~1e-4 the sample
+reported — was **~11 magnitudes** of light the exposure never knew about.
+Ring annuli, the twilight term and every future emitter had the same hole.
 
-- **It composes multiplicatively with the eclipse dim, because they are
-  different losses.** The eclipse dim is light the body never received —
-  a lighting loss, folded into `fluxScale`. Occlusion is light it emitted
-  and the camera never saw — a camera-path loss on the visible fraction.
-- **The occluder set is whatever rasterised**, not a list the statistic
+The frame already contains all of it. Mechanism, units, latency and the
+clamp argument are `src/client/hdr/exposure/reduction/README.md`; what
+writes the measured attachment, and why the display target cannot be
+measured directly, is `src/client/hdr/statistic/README.md`. Four
+properties of the statistic itself:
+
+- **The eclipse dim needs no separate slot.** It is light the body never
+  received, so it is already in the pixels the body drew — as is every
+  camera-path loss, because a surface that overwrote a source's pixels
+  overwrote its statistic texels.
+- **The emitter set is whatever rasterised**, not a list the statistic
   maintains — an oblate limb at its true polar radius, a moon in transit,
-  two bodies overlapping. Mirroring that geometry on the CPU was the
-  original design and it failed at the poles: a circle takes the
-  *equatorial* radius, and Saturn's flattening of 0.098 puts its real
-  polar limb at 90.2% of one, so Sol just past the pole read as hidden
-  while plainly visible and the exposure never cut.
-- **A body drawing no surface writes no occluder depth**, which retires
-  the separate mesh-presence gate the circle era needed: the rasteriser
-  answers "is there a surface here?" by construction, so admitting a
-  sub-threshold body to the walk costs nothing.
-- **Rings DO occlude**, by their authored optical depth along the slant
-  path — `T = (1 − alpha)^(1/|sin B|)`, so the same ring is opaque
-  edge-on and translucent face-on. They write no depth (a binary z-test
-  cannot express partial extinction), which makes them the one occluder
-  still handled analytically. This **reverses** the position held through
-  v3.7.0, that rings never dim a source behind them.
+  an airlight ring, a translucent annulus. Mirroring any of that on the
+  CPU is the shape that keeps drifting from the shader it mirrors.
+- **Frame clipping is automatic.** A source off the edge writes no texels,
+  and one half in frame writes half, so the frustum-edge ramp the walk
+  needed a 12 px constant for falls out of the rasteriser.
+- **Rings and airlight DO extinguish and DO emit**, by the same alpha they
+  composite with. This **reverses** the position held through v3.7.0, that
+  rings never dim a source behind them.
 
 Why an area-weighted arithmetic mean, and not the two obvious
 alternatives:
@@ -481,12 +481,10 @@ Two consequences worth stating rather than discovering:
   happens at park is the guard pinning the peak to `L_CAP` — 0.43 stops
   over `L_TARGET`. `f_ref` therefore sets the *handover coverage* and the
   behaviour below it, not the level at park (§ 3.2's subsection).
-- **The star walk's window widens with the anchor.** The bound is where a
-  star of `ADAPT_STAR_ABSMAG_REF` falls to `ADAPT_NEGLIGIBLE_FRACTION` of
-  `L_ADAPT`, so dropping the anchor 0.85 mag pushes it 8.9 pc → **13.2 pc**
-  and roughly triples the squared-distance tests the walk runs. The
-  taper, the flux gate and the coverage guarantee are all unchanged; only
-  the cost moves.
+- **The anchor no longer costs anything to lower.** It set the star
+  walk's camera window, and dropping it 0.85 mag roughly tripled the
+  squared-distance tests that walk ran. A frame reduction has no window:
+  every drawn star is already in the buffer.
 
 Expose `f_ref` and `L̄` on the debug panel (H8).
 
@@ -498,40 +496,53 @@ Mars all remained over the white point even at the slider's floor — the
 8.5 magnitudes of cut it offers is short of the ~10.5 Venus needs, which is
 precisely the gap automatic adaptation exists to close.
 
-**Measure on the CPU, analytically.** The inputs are all to hand —
-every drawn body's magnitude and true projected size, plus the stars near
-the camera — so the statistic is a pure function, stall-free and
-unit-testable. A GPU mip-reduce is *not* needed and would be actively
-wrong on approach: `LUMA_CEIL = 4096` clamps at emission, so a GPU
-measurement reads a resolved Venus as 4096, a 38× underestimate precisely
-when adaptation matters most.
+**Measure the rendered frame — and not the display target.** An earlier
+draft of this section argued for a CPU walk on the grounds that a GPU
+mip-reduce would read `LUMA_CEIL`-clamped emission and understate a
+resolved Venus by 38× exactly when adaptation matters most. That objection
+dissolves under the base-exposure division below: the target is rendered
+*with* the live cut, so at a settled `dm` nothing is near the ceiling, and
+on the transient the clamp makes the measurement a **lower bound** — the
+loop converges from above, bounded at 8.4 magnitudes of cut per
+measurement, so Sol from wide open settles in two frames.
 
-**What the shipped collector walks**
-(`src/client/hdr/exposure/scene-adaptation.ts`):
+Two objections that do *not* dissolve, and that is why the reduction runs
+over a **second, physical-luminance attachment** rather than over the
+display target:
 
-- **Every drawn solar-system body**, through the same visibility gate
-  `pick()` uses, at its true angular diameter with eclipse dim folded in
-  as the real flux loss it is, and with its camera distance — which
-  places it along its own view ray for the coverage measurement.
-- **Stars gated on flux, not on resolvedness.** Sol at 100 AU is a third
-  of a pixel wide and 1036× over `L_ADAPT`, so "is it a disc yet?" is the
-  wrong question. The camera window is *derived*: it is the distance at
-  which a star of absolute magnitude −6 falls to 3% of `L_ADAPT` (13.2 pc
-  on the frame above), which covers every fainter star exactly, since a
-  fainter one cannot reach the gate from further out. Only 120 catalogue
-  stars are brighter than that reference and the 22 brighter than −8 all
-  sit at extragalactic distances; a **taper over the outer fifth of the
-  window** carries any of them out continuously, so crossing the bound
-  can never pop the exposure. Walking the whole catalogue per frame would
-  cost ~3M flops for a term the diffuse floor already covers.
-- **One constant for the diffuse field** — the two aggregate rows of the
-  table above summed (8.0e-4). Inert by construction, and honest
-  bookkeeping rather than a live measurement.
+- **The display kernel preserves peak, not energy.** A star's quad is the
+  K-exaggerated `max(appSize, physSize)`, so a mean over the display
+  target over-counts a threshold star's flux by 1.96× and a
+  knee-saturated bright one by 28.9× (+3.7 mag) — on the branch that
+  governs, and scaling with a debug legibility slider.
+- **Chrome renders into the same target.** Grids, coordinate spheres,
+  boundaries and orbit rings carry authored colours inverse-mapped through
+  the operator; counting them as scene light would make switching on the
+  equatorial sphere darken the frame by ~0.3 mag.
 
-The statistic is measured at the **base instrument exposure**, never the
-live scalar it then writes: feeding the adapted, trimmed value back in
-would close a loop, and would make +3 stops of trim provoke a
-compensating cut.
+So attachment 1 is RG16F, written by physical emitters only — flux-correct
+luminance in R for the mean, peak-correct in G for the max — and gated per
+draw so chrome is excluded by construction rather than by patching every
+chrome call site. `src/client/hdr/statistic/README.md` is the contract.
+
+**The diffuse-field constant retires with the walk.** Its two rows were
+the frame's share of the threshold-star population and the Milky Way band,
+and the frame now draws both. What is genuinely left — the sub-threshold
+population — is what the Milky Way layer's volumetric raymarch integrates
+by construction, so a constant for it would double-count. It was two
+decades under the anchor and could never produce a cut, so dropping it
+changes nothing observable.
+
+**What is given up: per-source attribution.** A mean over pixels has no
+dominant source to name, so the EV readout's "adapted to X" clause goes
+with the walk. Deliberate, and the trade for seeing every emitter — the
+walk could name a source only because it could not see most of the light.
+
+The statistic is still measured at the **base instrument exposure**, never
+the live scalar it then writes: feeding the adapted, trimmed value back in
+would close a loop, and would make +3 stops of trim provoke a compensating
+cut. The target is rendered with the live scalar, so the reduction divides
+it back out — the one genuinely new trap in a buffer measurement.
 
 ### 3.2 What the model does and does not fix
 
@@ -610,10 +621,11 @@ pre-inverse-mapped chrome colours (`src/client/hdr/chrome/README.md`).
 
 **A limiting-magnitude readout is mandatory**, distinct from any slider
 value. Without it, a star field correctly vanishing reads as a bug. The
-EV row carries it: *"0 EV · adapted to Venus · stars to m 1.2"*, where the
-magnitude is `uThresholdMag + dm` — the one place adaptation is allowed to
-move a magnitude — and the adapted-to clause names the source carrying
-most of the frame's flux, dropped entirely while `dm` is 0.
+EV row carries it: *"0 EV · stars to m 1.2"*, where the magnitude is
+`uThresholdMag + dm` — the one place adaptation is allowed to move a
+magnitude. It once also named the source carrying most of the frame's
+flux; a frame-wide reduction has no per-source attribution to name, so
+that clause retired with the walk (§ 3.1).
 
 #### The highlight guard — a display concession, not a perceptual claim
 
@@ -638,17 +650,25 @@ a stray amplitude.) So:
 ```
 dm       = max(dm_eye, dm_guard),  both ≤ 0
 dm_guard = −2.5·log10(peak_max / L_CAP)
-peak_max = max over VISIBLE sources of  L(m)·fluxScale / max(1, π·r_px²)
+peak_max = max over the statistic attachment's peak channel
 ```
 
 `peak_max` is the frame's brightest per-pixel luminance at the base
-exposure, over true angular sizes, counting only sources whose visible
-fraction is positive — so occlusion and frame clipping both remove a
-source from it. `L_CAP` ships at **1.2**, the geometric mean of the two
-smoke readings that bracket it (Jupiter at park wanted −1.33 EV, i.e.
-0.775; Betelgeuse at the zoom floor wanted +3.00 EV with the trim maxed
-out and still asked for more headroom, i.e. ≥ 1.73). It is the one knob
-smoke-tuning moves.
+exposure. "Visible" is automatic in a buffer max — an occluded source's
+pixels were overwritten and an off-frame one wrote none — which is a
+simplification worth claiming rather than letting happen.
+
+`L_CAP` ships at **1.80**, and that is the same level the 1.2 of the
+source-walk era set. The walk's `L(m)/max(1, π·r_px²)` was a disc *mean*;
+a buffer max is the true brightest pixel, and a Lambert disc's peak over
+mean is exactly **3/2** — the ~0.4 mag margin this section used to flag as
+something to account for before raising `L_CAP` is now accounted for in the
+constant itself. The 1.2 came from the geometric mean of the two smoke
+readings that bracket it (Jupiter at park wanted −1.33 EV, i.e. 0.775;
+Betelgeuse at the zoom floor wanted +3.00 EV with the trim maxed out and
+still asked for more headroom, i.e. ≥ 1.73), and it survives as the disc
+mean a guard-governed body settles at. It is the one knob smoke-tuning
+moves.
 
 Three structural properties, in the sense that no refactor may lose them:
 
@@ -658,23 +678,22 @@ Three structural properties, in the sense that no refactor may lose them:
   Moon, and Sol at 1 AU all stay on the perception branch and behave
   exactly as they did.
 - **The handover is a pure coverage threshold.** The two branches are
-  equal at `f* = L_ADAPT / L_CAP` = **5.1%** of the frame, independently of
-  how bright the source is, and being equal there the crossing is
-  continuous — no fade band, no hysteresis, no state. An occluded source
-  hands back to the perception branch smoothly as its *visible* coverage
-  falls through `f*`.
+  equal at `f* = L_ADAPT · (3/2) / L_CAP` = **5.1%** of the frame,
+  independently of how bright the source is, and being equal there the
+  crossing is continuous — no fade band, no hysteresis, no state. An
+  occluded source hands back to the perception branch smoothly as its
+  *visible* coverage falls through `f*`.
 - **It protects surfaces, not points.** Below `f*` the perception model
   governs and a small bright source clips on purpose: a point of light
   should read as blinding and has no detail to protect. Sol at 1 AU stays
   clipped white, and § 3.2's accepted exception above survives intact.
 
 And it **pins the peak, not the disc mean**, which is what keeps any part
-of a disc off the white point rather than just its average. One caveat on
-that: `L(m)/max(1, π·r_px²)` is the true brightest pixel for a star, but
-for a planet mesh it is the disc *mean* — limb darkening plus the
-sub-solar point put the real peak up to ~0.4 mag higher. Harmless at
-`L_CAP` = 1.2, which has 2+ magnitudes of margin to the operator's own
-clipping onset (~8–20); account for it before tuning `L_CAP` upward.
+of a disc off the white point rather than just its average — and with the
+measurement reading the frame's own texels that is now literally true,
+where the walk could only ever offer a per-source mean. `L_CAP` = 1.80
+still has 2+ magnitudes of margin to the operator's own clipping onset
+(~8–20).
 
 **The known cost, stated rather than quietly fixed: every resolved surface
 now reads the same level.** A stellar photosphere and a planet disc become
@@ -1004,7 +1023,7 @@ day one — the fullscreen pass and the inline path can never drift.
   Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
   reaches surface detail within ±3 stops of EV 0. Above the handover
   coverage (§ 3.2, 5.1% of the frame) the highlight guard pins every one
-  of them at `L_CAP` and the case is trivially inside the trim; below it
+  of their peaks at `L_CAP` and the case is trivially inside the trim; below it
   the *coverage* band applies (≥ 0.86% of the frame), so a case that fails
   is a case flown from too far out — check the disc's frame fraction
   before concluding `L_ADAPT` is wrong. The known exception is Sol at

@@ -31,7 +31,8 @@ uniform float uAirlightLuminance;
 
 in vec2 vLocalXY;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outStatistic;
 
 // Unlit-face factor: light transmitted through the ring plane instead
 // of reflected off it.
@@ -79,8 +80,10 @@ void main() {
 
   vec3 col = min(
       strip.rgb * light * uAirlightLuminance * INV_PI, vec3(STELLATA_LUMA_CEIL));
+  float ringL = dot(col, STELLATA_LUMA_WEIGHTS);
+  outStatistic = stellataStatisticTexel(ringL, ringL, strip.a * uFade);
   // Undithered — the annulus alpha-blends over the body mesh, so a pixel
-  // can take both fragments (../../hdr/README.md § Operator).
+  // can take both fragments (../../../hdr/README.md § Operator).
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }

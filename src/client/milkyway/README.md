@@ -217,8 +217,10 @@ false` (the local bounding sphere is at origin but world position is
 `GALACTIC_CENTRE_PC - worldOffset`). `renderOrder = -3` for both
 meshes.
 
-Both meshes draw into the HDR target, and both apply the operator
-themselves when it isn't bound (`uHdrTarget = 0` — the shipped path while
+Both meshes draw into the HDR target — into its statistic attachment too,
+where the band's surface brightness is both the flux and the peak channel
+(`../hdr/statistic/README.md`) — and both apply the operator themselves
+when it isn't bound (`uHdrTarget = 0` — the shipped path while
 the ship gate is false, `../hdr/README.md` § Fallback). They use the
 **undithered** variant: the two components overlap on every band pixel
 and the dither is a function of `fragCoord` alone, so it would land

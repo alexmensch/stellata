@@ -21,16 +21,15 @@ src/client/hdr/exposure/
   exposure-controller.ts     ExposureController — sole writer of
     (+ test)                 uExposure and the three magnitude bounds,
                              and the effective-limit readout's source.
-  scene-adaptation-pure.ts   The adaptation statistic: mean visible flux
-    (+ test)                 per pixel, the brightest visible pixel and
-                             the highlight guard's L_CAP, the measured
-                             L_TARGET / L_ADAPT pair, exact disc↔viewport
-                             clipping, and the star-window derivation.
-  scene-adaptation.ts        SceneAdaptation — the per-frame collector
-    (+ test)                 that walks the frame's light sources.
-  coverage/                  How much of a source the camera can actually
-                             see, measured on the GPU against the geometry
-                             rendered. Its own README.
+  scene-adaptation-pure.ts   The two branches — the eye's anchor
+    (+ test)                 L_ADAPT, the highlight guard's L_CAP, the
+                             measured L_TARGET, the disc peak-over-mean
+                             that separates them, and the slew.
+  scene-adaptation.ts        SceneAdaptation — folds the frame-late
+    (+ test)                 measurement into the applied cut.
+  reduction/                 The GPU reduction of the HDR target's
+                             statistic attachment, and its readback. Its
+                             own README.
 ```
 
 ## The three terms
@@ -86,16 +85,18 @@ adaptation moves a magnitude, and it feeds the readout and nothing else.
 `setAdaptation` is the one setter that does **not** fire `onChange`: it
 runs every frame, and the URL sync and panel listen to that event.
 
-## Adaptation — the scene measures itself, once per frame
+## Adaptation — the frame measures itself
 
-`SceneAdaptation.measure()` runs in `animate()` after the layer fan-out
-(ephemeris positions must be current) and before the first draw, so the
-cut it writes can never be a frame behind the frame it measured.
+`SceneAdaptation.measure()` runs in `animate()` before the first draw and
+consumes the reduction that landed for an **earlier** frame
+(`reduction/README.md`). It is not one frame's own measurement, and does
+not need to be: the applied cut is slew-limited over 300 ms, so a frame or
+two of lag sits far inside the ramp.
 
 ```
-visibleFractionᵢ = clippedᵢ · transmissionᵢ
-L̄        = Σᵢ L(mᵢ)·fluxScaleᵢ·visibleFractionᵢ / (w·h) + DIFFUSE_FIELD_L
-peak_max = maxᵢ  L(mᵢ)·fluxScaleᵢ / max(1, π·r_pxᵢ²)     (visible only)
+L̄        = mean over the frame of the statistic attachment's R channel
+peak_max = max  over the frame of its G channel
+           both rescaled to the BASE instrument exposure
 dm       = max( min(0, −2.5·log10(L̄ / L_ADAPT)),
                 min(0, −2.5·log10(peak_max / L_CAP)) )
 ```
@@ -109,12 +110,39 @@ depend on them rather than on the formula:
 
 - **`max` of two ≤ 0 cuts, so the guard can only raise exposure.** No
   source entering the frame can darken it through the guard.
-- **The branches are equal at coverage `L_ADAPT / L_CAP` (5.1%)**, so the
-  handover is continuous and stateless. Nothing here caches which branch
-  governed last frame, and nothing may start to.
-- **The guard reads the peak over VISIBLE sources only.** Occlusion and
-  frame clipping remove a source from it, which is why `reduce()` computes
-  the visible fraction before touching the peak accumulator.
+- **The branches are equal at coverage
+  `L_ADAPT · DISC_PEAK_OVER_MEAN / L_CAP` (5.1%)**, so the handover is
+  continuous and stateless. Nothing here caches which branch governed last
+  frame, and nothing may start to.
+- **A buffer max is never below a buffer mean**, which is what keeps the
+  `max` well-behaved: a frame bright enough to want a cut cannot hand the
+  guard a peak under `L_CAP` and have the guard's zero win. Feeding the
+  two branches an inconsistent pair — as only a synthetic test can — is
+  the one way to see `max` cancel a cut the mean deserved.
+
+**What the two channels are.** Attachment 1 carries **flux-correct**
+luminance in R and **peak-correct** luminance in G, because the mean and
+the max need different normalisations of the same light and one channel
+cannot carry both. For an extended source the two are the same quantity —
+its true surface brightness. For a point source they are not: the display
+kernel preserves *peak*, not energy, so summing what attachment 0 holds
+would over-count a threshold star's flux by 1.96x and a knee-saturated
+bright one by 28.9x. R divides that kernel by its own area integral;
+`../../star-pipeline/README.md` § Star intensity profile owns the integral
+and `../README.md` § Statistic attachment owns the texel rule.
+
+**Occlusion, frame clipping and the diffuse field are all automatic now.**
+A surface that overwrote a star's pixels overwrote its statistic texels;
+a source off the edge of the frame wrote no texels at all; the Milky Way
+band and the faint star field are drawn light like anything else. The
+walk-era `DIFFUSE_FIELD_L` constant is therefore **retired rather than
+re-derived**: its two rows were the frame's share of the threshold-star
+population and the band, and both are now measured. What is left over — the
+genuinely sub-threshold population — is what the Milky Way layer's
+volumetric raymarch integrates by construction (`../../milkyway/README.md`),
+so carrying a constant for it would double-count. The constant was two
+decades under the anchor and could never produce a cut on its own, so
+dropping it changes nothing observable, including with `mw=0`.
 
 **The measurement is instantaneous; the applied cut is slew-limited.**
 `measure()` returns a one-pole filter of the measurement with
@@ -127,103 +155,47 @@ slew faster. Three things this has to get right:
 - **Warp snaps** (`blend = 1`). The camera is somewhere else by the next
   frame, so ramping from the old scene's cut is just a flash.
 - **It settles.** `slewDm` snaps inside `ADAPT_SLEW_SETTLE_MAG`, because
-  `dm === 0` is the sentinel `getDominantLabel()` and `setAdaptation`'s
-  skip-if-unchanged both read, and an exponential never arrives. Chart's
-  `reset()` drops `lastNowMs` too, so re-entering the scene snaps.
+  `dm === 0` is the sentinel `setAdaptation`'s skip-if-unchanged reads, and
+  an exponential never arrives. Chart's `reset()` drops `lastNowMs` too, so
+  re-entering the scene snaps.
 
 The readout follows the **applied** cut, not the measurement, so the
 number on screen always describes the frame on screen.
 
-**It is mean flux per pixel, and that is not an approximation.** A
-source's per-pixel luminance is its flux over `max(1, π·r_px²)` — the
-same denominator `stellataPointSourcePeak` uses — so `L·A` collapses to
-`L(m)` in both the resolved and the sub-pixel regime. Coverage survives
-only as the fraction of a source's footprint inside the frame, which is
-why a source sliding into view ramps continuously (no radial taper, no
-centre weighting — adding one would re-introduce the gaze dependence the
-scanned-observer premise rejects) and why a body the camera has flown
-inside of contributes its *surface brightness*.
+**No spatial weighting.** A plain mean over the target is the shape the
+scanned-observer premise implies; centre weighting or a fovea-like radial
+term would re-introduce the gaze dependence it rejects, and the buffer
+gives the plain mean for free.
 
-**The clipping disc is floored at `ADAPT_EDGE_RAMP_PX` across.** A
-sub-pixel source's own footprint would take its fraction 0 → 1 inside one
-frame of camera jitter, which reads as exposure flicker; the floor spreads
-that crossing over 12 px without touching the fully-inside or
-fully-outside answer. It is deliberately not a hysteresis pair — that
-would need per-source state, still step, and make the statistic depend on
-the camera's approach direction.
+**`L_CAP` is 1.80, and that is the same level 1.2 was.** A buffer max
+returns the frame's true brightest pixel where the source walk returned a
+disc *mean*, and a Lambert disc's peak over mean is exactly 3/2
+(`DISC_PEAK_OVER_MEAN`, 0.44 mag — the margin the walk-era README already
+flagged). `adaptedDiscMeanL` and `trimStopsForCoverage` are defined on disc
+means and thread the ratio back out, so day-side exposure is unchanged.
 
-Three invariants a change here must not break:
+**Two invariants a change here must not break:**
 
-- **Measure at the base instrument exposure**, never the live scalar.
-  `baseExposure` is `exposureForMagLimit(limitMag)` with no `dm` and no
-  `ev`: the measurement feeds the term it would otherwise be reading,
-  and with `ev` folded in, +3 stops of trim would provoke a compensating
-  cut that cancels it.
-- **True angular size only.** `LuminanceSample.diameterPx` is the body's
-  or star's `physSize`, never the rendered `max(appSize, physSize)` — the
-  perceptual glare kernel is a display exaggeration and must not drive
-  exposure.
-- **`fluxScale` carries real light losses only** — eclipse dim, the
-  window taper. It is not a display weight, and it is not where occlusion
-  goes: the eclipse dim is a *lighting* loss and occlusion is a
-  *camera-path* loss, so they multiply rather than share a slot.
+- **Measure at the base instrument exposure**, never the live scalar. The
+  target is rendered *with* the live one, so the reduction divides it back
+  out (`reduction/README.md` § Measure at the base exposure) — that is the
+  one genuinely new trap in a buffer measurement, and the most likely
+  source of a feedback loop.
+- **Chart mode measures nothing** and reports `dm = 0` rather than leaving
+  the last scene's cut standing; chart bypasses the whole seam
+  (`../README.md` § Chart mode).
 
-**Occlusion is measured on the GPU, and `coverage/README.md` owns it.**
-`transmissionᵢ` is the mean throughput over source *i*'s footprint, taken
-against the depth of the geometry that was actually rendered — so it
-follows an oblate limb, a moon in transit, and a translucent ring
-annulus, none of which a CPU mirror expressed. Two things this folder is
-responsible for:
+**What the frame-wide reduction gave up: per-source attribution.** The
+readout's "· adapted to Venus" clause retired with the walk — a mean over
+pixels has no dominant source to name. Deliberate, and the trade for
+seeing every emitter: the walk could name a source only because it could
+not see most of the light.
 
-- **The walk buffers.** Every sample is copied out of its producer's
-  scratch into a pool, and nothing is reduced until the walk finishes:
-  the measurement lands a frame late, so the coverage pass reads that
-  pool *after* the walk has ended. `sourceKey` is what survives the gap
-  — pool order does not.
-- **The candidate gate stays load-bearing.** `forEachDrawnBody` admits a
-  body on EITHER render path — glare above the photometric cutoff, or a
-  resolved surface — because at eclipse alignment φ(α) → 0 kills the
-  glare while the body still fills the frame with opaque surface.
-  Admitting it costs nothing on the source side (under threshold, it
-  emits less than the floor), and a body that draws no surface writes no
-  occluder depth, so the mesh-presence floor is now the rasteriser's
-  business rather than a separate gate.
-  `docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
-
-**Sources.** Every drawn solar-system body
-(`PlanetBodyField.forEachDrawnBody`, gated by the same visibility rule
-`pick()` uses) plus stars near the camera, gated on **flux rather than
-resolvedness** — Sol at 100 AU is a third of a pixel wide and 1036× over
-`L_ADAPT`, so "is it a disc yet?" is the wrong question. The star window
-is derived, not tuned: it is the distance at which a star of
-`ADAPT_STAR_ABSMAG_REF` falls to `ADAPT_NEGLIGIBLE_FRACTION` of the
-anchor (13.2 pc on a 1080p frame at 50°), which covers every fainter star
-exactly — a fainter one cannot reach the gate from further out. Only ~120
-catalogue stars are brighter than that reference, and a **taper over the
-outer fifth of the window** carries them out continuously, so crossing
-the bound can never pop the exposure. The diffuse field is one constant two
-decades below the anchor, and therefore inert by construction: the
-frame's **share** of the aggregate faint-star population (a 50° frame is
-10.8% of the sphere) plus the Milky Way band at its anticentre-plane
-surface brightness, which dominates it 6.7×.
-
-`LuminanceSample` is filled from a **scratch object owned by the
-producer** and is valid only inside one `visit` call — read it, don't
-retain it.
-
-**Chart mode measures nothing** and reports `dm = 0` rather than leaving
-the last scene's cut standing; chart bypasses the whole seam
-(`../README.md` § Chart mode).
-
-Perf row: `adaptation`, plus `submit.coverage` / `gpu.coverage` for the
-measurement (`coverage/README.md`). The dominant CPU cost is the star
-walk's sorted-distance window — thousands of squared-distance tests at
-mid-catalogue camera distances, a few hundred `renderedSizeComponents`
-calls inside the window, and single digits of sources past the flux gate.
-The window is a function of `L_ADAPT`, so a lower anchor widens it
-cubically in cost. The reduce is now linear in the ~27 bodies plus
-single-digit stars that survive the gate, where the circle-era occlusion
-pass was O(n²).
+Perf row: `adaptation` (now a handful of arithmetic), plus
+`submit.reduction` / `gpu.reduction` for the measurement itself
+(`reduction/README.md`). The star walk's sorted-distance window, its
+`renderedSizeComponents` calls and the O(n) reduce over the source pool are
+all gone; what replaces them is GPU work on half the frames.
 
 ## Not here yet
 

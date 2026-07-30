@@ -35,14 +35,6 @@ export class LocalDepthPass {
     };
   }
 
-  /** The spheres the last `render()` partitioned. Empty means no cluster
-   *  reported members, so nothing rendered here — the coverage pass reads
-   *  this to derive its own bracket over the same members
-   *  (`../hdr/exposure/coverage/README.md`). */
-  memberSpheres(): readonly MemberSphere[] {
-    return this.spheres;
-  }
-
   /** Run immediately after the main render. Renders the pass scene
    *  once per depth slice, far→near, clearing depth (never colour)
    *  between slices. No-op when no cluster reports members. Restores
