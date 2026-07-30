@@ -1478,7 +1478,6 @@ function promoteRow(
     gcvsName: null,
     athygDist: null,
     athygDistSrc: null,
-    athygRowId: null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
   });
