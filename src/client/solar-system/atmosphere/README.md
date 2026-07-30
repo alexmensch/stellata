@@ -277,12 +277,14 @@ model pointed at the ground and at the eye. The eye-approved slider value was
 0.0667 — 19 % under the derivation, which is how close the by-eye pass had
 already landed.
 
-**It is not the small correction the name suggests.** Measured through the CPU
-mirror on a mid-shell limb chord (`atmosphere-scattering-pure.ts`, physical
-depths, sun at 90°), the fill's share of total airlight is **57 % on Earth,
-59 % on Venus, 83 % on Mars, 85 % on Titan**, falling to 41 / 17 / 6 / 67 %
-back-lit where the Mie forward peak takes over. So single scatter leads only
-in back-lit geometry.
+**It is not the small correction the name suggests.** The fill's share of total
+airlight, on a chord at the mid-shell impact parameter with the sun
+perpendicular to the view: **Earth 57 %, Venus 57 %, Mars 83 %, Titan 83 %**,
+falling to 40 / 27 / 5 / 18 % back-lit where the Mie forward peak takes over.
+So the fill leads except in back-lit geometry, and how far it falls there is set
+by the body's own `mieG` — Titan's 0.80 peak is sharper than the 0.76 default.
+`msFill` is broken out of `ScatterResult` and the test owns the geometry, so
+these are measured rather than re-derived from the formula in prose.
 
 **Airlight rides host irradiance, and there is no gain on it.** Both the disc
 block and the shell multiply `uAirlightLuminance`
@@ -384,19 +386,16 @@ white-balance-processed, so pixel-matching is a trap. Instead:
 
 ### No global knobs
 
-There is **no debug slider on any of this**, and adding one would be a
-regression. Four global multipliers (density, Rayleigh↔Mie balance, scale
-height, sun intensity) existed while the depths were by-eye, and the workflow
-was "read a good value off the slider and bake it into the table". Once every
-row is a published measurement that workflow inverts: a value that disagrees
-with the render is a question for the source or the row, never for a global
-multiplier over all four bodies. They also became a correctness hazard — § Flux
-bookkeeping normalises what the shader emits, so a slider silently moved the
-calibration it was supposed to be testing.
-
-The line generalises: **perceptual knobs get sliders, physically-derived
-quantities don't.** Star-disc sizing and warp feel are legitimately by eye;
-τ_R at 450 nm is not.
+There is **no debug slider on any of this**, and adding one is a regression.
+Four global multipliers (density, Rayleigh↔Mie balance, scale height, sun
+intensity) existed while the depths were by-eye, when the workflow was "read a
+good value off the slider and bake it into the table". With every row a
+published measurement that inverts: a value disagreeing with the render is a
+question for the source or the row, never for a global multiplier over all four
+bodies. They were also a hazard — § Flux bookkeeping normalises what the shader
+emits, so a slider silently moved the calibration it was meant to test.
+Generally: **perceptual knobs get sliders, derived physics doesn't.** Star-disc
+sizing is legitimately by eye; τ_R at 450 nm is not.
 
 ## Shell extents
 

@@ -362,16 +362,30 @@ describe('atmosphere shells', () => {
   });
 
   it('stays optically thin over the texture — Titan the deliberate exception', () => {
-    // T_view at nadir per channel; the atmosphere is an overlay, never a
-    // second cloud layer that extinguishes the map (README.md § The texture
-    // carries the disc).
-    for (const name of ['Venus', 'Earth', 'Mars']) {
+    // Nadir T_view per channel, pinned per body: the texture IS the visible
+    // disc, so the overlay must not extinguish it and replace it with a
+    // featureless ball (README.md § The texture carries the disc). The pins
+    // are the guard — a published-value refinement should register here and
+    // be read, not trip a threshold it happens to sit near. Earth's blue is
+    // the thickest of the three at 0.76, and the bound below (the texture
+    // still supplies most of its own pixel) keeps real headroom under it.
+    const NADIR_T: Record<string, readonly [number, number, number]> = {
+      Venus: [0.881, 0.874, 0.856],
+      Earth: [0.906, 0.863, 0.763],
+      Mars: [0.813, 0.799, 0.761],
+    };
+    for (const [name, want] of Object.entries(NADIR_T)) {
       const atmo = atmoOf(name);
       for (let c = 0; c < 3; c++) {
-        const tauExt = atmo.rayleighCoeff[c] + atmo.mieCoeff + atmo.absorbCoeff[c];
-        expect(Math.exp(-tauExt)).toBeGreaterThan(0.75);
+        const tView = Math.exp(
+          -(atmo.rayleighCoeff[c] + atmo.mieCoeff + atmo.absorbCoeff[c]),
+        );
+        expect(tView).toBeCloseTo(want[c], 3);
+        expect(tView).toBeGreaterThan(0.5);
       }
     }
+    // Titan's haze is genuinely opaque in visible light — its surface, and our
+    // near-IR texture, are not there to be seen from space.
     const titan = atmoOf('Titan');
     const tauBlue = titan.rayleighCoeff[2] + titan.mieCoeff + titan.absorbCoeff[2];
     expect(Math.exp(-tauBlue)).toBeLessThan(0.05);

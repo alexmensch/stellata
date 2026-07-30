@@ -259,10 +259,16 @@ export interface ScatterResult {
   /** In-scattered airlight per channel, as a fraction of the host's
    *  perpendicular irradiance — `∫β_s·P·T dl` is already dimensionless, so
    *  the caller's `uAirlightLuminance` is the whole of the scale and there
-   *  is no gain to apply. */
+   *  is no gain to apply. Single scatter plus `msFill`. */
   readonly inscatter: Vec3;
   /** View-path transmittance per channel — multiplies the surface behind. */
   readonly transmittance: Vec3;
+  /** The isotropic multiple-scattering fill's own contribution to
+   *  `inscatter`. Broken out on the CPU side only (the shader has no use
+   *  for it) so its share can be measured instead of re-derived — it is
+   *  the majority of the airlight at physical depths, which is the thing
+   *  to watch: README.md § Multiple-scattering fill. */
+  readonly msFill: Vec3;
 }
 
 /** Integrate single-scattered airlight (+ a cheap multiple-scattering fill)
@@ -282,7 +288,7 @@ export function scatterAlongRay(
 ): ScatterResult {
   const span = tStop - tStart;
   if (span <= 0) {
-    return { inscatter: [0, 0, 0], transmittance: [1, 1, 1] };
+    return { inscatter: [0, 0, 0], transmittance: [1, 1, 1], msFill: [0, 0, 0] };
   }
   const segLen = span / ATMO_N_VIEW;
   const shadow = shadowSpan(o, d, sunDir);
@@ -337,6 +343,7 @@ export function scatterAlongRay(
   }
 
   const transmittance: [number, number, number] = [0, 0, 0];
+  const msFill: [number, number, number] = [0, 0, 0];
   const litFrac = litSum / ATMO_N_VIEW;
   for (let c = 0; c < 3; c++) {
     transmittance[c] = Math.exp(-(p.betaRs[c] * viewOdR + (p.betaMs + p.betaA[c]) * viewOdM));
@@ -344,10 +351,10 @@ export function scatterAlongRay(
     // sunlit. Negligible when thin (opacity → 0), dominant when thick.
     const scatterC = p.betaRs[c] + p.betaMs;
     const ssAlbedo = scatterC / Math.max(scatterC + p.betaA[c], 1e-6);
-    const ms = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
-    inscatter[c] += ms;
+    msFill[c] = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
+    inscatter[c] += msFill[c];
   }
-  return { inscatter, transmittance };
+  return { inscatter, transmittance, msFill };
 }
 
 /** Full-phase disc means (luma) of everything the mesh shader lays over the

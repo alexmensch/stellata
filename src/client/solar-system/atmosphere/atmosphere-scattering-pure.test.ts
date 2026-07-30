@@ -446,6 +446,42 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     expect(titanTail(12)).toBeGreaterThan(100 * (frac(12) / frac(0)));
   });
 
+  describe('the multiple-scattering fill is most of the airlight', () => {
+    // The README quotes these shares as the thing to watch (too much fill and
+    // the surface texture greys out), so the geometry they are measured at
+    // belongs in code, not in prose: a chord at the MID-SHELL impact
+    // parameter, sun perpendicular to the view (90°) and then behind the body
+    // (back-lit, where the Mie forward peak takes over).
+    const shareAt = (name: string, sunDir: Vec3): number => {
+      const { params } = rowOf(name);
+      const impact = (1 + params.rAtmo) / 2;
+      const o: Vec3 = [impact, 0, 10];
+      const d: Vec3 = [0, 0, -1];
+      const [t0, t1] = chord(o, d, params.rAtmo);
+      const r = scatterAlongRay(o, d, t0, t1, sunDir, params);
+      return relativeLuminance(r.msFill) / relativeLuminance(r.inscatter);
+    };
+    const SIDE_LIT: Vec3 = [1, 0, 0];
+    const BACK_LIT: Vec3 = [0, 0, -1];
+
+    const EXPECTED: Record<string, { side: number; back: number }> = {
+      Venus: { side: 0.565, back: 0.267 },
+      Earth: { side: 0.572, back: 0.402 },
+      Mars: { side: 0.825, back: 0.045 },
+      Titan: { side: 0.831, back: 0.184 },
+    };
+
+    for (const [name, want] of Object.entries(EXPECTED)) {
+      it(`${name}: fill leads side-lit, single scatter leads back-lit`, () => {
+        expect(shareAt(name, SIDE_LIT)).toBeCloseTo(want.side, 2);
+        expect(shareAt(name, BACK_LIT)).toBeCloseTo(want.back, 2);
+        // The ordering is the invariant the numbers illustrate.
+        expect(shareAt(name, SIDE_LIT)).toBeGreaterThan(0.5);
+        expect(shareAt(name, BACK_LIT)).toBeLessThan(shareAt(name, SIDE_LIT));
+      });
+    }
+  });
+
   describe('full-phase disc means — what keeps the drawn disc on the body flux', () => {
     // Measured through the same march the shader runs, per body, at physical
     // depths. `share` = π/p·⟨inscatter⟩ is the fraction of the body's own flux
