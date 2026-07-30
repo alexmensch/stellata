@@ -1,0 +1,171 @@
+// The GPU reduction of the HDR target's statistic attachment down to one
+// texel, and the frame-late readback of it. See README.md.
+
+import * as THREE from 'three';
+import { fullscreenTriangleGeometry } from '../../../util/fullscreen-pass';
+import fullscreenVert from '../../../util/fullscreen-pass.vert.glsl?raw';
+import reduceFrag from './reduce.frag.glsl?raw';
+import { ReductionReadback } from './reduction-readback';
+import { reductionLevelSizes } from './reduction-pure';
+
+/** One frame's reduced statistic, still in the exposure the frame was
+ *  RENDERED with — `rescaleToBaseExposure` is the caller's step, because
+ *  only the caller knows the instrument's base exposure. */
+export interface ReducedStatistic {
+  meanL: number;
+  peakL: number;
+  renderExposure: number;
+}
+
+interface Level {
+  target: THREE.WebGLRenderTarget;
+  width: number;
+  height: number;
+}
+
+export class LuminanceReduction {
+  private readonly scene = new THREE.Scene();
+  private readonly camera = new THREE.OrthographicCamera();
+  private readonly geometry = fullscreenTriangleGeometry();
+  private readonly material: THREE.RawShaderMaterial;
+  private levels: Level[] = [];
+  private floatRenderable: boolean | null = null;
+  private sourceWidth = 0;
+  private sourceHeight = 0;
+  private readback: ReductionReadback | null = null;
+  private pendingExposure = 0;
+  private latest: ReducedStatistic | null = null;
+
+  constructor() {
+    this.material = new THREE.RawShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      uniforms: {
+        uSource: { value: null },
+        uSourceSize: { value: new THREE.Vector2() },
+      },
+      vertexShader: fullscreenVert,
+      fragmentShader: reduceFrag,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.NoBlending,
+    });
+    const mesh = new THREE.Mesh(this.geometry, this.material);
+    mesh.frustumCulled = false;
+    this.scene.add(mesh);
+  }
+
+  /**
+   * Reduce `source` — the statistic attachment, at the drawing buffer's
+   * size — and ask for its one texel back. A frame whose predecessor has
+   * not landed does no GPU work at all, so the measurement refreshes every
+   * other frame at worst, far inside `ADAPT_SLEW_TAU_S`.
+   *
+   * `renderExposure` is the scalar the frame was drawn with, captured here
+   * because the readback outlives it.
+   *
+   * Leaves the render target at the canvas, the same contract the local
+   * depth pass keeps.
+   */
+  measure(
+    renderer: THREE.WebGLRenderer,
+    source: THREE.Texture,
+    width: number,
+    height: number,
+    renderExposure: number,
+  ): void {
+    this.poll();
+    const gl = renderer.getContext() as WebGL2RenderingContext;
+    // The chain's last level is RGBA32F, which needs the full float
+    // extension — half-float-only hardware gets no measurement at all and
+    // therefore no cut, the same tier HdrPipeline parks the whole seam on
+    // (../../README.md § Fallback). Degrades to wide open rather than to a
+    // wrong exposure.
+    this.floatRenderable ??= gl.getExtension('EXT_color_buffer_float') !== null;
+    if (!this.floatRenderable) return;
+    this.readback ??= new ReductionReadback(gl, 1);
+    if (this.readback.pending) return;
+    this.ensureLevels(width, height);
+    if (this.levels.length === 0) return;
+
+    let src = source;
+    let srcW = width;
+    let srcH = height;
+    for (const level of this.levels) {
+      this.material.uniforms.uSource.value = src;
+      (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
+      renderer.setRenderTarget(level.target);
+      renderer.render(this.scene, this.camera);
+      src = level.target.texture;
+      srcW = level.width;
+      srcH = level.height;
+    }
+    // The last level is still bound, which is the framebuffer readPixels
+    // reads from.
+    this.readback.request(1);
+    this.pendingExposure = renderExposure;
+    renderer.setRenderTarget(null);
+  }
+
+  /** The most recent landed measurement, or null until the first one
+   *  arrives. Frames before that keep whatever cut the statistic already
+   *  holds. */
+  current(): ReducedStatistic | null {
+    this.poll();
+    return this.latest;
+  }
+
+  /** Chart mode measures nothing; dropping the last reading is what stops
+   *  the frame that re-enters the scene adapting to a stale one. */
+  reset(): void {
+    this.latest = null;
+  }
+
+  dispose(): void {
+    for (const level of this.levels) level.target.dispose();
+    this.levels = [];
+    this.sourceWidth = 0;
+    this.sourceHeight = 0;
+    this.readback?.dispose();
+    this.readback = null;
+    this.floatRenderable = null;
+    this.latest = null;
+    this.pendingExposure = 0;
+    this.geometry.dispose();
+    this.material.dispose();
+    this.scene.clear();
+  }
+
+  private poll(): void {
+    const landed = this.readback?.poll();
+    if (landed === undefined || landed === null) return;
+    this.latest = {
+      meanL: landed.pixels[0],
+      peakL: landed.pixels[1],
+      renderExposure: this.pendingExposure,
+    };
+  }
+
+  /** The chain halves with `ceil` down to 1x1. Only the last level is
+   *  RGBA32F — `readPixels` guarantees the RGBA/FLOAT pair for that format
+   *  alone, and one texel of it costs nothing. */
+  private ensureLevels(width: number, height: number): void {
+    if (this.sourceWidth === width && this.sourceHeight === height) return;
+    for (const level of this.levels) level.target.dispose();
+    this.sourceWidth = width;
+    this.sourceHeight = height;
+    const sizes = reductionLevelSizes(width, height);
+    this.levels = sizes.map(([w, h], i) => ({
+      target: new THREE.WebGLRenderTarget(w, h, {
+        type: i === sizes.length - 1 ? THREE.FloatType : THREE.HalfFloatType,
+        format: THREE.RGBAFormat,
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        depthBuffer: false,
+        stencilBuffer: false,
+        generateMipmaps: false,
+      }),
+      width: w,
+      height: h,
+    }));
+  }
+}
