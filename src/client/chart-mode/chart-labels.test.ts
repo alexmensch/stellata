@@ -445,6 +445,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         uChartMagBright: { value: -2 },
       },
       getT: () => 0,
+      getWorldOffset: () => new THREE.Vector3(),
+      constellationLabelAnchors: [],
       getFilter: () => ({
         maxAppMag: 6.5, minDistSol: 0, maxDistSol: 1e9,
         spectMask: 0xff, showConstellation: true,

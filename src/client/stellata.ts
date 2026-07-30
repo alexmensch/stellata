@@ -145,6 +145,10 @@ import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
+import {
+  buildConstellationLabelAnchors,
+  type ConstellationLabelAnchor,
+} from './constellation-boundaries/constellation-regions';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
   EclipsePhotometryField,
@@ -328,6 +332,9 @@ export class Stellata implements FrameAnchor {
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
+  // Empty until attachConstellationBoundaries lands the artifact, which is
+  // optional — every consumer must read it as "not yet".
+  private constellationLabels: readonly ConstellationLabelAnchor[] = [];
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
@@ -1889,10 +1896,21 @@ export class Stellata implements FrameAnchor {
 
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
-   *  once the async load resolves. */
+   *  once the async load resolves, then binds the artifact's other two
+   *  readings — the chart label anchors and the membership lookup every
+   *  chart label anchors. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
     this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
+    this.constellationLabels = buildConstellationLabelAnchors(
+      artifact, this.catalog.constellations,
+    );
+  }
+
+  /** Latin-name anchors for the chart-mode label engine — one per IAU region,
+   *  so Serpens carries two. Empty until the boundary artifact loads. */
+  get constellationLabelAnchors(): readonly ConstellationLabelAnchor[] {
+    return this.constellationLabels;
   }
 
   /** Attach the loaded probe trajectories. Both layers are constructed in
