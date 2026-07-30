@@ -7,11 +7,9 @@ import {
 import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { unitVectorFromRaDec } from '../util/equatorial-basis';
-import {
-  buildConstellationLabelAnchors,
-  createConstellationNamer,
-} from './constellation-regions';
-import { createIauConstellationLookup } from './iau-boundaries-pure';
+import { validateBoundaryArtifact } from './boundary-artifact-loader';
+import { createConstellationRegions } from './constellation-regions';
+import { IAU_REGION_COUNT, createIauConstellationLookup } from './iau-geometry/iau-boundaries-pure';
 
 const lookup = createIauConstellationLookup(readIauEdgeRecords());
 // The artifact the browser actually reads, built the way build:catalog builds
@@ -23,12 +21,19 @@ const ARTIFACT: BoundaryArtifact = {
   ]),
 };
 
-const namer = createConstellationNamer(ARTIFACT, CONSTELLATIONS);
+const { namer, labelAnchors } = createConstellationRegions(ARTIFACT, CONSTELLATIONS);
 
 function at(raHours: number, decDeg: number, distancePc = 100): string | null {
   const v = unitVectorFromRaDec(raHours * 15, decDeg);
   return namer.nameAt({ x: v.x * distancePc, y: v.y * distancePc, z: v.z * distancePc });
 }
+
+// The loader's checks run against the real build, not just the fixture: the
+// areas ship quantised to two decimals, so the sphere-closure tolerance has to
+// absorb 89 roundings without absorbing a missing region.
+it('clears the load-time validator as the build emits it', () => {
+  expect(() => validateBoundaryArtifact(ARTIFACT)).not.toThrow();
+});
 
 describe('the runtime constellation namer', () => {
   it('names the constellation a well-known direction sits in', () => {
@@ -63,15 +68,15 @@ describe('the runtime constellation namer', () => {
         checked++;
       }
     }
-    expect(checked).toBeGreaterThan(3000);
+    expect(checked).toBe(3770);
   });
 });
 
 describe('chart label anchors', () => {
-  const anchors = buildConstellationLabelAnchors(ARTIFACT, CONSTELLATIONS);
+  const anchors = labelAnchors;
 
   it('carries one anchor per region, on the boundary sphere', () => {
-    expect(anchors).toHaveLength(ARTIFACT.labels.length);
+    expect(anchors).toHaveLength(IAU_REGION_COUNT);
     for (const anchor of anchors) {
       expect(anchor.position.length()).toBeCloseTo(SPHERE_RADIUS_PC, 0);
       expect(anchor.name.length).toBeGreaterThan(0);

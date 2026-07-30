@@ -69,7 +69,8 @@ move the pin by a KiB or more — which is the point. A ±1 KiB flip means
 re-pin, not bug.
 
 `c` carries the two constellations the arc separates, in source order,
-which carries **no side convention** — see the geometry README.
+which carries **no side convention** — see
+`src/client/constellation-boundaries/iau-geometry/README.md`.
 
 ## Labels and the region grid
 
@@ -78,7 +79,8 @@ the equal-surface-weight centre of mass of its region, in ICRS, with the
 region's area in square degrees at `AREA_DECIMALS = 2`. The areas
 reproduce the published IAU values, which is why they ship rather than
 being recomputed: they are the artifact's own self-check. Derivation and
-the inside-the-region assertion are in the geometry README § Label
+the inside-the-region assertion are in
+`src/client/constellation-boundaries/iau-geometry/README.md` § Label
 anchors.
 
 `regions` is the resolved cell grid, run-length-coded along RA
@@ -105,7 +107,7 @@ That is not a smoothness nicety:
 - A **constant-Dec** arc is a SMALL circle in B1875. Precession maps it to
   neither a straight line nor a great-circle arc, so a two-endpoint
   parallel draws a chord cutting **more than a degree** inside the true
-  boundary. `iau-boundaries-pure.test.ts` pins that departure so a future
+  boundary. `iau-geometry/iau-boundaries-pure.test.ts` pins that departure so a future
   "we only need the endpoints" optimisation fails rather than quietly
   moving the boundaries.
 - A **constant-RA** arc *is* a great circle and precession is a pure

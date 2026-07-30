@@ -9,7 +9,11 @@ import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
 } from './boundary-layer-pure';
-import { IAU_REGION_COUNT } from './iau-boundaries-pure';
+import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from './iau-geometry/iau-boundaries-pure';
+
+/** Slack on the sphere-closure check. Each of the 89 areas is quantised to
+ *  `AREA_DECIMALS = 2`, so the sum carries at most 89 × 0.005 of rounding. */
+const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
 
 /**
  * Narrow a parsed wire object to `BoundaryArtifact`, throwing on anything the
@@ -38,15 +42,26 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
       + `label anchors for ${IAU_REGION_COUNT} regions`,
     );
   }
+  let areaSquareDeg = 0;
   for (const label of artifact.labels) {
     if (!label.c || !Array.isArray(label.d) || label.d.length !== 3) {
       throw new Error(
         `constellation-boundaries.json: label ${String(label?.c)} carries no direction`,
       );
     }
+    areaSquareDeg += label.a;
   }
-  // Checked here rather than at the decode so the membership lookup the focus
-  // cards build off this grid has no failure path of its own.
+  // The areas are what makes the label set externally checkable — they
+  // reproduce the published IAU values, and the regions partition the sphere,
+  // so they close on it. That closure is the reason they ship, so it is
+  // asserted rather than assumed: a truncated or reordered region set arrives
+  // with the right label count and the wrong sky.
+  if (Math.abs(areaSquareDeg - FULL_SPHERE_SQUARE_DEG) > AREA_CLOSURE_TOLERANCE_SQUARE_DEG) {
+    throw new Error(
+      `constellation-boundaries.json: label areas sum to ${areaSquareDeg.toFixed(2)} `
+      + `sq deg, expected the full sphere (${FULL_SPHERE_SQUARE_DEG.toFixed(2)})`,
+    );
+  }
   try {
     validateRegionGridWire(artifact.regions);
   } catch (err) {

@@ -36,6 +36,33 @@ describe('validateBoundaryArtifact', () => {
     }))).toThrow(/label AND carries no direction/);
   });
 
+  // The areas close on the sphere because the regions partition it, which is
+  // the whole reason they ship — so a region set that arrives with the right
+  // count and the wrong sky is caught rather than drawn.
+  it('rejects label areas that do not close on the sphere', () => {
+    const labels = artifact().labels;
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: [{ ...labels[0], a: labels[0].a * 2 }, ...labels.slice(1)],
+    }))).toThrow(/label areas sum to .* expected the full sphere/);
+    // The 89 areas are quantised to two decimals, so the sum has to tolerate
+    // that much rounding without tolerating a missing region.
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: labels.map((l, i) => ({ ...l, a: l.a + (i % 2 ? 0.005 : -0.005) })),
+    }))).not.toThrow();
+  });
+
+  // The runtime bisects these bounds, so an out-of-order one is a wall in the
+  // wrong place: it resolves to a real constellation, just the wrong one.
+  it('rejects region grid bounds that do not ascend', () => {
+    const regions = artifact().regions;
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, raDeg: [180, 0] },
+    }))).toThrow(/raDeg must ascend \(raDeg\[1\] is 0 after 180\)/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, decDeg: [Number.NaN] },
+    }))).toThrow(/decDeg\[0\] is NaN/);
+  });
+
   // The runtime membership lookup decodes this grid without a failure path of
   // its own, so a run list that stops short has to die here — decoded, its
   // unfilled cells resolve as a constellation named "undefined".

@@ -42,7 +42,7 @@ on Sol, so a direction from Sol is meaningless for them.
 - **Stars** read catalog byte 34 (`star-focus-provider.ts`) — baked,
   survives a missing boundary artifact, and the designation
   constellation lives beside it
-  (`../constellation-boundaries/README.md` § ρ Aquilae).
+  (`../constellation-boundaries/iau-geometry/README.md` § ρ Aquilae).
 - **Every other kind** resolves through `Stellata.constellationOf(kind,
   idx)`, one grid lookup against the shipped IAU partition, so a galaxy
   and the stars around it are answered by the same boundaries.

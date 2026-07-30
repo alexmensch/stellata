@@ -196,7 +196,8 @@ export interface BuildCounts {
   /** AT-HYG rows whose IAU-positional constellation differs from their
    *  editorial `con` cell. Pinned exactly, not as a rate: it is the
    *  sharpest available signal on the B1875 precession epoch — see
-   *  src/client/constellation-boundaries/README.md § Agreement with AT-HYG. */
+   *  src/client/constellation-boundaries/iau-geometry/README.md
+   *  § Agreement with AT-HYG. */
   conPositionalDisagreement: number;
   /** Identifier-less catalog primaries that gained HIP / Gaia source_id
    *  from a multiples.tsv pair-primary row, joined by HD

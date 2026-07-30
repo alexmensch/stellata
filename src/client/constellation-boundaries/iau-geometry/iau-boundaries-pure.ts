@@ -2,19 +2,19 @@
 // its decomposition into named regions, and positional lookup against them.
 // See README.md.
 
-import { RA_HOURS_TO_DEG } from '../util/astronomy-constants';
+import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import {
   raDecFromUnitVector,
   unitVectorFromRaDec,
   type SkyPosition,
   type UnitVector,
-} from '../util/equatorial-basis';
+} from '../../util/equatorial-basis';
 import {
   B1875_JD,
   precessRaDec,
   precessionRotationFromJ2000,
   unprecessDirection,
-} from '../util/precession';
+} from '../../util/precession';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -345,6 +345,11 @@ export function constellationKey(edgeCode: string): string {
 }
 
 const STERADIAN_TO_SQUARE_DEG = RAD_TO_DEG * RAD_TO_DEG;
+
+/** 41252.96. The regions partition the sphere, so their areas close on it —
+ *  derived rather than typed in, so the closure check tests the decomposition
+ *  and not a transcription. */
+export const FULL_SPHERE_SQUARE_DEG = 4 * Math.PI * STERADIAN_TO_SQUARE_DEG;
 
 /** Where a region's name is written on the chart, and how much sky it covers. */
 export interface RegionLabelAnchor {

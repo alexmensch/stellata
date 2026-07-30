@@ -1,6 +1,6 @@
 // ICRS/J2000 ↔ the mean equator and equinox of another epoch, via the IAU 1976
 // (Lieske) angles ζ / z / θ and the rotation they compose.
-// See ../constellation-boundaries/README.md § B1875.
+// See ../constellation-boundaries/iau-geometry/README.md § B1875.
 
 import { ARCSEC_TO_RAD, J2000_JD } from './astronomy-constants';
 import {
@@ -29,7 +29,8 @@ export function besselianEpochToJd(besselianYear: number): number {
 /** The equinox the IAU constellation boundaries are drawn at (Delporte 1930):
  *  1874 Dec 31.76. Getting this epoch wrong by months leaves the boundaries
  *  looking plausible while flipping positions that sit within an arcsecond of
- *  a wall — see ../constellation-boundaries/README.md § ρ Aquilae. */
+ *  a wall — see ../constellation-boundaries/iau-geometry/README.md
+ *  § ρ Aquilae. */
 export const B1875_JD = besselianEpochToJd(1875);
 
 export interface PrecessionAngles {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
-import { raDecFromUnitVector } from '../util/equatorial-basis';
-import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
+import { CON_INDEX, readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
+import { raDecFromUnitVector } from '../../util/equatorial-basis';
+import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../util/precession';
 import {
+  FULL_SPHERE_SQUARE_DEG,
   IAU_REGION_COUNT,
   POLYLINE_MAX_STEP_DEG,
   angularDistanceToNearestEdgeDeg,
@@ -125,7 +126,9 @@ describe('region label anchors', () => {
     expect(byCode.get('SER1')!.areaSquareDeg + byCode.get('SER2')!.areaSquareDeg)
       .toBeCloseTo(636.928, 2);
     // And the regions partition the whole sphere, so the areas close on it.
-    expect(anchors.reduce((n, a) => n + a.areaSquareDeg, 0)).toBeCloseTo(41252.96, 1);
+    expect(anchors.reduce((n, a) => n + a.areaSquareDeg, 0))
+      .toBeCloseTo(FULL_SPHERE_SQUARE_DEG, 1);
+    expect(FULL_SPHERE_SQUARE_DEG).toBeCloseTo(41252.96, 2);
   });
 
   // buildRegionLabelAnchors throws rather than emit an anchor outside its own

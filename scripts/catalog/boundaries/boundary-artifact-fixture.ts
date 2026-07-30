@@ -1,11 +1,16 @@
 // Test-only: the smallest BoundaryArtifact that clears the load-time
 // validator, so a test exercising one field doesn't hand-write the rest.
 
-import { IAU_REGION_COUNT } from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
+import {
+  FULL_SPHERE_SQUARE_DEG,
+  IAU_REGION_COUNT,
+} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
 import type { BoundaryArtifact } from './boundaries-artifact-pure';
 
 /** Shape only — synthetic region codes and a 2 × 2 grid. Anything reading the
- *  real geometry builds from `readIauEdgeRecords` instead. */
+ *  real geometry builds from `readIauEdgeRecords` instead. Areas are the sphere
+ *  split evenly, which is meaningless per-region but is what the validator's
+ *  closure check reads. */
 export function boundaryArtifactFixture(
   overrides: Partial<BoundaryArtifact> = {},
 ): BoundaryArtifact {
@@ -17,7 +22,7 @@ export function boundaryArtifactFixture(
     labels: Array.from({ length: IAU_REGION_COUNT }, (_, i) => ({
       c: `R${i}`,
       d: [1, 0, 0] as [number, number, number],
-      a: 100,
+      a: FULL_SPHERE_SQUARE_DEG / IAU_REGION_COUNT,
     })),
     regions: {
       raDeg: [0, 180],

@@ -5,7 +5,7 @@ import { writeFile } from 'node:fs/promises';
 
 import type {
   IauConstellationLookup,
-} from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
+} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
 import { absoluteToApparentMagnitude } from '../catalog-pure';
 import {
