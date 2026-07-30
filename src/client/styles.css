@@ -1744,3 +1744,101 @@ body.monochrome .kb-modal-backdrop {
 body.monochrome .modal-shortcuts kbd {
   background: rgba(0, 0, 0, 0.06);
 }
+
+/* Display calibration. Reuses `.modal` only for its fixed inset-0 box and
+ * the ESC-chain guard that keys off the class; everything visual is
+ * overridden. The field must be code-value 0 with nothing translucent,
+ * blurred or filtered over it — a backdrop-filter or a non-black surround
+ * changes the very readings this screen exists to take. */
+.modal.calibration {
+  display: block;
+  z-index: 40;
+}
+.calib-surface {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 40px clamp(24px, 6vw, 72px) 56px;
+  background: #000;
+  color: var(--fg);
+}
+.calib-surface h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.calib-ambient {
+  max-width: 62ch;
+  margin: 0 0 28px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+.calib-section { margin-bottom: 30px; }
+.calib-section h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fg-dim);
+}
+.calib-section p {
+  max-width: 62ch;
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+.calib-ladder {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.calib-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.calib-swatch {
+  width: 72px;
+  height: 72px;
+}
+.calib-cell-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--fg-dim);
+}
+.calib-cell.is-target .calib-cell-label { color: var(--fg); }
+
+/* The white field stays collapsed until asked for: a bright surround on
+ * screen destroys the dark adaptation section 1 depends on. */
+.calib-highlight-field {
+  display: none;
+  padding: 18px;
+  background: #fff;
+}
+#calib-highlight.is-revealed .calib-highlight-field { display: block; }
+.calib-highlight-field .calib-cell-label { color: #000; }
+
+.calib-wedge {
+  display: flex;
+  max-width: 720px;
+}
+.calib-wedge-step {
+  flex: 1 1 0;
+  height: 56px;
+}
+
+.calib-gamma-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.calib-gamma-cell { display: block; }

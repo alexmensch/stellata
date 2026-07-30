@@ -248,6 +248,66 @@
       </div>
     </div>
 
+    <div id="calibration-modal" class="modal calibration" hidden>
+      <div class="calib-surface" role="dialog" aria-modal="true" aria-labelledby="calib-title">
+        <button class="modal-close" type="button" data-modal-dismiss aria-label="Close">×</button>
+        <h2 id="calib-title">Display calibration</h2>
+        <p class="calib-ambient">
+          Dim the room, keep light off the screen, and give your eyes a
+          minute to adapt. In a bright room none of this is meaningful.
+        </p>
+
+        <section class="calib-section">
+          <h3>1 · Black point</h3>
+          <p>
+            Raise your screen brightness until you can just make out patch
+            <b>2</b>. Patch <b>1</b> should sit at the edge of visibility, and
+            the field around them must read as black, not dark grey. This is
+            the one adjustment that matters most — the sky is faint sources on
+            black.
+          </p>
+          <div class="calib-ladder" id="calib-blackpoint"></div>
+        </section>
+
+        <section class="calib-section" id="calib-highlight">
+          <h3>
+            2 · Highlights
+            <button class="link-btn" type="button" id="calib-highlight-reveal" aria-expanded="false" aria-controls="calib-highlight-field">reveal — bright</button>
+          </h3>
+          <p>
+            Shows a full-white field, so do this <em>after</em> the black
+            point. Every patch should stay distinct from the surround. Patches
+            merging into the white mean your display clips highlights, and the
+            brightest stars will lose their colour.
+          </p>
+          <div class="calib-highlight-field" id="calib-highlight-field">
+            <div class="calib-ladder" id="calib-highlight-patches"></div>
+          </div>
+        </section>
+
+        <section class="calib-section">
+          <h3>3 · Grey ramp</h3>
+          <p>
+            Every band should be distinguishable from its neighbours. Bands
+            merging at the dark end mean brightness is too low; merging at the
+            bright end means it is too high.
+          </p>
+          <div class="calib-wedge" id="calib-wedge"></div>
+        </section>
+
+        <section class="calib-section">
+          <h3>4 · Gamma</h3>
+          <p>
+            Step back until the stripes blur together. The patch that
+            disappears into its surround is your display's gamma. Stellata is
+            authored for 2.2 (marked ·). This one is a reading, not an
+            adjustment — most displays offer no control over it.
+          </p>
+          <div class="calib-gamma-row" id="calib-gamma"></div>
+        </section>
+      </div>
+    </div>
+
     <div id="info-modal" class="modal" hidden>
       <div class="modal-backdrop" data-modal-dismiss></div>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
@@ -621,6 +681,13 @@
             </div>
             <input id="ev" type="range" value="0" />
             <div class="readout" id="ev-readout">0 EV · stars to m 7.8</div>
+
+            <div class="sub-label-row group-block">
+              <label class="sub-label">Display</label>
+              <span class="row-actions">
+                <button id="calibrate-open" class="link-btn" type="button">calibrate</button>
+              </span>
+            </div>
 
             <div class="sub-label-row group-block">
               <label class="sub-label">Star size exaggeration</label>

@@ -56,6 +56,10 @@ themselves.
   Local Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
+- `calibration/` — the display-calibration screen: authored sRGB step
+  wedge, black-point and highlight ladders, and gamma match patches.
+  Deliberately outside the `hdr/` path — it shows the display's own
+  transfer, not the operator's output.
 - `system-membership/` — kind-generic multi-object system contract
   (roster + collapsed-cluster queries) behind the hover system card
   and collapsed-pick-to-primary resolution; implemented by

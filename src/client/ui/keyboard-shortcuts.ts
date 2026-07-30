@@ -5,6 +5,7 @@ import { nextCoordSphereFrame } from '../galactic/coord-spheres/coord-sphere-fra
 import { DETAIL_LEVELS } from '../scene/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
+import { bindCalibrationOverlay } from '../calibration/calibration-overlay';
 import {
   pushTapAndCheckTriple,
   makeDoubleTapGate,
@@ -44,6 +45,7 @@ export function bindKeyboardShortcuts(
   deps: KeyboardShortcutsDeps,
 ) {
   const help = bindHelpModal();
+  const calibration = bindCalibrationOverlay();
 
   // The "go" picker reuses the topbar's existing `#topbar-search` widget —
   // whatever inputs `bindSearch` puts there (Focus / To / Location) are
@@ -191,6 +193,10 @@ export function bindKeyboardShortcuts(
         break;
       case 'u': case 'U':
         toggleControlsHidden();
+        e.preventDefault();
+        break;
+      case 'k': case 'K':
+        calibration.open();
         e.preventDefault();
         break;
       case 't': case 'T':

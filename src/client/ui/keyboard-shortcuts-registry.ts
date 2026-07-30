@@ -38,6 +38,7 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   { keys: ['Backspace'], label: 'Time scrubber (while open): reset to live now' },
   { keys: ['F', 'F'], label: 'Double-tap to toggle fullscreen' },
   { keys: ['U'], label: 'Show/hide the controls' },
+  { keys: ['K'], label: 'Open the display-calibration screen' },
   { keys: ['+', '−'], label: 'Exposure trim ± 1/3 stop' },
   { keys: ['='], label: 'Reset the exposure trim to 0 EV' },
   {
