@@ -5,7 +5,12 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MS_STRENGTH, TWILIGHT_SCATTER_FRAC } from './atmosphere-scattering-pure';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import {
+  MS_STRENGTH,
+  TWILIGHT_TAIL_AMP,
+  TWILIGHT_TAIL_REACH,
+} from './atmosphere-scattering-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -20,13 +25,24 @@ function glslFloat(src: string, name: string): number {
 }
 
 describe('constants mirrored from the CPU model', () => {
-  it('multiple-scattering fill weight', () => {
-    expect(glslFloat(scatter, 'STELLATA_MS_STRENGTH')).toBe(MS_STRENGTH);
+  it('multiple-scattering fill weight, as 1/(4π) on both sides', () => {
+    // A rounded literal here would be a second, drifting statement of a
+    // derived quantity the file already declares exactly.
+    expect(scatter).toContain('const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);');
+    expect(scatter).toContain('const float STELLATA_MS_STRENGTH = STELLATA_INV_4PI;');
+    expect(MS_STRENGTH).toBe(1 / (4 * Math.PI));
   });
 
-  it('twilight scatter fraction', () => {
-    expect(glslFloat(scatter, 'STELLATA_TWILIGHT_SCATTER_FRAC'))
-      .toBe(TWILIGHT_SCATTER_FRAC);
+  it('Rec.709 luma weights', () => {
+    // Its own const because the hdr chunks spliced alongside declare theirs;
+    // same numbers, and this is what keeps them the same numbers.
+    const [r, g, b] = LUMA_WEIGHTS;
+    expect(scatter).toContain(`const vec3 STELLATA_LUMA = vec3(${r}, ${g}, ${b});`);
+  });
+
+  it('twilight tail amplitude and reach', () => {
+    expect(glslFloat(scatter, 'STELLATA_TWILIGHT_TAIL_AMP')).toBe(TWILIGHT_TAIL_AMP);
+    expect(glslFloat(scatter, 'STELLATA_TWILIGHT_TAIL_REACH')).toBe(TWILIGHT_TAIL_REACH);
   });
 });
 
@@ -131,34 +147,54 @@ describe('the march runs in the frame where the oblate body is a unit sphere', (
     expect(meshFrag).not.toContain('uCenterView + uRadiusPc * nrm');
   });
 
-  it('keeps the twilight term on the REAL-space sun cosine', () => {
+  it('keeps the skylight term on the REAL-space sun cosine', () => {
     // Solar depression is measured against the true local horizontal, so the
-    // twilight term must not be handed the deflattened sun direction.
-    expect(meshFrag).toContain('stellata_twilightIrradiance(sunCos, uScaleHeightR,');
+    // skylight term must not be handed the deflattened sun direction.
+    expect(meshFrag).toContain('stellata_skyIrradiance(sunCos, uScaleHeightR,');
     expect(meshFrag).toContain('float sunCos = dot(n, uSunDirView);');
   });
 });
 
-describe('twilight on the night-side surface', () => {
-  it('is the shadow-edge altitude over the scale height', () => {
+describe('skylight on the surface', () => {
+  it('hangs the twilight falloff on the shadow-edge altitude over the scale height', () => {
     expect(scatter).toContain(
       'return 1.0 / sqrt(max(1.0 - sunCos * sunCos, 1e-12)) - 1.0;');
+    expect(scatter).toContain('float tail = exp(-h / hR)');
     expect(scatter).toContain(
-      'exp(-stellata_shadowEdgeAltitude(sunCos) / hR)');
+      '+ STELLATA_TWILIGHT_TAIL_AMP * exp(-h / (STELLATA_TWILIGHT_TAIL_REACH * hR));');
+  });
+
+  it('derives the terminator anchor from the Chapman column, not a fixed fraction', () => {
+    expect(scatter).toContain('float ch = sqrt(PI / (2.0 * hR));');
+    expect(scatter).toContain('vec3 tBar = (1.0 - exp(-x)) / x;');
+    expect(scatter).toContain('vec3 fTerm = 0.25 * tauScatter * tBar * exp(-tauAbsorb);');
+    expect(scatter).not.toMatch(/TWILIGHT_SCATTER_FRAC/);
+  });
+
+  it('gives the lit side a beam-interception term that vanishes at the terminator', () => {
+    expect(scatter).toContain('float mu = max(sunCos, 0.0);');
+    expect(scatter).toContain('vec3 beam = (0.5 * mu) * (tauScatter / tauExt)');
+  });
+
+  it('partitions the anchor against the beam term instead of summing them', () => {
+    // Both describe the same photons at opposite solar elevations, so carrying
+    // the horizon-sun anchor to noon double-counts it — README.md § Skylight.
+    expect(scatter).toContain('return fTerm * (tail * (1.0 - mu)) + beam;');
   });
 
   it('rides the surface scalar, added to the direct term rather than the airlight', () => {
     // It is light reflected off the ground, so it needs the albedo-bearing
     // scalar; folding it into the airlight would skip the surface entirely.
     expect(meshFrag).toMatch(/vec3 surfaceScale = base \* uSurfaceLuminance \* shadow;/);
-    expect(meshFrag).toMatch(/col \+= surfaceScale \* stellata_twilightIrradiance\(/);
+    expect(meshFrag).toMatch(/col \+= surfaceScale \* stellata_skyIrradiance\(/);
     // uAirlightLuminance scales the march and nothing else.
     expect(meshFrag.match(/uAirlightLuminance/g)).toHaveLength(2); // declaration + use
   });
 
-  it('takes the scattering optical depth only — absorption removes light', () => {
+  it('splits scattering from absorption — one redirects light, the other removes it', () => {
     expect(scatter).toContain('return betaRs * hR + vec3(betaMs * hM);');
     expect(meshFrag).toContain(
       'stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM)');
+    expect(meshFrag).toContain('uBetaAbsorb * uScaleHeightM');
   });
 });

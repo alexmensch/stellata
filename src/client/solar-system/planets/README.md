@@ -46,9 +46,8 @@ src/client/solar-system/planets/
                                   out, and the day map's measured mean
                                   luminance. Its own README.
   glare/                          Reflected-glare billboard shaders: the
-                                  shared star-perceptual point, the
-                                  photocentre shift, uGlareGain. Its own
-                                  README.
+                                  shared star-perceptual point and the
+                                  photocentre shift. Its own README.
   rings/                          Ring-annulus shaders and the radial
                                   strip. Its own README.
   rotation/                       Pole + prime-meridian elements and the
@@ -221,8 +220,8 @@ crossfade.
   reads exactly like a star of its apparent magnitude, on the same
   emission rule the star field runs. That is the load-bearing invariant:
   **visibility matches magnitude.** The billboard's own behaviour — the
-  photocentre shift, why a resolved mesh hides the glare's core, and
-  `uGlareGain` — is `glare/README.md`.
+  photocentre shift and why a resolved mesh hides the glare's core — is
+  `glare/README.md`.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -236,7 +235,7 @@ crossfade.
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; an airless night side is black (no
   ambient term), an atmospheric one is lit by twilight
-  (`../atmosphere/README.md` § Twilight). Three scalars refine it, all
+  (`../atmosphere/README.md` § Skylight). Three scalars refine it, all
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
@@ -247,7 +246,9 @@ crossfade.
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
     unit, pre-divided by the disc means of everything the shader
-    multiplies on top (§ Physical-luminance emission). Surface-only: the
+    multiplies on top (§ Physical-luminance emission) and, for an
+    atmospheric body, less the share of that flux its airlight already
+    supplies (`../atmosphere/README.md` § Flux bookkeeping). Surface-only: the
     reflected glare is the star-perceptual point (driven by appMag,
     above), so this shades the mesh, not the glare. Body-kind-agnostic —
     planets, moons, and future lit bodies all read the one scalar.
@@ -260,7 +261,7 @@ crossfade.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
     the terminator (Venus 0.08 widest; Titan the one moon with a band;
     undefined = airless hard cut). What actually lights the night side
-    is a separate physical term — `../atmosphere/README.md` § Twilight.
+    is a separate physical term — `../atmosphere/README.md` § Skylight.
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward

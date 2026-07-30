@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import {
-  DEFAULT_GLARE_GAIN,
   GLARE_PHOTOCENTRE_SHIFT,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
@@ -41,7 +42,11 @@ describe('reflected-glare calibration constants', () => {
     expect(GLARE_PHOTOCENTRE_SHIFT).toBeLessThanOrEqual(1);
   });
 
-  it('defaults the glare peak multiplier to 1 (planet glare = star of its mag)', () => {
-    expect(DEFAULT_GLARE_GAIN).toBe(1);
+  it('has no glare peak multiplier — a planet reads as a star of its mag', () => {
+    // The invariant used to be defended by a debug knob defaulting to 1;
+    // now nothing can multiply the peak. glare/README.md.
+    const glareVert = readFileSync(
+      fileURLToPath(new URL('./glare/planet.vert.glsl', import.meta.url)), 'utf8');
+    expect(glareVert).not.toMatch(/uGlareGain/);
   });
 });

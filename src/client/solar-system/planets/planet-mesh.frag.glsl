@@ -109,11 +109,13 @@ void main() {
   vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
-    // Twilight: the lit air overhead scattering host light down. sunCos is the
+    // Skylight: the air overhead scattering host light down — noon skylight on
+    // the lit side, the twilight band past the terminator. sunCos is the
     // REAL-space cosine, unlike the march below — solar depression is measured
     // against the ground observer's true local horizontal, the ellipsoid normal.
-    col += surfaceScale * stellata_twilightIrradiance(sunCos, uScaleHeightR,
-      stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM));
+    col += surfaceScale * stellata_skyIrradiance(sunCos, uScaleHeightR,
+      stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM),
+      uBetaAbsorb * uScaleHeightM);
 
     // Airlight in front of this fragment + the transmittance the surface
     // radiance loses on its way out, marched in the unit-sphere frame. The

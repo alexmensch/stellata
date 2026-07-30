@@ -38,8 +38,12 @@ import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
 import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
+  type AtmoDiscMeans,
+  type AtmosphereParams,
   MIE_G_DEFAULT,
   SUN_COLOUR,
+  atmoDiscMeans,
+  atmosphereParamsOf,
 } from '../atmosphere/atmosphere-scattering-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
@@ -61,40 +65,17 @@ const ATMO_DEFINES = { ATMO_N_VIEW, ATMO_N_LIGHT } as const;
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 
-/** Live-tunable global atmosphere multipliers (debug 'Atmosphere' panel).
- *  Applied on top of every body's calibrated base params. */
-export interface AtmosphereTuning {
-  /** Scales total optical depth (scatter + absorb) — the 'dial Titan down'. */
-  densityMul: number;
-  /** 0 = pure Rayleigh, 0.5 = per-body balance, 1 = pure Mie. */
-  rayleighMieBalance: number;
-  /** Multiplies both scale heights. */
-  scaleHeightMul: number;
-  /** Illuminant strength. */
-  sunIntensity: number;
-}
-
-const DEFAULT_ATMO_TUNING: AtmosphereTuning = {
-  densityMul: 1,
-  rayleighMieBalance: 0.5,
-  scaleHeightMul: 1,
-  sunIntensity: 1,
-};
-
-/** Per-body scattering constants in planet-radius units, derived once from
- *  the PlanetAtmosphere vertical optical depths. */
+/** Per-body scattering state in planet-radius units: the row's own params and
+ *  the disc means that normalise what the shader emits from them. Both derived
+ *  once — there is no global multiplier on a published optical depth, by
+ *  design (`../atmosphere/README.md` § No global knobs). */
 interface AtmoBase {
-  rAtmo: number;
   /** `polarRadiusRatio` — the shaders scale the ray's polar component by its
    *  reciprocal so the unit-sphere march geometry describes the body drawn. */
   polarR: number;
-  hR0: number;
-  hM0: number;
-  betaRs0: readonly [number, number, number];
-  betaMs0: number;
-  betaA0: readonly [number, number, number];
-  g: number;
   sunColour: readonly [number, number, number];
+  params: AtmosphereParams;
+  discMeans: AtmoDiscMeans;
 }
 
 function computeAtmoBase(
@@ -102,18 +83,15 @@ function computeAtmoBase(
   polarR: number,
   atmo: PlanetAtmosphere,
 ): AtmoBase {
-  const hR0 = atmo.rayleighHeightKm / radiusKm;
-  const hM0 = atmo.mieHeightKm / radiusKm;
+  const params = atmosphereParamsOf(atmo, radiusKm);
+  const sunColour = atmo.sunColour ?? SUN_COLOUR;
   return {
-    rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
     polarR,
-    hR0,
-    hM0,
-    betaRs0: [atmo.rayleighCoeff[0] / hR0, atmo.rayleighCoeff[1] / hR0, atmo.rayleighCoeff[2] / hR0],
-    betaMs0: atmo.mieCoeff / hM0,
-    betaA0: [atmo.absorbCoeff[0] / hM0, atmo.absorbCoeff[1] / hM0, atmo.absorbCoeff[2] / hM0],
-    g: atmo.mieG ?? MIE_G_DEFAULT,
-    sunColour: atmo.sunColour ?? SUN_COLOUR,
+    sunColour,
+    params,
+    // The airlight rides the illuminant and the surface does not, so the
+    // normaliser has to know which.
+    discMeans: atmoDiscMeans(params, relativeLuminance(sunColour)),
   };
 }
 
@@ -235,7 +213,6 @@ export class PlanetMeshLayer {
   private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
-  private readonly atmoTuning: AtmosphereTuning = { ...DEFAULT_ATMO_TUNING };
 
   constructor(
     field: PlanetBodyField,
@@ -351,7 +328,7 @@ export class PlanetMeshLayer {
         ? meshSurfaceLuminance(
             exposure, omegaPx, hostAbsmag, dHpPc, planet.albedo,
             this.baseMeanLuminance(planet, texState),
-            entry.atmoBase !== undefined,
+            entry.atmoBase?.discMeans,
           )
         : 0;
       if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);
@@ -549,26 +526,20 @@ export class PlanetMeshLayer {
     base: AtmoBase,
     radiusPc: number,
   ): void {
-    const t = this.atmoTuning;
-    const rayMul = t.densityMul * 2 * (1 - t.rayleighMieBalance);
-    const mieMul = t.densityMul * 2 * t.rayleighMieBalance;
+    const p = base.params;
     (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
     (u.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     u.uPolarRadiusR.value = base.polarR;
     u.uRadiusPc.value = radiusPc;
-    u.uAtmoRadius.value = base.rAtmo;
-    u.uScaleHeightR.value = base.hR0 * t.scaleHeightMul;
-    u.uScaleHeightM.value = base.hM0 * t.scaleHeightMul;
-    (u.uBetaRayleigh.value as THREE.Vector3).set(
-      base.betaRs0[0] * rayMul, base.betaRs0[1] * rayMul, base.betaRs0[2] * rayMul);
-    u.uBetaMie.value = base.betaMs0 * mieMul;
-    (u.uBetaAbsorb.value as THREE.Vector3).set(
-      base.betaA0[0] * mieMul, base.betaA0[1] * mieMul, base.betaA0[2] * mieMul);
-    u.uMieG.value = base.g;
+    u.uAtmoRadius.value = p.rAtmo;
+    u.uScaleHeightR.value = p.hR;
+    u.uScaleHeightM.value = p.hM;
+    (u.uBetaRayleigh.value as THREE.Vector3).set(p.betaRs[0], p.betaRs[1], p.betaRs[2]);
+    u.uBetaMie.value = p.betaMs;
+    (u.uBetaAbsorb.value as THREE.Vector3).set(p.betaA[0], p.betaA[1], p.betaA[2]);
+    u.uMieG.value = p.g;
     (u.uSunColour.value as THREE.Vector3).set(
-      base.sunColour[0] * t.sunIntensity,
-      base.sunColour[1] * t.sunIntensity,
-      base.sunColour[2] * t.sunIntensity);
+      base.sunColour[0], base.sunColour[1], base.sunColour[2]);
   }
 
   /** Pose the limb-halo shell on the body and feed it the shared scatter
@@ -591,14 +562,6 @@ export class PlanetMeshLayer {
     (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
     atmo.material.uniforms.uAirlightLuminance.value = airlightL;
     atmo.material.uniforms.uFade.value = fade;
-  }
-
-  getAtmosphereTuning(): AtmosphereTuning {
-    return { ...this.atmoTuning };
-  }
-
-  setAtmosphereTuning(patch: Partial<AtmosphereTuning>): void {
-    Object.assign(this.atmoTuning, patch);
   }
 
   private createEntry(idx: number, planet: Planet): MeshEntry {

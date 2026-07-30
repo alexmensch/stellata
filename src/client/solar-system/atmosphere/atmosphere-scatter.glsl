@@ -6,11 +6,12 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_SCATTER_FRAC in
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_TAIL_* in
 // atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
-const float STELLATA_MS_STRENGTH = 0.0667;
+const float STELLATA_MS_STRENGTH = STELLATA_INV_4PI;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
-const float STELLATA_TWILIGHT_SCATTER_FRAC = 0.055;
+const float STELLATA_TWILIGHT_TAIL_AMP = 1.459e-4;
+const float STELLATA_TWILIGHT_TAIL_REACH = 8.95;
 // Stands in for an unbounded shadow span; only ever min/maxed against a ray
 // parameter, never multiplied, so it just has to dwarf one.
 const float STELLATA_SHADOW_FAR = 1e20;
@@ -159,13 +160,25 @@ vec3 stellata_verticalScatterTau(vec3 betaRs, float betaMs, float hR, float hM) 
   return betaRs * hR + vec3(betaMs * hM);
 }
 
-// Twilight: the fraction of host irradiance the lit atmosphere scatters down
-// onto the surface below it. The shadow edge climbing out of the scattering
-// column is what extinguishes it, so its angular reach is the body's own
-// scale height.
-vec3 stellata_twilightIrradiance(float sunCos, float hR, vec3 tauScatter) {
-  return tauScatter * (STELLATA_TWILIGHT_SCATTER_FRAC
-    * exp(-stellata_shadowEdgeAltitude(sunCos) / hR));
+// Skylight: the fraction of host irradiance the atmosphere scatters down onto
+// the surface, per channel — one derived model covering the lit hemisphere
+// and the twilight band. The horizon-sun anchor and the beam term describe the
+// same photons at opposite solar elevations, so they partition (1 − mu) / mu
+// rather than summing. Anchors: README.md § Skylight; mirror skyIrradianceFrac.
+vec3 stellata_skyIrradiance(float sunCos, float hR, vec3 tauScatter, vec3 tauAbsorb) {
+  float ch = sqrt(PI / (2.0 * hR));
+  float h = stellata_shadowEdgeAltitude(sunCos);
+  float tail = exp(-h / hR)
+    + STELLATA_TWILIGHT_TAIL_AMP * exp(-h / (STELLATA_TWILIGHT_TAIL_REACH * hR));
+  vec3 tauExt = max(tauScatter + tauAbsorb, vec3(1e-6));
+  vec3 x = tauExt * ch;
+  vec3 tBar = (1.0 - exp(-x)) / x;
+  vec3 fTerm = 0.25 * tauScatter * tBar * exp(-tauAbsorb);
+  float mu = max(sunCos, 0.0);
+  float muSafe = max(mu, 1e-4);
+  vec3 beam = (0.5 * mu) * (tauScatter / tauExt)
+    * (1.0 - exp(-tauExt / muSafe)) * exp(-tauAbsorb / muSafe);
+  return fTerm * (tail * (1.0 - mu)) + beam;
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along

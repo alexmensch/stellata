@@ -18,7 +18,7 @@ src/client/solar-system/planets/glare/
 The glare is the **shared star-perceptual point** — a planet reads
 *exactly* like a star of its apparent magnitude: size =
 `perceptualAppSizePx(appMag)`, peak =
-`stellataPointSourcePeak(uExposure, appMag, 0.5·physSize) · uGlareGain` —
+`stellataPointSourcePeak(uExposure, appMag, 0.5·physSize)` —
 the same emission rule the star field runs
 (`../emission/README.md`). This is the load-bearing invariant:
 **visibility matches magnitude.** A body visible in chart mode
@@ -52,10 +52,10 @@ That occlusion is the local depth pass; the old core mask is gone.
 
 The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
-channel (`../../../hdr/statistic/README.md`). `uGlareGain` rides both, so
-the debug knob cannot desynchronise them.
+channel (`../../../hdr/statistic/README.md`).
 
-`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
-multiplier: planet-glare brightness against a star of the same magnitude
-(1 = identical). It is a debug knob, not a calibration one — the
-calibration lives in `../emission/README.md`.
+**There is no gain on the peak, and adding one would break the invariant
+above.** A `uGlareGain` debug multiplier rode both channels until the
+emission rule was physical; at 1 it did nothing, and at anything else it made
+a planet read as a star of a *different* magnitude. `mesh-crossfade.test.ts`
+pins its absence from the shader. Calibration lives in `../emission/README.md`.

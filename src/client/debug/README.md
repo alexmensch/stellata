@@ -30,12 +30,6 @@ src/client/debug/
   star-tuning.ts                  Live-tunable star-disc knobs, plus the
                                   derived-K readout (K, plate scale, FOV,
                                   resulting sizeMin/Max).
-  planet-tuning.ts                Reflected-planet-glare peak slider
-                                  (uGlareGain — planet glare brightness
-                                  vs a star of the same magnitude).
-  atmosphere-tuning.ts            Four global atmosphere-scattering
-                                  multipliers (density, Rayleigh↔Mie
-                                  balance, scale height, sun intensity).
   (+ tests for the pure helpers.)
 ```
 
@@ -354,11 +348,8 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with ten sections:
-Star disc (`star-tuning.ts`),
-Planet glare (`planet-tuning.ts`),
-Atmosphere (`atmosphere-tuning.ts`),
-Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
+collapsible host with eight sections:
+Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,

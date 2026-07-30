@@ -4,6 +4,7 @@
 
 import { ARCSEC_TO_RAD } from '../../../util/astronomy-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../hdr/emission-pure';
+import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
 import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../perceptual-magnitude';
 
 /** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)`.
@@ -76,6 +77,24 @@ export function hostIrradianceLuminance(
  *
  * Phase is deliberately absent — the shader's own terminator integrates
  * to φ(α), and `uPhaseScale` corrects that to the body's measured curve.
+ *
+ * `atmo` (`atmoDiscMeans`, present iff the body has an atmosphere) makes the
+ * same claim over the three things an atmosphere then does to that disc, all
+ * of them measured through the march the shader runs:
+ *
+ * - the view-path transmittance DIMS the shaded surface, so `atmo.surface`
+ *   replaces the Lambert 2/3 rather than adding to it;
+ * - the skylight is ADDED inside the same product, so `atmo.sky` joins it;
+ * - the airlight is added OUTSIDE it, on `hostIrradianceLuminance`, which no
+ *   surface scalar can normalise. It takes its share of the body's flux off
+ *   the top instead — `π/p · atmo.airlight` — and the reflected terms get the
+ *   remainder. The body's geometric albedo already counts the light its air
+ *   scatters, so leaving that share in would draw it twice.
+ *
+ * A body whose airlight alone exceeds its measured flux (`share > 1` — Titan,
+ * whose disc IS its haze) clamps to zero: the model says the haze is brighter
+ * than the body, and that is a per-body optical-depth error to read off the
+ * clamp, not something to hide by scaling the airlight.
  */
 export function meshSurfaceLuminance(
   exposure: number,
@@ -84,13 +103,19 @@ export function meshSurfaceLuminance(
   dHpPc: number,
   albedo: number,
   baseMeanLuminance: number,
-  hasAtmosphere: boolean,
+  atmo?: AtmoDiscMeans,
 ): number {
   const meanL = surfaceBrightnessLuminance(
     exposure,
     bodySurfaceBrightnessMagArcsec2(hostAbsmag, dHpPc, albedo),
     omegaPxArcsec2,
   );
-  const shadingDiscMean = lambertLimbDiscMean(hasAtmosphere ? 1 : LIMB_FLOOR, LIMB_EXP);
-  return meanL / (shadingDiscMean * Math.max(baseMeanLuminance, 1e-6));
+  const shadingDiscMean = atmo !== undefined
+    ? atmo.surface + atmo.sky
+    : lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
+  const airlightShare = atmo !== undefined ? (Math.PI / albedo) * atmo.airlight : 0;
+  return (
+    (meanL * Math.max(1 - airlightShare, 0)) /
+    (shadingDiscMean * Math.max(baseMeanLuminance, 1e-6))
+  );
 }

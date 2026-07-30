@@ -2,6 +2,9 @@
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § Atmospheres.
 
+import { relativeLuminance } from '../../hdr/tonemap-pure';
+import type { PlanetAtmosphere } from '../planet-system';
+
 export const ATMO_N_VIEW = 16;
 export const ATMO_N_LIGHT = 10;
 export const MIE_G_DEFAULT = 0.76;
@@ -11,23 +14,17 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Isotropic multiple-scattering fill weight. Single scattering alone leaves
- *  optically thick hazes (Venus, Titan) far too dark — most of their light
- *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
- *  opacity × sunlit.
- *
- *  0.0667 is 0.2/3, and the /3 is load-bearing: the 0.2 was judged by eye
- *  while single scatter still carried a 3× gain, so carrying it unchanged
- *  past that gain's deletion would triple this term's share of the airlight
- *  and grey out the surface texture the weight exists to stay under.
- *  README.md § Multiple-scattering fill has the shares. */
-export const MS_STRENGTH = 0.0667;
+const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
+const INV_4PI = 1 / (4 * Math.PI);
+
+/** Isotropic multiple-scattering fill weight — the isotropic source-function
+ *  approximation, so it IS 1/(4π): the same redistribution the skylight
+ *  terminator anchor's ¼ comes from. Derivation + measured shares:
+ *  README.md § Multiple-scattering fill. */
+export const MS_STRENGTH = INV_4PI;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
-
-const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
-const INV_4PI = 1 / (4 * Math.PI);
 
 export type Vec3 = readonly [number, number, number];
 
@@ -156,22 +153,61 @@ export function verticalScatterOpticalDepth(p: AtmosphereParams): Vec3 {
   return [p.betaRs[0] * p.hR + mie, p.betaRs[1] * p.hR + mie, p.betaRs[2] * p.hR + mie];
 }
 
-/** Share of the host's perpendicular irradiance that a unit vertical
- *  scattering optical depth delivers to the ground as skylight: ¼ from the
- *  hemispheric average of an isotropic in-scatter, times the ≈0.22 slant
- *  transmission a horizon sun reaches the scattering column through.
- *  Calibrated on Earth at the geometric terminator, where twilight measures
- *  ~400 lx against full sun's ~100 klx. */
-export const TWILIGHT_SCATTER_FRAC = 0.055;
+/** Vertical absorption optical depth per channel — the aerosol absorption
+ *  coefficient over its own (Mie) scale height. */
+export function verticalAbsorptionOpticalDepth(p: AtmosphereParams): Vec3 {
+  return [p.betaA[0] * p.hM, p.betaA[1] * p.hM, p.betaA[2] * p.hM];
+}
 
-/** Twilight: the fraction of host irradiance the lit atmosphere scatters
- *  down onto the surface below it, per channel. Its angular reach is the
- *  body's own scale height — the shadow edge climbing out of the scattering
- *  column is what extinguishes it, a few degrees on Earth and ~10° on
- *  Titan. Mirrors stellata_twilightIrradiance in the GLSL. */
-export function twilightIrradianceFrac(sunCos: number, hR: number, tauScatter: Vec3): Vec3 {
-  const f = TWILIGHT_SCATTER_FRAC * Math.exp(-shadowEdgeAltitude(sunCos) / hR);
-  return [tauScatter[0] * f, tauScatter[1] * f, tauScatter[2] * f];
+/** Chapman airmass of a horizon sun for an exponential atmosphere of scale
+ *  height `hR` (planet-radius units): √(π/(2·hR)) — ~35 on Earth. Inlined as
+ *  the same expression in the GLSL mirror, which the drift test pins. */
+function chapmanHorizon(hR: number): number {
+  return Math.sqrt(Math.PI / (2 * hR));
+}
+
+/** Multiple-scattering twilight tail: relative amplitude and reach (in
+ *  Rayleigh scale heights) of the second exponential, fit through the
+ *  measured Earth horizontal illuminance at 12° and 18° of solar depression
+ *  (0.008 lx and 0.0006 lx against ~400 lx at the geometric terminator).
+ *  The pure test re-derives both from that table. */
+export const TWILIGHT_TAIL_AMP = 1.459e-4;
+export const TWILIGHT_TAIL_REACH = 8.95;
+
+/**
+ * Skylight: the fraction of host irradiance the atmosphere scatters down
+ * onto the surface, per channel — one derived model covering the lit
+ * hemisphere and the twilight band. Mirrors stellata_skyIrradiance in the
+ * GLSL; derivation and measured anchors: README.md § Skylight.
+ *
+ * The horizon-sun anchor and the beam term describe the same photons at
+ * opposite solar elevations, so they partition as `(1 − μ_s)` / `μ_s` rather
+ * than summing — carrying the anchor to noon double-counts it.
+ */
+export function skyIrradianceFrac(
+  sunCos: number,
+  hR: number,
+  tauScatter: Vec3,
+  tauAbsorb: Vec3,
+): Vec3 {
+  const ch = chapmanHorizon(hR);
+  const h = shadowEdgeAltitude(sunCos);
+  const tail =
+    Math.exp(-h / hR) + TWILIGHT_TAIL_AMP * Math.exp(-h / (TWILIGHT_TAIL_REACH * hR));
+  const mu = Math.max(sunCos, 0);
+  const muSafe = Math.max(mu, 1e-4);
+  const out: [number, number, number] = [0, 0, 0];
+  for (let c = 0; c < 3; c++) {
+    const tauExt = Math.max(tauScatter[c] + tauAbsorb[c], 1e-6);
+    const x = tauExt * ch;
+    const tBar = (1 - Math.exp(-x)) / x;
+    const fTerm = 0.25 * tauScatter[c] * tBar * Math.exp(-tauAbsorb[c]);
+    const beam =
+      0.5 * mu * (tauScatter[c] / tauExt) *
+      (1 - Math.exp(-tauExt / muSafe)) * Math.exp(-tauAbsorb[c] / muSafe);
+    out[c] = fTerm * tail * (1 - mu) + beam;
+  }
+  return out;
 }
 
 export interface AtmosphereParams {
@@ -190,14 +226,49 @@ export interface AtmosphereParams {
   readonly g: number;
 }
 
+/** March params for one authored per-body row. The table carries **vertical
+ *  optical depths**; dividing each by its own scale height is what turns them
+ *  into the surface extinction coefficients the integrator marches, and this
+ *  is the only place that conversion happens. */
+export function atmosphereParamsOf(
+  atmo: PlanetAtmosphere,
+  radiusKm: number,
+): AtmosphereParams {
+  const hR = atmo.rayleighHeightKm / radiusKm;
+  const hM = atmo.mieHeightKm / radiusKm;
+  return {
+    rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
+    hR,
+    hM,
+    betaRs: [
+      atmo.rayleighCoeff[0] / hR,
+      atmo.rayleighCoeff[1] / hR,
+      atmo.rayleighCoeff[2] / hR,
+    ],
+    betaMs: atmo.mieCoeff / hM,
+    betaA: [
+      atmo.absorbCoeff[0] / hM,
+      atmo.absorbCoeff[1] / hM,
+      atmo.absorbCoeff[2] / hM,
+    ],
+    g: atmo.mieG ?? MIE_G_DEFAULT,
+  };
+}
+
 export interface ScatterResult {
   /** In-scattered airlight per channel, as a fraction of the host's
    *  perpendicular irradiance — `∫β_s·P·T dl` is already dimensionless, so
    *  the caller's `uAirlightLuminance` is the whole of the scale and there
-   *  is no gain to apply. */
+   *  is no gain to apply. Single scatter plus `msFill`. */
   readonly inscatter: Vec3;
   /** View-path transmittance per channel — multiplies the surface behind. */
   readonly transmittance: Vec3;
+  /** The isotropic multiple-scattering fill's own contribution to
+   *  `inscatter`. Broken out on the CPU side only (the shader has no use
+   *  for it) so its share can be measured instead of re-derived — it is
+   *  the majority of the airlight at physical depths, which is the thing
+   *  to watch: README.md § Multiple-scattering fill. */
+  readonly msFill: Vec3;
 }
 
 /** Integrate single-scattered airlight (+ a cheap multiple-scattering fill)
@@ -217,7 +288,7 @@ export function scatterAlongRay(
 ): ScatterResult {
   const span = tStop - tStart;
   if (span <= 0) {
-    return { inscatter: [0, 0, 0], transmittance: [1, 1, 1] };
+    return { inscatter: [0, 0, 0], transmittance: [1, 1, 1], msFill: [0, 0, 0] };
   }
   const segLen = span / ATMO_N_VIEW;
   const shadow = shadowSpan(o, d, sunDir);
@@ -272,6 +343,7 @@ export function scatterAlongRay(
   }
 
   const transmittance: [number, number, number] = [0, 0, 0];
+  const msFill: [number, number, number] = [0, 0, 0];
   const litFrac = litSum / ATMO_N_VIEW;
   for (let c = 0; c < 3; c++) {
     transmittance[c] = Math.exp(-(p.betaRs[c] * viewOdR + (p.betaMs + p.betaA[c]) * viewOdM));
@@ -279,8 +351,59 @@ export function scatterAlongRay(
     // sunlit. Negligible when thin (opacity → 0), dominant when thick.
     const scatterC = p.betaRs[c] + p.betaMs;
     const ssAlbedo = scatterC / Math.max(scatterC + p.betaA[c], 1e-6);
-    const ms = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
-    inscatter[c] += ms;
+    msFill[c] = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
+    inscatter[c] += msFill[c];
   }
-  return { inscatter, transmittance };
+  return { inscatter, transmittance, msFill };
+}
+
+/** Full-phase disc means (luma) of everything the mesh shader lays over the
+ *  body's flux — the normalisers that keep the drawn disc integrating to the
+ *  body's true flux. README.md § Flux bookkeeping. */
+export interface AtmoDiscMeans {
+  /** ⟨μ · luma(T_view)⟩ — the Lambert disc mean of what survives the view
+   *  path. The airless 2/3 in the transparent limit, and *less* than that
+   *  whenever the column extincts: the atmosphere dims the ground it lights. */
+  readonly surface: number;
+  /** ⟨luma(E_sky) · luma(T_view)⟩ — skylight reflected off the ground, out
+   *  through the same column. Rides the same scalar as `surface`. */
+  readonly sky: number;
+  /** ⟨luma(inscatter)⟩ · luma(illuminant) — the airlight in front of the
+   *  disc, as a fraction of host irradiance and carrying no albedo, so the
+   *  caller scales it by π/p to compare against the body's own flux. */
+  readonly airlight: number;
+}
+
+const DISC_MEAN_N = 64;
+
+/**
+ * Measure the disc means through the same march the shader runs, at full
+ * phase — where a disc point's sun cosine equals its emission cosine μ and
+ * the area weight is 2μ dμ. `illuminantLuma` is luma(uSunColour): the
+ * airlight rides the illuminant, the surface does not.
+ *
+ * Orthographic-limit geometry, as `lambertLimbDiscMean` also assumes: the
+ * view ray drops from the shell top onto the surface point along the
+ * sun-facing axis. Converged to 5 digits by `DISC_MEAN_N`.
+ */
+export function atmoDiscMeans(p: AtmosphereParams, illuminantLuma = 1): AtmoDiscMeans {
+  const tauScatter = verticalScatterOpticalDepth(p);
+  const tauAbsorb = verticalAbsorptionOpticalDepth(p);
+  const sunDir: Vec3 = [0, 0, 1];
+  const dir: Vec3 = [0, 0, -1];
+  let surface = 0;
+  let sky = 0;
+  let airlight = 0;
+  for (let i = 0; i < DISC_MEAN_N; i++) {
+    const mu = (i + 0.5) / DISC_MEAN_N;
+    const off = Math.sqrt(Math.max(1 - mu * mu, 0));
+    const zTop = Math.sqrt(Math.max(p.rAtmo * p.rAtmo - off * off, 0));
+    const march = scatterAlongRay([off, 0, zTop], dir, 0, zTop - mu, sunDir, p);
+    const tView = relativeLuminance(march.transmittance);
+    const weight = (2 * mu) / DISC_MEAN_N;
+    surface += mu * tView * weight;
+    sky += relativeLuminance(skyIrradianceFrac(mu, p.hR, tauScatter, tauAbsorb)) * tView * weight;
+    airlight += relativeLuminance(march.inscatter) * weight;
+  }
+  return { surface, sky, airlight: airlight * illuminantLuma };
 }
