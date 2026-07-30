@@ -32,6 +32,24 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
     return min(flux / spread, STELLATA_LUMA_CEIL);
 }
 
+/** The same kernel renormalised to carry the source's true FLUX rather than
+ *  its true peak — the adaptation statistic's flux channel. The display
+ *  kernel preserves peak and inflates energy, so dividing by its own area
+ *  integral `fluxIntegral * D^2` (perceptualDiscFluxIntegral) makes the
+ *  integral return stellataLuminanceForMag instead. Clamped like the display
+ *  peak: a clamped read is a lower bound the adaptation loop closes from
+ *  above. See ../hdr/exposure/README.md § What the statistic measures. */
+float stellataKernelFluxPeak(
+    float exposure,
+    float appMag,
+    float quadDiameterPx,
+    float fluxIntegral
+) {
+    float area = fluxIntegral * quadDiameterPx * quadDiameterPx;
+    float flux = stellataLuminanceForMag(exposure, appMag);
+    return min(flux / max(area, 1e-9), STELLATA_LUMA_CEIL);
+}
+
 /** Luminance one pixel receives from an extended source of surface
  *  brightness `magPerArcsec2`. The pixel's flux magnitude is
  *  `magPerArcsec2 - 2.5*log10(omegaPxArcsec2)`, and feeding that through
