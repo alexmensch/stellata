@@ -166,11 +166,11 @@ figures and the Latin names — one switch for every piece of constellation
 chrome. The shell's registry entry ANDs that with the shared warp gate.
 
 **Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
-with the coordinate sphere, at half its weight — and dotted where the grid is
-solid (§ Chart-mode layer), so the two reference layers stay distinguishable
-when drawn together. `renderOrder −0.8` puts the
-partition under the constellation figure (−0.75) and over the galactic
-disc / grid (−1); `depthTest` is off because the chart starfield renders
+with the coordinate sphere, at half its weight — and dotted where the grid
+is solid (§ Chart-mode layer), so the two reference layers stay
+distinguishable when drawn together. `renderOrder −0.8` puts the partition
+under the constellation figure (−0.75) and over the galactic disc / grid
+(−1); `depthTest` is off because the chart starfield renders
 depth-disabled, the same treatment the figure takes in chart mode. The
 material is bound through `setBuiltinChromeColour`'s **chart** variant —
 chart mode bypasses the HDR resolve, so the tone-map inverse must not be

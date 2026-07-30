@@ -192,12 +192,12 @@ rotating the reference CCW in world space makes content appear CW.
 
 ### Snap-to-level — an alignment guide, not a release-time fixup
 
-While rolling, the view **sticks** to level for as long as the
-requested roll stays inside `SNAP_TO_LEVEL_DEG` (2°) of it: the image
-visibly stops rotating at level, then breaks free on the way out. That
-stick *is* the feedback — the same affordance as Keynote / PowerPoint
-alignment guides. A release-only snap gives the user no way to feel where
-level is, which is the point of having it.
+While rolling, the view **sticks** to level for as long as the requested
+roll stays inside `SNAP_TO_LEVEL_DEG` (2°) of it: the image visibly stops
+rotating at level, then breaks free on the way out. That stick *is* the
+feedback — the same affordance as Keynote / PowerPoint alignment guides. A
+release-only snap gives the user no way to feel where level is, which is
+the point of having it.
 
 `applyRollDelta` implements it against a **virtual roll**: while snapped,
 `rollSnapExcursion` keeps accumulating what the pointer asked for while
