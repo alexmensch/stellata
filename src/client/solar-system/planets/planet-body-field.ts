@@ -34,7 +34,7 @@ import {
   planetApparentMagnitude,
   SOFT_TAPER_MARGIN_MAG,
 } from '../perceptual-magnitude';
-import { pixelsPerRadianFromFovRad } from '../../util/orbit-line';
+import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
   pickFromCandidates,
@@ -839,10 +839,7 @@ export class PlanetBodyField {
     const cy = uz * vx - ux * vz;
     const cz = ux * vy - uy * vx;
     const angle = Math.atan2(Math.sqrt(cx * cx + cy * cy + cz * cz), ux * vx + uy * vy + uz * vz);
-    const pxPerRad = pixelsPerRadianFromFovRad(
-      this.magShared.uFovYRad.value,
-      this.magShared.uViewport.value.y,
-    );
+    const pxPerRad = pixelsPerRadianFromUniforms(this.magShared);
     return angle * pxPerRad < BODY_COLLAPSE_THRESHOLD_PX;
   }
 

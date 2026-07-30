@@ -30,6 +30,21 @@ export function pixelsPerRadianFromFovRad(fovRad: number, viewportHeightPx: numb
   return viewportHeightPx / fovRad;
 }
 
+/** The viewport / FOV slots a layer needs to size anything in screen pixels,
+ *  held **by reference** so a resize or FOV change reaches it with no
+ *  bookkeeping. The star pipeline's shared-uniforms map satisfies this
+ *  structurally, which is where every consumer's instance comes from. */
+export interface ScreenMetricUniforms {
+  uViewport: { value: THREE.Vector2 };
+  uFovYRad: { value: number };
+}
+
+/** `pixelsPerRadian` for the shared uniform slots — the live read, so a layer
+ *  never caches a value a resize would stale. */
+export function pixelsPerRadianFromUniforms(shared: ScreenMetricUniforms): number {
+  return pixelsPerRadianFromFovRad(shared.uFovYRad.value, shared.uViewport.value.y);
+}
+
 /** On-screen radius (px) of a feature of half-extent `sizePc` at range
  *  `distancePc`. */
 export function angularRadiusPx(sizePc: number, distancePc: number, pxPerRad: number): number {

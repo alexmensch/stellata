@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
+import type { ScreenMetricUniforms } from '../util/orbit-line';
 import {
   BOUNDARY_DOT_PX,
   BOUNDARY_GAP_PX,
   ConstellationBoundaryLayer,
-  type BoundarySharedUniforms,
 } from './constellation-boundary-layer';
 
 const ARTIFACT: BoundaryArtifact = {
@@ -30,7 +30,7 @@ const ORIGIN = new THREE.Vector3();
 const VIEWPORT_H_PX = 1080;
 const FOV_Y_RAD = Math.PI / 3.6;
 
-function sharedUniforms(): BoundarySharedUniforms {
+function sharedUniforms(): ScreenMetricUniforms {
   return {
     uFovYRad: { value: FOV_Y_RAD },
     uViewport: { value: new THREE.Vector2(1920, VIEWPORT_H_PX) },

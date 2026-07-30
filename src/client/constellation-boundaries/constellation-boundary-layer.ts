@@ -10,21 +10,16 @@ import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome-colour';
-import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc-uniforms';
 import {
   makeDashedOrbitLineMaterial,
   makeOrbitLineSegments,
-  pixelsPerRadianFromFovRad,
+  pixelsPerRadianFromUniforms,
+  type ScreenMetricUniforms,
 } from '../util/orbit-line';
 import {
   boundaryLineAttributes,
   resolveBoundaryFadeWindowPc,
 } from './boundary-layer-pure';
-
-/** The star pipeline's viewport / FOV slots, by reference, so a resize or FOV
- *  change reaches the dot pattern's world→pixel scale with no bookkeeping. */
-export type BoundarySharedUniforms =
-  Pick<PerceptualDiscUniforms, 'uViewport' | 'uFovYRad'>;
 
 // Under the constellation figure (−0.75) and over the galactic disc / grid
 // (−1): the asterism network is the chart's content and the partition is
@@ -62,7 +57,7 @@ export const BOUNDARY_GAP_PX = 3;
  */
 export class ConstellationBoundaryLayer {
   readonly group: THREE.Group;
-  private readonly shared: BoundarySharedUniforms;
+  private readonly shared: ScreenMetricUniforms;
   private readonly material: THREE.LineDashedMaterial;
   private lineSegments: THREE.LineSegments | null = null;
   private fade: BoundaryFadeTableWire | null = null;
@@ -70,7 +65,7 @@ export class ConstellationBoundaryLayer {
   // NaN so the first setMagnitudeLimit always misses and recomputes.
   private magLimit = NaN;
 
-  constructor(shared: BoundarySharedUniforms) {
+  constructor(shared: ScreenMetricUniforms) {
     this.group = new THREE.Group();
     this.group.renderOrder = BOUNDARY_RENDER_ORDER;
     this.group.visible = false;
@@ -134,10 +129,7 @@ export class ConstellationBoundaryLayer {
     // authored in. One scale covers the whole sphere: the arcs sit 50 kpc out
     // and the camera never leaves Sol's neighbourhood while they draw, so
     // every vertex is at effectively the same range.
-    this.material.scale = pixelsPerRadianFromFovRad(
-      this.shared.uFovYRad.value,
-      this.shared.uViewport.value.y,
-    ) / SPHERE_RADIUS_PC;
+    this.material.scale = pixelsPerRadianFromUniforms(this.shared) / SPHERE_RADIUS_PC;
     this.group.visible = true;
   }
 
