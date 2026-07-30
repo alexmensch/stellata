@@ -2,10 +2,9 @@
 // the frame's brightest visible pixel, and the cut the two imply. See
 // README.md § Adaptation.
 
-import { circleCircleLensArea } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { smoothstep } from '../../galactic/galactic-fade';
-import { MESH_FADE_MIN_PX } from '../../solar-system/planets/mesh-crossfade';
 import { luminanceForMagnitude } from '../emission-pure';
+import { visibleFraction } from './coverage/coverage-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
  *  measured, not chosen: the geometric mean of three independently
@@ -72,17 +71,18 @@ export function slewDm(applied: number, measured: number, blend: number): number
   return applied + (measured - applied) * blend;
 }
 
-/** True diameter below which a source stops occluding — the
- *  mesh-presence floor: a body this small draws no surface to hide
- *  behind. */
-export const ADAPT_OCCLUDER_MIN_PX = MESH_FADE_MIN_PX;
-
 /**
  * One light source's frame footprint. `diameterPx` is TRUE angular
  * extent in CSS pixels — never the K-exaggerated kernel, or the
  * footprint hack would drive adaptation. `fluxScale` carries real
  * losses (eclipse dim, window taper), never a display weight.
- * `cameraDistancePc` orders the occlusion pass and nothing else.
+ * `cameraDistancePc` places the source along its own view ray for the
+ * coverage measurement.
+ *
+ * `sourceKey` identifies the source across frames, because the coverage
+ * measurement lands one frame after the walk that requested it. Producers
+ * own disjoint ranges: bodies use their flat instance index, stars
+ * `-1 - starIdx`.
  */
 export interface LuminanceSample {
   appMag: number;
@@ -91,19 +91,35 @@ export interface LuminanceSample {
   screenY: number;
   cameraDistancePc: number;
   fluxScale: number;
+  sourceKey: number;
   label: string | null;
+}
+
+/** A star's `sourceKey`, in the negative half so it can never collide
+ *  with a body's flat instance index. */
+export function starSourceKey(starIdx: number): number {
+  return -1 - starIdx;
 }
 
 /** Radius of the footprint a source's flux is actually spread over,
  *  floored at the 1 px² an unresolved point occupies — the same
- *  `max(1, π·r²)` denominator `stellataPointSourcePeak` uses. Occlusion
- *  and the peak both run against this TRUE footprint, never against the
- *  widened edge-ramp disc. */
+ *  `max(1, π·r²)` denominator `stellataPointSourcePeak` uses. The peak
+ *  and the coverage pass's self-occlusion slack run against this TRUE
+ *  footprint; the two visibility terms take the widened disc below. */
 export function footprintRadiusPx(diameterPx: number): number {
   return Math.max(0.5 * diameterPx, POINT_SOURCE_RADIUS_PX);
 }
 
 const POINT_SOURCE_RADIUS_PX = Math.sqrt(1 / Math.PI);
+
+/** The disc BOTH visibility terms are evaluated over — the flux footprint
+ *  widened to `ADAPT_EDGE_RAMP_PX` across. Frame clipping integrates it and
+ *  the coverage taps spread over it, which is what makes their product
+ *  exact rather than two fractions of different regions. Mirrored in
+ *  `coverage.frag.glsl` as `tapRadiusPx`. */
+export function visibilityDiscRadiusPx(diameterPx: number): number {
+  return Math.max(footprintRadiusPx(diameterPx), 0.5 * ADAPT_EDGE_RAMP_PX);
+}
 
 /** Area of a disc of radius `r` centred at the origin intersected with
  *  the axis-aligned quadrant `[0,x] × [0,y]`, for `x, y ≥ 0`. */
@@ -161,53 +177,23 @@ export function sourceVisibleFraction(
   w: number,
   h: number,
 ): number {
-  const r = Math.max(footprintRadiusPx(diameterPx), 0.5 * ADAPT_EDGE_RAMP_PX);
+  const r = visibilityDiscRadiusPx(diameterPx);
   return discViewportOverlapArea(r, cx, cy, w, h) / (Math.PI * r * r);
 }
 
-/**
- * Fraction of `subject`'s footprint hidden behind the **nearer** drawn
- * discs in `samples` — a camera-path loss, composing multiplicatively
- * with the eclipse dim in `fluxScale`. Lens areas are summed, so
- * overlapping occluders double-count: the error is always toward
- * over-occluding and cannot invent light.
- */
-export function occludedFraction(
-  subject: LuminanceSample,
-  samples: readonly LuminanceSample[],
-  count: number,
-): number {
-  const r = footprintRadiusPx(subject.diameterPx);
-  const area = Math.PI * r * r;
-  let hidden = 0;
-  for (let i = 0; i < count; i++) {
-    const o = samples[i];
-    if (o === subject) continue;
-    if (o.cameraDistancePc >= subject.cameraDistancePc) continue;
-    if (o.diameterPx < ADAPT_OCCLUDER_MIN_PX) continue;
-    const dx = o.screenX - subject.screenX;
-    const dy = o.screenY - subject.screenY;
-    hidden += circleCircleLensArea(r, 0.5 * o.diameterPx, Math.hypot(dx, dy));
-    if (hidden >= area) return 1;
-  }
-  return hidden / area;
-}
-
-/** What fraction of a source's light reaches the camera: frame clipping
- *  and occlusion by nearer discs, which are independent losses off the
- *  same footprint and so subtract. */
+/** What fraction of a source's light reaches the camera: frame clipping,
+ *  times the GPU-measured mean throughput over the part of the footprint
+ *  that is in frame (`coverage/README.md` § Composition). */
 export function sampleVisibleFraction(
   subject: LuminanceSample,
-  samples: readonly LuminanceSample[],
-  count: number,
+  transmission: number,
   w: number,
   h: number,
 ): number {
-  const clipped = sourceVisibleFraction(
-    subject.diameterPx, subject.screenX, subject.screenY, w, h,
+  return visibleFraction(
+    sourceVisibleFraction(subject.diameterPx, subject.screenX, subject.screenY, w, h),
+    transmission,
   );
-  if (clipped <= 0) return 0;
-  return Math.max(0, clipped - occludedFraction(subject, samples, count));
 }
 
 /** A sample's contribution to the frame's total flux, in luminance × px.

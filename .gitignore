@@ -6,7 +6,9 @@ dist/
 !.claude/settings.json
 .DS_Store
 *.log
-coverage/
+# Root-anchored: vitest writes ./coverage, and an unanchored rule silently
+# swallows any source folder that earns the name.
+/coverage/
 
 # Generated catalog artifacts (regenerated from source CSV). catalog.bin
 # ships as transport chunks (catalog.bin.<i>) + catalog-manifest.json.

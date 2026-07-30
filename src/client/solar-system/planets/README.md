@@ -396,26 +396,29 @@ the Jupiter exclusion in `data/textures/README.md` § Ring strips.
 `Planet.rings` adds an annulus mesh (`planet-rings.*.glsl`) in the
 body's equatorial plane (IAU pole; host orbital plane as the
 no-elements fallback), textured by the `<body>-rings.png` 1-D radial
-strip (RGB colour, A opacity; U = inner→outer edge). Lit-face
-fragments get full strip colour, the unlit face a dimmer
-transmitted factor, both fading out as illumination goes edge-on to
-the ring plane; the far-side segment inside the body's shadow
-(analytic ray–ellipsoid test toward the host) drops to a residual
-floor. Rendered only in the mesh-LOD regime: alpha rides the same
-crossfade `uFade`, hidden until the strip texture arrives (no
-representative-colour fallback), `renderOrder` 2.81 (after the body
-mesh) with `depthWrite: false`.
+strip (RGB colour, A opacity; U = inner→outer edge). Lit face gets full
+strip colour, unlit face a dimmer transmitted factor, both fading out as
+illumination goes edge-on; the far-side segment inside the body's shadow
+(analytic ray–ellipsoid test toward the host) drops to a residual floor.
+Rendered only in the mesh-LOD regime: alpha rides the same crossfade
+`uFade`, hidden until the strip texture arrives (no representative-colour
+fallback), `renderOrder` 2.81 (after the body mesh) with
+`depthWrite: false`.
 
 **Body occlusion is the local depth pass's z-buffer**: meshes + annuli
 render in the bracketed second pass (`../../local-depth/README.md`),
 where standard depth orders ring↔body natively — including the oblate
-limb. The analytic ray–ellipsoid helper survives only for the
-body-shadow term (sun ray, not camera ray). Geometry drawn near a
-planet body in the MAIN pass still cannot depth-test against it (the log
-buffer quantises the whole system into one step; `log2(1+w)` is linear
-for w ≪ 1) — new close-range geometry belongs in the local pass, not
-behind a new analytic trick. Edge-on the zero-thickness annulus thins
+limb. The analytic ray–ellipsoid helper survives only for the body-shadow
+term (sun ray, not camera ray). Geometry drawn near a planet body in the
+MAIN pass still cannot depth-test against it (same README, § Why the main
+pass cannot do this) — new close-range geometry belongs in the local pass,
+not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
+
+**Rings do dim a source behind them in the exposure statistic**, by
+authored optical depth at the ray's opening angle — no z-test could, they
+write no depth. Seam `forEachRingOccluder`, contract
+`../../hdr/exposure/coverage/README.md` § Rings.
 
 ## Planet rotation
 

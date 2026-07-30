@@ -327,31 +327,39 @@ inside the frame. That is what makes frustum-edge continuity free
 (below), and it is why a body the camera has flown inside of contributes
 its surface brightness rather than its whole flux.
 
-**A source hidden behind a nearer disc is not in the frame.** Coverage
+**A source hidden behind a nearer body is not in the frame.** Coverage
 alone counted a body's flux whether or not anything was in front of it, so
 Sol behind the night side of Saturn still dimmed the star field — the one
 contributing source in that frame was light that never reached the camera.
-Each sample therefore loses, in addition to its frame clipping, the
-screen-space lens overlap of every *nearer* drawn disc
-(`circleCircleLensArea`, the same closed form the binary eclipse
-photometry runs). Four properties of that pass:
+Each sample therefore carries, in addition to its frame clipping, a
+**throughput measured on the GPU against the geometry the frame actually
+drew**: the mean over its visibility disc of what reaches the camera,
+sampled from the local depth pass's own scene re-rendered under one
+bracket. Mechanism, latency, keying and fallbacks are
+`src/client/hdr/exposure/coverage/README.md`; four properties of the
+statistic itself:
 
 - **It composes multiplicatively with the eclipse dim, because they are
   different losses.** The eclipse dim is light the body never received —
   a lighting loss, folded into `fluxScale`. Occlusion is light it emitted
   and the camera never saw — a camera-path loss on the visible fraction.
-- **Occluders are gated at the mesh-presence floor** (~1 px true
-  diameter): a body drawing no surface cannot hide anything behind it.
-  Every star is below that gate except at solar-system range, where it
-  correctly is not.
-- **Rings do not occlude.** They are not sources, so they never enter the
-  sample set, and a ring plane's own opacity is a per-radius texture the
-  statistic has no access to. A body behind Saturn's rings keeps its flux.
-- **Overlapping occluders double-count**, since the lens areas are summed
-  rather than unioned. The error is always in the over-occluding
-  direction, so it can shave light off the statistic but never invent it —
-  and it takes two occluders both covering the same part of one third
-  body to appear at all.
+- **The occluder set is whatever rasterised**, not a list the statistic
+  maintains — an oblate limb at its true polar radius, a moon in transit,
+  two bodies overlapping. Mirroring that geometry on the CPU was the
+  original design and it failed at the poles: a circle takes the
+  *equatorial* radius, and Saturn's flattening of 0.098 puts its real
+  polar limb at 90.2% of one, so Sol just past the pole read as hidden
+  while plainly visible and the exposure never cut.
+- **A body drawing no surface writes no occluder depth**, which retires
+  the separate mesh-presence gate the circle era needed: the rasteriser
+  answers "is there a surface here?" by construction, so admitting a
+  sub-threshold body to the walk costs nothing.
+- **Rings DO occlude**, by their authored optical depth along the slant
+  path — `T = (1 − alpha)^(1/|sin B|)`, so the same ring is opaque
+  edge-on and translucent face-on. They write no depth (a binary z-test
+  cannot express partial extinction), which makes them the one occluder
+  still handled analytically. This **reverses** the position held through
+  v3.7.0, that rings never dim a source behind them.
 
 Why an area-weighted arithmetic mean, and not the two obvious
 alternatives:
@@ -503,8 +511,8 @@ when adaptation matters most.
 
 - **Every drawn solar-system body**, through the same visibility gate
   `pick()` uses, at its true angular diameter with eclipse dim folded in
-  as the real flux loss it is, and with its camera distance so the
-  occlusion pass can order it.
+  as the real flux loss it is, and with its camera distance — which
+  places it along its own view ray for the coverage measurement.
 - **Stars gated on flux, not on resolvedness.** Sol at 100 AU is a third
   of a pixel wide and 1036× over `L_ADAPT`, so "is it a disc yet?" is the
   wrong question. The camera window is *derived*: it is the distance at

@@ -19,13 +19,14 @@ import {
   sampleVisibleFraction,
   slewDm,
   starAdaptationWindowPc,
+  starSourceKey,
   windowTaper,
 } from './scene-adaptation-pure';
 
 function blankSample(): LuminanceSample {
   return {
     appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
-    cameraDistancePc: 0, fluxScale: 1, label: null,
+    cameraDistancePc: 0, fluxScale: 1, sourceKey: 0, label: null,
   };
 }
 
@@ -58,6 +59,11 @@ export interface SceneAdaptationDeps {
   baseExposure: () => number;
   bodies: AdaptationBodySources;
   stars: AdaptationStarSources;
+  /** Mean throughput over a source's footprint, measured on the GPU
+   *  against the geometry actually rendered (`coverage/README.md`). Lands
+   *  one frame late, so it is keyed on `sourceKey` rather than pool order,
+   *  and reads 1 for anything unmeasured. */
+  transmission: (sourceKey: number) => number;
 }
 
 /**
@@ -74,9 +80,10 @@ export class SceneAdaptation {
   private readonly starPos = new THREE.Vector3();
   private readonly screen: [number, number] = [0, 0];
   private readonly starSample: LuminanceSample = blankSample();
-  /** Every source this frame, copied out of the producers' scratch so the
-   *  occlusion pass can see them all at once. Grows to the frame's high
-   *  water mark and is reused; `count` is the live prefix. */
+  /** Every source this frame, copied out of the producers' scratch: the
+   *  reduce needs them all at once, and the coverage pass reads them again
+   *  after the walk has ended. Grows to the frame's high water mark and is
+   *  reused; `count` is the live prefix. */
   private readonly pool: LuminanceSample[] = [];
   private count = 0;
 
@@ -144,6 +151,17 @@ export class SceneAdaptation {
     return this.peakL;
   }
 
+  /** This frame's sources, for the coverage pass to measure against the
+   *  geometry the frame is about to draw. Read the live prefix
+   *  `sourceCount()` only; slots past it are last frame's. */
+  sources(): readonly LuminanceSample[] {
+    return this.pool;
+  }
+
+  sourceCount(): number {
+    return this.count;
+  }
+
   /**
    * What the frame is adapted TO: the source carrying most of the flux,
    * once there is a cut to explain. Null while nothing is adapting, and
@@ -169,9 +187,8 @@ export class SceneAdaptation {
     return 0;
   }
 
-  /** Copy a producer's scratch sample into the pool — nothing reduces
-   *  until the walk ends, since the last body visited can occlude the
-   *  first. */
+  /** Copy a producer's scratch sample into the pool — the sample is valid
+   *  only inside one `visit` call, and both consumers run after the walk. */
   private collect = (sample: LuminanceSample): void => {
     const slot = this.pool[this.count] ?? blankSample();
     this.pool[this.count] = slot;
@@ -181,6 +198,7 @@ export class SceneAdaptation {
     slot.screenY = sample.screenY;
     slot.cameraDistancePc = sample.cameraDistancePc;
     slot.fluxScale = sample.fluxScale;
+    slot.sourceKey = sample.sourceKey;
     slot.label = sample.label;
     this.count++;
   };
@@ -191,13 +209,14 @@ export class SceneAdaptation {
    *  occlusion and frame clipping remove a source from it. */
   private reduce(): void {
     const { pool, count, w, h, exposure } = this;
+    const transmission = this.deps.transmission;
     this.fluxL = 0;
     this.peakL = 0;
     this.dominantFluxL = 0;
     this.dominantLabel = null;
     for (let i = 0; i < count; i++) {
       const s = pool[i];
-      const visible = sampleVisibleFraction(s, pool, count, w, h);
+      const visible = sampleVisibleFraction(s, transmission(s.sourceKey), w, h);
       if (visible <= 0) continue;
       const fluxL = sampleFluxL(s, exposure, visible);
       this.fluxL += fluxL;
@@ -233,6 +252,7 @@ export class SceneAdaptation {
       s.screenY = this.screen[1];
       s.cameraDistancePc = dPc;
       s.fluxScale = taper;
+      s.sourceKey = starSourceKey(idx);
       s.label = this.deps.stars.starLabel(idx);
       this.collect(s);
       return false;

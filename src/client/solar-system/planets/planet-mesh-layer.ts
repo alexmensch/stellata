@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/slice-pure';
+import type { RingOccluder } from '../../hdr/exposure/coverage/coverage-pack-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';
@@ -222,6 +223,7 @@ export class PlanetMeshLayer {
   private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
+  private readonly ringOccluder: RingOccluder;
   private readonly atmoTuning: AtmosphereTuning = { ...DEFAULT_ATMO_TUNING };
 
   constructor(
@@ -239,6 +241,14 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
+    this.ringOccluder = {
+      centreView: new THREE.Vector3(),
+      poleView: new THREE.Vector3(0, 0, 1),
+      outerPc: 0,
+      innerRatio: 0,
+      alphaScale: 0,
+      strip: this.placeholder,
+    };
   }
 
   /** Append camera-relative bounding spheres for every mesh-visible
@@ -252,6 +262,33 @@ export class PlanetMeshLayer {
         distPc: entry.mesh.position.distanceTo(camera.position),
         radiusPc: entry.boundRadiusPc,
       });
+    }
+  }
+
+  /** Visit every ring annulus drawn this frame as a view-space occluder
+   *  for the exposure statistic (`../../hdr/exposure/coverage/README.md`).
+   *  Self-sufficient in the camera: it runs after the main render, where
+   *  `matrixWorld` is current, and re-inverts rather than reusing the
+   *  update pass's copy. */
+  forEachRingOccluder(
+    camera: THREE.PerspectiveCamera,
+    visit: (ring: RingOccluder) => void,
+  ): void {
+    if (!this.group.visible) return;
+    this.viewInverse.copy(camera.matrixWorld).invert();
+    const out = this.ringOccluder;
+    for (const entry of this.entries.values()) {
+      const ring = entry.ring;
+      if (!ring || !ring.mesh.visible) continue;
+      out.centreView.copy(ring.mesh.position).applyMatrix4(this.viewInverse);
+      out.poleView.set(0, 0, 1)
+        .applyQuaternion(ring.mesh.quaternion)
+        .transformDirection(this.viewInverse);
+      out.outerPc = ring.material.uniforms.uOuterPc.value as number;
+      out.innerRatio = ring.material.uniforms.uInnerRatio.value as number;
+      out.alphaScale = ring.material.uniforms.uFade.value as number;
+      out.strip = ring.material.uniforms.uRingMap.value as THREE.Texture;
+      visit(out);
     }
   }
 

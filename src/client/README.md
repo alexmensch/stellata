@@ -33,8 +33,9 @@ themselves.
   into and the fullscreen tone-map that resolves it to the canvas.
   Owns the shared operator chunk, its CPU mirror, and the chrome
   colour inverse-mapping. `hdr/exposure/` owns the scalar they run on —
-  instrument limit, per-frame scene adaptation, EV trim. Chart mode
-  bypasses all of it.
+  instrument limit, per-frame scene adaptation, EV trim — and
+  `hdr/exposure/coverage/` measures how much of each light source the
+  camera can actually see, on the GPU. Chart mode bypasses all of it.
 - `local-depth/` — the bracketed local depth pass: camera-relative
   depth slices giving close bodies (moons, rings, binary pairs) true
   z-buffer occlusion the main pass's log depth cannot. The planet
@@ -267,6 +268,11 @@ One fullscreen tone-map then resolves the target to the canvas, so
 nothing in the table composites against the canvas directly and the SVG
 layer sees only the resolved frame ([hdr/](hdr/README.md)). Chart mode
 bypasses the target and renders straight to the canvas as before.
+
+One pass draws after the resolve and appears nowhere in the table: the
+exposure statistic's coverage measurement, which binds its own targets,
+writes no pixel the user sees, and is read back a frame later
+([hdr/exposure/coverage/](hdr/exposure/coverage/README.md)).
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,

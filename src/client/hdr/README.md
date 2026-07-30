@@ -138,6 +138,7 @@ hdr.bind()                 → setRenderTarget(rt)     (or null when parked)
 renderer.render(scene)     → the whole main stack
 localDepthPass.render()    → repaints over the same target
 hdr.resolve()              → setRenderTarget(null) + fullscreen tone-map
+coveragePass.measure()     → own targets, then back to the canvas
 ```
 
 `bind()` and `resolve()` are called from `stellata.ts` `animate()` and
@@ -146,6 +147,11 @@ which is exactly why its repaint lands in the same target for free —
 `clearDepth()` in that pass clears the target's depth attachment, not
 the canvas's. Depth semantics, core masks, and the log-depth split are
 untouched: depth encoding is orthogonal to colour encoding.
+
+`coveragePass.measure()` runs last and touches neither this target nor
+the canvas — it binds its own, re-renders the local pass's scene for
+occluder depth, and restores. It is after the resolve so the measurement
+never delays the frame it measured (`exposure/coverage/README.md`).
 
 **The target's depth is 24-bit.** `depthBuffer: true` with
 `stencilBuffer: false` gives `DEPTH_COMPONENT24` on WebGL2 (three

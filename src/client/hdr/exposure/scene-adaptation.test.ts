@@ -14,6 +14,7 @@ import {
   type LuminanceSample,
   negligibleAppMag,
   starAdaptationWindowPc,
+  starSourceKey,
 } from './scene-adaptation-pure';
 
 const W = 1920;
@@ -27,7 +28,11 @@ interface Star {
   label?: string;
 }
 
-function harness(bodies: LuminanceSample[], stars: Star[] = []) {
+function harness(
+  bodies: LuminanceSample[],
+  stars: Star[] = [],
+  transmission: (sourceKey: number) => number = () => 1,
+) {
   const camera = new THREE.PerspectiveCamera(50, W / H, 1e-12, 1e9);
   camera.position.set(0, 0, 0);
   camera.updateMatrixWorld();
@@ -56,6 +61,7 @@ function harness(bodies: LuminanceSample[], stars: Star[] = []) {
       localPositions: () => positions,
       starLabel: (idx) => stars[idx].label ?? null,
     },
+    transmission,
   };
   return { adaptation: new SceneAdaptation(deps), camera };
 }
@@ -68,6 +74,7 @@ function body(patch: Partial<LuminanceSample>): LuminanceSample {
     screenY: 0.5 * H,
     cameraDistancePc: 1,
     fluxScale: 1,
+    sourceKey: 0,
     label: null,
     ...patch,
   };
@@ -109,29 +116,43 @@ describe('SceneAdaptation', () => {
     expect(dmLit - dmEclipsed).toBeCloseTo(-5, 3);
   });
 
-  it('drops a source hidden behind a nearer body', () => {
+  it('drops a source the coverage pass measured as fully blocked', () => {
     // Sol behind the night side of Saturn: the one contributing source in
     // the frame is light that never reached the camera.
-    const sol = body({ appMag: -26, diameterPx: 11, cameraDistancePc: 1e-4, label: 'Sol' });
-    // Night side, so the occluder contributes no flux of its own.
-    const saturn = body({
-      appMag: 30, diameterPx: 900, cameraDistancePc: 1e-5, label: 'Saturn',
+    const sol = body({
+      appMag: -26, diameterPx: 11, cameraDistancePc: 1e-4, sourceKey: 7, label: 'Sol',
     });
     const open = harness([sol]);
-    const blocked = harness([sol, saturn]);
+    const blocked = harness([sol], [], (key) => (key === 7 ? 0 : 1));
     expect(open.adaptation.measure(open.camera, false, 0, false)).toBeLessThan(-15);
     expect(blocked.adaptation.measure(blocked.camera, false, 0, false)).toBe(0);
     expect(blocked.adaptation.getMeanLuminance()).toBeCloseTo(DIFFUSE_FIELD_L, 12);
   });
 
-  it('lets an occluder be occluded in turn without reordering the walk', () => {
-    // Visited nearest-last, so a streaming reduce would have missed it.
-    const back = body({ appMag: -26, diameterPx: 11, cameraDistancePc: 1, label: 'Sol' });
-    const mid = body({ appMag: -20, diameterPx: 900, cameraDistancePc: 0.5, label: 'Saturn' });
-    const front = body({ appMag: -15, diameterPx: 4000, cameraDistancePc: 0.1, label: 'Titan' });
-    const { adaptation, camera } = harness([back, mid, front]);
+  it('buffers the whole walk, since the coverage pass reads it afterwards', () => {
+    // Nothing reduces until the walk ends and the pool outlives it: the
+    // measurement the next frame consumes is uploaded from these slots.
+    const bodies = [
+      body({ appMag: -26, diameterPx: 11, sourceKey: 1, label: 'Sol' }),
+      body({ appMag: -20, diameterPx: 900, sourceKey: 2, label: 'Saturn' }),
+      body({ appMag: -15, diameterPx: 4000, sourceKey: 3, label: 'Titan' }),
+    ];
+    const { adaptation, camera } = harness(bodies);
     adaptation.measure(camera, false, 0, false);
-    expect(adaptation.getDominantLabel()).toBe('Titan');
+    expect(adaptation.sourceCount()).toBe(3);
+    expect(adaptation.sources().slice(0, 3).map((b) => b.sourceKey)).toEqual([1, 2, 3]);
+    expect(adaptation.getDominantLabel()).toBe('Sol');
+  });
+
+  it('keys stars clear of the bodies, so neither reads the other\'s throughput', () => {
+    const { adaptation, camera } = harness(
+      [body({ appMag: -20, sourceKey: 0, label: 'Mercury' })],
+      [{ pc: 1e-5, appMag: -26, physSizePx: 20, label: 'Sol' }],
+    );
+    adaptation.measure(camera, false, 0, false);
+    const keys = adaptation.sources()
+      .slice(0, adaptation.sourceCount()).map((b) => b.sourceKey);
+    expect(keys).toEqual([0, starSourceKey(0)]);
   });
 
   it('snaps on the first frame — a fresh scene must not fade up', () => {
