@@ -3,12 +3,12 @@ import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
   type AtmosphereParams,
-  SHADOW_SOFT,
   type Vec3,
+  litFraction,
   miePhase,
   rayleighPhase,
   scatterAlongRay,
-  sunLit,
+  shadowSpan,
 } from './atmosphere-scattering-pure';
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -118,38 +118,113 @@ describe('scatterAlongRay', () => {
   });
 });
 
-describe('sunLit — soft planetary shadow terminator', () => {
+describe('shadowSpan', () => {
   const SUN: Vec3 = [1, 0, 0];
 
-  it('fully lit deep on the sunward hemisphere', () => {
-    expect(sunLit(1, 0, 0, ...SUN)).toBe(1);
+  it('is unbounded behind the terminator for a ray down the shadow axis', () => {
+    // Impact parameter never changes on this ray, so the cylinder never ends;
+    // the terminator plane is the only boundary it has.
+    const [s0, s1] = shadowSpan([-5, 0, 0], [-1, 0, 0], SUN);
+    expect(s0).toBe(-5);
+    expect(s1).toBeGreaterThan(1e6);
   });
 
-  it('fully dark deep in the shadow cylinder (anti-sunward, inside radius)', () => {
-    expect(sunLit(-1, 0, 0, ...SUN)).toBe(0);
+  it('is empty for a ray that misses the cylinder', () => {
+    const [s0, s1] = shadowSpan([0, 5, 0], [0, 0, 1], SUN);
+    expect(s0).toBeGreaterThan(s1);
   });
 
-  it('half-lit at the terminator plane on the surface', () => {
-    // sunT = 0, impact = 1 → axial term 0, radial smoothstep centred at 1 → 0.5.
-    expect(sunLit(0, 1, 0, ...SUN)).toBeCloseTo(0.5, 12);
+  it('is empty for a ray wholly sunward of the terminator plane', () => {
+    // Inside the cylinder by impact parameter, but in FRONT of the body — the
+    // half-space is what stops the cylinder shadowing the lit hemisphere.
+    const [s0, s1] = shadowSpan([2, -5, 0], [0, 1, 0], SUN);
+    expect(s0).toBeGreaterThan(s1);
   });
 
-  it('lit above the shadow cylinder even on the night side (twilight)', () => {
-    // Anti-sunward but impact clears the cylinder by more than SHADOW_SOFT.
-    expect(sunLit(-1, 1 + SHADOW_SOFT + 0.01, 0, ...SUN)).toBe(1);
+  it('brackets the cylinder crossing exactly', () => {
+    // Crossing the axis 2 radii behind the body: enters and leaves where the
+    // impact parameter is 1, so the chord is the cylinder's full diameter.
+    const [s0, s1] = shadowSpan([-2, -5, 0], [0, 1, 0], SUN);
+    expect(s0).toBeCloseTo(4, 12);
+    expect(s1).toBeCloseTo(6, 12);
+  });
+});
+
+describe('litFraction', () => {
+  it('is 0 for a segment inside the shadow and 1 for one outside', () => {
+    expect(litFraction(5, 0.5, [4, 6])).toBe(0);
+    expect(litFraction(2, 0.5, [4, 6])).toBe(1);
   });
 
-  it('varies continuously across the terminator (no quantised jump)', () => {
-    let prev = sunLit(0, 1 - 0.3, 0, ...SUN);
-    let maxStep = 0;
-    for (let k = 1; k <= 60; k++) {
-      const y = 1 - 0.3 + (0.6 * k) / 60; // sweep impact through the soft band
-      const cur = sunLit(0, y, 0, ...SUN);
-      maxStep = Math.max(maxStep, Math.abs(cur - prev));
-      prev = cur;
-    }
-    // A hard 0/1 test would jump by 1.0 in a single step; the soft band caps it.
-    expect(maxStep).toBeLessThan(0.1);
+  it('splits a segment straddling the shadow edge by exact coverage', () => {
+    expect(litFraction(4, 0.5, [4, 6])).toBeCloseTo(0.5, 12);
+    expect(litFraction(3.9, 0.5, [4, 6])).toBeCloseTo(0.6, 12);
+  });
+});
+
+describe('how far past the terminator sunlight reaches', () => {
+  const SUN: Vec3 = [1, 0, 0];
+  const EARTH_RATMO = (6371 + 100) / 6371;
+
+  /** Is a point lit? Any ray through it answers — the span is the interval
+   *  the point's own t = 0 either falls in or does not. */
+  function pointLit(radius: number, deltaDeg: number): number {
+    const a = (deltaDeg * Math.PI) / 180;
+    const p: Vec3 = [-radius * Math.sin(a), radius * Math.cos(a), 0];
+    return litFraction(0, 1e-9, shadowSpan(p, [0, 0, 1], SUN));
+  }
+
+  it('never reaches the ground past the terminator', () => {
+    // The defect this replaces: a fixed 0.15-radius soft band admitted
+    // full-density samples out to acos(0.85) = 31.8°, and the airglow arc it
+    // painted was that wide.
+    expect(pointLit(1, -1)).toBe(1);
+    expect(pointLit(1, 1)).toBe(0);
+    expect(pointLit(1, 20)).toBe(0);
+    expect(Math.acos(1 - 0.15) * (180 / Math.PI)).toBeCloseTo(31.79, 2);
+  });
+
+  it('reaches as far past it as a sample\'s own altitude lifts it clear', () => {
+    // Earth's shell top clears the cylinder to acos(1/1.0157) = 10.1°, and
+    // that arc is faint because it is 100 km up — 12 scale heights of density
+    // gone. Altitude sets the reach; density sets what you can see of it.
+    expect(Math.acos(1 / EARTH_RATMO) * (180 / Math.PI)).toBeCloseTo(10.09, 2);
+    expect(pointLit(EARTH_RATMO, 9)).toBe(1);
+    expect(pointLit(EARTH_RATMO, 11)).toBe(0);
+  });
+
+  it('resolves the terminator crossing without quantising the lit count', () => {
+    // A limb chord under a rotating sun. Coverage weights make the summed lit
+    // count continuous in the geometry, so refining the sweep 10× shrinks the
+    // largest step ~10×. A point-per-sample test steps by exactly 1 whatever
+    // the sweep — those steps ARE the terminator contours.
+    const [t0, t1] = chord(O, D, RATMO);
+    const segLen = (t1 - t0) / ATMO_N_VIEW;
+    const litCount = (phiDeg: number) => {
+      const phi = (phiDeg * Math.PI) / 180;
+      const sun: Vec3 = [Math.cos(phi), 0, Math.sin(phi)];
+      const span = shadowSpan(O, D, sun);
+      let sum = 0;
+      for (let i = 0; i < ATMO_N_VIEW; i++) {
+        sum += litFraction(t0 + (i + 0.5) * segLen, 0.5 * segLen, span);
+      }
+      return sum;
+    };
+    const maxStep = (stepDeg: number) => {
+      let prev = litCount(60);
+      let worst = 0;
+      for (let phi = 60 + stepDeg; phi <= 170; phi += stepDeg) {
+        const cur = litCount(phi);
+        worst = Math.max(worst, Math.abs(cur - prev));
+        prev = cur;
+      }
+      return worst;
+    };
+    const coarse = maxStep(0.2);
+    const fine = maxStep(0.02);
+    expect(coarse).toBeGreaterThan(0);
+    expect(fine).toBeLessThan(coarse / 5);
+    expect(fine).toBeLessThan(0.1);
   });
 });
 

@@ -11,13 +11,6 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Soft half-width (planet-radius units) of the planetary shadow terminator in
- *  the atmosphere. A hard lit/unlit test quantises the multiscatter lit-fraction
- *  and the single-scatter terminator into visible contours across the terminator
- *  (moiré under the few-sample march); smoothing over this band keeps both
- *  continuous. */
-export const SHADOW_SOFT = 0.15;
-
 /** Isotropic multiple-scattering fill weight. Single scattering alone leaves
  *  optically thick hazes (Venus, Titan) far too dark — most of their light
  *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
@@ -55,21 +48,67 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
-  return t * t * (3 - 2 * t);
+/** Sentinel span standing for "this ray never enters the shadow" — any
+ *  interval whose start is past its end, so every overlap comes out 0. */
+const NO_SHADOW: readonly [number, number] = [1, 0];
+const FAR = 1e20;
+
+/**
+ * The planetary shadow along `o + t·d`, as the single t-interval `[s0, s1]`
+ * it always is: inside the infinite shadow cylinder (a quadratic in t) and
+ * anti-sunward of the terminator plane (a half-space). `s0 > s1` when the
+ * ray never enters it. Equivalent to asking whether the ray from each point
+ * toward the host strikes the body, which is why the light march below never
+ * needs its own occlusion test.
+ *
+ * Solving the shadow beats sampling it: a point-per-segment lit/unlit test
+ * quantises the lit sample count into `ATMO_N_VIEW` brightness contours
+ * across the terminator, and the fixed 0.15-radius smoothing that used to
+ * hide them was 956 km on Earth — sunlight in the densest layers 32° past
+ * the terminator, an airglow arc tens of degrees wide. Mirrors
+ * stellata_shadowSpan in the GLSL.
+ */
+export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, number] {
+  const oS = o[0] * sunDir[0] + o[1] * sunDir[1] + o[2] * sunDir[2];
+  const dS = d[0] * sunDir[0] + d[1] * sunDir[1] + d[2] * sunDir[2];
+  const oP: Vec3 = [o[0] - oS * sunDir[0], o[1] - oS * sunDir[1], o[2] - oS * sunDir[2]];
+  const dP: Vec3 = [d[0] - dS * sunDir[0], d[1] - dS * sunDir[1], d[2] - dS * sunDir[2]];
+  const a = dP[0] * dP[0] + dP[1] * dP[1] + dP[2] * dP[2];
+  const b = oP[0] * dP[0] + oP[1] * dP[1] + oP[2] * dP[2];
+  const c = oP[0] * oP[0] + oP[1] * oP[1] + oP[2] * oP[2] - 1;
+
+  let lo: number;
+  let hi: number;
+  if (a > 1e-12) {
+    const disc = b * b - a * c;
+    if (disc <= 0) return NO_SHADOW;
+    const r = Math.sqrt(disc);
+    lo = (-b - r) / a;
+    hi = (-b + r) / a;
+  } else {
+    // Ray parallel to the shadow axis: its impact parameter never changes.
+    if (c >= 0) return NO_SHADOW;
+    lo = -FAR;
+    hi = FAR;
+  }
+
+  if (Math.abs(dS) > 1e-12) {
+    const th = -oS / dS;
+    if (dS > 0) hi = Math.min(hi, th);
+    else lo = Math.max(lo, th);
+  } else if (oS >= 0) {
+    return NO_SHADOW;
+  }
+  return [lo, hi];
 }
 
-/** Fraction of the point (px,py,pz) lit by the sun: 1 unless it is BOTH
- *  anti-sunward of the terminator plane AND inside the planet's shadow
- *  cylinder, smoothed over SHADOW_SOFT. Mirrors stellata_sunLit in the GLSL. */
-export function sunLit(px: number, py: number, pz: number, sx: number, sy: number, sz: number): number {
-  const sunT = px * sx + py * sy + pz * sz;
-  const impact = Math.sqrt(Math.max(px * px + py * py + pz * pz - sunT * sunT, 0));
-  return Math.max(
-    smoothstep(0, SHADOW_SOFT, sunT),
-    smoothstep(1 - SHADOW_SOFT, 1 + SHADOW_SOFT, impact),
-  );
+/** Fraction of the march segment centred on `t` with half-width `h` that
+ *  falls outside the shadow span — the exact quadrature weight for a hard
+ *  shadow, and continuous in the ray's geometry, so the lit sample count
+ *  cannot step. Mirrors stellata_litFraction in the GLSL. */
+export function litFraction(t: number, h: number, span: readonly [number, number]): number {
+  const overlap = Math.max(Math.min(t + h, span[1]) - Math.max(t - h, span[0]), 0);
+  return 1 - overlap / (2 * h);
 }
 
 export interface AtmosphereParams {
@@ -118,6 +157,7 @@ export function scatterAlongRay(
     return { inscatter: [0, 0, 0], transmittance: [1, 1, 1] };
   }
   const segLen = span / ATMO_N_VIEW;
+  const shadow = shadowSpan(o, d, sunDir);
   const mu = d[0] * sunDir[0] + d[1] * sunDir[1] + d[2] * sunDir[2];
   const pR = rayleighPhase(mu);
   const pM = miePhase(mu, p.g);
@@ -138,7 +178,7 @@ export function scatterAlongRay(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    const lit = sunLit(px, py, pz, sunDir[0], sunDir[1], sunDir[2]);
+    const lit = litFraction(t, 0.5 * segLen, shadow);
     litSum += lit;
     if (lit <= 0) continue;
     const sExit = farRoot(px, py, pz, sunDir[0], sunDir[1], sunDir[2], p.rAtmo);

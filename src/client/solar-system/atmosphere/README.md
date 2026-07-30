@@ -23,9 +23,14 @@ src/client/solar-system/atmosphere/
                                   single-scattering airlight for rays that
                                   miss the disc.
   atmosphere-scattering-pure.ts   CPU mirror of the integrator + per-body
-    (+ test)                      calibration constants + phase functions.
+    (+ test)                      calibration constants + phase functions,
+                                  and the analytic shadow span.
                                   Vitest-pinned. The TS sample-count
                                   constants seed the GLSL #defines.
+  atmosphere-glsl-drift.test.ts   Pins the GLSL literals against their TS
+                                  constants, and the expression shapes the
+                                  shadow-span fix turns on — no GL context
+                                  under vitest.
 ```
 
 Per-body params live in `../planet-system.ts` as `PlanetAtmosphere`
@@ -53,10 +58,13 @@ Three species over two exponential density profiles ρ(h) = exp(−h/H):
   yellow**. Earth's is zero. Do not invert the `absorbCoeff` channels — blue
   is the *most* absorbed.
 
-The night/day terminator falls out of the geometry: a sample inside the
-planet's shadow cylinder is dark and contributes no in-scatter (a soft-edged
-`stellata_sunLit` weight, not an ad-hoc day gate — see § Anti-banding for why
-the edge is softened).
+The night/day terminator falls out of the geometry, and is **solved rather
+than sampled**: the planetary shadow along a view ray is always exactly one
+t-interval (`stellata_shadowSpan` — inside the infinite shadow cylinder, cut
+against the terminator half-space), and each march sample is weighted by the
+fraction of its segment outside it. That is the same question as "does the ray
+from this sample toward the host strike the body", which is why the light march
+carries no occlusion test of its own.
 
 ## Airlight is applied on both surfaces
 
@@ -129,14 +137,17 @@ Three sources, three fixes.
    moiré rather than dissolving into fine grain. The CPU mirror uses the
    midpoint (0.5), so vitest pins deterministic quadrature while the shader
    decorrelates.
-3. *Terminator* — a hard lit/unlit sun test steps the multiscatter lit-fraction
-   (`litSum / ATMO_N_VIEW`) and the single-scatter edge in `1/ATMO_N_VIEW`
-   increments, drawing ~`ATMO_N_VIEW` brightness contours across the terminator
-   that beat against the jitter into the dominant moiré. `stellata_sunLit`
-   replaces the boolean with a **soft shadow** — lit unless a sample is both
-   anti-sunward of the terminator plane and inside the shadow cylinder, smoothed
-   over `SHADOW_SOFT` — so the lit-fraction is continuous and the contours are
-   gone.
+3. *Terminator* — a lit/unlit test **per sample** steps the multiscatter
+   lit-fraction (`litSum / ATMO_N_VIEW`) and the single-scatter edge in
+   `1/ATMO_N_VIEW` increments, drawing ~`ATMO_N_VIEW` brightness contours across
+   the terminator that beat against the jitter into the dominant moiré. The
+   analytic shadow span (§ The model) removes them at the root: coverage
+   weights make `litSum` **continuous in the ray's geometry**, so there is no
+   quantum to contour. This replaced a fixed `SHADOW_SOFT = 0.15` planet-radius
+   smoothing of the shadow edge — 956 km on Earth, 120 scale heights, which hid
+   the contours by lighting the densest layers **32° past the terminator** and
+   painting an airglow arc that wide. Blur the shadow to fix banding and the
+   geometry pays; solve it and neither does.
 
 The ad-hoc surface **limb-darkening** is dropped for atmospheric bodies (the
 scattering governs the limb; keeping it double-darkened the disc edge into a

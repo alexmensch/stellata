@@ -6,11 +6,13 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / SHADOW_SOFT in
-// atmosphere-scattering-pure.ts.
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE in
+// atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
 const float STELLATA_MS_STRENGTH = 0.2;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
-const float STELLATA_SHADOW_SOFT = 0.15;
+// Stands in for an unbounded shadow span; only ever min/maxed against a ray
+// parameter, never multiplied, so it just has to dwarf one.
+const float STELLATA_SHADOW_FAR = 1e20;
 
 float stellata_rayleighPhase(float mu) {
   return STELLATA_RAYLEIGH_PHASE_K * (1.0 + mu * mu);
@@ -64,16 +66,54 @@ bool stellata_hitsBodyAhead(vec3 o, vec3 dir) {
   return disc > 0.0 && -b - sqrt(disc) > 0.0;
 }
 
-// Fraction of a point lit by the sun: 1 unless it is BOTH anti-sunward of the
-// terminator plane AND inside the planet's shadow cylinder. Smoothed over
-// STELLATA_SHADOW_SOFT (planet-radius units) so the atmosphere terminator is
-// a continuous rolloff, not a hard 0/1 that quantises into moiré contours.
-float stellata_sunLit(vec3 p, vec3 sunDir) {
-  float sunT = dot(p, sunDir);
-  float impact = sqrt(max(dot(p, p) - sunT * sunT, 0.0));
-  return max(
-    smoothstep(0.0, STELLATA_SHADOW_SOFT, sunT),
-    smoothstep(1.0 - STELLATA_SHADOW_SOFT, 1.0 + STELLATA_SHADOW_SOFT, impact));
+// The planetary shadow along o + t·d as the single t-interval it always is:
+// inside the infinite shadow cylinder (a quadratic in t) and anti-sunward of
+// the terminator plane (a half-space). s0 > s1 means the ray never enters it.
+// Solving the shadow beats sampling it — a point-per-segment lit/unlit test
+// quantises the lit sample count into ATMO_N_VIEW contours across the
+// terminator, and the fixed 0.15-radius smoothing that used to hide them was
+// 956 km on Earth: sunlight in the densest layers 32° past the terminator.
+void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1) {
+  s0 = 1.0;
+  s1 = 0.0;
+  float oS = dot(o, sunDir);
+  float dS = dot(d, sunDir);
+  vec3 oP = o - oS * sunDir;
+  vec3 dP = d - dS * sunDir;
+  float a = dot(dP, dP);
+  float b = dot(oP, dP);
+  float c = dot(oP, oP) - 1.0;
+
+  float lo, hi;
+  if (a > 1e-12) {
+    float disc = b * b - a * c;
+    if (disc <= 0.0) return;
+    float r = sqrt(disc);
+    lo = (-b - r) / a;
+    hi = (-b + r) / a;
+  } else {
+    // Ray parallel to the shadow axis: its impact parameter never changes.
+    if (c >= 0.0) return;
+    lo = -STELLATA_SHADOW_FAR;
+    hi = STELLATA_SHADOW_FAR;
+  }
+
+  if (abs(dS) > 1e-12) {
+    float th = -oS / dS;
+    if (dS > 0.0) hi = min(hi, th); else lo = max(lo, th);
+  } else if (oS >= 0.0) {
+    return;
+  }
+  s0 = lo;
+  s1 = hi;
+}
+
+// Fraction of the march segment centred on t with half-width h that falls
+// outside the shadow span — the exact quadrature weight for a hard shadow,
+// and continuous in the ray's geometry, so the lit sample count cannot step.
+float stellata_litFraction(float t, float h, float s0, float s1) {
+  float overlap = max(min(t + h, s1) - max(t - h, s0), 0.0);
+  return 1.0 - overlap / (2.0 * h);
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along
@@ -91,6 +131,8 @@ void stellata_atmosphereRadiance(
   if (span <= 0.0) return;
 
   float segLen = span / float(ATMO_N_VIEW);
+  float shadow0, shadow1;
+  stellata_shadowSpan(o, d, sunDir, shadow0, shadow1);
   float mu = dot(d, sunDir);
   float pR = stellata_rayleighPhase(mu);
   float pM = stellata_miePhase(mu, g);
@@ -108,7 +150,7 @@ void stellata_atmosphereRadiance(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    float lit = stellata_sunLit(p, sunDir);
+    float lit = stellata_litFraction(t, 0.5 * segLen, shadow0, shadow1);
     litSum += lit;
     if (lit <= 0.0) continue;
     float sExit = stellata_farRoot(p, sunDir, rAtmo);
