@@ -397,7 +397,10 @@ Identifier dispatch in `search.ts`:
   the star. "Alf" is added only for α (most-commonly alternate-spelled).
 - GCVS designations (`g` field) emit an abbreviated + con-name-expanded
   label pair (`V645 Cen` / `V645 Centaurus`); the V-number zero-padding
-  GCVS stores (`V0645`) is stripped to the common form (`V645`).
+  GCVS stores (`V0645`) is stripped to the common form (`V645`). The
+  expansion fires only when the trailing token IS the constellation code,
+  so the 6,079 NSV / Magellanic designations emit one label
+  (`src/client/typeahead/README.md` § Star search).
 
 The dropdown deduplicates by star index so a star with multiple matching
 Bayer variants shows up once.
