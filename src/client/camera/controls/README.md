@@ -158,7 +158,7 @@ separate literal — a log-scale flight coefficient (see
 `aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
 camera-changing action can't race the in-flight lerp.
 
-## Aim controller (`camera/aim-controller.ts`)
+## Aim controller (`camera/controls/aim-controller.ts`)
 
 `AimController` owns the two aim-slerp state machines:
 

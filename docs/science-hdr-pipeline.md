@@ -691,7 +691,7 @@ the display compensation doing its job, not a claim about the observer.
 This change **demotes** the operator-shoulder work from load-bearing to
 optional: a longer shoulder would widen the 1.05-mag band the guard
 currently works around. It does not remove the constraint that any new
-curve stay analytically invertible (§ 2 / `chrome/README.md`).
+curve stay analytically invertible (§ 2 / `src/client/hdr/chrome/README.md`).
 
 ### 3.3 FOV is magnification; the instrument is aperture
 

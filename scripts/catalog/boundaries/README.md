@@ -107,7 +107,7 @@ That is not a smoothness nicety:
 - A **constant-Dec** arc is a SMALL circle in B1875. Precession maps it to
   neither a straight line nor a great-circle arc, so a two-endpoint
   parallel draws a chord cutting **more than a degree** inside the true
-  boundary. `iau-geometry/iau-boundaries-pure.test.ts` pins that departure so a future
+  boundary. `src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure.test.ts` pins that departure so a future
   "we only need the endpoints" optimisation fails rather than quietly
   moving the boundaries.
 - A **constant-RA** arc *is* a great circle and precession is a pure

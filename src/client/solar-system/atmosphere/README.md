@@ -158,8 +158,8 @@ are the same missing physics (multiple scattering), and both are that bead:
 
 **Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
-true flux (`../planets/mesh-surface-pure.ts`), and this term is added inside
-that product without being in the divisor. The day-side value is flat
+true flux (`../planets/emission/mesh-surface-pure.ts`), and this term is added
+inside that product without being in the divisor. The day-side value is flat
 `0.055·τ_scatter`, so the overshoot is Earth +0.6 %, Venus +1.0 %, Mars +0.5 %
 of the direct term — and **Titan +21 %**, its τ_Mie being 2.5. Titan's surface
 sits behind τ ≈ 2.5 of haze so little of it reaches the image, and the airlight
@@ -207,8 +207,8 @@ anchors the depths.
 
 **Airlight rides host irradiance, and there is no gain on it.** Both the disc
 block and the shell multiply `uAirlightLuminance`
-(`../planets/mesh-surface-pure.ts:hostIrradianceLuminance`) — the host's
-irradiance at the body in the scene-wide HDR unit, carrying no surface
+(`../planets/emission/mesh-surface-pure.ts:hostIrradianceLuminance`) — the
+host's irradiance at the body in the scene-wide HDR unit, carrying no surface
 albedo, because scattered sunlight doesn't depend on the ground's
 reflectance. The surface multiplies a *different* scalar that does
 (`uSurfaceLuminance`), and the two sit **exactly p/π apart**

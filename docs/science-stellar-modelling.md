@@ -307,7 +307,7 @@ move on any axis.
 One code path, parameterised by variability family. `classifyGcvsVarType`
 (`scripts/catalog/catalog-pure.ts`) refines the GCVS type into a subtype
 code (byte 37); `buildPulsationParams`
-(`src/client/star-pipeline/pulsation-params-pure.ts`) maps each code to
+(`src/client/star-pipeline/pulsation/pulsation-params-pure.ts`) maps each code to
 `{ρ, ΔB−V}`:
 
 | Family (code)            | ρ    | ΔB−V | GCVS prefixes |

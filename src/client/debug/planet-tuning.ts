@@ -4,7 +4,7 @@ import { type DebugSection, makeSlider } from './debug-panel';
 // Dev-only tuning section for the reflected-planet-glare pass. One knob:
 // uGlareGain — the glare peak multiplier, i.e. planet-glare brightness
 // relative to a star of the same apparent magnitude (1 = identical). See
-// planet.vert.glsl and solar-system/README.md § Planet mesh LOD.
+// solar-system/planets/glare/README.md.
 //
 // No reverse sync — see `SliderOpts.initial` in debug-panel.ts.
 

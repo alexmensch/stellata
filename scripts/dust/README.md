@@ -19,7 +19,7 @@ live.
 
 ## Output layout
 
-Canonical; must stay in sync with `src/client/dust-loader.ts`:
+Canonical; must stay in sync with `src/client/loaders/dust-loader.ts`:
 
 ```
 data/dust/

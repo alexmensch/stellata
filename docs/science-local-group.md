@@ -89,7 +89,7 @@ directly. As future LVDB snapshots land, the default-path objects
 update automatically; only the overrides need re-review against any
 structural-paper updates.
 
-Implementation: `src/client/local-group.ts`,
+Implementation: `src/client/local-group/local-group.ts`,
 `src/client/local-group/local-group-loader.ts`,
 `scripts/local-group/build-local-group.ts`,
 `scripts/local-group/build-local-group-pure.ts`. Rendering walkthrough in

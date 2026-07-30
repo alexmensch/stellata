@@ -273,7 +273,7 @@ mode and sizes its hit radius from the chart disc px
 shared cutoff constant lives in
 `solar-system/perceptual-magnitude.ts`.
 
-`Picker.pickStar` (`camera/picker.ts`) three fixes for the small-disc /
+`Picker.pickStar` (`camera/controls/picker.ts`) three fixes for the small-disc /
 variable case:
 
 1. **Variable bright-extreme filter.** Filter check uses

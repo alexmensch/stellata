@@ -2,7 +2,7 @@
 // the normaliser that reduces a brightness-stretched mosaic to a pure
 // albedo pattern. See README.md § Physical-luminance emission.
 
-import { relativeLuminance, srgbDecode } from '../../hdr/tonemap-pure';
+import { relativeLuminance, srgbDecode } from '../../../hdr/tonemap-pure';
 
 /** Rows of the downscaled copy the mean is measured on. Small because the
  *  mean converges long before detail does, and this runs on the main

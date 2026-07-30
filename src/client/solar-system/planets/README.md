@@ -45,13 +45,16 @@ src/client/solar-system/planets/
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
-  mesh-surface-pure.ts (+ test)   Emission into the HDR unit: mirrored limb
-                                  constants, disc-mean normalisers, the two
-                                  per-body luminance scalars.
-                                  See § Physical-luminance emission.
-  map-mean-luminance.ts (+ test)  Sphere-weighted mean linear luminance of a
-                                  day map, measured once on load — reduces a
-                                  stretched mosaic to an albedo pattern.
+  emission/                       The HDR-unit normalisers — the mesh
+                                  anchor, the two disc means that divide
+                                  out, and the day map's measured mean
+                                  luminance. Its own README.
+  glare/                          Reflected-glare billboard shaders: the
+                                  shared star-perceptual point, the
+                                  photocentre shift, uGlareGain. Its own
+                                  README.
+  rings/                          Ring-annulus shaders and the radial
+                                  strip. Its own README.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
                                   README (§ Planet rotation).
@@ -61,22 +64,11 @@ src/client/solar-system/planets/
                                   on the real ephemeris.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
-  planet.vert.glsl,
-  planet.frag.glsl                Instanced reflected-glare billboards
-                                  (point↔bloom on resolvedness, phase-
-                                  gated + photocentre-shifted). Imports
-                                  perceptual-disc.glsl from
-                                  ../../star-pipeline/ (shared glow
-                                  profile with stars).
   planet-mesh.vert.glsl,
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
                                   fallback, atmosphere airlight over the disc).
-  planet-rings.vert.glsl,
-  planet-rings.frag.glsl          Ring-annulus shaders (radial strip
-                                  sample, lit/transmitted faces, body
-                                  shadow) — see § Ring systems.
 ```
 
 ## The two layers
@@ -170,7 +162,7 @@ additive point that needs no depth occlusion (like a star).
 A planet crossing behind its host's *physical disc* (superior
 conjunction inside the host's angular radius) dims by the occluded area
 fraction — the same camera-anywhere geometry the binaries eclipse
-photometry runs (`../../binaries/eclipse-photometry-pure.ts`:
+photometry runs (`../../binaries/eclipse/eclipse-photometry-pure.ts`:
 `eclipseDimFromOffsets` + the shared anti-strobe blend helpers).
 `PlanetBodyField.update` evaluates each in-range host's planets per
 frame (the pair-relative offset is `iLocalRel` itself — small values, no
@@ -198,81 +190,12 @@ so it is deliberately not modelled.
 
 ## Physical-luminance emission
 
-Both planet layers emit into the scene-wide HDR unit
-(`../../hdr/README.md` § Unit) — the glare through the point-source rule,
-the mesh through the surface-brightness rule. There is no per-layer
-brightness encoding left: `uExposure` is the one exposure, and
-`uGlareGain` is a debug multiplier rather than a calibration knob.
-
-**The mesh anchor is a closed form.** A body's mean disc surface
-brightness drops both its radius and the viewer distance, because they
-cancel in `m + 2.5·log10(Ω_disc)`:
-
-```
-S₀ = m_host@body + 2.5·log10( π / (ARCSEC_TO_RAD² · p) )
-```
-
-so surface brightness depends only on host irradiance and geometric
-albedo — which is why a body does not brighten per-pixel on approach, the
-failure the old `^0.25` display compression existed to hide. The
-full-Moon case lands on +3.4 mag/arcsec², the measured value, from the
-same `p` that anchors the −12.7 flux; both are vitest-pinned.
-
-**Phase is carried once, by the shading.** `S₀` deliberately excludes
-φ(α): the shader's own Lambert terminator integrates to φ_Lambert on its
-own, and `uPhaseScale` corrects that to the body's measured Mallama
-curve. Folding φ into the anchor as well would count it twice.
-
-**Two disc means divide out**, which is what makes everything the shader
-multiplies on top a pure redistribution rather than a dimming:
-
-- `lambertLimbDiscMean` — the closed form `2·(F/3 + (1−F)/(3+E))` for
-  Lambert × limb darkening. The Lambert term contributes the 2/3 that
-  reconciles mean radiance with the geometric-albedo convention
-  `planetApparentMagnitude` uses; limb darkening then redistributes at
-  unit mean. Atmospheric bodies substitute `F = 1` (no limb term — the
-  scattering governs their limb), recovering the pure 2/3.
-  **`LIMB_FLOOR` / `LIMB_EXP` are mirrored as literals in
-  `planet-mesh.frag.glsl`** and drift-pinned; changing one side alone
-  shifts every body off its flux with no other symptom.
-- The **day map's own mean linear luminance** (`map-mean-luminance.ts`),
-  measured once on load from a downscaled copy, cos-latitude weighted.
-  The maps are brightness-stretched mosaics whose absolute level is not
-  radiometric — the build calibrates their mean *chromaticity* and
-  preserves whatever mean luminance the source had
-  (`data/textures/README.md` § Colour fidelity) — so the map may supply
-  only the pattern and the level has to come from `p`. Texture-less
-  bodies use the representative colour's own luminance, which is exactly
-  what that branch emits, so it is exact. Dividing by the measured mean
-  also makes the texture arriving mid-approach **flux-neutral**: both
-  branches target the same disc integral, so the map fades in as pattern
-  without a brightness step.
-
-**The resolve step is continuous by construction.** Past 1 px the glare's
-point-source rule emits `L(m)/(π·r_phys²)` — the disc's mean surface
-brightness — and the mesh emits that same quantity from the same `p` and
-irradiance. `mesh-surface-pure.test.ts` pins the two against each other
-to 1e-12 relative. This is what retired the old resolve-step luminosity
-step, where a dim-surfaced body's compressed mesh could read dimmer than
-its own peak-1 glare and a bright moon could outshine a resolved parent:
-that step existed only because mesh and glare were on unrelated scales.
-
-**Colour bookkeeping.** Day maps still load `NoColorSpace` and the mesh
-shader decodes them with `stellataSrgbDecode` before lighting — a raw
-display-encoded texel multiplied by a physical luminance would light the
-body with a gamma-bent albedo. `Planet.colour` is already linear and is
-not decoded. Ring strips are **not** decoded: their RGB was authored as a
-linear reflectance proxy anchored to the ~0.05 particle albedo, so
-decoding would darken the rings ~5x against the true-opacity alpha they
-were built with. That leaves the strip the one hand-anchored reflectance
-in these layers.
-
-**Both render paths.** Each planet shader applies the operator inline
-when `uHdrTarget` is 0, undithered — the mesh, ring annulus and
-atmosphere shell composite over each other, so a fragCoord-keyed dither
-would bias a pixel once per layer (`../../hdr/README.md` § Operator). The
-shell runs the operator on its airlight *before* `uFade` premultiplies,
-since the crossfade is a compositing weight, not light.
+Both layers emit into the scene-wide HDR unit (`../../hdr/README.md`
+§ Unit) — the glare through the point-source rule, the mesh through the
+surface-brightness rule, and past 1 px the two are the same quantity, so
+the resolve step is continuous by construction. The mesh anchor, the two
+disc means that divide out, and the colour bookkeeping that keeps a
+gamma-bent albedo from lighting the body live in `emission/README.md`.
 
 ## Planet mesh LOD
 
@@ -299,36 +222,11 @@ crossfade.
   correctly renders black there (no ambient term); atmospheric bodies
   keep an airlight limb ring.
 - **Reflected glare** is the **shared star-perceptual point** — a planet
-  reads *exactly* like a star of its apparent magnitude: size =
-  `perceptualAppSizePx(appMag)`, peak =
-  `stellataPointSourcePeak(uExposure, appMag, 0.5·physSize) · uGlareGain`
-  — the same emission rule the star field runs
-  (§ Physical-luminance emission). This is the
-  load-bearing invariant: **visibility matches magnitude.** A body
-  visible in chart mode (`appMag ≤ slider`) is equally visible here,
-  rendered like the naked-eye "wandering star" it is — Mars (~+1.3),
-  Jupiter (~−2), Saturn (~+0.5), Venus (~−4) all show, ordered by
-  magnitude, exactly as the surrounding star field does. `appMag` already
-  folds the phase factor φ(α) (`planetApparentMagnitude`), so a crescent
-  is correctly dimmer — no separate illumFrac on brightness. A
-  **photocentre shift** toward the sub-solar limb (shape only — brightness
-  unchanged), scaled by crescentness `(1−illumFrac)` and resolvedness
-  `res`, keeps a barely-resolved crescent's halo off its dark limb (kills
-  the ring) while leaving a sub-pixel dot centred. Eclipse folds in as a
-  flux multiplier on the peak.
-
-  When **resolved** the mesh draws the surface, writes depth, and occludes
-  the glare's core: since the magnitude bloom (`appSize`, capped at
-  `uSizeMax`) is smaller than a well-resolved disc (`physSize`), the glare
-  is hidden inside the disc and only shows as a lit-limb halo while the
-  body is small/bright. The full-Moon calibration
-  (`../perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux, so
-  the magnitude — and therefore visibility — is correct for any host star.
-  CPU mirror for the hover footprint: `max(physSize, appSize)`.
-
-`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak multiplier:
-planet-glare brightness against a star of the same magnitude (1 = identical).
-The occlusion above is the local depth pass; the old core mask is gone.
+  reads exactly like a star of its apparent magnitude, on the same
+  emission rule the star field runs. That is the load-bearing invariant:
+  **visibility matches magnitude.** The billboard's own behaviour — the
+  photocentre shift, why a resolved mesh hides the glare's core, and
+  `uGlareGain` — is `glare/README.md`.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -391,34 +289,11 @@ The occlusion above is the local depth pass; the old core mask is gone.
 
 ### Ring systems
 
-Saturn, plus Uranus + Neptune's faint rings at true opacity — spans and
-the Jupiter exclusion in `data/textures/README.md` § Ring strips.
-`Planet.rings` adds an annulus mesh (`planet-rings.*.glsl`) in the
-body's equatorial plane (IAU pole; host orbital plane as the
-no-elements fallback), textured by the `<body>-rings.png` 1-D radial
-strip (RGB colour, A opacity; U = inner→outer edge). Lit face gets full
-strip colour, unlit face a dimmer transmitted factor, both fading out as
-illumination goes edge-on; the far-side segment inside the body's shadow
-(analytic ray–ellipsoid test toward the host) drops to a residual floor.
-Rendered only in the mesh-LOD regime: alpha rides the same crossfade
-`uFade`, hidden until the strip texture arrives (no representative-colour
-fallback), `renderOrder` 2.81 (after the body mesh) with
-`depthWrite: false`.
-
-**Body occlusion is the local depth pass's z-buffer**: meshes + annuli
-render in the bracketed second pass (`../../local-depth/README.md`),
-where standard depth orders ring↔body natively — including the oblate
-limb. The analytic ray–ellipsoid helper survives only for the body-shadow
-term (sun ray, not camera ray). Geometry drawn near a planet body in the
-MAIN pass still cannot depth-test against it (same README, § Why the main
-pass cannot do this) — new close-range geometry belongs in the local pass,
-not behind a new analytic trick. Edge-on the zero-thickness annulus thins
-to a line, which is the physically honest look.
-
-**Rings do dim a source behind them in the exposure statistic**, by
-authored optical depth at the ray's opening angle — no z-test could, they
-write no depth. Seam `forEachRingOccluder`, contract
-`../../hdr/exposure/coverage/README.md` § Rings.
+Saturn, plus Uranus + Neptune's faint rings at true opacity. The annulus
+shaders, the radial strip's lit/transmitted faces, the body-shadow term,
+and why rings dim a source behind them in the exposure statistic while
+writing no depth all live in `rings/README.md`. Rendered only in the
+mesh-LOD regime, on the same crossfade `uFade` as the mesh.
 
 ## Planet rotation
 

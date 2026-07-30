@@ -56,8 +56,8 @@ import {
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import planetVert from './planet.vert.glsl?raw';
-import planetFrag from './planet.frag.glsl?raw';
+import planetVert from './glare/planet.vert.glsl?raw';
+import planetFrag from './glare/planet.frag.glsl?raw';
 
 /** Screen separation below which a body reads as one point with its
  *  parent (host star / parent planet). Deliberately looser than the

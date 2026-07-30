@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { equirectMeanLinearLuminance } from './map-mean-luminance';
-import { relativeLuminance, srgbDecode } from '../../hdr/tonemap-pure';
+import { relativeLuminance, srgbDecode } from '../../../hdr/tonemap-pure';
 
 /** Equirect RGBA where every pixel takes the same byte triple. */
 function flat(width: number, height: number, rgb: [number, number, number]): Uint8ClampedArray {
