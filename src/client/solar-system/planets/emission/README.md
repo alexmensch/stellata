@@ -17,9 +17,8 @@ src/client/solar-system/planets/emission/
 
 Both planet layers emit into the scene-wide HDR unit — the glare through
 the point-source rule, the mesh through the surface-brightness rule. There
-is no per-layer brightness encoding left: `uExposure` is the one exposure,
-and `uGlareGain` is a debug multiplier rather than a calibration knob
-(`../glare/README.md`).
+is no per-layer brightness encoding left, and no multiplier on either:
+`uExposure` is the one exposure (`../glare/README.md`).
 
 **The mesh anchor is a closed form.** A body's mean disc surface
 brightness drops both its radius and the viewer distance, because they

@@ -382,11 +382,21 @@ white-balance-processed, so pixel-matching is a trap. Instead:
   top is the real high-altitude blue limb Cassini images show. τ_Mie = 2.5
   sits in the measured visible haze range τ ≈ 2–5 (Tomasko et al. 2008).
 
-A dev **'Atmosphere' debug panel** (`../../debug/atmosphere-tuning.ts`)
-exposes four global multipliers applied on top of the per-body base —
-density (the 'dial Titan down' knob), Rayleigh↔Mie balance, scale
-height, and sun intensity — for live calibration; read a good value off
-the slider and bake it into the per-body table.
+### No global knobs
+
+There is **no debug slider on any of this**, and adding one would be a
+regression. Four global multipliers (density, Rayleigh↔Mie balance, scale
+height, sun intensity) existed while the depths were by-eye, and the workflow
+was "read a good value off the slider and bake it into the table". Once every
+row is a published measurement that workflow inverts: a value that disagrees
+with the render is a question for the source or the row, never for a global
+multiplier over all four bodies. They also became a correctness hazard — § Flux
+bookkeeping normalises what the shader emits, so a slider silently moved the
+calibration it was supposed to be testing.
+
+The line generalises: **perceptual knobs get sliders, physically-derived
+quantities don't.** Star-disc sizing and warp feel are legitimately by eye;
+τ_R at 450 nm is not.
 
 ## Shell extents
 

@@ -65,87 +65,34 @@ const ATMO_DEFINES = { ATMO_N_VIEW, ATMO_N_LIGHT } as const;
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 
-/** Live-tunable global atmosphere multipliers (debug 'Atmosphere' panel).
- *  Applied on top of every body's calibrated base params. */
-export interface AtmosphereTuning {
-  /** Scales total optical depth (scatter + absorb) — the 'dial Titan down'. */
-  densityMul: number;
-  /** 0 = pure Rayleigh, 0.5 = per-body balance, 1 = pure Mie. */
-  rayleighMieBalance: number;
-  /** Multiplies both scale heights. */
-  scaleHeightMul: number;
-  /** Illuminant strength. */
-  sunIntensity: number;
-}
-
-const DEFAULT_ATMO_TUNING: AtmosphereTuning = {
-  densityMul: 1,
-  rayleighMieBalance: 0.5,
-  scaleHeightMul: 1,
-  sunIntensity: 1,
-};
-
-/** Per-body scattering state in planet-radius units: the row's own params,
- *  the debug tuning applied on top, and the disc means that normalise
- *  whatever the tuned params make the shader emit. */
+/** Per-body scattering state in planet-radius units: the row's own params and
+ *  the disc means that normalise what the shader emits from them. Both derived
+ *  once — there is no global multiplier on a published optical depth, by
+ *  design (`../atmosphere/README.md` § No global knobs). */
 interface AtmoBase {
   /** `polarRadiusRatio` — the shaders scale the ray's polar component by its
    *  reciprocal so the unit-sphere march geometry describes the body drawn. */
   polarR: number;
   sunColour: readonly [number, number, number];
-  /** Straight off the PlanetAtmosphere row, untouched by the debug panel. */
-  base: AtmosphereParams;
-  /** `base` × the live tuning — what the uniforms carry. */
-  tuned: AtmosphereParams;
-  /** Measured through `tuned`, so the flux normalisation follows the sliders
-   *  instead of drifting off the base row (`retuned` refreshes both). */
+  params: AtmosphereParams;
   discMeans: AtmoDiscMeans;
-}
-
-/** The debug panel's global multipliers on one body's base params. Applied
- *  here once so the uniforms and the flux normaliser cannot disagree. */
-function tunedAtmoParams(base: AtmosphereParams, t: AtmosphereTuning): AtmosphereParams {
-  const rayMul = t.densityMul * 2 * (1 - t.rayleighMieBalance);
-  const mieMul = t.densityMul * 2 * t.rayleighMieBalance;
-  return {
-    rAtmo: base.rAtmo,
-    hR: base.hR * t.scaleHeightMul,
-    hM: base.hM * t.scaleHeightMul,
-    betaRs: [base.betaRs[0] * rayMul, base.betaRs[1] * rayMul, base.betaRs[2] * rayMul],
-    betaMs: base.betaMs * mieMul,
-    betaA: [base.betaA[0] * mieMul, base.betaA[1] * mieMul, base.betaA[2] * mieMul],
-    g: base.g,
-  };
-}
-
-function retuned(entry: AtmoBase, t: AtmosphereTuning): void {
-  entry.tuned = tunedAtmoParams(entry.base, t);
-  entry.discMeans = atmoDiscMeans(
-    entry.tuned,
-    relativeLuminance([
-      entry.sunColour[0] * t.sunIntensity,
-      entry.sunColour[1] * t.sunIntensity,
-      entry.sunColour[2] * t.sunIntensity,
-    ]),
-  );
 }
 
 function computeAtmoBase(
   radiusKm: number,
   polarR: number,
   atmo: PlanetAtmosphere,
-  tuning: AtmosphereTuning,
 ): AtmoBase {
-  const base = atmosphereParamsOf(atmo, radiusKm);
-  const entry: AtmoBase = {
+  const params = atmosphereParamsOf(atmo, radiusKm);
+  const sunColour = atmo.sunColour ?? SUN_COLOUR;
+  return {
     polarR,
-    sunColour: atmo.sunColour ?? SUN_COLOUR,
-    base,
-    tuned: base,
-    discMeans: { surface: 0, sky: 0, airlight: 0 },
+    sunColour,
+    params,
+    // The airlight rides the illuminant and the surface does not, so the
+    // normaliser has to know which.
+    discMeans: atmoDiscMeans(params, relativeLuminance(sunColour)),
   };
-  retuned(entry, tuning);
-  return entry;
 }
 
 /** The atmosphere-scatter uniforms shared by the mesh disc airlight and the
@@ -266,7 +213,6 @@ export class PlanetMeshLayer {
   private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
-  private readonly atmoTuning: AtmosphereTuning = { ...DEFAULT_ATMO_TUNING };
 
   constructor(
     field: PlanetBodyField,
@@ -580,7 +526,7 @@ export class PlanetMeshLayer {
     base: AtmoBase,
     radiusPc: number,
   ): void {
-    const p = base.tuned;
+    const p = base.params;
     (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
     (u.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     u.uPolarRadiusR.value = base.polarR;
@@ -592,11 +538,8 @@ export class PlanetMeshLayer {
     u.uBetaMie.value = p.betaMs;
     (u.uBetaAbsorb.value as THREE.Vector3).set(p.betaA[0], p.betaA[1], p.betaA[2]);
     u.uMieG.value = p.g;
-    const t = this.atmoTuning;
     (u.uSunColour.value as THREE.Vector3).set(
-      base.sunColour[0] * t.sunIntensity,
-      base.sunColour[1] * t.sunIntensity,
-      base.sunColour[2] * t.sunIntensity);
+      base.sunColour[0], base.sunColour[1], base.sunColour[2]);
   }
 
   /** Pose the limb-halo shell on the body and feed it the shared scatter
@@ -619,20 +562,6 @@ export class PlanetMeshLayer {
     (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
     atmo.material.uniforms.uAirlightLuminance.value = airlightL;
     atmo.material.uniforms.uFade.value = fade;
-  }
-
-  getAtmosphereTuning(): AtmosphereTuning {
-    return { ...this.atmoTuning };
-  }
-
-  setAtmosphereTuning(patch: Partial<AtmosphereTuning>): void {
-    Object.assign(this.atmoTuning, patch);
-    // The disc means normalise the TUNED params, so they are stale the moment
-    // a slider moves — leaving them would drift every atmospheric body off its
-    // flux while the panel is open.
-    for (const entry of this.entries.values()) {
-      if (entry.atmoBase) retuned(entry.atmoBase, this.atmoTuning);
-    }
   }
 
   private createEntry(idx: number, planet: Planet): MeshEntry {
@@ -679,7 +608,7 @@ export class PlanetMeshLayer {
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
       entry.atmoBase = computeAtmoBase(
-        planet.radiusKm, polarRadiusRatio(planet), planet.atmosphere, this.atmoTuning,
+        planet.radiusKm, polarRadiusRatio(planet), planet.atmosphere,
       );
       entry.atmosphere = this.createAtmosphere(planet, planet.atmosphere);
     }

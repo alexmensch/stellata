@@ -21,7 +21,6 @@ import {
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
-  DEFAULT_GLARE_GAIN,
   GLARE_PHOTOCENTRE_SHIFT,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
@@ -241,8 +240,6 @@ export class PlanetBodyField {
   private hideIdxUniform = { value: -1 };
   // Tunable reflected-glare peak multiplier (planet glare brightness vs a
   // star of the same magnitude) — one shared slot across the main-pass
-  // and local-pass glare materials; setGlareGain writes it for smoke.
-  private glareGainUniform = { value: DEFAULT_GLARE_GAIN };
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. One shared value drives the main-pass suppression AND the
   // mirror draws' member gate (opposite sense, keyed on the
@@ -403,18 +400,6 @@ export class PlanetBodyField {
     for (const host of this.hosts.values()) {
       host.cullDistance = cullDistancePc(host.hostAbsmag, host.brightestReflectance, cullMag);
     }
-  }
-
-  /** Reflected-glare gain — the flux-continuity calibration between the
-   *  resolved bloom peak and the mesh surface it sits over. One shared
-   *  uniform across the main- and local-pass glare materials; smoke-tuned
-   *  from the default in mesh-crossfade.ts. */
-  setGlareGain(gain: number): void {
-    this.glareGainUniform.value = gain;
-  }
-
-  getGlareGain(): number {
-    return this.glareGainUniform.value;
   }
 
   /**
@@ -1208,7 +1193,6 @@ export class PlanetBodyField {
           uMeshFadePx: {
             value: new THREE.Vector2(MESH_FADE_MIN_PX, MESH_FADE_FULL_PX),
           },
-          uGlareGain: this.glareGainUniform,
           uGlarePhotocentreShift: { value: GLARE_PHOTOCENTRE_SHIFT },
         },
       });

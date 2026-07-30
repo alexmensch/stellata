@@ -94,7 +94,6 @@ uniform float uLumBiasMax;
 uniform vec2 uMeshFadePx;
 // Reflected-glare peak multiplier — planet-glare brightness relative to
 // a star of the same magnitude (1 = identical). Debug-tunable.
-uniform float uGlareGain;
 // Photocentre shift toward the lit limb, as a fraction of the disc
 // radius, at maximum crescent and full resolvedness (GLARE_PHOTOCENTRE_
 // SHIFT from mesh-crossfade.ts).
@@ -308,17 +307,16 @@ void main() {
     // resolve step continuous: past 1 px both sides are the disc's mean
     // surface brightness rather than two unrelated peak-1 encodings.
     vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
-        * uGlareGain * eclipseFactor;
+        * eclipseFactor;
 
     // The statistic's flux channel. The frag shader shapes the kernel at
     // physRatio 0, so the exponent is uDistNMin alone; pxSize is CSS px,
     // which is what keeps the frame mean devicePixelRatio-independent
-    // (../../../hdr/exposure/reduction/README.md § Pixel units). uGlareGain
-    // rides it so the debug knob cannot desynchronise the two channels.
+    // (../../../hdr/exposure/reduction/README.md § Pixel units).
     vFluxPeakL = stellataKernelFluxPeak(uExposure, appMag, pxSize,
         perceptualDiscFluxIntegral(perceptualDiscExponent(
             softness, 0.0, uDistNMin, uDistNMin, uLumBiasMin, uLumBiasMax)))
-        * uGlareGain * eclipseFactor;
+        * eclipseFactor;
 
     // Photocentre shift toward the lit limb on a resolved crescent —
     // SHAPE only (brightness stays appMag-driven), scaled by crescentness

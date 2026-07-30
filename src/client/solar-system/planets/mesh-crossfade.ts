@@ -18,11 +18,6 @@ export const TEXTURE_PREFETCH_PX = 0.5;
  *  dark limb. Mirrored in planet.vert.glsl (uGlarePhotocentreShift). */
 export const GLARE_PHOTOCENTRE_SHIFT = 0.5;
 
-/** Default reflected-glare peak multiplier — planet-glare brightness
- *  relative to a star of the same magnitude (1 = identical). Smoke-tuned;
- *  drives the tunable uGlareGain uniform. */
-export const DEFAULT_GLARE_GAIN = 1.0;
-
 /** Mesh opacity for a physical diameter in CSS px: 0 at/below
  *  MESH_FADE_MIN_PX, 1 at/above MESH_FADE_FULL_PX, smoothstep across.
  *  Doubles as glare resolvedness `res` — the shader computes the same

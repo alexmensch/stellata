@@ -80,7 +80,7 @@ import { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { PROBE_MARKER_PX, ProbeField } from './solar-system/probes/probe-field';
 import { ProbePathLayer } from './solar-system/probes/probe-path-layer';
 import type { ProbeTrajectory } from './solar-system/probes/probe-trajectory';
-import { type AtmosphereTuning, PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
+import { PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
@@ -2179,17 +2179,6 @@ export class Stellata implements FrameAnchor {
     this.filters.setStarRenderParams(patch);
   }
   getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
-  /** Reflected-glare peak multiplier — planet-glare brightness relative
-   *  to a star of the same magnitude (1 = identical). Dev-panel smoke
-   *  knob (debug/planet-tuning.ts). */
-  setPlanetGlareGain(gain: number) { this.planetBodyField.setGlareGain(gain); }
-  getPlanetGlareGain(): number { return this.planetBodyField.getGlareGain(); }
-  /** Global atmosphere-scattering multipliers — dev-panel smoke knobs
-   *  (debug/atmosphere-tuning.ts). Applied on top of each body's base. */
-  setAtmosphereTuning(patch: Partial<AtmosphereTuning>) {
-    this.planetMeshLayer.setAtmosphereTuning(patch);
-  }
-  getAtmosphereTuning(): AtmosphereTuning { return this.planetMeshLayer.getAtmosphereTuning(); }
   clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
     this.filters.clearSizeOverrides(fields);
   }

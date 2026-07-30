@@ -46,9 +46,8 @@ src/client/solar-system/planets/
                                   out, and the day map's measured mean
                                   luminance. Its own README.
   glare/                          Reflected-glare billboard shaders: the
-                                  shared star-perceptual point, the
-                                  photocentre shift, uGlareGain. Its own
-                                  README.
+                                  shared star-perceptual point and the
+                                  photocentre shift. Its own README.
   rings/                          Ring-annulus shaders and the radial
                                   strip. Its own README.
   rotation/                       Pole + prime-meridian elements and the
@@ -221,8 +220,8 @@ crossfade.
   reads exactly like a star of its apparent magnitude, on the same
   emission rule the star field runs. That is the load-bearing invariant:
   **visibility matches magnitude.** The billboard's own behaviour — the
-  photocentre shift, why a resolved mesh hides the glare's core, and
-  `uGlareGain` — is `glare/README.md`.
+  photocentre shift and why a resolved mesh hides the glare's core — is
+  `glare/README.md`.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
