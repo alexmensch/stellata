@@ -149,12 +149,29 @@ atmosphere that hides its texture and reads as a featureless orange ball. Every
 atmosphere is an independent per-body `PlanetAtmosphere` row, so this is a local
 choice, not a global one; the debug sliders are global multipliers on top.
 
-**Multiple-scattering fill.** A small isotropic term = fraction scattered (not
+**Multiple-scattering fill.** An isotropic term = fraction scattered (not
 absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
-day-side ambient so the terminator doesn't fall to pure single-scatter black.
-Kept low precisely so it doesn't grey-wash the surface texture. It is the one
-weight in the model still set by eye, and it stands in for a term the march
-genuinely does not compute.
+day-side ambient so the terminator doesn't fall to pure single-scatter black. It
+stands in for a term the march genuinely does not compute, and it carries **no
+phase function and no directionality** — a veil, not a structured glow, which is
+why its *share* of the airlight is the thing to watch: too much of it and the
+surface texture greys out.
+
+**It is not the small correction the name suggests.** Measured through the CPU
+mirror on a limb chord (`atmosphere-scattering-pure.ts`), the fill's share of
+total airlight is **53 % on Earth, 61 % on Venus, 83 % on Mars** with the sun at
+90°, falling to 36 / 8 / 4 % back-lit where the Mie forward peak takes over. So
+single scatter leads only in back-lit geometry.
+
+`MS_STRENGTH = 0.0667` is `0.2/3`, and the `/3` is the interesting part: the 0.2
+was read off the slider while single scatter still carried the 3× gain that
+§ Airlight rides host irradiance describes deleting. Carried through unchanged
+it would have tripled the shares above (77 / 82 / 94 %) and washed the textures
+out. Rescaling preserves the ratio the eye had approved — it does **not** derive
+it. This weight and the per-body optical depths are both still by eye:
+`stellata-2f6.38` replaces this term with the physics it stands in for (and the
+twilight tail below, which is the same missing physics), `stellata-2f6.37`
+anchors the depths.
 
 **Airlight rides host irradiance, and there is no gain on it.** Both the disc
 block and the shell multiply `uAirlightLuminance`

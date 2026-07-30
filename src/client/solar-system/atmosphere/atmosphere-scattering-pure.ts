@@ -14,9 +14,14 @@ const LIGHT_JITTER_STRIDE = 0.6180339887;
 /** Isotropic multiple-scattering fill weight. Single scattering alone leaves
  *  optically thick hazes (Venus, Titan) far too dark — most of their light
  *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
- *  opacity × sunlit, which is negligible for thin atmospheres (Earth) and
- *  dominant for thick ones. */
-export const MS_STRENGTH = 0.2;
+ *  opacity × sunlit.
+ *
+ *  0.0667 is 0.2/3, and the /3 is load-bearing: the 0.2 was judged by eye
+ *  while single scatter still carried a 3× gain, so carrying it unchanged
+ *  past that gain's deletion would triple this term's share of the airlight
+ *  and grey out the surface texture the weight exists to stay under.
+ *  README.md § Multiple-scattering fill has the shares. */
+export const MS_STRENGTH = 0.0667;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];

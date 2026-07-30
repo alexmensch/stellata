@@ -3,6 +3,7 @@ import {
   ATMO_N_LIGHT,
   ATMO_N_VIEW,
   type AtmosphereParams,
+  MS_STRENGTH,
   TWILIGHT_SCATTER_FRAC,
   type Vec3,
   litFraction,
@@ -112,7 +113,10 @@ describe('scatterAlongRay', () => {
     };
     const r = scatterAlongRay(O, D, T0, T1, SUN_DAY, venus);
     expect(r.transmittance[0]).toBeLessThan(0.05); // surface behind is extinguished
-    expect(Math.min(...r.inscatter)).toBeGreaterThan(0.1); // yet the disc is lit
+    // Opacity and sunlit-fraction are both ~1 here and single scatter has
+    // self-extinguished, so the fill IS the airlight — keyed to MS_STRENGTH
+    // rather than a literal, since retuning the weight must not fail this.
+    expect(Math.min(...r.inscatter)).toBeGreaterThan(0.8 * MS_STRENGTH);
   });
 
   it('jitter offsets the sample lattice (shader anti-banding) without breaking sign', () => {

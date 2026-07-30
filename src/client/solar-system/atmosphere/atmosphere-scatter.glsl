@@ -8,7 +8,7 @@ const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
 // Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_SCATTER_FRAC in
 // atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
-const float STELLATA_MS_STRENGTH = 0.2;
+const float STELLATA_MS_STRENGTH = 0.0667;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
 const float STELLATA_TWILIGHT_SCATTER_FRAC = 0.055;
 // Stands in for an unbounded shadow span; only ever min/maxed against a ray
