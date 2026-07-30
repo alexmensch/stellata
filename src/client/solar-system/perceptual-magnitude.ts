@@ -71,7 +71,7 @@ export function perceptualAppSizePx(
 
 /**
  * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in shaders/planet.vert.glsl.
+ * mirror of the integrated formula in planets/glare/planet.vert.glsl.
  *
  *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
  *   m_planet         = m_host_at_planet
