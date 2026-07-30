@@ -1,6 +1,6 @@
-// Occluder-coverage math shared by the GPU pass and its CPU mirror: the
-// depth inverse, deterministic disc taps, ring slant transmission, and
-// the single-bracket depth range. Contract in README.md.
+// Occluder-coverage math: the depth inverse, deterministic disc taps, ring
+// slant transmission, and the single-bracket depth range. Most of it is the
+// executable spec coverage.frag.glsl is pinned against — README.md § Files.
 
 import { FAR_MARGIN, NEAR_FRACTION, NEAR_MIN_PC, type MemberSphere }
   from '../../../local-depth/slice-pure';
@@ -116,15 +116,8 @@ export function radialFromAxial(depthPc: number, rayLen: number): number {
 /**
  * Depth margin below a source before a surface counts as an occluder: the
  * source's own bounding radius, floored at `SELF_OCCLUSION_SLACK` of its
- * depth.
- *
- * The radius has to be the source's own, not a relative constant. A
- * resolved body's near surface sits a full radius in front of its centre
- * — 20% of the distance at a 5-radius framing — so a fixed relative slack
- * lets the dominant source of the whole statistic occlude itself and
- * vanish from the mean. `footprintRadiusPx / pxPerRadian · depth` **is**
- * that radius for anything resolved, and falls under the floor for
- * anything that isn't.
+ * depth. Why it cannot be a fixed relative constant — README.md § The
+ * slack is the source's own radius.
  */
 export function selfOcclusionSlackPc(
   footprintRadiusPx: number,
@@ -156,20 +149,9 @@ export function tapOccluded(
 }
 
 /**
- * Fraction of a ring's light path that gets through, from the strip's
- * authored alpha and the ring's opening angle to the line of sight.
- *
- * The strips carry `alpha = 1 − e^−τ` at each ring's **normal** optical
- * depth (`data/textures/README.md` § Ring strips), so `τ = −ln(1 − alpha)`
- * and a slant path of `1/|sin B|` normal depths gives
- *
- * ```
- * T = e^(−τ/|sin B|) = (1 − alpha)^(1/|sin B|)
- * ```
- *
- * which needs one `pow` and no logs. It is what makes the SAME ring
- * opaque edge-on and translucent face-on — the geometry dependence a
- * single opacity scalar cannot express.
+ * Fraction of a ring's light path that gets through: `(1 − alpha)^(1/|sin
+ * B|)` for the strip's authored normal-depth alpha at opening angle `B`.
+ * Derivation and why the angle has to be in it — README.md § Rings.
  */
 export function ringTransmission(stripAlpha: number, sinOpeningAngle: number): number {
   const a = Math.min(Math.max(stripAlpha, 0), 1);
@@ -194,7 +176,9 @@ export const RING_MIN_SIN_OPENING = 1e-6;
  * Returns 1 — no extinction — when the ray misses the annulus, runs
  * parallel to its plane, or crosses it at or beyond `sourceRadialPc`: a
  * ring behind the source cannot dim it. `stripAlphaAt` samples the radial
- * strip's authored alpha, the same inner→outer `U` the ring shader reads.
+ * strip's authored alpha, the same inner→outer `U` the ring shader reads;
+ * `alphaScale` is the annulus's live crossfade weight, so the extinction
+ * tracks the alpha actually composited rather than the authored strip.
  */
 export function ringRayTransmission(
   dx: number, dy: number, dz: number,
@@ -204,6 +188,7 @@ export function ringRayTransmission(
   innerRatio: number,
   sourceRadialPc: number,
   stripAlphaAt: (u: number) => number,
+  alphaScale: number,
 ): number {
   const sinB = dx * nx + dy * ny + dz * nz;
   if (Math.abs(sinB) < RING_MIN_SIN_OPENING) return 1;
@@ -215,18 +200,18 @@ export function ringRayTransmission(
   const r = Math.sqrt(hx * hx + hy * hy + hz * hz);
   if (r < innerRatio * outerPc || r > outerPc) return 1;
   return ringTransmission(
-    stripAlphaAt((r / outerPc - innerRatio) / (1 - innerRatio)),
+    stripAlphaAt((r / outerPc - innerRatio) / (1 - innerRatio)) * alphaScale,
     sinB,
   );
 }
 
 /**
- * Mean throughput over a source's footprint: the tap loop's reduction.
- * `tapThroughput` returns each tap's transmission, or `null` for a tap
- * outside the frame — those leave both sides of the mean, because the
- * frame-clipping term already owns them and the product would otherwise
- * count the same loss twice. No tap in frame reads as 1, leaving the
- * clipping term (≈0 there) to zero the product.
+ * Mean throughput over a source's visibility disc: the tap loop's
+ * reduction. `tapThroughput` returns each tap's transmission, or `null`
+ * for a tap outside the frame — those leave both sides of the mean,
+ * because the frame-clipping term already owns them and the product would
+ * otherwise count the same loss twice. No tap in frame reads as 1, and
+ * clipping is then exactly 0 over the same disc, so the product is 0.
  */
 export function meanTapThroughput(
   taps: number,
@@ -272,10 +257,10 @@ export function coverageBracket(
  *
  * **Multiplicative, where the circle-era formula subtracted.** Subtracting
  * was forced by not knowing where an occluder sat relative to the frame
- * edge; measuring transmission over the on-screen part of the footprint
- * makes the composition exact — `clipped` is what fraction of the
- * footprint is in frame, `transmission` the mean throughput over exactly
- * that part.
+ * edge. Both terms now run over the one `visibilityDiscRadiusPx` disc —
+ * `clipped` is what fraction of it is in frame, `transmission` the mean
+ * throughput over exactly that part — which is what makes the product
+ * exact rather than two fractions of different regions.
  */
 export function visibleFraction(clipped: number, transmission: number): number {
   return Math.min(Math.max(clipped, 0), 1) * Math.min(Math.max(transmission, 0), 1);

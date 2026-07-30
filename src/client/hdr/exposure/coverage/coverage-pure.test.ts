@@ -184,12 +184,13 @@ describe('ringRayTransmission', () => {
   const strip = () => ALPHA;
   // Same annulus, same hit radius, two openings: face-on (pole along the
   // ray) and 5 degrees off edge-on.
-  const faceOn = (sourceRadialPc = SOURCE) => ringRayTransmission(
-    0, 0, -1, R_MID, 0, -D, 0, 0, 1, OUTER, INNER_RATIO, sourceRadialPc, strip);
+  const faceOn = (sourceRadialPc = SOURCE, alphaScale = 1) => ringRayTransmission(
+    0, 0, -1, R_MID, 0, -D, 0, 0, 1, OUTER, INNER_RATIO, sourceRadialPc, strip,
+    alphaScale);
   const sin5 = Math.sin((5 * Math.PI) / 180);
   const cos5 = Math.cos((5 * Math.PI) / 180);
   const grazing = ringRayTransmission(
-    0, 0, -1, 0, R_MID, -D, cos5, 0, sin5, OUTER, INNER_RATIO, SOURCE, strip);
+    0, 0, -1, 0, R_MID, -D, cos5, 0, sin5, OUTER, INNER_RATIO, SOURCE, strip, 1);
 
   it('passes 1 - alpha face-on and goes opaque near edge-on', () => {
     expect(faceOn()).toBeCloseTo(1 - ALPHA, 12);
@@ -200,14 +201,14 @@ describe('ringRayTransmission', () => {
     const seen: number[] = [];
     ringRayTransmission(
       0, 0, -1, R_MID, 0, -D, 0, 0, 1, OUTER, INNER_RATIO, SOURCE,
-      (u) => { seen.push(u); return 0; });
+      (u) => { seen.push(u); return 0; }, 1);
     expect(seen).toHaveLength(1);
     expect(seen[0]).toBeCloseTo((0.8 - INNER_RATIO) / (1 - INNER_RATIO), 12);
   });
 
   it('lets a ray through the annulus hole and past the outer edge', () => {
     const at = (rPc: number) => ringRayTransmission(
-      0, 0, -1, rPc, 0, -D, 0, 0, 1, OUTER, INNER_RATIO, SOURCE, strip);
+      0, 0, -1, rPc, 0, -D, 0, 0, 1, OUTER, INNER_RATIO, SOURCE, strip, 1);
     expect(at(0.5 * INNER_RATIO * OUTER)).toBe(1);
     expect(at(1.5 * OUTER)).toBe(1);
   });
@@ -221,7 +222,16 @@ describe('ringRayTransmission', () => {
 
   it('leaves a ray in the ring plane alone — the annulus has no thickness', () => {
     expect(ringRayTransmission(
-      0, 0, -1, R_MID, 0, -D, 1, 0, 0, OUTER, INNER_RATIO, SOURCE, strip)).toBe(1);
+      0, 0, -1, R_MID, 0, -D, 1, 0, 0, OUTER, INNER_RATIO, SOURCE, strip, 1)).toBe(1);
+  });
+
+  it('rides the crossfade weight, not the authored strip', () => {
+    // The annulus is half composited, so it may only dim a source behind it
+    // by half the authored alpha — otherwise a ring fading in over the
+    // crossfade band would extinguish at full strength from the first frame.
+    expect(faceOn(SOURCE, 0)).toBe(1);
+    expect(faceOn(SOURCE, 0.5)).toBeCloseTo(1 - 0.5 * ALPHA, 12);
+    expect(faceOn(SOURCE, 1)).toBeCloseTo(1 - ALPHA, 12);
   });
 });
 
