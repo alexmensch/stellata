@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { exposureForMagLimit } from '../exposure-epoch';
 import {
   combineReductionTexels,
@@ -6,6 +8,11 @@ import {
   reductionLevelSizes,
   rescaleToBaseExposure,
 } from './reduction-pure';
+
+const shader = readFileSync(
+  fileURLToPath(new URL('./reduce.frag.glsl', import.meta.url)),
+  'utf8',
+).replace(/\/\/[^\n]*/g, '');
 
 /** Run a whole frame of level-0 texels through the chain the shader draws,
  *  so the 1x1 result can be compared against the true mean directly. */
@@ -95,6 +102,37 @@ describe('the reduced peak', () => {
 describe('combineReductionTexels', () => {
   it('reads an all-empty output texel as zero rather than NaN', () => {
     expect(combineReductionTexels([])).toEqual({ mean: 0, peak: 0, weight: 0 });
+  });
+});
+
+// combineReductionTexels is the spec; reduce.frag.glsl is what runs. The
+// two are tied by nothing at compile time, and a window widened on one side
+// alone silently biases the frame mean rather than failing.
+describe('GLSL drift', () => {
+  it('walks the same 2x2 window the spec combines', () => {
+    expect(shader).toContain('dy < 2');
+    expect(shader).toContain('dx < 2');
+  });
+
+  it('divides the outgoing weight by the same window area', () => {
+    const combined = combineReductionTexels([{ mean: 0, peak: 0, weight: 1 }]);
+    expect(shader).toContain('weight * 0.25');
+    expect(combined.weight).toBe(0.25);
+  });
+
+  it('drops out-of-bounds taps from the weight, not just the numerator', () => {
+    expect(shader).toMatch(/if \(c\.x >= bound\.x \|\| c\.y >= bound\.y\) continue;/);
+    expect(shader).toContain('weight += t.a');
+    expect(shader).toContain('numerator += t.a * t.r');
+  });
+
+  it('reads an all-empty output texel as zero rather than NaN, like the spec', () => {
+    expect(shader).toContain('weight > 0.0 ? numerator / weight : 0.0');
+    expect(combineReductionTexels([]).mean).toBe(0);
+  });
+
+  it('maxes the peak channel instead of averaging it', () => {
+    expect(shader).toContain('peak = max(peak, t.g)');
   });
 });
 

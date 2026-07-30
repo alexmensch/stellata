@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { STAR_RENDER_DEFAULTS } from '../filters/filter-state';
 import {
+  KERNEL_FLUX_FIT,
   KERNEL_FLUX_FIT_N_MAX,
   KERNEL_FLUX_FIT_N_MIN,
   perceptualDiscExponent,
@@ -9,6 +12,18 @@ import {
 
 const { visibleThreshold, distNMin, distNMax, lumBiasMin, lumBiasMax } = STAR_RENDER_DEFAULTS;
 const visibleK = -Math.log(visibleThreshold);
+
+const chunk = readFileSync(
+  fileURLToPath(new URL('./perceptual-disc.glsl', import.meta.url)),
+  'utf8',
+);
+
+/** Body of a GLSL function, comments stripped and whitespace collapsed. */
+function glslBody(name: string): string {
+  const m = chunk.match(new RegExp(`float ${name}\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}`));
+  if (m === null) throw new Error(`${name} not declared in perceptual-disc.glsl`);
+  return m[1].replace(/\/\/[^\n]*/g, '').replace(/\s+/g, ' ').trim();
+}
 
 /** The integral the fit approximates, by brute-force quadrature over the
  *  profile as `perceptual-disc.glsl` defines it. Independent of the fit. */
@@ -24,6 +39,29 @@ function integrateProfile(n: number, discardThreshold = 0): number {
   }
   return ((Math.PI / 2) * sum) / steps;
 }
+
+// The shader runs these two on the GPU and this file's copies are what the
+// accuracy claims above are measured against. Nothing at compile time ties
+// them together, so a typo in either copy would shift the statistic's flux
+// channel — the exposure — with every test above still passing.
+describe('GLSL drift', () => {
+  it('declares the same fit coefficients as KERNEL_FLUX_FIT', () => {
+    const polynomial = glslBody('perceptualDiscFluxIntegral').split('return')[1];
+    expect(polynomial.match(/-?\d+\.\d+/g)?.map(Number)).toEqual([...KERNEL_FLUX_FIT]);
+  });
+
+  it('shapes the exponent the same way perceptualDiscExponent does', () => {
+    expect(glslBody('perceptualDiscExponent')).toBe(
+      'float distN = mix(distNMin, distNMax, smoothstep(0.0, 0.5, physRatio));'
+      + ' float lumBias = mix(lumBiasMin, lumBiasMax, softness);'
+      + ' return distN * lumBias;',
+    );
+  });
+
+  it('shapes the profile on that exponent rather than re-deriving it', () => {
+    expect(glslBody('perceptualDiscProfile')).toContain('perceptualDiscExponent(');
+  });
+});
 
 describe('perceptualDiscExponent', () => {
   const n = (softness: number, physRatio: number) =>
