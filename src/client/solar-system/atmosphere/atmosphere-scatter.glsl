@@ -6,12 +6,14 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of AIRLIGHT_GAIN / MS_STRENGTH / LIGHT_JITTER_STRIDE / SHADOW_SOFT in
-// atmosphere-scattering-pure.ts.
-const float STELLATA_AIRLIGHT_GAIN = 3.0;
-const float STELLATA_MS_STRENGTH = 0.2;
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_SCATTER_FRAC in
+// atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
+const float STELLATA_MS_STRENGTH = 0.0667;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
-const float STELLATA_SHADOW_SOFT = 0.15;
+const float STELLATA_TWILIGHT_SCATTER_FRAC = 0.055;
+// Stands in for an unbounded shadow span; only ever min/maxed against a ray
+// parameter, never multiplied, so it just has to dwarf one.
+const float STELLATA_SHADOW_FAR = 1e20;
 
 float stellata_rayleighPhase(float mu) {
   return STELLATA_RAYLEIGH_PHASE_K * (1.0 + mu * mu);
@@ -65,16 +67,105 @@ bool stellata_hitsBodyAhead(vec3 o, vec3 dir) {
   return disc > 0.0 && -b - sqrt(disc) > 0.0;
 }
 
-// Fraction of a point lit by the sun: 1 unless it is BOTH anti-sunward of the
-// terminator plane AND inside the planet's shadow cylinder. Smoothed over
-// STELLATA_SHADOW_SOFT (planet-radius units) so the atmosphere terminator is
-// a continuous rolloff, not a hard 0/1 that quantises into moiré contours.
-float stellata_sunLit(vec3 p, vec3 sunDir) {
-  float sunT = dot(p, sunDir);
-  float impact = sqrt(max(dot(p, p) - sunT * sunT, 0.0));
-  return max(
-    smoothstep(0.0, STELLATA_SHADOW_SOFT, sunT),
-    smoothstep(1.0 - STELLATA_SHADOW_SOFT, 1.0 + STELLATA_SHADOW_SOFT, impact));
+// Scale a vector's component along `pole` by s, leaving the equatorial part
+// alone — the seam between an oblate body and a march that assumes a unit
+// sphere. s = 1/polarR maps a spheroid of polar radius polarR (equatorial
+// radii) onto the unit sphere, s = polarR inverts it. Linear about the body
+// centre, so a ray maps to a ray with its parameter unchanged; callers
+// renormalise directions. Normals scale by the inverse transpose, which for
+// this diagonal map is the inverse.
+vec3 stellata_scalePolar(vec3 v, vec3 pole, float s) {
+  return v + pole * (dot(v, pole) * (s - 1.0));
+}
+
+// The camera — at the view-space origin — relative to the body centre in
+// planet-radius units, in the unit-sphere frame. Both frags must enter the
+// march through this and stellata_deflattenedDir, sun direction included: a
+// sun left in real space tilts the shadow cylinder against the body casting it.
+vec3 stellata_deflattenedCamera(vec3 centreView, float radiusPc, vec3 pole, float polarR) {
+  return stellata_scalePolar(-centreView / radiusPc, pole, 1.0 / polarR);
+}
+
+// A unit direction in the same frame. The map is not a similarity, so the
+// result needs renormalising even though v arrives unit.
+vec3 stellata_deflattenedDir(vec3 v, vec3 pole, float polarR) {
+  return normalize(stellata_scalePolar(v, pole, 1.0 / polarR));
+}
+
+// The planetary shadow along o + t·d as the single t-interval it always is:
+// inside the infinite shadow cylinder (a quadratic in t) and anti-sunward of
+// the terminator plane (a half-space). s0 > s1 means the ray never enters it.
+// Solve once per ray, never per sample — README.md § Anti-banding.
+void stellata_shadowSpan(vec3 o, vec3 d, vec3 sunDir, out float s0, out float s1) {
+  // Inverted and unbounded, so it reads as empty against any ray parameter.
+  s0 = STELLATA_SHADOW_FAR;
+  s1 = -STELLATA_SHADOW_FAR;
+  float oS = dot(o, sunDir);
+  float dS = dot(d, sunDir);
+  vec3 oP = o - oS * sunDir;
+  vec3 dP = d - dS * sunDir;
+  float a = dot(dP, dP);
+  float b = dot(oP, dP);
+  float c = dot(oP, oP) - 1.0;
+
+  float lo, hi;
+  if (a > 1e-12) {
+    float disc = b * b - a * c;
+    if (disc <= 0.0) return;
+    float r = sqrt(disc);
+    lo = (-b - r) / a;
+    hi = (-b + r) / a;
+  } else {
+    // Ray parallel to the shadow axis: its impact parameter never changes.
+    if (c >= 0.0) return;
+    lo = -STELLATA_SHADOW_FAR;
+    hi = STELLATA_SHADOW_FAR;
+  }
+
+  if (abs(dS) > 1e-12) {
+    float th = -oS / dS;
+    if (dS > 0.0) hi = min(hi, th); else lo = max(lo, th);
+  } else if (oS >= 0.0) {
+    return;
+  }
+  s0 = lo;
+  s1 = hi;
+}
+
+// Fraction of the march segment centred on t with half-width h that falls
+// outside the shadow span — the exact quadrature weight for a hard shadow,
+// and continuous in the ray's geometry, so the lit sample count cannot step.
+//
+// Both bounds MUST stay offsets from t. t is the ray parameter from the
+// camera, so t ± h are large and nearly equal and the 1/(2h) amplifies
+// whatever float32 loses between them; clamping first is what makes a segment
+// wholly inside or outside the shadow return exactly 0 or 1.
+float stellata_litFraction(float t, float h, float s0, float s1) {
+  float lo = max(s0 - t, -h);
+  float hi = min(s1 - t, h);
+  return 1.0 - max(hi - lo, 0.0) / (2.0 * h);
+}
+
+// Altitude of the planetary shadow's upper edge directly above a surface
+// point with sun-cosine sunCos — 0 on the lit side, 1/cos(delta) − 1 delta
+// past the geometric terminator. Only the column above it still sees the host.
+float stellata_shadowEdgeAltitude(float sunCos) {
+  if (sunCos >= 0.0) return 0.0;
+  return 1.0 / sqrt(max(1.0 - sunCos * sunCos, 1e-12)) - 1.0;
+}
+
+// Vertical scattering optical depth per channel (absorption excluded).
+vec3 stellata_verticalScatterTau(vec3 betaRs, float betaMs, float hR, float hM) {
+  return betaRs * hR + vec3(betaMs * hM);
+}
+
+// Twilight: the fraction of host irradiance the lit atmosphere scatters down
+// onto the surface below it. The shadow edge climbing out of the scattering
+// column is what extinguishes it, so its angular reach is the body's own
+// scale height.
+vec3 stellata_twilightIrradiance(float sunCos, float hR, vec3 tauScatter) {
+  return tauScatter * (STELLATA_TWILIGHT_SCATTER_FRAC
+    * exp(-stellata_shadowEdgeAltitude(sunCos) / hR));
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along
@@ -92,6 +183,8 @@ void stellata_atmosphereRadiance(
   if (span <= 0.0) return;
 
   float segLen = span / float(ATMO_N_VIEW);
+  float shadow0, shadow1;
+  stellata_shadowSpan(o, d, sunDir, shadow0, shadow1);
   float mu = dot(d, sunDir);
   float pR = stellata_rayleighPhase(mu);
   float pM = stellata_miePhase(mu, g);
@@ -109,7 +202,7 @@ void stellata_atmosphereRadiance(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    float lit = stellata_sunLit(p, sunDir);
+    float lit = stellata_litFraction(t, 0.5 * segLen, shadow0, shadow1);
     litSum += lit;
     if (lit <= 0.0) continue;
     float sExit = stellata_farRoot(p, sunDir, rAtmo);
@@ -141,5 +234,5 @@ void stellata_atmosphereRadiance(
   vec3 scatterC = betaRs + betaMs;
   vec3 ssAlbedo = scatterC / max(scatterC + betaA, vec3(1e-6));
   vec3 ms = ssAlbedo * (1.0 - transmittance) * (litFrac * STELLATA_MS_STRENGTH);
-  inscatter = inscatter * STELLATA_AIRLIGHT_GAIN + ms;
+  inscatter += ms;
 }

@@ -8,6 +8,7 @@ import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';
 import { measureMapMeanLuminance } from './map-mean-luminance';
+import { polarRadiusRatio } from './spheroid-pure';
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
@@ -84,6 +85,9 @@ const DEFAULT_ATMO_TUNING: AtmosphereTuning = {
  *  the PlanetAtmosphere vertical optical depths. */
 interface AtmoBase {
   rAtmo: number;
+  /** `polarRadiusRatio` — the shaders scale the ray's polar component by its
+   *  reciprocal so the unit-sphere march geometry describes the body drawn. */
+  polarR: number;
   hR0: number;
   hM0: number;
   betaRs0: readonly [number, number, number];
@@ -93,11 +97,16 @@ interface AtmoBase {
   sunColour: readonly [number, number, number];
 }
 
-function computeAtmoBase(radiusKm: number, atmo: PlanetAtmosphere): AtmoBase {
+function computeAtmoBase(
+  radiusKm: number,
+  polarR: number,
+  atmo: PlanetAtmosphere,
+): AtmoBase {
   const hR0 = atmo.rayleighHeightKm / radiusKm;
   const hM0 = atmo.mieHeightKm / radiusKm;
   return {
     rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
+    polarR,
     hR0,
     hM0,
     betaRs0: [atmo.rayleighCoeff[0] / hR0, atmo.rayleighCoeff[1] / hR0, atmo.rayleighCoeff[2] / hR0],
@@ -115,6 +124,8 @@ function sharedAtmoUniforms(): Record<string, THREE.IUniform> {
     uCenterView: { value: new THREE.Vector3() },
     uRadiusPc: { value: 1 },
     uAtmoRadius: { value: 1.02 },
+    uPoleView: { value: new THREE.Vector3(0, 1, 0) },
+    uPolarRadiusR: { value: 1 },
     uScaleHeightR: { value: 0.01 },
     uScaleHeightM: { value: 0.01 },
     uBetaRayleigh: { value: new THREE.Vector3() },
@@ -219,6 +230,7 @@ export class PlanetMeshLayer {
   private readonly tmpSun = new THREE.Vector3();
   private readonly tmpSunView = new THREE.Vector3();
   private readonly tmpCenterView = new THREE.Vector3();
+  private readonly tmpPoleView = new THREE.Vector3();
   private readonly tmpCaster = new THREE.Vector3();
   private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
@@ -332,8 +344,7 @@ export class PlanetMeshLayer {
       const { mesh, material } = entry;
       mesh.visible = true;
       mesh.position.copy(this.tmpPlanet);
-      const polar = radiusPc * (1 - (planet.flattening ?? 0));
-      mesh.scale.set(radiusPc, polar, radiusPc);
+      mesh.scale.set(radiusPc, radiusPc * polarRadiusRatio(planet), radiusPc);
 
       const hp = this.field.hostPlanetOf(idx);
       if (planet.rotation) {
@@ -381,6 +392,12 @@ export class PlanetMeshLayer {
         : 0;
       if (hasSun) this.tmpSunView.copy(this.tmpSun).transformDirection(this.viewInverse);
       this.tmpCenterView.copy(this.tmpPlanet).applyMatrix4(this.viewInverse);
+      // The mesh's LOCAL +Y is the axis mesh.scale flattens, so the body's
+      // north pole in view space is that axis through the orientation. The
+      // atmosphere shaders need it to undo the flattening.
+      this.tmpPoleView.set(0, 1, 0)
+        .applyQuaternion(mesh.quaternion)
+        .transformDirection(this.viewInverse);
 
       if (entry.ring) {
         this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, airlightL);
@@ -561,7 +578,8 @@ export class PlanetMeshLayer {
 
   /** Write the shared single-scattering uniforms (planet-radius-unit base
    *  params × the global debug tuning) onto a mesh or shell material.
-   *  `tmpCenterView` must already hold the body's view-space centre. */
+   *  `tmpCenterView` and `tmpPoleView` must already hold the body's view-space
+   *  centre and north pole. */
   private applyAtmoUniforms(
     u: Record<string, THREE.IUniform>,
     base: AtmoBase,
@@ -571,6 +589,8 @@ export class PlanetMeshLayer {
     const rayMul = t.densityMul * 2 * (1 - t.rayleighMieBalance);
     const mieMul = t.densityMul * 2 * t.rayleighMieBalance;
     (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
+    (u.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
+    u.uPolarRadiusR.value = base.polarR;
     u.uRadiusPc.value = radiusPc;
     u.uAtmoRadius.value = base.rAtmo;
     u.uScaleHeightR.value = base.hR0 * t.scaleHeightMul;
@@ -659,7 +679,9 @@ export class PlanetMeshLayer {
     const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
-      entry.atmoBase = computeAtmoBase(planet.radiusKm, planet.atmosphere);
+      entry.atmoBase = computeAtmoBase(
+        planet.radiusKm, polarRadiusRatio(planet), planet.atmosphere,
+      );
       entry.atmosphere = this.createAtmosphere(planet, planet.atmosphere);
     }
     this.entries.set(idx, entry);
@@ -668,9 +690,9 @@ export class PlanetMeshLayer {
 
   // Slightly-larger spherical shell over the shared unit sphere. The
   // fragment shader integrates the view ray's single-scattered airlight
-  // through the atmosphere analytically, so no per-body geometry is needed;
-  // flattening is ignored (≤ 0.6 % for the atmosphere bodies, far below the
-  // shell thickness).
+  // analytically, in the frame where the body is a unit sphere, so the shell
+  // needs no per-body geometry — the mesh over-covers toward the poles and the
+  // excess discards (../atmosphere/README.md § Shell extents).
   private createAtmosphere(planet: Planet, atmo: PlanetAtmosphere): AtmosphereEntry {
     const shellRadiusPc = (planet.radiusKm + atmo.heightKm) * KM_PC;
     const material = new THREE.ShaderMaterial({
@@ -724,7 +746,7 @@ export class PlanetMeshLayer {
         uInnerRatio: { value: innerRatio },
         uOuterPc: { value: outerPc },
         uEqRadiusPc: { value: planet.radiusKm * KM_PC },
-        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * (1 - (planet.flattening ?? 0)) },
+        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * polarRadiusRatio(planet) },
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },

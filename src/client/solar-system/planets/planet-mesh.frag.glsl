@@ -102,25 +102,36 @@ void main() {
   // linear before it multiplies a physical luminance. uColour is already
   // linear (Planet.colour), so only the sampled branch decodes.
   vec3 base = mix(uColour, stellataSrgbDecode(texture(uMap, vUvM).rgb), uHasMap);
-  vec3 col = base * dayside * limb * uPhaseScale * uSurfaceLuminance * shadow;
+  // Everything reflected off the ground shares this scale, so a term added to
+  // it needs no albedo factor of its own.
+  vec3 surfaceScale = base * uSurfaceLuminance * shadow;
+  vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
-    // Airlight in front of this surface fragment + the transmittance the
-    // surface radiance loses on its way out. Reconstruct the surface point on
-    // the SMOOTH sphere from the renormalized normal, not the faceted
-    // position — the latter grids the analytic march to the tessellation.
-    vec3 nrm = normalize(vNormalV);
-    vec3 surf = uCenterView + uRadiusPc * nrm;
-    vec3 dir = normalize(surf);
-    vec3 o = -uCenterView / uRadiusPc;
-    float tStop = length(surf) / uRadiusPc;
+    // Twilight: the lit air overhead scattering host light down. sunCos is the
+    // REAL-space cosine, unlike the march below — solar depression is measured
+    // against the ground observer's true local horizontal, the ellipsoid normal.
+    col += surfaceScale * stellata_twilightIrradiance(sunCos, uScaleHeightR,
+      stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM));
+
+    // Airlight in front of this fragment + the transmittance the surface
+    // radiance loses on its way out, marched in the unit-sphere frame. The
+    // fragment's smooth surface point IS its direction there: normals scale by
+    // the inverse transpose, which for this diagonal map is the inverse, so
+    // squashing the normal's polar component and renormalising lands on it.
+    vec3 surf = normalize(stellata_scalePolar(normalize(vNormalV), uPoleView, uPolarRadiusR));
+    vec3 o = stellata_deflattenedCamera(uCenterView, uRadiusPc, uPoleView, uPolarRadiusR);
+    vec3 toSurf = surf - o;
+    float tStop = length(toSurf);
+    vec3 dir = toSurf / tStop;
+    vec3 sunDirR = stellata_deflattenedDir(uSunDirView, uPoleView, uPolarRadiusR);
     float t0, t1;
     float discA = stellata_shellEntry(o, dir, uAtmoRadius, t0, t1);
     float tStart = discA > 0.0 ? max(t0, 0.0) : 0.0;
     vec3 inscatter;
     vec3 transmittance;
     stellata_atmosphereRadiance(
-      o, dir, tStart, tStop, uAtmoRadius, uSunDirView,
+      o, dir, tStart, tStop, uAtmoRadius, sunDirR,
       uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
       stellata_atmoJitter(gl_FragCoord.xy),
       inscatter, transmittance);

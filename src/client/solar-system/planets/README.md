@@ -44,22 +44,21 @@ src/client/solar-system/planets/
                                   (sharedAtmoUniforms).
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
-  mesh-surface-pure.ts (+ test)   Emission into the HDR unit: the limb
-                                  constants the mesh shader mirrors, the
-                                  disc-mean normalisers, and the two
-                                  per-body luminance scalars. See
-                                  § Physical-luminance emission.
-  map-mean-luminance.ts (+ test)  Sphere-weighted mean linear luminance of
-                                  a day map, measured once on load — the
-                                  normaliser that reduces a stretched
-                                  mosaic to an albedo pattern.
+  spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
+  mesh-surface-pure.ts (+ test)   Emission into the HDR unit: mirrored limb
+                                  constants, disc-mean normalisers, the two
+                                  per-body luminance scalars.
+                                  See § Physical-luminance emission.
+  map-mean-luminance.ts (+ test)  Sphere-weighted mean linear luminance of a
+                                  day map, measured once on load — reduces a
+                                  stretched mosaic to an albedo pattern.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
                                   README (§ Planet rotation).
-  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math —
-                                  CPU mirror of the mesh shader's caster
-                                  loop, plus Io-transit / lunar-eclipse
-                                  search tests on the real ephemeris.
+  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math, CPU
+                                  mirror of the mesh shader's caster loop.
+                                  Io-transit / lunar-eclipse search tests
+                                  on the real ephemeris.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
   planet.vert.glsl,
@@ -327,22 +326,23 @@ crossfade.
   the magnitude — and therefore visibility — is correct for any host star.
   CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
-`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
-multiplier: planet-glare brightness relative to a star of the same
-magnitude (1 = identical). When resolved the
-**mesh** writes depth (local depth pass), so the additive glare is
-naturally occluded to the lit-limb halo — the old core depth-mask is gone.
+`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak multiplier:
+planet-glare brightness against a star of the same magnitude (1 = identical).
+The occlusion above is the local depth pass; the old core mask is gone.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
-  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical).
+  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical), via
+  `spheroid-pure.ts:polarRadiusRatio` and nowhere else
+  (`../atmosphere/README.md` § Shell extents says why).
   Orientation comes from the body's IAU rotation elements
   (§ Planet rotation); bodies without them fall back to pole =
   host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
-  not imagery. Limb darkening on top; no ambient term, so the night
-  side is black (physically honest). Three scalars refine it, all
+  not imagery. Limb darkening on top; an airless night side is black (no
+  ambient term), an atmospheric one is lit by twilight
+  (`../atmosphere/README.md` § Twilight). Three scalars refine it, all
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
@@ -363,10 +363,10 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
     (whose strip RGB supplies its own reflectance). Splitting it from
     `uSurfaceLuminance` is what fixes the airlight-to-surface and
     ring-to-body ratios by physics instead of by eye.
-  - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
-    half-width carrying twilight past the geometric terminator on
-    atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
-    band; undefined = airless hard cut).
+  - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
+    the terminator (Venus 0.08 widest; Titan the one moon with a band;
+    undefined = airless hard cut). What actually lights the night side
+    is a separate physical term — `../atmosphere/README.md` § Twilight.
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward

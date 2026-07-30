@@ -30,9 +30,10 @@ void main() {
   // is exactly radial) — avoids the faceting grid the interpolated position
   // would introduce into the analytic march.
   vec3 shellPoint = uCenterView + (uRadiusPc * uAtmoRadius) * normalize(vNormalV);
-  vec3 dir = normalize(shellPoint);
-  // Camera (origin) relative to the planet centre, planet-radius units.
-  vec3 o = -uCenterView / uRadiusPc;
+  // Everything below is in the unit-sphere frame (README.md § Shell extents).
+  vec3 dir = stellata_deflattenedDir(normalize(shellPoint), uPoleView, uPolarRadiusR);
+  vec3 o = stellata_deflattenedCamera(uCenterView, uRadiusPc, uPoleView, uPolarRadiusR);
+  vec3 sunDir = stellata_deflattenedDir(uSunDirView, uPoleView, uPolarRadiusR);
 
   float t0, t1;
   if (stellata_shellEntry(o, dir, uAtmoRadius, t0, t1) <= 0.0 || t1 <= 0.0) discard;
@@ -43,7 +44,7 @@ void main() {
   vec3 inscatter;
   vec3 transmittance;
   stellata_atmosphereRadiance(
-    o, dir, max(t0, 0.0), t1, uAtmoRadius, uSunDirView,
+    o, dir, max(t0, 0.0), t1, uAtmoRadius, sunDir,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);

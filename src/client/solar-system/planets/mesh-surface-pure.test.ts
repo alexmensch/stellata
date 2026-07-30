@@ -140,6 +140,24 @@ describe('meshSurfaceLuminance', () => {
     expect(dim * 0.1).toBeCloseTo(bright * 0.4, 12);
   });
 
+  it('sits exactly p/π below the airlight scalar — so the airlight needs no gain', () => {
+    // The two scalars an atmospheric body's shader multiplies differ by the
+    // body's Lambert reflectance and nothing else: the surface emits
+    // A·μ/π·E·Ω with A = 1.5p, the airlight emits (∫β·P·T dl)·E·Ω. Both are
+    // already the physical radiance, which is why the single-scatter
+    // integrator's output is complete as it stands and any overall airlight
+    // gain is a display fudge on a calibrated quantity.
+    const baseMean = 0.25;
+    const albedo = 0.43;
+    const surface = meshSurfaceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean, true,
+    );
+    const airlight = hostIrradianceLuminance(
+      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC,
+    );
+    expect((surface * baseMean * (2 / 3)) / airlight).toBeCloseTo(albedo / Math.PI, 12);
+  });
+
   it('uses the pure-Lambert mean for atmospheric bodies (no limb term)', () => {
     const airless = meshSurfaceLuminance(
       BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1, false,

@@ -11,23 +11,17 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Overall single-scatter brightness so the neutral slider (sun = 1) is
- *  roughly calibrated — the airlight is dim in absolute radiance units. */
-export const AIRLIGHT_GAIN = 3.0;
-
-/** Soft half-width (planet-radius units) of the planetary shadow terminator in
- *  the atmosphere. A hard lit/unlit test quantises the multiscatter lit-fraction
- *  and the single-scatter terminator into visible contours across the terminator
- *  (moiré under the few-sample march); smoothing over this band keeps both
- *  continuous. */
-export const SHADOW_SOFT = 0.15;
-
 /** Isotropic multiple-scattering fill weight. Single scattering alone leaves
  *  optically thick hazes (Venus, Titan) far too dark — most of their light
  *  is multiply scattered. This adds a cheap ambient term = scatter-fraction ×
- *  opacity × sunlit, which is negligible for thin atmospheres (Earth) and
- *  dominant for thick ones. */
-export const MS_STRENGTH = 0.2;
+ *  opacity × sunlit.
+ *
+ *  0.0667 is 0.2/3, and the /3 is load-bearing: the 0.2 was judged by eye
+ *  while single scatter still carried a 3× gain, so carrying it unchanged
+ *  past that gain's deletion would triple this term's share of the airlight
+ *  and grey out the surface texture the weight exists to stay under.
+ *  README.md § Multiple-scattering fill has the shares. */
+export const MS_STRENGTH = 0.0667;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
 export const SUN_COLOUR: readonly [number, number, number] = [1.0, 0.98, 0.94];
@@ -59,21 +53,125 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
   return -b + Math.sqrt(disc);
 }
 
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
-  return t * t * (3 - 2 * t);
+/**
+ * Scale a vector's component along `pole` by `s`, leaving the equatorial part
+ * untouched. Mirrors stellata_scalePolar in the GLSL.
+ *
+ * This is the seam between an oblate body and a march that assumes a unit
+ * sphere. `s = 1/polarR` maps a spheroid of polar radius `polarR` (equatorial
+ * radii) onto the unit sphere; `s = polarR` is the inverse. The map is linear
+ * about the body centre, so a ray maps to a ray with its parameter unchanged —
+ * callers renormalise directions and are otherwise unaffected. A surface
+ * *normal* scales by the inverse transpose, which for this diagonal map is the
+ * inverse: squashing an ellipsoid normal by `polarR` and renormalising gives
+ * the unit-sphere point the fragment corresponds to.
+ */
+export function scalePolarComponent(v: Vec3, pole: Vec3, s: number): Vec3 {
+  const along = (v[0] * pole[0] + v[1] * pole[1] + v[2] * pole[2]) * (s - 1);
+  return [v[0] + pole[0] * along, v[1] + pole[1] * along, v[2] + pole[2] * along];
 }
 
-/** Fraction of the point (px,py,pz) lit by the sun: 1 unless it is BOTH
- *  anti-sunward of the terminator plane AND inside the planet's shadow
- *  cylinder, smoothed over SHADOW_SOFT. Mirrors stellata_sunLit in the GLSL. */
-export function sunLit(px: number, py: number, pz: number, sx: number, sy: number, sz: number): number {
-  const sunT = px * sx + py * sy + pz * sz;
-  const impact = Math.sqrt(Math.max(px * px + py * py + pz * pz - sunT * sunT, 0));
-  return Math.max(
-    smoothstep(0, SHADOW_SOFT, sunT),
-    smoothstep(1 - SHADOW_SOFT, 1 + SHADOW_SOFT, impact),
-  );
+const FAR = 1e20;
+
+/** Sentinel span standing for "this ray never enters the shadow": inverted
+ *  and unbounded, so it reads as empty against any ray parameter rather than
+ *  only against ones outside [1, 0]. */
+const NO_SHADOW: readonly [number, number] = [FAR, -FAR];
+
+/**
+ * The planetary shadow along `o + t·d`, as the single t-interval `[s0, s1]`
+ * it always is: inside the infinite shadow cylinder (a quadratic in t) and
+ * anti-sunward of the terminator plane (a half-space). `s0 > s1` when the
+ * ray never enters it. Equivalent to asking whether the ray from each point
+ * toward the host strikes the body, which is why the light march below never
+ * needs its own occlusion test. Mirrors stellata_shadowSpan in the GLSL.
+ */
+export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, number] {
+  const oS = o[0] * sunDir[0] + o[1] * sunDir[1] + o[2] * sunDir[2];
+  const dS = d[0] * sunDir[0] + d[1] * sunDir[1] + d[2] * sunDir[2];
+  const oP: Vec3 = [o[0] - oS * sunDir[0], o[1] - oS * sunDir[1], o[2] - oS * sunDir[2]];
+  const dP: Vec3 = [d[0] - dS * sunDir[0], d[1] - dS * sunDir[1], d[2] - dS * sunDir[2]];
+  const a = dP[0] * dP[0] + dP[1] * dP[1] + dP[2] * dP[2];
+  const b = oP[0] * dP[0] + oP[1] * dP[1] + oP[2] * dP[2];
+  const c = oP[0] * oP[0] + oP[1] * oP[1] + oP[2] * oP[2] - 1;
+
+  let lo: number;
+  let hi: number;
+  if (a > 1e-12) {
+    const disc = b * b - a * c;
+    if (disc <= 0) return NO_SHADOW;
+    const r = Math.sqrt(disc);
+    lo = (-b - r) / a;
+    hi = (-b + r) / a;
+  } else {
+    // Ray parallel to the shadow axis: its impact parameter never changes.
+    if (c >= 0) return NO_SHADOW;
+    lo = -FAR;
+    hi = FAR;
+  }
+
+  if (Math.abs(dS) > 1e-12) {
+    const th = -oS / dS;
+    if (dS > 0) hi = Math.min(hi, th);
+    else lo = Math.max(lo, th);
+  } else if (oS >= 0) {
+    return NO_SHADOW;
+  }
+  return [lo, hi];
+}
+
+/**
+ * Fraction of the march segment centred on `t` with half-width `h` that falls
+ * outside the shadow span — the exact quadrature weight for a hard shadow, and
+ * continuous in the ray's geometry, so the lit sample count cannot step.
+ * Mirrors stellata_litFraction in the GLSL.
+ *
+ * Both bounds MUST stay **offsets from `t`**. `t` is the ray parameter measured
+ * from the camera, so `t ± h` are large and nearly equal and the `1/(2h)`
+ * amplifies whatever float32 loses between them; clamping to the segment first
+ * is what makes a segment wholly inside or outside the shadow return exactly
+ * 0 or 1.
+ */
+export function litFraction(t: number, h: number, span: readonly [number, number]): number {
+  const lo = Math.max(span[0] - t, -h);
+  const hi = Math.min(span[1] - t, h);
+  return 1 - Math.max(hi - lo, 0) / (2 * h);
+}
+
+/** Altitude (planet-radius units) of the planetary shadow's upper edge
+ *  directly above a surface point whose sun-cosine is `sunCos`: 0 on the lit
+ *  side, `1/cos(Δ) − 1` for a point Δ past the geometric terminator. Only the
+ *  column above it still sees the host, so this is the depth the ground's
+ *  twilight illumination has to reach out of. */
+export function shadowEdgeAltitude(sunCos: number): number {
+  if (sunCos >= 0) return 0;
+  return 1 / Math.sqrt(Math.max(1 - sunCos * sunCos, 1e-12)) - 1;
+}
+
+/** Vertical scattering optical depth per channel — Rayleigh plus grey Mie,
+ *  each coefficient over its own scale height. Absorption is excluded: this
+ *  is what redirects light, not what removes it. */
+export function verticalScatterOpticalDepth(p: AtmosphereParams): Vec3 {
+  const mie = p.betaMs * p.hM;
+  return [p.betaRs[0] * p.hR + mie, p.betaRs[1] * p.hR + mie, p.betaRs[2] * p.hR + mie];
+}
+
+/** Share of the host's perpendicular irradiance that a unit vertical
+ *  scattering optical depth delivers to the ground as skylight: ¼ from the
+ *  hemispheric average of an isotropic in-scatter, times the ≈0.22 slant
+ *  transmission a horizon sun reaches the scattering column through.
+ *  Calibrated on Earth at the geometric terminator, where twilight measures
+ *  ~400 lx against full sun's ~100 klx. */
+export const TWILIGHT_SCATTER_FRAC = 0.055;
+
+/** Twilight: the fraction of host irradiance the lit atmosphere scatters
+ *  down onto the surface below it, per channel. Its angular reach is the
+ *  body's own scale height — the shadow edge climbing out of the scattering
+ *  column is what extinguishes it, a few degrees on Earth and ~10° on
+ *  Titan. Mirrors stellata_twilightIrradiance in the GLSL. */
+export function twilightIrradianceFrac(sunCos: number, hR: number, tauScatter: Vec3): Vec3 {
+  const f = TWILIGHT_SCATTER_FRAC * Math.exp(-shadowEdgeAltitude(sunCos) / hR);
+  return [tauScatter[0] * f, tauScatter[1] * f, tauScatter[2] * f];
 }
 
 export interface AtmosphereParams {
@@ -93,7 +191,10 @@ export interface AtmosphereParams {
 }
 
 export interface ScatterResult {
-  /** In-scattered airlight radiance per channel (before sun colour). */
+  /** In-scattered airlight per channel, as a fraction of the host's
+   *  perpendicular irradiance — `∫β_s·P·T dl` is already dimensionless, so
+   *  the caller's `uAirlightLuminance` is the whole of the scale and there
+   *  is no gain to apply. */
   readonly inscatter: Vec3;
   /** View-path transmittance per channel — multiplies the surface behind. */
   readonly transmittance: Vec3;
@@ -119,6 +220,7 @@ export function scatterAlongRay(
     return { inscatter: [0, 0, 0], transmittance: [1, 1, 1] };
   }
   const segLen = span / ATMO_N_VIEW;
+  const shadow = shadowSpan(o, d, sunDir);
   const mu = d[0] * sunDir[0] + d[1] * sunDir[1] + d[2] * sunDir[2];
   const pR = rayleighPhase(mu);
   const pM = miePhase(mu, p.g);
@@ -139,7 +241,7 @@ export function scatterAlongRay(
     viewOdR += dR * segLen;
     viewOdM += dM * segLen;
 
-    const lit = sunLit(px, py, pz, sunDir[0], sunDir[1], sunDir[2]);
+    const lit = litFraction(t, 0.5 * segLen, shadow);
     litSum += lit;
     if (lit <= 0) continue;
     const sExit = farRoot(px, py, pz, sunDir[0], sunDir[1], sunDir[2], p.rAtmo);
@@ -178,7 +280,7 @@ export function scatterAlongRay(
     const scatterC = p.betaRs[c] + p.betaMs;
     const ssAlbedo = scatterC / Math.max(scatterC + p.betaA[c], 1e-6);
     const ms = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
-    inscatter[c] = inscatter[c] * AIRLIGHT_GAIN + ms;
+    inscatter[c] += ms;
   }
   return { inscatter, transmittance };
 }
