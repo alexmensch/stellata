@@ -165,6 +165,12 @@ describe('skylight on the surface', () => {
     expect(scatter).toContain('vec3 beam = (0.5 * mu) * (tauScatter / tauExt)');
   });
 
+  it('partitions the anchor against the beam term instead of summing them', () => {
+    // Both describe the same photons at opposite solar elevations, so carrying
+    // the horizon-sun anchor to noon double-counts it — README.md § Skylight.
+    expect(scatter).toContain('return fTerm * (tail * (1.0 - mu)) + beam;');
+  });
+
   it('rides the surface scalar, added to the direct term rather than the airlight', () => {
     // It is light reflected off the ground, so it needs the albedo-bearing
     // scalar; folding it into the airlight would skip the surface entirely.

@@ -111,7 +111,7 @@ from, so the phase-weighted view-ray in-scatter cannot stand in for it). One
 model, `stellata_skyIrradiance` / `skyIrradianceFrac`, three derived pieces:
 
 ```
-E_sky/E_host = F_term · tail(h_shadow)  +  beam(μ_s)
+E_sky/E_host = F_term · tail(h_shadow) · (1 − μ_s)  +  beam(μ_s)
 
 F_term  = ¼ · τ_s · T̄(τ_ext·Ch) · exp(−τ_a)          (terminator anchor)
 tail(h) = exp(−h/H) + B·exp(−h/(K·H))                 (twilight falloff)
@@ -145,9 +145,17 @@ reaches the scattering column through · ω̃ = τ_s/τ_ext
   crossing a horizontal surface (`μ_s`), the column scatters out
   `ω̃·(1−e^(−τ_ext/μ))`; half of that reaches the ground as diffuse skylight,
   less what the absorbing species eat on the way down. On Earth it gives
-  diffuse/direct ≈ 9 % at noon against the measured clear-sky 10–15 % (the
-  gap is ground-albedo bounce and aerosol multiple scattering). It vanishes
-  ∝ μ_s at the terminator, where `F_term` takes over continuously.
+  diffuse/direct ≈ 8 % at noon against the measured clear-sky 10–15 % (the
+  gap is ground-albedo bounce and aerosol multiple scattering).
+- **The two are a partition, not a sum.** `beam` is the same photons as
+  `F_term` seen at the other end of the elevation range — a lit column
+  redirecting sunlight downward — so the anchor carries a `(1 − μ_s)` weight
+  and the beam its `μ_s`, handing over across the terminator instead of
+  stacking. Added flat, as the anchor first was, it puts a horizon-sun floor
+  under local noon: 9 % of Earth's day-side skylight, and it is the same
+  "flat across the lit hemisphere" defect the single-exponential model had.
+  In the optically thin limit the partition reads exactly ½·τ_s at noon and
+  ¼·τ_s at the terminator, which is what the test pins.
 
 The variable is **solar depression angle, not distance along the ground**, and
 that is what makes the *projected* twilight band widen wherever the terminator

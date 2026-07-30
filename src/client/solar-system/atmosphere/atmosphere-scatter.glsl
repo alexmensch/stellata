@@ -162,8 +162,9 @@ vec3 stellata_verticalScatterTau(vec3 betaRs, float betaMs, float hR, float hM) 
 
 // Skylight: the fraction of host irradiance the atmosphere scatters down onto
 // the surface, per channel — one derived model covering the lit hemisphere
-// and the twilight band. Derivation + measured anchors: README.md § Skylight;
-// CPU mirror skyIrradianceFrac.
+// and the twilight band. The horizon-sun anchor and the beam term describe the
+// same photons at opposite solar elevations, so they partition (1 − mu) / mu
+// rather than summing. Anchors: README.md § Skylight; mirror skyIrradianceFrac.
 vec3 stellata_skyIrradiance(float sunCos, float hR, vec3 tauScatter, vec3 tauAbsorb) {
   float ch = sqrt(PI / (2.0 * hR));
   float h = stellata_shadowEdgeAltitude(sunCos);
@@ -177,7 +178,7 @@ vec3 stellata_skyIrradiance(float sunCos, float hR, vec3 tauScatter, vec3 tauAbs
   float muSafe = max(mu, 1e-4);
   vec3 beam = (0.5 * mu) * (tauScatter / tauExt)
     * (1.0 - exp(-tauExt / muSafe)) * exp(-tauAbsorb / muSafe);
-  return fTerm * tail + beam;
+  return fTerm * (tail * (1.0 - mu)) + beam;
 }
 
 // Airlight radiance (before sun colour) + view-path transmittance along

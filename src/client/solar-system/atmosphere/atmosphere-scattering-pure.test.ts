@@ -389,6 +389,17 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     expect(t[2]).toBeGreaterThan(t[0]);
   });
 
+  it('hands the terminator anchor over to the beam term rather than summing them', () => {
+    // Optically-thin limit, where both pieces reduce to a multiple of τ_s:
+    // beam → ½·τ_s·μ and the anchor → ¼·τ_s. Summing reads 0.75·τ_s at noon
+    // where the (1 − μ_s) partition reads exactly ½·τ_s. Both describe the
+    // same photons at opposite elevations — README.md § Skylight.
+    const thin: Vec3 = [1e-4, 1e-4, 1e-4];
+    const none: Vec3 = [0, 0, 0];
+    expect(dot(LUMA, skyIrradianceFrac(1, hR, thin, none)) / 1e-4).toBeCloseTo(0.5, 3);
+    expect(dot(LUMA, skyIrradianceFrac(0, hR, thin, none)) / 1e-4).toBeCloseTo(0.25, 2);
+  });
+
   it('day-side skylight rises with solar elevation to the measured noon share', () => {
     // Noon diffuse-to-direct on clear Earth measures ~10-15 %; the beam-
     // interception term (single scatter, no ground bounce) lands just under.
@@ -396,7 +407,7 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     const directHoriz = dot(LUMA, [
       Math.exp(-(tauS[0] + tauA[0])), Math.exp(-(tauS[1] + tauA[1])), Math.exp(-(tauS[2] + tauA[2])),
     ] as Vec3);
-    expect(noon).toBeCloseTo(0.0745, 3);
+    expect(noon).toBeCloseTo(0.0675, 3);
     expect(noon / directHoriz).toBeGreaterThan(0.05);
     expect(noon / directHoriz).toBeLessThan(0.15);
     const at = (mu: number) => dot(LUMA, skyIrradianceFrac(mu, hR, tauS, tauA));
@@ -421,9 +432,9 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
   it('pins the full-phase disc mean the flux divisor folds in', () => {
     // ~7 % of host irradiance on Earth — the size of the overshoot the
     // meshSurfaceLuminance divisor now cancels (emission/mesh-surface-pure.ts).
-    expect(skyIrradianceDiscMeanLuma(hR, tauS, tauA)).toBeCloseTo(0.0705, 3);
+    expect(skyIrradianceDiscMeanLuma(hR, tauS, tauA)).toBeCloseTo(0.0658, 3);
     const titan = rowOf('Titan');
-    expect(skyIrradianceDiscMeanLuma(titan.hR, titan.tauS, titan.tauA)).toBeCloseTo(0.157, 2);
+    expect(skyIrradianceDiscMeanLuma(titan.hR, titan.tauS, titan.tauA)).toBeCloseTo(0.148, 2);
   });
 
   it('reaches further past the terminator on Titan — the scale height sets the band', () => {

@@ -175,6 +175,10 @@ export const TWILIGHT_TAIL_REACH = 8.95;
  * onto the surface, per channel — one derived model covering the lit
  * hemisphere and the twilight band. Mirrors stellata_skyIrradiance in the
  * GLSL; derivation and measured anchors: README.md § Skylight.
+ *
+ * The horizon-sun anchor and the beam term describe the same photons at
+ * opposite solar elevations, so they partition as `(1 − μ_s)` / `μ_s` rather
+ * than summing — carrying the anchor to noon double-counts it.
  */
 export function skyIrradianceFrac(
   sunCos: number,
@@ -197,7 +201,7 @@ export function skyIrradianceFrac(
     const beam =
       0.5 * mu * (tauScatter[c] / tauExt) *
       (1 - Math.exp(-tauExt / muSafe)) * Math.exp(-tauAbsorb[c] / muSafe);
-    out[c] = fTerm * tail + beam;
+    out[c] = fTerm * tail * (1 - mu) + beam;
   }
   return out;
 }
