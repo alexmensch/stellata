@@ -11,10 +11,6 @@ export const MIE_G_DEFAULT = 0.76;
  *  into a moiré — the residual reads as unstructured grain instead. */
 const LIGHT_JITTER_STRIDE = 0.6180339887;
 
-/** Overall single-scatter brightness so the neutral slider (sun = 1) is
- *  roughly calibrated — the airlight is dim in absolute radiance units. */
-export const AIRLIGHT_GAIN = 3.0;
-
 /** Soft half-width (planet-radius units) of the planetary shadow terminator in
  *  the atmosphere. A hard lit/unlit test quantises the multiscatter lit-fraction
  *  and the single-scatter terminator into visible contours across the terminator
@@ -93,7 +89,10 @@ export interface AtmosphereParams {
 }
 
 export interface ScatterResult {
-  /** In-scattered airlight radiance per channel (before sun colour). */
+  /** In-scattered airlight per channel, as a fraction of the host's
+   *  perpendicular irradiance — `∫β_s·P·T dl` is already dimensionless, so
+   *  the caller's `uAirlightLuminance` is the whole of the scale and there
+   *  is no gain to apply. */
   readonly inscatter: Vec3;
   /** View-path transmittance per channel — multiplies the surface behind. */
   readonly transmittance: Vec3;
@@ -178,7 +177,7 @@ export function scatterAlongRay(
     const scatterC = p.betaRs[c] + p.betaMs;
     const ssAlbedo = scatterC / Math.max(scatterC + p.betaA[c], 1e-6);
     const ms = ssAlbedo * (1 - transmittance[c]) * litFrac * MS_STRENGTH;
-    inscatter[c] = inscatter[c] * AIRLIGHT_GAIN + ms;
+    inscatter[c] += ms;
   }
   return { inscatter, transmittance };
 }

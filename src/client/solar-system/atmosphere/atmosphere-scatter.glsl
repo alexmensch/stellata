@@ -6,9 +6,8 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of AIRLIGHT_GAIN / MS_STRENGTH / LIGHT_JITTER_STRIDE / SHADOW_SOFT in
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / SHADOW_SOFT in
 // atmosphere-scattering-pure.ts.
-const float STELLATA_AIRLIGHT_GAIN = 3.0;
 const float STELLATA_MS_STRENGTH = 0.2;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
 const float STELLATA_SHADOW_SOFT = 0.15;
@@ -141,5 +140,5 @@ void stellata_atmosphereRadiance(
   vec3 scatterC = betaRs + betaMs;
   vec3 ssAlbedo = scatterC / max(scatterC + betaA, vec3(1e-6));
   vec3 ms = ssAlbedo * (1.0 - transmittance) * (litFrac * STELLATA_MS_STRENGTH);
-  inscatter = inscatter * STELLATA_AIRLIGHT_GAIN + ms;
+  inscatter += ms;
 }

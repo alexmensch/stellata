@@ -93,23 +93,25 @@ choice, not a global one; the debug sliders are global multipliers on top.
 **Multiple-scattering fill.** A small isotropic term = fraction scattered (not
 absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
 day-side ambient so the terminator doesn't fall to pure single-scatter black.
-Kept low precisely so it doesn't grey-wash the surface texture. `AIRLIGHT_GAIN`
-scales the single-scatter term so the neutral slider (sun intensity = 1) is
-roughly calibrated.
+Kept low precisely so it doesn't grey-wash the surface texture. It is the one
+weight in the model still set by eye, and it stands in for a term the march
+genuinely does not compute.
 
-**Airlight rides host irradiance, not the surface scalar.** Both the disc
+**Airlight rides host irradiance, and there is no gain on it.** Both the disc
 block and the shell multiply `uAirlightLuminance`
 (`../planets/mesh-surface-pure.ts:hostIrradianceLuminance`) — the host's
 irradiance at the body in the scene-wide HDR unit, carrying no surface
 albedo, because scattered sunlight doesn't depend on the ground's
 reflectance. The surface multiplies a *different* scalar that does
-(`uSurfaceLuminance`), so the airlight-to-surface ratio is now set by
-physics rather than by `AIRLIGHT_GAIN` having been read off the slider
-back when both terms shared one display-compressed scalar pinned at ≈1
-for Earth. The ratio therefore **shifted** at the HDR conversion by the
-albedo normalisation; `AIRLIGHT_GAIN` is still the knob if a body's limb
-reads wrong against its disc, but check it against the disc rather than
-in isolation.
+(`uSurfaceLuminance`), and the two sit **exactly p/π apart**
+(`mesh-surface-pure.test.ts`). That is what closes the calibration: the
+integrator's `∫β_s·P·T dl` is already a dimensionless fraction of incident
+irradiance, so the product IS the physical airlight radiance and the only
+correct overall gain is 1. The `AIRLIGHT_GAIN = 3` that used to scale it was
+read off the slider back when both terms shared one display-compressed scalar
+pinned at ≈1 for Earth; after the split it was a 1.2-mag fudge on a calibrated
+quantity, and it is gone. A body whose limb reads wrong against its disc is a
+per-body optical-depth question, not a global one.
 
 ## Anti-banding
 
