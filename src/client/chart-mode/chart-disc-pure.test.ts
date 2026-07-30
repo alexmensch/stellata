@@ -45,43 +45,43 @@ describe('chartPlateauDistancePc', () => {
 
 describe('chartDiscPxForAppMag', () => {
   const params = { maxPx: 28, minPx: 1.5, magBright: -2 };
-  const maxAppMag = 6.5;
+  const limitMag = 6.5;
 
   it('returns maxPx at the bright threshold', () => {
-    expect(chartDiscPxForAppMag(-2, params, maxAppMag)).toBe(28);
+    expect(chartDiscPxForAppMag(-2, params, limitMag)).toBe(28);
   });
 
   it('returns maxPx for any star brighter than the threshold', () => {
     // The GLSL clamp pins t=0 below magBright; bright supergiants
     // viewed from up close should plateau, not overshoot.
-    expect(chartDiscPxForAppMag(-5, params, maxAppMag)).toBe(28);
+    expect(chartDiscPxForAppMag(-5, params, limitMag)).toBe(28);
   });
 
   it('returns minPx at the slider limit', () => {
-    expect(chartDiscPxForAppMag(6.5, params, maxAppMag)).toBe(1.5);
+    expect(chartDiscPxForAppMag(6.5, params, limitMag)).toBe(1.5);
   });
 
   it('clamps to minPx beyond the slider limit', () => {
-    expect(chartDiscPxForAppMag(15, params, maxAppMag)).toBe(1.5);
+    expect(chartDiscPxForAppMag(15, params, limitMag)).toBe(1.5);
   });
 
   it('mixes linearly between the two endpoints at the midpoint', () => {
     // (6.5 + -2)/2 = 2.25 → t = 0.5 → px = (28 + 1.5) / 2 = 14.75
-    expect(chartDiscPxForAppMag(2.25, params, maxAppMag)).toBeCloseTo(14.75, 6);
+    expect(chartDiscPxForAppMag(2.25, params, limitMag)).toBeCloseTo(14.75, 6);
   });
 
-  it('range-aware: widening maxAppMag spreads the disc range across more magnitudes', () => {
-    // At appMag=2.25 with maxAppMag=6.5 → t=0.5 → 14.75 px.
-    // With maxAppMag=15 the same appMag is at t=(2.25+2)/17 ≈ 0.25 →
+  it('range-aware: widening limitMag spreads the disc range across more magnitudes', () => {
+    // At appMag=2.25 with limitMag=6.5 → t=0.5 → 14.75 px.
+    // With limitMag=15 the same appMag is at t=(2.25+2)/17 ≈ 0.25 →
     // a larger disc because we're now in the brighter half of the slider.
     const px65 = chartDiscPxForAppMag(2.25, params, 6.5);
     const px15 = chartDiscPxForAppMag(2.25, params, 15);
     expect(px15).toBeGreaterThan(px65);
   });
 
-  it('guards against magBright == maxAppMag with the 0.001 denominator floor', () => {
+  it('guards against magBright == limitMag with the 0.001 denominator floor', () => {
     // Degenerate case: the slider sits at the bright threshold. The
-    // GLSL `max(maxAppMag − magBright, 0.001)` floor prevents division
+    // GLSL `max(limitMag − magBright, 0.001)` floor prevents division
     // by zero — every appMag above the threshold clamps to minPx, the
     // threshold itself returns maxPx.
     expect(chartDiscPxForAppMag(-2, params, -2)).toBe(28);

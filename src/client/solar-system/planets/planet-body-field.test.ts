@@ -1030,10 +1030,10 @@ describe('PlanetBodyField.pick', () => {
     f.dispose();
   });
 
-  it('kill condition: appMag > maxAppMag + 0.5 drops the candidate', () => {
+  it('kill condition: appMag past drawCutoffMag drops the candidate', () => {
     // Same setup as prime but with the planet shoved far enough away
-    // that its appMag exceeds the slider cutoff by > 0.5 mag. The
-    // soft-taper kill in pick() must drop it; result null.
+    // that its appMag exceeds the draw cutoff. The soft-taper kill in
+    // pick() must drop it; result null.
     const f = new PlanetBodyField(makeSharedUniforms(6.5));
     f.attachHost(
       0,

@@ -17,8 +17,9 @@ import { applyTheme } from '../ui/theme-toggle';
 //     branch on this independently of the existing body.monochrome).
 //   - Paper-aesthetic palette via the existing setMonochrome plumbing
 //     (stars, clouds, hud, galactic disc/grid, blend modes, clear color).
-//   - Cloud isobar pass (driven by uMaxAppMag); the milky-way band↔isobar
-//     swap rides applyDetailPreset via the milkyWayIsobar detail bind.
+//   - Cloud stippled-outline pass (via setMonochrome); the milky-way
+//     band↔isobar swap rides applyDetailPreset via the milkyWayIsobar
+//     detail bind.
 //   - Constellation figure switches to all-88 mode — the WebGL
 //     constellation-figure/ layer, rebuilt by the shell on the same
 //     chart-and-observe predicate.

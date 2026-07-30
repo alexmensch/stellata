@@ -154,7 +154,7 @@ height — so the compromise retires rather than being re-tuned.
 
 Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
 brightness curve + smoothstep taper) and `src/client/filters/`
-(`filter-state.ts` for the angular targets and `presetPxSizes`,
+(`filter-state.ts` for the angular targets and `starPxSizes`,
 `filter-controller.ts` for every mutation path). Live tuning via
 `debug.panel()` in the browser console.
 

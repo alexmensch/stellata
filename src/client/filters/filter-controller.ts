@@ -1,5 +1,5 @@
-// Owns FilterState + preset/FOV/render-knob mutations and their shader
-// uniform writes. See src/client/filters/README.md.
+// Owns FilterState + instrument/FOV/render-knob mutations and their
+// shader uniform writes. See src/client/filters/README.md.
 
 import type * as THREE from 'three';
 import type { EventBus } from '../util/event-bus';
@@ -14,8 +14,8 @@ import {
   starPxSizes,
   STAR_K_MULTIPLIER_DEFAULT,
   type StarRenderParams,
-  getStarKMultiplier,
-  setStarKMultiplier,
+  getStarKMultiplier as readStarKMultiplier,
+  setStarKMultiplier as patchStarKMultiplier,
 } from './filter-state';
 import {
   type DetailLevel,
@@ -182,14 +182,14 @@ export class FilterController {
   // Writes new pixel sizes into any non-overridden field so the change
   // shows live.
   setStarKMultiplier(m: number): void {
-    setStarKMultiplier(m);
+    patchStarKMultiplier(m);
     this.recomputeStarPxSizes();
     // Fire even when recompute patched nothing (e.g. sizes overridden) so
     // the debug readout reflects the new multiplier.
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }
-  getStarKMultiplier(): number { return getStarKMultiplier(); }
+  getStarKMultiplier(): number { return readStarKMultiplier(); }
   getStarKMultiplierDefault(): number { return STAR_K_MULTIPLIER_DEFAULT; }
 
   /** The *derived* K in effect right now — instrument density × the debug

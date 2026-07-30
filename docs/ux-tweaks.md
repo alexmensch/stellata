@@ -53,10 +53,11 @@ for the surrounding context.
   large).
 - **Star exaggeration multiplier** — the "Star size exaggeration" slider
   is a multiplier on the plate-scale-derived K (default 1, range
-  0.25–4·). Higher = bolder, more cartoonish stars; lower = more literal
-  physics. `kDensity` on the instrument record is the per-instrument
-  crowding half of K — 1 for the unaided eye, smaller for a deeper
-  instrument so a denser field doesn't wash out.
+  `STAR_K_MULTIPLIER_MIN`–`MAX` = 0.5–1.5). Higher = bolder, more
+  cartoonish stars; lower = more literal physics. `kDensity` on the
+  instrument record is the per-instrument crowding half of K — 1 for the
+  unaided eye, smaller for a deeper instrument so a denser field doesn't
+  wash out.
 - **Default camera FOV** — `DEFAULT_FOV` (50°) in `stellata.ts`. Reset
   button on the FOV slider snaps back here.
 - **EV trim range and step** — `EV_MAX_STOPS` (3) and `EV_STEP_STOPS`

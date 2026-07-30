@@ -103,7 +103,7 @@ uniform float uGlowMagOffset; // V surface brightness at colorAccum = 1
 // Chart-mode isobar pass. When > 0.5 the fragment renders only a thin
 // outline at the iso-line where the integrated apparent magnitude crosses
 // uLimitMag — giving the galactic glow a topographic-contour treatment
-// that follows the user's "minimally visible magnitude" slider.
+// that follows the instrument's limiting magnitude.
 uniform float uChartIsobar;
 uniform vec3  uChartInkColor;
 

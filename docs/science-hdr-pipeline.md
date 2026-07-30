@@ -224,8 +224,8 @@ volume keep the dithered call.
 
 *Shipped in H15–H18, replacing H6's "the magnitude slider is the single
 exposure control". `exposureForMagLimit` survives in
-`src/client/hdr/exposure-epoch.ts`; `InstrumentEpoch` and its multiplier
-pair do not (§ 3.4).*
+`src/client/hdr/exposure/exposure-epoch.ts`; `InstrumentEpoch` and its
+multiplier pair do not (§ 3.4).*
 
 Four things were welded onto one slider. They separate as:
 
@@ -374,7 +374,8 @@ alternatives:
 
 Contributions on a 1920×1080 viewport at the unaided eye's 50° FOV, so
 `uExposure` = 26.365 and `Ω_px` = 27 778 arcsec². Every row is pinned in
-`src/client/hdr/scene-adaptation-pure.test.ts` from exactly these inputs:
+`src/client/hdr/exposure/scene-adaptation-pure.test.ts` from exactly
+these inputs:
 
 | in frame | contribution to `L̄` |
 | --- | --- |
@@ -497,7 +498,8 @@ wrong on approach: `LUMA_CEIL = 4096` clamps at emission, so a GPU
 measurement reads a resolved Venus as 4096, a 38× underestimate precisely
 when adaptation matters most.
 
-**What the shipped collector walks** (`src/client/hdr/scene-adaptation.ts`):
+**What the shipped collector walks**
+(`src/client/hdr/exposure/scene-adaptation.ts`):
 
 - **Every drawn solar-system body**, through the same visibility gate
   `pick()` uses, at its true angular diameter with eclipse dim folded in

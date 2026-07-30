@@ -39,7 +39,7 @@ uniform map the disc, glow, and core-mask passes spread into their
 materials — `uRenderMode` is the only divergent slot, bound per
 material by `StarPipeline`. Every other consumer picks slots out of the
 same object **by reference**, so a single write reaches all of them
-with no bookkeeping: `FilterController` (the filter / preset / render
+with no bookkeeping: `FilterController` (the filter / instrument / render
 knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
 `pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, for its chart-mode
 isobar contour only — the band's own brightness is photometric),

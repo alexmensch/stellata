@@ -272,7 +272,7 @@ describe('EclipsePhotometryField.update — visibility prefilter', () => {
     const fx = edgeOnFixture();
     const field = new EclipsePhotometryField(fx);
     // appMag for primary at d=10pc with absmag=2 equals 2 (5·log10(10/10)=0).
-    // Set maxAppMag to 0 → prefilter rejects (0.5 < 2).
+    // Set thresholdMag to 0 → prefilter rejects (0.5 < 2).
     field.update(tForJd(J2000_JD + 2.5), CAM, 0, 0);
     expect(fx.eclipseDimBuffer[1]).toBe(1);
   });

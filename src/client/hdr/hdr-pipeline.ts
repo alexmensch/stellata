@@ -73,14 +73,13 @@ export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
   return out as unknown as HdrEmitterUniforms;
 }
 
-/** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
- *  false — and `HdrPipeline` owns every write after that, as it does for
- *  `uWhitePoint` and `uHighlightDesat` (both live dev knobs, rewritten by
- *  `syncMode`). `uExposure` seeds at the base epoch, which is
- *  `DEFAULT_FILTER.maxAppMag`'s epoch; `ExposureController` owns every
- *  later write (`exposure/README.md`). `uOmegaPxArcsec2` seeds at the
- *  default FOV over a 1000 px viewport and is rewritten by
- *  `setPixelSolidAngle` on every FOV / resize change. */
+/** `uHdrTarget` seeds to 0 and `HdrPipeline`'s constructor rewrites it
+ *  before the first frame, as it does `uWhitePoint` and `uHighlightDesat`
+ *  (both live dev knobs, rewritten by `syncMode`). `uExposure` seeds at
+ *  the base epoch; `ExposureController` owns every later write
+ *  (`exposure/README.md`). `uOmegaPxArcsec2` seeds at the default FOV
+ *  over a 1000 px viewport and is rewritten by `setPixelSolidAngle` on
+ *  every FOV / resize change. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },

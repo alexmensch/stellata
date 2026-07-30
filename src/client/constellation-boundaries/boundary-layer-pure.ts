@@ -70,16 +70,16 @@ export function boundaryLineAttributes(
 /**
  * The fade window for a live magnitude limit, interpolated out of the
  * artifact's quantile table. Between two emitted rows the offsets lerp; past
- * either end they clamp, since the slider reaches limits the table has too
- * few stars to describe.
+ * either end they clamp, since an instrument can reach limits the table has
+ * too few stars to describe.
  */
 export function resolveBoundaryFadeWindowPc(
   fade: BoundaryFadeTableWire,
-  maxAppMag: number,
+  limitMag: number,
 ): SolFrameFadeWindow {
   const innerCol = quantileColumn(fade, FADE_START_MISPLACED_PCT);
   const outerCol = quantileColumn(fade, FADE_END_MISPLACED_PCT);
-  const { lo, hi, t } = bracketMagRow(fade.magLimits, maxAppMag);
+  const { lo, hi, t } = bracketMagRow(fade.magLimits, limitMag);
   return {
     innerPc: lerpOffset(fade.offsetsPc, lo, hi, t, innerCol),
     outerPc: lerpOffset(fade.offsetsPc, lo, hi, t, outerCol),
@@ -96,19 +96,19 @@ function quantileColumn(fade: BoundaryFadeTableWire, pct: number): number {
   return col;
 }
 
-/** Bracketing row indices for `maxAppMag` in an ascending `magLimits`, plus
+/** Bracketing row indices for `limitMag` in an ascending `magLimits`, plus
  *  the fraction between them. Clamps to a single row at either end. */
 function bracketMagRow(
   magLimits: readonly number[],
-  maxAppMag: number,
+  limitMag: number,
 ): { lo: number; hi: number; t: number } {
   const last = magLimits.length - 1;
-  if (maxAppMag <= magLimits[0]) return { lo: 0, hi: 0, t: 0 };
-  if (maxAppMag >= magLimits[last]) return { lo: last, hi: last, t: 0 };
+  if (limitMag <= magLimits[0]) return { lo: 0, hi: 0, t: 0 };
+  if (limitMag >= magLimits[last]) return { lo: last, hi: last, t: 0 };
   let hi = 1;
-  while (magLimits[hi] < maxAppMag) hi++;
+  while (magLimits[hi] < limitMag) hi++;
   const lo = hi - 1;
-  return { lo, hi, t: (maxAppMag - magLimits[lo]) / (magLimits[hi] - magLimits[lo]) };
+  return { lo, hi, t: (limitMag - magLimits[lo]) / (magLimits[hi] - magLimits[lo]) };
 }
 
 function lerpOffset(

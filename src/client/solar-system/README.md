@@ -194,11 +194,12 @@ d_cull = 10 pc · √(p · (R/a)²) · 10^((uCullMag − M_host) / 5)
 ```
 
 where `(R/a)` for the brightest planet (proxy for "roundtrip flux")
-makes the formula geometry-independent. Sol's Jupiter under naked-eye
-preset gives ~290 AU — confirming that any non-Sol focus already
-collapses Sol's bodies far past the cull distance, exactly as
-intended. `PlanetBodyField.setMaxAppMag` recomputes the cache on
-every slider move.
+makes the formula geometry-independent. Sol's Jupiter at the unaided
+eye's cull bound (10.56) gives ~1900 AU — still confirming that any
+non-Sol focus collapses Sol's bodies far past the cull distance,
+exactly as intended. `PlanetBodyField.setCullMag` recomputes the cache
+on every instrument change; the bound is static in the EV trim and in
+adaptation, so it never moves per frame.
 
 ## Local activation
 
