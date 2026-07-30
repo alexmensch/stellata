@@ -4,9 +4,10 @@ import {
   clearChromeBindings,
   setBuiltinChromeColour,
   setChromeOperatorActive,
+  setChromeWhitePoint,
   setRawChromeColour,
 } from './chrome-colour';
-import { srgbDecode, tonemap, tonemapWhitePoint, type Rgb } from './tonemap-pure';
+import { srgbDecode, tonemap, tonemapWhitePoint, type Rgb } from '../tonemap-pure';
 
 const LW = tonemapWhitePoint();
 const HEXES = [0x5a7a9c, 0xc8d6ff, 0x223344, 0xffffff, 0x000000];
@@ -87,6 +88,21 @@ describe('setChromeOperatorActive(false)', () => {
       new THREE.Color(0x5a7a9c).g,
       new THREE.Color(0x5a7a9c).b,
     ]));
+  });
+
+  it('re-authors against a new white point so chrome cannot drift', () => {
+    const colour = setBuiltinChromeColour(new THREE.Color(), 0x5a7a9c);
+    const atDefault = colour.clone();
+    // DR_MAG is a live dev knob, and it moves the curve every physical
+    // layer runs through: chrome baked against the old white point would
+    // resolve to the wrong colour under the new one.
+    const wide = tonemapWhitePoint(9.5);
+    setChromeWhitePoint(wide);
+    expect(colour.g).not.toBeCloseTo(atDefault.g, 6);
+    expect(bytes(tonemap([colour.r, colour.g, colour.b], wide)))
+      .toEqual([0x5a, 0x7a, 0x9c]);
+    setChromeWhitePoint(LW);
+    expect(colour.g).toBeCloseTo(atDefault.g, 12);
   });
 
   it('leaves chart-mode colours alone in either state', () => {

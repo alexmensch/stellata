@@ -9,7 +9,7 @@ import type {
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
+import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
   makeDashedOrbitLineMaterial,
   makeOrbitLineSegments,
@@ -83,7 +83,7 @@ export class ConstellationBoundaryLayer {
 
   /** Build the arc geometry and seed the fade window from the live magnitude
    *  limit. Called once, when the artifact resolves. */
-  attach(artifact: BoundaryArtifact, maxAppMag: number): void {
+  attach(artifact: BoundaryArtifact, limitMag: number): void {
     this.disposeGeometry();
     this.fade = artifact.fade;
     const { positions, lineDistances } =
@@ -94,7 +94,7 @@ export class ConstellationBoundaryLayer {
     seg.geometry.setAttribute('lineDistance', new THREE.BufferAttribute(lineDistances, 1));
     this.group.add(seg);
     this.lineSegments = seg;
-    this.setMagnitudeLimit(maxAppMag);
+    this.setMagnitudeLimit(limitMag);
   }
 
   /** Re-derive the fade window for a new apparent-magnitude limit. Pushed on
@@ -105,10 +105,10 @@ export class ConstellationBoundaryLayer {
    *  pushes land while the artifact is still in flight, and recording the
    *  limit without a table to resolve it against would make `attach`'s own
    *  seeding call look like a no-op and leave the layer with no window. */
-  setMagnitudeLimit(maxAppMag: number): void {
-    if (this.fade === null || maxAppMag === this.magLimit) return;
-    this.magLimit = maxAppMag;
-    this.fadeWindow = resolveBoundaryFadeWindowPc(this.fade, maxAppMag);
+  setMagnitudeLimit(limitMag: number): void {
+    if (this.fade === null || limitMag === this.magLimit) return;
+    this.magLimit = limitMag;
+    this.fadeWindow = resolveBoundaryFadeWindowPc(this.fade, limitMag);
   }
 
   /** Per-frame update. The caller ANDs the declutter permission and the

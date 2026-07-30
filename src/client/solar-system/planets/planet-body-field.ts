@@ -14,6 +14,10 @@ import {
   type ChartDiscUniforms,
   type PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc-uniforms';
+import {
+  pickHdrEmitterUniforms,
+  type HdrEmitterUniforms,
+} from '../../hdr/hdr-pipeline';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
@@ -32,8 +36,9 @@ import {
   perceptualAppSizePx,
   perceptualDmEff,
   planetApparentMagnitude,
-  SOFT_TAPER_MARGIN_MAG,
 } from '../perceptual-magnitude';
+import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
+import type { LuminanceSample } from '../../hdr/exposure/scene-adaptation-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   MIN_DISC_HIT_RADIUS_PX,
@@ -42,7 +47,7 @@ import {
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
-import { projectToScreen } from '../../overlays/overlay-project';
+import { projectToScreen, projectToScreenInto } from '../../overlays/overlay-project';
 import {
   blendDimBuffer,
   dimBlendFactor,
@@ -130,10 +135,10 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
  *
  *   m_planet ≈ M_host + 5·log10(d/10) − 2.5·log10(p · (R/a)²)
  *
- * Set m_planet = maxAppMag and solve for d:
+ * Set m_planet = cullMag and solve for d:
  *
- *   d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
- *         = 10 pc · sqrt(p) · (R/a) · 10^((maxAppMag − M_host) / 5)
+ *   d_cull = 10 pc · √(p · (R/a)²) · 10^((cullMag − M_host) / 5)
+ *         = 10 pc · sqrt(p) · (R/a) · 10^((cullMag − M_host) / 5)
  *
  * The caller folds `alphaZeroPhaseFactor(coefs)` into
  * `brightestReflectance` before passing it in (see `attachHost`). For
@@ -148,10 +153,10 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
 export function cullDistancePc(
   hostAbsmag: number,
   brightestReflectance: number,
-  maxAppMag: number,
+  cullMag: number,
 ): number {
   if (brightestReflectance <= 0) return 0;
-  const distanceFactor = 10 ** ((maxAppMag - hostAbsmag) / 5);
+  const distanceFactor = 10 ** ((cullMag - hostAbsmag) / 5);
   return 10 * Math.sqrt(brightestReflectance) * distanceFactor;
 }
 
@@ -178,7 +183,7 @@ interface AttachedHost {
    *  c0 lifts its term above the globe-only reflectance; for every
    *  other planet alphaZeroPhaseFactor = 1. */
   brightestReflectance: number;
-  /** Cached cull distance for the current maxAppMag. */
+  /** Cached cull distance for the current uCullMag. */
   cullDistance: number;
   /** Slot range in the global instanced buffer. */
   startInstance: number;
@@ -205,7 +210,7 @@ export class PlanetBodyField {
   private capacity = INITIAL_CAPACITY;
   private liveCount = 0;
   private worldOffset = new THREE.Vector3();
-  private maxAppMag: number;
+  private cullMag: number;
   // Shared uniform bundle — references, not copies. The picker reads
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
@@ -245,10 +250,20 @@ export class PlanetBodyField {
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
+  // Scratch owned by forEachDrawnBody: valid only inside one `visit`
+  // call, which is why the sample is documented as read-then-drop.
+  private sampleTmp = new THREE.Vector3();
+  private screenTmp: [number, number] = [0, 0];
+  private adaptationSample: LuminanceSample = {
+    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
+    cameraDistancePc: 0, fluxScale: 1, label: null,
+  };
 
-  constructor(magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms) {
+  constructor(
+    magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+  ) {
     this.magShared = magnitudeShared;
-    this.maxAppMag = magnitudeShared.uMaxAppMag.value;
+    this.cullMag = magnitudeShared.uCullMag.value;
     this.group = new THREE.Group();
     this.group.visible = false;
     // PlanetBodyField sits in the renderer's local frame (no group
@@ -315,7 +330,7 @@ export class PlanetBodyField {
       positionsAt: ps.positionsAt ?? null,
       positionsScratch: ps.positionsAt ? new Float64Array(n * 3) : null,
       brightestReflectance,
-      cullDistance: cullDistancePc(hostAbsmag, brightestReflectance, this.maxAppMag),
+      cullDistance: cullDistancePc(hostAbsmag, brightestReflectance, this.cullMag),
       startInstance: this.liveCount,
       count: n,
     };
@@ -386,15 +401,15 @@ export class PlanetBodyField {
   }
 
   /**
-   * Recompute per-host cull distances when the magnitude slider
-   * moves. Stellata.ts calls this from `setFilter` whenever
-   * `maxAppMag` changes.
+   * Recompute per-host cull distances when the population bound moves —
+   * an instrument change. Static in the EV trim and in adaptation, so
+   * the cache can't thrash per frame.
    */
-  setMaxAppMag(maxAppMag: number): void {
-    if (this.maxAppMag === maxAppMag) return;
-    this.maxAppMag = maxAppMag;
+  setCullMag(cullMag: number): void {
+    if (this.cullMag === cullMag) return;
+    this.cullMag = cullMag;
     for (const host of this.hosts.values()) {
-      host.cullDistance = cullDistancePc(host.hostAbsmag, host.brightestReflectance, maxAppMag);
+      host.cullDistance = cullDistancePc(host.hostAbsmag, host.brightestReflectance, cullMag);
     }
   }
 
@@ -575,7 +590,7 @@ export class PlanetBodyField {
    *
    * Returns null if the host isn't attached or planetIdx is out of
    * range. Callers should treat null the same way the shader treats
-   * `appMag > uMaxAppMag + 0.5` — the planet isn't a viable hover target.
+   * past `drawCutoffMag()` — the planet isn't a viable hover target.
    */
   appMagFor(
     hostStarIdx: number,
@@ -676,9 +691,8 @@ export class PlanetBodyField {
   }
 
   /** Host star's absolute V-band magnitude, or null when unattached —
-   *  the luminosity input to the mesh's reflected-light intensity so
-   *  surface brightness scales with the host's class
-   *  (hostIntensityScale). */
+   *  the luminosity input to the mesh's surface brightness, so a body's
+   *  brightness scales with its host's class. */
   hostAbsmagOf(hostStarIdx: number): number | null {
     return this.hosts.get(hostStarIdx)?.hostAbsmag ?? null;
   }
@@ -759,6 +773,20 @@ export class PlanetBodyField {
     return this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal).appMag;
   }
 
+  /** The faintest magnitude that still puts pixels on screen — the CPU
+   *  mirror of the fragment shader's taper. Chart hard-clips at the
+   *  instrument limit (no taper, and it inherits no exposure state);
+   *  everything else fades out over the taper past the just-visible
+   *  threshold. Every "is this drawn, so is it pickable?" gate reads
+   *  this, so none of them can drift from the shader. */
+  private drawCutoffMag(): number {
+    return drawCutoffMag(
+      this.magShared.uLimitMag.value,
+      this.magShared.uThresholdMag.value,
+      this.mono,
+    );
+  }
+
   /** Rendered disc diameter in px at `cameraPosLocal` — the CPU mirror
    *  of the shader's `max(appSize, physSize)`, shared with `pick`.
    *  0 when the instance is unattached or below the soft-taper kill. */
@@ -767,22 +795,26 @@ export class PlanetBodyField {
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
     const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
+    if (dVp <= 0 || appMag > this.drawCutoffMag()) return 0;
     return this.discPixelSize(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag);
   }
 
   /** Physical (true angular-diameter) disc size in px, excluding the
    *  perceptual brightness floor that keeps faint bodies visible as dots —
    *  the "is this a resolved body?" measure driving the mesh LOD's
-   *  presence band. 0 when unattached, degenerate, or below the
-   *  soft-taper kill (mesh and billboard die together). */
+   *  presence band. 0 only when unattached or degenerate. Deliberately
+   *  NOT gated on `drawCutoffMag()` the way `renderedPlanetSizePx` above
+   *  is: a surface is opaque whatever its reflected flux, and φ(α) → 0
+   *  at α → 180° pushes an eclipsing body's appMag past the cutoff, so
+   *  gating here deleted the occluding mesh at exactly the alignment
+   *  where a body sits in front of its own host. */
   physicalPlanetSizePx(instanceIdx: number, cameraPosLocal: Readonly<THREE.Vector3>): number {
     const host = this.hostOfInstance(instanceIdx);
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
-    const { appMag, dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0 || appMag > this.magShared.uMaxAppMag.value + SOFT_TAPER_MARGIN_MAG) return 0;
-    return this.discSizeTerms(host.ps.planets[i].radiusKm * KM_PC, dVp, appMag).physSize;
+    const { dVp } = this.evalPlanetView(host, i, cameraPosLocal);
+    if (dVp <= 0) return 0;
+    return this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, dVp);
   }
 
   /** True when the body currently renders as one on-screen point with
@@ -811,8 +843,7 @@ export class PlanetBodyField {
     if (this.hidden) return false;
     const camPos = camera.position;
     const { appMag, planetX, planetY, planetZ, dVp } = view;
-    const cutoff = this.magShared.uMaxAppMag.value + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
-    if (dVp <= 0 || appMag > cutoff) return false;
+    if (dVp <= 0 || appMag > this.drawCutoffMag()) return false;
 
     const planet = host.ps.planets[i];
     const pi = planet.parentName ? parentIndexOf(host.ps.planets, planet.parentName) : -1;
@@ -860,6 +891,17 @@ export class PlanetBodyField {
     }
   }
 
+  /** True angular diameter in CSS px at the live plate scale — the
+   *  geometric half of `discSizeTerms`, carrying no magnitude term. */
+  private physDiscPx(radiusPc: number, dVp: number): number {
+    return physSizePx(
+      radiusPc,
+      dVp,
+      this.magShared.uViewport.value.y,
+      this.magShared.uFovYRad.value,
+    );
+  }
+
   /** Shader-mirroring physical + perceptual disc sizes in CSS px,
    *  reading the live shared uniforms so debug-panel writes stay in
    *  lockstep. */
@@ -868,12 +910,10 @@ export class PlanetBodyField {
     dVp: number,
     appMag: number,
   ): { physSize: number; appSize: number } {
-    const viewportH = this.magShared.uViewport.value.y;
-    const fovYRad = this.magShared.uFovYRad.value;
-    const physSize = physSizePx(radiusPc, dVp, viewportH, fovYRad);
+    const physSize = this.physDiscPx(radiusPc, dVp);
     const dMEff = perceptualDmEff(
       appMag,
-      this.magShared.uMaxAppMag.value,
+      this.magShared.uLimitMag.value,
       this.magShared.uSizeSpan.value,
       this.magShared.uSizeKnee.value,
     );
@@ -897,7 +937,7 @@ export class PlanetBodyField {
           minPx: this.magShared.uChartDiscMinPx.value,
           magBright: this.magShared.uChartMagBright.value,
         },
-        this.magShared.uMaxAppMag.value,
+        this.magShared.uLimitMag.value,
       );
     }
     // Rendered footprint = the wider of the true disc (mesh) and the
@@ -943,7 +983,6 @@ export class PlanetBodyField {
     const cursorY = clientY - rect.top;
     const viewportW = rect.width;
     const viewportH = rect.height;
-    const maxAppMag = this.magShared.uMaxAppMag.value;
     const camPos = camera.position;
 
     // Walk every host × planet and collect candidates that qualify for
@@ -956,42 +995,32 @@ export class PlanetBodyField {
     // returned HoverHit; no post-reduce re-projection.
     const candidates: CrossHostCandidate[] = [];
     const v = new THREE.Vector3();
-    for (const host of this.hosts.values()) {
-      for (let i = 0; i < host.count; i++) {
-        const view = this.evalPlanetView(host, i, camPos);
-        const { appMag, planetX, planetY, planetZ, dVp } = view;
-        if (dVp <= 0) continue;
-        // Same kill condition as the planet vertex shader: past the
-        // cutoff the GPU emits no quad and the hover can't pick what
-        // isn't drawn. Chart mode hard-clips (no soft taper) — same
-        // rule Picker.pickStar applies there.
-        const cutoff = maxAppMag + (this.mono ? 0 : SOFT_TAPER_MARGIN_MAG);
-        if (appMag > cutoff) continue;
-        // A body collapsed onto its parent renders as one point with
-        // it — that point's pick belongs to the parent (the star
-        // picker for a host, the parent planet's own candidacy for a
-        // moon), so the member is not individually pickable.
-        if (this.isViewCollapsedOntoParent(host, i, view, camera)) continue;
+    this.forEachDrawnBodyView(camPos, (host, i, view) => {
+      const { appMag, planetX, planetY, planetZ, dVp } = view;
+      // A body collapsed onto its parent renders as one point with
+      // it — that point's pick belongs to the parent (the star
+      // picker for a host, the parent planet's own candidacy for a
+      // moon), so the member is not individually pickable.
+      if (this.isViewCollapsedOntoParent(host, i, view, camera)) return;
 
-        v.set(planetX, planetY, planetZ);
-        const screen = projectToScreen(v, camera, viewportW, viewportH);
-        if (!screen) continue;
-        const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
+      v.set(planetX, planetY, planetZ);
+      const screen = projectToScreen(v, camera, viewportW, viewportH);
+      if (!screen) return;
+      const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
-        const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
-        const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
-        const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
+      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+      const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
+      const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
 
-        if (pxDist > hitRadius && pxDist > pxThreshold) continue;
-        candidates.push({
-          idx: i,
-          pxDist,
-          hitRadius,
-          hostStarIdx: host.hostStarIdx,
-          cameraDistancePc: dVp,
-        });
-      }
-    }
+      if (pxDist > hitRadius && pxDist > pxThreshold) return;
+      candidates.push({
+        idx: i,
+        pxDist,
+        hitRadius,
+        hostStarIdx: host.hostStarIdx,
+        cameraDistancePc: dVp,
+      });
+    });
 
     const winner = pickFromCandidates(candidates, pxThreshold);
     if (winner === null) return null;
@@ -1001,6 +1030,75 @@ export class PlanetBodyField {
       cameraDistancePc: winner.candidate.cameraDistancePc,
       tier: winner.tier,
     };
+  }
+
+  /**
+   * Every body that puts pixels on screen this frame, with the view the
+   * shader derives from — so no consumer can pick, light, or measure a
+   * body that isn't drawn. Two render paths, and **either alone is
+   * enough**: the reflected glare rides the photometric cutoff (the
+   * vertex shader's own kill condition, chart hard-clipping instead),
+   * the resolved surface rides its own geometric presence band. They
+   * part company at exactly one alignment — a body in front of its own
+   * host reflects nothing toward the camera while filling the frame with
+   * opaque surface — and taking only the glare's gate there dropped the
+   * body out of the occluder set, so the star it hides kept its full
+   * flux in the adaptation statistic. The whole field is skipped while it
+   * renders nothing at all.
+   */
+  private forEachDrawnBodyView(
+    cameraPosLocal: Readonly<THREE.Vector3>,
+    visit: (host: AttachedHost, planetIdx: number, view: PlanetView) => void,
+  ): void {
+    if (this.hidden) return;
+    const cutoff = this.drawCutoffMag();
+    for (const host of this.hosts.values()) {
+      for (let i = 0; i < host.count; i++) {
+        const view = this.evalPlanetView(host, i, cameraPosLocal);
+        if (view.dVp <= 0) continue;
+        if (view.appMag > cutoff
+          && this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, view.dVp) < MESH_FADE_MIN_PX) {
+          continue;
+        }
+        visit(host, i, view);
+      }
+    }
+  }
+
+  /**
+   * The body term of the exposure-adaptation statistic
+   * (`../../hdr/README.md` § Adaptation): each drawn body's true flux and
+   * TRUE angular footprint. `physSize` deliberately, never the rendered
+   * `max(appSize, physSize)` — the perceptual glare kernel is a display
+   * exaggeration and must not drive exposure. Eclipse dim rides
+   * `fluxScale` because an eclipse is a real light loss; the camera-path
+   * loss of one body sitting in front of another is the statistic's own
+   * occlusion pass, which `cameraDistancePc` orders.
+   */
+  forEachDrawnBody(
+    camera: THREE.PerspectiveCamera,
+    viewportW: number,
+    viewportH: number,
+    visit: (sample: LuminanceSample) => void,
+  ): void {
+    const s = this.adaptationSample;
+    this.forEachDrawnBodyView(camera.position, (host, i, view) => {
+      const idx = host.startInstance + i;
+      if (idx === this.hideIdxUniform.value) return;
+      this.sampleTmp.set(view.planetX, view.planetY, view.planetZ);
+      if (!projectToScreenInto(this.sampleTmp, camera, viewportW, viewportH, this.screenTmp)) {
+        return;
+      }
+      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+      s.appMag = view.appMag;
+      s.diameterPx = this.discSizeTerms(radiusPc, view.dVp, view.appMag).physSize;
+      s.screenX = this.screenTmp[0];
+      s.screenY = this.screenTmp[1];
+      s.cameraDistancePc = view.dVp;
+      s.fluxScale = this.eclipseDimForInstance(idx);
+      s.label = host.ps.planets[i].name;
+      visit(s);
+    });
   }
 
   /** Local-depth-pass mirror draws (disc + glow over the active
@@ -1132,10 +1230,13 @@ export class PlanetBodyField {
     this.geometry = geom;
   }
 
-  private buildMaterials(sm: PerceptualDiscUniforms & ChartDiscUniforms): void {
+  private buildMaterials(
+    sm: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+  ): void {
     const sharedPlanetUniforms = {
       ...pickPerceptualDiscUniforms(sm),
       ...pickChartDiscUniforms(sm),
+      ...pickHdrEmitterUniforms(sm),
     };
 
     const makeMat = (localPass = false) =>

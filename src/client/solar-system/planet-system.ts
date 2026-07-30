@@ -39,7 +39,7 @@ import {
   SATURN_ROTATION,
   URANUS_ROTATION,
   VENUS_ROTATION,
-} from './planets/rotation-elements-pure';
+} from './planets/rotation/rotation-elements-pure';
 
 export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant' | 'icy';
 

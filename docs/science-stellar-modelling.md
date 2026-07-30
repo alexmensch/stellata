@@ -72,21 +72,63 @@ aberrations + diffraction at a 7 mm dark-adapted pupil). No atmospheric
 seeing, no spike-rendering — the camera is in space and we model a
 clean PSF.
 
-**Magnitude limits per preset.** `naked-eye` = 6.5 (Bortle-1 dark sky);
-`binoculars` = 10.5 (typical 7×50 dark sky, derived from
-m_lim_eye + 5·log₁₀(50/7) ≈ +4.3 mag aperture gain); `all` = 15
-(matches the catalog/UI slider ceiling, no physical motivation).
+**Where m_lim comes from.** It is the *instrument's* limiting magnitude,
+derived from aperture — not a user-set data filter. The unaided eye is
+7 mm (the same dark-adapted pupil σ is derived at) giving m_lim = 7.8:
+Bortle-1 best case, in vacuum, fully night-adapted. Deeper instruments
+derive theirs from aperture the same way; the record shape and the
+retired `exposureMul` / `angularMag` multipliers are
+`docs/science-hdr-pipeline.md` § 3.4.
 
-**Exaggeration K.** Literal physics at 50° vertical FOV / 1080 px
-puts the threshold disc at ~0.25 px and Sirius (Δm = 8) at ~1 px —
-both invisible. `starExaggerationK` scales σ up so the threshold disc
-lands at a readable 1–2 px. K is per-preset because the population
-mix changes with the magnitude limit: defaults are `naked-eye` 12,
-`binoculars` 9, `all` 5 — wider catalogs use a smaller K so the dense
-star population doesn't wash the field out. Critically, the √Δm shape
-is preserved between stars within a preset, so *ratios* against the
-volumetric Milky Way bulge (rendered at its real angular size) stay
-correct.
+**Exaggeration K — two factors, and only one of them is physics.**
+Literal physics at 50° vertical FOV / 1080 px puts the threshold disc at
+~0.25 px and Sirius (Δm = 8) at ~1 px, both invisible. K scales σ up so
+the threshold disc lands on a readable pixel size. It is a
+sub-pixel-visibility hack, so it must retire as it stops being needed —
+which is exactly what stating it as *the factor that hits a target pixel
+size* accomplishes:
+
+```
+arcsec_per_px = FOV_deg × 3600 / viewport_height_css_px
+K = K_density(instrument) × max(1, TARGET_PX × arcsec_per_px / σ)
+```
+
+- **The plate-scale factor** is the one that earns its keep. Since
+  `sizeMinArcsec = σ·K`, the rendered size is
+  `σ·K / arcsec_per_px = TARGET_PX` identically — **star pixel size is
+  invariant in both FOV and viewport size**, until K floors at 1 (the
+  true PSF, at 3.47° FOV on a 1080-px viewport at `TARGET_PX` 2.592) and
+  the disc begins *growing* as the 30″ PSF resolves and real physics
+  takes over. What narrowing the FOV buys is
+  therefore *separation, not size*: a close pair that merged into one
+  blob at 50° resolves at 10°, because the exaggeration inflating both has
+  shrunk. The merged blob was never physics — it was K.
+- **`K_density`** is the instrument's half. The retired per-preset values
+  (12 / 9 / 5) conflated the two factors: a deeper limit needs a smaller
+  footprint or a dense field washes into a solid sheet. `K_density` = 1
+  for the unaided eye; it is a per-instrument calibration for anything
+  deeper.
+- **`TARGET_PX`** is the calibration this introduces, and **2.592
+  shipped** — set by eye against the observer's own experience of the real
+  sky, which is the only authority a perceptual exaggeration has. The
+  candidates it was chosen over were both derived rather than observed:
+  2.16 preserved the retired `K = 12`'s *angular* exaggeration at 50° on
+  1080 px, and 3.84 preserved its rendered pixel size on a 1920×1080
+  desktop. 2.16 read slightly too small and 3.84 clearly too large; 2.592
+  is 1.2× the former, i.e. the old model's `K = 14.4`.
+
+  **Calibrate it through `TARGET_PX`, never through the multiplier or
+  `K_density`.** Both of those multiply the *floored* plate-scale term, so
+  a non-unit default would leave K above 1 at every zoom level and stars
+  permanently larger than the true PSF — the honest-angular-size end of
+  the curve would become unreachable. `TARGET_PX` moves only the
+  unfloored term, so the floor stays exactly 1 and the crossover simply
+  shifts (3.47° at 2.592 on a 1080-px viewport, against 4.17° at 2.16).
+
+Critically, the √Δm shape is preserved between stars at any K, so
+*ratios* — including against the volumetric Milky Way bulge, rendered at
+its real angular size — stay correct. That is what makes rescaling the
+absolute mapping legitimate while the physical relationships hold.
 
 **Soft taper.** Real stars near the detection threshold fade across
 ~0.5 mag rather than popping at the limit. The shader extends
@@ -95,18 +137,26 @@ across that band; the disc pass keeps the hard limit since resolved
 discs at threshold would render as a sub-pixel speck.
 
 **Viewport calibration.** Sizes are stored in arcsec internally and
-converted to pixels per-frame via
-`arcsec_per_px = (FOV × 3600) / max(viewport_w, viewport_h)`. Using
-the larger viewport dimension as the reference gives consistent
-absolute pixel sizes across portrait/landscape orientations, at the
-cost of strict angular fidelity in the secondary axis. Three.js's
-`camera.fov` is the *vertical* FOV; horizontal arcsec/px would be
-identical only for square viewports.
+converted to pixels per frame against the viewport **height**, because
+three.js's `camera.fov` is the *vertical* FOV — that is the axis the
+angle actually maps to, and the axis `physSize` and the HDR unit's `Ω_px`
+already project through.
+
+The earlier convention divided by `max(viewport_w, viewport_h)` to keep
+absolute pixel sizes consistent across portrait and landscape. It bought
+that at the cost of two defects: widening a desktop window *grew the
+stars*, when a fixed vertical FOV should simply reveal more sky (≈ 2.9 px
+at 1440 wide against ≈ 6.9 px at 3440), and the secondary axis lost
+angular fidelity outright. The K derivation above subsumes the problem
+`max(w, h)` was solving — a coarser plate scale raises K, so a threshold
+star still lands on `TARGET_PX` even at a 390-px landscape-mobile
+height — so the compromise retires rather than being re-tuned.
 
 Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
-brightness curve + smoothstep taper) and `src/client/stellata.ts`
-(`MAG_PRESETS`, `applyMagnitudePreset`, `computePresetPxSizes`).
-Live tuning via `debug.panel()` in the browser console.
+brightness curve + smoothstep taper) and `src/client/filters/`
+(`filter-state.ts` for the angular targets and `starPxSizes`,
+`filter-controller.ts` for every mutation path). Live tuning via
+`debug.panel()` in the browser console.
 
 ## Star colour calibration
 

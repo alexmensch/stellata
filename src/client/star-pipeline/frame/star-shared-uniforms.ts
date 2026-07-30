@@ -3,7 +3,8 @@
 
 import * as THREE from 'three';
 import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
-import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import { DEFAULT_FILTER, instrumentLimitMag, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeColorLutTexture } from '../blackbody-lut';
@@ -33,14 +34,23 @@ export type StarSharedUniforms = ReturnType<typeof buildStarSharedUniforms>;
  * of the same map by reference for the same reason.
  */
 export function buildStarSharedUniforms(opts: StarSharedUniformsOptions) {
+  const baseLimitMag = instrumentLimitMag(DEFAULT_FILTER.instrument);
   return {
     // Exposure + the inline-operator branch. Owned by HdrPipeline, which
     // rewrites uHdrTarget whenever the seam, the resolve, or chart mode
     // changes; the star passes only read them.
     ...opts.hdr,
     uCameraPos: { value: new THREE.Vector3() },
-    // Seeded from DEFAULT_FILTER; FilterController owns every later write.
-    uMaxAppMag: { value: DEFAULT_FILTER.maxAppMag },
+    // The three magnitude bounds, all owned by ExposureController (it
+    // rewrites them from its constructor, so these seeds only have to be
+    // shape-correct): uLimitMag is the instrument's limit — the footprint
+    // window, chart disc sizing and the MW chart isobar; uThresholdMag is
+    // where a source lands on the just-visible floor, and is the taper
+    // anchor; uCullMag is the static population bound the vertex stage
+    // culls at. `../../hdr/exposure/README.md` § One writer, four slots.
+    uLimitMag: { value: baseLimitMag },
+    uThresholdMag: { value: baseLimitMag },
+    uCullMag: { value: cullMagFor(baseLimitMag) },
     uMinDistSol: { value: DEFAULT_FILTER.minDistSol },
     uMaxDistSol: { value: DEFAULT_FILTER.maxDistSol },
     uSpectMask: { value: DEFAULT_FILTER.spectMask },

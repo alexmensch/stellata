@@ -3,12 +3,20 @@ precision highp float;
 #include <common>
 #include <stellata_atmosphere_uniforms>
 #include <stellata_atmosphere_scatter>
+#include <stellata_hdr_emission>
+#include <stellata_tonemap>
 
-// Body → host direction (unit, view space); sun colour × intensity display
-// exposure; and the LOD crossfade weight — not part of the shared scatter
+// HDR seam, bound by reference from HdrPipeline.emitterUniforms.
+uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
+
+// Body → host direction (unit, view space); host irradiance in the
+// scene-wide HDR unit (the same scalar the mesh's own airlight block
+// rides); and the LOD crossfade weight — not part of the shared scatter
 // contract (the mesh shader uses these outside its atmosphere block too).
 uniform vec3 uSunDirView;
-uniform float uLitIntensity;
+uniform float uAirlightLuminance;
 uniform float uFade;
 
 in vec3 vPosV;
@@ -44,5 +52,13 @@ void main() {
   // the premultiplied-over shell occludes the background even where it adds no
   // airlight. Both channels ride uFade for the LOD crossfade.
   float opacity = 1.0 - stellata_luma(transmittance);
-  outColor = vec4(inscatter * uSunColour * uLitIntensity * uFade, opacity * uFade);
+  // The operator runs on the airlight radiance, before uFade premultiplies
+  // it — the crossfade is a compositing weight, not part of the light the
+  // operator sees. Undithered: the shell overlaps the body mesh's own
+  // fragments at the limb (../../hdr/README.md § Operator).
+  vec3 col = min(inscatter * uSunColour * uAirlightLuminance, vec3(STELLATA_LUMA_CEIL));
+  if (uHdrTarget < 0.5) {
+    col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
+  }
+  outColor = vec4(col * uFade, opacity * uFade);
 }

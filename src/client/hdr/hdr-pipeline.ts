@@ -9,22 +9,29 @@ import tonemapChunk from './tonemap.glsl?raw';
 import emissionChunk from './emission.glsl?raw';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
-import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
+import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
 import { pixelSolidAngleArcsec2 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
-import { clearChromeBindings, setChromeOperatorActive } from './chrome-colour';
+import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
+import {
+  clearChromeBindings,
+  setChromeOperatorActive,
+  setChromeWhitePoint,
+} from './chrome/chrome-colour';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
 
-/** Ship gate for the HDR epic. The seam is inert until the emitting
- *  layers actually carry physical luminance (H3 stars, H4 Milky Way,
- *  H5 planets) — with them still on their old encodings, turning it on
- *  changes brightness for no gain. Flip to true in the bead that lands
- *  the last conversion; `hdr-pipeline.test.ts` pins the current value so
- *  the flip has to be deliberate. `stellata.setHdrEnabled(true)` turns
- *  it on at runtime for development in the meantime. */
-export const HDR_DEFAULT_ENABLED = false;
+/** Ship gate for the HDR epic — **live**. Stars, the Milky Way, and the
+ *  planet layers all emit physical luminance now, so the target is the
+ *  default path and the operator runs once at the resolve.
+ *  `stellata.setHdrEnabled(false)` is the A/B: it parks every emitter on
+ *  its inline operator and returns chrome to authored colours
+ *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value.
+ *
+ *  Un-shelving a layer that still carries a pre-HDR encoding — the Local
+ *  Group emission pass is the one left (`LG_EMISSION_SHELVED`) — puts a
+ *  mis-calibrated emitter on the shared scale. Convert first. */
+export const HDR_DEFAULT_ENABLED = true;
 
 /** The uniforms every physical emitter binds **by reference**, so the
  *  seam's state reaches all of them with one write. `uHdrTarget` is the
@@ -42,13 +49,37 @@ export interface HdrEmitterUniforms {
   uOmegaPxArcsec2: THREE.IUniform<number>;
 }
 
-/** `uHdrTarget` seeds to 0 — the shipped path while the ship gate is
- *  false — and `HdrPipeline` owns every write after that. `uExposure`
- *  seeds at the base epoch, which is `DEFAULT_FILTER.maxAppMag`'s epoch;
- *  `FilterController` owns every later write (README.md § Exposure
- *  epochs). `uOmegaPxArcsec2` seeds at the default FOV over a 1000 px
- *  viewport and is rewritten by `setPixelSolidAngle` on every FOV /
- *  resize change. */
+export const HDR_EMITTER_UNIFORM_KEYS = [
+  'uHdrTarget',
+  'uWhitePoint',
+  'uHighlightDesat',
+  'uExposure',
+  'uOmegaPxArcsec2',
+] as const satisfies readonly (keyof HdrEmitterUniforms)[];
+
+/** Pick the seam's slots out of a wider shared-uniforms object, keeping
+ *  each `{ value }` slot's identity — an emitter that copied the values
+ *  would tone-map inline into an already-tone-mapped target the moment
+ *  `HdrPipeline` rewrote `uHdrTarget`. Mirrors
+ *  `pickPerceptualDiscUniforms`; used by the planet layers, which read the
+ *  star pipeline's map rather than holding the pipeline. */
+export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
+  src: T,
+): HdrEmitterUniforms {
+  const out: Record<string, THREE.IUniform> = {};
+  for (const key of HDR_EMITTER_UNIFORM_KEYS) {
+    out[key] = src[key];
+  }
+  return out as unknown as HdrEmitterUniforms;
+}
+
+/** `uHdrTarget` seeds to 0 and `HdrPipeline`'s constructor rewrites it
+ *  before the first frame, as it does `uWhitePoint` and `uHighlightDesat`
+ *  (both live dev knobs, rewritten by `syncMode`). `uExposure` seeds at
+ *  the base epoch; `ExposureController` owns every later write
+ *  (`exposure/README.md`). `uOmegaPxArcsec2` seeds at the default FOV
+ *  over a 1000 px viewport and is rewritten by `setPixelSolidAngle` on
+ *  every FOV / resize change. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },
@@ -80,6 +111,8 @@ export class HdrPipeline {
   private enabled = HDR_DEFAULT_ENABLED;
   private tonemapOn = true;
   private chart = false;
+  private drMag = DR_MAG;
+  private highlightDesat = HIGHLIGHT_DESAT;
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer;
@@ -177,6 +210,34 @@ export class HdrPipeline {
     this.syncMode();
   }
 
+  /**
+   * Magnitudes of range from the threshold floor to full white — the
+   * operator's shape, as a dev knob (README.md § Dev switches). Moves the
+   * star field and the Milky Way band together, and re-authors every
+   * chrome colour, since the mapping inverts against this white point.
+   *
+   * Extended Reinhard is already at 0.95 of full scale by `L` = 20
+   * whatever the white point is, so raising this buys hue survival at the
+   * top end and almost no visible gradient. Detail up there needs a
+   * longer *shoulder*, which is a different change.
+   */
+  setDynamicRangeMag(drMag: number): void {
+    this.drMag = drMag;
+    this.syncMode();
+  }
+
+  getDynamicRangeMag(): number { return this.drMag; }
+
+  /** Strength of the mix toward white above the knee — the other half of
+   *  the top end's look, and the term that decides whether a clipping
+   *  source keeps its hue. */
+  setHighlightDesat(desat: number): void {
+    this.highlightDesat = desat;
+    this.syncMode();
+  }
+
+  getHighlightDesat(): number { return this.highlightDesat; }
+
   /** Park the resolve on straight pass-through, keeping the target. The
    *  A/B that isolates a plumbing regression from a calibration one. */
   setTonemapEnabled(on: boolean): void {
@@ -197,12 +258,18 @@ export class HdrPipeline {
 
   /** Fan the seam's state out to the two things outside this class that
    *  depend on it: chrome's inverse mapping, which is only correct while
-   *  the operator it inverts is running, and the physical emitters, which
-   *  tone-map inline whenever the target isn't bound. Both read the same
-   *  `wantsTarget()`, so the chart bypass reaches them for free. */
+   *  the operator it inverts is running *and* only against the white point
+   *  it inverts, and the physical emitters, which tone-map inline whenever
+   *  the target isn't bound. Both read the same `wantsTarget()`, so the
+   *  chart bypass reaches them for free. Every state change routes through
+   *  here, which is what makes the operator's two shape knobs live. */
   private syncMode(): void {
     const targetActive = this.wantsTarget();
+    const whitePoint = tonemapWhitePoint(this.drMag);
     this.emitterUniforms.uHdrTarget.value = targetActive ? 1 : 0;
+    this.emitterUniforms.uWhitePoint.value = whitePoint;
+    this.emitterUniforms.uHighlightDesat.value = this.highlightDesat;
+    setChromeWhitePoint(whitePoint);
     setChromeOperatorActive(targetActive && this.tonemapOn);
   }
 
@@ -217,6 +284,8 @@ export class HdrPipeline {
     this.enabled = HDR_DEFAULT_ENABLED;
     this.tonemapOn = true;
     this.chart = false;
+    this.drMag = DR_MAG;
+    this.highlightDesat = HIGHLIGHT_DESAT;
     this.syncMode();
     clearChromeBindings();
   }

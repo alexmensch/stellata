@@ -7,21 +7,21 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { getPlanetPositions, resetPositionCache } from '../ephemerides/ephemeris';
-import { MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
-import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
-import { iauMeshOrientationQuat } from './planet-mesh-layer';
+import { getPlanetPositions, resetPositionCache } from '../../ephemerides/ephemeris';
+import { MOON_ELEMENTS, moonOffsetEcliptic } from '../../ephemerides/moon-ephemeris';
+import { ECLIPTIC_NORTH_POLE_ICRS } from '../../ephemerides/orbit-rings-layer';
+import { iauMeshOrientationQuat } from '../planet-mesh-layer';
 import {
   MARS_ROTATION,
   MOON_ROTATION_BY_NAME,
   subObserverLongitudeEastDeg,
   type RotationElements,
 } from './rotation-elements-pure';
-import { jdeToT } from '../time/time';
-import { KM_PC } from '../../util/astronomy-constants';
+import { jdeToT } from '../../time/time';
+import { KM_PC } from '../../../util/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/sub-observer-truth.tsv');
+const TRUTH_TSV = resolve(__dirname, '../../../../../data/horizons/sub-observer-truth.tsv');
 const C_KM_S = 299792.458;
 
 interface TruthRow {

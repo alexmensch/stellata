@@ -62,8 +62,8 @@
 // (lumBias) so hypergiants stay fuzzier than dwarfs at equivalent
 // physRatio.
 
-float perceptualDmEff(float appMag, float maxAppMag, float sizeSpan, float sizeKnee) {
-  float dM = maxAppMag - appMag;
+float perceptualDmEff(float appMag, float limitMag, float sizeSpan, float sizeKnee) {
+  float dM = limitMag - appMag;
   if (dM <= sizeSpan) {
     return max(dM, 0.0);
   }

@@ -419,7 +419,6 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     stars?: { con: number; absmag: number; distPc: number }[];
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
-    maxAppMag?: number;
     showConstellation?: boolean;
     detailPermits?: (id: string) => boolean;
   }
@@ -467,7 +466,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       getWorldOffset: () => new THREE.Vector3(),
       constellationLabelAnchors: patch.anchors ?? [],
       getFilter: () => ({
-        maxAppMag: patch.maxAppMag ?? 6.5, minDistSol: 0, maxDistSol: 1e9,
+        instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
         spectMask: 0xff, showConstellation: patch.showConstellation ?? true,
       }),
       detailPermits: patch.detailPermits ?? (() => true),
@@ -656,11 +655,16 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       labels.dispose();
     });
 
-    // Orion's only member is far under the limit, so no ORION label — the gate
-    // is per constellation, not per anchor.
+    // Serpens' one member drops under the instrument limit as well, so both its
+    // anchors go unnamed together — the gate is per constellation, not per anchor.
     it('gates a region on its brightest member, both anchors together', () => {
       const groups = installDomStubs();
-      const h = anchorHarness({ maxAppMag: -5 });
+      const h = anchorHarness({
+        stars: [
+          { con: SERPENS, absmag: 20, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+      });
       const labels = new ChartLabels(h.stellata);
       labels.start(h.ctx);
       h.emit('frame');

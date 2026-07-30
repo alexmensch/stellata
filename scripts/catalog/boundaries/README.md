@@ -132,7 +132,7 @@ offsetPc = (angular distance to its nearest wall + 0.5°) × distance from Sol
 is the camera offset at which that star becomes visibly misplaced
 relative to its own cell. `offsetsPc[i][j]` is the `quantilePcts[j]`
 percentile of that over every star with apparent V ≤ `magLimits[i]`, so
-the runtime lerps a window out of the live magnitude slider.
+the runtime lerps a window out of the live magnitude limit.
 
 The layer fades from the **1%** column to the **5%** column and rejects an
 artifact that carries neither — dropping a quantile here is a wire change
@@ -151,7 +151,7 @@ shape on why that matters).
 Rows are emitted only where ≥ `FADE_MIN_SAMPLES` (64) stars qualify — a
 percentile over a handful of naked-eye stars is sampling noise — and the
 build fails if fewer than two rows survive, since one row is a constant
-the slider cannot move. The runtime clamps outside the emitted range.
+no instrument limit can move. The runtime clamps outside the emitted range.
 `sampleCounts` ships alongside so a thin row is visible rather than
 implied.
 

@@ -1,11 +1,14 @@
 import type { Stellata } from '../../stellata';
 import {
   type FilterState,
-  type MagPresetName,
-  MAG_PRESETS,
   DEFAULT_FOV,
   ALL_SPECT_MASK,
 } from '../../filters/filter-state';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
+
+/** The retired v1–v3 magnitude presets. Frozen decoders still emit these
+ *  names; nothing downstream acts on them. */
+type LegacyPresetName = 'naked-eye' | 'binoculars' | 'all';
 import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
@@ -99,12 +102,12 @@ const FOCUS_ID_MASK = 0x7fffffff;
 const FOCUS_HIP_TAG_V2 = 0x800000;
 const FOCUS_ID_MASK_V2 = 0x7fffff;
 
-const PRESET_TO_INDEX: Record<MagPresetName, number> = {
+const PRESET_TO_INDEX: Record<LegacyPresetName, number> = {
   'naked-eye': 0,
   'binoculars': 1,
   'all': 2,
 };
-const INDEX_TO_PRESET: MagPresetName[] = ['naked-eye', 'binoculars', 'all'];
+const INDEX_TO_PRESET: LegacyPresetName[] = ['naked-eye', 'binoculars', 'all'];
 
 // Flags byte — packed booleans + small enums. Each bit is "non-default":
 //   0 = a coordinate sphere is up, 1 = HUD on, 2 = reserved, 3 = MW disabled,
@@ -155,11 +158,17 @@ export interface DecodedView {
   tgt?: [number, number, number];
   up?: [number, number, number];
   fov?: number;
+  /** Legacy blobs only (v1–v3, and v4 shared before the field retired):
+   *  the app-magnitude filter. Decode-and-ignore, same as `preset`. */
   mag?: number;
+  /** Manual EV trim, in stops. Default 0, omitted when default. */
+  ev?: number;
   dmin?: number;
   dmax?: number;
   spect?: number;
-  preset?: MagPresetName;
+  /** Legacy blobs only: the retired magnitude preset. Decoded so old
+   *  links still load, then ignored — the instrument owns the limit. */
+  preset?: LegacyPresetName;
   /** Declutter detail level. Default 'all' (fully cluttered) — encoded
    *  only when the user cycled below it. */
   detailLevel?: DetailLevel;
@@ -478,7 +487,7 @@ export function varintLen(val: number): number {
 // wrapping.
 function u8Field(
   bit: number,
-  key: 'fov' | 'mag' | 'smin' | 'smax' | 'span',
+  key: 'fov' | 'mag' | 'smin' | 'smax' | 'span' | 'ev',
   q: { min: number; max: number; step: number },
 ): FieldSpec {
   const maxByte = Math.round((q.max - q.min) / q.step);
@@ -533,6 +542,13 @@ function u8CloudField(bit: number, key: 'cloud' | 'toc'): FieldSpec {
 // across schema versions. Each is a stable, parameterised spec factory
 // — per-version FIELDS arrays below compose them; the golden-blob
 // corpus in url-state.test.ts pins the resulting byte behaviour.
+
+/** Retire a field without breaking blobs that already carry it: the
+ *  encoder never emits the bit, but the decoder still consumes the
+ *  payload bytes so every later field keeps its offset. */
+function decodeOnly(spec: FieldSpec): FieldSpec {
+  return { ...spec, isPresent: () => false };
+}
 
 function presetField(bit: number): FieldSpec {
   return {
@@ -834,16 +850,22 @@ const FIELDS_V3: FieldSpec[] = [
 // unclaimed for ~6 months of deploy overlap before any reuse.
 // Everything else is byte-identical to v3. Append-only bit policy
 // continues: unknown high mask bits are ignored by the decoder.
+// Bits 4 (app-magnitude filter) and 8 (magnitude preset) are RETIRED —
+// the instrument owns the limiting magnitude, so a blob carrying either
+// decodes and is ignored rather than failing. They stay in this table as
+// decode-only specs, NOT just as unclaimed bits: v4 blobs shipped by
+// v3.6.0 have them set with payload bytes, and a spec-less bit would
+// leave those bytes unconsumed, shifting every later field's offset.
 const FIELDS_V4: FieldSpec[] = [
   vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
   vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
   vec3FieldV3(2, 'up', () => DEFAULT_UP),
   u8Field(3,  'fov',  { min: 10, max: 120, step: 1   }),
-  u8Field(4,  'mag',  { min: -2, max: 15,  step: 0.1 }),
+  decodeOnly(u8Field(4, 'mag', { min: -2, max: 15, step: 0.1 })),
   u16Field(5, 'dmin'),
   u16Field(6, 'dmax'),
   u16Field(7, 'spect'),
-  presetField(8),
+  decodeOnly(presetField(8)),
   conField(9),
   u8Field(10, 'smin', { min: 1, max: 6,  step: 0.1 }),
   u8Field(11, 'smax', { min: 2, max: 32, step: 0.5 }),
@@ -858,6 +880,7 @@ const FIELDS_V4: FieldSpec[] = [
   lgEmissionDisabledField(22),
   detailLevelField(23),
   coordSphereEquatorialField(24),
+  u8Field(25, 'ev', { min: -EV_MAX_STOPS, max: EV_MAX_STOPS, step: EV_STEP_STOPS }),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -1009,8 +1032,7 @@ function fromBase64Url(blob: string): Uint8Array {
 }
 
 // Build a DecodedView from current Stellata state. Default-equality is
-// computed against canonical defaults (and the active preset for
-// preset-relative fields like `mag`) so omitted fields keep the blob
+// computed against canonical defaults so omitted fields keep the blob
 // minimal.
 export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView {
   const f = stellata.getFilter();
@@ -1020,15 +1042,12 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const sMax = distToSlider(f.maxDistSol, false);
   if (sMin !== 0) view.dmin = sMin;
   if (sMax !== SLIDER_STEPS) view.dmax = sMax;
-  if (f.activePreset !== 'naked-eye') view.preset = f.activePreset;
   if (f.detailLevel !== 'all') view.detailLevel = f.detailLevel;
-  // Magnitude diverges from the active preset only when the user moved the
-  // slider — otherwise it should adapt to the receiver's preset.
-  if (!approx(f.maxAppMag, MAG_PRESETS[f.activePreset].maxAppMag)) view.mag = f.maxAppMag;
   if (f.spectMask !== ALL_SPECT_MASK) view.spect = f.spectMask;
   if (f.highlightCon !== -1) view.con = f.highlightCon;
   // Size fields only when explicitly overridden — otherwise the receiver
-  // recomputes from preset + their own viewport (responsive sharing).
+  // recomputes from the instrument + their own viewport (responsive
+  // sharing).
   if (f.sizeMinOverridden) view.smin = f.sizeMin;
   if (f.sizeMaxOverridden) view.smax = f.sizeMax;
   if (f.sizeSpanOverridden) view.span = f.sizeSpan;
@@ -1040,6 +1059,9 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   const fov = stellata.getCameraFov();
   if (!approx(fov, DEFAULT_FOV)) view.fov = fov;
+
+  const ev = stellata.getEv();
+  if (!approx(ev, 0)) view.ev = ev;
 
   if (getUnit() === 'pc') view.unit = 'pc';
 
@@ -1209,7 +1231,6 @@ export function applyDecodedView(
 ): void {
   if (view.unit) setUnit(view.unit);
 
-  if (view.preset) stellata.applyMagnitudePreset(view.preset);
   // Declutter level — applied before the filter patch below; drives the
   // scene-element binds (default 'all' omitted, so this only fires for a
   // decluttered share). Runs after layers are constructed (applyFromUrl
@@ -1222,7 +1243,6 @@ export function applyDecodedView(
     patch.minDistSol = sliderToDist(view.dmin ?? 0, true);
     patch.maxDistSol = sliderToDist(view.dmax ?? SLIDER_STEPS, false);
   }
-  if (view.mag !== undefined) patch.maxAppMag = view.mag;
   if (view.spect !== undefined) patch.spectMask = view.spect;
   if (view.con !== undefined) patch.highlightCon = view.con;
   if (view.smin !== undefined) { patch.sizeMin = view.smin; patch.sizeMinOverridden = true; }
@@ -1236,6 +1256,7 @@ export function applyDecodedView(
   if (Object.keys(patch).length) stellata.setFilter(patch);
 
   if (view.fov !== undefined && view.fov > 0) stellata.setCameraFov(view.fov);
+  if (view.ev !== undefined) stellata.setEv(view.ev);
 
   // Pinned `t` — only present when the sender's `t` was scrubbed away
   // from live (the encoder gates emission on isLive). Apply before any

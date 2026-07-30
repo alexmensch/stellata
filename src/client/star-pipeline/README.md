@@ -65,7 +65,7 @@ vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
 ```
 
 The footprint math is untouched, but its *meaning* changed: the √Δm
-appSize curve and the per-preset exaggeration `K` are now purely a
+appSize curve and the plate-scale exaggeration `K` are now purely a
 display kernel normalised to peak 1 (§ Star intensity profile) — they
 size the star, they no longer encode how bright it is. **`K` therefore
 stops being a calibration knob**, trading only legibility against how
@@ -86,10 +86,12 @@ Two consequences specific to this pipeline:
   bright and a faint star still split halo-from-core at the same radius.
   The depth/halo decision is about shape, not brightness.
 
-The magnitude slider drives `uExposure` (`../hdr/README.md` § Exposure
-epochs) *and* keeps its population cutoff. The two agree by construction
-— a star past the limit would emit below the floor the unit is anchored
-to — leaving the vertex cull as a pure performance cull.
+The instrument's limiting magnitude drives `uExposure`
+(`../hdr/exposure/README.md`), and the vertex cull is a *separate*,
+derived bound (`uCullMag`) sitting far enough past it that +3 stops of
+manual trim can never expose a population edge. Population cutoff and
+exposure no longer agree by construction — they agreed only while one
+number served both.
 
 Validation compares **per-pixel** luminance, never integrals: the
 K-exaggerated footprint over-counts a star's frame flux by design
@@ -281,15 +283,16 @@ Each star's final pixel size is `max(appSize, physSize) × pixelRatio`
 in the vertex shader:
 
 - `appSize` is the brightness-based term: the `√Δm` Gaussian-PSF curve
-  over the visible-population window `Δm = uMaxAppMag − appMag`, with
+  over the visible-population window `Δm = uLimitMag − appMag`, with
   **soft-knee saturation** (`uSizeKnee`, default 16 mag, debug-tunable)
   above it. The curve and the knee's Michaelis–Menten form live in
   `perceptual-disc.glsl`'s header; the derivation is
   `docs/science-stellar-modelling.md` § Stellar perception model.
   `uSizeKnee = 0` recovers the hard clamp the knee replaced — which had
   pinned Sol and Barnard's Star to the same cap at 5e-3 pc despite a
-  2300× flux ratio. Endpoints `uSizeMin/Max` are derived per-frame from
-  the active preset's angular targets (§ Magnitude presets below).
+  2300× flux ratio. Endpoints `uSizeMin/Max` are derived from the
+  instrument's PSF and the live plate scale (§ Angular-size calibration
+  below).
 - `physSize = 2·atan(R · radiusFactor / dPc) · viewport.y / uFovYRad`
   is the star's true angular diameter projected to pixels. `R` is the
   per-star physical radius in pc (decoded from the `iLogRadius` vertex
@@ -300,37 +303,53 @@ in the vertex shader:
   in favour of pure geometry, so the on-screen disc ratio between any
   two stars at equal `d/R` matches their physical radius ratio.
 
-A **soft taper** runs in the fragment shader's glow pass: stars
-within +0.5 mag of `uMaxAppMag` survive vertex culling and fade in
-glow intensity via
-`1 - smoothstep(uMaxAppMag, uMaxAppMag + 0.5, vAppMag)` so the limit
-doesn't pop in/out as the slider moves. The disc pass hard-clips at
-`uMaxAppMag` (resolved discs in the fade region would render as a
-sub-pixel speck and read as a hard cutoff anyway).
+A **soft taper** runs in the fragment shader's glow pass, anchored on
+`uThresholdMag` — the magnitude a source lands exactly on `L_THRESH` at,
+instrument plus EV trim. Stars within +0.5 mag of it fade in glow
+intensity via
+`1 - smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag)` so the
+faint edge is always a fade rather than a pop. The disc pass hard-clips
+at `uThresholdMag` (resolved discs in the fade region would render as a
+sub-pixel speck and read as a hard cutoff anyway). The vertex cull sits
+further out still, at `uCullMag`; the taper must never follow the cull
+bound, or a threshold star would stop landing on the floor the unit is
+anchored to (`../hdr/exposure/README.md` § One writer, four slots).
 
-## Magnitude presets and angular-size calibration
+## Angular-size calibration
 
-Three presets live in `MAG_PRESETS` in `../filters/filter-state.ts`: `naked-eye`
-(m_lim = 6.5, span = 8 mag), `binoculars` (10.5, 12), and `all`
-(15, 17). Each carries `sizeMinArcsec` / `sizeMaxArcsec` — the
-*angular* size of the threshold disc and the saturation disc on the
-sky, derived from the eye's PSF width (σ = `STAR_PSF_ARCSEC` = 30″)
-scaled by a per-preset exaggeration constant in
-`STAR_EXAGGERATION_K_DEFAULTS` (naked-eye = 12, binoculars = 9,
-all = 5). The literal PSF puts threshold stars at sub-pixel size on a
-60° viewport; the exaggeration scales σ up to a readable pixel range
-while preserving the √Δm ratios between stars. K is per-preset
-because the population mix changes with the magnitude limit — wider
-catalogs use a smaller K so the denser star population doesn't wash
-out into a solid field.
+The threshold and saturation discs are *angular* sizes on the sky, from
+the instrument's PSF width (σ = `psfArcsec` = 30″ for the 7 mm
+dark-adapted pupil) scaled by the exaggeration K — and K is derived from
+the live plate scale rather than authored per instrument:
 
-The arcsec → pixel conversion divides by
-`max(window.innerWidth, innerHeight)`, not by height alone: that keeps
-absolute star sizes consistent across portrait/landscape and ultrawide
-monitors. The preset plumbing that calls it — `applyMagnitudePreset`,
-`recomputePresetPxSizes`, `setCameraFov`, and their override / resize
-semantics — belongs to `../filters/README.md`; this section is only the
-perception model those knobs feed.
+```
+arcsec_per_px = fov_deg · 3600 / viewport_height_css_px
+K = kDensity · kMultiplier · max(1, TARGET_PX · arcsec_per_px / psfArcsec)
+```
+
+so `sizeMinPx = σ·K / arcsec_per_px = TARGET_PX` (2.592 px) identically:
+**star pixel size is invariant in FOV and in viewport size**, until K
+floors at 1 and the true 30″ PSF resolves, past which the disc grows with
+the plate scale. What zooming buys is *separation, not size* — a close
+pair merged into one blob at 50° resolves at 10°, because the K inflating
+both has shrunk. The blob was never physics.
+
+`kDensity` is the instrument's own half of K — a crowding term, 1 for the
+unaided eye, since a deeper limit needs a smaller footprint or a dense
+field washes into a solid sheet. `kMultiplier` is the debug slider.
+
+The conversion divides by viewport **height** — the axis `camera.fov`
+maps to, and the axis `Ω_px` and `physSize` already project through. The
+old `max(w, h)` reference dimension is retired: it existed to stop stars
+vanishing on landscape mobile, which a coarser plate scale now handles by
+raising K on its own. Widening a desktop window therefore changes star
+size by zero; it only reveals more sky.
+
+The plumbing that calls it — `setInstrument`, `recomputeStarPxSizes`,
+`setCameraFov`, and their override / resize semantics — belongs to
+`../filters/README.md`; this section is only the perception model those
+knobs feed, and `docs/science-stellar-modelling.md` § Stellar perception
+model carries the derivation.
 
 `uFovYRad` (mirrored from `camera.fov` on every FOV change) is the only
 viewport-derived shader uniform that drives

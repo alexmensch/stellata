@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
+import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { Picker, type PickerDeps } from './picker';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
@@ -117,13 +118,12 @@ function defaultFilter(overrides: Partial<FilterState> = {}): FilterState {
   return {
     minDistSol: 0,
     maxDistSol: 50_000,
-    maxAppMag: 15,
+    instrument: 'unaided-eye',
     spectMask: ALL_SPECT_MASK,
     highlightCon: -1,
     sizeMin: 2,
     sizeMax: 10,
     sizeSpan: 8,
-    activePreset: 'all',
     sizeMinOverridden: false,
     sizeMaxOverridden: false,
     sizeSpanOverridden: false,
@@ -146,6 +146,9 @@ function makePicker(
     renderedSizePxFn?: (idx: number) => number;
     warpActive?: boolean;
     resolveCollapsedLead?: (idx: number) => number;
+    /** The instrument's limit, standing in for the threshold too (these
+     *  cases run at EV 0 and no adaptation). */
+    limitMag?: number;
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
@@ -158,6 +161,10 @@ function makePicker(
     sortedDistFromSol: data.sortedDistFromSol,
     getLocalPositions: () => data.localPositions,
     getFilter: () => filter,
+    drawCutoffMagFn: (chart) => {
+      const limitMag = opts.limitMag ?? 15;
+      return drawCutoffMag(limitMag, limitMag, chart);
+    },
     getClouds: () => null,
     getLocalGroupLayer: () => null,
     getShells: () => new ShellRegistry(),
@@ -309,43 +316,43 @@ describe('Picker / pickStar', () => {
   });
 
   describe('apparent-mag filter', () => {
-    it('respects maxAppMag against absmag + 5*(log10(dCam) - 1)', () => {
+    it('respects the instrument limit against absmag + 5*(log10(dCam) - 1)', () => {
       // Star at z = 0 → dCam = 30 pc → 5*(log10(30) - 1) ≈ 2.39
       // mag distance modulus. absmag = 5 → appMag ≈ 7.39.
       const data = makeCatalog([[0, 0, 0]], { absmag: [5] });
-      const { picker, camera } = makePicker(data, defaultFilter({ maxAppMag: 6 }));
+      const { picker, camera } = makePicker(data, defaultFilter(), { limitMag: 6 });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
-      // appMag 7.39 > maxAppMag 6 → star filtered out, miss.
+      // appMag 7.39 > the 6.5 cutoff → star filtered out, miss.
       expect(picker.pickStar(screen.x, screen.y)).toBe(-1);
     });
 
     it('uses bright-extreme appMag for variables so they stay pickable through trough', () => {
       // Same star as above, but now with a 3-mag variable amplitude.
       // Filter uses appMag - amp/2 = 7.39 - 1.5 = 5.89, inside the
-      // maxAppMag = 6 cutoff. (Without this, the variable would drop
-      // out at trough phase while still being drawn at peak.)
+      // limit-6 cutoff. (Without this, the variable would drop out at
+      // trough phase while still being drawn at peak.)
       const data = makeCatalog([[0, 0, 0]], {
         absmag: [5],
         periodDays: [10],
         amplitudeMag: [3],
       });
-      const { picker, camera } = makePicker(data, defaultFilter({ maxAppMag: 6 }));
+      const { picker, camera } = makePicker(data, defaultFilter(), { limitMag: 6 });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
       expect(picker.pickStar(screen.x, screen.y)).toBe(0);
     });
 
     it('picks in the soft-taper band where the disc still renders (navigate) but not in chart', () => {
-      // Regression: the click pick cut at maxAppMag while the shader
-      // fades the disc out over the maxAppMag + 0.5 soft taper, leaving a
-      // band that renders but couldn't be selected. absmag 4 at dCam 30 pc
-      // → appMag ≈ 6.39, inside (6, 6.5] for maxAppMag = 6.
+      // Regression: the click pick cut at the limit while the shader
+      // fades the disc out over the +0.5 soft taper, leaving a band that
+      // renders but couldn't be selected. absmag 4 at dCam 30 pc →
+      // appMag ≈ 6.39, inside (6, 6.5] for a limit of 6.
       const data = makeCatalog([[0, 0, 0]], { absmag: [4] });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), makeCamera());
       // Navigate: soft taper applies → the band star is pickable.
-      const nav = makePicker(data, defaultFilter({ maxAppMag: 6, chart: false }));
+      const nav = makePicker(data, defaultFilter({ chart: false }), { limitMag: 6 });
       expect(nav.picker.pickStar(screen.x, screen.y)).toBe(0);
-      // Chart mode hard-clips at maxAppMag (no taper) → not drawn, not pickable.
-      const chart = makePicker(data, defaultFilter({ maxAppMag: 6, chart: true }));
+      // Chart mode hard-clips at the limit (no taper) → not drawn, not pickable.
+      const chart = makePicker(data, defaultFilter({ chart: true }), { limitMag: 6 });
       expect(chart.picker.pickStar(screen.x, screen.y)).toBe(-1);
     });
   });
@@ -448,6 +455,7 @@ describe('Picker / cloud picks', () => {
       catalog: data.catalog,
       sortedByDistFromSol: data.sortedByDistFromSol,
       sortedDistFromSol: data.sortedDistFromSol,
+      drawCutoffMagFn: () => 15,
       getLocalPositions: () => data.localPositions,
       getFilter: () => defaultFilter(),
       getClouds: () => opts.clouds,

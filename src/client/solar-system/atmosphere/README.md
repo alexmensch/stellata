@@ -97,6 +97,20 @@ Kept low precisely so it doesn't grey-wash the surface texture. `AIRLIGHT_GAIN`
 scales the single-scatter term so the neutral slider (sun intensity = 1) is
 roughly calibrated.
 
+**Airlight rides host irradiance, not the surface scalar.** Both the disc
+block and the shell multiply `uAirlightLuminance`
+(`../planets/mesh-surface-pure.ts:hostIrradianceLuminance`) — the host's
+irradiance at the body in the scene-wide HDR unit, carrying no surface
+albedo, because scattered sunlight doesn't depend on the ground's
+reflectance. The surface multiplies a *different* scalar that does
+(`uSurfaceLuminance`), so the airlight-to-surface ratio is now set by
+physics rather than by `AIRLIGHT_GAIN` having been read off the slider
+back when both terms shared one display-compressed scalar pinned at ≈1
+for Earth. The ratio therefore **shifted** at the HDR conversion by the
+albedo normalisation; `AIRLIGHT_GAIN` is still the knob if a body's limb
+reads wrong against its disc, but check it against the disc rather than
+in isolation.
+
 ## Anti-banding
 
 Three sources, three fixes.

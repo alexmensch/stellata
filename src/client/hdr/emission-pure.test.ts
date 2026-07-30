@@ -6,18 +6,21 @@ import {
   pointSourcePeakLuminance,
   surfaceBrightnessLuminance,
 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
+import { DR_MAG, reinhardExtended, tonemapWhitePoint } from './tonemap-pure';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';
+
+const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
 // The § 1 range budget, at the naked-eye epoch. These are the numbers
 // H7 validates the star field against, so they are pinned rather than
 // bounded.
 describe('luminanceForMagnitude at the base epoch', () => {
   const cases: ReadonlyArray<[string, number, number]> = [
-    ['threshold star', 6.5, 0.02],
-    ['Vega', 0.0, 7.9621],
-    ['Sirius', -1.46, 30.55],
+    ['threshold star', EYE_LIMIT_MAG, 0.02],
+    ['Vega', 0.0, 26.3651],
+    ['Sirius', -1.46, 101.1649],
   ];
 
   it.each(cases)('%s (m=%f) → L=%f', (_name, m, expected) => {
@@ -25,7 +28,7 @@ describe('luminanceForMagnitude at the base epoch', () => {
   });
 
   it('sends a source DR_MAG brighter than the limit to full white', () => {
-    const white = luminanceForMagnitude(BASE_EPOCH_EXPOSURE, 6.5 - 7.5);
+    const white = luminanceForMagnitude(BASE_EPOCH_EXPOSURE, EYE_LIMIT_MAG - DR_MAG);
     expect(white).toBeCloseTo(tonemapWhitePoint(), 10);
     expect(reinhardExtended(white, tonemapWhitePoint())).toBeCloseTo(1, 12);
   });
@@ -94,12 +97,12 @@ describe('pixelSolidAngleArcsec2', () => {
 });
 
 // The § 1 range-budget row for the Milky Way band: a 20 mag/arcsec²
-// sightline at 94 arcsec/px lands on L ≈ 7e-4 at the base epoch.
+// sightline at 94 arcsec/px lands on L ≈ 2.3e-3 at the base epoch.
 describe('surfaceBrightnessLuminance', () => {
   it('matches the design gate’s MW band-pixel budget row', () => {
     expect(surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 20, 94 ** 2)).toBeCloseTo(
-      7e-4,
-      5,
+      2.3296e-3,
+      6,
     );
   });
 

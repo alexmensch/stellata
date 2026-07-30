@@ -28,9 +28,9 @@ function sharedUniforms(): ScreenMetricUniforms {
   };
 }
 
-function attached(maxAppMag = 6): ConstellationBoundaryLayer {
+function attached(limitMag = 6): ConstellationBoundaryLayer {
   const layer = new ConstellationBoundaryLayer(sharedUniforms());
-  layer.attach(ARTIFACT, maxAppMag);
+  layer.attach(ARTIFACT, limitMag);
   return layer;
 }
 

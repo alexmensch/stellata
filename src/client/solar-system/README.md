@@ -57,8 +57,10 @@ src/client/solar-system/
                                   soon as bk5 attaches them.
   perceptual-magnitude.ts         Per-planet apparent-magnitude model
                                   (Lambertian + Mallama phase factors)
-                                  + hostIntensityScale (mesh-regime
-                                  host-irradiance lighting).
+                                  + the host-irradiance magnitude and the
+                                  mesh's disc surface brightness (see
+                                  planets/README.md § Physical-luminance
+                                  emission).
                                   Drives the body field's glare
                                   sizing/brightness and per-planet label
                                   gating. Also consumed by ../binaries/
@@ -120,7 +122,7 @@ every interaction contract iterate that one array, so a moon inherits
 Target / focus / click / POI / hover / search as an ordinary body — no
 moon-specific path. `solPositionsAt` writes positions in `SOL_BODIES`
 order (planets first). Every moon carries IAU rotation elements
-(`MOON_ROTATION_BY_NAME` in `planets/rotation-elements-pure.ts`) —
+(`MOON_ROTATION_BY_NAME` in `planets/rotation/rotation-elements-pure.ts`) —
 tidally locked, so each `Ẇ` equals the orbital mean motion (test-pinned
 against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 
@@ -188,15 +190,16 @@ Closed-form bound on the visibility distance for the brightest
 planet of an attached host:
 
 ```
-d_cull = 10 pc · √(p · (R/a)²) · 10^((maxAppMag − M_host) / 5)
+d_cull = 10 pc · √(p · (R/a)²) · 10^((uCullMag − M_host) / 5)
 ```
 
 where `(R/a)` for the brightest planet (proxy for "roundtrip flux")
-makes the formula geometry-independent. Sol's Jupiter under naked-eye
-preset gives ~290 AU — confirming that any non-Sol focus already
-collapses Sol's bodies far past the cull distance, exactly as
-intended. `PlanetBodyField.setMaxAppMag` recomputes the cache on
-every slider move.
+makes the formula geometry-independent. Sol's Jupiter at the unaided
+eye's cull bound (10.56) gives ~1900 AU — still confirming that any
+non-Sol focus collapses Sol's bodies far past the cull distance,
+exactly as intended. `PlanetBodyField.setCullMag` recomputes the cache
+on every instrument change; the bound is static in the EV trim and in
+adaptation, so it never moves per frame.
 
 ## Local activation
 

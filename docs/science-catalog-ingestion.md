@@ -303,7 +303,7 @@ has visible cutoffs along the ecliptic plane. The result is that
 contiguous patches of Tycho-2 stars get distances (and survive into our
 binary) while adjacent patches don't. Those boundaries surface in the
 rendered scene as axis-aligned rectangular regions of denser, fainter
-stars — invisible at `maxAppMag` ≤ ~9 (the Tycho-mag population is
+stars — invisible at a limiting magnitude of ~9 or brighter (the Tycho-mag population is
 filtered out anyway), increasingly obvious from there to `all` at
 mag 15. A denser ingest that inherits this population will likely
 make the rectangles *more* prominent before they smooth out, since the

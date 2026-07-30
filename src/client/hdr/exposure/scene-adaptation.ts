@@ -1,0 +1,241 @@
+// Per-frame collector for the adaptation statistic: walks the frame's
+// light sources and reduces them to one exposure cut. See README.md
+// § Adaptation.
+
+import * as THREE from 'three';
+import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import { projectToScreenInto } from '../../overlays/overlay-project';
+import { luminanceForMagnitude } from '../emission-pure';
+import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
+import {
+  adaptationDm,
+  ADAPT_SLEW_TAU_S,
+  type LuminanceSample,
+  meanSceneLuminance,
+  negligibleAppMag,
+  sampleFluxL,
+  samplePeakL,
+  sampleVisibleFraction,
+  slewDm,
+  starAdaptationWindowPc,
+  windowTaper,
+} from './scene-adaptation-pure';
+
+function blankSample(): LuminanceSample {
+  return {
+    appMag: 0, diameterPx: 0, screenX: 0, screenY: 0,
+    cameraDistancePc: 0, fluxScale: 1, label: null,
+  };
+}
+
+/** Solar-system bodies drawn this frame, visited as flux samples.
+ *  Implemented by `PlanetBodyField`. */
+export interface AdaptationBodySources {
+  forEachDrawnBody(
+    camera: THREE.PerspectiveCamera,
+    viewportW: number,
+    viewportH: number,
+    visit: (sample: LuminanceSample) => void,
+  ): void;
+}
+
+/** The star half — the shell owns the uniform / filter references the
+ *  size mirror reads, so it arrives as callbacks (the shape
+ *  `StarLocalClusterDeps` uses for the same walk). */
+export interface AdaptationStarSources {
+  forEachStarNearCamera: (dThreshPc: number, cb: (idx: number) => boolean) => void;
+  renderedSizeComponents: (idx: number, out: RenderedSizeComponents) => RenderedSizeComponents;
+  localPositions: () => Float32Array;
+  starLabel: (idx: number) => string | null;
+}
+
+export interface SceneAdaptationDeps {
+  /** Viewport in CSS px, held by reference so resizes reach it. */
+  viewport: { value: THREE.Vector2 };
+  /** The instrument's own exposure — no adaptation, no trim. Measuring
+   *  against the live scalar would close a feedback loop. */
+  baseExposure: () => number;
+  bodies: AdaptationBodySources;
+  stars: AdaptationStarSources;
+}
+
+/**
+ * The area-weighted mean-luminance measurement
+ * (`docs/science-hdr-pipeline.md` § 3.1), evaluated analytically on the
+ * CPU — a GPU reduce would read `LUMA_CEIL`-clamped emission and
+ * understate a resolved disc exactly when adaptation matters most.
+ */
+export class SceneAdaptation {
+  private readonly deps: SceneAdaptationDeps;
+  private readonly sizeScratch: RenderedSizeComponents = {
+    appMag: 0, appSizePx: 0, physSizePx: 0,
+  };
+  private readonly starPos = new THREE.Vector3();
+  private readonly screen: [number, number] = [0, 0];
+  private readonly starSample: LuminanceSample = blankSample();
+  /** Every source this frame, copied out of the producers' scratch so the
+   *  occlusion pass can see them all at once. Grows to the frame's high
+   *  water mark and is reused; `count` is the live prefix. */
+  private readonly pool: LuminanceSample[] = [];
+  private count = 0;
+
+  private dm = 0;
+  private meanL = 0;
+  private peakL = 0;
+  private lastNowMs: number | null = null;
+  private dominantLabel: string | null = null;
+  private dominantFluxL = 0;
+  private fluxL = 0;
+  private w = 1;
+  private h = 1;
+  private exposure = 1;
+
+  constructor(deps: SceneAdaptationDeps) {
+    this.deps = deps;
+  }
+
+  /**
+   * Measure this frame and return the applied cut in magnitudes. Chart
+   * measures nothing and reports no cut. `nowMs` is wall-clock — the
+   * slew limit is a render filter, not sim time, so a time-warped frame
+   * must not slew faster; warp itself snaps.
+   */
+  measure(
+    camera: THREE.PerspectiveCamera,
+    chart: boolean,
+    nowMs: number,
+    warpActive: boolean,
+  ): number {
+    if (chart) return this.reset();
+    perfMark('adaptation');
+    const viewport = this.deps.viewport.value;
+    this.w = viewport.x;
+    this.h = viewport.y;
+    this.exposure = this.deps.baseExposure();
+    this.count = 0;
+    this.deps.bodies.forEachDrawnBody(camera, this.w, this.h, this.collect);
+    this.collectStars(camera);
+    this.reduce();
+    this.meanL = meanSceneLuminance(this.fluxL, this.w, this.h);
+    const measured = adaptationDm(this.meanL, this.peakL);
+    const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, ADAPT_SLEW_TAU_S);
+    this.lastNowMs = nowMs;
+    this.dm = slewDm(this.dm, measured, blend);
+    perfMeasure('adaptation');
+    return this.dm;
+  }
+
+  /** The cut actually applied this frame — slew-limited, so it trails the
+   *  measurement by ~`ADAPT_SLEW_TAU_S`. The readout reports this and not
+   *  the raw measurement, so the number on screen matches the frame. */
+  getDm(): number {
+    return this.dm;
+  }
+
+  /** `L̄` itself — the debug panel's row. */
+  getMeanLuminance(): number {
+    return this.meanL;
+  }
+
+  /** The frame's brightest visible per-pixel luminance — the statistic
+   *  the highlight guard reads, and the debug row beside `L̄`. */
+  getPeakLuminance(): number {
+    return this.peakL;
+  }
+
+  /**
+   * What the frame is adapted TO: the source carrying most of the flux,
+   * once there is a cut to explain. Null while nothing is adapting, and
+   * null for a dominant source with no name — the readout drops the
+   * clause rather than inventing a label.
+   */
+  getDominantLabel(): string | null {
+    return this.dm === 0 ? null : this.dominantLabel;
+  }
+
+  /** Chart's bypass, and the slew's own first-frame state: dropping
+   *  `lastNowMs` makes the frame that re-enters the scene snap rather than
+   *  ramp up from chart's zero cut. */
+  private reset(): number {
+    this.dm = 0;
+    this.meanL = 0;
+    this.peakL = 0;
+    this.fluxL = 0;
+    this.count = 0;
+    this.lastNowMs = null;
+    this.dominantFluxL = 0;
+    this.dominantLabel = null;
+    return 0;
+  }
+
+  /** Copy a producer's scratch sample into the pool — nothing reduces
+   *  until the walk ends, since the last body visited can occlude the
+   *  first. */
+  private collect = (sample: LuminanceSample): void => {
+    const slot = this.pool[this.count] ?? blankSample();
+    this.pool[this.count] = slot;
+    slot.appMag = sample.appMag;
+    slot.diameterPx = sample.diameterPx;
+    slot.screenX = sample.screenX;
+    slot.screenY = sample.screenY;
+    slot.cameraDistancePc = sample.cameraDistancePc;
+    slot.fluxScale = sample.fluxScale;
+    slot.label = sample.label;
+    this.count++;
+  };
+
+  /** Reduce the collected pool to the frame's total flux, its brightest
+   *  visible pixel, and the source carrying most of the flux. The peak is
+   *  a plain maximum beside the sum, over the **visible** sources only, so
+   *  occlusion and frame clipping remove a source from it. */
+  private reduce(): void {
+    const { pool, count, w, h, exposure } = this;
+    this.fluxL = 0;
+    this.peakL = 0;
+    this.dominantFluxL = 0;
+    this.dominantLabel = null;
+    for (let i = 0; i < count; i++) {
+      const s = pool[i];
+      const visible = sampleVisibleFraction(s, pool, count, w, h);
+      if (visible <= 0) continue;
+      const fluxL = sampleFluxL(s, exposure, visible);
+      this.fluxL += fluxL;
+      this.peakL = Math.max(this.peakL, samplePeakL(s, exposure));
+      if (fluxL > this.dominantFluxL) {
+        this.dominantFluxL = fluxL;
+        this.dominantLabel = s.label;
+      }
+    }
+  }
+
+  /** Stars close enough to matter — gated on flux, not resolvedness;
+   *  brighter-than-reference stars leave through the window taper
+   *  instead of popping at the bound. */
+  private collectStars(camera: THREE.PerspectiveCamera): void {
+    const { w, h, exposure } = this;
+    const windowPc = starAdaptationWindowPc(exposure, w * h);
+    const gateFluxL = luminanceForMagnitude(exposure, negligibleAppMag(exposure, w * h));
+    const local = this.deps.stars.localPositions();
+    const s = this.starSample;
+    this.deps.stars.forEachStarNearCamera(windowPc, (idx) => {
+      const j = idx * 3;
+      this.starPos.set(local[j], local[j + 1], local[j + 2]);
+      const dPc = this.starPos.distanceTo(camera.position);
+      const taper = windowTaper(dPc, windowPc);
+      if (taper <= 0) return false;
+      const c = this.deps.stars.renderedSizeComponents(idx, this.sizeScratch);
+      if (luminanceForMagnitude(exposure, c.appMag) * taper < gateFluxL) return false;
+      if (!projectToScreenInto(this.starPos, camera, w, h, this.screen)) return false;
+      s.appMag = c.appMag;
+      s.diameterPx = c.physSizePx;
+      s.screenX = this.screen[0];
+      s.screenY = this.screen[1];
+      s.cameraDistancePc = dPc;
+      s.fluxScale = taper;
+      s.label = this.deps.stars.starLabel(idx);
+      this.collect(s);
+      return false;
+    });
+  }
+}

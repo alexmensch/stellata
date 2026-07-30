@@ -27,8 +27,9 @@ src/client/debug/
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
                                   geometry readout (focused star, or all
                                   active dims when unfocused).
-  star-tuning.ts                  Live-tunable star exaggeration /
-                                  magnitude / size knobs.
+  star-tuning.ts                  Live-tunable star-disc knobs, plus the
+                                  derived-K readout (K, plate scale, FOV,
+                                  resulting sizeMin/Max).
   planet-tuning.ts                Reflected-planet-glare peak slider
                                   (uGlareGain — planet glare brightness
                                   vs a star of the same magnitude).
@@ -100,6 +101,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then an O(n²) occlusion pass over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
@@ -258,7 +260,7 @@ encodes them, and the cheap remaining work (magnitude gate +
 projection) only runs against the pruned set. Restrictive filters
 typically cut the eligible set by 80–90%.
 
-This pass also reordered the loops so the `appMag > maxAppMag`
+This pass also reordered the loops so the `appMag > drawCutoffMag`
 test runs *before* projection (free win — pure reorder).
 
 ### Chart-labels: dirty-tracked SVG attribute writes

@@ -145,8 +145,8 @@ describe('fade table', () => {
 
   it('refuses a table the runtime could not interpolate across', () => {
     // One surviving row gives the runtime a single constant, not a window it
-    // can lerp from the live magnitude slider — fail loudly at build time
-    // rather than ship a fade that ignores the slider.
+    // can lerp from the live magnitude limit — fail loudly at build time
+    // rather than ship a fade that ignores the limit.
     expect(() => buildFadeTable(samples(FADE_MIN_SAMPLES, (i) => i + 1, 5), [0, 5], [50]))
       .toThrow(/at least two magnitude rows/);
   });
