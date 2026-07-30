@@ -317,6 +317,13 @@ The shell MESH stays a real-space sphere: it equals the deflattened shell at the
 equator and over-covers toward the poles, so nothing is uncovered and the excess
 discards on shell entry.
 
+**`1 − f` has exactly one source: `../planets/spheroid-pure.ts:polarRadiusRatio`.**
+The mesh's `scale.y / scale.x`, the ring shader's `uPolarRadiusPc` and
+`uPolarRadiusR` here must be the same number — the shell discards ray-strikes
+against the spheroid its ratio defines while the mesh draws the one its scale
+defines, so any disagreement re-opens the seam above. Deriving `1 - flattening`
+inline at a fourth site is how that happens; don't.
+
 **Gas giants deliberately carry no shell**: their fuzzy
 limb is already carried by the solidity-soft billboard edge at distance
 and the cloud-deck maps up close, and none has a detached haze layer distinct

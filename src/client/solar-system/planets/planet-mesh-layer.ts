@@ -8,6 +8,7 @@ import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './mesh-surface-pure';
 import { measureMapMeanLuminance } from './map-mean-luminance';
+import { polarRadiusRatio } from './spheroid-pure';
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
@@ -84,9 +85,8 @@ const DEFAULT_ATMO_TUNING: AtmosphereTuning = {
  *  the PlanetAtmosphere vertical optical depths. */
 interface AtmoBase {
   rAtmo: number;
-  /** Polar radius in equatorial radii (1 − flattening) — the shaders scale the
-   *  ray's polar component by its reciprocal so the unit-sphere march geometry
-   *  describes the oblate body actually drawn. */
+  /** `polarRadiusRatio` — the shaders scale the ray's polar component by its
+   *  reciprocal so the unit-sphere march geometry describes the body drawn. */
   polarR: number;
   hR0: number;
   hM0: number;
@@ -99,14 +99,14 @@ interface AtmoBase {
 
 function computeAtmoBase(
   radiusKm: number,
-  flattening: number,
+  polarR: number,
   atmo: PlanetAtmosphere,
 ): AtmoBase {
   const hR0 = atmo.rayleighHeightKm / radiusKm;
   const hM0 = atmo.mieHeightKm / radiusKm;
   return {
     rAtmo: (radiusKm + atmo.heightKm) / radiusKm,
-    polarR: 1 - flattening,
+    polarR,
     hR0,
     hM0,
     betaRs0: [atmo.rayleighCoeff[0] / hR0, atmo.rayleighCoeff[1] / hR0, atmo.rayleighCoeff[2] / hR0],
@@ -344,8 +344,7 @@ export class PlanetMeshLayer {
       const { mesh, material } = entry;
       mesh.visible = true;
       mesh.position.copy(this.tmpPlanet);
-      const polar = radiusPc * (1 - (planet.flattening ?? 0));
-      mesh.scale.set(radiusPc, polar, radiusPc);
+      mesh.scale.set(radiusPc, radiusPc * polarRadiusRatio(planet), radiusPc);
 
       const hp = this.field.hostPlanetOf(idx);
       if (planet.rotation) {
@@ -681,7 +680,7 @@ export class PlanetMeshLayer {
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
       entry.atmoBase = computeAtmoBase(
-        planet.radiusKm, planet.flattening ?? 0, planet.atmosphere,
+        planet.radiusKm, polarRadiusRatio(planet), planet.atmosphere,
       );
       entry.atmosphere = this.createAtmosphere(planet, planet.atmosphere);
     }
@@ -747,7 +746,7 @@ export class PlanetMeshLayer {
         uInnerRatio: { value: innerRatio },
         uOuterPc: { value: outerPc },
         uEqRadiusPc: { value: planet.radiusKm * KM_PC },
-        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * (1 - (planet.flattening ?? 0)) },
+        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * polarRadiusRatio(planet) },
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
