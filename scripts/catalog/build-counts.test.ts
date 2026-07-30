@@ -93,6 +93,7 @@ function baseCounts(): BuildCounts {
     gcvsDesignationConOverride: 4,
     boundarySegments: 781,
     boundaryDirections: 12000,
+    boundaryRegionRuns: 2961,
     boundaryArtifactKb: 391,
     conPositionalDisagreement: 61,
     componentLettersStamped: 2,

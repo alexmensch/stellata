@@ -2,18 +2,19 @@
 // its decomposition into named regions, and positional lookup against them.
 // See README.md.
 
-import { RA_HOURS_TO_DEG } from '../util/astronomy-constants';
+import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import {
+  raDecFromUnitVector,
   unitVectorFromRaDec,
   type SkyPosition,
   type UnitVector,
-} from '../util/equatorial-basis';
+} from '../../util/equatorial-basis';
 import {
   B1875_JD,
   precessRaDec,
   precessionRotationFromJ2000,
   unprecessDirection,
-} from '../util/precession';
+} from '../../util/precession';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -128,6 +129,18 @@ function sortedDistinct(values: readonly number[]): number[] {
   return [...new Set(values)].sort((a, b) => a - b);
 }
 
+/** Dec band edges of a grid: the distinct edge declinations with ±90 closing
+ *  the outermost bands, so band `j` spans `[out[j], out[j + 1]]`. */
+function bandEdgesDeg(decBoundsDeg: readonly number[]): number[] {
+  return [-90, ...decBoundsDeg, 90];
+}
+
+/** Eastern RA bound of column `i`. The last column wraps past RA 0, so its
+ *  bound is the first bound plus a turn, never `raBoundsDeg[0]`. */
+function columnHiDeg(raBoundsDeg: readonly number[], i: number): number {
+  return i + 1 < raBoundsDeg.length ? raBoundsDeg[i + 1] : raBoundsDeg[0] + 360;
+}
+
 class DisjointSet {
   private readonly parent: Int32Array;
 
@@ -203,7 +216,7 @@ export function buildConstellationRegions(edges: IauBoundaryEdges): Constellatio
 
   const columns = raBoundsDeg.length;
   const bands = decBoundsDeg.length + 1;
-  const bandEdgesDeg = [-90, ...decBoundsDeg, 90];
+  const bandEdges = bandEdgesDeg(decBoundsDeg);
   const cellIndex = (i: number, j: number) => j * columns + i;
 
   const meridiansByRa = groupBy(edges.meridians, (e) => e.raDeg);
@@ -221,8 +234,8 @@ export function buildConstellationRegions(edges: IauBoundaryEdges): Constellatio
     const east = (i + 1) % columns;
     const shared = meridiansByRa.get(raBoundsDeg[east]) ?? [];
     for (let j = 0; j < bands; j++) {
-      const bandLoDeg = bandEdgesDeg[j];
-      const bandHiDeg = bandEdgesDeg[j + 1];
+      const bandLoDeg = bandEdges[j];
+      const bandHiDeg = bandEdges[j + 1];
       const wall = shared.find(
         (e) => e.decLoDeg <= bandLoDeg + COORD_EPSILON_DEG
           && e.decHiDeg >= bandHiDeg - COORD_EPSILON_DEG,
@@ -239,9 +252,9 @@ export function buildConstellationRegions(edges: IauBoundaryEdges): Constellatio
   for (let j = 0; j < bands - 1; j++) {
     const shared = parallelsByDec.get(decBoundsDeg[j]) ?? [];
     for (let i = 0; i < columns; i++) {
-      const columnLoDeg = raBoundsDeg[i];
-      const columnHiDeg = i + 1 < columns ? raBoundsDeg[i + 1] : raBoundsDeg[0] + 360;
-      const wall = shared.find((e) => coversRaColumn(e, columnLoDeg, columnHiDeg));
+      const wall = shared.find(
+        (e) => coversRaColumn(e, raBoundsDeg[i], columnHiDeg(raBoundsDeg, i)),
+      );
       if (!wall) {
         cells.union(cellIndex(i, j), cellIndex(i, j + 1));
       } else {
@@ -329,6 +342,90 @@ export function constellationEdgeCodeAt(
 export function constellationKey(edgeCode: string): string {
   const key = edgeCode.toLowerCase();
   return key === 'ser1' || key === 'ser2' ? 'ser' : key;
+}
+
+const STERADIAN_TO_SQUARE_DEG = RAD_TO_DEG * RAD_TO_DEG;
+
+/** 41252.96. The regions partition the sphere, so their areas close on it —
+ *  derived rather than typed in, so the closure check tests the decomposition
+ *  and not a transcription. */
+export const FULL_SPHERE_SQUARE_DEG = 4 * Math.PI * STERADIAN_TO_SQUARE_DEG;
+
+/** Where a region's name is written on the chart, and how much sky it covers. */
+export interface RegionLabelAnchor {
+  /** Edge-set code, so Serpens contributes two anchors (`SER1`, `SER2`). */
+  code: string;
+  /** ICRS direction of the region's centre of mass at equal surface weight. */
+  direction: UnitVector;
+  areaSquareDeg: number;
+}
+
+/** Equal-surface-weight centre of mass of every region, in ICRS.
+ *
+ *  Each cell is a spherical rectangle in B1875, so its area and its integral
+ *  of the unit direction both close in elementary functions — no sampling, and
+ *  the vector sum over a region's cells is exactly its centre of mass. A
+ *  region's emitted area reproduces the published IAU constellation area,
+ *  which is what makes this an externally checkable quantity rather than an
+ *  internal one.
+ *
+ *  **Every anchor is asserted to land inside its own region**, and the walk
+ *  throws rather than emit one that doesn't: a centre of mass is only
+ *  guaranteed inside a convex region, and the flux-weighted centroid this
+ *  replaces put Serpens' label in Ophiuchus. Splitting Serpens into SER1/SER2
+ *  is what keeps that true here — a single Serpens anchor would fail the
+ *  assertion, not slip past it. */
+export function buildRegionLabelAnchors(
+  grid: ConstellationRegionGrid,
+): RegionLabelAnchor[] {
+  const columns = grid.raBoundsDeg.length;
+  const bandEdges = bandEdgesDeg(grid.decBoundsDeg);
+  const sums = new Map<string, { x: number; y: number; z: number; areaSr: number }>();
+
+  for (let j = 0; j < bandEdges.length - 1; j++) {
+    const decLoRad = bandEdges[j] * DEG_TO_RAD;
+    const decHiRad = bandEdges[j + 1] * DEG_TO_RAD;
+    const sinLo = Math.sin(decLoRad);
+    const sinHi = Math.sin(decHiRad);
+    // ∫cos²δ dδ and ∫sinδ·cosδ dδ across the band — the declination halves of
+    // ∫∫ û cos δ dδ dα, whose α halves depend only on the column.
+    const intCosSq = (decHiRad / 2 + Math.sin(2 * decHiRad) / 4)
+      - (decLoRad / 2 + Math.sin(2 * decLoRad) / 4);
+    const intSinCos = (sinHi * sinHi - sinLo * sinLo) / 2;
+    for (let i = 0; i < columns; i++) {
+      const raLoRad = grid.raBoundsDeg[i] * DEG_TO_RAD;
+      const raHiRad = columnHiDeg(grid.raBoundsDeg, i) * DEG_TO_RAD;
+      const code = grid.cellCon[j * columns + i];
+      let sum = sums.get(code);
+      if (!sum) {
+        sum = { x: 0, y: 0, z: 0, areaSr: 0 };
+        sums.set(code, sum);
+      }
+      sum.x += (Math.sin(raHiRad) - Math.sin(raLoRad)) * intCosSq;
+      sum.y += (Math.cos(raLoRad) - Math.cos(raHiRad)) * intCosSq;
+      sum.z += (raHiRad - raLoRad) * intSinCos;
+      sum.areaSr += (raHiRad - raLoRad) * (sinHi - sinLo);
+    }
+  }
+
+  const toB1875 = precessionRotationFromJ2000(B1875_JD);
+  const anchors: RegionLabelAnchor[] = [];
+  for (const [code, sum] of [...sums].sort(([a], [b]) => a.localeCompare(b))) {
+    const length = Math.hypot(sum.x, sum.y, sum.z);
+    const b1875 = { x: sum.x / length, y: sum.y / length, z: sum.z / length };
+    const at = constellationEdgeCodeAt(grid, raDecFromUnitVector(b1875));
+    if (at !== code) {
+      throw new Error(
+        `IAU region ${code}'s area-weighted centre of mass falls in ${at}`,
+      );
+    }
+    anchors.push({
+      code,
+      direction: unprecessDirection(toB1875, b1875),
+      areaSquareDeg: sum.areaSr * STERADIAN_TO_SQUARE_DEG,
+    });
+  }
+  return anchors;
 }
 
 function angularSeparationDeg(a: SkyPosition, b: SkyPosition): number {
@@ -534,16 +631,31 @@ export function createNearestEdgeIndex(edges: IauBoundaryEdges): NearestEdgeInde
   };
 }
 
-/** The edge set with the B1875 precession bound in, so callers pass ICRS/J2000
- *  positions. Every method below precesses; the `edges` / `grid` fields are
- *  exposed for the geometry itself and expect B1875 input. */
-export interface IauConstellationLookup {
-  readonly edges: IauBoundaryEdges;
-  readonly grid: ConstellationRegionGrid;
+/** Membership over a region grid with the B1875 precession bound in, so
+ *  callers pass ICRS/J2000 positions. This is the half of the lookup that
+ *  needs no edge set, which is what lets a browser consumer have it from the
+ *  shipped artifact's grid (§ How each consumer gets this). */
+export interface GridConstellationLookup {
   /** Edge-set code (`AND`, `SER1`, …) for a J2000 position. */
   edgeCodeAt(j2000: SkyPosition): string;
   /** Lowercase IAU-88 table key; Serpens' two parts collapse to `ser`. */
   keyAt(j2000: SkyPosition): string;
+}
+
+export function createGridConstellationLookup(
+  grid: ConstellationRegionGrid,
+): GridConstellationLookup {
+  const toB1875 = precessionRotationFromJ2000(B1875_JD);
+  const codeAt = (j2000: SkyPosition) => constellationEdgeCodeAt(grid, precessRaDec(toB1875, j2000));
+  return { edgeCodeAt: codeAt, keyAt: (j2000) => constellationKey(codeAt(j2000)) };
+}
+
+/** The edge set with the B1875 precession bound in. Every method precesses;
+ *  the `edges` / `grid` fields are exposed for the geometry itself and expect
+ *  B1875 input. */
+export interface IauConstellationLookup extends GridConstellationLookup {
+  readonly edges: IauBoundaryEdges;
+  readonly grid: ConstellationRegionGrid;
   /** Degrees from a J2000 position to the nearest boundary arc. */
   distanceToNearestEdgeDeg(j2000: SkyPosition): number;
 }
@@ -559,12 +671,10 @@ export function createIauConstellationLookup(
   const grid = buildConstellationRegions(edges);
   const nearestEdge = createNearestEdgeIndex(edges);
   const toB1875 = precessionRotationFromJ2000(B1875_JD);
-  const at = (j2000: SkyPosition) => precessRaDec(toB1875, j2000);
   return {
     edges,
     grid,
-    edgeCodeAt: (j2000) => constellationEdgeCodeAt(grid, at(j2000)),
-    keyAt: (j2000) => constellationKey(constellationEdgeCodeAt(grid, at(j2000))),
-    distanceToNearestEdgeDeg: (j2000) => nearestEdge.distanceDeg(at(j2000)),
+    ...createGridConstellationLookup(grid),
+    distanceToNearestEdgeDeg: (j2000) => nearestEdge.distanceDeg(precessRaDec(toB1875, j2000)),
   };
 }

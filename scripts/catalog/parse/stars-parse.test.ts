@@ -67,7 +67,8 @@ describe('readStars build-time de-extinction of ci', () => {
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
-  // fields. See src/client/constellation-boundaries/README.md § ρ Aquilae.
+  // fields. See src/client/constellation-boundaries/iau-geometry/README.md
+  // § ρ Aquilae.
   const RHO_AQL_ROW = '2.17,46.5,OTHER,0.08,A2V,Aql,,Rho,67,99742,192425,7724,,20.23796,15.1975,4.94,,,';
 
   it('resolves byte 34 positionally while the designation keeps AT-HYG con', async () => {

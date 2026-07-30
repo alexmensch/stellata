@@ -324,18 +324,39 @@ describe('search / formatGcvsDesignation', () => {
 
 describe('search / buildGcvsLabels', () => {
   it('emits the abbreviated form plus a con-name-expanded variant', () => {
-    expect(buildGcvsLabels('V0645 Cen', 'Centauri')).toEqual([
+    expect(buildGcvsLabels('V0645 Cen', 'Cen', 'Centauri')).toEqual([
       'V645 Cen',
       'V645 Centauri',
     ]);
-    expect(buildGcvsLabels('VY CMa', 'Canis Majoris')).toEqual([
+    expect(buildGcvsLabels('VY CMa', 'CMa', 'Canis Majoris')).toEqual([
       'VY CMa',
       'VY Canis Majoris',
     ]);
   });
 
   it('emits only the abbreviated form when no constellation name is known', () => {
-    expect(buildGcvsLabels('R CrB', '')).toEqual(['R CrB']);
+    expect(buildGcvsLabels('R CrB', '', '')).toEqual(['R CrB']);
+  });
+
+  // 6,079 of the 14,148 GCVS-named entries end in a serial or a field number
+  // rather than an abbreviation. Rewriting that token invented designations
+  // that do not exist, in constellations the number has nothing to do with.
+  it('never expands a trailing token that is not the constellation code', () => {
+    expect(buildGcvsLabels('NSV 04199', 'Lup', 'Lupi')).toEqual(['NSV 04199']);
+    // The V-number padding strip is anchored at the start of the designation,
+    // so a Magellanic field number keeps its zeros — one label either way.
+    expect(buildGcvsLabels('LMC V0471', 'Dor', 'Doradus')).toEqual(['LMC V0471']);
+    expect(buildGcvsLabels('SMC V0018', 'Tuc', 'Tucanae')).toEqual(['SMC V0018']);
+    // A component letter fused onto the abbreviation is not the abbreviation:
+    // the expansion this used to emit ("EQ Pegasi") dropped the component.
+    expect(buildGcvsLabels('EQ PegA', 'Peg', 'Pegasi')).toEqual(['EQ PegA']);
+  });
+
+  it('matches the abbreviation case-insensitively', () => {
+    expect(buildGcvsLabels('R crb', 'CrB', 'Coronae Borealis')).toEqual([
+      'R crb',
+      'R Coronae Borealis',
+    ]);
   });
 });
 

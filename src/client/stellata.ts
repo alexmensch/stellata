@@ -71,6 +71,7 @@ import {
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
 import type { FocusableProviders, Target, TargetKind } from './camera/focus/focus-target';
+import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
@@ -145,6 +146,11 @@ import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
+import {
+  createConstellationRegions,
+  type ConstellationLabelAnchor,
+  type ConstellationNamer,
+} from './constellation-boundaries/constellation-regions';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
   EclipsePhotometryField,
@@ -328,6 +334,10 @@ export class Stellata implements FrameAnchor {
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
+  // Empty / null until attachConstellationBoundaries lands the artifact, which
+  // is optional — every consumer must read them as "not yet".
+  private constellationLabels: readonly ConstellationLabelAnchor[] = [];
+  private constellationNamer: ConstellationNamer | null = null;
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
@@ -1889,10 +1899,42 @@ export class Stellata implements FrameAnchor {
 
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
-   *  once the async load resolves. */
+   *  once the async load resolves, then binds the artifact's other two
+   *  readings — the chart label anchors, and the membership lookup every
+   *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
     this.constellationBoundaryLayer.attach(artifact, this.filter.maxAppMag);
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
+    const regions = createConstellationRegions(artifact, this.catalog.constellations);
+    this.constellationLabels = regions.labelAnchors;
+    this.constellationNamer = regions.namer;
+  }
+
+  /** Latin-name anchors for the chart-mode label engine — one per IAU region,
+   *  so Serpens carries two. Empty until the boundary artifact loads. */
+  get constellationLabelAnchors(): readonly ConstellationLabelAnchor[] {
+    return this.constellationLabels;
+  }
+
+  /** The IAU constellation a focusable object's own position falls in, in the
+   *  Sol frame — the convention every catalogue, almanac and observing guide
+   *  reports, and one of the two exceptions the focus card's camera-relative
+   *  rule admits. For the bodies that move it is an ephemeris statement, not a
+   *  property: a planet's answer tracks `getT()` because its position does.
+   *
+   *  Null before the boundary artifact loads, for Sol at the origin, and for
+   *  an object with no resolvable position this frame.
+   *
+   *  `star` is excluded because byte 34 is the shipped authority there — it
+   *  survives a missing artifact and carries the designation-constellation
+   *  split beside it — and `shell` because the Local Bubble and the heliopause
+   *  are centred on Sol, so a direction from Sol says nothing about them. */
+  constellationOf(kind: ConstellationOfKind, idx: number): string | null {
+    const namer = this.constellationNamer;
+    if (!namer) return null;
+    const abs = this.tmpConstellationAbs;
+    if (!this.focusables[kind].localPositionInto(idx, abs)) return null;
+    return namer.nameAt(abs.add(this.worldOffset));
   }
 
   /** Attach the loaded probe trajectories. Both layers are constructed in
@@ -1977,6 +2019,7 @@ export class Stellata implements FrameAnchor {
 
   private tmpVec3b = new THREE.Vector3();
   private tmpHostLocal = new THREE.Vector3();
+  private tmpConstellationAbs = new THREE.Vector3();
 
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */

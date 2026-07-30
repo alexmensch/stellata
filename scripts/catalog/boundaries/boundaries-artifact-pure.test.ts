@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseIauEdges } from '../../../src/client/constellation-boundaries/iau-boundaries-pure';
+import {
+  createIauConstellationLookup,
+  parseIauEdges,
+} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+import { readIauEdgeRecords } from '../parse/constellations';
 import {
   DIRECTION_DECIMALS,
   FADE_MIN_SAMPLES,
@@ -9,15 +13,22 @@ import {
   buildBoundaryArtifact,
   buildFadeTable,
   countDirections,
+  decodeRegionGrid,
+  encodeRegionGrid,
   misplacementOffsetPc,
   toSegmentWire,
   type FadeSample,
 } from './boundaries-artifact-pure';
+import { boundaryArtifactFixture } from './boundary-artifact-fixture';
 
 const EDGE_RECORDS = [
   '1:2 M+ 00:00:00 +10:00:00 00:00:00 +20:00:00 AAA BBB',
   '3:4 P+ 02:00:00 +30:00:00 04:00:00 +30:00:00 CCC DDD',
 ];
+
+// The two synthetic edges above decompose into nothing, so the region half of
+// the artifact rides the fixture's own tiny grid.
+const GRID = decodeRegionGrid(boundaryArtifactFixture().regions);
 
 function samples(count: number, offsetPc: (i: number) => number, appMag = 0): FadeSample[] {
   return Array.from({ length: count }, (_, i) => ({ offsetPc: offsetPc(i), appMag }));
@@ -46,7 +57,9 @@ describe('boundary segment wire shape', () => {
   });
 
   it('counts one direction per triple across every segment', () => {
-    const artifact = buildBoundaryArtifact(edges, samples(FADE_MIN_SAMPLES, (i) => i + 1));
+    const artifact = buildBoundaryArtifact(
+      { edges, grid: GRID }, samples(FADE_MIN_SAMPLES, (i) => i + 1),
+    );
     expect(artifact.segments).toHaveLength(2);
     expect(countDirections(artifact.segments))
       .toBe(artifact.segments.reduce((n, s) => n + s.d.length / 3, 0));
@@ -54,6 +67,43 @@ describe('boundary segment wire shape', () => {
     // different things, and confusing them is the whole failure mode here.
     expect(artifact.epoch).toBe('B1875');
     expect(artifact.frame).toBe('ICRS');
+  });
+});
+
+describe('region grid wire', () => {
+  const real = createIauConstellationLookup(readIauEdgeRecords()).grid;
+
+  it('round-trips the real grid through the run-length encoding', () => {
+    const wire = encodeRegionGrid(real);
+    expect(decodeRegionGrid(wire).cellCon).toEqual(real.cellCon);
+    // Regions are contiguous blocks of columns, which is the whole reason a
+    // 47k-cell grid is affordable on the wire at all.
+    expect(wire.runs.length / 2).toBeLessThan(real.cellCon.length / 10);
+    expect(wire.codes).toHaveLength(new Set(real.cellCon).size);
+  });
+
+  // `constellationEdgeCodeAt` bisects these bounds, so a rounded bound is a
+  // moved wall — the runtime would then answer a different constellation from
+  // the byte 34 this same grid assigned for a position near one.
+  it('carries the bounds at full precision', () => {
+    const wire = encodeRegionGrid(real);
+    expect(wire.raDeg).toEqual(real.raBoundsDeg);
+    expect(wire.decDeg).toEqual(real.decBoundsDeg);
+    expect(JSON.parse(JSON.stringify(wire)).raDeg).toEqual(real.raBoundsDeg);
+  });
+
+  it('rejects runs that do not tile the grid rather than leaving holes', () => {
+    const wire = encodeRegionGrid(real);
+    expect(() => decodeRegionGrid({ ...wire, runs: wire.runs.slice(0, -2) }))
+      .toThrow(/is malformed/);
+    expect(() => decodeRegionGrid({ ...wire, runs: [...wire.runs, 1, 0] }))
+      .toThrow(/tile the grid/);
+    expect(() => decodeRegionGrid({ ...wire, codes: [] })).toThrow(/missing bounds/);
+    // A code index past the table would decode to `undefined` cells, which
+    // resolve as a constellation named "undefined".
+    const outOfRange = [...wire.runs];
+    outOfRange[1] = wire.codes.length;
+    expect(() => decodeRegionGrid({ ...wire, runs: outOfRange })).toThrow(/is malformed/);
   });
 });
 

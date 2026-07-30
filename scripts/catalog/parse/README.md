@@ -235,7 +235,7 @@ Catalog byte 34 is **positional**: `createConstellationAssignment`
 record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
 space. The geometry — the B1875 precession, the edge decomposition, and
 its self-validating 89-region invariant — is
-`src/client/constellation-boundaries/README.md`; this module owns only
+`src/client/constellation-boundaries/iau-geometry/README.md`; this module owns only
 the index mapping, and throws at construction if a region names a
 constellation the IAU-88 table doesn't carry.
 

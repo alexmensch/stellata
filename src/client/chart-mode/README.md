@@ -188,15 +188,25 @@ to 18 px diagonal). `discPx` comes from `chartDiscPxForAppMag` in
 `chart-disc-pure.ts`, which mirrors the vertex shader's chart-branch
 formula.
 
-The constellation centroid is the **flux-weighted** position of every
-member (`weight = 10^(-0.4 × appMag)` per star). The visibility gate
-uses `min(appMag) ≤ maxAppMag` over all members. The full member walk
-is needed to fix a bug where constellations with no single dominant
-intrinsic-brightest star (Vela, Pyxis, Sagittarius, etc.) silently
-dropped their label, but the result is **cached** under a 0.5 pc
-camera-translation threshold + filter version. The cached centroid is
-still re-projected every frame; only the inner per-member loop is
-elided.
+**Constellation names sit at the IAU region's own centre, not at their
+stars.** The anchor is the equal-surface-weight centre of mass of the
+region the boundary layer draws — `Stellata.constellationLabelAnchors`,
+one per region, off the shipped artifact
+(`../constellation-boundaries/README.md` § Label anchors) — baked to the
+same Sol-centred sphere as the arcs, so `− worldOffset` is the whole
+per-frame projection and the name stays inside its block from any camera
+position. **Serpens therefore gets two labels**, one in Caput and one in
+Cauda; the flux-weighted centroid it replaced put a single "SERPENS" in
+the gap between them, which is Ophiuchus.
+
+Visibility still gates on the members: `min(appMag) ≤ maxAppMag` over
+every star byte 34 assigns to the constellation, so a region whose stars
+are all under the limit goes unnamed (both Serpens labels share one gate —
+one constellation, one member set). The full member walk is what fixed a
+bug where constellations with no single dominant intrinsic-brightest star
+(Vela, Pyxis, Sagittarius) silently dropped their label; it is **cached**
+under a 0.5 pc camera-translation threshold + filter version, since
+apparent magnitude barely moves under a small camera nudge.
 
 **Variable rings** are **intrinsic-only** — the ring set gates on
 `periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
@@ -245,7 +255,7 @@ the heuristic stays static). Left as future work; the heuristic is
 adequate for current near-Earth chart-mode use.
 
 **Pooling.** Each `<text>` / `<circle>` / `<line>` is keyed by stable
-identity (`n:idx`, `b:idx`, `c:conIdx`, `m:cloudIdx`) so adding /
+identity (`n:idx`, `b:idx`, `c:regionCode`, `m:cloudIdx`) so adding /
 removing nodes is free across frames. Unused entries are detached at
 the end of each tick.
 

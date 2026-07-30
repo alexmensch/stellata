@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
-import { raDecFromUnitVector } from '../util/equatorial-basis';
-import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../util/precession';
+import { CON_INDEX, readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
+import { raDecFromUnitVector } from '../../util/equatorial-basis';
+import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../util/precession';
 import {
+  FULL_SPHERE_SQUARE_DEG,
   IAU_REGION_COUNT,
   POLYLINE_MAX_STEP_DEG,
   angularDistanceToNearestEdgeDeg,
   buildBoundaryPolylines,
+  buildRegionLabelAnchors,
   constellationEdgeCodeAt,
   constellationKey,
   createIauConstellationLookup,
@@ -96,6 +98,62 @@ describe('region decomposition', () => {
     expect(constellationEdgeCodeAt(grid, orion)).toBe('ORI');
     expect(constellationEdgeCodeAt(grid, { ...orion, raDeg: orion.raDeg + 360 })).toBe('ORI');
     expect(constellationEdgeCodeAt(grid, { ...orion, raDeg: orion.raDeg - 360 })).toBe('ORI');
+  });
+});
+
+describe('region label anchors', () => {
+  const anchors = buildRegionLabelAnchors(grid);
+  const byCode = new Map(anchors.map((a) => [a.code, a]));
+
+  it('places one anchor per region', () => {
+    expect(anchors).toHaveLength(IAU_REGION_COUNT);
+    expect(new Set(anchors.map((a) => a.code))).toEqual(new Set(grid.cellCon));
+  });
+
+  // The areas are computed from the edge set alone and land on the published
+  // IAU values to three decimals — external corroboration of the cell
+  // decomposition that no internal count can give, and the reason the anchor
+  // is worth deriving here rather than eyeballing a position per constellation.
+  it('reproduces the published IAU constellation areas', () => {
+    const published: Record<string, number> = {
+      HYA: 1302.844, VIR: 1294.428, UMA: 1279.660, CET: 1231.411,
+      HER: 1225.148, ERI: 1137.919, ORI: 594.120, CRU: 68.447,
+    };
+    for (const [code, area] of Object.entries(published)) {
+      expect(byCode.get(code)!.areaSquareDeg).toBeCloseTo(area, 2);
+    }
+    // Serpens is published as one constellation; the two parts must add to it.
+    expect(byCode.get('SER1')!.areaSquareDeg + byCode.get('SER2')!.areaSquareDeg)
+      .toBeCloseTo(636.928, 2);
+    // And the regions partition the whole sphere, so the areas close on it.
+    expect(anchors.reduce((n, a) => n + a.areaSquareDeg, 0))
+      .toBeCloseTo(FULL_SPHERE_SQUARE_DEG, 1);
+    expect(FULL_SPHERE_SQUARE_DEG).toBeCloseTo(41252.96, 2);
+  });
+
+  // buildRegionLabelAnchors throws rather than emit an anchor outside its own
+  // region, so this pins the property the throw protects rather than the throw.
+  it('lands every anchor inside the region it names', () => {
+    for (const anchor of anchors) {
+      const b1875 = precessRaDec(B1875, raDecFromUnitVector(anchor.direction));
+      expect(constellationEdgeCodeAt(grid, b1875)).toBe(anchor.code);
+    }
+  });
+
+  // The whole point of the split: one Serpens anchor would sit in the Caput /
+  // Cauda gap, which is Ophiuchus — the flux-weighted centroid's bug.
+  it('anchors Serpens twice, in Caput and in Cauda', () => {
+    const caput = raDecFromUnitVector(byCode.get('SER1')!.direction);
+    const cauda = raDecFromUnitVector(byCode.get('SER2')!.direction);
+    expect(caput.raDeg / 15).toBeCloseTo(15.695, 2);
+    expect(caput.decDeg).toBeCloseTo(9.905, 2);
+    expect(cauda.raDeg / 15).toBeCloseTo(18.163, 2);
+    expect(cauda.decDeg).toBeCloseTo(-6.360, 2);
+    const midpoint = {
+      raDeg: (caput.raDeg + cauda.raDeg) / 2,
+      decDeg: (caput.decDeg + cauda.decDeg) / 2,
+    };
+    expect(lookup.edgeCodeAt(midpoint)).toBe('OPH');
   });
 });
 

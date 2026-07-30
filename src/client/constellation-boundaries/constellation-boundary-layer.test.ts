@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import { boundaryArtifactFixture } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import type { ScreenMetricUniforms } from '../util/orbit-line';
 import {
@@ -9,21 +9,12 @@ import {
   ConstellationBoundaryLayer,
 } from './constellation-boundary-layer';
 
-const ARTIFACT: BoundaryArtifact = {
-  epoch: 'B1875',
-  frame: 'ICRS',
-  stepDeg: 0.5,
+const ARTIFACT = boundaryArtifactFixture({
   segments: [
     { k: 'M', c: ['DEL', 'AQL'], d: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
     { k: 'P', c: ['ORI', 'TAU'], d: [0, 1, 0, 0, 0, 1] },
   ],
-  fade: {
-    magLimits: [6, 8],
-    quantilePcts: [0.1, 1, 5, 50],
-    offsetsPc: [[0.14, 0.4, 0.9, 7], [0.31, 0.6, 1.5, 10]],
-    sampleCounts: [3000, 20000],
-  },
-};
+});
 
 const ORIGIN = new THREE.Vector3();
 

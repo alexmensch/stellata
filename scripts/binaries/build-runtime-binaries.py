@@ -611,9 +611,10 @@ def write_binary(
             # has_orbit gates per-frame Kepler eval in BinaryOrbitField:
             # every element it consumes must be present, else ΔR(t) is NaN
             # and the runtime writes NaN into localPositions[primaryIdx]
-            # every frame — poisoning the flux-weighted centroid in
-            # chart-labels and every other consumer of the primary's
-            # position.
+            # every frame — silently corrupting every consumer of the
+            # primary's position, including projection and the chart-label
+            # magnitude gate, where a NaN loses every comparison instead of
+            # failing.
             has_orbit = pair_has_orbit(p)
             has_inclination = has_orbit and p.i_rad is not None
             parent_input = parents[input_i]

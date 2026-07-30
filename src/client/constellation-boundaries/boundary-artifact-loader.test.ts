@@ -1,21 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import { boundaryArtifactFixture as artifact } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
 import { loadBoundaries, validateBoundaryArtifact } from './boundary-artifact-loader';
-
-function artifact(): BoundaryArtifact {
-  return {
-    epoch: 'B1875',
-    frame: 'ICRS',
-    stepDeg: 0.5,
-    segments: [{ k: 'M', c: ['DEL', 'AQL'], d: [1, 0, 0, 0, 1, 0] }],
-    fade: {
-      magLimits: [6, 8],
-      quantilePcts: [0.1, 1, 5, 50],
-      offsetsPc: [[0.14, 0.4, 0.9, 7], [0.31, 0.6, 1.5, 10]],
-      sampleCounts: [3000, 20000],
-    },
-  };
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -38,6 +23,60 @@ describe('validateBoundaryArtifact', () => {
   it('rejects an empty segment list', () => {
     expect(() => validateBoundaryArtifact({ ...artifact(), segments: [] }))
       .toThrow(/no boundary segments/);
+  });
+
+  // A short label list is a partial sky: the missing names read as a
+  // declutter decision rather than as a stale artifact.
+  it('rejects a label list that does not cover every region', () => {
+    expect(() => validateBoundaryArtifact(artifact({ labels: [] })))
+      .toThrow(/0 label anchors for 89 regions/);
+    const truncated = { c: 'AND', d: [1, 0] as unknown as [number, number, number], a: 1 };
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: [...artifact().labels.slice(1), truncated],
+    }))).toThrow(/label AND carries no direction/);
+  });
+
+  // The areas close on the sphere because the regions partition it, which is
+  // the whole reason they ship — so a region set that arrives with the right
+  // count and the wrong sky is caught rather than drawn.
+  it('rejects label areas that do not close on the sphere', () => {
+    const labels = artifact().labels;
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: [{ ...labels[0], a: labels[0].a * 2 }, ...labels.slice(1)],
+    }))).toThrow(/label areas sum to .* expected the full sphere/);
+    // The 89 areas are quantised to two decimals, so the sum has to tolerate
+    // that much rounding without tolerating a missing region.
+    expect(() => validateBoundaryArtifact(artifact({
+      labels: labels.map((l, i) => ({ ...l, a: l.a + (i % 2 ? 0.005 : -0.005) })),
+    }))).not.toThrow();
+  });
+
+  // The runtime bisects these bounds, so an out-of-order one is a wall in the
+  // wrong place: it resolves to a real constellation, just the wrong one.
+  it('rejects region grid bounds that do not ascend', () => {
+    const regions = artifact().regions;
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, raDeg: [180, 0] },
+    }))).toThrow(/raDeg must ascend \(raDeg\[1\] is 0 after 180\)/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, decDeg: [Number.NaN] },
+    }))).toThrow(/decDeg\[0\] is NaN/);
+  });
+
+  // The runtime membership lookup decodes this grid without a failure path of
+  // its own, so a run list that stops short has to die here — decoded, its
+  // unfilled cells resolve as a constellation named "undefined".
+  it('rejects a region grid whose runs do not tile it', () => {
+    const regions = artifact().regions;
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: regions.runs.slice(0, 2) },
+    }))).toThrow(/region grid run 1 is malformed/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: [...regions.runs, 1, 0] },
+    }))).toThrow(/carries 4 runs, 3 tile the grid/);
+    expect(() => validateBoundaryArtifact(artifact({
+      regions: { ...regions, runs: [3, 0, 1, 1, 2, 0] },
+    }))).toThrow(/band 0 overruns 2 columns/);
   });
 
   it('rejects a fade table with no rows', () => {

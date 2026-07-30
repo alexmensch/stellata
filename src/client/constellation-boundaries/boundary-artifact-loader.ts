@@ -1,13 +1,19 @@
 // Fetch + validate public/constellation-boundaries.json.
 // See README.md § Chart-mode layer.
 
-import type {
-  BoundaryArtifact,
+import {
+  validateRegionGridWire,
+  type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
 } from './boundary-layer-pure';
+import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from './iau-geometry/iau-boundaries-pure';
+
+/** Slack on the sphere-closure check. Each of the 89 areas is quantised to
+ *  `AREA_DECIMALS = 2`, so the sum carries at most 89 × 0.005 of rounding. */
+const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
 
 /**
  * Narrow a parsed wire object to `BoundaryArtifact`, throwing on anything the
@@ -27,6 +33,39 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   }
   if (!Array.isArray(artifact.segments) || artifact.segments.length === 0) {
     throw new Error('constellation-boundaries.json: no boundary segments');
+  }
+  // One label per region, not "at least one": a short list is a partial sky
+  // whose missing names read as a declutter decision rather than a stale file.
+  if (!Array.isArray(artifact.labels) || artifact.labels.length !== IAU_REGION_COUNT) {
+    throw new Error(
+      `constellation-boundaries.json: ${Array.isArray(artifact.labels) ? artifact.labels.length : 'no'} `
+      + `label anchors for ${IAU_REGION_COUNT} regions`,
+    );
+  }
+  let areaSquareDeg = 0;
+  for (const label of artifact.labels) {
+    if (!label.c || !Array.isArray(label.d) || label.d.length !== 3) {
+      throw new Error(
+        `constellation-boundaries.json: label ${String(label?.c)} carries no direction`,
+      );
+    }
+    areaSquareDeg += label.a;
+  }
+  // The areas are what makes the label set externally checkable — they
+  // reproduce the published IAU values, and the regions partition the sphere,
+  // so they close on it. That closure is the reason they ship, so it is
+  // asserted rather than assumed: a truncated or reordered region set arrives
+  // with the right label count and the wrong sky.
+  if (Math.abs(areaSquareDeg - FULL_SPHERE_SQUARE_DEG) > AREA_CLOSURE_TOLERANCE_SQUARE_DEG) {
+    throw new Error(
+      `constellation-boundaries.json: label areas sum to ${areaSquareDeg.toFixed(2)} `
+      + `sq deg, expected the full sphere (${FULL_SPHERE_SQUARE_DEG.toFixed(2)})`,
+    );
+  }
+  try {
+    validateRegionGridWire(artifact.regions);
+  } catch (err) {
+    throw new Error(`constellation-boundaries.json: ${(err as Error).message}`);
   }
   const fade = artifact.fade;
   if (!Array.isArray(fade?.magLimits) || fade.magLimits.length === 0) {

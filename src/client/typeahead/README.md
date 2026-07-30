@@ -62,9 +62,20 @@ keyboard-shortcut handler (see `../ui/README.md` § Keyboard shortcuts).
 GCVS variable-star designations (`g` field: `R CrB`, `VY CMa`, `V645 Cen`)
 are Fuse-fuzzy like Bayer/proper names — `buildGcvsLabels` emits both the
 abbreviated and con-name-expanded forms, and `formatGcvsDesignation`
-strips the V-number zero-padding GCVS stores (`V0645` → `V645`). A
-variable with no proper/Bayer/Flamsteed name (VY CMa, RR Lyr) takes its
-GCVS designation as its display label via `buildStarLabels`.
+strips the V-number zero-padding GCVS stores (`V0645` → `V645`; anchored
+at the start, so `LMC V0471` keeps its zeros). A variable with no
+proper/Bayer/Flamsteed name (VY CMa, RR Lyr) takes its GCVS designation
+as its display label via `buildStarLabels`.
+
+**The expansion is gated on the trailing token BEING the entry's
+constellation code**, not on the entry having a constellation. 6,079 of
+the 14,148 GCVS-named entries end in something else — NSV serials
+(`NSV 04199`) and Magellanic field numbers (`LMC V0471`) — and rewriting
+that token emitted "NSV Lupus" / "LMC Dorado": a designation that does not
+exist, in a constellation the number has nothing to do with. Gating on the
+entry's own code rather than on "is some IAU abbreviation" is equivalent
+today (zero entries disagree, since `desigConIndex` is set *from* the
+designation) and stays correct if they ever diverge.
 
 **Multiple-star component aliases.** A component whose SearchEntry carries
 `cl` (WDS letter) + `cp` (system-primary record index) gets extra fuzzy

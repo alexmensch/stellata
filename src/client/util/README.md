@@ -77,7 +77,7 @@ build scripts, tests, and shader uniforms.
   to a direction or a `SkyPosition`. `besselianEpochToJd` supplies
   `B1875_JD`, the equinox the IAU constellation boundaries are drawn at —
   the θ sign and the epoch are both silent-failure modes, documented in
-  `../constellation-boundaries/README.md` § B1875.
+  `../constellation-boundaries/iau-geometry/README.md` § B1875.
 - `astronomy-constants.ts` — canonical values, one definition each, so
   client / build-script / shader consumers can't drift on precision.
   `RA_HOURS_TO_DEG` is the hours→degrees factor every catalogue RA column
