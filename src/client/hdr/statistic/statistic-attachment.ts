@@ -1,5 +1,5 @@
 // The per-draw gate on the target's statistic attachment. See README.md
-// § Statistic attachment.
+// § The gate.
 
 import type * as THREE from 'three';
 
@@ -24,10 +24,18 @@ export function bindStatisticGate(
  * chrome layer cannot reach the statistic — including one added later,
  * which is the point of gating the emitters rather than the chrome.
  *
- * Takes over the object's render hooks; a mesh that needs its own must
- * compose them here rather than assigning over these.
+ * Composes with whatever hooks the object already carries (three seeds
+ * both with no-ops), so call order never decides whose survive.
  */
 export function markStatisticEmitter(object: THREE.Object3D): void {
-  object.onBeforeRender = () => openGate?.();
-  object.onAfterRender = () => closeGate?.();
+  const before = object.onBeforeRender;
+  const after = object.onAfterRender;
+  object.onBeforeRender = (...args) => {
+    openGate?.();
+    before.apply(object, args);
+  };
+  object.onAfterRender = (...args) => {
+    after.apply(object, args);
+    closeGate?.();
+  };
 }

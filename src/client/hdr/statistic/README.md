@@ -79,9 +79,8 @@ Two things the gate has to get right:
 - **The resting state is restored on the way out of every draw**, so a
   mid-frame re-bind of the target cannot leave the gate open behind it.
 
-`markStatisticEmitter` takes over the object's `onBeforeRender` /
-`onAfterRender`; a mesh that needs its own must compose them here rather
-than assigning over these.
+`markStatisticEmitter` composes with whatever hooks the object already
+carries, so it is order-independent against a layer that wants its own.
 
 ## One blend equation, two attachments
 
