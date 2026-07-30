@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import {
+  BOUNDARY_DOT_PX,
+  BOUNDARY_GAP_PX,
   ConstellationBoundaryLayer,
   type BoundarySharedUniforms,
 } from './constellation-boundary-layer';
@@ -73,8 +75,9 @@ describe('ConstellationBoundaryLayer', () => {
     const material = lines.material as THREE.LineDashedMaterial;
     expect(material).toBeInstanceOf(THREE.LineDashedMaterial);
     // A dot shorter than its gap — dotted, not a dashed rule.
-    expect(material.dashSize).toBeGreaterThan(0);
-    expect(material.dashSize).toBeLessThan(material.gapSize);
+    expect(material.dashSize).toBe(BOUNDARY_DOT_PX);
+    expect(material.gapSize).toBe(BOUNDARY_GAP_PX);
+    expect(BOUNDARY_DOT_PX).toBeLessThan(BOUNDARY_GAP_PX);
     const phase = lines.geometry.getAttribute('lineDistance');
     expect(phase.count).toBe(lines.geometry.getAttribute('position').count);
     layer.dispose();
@@ -91,9 +94,10 @@ describe('ConstellationBoundaryLayer', () => {
     layer.update(ORIGIN, 0);
     const pxPerRad = VIEWPORT_H_PX / FOV_Y_RAD;
     expect(material.scale).toBeCloseTo(pxPerRad / SPHERE_RADIUS_PC, 12);
-    // Authored in pixels, so a dot is a few px — the atlas's fine stipple.
-    expect(material.dashSize).toBeLessThanOrEqual(4);
-    expect(material.dashSize + material.gapSize).toBeLessThanOrEqual(8);
+    // `scale` is the only thing that converts them, so the pattern stays in
+    // the pixel units it was authored in.
+    expect(material.dashSize).toBe(BOUNDARY_DOT_PX);
+    expect(material.gapSize).toBe(BOUNDARY_GAP_PX);
     layer.dispose();
   });
 

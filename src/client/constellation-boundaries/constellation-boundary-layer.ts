@@ -41,8 +41,8 @@ const BOUNDARY_OPACITY = 0.5;
 // pattern runs ~0.1° per dot, which at any FOV reachable here is sub-pixel and
 // reads as a faint solid line, so the dots hold their size on screen and the
 // sky spacing rides the zoom. `update` converts via `material.scale`.
-const BOUNDARY_DOT_PX = 1.5;
-const BOUNDARY_GAP_PX = 3;
+export const BOUNDARY_DOT_PX = 1.5;
+export const BOUNDARY_GAP_PX = 3;
 
 /**
  * The Delporte boundary arcs drawn Sol-centred at `SPHERE_RADIUS_PC`, faded
