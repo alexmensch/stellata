@@ -173,9 +173,14 @@ formulation exists. Each sample then loses the screen-space lens overlap
 (`circleCircleLensArea`, shared with the binary eclipse photometry) of
 every **nearer** drawn disc, which is what stops Sol behind Saturn's night
 side from dimming the star field. Occluders are gated at
-`ADAPT_OCCLUDER_MIN_PX` — the mesh-presence floor, so a body drawing no
-surface hides nothing — rings never occlude (they are not sources), and
-overlapping occluders double-count, always toward over-occluding.
+`ADAPT_OCCLUDER_MIN_PX` (= `MESH_FADE_MIN_PX`) so a body too small to
+draw a surface hides nothing; rings never occlude (they are not sources),
+and overlapping occluders double-count, always toward over-occluding.
+**Known gap:** the candidate set is `forEachDrawnBody`, which is gated
+photometrically, while the *mesh* is gated geometrically — so a body at
+eclipse alignment (φ(α) → 0) occludes visually but not in this statistic,
+and the star it hides keeps its full flux here. Same root cause as the
+mesh-presence gate; tracked in `bd show stellata-xypg.25`.
 `docs/science-hdr-pipeline.md` § 3.1 carries the reasoning.
 
 **Sources.** Every drawn solar-system body
