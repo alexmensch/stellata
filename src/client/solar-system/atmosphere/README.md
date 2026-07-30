@@ -121,7 +121,7 @@ F_term  = ¼ · τ_s · T̄(τ_ext·Ch) · exp(−τ_a)          (terminator anc
 tail(h) = exp(−h/H) + B·exp(−h/(K·H))                 (twilight falloff)
 beam(μ) = ½ · μ · ω̃ · (1 − exp(−τ_ext/μ)) · exp(−τ_a/μ)   (day side)
 
-h_shadow = 1/cos(Δ) − 1  (0 on the lit side) · Ch = √(π/2H), Chapman airmass
+h_shadow = 1/cos(Δ) − 1  (0 on the lit side) · Ch = √(π/(2H)), Chapman airmass
 of a horizon sun · T̄(x) = (1−e⁻ˣ)/x, the column-mean transmission that sun
 reaches the scattering column through · ω̃ = τ_s/τ_ext
 ```
@@ -161,20 +161,41 @@ reaches the scattering column through · ω̃ = τ_s/τ_ext
   In the optically thin limit the partition reads exactly ½·τ_s at noon and
   ¼·τ_s at the terminator, which is what the test pins.
 
-The variable is **solar depression angle, not distance along the ground**, and
-that is what makes the *projected* twilight band widen wherever the terminator
-crosses the surface obliquely — high latitude near solstice, where iso-`sunCos`
-contours spread out and polar twilight runs for weeks. It falls out of the
-parameterisation; there is no obliquity term and there should not be one.
+**The band is a constant-width annulus, and that is correct.** The variable is
+solar depression angle δ, and on a sphere δ **is** the great-circle arc past
+the terminator (`sunCos = cos θ` from the subsolar point, δ = θ − 90°), so the
+twilight zone is a ~18°-wide, constant-area zone wherever it sits. Iso-`sunCos`
+contours are evenly spaced circles about the subsolar point and never spread
+out; nothing about an oblique crossing reaches further.
+
+What varies, and falls out of the same parameterisation with no obliquity term:
+**duration** (a high-latitude point near solstice crawls along the annulus, so
+polar twilight runs for weeks) · **shape in latitude** (the annulus cuts across
+parallels obliquely, and near equinox it encloses the pole outright — subsolar
+latitude −10° puts the north pole at 10° depression, in nautical twilight) ·
+**projected width on screen**, foreshortened by the local emission angle. So
+the band reads much wider near a pole without being wider, and there is no
+obliquity term to add.
 
 `τ_s` is the vertical scattering optical depth
 (`stellata_verticalScatterTau`, absorption excluded), which gives the skylight
 the air's own hue — though at physical depths the T̄ saturation nearly
 flattens Earth's twilight channels (the strong zenith-blue of real twilight is
 ozone, which this model does not carry). `τ_a` is the absorption column
-(`uBetaAbsorb · uScaleHeightM`), which is what keeps Titan's ground light
-orange and ~10 % of incident — matching the measured surface flux — instead
-of the ~40 % a conservative-scattering model would claim.
+(`uBetaAbsorb · uScaleHeightM`), and it is what makes Titan's ground light
+orange: sky + direct at local noon comes out 0.28 of incident against the 0.49
+a conservative-scattering model of the same τ_ext would claim.
+
+**Where the model is over.** Earth's terminator anchor runs 1.75× (above) and
+Titan's noon ground light **2.8× the ~10 % of incident Huygens/DISR measured**
+(Tomasko et al. 2008). Same direction, same cause: the isotropic-redistribution
+½ and ¼ stop being upper bounds once τ ≫ 1, and nothing here loses photons back
+to space. Titan's is invisible in the render — its own haze extincts its ground
+to nothing (⟨μ·T_view⟩ = 0.006, § Flux bookkeeping) — but it is the number to
+beat if this term ever gets the two-stream treatment τ ≈ 5 wants. Note too that
+`TWILIGHT_TAIL_AMP` is an Earth fit carried unchanged: the *reach* is in scale
+heights and transfers, the amplitude is the multiple-scatter share at Earth's
+τ, and multiple scattering grows with τ.
 
 It rides `uSurfaceLuminance`, not `uAirlightLuminance` — this is light
 *reflected off the ground*, so it needs the albedo-bearing scalar, and the
