@@ -8,9 +8,10 @@ precedence); the measured coverage the join achieves — and why the
 inherited spine is load-bearing beside it — is
 `data/classic-ids/README.md` § Coverage.
 
-Not wired into `pnpm run build` or `build-catalog.ts`. This folder
-produces a committed artifact only; the record build starts consuming it
-in `stellata-3bsf.4`.
+Not wired into `pnpm run build` or `build-catalog.ts`. This folder produces a
+committed artifact only. The membership swap (`stellata-3bsf.4`) did **not**
+start consuming it — membership there is the inherited spine alone; joining
+this overlay as the build's label layer is `stellata-3bsf.11`.
 
 ## Files in this area
 
@@ -94,8 +95,10 @@ as one string peaks near a gigabyte alongside the join's own maps.
   overlay reproduces under that same source_id (`*Covered`). Both sides run
   the FULL gated resolution, so a row the gates scrub counts as unkeyed
   rather than scoring a label its record will not carry. This is the
-  transitional acceptance measurement: it moves to the inherited spine
-  when AT-HYG leaves the build's input set.
+  transitional acceptance measurement: it moves to the inherited spine when
+  AT-HYG leaves the build's input set — which it now has, so this side is
+  measuring against a catalogue the records no longer come from. Rebasing it
+  belongs with the label join (`stellata-3bsf.11`).
 
 `hd` / `hip` / `hr` compare values; `gl` compares the bare GJ number
 (the `Gl`/`GJ` prefix and component suffix are display forms); `flam`

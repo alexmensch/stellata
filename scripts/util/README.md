@@ -21,13 +21,18 @@ need the same thing — single-use helpers stay with their consumer.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
-  tens of megabytes behind it. Consumers are the SID registry readers,
-  the spine generator's required-inputs gate, and every artifact-backed
-  suite that self-skips when LFS hasn't smudged. Both live here rather
+  tens of megabytes behind it. Consumers are the SID registry readers and
+  every artifact-backed suite that self-skips when LFS hasn't smudged. Both live here rather
   than in `sid/sid-pure.ts` so this module stays a dependency leaf: the
   SID folder imports `REPO_ROOT` from it, so the reverse edge would put
   a domain module under every consumer of a path helper.
   `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
+  `ATHYG_CSV` is the one data path here, for the same leaf reason: the
+  catalogue stopped being a build input at the driver swap, so its three
+  remaining readers — the astrometry request, the classic-ID overlay, and the
+  boundary-epoch cross-check — sit in three folders with no module between
+  them, and each spelling the literal is how a path drifts
+  (`data/athyg/README.md` § Consumed by).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, `dist_src`). Buckets are derived from

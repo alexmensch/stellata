@@ -97,10 +97,11 @@ import {
 } from './distance/direction-cascade';
 import { readStars, type Star } from './parse/stars-parse';
 import {
-  ATHYG_CSV as SRC_CSV,
+  INHERITED_SPINE_TSV,
   READ_STARS_INPUT_PATHS,
   loadReadStarsInputs,
 } from './parse/read-stars-inputs';
+import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
 import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
@@ -118,6 +119,9 @@ const __dirname = dirname(__filename);
 
 const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
 const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
+// GCVS keys on HIP and HD; this cross-walk is what lets a spine row carrying
+// only a source_id still resolve a variable-star designation.
+const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
@@ -141,10 +145,10 @@ function isUpToDate(): boolean {
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
   // This file is an orchestration shell — the build logic lives across the
   // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
-  // them must invalidate the artifact. The two one-shot generators are the
-  // exception: nothing on a build:catalog path imports them, so enrolling
-  // them would force a full rebuild for an edit that cannot move a byte.
-  const nonBuildDirs = ['classic-ids', 'spine'].map((d) => resolve(__dirname, d));
+  // them must invalidate the artifact. The one-shot overlay generator is the
+  // exception: no build:catalog path imports it, so enrolling it would force
+  // a full rebuild for an edit that cannot move a byte.
+  const nonBuildDirs = ['classic-ids'].map((d) => resolve(__dirname, d));
   const scriptFiles: string[] = [];
   const collectScripts = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -166,7 +170,7 @@ function isUpToDate(): boolean {
   // Adding a new source is one array entry.
   const newest = maxMtimeOfSources([
     ...READ_STARS_INPUT_PATHS,
-    SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM,
+    SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
     SRC_SIMBAD_SAMPLE, SRC_MULTIPLES,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...scriptFiles,
@@ -185,8 +189,8 @@ async function removeStaleCatalogChunks(dir: string): Promise<void> {
 }
 
 async function main() {
-  if (!existsSync(SRC_CSV)) {
-    console.error(`Source CSV not found: ${SRC_CSV}`);
+  if (!existsSync(INHERITED_SPINE_TSV)) {
+    console.error(`Inherited spine not found: ${INHERITED_SPINE_TSV}`);
     process.exit(1);
   }
   if (!existsSync(SRC_STELLARIUM)) {
@@ -231,6 +235,11 @@ async function main() {
     multiplicityResolved: 0,
     multiplicityUnresolved: 0,
     componentDesignations: 0,
+    spineDroppedNoRaDec: 0,
+    spineDroppedNoDist: 0,
+    spineDroppedNoDirection: 0,
+    spineDroppedTooFar: 0,
+    spineDroppedNoVMagnitude: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -242,7 +251,7 @@ async function main() {
     variableCount: 0,
     searchEntries: 0,
     designationConMismatch: 0,
-    gcvsDesignationConOverride: 0,
+    gcvsDesignationCon: 0,
     boundarySegments: 0,
     boundaryDirections: 0,
     boundaryRegionRuns: 0,
@@ -251,10 +260,6 @@ async function main() {
     figureCount: 0,
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
-    gaiaSourceIdBackfilled: 0,
-    gaiaBindingMagRejected: 0,
-    gaiaBindingSiblingRejected: 0,
-    simbadWdsXidsEntries: 0,
     apsisEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -264,7 +269,6 @@ async function main() {
     spectralByGspspec: 0,
     spectralFallback: 0,
     ciSpectralDerived: 0,
-    conPositionalDisagreement: 0,
     multiplesIdentifierBackfill: 0,
     systemCoherenceSystems: 0,
     systemCoherenceRepositioned: 0,
@@ -322,14 +326,14 @@ async function main() {
 
   const inputs = loadReadStarsInputs();
   const {
-    bjMap, apsisMap, simbadSpectral, hipToGaia, directions,
+    bjMap, apsisMap, simbadSpectral, directions,
     dustGrid, conAssignment, sizes,
   } = inputs;
   Object.assign(counts, sizes);
 
-  console.log(`Reading ${SRC_CSV}...`);
+  console.log(`Reading ${INHERITED_SPINE_TSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = await readStars(SRC_CSV, inputs);
+  const { stars, stats } = readStars(INHERITED_SPINE_TSV, inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars`);
   console.log(`  dropped:`, stats.dropped);
@@ -351,11 +355,6 @@ async function main() {
     );
     console.log(
       `    by dist_src: ${formatDistSrcPartition(stats.lmcOverriddenByDistSrc)}`,
-    );
-  }
-  if (stats.gaiaSourceIdBackfilled > 0) {
-    console.log(
-      `  gaia_source_id backfill: ${stats.gaiaSourceIdBackfilled} rows via HIP→Gaia cross-walk`,
     );
   }
   const dv = stats.directionVia;
@@ -393,6 +392,11 @@ async function main() {
   }
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
+  counts.spineDroppedNoRaDec = stats.dropped.noRaDec;
+  counts.spineDroppedNoDist = stats.dropped.noDist;
+  counts.spineDroppedNoDirection = stats.dropped.noDirection;
+  counts.spineDroppedTooFar = stats.dropped.tooFar;
+  counts.spineDroppedNoVMagnitude = stats.dropped.noVMagnitude;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.bjOverriddenByDistSrc = stats.bjOverriddenByDistSrc;
@@ -400,9 +404,6 @@ async function main() {
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
   counts.lmcOverriddenByDistSrc = stats.lmcOverriddenByDistSrc;
-  counts.gaiaSourceIdBackfilled = stats.gaiaSourceIdBackfilled;
-  counts.gaiaBindingMagRejected = stats.gaiaBindingMagRejected;
-  counts.gaiaBindingSiblingRejected = stats.gaiaBindingSiblingRejected;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
@@ -424,7 +425,6 @@ async function main() {
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciSpectralDerived = stats.ciSpectralDerived;
-  counts.conPositionalDisagreement = stats.conPositionalDisagreement;
 
   const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
@@ -600,15 +600,22 @@ async function main() {
 
   // GCVS variable-star cross-match. Optional — if the files aren't present
   // we just skip, no variability rendered. xref.byGaia is bridged from
-  // byHip via gaia_dr3_hip_xmatch.tsv when present, so AT-HYG rows that
-  // carry a gaia_source_id but no HIP cell still resolve.
+  // byHip via gaia_dr3_hip_xmatch.tsv when present, so spine rows that
+  // carry a gaia_source_id but no HIP still resolve.
   if (existsSync(SRC_GCVS) && existsSync(SRC_GCVS_XREF)) {
     console.log('Parsing GCVS variable-star catalogue...');
     const tGcvs = Date.now();
     const gcvsData = parseGcvsMain(SRC_GCVS);
     const xref = parseGcvsCrossref(SRC_GCVS_XREF);
-    if (hipToGaia) {
+    if (existsSync(SRC_GAIA_HIP_XMATCH)) {
+      const tX = Date.now();
+      const hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
+      console.log(
+        `  Gaia DR3 ↔ HIP cross-walk: ${hipToGaia.size} entries in ${Date.now() - tX}ms`,
+      );
       bridgeGcvsByGaia(xref, hipToGaia);
+    } else {
+      console.log('  Gaia DR3 ↔ HIP cross-walk not found; GCVS byGaia bridge skipped.');
     }
     const m = applyVariability(stars, gcvsData, xref);
     console.log(
@@ -627,7 +634,7 @@ async function main() {
     counts.gcvsMatchedByHip = m.matchedByHip;
     counts.gcvsMatchedByHd = m.matchedByHd;
     counts.gcvsNamed = m.named;
-    counts.gcvsDesignationConOverride = m.desigConOverridden;
+    counts.gcvsDesignationCon = m.desigConSupplied;
   } else {
     console.log('GCVS files not found; skipping variability cross-match.');
   }

@@ -100,16 +100,22 @@ export function serializeSpine(rows: readonly SpineRow[]): string {
   return `${lines.join('\n')}\n`;
 }
 
-export function parseSpineTsv(text: string): SpineRow[] {
-  const lines = text.split('\n');
-  const header = (lines.shift() ?? '').split('\t');
+/** Lazy row walk. `readStars` consumes this rather than `parseSpineTsv`:
+ *  313,257 materialised rows hold ~660 MB for the whole walk, concurrently
+ *  with the Star array being built off them. */
+export function* iterSpineTsv(text: string): Generator<SpineRow> {
+  const headerEnd = text.indexOf('\n');
+  const header = (headerEnd === -1 ? text : text.slice(0, headerEnd)).split('\t');
   if (header.join('\t') !== SPINE_COLUMNS.join('\t')) {
     throw new Error(
       `inherited-spine header mismatch: got ${header.join(',')}`,
     );
   }
-  const rows: SpineRow[] = [];
-  for (const line of lines) {
+  let start = headerEnd === -1 ? text.length : headerEnd + 1;
+  while (start < text.length) {
+    const end = text.indexOf('\n', start);
+    const line = text.slice(start, end === -1 ? text.length : end);
+    start = end === -1 ? text.length : end + 1;
     if (line === '') continue;
     const cells = line.split('\t');
     if (cells.length !== SPINE_COLUMNS.length) {
@@ -119,9 +125,12 @@ export function parseSpineTsv(text: string): SpineRow[] {
     }
     const row = {} as SpineRow;
     SPINE_COLUMNS.forEach((column, i) => { row[column] = cells[i]; });
-    rows.push(row);
+    yield row;
   }
-  return rows;
+}
+
+export function parseSpineTsv(text: string): SpineRow[] {
+  return [...iterSpineTsv(text)];
 }
 
 function intCell(cell: string): number | null {

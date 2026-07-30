@@ -275,13 +275,24 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # Inner Aa1,Aa2 spectroscopic sub-pair (SB9_889, P=5.5521 d) subdivided
 # from the Pulkovo MSC orbit (absent from ORB6 and Gaia NSS).
 16120-1928	ν Scorpii	79374	6245697981070158080	136.899	0.5	-1.510	O				Aa2:::0.927:0.5;B::6245697981073442176:-0.2939;C::6245698187231874816:0.8080;D::6245698565188996992:1.8528	3674.78025				standard	ν Sco Aa; SIMBAD * nu Sco A sp_type cell empty for Gaia DR3 source 6245697981070158080, so build-catalog falls through to Gaia GSP-Spec spectraltype_esphs=O (bare class; lumClass=255 unknown). Published SIMBAD literature sp_type elsewhere is B2IV. ORB6 outer Aa,Ab orbit P=3674.78 d, e=0.92, i=89.7° (grade-3 CHARA visual, the highest-eccentricity rendered orbit — Kepler-solver stress case). Companions per multiples.tsv gaia_photometry: B (SIMBAD * nu. Sco B, sp_type empty), C = * nu.02 Sco A B8V, D = * nu.02 Sco B B9V. Inner Aa1,Aa2 (SB9_889, P=5.5521 d — the 1.41 d figure earlier notes carried is not in SB9/MSC) rendered via the Pulkovo MSC orbit. Anchor dimmed by flux conservation via its two synth sub-components (Ab, Aa2), both sharing Aa's Gaia source; B, C and D carry their own DR3 sources, so Gaia had already resolved them out of the anchor's G and they no longer dim it. System distance coherence anchors the root on the clean-Gaia nu-02 members at 136.9 pc; Aa (saturated, hosts the Aa,Ab subsystem) snaps within combined parallax noise.
-# ξ Ursae Majoris (Alula Australis, STF1523 AB) — AT-HYG carries the
-# system HD-only (no HIP, no Gaia); the record's identifiers come from
-# the multiples.tsv HD-keyed backfill (backfillPrimaryIdentifiers), so
-# this row is the end-to-end pin on that pass, plus on the sp_type
-# refresh reaching backfilled identifiers (the pull unions the WDS-xids
-# oids, so the record classifies F8.5:V by its Gaia source key).
-11182+3132	ξ Ursae Majoris	55203	756853643638639104	10.417	0.1	4.241	F8.5:V					21874.93				standard	SIMBAD * ksi UMa F8.5:V; AT-HYG GJ-anchored 10.42 pc, athyg_position astrometry route. HIP 55203 via ORB6, Gaia 756853643638639104 via SIMBAD xids, both surfaced onto the catalog record by the HD 98231 backfill. ORB6 grade-1 visual orbit AB P=59.89 yr = 21874.93 d.
+# ξ Ursae Majoris (Alula Australis, STF1523 AB) — AT-HYG carried the
+# system HD-only; the spine now carries the HIP + Gaia the multiples.tsv
+# backfill resolved, so this row pins that the identifiers still reach the
+# record, plus the sp_type refresh reaching them (the pull unions the
+# WDS-xids oids, so the record classifies F8.5:V by its Gaia source key).
+# Its absmag is a DEFERRED REGRESSION, not a truth pin — see notes_source.
+11182+3132	ξ Ursae Majoris	55203	756853643638639104	10.417	0.1	3.701	F8.5:V					21874.93				standard	SIMBAD * ksi UMa F8.5:V; AT-HYG GJ-anchored 10.42 pc, athyg_position astrometry route. HIP 55203 via ORB6, Gaia 756853643638639104 via SIMBAD xids. ORB6 grade-1 visual orbit AB P=59.89 yr = 21874.93 d. ABSMAG PINS A KNOWN-WRONG VALUE, 3.701 against the component's true 4.241: the driver swap put HIP 55203 on the record at walk time, so the V cascade takes the printed I/239 V, and that Hipparcos entry is the unresolved AB pair (4.33 component vs 3.79 blend). Nothing splits it because ksi UMa B is its own catalog record rather than a promoted member, and the anchor-flux solve only conserves flux for minted ones. Reverts to 4.241 when the separation gate lands - the same shape hits ksi Sco (0.84 mag) and HIP 43820 (0.65).
+# ξ Scorpii (16044-1122 AB) and HD 75632 (08554+7048 AB) — the other two
+# records the printed-blend V reaches. Same shape as ξ UMa above: the spine
+# carries the HIP the multiples.tsv backfill resolved, the V cascade takes the
+# printed I/239 entry, and that entry is the unresolved pair. Both absmags are
+# DEFERRED REGRESSIONS pinned at the emitted value, not truth pins — the
+# convention is validate/README.md § adding a star. The ci pins are honest:
+# colour is unaffected by the blend, and ξ Sco's is the class-derived value
+# its now-resolved SIMBAD F4 earns (it has no observed B−V and no Apsis Teff).
+# Radius is NOT pinned on either: it is derived from the wrong absmag.
+16044-1122	ξ Scorpii	78727	4343066192373820800	24.331	0.1	2.229	F4	0.419								standard	SIMBAD * ksi Sco A F4(V) for Gaia DR3 4343066192373820800 — parenthesised luminosity class, so the resolver keeps classIdx=F and lumClass=255 unknown; the row's bare F matches that. HIP 78727 + Gaia via the multiples.tsv HD-keyed backfill on HD 144069, frozen onto the spine row. ABSMAG PINS A KNOWN-WRONG VALUE, 2.229 against the component's true 3.069: the printed I/239 V for HIP 78727 is the AB blend (V 4.16) rather than the component (V 5.00), 0.840 mag. Nothing splits it — the anchor-flux solve conserves flux only for minted members and this pair's secondary is not one. Reverts to 3.069 when the separation gate lands. ci 0.419 is spectralClassCi(F4), not an observed cell: the spine's ci is empty here and no Apsis Teff covers the source, which is one of the two records moving ciSpectralDerived at the driver swap.
+08554+7048	HD 75632	43820	1118916397395366656	11.312	0.1	7.782	M1V	1.390								standard	SIMBAD HD 75632A M1V for Gaia DR3 1118916397395366656 (otype SB*). HIP 43820 + Gaia via the multiples.tsv HD-keyed backfill on HD 75632, frozen onto the spine row. ABSMAG PINS A KNOWN-WRONG VALUE, 7.782 against the component's true 8.432: the printed I/239 V for HIP 43820 is the AB blend (V 8.05) rather than the component (V 8.70), 0.650 mag — same unsplit-pair cause as ξ UMa and ξ Sco. Reverts to 8.432 when the separation gate lands. ci 1.390 is the spine's observed B−V, de-extincted by a negligible A_V at 11.3 pc.
 # ---- Promoted companions (newly minted catalog records) ----------------
 # These rows pin companions promoted into catalog.bin by the build's
 # read-multiples-and-promote pass. Their primary is already an AT-HYG

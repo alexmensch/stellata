@@ -1,10 +1,10 @@
 # Per-row pipeline and reference-catalogue parsing
 
-The AT-HYG row walk (`readStars` in `stars-parse.ts`) and everything it
-resolves per star: Gaia source_id binding, space-motion velocity,
-physical radius and spectral class, the GCVS variability cross-match,
-and Stellarium stick figures. The binary record layout these fields
-land in is `../README.md` § Binary catalog format.
+The spine row walk (`readStars` in `stars-parse.ts`) and everything it
+resolves per star: space-motion velocity, physical radius and spectral
+class, the GCVS variability cross-match, and Stellarium stick figures. The
+binary record layout these fields land in is `../README.md` § Binary catalog
+format; the membership term it walks is `../spine/README.md`.
 
 ## Files in this area
 
@@ -12,19 +12,19 @@ land in is `../README.md` § Binary catalog format.
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
                                   every other subfolder imports.
-  read-stars-inputs.ts            Source paths + loaders for every reference
-                                  table readStars consumes, plus the mtime
-                                  set derived artifacts invalidate against.
-                                  Shared by build-catalog.ts and the
-                                  inherited-spine generator so both walk the
-                                  CSV against identical inputs.
+  read-stars-inputs.ts            The spine path, plus source paths + loaders
+                                  for every reference table readStars
+                                  consumes, and the mtime set derived
+                                  artifacts invalidate against.
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
-                                  Apsis and 5p astrometry side-tables. The TYC
-                                  reader streams and takes a keep-set — its
-                                  table is 2.5 M rows. Cross-language parity
-                                  with scripts/binaries/parsers.py is pinned
-                                  in ../validate/.
+                                  Apsis and 5p astrometry side-tables. The HIP
+                                  walk now serves the GCVS byGaia bridge in
+                                  build-catalog.ts, not the record walk. The
+                                  TYC reader streams and takes a keep-set —
+                                  its table is 2.5 M rows. Cross-language
+                                  parity with scripts/binaries/parsers.py is
+                                  pinned in ../validate/.
   gcvs/                           GCVS variable-star parsing and the
                                   variability cross-match, with its own
                                   README. Read by build-catalog only.
@@ -69,49 +69,29 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-`gaia-xmatch.ts` is the deliberate exception: it streams a 2.5 M-row table
-line-by-line and dedups on angular distance, so it carries its own accumulator
-with the same header strictness rather than a second copy of this one.
+Two deliberate exceptions, both streaming walks that carry their own header
+strictness rather than a second copy of this one:
+
+- `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
+  angular distance, so it needs its own accumulator.
+- `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) demands the header be
+  the column list **byte for byte, in order**, where `headerIndex` resolves
+  columns by name in any order. That is the stricter contract on purpose: the
+  spine is frozen and its codec writes the header, so a header that merely
+  parses is already a file nobody meant to ship.
 
 ## Per-row pipeline
 
-Each AT-HYG row walks through, inside `readStars`:
+Each spine row walks through, inside `readStars`. The row arrives with its
+`gaia_source_id` already resolved — the native-cell → HIP-cross-walk
+precedence and both binding gates ran when the spine was frozen, and
+re-running them here would re-decide a binding against reference tables that
+have since moved (`../spine/README.md` § The identifier columns are read,
+never re-derived).
 
-1. **Gaia source_id resolution** (`resolveGaiaSourceId` in
-   `catalog-pure.ts`). AT-HYG's native `gaia` column wins where
-   present; otherwise the HIP cross-walk
-   (`data/gaia/gaia_dr3_hip_xmatch.tsv`) supplies it. The HIP
-   cross-walk fall-through resolves the ~147 HIP-bearing AT-HYG rows
-   whose `gaia` column is blank. Both candidates are vetted against a
-   G−V magnitude gate (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`, mirroring
-   `scripts/binaries/indices.py` — a cross-reference unit test keeps
-   the two equal): a bound source >1 mag fainter in G than the row's V
-   is a resolvable companion or background star that Gaia's
-   best-neighbour match landed on because the bright star itself is
-   saturated (Toliman carried a G=20.95 background source, Castor
-   carried Castor B's). Rejected rows ship `gaia_source_id = 0` and
-   route direction through the HIP2 tiers; counted
-   `gaiaBindingMagRejected`.
-
-   Both candidates also pass a **sibling-letter attribution gate**
-   (`isSiblingLetterAttribution`, fed by
-   `data/simbad/simbad_wds_xids.tsv`) — the catalog-boundary mirror
-   of the binaries pipeline's identity refutation. A similar-brightness
-   sibling slips the G−V gate: HIP 83608's cell holds μ Dra B's source,
-   HIP 41098's holds HD 70492 B's, so the primary's record keys on the
-   member's source and promotion mints a synth twin. A candidate is
-   scrubbed when SIMBAD gives one component letter sole ownership of
-   the source while the row's identity points at a disjoint sibling —
-   via the row's own per-component HIP letters when they are decisive,
-   else (blend-suffixed `HIP nA`/`HIP nB`, or a Hipparcos blend HIP
-   stored only on a SIMBAD system-level object) via the system's
-   source-bearing primary letter. Sub-letters count as their parent's
-   lineage, and a source SIMBAD attributes to two letters of one
-   system (photocentre blend) is never scrubbed. Counted
-   `gaiaBindingSiblingRejected`.
-2. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
+1. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
    in `catalog-pure.ts`). See `../distance/README.md` § Multi-layer distance refinement.
-3. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same
+2. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same
    value AT-HYG catalogued, re-derived as 1000/plx from
    `data/hipparcos/hip2_van_leeuwen.tsv` so the 4-dp print truncation
    drops out. Gated on HIP2 reproducing AT-HYG's printed distance
@@ -119,39 +99,38 @@ Each AT-HYG row walks through, inside `readStars`:
    gof 99, vs AT-HYG's sane 59.9 pc) is the case the gate exists for;
    disagreeing rows keep the curated AT-HYG value. Fires on 1,901 of
    1,903 dist_src=HIP rows.
-4. **LMC kinematic override** (`applyLmcKinematicOverride`). See
+3. **LMC kinematic override** (`applyLmcKinematicOverride`). See
    `../distance/README.md` § Multi-layer distance refinement.
-5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
+4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
    (`stars-parse.ts`). Drops rows still beyond LMC depth.
-6. **Direction resolution** (`resolveDirection` in
+5. **Direction resolution** (`resolveDirection` in
    `direction-cascade.ts`) and `xyz = direction × distance` in
    float64. See `../distance/README.md` § Direction resolution.
-7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
+6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See § Physical radius and spectral parsing.
-8. **Constellation** — positional, from the resolved xyz
-   (§ Positional constellation membership). AT-HYG's `con` cell is read
-   separately, as the DESIGNATION's constellation only.
-9. **Johnson V and absmag** (`resolveVMagnitude`, then
+7. **Constellation** — positional, from the resolved xyz
+   (§ Positional constellation membership). Nothing here sets the
+   DESIGNATION's constellation: the spine carries no editorial `con` cell.
+8. **Johnson V and absmag** (`resolveVMagnitude`, then
    `apparentToAbsoluteMagnitude` on the distance the whole override stack
    settled). See `../photometry/README.md` § The V cascade. The tier that
    won is kept on the record as `vVia`, because it decides whether the
    magnitude is the system's blend or one component's — companion
    promotion's flux conservation may only subtract a companion's light
    from a blend (`../companions/README.md` § Anchor flux conservation).
-10. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
    models neither). Clamped to [0.08, 2500] R☉.
 
-Each kept record carries `athygRowId` — AT-HYG's own `id`, build-time-only
-like `athygDist`/`athygDistSrc`/`vVia`. Non-null is the AT-HYG-derived predicate
-(promoted companions get `null`) and the join key back to printed CSV cells;
-`../spine/README.md` is its consumer.
+`athygDist` / `athygDistSrc` are build-time-only, like `vVia`: the spine's
+printed `dist` / `dist_src` cells, kept pre-override so the post-build
+distance-regression check has the input to measure drift against.
 
-AT-HYG's stored `x0/y0/z0` is never consumed: it is a mixed-epoch
+The spine carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a mixed-epoch
 merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
 inconsistent with the same row's printed ra/dec by up to tens of
 arcsec on high-PM stars (`docs/science-catalog-ingestion.md` § Driver astrometry).
@@ -250,43 +229,45 @@ Two properties follow from the boundaries partitioning the whole sphere:
 - **A row needs no catalogue entry to be classified.** The uncatalogued
   Gaia fill tier resolves on position like everything else.
 
-**AT-HYG's `con` cell is not retired — it is repurposed.** It seeds the
-constellation a star's *designation* is named for, which is editorial and
-diverges from position once a boundary moves past a named star: ρ Aql /
-67 Aql (HIP 99742) is positionally in **Delphinus** since 1992. Each
-record therefore carries two fields, `conIndex` (positional, byte 34) and
-`desigConIndex` (editorial, search-index `dc`), and
-`designationConIndex(dc, c)` in `../catalog-pure.ts` is the single
-statement of which one a Bayer / Flamsteed / GCVS designation reads.
-An AT-HYG `con` code absent from the IAU-88 table is a hard build error,
-not a silent fall-back — the input is frozen, so it can only mean the
-table drifted.
+**Nothing supplies the designation's constellation but a GCVS name.** A
+star's *designation* constellation is editorial and diverges from position
+once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) is
+positionally in **Delphinus** since 1992. AT-HYG's `con` cell used to seed
+it; the spine carries no such column, so `desigConIndex` (search-index `dc`)
+now starts at `NO_CONSTELLATION_INDEX` on every record and
+`designationConIndex(dc, c)` in `../catalog-pure.ts` — the single statement
+of which field a Bayer / Flamsteed / GCVS designation reads — falls back to
+the positional `conIndex` for all but the GCVS cases below.
 
-**A GCVS designation outranks the cell for its own star.** "LT Vul" names
-Vulpecula whatever a catalogue column says, so `applyVariability`
-(`gcvs-parse.ts`) sets `desigConIndex` from the designation's trailing
-abbreviation where the two disagree — `gcvsDesignationConOverride` pins
-**4**. The cell is not a nomenclature field and fails both ways:
+**That fallback is WRONG for 7 entries, and knowingly shipped.** A Bayer or
+Flamsteed designation is fixed by nomenclature: it was assigned before the
+1930 Delporte boundaries and does not migrate when proper motion carries the
+star across one. ρ Aql is ρ **Aquilae** permanently, and today it searches as
+"Rho Del" / "67 Del" — the exact rewrite the `desigConIndex` / `conIndex`
+split exists to prevent. The other six are promoted companions wide enough to
+straddle a boundary, whose composed names now take their own positional
+constellation instead of the primary's designation (Fomalhaut C).
+Re-sourcing the field from the classic-ID overlay's IV/27A constellation, or
+retiring it, is `stellata-3bsf.11` — until then, do not read the positional
+fallback as the intended rule.
 
-- **Stale** — LT Vul is filed under Sagitta, but sits in Vulpecula *and*
-  is named for it, so designation and boundaries agree against the cell.
+**A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
+whatever any catalogue column says, so `applyVariability` (`gcvs-parse.ts`)
+sets `desigConIndex` from the designation's trailing abbreviation —
+`gcvsDesignationCon` pins **8,069**, every named variable whose designation
+carries one. That the cell it used to correct was untrustworthy both ways is
+why the designation is the authority now that it is the only source:
+
+- **Stale** — LT Vul was filed under Sagitta, but sits in Vulpecula *and*
+  is named for it, so designation and boundaries agreed against the cell.
 - **Right on position, wrong on the name** — RY Cen (cell and position
   both Lupus, named for Centaurus) and EQ Vul (both Lyra, named for
-  Vulpecula) are genuine ρ Aql-shaped movers, and **invisible** to any
-  check that reads the designation constellation off the cell.
+  Vulpecula) are genuine ρ Aql-shaped movers, and were **invisible** to any
+  check reading the designation constellation off the cell.
 
-The fourth is a fill: a GCVS-named companion with no anchor to inherit a
-cell from holds the sentinel until its own designation supplies one.
-Designations naming no constellation (NSV serials, `LMC V0471`) leave the
-field alone.
-
-`conPositionalDisagreement` (build-counts) pins the divergence between
-the cell and the position at **63** rows. Note this is measured on the
-**resolved** position, not AT-HYG's printed ra/dec, which the boundaries
-module's own cross-check pins at 61 — six anonymous rows sit within an
-arcsecond of a wall and the direction cascade moves them across it.
-`designationConMismatch` pins the 10 search entries that actually carry
-`dc`.
+Those two plus CM Ind (named for Indus, positionally in Pavo) are the
+**3** entries `designationConMismatch` pins — the whole of `dc` on the wire,
+since everything else now agrees with its positional index by construction.
 
 ## Stick figures from Stellarium
 

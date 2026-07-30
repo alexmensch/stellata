@@ -6,8 +6,7 @@ import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
-import { ATHYG_CSV } from '../../../../scripts/catalog/parse/read-stars-inputs';
-import { isLfsPointerFile } from '../../../../scripts/util/paths';
+import { ATHYG_CSV, isLfsPointerFile } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
