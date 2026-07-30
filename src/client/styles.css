@@ -1754,7 +1754,18 @@ body.monochrome .modal-shortcuts kbd {
   display: block;
   z-index: 40;
 }
+/* One swatch edge drives every patch on the screen, so the sections scale
+ * together. Bounded on BOTH axes: the width term keeps the 8-wide black
+ * ladder inside the padding, the height term keeps the four sections from
+ * pushing the surface into a scroll. `--calib-columns` is published by
+ * calibration-overlay.ts from the ladder's own length. */
 .calib-surface {
+  --calib-swatch: clamp(48px, min(8.4vw, 12.5vh), 132px);
+  --calib-gap: clamp(6px, 0.9vw, 14px);
+  --calib-ladder-width: calc(
+    var(--calib-columns, 8) * var(--calib-swatch) +
+    (var(--calib-columns, 8) - 1) * var(--calib-gap)
+  );
   position: absolute;
   inset: 0;
   overflow-y: auto;
@@ -1797,7 +1808,7 @@ body.monochrome .modal-shortcuts kbd {
 }
 .calib-ladder {
   display: flex;
-  gap: 10px;
+  gap: var(--calib-gap);
   flex-wrap: wrap;
 }
 .calib-cell {
@@ -1807,8 +1818,8 @@ body.monochrome .modal-shortcuts kbd {
   gap: 5px;
 }
 .calib-swatch {
-  width: 72px;
-  height: 72px;
+  width: var(--calib-swatch);
+  aspect-ratio: 1;
 }
 .calib-cell-label {
   font-size: 10px;
@@ -1821,24 +1832,31 @@ body.monochrome .modal-shortcuts kbd {
  * screen destroys the dark adaptation section 1 depends on. */
 .calib-highlight-field {
   display: none;
-  padding: 18px;
+  padding: calc(var(--calib-gap) * 1.5);
   background: #fff;
 }
-#calib-highlight.is-revealed .calib-highlight-field { display: block; }
+/* inline-block, not block: the white field is a calibration target, so it
+ * shrink-wraps its patches instead of flooding the viewport with 255. */
+#calib-highlight.is-revealed .calib-highlight-field { display: inline-block; }
 .calib-highlight-field .calib-cell-label { color: #000; }
 
 .calib-wedge {
   display: flex;
-  max-width: 720px;
+  width: var(--calib-ladder-width);
+  max-width: 100%;
 }
 .calib-wedge-step {
   flex: 1 1 0;
-  height: 56px;
+  height: calc(var(--calib-swatch) * 0.62);
 }
 
 .calib-gamma-row {
   display: flex;
-  gap: 14px;
+  gap: var(--calib-gap);
   flex-wrap: wrap;
 }
-.calib-gamma-cell { display: block; }
+.calib-gamma-cell {
+  display: block;
+  width: calc(var(--calib-swatch) * 1.45);
+  aspect-ratio: 13 / 9;
+}

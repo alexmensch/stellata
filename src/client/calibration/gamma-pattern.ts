@@ -4,21 +4,23 @@
 
 import { greyCss } from './calibration-ladders-pure';
 
-export const GAMMA_CELL_CSS_WIDTH = 104;
-export const GAMMA_CELL_CSS_HEIGHT = 72;
 const PATCH_FRACTION = 0.5;
 
+/** Sizes the backing store from the canvas's laid-out CSS box, so the cell
+ *  tracks the responsive sizing in the stylesheet. Requires layout — a
+ *  still-hidden canvas measures zero and is skipped. */
 export function drawGammaCell(
   canvas: HTMLCanvasElement,
   code: number,
   dpr: number,
 ): void {
-  const w = Math.max(2, Math.round(GAMMA_CELL_CSS_WIDTH * dpr));
-  const h = Math.max(2, Math.round(GAMMA_CELL_CSS_HEIGHT * dpr));
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  const w = Math.max(2, Math.round(rect.width * dpr));
+  const h = Math.max(2, Math.round(rect.height * dpr));
   canvas.width = w;
   canvas.height = h;
-  canvas.style.width = `${GAMMA_CELL_CSS_WIDTH}px`;
-  canvas.style.height = `${GAMMA_CELL_CSS_HEIGHT}px`;
 
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) return;

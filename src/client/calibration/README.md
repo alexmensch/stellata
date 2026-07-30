@@ -69,13 +69,38 @@ That identity only holds while the eye integrates the stripes instead of
 resolving them, which is why `gamma-pattern.ts` scales its backing store
 by `devicePixelRatio` and fills **one device pixel per stripe**. A CSS
 `1px` pattern is two device pixels on a 2× display: the stripes become
-resolvable and every match point shifts. The cells are re-cut on
-`resize`, which is what covers a window dragged between displays of
-different ratios.
+resolvable and every match point shifts.
+
+The cell measures its own laid-out box rather than carrying fixed
+dimensions, so it tracks § Sizing. That makes **layout a precondition**:
+a still-hidden canvas measures zero and is skipped, so the cells are cut
+*after* `handle.open()`, never before. They are re-cut on `resize`, which
+covers both a viewport change and a window dragged between displays of
+different pixel ratios.
 
 The stops bracket `ASSUMED_DISPLAY_GAMMA` (2.2), the transfer
 `../hdr/tonemap.glsl`'s sRGB encode targets. Moving that encode means
 moving this constant.
+
+## Sizing
+
+One custom property — `--calib-swatch` on `.calib-surface` — is the edge
+length every patch on the screen derives from, so the four sections scale
+as a unit. It is clamped on **both** axes (`min(8.4vw, 12.5vh)`): the
+width term keeps the 8-wide black ladder inside the surface padding, the
+height term keeps the sections from pushing the surface into a scroll on
+a short viewport. Past those bounds the surface scrolls rather than
+shrinking the patches below a readable size.
+
+`--calib-columns` is published by `calibration-overlay.ts` from
+`BLACK_POINT_CODES.length`; the grey wedge spans
+`--calib-ladder-width` so it lines up with the black ladder at any
+swatch size, without the stylesheet restating how long that ladder is.
+
+The revealed white field is `inline-block`, not `block`. It is a
+calibration target rather than a background, so it shrink-wraps its
+patches — a full-viewport sheet of code value 255 is both useless as a
+reading and hostile to the dark adaptation the screen just asked for.
 
 ## Highlights reveal on click
 

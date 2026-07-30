@@ -17,6 +17,14 @@ import { drawGammaCell } from './gamma-pattern';
 export function bindCalibrationOverlay(): ModalHandle {
   const modal = document.getElementById('calibration-modal')!;
 
+  // The wedge spans exactly the black-point ladder, so the two sections
+  // share an extent at any swatch size. Published rather than hardcoded in
+  // the stylesheet so the ladder stays the single source of its own length.
+  modal.querySelector<HTMLElement>('.calib-surface')?.style.setProperty(
+    '--calib-columns',
+    String(BLACK_POINT_CODES.length),
+  );
+
   renderSwatchLadder(modal.querySelector('#calib-blackpoint'), BLACK_POINT_CODES, true);
   renderSwatchLadder(modal.querySelector('#calib-highlight-patches'), HIGHLIGHT_CODES, false);
   renderWedge(modal.querySelector('#calib-wedge'));
@@ -45,18 +53,16 @@ export function bindCalibrationOverlay(): ModalHandle {
     },
   });
 
-  document.getElementById('calibrate-open')?.addEventListener('click', () => {
-    redrawGamma();
+  // Cut the cells after the reveal, never before: they size themselves from
+  // their laid-out box, which is zero while the overlay is still hidden.
+  const open = () => {
     handle.open();
-  });
-
-  return {
-    open: () => {
-      redrawGamma();
-      handle.open();
-    },
-    close: handle.close,
+    redrawGamma();
   };
+
+  document.getElementById('calibrate-open')?.addEventListener('click', open);
+
+  return { open, close: handle.close };
 }
 
 function renderSwatchLadder(
