@@ -119,11 +119,13 @@ const FLAG_GRID         = 1 << 0;
 const FLAG_HUD          = 1 << 1;
 // bit 2 reserved (formerly FLAG_MC_DISABLED — retired; molecular-cloud
 // visibility is the declutter floor, no per-layer flag)
-const FLAG_MW_DISABLED  = 1 << 3;
+// bit 3 reserved (formerly FLAG_MW_DISABLED — retired; the galactic band
+// is physical light gated by the declutter floor, not a user overlay)
 const FLAG_UNIT_PC      = 1 << 4;
 const FLAG_MODE_OBSERVE = 1 << 5;
 const FLAG_CHART        = 1 << 6;
-const FLAG_CON_DISABLED = 1 << 7;
+// bit 7 reserved (formerly FLAG_CON_DISABLED — retired; constellation
+// chrome is the declutter floor's call, no master toggle)
 
 export interface IdMaps {
   /** HIP → row-index lookup. Built once at boot from `catalog.hip`. */
@@ -173,6 +175,9 @@ export interface DecodedView {
    *  only when the user cycled below it. */
   detailLevel?: DetailLevel;
   con?: number;
+  /** Legacy blobs only: the retired star-size / footprint-window sliders.
+   *  Decode-and-ignore, same as `mag` — the plate scale owns star pixel
+   *  size and the instrument owns the footprint window. */
   smin?: number;
   smax?: number;
   span?: number;
@@ -181,8 +186,6 @@ export interface DecodedView {
    *  predating the equatorial sphere still shows *a* sphere). */
   coordSphere?: CoordSphereFrame;
   showHud?: boolean;
-  showConstellation?: boolean;
-  showMilkyway?: boolean;
   showLgEmission?: boolean;
   unit?: 'pc' | 'ly';
   mode?: 'navigate' | 'observe';
@@ -850,12 +853,14 @@ const FIELDS_V3: FieldSpec[] = [
 // unclaimed for ~6 months of deploy overlap before any reuse.
 // Everything else is byte-identical to v3. Append-only bit policy
 // continues: unknown high mask bits are ignored by the decoder.
-// Bits 4 (app-magnitude filter) and 8 (magnitude preset) are RETIRED —
-// the instrument owns the limiting magnitude, so a blob carrying either
-// decodes and is ignored rather than failing. They stay in this table as
-// decode-only specs, NOT just as unclaimed bits: v4 blobs shipped by
-// v3.6.0 have them set with payload bytes, and a spec-less bit would
-// leave those bytes unconsumed, shifting every later field's offset.
+// Bits 4 (app-magnitude filter), 8 (magnitude preset), 10/11/12 (star
+// size min / max / footprint window) are RETIRED — the instrument owns the
+// limiting magnitude and the plate scale owns the footprint, so a blob
+// carrying any of them decodes and is ignored rather than failing. They
+// stay in this table as decode-only specs, NOT just as unclaimed bits:
+// v4 blobs already in the wild have them set with payload bytes, and a
+// spec-less bit would leave those bytes unconsumed, shifting every later
+// field's offset.
 const FIELDS_V4: FieldSpec[] = [
   vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
   vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
@@ -867,9 +872,9 @@ const FIELDS_V4: FieldSpec[] = [
   u16Field(7, 'spect'),
   decodeOnly(presetField(8)),
   conField(9),
-  u8Field(10, 'smin', { min: 1, max: 6,  step: 0.1 }),
-  u8Field(11, 'smax', { min: 2, max: 32, step: 0.5 }),
-  u8Field(12, 'span', { min: 2, max: 20, step: 0.5 }),
+  decodeOnly(u8Field(10, 'smin', { min: 1, max: 6,  step: 0.1 })),
+  decodeOnly(u8Field(11, 'smax', { min: 2, max: 32, step: 0.5 })),
+  decodeOnly(u8Field(12, 'span', { min: 2, max: 20, step: 0.5 })),
   flagsField(13),
   sidRefField(14, 'focus'),
   sidRefField(15, 'to'),
@@ -887,8 +892,6 @@ function packFlags(v: DecodedView): number {
   let f = 0;
   if (v.coordSphere !== undefined && v.coordSphere !== 'none') f |= FLAG_GRID;
   if (v.showHud) f |= FLAG_HUD;
-  if (v.showConstellation === false) f |= FLAG_CON_DISABLED;
-  if (v.showMilkyway === false) f |= FLAG_MW_DISABLED;
   if (v.unit === 'pc') f |= FLAG_UNIT_PC;
   if (v.mode === 'observe') f |= FLAG_MODE_OBSERVE;
   // Chart only persists when observe is also active — chart-mode is an
@@ -901,8 +904,6 @@ function packFlags(v: DecodedView): number {
 function unpackFlags(v: DecodedView, f: number): void {
   if (f & FLAG_GRID) v.coordSphere = 'galactic';
   if (f & FLAG_HUD) v.showHud = true;
-  if (f & FLAG_CON_DISABLED) v.showConstellation = false;
-  if (f & FLAG_MW_DISABLED) v.showMilkyway = false;
   if (f & FLAG_UNIT_PC) v.unit = 'pc';
   if (f & FLAG_MODE_OBSERVE) v.mode = 'observe';
   if (f & FLAG_CHART) v.chart = true;
@@ -1045,16 +1046,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (f.detailLevel !== 'all') view.detailLevel = f.detailLevel;
   if (f.spectMask !== ALL_SPECT_MASK) view.spect = f.spectMask;
   if (f.highlightCon !== -1) view.con = f.highlightCon;
-  // Size fields only when explicitly overridden — otherwise the receiver
-  // recomputes from the instrument + their own viewport (responsive
-  // sharing).
-  if (f.sizeMinOverridden) view.smin = f.sizeMin;
-  if (f.sizeMaxOverridden) view.smax = f.sizeMax;
-  if (f.sizeSpanOverridden) view.span = f.sizeSpan;
   if (f.coordSphere !== 'none') view.coordSphere = f.coordSphere;
   if (f.showHud) view.showHud = true;
-  if (!f.showConstellation) view.showConstellation = false;
-  if (!f.showMilkyway) view.showMilkyway = false;
   if (!f.showLgEmission) view.showLgEmission = false;
 
   const fov = stellata.getCameraFov();
@@ -1245,13 +1238,8 @@ export function applyDecodedView(
   }
   if (view.spect !== undefined) patch.spectMask = view.spect;
   if (view.con !== undefined) patch.highlightCon = view.con;
-  if (view.smin !== undefined) { patch.sizeMin = view.smin; patch.sizeMinOverridden = true; }
-  if (view.smax !== undefined) { patch.sizeMax = view.smax; patch.sizeMaxOverridden = true; }
-  if (view.span !== undefined) { patch.sizeSpan = view.span; patch.sizeSpanOverridden = true; }
   if (view.coordSphere !== undefined) patch.coordSphere = view.coordSphere;
   if (view.showHud !== undefined) patch.showHud = view.showHud;
-  if (view.showConstellation !== undefined) patch.showConstellation = view.showConstellation;
-  if (view.showMilkyway !== undefined) patch.showMilkyway = view.showMilkyway;
   if (view.showLgEmission !== undefined) patch.showLgEmission = view.showLgEmission;
   if (Object.keys(patch).length) stellata.setFilter(patch);
 

@@ -517,25 +517,28 @@ describe('url-state', () => {
       expect(view.preset).toBe('binoculars');
     });
 
-    it('round-trips smin at 0.1 step boundaries', () => {
-      for (const smin of [1, 1.5, 3.7, 6]) {
-        const { view } = roundtrip({ smin });
-        expect(view.smin).toBeCloseTo(smin, 1);
-      }
+    // smin/smax/span (bits 10/11/12) are retired the same way mag/preset
+    // were: decode-only specs, never encoded. The spec has to STAY so the
+    // three payload bytes are still consumed — drop it and every later
+    // field reads at the wrong offset. This pins that, not the values.
+    it('still consumes the retired smin/smax/span bytes without shifting later fields', () => {
+      // Bytes: version 4 · LEB128 mask bits 10+11+12+13 · smin 2.5 ·
+      // smax 18 · span 8 · flags FLAG_UNIT_PC.
+      const bytes = new Uint8Array([4, 0x80, 0x78, 15, 32, 12, 1 << 4]);
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const { view } = decodeBlob(blob);
+      expect(view.smin).toBeCloseTo(2.5, 6);
+      expect(view.smax).toBeCloseTo(18, 6);
+      expect(view.span).toBeCloseTo(8, 6);
+      // The payload byte after the three retired ones — wrong here means
+      // the offsets shifted.
+      expect(view.unit).toBe('pc');
     });
 
-    it('round-trips smax at 0.5 step boundaries', () => {
-      for (const smax of [2, 8, 16.5, 32]) {
-        const { view } = roundtrip({ smax });
-        expect(view.smax).toBeCloseTo(smax, 1);
-      }
-    });
-
-    it('round-trips span at 0.5 step boundaries', () => {
-      for (const span of [2, 5, 12.5, 20]) {
-        const { view } = roundtrip({ span });
-        expect(view.span).toBeCloseTo(span, 1);
-      }
+    it('never encodes smin/smax/span', () => {
+      expect(encodeBlob({ smin: 2.5, smax: 18, span: 8 })).toBe(encodeBlob({}));
     });
 
     it('rounds to nearest step, not floor', () => {
@@ -608,16 +611,6 @@ describe('url-state', () => {
       expect(view.showHud).toBe(true);
     });
 
-    it('round-trips showConstellation=false', () => {
-      const { view } = roundtrip({ showConstellation: false });
-      expect(view.showConstellation).toBe(false);
-    });
-
-    it('round-trips showMilkyway=false', () => {
-      const { view } = roundtrip({ showMilkyway: false });
-      expect(view.showMilkyway).toBe(false);
-    });
-
     it('round-trips showLgEmission=false (zero-byte presence bit, default-on elided)', () => {
       const { view } = roundtrip({ showLgEmission: false });
       expect(view.showLgEmission).toBe(false);
@@ -655,13 +648,22 @@ describe('url-state', () => {
       const { view } = roundtrip({
         coordSphere: 'galactic',
         showHud: true,
-        showConstellation: false,
+        mode: 'observe',
         unit: 'pc',
       });
       expect(view.coordSphere).toBe('galactic');
       expect(view.showHud).toBe(true);
-      expect(view.showConstellation).toBe(false);
+      expect(view.mode).toBe('observe');
       expect(view.unit).toBe('pc');
+    });
+
+    // Bits 3 (mw) and 7 (constellations) are retired. A blob that still
+    // carries them has to decode without error and land on the declutter
+    // floor's answer instead — the same treatment bits 4 / 8 got.
+    it('ignores the retired mw / constellation flag bits', () => {
+      const { view } = roundtrip({ coordSphere: 'galactic' });
+      expect(view).not.toHaveProperty('showMilkyway');
+      expect(view).not.toHaveProperty('showConstellation');
     });
 
     it('default flags are not encoded (no flags byte)', () => {
@@ -791,7 +793,6 @@ describe('url-state', () => {
         smax: 18,
         span: 8,
         coordSphere: 'galactic',
-        showConstellation: false,
         unit: 'pc',
         focus: { kind: 'sid', id: 101 },
         mode: 'observe',
@@ -806,17 +807,16 @@ describe('url-state', () => {
       // recomputes tgt from default.
       expect(out.tgt).toBeUndefined();
       expect(out.fov).toBe(45);
-      // mag / preset are retired from v4 — encoded by nothing, so a
-      // round-trip drops them.
+      // mag / preset / smin / smax / span are retired from v4 — encoded by
+      // nothing, so a round-trip drops them.
       expect(out.mag).toBeUndefined();
       expect(out.dmax).toBe(500);
       expect(out.spect).toBe(view.spect);
       expect(out.preset).toBeUndefined();
-      expect(out.smin).toBeCloseTo(2.5, 1);
-      expect(out.smax).toBeCloseTo(18, 1);
-      expect(out.span).toBeCloseTo(8, 1);
+      expect(out.smin).toBeUndefined();
+      expect(out.smax).toBeUndefined();
+      expect(out.span).toBeUndefined();
       expect(out.coordSphere).toBe('galactic');
-      expect(out.showConstellation).toBe(false);
       expect(out.unit).toBe('pc');
       expect(out.focus).toEqual(view.focus);
       expect(out.mode).toBe('observe');
@@ -1079,15 +1079,15 @@ describe('url-state', () => {
     });
 
     it('encodes shorter than v1 would for the same scalar fields', () => {
-      // v2 quantises fov/mag/smin/smax/span to u8, so a state that
-      // exercises all five takes 5 bytes of payload vs 20 in v1. v3
-      // additionally shrinks the mask via LEB128: bits 3,4,10,11,12
-      // give mask 0x1c18 → 2 LEB128 bytes vs v2's fixed 3.
-      const blob = encodeBlob({
-        fov: 60, mag: 5, smin: 3, smax: 20, span: 10,
-      });
-      // 1 version + 2 mask + 5 u8 = 8 bytes → 11 base64url chars
-      expect(blob.length).toBeLessThanOrEqual(11);
+      // v2 quantised fov to u8 where v1 spent a float32, and v3 shrank the
+      // mask via LEB128. Four of the five scalars this once exercised
+      // (mag/smin/smax/span) are retired from the encoder, so it now runs
+      // over fov + the three u16 filter scalars: bits 3,5,6,7 → mask 0xe8,
+      // 2 LEB128 bytes; payload 1 + 2 + 2 + 2 = 7.
+      const blob = encodeBlob({ fov: 60, dmin: 100, dmax: 800, spect: 510 });
+      // 1 version + 2 mask + 7 payload = 10 bytes → 14 base64url chars,
+      // against v1's 1 + 4 mask + 16 float32 = 21 bytes / 28 chars.
+      expect(blob.length).toBeLessThanOrEqual(14);
     });
   });
 
@@ -1371,7 +1371,10 @@ describe('url-state', () => {
         version: 3,
         label: 'kitchen sink scalars + flags',
         blob: 'A-h_NGQAIAP-AQEpDyAMmg',
-        view: { fov: 62, dmin: 100, dmax: 800, spect: 510, preset: 'binoculars', con: 41, smin: 2.5, smax: 18, span: 8, showHud: true, showConstellation: false, showMilkyway: false, unit: 'pc' },
+        // The blob still carries the retired mw / constellation flag bits;
+        // the decoder no longer surfaces them. smin/smax/span DO still
+        // decode — FIELDS_V3 is frozen, and its specs are unchanged.
+        view: { fov: 62, dmin: 100, dmax: 800, spect: 510, preset: 'binoculars', con: 41, smin: 2.5, smax: 18, span: 8, showHud: true, unit: 'pc' },
       },
       {
         version: 2,
