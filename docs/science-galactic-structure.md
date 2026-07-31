@@ -28,6 +28,13 @@ Implementation details: see `src/client/galactic/README.md`.
 
 ## Milky Way density profiles
 
+Integrated properties and the thin/thick/halo structural parameters come
+from **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
+(DOI 10.1146/annurev-astro-081915-023441); the sightline surface
+brightnesses the model is checked against come from **Leinert et al. 1998**,
+*A&AS* 127, 1 (DOI 10.1051/aas:1998105) Table 24. See `SCIENCE.md`
+§ Data sources for the values and their caveats.
+
 The volumetric Milky Way layer raymarches through two proxy meshes —
 a disc and a bulge — and accumulates emission along the camera→fragment
 ray. The density at each step is:
@@ -99,6 +106,15 @@ Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 `src/client/milkyway/milkyway.frag.glsl` (volumetric); see
 `src/client/star-pipeline/extinction/README.md` + the shelved particle layer and
 `src/client/milkyway/README.md`.
+
+Sources for the volumetric path: **Drimmel & Spergel 2001**, *ApJ* 556, 181
+(DOI 10.1086/321556) for the thin-disc dust distribution; **Schlegel,
+Finkbeiner & Davis 1998**, *ApJ* 500, 525 (DOI 10.1086/305772) for the
+0.15 mag/kpc local rate the normalisation is anchored to; **Cardelli,
+Clayton & Mathis 1989**, *ApJ* 345, 245 (DOI 10.1086/167900) for the
+per-channel reddening multipliers. The shipped 0.45 global strength takes
+the effective rate to 0.068 mag/kpc, 2.2x below that anchor, and is the one
+un-derived number left in this chain — `stellata-xypg.29` owns it.
 
 
 ## Constellation stick figures
