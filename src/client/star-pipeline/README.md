@@ -339,7 +339,10 @@ both has shrunk. The blob was never physics.
 
 `kDensity` is the instrument's own half of K — a crowding term, 1 for the
 unaided eye, since a deeper limit needs a smaller footprint or a dense
-field washes into a solid sheet. `kMultiplier` is the debug slider.
+field washes into a solid sheet. `kMultiplier` is the panel's "Star size
+exaggeration" slider — the only user-facing footprint control, and
+deliberately the only one (`../filters/README.md` § The multiplier is the
+ONLY footprint control).
 
 The conversion divides by viewport **height** — the axis `camera.fov`
 maps to, and the axis `Ω_px` and `physSize` already project through. The

@@ -25,8 +25,8 @@ registry only describes what to display.
 | `M` | Toggle chart mode (gated on `cameraMode === 'observe'`; auto-clears on observe→navigate) |
 | `V` | Cycle detail level: physical → representational → all (declutter cycle; `../scene/README.md`) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
-| `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
-| `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, EV trim, exaggeration) |
+| `C` | Open the Constellation picker. A plain single press — the double-tap `showConstellation` toggle went with the master toggle, so there is no deferral window on this key |
+| `R` | Reset Camera-section sliders (FOV, EV trim, exaggeration) |
 | `T` | Toggle the time scrubber (`../solar-system/time/time-scrubber-widget.ts`) |
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
@@ -120,14 +120,17 @@ The shared `bindRelocateModal` helper closes on:
 
 ### Reset (R) scope
 
-R resets only the sliders under the panel's Camera section — star size
-min/max, dynamic range, FOV, EV trim, exaggeration — by calling the
-same APIs that the per-row reset link buttons use:
-`clearSizeOverrides(['sizeMin','sizeMax'])`, `clearSizeOverrides(['sizeSpan'])`,
-`setCameraFov(DEFAULT_FOV)`, `setEv(0)`,
+R resets only the sliders under the panel's Camera section — FOV, EV trim,
+exaggeration — by calling the same APIs that the per-row reset link buttons
+use: `setCameraFov(DEFAULT_FOV)`, `setEv(0)`,
 `setStarKMultiplier(getStarKMultiplierDefault())`. Instrument / focus /
 overlays / camera position are deliberately *not* touched — those are user
 choices, not "default view" state.
+
+The star-size and "Dynamic range" resets are gone with their sliders
+(`../filters/README.md` § The multiplier is the ONLY footprint control);
+`sizeMin`/`sizeMax` are derived, so there is nothing to reset them *to*
+that they are not already at.
 
 ## Per-group collapse in the settings panel
 
@@ -156,10 +159,16 @@ inline `style="margin-top: …"` attributes that had already drifted (one row
 was 10px).
 
 **Which children start a block cannot be inferred from the element type** —
-the Camera section has `.sub-label-row`s ("Dynamic range") that deliberately
-sit tight *inside* the star-size block, sharing its readout. So a block start
-is marked, not derived, and a fully automatic per-child rule would need a
-spacing scale that distinguishes the two cases.
+a `.sub-label-row` can either open a block or sit tight *inside* one,
+sharing its readout, and both shapes have shipped in the Camera section. So
+a block start is marked, not derived, and a fully automatic per-child rule
+would need a spacing scale that distinguishes the two cases.
+
+Corollary when you delete a control: `.group-block` supplies the gap
+*before* an element, so removing the first child of a section can strand
+the 12px on what is now the top row, or drop it from the element that
+inherited the block start. Both retirements in this area moved the class
+(`#con-picker` gained it, the Camera section's FOV row lost it).
 
 The rule is scoped `.group-body > .group-block` rather than bare
 `.group-block`: at (0,2,0) it outranks `.sub-label`'s own (0,1,0) `margin-top`
@@ -193,19 +202,21 @@ preserved-but-frozen, and the panel CSS leans on the standard
   faded label text).
 - `.checkbox-row input[type="checkbox"]:disabled + span` — opacity
   0.55 on the label.
-- `.con-typeahead input:disabled` + `#con-picker.disabled .sub-label`
-  — same fade on the typeahead row when the master toggle is off.
+- `.con-typeahead input:disabled` — the fade on the typeahead input. The
+  `#con-picker.disabled .sub-label` companion rule is **deleted**: it was
+  keyed to a class only the retired `showConstellation` toggle ever set, so
+  the constellation picker is now always enabled.
 
-Three specific freezes use this:
+Two specific freezes use this:
 
-- **Star chart mode** disables `#show-milkyway` (the Milky Way layer is
-  hidden under chart anyway, see
-  `src/client/chart-mode/README.md`); `f.showMilkyway` is preserved so
-  the toggle restores its prior state on chart-off.
-- **`showConstellation === false`** disables `#con-input` and the
-  surrounding `#con-picker` styling.
+- **Not in observe mode** disables `#show-chart` — chart mode is
+  observe-only, and `f.chart` is preserved across the freeze.
 - **Camera too far from Sol** disables the coordinate sphere's `equatorial`
   stop (`../galactic/coord-spheres/README.md`).
+
+The third — chart mode freezing the galactic-glow checkbox — went with that
+checkbox: the band is physical light on the declutter floor, not an
+overlay, so there is no longer a value to preserve across the flip.
 
 **Put the explanatory `title` on the row, not the disabled control.** Both
 `#show-chart-row` and `#coord-sphere-row` carry it on the wrapper: a disabled

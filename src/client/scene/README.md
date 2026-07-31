@@ -45,17 +45,20 @@ override (`setSceneElementVisible`) writes one cache slot directly and
 supersedes its floor until the next `applyDetailPreset` overwrites the
 whole set.
 
-**The preset is authoritative — overrides are within-scene only.** Four
-elements also carry a legacy user toggle that ANDs with the floor:
-`constellationFigures` and `constellationBoundaries`←`showConstellation`
-(`C` — one switch for every piece of constellation chrome), `milkyWayBand`/
-`milkyWayIsobar`←`showMilkyway`, `lgEmissionGlow`←`showLgEmission`.
-`applyDetailPreset` resets those toggles to `on` so a per-element hide
-does **not** outlive a detail-level change — pick a new mode and the
-scene's floors alone decide. A toggle can only *hide* a permitted element,
-never force one below its floor. The chart↔realistic recompute passes
-`resetOverrides:false`, so a style flip (and URL restore, which re-applies
-the shared toggle state afterward) preserves the user's toggles.
+**The preset is authoritative — overrides are within-scene only.** Exactly
+one element still carries a legacy user toggle that ANDs with the floor:
+`lgEmissionGlow`←`showLgEmission`. `applyDetailPreset` resets it to `on` so
+a per-element hide does **not** outlive a detail-level change — pick a new
+mode and the scene's floors alone decide. A toggle can only *hide* a
+permitted element, never force one below its floor. The chart↔realistic
+recompute passes `resetOverrides:false`, so a style flip (and URL restore,
+which re-applies the shared toggle state afterward) preserves it.
+
+The other three toggles are retired, and the floors are now the *only*
+gate on their elements: `constellationFigures` /
+`constellationBoundaries` (was `showConstellation`) and `milkyWayBand` /
+`milkyWayIsobar` (was `showMilkyway`). Both were a second answer to a
+question the declutter cycle already answered.
 
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
 behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the

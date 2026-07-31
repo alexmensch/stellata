@@ -193,10 +193,10 @@ artifact. Dropping the layer still honours the frame check — a B1875-framed
 artifact never reaches the GPU.
 
 **Gates.** A chart-only declutter element, `constellationBoundaries` at
-floor `{ realistic: 'never', chart: 'all' }` (`../scene/README.md`), which
-also puts it behind the `showConstellation` master toggle (`C`) with the
-figures and the Latin names — one switch for every piece of constellation
-chrome. The shell's registry entry ANDs that with the shared warp gate.
+floor `{ realistic: 'never', chart: 'all' }` (`../scene/README.md`). That
+floor is the whole visibility answer — the `showConstellation` master toggle
+that used to AND with it is retired. The shell's registry entry ANDs the
+floor with the shared warp gate.
 
 **Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
 with the coordinate sphere, at half its weight — and dotted where the grid

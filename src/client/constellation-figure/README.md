@@ -57,9 +57,9 @@ with the discs automatically and **camera motion adds no CPU work** — the
 per-frame refill below is a fixed cost independent of the camera.
 
 - `setFigures(constellations, conIndices, localPositions)` — rebuild geometry.
-  The shell calls it when the active set changes: the highlighted index, chart
-  ↔ navigate, or the `showConstellation` master toggle. `conIndices` is the
-  highlighted one, all 88 (chart), or empty (hidden).
+  The shell calls it when the active set changes: the highlighted index, or
+  chart ↔ navigate. `conIndices` is the highlighted one, all 88 (chart), or
+  empty (nothing highlighted).
 - `update(localPositions)` — re-copies vertex positions from the live buffer
   every drawn frame, so a vertex tracks its star through everything that
   rewrites `localPositions` with no separate signal: proper-motion epoch
@@ -75,8 +75,7 @@ Three inputs, all pushed (no per-frame recompute):
 
 - `setPermitted(on)` — the `constellationFigures` declutter floor
   (`representational`; `../scene/README.md`), pushed from the detail bind.
-- `setFigures(..., [])` — the `showConstellation` master toggle off, or nothing
-  highlighted outside chart mode.
+- `setFigures(..., [])` — nothing highlighted outside chart mode.
 - `setMonochrome(on)` — chart mode swaps the sky-blue stroke for ink and drops
   `depthTest` so the figure reads flat over the depth-disabled chart starfield.
 

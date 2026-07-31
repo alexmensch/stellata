@@ -64,8 +64,9 @@ path applies must not be (`../hdr/README.md` § Chrome).
    (vs. only the highlighted one) so the chart shows the full asterism
    network. Passive — the WebGL `constellation-figure/` layer is rebuilt
    by the shell off the same `chart && observe` predicate, not toggled
-   here. Subject to the master `showConstellation` toggle — when off, no
-   asterism lines or constellation Latin labels render.
+   here. Whether it draws at all is the declutter floor's call
+   (`constellationFigures` / `chartConstellationNames`) — there is no
+   master toggle over it.
 
 Exit reverses each step — `stop()` detaches the engine's bus
 subscriptions and drains its SVG pools while keeping the catalog-derived

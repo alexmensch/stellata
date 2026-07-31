@@ -3,7 +3,12 @@
 
 import * as THREE from 'three';
 import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
-import { DEFAULT_FILTER, instrumentLimitMag, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import {
+  DEFAULT_FILTER,
+  instrumentLimitMag,
+  sizeSpanOf,
+  STAR_RENDER_DEFAULTS,
+} from '../../filters/filter-state';
 import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { R_SUN_PC } from '../../util/astronomy-constants';
@@ -57,7 +62,7 @@ export function buildStarSharedUniforms(opts: StarSharedUniformsOptions) {
     uPixelRatio: { value: opts.pixelRatio },
     uSizeMin: { value: DEFAULT_FILTER.sizeMin },
     uSizeMax: { value: DEFAULT_FILTER.sizeMax },
-    uSizeSpan: { value: DEFAULT_FILTER.sizeSpan },
+    uSizeSpan: { value: sizeSpanOf(DEFAULT_FILTER) },
     uMonochrome: { value: 0 },
     // Chart-mode disc sizing. Pixel range + bright-end magnitude
     // reference; vertex shader uses these only when uMonochrome > 0.5.

@@ -8,8 +8,8 @@ import {
   arcsecPerPx,
   DEFAULT_FILTER,
   type FilterState,
-  INSTRUMENTS,
   type InstrumentName,
+  sizeSpanOf,
   starExaggerationK,
   starPxSizes,
   STAR_K_MULTIPLIER_DEFAULT,
@@ -84,17 +84,15 @@ export class FilterController {
   // current render style. Overwriting the whole set clears any per-element
   // override a prior setSceneElementVisible left in the cache.
   //
-  // The preset is authoritative, so it also clears the per-element user
-  // toggles (`C` constellations, mw band, lg emission) that AND with the
-  // floors — a within-scene hide must not outlive the mode change. An
-  // element below its floor stays hidden regardless. `resetOverrides:false`
-  // is the render-style recompute (chart↔realistic) preserving those
-  // toggles across the style flip and through URL restore.
+  // The preset is authoritative, so it also clears the one per-element user
+  // toggle left that ANDs with the floors (lg emission) — a within-scene
+  // hide must not outlive the mode change. An element below its floor stays
+  // hidden regardless. `resetOverrides:false` is the render-style recompute
+  // (chart↔realistic) preserving that toggle across the style flip and
+  // through URL restore.
   applyDetailPreset(level: DetailLevel, resetOverrides = true): void {
     this.filter.detailLevel = level;
     if (resetOverrides) {
-      this.filter.showConstellation = true;
-      this.filter.showMilkyway = true;
       this.filter.showLgEmission = true;
     }
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
@@ -121,40 +119,30 @@ export class FilterController {
     u.uSpectMask.value = this.filter.spectMask;
     u.uSizeMin.value = this.filter.sizeMin;
     u.uSizeMax.value = this.filter.sizeMax;
-    u.uSizeSpan.value = this.filter.sizeSpan;
+    u.uSizeSpan.value = sizeSpanOf(this.filter);
     this.deps.onFilterApplied(this.filter);
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }
 
-  // Switch observing instrument. Always sets instrument + sizeSpan;
-  // sizeMin/Max only if their override flags are false.
+  // Switch observing instrument. The footprint window rides the record,
+  // so `setFilter`'s uniform write picks it up from the new instrument.
   setInstrument(name: InstrumentName): void {
-    const patch: Partial<FilterState> = { instrument: name };
-    if (!this.filter.sizeSpanOverridden) patch.sizeSpan = INSTRUMENTS[name].sizeSpan;
     const sizes = this.computeStarPxSizes(name);
-    if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
-    if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
-    this.setFilter(patch);
+    this.setFilter({
+      instrument: name,
+      sizeMin: sizes.sizeMinPx,
+      sizeMax: sizes.sizeMaxPx,
+    });
   }
 
-  // Recompute non-overridden pixel sizes from the instrument's angular
-  // targets. Called on viewport resize, FOV change, and at construction —
-  // only touches sizeMin/Max (the plate-scale-dependent fields), not
-  // sizeSpan.
+  // Re-derive the pixel sizes from the instrument's angular targets at the
+  // live plate scale. Called on viewport resize, FOV change, K-multiplier
+  // change, and at construction. `starPxSizes` already floors sizeMax at
+  // sizeMin, so the pair cannot invert.
   recomputeStarPxSizes(): void {
     const sizes = this.computeStarPxSizes(this.filter.instrument);
-    const patch: Partial<FilterState> = {};
-    if (!this.filter.sizeMinOverridden) patch.sizeMin = sizes.sizeMinPx;
-    if (!this.filter.sizeMaxOverridden) patch.sizeMax = sizes.sizeMaxPx;
-    // Post-patch consistency: the effective max must stay >= effective min.
-    // Both fields can be user-overridden independently; at low exaggeration K
-    // a recomputed max can fall below a user's min override, which would
-    // otherwise leave the filter in an inverted state.
-    const newMin = patch.sizeMin ?? this.filter.sizeMin;
-    const newMax = patch.sizeMax ?? this.filter.sizeMax;
-    if (newMax < newMin) patch.sizeMax = newMin;
-    if (Object.keys(patch).length > 0) this.setFilter(patch);
+    this.setFilter({ sizeMin: sizes.sizeMinPx, sizeMax: sizes.sizeMaxPx });
   }
 
   private computeStarPxSizes(name: InstrumentName) {
@@ -163,9 +151,10 @@ export class FilterController {
 
   // Camera FOV setter. Updates the projection matrix, mirrors the new FOV
   // into uFovYRad (drives the angular-diameter shader formula), recomputes
-  // the focused star's orbit floor (which depends on FOV), rebases
-  // non-overridden pixel sizes (arcsec/px depends on FOV), and fires a
-  // state change so URL sync picks up the new value.
+  // the focused star's orbit floor (which depends on FOV), and rebases the
+  // derived pixel sizes (arcsec/px depends on FOV). The recompute runs
+  // last: its `setFilter` is what emits filter + state, so URL sync sees
+  // the new FOV already mirrored.
   setCameraFov(fov: number): void {
     if (this.deps.camera.fov === fov) return;
     this.deps.camera.fov = fov;
@@ -173,21 +162,15 @@ export class FilterController {
     this.deps.uniforms.uFovYRad.value = (fov * Math.PI) / 180;
     this.deps.refreshOrbitFloor();
     this.recomputeStarPxSizes();
-    this.deps.bus.emit('filter', this.filter);
-    this.deps.bus.emit('state');
   }
   getCameraFov(): number { return this.deps.camera.fov; }
 
-  // Multiplier on the plate-scale-derived exaggeration K (debug panel).
-  // Writes new pixel sizes into any non-overridden field so the change
-  // shows live.
+  // Multiplier on the plate-scale-derived exaggeration K — the panel's
+  // "Star size exaggeration" slider. Re-derives the pixel sizes so the
+  // change shows live.
   setStarKMultiplier(m: number): void {
     patchStarKMultiplier(m);
     this.recomputeStarPxSizes();
-    // Fire even when recompute patched nothing (e.g. sizes overridden) so
-    // the debug readout reflects the new multiplier.
-    this.deps.bus.emit('filter', this.filter);
-    this.deps.bus.emit('state');
   }
   getStarKMultiplier(): number { return readStarKMultiplier(); }
   getStarKMultiplierDefault(): number { return STAR_K_MULTIPLIER_DEFAULT; }
@@ -236,26 +219,5 @@ export class FilterController {
       lumBiasMax: u.uLumBiasMax.value,
       sizeKnee: u.uSizeKnee.value,
     };
-  }
-
-  // Clear override flags for the named fields and write the instrument's
-  // derived value into them. Used by the size and span reset buttons.
-  clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>): void {
-    const inst = INSTRUMENTS[this.filter.instrument];
-    const sizes = this.computeStarPxSizes(this.filter.instrument);
-    const patch: Partial<FilterState> = {};
-    for (const f of fields) {
-      if (f === 'sizeMin') {
-        patch.sizeMinOverridden = false;
-        patch.sizeMin = sizes.sizeMinPx;
-      } else if (f === 'sizeMax') {
-        patch.sizeMaxOverridden = false;
-        patch.sizeMax = sizes.sizeMaxPx;
-      } else if (f === 'sizeSpan') {
-        patch.sizeSpanOverridden = false;
-        patch.sizeSpan = inst.sizeSpan;
-      }
-    }
-    this.setFilter(patch);
   }
 }

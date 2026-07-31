@@ -19,7 +19,9 @@ export interface Instrument {
   /** Crowding half of the exaggeration K, NOT the shipped 12/9/5 —
    *  the plate-scale half is derived per frame by `starPxSizes`. */
   kDensity: number;
-  /** Footprint dynamic range, magnitudes. */
+  /** Magnitude window the footprint curve grows across. NOT display
+   *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/README.md`
+   *  § Operator). */
   sizeSpan: number;
   /** No consumer yet — § 3.4's two remaining preset axes. */
   skyBackgroundMagArcsec2: number;
@@ -62,30 +64,31 @@ export function limitMagOf(f: Pick<FilterState, 'instrument'>): number {
   return instrumentLimitMag(f.instrument);
 }
 
+/** Sibling of `limitMagOf` for the footprint window. Derived from the
+ *  instrument on every read rather than cached on `FilterState`, so no
+ *  second authority for it can exist. */
+export function sizeSpanOf(f: Pick<FilterState, 'instrument'>): number {
+  return INSTRUMENTS[f.instrument].sizeSpan;
+}
+
 export interface FilterState {
   minDistSol: number;
   maxDistSol: number;
   spectMask: number;
-  highlightCon: number; // -1 = none; consumed by overlay, not shader
-  sizeMin: number;      // CSS pixels — set from the instrument's angular
-  sizeMax: number;      // size at the current viewport, or by manual slider.
-  sizeSpan: number;
+  // Which constellation figure is picked; -1 = none. Consumed by the
+  // overlay, not the shader. WHETHER constellation chrome draws at all is
+  // the declutter floor's call (`../scene/scene-elements.ts`), not this.
+  highlightCon: number;
+  // CSS pixels, both DERIVED — the instrument's angular sizes projected
+  // through the live plate scale by `starPxSizes`. Cached here because
+  // they are written to uniforms and read by the debug HUD; there is no
+  // authoring path, so `recomputeStarPxSizes` is their only writer.
+  sizeMin: number;
+  sizeMax: number;
   // The observing instrument. Drives the limiting magnitude, the
-  // exposure anchor, the footprint window, and the recompute of
-  // non-overridden size fields on viewport resize.
+  // exposure anchor, the footprint window, and the recompute of the
+  // derived size fields on viewport resize.
   instrument: InstrumentName;
-  // Manual-override flags for the size sliders. Set by slider input,
-  // cleared by the corresponding reset button (which also re-applies the
-  // instrument's derived value). When false, the derivation writes its
-  // computed pixel value into the field on each viewport resize.
-  sizeMinOverridden: boolean;
-  sizeMaxOverridden: boolean;
-  sizeSpanOverridden: boolean;
-  // Master visibility for constellation stick figures. When false the
-  // overlay draws nothing regardless of `highlightCon` (which is preserved
-  // so re-enabling restores the prior selection); the picker UI is also
-  // disabled and the C shortcut is suppressed by their own gates.
-  showConstellation: boolean;
   // Which coordinate sphere is up (grid lines on a 50 kpc sphere) — galactic
   // l/b, equatorial RA/Dec, or none. Mutually exclusive by construction; the
   // equatorial one additionally self-hides away from Sol. The galactic disc is
@@ -94,9 +97,6 @@ export interface FilterState {
   // HUD: Sol/GC locator arrows in both navigate + observe modes, plus the
   // OBSERVE-mode screen-centred ring. Future HUD widgets hang off this flag.
   showHud: boolean;
-  // Milky Way analytic background. Default-on; chart mode switches to
-  // outline-only rendering on this same toggle.
-  showMilkyway: boolean;
   // Local Group volumetric emission. Default-on; chart mode hides the
   // layer independently of this toggle.
   showLgEmission: boolean;
@@ -124,8 +124,8 @@ export const STAR_PHYSICS_FACTOR = 1.84;
  *  § Stellar perception model), not derived. */
 export const TARGET_PX = 2.592;
 
-// Debug-panel multiplier on the derived exaggeration K. 1 = the
-// plate-scale derivation untouched.
+// The panel's "Star size exaggeration" multiplier on the derived
+// exaggeration K. 1 = the plate-scale derivation untouched.
 export const STAR_K_MULTIPLIER_DEFAULT = 1;
 
 /** Multiplier slider bounds, kept symmetric about
@@ -187,15 +187,9 @@ export const DEFAULT_FILTER: FilterState = {
   // on every viewport resize.
   sizeMin: 1.8,
   sizeMax: 7.0,
-  sizeSpan: INSTRUMENTS[DEFAULT_INSTRUMENT].sizeSpan,
   instrument: DEFAULT_INSTRUMENT,
-  sizeMinOverridden: false,
-  sizeMaxOverridden: false,
-  sizeSpanOverridden: false,
-  showConstellation: true,
   coordSphere: 'none',
   showHud: false,
-  showMilkyway: true,
   showLgEmission: true,
   chart: false,
   detailLevel: 'all',

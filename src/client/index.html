@@ -546,10 +546,6 @@
               <button class="toggle-btn" data-unit="pc" type="button">parsecs</button>
               <button class="toggle-btn on" data-unit="ly" type="button">lightyears</button>
             </div>
-            <label class="checkbox-row group-block">
-              <input id="show-hud" type="checkbox" />
-              <span>Head up display (HUD)</span>
-            </label>
           </div>
         </section>
 
@@ -595,28 +591,6 @@
               </span>
             </div>
 
-            <label class="checkbox-row group-block">
-              <input id="show-constellation" type="checkbox" checked />
-              <span>Show constellations</span>
-            </label>
-            <div id="con-picker">
-              <label class="sub-label">Constellation</label>
-              <div class="con-typeahead" id="con-typeahead">
-                <input
-                  id="con-input"
-                  type="search"
-                  placeholder="Search constellation…"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <ul id="con-results" class="search-results" hidden></ul>
-              </div>
-            </div>
-
-            <label class="checkbox-row group-block">
-              <input id="show-milkyway" type="checkbox" checked />
-              <span>Galactic background glow</span>
-            </label>
             <!-- Tooltip on the row, not the equatorial button: that button is
                  the one that gets disabled, and a disabled control's own title
                  doesn't reliably surface. Same reason as #show-chart-row. -->
@@ -634,6 +608,26 @@
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="equatorial" type="button">equatorial</button>
               </span>
             </div>
+
+            <label class="checkbox-row group-block">
+              <input id="show-hud" type="checkbox" />
+              <span>Head up display (HUD)</span>
+            </label>
+
+            <div id="con-picker" class="group-block">
+              <label class="sub-label">Constellation</label>
+              <div class="con-typeahead" id="con-typeahead">
+                <input
+                  id="con-input"
+                  type="search"
+                  placeholder="Search constellation…"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <ul id="con-results" class="search-results" hidden></ul>
+              </div>
+            </div>
+
             <label class="checkbox-row group-block" id="show-chart-row" title="Available in observe mode">
               <input id="show-chart" type="checkbox" disabled />
               <span>Star chart mode</span>
@@ -648,25 +642,6 @@
           </header>
           <div class="group-body">
             <div class="sub-label-row">
-              <label class="sub-label">Star size <span class="unit">px</span></label>
-              <span class="row-actions">
-                <button id="size-reset" class="link-btn" type="button">reset</button>
-              </span>
-            </div>
-            <label class="sub-label">Min</label>
-            <input id="size-min" type="range" min="1" max="6" step="0.1" value="2.0" />
-            <label class="sub-label">Max</label>
-            <input id="size-max" type="range" min="2" max="32" step="0.5" value="24" />
-            <div class="sub-label-row">
-              <label class="sub-label">Dynamic range <span class="unit">mag</span></label>
-              <span class="row-actions">
-                <button id="span-reset" class="link-btn" type="button">reset</button>
-              </span>
-            </div>
-            <input id="size-span" type="range" min="2" max="20" step="0.5" value="6" />
-            <div class="readout" id="size-readout">2.0 – 24.0px · span 6mag</div>
-
-            <div class="sub-label-row group-block">
               <label class="sub-label">Field of view <span class="unit">°</span></label>
               <span class="row-actions">
                 <button id="fov-reset" class="link-btn" type="button">reset</button>
