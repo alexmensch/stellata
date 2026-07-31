@@ -57,6 +57,12 @@ export function extractReleaseNotes(body: string): string | null {
   const end = rest.findIndex((line) => line.startsWith('## '));
   const section = (end === -1 ? rest : rest.slice(0, end)).join('\n');
 
-  const stripped = section.replace(/<!--[\s\S]*?-->/g, '');
+  let stripped = section;
+  let previous: string;
+  do {
+    previous = stripped;
+    stripped = stripped.replace(/<!--[\s\S]*?-->/g, '');
+  } while (stripped !== previous);
+
   return /\S/.test(stripped) ? stripped : null;
 }
