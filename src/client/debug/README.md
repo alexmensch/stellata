@@ -223,9 +223,9 @@ frame.
 
 Cache `minAppMag` per constellation and walk only when:
 
-- No name is drawn at all — `showConstellation` off (`C`) or the
-  declutter floor withholding `chartConstellationNames` — in which
-  case the walk is skipped outright, not cached.
+- No name is drawn at all — the declutter floor withholding
+  `chartConstellationNames` — in which case the walk is skipped
+  outright, not cached.
 - Otherwise: camera moved more than
   `√BRIGHTEST_RECOMPUTE_DIST_SQ ≈ 0.5 pc` since the last walk, or
   the filter version bumped (via `stellata.on('filter', …)`).
