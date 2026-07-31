@@ -7,10 +7,18 @@ file's inline comments.
 
 ## `deploy.yml`
 
-Runs on push to `main`. Builds + `wrangler deploy`s, then extracts the
-`## Release notes` block from the merged PR's body and posts it to the
-GitHub release for the version this push ships. Replaces the flat
-auto-generated release notes with the PR-author-written block.
+Runs on push to `main`. Builds + `wrangler deploy`s **once, at HEAD**,
+then hands off to `scripts/release/cut-releases.ts`, which cuts a tag
+and a GitHub release for **every** commit in the pushed range whose
+`package.json#version` differs from its predecessor — each carrying the
+`## Release notes` block from its own PR body, in place of the flat
+auto-generated notes.
+
+One push can therefore ship several releases: merging a stack lands N
+PRs as N commits in a single push event. The version comparison that
+gates the deploy runs against `github.event.before`, not `HEAD~1`, so a
+stack whose *tip* commit doesn't bump still deploys and still releases
+its earlier bumps. Rationale and invariants: `scripts/release/README.md`.
 
 The PR-body extraction is the reason `release-notes-guard.yml` exists
 (below) — a missing block would land an empty release page.
