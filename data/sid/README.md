@@ -34,8 +34,11 @@ ledger-head.json        { rows, max_sid, sha256 } snapshot of the
                         structurally by the guard instead.
 sameas-overrides.tsv    Curated same-as edges (a → b → note):
                         cross-catalogue merges, synth re-subdivision
-                        bridges (docs/sid.md § 5), slug-rename bridges.
-                        Regular git, hand-edited.
+                        bridges (docs/sid.md § 5), slug-rename bridges,
+                        and designation-renumbering bridges (CNS5 moving
+                        Gl 157.1 into the GJ 9xxx block) — the shape where
+                        a record's canonical key is renamed rather than the
+                        object changing. Regular git, hand-edited.
 sol-objects.tsv         The sol: namespace mint list (key → kind):
                         sun + eight majors + Pluto + the 18 major moons
                         (moons reuse kind=planet) + the five deep-space

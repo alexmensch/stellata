@@ -178,15 +178,13 @@ corroboration that the B1875 epoch and the rotation are both right. A
 wrong epoch moves the implied date by centuries.
 
 This is why positional membership and the designation's constellation are
-carried as separate fields (byte 34 and search-index `dc`). The split
-survives, but its AT-HYG-sourced half did not: with the editorial `con` cell
-out of the build, ρ Aql has no designation constellation and its aliases do
-build against Delphinus today. That is a REGRESSION, not a policy — the
-designation is fixed by nomenclature and never migrates with the star —
-knowingly shipped pending `stellata-3bsf.11`. See `scripts/catalog/README.md`
-§ Search index for the split and
-`scripts/catalog/parse/README.md` § Positional constellation membership for
-what still supplies `dc`.
+carried as separate fields (byte 34 and search-index `dc`). Both halves are
+live: ρ Aql renders and searches as ρ Aql / 67 Aql off `dc` while byte 34 puts
+it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index keyed
+on the record's own HD/HIP — a designation is fixed by nomenclature and never
+migrates with the star, so nothing positional may supply it
+(`scripts/catalog/classic-ids/README.md` § The designation constellation). See
+`scripts/catalog/README.md` § Search index for the wire split.
 
 ## Agreement with AT-HYG
 

@@ -186,9 +186,28 @@ after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 
 **Precedence:** mechanical overlay wins over spine designations on
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
-point of the swap — with every flip enumerated in the parity ledger
-and a curated override file for cases where review finds the CDS join
-wrong (same pattern as `wds_xids_overrides.tsv`).
+point of the swap; Izar is the case that settles it (AT-HYG says HR 5505,
+IV/27A and V/50 say 5506, and ε Boo IS HR 5506). Every flip is enumerated in
+the parity ledger (`data/classic-ids/label_flips.tsv`, 719 rows: 133 flips,
+419 additions, 37 suppressions, 130 dropped extras) with a curated override
+file for cases where review finds the CDS join wrong (same pattern as
+`wds_xids_overrides.tsv`; empty today).
+
+**One mechanical exception, and it is an identity rule rather than a label
+one: the merge may not turn an unambiguous spine designation into an ambiguous
+one.** By the ambiguity policy above such a designation keys no ledger row, so
+attaching an identifier a DIFFERENT record already holds deletes a working SID
+key from both records and buys nothing — the star stays findable through the
+record that holds it. Withheld and counted, 37 cells (p Eridani's HIP 7751,
+Gl 277A's HIP 36626 which would otherwise go keyless).
+Where a flip RENAMES a record's canonical key rather than colliding — CNS5
+renumbering `Gl 157.1` to `GJ 9140` — the label flips and identity rides a
+`data/sid/sameas-overrides.tsv` bridge, per § 7.
+
+Record fields are single-valued and overlay cells are not, so the extra values
+of an ambiguous designation are enumerated as dropped labels rather than
+carried. Multi-valued identifiers are a wire + ledger change, not a merge
+rule.
 
 ## 5. Per-field cascades and rescue tiers
 
@@ -206,7 +225,8 @@ select per-field sourcing:
 | ci (B−V) | published Gaia-photometry relation → spine `ci` where BP−RP is absent |
 | spectral string | SIMBAD sp_type (in-tree, source_id-keyed) → spine `spect` |
 | radial velocity | Gaia DR3 `radial_velocity` (added to the astrometry-catalog pull schema) → spine `rv` |
-| constellation | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
+| constellation (position) | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
+| constellation (designation) | IV/27A `cst` by HD → by HIP → GCVS trailing abbreviation → positional |
 | proper / Bayer display | naming-authority ladder (`docs/star-naming.md`) |
 
 - **Bright tier** = rows the direction cascade already routes to
@@ -222,6 +242,16 @@ select per-field sourcing:
   contract here is the fallback (spine `ci`) and the acceptance
   mechanism (|Δci| distribution in the parity ledger), not the
   coefficients.
+- **The designation constellation is keyed on the DESIGNATION, not on
+  `gaia_source_id`.** A Bayer or Flamsteed name is fixed by nomenclature — it
+  predates the 1930 Delporte boundaries and does not migrate when proper motion
+  carries the star across one — so no positional or per-record editorial cell
+  may supply it. IV/27A keyed on the record's own HD/HIP is the source: a
+  designation → designation cross index asserts no binding to a Gaia source, so
+  it needs no binding gate and, unlike the label overlay, reaches the bright
+  tier Gaia saturation excludes (Fomalhaut). It covers 3,180 of the 3,303
+  Bayer/Flamsteed-bearing records against the source_id route's 2,474, with
+  zero disagreements. GCVS fills only what IV/27A leaves empty.
 - GCVS variability keys on HIP/HD exactly as today — the overlay
   supplies both.
 
@@ -244,7 +274,11 @@ test fixture:
 2. **Label parity.** Per-identifier coverage must not regress; every
    previously-named record keeps a name or is listed with a reason.
    Overlay-vs-spine designation flips are enumerated with disposition
-   (§ 4 precedence).
+   (§ 4 precedence) — `data/classic-ids/label_flips.tsv` is that ledger, and it
+   is the COMPLETE delta: the spine's designation multiset replayed through it
+   must equal the built catalogue's, which is the gate that keeps "every SID is
+   preserved by construction" checkable now that labels are no longer the
+   spine's verbatim.
 3. **Field parity.** |ΔV|, |Δabsmag|, |Δci| distributions pinned
    (p50/p99/max) once reviewed; spectral-string change count pinned.
 4. The dropped and merged lists must agree row-for-row with any SID

@@ -86,6 +86,12 @@ set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
 `build:catalog` path; it survives for `../export-astrometry-request.ts`
 and the classic-ID overlay's own gate.
 
+The classic-ID label merge is not an exception to this. It runs as a post-pass
+over the walk's output and rewrites LABELS (`hip`/`hd`/`hr`/`gl`/`flam`) — never
+`gaia_source_id`, and never before the direction / distance / V / spectral
+cascades have keyed on the spine's frozen `hip`
+(`../classic-ids/README.md` § The label merge).
+
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries `backfillPrimaryIdentifiers`
 wrote (ξ UMa / HD 98231, ξ Sco / HD 144069, HD 75632), plus ξ UMa B's
@@ -145,10 +151,18 @@ The spine is only worth freezing if it stands in for the build exactly, so
   `catalogRecordDesignations` walk (`../../sid/catalog-designations.ts`,
   the same one `sid:allocate` resolves against the ledger) over every
   non-`FLAG_BINARY_COMPANION_ONLY` record must tally identically to
-  `spineDesignations` over the committed TSV. That is what makes every SID
-  preserved by construction. Needs a built catalogue, so it runs in the
-  `build-catalog` job and locally.
+  `spineDesignations` over the committed TSV, **replayed through
+  `data/classic-ids/label_flips.tsv`**. Needs a built catalogue, so it runs in
+  the `build-catalog` job and locally.
 
-Both axes became tautological at the swap, which is the point: membership
-IS the spine, so the equalities hold by construction and any future change
-that breaks one has broken the membership term itself.
+The classic-ID label layer moves designations off the spine's inherited cells
+by design (`docs/catalog-driver.md` § 4), so the raw equality died with it. The
+committed review queue is the COMPLETE enumeration of that delta — flips,
+additions, suppressions and dropped extras — which is exactly why the gate
+replays it instead of relaxing: "every departure from the spine's designation
+set is accounted for" is the property that keeps every SID preserved by
+construction, and a queue that failed to list one would fail this gate.
+
+Membership itself stays tautological, which is the point: it IS the spine, so
+that equality holds by construction and any future change that breaks it has
+broken the membership term.
