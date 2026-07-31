@@ -1,0 +1,18 @@
+gaia_source_id	field	value
+# Curated exceptions to the label merge's mechanical rule (overlay wins on
+# disagreement, docs/catalog-driver.md § 4). One row per record per identifier;
+# an empty `value` keeps the spine's. `#` in the first column comments a line —
+# the header stays the first line, as every committed TSV's does.
+#
+# EMPTY BY DESIGN. Every one of today's 136 disagreements is either a real
+# AT-HYG cross-ID error the overlay corrects (Izar: AT-HYG's HR 5505 against
+# IV/27A + V/50's HR 5506, and ε Boo IS HR 5506) or a resolved close pair whose
+# two components the two catalogues letter oppositely — neither is the CDS join
+# being wrong, which is the only thing this file is for. The full enumeration
+# with dispositions is data/classic-ids/label_flips.tsv.
+#
+# Two shapes DO NOT belong here, because a label exception is the wrong tool:
+#   - an addition that would make another record's designation ambiguous is
+#     withheld mechanically by the collision guard (p Eridani, Gl 277A);
+#   - a Gliese renumbering (Gl 157.1 -> GJ 9140) is an identity bridge in
+#     data/sid/sameas-overrides.tsv, since both designations name the star.
