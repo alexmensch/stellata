@@ -2,6 +2,8 @@
 // decomposition, instance packing, flux ↔ magnitude inverse, and the
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
+import { relativeLuminance } from '../hdr/tonemap-pure';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import type { LgEmission, LgObject } from './local-group-loader';
 
 /** Population tints, seeded from the Milky Way palette (warm
@@ -9,6 +11,16 @@ import type { LgEmission, LgObject } from './local-group-loader';
  *  for discs). Per-object `emission.color` overrides. */
 export const SPHEROID_COLOR_RGB: [number, number, number] = [1.0, 0.9647, 0.9294];
 export const DISC_COLOR_RGB: [number, number, number] = [0.6706, 0.6588, 0.8745];
+
+/** Surface-brightness zero point of a raymarched column, mag/arcsec².
+ *
+ *  The solver normalises `density0` against zero-point-free flux
+ *  `F = 10^(−0.4·m_V)` (docs/science-local-group.md § Local Group
+ *  luminosity model), and Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a column
+ *  Σρ·ds IS flux per steradian, and the only conversion left is the
+ *  solid angle of one arcsec². Nothing here is tunable: the emission
+ *  scale is fixed the moment the solver runs. */
+export const LG_SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
 
 /** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
  *  disc pass marches denser: grazing rays run tens of kpc through an
@@ -112,10 +124,24 @@ function parseHexColor(hex: string): [number, number, number] | null {
   return [((v >> 16) & 0xff) / 255, ((v >> 8) & 0xff) / 255, (v & 0xff) / 255];
 }
 
+/** Tint divided by its own relative luminance, so it carries hue only.
+ *
+ *  The shader multiplies the scalar column by this per channel while the
+ *  solver normalised that column against total flux — an un-normalised
+ *  tint would therefore dim every object by its own luma (0.42 mag for
+ *  the disc lavender) and silently break the solved magnitudes. */
+export function lumaNormalisedTint(
+  rgb: readonly [number, number, number],
+): [number, number, number] {
+  const y = relativeLuminance(rgb as [number, number, number]);
+  if (!(y > 0)) return [1, 1, 1];
+  return [rgb[0] / y, rgb[1] / y, rgb[2] / y];
+}
+
 function tintFor(e: LgEmission, comp: EmissionComponent): [number, number, number] {
   const override = e.color ? parseHexColor(e.color) : null;
-  if (override) return override;
-  return comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB;
+  if (override) return lumaNormalisedTint(override);
+  return lumaNormalisedTint(comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB);
 }
 
 export interface EmissionInstanceCommon {
@@ -280,12 +306,18 @@ export function cpuRaymarchColumn(
   return accum;
 }
 
-/** Effective apparent magnitude of an integrated column — the shader's
- *  gate input, and (inverted) the calibration test's read-back path. */
-export function magFromIntensity(intensity: number, glowMagOffset: number): number {
-  return glowMagOffset - 2.5 * Math.log10(Math.max(intensity, 1e-12));
+/** Magnitude of an integrated flux number, and its inverse. `zeroPoint`
+ *  is 0 for a solid-angle-integrated flux (the calibration test's
+ *  read-back) and LG_SB_ZERO_POINT for a per-arcsec² column. */
+export function magFromIntensity(intensity: number, zeroPoint: number): number {
+  return zeroPoint - 2.5 * Math.log10(Math.max(intensity, 1e-12));
 }
 
-export function intensityFromMag(mag: number, glowMagOffset: number): number {
-  return Math.pow(10, (glowMagOffset - mag) / 2.5);
+export function intensityFromMag(mag: number, zeroPoint: number): number {
+  return Math.pow(10, (zeroPoint - mag) / 2.5);
+}
+
+/** Surface brightness a raymarched column carries, mag/arcsec². */
+export function columnSurfaceBrightness(column: number): number {
+  return magFromIntensity(column, LG_SB_ZERO_POINT);
 }

@@ -1911,10 +1911,8 @@ export class Stellata implements FrameAnchor {
     this.localGroupLayer.setMonochrome(this.monochrome);
     this.scene.add(this.localGroupLayer.group);
     if (!LG_EMISSION_SHELVED) {
-      const u = this.starPipeline.discMaterial.uniforms;
       this.lgEmission = new LocalGroupEmission(catalog.objects, {
-        uLimitMag: u.uLimitMag as { value: number },
-        uSizeSpan: u.uSizeSpan as { value: number },
+        hdr: this.hdr.emitterUniforms,
       });
       this.lgEmission.setChartHidden(this.monochrome);
       this.applyLgEmissionEnabled();

@@ -1,4 +1,4 @@
-import { type DebugSection, logScale, makeSlider } from '../debug/debug-panel';
+import { type DebugSection, makeSlider } from '../debug/debug-panel';
 import {
   DEFAULT_TOP_N,
   DEFAULT_MIN_PIXEL_SIZE_PX,
@@ -7,10 +7,9 @@ import {
   getMinPixelSize, setMinPixelSize,
   getMwInsideDiscPc, setMwInsideDiscPc,
 } from './local-group';
-import type { LocalGroupEmission } from './local-group-emission';
 
-// Dev-only tuning section for the Local Group layers: the emission
-// pair (brightness / glowMagOffset) plus the three label-ranking knobs:
+// Dev-only tuning section for the Local Group layers — the three
+// label-ranking knobs:
 //
 //   • top N        — max labels visible at once (default 5).
 //   • minPxSize    — apparent-size floor; sub-pixel objects can't earn
@@ -19,6 +18,9 @@ import type { LocalGroupEmission } from './local-group-emission';
 //                    suppressed. This is the *only* per-object policy
 //                    exception (Sol sits inside the MW disc; labelling
 //                    extragalactic objects from inside is clutter).
+//
+// The emission layer has no knobs: it emits physical luminance, so the
+// exposure model is its only lever (README § Emission layer).
 //
 // Section title "Deep field" is intentionally broader than "Local
 // Group" so future LG-layer knobs (ring opacity, sample density, the
@@ -38,38 +40,8 @@ const MW_INSIDE_MIN = 0;
 const MW_INSIDE_MAX = 20_000;
 const MW_INSIDE_STEP = 250;
 
-const { toSlider: brightnessToSlider, fromSlider: sliderToBrightness } = logScale(-7, 1);
-
-export function buildDeepFieldSection(
-  getEmission: () => LocalGroupEmission | null = () => null,
-): DebugSection {
+export function buildDeepFieldSection(): DebugSection {
   const body = document.createElement('div');
-
-  // Emission knobs — the LG glow's analogue of the Milky Way section's
-  // brightness / glowMagOffset pair; per-object flux ratios stay pinned
-  // by the solved density0 values, so these are the ONLY global levers.
-  const emission = getEmission();
-  if (emission) {
-    const v = emission.getValues();
-    body.appendChild(makeSlider({
-      label: 'emission brightness',
-      min: 0,
-      max: 1,
-      step: 0.001,
-      initial: brightnessToSlider(v.brightness),
-      format: (s) => sliderToBrightness(s).toExponential(2),
-      onChange: (s) => emission.setBrightness(sliderToBrightness(s)),
-    }));
-    body.appendChild(makeSlider({
-      label: 'emission glowMagOffset',
-      min: 5,
-      max: 25,
-      step: 0.1,
-      initial: v.glowMagOffset,
-      format: (x) => x.toFixed(1),
-      onChange: (x) => emission.setGlowMagOffset(x),
-    }));
-  }
 
   body.appendChild(makeSlider({
     label: 'top N labels',

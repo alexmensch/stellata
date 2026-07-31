@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import type { LgEmission, LgObject } from './local-group-loader';
 import {
@@ -8,8 +10,11 @@ import {
   cpuSersicNu,
   emissionComponents,
   emissionStepsFor,
+  columnSurfaceBrightness,
   intensityFromMag,
+  lumaNormalisedTint,
   magFromIntensity,
+  LG_SB_ZERO_POINT,
   DISC_COLOR_RGB,
   EMISSION_STEPS_DISC,
   EMISSION_STEPS_SERSIC,
@@ -18,6 +23,8 @@ import {
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
+import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
+import { relativeLuminance } from '../hdr/tonemap-pure';
 
 const SMC_EMISSION: LgEmission = {
   family: 'sersic',
@@ -163,21 +170,22 @@ describe('buildEmissionInstanceData', () => {
 
   it('applies family default tints and per-object color overrides', () => {
     expect(Array.from(sersic.color.slice(0, 3))).toEqual(
-      SPHEROID_COLOR_RGB.map((v) => Math.fround(v)),
+      lumaNormalisedTint(SPHEROID_COLOR_RGB).map((v) => Math.fround(v)),
     );
     // The bulge component takes the spheroid population tint, not the
     // host disc's.
     expect(Array.from(sersic.color.slice(3, 6))).toEqual(
-      SPHEROID_COLOR_RGB.map((v) => Math.fround(v)),
+      lumaNormalisedTint(SPHEROID_COLOR_RGB).map((v) => Math.fround(v)),
     );
     expect(Array.from(disc.color.slice(0, 3))).toEqual(
-      DISC_COLOR_RGB.map((v) => Math.fround(v)),
+      lumaNormalisedTint(DISC_COLOR_RGB).map((v) => Math.fround(v)),
     );
     const tinted = buildEmissionInstanceData([
       lgObject('X', { ...SMC_EMISSION, color: '#ff8000' }, [0, 0, 1000]),
     ]);
-    expect(tinted.sersic.color[0]).toBe(1);
-    expect(tinted.sersic.color[1]).toBeCloseTo(128 / 255, 6);
+    const expected = lumaNormalisedTint([1, 128 / 255, 0]);
+    expect(tinted.sersic.color[0]).toBeCloseTo(expected[0], 5);
+    expect(tinted.sersic.color[1]).toBeCloseTo(expected[1], 5);
     expect(tinted.sersic.color[2]).toBe(0);
   });
 });
@@ -258,9 +266,61 @@ describe('cpuRaymarchColumn — the shader mirror', () => {
 });
 
 describe('magFromIntensity / intensityFromMag', () => {
-  it('round-trips through the gate convention', () => {
+  it('round-trips through the zero-point convention', () => {
     expect(intensityFromMag(magFromIntensity(1234.5, 15), 15)).toBeCloseTo(1234.5, 6);
     expect(magFromIntensity(1, 15)).toBe(15);
+  });
+});
+
+describe('surface-brightness zero point', () => {
+  // A column is flux per steradian, so the zero point is the magnitude of
+  // one arcsec² of solid angle. Derived, never tuned.
+  it('is the solid angle of one arcsec²', () => {
+    expect(LG_SB_ZERO_POINT).toBeCloseTo(26.5721256659, 9);
+  });
+
+  // Nothing at compile time ties the shader's copy to this one.
+  it('the fragment shader declares the same value', () => {
+    const frag = readFileSync(
+      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
+      'utf8',
+    );
+    const m = frag.match(/const float SB_ZERO_POINT = ([\d.]+);/);
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBeCloseTo(LG_SB_ZERO_POINT, 9);
+  });
+
+  it('a unit column reads at the zero point', () => {
+    expect(columnSurfaceBrightness(1)).toBeCloseTo(LG_SB_ZERO_POINT, 12);
+  });
+
+  it('M31 disc centre lands on Freeman\'s law once de-projected', () => {
+    // Column through the shipped M31 disc at R = 0, face-on: ρ₀ · 2·z_d.
+    const faceOn = M31_EMISSION.density0 * 2 * M31_EMISSION.zdPc!;
+    expect(columnSurfaceBrightness(faceOn)).toBeCloseTo(21.43, 2);
+  });
+});
+
+describe('lumaNormalisedTint', () => {
+  it('leaves the tint at unit relative luminance so flux stays solved', () => {
+    for (const rgb of [SPHEROID_COLOR_RGB, DISC_COLOR_RGB, [1, 0.5, 0] as const]) {
+      expect(relativeLuminance(lumaNormalisedTint(rgb))).toBeCloseTo(1, 12);
+    }
+  });
+
+  it('preserves chromaticity — only the scale moves', () => {
+    const t = lumaNormalisedTint(DISC_COLOR_RGB);
+    expect(t[0] / t[1]).toBeCloseTo(DISC_COLOR_RGB[0] / DISC_COLOR_RGB[1], 12);
+    expect(t[2] / t[1]).toBeCloseTo(DISC_COLOR_RGB[2] / DISC_COLOR_RGB[1], 12);
+  });
+
+  it('the disc lavender would otherwise dim every disc by 0.42 mag', () => {
+    const lost = -2.5 * Math.log10(relativeLuminance(DISC_COLOR_RGB));
+    expect(lost).toBeCloseTo(0.42, 2);
+  });
+
+  it('a black tint degrades to white rather than extinguishing the object', () => {
+    expect(lumaNormalisedTint([0, 0, 0])).toEqual([1, 1, 1]);
   });
 });
 
@@ -270,7 +330,16 @@ describe('LocalGroupEmission controller', () => {
     lgObject('LMC', LMC_EMISSION, [15_000, 5_000, -42_000]),
     lgObject('M31', M31_EMISSION, [300_000, 500_000, 400_000]),
   ];
-  const shared = { uLimitMag: { value: 6.5 }, uSizeSpan: { value: 5 } };
+  const makeDeps = () => ({
+    hdr: {
+      uExposure: { value: 26.365 },
+      uOmegaPxArcsec2: { value: 40_000 },
+      uWhitePoint: { value: 20 },
+      uHighlightDesat: { value: 0.35 },
+      uHdrTarget: { value: 1 },
+    },
+  });
+  const deps = makeDeps();
 
   const sersicMeshOf = (layer: LocalGroupEmission) =>
     layer.group.children.find((m) =>
@@ -278,7 +347,7 @@ describe('LocalGroupEmission controller', () => {
     ) as THREE.Mesh;
 
   it('builds one instanced mesh per family with the packed component counts', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     expect(layer.group.children).toHaveLength(2);
     const geoms = layer.group.children.map(
       (m) => (m as THREE.Mesh).geometry as THREE.InstancedBufferGeometry,
@@ -292,7 +361,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('per-instance attributes are readable back off the geometry', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     const geom = sersicMeshOf(layer).geometry as THREE.InstancedBufferGeometry;
     const aSersic = geom.getAttribute('aSersic') as THREE.InstancedBufferAttribute;
     expect(aSersic.getX(0)).toBeCloseTo(SMC_EMISSION.density0, 7);
@@ -302,7 +371,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('per-family march density rides the material defines', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     const sersicMat = sersicMeshOf(layer).material as THREE.ShaderMaterial;
     expect(sersicMat.defines!.EMISSION_STEPS).toBe(EMISSION_STEPS_SERSIC);
     const discMesh = layer.group.children.find((m) => m !== sersicMeshOf(layer)) as THREE.Mesh;
@@ -313,7 +382,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('update writes the floating-origin offset uniform', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     layer.update(new THREE.Vector3(7, 8, 9));
     const mat = (layer.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
     expect(mat.uniforms.uWorldOffset.value.x).toBe(7);
@@ -322,7 +391,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('chart mode and setEnabled both gate visibility; either one hides', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     layer.update(new THREE.Vector3());
     expect(layer.group.visible).toBe(true);
     layer.setChartHidden(true);
@@ -335,7 +404,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('dispose empties the group and disposes every pass', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+    const layer = new LocalGroupEmission(objects, deps);
     const materials = layer.group.children.map((m) => (m as THREE.Mesh).material as THREE.ShaderMaterial);
     const spies = materials.map((m) => {
       let called = false;
@@ -348,12 +417,47 @@ describe('LocalGroupEmission controller', () => {
     for (const wasCalled of spies) expect(wasCalled()).toBe(true);
   });
 
-  it('shares the magnitude uniforms by reference', () => {
-    const layer = new LocalGroupEmission(objects, shared);
+  it('binds the HDR emitter uniforms by reference on every pass', () => {
+    const d = makeDeps();
+    const layer = new LocalGroupEmission(objects, d);
+    for (const child of layer.group.children) {
+      const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
+      expect(mat.uniforms.uExposure).toBe(d.hdr.uExposure);
+      expect(mat.uniforms.uOmegaPxArcsec2).toBe(d.hdr.uOmegaPxArcsec2);
+      expect(mat.uniforms.uHdrTarget).toBe(d.hdr.uHdrTarget);
+    }
+    d.hdr.uExposure.value = 99;
     const mat = (layer.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uLimitMag).toBe(shared.uLimitMag);
-    shared.uLimitMag.value = 9.9;
-    expect(mat.uniforms.uLimitMag.value).toBe(9.9);
+    expect(mat.uniforms.uExposure.value).toBe(99);
+    layer.dispose();
+  });
+
+  it('reads no star-pipeline gate uniform — the exposure model is the only lever', () => {
+    const layer = new LocalGroupEmission(objects, deps);
+    for (const child of layer.group.children) {
+      const names = Object.keys(
+        ((child as THREE.Mesh).material as THREE.ShaderMaterial).uniforms,
+      );
+      expect(names).not.toContain('uLimitMag');
+      expect(names).not.toContain('uSizeSpan');
+      expect(names).not.toContain('uBrightnessScale');
+      expect(names).not.toContain('uGlowMagOffset');
+    }
+    layer.dispose();
+  });
+
+  it('marks every pass a physical emitter so it reaches the statistic attachment', () => {
+    const layer = new LocalGroupEmission(objects, deps);
+    let opened = 0;
+    bindStatisticGate(() => { opened += 1; }, () => {});
+    for (const child of layer.group.children) {
+      child.onBeforeRender(
+        null as never, null as never, null as never,
+        null as never, null as never, null as never,
+      );
+    }
+    bindStatisticGate(null, null);
+    expect(opened).toBe(layer.group.children.length);
     layer.dispose();
   });
 });

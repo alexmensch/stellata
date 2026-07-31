@@ -15,6 +15,7 @@ import {
   type LgObject as BuildLgObject,
 } from '../../../scripts/local-group/build-local-group-pure';
 import {
+  columnSurfaceBrightness,
   cpuRaymarchColumn,
   emissionComponents,
   magFromIntensity,
@@ -291,3 +292,66 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
 });
 
 const WORST_DEVIATION_PIN = 'nearLmc→m31:0.017';
+
+// The flux test above pins the INTEGRAL. Nothing in it constrains how
+// that flux is distributed across the object, which is the half a viewer
+// actually reads. M31 is the only LG object with published photometry
+// detailed enough to check a profile against, and because the solver
+// fixes total flux while R_d / R_e / n / B/T / i all come from
+// publication, the profile has no free parameter left — these are
+// therefore closed-form consequences, not fitted values.
+describe('M31 surface-brightness profile vs published photometry', () => {
+  const m31 = OBJECTS.m31;
+  const disc = emissionComponents(m31.emission).find((c) => c.family === 'disc')!;
+
+  /** Column straight down the disc normal — the face-on sightline. */
+  function faceOnColumnAt(radiusPc: number): number {
+    if (disc.family !== 'disc') throw new Error('expected the disc component');
+    // ∫ρ₀·exp(−R/R_d)·exp(−|z|/z_d) dz over the full envelope.
+    const vertical = 2 * disc.zdPc * (1 - Math.exp(-disc.axesPc[2] / disc.zdPc));
+    return disc.density0 * Math.exp(-radiusPc / disc.rdPc) * vertical;
+  }
+
+  it("the disc's face-on central surface brightness satisfies Freeman's law", () => {
+    // Freeman (1970) μ₀(V) = 21.65 ± 0.30 for spiral discs. The model was
+    // never fitted to this — it falls out of the solved flux plus the
+    // published R_d — so agreement is a real check on the deprojection.
+    const mu0 = columnSurfaceBrightness(faceOnColumnAt(0));
+    expect(mu0).toBeGreaterThan(21.35);
+    expect(mu0).toBeLessThan(21.95);
+    expect(roundN(mu0, 2)).toBe(21.45);
+  });
+
+  it('falls 1.0857 mag per scale length — exponential in flux, linear in mag', () => {
+    // The reason a real M31 photograph shows no visible "exponential
+    // cliff": a log display transfer turns an exponential disc into a
+    // straight ramp. Pinned because it is the shape claim the layer makes.
+    const mu = (r: number) => columnSurfaceBrightness(faceOnColumnAt(r));
+    for (const n of [1, 2, 3]) {
+      expect(mu(n * disc.rdPc) - mu(0)).toBeCloseTo(n * 1.0857, 2);
+    }
+  });
+
+  it('structural inputs match the papers they are cited from', () => {
+    // Courteau et al. 2011 (ApJ 739, 20): R_d = 5.3 ± 0.5 kpc,
+    // R_e = 1.0 ± 0.2 kpc, n = 2.2 ± 0.3, at 785 ± 25 kpc.
+    if (disc.family !== 'disc') throw new Error('expected the disc component');
+    expect(disc.rdPc).toBe(5300);
+    const bulge = emissionComponents(m31.emission).find((c) => c.family === 'sersic')!;
+    if (bulge.family !== 'sersic') throw new Error('expected the bulge component');
+    expect(bulge.axesPc[0] / bulge.uMax).toBeCloseTo(1000, 6);
+    expect(1 / bulge.invN).toBeCloseTo(2.2, 6);
+    expect(m31.distance).toBeGreaterThan(760_000);
+    expect(m31.distance).toBeLessThan(810_000);
+  });
+
+  it('total magnitude sits between the as-observed and dereddened values', () => {
+    // Catalogue m_V = 3.44 is RC3 as-observed; Tempel et al. 2011
+    // (A&A 526, A155) Table 2 gives 3.24 intrinsic. The layer calibrates
+    // to as-observed on purpose (docs/science-local-group.md § No dust),
+    // so the difference IS the MW foreground it declines to remove.
+    expect(m31.emission.mV).toBe(3.44);
+    expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
+    expect(m31.emission.mV - 3.24).toBeLessThan(0.35);
+  });
+});
