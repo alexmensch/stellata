@@ -322,11 +322,11 @@ the default path and the operator runs once, at the resolve.
   being live means it now allocates on the first frame in practice; keep
   the laziness anyway, because `setHdrEnabled(false)` and chart mode both
   want a build that never pays for it.
-- **An unconverted emitter must not join the scale.** The Local Group
-  emission pass still runs the pre-HDR `uLimitMag`/`uSizeSpan` gate and
-  `1 − exp` squash; it renders nowhere (`LG_EMISSION_SHELVED`), which is
-  the only reason it isn't already wrong. Convert it before un-shelving —
-  `../local-group/README.md`.
+- **Every emitter is on the scale.** The Local Group emission pass was
+  the last one outside it; it now takes the same
+  `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
+  point derived from the solver's flux units rather than a tuned
+  constant (`../local-group/README.md` § Zero free parameters).
 
 ## Dev switches
 
@@ -412,5 +412,8 @@ is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
 eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
-The one emitter still outside the scale is the shelved Local Group
-emission pass (§ Ship gate).
+No emitter is outside the scale any more. What is still outstanding is
+*upstream* of the unit: the Milky Way's emissivity is anchored on one
+sightline rather than on a total luminosity, so the band carries a
+measured ~0.7 mag luminosity deficit and a too-steep latitude gradient
+into an otherwise-consistent frame (`stellata-xypg.29`).

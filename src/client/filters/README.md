@@ -95,10 +95,13 @@ their sole writer.
 
 The footprint window is the instrument's `sizeSpan`, read through
 `sizeSpanOf` on every use rather than cached on `FilterState`, so no second
-authority for it can exist. The uniform `uSizeSpan` survives because the
-shelved Local Group emission layer still aliases it as a pre-HDR
-brightness gate — retiring the uniform is `stellata-gxx.8`'s to finish
-(`../local-group/README.md` § Emission layer).
+authority for it can exist. `uSizeSpan` is now a **footprint uniform
+only** — star quads and planet glare size through it. Its last
+cross-layer consumer was the Local Group emission layer, which aliased
+it as a pre-HDR brightness gate until that layer moved onto the physical
+luminance unit (`../local-group/README.md` § Emission layer); nothing
+outside the perceptual-footprint path reads it now, so a change to it
+can no longer move a layer's brightness.
 
 ## Seam — uniforms by reference, layers by hook
 

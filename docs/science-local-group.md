@@ -171,16 +171,39 @@ quadrature path for all profiles; the analytic incomplete-gamma closed
 forms are vitest cross-pins. The ±0.1 mag render tolerance sits inside
 the catalogue's own ±0.2 mag median photometric uncertainty.
 
-The calibrated column field is what the renderer's magnitude gate
-reads: each pixel's column converts to a surface-brightness magnitude
-and reveals against the star pipeline's slider exactly like a star of
-that magnitude. Displayed pixel intensity follows that magnitude, not
-linear flux — a linear tone map across the ~7 mag bulge-to-disc-edge
-surface-brightness range would render every galaxy as a blown-out
-core on a black disc (the astrophotography stretch problem). Relative
-surface brightnesses, iso-magnitude reveal order, and the solved
-per-object flux ratios stay physical; only the display transfer curve
-is logarithmic.
+**The calibrated column field needs no display transform of its own.**
+A column is flux per steradian by the normalisation above, so its
+surface brightness is `26.5721 − 2.5·log10(column)` mag/arcsec² — a
+derived zero point, and the layer's only one. The renderer hands that
+to the scene-wide HDR unit like any other extended source
+(`docs/science-hdr-pipeline.md` § 4).
+
+An earlier revision gated the column against the star slider and
+squashed it locally, on the reasoning that a linear map across the
+bulge-to-disc-edge range would render every galaxy as a blown-out core
+on a black disc. That reasoning does not survive the arithmetic. The
+shared operator is extended Reinhard followed by an sRGB encode, and
+the pair is already log-like over exactly this range: M31 spans ~8.7 mag
+from bulge centre to disc envelope against the operator's `DR_MAG` of
+7.5, resolving to ~0.68 / ~0.11 / ~0.003 of full scale at centre, disc
+and envelope. The local squash was solving a problem the tone map
+already solves, at the cost of two hand-tuned constants and a 4.1 mag
+brightness error.
+
+**Why an exponential disc does not look exponential.** Surface
+brightness falls 1.0857 mag per scale length, so a profile that is
+exponential in flux is *linear in magnitude* — and both the
+dark-adapted eye and every astrophotography stretch work in roughly log
+space. M31's R_d = 5.3 kpc subtends 23.4 arcmin on the major axis, so
+the inner half-degree spans only ~1.4 mag: a gentle ramp, which is what
+photographs show. Inclination sharpens it across the minor axis by
+1/cos(77°) ≈ 4.4×, which is the visual asymmetry between the bright
+ridge and its fast perpendicular falloff. A long-exposure image is not
+a check on this — a typical processing chain histogram-stretches and
+HDR-merges the core against the disc, which deliberately destroys the
+radial photometry it would be checked against. Such an image *is* a
+usable check on chromaticity when its colour calibration is
+photometric.
 
 **Photometry.** LVDB `apparent_magnitude_v` is 100% complete over the
 121 dwarfs; M31 (m_V = 3.44) and M33 (m_V = 5.72) carry RC3 integrated

@@ -74,11 +74,10 @@ opacity write hits one slot.
 
 ## Emission layer
 
-> **Status:** Re-enabled on this branch (`LG_EMISSION_SHELVED = false`
-> in `local-group-emission.ts`) — the visual-treatment workspace. On
-> main the flag is true and the shell never constructs the layer; the
-> filter flag (`showLgEmission`), URL bit 22, and the debug-panel
-> Deep-field knobs stay wired in both states.
+> **Status:** Live (`LG_EMISSION_SHELVED = false`). The flag survives as
+> a kill switch; the filter flag (`showLgEmission`) and URL bit 22 gate
+> it the ordinary way. There are no Deep-field emission knobs — see
+> § Zero free parameters.
 
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group
@@ -116,27 +115,73 @@ thin-disc profile bands on grazing rays, and the jitter trades the
 bands for fine noise while preserving the expected column (the CPU
 mirror keeps deterministic midpoints).
 
-**Tone map is magnitude-domain, deliberately diverging from
-milkyway.frag.** Each column converts to a per-pixel
-surface-brightness magnitude via `uGlowMagOffset − 2.5·log10(column)`
-and gates against the star pipeline's shared `uLimitMag` /
-`uSizeSpan`; displayed intensity is `1 − exp(−color · brightness ·
-gate)` — the gate alone, never linear column flux, drives the pixel.
-The bulge-to-disc-edge column range spans ~7 mag ≈ 1000× linear; a
-linear-in-column map (the MW volume's convention — and since its HDR
-conversion, literally a single scalar gain, fine for the narrow
-in-galaxy column range) renders that as a blown core on a black disc
-from every external viewpoint. **This layer has not been converted to
-the HDR unit** — it keeps the gate + `1 − exp(−x)` squash; the conversion
-is `stellata-gxx.8`'s remit and `docs/science-hdr-pipeline.md` § 4 maps it
-identically to the MW. docs/science-local-group.md § Local Group luminosity
-model carries the display-transform rationale. **Do not scale
-density0 per object**: per-object flux ratios are physical, solved by
-the build; `setBrightness` (gain, seed 3.0) / `setGlowMagOffset`
-(which slider position reveals which isophote, seed 11.0 — naked-eye
-preset shows LMC/SMC + the M31 core like the real sky, "all" reveals
-the M31 disc to its envelope) via debug panel § Deep field or
-`stellata.localGroupEmission.*` are the only global levers.
+### Zero free parameters — the emission scale is derived
+
+The layer emits into the scene-wide HDR unit (`../hdr/README.md`
+§ Unit), exactly as the Milky Way band does. **The zero point is
+derived, not tuned.** The solver normalises `density0` against
+zero-point-free flux `F = 10^(−0.4·m_V)`, and
+Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a raymarched column *is* flux per
+steradian, and the only conversion left is the solid angle of one
+arcsec²:
+
+```
+S    = LG_SB_ZERO_POINT − 2.5·log10(column)     // 26.5721 mag/arcsec²
+m_px = S − 2.5·log10(Ω_px)
+```
+
+Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses to
+one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
+population tint rides through untouched. `LG_SB_ZERO_POINT` and the
+shader's `SB_ZERO_POINT` are pinned against each other in
+`local-group-emission.test.ts` — nothing at compile time ties them.
+
+**There is no brightness knob, globally or per object.** `density0` is
+solved per object (never scale it here — the flux ratios are physical),
+the zero point is a constant of the unit system, and `uExposure` is the
+only thing that moves the layer. That is what makes the glow
+brightness-comparable to the band and the star field by construction
+rather than by knob-matching. It also means the layer holds **no**
+star-pipeline uniform: `uLimitMag` / `uSizeSpan` are gone, and
+`uSizeSpan` is a footprint-only uniform again (`../filters/README.md`).
+
+**The tint is luma-normalised** (`lumaNormalisedTint`) so it carries hue
+only. The shader multiplies the scalar column per channel while the
+solver normalised that column against total flux — an un-normalised
+tint dims the object by its own relative luminance, which is 0.42 mag
+for the disc lavender. Harmless while a global gain absorbed it; a flux
+error the moment the unit is physical.
+
+**Sub-pixel proxies expand rather than lose flux.** 120 of the 123
+objects subtend under a pixel from most viewpoints, where fragment
+coverage quantises and drops the flux the solver guaranteed. The vertex
+stage scales axes and profile scale lengths by `k` and `density0` by
+`1/k³`, where `k` lifts the projected mesh radius to
+`MIN_PROJECTED_RADIUS_PX` (1 CSS px — the same resolution floor
+`stellataPointSourcePeak` applies to a star). The triple is flux-exact:
+the column picks up `k` from the path and `k⁻³` from the density while
+the solid angle picks up `k²`. `k → 1` continuously at the floor, so
+there is no cutover and nothing to add hysteresis against. Pixels-per-
+radian is derived from `uOmegaPxArcsec2` rather than taking its own
+uniform, so the floor and the gain cannot disagree about the viewport.
+
+**Both passes write the statistic attachment**
+(`../hdr/statistic/README.md`): an extended source's emission is already
+true surface brightness, so its flux and peak channels are the same
+quantity. Off-target (`uHdrTarget = 0`) each pass applies the operator
+itself, undithered — M31's disc and bulge overlap, and the dither is a
+function of `fragCoord` alone, so it would land twice.
+
+**What the intra-object range actually costs.** Bulge centre to disc
+envelope spans ~8.7 mag for M31. That fits the operator's range
+(`DR_MAG` 7.5) rather than fighting it: at the base epoch and a
+50° / 900 px viewport the bulge centre resolves to ~0.68 of full scale,
+the disc centre to ~0.11 and the envelope to ~0.003 — a bright core with
+a faint oval fading out around 30–40 arcmin, which is what M31 looks
+like. The earlier worry that a scalar gain would give "a blown core on
+a black disc" does not survive the arithmetic: extended Reinhard plus
+the sRGB encode already supply the log compression the old
+magnitude-domain gate was hand-rolling.
 
 Instance centres are absolute ICRS in float32 attributes; the vertex
 shader subtracts the per-frame `uWorldOffset` (≤ ~0.25 pc cancellation
@@ -164,6 +209,20 @@ same integral, same discretization) matches the physical prediction
 to ±0.1 mag across 6 camera positions × 5 objects, far-field pairs
 against the catalog 1/d² law and near/inside pairs against a
 converged dense march; the worst deviation is pinned (0.017 mag).
+**The mirror is colourless** — it integrates the scalar column — so it
+agrees with the shader only while the tint is luma-normalised; that is
+the invariant the normalisation exists to hold, not a stylistic choice.
+
+That test pins the *integral*. A second block pins the **distribution**,
+which is the half a viewer reads: M31's face-on disc central surface
+brightness at 21.45 mag/arcsec² against Freeman's 21.65 ± 0.30, the
+1.0857 mag-per-scale-length gradient, and R_d / R_e / n / distance
+against Courteau et al. 2011. Because the solver fixes total flux while
+every structural input is published, the profile has no free parameter
+left — those pins are closed-form consequences, not fits. M31 is the
+only LG object with photometry detailed enough to check a profile
+against, and it generalises because the machinery is shared: two
+profile families and one solver serve all 123 objects.
 
 ## Label engine
 

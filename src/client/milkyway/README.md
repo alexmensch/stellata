@@ -146,8 +146,14 @@ At strict physicality the band is faint: the GC sightline resolves to
 against 0.15 for a threshold star. That is the design gate's predicted
 "real suburban-sky band", not a regression.
 
-The Local Group emission layer keeps the old gate + `1 − exp(−x)` scheme
-until it is unshelved (`../local-group/README.md` § Emission layer).
+The Local Group emission layer runs the same mapping — same unit, same
+`stellataSurfaceBrightnessLuminance` gain, its own derived zero point
+(`../local-group/README.md` § Zero free parameters). The band and the
+glow are therefore directly brightness-comparable: both are
+mag/arcsec² in one exposure. **The two are not calibrated the same way,
+though.** LG `density0` is solved against each object's catalogue total
+flux; the band's densities are visually calibrated against a single
+sightline, which is what `stellata-xypg.29` exists to fix.
 
 ## Coordinate handling
 
