@@ -61,16 +61,8 @@ export function bindControls(stellata: Stellata) {
   const chipsHost = document.getElementById('spect-chips')!;
   const spectAllBtn = document.getElementById('spect-all')!;
   const spectNoneBtn = document.getElementById('spect-none')!;
-  const sizeMin = document.getElementById('size-min') as HTMLInputElement;
-  const sizeMax = document.getElementById('size-max') as HTMLInputElement;
-  const sizeSpan = document.getElementById('size-span') as HTMLInputElement;
-  const sizeReadout = document.getElementById('size-readout')!;
   const distUnitLabel = document.getElementById('dist-unit-label');
   const showHud = document.getElementById('show-hud') as HTMLInputElement;
-  const showConstellation = document.getElementById('show-constellation') as HTMLInputElement;
-  const conInput = document.getElementById('con-input') as HTMLInputElement | null;
-  const conPicker = document.getElementById('con-picker');
-  const showMilkyway = document.getElementById('show-milkyway') as HTMLInputElement;
   const showChart = document.getElementById('show-chart') as HTMLInputElement;
   const fov = document.getElementById('fov') as HTMLInputElement;
   const fovReadout = document.getElementById('fov-readout')!;
@@ -131,52 +123,13 @@ export function bindControls(stellata: Stellata) {
     (level) => stellata.applyDetailPreset(level));
   bindStopControl(coordSphereStops, 'coordSphere', COORD_SPHERE_FRAMES,
     (frame) => stellata.setFilter({ coordSphere: frame }));
-  // Size sliders set their override flag so the value sticks across
-  // preset changes and viewport resizes until the reset button clears it.
-  // Min/Max are coupled — dragging one past the other pushes the other
-  // along and marks both overridden.
-  sizeMin.addEventListener('input', () => {
-    let vMin = Number(sizeMin.value);
-    let vMax = Number(sizeMax.value);
-    const pushedMax = vMin > vMax;
-    if (pushedMax) { vMax = vMin; sizeMax.value = String(vMax); }
-    stellata.setFilter({
-      sizeMin: vMin, sizeMinOverridden: true,
-      ...(pushedMax ? { sizeMax: vMax, sizeMaxOverridden: true } : {}),
-    });
-  });
-  sizeMax.addEventListener('input', () => {
-    let vMin = Number(sizeMin.value);
-    let vMax = Number(sizeMax.value);
-    const pushedMin = vMax < vMin;
-    if (pushedMin) { vMin = vMax; sizeMin.value = String(vMin); }
-    stellata.setFilter({
-      sizeMax: vMax, sizeMaxOverridden: true,
-      ...(pushedMin ? { sizeMin: vMin, sizeMinOverridden: true } : {}),
-    });
-  });
-  sizeSpan.addEventListener('input', () => {
-    stellata.setFilter({ sizeSpan: Number(sizeSpan.value), sizeSpanOverridden: true });
-  });
   showHud.addEventListener('change', () => {
     stellata.setFilter({ showHud: showHud.checked });
-  });
-  showConstellation.addEventListener('change', () => {
-    stellata.setFilter({ showConstellation: showConstellation.checked });
-  });
-  showMilkyway.addEventListener('change', () => {
-    stellata.setFilter({ showMilkyway: showMilkyway.checked });
   });
   showChart.addEventListener('change', () => {
     stellata.setFilter({ chart: showChart.checked });
   });
 
-  document.getElementById('size-reset')!.addEventListener('click', () => {
-    stellata.clearSizeOverrides(['sizeMin', 'sizeMax']);
-  });
-  document.getElementById('span-reset')!.addEventListener('click', () => {
-    stellata.clearSizeOverrides(['sizeSpan']);
-  });
   fov.addEventListener('input', () => {
     stellata.setCameraFov(Number(fov.value));
   });
@@ -226,30 +179,8 @@ export function bindControls(stellata: Stellata) {
       el.classList.toggle('on', (f.spectMask & (1 << bit)) !== 0);
     }
 
-    const sMinStr = f.sizeMin.toString();
-    const sMaxStr = f.sizeMax.toString();
-    const spanStr = f.sizeSpan.toString();
-    if (sizeMin.value !== sMinStr) sizeMin.value = sMinStr;
-    if (sizeMax.value !== sMaxStr) sizeMax.value = sMaxStr;
-    if (sizeSpan.value !== spanStr) sizeSpan.value = spanStr;
-    sizeReadout.textContent = `${f.sizeMin.toFixed(1)} – ${f.sizeMax.toFixed(1)}px · span ${f.sizeSpan.toFixed(0)}mag`;
-
     if (showHud.checked !== f.showHud) {
       showHud.checked = f.showHud;
-    }
-    if (showConstellation.checked !== f.showConstellation) {
-      showConstellation.checked = f.showConstellation;
-    }
-    // Picker mirrors the master toggle: disabled when constellations are
-    // hidden, so the user can't change `highlightCon` from a state they
-    // can't see. The picked value persists on the filter, so re-enabling
-    // restores whatever was last chosen. The `.disabled` class on the
-    // wrapper drives the muted styling on the "Constellation" sub-label
-    // alongside the input itself.
-    if (conInput) conInput.disabled = !f.showConstellation;
-    if (conPicker) conPicker.classList.toggle('disabled', !f.showConstellation);
-    if (showMilkyway.checked !== f.showMilkyway) {
-      showMilkyway.checked = f.showMilkyway;
     }
     syncStopControl(coordSphereStops, 'coordSphere', f.coordSphere);
     // Chart toggle is observe-gated. Disable when not in observe so the
@@ -258,11 +189,6 @@ export function bindControls(stellata: Stellata) {
     const observeMode = stellata.getCameraMode() === 'observe';
     showChart.disabled = !observeMode;
     if (showChart.checked !== f.chart) showChart.checked = f.chart;
-    // Galactic-glow checkbox is meaningless in chart mode (the volumetric
-    // layer is hidden), so freeze it visually while preserving the
-    // underlying filter value for restoration on chart-off.
-    const chartActive = f.chart && observeMode;
-    showMilkyway.disabled = chartActive;
     const fovVal = stellata.getCameraFov();
     const fovStr = String(Math.round(fovVal));
     if (fov.value !== fovStr) fov.value = fovStr;
