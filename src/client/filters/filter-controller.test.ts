@@ -9,6 +9,7 @@ import {
   STAR_K_MULTIPLIER_MIN,
   STAR_K_MULTIPLIER_STEP,
   STAR_PHYSICS_FACTOR,
+  sizeSpanOf,
   starExaggerationK,
   resetStarKMultiplier,
   STAR_RENDER_DEFAULTS,
@@ -45,7 +46,7 @@ function makeUniforms(): FilterUniforms {
     uSpectMask: { value: DEFAULT_FILTER.spectMask },
     uSizeMin: { value: DEFAULT_FILTER.sizeMin },
     uSizeMax: { value: DEFAULT_FILTER.sizeMax },
-    uSizeSpan: { value: DEFAULT_FILTER.sizeSpan },
+    uSizeSpan: { value: sizeSpanOf(DEFAULT_FILTER) },
     uFovYRad: { value: (50 * Math.PI) / 180 },
     uVisibleThreshold: { value: STAR_RENDER_DEFAULTS.visibleThreshold },
     uVisibleK: { value: -Math.log(STAR_RENDER_DEFAULTS.visibleThreshold) },
@@ -101,25 +102,40 @@ describe('FilterController', () => {
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 
-  it('setInstrument sets its fields but respects override flags', () => {
+  it('setInstrument re-derives the pixel sizes from the new record', () => {
     const { ctrl } = makeHarness();
-    ctrl.setFilter({ sizeSpanOverridden: true, sizeSpan: 3 });
     ctrl.setInstrument('unaided-eye');
     const f = ctrl.getFilter();
     expect(f.instrument).toBe('unaided-eye');
-    expect(f.sizeSpan).toBe(3);
     const sizes = starPxSizes('unaided-eye', 50, 1080);
     expect(f.sizeMin).toBe(sizes.sizeMinPx);
     expect(f.sizeMax).toBe(sizes.sizeMaxPx);
   });
 
-  it('recomputeStarPxSizes clamps sizeMax up to a user-overridden sizeMin', () => {
+  // The footprint window has exactly one authority — the instrument
+  // record. There is no FilterState field and no slider to disagree with
+  // it, which is what xypg.12 retired.
+  it('uSizeSpan tracks the instrument, and no filter patch can move it', () => {
+    const { ctrl, uniforms } = makeHarness();
+    const span = INSTRUMENTS['unaided-eye'].sizeSpan;
+    expect(uniforms.uSizeSpan.value).toBe(span);
+    ctrl.setFilter({ spectMask: 0b1 });
+    expect(uniforms.uSizeSpan.value).toBe(span);
+    ctrl.setCameraFov(90);
+    expect(uniforms.uSizeSpan.value).toBe(span);
+  });
+
+  // sizeMin/Max are a pure function of instrument + FOV + viewport + K,
+  // so a bare setFilter that touches neither must not strand a stale
+  // pixel size — and the pair can never invert.
+  it('recomputeStarPxSizes always re-derives both endpoints, min <= max', () => {
     const { ctrl } = makeHarness();
     ctrl.setStarKMultiplier(0.01);
-    ctrl.setFilter({ sizeMinOverridden: true, sizeMin: 50 });
-    ctrl.recomputeStarPxSizes();
     const f = ctrl.getFilter();
-    expect(f.sizeMax).toBe(50);
+    const sizes = starPxSizes('unaided-eye', 50, 1080);
+    expect(f.sizeMin).toBe(sizes.sizeMinPx);
+    expect(f.sizeMax).toBe(sizes.sizeMaxPx);
+    expect(f.sizeMax).toBeGreaterThanOrEqual(f.sizeMin);
   });
 
   it('setCameraFov updates the projection, uFovYRad, orbit floor, and star sizes', () => {
@@ -171,14 +187,16 @@ describe('FilterController', () => {
     expect(ctrl.getStarExaggerationK()).toBeLessThan(wide);
   });
 
-  it('setStarKMultiplier scales the derived footprint and always emits', () => {
-    const { ctrl, emitted } = makeHarness();
+  it('setStarKMultiplier scales the derived footprint and emits once', () => {
+    const { ctrl, uniforms, emitted } = makeHarness();
     const before = starPxSizes('unaided-eye', 50, 1080).sizeMinPx;
-    ctrl.setFilter({ sizeMinOverridden: true, sizeMaxOverridden: true });
     emitted.length = 0;
     ctrl.setStarKMultiplier(2);
     expect(ctrl.getStarKMultiplier()).toBe(2);
     expect(starPxSizes('unaided-eye', 50, 1080).sizeMinPx).toBeCloseTo(before * 2, 12);
+    // The multiplier is the one remaining footprint control, so its write
+    // has to reach the uniform, not just the module state.
+    expect(uniforms.uSizeMin.value).toBeCloseTo(before * 2, 12);
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 
@@ -225,36 +243,18 @@ describe('FilterController', () => {
     expect(permitted.constellationFigures).toBe(true);
   });
 
-  it('applyDetailPreset clears the per-element user toggles (C / mw / lg)', () => {
+  it('applyDetailPreset clears the per-element user toggle (lg)', () => {
     const { ctrl } = makeHarness();
-    ctrl.setFilter({ showConstellation: false, showMilkyway: false, showLgEmission: false });
+    ctrl.setFilter({ showLgEmission: false });
     ctrl.applyDetailPreset('representational');
-    expect(ctrl.getFilter().showConstellation).toBe(true);
-    expect(ctrl.getFilter().showMilkyway).toBe(true);
     expect(ctrl.getFilter().showLgEmission).toBe(true);
   });
 
-  it('applyDetailPreset(level, false) preserves the toggles for a style recompute', () => {
+  it('applyDetailPreset(level, false) preserves the toggle for a style recompute', () => {
     const { ctrl } = makeHarness();
-    ctrl.setFilter({ showConstellation: false, showMilkyway: false, showLgEmission: false });
+    ctrl.setFilter({ showLgEmission: false });
     ctrl.applyDetailPreset('representational', false);
-    expect(ctrl.getFilter().showConstellation).toBe(false);
-    expect(ctrl.getFilter().showMilkyway).toBe(false);
     expect(ctrl.getFilter().showLgEmission).toBe(false);
-  });
-
-  it('clearSizeOverrides drops the flags and restores the derived values', () => {
-    const { ctrl } = makeHarness();
-    ctrl.setFilter({
-      sizeMinOverridden: true, sizeMin: 42,
-      sizeSpanOverridden: true, sizeSpan: 3,
-    });
-    ctrl.clearSizeOverrides(['sizeMin', 'sizeSpan']);
-    const f = ctrl.getFilter();
-    expect(f.sizeMinOverridden).toBe(false);
-    expect(f.sizeSpanOverridden).toBe(false);
-    expect(f.sizeMin).toBe(starPxSizes('unaided-eye', 50, 1080).sizeMinPx);
-    expect(f.sizeSpan).toBe(INSTRUMENTS['unaided-eye'].sizeSpan);
   });
 });
 

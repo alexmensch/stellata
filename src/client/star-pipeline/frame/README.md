@@ -49,6 +49,11 @@ isobar contour only — the band's own brightness is photometric),
 are arguments; the rest come from `DEFAULT_FILTER` /
 `STAR_RENDER_DEFAULTS` and the pipeline's own constants.
 
+`uSizeSpan` is the exception to "comes from `DEFAULT_FILTER`": the footprint
+window is no longer a `FilterState` field, so it seeds through
+`sizeSpanOf(DEFAULT_FILTER)` — the instrument record is its only authority
+(`../../filters/README.md` § The multiplier is the ONLY footprint control).
+
 The one set of slots this map does **not** own is
 `HdrPipeline.emitterUniforms` — `uExposure`, `uOmegaPxArcsec2`,
 `uWhitePoint`, `uHighlightDesat`, `uHdrTarget` — passed in as the `hdr`
