@@ -103,10 +103,10 @@ opacity write hits one slot.
 
 ## Emission layer
 
-> **Status:** Live (`LG_EMISSION_SHELVED = false`). The flag survives as
-> a kill switch; the filter flag (`showLgEmission`) and URL bit 22 gate
-> it the ordinary way. There are no Deep-field emission knobs — see
-> § Zero free parameters.
+> **Status:** Live and unconditional — the shell always constructs the
+> layer. The filter flag (`showLgEmission`) and URL bit 22 are the only
+> gates, and there are no Deep-field emission knobs (§ Zero free
+> parameters).
 
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group

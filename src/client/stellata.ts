@@ -25,7 +25,7 @@ import {
 import { GalacticDisc } from './galactic/galactic-disc';
 import { LocalGroupLayer } from './local-group/local-group';
 import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-loader';
-import { LG_EMISSION_SHELVED, LocalGroupEmission } from './local-group/local-group-emission';
+import { LocalGroupEmission } from './local-group/local-group-emission';
 import type { LgCatalog } from './local-group/local-group-loader';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
@@ -1910,14 +1910,12 @@ export class Stellata implements FrameAnchor {
     this.localGroupLayer = new LocalGroupLayer(catalog);
     this.localGroupLayer.setMonochrome(this.monochrome);
     this.scene.add(this.localGroupLayer.group);
-    if (!LG_EMISSION_SHELVED) {
-      this.lgEmission = new LocalGroupEmission(catalog.objects, {
-        hdr: this.hdr.emitterUniforms,
-      });
-      this.lgEmission.setChartHidden(this.monochrome);
-      this.applyLgEmissionEnabled();
-      this.scene.add(this.lgEmission.group);
-    }
+    this.lgEmission = new LocalGroupEmission(catalog.objects, {
+      hdr: this.hdr.emitterUniforms,
+    });
+    this.lgEmission.setChartHidden(this.monochrome);
+    this.applyLgEmissionEnabled();
+    this.scene.add(this.lgEmission.group);
   }
 
   /** Attach the parsed Local Bubble shell mesh. The layer is constructed
