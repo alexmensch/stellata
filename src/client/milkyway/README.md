@@ -71,6 +71,39 @@ band's hue varies by line of sight. Defaults are visually calibrated:
 - `DISC_COLOR` pale-lavender (171,168,223), `DENSITY0 = 1.5`
 - `BULGE_COLOR` near-white-warm (255,246,237), `DENSITY0 = 18`
 
+### Population tints carry hue, never flux
+
+`DISC_COLOR_RGB` / `BULGE_COLOR_RGB` are the **authored palette**;
+`DISC_TINT_RGB` / `BULGE_TINT_RGB` are what the shader and the CPU mirror
+actually multiply, and they are the palette divided by its own relative
+luminance (`lumaNormalisedTint`, `../hdr/emission-pure.ts`).
+
+The reason is that `stellataSurfaceBrightnessLuminance` is a *scalar* gain
+applied per channel, so a tint whose relative luminance isn't 1 rescales
+its own component's emission. The authored palette's two hues differ in
+relative luminance by 1.433× — the bulge rode **0.390 mag brighter than
+the disc purely because its hue is nearer white**, which moved the
+bulge/disc flux split without touching either density. Normalising drops
+the bulge's share of the luminance-weighted total from 0.361 to 0.283
+against a literature ~0.15–0.20; the remainder is density, and
+`stellata-xypg.29` owns it.
+
+Two consequences a future session needs:
+
+- **`setDiscColor` / `setBulgeColor` normalise their argument.** A colour
+  picker cannot move flux. `getValues()` returns the *authored* colour, not
+  the tint, because the tint's channels exceed 1 (the disc's blue sits at
+  1.29) and an `<input type="color">` cannot round-trip that.
+- **The Local Group layer seeds its family tints from the authored
+  constants here** (`../local-group/local-group-emission-pure.ts`) and
+  normalises them itself, so editing this palette moves both layers' hue.
+  `stellata-gxx.9` owns the per-object LG colours.
+
+The hues themselves are still **eyeballed, not photometric** — deriving
+them from published population colour indices through the star pipeline's
+Ballesteros → Planck → CIE path is the open half of `stellata-xypg.30`.
+Because the tints are normalised, that change cannot move any flux.
+
 ## Surface-brightness emission
 
 The band emits into the scene-wide HDR unit (`../hdr/README.md` § Unit).
@@ -114,8 +147,8 @@ stars together, by construction.
 Galactic-centre sightline (l = 0, b = 0) there:
 
 ```
-GC_SIGHTLINE_COLUMN = sightlineColumn(Sol, l=0, b=0)   ≈ 2.640e4
-GLOW_MAG_OFFSET     = 20.0 + 2.5·log10(column)         ≈ 31.054
+GC_SIGHTLINE_COLUMN = sightlineColumn(Sol, l=0, b=0)   ≈ 3.630e4
+GLOW_MAG_OFFSET     = 20.0 + 2.5·log10(column)         ≈ 31.400
 ```
 
 `GC_SIGHTLINE_COLUMN` comes from the CPU mirror at the shipped densities
@@ -124,20 +157,36 @@ instead of leaving a hand-pinned pair to disagree. Both are pinned in
 `milkyway.test.ts`. **Change the anchor, not the offset** — H7 replaces
 the single-point anchor with per-sightline published V photometry.
 
-The gradient this implies: GC 20.0, anticentre plane 22.55, NGP 25.08.
-Steeper than the real sky (NGP integrated starlight is ~23.5–24), and no
-offset fixes that — it is a density-profile question (the disc's 300 pc
-scale height, the single-component simplification). H7 also tunes
+The gradient this implies: GC 20.0, anticentre plane 22.47, NGP 25.00.
+Steeper than the real sky, and no offset fixes that. H7 also tunes
 `DR_MAG` (`../hdr/README.md` § Operator), the lever that lifts the band
 and the star field **together**.
 
-Two facts worth having before touching the calibration:
+**How steep, measured.** Leinert et al. 1998 Table 24 gives integrated
+starlight at 0.55 µm as λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the
+Galactic centre / the NGP, which converts to **22.92 / 23.83 mag/arcsec²**
+— a real plane-to-pole contrast of only **0.91 mag** against this model's
+5.00. The NGP end of that pair is what the "~23.5–24" figure quoted
+elsewhere in this file refers to, and the model is 1.17 mag too faint
+there. The GC end says something sharper: `GC_BAND_REFERENCE_MAG_ARCSEC2
+= 20.0` is **~2.9 mag brighter than published V surface photometry for
+that sightline**, so the anchor the whole layer hangs off is wrong, not
+merely provisional. `stellata-xypg.29` owns the replacement.
+
+The dominant cause is **not** the density profile: it is that the
+analytical dust integrates only **A_V ≈ 2.2 mag from Sol to the Galactic
+centre** at the shipped 0.45 strength (4.8 at strength 1.0), where the
+real l = 0, b = 0 sightline is ~30 mag and opaque in V. A smooth
+axisymmetric slab cannot produce that column, which is why the plane
+reads far too bright relative to the poles.
+
+Two further facts worth having before touching the calibration:
 
 - **The disc, not the bulge, dominates toward the Galactic centre** —
-  ~77 % of the luminance-weighted column. The disc's
+  ~83 % of the luminance-weighted column. The disc's
   `exp(−(R−R₀)/3000)` rise over a 23 kpc path to its back face outweighs
   the bulge's `density0 = 18` concentration over 10 kpc.
-- **The 32-step in-volume march under-counts the GC column by 1.7 %**
+- **The 32-step in-volume march under-counts the GC column by 1.8 %**
   against a converged march (pinned). Deliberately left: `STEPS` is a
   visual + perf decision, and it biases the anchor H7 re-derives anyway.
 
@@ -153,7 +202,9 @@ glow are therefore directly brightness-comparable: both are
 mag/arcsec² in one exposure. **The two are not calibrated the same way,
 though.** LG `density0` is solved against each object's catalogue total
 flux; the band's densities are visually calibrated against a single
-sightline, which is what `stellata-xypg.29` exists to fix.
+sightline, which is what `stellata-xypg.29` exists to fix. Measured in the
+LG layer's own zero-point-free flux unit, this model's integrated
+**M_V = −20.03** against Bland-Hawthorn & Gerhard 2016's **−21.37**.
 
 ## Coordinate handling
 
@@ -283,6 +334,7 @@ The same setters are individually callable under
   (raise → dimmer). A calibration constant, not a user knob
 - `setDiscDensity(x)` / `setBulgeDensity(x)` — per-component emission
 - `setDiscColor(r,g,b)` / `setBulgeColor(r,g,b)` — pre-extinction
-  palette
+  palette. Luma-normalised on write, so a hue edit cannot move flux
+  (§ Population tints carry hue, never flux)
 - `setExtinctionStrength(x)` — analytical dust τ multiplier
 - `setReddeningRGB(r,g,b)` — per-channel τ multiplier (CCM-derived)

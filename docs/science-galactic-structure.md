@@ -46,7 +46,9 @@ ray. The density at each step is:
 
 Each component multiplies a population colour pre-integration so the
 band's hue varies by line of sight. Densities and palette are visually
-calibrated; the emission column then converts to a V surface brightness
+calibrated — but the palette is **luma-normalised**, so it carries hue and
+cannot scale either component's flux; before that it moved the bulge/disc
+split by 0.39 mag on its own. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
 `src/client/milkyway/README.md` for the calibrated values, that

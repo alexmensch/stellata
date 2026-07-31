@@ -2,7 +2,7 @@
 // decomposition, instance packing, flux ↔ magnitude inverse, and the
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
-import { relativeLuminance } from '../hdr/tonemap-pure';
+import { lumaNormalisedTint } from '../hdr/emission-pure';
 import {
   BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
   DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
@@ -174,24 +174,10 @@ function parseHexColor(hex: string): [number, number, number] | null {
   return [((v >> 16) & 0xff) / 255, ((v >> 8) & 0xff) / 255, (v & 0xff) / 255];
 }
 
-/** Tint divided by its own relative luminance, so it carries hue only.
- *
- *  The shader multiplies the scalar column by this per channel while the
- *  solver normalised that column against total flux — an un-normalised
- *  tint would therefore dim every object by its own luma (0.42 mag for
- *  the disc lavender) and silently break the solved magnitudes. */
-export function lumaNormalisedTint(
-  rgb: readonly [number, number, number],
-): [number, number, number] {
-  const y = relativeLuminance(rgb as [number, number, number]);
-  if (!(y > 0)) return [1, 1, 1];
-  return [rgb[0] / y, rgb[1] / y, rgb[2] / y];
-}
-
 function tintFor(e: LgEmission, comp: EmissionComponent): [number, number, number] {
   const override = e.color ? parseHexColor(e.color) : null;
-  if (override) return lumaNormalisedTint(override);
-  return lumaNormalisedTint(comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB);
+  const authored = override ?? (comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB);
+  return [...lumaNormalisedTint(authored)];
 }
 
 export interface EmissionInstanceCommon {

@@ -9,6 +9,10 @@ import {
   MilkyWay,
 } from './milkyway';
 import {
+  BULGE_COLOR_RGB,
+  BULGE_TINT_RGB,
+  DISC_COLOR_RGB,
+  DISC_TINT_RGB,
   FOREGROUND_DUST_STEPS,
   MAG_PER_TAU,
   SOL_GALACTOCENTRIC_PC,
@@ -21,7 +25,12 @@ import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../hdr/emission-pure';
 import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { srgbEncode, reinhardExtended, tonemapWhitePoint } from '../hdr/tonemap-pure';
+import {
+  relativeLuminance,
+  srgbEncode,
+  reinhardExtended,
+  tonemapWhitePoint,
+} from '../hdr/tonemap-pure';
 
 function build() {
   const hdr = makeHdrEmitterUniforms();
@@ -70,14 +79,57 @@ describe('MilkyWay uniform wiring', () => {
     expect(v.glowMagOffset).toBe(GLOW_MAG_OFFSET);
     expect(v).not.toHaveProperty('brightness');
   });
+
+  it('binds the luma-normalised tint, not the authored palette', () => {
+    const { materials } = build();
+    const [disc, bulge] = materials.map((m) => m.uniforms.uColor.value as THREE.Color);
+    expect([disc.r, disc.g, disc.b]).toEqual([...DISC_TINT_RGB]);
+    expect([bulge.r, bulge.g, bulge.b]).toEqual([...BULGE_TINT_RGB]);
+  });
+
+  // The colour picker round-trips the authored hue; feeding the normalised
+  // tint back into it would drift the palette a channel at a time.
+  it('reports the authored palette to the tuning panel', () => {
+    const { layer } = build();
+    const v = layer.getValues();
+    expect([v.discColor.r, v.discColor.g, v.discColor.b]).toEqual([...DISC_COLOR_RGB]);
+    layer.setDiscColor(0.2, 0.4, 0.8);
+    expect(layer.getValues().discColor).toEqual({ r: 0.2, g: 0.4, b: 0.8 });
+  });
+});
+
+// Population tints carry hue, never flux: the shader multiplies the scalar
+// surface-brightness gain by the tint per channel, so a tint whose relative
+// luminance isn't 1 rescales its own component's emission.
+describe('MilkyWay population tints', () => {
+  it('holds both component tints at unit relative luminance', () => {
+    expect(relativeLuminance(DISC_TINT_RGB)).toBeCloseTo(1, 12);
+    expect(relativeLuminance(BULGE_TINT_RGB)).toBeCloseTo(1, 12);
+  });
+
+  // What the authored palette used to cost: the bulge rode 0.390 mag
+  // brighter than the disc purely because its hue is nearer white.
+  it('pins the bulge-vs-disc flux split the authored palette carried', () => {
+    const shift =
+      2.5 *
+      Math.log10(relativeLuminance(BULGE_COLOR_RGB) / relativeLuminance(DISC_COLOR_RGB));
+    expect(shift).toBeCloseTo(0.3903, 4);
+  });
+
+  it('keeps a colour-picker edit off the flux', () => {
+    const { layer, materials } = build();
+    layer.setBulgeColor(0.1, 0.9, 0.3);
+    const c = materials[1].uniforms.uColor.value as THREE.Color;
+    expect(relativeLuminance([c.r, c.g, c.b])).toBeCloseTo(1, 12);
+  });
 });
 
 describe('MilkyWay surface-brightness calibration', () => {
   // Both derived from the raymarch mirror rather than hand-tuned, so
   // these pins are what catch a profile / quadrature change.
   it('derives the GC column and the offset it anchors', () => {
-    expect(GC_SIGHTLINE_COLUMN / 1e4).toBeCloseTo(2.6404, 4);
-    expect(GLOW_MAG_OFFSET).toBeCloseTo(31.054, 3);
+    expect(GC_SIGHTLINE_COLUMN / 1e4).toBeCloseTo(3.6302, 4);
+    expect(GLOW_MAG_OFFSET).toBeCloseTo(31.400, 3);
   });
 
   // The latitude gradient the offset implies. Steeper than the real sky
@@ -91,8 +143,8 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(lDeg, bDeg),
       );
     expect(s(0, 0)).toBeCloseTo(GC_BAND_REFERENCE_MAG_ARCSEC2, 6);
-    expect(s(180, 0)).toBeCloseTo(22.55, 2);
-    expect(s(0, 90)).toBeCloseTo(25.08, 2);
+    expect(s(180, 0)).toBeCloseTo(22.47, 2);
+    expect(s(0, 90)).toBeCloseTo(25.00, 2);
   });
 
   // Faint-but-present at strict physicality: the band sits well below a

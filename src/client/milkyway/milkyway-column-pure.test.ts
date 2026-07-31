@@ -94,9 +94,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.083 mag', () => {
+  it('dims the Galactic-centre sightline by 0.063 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.083, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0629, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -109,9 +109,9 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.083, 3);
-    expect(offsets[1]).toBeCloseTo(0.056, 3);
-    expect(offsets[2]).toBeCloseTo(0.017, 3);
+    expect(offsets[0]).toBeCloseTo(0.0629, 3);
+    expect(offsets[1]).toBeCloseTo(0.0413, 3);
+    expect(offsets[2]).toBeCloseTo(0.0122, 3);
   });
 });
 
@@ -119,25 +119,25 @@ describe('effect of seeding τ from the camera', () => {
 // NOT the dominant emitter toward the Galactic centre. The disc's
 // exp(−(R−R₀)/hR) rise plus a 23 kpc path to its back face outweighs the
 // bulge's density0 = 18 concentration over 10 kpc, which is why fixing
-// the bulge's missing 0.315 τ_V moves the sightline by only 0.083 mag.
+// the bulge's missing 0.315 τ_V moves the sightline by only 0.063 mag.
 describe('per-component split toward the Galactic centre', () => {
-  it('has the disc carrying roughly three quarters of the column', () => {
+  it('has the disc carrying five sixths of the column', () => {
     const disc = relativeLuminance(componentColumnRgb(DISC_COMPONENT, SOL, TO_GC));
     const bulge = relativeLuminance(componentColumnRgb(BULGE_COMPONENT, SOL, TO_GC));
-    expect(disc / (disc + bulge)).toBeCloseTo(0.77, 2);
+    expect(disc / (disc + bulge)).toBeCloseTo(0.828, 2);
   });
 });
 
 describe('quadrature of the in-volume march', () => {
   // Pre-existing, and left alone deliberately: STEPS is a visual + perf
   // decision, and H7 owns the calibration this biases. Pinned so it is a
-  // known 1.7% under-count rather than a surprise.
-  it('under-counts the GC column by 1.7% against a dense march', () => {
+  // known 1.8% under-count rather than a surprise.
+  it('under-counts the GC column by 1.8% against a dense march', () => {
     const shipped = sightlineColumn(SOL, TO_GC);
     const ref = sightlineColumn(SOL, TO_GC, {
       steps: REFERENCE_STEPS,
       foregroundSteps: REFERENCE_STEPS,
     });
-    expect(shipped / ref).toBeCloseTo(0.983, 3);
+    expect(shipped / ref).toBeCloseTo(0.9822, 3);
   });
 });
