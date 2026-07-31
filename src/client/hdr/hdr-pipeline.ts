@@ -7,6 +7,7 @@ import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
 import emissionChunk from './emission.glsl?raw';
+import extendedEmitterChunk from './extended-emitter.glsl?raw';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
@@ -21,17 +22,16 @@ import { bindStatisticGate } from './statistic/statistic-attachment';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
+(THREE.ShaderChunk as Record<string, string>)['stellata_extended_emitter'] =
+  extendedEmitterChunk;
 
-/** Ship gate for the HDR epic — **live**. Stars, the Milky Way, and the
- *  planet layers all emit physical luminance now, so the target is the
- *  default path and the operator runs once at the resolve.
+/** Ship gate for the HDR epic — **live**. Every emitter — stars, the
+ *  Milky Way, the planet layers and the Local Group glow — emits physical
+ *  luminance, so the target is the default path and the operator runs
+ *  once at the resolve.
  *  `stellata.setHdrEnabled(false)` is the A/B: it parks every emitter on
  *  its inline operator and returns chrome to authored colours
- *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value.
- *
- *  Un-shelving a layer that still carries a pre-HDR encoding — the Local
- *  Group emission pass is the one left (`LG_EMISSION_SHELVED`) — puts a
- *  mis-calibrated emitter on the shared scale. Convert first. */
+ *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value. */
 export const HDR_DEFAULT_ENABLED = true;
 
 /** The uniforms every physical emitter binds **by reference**, so the

@@ -35,10 +35,17 @@ src/client/hdr/
                              inverse. Vitest-pinned against the design
                              doc's worked values.
   emission.glsl              The unit: magnitude → linear luminance, the
-                             point-source peak rule, and the extended-
-                             source surface-brightness rule (§ Unit).
+                             point-source peak rule, the extended-source
+                             surface-brightness rule (§ Unit), and the
+                             plate scale recovered from the pixel solid
+                             angle.
+  extended-emitter.glsl      The write tail a volumetric emitter shares:
+                             gain, clamp, both attachments, and the
+                             inline operator off-target. Composes the two
+                             chunks above, so it is the only include a
+                             raymarching stage needs (§ Extended sources).
   emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
-                             derivation and LUMA_CEIL.
+                             derivation and its inverse, and LUMA_CEIL.
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -91,10 +98,30 @@ normalisers that make the shaded disc integrate back to `L(m)` are
 `../solar-system/planets/README.md` § Physical-luminance emission; the
 mesh reads `uOmegaPxArcsec2` for the same reason the Milky Way does.
 
+### Extended sources — one write tail
+
+Everything after the gain is identical for every volumetric emitter, so
+`extended-emitter.glsl` (`stellata_extended_emitter`) owns it:
+`stellataEmitExtendedSource` applies the gain, clamps at `LUMA_CEIL`,
+writes the statistic texel, and off-target runs the operator undithered;
+`stellataEmitNothing` is the miss case. Both take the attachments as
+`out` params, making "attachment 1 has no default, so every branch must
+write it" one decision rather than one per early return. Consumers:
+`milkyway.frag.glsl` (which keeps its own magnitude step, since the chart
+isobar contours `magPx`) and `local-group-emission.frag.glsl`.
+
+It `#include`s both chunks above — three resolves includes recursively
+and the guards make the extra paste inert. `chunk-constant-drift.test.ts`
+resolves every extended-source stage through the real `ShaderChunk`
+registry, so a misspelled chunk name fails in vitest, not on first frame.
+
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
 arcsec² (`pixelSolidAngleArcsec2`), written by
 `HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
-fovYRad)`. CSS again so brightness is `devicePixelRatio`-independent, and
+fovYRad)`. A layer needing the plate scale back — the Local Group's
+resolution floor — inverts it through `stellataPxPerRadian` rather than
+taking a second uniform, so a resize cannot leave the two disagreeing.
+CSS again so brightness is `devicePixelRatio`-independent, and
 **height** rather than the `max(w, h)` reference dimension the preset
 arcsec→px conversion uses, because that is the axis the vertical FOV
 maps to and the axis `physSize` projects through. Every FOV change and
@@ -322,11 +349,11 @@ the default path and the operator runs once, at the resolve.
   being live means it now allocates on the first frame in practice; keep
   the laziness anyway, because `setHdrEnabled(false)` and chart mode both
   want a build that never pays for it.
-- **An unconverted emitter must not join the scale.** The Local Group
-  emission pass still runs the pre-HDR `uLimitMag`/`uSizeSpan` gate and
-  `1 − exp` squash; it renders nowhere (`LG_EMISSION_SHELVED`), which is
-  the only reason it isn't already wrong. Convert it before un-shelving —
-  `../local-group/README.md`.
+- **Every emitter is on the scale.** The Local Group emission pass was
+  the last one outside it; it now takes the same
+  `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
+  point derived from the solver's flux units rather than a tuned
+  constant (`../local-group/README.md` § Zero free parameters).
 
 ## Dev switches
 
@@ -412,5 +439,8 @@ is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
 eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
-The one emitter still outside the scale is the shelved Local Group
-emission pass (§ Ship gate).
+No emitter is outside the scale any more. What is still outstanding is
+*upstream* of the unit: the Milky Way's emissivity is anchored on one
+sightline rather than on a total luminosity, so the band carries a
+measured ~0.7 mag luminosity deficit and a too-steep latitude gradient
+into an otherwise-consistent frame (`stellata-xypg.29`).

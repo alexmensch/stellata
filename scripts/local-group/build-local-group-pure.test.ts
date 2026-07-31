@@ -11,7 +11,10 @@ import {
   mergeRowAndOverride,
   parseOrient,
   projectedSemiMajorPc,
+  renderedWireframeAxes,
   raDecDistanceToIcrs,
+  type LgEmission,
+  roundN,
   roundSig,
   skyBasis,
   slugify,
@@ -457,7 +460,9 @@ describe('buildStandaloneOverride', () => {
     expect(out.id).toBe('m31');
     expect(out.name).toBe('M31');                      // catalog-designation, no suffix
     expect(out.kind).toBe('disc');
-    expect(out.axes).toEqual([15000, 15000, 500]);
+    // The wireframe draws the emission envelope, not the structural
+    // axes from overrides.tsv (15000 x 15000 x 500) — renderedWireframeAxes.
+    expect(out.axes).toEqual([21200, 21200, 2000 / 3]);
     expect(out.source).toBe('OVERRIDE');
     expect(out.distance).toBe(776_000);
     expect(Math.hypot(...out.center)).toBeCloseTo(776_000, 0);
@@ -500,7 +505,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: dwarf,
       override: undefined,
-      wireframeAxes: dwarfGeom.axes,
+      structuralAxes: dwarfGeom.axes,
       orient: dwarfGeom.orient,
       distancePc: 84_000,
       name: dwarf.name,
@@ -517,7 +522,7 @@ describe('buildEmission', () => {
     const base = {
       row: measured,
       override: undefined as OverrideRow | undefined,
-      wireframeAxes: dwarfGeom.axes,
+      structuralAxes: dwarfGeom.axes,
       orient: dwarfGeom.orient,
       distancePc: 84_000,
       name: 'X',
@@ -549,7 +554,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: smc,
       override,
-      wireframeAxes: override.axes,
+      structuralAxes: override.axes,
       orient: parseOrient(override.orient),
       distancePc: 62_440,
       name: 'SMC',
@@ -567,7 +572,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: lmc,
       override: { name: 'LMC', axes: [4500, 4500, 1000], orient: 'disc:i=32,pa=135', refDoi: 'x', profile: 'disc', rdPc: 1500 },
-      wireframeAxes: [4500, 4500, 1000],
+      structuralAxes: [4500, 4500, 1000],
       orient: parseOrient('disc:i=32,pa=135'),
       distancePc: 49_590,
       name: 'LMC',
@@ -587,7 +592,7 @@ describe('buildEmission', () => {
         name: 'M31', axes: [15000, 15000, 500], orient: 'disc:i=77,pa=37', refDoi: 'x',
         mV: 3.44, profile: 'disc', rdPc: 5300, bulgeToTotal: 0.31, bulgeRePc: 1000, bulgeN: 2.2,
       },
-      wireframeAxes: [15000, 15000, 500],
+      structuralAxes: [15000, 15000, 500],
       orient: parseOrient('disc:i=77,pa=37'),
       distancePc: 776_000,
       name: 'M31',
@@ -612,7 +617,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: noMag,
         override: undefined,
-        wireframeAxes: [100, 100, 100],
+        structuralAxes: [100, 100, 100],
         orient: { kind: 'pa', pa: 0 },
         distancePc: 100_000,
         name: 'NoMag',
@@ -625,7 +630,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: makeRow({}),
         override: { name: 'X', axes: [1, 1, 1], orient: 'disc:i=0,pa=0', refDoi: 'x', profile: 'disc' },
-        wireframeAxes: [1, 1, 1],
+        structuralAxes: [1, 1, 1],
         orient: parseOrient('disc:i=0,pa=0'),
         distancePc: 1000,
         name: 'X',
@@ -638,7 +643,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: makeRow({ rhalfPhysicalPc: null }),
         override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x' },
-        wireframeAxes: [300, 200, 200],
+        structuralAxes: [300, 200, 200],
         orient: parseOrient('pa:0'),
         distancePc: 1000,
         name: 'X',
@@ -682,3 +687,45 @@ describe('slugify', () => {
 });
 
 void SOL_AXIS_X; // suppress unused-export-test export
+
+describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
+  const discEmission = (rEnvPc: number, zEnvPc: number): LgEmission => ({
+    family: 'disc', mV: 3.44, rdPc: 5300, zdPc: 500 / 3, rEnvPc, zEnvPc, density0: 1,
+  });
+  const sersicEmission = (uMax: number): LgEmission => ({
+    family: 'sersic', mV: 10, reffAxesPc: [400, 400, 400], n: 1,
+    bn: 1.676543, pn: 0.44493, uMax, density0: 1,
+  });
+
+  it('a disc wireframe IS the emission envelope', () => {
+    expect(renderedWireframeAxes([15000, 15000, 500], discEmission(21200, 2000 / 3)))
+      .toEqual([21200, 21200, 2000 / 3]);
+  });
+
+  it('closes the 4/3 vertical overhang that z_d = c/3 forces', () => {
+    // z_d = c/3 makes the vertical envelope 4*z_d = 4c/3, so the glow
+    // spilled a third of the disc's thickness past its own outline from
+    // every edge-on viewpoint. This is the case Alex reported on M31.
+    const structuralC = 500;
+    const zEnv = DISC_ENV_SCALE_LENGTHS * (structuralC / DISC_ZD_SHELL_DIVISOR);
+    expect(zEnv / structuralC).toBeCloseTo(4 / 3, 12);
+    const axes = renderedWireframeAxes([15000, 15000, structuralC], discEmission(21200, zEnv));
+    expect(axes[2]).toBe(zEnv);
+  });
+
+  it('leaves a spheroid wireframe on the half-light ellipsoid', () => {
+    // Deliberately SMALLER than the u99 mesh: light outside a half-light
+    // radius is what "half-light" means, and matching them would ring a
+    // mostly-empty volume at an invisible surface brightness.
+    expect(renderedWireframeAxes([400, 400, 400], sersicEmission(4.557)))
+      .toEqual([400, 400, 400]);
+  });
+
+  it('pins u₉₉ so the spheroid gap cannot drift silently', () => {
+    // Only half the invariant: the shipped uMax is max(u₉₉(n), shell/R_e),
+    // so what an observer sees is uMax·R_e over the half-light shell. The
+    // ratio for a real object is pinned in
+    // local-group-emission-calibration.test.ts, which has the catalogue.
+    expect(roundN(u99(1), 3)).toBe(4.557);
+  });
+});

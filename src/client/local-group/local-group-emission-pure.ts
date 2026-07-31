@@ -2,13 +2,75 @@
 // decomposition, instance packing, flux ↔ magnitude inverse, and the
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
+import { relativeLuminance } from '../hdr/tonemap-pure';
+import {
+  BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
+  DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
+} from '../milkyway/milkyway-column-pure';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import type { LgEmission, LgObject } from './local-group-loader';
 
-/** Population tints, seeded from the Milky Way palette (warm
- *  near-white bulge tone for old spheroid populations, pale lavender
- *  for discs). Per-object `emission.color` overrides. */
-export const SPHEROID_COLOR_RGB: [number, number, number] = [1.0, 0.9647, 0.9294];
-export const DISC_COLOR_RGB: [number, number, number] = [0.6706, 0.6588, 0.8745];
+/** Population tints — the Milky Way's own palette, by import: a spheroid
+ *  here is the same old population as its bulge, and an external disc the
+ *  same as ours. Per-object `emission.color` overrides. */
+export const SPHEROID_COLOR_RGB: [number, number, number] = [...MW_BULGE_COLOR_RGB];
+export const DISC_COLOR_RGB: [number, number, number] = [...MW_DISC_COLOR_RGB];
+
+/** Surface-brightness zero point of a raymarched column, mag/arcsec².
+ *
+ *  The solver normalises `density0` against zero-point-free flux
+ *  `F = 10^(−0.4·m_V)` (docs/science-local-group.md § Local Group
+ *  luminosity model), and Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a column
+ *  Σρ·ds IS flux per steradian, and the only conversion left is the
+ *  solid angle of one arcsec². Nothing here is tunable: the emission
+ *  scale is fixed the moment the solver runs. */
+export const LG_SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
+
+/** Projected radius, in CSS px, that a proxy mesh is expanded to when it
+ *  would otherwise render smaller. Below one pixel the rasteriser cannot
+ *  represent the source at all and quantised fragment coverage eats the
+ *  flux — the same resolution floor `stellataPointSourcePeak` applies to
+ *  a star's kernel. */
+export const MIN_PROJECTED_RADIUS_PX = 1;
+
+/**
+ * Scale factor expanding a sub-pixel proxy mesh to the resolution floor.
+ *
+ * Applied as: axes × k, profile scale lengths × k, density0 ÷ k³. That
+ * triple is flux-exact rather than approximately so — the column
+ * ∫ρ ds picks up k from the path and k⁻³ from the density, and the solid
+ * angle picks up k², so Φ is invariant while the image is the identical
+ * profile magnified. k → 1 continuously at the floor, so there is no
+ * cutover to hysteresis against.
+ */
+export function subPixelExpansion(meshRadiusPx: number): number {
+  if (!(meshRadiusPx > 0)) return 1;
+  return Math.max(1, MIN_PROJECTED_RADIUS_PX / meshRadiusPx);
+}
+
+/** The expansion applied to one component — the CPU twin of the vertex
+ *  shader's block, and what lets the calibration test integrate the
+ *  expanded profile rather than a restatement of it. Keep in lockstep
+ *  with local-group-emission.vert.glsl.
+ *
+ *  Sérsic `uMax` rides untouched: it is in R_e units and R_e = axes/uMax,
+ *  so scaling the axes already scales R_e. */
+export function expandComponent(
+  comp: EmissionComponent,
+  k: number,
+): EmissionComponent {
+  if (k === 1) return comp;
+  const axesPc: [number, number, number] = [
+    comp.axesPc[0] * k,
+    comp.axesPc[1] * k,
+    comp.axesPc[2] * k,
+  ];
+  const density0 = comp.density0 / (k * k * k);
+  if (comp.family === 'disc') {
+    return { ...comp, axesPc, density0, rdPc: comp.rdPc * k, zdPc: comp.zdPc * k };
+  }
+  return { ...comp, axesPc, density0 };
+}
 
 /** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
  *  disc pass marches denser: grazing rays run tens of kpc through an
@@ -112,10 +174,24 @@ function parseHexColor(hex: string): [number, number, number] | null {
   return [((v >> 16) & 0xff) / 255, ((v >> 8) & 0xff) / 255, (v & 0xff) / 255];
 }
 
+/** Tint divided by its own relative luminance, so it carries hue only.
+ *
+ *  The shader multiplies the scalar column by this per channel while the
+ *  solver normalised that column against total flux — an un-normalised
+ *  tint would therefore dim every object by its own luma (0.42 mag for
+ *  the disc lavender) and silently break the solved magnitudes. */
+export function lumaNormalisedTint(
+  rgb: readonly [number, number, number],
+): [number, number, number] {
+  const y = relativeLuminance(rgb as [number, number, number]);
+  if (!(y > 0)) return [1, 1, 1];
+  return [rgb[0] / y, rgb[1] / y, rgb[2] / y];
+}
+
 function tintFor(e: LgEmission, comp: EmissionComponent): [number, number, number] {
   const override = e.color ? parseHexColor(e.color) : null;
-  if (override) return override;
-  return comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB;
+  if (override) return lumaNormalisedTint(override);
+  return lumaNormalisedTint(comp.family === 'disc' ? DISC_COLOR_RGB : SPHEROID_COLOR_RGB);
 }
 
 export interface EmissionInstanceCommon {
@@ -280,12 +356,18 @@ export function cpuRaymarchColumn(
   return accum;
 }
 
-/** Effective apparent magnitude of an integrated column — the shader's
- *  gate input, and (inverted) the calibration test's read-back path. */
-export function magFromIntensity(intensity: number, glowMagOffset: number): number {
-  return glowMagOffset - 2.5 * Math.log10(Math.max(intensity, 1e-12));
+/** Magnitude of an integrated flux number, and its inverse. `zeroPoint`
+ *  is 0 for a solid-angle-integrated flux (the calibration test's
+ *  read-back) and LG_SB_ZERO_POINT for a per-arcsec² column. */
+export function magFromIntensity(intensity: number, zeroPoint: number): number {
+  return zeroPoint - 2.5 * Math.log10(Math.max(intensity, 1e-12));
 }
 
-export function intensityFromMag(mag: number, glowMagOffset: number): number {
-  return Math.pow(10, (glowMagOffset - mag) / 2.5);
+export function intensityFromMag(mag: number, zeroPoint: number): number {
+  return Math.pow(10, (zeroPoint - mag) / 2.5);
+}
+
+/** Surface brightness a raymarched column carries, mag/arcsec². */
+export function columnSurfaceBrightness(column: number): number {
+  return magFromIntensity(column, LG_SB_ZERO_POINT);
 }

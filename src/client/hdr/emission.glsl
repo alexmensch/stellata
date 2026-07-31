@@ -17,6 +17,15 @@ const vec3 STELLATA_LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
 
 const float STELLATA_LUMA_CEIL = 4096.0;
 const float STELLATA_PI = 3.141592653589793;
+const float STELLATA_ARCSEC_TO_RAD = 4.84813681109536e-6;
+
+/** Inverse of `pixelSolidAngleArcsec2` — CSS px per radian recovered from
+ *  the pixel solid angle. A layer needing a plate scale takes it from
+ *  `uOmegaPxArcsec2` through this rather than carrying a second uniform,
+ *  so a resize can never leave the two disagreeing about the viewport. */
+float stellataPxPerRadian(float omegaPxArcsec2) {
+    return 1.0 / (STELLATA_ARCSEC_TO_RAD * sqrt(max(omegaPxArcsec2, 1e-12)));
+}
 
 float stellataLuminanceForMag(float exposure, float appMag) {
     return exposure * pow(10.0, -0.4 * appMag);

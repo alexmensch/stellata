@@ -2,12 +2,10 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
-// The HDR unit + the scene-wide operator. Both are needed in this one
-// stage: the layer derives a per-pixel magnitude from its column integral
-// and, whenever the frame is NOT rendering into the HDR target, applies
-// the operator itself. See src/client/hdr/README.md § Unit, § Fallback.
-#include <stellata_hdr_emission>
-#include <stellata_tonemap>
+// The unit + the operator + the shared extended-source write tail. The
+// isobar pass needs the raw magnitude too, which is why the column and
+// the tail stay separate steps here. See src/client/hdr/README.md § Unit.
+#include <stellata_extended_emitter>
 
 // Bounded volumetric raymarch through proxy meshes.
 //
@@ -189,8 +187,7 @@ void main() {
   float c = dot(camLocal, camLocal) - 1.0;
   float disc = b * b - a * c;
   if (disc < 0.0) {
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float sqrtDisc = sqrt(disc);
@@ -199,8 +196,7 @@ void main() {
   // Back-face exit IS the fragment by construction — t = 1.
   float tExit = 1.0;
   if (tEnter >= tExit) {
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
 
@@ -215,8 +211,7 @@ void main() {
   float sStart = max(tEnter * worldPerT, S_MIN_PC);
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float logMin = log(sStart);
@@ -268,16 +263,12 @@ void main() {
     tauAccum += dTauRGB;
   }
 
-  // --- Surface brightness → luminance in the HDR unit -----------------
-  // colorAccum is the emission column in "density × pc × colour" units.
   // uGlowMagOffset states the V surface brightness a unit column carries,
-  // so this sightline's surface brightness is
-  //   S    = uGlowMagOffset - 2.5*log10(column)     [mag/arcsec²]
-  // and the flux magnitude inside one pixel is
-  //   m_px = S - 2.5*log10(Ω_px).
-  // Feeding m_px through the unit collapses the log round-trip to a single
-  // scalar gain, applied to all three channels — so the line-of-sight hue
-  // the raymarch built survives untouched.
+  // so this sightline reads S = uGlowMagOffset - 2.5*log10(column) and the
+  // pixel's flux magnitude is m_px = S - 2.5*log10(Ω_px). Only the isobar
+  // needs it in the magnitude domain; the emission path takes the same
+  // round-trip as one scalar gain inside stellataEmitExtendedSource.
+  // Computed outside the branch so fwidth stays in uniform control flow.
   float column = max(dot(colorAccum, STELLATA_LUMA_WEIGHTS), 1e-12);
   float magPx = uGlowMagOffset - 2.5 * log(column * uOmegaPxArcsec2) / LOG10;
 
@@ -290,8 +281,7 @@ void main() {
     float fw = max(fwidth(magPx), 1e-5);
     float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uLimitMag));
     if (line <= 0.0) {
-      fragColor = vec4(0.0);
-      outStatistic = vec4(0.0);
+      stellataEmitNothing(fragColor, outStatistic);
       return;
     }
     fragColor = vec4(uChartInkColor * line, line);
@@ -299,21 +289,9 @@ void main() {
     return;
   }
 
-  float gain = stellataSurfaceBrightnessLuminance(
-    uExposure, uGlowMagOffset, uOmegaPxArcsec2);
-  vec3 emitted = min(colorAccum * gain, vec3(STELLATA_LUMA_CEIL));
-
-  // Surface brightness, so flux and peak are the same quantity. The band
-  // writes alpha 1, so the additive blend sums both attachments alike.
-  float bandL = dot(emitted, STELLATA_LUMA_WEIGHTS);
-  outStatistic = stellataStatisticTexel(bandL, bandL, 1.0);
-
-  if (uHdrTarget > 0.5) {
-    fragColor = vec4(emitted, 1.0);
-    return;
-  }
-  // Undithered: the disc and bulge meshes both cover this pixel and blend
-  // additively, so a fragCoord-keyed offset would land twice.
-  fragColor = vec4(
-    stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), 1.0);
+  stellataEmitExtendedSource(
+    colorAccum,
+    uExposure, uGlowMagOffset, uOmegaPxArcsec2,
+    uHdrTarget, uWhitePoint, uHighlightDesat,
+    fragColor, outStatistic);
 }

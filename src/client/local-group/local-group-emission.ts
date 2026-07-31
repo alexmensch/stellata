@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import emissionVert from './local-group-emission.vert.glsl?raw';
 import emissionFrag from './local-group-emission.frag.glsl?raw';
+import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 import type { LgObject } from './local-group-loader';
 import {
   buildEmissionInstanceData,
@@ -14,32 +16,15 @@ import {
   type SersicInstanceData,
 } from './local-group-emission-pure';
 
-// Magnitude-domain tone map (README § Emission layer): pixel
-// brightness = 1 − exp(−color · uBrightnessScale · gate), where gate
-// is the star pipeline's normalized magnitude headroom. uGlowMagOffset
-// maps physical column → per-pixel surface-brightness magnitude and so
-// sets WHERE the slider reveals each isophote (seed 11.0: naked-eye
-// preset shows LMC/SMC + the M31 core, like the real sky; the "all"
-// preset reveals the M31 disc to its envelope). uBrightnessScale is
-// the overall gain. Neither knob touches per-object flux ratios —
-// those are pinned by the solved density0 values.
-const DEFAULT_BRIGHTNESS = 3.0;
-const GLOW_MAG_OFFSET = 11.0;
-
-/** Shelve flag: while true the shell never constructs this layer, so
- *  the emission glow renders nowhere (README.md § Emission layer).
- *  Flip to false to re-enable — everything downstream (filter flag,
- *  URL bit, debug knobs) is still wired. */
-export const LG_EMISSION_SHELVED = true;
-
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
 
-/** Uniforms shared by-reference with the star pipeline, as MilkyWay
- *  does — the instrument's limit gates stars and LG glow together. */
-export interface LgEmissionSharedUniforms {
-  uLimitMag: { value: number };
-  uSizeSpan: { value: number };
+export interface LgEmissionDeps {
+  /** `HdrPipeline.emitterUniforms`, by reference so exposure, pixel
+   *  solid angle and the inline-operator branch reach both family
+   *  passes with one write. This layer only reads them — the exposure
+   *  model is the only thing that moves the glow's brightness. */
+  hdr: HdrEmitterUniforms;
 }
 
 interface FamilyPass {
@@ -55,20 +40,12 @@ export class LocalGroupEmission {
 
   private readonly baseGeometry: THREE.SphereGeometry;
   private readonly passes: FamilyPass[] = [];
-  private readonly sharedTone: {
-    uBrightnessScale: { value: number };
-    uGlowMagOffset: { value: number };
-  };
   private readonly uWorldOffset = { value: new THREE.Vector3() };
 
   private enabled = true;
   private chartHidden = false;
 
-  constructor(objects: readonly LgObject[], shared: LgEmissionSharedUniforms) {
-    this.sharedTone = {
-      uBrightnessScale: { value: DEFAULT_BRIGHTNESS },
-      uGlowMagOffset: { value: GLOW_MAG_OFFSET },
-    };
+  constructor(objects: readonly LgObject[], deps: LgEmissionDeps) {
     this.baseGeometry = new THREE.SphereGeometry(
       1,
       SPHERE_WIDTH_SEGMENTS,
@@ -78,15 +55,15 @@ export class LocalGroupEmission {
     this.group = new THREE.Group();
 
     const { sersic, disc } = this.instanceData;
-    if (sersic.count > 0) this.passes.push(this.buildPass(sersic, false, shared));
-    if (disc.count > 0) this.passes.push(this.buildPass(disc, true, shared));
+    if (sersic.count > 0) this.passes.push(this.buildPass(sersic, false, deps));
+    if (disc.count > 0) this.passes.push(this.buildPass(disc, true, deps));
     for (const pass of this.passes) this.group.add(pass.mesh);
   }
 
   private buildPass(
     data: SersicInstanceData | DiscInstanceData,
     isDisc: boolean,
-    shared: LgEmissionSharedUniforms,
+    deps: LgEmissionDeps,
   ): FamilyPass {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.index = this.baseGeometry.index;
@@ -124,9 +101,9 @@ export class LocalGroupEmission {
       blending: THREE.AdditiveBlending,
       uniforms: {
         uWorldOffset: this.uWorldOffset,
-        ...this.sharedTone,
-        uLimitMag: shared.uLimitMag,
-        uSizeSpan: shared.uSizeSpan,
+        // Exposure, pixel solid angle, and the inline-operator branch.
+        // Owned by HdrPipeline; this layer only reads them.
+        ...deps.hdr,
       },
     });
 
@@ -136,6 +113,7 @@ export class LocalGroupEmission {
     // drop everything off-centre.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
+    markStatisticEmitter(mesh);
     return { mesh, geometry, material };
   }
 
@@ -166,21 +144,6 @@ export class LocalGroupEmission {
   setChartHidden(hidden: boolean): void {
     this.chartHidden = hidden;
     this.groupVisible();
-  }
-
-  setBrightness(x: number): void {
-    this.sharedTone.uBrightnessScale.value = Math.max(0, x);
-  }
-
-  setGlowMagOffset(x: number): void {
-    this.sharedTone.uGlowMagOffset.value = x;
-  }
-
-  getValues() {
-    return {
-      brightness: this.sharedTone.uBrightnessScale.value,
-      glowMagOffset: this.sharedTone.uGlowMagOffset.value,
-    };
   }
 
   dispose(): void {

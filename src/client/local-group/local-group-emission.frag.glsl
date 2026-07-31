@@ -2,15 +2,12 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
+#include <stellata_extended_emitter>
 
 // Bounded volumetric raymarch through per-instance Local Group proxy
 // volumes — the milkyway.frag.glsl scheme (unit-sphere entry/exit,
 // camera-inside clamp, log-distributed steps) with profile parameters
-// on flat varyings instead of uniforms, per-pixel sample jitter, and a
-// magnitude-domain tone map (see README § Emission layer: pixel
-// brightness follows the gate, not linear column flux — the star
-// pipeline's convention, NOT milkyway.frag's, which keeps linear
-// column in the exponent and would point-source any external view).
+// on flat varyings instead of uniforms, plus per-pixel sample jitter.
 // density0 values come solved from the build (docs/science-local-group.md
 // § Local Group luminosity model) — do NOT scale them per-object here;
 // per-object flux ratios are physical.
@@ -31,19 +28,23 @@ flat in vec4 vSersic;
 flat in float vUMax;
 #endif
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 outStatistic;
 
-uniform float uBrightnessScale;
-uniform float uLimitMag;      // shared with star pipeline
-uniform float uSizeSpan;      // shared with star pipeline
-uniform float uGlowMagOffset; // calibration: integrated column → appMag
+uniform float uExposure;
+uniform float uOmegaPxArcsec2;
+uniform float uHdrTarget;
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
 
 // EMISSION_STEPS is injected as a material define (per-family; see
 // local-group-emission-pure.ts EMISSION_STEPS_*).
 const int   STEPS = EMISSION_STEPS;
 const float S_MIN_PC = 0.1;
-const float LOG10 = 2.302585093;
 const float U_FLOOR = 1e-4;
+// Mirrors LG_SB_ZERO_POINT — a column is flux per steradian, so this is
+// just the solid angle of one arcsec².
+const float SB_ZERO_POINT = 26.5721256659;
 
 float sersicNu(float u, float invN, float bn, float pn) {
   float uc = max(u, U_FLOOR);
@@ -72,12 +73,12 @@ void main() {
   float c = dot(vCamLocal, vCamLocal) - 1.0;
   float disc = b * b - a * c;
   if (disc < 0.0) {
-    fragColor = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float tEnter = max((-b - sqrt(disc)) / a, 0.0);
   if (tEnter >= 1.0) {
-    fragColor = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
 
@@ -85,7 +86,7 @@ void main() {
   float sStart = max(tEnter * worldPerT, S_MIN_PC);
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
-    fragColor = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float logMin = log(sStart);
@@ -109,8 +110,13 @@ void main() {
     accum += densityAt(pLocal) * dsPc;
   }
 
-  float appMag = uGlowMagOffset - 2.5 * log(max(accum, 1e-12)) / LOG10;
-  float gate = max((uLimitMag - appMag) / max(uSizeSpan, 0.001), 0.0);
-  vec3 result = vec3(1.0) - exp(-vColor * uBrightnessScale * gate);
-  fragColor = vec4(result, 1.0);
+  // accum is Σρ·ds, which the solver's normalisation makes flux per
+  // steradian, so SB_ZERO_POINT is the surface brightness of a unit
+  // column. vColor carries hue only — it is luma-normalised on the CPU
+  // side — so the scalar gain leaves the solved flux alone.
+  stellataEmitExtendedSource(
+    vColor * accum,
+    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2,
+    uHdrTarget, uWhitePoint, uHighlightDesat,
+    fragColor, outStatistic);
 }

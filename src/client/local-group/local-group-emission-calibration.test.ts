@@ -10,15 +10,20 @@ import { parseLvdb, parseOverrides } from '../../../scripts/local-group/build-lo
 import {
   buildStandaloneOverride,
   filterForRendering,
+  MAX_DISTANCE_PC,
   mergeRowAndOverride,
   roundN,
   type LgObject as BuildLgObject,
 } from '../../../scripts/local-group/build-local-group-pure';
 import {
+  columnSurfaceBrightness,
+  cpuDensityAt,
   cpuRaymarchColumn,
   emissionComponents,
+  expandComponent,
   magFromIntensity,
   quatUnrotate,
+  subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
 
@@ -55,6 +60,26 @@ const OBJECTS = {
   m33: buildObject('M33'),
   fornax: buildObject('Fornax'),
 };
+
+/** The whole shipped catalogue, assembled as `build-local-group.ts` does:
+ *  every renderable LVDB row, then the standalone override rows LVDB does
+ *  not carry (M31, M33). */
+const ALL_OBJECTS: BuildLgObject[] = (() => {
+  const out: BuildLgObject[] = [];
+  const matched = new Set<string>();
+  for (const row of renderable) {
+    const merged = mergeRowAndOverride(row, overrideByName.get(row.name));
+    if (!merged) continue;
+    if (merged.source === 'OVERRIDE') matched.add(row.name);
+    out.push(merged);
+  }
+  for (const ov of overrides) {
+    if (matched.has(ov.name)) continue;
+    const built = buildStandaloneOverride(ov);
+    if (built) out.push(built);
+  }
+  return out;
+})();
 
 function sub(a: Vec3, b: Vec3): Vec3 {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -98,18 +123,21 @@ function rayColumn(
   dirWorld: Vec3,
   obj: BuildLgObject,
   steps?: number,
+  expansion = 1,
 ): number {
   let col = 0;
   for (const comp of emissionComponents(obj.emission)) {
-    col += componentRayColumn(camAbs, dirWorld, obj, comp, steps);
+    col += componentRayColumn(
+      camAbs, dirWorld, obj, expandComponent(comp, expansion), steps,
+    );
   }
   return col;
 }
 
-function objectMeshAxes(obj: BuildLgObject): Vec3 {
+function objectMeshAxes(obj: BuildLgObject, expansion = 1): Vec3 {
   const comps = emissionComponents(obj.emission);
   return [0, 1, 2].map((i) =>
-    Math.max(...comps.map((c) => c.axesPc[i])),
+    Math.max(...comps.map((c) => c.axesPc[i])) * expansion,
   ) as Vec3;
 }
 
@@ -134,8 +162,14 @@ function basisFor(dir: Vec3): { e1: Vec3; e2: Vec3 } {
 /** Total flux number Φ = ∫ I dΩ from an OUTSIDE camera: pinhole grid
  *  over the object's bounding cone, per-pixel solid angle
  *  dx·dy / (1 + x² + y²)^{3/2}. */
-function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps?: number): number {
-  const axes = objectMeshAxes(obj);
+function fluxOutside(
+  camAbs: Vec3,
+  obj: BuildLgObject,
+  rays: number,
+  steps?: number,
+  expansion = 1,
+): number {
+  const axes = objectMeshAxes(obj, expansion);
   const toC = sub(obj.center as Vec3, camAbs);
   const dist = norm(toC);
   const cdir: Vec3 = [toC[0] / dist, toC[1] / dist, toC[2] / dist];
@@ -156,7 +190,7 @@ function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps?: num
       const l = norm(raw);
       const dir: Vec3 = [raw[0] / l, raw[1] / l, raw[2] / l];
       const dOmega = (step * step) / Math.pow(1 + x * x + y * y, 1.5);
-      const col = rayColumn(camAbs, dir, obj, steps);
+      const col = rayColumn(camAbs, dir, obj, steps, expansion);
       if (col > 0) flux += col * dOmega;
     }
   }
@@ -290,4 +324,165 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
   );
 });
 
+// The sub-pixel floor is the one place the renderer rewrites a solved
+// profile mid-flight, so "flux-exact" has to be integrated rather than
+// asserted from the algebra. `expandComponent` is the vertex stage's CPU
+// twin: run the SAME flux integral over the expanded profile and the
+// answer may not move. A k² where the shader wants k³, or a scale length
+// that fails to ride the axes, shows up here as a magnitude shift.
+/** Four decades tighter than the layer's own ±0.1 mag. The expansion is
+ *  exact in closed form, so anything left is march discretisation, and
+ *  the measured worst is 8e-6 mag — this is a correctness bound, not a
+ *  tolerance. */
+const EXPANSION_TOLERANCE_MAG = 1e-4;
+const WORST_EXPANSION_PIN = 'm33@k20:-0.000008';
+
+describe('sub-pixel expansion — flux through the real integral', () => {
+  const MAX_K = 20;
+
+  /** The floor only ever fires on a mesh under a pixel wide, so the
+   *  expanded mesh still subtends a very narrow cone. Reproduce that:
+   *  put the camera far enough out that even MAX_K leaves entry and exit
+   *  a thin shell apart. Closer than this and the log-distributed march
+   *  redistributes its own samples between the two runs, which measures
+   *  the marcher rather than the expansion. */
+  const FAR_FIELD_FLOOR_RADII = 500;
+
+  function farCameraFor(obj: BuildLgObject): Vec3 {
+    const d = FAR_FIELD_FLOOR_RADII * MAX_K * Math.max(...objectMeshAxes(obj));
+    return [obj.center[0] + d, obj.center[1], obj.center[2]];
+  }
+
+  // The triple is flux-exact in closed form; what this measures is the
+  // DISCRETISED march's residual, because expanding the mesh moves the
+  // log-step distribution against the absolute S_MIN_PC floor. That
+  // residual is the shader's too, so pin it rather than tolerate it.
+  it('leaves the integrated magnitude unmoved at every expansion factor', () => {
+    const deviations: { pair: string; dev: number }[] = [];
+    for (const [name, obj] of Object.entries(OBJECTS)) {
+      const cam = farCameraFor(obj);
+      const base = magFromIntensity(fluxOutside(cam, obj, OUTSIDE_RAYS), 0);
+      for (const k of [1.5, 4, MAX_K]) {
+        const expanded = magFromIntensity(
+          fluxOutside(cam, obj, OUTSIDE_RAYS, undefined, k), 0,
+        );
+        deviations.push({ pair: `${name}@k${k}`, dev: expanded - base });
+      }
+    }
+    for (const { pair, dev } of deviations) {
+      expect(Math.abs(dev), pair).toBeLessThan(EXPANSION_TOLERANCE_MAG);
+    }
+    const worst = deviations.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a));
+    expect(deviations.length).toBe(15);
+    expect(`${worst.pair}:${roundN(worst.dev, 6)}`).toBe(WORST_EXPANSION_PIN);
+  });
+
+  it('magnifies the profile rather than reshaping it', () => {
+    // Same physical fraction of the mesh reads the same column before and
+    // after — the identical profile at a different scale, which is what
+    // makes the floor invisible rather than merely cheap.
+    const disc = emissionComponents(OBJECTS.m31.emission)[0];
+    const k = 7;
+    const expanded = expandComponent(disc, k);
+    for (const frac of [0.1, 0.4, 0.9]) {
+      const p: Vec3 = [frac, 0, 0];
+      const before = cpuDensityAt(p, disc) * disc.axesPc[0];
+      const after = cpuDensityAt(p, expanded) * expanded.axesPc[0];
+      expect(after).toBeCloseTo(before / (k * k), 12);
+    }
+  });
+
+  // Which viewpoints the floor is actually FOR. From Sol the catalogue is
+  // mostly resolved — dSphs are degrees across — so the floor is nearly
+  // inert there. It earns its keep from the far half of the envelope,
+  // where two thirds of the catalogue drops under a pixel.
+  // The other half of the spheroid-gap invariant. u₉₉(n) alone is pinned
+  // in build-local-group-pure.test.ts; what an observer actually sees is
+  // the shipped uMax·R_e against the half-light shell the wireframe draws.
+  it('keeps a spheroid mesh ~4.6x outside the ring it draws', () => {
+    const fornax = OBJECTS.fornax;
+    if (fornax.emission.family !== 'sersic') throw new Error('expected a spheroid');
+    const meshSemiMajor = fornax.emission.uMax * fornax.emission.reffAxesPc[0];
+    expect(roundN(meshSemiMajor / fornax.axes[0], 2)).toBe(4.56);
+  });
+
+  it('pins how much of the catalogue the floor catches, per viewpoint', () => {
+    const pxPerRadian = 900 / ((50 * Math.PI) / 180);
+    const subPixelFrom = (cam: Vec3) =>
+      ALL_OBJECTS.filter((obj) => {
+        const radiusPc = Math.max(...objectMeshAxes(obj));
+        const dist = norm(sub(obj.center as Vec3, cam));
+        return subPixelExpansion((radiusPc / dist) * pxPerRadian) > 1;
+      }).length;
+
+    expect(ALL_OBJECTS.length).toBe(123);
+    expect(subPixelFrom([0, 0, 0])).toBe(11);
+    expect(subPixelFrom([0, 0, 1_000_000])).toBe(59);
+    expect(subPixelFrom([0, 0, MAX_DISTANCE_PC])).toBe(82);
+  });
+});
+
 const WORST_DEVIATION_PIN = 'nearLmc→m31:0.017';
+
+// The flux test above pins the INTEGRAL. Nothing in it constrains how
+// that flux is distributed across the object, which is the half a viewer
+// actually reads. M31 is the only LG object with published photometry
+// detailed enough to check a profile against, and because the solver
+// fixes total flux while R_d / R_e / n / B/T / i all come from
+// publication, the profile has no free parameter left — these are
+// therefore closed-form consequences, not fitted values.
+describe('M31 surface-brightness profile vs published photometry', () => {
+  const m31 = OBJECTS.m31;
+  const disc = emissionComponents(m31.emission).find((c) => c.family === 'disc')!;
+
+  /** Column straight down the disc normal — the face-on sightline. */
+  function faceOnColumnAt(radiusPc: number): number {
+    if (disc.family !== 'disc') throw new Error('expected the disc component');
+    // ∫ρ₀·exp(−R/R_d)·exp(−|z|/z_d) dz over the full envelope.
+    const vertical = 2 * disc.zdPc * (1 - Math.exp(-disc.axesPc[2] / disc.zdPc));
+    return disc.density0 * Math.exp(-radiusPc / disc.rdPc) * vertical;
+  }
+
+  it("the disc's face-on central surface brightness satisfies Freeman's law", () => {
+    // Freeman (1970) μ₀(V) = 21.65 ± 0.30 for spiral discs. The model was
+    // never fitted to this — it falls out of the solved flux plus the
+    // published R_d — so agreement is a real check on the deprojection.
+    const mu0 = columnSurfaceBrightness(faceOnColumnAt(0));
+    expect(mu0).toBeGreaterThan(21.35);
+    expect(mu0).toBeLessThan(21.95);
+    expect(roundN(mu0, 2)).toBe(21.45);
+  });
+
+  it('falls 1.0857 mag per scale length — exponential in flux, linear in mag', () => {
+    // The reason a real M31 photograph shows no visible "exponential
+    // cliff": a log display transfer turns an exponential disc into a
+    // straight ramp. Pinned because it is the shape claim the layer makes.
+    const mu = (r: number) => columnSurfaceBrightness(faceOnColumnAt(r));
+    for (const n of [1, 2, 3]) {
+      expect(mu(n * disc.rdPc) - mu(0)).toBeCloseTo(n * 1.0857, 2);
+    }
+  });
+
+  it('structural inputs match the papers they are cited from', () => {
+    // Courteau et al. 2011 (ApJ 739, 20): R_d = 5.3 ± 0.5 kpc,
+    // R_e = 1.0 ± 0.2 kpc, n = 2.2 ± 0.3, at 785 ± 25 kpc.
+    if (disc.family !== 'disc') throw new Error('expected the disc component');
+    expect(disc.rdPc).toBe(5300);
+    const bulge = emissionComponents(m31.emission).find((c) => c.family === 'sersic')!;
+    if (bulge.family !== 'sersic') throw new Error('expected the bulge component');
+    expect(bulge.axesPc[0] / bulge.uMax).toBeCloseTo(1000, 6);
+    expect(1 / bulge.invN).toBeCloseTo(2.2, 6);
+    expect(m31.distance).toBeGreaterThan(760_000);
+    expect(m31.distance).toBeLessThan(810_000);
+  });
+
+  it('total magnitude sits between the as-observed and dereddened values', () => {
+    // Catalogue m_V = 3.44 is RC3 as-observed; Tempel et al. 2011
+    // (A&A 526, A155) Table 2 gives 3.24 intrinsic. The layer calibrates
+    // to as-observed on purpose (docs/science-local-group.md § No dust),
+    // so the difference IS the MW foreground it declines to remove.
+    expect(m31.emission.mV).toBe(3.44);
+    expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
+    expect(m31.emission.mV - 3.24).toBeLessThan(0.35);
+  });
+});

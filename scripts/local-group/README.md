@@ -81,6 +81,18 @@ consumes raw numbers and never re-derives photometry.
   semi-major equals LVDB `rhalf_physical`; z_d = wireframe c / 3;
   disc envelope max(4·R_d, wireframe a) × max(4·z_d, wireframe c);
   spheroid envelope u_max = max(u₉₉(n), shell/R_e).
+- `renderedWireframeAxes` decides what the WIREFRAME draws, which is not
+  always the structural axes. **Disc family: the wireframe is the
+  emission envelope.** The structural axes stay the emission's input
+  (z_d is still `structural c / 3`, so density0 is untouched); this only
+  moves the silhouette out to where emission stops. Without it the mesh
+  overhangs the rings unavoidably — the vertical envelope is
+  `4·z_d = 4c/3`, so the glow spills a third of the disc's thickness past
+  its own outline edge-on. **Spheroid family: unchanged**, and
+  deliberately ~4.6× smaller than the mesh — the wireframe is the
+  half-light ellipsoid while the mesh runs to u₉₉, and light outside a
+  half-light radius is what "half-light" means. The ratio is pinned so
+  the gap stays deliberate.
 - `emission-solver-pure.ts` solves ρ₀ = d₀² · 10^(−0.4·m_V) / G with
   G integrated **over the actual truncated mesh volume** through one
   numeric quadrature path (`integrateOverEllipsoid`, Gauss–Legendre in
