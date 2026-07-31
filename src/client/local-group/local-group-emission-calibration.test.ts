@@ -10,16 +10,20 @@ import { parseLvdb, parseOverrides } from '../../../scripts/local-group/build-lo
 import {
   buildStandaloneOverride,
   filterForRendering,
+  MAX_DISTANCE_PC,
   mergeRowAndOverride,
   roundN,
   type LgObject as BuildLgObject,
 } from '../../../scripts/local-group/build-local-group-pure';
 import {
   columnSurfaceBrightness,
+  cpuDensityAt,
   cpuRaymarchColumn,
   emissionComponents,
+  expandComponent,
   magFromIntensity,
   quatUnrotate,
+  subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
 
@@ -56,6 +60,26 @@ const OBJECTS = {
   m33: buildObject('M33'),
   fornax: buildObject('Fornax'),
 };
+
+/** The whole shipped catalogue, assembled as `build-local-group.ts` does:
+ *  every renderable LVDB row, then the standalone override rows LVDB does
+ *  not carry (M31, M33). */
+const ALL_OBJECTS: BuildLgObject[] = (() => {
+  const out: BuildLgObject[] = [];
+  const matched = new Set<string>();
+  for (const row of renderable) {
+    const merged = mergeRowAndOverride(row, overrideByName.get(row.name));
+    if (!merged) continue;
+    if (merged.source === 'OVERRIDE') matched.add(row.name);
+    out.push(merged);
+  }
+  for (const ov of overrides) {
+    if (matched.has(ov.name)) continue;
+    const built = buildStandaloneOverride(ov);
+    if (built) out.push(built);
+  }
+  return out;
+})();
 
 function sub(a: Vec3, b: Vec3): Vec3 {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -99,18 +123,21 @@ function rayColumn(
   dirWorld: Vec3,
   obj: BuildLgObject,
   steps?: number,
+  expansion = 1,
 ): number {
   let col = 0;
   for (const comp of emissionComponents(obj.emission)) {
-    col += componentRayColumn(camAbs, dirWorld, obj, comp, steps);
+    col += componentRayColumn(
+      camAbs, dirWorld, obj, expandComponent(comp, expansion), steps,
+    );
   }
   return col;
 }
 
-function objectMeshAxes(obj: BuildLgObject): Vec3 {
+function objectMeshAxes(obj: BuildLgObject, expansion = 1): Vec3 {
   const comps = emissionComponents(obj.emission);
   return [0, 1, 2].map((i) =>
-    Math.max(...comps.map((c) => c.axesPc[i])),
+    Math.max(...comps.map((c) => c.axesPc[i])) * expansion,
   ) as Vec3;
 }
 
@@ -135,8 +162,14 @@ function basisFor(dir: Vec3): { e1: Vec3; e2: Vec3 } {
 /** Total flux number Φ = ∫ I dΩ from an OUTSIDE camera: pinhole grid
  *  over the object's bounding cone, per-pixel solid angle
  *  dx·dy / (1 + x² + y²)^{3/2}. */
-function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps?: number): number {
-  const axes = objectMeshAxes(obj);
+function fluxOutside(
+  camAbs: Vec3,
+  obj: BuildLgObject,
+  rays: number,
+  steps?: number,
+  expansion = 1,
+): number {
+  const axes = objectMeshAxes(obj, expansion);
   const toC = sub(obj.center as Vec3, camAbs);
   const dist = norm(toC);
   const cdir: Vec3 = [toC[0] / dist, toC[1] / dist, toC[2] / dist];
@@ -157,7 +190,7 @@ function fluxOutside(camAbs: Vec3, obj: BuildLgObject, rays: number, steps?: num
       const l = norm(raw);
       const dir: Vec3 = [raw[0] / l, raw[1] / l, raw[2] / l];
       const dOmega = (step * step) / Math.pow(1 + x * x + y * y, 1.5);
-      const col = rayColumn(camAbs, dir, obj, steps);
+      const col = rayColumn(camAbs, dir, obj, steps, expansion);
       if (col > 0) flux += col * dOmega;
     }
   }
@@ -289,6 +322,104 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
       expect(`${worst.pair}:${roundN(worst.dev, 3)}`).toBe(WORST_DEVIATION_PIN);
     },
   );
+});
+
+// The sub-pixel floor is the one place the renderer rewrites a solved
+// profile mid-flight, so "flux-exact" has to be integrated rather than
+// asserted from the algebra. `expandComponent` is the vertex stage's CPU
+// twin: run the SAME flux integral over the expanded profile and the
+// answer may not move. A k² where the shader wants k³, or a scale length
+// that fails to ride the axes, shows up here as a magnitude shift.
+/** Four decades tighter than the layer's own ±0.1 mag. The expansion is
+ *  exact in closed form, so anything left is march discretisation, and
+ *  the measured worst is 8e-6 mag — this is a correctness bound, not a
+ *  tolerance. */
+const EXPANSION_TOLERANCE_MAG = 1e-4;
+const WORST_EXPANSION_PIN = 'm33@k20:-0.000008';
+
+describe('sub-pixel expansion — flux through the real integral', () => {
+  const MAX_K = 20;
+
+  /** The floor only ever fires on a mesh under a pixel wide, so the
+   *  expanded mesh still subtends a very narrow cone. Reproduce that:
+   *  put the camera far enough out that even MAX_K leaves entry and exit
+   *  a thin shell apart. Closer than this and the log-distributed march
+   *  redistributes its own samples between the two runs, which measures
+   *  the marcher rather than the expansion. */
+  const FAR_FIELD_FLOOR_RADII = 500;
+
+  function farCameraFor(obj: BuildLgObject): Vec3 {
+    const d = FAR_FIELD_FLOOR_RADII * MAX_K * Math.max(...objectMeshAxes(obj));
+    return [obj.center[0] + d, obj.center[1], obj.center[2]];
+  }
+
+  // The triple is flux-exact in closed form; what this measures is the
+  // DISCRETISED march's residual, because expanding the mesh moves the
+  // log-step distribution against the absolute S_MIN_PC floor. That
+  // residual is the shader's too, so pin it rather than tolerate it.
+  it('leaves the integrated magnitude unmoved at every expansion factor', () => {
+    const deviations: { pair: string; dev: number }[] = [];
+    for (const [name, obj] of Object.entries(OBJECTS)) {
+      const cam = farCameraFor(obj);
+      const base = magFromIntensity(fluxOutside(cam, obj, OUTSIDE_RAYS), 0);
+      for (const k of [1.5, 4, MAX_K]) {
+        const expanded = magFromIntensity(
+          fluxOutside(cam, obj, OUTSIDE_RAYS, undefined, k), 0,
+        );
+        deviations.push({ pair: `${name}@k${k}`, dev: expanded - base });
+      }
+    }
+    for (const { pair, dev } of deviations) {
+      expect(Math.abs(dev), pair).toBeLessThan(EXPANSION_TOLERANCE_MAG);
+    }
+    const worst = deviations.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a));
+    expect(deviations.length).toBe(15);
+    expect(`${worst.pair}:${roundN(worst.dev, 6)}`).toBe(WORST_EXPANSION_PIN);
+  });
+
+  it('magnifies the profile rather than reshaping it', () => {
+    // Same physical fraction of the mesh reads the same column before and
+    // after — the identical profile at a different scale, which is what
+    // makes the floor invisible rather than merely cheap.
+    const disc = emissionComponents(OBJECTS.m31.emission)[0];
+    const k = 7;
+    const expanded = expandComponent(disc, k);
+    for (const frac of [0.1, 0.4, 0.9]) {
+      const p: Vec3 = [frac, 0, 0];
+      const before = cpuDensityAt(p, disc) * disc.axesPc[0];
+      const after = cpuDensityAt(p, expanded) * expanded.axesPc[0];
+      expect(after).toBeCloseTo(before / (k * k), 12);
+    }
+  });
+
+  // Which viewpoints the floor is actually FOR. From Sol the catalogue is
+  // mostly resolved — dSphs are degrees across — so the floor is nearly
+  // inert there. It earns its keep from the far half of the envelope,
+  // where two thirds of the catalogue drops under a pixel.
+  // The other half of the spheroid-gap invariant. u₉₉(n) alone is pinned
+  // in build-local-group-pure.test.ts; what an observer actually sees is
+  // the shipped uMax·R_e against the half-light shell the wireframe draws.
+  it('keeps a spheroid mesh ~4.6x outside the ring it draws', () => {
+    const fornax = OBJECTS.fornax;
+    if (fornax.emission.family !== 'sersic') throw new Error('expected a spheroid');
+    const meshSemiMajor = fornax.emission.uMax * fornax.emission.reffAxesPc[0];
+    expect(roundN(meshSemiMajor / fornax.axes[0], 2)).toBe(4.56);
+  });
+
+  it('pins how much of the catalogue the floor catches, per viewpoint', () => {
+    const pxPerRadian = 900 / ((50 * Math.PI) / 180);
+    const subPixelFrom = (cam: Vec3) =>
+      ALL_OBJECTS.filter((obj) => {
+        const radiusPc = Math.max(...objectMeshAxes(obj));
+        const dist = norm(sub(obj.center as Vec3, cam));
+        return subPixelExpansion((radiusPc / dist) * pxPerRadian) > 1;
+      }).length;
+
+    expect(ALL_OBJECTS.length).toBe(123);
+    expect(subPixelFrom([0, 0, 0])).toBe(11);
+    expect(subPixelFrom([0, 0, 1_000_000])).toBe(59);
+    expect(subPixelFrom([0, 0, MAX_DISTANCE_PC])).toBe(82);
+  });
 });
 
 const WORST_DEVIATION_PIN = 'nearLmc→m31:0.017';

@@ -48,6 +48,30 @@ export function subPixelExpansion(meshRadiusPx: number): number {
   return Math.max(1, MIN_PROJECTED_RADIUS_PX / meshRadiusPx);
 }
 
+/** The expansion applied to one component — the CPU twin of the vertex
+ *  shader's block, and what lets the calibration test integrate the
+ *  expanded profile rather than a restatement of it. Keep in lockstep
+ *  with local-group-emission.vert.glsl.
+ *
+ *  Sérsic `uMax` rides untouched: it is in R_e units and R_e = axes/uMax,
+ *  so scaling the axes already scales R_e. */
+export function expandComponent(
+  comp: EmissionComponent,
+  k: number,
+): EmissionComponent {
+  if (k === 1) return comp;
+  const axesPc: [number, number, number] = [
+    comp.axesPc[0] * k,
+    comp.axesPc[1] * k,
+    comp.axesPc[2] * k,
+  ];
+  const density0 = comp.density0 / (k * k * k);
+  if (comp.family === 'disc') {
+    return { ...comp, axesPc, density0, rdPc: comp.rdPc * k, zdPc: comp.zdPc * k };
+  }
+  return { ...comp, axesPc, density0 };
+}
+
 /** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
  *  disc pass marches denser: grazing rays run tens of kpc through an
  *  envelope whose vertical scale height is ~10² pc, and undersampling

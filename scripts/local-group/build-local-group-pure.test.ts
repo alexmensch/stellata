@@ -14,6 +14,7 @@ import {
   renderedWireframeAxes,
   raDecDistanceToIcrs,
   type LgEmission,
+  roundN,
   roundSig,
   skyBasis,
   slugify,
@@ -720,9 +721,11 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
       .toEqual([400, 400, 400]);
   });
 
-  it('pins the spheroid gap so it stays deliberate rather than drifting', () => {
-    const uMax = u99(1);
-    expect(uMax).toBeGreaterThan(4.5);
-    expect(uMax).toBeLessThan(4.7);
+  it('pins u₉₉ so the spheroid gap cannot drift silently', () => {
+    // Only half the invariant: the shipped uMax is max(u₉₉(n), shell/R_e),
+    // so what an observer sees is uMax·R_e over the half-light shell. The
+    // ratio for a real object is pinned in
+    // local-group-emission-calibration.test.ts, which has the catalogue.
+    expect(roundN(u99(1), 3)).toBe(4.557);
   });
 });

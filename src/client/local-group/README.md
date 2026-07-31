@@ -181,18 +181,33 @@ tint dims the object by its own relative luminance, which is 0.42 mag
 for the disc lavender. Harmless while a global gain absorbed it; a flux
 error the moment the unit is physical.
 
-**Sub-pixel proxies expand rather than lose flux.** 120 of the 123
-objects subtend under a pixel from most viewpoints, where fragment
-coverage quantises and drops the flux the solver guaranteed. The vertex
-stage scales axes and profile scale lengths by `k` and `density0` by
-`1/k³`, where `k` lifts the projected mesh radius to
-`MIN_PROJECTED_RADIUS_PX` (1 CSS px — the same resolution floor
-`stellataPointSourcePeak` applies to a star). The triple is flux-exact:
-the column picks up `k` from the path and `k⁻³` from the density while
-the solid angle picks up `k²`. `k → 1` continuously at the floor, so
-there is no cutover and nothing to add hysteresis against. Pixels-per-
-radian is derived from `uOmegaPxArcsec2` rather than taking its own
+**Sub-pixel proxies expand rather than lose flux.** Below a pixel,
+fragment coverage quantises and drops the flux the solver guaranteed. The
+vertex stage scales axes and profile scale lengths by `k` and `density0`
+by `1/k³`, where `k` lifts the mesh's **largest semi-axis** to
+`MIN_PROJECTED_RADIUS_PX` (1 CSS px — the resolution floor
+`stellataPointSourcePeak` applies to a star). Largest, not the
+orientation-dependent projected radius: over-expanding a mesh the viewer
+can already resolve would move a visible silhouette, and everything near
+the floor reads near-isotropic anyway. The triple is flux-exact: the
+column picks up `k` from the path and `k⁻³` from the density while the
+solid angle picks up `k²`. `k → 1` continuously at the floor, so there is
+no cutover and nothing to add hysteresis against. Pixels-per-radian comes
+from `uOmegaPxArcsec2` through `stellataPxPerRadian` rather than a second
 uniform, so the floor and the gain cannot disagree about the viewport.
+
+**Which viewpoints it is for.** Not the ones near Sol: dSphs are degrees
+across, so at a 50° / 900 px viewport only **11 of the 123** objects sit
+under a pixel from Sol (median mesh radius 3.4 px), and zooming to 5°
+leaves none. The floor earns its keep from the far half of the envelope —
+59 of 123 at 1 Mpc out and **82 at the 2 Mpc camera limit**, which is
+also where an object losing its flux would be least recoverable. All
+three counts are pinned in `local-group-emission-calibration.test.ts`,
+alongside the flux-invariance check that integrates the expanded profile
+through the same raymarch rather than restating the algebra
+(`expandComponent` is the vertex stage's CPU twin — keep them in
+lockstep). Worst measured deviation across 5 objects × k ∈ {1.5, 4, 20}:
+8e-6 mag.
 
 **Both passes write the statistic attachment**
 (`../hdr/statistic/README.md`): an extended source's emission is already
