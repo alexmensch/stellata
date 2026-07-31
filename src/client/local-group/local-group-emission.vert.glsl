@@ -12,6 +12,11 @@ precision highp float;
 // material doesn't.
 
 uniform vec3 uWorldOffset;
+uniform float uOmegaPxArcsec2;
+
+// Resolution floor, CSS px — mirrors MIN_PROJECTED_RADIUS_PX.
+const float MIN_PROJECTED_RADIUS_PX = 1.0;
+const float ARCSEC_TO_RAD = 4.84813681109536e-6;
 
 in vec3 aCenterAbs;
 in vec4 aQuat;
@@ -44,16 +49,31 @@ void main() {
   // Absolute-ICRS centre → renderer-local. f32 cancellation here leaves
   // ~0.25 pc error at the 2 Mpc envelope — invisible at galaxy scale.
   vec3 centerLocal = aCenterAbs - uWorldOffset;
-  vec3 world = centerLocal + quatRotate(aQuat, position * aAxes);
+
+  // Sub-pixel proxies expand to the resolution floor: axes × k, scale
+  // lengths × k, density0 ÷ k³ leaves flux exact and the profile shape
+  // identical (see local-group-emission-pure.ts subPixelExpansion).
+  float pxPerRadian = 1.0 / (ARCSEC_TO_RAD * sqrt(max(uOmegaPxArcsec2, 1e-12)));
+  float meshRadiusPc = max(max(aAxes.x, aAxes.y), aAxes.z);
+  float distPc = max(length(cameraPosition - centerLocal), 1e-6);
+  float meshRadiusPx = (meshRadiusPc / distPc) * pxPerRadian;
+  float k = max(1.0, MIN_PROJECTED_RADIUS_PX / max(meshRadiusPx, 1e-12));
+  float densityScale = 1.0 / (k * k * k);
+  vec3 axes = aAxes * k;
+
+  vec3 world = centerLocal + quatRotate(aQuat, position * axes);
   vMeshLocalPos = position;
   vWorldPos = world;
-  vCamLocal = quatRotate(vec4(-aQuat.xyz, aQuat.w), cameraPosition - centerLocal) / aAxes;
-  vAxes = aAxes;
+  vCamLocal = quatRotate(vec4(-aQuat.xyz, aQuat.w), cameraPosition - centerLocal) / axes;
+  vAxes = axes;
   vColor = aColor;
 #ifdef FAMILY_DISC
-  vDisc = aDisc;
+  // (density0, 1/R_d, 1/z_d) — the reciprocals scale by 1/k.
+  vDisc = vec3(aDisc.x * densityScale, aDisc.yz / k);
 #else
-  vSersic = aSersic;
+  // uMax is in R_e units and R_e = axes/uMax, so it rides the expansion
+  // untouched; only the normalisation moves.
+  vSersic = vec4(aSersic.x * densityScale, aSersic.yzw);
   vUMax = aUMax;
 #endif
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);

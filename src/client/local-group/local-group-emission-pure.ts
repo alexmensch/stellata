@@ -22,6 +22,28 @@ export const DISC_COLOR_RGB: [number, number, number] = [0.6706, 0.6588, 0.8745]
  *  scale is fixed the moment the solver runs. */
 export const LG_SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
 
+/** Projected radius, in CSS px, that a proxy mesh is expanded to when it
+ *  would otherwise render smaller. Below one pixel the rasteriser cannot
+ *  represent the source at all and quantised fragment coverage eats the
+ *  flux — the same resolution floor `stellataPointSourcePeak` applies to
+ *  a star's kernel. */
+export const MIN_PROJECTED_RADIUS_PX = 1;
+
+/**
+ * Scale factor expanding a sub-pixel proxy mesh to the resolution floor.
+ *
+ * Applied as: axes × k, profile scale lengths × k, density0 ÷ k³. That
+ * triple is flux-exact rather than approximately so — the column
+ * ∫ρ ds picks up k from the path and k⁻³ from the density, and the solid
+ * angle picks up k², so Φ is invariant while the image is the identical
+ * profile magnified. k → 1 continuously at the floor, so there is no
+ * cutover to hysteresis against.
+ */
+export function subPixelExpansion(meshRadiusPx: number): number {
+  if (!(meshRadiusPx > 0)) return 1;
+  return Math.max(1, MIN_PROJECTED_RADIUS_PX / meshRadiusPx);
+}
+
 /** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
  *  disc pass marches denser: grazing rays run tens of kpc through an
  *  envelope whose vertical scale height is ~10² pc, and undersampling

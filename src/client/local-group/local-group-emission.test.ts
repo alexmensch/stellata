@@ -14,7 +14,9 @@ import {
   intensityFromMag,
   lumaNormalisedTint,
   magFromIntensity,
+  subPixelExpansion,
   LG_SB_ZERO_POINT,
+  MIN_PROJECTED_RADIUS_PX,
   DISC_COLOR_RGB,
   EMISSION_STEPS_DISC,
   EMISSION_STEPS_SERSIC,
@@ -290,6 +292,16 @@ describe('surface-brightness zero point', () => {
     expect(Number(m![1])).toBeCloseTo(LG_SB_ZERO_POINT, 9);
   });
 
+  it('the resolution floor matches the one the vertex shader applies', () => {
+    const vert = readFileSync(
+      fileURLToPath(new URL('./local-group-emission.vert.glsl', import.meta.url)),
+      'utf8',
+    );
+    const m = vert.match(/const float MIN_PROJECTED_RADIUS_PX = ([\d.]+);/);
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(MIN_PROJECTED_RADIUS_PX);
+  });
+
   it('a unit column reads at the zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(LG_SB_ZERO_POINT, 12);
   });
@@ -321,6 +333,36 @@ describe('lumaNormalisedTint', () => {
 
   it('a black tint degrades to white rather than extinguishing the object', () => {
     expect(lumaNormalisedTint([0, 0, 0])).toEqual([1, 1, 1]);
+  });
+});
+
+describe('subPixelExpansion', () => {
+  it('is inert at and above the resolution floor', () => {
+    expect(subPixelExpansion(MIN_PROJECTED_RADIUS_PX)).toBe(1);
+    expect(subPixelExpansion(50)).toBe(1);
+  });
+
+  it('lifts a sub-pixel mesh exactly to the floor', () => {
+    expect(subPixelExpansion(0.25) * 0.25).toBeCloseTo(MIN_PROJECTED_RADIUS_PX, 12);
+    expect(subPixelExpansion(0.001)).toBe(1000);
+  });
+
+  it('is continuous across the floor — no cutover to hysteresis against', () => {
+    const below = subPixelExpansion(MIN_PROJECTED_RADIUS_PX - 1e-9);
+    expect(below).toBeCloseTo(1, 8);
+  });
+
+  it('the axes×k, scale-lengths×k, density÷k³ triple conserves flux exactly', () => {
+    // Column ∝ ρ·path = k⁻³·k = k⁻², solid angle ∝ k², so Φ is invariant.
+    const k = subPixelExpansion(0.1);
+    const columnFactor = (1 / k ** 3) * k;
+    const solidAngleFactor = k ** 2;
+    expect(columnFactor * solidAngleFactor).toBeCloseTo(1, 12);
+  });
+
+  it('degrades to inert on a degenerate projected radius', () => {
+    expect(subPixelExpansion(0)).toBe(1);
+    expect(subPixelExpansion(Number.NaN)).toBe(1);
   });
 });
 
