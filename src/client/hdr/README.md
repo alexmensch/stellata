@@ -35,10 +35,17 @@ src/client/hdr/
                              inverse. Vitest-pinned against the design
                              doc's worked values.
   emission.glsl              The unit: magnitude → linear luminance, the
-                             point-source peak rule, and the extended-
-                             source surface-brightness rule (§ Unit).
+                             point-source peak rule, the extended-source
+                             surface-brightness rule (§ Unit), and the
+                             plate scale recovered from the pixel solid
+                             angle.
+  extended-emitter.glsl      The write tail a volumetric emitter shares:
+                             gain, clamp, both attachments, and the
+                             inline operator off-target. Composes the two
+                             chunks above, so it is the only include a
+                             raymarching stage needs (§ Extended sources).
   emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
-                             derivation and LUMA_CEIL.
+                             derivation and its inverse, and LUMA_CEIL.
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -91,10 +98,30 @@ normalisers that make the shaded disc integrate back to `L(m)` are
 `../solar-system/planets/README.md` § Physical-luminance emission; the
 mesh reads `uOmegaPxArcsec2` for the same reason the Milky Way does.
 
+### Extended sources — one write tail
+
+Everything after the gain is identical for every volumetric emitter, so
+`extended-emitter.glsl` (`stellata_extended_emitter`) owns it:
+`stellataEmitExtendedSource` applies the gain, clamps at `LUMA_CEIL`,
+writes the statistic texel, and off-target runs the operator undithered;
+`stellataEmitNothing` is the miss case. Both take the attachments as
+`out` params, making "attachment 1 has no default, so every branch must
+write it" one decision rather than one per early return. Consumers:
+`milkyway.frag.glsl` (which keeps its own magnitude step, since the chart
+isobar contours `magPx`) and `local-group-emission.frag.glsl`.
+
+It `#include`s both chunks above — three resolves includes recursively
+and the guards make the extra paste inert. `chunk-constant-drift.test.ts`
+resolves every extended-source stage through the real `ShaderChunk`
+registry, so a misspelled chunk name fails in vitest, not on first frame.
+
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
 arcsec² (`pixelSolidAngleArcsec2`), written by
 `HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
-fovYRad)`. CSS again so brightness is `devicePixelRatio`-independent, and
+fovYRad)`. A layer needing the plate scale back — the Local Group's
+resolution floor — inverts it through `stellataPxPerRadian` rather than
+taking a second uniform, so a resize cannot leave the two disagreeing.
+CSS again so brightness is `devicePixelRatio`-independent, and
 **height** rather than the `max(w, h)` reference dimension the preset
 arcsec→px conversion uses, because that is the axis the vertical FOV
 maps to and the axis `physSize` projects through. Every FOV change and

@@ -86,6 +86,16 @@ The Milky Way follows the disc rule through the same reasoning —
 `../galactic/README.md` imports its ring extents straight from the band's
 proxy meshes.
 
+**`axes` is the object's extent everywhere, not just its outline.** The
+same field feeds `maxSemiAxisPc` → `lgViewingDistancePc` (park radius and
+the focus `dMinFloor`), the label ranking's apparent-size test, and the
+pick ellipsoid. So the disc family's new envelope also parks the camera
+further out — M31 by 41 %. That is the intended reading: what should stay
+invariant is **the whole object fitting on screen**, and the whole object
+is now correctly the volume that emits. A disc-family object's `axes`
+therefore means a different isophote from a spheroid's, which is the
+tradeoff § Wireframe extent is making deliberately.
+
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
 - **disc**: midplane `LineLoop` plus a thickness pair offset ±c along
