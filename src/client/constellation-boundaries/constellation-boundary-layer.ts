@@ -111,8 +111,8 @@ export class ConstellationBoundaryLayer {
     this.fadeWindow = resolveBoundaryFadeWindowPc(this.fade, limitMag);
   }
 
-  /** Per-frame update. The caller ANDs the declutter permission and the
-   *  `showConstellation` toggle into its warp gate before calling. */
+  /** Per-frame update. The caller ANDs the declutter permission into its
+   *  warp gate before calling. */
   update(worldOffset: THREE.Vector3, distFromSolPc: number): void {
     if (this.lineSegments === null || this.fadeWindow === null) {
       this.group.visible = false;

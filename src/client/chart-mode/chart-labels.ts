@@ -499,8 +499,6 @@ export class ChartLabels {
     // luminous member (γ Vel for Vela) is often not the one that looks
     // brightest, and gating on it flips the label on and off at the wrong
     // slider threshold.
-    // The Latin-name labels follow the constellation lines — when the
-    // master toggle is off, both disappear together.
     perfMark('chart.constellations');
     // ~88 regions × ~30 members of transcendentals is the largest single
     // chart-mode CPU cost, so it is skipped two ways: entirely when no name is
@@ -508,14 +506,13 @@ export class ChartLabels {
     // moves under a small nudge. The sentinels are stamped only where the walk
     // actually runs — stamping them on a skipped walk would serve the stale
     // magnitudes for up to 0.5 pc of camera travel once names came back on.
-    const showNames = f.showConstellation && showConNames;
     const camDx = camera.position.x - this.lastBrightestCamPos.x;
     const camDy = camera.position.y - this.lastBrightestCamPos.y;
     const camDz = camera.position.z - this.lastBrightestCamPos.z;
     const camMovedSq = camDx * camDx + camDy * camDy + camDz * camDz;
     // NaN propagates through the comparison so the initial sentinel value
     // forces a recompute on first use after chart-mode entry.
-    const recompute = showNames && (
+    const recompute = showConNames && (
       !(camMovedSq < BRIGHTEST_RECOMPUTE_DIST_SQ) ||
       this.filterVersion !== this.lastBrightestVersion
     );
@@ -531,7 +528,7 @@ export class ChartLabels {
         m.minAppMag = minAppMag;
       }
     }
-    if (showNames) {
+    if (showConNames) {
       const worldOffset = stellata.getWorldOffset();
       for (const anchor of stellata.constellationLabelAnchors) {
         const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;

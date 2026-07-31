@@ -35,15 +35,9 @@ function makeFilter(overrides: Partial<FilterState> = {}): FilterState {
     highlightCon: -1,
     sizeMin: 1,
     sizeMax: 8,
-    sizeSpan: 8,
     instrument: 'unaided-eye',
-    sizeMinOverridden: false,
-    sizeMaxOverridden: false,
-    sizeSpanOverridden: false,
-    showConstellation: true,
     coordSphere: 'galactic',
     showHud: true,
-    showMilkyway: true,
     showLgEmission: true,
     chart: false,
     detailLevel: 'all',
@@ -224,7 +218,7 @@ describe('star-physics / renderedSizePx', () => {
   it('returns the `appSize` floor for a far-away, non-variable, bright-enough row', () => {
     const { catalog, camPos, localPositions } = sirius();
     const uniforms = makeUniforms();
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6 });
     // dCam = 5; appMag = catalog.absmag[0] + 5*(log10(5) - 1).
     // brightness = clamp01((limitMag - appMag) / sizeSpan).
     // appSize = sizeMin + sqrt(brightness) * (sizeMax - sizeMin).
@@ -247,7 +241,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(5, 0, 0);
     const uniforms = makeUniforms();
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6 });
     const got = renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
     });
@@ -268,7 +262,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(5, 0, 0);
     const uniforms = makeUniforms({ uSizeKnee: 0 });
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6 });
     const got = renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
     });
@@ -305,7 +299,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(28, 0, 0);
     const localPositions = cat.positions;
-    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8 });
+    const filter = makeFilter({ sizeMin: 1, sizeMax: 8 });
     const at = (phase: number) => renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions,
       uniforms: makeUniforms({ uModelDays: phase * 2.87 }), filter,
@@ -329,7 +323,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(28, 0, 0);
     const localPositions = cat.positions;
-    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8 });
+    const filter = makeFilter({ sizeMin: 1, sizeMax: 8 });
     // Heavy warp: 1e6× → uModelDaysPerRealSec = 1e6/86400 ≈ 11.57; floor =
     // 11.57 × 4 s ≈ 46.3 model-days ≫ the 0.5 d period, so the effective
     // period is the floor. At uModelDays = floor/2 the star is at φ=½ (min);

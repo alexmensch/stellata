@@ -419,7 +419,6 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     stars?: { con: number; absmag: number; distPc: number }[];
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
-    showConstellation?: boolean;
     detailPermits?: (id: string) => boolean;
   }
 
@@ -467,7 +466,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       constellationLabelAnchors: patch.anchors ?? [],
       getFilter: () => ({
         instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
-        spectMask: 0xff, showConstellation: patch.showConstellation ?? true,
+        spectMask: 0xff,
       }),
       detailPermits: patch.detailPermits ?? (() => true),
       getCloudCatalog: () => null,
@@ -674,7 +673,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     });
 
     // The member walk is the largest single chart-mode CPU cost, so it must not
-    // run when no name is drawn — under `C` off or the declutter floor.
+    // run when the declutter floor withholds the names.
     it('skips the member walk entirely when no name is drawn', () => {
       // Two member stars, so a frame that walks them costs the glyph pass'
       // single unconditional read plus two.
@@ -691,7 +690,6 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         return reads;
       }
 
-      expect(readsForOneFrame({ showConstellation: false })).toBe(GLYPH_PASS_READ);
       expect(readsForOneFrame({
         detailPermits: (id) => id !== 'chartConstellationNames',
       })).toBe(GLYPH_PASS_READ);

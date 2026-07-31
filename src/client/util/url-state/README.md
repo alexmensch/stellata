@@ -59,14 +59,22 @@ cloud focus is just a cloud-kind SID — and POIs are a count byte plus
 one LEB128 SID per entry. No type tag rides the wire; kind comes from
 the runtime resolver (`../sid-resolver/README.md`) at apply time.
 Bits 16/17 (the v1–v3 1-byte cloud refs) are retired — leave them
-unclaimed for ~6 months of deploy overlap. Bits 4 (`mag`) and 8
-(`preset`) are retired differently: the instrument owns the limiting
-magnitude, so any blob carrying either **decodes and is ignored** and the
-link lands on the instrument limit — but v4 blobs shared before the
-retirement have those bits set with payload bytes, so their specs stay in
-`FIELDS_V4` as decode-only entries (never encoded). Dropping a spec whose
-bit is in the wild shifts every later field's byte offset; retiring a
-field is an encoder-side change only. SIDs are frozen forever in
+unclaimed for ~6 months of deploy overlap. Bits 4 (`mag`), 8 (`preset`),
+10 (`smin`), 11 (`smax`) and 12 (`span`) are retired differently: the
+instrument owns the limiting magnitude and the plate scale owns star pixel
+size, so any blob carrying them **decodes and is ignored** and the link
+lands on the derived values — but v4 blobs shared before the retirement
+have those bits set with payload bytes, so their specs stay in
+`FIELDS_V4` as `decodeOnly(...)` entries (never encoded). Dropping a spec
+whose bit is in the wild leaves its bytes unconsumed and shifts every later
+field's byte offset; retiring a field is an encoder-side change only, and
+the test pins it with a hand-built blob asserting the field *after* the
+retired run still decodes. **A retired flag bit is cheaper** — the flags
+byte is one byte whatever bits are set, so no offset can shift and
+`packFlags` / `unpackFlags` just drop the leg, leaving the bit reserved by
+comment: bit 2 (molecular clouds), bit 3 (`showMilkyway`), bit 7
+(`showConstellation`), all three now gated by the declutter floor alone
+(`../../scene/README.md`). SIDs are frozen forever in
 `data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild —
 the failure mode v1–v3's row-index fallback couldn't avoid. **v3**
 introduced the LEB128 presence mask and per-component vec3 sub-masks

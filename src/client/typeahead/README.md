@@ -130,16 +130,14 @@ filtered results so it can't outrank a real match. `pick()` skips
 `aimAtConstellation` when `idx < 0` so the clear path doesn't try to
 aim at a non-existent target.
 
-**Master toggle (`showConstellation`).** A `<input id="show-constellation">`
-checkbox at the top of the Overlays group gates the entire constellation
-overlay — both the highlighted-only-in-navigate and the all-at-once
-chart-mode pass, plus the chart-mode Latin-name labels. When off,
-`controls.ts` disables `#con-input` and adds `.disabled` to `#con-picker`
-(faded sub-label), and a single `C` keypress is a no-op. A **double-tap
-on `C`** flips the master toggle in either direction — single taps are
-deferred by `C_DOUBLE_TAP_MS` (200 ms) so a second press inside the
-window can intercept the picker-open and switch to the toggle action.
-Key repeat (held key) is ignored so the flag doesn't oscillate.
-`highlightCon` is preserved while disabled, so re-enabling restores
-the prior selection. URL flag bit 7 (`FLAG_CON_DISABLED`) encodes the
-off state; default (on) is implicit.
+**No master toggle.** There used to be a `#show-constellation` checkbox
+gating the whole constellation overlay, with a double-tap `C` flipping it.
+Both are retired: the declutter cycle already owns whether constellation
+chrome draws, via the `constellationFigures` / `constellationBoundaries`
+floors (`../scene/README.md`), so a second switch was a redundant answer to
+the same question. The picker is therefore always enabled, and `C` is a
+plain single press with no deferral window.
+
+`highlightCon` survives and means only *which* figure is picked. URL flag
+bit 7 (the old `FLAG_CON_DISABLED`) is retired to decode-and-ignore —
+`../util/url-state/README.md`.

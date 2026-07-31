@@ -9,16 +9,16 @@ star-disc render knobs, and the controller that owns every mutation.
 
 - `filter-state.ts` — `FilterState`, `DEFAULT_FILTER`, `InstrumentName`,
   `INSTRUMENTS`, `limitMagForAperture` / `instrumentLimitMag` /
-  `limitMagOf`, `DEFAULT_FOV` (the instrument's own default), `TARGET_PX`,
-  `STAR_PHYSICS_FACTOR`, `ALL_SPECT_MASK`, `StarRenderParams`,
-  `STAR_RENDER_DEFAULTS`, the star-K multiplier module state, and the pure
-  `arcsecPerPx` / `starExaggerationK` / `starPxSizes` plate-scale chain.
-  Import filter types and instrument constants from here, not from
-  `stellata.ts`.
+  `limitMagOf` / `sizeSpanOf`, `DEFAULT_FOV` (the instrument's own
+  default), `TARGET_PX`, `STAR_PHYSICS_FACTOR`, `ALL_SPECT_MASK`,
+  `StarRenderParams`, `STAR_RENDER_DEFAULTS`, the star-K multiplier module
+  state, and the pure `arcsecPerPx` / `starExaggerationK` / `starPxSizes`
+  plate-scale chain. Import filter types and instrument constants from
+  here, not from `stellata.ts`.
 - `filter-controller.ts` — `FilterController`. Owns the single live
   `FilterState` instance and every mutation path: `setFilter`,
   `setInstrument`, `recomputeStarPxSizes`, `setCameraFov`,
-  `setStarKMultiplier`, `setStarRenderParams`, `clearSizeOverrides`,
+  `setStarKMultiplier`, `setStarRenderParams`,
   and the declutter cycle — `applyDetailPreset` /
   `setSceneElementVisible` drive the exhaustive scene-element binds
   (`../scene/README.md` § Detail-level declutter cycle). `FilterState`
@@ -71,6 +71,35 @@ threshold star still lands on target. Derivation:
 The "Star size exaggeration" slider is a **multiplier** on that derived K
 (1 = physical plate scale), not a per-instrument constant.
 
+### The multiplier is the ONLY footprint control, deliberately
+
+"Star size Min / Max (px)" and "Dynamic range (mag)" are retired. Three
+sliders shaped one thing — the display kernel's footprint — and after the
+HDR seam moved brightness onto the emitted peak
+(`../star-pipeline/README.md` § Physical-luminance emission), none of them
+carried brightness any more. `sizeMin`/`sizeMax` were K's pixel projection
+at the current viewport, so authoring them contradicted the `TARGET_PX`
+invariant above; and "Dynamic range" was never display dynamic range but
+the magnitude *window* of the footprint curve, colliding by name with the
+tone-map's `DR_MAG`, which is the real lever (`../hdr/README.md`
+§ Operator).
+
+**The multiplier stayed where those two went, because it is
+adaptation-neutral.** The exposure statistic divides a point source's flux
+channel by the kernel's own area integral `Φ(n)·D²`
+(`../hdr/statistic/README.md` § The unit), so moving K cannot move the
+exposure cut — it buys legibility against how crowded a dense field looks
+and nothing else. That is what makes it a safe taste axis to keep, and
+`sizeMin`/`sizeMax` are now derived-only, with `recomputeStarPxSizes` as
+their sole writer.
+
+The footprint window is the instrument's `sizeSpan`, read through
+`sizeSpanOf` on every use rather than cached on `FilterState`, so no second
+authority for it can exist. The uniform `uSizeSpan` survives because the
+shelved Local Group emission layer still aliases it as a pre-HDR
+brightness gate — retiring the uniform is `stellata-gxx.8`'s to finish
+(`../local-group/README.md` § Emission layer).
+
 ## Seam — uniforms by reference, layers by hook
 
 The controller writes the star-pipeline `sharedUniforms` subset
@@ -78,8 +107,10 @@ directly through the `FilterUniforms` refs it is constructed with
 (the same pass-the-uniform-ref seam `MilkyWay` and `PlanetBodyField`
 use), so a filter patch propagates to all three star passes with no
 per-frame copying. Side effects on *other* layers (planet-field cull
-distance, Milky Way / LG-emission enable) go through the shell's
-`onFilterApplied` hook — layer identity stays in `stellata.ts`.
+distance, LG-emission enable) go through the shell's `onFilterApplied`
+hook — layer identity stays in `stellata.ts`. The Milky Way is no longer
+one of them: its band is physical light gated by the declutter floor
+alone, with no user toggle to AND against.
 
 **The exposure scalar is NOT written here.** `ExposureController` owns
 `uExposure` and the three magnitude bounds derived from the instrument
@@ -101,18 +132,17 @@ before the first `setFilter`.
 
 ## Behaviour contracts
 
-- **Override flags.** `sizeMin/Max/Span` carry `*Overridden` flags:
-  instrument switches and viewport/FOV recomputes only write
-  non-overridden fields; the reset buttons clear the flag AND restore
-  the derived value via `clearSizeOverrides`.
-- **Resize recomputes only the derived sizes.** `recomputeStarPxSizes`
-  touches only sizeMin/Max — never `sizeSpan` — and clamps
-  `sizeMax >= sizeMin` after independent overrides. Since the plate scale
-  now divides by height, widening the window changes star size by zero.
+- **No override flags.** There is no authoring path into `sizeMin/Max`, so
+  instrument switches, viewport resizes and FOV changes all write both
+  unconditionally. `starPxSizes` floors `sizeMax` at `sizeMin`, so the pair
+  cannot invert and the controller needs no post-patch clamp. Since the
+  plate scale divides by height, widening the window changes star size by
+  zero.
 - **Events.** Every mutation emits `'filter'` then `'state'` (the
   emission-pairing contract in `src/client/README.md` § Event bus).
-  `setStarKMultiplier` emits even when the recompute patched nothing
-  so the debug readout reflects the new K.
+  `recomputeStarPxSizes` always patches, so it always emits — which is why
+  `setStarKMultiplier` and `setCameraFov` do NOT emit again after calling
+  it.
 - **The K multiplier is module state, not filter state.** It lives in
   `filter-state.ts` behind `getStarKMultiplier` / `setStarKMultiplier`
   because the pure size helpers read it; consumers call the getter rather

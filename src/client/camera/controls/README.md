@@ -6,9 +6,14 @@ in both navigate and observe modes.
 
 ## Files
 
-- `controls.ts` — settings-panel bindings (distance / exposure / size
-  sliders, spectral chips, overlay toggles) + the slider↔distance log
-  mapping (`sliderToDist` / `distToSlider`). The two segmented stop
+- `controls.ts` — settings-panel bindings (distance / FOV / exposure /
+  exaggeration sliders, spectral chips, overlay toggles) + the
+  slider↔distance log mapping (`sliderToDist` / `distToSlider`). The
+  star-size and "Dynamic range" sliders it used to bind are retired
+  (`../../filters/README.md` § The multiplier is the ONLY footprint
+  control), as are the galactic-glow and "Show constellations" checkboxes —
+  both are the declutter floor's call now (`../../scene/README.md`).
+  The two segmented stop
   controls (detail level, coordinate sphere) are bound
   and synced through `../../ui/stop-control.ts` (`../../ui/README.md`
   § Stop controls), not open-coded here. Reverse-sync runs off

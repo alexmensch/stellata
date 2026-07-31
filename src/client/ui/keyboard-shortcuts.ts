@@ -76,13 +76,6 @@ export function bindKeyboardShortcuts(
     focusTarget: () => document.getElementById('find-input') as HTMLInputElement | null,
   });
 
-  // C: single tap opens the picker, double tap flips the master toggle.
-  const conGate = makeDoubleTapGate(
-    () => { if (stellata.getFilter().showConstellation) conModal.open(); },
-    () => stellata.setFilter({
-      showConstellation: !stellata.getFilter().showConstellation,
-    }),
-  );
   // F: single tap opens Find (observe-only — in navigate, aiming just parks
   // the target behind the focused star); double tap F-F toggles fullscreen
   // in every mode.
@@ -176,7 +169,7 @@ export function bindKeyboardShortcuts(
       case 'c': case 'C':
         if (e.repeat) break;
         e.preventDefault();
-        conGate();
+        conModal.open();
         break;
       case 'h': case 'H':
         stellata.setFilter({ showHud: !stellata.getFilter().showHud });
@@ -266,11 +259,9 @@ function cycleDetailLevel(stellata: Stellata) {
 }
 
 // R: reset only the sliders living under the panel's "Camera" section —
-// star size min/max, dynamic range, FOV, EV trim, exaggeration. Mirrors
-// the per-row "reset" buttons wired in controls.ts.
+// FOV, EV trim, exaggeration. Mirrors the per-row "reset" buttons wired
+// in controls.ts.
 function resetCameraSection(stellata: Stellata) {
-  stellata.clearSizeOverrides(['sizeMin', 'sizeMax']);
-  stellata.clearSizeOverrides(['sizeSpan']);
   stellata.setCameraFov(DEFAULT_FOV);
   stellata.setEv(0);
   stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());

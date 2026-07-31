@@ -846,9 +846,8 @@ export class Stellata implements FrameAnchor {
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
     // Constellation figure lines rebuild when the active set changes: the
-    // highlighted figure, chart ↔ navigate (chart draws all 88), or the
-    // showConstellation master toggle. Detail-cycle permission is a separate
-    // push (buildSceneElementBinds).
+    // highlighted figure, or chart ↔ navigate (chart draws all 88).
+    // Detail-cycle permission is a separate push (buildSceneElementBinds).
     // The boundary fade window rides the same emit: it is a function of the
     // magnitude limit — a fainter limit admits stars nearer their walls —
     // pushed rather than read per frame so the table interpolation runs once
@@ -1038,13 +1037,11 @@ export class Stellata implements FrameAnchor {
   private refreshConstellationFigure(): void {
     const f = this.filter;
     const chartActive = f.chart && this.focus.getCameraMode() === 'observe';
-    const sig = `${f.showConstellation ? 1 : 0}|${chartActive ? 1 : 0}|${f.highlightCon}`;
+    const sig = `${chartActive ? 1 : 0}|${f.highlightCon}`;
     if (sig === this.conFigureSig) return;
     this.conFigureSig = sig;
     let indices: number[];
-    if (!f.showConstellation) {
-      indices = [];
-    } else if (chartActive) {
+    if (chartActive) {
       indices = this.catalog.constellations.map((_, i) => i);
     } else if (f.highlightCon >= 0) {
       indices = [f.highlightCon];
@@ -1173,11 +1170,10 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.constellationFigureLayer.dispose(),
     });
     this.layers.register({
-      // Chart-only (floor 'never' in the realistic column), and the
-      // showConstellation toggle covers every piece of constellation chrome.
+      // Chart-only — floor 'never' in the realistic column.
       update: (ctx) => this.updateWarpGatedRefLayer(
         this.constellationBoundaryLayer, ctx,
-        this.detailPermits('constellationBoundaries') && this.filter.showConstellation),
+        this.detailPermits('constellationBoundaries')),
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
@@ -2179,9 +2175,6 @@ export class Stellata implements FrameAnchor {
     this.filters.setStarRenderParams(patch);
   }
   getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
-  clearSizeOverrides(fields: Array<'sizeMin' | 'sizeMax' | 'sizeSpan'>) {
-    this.filters.clearSizeOverrides(fields);
-  }
 
   /** Stroke alpha `frame`'s sphere draws at from the camera's current distance
    *  from Sol. Its SVG edge labels ride the same value. */
@@ -2254,9 +2247,10 @@ export class Stellata implements FrameAnchor {
   private applyMilkywayEnabled(): void {
     // The layer group carries both realistic treatments: the volumetric
     // band (realistic floor) and the chart isobar (chart floor). Exactly
-    // one is permitted per render style; the user's mw toggle gates both.
-    const permitted = this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar;
-    this.milkyway.setEnabled(permitted && this.filter.showMilkyway);
+    // one is permitted per render style, and the floor is the only gate —
+    // the band is physical light, not a user-toggleable overlay.
+    this.milkyway.setEnabled(
+      this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar);
   }
   private applyLgEmissionEnabled(): void {
     this.lgEmission?.setEnabled(this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
