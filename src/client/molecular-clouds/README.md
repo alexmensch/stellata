@@ -132,6 +132,21 @@ chart names ride `chart-labels.ts`), additionally gated on the cloud's
 projected silhouette reaching ~40 px (`renderedCloudSizePx`) so distant
 complexes don't stack a label per member.
 
+## Constellation — centroid only, deliberately
+
+The focus card's `Constellation` row answers for the cloud's **centroid**
+(`../focus-card/README.md` § Constellation row), which is the convention
+for naming one — Taurus Molecular Cloud, Aquila Rift, Coalsack in Crux.
+
+It is also an under-answer, and knowingly so: a complex genuinely spans
+several constellations, and the literature says so in prose ("spans
+Taurus and Perseus"). The faithful version is the set of regions the
+**isosurface** overlaps, not a point lookup — the traced mesh is the
+input, not `centerAbs` — so it is its own piece of work rather than a
+tweak to the row. Do not "fix" it by sampling the ellipsoid axes: the
+fallback envelope is not the shape, and an axis-endpoint sample set would
+report a different span from the mesh for the same cloud.
+
 ## Unified focus / measurement / warp UX
 
 Clouds are full participants in the click-state machine alongside

@@ -132,12 +132,25 @@ export function formatGcvsDesignation(raw: string): string {
 // Fuzzy-search labels for a GCVS designation: the designation itself
 // (V-number padding stripped) plus a constellation-name-expanded variant
 // (trailing IAU abbreviation → full name), mirroring buildBayerLabels so
-// "V645 Cen" and "V645 Centaurus" both resolve. Empty conName → just the
-// abbreviated form.
-export function buildGcvsLabels(designation: string, conName: string): string[] {
+// "V645 Cen" and "V645 Centaurus" both resolve.
+//
+// The expansion is gated on the trailing token actually BEING this entry's
+// constellation abbreviation, not on the entry having a constellation at all.
+// 6,079 of the 14,148 GCVS-named entries end in something else — NSV serials
+// ("NSV 04199") and Magellanic field numbers ("LMC V0471") — and rewriting
+// that token invented "NSV Lupus" and "LMC Dorado": a designation that does
+// not exist, in a constellation the number has nothing to do with.
+export function buildGcvsLabels(
+  designation: string,
+  conCode: string,
+  conName: string,
+): string[] {
   const desig = formatGcvsDesignation(designation);
   const labels = new Set<string>([desig]);
-  if (conName) labels.add(desig.replace(/\s+\S+$/, ` ${conName}`));
+  const trailing = desig.split(/\s+/).pop() ?? '';
+  if (conCode && conName && trailing.toLowerCase() === conCode.toLowerCase()) {
+    labels.add(desig.replace(/\s+\S+$/, ` ${conName}`));
+  }
   return [...labels];
 }
 
@@ -365,7 +378,7 @@ export function buildSearchIndex(
     // designation for those.
     if (entry.g) {
       const gcvsPrimary = primary ?? formatGcvsDesignation(entry.g);
-      for (const label of buildGcvsLabels(entry.g, conName)) {
+      for (const label of buildGcvsLabels(entry.g, conCode, conName)) {
         fuzzyEntries.push({
           kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon,
           conExpansion: isConExpansion(label),

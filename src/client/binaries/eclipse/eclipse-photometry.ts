@@ -126,7 +126,7 @@ export class EclipsePhotometryField {
   update(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
-    maxAppMag: number,
+    thresholdMag: number,
     nowMs: number,
   ): void {
     const tJd = tToJDE(t);
@@ -139,7 +139,7 @@ export class EclipsePhotometryField {
 
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
-      const ev = this.evaluateRelation(rc, tJd, cameraPos, maxAppMag);
+      const ev = this.evaluateRelation(rc, tJd, cameraPos, thresholdMag);
       const result = ev.result;
       if (result === null) continue;
       const backIdx = result.front === 'primary' ? rc.secondaryIdx : rc.primaryIdx;
@@ -174,7 +174,7 @@ export class EclipsePhotometryField {
   debugRows(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
-    maxAppMag: number,
+    thresholdMag: number,
     starIdx: number | null,
   ): EclipseRelationDebugRow[] {
     const tJd = tToJDE(t);
@@ -183,7 +183,7 @@ export class EclipsePhotometryField {
     for (const rc of this.relations) {
       if (starIdx !== null
         && rc.primaryIdx !== starIdx && rc.secondaryIdx !== starIdx) continue;
-      const ev = this.evaluateRelation(rc, tJd, cameraPos, maxAppMag);
+      const ev = this.evaluateRelation(rc, tJd, cameraPos, thresholdMag);
       const holdsDim = dimBuf[rc.primaryIdx] < 1 || dimBuf[rc.secondaryIdx] < 1;
       if (starIdx === null && ev.gate !== 'clear' && !holdsDim) continue;
       rows.push({
@@ -216,7 +216,7 @@ export class EclipsePhotometryField {
     rc: EclipseRelationCache,
     tJd: number,
     cameraPos: Readonly<THREE.Vector3>,
-    maxAppMag: number,
+    thresholdMag: number,
   ): RelationEval {
     const local = this.opts.localPositions;
     const abs = this.opts.absolutePositions;
@@ -230,7 +230,7 @@ export class EclipsePhotometryField {
       return { gate: 'horizon', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
     }
     const appMag = apparentMagnitude(this.opts.absoluteMags[rc.primaryIdx], dCamPc);
-    if (appMag > maxAppMag + SOFT_TAPER_MARGIN_MAG) {
+    if (appMag > thresholdMag + SOFT_TAPER_MARGIN_MAG) {
       return { gate: 'mag', dCamPc, planeDot: null, relX: 0, relY: 0, relZ: 0, result: null };
     }
 

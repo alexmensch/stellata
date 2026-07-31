@@ -157,7 +157,7 @@ wants the camera:
 3. `cancelFocusLerp()`,
 4. bail if an observe transition is animating.
 
-Sites: `controls/input-controller.ts` `onPointerUp`, `Stellata.aimAt`,
+Sites: `controls/input/input-controller.ts` `onPointerUp`, `Stellata.aimAt`,
 and `Stellata.aimAtConstellation` (steps 2–4 only — it has no
 warp/aim bail).
 

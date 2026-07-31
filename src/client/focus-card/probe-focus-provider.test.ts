@@ -22,6 +22,7 @@ function makeProvider(patch: Partial<ProbeFocusProviderConfig> = {}) {
     solDistancePc: () => 143 * AU_PC,
     speedPcPerSec: () => 11.94 * KM_PC,
     signalLost: () => true,
+    constellationName: () => 'Ophiuchus',
     ...patch,
   });
 }

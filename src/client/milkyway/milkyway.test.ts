@@ -19,18 +19,18 @@ import {
 } from './milkyway-column-pure';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../hdr/emission-pure';
-import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { srgbEncode, reinhardExtended, tonemapWhitePoint } from '../hdr/tonemap-pure';
 
 function build() {
   const hdr = makeHdrEmitterUniforms();
-  const uMaxAppMag = { value: 6.5 };
-  const layer = new MilkyWay({ uMaxAppMag, hdr });
+  const uLimitMag = { value: 6.5 };
+  const layer = new MilkyWay({ uLimitMag, hdr });
   const materials = layer.group.children.map(
     (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
   );
-  return { layer, hdr, uMaxAppMag, materials };
+  return { layer, hdr, uLimitMag, materials };
 }
 
 describe('MilkyWay uniform wiring', () => {
@@ -48,9 +48,9 @@ describe('MilkyWay uniform wiring', () => {
     }
   });
 
-  it('shares the star pipeline’s uMaxAppMag for the chart isobar', () => {
-    const { uMaxAppMag, materials } = build();
-    for (const mat of materials) expect(mat.uniforms.uMaxAppMag).toBe(uMaxAppMag);
+  it('shares the star pipeline’s uLimitMag for the chart isobar', () => {
+    const { uLimitMag, materials } = build();
+    for (const mat of materials) expect(mat.uniforms.uLimitMag).toBe(uLimitMag);
   });
 
   // The layer emits physical luminance now; the per-layer squash and the

@@ -270,7 +270,7 @@ describe('LocalGroupEmission controller', () => {
     lgObject('LMC', LMC_EMISSION, [15_000, 5_000, -42_000]),
     lgObject('M31', M31_EMISSION, [300_000, 500_000, 400_000]),
   ];
-  const shared = { uMaxAppMag: { value: 6.5 }, uSizeSpan: { value: 5 } };
+  const shared = { uLimitMag: { value: 6.5 }, uSizeSpan: { value: 5 } };
 
   const sersicMeshOf = (layer: LocalGroupEmission) =>
     layer.group.children.find((m) =>
@@ -351,9 +351,9 @@ describe('LocalGroupEmission controller', () => {
   it('shares the magnitude uniforms by reference', () => {
     const layer = new LocalGroupEmission(objects, shared);
     const mat = (layer.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uMaxAppMag).toBe(shared.uMaxAppMag);
-    shared.uMaxAppMag.value = 9.9;
-    expect(mat.uniforms.uMaxAppMag.value).toBe(9.9);
+    expect(mat.uniforms.uLimitMag).toBe(shared.uLimitMag);
+    shared.uLimitMag.value = 9.9;
+    expect(mat.uniforms.uLimitMag.value).toBe(9.9);
     layer.dispose();
   });
 });

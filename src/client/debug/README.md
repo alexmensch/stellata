@@ -27,14 +27,9 @@ src/client/debug/
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
                                   geometry readout (focused star, or all
                                   active dims when unfocused).
-  star-tuning.ts                  Live-tunable star exaggeration /
-                                  magnitude / size knobs.
-  planet-tuning.ts                Reflected-planet-glare peak slider
-                                  (uGlareGain — planet glare brightness
-                                  vs a star of the same magnitude).
-  atmosphere-tuning.ts            Four global atmosphere-scattering
-                                  multipliers (density, Rayleigh↔Mie
-                                  balance, scale height, sun intensity).
+  star-tuning.ts                  Live-tunable star-disc knobs, plus the
+                                  derived-K readout (K, plate scale, FOV,
+                                  resulting sizeMin/Max).
   (+ tests for the pure helpers.)
 ```
 
@@ -100,13 +95,16 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then a linear reduce over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
+| `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
 | `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning every pass. The headline's source, and the only row that prices anything. |
 | `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
 | `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
 | `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope (`../hdr/README.md`). Same caveat. |
+| `gpu.reduction`         | timer query                      | The chain of ever-smaller weighted-mean draws down to one texel. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |
@@ -182,7 +180,7 @@ Ordered by impact. Each item shipped as a separate commit.
 
 ### `forEachStarNearCamera` — sorted-distance binary-search window
 
-`star-pipeline/star-frame.ts`. The core depth-mask gate
+`star-pipeline/frame/star-frame.ts`. The core depth-mask gate
 (`shouldEnableCoreMask`) and the star local-depth membership scan
 both need "which stars sit
 within `dThresh` pc of the camera?" The original implementation
@@ -212,27 +210,37 @@ Replaced with a module-level `projVec` scratch deliberately
 across the projection in `projectStar`, so a shared scratch would
 clobber the input.
 
-### Chart-labels: cached constellation centroids
+### Chart-labels: cached brightest constellation member
 
-`chart-labels.ts:240`. Constellation centroids are flux-weighted
-positions over every member star (88 constellations × ~30 members
-per frame, with `Math.pow` per member). The centroid barely moves
-under camera translation since the constellation spans hundreds of
-pc and the camera typically moves ≪ 1 pc per frame.
+The Latin names are placed from the shipped region anchors, so the
+per-member walk survives only as the **visibility gate**: a region
+whose brightest member is under the magnitude limit goes unnamed,
+and the apparent magnitude that decides it depends on the camera
+position (88 constellations × ~30 members, `Math.pow` per member).
+It barely moves under camera translation, since a constellation
+spans hundreds of pc and the camera typically moves ≪ 1 pc per
+frame.
 
-Cache the centroids and recompute only when either condition fires:
+Cache `minAppMag` per constellation and walk only when:
 
-- Camera moved more than `√CENTROID_RECOMPUTE_DIST_SQ ≈ 0.5 pc`
-  since the last recompute.
-- Filter version bumped (subscribed via `stellata.on('filter', …)`).
+- No name is drawn at all — `showConstellation` off (`C`) or the
+  declutter floor withholding `chartConstellationNames` — in which
+  case the walk is skipped outright, not cached.
+- Otherwise: camera moved more than
+  `√BRIGHTEST_RECOMPUTE_DIST_SQ ≈ 0.5 pc` since the last walk, or
+  the filter version bumped (via `stellata.on('filter', …)`).
 
-The centroid is still re-projected to screen every frame (88 cheap
-matrix transforms) — it's the inner per-member loop that's elided.
-Net: ~30× reduction in `chart.constellations` on a stationary
-camera.
+The **sentinels are stamped only where the walk actually runs.**
+Stamping them on a skipped walk leaves `minAppMag` at its `Infinity`
+seed while the cache reads as fresh, so names re-enabled within the
+0.5 pc threshold and without a filter change draw nothing —
+`chart-labels.test.ts` pins both halves.
 
-`startChartLabels()` initialises `lastCentroidCamPos` to NaN so the
-first frame after entering chart mode always recomputes.
+Anchors are still re-projected every frame (89 cheap matrix
+transforms); it is the inner per-member loop that's elided.
+
+`startChartLabels()` initialises `lastBrightestCamPos` to NaN so the
+first frame after entering chart mode always walks.
 
 ### Chart-labels: pre-binned eligibility lists for variables + binaries
 
@@ -248,7 +256,7 @@ encodes them, and the cheap remaining work (magnitude gate +
 projection) only runs against the pruned set. Restrictive filters
 typically cut the eligible set by 80–90%.
 
-This pass also reordered the loops so the `appMag > maxAppMag`
+This pass also reordered the loops so the `appMag > drawCutoffMag`
 test runs *before* projection (free win — pure reorder).
 
 ### Chart-labels: dirty-tracked SVG attribute writes
@@ -260,7 +268,7 @@ written `x` / `y` / `cx` / `cy` / `r` / `x1` / `x2`. Skip the
 write when the new value differs by less than `ATTR_DIRTY_PX = 0.05`
 (matches the `.toFixed(1)` display precision so visually identical
 attributes are coalesced). Drives `chart.dom` toward zero on a
-stationary camera once the centroid cache is in.
+stationary camera.
 
 ### Chart-labels: full-tick skip when nothing changed
 
@@ -274,7 +282,7 @@ labels don't otherwise move. Hash that tuple at the top of `tick()`:
 ```ts
 camera.position.equals(lastTickCamPos) &&
 camera.quaternion.equals(lastTickCamQuat) &&
-centroidsVersion === lastTickFilterVersion &&
+filterVersion === lastTickFilterVersion &&
 w === lastTickViewportW &&
 h === lastTickViewportH &&
 epochJyr === lastTickEpochJyr
@@ -340,11 +348,8 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with ten sections:
-Star disc (`star-tuning.ts`),
-Planet glare (`planet-tuning.ts`),
-Atmosphere (`atmosphere-tuning.ts`),
-Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
+collapsible host with eight sections:
+Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,

@@ -32,6 +32,40 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
     return min(flux / spread, STELLATA_LUMA_CEIL);
 }
 
+/** The same kernel renormalised to carry the source's true FLUX rather than
+ *  its true peak — the adaptation statistic's flux channel. The display
+ *  kernel preserves peak and inflates energy, so dividing by its own area
+ *  integral `fluxIntegral * D^2` (perceptualDiscFluxIntegral) makes the
+ *  integral return stellataLuminanceForMag instead. Clamped like the display
+ *  peak: a clamped read is a lower bound the adaptation loop closes from
+ *  above. See statistic/README.md § The unit. */
+float stellataKernelFluxPeak(
+    float exposure,
+    float appMag,
+    float quadDiameterPx,
+    float fluxIntegral
+) {
+    float area = fluxIntegral * quadDiameterPx * quadDiameterPx;
+    float flux = stellataLuminanceForMag(exposure, appMag);
+    return min(flux / max(area, 1e-9), STELLATA_LUMA_CEIL);
+}
+
+/** One texel of the statistic attachment: flux-correct luminance in R,
+ *  peak-correct in G. `alpha` must be whatever the same fragment writes to
+ *  attachment 0, because one blend equation runs over both attachments —
+ *  an emitter that wants its flux SUMMED under an alpha-scaled additive
+ *  blend passes a pre-divided R. Both channels clamp at the ceiling for the
+ *  reason the display peak does: a clamped read is a lower bound the
+ *  adaptation loop closes from above
+ *  (exposure/reduction/README.md § Measure at the base exposure). */
+vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
+    return vec4(
+        min(fluxL, STELLATA_LUMA_CEIL),
+        min(peakL, STELLATA_LUMA_CEIL),
+        0.0,
+        alpha);
+}
+
 /** Luminance one pixel receives from an extended source of surface
  *  brightness `magPerArcsec2`. The pixel's flux magnitude is
  *  `magPerArcsec2 - 2.5*log10(omegaPxArcsec2)`, and feeding that through

@@ -1,29 +1,83 @@
-// Filter / magnitude-preset / star-render-knob state: types, defaults,
-// and the preset derivation math. See src/client/filters/README.md.
+// Observing-instrument records, filter state, and the plate-scale star
+// size derivation. See src/client/filters/README.md.
 
 import type { CoordSphereFrame } from '../galactic/coord-spheres/coord-sphere';
 import type { DetailLevel } from '../scene/scene-elements';
 
-export type MagPresetName = 'naked-eye' | 'binoculars' | 'all';
+export type InstrumentName = 'unaided-eye';
+
+/**
+ * An observing instrument: aperture plus the data aperture cannot
+ * supply. Everything a renderer reads off it is either a field here or
+ * derived from one — `docs/science-hdr-pipeline.md` § 3.4.
+ */
+export interface Instrument {
+  apertureMm: number;
+  defaultFovDeg: number;
+  /** PSF width on the sky. */
+  psfArcsec: number;
+  /** Crowding half of the exaggeration K, NOT the shipped 12/9/5 —
+   *  the plate-scale half is derived per frame by `starPxSizes`. */
+  kDensity: number;
+  /** Footprint dynamic range, magnitudes. */
+  sizeSpan: number;
+  /** No consumer yet — § 3.4's two remaining preset axes. */
+  skyBackgroundMagArcsec2: number;
+  passband: 'V';
+}
+
+// The reference observer: a 7 mm dark-adapted pupil reaching m 7.8 in
+// vacuum under a Bortle-1 sky. Aperture and limit are anchored together
+// because σ = 30″ is derived at that same pupil.
+const EYE_APERTURE_MM = 7;
+const EYE_LIMIT_MAG = 7.8;
+
+/** Limiting magnitude from aperture — collecting area goes as D², so
+ *  every doubling of aperture buys 1.5 magnitudes. */
+export function limitMagForAperture(apertureMm: number): number {
+  return EYE_LIMIT_MAG + 5 * Math.log10(apertureMm / EYE_APERTURE_MM);
+}
+
+export const INSTRUMENTS: Record<InstrumentName, Instrument> = {
+  'unaided-eye': {
+    apertureMm: EYE_APERTURE_MM,
+    defaultFovDeg: 50,
+    psfArcsec: 30,
+    kDensity: 1,
+    sizeSpan: 8,
+    skyBackgroundMagArcsec2: 22,
+    passband: 'V',
+  },
+};
+
+export const DEFAULT_INSTRUMENT: InstrumentName = 'unaided-eye';
+
+export function instrumentLimitMag(name: InstrumentName): number {
+  return limitMagForAperture(INSTRUMENTS[name].apertureMm);
+}
+
+/** Convenience for the CPU mirrors that read the limit off filter state
+ *  rather than off the shader uniform. */
+export function limitMagOf(f: Pick<FilterState, 'instrument'>): number {
+  return instrumentLimitMag(f.instrument);
+}
 
 export interface FilterState {
   minDistSol: number;
   maxDistSol: number;
-  maxAppMag: number;
   spectMask: number;
   highlightCon: number; // -1 = none; consumed by overlay, not shader
-  sizeMin: number;      // CSS pixels — set from the active preset's angular
+  sizeMin: number;      // CSS pixels — set from the instrument's angular
   sizeMax: number;      // size at the current viewport, or by manual slider.
   sizeSpan: number;
-  // Active magnitude preset. Drives preset-defaults behaviour when the
-  // viewport resizes — non-overridden size fields recompute against this
-  // preset's angular targets so stars stay proportional to the scene
-  // (especially the Milky Way disc) regardless of screen size.
-  activePreset: MagPresetName;
+  // The observing instrument. Drives the limiting magnitude, the
+  // exposure anchor, the footprint window, and the recompute of
+  // non-overridden size fields on viewport resize.
+  instrument: InstrumentName;
   // Manual-override flags for the size sliders. Set by slider input,
   // cleared by the corresponding reset button (which also re-applies the
-  // active preset's value). When false, the preset writes its computed
-  // pixel value into the field on each preset switch and viewport resize.
+  // instrument's derived value). When false, the derivation writes its
+  // computed pixel value into the field on each viewport resize.
   sizeMinOverridden: boolean;
   sizeMaxOverridden: boolean;
   sizeSpanOverridden: boolean;
@@ -60,17 +114,34 @@ export interface FilterState {
 
 export const ALL_SPECT_MASK = 0b111111111;
 
-// Star size physics — see docs/science-stellar-modelling.md § Stellar perception model.
-// STAR_PHYSICS_FACTOR = 2·ln(10)/2.5. Per-preset starExaggerationK
-// is tunable via Stellata.setStarExaggerationK (debug panel).
-export const STAR_PSF_ARCSEC = 30;
+// Star size physics — see docs/science-stellar-modelling.md § Stellar
+// perception model. STAR_PHYSICS_FACTOR = 2·ln(10)/2.5.
 export const STAR_PHYSICS_FACTOR = 1.84;
-export const STAR_EXAGGERATION_K_DEFAULTS: Record<MagPresetName, number> = {
-  'naked-eye':  12,
-  'binoculars': 9,
-  'all':        5,
-};
-let starExaggerationK: Record<MagPresetName, number> = { ...STAR_EXAGGERATION_K_DEFAULTS };
+
+/** Pixel size a threshold star lands on, at every FOV and every
+ *  viewport height — the one number that moves absolute star size.
+ *  Calibrated by eye against the real sky (docs/science-stellar-modelling.md
+ *  § Stellar perception model), not derived. */
+export const TARGET_PX = 2.592;
+
+// Debug-panel multiplier on the derived exaggeration K. 1 = the
+// plate-scale derivation untouched.
+export const STAR_K_MULTIPLIER_DEFAULT = 1;
+
+/** Multiplier slider bounds, kept symmetric about
+ *  `STAR_K_MULTIPLIER_DEFAULT` so the calibrated value sits mid-track and
+ *  a drag either way reads as an equal-sized departure from it. */
+export const STAR_K_MULTIPLIER_MIN = 0.5;
+export const STAR_K_MULTIPLIER_MAX = 1.5;
+export const STAR_K_MULTIPLIER_STEP = 0.05;
+let starKMultiplier = STAR_K_MULTIPLIER_DEFAULT;
+
+export function getStarKMultiplier(): number { return starKMultiplier; }
+export function setStarKMultiplier(m: number): void { starKMultiplier = m; }
+/** Test hook — K tweaks must not leak across vitest cases. */
+export function resetStarKMultiplier(): void {
+  starKMultiplier = STAR_K_MULTIPLIER_DEFAULT;
+}
 
 // Star-disc rendering knobs. Defaults shipped to production; debug panel
 // can sweep each one independently for visual calibration. See
@@ -102,86 +173,22 @@ export const STAR_RENDER_DEFAULTS: StarRenderParams = {
   sizeKnee: 16,
 };
 
-export interface MagPreset {
-  maxAppMag: number;
-  sizeSpan: number;
-  sizeMinArcsec: number;
-  sizeMaxArcsec: number;
-}
-
-/** Naked-eye limiting magnitude (Bortle-1 dark sky) — the app-default
- *  sensitivity. Safe to import as a scalar where the MAG_PRESETS live
- *  binding must not be captured at module load. */
-export const NAKED_EYE_LIMIT_MAG = 6.5;
-
-// Static portion of each preset — the magnitude limit and dynamic range
-// don't depend on the exaggeration constant. sizeMinArcsec / sizeMaxArcsec
-// are recomputed from the current K via computeMagPresets().
-const PRESET_BASE: Record<MagPresetName, { maxAppMag: number; sizeSpan: number }> = {
-  // Magnitudes: binoculars 10.5 (typical 7×50 dark sky); all 15
-  // (matches the catalog/UI slider ceiling).
-  'naked-eye':  { maxAppMag: NAKED_EYE_LIMIT_MAG, sizeSpan: 8 },
-  'binoculars': { maxAppMag: 10.5, sizeSpan: 12 },
-  'all':        { maxAppMag: 15,   sizeSpan: 17 },
-};
-
-/** Preset order, for the panel's stop control. Derived from `PRESET_BASE` so
- *  a fourth preset can't be added to one list and missed in the other. */
-export const MAG_PRESET_NAMES = Object.keys(PRESET_BASE) as readonly MagPresetName[];
-
-function computeMagPresets(): Record<MagPresetName, MagPreset> {
-  const result = {} as Record<MagPresetName, MagPreset>;
-  for (const name of Object.keys(PRESET_BASE) as MagPresetName[]) {
-    const base = PRESET_BASE[name];
-    const sizeMinArcsec = STAR_PSF_ARCSEC * starExaggerationK[name];
-    result[name] = {
-      ...base,
-      sizeMinArcsec,
-      sizeMaxArcsec: sizeMinArcsec * Math.sqrt(STAR_PHYSICS_FACTOR * base.sizeSpan),
-    };
-  }
-  return result;
-}
-
-// Live binding — re-bound by setStarExaggerationK so consumers reading
-// MAG_PRESETS see the latest values after a K tweak.
-export let MAG_PRESETS: Record<MagPresetName, MagPreset> = computeMagPresets();
-
-export function getStarExaggerationK(name: MagPresetName): number {
-  return starExaggerationK[name];
-}
-
-/** Patch the exaggeration constant for one preset and re-derive
- *  MAG_PRESETS (size targets scale with K). */
-export function setStarExaggerationK(name: MagPresetName, k: number): void {
-  starExaggerationK[name] = k;
-  MAG_PRESETS = computeMagPresets();
-}
-
-/** Test hook — restore the default K record and re-derive MAG_PRESETS
- *  so K tweaks can't leak across vitest cases. */
-export function resetStarExaggerationK(): void {
-  starExaggerationK = { ...STAR_EXAGGERATION_K_DEFAULTS };
-  MAG_PRESETS = computeMagPresets();
-}
-
 // Default vertical FOV (degrees). User-tunable via the FOV slider; the
 // reset button snaps back to this value.
-export const DEFAULT_FOV = 50;
+export const DEFAULT_FOV = INSTRUMENTS[DEFAULT_INSTRUMENT].defaultFovDeg;
 
 export const DEFAULT_FILTER: FilterState = {
   minDistSol: 0,
   maxDistSol: 50_000,
-  maxAppMag: MAG_PRESETS['naked-eye'].maxAppMag,
   spectMask: ALL_SPECT_MASK,
   highlightCon: -1,
-  // sizeMin/Max placeholders — applyMagnitudePreset is called from the
+  // sizeMin/Max placeholders — recomputeStarPxSizes is called from the
   // constructor with the actual viewport to fill in real values, and again
   // on every viewport resize.
   sizeMin: 1.8,
   sizeMax: 7.0,
-  sizeSpan: MAG_PRESETS['naked-eye'].sizeSpan,
-  activePreset: 'naked-eye',
+  sizeSpan: INSTRUMENTS[DEFAULT_INSTRUMENT].sizeSpan,
+  instrument: DEFAULT_INSTRUMENT,
   sizeMinOverridden: false,
   sizeMaxOverridden: false,
   sizeSpanOverridden: false,
@@ -194,28 +201,47 @@ export const DEFAULT_FILTER: FilterState = {
   detailLevel: 'all',
 };
 
-// Convert a preset's angular size targets to CSS pixels for a camera FOV
-// (degrees, vertical) and reference viewport dimension. Callers pass the
-// *larger* viewport dimension as `refDim` — Three.js's camera.fov is the
-// vertical FOV, but tying calibration to height alone makes stars vanish
-// on landscape mobile (height = 390 px) while feeling right on desktops
-// (height = 1080 px). Scaling by max(w, h) gives a consistent absolute
-// pixel size regardless of orientation, at the cost of strict angular
-// fidelity in the secondary axis. 1-px floor on sizeMin since a sub-pixel
-// disc renders as nothing — and the same floor on sizeMax so it never
-// falls below sizeMin. (At low exaggeration K both raw values can be
-// sub-pixel; without the symmetric floor the saturation disc would
-// invert below the threshold disc.)
-export function presetPxSizes(
-  name: MagPresetName,
+/** Arcsec one CSS pixel of viewport HEIGHT subtends — the axis
+ *  `camera.fov` maps to, and the axis `physSize` and `Ω_px` project
+ *  through. */
+export function arcsecPerPx(fovDeg: number, viewportHeightPx: number): number {
+  return (fovDeg * 3600) / viewportHeightPx;
+}
+
+/** The exaggeration K: the factor that lands a threshold star on
+ *  TARGET_PX, floored at 1 where the true PSF already resolves. */
+export function starExaggerationK(
+  name: InstrumentName,
+  arcsecPx: number,
+  kMultiplier = getStarKMultiplier(),
+): number {
+  const inst = INSTRUMENTS[name];
+  return inst.kDensity * kMultiplier
+    * Math.max(1, (TARGET_PX * arcsecPx) / inst.psfArcsec);
+}
+
+/**
+ * Threshold and saturation disc sizes in CSS pixels. `sizeMinPx` is
+ * TARGET_PX identically until K floors at 1, past which the true PSF
+ * resolves and the disc grows with the plate scale. 1-px floor on
+ * sizeMin since a sub-pixel disc renders as nothing — and the same floor
+ * on sizeMax so it never falls below sizeMin (at K = 1 and a narrow FOV
+ * both raw values can be sub-pixel, and without the symmetric floor the
+ * saturation disc would invert below the threshold disc).
+ */
+export function starPxSizes(
+  name: InstrumentName,
   fovDeg: number,
-  refDim: number,
+  viewportHeightPx: number,
+  kMultiplier = getStarKMultiplier(),
 ): { sizeMinPx: number; sizeMaxPx: number } {
-  const p = MAG_PRESETS[name];
-  const arcsecPerPx = (fovDeg * 3600) / refDim;
-  const minPx = Math.max(1.0, p.sizeMinArcsec / arcsecPerPx);
+  const inst = INSTRUMENTS[name];
+  const arcsecPx = arcsecPerPx(fovDeg, viewportHeightPx);
+  const sizeMinArcsec = inst.psfArcsec * starExaggerationK(name, arcsecPx, kMultiplier);
+  const sizeMaxArcsec = sizeMinArcsec * Math.sqrt(STAR_PHYSICS_FACTOR * inst.sizeSpan);
+  const minPx = Math.max(1.0, sizeMinArcsec / arcsecPx);
   return {
     sizeMinPx: minPx,
-    sizeMaxPx: Math.max(minPx, p.sizeMaxArcsec / arcsecPerPx),
+    sizeMaxPx: Math.max(minPx, sizeMaxArcsec / arcsecPx),
   };
 }

@@ -1,7 +1,7 @@
 # UI and panel
 
 The right-side settings panel, layout containers, keyboard shortcuts,
-magnitude / FOV / exaggeration / theme controls, scale bar, and CSS
+exposure / FOV / exaggeration / theme controls, scale bar, and CSS
 gotchas.
 
 ## Keyboard shortcuts
@@ -26,7 +26,7 @@ registry only describes what to display.
 | `V` | Cycle detail level: physical → representational → all (declutter cycle; `../scene/README.md`) |
 | `W` | Trigger the warp animation (handled by `warp-button.ts`, not this module) |
 | `C` | Open the Constellation picker (double-tap toggles `showConstellation`) |
-| `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, exaggeration) |
+| `R` | Reset Camera-section sliders (size min/max, dynamic range, FOV, EV trim, exaggeration) |
 | `T` | Toggle the time scrubber (`../solar-system/time/time-scrubber-widget.ts`) |
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
@@ -35,8 +35,9 @@ registry only describes what to display.
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
-| `+` / `-` | Magnitude limit ± 0.5 (clamped to [-2, 15]) |
-| `=` | `applyMagnitudePreset('naked-eye')` |
+| `K` | Open the display-calibration screen (`../calibration/README.md`) — also reachable from the panel's Camera section |
+| `+` / `-` | EV trim ± one 1/3-stop grid step (`steppedEv`; clamped to ±`EV_MAX_STOPS` by `ExposureController.setEv`) |
+| `=` | Reset the EV trim to 0 |
 | `?` | Open the keyboard-shortcuts help modal (the full shortcut list) |
 | `Esc` | Priority chain below: modal close → cascade (observe→navigate → clear destination → clear focus, uniform across focusable kinds) |
 
@@ -119,13 +120,14 @@ The shared `bindRelocateModal` helper closes on:
 
 ### Reset (R) scope
 
-R resets only the four sliders under the panel's Camera section —
-star size min/max, dynamic range, FOV, exaggeration — by calling the
+R resets only the sliders under the panel's Camera section — star size
+min/max, dynamic range, FOV, EV trim, exaggeration — by calling the
 same APIs that the per-row reset link buttons use:
 `clearSizeOverrides(['sizeMin','sizeMax'])`, `clearSizeOverrides(['sizeSpan'])`,
-`setCameraFov(DEFAULT_FOV)`, `setStarExaggerationK(getStarExaggerationKDefault())`.
-Magnitude / focus / overlays / camera position are deliberately
-*not* touched — those are user choices, not "default view" state.
+`setCameraFov(DEFAULT_FOV)`, `setEv(0)`,
+`setStarKMultiplier(getStarKMultiplierDefault())`. Instrument / focus /
+overlays / camera position are deliberately *not* touched — those are user
+choices, not "default view" state.
 
 ## Per-group collapse in the settings panel
 
@@ -165,16 +167,13 @@ regardless of rule order in the stylesheet.
 
 ## Stop controls
 
-Three segmented controls in the panel — magnitude preset, detail level,
-coordinate sphere — share `stop-control.ts`: `bindStopControl` wires the
+Two segmented controls in the panel — detail level, coordinate sphere —
+share `stop-control.ts`: `bindStopControl` wires the
 clicks (reading each button's value from its `data-*` attribute and dropping
 anything not in the allowed list, so a markup typo is inert), `syncStopControl`
 lights the active stop. Both are **value-driven**: the highlight follows state,
-so `V` / `S` / a URL restore light the same stop a click would.
-
-The magnitude preset is the odd one — its active stop isn't a state field but
-"whichever preset the slider currently sits on", resolved in `controls.ts`
-before the shared sync call; an in-between magnitude lights nothing.
+so `V` / `S` / a URL restore light the same stop a click would. Each stop maps
+to a state field, so the sync call passes that field directly.
 
 A stop that the current camera can't reach is **disabled, not hidden**
 (`.link-btn:disabled`), and its explanatory `title` goes on the **row**, never
@@ -216,8 +215,8 @@ to it goes quiet exactly when it is the only thing explaining the state.
 ## Reverse-sync (DOM ← FilterState)
 
 Panel widgets subscribe to `stellata.on('filter', …)` and write DOM
-from the filter state. This is how URL restores and `naked eye`/`all`
-presets update sliders and chip states. **Setting `.value`
+from the filter state. This is how URL restores and instrument changes
+update sliders and chip states. **Setting `.value`
 programmatically does NOT dispatch `input`**, so there's no feedback
 loop. If you add a filter field, remember to handle it in the panel's
 `syncFromFilter`.
@@ -227,17 +226,16 @@ The FOV slider's reverse-sync is the one carve-out: it reads
 not in `FilterState`. `setCameraFov` fires the filter-change handlers
 so the slider re-syncs after a debug-panel or URL-restore change.
 
-The **active-preset highlight** on the magnitude-preset buttons is
-value-driven, not click-driven: the reverse-sync compares
-`f.maxAppMag` against each preset's value (epsilon 0.05) and toggles
-the `.on` class on the matching button — so dragging the slider to
-6.5 lights up "naked eye" the same as clicking it. Styling lives in
-`styles.css :.mag-preset.on`.
+The **EV readout is the one widget on a per-frame path.** Adaptation
+moves every frame, so `stellata.on('frame', …)` refreshes
+`#ev-readout` — write-on-change, so a steady scene touches no DOM.
+Everything else in the panel rides the discrete `'filter'` /
+`'cameraMode'` events.
 
-For the underlying magnitude / FOV / star-size-exaggeration model
-(presets, override flags, K table, soft-knee saturation), see
-`../star-pipeline/README.md` § Magnitude presets and angular-size
-calibration.
+For the underlying instrument / FOV / star-size model (aperture-derived
+`m_lim`, override flags, plate-scale K, soft-knee saturation), see
+`../filters/README.md` and `../star-pipeline/README.md`
+§ Angular-size calibration.
 
 ## Theme
 

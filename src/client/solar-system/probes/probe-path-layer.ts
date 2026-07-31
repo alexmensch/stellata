@@ -9,7 +9,7 @@ import {
   makeOrbitLine,
   makeOrbitLineMaterial,
   mirrorOrbitLine,
-  pixelsPerRadianFromFovRad,
+  pixelsPerRadianFromUniforms,
   trackAnchoredLine,
   ORBIT_LINE_OPACITY,
 } from '../../util/orbit-line';
@@ -121,8 +121,7 @@ export class ProbePathLayer {
     this.setDrawn(drawn);
     if (!drawn) return;
     field.solLocalInto(this.solLocal);
-    const pxPerRad = pixelsPerRadianFromFovRad(
-      this.shared.uFovYRad.value, this.shared.uViewport.value.y);
+    const pxPerRad = pixelsPerRadianFromUniforms(this.shared);
     for (let i = 0; i < this.trails.length; i++) {
       const trail = this.trails[i];
       const sample = field.sampleFor(i);

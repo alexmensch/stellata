@@ -2,10 +2,12 @@ import type { Stellata } from '../../stellata';
 import {
   ALL_SPECT_MASK,
   DEFAULT_FOV,
-  MAG_PRESETS,
-  MAG_PRESET_NAMES,
+  STAR_K_MULTIPLIER_MAX,
+  STAR_K_MULTIPLIER_MIN,
+  STAR_K_MULTIPLIER_STEP,
 } from '../../filters/filter-state';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
+import { EV_MAX_STOPS, EV_STEP_STOPS, steppedEv } from '../../hdr/exposure/exposure-epoch';
 import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindStopControl, syncStopControl } from '../../ui/stop-control';
@@ -42,13 +44,18 @@ export function distToSlider(pc: number, isMin: boolean): number {
   return Math.max(0, Math.min(SLIDER_STEPS, Math.round(v)));
 }
 
+/** Photography convention: signed stops with a sign on non-zero values,
+ *  plus what the observer can actually perceive at that trim — a
+ *  correctly-vanishing star field otherwise reads as a bug. */
+export function evLabel(ev: number, effectiveLimitMag: number): string {
+  const stops = ev === 0 ? '0' : `${ev > 0 ? '+' : '−'}${Math.abs(ev).toFixed(2)}`;
+  return `${stops} EV · stars to m ${effectiveLimitMag.toFixed(1)}`;
+}
+
 export function bindControls(stellata: Stellata) {
   const distMin = document.getElementById('dist-min') as HTMLInputElement;
   const distMax = document.getElementById('dist-max') as HTMLInputElement;
   const distReadout = document.getElementById('dist-readout')!;
-  const appMag = document.getElementById('app-mag') as HTMLInputElement;
-  const appMagReadout = document.getElementById('app-mag-readout')!;
-  const magPresets = document.querySelectorAll<HTMLButtonElement>('.mag-preset');
   const detailStops = document.querySelectorAll<HTMLButtonElement>('.detail-stop');
   const coordSphereStops = document.querySelectorAll<HTMLButtonElement>('.coord-sphere-stop');
   const chipsHost = document.getElementById('spect-chips')!;
@@ -68,6 +75,8 @@ export function bindControls(stellata: Stellata) {
   const fov = document.getElementById('fov') as HTMLInputElement;
   const fovReadout = document.getElementById('fov-readout')!;
   const exag = document.getElementById('exag') as HTMLInputElement;
+  const ev = document.getElementById('ev') as HTMLInputElement;
+  const evReadout = document.getElementById('ev-readout')!;
 
   distMin.max = String(SLIDER_STEPS);
   distMax.max = String(SLIDER_STEPS);
@@ -118,11 +127,6 @@ export function bindControls(stellata: Stellata) {
       maxDistSol: sliderToDist(vMax, false),
     });
   });
-  appMag.addEventListener('input', () => {
-    stellata.setFilter({ maxAppMag: Number(appMag.value) });
-  });
-  bindStopControl(magPresets, 'preset', MAG_PRESET_NAMES,
-    (preset) => stellata.applyMagnitudePreset(preset));
   bindStopControl(detailStops, 'detail', DETAIL_LEVELS,
     (level) => stellata.applyDetailPreset(level));
   bindStopControl(coordSphereStops, 'coordSphere', COORD_SPHERE_FRAMES,
@@ -179,11 +183,30 @@ export function bindControls(stellata: Stellata) {
   document.getElementById('fov-reset')!.addEventListener('click', () => {
     stellata.setCameraFov(DEFAULT_FOV);
   });
+  // Bounds come from the constants so the calibrated default stays
+  // mid-track (`filters/filter-state.ts`).
+  exag.min = String(STAR_K_MULTIPLIER_MIN);
+  exag.max = String(STAR_K_MULTIPLIER_MAX);
+  exag.step = String(STAR_K_MULTIPLIER_STEP);
   exag.addEventListener('input', () => {
-    stellata.setStarExaggerationK(Number(exag.value));
+    stellata.setStarKMultiplier(Number(exag.value));
   });
   document.getElementById('exag-reset')!.addEventListener('click', () => {
-    stellata.setStarExaggerationK(stellata.getStarExaggerationKDefault());
+    stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());
+  });
+  // The trim's grid is also the URL field's quantisation, so it comes
+  // from the constants rather than from the markup.
+  ev.min = String(-EV_MAX_STOPS);
+  ev.max = String(EV_MAX_STOPS);
+  ev.step = String(EV_STEP_STOPS);
+  // Snapped, not raw: a range input's own step arithmetic can drift off
+  // the grid (stepUp accumulation), and 0 is the value the readout
+  // formats without a sign.
+  ev.addEventListener('input', () => {
+    stellata.setEv(steppedEv(Number(ev.value), 0));
+  });
+  document.getElementById('ev-reset')!.addEventListener('click', () => {
+    stellata.setEv(0);
   });
 
   // Reverse sync: any filter change (user input, URL restore, presets) updates
@@ -195,18 +218,6 @@ export function bindControls(stellata: Stellata) {
     if (distMin.value !== String(sMin)) distMin.value = String(sMin);
     if (distMax.value !== String(sMax)) distMax.value = String(sMax);
     distReadout.textContent = `${fmtDist(f.minDistSol)} – ${fmtDist(f.maxDistSol)}`;
-
-    const magStr = f.maxAppMag.toString();
-    if (appMag.value !== magStr) appMag.value = magStr;
-    appMagReadout.textContent = `≤ ${f.maxAppMag.toFixed(1)}`;
-
-    // Unlike the other two stop controls the active preset isn't a state
-    // field — it's whichever one the magnitude slider currently sits on, so
-    // dragging to 6.5 lights "naked eye" without a click. No stop matches an
-    // in-between value.
-    const activePreset = MAG_PRESET_NAMES.find(
-      (name) => Math.abs(f.maxAppMag - MAG_PRESETS[name].maxAppMag) < 0.05);
-    syncStopControl(magPresets, 'preset', activePreset ?? '');
 
     syncStopControl(detailStops, 'detail', f.detailLevel);
 
@@ -257,8 +268,20 @@ export function bindControls(stellata: Stellata) {
     if (fov.value !== fovStr) fov.value = fovStr;
     fovReadout.textContent = `${Math.round(fovVal)}°`;
 
-    const kStr = stellata.getStarExaggerationK().toString();
+    const kStr = stellata.getStarKMultiplier().toString();
     if (exag.value !== kStr) exag.value = kStr;
+
+    const evVal = stellata.getEv();
+    if (Math.abs(Number(ev.value) - evVal) > 1e-6) ev.value = String(evVal);
+    syncEvReadout();
+  };
+
+  // Adaptation moves every frame, so the readout can't ride the discrete
+  // mutation events the rest of the panel syncs on. Write-on-change keeps
+  // it off the per-frame DOM path.
+  const syncEvReadout = () => {
+    const text = evLabel(stellata.getEv(), stellata.getEffectiveLimitMag());
+    if (evReadout.textContent !== text) evReadout.textContent = text;
   };
 
   // The equatorial stop is disabled (not hidden) beyond its Sol-distance fade
@@ -279,6 +302,7 @@ export function bindControls(stellata: Stellata) {
 
   stellata.on('filter', syncFromFilter);
   stellata.on('cameraMode', syncFromFilter);
+  stellata.on('frame', syncEvReadout);
   onUnitChange(() => {
     if (distUnitLabel) distUnitLabel.textContent = getUnit();
     syncFromFilter();

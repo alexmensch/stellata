@@ -36,7 +36,7 @@ import {
   type HdHipRouteDisagreement,
   type RejectedBinding,
 } from './classic-id-overlay-pure';
-import { REPO_ROOT as ROOT } from '../../util/paths';
+import { ATHYG_CSV as SRC_ATHYG, REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_TYC2_HD = resolve(ROOT, 'data/classic-ids/tyc2_hd.tsv');
@@ -45,7 +45,6 @@ const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
 const SRC_TYC_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_tyc_xmatch.tsv');
 const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
-const SRC_ATHYG = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');

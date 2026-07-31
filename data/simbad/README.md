@@ -48,9 +48,13 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
   beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
-  cascade) + `scripts/catalog/build-catalog.ts` (sibling-letter
-  attribution gate on AT-HYG gaia bindings — see
-  `scripts/catalog/parse/README.md` § Per-row pipeline).
+  cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
+  (sibling-letter attribution gate on the overlay's bindings — see
+  `data/classic-ids/README.md` § The binding gate). **The record build no
+  longer reads it**: `readStars` takes each binding off the spine column,
+  already gated, so the gate runs where bindings are still being decided
+  (`scripts/catalog/spine/README.md` § The identifier columns are read,
+  never re-derived).
 
 ## Refresh
 

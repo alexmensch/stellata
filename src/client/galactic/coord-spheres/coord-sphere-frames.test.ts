@@ -5,12 +5,14 @@ import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../galactic-coords'
 import type { CoordSphereFrame, CoordSphereSpec, DrawnCoordSphereFrame } from './coord-sphere';
 import { solFrameFadeFactor } from '../galactic-fade';
 import {
+  COORD_SPHERE_FRAMES,
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
   EQUATORIAL_FADE_WINDOW_PC,
   EQUATORIAL_SPHERE_SPEC,
   GALACTIC_SPHERE_SPEC,
   coordSphereFadeAt,
+  coordSphereNorthPole,
   coordSphereReachableAt,
   equatorialDirToIcrs,
   fmtDecDeg,
@@ -181,6 +183,31 @@ describe('sphere specs', () => {
   it('gives a fade window to the equatorial frame alone', () => {
     expect(GALACTIC_SPHERE_SPEC.fadeWindow).toBeUndefined();
     expect(EQUATORIAL_SPHERE_SPEC.fadeWindow).toBe(EQUATORIAL_FADE_WINDOW_PC);
+  });
+});
+
+// The roll alignment guide levels against this pole, so it has to be the pole
+// of the grid actually drawn — derived through the same dirToIcrs, never a
+// second constant that could drift from the geometry.
+describe('coordSphereNorthPole', () => {
+  it('is each frame’s own +90° latitude', () => {
+    expect(sepArcsec(coordSphereNorthPole('galactic'), GALACTIC_NORTH_POLE_ICRS)).toBeLessThan(1e-6);
+    const ncp = coordSphereNorthPole('equatorial');
+    expect(ncp.x).toBeCloseTo(0, 12);
+    expect(ncp.y).toBeCloseTo(0, 12);
+    expect(ncp.z).toBeCloseTo(1, 12);
+  });
+
+  it('levels against galactic north when no sphere is up', () => {
+    expect(coordSphereNorthPole('none')).toBe(coordSphereNorthPole('galactic'));
+  });
+
+  // The guide projects the pole into the image plane and reads the residual as
+  // an angle; a non-unit pole would bias it.
+  it('returns unit vectors for every frame', () => {
+    for (const frame of COORD_SPHERE_FRAMES) {
+      expect(coordSphereNorthPole(frame).length()).toBeCloseTo(1, 12);
+    }
   });
 });
 

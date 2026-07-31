@@ -12,41 +12,56 @@ concurrency:
   cancel-in-progress: false
 
 # Triggered on every push to main (i.e. PR merge), but the deploy job
-# only runs when package.json#version changed vs the previous commit.
+# only runs when package.json#version changed across the pushed range.
 # This pairs with version-guard.yml on PRs: PRs that touch shipped code
 # must bump the version, and that bump is what fires the deploy.
 # Pure-metadata PRs (skip-version-bump label) leave the version alone
 # and therefore don't redeploy.
 #
-# A successful deploy also tags v<version> and publishes a GitHub
-# release. Release notes come from the merging PR's body (the `##
-# Release notes` section, enforced by release-notes-guard.yml on PRs);
-# falls back to GitHub's auto-generated notes if the section can't be
-# found (e.g. non-squash merges, or pre-guard historical state).
+# The comparison is against the push's base commit, not HEAD~1: merging
+# a stack lands N commits in ONE push event, and each of those commits
+# may carry its own bump. Cloudflare gets one deploy, at HEAD, but
+# scripts/release/cut-releases.ts then cuts a tag + GitHub release for
+# EVERY bumped commit in the range, each with its own PR's `## Release
+# notes` section (enforced by release-notes-guard.yml). Falls back to
+# GitHub's auto-generated notes when a PR body has no usable section.
 
 jobs:
   detect-version-change:
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
-      version: ${{ steps.check.outputs.version }}
+      base: ${{ steps.check.outputs.base }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - id: check
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           new=$(jq -r .version package.json)
-          if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            old=$(git show HEAD~1:package.json | jq -r .version)
+
+          # A force-push (or the branch's first push) leaves `before`
+          # pointing at a commit this clone doesn't have; fall back to
+          # the single-commit comparison.
+          base=""
+          if [ -n "${BEFORE:-}" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+          elif git rev-parse -q --verify HEAD~1 >/dev/null; then
+            base=$(git rev-parse HEAD~1)
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$base" ]; then
+            old=$(git show "$base:package.json" | jq -r .version)
           else
             old=""
           fi
-          echo "version=$new" >> "$GITHUB_OUTPUT"
           echo "Current version: $new"
-          echo "Previous version: ${old:-<none>}"
+          echo "Base version: ${old:-<none>} (base: ${base:-<none>})"
           if [ "$new" = "$old" ]; then
             echo "Version unchanged — skipping deploy."
             echo "should_deploy=false" >> "$GITHUB_OUTPUT"
@@ -59,8 +74,6 @@ jobs:
     needs: detect-version-change
     if: needs.detect-version-change.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
-    env:
-      VERSION: ${{ needs.detect-version-change.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,49 +105,10 @@ jobs:
       - name: Tag and release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ needs.detect-version-change.outputs.base }}
         run: |
           set -euo pipefail
-          tag="v${VERSION}"
-          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            echo "Tag ${tag} already exists — skipping tag/release."
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git tag -a "${tag}" -m "${tag}"
-          git push origin "${tag}"
-
-          # Extract release notes from the merging PR's body. Squash
-          # merges put '(#NN)' at the end of the commit subject; pull
-          # the last such number out and fetch its body via gh.
-          notes_file=""
-          subject=$(git log -1 --pretty=%s HEAD)
-          pr=$(printf '%s' "$subject" | grep -oE '#[0-9]+' | tail -1 | tr -d '#' || true)
-          if [ -n "${pr:-}" ]; then
-            body=$(gh pr view "$pr" --json body --jq .body 2>/dev/null || true)
-            if [ -n "${body:-}" ]; then
-              section=$(printf '%s\n' "$body" | awk '
-                /^## Release notes[[:space:]]*$/ { capture=1; next }
-                /^## / && capture { exit }
-                capture { print }
-              ')
-              stripped=$(printf '%s' "$section" | perl -0777 -pe 's/<!--.*?-->//gs')
-              if printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
-                notes_file=$(mktemp)
-                printf '%s' "$stripped" > "$notes_file"
-                echo "Using release notes from PR #${pr}."
-              else
-                echo "PR #${pr} body has no usable '## Release notes' section — falling back to --generate-notes."
-              fi
-            else
-              echo "Could not fetch body for PR #${pr} — falling back to --generate-notes."
-            fi
-          else
-            echo "No PR number in commit subject — falling back to --generate-notes."
-          fi
-
-          if [ -n "$notes_file" ]; then
-            gh release create "${tag}" --title "${tag}" --notes-file "$notes_file"
-          else
-            gh release create "${tag}" --title "${tag}" --generate-notes
-          fi
+          pnpm exec tsx scripts/release/cut-releases.ts \
+            --base "$BASE" --head "$GITHUB_SHA"

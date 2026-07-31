@@ -1,6 +1,5 @@
-// Source paths and loaders for every reference table readStars consumes.
-// Shared by build-catalog.ts and the inherited-spine generator so both
-// walk the AT-HYG CSV against identical inputs. See README.md.
+// Source paths and loaders for every reference table readStars consumes,
+// plus the inherited spine it walks as the membership term. See README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -9,10 +8,8 @@ import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
   parseSimbadSptypeTsv,
-  parseSimbadWdsXidsTsv,
   type ApsisRow,
   type SimbadSpectralIndex,
-  type SimbadWdsXidIndex,
 } from '../catalog-pure';
 import type { BuildCounts } from '../build-counts';
 import {
@@ -28,29 +25,27 @@ import {
   STELLARIUM_SKYCULTURE_JSON,
 } from './constellations';
 import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import type { ReadStarsOptions } from './stars-parse';
-import { readGaiaHipXmatch } from './gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
-export const ATHYG_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
+export const INHERITED_SPINE_TSV = resolve(ROOT, INHERITED_SPINE_FILE);
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
-const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
 const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
-const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
 const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 
 /** Every file a readStars walk reads — the mtime set an artifact derived
  *  from that walk must invalidate against. */
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
-  ATHYG_CSV, SRC_BAILER_JONES, SRC_GAIA_HIP_XMATCH, SRC_GAIA_APSIS,
+  INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
-  SRC_SIMBAD_WDS_XIDS, SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
+  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
@@ -60,7 +55,6 @@ export type ReadStarsInputSizes = Pick<
   | 'bjEntries'
   | 'apsisEntries'
   | 'simbadSptypeEntries'
-  | 'simbadWdsXidsEntries'
   | 'gaiaAstrometryEntries'
   | 'hip2Entries'
   | 'hipVMagEntries'
@@ -75,8 +69,6 @@ export interface ReadStarsInputs extends Required<ReadStarsOptions> {
   /** Loaded unconditionally: absent dust is a hard fail below, not a
    *  soft-continue, so consumers never see the nullable form. */
   dustGrid: DustGrid;
-  /** Also feeds build-catalog's GCVS byGaia bridge. */
-  hipToGaia: Map<number, string> | null;
   sizes: ReadStarsInputSizes;
 }
 
@@ -85,7 +77,6 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     bjEntries: 0,
     apsisEntries: 0,
     simbadSptypeEntries: 0,
-    simbadWdsXidsEntries: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
@@ -137,34 +128,6 @@ export function loadReadStarsInputs(): ReadStarsInputs {
       `         Re-run scripts/refresh/refresh-simbad-sptype.py to restore\n` +
       `         the SIMBAD tier.`,
     );
-  }
-
-  // SIMBAD WDS cross-IDs — the sibling-letter gate's attribution source.
-  // Optional: without it the gate never fires and a mis-keyed blend row
-  // keeps its cross-walk source (pre-gate behaviour).
-  let wdsXids: SimbadWdsXidIndex | null = null;
-  if (existsSync(SRC_SIMBAD_WDS_XIDS)) {
-    console.log('Parsing SIMBAD WDS cross-IDs...');
-    const t = Date.now();
-    wdsXids = parseSimbadWdsXidsTsv(readFileSync(SRC_SIMBAD_WDS_XIDS, 'utf8'));
-    console.log(`  ${wdsXids.bySource.size} sources in ${Date.now() - t}ms`);
-    sizes.simbadWdsXidsEntries = wdsXids.bySource.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_SIMBAD_WDS_XIDS} not found — the sibling-letter\n` +
-      `         attribution gate is disabled. Re-run\n` +
-      `         scripts/refresh/refresh-simbad-wds-xids.py to restore it.`,
-    );
-  }
-
-  let hipToGaia: Map<number, string> | null = null;
-  if (existsSync(SRC_GAIA_HIP_XMATCH)) {
-    console.log('Parsing Gaia DR3 ↔ HIP cross-walk...');
-    const t = Date.now();
-    hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
-    console.log(`  ${hipToGaia.size} entries in ${Date.now() - t}ms`);
-  } else {
-    console.log('Gaia DR3 ↔ HIP cross-walk not found; backfill + GCVS bridge skipped.');
   }
 
   // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen,
@@ -252,7 +215,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   console.log(`  built the region grid in ${Date.now() - tCon}ms`);
 
   return {
-    bjMap, apsisMap, simbadSpectral, wdsXids, hipToGaia, directions, hipVMag,
+    bjMap, apsisMap, simbadSpectral, directions, hipVMag,
     dustGrid, conAssignment, sizes,
   };
 }

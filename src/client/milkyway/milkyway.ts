@@ -3,6 +3,7 @@ import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 import type { DustField } from '../loaders/dust-loader';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
@@ -67,10 +68,10 @@ export const GLOW_MAG_OFFSET =
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
 export interface MilkywayDeps {
-  /** The star pipeline's `uMaxAppMag`, by reference. Only the chart-mode
+  /** The star pipeline's `uLimitMag`, by reference. Only the chart-mode
    *  isobar contour reads it — the band's brightness is photometric, so
-   *  the magnitude slider reaches it through `uExposure` instead. */
-  uMaxAppMag: { value: number };
+   *  the exposure model reaches it through `uExposure` instead. */
+  uLimitMag: { value: number };
   /** `HdrPipeline.emitterUniforms`, spread in by reference so exposure,
    *  pixel solid angle and the inline-operator branch reach both
    *  components with one write. */
@@ -227,7 +228,7 @@ export class MilkyWay {
         // Exposure, pixel solid angle, and the inline-operator branch.
         // Owned by HdrPipeline; this layer only reads them.
         ...opts.deps.hdr,
-        uMaxAppMag: opts.deps.uMaxAppMag,
+        uLimitMag: opts.deps.uLimitMag,
 
         // Per-component.
         uIsBulge: { value: opts.isBulge },
@@ -257,6 +258,7 @@ export class MilkyWay {
     // mis-cull when the camera is offset far from Sol.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
+    markStatisticEmitter(mesh);
     return mesh;
   }
 

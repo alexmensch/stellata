@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
+import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
 
 export const MIRROR_CAPACITY = 8;
 
@@ -89,10 +90,13 @@ export class StarLocalMirror {
     discMesh.renderOrder = 0;
     const glowMesh = new THREE.Mesh(this.geometry, this.glowMaterial);
     glowMesh.frustumCulled = false;
-    // After the planet mirrors' disc (3) — the member star's glow gets
-    // holes at planet cores, matching the main pass's core-mask
-    // semantics; planet glow (4) still adds over everything.
+    // After every body surface (mesh 2.8, rings 2.81, shell 2.82): the
+    // glow writes no depth, so drawn EARLIER an opaque mesh would erase
+    // it wholesale instead of it depth-failing per fragment. Planet
+    // glare (4) still adds over everything.
     glowMesh.renderOrder = 3.5;
+    markStatisticEmitter(discMesh);
+    markStatisticEmitter(glowMesh);
     this.group.add(maskMesh);
     this.group.add(discMesh);
     this.group.add(glowMesh);

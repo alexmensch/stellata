@@ -9,10 +9,15 @@ import type {
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
-import { setBuiltinChromeColour } from '../hdr/chrome-colour';
-import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';
+import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
-  boundarySegmentVertices,
+  makeDashedOrbitLineMaterial,
+  makeOrbitLineSegments,
+  pixelsPerRadianFromUniforms,
+  type ScreenMetricUniforms,
+} from '../util/orbit-line';
+import {
+  boundaryLineAttributes,
   resolveBoundaryFadeWindowPc,
 } from './boundary-layer-pure';
 
@@ -24,6 +29,15 @@ const BOUNDARY_RENDER_ORDER = -0.8;
 // Half the weight of the opaque coordinate sphere sharing the same ink, so
 // the two reference layers stay distinguishable with both drawn.
 const BOUNDARY_OPACITY = 0.5;
+
+// Sky Atlas 2000.0 draws the partition as fine DOTS at the same stroke weight
+// as its solid coordinate grid — the break, not the weight, is what separates
+// the two layers. Sized in **screen pixels**, not degrees of sky: the paper
+// pattern runs ~0.1° per dot, which at any FOV reachable here is sub-pixel and
+// reads as a faint solid line, so the dots hold their size on screen and the
+// sky spacing rides the zoom. `update` converts via `material.scale`.
+export const BOUNDARY_DOT_PX = 1.5;
+export const BOUNDARY_GAP_PX = 3;
 
 /**
  * The Delporte boundary arcs drawn Sol-centred at `SPHERE_RADIUS_PC`, faded
@@ -43,18 +57,25 @@ const BOUNDARY_OPACITY = 0.5;
  */
 export class ConstellationBoundaryLayer {
   readonly group: THREE.Group;
-  private readonly material: THREE.LineBasicMaterial;
+  private readonly shared: ScreenMetricUniforms;
+  private readonly material: THREE.LineDashedMaterial;
   private lineSegments: THREE.LineSegments | null = null;
   private fade: BoundaryFadeTableWire | null = null;
   private fadeWindow: SolFrameFadeWindow | null = null;
   // NaN so the first setMagnitudeLimit always misses and recomputes.
   private magLimit = NaN;
 
-  constructor() {
+  constructor(shared: ScreenMetricUniforms) {
     this.group = new THREE.Group();
     this.group.renderOrder = BOUNDARY_RENDER_ORDER;
     this.group.visible = false;
-    this.material = makeOrbitLineMaterial(CHART_REFERENCE_INK, BOUNDARY_OPACITY);
+    this.shared = shared;
+    this.material = makeDashedOrbitLineMaterial(
+      CHART_REFERENCE_INK,
+      BOUNDARY_DOT_PX,
+      BOUNDARY_GAP_PX,
+      BOUNDARY_OPACITY,
+    );
     // The chart starfield renders depth-disabled, so the arcs read flat over
     // it — the same treatment the figure takes in chart mode.
     this.material.depthTest = false;
@@ -62,17 +83,18 @@ export class ConstellationBoundaryLayer {
 
   /** Build the arc geometry and seed the fade window from the live magnitude
    *  limit. Called once, when the artifact resolves. */
-  attach(artifact: BoundaryArtifact, maxAppMag: number): void {
+  attach(artifact: BoundaryArtifact, limitMag: number): void {
     this.disposeGeometry();
     this.fade = artifact.fade;
-    const seg = makeOrbitLineSegments(
-      boundarySegmentVertices(artifact.segments, SPHERE_RADIUS_PC),
-      this.material,
-      BOUNDARY_RENDER_ORDER,
-    );
+    const { positions, lineDistances } =
+      boundaryLineAttributes(artifact.segments, SPHERE_RADIUS_PC);
+    const seg = makeOrbitLineSegments(positions, this.material, BOUNDARY_RENDER_ORDER);
+    // The dash phase, per polyline rather than per pair — `computeLineDistances`
+    // would reset it at every subdivision node and draw the arcs solid.
+    seg.geometry.setAttribute('lineDistance', new THREE.BufferAttribute(lineDistances, 1));
     this.group.add(seg);
     this.lineSegments = seg;
-    this.setMagnitudeLimit(maxAppMag);
+    this.setMagnitudeLimit(limitMag);
   }
 
   /** Re-derive the fade window for a new apparent-magnitude limit. Pushed on
@@ -83,10 +105,10 @@ export class ConstellationBoundaryLayer {
    *  pushes land while the artifact is still in flight, and recording the
    *  limit without a table to resolve it against would make `attach`'s own
    *  seeding call look like a no-op and leave the layer with no window. */
-  setMagnitudeLimit(maxAppMag: number): void {
-    if (this.fade === null || maxAppMag === this.magLimit) return;
-    this.magLimit = maxAppMag;
-    this.fadeWindow = resolveBoundaryFadeWindowPc(this.fade, maxAppMag);
+  setMagnitudeLimit(limitMag: number): void {
+    if (this.fade === null || limitMag === this.magLimit) return;
+    this.magLimit = limitMag;
+    this.fadeWindow = resolveBoundaryFadeWindowPc(this.fade, limitMag);
   }
 
   /** Per-frame update. The caller ANDs the declutter permission and the
@@ -103,6 +125,11 @@ export class ConstellationBoundaryLayer {
     }
     this.group.position.copy(worldOffset).negate();
     this.material.opacity = opacity;
+    // World arc length → screen pixels, which is what the dot pattern is
+    // authored in. One scale covers the whole sphere: the arcs sit 50 kpc out
+    // and the camera never leaves Sol's neighbourhood while they draw, so
+    // every vertex is at effectively the same range.
+    this.material.scale = pixelsPerRadianFromUniforms(this.shared) / SPHERE_RADIUS_PC;
     this.group.visible = true;
   }
 

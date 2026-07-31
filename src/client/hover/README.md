@@ -142,7 +142,7 @@ How to apply:
   for un-registered providers. The same visibility logic the renderer
   uses to decide "draw this quad or not" is the right gate.
 - For the planet layer specifically: the planet shader emits no quad
-  when `appMag > maxAppMag + 0.5`; the picker mirrors that exact kill
+  when `appMag > uThresholdMag + 0.5`; the picker mirrors that exact kill
   condition. NO additional gate on `focusedPlanetSystem !== null`.
   The one non-visibility drop: a body collapsed onto its parent
   (`isCollapsedOntoParent` — sub-pixel from host / parent planet) is

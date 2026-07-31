@@ -325,4 +325,69 @@ describe('atmosphere shells', () => {
       expect(atmo.absorbCoeff[2]).toBeGreaterThan(atmo.absorbCoeff[0]);
     }
   });
+
+  const atmoOf = (name: string) => SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
+
+  it('Earth carries the Bodhaine 1999 sea-level Rayleigh depths', () => {
+    // The published table IS the calibration (README.md § Per-body sources);
+    // a drift back toward slider values is the regression this pins against.
+    expect(atmoOf('Earth').rayleighCoeff).toEqual([0.049, 0.097, 0.221]);
+  });
+
+  it('every Rayleigh row keeps the 1/λ⁴ blue-to-red shape', () => {
+    // (650/450)⁴ = 4.35; dispersion of the refractive index steepens the real
+    // ratio slightly (Earth's Bodhaine value is 4.51).
+    for (const name of ['Venus', 'Earth', 'Mars', 'Titan']) {
+      const [r, , b] = atmoOf(name).rayleighCoeff;
+      expect(b / r).toBeGreaterThan(4.3);
+      expect(b / r).toBeLessThan(4.7);
+    }
+  });
+
+  it('Venus, Mars, and Titan Rayleigh columns scale from Earth\'s by molecular column', () => {
+    // Column N = P/(m·g) per README.md § Per-body sources; CO₂ scatters ~2.45x
+    // air per molecule, N₂ ~0.96x. Green channel carries the check.
+    const earthG = atmoOf('Earth').rayleighCoeff[1];
+    expect(atmoOf('Venus').rayleighCoeff[1] / earthG).toBeCloseTo(0.070, 2);
+    expect(atmoOf('Mars').rayleighCoeff[1] / earthG).toBeCloseTo(0.026, 2);
+    expect(atmoOf('Titan').rayleighCoeff[1] / earthG).toBeCloseTo(10.4, 0);
+  });
+
+  it('Mars aerosol absorption encodes the measured dust single-scattering albedo', () => {
+    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al. 2009).
+    const mars = atmoOf('Mars');
+    const omega = mars.absorbCoeff.map((a) => mars.mieCoeff / (mars.mieCoeff + a));
+    expect(omega[0]).toBeCloseTo(0.97, 2);
+    expect(omega[2]).toBeCloseTo(0.75, 2);
+  });
+
+  it('stays optically thin over the texture — Titan the deliberate exception', () => {
+    // Nadir T_view per channel, pinned per body: the texture IS the visible
+    // disc, so the overlay must not extinguish it and replace it with a
+    // featureless ball (README.md § The texture carries the disc). The pins
+    // are the guard — a published-value refinement should register here and
+    // be read, not trip a threshold it happens to sit near. Earth's blue is
+    // the thickest of the three at 0.76, and the bound below (the texture
+    // still supplies most of its own pixel) keeps real headroom under it.
+    const NADIR_T: Record<string, readonly [number, number, number]> = {
+      Venus: [0.881, 0.874, 0.856],
+      Earth: [0.906, 0.863, 0.763],
+      Mars: [0.813, 0.799, 0.761],
+    };
+    for (const [name, want] of Object.entries(NADIR_T)) {
+      const atmo = atmoOf(name);
+      for (let c = 0; c < 3; c++) {
+        const tView = Math.exp(
+          -(atmo.rayleighCoeff[c] + atmo.mieCoeff + atmo.absorbCoeff[c]),
+        );
+        expect(tView).toBeCloseTo(want[c], 3);
+        expect(tView).toBeGreaterThan(0.5);
+      }
+    }
+    // Titan's haze is genuinely opaque in visible light — its surface, and our
+    // near-IR texture, are not there to be seen from space.
+    const titan = atmoOf('Titan');
+    const tauBlue = titan.rayleighCoeff[2] + titan.mieCoeff + titan.absorbCoeff[2];
+    expect(Math.exp(-tauBlue)).toBeLessThan(0.05);
+  });
 });

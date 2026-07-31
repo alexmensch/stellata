@@ -16,6 +16,34 @@ export function buildStarSection(stellata: Stellata): DebugSection {
   const body = document.createElement('div');
   const v = stellata.getStarRenderParams();
 
+  // Derived-K readout. K is a product of instrument density, the
+  // multiplier slider and the live plate scale, so the slider value alone
+  // doesn't tell you what the stars are actually being drawn at.
+  const kReadout = document.createElement('div');
+  kReadout.style.cssText =
+    'font:11px/1.4 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
+    'color:#0f0;padding:6px 8px;border-radius:4px;margin-bottom:8px;' +
+    'white-space:pre;user-select:text;cursor:text;';
+  body.appendChild(kReadout);
+
+  let visible = true;
+  let last = '';
+  const onFrame = () => {
+    if (!visible) return;
+    const f = stellata.getFilter();
+    const text =
+      `K ${stellata.getStarExaggerationK().toFixed(3)}`
+      + `  (×${stellata.getStarKMultiplier().toFixed(2)} slider)\n`
+      + `plate ${stellata.getArcsecPerPx().toFixed(2)}″/px`
+      + `  fov ${stellata.getCameraFov().toFixed(1)}°\n`
+      + `sizeMin ${f.sizeMin.toFixed(2)}px  sizeMax ${f.sizeMax.toFixed(2)}px`;
+    if (text === last) return;
+    last = text;
+    kReadout.textContent = text;
+  };
+  onFrame();
+  const unsubscribe = stellata.on('frame', onFrame);
+
   body.appendChild(makeSlider({
     label: 'visibleThreshold',
     min: 0.02,
@@ -103,7 +131,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
 
   return {
     element: body,
-    dispose: () => {},
-    setVisible: () => {},
+    dispose: () => { unsubscribe(); },
+    setVisible: (visibleNow: boolean) => { visible = visibleNow; },
   };
 }

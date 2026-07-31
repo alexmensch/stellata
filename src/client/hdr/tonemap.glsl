@@ -24,6 +24,16 @@ vec3 stellataSrgbEncode(vec3 c) {
     return mix(v * 12.92, 1.055 * pow(v, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, v));
 }
 
+/** Inverse of stellataSrgbEncode. What a layer sampling sRGB-authored
+ *  imagery needs before lighting it: the maps load with NoColorSpace, so
+ *  the raw texel is display-encoded and multiplying it by a physical
+ *  luminance would light the body with a gamma-bent albedo. CPU mirror is
+ *  srgbDecode in tonemap-pure.ts. */
+vec3 stellataSrgbDecode(vec3 c) {
+    vec3 v = clamp(c, 0.0, 1.0);
+    return mix(v / 12.92, pow((v + 0.055) / 1.055, vec3(2.4)), step(0.04045, v));
+}
+
 /** Interleaved-gradient noise, ±0.5/255 — breaks up the 8-bit banding
  *  the faint Milky Way gradient shows without it. */
 float stellataDither(vec2 fragCoord) {

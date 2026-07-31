@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  evLabel,
   sliderToDist,
   distToSlider,
   SLIDER_STEPS,
@@ -125,5 +126,13 @@ describe('controls / round-trip slider ↔ dist', () => {
       v = distToSlider(sliderToDist(v, false), false);
     }
     expect(v).toBe(500);
+  });
+});
+
+describe('controls / evLabel', () => {
+  it('centres 0 without a sign and signs everything else', () => {
+    expect(evLabel(0, 7.8)).toBe('0 EV · stars to m 7.8');
+    expect(evLabel(1 / 3, 8.05)).toBe('+0.33 EV · stars to m 8.1');
+    expect(evLabel(-1 / 3, 7.54)).toBe('−0.33 EV · stars to m 7.5');
   });
 });

@@ -1,6 +1,6 @@
-// Pure roll algebra for the galactic-referenced up axis: the level-up
-// projection, the pole-cone correction weight, and signed roll angles.
-// See README.md § Reference up axis.
+// Pure roll algebra for the reference up axis: the level-up projection, the
+// pole-cone correction weight, and signed roll angles. Frame-agnostic — the
+// pole is an argument. See README.md § Reference up axis.
 
 import type * as THREE from 'three';
 

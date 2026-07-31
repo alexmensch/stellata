@@ -6,6 +6,12 @@ import { describe, it, expect } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
+import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import {
+  SPINE_COLUMNS,
+  serializeSpine,
+  type SpineRow,
+} from '../spine/inherited-spine-pure';
 import { CONSTELLATIONS, createConstellationAssignment } from './constellations';
 import { readStars } from './stars-parse';
 
@@ -13,15 +19,22 @@ const CON_ASSIGNMENT = createConstellationAssignment();
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
-const ATHYG_HEADER =
-  'absmag,dist,dist_src,ci,spect,con,proper,bayer,flam,hip,hd,hr,gl,ra,dec,mag,gaia,pm_ra,pm_dec';
-
-function writeAthygCsv(rows: string[]): string {
-  const dir = mkdtempSync(join(tmpdir(), 'athyg-'));
-  const path = join(dir, 'athyg.csv');
-  writeFileSync(path, [ATHYG_HEADER, ...rows].join('\n') + '\n');
+// Emitted through the shipped codec, so a column added or renamed in
+// COLUMN_SPEC fails here rather than silently shifting every cell.
+function writeSpineTsv(rows: readonly Partial<SpineRow>[]): string {
+  const dir = mkdtempSync(join(tmpdir(), 'spine-'));
+  const path = join(dir, 'inherited-spine.tsv');
+  const blank = Object.fromEntries(
+    SPINE_COLUMNS.map((column) => [column, '']),
+  ) as SpineRow;
+  writeFileSync(path, serializeSpine(rows.map((row) => ({ ...blank, ...row }))));
   return path;
 }
+
+// ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). mag 10 at 100 pc is absmag 5.
+const AT_ORIGIN_SIGHTLINE: Partial<SpineRow> = {
+  ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V', mag: '10.0',
+};
 
 // Constant density everywhere (logRatio 0 collapses the exponential
 // decode), so any sightline inside the cube accumulates non-zero A_V.
@@ -38,15 +51,14 @@ function uniformDustGrid(): DustGrid {
 }
 
 describe('readStars build-time de-extinction of ci', () => {
-  it('de-reddens an observed ci but never the solar fallback', async () => {
+  it('de-reddens an observed ci but never the solar fallback', () => {
     const grid = uniformDustGrid();
-    const csv = writeAthygCsv([
-      // ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0), inside the cube.
-      '5.0,100,OTHER,,K0V,,BlankCi,,,,,,,0,0,10.0,,,',
-      '5.0,100,OTHER,0.5,K0V,,ObservedCi,,,,,,,0,0,10.0,,,',
-    ]);
-    const { stars } = await readStars(
-      csv, { conAssignment: CON_ASSIGNMENT, dustGrid: grid },
+    const { stars } = readStars(
+      writeSpineTsv([
+        { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
+        { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', ci: '0.5' },
+      ]),
+      { conAssignment: CON_ASSIGNMENT, dustGrid: grid },
     );
     expect(stars).toHaveLength(2);
     const av = avSolToStar(grid, 100, 0, 0);
@@ -64,47 +76,74 @@ describe('readStars build-time de-extinction of ci', () => {
   });
 });
 
+describe('readStars Gaia source_id', () => {
+  // The spine froze each binding after the native → cross-walk precedence and
+  // both gates ran. Re-applying the G−V gate here would re-decide it against
+  // photometry the frozen build already weighed, and a scrubbed source_id
+  // changes the record's designation set — so every SID keyed on it moves.
+  it('takes the frozen column even where the G−V gate would scrub it', () => {
+    const sourceId = '5853498713190525696';
+    const gaiaAstrometry = new Map<string, GaiaAstrometryCatalogRow>([
+      [sourceId, {
+        raDeg: 0, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.1,
+        pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1, ipdFracMultiPeak: 0,
+        gMag: 20.95, bpMag: null, rpMag: null,
+      }],
+    ]);
+    const { stars } = readStars(
+      writeSpineTsv([{
+        ...AT_ORIGIN_SIGHTLINE, mag: '1.33', gaia_source_id: sourceId,
+      }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: { gaiaAstrometry, hip2: new Map(), nssSourceIds: new Set() },
+      },
+    );
+    expect(stars[0].gaiaSourceId).toBe(sourceId);
+  });
+});
+
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
-  // fields. See src/client/constellation-boundaries/README.md § ρ Aquilae.
-  const RHO_AQL_ROW = '2.17,46.5,OTHER,0.08,A2V,Aql,,Rho,67,99742,192425,7724,,20.23796,15.1975,4.94,,,';
+  // fields. See src/client/constellation-boundaries/iau-geometry/README.md
+  // § ρ Aquilae.
+  const RHO_AQL: Partial<SpineRow> = {
+    dist: '46.5', dist_src: 'OTHER', ci: '0.08', spect: 'A2V', bayer: 'Rho',
+    flam: '67', hip: '99742', hd: '192425', hr: '7724',
+    ra: '20.23796', dec: '15.1975', mag: '4.94',
+  };
 
-  it('resolves byte 34 positionally while the designation keeps AT-HYG con', async () => {
-    const { stars, stats } = await readStars(
-      writeAthygCsv([RHO_AQL_ROW]), { conAssignment: CON_ASSIGNMENT },
+  it('resolves byte 34 positionally', () => {
+    const { stars } = readStars(
+      writeSpineTsv([RHO_AQL]), { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
-    expect(stars[0].desigConIndex).toBe(conIndexOf('aql'));
-    expect(stats.conPositionalDisagreement).toBe(1);
   });
 
-  it('assigns a row AT-HYG left unclassified and counts no disagreement', async () => {
-    // ra=0 h / dec=0° is in Pisces. An empty editorial cell is not a
-    // disagreement — there is nothing to disagree with.
-    const { stars, stats } = await readStars(
-      writeAthygCsv(['5.0,100,OTHER,0.5,K0V,,Anon,,,,,,,0,0,10.0,,,']),
+  it('names no designation constellation — the spine has no editorial cell', () => {
+    // ρ Aql is the sharpest case: the walk used to read "Aql" off AT-HYG's
+    // `con` column, and nothing replaces it here. A GCVS designation is the
+    // only source left, and this row has none, so its aliases fall back to
+    // the positional index until the overlay supplies one.
+    const { stars } = readStars(
+      writeSpineTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
       { conAssignment: CON_ASSIGNMENT },
     );
-    expect(stars[0].conIndex).toBe(conIndexOf('psc'));
-    expect(stars[0].desigConIndex).toBe(NO_CONSTELLATION_INDEX);
-    expect(stats.conPositionalDisagreement).toBe(0);
+    expect(stars.map((s) => s.desigConIndex))
+      .toEqual([NO_CONSTELLATION_INDEX, NO_CONSTELLATION_INDEX]);
   });
 
-  it('leaves Sol unclassified — the origin has no sky direction', async () => {
-    const { stars } = await readStars(
-      writeAthygCsv(['4.85,0,OTHER,0.656,G2V,,Sol,,,,,,,0,0,-26.7,,,']),
+  it('leaves Sol unclassified — the origin has no sky direction', () => {
+    const { stars } = readStars(
+      writeSpineTsv([{
+        ra: '0', dec: '0', dist: '0', dist_src: 'OTHER', ci: '0.656',
+        spect: 'G2V', proper: 'Sol', mag: '-26.7',
+      }]),
       { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
-  });
-
-  it('rejects an AT-HYG con cell absent from the IAU-88 table', async () => {
-    await expect(readStars(
-      writeAthygCsv(['5.0,100,OTHER,0.5,K0V,Zzz,Anon,,,,,,,0,0,10.0,,,']),
-      { conAssignment: CON_ASSIGNMENT },
-    )).rejects.toThrow(/not in the IAU-88 table/);
   });
 });

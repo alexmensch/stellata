@@ -46,9 +46,18 @@ build scripts, tests, and shader uniforms.
   `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
   `color` is an authored sRGB hex, mapped through the tone-map inverse so
   the line resolves at that appearance out of the HDR pass —
-  `../hdr/README.md` § Chrome) and
-  the on-screen-size helpers `pixelsPerRadian` (+ `pixelsPerRadianFromFovRad`
-  for callers holding the FOV in radians) / `angularRadiusPx` the orbit
+  `../hdr/README.md` § Chrome), its dashed sibling
+  `makeDashedOrbitLineMaterial(color, dash, gap, opacity?)` — dash lengths
+  in whatever unit the consumer's `material.scale` maps world distance into
+  (so a pattern can be authored in screen pixels), and the consumer owns the
+  cumulative `lineDistance` attribute because `computeLineDistances` resets
+  the phase per segment pair (`../constellation-boundaries/README.md`
+  § Chart-mode layer) — and the on-screen-size helpers `pixelsPerRadian`
+  (+ `pixelsPerRadianFromFovRad` for callers holding the FOV in radians, and
+  `pixelsPerRadianFromUniforms` for the `ScreenMetricUniforms` viewport / FOV
+  slot pair every layer that sizes in screen pixels holds by reference —
+  probe markers and trails, planet-body collapse, the boundary stipple) /
+  `angularRadiusPx` the orbit
   layers use for their pixel-size visibility gate, plus the shared
   `FEATURE_LEGIBILITY_MIN_PX` floor + `isFeatureLegible` predicate that both
   the orbit-ring gate and the boundary-shell silhouette labels
@@ -68,7 +77,7 @@ build scripts, tests, and shader uniforms.
   to a direction or a `SkyPosition`. `besselianEpochToJd` supplies
   `B1875_JD`, the equinox the IAU constellation boundaries are drawn at —
   the θ sign and the epoch are both silent-failure modes, documented in
-  `../constellation-boundaries/README.md` § B1875.
+  `../constellation-boundaries/iau-geometry/README.md` § B1875.
 - `astronomy-constants.ts` — canonical values, one definition each, so
   client / build-script / shader consumers can't drift on precision.
   `RA_HOURS_TO_DEG` is the hours→degrees factor every catalogue RA column

@@ -13,8 +13,10 @@ for the surrounding context.
   `stellata.ts` constructor.
 - **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
 - **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
-  `camera/controls/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it is
-  the alignment-guide band the roll sticks inside mid-drag; roll dead-zone
+  `camera/controls/input/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it
+  is the alignment-guide band the roll sticks inside mid-drag; which frame it
+  sticks to follows the displayed coordinate sphere
+  (`coordSphereNorthPole`, `galactic/coord-spheres/README.md`). Roll dead-zone
   is `ROLL_DEADZONE_PX` in `input-controller.ts`.
 - **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
   `camera/controls/input/pinch-zoom-pure.ts`: how many scroll notches a
@@ -40,25 +42,35 @@ for the surrounding context.
   ring in observe) and the start of the Sol/GC arrow shafts.
 - **Constellation polygon prominence** — `#con-polygon` stroke/fill in
   `styles.css` (currently deliberately subtle).
-- **Star size defaults** — `MAG_PRESETS` table in `stellata.ts`. Each
-  entry is `(maxAppMag, sizeSpan)`; sizeMin/Max are derived from
-  `STAR_PSF_ARCSEC × starExaggerationK[preset]` (with the √Δm factor
-  for max).
-- **Star exaggeration constants** — `STAR_EXAGGERATION_K_DEFAULTS` in
-  `stellata.ts`, keyed per magnitude preset (naked-eye = 12,
-  binoculars = 9, all = 5). Higher = bolder, more cartoonish stars;
-  lower = more literal physics. Per-preset because wider catalogs need
-  smaller K to avoid washing out. Live-tunable via the debug panel —
-  the slider drives whichever preset is currently active.
+- **Star size target** — `TARGET_PX` (2.592 px) in
+  `filters/filter-state.ts`: the pixel size a threshold star lands on at
+  every FOV and every viewport height. sizeMin/Max are derived from it
+  through `starPxSizes` (with the √Δm factor for max), so this is the one
+  number that moves absolute star size, and the only one that should be
+  used for it — the debug multiplier and `kDensity` multiply the floored
+  plate-scale term, so a non-unit default keeps K above 1 at every zoom.
+  2.592 was set by eye against the real sky (2.16 read small, 3.84
+  large).
+- **Star exaggeration multiplier** — the "Star size exaggeration" slider
+  is a multiplier on the plate-scale-derived K (default 1, range
+  `STAR_K_MULTIPLIER_MIN`–`MAX` = 0.5–1.5). Higher = bolder, more
+  cartoonish stars; lower = more literal physics. `kDensity` on the
+  instrument record is the per-instrument crowding half of K — 1 for the
+  unaided eye, smaller for a deeper instrument so a denser field doesn't
+  wash out.
 - **Default camera FOV** — `DEFAULT_FOV` (50°) in `stellata.ts`. Reset
   button on the FOV slider snaps back here.
-- **Max apparent magnitude presets** — `data-preset` attributes on
-  `.mag-preset` buttons in `index.html` map to `MAG_PRESETS` keys
-  (`naked-eye`, `binoculars`, `all`).
-- **Soft-taper width** — the `+0.5` offset in `magOk`
-  (`star.vert.glsl`) and the matching `smoothstep(uMaxAppMag, uMaxAppMag
-  + 0.5, vAppMag)` in the fragment shader's glow pass. Wider = softer
-  fade-in across the magnitude limit; 0 = hard cutoff.
+- **EV trim range and step** — `EV_MAX_STOPS` (3) and `EV_STEP_STOPS`
+  (1/3) in `hdr/exposure/exposure-epoch.ts`, driving the `#ev` slider.
+  Widening the range also widens the derived population cull, since the
+  cull bound is the deepest threshold the trim can reach.
+- **Soft-taper width** — `SOFT_TAPER_MARGIN_MAG` (0.5) in
+  `solar-system/perceptual-magnitude.ts`, used by `magOk`
+  (`star.vert.glsl`) and the matching
+  `smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag)` in the
+  fragment shader's glow pass. Wider = softer fade-in at the visibility
+  threshold; 0 = hard cutoff. Every CPU "is it drawn?" mirror reads the
+  same constant.
 - **Warp duration curve** — `WARP_T_MIN_MS`, `WARP_T_MAX_MS`,
   `WARP_T_K_MS` (ms-per-log10-parsec slope) in `stellata.ts`. Also
   `WARP_REORIENT_MS`. Arrival offset is per-star via `minDistForStar`.
@@ -81,6 +93,11 @@ for the surrounding context.
   `uChartDiscMinPx` (1.5 px) defaults set in the shared-uniforms map
   in `stellata.ts`; spread linearly across the visible magnitude
   range. `uChartMagBright` (−2.0) is the magnitude that maps to MAX.
+- **Constellation-boundary stipple** — `BOUNDARY_DOT_PX` (1.5 px) /
+  `BOUNDARY_GAP_PX` (3 px) in `constellation-boundary-layer.ts`, the Sky
+  Atlas 2000.0 dotted rule. Screen pixels, not degrees of sky — the dots hold
+  their size through zoom. `BOUNDARY_OPACITY` (0.5) is the weight it shares
+  with the solid coordinate grid.
 - **Variable-ring gap** — `VARIABLE_RING_MIN_GAP_PX` (1.0 px) in
   `chart-labels.ts`. Minimum radial gap between the outer ring and
   the peak inner disc; raise if low-amplitude variables look

@@ -45,7 +45,8 @@ precision highp float;
 
 in vec3 vMeshLocalPos;
 in vec3 vWorldPos;
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 outStatistic;
 
 // Auto-injected by ShaderMaterial:
 //   uniform vec3 cameraPosition;  // renderer-local
@@ -97,13 +98,13 @@ uniform float uExposure;
 uniform float uOmegaPxArcsec2; // pixel solid angle, arcsec²
 
 // Output controls.
-uniform float uMaxAppMag;     // shared with star pipeline (chart isobar)
+uniform float uLimitMag;      // shared with star pipeline (chart isobar)
 uniform float uGlowMagOffset; // V surface brightness at colorAccum = 1
 
 // Chart-mode isobar pass. When > 0.5 the fragment renders only a thin
 // outline at the iso-line where the integrated apparent magnitude crosses
-// uMaxAppMag — giving the galactic glow a topographic-contour treatment
-// that follows the user's "minimally visible magnitude" slider.
+// uLimitMag — giving the galactic glow a topographic-contour treatment
+// that follows the instrument's limiting magnitude.
 uniform float uChartIsobar;
 uniform vec3  uChartInkColor;
 
@@ -189,6 +190,7 @@ void main() {
   float disc = b * b - a * c;
   if (disc < 0.0) {
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    outStatistic = vec4(0.0);
     return;
   }
   float sqrtDisc = sqrt(disc);
@@ -198,6 +200,7 @@ void main() {
   float tExit = 1.0;
   if (tEnter >= tExit) {
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    outStatistic = vec4(0.0);
     return;
   }
 
@@ -213,6 +216,7 @@ void main() {
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    outStatistic = vec4(0.0);
     return;
   }
   float logMin = log(sStart);
@@ -284,18 +288,25 @@ void main() {
     // steep the local gradient is — flat regions of the band would
     // otherwise paint a wide smudge and steep regions a hairline.
     float fw = max(fwidth(magPx), 1e-5);
-    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uMaxAppMag));
+    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uLimitMag));
     if (line <= 0.0) {
       fragColor = vec4(0.0);
+      outStatistic = vec4(0.0);
       return;
     }
     fragColor = vec4(uChartInkColor * line, line);
+    outStatistic = vec4(0.0);
     return;
   }
 
   float gain = stellataSurfaceBrightnessLuminance(
     uExposure, uGlowMagOffset, uOmegaPxArcsec2);
   vec3 emitted = min(colorAccum * gain, vec3(STELLATA_LUMA_CEIL));
+
+  // Surface brightness, so flux and peak are the same quantity. The band
+  // writes alpha 1, so the additive blend sums both attachments alike.
+  float bandL = dot(emitted, STELLATA_LUMA_WEIGHTS);
+  outStatistic = stellataStatisticTexel(bandL, bandL, 1.0);
 
   if (uHdrTarget > 0.5) {
     fragColor = vec4(emitted, 1.0);

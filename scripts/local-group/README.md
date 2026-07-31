@@ -26,7 +26,7 @@ Reads two committed source files under `data/local-group/`:
 Emits `public/local-group.json` with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 `LgObject` type in `build-local-group-pure.ts`; the client loader at
-`src/client/local-group-loader.ts` mirrors it 1:1.
+`src/client/local-group/local-group-loader.ts` mirrors it 1:1.
 
 Each object also carries a `sid` (frozen Stellata ID, docs/sid.md § 7),
 stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail

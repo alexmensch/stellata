@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTER } from '../../filters/filter-state';
-import { BASE_EPOCH_EXPOSURE } from '../../hdr/exposure-epoch';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { BASE_EPOCH_EXPOSURE, cullMagFor } from '../../hdr/exposure/exposure-epoch';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
@@ -29,7 +29,9 @@ describe('buildStarSharedUniforms', () => {
 
   it('seeds the filter-driven slots from DEFAULT_FILTER', () => {
     const u = build();
-    expect(u.uMaxAppMag.value).toBe(DEFAULT_FILTER.maxAppMag);
+    expect(u.uLimitMag.value).toBe(instrumentLimitMag(DEFAULT_FILTER.instrument));
+    expect(u.uThresholdMag.value).toBe(u.uLimitMag.value);
+    expect(u.uCullMag.value).toBe(cullMagFor(u.uLimitMag.value));
     expect(u.uSizeMin.value).toBe(DEFAULT_FILTER.sizeMin);
     expect(u.uSizeMax.value).toBe(DEFAULT_FILTER.sizeMax);
     expect(u.uSpectMask.value).toBe(DEFAULT_FILTER.spectMask);

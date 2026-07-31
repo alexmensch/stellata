@@ -410,24 +410,42 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     handlerCount: () => number;
     ticks: () => number;
     positionsReads: () => number;
+    memberWalks: () => number;
   }
 
-  function makeHarness(): Harness {
+  interface HarnessPatch {
+    /** One star per entry, at `[0, 0, -distPc]` so it projects to screen
+     *  centre. `con` is the byte-34 index the membership walk buckets by. */
+    stars?: { con: number; absmag: number; distPc: number }[];
+    constellations?: { code: string; name: string }[];
+    anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
+    showConstellation?: boolean;
+    detailPermits?: (id: string) => boolean;
+  }
+
+  function makeHarness(patch: HarnessPatch = {}): Harness {
     const handlers = new Map<string, Set<() => void>>();
     let ticks = 0;
     let positionsReads = 0;
-    const positions = new Float32Array(0);
+    let absmagReads = 0;
+    const stars = patch.stars ?? [];
+    const positions = new Float32Array(stars.flatMap((s) => [0, 0, -s.distPc]));
+    const absmag = new Float32Array(stars.map((s) => s.absmag));
     const catalog = {
-      count: 0,
+      count: stars.length,
       names: new Map<number, string>(),
-      constellations: [] as unknown[],
-      constellation: new Uint8Array(0),
-      absmag: new Float32Array(0),
-      spectClass: new Uint8Array(0),
-      periodDays: new Float32Array(0),
-      amplitudeMag: new Float32Array(0),
-      varType: new Uint8Array(0),
-      flags: new Uint8Array(0),
+      constellations: patch.constellations ?? ([] as unknown[]),
+      constellation: new Uint8Array(stars.map((s) => s.con)),
+      // With no star names, no Bayer glyphs and no variables, the only readers
+      // are the glyph pass — once per tick, unconditionally — and the member
+      // walk, once per member star. So the per-frame delta is 1 with the walk
+      // skipped and 1 + one-per-star with it running.
+      get absmag() { absmagReads++; return absmag; },
+      spectClass: new Uint8Array(stars.length),
+      periodDays: new Float32Array(stars.length),
+      amplitudeMag: new Float32Array(stars.length),
+      varType: new Uint8Array(stars.length),
+      flags: new Uint8Array(stars.length),
       get positions() { positionsReads++; return positions; },
     };
     const camera = new THREE.PerspectiveCamera(50, 4 / 3, 0.01, 1000);
@@ -445,11 +463,13 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         uChartMagBright: { value: -2 },
       },
       getT: () => 0,
+      getWorldOffset: () => new THREE.Vector3(),
+      constellationLabelAnchors: patch.anchors ?? [],
       getFilter: () => ({
-        maxAppMag: 6.5, minDistSol: 0, maxDistSol: 1e9,
-        spectMask: 0xff, showConstellation: true,
+        instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
+        spectMask: 0xff, showConstellation: patch.showConstellation ?? true,
       }),
-      detailPermits: () => true,
+      detailPermits: patch.detailPermits ?? (() => true),
       getCloudCatalog: () => null,
       planetField: { liveInstanceCount: 0 },
       on: (name: string, fn: () => void) => {
@@ -466,6 +486,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       handlerCount: () => [...handlers.values()].reduce((n, s) => n + s.size, 0),
       ticks: () => ticks,
       positionsReads: () => positionsReads,
+      memberWalks: () => absmagReads,
     };
   }
 
@@ -583,5 +604,124 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     expect(h.handlerCount()).toBe(0);
     h.emit('frame');
     expect(h.ticks()).toBe(0);
+  });
+
+  // Constellation names come off the shipped region anchors, not off the member
+  // stars — the stars only decide whether a name is drawn at all.
+  describe('region label anchors', () => {
+    const CONSTELLATIONS = [
+      { code: 'Ser', name: 'Serpens' },
+      { code: 'Ori', name: 'Orion' },
+    ];
+    const SERPENS = 0;
+    const ORION = 1;
+    // Screen centre for a camera at the origin looking down −z.
+    const AHEAD = new THREE.Vector3(0, 0, -100);
+
+    function anchorHarness(patch: HarnessPatch = {}) {
+      return makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: AHEAD.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: AHEAD.clone() },
+          { code: 'ORI', name: 'Orion', conIndex: ORION, position: AHEAD.clone() },
+        ],
+        ...patch,
+      });
+    }
+
+    function drawnLabels(group: { children: unknown[] }): string[] {
+      return group.children
+        .map((c) => (c as { textContent?: string }).textContent)
+        .filter((t): t is string => typeof t === 'string')
+        .sort();
+    }
+
+    // Serpens' two anchors share a display name, so the pool has to key on the
+    // region code — keying on the name or the table index would collapse them
+    // to one <text> and drop the Cauda label.
+    it('draws one label per anchor, so Serpens is named twice', () => {
+      const groups = installDomStubs();
+      const h = anchorHarness();
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
+
+    // Serpens' one member drops under the instrument limit as well, so both its
+    // anchors go unnamed together — the gate is per constellation, not per anchor.
+    it('gates a region on its brightest member, both anchors together', () => {
+      const groups = installDomStubs();
+      const h = anchorHarness({
+        stars: [
+          { con: SERPENS, absmag: 20, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      labels.dispose();
+    });
+
+    // The member walk is the largest single chart-mode CPU cost, so it must not
+    // run when no name is drawn — under `C` off or the declutter floor.
+    it('skips the member walk entirely when no name is drawn', () => {
+      // Two member stars, so a frame that walks them costs the glyph pass'
+      // single unconditional read plus two.
+      const GLYPH_PASS_READ = 1;
+      function readsForOneFrame(patch: HarnessPatch): number {
+        installDomStubs();
+        const h = anchorHarness(patch);
+        const labels = new ChartLabels(h.stellata);
+        labels.start(h.ctx);
+        const before = h.memberWalks();
+        h.emit('frame');
+        const reads = h.memberWalks() - before;
+        labels.dispose();
+        return reads;
+      }
+
+      expect(readsForOneFrame({ showConstellation: false })).toBe(GLYPH_PASS_READ);
+      expect(readsForOneFrame({
+        detailPermits: (id) => id !== 'chartConstellationNames',
+      })).toBe(GLYPH_PASS_READ);
+      expect(readsForOneFrame({})).toBe(GLYPH_PASS_READ + 2);
+    });
+
+    // The sentinels are stamped only where the walk runs. Stamping them on a
+    // skipped walk leaves `minAppMag` at its Infinity seed while the cache
+    // reads as fresh, so names coming back on within the 0.5 pc threshold —
+    // and without a filter change to bump the version — draw nothing.
+    it('recomputes after names come back on without a filter change', () => {
+      const groups = installDomStubs();
+      let namesOn = false;
+      const h = anchorHarness({
+        detailPermits: (id) => id !== 'chartConstellationNames' || namesOn,
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+
+      // Well under BRIGHTEST_RECOMPUTE_DIST_SQ, so the walk's own distance
+      // gate would skip — but enough to defeat the full-tick skip and get a
+      // second real tick without touching the filter version.
+      namesOn = true;
+      h.stellata.camera.position.x += 0.01;
+      h.stellata.camera.updateMatrixWorld(true);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
   });
 });

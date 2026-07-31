@@ -2,7 +2,7 @@
 // the reachability + `S`-cycle rules that read off them.
 // See galactic/README.md § Coordinate spheres.
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { equatorialTangentBasisRad } from '../../util/equatorial-basis';
 import type {
   CoordSphereFrame,
@@ -92,6 +92,23 @@ export const DRAWN_COORD_SPHERE_FRAMES: readonly DrawnCoordSphereFrame[] =
 /** Cycle order for the `S` key and the panel's 3-stop control. */
 export const COORD_SPHERE_FRAMES: readonly CoordSphereFrame[] =
   ['none', ...DRAWN_COORD_SPHERE_FRAMES];
+
+function northPoleOf(spec: CoordSphereSpec): THREE.Vector3 {
+  return spec.dirToIcrs(0, Math.PI / 2, new THREE.Vector3()).normalize();
+}
+
+const COORD_SPHERE_NORTH_POLES: Record<DrawnCoordSphereFrame, THREE.Vector3> = {
+  galactic: northPoleOf(GALACTIC_SPHERE_SPEC),
+  equatorial: northPoleOf(EQUATORIAL_SPHERE_SPEC),
+};
+
+/** The pole a roll gesture levels against — the displayed sphere's own north,
+ *  galactic when no sphere is up. Derived through the spec's own `dirToIcrs`,
+ *  so the alignment guide cannot disagree with the grid it sticks to.
+ *  Callers must NOT mutate the returned vector. */
+export function coordSphereNorthPole(frame: CoordSphereFrame): THREE.Vector3 {
+  return COORD_SPHERE_NORTH_POLES[frame === 'none' ? 'galactic' : frame];
+}
 
 /** Stroke alpha `frame` draws at from this distance from Sol — 1 for a frame
  *  with no fade window. The SVG edge labels ride the same value, so text dims

@@ -67,8 +67,14 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 
 ## Consumed by
 
-- `scripts/catalog/build-catalog.ts` — HIP→DR3 backfill for the
-  `gaia_source_id` field; Apsis Teff/logg/[M/H]/A0 + GSP-Spec
+- `scripts/catalog/build-catalog.ts` — `gaia_dr3_hip_xmatch.tsv` bridges the
+  GCVS cross-reference onto `gaia_source_id`, so a spine row carrying no HIP
+  still resolves a variable-star designation. It no longer backfills
+  `gaia_source_id` itself: the record build reads each binding off the spine
+  column rather than re-deriving it (`scripts/catalog/spine/README.md`),
+  leaving `scripts/catalog/export-astrometry-request.ts` and the classic-ID
+  overlay as the cross-walk's resolution consumers. Also: Apsis
+  Teff/logg/[M/H]/A0 + GSP-Spec
   `spectraltype_esphs` for the six-tier spectral resolver;
   `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
   the NSS source_id set for the `gaia_nss_systemic` routing tag

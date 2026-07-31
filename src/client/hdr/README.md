@@ -19,10 +19,13 @@ src/client/hdr/
   hdr-pipeline.ts            HdrPipeline — target lifecycle (lazy alloc),
     (+ test)                 bind/resolve, chart bypass, float-support
                              detection, both ShaderChunk registrations,
-                             HDR_DEFAULT_ENABLED, and the emitter uniform
-                             seam (§ Unit). The class needs a live GL
-                             context, so the test pins only the ship gate
-                             (§ Ship gate).
+                             HDR_DEFAULT_ENABLED, the emitter uniform
+                             seam (§ Unit), and the statistic attachment's
+                             draw-buffer gate (§ Statistic attachment).
+                             The class needs a live GL context, so the test
+                             pins only the ship gate (§ Ship gate).
+  statistic/                 The target's second attachment: what may
+                             write it, in what unit — its own README.
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and inline by each
                              emitting shader when the target isn't bound.
@@ -36,13 +39,13 @@ src/client/hdr/
                              source surface-brightness rule (§ Unit).
   emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
                              derivation and LUMA_CEIL.
-  exposure-epoch.ts          The exposure control: magnitude limit →
-    (+ test)                 uExposure, the InstrumentEpoch multiplier
-                             pair, and the base epoch (§ Exposure
-                             epochs). No GLSL side — the shader only
-                             ever reads the resulting scalar.
-  chrome-colour.ts (+ test)  Authored chrome colours pre-mapped through
-                             the inverse (§ Chrome).
+  exposure/                  The exposure scalar and the magnitude
+                             bounds derived from it — instrument limit,
+                             scene adaptation, EV trim, and the reduction
+                             that measures the statistic attachment. Its
+                             own README.
+  chrome/                    Authored chrome colours pre-mapped through
+                             the inverse — its own README (§ Chrome).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
                              from TypeScript, and the include guards.
 ```
@@ -78,6 +81,16 @@ Being a single scalar is what lets a layer apply it to a coloured column
 without touching chromaticity. It is **unclamped** — the caller clamps
 the product against `LUMA_CEIL`, not the factor.
 
+**A reflecting body uses both rules, and that is what closes the resolve
+step.** A planet's glare billboard takes `stellataPointSourcePeak` with
+the same `m` the star field would use, while its mesh takes the
+surface-brightness rule with the disc's mean `S` — and past 1 px the two
+are the *same quantity*, so a body crossing from point to resolved mesh
+does not change brightness. The disc-mean derivation and the two
+normalisers that make the shaded disc integrate back to `L(m)` are
+`../solar-system/planets/README.md` § Physical-luminance emission; the
+mesh reads `uOmegaPxArcsec2` for the same reason the Milky Way does.
+
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
 arcsec² (`pixelSolidAngleArcsec2`), written by
 `HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
@@ -106,9 +119,6 @@ the chart bypass reaches emitters for free); layers only read. The
 resolve pass shares the white-point and desaturation objects, so inline
 and fullscreen can never disagree.
 
-`uExposure` is the one slot this class does **not** write — § Exposure
-epochs.
-
 **Both chunks are `#ifndef`-guarded**, and each declares the Rec.709
 luma weights behind a *shared* `STELLATA_LUMA_WEIGHTS_DECLARED` guard.
 An emitter that derives a per-pixel magnitude needs the unit and the
@@ -116,45 +126,39 @@ operator in one stage, and three's `resolveIncludes` pastes each
 `#include` textually wherever it appears — without the guards that
 combination fails to compile.
 
-## Exposure epochs — the magnitude slider is the exposure control
+## Exposure — one slot this class does not write
 
-`uExposure = L_THRESH · 10^(0.4·m_lim)` (`exposure-epoch.ts`), so the
-"Max apparent magnitude" slider sets what the scene is exposed *for*:
-a source at the limit lands on the just-noticeable floor the unit is
-anchored to, and every emitter reading the shared uniform moves together.
-The three presets are just three points on that curve — naked-eye 6.5 →
-≈ 7.96, binoculars 10.5 → ≈ 317, all 15 → 2.0e4
-(`docs/science-hdr-pipeline.md` § 3).
+`uExposure` is the one `emitterUniforms` slot `HdrPipeline` never writes.
+`ExposureController` owns it, along with the three magnitude bounds
+derived from the same state (`uLimitMag`, `uThresholdMag`, `uCullMag`) —
+`exposure/README.md` is the contract, and it is where the per-frame
+adaptation measurement lives too. Nothing in this README's operator or
+target discussion depends on how that scalar was arrived at: emitters
+read it, the resolve never sees it.
 
-**`FilterController` owns the write, not `HdrPipeline`.** The magnitude
-limit is filter state (`../filters/filter-state.ts`), and `uExposure`
-already reaches the controller by reference inside the star pipeline's
-shared uniform map, so `setFilter` writes it next to `uMaxAppMag` and
-every path that moves the slider — preset button, `+`/`−` keys, URL
-restore, size-override reset — is covered by construction. This is the
-one exception to "`HdrPipeline` owns `emitterUniforms`"; the seed value
-in `makeHdrEmitterUniforms` is `DEFAULT_FILTER.maxAppMag`'s epoch, so
-the two cannot disagree before the first `setFilter`.
+## Statistic attachment — a second, physical-luminance target
 
-**Population cull and exposure are the same number.** The slider keeps
-its vertex-cull semantics; that cull is now a *performance* cull
-coinciding with the visibility threshold, since a star past the limit
-would emit below the floor anyway. No second knob, no divergence.
+The target is MRT. **Attachment 0 is unchanged** — display luminance, same
+look. **Attachment 1 is RG16F**, carrying flux-correct luminance in R and
+peak-correct luminance in G for the exposure statistic to reduce, and it is
+gated per draw so only physical emitters reach it. Why attachment 0 cannot
+serve, the texel rule, the blend contract and the residuals are
+**`statistic/README.md`**; the reduction itself is
+`exposure/reduction/README.md`.
 
-`InstrumentEpoch` is the accommodation the design gate mandates: an
-instrument is a pair of multipliers on the epoch — `exposureMul`
-(aperture gain, applied by `epochExposure`) and `angularMag` (resolution
-gain, which divides the PSF / exaggeration-K arcsec targets
-`../filters/filter-state.ts` derives). Only `UNAIDED_EYE` exists today,
-identity on both; instrument presets are a future epic.
+`bind()` clears with the gate open, deliberately: the renderer's own
+auto-clear runs after `bind()` returns with the gate shut, so without an
+explicit both-attachment clear the statistic would accumulate across frames
+forever. It costs a redundant clear of attachment 0.
 
 ## Pass ordering — one target, two passes into it
 
 ```
-hdr.bind()                 → setRenderTarget(rt)     (or null when parked)
+hdr.bind()                 → setRenderTarget(rt) + clear both attachments
 renderer.render(scene)     → the whole main stack
 localDepthPass.render()    → repaints over the same target
 hdr.resolve()              → setRenderTarget(null) + fullscreen tone-map
+reduction.measure()        → own targets, then back to the canvas
 ```
 
 `bind()` and `resolve()` are called from `stellata.ts` `animate()` and
@@ -164,6 +168,11 @@ which is exactly why its repaint lands in the same target for free —
 the canvas's. Depth semantics, core masks, and the log-depth split are
 untouched: depth encoding is orthogonal to colour encoding.
 
+`reduction.measure()` runs last and touches neither this target nor the
+canvas — it binds its own chain of ever-smaller targets and restores. It
+is after the resolve so the measurement never delays the frame it measured
+(`exposure/reduction/README.md`).
+
 **The target's depth is 24-bit.** `depthBuffer: true` with
 `stencilBuffer: false` gives `DEPTH_COMPONENT24` on WebGL2 (three
 r160 `setupRenderBufferStorage`). This is load-bearing — the local
@@ -172,7 +181,8 @@ depth pass derives its slice-ratio bound from a 24-bit buffer
 attachment to a 16-bit renderbuffer or a depth *texture* of the wrong
 type would silently coarsen every close-range z-test by 256×.
 
-The target is `RGBA16F`, sized to the renderer's **drawing buffer**
+The target is `RGBA16F` plus its `RG16F` statistic attachment
+(§ Statistic attachment), sized to the renderer's **drawing buffer**
 (canvas × pixelRatio, existing cap 2). `syncSize()` re-derives from the
 renderer rather than taking a width/height, so window resize and any
 future pixel-ratio change are the same code path.
@@ -229,74 +239,20 @@ gamut matrix, nowhere else.
 
 ## Chrome — non-physical layers keep their authored look
 
-Galactic disc + grid, LG wireframes, the constellation figure, orbit
-rings, binary orbit paths, probe trails and markers, the heliopause and
-Local Bubble fresnel shells, and the cloud rim shells all render **into
-the target** (they must depth-test against the scene) but **never
-multiply exposure**. Their authored colours are mapped through
-`inverseTonemapConstant` at material set-time, so the resolve pass
-returns them at their authored appearance at any exposure.
+Authored, non-photometric layers (galactic disc, the coordinate spheres,
+LG wireframes, the constellation figure and boundaries, orbit rings,
+binary orbit paths, probe markers and trails, the fresnel shells, cloud
+rim shells) render into the target
+but never multiply exposure: their colours are pre-mapped through the
+operator's inverse so the resolve returns them as authored.
+**`chrome/README.md` is the contract** — which of the two setters a call
+site wants depends on how its shader emits colour, and the mapping is
+only correct while the operator it inverts is running.
 
-A probe marker counts as chrome for the same reason its own README gives
-for the glyph — the spacecraft subtends no angle at any range, so the
-marker stands in for it rather than depicting its light. The
-dust-particle layer is the one chrome layer left unmapped: it is shelved
-at strength 0 and carries no colour uniform to map, so unshelving it
-owes this pass a look.
-
-`chrome-colour.ts` exposes two setters, and **which one a call site
-wants depends on how its shader emits colour** — this is the one part
-of the mapping that is easy to get silently wrong:
-
-- `setBuiltinChromeColour` — for three's built-in materials
-  (`LineBasicMaterial`, `LineMaterial`, `MeshBasicMaterial`). Their
-  fragment shader carries `colorspace_fragment`, whose linear→sRGB
-  encode is what put the authored hex on screen. Rendering to a
-  non-XR render target makes three pick `LinearSRGBColorSpace` for the
-  output, which switches that encode **off** — so these materials emit
-  linear into the target and the mapped value goes in as linear
-  working-space components.
-- `setRawChromeColour` — for custom `ShaderMaterial` /
-  `RawShaderMaterial` chrome that writes a colour uniform straight out.
-  `new THREE.Color(hex)` linearises on construction (ColorManagement is
-  on by default) and the shader then emitted that linear number *as a
-  display value*, so what these layers have always shown is the hex
-  decoded twice. That doubly-darkened appearance is what they were
-  tuned against, so it is what this setter preserves — it is not a bug
-  being carried forward blindly, it is the tuned look. Correcting it is
-  a deliberate visual change, not part of the HDR seam.
-
-Both setters write via `Color.setRGB(..., LinearSRGBColorSpace)` so
-ColorManagement doesn't convert the mapped value a second time.
-
-**The mapping is only correct paired with the operator it inverts.** Left
-in place with the operator off, chrome renders badly wrong — a rim shell
-drops to a tenth of its authored brightness, a near-white probe marker
-clips to flat white. So every call is recorded in a module-level registry
-and `setChromeOperatorActive(false)` re-authors all of it back to plain
-`setHex`, which is exactly the pre-HDR Color state for both variants.
-`HdrPipeline.syncMode` drives that flag, and every state change routes
-through it: the float-support check in the constructor (**before any
-layer is built**, so a context without a float-renderable target never
-registers a mapped colour), both dev switches, and the chart flip.
-Getting this wrong is not a dev-only concern — the float-support path is
-what real fallback hardware takes, and chart parks the operator too.
-
-The registry is keyed by the live `Color`, so a re-attachable layer
-(clouds, Local Group) adds an entry per attach; `HdrPipeline.dispose`
-clears it.
-
-Two consequences worth knowing before touching this:
-
-- **Chrome blending is now linear.** Additive and alpha-blended chrome
-  composite in linear light instead of display space, so a translucent
-  line over a non-black background lands slightly differently even
-  though the line-over-black case is exact. Accepted by the design gate.
-- **The mapping is baked at set-time against the default white point.**
-  When H8 makes `DR_MAG` live on the debug panel, every chrome colour
-  must be re-mapped on change or chrome will drift while the physical
-  layers track. That re-application is H8's, not something this module
-  does today.
+`HdrPipeline.syncMode` is what drives that second point: every state
+change (the constructor's float-support check, both dev switches, the
+chart flip) routes through it, and it re-authors every registered colour
+when the operator parks.
 
 ## Chart mode — full bypass
 
@@ -323,9 +279,10 @@ materials anyway.
 `bind()` binds the canvas and `resolve()` no-ops.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
-0**, which is this path *and* the whole shipped path while the ship gate
-stays false — a physical luminance reaching the canvas with no operator
-would just blow out. It mirrors the extinction prepass's
+0** — a physical luminance reaching the canvas with no operator would just
+blow out. Since the ship gate went live this is genuinely the fallback
+path plus the `setHdrEnabled(false)` A/B, not the shipped default it was
+during H3–H5. It mirrors the extinction prepass's
 same-chunk-two-paths strategy
 (`../star-pipeline/extinction/README.md` § The prepass cache), and it is
 why the operator lives in a chunk rather than inside the fullscreen
@@ -348,44 +305,58 @@ everything downstream of the operator:
 Accepted: the result is approximately right rather than
 differently-calibrated.
 
-## Ship gate — the seam is off by default
+## Ship gate — the seam is live
 
-`HDR_DEFAULT_ENABLED` is **false**. Stars (H3) and the Milky Way (H4)
-are converted; planets (H5) still write their old display-encoded values,
-so turning the seam on today changes their brightness for no gain. The
-shipped default path stays the canvas one and the seam rides along
-dormant.
+`HDR_DEFAULT_ENABLED` is **true**. Every physical emitter carries
+luminance in the § Unit scale — stars (H3), the Milky Way (H4), and the
+planet mesh / rings / airlight / reflected glare (H5) — so the target is
+the default path and the operator runs once, at the resolve.
 
-- Flip the constant in the bead that lands the last conversion.
-  `hdr-pipeline.test.ts` pins the current value, so enabling it is a
-  deliberate two-line change.
-- `stellata.setHdrEnabled(true)` turns it on at runtime for development.
+- `hdr-pipeline.test.ts` pins the value, so changing it stays deliberate.
+- `stellata.setHdrEnabled(false)` is the whole-frame A/B (§ Dev switches).
+  It is no longer "what users get" — it is the comparison path.
 - **The target allocates lazily**, on first `bind()` that wants it — a
-  full drawing-buffer RGBA16F plus its 24-bit depth attachment is a
-  couple of hundred MB of VRAM at 2× DPR on a large display, and a
-  dormant seam must not cost that. Don't move the allocation back into
-  the constructor.
-- Each intervening bead has to keep **both** paths working and smoke
-  both. A converted layer's inline `stellata_tonemap` (§ Fallback) is
-  not exotic-hardware insurance — it is what users are running.
+  full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
+  24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
+  large display. The gate
+  being live means it now allocates on the first frame in practice; keep
+  the laziness anyway, because `setHdrEnabled(false)` and chart mode both
+  want a build that never pays for it.
+- **An unconverted emitter must not join the scale.** The Local Group
+  emission pass still runs the pre-HDR `uLimitMag`/`uSizeSpan` gate and
+  `1 − exp` squash; it renders nowhere (`LG_EMISSION_SHELVED`), which is
+  the only reason it isn't already wrong. Convert it before un-shelving —
+  `../local-group/README.md`.
 
 ## Dev switches
 
-- `stellata.setHdrEnabled(true/false)` — the seam itself. False (the
-  shipped default, § Ship gate) is the pre-HDR path entirely: no target,
-  no tone-map, chrome back to authored colours. It is also the path
-  hardware without a float-renderable target takes. **This is the full
-  A/B**, and while the ship gate stays false it is what users get.
+- `stellata.setHdrEnabled(true/false)` — the seam itself. False is the
+  pre-HDR compositing path entirely: no target, no tone-map, chrome back
+  to authored colours, every emitter on its inline operator. It is also
+  the path hardware without a float-renderable target takes. **This is
+  the full A/B.**
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through. Narrower: it isolates the target
   itself (depth, alpha, blend precision, pass order) from the operator.
+- `stellata.setDynamicRangeMag(x)` / `stellata.setHighlightDesat(x)` — the
+  operator's two shape knobs, live, for probing the display axis by eye.
+  Both route through `syncMode`, which is what re-authors every chrome
+  colour against the new white point (`chrome/README.md`).
 
-**Pass-through shows converted layers blown out, and that is the point
-of it** — `uHdrTarget` stays 1, so stars write raw linear `L` (tens to
+**What `DR_MAG` does and does not buy.** Extended Reinhard is
+`L(1 + L/Lw²)/(1 + L)`, which is already at 0.95 of full scale by `L` = 20
+*whatever* `Lw` is — so raising `DR_MAG` buys hue survival at the top end
+and almost no visible gradient. Detail up there needs a longer
+**shoulder**, not a higher white point, and any replacement curve must
+stay analytically invertible: `tonemap-pure.ts` carries the exact inverse
+and `chrome/` depends on it, which rules out ACES and filmic fits. A
+piecewise log shoulder is invertible; that is the shape to reach for.
+
+**Pass-through shows the scene blown out, and that is the point of it** —
+`uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
 thousands) and the resolve hands it to an 8-bit canvas unchanged. The
 mode isolates the *target* (depth, alpha, blend precision, pass order)
-from the *operator*; it is not a look comparison. Unconverted emitters
-still write display-encoded values and are exact in it.
+from the *operator*; it is not a look comparison.
 
 **It also cannot reproduce built-in-material chrome, by construction.**
 What disables their `colorspace_fragment` encode is the target's linear
@@ -395,6 +366,24 @@ constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
 encode. Custom-shader chrome *is* exact. Use `setHdrEnabled(false)` when
 you want a whole-frame comparison.
+
+**What the A/B is and is not for.** It compares *compositing*, not
+calibration: the peak of any source matches exactly on both paths by
+construction, so it cannot reveal a mis-calibrated emitter. What it shows
+is accumulation and blend-order differences (below). Since the gate went
+live it is a developer tool for the fallback path, not a look comparison a
+reader should reach for to judge whether the scene is right.
+
+**Expected on the A/B, and not a bug: chrome line work reads visibly
+brighter with the seam ON.** Grids, the galactic coordinate sphere, orbit
+rings and binary paths are authored colours pre-mapped through the
+operator's inverse, and § Chrome's mapping is exact only for *a lone
+full-alpha fragment over black*. Line work is neither — antialiased edges
+are partial-alpha, and lines cross each other — so the round trip does not
+return them to authored, and the residual lands on the bright side. The
+"slight look shift accepted in H2" wording undersells it; the shift on thin
+line work is plainly visible. Nothing downstream depends on it, and no
+resolve setting fixes it.
 
 Neither switch is bit-identical to a pre-HDR build, for two further
 reasons worth knowing before chasing a diff:
@@ -407,14 +396,9 @@ reasons worth knowing before chasing a diff:
   region that additively saturated to white *before* a later
   alpha-blended draw composites differently.
 
-One more inherent limit on the chrome mapping: it is exact for a chrome
-fragment landing alone at full alpha over black. Translucent and additive
-chrome contributes `L · α` into the target, and the operator is
-non-linear, so `tonemap(L·α) ≠ α · tonemap(L)`. Dim chrome sits in the
-toe where the operator is ~linear and the error is negligible; bright
-near-white chrome (the heliopause limb) shifts visibly. This is the
-linear-space-blending trade the design gate accepted
-(`docs/science-hdr-pipeline.md` § 4).
+Two inherent limits on the chrome mapping — exactness only for a lone
+full-alpha fragment over black, and linear-space blending — are
+`chrome/README.md`'s.
 
 Perf rows: `submit.tonemap` (CPU submission) and, where the driver
 exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
@@ -422,15 +406,11 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 
 ## Not here yet
 
-`DR_MAG`, `L_THRESH` and the desaturation strength become live panel
-knobs in H8, which then has to re-apply the chrome mapping on every
-change (§ Chrome). `DR_MAG` is also the faint-end lever H7 tunes against
-the eso0932a panorama — it moves the star field and the Milky Way band
+`DR_MAG` and the desaturation strength are live **dev-console** setters
+(§ Dev switches); H8 puts them on the panel, alongside `L_THRESH`, which
+is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
+eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
-The planet layers are the exposure control's one blind spot until H5
-converts them: their mesh + glare are still on their own LDR encodings,
-so the slider changes the star field and the Milky Way band without
-touching a planet's brightness. Nothing double-counts — the alternative
-(the old quarter-power slider term in `litIntensity`) put planets on a
-*second* exposure curve, which is worse the moment they land on this one.
+The one emitter still outside the scale is the shelved Local Group
+emission pass (§ Ship gate).

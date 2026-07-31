@@ -4,6 +4,7 @@ import {
   SPINE_COLUMNS,
   SPINE_PRINTED_COLUMNS,
   buildSpineRow,
+  iterSpineTsv,
   parseSpineTsv,
   serializeSpine,
   spineCounts,
@@ -80,6 +81,21 @@ describe('serializeSpine / parseSpineTsv', () => {
     const text = `${SPINE_COLUMNS.join('\t')}\n1\t2\n`;
     expect(() => parseSpineTsv(text))
       .toThrow(new RegExp(`expected ${SPINE_COLUMNS.length}`));
+  });
+
+  // The header has exactly as many cells as a data row, so a walk that reads
+  // it twice yields a row of column names — 'hip' parsing as a designation.
+  it('yields nothing from a header with no data rows, terminated or not', () => {
+    expect(parseSpineTsv(`${SPINE_COLUMNS.join('\t')}\n`)).toEqual([]);
+    expect(parseSpineTsv(SPINE_COLUMNS.join('\t'))).toEqual([]);
+  });
+
+  it('walks lazily — readStars must not hold 313k rows at once', () => {
+    const text = serializeSpine([row({ hip: '1' }), row({ hip: '2' })]);
+    const walk = iterSpineTsv(text);
+    expect(walk.next().value?.hip).toBe('1');
+    expect(walk.next().value?.hip).toBe('2');
+    expect(walk.next().done).toBe(true);
   });
 });
 

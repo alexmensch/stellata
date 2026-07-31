@@ -115,8 +115,7 @@ Both layers pool their elements by stable key per frame so adding /
 removing entries is free. The same `renderableAppMag` filter that
 gates the GPU disc also gates the glyphs — a hidden inner disc takes
 its ring or wings offscreen with it. The magnitude-driven sizing
-formula + flux-weighted constellation centroid math live in chart
-mode's renderer.
+formula lives in chart mode's renderer.
 
 ## Points of interest
 

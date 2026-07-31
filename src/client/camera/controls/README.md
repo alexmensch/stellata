@@ -6,10 +6,10 @@ in both navigate and observe modes.
 
 ## Files
 
-- `controls.ts` — settings-panel bindings (distance / magnitude / size
+- `controls.ts` — settings-panel bindings (distance / exposure / size
   sliders, spectral chips, overlay toggles) + the slider↔distance log
-  mapping (`sliderToDist` / `distToSlider`). The three segmented stop
-  controls (magnitude preset, detail level, coordinate sphere) are bound
+  mapping (`sliderToDist` / `distToSlider`). The two segmented stop
+  controls (detail level, coordinate sphere) are bound
   and synced through `../../ui/stop-control.ts` (`../../ui/README.md`
   § Stop controls), not open-coded here. Reverse-sync runs off
   `'filter'` / `'cameraMode'`; the one exception is the coordinate-sphere
@@ -158,7 +158,7 @@ separate literal — a log-scale flight coefficient (see
 `aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
 camera-changing action can't race the in-flight lerp.
 
-## Aim controller (`camera/aim-controller.ts`)
+## Aim controller (`camera/controls/aim-controller.ts`)
 
 `AimController` owns the two aim-slerp state machines:
 

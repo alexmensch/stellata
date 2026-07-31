@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   apparentMagnitude,
-  HOST_INTENSITY_MAX,
-  HOST_INTENSITY_MIN,
-  HOST_IRRADIANCE_DISPLAY_EXPONENT,
-  hostIntensityScale,
+  bodySurfaceBrightnessMagArcsec2,
+  hostIrradianceMagnitude,
   perceptualDmEff,
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
   it('returns the absolute magnitude at 10 pc by definition', () => {
@@ -240,55 +238,74 @@ describe('planetApparentMagnitude', () => {
   });
 });
 
-describe('hostIntensityScale', () => {
-  it('is exactly 1 for a solar host at the 1 AU reference (Earth insolation)', () => {
-    expect(hostIntensityScale(SUN_ABSMAG_V, AU_PC)).toBeCloseTo(1, 9);
+describe('hostIrradianceMagnitude', () => {
+  it('puts Sol at 1 AU at its known apparent magnitude', () => {
+    expect(hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC)).toBeCloseTo(-26.74, 2);
   });
 
-  it('reduces to the old Sol (1/d_au)^(2·exponent) law for a solar host', () => {
-    expect(hostIntensityScale(SUN_ABSMAG_V, 5.203 * AU_PC)).toBeCloseTo(
-      5.203 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
-    expect(hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC)).toBeCloseTo(
-      30.069 ** (-2 * HOST_IRRADIANCE_DISPLAY_EXPONENT), 9);
+  it('is the distance modulus: 5 mag per decade of host distance', () => {
+    expect(
+      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC)
+        - hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC),
+    ).toBeCloseTo(5, 9);
   });
 
-  it('Mercury clamps at the ceiling; nothing in-system hits the floor', () => {
-    expect(hostIntensityScale(SUN_ABSMAG_V, 0.387 * AU_PC)).toBe(HOST_INTENSITY_MAX);
-    expect(hostIntensityScale(SUN_ABSMAG_V, 39.482 * AU_PC)).toBeGreaterThan(HOST_INTENSITY_MIN);
+  it('trades luminosity against distance — equal irradiance is equal magnitude', () => {
+    // A host 5 mag fainter at 10x closer delivers the same irradiance, which
+    // is what makes everything derived from it general across systems rather
+    // than anchored to Sol.
+    expect(hostIrradianceMagnitude(SUN_ABSMAG_V + 5, AU_PC)).toBeCloseTo(
+      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC), 9);
+  });
+});
+
+describe('bodySurfaceBrightnessMagArcsec2', () => {
+  it('matches the measured full-Moon surface brightness', () => {
+    // The independent half of the -12.7 flux anchor above: 3.4 mag/arcsec2 is
+    // the measured value, and it follows from the same p and irradiance with
+    // no free constant.
+    expect(bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, 0.12))
+      .toBeCloseTo(3.4, 1);
   });
 
-  it('is monotonically non-increasing in host distance', () => {
-    let prev = Infinity;
-    for (const dAu of [0.1, 0.387, 1, 5.2, 9.5, 19.2, 30, 39.5, 100]) {
-      const v = hostIntensityScale(SUN_ABSMAG_V, dAu * AU_PC);
-      expect(v).toBeLessThanOrEqual(prev);
-      prev = v;
+  it('equals flux spread over the disc, at any radius and viewer distance', () => {
+    // The closed form drops radius and viewer distance because they cancel in
+    // m + 2.5·log10(Ω_disc). Deriving it the long way from
+    // planetApparentMagnitude proves the cancellation rather than assuming it:
+    // a body brightening per-pixel on approach is exactly the failure the old
+    // display compression existed to hide.
+    const albedo = 0.12;
+    const closed = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, albedo);
+    for (const radiusPc of [1737.4 * KM_PC, 69911 * KM_PC]) {
+      for (const dVpPc of [0.001 * AU_PC, AU_PC, 40 * AU_PC]) {
+        const m = planetApparentMagnitude(
+          SUN_ABSMAG_V, dVpPc, AU_PC, albedo, radiusPc, 1,
+        );
+        const rhoArcsec = radiusPc / dVpPc / ARCSEC_TO_RAD;
+        const viaFlux = m + 2.5 * Math.log10(Math.PI * rhoArcsec * rhoArcsec);
+        expect(viaFlux).toBeCloseTo(closed, 9);
+      }
     }
   });
 
-  it('Mercury reads visibly brighter than Neptune (the reported defect)', () => {
+  it('tracks albedo as -2.5·log10(p): a 10x darker surface is 2.5 mag fainter', () => {
     expect(
-      hostIntensityScale(SUN_ABSMAG_V, 0.387 * AU_PC)
-        / hostIntensityScale(SUN_ABSMAG_V, 30.069 * AU_PC),
-    ).toBeGreaterThan(5);
+      bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, 0.06)
+        - bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, 0.6),
+    ).toBeCloseTo(2.5, 9);
   });
 
-  it('scales with host luminosity — a luminous host lights bodies brighter', () => {
-    // A body 5 AU from a host 5 mag brighter (100× luminosity) than Sol
-    // receives 100× the irradiance; under the quarter-power display law
-    // that is 100^0.25 ≈ 3.16× the surface brightness of the same body at
-    // 5 AU from Sol — purely a function of star class, nothing else.
-    const sol5 = hostIntensityScale(SUN_ABSMAG_V, 5 * AU_PC);
-    const bright5 = hostIntensityScale(SUN_ABSMAG_V - 5, 5 * AU_PC);
-    expect(bright5 / sol5).toBeCloseTo(100 ** HOST_IRRADIANCE_DISPLAY_EXPONENT, 6);
+  it('brightens with irradiance one-for-one — Mercury over Neptune', () => {
+    // Now the full 1/d^2 range (~4.8 mag Mercury->Neptune) rather than the
+    // quarter-power compression the tone-map replaced.
+    const mercury = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, 0.387 * AU_PC, 0.142);
+    const neptune = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, 30.069 * AU_PC, 0.442);
+    expect(neptune - mercury).toBeGreaterThan(8);
   });
 
-  it('depends only on the irradiance M_host + 5·log10(d_hp): equal irradiance ⇒ equal scale', () => {
-    // A host 5 mag fainter at 10× closer delivers the same irradiance
-    // (Δm = −5 from distance cancels +5 from luminosity), so the scale is
-    // identical — the invariant that makes the law general across systems.
-    const a = hostIntensityScale(SUN_ABSMAG_V, 10 * AU_PC);
-    const b = hostIntensityScale(SUN_ABSMAG_V + 5, 1 * AU_PC);
-    expect(b).toBeCloseTo(a, 9);
+  it('scales with host luminosity by star class alone', () => {
+    const sol5 = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, 5 * AU_PC, 0.3);
+    const bright5 = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V - 5, 5 * AU_PC, 0.3);
+    expect(sol5 - bright5).toBeCloseTo(5, 9);
   });
 });

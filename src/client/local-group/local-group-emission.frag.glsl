@@ -34,7 +34,7 @@ flat in float vUMax;
 out vec4 fragColor;
 
 uniform float uBrightnessScale;
-uniform float uMaxAppMag;     // shared with star pipeline
+uniform float uLimitMag;      // shared with star pipeline
 uniform float uSizeSpan;      // shared with star pipeline
 uniform float uGlowMagOffset; // calibration: integrated column → appMag
 
@@ -110,7 +110,7 @@ void main() {
   }
 
   float appMag = uGlowMagOffset - 2.5 * log(max(accum, 1e-12)) / LOG10;
-  float gate = max((uMaxAppMag - appMag) / max(uSizeSpan, 0.001), 0.0);
+  float gate = max((uLimitMag - appMag) / max(uSizeSpan, 0.001), 0.0);
   vec3 result = vec3(1.0) - exp(-vColor * uBrightnessScale * gate);
   fragColor = vec4(result, 1.0);
 }

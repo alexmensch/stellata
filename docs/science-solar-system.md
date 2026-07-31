@@ -173,7 +173,7 @@ reading the UTC clock directly instead is 0.29° of Earth spin, which is
 resolvable on a textured globe. The
 regression corpus pins Earth's sub-solar longitude at an
 equation-of-time zero crossing (Greenwich noon → ~0° lon).
-Implementation: `src/client/solar-system/planets/rotation-elements-pure.ts`.
+Implementation: `src/client/solar-system/planets/rotation/rotation-elements-pure.ts`.
 
 **Ring systems.** Each ringed body renders an annulus in its
 equatorial (IAU-pole) plane textured by a 2048×1 radial strip.
@@ -243,7 +243,7 @@ Earth is "negligible" (the paper models latitude/temporal effects
 instead), Pluto because the paper doesn't cover it. Those three —
 and every future exoplanet — fall back to the Lambertian phase
 function `φ(α) = (sin α + (π − α)·cos α)/π`. See
-`src/client/phase-function.ts` for the per-planet coefficients.
+`src/client/solar-system/phase-function.ts` for the per-planet coefficients.
 
 **Orbital plane orientation.** Sol's planet system is rendered in its
 native ecliptic plane (J2000 obliquity ε = 23.4392911°), so the ring

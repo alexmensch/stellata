@@ -22,7 +22,7 @@ export class ReferenceUpController {
    *  `camera.up`: a `lookAt` resolves both to the same image-plane up, and
    *  only this one is free of the transported roll the endpoint would
    *  otherwise land on. Callers must NOT mutate it — roll goes through
-   *  `roll` / `snapReferenceToNorth` / `set`. */
+   *  `roll` / `snapReferenceTo` / `set`. */
   get(): THREE.Vector3 { return this.reference; }
 
   /** URL restore. Components are interpreted as a reference axis, which is
@@ -67,41 +67,41 @@ export class ReferenceUpController {
     this.correct(camera);
   }
 
-  /** Signed roll from the reference axis to galactic level, about the view
-   *  axis — the NAVIGATE residual. Read off the reference rather than the
-   *  rendered quaternion because there the quaternion trails `camera.up` by
-   *  a frame: `lookAt` hasn't consumed the newest roll yet. */
-  referenceRollError(camera: THREE.Camera): number {
+  /** Signed roll from the reference axis to level against `levelPole`, about
+   *  the view axis — the NAVIGATE residual. Read off the reference rather than
+   *  the rendered quaternion because there the quaternion trails `camera.up`
+   *  by a frame: `lookAt` hasn't consumed the newest roll yet. */
+  referenceRollError(camera: THREE.Camera, levelPole: THREE.Vector3): number {
     this.viewForwardInto(this.forward, camera);
     if (levelUpInto(this.currentUp, this.reference, this.forward) === 0) return 0;
-    return this.rollErrorTowardNorth();
+    return this.rollErrorToward(levelPole);
   }
 
-  /** Signed roll from the rendered screen-up to galactic level — the OBSERVE
-   *  residual, where the quaternion is what the user sees. */
-  renderedRollError(camera: THREE.Camera): number {
+  /** Signed roll from the rendered screen-up to level against `levelPole` —
+   *  the OBSERVE residual, where the quaternion is what the user sees. */
+  renderedRollError(camera: THREE.Camera, levelPole: THREE.Vector3): number {
     this.viewForwardInto(this.forward, camera);
     cameraLocalUpInto(this.currentUp, camera);
     this.currentUp.addScaledVector(this.forward, -this.currentUp.dot(this.forward));
     if (this.currentUp.lengthSq() === 0) return 0;
     this.currentUp.normalize();
-    return this.rollErrorTowardNorth();
+    return this.rollErrorToward(levelPole);
   }
 
-  /** Signed angle from `currentUp` (already unit and ⊥ `forward`) to the
-   *  galactic-level up for `forward`. */
-  private rollErrorTowardNorth(): number {
-    if (levelUpInto(this.level, GALACTIC_NORTH_POLE_ICRS, this.forward) === 0) return 0;
+  /** Signed angle from `currentUp` (already unit and ⊥ `forward`) to the up
+   *  that renders `levelPole` upright for `forward`. */
+  private rollErrorToward(levelPole: THREE.Vector3): number {
+    if (levelUpInto(this.level, levelPole, this.forward) === 0) return 0;
     return signedAngleAbout(this.currentUp, this.level, this.forward);
   }
 
-  /** Re-anchor the reference exactly onto galactic north. The snap target is
-   *  the canonical reference, never the user's last roll — a view that reads
-   *  level from here would otherwise still drift as the orbit moves, since
-   *  any axis in the `forward`/north plane renders level from this one
-   *  direction. Callers own the threshold (`SNAP_TO_LEVEL_RAD`). */
-  snapReferenceToNorth(camera: THREE.Camera): void {
-    this.reference.copy(GALACTIC_NORTH_POLE_ICRS);
+  /** Re-anchor the reference exactly onto `levelPole`. The snap target is a
+   *  canonical pole, never the user's last roll — a view that reads level from
+   *  here would otherwise still drift as the orbit moves, since any axis in
+   *  the `forward`/pole plane renders level from this one direction. Callers
+   *  own both the threshold (`SNAP_TO_LEVEL_RAD`) and the pole. */
+  snapReferenceTo(camera: THREE.Camera, levelPole: THREE.Vector3): void {
+    this.reference.copy(levelPole);
     this.correct(camera);
   }
 

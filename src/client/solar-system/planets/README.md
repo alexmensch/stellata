@@ -40,34 +40,30 @@ src/client/solar-system/planets/
                                   (sharedAtmoUniforms).
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
-  rotation-elements-pure.ts       IAU rotation elements per body (pole +
-    (+ test)                      prime meridian on the model clock) —
-                                  see § Planet rotation.
-  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math —
-                                  CPU mirror of the mesh shader's caster
-                                  loop, plus Io-transit / lunar-eclipse
-                                  search tests on the real ephemeris.
+  spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
+  emission/                       The HDR-unit normalisers — the mesh
+                                  anchor, the two disc means that divide
+                                  out, and the day map's measured mean
+                                  luminance. Its own README.
+  glare/                          Reflected-glare billboard shaders: the
+                                  shared star-perceptual point and the
+                                  photocentre shift. Its own README.
+  rings/                          Ring-annulus shaders and the radial
+                                  strip. Its own README.
+  rotation/                       Pole + prime-meridian elements and the
+                                  texture-UV orientation chain — its own
+                                  README (§ Planet rotation).
+  body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math, CPU
+                                  mirror of the mesh shader's caster loop.
+                                  Io-transit / lunar-eclipse search tests
+                                  on the real ephemeris.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
-  planet.vert.glsl,
-  planet.frag.glsl                Instanced reflected-glare billboards
-                                  (point↔bloom on resolvedness, phase-
-                                  gated + photocentre-shifted). Imports
-                                  perceptual-disc.glsl from
-                                  ../../star-pipeline/ (shared glow
-                                  profile with stars).
   planet-mesh.vert.glsl,
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
                                   representative-colour + limb-darkening
                                   fallback, atmosphere airlight over the disc).
-  planet-rings.vert.glsl,
-  planet-rings.frag.glsl          Ring-annulus shaders (radial strip
-                                  sample, lit/transmitted faces, body
-                                  shadow) — see § Ring systems.
-  texture-orientation.test.ts     Rendered IAU-orientation → texture-UV
-                                  chain vs Horizons sub-observer lon/lat
-                                  (pole-up, no mirror, prime meridian).
 ```
 
 ## The two layers
@@ -80,7 +76,7 @@ src/client/solar-system/planets/
 
   1. Skip the work entirely if the camera is past the host's
      `cullDistancePc` — the closed-form distance at which its
-     brightest planet would just cross the magnitude slider
+     brightest planet would just cross the population cull bound
      (`../README.md` § Per-host distance cull).
   2. Otherwise call `positionsAt(t, scratch)` to refresh local-frame
      positions, apply the per-host orientation quaternion, and write
@@ -142,8 +138,9 @@ Bodies render as the spheroid mesh (resolved surface) plus **one
 additive reflected-glare billboard** — no opaque disc / core-mask
 pass. Apparent magnitude is computed in the vertex shader from
 reflected host-star light through a per-planet phase function. The
-slider visibility cutoff applies — sub-cutoff planets fade naturally,
-no unconditional pixel floor. The glare is one pass (main-pass draw +
+visibility cutoff applies **to the glare** — sub-cutoff planets fade
+naturally, no unconditional pixel floor — and never to the mesh
+(§ Planet mesh LOD). The glare is one pass (main-pass draw +
 **local-pass mirror draw** over the active cluster's slot range, gated
 by the shared `uLocalPassRange` uniform — opposite sense under the
 `LOCAL_DEPTH_PASS` define). While the system is locally active
@@ -160,7 +157,7 @@ additive point that needs no depth occlusion (like a star).
 A planet crossing behind its host's *physical disc* (superior
 conjunction inside the host's angular radius) dims by the occluded area
 fraction — the same camera-anywhere geometry the binaries eclipse
-photometry runs (`../../binaries/eclipse-photometry-pure.ts`:
+photometry runs (`../../binaries/eclipse/eclipse-photometry-pure.ts`:
 `eclipseDimFromOffsets` + the shared anti-strobe blend helpers).
 `PlanetBodyField.update` evaluates each in-range host's planets per
 frame (the pair-relative offset is `iLocalRel` itself — small values, no
@@ -186,6 +183,15 @@ through. A planet in *front* (transit) dims the
 host by (R_p/R_host)² — negligible and owned by the star pipeline,
 so it is deliberately not modelled.
 
+## Physical-luminance emission
+
+Both layers emit into the scene-wide HDR unit (`../../hdr/README.md`
+§ Unit) — the glare through the point-source rule, the mesh through the
+surface-brightness rule, and past 1 px the two are the same quantity, so
+the resolve step is continuous by construction. The mesh anchor, the two
+disc means that divide out, and the colour bookkeeping that keeps a
+gamma-bent albedo from lighting the body live in `emission/README.md`.
+
 ## Planet mesh LOD
 
 On close approach the reflected glare hands off to a real oblate
@@ -201,54 +207,35 @@ crossfade.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.
+  Presence is **purely geometric** — `physicalPlanetSizePx` is the one
+  size accessor NOT gated on `drawCutoffMag()`, unlike its sibling
+  `renderedPlanetSizePx`. A surface is opaque whatever its reflected
+  flux, and the alignment where that matters most is the one the
+  photometric gate kills: at α → 180° a body sits in front of its own
+  host with φ(α) → 0, so gating presence on appMag deleted the mesh —
+  and with it the host's occlusion — at exactly the eclipse. The mesh
+  correctly renders black there (no ambient term); atmospheric bodies
+  keep an airlight limb ring.
 - **Reflected glare** is the **shared star-perceptual point** — a planet
-  reads *exactly* like a star of its apparent magnitude: size =
-  `perceptualAppSizePx(appMag)`, peak = `uGlareGain` (≈1). This is the
-  load-bearing invariant: **visibility matches magnitude.** A body
-  visible in chart mode (`appMag ≤ slider`) is equally visible here,
-  rendered like the naked-eye "wandering star" it is — Mars (~+1.3),
-  Jupiter (~−2), Saturn (~+0.5), Venus (~−4) all show, ordered by
-  magnitude, exactly as the surrounding star field does. `appMag` already
-  folds the phase factor φ(α) (`planetApparentMagnitude`), so a crescent
-  is correctly dimmer — no separate illumFrac on brightness. A
-  **photocentre shift** toward the sub-solar limb (shape only — brightness
-  unchanged), scaled by crescentness `(1−illumFrac)` and resolvedness
-  `res`, keeps a barely-resolved crescent's halo off its dark limb (kills
-  the ring) while leaving a sub-pixel dot centred. Eclipse folds in as a
-  flux multiplier on the peak.
-
-  When **resolved** the mesh draws the surface, writes depth, and occludes
-  the glare's core: since the magnitude bloom (`appSize`, capped at
-  `uSizeMax`) is smaller than a well-resolved disc (`physSize`), the glare
-  is hidden inside the disc and only shows as a lit-limb halo while the
-  body is small/bright. The full-Moon calibration
-  (`../perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux, so
-  the magnitude — and therefore visibility — is correct for any host star.
-  CPU mirror for the hover footprint: `max(physSize, appSize)`.
-
-Known refinement (smoke): a dim-surfaced body's resolved mesh (compressed
-`uLitIntensity`) can read dimmer than its own peak-1 glare, so there is a
-mild luminosity step as it resolves and a bright unresolved moon can look
-brighter than a resolved dim-surfaced parent. Visibility (the hard
-requirement) takes priority; matching resolved-surface brightness to the
-point scale is a separate mesh-shading calibration.
-
-`uGlareGain` (debug-tunable — `setGlareGain`) is the glare peak
-multiplier: planet-glare brightness relative to a star of the same
-magnitude (1 = identical). When resolved the
-**mesh** writes depth (local depth pass), so the additive glare is
-naturally occluded to the lit-limb halo — the old core depth-mask is gone.
+  reads exactly like a star of its apparent magnitude, on the same
+  emission rule the star field runs. That is the load-bearing invariant:
+  **visibility matches magnitude.** The billboard's own behaviour — the
+  photocentre shift and why a resolved mesh hides the glare's core — is
+  `glare/README.md`.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
-  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical).
+  fact-sheet oblateness (Saturn 0.098 is visibly non-spherical), via
+  `spheroid-pure.ts:polarRadiusRatio` and nowhere else
+  (`../atmosphere/README.md` § Shell extents says why).
   Orientation comes from the body's IAU rotation elements
   (§ Planet rotation); bodies without them fall back to pole =
   host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
-  not imagery. Limb darkening on top; no ambient term, so the night
-  side is black (physically honest). Three scalars refine it, all
+  not imagery. Limb darkening on top; an airless night side is black (no
+  ambient term), an atmospheric one is lit by twilight
+  (`../atmosphere/README.md` § Skylight). Three scalars refine it, all
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
@@ -256,32 +243,25 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
     Venus's forward-scattered crescent brightens where the data says.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
-  - `uLitIntensity` (`../perceptual-magnitude.ts:hostIntensityScale`) —
-    **host irradiance at the body** on a quarter-power display
-    compression, folding the host's absolute magnitude so surface
-    brightness scales with **star class**: the ratio is
-    `(E_body / E_ref)^0.25` where `E_body / E_ref =
-    10^(0.4·(HOST_IRRADIANCE_REF_MAG − m_host@body))` and
-    `m_host@body = M_host + 5·(log10(d_hp) − 1)`. For Sol it reduces
-    exactly to the old `(d_AU)^(−0.5)` law (reference 1 AU ⇒ Earth = 1,
-    Mercury ~1.6× clamped, Neptune ~0.18×); a body 1 AU from an O-class
-    host is far brighter, by star class alone. Clamped to
-    `[0.12, 1.6]` — the LDR compression H5 replaces with true surface
-    brightness. **No sensitivity term**: the magnitude slider is the
-    tone-map exposure now (`../../hdr/README.md` § Exposure epochs), so
-    a second quarter-power slider composition here would put planets on
-    a rival exposure curve — the cost is that the slider does not move
-    a planet's brightness at all until H5 converts these layers.
-    No viewer-distance term either, so approach can't blow it out; the
-    ring annulus multiplies the same scalar so ring↔body contrast is
-    preserved. Surface-only: the reflected glare is the star-perceptual
-    point (driven by appMag, above), so `uLitIntensity` shades the mesh
-    and ring, not the glare. Body-kind-agnostic: planets, moons, and
-    future lit bodies all read the one scalar the mesh layer computes.
-  - `uTermSoftness` (`Planet.terminatorSoftness`) — smoothstep
-    half-width carrying twilight past the geometric terminator on
-    atmospheric bodies (Venus 0.08 widest; Titan the one moon with a
-    band; undefined = airless hard cut).
+  - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
+    the body's **true mean surface brightness** in the scene-wide HDR
+    unit, pre-divided by the disc means of everything the shader
+    multiplies on top (§ Physical-luminance emission) and, for an
+    atmospheric body, less the share of that flux its airlight already
+    supplies (`../atmosphere/README.md` § Flux bookkeeping). Surface-only: the
+    reflected glare is the star-perceptual point (driven by appMag,
+    above), so this shades the mesh, not the glare. Body-kind-agnostic —
+    planets, moons, and future lit bodies all read the one scalar.
+  - `uAirlightLuminance` (`hostIrradianceLuminance`) — host irradiance on
+    the same scale, carrying no surface albedo. Scattered sunlight rides
+    it: the disc airlight, the atmosphere shell, and the ring annulus
+    (whose strip RGB supplies its own reflectance). Splitting it from
+    `uSurfaceLuminance` is what fixes the airlight-to-surface and
+    ring-to-body ratios by physics instead of by eye.
+  - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
+    the terminator (Venus 0.08 widest; Titan the one moon with a band;
+    undefined = airless hard cut). What actually lights the night side
+    is a separate physical term — `../atmosphere/README.md` § Skylight.
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward
@@ -306,72 +286,18 @@ naturally occluded to the lit-limb halo — the old core depth-mask is gone.
 
 ### Ring systems
 
-Saturn, plus Uranus + Neptune's faint rings at true opacity — spans and
-the Jupiter exclusion in `data/textures/README.md` § Ring strips.
-`Planet.rings` adds an annulus mesh (`planet-rings.*.glsl`) in the
-body's equatorial plane (IAU pole; host orbital plane as the
-no-elements fallback), textured by the `<body>-rings.png` 1-D radial
-strip (RGB colour, A opacity; U = inner→outer edge). Lit-face
-fragments get full strip colour, the unlit face a dimmer
-transmitted factor, both fading out as illumination goes edge-on to
-the ring plane; the far-side segment inside the body's shadow
-(analytic ray–ellipsoid test toward the host) drops to a residual
-floor. Rendered only in the mesh-LOD regime: alpha rides the same
-crossfade `uFade`, hidden until the strip texture arrives (no
-representative-colour fallback), `renderOrder` 2.81 (after the body
-mesh) with `depthWrite: false`.
-
-**Body occlusion is the local depth pass's z-buffer**: meshes + annuli
-render in the bracketed second pass (`../../local-depth/README.md`),
-where standard depth orders ring↔body natively — including the oblate
-limb. The analytic ray–ellipsoid helper survives only for the
-body-shadow term (sun ray, not camera ray). Geometry drawn near a
-planet body in the MAIN pass still cannot depth-test against it (the log
-buffer quantises the whole system into one step; `log2(1+w)` is linear
-for w ≪ 1) — new close-range geometry belongs in the local pass, not
-behind a new analytic trick. Edge-on the zero-thickness annulus thins
-to a line, which is the physically honest look.
+Saturn, plus Uranus + Neptune's faint rings at true opacity. The annulus
+shaders, the radial strip's lit/transmitted faces, the body-shadow term,
+and why rings dim a source behind them in the exposure statistic while
+writing no depth all live in `rings/README.md`. Rendered only in the
+mesh-LOD regime, on the same crossfade `uFade` as the mesh.
 
 ## Planet rotation
 
-`rotation-elements-pure.ts` carries per-body IAU rotation elements —
-pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
-`W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
-Cartographic Coordinates and Rotational Elements 2015 report
-(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
-periodic nutation/precession terms are dropped, with two caveats:
-Mars's pck linear row is incomplete WITHOUT its ~71-kyr slow terms
-(1.55° of pole Dec, 0.58° of W) — those are folded into the table as
-a J2000 linearisation (see the MARS_ROTATION comment) — and the
-dropped short-period librations are not all sub-degree (Moon E1
-terms ~3.9°, Europa ~1°, Neptune's ±0.7° pole nod; follow-up bead
-filed). The linear pole rates carry the visually meaningful secular
-part (Earth's axial precession drifts the pole ~30° across the
-model-clock window). `t` is treated as TDB via `tToJDE` — the ~69 s
-UTC↔TDB gap is ~0.3° of Earth spin, accepted repo-wide.
-`texture-orientation.test.ts` pins the whole orientation → texture-UV
-chain (pole-up, no mirror, prime meridian) against frozen JPL
-Horizons sub-observer lon/lat for Mars, Ganymede, and Io
-(`data/horizons/sub-observer-truth.tsv`).
-
-The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
-(the IAU convention: body +z = pole, +x = prime meridian, W measured
-from the node of the body equator on the ICRS equator), then the
-geometry pole tilt (+Y → +z). Driven off `getT()` each frame like
-binary orbits, so the scrubber spins planets and the day side tracks
-the actual model-time hemisphere. `Planet.rotation` is optional —
-bodies without published elements (exoplanets) keep the fallback
-pole = host orbital-plane normal with an arbitrary fixed meridian.
-
-`RotationElements.mapCenterLonDeg` is texture metadata riding the
-same table: the east longitude at the horizontal centre of the
-body's equirect map, added to the spin term so texture features land
-on their true longitudes. Planet maps are centred on 0° except
-Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
-centre); moon maps are centred on 180° except the Moon and Io (0°) —
-see `data/textures/README.md` § Artifact contract. Gas-giant and
-Venus cloud maps are epoch snapshots of rotating cloud decks, so
-their longitude alignment is inherently arbitrary; 0 is used.
+Per-body IAU rotation elements — pole RA/Dec + linear rates, the prime
+meridian `W(t)`, the body→ICRS composition the mesh applies, and the
+`mapCenterLonDeg` texture metadata riding the same table — live in
+`rotation/README.md`.
 
 ## Labels
 

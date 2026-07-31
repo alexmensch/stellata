@@ -9,7 +9,7 @@ import { LABEL_OFFSET_PX } from '../solar-system/planets/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
-import { setRawChromeColour } from '../hdr/chrome-colour';
+import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
 import fresnelRimChunk from './fresnel-rim.glsl?raw';

@@ -3,6 +3,16 @@ precision highp float;
 #include <common>
 #include <stellata_atmosphere_uniforms>
 #include <stellata_atmosphere_scatter>
+// The scene-wide unit (STELLATA_LUMA_CEIL) and operator. The operator runs
+// inline here whenever the frame is not rendering into the HDR target —
+// see ../../hdr/README.md § Fallback.
+#include <stellata_hdr_emission>
+#include <stellata_tonemap>
+
+// HDR seam, bound by reference from HdrPipeline.emitterUniforms.
+uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
+uniform float uWhitePoint;
+uniform float uHighlightDesat;
 
 // uMap is always bound (1×1 white placeholder when the body has no texture)
 // — sampling an unbound texture is undefined in WebGL.
@@ -17,9 +27,15 @@ uniform float uFade;
 // (phaseRatioToLambert) and clamped there — corrects the Lambert
 // disc-integrated output to the body's measured phase curve.
 uniform float uPhaseScale;
-// Host-irradiance display intensity, CPU-computed via
-// perceptual-magnitude.ts (hostIntensityScale).
-uniform float uLitIntensity;
+// Surface luminance in the scene-wide HDR unit, CPU-computed via
+// mesh-surface-pure.ts (meshSurfaceLuminance): the disc's mean surface
+// brightness divided by the disc means of everything multiplied on top, so
+// the shaded, textured disc integrates to the body's true flux.
+uniform float uSurfaceLuminance;
+// Host irradiance on the same scale (hostIrradianceLuminance) — what
+// scattered sunlight rides, carrying no surface albedo. Separate from
+// uSurfaceLuminance so the airlight-to-surface ratio is fixed by physics.
+uniform float uAirlightLuminance;
 // Terminator softness half-width on dot(n, sunDir); 0 = airless hard
 // cut (Planet.terminatorSoftness).
 uniform float uTermSoftness;
@@ -41,11 +57,16 @@ in vec3 vNormalV;
 in vec3 vPosV;
 in vec2 vUvM;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outStatistic;
 
 // Limb darkening: full brightness face-on, dimming toward the
 // silhouette. Carries the whole visual character of texture-less
 // bodies (Uranus) and reads subtly on textured ones.
+//
+// Changing either value here without mesh-surface-pure.ts changes the
+// disc mean uSurfaceLuminance divides out, which silently shifts every
+// body off its true flux. lambertLimbDiscMean is the closed form.
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
@@ -78,31 +99,59 @@ void main() {
   // surface limb-darkening is dropped (it double-darkened the disc edge into
   // a black rim). Airless bodies keep it as their whole limb character.
   float limb = uHasAtmosphere > 0.5 ? 1.0 : mix(LIMB_FLOOR, 1.0, pow(ndotv, LIMB_EXP));
-  vec3 base = mix(uColour, texture(uMap, vUvM).rgb, uHasMap);
-  vec3 col = base * dayside * limb * uPhaseScale * uLitIntensity * shadow;
+  // The day map is sRGB-authored imagery loaded raw, so it decodes to
+  // linear before it multiplies a physical luminance. uColour is already
+  // linear (Planet.colour), so only the sampled branch decodes.
+  vec3 base = mix(uColour, stellataSrgbDecode(texture(uMap, vUvM).rgb), uHasMap);
+  // Everything reflected off the ground shares this scale, so a term added to
+  // it needs no albedo factor of its own.
+  vec3 surfaceScale = base * uSurfaceLuminance * shadow;
+  vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
-    // Airlight in front of this surface fragment + the transmittance the
-    // surface radiance loses on its way out. Reconstruct the surface point on
-    // the SMOOTH sphere from the renormalized normal, not the faceted
-    // position — the latter grids the analytic march to the tessellation.
-    vec3 nrm = normalize(vNormalV);
-    vec3 surf = uCenterView + uRadiusPc * nrm;
-    vec3 dir = normalize(surf);
-    vec3 o = -uCenterView / uRadiusPc;
-    float tStop = length(surf) / uRadiusPc;
+    // Skylight: the air overhead scattering host light down — noon skylight on
+    // the lit side, the twilight band past the terminator. sunCos is the
+    // REAL-space cosine, unlike the march below — solar depression is measured
+    // against the ground observer's true local horizontal, the ellipsoid normal.
+    col += surfaceScale * stellata_skyIrradiance(sunCos, uScaleHeightR,
+      stellata_verticalScatterTau(uBetaRayleigh, uBetaMie, uScaleHeightR, uScaleHeightM),
+      uBetaAbsorb * uScaleHeightM);
+
+    // Airlight in front of this fragment + the transmittance the surface
+    // radiance loses on its way out, marched in the unit-sphere frame. The
+    // fragment's smooth surface point IS its direction there: normals scale by
+    // the inverse transpose, which for this diagonal map is the inverse, so
+    // squashing the normal's polar component and renormalising lands on it.
+    vec3 surf = normalize(stellata_scalePolar(normalize(vNormalV), uPoleView, uPolarRadiusR));
+    vec3 o = stellata_deflattenedCamera(uCenterView, uRadiusPc, uPoleView, uPolarRadiusR);
+    vec3 toSurf = surf - o;
+    float tStop = length(toSurf);
+    vec3 dir = toSurf / tStop;
+    vec3 sunDirR = stellata_deflattenedDir(uSunDirView, uPoleView, uPolarRadiusR);
     float t0, t1;
     float discA = stellata_shellEntry(o, dir, uAtmoRadius, t0, t1);
     float tStart = discA > 0.0 ? max(t0, 0.0) : 0.0;
     vec3 inscatter;
     vec3 transmittance;
     stellata_atmosphereRadiance(
-      o, dir, tStart, tStop, uAtmoRadius, uSunDirView,
+      o, dir, tStart, tStop, uAtmoRadius, sunDirR,
       uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
       stellata_atmoJitter(gl_FragCoord.xy),
       inscatter, transmittance);
-    col = col * transmittance + inscatter * uSunColour * uLitIntensity;
+    col = col * transmittance + inscatter * uSunColour * uAirlightLuminance;
   }
 
+  col = min(col, vec3(STELLATA_LUMA_CEIL));
+  // True surface brightness, so the statistic's two channels are the same
+  // quantity, and the alpha mirrors attachment 0's so the LOD crossfade
+  // composites both attachments alike.
+  float surfaceL = dot(col, STELLATA_LUMA_WEIGHTS);
+  outStatistic = stellataStatisticTexel(surfaceL, surfaceL, uFade);
+  // Undithered: the ring annulus and the atmosphere shell alpha-blend over
+  // this surface, so a pixel can take more than one planet fragment and the
+  // fragCoord-keyed dither would bias it once per layer.
+  if (uHdrTarget < 0.5) {
+    col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
+  }
   outColor = vec4(col, uFade);
 }

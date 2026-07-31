@@ -17,6 +17,7 @@ import {
 import type { Stellata } from '../../stellata';
 import type { Target } from '../../camera/focus/focus-target';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
+import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
@@ -210,7 +211,8 @@ function makeStatefulStellata() {
   const stub: Partial<Stellata> = {
     getFilter: () => ({ ...DEFAULT_FILTER }),
     setFilter: () => {},
-    applyMagnitudePreset: () => {},
+    getEv: () => 0,
+    setEv: () => {},
     getCameraFov: () => DEFAULT_FOV,
     setCameraFov: () => {},
     getT: () => Date.now() / 1000,
@@ -485,12 +487,34 @@ describe('url-state', () => {
       expect(view.fov).toBe(10);
     });
 
-    it('round-trips mag at 0.1 step boundaries', () => {
-      // mag: min=-2, max=15, step=0.1
-      for (const mag of [-2, 0, 5.5, 12.3, 15]) {
-        const { view } = roundtrip({ mag });
-        expect(view.mag).toBeCloseTo(mag, 1);
+    it('round-trips ev at 1/3-stop boundaries', () => {
+      for (const ev of [-EV_MAX_STOPS, -1, 0, EV_STEP_STOPS, EV_MAX_STOPS]) {
+        const { view } = roundtrip({ ev });
+        expect(view.ev).toBeCloseTo(ev, 6);
       }
+    });
+
+    it('drops the retired mag field — the instrument owns the limit', () => {
+      const { view } = roundtrip({ mag: 6.5 });
+      expect(view.mag).toBeUndefined();
+    });
+
+    it('consumes the retired mag/preset bytes in a v3.6.0-era v4 blob', () => {
+      // v3.6.0 shipped v4 blobs with u8Field(4, 'mag') and presetField(8)
+      // live. Their specs must survive as decode-only entries: dropped
+      // outright, the unconsumed payload bytes shift every later field
+      // (dmax here would read the mag byte and decode as 62549).
+      // Bytes: version 4 · LEB128 mask bits 3+4+6+8 · fov 45 · mag 6.5 ·
+      // dmax 500 (u16 LE) · preset 1 (binoculars).
+      const bytes = new Uint8Array([4, 0xd8, 0x02, 35, 85, 0xf4, 0x01, 1]);
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const { view } = decodeBlob(blob);
+      expect(view.fov).toBe(45);
+      expect(view.dmax).toBe(500);
+      expect(view.mag).toBeCloseTo(6.5, 6);
+      expect(view.preset).toBe('binoculars');
     });
 
     it('round-trips smin at 0.1 step boundaries', () => {
@@ -545,11 +569,9 @@ describe('url-state', () => {
   });
 
   describe('preset and constellation', () => {
-    it('round-trips each preset', () => {
-      for (const preset of ['naked-eye', 'binoculars', 'all'] as const) {
-        const { view } = roundtrip({ preset });
-        expect(view.preset).toBe(preset);
-      }
+    it('drops the retired preset field', () => {
+      const { view } = roundtrip({ preset: 'binoculars' });
+      expect(view.preset).toBeUndefined();
     });
 
     it('round-trips constellation index incl. negative values', () => {
@@ -784,10 +806,12 @@ describe('url-state', () => {
       // recomputes tgt from default.
       expect(out.tgt).toBeUndefined();
       expect(out.fov).toBe(45);
-      expect(out.mag).toBeCloseTo(6.5, 1);
+      // mag / preset are retired from v4 — encoded by nothing, so a
+      // round-trip drops them.
+      expect(out.mag).toBeUndefined();
       expect(out.dmax).toBe(500);
       expect(out.spect).toBe(view.spect);
-      expect(out.preset).toBe('binoculars');
+      expect(out.preset).toBeUndefined();
       expect(out.smin).toBeCloseTo(2.5, 1);
       expect(out.smax).toBeCloseTo(18, 1);
       expect(out.span).toBeCloseTo(8, 1);
@@ -971,6 +995,8 @@ describe('url-state', () => {
       const up = opts.up ?? GN_UP;
       const stub: Partial<Stellata> = {
         getFilter: () => ({ ...DEFAULT_FILTER }),
+        getEv: () => 0,
+        setEv: () => {},
         getCameraFov: () => DEFAULT_FOV,
         getFocusedStar: () => opts.focusedStar ?? null,
         getFocusedTarget: () => (opts.focusedStar != null
@@ -1751,7 +1777,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     const stub: Partial<Stellata> = {
       getFilter: () => ({ ...DEFAULT_FILTER }),
       setFilter: () => {},
-      applyMagnitudePreset: () => {},
+      getEv: () => 0,
+      setEv: () => {},
       getCameraFov: () => state.fov,
       setCameraFov: (f) => { state.fov = f; },
       getT: () => state.t,

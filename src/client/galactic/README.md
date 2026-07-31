@@ -87,7 +87,10 @@ Both grids and their edge labels live in `coord-spheres/` — see
 What matters from out here: they are **mutually exclusive**
 (`filter.coordSphere` is a `'none' | 'galactic' | 'equatorial'` tri-state),
 both sit at `SPHERE_RADIUS_PC` = 50 kpc, and the equatorial one is the sole
-consumer of `solFrameFadeFactor` besides the IAU boundary arcs.
+consumer of `solFrameFadeFactor` besides the IAU boundary arcs. One consumer
+sits outside the layer entirely: the camera's roll snap-to-level reads
+`coordSphereNorthPole(filter.coordSphere)`, so the alignment guide sticks to
+whichever grid is up (`../camera/controls/input/README.md` § Snap-to-level).
 
 ## HUD
 
@@ -300,10 +303,10 @@ anyway. It is part of the declutter cycle, though: the detail level
   visual noise on a paper-chart background).
 - Either sphere swaps stroke colour to `CHART_REFERENCE_INK` (`#3a3530`,
   `../chart-mode/chart-palette.ts` — shared with the IAU constellation
-  boundaries, which draw the same ink at half weight), no transparency, no
-  blending. The equator/line opacity split is dropped in chart mode
-  (paper-chart aesthetic doesn't fade) — except under an active
-  Sol-distance fade, which keeps blending on
+  boundaries, which draw the same ink at half weight and dotted; the grid
+  stays solid), no transparency, no blending. The equator/line opacity
+  split is dropped in chart mode (paper-chart aesthetic doesn't fade) —
+  except under an active Sol-distance fade, which keeps blending on
   (`coord-spheres/README.md` § Coordinate spheres).
 - Sol/GC arrows + HUD ring + POI ring/arrow/labels all flip to a deep
   saturated blue palette (`rgba(30, 64, 175, 0.85)`, the existing

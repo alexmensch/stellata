@@ -25,17 +25,17 @@ export function chartPlateauDistancePc(absMag: number, magBright: number): numbe
 /**
  * Chart-mode rendered disc diameter (CSS pixels) for a star of apparent
  * magnitude `appMag`, mirroring the vertex shader's
- * `mix(maxPx, minPx, clamp((appMag − magBright) / (maxAppMag − magBright), 0, 1))`.
+ * `mix(maxPx, minPx, clamp((appMag − magBright) / (limitMag − magBright), 0, 1))`.
  * Returns `maxPx` at the bright end (`appMag ≤ magBright`) and `minPx`
- * at the slider limit (`appMag = maxAppMag`).
+ * at the instrument limit (`appMag = limitMag`).
  */
 export function chartDiscPxForAppMag(
   appMag: number,
   params: ChartDiscParams,
-  maxAppMag: number,
+  limitMag: number,
 ): number {
   const t = Math.max(0, Math.min(1,
     (appMag - params.magBright) /
-      Math.max(maxAppMag - params.magBright, 0.001)));
+      Math.max(limitMag - params.magBright, 0.001)));
   return params.maxPx + (params.minPx - params.maxPx) * t;
 }

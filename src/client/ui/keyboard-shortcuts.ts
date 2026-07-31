@@ -5,10 +5,12 @@ import { nextCoordSphereFrame } from '../galactic/coord-spheres/coord-sphere-fra
 import { DETAIL_LEVELS } from '../scene/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
+import { bindCalibrationOverlay } from '../calibration/calibration-overlay';
 import {
   pushTapAndCheckTriple,
   makeDoubleTapGate,
 } from './keyboard-shortcuts-pure';
+import { steppedEv } from '../hdr/exposure/exposure-epoch';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
 
@@ -16,10 +18,6 @@ import { toggleControlsHidden } from './controls-hidden';
 // shortcut is a thin wrapper over an existing public API so future
 // behavioural changes propagate automatically — see CLAUDE.md and the
 // plan for the rationale.
-
-const MAG_STEP = 0.5;
-const MAG_MIN = -2;
-const MAG_MAX = 15;
 
 // Keys that drive the time scrubber while it's open → the widget method
 // each fires. Handled ahead of the main switch since they share one
@@ -47,6 +45,7 @@ export function bindKeyboardShortcuts(
   deps: KeyboardShortcutsDeps,
 ) {
   const help = bindHelpModal();
+  const calibration = bindCalibrationOverlay();
 
   // The "go" picker reuses the topbar's existing `#topbar-search` widget —
   // whatever inputs `bindSearch` puts there (Focus / To / Location) are
@@ -196,6 +195,10 @@ export function bindKeyboardShortcuts(
         toggleControlsHidden();
         e.preventDefault();
         break;
+      case 'k': case 'K':
+        calibration.open();
+        e.preventDefault();
+        break;
       case 't': case 'T':
         deps.timeScrubber.toggle();
         e.preventDefault();
@@ -232,15 +235,15 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case '+':
-        adjustMag(stellata, +MAG_STEP);
+        stellata.setEv(steppedEv(stellata.getEv(), +1));
         e.preventDefault();
         break;
       case '-':
-        adjustMag(stellata, -MAG_STEP);
+        stellata.setEv(steppedEv(stellata.getEv(), -1));
         e.preventDefault();
         break;
       case '=':
-        stellata.applyMagnitudePreset('naked-eye');
+        stellata.setEv(0);
         e.preventDefault();
         break;
     }
@@ -262,20 +265,15 @@ function cycleDetailLevel(stellata: Stellata) {
   stellata.applyDetailPreset(next);
 }
 
-function adjustMag(stellata: Stellata, delta: number) {
-  const cur = stellata.getFilter().maxAppMag;
-  const next = clamp(cur + delta, MAG_MIN, MAG_MAX);
-  stellata.setFilter({ maxAppMag: next });
-}
-
 // R: reset only the sliders living under the panel's "Camera" section —
-// star size min/max, dynamic range, FOV, exaggeration. Mirrors the
-// per-row "reset" buttons wired in controls.ts:159-176.
+// star size min/max, dynamic range, FOV, EV trim, exaggeration. Mirrors
+// the per-row "reset" buttons wired in controls.ts.
 function resetCameraSection(stellata: Stellata) {
   stellata.clearSizeOverrides(['sizeMin', 'sizeMax']);
   stellata.clearSizeOverrides(['sizeSpan']);
   stellata.setCameraFov(DEFAULT_FOV);
-  stellata.setStarExaggerationK(stellata.getStarExaggerationKDefault());
+  stellata.setEv(0);
+  stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());
 }
 
 // ESC progression: observe→navigate (keep focus, animated exit), then
@@ -415,8 +413,4 @@ function anyVisibleSelector(selector: string): boolean {
     if (!nodes[i].hidden) return true;
   }
   return false;
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import type { FilterState } from '../../filters/filter-state';
+import { limitMagOf, type FilterState } from '../../filters/filter-state';
 import {
   fovMinorRad,
   peakAmplitudeFactor,
@@ -31,13 +31,12 @@ function makeFilter(overrides: Partial<FilterState> = {}): FilterState {
   return {
     minDistSol: 0,
     maxDistSol: 1e9,
-    maxAppMag: 6,
     spectMask: 0xff,
     highlightCon: -1,
     sizeMin: 1,
     sizeMax: 8,
     sizeSpan: 8,
-    activePreset: 'naked-eye',
+    instrument: 'unaided-eye',
     sizeMinOverridden: false,
     sizeMaxOverridden: false,
     sizeSpanOverridden: false,
@@ -225,21 +224,21 @@ describe('star-physics / renderedSizePx', () => {
   it('returns the `appSize` floor for a far-away, non-variable, bright-enough row', () => {
     const { catalog, camPos, localPositions } = sirius();
     const uniforms = makeUniforms();
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8, maxAppMag: 6 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
     // dCam = 5; appMag = catalog.absmag[0] + 5*(log10(5) - 1).
-    // brightness = clamp01((maxAppMag - appMag) / sizeSpan).
+    // brightness = clamp01((limitMag - appMag) / sizeSpan).
     // appSize = sizeMin + sqrt(brightness) * (sizeMax - sizeMin).
     // Float32 round-trip on absmag is the precision-leaking step; compute
     // expected via the rounded value so the toBe is bit-exact.
     const got = renderedSizePx({ catalog, idx: 0, camPos, localPositions, uniforms, filter });
     const appMag = catalog.absmag[0] + 5 * (Math.log10(5) - 1);
-    const brightness = Math.max(0, Math.min(1, (6 - appMag) / 8));
+    const brightness = Math.max(0, Math.min(1, (limitMagOf(filter) - appMag) / 8));
     const appSize = 1.5 + Math.sqrt(brightness) * (6 - 1.5);
     expect(got).toBe(appSize);
   });
 
   it('grows past sizeMax through the soft knee when Δm exceeds sizeSpan', () => {
-    // Bright supergiant-like row: Δm = maxAppMag − appMag lands well past
+    // Bright supergiant-like row: Δm = limitMag − appMag lands well past
     // sizeSpan, where the shader's Michaelis–Menten knee keeps the disc
     // growing. The old CPU mirror hard-clamped at sizeMax here.
     const cat = makeCatalog(1, c => {
@@ -248,12 +247,12 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(5, 0, 0);
     const uniforms = makeUniforms();
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8, maxAppMag: 6 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
     const got = renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
     });
     const appMag = cat.absmag[0] + 5 * (Math.log10(5) - 1);
-    const dM = 6 - appMag;
+    const dM = limitMagOf(filter) - appMag;
     const over = dM - 8;
     const dMEff = 8 + (16 * over) / Math.max(16 + over, 1e-6);
     const expected = 1.5 + Math.sqrt(dMEff / 8) * (6 - 1.5);
@@ -269,7 +268,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(5, 0, 0);
     const uniforms = makeUniforms({ uSizeKnee: 0 });
-    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8, maxAppMag: 6 });
+    const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6, sizeSpan: 8 });
     const got = renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
     });
@@ -306,7 +305,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(28, 0, 0);
     const localPositions = cat.positions;
-    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8, maxAppMag: 6 });
+    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8 });
     const at = (phase: number) => renderedSizePx({
       catalog: cat, idx: 0, camPos, localPositions,
       uniforms: makeUniforms({ uModelDays: phase * 2.87 }), filter,
@@ -330,7 +329,7 @@ describe('star-physics / renderedSizePx', () => {
     });
     const camPos = new THREE.Vector3(28, 0, 0);
     const localPositions = cat.positions;
-    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8, maxAppMag: 6 });
+    const filter = makeFilter({ sizeMin: 1, sizeMax: 8, sizeSpan: 8 });
     // Heavy warp: 1e6× → uModelDaysPerRealSec = 1e6/86400 ≈ 11.57; floor =
     // 11.57 × 4 s ≈ 46.3 model-days ≫ the 0.5 d period, so the effective
     // period is the floor. At uModelDays = floor/2 the star is at φ=½ (min);

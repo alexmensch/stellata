@@ -1,15 +1,16 @@
 # Catalog build
 
-Single-star catalogue build pipeline: AT-HYG + GCVS + CCDM +
-Bailer-Jones + Gaia Apsis + SIMBAD sp_type + SIMBAD WDS cross-IDs +
+Single-star catalogue build pipeline: the inherited spine + GCVS + CCDM +
+Bailer-Jones + Gaia Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
 `public/search-index.json` + `public/catalog-row-index-map.json` +
 `public/constellation-boundaries.json`.
 Run via `pnpm run build:catalog`.
 
-The AT-HYG-retirement plan (Gaia-native membership + classic-ID label
-overlay) is designed in `docs/catalog-driver.md`.
+Membership is `data/athyg/inherited-spine.tsv` and nothing else — AT-HYG the
+catalogue left this build's input set. The contract is
+`docs/catalog-driver.md`; the membership term is `spine/README.md`.
 
 `build-catalog.ts` is the orchestrator; `catalog-pure.ts` is the single
 source of truth for the v9 binary layout, the override math, and the
@@ -26,8 +27,10 @@ subfolders.
   Stellarium stick figures. Its `gcvs/` subfolder owns the variable-star
   parsing and the variability cross-match.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
-  arcs resampled and precessed to ICRS, plus the magnitude-keyed
-  fade-quantile table the chart-mode layer derives its fade window from.
+  arcs resampled and precessed to ICRS, the per-region label anchors, the
+  resolved cell grid the runtime resolves membership against, and the
+  magnitude-keyed fade-quantile table the chart-mode layer derives its
+  fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records, plus component-letter stamping and
   display-name collision resolution. Its `record-index/` subfolder holds
@@ -43,9 +46,9 @@ subfolders.
 - `classic-ids/` — the frozen-CDS classic-designation overlay build
   (`pnpm run build:classic-ids` → `data/classic-ids/`). Not part of
   `build:catalog`; no consumer here yet.
-- `spine/` — the one-shot inherited-spine generator
-  (`pnpm run build:spine` → `data/athyg/inherited-spine.tsv`). Not part of
-  `build:catalog`; no consumer here yet.
+- `spine/` — the membership term: the frozen
+  `data/athyg/inherited-spine.tsv`, its codec, and the two gates holding it
+  to the build it snapshots. `parse/` streams it through `iterSpineTsv`.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -79,13 +82,13 @@ scripts/catalog/
 
 `export-astrometry-request.ts` (run `pnpm run build:astrometry-request`)
 emits `data/gaia/gaia_catalog_source_id_request.tsv` — the deduped,
-numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved
-through the SAME `resolveGaiaSourceId` precedence step 1 uses (native
-`gaia` column → HIP cross-walk). It reuses that function directly so
-the resolution logic stays defined once; the pure `sortSourceIdsNumeric`
-helper (`export-astrometry-request-pure.ts`) does the BigInt sort that
-matches the binaries request file's numeric ordering. ~315k source_ids
-from the v3.3 classic-IDs subset.
+numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved through
+`resolveGaiaSourceId`'s native-`gaia`-column → HIP-cross-walk precedence.
+This is the last script reading the AT-HYG CSV and the last caller of that
+function here; the record build takes the binding off the spine column
+instead (`spine/README.md`); rebasing the pull list onto the spine is
+`stellata-3bsf.18`. The pure `sortSourceIdsNumeric` helper does the BigInt sort matching
+the binaries request file's ordering. ~315k source_ids.
 
 The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py`,
 which pulls the 5p astrometry into
@@ -166,18 +169,16 @@ Ballesteros(B–V) → Apsis-direct).
                           17 bits) so 24 bits would suffice, but `uint32`
                           keeps the record stride a multiple of 4.
   - 44–51 `uint64`       **Gaia DR3 source_id** little-endian (0 = none).
-                          Sourced from AT-HYG's native `gaia` column;
-                          rows with that column blank fall back to a HIP→Gaia
-                          DR3 cross-walk (Gaia's `hipparcos2_best_neighbour`,
-                          loaded from `data/gaia/gaia_dr3_hip_xmatch.tsv`).
-                          IDs routinely exceed 2^53 so the JS reader
-                          exposes them via `BigUint64Array`. The ~0.4%
-                          residual without a source_id is dominated by
-                          Gaia-saturated bright binaries (Sirius, Vega,
-                          Procyon, …) absent from both AT-HYG and the
-                          best-neighbour cross-walk; their orbital
-                          rendering flows through `data/binaries/multiples.tsv`
-                          instead.
+                          Read off the spine column, which froze the
+                          native-cell → HIP-cross-walk precedence and both
+                          binding gates; the build re-derives nothing
+                          (`spine/README.md`). IDs routinely exceed 2^53 so
+                          the JS reader exposes them via `BigUint64Array`.
+                          The ~0.4% residual is dominated by Gaia-saturated
+                          bright binaries (Sirius, Vega, Procyon, …) absent
+                          from both AT-HYG and the cross-walk; their orbital
+                          rendering flows through
+                          `data/binaries/multiples.tsv` instead.
   - 52–55 `float32`      **teff_gspphot** (K) — Gaia DR3 Apsis Teff from
                           gspphot. `NaN` (`NO_APSIS` sentinel) for the
                           ~15% of records absent from gspphot or whose
@@ -301,13 +302,12 @@ the pure comparator + formatter and has its own vitest coverage; the
 assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
-snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus
-`scripts/util/` and `scripts/sid/`, so editing any build module — not just a
-top-level one — invalidates the artifact. `classic-ids/` and `spine/` are
-skipped: no `build:catalog` path imports either one-shot generator, so
-enrolling them would force a full rebuild for an edit that cannot move a
-byte. `validate/` stays in (the distance-regression check reads
-`simbad-sample-parse.ts`).
+snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus `scripts/util/` and
+`scripts/sid/`, so editing any build module invalidates the artifact.
+`classic-ids/` is skipped: no `build:catalog` path imports the one-shot
+overlay generator, so enrolling it would force a full rebuild for an edit
+that cannot move a byte. `spine/` stays in (`parse/` imports its codec), and
+so does `validate/`.
 
 ## SID allocation
 
@@ -319,7 +319,7 @@ builds each record's designation set, and `resolveSids` maps it to the
 existing ledger sid. The build **never mints** — `sid:allocate` is the sole
 ledger writer (docs/sid.md § 4.4).
 
-Bootstrap when the record set changes (new AT-HYG rows, new companions):
+Bootstrap when the record set changes (a new spine, new companions):
 
 1. `pnpm run build:catalog` resolves every record. Any object absent from the
    ledger is written with `NO_SID` (0) so the artifact still lands, then the
@@ -345,8 +345,8 @@ One JSON array entry per star that has at least one searchable identifier
 Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/dc/s/cl/cp`) to keep wire size down — file is
 ~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
-AT-HYG source ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip
-display. The `g` field carries the GCVS variable-star designation
+spine's printed `spect` cell ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the
+hover tooltip display. The `g` field carries the GCVS variable-star designation
 (`R CrB`, `VY CMa`, `V0645 Cen`) attached during the GCVS cross-match
 (`parse/gcvs/README.md`) — the lookup key the cross-match already
 computes, now also emitted so variables become searchable by their
@@ -373,16 +373,18 @@ dropdown's context line; `dc` is the constellation its Bayer / Flamsteed /
 GCVS designation is *named* for, and is the one every alias and display
 label is built against. `dc` is emitted only where the two diverge AND
 the entry carries a constellation-relative designation (`b`/`f`/`g`/`cl`)
-— 10 entries today, `designationConMismatch` in build-counts, so the
-reader's `designationConIndex(dc, c)` fallback carries everything else at
-no wire cost. The ten are ρ Aql, three GCVS variables named for a
-constellation they do not sit in (CM Ind → Pavo, RY Cen → Lupus,
-EQ Vul → Lyra), and six promoted companions wide enough to straddle a
-boundary (Fomalhaut C sits in Aquarius but is "α PsA C").
+— **3** entries today, `designationConMismatch` in build-counts, so the
+reader's `designationConIndex(dc, c)` fallback carries everything else at no
+wire cost. All three are GCVS variables named for a constellation they do not
+sit in (CM Ind → Pavo, RY Cen → Lupus, EQ Vul → Lyra): a GCVS designation is
+the build's only nomenclature source since the spine dropped AT-HYG's
+editorial `con` cell, so ρ Aql and six boundary-straddling promoted
+companions fall back to their positional index — `stellata-3bsf.11` decides
+where `dc` is re-sourced from, or whether it retires.
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
-(`src/client/search.ts`) both import it; drift = compile error.
+(`src/client/typeahead/search.ts`) both import it; drift = compile error.
 
 Identifier dispatch in `search.ts`:
 - Regex-prefix forms (`HIP 27989`, `HD 39801`, `HR 2061`, `Gl 559A`) go
@@ -395,7 +397,10 @@ Identifier dispatch in `search.ts`:
   the star. "Alf" is added only for α (most-commonly alternate-spelled).
 - GCVS designations (`g` field) emit an abbreviated + con-name-expanded
   label pair (`V645 Cen` / `V645 Centaurus`); the V-number zero-padding
-  GCVS stores (`V0645`) is stripped to the common form (`V645`).
+  GCVS stores (`V0645`) is stripped to the common form (`V645`). The
+  expansion fires only when the trailing token IS the constellation code,
+  so the 6,079 NSV / Magellanic designations emit one label
+  (`src/client/typeahead/README.md` § Star search).
 
 The dropdown deduplicates by star index so a star with multiple matching
 Bayer variants shows up once.
@@ -424,7 +429,7 @@ Today's downstream consumers:
   `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so `bestApsisTeff`
   (`star-color-routing-pure.ts`) writes the best Apsis Teff to the
   `iTeffApsis` attribute, and the lower tiers are baked into `iCi` at
-  build: an observed AT-HYG B−V, or the intrinsic spectral-class colour
+  build: the spine's printed B−V, or the intrinsic spectral-class colour
   `spectralClassCi` (`catalog-pure.ts`) derives when a no-Apsis star has
   no B−V but a parseable class (`ciSpectralDerived` in build-counts),
   else the solar fallback.

@@ -35,7 +35,7 @@ src/client/chart-mode/
 `CHART_REFERENCE_INK` (`#3a3530`) is the ink for chart-mode *reference*
 geometry — the galactic coordinate sphere (`../galactic/coord-spheres/README.md`) and the
 IAU constellation boundaries (`../constellation-boundaries/README.md`),
-which take it at half weight. It sits deliberately lighter than the
+which take it at half weight and dotted. It sits deliberately lighter than the
 near-black figure / label ink so reference lines read as a layer under the
 chart's content. One token, because two modules authoring the same hex is
 how the two drift apart.
@@ -94,7 +94,7 @@ chart-hidden as before.
 
 ```glsl
 chartT = clamp(
-  (appMag - uChartMagBright) / max(uMaxAppMag - uChartMagBright, 0.001),
+  (appMag - uChartMagBright) / max(uLimitMag - uChartMagBright, 0.001),
   0, 1);
 pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
 vPhysRatio = 1.0;  // force the frag shader's disc-pass branch
@@ -134,20 +134,22 @@ position. The vertex shader sets `vAaWidth` in every return path
 (early-out, hide-focus, invisible cull, both pxSize branches) so the
 varying is always defined.
 
-The disc-pass branch hard-clips at `vAppMag > uMaxAppMag` (no soft
+The disc-pass branch hard-clips at `vAppMag > uLimitMag` (no soft
 taper, since a sub-pixel fade-in band reads as a hard cutoff anyway
-on a paper chart).
+on a paper chart). Chart reads the *instrument* limit, not the
+trim-following `uThresholdMag`: it is deliberately non-photometric and
+inherits no exposure state at all.
 
 ## Chart treatments — Milky Way isobar + cloud outlines
 
 - **Milky Way** (`milkyway.frag.glsl`): an `if (uChartIsobar > 0.5)`
   branch renders a single thin line, `line = 1 - smoothstep(fw*0.5,
-  fw*1.5, |appMag - uMaxAppMag|)` where `fw = fwidth(appMag)`. The
+  fw*1.5, |appMag - uLimitMag|)` where `fw = fwidth(appMag)`. The
   contour tracks "where the integrated brightness would equal the
-  slider limit" — drag the magnitude slider and the contour moves
-  through the band like a topographic line. Discarded outside the
+  instrument's limiting magnitude" — change instrument and the contour
+  moves through the band like a topographic line. Discarded outside the
   line so depth stays clean. Solid black ink (`uMonoColor`), toggled by
-  `setMilkywayIsobar` with the shared `uMaxAppMag` uniform reference.
+  `setMilkywayIsobar` with the shared `uLimitMag` uniform reference.
 - **Molecular clouds** (`../molecular-clouds/cloud-rim.frag.glsl`): the
   rim-shell material's chart branch draws a **stippled silhouette
   outline** of each cloud's isosurface mesh — the SkyAtlas 2000 nebula
@@ -188,15 +190,25 @@ to 18 px diagonal). `discPx` comes from `chartDiscPxForAppMag` in
 `chart-disc-pure.ts`, which mirrors the vertex shader's chart-branch
 formula.
 
-The constellation centroid is the **flux-weighted** position of every
-member (`weight = 10^(-0.4 × appMag)` per star). The visibility gate
-uses `min(appMag) ≤ maxAppMag` over all members. The full member walk
-is needed to fix a bug where constellations with no single dominant
-intrinsic-brightest star (Vela, Pyxis, Sagittarius, etc.) silently
-dropped their label, but the result is **cached** under a 0.5 pc
-camera-translation threshold + filter version. The cached centroid is
-still re-projected every frame; only the inner per-member loop is
-elided.
+**Constellation names sit at the IAU region's own centre, not at their
+stars.** The anchor is the equal-surface-weight centre of mass of the
+region the boundary layer draws — `Stellata.constellationLabelAnchors`,
+one per region, off the shipped artifact
+(`../constellation-boundaries/README.md` § Label anchors) — baked to the
+same Sol-centred sphere as the arcs, so `− worldOffset` is the whole
+per-frame projection and the name stays inside its block from any camera
+position. **Serpens therefore gets two labels**, one in Caput and one in
+Cauda; the flux-weighted centroid it replaced put a single "SERPENS" in
+the gap between them, which is Ophiuchus.
+
+Visibility still gates on the members: `min(appMag) ≤ uLimitMag` over
+every star byte 34 assigns to the constellation, so a region whose stars
+are all under the limit goes unnamed (both Serpens labels share one gate —
+one constellation, one member set). The full member walk is what fixed a
+bug where constellations with no single dominant intrinsic-brightest star
+(Vela, Pyxis, Sagittarius) silently dropped their label; it is **cached**
+under a 0.5 pc camera-translation threshold + filter version, since
+apparent magnitude barely moves under a small camera nudge.
 
 **Variable rings** are **intrinsic-only** — the ring set gates on
 `periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
@@ -245,7 +257,7 @@ the heuristic stays static). Left as future work; the heuristic is
 adequate for current near-Earth chart-mode use.
 
 **Pooling.** Each `<text>` / `<circle>` / `<line>` is keyed by stable
-identity (`n:idx`, `b:idx`, `c:conIdx`, `m:cloudIdx`) so adding /
+identity (`n:idx`, `b:idx`, `c:regionCode`, `m:cloudIdx`) so adding /
 removing nodes is free across frames. Unused entries are detached at
 the end of each tick.
 
@@ -253,7 +265,7 @@ the end of each tick.
 
 Click-pick tracks **render visibility** identically for every kind: a
 body is click-pinnable iff it is currently drawn. Chart mode hard-clips
-the star disc at `uMaxAppMag` (no soft taper — § Star disc sizing), so
+the star disc at `uLimitMag` (no soft taper — § Star disc sizing), so
 `pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
 navigate; `PlanetBodyField.pick` applies the same hard clip in chart
 mode and sizes its hit radius from the chart disc px
@@ -261,7 +273,7 @@ mode and sizes its hit radius from the chart disc px
 shared cutoff constant lives in
 `solar-system/perceptual-magnitude.ts`.
 
-`Picker.pickStar` (`camera/picker.ts`) three fixes for the small-disc /
+`Picker.pickStar` (`camera/controls/picker.ts`) three fixes for the small-disc /
 variable case:
 
 1. **Variable bright-extreme filter.** Filter check uses

@@ -11,12 +11,16 @@ precision highp int;
 #include <stellata_hdr_emission>
 
 // Exposure — the whole scene's single brightness anchor, shared with
-// every other physical layer. Pinned to the naked-eye base epoch until
-// H6 routes the magnitude slider through it.
+// every other physical layer.
 uniform float uExposure;
 
 uniform vec3 uCameraPos;
-uniform float uMaxAppMag;
+// The instrument's limiting magnitude: the √Δm footprint window and
+// chart-mode disc sizing, neither of which follows the exposure state.
+uniform float uLimitMag;
+// Population cull bound — the deepest the EV trim can reach plus the
+// soft taper, so raising the trim can never expose a population edge.
+uniform float uCullMag;
 uniform float uMinDistSol;
 uniform float uMaxDistSol;
 uniform uint uSpectMask;
@@ -54,9 +58,15 @@ uniform float uSizeSpan;
 // linear ceiling. See the perceptual-disc chunk for the formula and
 // the rationale (Sol-vs-Barnard ratio at close approach).
 uniform float uSizeKnee;
+// The fragment stage's profile-shaping knobs, read here only to recover
+// the exponent the kernel's area integral needs.
+uniform float uDistNMin;
+uniform float uDistNMax;
+uniform float uLumBiasMin;
+uniform float uLumBiasMax;
 // Chart-mode disc sizing. Stars render as flat hard-edged discs whose
 // pixel diameter spreads linearly between [Min, Max] across the visible
-// magnitude range [Bright, MaxAppMag]. Linear in mag = log10 in flux,
+// magnitude range [Bright, LimitMag]. Linear in mag = log10 in flux,
 // matching naked-eye perception (defined that way). Uniforms read only
 // when uMonochrome > 0.5; outside chart mode the existing physical-size
 // + apparent-magnitude blend formula runs unchanged.
@@ -197,6 +207,11 @@ out float vLocalMember; // 1 = local-depth-cluster member (main variant only)
 // Linear luminance at the centre of this star's display kernel. Constant
 // per instance, so the interpolation across the quad is exact.
 out float vPeakL;
+// The same kernel renormalised so its integral is the star's true flux —
+// the adaptation statistic's channel. Derived here rather than in the
+// fragment stage because the exponent morphs on vSoftness and vPhysRatio,
+// both of which are per instance.
+out float vFluxPeakL;
 
 const float LOG10 = 2.302585093;
 
@@ -242,6 +257,7 @@ void emitOffscreenSentinel(float appMag, float softness) {
     vSoftness = softness;
     vAaWidth = 0.0;
     vPeakL = 0.0;
+    vFluxPeakL = 0.0;
 }
 
 void main() {
@@ -356,14 +372,14 @@ void main() {
     // Visibility prefilter — dust-independent. Spectral mask and distance
     // band are absolute filters (not affected by extinction). The magnitude
     // band is monotonic in dust: A_V ≥ 0, so a star whose unextincted
-    // appMag already sits above (uMaxAppMag + 0.5) cannot become visible
-    // after extinction — the prefilter is exact, no dust headroom needed.
+    // appMag already sits above uCullMag cannot become visible after
+    // extinction — the prefilter is exact, no dust headroom needed.
     // Skip the extinction read for those stars — a texelFetch on the
     // prepass path, the full 48-tap raymarch on the fallback path (where
     // this is the dominant vertex-shader saving).
     bool spectOk = (uSpectMask & (1u << uint(iSpectClass))) != 0u;
     bool distOk = iDistSol >= uMinDistSol && iDistSol <= uMaxDistSol;
-    bool magOkPrelim = appMag <= uMaxAppMag + 0.5;
+    bool magOkPrelim = appMag <= uCullMag;
 
     // Luminosity-class softness: linear from white dwarf (0) → hypergiant
     // (9). Unknown (iLumClass = 255) falls back to main-sequence-dwarf
@@ -407,11 +423,11 @@ void main() {
     // near maximum light = bluer/hotter) both shift the same LUT input.
     float effectiveCi = intrinsicBv + absorbAV / R_V + ciMod;
 
-    // Final magnitude check with the extincted value. Soft taper: stars
-    // within +0.5 mag of the limit still pass through and render in the
-    // glow pass at fading intensity (frag shader handles the smoothstep),
-    // so the limit doesn't pop in/out as the slider moves.
-    if (appMag > uMaxAppMag + 0.5) {
+    // Final magnitude check with the extincted value. Everything down to
+    // the cull bound passes through; the frag shader's taper against
+    // uThresholdMag is what fades the faint edge, so the population edge
+    // sits well past anything the EV trim can reveal.
+    if (appMag > uCullMag) {
         emitOffscreenSentinel(appMag, softness);
         return;
     }
@@ -431,7 +447,7 @@ void main() {
         // spreads linearly into [MAX..MIN].
         float chartT = clamp(
             (appMag - uChartMagBright)
-                / max(uMaxAppMag - uChartMagBright, 0.001),
+                / max(uLimitMag - uChartMagBright, 0.001),
             0.0, 1.0);
         pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
         // Force the frag shader's chart-mode disc path. (Outside chart
@@ -441,11 +457,12 @@ void main() {
         // frag shader touches luminance; the assignment only keeps the
         // varying defined.
         vPeakL = 0.0;
+        vFluxPeakL = 0.0;
     } else {
         // Apparent-magnitude size term — the perceptual-disc abstraction.
         // Same √Δm + soft-knee mapping a planet would use (3re.16); the
         // chunk owns the math + rationale.
-        float dMEff = perceptualDmEff(appMag, uMaxAppMag, uSizeSpan, uSizeKnee);
+        float dMEff = perceptualDmEff(appMag, uLimitMag, uSizeSpan, uSizeKnee);
         float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
 
         // Physical-size term. True angular diameter projected to pixels:
@@ -475,6 +492,18 @@ void main() {
 
         pxSize = max(appSize, physSize);
         vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+
+        // The statistic's flux channel. `pxSize` is CSS pixels, which is
+        // what makes the frame mean devicePixelRatio-independent: the
+        // reduction runs over device pixels, so a CSS-px kernel area puts
+        // the star's whole flux over exactly one CSS pixel's worth of the
+        // frame mean, matching how an extended source's surface brightness
+        // already reads (../hdr/exposure/reduction/README.md § Pixel units).
+        vFluxPeakL = stellataKernelFluxPeak(
+            uExposure, appMag, pxSize,
+            perceptualDiscFluxIntegral(perceptualDiscExponent(
+                vSoftness, vPhysRatio, uDistNMin, uDistNMax,
+                uLumBiasMin, uLumBiasMax)));
     }
 
     // Edge AA in vUv units. The quad spans pxSize CSS pixels; vUv ranges

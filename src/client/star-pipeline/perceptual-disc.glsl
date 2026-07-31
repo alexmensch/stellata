@@ -62,8 +62,8 @@
 // (lumBias) so hypergiants stay fuzzier than dwarfs at equivalent
 // physRatio.
 
-float perceptualDmEff(float appMag, float maxAppMag, float sizeSpan, float sizeKnee) {
-  float dM = maxAppMag - appMag;
+float perceptualDmEff(float appMag, float limitMag, float sizeSpan, float sizeKnee) {
+  float dM = limitMag - appMag;
   if (dM <= sizeSpan) {
     return max(dM, 0.0);
   }
@@ -81,6 +81,19 @@ float perceptualAppSizePx(float dMEff, float sizeMin, float sizeMax, float sizeS
 // hypergiant-fuzzy. Caller supplies the four shaping uniforms
 // directly so the chunk doesn't depend on a particular uniform-naming
 // convention.
+float perceptualDiscExponent(
+  float softness,
+  float physRatio,
+  float distNMin,
+  float distNMax,
+  float lumBiasMin,
+  float lumBiasMax
+) {
+  float distN = mix(distNMin, distNMax, smoothstep(0.0, 0.5, physRatio));
+  float lumBias = mix(lumBiasMin, lumBiasMax, softness);
+  return distN * lumBias;
+}
+
 float perceptualDiscProfile(
   float r,
   float softness,
@@ -92,9 +105,27 @@ float perceptualDiscProfile(
   float lumBiasMin,
   float lumBiasMax
 ) {
-  float distN = mix(distNMin, distNMax, smoothstep(0.0, 0.5, physRatio));
-  float lumBias = mix(lumBiasMin, lumBiasMax, softness);
-  float n = distN * lumBias;
+  float n = perceptualDiscExponent(
+    softness, physRatio, distNMin, distNMax, lumBiasMin, lumBiasMax);
   float raw = exp(-visibleK * pow(2.0 * r, n));
   return max(0.0, (raw - visibleThreshold) / (1.0 - visibleThreshold));
+}
+
+// Area integral of the unit-peak profile over its own quad, in
+// quad-normalised units: a kernel D px across covers Φ(n)·D² px² of
+// unit-peak light. Degree-4 fit in 1/n over the reachable range [1.32, 10]
+// — the exact integral is an incomplete gamma. Mirrored in
+// perceptual-disc-flux-pure.ts, which carries the accuracy claim.
+//
+// This is what makes the adaptation statistic's flux channel correct: the
+// kernel preserves PEAK, not energy, so its integral over-counts a point
+// source's frame flux and cannot be summed as-is.
+// See ../hdr/statistic/README.md § The unit.
+float perceptualDiscFluxIntegral(float n) {
+  float x = 1.0 / max(n, 1e-6);
+  return 0.774519065
+    + x * (-2.002796349
+    + x * (3.390374540
+    + x * (-3.309638782
+    + x * 1.360211895)));
 }

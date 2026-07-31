@@ -41,6 +41,7 @@ function makeProvider(overrides: Partial<Parameters<typeof createPlanetFocusProv
     appMagFor: () => -3.86,
     moonNamesOf: (idx) =>
       idx === 1 ? ['Io', 'Europa', 'Ganymede', 'Callisto'] : [],
+    constellationName: () => 'Taurus',
     ...overrides,
   });
 }

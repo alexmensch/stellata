@@ -25,16 +25,27 @@ import {
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
 import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
+import {
+  makeHdrEmitterUniforms,
+  type HdrEmitterUniforms,
+} from '../../hdr/hdr-pipeline';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
+
+const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
 function makeSharedUniforms(
-  maxAppMag = 6.5,
-): PerceptualDiscUniforms & ChartDiscUniforms {
+  limitMag = STUB_LIMIT_MAG,
+): PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms {
   return {
+    ...makeHdrEmitterUniforms(),
     uMonochrome: { value: 0 },
     uChartDiscMaxPx: { value: 28 },
     uChartDiscMinPx: { value: 1.5 },
     uChartMagBright: { value: -2 },
-    uMaxAppMag: { value: maxAppMag },
+    uLimitMag: { value: limitMag },
+    uThresholdMag: { value: limitMag },
+    uCullMag: { value: cullMagFor(limitMag) },
     uSizeMin: { value: 2 },
     uSizeMax: { value: 24 },
     uSizeSpan: { value: 8 },
@@ -71,10 +82,11 @@ describe('cullDistancePc', () => {
     expect(cullDistancePc(4.83, 0, 6.5)).toBe(0);
   });
 
-  it('reproduces Jupiter-from-Sol naked-eye threshold (~290 AU)', () => {
-    // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. Naked-eye
-    // cutoff 6.5. 290 AU is comfortably sub-parsec (Sol's naked-eye
-    // preset stays sub-pc) and within the Standard-mode focus zoom range.
+  it('reproduces Jupiter-from-Sol at a 6.5 cull bound (~290 AU)', () => {
+    // Jupiter: p=0.538, R=69911 km, a=5.203 AU. Sol M=4.83. 6.5 is an
+    // arbitrary bound for exercising the closed form, not the shipped
+    // one; 290 AU is comfortably sub-parsec and within the focus zoom
+    // range.
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
@@ -84,7 +96,7 @@ describe('cullDistancePc', () => {
     expect(dAu).toBeLessThan(400);
   });
 
-  it('grows with the magnitude slider (more sensitivity → see further)', () => {
+  it('grows with the cull magnitude (deeper bound → see further)', () => {
     const aPc = 5.203 * AU_PC;
     const Rpc = 69911 * KM_PC;
     const refl = 0.538 * (Rpc / aPc) ** 2;
@@ -220,11 +232,11 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('setMaxAppMag is a no-op smoke (cull distances refresh internally)', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+  it('setCullMag is a no-op smoke (cull distances refresh internally)', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
-    f.setMaxAppMag(15);
-    f.setMaxAppMag(6.5);
+    f.setCullMag(15);
+    f.setCullMag(cullMagFor(STUB_LIMIT_MAG));
     expect(f.group.visible).toBe(true);
     f.dispose();
   });
@@ -418,7 +430,7 @@ describe('PlanetBodyField lifecycle', () => {
     expect(expectedRatio).toBeLessThan(1.35);
     // And the cull derivation matches `cullDistancePc` directly.
     expect(dSaturn).toBeCloseTo(
-      cullDistancePc(4.83, baseRefl * alphaZeroPhaseFactor(SATURN_PHASE), 6.5),
+      cullDistancePc(4.83, baseRefl * alphaZeroPhaseFactor(SATURN_PHASE), cullMagFor(6.5)),
       6,
     );
     f.dispose();
@@ -1005,23 +1017,23 @@ describe('PlanetBodyField.pick', () => {
     const expected = chartDiscPxForAppMag(
       appMag,
       { maxPx: 28, minPx: 1.5, magBright: -2 },
-      shared.uMaxAppMag.value,
+      shared.uLimitMag.value,
     );
     expect(f.renderedPlanetSizePx(0, camera.position)).toBeCloseTo(expected, 10);
 
     // Hard clip: a limit just below appMag drops the pick immediately —
     // the navigate-mode soft-taper margin must not apply in chart.
-    shared.uMaxAppMag.value = appMag - 0.01;
+    shared.uLimitMag.value = appMag - 0.01;
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
     f.setMonochrome(false);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
     f.dispose();
   });
 
-  it('kill condition: appMag > maxAppMag + 0.5 drops the candidate', () => {
+  it('kill condition: appMag past drawCutoffMag drops the candidate', () => {
     // Same setup as prime but with the planet shoved far enough away
-    // that its appMag exceeds the slider cutoff by > 0.5 mag. The
-    // soft-taper kill in pick() must drop it; result null.
+    // that its appMag exceeds the draw cutoff. The soft-taper kill in
+    // pick() must drop it; result null.
     const f = new PlanetBodyField(makeSharedUniforms(6.5));
     f.attachHost(
       0,
@@ -1139,6 +1151,40 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
     expect(f.physicalPlanetSizePx(99, camera.position)).toBe(0); // unattached
     f.dispose();
   });
+
+  it('keeps the resolved size at eclipse alignment, where the glare dies', () => {
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, R_SUN_PC, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0, 0);
+
+    // Camera BEYOND the body on the host→body line: phase angle 180°, so
+    // φ(α) = 0 and appMag runs past the draw cutoff. The reflected glare
+    // correctly dies — there is no lit face to see — but the body is a
+    // 20-radii-away opaque surface and must still mesh, or it stops
+    // occluding the host it is sitting in front of.
+    const KM_PC_LOCAL = 1 / 3.0857e13;
+    camera.position.set(0, 0, -1 * AU_PC - 20 * 6000 * KM_PC_LOCAL);
+    expect(f.renderedPlanetSizePx(0, camera.position)).toBe(0);
+    const eclipsePx = f.physicalPlanetSizePx(0, camera.position);
+    expect(eclipsePx).toBeGreaterThan(MESH_FADE_FULL_PX);
+    expect(meshFadeFromPhysPx(eclipsePx)).toBe(1);
+    f.dispose();
+  });
+
 });
 
 describe('PlanetBodyField flat-instance identity + geometry accessors', () => {

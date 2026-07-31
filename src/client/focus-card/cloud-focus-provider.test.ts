@@ -34,6 +34,7 @@ describe('createCloudFocusProvider', () => {
     const provider = createCloudFocusProvider({
       clouds: [cloud('Taurus', [22.0, 19.0, 9.5], 'Z2021T1', 15610)],
       cameraDistancePc: () => 150.4,
+      constellationName: () => 'Taurus',
     });
     const out = provider.format(0);
     expect(out.name).toBe('Taurus');
@@ -48,6 +49,7 @@ describe('createCloudFocusProvider', () => {
     const provider = createCloudFocusProvider({
       clouds: [makeMockCloud({ name: 'Eagle Nebula', aliases: ['M16', 'NGC 6611'] })],
       cameraDistancePc: () => 42,
+      constellationName: () => 'Taurus',
     });
     const out = provider.format(0);
     expect(out.name).toBe('Eagle Nebula');
@@ -58,6 +60,7 @@ describe('createCloudFocusProvider', () => {
     const provider = createCloudFocusProvider({
       clouds: [cloud('Aquila Rift', [75.73, 75.73, 75.73], 'Z2020', null)],
       cameraDistancePc: () => 236.2,
+      constellationName: () => 'Taurus',
     });
     const out = provider.format(0);
     expect(rowValue(out.rows, 'Mass')).toBeUndefined();
@@ -68,6 +71,7 @@ describe('createCloudFocusProvider', () => {
     const provider = createCloudFocusProvider({
       clouds: null,
       cameraDistancePc: () => 1,
+      constellationName: () => 'Taurus',
     });
     expect(provider.format(0)).toEqual({
       name: '',

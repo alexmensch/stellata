@@ -98,12 +98,13 @@ and exactly how a resolved stellar disc behaves under the point-source
 peak rule. `HdrPipeline.setPixelSolidAngle` owns the uniform; the shell
 drives it from FOV changes and resize.
 
-`uMaxAppMag` still arrives by reference from the star pipeline's shared
+`uLimitMag` still arrives by reference from the star pipeline's shared
 uniform map, but **only the chart-mode isobar reads it** — the band's
-brightness is photometric now, so the magnitude slider reaches it
-through `uExposure` instead (`../hdr/README.md` § Exposure epochs). The
-band therefore brightens in lockstep with the star field across the
-preset range: ≈ 2500× more exposure at "all" than at naked-eye.
+brightness is photometric now, so the exposure model reaches it through
+`uExposure` instead (`../hdr/exposure/README.md`). The band therefore
+brightens and dims in lockstep with the star field: a deeper instrument,
+the automatic adaptation cut and the manual EV trim all move it and the
+stars together, by construction.
 
 ### Calibration
 
@@ -216,8 +217,10 @@ false` (the local bounding sphere is at origin but world position is
 `GALACTIC_CENTRE_PC - worldOffset`). `renderOrder = -3` for both
 meshes.
 
-Both meshes draw into the HDR target, and both apply the operator
-themselves when it isn't bound (`uHdrTarget = 0` — the shipped path while
+Both meshes draw into the HDR target — into its statistic attachment too,
+where the band's surface brightness is both the flux and the peak channel
+(`../hdr/statistic/README.md`) — and both apply the operator themselves
+when it isn't bound (`uHdrTarget = 0` — the shipped path while
 the ship gate is false, `../hdr/README.md` § Fallback). They use the
 **undithered** variant: the two components overlap on every band pixel
 and the dither is a function of `fragCoord` alone, so it would land
@@ -233,15 +236,27 @@ are renderer-local with small magnitudes.
 
 ## Chart mode + warp
 
-Chart mode swaps the volumetric raymarch for a single-line **isobar
-contour** along the magnitude limit (a thin ink line tracking "where
-the integrated MW would equal the visible magnitude limit" reads as a
-paper-atlas equivalent of the volumetric band). The contour rendering
-is handled by chart-mode wiring; this layer's `setIsobar(true)` simply
-hides the meshes. The band↔isobar swap is driven by the `milkyWayIsobar`
-detail bind (chart floor), not chart-mode.ts directly — the group stays
-enabled in chart because `applyMilkywayEnabled` permits either the band
-or the isobar (`../scene/README.md` § Chart-content wiring).
+**Chart mode currently renders no Milky Way at all.** `setIsobar(true)`
+sets `uChartIsobar = 1`, switches both materials to `NormalBlending`, and
+then hides both meshes — so the fragment shader's isobar branch
+(`milkyway.frag.glsl`, the `fwidth`-normalised contour at
+`magPx == uLimitMag`) is unreachable. The branch is written and the
+uniforms are plumbed; only the draw is suppressed, pending the contour
+treatment.
+
+Two things a future session needs before re-enabling it, both in
+`stellata-xypg.22`: the contour must be evaluated on **surface brightness
+`S`**, not on the Ω_px-dependent `magPx`, or the line moves when the
+camera zooms — wrong for a chart. And the threshold it compares against
+is an *extended-source* limit (~21.5–22 mag/arcsec² for a dark-adapted
+eye), which is a different quantity from the instrument's point-source
+`m_lim`, because rod spatial summation integrates an extended source over
+many receptors.
+
+The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
+floor), not chart-mode.ts directly — the group stays enabled in chart
+because `applyMilkywayEnabled` permits either the band or the isobar
+(`../scene/README.md` § Chart-content wiring).
 
 Warp keeps the layer visible in dark mode — the band reorienting as
 the camera flies past the GC is the realism payoff.

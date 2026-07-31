@@ -10,7 +10,7 @@ within tolerance of these positions. Never read at build time.
 A second table, `sub-observer-truth.tsv`, freezes geocentric
 sub-observer and sub-solar lon/lat for Mars, Ganymede, and Io at the
 same three epochs (`QUANTITIES='14,15'`, retrieved 2026-07-19).
-Consumed by `src/client/solar-system/planets/texture-orientation.test.ts`,
+Consumed by `src/client/solar-system/planets/rotation/texture-orientation.test.ts`,
 which pins the full IAU-orientation → texture-UV chain. Columns:
 `body`, `jd_ut`, then `ob_lon_west_deg` / `ob_lat_deg` (quantity 14)
 and `subsol_lon_west_deg` / `subsol_lat_deg` (quantity 15). All three
