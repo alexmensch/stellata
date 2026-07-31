@@ -286,8 +286,10 @@ the Sol/GC label affordance (warp stays on the `W` key).
   none.
 - `showHud` — gates the HUD: Sol/GC arrows in both modes, plus the
   OBSERVE-mode ring. URL `hud=1`, default-omitted. Panel checkbox lives
-  under **Navigation** ("Head up display (HUD)") since the HUD's role is
-  navigational orientation. Future HUD widgets hang off the same flag.
+  under **Overlays** ("Head up display (HUD)"), directly after the
+  coordinate sphere it orients against — the HUD is chrome drawn over the
+  scene, which is what that section collects, and **Navigation** is now
+  units only. Future HUD widgets hang off the same flag.
 
 Neither sphere is in the declutter cycle — both are user-owned chrome
 (`galacticCoordSphere` / `equatorialCoordSphere` in `USER_OWNED_IDS`,
