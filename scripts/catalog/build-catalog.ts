@@ -95,6 +95,12 @@ import {
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
+import {
+  applyClassicIdLabels,
+  loadClassicIdLabelInputs,
+  CLASSIC_ID_LABEL_INPUT_PATHS,
+} from './classic-ids/apply-classic-id-labels';
+import { emptyLabelMergeCounts, LABEL_FIELDS } from './classic-ids/label-merge-pure';
 import { readStars, type Star } from './parse/stars-parse';
 import {
   INHERITED_SPINE_TSV,
@@ -145,16 +151,13 @@ function isUpToDate(): boolean {
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
   // This file is an orchestration shell — the build logic lives across the
   // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
-  // them must invalidate the artifact. The one-shot overlay generator is the
-  // exception: no build:catalog path imports it, so enrolling it would force
-  // a full rebuild for an edit that cannot move a byte.
-  const nonBuildDirs = ['classic-ids'].map((d) => resolve(__dirname, d));
+  // them must invalidate the artifact.
   const scriptFiles: string[] = [];
   const collectScripts = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = resolve(dir, entry.name);
       if (entry.isDirectory()) {
-        if (!nonBuildDirs.includes(path)) collectScripts(path);
+        collectScripts(path);
       } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
         scriptFiles.push(path);
       }
@@ -170,6 +173,7 @@ function isUpToDate(): boolean {
   // Adding a new source is one array entry.
   const newest = maxMtimeOfSources([
     ...READ_STARS_INPUT_PATHS,
+    ...CLASSIC_ID_LABEL_INPUT_PATHS,
     SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
     SRC_SIMBAD_SAMPLE, SRC_MULTIPLES,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
@@ -235,6 +239,9 @@ async function main() {
     multiplicityResolved: 0,
     multiplicityUnresolved: 0,
     componentDesignations: 0,
+    ...emptyLabelMergeCounts(),
+    desigConFromCrossIndex: 0,
+    crossIndexUnknownCst: 0,
     spineDroppedNoRaDec: 0,
     spineDroppedNoDist: 0,
     spineDroppedNoDirection: 0,
@@ -425,6 +432,30 @@ async function main() {
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciSpectralDerived = stats.ciSpectralDerived;
+
+  // Classic-ID label layer: the frozen CDS joins replace AT-HYG's inherited
+  // cross-IDs, and IV/27A supplies each Bayer / Flamsteed designation's own
+  // constellation. A post-pass, not a walk tier — the field cascades above key
+  // on the spine's frozen identifiers.
+  console.log('Merging the classic-ID label overlay...');
+  const labelCounts = applyClassicIdLabels(stars, loadClassicIdLabelInputs());
+  Object.assign(counts, labelCounts);
+  for (const field of LABEL_FIELDS) {
+    console.log(
+      `  ${field.padEnd(5)} agree ${labelCounts.labelAgree[field]}, ` +
+        `added ${labelCounts.labelAdded[field]}, ` +
+        `flipped ${labelCounts.labelFlipped[field]}, ` +
+        `spine-only ${labelCounts.labelSpineOnly[field]}, ` +
+        `suppressed ${labelCounts.labelSuppressed[field]}, ` +
+        `extras dropped ${labelCounts.labelExtraDropped[field]}, ` +
+        `overridden ${labelCounts.labelOverridden[field]}`,
+    );
+  }
+  console.log(
+    `  ${labelCounts.labelNoOverlayEntry} records have no overlay row (spine ` +
+      `backstop); designation constellation from IV/27A on ` +
+      `${labelCounts.desigConFromCrossIndex}`,
+  );
 
   const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);

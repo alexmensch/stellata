@@ -10,7 +10,7 @@
   "gcvsMatchedByGaia": 2767,
   "gcvsMatchedByHip": 405,
   "gcvsMatchedByHd": 946,
-  "gcvsNamed": 14148,
+  "gcvsNamed": 14147,
   "ccdmGroups": 12496,
   "ccdmResolved": 12393,
   "ccdmFlagged": 9620,
@@ -20,6 +20,58 @@
   "multiplicityResolved": 20939,
   "multiplicityUnresolved": 4355,
   "componentDesignations": 20939,
+  "labelNoOverlayEntry": 15017,
+  "labelAgree": {
+    "hip": 99029,
+    "hd": 280528,
+    "hr": 7282,
+    "gl": 1820,
+    "flam": 2028
+  },
+  "labelAdded": {
+    "hip": 0,
+    "hd": 148,
+    "hr": 4,
+    "gl": 198,
+    "flam": 69
+  },
+  "labelFlipped": {
+    "hip": 0,
+    "hd": 43,
+    "hr": 23,
+    "gl": 65,
+    "flam": 2
+  },
+  "labelSpineOnly": {
+    "hip": 18623,
+    "hd": 12755,
+    "hr": 1707,
+    "gl": 1262,
+    "flam": 694
+  },
+  "labelSuppressed": {
+    "hip": 2,
+    "hd": 24,
+    "hr": 1,
+    "gl": 8,
+    "flam": 2
+  },
+  "labelExtraDropped": {
+    "hip": 0,
+    "hd": 129,
+    "hr": 1,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelOverridden": {
+    "hip": 0,
+    "hd": 0,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "desigConFromCrossIndex": 3600,
+  "crossIndexUnknownCst": 0,
   "spineDroppedNoRaDec": 0,
   "spineDroppedNoDist": 0,
   "spineDroppedNoDirection": 0,
@@ -48,11 +100,11 @@
     "OTHER": 0,
     "UNRECOGNISED": 0
   },
-  "nameTableEntries": 12071,
+  "nameTableEntries": 12073,
   "variableCount": 3929,
   "searchEntries": 324693,
-  "designationConMismatch": 3,
-  "gcvsDesignationCon": 8069,
+  "designationConMismatch": 65,
+  "gcvsDesignationCon": 7363,
   "boundarySegments": 781,
   "boundaryDirections": 10110,
   "boundaryRegionRuns": 2961,
@@ -99,7 +151,7 @@
   "companionBlendDimGaiaResolved": 2500,
   "companionRepositionedCollocatedDouble": 0,
   "companionConstellationSplitFromAnchor": 7,
-  "componentLettersStamped": 148,
+  "componentLettersStamped": 150,
   "componentNameCollisionsResolved": 1,
   "componentNameCollisionsUnresolved": 0,
   "gaiaAstrometryEntries": 315050,

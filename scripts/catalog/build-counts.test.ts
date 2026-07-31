@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { emptyLabelMergeCounts } from './classic-ids/label-merge-pure';
 import {
   compareBuildCounts,
   formatCountDiff,
@@ -34,6 +35,9 @@ function baseCounts(): BuildCounts {
     multiplicityResolved: 20000,
     multiplicityUnresolved: 5000,
     componentDesignations: 16000,
+    ...emptyLabelMergeCounts(),
+    desigConFromCrossIndex: 3180,
+    crossIndexUnknownCst: 0,
     spineDroppedNoRaDec: 0,
     spineDroppedNoDist: 0,
     spineDroppedNoDirection: 0,

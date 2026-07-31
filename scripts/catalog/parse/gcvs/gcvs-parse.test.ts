@@ -297,29 +297,37 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     expect(gcvsDesignationConIndex('')).toBe(NO_CONSTELLATION_INDEX);
   });
 
-  it('overrides a stale designation constellation (LT Vul)', () => {
-    // AT-HYG filed HIP 93603 under Sagitta; it sits in Vulpecula and GCVS
-    // named it for Vulpecula. Anything that reinstates a per-record editorial
-    // cell has to lose to the designation, or the star searches as
-    // "LT Sagitta".
-    const star = makeStar({ hip: 93603, desigConIndex: conIndexOf('sge') });
-    const r = applyVariability([star], new Map<string, VarStarData>(), {
-      byHip: new Map([[93603, 'LT Vul']]), byHd: new Map(), byGaia: new Map(),
+  it('names its own constellation where nothing upstream does (LT Vul, RY Cen)', () => {
+    // LT Vul: filed under Sagitta once, sits in Vulpecula, named for Vulpecula.
+    // RY Cen: cell and position both Lupus, designation Centaurus — a mover no
+    // check reading a positional or editorial cell can see. Neither carries a
+    // Bayer or Flamsteed designation, so IV/27A has no row and the variable
+    // name is the only nomenclature there is.
+    const ltVul = makeStar({ hip: 93603, desigConIndex: NO_CONSTELLATION_INDEX });
+    const ryCen = makeStar({ hip: 71, desigConIndex: NO_CONSTELLATION_INDEX });
+    const r = applyVariability([ltVul, ryCen], new Map<string, VarStarData>(), {
+      byHip: new Map([[93603, 'LT Vul'], [71, 'RY Cen']]),
+      byHd: new Map(),
+      byGaia: new Map(),
     });
-    expect(star.desigConIndex).toBe(conIndexOf('vul'));
-    expect(r.desigConSupplied).toBe(1);
+    expect(ltVul.desigConIndex).toBe(conIndexOf('vul'));
+    expect(ryCen.desigConIndex).toBe(conIndexOf('cen'));
+    expect(r.desigConSupplied).toBe(2);
   });
 
-  it('surfaces a designated mover whose position agrees with the stale cell', () => {
-    // RY Cen / EQ Vul shape: AT-HYG's cell and the IAU position both say
-    // Lupus, but the designation names Centaurus. Deriving the designation
-    // constellation from either misses these entirely.
-    const star = makeStar({ hip: 71, desigConIndex: conIndexOf('lup') });
-    const r = applyVariability([star], new Map<string, VarStarData>(), {
-      byHip: new Map([[71, 'RY Cen']]), byHd: new Map(), byGaia: new Map(),
+  it('yields to IV/27A where a Bayer/Flamsteed designation disagrees (TY Crv)', () => {
+    // 8 records carry both a Bayer/Flamsteed designation and a variable name in
+    // DIFFERENT constellations (HD 104337 is Crater's Flamsteed star and
+    // Corvus's TY). One uint8 serves one of them: IV/27A wins because its
+    // consumers compose the label out of this field, while a GCVS label reads
+    // the constellation out of the designation string and loses only its
+    // expanded alias.
+    const tyCrv = makeStar({ hip: 58587, desigConIndex: conIndexOf('crt') });
+    const r = applyVariability([tyCrv], new Map<string, VarStarData>(), {
+      byHip: new Map([[58587, 'TY Crv']]), byHd: new Map(), byGaia: new Map(),
     });
-    expect(star.desigConIndex).toBe(conIndexOf('cen'));
-    expect(r.desigConSupplied).toBe(1);
+    expect(tyCrv.desigConIndex).toBe(conIndexOf('crt'));
+    expect(r.desigConSupplied).toBe(0);
   });
 
   it('fills an absent designation constellation rather than only correcting one', () => {
@@ -334,6 +342,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
   });
 
   it('leaves an already-set index alone when the designation agrees or is silent', () => {
+    // The dominant post-IV/27A shape: 698 records where the two agree.
     const agreeing = makeStar({ hip: 72, desigConIndex: conIndexOf('and') });
     const silent = makeStar({ hip: 73, desigConIndex: conIndexOf('dor') });
     const r = applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
