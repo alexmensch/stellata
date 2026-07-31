@@ -6,11 +6,13 @@ from a `## Release notes` section in the merging PR's body. There is
 no separate `CHANGELOG.md`.
 
 Releases are cut automatically by `.github/workflows/deploy.yml`:
-every push to `main` whose `package.json#version` differs from the
-previous commit triggers a build, a `wrangler deploy`, a `v<version>`
-tag, and a GitHub release. PRs that bump the version therefore
-release on merge; the work below is mostly about getting the bump
-*and the release notes section* right on the PR.
+a push to `main` that changes `package.json#version` triggers a build
+and a `wrangler deploy` at HEAD, then a `v<version>` tag and a GitHub
+release for **each** bumped commit in the push. PRs that bump the
+version therefore release on merge — including every PR in a merged
+stack, which lands as several commits in one push. The work below is
+mostly about getting the bump *and the release notes section* right on
+the PR.
 
 ## Release notes per PR
 
@@ -26,12 +28,14 @@ stripped before the check, so the empty template doesn't pass).
 Pure metadata PRs that attach `skip-version-bump` are exempt — they
 don't ship a release.
 
-When the deploy workflow runs, it parses the squash-commit subject
-for the merged PR number, fetches the body via `gh pr view --json
-body`, extracts the `## Release notes` section, and passes it to
-`gh release create --notes-file`. If the section can't be found
-(non-squash merge, body fetch fails) it falls back to GitHub's
-`--generate-notes`.
+When the deploy workflow runs, it parses each releasing commit's
+squash subject for the merged PR number, fetches that body via `gh pr
+view --json body`, extracts the `## Release notes` section, and passes
+it to `gh release create`. If the section can't be found (non-squash
+merge, body fetch fails) it falls back to GitHub's `--generate-notes`.
+
+Notes are per PR, not per push: a stack of six bumping PRs merged
+together produces six release pages, each with its own author's prose.
 
 ## Version policy
 
@@ -162,16 +166,25 @@ fix PR hits the same block.
 
 On every push to `main`, `deploy.yml`:
 
-1. Compares `HEAD:package.json#version` against `HEAD~1:package.json#version`.
-   No change → exits silently.
+1. Compares `HEAD:package.json#version` against the version at the
+   push's base commit (`github.event.before`, falling back to `HEAD~1`
+   when that commit isn't in the clone). No change → exits silently.
 2. Checks out with LFS, sets up Node 24 + Python 3, runs `pnpm install --frozen-lockfile`
    and `pnpm run build` (binaries + catalog + binaries-runtime +
    clouds + local-group + dust-sync + client).
-3. Deploys to Cloudflare via `cloudflare/wrangler-action@v4`.
-4. Tags `v<version>` and pushes the tag.
-5. Extracts the `## Release notes` section from the merging PR's
-   body and creates the GitHub release with `--notes-file`. Falls
-   back to `--generate-notes` if the section is missing.
+3. Deploys to Cloudflare via `cloudflare/wrangler-action@v4` — once,
+   at HEAD.
+4. Runs `scripts/release/cut-releases.ts`, which walks the pushed range
+   and, for each commit whose version differs from its predecessor's,
+   pushes a `v<version>` tag at that commit and creates its release
+   from that commit's own PR body. Falls back to `--generate-notes`
+   where the section is missing, and skips any version already
+   released.
+
+Step 4 is what makes a merged stack correct: the base-commit
+comparison in step 1 means the push still deploys when its tip commit
+carries no bump, and the per-commit walk means no intermediate
+version's notes are dropped. See `scripts/release/README.md`.
 
 Required repository secrets:
 
@@ -194,11 +207,14 @@ Required repository secrets:
 If the workflow needs to be bypassed (e.g. infrastructure outage):
 
 ```sh
-VERSION=$(node -p "require('./package.json').version")
-git tag -a "v$VERSION" -m "v$VERSION"
-git push origin "v$VERSION"
-# Use --notes-file with the PR's release-notes section, or
-# --generate-notes as a quick fallback.
-gh release create "v$VERSION" --title "v$VERSION" --generate-notes
 pnpm run deploy
+# Same planner the workflow uses: --dry-run first to see which tags
+# it would cut, from which commits and PRs, then drop the flag.
+pnpm exec tsx scripts/release/cut-releases.ts --base <base-sha> --dry-run
+pnpm exec tsx scripts/release/cut-releases.ts --base <base-sha>
 ```
+
+`--base` is the last commit that was already released; `--head`
+defaults to `HEAD`. Already-released versions are skipped, so
+re-running after a partial failure is safe. To back-fill releases the
+workflow missed entirely, pass the tag it last cut as `--base`.
