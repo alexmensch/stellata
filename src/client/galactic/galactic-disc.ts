@@ -2,17 +2,26 @@ import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from './galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
+import {
+  BULGE_HALF_THICKNESS_PC,
+  BULGE_RADIUS_PC,
+  DISC_HALF_THICKNESS_PC,
+  DISC_RADIUS_PC,
+} from '../milkyway/milkyway-column-pure';
 
-// 15 kpc midplane radius — outer reference rim of the MW disc wireframe.
-// Exported so the MW SVG label (`createMilkyWayLabel` in local-group.ts)
-// can anchor to the rim's projected silhouette rather than the bulge
-// projection (which sits ~12× smaller than the disc and made the label
-// hug the GC core instead of the disc edge).
-export const MIDPLANE_RADIUS_PC = 15_000;
-const THICKNESS_HALF_PC = 400;
+// Every extent here is the matching Milky Way proxy-mesh envelope, taken
+// by import rather than restated: the wireframe's job is to outline the
+// volume that emits, so a divergence renders light outside its own
+// outline. Hand-set values previously ran 1.5× short vertically on the
+// disc and 2× on the bulge.
+//
+// Exported for the MW SVG label (`createMilkyWayLabel` in local-group.ts),
+// which anchors to the rim's projected silhouette rather than the bulge
+// projection — the latter sits ~12× smaller and made the label hug the GC
+// core instead of the disc edge.
+export const MIDPLANE_RADIUS_PC = DISC_RADIUS_PC;
+const THICKNESS_HALF_PC = DISC_HALF_THICKNESS_PC;
 const MIDPLANE_SEGMENTS = 128;
-const BULGE_RADIUS_PC = 3000;
-const BULGE_HALF_THICKNESS_PC = 1500;
 const BULGE_SEGMENTS = 64;
 
 // Default colour — warm amber for the dark theme. Chart (mono) mode hides

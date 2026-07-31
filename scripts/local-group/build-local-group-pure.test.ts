@@ -11,7 +11,9 @@ import {
   mergeRowAndOverride,
   parseOrient,
   projectedSemiMajorPc,
+  renderedWireframeAxes,
   raDecDistanceToIcrs,
+  type LgEmission,
   roundSig,
   skyBasis,
   slugify,
@@ -457,7 +459,9 @@ describe('buildStandaloneOverride', () => {
     expect(out.id).toBe('m31');
     expect(out.name).toBe('M31');                      // catalog-designation, no suffix
     expect(out.kind).toBe('disc');
-    expect(out.axes).toEqual([15000, 15000, 500]);
+    // The wireframe draws the emission envelope, not the structural
+    // axes from overrides.tsv (15000 x 15000 x 500) — renderedWireframeAxes.
+    expect(out.axes).toEqual([21200, 21200, 2000 / 3]);
     expect(out.source).toBe('OVERRIDE');
     expect(out.distance).toBe(776_000);
     expect(Math.hypot(...out.center)).toBeCloseTo(776_000, 0);
@@ -682,3 +686,43 @@ describe('slugify', () => {
 });
 
 void SOL_AXIS_X; // suppress unused-export-test export
+
+describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
+  const discEmission = (rEnvPc: number, zEnvPc: number): LgEmission => ({
+    family: 'disc', mV: 3.44, rdPc: 5300, zdPc: 500 / 3, rEnvPc, zEnvPc, density0: 1,
+  });
+  const sersicEmission = (uMax: number): LgEmission => ({
+    family: 'sersic', mV: 10, reffAxesPc: [400, 400, 400], n: 1,
+    bn: 1.676543, pn: 0.44493, uMax, density0: 1,
+  });
+
+  it('a disc wireframe IS the emission envelope', () => {
+    expect(renderedWireframeAxes([15000, 15000, 500], discEmission(21200, 2000 / 3)))
+      .toEqual([21200, 21200, 2000 / 3]);
+  });
+
+  it('closes the 4/3 vertical overhang that z_d = c/3 forces', () => {
+    // z_d = c/3 makes the vertical envelope 4*z_d = 4c/3, so the glow
+    // spilled a third of the disc's thickness past its own outline from
+    // every edge-on viewpoint. This is the case Alex reported on M31.
+    const structuralC = 500;
+    const zEnv = DISC_ENV_SCALE_LENGTHS * (structuralC / DISC_ZD_SHELL_DIVISOR);
+    expect(zEnv / structuralC).toBeCloseTo(4 / 3, 12);
+    const axes = renderedWireframeAxes([15000, 15000, structuralC], discEmission(21200, zEnv));
+    expect(axes[2]).toBe(zEnv);
+  });
+
+  it('leaves a spheroid wireframe on the half-light ellipsoid', () => {
+    // Deliberately SMALLER than the u99 mesh: light outside a half-light
+    // radius is what "half-light" means, and matching them would ring a
+    // mostly-empty volume at an invisible surface brightness.
+    expect(renderedWireframeAxes([400, 400, 400], sersicEmission(4.557)))
+      .toEqual([400, 400, 400]);
+  });
+
+  it('pins the spheroid gap so it stays deliberate rather than drifting', () => {
+    const uMax = u99(1);
+    expect(uMax).toBeGreaterThan(4.5);
+    expect(uMax).toBeLessThan(4.7);
+  });
+});

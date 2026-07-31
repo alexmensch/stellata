@@ -15,8 +15,8 @@ src/client/galactic/
                                   GALACTIC_CENTRE_PC (Vector3 at R₀ =
                                   8.122 kpc). Reused by the Milky Way
                                   volumetric layer (src/client/milkyway/README.md).
-  galactic-disc.ts                15 kpc midplane ring + ±400 pc
-                                  thickness rings + 3 × 1.5 kpc bulge
+  galactic-disc.ts                15 kpc midplane ring + ±600 pc
+                                  thickness rings + 5 × 3 kpc bulge
                                   wireframe; always-on in dark mode,
                                   hidden in chart mode.
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
@@ -49,9 +49,18 @@ cycle gates it as `galacticDiscWireframe` (floor `representational`); the
 per-frame warp/fade update is skipped when the detail cycle doesn't
 permit it (`../scene/README.md` § Detail-level declutter cycle). A 15 kpc
 midplane ring, two thickness rings at
-±400 pc, and a 3 kpc × 1.5 kpc bulge wireframe (three orthogonal ring
+±600 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
-sits ~8 kpc *inside* the disc, not at its middle. Each ring is a basic
+sits ~8 kpc *inside* the disc, not at its middle.
+
+**Every extent is imported from the Milky Way proxy meshes**
+(`../milkyway/milkyway-column-pure.ts` `DISC_RADIUS_PC` /
+`DISC_HALF_THICKNESS_PC` / `BULGE_RADIUS_PC` /
+`BULGE_HALF_THICKNESS_PC`), never restated here. The wireframe's job is
+to outline the volume that emits, so any divergence renders band light
+outside its own outline — which is what the previous hand-set ±400 pc
+and 3 × 1.5 kpc did, running 1.5× short vertically on the disc and 2× on
+the bulge. Changing a mesh envelope now moves the ring with it. Each ring is a basic
 `LineLoop` whose vertices are pre-baked once into absolute ICRS via
 `GAL_TO_ICRS` plus the GC offset; per frame `discGroup.position` is
 rebased to `-worldOffset` (via `.copy(worldOffset).negate()` on the

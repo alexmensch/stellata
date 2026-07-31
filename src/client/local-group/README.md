@@ -57,6 +57,35 @@ an `lg` FocusableProviders entry), park at `lgViewingDistancePc`
 (2.4 × max semi-axis, the shared `viewingDistanceForExtent` rule), and
 ride the URL's universal any-kind focus/to SID refs unchanged.
 
+### Wireframe extent — two isophotes, on purpose
+
+The wireframe and the glow do **not** draw the same surface, and which
+one an object gets depends on its family:
+
+- **Disc family (LMC, M31, M33) — the wireframe IS the emission
+  envelope.** Derived by `renderedWireframeAxes`
+  (`scripts/local-group/README.md`), not hand-entered, so it cannot
+  drift. `overrides.tsv`'s `a_pc/b_pc/c_pc` remain the *structural*
+  input the emission geometry is built from; they are no longer what
+  gets drawn. This exists because the overhang was structural rather
+  than incidental: `z_d = c/3` makes the vertical envelope `4·z_d =
+  4c/3`, so the glow spilled a third of the disc's thickness past its
+  own outline from every edge-on viewpoint, and M31 ran 41 % past it
+  radially too (`4·R_d = 21.2 kpc` against a hand-set 15 kpc — which
+  also happens to put the new outline at M31's R₂₅).
+- **Spheroid family (everything else) — the wireframe stays the
+  half-light ellipsoid** (LVDB `rhalf_physical`), and is therefore
+  ~4.6× *smaller* than the u₉₉ emission mesh at n = 1. That gap is
+  correct and deliberate: light outside a half-light radius is what
+  "half-light" means, and matching the two would ring a mostly-empty
+  volume at a surface brightness nobody can see, while inflating every
+  pick target and label silhouette. Read these rings as a **contour,
+  not a containment shell**.
+
+The Milky Way follows the disc rule through the same reasoning —
+`../galactic/README.md` imports its ring extents straight from the band's
+proxy meshes.
+
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
 - **disc**: midplane `LineLoop` plus a thickness pair offset ±c along

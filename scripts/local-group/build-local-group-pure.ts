@@ -598,6 +598,34 @@ export function buildEmission(opts: {
   };
 }
 
+/**
+ * Semi-axes the wireframe actually draws, given the structural axes and
+ * the solved emission block.
+ *
+ * **Disc family: the wireframe is the emission envelope.** The structural
+ * axes stay the emission's input (z_d is still `structural c / 3`, so
+ * density0 and the vertical profile are untouched) — this only moves the
+ * silhouette out to where emission actually stops. Without it the mesh
+ * always overhangs the rings, by construction and unavoidably: the
+ * vertical envelope is `4·z_d = 4c/3`, so the glow spills a third of the
+ * disc's thickness past its own outline from every edge-on viewpoint.
+ *
+ * **Spheroid family: unchanged, and deliberately smaller than the mesh.**
+ * The wireframe is the half-light ellipsoid (LVDB `rhalf_physical`) while
+ * the mesh runs to u₉₉ — a ~4.6× ratio at n = 1. Light outside a
+ * half-light radius is what "half-light" means, and matching them would
+ * draw rings around a mostly-empty volume at a surface brightness nobody
+ * can see. `local-group.test.ts` pins the ratio so the gap stays
+ * deliberate.
+ */
+export function renderedWireframeAxes(
+  structuralAxes: [number, number, number],
+  emission: LgEmission,
+): [number, number, number] {
+  if (emission.family !== 'disc') return structuralAxes;
+  return [emission.rEnvPc, emission.rEnvPc, emission.zEnvPc];
+}
+
 /** Assemble an LgObject from already-resolved fields. Both call sites
  *  (`mergeRowAndOverride` and `buildStandaloneOverride`) arrive at the
  *  same shape after they decide where axes/orient/position come from;
@@ -682,7 +710,7 @@ export function mergeRowAndOverride(
     row.ra,
     row.dec,
     distancePc,
-    axes,
+    renderedWireframeAxes(axes, emission),
     orient,
     source,
     emission,
@@ -719,7 +747,7 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
     ov.raDeg,
     ov.decDeg,
     distancePc,
-    ov.axes,
+    renderedWireframeAxes(ov.axes, emission),
     orient,
     'OVERRIDE',
     emission,
