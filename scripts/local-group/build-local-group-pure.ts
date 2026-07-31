@@ -467,14 +467,14 @@ export function buildLvdbDefault(row: LvdbRow): {
  *  default for dSphs. */
 export const SERSIC_N_FALLBACK = 1;
 
-/** Disc vertical scale height convention: z_d = c_wireframe / 3 — the
+/** Disc vertical scale height convention: z_d = structural c / 3 — the
  *  shell sits at 3 scale heights ≈ 95% of the vertical light. */
 export const DISC_ZD_SHELL_DIVISOR = 3;
 
 /** Disc envelope rule: proxy extends to 4 scale lengths in plane and 4
- *  scale heights vertically (≥ the wireframe on both), matching the
- *  observed ~4–5 R_d disc truncations. The solver compensates whatever
- *  the envelope clips, so totals stay exact. */
+ *  scale heights vertically (≥ the structural axes on both), matching
+ *  the observed ~4–5 R_d disc truncations. The solver compensates
+ *  whatever the envelope clips, so totals stay exact. */
 export const DISC_ENV_SCALE_LENGTHS = 4;
 
 /** Sky-projected semi-major axis of an override shell — the scale
@@ -498,14 +498,16 @@ export function projectedSemiMajorPc(
 export function buildEmission(opts: {
   row: LvdbRow | null;
   override: OverrideRow | undefined;
-  /** Resolved wireframe semi-axes — the silhouette the emission must
-   *  never sit inside. */
-  wireframeAxes: [number, number, number];
+  /** Structural semi-axes from `overrides.tsv` / LVDB. The disc family's
+   *  wireframe is derived back out of the emission block this returns
+   *  (`renderedWireframeAxes`), so these are an input to the geometry,
+   *  not the silhouette. */
+  structuralAxes: [number, number, number];
   orient: Orientation;
   distancePc: number;
   name: string;
 }): LgEmission {
-  const { row, override, wireframeAxes, orient, distancePc, name } = opts;
+  const { row, override, structuralAxes, orient, distancePc, name } = opts;
   const mV = override?.mV ?? row?.apparentMagV ?? null;
   if (mV === null) {
     throw new Error(`${name}: no apparent V magnitude in LVDB or overrides — cannot calibrate emission`);
@@ -518,9 +520,9 @@ export function buildEmission(opts: {
     if (rdPc === undefined) {
       throw new Error(`${name}: disc profile requires r_d_pc in overrides.tsv`);
     }
-    const zdPc = wireframeAxes[2] / DISC_ZD_SHELL_DIVISOR;
-    const rEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * rdPc, wireframeAxes[0]);
-    const zEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * zdPc, wireframeAxes[2]);
+    const zdPc = structuralAxes[2] / DISC_ZD_SHELL_DIVISOR;
+    const rEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * rdPc, structuralAxes[0]);
+    const zEnvPc = Math.max(DISC_ENV_SCALE_LENGTHS * zdPc, structuralAxes[2]);
     const bt = override?.bulgeToTotal ?? 0;
     const flux = fluxNumber(mV);
     const density0 = solveDensity0(
@@ -577,9 +579,9 @@ export function buildEmission(opts: {
   } else {
     // Default path: the wireframe ellipsoid IS the R_e ellipsoid —
     // silhouette and glow share one geometry source.
-    reffAxesPc = wireframeAxes;
+    reffAxesPc = structuralAxes;
   }
-  const uMax = Math.max(u99(n), wireframeAxes[0] / reffAxesPc[0]);
+  const uMax = Math.max(u99(n), structuralAxes[0] / reffAxesPc[0]);
   const density0 = solveDensity0(
     distancePc,
     fluxNumber(mV),
@@ -598,26 +600,9 @@ export function buildEmission(opts: {
   };
 }
 
-/**
- * Semi-axes the wireframe actually draws, given the structural axes and
- * the solved emission block.
- *
- * **Disc family: the wireframe is the emission envelope.** The structural
- * axes stay the emission's input (z_d is still `structural c / 3`, so
- * density0 and the vertical profile are untouched) — this only moves the
- * silhouette out to where emission actually stops. Without it the mesh
- * always overhangs the rings, by construction and unavoidably: the
- * vertical envelope is `4·z_d = 4c/3`, so the glow spills a third of the
- * disc's thickness past its own outline from every edge-on viewpoint.
- *
- * **Spheroid family: unchanged, and deliberately smaller than the mesh.**
- * The wireframe is the half-light ellipsoid (LVDB `rhalf_physical`) while
- * the mesh runs to u₉₉ — a ~4.6× ratio at n = 1. Light outside a
- * half-light radius is what "half-light" means, and matching them would
- * draw rings around a mostly-empty volume at a surface brightness nobody
- * can see. `local-group.test.ts` pins the ratio so the gap stays
- * deliberate.
- */
+/** Semi-axes the wireframe draws: the emission envelope for the disc
+ *  family, the structural half-light ellipsoid for spheroids. Why the two
+ *  families differ — see README.md § Emission solver. */
 export function renderedWireframeAxes(
   structuralAxes: [number, number, number],
   emission: LgEmission,
@@ -699,7 +684,7 @@ export function mergeRowAndOverride(
   const emission = buildEmission({
     row,
     override,
-    wireframeAxes: axes,
+    structuralAxes: axes,
     orient,
     distancePc,
     name: row.name,
@@ -736,7 +721,7 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
   const emission = buildEmission({
     row: null,
     override: ov,
-    wireframeAxes: ov.axes,
+    structuralAxes: ov.axes,
     orient,
     distancePc,
     name: ov.name,

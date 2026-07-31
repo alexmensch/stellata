@@ -504,7 +504,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: dwarf,
       override: undefined,
-      wireframeAxes: dwarfGeom.axes,
+      structuralAxes: dwarfGeom.axes,
       orient: dwarfGeom.orient,
       distancePc: 84_000,
       name: dwarf.name,
@@ -521,7 +521,7 @@ describe('buildEmission', () => {
     const base = {
       row: measured,
       override: undefined as OverrideRow | undefined,
-      wireframeAxes: dwarfGeom.axes,
+      structuralAxes: dwarfGeom.axes,
       orient: dwarfGeom.orient,
       distancePc: 84_000,
       name: 'X',
@@ -553,7 +553,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: smc,
       override,
-      wireframeAxes: override.axes,
+      structuralAxes: override.axes,
       orient: parseOrient(override.orient),
       distancePc: 62_440,
       name: 'SMC',
@@ -571,7 +571,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: lmc,
       override: { name: 'LMC', axes: [4500, 4500, 1000], orient: 'disc:i=32,pa=135', refDoi: 'x', profile: 'disc', rdPc: 1500 },
-      wireframeAxes: [4500, 4500, 1000],
+      structuralAxes: [4500, 4500, 1000],
       orient: parseOrient('disc:i=32,pa=135'),
       distancePc: 49_590,
       name: 'LMC',
@@ -591,7 +591,7 @@ describe('buildEmission', () => {
         name: 'M31', axes: [15000, 15000, 500], orient: 'disc:i=77,pa=37', refDoi: 'x',
         mV: 3.44, profile: 'disc', rdPc: 5300, bulgeToTotal: 0.31, bulgeRePc: 1000, bulgeN: 2.2,
       },
-      wireframeAxes: [15000, 15000, 500],
+      structuralAxes: [15000, 15000, 500],
       orient: parseOrient('disc:i=77,pa=37'),
       distancePc: 776_000,
       name: 'M31',
@@ -616,7 +616,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: noMag,
         override: undefined,
-        wireframeAxes: [100, 100, 100],
+        structuralAxes: [100, 100, 100],
         orient: { kind: 'pa', pa: 0 },
         distancePc: 100_000,
         name: 'NoMag',
@@ -629,7 +629,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: makeRow({}),
         override: { name: 'X', axes: [1, 1, 1], orient: 'disc:i=0,pa=0', refDoi: 'x', profile: 'disc' },
-        wireframeAxes: [1, 1, 1],
+        structuralAxes: [1, 1, 1],
         orient: parseOrient('disc:i=0,pa=0'),
         distancePc: 1000,
         name: 'X',
@@ -642,7 +642,7 @@ describe('buildEmission', () => {
       buildEmission({
         row: makeRow({ rhalfPhysicalPc: null }),
         override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x' },
-        wireframeAxes: [300, 200, 200],
+        structuralAxes: [300, 200, 200],
         orient: parseOrient('pa:0'),
         distancePc: 1000,
         name: 'X',

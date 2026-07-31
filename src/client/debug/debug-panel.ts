@@ -392,20 +392,6 @@ export function makeSlider(opts: SliderOpts): HTMLDivElement {
   return row;
 }
 
-/** Log-scale mapping for sliders whose useful range spans decades
- *  (volumetric brightness gains). Slider travels [0, 1]; the value is
- *  10^lerp(minExp, maxExp). */
-export function logScale(minExp: number, maxExp: number): {
-  toSlider: (v: number) => number;
-  fromSlider: (s: number) => number;
-} {
-  const range = maxExp - minExp;
-  return {
-    toSlider: (v) => (v <= 0 ? 0 : (Math.log10(v) - minExp) / range),
-    fromSlider: (s) => Math.pow(10, minExp + s * range),
-  };
-}
-
 export interface ColorOpts {
   label: string;
   initial: { r: number; g: number; b: number };

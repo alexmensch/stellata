@@ -2,6 +2,7 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
+#include <stellata_hdr_emission>
 
 // Instanced volumetric proxies for Local Group emission. Each instance
 // is a unit sphere scaled to the component's emission envelope
@@ -16,7 +17,6 @@ uniform float uOmegaPxArcsec2;
 
 // Resolution floor, CSS px — mirrors MIN_PROJECTED_RADIUS_PX.
 const float MIN_PROJECTED_RADIUS_PX = 1.0;
-const float ARCSEC_TO_RAD = 4.84813681109536e-6;
 
 in vec3 aCenterAbs;
 in vec4 aQuat;
@@ -53,7 +53,11 @@ void main() {
   // Sub-pixel proxies expand to the resolution floor: axes × k, scale
   // lengths × k, density0 ÷ k³ leaves flux exact and the profile shape
   // identical (see local-group-emission-pure.ts subPixelExpansion).
-  float pxPerRadian = 1.0 / (ARCSEC_TO_RAD * sqrt(max(uOmegaPxArcsec2, 1e-12)));
+  // Sized off the LARGEST semi-axis, not the orientation-dependent
+  // projected one: over-expanding a mesh the viewer can already resolve
+  // would move a visible silhouette, and every object near the floor is
+  // near-isotropic on screen anyway.
+  float pxPerRadian = stellataPxPerRadian(uOmegaPxArcsec2);
   float meshRadiusPc = max(max(aAxes.x, aAxes.y), aAxes.z);
   float distPc = max(length(cameraPosition - centerLocal), 1e-6);
   float meshRadiusPx = (meshRadiusPc / distPc) * pxPerRadian;

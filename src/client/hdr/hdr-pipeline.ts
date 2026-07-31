@@ -7,6 +7,7 @@ import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
 import emissionChunk from './emission.glsl?raw';
+import extendedEmitterChunk from './extended-emitter.glsl?raw';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
@@ -21,6 +22,8 @@ import { bindStatisticGate } from './statistic/statistic-attachment';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
+(THREE.ShaderChunk as Record<string, string>)['stellata_extended_emitter'] =
+  extendedEmitterChunk;
 
 /** Ship gate for the HDR epic — **live**. Every emitter — stars, the
  *  Milky Way, the planet layers and the Local Group glow — emits physical

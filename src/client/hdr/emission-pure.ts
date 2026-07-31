@@ -52,6 +52,14 @@ export function pixelSolidAngleArcsec2(pxPerRadian: number): number {
   return arcsecPerPx * arcsecPerPx;
 }
 
+/** Inverse of `pixelSolidAngleArcsec2`. A layer that needs a plate scale
+ *  recovers it from `uOmegaPxArcsec2` rather than taking a second
+ *  uniform, so a resize cannot leave the two disagreeing about the
+ *  viewport. Mirrors `stellataPxPerRadian`. */
+export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
+  return 1 / (ARCSEC_TO_RAD * Math.sqrt(Math.max(omegaPxArcsec2, 1e-12)));
+}
+
 /**
  * Luminance one pixel receives from an extended source of surface
  * brightness `magPerArcsec2`. The pixel's flux magnitude is

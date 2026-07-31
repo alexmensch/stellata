@@ -3,14 +3,18 @@
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
 import { relativeLuminance } from '../hdr/tonemap-pure';
+import {
+  BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
+  DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
+} from '../milkyway/milkyway-column-pure';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import type { LgEmission, LgObject } from './local-group-loader';
 
-/** Population tints, seeded from the Milky Way palette (warm
- *  near-white bulge tone for old spheroid populations, pale lavender
- *  for discs). Per-object `emission.color` overrides. */
-export const SPHEROID_COLOR_RGB: [number, number, number] = [1.0, 0.9647, 0.9294];
-export const DISC_COLOR_RGB: [number, number, number] = [0.6706, 0.6588, 0.8745];
+/** Population tints — the Milky Way's own palette, by import: a spheroid
+ *  here is the same old population as its bulge, and an external disc the
+ *  same as ours. Per-object `emission.color` overrides. */
+export const SPHEROID_COLOR_RGB: [number, number, number] = [...MW_BULGE_COLOR_RGB];
+export const DISC_COLOR_RGB: [number, number, number] = [...MW_DISC_COLOR_RGB];
 
 /** Surface-brightness zero point of a raymarched column, mag/arcsec².
  *

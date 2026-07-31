@@ -4,14 +4,17 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import * as THREE from 'three';
 import { LUMA_WEIGHTS } from './tonemap-pure';
-import { LUMA_CEIL } from './emission-pure';
+import { LUMA_CEIL, pxPerRadianFromSolidAngle } from './emission-pure';
+import './hdr-pipeline';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
 const tonemapChunk = read('./tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
+const extendedEmitterChunk = read('./extended-emitter.glsl');
 
 function lumaWeights(chunk: string): number[] {
   const m = chunk.match(
@@ -32,6 +35,22 @@ describe('shared chunk constants', () => {
     expect(m).not.toBeNull();
     expect(Number(m![1])).toBe(LUMA_CEIL);
   });
+
+  // The plate scale a layer recovers from uOmegaPxArcsec2. Its arcsec
+  // conversion is a GLSL literal, so nothing but this pins it to
+  // ARCSEC_TO_RAD — and a wrong plate scale mis-sizes a resolution floor
+  // silently rather than failing to compile.
+  it('emission.glsl recovers px-per-radian exactly as emission-pure does', () => {
+    const m = emissionChunk.match(
+      /const float STELLATA_ARCSEC_TO_RAD = ([\d.e-]+);/,
+    );
+    expect(m).not.toBeNull();
+    const arcsecToRad = Number(m![1]);
+    for (const omega of [4, 40, 4_000, 40_000]) {
+      const shader = 1 / (arcsecToRad * Math.sqrt(omega));
+      expect(shader).toBeCloseTo(pxPerRadianFromSolidAngle(omega), 6);
+    }
+  });
 });
 
 // Both chunks can land in one fragment stage from H4 on (a per-pixel
@@ -45,6 +64,7 @@ describe('include guards', () => {
   it('guards each chunk against double inclusion', () => {
     expect(guarded(tonemapChunk, 'STELLATA_TONEMAP')).toBe(true);
     expect(guarded(emissionChunk, 'STELLATA_HDR_EMISSION')).toBe(true);
+    expect(guarded(extendedEmitterChunk, 'STELLATA_EXTENDED_EMITTER')).toBe(true);
   });
 
   it('shares one guard for the duplicated luma-weight declaration', () => {
@@ -54,19 +74,74 @@ describe('include guards', () => {
   });
 
   it('closes every #ifndef it opens', () => {
-    for (const chunk of [tonemapChunk, emissionChunk]) {
+    for (const chunk of [tonemapChunk, emissionChunk, extendedEmitterChunk]) {
       const opens = chunk.match(/^#ifndef /gm)?.length ?? 0;
       const closes = chunk.match(/^#endif/gm)?.length ?? 0;
       expect(closes).toBe(opens);
     }
   });
 
-  // Keeps the guards' reason alive: the Milky Way fragment stage really
-  // does take both, because it derives a per-pixel magnitude from its
-  // column integral AND applies the operator inline off-target.
-  it('has a live consumer including both chunks in one stage', () => {
-    const mwFrag = read('../milkyway/milkyway.frag.glsl');
-    expect(mwFrag).toContain('#include <stellata_hdr_emission>');
-    expect(mwFrag).toContain('#include <stellata_tonemap>');
+  // Keeps the guards' reason alive: stellata_extended_emitter pulls both
+  // into one stage, and the LG vertex stage takes the unit on its own for
+  // the plate scale — so a fragment stage gets stellata_hdr_emission from
+  // two paste paths at once.
+  it('the composite chunk pulls both into one stage', () => {
+    expect(extendedEmitterChunk).toContain('#include <stellata_hdr_emission>');
+    expect(extendedEmitterChunk).toContain('#include <stellata_tonemap>');
+  });
+
+  it('has live consumers on both the composite and the bare unit', () => {
+    expect(read('../milkyway/milkyway.frag.glsl'))
+      .toContain('#include <stellata_extended_emitter>');
+    expect(read('../local-group/local-group-emission.frag.glsl'))
+      .toContain('#include <stellata_extended_emitter>');
+    expect(read('../local-group/local-group-emission.vert.glsl'))
+      .toContain('#include <stellata_hdr_emission>');
+  });
+});
+
+// An unregistered or misspelled chunk name throws inside the renderer's
+// program build — first frame on a GPU, which CI does not have. Resolve
+// the same way three does (recursively, through the real ShaderChunk
+// registry) so the name is checked here instead.
+describe('chunk resolution', () => {
+  const resolve = (src: string): string =>
+    src.replace(/^[ \t]*#include +<([\w\d./]+)>/gm, (_m, name: string) => {
+      const chunk = (THREE.ShaderChunk as Record<string, string>)[name];
+      if (chunk === undefined) throw new Error(`Can not resolve #include <${name}>`);
+      return resolve(chunk);
+    });
+
+  const STAGES = [
+    '../milkyway/milkyway.frag.glsl',
+    '../local-group/local-group-emission.frag.glsl',
+    '../local-group/local-group-emission.vert.glsl',
+  ];
+
+  it('every stellata include on an extended-source stage resolves', () => {
+    for (const stage of STAGES) {
+      const resolved = resolve(read(stage));
+      expect(resolved).not.toMatch(/#include\s*<stellata_/);
+    }
+  });
+
+  it('the composite pulls its callees in ahead of the call', () => {
+    for (const stage of STAGES.slice(0, 2)) {
+      const resolved = resolve(read(stage));
+      expect(resolved.indexOf('float stellataSurfaceBrightnessLuminance('))
+        .toBeLessThan(resolved.indexOf('void stellataEmitExtendedSource('));
+      expect(resolved.indexOf('vec3 stellataTonemapUndithered('))
+        .toBeLessThan(resolved.indexOf('void stellataEmitExtendedSource('));
+    }
+  });
+
+  // The luma weights land in the resolved text twice — once per chunk —
+  // and the shared guard is what makes the second paste inert. Assert the
+  // guard reaches the stage, not the text count.
+  it('carries the shared guard onto every stage that pastes both chunks', () => {
+    for (const stage of STAGES.slice(0, 2)) {
+      const resolved = resolve(read(stage));
+      expect(resolved).toContain('#ifndef STELLATA_LUMA_WEIGHTS_DECLARED');
+    }
   });
 });

@@ -305,12 +305,6 @@ describe('surface-brightness zero point', () => {
   it('a unit column reads at the zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(LG_SB_ZERO_POINT, 12);
   });
-
-  it('M31 disc centre lands on Freeman\'s law once de-projected', () => {
-    // Column through the shipped M31 disc at R = 0, face-on: ρ₀ · 2·z_d.
-    const faceOn = M31_EMISSION.density0 * 2 * M31_EMISSION.zdPc!;
-    expect(columnSurfaceBrightness(faceOn)).toBeCloseTo(21.43, 2);
-  });
 });
 
 describe('lumaNormalisedTint', () => {

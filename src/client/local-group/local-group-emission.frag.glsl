@@ -2,8 +2,7 @@ precision highp float;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
-#include <stellata_hdr_emission>
-#include <stellata_tonemap>
+#include <stellata_extended_emitter>
 
 // Bounded volumetric raymarch through per-instance Local Group proxy
 // volumes — the milkyway.frag.glsl scheme (unit-sphere entry/exit,
@@ -74,14 +73,12 @@ void main() {
   float c = dot(vCamLocal, vCamLocal) - 1.0;
   float disc = b * b - a * c;
   if (disc < 0.0) {
-    fragColor = vec4(0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float tEnter = max((-b - sqrt(disc)) / a, 0.0);
   if (tEnter >= 1.0) {
-    fragColor = vec4(0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
 
@@ -89,8 +86,7 @@ void main() {
   float sStart = max(tEnter * worldPerT, S_MIN_PC);
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
-    fragColor = vec4(0.0);
-    outStatistic = vec4(0.0);
+    stellataEmitNothing(fragColor, outStatistic);
     return;
   }
   float logMin = log(sStart);
@@ -114,31 +110,13 @@ void main() {
     accum += densityAt(pLocal) * dsPc;
   }
 
-  // --- Surface brightness → luminance in the HDR unit -----------------
   // accum is Σρ·ds, which the solver's normalisation makes flux per
-  // steradian — so this pixel's surface brightness is
-  //   S = SB_ZERO_POINT - 2.5*log10(accum)     [mag/arcsec²]
-  // and feeding S - 2.5*log10(Ω_px) back through the unit collapses the
-  // log round-trip to one scalar gain. vColor carries hue only (it is
-  // luma-normalised on the CPU side), so chromaticity rides through
-  // without touching the solved flux.
-  float gain = stellataSurfaceBrightnessLuminance(
-    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2);
-  vec3 emitted = min(vColor * accum * gain, vec3(STELLATA_LUMA_CEIL));
-
-  // Extended source: its emission is already true surface brightness, so
-  // flux and peak are the same quantity (hdr/statistic/README.md § The
-  // unit). Alpha 1 matches what attachment 0 writes under additive blend.
-  float glowL = dot(emitted, STELLATA_LUMA_WEIGHTS);
-  outStatistic = stellataStatisticTexel(glowL, glowL, 1.0);
-
-  if (uHdrTarget > 0.5) {
-    fragColor = vec4(emitted, 1.0);
-    return;
-  }
-  // Undithered: overlapping instances (M31's disc and bulge) both cover
-  // this pixel and blend additively, so a fragCoord-keyed offset would
-  // land more than once.
-  fragColor = vec4(
-    stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), 1.0);
+  // steradian, so SB_ZERO_POINT is the surface brightness of a unit
+  // column. vColor carries hue only — it is luma-normalised on the CPU
+  // side — so the scalar gain leaves the solved flux alone.
+  stellataEmitExtendedSource(
+    vColor * accum,
+    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2,
+    uHdrTarget, uWhitePoint, uHighlightDesat,
+    fragColor, outStatistic);
 }
