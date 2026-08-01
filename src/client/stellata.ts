@@ -70,7 +70,9 @@ import {
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
+import { KIND_TRAITS, type FocusableProviders, type Target, type TargetKind } from './camera/focus/focus-target';
+import type { KindContext, KindPick } from './kinds/kind-module';
+import { buildKindModules, KIND_ROSTER, type BuiltKindModules } from './kinds/kind-modules';
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { parkDistance } from './camera/focus/focus-transition';
@@ -78,9 +80,6 @@ import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-r
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import { PlanetBodyField } from './solar-system/planets/planet-body-field';
-import { PROBE_MARKER_PX, ProbeField } from './solar-system/probes/probe-field';
-import { ProbePathLayer } from './solar-system/probes/probe-path-layer';
-import type { ProbeTrajectory } from './solar-system/probes/probe-trajectory';
 import { PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
@@ -168,6 +167,10 @@ import { buildPulsationSuppressMask } from './star-pipeline/pulsation/pulsation-
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
   catalog: Catalog;
+  /** Kind-module record, artifacts already loaded (kinds/kind-modules.ts).
+   *  Omitted → fresh unloaded modules, so module-backed kinds attach with
+   *  empty rosters (headless tests). */
+  kinds?: BuiltKindModules;
 }
 
 export type CameraMode = 'navigate' | 'observe';
@@ -354,10 +357,10 @@ export class Stellata implements FrameAnchor {
   // focus, gated by per-planet apparent magnitude + per-host distance cull.
   private planetBodyField: PlanetBodyField;
   private planetMeshLayer: PlanetMeshLayer;
-  // Physical layer, Sol-anchored — the five Sun-escape probes at their
-  // position for the model clock, plus each one's traversed trail.
-  private probeMarkerField: ProbeField;
-  private probePathLayer: ProbePathLayer;
+  /** Kind-module record — one module per migrated TargetKind, null while
+   *  a kind's wiring is still inline (kinds/README.md). Public so search
+   *  and overlays dispatch generic legs (displayName, searchEntries). */
+  readonly kinds: BuiltKindModules;
   private readonly localDepthPass = new LocalDepthPass();
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -421,8 +424,9 @@ export class Stellata implements FrameAnchor {
   // planet-focus ref — see the constructor's attach block.
   readonly planetSystemsReady!: Promise<void>;
 
-  constructor({ canvas, catalog }: StellataOptions) {
+  constructor({ canvas, catalog, kinds }: StellataOptions) {
     this.catalog = catalog;
+    this.kinds = kinds ?? buildKindModules();
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -593,16 +597,34 @@ export class Stellata implements FrameAnchor {
       baseExposure: () => exposureForMagLimit(this.exposure.getLimitMag()),
       reduced: () => this.reduction.current(),
     });
-    this.probeMarkerField = new ProbeField(sharedUniforms);
-    this.scene.add(this.probeMarkerField.group);
-    this.probePathLayer = new ProbePathLayer(sharedUniforms);
-    this.scene.add(this.probePathLayer.group);
+    // Kind-module attach, in roster order. Each returned scene layer
+    // registers HERE — before every inline-wired layer — so module
+    // layers update first; the probe field must write this frame's
+    // samples before the planet layer's moving-focal ride reads them.
+    const kindCtx: KindContext = {
+      scene: this.scene,
+      camera: this.camera,
+      canvas: this.renderer.domElement,
+      sharedUniforms,
+      solIndex: catalog.solIndex,
+      getT: () => this.getT(),
+      getWorldOffset: () => this.worldOffset,
+      getFocusedTarget: () => this.focus.getFocusedTarget(),
+      getMonochrome: () => this.monochrome,
+      detailPermits: (id) => this.detailPermits(id),
+      constellationOf: (kind, idx) => this.constellationOf(kind, idx),
+      onFrame: (handler) => this.bus.on('frame', handler),
+    };
+    for (const kind of KIND_ROSTER) {
+      const layer = this.kinds[kind]?.attach(kindCtx);
+      if (layer) this.layers.register(layer);
+    }
     this.solarCluster = new SolarSystemCluster(
       this.planetBodyField,
       this.planetMeshLayer,
       this.orbitRingsLayer,
-      this.probeMarkerField,
-      this.probePathLayer,
+      this.kinds.probe.field,
+      this.kinds.probe.pathLayer,
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
@@ -669,7 +691,7 @@ export class Stellata implements FrameAnchor {
       getLocalGroupLayer: () => this.localGroupLayer,
       getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
-      getProbeField: () => this.probeMarkerField,
+      kindPicks: this.collectKindPicks(),
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
@@ -802,20 +824,7 @@ export class Stellata implements FrameAnchor {
         chartPlateauDistance: () => null,
         planetSystemHost: () => null,
       },
-      probe: {
-        anchorInto: (idx, out) => {
-          if (!this.probeMarkerField.localPositionInto(idx, out)) return false;
-          out.add(this.worldOffset);
-          return true;
-        },
-        localPositionInto: (idx, out) => this.probeMarkerField.localPositionInto(idx, out),
-        focusParkDistance: () => starPhysics.PROBE_PARK_DIST_PC,
-        orbitFloor: () => starPhysics.PROBE_ORBIT_FLOOR_PC,
-        arrivalRadiusPc: () => null,
-        renderedSizePx: () => PROBE_MARKER_PX,
-        chartPlateauDistance: () => null,
-        planetSystemHost: () => this.catalog.solIndex,
-      },
+      probe: this.kinds.probe.focusable(),
       planet: {
         anchorInto: (idx, out) =>
           this.planetBodyField.planetAbsolutePositionInto(idx, out),
@@ -1019,10 +1028,7 @@ export class Stellata implements FrameAnchor {
         // so a future non-Sol host's pin works live yet won't round-trip
         // through ?v=.
         planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
-        // Every loaded probe pins and round-trips: its SID domain is
-        // built over the loaded roster, so localIndex IS the Target idx
-        // with no translation step (main.ts).
-        probe: (idx) => this.probeMarkerField.probeAt(idx) !== null,
+        probe: (idx) => this.kinds.probe.pinnable(idx),
         lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
         shell: (idx) => (this.shells.at(idx)?.sid ?? 0) !== 0,
         cloud: () => false,
@@ -1103,31 +1109,6 @@ export class Stellata implements FrameAnchor {
   // keep ticking (clouds stay visible during warp by design — flying
   // past Taurus is a feature). See scene/README.md.
   private registerSceneLayers(): void {
-    // Registered before the planet layer so the moving-focal ride there
-    // reads this frame's probe sample, not last frame's: at high
-    // fast-forward one frame of a probe's motion is a visible offset.
-    // Sample positions are camera-independent, so the ride's camera
-    // translation landing after this entry changes nothing here.
-    this.layers.register({
-      update: (ctx) => {
-        this.probeMarkerField.update(ctx.t, ctx.camera);
-        // After the field wrote this frame's samples: each trail's last
-        // vertex IS the marker position it just resolved. Only the
-        // focused probe's trail draws.
-        this.probePathLayer.update(
-          this.probeMarkerField, ctx.t, ctx.camera, this.focusedProbeIdx(),
-        );
-      },
-      setMonochrome: (on) => {
-        this.probeMarkerField.setMonochrome(on);
-        this.probePathLayer.setMonochrome(on);
-      },
-      recenter: (newOrigin) => this.probeMarkerField.recenter(newOrigin),
-      dispose: () => {
-        this.probeMarkerField.dispose();
-        this.probePathLayer.dispose();
-      },
-    });
     this.layers.register({
       update: (ctx) => {
         this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
@@ -1393,8 +1374,18 @@ export class Stellata implements FrameAnchor {
     if (t?.kind === 'planet') {
       return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
     }
-    if (t?.kind === 'probe') return PROBE_MARKER_PX * 0.5;
+    if (t?.kind === 'probe') return this.focusables.probe.renderedSizePx(t.idx) * 0.5;
     return 0;
+  }
+
+  /** Kind-module pick surfaces for the Picker's generic dispatch. */
+  private collectKindPicks(): Partial<Record<TargetKind, KindPick>> {
+    const picks: Partial<Record<TargetKind, KindPick>> = {};
+    for (const kind of KIND_ROSTER) {
+      const pick = this.kinds[kind]?.pick;
+      if (pick) picks[kind] = pick;
+    }
+    return picks;
   }
   /** Absolute-space coordinate of the renderer's current local origin.
    *  Read-only snapshot; callers must not mutate. URL serialisation
@@ -1433,10 +1424,10 @@ export class Stellata implements FrameAnchor {
       this.clock.setTimeAbsolute(t);
     }
     // A URL restore jumps the clock and then applies its focus, both before
-    // the next frame. Probe focus reads the marker field's sample record, so
-    // it has to be resolved at the NEW `t` — seeding only at attach would
-    // recentre onto where the probe was when the page loaded.
-    this.probeMarkerField.resampleAt(this.getT());
+    // the next frame — t-sampled kind state (probe samples) has to be
+    // reseeded at the NEW `t` or a restored focus recentres onto where the
+    // object was when the page loaded.
+    for (const kind of KIND_ROSTER) this.kinds[kind]?.clockJumped?.(this.getT());
     this.bus.emit('state');
   }
   getMonochrome(): boolean { return this.monochrome; }
@@ -1517,13 +1508,15 @@ export class Stellata implements FrameAnchor {
    *  parks the camera AT the object, whose disc would render from the
    *  interior. One choke point dispatching per kind: star → the
    *  uHideFocusIdx shader pin, planet → the body field's uHideIdx,
-   *  probe → the marker field's hidden slot. Passing null (or a kind
+   *  module kinds → their setFocalHidden leg. Passing null (or a kind
    *  switch) unhides the other kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
     this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
       target?.kind === 'star' ? target.idx : -1;
     this.planetBodyField.setHiddenInstance(target?.kind === 'planet' ? target.idx : -1);
-    this.probeMarkerField.setHiddenInstance(target?.kind === 'probe' ? target.idx : -1);
+    for (const kind of KIND_ROSTER) {
+      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
+    }
   }
 
   getPois(): readonly Target[] { return this.poiStore.get(); }
@@ -2023,35 +2016,6 @@ export class Stellata implements FrameAnchor {
     return namer.nameAt(abs.add(this.worldOffset));
   }
 
-  /** Attach the loaded probe trajectories. Both layers are constructed in
-   *  the ctor and already in the scene (Sol-anchored, like the heliopause);
-   *  this binds the roster once the async load resolves. An empty roster
-   *  leaves both layers inert. */
-  attachProbes(trajectories: readonly ProbeTrajectory[]): void {
-    this.probeMarkerField.recenter(this.worldOffset);
-    this.probeMarkerField.attach(trajectories, this.getT());
-    this.probeMarkerField.setMonochrome(this.monochrome);
-    this.probePathLayer.attach(trajectories);
-    this.probePathLayer.setMonochrome(this.monochrome);
-  }
-
-  /** The probe marker field — read by the probe labels, the hover
-   *  provider, and the focus card for each marker's per-frame sample. */
-  get probeField(): ProbeField { return this.probeMarkerField; }
-
-  /** Roster index of the focused probe, or -1. The trail focus gate. */
-  private focusedProbeIdx(): number {
-    const t = this.focus.getFocusedTarget();
-    return t?.kind === 'probe' ? t.idx : -1;
-  }
-
-  /** Camera→probe distance in the local frame (pc); null when the
-   *  trajectory doesn't cover the current `t`. */
-  probeCameraDistancePc(idx: number): number | null {
-    const s = this.probeMarkerField.sampleFor(idx);
-    return s === null || !s.sampled ? null : this.camera.position.distanceTo(s.localPc);
-  }
-
   /** The Local Bubble shell layer — read by its silhouette label for the
    *  surface samples + attach state. */
   getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
@@ -2249,10 +2213,14 @@ export class Stellata implements FrameAnchor {
   private buildSceneElementBinds(): SceneElementBinds {
     const set = (id: SceneElementId, extra?: (on: boolean) => void) =>
       (on: boolean) => { this.detailPermitted[id] = on; extra?.(on); };
+    const kindPush: Partial<Record<SceneElementId, (on: boolean) => void>> = {};
+    for (const kind of KIND_ROSTER) {
+      Object.assign(kindPush, this.kinds[kind]?.detailBinds?.());
+    }
     return {
       stars: set('stars'),
       planetBodies: set('planetBodies'),
-      probeMarkers: set('probeMarkers', (on) => this.probeMarkerField.setPermitted(on)),
+      probeMarkers: set('probeMarkers', kindPush.probeMarkers),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
       milkyWayIsobar: set('milkyWayIsobar', (on) => {
         this.setMilkywayIsobar(on);
@@ -2263,7 +2231,7 @@ export class Stellata implements FrameAnchor {
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
       binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
-      probeTrails: set('probeTrails', (on) => this.probePathLayer.setPermitted(on)),
+      probeTrails: set('probeTrails', kindPush.probeTrails),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),

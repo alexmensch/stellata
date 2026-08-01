@@ -249,7 +249,7 @@ export class InputController {
   private pickLadderObject(x: number, y: number): Target | null {
     const star = this.deps.picker.pickStarHit(x, y, 16);
     const planet = this.deps.picker.pickPlanetClick(x, y, 16);
-    const probe = this.deps.picker.pickProbeHit(x, y, 16);
+    const probe = this.deps.picker.pickKindHit('probe', x, y, 16);
     const lg = this.deps.picker.pickLocalGroupHit(x, y, 16);
     const shell = this.deps.picker.pickShellHit(x, y);
     const picks: Array<{ kind: 'star' | 'planet' | 'probe' | 'lg' | 'shell'; hit: HoverHit } | null> = [

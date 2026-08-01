@@ -144,7 +144,7 @@ function makeHarness(): Harness {
             tier: state.pickLgTier,
           }
         : null),
-      pickProbeHit: () => (state.pickProbeResult !== null
+      pickKindHit: (kind: string) => (kind === 'probe' && state.pickProbeResult !== null
         ? {
             idx: state.pickProbeResult,
             cameraDistancePc: state.pickProbeDistancePc,

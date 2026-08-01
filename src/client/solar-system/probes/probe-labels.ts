@@ -1,13 +1,14 @@
 // Probe-name SVG labels, one per drawn marker. See README.md § Labels.
 
 import * as THREE from 'three';
-import type { Stellata } from '../../stellata';
+import type { KindContext } from '../../kinds/kind-module';
 import { setStyle } from '../../overlays/dirty-attr';
 import { placeAnchoredLabel } from '../../overlays/anchored-label';
 import { LABEL_OFFSET_PX } from '../planets/planet-labels';
+import type { ProbeField } from './probe-field';
 import { probeLabelText } from './probe-trajectory';
 
-export function createProbeLabels(stellata: Stellata): void {
+export function createProbeLabels(ctx: KindContext, field: ProbeField): void {
   const group = document.getElementById('probe-labels') as unknown as SVGGElement | null;
   if (!group) return;
 
@@ -18,7 +19,7 @@ export function createProbeLabels(stellata: Stellata): void {
     for (const el of entries) el.remove();
     entries.length = 0;
     const NS = 'http://www.w3.org/2000/svg';
-    for (let i = 0; i < stellata.probeField.probeCount(); i++) {
+    for (let i = 0; i < field.probeCount(); i++) {
       const text = document.createElementNS(NS, 'text') as SVGTextElement;
       text.setAttribute('class', 'probe-label');
       text.setAttribute('text-anchor', 'start');
@@ -38,14 +39,14 @@ export function createProbeLabels(stellata: Stellata): void {
   }
   setGroupVisible(false);
 
-  stellata.on('frame', () => {
-    if (entries.length !== stellata.probeField.probeCount()) rebuildEntries();
-    if (entries.length === 0 || stellata.getMonochrome()
-        || !stellata.detailPermits('probeLabels')) {
+  ctx.onFrame(() => {
+    if (entries.length !== field.probeCount()) rebuildEntries();
+    if (entries.length === 0 || ctx.getMonochrome()
+        || !ctx.detailPermits('probeLabels')) {
       setGroupVisible(false);
       return;
     }
-    const camera = stellata.camera;
+    const camera = ctx.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
     setGroupVisible(true);
@@ -54,14 +55,14 @@ export function createProbeLabels(stellata: Stellata): void {
       // Always-on while the marker is drawn: a probe is a discovery
       // affordance and its glyph carries no name of its own, so there is
       // no resolvability gate beyond the marker's own visibility.
-      const sample = stellata.probeField.sampleFor(i);
-      const traj = stellata.probeField.probeAt(i);
+      const sample = field.sampleFor(i);
+      const traj = field.probeAt(i);
       if (sample === null || !sample.visible || traj === null) {
         el.style.display = 'none';
         continue;
       }
       tmp.copy(sample.localPc);
-      const label = probeLabelText(traj, stellata.getT());
+      const label = probeLabelText(traj, ctx.getT());
       if (el.textContent !== label) el.textContent = label;
       placeAnchoredLabel(el, tmp, camera, w, h, LABEL_OFFSET_PX);
     }

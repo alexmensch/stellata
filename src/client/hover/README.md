@@ -17,9 +17,11 @@ lives entirely under `src/client/hover/`:
 - `hover-engine.ts` — the engine.
 - `hover-types.ts` — the `HoverProvider` contract.
 - `hover-pick-disambiguator.ts` — cross-provider picker tiebreak.
-- `*-hover-provider.ts` (one per layer) — stars, planets, deep-space
-  probes, Local Group, heliopause, boundary shells
-  (`shell-hover-provider.ts`, dispatching over the `ShellRegistry`), …
+- `*-hover-provider.ts` (one per layer) — stars, planets, Local Group,
+  boundary shells (`shell-hover-provider.ts`, dispatching over the
+  `ShellRegistry`), clouds. Kinds migrated onto kind modules build
+  their provider in the module instead (probes —
+  `../solar-system/probes/probe-module.ts`).
 - `formatters/*-hover-format.ts` (one per layer) — pure functions with
   their own vitest coverage.
 
@@ -153,12 +155,13 @@ How to apply:
   provider gates each `ShellPickSurface.visible()` on the shell's
   `isVisible()` (mirrors `group.visible` — the actual rendered state), so
   a decluttered / chart-hidden / camera-inside shell isn't hoverable.
-- For deep-space probes: `pickProbeHit` gates on the marker field's own
-  per-frame `visible` verdict — the same record the glyph's alpha comes
-  from — with `PROBE_MARKER_PX` as the hit-radius basis. Note the probe
-  layer has a focus gate on its **trail** and none on its marker; the
-  picker follows the marker, which is what this rule means by "the
-  renderer's draw predicate".
+- For deep-space probes: the probe kind module's pick leg
+  (`../solar-system/probes/probe-module.ts`) gates on the marker
+  field's own per-frame `visible` verdict — the same record the glyph's
+  alpha comes from — with `PROBE_MARKER_PX` as the hit-radius basis.
+  Note the probe layer has a focus gate on its **trail** and none on
+  its marker; the picker follows the marker, which is what this rule
+  means by "the renderer's draw predicate".
 
 When designing or auditing a new hover provider, walk through this
 checklist:

@@ -11,11 +11,7 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
-import type { ProbeField } from '../../solar-system/probes/probe-field';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
-
-// No probe roster in these fixtures — pickProbeHit walks an empty field.
-const EMPTY_PROBE_FIELD = { probeCount: () => 0 } as unknown as ProbeField;
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -163,7 +159,7 @@ function makePicker(
     getLocalGroupLayer: () => null,
     getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-    getProbeField: () => EMPTY_PROBE_FIELD,
+    kindPicks: {},
     getWorldOffset: () => new THREE.Vector3(),
     getWarpActive: () => opts.warpActive ?? false,
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
@@ -456,7 +452,7 @@ describe('Picker / cloud picks', () => {
       getLocalGroupLayer: () => null,
       getShells: () => new ShellRegistry(),
       getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-      getProbeField: () => EMPTY_PROBE_FIELD,
+      kindPicks: {},
       getWorldOffset: () => new THREE.Vector3(),
       getWarpActive: () => opts.warpActive ?? false,
       renderedSizePxFn: () => 20,
