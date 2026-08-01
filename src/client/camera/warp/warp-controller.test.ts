@@ -350,7 +350,7 @@ describe('WarpController — lifecycle + idempotency', () => {
   it('warpToCloud bails when the cloud index is not seeded', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.warp.warpTo({ kind: 'cloud', idx: 99 }); // makeCloudFocusTarget returns null
+    h.warp.warpTo({ kind: 'cloud', idx: 99 }); // makeFocusTarget returns null
     expect(h.warp.isActive()).toBe(false);
   });
 

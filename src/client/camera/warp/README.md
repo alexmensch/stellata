@@ -16,7 +16,7 @@ The warp consumes focusable objects through the `FocusTarget` contract
   warp-only scratch state. The integration shell composes the
   controller alongside Picker / AimController and delegates the
   animate-loop tick when `warp.isActive()` returns true. Cross-
-  controller coupling (focus state, FocusTarget factories,
+  controller coupling (focus state, the FocusTarget builder,
   floating-origin recentre, vector-slot clear) lives behind the
   `FocusOps` interface implemented by `FocusController` (in
   `../focus/`).

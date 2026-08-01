@@ -235,8 +235,8 @@ export class ProbeField {
   }
 
   /** Rebase onto a new floating origin. Every sample's `localPc` moves with
-   *  it: `setProbeFocus` reads `localPositionInto` immediately after the
-   *  recentre it just triggered, so leaving them in the old frame would
+   *  it: the hard-focus setter reads `localPositionInto` immediately after
+   *  the recentre it just triggered, so leaving them in the old frame would
    *  shift the camera by the whole recentre delta. */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
     this.worldOffset.copy(newWorldOffset);

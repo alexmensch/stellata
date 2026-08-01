@@ -70,7 +70,8 @@ import {
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import type { FocusableProviders, Target, TargetKind } from './camera/focus/focus-target';
+import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
+import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
@@ -200,12 +201,6 @@ export type StellataEventMap = {
   state: void;
   frame: void;
 };
-
-/** Hard focus kinds whose object moves in the local frame as `t`
- *  advances, so the camera has to ride it — see § Moving-focal ride in
- *  camera/focus/README.md. A star's motion is orbital perturbation and
- *  rides its own path (`applyFocalFrameRide`). */
-const MOVING_FOCUS_KINDS: ReadonlySet<TargetKind> = new Set(['planet', 'probe']);
 
 export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
@@ -707,94 +702,143 @@ export class Stellata implements FrameAnchor {
       aim: this.aim,
       referenceUp: this.referenceUp,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
-      getClouds: () => this.clouds,
-      getLocalGroup: () => this.localGroupLayer,
-      getShells: () => this.shells,
-      getPlanetField: () => this.planetBodyField,
-      getProbeField: () => this.probeMarkerField,
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
       focalPerturbationInto: (idx, out) =>
         this.binaryOrbitField?.focalPerturbationInto(idx, this.getT(), out) ?? false,
     });
-    // Kind-agnostic geometry registry — the shell's per-kind knowledge
-    // in one exhaustive record. Lazily-attached layers are read through
-    // the private per-kind helpers' getters, so attach cycles need no
+    // Kind-agnostic geometry + focus-state registry — the shell's
+    // per-kind knowledge in one exhaustive record. Lazily-attached
+    // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
+    const cloudPark = (idx: number): number => {
+      const clouds = this.clouds;
+      if (!clouds?.clouds[idx]) return 0;
+      return parkDistance({
+        R_pc: clouds.focusExtentPc(idx),
+        dMinFloor: clouds.viewingDistancePc(idx),
+      });
+    };
+    const lgPark = (idx: number): number => {
+      const obj = this.localGroupLayer?.objects[idx];
+      if (!obj) return 0;
+      return parkDistance({
+        R_pc: maxSemiAxisPc(obj),
+        dMinFloor: lgViewingDistancePc(obj),
+      });
+    };
+    const shellPark = (idx: number): number => this.shells.focusParkDistancePc(idx);
+    const planetRadiusPc = (idx: number): number | null => {
+      const p = this.planetBodyField.planetAt(idx);
+      return p ? p.radiusKm * KM_PC : null;
+    };
+    const softFloor = (park: (idx: number) => number) =>
+      (idx: number): number => Math.min(GLOBAL_MIN_DIST_PC, park(idx));
     (this as { focusables: FocusableProviders }).focusables = {
       star: {
+        anchorInto: (idx, out) => {
+          if (idx < 0 || idx >= this.catalog.count) return false;
+          const p = this.catalog.positions;
+          out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+          return true;
+        },
         localPositionInto: (idx, out) => {
           if (idx < 0 || idx >= this.catalog.count) return false;
           this.starLocalPositionInto(idx, out);
           return true;
         },
         focusParkDistance: (idx) => this.focus.parkDistForStar(idx),
+        orbitFloor: (idx) => starPhysics.minOrbitDistForStar({
+          catalog: this.catalog,
+          idx,
+          fovMinorRad: starPhysics.fovMinorRad(this.camera),
+        }),
         arrivalRadiusPc: (idx) =>
           Math.max(this.catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
         renderedSizePx: (idx) => this.renderedSizePxFor(idx),
+        chartPlateauDistance: (idx, magBright) =>
+          chartPlateauDistancePc(this.catalog.absmag[idx], magBright),
+        planetSystemHost: (idx) => idx,
       },
       cloud: {
+        anchorInto: (idx, out) => this.clouds?.focusCenterAbsInto(idx, out) ?? false,
         localPositionInto: (idx, out) =>
           this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
-        focusParkDistance: (idx) => {
-          const clouds = this.clouds;
-          if (!clouds?.clouds[idx]) return 0;
-          return parkDistance({
-            R_pc: clouds.focusExtentPc(idx),
-            dMinFloor: clouds.viewingDistancePc(idx),
-          });
-        },
+        focusParkDistance: cloudPark,
+        orbitFloor: softFloor(cloudPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) => this.renderedCloudSizePx(idx),
+        chartPlateauDistance: () => null,
+        planetSystemHost: () => null,
       },
       lg: {
+        anchorInto: (idx, out) => {
+          const obj = this.localGroupLayer?.objects[idx];
+          if (!obj) return false;
+          out.copy(obj.centerAbs);
+          return true;
+        },
         localPositionInto: (idx, out) =>
           this.localGroupLayer?.lgLocalPositionInto(idx, this.worldOffset, out) ?? false,
-        focusParkDistance: (idx) => {
-          const obj = this.localGroupLayer?.objects[idx];
-          if (!obj) return 0;
-          return parkDistance({
-            R_pc: maxSemiAxisPc(obj),
-            dMinFloor: lgViewingDistancePc(obj),
-          });
-        },
+        focusParkDistance: lgPark,
+        orbitFloor: softFloor(lgPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) =>
           this.localGroupLayer?.renderedLgSizePx(
             idx, this.camera, this.worldOffset, () => this.angularToPx(),
           ) ?? 0,
+        chartPlateauDistance: () => null,
+        planetSystemHost: () => null,
       },
       shell: {
+        anchorInto: (idx, out) => this.shells.at(idx)?.centerAbsInto(out) ?? false,
         localPositionInto: (idx, out) => this.shells.localPositionInto(idx, this.worldOffset, out),
-        focusParkDistance: (idx) => this.shells.focusParkDistancePc(idx),
+        focusParkDistance: shellPark,
+        orbitFloor: softFloor(shellPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) =>
           this.shells.renderedSizePx(idx, this.worldOffset, this.camera.position, this.angularToPx()),
+        chartPlateauDistance: () => null,
+        planetSystemHost: () => null,
       },
       probe: {
+        anchorInto: (idx, out) => {
+          if (!this.probeMarkerField.localPositionInto(idx, out)) return false;
+          out.add(this.worldOffset);
+          return true;
+        },
         localPositionInto: (idx, out) => this.probeMarkerField.localPositionInto(idx, out),
         focusParkDistance: () => starPhysics.PROBE_PARK_DIST_PC,
+        orbitFloor: () => starPhysics.PROBE_ORBIT_FLOOR_PC,
         arrivalRadiusPc: () => null,
         renderedSizePx: () => PROBE_MARKER_PX,
+        chartPlateauDistance: () => null,
+        planetSystemHost: () => this.catalog.solIndex,
       },
       planet: {
+        anchorInto: (idx, out) =>
+          this.planetBodyField.planetAbsolutePositionInto(idx, out),
         localPositionInto: (idx, out) =>
           this.planetBodyField.planetLocalPositionInto(idx, out),
         focusParkDistance: (idx) => {
-          const p = this.planetBodyField.planetAt(idx);
-          if (!p) return 0;
-          return starPhysics.parkDistForPlanet(
-            p.radiusKm * KM_PC,
-            starPhysics.fovMinorRad(this.camera),
-          );
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.parkDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
         },
-        arrivalRadiusPc: (idx) => {
-          const p = this.planetBodyField.planetAt(idx);
-          return p ? p.radiusKm * KM_PC : null;
+        orbitFloor: (idx) => {
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.minOrbitDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
         },
+        arrivalRadiusPc: planetRadiusPc,
         renderedSizePx: (idx) =>
           this.planetBodyField.renderedPlanetSizePx(idx, this.camera.position),
+        chartPlateauDistance: () => null,
+        planetSystemHost: (idx) =>
+          this.planetBodyField.hostPlanetOf(idx)?.hostStarIdx ?? null,
       },
     };
     this.warp = new WarpController({
@@ -1761,7 +1805,7 @@ export class Stellata implements FrameAnchor {
   // target is the parsec-ahead look pin rather than on the object.
   private applyMovingFocalRide(): void {
     const focused = this.focus.getFocusedTarget();
-    if (focused === null || !MOVING_FOCUS_KINDS.has(focused.kind)) {
+    if (focused === null || !KIND_TRAITS[focused.kind].moving) {
       this._movingRideIdx = null;
       return;
     }
@@ -2053,8 +2097,9 @@ export class Stellata implements FrameAnchor {
    *  attachClouds runs. */
   get cloudLayer(): MolecularClouds | null { return this.clouds; }
 
-  /** Kind-agnostic travel — see FocusController.flyTo. Stars park via
-   *  `focusStar`; soft kinds ride the shared focus-park path. */
+  /** Kind-agnostic travel — see FocusController.flyTo. Hard kinds park
+   *  via the recentring focus path; soft kinds ride the shared
+   *  focus-park path. */
   flyTo(target: Target, opts: { animate?: boolean } = {}) {
     this.focus.flyTo(target, opts);
   }

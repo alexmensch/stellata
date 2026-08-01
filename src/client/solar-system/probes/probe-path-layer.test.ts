@@ -134,8 +134,9 @@ describe('ProbeField out-of-frame reads', () => {
   });
 
   it('rebases localPc onto a new origin, so a focus recentre reads the new frame', () => {
-    // setProbeFocus calls localPositionInto immediately after the recentre
-    // it triggered; a stale localPc would shift the camera by the delta.
+    // The hard-focus setter calls localPositionInto immediately after the
+    // recentre it triggered; a stale localPc would shift the camera by the
+    // delta.
     const h = makeHarness();
     h.draw(0);
     const shift = new THREE.Vector3(5 * AU_PC, 0, 0);

@@ -57,16 +57,17 @@ Three structural findings drive the design:
 
 1. **Verb-oriented registries, centrally wired.** The kind's knowledge
    is smeared across the capability wiring sites (`stellata.focusables`
-   is a ~75-line inline record; `main.ts` builds card providers as ~90
+   is a ~130-line inline record after phase 1 folded the FocusTarget
+   legs into it; `main.ts` builds card providers as ~90
    lines of inline closures reaching into shell internals). `TargetKind`
    and `FocusKind` are the same union spelled twice.
-2. **Two parallel per-kind geometry contracts.** `FocusableProvider`
-   and `FocusTarget` overlap ~60%; the per-kind `makeXFocusTarget`
-   factories in `focus-controller.ts` mostly re-derive legs the provider
-   record already has. Hard/soft and moving-kind membership
-   (`isHardTarget`, `MOVING_FOCUS_KINDS`) are hand-maintained sets
-   rather than declared properties of the kind.
-3. **`stellata.ts` is three files in one** (2,816 lines): a legitimate
+2. **Two parallel per-kind geometry contracts.** *(Closed in phase 1.)*
+   `FocusableProvider` and `FocusTarget` overlapped ~60%, with per-kind
+   `makeXFocusTarget` factories re-deriving legs the provider record
+   already had; `FocusTarget` is now built generically from the
+   provider, and hard/moving membership is declared data in
+   `KIND_TRAITS` rather than a hand-maintained set.
+3. **`stellata.ts` is three files in one** (2,861 lines): a legitimate
    composition root + frame loop (~900); per-kind glue that grows with
    every kind (~600); and a facade of ~90 one-line forwarding shims over
    the controllers (~500+ with doc comments) that grows with every
@@ -102,8 +103,8 @@ what is today scattered across the wiring sites:
 ```ts
 interface ObjectKindModule {
   kind: TargetKind;
-  hard: boolean;              // replaces isHardTarget's spelled-out list
-  moving: boolean;            // replaces MOVING_FOCUS_KINDS
+  hard: boolean;              // absorbs the kind's KIND_TRAITS row
+  moving: boolean;            // (phase 1 landed hard/moving there)
   critical?: boolean;         // blocks first paint (star catalog only)
   load(baseUrl, onProgress): Promise<Artifact | null>;  // NEVER rejects
   attach(ctx: KindContext, artifact): KindRuntime | null;
@@ -172,19 +173,20 @@ module's API.
 
 ## Contract consolidations
 
-### Merge `FocusTarget` into `FocusableProvider` (phase 1)
+### Merge `FocusTarget` into `FocusableProvider` (phase 1 — landed)
 
 `FocusableProvider` (`localPositionInto`, `focusParkDistance`,
 `arrivalRadiusPc`, `renderedSizePx`) and `FocusTarget` (`anchorInto`,
 `localPositionInto`, `parkRadius`, `physicalRadius`, `applyFocus`,
-`emitFocusEvents`, `chartPlateauDistance`) are parallel per-kind
-geometry contracts. Phase 1 merges them: the provider record gains the
-missing legs, `applyFocus` / `emitFocusEvents` share the hard/soft
-dispatch via the declared `hard` flag and the existing
-`parkOnFocalTarget` tail, and `FocusTarget` instances are built
-generically from the provider record. This deletes the
-`makeFocusTarget` switch and the five ~50-line per-kind factories — the
-single biggest per-kind cost centre — before the module rotation begins.
+`emitFocusEvents`, `chartPlateauDistance`) were parallel per-kind
+geometry contracts. Phase 1 merged them: the provider record gained the
+missing legs (`anchorInto`, `orbitFloor`, `chartPlateauDistance`,
+`planetSystemHost`), `applyFocus` / `emitFocusEvents` became single
+shared implementations reading those legs, hard/moving membership moved
+to the declared `KIND_TRAITS` record, and one `parkOnFocalTarget` tail
+now serves both the hard and soft entry points. The `makeFocusTarget`
+switch and the six per-kind factories — the single biggest per-kind cost
+centre — are gone, ahead of the module rotation.
 
 ### Facade flattening (phase 4)
 
@@ -263,8 +265,8 @@ if it rises in priority, that phase rises with it.
 Tracked as the object-kind modularity epic in bd; one child per phase,
 dependency-linked in order. Sizing per bead-authoring rules.
 
-1. **Merge `FocusTarget` into `FocusableProvider`** — self-contained,
-   high value/risk ratio; kills the per-kind factories.
+1. **Merge `FocusTarget` into `FocusableProvider`** — landed.
+   Self-contained, high value/risk ratio; killed the per-kind factories.
 2. **`KindContext` + `ObjectKindModule` + pilot migration (probes).**
    Probes are the newest, cleanest kind. The pilot settles the
    `KindContext` field list and amends the contract sketch.

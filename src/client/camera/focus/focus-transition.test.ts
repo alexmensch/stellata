@@ -4,6 +4,7 @@ import {
   newFocusLerpFrom,
   parkDistance,
   tickFocusLerp,
+  viewingDistanceForExtent,
 } from './focus-transition';
 import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {
@@ -55,6 +56,26 @@ describe('parkDistance', () => {
     const Rpeak = 2 * R_SUN_PC;
     const d = parkDistance({ R_pc: Rpeak, dMinFloor: 0 });
     expect(d).toBe(AU_PC + Rpeak);
+  });
+
+  it('is the identity over a soft kind\'s viewing distance for every real object', () => {
+    // A soft kind's parkRadius reads focusParkDistance — parkDistance over
+    // the viewing distance — where it used to read the viewing distance
+    // itself. 2.4 R dominates AU + R above R = AU / 1.4, and the 5 pc
+    // default floor dominates below it, so the two agree for clouds and LG
+    // objects at any size and for floorless shells down to ~0.71 AU.
+    for (const R_pc of [200 * AU_PC, 1, 10, 5000]) {
+      for (const floorPc of [0, 5]) {
+        const viewing = viewingDistanceForExtent(R_pc, floorPc);
+        expect(parkDistance({ R_pc, dMinFloor: viewing })).toBe(viewing);
+      }
+    }
+  });
+
+  it('lets the AU term win under the crossover, which no real shell reaches', () => {
+    const R_pc = 0.5 * AU_PC;
+    const viewing = viewingDistanceForExtent(R_pc, 0);
+    expect(parkDistance({ R_pc, dMinFloor: viewing })).toBe(AU_PC + R_pc);
   });
 });
 

@@ -1,6 +1,6 @@
-// Per-object FocusTarget contract consumed by warp / focus-lerp /
-// arrival code. See src/client/camera/focus/README.md § FocusTarget
-// contract.
+// Per-kind focusable contracts: kind traits, the FocusableProvider
+// registry, and the FocusTarget camera-transition view built from it.
+// See src/client/camera/focus/README.md § FocusableProviders.
 
 import * as THREE from 'three';
 
@@ -26,33 +26,91 @@ export function targetsEqual(a: Target | null, b: Target | null): boolean {
   return a.kind === b.kind && a.idx === b.idx;
 }
 
-/** Hard focus kinds (star / planet / probe) recentre the floating origin
- *  onto the object and drop the orbit floor to a per-object physical
- *  solve; they're also the only valid observe anchors (the camera parks
- *  exactly at the object, which needs the float32-clean local frame a
- *  recentre establishes). Soft kinds (cloud / LG / shell) do neither. */
-export function isHardTarget(t: Target | null): boolean {
-  return t !== null && (t.kind === 'star' || t.kind === 'planet' || t.kind === 'probe');
+/** Per-kind interaction traits.
+ *  `hard`: focus recentres the floating origin onto the object and drops
+ *  the orbit floor to a per-object physical solve; hard kinds are also
+ *  the only valid observe anchors (the camera parks exactly at the
+ *  object, which needs the float32-clean local frame a recentre
+ *  establishes). Soft kinds do neither.
+ *  `moving`: the object moves in the local frame as `t` advances, so the
+ *  moving-focal ride translates the camera with it (a star's orbital
+ *  perturbation rides its own focal-frame path instead). */
+export interface KindTraits {
+  readonly hard: boolean;
+  readonly moving: boolean;
 }
 
-/** Per-kind geometry legs the kind-agnostic shell surface dispatches
- *  through (flyTo park math, overlay projection, chevron sizing).
- *  Camera-transition code consumes objects through `FocusTarget`
- *  instead. Star-only affordances are getFocusedStar() guards, never
- *  provider legs — see README.md § FocusableProviders before adding
- *  one. */
+/** EXHAUSTIVE over TargetKind — adding a kind without declaring its
+ *  traits fails tsc. Don't weaken it to a partial map. */
+export const KIND_TRAITS = {
+  star: { hard: true, moving: false },
+  cloud: { hard: false, moving: false },
+  lg: { hard: false, moving: false },
+  planet: { hard: true, moving: true },
+  shell: { hard: false, moving: false },
+  probe: { hard: true, moving: true },
+} as const satisfies { readonly [K in TargetKind]: KindTraits };
+
+/** The kinds whose `hard` trait is declared true, derived from the
+ *  record rather than restated — flipping a row moves the kind between
+ *  `HardTarget` and the soft remainder with no second edit. */
+export type HardKind = {
+  [K in TargetKind]: (typeof KIND_TRAITS)[K]['hard'] extends true ? K : never;
+}[TargetKind];
+
+/** A Target statically known to be a hard kind. */
+export type HardTarget = Target & { readonly kind: HardKind };
+
+/** Hard-kind predicate over the declared traits — never spell the
+ *  membership out at a call site. Narrows away the null and down to the
+ *  hard kinds, so guarded callers can hand the target straight to the
+ *  hard-only paths. */
+export function isHardTarget(t: Target | null): t is HardTarget {
+  return t !== null && KIND_TRAITS[t.kind].hard;
+}
+
+/** Per-kind geometry + focus-state legs. One provider per kind, built
+ *  by the integration shell; the shell surfaces dispatch through it
+ *  (flyTo park math, overlay projection, chevron sizing) and
+ *  FocusController derives every focus mutation and `FocusTarget` from
+ *  it, so a new kind implements this record and nothing else.
+ *  Star-only affordances are getFocusedStar() guards, never provider
+ *  legs — see README.md § FocusableProviders before adding one. */
 export interface FocusableProvider {
-  /** Floating-frame position; false when the layer hasn't loaded or
-   *  the index is out of range (out untouched). */
+  /** Absolute-space anchor (catalog-frame parsecs) — the
+   *  `recenterOrigin` input when a hard kind is focused and when the
+   *  warp's mid-Fly recentre pivots onto the object. False when the
+   *  layer hasn't loaded or the index is out of range (out untouched). */
+  anchorInto(idx: number, out: THREE.Vector3): boolean;
+  /** Floating-frame position; same false-on-unavailable contract as
+   *  `anchorInto`. */
   localPositionInto(idx: number, out: THREE.Vector3): boolean;
-  /** Camera-to-object distance the focus-park lerp lands at. */
+  /** Camera-to-object distance every park lands at: the focus-park lerp
+   *  destination, the unfocus zoom-out anchor, and the warp's
+   *  source / dest offsets. */
   focusParkDistance(idx: number): number;
+  /** Manual-zoom floor applied while this object is focused. Hard
+   *  kinds: the per-object physical solve. Soft kinds: the global
+   *  floor, unless the object's own park distance is tighter — an
+   *  AU-scale shell parks inside the global floor and would otherwise
+   *  be clamped straight back out by `controls.update()`. */
+  orbitFloor(idx: number): number;
   /** Geometric radius (pc) driving the angular-size arrival ease, or
-   *  null when the kind has none (ellipsoids) — the curve falls back
-   *  to its log-d profile. */
+   *  null when the kind has none (ellipsoids, fixed-pixel markers) —
+   *  the curve falls back to its log-d profile. */
   arrivalRadiusPc(idx: number): number | null;
   /** Rendered silhouette diameter in px at the current camera. */
   renderedSizePx(idx: number): number;
+  /** Camera-to-anchor distance where the chart-mode disc plateaus at
+   *  `uChartDiscMaxPx` given the current `uChartMagBright`; null when
+   *  the kind has no magnitude-driven chart disc. Feeds the warp's
+   *  early Fly → phase-3 pivot (../warp/README.md § Chart-mode
+   *  plateau-trigger). */
+  chartPlateauDistance(idx: number, magBright: number): number | null;
+  /** Catalog index of the star whose planet system attaches while this
+   *  object is focused (a star: itself; a planet: its host; a probe:
+   *  Sol), or null to detach (soft kinds). */
+  planetSystemHost(idx: number): number | null;
 }
 
 /** EXHAUSTIVE over TargetKind — adding a focusable kind without a
@@ -60,8 +118,11 @@ export interface FocusableProvider {
  *  Don't weaken it to a partial map. */
 export type FocusableProviders = { readonly [K in TargetKind]: FocusableProvider };
 
-/** A focusable object — star, cloud, Local Group object, future
- *  planet/probe/nebula/etc. */
+/** One focusable object as camera-transition code (warp, focus-park,
+ *  mid-Fly recentre) consumes it: the provider legs bound to a single
+ *  (kind, idx), plus the deferred focus-mutation pair. Instances are
+ *  built generically by `FocusController.makeFocusTarget` from the
+ *  `FocusableProviders` record — there are no per-kind factories. */
 export interface FocusTarget {
   /** Identity tag. Used for event-payload dispatch and equality checks
    *  in higher-level code (URL state, focus-vector match-up). New kinds
@@ -86,19 +147,16 @@ export interface FocusTarget {
    *  unavailable-source. */
   localPositionInto(out: THREE.Vector3): boolean;
 
-  /** Camera-to-anchor distance at the parked pose. For stars: the
-   *  per-star `parkDistForStar` (90 %-fill floor or GLOBAL_MIN_DIST).
-   *  For clouds: `MolecularClouds.viewingDistancePc` (keyed on the
-   *  rendered shape's extent). The warp computes `pStart` / `pEnd` as
+  /** Camera-to-anchor distance at the parked pose — the provider's
+   *  `focusParkDistance`. The warp computes `pStart` / `pEnd` as
    *  `anchor − travelDir · parkRadius()` for source and destination
    *  respectively. */
   parkRadius(): number;
 
-  /** Per-kind focus-state mutation. Sets the relevant
-   *  `focusedStar` / `focusedCloud` field, updates derived state
-   *  (per-focus `minDistance`, planet-system attach, etc.), and clears
-   *  whichever sibling focus field was previously set — all WITHOUT
-   *  firing any events on the bus. Events are deferred to
+  /** Focus-state mutation: sets the focus Target slot (displacing any
+   *  other kind structurally), applies the kind's `orbitFloor`, and
+   *  attaches (hard kinds) or detaches (soft kinds) the planet system —
+   *  all WITHOUT firing any events on the bus. Events are deferred to
    *  `emitFocusEvents` so the UI can be settled in lock-step with the
    *  camera landing (see `finishWarp`). */
   applyFocus(): void;

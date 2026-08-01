@@ -123,8 +123,9 @@ arrived: exposure is no longer a function of filter state alone.
 
 `setCameraFov` additionally drives `camera.updateProjectionMatrix()`,
 mirrors `uFovYRad`, and calls the `refreshOrbitFloor` dep
-(`FocusController.refreshOrbitFloor`) because the focused star's
-manual-zoom floor depends on FOV. It also recomputes the star pixel sizes,
+(`FocusController.refreshOrbitFloor`) because the focused object's
+manual-zoom floor is an angular solve for the star and planet kinds.
+It also recomputes the star pixel sizes,
 since K rides the plate scale.
 
 Uniform seeding order: `stellata.ts` seeds the shared uniforms from
