@@ -598,13 +598,22 @@ export class FocusController implements FocusOps {
   }
 
   /**
-   * Park-or-stay camera motion, shared by every hard-focus entry point.
-   * Runs AFTER the kind's recentring focus mutation, so `controls.target`
-   * is the object's live position in the post-recentre frame and the
-   * lerp's fromPos / toPos live in that same frame.
+   * Park-or-stay camera motion, shared by every focus entry point, hard
+   * and soft. Runs AFTER the kind's focus mutation (and its recentre, for
+   * a hard kind), so `controls.target` is the object's live position in
+   * the post-recentre frame and the lerp's fromPos / toPos live in that
+   * same frame.
    *
    * `arrivalRadiusPc` is the object's geometric radius for the
    * angular-size arrival ease; null falls back to the log-d profile.
+   *
+   * `bidirectional` moves the camera to `parkDist` from BOTH sides. A
+   * soft focus frames the whole extended object, so it flies OUT as well
+   * as in — required for a boundary shell the camera sits *inside* (Sol
+   * inside the Local Bubble / heliopause), where staying put leaves the
+   * back-face-culled wall invisible; only a near-exact match stays put.
+   * A hard focus stays put whenever it is already inside the park: you
+   * can sit close to a star, so a re-focus shouldn't yank you back out.
    */
   private parkOnFocalTarget(
     startQuat: THREE.Quaternion,
@@ -612,11 +621,19 @@ export class FocusController implements FocusOps {
     parkDist: number,
     arrivalRadiusPc: number | null,
     animate: boolean,
+    bidirectional = false,
   ): void {
     const target = this.deps.controls.target;
     const eyeDist = this.deps.camera.position.distanceTo(target);
+    const move = bidirectional
+      ? Math.abs(eyeDist - parkDist) > parkDist * 1e-4
+      : eyeDist > parkDist;
 
-    if (animate && eyeDist > parkDist) {
+    if (!move) {
+      this.deps.controls.update();
+      return;
+    }
+    if (animate) {
       this.startFocusLerp(newFocusLerpFrom(
         this.deps.camera.position,
         startQuat,
@@ -634,19 +651,16 @@ export class FocusController implements FocusOps {
       // event chain — Stellata's pointerup runs before TC's dynamically-
       // added pointerup, and TC's _state would stay stuck at ROTATE
       // until the next click clears it (cursor appears captured).
-    } else if (eyeDist > parkDist) {
-      // animate: false snap path — outside park: place at park along
-      // current eye direction with an explicit lookAt so orientation
-      // matches what TC would resolve.
-      const dir = this.deps.camera.position.clone().sub(target).normalize();
-      if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-      this.deps.camera.position.copy(target).addScaledVector(dir, parkDist);
-      this.deps.camera.lookAt(target);
-      this.deps.controls.update();
-    } else {
-      // Inside park: stay-put. Nothing to move.
-      this.deps.controls.update();
+      return;
     }
+    // animate: false snap path — place at park along the current eye
+    // direction with an explicit lookAt so orientation matches what TC
+    // would resolve.
+    const dir = this.deps.camera.position.clone().sub(target).normalize();
+    if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+    this.deps.camera.position.copy(target).addScaledVector(dir, parkDist);
+    this.deps.camera.lookAt(target);
+    this.deps.controls.update();
   }
 
   /** setFocus-analogue for the non-star hard kinds: observe bail-out,
@@ -695,8 +709,7 @@ export class FocusController implements FocusOps {
     // handling is needed — the provider's local position is valid in
     // the current local frame both before and after the focus clear.
     const provider = this.deps.getFocusables()[target.kind];
-    const dest = new THREE.Vector3();
-    if (!provider.localPositionInto(target.idx, dest)) return;
+    if (!provider.localPositionInto(target.idx, this.tmpLive)) return;
     if (this.deps.getWarp().isActive()) return;
     this.cancelUnfocusLerp();
     this.cancelFocusLerp();
@@ -708,48 +721,18 @@ export class FocusController implements FocusOps {
     if (isHardTarget(this.focused)) this.setFocus(null);
     this.clearVector();
 
-    const animate = opts.animate ?? true;
     const startQuat = this.deps.camera.quaternion.clone();
     const referenceUp = this.deps.referenceUp.get();
 
-    this.deps.controls.target.copy(dest);
-    const parkDist = provider.focusParkDistance(target.idx);
-    const eyeDist = this.deps.camera.position.distanceTo(dest);
-
-    // Move to parkDist in BOTH directions — a soft focus frames the whole
-    // extended object. Flying IN (eye > park) is the common case; flying
-    // OUT (eye < park) matters for a boundary shell the camera sits
-    // *inside* (Sol inside the Local Bubble / heliopause), where staying
-    // put would leave the back-face-culled shell invisible.
-    if (Math.abs(eyeDist - parkDist) > parkDist * 1e-4) {
-      if (animate) {
-        this.startFocusLerp(newFocusLerpFrom(
-          this.deps.camera.position,
-          startQuat,
-          referenceUp,
-          dest,
-          parkDist,
-          FOCUS_LERP_MS,
-          performance.now(),
-          arrivalEaseFn({
-            d0: eyeDist,
-            dEnd: parkDist,
-            targetRadius: provider.arrivalRadiusPc(target.idx),
-          }),
-        ));
-        // controls.enabled stays true — see focusStar's comment.
-      } else {
-        const dir = new THREE.Vector3()
-          .subVectors(this.deps.camera.position, dest)
-          .normalize();
-        if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-        this.deps.camera.position.copy(dest).addScaledVector(dir, parkDist);
-        this.deps.camera.lookAt(dest);
-        this.deps.controls.update();
-      }
-    } else {
-      this.deps.controls.update();
-    }
+    this.deps.controls.target.copy(this.tmpLive);
+    this.parkOnFocalTarget(
+      startQuat,
+      referenceUp,
+      provider.focusParkDistance(target.idx),
+      provider.arrivalRadiusPc(target.idx),
+      opts.animate ?? true,
+      true,
+    );
     this.setSoftFocus(target);
     this.deps.controls.minDistance = provider.orbitFloor(target.idx);
   }
