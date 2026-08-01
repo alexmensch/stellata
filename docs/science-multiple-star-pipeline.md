@@ -439,7 +439,45 @@ consume it in two complementary ways:
    For `wds_mag` members the member's brightness is independent, so
    its flux is subtracted directly (Acrux: A −4.21 blend →
    A′ = −3.48 + B = −3.43), guarded against a member as bright as the
-   blend itself.
+   blend itself. The subtraction is an **apparent-frame** one at each
+   record's own distance, because the one thing the catalogue actually
+   measured is the entry's apparent brightness.
+
+   **Where each tier stops blending — the separation bound.** "Did this
+   catalogue fit one photocentre over the pair" has an angular answer as
+   well as an identifier one, and needs it: a member with no own source_id
+   carries no identifier evidence either way, and photometry alone cannot
+   tell a sub-arcsec photocentre from a companion 500″ off. Both bounds are
+   measured the same way — take pairs whose primary carries a V from the
+   tier, and ask per separation bin whether that V lands nearer WDS's
+   component-A magnitude or the A+B blend.
+
+   *Printed Hipparcos (`I/239`), 3,186 pairs.* The blend hypothesis wins
+   68–92% of the time at every separation inside 10″, then collapses:
+
+   | sep | 0–1″ | 1–3″ | 3–7″ | 7–10″ | 10–15″ | 15–30″ | >30″ |
+   | --- | --- | --- | --- | --- | --- | --- | --- |
+   | blend wins | 91% | 82% | 74% | 71% | 15.5% | 6% | 9% |
+
+   A knee that sharp is instrumental, not statistical: it is the Hipparcos
+   Input Catalogue's own ~10″ threshold for entering components separately.
+   Bound: **10″**.
+
+   *Gaia `gaia_riello`, members with no own source_id.* Far shallower,
+   because the population it is measured against (members Gaia DID resolve)
+   sets a ~20–30% noise floor from subtree mag_pri values and band
+   mismatches. Excess over that floor: decisive below 0.6″ (78% / 48% vs a
+   16% floor), moderate to 1″ (34%), gone by 1.5″ (26% against a 21%
+   floor) — Gaia DR3's stated deblending scale. Bound: **1″**.
+
+   Members past the bound are counted, never silently dropped, and a pair
+   WDS published no separation for is excluded: no measurement is no
+   evidence of blending (AU Mic AB). Structural members — ids
+   inherited-then-stripped from the anchor — skip the gate, since a shared
+   catalogue identifier is direct evidence about *this* pair rather than a
+   population threshold. The bound decides δ Cep C (41″), GJ 570 B (26″)
+   and σ Ori I (525″) out, and ξ UMa B (2.7″), ξ Sco B (1.1″) and
+   HD 75632 B (3.5″) in.
 
    **Gaia-photometry brightness for own-DR3 companions.** A companion
    that earned its own Gaia DR3 5p fit (position + parallax) but has no

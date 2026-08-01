@@ -251,24 +251,42 @@ Per-row gates and resolution:
   § Blend light conservation. Counted `blendDimmedAnchors`
   (per anchor); members the fit leaves outside are
   `blendDimMembersOutside`, members with no usable WDS magnitudes
-  `blendDimMembersUnfit`. Caveats: WDS pair magnitudes are taken at face value,
+  `blendDimMembersUnfit`, members past the tier's blending scale
+  `blendDimBeyondSeparation` (§ The separation gate below).
+  Caveats: WDS pair magnitudes are taken at face value,
   and speckle-band (non-V) pairs overstate a member's V share (Achernar's Δm 1.4
   is H-band) — a data-curation tail, visible in the known-stars notes; and the fit
   judges only which hypothesis is CLOSEST, never how close, so an anchor matching
   neither still dims by the nearer one. The equal-split gaia_photometry blend
   pass above stays for the N-way no-WDS-mag case.
-  **The solve only reaches MINTED members**, which is a reach bound, not a
-  detail: a member that is already its own catalog record is never a candidate
-  subset, so an anchor on a printed blend tier keeps the pair's combined light
-  and ships too bright. Three records are in that state today — ξ UMa 0.54 mag,
-  ξ Sco 0.84, HIP 43820 0.65 — because the driver swap put their HIP on the
-  record at walk time and the V cascade took the printed `I/239` entry, which
-  is the unresolved pair. Registering already-in-catalog members is the right
-  shape but needs a separation term (unconditional registration subtracts
-  siblings at 26″–258″ on δ Cep / GJ 570 / AU Mic); `stellata-3bsf.15` owns it
-  and carries the fix-attempt writeup. Pinned per-star in
-  `../validate/known-stars.tsv` at the emitted value, per
-  `../validate/README.md` § adding a star.
+  **The solve reaches members that are already their own catalog record**, not
+  only minted ones: an anchor on a printed blend tier otherwise keeps the pair's
+  combined light and ships too bright, which is what put ξ UMa 0.54 mag, ξ Sco
+  0.72 and HD 75632 0.95 over. Those enter as `own` — flux subtraction against
+  the record's own measurement, never the Δmag re-split, which would overwrite a
+  first-class record's brightness — and are deduped per `(anchor, member)`, since
+  every cursor pairing the two arrives at the same registration. Registration
+  reads the ANCHOR RECORD's `vVia`, never a multiples.tsv `photometry_via` cell:
+  those freeze at the build that wrote the TSV and went stale under the driver
+  swap (ξ UMa's AB row says `none` while the record carries a printed `I/239`
+  blend — the exact population needing the dim).
+  **Conservation is an observed-frame statement.** The catalogue measured one
+  apparent brightness, so a member's flux leaves at the apparent magnitude the
+  observer sees, and the residual converts back at the anchor's own distance.
+  Identical arithmetic for a minted member (tangent projection puts it at the
+  anchor's distance) but not for an already-in-catalog one: ξ Sco B sits 3.4 pc
+  past A, and subtracting absolute fluxes there overshoots by 0.35 mag.
+  **The separation gate.** Identity evidence answers "is this member inside the
+  entry" only where the catalogue published an identifier for it; past that the
+  tier's own blending scale is the term, and without it photometry alone cannot
+  tell a sub-arcsec photocentre from a companion 525″ off (AR Cas I, σ Ori I —
+  held out until now only by the smallest-subset tie-break).
+  `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and `GAIA_BLEND_MAX_SEP_ARCSEC` = 1″ are
+  both calibrated against the blend-vs-component hypothesis split per separation
+  bin, tables and the instrumental reading in
+  `docs/science-multiple-star-pipeline.md` § Blend light conservation. A pair WDS
+  published no separation for is EXCLUDED (no measurement is no evidence — AU Mic
+  AB); structural members skip the gate. Counted `blendDimBeyondSeparation`.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
   surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair

@@ -133,11 +133,11 @@ preserved. To add a star or system:
    **Never widen a tolerance.** Where the investigation lands on a real
    defect whose fix is deferred, re-pin the value to what the build emits
    and say so in `notes_source` — the published truth, the cause, and the
-   bead that restores it. ξ Ursae Majoris' absmag is the worked example;
-   ξ Scorpii and HD 75632 carry the same pin for the same cause. **Pin every
-   star a deferred defect touches, not just the one you found it on** — a
-   partially-pinned set fails loudly on one star and silently on the rest,
-   which reads as a narrower defect than it is.
+   bead that restores it. **Pin every star a deferred defect touches, not
+   just the one you found it on** — a partially-pinned set fails loudly on
+   one star and silently on the rest, which reads as a narrower defect than
+   it is. No row carries such a pin today; ξ UMa / ξ Scorpii / HD 75632 held
+   the last set, and `git log -p` on this file has the worked example.
    A pinned known-wrong value keeps the row guarding everything else about
    the star and makes the regression fail loudly when its fix lands; a
    widened tolerance stops guarding anything and is silent either way.

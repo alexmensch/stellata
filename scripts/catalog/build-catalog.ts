@@ -303,6 +303,7 @@ async function main() {
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
     companionBlendDimGaiaResolved: 0,
+    companionBlendDimBeyondSeparation: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
     componentLettersStamped: 0,
@@ -545,7 +546,8 @@ async function main() {
         `blend-split=${ps.blendSplitRecords}, ` +
         `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
         `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
-        `gaia-resolved ${ps.blendDimGaiaResolved}), ` +
+        `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
+        `beyond-separation ${ps.blendDimBeyondSeparation}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
         `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
         `in ${Date.now() - tProm}ms`,
@@ -571,6 +573,7 @@ async function main() {
     counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
     counts.companionBlendDimOutside = ps.blendDimMembersOutside;
     counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
+    counts.companionBlendDimBeyondSeparation = ps.blendDimBeyondSeparation;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
 
