@@ -119,7 +119,7 @@ interface FocusTarget {
 | `anchorInto` | Input to `recenterOrigin`. The floating origin lands here when the object is focused. |
 | `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` / dest-`B` derivation in `warpTo`. |
 | `parkRadius` | The warp computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()` for source and destination respectively — symmetric across both endpoints. |
-| `applyFocus` | Sets the per-kind `focusedStar` / `focusedCloud` / etc. field, updates derived state (`minDistance`, planet system attach), clears whichever sibling-kind focus was set. **No events fire.** |
+| `applyFocus` | Writes the focus `Target` slot (cross-kind displacement is structural), applies the provider's `orbitFloor`, and attaches or detaches the planet system per its `planetSystemHost`. One shared implementation for every kind. **No events fire.** |
 | `emitFocusEvents` | Fires the deferred `'focus'` emit (kind-tagged Target payload) then `'state'`. Called from `finishWarp` after the camera lands. |
 | `physicalRadius` | Geometric radius in parsecs, or `null` when the kind has no single radius (clouds — ellipsoid axes don't reduce to one). Consumed by arrival curves that need angular size — the hybrid curve's inner regime uses `θ = R/d` for the close-approach smoothstep. Kinds returning `null` silently fall back to a log-d profile. |
 | `chartPlateauDistance` | Camera-to-anchor distance at which the chart-mode disc plateaus at `uChartDiscMaxPx`, given the current `uChartMagBright` threshold. Returns `null` when the chart-mode treatment isn't a magnitude-driven disc (clouds → isobar contour). Used by `updateWarp` to pivot Fly → phase 3 early when chart mode is active and the destination disc would stop growing perceptibly. |
@@ -188,20 +188,24 @@ Don't add speculative capability methods before the second kind.
 The three **hard** focus kinds all recentre the floating origin onto the
 object and drop `controls.minDistance` to a per-object physical floor;
 clouds, LG objects, and boundary shells stay **soft** (no recentre, no
-floor change). Membership is declared per kind in `KIND_TRAITS`;
-`isHardTarget` is the single predicate — never spell the membership out
-at a call site.
+floor change). Membership is declared per kind in `KIND_TRAITS` and
+lifted to the type level from there: `HardKind` maps the record's
+`hard: true` rows to their kind tags, `HardTarget` is a `Target` pinned
+to one of them, and `isHardTarget` is the predicate that narrows to it
+— never spell the membership out at a call site, and never restate it
+as a second union.
 
 One generic pair serves every hard kind: `focusHardTarget` (the flyTo
 leg — `focusStar` is its star-index shim) and `setHardFocus` (the
 setFocus-analogue: observe bail-out, recentre onto the provider's
 `anchorInto`, `orbitFloor` drop, `planetSystemHost` attach,
-pose-preserving target snap). Both share `parkOnFocalTarget` for the
-lerp-in / snap / stay-put tail, so a fourth hard kind supplies only its
-provider legs and traits row. The one star-only branch: the star's
-target snap runs through `setFocus`, whose float64 live-position
-accessor (baseline + orbital perturbation) the provider's buffer-read
-leg can't replace — see § Pin-to-center. Displacing a
+pose-preserving target snap). Both take a `HardTarget` and share
+`parkOnFocalTarget` — the same lerp-in / snap / stay-put ladder the soft
+leg runs, differing only in its `bidirectional` flag — so a fourth hard
+kind supplies only its provider legs and traits row. The one star-only
+branch: the star's target snap runs through `setFocus`, whose float64
+live-position accessor (baseline + orbital perturbation) the provider's
+buffer-read leg can't replace — see § Pin-to-center. Displacing a
 non-star hard focus — `setFocus(null)`, a soft kind, or Esc — runs the
 same detach side effects a star unfocus does (floor clamp to
 `min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
@@ -265,15 +269,15 @@ per-kind pin), which reseeds the ride when it fires.
 
 ## Focus-park lerp
 
-Click-focus on a star (or `flyTo` for the soft kinds) doesn't
-teleport. The lerp lives here as the generic `parkDistance(...)` +
-`newFocusLerpFrom(...)` + `tickFocusLerp(...)` trio — stars consume it,
-the soft kinds compose the same primitives through their provider's
-`focusParkDistance`, future focusable kinds plug in the same way.
+Click-focus doesn't teleport. The lerp lives here as the generic
+`parkDistance(...)` + `newFocusLerpFrom(...)` + `tickFocusLerp(...)`
+trio; every kind composes the same primitives through its provider's
+`focusParkDistance`, and future focusable kinds plug in the same way.
 
-Branch in `focusStar` / the soft-kind leg of `flyTo`:
+`parkOnFocalTarget` is the single park-or-stay ladder both `flyTo` legs
+run, taking `bidirectional` for the soft-kind rule below:
 
-- **`eyeDist <= parkDist` → stay put (`focusStar` only).** Camera
+- **`eyeDist <= parkDist` → stay put (hard kinds only).** Camera
   doesn't move; only `controls.target`, `controls.minDistance`, and
   focus state update. You can sit close to a star, so a re-focus
   shouldn't yank the camera back out.
@@ -287,7 +291,7 @@ Branch in `focusStar` / the soft-kind leg of `flyTo`:
   a visible pop (`../controls/input/README.md` § Reference up axis). Both
   interpolations are driven by the same smoothstep, so the camera
   continuously rotates toward the new target as it flies in. Builds
-  the lerp **after** `setFocus` recentres the floating origin so
+  the lerp **after** the focus mutation recentres the floating origin so
   `fromPos` / `toPos` live in the post-recentre frame.
 - **Soft-kind `flyTo` moves to `parkDist` in BOTH directions.** A soft
   focus frames the whole extended object, so it flies OUT as well as in
@@ -320,7 +324,7 @@ uses (`body.warping`). Stellata fires the `'focusLerp'` event on
 start / end edges; `main.ts` toggles the body class.
 
 `cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`,
+`cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
 `startWarp`, `aimAt`, `aimAtConstellation`, `onPointerUp`) so a
 follow-up camera-changing action can't race the in-flight lerp.
 
