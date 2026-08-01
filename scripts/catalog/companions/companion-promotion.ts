@@ -402,6 +402,10 @@ export interface PromotionStats {
    *  anchor tier's blending scale (or WDS published no separation at all), so no
    *  entry of that catalogue sums both. */
   blendDimBeyondSeparation: number;
+  /** Dim candidates whose WINNING hypothesis still missed the anchor's observed
+   *  magnitude by more than the input's error scale — the anchor matches
+   *  neither "alone" nor any blend, so the fit's pick carries no information. */
+  blendDimMembersMisfit: number;
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
@@ -434,6 +438,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersOutside: 0,
     blendDimGaiaResolved: 0,
     blendDimBeyondSeparation: 0,
+    blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
   };
 }
@@ -840,6 +845,12 @@ const ANCHOR_DIM_DECISIVE_MAG = RIELLO_G_MINUS_V_SIGMA;
 // 2^N subset enumeration cap. Real anchors carry ≤ ~6 fitted members; a
 // larger group is pathological input, not a solvable attribution.
 const ANCHOR_DIM_MAX_FIT_MEMBERS = 16;
+
+// How far the WINNING hypothesis may sit from the anchor's observed magnitude
+// before the fit is refused as matching nothing. Distinct from the decisive
+// margin above, which compares hypotheses to each other and says nothing about
+// whether any of them is right. Calibrated — README § Anchor flux conservation.
+export const ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG = 0.2;
 
 // Angular scale beyond which a member's light cannot be inside the anchor's
 // magnitude, per the catalogue that produced it. Both calibrated against the
@@ -2184,7 +2195,13 @@ export function promoteCompanions(
         // flips a pinned value. No dim when "anchor alone" is in the
         // class (the Sirius Δmag≈10 shape).
         const bestErr = Math.min(...errs);
-        if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
+        if (bestErr > ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG) {
+          // Closest is not close. Every hypothesis misses the anchor's observed
+          // magnitude by more than the input's own error scale, so the winner
+          // was picked out of a field of wrong answers and its membership claim
+          // carries no information.
+          stats.blendDimMembersMisfit += participants.length;
+        } else if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
           stats.blendDimMembersOutside += participants.length;
         } else {
           let bestMask = 0;

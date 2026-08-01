@@ -295,6 +295,9 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Dim candidates wider than the anchor tier's blending scale, or carrying no
    *  published separation at all — no entry of that catalogue sums both. */
   companionBlendDimBeyondSeparation: number;
+  /** Dim candidates whose winning hypothesis still missed the anchor's observed
+   *  magnitude by more than the input's error scale — matched nothing. */
+  companionBlendDimMisfit: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
   /** Existing AT-HYG blend-coordinate double entries repositioned in

@@ -246,6 +246,12 @@ Per-row gates and resolution:
     magnitude the observer sees and the residual converts back at the anchor's
     own distance. Identical arithmetic for a minted member (tangent projection
     puts it at the anchor's distance), not for an already-in-catalog one.
+  - **Closest is not close.** The decisive margin ranks hypotheses against each
+    other and says nothing about whether any is right, so
+    `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses a fit whose WINNER still
+    misses the anchor's observed magnitude by more than the input's own error
+    scale (`blendDimMembersMisfit`). Scoped to the fit's verdict: structural
+    members still apply.
   - **The separation gate.** Identity evidence answers "is this member inside
     the entry" only where the catalogue published an identifier for it; past
     that, photometry alone cannot tell a sub-arcsec photocentre from a companion

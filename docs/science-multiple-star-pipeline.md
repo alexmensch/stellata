@@ -459,8 +459,34 @@ consume it in two complementary ways:
    D fits worse than {A,B}), while Polaris Ab — inside the 1.98 blend at
    Δmag 2.0 — dims its anchor ~0.16 mag.
 
-   The fit judges only which hypothesis is CLOSEST, never how close, so an
-   anchor matching neither still dims by the nearer one.
+   **How close the winner has to be.** The decisive margin above compares
+   hypotheses to each other and says nothing about whether any of them is
+   right, so an anchor matching neither "alone" nor any blend — WDS pair
+   mags in a non-V band, or estimates — would still dim by whichever
+   missed by less. `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses that,
+   counted `blendDimMembersMisfit`.
+
+   Calibrated off the winning residual `|m_obs − m(S_best)|` over all 2,267
+   anchors that dimmed before the gate existed. Density per 0.01 mag:
+
+   | residual | 0–0.14 | 0.14–0.16 | 0.16–0.18 | 0.18–0.20 | 0.20–0.30 | 0.30–0.40 | >0.40 |
+   | --- | --- | --- | --- | --- | --- | --- | --- |
+   | anchors per 0.01 mag | 100–183 | 62 | 28 | 13 | 8–14 | 2.5 | ≤1.2 |
+
+   A flat core out to 0.14 — that is the WDS-against-record measurement
+   error, and its width is consistent with the ~0.1 mag face-value accuracy
+   of WDS pair magnitudes that dominates every other term here. Then an
+   order-of-magnitude collapse across 0.14–0.20, and past it a tail with no
+   core structure at all, running to 9 mag. 0.2 sits where the core has
+   ended but before the tail's own density flattens; it is also 2× the
+   input's accuracy scale. Refuses 206 of 2,372 dims, and no corpus star
+   moves — the refused population is the arbitrary-attribution tail, not
+   the well-measured showcase systems.
+
+   The gate scopes to the FIT's verdict only. Structural members — ids
+   inherited-then-stripped from the anchor — still apply, because a shared
+   catalogue identifier is evidence about that pair rather than an output
+   of the solve.
 
    **"Anchor alone" is the deepest row, not the faintest.** WDS's `mag_pri`
    covers the whole subtree of whatever letter its row pairs, so a

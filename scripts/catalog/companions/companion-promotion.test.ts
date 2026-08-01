@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   canonicalCompLetter,
   componentDepth,
   composeSyntheticId,
@@ -974,6 +975,44 @@ describe('anchor flux dimming', () => {
     );
     // And it is brighter than the same-distance answer: less flux came out.
     expect(anchor.absmag).toBeLessThan(2.1);
+  });
+
+  // The decisive margin compares hypotheses to EACH OTHER and says nothing
+  // about whether any of them is right, so an anchor whose observed magnitude
+  // matches neither "alone" nor any blend still dimmed by whichever missed by
+  // less — WDS pair mags in a non-V band, or estimates.
+  const misfitAt = (anchorOffset: number) => {
+    const blend = blendMag(2.1, 4.1);
+    // Move the anchor's own magnitude away from every hypothesis at once.
+    const anchor = blendAnchor({ absmag: blend - anchorOffset });
+    const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+    rows[0].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    return stats;
+  };
+
+  it('refuses the dim when the winning hypothesis matches nothing', () => {
+    // distPc=10, so an absmag offset is an observed-frame offset one-for-one.
+    const inside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG - 0.01);
+    expect(inside.blendDimmedAnchors).toBe(1);
+    expect(inside.blendDimMembersMisfit).toBe(0);
+
+    const outside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG + 0.01);
+    expect(outside.blendDimmedAnchors).toBe(0);
+    expect(outside.blendDimMembersMisfit).toBe(1);
+    expect(outside.blendDimMembersOutside).toBe(0);
+  });
+
+  it('a refused fit still lets structural members dim — identity is not a fit', () => {
+    // Both rows carry the anchor's HIP: the catalogue could not separate them,
+    // which is evidence about this pair rather than a verdict from the solve.
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend - 2.0 });
+    const rows = solveRows({ hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+    rows[0].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimMembersMisfit).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
   });
 
   it('subtracts an existing member once when two cursors pair it with the anchor', () => {
