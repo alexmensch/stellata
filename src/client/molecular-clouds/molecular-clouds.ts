@@ -23,6 +23,7 @@ import {
   SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
+import { markAbsorber } from '../hdr/statistic/statistic-attachment';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
 // (1.03) to cover tessellation sag — its raymarch clips to the analytic
@@ -165,6 +166,7 @@ export class MolecularClouds {
       mesh.scale.set(c.axes[0], c.axes[1], c.axes[2]);
       mesh.frustumCulled = false; // group origin is offset per frame
       mesh.renderOrder = ABSORPTION_RENDER_ORDER;
+      markAbsorber(mesh);
       this.absorptionGroup.add(mesh);
 
       const surface = surfaceForCloud;

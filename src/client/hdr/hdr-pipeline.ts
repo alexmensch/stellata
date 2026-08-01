@@ -25,7 +25,7 @@ import {
 } from './chrome/chrome-colour';
 import {
   bindStatisticGate,
-  type EmitterAttachments,
+  type GatedAttachments,
 } from './statistic/statistic-attachment';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
@@ -255,14 +255,21 @@ export class HdrPipeline {
    *
    *  A volumetric emitter masks attachment **0** off instead: on-target it
    *  writes zero there and the resolve owns that pixel, so masking makes the
-   *  contract explicit rather than relying on an additive blend of zero. */
-  private openEmitterGate = (attachments: EmitterAttachments): void => {
+   *  contract explicit rather than relying on an additive blend of zero. An
+   *  absorber takes both colour attachments and neither emits nor measures:
+   *  `statistic/README.md` § The gate is the table. */
+  private openEmitterGate = (attachments: GatedAttachments): void => {
     const gl = this.gl;
-    gl.drawBuffers(
-      attachments === 'diffuse'
-        ? [gl.NONE, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]
-        : [gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.NONE],
-    );
+    switch (attachments) {
+      case 'diffuse':
+        gl.drawBuffers([gl.NONE, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+        return;
+      case 'absorption':
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2]);
+        return;
+      default:
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.NONE]);
+    }
   };
 
   private closeEmitterGate = (): void => {

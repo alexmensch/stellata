@@ -3,21 +3,21 @@
 
 import type * as THREE from 'three';
 
-/** Which of the target's attachments a draw is allowed to write past
- *  attachment 0. A volumetric emitter reaches attachment 2 as well, because
- *  its display value has to be convolved before it lands on screen
- *  (`../summation/README.md`). */
-export type EmitterAttachments = 'statistic' | 'diffuse';
+/** Which set of the target's attachments a draw may write. Attachment 0 is
+ *  the only one open at rest; a volumetric emitter and an absorber both
+ *  reach attachment 2, because that is where the diffuse field lives until
+ *  the resolve convolves it (`../summation/README.md`). */
+export type GatedAttachments = 'statistic' | 'diffuse' | 'absorption';
 
-let openGate: ((attachments: EmitterAttachments) => void) | null = null;
+let openGate: ((attachments: GatedAttachments) => void) | null = null;
 let closeGate: (() => void) | null = null;
 
 /** `HdrPipeline` owns the GL context, so it supplies the two calls; every
- *  emitter binds to them through the two `mark*Emitter` helpers. Null while
+ *  marked mesh binds to them through the three `mark*` helpers. Null while
  *  no target exists, which is what makes the seam inert under the fallback
  *  path and in chart mode. */
 export function bindStatisticGate(
-  open: ((attachments: EmitterAttachments) => void) | null,
+  open: ((attachments: GatedAttachments) => void) | null,
   close: (() => void) | null,
 ): void {
   openGate = open;
@@ -51,7 +51,22 @@ export function markDiffuseEmitter(object: THREE.Object3D): void {
   markEmitter(object, 'diffuse');
 }
 
-function markEmitter(object: THREE.Object3D, attachments: EmitterAttachments): void {
+/**
+ * Declare a mesh an **absorber**: its blend has to reach attachment 2 as
+ * well as attachment 0, because the light it dims — the band, the Local
+ * Group glow — is in attachment 2 now. Attachment 1 stays shut, so the
+ * statistic keeps reading un-extincted light (README.md § Known residuals).
+ *
+ * The statistic gate's default is safe because a draw that forgets it merely
+ * fails to *contribute*. This one inverts: an absorber that forgets the mark
+ * silently stops absorbing, which looks like a missing dark rift rather than
+ * an error. `molecular-clouds.test.ts` pins the only call site.
+ */
+export function markAbsorber(object: THREE.Object3D): void {
+  markEmitter(object, 'absorption');
+}
+
+function markEmitter(object: THREE.Object3D, attachments: GatedAttachments): void {
   const before = object.onBeforeRender;
   const after = object.onAfterRender;
   object.onBeforeRender = (...args) => {

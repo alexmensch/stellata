@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   bindStatisticGate,
+  markAbsorber,
   markDiffuseEmitter,
   markStatisticEmitter,
 } from './statistic-attachment';
@@ -87,6 +88,28 @@ describe('markDiffuseEmitter', () => {
   it('is inert on the canvas path, exactly as the statistic mark is', () => {
     const mesh = new THREE.Object3D();
     markDiffuseEmitter(mesh);
+    expect(() => draw(mesh)).not.toThrow();
+  });
+});
+
+// An absorber is neither an emitter nor a measurement: it keeps attachment 0
+// (nothing else may assume that attachment is empty behind it) and takes
+// attachment 2, because the diffuse field it dims is there until the resolve
+// convolves it. Attachment 1 stays shut, so the statistic keeps reading
+// un-extincted light — README.md § Known residuals.
+describe('markAbsorber', () => {
+  it('asks for the diffuse attachment alongside attachment 0', () => {
+    const { log, bind } = trace();
+    bind();
+    const mesh = new THREE.Object3D();
+    markAbsorber(mesh);
+    draw(mesh);
+    expect(log).toEqual(['open:absorption', 'close']);
+  });
+
+  it('is inert on the canvas path, exactly as the other two marks are', () => {
+    const mesh = new THREE.Object3D();
+    markAbsorber(mesh);
     expect(() => draw(mesh)).not.toThrow();
   });
 });

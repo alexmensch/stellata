@@ -1,14 +1,21 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds';
 import type { Cloud, CloudCatalog } from './cloud-loader';
 import type { CloudSurface } from './cloud-surfaces-loader';
 import { makeMockCloud, makeMockCatalog } from './cloud-mock';
+import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
 import {
   DEFAULT_FACE_ON_FLOOR,
   DEFAULT_FRESNEL_POWER,
   SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
+
+/** The render hooks take three's full callback signature and ignore all of
+ *  it; firing them is the whole test. */
+const NO_RENDER_ARGS = [] as unknown as Parameters<THREE.Object3D['onBeforeRender']>;
 
 function makeCloud(axes: [number, number, number], id = 'test'): Cloud {
   return makeMockCloud({ name: id, id, sid: id.charCodeAt(0), axes });
@@ -100,6 +107,35 @@ describe('MolecularClouds / absorption material contract', () => {
     c.setMonochrome(false);
     c.update(new THREE.Vector3(), true);
     expect(absorptionGroup(c).visible).toBe(true);
+  });
+
+  // The light an absorber dims is in attachment 2 now
+  // (../hdr/summation/README.md), and the gate's default keeps it shut. A
+  // draw that never opens it multiplies an attachment holding nothing: no
+  // error, no dark rift. Both halves of the contract are pinned because
+  // either alone is silent.
+  it('opens the absorption gate around every absorption draw', () => {
+    const log: string[] = [];
+    bindStatisticGate((a) => log.push(`open:${a}`), () => log.push('close'));
+    try {
+      const c = new MolecularClouds(makeCatalog());
+      for (const m of absorptionGroup(c).children) {
+        m.onBeforeRender(...NO_RENDER_ARGS);
+        m.onAfterRender(...NO_RENDER_ARGS);
+      }
+    } finally {
+      bindStatisticGate(null, null);
+    }
+    expect(log).toEqual(['open:absorption', 'close', 'open:absorption', 'close']);
+  });
+
+  it('writes the same texel to attachment 2 that it writes to attachment 0', () => {
+    const frag = readFileSync(
+      fileURLToPath(new URL('./cloud-absorption.frag.glsl', import.meta.url)),
+      'utf8',
+    );
+    expect(frag).toContain('layout(location = 2) out vec4 outDiffuse;');
+    expect(frag).toContain('outDiffuse = outColor;');
   });
 
   it('setSteps clamps into the shader budget', () => {
