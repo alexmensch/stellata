@@ -515,7 +515,7 @@ consume it in two complementary ways:
    catalogue fit one photocentre over the pair" has an angular answer as
    well as an identifier one, and needs it: a member with no own source_id
    carries no identifier evidence either way, and photometry alone cannot
-   tell a sub-arcsec photocentre from a companion 500″ off. Both bounds are
+   tell a sub-arcsec photocentre from a companion 525″ off. Both bounds are
    measured the same way — take pairs whose primary carries a V from the
    tier, and ask per separation bin whether that V lands nearer WDS's
    component-A magnitude or the A+B blend.
@@ -541,11 +541,12 @@ consume it in two complementary ways:
    Members past the bound are counted, never silently dropped, and a pair
    WDS published no separation for is excluded: no measurement is no
    evidence of blending (AU Mic AB). Structural members — ids
-   inherited-then-stripped from the anchor — skip the gate, since a shared
-   catalogue identifier is direct evidence about *this* pair rather than a
-   population threshold. The bound decides δ Cep C (41″), GJ 570 B (26″)
-   and σ Ori I (525″) out, and ξ UMa B (2.7″), ξ Sco B (1.1″) and
-   HD 75632 B (3.5″) in.
+   inherited-then-stripped from the anchor — skip the gate in BOTH tiers,
+   since a shared catalogue identifier is direct evidence about *this* pair
+   rather than a population threshold; on a Gaia tier that exempts them from
+   the bound without exempting them from the fit, and 350 candidates turn on
+   it. The bound decides δ Cep C (41″), GJ 570 B (26″) and σ Ori I (525″)
+   out, and ξ UMa B (2.7″), ξ Sco B (1.1″) and HD 75632 B (3.5″) in.
 
    **Gaia-photometry brightness for own-DR3 companions.** A companion
    that earned its own Gaia DR3 5p fit (position + parallax) but has no

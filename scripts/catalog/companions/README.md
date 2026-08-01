@@ -259,7 +259,10 @@ Per-row gates and resolution:
     525″ off. `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and
     `GAIA_BLEND_MAX_SEP_ARCSEC` = 1″, both calibrated. A pair WDS published no
     separation for is EXCLUDED — no measurement is no evidence of blending
-    (AU Mic AB); structural members skip the gate.
+    (AU Mic AB). Structural members skip the bound in BOTH tiers — ids inherited
+    from the anchor are evidence about THIS pair and outrank a population
+    threshold — which is not the same as bypassing the fit, and 350 Gaia-tier
+    candidates turn on the difference.
 
   Apply, once per anchor with exact conservation: `own` / `wds_mag` members
   subtract their actual flux, guarded against a member as bright as the blend

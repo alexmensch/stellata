@@ -936,6 +936,26 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
 
+  // The exemption is not the printed tier's fit bypass: a Gaia-tier anchor's
+  // structural member still argues its membership through the solve, but the
+  // angular bound must not reach it either. Its ids were the anchor's, so it
+  // shares the source whose G the anchor's V came through and is inside that
+  // measurement by construction — evidence about THIS pair, which outranks a
+  // population threshold calibrated at 1″.
+  it('a structural member skips the gate on a Gaia tier too, at 400 times the bound', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend, vVia: 'gaia_riello' });
+    const rows = solveRows({
+      hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1, sepArcsec: 400.0,
+    });
+    rows[0].absmag = blend;
+    rows[0].sepArcsec = 400.0;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+  });
+
   // ξ UMa's shape: the member is its own first-class record, so it never reaches
   // the minting path and the anchor used to keep the pair's combined light.
   it('dims via a member that is already its own catalog record', () => {

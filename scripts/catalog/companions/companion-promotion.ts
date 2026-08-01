@@ -403,7 +403,7 @@ export interface PromotionStats {
   blendDimGaiaResolved: number;
   /** Dim candidates dropped before the fit because the pair sits wider than the
    *  anchor tier's blending scale (or WDS published no separation at all), so no
-   *  entry of that catalogue sums both. */
+   *  entry of that catalogue sums both. Structural members are exempt. */
   blendDimMembersBeyondSeparation: number;
   /** Dim candidates whose WINNING hypothesis still missed the anchor's observed
    *  magnitude by more than the input's error scale — the anchor matches
@@ -2157,9 +2157,15 @@ export function promoteCompanions(
     // blending scale is the missing term — a member past it is outside the
     // entry no matter how well its flux happens to fit (AR Cas I at 234″,
     // σ Ori I at 525″, both held out until now only by the smallest-subset
-    // tie-break). Structural members skip it: a shared catalogue identifier is
-    // direct evidence the catalogue could not separate them, which is stronger
-    // and more specific than a population-level threshold.
+    // tie-break).
+    //
+    // Structural members skip the bound in BOTH tiers: ids inherited from the
+    // anchor mean the catalogue could not separate this pair, which is direct
+    // evidence about it and outranks a population threshold. That is not the
+    // same as bypassing the fit — only a printed tier's structural members do
+    // that (above), and a Gaia tier's stay fit participants, where a shared
+    // identifier says the cross-match could not separate them rather than that
+    // the photometry blends.
     const anchorMagIsSystemBlend = vTierIsSystemBlend(anchor.vVia);
     const maxSepArcsec = anchorMagIsSystemBlend
       ? PRINTED_BLEND_MAX_SEP_ARCSEC : GAIA_BLEND_MAX_SEP_ARCSEC;
@@ -2170,7 +2176,8 @@ export function promoteCompanions(
         structural.push(c);
       } else if (!anchorMagIsSystemBlend && c.member.gaiaSourceId !== null) {
         stats.blendDimGaiaResolved++;
-      } else if (!withinBlendSeparation(c.sepArcsec, maxSepArcsec)) {
+      } else if (!c.structural
+          && !withinBlendSeparation(c.sepArcsec, maxSepArcsec)) {
         stats.blendDimMembersBeyondSeparation++;
       } else {
         fitted.push(c);
