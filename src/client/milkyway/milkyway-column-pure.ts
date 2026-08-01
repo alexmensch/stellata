@@ -78,9 +78,9 @@ export const FOREGROUND_DUST_STEPS = 16;
 
 // --- Profiles ----------------------------------------------------------
 
-/** Disc emissivity at the component's RELATIVE weight. The unit scale is
- *  `EMISSIVITY_SCALE`, applied by the march rather than baked here — it is
- *  derived from a march, so baking it would be circular. */
+/** Disc emissivity at the component's RELATIVE weight. `EMISSIVITY_SCALE`
+ *  puts it in the shared flux unit and is derived from a march of this
+ *  profile, so it cannot be baked in here. */
 export function discDensity(rPc: number, zPc: number): number {
   return (
     DISC_WEIGHT *
@@ -256,18 +256,18 @@ export interface ColumnOptions {
   /** Steps in the foreground pre-march. 0 reproduces the pre-fix shader,
    *  which seeded τ at the mesh boundary and skipped this column. */
   readonly foregroundSteps?: number;
-  /** Multiplier taking the components' relative weights to the shared flux
-   *  unit. Defaults to `EMISSIVITY_SCALE`; only its own derivation passes
-   *  1, which is what keeps that derivation non-circular. */
-  readonly emissivityScale?: number;
 }
 
 /**
- * One component's dust-attenuated emission column, in the shader's
- * "density × pc × colour" units. Mirrors milkyway.frag.glsl: log-
- * distributed steps from the front face (or `S_MIN_PC` when inside) to
- * the back face, Beer-Lambert attenuation with half-step self-shielding,
- * seeded with the foreground dust column.
+ * One component's dust-attenuated emission column, in the component's
+ * **relative weight** units. Mirrors milkyway.frag.glsl: log-distributed
+ * steps from the front face (or `S_MIN_PC` when inside) to the back face,
+ * Beer-Lambert attenuation with half-step self-shielding, seeded with the
+ * foreground dust column.
+ *
+ * Every column function here is weight-space. `EMISSIVITY_SCALE` enters
+ * exactly once, in `sightlineEmissionColumn` — the march is linear in it,
+ * and the scale is derived from a march, so it cannot appear inside one.
  */
 export function componentColumnRgb(
   component: MilkywayComponent,
@@ -280,7 +280,6 @@ export function componentColumnRgb(
     dustEnabled = true,
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
-    emissivityScale = EMISSIVITY_SCALE,
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 
@@ -319,7 +318,7 @@ export function componentColumnRgb(
     if (outside > 0.001) break;
 
     const { rPc, zPc } = cylindrical(p);
-    const density = emissivityScale * component.density(rPc, zPc);
+    const density = component.density(rPc, zPc);
     const dTau = tauStepRgb(rPc, zPc, dsPc, dustEffective);
 
     for (let k = 0; k < 3; k++) {
@@ -346,28 +345,14 @@ export function sightlineColumnRgb(
   return total;
 }
 
-/**
- * The luminance-weighted column the shader turns into surface brightness
- * via `S = uGlowMagOffset − 2.5·log10(column)`.
- */
+/** The luminance-weighted column in weight space — scale-free, so a
+ *  ratio of two of these is meaningful on its own. */
 export function sightlineColumn(
   originPc: Vec3,
   dirUnit: Vec3,
   options: ColumnOptions = {},
 ): number {
   return relativeLuminance(sightlineColumnRgb(originPc, dirUnit, options));
-}
-
-/** Surface brightness in mag/arcsec² for a sightline. */
-export function sightlineSurfaceBrightness(
-  glowMagOffset: number,
-  originPc: Vec3,
-  dirUnit: Vec3,
-  options: ColumnOptions = {},
-): number {
-  return (
-    glowMagOffset - 2.5 * Math.log10(sightlineColumn(originPc, dirUnit, options))
-  );
 }
 
 // --- Emission scale ----------------------------------------------------
@@ -388,11 +373,34 @@ export const EMISSIVITY_SCALE =
   10 ** (-0.4 * (NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - SB_ZERO_POINT)) /
   sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 90), {
     dustEnabled: false,
-    emissivityScale: 1,
   });
 
 /** Per-component emissivity in the shared flux unit — what the shader
- *  receives. The CPU mirror reaches the same product through
- *  `ColumnOptions.emissivityScale`. */
+ *  receives as `density0`. */
 export const DISC_DENSITY0 = DISC_WEIGHT * EMISSIVITY_SCALE;
 export const BULGE_DENSITY0 = BULGE_WEIGHT * EMISSIVITY_SCALE;
+
+/** The column the shader turns into surface brightness via
+ *  `S = uGlowMagOffset − 2.5·log10(column)`: the weight-space march in
+ *  the shared flux unit. Declared below `EMISSIVITY_SCALE` so no march
+ *  can reach the scale before it exists. */
+export function sightlineEmissionColumn(
+  originPc: Vec3,
+  dirUnit: Vec3,
+  options: ColumnOptions = {},
+): number {
+  return EMISSIVITY_SCALE * sightlineColumn(originPc, dirUnit, options);
+}
+
+/** Surface brightness in mag/arcsec² for a sightline. */
+export function sightlineSurfaceBrightness(
+  glowMagOffset: number,
+  originPc: Vec3,
+  dirUnit: Vec3,
+  options: ColumnOptions = {},
+): number {
+  return (
+    glowMagOffset -
+    2.5 * Math.log10(sightlineEmissionColumn(originPc, dirUnit, options))
+  );
+}

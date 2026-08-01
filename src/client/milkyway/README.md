@@ -22,7 +22,9 @@ disables. Hidden in chart mode.
 - `milkyway-column-pure.ts` — the density / dust profile constants the
   shader receives as uniforms, plus a CPU mirror of its raymarch. The
   calibration constants below are *derived* from this mirror rather than
-  hand-tuned, and the shader's step counts are pinned against it.
+  hand-tuned, and the shader's step counts are pinned against it. Column
+  functions here are weight-space; `sightlineEmissionColumn` is the one
+  that carries the shared flux unit (§ Calibration).
 - `diffuse-reference.ts` — published integrated-starlight photometry and
   the resolved-star subtraction that turns it into a target for a diffuse
   layer (§ Calibration).
@@ -168,10 +170,17 @@ taking the two components' **relative weights** (`DISC_WEIGHT = 1.5`,
 
 ```
 EMISSIVITY_SCALE = 10^(−0.4·(NGP_DIFFUSE_RESIDUAL − SB_ZERO_POINT))
-                 / sightlineColumn(Sol, b=90, dust-free, scale=1)
+                 / sightlineColumn(Sol, b=90, dust-free)
 DISC_DENSITY0    = DISC_WEIGHT  × EMISSIVITY_SCALE   ≈ 1.759e−2
 BULGE_DENSITY0   = BULGE_WEIGHT × EMISSIVITY_SCALE   ≈ 2.111e−1
 ```
+
+**Every column function in the CPU mirror is weight-space**, and the scale
+enters at exactly one seam: `sightlineEmissionColumn`. The march is linear
+in it, so threading it through the loop would buy nothing and would make
+the derivation reach for a constant it is in the middle of computing.
+`sightlineColumn` ratios (quadrature convergence, the per-component split)
+are therefore scale-free by construction.
 
 **Marched dust-free, and that is the point.** The previous design derived
 the zero point *through* the shipped extinction, so the layer's entire
