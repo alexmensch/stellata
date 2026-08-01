@@ -385,8 +385,9 @@ export interface PromotionStats {
   blendDimmedAnchors: number;
   /** Dim members reaching the subtraction but not applied: the guard
    *  M_member > M_blend + 0.05 (a member as bright as its anchor's blend would
-   *  zero or invert the residual flux), or a degenerate member position with no
-   *  observed magnitude to subtract. */
+   *  zero or invert the residual flux), or no observed magnitude to subtract at
+   *  all — which only a structural member can be, since the fit already drops
+   *  its own participants for that (`blendDimMembersUnfit`). */
   blendDimSkipped: number;
   /** Dim candidates no magnitude comparison could reach — no observed WDS
    *  magnitude for the member or the anchor, no distance, or a pathologically
@@ -2129,12 +2130,29 @@ export function promoteCompanions(
     // rows say 12.7 kpc against the record's B-J 6.2 kpc, a 1.5 mag error in
     // the observed frame every hypothesis below is compared against).
     const distPc = Math.hypot(anchor.x, anchor.y, anchor.z);
-    const mObs = distPc > 0
-      ? absoluteToApparentMagnitude(anchor.absmag, distPc) + av : null;
-    const obsMag = (c: AnchorDimCandidate): number | null =>
-      c.memberWdsMag !== null ? c.memberWdsMag
+    const recordObsMag = (s: Star): number | null => {
+      const d = Math.hypot(s.x, s.y, s.z);
+      return d > 0 ? absoluteToApparentMagnitude(s.absmag, d) + av : null;
+    };
+    const mObs = distPc > 0 ? recordObsMag(anchor) : null;
+    // ONE definition of a member's light, for the fit and the subtraction alike.
+    // An independent-brightness member ships its own record, so the hypothesis
+    // has to be built from the magnitude that record will actually contribute:
+    // judging {B} on WDS's mag_sec and then subtracting a Gaia-measured value
+    // leaves the emitted residual unbounded by the goodness-of-fit gate below —
+    // HD 75632 B's own photometry is 0.47 mag off WDS's mag_sec, twice that
+    // gate's whole budget. A dmag_imputed member has no independent measurement
+    // (its absmag is anchor-relative and the apply step rewrites it), so the WDS
+    // observed frame is the only evidence there is.
+    const obsMag = (c: AnchorDimCandidate): number | null => {
+      if (c.source !== 'dmag_imputed') {
+        const measured = recordObsMag(c.member);
+        if (measured !== null) return measured;
+      }
+      return c.memberWdsMag !== null ? c.memberWdsMag
         : c.anchorWdsMag !== null && c.dmag !== null ? c.anchorWdsMag + c.dmag
           : null;
+    };
 
     // An anchor's magnitude holds exactly what the catalogue behind it could
     // not resolve. A printed tier resolves nothing inside one entry, so every
@@ -2256,21 +2274,15 @@ export function promoteCompanions(
     let appliedIndependents = 0;
     const relatives: Array<{ cand: AnchorDimCandidate; delta: number }> = [];
     for (const c of applied) {
+      const memberMObs = obsMag(c);
       if (c.source === 'dmag_imputed') {
-        const m = obsMag(c);
-        const delta = anchorAloneMag !== null && m !== null
-          ? m - anchorAloneMag : c.dmag;
+        const delta = anchorAloneMag !== null && memberMObs !== null
+          ? memberMObs - anchorAloneMag : c.dmag;
         if (delta !== null) relatives.push({ cand: c, delta });
         continue;
       }
-      const memberDistPc = Math.hypot(c.member.x, c.member.y, c.member.z);
-      if (!(memberDistPc > 0)) {
-        stats.blendDimSkipped++;
-        continue;
-      }
-      const memberMObs =
-        absoluteToApparentMagnitude(c.member.absmag, memberDistPc) + av;
-      if (!(memberMObs > mObs + ANCHOR_DIM_MIN_DELTA_MAG)) {
+      if (memberMObs === null
+          || !(memberMObs > mObs + ANCHOR_DIM_MIN_DELTA_MAG)) {
         stats.blendDimSkipped++;
         continue;
       }

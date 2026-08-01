@@ -1065,6 +1065,52 @@ describe('anchor flux dimming', () => {
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
+
+  // HD 75632's shape, pushed until it changes the verdict rather than just the
+  // emitted value. An already-in-catalog member contributes the light its OWN
+  // record carries, not WDS's mag_sec for the pair (B's Gaia photometry is
+  // 0.47 mag off it in the real system), so the solve has to be judged on the
+  // same magnitude the subtraction removes. Judging {B} on mag_sec and then
+  // subtracting the record leaves the result unbounded by either gate.
+  const disagreeingMember = (anchorAbsmag: number, memberAbsmag: number) => {
+    const anchor = blendAnchor({ absmag: anchorAbsmag });
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: memberAbsmag, x: 10, y: 0, z: 0,
+    });
+    const rows = solveRows({
+      gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
+    });
+    rows[0].absmag = anchorAbsmag;
+    const { stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    return { anchor, member, stats };
+  };
+
+  it('judges an existing member on its own light, not the pair mag_sec it disagrees with', () => {
+    // distPc=10 throughout, so absmag and observed magnitude coincide. The
+    // record is 1.9 mag brighter than mag_sec 4.1 claims: on mag_sec, {B} fits
+    // the 2.0 entry to 0.06 mag and wins decisively — and then subtracting the
+    // record's real 2.2 drops the anchor to 3.93, a 1.9 mag move certified by a
+    // 0.06 mag fit. On the record's own light nothing beats anchor-alone.
+    const { anchor, stats } = disagreeingMember(2.0, 2.2);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBe(2.0);
+  });
+
+  it('and admits the conserving dim that same disagreement used to refuse', () => {
+    // The mirror case: against a 1.5 entry, mag_sec puts every hypothesis past
+    // ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG (best 0.44) and the fit is refused as
+    // matching nothing, while the member's own 2.2 fits to 0.10 and conserves
+    // exactly. The gate now measures the light that will actually be subtracted.
+    const { anchor, member, stats } = disagreeingMember(1.5, 2.2);
+    expect(stats.blendDimMembersMisfit).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.3078, 4);
+    expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(1.5, 9);
+  });
 });
 
 describe('hasRenderableOrbit', () => {

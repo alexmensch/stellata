@@ -247,12 +247,19 @@ Per-row gates and resolution:
     magnitude the observer sees and the residual converts back at the anchor's
     own distance. Identical arithmetic for a minted member (tangent projection
     puts it at the anchor's distance), not for an already-in-catalog one.
+  - **The fit and the subtraction share ONE member magnitude** (`obsMag`). An
+    independent-brightness member ships its own record, so the hypothesis is
+    built from the light that record contributes, not the pair's WDS `mag_sec` —
+    HD 75632 B's Gaia photometry is 0.47 mag off `mag_sec` 9.10, so judging
+    `{B}` on one and subtracting the other put the emitted absmag outside the
+    residual gate that had just certified it. Only `dmag_imputed` members use
+    the WDS frame, having no independent measurement to use instead.
   - **Closest is not close.** The decisive margin ranks hypotheses against each
     other and says nothing about whether any is right, so
     `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses a fit whose WINNER still
     misses the anchor's observed magnitude by more than the input's own error
-    scale (`blendDimMembersMisfit`). Scoped to the fit's verdict: structural
-    members still apply.
+    scale (`blendDimMembersMisfit`). Scoped to the fit's verdict, so members
+    that never entered the fit — a printed tier's structural ones — still apply.
   - **The separation gate.** Identity evidence answers "is this member inside
     the entry" only where the catalogue published an identifier for it; past
     that, photometry alone cannot tell a sub-arcsec photocentre from a companion

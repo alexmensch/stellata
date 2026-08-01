@@ -446,9 +446,15 @@ consume it in two complementary ways:
    **Which members are in the blend — the joint subset solve.** Membership
    is not decided per member. The hypothesis
    `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` is evaluated over every
-   subset `S` of the anchor's candidate members, in observed-frame WDS
-   magnitudes, and the one landing closest to the anchor's own observed
-   magnitude wins. It is decisive only when it beats "anchor alone" by
+   subset `S` of the anchor's candidate members, in the observed frame, and
+   the one landing closest to the anchor's own observed magnitude wins.
+   `F_i` is the light that member's record will actually contribute — its own
+   apparent magnitude where it has one, WDS's pair magnitude only for a
+   `dmag_imputed` member, which has no independent measurement to offer. The
+   two must be the same quantity: HD 75632 B's Gaia photometry sits 0.47 mag
+   from WDS's `mag_sec`, so a solve judged on the pair magnitude and then
+   applied against the record leaves what ships unbounded by the residual gate
+   below. It is decisive only when it beats "anchor alone" by
    ≥ `RIELLO_G_MINUS_V_SIGMA` = 0.03017 mag — the published scatter of the
    relation the anchor's V came through, so the margin never discriminates
    below the noise in its own input. Hypotheses within that margin of the
@@ -466,12 +472,13 @@ consume it in two complementary ways:
    missed by less. `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses that,
    counted `blendDimMembersMisfit`.
 
-   Calibrated off the winning residual `|m_obs − m(S_best)|` over all 2,267
-   anchors that dimmed before the gate existed. Density per 0.01 mag:
+   Calibrated off the winning residual `|m_obs − m(S_best)|` over all 2,301
+   anchors whose fit is decisive, i.e. every anchor the solve would dim absent
+   the gate. Density per 0.01 mag:
 
    | residual | 0–0.14 | 0.14–0.16 | 0.16–0.18 | 0.18–0.20 | 0.20–0.30 | 0.30–0.40 | >0.40 |
    | --- | --- | --- | --- | --- | --- | --- | --- |
-   | anchors per 0.01 mag | 100–183 | 62 | 28 | 13 | 8–14 | 2.5 | ≤1.2 |
+   | anchors per 0.01 mag | 100–190 | 61 | 28 | 12 | 8–14 | 2.8 | ≤1.9 |
 
    A flat core out to 0.14 — that is the WDS-against-record measurement
    error, and its width is consistent with the ~0.1 mag face-value accuracy
@@ -479,14 +486,19 @@ consume it in two complementary ways:
    order-of-magnitude collapse across 0.14–0.20, and past it a tail with no
    core structure at all, running to 9 mag. 0.2 sits where the core has
    ended but before the tail's own density flattens; it is also 2× the
-   input's accuracy scale. Refuses 206 of 2,372 dims, and no corpus star
-   moves — the refused population is the arbitrary-attribution tail, not
-   the well-measured showcase systems.
+   input's accuracy scale. Refuses 236 of the 2,301 fits, of which 211
+   anchors stop dimming altogether (the other 25 keep a structural member's
+   dim, which the gate does not scope). No corpus star moves — the refused
+   population is the arbitrary-attribution tail, not the well-measured
+   showcase systems.
 
-   The gate scopes to the FIT's verdict only. Structural members — ids
-   inherited-then-stripped from the anchor — still apply, because a shared
-   catalogue identifier is evidence about that pair rather than an output
-   of the solve.
+   The gate scopes to the FIT's verdict only, so a member that never entered
+   the fit still applies — which on a printed tier is every structural member,
+   ids inherited-then-stripped from the anchor, since a shared catalogue
+   identifier is evidence about that pair rather than an output of the solve.
+   A Gaia tier's structural members do argue through the solve (there the
+   shared identifier says the cross-match could not separate them, not that
+   the photometry blends) and so share its verdict.
 
    **"Anchor alone" is the deepest row, not the faintest.** WDS's `mag_pri`
    covers the whole subtree of whatever letter its row pairs, so a
@@ -502,6 +514,14 @@ consume it in two complementary ways:
    is band or epoch — taking the fainter claims a decomposition that is not
    there, silently, since the fit still solves; brightest is the same
    conservative posture as the smallest-winning-subset rule.
+
+   What makes a letter compound is two designators at ONE level, not two
+   capitals. WDS concatenates at whichever level it is aggregating, so `Aab`
+   is Aa+Ab and `Aa12` is Aa1+Aa2, both as much an aggregate as `AB` — and
+   reading them by capitals alone scores `Aab` the DEEPEST rank there is,
+   the η CrB failure one level down. `Aab` is in multiples.tsv today
+   (15169-6057), inert only because that cursor carries no identifier for an
+   anchor to resolve against.
 
    ν Sco is where the depth rule is load-bearing rather than cosmetic. Four
    rows reach its Aa anchor, printing `Aa1` = 4.37, `Aa` = 4.50 and
