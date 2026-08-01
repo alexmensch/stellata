@@ -405,8 +405,8 @@ encode. Custom-shader chrome *is* exact. Use `hdr.setEnabled(false)` when
 you want a whole-frame comparison.
 
 **What the A/B is and is not for.** It compares *compositing*, not
-calibration (§ Fallback), so it cannot reveal a mis-calibrated emitter —
-only accumulation and blend-order differences.
+calibration (§ Fallback) — accumulation and blend-order only, and now wider
+for the band (`docs/science-hdr-pipeline.md` § 2, stacked emitters).
 
 **Expected on the A/B, and not a bug: chrome line work reads visibly
 brighter with the seam ON.** § Chrome's inverse mapping is exact only for

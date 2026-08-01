@@ -67,7 +67,7 @@ values for the unaided eye at `dm = 0`, EV 0 (`m_lim = 7.8`,
 | Vega | 0.0 | 26.4 | 1.03 → clips white |
 | Sirius | −1.46 | 101 | 1.24 → white |
 | Venus (max) | −4.7 | 2.0e3 | white |
-| MW band, brightest sightline (S = 22.01 mag/″², Ω_sum) | ≈ 8.0 | 0.0199 | 0.149 → reads as a threshold star (§ Extended sources) |
+| MW band, brightest sightline (S = 22.01 mag/″², Ω_sum) | 7.81 = `m_lim` by construction | 0.0199 | 0.149 → reads as a threshold star (§ Extended sources) |
 | Sun disc at 1 AU | −26.7 | ceiling clamp | white |
 
 Adaptation only ever *cuts* from this table (§ 3.1), so these are the
@@ -332,6 +332,17 @@ on one pixel add the same offset N times — a coherent bias over dense
 fields, not noise that cancels. H3 split `stellataTonemapUndithered`
 out for emitters that overlap; the resolve and any single-coverage
 volume keep the dithered call.
+
+**Stacked emitters only composite exactly on-target.** Off-target each
+fragment runs the operator before the additive blend sums them, and the
+operator is not additive, so a pixel covered by N fragments does not
+resolve to the same value either way. This has always been true of the
+Milky Way band, whose disc and bulge proxies overlap toward the Galactic
+centre, and of M31's two components — but § 1's summation gain raised the
+band's per-fragment `L` about 12×, which moves those fragments to a
+steeper part of the curve and widens the gap. It is a property of the
+`setHdrEnabled(false)` A/B and the no-float-RT fallback, not of the
+shipped path, where the operator runs once at the resolve.
 
 ## 3. Exposure model — instrument, adaptation, and the EV trim
 
