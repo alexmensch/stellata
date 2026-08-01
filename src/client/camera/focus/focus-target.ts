@@ -42,18 +42,30 @@ export interface KindTraits {
 
 /** EXHAUSTIVE over TargetKind — adding a kind without declaring its
  *  traits fails tsc. Don't weaken it to a partial map. */
-export const KIND_TRAITS: { readonly [K in TargetKind]: KindTraits } = {
+export const KIND_TRAITS = {
   star: { hard: true, moving: false },
   cloud: { hard: false, moving: false },
   lg: { hard: false, moving: false },
   planet: { hard: true, moving: true },
   shell: { hard: false, moving: false },
   probe: { hard: true, moving: true },
-};
+} as const satisfies { readonly [K in TargetKind]: KindTraits };
+
+/** The kinds whose `hard` trait is declared true, derived from the
+ *  record rather than restated — flipping a row moves the kind between
+ *  `HardTarget` and the soft remainder with no second edit. */
+export type HardKind = {
+  [K in TargetKind]: (typeof KIND_TRAITS)[K]['hard'] extends true ? K : never;
+}[TargetKind];
+
+/** A Target statically known to be a hard kind. */
+export type HardTarget = Target & { readonly kind: HardKind };
 
 /** Hard-kind predicate over the declared traits — never spell the
- *  membership out at a call site. */
-export function isHardTarget(t: Target | null): boolean {
+ *  membership out at a call site. Narrows away the null and down to the
+ *  hard kinds, so guarded callers can hand the target straight to the
+ *  hard-only paths. */
+export function isHardTarget(t: Target | null): t is HardTarget {
   return t !== null && KIND_TRAITS[t.kind].hard;
 }
 

@@ -16,6 +16,7 @@ import {
   targetsEqual,
   type FocusableProviders,
   type FocusTarget,
+  type HardTarget,
   type Target,
   type TargetKind,
 } from './focus-target';
@@ -263,14 +264,17 @@ export class FocusController implements FocusOps {
     return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
   }
 
-  /** Re-solve the focused star's manual-zoom floor against the current
+  /** Re-solve the focused object's manual-zoom floor against the current
    *  camera FOV / aspect. No-op when nothing is focused. Called on FOV
    *  change (FilterController.setCameraFov) and viewport resize — both
-   *  move `fov_minor`, which the floor solve depends on. */
+   *  move `fov_minor`, which the star and planet floor solves depend on.
+   *  Dispatches through the provider so every kind re-solves; the probe
+   *  constant and the soft kinds' `min(GLOBAL, park)` are FOV-invariant,
+   *  so re-applying them writes the same value back. */
   refreshOrbitFloor(): void {
-    if (this.focusedStar === null) return;
-    this.deps.controls.minDistance =
-      this.deps.getFocusables().star.orbitFloor(this.focusedStar);
+    const t = this.focused;
+    if (t === null) return;
+    this.deps.controls.minDistance = this.deps.getFocusables()[t.kind].orbitFloor(t.idx);
   }
 
   /** Auto-park target — pure star-physics helper applied with the
@@ -321,7 +325,7 @@ export class FocusController implements FocusOps {
    *  focus is empty or soft. The observe anchor — observe parks the
    *  camera exactly at the object, which requires the recentred local
    *  frame only hard kinds establish. */
-  getFocusedHardTarget(): Target | null {
+  getFocusedHardTarget(): HardTarget | null {
     const t = this.getFocusedTarget();
     return isHardTarget(t) ? t : null;
   }
@@ -338,7 +342,7 @@ export class FocusController implements FocusOps {
     // focus is a hard focus like a star's — it set the orbit floor and
     // attached the host's planet system on entry, so displacing it to
     // null must run the same detach side effects a star unfocus does.
-    const wasHardNonStar = isHardTarget(this.focused) && this.focused!.kind !== 'star';
+    const wasHardNonStar = isHardTarget(this.focused) && this.focused.kind !== 'star';
     const displaced = this.focused !== null && this.focused.kind !== 'star';
     if (displaced) this.focused = null;
     if (this.focusedStar === idx) {
@@ -552,7 +556,7 @@ export class FocusController implements FocusOps {
    * camera teleports backward and lands at `|targetOld|` past the
    * object.
    */
-  private focusHardTarget(target: Target, opts: { animate?: boolean } = {}): void {
+  private focusHardTarget(target: HardTarget, opts: { animate?: boolean } = {}): void {
     const provider = this.deps.getFocusables()[target.kind];
     if (!provider.localPositionInto(target.idx, this.tmpLive)) return;
     if (this.deps.getWarp().isActive()) return;
@@ -653,7 +657,7 @@ export class FocusController implements FocusOps {
    *  object's live local position. Emits the 'focus' + 'state' pair.
    *  Stars run setFocus instead — their target snap needs the float64
    *  live-position accessor, not the provider's buffer read. */
-  private setHardFocus(target: Target): void {
+  private setHardFocus(target: HardTarget): void {
     const provider = this.deps.getFocusables()[target.kind];
     if (!provider.anchorInto(target.idx, this.tmpRecenter)) return;
     if (this.cameraMode === 'observe') {
@@ -697,7 +701,11 @@ export class FocusController implements FocusOps {
     this.cancelUnfocusLerp();
     this.cancelFocusLerp();
 
-    if (this.focusedStar !== null) this.setFocus(null);
+    // Displace a hard focus up front, before the park math: setFocus(null)
+    // runs the detach side effects (floor clamp, planet-system detach) and
+    // settles the UI ahead of the camera motion. setSoftFocus would
+    // otherwise do it after the lerp is already in flight.
+    if (isHardTarget(this.focused)) this.setFocus(null);
     this.clearVector();
 
     const animate = opts.animate ?? true;
