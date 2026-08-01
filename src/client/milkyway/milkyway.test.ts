@@ -48,6 +48,7 @@ import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
 } from '../hdr/exposure/exposure-epoch';
+import { L_CAP } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
 import {
   L_THRESH,
@@ -393,6 +394,21 @@ describe('MilkyWay surface-brightness calibration', () => {
     expect(physical(REFERENCE_OMEGA_PX)).toBeLessThan(
       physical(DEFAULT_SUMMATION_ARCSEC2),
     );
+  });
+
+  // Keeping the concession off attachment 1 is only safe if what the band
+  // does write cannot provoke an adaptation cut. It cannot, by 10 stops —
+  // and the margin is measured on the Ω_px value the statistic actually
+  // carries, not on the 12x-larger level the band displays at
+  // (statistic/README.md § The unit).
+  it('writes a statistic the adaptation cut cannot act on', () => {
+    const statisticL = surfaceBrightnessLuminance(
+      BASE_EPOCH_EXPOSURE,
+      sbAt(0, 5),
+      REFERENCE_OMEGA_PX,
+    );
+    expect(statisticL).toBeCloseTo(1.657e-3, 6);
+    expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.1, 1);
   });
 
   // What the concession is worth at the reference viewport, stated as the
