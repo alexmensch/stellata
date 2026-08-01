@@ -3,6 +3,7 @@
 // receives as uniforms — see README.md § Density profiles, § Calibration.
 
 import { R0_PC } from '../galactic/galactic-coords';
+import { lumaNormalisedTint } from '../hdr/emission-pure';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -15,6 +16,9 @@ export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
 export const DISC_DENSITY0 = 1.5;
 export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
+/** The authored palette carrying hue only — what the shader multiplies in.
+ *  See README.md § Population tints carry hue, never flux. */
+export const DISC_TINT_RGB: Rgb = lumaNormalisedTint(DISC_COLOR_RGB);
 
 // --- Bulge component ---------------------------------------------------
 
@@ -24,6 +28,7 @@ export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
 export const BULGE_DENSITY0 = 18.0;
 export const BULGE_COLOR_RGB: Rgb = [1.0, 0.9647, 0.9294];
+export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
 // --- Analytical dust ---------------------------------------------------
 
@@ -100,14 +105,14 @@ export interface MilkywayComponent {
 export const DISC_COMPONENT: MilkywayComponent = {
   name: 'disc',
   meshScalePc: [DISC_RADIUS_PC, DISC_RADIUS_PC, DISC_HALF_THICKNESS_PC],
-  colorRgb: DISC_COLOR_RGB,
+  colorRgb: DISC_TINT_RGB,
   density: discDensity,
 };
 
 export const BULGE_COMPONENT: MilkywayComponent = {
   name: 'bulge',
   meshScalePc: [BULGE_RADIUS_PC, BULGE_RADIUS_PC, BULGE_HALF_THICKNESS_PC],
-  colorRgb: BULGE_COLOR_RGB,
+  colorRgb: BULGE_TINT_RGB,
   density: bulgeDensity,
 };
 
