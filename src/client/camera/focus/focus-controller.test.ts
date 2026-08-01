@@ -1120,12 +1120,68 @@ describe('FocusController — planet focus (kind "planet")', () => {
       pick: { labelElementId: 'x', visible: () => true, sampleCount: () => 0, sampleLocalInto: () => {} },
     };
     h.shells.register('heliopause', auShell); // SHELL_KEYS idx 1
-    const park = h.shells.viewingDistancePc(1);
+    const park = h.shells.focusParkDistancePc(1);
     expect(park).toBeLessThan(GLOBAL_MIN_DIST_PC);
+    // parkRadius reads the park leg where it used to read the viewing
+    // distance. The two coincide for every registered shell — 2.4 × extent
+    // dominates the AU + extent term above ~0.71 AU and the heliopause is
+    // 200 AU — so the switch is a rename at runtime, not a move.
+    expect(park).toBe(h.shells.viewingDistancePc(1));
 
     const ft = h.focus.makeFocusTarget({ kind: 'shell', idx: 1 })!;
-    expect(ft).not.toBeNull();
+    expect(ft.parkRadius()).toBe(park);
     ft.applyFocus();
     expect(h.controls.minDistance).toBeCloseTo(park, 12);
+  });
+
+  it('applyFocus on a planet attaches the host system with no emit (warp-arrival path)', async () => {
+    // The warp mutates focus at the mid-Fly recentre and defers every event
+    // to finishWarp, so applyFocus must move the floor and the planet system
+    // silently. One shared implementation now serves all six kinds through
+    // the provider's orbitFloor / planetSystemHost legs.
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    const ft = h.focus.makeFocusTarget({ kind: 'planet', idx })!;
+    h.busEvents.length = 0;
+
+    ft.applyFocus();
+    expect(h.busEvents).toEqual([]);
+    expect(h.focus.getFocusedTarget()).toEqual({ kind: 'planet', idx });
+    expect(h.controls.minDistance)
+      .toBeCloseTo(minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)), 15);
+    await Promise.resolve();
+    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+  });
+
+  it('applyFocus on a soft kind detaches the planet system a hard focus attached', async () => {
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    await Promise.resolve();
+    expect(h.focus.getFocusedPlanetSystem()).not.toBeNull();
+
+    h.focus.makeFocusTarget({ kind: 'cloud', idx: 0 })!.applyFocus();
+    expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
+    // planetSystemHost is null for a soft kind, so the shared leg detaches
+    // where the retired factories relied on a hard→soft branch.
+    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.controls.minDistance).toBe(GLOBAL_MIN_DIST_PC);
+  });
+
+  it('refreshOrbitFloor re-solves a focused planet floor after an FOV change', () => {
+    // The floor is an angular solve, so an FOV change or a viewport resize
+    // has to re-run it for whichever kind is focused — not just for a star.
+    const h = makeHarness();
+    const idx = attachTestPlanet(h);
+    h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
+    const before = h.controls.minDistance;
+
+    h.camera.fov = 20;
+    h.camera.updateProjectionMatrix();
+    h.focus.refreshOrbitFloor();
+
+    const expected = minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera));
+    expect(expected).toBeGreaterThan(before * 2);
+    expect(h.controls.minDistance).toBeCloseTo(expected, 15);
   });
 });
