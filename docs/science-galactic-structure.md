@@ -116,16 +116,17 @@ Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 Sources for the volumetric path: **Drimmel & Spergel 2001**, *ApJ* 556, 181
 (DOI 10.1086/321556) for the thin-disc dust distribution; **Cardelli,
 Clayton & Mathis 1989**, *ApJ* 345, 245 (DOI 10.1086/167900) for the
-per-channel reddening multipliers.
+per-channel reddening multipliers; **Schlegel, Finkbeiner & Davis 1998**,
+*ApJ* 500, 525 (DOI 10.1086/305772) for the polar A_V spread the
+perpendicular column is checked against.
 
-The normalisation previously cited **Schlegel, Finkbeiner & Davis 1998**
-for a "0.15 mag/kpc local rate", under a shipped 0.45 multiplier that took
-the effective rate to 0.068 mag/kpc. Both parts were wrong: SFD is a 2D
-full-sky E(B−V) map and publishes no per-kpc rate at all, and 0.068
+SFD used to be cited for something it does not publish: a "0.15 mag/kpc
+local rate", under a shipped 0.45 multiplier that took the effective rate
+to 0.068 mag/kpc. Both parts were wrong. SFD is a 2D full-sky E(B−V) map
+and gives no per-kpc rate at all — only the polar spread above — and 0.068
 mag/kpc is 10–25× below the measured solar-neighbourhood plane rate. The
-under-extinction — not the density profile — was why the band's plane read
-~3 mag too bright against its poles. `stellata-xypg.29` replaced it with
-the derived-from-a-rate scheme above and retired the bare multiplier.
+under-extinction, not the density profile, was why the band's plane read
+~3 mag too bright against its poles.
 
 
 ## Constellation stick figures
