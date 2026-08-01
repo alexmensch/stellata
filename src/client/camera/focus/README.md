@@ -11,16 +11,16 @@ close-approach focused star sitting at exactly NDC origin.
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
   § Focus state), `cameraMode`, `focusedPlanetSystem`, the focus-park
-  lerp state, pin-engage geometry, and the `makeFocusTarget` /
-  `currentFocusTarget` factories. Canonical home for
+  lerp state, pin-engage geometry, and the generic `makeFocusTarget` /
+  `currentFocusTarget` builders. Canonical home for
   `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
   Implements the `FocusOps` interface consumed by `WarpController` and
   the `ObserveFocusOps` interface consumed by `ObserveTransition`.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
   kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe'`), the
-  `FocusTarget` contract, and the `FocusableProviders` registry contract
-  (§ FocusableProviders). Per-kind factories return objects closing
-  over the current focus state + controller deps so warp / overlays /
+  `KIND_TRAITS` hard/moving declarations, the `FocusableProviders`
+  registry contract (§ FocusableProviders), and the `FocusTarget`
+  camera-transition view built generically from it, so warp / overlays /
   arrival math can read positions and emit events without knowing the
   kind. A planet Target's idx is the PlanetBodyField flat global
   instance index; (host, planet-within-host) resolve through the
@@ -53,11 +53,12 @@ the shell delegates to.
 - `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
   state.
 - Click/select-driven entry points are Target-keyed: `flyTo(target)`
-  (star leg = `focusStar`; soft kinds share one provider-driven
-  focus-park path), `setOrbitTarget(target)`, `setVector(target |
-  null)`, `unfocus` (including the vector-only wipe when nothing is
-  focused). Each gates on `getWarp().isActive()` and cancels any
-  in-flight focus-park / unfocus lerp before claiming the camera.
+  (hard kinds route through `focusHardTarget`; soft kinds share one
+  provider-driven focus-park path), `setOrbitTarget(target)`,
+  `setVector(target | null)`, `unfocus` (including the vector-only wipe
+  when nothing is focused). Each gates on `getWarp().isActive()` and
+  cancels any in-flight focus-park / unfocus lerp before claiming the
+  camera.
 
 Construction cycle: `WarpController` and `ObserveTransition` both take
 `focus: FocusOps` from `FocusController`, but `FocusController`'s
@@ -81,19 +82,21 @@ Bus events emitted from the controller:
 
 Warp, focus-park lerp, mid-Fly recentre, and any future
 camera-transition code consume focusable objects through the
-**`FocusTarget` interface** (`focus-target.ts`). Adding a new
-focusable kind (planet, probe, nebula, exoplanet, …) consists of:
+**`FocusTarget` interface** (`focus-target.ts`). Instances are built
+generically by `FocusController.makeFocusTarget` from the kind's
+`FocusableProvider` — there are no per-kind factories. Adding a new
+focusable kind (nebula, exoplanet, …) consists of:
 
-1. Implementing the interface (typically as a factory method on
-   `FocusController` that returns an object closing over the per-kind
-   catalog / state / event-bus references).
-2. Plumbing pick / click handling for the new kind so its
-   `FocusTarget` can be passed to `startWarp` / `focusStar`-style
-   entry points.
+1. Declaring the kind's `KIND_TRAITS` row and its `FocusableProvider`
+   entry in `stellata.focusables` (both records are exhaustive over
+   `TargetKind`, so `tsc` fails until both exist).
+2. Plumbing pick / click handling for the new kind so its `Target` can
+   be passed to `warpTo` / `flyTo`-style entry points.
 
-That's it. The warp internals (`updateWarp`, `finishWarp`, mid-Fly
-recentre, pin guard, scale-bar focus tracking, …) stay agnostic above
-this seam and do not need to change.
+That's it. The focus mutations (`flyTo`, `setOrbitTarget`, the warp's
+`applyFocus`) and the warp internals (`updateWarp`, `finishWarp`,
+mid-Fly recentre, pin guard, scale-bar focus tracking, …) stay agnostic
+above this seam and do not need to change.
 
 ### The interface
 
@@ -131,21 +134,29 @@ arrives — events settle in lock-step with the landing.
 `WarpState` carries `source: FocusTarget` and `dest: FocusTarget`. The
 warp animation reads geometry via the interface methods and mutates
 focus state via `dest.applyFocus()` (mid-Fly recentre) and
-`dest.emitFocusEvents()` (`finishWarp`). No `destKind` switches remain
-in the warp pipeline; the dispatch table is
-`FocusController.makeFocusTarget(target)` — the one per-kind switch,
-and the one place that needs editing when a new kind is added.
+`dest.emitFocusEvents()` (`finishWarp`). No `destKind` switches exist
+anywhere in the pipeline: `FocusController.makeFocusTarget(target)`
+binds the kind's provider legs to one (kind, idx), and `applyFocus` /
+`emitFocusEvents` are single shared implementations reading the
+provider's `orbitFloor` / `planetSystemHost` data legs.
 
 ## FocusableProviders — the kind-agnostic geometry registry
 
 `FocusableProviders` (`focus-target.ts`) is a mapped type EXHAUSTIVE
 over `TargetKind` — **adding a focusable kind without a provider fails
-`tsc`**, the same compile-time contract `FocusCardProviders` carries;
-`focus-target.test.ts` pins it with `@ts-expect-error`. Each provider
-holds the per-kind geometry legs the shell surface dispatches through:
-`localPositionInto`, `focusParkDistance` (the focus-park lerp landing
-distance), `arrivalRadiusPc` (angular-size ease input; null → log-d
-fallback), `renderedSizePx` (overlay chevron / silhouette sizing).
+`tsc`**, the same compile-time contract `FocusCardProviders` and
+`KIND_TRAITS` carry; `focus-target.test.ts` pins all of them with
+`@ts-expect-error`. Each provider holds every per-kind leg the
+kind-agnostic code dispatches through: `anchorInto` (absolute recentre
+anchor), `localPositionInto`, `focusParkDistance` (the landing distance
+of every park), `orbitFloor` (the manual-zoom floor a focus applies),
+`arrivalRadiusPc` (angular-size ease input; null → log-d fallback),
+`renderedSizePx` (overlay chevron / silhouette sizing),
+`chartPlateauDistance` (warp chart-mode pivot; null → no chart disc),
+and `planetSystemHost` (which star's planet system attaches; null →
+detach). Hard/soft and moving membership are NOT provider legs — they
+are declared data in `KIND_TRAITS`, readable without the registry
+(`isHardTarget` is the predicate).
 The registry is constructed once in `stellata.ts` (exposed as
 `stellata.focusables`); lazily-attached layers are read through
 closures, so attach cycles need no re-registration. Overlays and
@@ -169,7 +180,7 @@ kind N+1 passes through them untouched. A mechanism gains an optional
 provider member only when a second kind actually implements it; the
 moving-focal ride is the worked example — added for planets as the
 analogue of the binary ride, and when probes arrived they needed only
-a provider leg and a `MOVING_FOCUS_KINDS` entry, no ride of their own.
+a provider leg and a `moving: true` trait, no ride of their own.
 Don't add speculative capability methods before the second kind.
 
 ## Hard kinds — star, planet, probe
@@ -177,25 +188,30 @@ Don't add speculative capability methods before the second kind.
 The three **hard** focus kinds all recentre the floating origin onto the
 object and drop `controls.minDistance` to a per-object physical floor;
 clouds, LG objects, and boundary shells stay **soft** (no recentre, no
-floor change). `isHardTarget` is the single predicate — never spell the
-membership out at a call site.
+floor change). Membership is declared per kind in `KIND_TRAITS`;
+`isHardTarget` is the single predicate — never spell the membership out
+at a call site.
 
-`focusPlanet` / `focusProbe` mirror `focusStar`, and `setPlanetFocus` /
-`setProbeFocus` are the setFocus-analogues (observe bail-out, recentre
-onto the object's absolute position, floor drop, pose-preserving target
-snap). All three entry points share `parkOnFocalTarget` for the
+One generic pair serves every hard kind: `focusHardTarget` (the flyTo
+leg — `focusStar` is its star-index shim) and `setHardFocus` (the
+setFocus-analogue: observe bail-out, recentre onto the provider's
+`anchorInto`, `orbitFloor` drop, `planetSystemHost` attach,
+pose-preserving target snap). Both share `parkOnFocalTarget` for the
 lerp-in / snap / stay-put tail, so a fourth hard kind supplies only its
-park distance, arrival radius, and recentring mutation. Displacing a
+provider legs and traits row. The one star-only branch: the star's
+target snap runs through `setFocus`, whose float64 live-position
+accessor (baseline + orbital perturbation) the provider's buffer-read
+leg can't replace — see § Pin-to-center. Displacing a
 non-star hard focus — `setFocus(null)`, a soft kind, or Esc — runs the
 same detach side effects a star unfocus does (floor clamp to
 `min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
 
-Everything the controller reads for a non-star hard focus — focal local
-position, park distance — dispatches through `FocusableProviders`, not
-through a per-kind field reference. A test harness that stubs one of
-those legs is therefore answering for the field, which is exactly the
-bug `focus-controller.test.ts` wires its planet + probe legs to real
-fields to avoid.
+Everything the controller reads for a focus — focal local position,
+park distance, orbit floor, planet-system host — dispatches through
+`FocusableProviders`, not through a per-kind field reference. A test
+harness that stubs one of those legs is therefore answering for the
+field, which is exactly the bug `focus-controller.test.ts` wires its
+hard-kind + shell legs to real fields to avoid.
 
 - **Planet floors/parks** come from `star-physics.ts`:
   `minOrbitDistForPlanet` (the same 90 %-fill solve stars use) and
@@ -228,8 +244,8 @@ offsets survive and the object stays glued to `controls.target` at any
 rate. That is what makes the probe flythrough hold.
 
 It is one slot for both kinds, read through
-`focusables[kind].localPositionInto`, with membership in
-`MOVING_FOCUS_KINDS`. Two things keep it correct:
+`focusables[kind].localPositionInto`, with membership declared as
+`moving: true` in `KIND_TRAITS`. Two things keep it correct:
 
 - **The ride reseeds on every `'focus'` event.** Each hard focus
   recentres the origin, staleing the cached last position — and it is

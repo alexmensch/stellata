@@ -199,7 +199,7 @@ async function main() {
     // curated objects, docs/sid.md § 7). localIndex = SHELL_KEYS index =
     // Target {kind:'shell'} idx. Attach unconditionally: a shell whose
     // layer is absent still resolves its sid, then focus/pin fall through
-    // to null via makeShellFocusTarget (same graceful path as lg).
+    // to null via the shell provider's legs (same graceful path as lg).
     sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
     // Probes are `sol:` objects like the planets, but their domain is keyed
     // over the LOADED roster, not PROBE_MISSIONS: `loadProbes` drops a probe

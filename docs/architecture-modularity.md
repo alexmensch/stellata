@@ -102,8 +102,8 @@ what is today scattered across the wiring sites:
 ```ts
 interface ObjectKindModule {
   kind: TargetKind;
-  hard: boolean;              // replaces isHardTarget's spelled-out list
-  moving: boolean;            // replaces MOVING_FOCUS_KINDS
+  hard: boolean;              // absorbs the kind's KIND_TRAITS row
+  moving: boolean;            // (phase 1 landed hard/moving there)
   critical?: boolean;         // blocks first paint (star catalog only)
   load(baseUrl, onProgress): Promise<Artifact | null>;  // NEVER rejects
   attach(ctx: KindContext, artifact): KindRuntime | null;
