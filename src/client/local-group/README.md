@@ -169,13 +169,16 @@ steradian, and the only conversion left is the solid angle of one
 arcsec²:
 
 ```
-S    = LG_SB_ZERO_POINT − 2.5·log10(column)     // 26.5721 mag/arcsec²
+S    = SB_ZERO_POINT − 2.5·log10(column)        // 26.5721 mag/arcsec²
 m_px = S − 2.5·log10(Ω_px)
 ```
 
 Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses to
 one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
-population tint rides through untouched. `LG_SB_ZERO_POINT` and the
+population tint rides through untouched. `SB_ZERO_POINT` lives in
+`../hdr/emission-pure.ts` — it is the emission unit's constant, not this
+layer's, and the Milky Way band takes the same one
+(`../milkyway/README.md` § Calibration). The TypeScript constant and the
 shader's `SB_ZERO_POINT` are pinned against each other in
 `local-group-emission.test.ts` — nothing at compile time ties them.
 

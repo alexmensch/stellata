@@ -2,12 +2,11 @@
 // decomposition, instance packing, flux ↔ magnitude inverse, and the
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
-import { lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
 import {
   BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
   DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
 } from '../milkyway/milkyway-column-pure';
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import type { LgEmission, LgObject } from './local-group-loader';
 
 /** Population tints — the Milky Way's own palette, by import: a spheroid
@@ -15,16 +14,6 @@ import type { LgEmission, LgObject } from './local-group-loader';
  *  same as ours. Per-object `emission.color` overrides. */
 export const SPHEROID_COLOR_RGB: [number, number, number] = [...MW_BULGE_COLOR_RGB];
 export const DISC_COLOR_RGB: [number, number, number] = [...MW_DISC_COLOR_RGB];
-
-/** Surface-brightness zero point of a raymarched column, mag/arcsec².
- *
- *  The solver normalises `density0` against zero-point-free flux
- *  `F = 10^(−0.4·m_V)` (docs/science-local-group.md § Local Group
- *  luminosity model), and Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a column
- *  Σρ·ds IS flux per steradian, and the only conversion left is the
- *  solid angle of one arcsec². Nothing here is tunable: the emission
- *  scale is fixed the moment the solver runs. */
-export const LG_SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
 
 /** Projected radius, in CSS px, that a proxy mesh is expanded to when it
  *  would otherwise render smaller. Below one pixel the rasteriser cannot
@@ -344,7 +333,7 @@ export function cpuRaymarchColumn(
 
 /** Magnitude of an integrated flux number, and its inverse. `zeroPoint`
  *  is 0 for a solid-angle-integrated flux (the calibration test's
- *  read-back) and LG_SB_ZERO_POINT for a per-arcsec² column. */
+ *  read-back) and SB_ZERO_POINT for a per-arcsec² column. */
 export function magFromIntensity(intensity: number, zeroPoint: number): number {
   return zeroPoint - 2.5 * Math.log10(Math.max(intensity, 1e-12));
 }
@@ -355,5 +344,5 @@ export function intensityFromMag(mag: number, zeroPoint: number): number {
 
 /** Surface brightness a raymarched column carries, mag/arcsec². */
 export function columnSurfaceBrightness(column: number): number {
-  return magFromIntensity(column, LG_SB_ZERO_POINT);
+  return magFromIntensity(column, SB_ZERO_POINT);
 }

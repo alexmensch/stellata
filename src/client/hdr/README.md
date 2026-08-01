@@ -45,9 +45,10 @@ src/client/hdr/
                              chunks above, so it is the only include a
                              raymarching stage needs (§ Extended sources).
   emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
-                             derivation and its inverse, LUMA_CEIL, and
-                             lumaNormalisedTint — the hue-only tint every
-                             extended emitter multiplies (§ Unit).
+                             derivation and its inverse, LUMA_CEIL,
+                             SB_ZERO_POINT (the zero point both volumetric
+                             emitters share) and lumaNormalisedTint, the
+                             hue-only tint they multiply (§ Unit).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -442,8 +443,7 @@ is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
 eso0932a panorama — it moves the star field and the Milky Way band
 together, which is the point of it.
 
-No emitter is outside the scale any more. What is still outstanding is
+No emitter is outside the scale, and both volumetric emitters now share one
+zero point (`SB_ZERO_POINT`) instead of deriving their own. Still outstanding
 *upstream* of the unit: the Milky Way's emissivity is anchored on one
-sightline rather than on a total luminosity, so the band carries a
-measured ~0.7 mag luminosity deficit and a too-steep latitude gradient
-into an otherwise-consistent frame (`stellata-xypg.29`).
+corrected sightline, not a total luminosity — `../milkyway/README.md`.

@@ -14,7 +14,6 @@ import {
   intensityFromMag,
   magFromIntensity,
   subPixelExpansion,
-  LG_SB_ZERO_POINT,
   MIN_PROJECTED_RADIUS_PX,
   DISC_COLOR_RGB,
   EMISSION_STEPS_DISC,
@@ -24,7 +23,7 @@ import {
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
-import { lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
 import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
 import { relativeLuminance } from '../hdr/tonemap-pure';
 
@@ -278,7 +277,7 @@ describe('surface-brightness zero point', () => {
   // A column is flux per steradian, so the zero point is the magnitude of
   // one arcsec² of solid angle. Derived, never tuned.
   it('is the solid angle of one arcsec²', () => {
-    expect(LG_SB_ZERO_POINT).toBeCloseTo(26.5721256659, 9);
+    expect(SB_ZERO_POINT).toBeCloseTo(26.5721256659, 9);
   });
 
   // Nothing at compile time ties the shader's copy to this one.
@@ -289,7 +288,7 @@ describe('surface-brightness zero point', () => {
     );
     const m = frag.match(/const float SB_ZERO_POINT = ([\d.]+);/);
     expect(m).not.toBeNull();
-    expect(Number(m![1])).toBeCloseTo(LG_SB_ZERO_POINT, 9);
+    expect(Number(m![1])).toBeCloseTo(SB_ZERO_POINT, 9);
   });
 
   it('the resolution floor matches the one the vertex shader applies', () => {
@@ -303,7 +302,7 @@ describe('surface-brightness zero point', () => {
   });
 
   it('a unit column reads at the zero point', () => {
-    expect(columnSurfaceBrightness(1)).toBeCloseTo(LG_SB_ZERO_POINT, 12);
+    expect(columnSurfaceBrightness(1)).toBeCloseTo(SB_ZERO_POINT, 12);
   });
 });
 
