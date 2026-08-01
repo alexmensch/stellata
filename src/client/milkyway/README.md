@@ -254,10 +254,18 @@ Two facts worth having before touching this:
 sightline resolves to ~0.0066 of full scale at a 50° / 900 px viewport
 against 0.15 for a threshold star — inside the range the resolve's dither
 breaks up, but under the 4/255 the old 0.45-strength calibration reached.
-`DR_MAG` (`../hdr/README.md` § Operator) is the lever, and it lifts the
-band and the star field **together**; `stellata-xypg.7` owns tuning it
-against eso0932a. **Do not raise the emissivity to compensate** — that
-puts the pole back above its measured residual.
+That is **too dim against a dark sky, and the cause is the display model,
+not this layer.** Summed over a 1° rod-summation patch the band toward the
+Galactic centre is equivalent to a 5.51-mag point source — 0.99 mag *above*
+the naked-eye limit — yet it renders 42× fainter than a threshold star,
+because `L_THRESH` lifts point sources to a comfortable display level and
+extended sources get no equivalent concession. The retired 20.0 anchor was
+silently supplying that lift. `stellata-xypg.34` owns it.
+
+**Do not raise the emissivity to compensate** — that breaks a pole pinned
+against a measured residual in order to paper over a display bug. `DR_MAG`
+(`../hdr/README.md` § Operator) cannot fix it either: it lifts the band and
+the star field together, so it has no term for a point-vs-extended ratio.
 
 The Local Group emission layer runs the same mapping and now the same
 constant (`../local-group/README.md` § Zero free parameters). The two

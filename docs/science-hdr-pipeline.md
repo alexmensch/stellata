@@ -1075,7 +1075,18 @@ axes; the presets themselves are a future epic) · veiling glare (§ 3.2 —
 own bead, deferred) · Display-P3 output (zsr.2 — plugs into the § 2
 encode) · BC_photopic (a7d.2.10 — substitutes into `L(m)` when it lands)
 · time-domain adaptation dynamics (§ 3.1 is deliberately instantaneous:
-no light/dark-adapt time constants, no feedback loop) · scotopic/mesopic
-eye modelling (rod spatial summation can't be reproduced on a display;
-`DR_MAG` absorbs the compression) · bloom/lens-flare post effects (the
-existing PSF footprint is the bloom).
+no light/dark-adapt time constants, no feedback loop) · bloom/lens-flare
+post effects (the existing PSF footprint is the bloom).
+
+**Rod spatial summation is no longer out of scope.** This section used to
+waive scotopic/mesopic eye modelling on the grounds that "`DR_MAG` absorbs
+the compression". It does not: `DR_MAG` sets the range from threshold to
+white and lifts point and extended sources *together*, so it carries no
+term that can express a point-vs-extended ratio. The waiver survived only
+because the Milky Way band was ~2.9 mag over-bright, which silently
+supplied the missing lift; `stellata-xypg.29` corrected the photometry and
+exposed the gap. Measured at 900 px / 50° FOV, the band toward the Galactic
+centre renders 42× fainter than a *threshold* star, while summed over a 1°
+rod-summation patch it is 0.99 mag **above** the naked-eye limit — the
+ordering is inverted. `stellata-xypg.34` owns the extended-source threshold
+that pairs with `L_THRESH`.
