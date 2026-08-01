@@ -126,10 +126,10 @@ instrument's `skyBackgroundMagArcsec2` (`exposure/exposure-epoch.ts`
 `docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
 
 `stellataEmitExtendedSource` takes **both** angles, and which one displays
-is per consumer: the band is uniform over the summation patch, M31 is not
-(bulge `R_e` 4.4′ inside 13.0′, and the gain would claim 2.34 mag more than
-the galaxy's whole flux), so `local-group-emission.frag.glsl` passes
-`Ω_px` twice. The statistic always takes `Ω_px` (`statistic/README.md`).
+is per consumer. The band is uniform over the summation patch; M31's core
+is not, so `local-group-emission.frag.glsl` passes `Ω_px` twice — an
+opt-out costing 2.695 mag past 3.6′ to avoid 3.95 at the nucleus
+(`../local-group/README.md`). Statistic: always `Ω_px` (`statistic/README.md`).
 
 Everything after the gain is identical for every volumetric emitter, so
 that chunk owns it: gain, clamp at `LUMA_CEIL`, statistic texel, and

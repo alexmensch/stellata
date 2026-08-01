@@ -186,15 +186,24 @@ shader's `SB_ZERO_POINT` are pinned against each other in
 area.** The band's display path substitutes `uOmegaSummationArcsec2` so an
 extended source's threshold lands where the eye's does
 (`../hdr/README.md` § Extended sources), and that substitution is only the
-flux in the summation patch for a source **uniform across it**. These
-objects are not: M31's bulge `R_e` is 4.4′ inside a 13.0′ summation disc,
-and at its central surface brightness (15.30) the gain would claim 1.10
-mag from one patch — **2.34 mag more than the galaxy's whole 3.44**. So
-this layer passes the pixel solid angle to both of
-`stellataEmitExtendedSource`'s solid-angle arguments, and
-`local-group-emission-calibration.test.ts` pins the arithmetic that says
-why. Reaching for the summation uniform here is the plausible-looking
-change that blows M31's core to white.
+flux in the summation patch for a source **uniform across it**. So this
+layer passes the pixel solid angle to both of
+`stellataEmitExtendedSource`'s solid-angle arguments. Reaching for the
+summation uniform here is the plausible-looking change that blows M31's
+core to white — **3.95 mag** over the correct answer at the nucleus.
+
+**But the opt-out is per-layer where uniformity is per-fragment, and it
+costs real accuracy — do not read it as settled.** The over-lift is
+confined to a **3.6′ crossover radius**; outside it M31 *is* uniform over a
+13.0′ patch to better than 0.02 mag, so `Ω_px` under-lifts by the full
+**2.695 mag** the band gained, over most of the object a viewer sees. The
+seam shows from Sol at the default view: M31 sits where the band's own
+diffuse component is 24.20 mag/arcsec² and renders 8.6/255, against
+0.7/255 for an M31 isophote of that same surface brightness. All three
+figures, plus the rejected `fwidth(S)` cap, are pinned in
+`local-group-emission-calibration.test.ts` § against convolve-then-gain.
+`stellata-xypg.35` owns the fix (convolve, then gain — the only operation
+that makes both layers correct at once).
 
 **There is no brightness knob, globally or per object.** `density0` is
 solved per object (never scale it here — the flux ratios are physical),

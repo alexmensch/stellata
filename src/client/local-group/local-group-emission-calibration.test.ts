@@ -26,10 +26,16 @@ import {
   subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
+import { pixelSolidAngleArcsec2 } from '../hdr/emission-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
+import { angularToPx } from '../camera/controls/star-geometry';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
+/** Steps per line-of-sight column integration. The Sérsic centre is a cusp
+ *  and converges slowly there, so this is set by the central column rather
+ *  than by the profile's smooth part. */
+const COLUMN_STEPS = 20_000;
 /** Far-field validity threshold: beyond 8 mesh radii the point-source
  *  1/d² law is accurate to ~0.02 mag — well inside the tolerance. */
 const FAR_FIELD_MESH_RADII = 8;
@@ -437,17 +443,29 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   const m31 = OBJECTS.m31;
   const disc = emissionComponents(m31.emission).find((c) => c.family === 'disc')!;
 
-  /** Column straight through a component's centre — the peak the shader
-   *  reaches on that component. Fine-stepped rather than analytic because
-   *  the Sérsic profile has no closed form. */
-  function centralColumn(comp: EmissionComponent): number {
-    const steps = 20_000;
+  /** Column through a component at projected radius `bPc`, face-on — which
+   *  for an inclined disc is the major-axis cut. `bPc` = 0 is the central
+   *  column, the peak the shader reaches. Fine-stepped rather than analytic
+   *  because the Sérsic profile has no closed form. */
+  function columnAt(comp: EmissionComponent, bPc: number): number {
+    const bx = bPc / comp.axesPc[0];
+    if (bx >= 1) return 0;
+    const zMax = Math.sqrt(1 - bx * bx);
     let col = 0;
-    for (let i = 0; i < steps; i++) {
-      col += cpuDensityAt([0, 0, (i + 0.5) / steps], comp) * (comp.axesPc[2] / steps);
+    for (let i = 0; i < COLUMN_STEPS; i++) {
+      const t = ((i + 0.5) / COLUMN_STEPS) * zMax;
+      col += cpuDensityAt([bx, 0, t], comp) * ((zMax / COLUMN_STEPS) * comp.axesPc[2]);
     }
     return 2 * col;
   }
+
+  const combinedSbAt = (thetaArcsec: number) =>
+    columnSurfaceBrightness(
+      emissionComponents(m31.emission).reduce(
+        (sum, comp) => sum + columnAt(comp, thetaArcsec * ARCSEC_TO_RAD * m31.distance),
+        0,
+      ),
+    );
 
   /** Column straight down the disc normal — the face-on sightline. */
   function faceOnColumnAt(radiusPc: number): number {
@@ -510,7 +528,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   // measurement that scopes the concession to the band.
   it('would claim more flux from one summation patch than it has in total', () => {
     const column = emissionComponents(m31.emission).reduce(
-      (sum, comp) => sum + centralColumn(comp),
+      (sum, comp) => sum + columnAt(comp, 0),
       0,
     );
     const centreSb = columnSurfaceBrightness(column);
@@ -530,5 +548,114 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     const summationRadiusArcmin =
       Math.sqrt(DEFAULT_SUMMATION_ARCSEC2 / Math.PI) / 60;
     expect(summationRadiusArcmin / reArcmin).toBeCloseTo(1.47, 2);
+  });
+
+  // What the opt-out above actually costs, measured against the operation
+  // that would be correct: average the flux over the summation patch FIRST,
+  // then gain by the patch area. `10^(−0.4·S̄)·Ω_sum` IS that patch flux, so
+  // the ideal needs no free parameter — only an integral. Both errors are
+  // real and they point opposite ways, which is the finding: the opt-out is
+  // right for the bulge core and wrong for everything outside it.
+  describe('against convolve-then-gain', () => {
+    const R_SUM_ARCSEC = Math.sqrt(DEFAULT_SUMMATION_ARCSEC2 / Math.PI);
+    const TABLE_MAX_ARCSEC = 90 * 60;
+    const TABLE_N = 900;
+
+    // The patch integral samples the profile ~10^5 times per centre, so the
+    // radially symmetric face-on profile is tabulated once. Built lazily —
+    // 10^7 density evaluations are not worth paying on an unrelated run.
+    let table: number[] | null = null;
+    function fluxPerArcsec2(thetaArcsec: number): number {
+      table ??= Array.from({ length: TABLE_N + 1 }, (_, i) =>
+        10 ** (-0.4 * combinedSbAt((i / TABLE_N) * TABLE_MAX_ARCSEC)),
+      );
+      const x = (Math.abs(thetaArcsec) / TABLE_MAX_ARCSEC) * TABLE_N;
+      if (x >= TABLE_N) return 0;
+      const i = Math.floor(x);
+      return table[i] + (table[i + 1] - table[i]) * (x - i);
+    }
+
+    /** Flux inside one summation patch centred `thetaArcsec` from the
+     *  nucleus, integrated in polar coordinates about the patch centre. */
+    function patchFlux(thetaArcsec: number): number {
+      const nRho = 220;
+      const nPhi = 180;
+      let acc = 0;
+      for (let i = 0; i < nRho; i++) {
+        const rho = ((i + 0.5) / nRho) * R_SUM_ARCSEC;
+        for (let j = 0; j < nPhi; j++) {
+          const phi = ((j + 0.5) / nPhi) * 2 * Math.PI;
+          acc +=
+            fluxPerArcsec2(
+              Math.sqrt(
+                thetaArcsec * thetaArcsec +
+                  rho * rho +
+                  2 * thetaArcsec * rho * Math.cos(phi),
+              ),
+            ) * rho;
+        }
+      }
+      return acc * (R_SUM_ARCSEC / nRho) * ((2 * Math.PI) / nPhi);
+    }
+
+    /** Magnitudes a gain of `omega` lands from ideal at `thetaArcsec`.
+     *  Negative is too bright. */
+    const errorMag = (thetaArcsec: number, omega: number) =>
+      -2.5 *
+      Math.log10((fluxPerArcsec2(thetaArcsec) * omega) / patchFlux(thetaArcsec));
+
+    it('over-lifts the nucleus by 3.95 mag if the band gain is reused', () => {
+      expect(errorMag(0, DEFAULT_SUMMATION_ARCSEC2)).toBeCloseTo(-3.95, 2);
+    });
+
+    it('under-lifts the smooth disc by the full Ω ratio as shipped', () => {
+      // Outside ~4 arcmin the profile is uniform over a 13 arcmin patch to
+      // better than 0.02 mag, so the ideal collapses onto the band's own
+      // gain and the shipped Ω_px shortfall is the Ω ratio — the same
+      // 2.695 mag the band gained. This is the half of the trade the
+      // opt-out pays, and it covers most of the object a viewer sees.
+      const omegaPx = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
+      const ratioMag = 2.5 * Math.log10(DEFAULT_SUMMATION_ARCSEC2 / omegaPx);
+      expect(ratioMag).toBeCloseTo(2.695, 3);
+      for (const arcmin of [25, 40, 60]) {
+        const theta = arcmin * 60;
+        expect(errorMag(theta, DEFAULT_SUMMATION_ARCSEC2)).toBeCloseTo(0, 1.5);
+        // The two gains differ by the Ω ratio at every θ by construction, so
+        // the shortfall is the ratio plus whatever non-uniformity is left.
+        expect(errorMag(theta, omegaPx) - errorMag(theta, DEFAULT_SUMMATION_ARCSEC2))
+          .toBeCloseTo(ratioMag, 9);
+        expect(errorMag(theta, omegaPx)).toBeGreaterThan(2.7);
+        expect(errorMag(theta, omegaPx)).toBeLessThan(2.72);
+      }
+    });
+
+    it('crosses over at 3.6 arcmin', () => {
+      expect(errorMag(3.0 * 60, DEFAULT_SUMMATION_ARCSEC2)).toBeLessThan(0);
+      expect(errorMag(4.0 * 60, DEFAULT_SUMMATION_ARCSEC2)).toBeGreaterThan(0);
+    });
+
+    // A per-fragment `fwidth(S)` cap on the effective summation area was the
+    // cheap alternative to a convolution pass. Rejected, and pinned so it is
+    // not re-proposed: the over-count is driven by CURVATURE while fwidth is
+    // a first derivative, so at the nucleus — where the profile is flat and
+    // the error is worst — the cap does not bind at all. Everywhere else it
+    // over-corrects, landing fainter than ideal by more than not capping.
+    it('is not rescued by a fwidth(S)-derived cap', () => {
+      const cappedError = (thetaArcsec: number) => {
+        const h = Math.max(thetaArcsec * 1e-3, 0.5);
+        const gradPerArcsec = Math.abs(
+          (combinedSbAt(thetaArcsec + h) - combinedSbAt(thetaArcsec - h)) / (2 * h),
+        );
+        const scale = gradPerArcsec > 0 ? 1 / gradPerArcsec : Infinity;
+        return errorMag(
+          thetaArcsec,
+          Math.min(DEFAULT_SUMMATION_ARCSEC2, Math.PI * scale * scale),
+        );
+      };
+      expect(cappedError(0)).toBeCloseTo(errorMag(0, DEFAULT_SUMMATION_ARCSEC2), 2);
+      for (const arcmin of [0.5, 2, 6.5]) {
+        expect(cappedError(arcmin * 60)).toBeGreaterThan(1.5);
+      }
+    });
   });
 });

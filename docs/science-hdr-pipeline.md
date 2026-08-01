@@ -204,30 +204,43 @@ substitution is the flux in the summation area only for a source
 **uniform across it**, and the band from Sol is the only current emitter
 that qualifies everywhere.
 
-- **The Local Group layer therefore opts out** and keeps `Ω_px`. M31's
-  bulge `R_e` is 4.4′ against the 13.0′ summation disc, and at its
-  central surface brightness (15.30) the gain would claim 1.10 mag from
-  one patch — **2.34 mag more than the whole galaxy's 3.44**. Pinned in
-  `local-group-emission-calibration.test.ts`. But its *outer* disc
-  (`R_d` = 5.3 kpc ≈ 23′) is smooth over 13′ and does qualify, so the
-  opt-out is too coarse in the other direction: the envelope is now
-  under-displayed by the same ~2.7 mag the band gained.
-- **Two consequences of the same coarseness, both live rather than
-  latent.** An extended source's FOV response is a *display* choice here,
-  so the band holds its level across FOV while every LG object still dims
-  quadratically — visibly different behaviour for two things on screen at
-  once. And a Galaxy patch renders ~2.7 mag (at 50° / 900 px) over an LG
-  patch of the same surface brightness, which reads as an inconsistency
-  from any external viewpoint rather than only past ~1.5 Mpc, where the
-  whole Galaxy additionally falls under the summation area.
+- **The Local Group layer opts out** and keeps `Ω_px`. Reusing the band's
+  gain would over-lift M31's nucleus by **3.95 mag** against the operation
+  that would be correct — average the flux over the patch first, then gain
+  by the patch area, which is what `10^(−0.4·S̄)·Ω_sum` *is*. The
+  flux-conservation form of the same statement: at its central surface
+  brightness (15.30) one patch would claim 1.10 mag, **2.34 mag more than
+  the whole galaxy's 3.44**.
+- **What the opt-out costs, and it is not small.** The over-lift is
+  confined to a **3.6′ crossover radius**. Outside it the profile is
+  uniform over a 13.0′ patch to better than 0.02 mag, the ideal collapses
+  onto the band's own gain, and `Ω_px` therefore under-lifts by the full
+  **2.695 mag** the band gained — over most of the object a viewer sees.
+  Both errors and the crossover are pinned in
+  `local-group-emission-calibration.test.ts`. The opt-out is the better of
+  the two available answers, not a correct one: a 4-mag white core is worse
+  than a dim envelope.
+- **Visible from Sol at the default view, not only from outside.** M31 sits
+  at b = −21.6°, where the band's own diffuse component is 24.20
+  mag/arcsec² and now renders 8.6/255 — while an M31 isophote at that same
+  surface brightness renders 0.7/255, a factor of 12 the wrong way, with
+  the two overlapping on screen. Past ~1.5 Mpc the whole Galaxy
+  additionally falls under the summation area. The FOV response splits too:
+  the band holds its level while every LG object still dims quadratically.
 - **The fix is one operation: convolve over the summation kernel, then
-  gain.** Blurring `S` first makes the uniformity assumption true by
-  construction, so both layers take the same anchor, both become
+  gain.** Blurring the emission first makes the uniformity assumption true
+  by construction, so both layers take the same anchor, both become
   FOV-invariant, and the resolution loss the eye actually applies comes
   along. It belongs on the emission side upstream of the operator — the
   veiling-glare seam (§ 3.2) — and needs a pass of its own, so it is its
-  own bead. A per-fragment `fwidth(S)` cap on the effective summation area
-  is the cheap approximation to evaluate first.
+  own bead (`stellata-xypg.35`).
+- *Rejected: a per-fragment `fwidth(S)` cap on the effective summation
+  area*, which was the cheap alternative to that pass. The over-count is
+  driven by **curvature** and `fwidth` is a first derivative, so at the
+  nucleus — profile flat, error worst — the cap does not bind at all and
+  leaves the full 3.95 mag. Everywhere else it over-corrects, landing
+  1.75–2.79 mag *fainter* than ideal across 0.5–6.5′, worse than not
+  capping. Measured and pinned alongside the two errors above.
 
 **The concession is absent from the statistic.** Attachment 1 keeps
 `Ω_px` in both channels: the adaptation model reads retinal illuminance,
