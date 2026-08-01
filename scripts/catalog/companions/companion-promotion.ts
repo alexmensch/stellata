@@ -12,6 +12,8 @@ import {
   NO_CONSTELLATION_INDEX,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
+  absoluteToApparentMagnitude,
+  apparentToAbsoluteMagnitude,
   classifyFromSimbad,
   designationConIndex,
   spectralClassCi,
@@ -703,7 +705,7 @@ export function imputeCompanionAbsmag(
   const distPc = secondary.distPc ?? primary?.distPc ?? null;
   if (ownWdsMag !== null && distPc !== null && distPc > 0) {
     return {
-      absmag: ownWdsMag - 5 * Math.log10(distPc / 10),
+      absmag: apparentToAbsoluteMagnitude(ownWdsMag, distPc),
       source: 'wds_mag',
     };
   }
@@ -2120,7 +2122,8 @@ export function promoteCompanions(
     // rows say 12.7 kpc against the record's B-J 6.2 kpc, a 1.5 mag error in
     // the observed frame every hypothesis below is compared against).
     const distPc = Math.hypot(anchor.x, anchor.y, anchor.z);
-    const mObs = distPc > 0 ? anchor.absmag + av + 5 * Math.log10(distPc / 10) : null;
+    const mObs = distPc > 0
+      ? absoluteToApparentMagnitude(anchor.absmag, distPc) + av : null;
     const obsMag = (c: AnchorDimCandidate): number | null =>
       c.memberWdsMag !== null ? c.memberWdsMag
         : c.anchorWdsMag !== null && c.dmag !== null ? c.anchorWdsMag + c.dmag
@@ -2251,7 +2254,8 @@ export function promoteCompanions(
         stats.blendDimSkipped++;
         continue;
       }
-      const memberMObs = c.member.absmag + av + 5 * Math.log10(memberDistPc / 10);
+      const memberMObs =
+        absoluteToApparentMagnitude(c.member.absmag, memberDistPc) + av;
       if (!(memberMObs > mObs + ANCHOR_DIM_MIN_DELTA_MAG)) {
         stats.blendDimSkipped++;
         continue;
@@ -2266,8 +2270,8 @@ export function promoteCompanions(
       continue;
     }
     const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
-    anchor.absmag = -2.5 * Math.log10(residualFlux / (1 + relSum))
-      - av - 5 * Math.log10(distPc / 10);
+    const residualMObs = -2.5 * Math.log10(residualFlux / (1 + relSum));
+    anchor.absmag = apparentToAbsoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
       cand.member.physicalRadius = physicalRadius(
