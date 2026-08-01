@@ -83,8 +83,8 @@ shared flux unit (§ Calibration). Their ratio is the bulge/disc split and
 is still visually chosen — Licquia & Newman 2015 give B/T = 0.150
 (+0.028/−0.019) in stellar *mass*, which is the closest published anchor
 and an upper bound on the V-band value (the bulge's older, more
-metal-rich population carries a higher Υ\*_V). `stellata-xypg.29`'s
-deferred M_V solve owns replacing it.
+metal-rich population carries a higher Υ\*_V). `stellata-xypg.33` owns
+replacing it.
 
 ### Population tints carry hue, never flux
 
@@ -101,7 +101,7 @@ the disc purely because its hue is nearer white**, which moved the
 bulge/disc flux split without touching either density. Normalising drops
 the bulge's share of the luminance-weighted total from 0.361 to 0.283
 against a literature ~0.15–0.20; the remainder is the weight ratio, which
-the deferred M_V solve owns (§ Calibration).
+`stellata-xypg.33` owns (§ Calibration).
 
 Two consequences a future session needs:
 
@@ -206,15 +206,23 @@ the same subtraction is meaningless — `diffuseResidualMagArcsec2` returns
 `null` for that pair rather than a plausible-looking number.
 
 **Interim, deliberately.** One sightline still does not constrain a total
-luminosity. `stellata-xypg.29` deferred the solve against the Galaxy's
+luminosity, and `stellata-xypg.33` carries the solve against the Galaxy's
 integrated M_V (Bland-Hawthorn & Gerhard 2016 give −21.37, with a real
-0.5–0.9 mag spread across older direct-integration values) until the
-extinction was right, because solving emissivity against a slab that was
-an order of magnitude thin bakes the attenuation error into the
-luminosity. The resolved catalogue is only **0.205 %** of the Galaxy's
-light (integrated M_V = −14.65), so that solve can ignore the double
-count entirely — the two numbers are large and negligible for different
-reasons.
+0.5–0.9 mag spread across older direct-integration values). It was
+deferred behind the dust fix rather than done here, because solving
+emissivity against a slab an order of magnitude thin bakes the
+attenuation error into the luminosity — the retired anchor's exact
+defect.
+
+The two constraints do not yet agree: M_V = −21.37 wants ~1.3 mag more
+total light than the NGP residual admits, so satisfying both needs the
+**shape** to change rather than a global gain. That is why .33 sits
+behind `stellata-xypg.32`.
+
+The resolved catalogue is only **0.205 %** of the Galaxy's light
+(integrated M_V = −14.65), so that solve can ignore the double count
+entirely — the same star field is dominant from Sol and negligible from
+outside, for the same 1/d² reason.
 
 #### The gradient this produces
 
