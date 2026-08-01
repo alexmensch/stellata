@@ -8,10 +8,8 @@ import {
   MilkyWay,
 } from './milkyway';
 import {
-  ANALYTICAL_DUST_NORM_PER_PC,
   BULGE_COLOR_RGB,
   BULGE_TINT_RGB,
-  DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
   DISC_TINT_RGB,
@@ -21,9 +19,12 @@ import {
   SOL_GALACTOCENTRIC_PC,
   STEPS,
   S_MIN_PC,
+  dustTauVPerPc,
+  foregroundDustTauRgb,
   galacticDirection,
   sightlineSurfaceBrightness,
 } from './milkyway-column-pure';
+import { R0_PC } from '../galactic/galactic-coords';
 import {
   LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2,
   NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2,
@@ -169,21 +170,44 @@ describe('MilkyWay diffuse reference', () => {
   });
 });
 
+// A_V range the SFD map spans toward the galactic poles. The literature
+// figure is an interval, so containment is the assertion; the model's own
+// number is pinned exactly alongside it.
+const SFD_POLAR_AV_MIN = 0.03;
+const SFD_POLAR_AV_MAX = 0.15;
+
 describe('MilkyWay analytical dust', () => {
-  // The normalisation is derived from a declarative rate, so the rate is
-  // the thing to argue with. Schlegel/Finkbeiner/Davis publishes no
-  // per-kpc rate at all — the figure this replaced cited it anyway.
-  it('derives the norm from the stated local plane rate', () => {
-    expect(
-      ANALYTICAL_DUST_NORM_PER_PC * DEFAULT_DUST_AV_PER_DENSITY_PC * 1000,
-    ).toBeCloseTo(LOCAL_DUST_RATE_MAG_PER_KPC, 9);
+  // Marched through the profile rather than re-arranged out of the
+  // normalisation, so a change to the radial term, the A_V-per-density
+  // wiring or a re-introduced 0.45 multiplier all show up here.
+  // Schlegel/Finkbeiner/Davis publishes no per-kpc rate at all — the
+  // figure this replaced cited it anyway.
+  it('marches the stated plane rate at (R₀, z = 0)', () => {
+    const magPerPc =
+      dustTauVPerPc(R0_PC, 0, DEFAULT_EXTINCTION_STRENGTH) * MAG_PER_TAU;
+    expect(magPerPc * 1000).toBeCloseTo(LOCAL_DUST_RATE_MAG_PER_KPC, 9);
     expect(LOCAL_DUST_RATE_MAG_PER_KPC).toBe(1.0);
   });
 
-  // The scale height ties the plane rate to the perpendicular column, and
-  // both land inside their own literature ranges at the same normalisation.
+  // The second constraint the 1.0 mag/kpc rate has to satisfy, and the one
+  // the scale height controls: integrate the slab straight up from Sol and
+  // the perpendicular column has to land in SFD's polar range. Marched, so
+  // moving ANALYTICAL_DUST_SCALE_HEIGHT_PC fails it — which is the whole
+  // reason the two constraints are described as independent.
   it('lands the polar column inside the SFD polar spread', () => {
-    expect(LOCAL_DUST_RATE_MAG_PER_KPC * 0.125).toBeCloseTo(0.125, 6);
+    const tau = foregroundDustTauRgb(
+      SOL_GALACTOCENTRIC_PC,
+      galacticDirection(0, 90),
+      20_000,
+      DEFAULT_EXTINCTION_STRENGTH,
+      4096,
+    );
+    const av = tau[1] * MAG_PER_TAU;
+    // 0.125 analytically; the march starts at S_MIN_PC like the shader's
+    // does, which drops the first parsec (0.8%).
+    expect(av).toBeCloseTo(0.124, 3);
+    expect(av).toBeGreaterThan(SFD_POLAR_AV_MIN);
+    expect(av).toBeLessThan(SFD_POLAR_AV_MAX);
   });
 
   // A multiplier of anything but 1 means the shipped extinction disagrees
