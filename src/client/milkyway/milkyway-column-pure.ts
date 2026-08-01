@@ -3,7 +3,8 @@
 // receives as uniforms — see README.md § Density profiles, § Calibration.
 
 import { R0_PC } from '../galactic/galactic-coords';
-import { lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import { NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 } from './diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -14,7 +15,7 @@ export const DISC_RADIUS_PC = 15_000;
 export const DISC_HALF_THICKNESS_PC = 600;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
-export const DISC_DENSITY0 = 1.5;
+export const DISC_WEIGHT = 1.5;
 export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
 /** The authored palette carrying hue only — what the shader multiplies in.
  *  See README.md § Population tints carry hue, never flux. */
@@ -26,7 +27,7 @@ export const BULGE_RADIUS_PC = 5_000;
 export const BULGE_HALF_THICKNESS_PC = 3_000;
 export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
-export const BULGE_DENSITY0 = 18.0;
+export const BULGE_WEIGHT = 18.0;
 export const BULGE_COLOR_RGB: Rgb = [1.0, 0.9647, 0.9294];
 export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
@@ -77,9 +78,12 @@ export const FOREGROUND_DUST_STEPS = 16;
 
 // --- Profiles ----------------------------------------------------------
 
+/** Disc emissivity at the component's RELATIVE weight. The unit scale is
+ *  `EMISSIVITY_SCALE`, applied by the march rather than baked here — it is
+ *  derived from a march, so baking it would be circular. */
 export function discDensity(rPc: number, zPc: number): number {
   return (
-    DISC_DENSITY0 *
+    DISC_WEIGHT *
     Math.exp(-(rPc - R0_PC) / DISC_SCALE_LENGTH_PC) *
     Math.exp(-Math.abs(zPc) / DISC_SCALE_HEIGHT_PC)
   );
@@ -88,7 +92,7 @@ export function discDensity(rPc: number, zPc: number): number {
 export function bulgeDensity(rPc: number, zPc: number): number {
   const zEff = zPc / BULGE_AXIS_RATIO;
   const rPrime = Math.sqrt(rPc * rPc + zEff * zEff);
-  return BULGE_DENSITY0 * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
+  return BULGE_WEIGHT * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
 }
 
 export function analyticalDustDensity(rPc: number, zPc: number): number {
@@ -252,6 +256,10 @@ export interface ColumnOptions {
   /** Steps in the foreground pre-march. 0 reproduces the pre-fix shader,
    *  which seeded τ at the mesh boundary and skipped this column. */
   readonly foregroundSteps?: number;
+  /** Multiplier taking the components' relative weights to the shared flux
+   *  unit. Defaults to `EMISSIVITY_SCALE`; only its own derivation passes
+   *  1, which is what keeps that derivation non-circular. */
+  readonly emissivityScale?: number;
 }
 
 /**
@@ -272,6 +280,7 @@ export function componentColumnRgb(
     dustEnabled = true,
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
+    emissivityScale = EMISSIVITY_SCALE,
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 
@@ -310,7 +319,7 @@ export function componentColumnRgb(
     if (outside > 0.001) break;
 
     const { rPc, zPc } = cylindrical(p);
-    const density = component.density(rPc, zPc);
+    const density = emissivityScale * component.density(rPc, zPc);
     const dTau = tauStepRgb(rPc, zPc, dsPc, dustEffective);
 
     for (let k = 0; k < 3; k++) {
@@ -360,3 +369,30 @@ export function sightlineSurfaceBrightness(
     glowMagOffset - 2.5 * Math.log10(sightlineColumn(originPc, dirUnit, options))
   );
 }
+
+// --- Emission scale ----------------------------------------------------
+
+/**
+ * Multiplier taking the components' relative weights to the shared
+ * `SB_ZERO_POINT` flux unit, derived so the NGP sightline lands on the
+ * anchor above. Marched **dust-free**, which is the whole point: the
+ * emissivity is an intrinsic property and must not move when the
+ * extinction does.
+ *
+ * Interim. `stellata-xypg.29` deferred the solve against the Galaxy's
+ * total M_V; until that lands this is one sightline rather than an
+ * integrated luminosity, and the resulting integrated M_V is a reported
+ * outcome rather than an input.
+ */
+export const EMISSIVITY_SCALE =
+  10 ** (-0.4 * (NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - SB_ZERO_POINT)) /
+  sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 90), {
+    dustEnabled: false,
+    emissivityScale: 1,
+  });
+
+/** Per-component emissivity in the shared flux unit — what the shader
+ *  receives. The CPU mirror reaches the same product through
+ *  `ColumnOptions.emissivityScale`. */
+export const DISC_DENSITY0 = DISC_WEIGHT * EMISSIVITY_SCALE;
+export const BULGE_DENSITY0 = BULGE_WEIGHT * EMISSIVITY_SCALE;
