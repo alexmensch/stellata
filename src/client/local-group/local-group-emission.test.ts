@@ -12,7 +12,6 @@ import {
   emissionStepsFor,
   columnSurfaceBrightness,
   intensityFromMag,
-  lumaNormalisedTint,
   magFromIntensity,
   subPixelExpansion,
   LG_SB_ZERO_POINT,
@@ -25,6 +24,7 @@ import {
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
+import { lumaNormalisedTint } from '../hdr/emission-pure';
 import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
 import { relativeLuminance } from '../hdr/tonemap-pure';
 
@@ -307,26 +307,16 @@ describe('surface-brightness zero point', () => {
   });
 });
 
-describe('lumaNormalisedTint', () => {
-  it('leaves the tint at unit relative luminance so flux stays solved', () => {
-    for (const rgb of [SPHEROID_COLOR_RGB, DISC_COLOR_RGB, [1, 0.5, 0] as const]) {
+describe('population tints', () => {
+  it('both family tints carry unit relative luminance', () => {
+    for (const rgb of [SPHEROID_COLOR_RGB, DISC_COLOR_RGB]) {
       expect(relativeLuminance(lumaNormalisedTint(rgb))).toBeCloseTo(1, 12);
     }
-  });
-
-  it('preserves chromaticity — only the scale moves', () => {
-    const t = lumaNormalisedTint(DISC_COLOR_RGB);
-    expect(t[0] / t[1]).toBeCloseTo(DISC_COLOR_RGB[0] / DISC_COLOR_RGB[1], 12);
-    expect(t[2] / t[1]).toBeCloseTo(DISC_COLOR_RGB[2] / DISC_COLOR_RGB[1], 12);
   });
 
   it('the disc lavender would otherwise dim every disc by 0.42 mag', () => {
     const lost = -2.5 * Math.log10(relativeLuminance(DISC_COLOR_RGB));
     expect(lost).toBeCloseTo(0.42, 2);
-  });
-
-  it('a black tint degrades to white rather than extinguishing the object', () => {
-    expect(lumaNormalisedTint([0, 0, 0])).toEqual([1, 1, 1]);
   });
 });
 

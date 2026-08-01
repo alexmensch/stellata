@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
+import { lumaNormalisedTint } from '../hdr/emission-pure';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 import type { DustField } from '../loaders/dust-loader';
@@ -12,6 +13,7 @@ import {
   BULGE_AXIS_RATIO,
   BULGE_COLOR_RGB,
   BULGE_DENSITY0,
+  BULGE_TINT_RGB,
   BULGE_HALF_THICKNESS_PC,
   BULGE_RADIUS_PC,
   BULGE_SCALE_RADIUS_PC,
@@ -23,6 +25,7 @@ import {
   DISC_RADIUS_PC,
   DISC_SCALE_HEIGHT_PC,
   DISC_SCALE_LENGTH_PC,
+  DISC_TINT_RGB,
   REDDENING_RGB,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
@@ -79,12 +82,25 @@ export interface MilkywayDeps {
 }
 
 /** Per-component density / colour / scale parameters. Exposed as an
- *  interface so the dev-console levers can target either component. */
+ *  interface so the dev-console levers can target either component.
+ *
+ *  `tint` is the uniform and is luma-normalised; `authoredColor` is the
+ *  palette the colour picker round-trips. Writing the authored value into
+ *  the uniform would make a hue edit move the component's flux. */
 interface ComponentMaterials {
   material: THREE.ShaderMaterial;
   density0: { value: number };
-  color: { value: THREE.Color };
+  tint: { value: THREE.Color };
+  authoredColor: THREE.Color;
   meshScale: { value: THREE.Vector3 };
+}
+
+function tintColor(r: number, g: number, b: number): THREE.Color {
+  return new THREE.Color(...lumaNormalisedTint([r, g, b]));
+}
+
+function rgbOf(c: THREE.Color): { r: number; g: number; b: number } {
+  return { r: c.r, g: c.g, b: c.b };
 }
 
 export class MilkyWay {
@@ -165,7 +181,8 @@ export class MilkyWay {
         DISC_HALF_THICKNESS_PC,
       ),
       density0: DISC_DENSITY0,
-      color: new THREE.Color(...DISC_COLOR_RGB),
+      authoredColor: new THREE.Color(...DISC_COLOR_RGB),
+      tint: new THREE.Color(...DISC_TINT_RGB),
       deps,
     });
     this.discMesh = this.buildMesh(discGeom, this.disc);
@@ -180,7 +197,8 @@ export class MilkyWay {
         BULGE_HALF_THICKNESS_PC,
       ),
       density0: BULGE_DENSITY0,
-      color: new THREE.Color(...BULGE_COLOR_RGB),
+      authoredColor: new THREE.Color(...BULGE_COLOR_RGB),
+      tint: new THREE.Color(...BULGE_TINT_RGB),
       deps,
     });
     this.bulgeMesh = this.buildMesh(bulgeGeom, this.bulge);
@@ -194,11 +212,12 @@ export class MilkyWay {
     isBulge: boolean;
     meshScale: THREE.Vector3;
     density0: number;
-    color: THREE.Color;
+    authoredColor: THREE.Color;
+    tint: THREE.Color;
     deps: MilkywayDeps;
   }): ComponentMaterials {
     const density0 = { value: opts.density0 };
-    const color = { value: opts.color };
+    const tint = { value: opts.tint };
     const meshScale = { value: opts.meshScale };
 
     const material = new THREE.ShaderMaterial({
@@ -234,7 +253,7 @@ export class MilkyWay {
         uIsBulge: { value: opts.isBulge },
         uMeshScalePc: meshScale,
         uDensity0: density0,
-        uColor: color,
+        uColor: tint,
         uDiscScaleLengthPc: { value: DISC_SCALE_LENGTH_PC },
         uDiscScaleHeightPc: { value: DISC_SCALE_HEIGHT_PC },
         uBulgeScaleRadiusPc: { value: BULGE_SCALE_RADIUS_PC },
@@ -242,7 +261,7 @@ export class MilkyWay {
       },
     });
 
-    return { material, density0, color, meshScale };
+    return { material, density0, tint, authoredColor: opts.authoredColor, meshScale };
   }
 
   private buildMesh(geom: THREE.SphereGeometry, comp: ComponentMaterials): THREE.Mesh {
@@ -321,10 +340,15 @@ export class MilkyWay {
   }
 
   setDiscColor(r: number, g: number, b: number) {
-    this.disc.color.value.setRGB(r, g, b);
+    this.setComponentColor(this.disc, r, g, b);
   }
   setBulgeColor(r: number, g: number, b: number) {
-    this.bulge.color.value.setRGB(r, g, b);
+    this.setComponentColor(this.bulge, r, g, b);
+  }
+
+  private setComponentColor(c: ComponentMaterials, r: number, g: number, b: number) {
+    c.authoredColor.setRGB(r, g, b);
+    c.tint.value.copy(tintColor(r, g, b));
   }
 
   /** Set the wavelength-reddening per-channel τ multipliers. CCM
@@ -343,8 +367,8 @@ export class MilkyWay {
       discDensity: this.disc.density0.value,
       bulgeDensity: this.bulge.density0.value,
       extinctionStrength: this.sharedDust.uExtinctionStrength.value,
-      discColor: { r: this.disc.color.value.r, g: this.disc.color.value.g, b: this.disc.color.value.b },
-      bulgeColor: { r: this.bulge.color.value.r, g: this.bulge.color.value.g, b: this.bulge.color.value.b },
+      discColor: rgbOf(this.disc.authoredColor),
+      bulgeColor: rgbOf(this.bulge.authoredColor),
       reddening: { r: c.x, g: c.y, b: c.z },
     };
   }

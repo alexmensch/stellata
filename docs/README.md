@@ -6,6 +6,13 @@ a README.md there*; only land in `docs/` if the topic truly spans the
 whole codebase.
 
 ```
+architecture-modularity.md  Design gate for the object-kind modularity
+                        epic: engine services / kind modules /
+                        population shards, the ObjectKindModule +
+                        KindContext contracts, FocusTarget-into-
+                        FocusableProvider merge, facade flattening,
+                        free-fly engine constraints, phasing. Spans
+                        src/client/ end to end.
 authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
                         sibling symmetry, sentinel-init dirty-track,
                         single source of truth for time / camera state).

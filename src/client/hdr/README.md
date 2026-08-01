@@ -45,7 +45,9 @@ src/client/hdr/
                              chunks above, so it is the only include a
                              raymarching stage needs (§ Extended sources).
   emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
-                             derivation and its inverse, and LUMA_CEIL.
+                             derivation and its inverse, LUMA_CEIL, and
+                             lumaNormalisedTint — the hue-only tint every
+                             extended emitter multiplies (§ Unit).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -87,6 +89,12 @@ L_px = uExposure · 10^(−0.4·S) · uOmegaPxArcsec2
 Being a single scalar is what lets a layer apply it to a coloured column
 without touching chromaticity. It is **unclamped** — the caller clamps
 the product against `LUMA_CEIL`, not the factor.
+
+**Being a scalar is also why an emitter's tint must carry hue only.** It
+multiplies every channel equally while the emissivity it scales was
+normalised against a total flux, so a tint whose relative luminance isn't 1
+rescales that emitter's flux by that luminance — 0.42 mag on the Local
+Group disc family, 0.39 mag on the band. `lumaNormalisedTint` owns it.
 
 **A reflecting body uses both rules, and that is what closes the resolve
 step.** A planet's glare billboard takes `stellataPointSourcePeak` with
@@ -363,8 +371,8 @@ the default path and the operator runs once, at the resolve.
   the path hardware without a float-renderable target takes. **This is
   the full A/B.**
 - `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
-  the resolve straight pass-through. Narrower: it isolates the target
-  itself (depth, alpha, blend precision, pass order) from the operator.
+  the resolve straight pass-through, isolating the target itself (depth,
+  alpha, blend precision, pass order) from the operator.
 - `stellata.setDynamicRangeMag(x)` / `stellata.setHighlightDesat(x)` — the
   operator's two shape knobs, live, for probing the display axis by eye.
   Both route through `syncMode`, which is what re-authors every chrome
@@ -381,9 +389,7 @@ piecewise log shoulder is invertible; that is the shape to reach for.
 
 **Pass-through shows the scene blown out, and that is the point of it** —
 `uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
-thousands) and the resolve hands it to an 8-bit canvas unchanged. The
-mode isolates the *target* (depth, alpha, blend precision, pass order)
-from the *operator*; it is not a look comparison.
+thousands) and the resolve hands it to an 8-bit canvas unchanged.
 
 **It also cannot reproduce built-in-material chrome, by construction.**
 What disables their `colorspace_fragment` encode is the target's linear
@@ -395,11 +401,8 @@ encode. Custom-shader chrome *is* exact. Use `setHdrEnabled(false)` when
 you want a whole-frame comparison.
 
 **What the A/B is and is not for.** It compares *compositing*, not
-calibration: the peak of any source matches exactly on both paths by
-construction, so it cannot reveal a mis-calibrated emitter. What it shows
-is accumulation and blend-order differences (below). Since the gate went
-live it is a developer tool for the fallback path, not a look comparison a
-reader should reach for to judge whether the scene is right.
+calibration (§ Fallback), so it cannot reveal a mis-calibrated emitter —
+only accumulation and blend-order differences.
 
 **Expected on the A/B, and not a bug: chrome line work reads visibly
 brighter with the seam ON.** Grids, the galactic coordinate sphere, orbit
