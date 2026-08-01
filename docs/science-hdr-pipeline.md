@@ -390,7 +390,7 @@ these inputs:
 | resolved Venus filling 20% of the frame (`S₀` = +0.78, so `L_surf` 3.6e5) | 7.1e4 |
 | Sol's disc at 1 AU (m −26.74; 0.53° = 11.4 px across, 103 px² of 2.07e6) | 6.3e5 |
 | the frame's share of 100 000 threshold-magnitude stars, 1 px each | 1.0e-4 |
-| Milky Way band at 22.55 mag/arcsec² over the full frame | 7.0e-4 |
+| Milky Way band at 23.47 mag/arcsec² over the full frame | 3.0e-4 |
 | Venus unresolved from Earth (m −4.4, on the 1 px floor) | 7.3e-4 |
 
 **The two aggregate rows are per-frame, and an earlier draft of this
@@ -398,12 +398,14 @@ table had them whole-sky.** The statistic is a mean over *this frame's*
 pixels, so a whole-sky star count belongs in it only through the fraction
 of the sphere the frame covers — 10.8% at 50° on a 16:9 viewport, so
 100 000 threshold stars contribute 1.0e-4 rather than 9.6e-4. The band's
-surface brightness is the anticentre-plane 22.55 mag/arcsec² the Milky
-Way layer's own gradient derives (`src/client/milkyway/README.md`), not a
-round 22: the band is what a frame pointed at it actually contains, and
-the layer is the authority on how bright that is. The diffuse field is
-therefore **Milky-Way-dominated by 6.7×**, where the earlier rows had the
-two within 25% of each other.
+surface brightness is the anticentre-plane figure the Milky Way layer's
+own gradient derives (`src/client/milkyway/README.md`), not a round 22:
+the band is what a frame pointed at it actually contains, and the layer is
+the authority on how bright that is. The test reads it out of the layer
+rather than copying it, because it has moved twice — 22.55 under the
+retired 20.0 anchor, 23.47 once the dust was normalised. The diffuse field
+is therefore **Milky-Way-dominated by 2.9×**, where the earliest rows had
+the two within 25% of each other.
 
 Nearly eight decades separate the cases that must adapt from the cases
 that must not, and the aggregate field sits **two** decades below

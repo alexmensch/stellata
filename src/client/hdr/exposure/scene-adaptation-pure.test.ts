@@ -3,11 +3,17 @@ import { angularToPx } from '../../camera/controls/star-geometry';
 import { PLANET_PARK_FILL_FRACTION } from '../../camera/controls/star-physics';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import {
+  SB_ZERO_POINT,
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
 } from '../emission-pure';
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
+import {
+  SOL_GALACTOCENTRIC_PC,
+  galacticDirection,
+  sightlineSurfaceBrightness,
+} from '../../milkyway/milkyway-column-pure';
 import { tonemapWhitePoint } from '../tonemap-pure';
 import {
   ADAPT_REF_COVERAGE,
@@ -39,6 +45,12 @@ const FRAME_SKY_FRACTION =
 
 /** L_THRESH by construction: a source at the instrument's limit. */
 const THRESHOLD_STAR_L = luminanceForMagnitude(EXPOSURE, 7.8);
+
+/** The whole diffuse field the walk era carried as `DIFFUSE_FIELD_L`:
+ *  the frame's share of the threshold-star population plus the Milky Way
+ *  band. Both are measured out of the buffer now; this is what they sum
+ *  to, and it is the floor the must-not-adapt cases sit on. */
+const AGGREGATE_FIELD_L = 4.05e-4;
 
 /** What a source of apparent magnitude `m` adds to `L̄` once the frame has
  *  drawn it: its whole flux spread over the frame. The buffer reduction
@@ -134,22 +146,31 @@ describe('§ 3.1 contribution table', () => {
     expect(FRAME_SKY_FRACTION).toBeCloseTo(0.1077, 4);
     const thresholdStars =
       (1e5 * FRAME_SKY_FRACTION * THRESHOLD_STAR_L) / VIEWPORT_AREA_PX;
-    // The band's anticentre-plane surface brightness (milkyway/README.md's
-    // gradient: GC 20.0, anticentre plane 22.55, NGP 25.08).
-    const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, 22.55, OMEGA_PX);
+    // The band's anticentre-plane surface brightness, taken from the layer
+    // rather than copied: the Milky Way layer is the authority on how
+    // bright the band is, and a literal here goes stale the next time its
+    // calibration moves. It has, twice.
+    const bandAnticentreSb = sightlineSurfaceBrightness(
+      SB_ZERO_POINT,
+      SOL_GALACTOCENTRIC_PC,
+      galacticDirection(180, 0),
+    );
+    const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, bandAnticentreSb, OMEGA_PX);
+    expect(bandAnticentreSb).toBeCloseTo(23.47, 2);
     expect(thresholdStars).toBeCloseTo(1.04e-4, 5);
-    expect(milkyWayBand).toBeCloseTo(7.0e-4, 5);
-    expect(milkyWayBand / thresholdStars).toBeCloseTo(6.7, 1);
+    expect(milkyWayBand).toBeCloseTo(3.0e-4, 5);
+    expect(milkyWayBand / thresholdStars).toBeCloseTo(2.9, 1);
     // Both rows are drawn light now, so both land in the buffer rather
-    // than in a constant — and both are inert either way: the summed
-    // 8.0e-4 the constant carried cannot reach the anchor on its own.
+    // than in a constant — and both are inert either way: their sum
+    // cannot reach the anchor on its own, with two decades to spare.
+    expect(thresholdStars + milkyWayBand).toBeCloseTo(AGGREGATE_FIELD_L, 5);
     expect((thresholdStars + milkyWayBand) * 50).toBeLessThan(L_ADAPT);
   });
 
   it('separates the two regimes by nearly eight decades', () => {
     const mustAdapt = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX) * 0.2;
-    const mustNot = contribution(-4.4) + 8.0e-4;
-    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.7, 1);
+    const mustNot = contribution(-4.4) + AGGREGATE_FIELD_L;
+    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.8, 1);
   });
 });
 
