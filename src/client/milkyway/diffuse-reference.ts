@@ -35,7 +35,6 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
 export const RESOLVED_CATALOGUE_MAG_ARCSEC2 = {
   galacticCentre: 22.374,
   northGalacticPole: 24.286,
-  anticentre: 22.903,
 } as const;
 
 /** Surface brightness left for the diffuse layer once an already-drawn
@@ -51,6 +50,24 @@ export function diffuseResidualMagArcsec2(
   return residual > 0 ? -2.5 * Math.log10(residual) : null;
 }
 
+const ngpResidual = diffuseResidualMagArcsec2(
+  LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole,
+  RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole,
+);
+
+// A null here means a catalogue rebuild moved the resolved sum past the
+// published total. Failing the import is the point: the alternative is
+// null coercing to 0 through EMISSIVITY_SCALE's arithmetic, which yields
+// a finite, enormous emissivity and a band ten decades too bright.
+if (ngpResidual === null) {
+  throw new Error(
+    'NGP diffuse residual is undefined: the resolved catalogue at ' +
+      `${RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole} mag/arcsec² is not fainter ` +
+      `than Leinert's ${LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole} total. ` +
+      'Re-derive both rows against the current catalogue build.',
+  );
+}
+
 /**
  * The band's emissivity anchor: what is left at the NGP after the star
  * field's own contribution comes off Leinert's total.
@@ -62,7 +79,4 @@ export function diffuseResidualMagArcsec2(
  * difference is meaningless — `diffuseResidualMagArcsec2` returns null
  * for that pair, deliberately, rather than a plausible-looking number.
  */
-export const NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 = diffuseResidualMagArcsec2(
-  LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole,
-  RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole,
-) as number;
+export const NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 = ngpResidual;
