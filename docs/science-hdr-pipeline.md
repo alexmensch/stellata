@@ -198,19 +198,36 @@ unit already branches on (`stellataPointSourcePeak` vs
 `stellataSurfaceBrightnessLuminance`) — and it moves a *threshold anchor*,
 not `uExposure` and not the operator, both of which stay global.
 
-**Two limits, stated rather than papered over.** The substitution is the
-flux in the summation area only for a source **uniform across it**:
+**The limit, stated rather than papered over: uniformity is a
+per-FRAGMENT property and this ships it as a per-LAYER one.** The
+substitution is the flux in the summation area only for a source
+**uniform across it**, and the band from Sol is the only current emitter
+that qualifies everywhere.
 
 - **The Local Group layer therefore opts out** and keeps `Ω_px`. M31's
   bulge `R_e` is 4.4′ against the 13.0′ summation disc, and at its
   central surface brightness (15.30) the gain would claim 1.10 mag from
   one patch — **2.34 mag more than the whole galaxy's 3.44**. Pinned in
-  `local-group-emission-calibration.test.ts`.
-- **Our own band from beyond ~1.5 Mpc** shrinks under the summation area
-  too, and would then read 2.7 mag over an equivalent LG object. Inside
-  the LG camera limit it never gets there. The general fix is a
-  convolution over the summation kernel on the emission side — the
-  veiling-glare seam (§ 3.2), not a gain — and it is its own bead.
+  `local-group-emission-calibration.test.ts`. But its *outer* disc
+  (`R_d` = 5.3 kpc ≈ 23′) is smooth over 13′ and does qualify, so the
+  opt-out is too coarse in the other direction: the envelope is now
+  under-displayed by the same ~2.7 mag the band gained.
+- **Two consequences of the same coarseness, both live rather than
+  latent.** An extended source's FOV response is a *display* choice here,
+  so the band holds its level across FOV while every LG object still dims
+  quadratically — visibly different behaviour for two things on screen at
+  once. And a Galaxy patch renders ~2.7 mag (at 50° / 900 px) over an LG
+  patch of the same surface brightness, which reads as an inconsistency
+  from any external viewpoint rather than only past ~1.5 Mpc, where the
+  whole Galaxy additionally falls under the summation area.
+- **The fix is one operation: convolve over the summation kernel, then
+  gain.** Blurring `S` first makes the uniformity assumption true by
+  construction, so both layers take the same anchor, both become
+  FOV-invariant, and the resolution loss the eye actually applies comes
+  along. It belongs on the emission side upstream of the operator — the
+  veiling-glare seam (§ 3.2) — and needs a pass of its own, so it is its
+  own bead. A per-fragment `fwidth(S)` cap on the effective summation area
+  is the cheap approximation to evaluate first.
 
 **The concession is absent from the statistic.** Attachment 1 keeps
 `Ω_px` in both channels: the adaptation model reads retinal illuminance,
