@@ -42,7 +42,7 @@ uniform float uHighlightDesat;
 const int   STEPS = EMISSION_STEPS;
 const float S_MIN_PC = 0.1;
 const float U_FLOOR = 1e-4;
-// Mirrors SB_ZERO_POINT (../hdr/emission-pure.ts) — a column is flux per
+// Mirrors SB_ZERO_POINT (../hdr/emission/emission-pure.ts) — a column is flux per
 // steradian, so this is
 // just the solid angle of one arcsec².
 const float SB_ZERO_POINT = 26.5721256659;
@@ -53,7 +53,7 @@ float sersicNu(float u, float invN, float bn, float pn) {
 }
 
 /** `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (../hdr/emission.glsl). `zFootprintPc` is its share along the disc normal,
+ *  (../hdr/emission/emission.glsl). `zFootprintPc` is its share along the disc normal,
  *  which the caller has already projected — a face-on disc gets none, or the
  *  softening would eat the vertical column instead of averaging it. */
 float densityAt(vec3 pLocal, float footprintPc, float zFootprintPc) {

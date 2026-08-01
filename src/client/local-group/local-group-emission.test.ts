@@ -23,7 +23,7 @@ import {
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
 import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
 import { relativeLuminance } from '../hdr/tonemap-pure';

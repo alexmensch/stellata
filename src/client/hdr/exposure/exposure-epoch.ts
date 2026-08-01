@@ -9,7 +9,7 @@ import {
   instrumentLimitMag,
 } from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-import { rodSummationSolidAngleArcsec2 } from '../emission-pure';
+import { rodSummationSolidAngleArcsec2 } from '../emission/emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 
 /** One photographic stop in magnitudes: 2.5·log10(2). */

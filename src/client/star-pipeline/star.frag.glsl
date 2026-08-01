@@ -8,7 +8,7 @@ precision highp int;
 // formula and the brightness-PSF-saturation rationale.
 #include <stellata_perceptual_disc>
 // The luminance unit — read here only for the statistic attachment's
-// texel rule and LUMA_CEIL (src/client/hdr/README.md § Unit).
+// texel rule and LUMA_CEIL (src/client/hdr/emission/README.md § Unit).
 #include <stellata_hdr_emission>
 // The scene-wide operator. Applied inline here whenever the frame is
 // NOT rendering into the HDR target, which — while the ship gate stays

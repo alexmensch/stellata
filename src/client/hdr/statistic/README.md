@@ -43,7 +43,7 @@ R = flux-correct luminance   → reduce MEAN → L̄
 G = peak-correct luminance   → reduce MAX  → peak_max
 ```
 
-`stellataStatisticTexel` (`../emission.glsl`) is the texel rule. Both
+`stellataStatisticTexel` (`../emission/emission.glsl`) is the texel rule. Both
 channels clamp at `LUMA_CEIL`, for the reason the display peak does: a
 clamped read is a lower bound the adaptation loop closes from above
 (`../exposure/reduction/README.md` § Measure at the base exposure).

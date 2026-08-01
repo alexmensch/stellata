@@ -43,7 +43,7 @@ import {
   extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../hdr/emission-pure';
+} from '../hdr/emission/emission-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,

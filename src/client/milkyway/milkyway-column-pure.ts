@@ -9,7 +9,7 @@ import {
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../hdr/emission-pure';
+} from '../hdr/emission/emission-pure';
 import { NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 } from './diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 

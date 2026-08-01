@@ -3,7 +3,7 @@
 The normalisers that put a planet's mesh and glare on the one physical
 luminance scale, and the reason a body does not brighten per-pixel on
 approach. `../README.md` owns the two layers that read these scalars;
-`../../../hdr/README.md` § Unit is the contract they emit into.
+`../../../hdr/emission/README.md` § Unit is the contract they emit into.
 
 ```
 src/client/solar-system/planets/emission/

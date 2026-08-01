@@ -12,20 +12,20 @@ import {
   softenRadius,
   surfaceBrightnessLuminance,
 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
-import { angularToPx } from '../camera/controls/star-geometry';
+import { BASE_EPOCH_EXPOSURE } from '../exposure/exposure-epoch';
+import { angularToPx } from '../../camera/controls/star-geometry';
 import {
   DR_MAG,
   L_THRESH,
   reinhardExtended,
   relativeLuminance,
   tonemapWhitePoint,
-} from './tonemap-pure';
+} from '../tonemap-pure';
 import {
   DEFAULT_FILTER,
   extendedThresholdSbFor,
   instrumentLimitMag,
-} from '../filters/filter-state';
+} from '../../filters/filter-state';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_FILTER.instrument);

@@ -4,7 +4,7 @@ precision highp float;
 #include <logdepthbuf_pars_fragment>
 // The unit + the operator + the shared extended-source write tail. The
 // isobar pass needs the raw magnitude too, which is why the column and
-// the tail stay separate steps here. See src/client/hdr/README.md § Unit.
+// the tail stay separate steps here. See src/client/hdr/emission/README.md § Unit.
 #include <stellata_extended_emitter>
 
 // Bounded volumetric raymarch through proxy meshes.
@@ -123,7 +123,7 @@ const int FOREGROUND_DUST_STEPS = 16;
 
 // `footprintPc` / `zFootprintPc` smooth the profile over one pixel's
 // transverse footprint so a point-sampled fragment carries the pixel's area
-// average (../hdr/emission.glsl). From Sol they are metres against a 300 pc
+// average (../hdr/emission/emission.glsl). From Sol they are metres against a 300 pc
 // scale height and change nothing; from outside the Galaxy they are what
 // keeps the band comparable with a Local Group object at the same distance.
 float discDensityVal(float R, float zVal, float footprintPc, float zFootprintPc) {

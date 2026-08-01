@@ -91,7 +91,7 @@ replacing it.
 `DISC_COLOR_RGB` / `BULGE_COLOR_RGB` are the **authored palette**;
 `DISC_TINT_RGB` / `BULGE_TINT_RGB` are what the shader and the CPU mirror
 actually multiply, and they are the palette divided by its own relative
-luminance (`lumaNormalisedTint`, `../hdr/emission-pure.ts`).
+luminance (`lumaNormalisedTint`, `../hdr/emission/emission-pure.ts`).
 
 The reason is that `stellataSurfaceBrightnessLuminance` is a *scalar* gain
 applied per channel, so a tint whose relative luminance isn't 1 rescales
@@ -121,7 +121,7 @@ Because the tints are normalised, that change cannot move any flux.
 
 ## Surface-brightness emission
 
-The band emits into the scene-wide HDR unit (`../hdr/README.md` § Unit).
+The band emits into the scene-wide HDR unit (`../hdr/emission/README.md` § Unit).
 `colorAccum` is the raymarch's emission column in "density × pc ×
 colour" units; `uGlowMagOffset` carries `SB_ZERO_POINT`, the **V surface
 brightness a unit column carries**, so the sightline reads
@@ -157,7 +157,7 @@ stars together, by construction.
 ### Calibration
 
 **The zero point is not the band's own — it is the emission unit's.**
-`SB_ZERO_POINT` (`../hdr/emission-pure.ts`) = 26.5721 mag/arcsec², the
+`SB_ZERO_POINT` (`../hdr/emission/emission-pure.ts`) = 26.5721 mag/arcsec², the
 magnitude of one arcsec², shared verbatim with the Local Group layer. A
 raymarched column is flux per steradian once `density0` sits in
 zero-point-free flux units, so nothing about the conversion is free.

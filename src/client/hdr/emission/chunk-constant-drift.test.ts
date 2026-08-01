@@ -5,19 +5,19 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { LUMA_WEIGHTS } from './tonemap-pure';
+import { LUMA_WEIGHTS } from '../tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
   footprintRadiusPc,
   pxPerRadianFromSolidAngle,
 } from './emission-pure';
-import './hdr-pipeline';
+import '../hdr-pipeline';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
-const tonemapChunk = read('./tonemap.glsl');
+const tonemapChunk = read('../tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
 
@@ -99,11 +99,11 @@ describe('shared chunk constants', () => {
   // silently shadows nothing, so only this catches it.
   it('no consumer of the unit redeclares a constant it already has', () => {
     for (const stage of [
-      '../star-pipeline/star.vert.glsl',
-      '../solar-system/planets/glare/planet.vert.glsl',
-      '../milkyway/milkyway.frag.glsl',
-      '../local-group/local-group-emission.frag.glsl',
-      '../local-group/local-group-emission.vert.glsl',
+      '../../star-pipeline/star.vert.glsl',
+      '../../solar-system/planets/glare/planet.vert.glsl',
+      '../../milkyway/milkyway.frag.glsl',
+      '../../local-group/local-group-emission.frag.glsl',
+      '../../local-group/local-group-emission.vert.glsl',
     ]) {
       const src = read(stage);
       // Directly, or through the composite that pulls the unit in.
@@ -151,11 +151,11 @@ describe('include guards', () => {
   });
 
   it('has live consumers on both the composite and the bare unit', () => {
-    expect(read('../milkyway/milkyway.frag.glsl'))
+    expect(read('../../milkyway/milkyway.frag.glsl'))
       .toContain('#include <stellata_extended_emitter>');
-    expect(read('../local-group/local-group-emission.frag.glsl'))
+    expect(read('../../local-group/local-group-emission.frag.glsl'))
       .toContain('#include <stellata_extended_emitter>');
-    expect(read('../local-group/local-group-emission.vert.glsl'))
+    expect(read('../../local-group/local-group-emission.vert.glsl'))
       .toContain('#include <stellata_hdr_emission>');
   });
 });
@@ -173,9 +173,9 @@ describe('chunk resolution', () => {
     });
 
   const STAGES = [
-    '../milkyway/milkyway.frag.glsl',
-    '../local-group/local-group-emission.frag.glsl',
-    '../local-group/local-group-emission.vert.glsl',
+    '../../milkyway/milkyway.frag.glsl',
+    '../../local-group/local-group-emission.frag.glsl',
+    '../../local-group/local-group-emission.vert.glsl',
   ];
 
   it('every stellata include on an extended-source stage resolves', () => {

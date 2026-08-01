@@ -1,0 +1,154 @@
+# The emission unit — magnitude → luminance, and the two solid angles
+
+What an emitting layer writes into the HDR target. `../README.md` owns the
+target's lifecycle, pass ordering and the operator; this folder owns the
+*value* a fragment carries and the rules that turn a physical magnitude
+into it. `docs/science-hdr-pipeline.md` § 1 is the design gate.
+
+```
+src/client/hdr/emission/
+  emission.glsl              The unit: magnitude → linear luminance, the
+                             point-source peak rule, the extended-source
+                             surface-brightness rule, the footprint
+                             softening (§ Footprint), and the plate scale /
+                             extended threshold recovered from the two
+                             solid angles.
+  extended-emitter.glsl      The write tail a volumetric emitter shares:
+                             gain, clamp, every attachment, and the inline
+                             operator off-target. Composes the unit and the
+                             operator, so it is the only include a
+                             raymarching stage needs (§ Extended sources).
+  emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
+                             and their inverses, LUMA_CEIL, SB_ZERO_POINT
+                             (the zero point both volumetric emitters
+                             share) and lumaNormalisedTint, the hue-only
+                             tint they multiply.
+  chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
+                             from TypeScript, and the include guards.
+```
+
+## Unit — what an emitting layer writes
+
+`emission.glsl` (`stellata_hdr_emission`) is the contract.
+`L = uExposure · 10^(−0.4·m)` from a physical V-band apparent magnitude,
+clamped at `LUMA_CEIL` (4096) before the write.
+`stellataPointSourcePeak` adds the flux-vs-surface-brightness rule for
+anything that draws a kernel rather than a surface:
+
+```
+peak_L = L(m) / max(1, π · r_phys_px²)
+```
+
+`r_phys_px` is the source's **true angular radius in CSS pixels** —
+uncapped by any viewport-fraction clamp, and CSS rather than device
+pixels so a resolved disc's surface brightness doesn't shift with
+`devicePixelRatio`. Below 1 px the whole flux lands on the peak; above
+it the emission is true surface brightness.
+
+A layer that draws an **extended source** instead of a kernel takes
+`stellataSurfaceBrightnessLuminance` — the flux magnitude inside a solid
+angle `Ω` is `S − 2.5·log10(Ω)` for a surface brightness `S` in
+mag/arcsec², and the log round-trip through `L(m)` collapses to one
+scalar gain:
+
+```
+L_px = uExposure · 10^(−0.4·S) · Ω
+```
+
+Being a single scalar is what lets a layer apply it to a coloured column
+without touching chromaticity. It is **unclamped** — the caller clamps the
+product against `LUMA_CEIL`, not the factor. **Which `Ω` is § Extended
+sources' decision**, and it separates the physical answer from the
+displayed one.
+
+**Being a scalar is also why an emitter's tint must carry hue only.** It
+multiplies every channel equally while the emissivity it scales was
+normalised against a total flux, so a tint whose relative luminance isn't 1
+rescales that emitter's flux by that luminance — 0.42 mag on the Local
+Group disc family, 0.39 mag on the band. `lumaNormalisedTint` owns it.
+
+**A reflecting body uses both rules, and that is what closes the resolve
+step.** A planet's glare billboard takes `stellataPointSourcePeak` with
+the same `m` the star field would use, while its mesh takes the
+surface-brightness rule with the disc's mean `S` — and past 1 px the two
+are the *same quantity*, so a body crossing from point to resolved mesh
+does not change brightness. The disc-mean derivation and the two
+normalisers that make the shaded disc integrate back to `L(m)` are
+`../../solar-system/planets/README.md` § Physical-luminance emission.
+**The mesh reads `uOmegaPxArcsec2` and, unlike the band, must**: the two
+rules agree at 1 px on that solid angle alone, so the summation
+substitution below would break the resolve step it exists to close.
+
+## Extended sources — two solid angles, one write tail
+
+**A point source at `m_lim` is lifted to `L_THRESH`; an extended source
+needs its own anchor or the render inverts the eye's ordering.** Rod
+summation makes its threshold a *surface brightness*, so
+`rodSummationSolidAngleArcsec2` turns that threshold and `m_lim` into
+`uOmegaSummationArcsec2` — 4.7863e5 arcsec², a 13.0′ critical diameter —
+which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
+level cannot move with FOV. Derivation, the threshold's identity with the
+instrument's `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
+`extendedThresholdSbFor`), and every rejected alternative:
+`docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
+
+`stellataEmitExtendedSource` takes **both** angles, and which one displays
+is per consumer. The band is uniform over the summation patch; M31's core
+is not, so `local-group-emission.frag.glsl` passes `Ω_px` twice — an
+opt-out costing 2.695 mag past 3.6′ to avoid 3.95 at the nucleus
+(`../../local-group/README.md`). Statistic: always `Ω_px`
+(`../statistic/README.md`).
+
+Everything after the gain is identical for every volumetric emitter, so
+that chunk owns it: gain, clamp at `LUMA_CEIL`, statistic texel, and
+off-target the undithered operator. `stellataEmitNothing` is the miss case.
+Both take the attachments as `out` params, making "attachment 1 has no
+default, so every branch must write it" one decision rather than one per
+early return. `milkyway.frag.glsl` keeps its own magnitude step because the
+chart isobar contours surface brightness against
+`stellataExtendedThresholdSb`, the inverse of the same pair — so contour
+and emission cannot disagree about where threshold is.
+
+It `#include`s the unit and the operator — three resolves includes
+recursively and the guards make the extra paste inert.
+`chunk-constant-drift.test.ts` resolves every extended-source stage through
+the real `ShaderChunk` registry, so a misspelled chunk name fails in
+vitest, not on first frame.
+
+**Both chunks are `#ifndef`-guarded**, and each declares the Rec.709
+luma weights behind a *shared* `STELLATA_LUMA_WEIGHTS_DECLARED` guard.
+An emitter that derives a per-pixel magnitude needs the unit and the
+operator in one stage, and three's `resolveIncludes` pastes each
+`#include` textually wherever it appears — without the guards that
+combination fails to compile.
+
+## Footprint — a fragment carries a pixel, not a point
+
+A raymarch evaluates its profile at the **pixel centre**, so a centrally
+peaked profile lands over the pixel's own area average — 3.95 mag at M31's
+nucleus. `stellataFootprintPc` is the radius that fixes it:
+
+```
+ε = distancePc / (pxPerRadian · √12)
+```
+
+one pixel's span at that distance, matched on the **second moment** of a
+square footprint, which is the order `stellataSoftenRadius`'s Plummer form
+corrects to. No free parameter, and it tracks the exact area average to
+0.1 mag across the whole 10°–120° FOV range
+(`../../local-group/local-group-emission-calibration.test.ts`).
+
+Two things it must get right, both measured:
+
+- **`sqrt(r² + ε²)` on a spherically symmetric profile is exactly
+  transverse smoothing**, because `|p|²` splits into the parallel and
+  perpendicular parts of `p` — the ray direction contributes nothing.
+- **A separable profile needs the axis projection.**
+  `stellataFootprintAlong` is why a face-on disc gets *no* vertical
+  softening: `z_d` is finer than the footprint at wide FOV, so smoothing
+  along the ray would suppress the column rather than average it.
+
+Inert where the plate scale already resolves the profile. From Sol the
+band moves under 0.002 mag at both FOV extremes (`../../milkyway/README.md`
+§ The gradient this produces), which is what keeps the shipped display
+table where it is.

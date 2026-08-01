@@ -26,7 +26,7 @@ import {
   subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
-import { footprintRadiusPc, pixelSolidAngleArcsec2 } from '../hdr/emission-pure';
+import { footprintRadiusPc, pixelSolidAngleArcsec2 } from '../hdr/emission/emission-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';

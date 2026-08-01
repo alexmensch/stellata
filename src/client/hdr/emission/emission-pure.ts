@@ -2,8 +2,8 @@
 // luminance, and the peak a point source's display kernel carries. CPU
 // mirror of emission.glsl — see README.md § Unit.
 
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { type Rgb, relativeLuminance } from './tonemap-pure';
+import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { type Rgb, relativeLuminance } from '../tonemap-pure';
 
 /** Every emission clamps here before the write. Extended Reinhard maps
  *  anything past ~10× the white point to indistinguishable white, so the

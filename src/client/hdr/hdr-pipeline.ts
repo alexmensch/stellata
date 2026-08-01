@@ -6,12 +6,12 @@ import { fullscreenTriangleGeometry } from '../util/fullscreen-pass';
 import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
-import emissionChunk from './emission.glsl?raw';
-import extendedEmitterChunk from './extended-emitter.glsl?raw';
+import emissionChunk from './emission/emission.glsl?raw';
+import extendedEmitterChunk from './emission/extended-emitter.glsl?raw';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
-import { pixelSolidAngleArcsec2 } from './emission-pure';
+import { pixelSolidAngleArcsec2 } from './emission/emission-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,

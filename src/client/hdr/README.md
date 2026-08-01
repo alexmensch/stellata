@@ -34,21 +34,10 @@ src/client/hdr/
   tonemap-pure.ts (+ test)   CPU mirror of tonemap.glsl plus the exact
                              inverse. Vitest-pinned against the design
                              doc's worked values.
-  emission.glsl              The unit: magnitude → linear luminance, the
-                             point-source peak rule, the extended-source
-                             surface-brightness rule (§ Unit), and the
-                             plate scale / extended threshold recovered
-                             from the two solid angles.
-  extended-emitter.glsl      The write tail a volumetric emitter shares:
-                             gain, clamp, both attachments, and the
-                             inline operator off-target. Composes the two
-                             chunks above, so it is the only include a
-                             raymarching stage needs (§ Extended sources).
-  emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
-                             and their inverses, LUMA_CEIL, SB_ZERO_POINT
-                             (the zero point both volumetric emitters
-                             share) and lumaNormalisedTint, the hue-only
-                             tint they multiply (§ Unit).
+  emission/                  The unit an emitting layer writes in:
+                             magnitude → luminance, the point-source peak
+                             rule, the two solid angles and the footprint
+                             softening — its own README (§ Unit).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -56,95 +45,14 @@ src/client/hdr/
                              own README.
   chrome/                    Authored chrome colours pre-mapped through
                              the inverse — its own README (§ Chrome).
-  chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
-                             from TypeScript, and the include guards.
 ```
 
 ## Unit — what an emitting layer writes
 
-`emission.glsl` (`stellata_hdr_emission`) is the other half of the
-contract. `L = uExposure · 10^(−0.4·m)` from a physical V-band apparent
-magnitude, clamped at `LUMA_CEIL` (4096) before the write.
-`stellataPointSourcePeak` adds the flux-vs-surface-brightness rule for
-anything that draws a kernel rather than a surface:
-
-```
-peak_L = L(m) / max(1, π · r_phys_px²)
-```
-
-`r_phys_px` is the source's **true angular radius in CSS pixels** —
-uncapped by any viewport-fraction clamp, and CSS rather than device
-pixels so a resolved disc's surface brightness doesn't shift with
-`devicePixelRatio`. Below 1 px the whole flux lands on the peak; above
-it the emission is true surface brightness.
-
-A layer that draws an **extended source** instead of a kernel takes
-`stellataSurfaceBrightnessLuminance` — the flux magnitude inside a solid
-angle `Ω` is `S − 2.5·log10(Ω)` for a surface brightness `S` in
-mag/arcsec², and the log round-trip through `L(m)` collapses to one
-scalar gain:
-
-```
-L_px = uExposure · 10^(−0.4·S) · Ω
-```
-
-Being a single scalar is what lets a layer apply it to a coloured column
-without touching chromaticity. It is **unclamped** — the caller clamps the
-product against `LUMA_CEIL`, not the factor. **Which `Ω` is § Extended
-sources' decision**, and it separates the physical answer from the
-displayed one.
-
-**Being a scalar is also why an emitter's tint must carry hue only.** It
-multiplies every channel equally while the emissivity it scales was
-normalised against a total flux, so a tint whose relative luminance isn't 1
-rescales that emitter's flux by that luminance — 0.42 mag on the Local
-Group disc family, 0.39 mag on the band. `lumaNormalisedTint` owns it.
-
-**A reflecting body uses both rules, and that is what closes the resolve
-step.** A planet's glare billboard takes `stellataPointSourcePeak` with
-the same `m` the star field would use, while its mesh takes the
-surface-brightness rule with the disc's mean `S` — and past 1 px the two
-are the *same quantity*, so a body crossing from point to resolved mesh
-does not change brightness. The disc-mean derivation and the two
-normalisers that make the shaded disc integrate back to `L(m)` are
-`../solar-system/planets/README.md` § Physical-luminance emission. **The
-mesh reads `uOmegaPxArcsec2` and, unlike the band, must**: the two rules
-agree at 1 px on that solid angle alone, so the summation substitution
-below would break the resolve step it exists to close.
-
-### Extended sources — two solid angles, one write tail
-
-**A point source at `m_lim` is lifted to `L_THRESH`; an extended source
-needs its own anchor or the render inverts the eye's ordering.** Rod
-summation makes its threshold a *surface brightness*, so
-`rodSummationSolidAngleArcsec2` turns that threshold and `m_lim` into
-`uOmegaSummationArcsec2` — 4.7863e5 arcsec², a 13.0′ critical diameter —
-which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
-level cannot move with FOV. Derivation, the threshold's identity with the
-instrument's `skyBackgroundMagArcsec2` (`../filters/filter-state.ts`
-`extendedThresholdSbFor`), and every rejected alternative:
-`docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
-
-`stellataEmitExtendedSource` takes **both** angles, and which one displays
-is per consumer. The band is uniform over the summation patch; M31's core
-is not, so `local-group-emission.frag.glsl` passes `Ω_px` twice — an
-opt-out costing 2.695 mag past 3.6′ to avoid 3.95 at the nucleus
-(`../local-group/README.md`). Statistic: always `Ω_px` (`statistic/README.md`).
-
-Everything after the gain is identical for every volumetric emitter, so
-that chunk owns it: gain, clamp at `LUMA_CEIL`, statistic texel, and
-off-target the undithered operator. `stellataEmitNothing` is the miss case.
-Both take the attachments as `out` params, making "attachment 1 has no
-default, so every branch must write it" one decision rather than one per
-early return. `milkyway.frag.glsl` keeps its own magnitude step because the
-chart isobar contours surface brightness against
-`stellataExtendedThresholdSb`, the inverse of the same pair — so contour
-and emission cannot disagree about where threshold is.
-
-It `#include`s both chunks above — three resolves includes recursively
-and the guards make the extra paste inert. `chunk-constant-drift.test.ts`
-resolves every extended-source stage through the real `ShaderChunk`
-registry, so a misspelled chunk name fails in vitest, not on first frame.
+`emission/README.md` is the contract: the magnitude → luminance rule, the
+point-source peak, the extended-source surface-brightness gain and the
+two solid angles it can run on. What belongs *here* is the plumbing that
+carries those numbers to every layer.
 
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
 arcsec² (`pixelSolidAngleArcsec2`), written by
@@ -164,8 +72,9 @@ every resize has to reach it; the integration shell's
 invariant — matching the point-source rule exactly, since a resolved
 disc's `r_phys_px` grows as FOV shrinks. The *display* path no longer
 follows it: the eye's summation area is angular, so a diffuse source holds
-its level at any plate scale (§ Extended sources). The statistic keeps the
-quadratic fall; an unresolved point keeps its peak at any FOV.
+its level at any plate scale (`emission/README.md` § Extended sources). The
+statistic keeps the quadratic fall; an unresolved point keeps its peak at
+any FOV.
 
 `HdrPipeline.emitterUniforms` is how a layer binds to this. Six
 uniforms, held **by reference** so one write reaches every pass:
@@ -177,13 +86,6 @@ or run the operator itself. `HdrPipeline` owns every write to
 the chart bypass reaches emitters for free); layers only read. The
 resolve pass shares the white-point and desaturation objects, so inline
 and fullscreen can never disagree.
-
-**Both chunks are `#ifndef`-guarded**, and each declares the Rec.709
-luma weights behind a *shared* `STELLATA_LUMA_WEIGHTS_DECLARED` guard.
-An emitter that derives a per-pixel magnitude needs the unit and the
-operator in one stage, and three's `resolveIncludes` pastes each
-`#include` textually wherever it appears — without the guards that
-combination fails to compile.
 
 ## Exposure — two slots this class does not write
 
@@ -444,6 +346,4 @@ the *only* faint-end lever now that the two thresholds are separable.
 No emitter is outside the scale, and both volumetric emitters share one
 zero point (`SB_ZERO_POINT`). Still outstanding *upstream* of the unit: the
 Milky Way's emissivity is anchored on one corrected sightline, not a total
-luminosity — `../milkyway/README.md`. And **this README is at its cap**:
-the next addition splits the unit (`emission*.glsl`, `emission-pure.ts`,
-`extended-emitter.glsl`) into `hdr/emission/` with its own README.
+luminosity — `../milkyway/README.md`.

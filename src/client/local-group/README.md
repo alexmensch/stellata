@@ -176,7 +176,7 @@ m_px = S − 2.5·log10(Ω_px)
 Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses to
 one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
 population tint rides through untouched. `SB_ZERO_POINT` lives in
-`../hdr/emission-pure.ts` — it is the emission unit's constant, not this
+`../hdr/emission/emission-pure.ts` — it is the emission unit's constant, not this
 layer's, and the Milky Way band takes the same one
 (`../milkyway/README.md` § Calibration). The TypeScript constant and the
 shader's `SB_ZERO_POINT` are pinned against each other in
@@ -214,7 +214,7 @@ rather than by knob-matching. It also means the layer holds **no**
 star-pipeline uniform: `uLimitMag` / `uSizeSpan` are gone, and
 `uSizeSpan` is a footprint-only uniform again (`../filters/README.md`).
 
-**The tint is luma-normalised** (`lumaNormalisedTint`, `../hdr/emission-pure.ts`) so it carries hue
+**The tint is luma-normalised** (`lumaNormalisedTint`, `../hdr/emission/emission-pure.ts`) so it carries hue
 only. The shader multiplies the scalar column per channel while the
 solver normalised that column against total flux — an un-normalised
 tint dims the object by its own relative luminance, which is 0.42 mag
