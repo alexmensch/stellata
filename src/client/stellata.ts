@@ -73,7 +73,6 @@ import {
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
-  buildKindModules,
   collectKindPicks,
   KIND_ROSTER,
   mergeKindDetailBinds,
@@ -173,10 +172,10 @@ import { buildPulsationSuppressMask } from './star-pipeline/pulsation/pulsation-
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
   catalog: Catalog;
-  /** Kind-module record, artifacts already loaded (kinds/kind-modules.ts).
-   *  Omitted → fresh unloaded modules, so module-backed kinds attach with
-   *  empty rosters (headless tests). */
-  kinds?: BuiltKindModules;
+  /** Kind-module record with every artifact already loaded — the
+   *  constructor attaches each module, and an unloaded one attaches to
+   *  an empty roster (kinds/kind-modules.ts). */
+  kinds: BuiltKindModules;
 }
 
 export type CameraMode = 'navigate' | 'observe';
@@ -432,7 +431,7 @@ export class Stellata implements FrameAnchor {
 
   constructor({ canvas, catalog, kinds }: StellataOptions) {
     this.catalog = catalog;
-    this.kinds = kinds ?? buildKindModules();
+    this.kinds = kinds;
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
