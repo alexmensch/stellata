@@ -302,6 +302,33 @@ enough to see it.
   ephemerides at each probe's known closest-approach epochs.
   Public-domain (U.S. Government work).
 
+- **Milky Way integrated properties and structure** (the volumetric band's
+  photometric anchors; no data files, constants only):
+    - **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
+      (DOI 10.1146/annurev-astro-081915-023441). Table 2 gives the Galaxy's
+      global absolute magnitudes and colour indices as an external observer
+      would measure them (M_V = −21.37, B−V = 0.73, from Licquia, Newman &
+      Brinchmann 2015's Milky Way analogues); § 5.1 gives the thin/thick
+      disc scale heights (300 ± 50 / 900 ± 180 pc), the thin-disc scale
+      length (2.6 ± 0.5 kpc), and the thick-disc normalisations
+      (f_ρ = 4 ± 2 %, f_Σ = 12 ± 4 %). The review is explicit that the
+      quoted magnitudes and colour indices come from different calibrations
+      and are mutually inconsistent at the ~0.1 mag level, and that older
+      direct-integration values run dimmer and bluer (Bahcall & Soneira
+      1980: M_V = −20.5; de Vaucouleurs 1983: M_B = −20.2 ± 0.15).
+    - **Leinert et al. 1998**, *A&AS* 127, 1
+      (DOI 10.1051/aas:1998105) — "The 1997 reference of diffuse night sky
+      brightness". Table 24's integrated starlight at 0.55 µm
+      (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
+      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band's sightline
+      surface brightness is checked against. These are SKY-model
+      predictions (Wainscoat et al. 1992) for *total* starlight, so they
+      include the resolved stars the catalogue draws separately —
+      quantifying that overlap is part of `stellata-xypg.29`.
+  Both are checks on a model whose emissivity is currently anchored on a
+  single sightline; `src/client/milkyway/README.md` § Calibration carries
+  the measured disagreement.
+
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the
 > molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,

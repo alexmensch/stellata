@@ -184,7 +184,7 @@ rather than by knob-matching. It also means the layer holds **no**
 star-pipeline uniform: `uLimitMag` / `uSizeSpan` are gone, and
 `uSizeSpan` is a footprint-only uniform again (`../filters/README.md`).
 
-**The tint is luma-normalised** (`lumaNormalisedTint`) so it carries hue
+**The tint is luma-normalised** (`lumaNormalisedTint`, `../hdr/emission-pure.ts`) so it carries hue
 only. The shader multiplies the scalar column per channel while the
 solver normalised that column against total flux — an un-normalised
 tint dims the object by its own relative luminance, which is 0.42 mag

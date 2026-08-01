@@ -3,6 +3,7 @@
 // mirror of emission.glsl — see README.md § Unit.
 
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import { type Rgb, relativeLuminance } from './tonemap-pure';
 
 /** Every emission clamps here before the write. Extended Reinhard maps
  *  anything past ~10× the white point to indistinguishable white, so the
@@ -77,4 +78,21 @@ export function surfaceBrightnessLuminance(
   omegaPxArcsec2: number,
 ): number {
   return luminanceForMagnitude(exposure, magPerArcsec2) * omegaPxArcsec2;
+}
+
+/**
+ * A population tint divided by its own relative luminance, so it carries
+ * hue only.
+ *
+ * `surfaceBrightnessLuminance` is a scalar gain applied per channel, while
+ * the emissivity it multiplies was normalised against a total flux. An
+ * un-normalised tint therefore scales its own emitter's flux by its
+ * relative luminance — 0.42 mag for the Local Group disc lavender, 0.39 mag
+ * of bulge-vs-disc split for the Milky Way band. Harmless while a global
+ * gain absorbed it; a photometric error the moment the unit is physical.
+ */
+export function lumaNormalisedTint(rgb: Rgb): Rgb {
+  const y = relativeLuminance(rgb);
+  if (!(y > 0)) return [1, 1, 1];
+  return [rgb[0] / y, rgb[1] / y, rgb[2] / y];
 }
