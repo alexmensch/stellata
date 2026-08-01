@@ -268,7 +268,7 @@ export class Stellata implements FrameAnchor {
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
   // Owns the exposure scalar and the three magnitude bounds derived from
   // it — instrument limit, just-visible threshold, population cull
-  // (hdr/exposure/README.md § One writer, four slots).
+  // (hdr/exposure/README.md § One writer, five slots).
   readonly exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).

@@ -71,6 +71,25 @@ describe('shared chunk constants', () => {
     }
     expect(Number.isFinite(extendedThresholdSbFromSolidAngle(0, 7.8))).toBe(true);
   });
+
+  // A stage that pastes the unit already has ln(10) and π in scope, so a
+  // local copy is both redundant and free to drift to fewer digits — which
+  // is what two of these had done. Redeclaring one is legal GLSL and
+  // silently shadows nothing, so only this catches it.
+  it('no consumer of the unit redeclares a constant it already has', () => {
+    for (const stage of [
+      '../star-pipeline/star.vert.glsl',
+      '../solar-system/planets/glare/planet.vert.glsl',
+      '../milkyway/milkyway.frag.glsl',
+      '../local-group/local-group-emission.frag.glsl',
+      '../local-group/local-group-emission.vert.glsl',
+    ]) {
+      const src = read(stage);
+      // Directly, or through the composite that pulls the unit in.
+      expect(src).toMatch(/#include <stellata_(hdr_emission|extended_emitter)>/);
+      expect(src).not.toMatch(/const float (LOG10|PI_CONST|PI)\s*=/);
+    }
+  });
 });
 
 // Both chunks can land in one fragment stage from H4 on (a per-pixel

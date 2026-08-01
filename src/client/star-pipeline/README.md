@@ -335,7 +335,7 @@ at `uThresholdMag` (resolved discs in the fade region would render as a
 sub-pixel speck and read as a hard cutoff anyway). The vertex cull sits
 further out still, at `uCullMag`; the taper must never follow the cull
 bound, or a threshold star would stop landing on the floor the unit is
-anchored to (`../hdr/exposure/README.md` § One writer, four slots).
+anchored to (`../hdr/exposure/README.md` § One writer, five slots).
 
 ## Angular-size calibration
 

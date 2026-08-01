@@ -1,5 +1,5 @@
 // Owns every write to the scene's exposure scalar and the three magnitude
-// bounds derived from it. See README.md § One writer, four slots.
+// bounds derived from it. See README.md § One writer, five slots.
 
 import {
   type InstrumentName,
