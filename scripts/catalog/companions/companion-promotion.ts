@@ -872,22 +872,69 @@ function withinBlendSeparation(
   return sepArcsec !== null && sepArcsec <= maxSepArcsec;
 }
 
+/** How many WDS designators deep a component letter sits: ``"A" → 1``,
+ *  ``"Aa" → 2``, ``"Aa1" → 3``. Walks `parentComponentToken` rather than
+ *  counting characters, so the two cannot drift on what a level is.
+ *
+ *  A multi-uppercase token is an unresolved COMPOUND ("AB", "ABC") — the
+ *  aggregate of several top-level letters, so less decomposed than any one of
+ *  them, and 0 rather than the 2 its length suggests. η CrB is the case that
+ *  makes this load-bearing: its `AB,E` row prints `mag_pri` 4.98 for the A+B
+ *  blend against the `AB` row's 5.64 for A alone. */
+export function componentDepth(comp: string): number {
+  const c = comp.trim();
+  if (/^[A-Z]{2,}$/.test(c)) return 0;
+  let depth = 0;
+  for (let tok: string | null = c; tok; tok = parentComponentToken(tok)) {
+    depth++;
+  }
+  return depth;
+}
+
 /** The observed-frame geometry a dim candidate is judged on: which WDS magnitude
- *  is the member's own and which the anchor's, plus the pair's separation. A
- *  pair-row-primary escape heads its own sub-pair, so its `mag_pri` IS the
- *  member's light and its offset from the anchor is the Stage-6 root
- *  composition rather than the row's own sep. */
-function anchorDimGeometry(row: MultiplesTsvRow): {
+ *  is the member's own and which the anchor's, how deep the letter that anchor
+ *  magnitude describes sits, and the pair's separation. A pair-row-primary
+ *  escape heads its own sub-pair, so its `mag_pri` IS the member's light and its
+ *  offset from the anchor is the Stage-6 root composition rather than the row's
+ *  own sep. */
+function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
   memberWdsMag: number | null;
   anchorWdsMag: number | null;
+  anchorDepth: number;
   sepArcsec: number | null;
 } {
   const isPairRowPrimary = row.orbitRole === 'primary';
   return {
     memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
     anchorWdsMag: isPairRowPrimary ? null : row.magPri,
+    anchorDepth: componentDepth(anchorComp),
     sepArcsec: isPairRowPrimary ? row.anchorSepArcsec : row.sepArcsec,
   };
+}
+
+/** The anchor's own light: the `mag_pri` of its MOST-DECOMPOSED candidate row.
+ *  WDS's `mag_pri` covers the whole subtree of whatever letter its row pairs, so
+ *  a top-level row already sums the sub-letters and only the deepest names what
+ *  the re-split's residual represents (AR Cas prints 4.87 for A, 5.02 for Aa).
+ *
+ *  Ties break BRIGHTEST, not faintest. Two rows at one depth are two
+ *  measurements of the same letter's subtree, and their disagreement is band or
+ *  epoch, never decomposition — taking the fainter would claim a split that is
+ *  not there and hand the difference to the members. Brightest is the same
+ *  conservative posture as the solve's smallest-winning-subset rule: it makes
+ *  "anchor alone" fit better, so a dim needs more evidence, not less. */
+function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
+  let best: AnchorDimCandidate | null = null;
+  for (const c of cands) {
+    if (c.anchorWdsMag === null) continue;
+    if (best === null
+        || c.anchorDepth > best.anchorDepth
+        || (c.anchorDepth === best.anchorDepth
+          && c.anchorWdsMag < (best.anchorWdsMag as number))) {
+      best = c;
+    }
+  }
+  return best?.anchorWdsMag ?? null;
 }
 
 /** SpectralInfo for an existing catalog record, for re-deriving its
@@ -1299,6 +1346,9 @@ interface AnchorDimCandidate {
    *  mag_pri when the member is its direct secondary; null on an escape
    *  row (its mag_pri is the member's own light). */
   anchorWdsMag: number | null;
+  /** Depth of the component letter `anchorWdsMag` describes — the selector for
+   *  which candidate row names the anchor's own light. */
+  anchorDepth: number;
   /** Angular separation from the anchor (″) — the row's own sep for a direct
    *  secondary, the WDS-root offset for an escape row. */
   sepArcsec: number | null;
@@ -1324,7 +1374,7 @@ function registerExistingMemberForAnchorDim(
   memberIdx: number,
   dustGrid: DustGrid | null,
 ): void {
-  const { row, anchorStar, anchorCatalogIdx } = ctx;
+  const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx } = ctx;
   if (anchorCatalogIdx === null || anchorStar === null
       || memberIdx === anchorCatalogIdx
       || !anchorMagIsCatalogued(anchorStar)) {
@@ -1344,7 +1394,7 @@ function registerExistingMemberForAnchorDim(
     source: 'own',
     dmag: row.dmag,
     structural: false,
-    ...anchorDimGeometry(row),
+    ...anchorDimGeometry(row, anchorPrimaryRow.comp),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
   });
 }
@@ -1602,7 +1652,7 @@ function promoteRow(
       source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
       structural: idsInheritedFromAnchor,
-      ...anchorDimGeometry(row),
+      ...anchorDimGeometry(row, anchorPrimaryRow.comp),
       av,
     });
   }
@@ -2047,23 +2097,7 @@ export function promoteCompanions(
   }
   for (const cands of dimByAnchor.values()) {
     const anchor = getStarAt(cands[0].anchorIdx);
-    // The anchor's own light, once every member is out: the FAINTEST mag_pri
-    // its candidate rows offer. WDS's `mag_pri` covers the whole subtree of
-    // whatever letter the row pairs, so a top-level row's value already sums
-    // sub-letter members (AR Cas lists 4.87 for A, 5.02 for Aa) and only the
-    // most-decomposed one names what the re-split's residual represents.
-    //
-    // Faintest is a PROXY for most-decomposed, exact only while the rows agree
-    // on one component's photometry. Two top-level rows disagreeing by band or
-    // epoch make this pick the fainter measurement of the same letter and claim
-    // a decomposition that is not there — silently, since the fit still solves.
-    // Keying on the paired letter's depth is the real rule; see README
-    // § Anchor flux conservation.
-    const anchorAloneMag = cands.reduce<number | null>(
-      (m, c) => (c.anchorWdsMag !== null && (m === null || c.anchorWdsMag > m)
-        ? c.anchorWdsMag : m),
-      null,
-    );
+    const anchorAloneMag = anchorAloneMagnitude(cands);
     // One A_V for the whole group: the dust grid is voxelised far coarser than
     // even the widest member's offset (σ Ori's E at 42″, AR Cas I at 234″), so
     // every candidate's sightline integral returns the same value and any of

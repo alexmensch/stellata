@@ -216,77 +216,56 @@ Per-row gates and resolution:
   anchor's G (`blendDimGaiaResolved` — HD 153557's B at 5″, σ Ori's E at 42″,
   both of which the fit alone would have dimmed). `vTierIsSystemBlend` owns
   that split (`../photometry/README.md` § Which tiers give a system blend).
-  Every remaining own-brightness member (`dmag_imputed` / `own` / `wds_mag`)
-  is decided per anchor by a **joint subset solve**: the hypothesis
-  `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` over observed-frame WDS
-  magnitudes landing closest to the anchor's observed apparent magnitude wins,
-  decisive only when it beats "anchor alone" by ≥`RIELLO_G_MINUS_V_SIGMA` =
-  0.03017 mag — the published scatter of the relation that V came through, so the
-  margin never sits below the noise in its own input. Hypotheses within it are an
-  equivalence class and its SMALLEST subset wins, so a negligible-flux
-  member never flips the outcome and Sirius' Δmag≈10 float-noise shape never
-  dims. The joint fit is what a pairwise test couldn't do: 36 Oph D cannot
-  claim A+B's blend (any subset containing D fits worse than {A,B}), while
-  Polaris Ab (inside the 1.98 blend, Δmag 2.0) dims its anchor ~0.16 mag.
-  Two references the solve needs, both easy to get wrong. The anchor's
-  **observed magnitude** comes from its own `absmag` at its own `|xyz|`, never a
-  multiples.tsv `dist_pc` — that can predate a distance override the record took
-  (HD 64315: 12.7 kpc vs 6.2) or a coherence reposition (σ Ori 328.9 → 399.8 pc),
-  both safe here because coherence moves records at fixed apparent brightness.
-  And **"anchor alone"** is the FAINTEST `mag_pri` across the anchor's rows, since
-  WDS's `mag_pri` covers the whole subtree of whatever letter its row pairs (AR
-  Cas prints 4.87 for A, 5.02 for Aa); that value is also the Δ reference for
-  every `dmag_imputed` member, putting Ab 2.40 off Aa, not 2.55 off the A blend.
-  Faintest is a **proxy** for most-decomposed and holds only while the rows agree
-  on one component's photometry — two top-level rows differing by band or epoch
-  make it pick the fainter measurement of the same letter and claim a
-  decomposition that is not there, silently, since the fit still solves. The real
-  rule is the paired letter's depth; carrying that onto the candidate is filed
-  work, not shipped.
-  Apply, once per anchor with exact conservation: members with independent
-  brightness (`own` / `wds_mag`) subtract their actual flux, guarded against a
-  member as bright as the blend itself (`blendDimSkipped`); blend-relative
-  members (`dmag_imputed`) re-split the residual by Δmag — the N-member
-  generalisation of the split derived in `docs/science-multiple-star-pipeline.md`
-  § Blend light conservation. Counted `blendDimmedAnchors`
-  (per anchor); members the fit leaves outside are
-  `blendDimMembersOutside`, members with no usable WDS magnitudes
-  `blendDimMembersUnfit`, members past the tier's blending scale
-  `blendDimBeyondSeparation` (§ The separation gate below).
-  Caveats: WDS pair magnitudes are taken at face value,
-  and speckle-band (non-V) pairs overstate a member's V share (Achernar's Δm 1.4
-  is H-band) — a data-curation tail, visible in the known-stars notes; and the fit
-  judges only which hypothesis is CLOSEST, never how close, so an anchor matching
-  neither still dims by the nearer one. The equal-split gaia_photometry blend
-  pass above stays for the N-way no-WDS-mag case.
-  **The solve reaches members that are already their own catalog record**, not
-  only minted ones: an anchor on a printed blend tier otherwise keeps the pair's
-  combined light and ships too bright, which is what put ξ UMa 0.54 mag, ξ Sco
-  0.72 and HD 75632 0.95 over. Those enter as `own` — flux subtraction against
-  the record's own measurement, never the Δmag re-split, which would overwrite a
-  first-class record's brightness — and are deduped per `(anchor, member)`, since
-  every cursor pairing the two arrives at the same registration. Registration
-  reads the ANCHOR RECORD's `vVia`, never a multiples.tsv `photometry_via` cell:
-  those freeze at the build that wrote the TSV and went stale under the driver
-  swap (ξ UMa's AB row says `none` while the record carries a printed `I/239`
-  blend — the exact population needing the dim).
-  **Conservation is an observed-frame statement.** The catalogue measured one
-  apparent brightness, so a member's flux leaves at the apparent magnitude the
-  observer sees, and the residual converts back at the anchor's own distance.
-  Identical arithmetic for a minted member (tangent projection puts it at the
-  anchor's distance) but not for an already-in-catalog one: ξ Sco B sits 3.4 pc
-  past A, and subtracting absolute fluxes there overshoots by 0.35 mag.
-  **The separation gate.** Identity evidence answers "is this member inside the
-  entry" only where the catalogue published an identifier for it; past that the
-  tier's own blending scale is the term, and without it photometry alone cannot
-  tell a sub-arcsec photocentre from a companion 525″ off (AR Cas I, σ Ori I —
-  held out until now only by the smallest-subset tie-break).
-  `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and `GAIA_BLEND_MAX_SEP_ARCSEC` = 1″ are
-  both calibrated against the blend-vs-component hypothesis split per separation
-  bin, tables and the instrumental reading in
-  `docs/science-multiple-star-pipeline.md` § Blend light conservation. A pair WDS
-  published no separation for is EXCLUDED (no measurement is no evidence — AU Mic
-  AB); structural members skip the gate. Counted `blendDimBeyondSeparation`.
+  Every remaining own-brightness member (`dmag_imputed` / `own` / `wds_mag`) is
+  decided per anchor by a **joint subset solve** — derivation, margin rationale
+  and worked examples in `docs/science-multiple-star-pipeline.md` § Blend light
+  conservation. The engineering invariants it rests on, each easy to get wrong:
+
+  - **Observed magnitude** comes from the anchor's own `absmag` at its own
+    `|xyz|`, never a multiples.tsv `dist_pc` — that can predate a distance
+    override the record took (HD 64315: 12.7 kpc vs 6.2) or a coherence
+    reposition (σ Ori 328.9 → 399.8 pc), both safe here because coherence moves
+    records at fixed apparent brightness.
+  - **"Anchor alone"** is the `mag_pri` of the anchor's DEEPEST row, and is also
+    the Δ reference for every `dmag_imputed` member. `componentDepth` ranks the
+    letter, NOT its length: a multi-uppercase token is an unresolved compound
+    and scores 0, BELOW a single letter, because η CrB's `AB,E` row prints the
+    A+B aggregate and reading it as deeper than `A` makes the blend the anchor's
+    own light. Ties break brightest.
+  - **Registration** reads the ANCHOR RECORD's `vVia`, never a multiples.tsv
+    `photometry_via` cell: those freeze at the build that wrote the TSV and went
+    stale under the driver swap (ξ UMa's AB row says `none` while the record
+    carries a printed `I/239` blend — the exact population needing the dim).
+  - **Members already in the catalog are candidates too**, not only minted ones,
+    or an anchor on a printed blend tier keeps the pair's combined light. They
+    enter as `own` — flux subtraction against the record's own measurement,
+    never the Δmag re-split, which would overwrite a first-class record's
+    brightness — deduped per `(anchor, member)`, since every cursor pairing the
+    two arrives at the same registration.
+  - **Conservation is observed-frame.** A member's flux leaves at the apparent
+    magnitude the observer sees and the residual converts back at the anchor's
+    own distance. Identical arithmetic for a minted member (tangent projection
+    puts it at the anchor's distance), not for an already-in-catalog one.
+  - **The separation gate.** Identity evidence answers "is this member inside
+    the entry" only where the catalogue published an identifier for it; past
+    that, photometry alone cannot tell a sub-arcsec photocentre from a companion
+    525″ off. `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and
+    `GAIA_BLEND_MAX_SEP_ARCSEC` = 1″, both calibrated. A pair WDS published no
+    separation for is EXCLUDED — no measurement is no evidence of blending
+    (AU Mic AB); structural members skip the gate.
+
+  Apply, once per anchor with exact conservation: `own` / `wds_mag` members
+  subtract their actual flux, guarded against a member as bright as the blend
+  itself (`blendDimSkipped`); `dmag_imputed` members re-split the residual by
+  Δmag. Counted `blendDimmedAnchors` per anchor; members the fit leaves outside
+  are `blendDimMembersOutside`, with no usable WDS magnitudes
+  `blendDimMembersUnfit`, past the tier's blending scale
+  `blendDimBeyondSeparation`, resolved out by their own Gaia source
+  `blendDimGaiaResolved`. The equal-split `gaia_photometry` blend pass above
+  stays for the N-way no-WDS-mag case. Standing caveat: WDS pair magnitudes are
+  taken at face value, and speckle-band (non-V) pairs overstate a member's V
+  share (Achernar's Δm 1.4 is H-band) — a data-curation tail, visible in the
+  known-stars notes.
 - **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
   5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
   surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair

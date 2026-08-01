@@ -443,6 +443,48 @@ consume it in two complementary ways:
    record's own distance, because the one thing the catalogue actually
    measured is the entry's apparent brightness.
 
+   **Which members are in the blend — the joint subset solve.** Membership
+   is not decided per member. The hypothesis
+   `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` is evaluated over every
+   subset `S` of the anchor's candidate members, in observed-frame WDS
+   magnitudes, and the one landing closest to the anchor's own observed
+   magnitude wins. It is decisive only when it beats "anchor alone" by
+   ≥ `RIELLO_G_MINUS_V_SIGMA` = 0.03017 mag — the published scatter of the
+   relation the anchor's V came through, so the margin never discriminates
+   below the noise in its own input. Hypotheses within that margin of the
+   best are an equivalence class and the SMALLEST subset in it wins, so a
+   negligible-flux member never flips the outcome and Sirius' Δmag ≈ 10
+   float-noise shape never dims at all. The joint form is what a pairwise
+   test cannot do: 36 Oph D cannot claim A+B's blend (any subset containing
+   D fits worse than {A,B}), while Polaris Ab — inside the 1.98 blend at
+   Δmag 2.0 — dims its anchor ~0.16 mag.
+
+   The fit judges only which hypothesis is CLOSEST, never how close, so an
+   anchor matching neither still dims by the nearer one.
+
+   **"Anchor alone" is the deepest row, not the faintest.** WDS's `mag_pri`
+   covers the whole subtree of whatever letter its row pairs, so a
+   top-level row already sums the sub-letters and only the most-decomposed
+   one names what the residual represents — AR Cas prints 4.87 for A and
+   5.02 for Aa, and Ab is Δ2.40 off Aa's own light, not 2.55 off the A
+   blend. Faintest was a proxy for most-decomposed and fails two ways.
+   A compound letter is an aggregate, not a sub-letter, so it must rank
+   BELOW a single letter despite being longer: η CrB's `AB,E` row prints
+   4.98 for the A+B blend against the `AB` row's 5.64 for A alone, and
+   reading `AB` as deeper stops the pair re-splitting at all. And two rows
+   at ONE depth are two measurements of the same subtree whose disagreement
+   is band or epoch — taking the fainter claims a decomposition that is not
+   there, silently, since the fit still solves; brightest is the same
+   conservative posture as the smallest-winning-subset rule.
+
+   ν Sco is where the depth rule is load-bearing rather than cosmetic. Four
+   rows reach its Aa anchor, printing `Aa1` = 4.37, `Aa` = 4.50 and
+   `A` = 4.35 twice. Both sub-components (Ab, Aa2) are subtracted, so the
+   residual IS Aa1 — and keying on Aa's subtree double-counted Aa2 by
+   0.124 mag. WDS's two values disagree in the physically impossible
+   direction (Aa1 alone cannot outshine the Aa subtree containing it),
+   which is exactly the noise the depth rule stops reading as structure.
+
    **Where each tier stops blending — the separation bound.** "Did this
    catalogue fit one photocentre over the pair" has an angular answer as
    well as an identifier one, and needs it: a member with no own source_id

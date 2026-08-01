@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   canonicalCompLetter,
+  componentDepth,
   composeSyntheticId,
   groupBySystem,
   GAIA_BLEND_MAX_SEP_ARCSEC,
@@ -722,23 +723,35 @@ describe('anchor flux dimming', () => {
     expect(total).toBeCloseTo(blend, 6);
   });
 
-  // AR Cas' shape: WDS prints mag_pri per row for the whole subtree of the
-  // letter that row pairs, so the top-level A,C row's 4.87 already sums the
-  // sub-letters while the Aa,Ab row's 5.02 is A's own light. Only the faintest
-  // — most-decomposed — value names what the re-split's residual represents,
-  // and it is also the Δ reference every dmag_imputed member is measured from.
-  it('anchor-alone is the faintest mag_pri across the anchor rows, not the first', () => {
+  // AR Cas' shape: WDS prints mag_pri for the whole subtree of the letter its
+  // row pairs, so the top-level A,C row's 4.87 already sums the sub-letters
+  // while the Aa,Ab row's 5.02 is A's own light. Only the most-decomposed value
+  // names what the re-split's residual represents, and it is also the Δ
+  // reference every dmag_imputed member is measured from.
+  const depthRows = (
+    over1: Partial<MultiplesTsvRow>,
+    over2: Partial<MultiplesTsvRow>,
+    secondCursorComp: string,
+  ) => {
+    const blend = blendMag(5.02, 7.42);
+    const rows = solveRows(over1, over2);
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    rows[2].comp = secondCursorComp;
+    return rows;
+  };
+
+  it('anchor-alone is the DEEPEST mag_pri across the anchor rows, not the first', () => {
     const blend = blendMag(5.02, 7.42);
     const anchor = blendAnchor({ absmag: blend });
-    const rows = solveRows(
+    const rows = depthRows(
       // A,C FIRST — a top-level row whose mag_pri is the brighter A blend. The
       // ordering is the point: taking whichever row comes first picks this one.
       { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
       // Aa,Ab: the decomposed row. Ab is Δ2.40 off Aa's own 5.02.
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+      'Aa',
     );
-    rows[0].absmag = blend;
-    rows[2].absmag = blend;
     const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(newStars).toHaveLength(2);
     // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
@@ -747,8 +760,56 @@ describe('anchor flux dimming', () => {
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBeCloseTo(5.02, 3);
-    // The Δ reference is that same faintest value: 7.42 − 5.02, never 7.42 − 4.87.
+    // The Δ reference is that same deepest value: 7.42 − 5.02, never 7.42 − 4.87.
     expect(newStars[1].absmag - anchor.absmag).toBeCloseTo(2.40, 9);
+  });
+
+  // The reason depth replaced "faintest": identical magnitudes, but both rows
+  // now pair the SAME top-level letter, so 5.02 is a second measurement of A's
+  // subtree (different band or epoch) rather than a decomposition of it.
+  // Selecting it would claim a split that is not there — silently, since the
+  // fit still solves — and hand the 0.15 mag difference to the members.
+  it('two rows at one depth take the brightest — a band disagreement is not a decomposition', () => {
+    const blend = blendMag(5.02, 7.42);
+    const anchor = blendAnchor({ absmag: blend });
+    const rows = depthRows(
+      { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
+      { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+      'A',
+    );
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(2);
+    expect(anchor.absmag).toBe(blend);
+  });
+
+  it('componentDepth walks the same designator levels parentComponentToken does', () => {
+    expect(componentDepth('A')).toBe(1);
+    expect(componentDepth('Aa')).toBe(2);
+    expect(componentDepth('Aa1')).toBe(3);
+    expect(componentDepth('')).toBe(0);
+    // Compounds are aggregates, not sub-letters: shallower than a single
+    // letter despite being longer (η CrB's AB,E row blends A+B into mag_pri).
+    expect(componentDepth('AB')).toBe(0);
+    expect(componentDepth('ABC')).toBe(0);
+  });
+
+  // η CrB's shape: the AB cursor prints A's own 5.64, the AB,E cursor prints
+  // 4.98 for the A+B aggregate. Ranking "AB" by its length would make the
+  // BLEND the anchor's own light and stop the pair re-splitting at all.
+  it('a compound anchor letter never outranks a single letter', () => {
+    const blend = blendMag(5.64, 5.95);
+    const anchor = blendAnchor({ absmag: blend });
+    const rows = depthRows(
+      { dmag: 0.31, magPri: 5.64, magSec: 5.95 },
+      { dmag: 12.02, magPri: 4.98, magSec: 17.00 },
+      'AB',
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(5.64, 3);
   });
 
   // HD 64315's shape: multiples.tsv carries a system distance that predates the
