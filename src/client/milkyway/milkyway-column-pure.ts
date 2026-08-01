@@ -364,10 +364,9 @@ export function sightlineColumn(
  * emissivity is an intrinsic property and must not move when the
  * extinction does.
  *
- * Interim. `stellata-xypg.29` deferred the solve against the Galaxy's
- * total M_V; until that lands this is one sightline rather than an
- * integrated luminosity, and the resulting integrated M_V is a reported
- * outcome rather than an input.
+ * Interim: one sightline, not an integrated luminosity, so the model's own
+ * total M_V is a reported outcome rather than an input. See README.md
+ * § Calibration for the solve that replaces this and why it waits.
  */
 export const EMISSIVITY_SCALE =
   10 ** (-0.4 * (NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - SB_ZERO_POINT)) /

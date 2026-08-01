@@ -328,10 +328,9 @@ describe('MilkyWay surface-brightness calibration', () => {
   // GC sightline lands near 1.7/255, inside the range the resolve's dither
   // breaks up but well under the 4/255 the old 0.45-strength calibration
   // reached. The brightest part of the band (b ≈ 5°) is the one that
-  // carries the layer visually. Lifting it is the exposure model's job —
-  // DR_MAG is the lever, and `stellata-xypg.7` owns tuning it against
-  // eso0932a. Do not raise the emissivity to compensate; that would put
-  // the pole back above its measured residual.
+  // carries the layer visually. Lifting it is the exposure model's job, not
+  // this layer's: raising the emissivity to compensate would put the pole
+  // back above its measured residual. See README.md § Calibration.
   it('renders the band in the dither-resolvable toe at the base epoch', () => {
     expect(bandDisplayLevel()).toBeCloseTo(0.0066, 4);
     expect(bandDisplayLevel()).toBeGreaterThan(1 / 255);
