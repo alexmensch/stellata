@@ -133,14 +133,25 @@ preserved. To add a star or system:
    **Never widen a tolerance.** Where the investigation lands on a real
    defect whose fix is deferred, re-pin the value to what the build emits
    and say so in `notes_source` — the published truth, the cause, and the
-   bead that restores it. ξ Ursae Majoris' absmag is the worked example;
-   ξ Scorpii and HD 75632 carry the same pin for the same cause. **Pin every
-   star a deferred defect touches, not just the one you found it on** — a
-   partially-pinned set fails loudly on one star and silently on the rest,
-   which reads as a narrower defect than it is.
-   A pinned known-wrong value keeps the row guarding everything else about
-   the star and makes the regression fail loudly when its fix lands; a
+   bead that restores it. **Pin every star a deferred defect touches, not
+   just the one you found it on** — a partially-pinned set fails loudly on
+   one star and silently on the rest, which reads as a narrower defect than
+   it is. A pinned known-wrong value keeps the row guarding everything else
+   about the star and makes the regression fail loudly when its fix lands; a
    widened tolerance stops guarding anything and is silent either way.
+
+   The shape, from the set that most recently carried one — ξ UMa, whose
+   `primary_absmag` sat at 3.701 against the component's true 4.241 because
+   the printed Hipparcos V on its record was the unresolved AB pair and
+   nothing re-split it. The row pinned **3.701**, the emitted value, with
+   `notes_source` carrying all three parts: `ABSMAG PINS A KNOWN-WRONG VALUE,
+   3.701 against the component's true 4.241` (published truth), the cause,
+   and `Reverts to 4.241 when the separation gate lands` naming the bead. Its
+   `ci` stayed a truth pin — colour is unaffected by a blend — and
+   `primary_radius_rsun` was left unpinned rather than pinned wrong, since it
+   derives from the bad absmag. ξ Scorpii and HD 75632 carried the same pin
+   for the same cause; the gate landed and all three now pin real values. No
+   row carries a deferred pin today.
 6. When curating a multi-star system, also pin its kept-pair set in
    `system-pair-topology.tsv` — the exact-set fixture is what catches
    a later ingest silently adding or dropping a pair for that root.

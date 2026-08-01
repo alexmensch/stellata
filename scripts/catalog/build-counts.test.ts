@@ -92,6 +92,8 @@ function baseCounts(): BuildCounts {
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
     companionBlendDimGaiaResolved: 0,
+    companionBlendDimBeyondSeparation: 0,
+    companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 1,
     companionConstellationSplitFromAnchor: 0,
     designationConMismatch: 1,

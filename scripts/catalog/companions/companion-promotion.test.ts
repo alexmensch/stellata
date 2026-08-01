@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   canonicalCompLetter,
+  componentDepth,
   composeSyntheticId,
   groupBySystem,
+  GAIA_BLEND_MAX_SEP_ARCSEC,
+  PRINTED_BLEND_MAX_SEP_ARCSEC,
   hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
@@ -720,23 +724,35 @@ describe('anchor flux dimming', () => {
     expect(total).toBeCloseTo(blend, 6);
   });
 
-  // AR Cas' shape: WDS prints mag_pri per row for the whole subtree of the
-  // letter that row pairs, so the top-level A,C row's 4.87 already sums the
-  // sub-letters while the Aa,Ab row's 5.02 is A's own light. Only the faintest
-  // — most-decomposed — value names what the re-split's residual represents,
-  // and it is also the Δ reference every dmag_imputed member is measured from.
-  it('anchor-alone is the faintest mag_pri across the anchor rows, not the first', () => {
+  // AR Cas' shape: WDS prints mag_pri for the whole subtree of the letter its
+  // row pairs, so the top-level A,C row's 4.87 already sums the sub-letters
+  // while the Aa,Ab row's 5.02 is A's own light. Only the most-decomposed value
+  // names what the re-split's residual represents, and it is also the Δ
+  // reference every dmag_imputed member is measured from.
+  const depthRows = (
+    over1: Partial<MultiplesTsvRow>,
+    over2: Partial<MultiplesTsvRow>,
+    secondCursorComp: string,
+  ) => {
     const blend = blendMag(5.02, 7.42);
-    const anchor = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
-    const rows = solveRows(
+    const rows = solveRows(over1, over2);
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    rows[2].comp = secondCursorComp;
+    return rows;
+  };
+
+  it('anchor-alone is the DEEPEST mag_pri across the anchor rows, not the first', () => {
+    const blend = blendMag(5.02, 7.42);
+    const anchor = blendAnchor({ absmag: blend });
+    const rows = depthRows(
       // A,C FIRST — a top-level row whose mag_pri is the brighter A blend. The
       // ordering is the point: taking whichever row comes first picks this one.
       { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
       // Aa,Ab: the decomposed row. Ab is Δ2.40 off Aa's own 5.02.
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+      'Aa',
     );
-    rows[0].absmag = blend;
-    rows[2].absmag = blend;
     const { newStars, stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
     expect(newStars).toHaveLength(2);
     // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
@@ -745,8 +761,67 @@ describe('anchor flux dimming', () => {
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBeCloseTo(5.02, 3);
-    // The Δ reference is that same faintest value: 7.42 − 5.02, never 7.42 − 4.87.
+    // The Δ reference is that same deepest value: 7.42 − 5.02, never 7.42 − 4.87.
     expect(newStars[1].absmag - anchor.absmag).toBeCloseTo(2.40, 9);
+  });
+
+  // The reason depth replaced "faintest": identical magnitudes, but both rows
+  // now pair the SAME top-level letter, so 5.02 is a second measurement of A's
+  // subtree (different band or epoch) rather than a decomposition of it.
+  // Selecting it would claim a split that is not there — silently, since the
+  // fit still solves — and hand the 0.15 mag difference to the members.
+  it('two rows at one depth take the brightest — a band disagreement is not a decomposition', () => {
+    const blend = blendMag(5.02, 7.42);
+    const anchor = blendAnchor({ absmag: blend });
+    const rows = depthRows(
+      { dmag: 4.13, magPri: 4.87, magSec: 9.00 },
+      { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
+      'A',
+    );
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(2);
+    expect(anchor.absmag).toBe(blend);
+  });
+
+  it('componentDepth walks the same designator levels parentComponentToken does', () => {
+    expect(componentDepth('A')).toBe(1);
+    expect(componentDepth('Aa')).toBe(2);
+    expect(componentDepth('Aa1')).toBe(3);
+    expect(componentDepth('')).toBe(0);
+    // Compounds are aggregates, not sub-letters: shallower than a single
+    // letter despite being longer (η CrB's AB,E row blends A+B into mag_pri).
+    expect(componentDepth('AB')).toBe(0);
+    expect(componentDepth('ABC')).toBe(0);
+    // WDS concatenates at whichever level it aggregates, so the rule is two
+    // designators at ONE level, not two capitals. 'Aab' is Aa+Ab and would
+    // otherwise score 3 — the deepest rank there is, on an aggregate. It is in
+    // multiples.tsv today (15169-6057), inert only because that cursor carries
+    // no identifier for an anchor to resolve.
+    expect(componentDepth('Aab')).toBe(0);
+    expect(componentDepth('Aa12')).toBe(0);
+    // Single designators at every level still walk, including the truncated
+    // secondary forms Stage 6 emits.
+    expect(componentDepth('Ab1')).toBe(3);
+    expect(componentDepth('b1')).toBe(2);
+  });
+
+  // η CrB's shape: the AB cursor prints A's own 5.64, the AB,E cursor prints
+  // 4.98 for the A+B aggregate. Ranking "AB" by its length would make the
+  // BLEND the anchor's own light and stop the pair re-splitting at all.
+  it('a compound anchor letter never outranks a single letter', () => {
+    const blend = blendMag(5.64, 5.95);
+    const anchor = blendAnchor({ absmag: blend });
+    const rows = depthRows(
+      { dmag: 0.31, magPri: 5.64, magSec: 5.95 },
+      { dmag: 12.02, magPri: 4.98, magSec: 17.00 },
+      'AB',
+    );
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(5.64, 3);
   });
 
   // HD 64315's shape: multiples.tsv carries a system distance that predates the
@@ -763,7 +838,7 @@ describe('anchor flux dimming', () => {
     };
     // A row distance 10× the record's would put the observed frame 5 mag off,
     // where every subset fits worse than leaving the anchor alone.
-    const stale = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const stale = blendAnchor({ absmag: blend });
     const staleStats = promoteCompanions(
       rows(100), [stale], CONSTELLATIONS, CON_ASSIGNMENT,
     ).stats;
@@ -771,13 +846,270 @@ describe('anchor flux dimming', () => {
     expect(stale.absmag).toBeCloseTo(2.1, 3);
 
     // And a row with no distance at all no longer strands the fit as unfittable.
-    const absent = makeStar({ hip: 7777, absmag: blend, proper: 'Blendy', x: 10, y: 0, z: 0 });
+    const absent = blendAnchor({ absmag: blend });
     const absentStats = promoteCompanions(
       rows(null), [absent], CONSTELLATIONS, CON_ASSIGNMENT,
     ).stats;
     expect(absentStats.blendDimMembersUnfit).toBe(0);
     expect(absentStats.blendDimmedAnchors).toBe(1);
     expect(absent.absmag).toBeCloseTo(2.1, 3);
+  });
+
+  // The gate the identifier discriminator cannot supply: a member with no own
+  // source_id offers no evidence either way, so a 525″ companion fitting the
+  // blend by luck used to dim the anchor (σ Ori I, AR Cas I).
+  const sepRows = (sepArcsec: number | null) => {
+    const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1, sepArcsec });
+    rows[0].absmag = blendMag(2.1, 4.1);
+    rows[0].sepArcsec = sepArcsec;
+    return rows;
+  };
+  const dimAt = (sepArcsec: number | null, anchorOver: Partial<Star> = {}) => {
+    const anchor = blendAnchor({ absmag: blendMag(2.1, 4.1), ...anchorOver });
+    const stats = promoteCompanions(
+      sepRows(sepArcsec), [anchor], CONSTELLATIONS, CON_ASSIGNMENT,
+    ).stats;
+    return { anchor, stats };
+  };
+
+  it('holds a member past the printed tier blending scale out of the blend', () => {
+    const inside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC);
+    expect(inside.stats.blendDimmedAnchors).toBe(1);
+    expect(inside.stats.blendDimMembersBeyondSeparation).toBe(0);
+    expect(inside.anchor.absmag).toBeCloseTo(2.1, 3);
+
+    // The same fit, one hundredth of an arcsecond wider: identical photometry,
+    // opposite verdict, because the bound is the discriminator now.
+    const outside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC + 0.01);
+    expect(outside.stats.blendDimmedAnchors).toBe(0);
+    expect(outside.stats.blendDimMembersBeyondSeparation).toBe(1);
+    expect(outside.anchor.absmag).toBe(blendMag(2.1, 4.1));
+  });
+
+  it('applies the Gaia deblending bound instead when the anchor V came from Gaia', () => {
+    // 5″ is inside a printed Hipparcos entry and far outside one DR3 source.
+    expect(dimAt(5.0).stats.blendDimmedAnchors).toBe(1);
+    const gaia = dimAt(5.0, { vVia: 'gaia_riello' });
+    expect(gaia.stats.blendDimmedAnchors).toBe(0);
+    expect(gaia.stats.blendDimMembersBeyondSeparation).toBe(1);
+    expect(dimAt(GAIA_BLEND_MAX_SEP_ARCSEC, { vVia: 'gaia_riello' })
+      .stats.blendDimmedAnchors).toBe(1);
+  });
+
+  // AU Mic AB's shape. A minted member never reaches the gate with no
+  // separation (the row drops for want of a position first), so the case only
+  // arises for a member that is already its own record — which is exactly the
+  // population unconditional registration got wrong.
+  it('excludes an existing member whose pair WDS published no separation for', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend });
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: 4.1, x: 10, y: 0, z: 0,
+    });
+    const rows = solveRows({
+      gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
+      sepArcsec: null,
+    });
+    rows[0].absmag = blend;
+    rows[0].sepArcsec = null;
+    const { stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(anchor.absmag).toBe(blend);
+  });
+
+  it('a structural member skips the gate — a shared id outranks the threshold', () => {
+    // Both rows carry the anchor's HIP, so the ids strip and the member is
+    // structural: the catalogue itself says it could not separate them.
+    const anchor = blendAnchor({ absmag: blendMag(2.1, 4.1) });
+    const rows = solveRows({
+      hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1, sepArcsec: 400.0,
+    });
+    rows[0].absmag = blendMag(2.1, 4.1);
+    rows[0].sepArcsec = 400.0;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+  });
+
+  // The exemption is not the printed tier's fit bypass: a Gaia-tier anchor's
+  // structural member still argues its membership through the solve, but the
+  // angular bound must not reach it either. Its ids were the anchor's, so it
+  // shares the source whose G the anchor's V came through and is inside that
+  // measurement by construction — evidence about THIS pair, which outranks a
+  // population threshold calibrated at 1″.
+  it('a structural member skips the gate on a Gaia tier too, at 400 times the bound', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend, vVia: 'gaia_riello' });
+    const rows = solveRows({
+      hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1, sepArcsec: 400.0,
+    });
+    rows[0].absmag = blend;
+    rows[0].sepArcsec = 400.0;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+  });
+
+  // ξ UMa's shape: the member is its own first-class record, so it never reaches
+  // the minting path and the anchor used to keep the pair's combined light.
+  it('dims via a member that is already its own catalog record', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend });
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: 4.1, x: 10, y: 0, z: 0,
+    });
+    const rows = solveRows({
+      gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
+    });
+    rows[0].absmag = blend;
+    const { newStars, stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(newStars).toHaveLength(0);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    // Its own measurement is subtracted; the record itself is never rewritten.
+    expect(member.absmag).toBe(4.1);
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+    expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(blend, 6);
+  });
+
+  // ξ Sco B sits 3.4 pc past A. Subtracting absolute fluxes would treat it as
+  // if it shared A's distance and overshoot; only the observed frame conserves
+  // what the catalogue actually measured.
+  it('subtracts an existing member at its own distance, in the apparent frame', () => {
+    const blendApparent = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blendApparent });
+    // Twice the anchor's distance: same absmag, 1.505 mag fainter as seen.
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: 4.1, x: 20, y: 0, z: 0,
+    });
+    const rows = solveRows({
+      gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
+    });
+    rows[0].absmag = blendApparent;
+    const { stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(stats.blendDimmedAnchors).toBe(1);
+    const memberApparent = 4.1 + 5 * Math.log10(20 / 10);
+    // distPc=10 for the anchor, so its absmag and apparent magnitude coincide.
+    expect(anchor.absmag).toBeCloseTo(
+      -2.5 * Math.log10(10 ** (-0.4 * blendApparent) - 10 ** (-0.4 * memberApparent)),
+      6,
+    );
+    // And it is brighter than the same-distance answer: less flux came out.
+    expect(anchor.absmag).toBeLessThan(2.1);
+  });
+
+  // The decisive margin compares hypotheses to EACH OTHER and says nothing
+  // about whether any of them is right, so an anchor whose observed magnitude
+  // matches neither "alone" nor any blend still dimmed by whichever missed by
+  // less — WDS pair mags in a non-V band, or estimates.
+  const misfitAt = (anchorOffset: number) => {
+    const blend = blendMag(2.1, 4.1);
+    // Move the anchor's own magnitude away from every hypothesis at once.
+    const anchor = blendAnchor({ absmag: blend - anchorOffset });
+    const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+    rows[0].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    return stats;
+  };
+
+  it('refuses the dim when the winning hypothesis matches nothing', () => {
+    // distPc=10, so an absmag offset is an observed-frame offset one-for-one.
+    const inside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG - 0.01);
+    expect(inside.blendDimmedAnchors).toBe(1);
+    expect(inside.blendDimMembersMisfit).toBe(0);
+
+    const outside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG + 0.01);
+    expect(outside.blendDimmedAnchors).toBe(0);
+    expect(outside.blendDimMembersMisfit).toBe(1);
+    expect(outside.blendDimMembersOutside).toBe(0);
+  });
+
+  it('a refused fit still lets structural members dim — identity is not a fit', () => {
+    // Both rows carry the anchor's HIP: the catalogue could not separate them,
+    // which is evidence about this pair rather than a verdict from the solve.
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend - 2.0 });
+    const rows = solveRows({ hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1 });
+    rows[0].absmag = blend;
+    const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
+    expect(stats.blendDimMembersMisfit).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+  });
+
+  it('subtracts an existing member once when two cursors pair it with the anchor', () => {
+    const blend = blendMag(2.1, 4.1);
+    const anchor = blendAnchor({ absmag: blend });
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: 4.1, x: 10, y: 0, z: 0,
+    });
+    const shared = { gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1 };
+    const rows = solveRows(shared, shared);
+    rows[0].absmag = blend;
+    rows[2].absmag = blend;
+    // The AD cursor names the same record under comp D — one member, two rows.
+    rows[3].comp = 'B';
+    const { stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(stats.alreadyInCatalog).toBe(2);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.1, 3);
+  });
+
+  // HD 75632's shape, pushed until it changes the verdict rather than just the
+  // emitted value. An already-in-catalog member contributes the light its OWN
+  // record carries, not WDS's mag_sec for the pair (B's Gaia photometry is
+  // 0.47 mag off it in the real system), so the solve has to be judged on the
+  // same magnitude the subtraction removes. Judging {B} on mag_sec and then
+  // subtracting the record leaves the result unbounded by either gate.
+  const disagreeingMember = (anchorAbsmag: number, memberAbsmag: number) => {
+    const anchor = blendAnchor({ absmag: anchorAbsmag });
+    const member = makeStar({
+      gaiaSourceId: '4242424242', absmag: memberAbsmag, x: 10, y: 0, z: 0,
+    });
+    const rows = solveRows({
+      gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
+    });
+    rows[0].absmag = anchorAbsmag;
+    const { stats } = promoteCompanions(
+      rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    return { anchor, member, stats };
+  };
+
+  it('judges an existing member on its own light, not the pair mag_sec it disagrees with', () => {
+    // distPc=10 throughout, so absmag and observed magnitude coincide. The
+    // record is 1.9 mag brighter than mag_sec 4.1 claims: on mag_sec, {B} fits
+    // the 2.0 entry to 0.06 mag and wins decisively — and then subtracting the
+    // record's real 2.2 drops the anchor to 3.93, a 1.9 mag move certified by a
+    // 0.06 mag fit. On the record's own light nothing beats anchor-alone.
+    const { anchor, stats } = disagreeingMember(2.0, 2.2);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(0);
+    expect(stats.blendDimMembersOutside).toBe(1);
+    expect(anchor.absmag).toBe(2.0);
+  });
+
+  it('and admits the conserving dim that same disagreement used to refuse', () => {
+    // The mirror case: against a 1.5 entry, mag_sec puts every hypothesis past
+    // ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG (best 0.44) and the fit is refused as
+    // matching nothing, while the member's own 2.2 fits to 0.10 and conserves
+    // exactly. The gate now measures the light that will actually be subtracted.
+    const { anchor, member, stats } = disagreeingMember(1.5, 2.2);
+    expect(stats.blendDimMembersMisfit).toBe(0);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(2.3078, 4);
+    expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(1.5, 9);
   });
 });
 

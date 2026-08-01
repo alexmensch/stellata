@@ -12,6 +12,8 @@ import {
   NO_CONSTELLATION_INDEX,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absmagFromSpectral,
+  absoluteToApparentMagnitude,
+  apparentToAbsoluteMagnitude,
   classifyFromSimbad,
   designationConIndex,
   spectralClassCi,
@@ -381,9 +383,11 @@ export interface PromotionStats {
    *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
    *  per anchor. */
   blendDimmedAnchors: number;
-  /** Dim members skipped by the guard M_member > M_blend + 0.05 —
-   *  a member as bright as (or brighter than) its anchor's blend would
-   *  zero or invert the residual flux. */
+  /** Dim members reaching the subtraction but not applied: the guard
+   *  M_member > M_blend + 0.05 (a member as bright as its anchor's blend would
+   *  zero or invert the residual flux), or no observed magnitude to subtract at
+   *  all — which only a structural member can be, since the fit already drops
+   *  its own participants for that (`blendDimMembersUnfit`). */
   blendDimSkipped: number;
   /** Dim candidates no magnitude comparison could reach — no observed WDS
    *  magnitude for the member or the anchor, no distance, or a pathologically
@@ -398,6 +402,14 @@ export interface PromotionStats {
    *  source_id and the anchor's V came from Gaia's, so its light was never in
    *  there and dimming would subtract it twice. */
   blendDimGaiaResolved: number;
+  /** Dim candidates dropped before the fit because the pair sits wider than the
+   *  anchor tier's blending scale (or WDS published no separation at all), so no
+   *  entry of that catalogue sums both. Structural members are exempt. */
+  blendDimMembersBeyondSeparation: number;
+  /** Dim candidates whose WINNING hypothesis still missed the anchor's observed
+   *  magnitude by more than the input's error scale — the anchor matches
+   *  neither "alone" nor any blend, so the fit's pick carries no information. */
+  blendDimMembersMisfit: number;
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
@@ -429,6 +441,8 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersUnfit: 0,
     blendDimMembersOutside: 0,
     blendDimGaiaResolved: 0,
+    blendDimMembersBeyondSeparation: 0,
+    blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
   };
 }
@@ -693,7 +707,7 @@ export function imputeCompanionAbsmag(
   const distPc = secondary.distPc ?? primary?.distPc ?? null;
   if (ownWdsMag !== null && distPc !== null && distPc > 0) {
     return {
-      absmag: ownWdsMag - 5 * Math.log10(distPc / 10),
+      absmag: apparentToAbsoluteMagnitude(ownWdsMag, distPc),
       source: 'wds_mag',
     };
   }
@@ -836,11 +850,119 @@ const ANCHOR_DIM_DECISIVE_MAG = RIELLO_G_MINUS_V_SIGMA;
 // larger group is pathological input, not a solvable attribution.
 const ANCHOR_DIM_MAX_FIT_MEMBERS = 16;
 
+// How far the WINNING hypothesis may sit from the anchor's observed magnitude
+// before the fit is refused as matching nothing. Distinct from the decisive
+// margin above, which compares hypotheses to each other and says nothing about
+// whether any of them is right. Calibrated — README § Anchor flux conservation.
+export const ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG = 0.2;
+
+// Angular scale beyond which a member's light cannot be inside the anchor's
+// magnitude, per the catalogue that produced it. Both calibrated against the
+// blend-vs-component hypothesis split over WDS pair magnitudes — README
+// § The separation gate.
+export const PRINTED_BLEND_MAX_SEP_ARCSEC = 10.0;
+export const GAIA_BLEND_MAX_SEP_ARCSEC = 1.0;
+
+/** Whether the anchor record's magnitude came from a catalogue tier at all — the
+ *  precondition for any member's light being inside it. A minted companion
+ *  (`vVia === null`) is per-component by construction; `none` is a record no
+ *  cascade produced a V for.
+ *
+ *  Read off the RECORD, never a multiples.tsv `photometry_via` cell: those are
+ *  frozen from the build that wrote the TSV and go stale under a membership
+ *  swap — ξ UMa's AB row says `none` while the record carries a printed
+ *  `I/239` blend, which is exactly the population that needs dimming. */
+function anchorMagIsCatalogued(anchor: Star): boolean {
+  return anchor.vVia !== null && anchor.vVia !== 'none';
+}
+
+/** Whether a member at this separation can be inside an entry that blends out
+ *  to `maxSepArcsec`. A null separation is WDS publishing no measurement, which
+ *  is no evidence of blending: excluded, so an unmeasured wide pair (AU Mic AB)
+ *  never subtracts. Zero is a sub-resolution pair, the tightest case there is. */
+function withinBlendSeparation(
+  sepArcsec: number | null,
+  maxSepArcsec: number,
+): boolean {
+  return sepArcsec !== null && sepArcsec <= maxSepArcsec;
+}
+
+/** Two designators at ONE level, which makes the token an unresolved COMPOUND:
+ *  the aggregate of several components rather than one of them. Matches at any
+ *  level, since WDS concatenates at whichever it is aggregating — `AB` and `ABC`
+ *  at the top, `Aab` for Aa+Ab (multiples.tsv carries one, 15169-6057), `Aa12`
+ *  for Aa1+Aa2. */
+const COMPOUND_COMPONENT_LEVEL = /[A-Z]{2,}|[a-z]{2,}|\d{2,}/;
+
+/** How many WDS designators deep a component letter sits: ``"A" → 1``,
+ *  ``"Aa" → 2``, ``"Aa1" → 3``. Walks `parentComponentToken` rather than
+ *  counting characters, so the two cannot drift on what a level is.
+ *
+ *  A compound scores 0 — less decomposed than any single letter, rather than the
+ *  depth its length suggests. η CrB is the case that makes this load-bearing:
+ *  its `AB,E` row prints `mag_pri` 4.98 for the A+B blend against the `AB` row's
+ *  5.64 for A alone, so reading `AB` as deeper than `A` makes the blend the
+ *  anchor's own light and stops the pair re-splitting at all. */
+export function componentDepth(comp: string): number {
+  const c = comp.trim();
+  if (COMPOUND_COMPONENT_LEVEL.test(c)) return 0;
+  let depth = 0;
+  for (let tok: string | null = c; tok; tok = parentComponentToken(tok)) {
+    depth++;
+  }
+  return depth;
+}
+
+/** The observed-frame geometry a dim candidate is judged on: which WDS magnitude
+ *  is the member's own and which the anchor's, how deep the letter that anchor
+ *  magnitude describes sits, and the pair's separation. A pair-row-primary
+ *  escape heads its own sub-pair, so its `mag_pri` IS the member's light and its
+ *  offset from the anchor is the Stage-6 root composition rather than the row's
+ *  own sep. */
+function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
+  memberWdsMag: number | null;
+  anchorWdsMag: number | null;
+  anchorDepth: number;
+  sepArcsec: number | null;
+} {
+  const isPairRowPrimary = row.orbitRole === 'primary';
+  return {
+    memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
+    anchorWdsMag: isPairRowPrimary ? null : row.magPri,
+    anchorDepth: componentDepth(anchorComp),
+    sepArcsec: isPairRowPrimary ? row.anchorSepArcsec : row.sepArcsec,
+  };
+}
+
+/** The anchor's own light: the `mag_pri` of its MOST-DECOMPOSED candidate row.
+ *  WDS's `mag_pri` covers the whole subtree of whatever letter its row pairs, so
+ *  a top-level row already sums the sub-letters and only the deepest names what
+ *  the re-split's residual represents (AR Cas prints 4.87 for A, 5.02 for Aa).
+ *
+ *  Ties break BRIGHTEST, not faintest. Two rows at one depth are two
+ *  measurements of the same letter's subtree, and their disagreement is band or
+ *  epoch, never decomposition — taking the fainter would claim a split that is
+ *  not there and hand the difference to the members. Brightest is the same
+ *  conservative posture as the solve's smallest-winning-subset rule: it makes
+ *  "anchor alone" fit better, so a dim needs more evidence, not less. */
+function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
+  let best: { mag: number; depth: number } | null = null;
+  for (const c of cands) {
+    if (c.anchorWdsMag === null) continue;
+    if (best === null
+        || c.anchorDepth > best.depth
+        || (c.anchorDepth === best.depth && c.anchorWdsMag < best.mag)) {
+      best = { mag: c.anchorWdsMag, depth: c.anchorDepth };
+    }
+  }
+  return best?.mag ?? null;
+}
+
 /** SpectralInfo for an existing catalog record, for re-deriving its
  *  radius after a brightness change. Re-parses the display string when
  *  possible; otherwise reconstructs the coarse class/lum fields the
  *  record already carries (subclass defaults to the mid-class 5). */
-function anchorSpectralInfo(star: Star): SpectralInfo {
+function recordSpectralInfo(star: Star): SpectralInfo {
   const parsed = star.spectDisplay ? classifyFromSimbad(star.spectDisplay) : null;
   return parsed ?? {
     classIdx: star.spectClass,
@@ -1219,6 +1341,9 @@ interface PromotionState {
   /** Anchor-dimming candidates for the flux-conservation post-pass —
    *  see `blendDimmedAnchors`. */
   anchorDimCandidates: AnchorDimCandidate[];
+  /** `<anchorIdx> <memberIdx>` pairs already registered off an existing catalog
+   *  record, so a member reached from two cursors subtracts its flux once. */
+  existingDimMembers: Set<string>;
 }
 
 interface AnchorDimCandidate {
@@ -1242,12 +1367,57 @@ interface AnchorDimCandidate {
    *  mag_pri when the member is its direct secondary; null on an escape
    *  row (its mag_pri is the member's own light). */
   anchorWdsMag: number | null;
+  /** Depth of the component letter `anchorWdsMag` describes — the selector for
+   *  which candidate row names the anchor's own light. */
+  anchorDepth: number;
+  /** Angular separation from the anchor (″) — the row's own sep for a direct
+   *  secondary, the WDS-root offset for an escape row. */
+  sepArcsec: number | null;
   av: number;
 }
 
 interface BlendSplitCandidate {
   star: Star;
   spectral: SpectralInfo;
+}
+
+/** Register an existing catalog record as one of its anchor's dim candidates.
+ *
+ *  A member that is already its own record never reaches the minting path below,
+ *  so the subset solve could not see it and an anchor on a printed blend tier
+ *  kept the pair's combined light (ξ UMa, ξ Sco, HD 75632 all shipped ~0.5–0.8
+ *  mag too bright). The record's absmag is an independent measurement, so it
+ *  enters as `source: 'own'` — flux subtraction, never the Δmag re-split, which
+ *  would overwrite a first-class record's own brightness. */
+function registerExistingMemberForAnchorDim(
+  ctx: PromoteRowContext,
+  state: PromotionState,
+  memberIdx: number,
+  dustGrid: DustGrid | null,
+): void {
+  const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx } = ctx;
+  if (anchorCatalogIdx === null || anchorStar === null
+      || memberIdx === anchorCatalogIdx
+      || !anchorMagIsCatalogued(anchorStar)) {
+    return;
+  }
+  // One subtraction per (anchor, member). The same record arrives here from
+  // every cursor pairing it with the anchor, and a second registration would
+  // subtract its flux twice.
+  const pairKey = `${anchorCatalogIdx} ${memberIdx}`;
+  if (state.existingDimMembers.has(pairKey)) return;
+  state.existingDimMembers.add(pairKey);
+  const member = state.existingStars[memberIdx];
+  state.anchorDimCandidates.push({
+    anchorIdx: anchorCatalogIdx,
+    member,
+    memberSpectral: recordSpectralInfo(member),
+    source: 'own',
+    dmag: row.dmag,
+    structural: false,
+    ...anchorDimGeometry(row, anchorPrimaryRow.comp),
+    av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
+  });
 }
 
 function promoteRow(
@@ -1294,6 +1464,7 @@ function promoteRow(
       && existingIdx === anchorCatalogIdx;
     if (existingIdx !== null && !inheritedIdCollision) {
       stats.alreadyInCatalog++;
+      registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
       return null;
     }
     // A row whose own gaia missed the index can still BE an existing
@@ -1308,6 +1479,7 @@ function promoteRow(
       const hipHit = state.existing.byHip.get(row.hip as number);
       if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
         stats.alreadyInCatalog++;
+        registerExistingMemberForAnchorDim(ctx, state, hipHit, dustGrid);
         return null;
       }
     }
@@ -1483,8 +1655,8 @@ function promoteRow(
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   stats.promoted++;
-  // Flux conservation: a member whose light is embedded in the
-  // anchor's athyg_own BLEND magnitude must dim the anchor or the
+  // Flux conservation: a member whose light is embedded in whatever
+  // catalogue tier gave the anchor its V must dim the anchor or the
   // system double-counts it. Blend membership is structural for
   // inherited-then-stripped ids; every other own-brightness member
   // (identifier-carrying AND identifier-less synth alike) is a
@@ -1492,9 +1664,8 @@ function promoteRow(
   // see README § Anchor flux conservation. Deferred to a post-pass so
   // each anchor's members are judged jointly.
   if (OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)
-      && anchorPrimaryRow.photometryVia === PHOTOMETRY_VIA_OWN
-      && anchorCatalogIdx !== null) {
-    const isPairRowPrimary = row.orbitRole === 'primary';
+      && anchorCatalogIdx !== null && anchorStar !== null
+      && anchorMagIsCatalogued(anchorStar)) {
     state.anchorDimCandidates.push({
       anchorIdx: anchorCatalogIdx,
       member: state.newStars[state.newStars.length - 1],
@@ -1502,8 +1673,7 @@ function promoteRow(
       source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
       structural: idsInheritedFromAnchor,
-      memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
-      anchorWdsMag: isPairRowPrimary ? null : row.magPri,
+      ...anchorDimGeometry(row, anchorPrimaryRow.comp),
       av,
     });
   }
@@ -1626,6 +1796,7 @@ export function promoteCompanions(
     promotedBySynth: new Map(),
     gaiaPhotometryByBackingSource: new Map(),
     anchorDimCandidates: [],
+    existingDimMembers: new Set(),
   };
   const getStarAt = (idx: number): Star =>
     idx < existingStars.length
@@ -1947,23 +2118,7 @@ export function promoteCompanions(
   }
   for (const cands of dimByAnchor.values()) {
     const anchor = getStarAt(cands[0].anchorIdx);
-    // The anchor's own light, once every member is out: the FAINTEST mag_pri
-    // its candidate rows offer. WDS's `mag_pri` covers the whole subtree of
-    // whatever letter the row pairs, so a top-level row's value already sums
-    // sub-letter members (AR Cas lists 4.87 for A, 5.02 for Aa) and only the
-    // most-decomposed one names what the re-split's residual represents.
-    //
-    // Faintest is a PROXY for most-decomposed, exact only while the rows agree
-    // on one component's photometry. Two top-level rows disagreeing by band or
-    // epoch make this pick the fainter measurement of the same letter and claim
-    // a decomposition that is not there — silently, since the fit still solves.
-    // Keying on the paired letter's depth is the real rule; see README
-    // § Anchor flux conservation.
-    const anchorAloneMag = cands.reduce<number | null>(
-      (m, c) => (c.anchorWdsMag !== null && (m === null || c.anchorWdsMag > m)
-        ? c.anchorWdsMag : m),
-      null,
-    );
+    const anchorAloneMag = anchorAloneMagnitude(cands);
     // One A_V for the whole group: the dust grid is voxelised far coarser than
     // even the widest member's offset (σ Ori's E at 42″, AR Cas I at 234″), so
     // every candidate's sightline integral returns the same value and any of
@@ -1975,11 +2130,29 @@ export function promoteCompanions(
     // rows say 12.7 kpc against the record's B-J 6.2 kpc, a 1.5 mag error in
     // the observed frame every hypothesis below is compared against).
     const distPc = Math.hypot(anchor.x, anchor.y, anchor.z);
-    const mObs = distPc > 0 ? anchor.absmag + av + 5 * Math.log10(distPc / 10) : null;
-    const obsMag = (c: AnchorDimCandidate): number | null =>
-      c.memberWdsMag !== null ? c.memberWdsMag
+    const recordObsMag = (s: Star): number | null => {
+      const d = Math.hypot(s.x, s.y, s.z);
+      return d > 0 ? absoluteToApparentMagnitude(s.absmag, d) + av : null;
+    };
+    const mObs = distPc > 0 ? recordObsMag(anchor) : null;
+    // ONE definition of a member's light, for the fit and the subtraction alike.
+    // An independent-brightness member ships its own record, so the hypothesis
+    // has to be built from the magnitude that record will actually contribute:
+    // judging {B} on WDS's mag_sec and then subtracting a Gaia-measured value
+    // leaves the emitted residual unbounded by the goodness-of-fit gate below —
+    // HD 75632 B's own photometry is 0.47 mag off WDS's mag_sec, twice that
+    // gate's whole budget. A dmag_imputed member has no independent measurement
+    // (its absmag is anchor-relative and the apply step rewrites it), so the WDS
+    // observed frame is the only evidence there is.
+    const obsMag = (c: AnchorDimCandidate): number | null => {
+      if (c.source !== 'dmag_imputed') {
+        const measured = recordObsMag(c.member);
+        if (measured !== null) return measured;
+      }
+      return c.memberWdsMag !== null ? c.memberWdsMag
         : c.anchorWdsMag !== null && c.dmag !== null ? c.anchorWdsMag + c.dmag
           : null;
+    };
 
     // An anchor's magnitude holds exactly what the catalogue behind it could
     // not resolve. A printed tier resolves nothing inside one entry, so every
@@ -1995,14 +2168,35 @@ export function promoteCompanions(
     // nulls a minted member's gaiaSourceId whenever the row's source is the
     // anchor row's or the anchor record's, so non-null here already means
     // different. A member sharing the anchor's source arrives with null.
+    //
+    // Identity evidence answers that only where the catalogue published one; a
+    // member with no own source has no such evidence, and photometry alone
+    // cannot tell "inside the photocentre" from "525″ away". The tier's own
+    // blending scale is the missing term — a member past it is outside the
+    // entry no matter how well its flux happens to fit (AR Cas I at 234″,
+    // σ Ori I at 525″, both held out until now only by the smallest-subset
+    // tie-break).
+    //
+    // Structural members skip the bound in BOTH tiers: ids inherited from the
+    // anchor mean the catalogue could not separate this pair, which is direct
+    // evidence about it and outranks a population threshold. That is not the
+    // same as bypassing the fit — only a printed tier's structural members do
+    // that (above), and a Gaia tier's stay fit participants, where a shared
+    // identifier says the cross-match could not separate them rather than that
+    // the photometry blends.
     const anchorMagIsSystemBlend = vTierIsSystemBlend(anchor.vVia);
+    const maxSepArcsec = anchorMagIsSystemBlend
+      ? PRINTED_BLEND_MAX_SEP_ARCSEC : GAIA_BLEND_MAX_SEP_ARCSEC;
     const structural: AnchorDimCandidate[] = [];
     const fitted: AnchorDimCandidate[] = [];
     for (const c of cands) {
-      if (anchorMagIsSystemBlend) {
-        (c.structural ? structural : fitted).push(c);
-      } else if (c.member.gaiaSourceId !== null) {
+      if (anchorMagIsSystemBlend && c.structural) {
+        structural.push(c);
+      } else if (!anchorMagIsSystemBlend && c.member.gaiaSourceId !== null) {
         stats.blendDimGaiaResolved++;
+      } else if (!c.structural
+          && !withinBlendSeparation(c.sepArcsec, maxSepArcsec)) {
+        stats.blendDimMembersBeyondSeparation++;
       } else {
         fitted.push(c);
       }
@@ -2036,7 +2230,13 @@ export function promoteCompanions(
         // flips a pinned value. No dim when "anchor alone" is in the
         // class (the Sirius Δmag≈10 shape).
         const bestErr = Math.min(...errs);
-        if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
+        if (bestErr > ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG) {
+          // Closest is not close. Every hypothesis misses the anchor's observed
+          // magnitude by more than the input's own error scale, so the winner
+          // was picked out of a field of wrong answers and its membership claim
+          // carries no information.
+          stats.blendDimMembersMisfit += participants.length;
+        } else if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
           stats.blendDimMembersOutside += participants.length;
         } else {
           let bestMask = 0;
@@ -2060,32 +2260,44 @@ export function promoteCompanions(
 
     const applied = [...structural, ...chosen];
     if (applied.length === 0) continue;
+    if (mObs === null) {
+      stats.blendDimMembersUnfit += applied.length;
+      continue;
+    }
+    // Conservation is an OBSERVED-frame statement: the catalogue measured one
+    // apparent brightness for the entry, so a member's flux comes out at the
+    // magnitude the observer sees it at, never its absolute one. Identical for a
+    // minted member — tangent projection places it at the anchor's distance —
+    // but an already-in-catalog member carries its own, and ξ Sco B's is 3.4 pc
+    // past A's.
     let ownFlux = 0;
     let appliedIndependents = 0;
     const relatives: Array<{ cand: AnchorDimCandidate; delta: number }> = [];
     for (const c of applied) {
+      const memberMObs = obsMag(c);
       if (c.source === 'dmag_imputed') {
-        const m = obsMag(c);
-        const delta = anchorAloneMag !== null && m !== null
-          ? m - anchorAloneMag : c.dmag;
+        const delta = anchorAloneMag !== null && memberMObs !== null
+          ? memberMObs - anchorAloneMag : c.dmag;
         if (delta !== null) relatives.push({ cand: c, delta });
         continue;
       }
-      if (!(c.member.absmag > anchor.absmag + ANCHOR_DIM_MIN_DELTA_MAG)) {
+      if (memberMObs === null
+          || !(memberMObs > mObs + ANCHOR_DIM_MIN_DELTA_MAG)) {
         stats.blendDimSkipped++;
         continue;
       }
-      ownFlux += Math.pow(10, -0.4 * c.member.absmag);
+      ownFlux += Math.pow(10, -0.4 * memberMObs);
       appliedIndependents++;
     }
     if (relatives.length === 0 && appliedIndependents === 0) continue;
-    const residualFlux = Math.pow(10, -0.4 * anchor.absmag) - ownFlux;
+    const residualFlux = Math.pow(10, -0.4 * mObs) - ownFlux;
     if (!(residualFlux > 0)) {
       stats.blendDimSkipped += appliedIndependents;
       continue;
     }
     const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
-    anchor.absmag = -2.5 * Math.log10(residualFlux / (1 + relSum));
+    const residualMObs = -2.5 * Math.log10(residualFlux / (1 + relSum));
+    anchor.absmag = apparentToAbsoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
       cand.member.physicalRadius = physicalRadius(
@@ -2093,7 +2305,7 @@ export function promoteCompanions(
       );
     }
     anchor.physicalRadius = physicalRadius(
-      anchor.absmag, anchorSpectralInfo(anchor),
+      anchor.absmag, recordSpectralInfo(anchor),
     );
     stats.blendDimmedAnchors++;
   }

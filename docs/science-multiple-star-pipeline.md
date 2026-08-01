@@ -439,7 +439,134 @@ consume it in two complementary ways:
    For `wds_mag` members the member's brightness is independent, so
    its flux is subtracted directly (Acrux: A −4.21 blend →
    A′ = −3.48 + B = −3.43), guarded against a member as bright as the
-   blend itself.
+   blend itself. The subtraction is an **apparent-frame** one at each
+   record's own distance, because the one thing the catalogue actually
+   measured is the entry's apparent brightness.
+
+   **Which members are in the blend — the joint subset solve.** Membership
+   is not decided per member. The hypothesis
+   `m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i)` is evaluated over every
+   subset `S` of the anchor's candidate members, in the observed frame, and
+   the one landing closest to the anchor's own observed magnitude wins.
+   `F_i` is the light that member's record will actually contribute — its own
+   apparent magnitude where it has one, WDS's pair magnitude only for a
+   `dmag_imputed` member, which has no independent measurement to offer. The
+   two must be the same quantity: HD 75632 B's Gaia photometry sits 0.47 mag
+   from WDS's `mag_sec`, so a solve judged on the pair magnitude and then
+   applied against the record leaves what ships unbounded by the residual gate
+   below. It is decisive only when it beats "anchor alone" by
+   ≥ `RIELLO_G_MINUS_V_SIGMA` = 0.03017 mag — the published scatter of the
+   relation the anchor's V came through, so the margin never discriminates
+   below the noise in its own input. Hypotheses within that margin of the
+   best are an equivalence class and the SMALLEST subset in it wins, so a
+   negligible-flux member never flips the outcome and Sirius' Δmag ≈ 10
+   float-noise shape never dims at all. The joint form is what a pairwise
+   test cannot do: 36 Oph D cannot claim A+B's blend (any subset containing
+   D fits worse than {A,B}), while Polaris Ab — inside the 1.98 blend at
+   Δmag 2.0 — dims its anchor ~0.16 mag.
+
+   **How close the winner has to be.** The decisive margin above compares
+   hypotheses to each other and says nothing about whether any of them is
+   right, so an anchor matching neither "alone" nor any blend — WDS pair
+   mags in a non-V band, or estimates — would still dim by whichever
+   missed by less. `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses that,
+   counted `blendDimMembersMisfit`.
+
+   Calibrated off the winning residual `|m_obs − m(S_best)|` over all 2,301
+   anchors whose fit is decisive, i.e. every anchor the solve would dim absent
+   the gate. Density per 0.01 mag:
+
+   | residual | 0–0.14 | 0.14–0.16 | 0.16–0.18 | 0.18–0.20 | 0.20–0.30 | 0.30–0.40 | >0.40 |
+   | --- | --- | --- | --- | --- | --- | --- | --- |
+   | anchors per 0.01 mag | 100–190 | 61 | 28 | 12 | 8–14 | 2.8 | ≤1.9 |
+
+   A flat core out to 0.14 — that is the WDS-against-record measurement
+   error, and its width is consistent with the ~0.1 mag face-value accuracy
+   of WDS pair magnitudes that dominates every other term here. Then an
+   order-of-magnitude collapse across 0.14–0.20, and past it a tail with no
+   core structure at all, running to 9 mag. 0.2 sits where the core has
+   ended but before the tail's own density flattens; it is also 2× the
+   input's accuracy scale. Refuses 236 of the 2,301 fits, of which 211
+   anchors stop dimming altogether (the other 25 keep a structural member's
+   dim, which the gate does not scope). No corpus star moves — the refused
+   population is the arbitrary-attribution tail, not the well-measured
+   showcase systems.
+
+   The gate scopes to the FIT's verdict only, so a member that never entered
+   the fit still applies — which on a printed tier is every structural member,
+   ids inherited-then-stripped from the anchor, since a shared catalogue
+   identifier is evidence about that pair rather than an output of the solve.
+   A Gaia tier's structural members do argue through the solve (there the
+   shared identifier says the cross-match could not separate them, not that
+   the photometry blends) and so share its verdict.
+
+   **"Anchor alone" is the deepest row, not the faintest.** WDS's `mag_pri`
+   covers the whole subtree of whatever letter its row pairs, so a
+   top-level row already sums the sub-letters and only the most-decomposed
+   one names what the residual represents — AR Cas prints 4.87 for A and
+   5.02 for Aa, and Ab is Δ2.40 off Aa's own light, not 2.55 off the A
+   blend. Faintest was a proxy for most-decomposed and fails two ways.
+   A compound letter is an aggregate, not a sub-letter, so it must rank
+   BELOW a single letter despite being longer: η CrB's `AB,E` row prints
+   4.98 for the A+B blend against the `AB` row's 5.64 for A alone, and
+   reading `AB` as deeper stops the pair re-splitting at all. And two rows
+   at ONE depth are two measurements of the same subtree whose disagreement
+   is band or epoch — taking the fainter claims a decomposition that is not
+   there, silently, since the fit still solves; brightest is the same
+   conservative posture as the smallest-winning-subset rule.
+
+   What makes a letter compound is two designators at ONE level, not two
+   capitals. WDS concatenates at whichever level it is aggregating, so `Aab`
+   is Aa+Ab and `Aa12` is Aa1+Aa2, both as much an aggregate as `AB` — and
+   reading them by capitals alone scores `Aab` the DEEPEST rank there is,
+   the η CrB failure one level down. `Aab` is in multiples.tsv today
+   (15169-6057), inert only because that cursor carries no identifier for an
+   anchor to resolve against.
+
+   ν Sco is where the depth rule is load-bearing rather than cosmetic. Four
+   rows reach its Aa anchor, printing `Aa1` = 4.37, `Aa` = 4.50 and
+   `A` = 4.35 twice. Both sub-components (Ab, Aa2) are subtracted, so the
+   residual IS Aa1 — and keying on Aa's subtree double-counted Aa2 by
+   0.124 mag. WDS's two values disagree in the physically impossible
+   direction (Aa1 alone cannot outshine the Aa subtree containing it),
+   which is exactly the noise the depth rule stops reading as structure.
+
+   **Where each tier stops blending — the separation bound.** "Did this
+   catalogue fit one photocentre over the pair" has an angular answer as
+   well as an identifier one, and needs it: a member with no own source_id
+   carries no identifier evidence either way, and photometry alone cannot
+   tell a sub-arcsec photocentre from a companion 525″ off. Both bounds are
+   measured the same way — take pairs whose primary carries a V from the
+   tier, and ask per separation bin whether that V lands nearer WDS's
+   component-A magnitude or the A+B blend.
+
+   *Printed Hipparcos (`I/239`), 3,186 pairs.* The blend hypothesis wins
+   68–92% of the time at every separation inside 10″, then collapses:
+
+   | sep | 0–1″ | 1–3″ | 3–7″ | 7–10″ | 10–15″ | 15–30″ | >30″ |
+   | --- | --- | --- | --- | --- | --- | --- | --- |
+   | blend wins | 91% | 82% | 74% | 71% | 15.5% | 6% | 9% |
+
+   A knee that sharp is instrumental, not statistical: it is the Hipparcos
+   Input Catalogue's own ~10″ threshold for entering components separately.
+   Bound: **10″**.
+
+   *Gaia `gaia_riello`, members with no own source_id.* Far shallower,
+   because the population it is measured against (members Gaia DID resolve)
+   sets a ~20–30% noise floor from subtree mag_pri values and band
+   mismatches. Excess over that floor: decisive below 0.6″ (78% / 48% vs a
+   16% floor), moderate to 1″ (34%), gone by 1.5″ (26% against a 21%
+   floor) — Gaia DR3's stated deblending scale. Bound: **1″**.
+
+   Members past the bound are counted, never silently dropped, and a pair
+   WDS published no separation for is excluded: no measurement is no
+   evidence of blending (AU Mic AB). Structural members — ids
+   inherited-then-stripped from the anchor — skip the gate in BOTH tiers,
+   since a shared catalogue identifier is direct evidence about *this* pair
+   rather than a population threshold; on a Gaia tier that exempts them from
+   the bound without exempting them from the fit, and 350 candidates turn on
+   it. The bound decides δ Cep C (41″), GJ 570 B (26″) and σ Ori I (525″)
+   out, and ξ UMa B (2.7″), ξ Sco B (1.1″) and HD 75632 B (3.5″) in.
 
    **Gaia-photometry brightness for own-DR3 companions.** A companion
    that earned its own Gaia DR3 5p fit (position + parallax) but has no
