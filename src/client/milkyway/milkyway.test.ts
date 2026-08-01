@@ -31,6 +31,7 @@ import {
   diffuseResidualMagArcsec2,
 } from './diffuse-reference';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../filters/filter-state';
 import {
   SB_ZERO_POINT,
   pixelSolidAngleArcsec2,
@@ -47,7 +48,7 @@ import {
 
 function build() {
   const hdr = makeHdrEmitterUniforms();
-  const uLimitMag = { value: 6.5 };
+  const uLimitMag = { value: instrumentLimitMag(DEFAULT_INSTRUMENT) };
   const layer = new MilkyWay({ uLimitMag, hdr });
   const materials = layer.group.children.map(
     (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
