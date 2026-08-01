@@ -28,6 +28,12 @@ Modules themselves live in their kind's folder
   cannot ship without stating its entry. Never weaken to a partial
   map. The `null` rows shrink as epic phases migrate kinds and the
   union of module-vs-inline wiring is always visible in one record.
+- **`KIND_ROSTER` coverage is a compile-time pin too.** The record
+  alone can't catch an unrostered kind — it still has a row, it just
+  never loads, attaches, or answers a roster loop — so
+  `RosterCoversEveryKind` collapses `KindModules` to `never` when a
+  kind is missing from the list. Order and no-duplicates stay pinned
+  by `kind-modules.test.ts`.
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`

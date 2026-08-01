@@ -8,11 +8,6 @@ import {
 } from '../solar-system/probes/probe-module';
 import type { KindPick, ObjectKindModule } from './kind-module';
 
-/** EXHAUSTIVE over TargetKind — a kind without an entry (module or an
- *  explicit null while its wiring is still inline) fails tsc. Don't
- *  weaken it to a partial map. */
-export type KindModules = { readonly [K in TargetKind]: ObjectKindModule<K> | null };
-
 /** Explicit ordered roster — attach order IS scene-layer update order
  *  for module-supplied layers, and module layers update before every
  *  inline-wired layer. Probe leads: its field must write this frame's
@@ -25,6 +20,20 @@ export const KIND_ROSTER = [
   'lg',
   'shell',
 ] as const satisfies readonly TargetKind[];
+
+/** `unknown` when KIND_ROSTER lists every TargetKind, `never` otherwise
+ *  — intersected into `KindModules` so a missing roster line collapses
+ *  the record type and fails `buildKindModules`. The exhaustive record
+ *  can't catch this on its own: an unrostered kind still has a row, it
+ *  just silently never loads, attaches, or answers a roster loop. */
+type RosterCoversEveryKind =
+  [Exclude<TargetKind, (typeof KIND_ROSTER)[number]>] extends [never] ? unknown : never;
+
+/** EXHAUSTIVE over TargetKind — a kind without an entry (module or an
+ *  explicit null while its wiring is still inline) fails tsc. Don't
+ *  weaken it to a partial map. */
+export type KindModules =
+  { readonly [K in TargetKind]: ObjectKindModule<K> | null } & RosterCoversEveryKind;
 
 /** Build the per-shell KIND_MODULES record. A factory rather than a
  *  module-scope constant because modules are stateful (they hold their
