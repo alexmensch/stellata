@@ -10,6 +10,7 @@ import {
 import {
   BULGE_COLOR_RGB,
   BULGE_TINT_RGB,
+  DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
   DISC_TINT_RGB,
@@ -234,6 +235,20 @@ describe('MilkyWay analytical dust', () => {
   // with the anchor above. It shipped at 0.45 for a long time.
   it('keeps the dev multiplier out of the calibration', () => {
     expect(DEFAULT_EXTINCTION_STRENGTH).toBe(1.0);
+  });
+
+  // The normalisation divides by this constant, and attachDust overwrites
+  // the *uniform* from the loaded manifest while leaving the *norm* derived
+  // from the copy here. Disagree and the shipped rate is silently
+  // LOCAL_DUST_RATE_MAG_PER_KPC x (manifest / this), not the stated 1.0.
+  it('derives the norm at the A_V rate the shipped dust field carries', () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL('../../../data/dust/manifest.json', import.meta.url)),
+        'utf-8',
+      ),
+    ) as { avPerDensityPerPc: number };
+    expect(DEFAULT_DUST_AV_PER_DENSITY_PC).toBe(manifest.avPerDensityPerPc);
   });
 });
 
