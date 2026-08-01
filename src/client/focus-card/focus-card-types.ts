@@ -1,10 +1,12 @@
 // The FocusCardProvider contract and the focusable-kind union it is
 // exhaustively keyed on. See ./README.md.
 
-/** Every object kind the app can focus. Extending this union without
- *  adding a provider to `FocusCardProviders` fails the TypeScript
- *  build — that is the contract, not a convention. */
-export type FocusKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe';
+import type { TargetKind } from '../camera/focus/focus-target';
+
+/** Every object kind the app can focus — `TargetKind` itself. Extending
+ *  that union without adding a provider to `FocusCardProviders` fails
+ *  the TypeScript build — that is the contract, not a convention. */
+export type FocusKind = TargetKind;
 
 export interface FocusCardRow {
   label: string;

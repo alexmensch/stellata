@@ -100,9 +100,8 @@ so the whole unit stays card-sized regardless of pin count.
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
-  `FocusKind` union
-  (`'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe'`).
-  `FocusCardProviders` is a
+  `FocusKind` union (an alias of `TargetKind` — every focusable kind
+  carries a card). `FocusCardProviders` is a
   mapped type EXHAUSTIVE over the union: **adding a focusable kind
   without a focus-card provider fails `tsc`** — that compile-time
   guarantee is the point of the registry shape, don't weaken it to a
