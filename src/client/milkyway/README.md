@@ -256,10 +256,10 @@ against 0.15 for a threshold star — inside the range the resolve's dither
 breaks up, but under the 4/255 the old 0.45-strength calibration reached.
 That is **too dim against a dark sky, and the cause is the display model,
 not this layer.** Summed over a 1° rod-summation patch the band toward the
-Galactic centre is equivalent to a 5.51-mag point source — 0.99 mag *above*
-the naked-eye limit — yet it renders 42× fainter than a threshold star,
-because `L_THRESH` lifts point sources to a comfortable display level and
-extended sources get no equivalent concession. The retired 20.0 anchor was
+Galactic centre is equivalent to a 5.51-mag point source — **2.29 mag above**
+the shipped instrument's 7.8 limit — yet it renders at **1/23 of a threshold
+star**, because `L_THRESH` lifts point sources to a comfortable display level
+and extended sources get no equivalent concession. The retired 20.0 anchor was
 silently supplying that lift. `stellata-xypg.34` owns it.
 
 **Do not raise the emissivity to compensate** — that breaks a pole pinned

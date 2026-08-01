@@ -1085,8 +1085,9 @@ white and lifts point and extended sources *together*, so it carries no
 term that can express a point-vs-extended ratio. The waiver survived only
 because the Milky Way band was ~2.9 mag over-bright, which silently
 supplied the missing lift; `stellata-xypg.29` corrected the photometry and
-exposed the gap. Measured at 900 px / 50° FOV, the band toward the Galactic
-centre renders 42× fainter than a *threshold* star, while summed over a 1°
-rod-summation patch it is 0.99 mag **above** the naked-eye limit — the
-ordering is inverted. `stellata-xypg.34` owns the extended-source threshold
-that pairs with `L_THRESH`.
+exposed the gap. Measured at the shipped default instrument (`unaided-eye`,
+m_lim 7.8) and 900 px / 50° FOV: the band toward the Galactic centre renders
+**1/23 of a threshold star** (1.67/255 against 38.3/255), while summed over a
+1° rod-summation patch it is **2.29 mag above** that same limit. The ordering
+is inverted. `stellata-xypg.34` owns the extended-source threshold that pairs
+with `L_THRESH`.
