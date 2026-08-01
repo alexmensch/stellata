@@ -26,11 +26,27 @@ import {
   subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
-import { footprintRadiusPc, pixelSolidAngleArcsec2 } from '../hdr/emission/emission-pure';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
+import {
+  footprintRadiusPc,
+  pixelSolidAngleArcsec2,
+} from '../hdr/emission/emission-pure';
+import {
+  summationDownsample,
+  summationMean,
+  summationRadiusPx,
+} from '../hdr/summation/summation-pure';
+import {
+  BASE_EPOCH_EXPOSURE,
+  DEFAULT_SUMMATION_ARCSEC2,
+} from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import {
+  reinhardExtended,
+  srgbEncode,
+  tonemapWhitePoint,
+} from '../hdr/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -568,7 +584,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../hdr/README.md` § Extended sources). That gain multiplies a
+  // gain (`../hdr/emission/README.md` § Extended sources). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
@@ -599,12 +615,12 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     expect(summationRadiusArcmin / reArcmin).toBeCloseTo(1.47, 2);
   });
 
-  // What the opt-out above actually costs, measured against the operation
-  // that would be correct: average the flux over the summation patch FIRST,
-  // then gain by the patch area. `10^(−0.4·S̄)·Ω_sum` IS that patch flux, so
-  // the ideal needs no free parameter — only an integral. Both errors are
-  // real and they point opposite ways, which is the finding: the opt-out is
-  // right for the bulge core and wrong for everything outside it.
+  // The pass this layer's display level now goes through, measured against
+  // the operation that is correct by construction: average the flux over the
+  // summation patch FIRST, then gain by the patch area. `10^(−0.4·S̄)·Ω_sum`
+  // IS that patch flux, so the ideal needs no free parameter — only an
+  // integral, and every figure below is an absolute error rather than a
+  // comparison with previous behaviour.
   describe('against convolve-then-gain', () => {
     const R_SUM_ARCSEC = Math.sqrt(DEFAULT_SUMMATION_ARCSEC2 / Math.PI);
     const TABLE_MAX_ARCSEC = 90 * 60;
@@ -657,12 +673,12 @@ describe('M31 surface-brightness profile vs published photometry', () => {
       expect(errorMag(0, DEFAULT_SUMMATION_ARCSEC2)).toBeCloseTo(-3.95, 2);
     });
 
-    it('under-lifts the smooth disc by the full Ω ratio as shipped', () => {
+    it('under-lifts the smooth disc by the full Ω ratio on the pixel angle', () => {
       // Outside ~4 arcmin the profile is uniform over a 13 arcmin patch to
       // better than 0.02 mag, so the ideal collapses onto the band's own
-      // gain and the shipped Ω_px shortfall is the Ω ratio — the same
-      // 2.695 mag the band gained. This is the half of the trade the
-      // opt-out pays, and it covers most of the object a viewer sees.
+      // gain and a per-pixel shortfall is the Ω ratio — the same 2.695 mag
+      // the band gained. This is what the retired per-layer opt-out cost
+      // over most of the object a viewer sees.
       const omegaPx = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
       const ratioMag = 2.5 * Math.log10(DEFAULT_SUMMATION_ARCSEC2 / omegaPx);
       expect(ratioMag).toBeCloseTo(2.695, 3);
@@ -704,6 +720,143 @@ describe('M31 surface-brightness profile vs published photometry', () => {
       expect(cappedError(0)).toBeCloseTo(errorMag(0, DEFAULT_SUMMATION_ARCSEC2), 2);
       for (const arcmin of [0.5, 2, 6.5]) {
         expect(cappedError(arcmin * 60)).toBeGreaterThan(1.5);
+      }
+    });
+
+    // What the shipped pass actually delivers: the softened profile a
+    // fragment writes, box-averaged by the downsample factor, convolved with
+    // the flat summation disc — every stage of `../hdr/summation/README.md`
+    // run on the CPU against the same ideal. `10^(−0.4·S̄)·Ω_sum` is the patch
+    // flux, so `patchFlux / Ω_sum` is the mean the convolution should return
+    // and the Ω_sum gain cancels out of the comparison.
+    const softTables = new Map<number, number[]>();
+    function softFluxPerArcsec2(thetaArcsec: number, fovDeg: number): number {
+      let soft = softTables.get(fovDeg);
+      if (soft === undefined) {
+        const footprintPc = footprintRadiusPc(
+          m31.distance,
+          pixelSolidAngleArcsec2(angularToPx(900, (fovDeg * Math.PI) / 180)),
+        );
+        soft = Array.from({ length: TABLE_N + 1 }, (_, i) =>
+          10 ** (-0.4 * combinedSbAt((i / TABLE_N) * TABLE_MAX_ARCSEC, footprintPc)),
+        );
+        softTables.set(fovDeg, soft);
+      }
+      const x = (Math.abs(thetaArcsec) / TABLE_MAX_ARCSEC) * TABLE_N;
+      if (x >= TABLE_N) return 0;
+      const i = Math.floor(x);
+      return soft[i] + (soft[i + 1] - soft[i]) * (x - i);
+    }
+
+    /** Mean display level the pass produces at `thetaArcsec`, in flux per
+     *  arcsec² — the Ω_sum gain is common to both sides. */
+    function shippedMean(thetaArcsec: number, fovDeg: number): number {
+      const pxPerRadian = angularToPx(900, (fovDeg * Math.PI) / 180);
+      const pxArcsec = 1 / (pxPerRadian * ARCSEC_TO_RAD);
+      const radiusPx = summationRadiusPx(
+        DEFAULT_SUMMATION_ARCSEC2,
+        pixelSolidAngleArcsec2(pxPerRadian),
+      );
+      const factor = summationDownsample(radiusPx);
+      const texelArcsec = pxArcsec * factor;
+      // One source texel: the box average of factor² pixel samples, which is
+      // what the downsample stage writes.
+      const texel = (dx: number, dy: number) => {
+        const cx = thetaArcsec + dx * texelArcsec;
+        const cy = dy * texelArcsec;
+        let acc = 0;
+        for (let i = 0; i < factor; i++) {
+          const x = cx + ((i + 0.5) / factor - 0.5) * texelArcsec;
+          for (let j = 0; j < factor; j++) {
+            const y = cy + ((j + 0.5) / factor - 0.5) * texelArcsec;
+            acc += softFluxPerArcsec2(Math.hypot(x, y), fovDeg);
+          }
+        }
+        return acc / (factor * factor);
+      };
+      return summationMean(texel, radiusPx / factor);
+    }
+
+    const shippedError = (thetaArcsec: number, fovDeg: number) =>
+      -2.5 *
+      Math.log10(
+        shippedMean(thetaArcsec, fovDeg) /
+          (patchFlux(thetaArcsec) / DEFAULT_SUMMATION_ARCSEC2),
+      );
+
+    // The acceptance. Pinned per plate scale because the point is that the
+    // error does NOT grow as the pixel does — positive throughout, so the
+    // core lands slightly faint rather than bright, which is the direction a
+    // 4-magnitude white nucleus made non-negotiable.
+    it('lands the nucleus within a tenth of a magnitude at every FOV', () => {
+      const nucleus: Record<number, number> = {
+        [FOV_MIN_DEG]: 0.029,
+        20: 0.079,
+        30: 0.045,
+        50: 0.089,
+        90: 0.179,
+        [FOV_MAX_DEG]: 0.148,
+      };
+      for (const [fovDeg, expected] of Object.entries(nucleus)) {
+        const err = shippedError(0, Number(fovDeg));
+        expect(err).toBeCloseTo(expected, 2);
+        // Positive everywhere: the nucleus is never brighter than ideal, at
+        // any plate scale. Reusing the band's gain put it 3.95 mag over.
+        expect(err).toBeGreaterThan(0);
+      }
+    });
+
+    // The half the retired opt-out got wrong by 2.695 mag, over most of the
+    // object a viewer sees — and it is now FOV-invariant, which is the other
+    // acceptance criterion: M31 and the band respond to the field the same
+    // way because neither carries a plate scale any more.
+    // What a viewer actually sees, in 8-bit levels at the base epoch and the
+    // reference viewport — the distribution half of the acceptance, and the
+    // half the § against convolve-then-gain errors above cannot show. A
+    // threshold star lands on 38.25 (../hdr/tonemap-pure.ts), so M31 reads
+    // brighter than one out to nearly 20 arcmin: a smudge most of a degree
+    // across, which is what the naked eye gets.
+    //
+    // Under the retired per-layer opt-out the same rows ran 173 at the core
+    // and 0.8 at 40 arcmin — a bright nucleus on a black disc. The core comes
+    // DOWN here and the envelope comes up, because the patch average dilutes
+    // a cusp and lifts a smooth profile.
+    it('pins the levels M31 renders at across its profile', () => {
+      const level = (arcmin: number) =>
+        255 *
+        srgbEncode(
+          reinhardExtended(
+            BASE_EPOCH_EXPOSURE * shippedMean(arcmin * 60, 50) * DEFAULT_SUMMATION_ARCSEC2,
+            tonemapWhitePoint(),
+          ),
+        );
+      expect(level(0)).toBeCloseTo(120.0, 1);
+      expect(level(10)).toBeCloseTo(64.1, 1);
+      expect(level(20)).toBeCloseTo(35.1, 1);
+      expect(level(40)).toBeCloseTo(18.1, 1);
+      // Monotonic outward, which "a bright core with a faint oval" requires
+      // and a convolution could break if the kernel were asymmetric.
+      for (const arcmin of [5, 10, 20, 30, 40]) {
+        expect(level(arcmin)).toBeLessThan(level(arcmin - 5));
+      }
+    });
+
+    it('holds the smooth envelope at every FOV', () => {
+      for (const arcmin of [16, 25, 40]) {
+        const theta = arcmin * 60;
+        for (const fovDeg of [FOV_MIN_DEG, 50, FOV_MAX_DEG]) {
+          // Under 0.08 mag against an ideal that needs no free parameter,
+          // and negative — the envelope is marginally over rather than the
+          // 2.695 mag under it used to sit.
+          expect(Math.abs(shippedError(theta, fovDeg))).toBeLessThan(0.08);
+        }
+        // Worst spread across the whole FOV range is 0.069 mag, at 16 arcmin
+        // and 120° — where the patch is sub-pixel and 16 arcmin is two pixels
+        // from the nucleus. Against 5.4 mag of drift on the pixel angle.
+        const spread = Math.abs(
+          shippedError(theta, FOV_MIN_DEG) - shippedError(theta, FOV_MAX_DEG),
+        );
+        expect(spread).toBeLessThan(0.07);
       }
     });
   });

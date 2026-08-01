@@ -92,22 +92,31 @@ instrument's `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`), and every rejected alternative:
 `docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
 
-`stellataEmitExtendedSource` takes **both** angles, and which one displays
-is per consumer. The band is uniform over the summation patch; M31's core
-is not, so `local-group-emission.frag.glsl` passes `Ω_px` twice — an
-opt-out costing 2.695 mag past 3.6′ to avoid 3.95 at the nucleus
-(`../../local-group/README.md`). Statistic: always `Ω_px`
-(`../statistic/README.md`).
+**The substitution is only the flux in the patch for a source uniform
+across it, so it does not happen here.** `stellataEmitExtendedSource` writes
+the `Ω_sum`-gained value to **attachment 2** and the resolve averages it over
+the patch before it reaches the canvas — which makes uniformity true by
+construction and lets both volumetric emitters take the same anchor.
+`../summation/README.md` owns that pass; the opt-out this used to carry (the
+Local Group passing `Ω_px` twice, 2.695 mag under past 3.6′ to avoid 3.95 at
+M31's nucleus) is retired with it. Statistic: always `Ω_px`, always
+unconvolved (`../statistic/README.md`).
 
 Everything after the gain is identical for every volumetric emitter, so
-that chunk owns it: gain, clamp at `LUMA_CEIL`, statistic texel, and
-off-target the undithered operator. `stellataEmitNothing` is the miss case.
-Both take the attachments as `out` params, making "attachment 1 has no
-default, so every branch must write it" one decision rather than one per
-early return. `milkyway.frag.glsl` keeps its own magnitude step because the
-chart isobar contours surface brightness against
+that chunk owns it: both gains, the clamp at `LUMA_CEIL`, every attachment,
+and off-target the undithered operator. `stellataEmitNothing` is the miss
+case. Both take the attachments as `out` params, making "attachments 1 and 2
+have no default, so every branch must write them" one decision rather than
+one per early return. `milkyway.frag.glsl` keeps its own magnitude step
+because the chart isobar contours surface brightness against
 `stellataExtendedThresholdSb`, the inverse of the same pair — so contour
 and emission cannot disagree about where threshold is.
+
+**Off-target there is no attachment 2 and no pass, so the anchor is gone
+entirely** and both emitters fall back to `Ω_px`. One rule rather than a
+per-layer choice: the concession *is* the pass. That is the float-RT fallback
+and the `setHdrEnabled(false)` A/B (`../README.md` § Fallback), where the
+band returns to its pre-xypg.34 level.
 
 It `#include`s the unit and the operator — three resolves includes
 recursively and the guards make the extra paste inert.

@@ -1,28 +1,25 @@
 # Milky Way volumetric disc
 
-`milkyway.ts` + `milkyway.{vert,frag}.glsl` render the integrated
-surface brightness of unresolved Galactic stars by raymarching through
-**two proxy meshes** anchored at the galactic centre — a flattened
-disc (30 × 30 × 1.2 kpc envelope) and an oblate bulge (10 × 10 × 6 kpc
-envelope), both rotated so their short axes align with NGP. Each
-fragment ray-sphere-intersects its mesh in mesh-local frame, then
-raymarches log-distributed steps from front-face entry (or the camera
-position, if the camera is inside the mesh) to the back-face fragment,
-accumulating emission with running dust extinction. The two meshes'
-contributions add via additive blending. Default-on; URL `mw=0`
-disables. Hidden in chart mode.
+`milkyway.ts` + `milkyway.{vert,frag}.glsl` render the integrated surface
+brightness of unresolved Galactic stars by raymarching **two proxy meshes**
+anchored at the galactic centre — a flattened disc (30 × 30 × 1.2 kpc
+envelope) and an oblate bulge (10 × 10 × 6 kpc), both rotated so their short
+axes align with NGP. Each fragment ray-sphere-intersects its mesh in
+mesh-local frame, then marches log-distributed steps from front-face entry
+(or the camera, if it is inside) to the back-face fragment, accumulating
+emission with running dust extinction; the two meshes add via additive
+blending. Default-on; URL `mw=0` disables. Hidden in chart mode.
 
 ## Files
 
-- `milkyway.ts` — volumetric disc + bulge renderer. Composes the two
-  proxy meshes; owns the `setIsobar` chart-mode handoff (currently
-  hides the meshes when chart engages).
-- `milkyway.vert.glsl`, `milkyway.frag.glsl` — ray-sphere intersect +
-  log-distributed raymarch, additive-blended.
+- `milkyway.ts` — volumetric disc + bulge renderer. Composes the two proxy
+  meshes; owns the `setIsobar` chart-mode handoff (which hides them).
+- `milkyway.{vert,frag}.glsl` — ray-sphere intersect + log-distributed
+  raymarch, additive-blended.
 - `milkyway-column-pure.ts` — the density / dust profile constants the
-  shader receives as uniforms, plus a CPU mirror of its raymarch. The
-  calibration constants below are *derived* from this mirror rather than
-  hand-tuned, and the shader's step counts are pinned against it.
+  shader receives as uniforms, plus a CPU mirror of its raymarch. Every
+  calibration constant below is *derived* from this mirror, and the shader's
+  step counts are pinned against it.
 - `diffuse-reference.ts` — published integrated-starlight photometry and
   the resolved-star subtraction that turns it into a target for a diffuse
   layer (§ Calibration).
@@ -35,23 +32,17 @@ disables. Hidden in chart mode.
   reference marches, and the blast radius of the foreground dust column.
 
 `galactic-coords.ts` (`GAL_TO_ICRS`, `GALACTIC_CENTRE_PC`) lives in
-`../galactic/` and is imported here for the GC-anchored mesh
-placement.
+`../galactic/`, imported here for the GC-anchored mesh placement.
 
 ## Why a volumetric mesh, not a skybox
 
-An earlier version (rev 1) put the integration in a 50 kpc
-camera-anchored skybox sphere and marched camera→back-surface.
-Mathematically defensible, but visually it was a "theatre backdrop":
-the geometry doing the work was a 2D sphere enclosing the camera, so
-flying past the bulge produced no parallax — the band reoriented in
-odd ways and the disc never read as an actual 3D shape from outside.
-The volumetric-mesh approach replaces the enclosing sphere with the
-*actual disc shape*, so standard 3D rasterisation handles parallax by
-construction. From outside, you see a flattened glowing lens; from
-inside, the path length through the volume varies naturally with view
-direction (long along the plane, short toward NGP) producing the right
-band geometry.
+A rejected rev 1 integrated through a 50 kpc camera-anchored skybox sphere:
+mathematically defensible, visually a theatre backdrop. The geometry doing
+the work enclosed the camera, so flying past the bulge produced no parallax
+and the disc never read as a 3D shape from outside. Marching the *actual disc
+shape* hands parallax to standard rasterisation, and the path length through
+the volume then varies with view direction on its own — long along the plane,
+short toward NGP.
 
 ## Density profiles
 
@@ -139,12 +130,21 @@ which is why the line-of-sight hue the raymarch built survives untouched.
 the magnitude means the same thing it does for a star.
 
 **`Ω` is the eye's rod summation area, not the pixel's**
-(`uOmegaSummationArcsec2`; `../hdr/README.md` § Extended sources). An
+(`uOmegaSummationArcsec2`; `../hdr/emission/README.md` § Extended sources). An
 extended source's threshold is a surface brightness, and the summation
 area is fixed in angle — so the band holds its display level at every FOV
 and viewport, where the pixel solid angle would have dimmed it
 quadratically. The statistic attachment still takes `uOmegaPxArcsec2`: the
 concession is a display anchor, not light.
+
+**The gained value goes to attachment 2, and the resolve averages it over
+the summation patch before compositing** (`../hdr/summation/README.md`). From
+Sol that average returns the field unchanged — the band's structure scale is
+degrees and a normalised kernel is an identity on a uniform field, so the
+table below survives by construction, not to a tolerance. It happens for the
+Local Group's sake: its objects are *not* uniform over the patch, and
+averaging is what lets both layers share one anchor and makes the Galaxy seen
+from outside comparable with anything beside it.
 
 `uLimitMag` still arrives by reference from the star pipeline's shared
 uniform map, but **only the chart-mode isobar reads it** — the band's
@@ -271,12 +271,18 @@ dimmed further as the camera zoomed. The 20.0 anchor had been silently
 supplying the missing lift, and removing it exposed the gap
 (`stellata-xypg.34`).
 
+**The convolution and the footprint softening both leave this table where it
+is** — the first is an identity on a uniform field, the second is metres
+against a 300 pc scale height from inside the disc. Every row moves under
+0.002 mag at both FOV extremes (pinned). Neither is inert from *outside* the
+Galaxy, which is where they were needed.
+
 **Do not raise the emissivity if the band still reads wrong** — that
 breaks a pole pinned against a measured residual to move a display anchor.
 `DR_MAG` cannot do it either: it lifts the band and the star field
 together, so it has no term for a point-vs-extended ratio. The lever is
 the extended-source threshold itself, which is the instrument's
-`skyBackgroundMagArcsec2` (`../hdr/README.md` § Extended sources).
+`skyBackgroundMagArcsec2` (`../hdr/emission/README.md` § Extended sources).
 
 The Local Group emission layer runs the same mapping and now the same
 constant (`../local-group/README.md` § Zero free parameters). The two
@@ -429,21 +435,14 @@ No FPS gate. Toggle via the panel checkbox or `mw=0` URL.
 
 ## Dev levers
 
-`milkyway-tuning.ts` registers the Milky Way section of the debug
-panel: linear sliders for `glowMagOffset` / `discDensity` /
-`bulgeDensity` / `extinctionStrength` + colour pickers for disc + bulge
-palette + three linear sliders for the reddening RGB multipliers.
+`milkyway-tuning.ts` registers the panel section — sliders for
+`glowMagOffset`, `discDensity`, `bulgeDensity`, `extinctionStrength` and the
+three reddening RGB multipliers, plus both palette colour pickers. Every one
+is also callable as `stellata.milkyway.set<Name>(...)`.
 
-The same setters are individually callable under
-`stellata.milkyway.*`:
-
-- `setGlowMagOffset(x)` — surface-brightness zero point, mag/arcsec²
-  (raise → dimmer). A constant of the shared emission unit, not a user
-  knob — moving it desynchronises the band from the Local Group layer
-- `setDiscDensity(x)` / `setBulgeDensity(x)` — per-component emission
-- `setDiscColor(r,g,b)` / `setBulgeColor(r,g,b)` — pre-extinction
-  palette. Luma-normalised on write, so a hue edit cannot move flux
-  (§ Population tints carry hue, never flux)
-- `setExtinctionStrength(x)` — analytical dust τ multiplier; 1.0 is the
-  calibrated rate (§ Analytical-only dust)
-- `setReddeningRGB(r,g,b)` — per-channel τ multiplier (CCM-derived)
+Two of them are not knobs despite the slider. `setGlowMagOffset` moves the
+shared emission unit's zero point, so it desynchronises the band from the
+Local Group layer; `setExtinctionStrength` at anything but 1.0 means the
+shipped extinction disagrees with its own stated anchor
+(§ Analytical-only dust). The colour setters luma-normalise on write, so a
+hue edit cannot move flux (§ Population tints carry hue, never flux).

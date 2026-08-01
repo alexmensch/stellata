@@ -1,17 +1,23 @@
-// The per-draw gate on the target's statistic attachment. See README.md
+// The per-draw gate on the target's non-default attachments. See README.md
 // § The gate.
 
 import type * as THREE from 'three';
 
-let openGate: (() => void) | null = null;
+/** Which of the target's attachments a draw is allowed to write past
+ *  attachment 0. A volumetric emitter reaches attachment 2 as well, because
+ *  its display value has to be convolved before it lands on screen
+ *  (`../summation/README.md`). */
+export type EmitterAttachments = 'statistic' | 'diffuse';
+
+let openGate: ((attachments: EmitterAttachments) => void) | null = null;
 let closeGate: (() => void) | null = null;
 
 /** `HdrPipeline` owns the GL context, so it supplies the two calls; every
- *  emitter binds to them through `markStatisticEmitter`. Null while no
- *  target exists, which is what makes the seam inert under the fallback
+ *  emitter binds to them through the two `mark*Emitter` helpers. Null while
+ *  no target exists, which is what makes the seam inert under the fallback
  *  path and in chart mode. */
 export function bindStatisticGate(
-  open: (() => void) | null,
+  open: ((attachments: EmitterAttachments) => void) | null,
   close: (() => void) | null,
 ): void {
   openGate = open;
@@ -28,10 +34,28 @@ export function bindStatisticGate(
  * both with no-ops), so call order never decides whose survive.
  */
 export function markStatisticEmitter(object: THREE.Object3D): void {
+  markEmitter(object, 'statistic');
+}
+
+/**
+ * Declare a mesh a **volumetric** emitter: attachment 2 opens too, and
+ * attachment 0 does not — the resolve owns that write once it has averaged
+ * attachment 2 over the summation patch.
+ *
+ * A shader that declares `location = 2` and a draw that does not open it are
+ * both silent failures — the write is discarded in one direction, and in the
+ * other every non-diffuse draw leaves attachment 2 undefined. So the mark and
+ * the `out` declaration are one contract.
+ */
+export function markDiffuseEmitter(object: THREE.Object3D): void {
+  markEmitter(object, 'diffuse');
+}
+
+function markEmitter(object: THREE.Object3D, attachments: EmitterAttachments): void {
   const before = object.onBeforeRender;
   const after = object.onAfterRender;
   object.onBeforeRender = (...args) => {
-    openGate?.();
+    openGate?.(attachments);
     before.apply(object, args);
   };
   object.onAfterRender = (...args) => {

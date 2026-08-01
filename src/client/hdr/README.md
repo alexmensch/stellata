@@ -20,12 +20,14 @@ src/client/hdr/
     (+ test)                 bind/resolve, chart bypass, float-support
                              detection, both ShaderChunk registrations,
                              HDR_DEFAULT_ENABLED, the emitter uniform
-                             seam (§ Unit), and the statistic attachment's
-                             draw-buffer gate (§ Statistic attachment).
+                             seam (§ Unit), and the draw-buffer gate on
+                             attachments 1 and 2 (§ Three attachments).
                              The class needs a live GL context, so the test
                              pins only the ship gate (§ Ship gate).
   statistic/                 The target's second attachment: what may
-                             write it, in what unit — its own README.
+                             write it, in what unit, and the per-draw gate
+                             every non-default attachment goes through —
+                             its own README.
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and inline by each
                              emitting shader when the target isn't bound.
@@ -38,6 +40,9 @@ src/client/hdr/
                              magnitude → luminance, the point-source peak
                              rule, the two solid angles and the footprint
                              softening — its own README (§ Unit).
+  summation/                 Attachment 2's convolution over the eye's
+                             summation patch, which the resolve composites
+                             — its own README (§ Pass ordering).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -98,30 +103,40 @@ Nothing in this README's operator or target discussion depends on how
 those numbers were arrived at: emitters read them, the resolve never sees
 them.
 
-## Statistic attachment — a second, physical-luminance target
+## Three attachments, and a per-draw gate on two of them
 
-The target is MRT. **Attachment 0 is unchanged** — display luminance, same
-look. **Attachment 1 is RG16F**, carrying flux-correct luminance in R and
-peak-correct luminance in G for the exposure statistic to reduce, and it is
-gated per draw so only physical emitters reach it. Why attachment 0 cannot
-serve, the texel rule, the blend contract and the residuals are
+The target is MRT. **Attachment 0** is display luminance, from every emitter
+that draws a kernel or a surface. **Attachment 1 is RG16F**, carrying
+flux-correct luminance in R and peak-correct luminance in G for the exposure
+statistic to reduce. **Attachment 2** is the volumetric emitters' own: their
+display value gained by the eye's summation area but not yet averaged over
+it, which is what the resolve does (`summation/README.md`). Both extra
+attachments are gated per draw, so nothing reaches either by accident — the
+gate, the texel rule, the blend contract and the residuals are
 **`statistic/README.md`**; the reduction itself is
 `exposure/reduction/README.md`.
 
-`bind()` clears with the gate open, deliberately: the renderer's own
-auto-clear runs after `bind()` returns with the gate shut, so without an
-explicit both-attachment clear the statistic would accumulate across frames
-forever. It costs a redundant clear of attachment 0.
+`bind()` clears with every gate open, deliberately: the renderer's own
+auto-clear runs after `bind()` returns with them shut, so without an explicit
+all-attachment clear both would accumulate across frames forever. It costs a
+redundant clear of attachment 0.
 
 ## Pass ordering — one target, two passes into it
 
 ```
-hdr.bind()                 → setRenderTarget(rt) + clear both attachments
+hdr.bind()                 → setRenderTarget(rt) + clear all attachments
 renderer.render(scene)     → the whole main stack
 localDepthPass.render()    → repaints over the same target
-hdr.resolve()              → setRenderTarget(null) + fullscreen tone-map
+hdr.resolve()              → SummationPass box-averages attachment 2 when
+                             the patch is wide enough, then
+                             setRenderTarget(null) + fullscreen tone-map
 reduction.measure()        → own targets, then back to the canvas
 ```
+
+The downsample runs inside `resolve()` rather than from `animate()`: it reads
+a target only this class knows the layout of, and pairing it with the resolve
+is what stops the two disagreeing about the factor
+(`summation/README.md`).
 
 `bind()` and `resolve()` are called from `stellata.ts` `animate()` and
 must pair. The local depth pass never touches the render target itself,
@@ -143,11 +158,17 @@ depth pass derives its slice-ratio bound from a 24-bit buffer
 attachment to a 16-bit renderbuffer or a depth *texture* of the wrong
 type would silently coarsen every close-range z-test by 256×.
 
-The target is `RGBA16F` plus its `RG16F` statistic attachment
-(§ Statistic attachment), sized to the renderer's **drawing buffer**
-(canvas × pixelRatio, existing cap 2). `syncSize()` re-derives from the
-renderer rather than taking a width/height, so window resize and any
-future pixel-ratio change are the same code path.
+The target is `RGBA16F` plus its `RG16F` statistic attachment and a second
+`RGBA16F` for the diffuse emitters (§ Three attachments), sized to the
+renderer's **drawing buffer** (canvas × pixelRatio, existing cap 2).
+`syncSize()` re-derives from the renderer rather than taking a width/height,
+so window resize and any future pixel-ratio change are the same code path —
+and it reaches the summation pass's own target too.
+
+**The diffuse attachment is 8 bytes/px on top of the 12 the other two cost**,
+plus the summation pass's quarter-resolution target. That is the price of
+convolving before the operator rather than gaining per fragment, and it is
+why the laziness below is load-bearing rather than tidy.
 
 ## Operator
 
@@ -228,9 +249,13 @@ prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
 Since the ship gate went live it is the fallback path plus the
 `hdr.setEnabled(false)` A/B, not the shipped default it was during H3–H5.
 
-Calibration is identical on both paths — same `L`, same operator, same
-exposure, and the **peak of any source matches exactly**. What differs is
-everything downstream of the operator:
+Calibration is identical on both paths for a point source — same `L`, same
+operator, same exposure, and the **peak matches exactly**. A *diffuse* source
+is the exception: there is no attachment 2 and no pass to convolve it, so the
+extended-source anchor is gone and both volumetric emitters revert to the
+pixel solid angle (`emission/README.md` § Extended sources). The band and the
+Local Group therefore read several magnitudes fainter on this path, by
+construction rather than by drift. What differs downstream of the operator:
 
 - Additive accumulation happens on tone-mapped values, so dense star
   fields and the MW band over-brighten slightly where sources overlap.

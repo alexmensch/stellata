@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindStatisticGate, markStatisticEmitter } from './statistic-attachment';
+import {
+  bindStatisticGate,
+  markDiffuseEmitter,
+  markStatisticEmitter,
+} from './statistic-attachment';
 
 /** The hooks take three's full render-callback signature and ignore all of
  *  it; the test only ever needs to fire them. */
@@ -16,7 +20,8 @@ function trace(): { log: string[]; bind: () => void } {
   const log: string[] = [];
   return {
     log,
-    bind: () => bindStatisticGate(() => log.push('open'), () => log.push('close')),
+    bind: () =>
+      bindStatisticGate((a) => log.push(`open:${a}`), () => log.push('close')),
   };
 }
 
@@ -29,7 +34,7 @@ describe('markStatisticEmitter', () => {
     const mesh = new THREE.Object3D();
     markStatisticEmitter(mesh);
     draw(mesh);
-    expect(log).toEqual(['open', 'close']);
+    expect(log).toEqual(['open:statistic', 'close']);
   });
 
   it('leaves the gate shut for a mesh nobody marked', () => {
@@ -47,7 +52,7 @@ describe('markStatisticEmitter', () => {
     mesh.onAfterRender = () => log.push('layer-after');
     markStatisticEmitter(mesh);
     draw(mesh);
-    expect(log).toEqual(['open', 'layer-before', 'layer-after', 'close']);
+    expect(log).toEqual(['open:statistic', 'layer-before', 'layer-after', 'close']);
   });
 
   it('composes the other way round too, so call order decides nothing', () => {
@@ -60,7 +65,29 @@ describe('markStatisticEmitter', () => {
     mesh.onBeforeRender = (...args) => { log.push('layer-before'); before.apply(mesh, args); };
     mesh.onAfterRender = (...args) => { after.apply(mesh, args); log.push('layer-after'); };
     draw(mesh);
-    expect(log).toEqual(['layer-before', 'open', 'close', 'layer-after']);
+    expect(log).toEqual(['layer-before', 'open:statistic', 'close', 'layer-after']);
+  });
+});
+
+// A volumetric emitter opens a different set: attachment 2 as well, and
+// attachment 0 masked off, because the resolve owns that pixel once it has
+// averaged attachment 2 over the summation patch (../summation/README.md).
+// Marking one `markStatisticEmitter` instead would discard every diffuse
+// write silently, so which helper a layer calls is part of its contract.
+describe('markDiffuseEmitter', () => {
+  it('asks for the diffuse attachment, not merely the statistic', () => {
+    const { log, bind } = trace();
+    bind();
+    const mesh = new THREE.Object3D();
+    markDiffuseEmitter(mesh);
+    draw(mesh);
+    expect(log).toEqual(['open:diffuse', 'close']);
+  });
+
+  it('is inert on the canvas path, exactly as the statistic mark is', () => {
+    const mesh = new THREE.Object3D();
+    markDiffuseEmitter(mesh);
+    expect(() => draw(mesh)).not.toThrow();
   });
 });
 
@@ -83,7 +110,7 @@ describe('an unbound gate', () => {
     draw(mesh);
     bindStatisticGate(null, null);
     draw(mesh);
-    expect(log).toEqual(['open', 'close']);
+    expect(log).toEqual(['open:statistic', 'close']);
   });
 
   it('still runs the layer\'s own hooks', () => {

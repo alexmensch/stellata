@@ -14,7 +14,7 @@ describe('HDR_DEFAULT_ENABLED', () => {
 });
 
 /**
- * The target is MRT (README.md § Statistic attachment), built on
+ * The target is MRT (README.md § Three attachments), built on
  * `WebGLMultipleRenderTargets` — which three deprecates at r162 in favour
  * of `new WebGLRenderTarget(w, h, { count: 2 })` and removes thereafter.
  *

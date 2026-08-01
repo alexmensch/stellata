@@ -7,10 +7,16 @@ mesh write into it. `../README.md` owns the target's lifecycle;
 
 ```
 src/client/hdr/statistic/
-  statistic-attachment.ts   markStatisticEmitter (the per-draw gate a
-                            physical emitter binds to) and the seam
-                            HdrPipeline drives it through.
+  statistic-attachment.ts   The per-draw gate on every attachment past 0 —
+    (+ test)                markStatisticEmitter for a point emitter,
+                            markDiffuseEmitter for a volumetric one — and
+                            the seam HdrPipeline drives it through
+                            (§ The gate).
 ```
+
+The gate lives here because attachment 1 is the reason it exists: chrome
+must not reach the statistic. It also admits attachment 2, whose contract is
+`../summation/README.md`'s.
 
 ## Why attachment 0 cannot serve
 
@@ -50,11 +56,14 @@ clamped read is a lower bound the adaptation loop closes from above
 
 **An extended source has `R = G`** — its emission is already true surface
 brightness, so its flux over the pixels it covers is what a mean wants.
-Both are computed at the **pixel** solid angle even where attachment 0 is
-not: the Milky Way band displays at the eye's rod summation area
-(`../README.md` § Extended sources), and that lift is a display
-concession rather than light, so it must not reach a channel the
-adaptation model reads as retinal illuminance. What this channel therefore
+Both are computed at the **pixel** solid angle, and **unconvolved**: a
+volumetric emitter's display value goes to attachment 2 gained by the eye's
+rod summation area and averaged over it (`../summation/README.md`), and that
+whole path is a display concession rather than light, so none of it may reach
+a channel the adaptation model reads as retinal illuminance. A normalised
+convolution conserves total flux anyway, so the mean the reduction takes
+would barely move — the reason to keep it out is the unit, not the size of
+the error. What this channel therefore
 sees from the band's brightest sightline at the base epoch is
 `L` = 1.657e-3 — **10.1 stops under `L_CAP` 1.8**, so no cut can originate
 here (the 0.02 the band *displays* at never reaches this channel, which is
@@ -73,13 +82,25 @@ than device pixels is what keeps the frame mean
 
 ## The gate — chrome is safe by default
 
-The target binds with `drawBuffers [0, NONE]`, and only a mesh passed to
-`markStatisticEmitter` flips attachment 1 on for the span of its own draw.
+The target binds with `drawBuffers [0, NONE, NONE]`, and only a mesh passed
+to one of the two marks flips anything else on for the span of its own draw.
 Nothing else can reach the statistic, **including a chrome layer added
 later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.
 
-Two things the gate has to get right:
+**Which mark a layer calls is part of its contract**, not a detail:
+
+- `markStatisticEmitter` → `[0, 1, NONE]`. A point emitter: stars, planet
+  glare, the planet mesh, ring annuli, airlight.
+- `markDiffuseEmitter` → `[NONE, 1, 2]`. A volumetric emitter, and it masks
+  attachment **0** off, because on-target the resolve owns that pixel once it
+  has averaged attachment 2 over the summation patch
+  (`../summation/README.md`). The mark and the shader's `layout(location = 2)`
+  are one decision — either alone fails silently, discarding the diffuse
+  write in one direction and leaving attachment 2 undefined for every other
+  draw in the other.
+
+Two further things the gate has to get right:
 
 - **It is unbound whenever no MRT framebuffer is current.** `drawBuffers`
   on the default framebuffer accepts only `BACK` or `NONE`, so an emitter

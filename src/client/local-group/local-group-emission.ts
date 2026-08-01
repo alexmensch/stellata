@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import emissionVert from './local-group-emission.vert.glsl?raw';
 import emissionFrag from './local-group-emission.frag.glsl?raw';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
+import { markDiffuseEmitter } from '../hdr/statistic/statistic-attachment';
 import type { LgObject } from './local-group-loader';
 import {
   buildEmissionInstanceData,
@@ -113,7 +113,7 @@ export class LocalGroupEmission {
     // drop everything off-centre.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
-    markStatisticEmitter(mesh);
+    markDiffuseEmitter(mesh);
     return { mesh, geometry, material };
   }
 

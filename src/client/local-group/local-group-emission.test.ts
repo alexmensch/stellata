@@ -306,22 +306,34 @@ describe('surface-brightness zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(SB_ZERO_POINT, 12);
   });
 
-  // This layer deliberately does NOT take the Milky Way band's rod
-  // summation gain: LG objects carry magnitudes of structure inside the
-  // summation area, and a gain that assumes uniformity over it would have
-  // one 13-arcmin patch of M31's core emit brighter than the whole galaxy
-  // (../hdr/README.md § Extended sources). Passing the pixel solid angle
-  // twice is the opt-out, so pin it — reaching for uOmegaSummationArcsec2
-  // here is the plausible-looking change that breaks M31.
-  it('displays at the pixel solid angle, not the summation area', () => {
+  // The band's own summation anchor, which this layer used to opt out of by
+  // passing Ω_px twice. It can take it now only because the anchor rides
+  // attachment 2 and the resolve averages over the patch first
+  // (../hdr/summation/README.md) — so the `location = 2` declaration and the
+  // summation uniform are one contract. A shader that gained by Ω_sum
+  // straight into attachment 0 would put 3.95 mag on M31's nucleus.
+  it('displays at the summation area, through the diffuse attachment', () => {
     const frag = readFileSync(
       fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
       'utf8',
     );
     expect(frag).toMatch(
-      /uExposure, SB_ZERO_POINT, uOmegaPxArcsec2, uOmegaPxArcsec2,/,
+      /uExposure, SB_ZERO_POINT, uOmegaSummationArcsec2, uOmegaPxArcsec2,/,
     );
-    expect(frag).not.toContain('uOmegaSummationArcsec2');
+    expect(frag).toMatch(/layout\(location = 2\) out vec4 outDiffuse;/);
+  });
+
+  // Both volumetric emitters have to reach attachment 2 and neither may
+  // reach attachment 0 on-target, so the gate they mark themselves with is
+  // part of the contract: `markStatisticEmitter` would discard every diffuse
+  // write silently rather than fail.
+  it('marks itself a diffuse emitter, not merely a physical one', () => {
+    const src = readFileSync(
+      fileURLToPath(new URL('./local-group-emission.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(src).toContain('markDiffuseEmitter(mesh)');
+    expect(src).not.toContain('markStatisticEmitter');
   });
 });
 

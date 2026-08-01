@@ -146,7 +146,7 @@ kernel preserves *peak*, not energy, so summing what attachment 0 holds
 would over-count a threshold star's flux by 1.96x and a knee-saturated
 bright one by 28.9x. R divides that kernel by its own area integral;
 `../../star-pipeline/README.md` § Star intensity profile owns the integral
-and `../README.md` § Statistic attachment owns the texel rule.
+and `../statistic/README.md` owns the texel rule.
 
 **Occlusion, frame clipping and the diffuse field are all automatic now.**
 A surface that overwrote a star's pixels overwrote its statistic texels;

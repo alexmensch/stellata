@@ -4,7 +4,7 @@ precision highp float;
 #include <logdepthbuf_pars_fragment>
 // The unit + the operator + the shared extended-source write tail. The
 // isobar pass needs the raw magnitude too, which is why the column and
-// the tail stay separate steps here. See src/client/hdr/emission/README.md § Unit.
+// the tail stay separate steps here. See ../hdr/emission/README.md § Unit.
 #include <stellata_extended_emitter>
 
 // Bounded volumetric raymarch through proxy meshes.
@@ -45,6 +45,9 @@ in vec3 vMeshLocalPos;
 in vec3 vWorldPos;
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec4 outStatistic;
+// Attachment 2 — the diffuse emitters' own, convolved at the resolve
+// (../hdr/summation/README.md).
+layout(location = 2) out vec4 outDiffuse;
 
 // Auto-injected by ShaderMaterial:
 //   uniform vec3 cameraPosition;  // renderer-local
@@ -123,9 +126,10 @@ const int FOREGROUND_DUST_STEPS = 16;
 
 // `footprintPc` / `zFootprintPc` smooth the profile over one pixel's
 // transverse footprint so a point-sampled fragment carries the pixel's area
-// average (../hdr/emission/emission.glsl). From Sol they are metres against a 300 pc
-// scale height and change nothing; from outside the Galaxy they are what
-// keeps the band comparable with a Local Group object at the same distance.
+// average (../hdr/emission/README.md § Footprint). From Sol they are metres
+// against a 300 pc scale height and change nothing; from outside the Galaxy
+// they are what keeps the band comparable with a Local Group object at the
+// same distance.
 float discDensityVal(float R, float zVal, float footprintPc, float zFootprintPc) {
   return uDensity0
        * exp(-(stellataSoftenRadius(R, footprintPc) - uR0Pc) / uDiscScaleLengthPc)
@@ -191,7 +195,7 @@ void main() {
   float c = dot(camLocal, camLocal) - 1.0;
   float disc = b * b - a * c;
   if (disc < 0.0) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
   float sqrtDisc = sqrt(disc);
@@ -200,7 +204,7 @@ void main() {
   // Back-face exit IS the fragment by construction — t = 1.
   float tExit = 1.0;
   if (tEnter >= tExit) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
 
@@ -215,7 +219,7 @@ void main() {
   float sStart = max(tEnter * worldPerT, S_MIN_PC);
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
   float logMin = log(sStart);
@@ -291,21 +295,23 @@ void main() {
     float thresholdSb = stellataExtendedThresholdSb(uOmegaSummationArcsec2, uLimitMag);
     float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(sb - thresholdSb));
     if (line <= 0.0) {
-      stellataEmitNothing(fragColor, outStatistic);
+      stellataEmitNothing(fragColor, outStatistic, outDiffuse);
       return;
     }
     fragColor = vec4(uChartInkColor * line, line);
     outStatistic = vec4(0.0);
+    outDiffuse = vec4(0.0);
     return;
   }
 
-  // Displayed at the rod summation solid angle: the band's structure scale
-  // from Sol is degrees, so it is uniform over the eye's summation area and
-  // threshold belongs where the eye's is (../hdr/README.md § Extended
-  // sources). The statistic stays on Ω_px — it measures light, not display.
+  // The rod summation solid angle goes to attachment 2, which the resolve
+  // averages over the summation patch before it lands on screen. The band is
+  // uniform over that patch from Sol, so the average returns it unchanged —
+  // but the same write is what makes the Galaxy seen from outside comparable
+  // with a Local Group object (../hdr/summation/README.md).
   stellataEmitExtendedSource(
     colorAccum,
     uExposure, uGlowMagOffset, uOmegaSummationArcsec2, uOmegaPxArcsec2,
     uHdrTarget, uWhitePoint, uHighlightDesat,
-    fragColor, outStatistic);
+    fragColor, outStatistic, outDiffuse);
 }
