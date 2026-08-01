@@ -72,7 +72,12 @@ import {
 } from './camera/focus/focus-controller';
 import { KIND_TRAITS, type FocusableProviders, type Target, type TargetKind } from './camera/focus/focus-target';
 import type { KindContext, KindPick } from './kinds/kind-module';
-import { buildKindModules, KIND_ROSTER, type BuiltKindModules } from './kinds/kind-modules';
+import {
+  buildKindModules,
+  KIND_ROSTER,
+  mergeKindDetailBinds,
+  type BuiltKindModules,
+} from './kinds/kind-modules';
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { parkDistance } from './camera/focus/focus-transition';
@@ -2210,17 +2215,20 @@ export class Stellata implements FrameAnchor {
   // cache; the imperative layers (Milky Way / LG-emission enable, orbit
   // rings, heliopause shell) pass an `extra` push because they have no
   // per-frame gate that would pick the cache change up on its own.
+  // Kind-module pushes route by element id, so migrating a kind needs no
+  // edit here.
   private buildSceneElementBinds(): SceneElementBinds {
+    const kindPush = mergeKindDetailBinds(this.kinds);
     const set = (id: SceneElementId, extra?: (on: boolean) => void) =>
-      (on: boolean) => { this.detailPermitted[id] = on; extra?.(on); };
-    const kindPush: Partial<Record<SceneElementId, (on: boolean) => void>> = {};
-    for (const kind of KIND_ROSTER) {
-      Object.assign(kindPush, this.kinds[kind]?.detailBinds?.());
-    }
+      (on: boolean) => {
+        this.detailPermitted[id] = on;
+        extra?.(on);
+        kindPush[id]?.(on);
+      };
     return {
       stars: set('stars'),
       planetBodies: set('planetBodies'),
-      probeMarkers: set('probeMarkers', kindPush.probeMarkers),
+      probeMarkers: set('probeMarkers'),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
       milkyWayIsobar: set('milkyWayIsobar', (on) => {
         this.setMilkywayIsobar(on);
@@ -2231,7 +2239,7 @@ export class Stellata implements FrameAnchor {
       lgWireframes: set('lgWireframes'),
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
       binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
-      probeTrails: set('probeTrails', kindPush.probeTrails),
+      probeTrails: set('probeTrails'),
       heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
       localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
       constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),

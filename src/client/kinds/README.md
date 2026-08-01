@@ -14,8 +14,8 @@ inside a kind stays module-internal.
   answer to "what may a layer depend on"), `KindPick`,
   `KindSearchEntry`.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
-  list), the exhaustive `KindModules` mapped type, and
-  `buildKindModules()`.
+  list), the exhaustive `KindModules` mapped type,
+  `buildKindModules()`, and `mergeKindDetailBinds()`.
 
 Modules themselves live in their kind's folder
 (`../solar-system/probes/probe-module.ts` is the pilot) and are only
@@ -44,6 +44,12 @@ Modules themselves live in their kind's folder
 - **`KIND_TRAITS` stays in `../camera/focus/focus-target.ts`.** The
   contract file is a leaf; folding hard/moving into modules would make
   it import every kind folder.
+- **Declutter pushes route by element id, not by name.**
+  `mergeKindDetailBinds()` flattens every module's `detailBinds()` into
+  one `SceneElementId`-keyed record and the shell's `set(id)` helper
+  applies `kindPush[id]` for EVERY row of its exhaustive record — a
+  migrated kind adds no line to `buildSceneElementBinds`. Two kinds
+  claiming one element throws at merge rather than silently clobbering.
 - **Kind-specific machinery stays out of the contract.** The shell may
   hold a module's concrete type for cross-kind wiring (the solar-system
   cluster reads `kinds.probe.field` for its local-depth mirror); the
@@ -59,6 +65,6 @@ providers, label overlays, and the search corpus. `stellata.ts`: the
 constructor builds one `KindContext` and attach-loops the roster at
 the layer-construction point; `setT` fans out `clockJumped`,
 `setFocalBodyHidden` fans out `setFocalHidden`, `buildSceneElementBinds`
-merges `detailBinds()` pushes into its exhaustive record, and the
+applies the merged `detailBinds()` pushes, and the
 Picker dispatches click picks through the modules' `pick` legs
 (`pickKindHit`) so click and hover share one pick function per kind.

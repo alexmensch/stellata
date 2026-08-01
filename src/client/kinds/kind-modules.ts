@@ -2,6 +2,7 @@
 // See ./README.md.
 
 import type { TargetKind } from '../camera/focus/focus-target';
+import type { SceneElementId } from '../scene/scene-elements';
 import {
   createProbeKindModule,
 } from '../solar-system/probes/probe-module';
@@ -41,3 +42,23 @@ export function buildKindModules() {
 }
 
 export type BuiltKindModules = ReturnType<typeof buildKindModules>;
+
+export type KindDetailBinds = Partial<Record<SceneElementId, (on: boolean) => void>>;
+
+/** Flatten every module's declutter pushes into one element-keyed
+ *  record for the shell's exhaustive bind builder. Two kinds claiming
+ *  the same element throws rather than silently clobbering — the
+ *  merged record is keyless about which module wrote a row. */
+export function mergeKindDetailBinds(modules: KindModules): KindDetailBinds {
+  const merged: KindDetailBinds = {};
+  for (const kind of KIND_ROSTER) {
+    const binds = modules[kind]?.detailBinds?.();
+    if (!binds) continue;
+    for (const [id, push] of Object.entries(binds) as [SceneElementId, ((on: boolean) => void) | undefined][]) {
+      if (!push) continue;
+      if (merged[id]) throw new Error(`scene element '${id}' claimed by two kind modules`);
+      merged[id] = push;
+    }
+  }
+  return merged;
+}
