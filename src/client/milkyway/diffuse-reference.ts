@@ -21,8 +21,8 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
 /**
  * Surface brightness of the stars **Stellata already draws** — the
  * catalogue summed as Σ10^(−0.4·V) inside a 10° cap and divided by the
- * cap's solid angle, from `public/catalog.bin.*` at build v9 (329,656
- * records).
+ * cap's solid angle, from `public/catalog.bin.*` at build v9 (329,657
+ * records, `recordCount` in scripts/catalog/build-catalog-expected.json).
  *
  * Measured rather than computed at runtime: the client has no reason to
  * carry a whole-sky photometric reduction, and the catalogue is frozen
