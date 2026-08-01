@@ -33,7 +33,11 @@ import {
   diffuseResidualMagArcsec2,
 } from './diffuse-reference';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../filters/filter-state';
+import {
+  DEFAULT_INSTRUMENT,
+  extendedThresholdSbFor,
+  instrumentLimitMag,
+} from '../filters/filter-state';
 import {
   SB_ZERO_POINT,
   extendedThresholdSbFromSolidAngle,
@@ -342,24 +346,38 @@ describe('MilkyWay surface-brightness calibration', () => {
   // trim. Pinned as a table because the ORDERING is the acceptance — the
   // brightest sightline reads as a threshold star does and the pole sits at
   // the dither floor. Under the retired per-pixel mapping the same rows ran
-  // 5.45 / 1.67 / 0.33 of 255: the band was a seventh of a threshold star
-  // where the eye puts it 3.6 mag above one (docs/science-hdr-pipeline.md
-  // § 1, Extended sources).
+  // 5.45 / 1.67 / 1.42 / 0.68 / 0.33 of 255, a seventh of a threshold star
+  // at its brightest (docs/science-hdr-pipeline.md § 1, Extended sources).
   it('pins the band against a threshold star at the base epoch', () => {
-    const thresholdStar = displayLevel(L_THRESH);
-    expect(thresholdStar * 255).toBeCloseTo(38.25, 2);
+    expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
     expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(38.07, 2);
     expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(17.98, 2);
     expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.85, 2);
     expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.17, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(3.9, 1);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(3.90, 2);
+  });
 
-    // The band's own maximum lands within 0.02 mag of a threshold star, and
-    // the pole 2.28 mag under it — the ordering the report inverted.
-    expect(2.5 * Math.log10(thresholdStar / bandDisplayLevel(sbAt(0, 5))))
-      .toBeCloseTo(0.005, 3);
-    expect(bandDisplayLevel(sbAt(0, 90))).toBeLessThan(thresholdStar / 8);
+  // How far under threshold each sightline sits, which is the photometric
+  // statement the display levels above cannot make: they are tone-mapped and
+  // sRGB-encoded, so a RATIO of them is not a magnitude and reads ~0.5 mag
+  // shy of the real gap. Against S_lim it is a plain subtraction — no
+  // operator, no encode, no viewport — and it is the column a future session
+  // wants when asking whether a sightline should be visible at all.
+  it('pins each sightline as a magnitude gap against the extended threshold', () => {
+    const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
+    expect(sLim).toBe(22);
+
+    expect(sbAt(0, 5) - sLim).toBeCloseTo(0.01, 2);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(1.29, 2);
+    expect(sbAt(180, 0) - sLim).toBeCloseTo(1.47, 2);
+    expect(sbAt(0, 30) - sLim).toBeCloseTo(2.26, 2);
+    expect(sbAt(0, 90) - sLim).toBeCloseTo(3.07, 2);
+
+    // The band's maximum lands ON threshold, which is what the anchor pins;
+    // a threshold star and a threshold surface brightness are the same
+    // display level by construction (emission-pure.test.ts).
+    expect(bandDisplayLevel(sLim)).toBeCloseTo(displayLevel(L_THRESH), 12);
   });
 
   // Rod summation is fixed in ANGLE, so narrowing the field cannot lose the

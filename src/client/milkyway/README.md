@@ -231,17 +231,22 @@ outside, for the same 1/d² reason.
 
 #### The gradient this produces, and what it reads on screen
 
-Display levels are of 255 at the base epoch with no EV trim, and carry no
-viewport — the summation area is fixed in angle (§ Surface-brightness
-emission). Both columns pinned in `milkyway.test.ts`.
+Levels are of 255 at the base epoch, no EV trim, no viewport — the
+summation area is fixed in angle. All pinned in `milkyway.test.ts`.
 
-| sightline | mag/arcsec² | /255 | vs a threshold star (38.25) |
+**`Δ` is `S − S_lim`** against the 22.0 extended threshold, a plain
+subtraction. Don't restate it as a ratio of the levels: those are
+tone-mapped and encoded, so `2.5·log10` of one reads ~0.5 mag shy at the
+pole. A threshold star also lands on 38.25, so `/255` doubles as "against
+a just-visible star".
+
+| sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 22.01 | 38.1 | 0.005 mag under — the band's maximum |
-| l = 0, b = 0 (GC) | 23.29 | 18.0 | 0.84 mag under |
-| anticentre | 23.47 | 15.9 | 0.98 mag under |
-| b = 30 | 24.26 | 8.2 | 1.7 mag under |
-| NGP | 25.07 | 3.9 | 2.3 mag under, at the dither floor |
+| l = 0, b = 5 | 22.01 | **0.01** — the maximum, on threshold | 38.1 |
+| l = 0, b = 0 (GC) | 23.29 | 1.29 under | 18.0 |
+| anticentre | 23.47 | 1.47 under | 15.9 |
+| b = 30 | 24.26 | 2.26 under | 8.2 |
+| NGP | 25.07 | 3.07 under | 3.9, at the dither floor |
 
 Plane-to-pole contrast **1.78 mag**, against 5.00 before. **The midplane
 is not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
