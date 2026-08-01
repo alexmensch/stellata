@@ -76,6 +76,13 @@ ramp across the last texel. Two rejected alternatives, both measured:
   (0.072 mag against 0.018 at a 4-texel radius). The ramp matches exact
   circle-square overlap to 0.001 mag.
 
+**`summationRadiusPx` is in CSS pixels and every texel here is a
+drawing-buffer pixel.** `Ω_px` is a CSS solid angle on purpose — brightness
+must not track `devicePixelRatio` — so `SummationPass` multiplies by the
+renderer's pixel ratio before choosing a factor. Miss that crossing and the
+kernel is `pixelRatio` times too small, which reads as the convolution
+quietly doing nothing on a retina display.
+
 `summationDownsample` is what keeps a non-separable kernel affordable while
 the patch's radius spans 0.8 px at 120° FOV to tens of px at 10° on a tall
 viewport: the source is box-averaged until the kernel is ~3 texels, so the

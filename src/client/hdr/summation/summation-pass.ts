@@ -82,7 +82,13 @@ export class SummationPass {
     omegaPxArcsec2: number,
   ): void {
     this.renderer.getDrawingBufferSize(this.size);
-    const radiusPx = summationRadiusPx(omegaSummationArcsec2, omegaPxArcsec2);
+    // Ω_px is a CSS-pixel solid angle — brightness must not track
+    // devicePixelRatio — but every texel here is a DRAWING-BUFFER pixel, so
+    // the patch radius has to cross that ratio or the kernel comes out
+    // `pixelRatio` times too small on a retina display.
+    const radiusPx =
+      summationRadiusPx(omegaSummationArcsec2, omegaPxArcsec2) *
+      this.renderer.getPixelRatio();
     const factor = summationDownsample(radiusPx);
 
     this.uniforms.uSummationRadiusTexels.value = radiusPx / factor;
