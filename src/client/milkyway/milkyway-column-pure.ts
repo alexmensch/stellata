@@ -34,14 +34,31 @@ export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
 export const ANALYTICAL_DUST_SCALE_LENGTH_PC = 3_500;
 export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
-export const ANALYTICAL_DUST_NORM_PER_PC = 5.5e-5;
+
+/** V-band extinction the slab produces per kpc at (R₀, z = 0) — the
+ *  declarative dust anchor, from which the normalisation is derived.
+ *  1.0 mag/kpc is the upper end of the range commonly adopted for the
+ *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
+ *  to 1.8). Two independent constraints meet here: at the 125 pc scale
+ *  height it also puts the perpendicular column to the pole at
+ *  A_V = 0.125, inside the SFD polar spread. See README.md § Analytical
+ *  dust. */
+export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
+
 export const REDDENING_RGB: Rgb = [0.76, 1.0, 1.35];
-export const DEFAULT_EXTINCTION_STRENGTH = 0.45;
 
 /** `avPerDensityPerPc` from the dust manifest (ZGR_TO_AV). `attachDust`
  *  overwrites the uniform from the loaded field; this is the value the
  *  shipped artifact carries and the one the calibration is derived at. */
 export const DEFAULT_DUST_AV_PER_DENSITY_PC = 2.742;
+
+export const ANALYTICAL_DUST_NORM_PER_PC =
+  LOCAL_DUST_RATE_MAG_PER_KPC / (DEFAULT_DUST_AV_PER_DENSITY_PC * 1000);
+
+/** The dust multiplier is a dev lever, not a calibration term — the
+ *  normalisation above is the calibration. Anything but 1 means the
+ *  shipped extinction disagrees with its own stated anchor. */
+export const DEFAULT_EXTINCTION_STRENGTH = 1.0;
 
 export const MAG_PER_TAU = 1.0857;
 
