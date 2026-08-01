@@ -8,9 +8,11 @@ import { LABEL_OFFSET_PX } from '../planets/planet-labels';
 import type { ProbeField } from './probe-field';
 import { probeLabelText } from './probe-trajectory';
 
-export function createProbeLabels(ctx: KindContext, field: ProbeField): void {
+/** Returns the teardown — the module holds it and runs it from the
+ *  probe scene layer's dispose. */
+export function createProbeLabels(ctx: KindContext, field: ProbeField): () => void {
   const group = document.getElementById('probe-labels') as unknown as SVGGElement | null;
-  if (!group) return;
+  if (!group) return () => {};
 
   const entries: SVGTextElement[] = [];
   const tmp = new THREE.Vector3();
@@ -39,7 +41,7 @@ export function createProbeLabels(ctx: KindContext, field: ProbeField): void {
   }
   setGroupVisible(false);
 
-  ctx.onFrame(() => {
+  const unsubscribe = ctx.onFrame(() => {
     if (entries.length !== field.probeCount()) rebuildEntries();
     if (entries.length === 0 || ctx.getMonochrome()
         || !ctx.detailPermits('probeLabels')) {
@@ -67,4 +69,11 @@ export function createProbeLabels(ctx: KindContext, field: ProbeField): void {
       placeAnchoredLabel(el, tmp, camera, w, h, LABEL_OFFSET_PX);
     }
   });
+
+  return () => {
+    unsubscribe();
+    for (const el of entries) el.remove();
+    entries.length = 0;
+    setGroupVisible(false);
+  };
 }

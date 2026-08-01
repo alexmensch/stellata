@@ -528,15 +528,7 @@ export function createSearchRunner(
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
       if (!m) continue;
-      for (const e of m.searchEntries()) {
-        fuzzyEntries.push({
-          kind,
-          index: e.index,
-          label: e.label,
-          primary: e.primary,
-          displayCon: e.displayCon,
-        });
-      }
+      for (const e of m.searchEntries()) fuzzyEntries.push({ kind, ...e });
     }
   }
 

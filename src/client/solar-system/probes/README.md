@@ -248,6 +248,10 @@ fixed-size and carries no name of its own, so a marker without a label is
 an unidentifiable dot. Labels show whenever the marker is drawn and the
 `probeLabels` declutter floor permits.
 
+`createProbeLabels` returns its teardown (frame unsubscribe + entry
+removal); the module holds it and runs it from the scene layer's
+`dispose`, so the overlay's lifetime matches the field's.
+
 ## Declutter and chart mode
 
 Three elements in `../../scene/scene-elements.ts`: `probeMarkers` and

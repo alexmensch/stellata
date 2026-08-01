@@ -79,7 +79,8 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   sids(): readonly number[] | null;
   /** SVG label overlay factory — separate from `attach` because label
    *  overlays mount into the DOM, which the shell constructor must not
-   *  require (headless tests attach without one). */
+   *  require (headless tests attach without one). The module keeps the
+   *  overlay's teardown and runs it from its scene layer's `dispose`. */
   labels?(): void;
   /** Imperative declutter pushes for the kind's scene elements, keyed by
    *  element id; the shell's exhaustive bind record calls them. */

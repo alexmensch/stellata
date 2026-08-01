@@ -38,6 +38,7 @@ export function createProbeKindModule(): ProbeKindModule {
   let ctx: KindContext | null = null;
   let field: ProbeField | null = null;
   let paths: ProbePathLayer | null = null;
+  let disposeLabels: (() => void) | null = null;
 
   const pick = (
     clientX: number,
@@ -124,6 +125,8 @@ export function createProbeKindModule(): ProbeKindModule {
         },
         recenter: (newOrigin) => field!.recenter(newOrigin),
         dispose: () => {
+          disposeLabels?.();
+          disposeLabels = null;
           field!.dispose();
           paths!.dispose();
         },
@@ -198,7 +201,7 @@ export function createProbeKindModule(): ProbeKindModule {
     sids: () => trajectories.map((p) => SOL_OBJECT_SIDS[p.id] ?? 0),
 
     labels: () => {
-      if (ctx && field) createProbeLabels(ctx, field);
+      if (ctx && field) disposeLabels = createProbeLabels(ctx, field);
     },
 
     detailBinds: () => ({
