@@ -23,11 +23,18 @@ import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
-import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import {
+  AU_PC,
+  KM_PC,
+  MIN_PHYSICAL_RADIUS_R_SUN,
+  R_SUN_PC,
+} from '../../util/astronomy-constants';
+import {
+  PROBE_ORBIT_FLOOR_PC,
   PROBE_PARK_DIST_PC,
   fovMinorRad,
   minOrbitDistForPlanet,
+  minOrbitDistForStar,
   parkDistForPlanet,
 } from '../controls/star-physics';
 import type { Catalog } from '../../loaders/catalog-loader';
@@ -189,48 +196,89 @@ function makeHarness(opts: {
     });
   }
 
-  // Stub geometry registry: the star leg mirrors the frame anchor; the
-  // soft kinds report a fixed position so setOrbitTarget / flyTo have
-  // something to aim at without a real layer. The two moving hard kinds
-  // (planet, probe) must mirror production exactly — the controller reads
-  // its focal position and park distance through this registry for every
-  // non-star kind, so a stubbed leg would silently answer for the field.
+  // Stub geometry registry: the star leg mirrors the frame anchor; cloud
+  // and lg report a fixed position so setOrbitTarget / flyTo have
+  // something to aim at without a real layer. The hard kinds and the
+  // shell must mirror production exactly — the controller reads its
+  // focal position, park distance, orbit floor, and planet-system host
+  // through this registry for every kind, so a stubbed leg would
+  // silently answer for the field.
   const softProvider: FocusableProvider = {
+    anchorInto: (_idx, out) => { out.set(1, 2, 3).add(frame.worldOffset); return true; },
     localPositionInto: (_idx, out) => { out.set(1, 2, 3); return true; },
     focusParkDistance: () => 1,
+    orbitFloor: () => Math.min(GLOBAL_MIN_DIST_PC, 1),
     arrivalRadiusPc: () => null,
     renderedSizePx: () => 10,
+    chartPlateauDistance: () => null,
+    planetSystemHost: () => null,
   };
   const focusables: FocusableProviders = {
     star: {
+      anchorInto: (idx, out) => {
+        if (idx < 0 || idx >= catalog.count) return false;
+        const p = catalog.positions;
+        out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+        return true;
+      },
       localPositionInto: (idx, out) => {
+        if (idx < 0 || idx >= catalog.count) return false;
         frame.anchor.starLocalPositionInto(idx, out);
         return true;
       },
       focusParkDistance: (idx) => focus.parkDistForStar(idx),
-      arrivalRadiusPc: () => null,
+      orbitFloor: (idx) =>
+        minOrbitDistForStar({ catalog, idx, fovMinorRad: fovMinorRad(camera) }),
+      arrivalRadiusPc: (idx) =>
+        Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
       renderedSizePx: () => 10,
+      chartPlateauDistance: () => null,
+      planetSystemHost: (idx) => idx,
     },
     cloud: softProvider,
     lg: softProvider,
     planet: {
+      anchorInto: (idx, out) => planetField.planetAbsolutePositionInto(idx, out),
       localPositionInto: (idx, out) => planetField.planetLocalPositionInto(idx, out),
       focusParkDistance: (idx) => {
         const p = planetField.planetAt(idx);
         return p === null ? 0 : parkDistForPlanet(p.radiusKm * KM_PC, fovMinorRad(camera));
+      },
+      orbitFloor: (idx) => {
+        const p = planetField.planetAt(idx);
+        return p === null ? 0 : minOrbitDistForPlanet(p.radiusKm * KM_PC, fovMinorRad(camera));
       },
       arrivalRadiusPc: (idx) => {
         const p = planetField.planetAt(idx);
         return p === null ? null : p.radiusKm * KM_PC;
       },
       renderedSizePx: () => 10,
+      chartPlateauDistance: () => null,
+      planetSystemHost: (idx) => planetField.hostPlanetOf(idx)?.hostStarIdx ?? null,
     },
-    shell: softProvider,
+    shell: {
+      anchorInto: (idx, out) => shells.at(idx)?.centerAbsInto(out) ?? false,
+      localPositionInto: (idx, out) => shells.localPositionInto(idx, frame.worldOffset, out),
+      focusParkDistance: (idx) => shells.focusParkDistancePc(idx),
+      orbitFloor: (idx) => Math.min(GLOBAL_MIN_DIST_PC, shells.focusParkDistancePc(idx)),
+      arrivalRadiusPc: () => null,
+      renderedSizePx: () => 10,
+      chartPlateauDistance: () => null,
+      planetSystemHost: () => null,
+    },
     probe: {
+      anchorInto: (idx, out) => {
+        if (!probeField.localPositionInto(idx, out)) return false;
+        out.add(frame.worldOffset);
+        return true;
+      },
       localPositionInto: (idx, out) => probeField.localPositionInto(idx, out),
       focusParkDistance: () => PROBE_PARK_DIST_PC,
+      orbitFloor: () => PROBE_ORBIT_FLOOR_PC,
       arrivalRadiusPc: () => null,
       renderedSizePx: () => PROBE_MARKER_PX,
+      chartPlateauDistance: () => null,
+      planetSystemHost: () => catalog.solIndex,
     },
   };
 
@@ -293,11 +341,6 @@ function makeHarness(opts: {
     setFocalBodyHidden: (target) => {
       uHide.value = target?.kind === 'star' ? target.idx : -1;
     },
-    getClouds: () => null,
-    getLocalGroup: () => null,
-    getShells: () => shells,
-    getPlanetField: () => planetField,
-    getProbeField: () => probeField,
     getWarp: () => warp,
     getObserve: () => observe,
     getFocusables: () => focusables,
@@ -934,7 +977,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
   });
 
-  it('focusPlanet preserves the camera absolute pose at lerp start (no teleport)', () => {
+  it('planet flyTo preserves the camera absolute pose at lerp start (no teleport)', () => {
     const h = makeHarness();
     const idx = attachTestPlanet(h);
     h.focus.setFocus(0);
