@@ -23,6 +23,10 @@ themselves.
   is the pattern to copy; warn-then-null on a present-but-invalid artifact
   (`local-group/local-group-loader.ts`) is the shape for shape errors.
 - `stellata-events.test.ts` — integration-shell event-emission test.
+- `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
+  kind-module roster: one module per `TargetKind` (probes migrated so
+  far) supplies load/attach + every capability leg, and the shell/boot
+  iterate the roster instead of hand-wiring each site.
 - `util/` — project-agnostic plumbing (event bus, URL state).
 - `filters/` — `FilterState` + the instrument record (aperture-derived
   limiting magnitude, plate-scale star sizing) + render knobs and the

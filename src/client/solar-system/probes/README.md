@@ -23,6 +23,13 @@ and valid observe anchors.
 
 ```
 src/client/solar-system/probes/
+  probe-module.ts (+ test)        The probe ObjectKindModule
+                                  (../../kinds/README.md): load/attach
+                                  plus the focusable / card / hover
+                                  (whose pick the click FSM shares) /
+                                  search / SID / pinnable / declutter /
+                                  clock-jump / focal-hide legs, each
+                                  reading the field below.
   probe-trajectory.ts (+ test)    Wire file → typed arrays, plus the pure
                                   sampler: probeStateAt / probeSampleIndexAt
                                   / probeSignalLost / probeLabelText.
@@ -38,6 +45,10 @@ src/client/solar-system/probes/
                                   probe, launch → position(t). See § Trails.
   probe-path-layer.test.ts        Trail focus gate + the field's
                                   visible-vs-sampled split.
+  probe-focus-geometry.ts         PROBE_ORBIT_FLOOR_PC /
+                                  PROBE_PARK_DIST_PC — fixed park
+                                  geometry, not a fill solve. See
+                                  § Park distance.
   probe-labels.ts                 Per-probe SVG labels. See § Labels.
   probe.vert.glsl,
   probe.frag.glsl                 Fixed-pixel-size diamond glyph.
@@ -45,14 +56,16 @@ src/client/solar-system/probes/
     .ts                           corpus. See § Coherence, not precision.
 ```
 
-The interaction surfaces live with their subsystems, not here:
-`../../camera/focus/` (focus paths + park geometry),
-`../../camera/controls/picker.ts` (`pickProbeHit`),
-`../../hover/probe-hover-provider.ts`,
-`../../focus-card/probe-focus-provider.ts`,
+The interaction surfaces dispatch through `probe-module.ts`'s legs —
+the shell, boot, Picker, hover engine, card rolodex, and search corpus
+all reach probes through the kind-module roster
+(`../../kinds/README.md`), with no probe-specific wiring at those
+sites. What stays outside this folder: `../../camera/focus/` (the
+kind-generic focus paths the provider legs feed),
+`../../focus-card/probe-focus-provider.ts` (the card rows the module
+constructs), `../../hover/formatters/probe-hover-format.ts`,
 `../../format/probe-format.ts` (the mission-stat formatters both card
-tiers share), `../../typeahead/search.ts` (corpus entries), and
-`../sol-object-sids.ts` (the frozen SIDs).
+tiers share), and `../sol-object-sids.ts` (the frozen SIDs).
 
 ## Sampler
 
@@ -235,6 +248,10 @@ fixed-size and carries no name of its own, so a marker without a label is
 an unidentifiable dot. Labels show whenever the marker is drawn and the
 `probeLabels` declutter floor permits.
 
+`createProbeLabels` returns its teardown (frame unsubscribe + entry
+removal); the module holds it and runs it from the scene layer's
+`dispose`, so the overlay's lifetime matches the field's.
+
 ## Declutter and chart mode
 
 Three elements in `../../scene/scene-elements.ts`: `probeMarkers` and
@@ -318,7 +335,7 @@ marker is a fixed-pixel glyph, and the spacecraft's own metre scale
 would solve to a park ~1e-17 pc — five orders of magnitude **inside**
 `CAMERA_NEAR_PC` (~31 km), where the very marker the camera flew to gets
 clipped. `PROBE_ORBIT_FLOOR_PC` / `PROBE_PARK_DIST_PC`
-(`../../camera/controls/star-physics.ts`) are therefore fixed distances,
+(`probe-focus-geometry.ts`) are therefore fixed distances,
 1000 km and 10 000 km, pinned against the near plane in
 `../../camera/depth-range.test.ts`.
 
@@ -351,9 +368,11 @@ in the interaction layer:
   distance vector, and POIs already carry any-kind SIDs, and unlike the
   planet domain there is no index translation — the resolver's
   localIndex IS the Target idx.
-- **Hover** — `pickProbeHit` mirrors the marker draw predicate exactly
-  (`visible`), with `PROBE_MARKER_PX` as the hit-radius basis. No
-  focus gate on the pick side, unlike the trail (hover Rule 2).
+- **Hover / click pick** — the module's hover provider supplies the one
+  `pick` the click FSM also runs (via `Picker.pickKindHit`), mirrors
+  the marker draw predicate exactly (`visible`), and takes
+  `PROBE_MARKER_PX` as the hit-radius basis. No focus gate on the pick
+  side, unlike the trail (hover Rule 2).
 - **Cards** — tier 1 and tier 2 share the mission-stat formatters in
   `../../format/probe-format.ts`, so the two tiers can never print
   different numbers. The heliocentric distance and speed rows are

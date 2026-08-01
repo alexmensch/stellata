@@ -2,12 +2,12 @@ import Fuse from 'fuse.js';
 import { resolveStarName } from '../format/star-companion-format';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { isHardTarget, type Target } from '../camera/focus/focus-target';
+import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
 import type { LgCatalog } from '../local-group/local-group-loader';
 import type { ShellRegistry } from '../fresnel-shell/shell-registry';
-import type { ProbeField } from '../solar-system/probes/probe-field';
+import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
@@ -19,7 +19,7 @@ import {
 
 export type { SearchEntry };
 
-type EntryKind = 'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe';
+type EntryKind = TargetKind;
 
 /** Static dropdown-row distance for a Local Group entry. Fixed units by
  *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
@@ -442,7 +442,7 @@ export function createSearchRunner(
   clouds: CloudCatalog | null,
   lg: LgCatalog | null = null,
   shells: ShellRegistry | null = null,
-  probes: ProbeField | null = null,
+  kinds: KindModules | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
@@ -520,24 +520,15 @@ export function createSearchRunner(
     }
   }
 
-  // Deep-space probes — mission label only; the roster carries no
-  // aliases and the labels ("Voyager 1") are what anyone types. Index is
-  // the ProbeField roster index = the Target idx, so a missing artifact
-  // simply leaves that probe out of the corpus rather than shifting the
-  // others. "Interstellar" in the secondary line is the mission class,
-  // and the one word that distinguishes Pioneer 10 the probe from any
-  // star row.
-  if (probes) {
-    for (let i = 0; i < probes.probeCount(); i++) {
-      const traj = probes.probeAt(i);
-      if (!traj) continue;
-      fuzzyEntries.push({
-        kind: 'probe',
-        index: i,
-        label: traj.label,
-        primary: traj.label,
-        displayCon: 'Probe · Interstellar',
-      });
+  // Kind-module corpus rows (deep-space probes today). Each entry's
+  // index is its kind's Target idx by the module contract, so a missing
+  // artifact leaves an object out of the corpus rather than shifting
+  // the others.
+  if (kinds) {
+    for (const kind of KIND_ROSTER) {
+      const m = kinds[kind];
+      if (!m) continue;
+      for (const e of m.searchEntries()) fuzzyEntries.push({ kind, ...e });
     }
   }
 
@@ -731,7 +722,7 @@ export function bindSearch(
   lg: LgCatalog | null = null,
 ) {
   const runQuery = createSearchRunner(
-    catalog, raw, clouds, lg, stellata.shells, stellata.probeField,
+    catalog, raw, clouds, lg, stellata.shells, stellata.kinds,
   );
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
@@ -838,7 +829,7 @@ export function bindSearch(
     switch (t.kind) {
       case 'star': return describe(t.idx);
       case 'planet': return stellata.planetField.planetAt(t.idx)?.name ?? '';
-      case 'probe': return stellata.probeField.probeAt(t.idx)?.label ?? '';
+      case 'probe': return stellata.kinds.probe.displayName(t.idx);
       case 'cloud': return clouds ? clouds.clouds[t.idx].name : '';
       case 'lg': return lg ? lg.objects[t.idx].name : '';
       case 'shell': return stellata.shells.at(t.idx)?.label ?? '';
@@ -887,7 +878,7 @@ export function bindFindSearch(
   lg: LgCatalog | null = null,
 ): void {
   const runQuery = createSearchRunner(
-    catalog, raw, clouds, lg, stellata.shells, stellata.probeField,
+    catalog, raw, clouds, lg, stellata.shells, stellata.kinds,
   );
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;

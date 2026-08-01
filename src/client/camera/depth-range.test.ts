@@ -4,11 +4,13 @@ import { CAMERA_NEAR_PC, FOV_MAX_DEG } from './timing';
 import { CAMERA_FAR_PC, MAX_DISTANCE_PC } from '../../../scripts/local-group/build-local-group-pure';
 import { GLOBAL_MIN_DIST_PC } from './focus/focus-controller';
 import {
-  PROBE_ORBIT_FLOOR_PC,
-  PROBE_PARK_DIST_PC,
   fovMinorRad,
   minOrbitDistForPlanet,
 } from './controls/star-physics';
+import {
+  PROBE_ORBIT_FLOOR_PC,
+  PROBE_PARK_DIST_PC,
+} from '../solar-system/probes/probe-focus-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { KM_PC } from '../util/astronomy-constants';

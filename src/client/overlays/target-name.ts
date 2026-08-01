@@ -26,7 +26,7 @@ export function targetDisplayName(
     case 'planet':
       return stellata.planetField.planetAt(t.idx)?.name ?? 'Planet';
     case 'probe':
-      return stellata.probeField.probeAt(t.idx)?.label ?? 'Probe';
+      return stellata.kinds.probe.displayName(t.idx) || 'Probe';
     case 'cloud': {
       const cat = stellata.getCloudCatalog();
       return cat ? cat.clouds[t.idx].name : 'Cloud';

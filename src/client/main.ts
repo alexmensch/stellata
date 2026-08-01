@@ -18,9 +18,8 @@ import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
-import { createProbeLabels } from './solar-system/probes/probe-labels';
 import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
-import { loadProbes } from './solar-system/probes/probe-loader';
+import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
 import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
@@ -51,7 +50,6 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
-import { createProbeFocusProvider } from './focus-card/probe-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
 import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
@@ -60,7 +58,6 @@ import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
 import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
-import { createProbeHoverProvider } from './hover/probe-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
 import { createShellHoverProvider } from './hover/shell-hover-provider';
 import { createCloudHoverProvider } from './hover/cloud-hover-provider';
@@ -78,7 +75,8 @@ async function main() {
   const tooltip = document.getElementById('tooltip')!;
 
   try {
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, boundaries, probes] = await Promise.all([
+    const kinds = buildKindModules();
+    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, boundaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -117,10 +115,9 @@ async function main() {
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Deep-space probe trajectories. ~450 KB of JSON across the five
-      // Sun-escape probes; each one that's missing (a checkout that never
-      // ran the public/ sync) simply drops its marker and trail.
-      loadProbes(import.meta.env.BASE_URL),
+      // Kind-module artifacts (deep-space probes today). Each load never
+      // rejects — a missing artifact leaves that kind's roster empty.
+      ...KIND_ROSTER.map((kind) => kinds[kind]?.load(import.meta.env.BASE_URL)),
     ]);
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
@@ -130,7 +127,7 @@ async function main() {
     const spectralMap = buildSpectralMap(searchIndex);
     const bayerMap = buildBayerMap(searchIndex);
 
-    const stellata = new Stellata({ canvas, catalog });
+    const stellata = new Stellata({ canvas, catalog, kinds });
     // Dev-console access: `stellata.setExtinctionStrength(X)` etc. Handy for
     // dust debugging and not worth gating behind an env check on a solo
     // project.
@@ -155,9 +152,6 @@ async function main() {
     // IAU constellation boundaries — a chart-only declutter element at floor
     // 'all'; absent artifact = no arcs.
     if (boundaries) stellata.attachConstellationBoundaries(boundaries);
-
-    // Deep-space probes — markers + traversed trails on the model clock.
-    stellata.attachProbes(probes);
 
     // Horizons planet element tables — 1.5 MB that upgrades the planet
     // ephemeris from the Standish series' 0.06 AU to ~5e-6 AU across
@@ -201,15 +195,15 @@ async function main() {
     // layer is absent still resolves its sid, then focus/pin fall through
     // to null via the shell provider's legs (same graceful path as lg).
     sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
-    // Probes are `sol:` objects like the planets, but their domain is keyed
-    // over the LOADED roster, not PROBE_MISSIONS: `loadProbes` drops a probe
-    // whose artifact is missing, and localIndex must equal the Target idx.
-    // A dropped probe's sid then resolves `unknown` (its own URL ref drops)
-    // while every other probe still resolves — no index shift.
-    sidResolver.attach(
-      'probe',
-      arrayDomain(probes.map((p) => SOL_OBJECT_SIDS[p.id] ?? 0)),
-    );
+    // Kind-module domains (probes today): sids() is localIndex-ordered
+    // with localIndex = Target idx; null concludes the domain.
+    for (const kind of KIND_ROSTER) {
+      const m = kinds[kind];
+      if (!m) continue;
+      const sids = m.sids();
+      if (sids) sidResolver.attach(kind, arrayDomain(sids));
+      else sidResolver.conclude(kind);
+    }
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -269,7 +263,8 @@ async function main() {
         stellata.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
     }
     createPlanetLabels(stellata);
-    createProbeLabels(stellata);
+    // Kind-module SVG label overlays (probe labels today).
+    for (const kind of KIND_ROSTER) kinds[kind]?.labels?.();
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
     // Per-cloud molecular-cloud labels. Mints SVG <text> children under
@@ -339,9 +334,13 @@ async function main() {
     const hoverProviders: HoverProvider[] = [
       starHoverProvider,
       planetHoverProvider,
-      createProbeHoverProvider({ stellata }),
       shellHoverProvider,
     ];
+    // Kind-module hover surfaces (probes today).
+    for (const kind of KIND_ROSTER) {
+      const provider = kinds[kind]?.hover?.();
+      if (provider) hoverProviders.push(provider);
+    }
     // LG provider only registers when the build artifact loaded — fresh
     // checkouts without `pnpm run build:local-group` leave stellata.localGroup
     // null and the wireframes don't render; no provider in that case.
@@ -408,23 +407,7 @@ async function main() {
             return ps ? moonNamesOf(ps.planets, host!.planetIdx) : [];
           },
         }),
-        // Every probe row reads the field's one per-frame sample, so the
-        // card can never disagree with the marker about where the probe
-        // is or how fast it is going.
-        probe: createProbeFocusProvider({
-          probeAt: (idx) => stellata.probeField.probeAt(idx),
-          cameraDistancePc: (idx) => stellata.probeCameraDistancePc(idx),
-          solDistancePc: (idx) => {
-            const s = stellata.probeField.sampleFor(idx);
-            return s === null || !s.sampled ? null : s.solRelPc.length();
-          },
-          speedPcPerSec: (idx) => {
-            const s = stellata.probeField.sampleFor(idx);
-            return s === null || !s.sampled ? null : s.velPcPerSec.length();
-          },
-          signalLost: (idx) => stellata.probeField.sampleFor(idx)?.signalLost ?? false,
-          constellationName: (idx) => stellata.constellationOf('probe', idx),
-        }),
+        probe: kinds.probe.card(),
         cloud: createCloudFocusProvider({
           clouds: cloudCatalog?.clouds ?? null,
           cameraDistancePc: (idx) => {

@@ -5,17 +5,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { Picker, type PickerDeps } from './picker';
+import type { HoverHit } from '../../hover/hover-types';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
-import type { ProbeField } from '../../solar-system/probes/probe-field';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
-
-// No probe roster in these fixtures — pickProbeHit walks an empty field.
-const EMPTY_PROBE_FIELD = { probeCount: () => 0 } as unknown as ProbeField;
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -143,6 +140,7 @@ function makePicker(
     /** The instrument's limit, standing in for the threshold too (these
      *  cases run at EV 0 and no adaptation). */
     limitMag?: number;
+    kindPicks?: PickerDeps['kindPicks'];
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
@@ -163,7 +161,7 @@ function makePicker(
     getLocalGroupLayer: () => null,
     getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-    getProbeField: () => EMPTY_PROBE_FIELD,
+    kindPicks: opts.kindPicks ?? {},
     getWorldOffset: () => new THREE.Vector3(),
     getWarpActive: () => opts.warpActive ?? false,
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
@@ -456,7 +454,7 @@ describe('Picker / cloud picks', () => {
       getLocalGroupLayer: () => null,
       getShells: () => new ShellRegistry(),
       getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-      getProbeField: () => EMPTY_PROBE_FIELD,
+      kindPicks: {},
       getWorldOffset: () => new THREE.Vector3(),
       getWarpActive: () => opts.warpActive ?? false,
       renderedSizePxFn: () => 20,
@@ -514,5 +512,31 @@ describe('Picker / cloud picks', () => {
       winners.add(click);
     }
     expect(winners).toEqual(new Set([0, 1]));
+  });
+});
+
+describe('Picker / pickKindHit', () => {
+  const HIT: HoverHit = { idx: 3, cameraDistancePc: 1.5, tier: 'prime' };
+
+  it('dispatches to the registered kind and forwards the threshold', () => {
+    const calls: Array<[number, number, number]> = [];
+    const { picker } = makePicker(makeCatalog([[0, 0, 0]]), defaultFilter(), {
+      kindPicks: {
+        probe: (x, y, px) => { calls.push([x, y, px]); return HIT; },
+      },
+    });
+    expect(picker.pickKindHit('probe', 40, 50, 16)).toBe(HIT);
+    expect(calls).toEqual([[40, 50, 16]]);
+    // Same default threshold the other hover-side pick paths carry.
+    picker.pickKindHit('probe', 40, 50);
+    expect(calls[1]).toEqual([40, 50, 14]);
+  });
+
+  it('returns null for a kind with no module pick registered', () => {
+    const { picker } = makePicker(makeCatalog([[0, 0, 0]]), defaultFilter(), {
+      kindPicks: { probe: () => HIT },
+    });
+    expect(picker.pickKindHit('lg', 40, 50, 16)).toBeNull();
+    expect(picker.pickKindHit('planet', 40, 50, 16)).toBeNull();
   });
 });
