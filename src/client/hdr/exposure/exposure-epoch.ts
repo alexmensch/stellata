@@ -4,8 +4,8 @@
 
 import {
   DEFAULT_INSTRUMENT,
-  INSTRUMENTS,
   type InstrumentName,
+  extendedThresholdSbFor,
   instrumentLimitMag,
 } from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
@@ -81,25 +81,12 @@ export function drawCutoffMag(
   return chart ? limitMag : thresholdMag + SOFT_TAPER_MARGIN_MAG;
 }
 
-/**
- * The surface brightness at which an extended source is at the edge of
- * detection — the extended-source sibling of `m_lim`.
- *
- * It **is** the instrument's sky background, and that identity is the
- * claim: an extended source is detected as a contrast against the sky it
- * sits in, and threshold contrast for a large, soft, scotopic target is of
- * order unity. `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
- * carries the derivation, the summation area it implies, and why the
- * absolute-flux alternative over-lifts.
- */
-export function extendedThresholdSbFor(name: InstrumentName): number {
-  return INSTRUMENTS[name].skyBackgroundMagArcsec2;
-}
-
 /** `uOmegaSummationArcsec2` for an instrument — the summation area implied
- *  by pairing its extended-source threshold with its point-source limit.
- *  Static in the exposure state: adaptation and the trim move both
- *  thresholds together, so their offset is the instrument's alone. */
+ *  by pairing its extended-source threshold (`extendedThresholdSbFor`) with
+ *  its point-source limit. Static in the exposure state: adaptation and the
+ *  trim move both thresholds together, so their offset is the instrument's
+ *  alone. Why that threshold is the sky background:
+ *  `docs/science-hdr-pipeline.md` § 1 (*Extended sources*). */
 export function summationSolidAngleFor(name: InstrumentName): number {
   return rodSummationSolidAngleArcsec2(
     extendedThresholdSbFor(name),

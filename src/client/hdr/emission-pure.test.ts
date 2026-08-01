@@ -9,10 +9,7 @@ import {
   rodSummationSolidAngleArcsec2,
   surfaceBrightnessLuminance,
 } from './emission-pure';
-import {
-  BASE_EPOCH_EXPOSURE,
-  extendedThresholdSbFor,
-} from './exposure/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import {
   DR_MAG,
@@ -21,7 +18,11 @@ import {
   relativeLuminance,
   tonemapWhitePoint,
 } from './tonemap-pure';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';
+import {
+  DEFAULT_FILTER,
+  extendedThresholdSbFor,
+  instrumentLimitMag,
+} from '../filters/filter-state';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_FILTER.instrument);

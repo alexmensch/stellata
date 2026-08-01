@@ -121,8 +121,8 @@ summation makes its threshold a *surface brightness*, so
 `uOmegaSummationArcsec2` — 4.7863e5 arcsec², a 13.0′ critical diameter —
 which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
 level cannot move with FOV. Derivation, the threshold's identity with the
-instrument's `skyBackgroundMagArcsec2` (`exposure/exposure-epoch.ts`
-`extendedThresholdSbFor`), and both rejected alternatives:
+instrument's `skyBackgroundMagArcsec2` (`../filters/filter-state.ts`
+`extendedThresholdSbFor`), and every rejected alternative:
 `docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
 
 `stellataEmitExtendedSource` takes **both** angles, and which one displays

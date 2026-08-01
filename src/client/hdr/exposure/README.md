@@ -73,9 +73,17 @@ function of filter state alone.
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
 `m_lim` and the extended-source `S_lim`, which is the instrument's
-`skyBackgroundMagArcsec2` (`extendedThresholdSbFor`) — and adaptation and
-the trim move both together, so only an instrument change may write it.
-The derivation is `../README.md` § Extended sources.
+`skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
+`extendedThresholdSbFor`) — and adaptation and the trim move both together,
+so only an instrument change may write it. The derivation is
+`../README.md` § Extended sources.
+
+**There is no `uThresholdMag` analogue on the extended side.** The
+point-source pair ships an anchor *and* a trimmed edge; the extended side
+ships only the anchor, so the `S_lim` that `stellataExtendedThresholdSb`
+recovers is always the untrimmed 22.0. Harmless while the only consumer is
+the chart isobar, which inherits no exposure state — but a scene-mode
+isobar would need `S_lim + MAG_PER_STOP·ev`, not this.
 
 **The taper anchors on `uThresholdMag`, the cull on `uCullMag`.** A
 source at the threshold carries exactly `L_THRESH` at any trim, which is

@@ -51,12 +51,14 @@ question. `docs/science-hdr-pipeline.md` § 3.4 carries the record shape
 and the three axes a future instrument needs.
 
 **`skyBackgroundMagArcsec2` is the extended-source threshold surface
-brightness**, and its only consumer today is
-`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`: an extended
-source is detected as a contrast against the sky it sits in, so the
-background level *is* where its threshold sits (`../hdr/README.md`
-§ Extended sources). It has yet to land as an additive floor on `L`, which
-is the other half of the axis. `passband` still has no consumer.
+brightness**, read through `extendedThresholdSbFor` — the sibling of
+`instrumentLimitMag`, and here rather than in `hdr/` for the same reason
+that one is: an extended source is detected as a contrast against the sky
+it sits in, so the background level *is* where its threshold sits
+(`../hdr/README.md` § Extended sources). Its only consumer is
+`../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor`, which pairs
+it with `m_lim`. It has yet to land as an additive floor on `L`, which is
+the other half of the axis. `passband` still has no consumer.
 
 ## Star pixel size is plate-scale-derived
 
