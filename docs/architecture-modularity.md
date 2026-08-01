@@ -90,50 +90,86 @@ clouds-read-star-material-uniforms coupling is a latent bug source
 independent of this epic.
 
 **`KindContext`** is the one dependency struct handed to every module —
-the documented answer to "what may a layer depend on?": camera,
-`worldOffset` accessor, model clock (`getT`), exposure, HDR emitter
-uniforms, `angularToPx`, event bus, scene handle. Its exact field list
-is settled during the pilot migration (phase 2), not up front.
+the documented answer to "what may a layer depend on?". The pilot
+(phase 2) settled the field list in
+`src/client/kinds/kind-module.ts`: scene, camera, canvas, the shared
+view-uniform map, `solIndex`, and accessors for the model clock,
+`worldOffset`, focused Target, monochrome, declutter permission,
+constellation lookup, and the frame tick. Exposure and `angularToPx`
+from the original sketch wait for their first module consumer.
 
 ### Tier 2 — kind modules
 
 One module per `TargetKind`, exported from the kind's folder, bundling
-what is today scattered across the wiring sites:
+what was scattered across the wiring sites. The contract as the probe
+pilot (phase 2) settled it — `src/client/kinds/kind-module.ts` is the
+authority:
 
 ```ts
-interface ObjectKindModule {
-  kind: TargetKind;
-  hard: boolean;              // absorbs the kind's KIND_TRAITS row
-  moving: boolean;            // (phase 1 landed hard/moving there)
-  critical?: boolean;         // blocks first paint (star catalog only)
-  load(baseUrl, onProgress): Promise<Artifact | null>;  // NEVER rejects
-  attach(ctx: KindContext, artifact): KindRuntime | null;
-  // capability legs, closing over the runtime:
-  focusable: FocusableProvider;      // merged contract, § below
-  card: FocusCardProvider;
-  hover?: HoverProvider;
-  pick?: PickSurface;
+interface ObjectKindModule<K extends TargetKind> {
+  kind: K;
+  critical?: boolean;         // blocks first paint (star catalog only; phase 5)
+  load(baseUrl): Promise<void>;      // NEVER rejects; stores the artifact
+  attach(ctx: KindContext): SceneLayer | null;  // shell registers the layer
+  // capability legs, valid after attach:
+  focusable(): FocusableProvider;    // merged contract, § below
+  card(): FocusCardProvider<K>;
+  hover?(): HoverProvider;
+  pick?: KindPick;                   // shared by hover + the click FSM
   pinnable(idx: number): boolean;
-  searchEntries(): FuzzyEntry[];
-  sidDomain(): Uint32Array | null;
-  sceneElements: SceneElementFloorRow[];
-  labels?(ctx): void;                // SVG label overlay factory
+  searchEntries(): readonly KindSearchEntry[];
   displayName(idx: number): string;
+  sids(): readonly number[] | null;  // localIndex-ordered; null ⇒ conclude
+  labels?(): void;                   // SVG label overlay factory (needs DOM)
+  detailBinds?(): Partial<Record<SceneElementId, (on: boolean) => void>>;
+  clockJumped?(t: number): void;     // model clock jumped — reseed t-sampled state
+  setFocalHidden?(idx: number): void; // observe-anchor hide slot
 }
 ```
 
-`KIND_MODULES: Record<TargetKind, ObjectKindModule>` — an exhaustive
-record, preserving the existing `tsc` guarantee (a kind missing any leg
-fails to compile). **The exhaustive-record property must not be
-weakened**; it is the best part of the current design. `main.ts` boot
-becomes `Promise.all` over `modules.map(m => m.load(...))` plus one
-attach loop; search / SID / hover / card / pin / declutter wiring become
-loops over the roster.
+`KindModules` — a mapped type exhaustive over `TargetKind`, preserving
+the existing `tsc` guarantee (a kind missing its entry fails to
+compile); kinds not yet migrated hold an explicit `null` row. **The
+exhaustive-record property must not be weakened**; it is the best part
+of the current design. `main.ts` boot runs `load` per roster entry
+inside its `Promise.all` plus one attach loop in the shell
+constructor; search / SID / hover / pick / card / pin / declutter /
+clock-jump / focal-hide wiring are loops over `KIND_ROSTER`.
 
-The exact leg list above is a starting sketch — the pilot migration
-validates and amends it. Kind-specific machinery (planet host-attach,
+What the pilot taught, versus the original sketch:
+
+- **The module keeps its own artifact** (`load` stores it; `attach`
+  takes only ctx). A load/attach pair passing the artifact through the
+  shell forces `unknown`-typed hand-offs or per-kind generics at every
+  loop; module-internal storage preserves typing with zero shell
+  knowledge. `onProgress` waits for the first consumer (the star
+  catalog, phase 5).
+- **`attach` runs in the shell constructor, at the roster position**,
+  with artifacts loaded before construction — not post-construction
+  from boot. Scene-layer registration order is update order, and the
+  probe layer must update before the inline planet layer (moving-focal
+  ride freshness), which a post-construction attach could not provide
+  while inline layers still register in the constructor.
+- **`hard` / `moving` stay in `KIND_TRAITS`**, not module fields: the
+  contract file (`focus-target.ts`) is a leaf that must not import kind
+  folders, and traits are declared data readable without instantiating
+  modules.
+- **`sceneElements` floors stay in `SCENE_ELEMENT_FLOORS`** (same leaf
+  argument); the module contributes only the imperative pushes via
+  `detailBinds`, merged into the shell's exhaustive bind record.
+- **Modules are stateful per-shell instances**, so the record is built
+  by a `buildKindModules()` factory, not a module-scope constant.
+- Two legs the sketch missed: `clockJumped` (a URL restore jumps the
+  clock and then applies focus before the next frame — probe samples
+  must reseed at the new `t`) and `setFocalHidden` (the observe-anchor
+  body hide previously hand-dispatched per kind in the shell).
+
+Kind-specific machinery (planet host-attach,
 the fresnel-shell primitive, binary orbital dynamics) stays in the kind
-folder; the contract covers only the shared surfaces. Per the standing
+folder; the contract covers only the shared surfaces, and the shell may
+hold a module's concrete type for cross-kind wiring (the solar-system
+cluster reads the probe module's `field` for its local-depth mirror).
+Per the standing
 rule, a capability gains an optional leg when the second kind needs it,
 never speculatively.
 
@@ -267,9 +303,13 @@ dependency-linked in order. Sizing per bead-authoring rules.
 
 1. **Merge `FocusTarget` into `FocusableProvider`** — landed.
    Self-contained, high value/risk ratio; killed the per-kind factories.
-2. **`KindContext` + `ObjectKindModule` + pilot migration (probes).**
-   Probes are the newest, cleanest kind. The pilot settles the
-   `KindContext` field list and amends the contract sketch.
+2. **`KindContext` + `ObjectKindModule` + pilot migration (probes)** —
+   landed (`src/client/kinds/`). The pilot settled the `KindContext`
+   field list (scene, camera, canvas, shared uniforms, solIndex, and
+   accessors for t / worldOffset / focus / monochrome / declutter /
+   constellation / frame-tick) and amended the contract sketch
+   (§ Tier 2). It also collapsed `FocusKind` into an alias of
+   `TargetKind` — half of structural finding 1.
 3. **Migrate the remaining non-star kinds** — soft kinds (cloud / lg /
    shell) together, planet on its own (host-attach machinery).
 4. **Facade flattening.**
