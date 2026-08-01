@@ -198,55 +198,79 @@ unit already branches on (`stellataPointSourcePeak` vs
 `stellataSurfaceBrightnessLuminance`) — and it moves a *threshold anchor*,
 not `uExposure` and not the operator, both of which stay global.
 
-**The limit, stated rather than papered over: uniformity is a
-per-FRAGMENT property and this ships it as a per-LAYER one.** The
-substitution is the flux in the summation area only for a source
-**uniform across it**, and the band from Sol is the only current emitter
-that qualifies everywhere.
+**Uniformity is a per-FRAGMENT property, so the substitution is a
+convolution rather than a gain.** `10^(−0.4·S)·Ω_sum` is the flux in the
+summation area only for a source **uniform across it**. The band from Sol is
+the only emitter that qualifies everywhere, so what ships is
+*average-then-gain*: the diffuse emitters write their `Ω_sum`-gained value to
+its own render-target attachment and the resolve takes the mean over the
+patch before compositing. Averaging first makes the assumption true by
+construction, so **both volumetric emitters take the same anchor**, both are
+FOV-invariant, and the resolution loss the eye applies comes along —
+naked-eye M31 is a smudge, which a gain cannot reproduce.
+`src/client/hdr/summation/README.md` is the implementation.
 
-- **The Local Group layer opts out** and keeps `Ω_px`. Reusing the band's
-  gain would over-lift M31's nucleus by **3.95 mag** against the operation
-  that would be correct — average the flux over the patch first, then gain
-  by the patch area, which is what `10^(−0.4·S̄)·Ω_sum` *is*. The
-  flux-conservation form of the same statement: at its central surface
-  brightness (15.30) one patch would claim 1.10 mag, **2.34 mag more than
-  the whole galaxy's 3.44**.
-- **What the opt-out costs, and it is not small.** The over-lift is
-  confined to a **3.6′ crossover radius**. Outside it the profile is
-  uniform over a 13.0′ patch to better than 0.02 mag, the ideal collapses
-  onto the band's own gain, and `Ω_px` therefore under-lifts by the full
-  **2.695 mag** the band gained — over most of the object a viewer sees.
-  Both errors and the crossover are pinned in
-  `local-group-emission-calibration.test.ts`. The opt-out is the better of
-  the two available answers, not a correct one: a 4-mag white core is worse
-  than a dim envelope.
-- **Visible from Sol at the default view, not only from outside.** M31 sits
-  at b = −21.6°, where the band's own diffuse component is 24.20
-  mag/arcsec² and now renders 8.6/255 — while an M31 isophote at that same
-  surface brightness renders 0.7/255, a factor of 12 the wrong way, with
-  the two overlapping on screen. Past ~1.5 Mpc the whole Galaxy
-  additionally falls under the summation area. The FOV response splits too:
-  the band holds its level while every LG object still dims quadratically.
-- **The fix is one operation: convolve over the summation kernel, then
-  gain.** Blurring the emission first makes the uniformity assumption true
-  by construction, so both layers take the same anchor, both become
-  FOV-invariant, and the resolution loss the eye actually applies comes
-  along. It belongs on the emission side upstream of the operator — the
-  veiling-glare seam (§ 3.2) — and needs a pass of its own, so it is its
-  own bead (`stellata-xypg.35`).
+- **The ideal has no free parameter**, which is what makes every figure below
+  an absolute error rather than a comparison with previous behaviour:
+  `10^(−0.4·S̄)·Ω_sum` over the patch *is* the patch flux, so the reference
+  needs only an integral of the published profile.
+- **What a per-layer answer cost, and why neither choice was right.** Reusing
+  the band's gain on M31 over-lifts the nucleus **3.95 mag**; the pixel solid
+  angle under-lifts the envelope by the full **2.695 mag** the band gained,
+  and the crossover between them sits at **3.6′** — inside which the profile
+  is not uniform over 13.0′, outside which it is, to better than 0.02 mag.
+  The flux-conservation form of the first: at its central surface brightness
+  (15.30) one patch would claim 1.10 mag, **2.34 mag more than the whole
+  galaxy's 3.44**. All of it pinned in
+  `local-group-emission-calibration.test.ts`.
+- **The seam was visible from Sol at the default view, not only from
+  outside.** M31 sits at b = −21.6°, where the band's own diffuse component
+  is 24.20 mag/arcsec² and renders 8.6/255 — while an M31 isophote at that
+  same surface brightness rendered 0.7/255, a factor of 12 the wrong way,
+  with the two overlapping on screen. The FOV response split too: the band
+  held its level while every LG object dimmed quadratically.
+- **A convolution can only average what the rasteriser sampled**, and a
+  raymarch point-samples its profile at the pixel centre — so an aliased
+  Sérsic cusp survives it intact. Both emitters therefore smooth their
+  profile radius over one pixel's transverse footprint, `ε = s·d/√12`,
+  matched on the second moment of a square pixel. No free parameter there
+  either, and it tracks the exact area average to 0.1 mag across the whole
+  FOV range.
+- **What it delivers**, against that ideal: M31's nucleus **0.03–0.18 mag
+  faint** at every reachable FOV (positive throughout — the core is never
+  brighter than ideal), the smooth envelope inside **0.08 mag**, and the
+  band's shipped display table from Sol unmoved, because a normalised kernel
+  is an identity on a uniform field and the footprint is metres against a
+  300 pc scale height from inside the disc.
 - *Rejected: a per-fragment `fwidth(S)` cap on the effective summation
-  area*, which was the cheap alternative to that pass. The over-count is
+  area*, which was the cheap alternative to the pass. The over-count is
   driven by **curvature** and `fwidth` is a first derivative, so at the
   nucleus — profile flat, error worst — the cap does not bind at all and
   leaves the full 3.95 mag. Everywhere else it over-corrects, landing
   1.75–2.79 mag *fainter* than ideal across 0.5–6.5′, worse than not
-  capping. Measured and pinned alongside the two errors above.
+  capping. Measured and pinned alongside the errors above.
+- *Rejected: a separable Gaussian of matched σ.* The kernel is Ricco's flat
+  patch, and a Gaussian is a different operator rather than a cheap
+  approximation to it — 0.43 mag off at 10° FOV, and still 0.30 mag off when
+  the patch spans 97 px, so it does not converge as the plate scale
+  resolves. That is what forces a non-separable kernel, and therefore the
+  resolution-adaptive downsample that keeps its tap count bounded.
+- **The convolution is not spatially-varying tone mapping** (§ 3.2 rejects
+  that by rule). It redistributes light on the **emission** side, upstream of
+  a global operator, exactly as veiling glare will; the operator still reads
+  one pixel's luminance and one scene-wide scalar.
+- **Off-target there is no attachment and no pass**, so the anchor goes away
+  for both emitters rather than one keeping a private fallback — the
+  concession *is* the pass. That is the float-RT fallback (§ 6) and the
+  `setHdrEnabled(false)` A/B, where the band returns to its per-pixel level.
 
 **The concession is absent from the statistic.** Attachment 1 keeps
-`Ω_px` in both channels: the adaptation model reads retinal illuminance,
-and inflating a band pixel 12× there would let the display concession
-drive the exposure cut. `src/client/hdr/statistic/README.md` carries the
-headroom measurement.
+`Ω_px` in both channels, and unconvolved: the adaptation model reads retinal
+illuminance, and inflating a band pixel 12× there would let the display
+concession drive the exposure cut. A normalised convolution conserves total
+flux anyway, so the mean the reduction takes would barely move — the reason
+to keep it out is the unit, not the size of the error.
+`src/client/hdr/statistic/README.md` carries the headroom measurement.
 
 ### Colour — linear chromaticity, luminance-normalized
 
@@ -737,7 +761,10 @@ every cinematic effect walks through:
   cannot express. Standard model: the Vos & van den Berg glare-spread
   function (CIE 135/1, valid 0.1°–100°); the simple form is
   Stiles–Holladay, `L_veil ≈ 10·E/θ²` with θ in degrees. Deferred to
-  its own bead.
+  its own bead, but the seam it needs is now built and load-bearing: rod
+  summation convolves the diffuse attachment upstream of the operator
+  (§ 1, *Extended sources*), and a glare kernel is the same pass over a
+  different radius.
 
 **Apply compensation at emission, never at the resolve.** `uExposure`
 already multiplies at emission and `LUMA_CEIL` clamps there, so a lower

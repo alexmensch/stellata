@@ -357,7 +357,9 @@ full-alpha fragment over black, and linear-space blending — are
 
 Perf rows: `submit.tonemap` (CPU submission) and, where the driver
 exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
-§ GPU timing.
+§ GPU timing. Both scopes now include the summation downsample and the
+convolution's taps, since `resolve()` runs them.
+`summation/README.md` § The kernel is where the tap count is bounded.
 
 ## Not here yet
 

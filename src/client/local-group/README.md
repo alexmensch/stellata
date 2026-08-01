@@ -160,8 +160,8 @@ mirror keeps deterministic midpoints).
 
 ### Zero free parameters — the emission scale is derived
 
-The layer emits into the scene-wide HDR unit (`../hdr/README.md`
-§ Unit), exactly as the Milky Way band does. **The zero point is
+The layer emits into the scene-wide HDR unit
+(`../hdr/emission/README.md` § Unit), exactly as the Milky Way band does. **The zero point is
 derived, not tuned.** The solver normalises `density0` against
 zero-point-free flux `F = 10^(−0.4·m_V)`, and
 Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a raymarched column *is* flux per

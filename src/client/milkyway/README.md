@@ -391,14 +391,15 @@ false` (the local bounding sphere is at origin but world position is
 `GALACTIC_CENTRE_PC - worldOffset`). `renderOrder = -3` for both
 meshes.
 
-Both meshes draw into the HDR target — into its statistic attachment too,
-where the band's surface brightness is both the flux and the peak channel
-(`../hdr/statistic/README.md`) — and both apply the operator themselves
-when it isn't bound (`uHdrTarget = 0` — the shipped path while
-the ship gate is false, `../hdr/README.md` § Fallback). They use the
-**undithered** variant: the two components overlap on every band pixel
-and the dither is a function of `fragCoord` alone, so it would land
-twice.
+Both meshes draw into the HDR target's **diffuse** attachment, and into the
+statistic attachment where the band's surface brightness is both the flux and
+the peak channel (`../hdr/statistic/README.md`). Neither writes attachment 0
+on-target: the resolve owns that pixel once it has averaged the diffuse
+attachment over the summation patch. Off-target both apply the operator
+themselves over the pixel solid angle (`uHdrTarget = 0`, the float-RT
+fallback and the A/B — `../hdr/README.md` § Fallback), in the **undithered**
+variant: the two components overlap on every band pixel and the dither is a
+function of `fragCoord` alone, so it would land twice.
 
 The meshes are NOT camera-anchored — they sit at the galactic centre.
 `update()` rebases each mesh's position to

@@ -68,7 +68,7 @@ function of filter state alone.
 | `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, the MW chart isobar |
 | `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, every CPU "is it drawn?" mirror (`drawCutoffMag`) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
-| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | the MW band's display gain and its chart isobar |
+| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain, and the chart isobar |
 
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
@@ -76,7 +76,8 @@ the point.** It is the offset between two *thresholds* — the point-source
 `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
-`../README.md` § Extended sources.
+`../emission/README.md` § Extended sources; the convolution it gains into is
+`../summation/README.md`.
 
 **There is no `uThresholdMag` analogue on the extended side.** The
 point-source pair ships an anchor *and* a trimmed edge; the extended side

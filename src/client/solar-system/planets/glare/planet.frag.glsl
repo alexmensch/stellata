@@ -10,7 +10,7 @@ precision highp float;
 // only — never an opaque disc.
 #include <stellata_perceptual_disc>
 // The luminance unit — read here only for the statistic attachment's
-// texel rule and LUMA_CEIL (../../../hdr/README.md § Unit).
+// texel rule and LUMA_CEIL (../../../hdr/emission/README.md § Unit).
 #include <stellata_hdr_emission>
 // The scene-wide operator, applied inline whenever the frame is not
 // rendering into the HDR target — see ../../../hdr/README.md § Fallback.

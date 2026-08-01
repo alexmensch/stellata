@@ -199,8 +199,8 @@ so it is deliberately not modelled.
 
 ## Physical-luminance emission
 
-Both layers emit into the scene-wide HDR unit (`../../hdr/README.md`
-§ Unit) — the glare through the point-source rule, the mesh through the
+Both layers emit into the scene-wide HDR unit
+(`../../hdr/emission/README.md` § Unit) — the glare through the point-source rule, the mesh through the
 surface-brightness rule, and past 1 px the two are the same quantity, so
 the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a
