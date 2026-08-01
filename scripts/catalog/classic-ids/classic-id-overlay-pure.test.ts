@@ -2,13 +2,11 @@ import { describe, it, expect } from 'vitest';
 
 import {
   applyBindingGate,
-  athygIdOrNull,
   bindingEvidence,
   buildClassicIdOverlay,
   glieseNumber,
-  measureAthygLabelParity,
+  parseOverlayTsv,
   serializeOverlay,
-  type AthygLabelRow,
   type OverlayInput,
 } from './classic-id-overlay-pure';
 
@@ -250,72 +248,36 @@ describe('serializeOverlay', () => {
   });
 });
 
-describe('athygIdOrNull', () => {
-  it('treats AT-HYG\'s empty and "0" sentinels as missing', () => {
-    expect(athygIdOrNull('')).toBeNull();
-    expect(athygIdOrNull('0')).toBeNull();
-    expect(athygIdOrNull(undefined)).toBeNull();
-    expect(athygIdOrNull('91262')).toBe(91262);
-  });
-});
-
 describe('glieseNumber', () => {
   it('reduces both prefixes and the component suffix to the bare number', () => {
     expect(glieseNumber('Gl 914B')).toBe('914');
     expect(glieseNumber('GJ 914')).toBe('914');
     expect(glieseNumber('Gl 4.1A')).toBe('4.1');
+    // CNS5 prints whole numbers with a trailing .0; the supplement's genuinely
+    // fractional entries keep theirs.
+    expect(glieseNumber('914.0')).toBe('914');
+    expect(glieseNumber('17.1')).toBe('17.1');
     expect(glieseNumber('NN 3001')).toBeNull();
   });
 });
 
-describe('measureAthygLabelParity', () => {
-  const row = (over: Partial<AthygLabelRow>): AthygLabelRow => ({
-    sourceId: VEGA_SRC, mag: 5, hd: null, hip: null, hr: null,
-    gl: null, bayer: null, flam: null, ...over,
-  });
-
-  it('scores a reproduced identifier as covered and a missing one as keyed only', () => {
-    const { overlay } = buildClassicIdOverlay(input());
-    const result = measureAthygLabelParity(
-      [row({ hd: 172167, hr: 7001 }), row({ hd: 999999 })],
-      overlay,
-    );
-    expect(result.parity.hdKeyed).toBe(2);
-    expect(result.parity.hdCovered).toBe(1);
-    expect(result.parity.hrKeyed).toBe(1);
-    expect(result.parity.hrCovered).toBe(1);
-  });
-
-  it('scores bayer on presence, since IV/27A spells it "alf" and AT-HYG "Alp"', () => {
-    const { overlay } = buildClassicIdOverlay(input());
-    const result = measureAthygLabelParity([row({ bayer: 'Alp' })], overlay);
-    expect(result.parity.bayerCovered).toBe(1);
-  });
-
-  it('scores gl on its GJ number, ignoring prefix and component letter', () => {
+describe('parseOverlayTsv', () => {
+  it('round-trips the serialized artifact, multi-values included', () => {
     const { overlay } = buildClassicIdOverlay(
       input({
+        tyc2Hd: [
+          { tyc: '3105-2070-1', hd: 172167, nHd: 2, nTyc: 1 },
+          { tyc: '3105-2070-1', hd: 172168, nHd: 2, nTyc: 1 },
+          { tyc: '5949-2777-1', hd: 48915, nHd: 1, nTyc: 1 },
+        ],
         cns5: [{ cns5: 1, gj: '721', gjComp: 'A', gaiaSourceId: VEGA_SRC, hip: null }],
       }),
     );
-    const result = measureAthygLabelParity([row({ gl: 'Gl 721B' })], overlay);
-    expect(result.parity.glCovered).toBe(1);
+    expect(parseOverlayTsv(serializeOverlay(overlay))).toEqual(overlay);
   });
 
-  it('counts rows the overlay cannot key, and the bright tier among them', () => {
-    const { overlay } = buildClassicIdOverlay(input());
-    const result = measureAthygLabelParity(
-      [
-        row({ sourceId: null, mag: 0.03, hd: 172167 }),
-        row({ sourceId: 'not-in-overlay', mag: -1.44, hd: 48915 }),
-        row({ mag: 5, hd: 172167 }),
-      ],
-      overlay,
-    );
-    expect(result.rows).toBe(3);
-    expect(result.rowsWithoutSourceId).toBe(1);
-    expect(result.rowsWithoutOverlayEntry).toBe(2);
-    expect(result.brightRows).toBe(2);
-    expect(result.brightRowsWithoutOverlayEntry).toBe(2);
+  it('rejects a header that is not the column list byte for byte', () => {
+    expect(() => parseOverlayTsv('gaia_source_id\thd\n1\t2\n'))
+      .toThrow(/header/);
   });
 });

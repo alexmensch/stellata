@@ -229,34 +229,33 @@ Two properties follow from the boundaries partitioning the whole sphere:
 - **A row needs no catalogue entry to be classified.** The uncatalogued
   Gaia fill tier resolves on position like everything else.
 
-**Nothing supplies the designation's constellation but a GCVS name.** A
-star's *designation* constellation is editorial and diverges from position
-once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) is
-positionally in **Delphinus** since 1992. AT-HYG's `con` cell used to seed
-it; the spine carries no such column, so `desigConIndex` (search-index `dc`)
-now starts at `NO_CONSTELLATION_INDEX` on every record and
-`designationConIndex(dc, c)` in `../catalog-pure.ts` — the single statement
-of which field a Bayer / Flamsteed / GCVS designation reads — falls back to
-the positional `conIndex` for all but the GCVS cases below.
+**The designation's constellation comes from IV/27A, not from this walk.** A
+star's *designation* constellation is fixed by nomenclature and diverges from
+position once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) has
+been positionally in **Delphinus** since 1992 and is ρ **Aquilae** permanently.
+AT-HYG's editorial `con` cell used to seed it; the spine carries no such column,
+so the walk leaves `desigConIndex` (search-index `dc`) at
+`NO_CONSTELLATION_INDEX` and the classic-ID label pass fills it from IV/27A
+keyed on the record's own HD/HIP — cascade, coverage and the GCVS precedence in
+`../classic-ids/README.md` § The designation constellation.
+`designationConIndex(dc, c)` in `../catalog-pure.ts` is still the single
+statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
+positional `conIndex` is still the last fallback (123 faint Flamsteed-only
+records IV/27A's TAP subset omits).
 
-**That fallback is WRONG for 7 entries, and knowingly shipped.** A Bayer or
-Flamsteed designation is fixed by nomenclature: it was assigned before the
-1930 Delporte boundaries and does not migrate when proper motion carries the
-star across one. ρ Aql is ρ **Aquilae** permanently, and today it searches as
-"Rho Del" / "67 Del" — the exact rewrite the `desigConIndex` / `conIndex`
-split exists to prevent. The other six are promoted companions wide enough to
-straddle a boundary, whose composed names now take their own positional
-constellation instead of the primary's designation (Fomalhaut C).
-Re-sourcing the field from the classic-ID overlay's IV/27A constellation, or
-retiring it, is `stellata-3bsf.11` — until then, do not read the positional
-fallback as the intended rule.
+The population that fallback would silence is not small: 65 search entries carry
+a `dc` today, dominated by Flamsteed numbers assigned under Ptolemaic
+constellations that the 1930 Delporte boundaries reassigned (15 LMi sits in Ursa
+Major, 41 Lyn — Intercrus — likewise), plus the boundary-straddling promoted
+companions whose composed names take the anchor's designation (Fomalhaut C is
+α PsA C while sitting in Aquarius).
 
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`gcvs-parse.ts`)
-sets `desigConIndex` from the designation's trailing abbreviation —
-`gcvsDesignationCon` pins **8,069**, every named variable whose designation
-carries one. That the cell it used to correct was untrustworthy both ways is
-why the designation is the authority now that it is the only source:
+sets `desigConIndex` from the designation's trailing abbreviation wherever
+IV/27A left it empty — `gcvsDesignationCon` pins **7,363**. Its authority is
+not a fallback position: the cell it used to correct was untrustworthy both
+ways —
 
 - **Stale** — LT Vul was filed under Sagitta, but sits in Vulpecula *and*
   is named for it, so designation and boundaries agreed against the cell.
@@ -265,9 +264,9 @@ why the designation is the authority now that it is the only source:
   Vulpecula) are genuine ρ Aql-shaped movers, and were **invisible** to any
   check reading the designation constellation off the cell.
 
-Those two plus CM Ind (named for Indus, positionally in Pavo) are the
-**3** entries `designationConMismatch` pins — the whole of `dc` on the wire,
-since everything else now agrees with its positional index by construction.
+Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
+share of the **65** entries `designationConMismatch` pins; the rest come from
+IV/27A.
 
 ## Stick figures from Stellarium
 

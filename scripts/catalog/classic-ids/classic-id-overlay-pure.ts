@@ -3,7 +3,9 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
-import { nonEmpty } from '../parse/corpus-tsv';
+// Type-only: the merge imports this module's values, so the runtime graph
+// stays one-way.
+import type { LabelMergeCounts } from './label-merge-pure';
 
 /** Multi-value separator inside an overlay cell. A designation that names a
  *  catalogue granularity rather than one object attaches to every matching
@@ -408,28 +410,37 @@ export function serializeOverlay(overlay: ClassicIdOverlay): string {
   return `${lines.join('\n')}\n`;
 }
 
-/** TS mirror of `refresh_lib.athyg_int_or_none`: an empty cell and a literal
- *  "0" both mean "no identifier". v3.3 uses the empty cell throughout — no
- *  `hd`/`hr`/`hip`/`flam` cell in the committed CSV is "0" — so the sentinel
- *  branch is defensive against an upstream that changes convention, which is
- *  why it mirrors the Python rule rather than trusting today's data. */
-export function athygIdOrNull(cell: string | undefined): number | null {
-  const t = nonEmpty(cell);
-  if (t === null || t === '0') return null;
-  const n = Number.parseInt(t, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-/** One AT-HYG row reduced to what label parity compares. */
-export interface AthygLabelRow {
-  sourceId: string | null;
-  mag: number | null;
-  hd: number | null;
-  hip: number | null;
-  hr: number | null;
-  gl: string | null;
-  bayer: string | null;
-  flam: number | null;
+/** Read the committed overlay back. Demands the header be `OVERLAY_COLUMNS`
+ *  byte for byte, in order — the same contract `iterSpineTsv` holds its own
+ *  frozen artifact to (`../parse/README.md` § TSV header resolution): this
+ *  file's only writer is `serializeOverlay` above, so a header that merely
+ *  parses is already a file nobody meant to ship. */
+export function parseOverlayTsv(text: string): ClassicIdOverlay {
+  const lines = text.split(/\r?\n/);
+  const header = OVERLAY_COLUMNS.join('\t');
+  if (lines[0] !== header) {
+    throw new Error(
+      `classic_id_overlay.tsv header is "${lines[0] ?? ''}", expected ` +
+        `"${header}" — re-run \`pnpm run build:classic-ids\`.`,
+    );
+  }
+  const overlay: ClassicIdOverlay = new Map();
+  const cells = (v: string): string[] =>
+    v === '' ? [] : v.split(OVERLAY_VALUE_SEPARATOR);
+  const ints = (v: string): number[] => cells(v).map(Number);
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const [sourceId, hd, hr, hip, gj, bayer, flamsteed] = lines[i].split('\t');
+    overlay.set(sourceId, {
+      hd: ints(hd),
+      hr: ints(hr),
+      hip: ints(hip),
+      gj: cells(gj),
+      bayer: cells(bayer),
+      flamsteed: cells(flamsteed),
+    });
+  }
+  return overlay;
 }
 
 /** Gaia saturates around G ≈ 3, so neither best-neighbour cross-walk carries
@@ -439,142 +450,31 @@ export interface AthygLabelRow {
  *  session cannot mistake the overlay for the label authority. */
 export const BRIGHT_TIER_MAG_CEILING = 3;
 
-/** Per-identifier label parity of the overlay against the AT-HYG rows it
- *  can reach. `*Keyed` counts AT-HYG rows that resolve to a source_id AND
- *  carry the identifier; `*Covered` counts those the overlay reproduces
- *  under that same source_id.
+/** Strip a Gliese designation down to its bare catalogue number: "Gl 914B",
+ *  "GJ 914" and CNS5's own "914.0" all reduce to "914".
  *
- *  hd / hip / hr / gl compare values (`gl` on its GJ number, since the
- *  Gl-vs-GJ prefix and component suffix are display forms). `bayer`
- *  compares presence only: IV/27A spells Bayer letters "alf" where AT-HYG
- *  spells them "Alp", and reconciling the two is the naming-authority
- *  ladder's job, not this join's. `flam` compares the number and ignores
- *  the constellation — the row is already keyed on one source_id, so a
- *  matching number in a different constellation is not a reachable state. */
-export interface AthygLabelParity {
-  hdKeyed: number;
-  hdCovered: number;
-  hipKeyed: number;
-  hipCovered: number;
-  hrKeyed: number;
-  hrCovered: number;
-  glKeyed: number;
-  glCovered: number;
-  bayerKeyed: number;
-  bayerCovered: number;
-  flamKeyed: number;
-  flamCovered: number;
-}
-
-/** Strip a Gliese designation down to its bare catalogue number: "Gl 914B"
- *  and "GJ 914" both reduce to "914". */
+ *  The trailing `.0` matters: CNS5 prints whole numbers with one, while the
+ *  Gliese supplement's genuinely fractional entries ("Gl 17.1") keep theirs, so
+ *  only a zero fraction is a formatting artifact. Comparing the two
+ *  conventions without collapsing it scores 14 same-star pairs as
+ *  disagreements. */
 export function glieseNumber(designation: string): string | null {
-  const m = /^(?:Gl|GJ)\s*([\d.]+)/.exec(designation.trim());
-  return m ? m[1] : null;
+  const m = /^(?:Gl|GJ)?\s*([\d.]+)/.exec(designation.trim());
+  if (!m) return null;
+  return m[1].endsWith('.0') ? m[1].slice(0, -2) : m[1];
 }
 
-function overlayGlNumbers(entry: OverlayEntry): Set<string> {
-  const out = new Set<string>();
-  for (const gj of entry.gj) {
-    const m = /^([\d.]+)/.exec(gj);
-    if (m) out.add(m[1]);
-  }
-  return out;
-}
-
-function overlayFlamsteedNumbers(entry: OverlayEntry): Set<number> {
-  const out = new Set<number>();
-  for (const f of entry.flamsteed) {
-    const n = Number.parseInt(f, 10);
-    if (Number.isFinite(n)) out.add(n);
-  }
-  return out;
-}
-
-export interface AthygParityResult {
-  rows: number;
-  rowsWithoutSourceId: number;
-  /** Rows that resolve to a source_id the overlay has no entry for. */
-  rowsWithoutOverlayEntry: number;
-  brightRows: number;
-  brightRowsWithoutOverlayEntry: number;
-  parity: AthygLabelParity;
-}
-
-export function measureAthygLabelParity(
-  rows: Iterable<AthygLabelRow>,
-  overlay: ClassicIdOverlay,
-): AthygParityResult {
-  const parity: AthygLabelParity = {
-    hdKeyed: 0, hdCovered: 0,
-    hipKeyed: 0, hipCovered: 0,
-    hrKeyed: 0, hrCovered: 0,
-    glKeyed: 0, glCovered: 0,
-    bayerKeyed: 0, bayerCovered: 0,
-    flamKeyed: 0, flamCovered: 0,
-  };
-  let total = 0;
-  let withoutSourceId = 0;
-  let withoutEntry = 0;
-  let bright = 0;
-  let brightWithoutEntry = 0;
-  for (const row of rows) {
-    total++;
-    const isBright = row.mag !== null && row.mag <= BRIGHT_TIER_MAG_CEILING;
-    if (isBright) bright++;
-    if (row.sourceId === null) {
-      withoutSourceId++;
-      withoutEntry++;
-      if (isBright) brightWithoutEntry++;
-      continue;
-    }
-    const entry = overlay.get(row.sourceId);
-    if (entry === undefined) {
-      withoutEntry++;
-      if (isBright) brightWithoutEntry++;
-    }
-    const score = (
-      keyed: keyof AthygLabelParity,
-      covered: keyof AthygLabelParity,
-      present: boolean,
-      reproduced: () => boolean,
-    ): void => {
-      if (!present) return;
-      parity[keyed]++;
-      if (entry !== undefined && reproduced()) parity[covered]++;
-    };
-    score('hdKeyed', 'hdCovered', row.hd !== null,
-      () => entry!.hd.includes(row.hd!));
-    score('hipKeyed', 'hipCovered', row.hip !== null,
-      () => entry!.hip.includes(row.hip!));
-    score('hrKeyed', 'hrCovered', row.hr !== null,
-      () => entry!.hr.includes(row.hr!));
-    score('glKeyed', 'glCovered', row.gl !== null, () => {
-      const n = glieseNumber(row.gl!);
-      return n !== null && overlayGlNumbers(entry!).has(n);
-    });
-    score('bayerKeyed', 'bayerCovered', row.bayer !== null,
-      () => entry!.bayer.length > 0);
-    score('flamKeyed', 'flamCovered', row.flam !== null,
-      () => overlayFlamsteedNumbers(entry!).has(row.flam!));
-  }
-  return {
-    rows: total,
-    rowsWithoutSourceId: withoutSourceId,
-    rowsWithoutOverlayEntry: withoutEntry,
-    brightRows: bright,
-    brightRowsWithoutOverlayEntry: brightWithoutEntry,
-    parity,
-  };
-}
-
-export interface ClassicIdOverlayCounts extends OverlayJoinCounts {
-  athygRows: number;
-  /** Rows that reach no source_id the record build would accept — including
-   *  the ones whose only candidate binding its gates scrub. */
-  athygRowsWithoutSourceId: number;
-  athygRowsWithoutOverlayEntry: number;
-  athygBrightRows: number;
-  athygBrightRowsWithoutOverlayEntry: number;
-  athygLabelParity: AthygLabelParity;
+/** The join's own counts plus the label merge measured over the membership
+ *  term. Per-identifier coverage is `labelAgree / (labelAgree + labelFlipped +
+ *  labelSpineOnly)` from the merge counts — the same walk that decides what the
+ *  record build writes, so the published figure cannot drift from the shipped
+ *  labels the way a second measurement over a retired input could. */
+export interface ClassicIdOverlayCounts extends OverlayJoinCounts, LabelMergeCounts {
+  spineRows: number;
+  /** Spine rows carrying no source_id at all — the no-Gaia residual, whose
+   *  labels can only ride the spine. */
+  spineRowsWithoutSourceId: number;
+  spineRowsWithoutOverlayEntry: number;
+  spineBrightRows: number;
+  spineBrightRowsWithoutOverlayEntry: number;
 }

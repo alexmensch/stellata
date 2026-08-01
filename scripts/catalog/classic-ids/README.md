@@ -1,34 +1,53 @@
 # Classic-ID overlay build
 
 Joins the four frozen CDS classic-designation tables onto Gaia DR3
-source_ids and writes `data/classic-ids/classic_id_overlay.tsv`. Run via
-`pnpm run build:classic-ids`. The contract it implements is
-`docs/catalog-driver.md` § 2 (sources) and § 4 (HD route, ambiguity,
-precedence); the measured coverage the join achieves — and why the
-inherited spine is load-bearing beside it — is
+source_ids, writes `data/classic-ids/classic_id_overlay.tsv`, and merges it
+onto the record build's spine-derived labels. The contract it implements is
+`docs/catalog-driver.md` § 2 (sources), § 4 (HD route, ambiguity, precedence)
+and § 5 (the designation-constellation cascade); the measured coverage the join
+achieves — and why the inherited spine is load-bearing beside it — is
 `data/classic-ids/README.md` § Coverage.
 
-Not wired into `pnpm run build` or `build-catalog.ts`. This folder produces a
-committed artifact only. The membership swap (`stellata-3bsf.4`) did **not**
-start consuming it — membership there is the inherited spine alone; joining
-this overlay as the build's label layer is `stellata-3bsf.11`.
+Two entry points, both on the shipping path:
+
+- `pnpm run build:classic-ids` regenerates the committed overlay and the label
+  merge's review queue. CI asserts both are byte-identical to what the
+  committed code produces, so artifact and code always land together.
+- `build-catalog.ts` calls `applyClassicIdLabels` as a post-pass over
+  `readStars`' output — this folder is where the record build's LABELS come
+  from, while its membership is the spine alone.
 
 ## Files in this area
 
 ```
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
-                                  both Gaia cross-walks and the gate's three
-                                  evidence tables, writes the overlay and its
-                                  two review queues, and asserts the count
-                                  snapshot.
+                                  both Gaia cross-walks, the gate's three
+                                  evidence tables and the spine, writes the
+                                  overlay and its three review queues, and
+                                  asserts the count snapshot.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-vmag-parse.ts, shared
                                   with the V cascade's bright tier.
-  classic-id-overlay-pure.ts      The join, the binding gate, its counts, the
-    (+ test)                      TSV serializer, and the AT-HYG label-parity
-                                  measurement. Pure.
+  classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
+    (+ test)                      the overlay TSV codec (both directions).
+                                  Pure.
+  label-merge-pure.ts (+ test)    The merge itself: the per-identifier rule,
+                                  the collision guard, the curated overrides,
+                                  the review-queue codec, and the designation
+                                  delta the spine parity gate replays. Pure.
+  designation-constellation-pure.ts
+                                  IV/27A's `cst` keyed by HD/HIP — the
+                                  constellation a Bayer / Flamsteed
+                                  designation is NAMED for. Pure.
+  apply-classic-id-labels.ts      The record build's entry point: loads the
+                                  committed tables and applies both of the
+                                  above to the Star array.
+  designation-constellation.test.ts
+                                  Pins the cascade's output on the WIRE
+                                  (ρ Aql, 15 LMi, Fomalhaut C) against the
+                                  built search index.
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var
@@ -74,9 +93,106 @@ The TYC cross-walk is 2.5 M rows for a ~350 k-row join, so
 and takes a keep-set of the Tycho ids IV/25 actually mentions. Reading it
 as one string peaks near a gigabyte alongside the join's own maps.
 
+## The label merge
+
+`mergeClassicIdLabels` (`label-merge-pure.ts`) runs over the same overlay from
+two places — `build:classic-ids` over the spine rows, `build:catalog` over the
+records those rows produced — through one pure function, and the record build
+then asserts its own review queue is byte-identical to the committed one. That
+equality is the guarantee that `data/classic-ids/label_flips.tsv` describes the
+labels actually shipped.
+
+Per identifier (`hip`, `hd`, `hr`, `gl`, `flam`), first hit wins:
+
+```
+overlay asserts nothing        -> the spine's value stands (the backstop)
+overlay confirms the spine     -> the spine's own SPELLING is kept
+spine has no value             -> the overlay's is added
+the two disagree               -> the overlay wins (§ 4 precedence)
+```
+
+**Bayer STRINGS are not merged.** IV/27A spells Bayer letters `alf` where the
+spine spells them `Alp`; choosing between the conventions is the naming
+ladder's gate (`docs/star-naming.md` § 4). So the overlay's `flamsteed` cell is
+read for its NUMBER only, its `bayer` cell for nothing at all, and the
+constellation those cells carry reaches the build through the separate
+designation-keyed route below.
+
+Record fields are single-valued while overlay cells are not, so where the
+overlay asserts several values the field takes one and the rest are enumerated
+as `extra-dropped` — labels the record will not answer to. Multi-valued
+identifier support is a wire + ledger change, not a merge rule.
+
+### The collision guard
+
+**The merge may not turn an unambiguous spine designation into an ambiguous
+one.** A designation covering more than one record names a catalogue
+granularity, so `docs/sid.md` § 4.1 drops it from the same-as graph entirely —
+it keys no ledger row. Attaching an identifier a DIFFERENT record already holds
+off the spine therefore deletes a working SID key from BOTH records and buys
+nothing: the star stays findable under that identifier through the record that
+holds it. p Eridani (the overlay attaches HIP 7751 to the HD 10361 component)
+and Gl 277A (HIP 36626, which would go fully keyless and hard-fail allocation)
+are the two cases the guard exists for; it fires on 37 cells in total.
+
+Scored against the POST-merge assignment, so the four HD mutual swaps stay
+legal — neither value gains an owner. That needs a fixpoint rather than one
+pass: withholding one proposal can re-expose a value its partner had proposed
+to vacate.
+
+### Curated overrides, and what does NOT belong in them
+
+`data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
+an explicit value, or empty for "keep the spine's". It is for the case
+`docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It is
+**empty today**, and two shapes deliberately stay out of it:
+
+- an addition that would make another record's designation ambiguous is
+  withheld mechanically by the guard above;
+- a Gliese renumbering (`Gl 157.1` → CNS5's `GJ 9140`) is an IDENTITY bridge in
+  `data/sid/sameas-overrides.tsv`, not a label exception — both designations
+  name the star, and `gl:` is the canonical key of all five affected records,
+  so the bridge is what keeps their sids through the rename.
+
+## The designation constellation
+
+`desigConIndex` (search-index `dc`) is the constellation a Bayer / Flamsteed
+designation is NAMED for. It is fixed by nomenclature and does not migrate when
+proper motion carries a star across a 1930 Delporte boundary, so it cannot be
+derived from the record's position. The cascade:
+
+```
+IV/27A `cst` by HD -> by HIP -> GCVS trailing abbreviation -> positional conIndex
+```
+
+Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
+`gaia_source_id`:
+
+- A designation → designation cross index carries **no astrometric claim** — it
+  says the star named HD 216956 is also named α PsA, never which Gaia source
+  holds that star's photons — so it needs no binding gate.
+- That is also the only way to reach the bright tier. Gaia saturates near
+  G ≈ 3, so 117 records at V ≤ 3 have no overlay row at all, Fomalhaut among
+  them, and their promoted companions compose names off them.
+- Measured over the 3,303 spine rows carrying a Bayer or Flamsteed cell, the
+  HD/HIP route covers 3,180 against the source_id route's 2,474, with zero
+  disagreements and nothing the overlay reaches that it does not. One tier
+  instead of two.
+
+The 123 rows it misses are faint Flamsteed-only records absent from IV/27A's
+TAP subset; they ride the positional fallback.
+
+**GCVS fills the field only where IV/27A left it empty** (7,363 records). On the
+8 where the two disagree the star carries a Bayer/Flamsteed designation and a
+variable name in different constellations (HD 104337 is Crater's Flamsteed star
+and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its
+consumers COMPOSE the label out of this field, while a GCVS label reads the
+constellation out of the designation string and loses only its expanded alias
+(`../parse/gcvs/README.md`).
+
 ## Counts and the parity measurement
 
-`classic-id-overlay-expected.json` pins 50 counts through the same
+`classic-id-overlay-expected.json` pins the counts through the same
 `compareBuildCounts` / `UPDATE_BUILD_COUNTS` machinery
 `build-catalog.ts` uses (`assertOrUpdateSnapshot` in
 `../../util/snapshot-assert.ts`). Four groups:
@@ -90,26 +206,23 @@ as one string peaks near a gigabyte alongside the join's own maps.
   last one is the count to watch alongside
   `athygBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
   mis-bindings live.
-- **`athygLabelParity`** — per identifier, AT-HYG rows that resolve to an
-  accepted source_id and carry the identifier (`*Keyed`) versus those the
-  overlay reproduces under that same source_id (`*Covered`). Both sides run
-  the FULL gated resolution, so a row the gates scrub counts as unkeyed
-  rather than scoring a label its record will not carry. This is the
-  transitional acceptance measurement: it moves to the inherited spine when
-  AT-HYG leaves the build's input set — which it now has, so this side is
-  measuring against a catalogue the records no longer come from. Rebasing it
-  belongs with the label join (`stellata-3bsf.11`).
+- **`label*`** — the merge's own per-identifier routing, which IS the label
+  parity measurement: `labelAgree + labelFlipped + labelSpineOnly` is every
+  record the spine labels and `labelAgree` is the subset the overlay
+  reproduces, so coverage is a ratio of counts the build itself produced
+  rather than a second walk that could disagree with the shipped labels. The
+  same set is pinned in `../build-catalog-expected.json` from the record side.
+- **`spine*`** — rows, no-source_id rows, rows with no overlay entry, and the
+  bright-tier split of that last one.
 
-`hd` / `hip` / `hr` compare values; `gl` compares the bare GJ number
-(the `Gl`/`GJ` prefix and component suffix are display forms); `flam`
-compares the number and ignores the constellation (the row is already keyed
-on one source_id, so a same-number-different-constellation match is not
-reachable); **`bayer` compares presence only** — IV/27A spells Bayer letters
-`alf` where AT-HYG spells them `Alp`, and reconciling the two is the
-naming-authority ladder's gate, not this join's.
+Values compare on the merge's own normalisation: `gl` on its bare GJ number
+(the `Gl`/`GJ` prefix and component suffix are display forms, and CNS5's
+trailing `.0` on whole numbers is a formatting artifact — not collapsing it
+scored 14 same-star pairs as disagreements), `flam` on the number alone (the
+row is already keyed on one source_id, so a same-number-different-constellation
+match is not reachable).
 
-`athygBrightRowsWithoutOverlayEntry` is the count to watch: Gaia
-saturates near G ≈ 3, so a source_id-keyed table structurally cannot
-carry the brightest stars, and a future session reading a high `overlayHd`
-could otherwise conclude the overlay replaces AT-HYG's label columns
-outright.
+`spineBrightRowsWithoutOverlayEntry` is the count to watch: Gaia saturates near
+G ≈ 3, so a source_id-keyed table structurally cannot carry the brightest
+stars, and a future session reading a high `overlayHd` could otherwise conclude
+the overlay replaces the spine's label columns outright.

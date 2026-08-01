@@ -32,23 +32,59 @@
   "bsc5HrUnkeyed": 1688,
   "cns5GjUnkeyed": 670,
   "cns5GjViaHip": 2,
-  "athygRows": 317175,
-  "athygRowsWithoutSourceId": 2387,
-  "athygRowsWithoutOverlayEntry": 16032,
-  "athygBrightRows": 178,
-  "athygBrightRowsWithoutOverlayEntry": 115,
-  "athygLabelParity": {
-    "hdKeyed": 294969,
-    "hdCovered": 283279,
-    "hipKeyed": 116581,
-    "hipCovered": 99273,
-    "hrKeyed": 8675,
-    "hrCovered": 7287,
-    "glKeyed": 2931,
-    "glCovered": 1805,
-    "bayerKeyed": 1357,
-    "bayerCovered": 1092,
-    "flamKeyed": 2551,
-    "flamCovered": 2030
-  }
+  "labelNoOverlayEntry": 15017,
+  "labelAgree": {
+    "hip": 99029,
+    "hd": 280528,
+    "hr": 7282,
+    "gl": 1820,
+    "flam": 2028
+  },
+  "labelAdded": {
+    "hip": 0,
+    "hd": 148,
+    "hr": 4,
+    "gl": 198,
+    "flam": 69
+  },
+  "labelFlipped": {
+    "hip": 0,
+    "hd": 43,
+    "hr": 23,
+    "gl": 65,
+    "flam": 2
+  },
+  "labelSpineOnly": {
+    "hip": 18623,
+    "hd": 12755,
+    "hr": 1707,
+    "gl": 1262,
+    "flam": 694
+  },
+  "labelSuppressed": {
+    "hip": 2,
+    "hd": 24,
+    "hr": 1,
+    "gl": 8,
+    "flam": 2
+  },
+  "labelExtraDropped": {
+    "hip": 0,
+    "hd": 129,
+    "hr": 1,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelOverridden": {
+    "hip": 0,
+    "hd": 0,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "spineRows": 313257,
+  "spineRowsWithoutSourceId": 1371,
+  "spineRowsWithoutOverlayEntry": 15017,
+  "spineBrightRows": 178,
+  "spineBrightRowsWithoutOverlayEntry": 115
 }

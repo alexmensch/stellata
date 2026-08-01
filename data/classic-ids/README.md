@@ -1,10 +1,10 @@
 # Classic-designation cross indexes
 
 The frozen CDS tables that carry HD / HR / Bayer / Flamsteed / GJ
-designations, plus the source_id-keyed overlay joined out of them. This
-is the identifier half of the AT-HYG retirement — `docs/catalog-driver.md`
-§ 2 decides the sources, § 4 the HD→Gaia route and the ambiguity /
-precedence policy.
+designations, the source_id-keyed overlay joined out of them, and the review
+queues the merge onto the catalogue's records produces. This is the identifier
+half of the AT-HYG retirement — `docs/catalog-driver.md` § 2 decides the
+sources, § 4 the HD→Gaia route and the ambiguity / precedence policy.
 
 ```
 tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
@@ -21,6 +21,16 @@ hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
 rejected_bindings.tsv              187 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
+label_flips.tsv                    719 rows. Pipeline-derived. EVERY departure
+                                   of the shipped labels from the spine's, with
+                                   a disposition each — the parity ledger
+                                   `docs/catalog-driver.md` § 6.2 requires, and
+                                   the delta the spine's designation-multiset
+                                   gate replays.
+classic_id_overrides.tsv           Hand-curated. Empty by design; the escape
+                                   hatch for a CDS join review finds wrong
+                                   (scripts/catalog/classic-ids/README.md
+                                   § Curated overrides).
 ```
 
 ## Provenance
@@ -140,31 +150,38 @@ own identity work (`stellata-3bsf.4`), not a photometric gate's.
 
 ## Coverage — the overlay is a union term, not the label authority
 
-Measured 2026-07-28 against the 317,175 AT-HYG rows, counting only rows
-that resolve to a source_id the record build accepts AND carry the
-identifier (counts pinned in
-`scripts/catalog/classic-ids/classic-id-overlay-expected.json`). Both sides
-run the gated resolution — a row whose only candidate binding the gates
-scrub ships `gaia_source_id = 0`, so scoring it against an ungated binding
-would credit a label no record carries:
+Measured 2026-08-01 against the inherited spine's 313,257 rows — the
+membership term itself, so these are the records the labels actually land on.
+Coverage is the label merge's own routing (counts pinned in
+`scripts/catalog/classic-ids/classic-id-overlay-expected.json`): `keyed` is
+every spine row carrying the identifier, `reproduces` the subset the overlay
+confirms. The remainder is the overlay disagreeing (a flip, § 4 precedence) or
+asserting nothing:
 
-| Identifier | AT-HYG rows keyed | Overlay reproduces | |
-|---|---|---|---|
-| hd | 294,969 | 283,279 | 96.0% |
-| hip | 116,581 | 99,273 | 85.2% |
-| hr | 8,675 | 7,287 | 84.0% |
-| gl | 2,931 | 1,805 | 61.6% |
-| bayer | 1,357 | 1,092 | 80.5% |
-| flam | 2,551 | 2,030 | 79.6% |
+| Identifier | Spine rows keyed | Overlay reproduces | | Flips |
+|---|---|---|---|---|
+| hd | 293,326 | 280,528 | 95.6% | 43 |
+| hip | 117,652 | 99,029 | 84.2% | 0 |
+| hr | 9,012 | 7,282 | 80.8% | 23 |
+| gl | 3,147 | 1,820 | 57.8% | 65 |
+| flam | 2,724 | 2,028 | 74.4% | 2 |
 
-**16,032 AT-HYG rows get no overlay entry at all** — 2,387 reach no
-accepted source_id, and the rest resolve to one that neither
-best-neighbour walk carries. That population is concentrated at the bright
-end exactly as `docs/catalog-driver.md` § 5's bright tier predicts: **115 of
-the 178 rows at V ≤ 3 have no overlay row**, Vega, Sirius, Procyon and
-Betelgeuse among them. Gaia saturates near G ≈ 3, so the most famous
-stars in the catalogue are absent from a source_id-keyed table by
-construction, not by a join defect.
+Additions the spine had no value for: hd 148, hr 4, gl 198, flam 69.
+
+The earlier figures in this section were measured against the AT-HYG CSV's
+317,175 rows and read a few points higher on `hd`/`hip`/`hr` (a larger
+denominator) and lower on `gl` (the comparison scored CNS5's trailing `.0` as a
+disagreement). `bayer` is no longer scored: the two catalogues' spellings
+(`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
+cell.
+
+**15,017 spine rows get no overlay entry at all** — 1,371 carry no source_id,
+and the rest resolve to one that neither best-neighbour walk carries. That
+population is concentrated at the bright end exactly as
+`docs/catalog-driver.md` § 5's bright tier predicts: **115 of the 178 rows at
+V ≤ 3 have no overlay row**, Vega, Sirius, Procyon and Betelgeuse among them.
+Gaia saturates near G ≈ 3, so the most famous stars in the catalogue are absent
+from a source_id-keyed table by construction, not by a join defect.
 
 Three structural bounds behind the shortfalls:
 
@@ -177,24 +194,23 @@ Three structural bounds behind the shortfalls:
 2. **The HIP cross-walk holds 99,525 entries against AT-HYG's 117,961
    HIP-bearing rows.** HIP is a designation, so a HIP the walk omits is a
    label the overlay cannot attach.
-3. **CNS5's 25 pc volume limit** caps the Gliese label: **91% of the 1,126
+3. **CNS5's 25 pc volume limit** caps the Gliese label: **91% of the ~1.1k
    `gl` misses sit beyond 25 pc (median 31 pc, p90 89 pc)** while 99% of
    the hits sit inside it. AT-HYG's `gl` column carries GJ numbers from
    the wider Gliese-Jahreiß and NLTT supplements that CNS5 does not
    enumerate.
 
    These four figures are derived, not pinned — recompute them from
-   `classic_id_overlay.tsv` + AT-HYG's `dist` column rather than trusting
+   `classic_id_overlay.tsv` + the spine's `dist` column rather than trusting
    the prose, and correct it here if it has drifted. The pinned
-   `glKeyed` / `glCovered` pair is the only gated number.
+   `labelAgree.gl` / `labelSpineOnly.gl` pair is the only gated number.
 
 None of this loses a record or a label: `docs/catalog-driver.md` § 1
 defines labels as *overlay + spine backstop*, and the inherited spine
 preserves every record's designation set. The measurement's real content
-is that the backstop is **load-bearing for 4–39% of each identifier**,
-not a rare fallback — so the spine must ship before the overlay can
-replace AT-HYG's label columns (`stellata-3bsf.4`), and the parity gate
-(`stellata-cns.7`) checks the union, never the overlay alone.
+is that the backstop is **load-bearing for 4–42% of each identifier**,
+not a rare fallback — which is why the merge is a union and never the overlay
+alone, and why the parity gate (`stellata-cns.7`) checks the union.
 
 ## Consumed by
 
@@ -203,19 +219,24 @@ frozen tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv`, the gate's
 evidence (`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
 `data/hipparcos/hip_main_vmag.tsv` for printed V,
 `data/simbad/simbad_wds_xids.tsv` for component attribution), and
-`data/athyg/athyg_33_classic_ids.csv` (the last only to measure label
-parity). The three evidence files are **required, not optional** — without
-them the join would key labels on sources the record build refuses, so a
-missing one hard-fails rather than degrading. No runtime or `catalog.bin`
-consumer yet — wiring the overlay into the record build is
-`stellata-3bsf.4`.
+`data/athyg/inherited-spine.tsv` (the last for the label merge's spine side).
+The three evidence files are **required, not optional** — without them the join
+would key labels on sources the record build refuses, so a missing one
+hard-fails rather than degrading.
+
+`classic_id_overlay.tsv` + `cross_index.tsv` + `classic_id_overrides.tsv` are
+then read by `build-catalog.ts` itself
+(`scripts/catalog/classic-ids/apply-classic-id-labels.ts`): the overlay is the
+record build's label layer, and IV/27A's `cst` is the only source for the
+constellation a Bayer / Flamsteed designation is NAMED for.
 
 ## Refresh
 
 `pnpm run refresh:classic-ids` re-pulls all four tables;
 `--only <stem>` limits it to one, `--force` overrides the mtime skip.
-Then `pnpm run build:classic-ids` regenerates the overlay — CI asserts
-the committed overlay is byte-identical to what the committed code
-produces, so the two always land in the same commit. The classic-side
+Then `pnpm run build:classic-ids` regenerates the overlay and `label_flips.tsv`
+— CI asserts both are byte-identical to what the committed code produces, and
+`build:catalog` re-derives the queue from its own records and hard-fails on any
+difference, so artifact and code always land in the same commit. The classic-side
 joins are Gaia-DR-independent and never re-pull for a data release
 (`docs/catalog-driver.md` § 8); only the TYC/HIP → source_id hops move.

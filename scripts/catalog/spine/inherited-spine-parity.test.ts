@@ -14,6 +14,11 @@ import {
 } from '../catalog-lookup';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../catalog-pure';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
+import {
+  LABEL_FLIPS_FILE,
+  labelFlipDesignationDelta,
+  parseLabelFlipsTsv,
+} from '../classic-ids/label-merge-pure';
 import { REPO_ROOT, isLfsPointer } from '../../util/paths';
 import {
   INHERITED_SPINE_EXPECTED_FILE,
@@ -85,6 +90,18 @@ describe.skipIf(!spineAvailable || !built)(
       spineRecords = rows.length;
       const fromSpine = tally(rows.map(spineDesignations));
 
+      // The classic-ID label layer moves designations off the spine's inherited
+      // cells by design (docs/catalog-driver.md § 4), so the spine side is
+      // replayed through the committed review queue — the complete enumeration
+      // of that delta. Equality then still says every departure is accounted
+      // for, which is what made "every SID is preserved" checkable.
+      const delta = labelFlipDesignationDelta(
+        parseLabelFlipsTsv(readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8')),
+      );
+      for (const [designation, by] of delta) {
+        fromSpine.set(designation, (fromSpine.get(designation) ?? 0) + by);
+      }
+
       differences = [...new Set([...fromBuild.keys(), ...fromSpine.keys()])]
         .map((designation) => ({
           designation,
@@ -103,7 +120,7 @@ describe.skipIf(!spineAvailable || !built)(
       expect(builtRecords).toBe(spineRecords);
     });
 
-    it('resolves the identical designation multiset, so every SID is preserved', () => {
+    it('resolves the spine multiset transformed by the label queue, so every SID is preserved', () => {
       expect(differences.slice(0, 20)).toEqual([]);
       expect(differences).toHaveLength(0);
     });
