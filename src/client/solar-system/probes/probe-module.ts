@@ -7,10 +7,6 @@ import {
   pickFromCandidates,
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
-import {
-  PROBE_ORBIT_FLOOR_PC,
-  PROBE_PARK_DIST_PC,
-} from '../../camera/controls/star-physics';
 import { createProbeFocusProvider } from '../../focus-card/probe-focus-provider';
 import type { FocusCardProvider } from '../../focus-card/focus-card-types';
 import { formatProbeHover } from '../../hover/formatters/probe-hover-format';
@@ -24,6 +20,7 @@ import { projectToScreen } from '../../overlays/overlay-project';
 import type { SceneLayer } from '../../scene/scene-layer';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PROBE_MARKER_PX, ProbeField } from './probe-field';
+import { PROBE_ORBIT_FLOOR_PC, PROBE_PARK_DIST_PC } from './probe-focus-geometry';
 import { createProbeLabels } from './probe-labels';
 import { loadProbes } from './probe-loader';
 import { ProbePathLayer } from './probe-path-layer';

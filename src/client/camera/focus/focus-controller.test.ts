@@ -30,13 +30,15 @@ import {
   R_SUN_PC,
 } from '../../util/astronomy-constants';
 import {
-  PROBE_ORBIT_FLOOR_PC,
-  PROBE_PARK_DIST_PC,
   fovMinorRad,
   minOrbitDistForPlanet,
   minOrbitDistForStar,
   parkDistForPlanet,
 } from '../controls/star-physics';
+import {
+  PROBE_ORBIT_FLOOR_PC,
+  PROBE_PARK_DIST_PC,
+} from '../../solar-system/probes/probe-focus-geometry';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';

@@ -59,13 +59,11 @@ in both navigate and observe modes.
   canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
-  solves, keyed on the body radius directly. `PROBE_ORBIT_FLOOR_PC` /
-  `PROBE_PARK_DIST_PC` break that pattern deliberately: they are fixed
-  distances, not solves, because a probe marker is a fixed-pixel glyph
-  with no disc to fill and its metre-scale hull would solve to a park
-  inside `CAMERA_NEAR_PC` (`../depth-range.test.ts` pins the margin;
-  `../../solar-system/probes/README.md` § Park distance carries the
-  derivation).
+  solves, keyed on the body radius directly. Everything here is a
+  solve; a kind whose park geometry is a fixed distance instead keeps
+  its constants in its own folder (probes —
+  `../../solar-system/probes/probe-focus-geometry.ts`, with
+  `../depth-range.test.ts` pinning the near-plane margin).
 
 ### star-geometry vs star-physics vs stellata.ts
 

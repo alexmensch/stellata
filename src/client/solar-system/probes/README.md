@@ -25,10 +25,11 @@ and valid observe anchors.
 src/client/solar-system/probes/
   probe-module.ts (+ test)        The probe ObjectKindModule
                                   (../../kinds/README.md): load/attach
-                                  plus the focusable / card / hover /
-                                  pick / search / SID / pinnable /
-                                  declutter / clock-jump / focal-hide
-                                  legs, each reading the field below.
+                                  plus the focusable / card / hover
+                                  (whose pick the click FSM shares) /
+                                  search / SID / pinnable / declutter /
+                                  clock-jump / focal-hide legs, each
+                                  reading the field below.
   probe-trajectory.ts (+ test)    Wire file → typed arrays, plus the pure
                                   sampler: probeStateAt / probeSampleIndexAt
                                   / probeSignalLost / probeLabelText.
@@ -44,6 +45,10 @@ src/client/solar-system/probes/
                                   probe, launch → position(t). See § Trails.
   probe-path-layer.test.ts        Trail focus gate + the field's
                                   visible-vs-sampled split.
+  probe-focus-geometry.ts         PROBE_ORBIT_FLOOR_PC /
+                                  PROBE_PARK_DIST_PC — fixed park
+                                  geometry, not a fill solve. See
+                                  § Park distance.
   probe-labels.ts                 Per-probe SVG labels. See § Labels.
   probe.vert.glsl,
   probe.frag.glsl                 Fixed-pixel-size diamond glyph.
@@ -56,7 +61,7 @@ the shell, boot, Picker, hover engine, card rolodex, and search corpus
 all reach probes through the kind-module roster
 (`../../kinds/README.md`), with no probe-specific wiring at those
 sites. What stays outside this folder: `../../camera/focus/` (the
-kind-generic focus paths + park geometry the provider legs feed),
+kind-generic focus paths the provider legs feed),
 `../../focus-card/probe-focus-provider.ts` (the card rows the module
 constructs), `../../hover/formatters/probe-hover-format.ts`,
 `../../format/probe-format.ts` (the mission-stat formatters both card
@@ -326,7 +331,7 @@ marker is a fixed-pixel glyph, and the spacecraft's own metre scale
 would solve to a park ~1e-17 pc — five orders of magnitude **inside**
 `CAMERA_NEAR_PC` (~31 km), where the very marker the camera flew to gets
 clipped. `PROBE_ORBIT_FLOOR_PC` / `PROBE_PARK_DIST_PC`
-(`../../camera/controls/star-physics.ts`) are therefore fixed distances,
+(`probe-focus-geometry.ts`) are therefore fixed distances,
 1000 km and 10 000 km, pinned against the near plane in
 `../../camera/depth-range.test.ts`.
 
