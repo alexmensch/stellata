@@ -210,7 +210,15 @@ describe('the resolve composites the convolution', () => {
   // drop the band and the Local Group out of the A/B entirely.
   it('keeps the diffuse light on the pass-through path', () => {
     const passThrough = resolveFrag.slice(resolveFrag.indexOf('uTonemapEnabled < 0.5'));
-    expect(passThrough).toContain('outColor = vec4(linear, hdr.a);');
+    expect(passThrough).toContain('outColor = vec4(linear, 1.0);');
+  });
+
+  // A diffuse emitter masks attachment 0 off, so its alpha is the clear's 0
+  // while its rgb is the whole band. Handing that to a premultiplied canvas
+  // is rgb > a — undefined by spec, black in practice, and the reason the
+  // first cut of this pass rendered no band at all.
+  it('owns the canvas alpha rather than carrying attachment 0’s', () => {
+    expect(resolveFrag).not.toContain('hdr.a');
   });
 
   it('maps a display pixel onto the source with the factor’s own scale', () => {

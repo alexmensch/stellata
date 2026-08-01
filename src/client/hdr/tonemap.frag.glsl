@@ -31,12 +31,16 @@ void main() {
         uSummationRadiusTexels,
         uSummationExtent
     );
+    // Alpha 1, not attachment 0's: a diffuse emitter masks attachment 0 off,
+    // so carrying its alpha through would hand the compositor a premultiplied
+    // pixel with rgb > a wherever the band or an LG object is the only light —
+    // undefined by spec, and black in practice.
     if (uTonemapEnabled < 0.5) {
-        outColor = vec4(linear, hdr.a);
+        outColor = vec4(linear, 1.0);
         return;
     }
     outColor = vec4(
         stellataTonemap(linear, uWhitePoint, uHighlightDesat, gl_FragCoord.xy),
-        hdr.a
+        1.0
     );
 }
