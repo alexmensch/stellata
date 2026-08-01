@@ -44,19 +44,6 @@ describe('shared chunk constants', () => {
   // conversion is a GLSL literal, so nothing but this pins it to
   // ARCSEC_TO_RAD — and a wrong plate scale mis-sizes a resolution floor
   // silently rather than failing to compile.
-  // The isobar reads the extended-source threshold back out of the same
-  // uniform the gain runs on, and the conversion is a GLSL literal — so
-  // nothing but this pins it to Math.log10.
-  it('emission.glsl recovers the extended threshold exactly as emission-pure does', () => {
-    const m = emissionChunk.match(/const float STELLATA_LOG10 = ([\d.]+);/);
-    expect(m).not.toBeNull();
-    const log10 = Number(m![1]);
-    for (const omega of [4, 40_000, 478_630.09]) {
-      const shader = 7.8 + (2.5 * Math.log(omega)) / log10;
-      expect(shader).toBeCloseTo(extendedThresholdSbFromSolidAngle(omega, 7.8), 9);
-    }
-  });
-
   it('emission.glsl recovers px-per-radian exactly as emission-pure does', () => {
     const m = emissionChunk.match(
       /const float STELLATA_ARCSEC_TO_RAD = ([\d.e-]+);/,
@@ -67,6 +54,22 @@ describe('shared chunk constants', () => {
       const shader = 1 / (arcsecToRad * Math.sqrt(omega));
       expect(shader).toBeCloseTo(pxPerRadianFromSolidAngle(omega), 6);
     }
+  });
+
+  // The isobar reads the extended-source threshold back out of the same
+  // uniform the gain runs on, and the log conversion is a GLSL literal — so
+  // nothing but this pins it to Math.log10. Ω = 0 is in the sweep because
+  // both sides floor it: the CPU mirror silently returned -Infinity until
+  // this case existed.
+  it('emission.glsl recovers the extended threshold exactly as emission-pure does', () => {
+    const m = emissionChunk.match(/const float STELLATA_LOG10 = ([\d.]+);/);
+    expect(m).not.toBeNull();
+    const log10 = Number(m![1]);
+    for (const omega of [0, 4, 40_000, 478_630.09]) {
+      const shader = 7.8 + (2.5 * Math.log(Math.max(omega, 1e-12))) / log10;
+      expect(shader).toBeCloseTo(extendedThresholdSbFromSolidAngle(omega, 7.8), 9);
+    }
+    expect(Number.isFinite(extendedThresholdSbFromSolidAngle(0, 7.8))).toBe(true);
   });
 });
 

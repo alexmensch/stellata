@@ -128,7 +128,7 @@ export function extendedThresholdSbFromSolidAngle(
   omegaSummationArcsec2: number,
   limitMag: number,
 ): number {
-  return limitMag + 2.5 * Math.log10(omegaSummationArcsec2);
+  return limitMag + 2.5 * Math.log10(Math.max(omegaSummationArcsec2, 1e-12));
 }
 
 /**
