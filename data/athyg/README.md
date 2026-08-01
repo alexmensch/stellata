@@ -60,6 +60,9 @@ Licence follows the CSV it derives from (CC-BY-SA-4.0).
 is a record, and no other source adds one. Two test files in
 `scripts/catalog/spine/` also read it — the guard pins its bytes and
 committed counts, the parity gate holds it to the build it snapshots.
+`pnpm run build:classic-ids` reads it as well, as the label merge's spine
+side: its review queue has to describe the same records the record build
+labels (`scripts/catalog/classic-ids/README.md` § The label merge).
 Reference epoch J2000.0.
 
 `athyg_33_classic_ids.csv` is **no longer a build input.** It stays

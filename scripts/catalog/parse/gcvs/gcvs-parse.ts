@@ -162,11 +162,8 @@ export interface ApplyVariabilityResult {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   named: number;
-  /** Stars whose `desigConIndex` came from their GCVS designation. No pass
-   *  upstream sets the field today, so this is currently every named star
-   *  whose designation carries a constellation abbreviation — but the
-   *  disagreement check below stays: it is what keeps the designation
-   *  outranking any editorial index a later pass reinstates. */
+  /** Stars whose `desigConIndex` came from their GCVS designation — the ones
+   *  IV/27A's Bayer/Flamsteed cross index carries no row for. */
   desigConSupplied: number;
 }
 
@@ -208,12 +205,17 @@ export function applyVariability(
     if (!gcvsName || !source) continue;
     s.gcvsName = gcvsName;
     named++;
-    // A GCVS designation names its own constellation, which is what makes it
-    // the designation authority: it is right where an editorial cell was
-    // stale (LT Vul, filed under Sge) and where one missed the mover outright
-    // (RY Cen, EQ Vul).
+    // A GCVS designation names its own constellation (LT Vul is Vulpecula's
+    // whatever any catalogue column says), but it fills `desigConIndex` only
+    // where IV/27A left it empty. On the 8 records where the two disagree the
+    // star carries BOTH a Bayer/Flamsteed designation and a variable name, in
+    // different constellations (TY Crv is Crater's 'N Crt'), and one uint8
+    // cannot serve both: IV/27A wins because its consumers BUILD the label
+    // from this field, while a GCVS label reads the constellation out of the
+    // designation string itself and only loses its expanded alias.
     const desigCon = gcvsDesignationConIndex(gcvsName);
-    if (desigCon !== NO_CONSTELLATION_INDEX && desigCon !== s.desigConIndex) {
+    if (desigCon !== NO_CONSTELLATION_INDEX
+        && s.desigConIndex === NO_CONSTELLATION_INDEX) {
       s.desigConIndex = desigCon;
       desigConSupplied++;
     }

@@ -2,13 +2,18 @@
 // BuildCounts record against the committed snapshot. See
 // scripts/catalog/README.md § Validation harness.
 import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
+import type { LabelMergeCounts } from './classic-ids/label-merge-pure';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
  *  path. The generic comparator below is reused with other snapshots. */
 export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expected.json';
 
-export interface BuildCounts {
+/** Extends the label merge's own partitions rather than restating them: the
+ *  merge module owns what those counts mean, and `build:classic-ids` pins the
+ *  same set from the spine side — the two snapshots agreeing is what proves the
+ *  committed review queue describes the shipped labels. */
+export interface BuildCounts extends LabelMergeCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
   /** `inferBinaries` companion assignments. */
@@ -388,6 +393,15 @@ export interface BuildCounts {
   /** Rows whose velocity carries a non-zero AT-HYG radial velocity
    *  (rv cell present and non-zero; rv_src is Gaia RVS on the bulk). */
   velocityRvApplied: number;
+  /** Records whose designation constellation came from IV/27A keyed on their
+   *  own HD / HIP — the nomenclature source that replaced AT-HYG's editorial
+   *  `con` cell. The GCVS pass overwrites it where a variable designation
+   *  carries its own (`gcvsDesignationCon`). */
+  desigConFromCrossIndex: number;
+  /** IV/27A rows whose `cst` names no IAU-88 constellation. **Pinned at 0** —
+   *  the table's abbreviations ARE the IAU set, so a non-zero value is an
+   *  upstream convention change, not a tolerable miss. */
+  crossIndexUnknownCst: number;
 }
 
 export type CountDiff =

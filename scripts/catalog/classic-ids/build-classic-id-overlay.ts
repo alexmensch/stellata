@@ -1,20 +1,18 @@
 // Emit data/classic-ids/classic_id_overlay.tsv — the source_id-keyed classic
-// designation overlay. See README.md.
-import { createReadStream, existsSync, readFileSync, writeFileSync } from 'node:fs';
+// designation overlay — plus the label merge's review queue. See README.md.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parse } from 'csv-parse';
 
 import {
-  parseGaiaSourceIdStr,
   parseSimbadWdsXidsTsv,
-  resolveGaiaSourceId,
   type SimbadWdsXidIndex,
 } from '../catalog-pure';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
 import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
-import { nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { parseFloatOrNull } from '../parse/corpus-tsv';
 import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import {
   parseBsc5Tsv,
   parseCns5Tsv,
@@ -22,21 +20,27 @@ import {
   parseTyc2HdTsv,
 } from './classic-ids-parse';
 import {
-  athygIdOrNull,
   bindingEvidence,
   BRIGHT_TIER_MAG_CEILING,
   OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
-  measureAthygLabelParity,
   serializeOverlay,
-  type AthygLabelRow,
-  type BindingEvidence,
   type ClassicIdOverlay,
   type ClassicIdOverlayCounts,
   type HdHipRouteDisagreement,
   type RejectedBinding,
 } from './classic-id-overlay-pure';
-import { ATHYG_CSV as SRC_ATHYG, REPO_ROOT as ROOT } from '../../util/paths';
+import {
+  CLASSIC_ID_OVERRIDES_FILE,
+  LABEL_FIELDS,
+  LABEL_FLIPS_FILE,
+  labelFlipsTsv,
+  mergeClassicIdLabels,
+  parseLabelOverridesTsv,
+  spineLabelMergeRecord,
+  type LabelMergeRecord,
+} from './label-merge-pure';
+import { REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_TYC2_HD = resolve(ROOT, 'data/classic-ids/tyc2_hd.tsv');
@@ -49,7 +53,11 @@ const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 
+const SRC_SPINE = resolve(ROOT, INHERITED_SPINE_FILE);
+const SRC_OVERRIDES = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
+
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
+const OUT_LABEL_FLIPS = resolve(ROOT, LABEL_FLIPS_FILE);
 const OUT_DISAGREEMENTS = resolve(
   ROOT,
   'data/classic-ids/hd_hip_route_disagreements.tsv',
@@ -74,42 +82,43 @@ function readRequired(path: string): string {
   return readFileSync(path, 'utf8');
 }
 
-async function readAthygLabelRows(
-  hipToSource: ReadonlyMap<number, string>,
-  evidence: BindingEvidence,
-): Promise<AthygLabelRow[]> {
-  const parser = createReadStream(SRC_ATHYG).pipe(
-    parse({ columns: true, skip_empty_lines: true, cast: false }),
-  );
-  const rows: AthygLabelRow[] = [];
-  for await (const row of parser) {
-    // The FULL resolution build-catalog.ts applies — native-gaia → HIP
-    // cross-walk precedence *and* both vetting gates. Passing the row's V and
-    // the two evidence tables is what makes this the source_id the shipped
-    // record would key on: a magnitude- or sibling-scrubbed row ships
-    // gaia_source_id = 0 and takes its labels from the spine, so measuring it
-    // against an ungated binding would score a label the record never carries.
-    const vMag = parseFloatOrNull(row.mag);
-    const { gaiaSourceId } = resolveGaiaSourceId(
-      parseGaiaSourceIdStr(row.gaia),
-      athygIdOrNull(row.hip),
-      hipToSource as Map<number, string>,
-      vMag,
-      evidence.gMagOf,
-      evidence.wdsXids,
-    );
-    rows.push({
-      sourceId: gaiaSourceId,
-      mag: vMag,
-      hd: athygIdOrNull(row.hd),
-      hip: athygIdOrNull(row.hip),
-      hr: athygIdOrNull(row.hr),
-      gl: nonEmpty(row.gl),
-      bayer: nonEmpty(row.bayer),
-      flam: parseIntOrNull(row.flam),
-    });
+interface SpineLabelSide {
+  records: LabelMergeRecord[];
+  labels: string[];
+  rows: number;
+  brightRows: number;
+  brightRowsWithoutOverlayEntry: number;
+  rowsWithoutSourceId: number;
+  rowsWithoutOverlayEntry: number;
+}
+
+/** The membership term's side of the merge. Every spine row already carries the
+ *  source_id the shipped record keys on — the native-cell → HIP-cross-walk
+ *  precedence and both binding gates ran when the spine was frozen — so unlike
+ *  the AT-HYG CSV this file replaced, nothing here re-resolves a binding
+ *  (`../spine/README.md` § The identifier columns are read, never
+ *  re-derived). */
+function readSpineLabelSide(overlay: ClassicIdOverlay): SpineLabelSide {
+  const side: SpineLabelSide = {
+    records: [], labels: [], rows: 0, brightRows: 0,
+    brightRowsWithoutOverlayEntry: 0, rowsWithoutSourceId: 0,
+    rowsWithoutOverlayEntry: 0,
+  };
+  for (const row of iterSpineTsv(readRequired(SRC_SPINE))) {
+    const { record, label } = spineLabelMergeRecord(row);
+    side.records.push(record);
+    side.labels.push(label);
+    side.rows++;
+    const mag = parseFloatOrNull(row.mag);
+    const isBright = mag !== null && mag <= BRIGHT_TIER_MAG_CEILING;
+    if (isBright) side.brightRows++;
+    if (record.gaiaSourceId === null) side.rowsWithoutSourceId++;
+    if (record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId)) {
+      side.rowsWithoutOverlayEntry++;
+      if (isBright) side.brightRowsWithoutOverlayEntry++;
+    }
   }
-  return rows;
+  return side;
 }
 
 function writeTsv(path: string, header: string, rows: readonly string[]): void {
@@ -145,29 +154,26 @@ function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
 }
 
 function reportCoverage(counts: ClassicIdOverlayCounts): void {
-  const p = counts.athygLabelParity;
-  const pairs: [string, number, number][] = [
-    ['hd', p.hdKeyed, p.hdCovered],
-    ['hip', p.hipKeyed, p.hipCovered],
-    ['hr', p.hrKeyed, p.hrCovered],
-    ['gl', p.glKeyed, p.glCovered],
-    ['bayer', p.bayerKeyed, p.bayerCovered],
-    ['flam', p.flamKeyed, p.flamCovered],
-  ];
   console.log(
-    `AT-HYG label parity over ${counts.athygRows} rows: ` +
-      `${counts.athygRowsWithoutOverlayEntry} have no overlay entry at all ` +
-      `(${counts.athygRowsWithoutSourceId} reach no source_id; the rest resolve ` +
-      `to a source_id absent from both cross-walks), including ` +
-      `${counts.athygBrightRowsWithoutOverlayEntry} of ${counts.athygBrightRows} ` +
+    `spine label parity over ${counts.spineRows} rows: ` +
+      `${counts.spineRowsWithoutOverlayEntry} have no overlay entry at all ` +
+      `(${counts.spineRowsWithoutSourceId} carry no source_id; the rest resolve ` +
+      `to one absent from both cross-walks), including ` +
+      `${counts.spineBrightRowsWithoutOverlayEntry} of ${counts.spineBrightRows} ` +
       `rows at V <= ${BRIGHT_TIER_MAG_CEILING}. Those labels ride the ` +
       `inherited spine, not the overlay.`,
   );
-  for (const [name, keyed, covered] of pairs) {
+  for (const field of LABEL_FIELDS) {
+    const covered = counts.labelAgree[field];
+    const keyed = covered + counts.labelFlipped[field] + counts.labelSpineOnly[field];
     const pct = keyed === 0 ? 0 : (100 * covered) / keyed;
     console.log(
-      `  ${name.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)}` +
-        ` (${pct.toFixed(1)}%)`,
+      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)}` +
+        ` (${pct.toFixed(1)}%) — added ${counts.labelAdded[field]}, ` +
+        `flipped ${counts.labelFlipped[field]}, ` +
+        `suppressed ${counts.labelSuppressed[field]}, ` +
+        `extras dropped ${counts.labelExtraDropped[field]}, ` +
+        `overridden ${counts.labelOverridden[field]}`,
     );
   }
 }
@@ -200,7 +206,6 @@ async function main(): Promise<void> {
 
   requireExists(SRC_TYC_XMATCH);
   requireExists(SRC_HIP_XMATCH);
-  requireExists(SRC_ATHYG);
 
   // Both best-neighbour walks below are unvetted, so the gate's evidence is a
   // required input, not an enrichment: without it the join would key labels on
@@ -237,27 +242,41 @@ async function main(): Promise<void> {
     evidence,
   });
 
-  const athygRows = await readAthygLabelRows(hipToSource, evidence);
-  const parity = measureAthygLabelParity(athygRows, overlay);
+  // The merge runs here as well as in the record build, over the same overlay
+  // and the same pure function, so the committed review queue below describes
+  // exactly the labels build:catalog writes. Its own count snapshot is the
+  // cross-check.
+  const spine = readSpineLabelSide(overlay);
+  const overrides = existsSync(SRC_OVERRIDES)
+    ? parseLabelOverridesTsv(readFileSync(SRC_OVERRIDES, 'utf8'))
+    : new Map();
+  const merge = mergeClassicIdLabels({
+    records: spine.records,
+    labels: spine.labels,
+    overlay,
+    overrides,
+  });
 
   const counts: ClassicIdOverlayCounts = {
     ...joinCounts,
-    athygRows: parity.rows,
-    athygRowsWithoutSourceId: parity.rowsWithoutSourceId,
-    athygRowsWithoutOverlayEntry: parity.rowsWithoutOverlayEntry,
-    athygBrightRows: parity.brightRows,
-    athygBrightRowsWithoutOverlayEntry: parity.brightRowsWithoutOverlayEntry,
-    athygLabelParity: parity.parity,
+    ...merge.counts,
+    spineRows: spine.rows,
+    spineRowsWithoutSourceId: spine.rowsWithoutSourceId,
+    spineRowsWithoutOverlayEntry: spine.rowsWithoutOverlayEntry,
+    spineBrightRows: spine.brightRows,
+    spineBrightRowsWithoutOverlayEntry: spine.brightRowsWithoutOverlayEntry,
   };
 
   writeFileSync(OUT_OVERLAY, serializeOverlay(overlay));
   writeDisagreements(disagreements);
   writeRejectedBindings(rejectedBindings);
+  writeFileSync(OUT_LABEL_FLIPS, labelFlipsTsv(merge.flips));
   logOverlay(overlay, counts);
   reportCoverage(counts);
   console.log(`wrote ${OUT_OVERLAY}`);
   console.log(`wrote ${OUT_DISAGREEMENTS} (${disagreements.length} rows)`);
   console.log(`wrote ${OUT_REJECTED} (${rejectedBindings.length} rows)`);
+  console.log(`wrote ${OUT_LABEL_FLIPS} (${merge.flips.length} rows)`);
 
   await assertOrUpdateSnapshot<ClassicIdOverlayCounts>({
     envVar: 'UPDATE_BUILD_COUNTS',

@@ -9,8 +9,10 @@ Stellarium → `public/catalog.bin.<i>` transport chunks +
 Run via `pnpm run build:catalog`.
 
 Membership is `data/athyg/inherited-spine.tsv` and nothing else — AT-HYG the
-catalogue left this build's input set. The contract is
-`docs/catalog-driver.md`; the membership term is `spine/README.md`.
+catalogue left this build's input set. Classic designations are the frozen-CDS
+overlay merged onto the spine's inherited cells (`classic-ids/README.md`). The
+contract is `docs/catalog-driver.md`; the membership term is
+`spine/README.md`.
 
 `build-catalog.ts` is the orchestrator; `catalog-pure.ts` is the single
 source of truth for the v9 binary layout, the override math, and the
@@ -43,9 +45,10 @@ subfolders.
 - `distance/` — direction resolution, build-time de-extinction, and the
   multi-layer distance-refinement override stack with its
   authoring discipline and post-build regression check.
-- `classic-ids/` — the frozen-CDS classic-designation overlay build
-  (`pnpm run build:classic-ids` → `data/classic-ids/`). Not part of
-  `build:catalog`; no consumer here yet.
+- `classic-ids/` — the frozen-CDS overlay build
+  (`pnpm run build:classic-ids` → `data/classic-ids/`) AND the record build's
+  label layer: the per-identifier merge with its collision guard, plus the
+  designation-constellation cascade. Applied as a post-pass over `readStars`.
 - `spine/` — the membership term: the frozen
   `data/athyg/inherited-spine.tsv`, its codec, and the two gates holding it
   to the build it snapshots. `parse/` streams it through `iterSpineTsv`.
@@ -303,11 +306,10 @@ assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus `scripts/util/` and
-`scripts/sid/`, so editing any build module invalidates the artifact.
-`classic-ids/` is skipped: no `build:catalog` path imports the one-shot
-overlay generator, so enrolling it would force a full rebuild for an edit
-that cannot move a byte. `spine/` stays in (`parse/` imports its codec), and
-so does `validate/`.
+`scripts/sid/`, so editing any build module invalidates the artifact — with no
+exclusions: `classic-ids/` used to be skipped as a one-shot generator and is now
+the label layer, `spine/` is in because `parse/` imports its codec, and so is
+`validate/`.
 
 ## SID allocation
 
@@ -373,14 +375,12 @@ dropdown's context line; `dc` is the constellation its Bayer / Flamsteed /
 GCVS designation is *named* for, and is the one every alias and display
 label is built against. `dc` is emitted only where the two diverge AND
 the entry carries a constellation-relative designation (`b`/`f`/`g`/`cl`)
-— **3** entries today, `designationConMismatch` in build-counts, so the
+— **65** entries today, `designationConMismatch` in build-counts, so the
 reader's `designationConIndex(dc, c)` fallback carries everything else at no
-wire cost. All three are GCVS variables named for a constellation they do not
-sit in (CM Ind → Pavo, RY Cen → Lupus, EQ Vul → Lyra): a GCVS designation is
-the build's only nomenclature source since the spine dropped AT-HYG's
-editorial `con` cell, so ρ Aql and six boundary-straddling promoted
-companions fall back to their positional index — `stellata-3bsf.11` decides
-where `dc` is re-sourced from, or whether it retires.
+wire cost. Mostly Flamsteed numbers the 1930 boundaries reassigned (15 LMi sits
+in Ursa Major), plus ρ Aql, boundary-straddling promoted companions and 3 GCVS
+variables. Source and precedence: `classic-ids/README.md` § The designation
+constellation.
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
