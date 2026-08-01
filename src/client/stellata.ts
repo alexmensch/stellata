@@ -729,6 +729,10 @@ export class Stellata implements FrameAnchor {
       });
     };
     const shellPark = (idx: number): number => this.shells.focusParkDistancePc(idx);
+    const planetRadiusPc = (idx: number): number | null => {
+      const p = this.planetBodyField.planetAt(idx);
+      return p ? p.radiusKm * KM_PC : null;
+    };
     const softFloor = (park: (idx: number) => number) =>
       (idx: number): number => Math.min(GLOBAL_MIN_DIST_PC, park(idx));
     (this as { focusables: FocusableProviders }).focusables = {
@@ -818,25 +822,18 @@ export class Stellata implements FrameAnchor {
         localPositionInto: (idx, out) =>
           this.planetBodyField.planetLocalPositionInto(idx, out),
         focusParkDistance: (idx) => {
-          const p = this.planetBodyField.planetAt(idx);
-          if (!p) return 0;
-          return starPhysics.parkDistForPlanet(
-            p.radiusKm * KM_PC,
-            starPhysics.fovMinorRad(this.camera),
-          );
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.parkDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
         },
         orbitFloor: (idx) => {
-          const p = this.planetBodyField.planetAt(idx);
-          if (!p) return 0;
-          return starPhysics.minOrbitDistForPlanet(
-            p.radiusKm * KM_PC,
-            starPhysics.fovMinorRad(this.camera),
-          );
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.minOrbitDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
         },
-        arrivalRadiusPc: (idx) => {
-          const p = this.planetBodyField.planetAt(idx);
-          return p ? p.radiusKm * KM_PC : null;
-        },
+        arrivalRadiusPc: planetRadiusPc,
         renderedSizePx: (idx) =>
           this.planetBodyField.renderedPlanetSizePx(idx, this.camera.position),
         chartPlateauDistance: () => null,
