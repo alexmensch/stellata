@@ -267,7 +267,7 @@ Per-row gates and resolution:
   Δmag. Counted `blendDimmedAnchors` per anchor; members the fit leaves outside
   are `blendDimMembersOutside`, with no usable WDS magnitudes
   `blendDimMembersUnfit`, past the tier's blending scale
-  `blendDimBeyondSeparation`, resolved out by their own Gaia source
+  `blendDimMembersBeyondSeparation`, resolved out by their own Gaia source
   `blendDimGaiaResolved`. The equal-split `gaia_photometry` blend pass above
   stays for the N-way no-WDS-mag case. Standing caveat: WDS pair magnitudes are
   taken at face value, and speckle-band (non-V) pairs overstate a member's V

@@ -383,9 +383,10 @@ export interface PromotionStats {
    *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
    *  per anchor. */
   blendDimmedAnchors: number;
-  /** Dim members skipped by the guard M_member > M_blend + 0.05 —
-   *  a member as bright as (or brighter than) its anchor's blend would
-   *  zero or invert the residual flux. */
+  /** Dim members reaching the subtraction but not applied: the guard
+   *  M_member > M_blend + 0.05 (a member as bright as its anchor's blend would
+   *  zero or invert the residual flux), or a degenerate member position with no
+   *  observed magnitude to subtract. */
   blendDimSkipped: number;
   /** Dim candidates no magnitude comparison could reach — no observed WDS
    *  magnitude for the member or the anchor, no distance, or a pathologically
@@ -403,7 +404,7 @@ export interface PromotionStats {
   /** Dim candidates dropped before the fit because the pair sits wider than the
    *  anchor tier's blending scale (or WDS published no separation at all), so no
    *  entry of that catalogue sums both. */
-  blendDimBeyondSeparation: number;
+  blendDimMembersBeyondSeparation: number;
   /** Dim candidates whose WINNING hypothesis still missed the anchor's observed
    *  magnitude by more than the input's error scale — the anchor matches
    *  neither "alone" nor any blend, so the fit's pick carries no information. */
@@ -439,7 +440,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersUnfit: 0,
     blendDimMembersOutside: 0,
     blendDimGaiaResolved: 0,
-    blendDimBeyondSeparation: 0,
+    blendDimMembersBeyondSeparation: 0,
     blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
   };
@@ -944,17 +945,16 @@ function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
  *  conservative posture as the solve's smallest-winning-subset rule: it makes
  *  "anchor alone" fit better, so a dim needs more evidence, not less. */
 function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
-  let best: AnchorDimCandidate | null = null;
+  let best: { mag: number; depth: number } | null = null;
   for (const c of cands) {
     if (c.anchorWdsMag === null) continue;
     if (best === null
-        || c.anchorDepth > best.anchorDepth
-        || (c.anchorDepth === best.anchorDepth
-          && c.anchorWdsMag < (best.anchorWdsMag as number))) {
-      best = c;
+        || c.anchorDepth > best.depth
+        || (c.anchorDepth === best.depth && c.anchorWdsMag < best.mag)) {
+      best = { mag: c.anchorWdsMag, depth: c.anchorDepth };
     }
   }
-  return best?.anchorWdsMag ?? null;
+  return best?.mag ?? null;
 }
 
 /** SpectralInfo for an existing catalog record, for re-deriving its
@@ -1654,8 +1654,8 @@ function promoteRow(
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   stats.promoted++;
-  // Flux conservation: a member whose light is embedded in the
-  // anchor's athyg_own BLEND magnitude must dim the anchor or the
+  // Flux conservation: a member whose light is embedded in whatever
+  // catalogue tier gave the anchor its V must dim the anchor or the
   // system double-counts it. Blend membership is structural for
   // inherited-then-stripped ids; every other own-brightness member
   // (identifier-carrying AND identifier-less synth alike) is a
@@ -2171,7 +2171,7 @@ export function promoteCompanions(
       } else if (!anchorMagIsSystemBlend && c.member.gaiaSourceId !== null) {
         stats.blendDimGaiaResolved++;
       } else if (!withinBlendSeparation(c.sepArcsec, maxSepArcsec)) {
-        stats.blendDimBeyondSeparation++;
+        stats.blendDimMembersBeyondSeparation++;
       } else {
         fitted.push(c);
       }

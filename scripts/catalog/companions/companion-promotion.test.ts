@@ -875,14 +875,14 @@ describe('anchor flux dimming', () => {
   it('holds a member past the printed tier blending scale out of the blend', () => {
     const inside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC);
     expect(inside.stats.blendDimmedAnchors).toBe(1);
-    expect(inside.stats.blendDimBeyondSeparation).toBe(0);
+    expect(inside.stats.blendDimMembersBeyondSeparation).toBe(0);
     expect(inside.anchor.absmag).toBeCloseTo(2.1, 3);
 
     // The same fit, one hundredth of an arcsecond wider: identical photometry,
     // opposite verdict, because the bound is the discriminator now.
     const outside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC + 0.01);
     expect(outside.stats.blendDimmedAnchors).toBe(0);
-    expect(outside.stats.blendDimBeyondSeparation).toBe(1);
+    expect(outside.stats.blendDimMembersBeyondSeparation).toBe(1);
     expect(outside.anchor.absmag).toBe(blendMag(2.1, 4.1));
   });
 
@@ -891,7 +891,7 @@ describe('anchor flux dimming', () => {
     expect(dimAt(5.0).stats.blendDimmedAnchors).toBe(1);
     const gaia = dimAt(5.0, { vVia: 'gaia_riello' });
     expect(gaia.stats.blendDimmedAnchors).toBe(0);
-    expect(gaia.stats.blendDimBeyondSeparation).toBe(1);
+    expect(gaia.stats.blendDimMembersBeyondSeparation).toBe(1);
     expect(dimAt(GAIA_BLEND_MAX_SEP_ARCSEC, { vVia: 'gaia_riello' })
       .stats.blendDimmedAnchors).toBe(1);
   });
@@ -916,7 +916,7 @@ describe('anchor flux dimming', () => {
       rows, [anchor, member], CONSTELLATIONS, CON_ASSIGNMENT,
     );
     expect(stats.alreadyInCatalog).toBe(1);
-    expect(stats.blendDimBeyondSeparation).toBe(1);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(blend);
   });
@@ -931,7 +931,7 @@ describe('anchor flux dimming', () => {
     rows[0].absmag = blendMag(2.1, 4.1);
     rows[0].sepArcsec = 400.0;
     const { stats } = promoteCompanions(rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT);
-    expect(stats.blendDimBeyondSeparation).toBe(0);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(0);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });

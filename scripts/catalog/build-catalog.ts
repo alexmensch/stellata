@@ -548,7 +548,7 @@ async function main() {
         `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
         `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
         `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
-        `beyond-separation ${ps.blendDimBeyondSeparation}, ` +
+        `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
         `misfit ${ps.blendDimMembersMisfit}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
         `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
@@ -575,7 +575,7 @@ async function main() {
     counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
     counts.companionBlendDimOutside = ps.blendDimMembersOutside;
     counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
-    counts.companionBlendDimBeyondSeparation = ps.blendDimBeyondSeparation;
+    counts.companionBlendDimBeyondSeparation = ps.blendDimMembersBeyondSeparation;
     counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
