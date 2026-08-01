@@ -116,6 +116,12 @@ gate, the texel rule, the blend contract and the residuals are
 **`statistic/README.md`**; the reduction itself is
 `exposure/reduction/README.md`.
 
+**A layer that operates on light already in the target has to name the
+attachment that light is in.** Molecular-cloud absorption is the one such
+layer, and moving the diffuse emitters to attachment 2 moved what it dims:
+`summation/README.md` § Where each absorber acts is the statement, and the
+canvas alpha is the second consumer that had to follow.
+
 `bind()` clears with every gate open, deliberately: the renderer's own
 auto-clear runs after `bind()` returns with them shut, so without an explicit
 all-attachment clear both would accumulate across frames forever. It costs a

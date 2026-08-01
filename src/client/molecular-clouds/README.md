@@ -104,6 +104,15 @@ at −1 (galactic disc/grid, Local Bubble shell, the cloud rim shells
 themselves) deliberately draws after the mesh — annotation shouldn't
 be extincted.
 
+**Order is necessary and no longer sufficient**, because the band and the
+LG glow write the HDR target's *third* attachment now, not the one the
+absorption draw would reach by default. The mesh is `markAbsorber`ed
+(`../hdr/statistic/README.md` § The gate) and the shader writes its
+alpha-only texel to `location = 2` as well as `location = 0`; one blend
+equation covers both, so the multiply is identical on each. Drop either
+half and the clouds keep drawing, keep sorting correctly, and extinct
+nothing — no error, no missing draw, just no dark rift.
+
 **The MW band is not exempt, and that overlap is deliberate.** Its own
 analytic slab is normalised to a *total* extinction rate, so wherever a
 rendered cloud sits the two stack. Measured: clouds cover 15.4 % of the

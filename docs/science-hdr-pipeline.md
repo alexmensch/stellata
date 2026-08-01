@@ -263,6 +263,25 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   for both emitters rather than one keeping a private fallback — the
   concession *is* the pass. That is the float-RT fallback (§ 6) and the
   `setHdrEnabled(false)` A/B, where the band returns to its per-pixel level.
+- **Everything that operates on the emission has to move with it.** Giving the
+  diffuse emitters their own attachment takes them out of the chain that
+  anything drawn in front of them composites against, and the depth-test
+  argument for staying in one framebuffer says nothing about **blend** order.
+  Exactly two things operate on them, and both are part of this design rather
+  than details of it:
+  - *Molecular-cloud absorption* is a multiply drawn after the band
+    (`renderOrder` −2 against −3), so it opens attachment 2 as well and writes
+    the same alpha-only texel to both — one blend equation covers every
+    attachment, so it is a gate flag, not a second draw. Extinction therefore
+    lands **before** the convolution, which is the physical order: light is
+    absorbed in interstellar space, and the eye sums what survives. It is the
+    only absorber in the scene; a future one takes the same mark
+    (`src/client/hdr/statistic/README.md` § The gate).
+  - *The canvas alpha.* The resolve carried it through from attachment 0,
+    which a diffuse fragment now leaves at the clear's zero while its rgb is
+    the entire band. A premultiplied canvas composites `rgb > a` as nothing,
+    so the band and M31 rendered black. The resolve is the whole frame and
+    owns that channel: it writes alpha 1.
 
 **The concession is absent from the statistic.** Attachment 1 keeps
 `Ω_px` in both channels, and unconvolved: the adaptation model reads retinal

@@ -44,11 +44,35 @@ of M31's overlapping disc and bulge, and the existing pass order
 ```
 hdr.bind()             → clear all three attachments
 renderer.render(scene) → diffuse emitters land in attachment 2, everything
-                         else in attachment 0; both still write attachment 1
+                         else in attachment 0; both still write attachment 1,
+                         and the absorbers multiply attachments 0 and 2
 summation.render()     → box-downsample attachment 2 when the factor is > 1
 hdr.resolve()          → attachment 0 + Σ(attachment 2 over the patch),
-                         then the operator
+                         then the operator, at alpha 1
 ```
+
+## Where each absorber acts
+
+A layer that leaves attachment 0 also leaves the blend chain everything drawn
+in front of it composites against, and depth ordering says nothing about that.
+Two consumers operate on the diffuse emitters, and both have to follow them:
+
+- **Molecular-cloud absorption** (`renderOrder` −2, against the emitters'
+  −3) is a premultiplied `rgb = 0` multiply, so it is `markAbsorber` →
+  `[0, NONE, 2]`: one blend equation covers every attachment, so the same
+  alpha-only texel dims both. Extinction lands **before** the convolution,
+  which is the physical order — light is absorbed in interstellar space and
+  the eye sums what survives. Keeping attachment 0 costs nothing and leaves
+  any future far-field opaque emitter extincted.
+- **The canvas alpha.** The resolve writes **1**, not attachment 0's: a
+  diffuse fragment masks attachment 0 off, so its alpha is the clear's zero
+  while its rgb is the whole band, and a premultiplied canvas composites
+  `rgb > a` as nothing.
+
+The absorber mark inverts the gate's usual safety — a mesh that forgets it
+merely stops absorbing, with no error and no missing draw, so
+`../../molecular-clouds/molecular-clouds.test.ts` pins the only call site
+alongside the shader's `location = 2` declaration.
 
 **The gain does not move**, and that is deliberate: attachment 2 carries the
 same `Ω_sum`-gained value the band used to write into attachment 0, so the

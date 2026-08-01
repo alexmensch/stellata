@@ -9,7 +9,8 @@ mesh write into it. `../README.md` owns the target's lifecycle;
 src/client/hdr/statistic/
   statistic-attachment.ts   The per-draw gate on every attachment past 0 —
     (+ test)                markStatisticEmitter for a point emitter,
-                            markDiffuseEmitter for a volumetric one — and
+                            markDiffuseEmitter for a volumetric one,
+                            markAbsorber for a layer that dims them — and
                             the seam HdrPipeline drives it through
                             (§ The gate).
 ```
@@ -99,6 +100,17 @@ sites and hoping the eleventh remembers.
   are one decision — either alone fails silently, discarding the diffuse
   write in one direction and leaving attachment 2 undefined for every other
   draw in the other.
+- `markAbsorber` → `[0, NONE, 2]`. Molecular-cloud absorption, the one layer
+  that operates on light already in the target rather than adding any. It
+  needs attachment 2 because that is where the light it dims now is, and
+  keeps attachment 0 because nothing else may assume that attachment is empty
+  behind it. Attachment 1 stays shut — § Known residuals.
+
+**This mark inverts the gate's safety, and it is the only one that does.** A
+draw that forgets `markStatisticEmitter` merely fails to contribute; one that
+forgets `markAbsorber` silently stops absorbing, which reads as a missing dark
+rift rather than an error. `../../molecular-clouds/molecular-clouds.test.ts`
+pins the only call site.
 
 Two further things the gate has to get right:
 
@@ -137,7 +149,7 @@ attachment 1 is therefore part of its contract, not a free slot.**
   1's flux channel under-counts where two resolved discs overlap. Rare
   (close resolved stars) and small; documented rather than fixed.
 - **Absorption layers write no texel.** Molecular-cloud absorption dims
-  attachment 0 but leaves the statistic reading the Milky Way band
+  attachments 0 and 2 but leaves the statistic reading the Milky Way band
   un-extincted. Inert: the band sits two decades under the adaptation
   anchor and cannot produce a cut on its own.
 - **A point source's G over-reads in the kernel's wings** under an additive
