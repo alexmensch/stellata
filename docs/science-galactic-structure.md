@@ -95,7 +95,13 @@ Drimmel & Spergel-style thin-disc dust. Per step, opacity converts to
 per-channel optical depth via CCM-derived reddening multipliers
 `(0.76, 1.0, 1.35)` — red transmits most, blue extincts away — applied
 with Beer-Lambert running attenuation including a half-step
-self-shielding term. Default global strength = 0.45.
+self-shielding term. Default global strength = 1.0.
+
+`norm` is derived from a declarative rate: 1.0 mag/kpc of V extinction
+at (R₀, z = 0), the top of the range commonly adopted for the
+solar-neighbourhood plane. At the 125 pc scale height that also puts the
+perpendicular column to the pole at A_V = 0.125, inside the SFD polar
+spread — two independent constraints meeting at one normalisation.
 
 The Edenhofer voxel grid is **deliberately not used** for the Milky Way
 band — voxel structure (~5 pc native) aliases into visible streaks
@@ -108,13 +114,18 @@ Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 `src/client/milkyway/README.md`.
 
 Sources for the volumetric path: **Drimmel & Spergel 2001**, *ApJ* 556, 181
-(DOI 10.1086/321556) for the thin-disc dust distribution; **Schlegel,
-Finkbeiner & Davis 1998**, *ApJ* 500, 525 (DOI 10.1086/305772) for the
-0.15 mag/kpc local rate the normalisation is anchored to; **Cardelli,
+(DOI 10.1086/321556) for the thin-disc dust distribution; **Cardelli,
 Clayton & Mathis 1989**, *ApJ* 345, 245 (DOI 10.1086/167900) for the
-per-channel reddening multipliers. The shipped 0.45 global strength takes
-the effective rate to 0.068 mag/kpc, 2.2x below that anchor, and is the one
-un-derived number left in this chain — `stellata-xypg.29` owns it.
+per-channel reddening multipliers.
+
+The normalisation previously cited **Schlegel, Finkbeiner & Davis 1998**
+for a "0.15 mag/kpc local rate", under a shipped 0.45 multiplier that took
+the effective rate to 0.068 mag/kpc. Both parts were wrong: SFD is a 2D
+full-sky E(B−V) map and publishes no per-kpc rate at all, and 0.068
+mag/kpc is 10–25× below the measured solar-neighbourhood plane rate. The
+under-extinction — not the density profile — was why the band's plane read
+~3 mag too bright against its poles. `stellata-xypg.29` replaced it with
+the derived-from-a-rate scheme above and retired the bare multiplier.
 
 
 ## Constellation stick figures
