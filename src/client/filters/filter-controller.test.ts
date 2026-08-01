@@ -114,7 +114,8 @@ describe('FilterController', () => {
 
   // The footprint window has exactly one authority — the instrument
   // record. There is no FilterState field and no slider to disagree with
-  // it, which is what xypg.12 retired.
+  // it; both were retired. See README.md § The multiplier is the ONLY
+  // footprint control.
   it('uSizeSpan tracks the instrument, and no filter patch can move it', () => {
     const { ctrl, uniforms } = makeHarness();
     const span = INSTRUMENTS['unaided-eye'].sizeSpan;

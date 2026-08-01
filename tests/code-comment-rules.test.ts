@@ -3,7 +3,7 @@
 // key wikilinks, or oversized module docstrings appear — see
 // docs/authoring-patterns.md § Code comment hygiene for the rules.
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
@@ -33,17 +33,23 @@ interface Pattern {
 }
 
 // Stellata bead IDs follow the shape `<epic>.<NN>[.<MM>]` where the
-// epic is a 3-character alphanumeric token (`9mm`, `dch`, `lmh`,
-// `1ui`, …) — that's the bd default for this project across every
-// epic ever created. Matching the shape rather than an enumerated
+// epic is a short alphanumeric token. Mostly 3 characters (`9mm`,
+// `dch`, `lmh`, `1ui`) but bd mints longer ones too (`xypg`, `3bsf`,
+// `o6nx`, `t2u5`, `uadc`, `zau1`) — pinning the length to exactly 3
+// silently exempted every ID built on those, which is most of the
+// epics in active use. Matching the shape rather than an enumerated
 // list keeps the regex future-proof: new epics auto-covered without
 // test edits.
 //
-// The negative lookahead `(?![0-9]{3}\b)` rejects pure-numeric
-// 3-char prefixes so decimal numbers like `365.25`, `180.0`, `100.5`
+// The 5-char ceiling is what keeps the bare-ID pattern from reading an
+// ordinary lowercase word before a decimal (`chunk.0`) as a bead ID.
+// No epic has exceeded it; raise it if one does.
+//
+// The negative lookahead `(?![0-9]{3,}\b)` rejects pure-numeric
+// prefixes so decimal numbers like `365.25`, `180.0`, `100.5`
 // don't false-fire. Every real stellata epic contains at least one
 // letter, so this preserves coverage without enumerating epics.
-const EPIC_SHAPE = '(?![0-9]{3}\\b)[a-z0-9]{3}';
+const EPIC_SHAPE = '(?![0-9]{3,}\\b)[a-z0-9]{3,5}';
 
 const FORBIDDEN: Pattern[] = [
   {
@@ -57,10 +63,12 @@ const FORBIDDEN: Pattern[] = [
   {
     name: 'bare bead-ID (<epic>.NN[.MM…])',
     // Lookbehind excludes word char (preceding identifier), hyphen
-    // (e.g. `hip-2.5`), AND backslash (Python `\t20.85` TSV escapes
-    // would otherwise read as `t20.8`). Trailing `(?:\.\d+)+` keeps
-    // sub-sub-issues like `a7d.2.11` in the match span.
-    re: new RegExp(`(?<![\\w\\\\-])${EPIC_SHAPE}(?:\\.\\d+)+\\b`),
+    // (e.g. `hip-2.5`), backslash (Python `\t20.85` TSV escapes would
+    // otherwise read as `t20.8`), AND dot — a dotted path segment before
+    // a numeric one (`public/catalog.bin.0`) is otherwise indistinguishable
+    // from `<epic>.NN`. Trailing `(?:\.\d+)+` keeps sub-sub-issues like
+    // `a7d.2.11` in the match span.
+    re: new RegExp(`(?<![\\w\\\\.-])${EPIC_SHAPE}(?:\\.\\d+)+\\b`),
   },
   {
     name: 'bead-relative time (pre-/post-/since-<epic>.NN)',
@@ -179,6 +187,46 @@ function moduleDocstringLines(path: string): number {
   }
   return count;
 }
+
+// The scan is only as good as the shapes it recognises, and a silent gap
+// here reads as compliance: EPIC_SHAPE was pinned to exactly 3 characters
+// for a long time, which exempted xypg / 3bsf / o6nx / t2u5 / uadc / zau1 —
+// most of the epics in use — with a green suite the whole time.
+describe('forbidden-pattern shapes', () => {
+  const matches = (line: string) => FORBIDDEN.some(p => p.re.test(line));
+
+  it('catches bead IDs at every epic-slug length', () => {
+    for (const id of [
+      'stellata-9mm.227', 'stellata-dch.83.9', 'stellata-xypg.29',
+      'stellata-3bsf.4', 'stellata-o6nx.1', 'stellata-zau1',
+      'uadc.3', 'xypg.12', 'a7d.2.11', 'pre-dch.5', 'since-t2u5.7',
+    ]) {
+      expect(matches(`// something ${id} something`), id).toBe(true);
+    }
+  });
+
+  it('catches PR refs and memory-key wikilinks', () => {
+    expect(matches('// see PR #12 for the rationale')).toBe(true);
+    expect(matches('// extracted in PR 341')).toBe(true);
+    expect(matches('// per [[stellata-bd-operations]]')).toBe(true);
+  });
+
+  it('leaves ordinary prose and numerals alone', () => {
+    for (const line of [
+      '// 365.25 days per Julian year',
+      '// clamped to 180.0 degrees',
+      '// the 100.5 pc cutoff',
+      '// bumped to v3.16.0 this release',
+      '// hip-2.5 is not a bead',
+      '// see stellata-events.test.ts for the wiring',
+      '// writes public/catalog.bin.0 and .bin.1',
+      '// Table 24.3 gives the integrated starlight',
+      '// a tab-escaped TSV cell like \\t20.85 in the Python parser',
+    ]) {
+      expect(matches(line), line).toBe(false);
+    }
+  });
+});
 
 describe('forbidden code-comment patterns', () => {
   it('no bead-IDs, PR refs, or memory-key wikilinks in src/ or scripts/', () => {

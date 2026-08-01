@@ -577,8 +577,9 @@ export class ChartLabels {
     perfMeasure('chart.clouds');
 
     // 5) Planet bodies — name labels beside the chart disc, gated by the
-    // same magnitude rule as the ink disc itself (uadc.3 decision:
-    // magnitude disc + star-style name label, no glyph vocabulary).
+    // same magnitude rule as the ink disc itself: magnitude disc +
+    // star-style name label, no glyph vocabulary. See README.md § Star
+    // disc sizing.
     perfMark('chart.planets');
     const planetField = stellata.kinds.planet.field;
     if (showStarNames) for (let i = 0; i < planetField.liveInstanceCount; i++) {

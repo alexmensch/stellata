@@ -37,8 +37,8 @@ function readSnapshot<T>(repoRelative: string): T {
 describe('inherited spine ↔ shipped build record parity', () => {
   // Snapshot against snapshot: no artifacts, no LFS, so this runs in every
   // job. A record-build change that moves recordCount without regenerating
-  // the spine breaks the membership term stellata-3bsf.4 swaps in, and the
-  // count-only guard next door cannot see it.
+  // the spine breaks the membership term, and the count-only guard next
+  // door cannot see it. See README.md § Parity with the shipped build.
   it('holds one row per AT-HYG-derived record of the shipped build', () => {
     const build = readSnapshot<BuildCounts>(BUILD_COUNTS_EXPECTED_FILE);
     const spine = readSnapshot<SpineCounts>(INHERITED_SPINE_EXPECTED_FILE);

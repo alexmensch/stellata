@@ -273,8 +273,8 @@ export class InputController {
     const cloudIdx = this.deps.picker.pickKindHit('cloud', x, y)?.idx ?? null;
     if (cloudIdx === null) return false;
 
-    // Clouds keep the pre-ladder vector-first semantics (stellata-t2u5
-    // tracks folding them into the click ladder).
+    // Clouds keep the pre-ladder vector-first semantics — they are not on
+    // the kind-generic click ladder yet.
     const clicked: Target = { kind: 'cloud', idx: cloudIdx };
     const focused = this.deps.getFocusedTarget();
     if (focused === null) {
