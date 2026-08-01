@@ -26,9 +26,10 @@ import {
   subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
-import { pixelSolidAngleArcsec2 } from '../hdr/emission-pure';
+import { footprintRadiusPc, pixelSolidAngleArcsec2 } from '../hdr/emission-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
@@ -447,22 +448,27 @@ describe('M31 surface-brightness profile vs published photometry', () => {
    *  for an inclined disc is the major-axis cut. `bPc` = 0 is the central
    *  column, the peak the shader reaches. Fine-stepped rather than analytic
    *  because the Sérsic profile has no closed form. */
-  function columnAt(comp: EmissionComponent, bPc: number): number {
+  function columnAt(comp: EmissionComponent, bPc: number, footprintPc = 0): number {
     const bx = bPc / comp.axesPc[0];
     if (bx >= 1) return 0;
     const zMax = Math.sqrt(1 - bx * bx);
     let col = 0;
     for (let i = 0; i < COLUMN_STEPS; i++) {
       const t = ((i + 0.5) / COLUMN_STEPS) * zMax;
-      col += cpuDensityAt([bx, 0, t], comp) * ((zMax / COLUMN_STEPS) * comp.axesPc[2]);
+      // Face-on, so the ray runs down z and the footprint has no share along
+      // it — `footprintAlong([0,0,1], [0,0,1])` is 0.
+      col +=
+        cpuDensityAt([bx, 0, t], comp, footprintPc) *
+        ((zMax / COLUMN_STEPS) * comp.axesPc[2]);
     }
     return 2 * col;
   }
 
-  const combinedSbAt = (thetaArcsec: number) =>
+  const combinedSbAt = (thetaArcsec: number, footprintPc = 0) =>
     columnSurfaceBrightness(
       emissionComponents(m31.emission).reduce(
-        (sum, comp) => sum + columnAt(comp, thetaArcsec * ARCSEC_TO_RAD * m31.distance),
+        (sum, comp) =>
+          sum + columnAt(comp, thetaArcsec * ARCSEC_TO_RAD * m31.distance, footprintPc),
         0,
       ),
     );
@@ -516,6 +522,49 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     expect(m31.emission.mV).toBe(3.44);
     expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
     expect(m31.emission.mV - 3.24).toBeLessThan(0.35);
+  });
+
+  // The footprint softening's whole claim: `ε = s/√12` makes a point-sampled
+  // fragment carry the pixel's AREA average of the column. Without it the
+  // raymarch reads the Sérsic cusp at the pixel centre, and no amount of
+  // screen-space convolution downstream can undo that — the display
+  // convolution can only average what the rasteriser sampled.
+  //
+  // The reference is a brute-force average of the unsoftened profile over the
+  // pixel square, which is what the softening approximates to second order.
+  it('softens the nucleus to the area average a pixel should carry', () => {
+    const areaAverageSb = (thetaArcsec: number, pxArcsec: number) => {
+      const n = 24;
+      let acc = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = ((i + 0.5) / n - 0.5) * pxArcsec;
+        for (let j = 0; j < n; j++) {
+          const dy = ((j + 0.5) / n - 0.5) * pxArcsec;
+          acc += 10 ** (-0.4 * combinedSbAt(Math.hypot(thetaArcsec + dx, dy)));
+        }
+      }
+      return -2.5 * Math.log10(acc / (n * n));
+    };
+
+    // Pinned per plate scale rather than bounded: the point of the √12 is
+    // that the residual does NOT grow as the pixel does. Negative is
+    // brighter than the area average — the softening slightly under-corrects
+    // the cusp, and does so by the same tenth of a magnitude at 10° as at
+    // 120°, against the 3.95 mag the point sample carries.
+    const residual: Record<number, number> = {
+      [FOV_MIN_DEG]: -0.092,
+      50: -0.119,
+      [FOV_MAX_DEG]: -0.076,
+    };
+    for (const fovDeg of [FOV_MIN_DEG, 50, FOV_MAX_DEG]) {
+      const pxPerRadian = angularToPx(900, (fovDeg * Math.PI) / 180);
+      const pxArcsec = 1 / (pxPerRadian * ARCSEC_TO_RAD);
+      const footprint = footprintRadiusPc(m31.distance, pixelSolidAngleArcsec2(pxPerRadian));
+      expect(combinedSbAt(0, footprint) - areaAverageSb(0, pxArcsec)).toBeCloseTo(
+        residual[fovDeg],
+        2,
+      );
+    }
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display

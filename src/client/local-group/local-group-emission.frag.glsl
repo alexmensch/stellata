@@ -52,15 +52,21 @@ float sersicNu(float u, float invN, float bn, float pn) {
   return pow(uc, -pn) * exp(-bn * pow(uc, invN));
 }
 
-float densityAt(vec3 pLocal) {
+/** `footprintPc` smooths the profile over one pixel's transverse footprint
+ *  (../hdr/emission.glsl). `zFootprintPc` is its share along the disc normal,
+ *  which the caller has already projected — a face-on disc gets none, or the
+ *  softening would eat the vertical column instead of averaging it. */
+float densityAt(vec3 pLocal, float footprintPc, float zFootprintPc) {
 #ifdef FAMILY_DISC
   vec3 phys = pLocal * vAxes;
-  float R = length(phys.xy);
-  return vDisc.x * exp(-R * vDisc.y - abs(phys.z) * vDisc.z);
+  float R = stellataSoftenRadius(length(phys.xy), footprintPc);
+  float z = stellataSoftenRadius(abs(phys.z), zFootprintPc);
+  return vDisc.x * exp(-R * vDisc.y - z * vDisc.z);
 #else
   // Spheroid mesh axes are uMax × R_e, so the ellipsoidal radius in
-  // R_e units is just uMax × the unit-ball radius.
-  float u = length(pLocal) * vUMax;
+  // R_e units is just uMax × the unit-ball radius, and the footprint
+  // converts with the same R_e = vAxes.x / vUMax.
+  float u = stellataSoftenRadius(length(pLocal) * vAxes.x, footprintPc) * vUMax / vAxes.x;
   return vSersic.x * sersicNu(u, vSersic.y, vSersic.z, vSersic.w);
 #endif
 }
@@ -98,6 +104,13 @@ void main() {
   // grazing rays; jitter trades the bands for fine noise.
   float jitter = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
 
+#ifdef FAMILY_DISC
+  float zFootprintScale =
+    stellataFootprintAlong(normalize(dirLocal * vAxes), vec3(0.0, 0.0, 1.0));
+#else
+  float zFootprintScale = 0.0;
+#endif
+
   float accum = 0.0;
   float prevS = sStart;
   for (int i = 0; i < STEPS; i++) {
@@ -108,7 +121,8 @@ void main() {
     float t = sSample / worldPerT;
     vec3 pLocal = vCamLocal + t * dirLocal;
     if (dot(pLocal, pLocal) > 1.001) break;
-    accum += densityAt(pLocal) * dsPc;
+    float footprintPc = stellataFootprintPc(sSample, uOmegaPxArcsec2);
+    accum += densityAt(pLocal, footprintPc, footprintPc * zFootprintScale) * dsPc;
   }
 
   // accum is Σρ·ds, which the solver's normalisation makes flux per

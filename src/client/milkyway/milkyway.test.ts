@@ -50,6 +50,7 @@ import {
 } from '../hdr/exposure/exposure-epoch';
 import { L_CAP } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import {
   L_THRESH,
   relativeLuminance,
@@ -409,6 +410,29 @@ describe('MilkyWay surface-brightness calibration', () => {
     );
     expect(statisticL).toBeCloseTo(1.657e-3, 6);
     expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.1, 1);
+  });
+
+  // The footprint softening exists for the Local Group's Sérsic cusp and for
+  // the band seen from outside; from Sol it must be inert, because the table
+  // above is the shipped look. The camera sits INSIDE the disc, so the
+  // footprint is metres over the near half of the march and a few parsecs at
+  // the far rim — against a 300 pc scale height and a 3 kpc scale length. The
+  // residual at 120° is 0.002 mag, so it cannot move a row pinned to 0.01.
+  it('leaves every Sol sightline where it was, at both FOV extremes', () => {
+    for (const fovDeg of [FOV_MIN_DEG, FOV_MAX_DEG]) {
+      const omegaPxArcsec2 = pixelSolidAngleArcsec2(
+        angularToPx(900, (fovDeg * Math.PI) / 180),
+      );
+      for (const [lDeg, bDeg] of [[0, 5], [0, 0], [180, 0], [0, 30], [0, 90]]) {
+        const softened = sightlineSurfaceBrightness(
+          SB_ZERO_POINT,
+          SOL_GALACTOCENTRIC_PC,
+          galacticDirection(lDeg, bDeg),
+          { omegaPxArcsec2 },
+        );
+        expect(softened - sbAt(lDeg, bDeg)).toBeCloseTo(0, 2);
+      }
+    }
   });
 
   // What the concession is worth at the reference viewport, stated as the

@@ -75,6 +75,53 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
 }
 
 /**
+ * Radius, in pc, over which a raymarch step must smooth its profile for a
+ * point-sampled fragment to carry the pixel's **area** average of the column
+ * rather than the profile's value at the pixel centre.
+ *
+ * One CSS pixel subtends `distancePc / pxPerRadian` at that distance; the
+ * `√12` matches the second moment of a square footprint, which is the order
+ * the Plummer softening in `softenRadius` corrects to. It grows along the
+ * ray, so the footprint is a cone rather than a cylinder.
+ *
+ * This is load-bearing for the display convolution rather than cosmetic: the
+ * convolution can only average what the rasteriser sampled, and an aliased
+ * Sérsic cusp survives it — 3.95 mag on M31's nucleus.
+ * `summation/README.md` § Footprint carries the measurement.
+ */
+export function footprintRadiusPc(distancePc: number, omegaPxArcsec2: number): number {
+  return distancePc / (pxPerRadianFromSolidAngle(omegaPxArcsec2) * Math.sqrt(12));
+}
+
+/**
+ * A profile radius smoothed over the footprint. For a spherically symmetric
+ * profile this is exactly **transverse** smoothing: `|p|² + ε²` splits into
+ * the parallel and perpendicular parts of `p`, so adding `ε²` to the whole
+ * radius adds it to the perpendicular part alone and the ray direction
+ * contributes nothing.
+ */
+export function softenRadius(radiusPc: number, footprintPc: number): number {
+  return Math.sqrt(radiusPc * radiusPc + footprintPc * footprintPc);
+}
+
+/**
+ * How much of the footprint lies along a unit `axis` for a ray running
+ * `dirUnit`: the extent of the perpendicular disc projected onto that axis.
+ *
+ * Zero when the ray runs along the axis, which is what a **separable**
+ * profile needs. A disc's vertical scale height is finer than the footprint
+ * at wide FOV, so softening a face-on disc along z would suppress the column
+ * rather than average it.
+ */
+export function footprintAlong(
+  dirUnit: readonly [number, number, number],
+  axis: readonly [number, number, number],
+): number {
+  const c = dirUnit[0] * axis[0] + dirUnit[1] * axis[1] + dirUnit[2] * axis[2];
+  return Math.sqrt(Math.max(0, 1 - c * c));
+}
+
+/**
  * Luminance from an extended source of surface brightness
  * `magPerArcsec2`, spread over `omegaArcsec2`. The flux magnitude inside
  * that solid angle is `magPerArcsec2 − 2.5·log10(omegaArcsec2)`; feeding

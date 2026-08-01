@@ -19,6 +19,7 @@ const float STELLATA_LUMA_CEIL = 4096.0;
 const float STELLATA_PI = 3.141592653589793;
 const float STELLATA_ARCSEC_TO_RAD = 4.84813681109536e-6;
 const float STELLATA_LOG10 = 2.302585092994046;
+const float STELLATA_SQRT12 = 3.4641016151377544;
 
 /** Inverse of `pixelSolidAngleArcsec2` — CSS px per radian recovered from
  *  the pixel solid angle. A layer needing a plate scale takes it from
@@ -26,6 +27,39 @@ const float STELLATA_LOG10 = 2.302585092994046;
  *  so a resize can never leave the two disagreeing about the viewport. */
 float stellataPxPerRadian(float omegaPxArcsec2) {
     return 1.0 / (STELLATA_ARCSEC_TO_RAD * sqrt(max(omegaPxArcsec2, 1e-12)));
+}
+
+/** Radius, in pc, over which a raymarch step must smooth its profile for a
+ *  point-sampled fragment to carry the pixel's AREA average of the column
+ *  rather than the profile's value at the pixel centre. One CSS pixel
+ *  subtends `distancePc / pxPerRadian`; `sqrt(12)` matches the second moment
+ *  of a square footprint, which is the order the softening below corrects to.
+ *  Grows along the ray, so it is a cone rather than a cylinder.
+ *
+ *  Load-bearing for the display convolution, not cosmetic: the convolution
+ *  can only average what the rasteriser sampled, and an aliased Sérsic cusp
+ *  survives it — 3.95 mag on M31's nucleus. summation/README.md § Footprint. */
+float stellataFootprintPc(float distancePc, float omegaPxArcsec2) {
+    return distancePc / (stellataPxPerRadian(omegaPxArcsec2) * STELLATA_SQRT12);
+}
+
+/** A profile radius smoothed over the footprint. For a spherically symmetric
+ *  profile this is exactly TRANSVERSE smoothing — `|p|² + eps²` splits into
+ *  the parallel and perpendicular parts of `p`, so adding `eps²` to the whole
+ *  radius adds it to the perpendicular part alone. */
+float stellataSoftenRadius(float radiusPc, float footprintPc) {
+    return sqrt(radiusPc * radiusPc + footprintPc * footprintPc);
+}
+
+/** How much of the footprint lies along `axis` for a ray running `dirUnit`:
+ *  the perpendicular disc's extent projected onto that axis. Zero when the
+ *  ray runs along the axis, which is what a separable profile needs — the
+ *  vertical scale height is finer than the footprint at wide FOV, so
+ *  softening a face-on disc along z would suppress the column instead of
+ *  averaging it. */
+float stellataFootprintAlong(vec3 dirUnit, vec3 axis) {
+    float c = dot(dirUnit, axis);
+    return sqrt(max(0.0, 1.0 - c * c));
 }
 
 float stellataLuminanceForMag(float exposure, float appMag) {

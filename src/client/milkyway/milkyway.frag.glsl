@@ -121,15 +121,20 @@ const int FOREGROUND_DUST_STEPS = 16;
 
 // --- Density functions ----------------------------------------------
 
-float discDensityVal(float R, float zVal) {
+// `footprintPc` / `zFootprintPc` smooth the profile over one pixel's
+// transverse footprint so a point-sampled fragment carries the pixel's area
+// average (../hdr/emission.glsl). From Sol they are metres against a 300 pc
+// scale height and change nothing; from outside the Galaxy they are what
+// keeps the band comparable with a Local Group object at the same distance.
+float discDensityVal(float R, float zVal, float footprintPc, float zFootprintPc) {
   return uDensity0
-       * exp(-(R - uR0Pc) / uDiscScaleLengthPc)
-       * exp(-abs(zVal) / uDiscScaleHeightPc);
+       * exp(-(stellataSoftenRadius(R, footprintPc) - uR0Pc) / uDiscScaleLengthPc)
+       * exp(-stellataSoftenRadius(abs(zVal), zFootprintPc) / uDiscScaleHeightPc);
 }
 
-float bulgeDensityVal(float R, float zVal) {
+float bulgeDensityVal(float R, float zVal, float footprintPc) {
   float zEff = zVal / uBulgeAxisRatio;
-  float rPrime = sqrt(R * R + zEff * zEff);
+  float rPrime = stellataSoftenRadius(sqrt(R * R + zEff * zEff), footprintPc);
   return uDensity0 * exp(-rPrime / uBulgeScaleRadiusPc);
 }
 
@@ -230,8 +235,11 @@ void main() {
   float prevS = sStart;
 
   float dustEffective = uDustEnabled * uExtinctionStrength;
+  vec3 dirGalCentric = dirLocal * uMeshScalePc;
   vec3 tauAccum = foregroundDustTau(
-    camGalCentric, dirLocal * uMeshScalePc, sStart, worldPerT, dustEffective);
+    camGalCentric, dirGalCentric, sStart, worldPerT, dustEffective);
+  float zFootprintScale =
+    stellataFootprintAlong(normalize(dirGalCentric), vec3(0.0, 0.0, 1.0));
 
   for (int i = 0; i < STEPS; i++) {
     float sBoundary = exp(logMin + float(i + 1) * logStep);
@@ -250,9 +258,10 @@ void main() {
     float R = length(posGalCentric.xy);
     float zVal = posGalCentric.z;
 
+    float footprintPc = stellataFootprintPc(sMid, uOmegaPxArcsec2);
     float densityVal = uIsBulge
-      ? bulgeDensityVal(R, zVal)
-      : discDensityVal(R, zVal);
+      ? bulgeDensityVal(R, zVal, footprintPc)
+      : discDensityVal(R, zVal, footprintPc, footprintPc * zFootprintScale);
 
     vec3 dTauRGB = dustTauStepRGB(R, zVal, dsPc, dustEffective);
 

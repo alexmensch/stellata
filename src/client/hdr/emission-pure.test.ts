@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
+  footprintAlong,
+  footprintRadiusPc,
   lumaNormalisedTint,
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   pointSourcePeakLuminance,
   rodSummationSolidAngleArcsec2,
+  softenRadius,
   surfaceBrightnessLuminance,
 } from './emission-pure';
 import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
@@ -107,6 +110,43 @@ describe('pixelSolidAngleArcsec2', () => {
 
   it('is finite at the zero-FOV singularity a transition can pass through', () => {
     expect(Number.isFinite(pixelSolidAngleArcsec2(angularToPx(900, 0)))).toBe(true);
+  });
+});
+
+describe('the footprint a raymarch step smooths its profile over', () => {
+  const omega50 = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)));
+
+  it('is the pixel span at that distance over sqrt(12)', () => {
+    // 50° / 900 px is 200 arcsec per pixel, so one pixel spans
+    // 200/206265 × 785 kpc ≈ 761 pc at M31 and the footprint is that / √12.
+    const spanPc = (200 / 206264.806) * 785_000;
+    expect(footprintRadiusPc(785_000, omega50)).toBeCloseTo(spanPc / Math.sqrt(12), 1);
+  });
+
+  it('vanishes as the plate scale resolves the profile', () => {
+    const wide = footprintRadiusPc(785_000, omega50);
+    const zoomed = footprintRadiusPc(785_000, pixelSolidAngleArcsec2(angularToPx(900, fovYRad(10))));
+    expect(wide / zoomed).toBeCloseTo(5, 6);
+  });
+
+  it('leaves a radius alone once the footprint is small against it', () => {
+    expect(softenRadius(5_000, 4)).toBeCloseTo(5_000, 2);
+    expect(softenRadius(0, 300)).toBe(300);
+  });
+
+  // The whole reason the axis projection exists: a face-on disc must get NO
+  // vertical softening. The scale height is finer than the footprint at wide
+  // FOV, so softening along the ray would suppress the column rather than
+  // average it — a 2.7 mag error in the direction nothing would flag.
+  it('puts no footprint along an axis the ray runs down', () => {
+    expect(footprintAlong([0, 0, 1], [0, 0, 1])).toBeCloseTo(0, 12);
+    expect(footprintAlong([0, 0, -1], [0, 0, 1])).toBeCloseTo(0, 12);
+  });
+
+  it('puts the whole footprint along an axis the ray runs across', () => {
+    expect(footprintAlong([1, 0, 0], [0, 0, 1])).toBeCloseTo(1, 12);
+    const diagonal = Math.SQRT1_2;
+    expect(footprintAlong([diagonal, 0, diagonal], [0, 0, 1])).toBeCloseTo(diagonal, 12);
   });
 });
 

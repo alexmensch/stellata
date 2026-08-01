@@ -9,6 +9,7 @@ import { LUMA_WEIGHTS } from './tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
+  footprintRadiusPc,
   pxPerRadianFromSolidAngle,
 } from './emission-pure';
 import './hdr-pipeline';
@@ -70,6 +71,26 @@ describe('shared chunk constants', () => {
       expect(shader).toBeCloseTo(extendedThresholdSbFromSolidAngle(omega, 7.8), 9);
     }
     expect(Number.isFinite(extendedThresholdSbFromSolidAngle(0, 7.8))).toBe(true);
+  });
+
+  // How far a raymarch step smooths its profile, and therefore whether the
+  // display convolution averages a resolved field or an aliased cusp
+  // (summation/README.md § Footprint). Both the √12 and the arcsec
+  // conversion are GLSL literals; too small leaves the cusp, too large dims
+  // the core, and neither failure mode stops the shader compiling.
+  it('emission.glsl derives the same footprint radius as emission-pure does', () => {
+    const sqrt12 = emissionChunk.match(/const float STELLATA_SQRT12 = ([\d.]+);/);
+    const arcsec = emissionChunk.match(/const float STELLATA_ARCSEC_TO_RAD = ([\d.e-]+);/);
+    expect(sqrt12).not.toBeNull();
+    expect(arcsec).not.toBeNull();
+    expect(Number(sqrt12![1])).toBeCloseTo(Math.sqrt(12), 12);
+    for (const omega of [4, 4_000, 40_000]) {
+      for (const distancePc of [1, 785_000, 2_000_000]) {
+        const pxPerRadian = 1 / (Number(arcsec![1]) * Math.sqrt(omega));
+        const shader = distancePc / (pxPerRadian * Number(sqrt12![1]));
+        expect(shader).toBeCloseTo(footprintRadiusPc(distancePc, omega), 6);
+      }
+    }
   });
 
   // A stage that pastes the unit already has ln(10) and π in scope, so a
