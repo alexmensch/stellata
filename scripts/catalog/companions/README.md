@@ -228,10 +228,11 @@ Per-row gates and resolution:
     records at fixed apparent brightness.
   - **"Anchor alone"** is the `mag_pri` of the anchor's DEEPEST row, and is also
     the Δ reference for every `dmag_imputed` member. `componentDepth` ranks the
-    letter, NOT its length: a multi-uppercase token is an unresolved compound
-    and scores 0, BELOW a single letter, because η CrB's `AB,E` row prints the
-    A+B aggregate and reading it as deeper than `A` makes the blend the anchor's
-    own light. Ties break brightest.
+    letter, NOT its length: a compound is an unresolved aggregate and scores 0,
+    BELOW a single letter, because η CrB's `AB,E` row prints the A+B aggregate
+    and reading it as deeper than `A` makes the blend the anchor's own light.
+    The test is two designators at ONE level (`AB`, `Aab`, `Aa12`), never "two
+    capitals". Ties break brightest.
   - **Registration** reads the ANCHOR RECORD's `vVia`, never a multiples.tsv
     `photometry_via` cell: those freeze at the build that wrote the TSV and went
     stale under the driver swap (ξ UMa's AB row says `none` while the record

@@ -885,18 +885,25 @@ function withinBlendSeparation(
   return sepArcsec !== null && sepArcsec <= maxSepArcsec;
 }
 
+/** Two designators at ONE level, which makes the token an unresolved COMPOUND:
+ *  the aggregate of several components rather than one of them. Matches at any
+ *  level, since WDS concatenates at whichever it is aggregating — `AB` and `ABC`
+ *  at the top, `Aab` for Aa+Ab (multiples.tsv carries one, 15169-6057), `Aa12`
+ *  for Aa1+Aa2. */
+const COMPOUND_COMPONENT_LEVEL = /[A-Z]{2,}|[a-z]{2,}|\d{2,}/;
+
 /** How many WDS designators deep a component letter sits: ``"A" → 1``,
  *  ``"Aa" → 2``, ``"Aa1" → 3``. Walks `parentComponentToken` rather than
  *  counting characters, so the two cannot drift on what a level is.
  *
- *  A multi-uppercase token is an unresolved COMPOUND ("AB", "ABC") — the
- *  aggregate of several top-level letters, so less decomposed than any one of
- *  them, and 0 rather than the 2 its length suggests. η CrB is the case that
- *  makes this load-bearing: its `AB,E` row prints `mag_pri` 4.98 for the A+B
- *  blend against the `AB` row's 5.64 for A alone. */
+ *  A compound scores 0 — less decomposed than any single letter, rather than the
+ *  depth its length suggests. η CrB is the case that makes this load-bearing:
+ *  its `AB,E` row prints `mag_pri` 4.98 for the A+B blend against the `AB` row's
+ *  5.64 for A alone, so reading `AB` as deeper than `A` makes the blend the
+ *  anchor's own light and stops the pair re-splitting at all. */
 export function componentDepth(comp: string): number {
   const c = comp.trim();
-  if (/^[A-Z]{2,}$/.test(c)) return 0;
+  if (COMPOUND_COMPONENT_LEVEL.test(c)) return 0;
   let depth = 0;
   for (let tok: string | null = c; tok; tok = parentComponentToken(tok)) {
     depth++;

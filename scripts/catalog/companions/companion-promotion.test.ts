@@ -793,6 +793,17 @@ describe('anchor flux dimming', () => {
     // letter despite being longer (η CrB's AB,E row blends A+B into mag_pri).
     expect(componentDepth('AB')).toBe(0);
     expect(componentDepth('ABC')).toBe(0);
+    // WDS concatenates at whichever level it aggregates, so the rule is two
+    // designators at ONE level, not two capitals. 'Aab' is Aa+Ab and would
+    // otherwise score 3 — the deepest rank there is, on an aggregate. It is in
+    // multiples.tsv today (15169-6057), inert only because that cursor carries
+    // no identifier for an anchor to resolve.
+    expect(componentDepth('Aab')).toBe(0);
+    expect(componentDepth('Aa12')).toBe(0);
+    // Single designators at every level still walk, including the truncated
+    // secondary forms Stage 6 emits.
+    expect(componentDepth('Ab1')).toBe(3);
+    expect(componentDepth('b1')).toBe(2);
   });
 
   // η CrB's shape: the AB cursor prints A's own 5.64, the AB,E cursor prints
