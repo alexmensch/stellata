@@ -152,7 +152,8 @@ describe('probe kind module', () => {
       warpActive: false,
     });
     // The marker sits at screen centre: prime pick there, none far away.
-    expect(m.pick!(400, 300, 14)?.idx).toBe(0);
-    expect(m.pick!(0, 0, 14)).toBeNull();
+    const { pick } = m.hover!();
+    expect(pick(400, 300, 14)?.idx).toBe(0);
+    expect(pick(0, 0, 14)).toBeNull();
   });
 });

@@ -50,6 +50,11 @@ Modules themselves live in their kind's folder
   applies `kindPush[id]` for EVERY row of its exhaustive record — a
   migrated kind adds no line to `buildSceneElementBinds`. Two kinds
   claiming one element throws at merge rather than silently clobbering.
+- **One pick function per kind, and it lives on `hover()`.** There is
+  no separate `pick` leg to keep in sync: `KindPick` IS
+  `HoverProvider['pick']`, and `collectKindPicks()` reads it off the
+  module's hover provider for the Picker. A kind that wants a click
+  pick supplies a hover provider.
 - **Kind-specific machinery stays out of the contract.** The shell may
   hold a module's concrete type for cross-kind wiring (the solar-system
   cluster reads `kinds.probe.field` for its local-depth mirror); the
@@ -65,6 +70,6 @@ providers, label overlays, and the search corpus. `stellata.ts`: the
 constructor builds one `KindContext` and attach-loops the roster at
 the layer-construction point; `setT` fans out `clockJumped`,
 `setFocalBodyHidden` fans out `setFocalHidden`, `buildSceneElementBinds`
-applies the merged `detailBinds()` pushes, and the
-Picker dispatches click picks through the modules' `pick` legs
-(`pickKindHit`) so click and hover share one pick function per kind.
+applies the merged `detailBinds()` pushes, and `collectKindPicks()`
+hands the Picker each module's hover `pick` for its `pickKindHit`
+dispatch.

@@ -155,7 +155,7 @@ How to apply:
   provider gates each `ShellPickSurface.visible()` on the shell's
   `isVisible()` (mirrors `group.visible` — the actual rendered state), so
   a decluttered / chart-hidden / camera-inside shell isn't hoverable.
-- For deep-space probes: the probe kind module's pick leg
+- For deep-space probes: the probe kind module's hover pick
   (`../solar-system/probes/probe-module.ts`) gates on the marker
   field's own per-frame `visible` verdict — the same record the glyph's
   alpha comes from — with `PROBE_MARKER_PX` as the hit-radius basis.

@@ -5,7 +5,7 @@ import type * as THREE from 'three';
 import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focus-target';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
-import type { HoverHit, HoverProvider } from '../hover/hover-types';
+import type { HoverProvider } from '../hover/hover-types';
 import type { SceneElementId } from '../scene/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { StarSharedUniforms } from '../star-pipeline/frame/star-shared-uniforms';
@@ -35,14 +35,10 @@ export interface KindContext {
   onFrame(handler: () => void): () => void;
 }
 
-/** One kind's pick path — same contract as `HoverProvider.pick`; the
- *  Picker dispatches click picks through it so click and hover can never
- *  disagree on a hit. */
-export type KindPick = (
-  clientX: number,
-  clientY: number,
-  pixelThreshold?: number,
-) => HoverHit | null;
+/** One kind's pick path. It IS `HoverProvider.pick` — the Picker
+ *  dispatches click picks through the kind's hover provider so click
+ *  and hover can never disagree on a hit. */
+export type KindPick = HoverProvider['pick'];
 
 /** One search-corpus row contributed by a kind; `index` is the kind's
  *  Target idx. The runner tags rows with the module's kind. */
@@ -70,10 +66,10 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   attach(ctx: KindContext): SceneLayer | null;
   focusable(): FocusableProvider;
   card(): FocusCardProvider<K>;
+  /** The kind's hover surface. Its `pick` doubles as the click-pick
+   *  path the shell hands the Picker (`pickKindHit`) — one pick
+   *  function per kind, never a second leg to keep in sync. */
   hover?(): HoverProvider;
-  /** Click-pick surface, dispatched via `Picker.pickKindHit`. Share the
-   *  implementation with `hover().pick`. */
-  pick?: KindPick;
   pinnable(idx: number): boolean;
   searchEntries(): readonly KindSearchEntry[];
   /** Display name for a Target of this kind; '' when unresolvable. */

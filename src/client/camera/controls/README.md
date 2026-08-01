@@ -29,8 +29,8 @@ in both navigate and observe modes.
   stars / clouds / planets / Local Group / heliopause / boundary
   shells (`pickShellHit`, shared silhouette helper in
   `fresnel-shell/`). Kinds migrated onto kind modules pick through
-  `pickKindHit`, which dispatches to the module's own pick leg
-  (probes today) — the same function the kind's hover provider calls,
+  `pickKindHit`, which dispatches to the module's hover-provider pick
+  (probes today) — literally the same function the hover engine runs,
   so click and hover can't disagree. The two
   cloud surfaces (`pickCloud` / `pickCloudHit`) hold only their own gates
   — warp and `group.visible` respectively — and delegate the winner to

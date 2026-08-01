@@ -45,7 +45,7 @@ export function createProbeKindModule(): ProbeKindModule {
   const pick = (
     clientX: number,
     clientY: number,
-    pixelThreshold = 14,
+    pixelThreshold: number,
   ): HoverHit | null => {
     if (!ctx || !field) return null;
     const rect = ctx.canvas.getBoundingClientRect();
@@ -162,7 +162,7 @@ export function createProbeKindModule(): ProbeKindModule {
 
     hover: (): HoverProvider<'probe'> => ({
       kind: 'probe',
-      pick: (x, y, pxThreshold) => pick(x, y, pxThreshold),
+      pick,
       format: (hit) => {
         const traj = field?.probeAt(hit.idx);
         const sample = sampledFor(hit.idx);
@@ -177,8 +177,6 @@ export function createProbeKindModule(): ProbeKindModule {
         });
       },
     }),
-
-    pick,
 
     pinnable: (idx) => (field?.probeAt(idx) ?? null) !== null,
 

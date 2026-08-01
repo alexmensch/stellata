@@ -114,8 +114,7 @@ interface ObjectKindModule<K extends TargetKind> {
   // capability legs, valid after attach:
   focusable(): FocusableProvider;    // merged contract, § below
   card(): FocusCardProvider<K>;
-  hover?(): HoverProvider;
-  pick?: KindPick;                   // shared by hover + the click FSM
+  hover?(): HoverProvider;           // its pick doubles as the click FSM's
   pinnable(idx: number): boolean;
   searchEntries(): readonly KindSearchEntry[];
   displayName(idx: number): string;
@@ -157,6 +156,12 @@ What the pilot taught, versus the original sketch:
 - **`sceneElements` floors stay in `SCENE_ELEMENT_FLOORS`** (same leaf
   argument); the module contributes only the imperative pushes via
   `detailBinds`, merged into the shell's exhaustive bind record.
+- **No separate `pick` leg.** The sketch's `pick?: PickSurface`
+  alongside `hover?` is one capability spelled twice, kept honest only
+  by convention. `KindPick` is `HoverProvider['pick']` and
+  `collectKindPicks()` reads the click-pick surface off the hover
+  provider — the click FSM and the hover engine run the same function
+  object.
 - **Modules are stateful per-shell instances**, so the record is built
   by a `buildKindModules()` factory, not a module-scope constant.
 - Two legs the sketch missed: `clockJumped` (a URL restore jumps the

@@ -70,10 +70,11 @@ import {
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import { KIND_TRAITS, type FocusableProviders, type Target, type TargetKind } from './camera/focus/focus-target';
-import type { KindContext, KindPick } from './kinds/kind-module';
+import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
+import type { KindContext } from './kinds/kind-module';
 import {
   buildKindModules,
+  collectKindPicks,
   KIND_ROSTER,
   mergeKindDetailBinds,
   type BuiltKindModules,
@@ -696,7 +697,7 @@ export class Stellata implements FrameAnchor {
       getLocalGroupLayer: () => this.localGroupLayer,
       getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
-      kindPicks: this.collectKindPicks(),
+      kindPicks: collectKindPicks(this.kinds),
       getWorldOffset: () => this.worldOffset,
       getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
@@ -1383,15 +1384,6 @@ export class Stellata implements FrameAnchor {
     return 0;
   }
 
-  /** Kind-module pick surfaces for the Picker's generic dispatch. */
-  private collectKindPicks(): Partial<Record<TargetKind, KindPick>> {
-    const picks: Partial<Record<TargetKind, KindPick>> = {};
-    for (const kind of KIND_ROSTER) {
-      const pick = this.kinds[kind]?.pick;
-      if (pick) picks[kind] = pick;
-    }
-    return picks;
-  }
   /** Absolute-space coordinate of the renderer's current local origin.
    *  Read-only snapshot; callers must not mutate. URL serialisation
    *  emits this so close-orbit unfocus poses (where worldOffset sits at

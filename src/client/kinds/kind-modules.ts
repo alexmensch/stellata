@@ -6,7 +6,7 @@ import type { SceneElementId } from '../scene/scene-elements';
 import {
   createProbeKindModule,
 } from '../solar-system/probes/probe-module';
-import type { ObjectKindModule } from './kind-module';
+import type { KindPick, ObjectKindModule } from './kind-module';
 
 /** EXHAUSTIVE over TargetKind — a kind without an entry (module or an
  *  explicit null while its wiring is still inline) fails tsc. Don't
@@ -42,6 +42,18 @@ export function buildKindModules() {
 }
 
 export type BuiltKindModules = ReturnType<typeof buildKindModules>;
+
+/** Click-pick surfaces for `Picker.pickKindHit`, taken from each
+ *  module's hover provider so the click FSM and the hover engine run
+ *  the same function. */
+export function collectKindPicks(modules: KindModules): Partial<Record<TargetKind, KindPick>> {
+  const picks: Partial<Record<TargetKind, KindPick>> = {};
+  for (const kind of KIND_ROSTER) {
+    const pick = modules[kind]?.hover?.().pick;
+    if (pick) picks[kind] = pick;
+  }
+  return picks;
+}
 
 export type KindDetailBinds = Partial<Record<SceneElementId, (on: boolean) => void>>;
 

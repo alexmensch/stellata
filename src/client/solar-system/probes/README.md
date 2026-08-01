@@ -359,8 +359,8 @@ in the interaction layer:
   distance vector, and POIs already carry any-kind SIDs, and unlike the
   planet domain there is no index translation — the resolver's
   localIndex IS the Target idx.
-- **Hover / click pick** — the module's one `pick` leg serves both the
-  hover provider and the click FSM (via `Picker.pickKindHit`), mirrors
+- **Hover / click pick** — the module's hover provider supplies the one
+  `pick` the click FSM also runs (via `Picker.pickKindHit`), mirrors
   the marker draw predicate exactly (`visible`), and takes
   `PROBE_MARKER_PX` as the hit-radius basis. No focus gate on the pick
   side, unlike the trail (hover Rule 2).
