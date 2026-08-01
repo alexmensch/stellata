@@ -41,6 +41,7 @@ import {
 import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
 import {
+  L_THRESH,
   relativeLuminance,
   srgbEncode,
   reinhardExtended,
@@ -176,6 +177,25 @@ describe('MilkyWay diffuse reference', () => {
 const SFD_POLAR_AV_MIN = 0.03;
 const SFD_POLAR_AV_MAX = 0.15;
 
+// Rod spatial summation integrates an extended source over roughly a
+// degree of sky, which is why the band's naked-eye visibility is a
+// different question from its per-pixel level.
+const ROD_SUMMATION_PATCH_DEG = 1;
+const ARCSEC_PER_DEG = 3600;
+
+/** Display level the GC sightline reaches at the base epoch, on the
+ *  reference 900 px / 50° viewport both display assertions use. */
+function bandDisplayLevel(): number {
+  const omega = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
+  return srgbEncode(
+    reinhardExtended(
+      GC_SIGHTLINE_COLUMN *
+        surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, omega),
+      tonemapWhitePoint(),
+    ),
+  );
+}
+
 describe('MilkyWay analytical dust', () => {
   // Marched through the profile rather than re-arranged out of the
   // normalisation, so a change to the radial term, the A_V-per-density
@@ -226,7 +246,9 @@ describe('MilkyWay surface-brightness calibration', () => {
   });
 
   // The anchor is set on the DUST-FREE pole, so the rendered pole sits a
-  // little under it — the slab's own 0.125 mag perpendicular column.
+  // little under it. Less than the slab's full 0.125 mag perpendicular
+  // column, because the emission originates throughout the slab rather
+  // than behind all of it.
   it('puts the NGP on the resolved-star-corrected residual', () => {
     const s = (lDeg: number, bDeg: number) =>
       sightlineSurfaceBrightness(
@@ -270,7 +292,10 @@ describe('MilkyWay surface-brightness calibration', () => {
         extinctionStrength: k,
       });
     expect(at(0)).toBeCloseTo(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2, 2);
-    expect(at(4) - at(0)).toBeLessThan(0.5);
+    // Quadrupling the dust attenuates the pole and moves nothing else.
+    // Pinned rather than bounded: a loose ceiling here would also pass if
+    // the emissivity had silently re-coupled and cancelled the change.
+    expect(at(4) - at(0)).toBeCloseTo(0.302, 3);
   });
 
   // The plane-to-pole contrast the retired anchor got wrong by 4 mag.
@@ -293,20 +318,35 @@ describe('MilkyWay surface-brightness calibration', () => {
   // eso0932a. Do not raise the emissivity to compensate; that would put
   // the pole back above its measured residual.
   it('renders the band in the dither-resolvable toe at the base epoch', () => {
-    const omega = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
-    const displayAt = (column: number) =>
-      srgbEncode(
-        reinhardExtended(
-          column *
-            surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, omega),
-          tonemapWhitePoint(),
-        ),
-      );
-    expect(displayAt(GC_SIGHTLINE_COLUMN)).toBeCloseTo(0.0066, 4);
-    expect(displayAt(GC_SIGHTLINE_COLUMN)).toBeGreaterThan(1 / 255);
-    expect(displayAt(GC_SIGHTLINE_COLUMN)).toBeLessThan(
+    expect(bandDisplayLevel()).toBeCloseTo(0.0066, 4);
+    expect(bandDisplayLevel()).toBeGreaterThan(1 / 255);
+    expect(bandDisplayLevel()).toBeLessThan(
       srgbEncode(reinhardExtended(0.02, tonemapWhitePoint())),
     );
+  });
+
+  // The band is faint on screen but not faint in the sky, and the two
+  // disagree by a wide margin. Summed over a rod-summation patch the GC
+  // sightline is well ABOVE the shipped instrument's limit, yet it renders
+  // at a small fraction of a threshold star, because L_THRESH lifts point
+  // sources to a comfortable display level and extended sources get no
+  // equivalent concession. The retired 20.0 anchor was silently supplying
+  // that lift.
+  //
+  // Pinned because these three figures are the whole case for the
+  // extended-source threshold (README.md § Calibration), they are what a
+  // future session will act on, and they were already computed once
+  // against the wrong m_lim.
+  it('pins the extended-source display gap against the shipped instrument', () => {
+    const patchArcsec2 = (ROD_SUMMATION_PATCH_DEG * ARCSEC_PER_DEG) ** 2;
+    const patchMag = GC_SIGHTLINE_MAG_ARCSEC2 - 2.5 * Math.log10(patchArcsec2);
+    expect(patchMag).toBeCloseTo(5.51, 2);
+    expect(instrumentLimitMag(DEFAULT_INSTRUMENT) - patchMag).toBeCloseTo(2.29, 2);
+
+    const thresholdStar = srgbEncode(reinhardExtended(L_THRESH, tonemapWhitePoint()));
+    expect(thresholdStar * 255).toBeCloseTo(38.3, 1);
+    // Brighter than the limit by 2.29 mag, drawn at 1/23 of it.
+    expect(thresholdStar / bandDisplayLevel()).toBeCloseTo(22.88, 2);
   });
 
   it('dims the band quadratically with FOV — magnification costs surface brightness', () => {
