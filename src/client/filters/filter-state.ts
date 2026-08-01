@@ -23,8 +23,11 @@ export interface Instrument {
    *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/README.md`
    *  § Operator). */
   sizeSpan: number;
-  /** No consumer yet — § 3.4's two remaining preset axes. */
+  /** Doubles as the extended-source detection threshold
+   *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). Not
+   *  yet an additive floor on `L`, which is the other half of the axis. */
   skyBackgroundMagArcsec2: number;
+  /** No consumer yet — § 3.4's remaining preset axis. */
   passband: 'V';
 }
 

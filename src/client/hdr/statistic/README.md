@@ -50,6 +50,13 @@ clamped read is a lower bound the adaptation loop closes from above
 
 **An extended source has `R = G`** — its emission is already true surface
 brightness, so its flux over the pixels it covers is what a mean wants.
+Both are computed at the **pixel** solid angle even where attachment 0 is
+not: the Milky Way band displays at the eye's rod summation area
+(`../README.md` § Extended sources), and that lift is a display
+concession rather than light, so it must not reach a channel the
+adaptation model reads as retinal illuminance. Headroom at the base
+epoch: the band's brightest display level is 0.02 against `L_CAP` 1.8, so
+the guard is not being bypassed by anything that matters.
 
 **A point source does not.** Its R divides the display kernel by the
 kernel's own area integral, `Φ(n)·D²`, where Φ is

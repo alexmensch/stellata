@@ -75,12 +75,17 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
 }
 
 /**
- * Luminance one pixel receives from an extended source of surface
- * brightness `magPerArcsec2`. The pixel's flux magnitude is
- * `magPerArcsec2 − 2.5·log10(omegaPxArcsec2)`; feeding that through
- * `luminanceForMagnitude` collapses the log round-trip to this product,
- * which is why a layer can apply it as a single scalar gain and keep its
- * chromaticity.
+ * Luminance from an extended source of surface brightness
+ * `magPerArcsec2`, spread over `omegaArcsec2`. The flux magnitude inside
+ * that solid angle is `magPerArcsec2 − 2.5·log10(omegaArcsec2)`; feeding
+ * that through `luminanceForMagnitude` collapses the log round-trip to
+ * this product, which is why a layer can apply it as a single scalar gain
+ * and keep its chromaticity.
+ *
+ * The pixel solid angle is the **physical** answer and is what the
+ * adaptation statistic wants. A **display** path takes
+ * `rodSummationSolidAngleArcsec2` instead, so that threshold for an
+ * extended source lands where the eye's is.
  *
  * Unclamped — a layer scaling a per-channel column by this must clamp the
  * product against `LUMA_CEIL`, not the factor.
@@ -88,9 +93,42 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
 export function surfaceBrightnessLuminance(
   exposure: number,
   magPerArcsec2: number,
-  omegaPxArcsec2: number,
+  omegaArcsec2: number,
 ): number {
-  return luminanceForMagnitude(exposure, magPerArcsec2) * omegaPxArcsec2;
+  return luminanceForMagnitude(exposure, magPerArcsec2) * omegaArcsec2;
+}
+
+/**
+ * Solid angle the eye sums an extended source's flux over, in arcsec² —
+ * the rod summation area implied by pairing an instrument's
+ * extended-source threshold surface brightness with its point-source
+ * limit.
+ *
+ * A source at `thresholdMagArcsec2` lands on `L_THRESH` when this stands
+ * in for the pixel solid angle in `surfaceBrightnessLuminance`, exactly as
+ * a point source at `limitMag` does. Fixed in **angle**, so an extended
+ * source's display luminance does not move with FOV — the eye's summation
+ * area is a property of the retina, not of the plate scale.
+ * `docs/science-hdr-pipeline.md` § 1 carries the derivation.
+ */
+export function rodSummationSolidAngleArcsec2(
+  thresholdMagArcsec2: number,
+  limitMag: number,
+): number {
+  return 10 ** (0.4 * (thresholdMagArcsec2 - limitMag));
+}
+
+/** Inverse of `rodSummationSolidAngleArcsec2`. A consumer needing the
+ *  threshold back in the magnitude domain — the chart isobar contours a
+ *  surface brightness — recovers it from the same solid angle the gain
+ *  runs on rather than taking a second uniform, so the contour and the
+ *  emission cannot disagree about where threshold is. Mirrors
+ *  `stellataExtendedThresholdSb`. */
+export function extendedThresholdSbFromSolidAngle(
+  omegaSummationArcsec2: number,
+  limitMag: number,
+): number {
+  return limitMag + 2.5 * Math.log10(omegaSummationArcsec2);
 }
 
 /**

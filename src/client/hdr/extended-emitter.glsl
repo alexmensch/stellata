@@ -24,6 +24,14 @@ void stellataEmitNothing(out vec4 fragColor, out vec4 statistic) {
  * surface brightness a unit column represents. The gain collapses the
  * magnitude round-trip to one scalar, so hue survives it untouched.
  *
+ * TWO solid angles, and they are different quantities.
+ * `omegaDisplayArcsec2` sets where the fragment lands on screen: the rod
+ * summation solid angle for a source smooth over it, so that threshold
+ * lands where the eye's does, and `omegaPxArcsec2` for a source with
+ * structure finer than the summation area (README.md § Extended sources).
+ * `omegaPxArcsec2` alone feeds the statistic — the display concession is
+ * not light, and the adaptation model reads retinal illuminance.
+ *
  * Extended source, so flux and peak are the same quantity and alpha is 1
  * — the additive blend must SUM the statistic, not scale it a second time
  * (statistic/README.md § One blend equation, two attachments).
@@ -35,6 +43,7 @@ void stellataEmitExtendedSource(
     vec3 column,
     float exposure,
     float magPerArcsec2,
+    float omegaDisplayArcsec2,
     float omegaPxArcsec2,
     float hdrTarget,
     float whitePoint,
@@ -43,11 +52,12 @@ void stellataEmitExtendedSource(
     out vec4 statistic
 ) {
     float gain = stellataSurfaceBrightnessLuminance(
-        exposure, magPerArcsec2, omegaPxArcsec2);
+        exposure, magPerArcsec2, omegaDisplayArcsec2);
     vec3 emitted = min(column * gain, vec3(STELLATA_LUMA_CEIL));
 
-    float emittedL = dot(emitted, STELLATA_LUMA_WEIGHTS);
-    statistic = stellataStatisticTexel(emittedL, emittedL, 1.0);
+    float physicalL = dot(column, STELLATA_LUMA_WEIGHTS)
+        * stellataSurfaceBrightnessLuminance(exposure, magPerArcsec2, omegaPxArcsec2);
+    statistic = stellataStatisticTexel(physicalL, physicalL, 1.0);
 
     fragColor = hdrTarget > 0.5
         ? vec4(emitted, 1.0)

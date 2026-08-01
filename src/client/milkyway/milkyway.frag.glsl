@@ -93,16 +93,16 @@ uniform float uHdrTarget;      // 1 = target bound, emit linear L untouched
 uniform float uWhitePoint;
 uniform float uHighlightDesat;
 uniform float uExposure;
-uniform float uOmegaPxArcsec2; // pixel solid angle, arcsec²
+uniform float uOmegaPxArcsec2;        // pixel solid angle, arcsec²
+uniform float uOmegaSummationArcsec2; // rod summation solid angle, arcsec²
 
 // Output controls.
 uniform float uLimitMag;      // shared with star pipeline (chart isobar)
 uniform float uGlowMagOffset; // V surface brightness at colorAccum = 1
 
 // Chart-mode isobar pass. When > 0.5 the fragment renders only a thin
-// outline at the iso-line where the integrated apparent magnitude crosses
-// uLimitMag — giving the galactic glow a topographic-contour treatment
-// that follows the instrument's limiting magnitude.
+// outline at the iso-line where the sightline's surface brightness crosses
+// the instrument's extended-source detection threshold.
 uniform float uChartIsobar;
 uniform vec3  uChartInkColor;
 
@@ -112,7 +112,6 @@ uniform vec3  uChartInkColor;
 // far portion of the ray.
 const int   STEPS = 32;
 const float S_MIN_PC = 1.0;
-const float LOG10 = 2.302585093;
 const float MAG_PER_TAU = 1.0857;
 
 // Deliberately linear rather than log-distributed like the march below:
@@ -264,22 +263,24 @@ void main() {
   }
 
   // uGlowMagOffset states the V surface brightness a unit column carries,
-  // so this sightline reads S = uGlowMagOffset - 2.5*log10(column) and the
-  // pixel's flux magnitude is m_px = S - 2.5*log10(Ω_px). Only the isobar
-  // needs it in the magnitude domain; the emission path takes the same
+  // so this sightline reads S = uGlowMagOffset - 2.5*log10(column). Only
+  // the isobar needs the magnitude domain; the emission path takes the
   // round-trip as one scalar gain inside stellataEmitExtendedSource.
   // Computed outside the branch so fwidth stays in uniform control flow.
   float column = max(dot(colorAccum, STELLATA_LUMA_WEIGHTS), 1e-12);
-  float magPx = uGlowMagOffset - 2.5 * log(column * uOmegaPxArcsec2) / LOG10;
+  float sb = uGlowMagOffset - 2.5 * log(column) / STELLATA_LOG10;
 
   if (uChartIsobar > 0.5) {
-    // Single solid contour line at the iso-magnitude where the pixel's
-    // integrated brightness equals the user's threshold. Use fwidth on
-    // magPx so the line is a constant 1 px wide regardless of how
-    // steep the local gradient is — flat regions of the band would
-    // otherwise paint a wide smudge and steep regions a hairline.
-    float fw = max(fwidth(magPx), 1e-5);
-    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(magPx - uLimitMag));
+    // Single solid contour where the sightline's SURFACE BRIGHTNESS crosses
+    // the extended-source threshold. Surface brightness carries no Ω_px
+    // term, so the line is FOV- and viewport-invariant — a chart's band
+    // outline is a fixed feature of the sky, not of the plate scale. Use
+    // fwidth so the line is a constant 1 px wide regardless of how steep
+    // the local gradient is — flat regions of the band would otherwise
+    // paint a wide smudge and steep regions a hairline.
+    float fw = max(fwidth(sb), 1e-5);
+    float thresholdSb = stellataExtendedThresholdSb(uOmegaSummationArcsec2, uLimitMag);
+    float line = 1.0 - smoothstep(fw * 0.5, fw * 1.5, abs(sb - thresholdSb));
     if (line <= 0.0) {
       stellataEmitNothing(fragColor, outStatistic);
       return;
@@ -289,9 +290,13 @@ void main() {
     return;
   }
 
+  // Displayed at the rod summation solid angle: the band's structure scale
+  // from Sol is degrees, so it is uniform over the eye's summation area and
+  // threshold belongs where the eye's is (../hdr/README.md § Extended
+  // sources). The statistic stays on Ω_px — it measures light, not display.
   stellataEmitExtendedSource(
     colorAccum,
-    uExposure, uGlowMagOffset, uOmegaPxArcsec2,
+    uExposure, uGlowMagOffset, uOmegaSummationArcsec2, uOmegaPxArcsec2,
     uHdrTarget, uWhitePoint, uHighlightDesat,
     fragColor, outStatistic);
 }

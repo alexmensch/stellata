@@ -110,7 +110,8 @@ footprint control).
 
 The one set of slots this map does **not** own is
 `HdrPipeline.emitterUniforms` — `uExposure`, `uOmegaPxArcsec2`,
-`uWhitePoint`, `uHighlightDesat`, `uHdrTarget` — passed in as the `hdr`
+`uOmegaSummationArcsec2`, `uWhitePoint`, `uHighlightDesat`,
+`uHdrTarget` — passed in as the `hdr`
 option and spread in by reference. `HdrPipeline` rewrites `uHdrTarget`
 on every seam / resolve / chart-mode change, so copying the values
 instead of sharing the objects would leave the star passes tone-mapping

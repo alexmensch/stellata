@@ -6,7 +6,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { LUMA_WEIGHTS } from './tonemap-pure';
-import { LUMA_CEIL, pxPerRadianFromSolidAngle } from './emission-pure';
+import {
+  LUMA_CEIL,
+  extendedThresholdSbFromSolidAngle,
+  pxPerRadianFromSolidAngle,
+} from './emission-pure';
 import './hdr-pipeline';
 
 const read = (name: string) =>
@@ -40,6 +44,19 @@ describe('shared chunk constants', () => {
   // conversion is a GLSL literal, so nothing but this pins it to
   // ARCSEC_TO_RAD — and a wrong plate scale mis-sizes a resolution floor
   // silently rather than failing to compile.
+  // The isobar reads the extended-source threshold back out of the same
+  // uniform the gain runs on, and the conversion is a GLSL literal — so
+  // nothing but this pins it to Math.log10.
+  it('emission.glsl recovers the extended threshold exactly as emission-pure does', () => {
+    const m = emissionChunk.match(/const float STELLATA_LOG10 = ([\d.]+);/);
+    expect(m).not.toBeNull();
+    const log10 = Number(m![1]);
+    for (const omega of [4, 40_000, 478_630.09]) {
+      const shader = 7.8 + (2.5 * Math.log(omega)) / log10;
+      expect(shader).toBeCloseTo(extendedThresholdSbFromSolidAngle(omega, 7.8), 9);
+    }
+  });
+
   it('emission.glsl recovers px-per-radian exactly as emission-pure does', () => {
     const m = emissionChunk.match(
       /const float STELLATA_ARCSEC_TO_RAD = ([\d.e-]+);/,

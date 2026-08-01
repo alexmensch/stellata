@@ -18,6 +18,7 @@ const vec3 STELLATA_LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
 const float STELLATA_LUMA_CEIL = 4096.0;
 const float STELLATA_PI = 3.141592653589793;
 const float STELLATA_ARCSEC_TO_RAD = 4.84813681109536e-6;
+const float STELLATA_LOG10 = 2.302585092994046;
 
 /** Inverse of `pixelSolidAngleArcsec2` — CSS px per radian recovered from
  *  the pixel solid angle. A layer needing a plate scale takes it from
@@ -75,21 +76,34 @@ vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
         alpha);
 }
 
-/** Luminance one pixel receives from an extended source of surface
- *  brightness `magPerArcsec2`. The pixel's flux magnitude is
- *  `magPerArcsec2 - 2.5*log10(omegaPxArcsec2)`, and feeding that through
- *  stellataLuminanceForMag collapses the log round-trip to this product —
- *  which is why a layer can apply it as one scalar gain and keep its
- *  chromaticity.
+/** Luminance from an extended source of surface brightness
+ *  `magPerArcsec2` spread over `omegaArcsec2`. The flux magnitude inside
+ *  that solid angle is `magPerArcsec2 - 2.5*log10(omegaArcsec2)`, and
+ *  feeding that through stellataLuminanceForMag collapses the log
+ *  round-trip to this product — which is why a layer can apply it as one
+ *  scalar gain and keep its chromaticity.
+ *
+ *  The pixel solid angle is the physical answer; a display path takes the
+ *  rod summation solid angle instead (README.md § Extended sources).
  *
  *  Unclamped: a layer scaling a per-channel column by this must clamp the
  *  product against STELLATA_LUMA_CEIL, not the factor. */
 float stellataSurfaceBrightnessLuminance(
     float exposure,
     float magPerArcsec2,
-    float omegaPxArcsec2
+    float omegaArcsec2
 ) {
-    return stellataLuminanceForMag(exposure, magPerArcsec2) * omegaPxArcsec2;
+    return stellataLuminanceForMag(exposure, magPerArcsec2) * omegaArcsec2;
+}
+
+/** The extended-source threshold surface brightness recovered from the rod
+ *  summation solid angle — the inverse of `rodSummationSolidAngleArcsec2`.
+ *  A consumer needing threshold back in the magnitude domain (the chart
+ *  isobar contours a surface brightness) takes it from the same uniform
+ *  the gain runs on rather than a second one, so the contour and the
+ *  emission cannot disagree about where threshold is. */
+float stellataExtendedThresholdSb(float omegaSummationArcsec2, float limitMag) {
+    return limitMag + 2.5 * log(max(omegaSummationArcsec2, 1e-12)) / STELLATA_LOG10;
 }
 
 #endif

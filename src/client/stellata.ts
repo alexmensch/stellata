@@ -436,11 +436,12 @@ export class Stellata implements FrameAnchor {
     });
     this.sharedUniforms = sharedUniforms;
     // Constructed before every consumer of the magnitude bounds: it
-    // rewrites all four slots from its own constructor, so the seeds in
+    // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
     this.exposure = new ExposureController({
       uniforms: {
         uExposure: this.hdr.emitterUniforms.uExposure,
+        uOmegaSummationArcsec2: this.hdr.emitterUniforms.uOmegaSummationArcsec2,
         uLimitMag: sharedUniforms.uLimitMag,
         uThresholdMag: sharedUniforms.uThresholdMag,
         uCullMag: sharedUniforms.uCullMag,

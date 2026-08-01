@@ -2,8 +2,14 @@
 // EV trim collapsed into one scalar, plus the two magnitude bounds the
 // shaders derive from it. See README.md § The three terms.
 
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
+import {
+  DEFAULT_INSTRUMENT,
+  INSTRUMENTS,
+  type InstrumentName,
+  instrumentLimitMag,
+} from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { rodSummationSolidAngleArcsec2 } from '../emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 
 /** One photographic stop in magnitudes: 2.5·log10(2). */
@@ -75,6 +81,36 @@ export function drawCutoffMag(
   return chart ? limitMag : thresholdMag + SOFT_TAPER_MARGIN_MAG;
 }
 
+/**
+ * The surface brightness at which an extended source is at the edge of
+ * detection — the extended-source sibling of `m_lim`.
+ *
+ * It **is** the instrument's sky background, and that identity is the
+ * claim: an extended source is detected as a contrast against the sky it
+ * sits in, and threshold contrast for a large, soft, scotopic target is of
+ * order unity. `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
+ * carries the derivation, the summation area it implies, and why the
+ * absolute-flux alternative over-lifts.
+ */
+export function extendedThresholdSbFor(name: InstrumentName): number {
+  return INSTRUMENTS[name].skyBackgroundMagArcsec2;
+}
+
+/** `uOmegaSummationArcsec2` for an instrument — the summation area implied
+ *  by pairing its extended-source threshold with its point-source limit.
+ *  Static in the exposure state: adaptation and the trim move both
+ *  thresholds together, so their offset is the instrument's alone. */
+export function summationSolidAngleFor(name: InstrumentName): number {
+  return rodSummationSolidAngleArcsec2(
+    extendedThresholdSbFor(name),
+    instrumentLimitMag(name),
+  );
+}
+
 /** The default instrument at EV 0 on an unadapted frame — every light
  *  decision in the scene grounds on it. */
 export const BASE_EPOCH_EXPOSURE = sceneExposure(instrumentLimitMag(DEFAULT_INSTRUMENT));
+
+/** Seed for `uOmegaSummationArcsec2`; `ExposureController` owns every
+ *  later write, as it does for `uExposure`. */
+export const DEFAULT_SUMMATION_ARCSEC2 = summationSolidAngleFor(DEFAULT_INSTRUMENT);

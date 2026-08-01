@@ -51,12 +51,13 @@ stars" is a request for a larger aperture — a different instrument — so a
 second control expressing it in magnitudes would be a second,
 contradictory answer to the same question.
 
-## One writer, four slots
+## One writer, five slots
 
-**`ExposureController` owns every write** — `uExposure` plus the three
-magnitude bounds — so the scalar and the bounds cannot disagree. It is
+**`ExposureController` owns every write** — `uExposure`,
+`uOmegaSummationArcsec2`, and the three magnitude bounds — so the scalar
+and the bounds cannot disagree. It is
 constructed *before* every consumer of those uniforms and rewrites all
-four from its own constructor, which is why the seeds in
+five from its own constructor, which is why the seeds in
 `buildSharedUniforms` never reach a shader. This is the one exception
 to "`HdrPipeline` owns `emitterUniforms`", and it moved here from
 `FilterController` when adaptation arrived: the exposure is no longer a
@@ -67,6 +68,14 @@ function of filter state alone.
 | `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, the MW chart isobar |
 | `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, every CPU "is it drawn?" mirror (`drawCutoffMag`) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
+| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | the MW band's display gain and its chart isobar |
+
+**`uOmegaSummationArcsec2` is static in the exposure state, and that is
+the point.** It is the offset between two *thresholds* — the point-source
+`m_lim` and the extended-source `S_lim`, which is the instrument's
+`skyBackgroundMagArcsec2` (`extendedThresholdSbFor`) — and adaptation and
+the trim move both together, so only an instrument change may write it.
+The derivation is `../README.md` § Extended sources.
 
 **The taper anchors on `uThresholdMag`, the cull on `uCullMag`.** A
 source at the threshold carries exactly `L_THRESH` at any trim, which is

@@ -10,14 +10,17 @@ import {
   drawCutoffMag,
   EV_MAX_STOPS,
   sceneExposure,
+  summationSolidAngleFor,
   thresholdMagFor,
 } from './exposure-epoch';
 
-/** The four slots this controller writes, held by reference. `uExposure`
- *  arrives from `HdrPipeline.emitterUniforms`; the three magnitude
- *  bounds from the star pipeline's shared map. */
+/** The five slots this controller writes, held by reference. `uExposure`
+ *  and `uOmegaSummationArcsec2` arrive from
+ *  `HdrPipeline.emitterUniforms`; the three magnitude bounds from the star
+ *  pipeline's shared map. */
 export interface ExposureUniforms {
   uExposure: { value: number };
+  uOmegaSummationArcsec2: { value: number };
   uLimitMag: { value: number };
   uThresholdMag: { value: number };
   uCullMag: { value: number };
@@ -102,5 +105,6 @@ export class ExposureController {
     u.uThresholdMag.value = thresholdMagFor(limitMag, this.ev);
     u.uCullMag.value = cullMagFor(limitMag);
     u.uExposure.value = this.exposure();
+    u.uOmegaSummationArcsec2.value = summationSolidAngleFor(this.instrument);
   }
 }

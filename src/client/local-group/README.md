@@ -182,6 +182,20 @@ layer's, and the Milky Way band takes the same one
 shader's `SB_ZERO_POINT` are pinned against each other in
 `local-group-emission.test.ts` — nothing at compile time ties them.
 
+**`Ω_px` here, deliberately, where the band takes the eye's summation
+area.** The band's display path substitutes `uOmegaSummationArcsec2` so an
+extended source's threshold lands where the eye's does
+(`../hdr/README.md` § Extended sources), and that substitution is only the
+flux in the summation patch for a source **uniform across it**. These
+objects are not: M31's bulge `R_e` is 4.4′ inside a 13.0′ summation disc,
+and at its central surface brightness (15.30) the gain would claim 1.10
+mag from one patch — **2.34 mag more than the galaxy's whole 3.44**. So
+this layer passes the pixel solid angle to both of
+`stellataEmitExtendedSource`'s solid-angle arguments, and
+`local-group-emission-calibration.test.ts` pins the arithmetic that says
+why. Reaching for the summation uniform here is the plausible-looking
+change that blows M31's core to white.
+
 **There is no brightness knob, globally or per object.** `density0` is
 solved per object (never scale it here — the flux ratios are physical),
 the zero point is a constant of the unit system, and `uExposure` is the

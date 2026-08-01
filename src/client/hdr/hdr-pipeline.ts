@@ -12,7 +12,10 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
 import { pixelSolidAngleArcsec2 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
+import {
+  BASE_EPOCH_EXPOSURE,
+  DEFAULT_SUMMATION_ARCSEC2,
+} from './exposure/exposure-epoch';
 import {
   clearChromeBindings,
   setChromeOperatorActive,
@@ -48,6 +51,7 @@ export interface HdrEmitterUniforms {
   uHighlightDesat: THREE.IUniform<number>;
   uExposure: THREE.IUniform<number>;
   uOmegaPxArcsec2: THREE.IUniform<number>;
+  uOmegaSummationArcsec2: THREE.IUniform<number>;
 }
 
 export const HDR_EMITTER_UNIFORM_KEYS = [
@@ -56,6 +60,7 @@ export const HDR_EMITTER_UNIFORM_KEYS = [
   'uHighlightDesat',
   'uExposure',
   'uOmegaPxArcsec2',
+  'uOmegaSummationArcsec2',
 ] as const satisfies readonly (keyof HdrEmitterUniforms)[];
 
 /** Pick the seam's slots out of a wider shared-uniforms object, keeping
@@ -78,7 +83,8 @@ export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
  *  before the first frame, as it does `uWhitePoint` and `uHighlightDesat`
  *  (both live dev knobs, rewritten by `syncMode`). `uExposure` seeds at
  *  the base epoch; `ExposureController` owns every later write
- *  (`exposure/README.md`). `uOmegaPxArcsec2` seeds at the default FOV
+ *  (`exposure/README.md`), and `uOmegaSummationArcsec2` the same way.
+ *  `uOmegaPxArcsec2` seeds at the default FOV
  *  over a 1000 px viewport and is rewritten by `setPixelSolidAngle` on
  *  every FOV / resize change. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
@@ -90,6 +96,7 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
     uOmegaPxArcsec2: {
       value: pixelSolidAngleArcsec2(angularToPx(1000, (DEFAULT_FOV * Math.PI) / 180)),
     },
+    uOmegaSummationArcsec2: { value: DEFAULT_SUMMATION_ARCSEC2 },
   };
 }
 

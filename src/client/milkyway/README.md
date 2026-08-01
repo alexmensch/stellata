@@ -124,27 +124,27 @@ Because the tints are normalised, that change cannot move any flux.
 The band emits into the scene-wide HDR unit (`../hdr/README.md` § Unit).
 `colorAccum` is the raymarch's emission column in "density × pc ×
 colour" units; `uGlowMagOffset` carries `SB_ZERO_POINT`, the **V surface
-brightness a unit column carries**, so the sightline's surface brightness
-and the flux magnitude inside one pixel are
+brightness a unit column carries**, so the sightline reads
 
 ```
 S    = uGlowMagOffset - 2.5·log10(column)      // mag/arcsec²
-m_px = S - 2.5·log10(uOmegaPxArcsec2)
+m    = S - 2.5·log10(Ω)
 ```
 
-Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses
-the log round-trip to a **single scalar gain**
+Feeding `m` back through `L = uExposure · 10^(−0.4·m)` collapses the log
+round-trip to a **single scalar gain**
 (`stellataSurfaceBrightnessLuminance`), applied to all three channels —
 which is why the line-of-sight hue the raymarch built survives untouched.
 `column` is the luminance-weighted `dot(colorAccum, LUMA_WEIGHTS)`, so
 the magnitude means the same thing it does for a star.
 
-**Surface brightness is the invariant, not per-pixel luminance.**
-Zooming in shrinks `uOmegaPxArcsec2` quadratically, so the band dims
-per pixel — the magnification loss a real aperture gain has to pay for,
-and exactly how a resolved stellar disc behaves under the point-source
-peak rule. `HdrPipeline.setPixelSolidAngle` owns the uniform; the shell
-drives it from FOV changes and resize.
+**`Ω` is the eye's rod summation area, not the pixel's**
+(`uOmegaSummationArcsec2`; `../hdr/README.md` § Extended sources). An
+extended source's threshold is a surface brightness, and the summation
+area is fixed in angle — so the band holds its display level at every FOV
+and viewport, where the pixel solid angle would have dimmed it
+quadratically. The statistic attachment still takes `uOmegaPxArcsec2`: the
+concession is a display anchor, not light.
 
 `uLimitMag` still arrives by reference from the star pipeline's shared
 uniform map, but **only the chart-mode isobar reads it** — the band's
@@ -229,15 +229,19 @@ The resolved catalogue is only **0.205 %** of the Galaxy's light
 entirely — the same star field is dominant from Sol and negligible from
 outside, for the same 1/d² reason.
 
-#### The gradient this produces
+#### The gradient this produces, and what it reads on screen
 
-| sightline | mag/arcsec² |
-| --- | --- |
-| l = 0, b = 0 (GC) | 23.29 |
-| l = 0, b = 5 | 22.01 |
-| anticentre | 23.47 |
-| b = 30 | 24.26 |
-| NGP | 25.07 |
+Display levels are of 255 at the base epoch with no EV trim, and carry no
+viewport — the summation area is fixed in angle (§ Surface-brightness
+emission). Both columns pinned in `milkyway.test.ts`.
+
+| sightline | mag/arcsec² | /255 | vs a threshold star (38.25) |
+| --- | --- | --- | --- |
+| l = 0, b = 5 | 22.01 | 38.1 | 0.005 mag under — the band's maximum |
+| l = 0, b = 0 (GC) | 23.29 | 18.0 | 0.84 mag under |
+| anticentre | 23.47 | 15.9 | 0.98 mag under |
+| b = 30 | 24.26 | 8.2 | 1.7 mag under |
+| NGP | 25.07 | 3.9 | 2.3 mag under, at the dither floor |
 
 Plane-to-pole contrast **1.78 mag**, against 5.00 before. **The midplane
 is not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
@@ -255,22 +259,19 @@ Two facts worth having before touching this:
   visual + perf decision, and it no longer biases the calibration — the
   anchor is the NGP sightline, where the log distribution converges.
 
-**The band is faint at the base epoch, and more so than before.** The GC
-sightline resolves to ~0.0066 of full scale at a 50° / 900 px viewport
-against 0.15 for a threshold star — inside the range the resolve's dither
-breaks up, but under the 4/255 the old 0.45-strength calibration reached.
-That is **too dim against a dark sky, and the cause is the display model,
-not this layer.** Summed over a 1° rod-summation patch the band toward the
-Galactic centre is equivalent to a 5.51-mag point source — **2.29 mag above**
-the shipped instrument's 7.8 limit — yet it renders at **1/23 of a threshold
-star**, because `L_THRESH` lifts point sources to a comfortable display level
-and extended sources get no equivalent concession. The retired 20.0 anchor was
-silently supplying that lift. `stellata-xypg.34` owns it.
+Under the retired per-pixel mapping the display column ran 5.45 / 1.67 /
+1.42 / 0.68 / 0.33 at 50° / 900 px: the band sat at a *seventh* of a
+threshold star where rod summation puts its maximum level with one, and it
+dimmed further as the camera zoomed. The 20.0 anchor had been silently
+supplying the missing lift, and removing it exposed the gap
+(`stellata-xypg.34`).
 
-**Do not raise the emissivity to compensate** — that breaks a pole pinned
-against a measured residual in order to paper over a display bug. `DR_MAG`
-(`../hdr/README.md` § Operator) cannot fix it either: it lifts the band and
-the star field together, so it has no term for a point-vs-extended ratio.
+**Do not raise the emissivity if the band still reads wrong** — that
+breaks a pole pinned against a measured residual to move a display anchor.
+`DR_MAG` cannot do it either: it lifts the band and the star field
+together, so it has no term for a point-vs-extended ratio. The lever is
+the extended-source threshold itself, which is the instrument's
+`skyBackgroundMagArcsec2` (`../hdr/README.md` § Extended sources).
 
 The Local Group emission layer runs the same mapping and now the same
 constant (`../local-group/README.md` § Zero free parameters). The two
@@ -400,20 +401,16 @@ are renderer-local with small magnitudes.
 
 **Chart mode currently renders no Milky Way at all.** `setIsobar(true)`
 sets `uChartIsobar = 1`, switches both materials to `NormalBlending`, and
-then hides both meshes — so the fragment shader's isobar branch
-(`milkyway.frag.glsl`, the `fwidth`-normalised contour at
-`magPx == uLimitMag`) is unreachable. The branch is written and the
-uniforms are plumbed; only the draw is suppressed, pending the contour
-treatment.
+then hides both meshes — so the fragment shader's `fwidth`-normalised
+contour branch is unreachable. The branch is written and the uniforms are
+plumbed; only the draw is suppressed, pending the treatment.
 
-Two things a future session needs before re-enabling it, both in
-`stellata-xypg.22`: the contour must be evaluated on **surface brightness
-`S`**, not on the Ω_px-dependent `magPx`, or the line moves when the
-camera zooms — wrong for a chart. And the threshold it compares against
-is an *extended-source* limit (~21.5–22 mag/arcsec² for a dark-adapted
-eye), which is a different quantity from the instrument's point-source
-`m_lim`, because rod spatial summation integrates an extended source over
-many receptors.
+**Its physics is settled.** The contour is evaluated on **surface
+brightness `S`** — no Ω_px term, so the line is FOV- and
+viewport-invariant, which is what a chart wants — against the
+extended-source threshold `stellataExtendedThresholdSb` recovers from
+`uOmegaSummationArcsec2` (22.0 mag/arcsec² at the shipped instrument).
+`stellata-xypg.22` still owns the treatment and un-hiding the meshes.
 
 The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
 floor), not chart-mode.ts directly — the group stays enabled in chart

@@ -26,6 +26,8 @@ import {
   subPixelExpansion,
   type EmissionComponent,
 } from './local-group-emission-pure';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Far-field validity threshold: beyond 8 mesh radii the point-source
@@ -435,6 +437,18 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   const m31 = OBJECTS.m31;
   const disc = emissionComponents(m31.emission).find((c) => c.family === 'disc')!;
 
+  /** Column straight through a component's centre — the peak the shader
+   *  reaches on that component. Fine-stepped rather than analytic because
+   *  the Sérsic profile has no closed form. */
+  function centralColumn(comp: EmissionComponent): number {
+    const steps = 20_000;
+    let col = 0;
+    for (let i = 0; i < steps; i++) {
+      col += cpuDensityAt([0, 0, (i + 0.5) / steps], comp) * (comp.axesPc[2] / steps);
+    }
+    return 2 * col;
+  }
+
   /** Column straight down the disc normal — the face-on sightline. */
   function faceOnColumnAt(radiusPc: number): number {
     if (disc.family !== 'disc') throw new Error('expected the disc component');
@@ -484,5 +498,37 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     expect(m31.emission.mV).toBe(3.44);
     expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
     expect(m31.emission.mV - 3.24).toBeLessThan(0.35);
+  });
+
+  // Why this layer does NOT take the Milky Way band's rod-summation display
+  // gain (`../hdr/README.md` § Extended sources). That gain multiplies a
+  // surface brightness by the eye's summation solid angle, which is the
+  // flux in that patch only for a source uniform across it. M31's bulge
+  // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
+  // uniformity at the CENTRAL surface brightness claims 2.3 mag more flux
+  // from one patch than the whole galaxy emits — impossible, and the
+  // measurement that scopes the concession to the band.
+  it('would claim more flux from one summation patch than it has in total', () => {
+    const column = emissionComponents(m31.emission).reduce(
+      (sum, comp) => sum + centralColumn(comp),
+      0,
+    );
+    const centreSb = columnSurfaceBrightness(column);
+    expect(centreSb).toBeCloseTo(15.3, 2);
+
+    const claimed = centreSb - 2.5 * Math.log10(DEFAULT_SUMMATION_ARCSEC2);
+    expect(claimed).toBeCloseTo(1.1, 2);
+    expect(m31.emission.mV - claimed).toBeCloseTo(2.34, 2);
+
+    // The 13.0 arcmin summation disc reaches only 1.5 R_e of the bulge, so
+    // "uniform over the patch" is not close to true.
+    const bulge = emissionComponents(m31.emission).find((c) => c.family === 'sersic')!;
+    if (bulge.family !== 'sersic') throw new Error('expected the bulge component');
+    const reArcmin =
+      bulge.axesPc[0] / bulge.uMax / m31.distance / ARCSEC_TO_RAD / 60;
+    expect(reArcmin).toBeCloseTo(4.43, 2);
+    const summationRadiusArcmin =
+      Math.sqrt(DEFAULT_SUMMATION_ARCSEC2 / Math.PI) / 60;
+    expect(summationRadiusArcmin / reArcmin).toBeCloseTo(1.47, 2);
   });
 });

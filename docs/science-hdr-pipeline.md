@@ -67,7 +67,7 @@ values for the unaided eye at `dm = 0`, EV 0 (`m_lim = 7.8`,
 | Vega | 0.0 | 26.4 | 1.03 → clips white |
 | Sirius | −1.46 | 101 | 1.24 → white |
 | Venus (max) | −4.7 | 2.0e3 | white |
-| MW band pixel, brightest sightline (S = 22.01 mag/″², 94″/px) | ≈ 12.1 | 3.7e-4 | below the dither floor (§ Out of scope) |
+| MW band, brightest sightline (S = 22.01 mag/″², Ω_sum) | ≈ 8.0 | 0.0199 | 0.149 → reads as a threshold star (§ Extended sources) |
 | Sun disc at 1 AU | −26.7 | ceiling clamp | white |
 
 Adaptation only ever *cuts* from this table (§ 3.1), so these are the
@@ -134,6 +134,89 @@ photometrically real: extinction A_V adds to `m`, `iEclipseDim` folds in
 as `−2.5·log10(dim)`, variable-star `magMod` now modulates true
 luminance (not just footprint), and the ±0.5-mag soft taper multiplies
 `L`.
+
+### Extended sources — the second threshold
+
+`L_THRESH` anchors a **point** source. An extended source mapped at its
+raw per-pixel flux inherits no anchor at all, and the gap is not small:
+at the shipped instrument and 900 px / 50°, the band toward the Galactic
+centre rendered **1/23 of a threshold star** while a rod-summation patch
+of it sits 2.3 mag **above** the same limit. The ordering was inverted.
+
+The eye does not detect an extended source pixel by pixel. Rods sum over
+a critical area (Ricco), so for a source larger than that area threshold
+is a **surface brightness**, and the anchor is its own constant:
+
+```
+S_thresh = instrument.skyBackgroundMagArcsec2          (22.0, unaided eye)
+Ω_sum    = 10^(0.4·(S_thresh − m_lim))                 = 4.7863e5 arcsec²
+L_px     = uExposure · 10^(−0.4·S) · Ω_sum
+```
+
+so `Ω_sum` stands in for `Ω_px` on the display path and a source at
+`S_thresh` lands on `L_THRESH` exactly, as a point source at `m_lim`
+does. `rodSummationSolidAngleArcsec2` owns the pair.
+
+**Why the threshold is the sky background.** An extended source is
+detected as a *contrast* against the sky it sits in, and threshold
+contrast for a large, soft, scotopic target is of order unity — so the
+background level *is* the threshold surface brightness to the precision
+this concession claims. That makes it an instrument property with no free
+parameter, and it puts the `skyBackgroundMagArcsec2` axis (§ 3.4) to
+work: a light-polluted preset loses the band while keeping its stars,
+which is what a city sky does.
+
+**The consistency check that makes it a summation area rather than a
+fudge.** 22.0 against `m_lim` 7.8 implies a **13.0 arcmin** critical
+diameter — inside the range measured for scotopic Ricco summation at a
+non-zero background, and correctly smaller than the ~30–60′ quoted at
+absolute darkness, since the critical area shrinks as background
+luminance rises. Two independent constraints landing together is the
+whole case; neither number was chosen to hit the other.
+
+*Rejected: the absolute-flux form of the same model* — take a 1° patch
+(the figure this bug was first measured with) and threshold on summed
+flux alone. That gives `S_thresh` = 25.6 and 6.3 mag of lift at the
+reference viewport, and it renders the NGP diffuse component at 0.19 of
+full scale: a visible fog over the whole sky. It is the right criterion
+against a *black* background, and Stellata's background is black only
+because the airglow / zodiacal / unresolved terms are not drawn — the
+very light `m_lim` = 7.8 was measured against. Thresholding on absolute
+flux therefore double-counts them.
+
+**This makes an extended source FOV-invariant, and that reverses § 3.3's
+point 2 for the display path.** Per-pixel flux still falls as FOV²; what
+does not is the flux the *retina* sums, because its summation area is
+fixed in angle and a screen degree now covers less sky. The simulated
+observer detects the band identically at any plate scale, so the rendered
+level must not move. § 3.3's quadratic dimming survives as the
+photographic statement and as the statistic's behaviour.
+
+**It is not per-layer exposure** (§ 3.2's rejection). The distinction is
+point-vs-extended — a property of the source's angular extent, which the
+unit already branches on (`stellataPointSourcePeak` vs
+`stellataSurfaceBrightnessLuminance`) — and it moves a *threshold anchor*,
+not `uExposure` and not the operator, both of which stay global.
+
+**Two limits, stated rather than papered over.** The substitution is the
+flux in the summation area only for a source **uniform across it**:
+
+- **The Local Group layer therefore opts out** and keeps `Ω_px`. M31's
+  bulge `R_e` is 4.4′ against the 13.0′ summation disc, and at its
+  central surface brightness (15.30) the gain would claim 1.10 mag from
+  one patch — **2.34 mag more than the whole galaxy's 3.44**. Pinned in
+  `local-group-emission-calibration.test.ts`.
+- **Our own band from beyond ~1.5 Mpc** shrinks under the summation area
+  too, and would then read 2.7 mag over an equivalent LG object. Inside
+  the LG camera limit it never gets there. The general fix is a
+  convolution over the summation kernel on the emission side — the
+  veiling-glare seam (§ 3.2), not a gain — and it is its own bead.
+
+**The concession is absent from the statistic.** Attachment 1 keeps
+`Ω_px` in both channels: the adaptation model reads retinal illuminance,
+and inflating a band pixel 12× there would let the display concession
+drive the exposure cut. `src/client/hdr/statistic/README.md` carries the
+headroom measurement.
 
 ### Colour — linear chromaticity, luminance-normalized
 
@@ -739,12 +822,15 @@ telephoto, with three honest consequences:
 1. **Point-source limiting magnitude is FOV-invariant.** An unresolved
    star's peak is `L(m)` at any plate scale. Zooming reveals no star
    that was not already there.
-2. **Extended sources dim quadratically.** `Ω_px` falls as FOV², so the
-   Milky Way band fades as the camera zooms into it and a marginal
-   planet disc can drop under the floor. This is real — you cannot
-   magnify nebulosity into visibility — and it is what makes changing
-   *instrument* the answer rather than zooming further. +3 stops of trim
-   recovers roughly 50° → 18°.
+2. **Extended sources dim quadratically at the detector, and that is not
+   what the observer sees.** `Ω_px` falls as FOV², so a marginal planet
+   disc drops under the floor and the statistic's view of the Milky Way
+   band fades. But the *eye's* summation area is fixed in angle, so the
+   band's rendered level is FOV-invariant by construction — § 1
+   (*Extended sources*) is the amendment, and it reverses this row for
+   the display path only. "You cannot magnify nebulosity into visibility"
+   still holds: what zooming does not buy is *detection*, and the band is
+   equally detectable at 90° and 20° rather than equally invisible.
 3. **Only aperture moves depth**, and aperture belongs to the
    instrument.
 
@@ -861,12 +947,21 @@ from this change.
 
 **The three axes a future preset needs, named here so the record does
 not have to be reopened per preset:** aperture/resolution (above),
-sky-background luminance (`skyBackgroundMagArcsec2` — no consumer yet;
-it lands as an additive floor on `L`), and passband (no consumer yet; it
+sky-background luminance (`skyBackgroundMagArcsec2` — **now the
+extended-source threshold surface brightness `S_lim`**, § 1; still to
+land as an additive floor on `L`), and passband (no consumer yet; it
 substitutes for V in `L(m)`, alongside `BC_photopic`). The presets
 themselves — binoculars, telescope, filtered solar telescope,
 light-polluted city, JWST — stay out of scope; only the record shape is
 mandated here.
+
+**Aperture moves `m_lim` and leaves `S_lim` where it is**, and that falls
+out rather than being asserted: `Ω_sum` carries `10^(−0.4·m_lim)`, so it
+shrinks by exactly the aperture gain `uExposure` adds. A deeper
+instrument reaches fainter *stars* without making the band brighter,
+which is the visual-instrument fact that magnification and aperture
+cannot raise surface brightness past the naked eye's. Pinned in
+`emission-pure.test.ts`.
 
 ## 4. Per-layer mapping — every current squash and its replacement
 
@@ -876,8 +971,8 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | --- | --- | --- |
 | Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; `Ω_px` = pixel solid angle in arcsec², so **surface brightness** rather than per-pixel luminance is the FOV-invariant (zooming dims the band exactly as it dims a resolved stellar disc). `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is its `EMISSIVITY_SCALE`, against a resolved-star-corrected NGP residual and marched dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
-| LG emission (`local-group-emission.frag.glsl`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `stellataSurfaceBrightnessLuminance`. The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
+| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is its `EMISSIVITY_SCALE`, against a resolved-star-corrected NGP residual and marched dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
+| LG emission (`local-group-emission.frag.glsl`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `stellataSurfaceBrightnessLuminance`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` since deleted (no multiplier on a physical peak). mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
 | Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
 | Planet rings | multiply litIntensity | *Shipped as designed (H5).* Multiply the same host-irradiance scalar the disc airlight and the atmosphere shell ride (`hostIrradianceLuminance`), so ring↔body contrast is fixed by the shared exposure. The strip's RGB is read as a LINEAR reflectance and deliberately not sRGB-decoded — it was authored as an albedo proxy, and decoding would darken the rings ~5x against the true-opacity alpha |
@@ -1045,9 +1140,10 @@ day one — the fullscreen pass and the inline path can never drift.
 - **FOV invariants (H16)** — star pixel size constant from 120° down to
   the `K = 1` crossover (3.47° on a 1080-px viewport at `TARGET_PX` 2.592),
   below which the resolved 30″ PSF makes the disc *grow*; a close pair
-  merged at 50° resolving at 10°; no new star appearing at any FOV; the MW
-  band dimming quadratically (the accepted § 3.3 consequence, not a
-  regression).
+  merged at 50° resolving at 10°; no new star appearing at any FOV; **the
+  MW band holding its level** across the whole range — the summation area
+  is fixed in angle (§ 1, *Extended sources*), which replaced this row's
+  earlier expectation of quadratic dimming.
 
 ## 9. Bead-shape decisions
 
@@ -1092,16 +1188,15 @@ encode) · BC_photopic (a7d.2.10 — substitutes into `L(m)` when it lands)
 no light/dark-adapt time constants, no feedback loop) · bloom/lens-flare
 post effects (the existing PSF footprint is the bloom).
 
-**Rod spatial summation is no longer out of scope.** This section used to
-waive scotopic/mesopic eye modelling on the grounds that "`DR_MAG` absorbs
-the compression". It does not: `DR_MAG` sets the range from threshold to
-white and lifts point and extended sources *together*, so it carries no
-term that can express a point-vs-extended ratio. The waiver survived only
-because the Milky Way band was ~2.9 mag over-bright, which silently
-supplied the missing lift; `stellata-xypg.29` corrected the photometry and
-exposed the gap. Measured at the shipped default instrument (`unaided-eye`,
-m_lim 7.8) and 900 px / 50° FOV: the band toward the Galactic centre renders
-**1/23 of a threshold star** (1.67/255 against 38.3/255), while summed over a
-1° rod-summation patch it is **2.29 mag above** that same limit. The ordering
-is inverted. `stellata-xypg.34` owns the extended-source threshold that pairs
-with `L_THRESH`.
+**Rod spatial summation came into scope and shipped** (§ 1, *Extended
+sources*). This section used to waive scotopic/mesopic eye modelling on the
+grounds that "`DR_MAG` absorbs the compression". It does not: `DR_MAG` sets
+the range from threshold to white and lifts point and extended sources
+*together*, so it carries no term that can express a point-vs-extended
+ratio. The waiver survived only because the Milky Way band was ~2.9 mag
+over-bright, which silently supplied the missing lift; `stellata-xypg.29`
+corrected the photometry and `stellata-xypg.34` replaced the accident with a
+threshold. **Still out of scope: everything spatial about rod summation** —
+the resolution loss, and the convolution that would let a *structured*
+extended source take the same anchor (§ 1's second stated limit). What
+shipped is the threshold, applied as a gain.

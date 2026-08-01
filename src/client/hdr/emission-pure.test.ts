@@ -1,18 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import {
   LUMA_CEIL,
+  extendedThresholdSbFromSolidAngle,
   lumaNormalisedTint,
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   pointSourcePeakLuminance,
+  rodSummationSolidAngleArcsec2,
   surfaceBrightnessLuminance,
 } from './emission-pure';
-import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
+import {
+  BASE_EPOCH_EXPOSURE,
+  extendedThresholdSbFor,
+} from './exposure/exposure-epoch';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { DR_MAG, reinhardExtended, relativeLuminance, tonemapWhitePoint } from './tonemap-pure';
+import {
+  DR_MAG,
+  L_THRESH,
+  reinhardExtended,
+  relativeLuminance,
+  tonemapWhitePoint,
+} from './tonemap-pure';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
+const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_FILTER.instrument);
 
 // The § 1 range budget, at the naked-eye epoch. These are the numbers
 // H7 validates the star field against, so they are pinned rather than
@@ -120,6 +132,50 @@ describe('surfaceBrightnessLuminance', () => {
     const a = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 1000);
     const b = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 4000);
     expect(b / a).toBeCloseTo(4, 12);
+  });
+});
+
+// The extended-source half of the threshold anchor. `L_THRESH` is where a
+// POINT source at `m_lim` lands; this is where a large diffuse source at
+// the instrument's own sky background lands, and the two have to be the
+// same display level or the render inverts the eye's ordering.
+describe('rodSummationSolidAngleArcsec2', () => {
+  it('lands an extended source at threshold on L_THRESH exactly', () => {
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, EYE_LIMIT_MAG);
+    expect(
+      surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, EXTENDED_THRESHOLD_SB, omega),
+    ).toBeCloseTo(L_THRESH, 12);
+  });
+
+  // The consistency check that makes the pair a summation area rather than
+  // a fudge: 22 mag/arcsec² against m_lim 7.8 implies a 13.0 arcmin critical
+  // diameter, inside the scotopic Ricco range measured at a non-zero
+  // background. docs/science-hdr-pipeline.md § 1 (Extended sources).
+  it('implies a scotopic Ricco critical diameter of 13 arcmin', () => {
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, EYE_LIMIT_MAG);
+    expect(omega).toBeCloseTo(478_630.09, 2);
+    const diameterArcmin = (2 * Math.sqrt(omega / Math.PI)) / 60;
+    expect(diameterArcmin).toBeCloseTo(13.011, 3);
+  });
+
+  it('round-trips through its inverse', () => {
+    for (const [sb, limit] of [[22, 7.8], [18, 7.8], [22, 12.1]] as const) {
+      const omega = rodSummationSolidAngleArcsec2(sb, limit);
+      expect(extendedThresholdSbFromSolidAngle(omega, limit)).toBeCloseTo(sb, 9);
+    }
+  });
+
+  // A deeper aperture raises m_lim, and the summation area falls by exactly
+  // as much — so aperture buys point-source depth without moving where an
+  // extended source's threshold sits. That is the visual-instrument fact
+  // that magnification cannot raise surface brightness.
+  it('cancels an aperture gain, leaving the extended threshold fixed', () => {
+    const deeper = EYE_LIMIT_MAG + 4.3;
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, deeper);
+    const exposure = BASE_EPOCH_EXPOSURE * 10 ** (0.4 * 4.3);
+    expect(
+      surfaceBrightnessLuminance(exposure, EXTENDED_THRESHOLD_SB, omega),
+    ).toBeCloseTo(L_THRESH, 12);
   });
 });
 
