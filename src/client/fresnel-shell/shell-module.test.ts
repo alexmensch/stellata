@@ -4,6 +4,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { HELIOPAUSE_EXTENT_PC } from '../solar-system/heliopause/heliopause';
@@ -99,7 +100,7 @@ describe('shell kind module', () => {
     expect(provider.localPositionInto(0, out)).toBe(true);
     // Whole-shell framing: park = 2.4 × the 100 pc wall extent.
     expect(provider.focusParkDistance(0)).toBeCloseTo(240, 6);
-    expect(provider.orbitFloor(0)).toBeLessThanOrEqual(provider.focusParkDistance(0));
+    expect(provider.orbitFloor(0)).toBe(GLOBAL_MIN_DIST_PC);
     expect(provider.arrivalRadiusPc(0)).toBeNull();
 
     const card = m.card();

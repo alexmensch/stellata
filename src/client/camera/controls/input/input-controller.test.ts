@@ -422,6 +422,28 @@ describe('InputController deferred-click gate', () => {
     });
   }
 
+  // The cloud pick carried its own warp gate until the kind module took
+  // it over; this predicate is what subsumes it, so the cloud path is
+  // pinned here too rather than only through the star pick above.
+  it('drops a cloud single click while warping (no orbit target, no vector)', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickCloudResult = 2;
+    state.warpActive = true;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.setOrbitTarget).not.toHaveBeenCalled();
+    expect(deps.setVector).not.toHaveBeenCalled();
+    expect(emitted).toEqual([]);
+  });
+
+  it('drops a cloud double click while warping (no travel)', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickCloudResult = 2;
+    state.warpActive = true;
+    (input as unknown as WithPrivates).dispatchDoubleClick(10, 20);
+    expect(deps.flyTo).not.toHaveBeenCalled();
+    expect(emitted).toEqual([]);
+  });
+
   it('dispatches normally when no gate is set', () => {
     const { input, state, deps } = makeHarness();
     state.pickStarResult = 5;

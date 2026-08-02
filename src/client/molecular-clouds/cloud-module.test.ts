@@ -4,8 +4,11 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
+import { makeLabelDom } from '../ui/label-dom-mock';
+import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -113,7 +116,9 @@ describe('cloud kind module', () => {
     // Ellipsoid fallback: extent = maxAxis × uEnv = 10 pc, park at the
     // 2.4× viewing distance the soft-focus rule prescribes.
     expect(provider.focusParkDistance(0)).toBeCloseTo(24, 6);
-    expect(provider.orbitFloor(0)).toBeLessThanOrEqual(provider.focusParkDistance(0));
+    // Soft kinds never tighten the manual-zoom floor below the
+    // unfocused global one, whatever the park distance.
+    expect(provider.orbitFloor(0)).toBe(GLOBAL_MIN_DIST_PC);
     expect(provider.arrivalRadiusPc(0)).toBeNull();
     expect(provider.renderedSizePx(0)).toBeGreaterThan(0);
 
@@ -147,5 +152,30 @@ describe('cloud kind module', () => {
       if (hit) winners.add(hit.idx);
     }
     expect(winners).toEqual(new Set([0, 1]));
+  });
+
+  it('runs the label teardown from its scene layer dispose', async () => {
+    stubFetch(true);
+    const m = createCloudKindModule();
+    await m.load('/');
+    const dom = makeLabelDom([CLOUD_LABELS_GROUP_ID]);
+    vi.stubGlobal('document', dom.document);
+    const frames: (() => void)[] = [];
+    let unsubscribed = 0;
+    const layer = m.attach(makeKindContext({
+      onFrame: (handler) => {
+        frames.push(handler);
+        return () => { unsubscribed++; };
+      },
+    }))!;
+
+    m.labels!();
+    // One <text> + one bound label engine per cloud.
+    expect(dom.nodes.size).toBe(2);
+    expect(frames).toHaveLength(2);
+
+    layer.dispose();
+    expect(unsubscribed).toBe(2);
+    expect(dom.removed()).toBe(2);
   });
 });

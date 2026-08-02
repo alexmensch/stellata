@@ -18,7 +18,6 @@ import {
   type SearchEntry,
 } from './search';
 import type { Stellata } from '../stellata';
-import { formatLgSearchDistance } from '../local-group/lg-module';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
@@ -584,12 +583,6 @@ describe('search / Local Group entries', () => {
       displayCon: 'Dwarf spheroidal · 84 kpc',
     },
   ]);
-
-  it('formatLgSearchDistance switches kpc → Mpc at 1 Mpc', () => {
-    expect(formatLgSearchDistance(84_000)).toBe('84 kpc');
-    expect(formatLgSearchDistance(776_000)).toBe('776 kpc');
-    expect(formatLgSearchDistance(1_200_000)).toBe('1.20 Mpc');
-  });
 
   it('resolves aliases and display names to the same object with type + distance rows', () => {
     const run = createSearchRunner(catalog, [], kinds);

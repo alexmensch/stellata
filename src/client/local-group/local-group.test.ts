@@ -18,6 +18,7 @@ import type { LgCatalog, LgObject } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC } from '../galactic/galactic-fade';
 import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIN_DISC_HIT_RADIUS_PX } from '../camera/controls/star-geometry';
+import { makeLabelDom } from '../ui/label-dom-mock';
 
 function makeObject(o: Partial<LgObject>): LgObject {
   return {
@@ -500,35 +501,11 @@ describe('createLocalGroupLabels teardown', () => {
     return state;
   }
 
-  /** Minimal `#lg-labels` container + <text> factory; the label engine
-   *  also getElementById's each minted node by id. */
-  function stubDom(): { removed: number } {
-    const counts = { removed: 0 };
-    const byId = new Map<string, unknown>();
-    const group = { appendChild: () => {} };
-    vi.stubGlobal('document', {
-      getElementById: (id: string) => (id === 'lg-labels' ? group : byId.get(id) ?? null),
-      createElementNS: () => {
-        const node = {
-          style: { display: '' },
-          attrs: new Map<string, string>(),
-          textContent: '',
-          setAttribute(k: string, v: string) {
-            this.attrs.set(k, v);
-            if (k === 'id') byId.set(v, this);
-          },
-          remove: () => { counts.removed++; },
-        };
-        return node;
-      },
-    });
-    return counts;
-  }
-
   afterEach(() => vi.unstubAllGlobals());
 
   it('unsubscribes every frame handler, drops the nodes, and clears its candidates', () => {
-    const dom = stubDom();
+    const dom = makeLabelDom(['lg-labels']);
+    vi.stubGlobal('document', dom.document);
     const fake = makeHost();
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ id: 'a', name: 'A' }),
@@ -538,11 +515,11 @@ describe('createLocalGroupLabels teardown', () => {
     const teardown = createLocalGroupLabels(fake.host, layer);
     // One ranking handler + one label engine per object.
     expect(fake.handlers).toHaveLength(3);
-    expect(dom.removed).toBe(0);
+    expect(dom.removed()).toBe(0);
 
     teardown();
     expect(fake.unsubscribed).toBe(3);
-    expect(dom.removed).toBe(2);
+    expect(dom.removed()).toBe(2);
 
     // Sentinel reset: the next mount subscribes its own ranking pass
     // rather than reading the released one's verdict.

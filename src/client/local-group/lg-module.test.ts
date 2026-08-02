@@ -3,6 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { createLgKindModule, formatLgSearchDistance } from './lg-module';
@@ -109,7 +110,7 @@ describe('lg kind module', () => {
     expect(out.x).toBe(84_000);
     // Park frames the whole object: 2.4 × the 21.2 kpc semi-axis.
     expect(provider.focusParkDistance(0)).toBeCloseTo(2.4 * 21_200, 6);
-    expect(provider.orbitFloor(0)).toBeLessThanOrEqual(provider.focusParkDistance(0));
+    expect(provider.orbitFloor(0)).toBe(GLOBAL_MIN_DIST_PC);
     expect(provider.arrivalRadiusPc(0)).toBeNull();
     expect(provider.renderedSizePx(0)).toBeGreaterThan(0);
 
@@ -159,6 +160,7 @@ describe('lg kind module', () => {
 
   it('formatLgSearchDistance switches kpc → Mpc at 1 Mpc', () => {
     expect(formatLgSearchDistance(84_000)).toBe('84 kpc');
+    expect(formatLgSearchDistance(776_000)).toBe('776 kpc');
     expect(formatLgSearchDistance(1_200_000)).toBe('1.20 Mpc');
   });
 });
