@@ -71,21 +71,19 @@ export class SummationPass {
    * Point the resolve at the field it should convolve, box-averaging first
    * when the patch is wide enough in pixels to need it.
    *
-   * Restores the render target to `diffuseTarget` on the way out, so the
-   * caller's binding survives — this runs between the scene render and the
-   * resolve, and the resolve rebinds the canvas itself.
+   * Leaves its own target bound when it downsamples; the resolve binds the
+   * canvas as its next statement, so restoring the caller's target here would
+   * be a write nothing reads.
    */
   render(
     diffuse: THREE.Texture,
-    diffuseTarget: THREE.WebGLMultipleRenderTargets,
     omegaSummationArcsec2: number,
     omegaPxArcsec2: number,
   ): void {
     this.renderer.getDrawingBufferSize(this.size);
     // Ω_px is a CSS-pixel solid angle — brightness must not track
     // devicePixelRatio — but every texel here is a DRAWING-BUFFER pixel, so
-    // the patch radius has to cross that ratio or the kernel comes out
-    // `pixelRatio` times too small on a retina display.
+    // the patch radius has to cross that ratio (README.md § The kernel).
     const radiusPx =
       summationRadiusPx(omegaSummationArcsec2, omegaPxArcsec2) *
       this.renderer.getPixelRatio();
@@ -110,14 +108,17 @@ export class SummationPass {
       this.size.y,
     );
 
+    // The sub-rect rides the TARGET's own viewport, which `setRenderTarget`
+    // applies verbatim — never `renderer.setViewport`, which takes CSS units
+    // and multiplies by `pixelRatio` on the way in while every number here is
+    // a drawing-buffer pixel, and which would leave the CANVAS viewport
+    // rewritten for the resolve and every frame after it. Any pass rendering
+    // into part of a target belongs on this seam for the same two reasons.
+    target.viewport.set(0, 0, width, height);
+    target.scissor.set(0, 0, width, height);
+    target.scissorTest = true;
     this.renderer.setRenderTarget(target);
-    this.renderer.setViewport(0, 0, width, height);
-    this.renderer.setScissor(0, 0, width, height);
-    this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);
-    this.renderer.setScissorTest(false);
-    this.renderer.setViewport(0, 0, target.width, target.height);
-    this.renderer.setRenderTarget(diffuseTarget);
 
     this.uniforms.uDiffuseTexture.value = target.texture;
     this.uniforms.uSummationExtent.value.set(width, height);

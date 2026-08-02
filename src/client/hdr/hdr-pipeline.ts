@@ -226,7 +226,6 @@ export class HdrPipeline {
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     this.summation.render(
       this.rt.texture[2],
-      this.rt,
       this.emitterUniforms.uOmegaSummationArcsec2.value,
       this.emitterUniforms.uOmegaPxArcsec2.value,
     );
