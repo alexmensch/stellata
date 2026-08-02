@@ -156,7 +156,6 @@ function makeHarness(): Harness {
         }
         return null;
       },
-      pickShellHit: () => null,
     } as unknown as Picker,
     bus: {
       emit: (name: string) => { emitted.push(name); },

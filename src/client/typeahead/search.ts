@@ -421,10 +421,11 @@ export function buildSearchIndex(
   return { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap };
 }
 
-// Build the shared query runner over stars + clouds: direct-lookup maps for
-// numeric IDs, fuzzy fallback, within-kind dedup. Every search surface (the
-// topbar Focus/To boxes and the `F` find modal) runs the same corpus through
-// this, so ranking + ID dispatch never diverge between them.
+// Build the shared query runner: direct-lookup maps for numeric IDs, the
+// star fuzzy corpus, kind-module rows via the roster, within-kind dedup.
+// Every search surface (the topbar Focus/To boxes and the `F` find modal)
+// runs the same corpus through this, so ranking + ID dispatch never
+// diverge between them.
 export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],

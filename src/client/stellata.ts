@@ -622,8 +622,8 @@ export class Stellata implements FrameAnchor {
 
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
-    // Layers that attach asynchronously (clouds, Local Group) are
-    // read through getters so Picker sees them as soon as they land.
+    // Kind-module surfaces dispatch through `kindPicks`; the remaining
+    // getters cover the inline-wired star and planet paths.
     // `picker` is `readonly` — assigned via writable cast since field
     // initialisation in TS requires bypassing the readonly guard here.
     (this as { picker: Picker }).picker = new Picker({
@@ -966,11 +966,10 @@ export class Stellata implements FrameAnchor {
   }
 
   // One adapter entry per scene layer; registration order is per-frame
-  // update order. Lazily-attached layers are read through closures so
-  // attach/replace cycles need no re-registration. Warp gating is
-  // per-entry: reference layers hide during warp, physical/light layers
-  // keep ticking (clouds stay visible during warp by design — flying
-  // past Taurus is a feature). See scene/README.md.
+  // update order (kind-module layers registered ahead of these in the
+  // constructor's roster loop). Warp gating is per-entry: reference
+  // layers hide during warp, physical/light layers keep ticking. See
+  // scene/README.md.
   private registerSceneLayers(): void {
     this.layers.register({
       update: (ctx) => {
