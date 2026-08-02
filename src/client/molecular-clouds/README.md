@@ -136,8 +136,10 @@ a stride subsample of the traced mesh's vertices, or a fibonacci sweep
 of the `u = uEnv` envelope for fallback clouds. A `labels`-tier
 declutter element (`molecularCloudLabels`, floor `all`, realistic only —
 chart names ride `chart-labels.ts`), additionally gated on the cloud's
-projected silhouette reaching ~40 px (`renderedCloudSizePx`) so distant
-complexes don't stack a label per member.
+projected silhouette reaching ~40 px (the module's `renderedSizePx` leg,
+passed in) so distant complexes don't stack a label per member. The
+module keeps the mount's teardown and runs it from its scene layer's
+`dispose`.
 
 ## Constellation — centroid only, deliberately
 
@@ -229,8 +231,9 @@ Projection is against the **effective centre** (§ Effective focus
 geometry), and the denominator is the layer's `renderedSizePx` — the
 extent sphere for traced clouds, the tight ellipsoid quadric otherwise,
 both at the depicted `u = uEnv` envelope, keyed off the canonical
-shader-side pixels-per-radian (`PickerDeps.fovYRadRef` / `viewportRef`)
-so the score matches the silhouette the user actually clicked inside.
+shader-side pixels-per-radian (`KindContext.angularToPx()`, which reads
+the shared view uniforms the star passes write) so the score matches the
+silhouette the user actually clicked inside.
 Every hit enters the shared `pickFromCandidates` reducer as a prime-tier
 candidate with `hitRadius: Infinity` — see `cloudPickCandidate` for why a
 real radius would misclassify near-lobe hits.

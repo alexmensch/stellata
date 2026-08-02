@@ -326,7 +326,10 @@ dependency-linked in order. Sizing per bead-authoring rules.
    (two instances of one module, never a top-level registry); the
    shared label engine takes a narrow host interface `KindContext`
    satisfies structurally, and label factories return teardowns the
-   module runs from its scene layer's dispose; one pick per kind
+   module runs from its scene layer's dispose — state shared with an
+   overlay wired outside the module (the LG apparent-size ranking pass,
+   which the MW label also reads) is ref-counted rather than owned, so
+   the last release resets it; one pick per kind
    through `Picker.pickKindHit` — the cloud click's old warp gate is
    subsumed by the click FSM's `blocksClick()`, and the kind-specific
    `Picker` methods and hover-provider files are gone.

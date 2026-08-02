@@ -1959,8 +1959,9 @@ export class Stellata implements FrameAnchor {
   // Per-element bind adapters (exhaustive over SceneElementId — a new
   // renderable that isn't wired fails tsc). Each writes the permitted
   // cache; the imperative layers (Milky Way / LG-emission enable, orbit
-  // rings, heliopause shell) pass an `extra` push because they have no
-  // per-frame gate that would pick the cache change up on its own.
+  // rings) pass an `extra` push because they have no per-frame gate that
+  // would pick the cache change up on its own — the shells take theirs
+  // from the shell module's `detailBinds` instead.
   // Kind-module pushes route by element id, so migrating a kind needs no
   // edit here.
   private buildSceneElementBinds(): SceneElementBinds {
@@ -2302,9 +2303,9 @@ export class Stellata implements FrameAnchor {
   //    Adding a new writer that retains the value across another
   //    animate-stack method violates the contract.
   //  - _tmpRenderLocal: owned by per-call read methods invoked outside
-  //    the animate stack (renderedCloudSizePx, etc.). Independent of
-  //    _tmpAnimateLocal; never observed by code that holds a reference
-  //    across calls.
+  //    the animate stack (the planet camera-distance read). Independent
+  //    of _tmpAnimateLocal; never observed by code that holds a
+  //    reference across calls.
   private _tmpAnimateLocal = new THREE.Vector3();
   private _tmpRenderLocal = new THREE.Vector3();
 

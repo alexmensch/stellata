@@ -323,10 +323,18 @@ Filter order, per candidate:
    viewport still count (the MW disc at grazing incidence).
 
 The ranking lives in the pure `computeVisibleLabels(candidates,
-params)` helper (testable in isolation). A per-frame handler — registered
-the first time `createMilkyWayLabel` or `createLocalGroupLabels` is
-called — runs `computeVisibleLabels` and writes the result into the
-shared `visibleLabelIds` Set; per-label predicates query it.
+params)` helper (testable in isolation). A per-frame handler runs
+`computeVisibleLabels` and writes the result into the shared
+`visibleLabelIds` Set; per-label predicates query it.
+
+**The pass is ref-counted, not owned by either caller.** MW and the LG
+objects compete for the same top-N slots, so one handler serves both:
+`createMilkyWayLabel` and `createLocalGroupLabels` each acquire it, the
+first acquisition subscribes, and the last release unsubscribes and
+clears the verdict. The lg module releases from its scene layer's
+`dispose`; the MW label holds for the page's lifetime. Skipping the
+release would latch a disposed host's `visibleLabelIds` and silently
+hide every label a re-created host mounts.
 
 All three knobs are live-tunable through the **Deep field**
 debug-panel section (`local-group-tuning.ts`):

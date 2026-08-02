@@ -214,11 +214,12 @@ async function main() {
         stellata.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
     }
     createPlanetLabels(stellata);
-    // Kind-module SVG label overlays (probe labels today).
+    // Kind-module SVG label overlays (probe, cloud, lg, shell).
     for (const kind of KIND_ROSTER) kinds[kind]?.labels?.();
     // Milky Way label fades in once the camera sits past ~10 kpc from the
-    // galactic centre. Independent of attachLocalGroup — the MW label
-    // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
+    // galactic centre. Wired outside the lg module — the MW label anchors
+    // at GALACTIC_CENTRE_PC, not at a Local Group catalog entry — but it
+    // shares that module's apparent-size ranking pass.
     createMilkyWayLabel(stellata);
     createScaleBar(stellata);
     bindWarpButton(stellata);
