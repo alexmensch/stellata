@@ -251,7 +251,7 @@ export class InputController {
     const planet = this.deps.picker.pickPlanetClick(x, y, 16);
     const probe = this.deps.picker.pickKindHit('probe', x, y, 16);
     const lg = this.deps.picker.pickKindHit('lg', x, y, 16);
-    const shell = this.deps.picker.pickShellHit(x, y);
+    const shell = this.deps.picker.pickKindHit('shell', x, y);
     const picks: Array<{ kind: 'star' | 'planet' | 'probe' | 'lg' | 'shell'; hit: HoverHit } | null> = [
       star ? { kind: 'star', hit: star } : null,
       planet ? { kind: 'planet', hit: planet } : null,

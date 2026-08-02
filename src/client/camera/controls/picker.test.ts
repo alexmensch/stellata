@@ -10,7 +10,6 @@ import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
-import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -154,7 +153,6 @@ function makePicker(
       const limitMag = opts.limitMag ?? 15;
       return drawCutoffMag(limitMag, limitMag, chart);
     },
-    getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     kindPicks: opts.kindPicks ?? {},
     getWorldOffset: () => new THREE.Vector3(),

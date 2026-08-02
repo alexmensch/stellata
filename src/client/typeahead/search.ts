@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
-import type { ShellRegistry } from '../fresnel-shell/shell-registry';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
@@ -429,30 +428,12 @@ export function buildSearchIndex(
 export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
-  shells: ShellRegistry | null = null,
   kinds: KindModules | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
     buildSearchIndex(raw, catalog.constellations);
-
-  // Boundary shells (Local Bubble, heliopause) — the registry holds only
-  // the shells whose layer attached; index is the SHELL_KEYS/Target idx.
-  // Secondary line is the shell's type descriptor.
-  if (shells) {
-    for (let i = 0; i < shells.count; i++) {
-      const s = shells.at(i);
-      if (!s) continue;
-      fuzzyEntries.push({
-        kind: 'shell',
-        index: i,
-        label: s.label,
-        primary: s.label,
-        displayCon: s.card.typeLine,
-      });
-    }
-  }
 
   // Sol's planets and moons — search-by-name is deliberately Sol-only
   // (bk5 exoplanets are visit-to-discover). Entry index is the SOL_BODIES
@@ -672,9 +653,7 @@ export function bindSearch(
   raw: SearchEntry[],
   starLabels: Map<number, string>,
 ) {
-  const runQuery = createSearchRunner(
-    catalog, raw, stellata.shells, stellata.kinds,
-  );
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -783,7 +762,7 @@ export function bindSearch(
       case 'probe': return stellata.kinds.probe.displayName(t.idx);
       case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
       case 'lg': return stellata.kinds.lg.displayName(t.idx);
-      case 'shell': return stellata.shells.at(t.idx)?.label ?? '';
+      case 'shell': return stellata.kinds.shell.displayName(t.idx);
     }
   };
   const syncFocusUI = () => {
@@ -826,9 +805,7 @@ export function bindFindSearch(
   catalog: Catalog,
   raw: SearchEntry[],
 ): void {
-  const runQuery = createSearchRunner(
-    catalog, raw, stellata.shells, stellata.kinds,
-  );
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 

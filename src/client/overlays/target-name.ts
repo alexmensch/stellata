@@ -32,6 +32,6 @@ export function targetDisplayName(
     case 'lg':
       return stellata.localGroup?.objects[t.idx]?.name ?? 'Galaxy';
     case 'shell':
-      return stellata.shells.at(t.idx)?.label ?? 'Shell';
+      return stellata.kinds.shell.displayName(t.idx) || 'Shell';
   }
 }

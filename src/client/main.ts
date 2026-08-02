@@ -2,9 +2,7 @@ import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadBinaries } from './binaries/binaries-loader';
-import { loadLocalBubble } from './local-bubble/local-bubble-loader';
 import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
-import { createLocalBubbleLabel } from './local-bubble/local-bubble';
 import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
@@ -16,7 +14,6 @@ import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
 import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
 import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
-import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { tToJDE } from './solar-system/time/time';
@@ -47,12 +44,8 @@ import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
-import { createShellFocusProvider } from './focus-card/shell-focus-provider';
-import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
-import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
-import { createShellHoverProvider } from './hover/shell-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
 async function main() {
@@ -68,7 +61,7 @@ async function main() {
 
   try {
     const kinds = buildKindModules();
-    const [catalog, searchIndex, binaries, localBubble, boundaries] = await Promise.all([
+    const [catalog, searchIndex, binaries, boundaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -86,17 +79,14 @@ async function main() {
       // `pnpm run build:binaries`). The renderer renders identically
       // without the field; orbital evolution simply doesn't fire.
       loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
-      // Local Bubble shell mesh. ~650 KB; null when the artifact is
-      // missing (fresh checkout without `pnpm run build:local-bubble`).
-      // The scene renders fine without it — the shell simply doesn't draw.
-      loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
       // IAU constellation boundary arcs + the fade-quantile table. ~334 KB;
       // null when the artifact is missing or invalid (a checkout that never
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts (probes, molecular clouds). Each load never
-      // rejects — a missing artifact leaves that kind's roster empty.
+      // Kind-module artifacts (probes, clouds, Local Group, the Local
+      // Bubble mesh). Each load never rejects — a missing artifact
+      // leaves that kind's roster empty.
       ...KIND_ROSTER.map((kind) => kinds[kind]?.load(import.meta.env.BASE_URL)),
     ]);
 
@@ -116,10 +106,6 @@ async function main() {
     // catalog pairs against `Stellata.getT()`. Static placements remain
     // identical when this artifact is absent.
     if (binaries) stellata.attachBinaries(binaries);
-
-    // Local Bubble shell — the dust-wall cavity the Sun sits inside.
-    // A representational declutter element; absent artifact = no shell.
-    if (localBubble) stellata.attachLocalBubble(localBubble);
 
     // IAU constellation boundaries — a chart-only declutter element at floor
     // 'all'; absent artifact = no arcs.
@@ -157,14 +143,11 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    // Both boundary shells carry static, always-known SIDs (generated /
-    // curated objects, docs/sid.md § 7). localIndex = SHELL_KEYS index =
-    // Target {kind:'shell'} idx. Attach unconditionally: a shell whose
-    // layer is absent still resolves its sid, then focus/pin fall through
-    // to null via the shell provider's legs (same graceful path as lg).
-    sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
-    // Kind-module domains (probes today): sids() is localIndex-ordered
-    // with localIndex = Target idx; null concludes the domain.
+    // Kind-module domains: sids() is localIndex-ordered with
+    // localIndex = Target idx; null concludes the domain. The shell
+    // module's list is static (docs/sid.md § 7), so its domain attaches
+    // even when a layer's artifact is absent — focus/pin then fall
+    // through to null via the empty registry slot.
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
       if (!m) continue;
@@ -233,8 +216,6 @@ async function main() {
     createPlanetLabels(stellata);
     // Kind-module SVG label overlays (probe labels today).
     for (const kind of KIND_ROSTER) kinds[kind]?.labels?.();
-    createHeliopauseLabel(stellata);
-    createLocalBubbleLabel(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
@@ -289,15 +270,11 @@ async function main() {
       },
     });
     const planetHoverProvider = createPlanetHoverProvider({ stellata });
-    // Boundary-shell hover dispatches over the shell registry — one
-    // provider covers the Local Bubble and the heliopause alike.
-    const shellHoverProvider = createShellHoverProvider({ stellata });
     const hoverProviders: HoverProvider[] = [
       starHoverProvider,
       planetHoverProvider,
-      shellHoverProvider,
     ];
-    // Kind-module hover surfaces (probes today).
+    // Kind-module hover surfaces.
     for (const kind of KIND_ROSTER) {
       const provider = kinds[kind]?.hover?.();
       if (provider) hoverProviders.push(provider);
@@ -354,11 +331,7 @@ async function main() {
         probe: kinds.probe.card(),
         cloud: kinds.cloud.card(),
         lg: kinds.lg.card(),
-        shell: createShellFocusProvider({
-          shellAt: (idx) => stellata.shells.at(idx),
-          cameraDistancePc: (idx) =>
-            stellata.shells.cameraDistancePc(idx, stellata.getWorldOffset(), stellata.camera.position),
-        }),
+        shell: kinds.shell.card(),
       },
     });
 

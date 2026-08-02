@@ -103,8 +103,10 @@ describe('mergeKindDetailBinds', () => {
     expect(() => mergeKindDetailBinds(record)).toThrow(/probeMarkers/);
   });
 
-  it('carries the probe module both of its declutter elements', () => {
+  it('carries every module declutter element exactly once', () => {
     const merged = mergeKindDetailBinds(buildKindModules());
-    expect(Object.keys(merged).sort()).toEqual(['probeMarkers', 'probeTrails']);
+    expect(Object.keys(merged).sort()).toEqual([
+      'heliopauseShell', 'localBubbleShell', 'probeMarkers', 'probeTrails',
+    ]);
   });
 });

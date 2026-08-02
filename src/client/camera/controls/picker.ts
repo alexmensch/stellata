@@ -4,8 +4,6 @@
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { FilterState } from '../../filters/filter-state';
-import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
-import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import type { TargetKind } from '../focus/focus-target';
 import type { KindPick } from '../../kinds/kind-module';
@@ -33,7 +31,6 @@ export interface PickerDeps {
   // the live Float32Array rather than a snapshot reference.
   getLocalPositions: () => Float32Array;
   getFilter: () => Readonly<FilterState>;
-  getShells: () => ShellRegistry;
   getPlanetBodyField: () => PlanetBodyField;
   // Kind-module pick surfaces (kinds/kind-module.ts) — one entry per
   // migrated kind, absent for kinds whose pick path is still inline.
@@ -61,10 +58,6 @@ export interface PickerDeps {
 
 export class Picker {
   private readonly deps: PickerDeps;
-
-  // Per-instance scratch state. Reused per call to avoid re-allocating
-  // Three.js objects on the hot pick path.
-  private readonly tmpV3 = new THREE.Vector3();
 
   constructor(deps: PickerDeps) {
     this.deps = deps;
@@ -125,35 +118,6 @@ export class Picker {
     pixelThreshold = 14,
   ): HoverHit | null {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
-  }
-
-  // Boundary-shell hit (Local Bubble, heliopause): the nearest registered
-  // shell whose silhouette / label bbox is under the cursor. Fallback tier
-  // — stars / planets / LG win any overlap. Only visible (drawn) shells
-  // pick, so a decluttered or camera-inside shell isn't hoverable.
-  pickShellHit(clientX: number, clientY: number): HoverHit | null {
-    const shells = this.deps.getShells();
-    const rect = this.deps.domElement.getBoundingClientRect();
-    const worldOffset = this.deps.getWorldOffset() as THREE.Vector3;
-    const cameraPos = this.deps.camera.position;
-    let best: HoverHit | null = null;
-    for (let idx = 0; idx < shells.count; idx++) {
-      const shell = shells.at(idx);
-      if (!shell || !shell.pick.visible()) continue;
-      const hit = pickShellSilhouette({
-        camera: this.deps.camera,
-        rect,
-        clientX,
-        clientY,
-        worldOffset,
-        surface: shell.pick,
-        cameraDistancePc: shells.cameraDistancePc(idx, worldOffset, cameraPos),
-        idx,
-        scratch: this.tmpV3,
-      });
-      if (hit && (best === null || hit.cameraDistancePc < best.cameraDistancePc)) best = hit;
-    }
-    return best;
   }
 
   // ─── Internal ─────────────────────────────────────────────────────

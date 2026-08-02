@@ -592,7 +592,7 @@ describe('search / Local Group entries', () => {
   });
 
   it('resolves aliases and display names to the same object with type + distance rows', () => {
-    const run = createSearchRunner(catalog, [], null, kinds);
+    const run = createSearchRunner(catalog, [], kinds);
     for (const q of ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M31']) {
       const hit = run(q)[0];
       expect(hit?.kind).toBe('lg');
@@ -607,7 +607,7 @@ describe('search / Local Group entries', () => {
   });
 
   it('dedupes multiple alias matches of one object to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], null, kinds);
+    const run = createSearchRunner(catalog, [], kinds);
     const rows = run('andromeda');
     expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
   });
@@ -626,7 +626,7 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   ]);
 
   it('resolves the display name + every alias to the same cloud', () => {
-    const run = createSearchRunner(catalog, [], null, kinds);
+    const run = createSearchRunner(catalog, [], kinds);
     for (const q of ['Eagle Nebula', 'M16', 'NGC 6611']) {
       const hit = run(q)[0];
       expect(hit?.kind, q).toBe('cloud');
@@ -637,12 +637,12 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   });
 
   it('dedupes multiple alias matches of one cloud to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], null, kinds);
+    const run = createSearchRunner(catalog, [], kinds);
     expect(run('eagle').filter((e) => e.kind === 'cloud' && e.index === 0)).toHaveLength(1);
   });
 
   it('indexes an alias-less cloud by name alone', () => {
-    const run = createSearchRunner(catalog, [], null, kinds);
+    const run = createSearchRunner(catalog, [], kinds);
     const hit = run('Taurus')[0];
     expect(hit?.kind).toBe('cloud');
     expect(hit?.index).toBe(1);
@@ -677,7 +677,7 @@ describe('search / ranking tiers', () => {
       displayCon: 'Galaxy · 813 kpc',
     },
   ]);
-  const run = createSearchRunner(catalog, raw, null, lg);
+  const run = createSearchRunner(catalog, raw, lg);
 
   it('tags constellation-expansion labels and only them', () => {
     const { fuzzyEntries } = buildSearchIndex(raw, CONS);

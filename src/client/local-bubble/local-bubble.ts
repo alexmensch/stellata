@@ -2,8 +2,7 @@
 // silhouette label. See src/client/local-bubble/README.md.
 
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
-import { labelHostOf } from '../ui/distance-gated-label';
+import type { KindContext } from '../kinds/kind-module';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 import {
   FresnelShell,
@@ -13,7 +12,12 @@ import {
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../fresnel-shell/fresnel-shell';
-import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../fresnel-shell/shell-registry';
+import {
+  SHELL_KEYS,
+  type ShellCardInfo,
+  type ShellPickSurface,
+  type ShellRegistry,
+} from '../fresnel-shell/shell-registry';
 
 const LOCAL_BUBBLE_SHELL_IDX = SHELL_KEYS.indexOf('local_bubble');
 
@@ -139,23 +143,26 @@ export class LocalBubbleShell extends FresnelShell {
  *  legibility floor (`isShellLabelResolvable`) — the shell has no distance
  *  cutoff of its own, so without this the label would outlive the shell's
  *  legibility as the camera zooms out. */
-export function createLocalBubbleLabel(stellata: Stellata): void {
-  const shell = stellata.getLocalBubbleShell();
-  createShellSilhouetteLabel(labelHostOf(stellata), {
+export function createLocalBubbleLabel(
+  ctx: KindContext,
+  shell: LocalBubbleShell,
+  shells: ShellRegistry,
+): () => void {
+  return createShellSilhouetteLabel(ctx, {
     elementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
     sampleCount: shell.labelSampleCount(),
-    getWorldSample: (i, out) => shell.labelSampleInto(i, stellata.getWorldOffset(), out),
+    getWorldSample: (i, out) => shell.labelSampleInto(i, ctx.getWorldOffset(), out),
     visible: () =>
-      !stellata.getMonochrome()
-      && stellata.detailPermits('localBubbleLabel')
+      !ctx.getMonochrome()
+      && ctx.detailPermits('localBubbleLabel')
       && shell.hasMesh()
       && isShellLabelResolvable(
-        stellata.shells,
+        shells,
         LOCAL_BUBBLE_SHELL_IDX,
-        stellata.getWorldOffset(),
-        stellata.camera.position,
+        ctx.getWorldOffset(),
+        ctx.camera.position,
         window.innerHeight,
-        stellata.camera.fov * Math.PI / 180,
+        ctx.camera.fov * Math.PI / 180,
       ),
   });
 }
