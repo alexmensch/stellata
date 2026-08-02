@@ -24,6 +24,10 @@ in vec3 vNormalV;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outStatistic;
+// Attachment 2 holds the diffuse emitters until the resolve convolves them,
+// and the shell is drawn in front of them — the same opacity that extincts
+// the stars behind it (../../hdr/attachments/README.md § The gate).
+layout(location = 2) out vec4 outDiffuse;
 
 void main() {
   // Reconstruct the shell-surface point on the SMOOTH sphere from the
@@ -68,4 +72,5 @@ void main() {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
   outColor = vec4(col * uFade, opacity * uFade);
+  outDiffuse = stellataOccluderTexel(opacity * uFade);
 }

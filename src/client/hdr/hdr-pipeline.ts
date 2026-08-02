@@ -256,7 +256,8 @@ export class HdrPipeline {
    *  A volumetric emitter masks attachment **0** off instead: on-target it
    *  writes zero there and the resolve owns that pixel, so masking makes the
    *  contract explicit rather than relying on an additive blend of zero. An
-   *  absorber takes both colour attachments and neither emits nor measures:
+   *  absorber takes both colour attachments and neither emits nor measures,
+   *  and an emitter drawn in front of the diffuse field takes all three:
    *  `attachments/README.md` § The gate is the table. */
   private openEmitterGate = (attachments: GatedAttachments): void => {
     const gl = this.gl;
@@ -266,6 +267,13 @@ export class HdrPipeline {
         return;
       case 'absorption':
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2]);
+        return;
+      case 'occluding-emitter':
+        gl.drawBuffers([
+          gl.COLOR_ATTACHMENT0,
+          gl.COLOR_ATTACHMENT1,
+          gl.COLOR_ATTACHMENT2,
+        ]);
         return;
       default:
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.NONE]);

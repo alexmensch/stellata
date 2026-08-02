@@ -59,6 +59,10 @@ in vec2 vUvM;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outStatistic;
+// Attachment 2 holds the diffuse emitters until the resolve convolves them,
+// and this surface is drawn in front of them
+// (../../hdr/attachments/README.md § The gate).
+layout(location = 2) out vec4 outDiffuse;
 
 // Limb darkening: full brightness face-on, dimming toward the
 // silhouette. Carries the whole visual character of texture-less
@@ -154,4 +158,5 @@ void main() {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
   outColor = vec4(col, uFade);
+  outDiffuse = stellataOccluderTexel(uFade);
 }

@@ -110,6 +110,17 @@ vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
         alpha);
 }
 
+/** One texel of the diffuse attachment for a fragment that adds no diffuse
+ *  light but stands in front of some: black at the fragment's own alpha, so
+ *  the one blend equation dims what is behind it by exactly the opacity it
+ *  composited attachment 0 with. `alpha` MUST be the alpha the same fragment
+ *  writes to attachment 0 — pass a different one and the object occludes the
+ *  band by a different amount than it occludes everything else
+ *  (../attachments/README.md § The gate). */
+vec4 stellataOccluderTexel(float alpha) {
+    return vec4(vec3(0.0), alpha);
+}
+
 /** Luminance from an extended source of surface brightness
  *  `magPerArcsec2` spread over `omegaArcsec2`. The flux magnitude inside
  *  that solid angle is `magPerArcsec2 - 2.5*log10(omegaArcsec2)`, and

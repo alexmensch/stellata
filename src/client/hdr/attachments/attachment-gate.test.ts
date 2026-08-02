@@ -4,6 +4,7 @@ import {
   bindAttachmentGate,
   markAbsorber,
   markDiffuseEmitter,
+  markOccludingEmitter,
   markStatisticEmitter,
 } from './attachment-gate';
 
@@ -110,6 +111,28 @@ describe('markAbsorber', () => {
   it('is inert on the canvas path, exactly as the other two marks are', () => {
     const mesh = new THREE.Object3D();
     markAbsorber(mesh);
+    expect(() => draw(mesh)).not.toThrow();
+  });
+});
+
+// A surface drawn in front of the diffuse field is an emitter AND an occluder,
+// so it is the one mark that opens every attachment: light into 0, its
+// statistic into 1, and its own opacity into 2. The alternative — a depth-only
+// prepass per body, the star pipeline's renderOrder −4 trick — cannot dim by a
+// partial alpha, which the ring annulus and the atmosphere limb both need.
+describe('markOccludingEmitter', () => {
+  it('asks for every attachment, emitting and occluding in one draw', () => {
+    const { log, bind } = trace();
+    bind();
+    const mesh = new THREE.Object3D();
+    markOccludingEmitter(mesh);
+    draw(mesh);
+    expect(log).toEqual(['open:occluding-emitter', 'close']);
+  });
+
+  it('is inert on the canvas path, exactly as the other marks are', () => {
+    const mesh = new THREE.Object3D();
+    markOccludingEmitter(mesh);
     expect(() => draw(mesh)).not.toThrow();
   });
 });

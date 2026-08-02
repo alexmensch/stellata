@@ -45,17 +45,22 @@ of M31's overlapping disc and bulge, and the existing pass order
 hdr.bind()             → clear all three attachments
 renderer.render(scene) → diffuse emitters land in attachment 2, everything
                          else in attachment 0; both still write attachment 1,
-                         and the absorbers multiply attachments 0 and 2
+                         and every attenuating draw multiplies 0 and 2
 summation.render()     → box-downsample attachment 2 when the factor is > 1
 hdr.resolve()          → attachment 0 + Σ(attachment 2 over the patch),
                          then the operator, at alpha 1
 ```
 
-## Where each absorber acts
+## Everything that dims the field has to follow it here
 
 A layer that leaves attachment 0 also leaves the blend chain everything drawn
-in front of it composites against, and depth ordering says nothing about that.
-Two consumers operate on the diffuse emitters, and both have to follow them:
+in front of it composites against, and **depth ordering says nothing about
+that** — the emitters draw first and the resolve adds attachment 2
+unconditionally, so nothing drawn later can take it away by writing depth. The
+criterion is therefore the blend, not the order: **a draw attenuates the
+diffuse field iff its blend's destination factor is not `One`**, and every
+such draw ordered after the emitters needs attachment 2 open. Additive and max
+blends are exempt because neither can attenuate anything.
 
 - **Molecular-cloud absorption** (`renderOrder` −2, against the emitters'
   −3) is a premultiplied `rgb = 0` multiply, so it is `markAbsorber` →
@@ -64,15 +69,25 @@ Two consumers operate on the diffuse emitters, and both have to follow them:
   which is the physical order — light is absorbed in interstellar space and
   the eye sums what survives. Keeping attachment 0 costs nothing and leaves
   any future far-field opaque emitter extincted.
+- **Every close-range surface in front of the band** — the planet mesh, its
+  ring annulus, its atmosphere shell, all alpha-composited in the local depth
+  pass. They emit *and* attenuate, so they take `markOccludingEmitter` →
+  `[0, 1, 2]` and write black at their own alpha
+  (`../attachments/README.md` § The gate). Without it the band is added over a
+  planet's night side, a shadowed ring section and the atmosphere limb —
+  wherever the surface is dim enough for 38/255 to show.
 - **The canvas alpha.** The resolve writes **1**, not attachment 0's: a
   diffuse fragment masks attachment 0 off, so its alpha is the clear's zero
   while its rgb is the whole band, and a premultiplied canvas composites
   `rgb > a` as nothing.
 
-The absorber mark inverts the gate's usual safety — a mesh that forgets it
-merely stops absorbing, with no error and no missing draw, so
-`../../molecular-clouds/molecular-clouds.test.ts` pins the only call site
-alongside the shader's `location = 2` declaration.
+Both marks invert the gate's usual safety — a mesh that forgets one merely
+stops absorbing or stops occluding, with no error and no missing draw, so
+`../../molecular-clouds/molecular-clouds.test.ts` and
+`../../solar-system/planets/planet-mesh-layer.test.ts` pin every call site
+alongside the shaders' `location = 2` declarations. Authored chrome is the
+one category deliberately left out — `../attachments/README.md` § Known
+residuals.
 
 **The gain does not move**, and that is deliberate: attachment 2 carries the
 same `Ω_sum`-gained value the band used to write into attachment 0, so the

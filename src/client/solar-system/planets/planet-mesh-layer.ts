@@ -46,7 +46,7 @@ import {
   atmosphereParamsOf,
 } from '../atmosphere/atmosphere-scattering-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
+import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
 
 // Splice the shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — into both the mesh disc and the shell
@@ -597,7 +597,7 @@ export class PlanetMeshLayer {
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
     mesh.renderOrder = 2.8;
-    markStatisticEmitter(mesh);
+    markOccludingEmitter(mesh);
     this.group.add(mesh);
     const radiusPc = planet.radiusKm * KM_PC;
     const boundRadiusPc = Math.max(
@@ -656,7 +656,7 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.82;
     mesh.scale.setScalar(shellRadiusPc);
     mesh.visible = false;
-    markStatisticEmitter(mesh);
+    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, shellRadiusPc };
   }
@@ -694,7 +694,7 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.81;
     mesh.scale.setScalar(outerPc);
     mesh.visible = false;
-    markStatisticEmitter(mesh);
+    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, geometry };
   }

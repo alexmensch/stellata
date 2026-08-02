@@ -4,10 +4,14 @@
 import type * as THREE from 'three';
 
 /** Which set of the target's attachments a draw may write. Attachment 0 is
- *  the only one open at rest; a volumetric emitter and an absorber both
- *  reach attachment 2, because that is where the diffuse field lives until
- *  the resolve convolves it (`../summation/README.md`). */
-export type GatedAttachments = 'statistic' | 'diffuse' | 'absorption';
+ *  the only one open at rest; every set that reaches attachment 2 does so
+ *  because that is where the diffuse field lives until the resolve convolves
+ *  it (`../summation/README.md`). */
+export type GatedAttachments =
+  | 'statistic'
+  | 'diffuse'
+  | 'absorption'
+  | 'occluding-emitter';
 
 let openGate: ((attachments: GatedAttachments) => void) | null = null;
 let closeGate: (() => void) | null = null;
@@ -64,6 +68,26 @@ export function markDiffuseEmitter(object: THREE.Object3D): void {
  */
 export function markAbsorber(object: THREE.Object3D): void {
   markEmitter(object, 'absorption');
+}
+
+/**
+ * Declare a mesh an emitter that **also stands in front of the diffuse
+ * field**: every attachment opens, because it emits into 0, measures into 1,
+ * and has to dim 2 by its own opacity.
+ *
+ * This is the mark for any alpha-compositing draw ordered after the
+ * volumetric emitters — the planet mesh, its ring annulus, its atmosphere
+ * shell. Leaving the diffuse field out of their blend chain is what let the
+ * band be added back on top of a planet's night side; the depth buffer cannot
+ * help, because the emitters drew first and the resolve adds attachment 2
+ * unconditionally. Same inverted safety as `markAbsorber`: forget it and the
+ * object silently stops occluding.
+ *
+ * The shader's `stellataOccluderTexel` alpha and this mark are one contract —
+ * `planet-mesh-layer.test.ts` pins both halves.
+ */
+export function markOccludingEmitter(object: THREE.Object3D): void {
+  markEmitter(object, 'occluding-emitter');
 }
 
 function markEmitter(object: THREE.Object3D, attachments: GatedAttachments): void {

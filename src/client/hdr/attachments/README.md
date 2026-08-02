@@ -84,33 +84,47 @@ than device pixels is what keeps the frame mean
 ## The gate — chrome is safe by default
 
 The target binds with `drawBuffers [0, NONE, NONE]`, and only a mesh passed
-to one of the two marks flips anything else on for the span of its own draw.
+to one of the marks below flips anything else on for the span of its own draw.
 Nothing else can reach the statistic, **including a chrome layer added
 later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.
 
 **Which mark a layer calls is part of its contract**, not a detail:
 
-- `markStatisticEmitter` → `[0, 1, NONE]`. A point emitter: stars, planet
-  glare, the planet mesh, ring annuli, airlight.
-- `markDiffuseEmitter` → `[NONE, 1, 2]`. A volumetric emitter, and it masks
-  attachment **0** off, because on-target the resolve owns that pixel once it
-  has averaged attachment 2 over the summation patch
-  (`../summation/README.md`). The mark and the shader's `layout(location = 2)`
-  are one decision — either alone fails silently, discarding the diffuse
-  write in one direction and leaving attachment 2 undefined for every other
-  draw in the other.
-- `markAbsorber` → `[0, NONE, 2]`. Molecular-cloud absorption, the one layer
-  that operates on light already in the target rather than adding any. It
-  needs attachment 2 because that is where the light it dims now is, and
-  keeps attachment 0 because nothing else may assume that attachment is empty
-  behind it. Attachment 1 stays shut — § Known residuals.
+| mark | opens | for |
+| --- | --- | --- |
+| `markStatisticEmitter` | `[0, 1, NONE]` | a point emitter: stars, planet glare, airlight |
+| `markDiffuseEmitter` | `[NONE, 1, 2]` | a volumetric emitter |
+| `markAbsorber` | `[0, NONE, 2]` | a draw that only dims: molecular-cloud absorption |
+| `markOccludingEmitter` | `[0, 1, 2]` | an emitter drawn in FRONT of the diffuse field |
 
-**This mark inverts the gate's safety, and it is the only one that does.** A
-draw that forgets `markStatisticEmitter` merely fails to contribute; one that
-forgets `markAbsorber` silently stops absorbing, which reads as a missing dark
-rift rather than an error. `../../molecular-clouds/molecular-clouds.test.ts`
-pins the only call site.
+- **A volumetric emitter masks attachment 0 off**, because on-target the
+  resolve owns that pixel once it has averaged attachment 2 over the summation
+  patch (`../summation/README.md`). The mark and the shader's
+  `layout(location = 2)` are one decision — either alone fails silently,
+  discarding the diffuse write in one direction and leaving attachment 2
+  undefined for every other draw in the other.
+- **An absorber keeps attachment 0** because nothing else may assume that
+  attachment is empty behind it, and needs attachment 2 because that is where
+  the light it dims now is. Attachment 1 stays shut — § Known residuals.
+- **An occluding emitter takes all three, and the criterion is its blend, not
+  its depth.** Attachment 2 leaves the chain everything drawn in front of it
+  composites against, so **any draw ordered after the volumetric emitters
+  whose blend has a destination factor other than `One` has to dim attachment
+  2 as well** — otherwise the resolve adds the band back on top of it. Depth
+  cannot substitute: the emitters drew first, and the resolve adds attachment
+  2 unconditionally. Additive and max blends need nothing, since neither can
+  attenuate. Live members: the planet mesh, its ring annulus, its atmosphere
+  shell — each writing `stellataOccluderTexel` at the alpha it composited
+  attachment 0 with (`../emission/emission.glsl`).
+
+**Two of these marks invert the gate's safety.** A draw that forgets
+`markStatisticEmitter` merely fails to contribute; one that forgets
+`markAbsorber` silently stops absorbing, which reads as a missing dark rift,
+and one that forgets `markOccludingEmitter` silently stops occluding, which
+reads as the Milky Way band glowing through a planet's night side. Both call
+sites are pinned — `../../molecular-clouds/molecular-clouds.test.ts` and
+`../../solar-system/planets/planet-mesh-layer.test.ts`.
 
 Two further things the gate has to get right:
 
@@ -124,11 +138,13 @@ Two further things the gate has to get right:
 `markStatisticEmitter` composes with whatever hooks the object already
 carries, so it is order-independent against a layer that wants its own.
 
-## One blend equation, two attachments
+## One blend equation, every attachment
 
 WebGL2 has no per-attachment blend state, so the blend an emitter chose for
-its colour runs over its statistic texel too. **Each emitter's alpha on
-attachment 1 is therefore part of its contract, not a free slot.**
+its colour runs over its statistic and diffuse texels too. **Each emitter's
+alpha on those attachments is therefore part of its contract, not a free
+slot** — and it is what lets an occluder dim attachment 2 by a gate flag
+rather than a second draw.
 
 - **Additive passes** (star glow, planet glare, the Milky Way band) blend
   `SrcAlpha × One` because their materials are not premultiplied. They
@@ -152,6 +168,18 @@ attachment 1 is therefore part of its contract, not a free slot.**
   attachments 0 and 2 but leaves the statistic reading the Milky Way band
   un-extincted. Inert: the band sits two decades under the adaptation
   anchor and cannot produce a cut on its own.
+- **Authored chrome does not occlude the diffuse field.** Every
+  alpha-composited chrome layer in front of the emitters — the galactic disc,
+  both coordinate spheres, LG wireframes, the constellation figure, orbit and
+  binary paths, probe markers, fresnel and cloud rim shells — blends into
+  attachment 0 alone, so the band is added over it rather than under it, and
+  line work crossing the band reads slightly brighter than it should. Several
+  are built-in `Line` / `LineMaterial` programs with no fragment output to
+  add, and `../README.md` § Chrome's inverse mapping is already exact only for
+  a lone full-alpha fragment over black. Accepted: at the band's ceiling of
+  38/255
+  the shift is a fraction of a bright chrome line, and it applies to nothing
+  photometric.
 - **A point source's G over-reads in the kernel's wings** under an additive
   blend, because alpha 1 drops the second `glow` factor attachment 0 gets.
   Exact at the peak, which is the only place a frame `max` reads it.

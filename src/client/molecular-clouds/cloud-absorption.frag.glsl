@@ -52,7 +52,7 @@ layout(location = 0) out vec4 outColor;
 // Attachment 2 carries the diffuse emitters until the resolve convolves it,
 // and one blend equation covers every attachment — so the same alpha-only
 // texel written here is what dims the band and the LG glow
-// (../hdr/summation/README.md § Where each absorber acts).
+// (../hdr/summation/README.md § Everything that dims the field).
 layout(location = 2) out vec4 outDiffuse;
 
 // Interleaved gradient noise of gl_FragCoord — static per pixel, never

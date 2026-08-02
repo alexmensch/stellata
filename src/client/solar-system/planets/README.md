@@ -206,6 +206,12 @@ the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a
 gamma-bent albedo from lighting the body live in `emission/README.md`.
 
+The three alpha-composited surfaces — mesh, annulus, atmosphere shell — are
+`markOccludingEmitter` rather than `markStatisticEmitter`, so they dim the
+diffuse attachment by their own opacity as well as emitting. The additive
+glare needs nothing: an additive blend cannot attenuate
+(`../../hdr/attachments/README.md` § The gate).
+
 ## Planet mesh LOD
 
 On close approach the reflected glare hands off to a real oblate

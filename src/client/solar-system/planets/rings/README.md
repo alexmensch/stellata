@@ -45,3 +45,10 @@ statistic texel like any other alpha-blended emitter, at the strip's
 the slant-path enhancement the source walk applied analytically
 (`T = (1 − α)^(1/|sin B|)`, opaque edge-on) is gone
 (`../../../hdr/attachments/README.md` § Known residuals).
+
+**"Behind them" includes the Milky Way band and the Local Group**, which is
+why the annulus is a `markOccludingEmitter` and writes `stellataOccluderTexel`
+at that same alpha: the diffuse emitters live in their own attachment until the
+resolve convolves them, and a draw that dims only attachment 0 lets the band
+back in over a shadowed ring section (`../../../hdr/summation/README.md`
+§ Everything that dims the field).

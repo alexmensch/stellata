@@ -37,8 +37,8 @@ void stellataEmitNothing(out vec4 fragColor, out vec4 statistic, out vec4 diffus
  * concession is not light, and the adaptation model reads retinal
  * illuminance. Extended source, so flux and peak are the same quantity and
  * alpha is 1: the additive blend must SUM the statistic, not scale it a
- * second time (../attachments/README.md § One blend equation, two
- * attachments).
+ * second time (../attachments/README.md § One blend equation, every
+ * attachment).
  *
  * Off-target there is no attachment 2 and no pass to run the convolution, so
  * the summation anchor is gone entirely and BOTH volumetric emitters fall

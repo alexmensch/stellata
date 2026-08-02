@@ -263,20 +263,34 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   for both emitters rather than one keeping a private fallback — the
   concession *is* the pass. That is the float-RT fallback (§ 6) and the
   `setHdrEnabled(false)` A/B, where the band returns to its per-pixel level.
-- **Everything that operates on the emission has to move with it.** Giving the
+- **Everything that dims the emission has to move with it.** Giving the
   diffuse emitters their own attachment takes them out of the chain that
   anything drawn in front of them composites against, and the depth-test
   argument for staying in one framebuffer says nothing about **blend** order.
-  Exactly two things operate on them, and both are part of this design rather
-  than details of it:
+  The rule the enumeration has to be derived from, rather than a list of the
+  layers that came to mind: **a draw dims the diffuse field iff its blend's
+  destination factor is not `One`**, so every such draw ordered after the
+  emitters opens attachment 2 and writes black at its own alpha. Depth cannot
+  stand in for it — the emitters draw first and the resolve adds attachment 2
+  unconditionally, so an opaque body drawn later cannot subtract itself by
+  writing depth. Additive and max blends are exempt: neither attenuates.
+  Three consumers, and each is part of this design rather than a detail of it:
   - *Molecular-cloud absorption* is a multiply drawn after the band
     (`renderOrder` −2 against −3), so it opens attachment 2 as well and writes
     the same alpha-only texel to both — one blend equation covers every
     attachment, so it is a gate flag, not a second draw. Extinction therefore
     lands **before** the convolution, which is the physical order: light is
     absorbed in interstellar space, and the eye sums what survives. It is the
-    only absorber in the scene; a future one takes the same mark
+    only *interstellar* absorber in the scene; a future one takes the same mark
     (`src/client/hdr/attachments/README.md` § The gate).
+  - *Every close-range surface in front of the band* — the planet mesh, the
+    ring annulus, the atmosphere shell, all alpha-composited in the local
+    depth pass. They emit and attenuate, so they open all three attachments.
+    Their own occlusion contracts already said so and were silently void
+    without this: an atmosphere shell is premultiplied-over specifically so a
+    dense limb chord that scatters no light still extincts what is behind it,
+    and a ring annulus dims a source behind it because no z-test could. Both
+    claims are about the whole background, and the band had left it.
   - *The canvas alpha.* The resolve carried it through from attachment 0,
     which a diffuse fragment now leaves at the clear's zero while its rgb is
     the entire band. A premultiplied canvas composites `rgb > a` as nothing,

@@ -33,6 +33,10 @@ in vec2 vLocalXY;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outStatistic;
+// Attachment 2 holds the diffuse emitters until the resolve convolves them,
+// and the annulus is drawn in front of them
+// (../../../hdr/attachments/README.md § The gate).
+layout(location = 2) out vec4 outDiffuse;
 
 // Unlit-face factor: light transmitted through the ring plane instead
 // of reflected off it.
@@ -88,4 +92,5 @@ void main() {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
   outColor = vec4(col, strip.a * uFade);
+  outDiffuse = stellataOccluderTexel(strip.a * uFade);
 }
