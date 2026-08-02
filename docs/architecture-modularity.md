@@ -95,8 +95,11 @@ the documented answer to "what may a layer depend on?". The pilot
 `src/client/kinds/kind-module.ts`: scene, camera, canvas, the shared
 view-uniform map, `solIndex`, and accessors for the model clock,
 `worldOffset`, focused Target, monochrome, declutter permission,
-constellation lookup, and the frame tick. Exposure and `angularToPx`
-from the original sketch wait for their first module consumer.
+constellation lookup, and the frame tick. Phase 3a added the two legs
+whose first consumers arrived with the soft kinds: `angularToPx()`
+(every projected-size leg) and `solAbsInto()` (the heliopause anchor;
+the planet kind's host attach is its second consumer). Exposure still
+waits for a consumer.
 
 ### Tier 2 — kind modules
 
@@ -316,7 +319,17 @@ dependency-linked in order. Sizing per bead-authoring rules.
    (§ Tier 2). It also collapsed `FocusKind` into an alias of
    `TargetKind` — half of structural finding 1.
 3. **Migrate the remaining non-star kinds** — soft kinds (cloud / lg /
-   shell) together, planet on its own (host-attach machinery).
+   shell) **landed** (`molecular-clouds/cloud-module.ts`,
+   `local-group/lg-module.ts`, `fresnel-shell/shell-module.ts`);
+   planet on its own (host-attach machinery). What the soft-kind pass
+   settled: `ShellRegistry` became the shell module's internal runtime
+   (two instances of one module, never a top-level registry); the
+   shared label engine takes a narrow host interface `KindContext`
+   satisfies structurally, and label factories return teardowns the
+   module runs from its scene layer's dispose; one pick per kind
+   through `Picker.pickKindHit` — the cloud click's old warp gate is
+   subsumed by the click FSM's `blocksClick()`, and the kind-specific
+   `Picker` methods and hover-provider files are gone.
 4. **Facade flattening.**
 5. **Engine-services extraction + star module** — frame/anchor service
    out of `StarFrame` ownership, shared view uniforms out of the star

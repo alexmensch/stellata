@@ -29,11 +29,17 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
     viewportHeightPx, fovYRad)` — the label legibility gate both shells'
     visibility predicates share (§ Invariants below).
-- `shell-registry.ts` — the focus-target seam (§ Boundary shells as
-  focus targets): `SHELL_KEYS`, the `ShellInstance` contract, and
-  `ShellRegistry` (owns per-shell geometry: localPositionInto,
+- `shell-module.ts` (+ test) — the shell `ObjectKindModule`
+  (`../kinds/README.md`): one module whose `attach` constructs BOTH
+  shell layers (heliopause + Local Bubble) and registers them into its
+  internal registry, plus the focusable / card / hover / search / SID /
+  declutter / label legs.
+- `shell-registry.ts` — the shell kind's internal runtime (§ Boundary
+  shells as focus targets): `SHELL_KEYS`, the `ShellInstance` contract,
+  and `ShellRegistry` (owns per-shell geometry: localPositionInto,
   cameraDistancePc, viewingDistancePc, focusParkDistancePc,
-  renderedSizePx).
+  renderedSizePx). Instantiated per shell-module; no longer a
+  top-level registry on `Stellata`.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
 - `shell-pick.ts` — `pickShellSilhouette`, the shared silhouette-bbox +
@@ -92,13 +98,14 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   the SID domain's localIndex uses, so the three (Target idx, SID local
   index, `SHELL_OBJECT_SIDS` order) stay aligned. Append to `SHELL_KEYS`
   only; never reorder.
-- **Registering an instance:** call `stellata.shells.register(key, {...})`
-  from the shell's attach path with `label`, `sid`
-  (`SHELL_OBJECT_SIDS[key]`), `card` (type line / size / provenance —
-  non-luminous, so no magnitude rows), `centerAbsInto` (absolute ICRS
-  center), and `extentPc` (representative radius). An absent shell leaves
-  its slot empty and every dispatch falls through to null (same graceful
-  path as an unloaded `lg` layer).
+- **Registering an instance:** the shell module's `attach` registers
+  each shell with `label`, `sid` (`SHELL_OBJECT_SIDS[key]`), `card`
+  (type line / size / provenance — non-luminous, so no magnitude rows),
+  `centerAbsInto` (absolute ICRS center), and `extentPc`
+  (representative radius). An absent shell leaves its slot empty and
+  every dispatch falls through to null (same graceful path as an
+  unloaded `lg` layer); the SID domain attaches regardless — the
+  module's `sids()` list is static.
 - **Framing.** Focus parks at `viewingDistanceForExtent(extent)` via the
   generic park-radius path — no new camera code. This aligns with the
   hide-when-inside invariant above: the pulled-out "whole shell on screen"

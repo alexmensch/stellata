@@ -19,8 +19,10 @@ the constellation the star sits in. Selecting an entry dispatches through `flyTo
 observe mode.
 
 `createSearchRunner` is the shared query runner (ID dispatch + fuzzy +
-tier re-rank + within-kind dedup over stars + clouds + Local Group
-objects + Sol's planets + boundary shells + the deep-space probes). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
+tier re-rank + within-kind dedup over stars + Sol's planets + every
+kind-module row — clouds, Local Group objects, boundary shells, and
+the deep-space probes arrive via each module's `searchEntries()` leg,
+so the runner takes no per-kind parameters). Fuzzy hits re-rank at equal (bucketed) Fuse score: exact
 label > query-is-prefix > plain name/alias > constellation-expansion
 label ("Gamma Andromeda" — fuzzy-searchable but never outranking the
 Andromeda Galaxy for the bare constellation-name query), then shorter

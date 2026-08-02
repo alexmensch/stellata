@@ -109,9 +109,9 @@ attach loop runs before `registerSceneLayers`, so a module layer
 updates ahead of every inline-wired entry — which is what keeps the
 probe field's samples a frame-fresh read for the planet layer's
 moving-focal ride. Each inline entry is a
-closure over the shell's layer field, so lazily-attached layers
-(clouds, Local Group, binaries) read whatever is currently attached —
-`null` before attach, the live instance after, with no re-registration.
+closure over the shell's layer field, so a lazily-attached layer
+(binaries) reads whatever is currently attached — `null` before
+attach, the live instance after, with no re-registration.
 
 `FrameCtx` (camera, worldOffset, float64 `distFromSol`, model-clock
 `t`, `warpActive`) is computed once per frame and shared. Warp
