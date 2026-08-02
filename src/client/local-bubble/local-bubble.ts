@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
+import { labelHostOf } from '../ui/distance-gated-label';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 import {
   FresnelShell,
@@ -140,7 +141,7 @@ export class LocalBubbleShell extends FresnelShell {
  *  legibility as the camera zooms out. */
 export function createLocalBubbleLabel(stellata: Stellata): void {
   const shell = stellata.getLocalBubbleShell();
-  createShellSilhouetteLabel(stellata, {
+  createShellSilhouetteLabel(labelHostOf(stellata), {
     elementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
     sampleCount: shell.labelSampleCount(),
     getWorldSample: (i, out) => shell.labelSampleInto(i, stellata.getWorldOffset(), out),

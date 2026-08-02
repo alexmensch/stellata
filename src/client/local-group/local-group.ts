@@ -6,7 +6,7 @@ import type { LgCatalog, LgObject } from './local-group-loader';
 import { maxSemiAxisPc } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from '../galactic/galactic-fade';
 import type { Stellata } from '../stellata';
-import { createDistanceGatedLabel } from '../ui/distance-gated-label';
+import { createDistanceGatedLabel, labelHostOf } from '../ui/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
@@ -531,7 +531,7 @@ export function createMilkyWayLabel(stellata: Stellata): void {
     maxAxis: MIDPLANE_RADIUS_PC,
   });
   const rimSamplesAbs = buildMwRimSamples();
-  createDistanceGatedLabel(stellata, {
+  createDistanceGatedLabel(labelHostOf(stellata), {
     elementId: 'mw-label',
     sampleCount: rimSamplesAbs.length,
     getWorldSample: (i, out) => out.copy(rimSamplesAbs[i]).sub(stellata.getWorldOffset()),
@@ -592,7 +592,7 @@ export function createLocalGroupLabels(
 
     const idx = i;
     const id = obj.id;
-    createDistanceGatedLabel(stellata, {
+    createDistanceGatedLabel(labelHostOf(stellata), {
       elementId,
       sampleCount: layer.sampleCount(idx),
       getWorldSample: (j, out) => {

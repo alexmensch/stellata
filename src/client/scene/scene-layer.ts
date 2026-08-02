@@ -29,6 +29,27 @@ export interface SceneLayer {
   dispose(): void;
 }
 
+/** Per-frame update body shared by the warp-gated reference layers
+ *  (galactic disc, constellation boundaries, LG wireframe): hidden
+ *  during warp or when the declutter floor forbids, else distance-faded
+ *  by the layer's own update. Null layer → no-op so a lazily-attached
+ *  layer registers unconditionally. */
+export function updateWarpGatedRefLayer(
+  layer: {
+    group: { visible: boolean };
+    update: (worldOffset: Readonly<THREE.Vector3>, distFromSol: number) => void;
+  } | null,
+  ctx: FrameCtx,
+  permitted: boolean,
+): void {
+  if (!layer) return;
+  if (ctx.warpActive || !permitted) {
+    layer.group.visible = false;
+    return;
+  }
+  layer.update(ctx.worldOffset, ctx.distFromSol);
+}
+
 /** Ordered layer collection. update runs in registration order —
  *  register in draw-dependency order (continuously-ticking layers
  *  first, SVG projectors after the camera-matrix refresh they need). */

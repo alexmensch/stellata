@@ -3,7 +3,20 @@
 // and Local Group label families.
 
 import * as THREE from 'three';
+import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
+
+/** What the engine reads per frame — satisfied by `KindContext` directly
+ *  (module label overlays) and by `labelHostOf(stellata)` for overlays
+ *  wired outside a kind module. */
+export type LabelFrameHost = Pick<KindContext, 'camera' | 'onFrame'>;
+
+export function labelHostOf(stellata: Stellata): LabelFrameHost {
+  return {
+    camera: stellata.camera,
+    onFrame: (handler) => stellata.on('frame', handler),
+  };
+}
 
 export interface DistanceGatedLabelOptions {
   /** ID of the existing SVG <text> element the label binds to. */
@@ -39,11 +52,11 @@ export interface DistanceGatedLabelOptions {
 }
 
 export function createDistanceGatedLabel(
-  stellata: Stellata,
+  host: LabelFrameHost,
   opts: DistanceGatedLabelOptions,
-): void {
+): () => void {
   const text = document.getElementById(opts.elementId) as unknown as SVGTextElement | null;
-  if (!text) return;
+  if (!text) return () => {};
 
   const tmp = new THREE.Vector3();
   // Poison sentinel — `null` disagrees with both true and false so the
@@ -65,12 +78,12 @@ export function createDistanceGatedLabel(
   };
   setVisible(false);
 
-  stellata.on('frame', () => {
+  return host.onFrame(() => {
     if (!opts.visible()) {
       setVisible(false);
       return;
     }
-    const camera = stellata.camera;
+    const camera = host.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
 

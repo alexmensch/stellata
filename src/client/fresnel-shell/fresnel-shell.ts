@@ -3,8 +3,7 @@
 // See src/client/fresnel-shell/README.md.
 
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
-import { createDistanceGatedLabel } from '../ui/distance-gated-label';
+import { createDistanceGatedLabel, type LabelFrameHost } from '../ui/distance-gated-label';
 import { LABEL_OFFSET_PX } from '../solar-system/planets/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
@@ -159,10 +158,10 @@ export interface ShellSilhouetteLabelOptions {
  *  hugs the projected silhouette and auto-hides when the camera is inside
  *  the shell (a sample crosses behind the near plane). */
 export function createShellSilhouetteLabel(
-  stellata: Stellata,
+  host: LabelFrameHost,
   opts: ShellSilhouetteLabelOptions,
-): void {
-  createDistanceGatedLabel(stellata, {
+): () => void {
+  return createDistanceGatedLabel(host, {
     ...opts,
     labelDir: { x: Math.SQRT1_2, y: Math.SQRT1_2 },
     offsetPx: LABEL_OFFSET_PX,

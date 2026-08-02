@@ -2,6 +2,7 @@
 // pattern applied per cloud via the shared shell-label engine.
 
 import type { Stellata } from '../stellata';
+import { labelHostOf } from '../ui/distance-gated-label';
 import { createShellSilhouetteLabel } from '../fresnel-shell/fresnel-shell';
 
 /** Container `<g>` in index.html the per-cloud `<text>` nodes mint into. */
@@ -29,7 +30,7 @@ export function createMolecularCloudLabels(stellata: Stellata): void {
     text.setAttribute('dominant-baseline', 'hanging');
     text.textContent = cloud.name;
     group.appendChild(text);
-    createShellSilhouetteLabel(stellata, {
+    createShellSilhouetteLabel(labelHostOf(stellata), {
       elementId: text.id,
       sampleCount: clouds.labelSampleCount(idx),
       getWorldSample: (i, out) =>

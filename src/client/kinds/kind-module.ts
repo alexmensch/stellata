@@ -24,6 +24,13 @@ export interface KindContext {
    *  the slots they consume. */
   readonly sharedUniforms: StarSharedUniforms;
   readonly solIndex: number;
+  /** Sol's absolute catalog position into `out`; false with no Sol row.
+   *  Distinct from `-worldOffset`: Sol's catalog record sits ~1 AU off
+   *  the coordinate origin, and anchor registration wants the record. */
+  solAbsInto(out: THREE.Vector3): boolean;
+  /** Live pixels-per-radian for the active viewport / FOV — the shared
+   *  conversion every projected-size leg (renderedSizePx) keys off. */
+  angularToPx(): number;
   getT(): number;
   getWorldOffset(): Readonly<THREE.Vector3>;
   getFocusedTarget(): Target | null;

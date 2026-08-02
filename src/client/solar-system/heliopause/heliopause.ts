@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
+import { labelHostOf } from '../../ui/distance-gated-label';
 import { AU_PC } from '../../util/astronomy-constants';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import {
@@ -232,7 +233,7 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
  *  ellipsoid silhouette, the bottom-right anchor direction, and
  *  `isHeliopauseApexVisible`. */
 export function createHeliopauseLabel(stellata: Stellata): void {
-  createShellSilhouetteLabel(stellata, {
+  createShellSilhouetteLabel(labelHostOf(stellata), {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,
     sampleCount: HELIOPAUSE_SAMPLE_POINTS_SOL.length,
     getWorldSample: (i, out) =>

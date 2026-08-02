@@ -69,6 +69,7 @@ import {
   FocusController,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
+  softOrbitFloor,
 } from './camera/focus/focus-controller';
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
@@ -138,7 +139,7 @@ import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
-import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
+import { SceneLayerRegistry, updateWarpGatedRefLayer, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
   type SceneElementBinds,
@@ -612,6 +613,17 @@ export class Stellata implements FrameAnchor {
       canvas: this.renderer.domElement,
       sharedUniforms,
       solIndex: catalog.solIndex,
+      solAbsInto: (out) => {
+        const si = catalog.solIndex;
+        if (si < 0) return false;
+        out.set(
+          catalog.positions[si * 3],
+          catalog.positions[si * 3 + 1],
+          catalog.positions[si * 3 + 2],
+        );
+        return true;
+      },
+      angularToPx: () => this.angularToPx(),
       getT: () => this.getT(),
       getWorldOffset: () => this.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
@@ -760,8 +772,6 @@ export class Stellata implements FrameAnchor {
       const p = this.planetBodyField.planetAt(idx);
       return p ? p.radiusKm * KM_PC : null;
     };
-    const softFloor = (park: (idx: number) => number) =>
-      (idx: number): number => Math.min(GLOBAL_MIN_DIST_PC, park(idx));
     (this as { focusables: FocusableProviders }).focusables = {
       star: {
         anchorInto: (idx, out) => {
@@ -793,7 +803,7 @@ export class Stellata implements FrameAnchor {
         localPositionInto: (idx, out) =>
           this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
         focusParkDistance: cloudPark,
-        orbitFloor: softFloor(cloudPark),
+        orbitFloor: softOrbitFloor(cloudPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) => this.renderedCloudSizePx(idx),
         chartPlateauDistance: () => null,
@@ -809,7 +819,7 @@ export class Stellata implements FrameAnchor {
         localPositionInto: (idx, out) =>
           this.localGroupLayer?.lgLocalPositionInto(idx, this.worldOffset, out) ?? false,
         focusParkDistance: lgPark,
-        orbitFloor: softFloor(lgPark),
+        orbitFloor: softOrbitFloor(lgPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) =>
           this.localGroupLayer?.renderedLgSizePx(
@@ -822,7 +832,7 @@ export class Stellata implements FrameAnchor {
         anchorInto: (idx, out) => this.shells.at(idx)?.centerAbsInto(out) ?? false,
         localPositionInto: (idx, out) => this.shells.localPositionInto(idx, this.worldOffset, out),
         focusParkDistance: shellPark,
-        orbitFloor: softFloor(shellPark),
+        orbitFloor: softOrbitFloor(shellPark),
         arrivalRadiusPc: () => null,
         renderedSizePx: (idx) =>
           this.shells.renderedSizePx(idx, this.worldOffset, this.camera.position, this.angularToPx()),
@@ -1065,27 +1075,6 @@ export class Stellata implements FrameAnchor {
     this.animate();
   }
 
-  // Reference layers (galactic disc, LG wireframe): hidden during warp,
-  // else distance-faded. Shared update body; null layer → no-op so a
-  // lazily-attached layer registers unconditionally.
-  private updateWarpGatedRefLayer(
-    layer: {
-      group: { visible: boolean };
-      update: (worldOffset: THREE.Vector3, distFromSol: number) => void;
-    } | null,
-    ctx: FrameCtx,
-    permitted: boolean,
-  ): void {
-    if (!layer) return;
-    // Detail-cycle permission (representational floor) AND's with the warp
-    // gate; either false hides the group.
-    if (ctx.warpActive || !permitted) {
-      layer.group.visible = false;
-      return;
-    }
-    layer.update(ctx.worldOffset, ctx.distFromSol);
-  }
-
   // Rebuild the constellation figure geometry for the active set: the
   // highlighted figure, all 88 in chart mode, or none. Skips the rebuild when
   // the active set is unchanged (filter emits fire on every slider drag).
@@ -1201,20 +1190,20 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       // Chart-only — floor 'never' in the realistic column.
-      update: (ctx) => this.updateWarpGatedRefLayer(
+      update: (ctx) => updateWarpGatedRefLayer(
         this.constellationBoundaryLayer, ctx,
         this.detailPermits('constellationBoundaries')),
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
     this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(
+      update: (ctx) => updateWarpGatedRefLayer(
         this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(
+      update: (ctx) => updateWarpGatedRefLayer(
         this.localGroupLayer, ctx, this.detailPermits('lgWireframes')),
       setMonochrome: (on) => this.localGroupLayer?.setMonochrome(on),
       dispose: () => this.localGroupLayer?.dispose(),
