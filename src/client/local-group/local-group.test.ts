@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   LocalGroupLayer,
   computeVisibleLabels,
+  createLocalGroupLabels,
+  type LgLabelHost,
   DEFAULT_TOP_N,
   DEFAULT_MIN_PIXEL_SIZE_PX,
   DEFAULT_MW_INSIDE_DISC_PC,
@@ -466,5 +468,87 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
       mwInsideDiscPc: 0,
     }));
     expect(result.has('huge-edge')).toBe(true);
+  });
+});
+
+// The lg module runs this teardown from its scene layer's dispose. The
+// ranking pass is module-scope state shared with the MW label, so the
+// release has to unsubscribe it and reset the holder count — otherwise a
+// re-created host reads a disposed one's verdict forever.
+describe('createLocalGroupLabels teardown', () => {
+  interface FakeHost {
+    host: LgLabelHost;
+    handlers: (() => void)[];
+    unsubscribed: number;
+  }
+
+  function makeHost(): FakeHost {
+    const state: FakeHost = {
+      handlers: [],
+      unsubscribed: 0,
+      host: {
+        camera: new THREE.PerspectiveCamera(60, 4 / 3, 0.1, 1e9),
+        onFrame: (handler) => {
+          state.handlers.push(handler);
+          return () => { state.unsubscribed++; };
+        },
+        getWorldOffset: () => new THREE.Vector3(),
+        getMonochrome: () => false,
+        detailPermits: () => true,
+      },
+    };
+    return state;
+  }
+
+  /** Minimal `#lg-labels` container + <text> factory; the label engine
+   *  also getElementById's each minted node by id. */
+  function stubDom(): { removed: number } {
+    const counts = { removed: 0 };
+    const byId = new Map<string, unknown>();
+    const group = { appendChild: () => {} };
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => (id === 'lg-labels' ? group : byId.get(id) ?? null),
+      createElementNS: () => {
+        const node = {
+          style: { display: '' },
+          attrs: new Map<string, string>(),
+          textContent: '',
+          setAttribute(k: string, v: string) {
+            this.attrs.set(k, v);
+            if (k === 'id') byId.set(v, this);
+          },
+          remove: () => { counts.removed++; },
+        };
+        return node;
+      },
+    });
+    return counts;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('unsubscribes every frame handler, drops the nodes, and clears its candidates', () => {
+    const dom = stubDom();
+    const fake = makeHost();
+    const layer = new LocalGroupLayer(makeCatalog([
+      makeObject({ id: 'a', name: 'A' }),
+      makeObject({ id: 'b', name: 'B' }),
+    ]));
+
+    const teardown = createLocalGroupLabels(fake.host, layer);
+    // One ranking handler + one label engine per object.
+    expect(fake.handlers).toHaveLength(3);
+    expect(dom.removed).toBe(0);
+
+    teardown();
+    expect(fake.unsubscribed).toBe(3);
+    expect(dom.removed).toBe(2);
+
+    // Sentinel reset: the next mount subscribes its own ranking pass
+    // rather than reading the released one's verdict.
+    const second = makeHost();
+    createLocalGroupLabels(second.host, layer)();
+    expect(second.handlers).toHaveLength(3);
+    layer.dispose();
   });
 });

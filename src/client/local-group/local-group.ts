@@ -501,12 +501,16 @@ function lgLabelHostOf(stellata: Stellata): LgLabelHost {
 const candidates: LabelCandidate[] = [];
 let visibleLabelIds = new Set<string>();
 const tmpCamAbs = new THREE.Vector3();
-let rankingHandlerRegistered = false;
+let rankingHolders = 0;
+let stopRanking: (() => void) | null = null;
 
-function ensureRankingHandlerRegistered(host: LgLabelHost): void {
-  if (rankingHandlerRegistered) return;
-  rankingHandlerRegistered = true;
-  host.onFrame(() => {
+/** Subscribe the shared ranking pass for the first holder and hand back
+ *  that holder's release. The last release unsubscribes it and clears
+ *  the verdict, so a re-created host registers a fresh pass instead of
+ *  reading a disposed host's `visibleLabelIds` forever. */
+function acquireRankingHandler(host: LgLabelHost): () => void {
+  rankingHolders++;
+  stopRanking ??= host.onFrame(() => {
     if (host.getMonochrome()) {
       visibleLabelIds = new Set();
       return;
@@ -535,6 +539,15 @@ function ensureRankingHandlerRegistered(host: LgLabelHost): void {
       mwInsideDiscPc,
     });
   });
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--rankingHolders > 0) return;
+    stopRanking?.();
+    stopRanking = null;
+    visibleLabelIds = new Set();
+  };
 }
 
 /** Mount the SVG "Milky Way" label and bind per-frame projection.
@@ -544,7 +557,7 @@ function ensureRankingHandlerRegistered(host: LgLabelHost): void {
  *  when the camera is inside the disc the ranking returns empty. */
 export function createMilkyWayLabel(stellata: Stellata): void {
   const host = lgLabelHostOf(stellata);
-  ensureRankingHandlerRegistered(host);
+  acquireRankingHandler(host);
   candidates.push({
     id: 'mw',
     centerAbs: GALACTIC_CENTRE_PC.clone(),
@@ -590,9 +603,11 @@ export function createLocalGroupLabels(
   host: LgLabelHost,
   layer: LocalGroupLayer,
 ): () => void {
-  ensureRankingHandlerRegistered(host);
   const group = document.getElementById('lg-labels') as unknown as SVGGElement | null;
   if (!group) return () => {};
+  // Acquired before the per-label engines subscribe, so the ranking pass
+  // runs ahead of every predicate that queries its verdict.
+  const releaseRanking = acquireRankingHandler(host);
   const teardowns: (() => void)[] = [];
   const texts: SVGTextElement[] = [];
   const ownCandidates: LabelCandidate[] = [];
@@ -640,5 +655,6 @@ export function createLocalGroupLabels(
       const at = candidates.indexOf(candidate);
       if (at >= 0) candidates.splice(at, 1);
     }
+    releaseRanking();
   };
 }
