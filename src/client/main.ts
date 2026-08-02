@@ -1,9 +1,6 @@
 import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
-import { loadClouds } from './molecular-clouds/cloud-loader';
-import { loadCloudSurfaces } from './molecular-clouds/cloud-surfaces-loader';
-import { createMolecularCloudLabels } from './molecular-clouds/cloud-labels';
 import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
@@ -51,7 +48,6 @@ import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
-import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
 import { createLgFocusProvider } from './focus-card/lg-focus-provider';
 import { createShellFocusProvider } from './focus-card/shell-focus-provider';
 import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
@@ -60,7 +56,6 @@ import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
 import { createShellHoverProvider } from './hover/shell-hover-provider';
-import { createCloudHoverProvider } from './hover/cloud-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
 async function main() {
@@ -76,7 +71,7 @@ async function main() {
 
   try {
     const kinds = buildKindModules();
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, boundaries] = await Promise.all([
+    const [catalog, searchIndex, lgCatalog, binaries, localBubble, boundaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -89,13 +84,6 @@ async function main() {
       fetch(`${import.meta.env.BASE_URL}search-index.json`).then(
         (r) => r.json() as Promise<SearchEntry[]>,
       ),
-      // Molecular clouds. Fetched in parallel with the catalog —
-      // a few hundred KB; null if the artifact is missing (fresh checkout
-      // without `pnpm run build:clouds`).
-      loadClouds(`${import.meta.env.BASE_URL}clouds.json`),
-      // Per-cloud isosurface rim meshes; null if the artifact is missing —
-      // every cloud then falls back to its ellipsoid rim shape.
-      loadCloudSurfaces(`${import.meta.env.BASE_URL}cloud-surfaces.bin`),
       // Local Group wireframes. ~20 KB JSON; null if
       // the artifact is missing (fresh checkout without
       // `pnpm run build:local-group`). No-op layer in that case —
@@ -115,7 +103,7 @@ async function main() {
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts (deep-space probes today). Each load never
+      // Kind-module artifacts (probes, molecular clouds). Each load never
       // rejects — a missing artifact leaves that kind's roster empty.
       ...KIND_ROSTER.map((kind) => kinds[kind]?.load(import.meta.env.BASE_URL)),
     ]);
@@ -132,10 +120,6 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Molecular-cloud presence layer — a representational-tier declutter
-    // element; absent artifact = no layer.
-    if (cloudCatalog) stellata.attachClouds(cloudCatalog, cloudSurfaces);
-
     // Local Group wireframes. Always-on when the artifact is present —
     // same model as the MW disc, no toggle / URL flag.
     if (lgCatalog) stellata.attachLocalGroup(lgCatalog);
@@ -185,8 +169,6 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    if (cloudCatalog) sidResolver.attach('cloud', arrayDomain(cloudCatalog.clouds.map((c) => c.sid)));
-    else sidResolver.conclude('cloud');
     if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
     else sidResolver.conclude('lg');
     // Both boundary shells carry static, always-known SIDs (generated /
@@ -252,8 +234,8 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex, starLabels, cloudCatalog, lgCatalog);
-    bindFindSearch(stellata, catalog, searchIndex, cloudCatalog, lgCatalog);
+    bindSearch(stellata, catalog, searchIndex, starLabels, lgCatalog);
+    bindFindSearch(stellata, catalog, searchIndex, lgCatalog);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
@@ -267,9 +249,6 @@ async function main() {
     for (const kind of KIND_ROSTER) kinds[kind]?.labels?.();
     createHeliopauseLabel(stellata);
     createLocalBubbleLabel(stellata);
-    // Per-cloud molecular-cloud labels. Mints SVG <text> children under
-    // #cloud-labels; no-op when the cloud layer didn't attach.
-    createMolecularCloudLabels(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
@@ -350,14 +329,6 @@ async function main() {
         context: { objects: lgCatalog.objects },
       }));
     }
-    // Cloud provider registers iff the cloud layer is attached (absent
-    // clouds.json artifact = no layer, no provider).
-    if (stellata.cloudLayer) {
-      hoverProviders.push(createCloudHoverProvider({
-        stellata,
-        context: { clouds: stellata.cloudLayer.clouds },
-      }));
-    }
     createHoverEngine({
       canvas,
       tooltip,
@@ -408,20 +379,7 @@ async function main() {
           },
         }),
         probe: kinds.probe.card(),
-        cloud: createCloudFocusProvider({
-          clouds: cloudCatalog?.clouds ?? null,
-          cameraDistancePc: (idx) => {
-            const cloud = cloudCatalog!.clouds[idx];
-            const w = stellata.getWorldOffset();
-            const c = stellata.camera.position;
-            return Math.hypot(
-              cloud.centerAbs.x - w.x - c.x,
-              cloud.centerAbs.y - w.y - c.y,
-              cloud.centerAbs.z - w.z - c.z,
-            );
-          },
-          constellationName: (idx) => stellata.constellationOf('cloud', idx),
-        }),
+        cloud: kinds.cloud.card(),
         lg: createLgFocusProvider({
           objects: lgCatalog?.objects ?? null,
           cameraDistancePc: (idx) => {

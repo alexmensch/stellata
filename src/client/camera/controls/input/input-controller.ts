@@ -232,9 +232,9 @@ export class InputController {
       this.deps.flyTo(picked);
       return;
     }
-    const cloudIdx = this.deps.picker.pickCloud(x, y);
-    if (cloudIdx !== null) {
-      this.deps.flyTo({ kind: 'cloud', idx: cloudIdx });
+    const cloud = this.deps.picker.pickKindHit('cloud', x, y);
+    if (cloud !== null) {
+      this.deps.flyTo({ kind: 'cloud', idx: cloud.idx });
       return;
     }
     this.deps.bus.emit('noopClick', { x, y });
@@ -270,7 +270,7 @@ export class InputController {
     if (picked !== null) {
       return this.applyObjectClick(picked);
     }
-    const cloudIdx = this.deps.picker.pickCloud(x, y);
+    const cloudIdx = this.deps.picker.pickKindHit('cloud', x, y)?.idx ?? null;
     if (cloudIdx === null) return false;
 
     // Clouds keep the pre-ladder vector-first semantics (stellata-t2u5

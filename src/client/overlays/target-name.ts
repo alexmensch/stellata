@@ -27,10 +27,8 @@ export function targetDisplayName(
       return stellata.planetField.planetAt(t.idx)?.name ?? 'Planet';
     case 'probe':
       return stellata.kinds.probe.displayName(t.idx) || 'Probe';
-    case 'cloud': {
-      const cat = stellata.getCloudCatalog();
-      return cat ? cat.clouds[t.idx].name : 'Cloud';
-    }
+    case 'cloud':
+      return stellata.kinds.cloud.displayName(t.idx) || 'Cloud';
     case 'lg':
       return stellata.localGroup?.objects[t.idx]?.name ?? 'Galaxy';
     case 'shell':

@@ -9,8 +9,6 @@ import type { HoverHit } from '../../hover/hover-types';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
-import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
@@ -135,7 +133,6 @@ function makePicker(
   opts: {
     camera?: THREE.PerspectiveCamera;
     renderedSizePxFn?: (idx: number) => number;
-    warpActive?: boolean;
     resolveCollapsedLead?: (idx: number) => number;
     /** The instrument's limit, standing in for the threshold too (these
      *  cases run at EV 0 and no adaptation). */
@@ -157,17 +154,13 @@ function makePicker(
       const limitMag = opts.limitMag ?? 15;
       return drawCutoffMag(limitMag, limitMag, chart);
     },
-    getClouds: () => null,
     getLocalGroupLayer: () => null,
     getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     kindPicks: opts.kindPicks ?? {},
     getWorldOffset: () => new THREE.Vector3(),
-    getWarpActive: () => opts.warpActive ?? false,
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
     resolveCollapsedLead: opts.resolveCollapsedLead ?? ((idx) => idx),
-    fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
-    viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
   };
   return { picker: new Picker(deps), camera, dom };
 }
@@ -414,104 +407,6 @@ describe('Picker / pickStarHit', () => {
     const hit = picker.pickStarHit(screen.x + 6, screen.y);
     expect(hit).not.toBeNull();
     expect(hit!.tier).toBe('fallback');
-  });
-});
-
-// Both cloud surfaces delegate their winner to MolecularClouds.pick, so
-// these cover the per-surface gates plus the click/hover agreement the
-// delegation buys.
-describe('Picker / cloud picks', () => {
-  // A 10 pc sphere at the origin, plus a 3 pc sphere between it and the
-  // camera at (0,0,30) whose silhouette nests inside the big one.
-  function makeCloudLayer(): MolecularClouds {
-    const layer = new MolecularClouds(makeMockCatalog([
-      makeMockCloud({ name: 'big', id: 'big', sid: 1, axes: [10, 10, 10] }),
-      makeMockCloud({
-        name: 'small', id: 'small', sid: 2, axes: [3, 3, 3],
-        centerAbs: new THREE.Vector3(2.4, 0, 12),
-      }),
-    ]));
-    layer.group.updateMatrixWorld(true);
-    return layer;
-  }
-
-  function makeCloudPicker(opts: {
-    clouds: MolecularClouds | null;
-    warpActive?: boolean;
-  }): { picker: Picker; camera: THREE.PerspectiveCamera } {
-    const data = makeCatalog([]);
-    const camera = makeCamera();
-    const deps: PickerDeps = {
-      domElement: makeDomElementStub(),
-      camera,
-      catalog: data.catalog,
-      sortedByDistFromSol: data.sortedByDistFromSol,
-      sortedDistFromSol: data.sortedDistFromSol,
-      drawCutoffMagFn: () => 15,
-      getLocalPositions: () => data.localPositions,
-      getFilter: () => defaultFilter(),
-      getClouds: () => opts.clouds,
-      getLocalGroupLayer: () => null,
-      getShells: () => new ShellRegistry(),
-      getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
-      kindPicks: {},
-      getWorldOffset: () => new THREE.Vector3(),
-      getWarpActive: () => opts.warpActive ?? false,
-      renderedSizePxFn: () => 20,
-      resolveCollapsedLead: (idx) => idx,
-      fovYRadRef: { value: (FOV_DEG * Math.PI) / 180 },
-      viewportRef: { value: new THREE.Vector2(VIEWPORT_W, VIEWPORT_H) },
-    };
-    return { picker: new Picker(deps), camera };
-  }
-
-  it('both surfaces return null when no cloud layer is attached', () => {
-    const { picker } = makeCloudPicker({ clouds: null });
-    expect(picker.pickCloud(400, 300)).toBeNull();
-    expect(picker.pickCloudHit(400, 300)).toBeNull();
-  });
-
-  it('pickCloud returns null while warping; hover is not warp-gated', () => {
-    const { picker } = makeCloudPicker({ clouds: makeCloudLayer(), warpActive: true });
-    expect(picker.pickCloud(400, 300)).toBeNull();
-    expect(picker.pickCloudHit(400, 300)?.idx).toBe(0);
-  });
-
-  it('pickCloudHit returns null when the cloud group is not visible', () => {
-    const clouds = makeCloudLayer();
-    clouds.group.visible = false;
-    const { picker } = makeCloudPicker({ clouds });
-    expect(picker.pickCloudHit(400, 300)).toBeNull();
-  });
-
-  it('pickCloudHit carries the fallback tier and the camera distance', () => {
-    const { picker } = makeCloudPicker({ clouds: makeCloudLayer() });
-    const hit = picker.pickCloudHit(400, 300);
-    expect(hit).not.toBeNull();
-    expect(hit!.idx).toBe(0);
-    expect(hit!.tier).toBe('fallback');
-    // Camera at (0,0,30) → 30 pc to the big cloud centred at the origin.
-    expect(hit!.cameraDistancePc).toBeCloseTo(30, 5);
-  });
-
-  it('both surfaces return null off the cloud silhouettes', () => {
-    const { picker } = makeCloudPicker({ clouds: makeCloudLayer() });
-    expect(picker.pickCloud(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBeNull();
-    expect(picker.pickCloudHit(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBeNull();
-  });
-
-  it('click and hover agree on which of two overlapping clouds wins', () => {
-    const { picker, camera } = makeCloudPicker({ clouds: makeCloudLayer() });
-    // Sweep the overlap region: the winner flips from the big complex to
-    // the small foreground cloud, and both surfaces must flip together.
-    const winners = new Set<number | null>();
-    for (let x = 0; x <= 3.4; x += 0.2) {
-      const screen = projectToScreen(new THREE.Vector3(x, 0, 12), camera);
-      const click = picker.pickCloud(screen.x, screen.y);
-      expect(picker.pickCloudHit(screen.x, screen.y)?.idx ?? null).toBe(click);
-      winners.add(click);
-    }
-    expect(winners).toEqual(new Set([0, 1]));
   });
 });
 

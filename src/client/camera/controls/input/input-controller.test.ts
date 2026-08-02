@@ -129,7 +129,6 @@ function makeHarness(): Harness {
             tier: state.pickStarTier,
           }
         : null),
-      pickCloud: () => state.pickCloudResult,
       pickPlanetClick: () => (state.pickPlanetResult !== null
         ? {
             idx: state.pickPlanetResult,
@@ -144,13 +143,19 @@ function makeHarness(): Harness {
             tier: state.pickLgTier,
           }
         : null),
-      pickKindHit: (kind: string) => (kind === 'probe' && state.pickProbeResult !== null
-        ? {
+      pickKindHit: (kind: string) => {
+        if (kind === 'probe' && state.pickProbeResult !== null) {
+          return {
             idx: state.pickProbeResult,
             cameraDistancePc: state.pickProbeDistancePc,
             tier: state.pickProbeTier,
-          }
-        : null),
+          };
+        }
+        if (kind === 'cloud' && state.pickCloudResult !== null) {
+          return { idx: state.pickCloudResult, cameraDistancePc: 1, tier: 'fallback' };
+        }
+        return null;
+      },
       pickShellHit: () => null,
     } as unknown as Picker,
     bus: {

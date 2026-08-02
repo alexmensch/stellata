@@ -38,9 +38,8 @@ import {
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
-import { MolecularClouds } from './molecular-clouds/molecular-clouds';
+import type { MolecularClouds } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
-import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import {
@@ -396,11 +395,6 @@ export class Stellata implements FrameAnchor {
   // own toggle hide it.
   private lgEmission: LocalGroupEmission | null = null;
 
-  // Molecular cloud overlay. null until attachClouds() runs;
-  // the layer loads asynchronously after the catalog and search index so
-  // first paint isn't gated on it.
-  private clouds: MolecularClouds | null = null;
-
   // Milky Way analytic background. Constructed eagerly so the
   // band is on during first paint. Dust is wired in once the volumetric
   // texture attaches.
@@ -704,18 +698,14 @@ export class Stellata implements FrameAnchor {
       sortedDistFromSol: this.starFrame.sortedDistFromSol,
       getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
-      getClouds: () => this.clouds,
       getLocalGroupLayer: () => this.localGroupLayer,
       getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
       kindPicks: collectKindPicks(this.kinds),
       getWorldOffset: () => this.worldOffset,
-      getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
-      fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
-      viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
     });
     // The warp / focus-lerp / observe-transition busy checks stay on
     // stellata's aimAt dispatcher because they gate behaviour the
@@ -751,14 +741,6 @@ export class Stellata implements FrameAnchor {
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
-    const cloudPark = (idx: number): number => {
-      const clouds = this.clouds;
-      if (!clouds?.clouds[idx]) return 0;
-      return parkDistance({
-        R_pc: clouds.focusExtentPc(idx),
-        dMinFloor: clouds.viewingDistancePc(idx),
-      });
-    };
     const lgPark = (idx: number): number => {
       const obj = this.localGroupLayer?.objects[idx];
       if (!obj) return 0;
@@ -798,17 +780,7 @@ export class Stellata implements FrameAnchor {
           chartPlateauDistancePc(this.catalog.absmag[idx], magBright),
         planetSystemHost: (idx) => idx,
       },
-      cloud: {
-        anchorInto: (idx, out) => this.clouds?.focusCenterAbsInto(idx, out) ?? false,
-        localPositionInto: (idx, out) =>
-          this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
-        focusParkDistance: cloudPark,
-        orbitFloor: softOrbitFloor(cloudPark),
-        arrivalRadiusPc: () => null,
-        renderedSizePx: (idx) => this.renderedCloudSizePx(idx),
-        chartPlateauDistance: () => null,
-        planetSystemHost: () => null,
-      },
+      cloud: this.kinds.cloud.focusable(),
       lg: {
         anchorInto: (idx, out) => {
           const obj = this.localGroupLayer?.objects[idx];
@@ -1046,7 +1018,7 @@ export class Stellata implements FrameAnchor {
         probe: (idx) => this.kinds.probe.pinnable(idx),
         lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
         shell: (idx) => (this.shells.at(idx)?.sid ?? 0) !== 0,
-        cloud: () => false,
+        cloud: (idx) => this.kinds.cloud.pinnable(idx),
       },
       onChange: (pois) => {
         this.bus.emit('pois', pois);
@@ -1244,12 +1216,6 @@ export class Stellata implements FrameAnchor {
       update: (ctx) => this.updateHud(ctx.warpActive),
       setMonochrome: (on) => this.hudOverlay.setMonochrome(on),
       dispose: () => this.hudOverlay.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) =>
-        this.clouds?.update(ctx.worldOffset, this.detailPermits('molecularCloudEllipsoids')),
-      setMonochrome: (on) => this.clouds?.setMonochrome(on),
-      dispose: () => this.clouds?.dispose(),
     });
     this.layers.register({
       // Re-anchors the skybox mesh to camera.position and refreshes the
@@ -2013,38 +1979,17 @@ export class Stellata implements FrameAnchor {
    *  glow-mag-offset levers). null until attachLocalGroup runs. */
   get localGroupEmission(): LocalGroupEmission | null { return this.lgEmission; }
 
-  /** Wire the loaded molecular cloud catalog into the scene. Idempotent —
-   *  calling again replaces the layer. Pass null to detach. `surfaces` is
-   *  the optional sid-keyed isosurface mesh map (cloud-surfaces.bin);
-   *  clouds without one fall back to their ellipsoid rim shape. */
-  attachClouds(catalog: CloudCatalog | null, surfaces: Map<number, CloudSurface> | null = null) {
-    if (this.clouds) {
-      this.scene.remove(this.clouds.group);
-      this.clouds.dispose();
-      this.clouds = null;
-    }
-    if (catalog === null || catalog.clouds.length === 0) return;
-    const u = this.starPipeline.discMaterial.uniforms;
-    this.clouds = new MolecularClouds(catalog, surfaces, {
-      uFovYRad: u.uFovYRad as { value: number },
-      uViewport: u.uViewport as { value: THREE.Vector2 },
-    });
-    this.clouds.setMonochrome(this.monochrome);
-    this.scene.add(this.clouds.group);
-  }
-
-  /** Catalog of clouds, or null if none are attached. Exposed for search
-   *  index integration in main.ts. */
+  /** Catalog of clouds, or null when the cloud module has no layer.
+   *  Exposed for chart-mode name rows. */
   getCloudCatalog(): CloudCatalog | null {
-    return this.clouds
-      ? { count: this.clouds.clouds.length, clouds: this.clouds.clouds }
-      : null;
+    const layer = this.kinds.cloud.layer;
+    return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
   /** Direct access to the cloud render layer for dev-console tuning
-   *  (`stellata.cloudLayer.setOpacity(0.5)` etc.). null until
-   *  attachClouds runs. */
-  get cloudLayer(): MolecularClouds | null { return this.clouds; }
+   *  (`stellata.cloudLayer.setOpacity(0.5)` etc.). null when the
+   *  clouds.json artifact is absent. */
+  get cloudLayer(): MolecularClouds | null { return this.kinds.cloud.layer; }
 
   /** Kind-agnostic travel — see FocusController.flyTo. Hard kinds park
    *  via the recentring focus path; soft kinds ride the shared
@@ -2525,33 +2470,6 @@ export class Stellata implements FrameAnchor {
     return angularToPxPure(viewport.y, u.uFovYRad.value as number);
   }
 
-  /** Cloud analogue of `renderedSizePx` — pixel diameter of the cloud's
-   *  silhouette at the current camera distance, the cloud provider's
-   *  renderedSizePx leg (the distance-vector chevron tip lands on the
-   *  rendered edge instead of the user's `sizeMax` star-size knob) and
-   *  the cloud labels' screen-size gate. Returns 0 when no cloud layer
-   *  is loaded or the index is out of range. */
-  renderedCloudSizePx(cloudIdx: number): number {
-    if (!this.clouds) return 0;
-    const local = this._tmpRenderLocal;
-    if (!this.clouds.cloudLocalPositionInto(cloudIdx, this.worldOffset, local)) return 0;
-    const camPos = this.camera.position;
-    const dx = local.x - camPos.x;
-    const dy = local.y - camPos.y;
-    const dz = local.z - camPos.z;
-    const dCam = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (dCam < 1e-12) {
-      return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx());
-    }
-    // World-space unit direction from the cloud toward the camera. The
-    // ellipsoid-fallback path rotates this into the cloud's local frame
-    // so the silhouette bound tightens for axis-aligned views (prolate
-    // end-on no longer overshoots by the prolate axis ratio).
-    this.tmpCloudDir.set(camPos.x - local.x, camPos.y - local.y, camPos.z - local.z)
-      .multiplyScalar(1 / dCam);
-    return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx(), this.tmpCloudDir);
-  }
-  private tmpCloudDir = new THREE.Vector3();
   // Scratch slots for the non-allocating *LocalPositionInto helpers.
   // Each is owned by one call-stack scope; values are valid only inside
   // that scope and must not be retained across method calls.
