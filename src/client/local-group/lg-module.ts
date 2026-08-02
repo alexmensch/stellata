@@ -8,7 +8,8 @@ import { createLgFocusProvider } from '../focus-card/lg-focus-provider';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import { pickHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { formatLocalGroupHover } from '../hover/formatters/local-group-hover-format';
-import type { HoverProvider } from '../hover/hover-types';
+import type { HoverHit, HoverProvider } from '../hover/hover-types';
+import { absCameraDistancePc } from '../kinds/kind-geometry';
 import type {
   KindContext,
   KindSearchEntry,
@@ -50,6 +51,22 @@ export function createLgKindModule(): LgKindModule {
   let layer: LocalGroupLayer | null = null;
   let emission: LocalGroupEmission | null = null;
   let disposeLabels: (() => void) | null = null;
+
+  const pick = (
+    clientX: number,
+    clientY: number,
+    pxThreshold: number,
+  ): HoverHit | null => {
+    if (!ctx || !layer) return null;
+    return layer.pick(
+      ctx.camera,
+      ctx.getWorldOffset(),
+      ctx.canvas.getBoundingClientRect(),
+      clientX,
+      clientY,
+      pxThreshold,
+    );
+  };
 
   const lgPark = (idx: number): number => {
     const obj = catalog?.objects[idx];
@@ -127,32 +144,13 @@ export function createLgKindModule(): LgKindModule {
 
     card: (): FocusCardProvider<'lg'> => createLgFocusProvider({
       objects: catalog?.objects ?? null,
-      cameraDistancePc: (idx) => {
-        const obj = catalog!.objects[idx];
-        const w = ctx!.getWorldOffset();
-        const c = ctx!.camera.position;
-        return Math.hypot(
-          obj.centerAbs.x - w.x - c.x,
-          obj.centerAbs.y - w.y - c.y,
-          obj.centerAbs.z - w.z - c.z,
-        );
-      },
+      cameraDistancePc: (idx) => absCameraDistancePc(ctx!, catalog!.objects[idx].centerAbs),
       constellationName: (idx) => ctx?.constellationOf('lg', idx) ?? null,
     }),
 
     hover: (): HoverProvider<'local-group'> => ({
       kind: 'local-group',
-      pick: (clientX, clientY, pxThreshold) => {
-        if (!ctx || !layer) return null;
-        return layer.pick(
-          ctx.camera,
-          ctx.getWorldOffset(),
-          ctx.canvas.getBoundingClientRect(),
-          clientX,
-          clientY,
-          pxThreshold,
-        );
-      },
+      pick,
       format: (hit) =>
         catalog
           ? formatLocalGroupHover(hit.idx, hit.cameraDistancePc, { objects: catalog.objects })

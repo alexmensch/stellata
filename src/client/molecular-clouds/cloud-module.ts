@@ -8,7 +8,8 @@ import { parkDistance } from '../camera/focus/focus-transition';
 import { createCloudFocusProvider } from '../focus-card/cloud-focus-provider';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import { formatCloudHover } from '../hover/formatters/cloud-hover-format';
-import type { HoverProvider } from '../hover/hover-types';
+import type { HoverHit, HoverProvider } from '../hover/hover-types';
+import { absCameraDistancePc } from '../kinds/kind-geometry';
 import type {
   KindContext,
   KindSearchEntry,
@@ -44,6 +45,18 @@ export function createCloudKindModule(): CloudKindModule {
       R_pc: layer.focusExtentPc(idx),
       dMinFloor: layer.viewingDistancePc(idx),
     });
+  };
+
+  const pick = (clientX: number, clientY: number): HoverHit | null => {
+    if (!ctx || !layer) return null;
+    return layer.pick(
+      ctx.camera,
+      ctx.getWorldOffset(),
+      ctx.canvas.getBoundingClientRect(),
+      clientX,
+      clientY,
+      ctx.angularToPx(),
+    );
   };
 
   const renderedSizePx = (idx: number): number => {
@@ -113,32 +126,13 @@ export function createCloudKindModule(): CloudKindModule {
 
     card: (): FocusCardProvider<'cloud'> => createCloudFocusProvider({
       clouds: catalog?.clouds ?? null,
-      cameraDistancePc: (idx) => {
-        const cloud = catalog!.clouds[idx];
-        const w = ctx!.getWorldOffset();
-        const c = ctx!.camera.position;
-        return Math.hypot(
-          cloud.centerAbs.x - w.x - c.x,
-          cloud.centerAbs.y - w.y - c.y,
-          cloud.centerAbs.z - w.z - c.z,
-        );
-      },
+      cameraDistancePc: (idx) => absCameraDistancePc(ctx!, catalog!.clouds[idx].centerAbs),
       constellationName: (idx) => ctx?.constellationOf('cloud', idx) ?? null,
     }),
 
     hover: (): HoverProvider<'cloud'> => ({
       kind: 'cloud',
-      pick: (clientX, clientY) => {
-        if (!ctx || !layer) return null;
-        return layer.pick(
-          ctx.camera,
-          ctx.getWorldOffset(),
-          ctx.canvas.getBoundingClientRect(),
-          clientX,
-          clientY,
-          ctx.angularToPx(),
-        );
-      },
+      pick,
       format: (hit) =>
         catalog ? formatCloudHover(hit.idx, hit.cameraDistancePc, { clouds: catalog.clouds }) : null,
     }),

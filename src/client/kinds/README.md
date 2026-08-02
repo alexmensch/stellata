@@ -16,6 +16,11 @@ inside a kind stays module-internal.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
   list), the exhaustive `KindModules` mapped type,
   `buildKindModules()`, and `mergeKindDetailBinds()`.
+- `kind-geometry.ts` — leg helpers shared across modules:
+  `absCameraDistancePc(ctx, centerAbs)`, the card
+  `cameraDistancePc` leg for every kind whose centre is absolute
+  (cloud, lg). Shells go through their registry instead, which answers
+  0 for an absent slot.
 - `kind-context-mock.ts` — the `KindContext` fixture builder the
   module test suites share.
 
