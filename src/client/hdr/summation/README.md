@@ -28,7 +28,10 @@ src/client/hdr/summation/
     .glsl                    kernel spans a bounded number of texels.
   summation-pass.ts          SummationPass — the downsample target's
     (+ test)                 lifecycle, the per-frame factor choice, and
-                             the uniforms it hands the resolve.
+                             the uniforms it hands the resolve. The test
+                             drives it against a stub renderer, which is
+                             what pins the sub-rect seam and the pixel-ratio
+                             crossing without a GL context.
 ```
 
 ## Where it sits in the frame
@@ -120,16 +123,21 @@ drawing-buffer pixel.** `Ω_px` is a CSS solid angle on purpose — brightness
 must not track `devicePixelRatio` — so `SummationPass` multiplies by the
 renderer's pixel ratio before choosing a factor. Miss that crossing and the
 kernel is `pixelRatio` times too small, which reads as the convolution
-quietly doing nothing on a retina display.
+quietly doing nothing on a retina display. **`devicePixelRatio` is therefore
+part of this pass's domain even though it is deliberately absent from the
+brightness**, and every bound here is measured over it: 0.8 px at 120° FOV to
+**47 px** at 10° on the tallest viewport a browser reports at the ratio cap of
+2 — not the 23 CSS px the same corner reads without the crossing.
 
-`summationDownsample` is what keeps a non-separable kernel affordable while
-the patch's radius spans 0.8 px at 120° FOV to tens of px at 10° on a tall
-viewport: the source is box-averaged until the kernel is ~3 texels, so the
+`summationDownsample` is what keeps a non-separable kernel affordable across
+that range: the source is box-averaged until the kernel is ~3 texels, so the
 tap count is bounded at every FOV instead of growing quadratically.
 `MAX_KERNEL_REACH_TEXELS` is the GLSL loop bound this buys, and the
 downsample target is sized to the *widest* factor the pass will use, with
-each frame rendering into the sub-rect it needs — so a zoom never
-reallocates.
+each frame rendering into the sub-rect it needs — **on the target's own
+viewport, never the renderer's** (`summation-pass.ts` says why; a
+`renderer.setViewport` here is a CSS-unit write that three scales by the same
+pixel ratio and that outlives the pass) — so a zoom never reallocates.
 
 ## Footprint — the half the convolution cannot do
 

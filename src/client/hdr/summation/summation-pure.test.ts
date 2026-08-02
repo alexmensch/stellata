@@ -29,8 +29,24 @@ const radiusFor = (fovDeg: number, viewportPx = 900) =>
   summationRadiusPx(DEFAULT_SUMMATION_ARCSEC2, omegaPxFor(fovDeg, viewportPx));
 
 /** The tallest viewport a browser plausibly reports in CSS pixels — an 8K
- *  panel at devicePixelRatio 2. Ω_px is in CSS px, so DPR does not enter. */
+ *  panel at devicePixelRatio 2. */
 const TALLEST_VIEWPORT_CSS_PX = 2160;
+
+/** Ω_px is a CSS solid angle, but the convolution's texels are drawing-buffer
+ *  pixels, so `SummationPass` multiplies the radius by the device pixel ratio
+ *  before choosing a factor — the ratio is part of this pass's domain even
+ *  though it is deliberately absent from the brightness. 2 is the renderer's
+ *  existing cap, so it is the worst case rather than a sample. */
+const MAX_PIXEL_RATIO = 2;
+
+/** Radius in the units the factor is actually chosen in
+ *  (`summation-pass.ts`), which is what every bound below has to be measured
+ *  over. */
+const bufferRadiusFor = (
+  fovDeg: number,
+  viewportPx = 900,
+  pixelRatio = MAX_PIXEL_RATIO,
+) => radiusFor(fovDeg, viewportPx) * pixelRatio;
 
 describe('the summation patch on screen', () => {
   it('is the 13.0 arcmin critical diameter at the reference viewport', () => {
@@ -42,10 +58,19 @@ describe('the summation patch on screen', () => {
   // The one quantity in the pass that moves with FOV, and the reason it
   // cannot be a fixed-radius blur. Sub-pixel at the widest field, tens of
   // pixels at the narrowest on a tall display.
-  it('spans 0.8 px to 32 px across every reachable viewport', () => {
+  it('spans 0.8 px to 23 CSS px across every reachable viewport', () => {
     expect(radiusFor(FOV_MAX_DEG)).toBeCloseTo(0.81, 2);
     expect(radiusFor(FOV_MIN_DEG)).toBeCloseTo(9.76, 2);
     expect(radiusFor(FOV_MIN_DEG, TALLEST_VIEWPORT_CSS_PX)).toBeCloseTo(23.4, 1);
+  });
+
+  // What the factor is chosen from, which is what MAX_DOWNSAMPLE's headroom
+  // has to cover: 47 px against the 144 px the constant buys.
+  it('reaches 47 drawing-buffer px at the worst case the cap allows', () => {
+    expect(bufferRadiusFor(FOV_MIN_DEG, TALLEST_VIEWPORT_CSS_PX)).toBeCloseTo(46.8, 1);
+    expect(bufferRadiusFor(FOV_MIN_DEG, TALLEST_VIEWPORT_CSS_PX)).toBeLessThan(
+      MAX_DOWNSAMPLE * TARGET_KERNEL_RADIUS_TEXELS,
+    );
   });
 
   it('is finite at the zero-FOV singularity a transition can pass through', () => {
@@ -81,14 +106,16 @@ describe('the downsample factor that bounds the tap count', () => {
   it('keeps the kernel inside the band its accuracy was measured over', () => {
     for (const fovDeg of [FOV_MIN_DEG, 20, 30, 50, 90, FOV_MAX_DEG]) {
       for (const viewport of [900, TALLEST_VIEWPORT_CSS_PX]) {
-        const radiusPx = radiusFor(fovDeg, viewport);
-        const factor = summationDownsample(radiusPx);
-        const texels = radiusPx / factor;
-        expect(texels).toBeLessThan(MAX_KERNEL_REACH_TEXELS - 0.5);
-        // Below the target the patch is simply smaller than 3 px and there is
-        // nothing to downsample — the factor floors at 1.
-        if (radiusPx >= TARGET_KERNEL_RADIUS_TEXELS) {
-          expect(texels).toBeGreaterThan(TARGET_KERNEL_RADIUS_TEXELS - 1.5 / factor);
+        for (const pixelRatio of [1, 1.5, MAX_PIXEL_RATIO]) {
+          const radiusPx = bufferRadiusFor(fovDeg, viewport, pixelRatio);
+          const factor = summationDownsample(radiusPx);
+          const texels = radiusPx / factor;
+          expect(texels).toBeLessThan(MAX_KERNEL_REACH_TEXELS - 0.5);
+          // Below the target the patch is simply smaller than 3 px and there
+          // is nothing to downsample — the factor floors at 1.
+          if (radiusPx >= TARGET_KERNEL_RADIUS_TEXELS) {
+            expect(texels).toBeGreaterThan(TARGET_KERNEL_RADIUS_TEXELS - 1.5 / factor);
+          }
         }
       }
     }
@@ -133,9 +160,11 @@ describe('the kernel weights', () => {
   it('returns a uniform field untouched at every reachable radius', () => {
     for (const fovDeg of [FOV_MIN_DEG, 20, 30, 50, 90, FOV_MAX_DEG]) {
       for (const viewport of [900, TALLEST_VIEWPORT_CSS_PX]) {
-        const radiusPx = radiusFor(fovDeg, viewport);
-        const texels = radiusPx / summationDownsample(radiusPx);
-        expect(summationMean(() => 0.02, texels)).toBeCloseTo(0.02, 15);
+        for (const pixelRatio of [1, 1.5, MAX_PIXEL_RATIO]) {
+          const radiusPx = bufferRadiusFor(fovDeg, viewport, pixelRatio);
+          const texels = radiusPx / summationDownsample(radiusPx);
+          expect(summationMean(() => 0.02, texels)).toBeCloseTo(0.02, 15);
+        }
       }
     }
   });

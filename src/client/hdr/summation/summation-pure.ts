@@ -29,9 +29,12 @@ export const TARGET_KERNEL_RADIUS_TEXELS = 3;
 export const MAX_KERNEL_REACH_TEXELS = 5;
 
 /** The box loop's bound in the downsample stage, and therefore the largest
- *  factor that averages a whole cell rather than a corner of one. 32 covers
- *  a patch radius of 144 px, against ~32 px at the narrowest FOV on the
- *  tallest viewport a browser reports — pinned in the test. */
+ *  factor that averages a whole cell rather than a corner of one. 32 covers a
+ *  patch radius of 144 px. The radius it is compared against is in
+ *  **drawing-buffer** pixels — `SummationPass` crosses the device pixel ratio
+ *  before choosing a factor — so the worst reachable case is ~47 px, not the
+ *  ~23 CSS px of the narrowest FOV on the tallest viewport a browser reports.
+ *  Both are pinned in the test. */
 export const MAX_DOWNSAMPLE = 32;
 
 /**
