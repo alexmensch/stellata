@@ -49,7 +49,7 @@ export function createShellKindModule(): ShellKindModule {
   const pick = (clientX: number, clientY: number): HoverHit | null => {
     if (!ctx) return null;
     const rect = ctx.canvas.getBoundingClientRect();
-    const worldOffset = ctx.getWorldOffset() as THREE.Vector3;
+    const worldOffset = ctx.getWorldOffset();
     const cameraPos = ctx.camera.position;
     let best: HoverHit | null = null;
     for (let idx = 0; idx < registry.count; idx++) {
@@ -153,14 +153,14 @@ export function createShellKindModule(): ShellKindModule {
     focusable: (): FocusableProvider => ({
       anchorInto: (idx, out) => registry.at(idx)?.centerAbsInto(out) ?? false,
       localPositionInto: (idx, out) =>
-        registry.localPositionInto(idx, ctx!.getWorldOffset() as THREE.Vector3, out),
+        registry.localPositionInto(idx, ctx!.getWorldOffset(), out),
       focusParkDistance: shellPark,
       orbitFloor: softOrbitFloor(shellPark),
       arrivalRadiusPc: () => null,
       renderedSizePx: (idx) =>
         registry.renderedSizePx(
           idx,
-          ctx!.getWorldOffset() as THREE.Vector3,
+          ctx!.getWorldOffset(),
           ctx!.camera.position,
           ctx!.angularToPx(),
         ),
@@ -171,11 +171,7 @@ export function createShellKindModule(): ShellKindModule {
     card: (): FocusCardProvider<'shell'> => createShellFocusProvider({
       shellAt: (idx) => registry.at(idx),
       cameraDistancePc: (idx) =>
-        registry.cameraDistancePc(
-          idx,
-          ctx!.getWorldOffset() as THREE.Vector3,
-          ctx!.camera.position,
-        ),
+        registry.cameraDistancePc(idx, ctx!.getWorldOffset(), ctx!.camera.position),
     }),
 
     hover: (): HoverProvider<'shell'> => ({

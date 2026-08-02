@@ -11,7 +11,7 @@ export interface ShellPickParams {
   rect: DOMRect;
   clientX: number;
   clientY: number;
-  worldOffset: THREE.Vector3;
+  worldOffset: Readonly<THREE.Vector3>;
   surface: ShellPickSurface;
   /** Camera→center distance for the returned hit. */
   cameraDistancePc: number;
