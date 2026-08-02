@@ -39,11 +39,16 @@ The volumetric Milky Way layer raymarches through two proxy meshes —
 a disc and a bulge — and accumulates emission along the camera→fragment
 ray. The density at each step is:
 
-- **Disc**: `density0 × exp(-(R-R₀)/3000pc) × exp(-|z|/300pc)` — single
-  double-exponential thin-disc-like profile in galactocentric cylindrical
-  coordinates. The originally-planned Jurić thin/thick/halo decomposition
-  was simplified out during iteration; the smooth single component reads
-  convincingly enough that the extra components weren't worth the
+- **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
+  0.04·exp(-|z|/900pc))` — thin plus thick in galactocentric cylindrical
+  coordinates, the thick term at BHG16 § 5.1's z_T = 900 ± 180 pc and
+  f_ρ = 4 ± 2 %. It exists for the **external** view: edge-on from the LMC
+  or a few hundred kpc out, a galaxy with no thick disc reads as a
+  hard-edged lens. Both components share one radial scale length, which
+  puts the thick/thin luminosity ratio at 0.12 against Mosenkov et al.
+  2021's 0.71 ± 0.45 (unWISE 3.4 µm, DOI 10.1093/mnras/stab2445) — whose
+  thick disc is radially longer as well as thicker. The halo is still
+  absent; the Jurić decomposition's third component was never worth its
   calibration cost.
 - **Bulge**: `density0 × exp(-r'/1000pc)` where
   `r' = sqrt(R² + (z/q)²)` is the oblate-spheroid radius with q = 0.6.
@@ -52,14 +57,53 @@ ray. The density at each step is:
   in iteration.
 
 Each component multiplies a population colour pre-integration so the
-band's hue varies by line of sight. Densities and palette are visually
-calibrated — but the palette is **luma-normalised**, so it carries hue and
-cannot scale either component's flux; before that it moved the bulge/disc
-split by 0.39 mag on its own. The emission column then converts to a V surface brightness
+band's hue varies by line of sight. The palette is visually chosen but
+**luma-normalised**, so it carries hue and cannot scale either
+component's flux; before that it moved the bulge/disc split by 0.39 mag
+on its own, and it is what makes the scalar volume integral below the
+luminance integral. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
 `src/client/milkyway/README.md` for the calibrated values, that
 conversion, and the full coordinate-handling chain.
+
+### The luminosity solve, and the constraint it cannot satisfy
+
+Both components' `density0` is **solved**, not authored: each proxy
+volume integrates to its share of the Galaxy's published integrated
+luminosity, through the same `ρ₀ = d²·F/G` the Local Group build solves
+per object, at d = 10 pc because the anchor is an absolute magnitude.
+Inputs are BHG16 Table 2's M_V = −21.37 and Licquia & Newman 2015's
+B/T = 0.150 — the latter measured in stellar *mass*, so it is an upper
+bound on the V-band value (the bulge's older population carries a higher
+Υ\*_V). There is no free parameter left.
+
+**The model cannot also satisfy the sightline it used to be anchored on,
+and no shape parameter bridges the gap.** The earlier calibration pinned
+the north galactic pole to Leinert's total starlight there *minus* the
+catalogue stars Stellata draws itself — a defensible target that removes
+56 % of the pole's light but only 0.2 % of the Galaxy's, because the
+catalogue is a local sample and the pole column is almost entirely local.
+A single emissivity field anchored on the subtracted pole therefore runs
+a factor of three low everywhere else, and the shipped solve is 1.59 mag
+brighter than that residual at the pole and 0.94 mag brighter than
+Leinert's total toward the Galactic centre.
+
+Two things make that a scale disagreement between published sources
+rather than a shape error in the model. The two checks have the **same
+sign and the same order**, which a wrong profile would not produce; and
+0.5–0.9 mag is the real spread across M_V determinations, which BHG16's
+own figure carries — its value comes from Milky Way analogues rather than
+direct integration, and it flags an internal SDSS-vs-colour-index
+inconsistency.
+
+The total wins because it is what the camera sees from outside: the
+Galaxy viewed from M31 has to be at least as bright as M31 viewed from
+here, and under the sightline anchor it was 1.11 mag fainter. A
+vertical-profile change cannot substitute — the pole column and the
+integrated total are both vertical integrals, and adding the thick disc
+moved their ratio by 0.09 mag. `src/client/milkyway/README.md`
+§ Calibration carries the numbers and the pins.
 
 ## Interstellar dust extinction
 

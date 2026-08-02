@@ -15,7 +15,7 @@ src/client/galactic/
                                   GALACTIC_CENTRE_PC (Vector3 at R₀ =
                                   8.122 kpc). Reused by the Milky Way
                                   volumetric layer (src/client/milkyway/README.md).
-  galactic-disc.ts                15 kpc midplane ring + ±600 pc
+  galactic-disc.ts                15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
                                   wireframe; always-on in dark mode,
                                   hidden in chart mode.
@@ -49,7 +49,7 @@ cycle gates it as `galacticDiscWireframe` (floor `representational`); the
 per-frame warp/fade update is skipped when the detail cycle doesn't
 permit it (`../scene/README.md` § Detail-level declutter cycle). A 15 kpc
 midplane ring, two thickness rings at
-±600 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
+±1800 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle.
 
@@ -61,7 +61,8 @@ to outline the volume that emits, so any divergence renders band light
 outside its own outline — which is what the previous hand-set ±400 pc and
 3 × 1.5 kpc did: 1.5× short vertically on the disc, and on the bulge 2×
 vertically and 1.67× radially. Changing a mesh envelope now moves the
-ring with it.
+ring with it — the thickness rings tripled when the disc gained its thick
+component (`../milkyway/README.md` § Density profiles).
 
 Each ring is a basic
 `LineLoop` whose vertices are pre-baked once into absolute ICRS via

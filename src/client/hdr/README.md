@@ -373,6 +373,7 @@ the Milky Way band together, which is the point of it, and it is no longer
 the *only* faint-end lever now that the two thresholds are separable.
 
 No emitter is outside the scale, and both volumetric emitters share one
-zero point (`SB_ZERO_POINT`). Still outstanding *upstream* of the unit: the
-Milky Way's emissivity is anchored on one corrected sightline, not a total
-luminosity — `../milkyway/README.md`.
+zero point (`SB_ZERO_POINT`) and one ρ₀ solve
+(`emission/README.md` § Solving ρ₀). The band is anchored on the Galaxy's
+integrated M_V now; where that leaves it against the sightline photometry
+is `../milkyway/README.md` § Calibration.

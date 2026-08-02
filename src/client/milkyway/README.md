@@ -2,7 +2,7 @@
 
 `milkyway.ts` + `milkyway.{vert,frag}.glsl` render the integrated surface
 brightness of unresolved Galactic stars by raymarching **two proxy meshes**
-anchored at the galactic centre — a flattened disc (30 × 30 × 1.2 kpc
+anchored at the galactic centre — a flattened disc (30 × 30 × 3.6 kpc
 envelope) and an oblate bulge (10 × 10 × 6 kpc), both rotated so their short
 axes align with NGP. Each fragment ray-sphere-intersects its mesh in
 mesh-local frame, then marches log-distributed steps from front-face entry
@@ -17,12 +17,12 @@ blending. Default-on; URL `mw=0` disables. Hidden in chart mode.
 - `milkyway.{vert,frag}.glsl` — ray-sphere intersect + log-distributed
   raymarch, additive-blended.
 - `milkyway-column-pure.ts` — the density / dust profile constants the
-  shader receives as uniforms, plus a CPU mirror of its raymarch. Every
-  calibration constant below is *derived* from this mirror, and the shader's
-  step counts are pinned against it.
-- `diffuse-reference.ts` — published integrated-starlight photometry and
-  the resolved-star subtraction that turns it into a target for a diffuse
-  layer (§ Calibration).
+  shader receives as uniforms, plus a CPU mirror of its raymarch. Owns the
+  ρ₀ solve (§ Calibration); the shader's step counts are pinned against the
+  mirror.
+- `diffuse-reference.ts` — the published photometry the solve runs on
+  (M_V, B/T) and the two sightline checks it is graded against
+  (§ Calibration).
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
@@ -36,27 +36,32 @@ blending. Default-on; URL `mw=0` disables. Hidden in chart mode.
 
 ## Why a volumetric mesh, not a skybox
 
-A rejected rev 1 integrated through a 50 kpc camera-anchored skybox sphere:
-mathematically defensible, visually a theatre backdrop. The geometry doing
-the work enclosed the camera, so flying past the bulge produced no parallax
-and the disc never read as a 3D shape from outside. Marching the *actual disc
-shape* hands parallax to standard rasterisation, and the path length through
-the volume then varies with view direction on its own — long along the plane,
-short toward NGP.
+A rejected rev 1 integrated through a 50 kpc camera-anchored skybox sphere.
+The geometry doing the work enclosed the camera, so flying past the bulge
+produced no parallax and the disc never read as a 3D shape from outside.
+Marching the *actual disc shape* hands parallax to standard rasterisation,
+and the path length then varies with view direction on its own.
 
 ## Density profiles
 
 Constants baked into `milkyway.ts`; no runtime data loads.
 
-- **Disc**: `density0 × exp(-(R-R₀)/3000pc) × exp(-|z|/300pc)` — single
-  double-exponential thin-disc-like profile. The originally-planned
-  Jurić thin/thick/halo decomposition was simplified out during
-  iteration. It is **not** a high-latitude deficit: measured against the
-  resolved-star-corrected residual the pole is right to 0.08 mag
-  (§ Calibration), so a thick-disc term would make it slightly worse.
-  The case for adding one is external-viewpoint realism — an edge-on
-  Galaxy with no thick disc reads wrong from outside — and that is
-  `stellata-xypg.32`.
+- **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
+  0.04·exp(-|z|/900pc))` — thin plus thick, Bland-Hawthorn & Gerhard
+  2016 § 5.1 (z_T = 900 ± 180 pc carrying f_ρ = 4 ± 2 % of the local
+  density). It is for the **external** view — edge-on from the LMC or a
+  few hundred kpc out, a galaxy without one reads as a hard-edged lens —
+  and is **not** a high-latitude fix: it brightens the pole.
+
+  Both components share a radial scale length, which is where the model
+  departs from the literature (`docs/science-galactic-structure.md`
+  § Milky Way density profiles).
+
+  `DISC_HALF_THICKNESS_PC` = 1800 is **two thick scale heights**, the
+  same rule 600 pc followed against the thin one, and it clips 0.0183 mag
+  of the vertical column where 600 clipped 0.158. `../galactic/` imports
+  it for the disc wireframe, so the thickness rings move with the
+  envelope.
 - **Bulge**: `density0 × exp(-r'/1000pc)` where
   `r' = sqrt(R² + (z/q)²)` is the oblate-spheroid radius with q = 0.6.
   Simple exponential rather than McMillan's power-law-times-Gaussian
@@ -64,18 +69,10 @@ Constants baked into `milkyway.ts`; no runtime data loads.
   like in iteration.
 
 Each component multiplies a population colour pre-integration, so the
-band's hue varies by line of sight. Defaults are visually calibrated:
-
-- `DISC_COLOR` pale-lavender (171,168,223), `DISC_WEIGHT = 1.5`
-- `BULGE_COLOR` near-white-warm (255,246,237), `BULGE_WEIGHT = 18`
-
-The two weights are **relative**; `EMISSIVITY_SCALE` puts them in the
-shared flux unit (§ Calibration). Their ratio is the bulge/disc split and
-is still visually chosen — Licquia & Newman 2015 give B/T = 0.150
-(+0.028/−0.019) in stellar *mass*, which is the closest published anchor
-and an upper bound on the V-band value (the bulge's older, more
-metal-rich population carries a higher Υ\*_V). `stellata-xypg.33` owns
-replacing it.
+band's hue varies by line of sight — pale-lavender (171,168,223) for the
+disc, near-white-warm (255,246,237) for the bulge. Neither carries flux,
+and neither component has a hand-set weight any more: both `density0`
+values are solved (§ Calibration).
 
 ### Population tints carry hue, never flux
 
@@ -89,10 +86,10 @@ applied per channel, so a tint whose relative luminance isn't 1 rescales
 its own component's emission. The authored palette's two hues differ in
 relative luminance by 1.433× — the bulge rode **0.390 mag brighter than
 the disc purely because its hue is nearer white**, which moved the
-bulge/disc flux split without touching either density. Normalising drops
-the bulge's share of the luminance-weighted total from 0.361 to 0.283
-against a literature ~0.15–0.20; the remainder is the weight ratio, which
-`stellata-xypg.33` owns (§ Calibration).
+bulge/disc flux split without touching either density. Normalising dropped
+the bulge's share of the luminance-weighted total from 0.361 to 0.283;
+the solve now sets it outright at 0.150 (§ Calibration), so what
+normalisation buys is that a hue edit cannot move it back.
 
 Two consequences a future session needs:
 
@@ -157,38 +154,55 @@ stars together, by construction.
 ### Calibration
 
 **The zero point is not the band's own — it is the emission unit's.**
-`SB_ZERO_POINT` (`../hdr/emission/emission-pure.ts`) = 26.5721 mag/arcsec², the
-magnitude of one arcsec², shared verbatim with the Local Group layer. A
-raymarched column is flux per steradian once `density0` sits in
-zero-point-free flux units, so nothing about the conversion is free.
+`SB_ZERO_POINT` (`../hdr/emission/emission-pure.ts`) = 26.5721 mag/arcsec²,
+shared verbatim with the Local Group layer. A raymarched column is flux per
+steradian once `density0` sits in zero-point-free flux units, so nothing
+about the conversion is free.
 
-What the layer derives instead is `EMISSIVITY_SCALE`, the multiplier
-taking the two components' **relative weights** (`DISC_WEIGHT = 1.5`,
-`BULGE_WEIGHT = 18`) into that unit:
+What the layer derives is each component's `density0`, through the same
+`ρ₀ = d²·F/G` the Local Group solves per object
+(`../hdr/emission/README.md` § Solving ρ₀) — here with **d = 10 pc**,
+because the anchor is an *absolute* magnitude:
 
 ```
-EMISSIVITY_SCALE = 10^(−0.4·(NGP_DIFFUSE_RESIDUAL − SB_ZERO_POINT))
-                 / sightlineColumn(Sol, b=90, dust-free)
-DISC_DENSITY0    = DISC_WEIGHT  × EMISSIVITY_SCALE   ≈ 1.759e−2
-BULGE_DENSITY0   = BULGE_WEIGHT × EMISSIVITY_SCALE   ≈ 2.111e−1
+DISC_DENSITY0  = 100·10^(−0.4·M_V)·(1 − B/T) / ∫ discShape  dV ≈ 5.651e−2
+BULGE_DENSITY0 = 100·10^(−0.4·M_V)·     B/T  / ∫ bulgeShape dV ≈ 4.013e−1
 ```
 
-**Every column function in the mirror is weight-space**; the scale enters
-at one seam, `sightlineEmissionColumn`. So `sightlineColumn` ratios
-(quadrature, the per-component split) are scale-free by construction, and
-the derivation cannot reach a constant it is mid-way through computing.
+`GALAXY_TOTAL_ABSMAG_V` = **−21.37** (BHG16 Table 2) and
+`BULGE_TO_TOTAL_V` = **0.150** (Licquia & Newman 2015, in stellar *mass*
+— an upper bound on the V-band value). **Zero free parameters, and no
+march feeds the calibration.**
 
-**Marched dust-free, and that is the point.** The previous design derived
-the zero point *through* the shipped extinction, so the layer's entire
-photometric scale swung 2.7 mag across the dust knob — including at the
-poles, where there is essentially no dust. Emissivity is intrinsic;
-extinction attenuates it at render time. `milkyway.test.ts` pins the
-independence directly.
+Three properties a change here must keep:
 
-#### The anchor subtracts the star field
+- **The shape integrals may not reach a `density0`.** `discShape` /
+  `bulgeShape` are the profiles normalised to 1 at (R₀, 0) and at the
+  centre; the integrals march *those* and the density functions multiply
+  the solved constant on top.
+- **The scalar volume integral is the LUMINANCE integral**, because both
+  tints are luma-normalised (§ Population tints). That is what lets one
+  flux total be split between two hues without either moving light.
+- **Truncation compensation is inherent.** G is over the ACTUAL proxy
+  volume, so the 0.031 mag the disc envelope clips is redistributed inward
+  — a tighter envelope *brightens* what remains rather than losing it.
 
-`NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2` = **24.99**, and it is *not* a
-published number. `diffuse-reference.ts` builds it:
+**Solved dust-free, and that is the point.** An earlier design derived the
+zero point *through* the shipped extinction, so the photometric scale swung
+2.7 mag across the dust knob — including at the poles, where there is no
+dust. Emissivity is intrinsic and `GALAXY_TOTAL_ABSMAG_V` is itself
+internal-extinction-corrected; `milkyway.test.ts` pins the independence.
+
+#### Two checks, and both disagree by the same sign and order
+
+Neither is an anchor. Both are pinned in `milkyway.test.ts`.
+
+| check | published | model | model is |
+| --- | --- | --- | --- |
+| NGP diffuse residual | 24.99 | 23.40 | **1.587 mag brighter** |
+| Galactic centre, Leinert total | 22.92 | 21.98 | **0.936 mag brighter** |
+
+The 24.99 is *not* published; `diffuse-reference.ts` builds it:
 
 | | mag/arcsec² |
 | --- | --- |
@@ -197,37 +211,21 @@ published number. `diffuse-reference.ts` builds it:
 | Residual left for the diffuse band | **24.99** |
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
-resolved or not. The star pipeline draws two thirds of that light at the
-pole as individual quads, so **pinning the published figure would
-double-count the star field** — which is exactly what the retired
-`GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` anchor did, and why the model
-looked "1.17 mag too faint at the NGP" when it was in fact correct there.
+resolved or not, so pinning the published figure would double-count the
+star field — the retired `GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` anchor's
+exact defect. The GC row is graded against the total rather than a
+residual because the catalogue's GC entry is de-extincted while the real
+column is ~30 mag: `diffuseResidualMagArcsec2` returns `null` for that
+pair deliberately, and folding it in would only widen the gap.
 
-The NGP is the anchor sightline because it is the only one where the two
-inputs are commensurable: pole extinction is ~0.03 mag, so a de-extincted
-catalogue sum and an observed sky model agree well inside their own
-uncertainties. Toward the Galactic centre the real column is ~30 mag and
-the same subtraction is meaningless — `diffuseResidualMagArcsec2` returns
-`null` for that pair rather than a plausible-looking number.
-
-**Interim, deliberately.** One sightline still does not constrain a total
-luminosity, and `stellata-xypg.33` carries the solve against the Galaxy's
-integrated M_V (Bland-Hawthorn & Gerhard 2016 give −21.37, with a real
-0.5–0.9 mag spread across older direct-integration values). It was
-deferred behind the dust fix rather than done here, because solving
-emissivity against a slab an order of magnitude thin bakes the
-attenuation error into the luminosity — the retired anchor's exact
-defect.
-
-The two constraints do not yet agree: M_V = −21.37 wants ~1.3 mag more
-total light than the NGP residual admits, so satisfying both needs the
-**shape** to change rather than a global gain. That is why .33 sits
-behind `stellata-xypg.32`.
-
-The resolved catalogue is only **0.205 %** of the Galaxy's light
-(integrated M_V = −14.65), so that solve can ignore the double count
-entirely — the same star field is dominant from Sol and negligible from
-outside, for the same 1/d² reason.
+**The two constraints cannot both be met, and no shape parameter bridges
+them** — the argument is `docs/science-galactic-structure.md` § The
+luminosity solve. The total wins because it is what the camera sees from
+outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
+ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
+than M31 — the cross-layer symptom `stellata-xypg` opened on. The cost is
+at the pole, where diffuse + catalogue now reads 23.07 against Leinert's
+23.83.
 
 #### The gradient this produces, and what it reads on screen
 
@@ -242,16 +240,21 @@ a just-visible star".
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 22.01 | **0.01** — the maximum, on threshold | 38.1 |
-| l = 0, b = 0 (GC) | 23.29 | 1.29 under | 18.0 |
-| anticentre | 23.47 | 1.47 under | 15.9 |
-| b = 30 | 24.26 | 2.26 under | 8.2 |
-| NGP | 25.07 | 3.07 under | 3.9, at the dither floor |
+| l = 0, b = 5 | 20.71 | **1.29 OVER** — the maximum | 70.3 |
+| l = 0, b = 0 (GC) | 21.98 | 0.02 over | 38.6 |
+| anticentre | 22.16 | 0.16 under | 35.1 |
+| b = 30 | 22.61 | 0.61 under | 27.4 |
+| NGP | 23.49 | 1.49 under | 15.6 |
 
-Plane-to-pole contrast **1.78 mag**, against 5.00 before. **The midplane
-is not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
-most dust. The real band behaves the same way; the dark rift is dust, not
-a gap in the stars. Pinned in `milkyway.test.ts`.
+Plane-to-pole contrast **1.51 mag**. **The midplane is not the maximum**
+— b ≈ 5° is, because the in-plane sightline eats the most dust. The real
+band behaves the same way; the dark rift is dust, not a gap in the stars.
+Pinned in `milkyway.test.ts`.
+
+**Nothing pins the band to the threshold any more** — the maximum used to
+land exactly on it. That the NGP renders at 15.6/255 while sitting 1.49 mag
+*under* the detection threshold is `stellata-xypg.36`, which this makes
+worse before it lands.
 
 Two facts worth having before touching this:
 
@@ -264,12 +267,11 @@ Two facts worth having before touching this:
   visual + perf decision, and it no longer biases the calibration — the
   anchor is the NGP sightline, where the log distribution converges.
 
-Under the retired per-pixel mapping the display column ran 5.45 / 1.67 /
-1.42 / 0.68 / 0.33 at 50° / 900 px: the band sat at a *seventh* of a
-threshold star where rod summation puts its maximum level with one, and it
-dimmed further as the camera zoomed. The 20.0 anchor had been silently
-supplying the missing lift, and removing it exposed the gap
-(`stellata-xypg.34`).
+Under the sightline anchor the same rows ran 35.95 / 14.76 / 12.85 / 8.66
+/ 3.86 — the solve is 1.6 mag brighter everywhere. Under the retired
+per-pixel mapping before that, 5.45 / 1.67 / 1.42 / 0.68 / 0.33 at
+50° / 900 px: the band sat at a *seventh* of a threshold star and dimmed
+further as the camera zoomed (`stellata-xypg.34`).
 
 **The convolution and the footprint softening both leave this table where it
 is** — the first is an identity on a uniform field, the second is metres
@@ -277,26 +279,26 @@ against a 300 pc scale height from inside the disc. Every row moves under
 0.003 mag at both FOV extremes (pinned). Neither is inert from *outside* the
 Galaxy, which is where they were needed.
 
-**Do not raise the emissivity if the band still reads wrong** — that
-breaks a pole pinned against a measured residual to move a display anchor.
+**Do not raise or lower the emissivity if the band still reads wrong** —
+it is solved against a published luminosity and carries no slack.
 `DR_MAG` cannot do it either: it lifts the band and the star field
 together, so it has no term for a point-vs-extended ratio. The lever is
 the extended-source threshold itself, which is the instrument's
 `skyBackgroundMagArcsec2` (`../hdr/emission/README.md` § Extended sources).
 
-The Local Group emission layer runs the same mapping and now the same
-constant (`../local-group/README.md` § Zero free parameters). The two
-layers are one unit system: same zero point, same
-`stellataSurfaceBrightnessLuminance` gain, both mag/arcsec² in one
-exposure. What still differs is how each got its `density0` — LG solves
-per object against catalogue total flux, the band against one corrected
-sightline.
+The Local Group emission layer runs the same mapping, the same constant
+(`../local-group/README.md` § Zero free parameters) and now the same
+solve. The two layers are one unit system: same zero point, same
+`stellataSurfaceBrightnessLuminance` gain, same `ρ₀ = d²·F/G`, both
+mag/arcsec² in one exposure. All that differs is which magnitude goes in
+— LG a catalogue *apparent* one at each object's own distance, the band a
+published *absolute* one at 10 pc.
 
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y aligned with the galactic disc
 plane, +Z toward NGP. `mesh.scale` extends to galactocentric pc per
-axis (disc 15000×15000×600; bulge 5000×5000×3000). `mesh.quaternion =
+axis (disc 15000×15000×1800; bulge 5000×5000×3000). `mesh.quaternion =
 GAL_TO_ICRS` rotates galactic axes into ICRS world axes. The shader
 transforms `cameraPosition` (renderer-local) → galactocentric ICRS
 (subtract `uGalCenter`) → galactocentric galactic (rotate by
@@ -327,12 +329,10 @@ solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs to
 height ties the plane rate to the perpendicular column, and 1.0 mag/kpc
 puts the pole at A_V = 0.125, inside the SFD polar spread (~0.03–0.15).
 
-**What this replaced was wrong by an order of magnitude and mis-cited.**
-The previous norm gave 0.1508 mag/kpc — 0.0679 after a bare 0.45
-multiplier — attributed to Schlegel, Finkbeiner & Davis 1998. SFD is a 2D
-full-sky E(B−V) map; it publishes no per-kpc rate at all. The
-under-extinction was the single largest error in the layer: it is why the
-plane read ~3 mag too bright against the poles, not the density profile.
+**What this replaced was wrong by an order of magnitude and mis-cited** —
+0.0679 mag/kpc attributed to SFD 1998, a 2D E(B−V) map publishing no
+per-kpc rate at all. That under-extinction, not the density profile, is
+why the plane read ~3 mag too bright against the poles.
 
 `setExtinctionStrength(x)` scales the dust globally and **defaults to
 1.0**. It is a dev lever, not a calibration term — anything but 1 means
