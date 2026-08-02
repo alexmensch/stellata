@@ -96,9 +96,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.048 mag', () => {
+  it('dims the Galactic-centre sightline by 0.046 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0479, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0461, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -111,9 +111,9 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.0479, 3);
-    expect(offsets[1]).toBeCloseTo(0.0472, 3);
-    expect(offsets[2]).toBeCloseTo(0.0412, 3);
+    expect(offsets[0]).toBeCloseTo(0.0461, 3);
+    expect(offsets[1]).toBeCloseTo(0.0454, 3);
+    expect(offsets[2]).toBeCloseTo(0.0396, 3);
   });
 });
 

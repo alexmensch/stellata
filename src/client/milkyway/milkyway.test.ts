@@ -13,8 +13,13 @@ import {
   DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
+  DISC_HALF_THICKNESS_PC,
+  DISC_SCALE_HEIGHT_PC,
+  DISC_THICK_DENSITY_FRACTION,
+  DISC_THICK_SCALE_HEIGHT_PC,
   DISC_TINT_RGB,
   FOREGROUND_DUST_STEPS,
+  discVerticalProfile,
   LOCAL_DUST_RATE_MAG_PER_KPC,
   MAG_PER_TAU,
   SOL_GALACTOCENTRIC_PC,
@@ -108,6 +113,21 @@ describe('MilkyWay uniform wiring', () => {
     expect(v).not.toHaveProperty('brightness');
   });
 
+  // An unbound uniform reads 0 in GLSL, so a missing thick-disc binding
+  // deletes the term silently — no compile error, no visible change from
+  // Sol, and the external edge-on view quietly loses its halo.
+  it('binds the thick-disc term in both components', () => {
+    const { materials } = build();
+    for (const mat of materials) {
+      expect(mat.uniforms.uDiscThickScaleHeightPc.value).toBe(
+        DISC_THICK_SCALE_HEIGHT_PC,
+      );
+      expect(mat.uniforms.uDiscThickFraction.value).toBe(
+        DISC_THICK_DENSITY_FRACTION,
+      );
+    }
+  });
+
   it('binds the luma-normalised tint, not the authored palette', () => {
     const { materials } = build();
     const [disc, bulge] = materials.map((m) => m.uniforms.uColor.value as THREE.Color);
@@ -149,6 +169,47 @@ describe('MilkyWay population tints', () => {
     layer.setBulgeColor(0.1, 0.9, 0.3);
     const c = materials[1].uniforms.uColor.value as THREE.Color;
     expect(relativeLuminance([c.r, c.g, c.b])).toBeCloseTo(1, 12);
+  });
+});
+
+// Bland-Hawthorn & Gerhard 2016 § 5.1. The thick disc is for the EXTERNAL
+// edge-on view — from Sol it is a small correction, and it is emphatically
+// not a fix for a high-latitude deficit (README.md § Density profiles).
+describe('MilkyWay vertical profile', () => {
+  it('pins the thin/thick split against BHG16 § 5.1', () => {
+    expect(DISC_SCALE_HEIGHT_PC).toBe(300);
+    expect(DISC_THICK_SCALE_HEIGHT_PC).toBe(900);
+    expect(DISC_THICK_DENSITY_FRACTION).toBe(0.04);
+    expect(discVerticalProfile(0)).toBeCloseTo(1.04, 12);
+  });
+
+  // The thick disc's share of the vertical column, which is the number the
+  // external cross-check disagrees with: Mosenkov et al. 2021 measure a
+  // thick/thin LUMINOSITY ratio of 0.71 ± 0.45 at 3.4 µm, against 0.12
+  // here. Their thick disc also carries a longer radial scale length and
+  // this model gives both components the same one, so the two are not the
+  // same quantity — stated rather than tuned (README.md § Density profiles).
+  it('pins the thick/thin luminosity ratio the shared scale length implies', () => {
+    const thin = DISC_SCALE_HEIGHT_PC;
+    const thick = DISC_THICK_DENSITY_FRACTION * DISC_THICK_SCALE_HEIGHT_PC;
+    expect(thick / thin).toBeCloseTo(0.12, 12);
+  });
+
+  // The envelope is two thick scale heights, the same rule 600 pc followed
+  // against the thin one. Pinned as the magnitude it clips off the vertical
+  // column, because that is what a reader wants when asking whether the
+  // envelope is tight enough — and it is 8x better than the 0.158 mag the
+  // 600 pc envelope cost.
+  it('clips a stated fraction of the vertical column at the envelope', () => {
+    expect(DISC_HALF_THICKNESS_PC).toBe(2 * DISC_THICK_SCALE_HEIGHT_PC);
+    const column = (limitPc: number) =>
+      DISC_SCALE_HEIGHT_PC * (1 - Math.exp(-limitPc / DISC_SCALE_HEIGHT_PC)) +
+      DISC_THICK_DENSITY_FRACTION *
+        DISC_THICK_SCALE_HEIGHT_PC *
+        (1 - Math.exp(-limitPc / DISC_THICK_SCALE_HEIGHT_PC));
+    const loss =
+      -2.5 * Math.log10(column(DISC_HALF_THICKNESS_PC) / column(Infinity));
+    expect(loss).toBeCloseTo(0.0183, 4);
   });
 });
 
@@ -276,8 +337,8 @@ describe('MilkyWay surface-brightness calibration', () => {
   // Derived from the raymarch mirror rather than hand-tuned, so these pins
   // are what catch a profile / quadrature change.
   it('derives the GC column and the surface brightness it implies', () => {
-    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(20.485, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(23.29, 2);
+    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(15.867, 3);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(23.57, 2);
   });
 
   // The anchor is set on the DUST-FREE pole, so the rendered pole sits a
@@ -298,8 +359,8 @@ describe('MilkyWay surface-brightness calibration', () => {
       { dustEnabled: false },
     );
     expect(dustFree).toBeCloseTo(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2, 6);
-    expect(s(0, 90) - dustFree).toBeCloseTo(0.077, 3);
-    expect(s(180, 0)).toBeCloseTo(23.47, 2);
+    expect(s(0, 90) - dustFree).toBeCloseTo(0.087, 3);
+    expect(s(180, 0)).toBeCloseTo(23.75, 2);
     expect(s(0, 0)).toBeCloseTo(GC_SIGHTLINE_MAG_ARCSEC2, 6);
   });
 
@@ -314,8 +375,8 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(0, bDeg),
       );
     expect(s(5)).toBeLessThan(s(0));
-    expect(s(5)).toBeCloseTo(22.01, 2);
-    expect(s(0)).toBeCloseTo(23.29, 2);
+    expect(s(5)).toBeCloseTo(22.12, 2);
+    expect(s(0)).toBeCloseTo(23.57, 2);
   });
 
   // The whole point of the rework: extinction attenuates, it does not
@@ -330,7 +391,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     // Quadrupling the dust attenuates the pole and moves nothing else.
     // Pinned rather than bounded: a loose ceiling here would also pass if
     // the emissivity had silently re-coupled and cancelled the change.
-    expect(at(4) - at(0)).toBeCloseTo(0.302, 3);
+    expect(at(4) - at(0)).toBeCloseTo(0.339, 3);
   });
 
   // The plane-to-pole contrast the retired anchor got wrong by 4 mag.
@@ -341,7 +402,7 @@ describe('MilkyWay surface-brightness calibration', () => {
         SOL_GALACTOCENTRIC_PC,
         galacticDirection(lDeg, bDeg),
       );
-    expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.78, 2);
+    expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.51, 2);
   });
 
   // The whole band, in 8-bit display levels at the base epoch with no EV
@@ -353,11 +414,11 @@ describe('MilkyWay surface-brightness calibration', () => {
   it('pins the band against a threshold star at the base epoch', () => {
     expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
-    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(38.07, 2);
-    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(17.98, 2);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.85, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.17, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(3.90, 2);
+    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(35.95, 2);
+    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(14.76, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(12.85, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.66, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(3.86, 2);
   });
 
   // How far under threshold each sightline sits, which is the photometric
@@ -370,11 +431,11 @@ describe('MilkyWay surface-brightness calibration', () => {
     const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
     expect(sLim).toBe(22);
 
-    expect(sbAt(0, 5) - sLim).toBeCloseTo(0.01, 2);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(1.29, 2);
-    expect(sbAt(180, 0) - sLim).toBeCloseTo(1.47, 2);
-    expect(sbAt(0, 30) - sLim).toBeCloseTo(2.26, 2);
-    expect(sbAt(0, 90) - sLim).toBeCloseTo(3.07, 2);
+    expect(sbAt(0, 5) - sLim).toBeCloseTo(0.12, 2);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(1.57, 2);
+    expect(sbAt(180, 0) - sLim).toBeCloseTo(1.75, 2);
+    expect(sbAt(0, 30) - sLim).toBeCloseTo(2.20, 2);
+    expect(sbAt(0, 90) - sLim).toBeCloseTo(3.08, 2);
 
     // The band's maximum lands ON threshold, which is what the anchor pins;
     // a threshold star and a threshold surface brightness are the same
@@ -408,8 +469,8 @@ describe('MilkyWay surface-brightness calibration', () => {
       sbAt(0, 5),
       REFERENCE_OMEGA_PX,
     );
-    expect(statisticL).toBeCloseTo(1.657e-3, 6);
-    expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.1, 1);
+    expect(statisticL).toBeCloseTo(1.497e-3, 6);
+    expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.2, 1);
   });
 
   // The footprint softening exists for the Local Group's Sérsic cusp and for
@@ -436,7 +497,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     }
     // Pinned rather than bounded: the figure the READMEs quote is this one,
     // and a two-place tolerance would have let 0.005 through.
-    expect(worst).toBeCloseTo(0.00285, 5);
+    expect(worst).toBeCloseTo(0.00278, 5);
   });
 
   // What the concession is worth at the reference viewport, stated as the
@@ -476,6 +537,18 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
 
   it('agrees on the foreground pre-march step count', () => {
     expect(glslConst('int', 'FOREGROUND_DUST_STEPS')).toBe(FOREGROUND_DUST_STEPS);
+  });
+
+  // The vertical profile is two exponentials on ONE softened |z|, not two
+  // independent softenings — the footprint correction is a property of the
+  // sample, not of the component it feeds.
+  it('sums both vertical exponentials over one softened |z|', () => {
+    expect(frag).toMatch(
+      /float absZ = stellataSoftenRadius\(abs\(zVal\), zFootprintPc\);/,
+    );
+    expect(frag).toMatch(
+      /exp\(-absZ \/ uDiscScaleHeightPc\)\s*\+ uDiscThickFraction \* exp\(-absZ \/ uDiscThickScaleHeightPc\)/,
+    );
   });
 
   it('agrees on the τ→magnitude conversion', () => {

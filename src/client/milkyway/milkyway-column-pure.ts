@@ -18,9 +18,20 @@ export type Vec3 = readonly [number, number, number];
 // --- Disc component ----------------------------------------------------
 
 export const DISC_RADIUS_PC = 15_000;
-export const DISC_HALF_THICKNESS_PC = 600;
+/** Two thick scale heights — the same rule the 600 pc envelope followed
+ *  against the thin one, moved to the component that now sets the extent.
+ *  See README.md § Density profiles for the truncation it costs. */
+export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
+
+/** Thick disc, Bland-Hawthorn & Gerhard 2016 § 5.1: z_T = 900 ± 180 pc
+ *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. Shares the
+ *  thin disc's radial scale length, which is the one place this departs
+ *  from the literature — see README.md § Density profiles. */
+export const DISC_THICK_SCALE_HEIGHT_PC = 900;
+export const DISC_THICK_DENSITY_FRACTION = 0.04;
+
 export const DISC_WEIGHT = 1.5;
 export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
 /** The authored palette carrying hue only — what the shader multiplies in.
@@ -84,6 +95,15 @@ export const FOREGROUND_DUST_STEPS = 16;
 
 // --- Profiles ----------------------------------------------------------
 
+/** Thin plus thick exponential, at an already-softened |z|. */
+export function discVerticalProfile(absZPc: number): number {
+  return (
+    Math.exp(-absZPc / DISC_SCALE_HEIGHT_PC) +
+    DISC_THICK_DENSITY_FRACTION *
+      Math.exp(-absZPc / DISC_THICK_SCALE_HEIGHT_PC)
+  );
+}
+
 /** Disc emissivity at the component's RELATIVE weight. `EMISSIVITY_SCALE`
  *  puts it in the shared flux unit and is derived from a march of this
  *  profile, so it cannot be baked in here. */
@@ -96,7 +116,7 @@ export function discDensity(
   return (
     DISC_WEIGHT *
     Math.exp(-(softenRadius(rPc, footprintPc) - R0_PC) / DISC_SCALE_LENGTH_PC) *
-    Math.exp(-softenRadius(Math.abs(zPc), zFootprintPc) / DISC_SCALE_HEIGHT_PC)
+    discVerticalProfile(softenRadius(Math.abs(zPc), zFootprintPc))
   );
 }
 
