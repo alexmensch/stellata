@@ -5,8 +5,12 @@ overrides → `public/local-group.json`. `build-local-group-pure.ts`
 holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
 rules, distance filter, emission assembly);
-`emission-solver-pure.ts` holds the DENSITY0 solver maths. All
-vitest-pinned in `*.test.ts`.
+`emission-solver-pure.ts` holds the Sérsic deprojection and each
+family's truncated-volume integral. The quadrature and the ρ₀ solve
+itself are shared with the Milky Way band and live in
+`src/client/hdr/emission/density0-solver-pure.ts` — a build script
+importing from the client is the established direction, and the reverse
+is not. All vitest-pinned in `*.test.ts`.
 
 The TSV parser handles both LVDB-merge and standalone-position
 override rows; optional emission columns are resolved by header name.
@@ -93,11 +97,12 @@ consumes raw numbers and never re-derives photometry.
   half-light ellipsoid while the mesh runs to u₉₉, and light outside a
   half-light radius is what "half-light" means. The ratio is pinned so
   the gap stays deliberate.
-- `emission-solver-pure.ts` solves ρ₀ = d₀² · 10^(−0.4·m_V) / G with
-  G integrated **over the actual truncated mesh volume** through one
-  numeric quadrature path (`integrateOverEllipsoid`, Gauss–Legendre in
-  unit-ball coordinates) for every profile; the analytic
-  incomplete-gamma closed forms exist only as vitest cross-pins.
+- ρ₀ = d₀² · 10^(−0.4·m_V) / G, with G integrated **over the actual
+  truncated mesh volume** through one numeric quadrature path
+  (`integrateOverEllipsoid`, Gauss–Legendre in unit-ball coordinates) for
+  every profile; the analytic incomplete-gamma closed forms exist only as
+  vitest cross-pins. `emission-solver-pure.ts` supplies the shapes,
+  `src/client/hdr/emission/README.md` § Solving ρ₀ owns the solve.
 - **M31 bulge contract:** the bulge is its own spheroid component —
   density0 solves over the bulge's u ≤ uMax sphere via the same
   Sérsic geometry integral as every spheroid, and the renderer packs

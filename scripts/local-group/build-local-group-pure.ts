@@ -1,14 +1,17 @@
 // Pure helpers for build-local-group.ts: distance filter, override
 // merge, orientation quaternions, display-name routing, and per-object
-// emission assembly over emission-solver-pure.ts. Off the I/O path.
+// emission assembly over the profile geometry + the shared ρ₀ solve. Off
+// the I/O path.
 
+import {
+  fluxNumber,
+  solveDensity0,
+} from '../../src/client/hdr/emission/density0-solver-pure';
 import {
   bnCoeff,
   discGeometryIntegral,
-  fluxNumber,
   pnCoeff,
   sersicGeometryIntegral,
-  solveDensity0,
   u99,
 } from './emission-solver-pure';
 
