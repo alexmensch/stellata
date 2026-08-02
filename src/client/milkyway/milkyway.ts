@@ -31,7 +31,7 @@ import {
   REDDENING_RGB,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
-  sightlineEmissionColumn,
+  sightlineColumn,
 } from './milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
@@ -45,7 +45,7 @@ import {
  *  (l = 0, b = 0) integrates to, from the CPU mirror of the shader's
  *  raymarch. Pinned in ./milkyway.test.ts so a profile or quadrature
  *  change is visible. */
-export const GC_SIGHTLINE_COLUMN = sightlineEmissionColumn(
+export const GC_SIGHTLINE_COLUMN = sightlineColumn(
   SOL_GALACTOCENTRIC_PC,
   galacticDirection(0, 0),
 );

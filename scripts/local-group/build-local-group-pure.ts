@@ -1,7 +1,6 @@
-// Pure helpers for build-local-group.ts: distance filter, override
-// merge, orientation quaternions, display-name routing, and per-object
-// emission assembly over the profile geometry + the shared ρ₀ solve. Off
-// the I/O path.
+// Pure helpers for build-local-group.ts: distance filter, override merge,
+// orientation quaternions, display-name routing, and per-object emission
+// assembly over the profile geometry + the shared ρ₀ solve. Off the I/O path.
 
 import {
   fluxNumber,
@@ -103,7 +102,7 @@ export interface LvdbRow {
 
 /** Solved Sérsic component — shared by the spheroid family and the
  *  M31 bulge (DRY at schema level). Axes in parsecs; density0 in the
- *  zero-point-free flux-number units of emission-solver-pure.ts. */
+ *  zero-point-free flux-number units the ρ₀ solve works in. */
 export interface SersicParams {
   reffAxesPc: [number, number, number];
   n: number;

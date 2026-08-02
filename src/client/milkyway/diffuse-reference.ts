@@ -1,6 +1,35 @@
-// Published integrated-starlight photometry and the resolved-star
-// subtraction that turns it into a target for the diffuse band.
-// See README.md § Calibration.
+// The published photometry the band is solved against and checked with:
+// the Galaxy's integrated luminosity and bulge fraction, plus the
+// resolved-star subtraction behind the NGP check. README.md § Calibration.
+
+/**
+ * Integrated V-band absolute magnitude of the Galaxy, Bland-Hawthorn &
+ * Gerhard 2016 Table 2 — the total the emissivity is solved against.
+ *
+ * **Cite the spread, do not imply consensus.** BHG16's figure derives from
+ * Milky Way analogues (Licquia, Newman & Brinchmann 2015) rather than from
+ * direct integration, and it flags its own SDSS-vs-colour-index
+ * inconsistency. Older direct-integration work runs 0.3–0.5 mag dimmer
+ * once its B-band results are carried across at the Galaxy's integrated
+ * colour: de Vaucouleurs & Pence 1978 M_B = −20.2 ± 0.15 and van der
+ * Kruit 1986 M_B = −20.3 ± 0.2, against (B−V) ≈ 0.83.
+ *
+ * Intrinsic, i.e. corrected for internal extinction — which is what the
+ * emissivity has to be, because the layer applies its own dust at render
+ * time (README.md § Analytical-only dust).
+ */
+export const GALAXY_TOTAL_ABSMAG_V = -21.37;
+
+/**
+ * Bulge share of the Galaxy's V-band light. Licquia & Newman 2015 (DOI
+ * 10.1088/0004-637X/806/1/96) give B/T = 0.150 (+0.028/−0.019) in stellar
+ * **mass**; no published V-band B/T exists.
+ *
+ * It is an **upper bound** on the V-band value, not an equivalent: the
+ * bulge's older, more metal-rich population carries a higher Υ\*_V than
+ * the disc's, so the same mass share buys less V light.
+ */
+export const BULGE_TO_TOTAL_V = 0.15;
 
 /**
  * Integrated starlight at 0.55 µm from Leinert et al. 1998, A&AS 127, 1
@@ -56,9 +85,10 @@ const ngpResidual = diffuseResidualMagArcsec2(
 );
 
 // A null here means a catalogue rebuild moved the resolved sum past the
-// published total. Failing the import is the point: the alternative is
-// null coercing to 0 through EMISSIVITY_SCALE's arithmetic, which yields
-// a finite, enormous emissivity and a band ten decades too bright.
+// published total, i.e. the two rows stopped measuring the same thing.
+// Failing the import is the point: the alternative is a nullable export
+// whose consumers reach for `?? 0`, and a zero residual reads as a
+// perfectly-matched check rather than a broken one.
 if (ngpResidual === null) {
   throw new Error(
     'NGP diffuse residual is undefined: the resolved catalogue at ' +
@@ -69,8 +99,10 @@ if (ngpResidual === null) {
 }
 
 /**
- * The band's emissivity anchor: what is left at the NGP after the star
- * field's own contribution comes off Leinert's total.
+ * What is left at the NGP after the star field's own contribution comes
+ * off Leinert's total — a **check** on the emissivity, not its anchor:
+ * the model is solved against the Galaxy's total luminosity above, and
+ * the two do not agree (README.md § Calibration).
  *
  * The NGP is the only sightline where the two inputs are commensurable.
  * Extinction there is ~0.03 mag, so the de-extincted catalogue sum and

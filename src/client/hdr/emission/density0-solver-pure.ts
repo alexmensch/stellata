@@ -7,6 +7,11 @@ export function fluxNumber(mV: number): number {
   return Math.pow(10, -0.4 * mV);
 }
 
+/** The distance an ABSOLUTE magnitude is defined at, which is what an
+ *  emitter anchored on a published M rather than an observed m passes as
+ *  `solveDensity0`'s first argument. */
+export const ABSOLUTE_MAGNITUDE_DISTANCE_PC = 10;
+
 /** Gauss–Legendre nodes/weights on [-1, 1] (Newton on the Legendre
  *  recurrence). */
 export function gaussLegendre(n: number): { x: Float64Array; w: Float64Array } {
