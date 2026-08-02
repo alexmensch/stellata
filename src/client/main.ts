@@ -1,12 +1,11 @@
 import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
-import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadLocalBubble } from './local-bubble/local-bubble-loader';
 import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
 import { createLocalBubbleLabel } from './local-bubble/local-bubble';
-import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
+import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
@@ -48,13 +47,11 @@ import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
-import { createLgFocusProvider } from './focus-card/lg-focus-provider';
 import { createShellFocusProvider } from './focus-card/shell-focus-provider';
 import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
 import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
-import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
 import { createShellHoverProvider } from './hover/shell-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
@@ -71,7 +68,7 @@ async function main() {
 
   try {
     const kinds = buildKindModules();
-    const [catalog, searchIndex, lgCatalog, binaries, localBubble, boundaries] = await Promise.all([
+    const [catalog, searchIndex, binaries, localBubble, boundaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -84,11 +81,6 @@ async function main() {
       fetch(`${import.meta.env.BASE_URL}search-index.json`).then(
         (r) => r.json() as Promise<SearchEntry[]>,
       ),
-      // Local Group wireframes. ~20 KB JSON; null if
-      // the artifact is missing (fresh checkout without
-      // `pnpm run build:local-group`). No-op layer in that case —
-      // outlines simply don't render.
-      loadLocalGroup(`${import.meta.env.BASE_URL}local-group.json`),
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
       // `pnpm run build:binaries`). The renderer renders identically
@@ -120,10 +112,6 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Local Group wireframes. Always-on when the artifact is present —
-    // same model as the MW disc, no toggle / URL flag.
-    if (lgCatalog) stellata.attachLocalGroup(lgCatalog);
-
     // Binary-orbit runtime — visible orbital motion for ~hundreds of
     // catalog pairs against `Stellata.getT()`. Static placements remain
     // identical when this artifact is absent.
@@ -169,8 +157,6 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
-    else sidResolver.conclude('lg');
     // Both boundary shells carry static, always-known SIDs (generated /
     // curated objects, docs/sid.md § 7). localIndex = SHELL_KEYS index =
     // Target {kind:'shell'} idx. Attach unconditionally: a shell whose
@@ -234,8 +220,8 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex, starLabels, lgCatalog);
-    bindFindSearch(stellata, catalog, searchIndex, lgCatalog);
+    bindSearch(stellata, catalog, searchIndex, starLabels);
+    bindFindSearch(stellata, catalog, searchIndex);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
@@ -253,10 +239,6 @@ async function main() {
     // galactic centre. Independent of attachLocalGroup — the MW label
     // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
     createMilkyWayLabel(stellata);
-    // Per-object Local Group labels. Mints SVG <text> children under
-    // #lg-labels for each catalog object that carries a labelThresholdPc;
-    // no-op when the layer didn't attach (missing artifact).
-    if (stellata.localGroup) createLocalGroupLabels(stellata, stellata.localGroup);
     createScaleBar(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
@@ -320,15 +302,6 @@ async function main() {
       const provider = kinds[kind]?.hover?.();
       if (provider) hoverProviders.push(provider);
     }
-    // LG provider only registers when the build artifact loaded — fresh
-    // checkouts without `pnpm run build:local-group` leave stellata.localGroup
-    // null and the wireframes don't render; no provider in that case.
-    if (lgCatalog) {
-      hoverProviders.push(createLocalGroupHoverProvider({
-        stellata,
-        context: { objects: lgCatalog.objects },
-      }));
-    }
     createHoverEngine({
       canvas,
       tooltip,
@@ -380,20 +353,7 @@ async function main() {
         }),
         probe: kinds.probe.card(),
         cloud: kinds.cloud.card(),
-        lg: createLgFocusProvider({
-          objects: lgCatalog?.objects ?? null,
-          cameraDistancePc: (idx) => {
-            const obj = lgCatalog!.objects[idx];
-            const w = stellata.getWorldOffset();
-            const c = stellata.camera.position;
-            return Math.hypot(
-              obj.centerAbs.x - w.x - c.x,
-              obj.centerAbs.y - w.y - c.y,
-              obj.centerAbs.z - w.z - c.z,
-            );
-          },
-          constellationName: (idx) => stellata.constellationOf('lg', idx),
-        }),
+        lg: kinds.lg.card(),
         shell: createShellFocusProvider({
           shellAt: (idx) => stellata.shells.at(idx),
           cameraDistancePc: (idx) =>

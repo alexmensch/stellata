@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
-import type { LgCatalog } from '../local-group/local-group-loader';
 import type { ShellRegistry } from '../fresnel-shell/shell-registry';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SOL_BODIES } from '../solar-system/planet-system';
@@ -19,14 +18,6 @@ import {
 export type { SearchEntry };
 
 type EntryKind = TargetKind;
-
-/** Static dropdown-row distance for a Local Group entry. Fixed units by
- *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
- *  built once and galaxy distances read naturally in kpc either way. */
-export function formatLgSearchDistance(pc: number): string {
-  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(2)} Mpc`;
-  return `${Math.round(pc / 1000)} kpc`;
-}
 
 export interface FuzzyEntry {
   kind: EntryKind;
@@ -438,7 +429,6 @@ export function buildSearchIndex(
 export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
-  lg: LgCatalog | null = null,
   shells: ShellRegistry | null = null,
   kinds: KindModules | null = null,
 ): (q: string) => FuzzyEntry[] {
@@ -446,21 +436,6 @@ export function createSearchRunner(
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
     buildSearchIndex(raw, catalog.constellations);
-
-  // Local Group entries — display name plus every catalog cross-ID /
-  // common-name alias the build emitted ("Andromeda Galaxy", "NGC 224",
-  // "M 110", …), each resolving to the same object. The secondary line
-  // carries type + distance so "Sagittarius" disambiguates the 26 kpc
-  // dSph from any star row at a glance.
-  if (lg) {
-    for (let i = 0; i < lg.objects.length; i++) {
-      const o = lg.objects[i];
-      const displayCon = `${o.type} · ${formatLgSearchDistance(o.distanceFromSol)}`;
-      for (const label of [o.name, ...(o.aliases ?? [])]) {
-        fuzzyEntries.push({ kind: 'lg', index: i, label, primary: o.name, displayCon });
-      }
-    }
-  }
 
   // Boundary shells (Local Bubble, heliopause) — the registry holds only
   // the shells whose layer attached; index is the SHELL_KEYS/Target idx.
@@ -696,10 +671,9 @@ export function bindSearch(
   catalog: Catalog,
   raw: SearchEntry[],
   starLabels: Map<number, string>,
-  lg: LgCatalog | null = null,
 ) {
   const runQuery = createSearchRunner(
-    catalog, raw, lg, stellata.shells, stellata.kinds,
+    catalog, raw, stellata.shells, stellata.kinds,
   );
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
@@ -808,7 +782,7 @@ export function bindSearch(
       case 'planet': return stellata.planetField.planetAt(t.idx)?.name ?? '';
       case 'probe': return stellata.kinds.probe.displayName(t.idx);
       case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
-      case 'lg': return lg ? lg.objects[t.idx].name : '';
+      case 'lg': return stellata.kinds.lg.displayName(t.idx);
       case 'shell': return stellata.shells.at(t.idx)?.label ?? '';
     }
   };
@@ -851,10 +825,9 @@ export function bindFindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
-  lg: LgCatalog | null = null,
 ): void {
   const runQuery = createSearchRunner(
-    catalog, raw, lg, stellata.shells, stellata.kinds,
+    catalog, raw, stellata.shells, stellata.kinds,
   );
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;

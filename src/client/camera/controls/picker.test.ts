@@ -154,7 +154,6 @@ function makePicker(
       const limitMag = opts.limitMag ?? 15;
       return drawCutoffMag(limitMag, limitMag, chart);
     },
-    getLocalGroupLayer: () => null,
     getShells: () => new ShellRegistry(),
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     kindPicks: opts.kindPicks ?? {},

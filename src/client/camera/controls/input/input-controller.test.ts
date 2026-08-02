@@ -136,13 +136,6 @@ function makeHarness(): Harness {
             tier: state.pickPlanetTier,
           }
         : null),
-      pickLocalGroupHit: () => (state.pickLgResult !== null
-        ? {
-            idx: state.pickLgResult,
-            cameraDistancePc: state.pickLgDistancePc,
-            tier: state.pickLgTier,
-          }
-        : null),
       pickKindHit: (kind: string) => {
         if (kind === 'probe' && state.pickProbeResult !== null) {
           return {
@@ -153,6 +146,13 @@ function makeHarness(): Harness {
         }
         if (kind === 'cloud' && state.pickCloudResult !== null) {
           return { idx: state.pickCloudResult, cameraDistancePc: 1, tier: 'fallback' };
+        }
+        if (kind === 'lg' && state.pickLgResult !== null) {
+          return {
+            idx: state.pickLgResult,
+            cameraDistancePc: state.pickLgDistancePc,
+            tier: state.pickLgTier,
+          };
         }
         return null;
       },

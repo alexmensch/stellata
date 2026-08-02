@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import {
   splitBayer,
   formatBayerDisplay,
@@ -13,13 +12,13 @@ import {
   formatGcvsDesignation,
   buildGcvsLabels,
   createSearchRunner,
-  formatLgSearchDistance,
   resolveEntryTarget,
   starDesignations,
   type FuzzyEntry,
   type SearchEntry,
 } from './search';
 import type { Stellata } from '../stellata';
+import { formatLgSearchDistance } from '../local-group/lg-module';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
@@ -569,31 +568,22 @@ describe('search / starDesignations', () => {
 });
 
 describe('search / Local Group entries', () => {
-  const lgObject = (name: string, type: string, distanceFromSol: number, aliases?: string[]) => ({
-    name,
-    id: name.toLowerCase().replace(/\s+/g, '-'),
-    type,
-    ...(aliases ? { aliases } : {}),
-    sid: 1,
-    centerAbs: new THREE.Vector3(distanceFromSol, 0, 0),
-    kind: 'disc' as const,
-    axes: [1000, 1000, 500] as [number, number, number],
-    quat: new THREE.Quaternion(),
-    source: 'OVERRIDE' as const,
-    distanceFromSol,
-    emission: {
-      family: 'disc' as const,
-      mV: 3.44, rdPc: 5300, zdPc: 167, rEnvPc: 21200, zEnvPc: 667, density0: 0.34,
-    },
-  });
-  const lg = {
-    count: 2,
-    objects: [
-      lgObject('M31', 'Spiral galaxy', 776_000, ['Andromeda Galaxy', 'NGC 224', 'Messier 31']),
-      lgObject('Sculptor Dwarf Spheroidal', 'Dwarf spheroidal', 84_000),
-    ],
-  };
   const catalog = { ...makeEmptyCatalog(0), constellations: [], names: new Map() };
+  // The lg module emits one row per display name / catalog alias, with a
+  // type-and-distance secondary line (lg-module.test.ts pins the
+  // emission; these pin the runner over that row shape).
+  const kinds = kindsWith('lg', [
+    { index: 0, label: 'M31', primary: 'M31', displayCon: 'Spiral galaxy · 776 kpc' },
+    { index: 0, label: 'Andromeda Galaxy', primary: 'M31', displayCon: 'Spiral galaxy · 776 kpc' },
+    { index: 0, label: 'NGC 224', primary: 'M31', displayCon: 'Spiral galaxy · 776 kpc' },
+    { index: 0, label: 'Messier 31', primary: 'M31', displayCon: 'Spiral galaxy · 776 kpc' },
+    {
+      index: 1,
+      label: 'Sculptor Dwarf Spheroidal',
+      primary: 'Sculptor Dwarf Spheroidal',
+      displayCon: 'Dwarf spheroidal · 84 kpc',
+    },
+  ]);
 
   it('formatLgSearchDistance switches kpc → Mpc at 1 Mpc', () => {
     expect(formatLgSearchDistance(84_000)).toBe('84 kpc');
@@ -602,7 +592,7 @@ describe('search / Local Group entries', () => {
   });
 
   it('resolves aliases and display names to the same object with type + distance rows', () => {
-    const run = createSearchRunner(catalog, [], lg);
+    const run = createSearchRunner(catalog, [], null, kinds);
     for (const q of ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M31']) {
       const hit = run(q)[0];
       expect(hit?.kind).toBe('lg');
@@ -617,7 +607,7 @@ describe('search / Local Group entries', () => {
   });
 
   it('dedupes multiple alias matches of one object to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], lg);
+    const run = createSearchRunner(catalog, [], null, kinds);
     const rows = run('andromeda');
     expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
   });
@@ -636,7 +626,7 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   ]);
 
   it('resolves the display name + every alias to the same cloud', () => {
-    const run = createSearchRunner(catalog, [], null, null, kinds);
+    const run = createSearchRunner(catalog, [], null, kinds);
     for (const q of ['Eagle Nebula', 'M16', 'NGC 6611']) {
       const hit = run(q)[0];
       expect(hit?.kind, q).toBe('cloud');
@@ -647,12 +637,12 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   });
 
   it('dedupes multiple alias matches of one cloud to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], null, null, kinds);
+    const run = createSearchRunner(catalog, [], null, kinds);
     expect(run('eagle').filter((e) => e.kind === 'cloud' && e.index === 0)).toHaveLength(1);
   });
 
   it('indexes an alias-less cloud by name alone', () => {
-    const run = createSearchRunner(catalog, [], null, null, kinds);
+    const run = createSearchRunner(catalog, [], null, kinds);
     const hit = run('Taurus')[0];
     expect(hit?.kind).toBe('cloud');
     expect(hit?.index).toBe(1);
@@ -676,31 +666,18 @@ describe('search / ranking tiers', () => {
     constellation: Float32Array.from([0, 0, 0, 0]),
     names: new Map([[0, 'Almach'], [1, 'Alpheratz'], [3, 'Mirach']]),
   };
-  const lgObject = (name: string, distanceFromSol: number, aliases?: string[]) => ({
-    name,
-    id: name.toLowerCase().replace(/\s+/g, '-'),
-    type: 'Galaxy',
-    ...(aliases ? { aliases } : {}),
-    sid: 1,
-    centerAbs: new THREE.Vector3(distanceFromSol, 0, 0),
-    kind: 'disc' as const,
-    axes: [1000, 1000, 500] as [number, number, number],
-    quat: new THREE.Quaternion(),
-    source: 'OVERRIDE' as const,
-    distanceFromSol,
-    emission: {
-      family: 'disc' as const,
-      mV: 3.44, rdPc: 5300, zdPc: 167, rEnvPc: 21200, zEnvPc: 667, density0: 0.34,
+  const lg = kindsWith('lg', [
+    { index: 0, label: 'M31', primary: 'M31', displayCon: 'Galaxy · 776 kpc' },
+    { index: 0, label: 'Andromeda Galaxy', primary: 'M31', displayCon: 'Galaxy · 776 kpc' },
+    { index: 0, label: 'NGC 224', primary: 'M31', displayCon: 'Galaxy · 776 kpc' },
+    {
+      index: 1,
+      label: 'Andromeda XIX Dwarf Spheroidal',
+      primary: 'Andromeda XIX Dwarf Spheroidal',
+      displayCon: 'Galaxy · 813 kpc',
     },
-  });
-  const lg = {
-    count: 2,
-    objects: [
-      lgObject('M31', 776_000, ['Andromeda Galaxy', 'NGC 224']),
-      lgObject('Andromeda XIX Dwarf Spheroidal', 812_830),
-    ],
-  };
-  const run = createSearchRunner(catalog, raw, lg);
+  ]);
+  const run = createSearchRunner(catalog, raw, null, lg);
 
   it('tags constellation-expansion labels and only them', () => {
     const { fuzzyEntries } = buildSearchIndex(raw, CONS);

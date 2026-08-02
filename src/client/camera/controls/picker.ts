@@ -4,7 +4,6 @@
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { FilterState } from '../../filters/filter-state';
-import type { LocalGroupLayer } from '../../local-group/local-group';
 import type { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { pickShellSilhouette } from '../../fresnel-shell/shell-pick';
 import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
@@ -34,7 +33,6 @@ export interface PickerDeps {
   // the live Float32Array rather than a snapshot reference.
   getLocalPositions: () => Float32Array;
   getFilter: () => Readonly<FilterState>;
-  getLocalGroupLayer: () => LocalGroupLayer | null;
   getShells: () => ShellRegistry;
   getPlanetBodyField: () => PlanetBodyField;
   // Kind-module pick surfaces (kinds/kind-module.ts) — one entry per
@@ -127,22 +125,6 @@ export class Picker {
     pixelThreshold = 14,
   ): HoverHit | null {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
-  }
-
-  // Returns null when the LG layer isn't attached (fresh checkout
-  // without the build artifact).
-  pickLocalGroupHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
-    const lg = this.deps.getLocalGroupLayer();
-    if (!lg) return null;
-    const rect = this.deps.domElement.getBoundingClientRect();
-    return lg.pick(
-      this.deps.camera,
-      this.deps.getWorldOffset() as THREE.Vector3,
-      rect,
-      clientX,
-      clientY,
-      pixelThreshold,
-    );
   }
 
   // Boundary-shell hit (Local Bubble, heliopause): the nearest registered

@@ -15,6 +15,13 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     uViewport: { value: new THREE.Vector2(MOCK_VIEWPORT_W, MOCK_VIEWPORT_H) },
     uPixelRatio: { value: 1 },
     uFovYRad: { value: MOCK_FOV_Y_RAD },
+    // The HDR emitter slots ride the shared map by reference in
+    // production (star-pipeline/frame/README.md § Shared uniforms).
+    uHdrTarget: { value: 0 },
+    uWhitePoint: { value: 1 },
+    uHighlightDesat: { value: 0 },
+    uExposure: { value: 1 },
+    uOmegaPxArcsec2: { value: 1 },
   } as unknown as StarSharedUniforms;
   return {
     scene: new THREE.Scene(),

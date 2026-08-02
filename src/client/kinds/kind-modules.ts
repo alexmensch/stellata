@@ -2,6 +2,7 @@
 // See ./README.md.
 
 import type { TargetKind } from '../camera/focus/focus-target';
+import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
 import type { SceneElementId } from '../scene/scene-elements';
 import {
@@ -44,7 +45,7 @@ export function buildKindModules() {
   return {
     star: null,
     cloud: createCloudKindModule(),
-    lg: null,
+    lg: createLgKindModule(),
     planet: null,
     shell: null,
     probe: createProbeKindModule(),
