@@ -155,7 +155,6 @@ function makePicker(
     },
     getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     kindPicks: opts.kindPicks ?? {},
-    getWorldOffset: () => new THREE.Vector3(),
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
     resolveCollapsedLead: opts.resolveCollapsedLead ?? ((idx) => idx),
   };

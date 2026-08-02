@@ -636,7 +636,6 @@ export class Stellata implements FrameAnchor {
       getFilter: () => this.filter,
       getPlanetBodyField: () => this.planetBodyField,
       kindPicks: collectKindPicks(this.kinds),
-      getWorldOffset: () => this.worldOffset,
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),

@@ -36,11 +36,6 @@ export interface PickerDeps {
   // migrated kind, absent for kinds whose pick path is still inline.
   // Hover providers call the same functions, so the two can't disagree.
   kindPicks: Readonly<Partial<Record<TargetKind, KindPick>>>;
-  // Floating-origin offset — picks for objects in absolute (catalog)
-  // space (Local Group, boundary shells) need to project into the local
-  // frame the camera lives in. Read each call; recentre mutates it
-  // in-place.
-  getWorldOffset: () => Readonly<THREE.Vector3>;
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;

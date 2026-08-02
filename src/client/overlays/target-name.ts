@@ -4,8 +4,9 @@ import { resolveStarName } from '../format/star-companion-format';
 
 /** Display name for any Target kind — the shared per-kind lookup behind
  *  the POI overlay labels and the distance-vector destination label.
- *  Star names live on the search corpus (`starLabels`); the other kinds
- *  read their layer's catalog. The `switch` returns on every kind so a
+ *  Star names live on the search corpus (`starLabels`); every migrated
+ *  kind answers through its module's `displayName` leg, planets through
+ *  the planet field. The `switch` returns on every kind so a
  *  new `TargetKind` fails `tsc` (missing return) rather than silently
  *  falling through to the wrong catalog. */
 export function targetDisplayName(
@@ -30,7 +31,7 @@ export function targetDisplayName(
     case 'cloud':
       return stellata.kinds.cloud.displayName(t.idx) || 'Cloud';
     case 'lg':
-      return stellata.localGroup?.objects[t.idx]?.name ?? 'Galaxy';
+      return stellata.kinds.lg.displayName(t.idx) || 'Galaxy';
     case 'shell':
       return stellata.kinds.shell.displayName(t.idx) || 'Shell';
   }
