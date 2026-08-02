@@ -274,7 +274,7 @@ supplying the missing lift, and removing it exposed the gap
 **The convolution and the footprint softening both leave this table where it
 is** — the first is an identity on a uniform field, the second is metres
 against a 300 pc scale height from inside the disc. Every row moves under
-0.002 mag at both FOV extremes (pinned). Neither is inert from *outside* the
+0.003 mag at both FOV extremes (pinned). Neither is inert from *outside* the
 Galaxy, which is where they were needed.
 
 **Do not raise the emissivity if the band still reads wrong** — that

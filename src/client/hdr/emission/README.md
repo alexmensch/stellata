@@ -158,6 +158,6 @@ Two things it must get right, both measured:
   along the ray would suppress the column rather than average it.
 
 Inert where the plate scale already resolves the profile. From Sol the
-band moves under 0.002 mag at both FOV extremes (`../../milkyway/README.md`
+band moves under 0.003 mag at both FOV extremes (`../../milkyway/README.md`
 § The gradient this produces), which is what keeps the shipped display
 table where it is.

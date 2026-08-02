@@ -417,8 +417,9 @@ describe('MilkyWay surface-brightness calibration', () => {
   // above is the shipped look. The camera sits INSIDE the disc, so the
   // footprint is metres over the near half of the march and a few parsecs at
   // the far rim — against a 300 pc scale height and a 3 kpc scale length. The
-  // residual at 120° is 0.002 mag, so it cannot move a row pinned to 0.01.
+  // worst residual is 0.0029 mag, so it cannot move a row pinned to 0.01.
   it('leaves every Sol sightline where it was, at both FOV extremes', () => {
+    let worst = 0;
     for (const fovDeg of [FOV_MIN_DEG, FOV_MAX_DEG]) {
       const omegaPxArcsec2 = pixelSolidAngleArcsec2(
         angularToPx(900, (fovDeg * Math.PI) / 180),
@@ -430,9 +431,12 @@ describe('MilkyWay surface-brightness calibration', () => {
           galacticDirection(lDeg, bDeg),
           { omegaPxArcsec2 },
         );
-        expect(softened - sbAt(lDeg, bDeg)).toBeCloseTo(0, 2);
+        worst = Math.max(worst, Math.abs(softened - sbAt(lDeg, bDeg)));
       }
     }
+    // Pinned rather than bounded: the figure the READMEs quote is this one,
+    // and a two-place tolerance would have let 0.005 through.
+    expect(worst).toBeCloseTo(0.00285, 5);
   });
 
   // What the concession is worth at the reference viewport, stated as the

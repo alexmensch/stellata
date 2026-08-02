@@ -749,7 +749,15 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     }
 
     /** Mean display level the pass produces at `thetaArcsec`, in flux per
-     *  arcsec² — the Ω_sum gain is common to both sides. */
+     *  arcsec² — the Ω_sum gain is common to both sides.
+     *
+     *  Each tap is the box average of a continuously-positioned cell, where
+     *  the shader takes a BILINEAR read of the discrete downsample grid at
+     *  `fragCoord / factor` — generally off-centre, so it mixes four texels.
+     *  That is ~one texel of further smoothing this mirror does not model, so
+     *  the residuals below are the ideal kernel's rather than the shader's.
+     *  It bounds them from the sharp side: bilinear can only smooth further,
+     *  and every pin here is "the core is not brighter than ideal". */
     function shippedMean(thetaArcsec: number, fovDeg: number): number {
       const pxPerRadian = angularToPx(900, (fovDeg * Math.PI) / 180);
       const pxArcsec = 1 / (pxPerRadian * ARCSEC_TO_RAD);

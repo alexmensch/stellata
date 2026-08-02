@@ -19,6 +19,22 @@ void stellataEmitNothing(out vec4 fragColor, out vec4 statistic, out vec4 diffus
     diffuse = vec4(0.0);
 }
 
+/** A raymarched column taken to display luminance at one solid angle, clamped
+ *  at the ceiling. The gain is unclamped by contract, so the CALLER clamps the
+ *  product — which is the same three lines for the summation angle and the
+ *  pixel one, differing only in which Ω they run on. */
+vec3 stellataGainedColumn(
+    vec3 column,
+    float exposure,
+    float magPerArcsec2,
+    float omegaArcsec2
+) {
+    return min(
+        column * stellataSurfaceBrightnessLuminance(
+            exposure, magPerArcsec2, omegaArcsec2),
+        vec3(STELLATA_LUMA_CEIL));
+}
+
 /**
  * `column` is the layer's own integrated column, per channel, carrying
  * whatever chromaticity the raymarch built; `magPerArcsec2` is the
@@ -67,21 +83,17 @@ void stellataEmitExtendedSource(
     // Clamped before the convolution rather than after, so fp16 additive
     // accumulation across overlapping volumes cannot overflow. Nothing
     // reaches the ceiling pre-summation at the shipped epochs.
-    diffuse = vec4(min(
-        column * stellataSurfaceBrightnessLuminance(
-            exposure, magPerArcsec2, omegaSummationArcsec2),
-        vec3(STELLATA_LUMA_CEIL)), 1.0);
+    diffuse = vec4(
+        stellataGainedColumn(column, exposure, magPerArcsec2, omegaSummationArcsec2),
+        1.0);
 
     if (hdrTarget > 0.5) {
         fragColor = vec4(0.0);
         return;
     }
-    vec3 perPixel = min(
-        column * stellataSurfaceBrightnessLuminance(
-            exposure, magPerArcsec2, omegaPxArcsec2),
-        vec3(STELLATA_LUMA_CEIL));
-    fragColor = vec4(
-        stellataTonemapUndithered(perPixel, whitePoint, highlightDesat), 1.0);
+    fragColor = vec4(stellataTonemapUndithered(
+        stellataGainedColumn(column, exposure, magPerArcsec2, omegaPxArcsec2),
+        whitePoint, highlightDesat), 1.0);
 }
 
 #endif

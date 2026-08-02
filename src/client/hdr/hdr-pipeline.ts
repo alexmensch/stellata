@@ -168,8 +168,10 @@ export class HdrPipeline {
     // (exposure/reduction/README.md § The chain).
     this.rt.texture[1].format = THREE.RGFormat;
     this.rt.texture[1].colorSpace = THREE.LinearSRGBColorSpace;
-    // Linear: at factor 1 the resolve samples this attachment directly and
-    // its taps have to interpolate the same way the downsampled path's do.
+    // Linear to match the downsample target, though inert at factor 1: the
+    // resolve reads this attachment directly there, at integer offsets from
+    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+    // nearest agree. It stops being inert the moment a tap is off-centre.
     this.rt.texture[2].minFilter = THREE.LinearFilter;
     this.rt.texture[2].magFilter = THREE.LinearFilter;
     this.rt.texture[2].colorSpace = THREE.LinearSRGBColorSpace;
