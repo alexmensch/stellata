@@ -18,12 +18,12 @@ switches.
 src/client/hdr/
   hdr-pipeline.ts            HdrPipeline — target lifecycle (lazy alloc),
     (+ test)                 bind/resolve, chart bypass, float-support
-                             detection, both ShaderChunk registrations,
-                             HDR_DEFAULT_ENABLED, the emitter uniform
-                             seam (§ Unit), and the draw-buffer gate on
-                             attachments 1 and 2 (§ Three attachments).
-                             The class needs a live GL context, so the test
-                             pins only the ship gate (§ Ship gate).
+                             detection, every ShaderChunk registration, the
+                             emitter uniform seam (§ Unit), and the
+                             draw-buffer gate on attachments 1 and 2
+                             (§ Three attachments). The class needs a live GL
+                             context, so the test pins only that nothing can
+                             switch the seam off (§ Ship gate).
   attachments/               The attachments past 0: the per-draw gate
                              every one of them goes through, and what may
                              write the statistic, in what unit — its own
@@ -253,16 +253,24 @@ materials anyway.
 blow out. That is why the operator lives in a chunk rather than inside the
 fullscreen shader, the same two-consumers strategy as the extinction
 prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
-Since the ship gate went live it is the fallback path plus the
-`hdr.setEnabled(false)` A/B, not the shipped default it was during H3–H5.
+Two things still reach it: this fallback, and **chart mode**, which is the
+reason the inline path cannot simply be deleted now that the seam has no
+switch.
 
-Calibration is identical on both paths for a point source — same `L`, same
-operator, same exposure, and the **peak matches exactly**. A *diffuse* source
-is the exception: there is no attachment 2 and no pass to convolve it, so the
-extended-source anchor is gone and both volumetric emitters revert to the
-pixel solid angle (`emission/README.md` § Extended sources). The band and the
-Local Group therefore read several magnitudes fainter on this path, by
-construction rather than by drift. What differs downstream of the operator:
+**This path is not a calibrated build, and that is why nothing can select
+it.** A point source is fine — same `L`, same operator, same exposure, and the
+**peak matches exactly**. A *diffuse* source is not: there is no attachment 2
+and no pass to convolve it, so the extended-source anchor is gone entirely and
+both volumetric emitters revert to the pixel solid angle
+(`emission/README.md` § Extended sources), which puts the band and the Local
+Group **several magnitudes faint**. There used to be a dev setter that parked
+the whole frame here; it was retired precisely because "the comparison path"
+and "a differently-calibrated scene" cannot be the same switch, and a release
+note describing it as what older hardware gets was describing a defect as a
+feature.
+
+Three further differences, all downstream of the operator and all minor
+against that one:
 
 - Additive accumulation happens on tone-mapped values, so dense star
   fields and the MW band over-brighten slightly where sources overlap.
@@ -274,25 +282,21 @@ construction rather than by drift. What differs downstream of the operator:
 - Per-channel-max discs blend post-curve (monotonic, so the silhouette
   is unchanged).
 
-Accepted: the result is approximately right rather than
-differently-calibrated.
+## Ship gate — the seam is the only path
 
-## Ship gate — the seam is live
+Every physical emitter carries luminance in the § Unit scale — stars (H3), the
+Milky Way (H4), the planet mesh / rings / airlight / reflected glare (H5), the
+Local Group glow — so the target is the path, and `supported` is the one thing
+that can take it away. There is no `HDR_DEFAULT_ENABLED` and no setter:
+`wantsTarget()` is `supported && !chart`, and `hdr-pipeline.test.ts` pins
+that shape so a third input has to be a deliberate edit.
 
-`HDR_DEFAULT_ENABLED` is **true**. Every physical emitter carries
-luminance in the § Unit scale — stars (H3), the Milky Way (H4), and the
-planet mesh / rings / airlight / reflected glare (H5) — so the target is
-the default path and the operator runs once, at the resolve.
-
-- `hdr-pipeline.test.ts` pins the value, so changing it stays deliberate.
-- `stellata.hdr.setEnabled(false)` is the whole-frame A/B (§ Dev switches).
-  It is no longer "what users get" — it is the comparison path.
 - **The target allocates lazily**, on first `bind()` that wants it — a
-  full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
-  24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
-  large display. It allocates on the first frame in practice; keep the
-  laziness anyway, because `hdr.setEnabled(false)` and chart mode both want
-  a build that never pays for it.
+  full drawing-buffer RGBA16F plus its RG16F statistic attachment, its
+  second RGBA16F and its 24-bit depth attachment is a couple of hundred MB
+  of VRAM at 2x DPR on a large display. It allocates on the first frame in
+  practice; keep the laziness anyway, because chart mode and an unsupported
+  context both want a build that never pays for it.
 - **Every emitter is on the scale.** The Local Group emission pass was
   the last one outside it; it takes the same
   `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
@@ -301,11 +305,6 @@ the default path and the operator runs once, at the resolve.
 
 ## Dev switches
 
-- `stellata.hdr.setEnabled(true/false)` — the seam itself. False is the
-  pre-HDR compositing path entirely: no target, no tone-map, chrome back
-  to authored colours, every emitter on its inline operator. It is also
-  the path hardware without a float-renderable target takes. **This is
-  the full A/B.**
 - `stellata.hdr.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through, isolating the target itself (depth,
   alpha, blend precision, pass order) from the operator.
@@ -332,22 +331,18 @@ colour space, not the resolve — so with the operator parked,
 `LineBasicMaterial` / `LineMaterial` chrome (grids, orbit paths, the
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
-encode. Custom-shader chrome *is* exact. Use `hdr.setEnabled(false)` when
-you want a whole-frame comparison.
+encode. Custom-shader chrome *is* exact. There is no whole-frame comparison
+to fall back on any more — § Fallback says why the one that existed was
+worse than nothing.
 
-**What the A/B is and is not for.** It compares *compositing*, not
-calibration (§ Fallback) — accumulation and blend-order only, and now wider
-for the band (`docs/science-hdr-pipeline.md` § 2, stacked emitters).
+**Chrome line work reads brighter through the seam than authored, and that
+is not a bug.** § Chrome's inverse mapping is exact only for *a lone
+full-alpha fragment over black*, and line work is neither — antialiased edges
+are partial-alpha and lines cross each other — so the round trip lands on the
+bright side. The shift on thin line work is plainly visible, nothing
+downstream depends on it, and no resolve setting fixes it.
 
-**Expected on the A/B, and not a bug: chrome line work reads visibly
-brighter with the seam ON.** § Chrome's inverse mapping is exact only for
-*a lone full-alpha fragment over black*, and line work is neither —
-antialiased edges are partial-alpha and lines cross each other — so the
-round trip lands on the bright side. The shift on thin line work is
-plainly visible, nothing downstream depends on it, and no resolve setting
-fixes it.
-
-Neither switch is bit-identical to a pre-HDR build, for two further
+Pass-through is not bit-identical to a pre-HDR build, for two further
 reasons worth knowing before chasing a diff:
 
 - Blending intermediates no longer round-trip through 8 bits, so faint

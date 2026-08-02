@@ -34,14 +34,16 @@ import {
   extendedEmitterChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_summation'] = summationChunk;
 
-/** Ship gate for the HDR epic — **live**. Every emitter — stars, the
- *  Milky Way, the planet layers and the Local Group glow — emits physical
- *  luminance, so the target is the default path and the operator runs
- *  once at the resolve.
- *  `stellata.hdr.setEnabled(false)` is the A/B: it parks every emitter on
- *  its inline operator and returns chrome to authored colours
- *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value. */
-export const HDR_DEFAULT_ENABLED = true;
+/** Whether the target is even allocatable. The seam has no switch of its own
+ *  any more (README.md § Fallback), so the only reason to render without it is
+ *  a context that cannot: no `EXT_color_buffer_float` and no
+ *  `EXT_color_buffer_half_float`, which the constructor checks.
+ *
+ *  A build with `supported` false is NOT a calibrated build. Every point
+ *  source lands on its own peak, but a diffuse one loses attachment 2 and the
+ *  convolution with it, so the band and the Local Group read several
+ *  magnitudes faint. That is why this is a hardware verdict rather than a
+ *  setting anybody can reach. */
 
 /** The uniforms every physical emitter binds **by reference**, so the
  *  seam's state reaches all of them with one write. `uHdrTarget` is the
@@ -124,7 +126,6 @@ export class HdrPipeline {
   private material: THREE.RawShaderMaterial | null = null;
   private geometry: THREE.BufferGeometry | null = null;
   private summation: SummationPass | null = null;
-  private enabled = HDR_DEFAULT_ENABLED;
   private tonemapOn = true;
   private chart = false;
   private drMag = DR_MAG;
@@ -147,7 +148,7 @@ export class HdrPipeline {
    *  attachment, a second RGBA16F for the diffuse emitters
    *  (`summation/README.md`) and a 24-bit depth attachment — a few hundred MB
    *  of VRAM at 2x DPR on a large display. Allocate it on first use so a
-   *  build shipping with HDR_DEFAULT_ENABLED false costs nothing. */
+   *  context that cannot render into it never pays for one. */
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
     if (!this.supported) return false;
@@ -317,11 +318,6 @@ export class HdrPipeline {
     this.syncMode();
   }
 
-  setEnabled(on: boolean): void {
-    this.enabled = on;
-    this.syncMode();
-  }
-
   /**
    * Magnitudes of range from the threshold floor to full white — the
    * operator's shape, as a dev knob (README.md § Dev switches). Moves the
@@ -365,7 +361,7 @@ export class HdrPipeline {
   /** Whether the scene should render into the target this frame. Does not
    *  imply the target exists yet — `bind()` allocates on demand. */
   private wantsTarget(): boolean {
-    return this.supported && this.enabled && !this.chart;
+    return this.supported && !this.chart;
   }
 
   /** Fan the seam's state out to the two things outside this class that
@@ -403,7 +399,6 @@ export class HdrPipeline {
     this.material = null;
     this.geometry = null;
     this.summation = null;
-    this.enabled = HDR_DEFAULT_ENABLED;
     this.tonemapOn = true;
     this.chart = false;
     this.drMag = DR_MAG;

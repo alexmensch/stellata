@@ -130,8 +130,8 @@ Two further things the gate has to get right:
 
 - **It is unbound whenever no MRT framebuffer is current.** `drawBuffers`
   on the default framebuffer accepts only `BACK` or `NONE`, so an emitter
-  hook firing on the canvas path — chart mode, the float-RT fallback, the
-  `hdr.setEnabled(false)` A/B — would be a GL error rather than a no-op.
+  hook firing on the canvas path — chart mode, or a context with no
+  float-renderable buffer — would be a GL error rather than a no-op.
 - **The resting state is restored on the way out of every draw**, so a
   mid-frame re-bind of the target cannot leave the gate open behind it.
 

@@ -262,7 +262,7 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
 - **Off-target there is no attachment and no pass**, so the anchor goes away
   for both emitters rather than one keeping a private fallback — the
   concession *is* the pass. That is the float-RT fallback (§ 6) and the
-  `setHdrEnabled(false)` A/B, where the band returns to its per-pixel level.
+  chart mode, where the band returns to its per-pixel level.
 - **Everything that dims the emission has to move with it.** Giving the
   diffuse emitters their own attachment takes them out of the chain that
   anything drawn in front of them composites against, and the depth-test
@@ -397,9 +397,9 @@ resolve to the same value either way. This has always been true of the
 Milky Way band, whose disc and bulge proxies overlap toward the Galactic
 centre, and of M31's two components — but § 1's summation gain raised the
 band's per-fragment `L` about 12×, which moves those fragments to a
-steeper part of the curve and widens the gap. It is a property of the
-`setHdrEnabled(false)` A/B and the no-float-RT fallback, not of the
-shipped path, where the operator runs once at the resolve.
+steeper part of the curve and widens the gap. It is a property of chart mode
+and the no-float-RT fallback, not of the shipped path, where the operator
+runs once at the resolve.
 
 ## 3. Exposure model — instrument, adaptation, and the EV trim
 
@@ -1134,10 +1134,20 @@ Calibration is identical (same `L`, same operator, same exposure); what
 degrades is compositing: additive accumulation happens on tone-mapped
 values, so dense star fields and the MW band over-brighten slightly
 where sources overlap, and per-channel-max discs blend post-curve.
-Accepted — the fallback population is ~zero on real hardware, and the
-result is approximately right rather than differently-calibrated.
-A `stellata.hdr.setEnabled(false)` dev switch parks the renderer on the
-fallback path for A/B, mirroring `setExtinctionPrepassEnabled`.
+Accepted — the fallback population is ~zero on real hardware, and for a
+point source the result is approximately right rather than
+differently-calibrated.
+
+**§ 1's convolution ended that symmetry for diffuse sources, and took the
+dev switch with it.** Off-target there is no attachment 2 and no pass, so
+both volumetric emitters lose the extended-source anchor and read several
+magnitudes faint. A `stellata.hdr.setEnabled(false)` switch used to park the
+whole frame here for A/B, mirroring `setExtinctionPrepassEnabled`; it is
+**retired**, because a path that changes the calibration is not a
+compositing comparison, and shipping it as a setting invited release notes
+describing a mis-calibrated scene as what older hardware gets. What remains
+is a hardware verdict (`supported`) and chart mode, neither of which anyone
+selects.
 
 The fallback is why the operator must live in the shared chunk from H2
 day one — the fullscreen pass and the inline path can never drift.
@@ -1166,18 +1176,21 @@ day one — the fullscreen pass and the inline path can never drift.
   `RawShaderMaterial` and the blackbody LUT loads `NoColorSpace`), so
   today's authored values are already display-encoded and the pass's
   encode re-encodes them. The two effects are large and opposed.
-- **The seam shipped dormant through H3–H5 and is now live.**
-  `HDR_DEFAULT_ENABLED` (in `src/client/hdr/hdr-pipeline.ts`) was false
-  while emitters were still on their old encodings — enabling it earlier
-  would only have traded a correct-looking scene for a mis-calibrated
-  one — and H5 flipped it with the last conversion. The render target
-  allocates lazily, which is what made the dormant period cost no VRAM
-  and still serves `hdr.setEnabled(false)` and chart mode.
-  **Consequence that outlives the flip:** with the seam off, an emitter's
-  physical luminance reaches the canvas with no operator, so the inline
-  `stellata_tonemap` fallback (§ 6) is not exotic-hardware insurance. It
-  was the default path throughout H3–H5 and remains the A/B and the
-  no-float-RT path, so every emitter keeps both paths working.
+- **The seam shipped dormant through H3–H5, went live, and now has no
+  switch at all.** `HDR_DEFAULT_ENABLED` was false while emitters were
+  still on their old encodings — enabling it earlier would only have traded
+  a correct-looking scene for a mis-calibrated one — and H5 flipped it with
+  the last conversion. The constant and its setter are since **removed**
+  (§ 6): once the diffuse convolution made the off-target path
+  differently-calibrated rather than approximately right, leaving a way to
+  select it was leaving a way to ship a wrong scene. `wantsTarget()` is
+  `supported && !chart`. The render target still allocates lazily, which is
+  what made the dormant period cost no VRAM and still serves chart mode and
+  an unsupported context.
+  **Consequence that outlives all of it:** the inline `stellata_tonemap`
+  fallback (§ 6) cannot be deleted, because **chart mode** runs on it. It
+  was the default path throughout H3–H5 and is still the no-float-RT path,
+  so every emitter keeps both paths compiling.
   The one emitter still outside the scale is the shelved Local Group
   emission pass (stellata-gxx.8) — convert before un-shelving.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
