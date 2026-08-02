@@ -100,7 +100,7 @@ construction and lets both volumetric emitters take the same anchor.
 `../summation/README.md` owns that pass; the opt-out this used to carry (the
 Local Group passing `Ω_px` twice, 2.695 mag under past 3.6′ to avoid 3.95 at
 M31's nucleus) is retired with it. Statistic: always `Ω_px`, always
-unconvolved (`../statistic/README.md`).
+unconvolved (`../attachments/README.md`).
 
 Everything after the gain is identical for every volumetric emitter, so
 that chunk owns it: both gains, the clamp at `LUMA_CEIL`, every attachment,

@@ -24,10 +24,10 @@ src/client/hdr/
                              attachments 1 and 2 (§ Three attachments).
                              The class needs a live GL context, so the test
                              pins only the ship gate (§ Ship gate).
-  statistic/                 The target's second attachment: what may
-                             write it, in what unit, and the per-draw gate
-                             every non-default attachment goes through —
-                             its own README.
+  attachments/               The attachments past 0: the per-draw gate
+                             every one of them goes through, and what may
+                             write the statistic, in what unit — its own
+                             README.
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and inline by each
                              emitting shader when the target isn't bound.
@@ -113,7 +113,7 @@ display value gained by the eye's summation area but not yet averaged over
 it, which is what the resolve does (`summation/README.md`). Both extra
 attachments are gated per draw, so nothing reaches either by accident — the
 gate, the texel rule, the blend contract and the residuals are
-**`statistic/README.md`**; the reduction itself is
+**`attachments/README.md`**; the reduction itself is
 `exposure/reduction/README.md`.
 
 **A layer that operates on light already in the target has to name the

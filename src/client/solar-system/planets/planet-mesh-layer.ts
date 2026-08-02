@@ -46,7 +46,7 @@ import {
   atmosphereParamsOf,
 } from '../atmosphere/atmosphere-scattering-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
+import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 
 // Splice the shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — into both the mesh disc and the shell

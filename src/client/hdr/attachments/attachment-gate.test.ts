@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  bindStatisticGate,
+  bindAttachmentGate,
   markAbsorber,
   markDiffuseEmitter,
   markStatisticEmitter,
-} from './statistic-attachment';
+} from './attachment-gate';
 
 /** The hooks take three's full render-callback signature and ignore all of
  *  it; the test only ever needs to fire them. */
@@ -22,11 +22,11 @@ function trace(): { log: string[]; bind: () => void } {
   return {
     log,
     bind: () =>
-      bindStatisticGate((a) => log.push(`open:${a}`), () => log.push('close')),
+      bindAttachmentGate((a) => log.push(`open:${a}`), () => log.push('close')),
   };
 }
 
-afterEach(() => bindStatisticGate(null, null));
+afterEach(() => bindAttachmentGate(null, null));
 
 describe('markStatisticEmitter', () => {
   it('opens the gate before the draw and shuts it after', () => {
@@ -131,7 +131,7 @@ describe('an unbound gate', () => {
     const mesh = new THREE.Object3D();
     markStatisticEmitter(mesh);
     draw(mesh);
-    bindStatisticGate(null, null);
+    bindAttachmentGate(null, null);
     draw(mesh);
     expect(log).toEqual(['open:statistic', 'close']);
   });

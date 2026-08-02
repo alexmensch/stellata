@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
-import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
+import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 
 export const MIRROR_CAPACITY = 8;
 

@@ -82,7 +82,7 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
  *  integral `fluxIntegral * D^2` (perceptualDiscFluxIntegral) makes the
  *  integral return stellataLuminanceForMag instead. Clamped like the display
  *  peak: a clamped read is a lower bound the adaptation loop closes from
- *  above. See statistic/README.md § The unit. */
+ *  above. See attachments/README.md § The unit. */
 float stellataKernelFluxPeak(
     float exposure,
     float appMag,

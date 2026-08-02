@@ -96,7 +96,7 @@ tone-map's `DR_MAG`, which is the real lever (`../hdr/README.md`
 **The multiplier stayed where those two went, because it is
 adaptation-neutral.** The exposure statistic divides a point source's flux
 channel by the kernel's own area integral `Φ(n)·D²`
-(`../hdr/statistic/README.md` § The unit), so moving K cannot move the
+(`../hdr/attachments/README.md` § The unit), so moving K cannot move the
 exposure cut — it buys legibility against how crowded a dense field looks
 and nothing else. That is what makes it a safe taste axis to keep, and
 `sizeMin`/`sizeMax` are now derived-only, with `recomputeStarPxSizes` as

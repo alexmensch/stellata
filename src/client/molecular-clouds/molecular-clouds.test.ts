@@ -6,7 +6,7 @@ import { MolecularClouds, renderedCloudSizePx } from './molecular-clouds';
 import type { Cloud, CloudCatalog } from './cloud-loader';
 import type { CloudSurface } from './cloud-surfaces-loader';
 import { makeMockCloud, makeMockCatalog } from './cloud-mock';
-import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
+import { bindAttachmentGate } from '../hdr/attachments/attachment-gate';
 import {
   DEFAULT_FACE_ON_FLOOR,
   DEFAULT_FRESNEL_POWER,
@@ -116,7 +116,7 @@ describe('MolecularClouds / absorption material contract', () => {
   // either alone is silent.
   it('opens the absorption gate around every absorption draw', () => {
     const log: string[] = [];
-    bindStatisticGate((a) => log.push(`open:${a}`), () => log.push('close'));
+    bindAttachmentGate((a) => log.push(`open:${a}`), () => log.push('close'));
     try {
       const c = new MolecularClouds(makeCatalog());
       for (const m of absorptionGroup(c).children) {
@@ -124,7 +124,7 @@ describe('MolecularClouds / absorption material contract', () => {
         m.onAfterRender(...NO_RENDER_ARGS);
       }
     } finally {
-      bindStatisticGate(null, null);
+      bindAttachmentGate(null, null);
     }
     expect(log).toEqual(['open:absorption', 'close', 'open:absorption', 'close']);
   });

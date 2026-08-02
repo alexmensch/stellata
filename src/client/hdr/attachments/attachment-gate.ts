@@ -1,5 +1,5 @@
-// The per-draw gate on the target's non-default attachments. See README.md
-// § The gate.
+// The per-draw gate on the target's attachments past 0 — one mark per role.
+// See README.md § The gate.
 
 import type * as THREE from 'three';
 
@@ -16,7 +16,7 @@ let closeGate: (() => void) | null = null;
  *  marked mesh binds to them through the three `mark*` helpers. Null while
  *  no target exists, which is what makes the seam inert under the fallback
  *  path and in chart mode. */
-export function bindStatisticGate(
+export function bindAttachmentGate(
   open: ((attachments: GatedAttachments) => void) | null,
   close: (() => void) | null,
 ): void {

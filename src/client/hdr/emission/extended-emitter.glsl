@@ -37,7 +37,7 @@ void stellataEmitNothing(out vec4 fragColor, out vec4 statistic, out vec4 diffus
  * concession is not light, and the adaptation model reads retinal
  * illuminance. Extended source, so flux and peak are the same quantity and
  * alpha is 1: the additive blend must SUM the statistic, not scale it a
- * second time (../statistic/README.md § One blend equation, two
+ * second time (../attachments/README.md § One blend equation, two
  * attachments).
  *
  * Off-target there is no attachment 2 and no pass to run the convolution, so

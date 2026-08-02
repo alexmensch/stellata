@@ -25,7 +25,7 @@ import {
 import { LocalGroupEmission } from './local-group-emission';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
-import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
+import { bindAttachmentGate } from '../hdr/attachments/attachment-gate';
 import { relativeLuminance } from '../hdr/tonemap-pure';
 
 const SMC_EMISSION: LgEmission = {
@@ -506,14 +506,14 @@ describe('LocalGroupEmission controller', () => {
   it('marks every pass a physical emitter so it reaches the statistic attachment', () => {
     const layer = new LocalGroupEmission(objects, deps);
     let opened = 0;
-    bindStatisticGate(() => { opened += 1; }, () => {});
+    bindAttachmentGate(() => { opened += 1; }, () => {});
     for (const child of layer.group.children) {
       child.onBeforeRender(
         null as never, null as never, null as never,
         null as never, null as never, null as never,
       );
     }
-    bindStatisticGate(null, null);
+    bindAttachmentGate(null, null);
     expect(opened).toBe(layer.group.children.length);
     layer.dispose();
   });

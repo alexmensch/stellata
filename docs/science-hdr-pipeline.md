@@ -276,7 +276,7 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
     lands **before** the convolution, which is the physical order: light is
     absorbed in interstellar space, and the eye sums what survives. It is the
     only absorber in the scene; a future one takes the same mark
-    (`src/client/hdr/statistic/README.md` § The gate).
+    (`src/client/hdr/attachments/README.md` § The gate).
   - *The canvas alpha.* The resolve carried it through from attachment 0,
     which a diffuse fragment now leaves at the clear's zero while its rgb is
     the entire band. A premultiplied canvas composites `rgb > a` as nothing,
@@ -289,7 +289,7 @@ illuminance, and inflating a band pixel 12× there would let the display
 concession drive the exposure cut. A normalised convolution conserves total
 flux anyway, so the mean the reduction takes would barely move — the reason
 to keep it out is the unit, not the size of the error.
-`src/client/hdr/statistic/README.md` carries the headroom measurement.
+`src/client/hdr/attachments/README.md` carries the headroom measurement.
 
 ### Colour — linear chromaticity, luminance-normalized
 
@@ -510,7 +510,7 @@ Ring annuli, the skylight term and every future emitter had the same hole.
 The frame already contains all of it. Mechanism, units, latency and the
 clamp argument are `src/client/hdr/exposure/reduction/README.md`; what
 writes the measured attachment, and why the display target cannot be
-measured directly, is `src/client/hdr/statistic/README.md`. Four
+measured directly, is `src/client/hdr/attachments/README.md`. Four
 properties of the statistic itself:
 
 - **The eclipse dim needs no separate slot.** It is light the body never
@@ -692,7 +692,7 @@ display target:
 So attachment 1 is RG16F, written by physical emitters only — flux-correct
 luminance in R for the mean, peak-correct in G for the max — and gated per
 draw so chrome is excluded by construction rather than by patching every
-chrome call site. `src/client/hdr/statistic/README.md` is the contract.
+chrome call site. `src/client/hdr/attachments/README.md` is the contract.
 
 **The diffuse-field constant retires with the walk.** Its two rows were
 the frame's share of the threshold-star population and the Milky Way band,

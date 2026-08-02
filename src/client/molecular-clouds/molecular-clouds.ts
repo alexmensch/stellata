@@ -23,7 +23,7 @@ import {
   SHELL_RIM_ALPHA_LIMB,
 } from '../fresnel-shell/fresnel-shell';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
-import { markAbsorber } from '../hdr/statistic/statistic-attachment';
+import { markAbsorber } from '../hdr/attachments/attachment-gate';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
 // (1.03) to cover tessellation sag — its raymarch clips to the analytic

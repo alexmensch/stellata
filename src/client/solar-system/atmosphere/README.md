@@ -96,7 +96,7 @@ further than the geometric one; the *lit* one is exact and does not.
 
 Both surfaces also write the HDR target's **statistic attachment**, so the
 airlight drives the exposure like any other light
-(`../../hdr/statistic/README.md`). It did not always: the adaptation
+(`../../hdr/attachments/README.md`). It did not always: the adaptation
 statistic used to walk a per-source model carrying reflected host light
 alone, and at `α → 180°` — exactly where the Mie forward peak paints the
 Cassini ring this model was built for — the two disagreed by ~11

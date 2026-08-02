@@ -393,7 +393,7 @@ meshes.
 
 Both meshes draw into the HDR target's **diffuse** attachment, and into the
 statistic attachment where the band's surface brightness is both the flux and
-the peak channel (`../hdr/statistic/README.md`). Neither writes attachment 0
+the peak channel (`../hdr/attachments/README.md`). Neither writes attachment 0
 on-target: the resolve owns that pixel once it has averaged the diffuse
 attachment over the summation patch. Off-target both apply the operator
 themselves over the pixel solid angle (`uHdrTarget = 0`, the float-RT

@@ -1,23 +1,23 @@
-# The statistic attachment — what the exposure is allowed to see
+# The target's extra attachments — who may write them
 
-The HDR target's second colour attachment, and the one call that lets a
-mesh write into it. `../README.md` owns the target's lifecycle;
-`../exposure/reduction/README.md` reduces what lands here;
-`../exposure/README.md` owns what the two reduced numbers then do.
+The HDR target's attachments past 0, and the per-draw gate deciding which of
+them a given mesh reaches. `../README.md` owns the target's lifecycle;
+attachment 1's unit and residuals are here; attachment 2's contract is
+`../summation/README.md`'s; `../exposure/reduction/README.md` reduces
+attachment 1 and `../exposure/README.md` owns what the two reduced numbers
+then do.
 
 ```
-src/client/hdr/statistic/
-  statistic-attachment.ts   The per-draw gate on every attachment past 0 —
-    (+ test)                markStatisticEmitter for a point emitter,
-                            markDiffuseEmitter for a volumetric one,
-                            markAbsorber for a layer that dims them — and
-                            the seam HdrPipeline drives it through
-                            (§ The gate).
+src/client/hdr/attachments/
+  attachment-gate.ts        The per-draw gate on every attachment past 0 —
+    (+ test)                one mark per role (§ The gate) plus the seam
+                            HdrPipeline drives it through.
 ```
 
-The gate lives here because attachment 1 is the reason it exists: chrome
-must not reach the statistic. It also admits attachment 2, whose contract is
-`../summation/README.md`'s.
+**The mark a layer calls is its whole declaration of how it stands to the
+light already in the target**, and nothing else may touch `drawBuffers`.
+§ The gate is that table: a new layer picks a row, and a layer that fits no
+row adds one there rather than reaching for the GL call itself.
 
 ## Why attachment 0 cannot serve
 

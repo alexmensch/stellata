@@ -401,7 +401,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // does write cannot provoke an adaptation cut. It cannot, by 10 stops —
   // and the margin is measured on the Ω_px value the statistic actually
   // carries, not on the 12x-larger level the band displays at
-  // (statistic/README.md § The unit).
+  // (attachments/README.md § The unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,

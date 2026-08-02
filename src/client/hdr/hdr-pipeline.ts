@@ -24,9 +24,9 @@ import {
   setChromeWhitePoint,
 } from './chrome/chrome-colour';
 import {
-  bindStatisticGate,
+  bindAttachmentGate,
   type GatedAttachments,
-} from './statistic/statistic-attachment';
+} from './attachments/attachment-gate';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
@@ -257,7 +257,7 @@ export class HdrPipeline {
    *  writes zero there and the resolve owns that pixel, so masking makes the
    *  contract explicit rather than relying on an additive blend of zero. An
    *  absorber takes both colour attachments and neither emits nor measures:
-   *  `statistic/README.md` § The gate is the table. */
+   *  `attachments/README.md` § The gate is the table. */
   private openEmitterGate = (attachments: GatedAttachments): void => {
     const gl = this.gl;
     switch (attachments) {
@@ -378,7 +378,7 @@ export class HdrPipeline {
     // default framebuffer accepts only BACK or NONE, so an emitter's hook
     // firing on the canvas path would be a GL error, not a no-op.
     const gateLive = targetActive && this.rt !== null;
-    bindStatisticGate(
+    bindAttachmentGate(
       gateLive ? this.openEmitterGate : null,
       gateLive ? this.closeEmitterGate : null,
     );

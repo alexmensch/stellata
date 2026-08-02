@@ -85,7 +85,7 @@ to nothing.
 
 **The statistic never sees any of this.** Attachment 1 stays on `Ω_px` in
 both channels, unblurred: the adaptation model reads retinal illuminance,
-not the display concession (`../statistic/README.md`).
+not the display concession (`../attachments/README.md`).
 
 ## The kernel — a flat disc, and it has to be
 

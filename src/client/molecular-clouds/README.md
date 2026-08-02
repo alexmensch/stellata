@@ -107,7 +107,7 @@ be extincted.
 **Order is necessary and no longer sufficient**, because the band and the
 LG glow write the HDR target's *third* attachment now, not the one the
 absorption draw would reach by default. The mesh is `markAbsorber`ed
-(`../hdr/statistic/README.md` § The gate) and the shader writes its
+(`../hdr/attachments/README.md` § The gate) and the shader writes its
 alpha-only texel to `location = 2` as well as `location = 0`; one blend
 equation covers both, so the multiply is identical on each. Drop either
 half and the clouds keep drawing, keep sorting correctly, and extinct

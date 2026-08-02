@@ -251,7 +251,7 @@ lockstep). Worst measured deviation across 5 objects × k ∈ {1.5, 4, 20}:
 8e-6 mag.
 
 **Both passes write the statistic attachment**
-(`../hdr/statistic/README.md`): an extended source's emission is already
+(`../hdr/attachments/README.md`): an extended source's emission is already
 true surface brightness, so its flux and peak channels are the same
 quantity, and both stay on `Ω_px` and unconvolved. Off-target
 (`uHdrTarget = 0`) there is no diffuse attachment and no convolution, so each

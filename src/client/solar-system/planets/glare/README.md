@@ -52,7 +52,7 @@ That occlusion is the local depth pass; the old core mask is gone.
 
 The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
-channel (`../../../hdr/statistic/README.md`).
+channel (`../../../hdr/attachments/README.md`).
 
 **There is no gain on the peak, and adding one would break the invariant
 above.** A `uGlareGain` debug multiplier rode both channels until the

@@ -44,4 +44,4 @@ statistic texel like any other alpha-blended emitter, at the strip's
 **face-on** opacity: a rasterised fragment carries no opening angle, so
 the slant-path enhancement the source walk applied analytically
 (`T = (1 − α)^(1/|sin B|)`, opaque edge-on) is gone
-(`../../../hdr/statistic/README.md` § Known residuals).
+(`../../../hdr/attachments/README.md` § Known residuals).
