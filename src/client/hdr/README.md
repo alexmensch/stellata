@@ -384,10 +384,11 @@ convolution's taps, since `resolve()` runs them.
 
 `DR_MAG` and the desaturation strength are live **dev-console** setters
 (§ Dev switches); H8 puts them on the panel, alongside `L_THRESH` and the
-extended-source threshold, both still baked. `DR_MAG` is the faint-end
-lever H7 tunes against the eso0932a panorama — it moves the star field and
-the Milky Way band together, which is the point of it, and it is no longer
-the *only* faint-end lever now that the two thresholds are separable.
+extended-source threshold, both still baked. `DR_MAG` is validated at 7.5
+against the eso0932a panorama (`docs/science-hdr-pipeline.md` § 8) — it
+moves the star field and the Milky Way band together, which is the point
+of it, and it is no longer the *only* faint-end lever now that the two
+thresholds are separable.
 
 No emitter is outside the scale, and both volumetric emitters share one
 zero point (`SB_ZERO_POINT`) and one ρ₀ solve

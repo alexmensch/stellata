@@ -8,7 +8,8 @@ axes align with NGP. Each fragment ray-sphere-intersects its mesh in
 mesh-local frame, then marches log-distributed steps from front-face entry
 (or the camera, if it is inside) to the back-face fragment, accumulating
 emission with running dust extinction; the two meshes add via additive
-blending. Default-on; URL `mw=0` disables. Hidden in chart mode.
+blending. Default-on, no FPS gate; URL `mw=0` or the panel checkbox
+disables. Hidden in chart mode.
 
 ## Files
 
@@ -228,6 +229,7 @@ outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
 ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
 than M31 — the cross-layer symptom `stellata-xypg` opened on. The cost is
 at the pole: diffuse + catalogue reads 23.07 against Leinert's 23.83.
+The eso0932a panorama sides with the total (`docs/science-hdr-pipeline.md` § 8).
 
 #### The gradient this produces, and what it reads on screen
 
@@ -431,8 +433,6 @@ because `applyMilkywayEnabled` permits either the band or the isobar
 
 Warp keeps the layer visible in dark mode — the band reorienting as
 the camera flies past the GC is the realism payoff.
-
-No FPS gate. Toggle via the panel checkbox or `mw=0` URL.
 
 ## Dev levers
 
