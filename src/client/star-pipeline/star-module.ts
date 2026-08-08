@@ -23,6 +23,7 @@ import type {
 } from '../kinds/kind-module';
 import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
+import { catalogShard, StarShardTable } from './shards/star-shards-pure';
 import { tToJDE } from '../solar-system/time/time';
 import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
@@ -49,6 +50,9 @@ export interface StarModuleRuntime {
 export interface StarKindModule extends ObjectKindModule<'star'> {
   /** The decoded catalog. Valid after `load`. */
   readonly catalog: Catalog;
+  /** The kind's population shards mapped into flat Target.idx space —
+   *  the catalog is shard 0. Valid after `load`. */
+  readonly shardTable: StarShardTable;
   /** The raw search-index rows. Valid after `load`. */
   readonly searchIndex: SearchEntry[];
   /** Star idx → display label, derived from the search index at `load`.
@@ -64,6 +68,7 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
 
 export function createStarKindModule(): StarKindModule {
   let catalog: Catalog | null = null;
+  let shardTable: StarShardTable | null = null;
   let searchIndex: SearchEntry[] | null = null;
   let ctx: KindContext | null = null;
   let runtime: StarModuleRuntime | null = null;
@@ -93,6 +98,10 @@ export function createStarKindModule(): StarKindModule {
       if (!catalog) throw new Error('star module read before load');
       return catalog;
     },
+    get shardTable(): StarShardTable {
+      if (!shardTable) throw new Error('star module read before load');
+      return shardTable;
+    },
     get searchIndex(): SearchEntry[] {
       if (!searchIndex) throw new Error('star module read before load');
       return searchIndex;
@@ -120,6 +129,7 @@ export function createStarKindModule(): StarKindModule {
       starLabels = buildStarLabels(catalog, searchIndex);
       spectralMap = buildSpectralMap(searchIndex);
       searchEntryById = new Map(searchIndex.map((e) => [e.i, e]));
+      shardTable = new StarShardTable([catalogShard(catalog)]);
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {
@@ -212,7 +222,7 @@ export function createStarKindModule(): StarKindModule {
 
     displayName: (idx) => (catalog ? resolveStarName(nameCtx(), idx) : ''),
 
-    sids: () => catalog?.sid ?? null,
+    sids: () => shardTable?.sids() ?? null,
 
     setFocalHidden: (idx) => {
       if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx;
