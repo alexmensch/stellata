@@ -3,9 +3,14 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import type { KindContext } from '../../kinds/kind-module';
-import { makeKindContext } from '../../kinds/kind-context-mock';
+import {
+  makeKindContext,
+  makeMockHdrEmitterUniforms,
+  MOCK_FOV_Y_RAD,
+  MOCK_VIEWPORT_H,
+  MOCK_VIEWPORT_W,
+} from '../../kinds/kind-context-mock';
 import { buildStarSharedUniforms } from '../../star-pipeline/frame/star-shared-uniforms';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { SOL_BODIES } from '../planet-system';
@@ -17,18 +22,14 @@ const MARS = SOL_BODIES.findIndex((b) => b.name === 'Mars');
 const EUROPA = SOL_BODIES.findIndex((b) => b.name === 'Europa');
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+  // Same viewport / FOV as the mock's camera and canvas rect, so pick
+  // projections and screen-centre coordinates agree across both maps.
   const sharedUniforms = buildStarSharedUniforms({
     pixelRatio: 1,
-    fovYRad: (50 * Math.PI) / 180,
-    viewportW: 800,
-    viewportH: 600,
-    hdr: {
-      uExposure: { value: 1 },
-      uOmegaPxArcsec2: { value: 1 },
-      uWhitePoint: { value: 1 },
-      uHighlightDesat: { value: 0 },
-      uHdrTarget: { value: 0 },
-    } as HdrEmitterUniforms,
+    fovYRad: MOCK_FOV_Y_RAD,
+    viewportW: MOCK_VIEWPORT_W,
+    viewportH: MOCK_VIEWPORT_H,
+    hdr: makeMockHdrEmitterUniforms(),
   });
   return makeKindContext({
     sharedUniforms,
