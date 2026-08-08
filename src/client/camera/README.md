@@ -144,6 +144,16 @@ Why each one exists, and who reads it:
 - **`AimController.isActive`** — the aim slerp alone; a focus change may
   interrupt an aim but not a warp.
 
+### Camera mode: read on `focus`, write on `observe`
+
+`stellata.focus.getCameraMode()` reads it; `stellata.observe.setMode()`
+writes it. The asymmetry is deliberate and load-bearing —
+`FocusController` owns the field (~20 unrelated read sites) while
+`ObserveTransition` owns the enter/exit FSM and writes through the
+`setCameraModeValue` dep callback, so it stays the only mode-switcher
+(`observe/README.md` § ObserveTransition kinds). Callers pair the two
+namespaces in one expression routinely; that is correct, not a smell.
+
 ### The claim-the-camera sequence
 
 Three sites run the same four-step sequence when a *new user action*
