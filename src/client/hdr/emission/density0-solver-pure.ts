@@ -14,7 +14,7 @@ export const ABSOLUTE_MAGNITUDE_DISTANCE_PC = 10;
 
 /** Gauss–Legendre nodes/weights on [-1, 1] (Newton on the Legendre
  *  recurrence). */
-export function gaussLegendre(n: number): { x: Float64Array; w: Float64Array } {
+function gaussLegendre(n: number): { x: Float64Array; w: Float64Array } {
   const x = new Float64Array(n);
   const w = new Float64Array(n);
   const m = (n + 1) >> 1;
@@ -42,8 +42,8 @@ export function gaussLegendre(n: number): { x: Float64Array; w: Float64Array } {
   return { x, w };
 }
 
-export const QUAD_RADIAL_NODES = 96;
-export const QUAD_POLAR_NODES = 48;
+const QUAD_RADIAL_NODES = 96;
+const QUAD_POLAR_NODES = 48;
 
 function mapToUnit(gl: { x: Float64Array; w: Float64Array }): {
   x: Float64Array;
@@ -87,6 +87,23 @@ export function integrateOverEllipsoid(
   }
   // 2π from azimuthal symmetry, ×2 from the z-reflection half-domain.
   return axes[0] * axes[1] * axes[2] * 4 * Math.PI * sum;
+}
+
+/** `integrateOverEllipsoid` for a profile stated in cylindrical (R, |z|) —
+ *  the disc and bulge families, whose envelopes are spheroids of
+ *  revolution. Taking the two semi-axes as scalars rather than a triple is
+ *  what makes both the axis swap and an unequal R-plane inexpressible: the
+ *  unit-ball mapping lives here instead of in each caller's closure. */
+export function integrateOverEllipsoidRz(
+  f: (rPc: number, absZPc: number) => number,
+  radiusPc: number,
+  halfThicknessPc: number,
+): number {
+  return integrateOverEllipsoid(
+    (r, cosTheta) =>
+      f(radiusPc * r * Math.sqrt(1 - cosTheta * cosTheta), halfThicknessPc * r * cosTheta),
+    [radiusPc, radiusPc, halfThicknessPc],
+  );
 }
 
 /** ρ₀ such that far-field flux at the catalog distance reproduces the

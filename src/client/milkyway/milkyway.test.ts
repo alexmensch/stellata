@@ -38,7 +38,7 @@ import {
   sightlineSurfaceBrightness,
 } from './milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
-import { integrateOverEllipsoid } from '../hdr/emission/density0-solver-pure';
+import { integrateOverEllipsoidRz } from '../hdr/emission/density0-solver-pure';
 import {
   BULGE_TO_TOTAL_V,
   GALAXY_TOTAL_ABSMAG_V,
@@ -279,13 +279,11 @@ describe('MilkyWay luminosity solve', () => {
   // visible only in the profile it redistributes.
   it('compensates the disc envelope truncation into ρ₀', () => {
     const loose = 20_000;
-    const untruncated = integrateOverEllipsoid(
-      (r, c) =>
-        Math.exp(
-          -(DISC_RADIUS_PC * r * Math.sqrt(1 - c * c) - R0_PC) /
-            DISC_SCALE_LENGTH_PC,
-        ) * discVerticalProfile(Math.abs(loose * r * c)),
-      [DISC_RADIUS_PC, DISC_RADIUS_PC, loose],
+    const untruncated = integrateOverEllipsoidRz(
+      (R, z) =>
+        Math.exp(-(R - R0_PC) / DISC_SCALE_LENGTH_PC) * discVerticalProfile(z),
+      DISC_RADIUS_PC,
+      loose,
     );
     expect(-2.5 * Math.log10(DISC_VOLUME_INTEGRAL / untruncated)).toBeCloseTo(
       0.0308,

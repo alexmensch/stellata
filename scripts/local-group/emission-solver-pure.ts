@@ -2,7 +2,10 @@
 // truncated-volume integrals each family solves through, over the shared
 // quadrature. docs/science-local-group.md § LG luminosity.
 
-import { integrateOverEllipsoid } from '../../src/client/hdr/emission/density0-solver-pure';
+import {
+  integrateOverEllipsoid,
+  integrateOverEllipsoidRz,
+} from '../../src/client/hdr/emission/density0-solver-pure';
 
 /** Ciotti & Bertin 1999 asymptotic b_n — the Sérsic shape constant
  *  placing half the projected light inside R_e. */
@@ -145,9 +148,9 @@ export function discGeometryIntegral(
   rEnvPc: number,
   zEnvPc: number,
 ): number {
-  return integrateOverEllipsoid((r, c) => {
-    const R = rEnvPc * r * Math.sqrt(1 - c * c);
-    const z = zEnvPc * r * c;
-    return Math.exp(-R / rdPc - z / zdPc);
-  }, [rEnvPc, rEnvPc, zEnvPc]);
+  return integrateOverEllipsoidRz(
+    (R, z) => Math.exp(-R / rdPc - z / zdPc),
+    rEnvPc,
+    zEnvPc,
+  );
 }

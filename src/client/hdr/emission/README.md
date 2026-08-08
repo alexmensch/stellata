@@ -109,7 +109,12 @@ two differently-tinted components without either hue moving flux.
 
 `integrateOverEllipsoid` takes `f(r, cosθ)` in unit-ball coordinates, with
 cosθ from the +C axis, and requires axisymmetry about local z plus z → −z
-symmetry. Every profile solved here has both.
+symmetry. Every profile solved here has both. **A profile stated in
+cylindrical (R, |z|) takes `integrateOverEllipsoidRz` instead** — it owns
+the unit-ball → physical mapping, and taking the two semi-axes as scalars
+is what makes an axis swap inexpressible rather than merely tested-for.
+Only the Sérsic family, whose density depends on the ellipsoidal radius
+alone, uses the raw form.
 
 ## Extended sources — two solid angles, one write tail
 

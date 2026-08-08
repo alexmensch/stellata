@@ -12,7 +12,7 @@ import {
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
-  integrateOverEllipsoid,
+  integrateOverEllipsoidRz,
   solveDensity0,
 } from '../hdr/emission/density0-solver-pure';
 import {
@@ -137,22 +137,16 @@ function bulgeShape(rPc: number, zPc: number, footprintPc = 0): number {
  *  LUMINANCE integral and a flux share can be split between the two
  *  without either hue moving light
  *  (`../hdr/emission/README.md` § Solving ρ₀). */
-export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoid(
-  (r, c) =>
-    discShape(
-      DISC_RADIUS_PC * r * Math.sqrt(1 - c * c),
-      DISC_HALF_THICKNESS_PC * r * c,
-    ),
-  [DISC_RADIUS_PC, DISC_RADIUS_PC, DISC_HALF_THICKNESS_PC],
+export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
+  discShape,
+  DISC_RADIUS_PC,
+  DISC_HALF_THICKNESS_PC,
 );
 
-export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoid(
-  (r, c) =>
-    bulgeShape(
-      BULGE_RADIUS_PC * r * Math.sqrt(1 - c * c),
-      BULGE_HALF_THICKNESS_PC * r * c,
-    ),
-  [BULGE_RADIUS_PC, BULGE_RADIUS_PC, BULGE_HALF_THICKNESS_PC],
+export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
+  bulgeShape,
+  BULGE_RADIUS_PC,
+  BULGE_HALF_THICKNESS_PC,
 );
 
 /**
