@@ -44,8 +44,14 @@ Target idx. Sol's planets and moons enter the corpus
 by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
 deliberately Sol-only, since bk5 exoplanets are visit-to-discover. A
 planet entry carries the body field's flat Target index, baked by the
-planet module's `searchEntries()`; boot awaits `planetSystemsReady`
-before binding search so the attach table exists at corpus build.
+planet module's `searchEntries()`; boot awaits
+`kinds.planet.systemsReady` before binding search so the attach table
+exists at corpus build. **The corpus is a boot-time snapshot** — the
+rows hold flat indices, not a live lookup, and `resolveEntryTarget` is
+a plain `{kind, idx}` wrap with no attach-table check behind it. Sol is
+the only host that ever attaches today, so nothing can go stale; the
+bk5 exoplanet phase, which attaches hosts on approach, has to rebuild
+the corpus on attach rather than extend this one.
 The five deep-space probes enter by mission label, secondary line
 "Probe · Interstellar", index = the LOADED-roster index, which is the
 Target idx directly (no translation) — so a probe whose artifact is

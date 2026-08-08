@@ -132,6 +132,15 @@ update — its visibility is event-driven, and `chart-labels` registers
 `dispose` alone because its per-frame work rides the `'frame'` event
 under `chart-mode.ts`'s start/stop gate).
 
+**Not every entry owns a layer.** The first inline entry owns no GPU
+resources at all (`dispose` is empty): it exists to sequence the
+moving-focal ride between the module layers' position writes and the
+planet mesh's camera read, both of which belong to other owners. The
+registry is the only place that expresses "between these two", so a
+sequencing-only entry is the intended shape rather than a smell — but
+it is the exception, and it is spelled out here so the next one has to
+justify itself.
+
 Not in the registry: camera controllers, the star pipeline, and the
 extinction prepass — they aren't scene layers and keep explicit
 lifecycle calls in `stellata.ts`. `setMonochrome`'s star-pipeline

@@ -1376,7 +1376,7 @@ export function applyDecodedView(
   // kind. Entries that don't resolve are silently dropped (graceful
   // partial restore). SID POIs resolve synchronously rather than via
   // deferred intents: the star domain attaches at catalog load and
-  // main.ts awaits planetSystemsReady, both strictly before
+  // main.ts awaits kinds.planet.systemsReady, both strictly before
   // applyFromUrl — a pending POI sid is therefore as dead as an
   // unknown one.
   {

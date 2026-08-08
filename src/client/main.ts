@@ -229,7 +229,7 @@ async function main() {
     // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
     // the galactic centre, HUD on, no constellation highlight).
     // Planet-focus refs need the body field's attach table, settled by
-    // the planetSystemsReady await above.
+    // the `kinds.planet.systemsReady` await above.
     if (!applyFromUrl(stellata, idMaps)) {
       applyFirstLoadView(stellata, idMaps);
     }

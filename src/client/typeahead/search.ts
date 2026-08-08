@@ -439,7 +439,7 @@ export function createSearchRunner(
   // by the module contract, so a missing artifact leaves an object out
   // of the corpus rather than shifting the others. Planet rows carry the
   // body field's flat index, so the runner is built after boot's
-  // `planetSystemsReady` await.
+  // `kinds.planet.systemsReady` await.
   if (kinds) {
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
