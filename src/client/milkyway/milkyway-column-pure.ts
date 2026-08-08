@@ -110,10 +110,11 @@ export function discVerticalProfile(absZPc: number): number {
   );
 }
 
-/** Both profiles' SHAPE, normalised to 1 at (R₀, z = 0) for the disc and
- *  at the centre for the bulge. `density0` scales it; the volume integrals
- *  below are marched over the shape, so neither may reach a `density0` it
- *  is mid-way through deriving. */
+/** Both profiles' SHAPE at unit ρ₀. The disc's radial term is 1 at R₀ and
+ *  its vertical term is 1 + f_ρ at the midplane, so `DISC_DENSITY0` is a
+ *  solved scale rather than the emissivity at any particular point; the
+ *  bulge's is 1 at the centre. The volume integrals below march the shape,
+ *  so neither may reach a `density0` it is mid-way through deriving. */
 function discShape(
   rPc: number,
   zPc: number,
@@ -159,8 +160,8 @@ export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
  * **Zero free parameters, and no march feeds the calibration** — the
  * relative component weights the sightline anchor needed are gone with
  * it. Truncation compensation rides along: G is over the ACTUAL mesh
- * volume, so the 0.031 mag the disc envelope clips is redistributed
- * inward rather than lost (README.md § Calibration).
+ * volume, so the 0.076 mag the disc envelope clips against all space is
+ * redistributed inward rather than lost (README.md § Calibration).
  */
 export const DISC_DENSITY0 = solveDensity0(
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,

@@ -17,7 +17,6 @@ import {
   DISC_COLOR_RGB,
   DISC_DENSITY0,
   DISC_HALF_THICKNESS_PC,
-  DISC_RADIUS_PC,
   DISC_SCALE_LENGTH_PC,
   DISC_VOLUME_INTEGRAL,
   DISC_SCALE_HEIGHT_PC,
@@ -38,7 +37,6 @@ import {
   sightlineSurfaceBrightness,
 } from './milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
-import { integrateOverEllipsoidRz } from '../hdr/emission/density0-solver-pure';
 import {
   BULGE_TO_TOTAL_V,
   GALAXY_TOTAL_ABSMAG_V,
@@ -277,16 +275,24 @@ describe('MilkyWay luminosity solve', () => {
   // BRIGHTENS what is left rather than losing it. Pinned because that is
   // the one way the truncation can bite: it is silent in the total and
   // visible only in the profile it redistributes.
+  //
+  // Measured against ALL SPACE, whose closed form is exact — not against a
+  // vertically-loosened ellipsoid, which is what the envelope is clipping
+  // relative to only if you pick its radius, and which reports 0.031 for a
+  // clip that is really 0.076. The radial direction dominates and cannot
+  // be separated out: the envelope is one ellipsoid, and at 15 kpc against
+  // a 3 kpc scale length it still cuts exp(−(15000 − R₀)/3000) = 0.10 of
+  // the midplane emissivity at the rim.
   it('compensates the disc envelope truncation into ρ₀', () => {
-    const loose = 20_000;
-    const untruncated = integrateOverEllipsoidRz(
-      (R, z) =>
-        Math.exp(-(R - R0_PC) / DISC_SCALE_LENGTH_PC) * discVerticalProfile(z),
-      DISC_RADIUS_PC,
-      loose,
-    );
-    expect(-2.5 * Math.log10(DISC_VOLUME_INTEGRAL / untruncated)).toBeCloseTo(
-      0.0308,
+    const allSpace =
+      2 * Math.PI *
+      Math.exp(R0_PC / DISC_SCALE_LENGTH_PC) *
+      DISC_SCALE_LENGTH_PC ** 2 *
+      2 *
+      (DISC_SCALE_HEIGHT_PC +
+        DISC_THICK_DENSITY_FRACTION * DISC_THICK_SCALE_HEIGHT_PC);
+    expect(-2.5 * Math.log10(DISC_VOLUME_INTEGRAL / allSpace)).toBeCloseTo(
+      0.0757,
       4,
     );
   });

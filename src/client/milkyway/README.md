@@ -177,15 +177,18 @@ march feeds the calibration.**
 Three properties a change here must keep:
 
 - **The shape integrals may not reach a `density0`.** `discShape` /
-  `bulgeShape` are the profiles normalised to 1 at (R₀, 0) and at the
-  centre; the integrals march *those* and the density functions multiply
-  the solved constant on top.
+  `bulgeShape` are the profiles at unit ρ₀ — the integrals march *those*,
+  the density functions multiply the solved constant on top. ρ₀ is a scale,
+  **not** a point emissivity: the disc's vertical term is 1.04 at the
+  midplane, so `DISC_DENSITY0` sits 4 % above (R₀, 0).
 - **The scalar volume integral is the LUMINANCE integral**, because both
   tints are luma-normalised (§ Population tints). That is what lets one
   flux total be split between two hues without either moving light.
 - **Truncation compensation is inherent.** G is over the ACTUAL proxy
-  volume, so the 0.031 mag the disc envelope clips is redistributed inward
-  — a tighter envelope *brightens* what remains rather than losing it.
+  volume, so the **0.076 mag** the disc envelope clips against all space is
+  redistributed inward — a tighter envelope *brightens* what remains. Mostly
+  radial, against 0.018 mag vertical (§ Density profiles), and one ellipsoid
+  does not separate into the two — the pin is the all-space closed form.
 
 **Solved dust-free, and that is the point.** An earlier design derived the
 zero point *through* the shipped extinction, so the photometric scale swung
@@ -224,8 +227,7 @@ luminosity solve. The total wins because it is what the camera sees from
 outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
 ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
 than M31 — the cross-layer symptom `stellata-xypg` opened on. The cost is
-at the pole, where diffuse + catalogue now reads 23.07 against Leinert's
-23.83.
+at the pole: diffuse + catalogue reads 23.07 against Leinert's 23.83.
 
 #### The gradient this produces, and what it reads on screen
 
@@ -268,10 +270,8 @@ Two facts worth having before touching this:
   anchor is the NGP sightline, where the log distribution converges.
 
 Under the sightline anchor the same rows ran 35.95 / 14.76 / 12.85 / 8.66
-/ 3.86 — the solve is 1.6 mag brighter everywhere. Under the retired
-per-pixel mapping before that, 5.45 / 1.67 / 1.42 / 0.68 / 0.33 at
-50° / 900 px: the band sat at a *seventh* of a threshold star and dimmed
-further as the camera zoomed (`stellata-xypg.34`).
+/ 3.86 — the solve is 1.6 mag brighter everywhere. The retired per-pixel
+mapping before that is `docs/science-hdr-pipeline.md` § 1.
 
 **The convolution and the footprint softening both leave this table where it
 is** — the first is an identity on a uniform field, the second is metres
