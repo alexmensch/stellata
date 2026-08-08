@@ -13,7 +13,7 @@ import {
   sersicGeometryIntegralAnalytic,
   sersicNu,
   u99,
-} from './emission-solver-pure';
+} from './emission-geometry-pure';
 
 describe('Sérsic shape constants', () => {
   it('pins b_n (Ciotti & Bertin 1999)', () => {

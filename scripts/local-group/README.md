@@ -5,7 +5,7 @@ overrides → `public/local-group.json`. `build-local-group-pure.ts`
 holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
 rules, distance filter, emission assembly);
-`emission-solver-pure.ts` holds the Sérsic deprojection and each
+`emission-geometry-pure.ts` holds the Sérsic deprojection and each
 family's truncated-volume integral. The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
 `src/client/hdr/emission/density0-solver-pure.ts` — a build script
@@ -101,7 +101,7 @@ consumes raw numbers and never re-derives photometry.
   truncated mesh volume** through one numeric quadrature path
   (`integrateOverEllipsoid`, Gauss–Legendre in unit-ball coordinates) for
   every profile; the analytic incomplete-gamma closed forms exist only as
-  vitest cross-pins. `emission-solver-pure.ts` supplies the shapes,
+  vitest cross-pins. `emission-geometry-pure.ts` supplies the shapes,
   `src/client/hdr/emission/README.md` § Solving ρ₀ owns the solve.
 - **M31 bulge contract:** the bulge is its own spheroid component —
   density0 solves over the bulge's u ≤ uMax sphere via the same

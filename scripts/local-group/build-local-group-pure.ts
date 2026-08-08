@@ -12,7 +12,7 @@ import {
   pnCoeff,
   sersicGeometryIntegral,
   u99,
-} from './emission-solver-pure';
+} from './emission-geometry-pure';
 
 /** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
  *  canonical Local Group: M31 + M33 + their satellite subgroup, plus

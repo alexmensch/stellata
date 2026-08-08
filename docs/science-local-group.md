@@ -165,10 +165,12 @@ disc truncations at 4–5 R_d. M31's bulge and disc are solved
 separately against B/T · F and (1 − B/T) · F, each over its own proxy
 mesh — the bulge is a distinct spheroid volume (u ≤ u₉₉ sphere), not a
 term clipped inside the disc envelope, so it reads as a bulge from
-edge-on viewpoints too. The solver
-(`scripts/local-group/emission-solver-pure.ts`) uses one numeric
-quadrature path for all profiles; the analytic incomplete-gamma closed
-forms are vitest cross-pins. The ±0.1 mag render tolerance sits inside
+edge-on viewpoints too. One numeric quadrature path serves all profiles
+(`src/client/hdr/emission/density0-solver-pure.ts`, shared with the Milky
+Way band, which solves the same ρ₀ against an absolute magnitude);
+`scripts/local-group/emission-geometry-pure.ts` supplies each family's
+shape, and the analytic incomplete-gamma closed forms are vitest
+cross-pins. The ±0.1 mag render tolerance sits inside
 the catalogue's own ±0.2 mag median photometric uncertainty.
 
 **The calibrated column field needs no display transform of its own.**
