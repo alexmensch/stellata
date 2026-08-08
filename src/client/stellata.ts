@@ -610,9 +610,7 @@ export class Stellata implements FrameAnchor {
     // by the click FSM in onPointerUp and by the hover providers.
     // Kind-module surfaces dispatch through `kindPicks`; the remaining
     // getters cover the inline-wired star path.
-    // `picker` is `readonly` — assigned via writable cast since field
-    // initialisation in TS requires bypassing the readonly guard here.
-    (this as { picker: Picker }).picker = new Picker({
+    this.picker = new Picker({
       domElement: this.renderer.domElement,
       camera: this.camera,
       catalog: this.catalog,
@@ -659,7 +657,7 @@ export class Stellata implements FrameAnchor {
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
-    (this as { focusables: FocusableProviders }).focusables = {
+    this.focusables = {
       star: {
         anchorInto: (idx, out) => {
           if (idx < 0 || idx >= this.catalog.count) return false;
@@ -867,7 +865,8 @@ export class Stellata implements FrameAnchor {
     // while its label, a per-frame reader, showed. `resetOverrides: false`
     // so a later `?v=` restore still owns the within-scene toggles.
     this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
-    this.attachEvents();
+    window.addEventListener('resize', this.onResize);
+    this.input = this.createInputController();
     this.animate();
   }
 
@@ -1881,9 +1880,8 @@ export class Stellata implements FrameAnchor {
     return this._compositeSuppress[idx] === 1;
   }
 
-  private attachEvents() {
-    window.addEventListener('resize', this.onResize);
-    (this as { input: InputController }).input = new InputController({
+  private createInputController(): InputController {
+    return new InputController({
       canvas: this.renderer.domElement,
       camera: this.camera,
       controls: this.controls,
