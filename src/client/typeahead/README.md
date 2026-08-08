@@ -7,6 +7,13 @@ elements are moved into the modal on open and restored on close).
 
 ## Star search
 
+`star-designations.ts` is the leaf holding the pure designation
+formatters (`splitBayer`, `formatBayerDisplay`, `superscript`,
+`formatGcvsDesignation`, `starDesignations`) — split out so the star
+kind module's provider chain can import them without a cycle through
+`search.ts` → `kind-modules.ts`; `search.ts` re-exports them, so both
+import paths stay valid.
+
 `search.ts` is fuse.js-backed; ranks against name + constellation +
 Bayer designation. Every constellation-relative *designation* — Bayer,
 Flamsteed, GCVS, the component aliases below — resolves through

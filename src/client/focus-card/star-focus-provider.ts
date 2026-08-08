@@ -10,7 +10,7 @@ import {
 import type { Catalog } from '../loaders/catalog-loader';
 import type { BinariesData } from '../binaries/binaries-loader';
 import type { SearchEntry } from '../typeahead/search';
-import { starDesignations } from '../typeahead/search';
+import { starDesignations } from '../typeahead/star-designations';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatSpectral, spectralLine } from '../format/spectral-format';
 import {
