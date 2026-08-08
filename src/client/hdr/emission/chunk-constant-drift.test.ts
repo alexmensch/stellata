@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { LUMA_WEIGHTS } from '../tonemap-pure';
+import { L_THRESH, LUMA_WEIGHTS, TOE_GAMMA } from '../tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
@@ -33,6 +33,15 @@ describe('shared chunk constants', () => {
   it('both chunks declare the same Rec.709 luma weights as tonemap-pure', () => {
     expect(lumaWeights(tonemapChunk)).toEqual([...LUMA_WEIGHTS]);
     expect(lumaWeights(emissionChunk)).toEqual([...LUMA_WEIGHTS]);
+  });
+
+  it('tonemap.glsl runs the same faint-end toe as tonemap-pure', () => {
+    const knee = tonemapChunk.match(/const float STELLATA_TOE_KNEE = ([\d.]+);/);
+    const gamma = tonemapChunk.match(/const float STELLATA_TOE_GAMMA = ([\d.]+);/);
+    expect(knee).not.toBeNull();
+    expect(gamma).not.toBeNull();
+    expect(Number(knee![1])).toBe(L_THRESH);
+    expect(Number(gamma![1])).toBeCloseTo(TOE_GAMMA, 6);
   });
 
   it('emission.glsl clamps at the same ceiling as emission-pure', () => {

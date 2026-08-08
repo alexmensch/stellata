@@ -262,10 +262,12 @@ alone, so it would land twice.
 **What the intra-object range actually costs.** Bulge centre to disc
 envelope spans ~8.7 mag for M31, which fits the operator's range
 (`DR_MAG` 7.5) rather than fighting it. Through the summation patch, at the
-base epoch and a 50° / 900 px viewport, the profile reads **120 / 64 / 35 /
-18** of 255 at 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31
-stays brighter than one out to nearly 20 arcmin. A smudge most of a degree
-across, which is what the naked eye gets, and pinned in
+base epoch and a 50° / 900 px viewport, the profile reads **120 / 64 / 28 /
+1** of 255 at 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31
+stays brighter than one out to ~15 arcmin, and the operator's faint-end toe
+(`../hdr/README.md` § Operator) takes the sub-threshold outer envelope to
+the dither floor. A bright core trailing off over most of a degree, which
+is what the naked eye gets, and pinned in
 `local-group-emission-calibration.test.ts`.
 
 The patch average is what makes that distribution: it dilutes the Sérsic cusp

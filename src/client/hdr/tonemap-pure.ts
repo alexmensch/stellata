@@ -15,6 +15,31 @@ export function tonemapWhitePoint(drMag = DR_MAG, lThresh = L_THRESH): number {
   return lThresh * 10 ** (0.4 * drMag);
 }
 
+/** Magnitudes below the threshold at which the faint-end toe lands on
+ *  black — the detection rolloff's full width. */
+export const TOE_BLACK_MAG = 1.5;
+
+/** The darkest level the encode can distinguish from black: half an
+ *  8-bit output step, decoded through the sRGB linear segment. */
+const EIGHT_BIT_STEP_L = 0.5 / 255 / 12.92;
+
+/** Exponent of the faint-end toe, derived so a source exactly
+ *  `TOE_BLACK_MAG` under threshold lands on `EIGHT_BIT_STEP_L`. */
+export const TOE_GAMMA = Math.log10(L_THRESH / EIGHT_BIT_STEP_L) / (0.4 * TOE_BLACK_MAG);
+
+/** Detection rolloff below the threshold: sub-threshold light compresses
+ *  to black over `TOE_BLACK_MAG` magnitudes instead of rendering at its
+ *  near-linear Reinhard value. Identity at and above `L_THRESH`, so the
+ *  threshold anchor holds. */
+export function faintToe(y: number, lThresh = L_THRESH): number {
+  return y < lThresh ? lThresh * (y / lThresh) ** TOE_GAMMA : y;
+}
+
+/** Exact inverse of `faintToe` — the chrome mapping composes it. */
+export function faintToeInverse(yt: number, lThresh = L_THRESH): number {
+  return yt < lThresh ? lThresh * (yt / lThresh) ** (1 / TOE_GAMMA) : yt;
+}
+
 export function relativeLuminance(rgb: Rgb): number {
   return (
     rgb[0] * LUMA_WEIGHTS[0] + rgb[1] * LUMA_WEIGHTS[1] + rgb[2] * LUMA_WEIGHTS[2]
@@ -41,13 +66,19 @@ export function srgbDecode(c: number): number {
   return v < SRGB_DECODE_KNEE ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
+/** Scalar display transfer: linear luminance → encoded sRGB, the whole
+ *  chain a hue-free level comparison runs through. */
+export function displayLevel(y: number, whitePoint: number): number {
+  return srgbEncode(reinhardExtended(faintToe(y), whitePoint));
+}
+
 /** Linear HDR luminance → display sRGB, hue-preserving. Mirrors
  *  `stellataTonemapUndithered`: the dither is 8-bit quantisation noise
  *  applied after the operator, not part of it. */
 export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): Rgb {
   const y = relativeLuminance(hdr);
   if (y <= 0) return [0, 0, 0];
-  const yd = reinhardExtended(y, whitePoint);
+  const yd = reinhardExtended(faintToe(y), whitePoint);
   const white = 1 - Math.exp(-desat * Math.max(y / whitePoint - 1, 0));
   const chroma = (yd / y) * (1 - white);
   return [
@@ -65,7 +96,7 @@ export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): 
 export function inverseTonemapConstant(linearDisplay: Rgb, whitePoint: number): Rgb {
   const yd = relativeLuminance(linearDisplay);
   if (yd <= 0) return [0, 0, 0];
-  const scale = reinhardExtendedInverse(yd, whitePoint) / yd;
+  const scale = faintToeInverse(reinhardExtendedInverse(yd, whitePoint)) / yd;
   return [
     linearDisplay[0] * scale,
     linearDisplay[1] * scale,

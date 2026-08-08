@@ -3,6 +3,11 @@ import {
   DR_MAG,
   HIGHLIGHT_DESAT,
   L_THRESH,
+  TOE_BLACK_MAG,
+  TOE_GAMMA,
+  displayLevel,
+  faintToe,
+  faintToeInverse,
   inverseTonemapConstant,
   reinhardExtended,
   reinhardExtendedInverse,
@@ -50,6 +55,43 @@ describe('reinhardExtended', () => {
       expect(y).toBeGreaterThan(prev);
       prev = y;
     }
+  });
+});
+
+describe('faintToe', () => {
+  it('is identity at and above the threshold, so the anchor holds', () => {
+    for (const y of [L_THRESH, 0.05, 1, 20]) expect(faintToe(y)).toBe(y);
+    expect(displayLevel(L_THRESH, LW)).toBeCloseTo(0.15, 3);
+  });
+
+  it('lands a source TOE_BLACK_MAG under threshold on half an 8-bit step', () => {
+    expect(TOE_BLACK_MAG).toBe(1.5);
+    expect(TOE_GAMMA).toBeCloseTo(3.53310, 5);
+    const black = faintToe(L_THRESH * 10 ** (-0.4 * TOE_BLACK_MAG));
+    expect(srgbEncode(black) * 255).toBeCloseTo(0.5, 6);
+  });
+
+  it('keeps light just under threshold visible', () => {
+    // 0.16 mag under (the anticentre's margin) still reads plainly.
+    const y = L_THRESH * 10 ** (-0.4 * 0.16);
+    expect(displayLevel(y, LW) * 255).toBeCloseTo(28.19, 1);
+  });
+
+  it('is monotonic and continuous through the knee', () => {
+    let prev = -1;
+    for (let e = -4; e <= 0; e += 0.05) {
+      const v = faintToe(L_THRESH * 10 ** e);
+      expect(v).toBeGreaterThan(prev);
+      prev = v;
+    }
+    expect(faintToe(L_THRESH * 0.9999999)).toBeCloseTo(L_THRESH, 6);
+  });
+
+  it('inverts exactly across the rolloff', () => {
+    for (const y of [1e-6, 1e-4, 0.005, 0.0199, L_THRESH, 0.5]) {
+      expect(faintToeInverse(faintToe(y))).toBeCloseTo(y, 10);
+    }
+    expect(faintToeInverse(0)).toBe(0);
   });
 });
 
@@ -136,6 +178,7 @@ describe('tonemap', () => {
 describe('inverseTonemapConstant', () => {
   it('round-trips every authored chrome colour through the operator', () => {
     const authored: Rgb[] = [
+      [0.004, 0.005, 0.006],
       [0.02, 0.02, 0.02],
       [0.1, 0.15, 0.25],
       [0.5, 0.5, 0.5],

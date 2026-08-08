@@ -326,11 +326,13 @@ linear before lighting (they are sRGB-authored imagery).
 
 ## 2. Tone-map operator
 
-**Luminance-domain extended Reinhard, hue-preserving:**
+**Luminance-domain extended Reinhard, hue-preserving, with a faint-end
+detection toe:**
 
 ```
 Y   = dot(rgb, LUMA_WEIGHTS)            // Rec.709 luminance
-Yd  = Y · (1 + Y/Lw²) / (1 + Y)
+Yt  = Y < L_THRESH ? L_THRESH · (Y/L_THRESH)^TOE_GAMMA : Y
+Yd  = Yt · (1 + Yt/Lw²) / (1 + Yt)
 rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
 ```
 
@@ -350,6 +352,27 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   search over 5–8; raising it would be an explicit exaggeration on the
   luminance axis (the same move K makes on the size axis) and must be
   recorded as one.
+- **The faint-end toe makes the threshold mean what it says.** Extended
+  Reinhard is near-linear at small `Y` and the sRGB encode then lifts it,
+  so sub-threshold light rendered at its linear value reads plainly on a
+  dark screen — a patch 1.49 mag *under* the extended-source detection
+  threshold rendered at 15.6/255. Physically you don't see that residual
+  because it sits under a luminous natural sky background; Stellata
+  renders a black sky, so the operator carries the detection rolloff
+  instead: identity at and above `L_THRESH` (every anchor holds), a
+  power toe below it. `TOE_GAMMA` is derived, not tuned — a source
+  exactly **`TOE_BLACK_MAG` = 1.5 mag** under threshold lands on half an
+  8-bit output step, the level the encode cannot distinguish from black.
+  Exactly invertible (a power), and the chrome mapping composes the
+  inverse. The rejected alternative was rendering the sky background as
+  a real luminance pedestal — more honest (threshold becomes a
+  consequence), but it lifts the whole frame's black level and feeds the
+  full-frame pedestal into the adaptation statistic and chart mode; the
+  toe expresses the same detection claim in the display transfer, where
+  the display's own floor is already a concession. Sub-threshold *stars*
+  cross the toe too, on top of their emission-side taper — the visible
+  faint edge tightens rather than moves, since the taper already ends
+  0.5 mag past threshold.
 - **Scaling luminance and preserving the RGB ratio keeps hue exact** —
   the calibrated Ballesteros/blackbody star colours and the CCM
   reddening ratios survive the operator untouched. ACES/filmic was

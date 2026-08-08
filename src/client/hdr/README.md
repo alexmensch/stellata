@@ -179,21 +179,33 @@ why the laziness below is load-bearing rather than tidy.
 
 ## Operator
 
-Luminance-domain extended Reinhard, hue-preserving, then highlight
-desaturation, then sRGB encode, then dither — all in `stellata_tonemap`
-so the fullscreen pass and the fallback path can never drift (the
-`stellata_dust_raymarch` two-consumers pattern).
+Faint-end toe, then luminance-domain extended Reinhard, hue-preserving,
+then highlight desaturation, then sRGB encode, then dither — all in
+`stellata_tonemap` so the fullscreen pass and the fallback path can never
+drift (the `stellata_dust_raymarch` two-consumers pattern).
 
 | Constant | Default | Role |
 | --- | --- | --- |
 | `L_THRESH` | 0.02 | display luminance of a source at the magnitude limit |
 | `DR_MAG` | 7.5 | magnitudes of range from threshold to full white |
 | `HIGHLIGHT_DESAT` | 0.35 | strength of the mix toward white above the knee |
+| `TOE_BLACK_MAG` | 1.5 | magnitudes under threshold at which the toe lands on black |
 
 `tonemapWhitePoint()` = `L_THRESH · 10^(0.4·DR_MAG)` = **20**, and
 `reinhardExtended(20, 20) = 1` exactly — a source `DR_MAG` magnitudes
 brighter than the threshold lands on full white by construction. At the
 gentle end, `L = L_THRESH` resolves to 0.15 of full scale after encode.
+
+**The toe is the detection rolloff below threshold** — identity at and
+above `L_THRESH`, so every anchor holds, and a power below it whose
+exponent (`TOE_GAMMA`, derived) puts a source exactly `TOE_BLACK_MAG`
+under threshold on half an 8-bit step. Sub-threshold light no longer
+renders at its near-linear Reinhard value; the Milky Way pole is the
+motivating case (`../milkyway/README.md` § The gradient this produces).
+Exactly invertible, and `inverseTonemapConstant` composes the inverse so
+dark-authored chrome round-trips (`chrome/README.md`). The design
+argument — and why a rendered sky-background pedestal was rejected — is
+`docs/science-hdr-pipeline.md` § 2.
 
 Two testing consequences of what `docs/science-hdr-pipeline.md` § 2 says
 about hue and clipping: hue survival is pinned in `tonemap-pure.test.ts`,

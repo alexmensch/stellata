@@ -42,11 +42,7 @@ import {
 import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import {
-  reinhardExtended,
-  srgbEncode,
-  tonemapWhitePoint,
-} from '../hdr/tonemap-pure';
+import { displayLevel, tonemapWhitePoint } from '../hdr/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -822,8 +818,10 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // reference viewport — the distribution half of the acceptance, and the
     // half the § against convolve-then-gain errors above cannot show. A
     // threshold star lands on 38.25 (../hdr/tonemap-pure.ts), so M31 reads
-    // brighter than one out to nearly 20 arcmin: a smudge most of a degree
-    // across, which is what the naked eye gets.
+    // brighter than one out to ~15 arcmin — the core and inner disc the
+    // naked eye actually gets. The outer rows sit under the extended
+    // threshold, so the faint-end toe compresses them: the 40-arcmin
+    // envelope reads ~1/255 where the near-linear curve gave it 18.
     //
     // Under the retired per-layer opt-out the same rows ran 173 at the core
     // and 0.8 at 40 arcmin — a bright nucleus on a black disc. The core comes
@@ -832,16 +830,14 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     it('pins the levels M31 renders at across its profile', () => {
       const level = (arcmin: number) =>
         255 *
-        srgbEncode(
-          reinhardExtended(
-            BASE_EPOCH_EXPOSURE * shippedMean(arcmin * 60, 50) * DEFAULT_SUMMATION_ARCSEC2,
-            tonemapWhitePoint(),
-          ),
+        displayLevel(
+          BASE_EPOCH_EXPOSURE * shippedMean(arcmin * 60, 50) * DEFAULT_SUMMATION_ARCSEC2,
+          tonemapWhitePoint(),
         );
       expect(level(0)).toBeCloseTo(120.0, 1);
       expect(level(10)).toBeCloseTo(64.1, 1);
-      expect(level(20)).toBeCloseTo(35.1, 1);
-      expect(level(40)).toBeCloseTo(18.1, 1);
+      expect(level(20)).toBeCloseTo(27.76, 1);
+      expect(level(40)).toBeCloseTo(1.01, 1);
       // Monotonic outward, which "a bright core with a faint oval" requires
       // and a convolution could break if the kernel were asymmetric.
       for (const arcmin of [5, 10, 20, 30, 40]) {

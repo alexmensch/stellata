@@ -68,9 +68,8 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import {
   L_THRESH,
+  displayLevel as displayTransfer,
   relativeLuminance,
-  srgbEncode,
-  reinhardExtended,
   tonemapWhitePoint,
 } from '../hdr/tonemap-pure';
 
@@ -373,7 +372,7 @@ const REFERENCE_OMEGA_PX = pixelSolidAngleArcsec2(
   angularToPx(900, (50 * Math.PI) / 180),
 );
 
-const displayLevel = (l: number) => srgbEncode(reinhardExtended(l, tonemapWhitePoint()));
+const displayLevel = (l: number) => displayTransfer(l, tonemapWhitePoint());
 
 /** Display level a sightline reaches at the base epoch. The rod summation
  *  solid angle, not the pixel's, so this carries no viewport. */
@@ -529,19 +528,20 @@ describe('MilkyWay surface-brightness calibration', () => {
   });
 
   // The whole band, in 8-bit display levels at the base epoch with no EV
-  // trim. Pinned as a table because the ORDERING is the acceptance. Under
-  // the sightline anchor the same rows ran 35.95 / 14.76 / 12.85 / 8.66 /
-  // 3.86 of 255 — the luminosity solve is 1.6 mag brighter everywhere, so
-  // the brightest sightline is now most of TWO threshold stars and the
-  // pole has left the dither floor (README.md § Calibration).
+  // trim. Pinned as a table because the ORDERING is the acceptance. The
+  // faint-end toe is in these figures: sightlines over the extended
+  // threshold are untouched, sub-threshold ones roll off, and the pole —
+  // 1.49 mag under, pre-toe 15.65 — lands back on the dither floor
+  // because a patch the modelled eye cannot detect must not read plainly
+  // visible (README.md § Calibration).
   it('pins the band against a threshold star at the base epoch', () => {
     expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
     expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(70.33, 2);
     expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(38.56, 2);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(35.12, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(27.43, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(15.65, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(27.98, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.92, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.51, 2);
   });
 
   // How far under threshold each sightline sits, which is the photometric
