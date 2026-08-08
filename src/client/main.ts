@@ -1,15 +1,9 @@
 import { loadCatalog } from './loaders/catalog-loader';
 import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
-import { loadClouds } from './molecular-clouds/cloud-loader';
-import { loadCloudSurfaces } from './molecular-clouds/cloud-surfaces-loader';
-import { createMolecularCloudLabels } from './molecular-clouds/cloud-labels';
-import { loadLocalGroup } from './local-group/local-group-loader';
 import { loadBinaries } from './binaries/binaries-loader';
-import { loadLocalBubble } from './local-bubble/local-bubble-loader';
 import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
-import { createLocalBubbleLabel } from './local-bubble/local-bubble';
-import { createLocalGroupLabels, createMilkyWayLabel } from './local-group/local-group';
+import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
@@ -20,7 +14,6 @@ import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
 import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
 import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
-import { createHeliopauseLabel } from './solar-system/heliopause/heliopause';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { tToJDE } from './solar-system/time/time';
@@ -51,16 +44,8 @@ import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
 import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
 import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
-import { createCloudFocusProvider } from './focus-card/cloud-focus-provider';
-import { createLgFocusProvider } from './focus-card/lg-focus-provider';
-import { createShellFocusProvider } from './focus-card/shell-focus-provider';
-import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
-import { SHELL_KEYS } from './fresnel-shell/shell-registry';
 import { createStarHoverProvider } from './hover/star-hover-provider';
 import { createPlanetHoverProvider } from './hover/planet-hover-provider';
-import { createLocalGroupHoverProvider } from './hover/local-group-hover-provider';
-import { createShellHoverProvider } from './hover/shell-hover-provider';
-import { createCloudHoverProvider } from './hover/cloud-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
 async function main() {
@@ -76,7 +61,7 @@ async function main() {
 
   try {
     const kinds = buildKindModules();
-    const [catalog, searchIndex, cloudCatalog, cloudSurfaces, lgCatalog, binaries, localBubble, boundaries] = await Promise.all([
+    const [catalog, searchIndex, binaries, boundaries] = await Promise.all([
       loadCatalog(
         `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
         `${import.meta.env.BASE_URL}constellations.json`,
@@ -89,34 +74,19 @@ async function main() {
       fetch(`${import.meta.env.BASE_URL}search-index.json`).then(
         (r) => r.json() as Promise<SearchEntry[]>,
       ),
-      // Molecular clouds. Fetched in parallel with the catalog —
-      // a few hundred KB; null if the artifact is missing (fresh checkout
-      // without `pnpm run build:clouds`).
-      loadClouds(`${import.meta.env.BASE_URL}clouds.json`),
-      // Per-cloud isosurface rim meshes; null if the artifact is missing —
-      // every cloud then falls back to its ellipsoid rim shape.
-      loadCloudSurfaces(`${import.meta.env.BASE_URL}cloud-surfaces.bin`),
-      // Local Group wireframes. ~20 KB JSON; null if
-      // the artifact is missing (fresh checkout without
-      // `pnpm run build:local-group`). No-op layer in that case —
-      // outlines simply don't render.
-      loadLocalGroup(`${import.meta.env.BASE_URL}local-group.json`),
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
       // `pnpm run build:binaries`). The renderer renders identically
       // without the field; orbital evolution simply doesn't fire.
       loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
-      // Local Bubble shell mesh. ~650 KB; null when the artifact is
-      // missing (fresh checkout without `pnpm run build:local-bubble`).
-      // The scene renders fine without it — the shell simply doesn't draw.
-      loadLocalBubble(`${import.meta.env.BASE_URL}local-bubble.bin`),
       // IAU constellation boundary arcs + the fade-quantile table. ~334 KB;
       // null when the artifact is missing or invalid (a checkout that never
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts (deep-space probes today). Each load never
-      // rejects — a missing artifact leaves that kind's roster empty.
+      // Kind-module artifacts (probes, clouds, Local Group, the Local
+      // Bubble mesh). Each load never rejects — a missing artifact
+      // leaves that kind's roster empty.
       ...KIND_ROSTER.map((kind) => kinds[kind]?.load(import.meta.env.BASE_URL)),
     ]);
 
@@ -132,22 +102,10 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Molecular-cloud presence layer — a representational-tier declutter
-    // element; absent artifact = no layer.
-    if (cloudCatalog) stellata.attachClouds(cloudCatalog, cloudSurfaces);
-
-    // Local Group wireframes. Always-on when the artifact is present —
-    // same model as the MW disc, no toggle / URL flag.
-    if (lgCatalog) stellata.attachLocalGroup(lgCatalog);
-
     // Binary-orbit runtime — visible orbital motion for ~hundreds of
     // catalog pairs against `Stellata.getT()`. Static placements remain
     // identical when this artifact is absent.
     if (binaries) stellata.attachBinaries(binaries);
-
-    // Local Bubble shell — the dust-wall cavity the Sun sits inside.
-    // A representational declutter element; absent artifact = no shell.
-    if (localBubble) stellata.attachLocalBubble(localBubble);
 
     // IAU constellation boundaries — a chart-only declutter element at floor
     // 'all'; absent artifact = no arcs.
@@ -185,18 +143,11 @@ async function main() {
       'planet',
       arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
     );
-    if (cloudCatalog) sidResolver.attach('cloud', arrayDomain(cloudCatalog.clouds.map((c) => c.sid)));
-    else sidResolver.conclude('cloud');
-    if (lgCatalog) sidResolver.attach('lg', arrayDomain(lgCatalog.objects.map((o) => o.sid)));
-    else sidResolver.conclude('lg');
-    // Both boundary shells carry static, always-known SIDs (generated /
-    // curated objects, docs/sid.md § 7). localIndex = SHELL_KEYS index =
-    // Target {kind:'shell'} idx. Attach unconditionally: a shell whose
-    // layer is absent still resolves its sid, then focus/pin fall through
-    // to null via the shell provider's legs (same graceful path as lg).
-    sidResolver.attach('shell', arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])));
-    // Kind-module domains (probes today): sids() is localIndex-ordered
-    // with localIndex = Target idx; null concludes the domain.
+    // Kind-module domains: sids() is localIndex-ordered with
+    // localIndex = Target idx; null concludes the domain. The shell
+    // module's list is static (docs/sid.md § 7), so its domain attaches
+    // even when a layer's artifact is absent — focus/pin then fall
+    // through to null via the empty registry slot.
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
       if (!m) continue;
@@ -252,8 +203,8 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex, starLabels, cloudCatalog, lgCatalog);
-    bindFindSearch(stellata, catalog, searchIndex, cloudCatalog, lgCatalog);
+    bindSearch(stellata, catalog, searchIndex, starLabels);
+    bindFindSearch(stellata, catalog, searchIndex);
     createDistanceVectorOverlay(stellata, starLabels);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata, starLabels);
@@ -263,21 +214,13 @@ async function main() {
         stellata.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
     }
     createPlanetLabels(stellata);
-    // Kind-module SVG label overlays (probe labels today).
+    // Kind-module SVG label overlays (probe, cloud, lg, shell).
     for (const kind of KIND_ROSTER) kinds[kind]?.labels?.();
-    createHeliopauseLabel(stellata);
-    createLocalBubbleLabel(stellata);
-    // Per-cloud molecular-cloud labels. Mints SVG <text> children under
-    // #cloud-labels; no-op when the cloud layer didn't attach.
-    createMolecularCloudLabels(stellata);
     // Milky Way label fades in once the camera sits past ~10 kpc from the
-    // galactic centre. Independent of attachLocalGroup — the MW label
-    // anchors at GALACTIC_CENTRE_PC, not at a Local Group catalog entry.
+    // galactic centre. Wired outside the lg module — the MW label anchors
+    // at GALACTIC_CENTRE_PC, not at a Local Group catalog entry — but it
+    // shares that module's apparent-size ranking pass.
     createMilkyWayLabel(stellata);
-    // Per-object Local Group labels. Mints SVG <text> children under
-    // #lg-labels for each catalog object that carries a labelThresholdPc;
-    // no-op when the layer didn't attach (missing artifact).
-    if (stellata.localGroup) createLocalGroupLabels(stellata, stellata.localGroup);
     createScaleBar(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
@@ -328,35 +271,14 @@ async function main() {
       },
     });
     const planetHoverProvider = createPlanetHoverProvider({ stellata });
-    // Boundary-shell hover dispatches over the shell registry — one
-    // provider covers the Local Bubble and the heliopause alike.
-    const shellHoverProvider = createShellHoverProvider({ stellata });
     const hoverProviders: HoverProvider[] = [
       starHoverProvider,
       planetHoverProvider,
-      shellHoverProvider,
     ];
-    // Kind-module hover surfaces (probes today).
+    // Kind-module hover surfaces.
     for (const kind of KIND_ROSTER) {
       const provider = kinds[kind]?.hover?.();
       if (provider) hoverProviders.push(provider);
-    }
-    // LG provider only registers when the build artifact loaded — fresh
-    // checkouts without `pnpm run build:local-group` leave stellata.localGroup
-    // null and the wireframes don't render; no provider in that case.
-    if (lgCatalog) {
-      hoverProviders.push(createLocalGroupHoverProvider({
-        stellata,
-        context: { objects: lgCatalog.objects },
-      }));
-    }
-    // Cloud provider registers iff the cloud layer is attached (absent
-    // clouds.json artifact = no layer, no provider).
-    if (stellata.cloudLayer) {
-      hoverProviders.push(createCloudHoverProvider({
-        stellata,
-        context: { clouds: stellata.cloudLayer.clouds },
-      }));
     }
     createHoverEngine({
       canvas,
@@ -408,39 +330,9 @@ async function main() {
           },
         }),
         probe: kinds.probe.card(),
-        cloud: createCloudFocusProvider({
-          clouds: cloudCatalog?.clouds ?? null,
-          cameraDistancePc: (idx) => {
-            const cloud = cloudCatalog!.clouds[idx];
-            const w = stellata.getWorldOffset();
-            const c = stellata.camera.position;
-            return Math.hypot(
-              cloud.centerAbs.x - w.x - c.x,
-              cloud.centerAbs.y - w.y - c.y,
-              cloud.centerAbs.z - w.z - c.z,
-            );
-          },
-          constellationName: (idx) => stellata.constellationOf('cloud', idx),
-        }),
-        lg: createLgFocusProvider({
-          objects: lgCatalog?.objects ?? null,
-          cameraDistancePc: (idx) => {
-            const obj = lgCatalog!.objects[idx];
-            const w = stellata.getWorldOffset();
-            const c = stellata.camera.position;
-            return Math.hypot(
-              obj.centerAbs.x - w.x - c.x,
-              obj.centerAbs.y - w.y - c.y,
-              obj.centerAbs.z - w.z - c.z,
-            );
-          },
-          constellationName: (idx) => stellata.constellationOf('lg', idx),
-        }),
-        shell: createShellFocusProvider({
-          shellAt: (idx) => stellata.shells.at(idx),
-          cameraDistancePc: (idx) =>
-            stellata.shells.cameraDistancePc(idx, stellata.getWorldOffset(), stellata.camera.position),
-        }),
+        cloud: kinds.cloud.card(),
+        lg: kinds.lg.card(),
+        shell: kinds.shell.card(),
       },
     });
 

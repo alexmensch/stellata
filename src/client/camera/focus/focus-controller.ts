@@ -44,6 +44,12 @@ import { FOCUS_LERP_MS } from '../timing';
  *  star — `minOrbitDistForStar` then returns the per-star physical floor. */
 export const GLOBAL_MIN_DIST_PC = 5e-3;
 
+/** Soft kinds never tighten the manual-zoom floor below the unfocused
+ *  global one — the orbitFloor leg for every no-recentre kind. */
+export function softOrbitFloor(park: (idx: number) => number) {
+  return (idx: number): number => Math.min(GLOBAL_MIN_DIST_PC, park(idx));
+}
+
 /** Squared-length threshold below which `controls.target` is treated as
  *  coincident with the local origin (= focal-star position). Engages the
  *  uPinFocusToCenter shader pin so the focused star renders at NDC (0,0)

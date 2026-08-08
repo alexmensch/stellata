@@ -7,7 +7,7 @@ import { PROBE_MISSIONS } from '../../../../scripts/probes/probe-roster';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { PROBE_ORBIT_FLOOR_PC, PROBE_PARK_DIST_PC } from './probe-focus-geometry';
 import type { KindContext } from '../../kinds/kind-module';
-import type { StarSharedUniforms } from '../../star-pipeline/frame/star-shared-uniforms';
+import { makeKindContext } from '../../kinds/kind-context-mock';
 import { AU_PC } from '../../util/astronomy-constants';
 import { tToJDE } from '../time/time';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
@@ -40,31 +40,12 @@ function makeFile(id: string, label: string): ProbeTrajectoryFile {
 }
 
 function makeCtx(): KindContext {
-  const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
-  camera.position.set(41 * AU_PC, 0, 0);
-  const sharedUniforms = {
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
-    uFovYRad: { value: (50 * Math.PI) / 180 },
-  } as unknown as StarSharedUniforms;
-  return {
-    scene: new THREE.Scene(),
-    camera,
-    canvas: {
-      getBoundingClientRect: () => ({
-        left: 0, top: 0, width: 800, height: 600,
-      } as DOMRect),
-    } as unknown as HTMLElement,
-    sharedUniforms,
+  const ctx = makeKindContext({
     solIndex: 7,
-    getT: () => 0,
-    getWorldOffset: () => new THREE.Vector3(),
-    getFocusedTarget: () => null,
-    getMonochrome: () => false,
-    detailPermits: () => true,
     constellationOf: () => 'Ophiuchus',
-    onFrame: () => () => {},
-  };
+  });
+  ctx.camera.position.set(41 * AU_PC, 0, 0);
+  return ctx;
 }
 
 /** Serve fixture JSON for `present` mission ids, 404 for the rest. */

@@ -26,16 +26,13 @@ in both navigate and observe modes.
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
-  stars / clouds / planets / Local Group / heliopause / boundary
-  shells (`pickShellHit`, shared silhouette helper in
-  `fresnel-shell/`). Kinds migrated onto kind modules pick through
-  `pickKindHit`, which dispatches to the module's hover-provider pick
-  (probes today) — literally the same function the hover engine runs,
-  so click and hover can't disagree. The two
-  cloud surfaces (`pickCloud` / `pickCloudHit`) hold only their own gates
-  — warp and `group.visible` respectively — and delegate the winner to
-  `MolecularClouds.pick` so click and hover can't disagree
-  (`../../molecular-clouds/README.md` § Picking + hover). Both star pick
+  the two inline kinds, stars and planets. Every migrated kind (probe,
+  cloud, Local Group, boundary shells) picks through `pickKindHit`,
+  which dispatches to the module's hover-provider pick — literally the
+  same function the hover engine runs, so click and hover can't
+  disagree (a cloud's overlapping-winner resolution stays in
+  `MolecularClouds.pick`, `../../molecular-clouds/README.md`
+  § Picking + hover). Both star pick
   surfaces route the winner through `resolveCollapsedLead` (backed by
   the system-membership registry — `src/client/system-membership/`):
   a member of a collapsed cluster resolves to the cluster's primary, so

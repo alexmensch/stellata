@@ -16,10 +16,20 @@ inside a kind stays module-internal.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
   list), the exhaustive `KindModules` mapped type,
   `buildKindModules()`, and `mergeKindDetailBinds()`.
+- `kind-geometry.ts` — leg helpers shared across modules:
+  `absCameraDistancePc(ctx, centerAbs)`, the card
+  `cameraDistancePc` leg for every kind whose centre is absolute
+  (cloud, lg). Shells go through their registry instead, which answers
+  0 for an absent slot.
+- `kind-context-mock.ts` — the `KindContext` fixture builder the
+  module test suites share.
 
-Modules themselves live in their kind's folder
-(`../solar-system/probes/probe-module.ts` is the pilot) and are only
-*assembled* here.
+Modules themselves live in their kind's folder — probe
+(`../solar-system/probes/probe-module.ts`, the pilot), cloud
+(`../molecular-clouds/cloud-module.ts`), lg
+(`../local-group/lg-module.ts`), shell
+(`../fresnel-shell/shell-module.ts`, whose internal `ShellRegistry`
+holds its two instances) — and are only *assembled* here.
 
 ## Contracts that must not drift
 
@@ -72,10 +82,15 @@ Modules themselves live in their kind's folder
 `main.ts`: `buildKindModules()` → `load` per roster entry inside the
 boot `Promise.all` → hand the record to `new Stellata({kinds})` →
 roster loops for SID domains (`sids()`, null ⇒ conclude), hover
-providers, label overlays, and the search corpus. `stellata.ts`: the
-constructor builds one `KindContext` and attach-loops the roster at
-the layer-construction point; `setT` fans out `clockJumped`,
-`setFocalBodyHidden` fans out `setFocalHidden`, `buildSceneElementBinds`
-applies the merged `detailBinds()` pushes, and `collectKindPicks()`
-hands the Picker each module's hover `pick` for its `pickKindHit`
-dispatch.
+providers, label overlays, and the search corpus
+(`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters).
+`stellata.ts`: the constructor builds one `KindContext` and
+attach-loops the roster at the layer-construction point; `setT` fans
+out `clockJumped`, `setFocalBodyHidden` fans out `setFocalHidden`,
+`buildSceneElementBinds` applies the merged `detailBinds()` pushes,
+and `collectKindPicks()` hands the Picker each module's hover `pick`
+for its `pickKindHit` dispatch (the click FSM's cloud / lg / shell /
+probe picks all route through it). The `focusables` record and
+`PoiStore.pinnable` rows for migrated kinds are the modules'
+`focusable()` / `pinnable` legs; both records stay exhaustive in the
+shell.

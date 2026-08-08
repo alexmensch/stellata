@@ -22,19 +22,26 @@ decoupled components per cloud:
 Both stay visible during warp by design (flying past Taurus is a
 feature, not noise).
 
-The runtime fetches `public/clouds.json` via `cloud-loader.ts`
+The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
+its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 (version gate: v3; the client reads the geometry + density-model fields
 + the curated `aliases` and ignores the build-side `noiseModel` block) and
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
-meshes; a missing artifact means every cloud uses its ellipsoid rim).
+meshes; a missing artifact means every cloud uses its ellipsoid rim),
+and its `attach` constructs the layer at the kind's roster position.
 Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
-`pnpm run build:clouds`. The resolver's `cloud` SID domain attaches in
-`main.ts` when the catalog loads (see `../util/sid-resolver/README.md`).
+`pnpm run build:clouds`. The resolver's `cloud` SID domain is the
+module's `sids()` leg, attached by main.ts's roster loop (see
+`../util/sid-resolver/README.md`).
 
 ## Files
 
+- `cloud-module.ts` (+ test) — the cloud `ObjectKindModule`
+  (`../kinds/README.md`): load/attach plus the focusable / card / hover
+  (whose pick the click FSM shares) / search / SID / declutter legs and
+  the live `renderedSizePx`, each reading the layer below.
 - `molecular-clouds.ts` — `MolecularClouds` renderer + the silhouette /
   viewing-distance helpers.
 - `cloud-loader.ts` — `clouds.json` v3 fetch/decode.
@@ -129,8 +136,10 @@ a stride subsample of the traced mesh's vertices, or a fibonacci sweep
 of the `u = uEnv` envelope for fallback clouds. A `labels`-tier
 declutter element (`molecularCloudLabels`, floor `all`, realistic only —
 chart names ride `chart-labels.ts`), additionally gated on the cloud's
-projected silhouette reaching ~40 px (`renderedCloudSizePx`) so distant
-complexes don't stack a label per member.
+projected silhouette reaching ~40 px (the module's `renderedSizePx` leg,
+passed in) so distant complexes don't stack a label per member. The
+module keeps the mount's teardown and runs it from its scene layer's
+`dispose`.
 
 ## Constellation — centroid only, deliberately
 
@@ -184,17 +193,17 @@ absorption ellipsoid (its `SphereGeometry` is only the raymarch domain).
 Raycasting ignores mesh visibility, so picking works while the rim is
 decluttered or in chart mode. The click handler in `onPointerUp` falls
 back to a cloud pick when no star is hit (stars take priority because
-they're the smaller, more precise target), and the hover engine's
-`cloud-hover-provider` calls `Picker.pickCloudHit` so hovering over a
-cloud's body shows its name + distance + axes in the existing tooltip
-element.
+they're the smaller, more precise target), and the hover engine runs
+the cloud module's provider, so hovering over a cloud's body shows its
+name + distance + axes in the existing tooltip element.
 
 **One winner resolver, in the layer.** `MolecularClouds.pick` is the
-single entry point behind both pick surfaces — `Picker.pickCloud`
-(click, keeps its warp gate) and `Picker.pickCloudHit` (hover, keeps the
-`group.visible` gate) each delegate, so the two can never disagree on
-which of two overlapping clouds the cursor is on. A tiebreak living in
-the click handler instead would drift the moment either surface changes.
+single entry point behind the module's one pick surface — the click
+FSM (via `Picker.pickKindHit('cloud', …)`) and the hover engine run
+the same function, so the two can never disagree on which of two
+overlapping clouds the cursor is on. A tiebreak living in the click
+handler instead would drift the moment either surface changes. (The
+old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
 Hover tier is always `fallback`: stars, planets, LG objects and shells
 win any overlap with a cloud body.
 
@@ -222,19 +231,20 @@ Projection is against the **effective centre** (§ Effective focus
 geometry), and the denominator is the layer's `renderedSizePx` — the
 extent sphere for traced clouds, the tight ellipsoid quadric otherwise,
 both at the depicted `u = uEnv` envelope, keyed off the canonical
-shader-side pixels-per-radian (`PickerDeps.fovYRadRef` / `viewportRef`)
-so the score matches the silhouette the user actually clicked inside.
+shader-side pixels-per-radian (`KindContext.angularToPx()`, which reads
+the shared view uniforms the star passes write) so the score matches the
+silhouette the user actually clicked inside.
 Every hit enters the shared `pickFromCandidates` reducer as a prime-tier
 candidate with `hitRadius: Infinity` — see `cloudPickCandidate` for why a
 real radius would misclassify near-lobe hits.
 
 ## Search
 
-Cloud entries share the same Fuse fuzzy index as star entries,
-discriminated by a `kind: 'star' | 'cloud'` tag. Each cloud indexes its
-canonical `name` plus every curated `aliases` entry (`scripts/clouds/README.md`
-§ Alternate names), all resolving to the same cloud — the Local Group
-pattern. The Focus search box dispatches `flyTo` with the entry's Target
+Cloud entries enter the shared Fuse fuzzy index through the module's
+`searchEntries()` leg, discriminated by their `kind` tag. Each cloud
+indexes its canonical `name` plus every curated `aliases` entry
+(`scripts/clouds/README.md` § Alternate names), all resolving to the
+same cloud — the Local Group pattern. The Focus search box dispatches `flyTo` with the entry's Target
 (focus-park lerp to viewing distance + set cloud focus); the To (distance
 vector) box dispatches `setVector` the same way.
 

@@ -57,7 +57,8 @@ intentional, since from inside there's nothing geometrically
 informative to show.
 
 The "Heliopause" SVG label is anchored to the upwind apex's projected
-silhouette by `createHeliopauseLabel` in `main.ts`. The shell itself has
+silhouette by `createHeliopauseLabel`, mounted by the shell module's
+`labels()` leg. The shell itself has
 no distance-based render cutoff, so the label gates on
 `isShellLabelResolvable` (`../../fresnel-shell/README.md` § Boundary shells
 as focus targets) — the shell's projected angular radius at the true
@@ -69,13 +70,13 @@ screen-size floor the planet labels ride via the orbit-ring gate.
 
 The heliopause is a full boundary-shell focus target (`shell`
 `TargetKind`): searchable, focusable, warpable, pinnable, hoverable —
-registered into the shared `ShellRegistry` in the Stellata ctor (center =
-Sol, extent = the 200 AU downwind apex, SID =
-`SHELL_OBJECT_SIDS.heliopause`, card + `HELIOPAUSE_SAMPLE_POINTS_SOL`
-pick surface). Search / focus card / hover / click-pick all route through
-the shared shell machinery (`../../fresnel-shell/README.md` § Boundary
-shells as focus targets) — there is no heliopause-specific hover or
-picker anymore.
+one of the shell kind module's two instances, registered into its
+internal `ShellRegistry` on attach (center = Sol, extent = the 200 AU
+downwind apex, SID = `SHELL_OBJECT_SIDS.heliopause`, card +
+`HELIOPAUSE_SAMPLE_POINTS_SOL` pick surface). Search / focus card /
+hover / click-pick all route through the module's legs
+(`../../fresnel-shell/README.md` § Boundary shells as focus targets) —
+there is no heliopause-specific hover or picker anymore.
 
 **Visibility is declutter-governed, not focus-coupled.** The shell (and
 its apex label) render whenever the `heliopauseShell` /`heliopauseLabel`

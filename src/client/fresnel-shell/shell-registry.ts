@@ -89,7 +89,11 @@ export class ShellRegistry {
   /** Shell center in the renderer's local frame (absolute − worldOffset).
    *  false when the shell or its geometry is absent — the shell provider's
    *  localPositionInto leg. */
-  localPositionInto(idx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
+  localPositionInto(
+    idx: number,
+    worldOffset: Readonly<THREE.Vector3>,
+    out: THREE.Vector3,
+  ): boolean {
     const shell = this.at(idx);
     if (!shell || !shell.centerAbsInto(out)) return false;
     out.sub(worldOffset);
@@ -97,7 +101,11 @@ export class ShellRegistry {
   }
 
   /** Live camera→center distance in the local frame, pc; 0 when absent. */
-  cameraDistancePc(idx: number, worldOffset: THREE.Vector3, cameraPos: THREE.Vector3): number {
+  cameraDistancePc(
+    idx: number,
+    worldOffset: Readonly<THREE.Vector3>,
+    cameraPos: Readonly<THREE.Vector3>,
+  ): number {
     if (!this.localPositionInto(idx, worldOffset, this.tmp)) return 0;
     return this.tmp.distanceTo(cameraPos);
   }
@@ -133,8 +141,8 @@ export class ShellRegistry {
    *  silhouette sizing. 0 when absent. */
   renderedSizePx(
     idx: number,
-    worldOffset: THREE.Vector3,
-    cameraPos: THREE.Vector3,
+    worldOffset: Readonly<THREE.Vector3>,
+    cameraPos: Readonly<THREE.Vector3>,
     angularToPx: number,
   ): number {
     const shell = this.at(idx);

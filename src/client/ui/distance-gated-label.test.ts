@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { createDistanceGatedLabel } from './distance-gated-label';
-
-type AnyStellata = Parameters<typeof createDistanceGatedLabel>[0];
+import { createDistanceGatedLabel, type LabelFrameHost } from './distance-gated-label';
 
 interface FakeText {
   style: { display: string };
@@ -41,25 +39,28 @@ function buildCamera(eye: THREE.Vector3, lookAt: THREE.Vector3): THREE.Perspecti
   return cam;
 }
 
-interface FakeStellata {
-  camera: THREE.PerspectiveCamera;
+interface FakeHost extends LabelFrameHost {
   fireFrame: () => void;
   framed: { cb?: () => void };
-  on: AnyStellata['on'];
+  unsubscribed: number;
 }
 
-function makeFakeStellata(camera: THREE.PerspectiveCamera): FakeStellata {
+function makeHost(camera: THREE.PerspectiveCamera): FakeHost {
   const framed: { cb?: () => void } = {};
-  const on = ((event: string, cb: () => void) => {
-    if (event === 'frame') framed.cb = cb;
-    return () => {};
-  }) as unknown as AnyStellata['on'];
-  return {
+  const host: FakeHost = {
     camera,
     framed,
+    unsubscribed: 0,
     fireFrame: () => framed.cb?.(),
-    on,
+    onFrame: (cb) => {
+      framed.cb = cb;
+      return () => {
+        host.unsubscribed++;
+        framed.cb = undefined;
+      };
+    },
   };
+  return host;
 }
 
 describe('createDistanceGatedLabel', () => {
@@ -78,8 +79,8 @@ describe('createDistanceGatedLabel', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    const fake = makeHost(cam);
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: 1,
       getWorldSample: (_, out) => out.set(0, 0, 0),
@@ -94,8 +95,8 @@ describe('createDistanceGatedLabel', () => {
   it('returns silently when the element is absent (no SVG slot, no crash)', () => {
     mountDom({});
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
-    expect(() => createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    const fake = makeHost(cam);
+    expect(() => createDistanceGatedLabel(fake, {
       elementId: 'missing',
       sampleCount: 1,
       getWorldSample: (_, out) => out.set(0, 0, 0),
@@ -109,14 +110,43 @@ describe('createDistanceGatedLabel', () => {
     expect(fake.framed.cb).toBeUndefined();
   });
 
+  // The teardown every label family threads into its module's scene-layer
+  // dispose. Without it the handler outlives the layer it projects.
+  it('detaches its frame handler when the returned teardown runs', () => {
+    const text = makeFakeText();
+    mountDom({ 'lbl': text });
+    const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
+    const fake = makeHost(cam);
+    let visible = true;
+    const stop = createDistanceGatedLabel(fake, {
+      elementId: 'lbl',
+      sampleCount: 1,
+      getWorldSample: (_, out) => out.set(0, 0, 0),
+      visible: () => visible,
+      labelDir: { x: 1, y: 0 },
+      offsetPx: 10,
+      lerp: 0.5,
+    });
+    fake.fireFrame();
+    expect(text.style.display).toBe('');
+
+    stop();
+    expect(fake.unsubscribed).toBe(1);
+    // A frame after teardown must not reach the predicate — flipping it
+    // false would otherwise write display:none.
+    visible = false;
+    fake.fireFrame();
+    expect(text.style.display).toBe('');
+  });
+
   it('hides on visible()=false and clears smoothing so the next show snaps', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
+    const fake = makeHost(cam);
 
     let predicate = true;
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: 1,
       getWorldSample: (_, out) => out.set(1, 0, 0), // off-axis point
@@ -140,7 +170,7 @@ describe('createDistanceGatedLabel', () => {
     // Show again — should snap (not lerp from x1) because smoothed reset.
     // Switch the sample point so the new target differs from x1.
     predicate = true;
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: 1,
       getWorldSample: (_, out) => out.set(-1, 0, 0),
@@ -160,7 +190,7 @@ describe('createDistanceGatedLabel', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
+    const fake = makeHost(cam);
 
     // Four samples on the unit circle in z=0. labelDir = (+x, 0) → the
     // right-side sample (+1, 0, 0) projects to the largest screen-x and
@@ -172,7 +202,7 @@ describe('createDistanceGatedLabel', () => {
       new THREE.Vector3(0, 1, 0),
       new THREE.Vector3(0, -1, 0),
     ];
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: samples.length,
       getWorldSample: (i, out) => out.copy(samples[i]),
@@ -196,11 +226,11 @@ describe('createDistanceGatedLabel', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
+    const fake = makeHost(cam);
 
     // Single sample at origin → projects exactly to screen centre (400, 300).
     // Offset 50 px along (1, 0) → label anchor at (450, 300).
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: 1,
       getWorldSample: (_, out) => out.set(0, 0, 0),
@@ -218,7 +248,7 @@ describe('createDistanceGatedLabel', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
+    const fake = makeHost(cam);
 
     // First sample is in front of the camera; second is behind it (z > eye.z
     // in world space). Even though the first sample alone would project
@@ -227,7 +257,7 @@ describe('createDistanceGatedLabel', () => {
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, 10), // behind camera at z=5 → near-plane bail
     ];
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: samples.length,
       getWorldSample: (i, out) => out.copy(samples[i]),
@@ -244,12 +274,12 @@ describe('createDistanceGatedLabel', () => {
     const text = makeFakeText();
     mountDom({ 'lbl': text });
     const cam = buildCamera(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
-    const fake = makeFakeStellata(cam);
+    const fake = makeHost(cam);
 
     // Animate the sample world position frame-by-frame. The smoothed
     // screen-x should chase the target with the lerp factor.
     let samplePos = new THREE.Vector3(0, 0, 0);
-    createDistanceGatedLabel(fake as unknown as AnyStellata, {
+    createDistanceGatedLabel(fake, {
       elementId: 'lbl',
       sampleCount: 1,
       getWorldSample: (_, out) => out.copy(samplePos),

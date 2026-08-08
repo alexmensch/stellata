@@ -232,9 +232,9 @@ export class InputController {
       this.deps.flyTo(picked);
       return;
     }
-    const cloudIdx = this.deps.picker.pickCloud(x, y);
-    if (cloudIdx !== null) {
-      this.deps.flyTo({ kind: 'cloud', idx: cloudIdx });
+    const cloud = this.deps.picker.pickKindHit('cloud', x, y);
+    if (cloud !== null) {
+      this.deps.flyTo({ kind: 'cloud', idx: cloud.idx });
       return;
     }
     this.deps.bus.emit('noopClick', { x, y });
@@ -250,8 +250,8 @@ export class InputController {
     const star = this.deps.picker.pickStarHit(x, y, 16);
     const planet = this.deps.picker.pickPlanetClick(x, y, 16);
     const probe = this.deps.picker.pickKindHit('probe', x, y, 16);
-    const lg = this.deps.picker.pickLocalGroupHit(x, y, 16);
-    const shell = this.deps.picker.pickShellHit(x, y);
+    const lg = this.deps.picker.pickKindHit('lg', x, y, 16);
+    const shell = this.deps.picker.pickKindHit('shell', x, y);
     const picks: Array<{ kind: 'star' | 'planet' | 'probe' | 'lg' | 'shell'; hit: HoverHit } | null> = [
       star ? { kind: 'star', hit: star } : null,
       planet ? { kind: 'planet', hit: planet } : null,
@@ -270,7 +270,7 @@ export class InputController {
     if (picked !== null) {
       return this.applyObjectClick(picked);
     }
-    const cloudIdx = this.deps.picker.pickCloud(x, y);
+    const cloudIdx = this.deps.picker.pickKindHit('cloud', x, y)?.idx ?? null;
     if (cloudIdx === null) return false;
 
     // Clouds keep the pre-ladder vector-first semantics (stellata-t2u5

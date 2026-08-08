@@ -2,6 +2,9 @@
 // See ./README.md.
 
 import type { TargetKind } from '../camera/focus/focus-target';
+import { createShellKindModule } from '../fresnel-shell/shell-module';
+import { createLgKindModule } from '../local-group/lg-module';
+import { createCloudKindModule } from '../molecular-clouds/cloud-module';
 import type { SceneElementId } from '../scene/scene-elements';
 import {
   createProbeKindModule,
@@ -42,10 +45,10 @@ export type KindModules =
 export function buildKindModules() {
   return {
     star: null,
-    cloud: null,
-    lg: null,
+    cloud: createCloudKindModule(),
+    lg: createLgKindModule(),
     planet: null,
-    shell: null,
+    shell: createShellKindModule(),
     probe: createProbeKindModule(),
   } satisfies KindModules;
 }

@@ -6,11 +6,12 @@ sits *inside* a bubble. A `representational`-tier declutter element
 (`localBubbleShell`, `scene/README.md`).
 
 It is also a full **boundary-shell focus target** (`shell` `TargetKind`):
-searchable, focusable, warpable, and pinnable. `Stellata.attachLocalBubble`
-registers it into the shared `ShellRegistry` (center = mesh centroid,
-extent = max wall distance, SID = `SHELL_OBJECT_SIDS.local_bubble`, card +
-silhouette pick surface) — see `../fresnel-shell/README.md` § Boundary
-shells as focus targets.
+searchable, focusable, warpable, and pinnable. The shell kind module's
+`attach` registers it into its internal `ShellRegistry` when the mesh
+artifact loaded (center = mesh centroid, extent = max wall distance,
+SID = `SHELL_OBJECT_SIDS.local_bubble`, card + silhouette pick
+surface) — see `../fresnel-shell/README.md` § Boundary shells as focus
+targets.
 
 ## Files
 

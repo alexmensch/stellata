@@ -4,9 +4,6 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
-import type { CloudCatalog } from '../molecular-clouds/cloud-loader';
-import type { LgCatalog } from '../local-group/local-group-loader';
-import type { ShellRegistry } from '../fresnel-shell/shell-registry';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
@@ -20,14 +17,6 @@ import {
 export type { SearchEntry };
 
 type EntryKind = TargetKind;
-
-/** Static dropdown-row distance for a Local Group entry. Fixed units by
- *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
- *  built once and galaxy distances read naturally in kpc either way. */
-export function formatLgSearchDistance(pc: number): string {
-  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(2)} Mpc`;
-  return `${Math.round(pc / 1000)} kpc`;
-}
 
 export interface FuzzyEntry {
   kind: EntryKind;
@@ -432,74 +421,20 @@ export function buildSearchIndex(
   return { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap };
 }
 
-// Build the shared query runner over stars + clouds: direct-lookup maps for
-// numeric IDs, fuzzy fallback, within-kind dedup. Every search surface (the
-// topbar Focus/To boxes and the `F` find modal) runs the same corpus through
-// this, so ranking + ID dispatch never diverge between them.
+// Build the shared query runner: direct-lookup maps for numeric IDs, the
+// star fuzzy corpus, kind-module rows via the roster, within-kind dedup.
+// Every search surface (the topbar Focus/To boxes and the `F` find modal)
+// runs the same corpus through this, so ranking + ID dispatch never
+// diverge between them.
 export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
-  clouds: CloudCatalog | null,
-  lg: LgCatalog | null = null,
-  shells: ShellRegistry | null = null,
   kinds: KindModules | null = null,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
     buildSearchIndex(raw, catalog.constellations);
-
-  // Cloud entries — display name plus every curated cross-catalogue / common
-  // alias ("Eagle Nebula", "M16", "NGC 6611"), each resolving to the same
-  // cloud (the Local Group pattern below). The "cloud" badge in the dropdown
-  // secondary line distinguishes Taurus (the cloud) from Tau (any star
-  // labelled "Tau …").
-  if (clouds) {
-    for (let i = 0; i < clouds.clouds.length; i++) {
-      const c = clouds.clouds[i];
-      for (const label of [c.name, ...(c.aliases ?? [])]) {
-        fuzzyEntries.push({
-          kind: 'cloud',
-          index: i,
-          label,
-          primary: c.name,
-          displayCon: 'Molecular cloud',
-        });
-      }
-    }
-  }
-
-  // Local Group entries — display name plus every catalog cross-ID /
-  // common-name alias the build emitted ("Andromeda Galaxy", "NGC 224",
-  // "M 110", …), each resolving to the same object. The secondary line
-  // carries type + distance so "Sagittarius" disambiguates the 26 kpc
-  // dSph from any star row at a glance.
-  if (lg) {
-    for (let i = 0; i < lg.objects.length; i++) {
-      const o = lg.objects[i];
-      const displayCon = `${o.type} · ${formatLgSearchDistance(o.distanceFromSol)}`;
-      for (const label of [o.name, ...(o.aliases ?? [])]) {
-        fuzzyEntries.push({ kind: 'lg', index: i, label, primary: o.name, displayCon });
-      }
-    }
-  }
-
-  // Boundary shells (Local Bubble, heliopause) — the registry holds only
-  // the shells whose layer attached; index is the SHELL_KEYS/Target idx.
-  // Secondary line is the shell's type descriptor.
-  if (shells) {
-    for (let i = 0; i < shells.count; i++) {
-      const s = shells.at(i);
-      if (!s) continue;
-      fuzzyEntries.push({
-        kind: 'shell',
-        index: i,
-        label: s.label,
-        primary: s.label,
-        displayCon: s.card.typeLine,
-      });
-    }
-  }
 
   // Sol's planets and moons — search-by-name is deliberately Sol-only
   // (bk5 exoplanets are visit-to-discover). Entry index is the SOL_BODIES
@@ -718,12 +653,8 @@ export function bindSearch(
   catalog: Catalog,
   raw: SearchEntry[],
   starLabels: Map<number, string>,
-  clouds: CloudCatalog | null,
-  lg: LgCatalog | null = null,
 ) {
-  const runQuery = createSearchRunner(
-    catalog, raw, clouds, lg, stellata.shells, stellata.kinds,
-  );
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -830,9 +761,9 @@ export function bindSearch(
       case 'star': return describe(t.idx);
       case 'planet': return stellata.planetField.planetAt(t.idx)?.name ?? '';
       case 'probe': return stellata.kinds.probe.displayName(t.idx);
-      case 'cloud': return clouds ? clouds.clouds[t.idx].name : '';
-      case 'lg': return lg ? lg.objects[t.idx].name : '';
-      case 'shell': return stellata.shells.at(t.idx)?.label ?? '';
+      case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
+      case 'lg': return stellata.kinds.lg.displayName(t.idx);
+      case 'shell': return stellata.kinds.shell.displayName(t.idx);
     }
   };
   const syncFocusUI = () => {
@@ -874,12 +805,8 @@ export function bindFindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
-  clouds: CloudCatalog | null,
-  lg: LgCatalog | null = null,
 ): void {
-  const runQuery = createSearchRunner(
-    catalog, raw, clouds, lg, stellata.shells, stellata.kinds,
-  );
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 

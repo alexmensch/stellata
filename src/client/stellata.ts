@@ -23,10 +23,8 @@ import {
 (THREE.ShaderChunk as Record<string, string>)['stellata_dust_raymarch'] =
   dustRaymarchChunk;
 import { GalacticDisc } from './galactic/galactic-disc';
-import { LocalGroupLayer } from './local-group/local-group';
-import { lgViewingDistancePc, maxSemiAxisPc } from './local-group/local-group-loader';
-import { LocalGroupEmission } from './local-group/local-group-emission';
-import type { LgCatalog } from './local-group/local-group-loader';
+import type { LocalGroupLayer } from './local-group/local-group';
+import type { LocalGroupEmission } from './local-group/local-group-emission';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
 import {
@@ -38,9 +36,8 @@ import {
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
-import { MolecularClouds } from './molecular-clouds/molecular-clouds';
+import type { MolecularClouds } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
-import type { CloudSurface } from './molecular-clouds/cloud-surfaces-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import {
@@ -80,7 +77,6 @@ import {
 } from './kinds/kind-modules';
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { parkDistance } from './camera/focus/focus-transition';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
 import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
@@ -94,20 +90,6 @@ import {
   PHYS_RATIO_THRESHOLD,
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/local-pass/star-local-cluster-pure';
-import {
-  Heliopause,
-  HELIOPAUSE_LABEL,
-  HELIOPAUSE_CARD,
-  HELIOPAUSE_EXTENT_PC,
-} from './solar-system/heliopause/heliopause';
-import {
-  LocalBubbleShell,
-  LOCAL_BUBBLE_LABEL,
-  LOCAL_BUBBLE_CARD,
-} from './local-bubble/local-bubble';
-import type { LocalBubbleMesh } from './local-bubble/local-bubble-loader';
-import { ShellRegistry } from './fresnel-shell/shell-registry';
-import { SHELL_OBJECT_SIDS } from './fresnel-shell/shell-object-sids';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
@@ -138,7 +120,7 @@ import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
-import { SceneLayerRegistry, type FrameCtx } from './scene/scene-layer';
+import { SceneLayerRegistry, updateWarpGatedRefLayer, type FrameCtx } from './scene/scene-layer';
 import {
   type DetailLevel,
   type SceneElementBinds,
@@ -370,35 +352,11 @@ export class Stellata implements FrameAnchor {
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
-  // Sol-anchored asymmetric ellipsoid; visible only when Sol is the
-  // focused host.
-  private heliopause: Heliopause;
-  private localBubbleShell: LocalBubbleShell;
-  /** Boundary-shell focus-target instances (Local Bubble, heliopause).
-   *  Populated by each shell's attach; the kind-agnostic shell dispatch
-   *  reads it. See fresnel-shell/shell-registry.ts. */
-  readonly shells = new ShellRegistry();
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   private hudOverlay: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
    *  the chart activation predicate; the shell owns its lifetime. */
   readonly chartLabels = new ChartLabels(this);
-
-  // null until attachLocalGroup() runs; absent layer is a no-op
-  // everywhere. Shares the MW disc's FADE_INNER_PC / FADE_OUTER_PC
-  // reveal curve.
-  private localGroupLayer: LocalGroupLayer | null = null;
-
-  // Volumetric LG emission — the wireframe's luminous sibling, built
-  // from the same catalog. No Sol-distance fade and visible during
-  // warp (it's light, not reference chrome); only chart mode and its
-  // own toggle hide it.
-  private lgEmission: LocalGroupEmission | null = null;
-
-  // Molecular cloud overlay. null until attachClouds() runs;
-  // the layer loads asynchronously after the catalog and search index so
-  // first paint isn't gated on it.
-  private clouds: MolecularClouds | null = null;
 
   // Milky Way analytic background. Constructed eagerly so the
   // band is on during first paint. Dust is wired in once the volumetric
@@ -612,6 +570,17 @@ export class Stellata implements FrameAnchor {
       canvas: this.renderer.domElement,
       sharedUniforms,
       solIndex: catalog.solIndex,
+      solAbsInto: (out) => {
+        const si = catalog.solIndex;
+        if (si < 0) return false;
+        out.set(
+          catalog.positions[si * 3],
+          catalog.positions[si * 3 + 1],
+          catalog.positions[si * 3 + 2],
+        );
+        return true;
+      },
+      angularToPx: () => this.angularToPx(),
       getT: () => this.getT(),
       getWorldOffset: () => this.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
@@ -633,33 +602,6 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
-    // Heliopause is Sol-anchored — added once; visibility is governed by
-    // the declutter cycle (`heliopauseShell`), like the Local Bubble.
-    this.heliopause = new Heliopause();
-    this.scene.add(this.heliopause.group);
-    if (catalog.solIndex >= 0) {
-      const si = catalog.solIndex;
-      const solAbs = new THREE.Vector3(
-        catalog.positions[si * 3],
-        catalog.positions[si * 3 + 1],
-        catalog.positions[si * 3 + 2],
-      );
-      this.shells.register('heliopause', {
-        label: HELIOPAUSE_LABEL,
-        sid: SHELL_OBJECT_SIDS.heliopause,
-        card: HELIOPAUSE_CARD,
-        centerAbsInto: (out) => {
-          out.copy(solAbs);
-          return true;
-        },
-        extentPc: () => HELIOPAUSE_EXTENT_PC,
-        pick: this.heliopause.shellPickSurface(),
-      });
-    }
-    this.localBubbleShell = new LocalBubbleShell();
-    this.scene.add(this.localBubbleShell.group);
-    this.localBubbleShell.recenter(this.worldOffset);
-
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
@@ -680,8 +622,8 @@ export class Stellata implements FrameAnchor {
 
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
-    // Layers that attach asynchronously (clouds, Local Group) are
-    // read through getters so Picker sees them as soon as they land.
+    // Kind-module surfaces dispatch through `kindPicks`; the remaining
+    // getters cover the inline-wired star and planet paths.
     // `picker` is `readonly` — assigned via writable cast since field
     // initialisation in TS requires bypassing the readonly guard here.
     (this as { picker: Picker }).picker = new Picker({
@@ -692,18 +634,11 @@ export class Stellata implements FrameAnchor {
       sortedDistFromSol: this.starFrame.sortedDistFromSol,
       getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
-      getClouds: () => this.clouds,
-      getLocalGroupLayer: () => this.localGroupLayer,
-      getShells: () => this.shells,
       getPlanetBodyField: () => this.planetBodyField,
       kindPicks: collectKindPicks(this.kinds),
-      getWorldOffset: () => this.worldOffset,
-      getWarpActive: () => this.warp.isActive(),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
-      fovYRadRef: this.starPipeline.discMaterial.uniforms.uFovYRad as { value: number },
-      viewportRef: this.starPipeline.discMaterial.uniforms.uViewport as { value: THREE.Vector2 },
     });
     // The warp / focus-lerp / observe-transition busy checks stay on
     // stellata's aimAt dispatcher because they gate behaviour the
@@ -739,29 +674,10 @@ export class Stellata implements FrameAnchor {
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
-    const cloudPark = (idx: number): number => {
-      const clouds = this.clouds;
-      if (!clouds?.clouds[idx]) return 0;
-      return parkDistance({
-        R_pc: clouds.focusExtentPc(idx),
-        dMinFloor: clouds.viewingDistancePc(idx),
-      });
-    };
-    const lgPark = (idx: number): number => {
-      const obj = this.localGroupLayer?.objects[idx];
-      if (!obj) return 0;
-      return parkDistance({
-        R_pc: maxSemiAxisPc(obj),
-        dMinFloor: lgViewingDistancePc(obj),
-      });
-    };
-    const shellPark = (idx: number): number => this.shells.focusParkDistancePc(idx);
     const planetRadiusPc = (idx: number): number | null => {
       const p = this.planetBodyField.planetAt(idx);
       return p ? p.radiusKm * KM_PC : null;
     };
-    const softFloor = (park: (idx: number) => number) =>
-      (idx: number): number => Math.min(GLOBAL_MIN_DIST_PC, park(idx));
     (this as { focusables: FocusableProviders }).focusables = {
       star: {
         anchorInto: (idx, out) => {
@@ -788,47 +704,9 @@ export class Stellata implements FrameAnchor {
           chartPlateauDistancePc(this.catalog.absmag[idx], magBright),
         planetSystemHost: (idx) => idx,
       },
-      cloud: {
-        anchorInto: (idx, out) => this.clouds?.focusCenterAbsInto(idx, out) ?? false,
-        localPositionInto: (idx, out) =>
-          this.clouds?.cloudLocalPositionInto(idx, this.worldOffset, out) ?? false,
-        focusParkDistance: cloudPark,
-        orbitFloor: softFloor(cloudPark),
-        arrivalRadiusPc: () => null,
-        renderedSizePx: (idx) => this.renderedCloudSizePx(idx),
-        chartPlateauDistance: () => null,
-        planetSystemHost: () => null,
-      },
-      lg: {
-        anchorInto: (idx, out) => {
-          const obj = this.localGroupLayer?.objects[idx];
-          if (!obj) return false;
-          out.copy(obj.centerAbs);
-          return true;
-        },
-        localPositionInto: (idx, out) =>
-          this.localGroupLayer?.lgLocalPositionInto(idx, this.worldOffset, out) ?? false,
-        focusParkDistance: lgPark,
-        orbitFloor: softFloor(lgPark),
-        arrivalRadiusPc: () => null,
-        renderedSizePx: (idx) =>
-          this.localGroupLayer?.renderedLgSizePx(
-            idx, this.camera, this.worldOffset, () => this.angularToPx(),
-          ) ?? 0,
-        chartPlateauDistance: () => null,
-        planetSystemHost: () => null,
-      },
-      shell: {
-        anchorInto: (idx, out) => this.shells.at(idx)?.centerAbsInto(out) ?? false,
-        localPositionInto: (idx, out) => this.shells.localPositionInto(idx, this.worldOffset, out),
-        focusParkDistance: shellPark,
-        orbitFloor: softFloor(shellPark),
-        arrivalRadiusPc: () => null,
-        renderedSizePx: (idx) =>
-          this.shells.renderedSizePx(idx, this.worldOffset, this.camera.position, this.angularToPx()),
-        chartPlateauDistance: () => null,
-        planetSystemHost: () => null,
-      },
+      cloud: this.kinds.cloud.focusable(),
+      lg: this.kinds.lg.focusable(),
+      shell: this.kinds.shell.focusable(),
       probe: this.kinds.probe.focusable(),
       planet: {
         anchorInto: (idx, out) =>
@@ -1034,9 +912,9 @@ export class Stellata implements FrameAnchor {
         // through ?v=.
         planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
         probe: (idx) => this.kinds.probe.pinnable(idx),
-        lg: (idx) => (this.localGroupLayer?.objects[idx]?.sid ?? 0) !== 0,
-        shell: (idx) => (this.shells.at(idx)?.sid ?? 0) !== 0,
-        cloud: () => false,
+        lg: (idx) => this.kinds.lg.pinnable(idx),
+        shell: (idx) => this.kinds.shell.pinnable(idx),
+        cloud: (idx) => this.kinds.cloud.pinnable(idx),
       },
       onChange: (pois) => {
         this.bus.emit('pois', pois);
@@ -1065,27 +943,6 @@ export class Stellata implements FrameAnchor {
     this.animate();
   }
 
-  // Reference layers (galactic disc, LG wireframe): hidden during warp,
-  // else distance-faded. Shared update body; null layer → no-op so a
-  // lazily-attached layer registers unconditionally.
-  private updateWarpGatedRefLayer(
-    layer: {
-      group: { visible: boolean };
-      update: (worldOffset: THREE.Vector3, distFromSol: number) => void;
-    } | null,
-    ctx: FrameCtx,
-    permitted: boolean,
-  ): void {
-    if (!layer) return;
-    // Detail-cycle permission (representational floor) AND's with the warp
-    // gate; either false hides the group.
-    if (ctx.warpActive || !permitted) {
-      layer.group.visible = false;
-      return;
-    }
-    layer.update(ctx.worldOffset, ctx.distFromSol);
-  }
-
   // Rebuild the constellation figure geometry for the active set: the
   // highlighted figure, all 88 in chart mode, or none. Skips the rebuild when
   // the active set is unchanged (filter emits fire on every slider drag).
@@ -1108,11 +965,10 @@ export class Stellata implements FrameAnchor {
   }
 
   // One adapter entry per scene layer; registration order is per-frame
-  // update order. Lazily-attached layers are read through closures so
-  // attach/replace cycles need no re-registration. Warp gating is
-  // per-entry: reference layers hide during warp, physical/light layers
-  // keep ticking (clouds stay visible during warp by design — flying
-  // past Taurus is a feature). See scene/README.md.
+  // update order (kind-module layers registered ahead of these in the
+  // constructor's roster loop). Warp gating is per-entry: reference
+  // layers hide during warp, physical/light layers keep ticking. See
+  // scene/README.md.
   private registerSceneLayers(): void {
     this.layers.register({
       update: (ctx) => {
@@ -1201,23 +1057,17 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       // Chart-only — floor 'never' in the realistic column.
-      update: (ctx) => this.updateWarpGatedRefLayer(
+      update: (ctx) => updateWarpGatedRefLayer(
         this.constellationBoundaryLayer, ctx,
         this.detailPermits('constellationBoundaries')),
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
     this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(
+      update: (ctx) => updateWarpGatedRefLayer(
         this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) => this.updateWarpGatedRefLayer(
-        this.localGroupLayer, ctx, this.detailPermits('lgWireframes')),
-      setMonochrome: (on) => this.localGroupLayer?.setMonochrome(on),
-      dispose: () => this.localGroupLayer?.dispose(),
     });
     this.layers.register({
       // Both spheres are camera-tracked; a spec's optional fade window is the
@@ -1257,33 +1107,10 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.hudOverlay.dispose(),
     });
     this.layers.register({
-      update: (ctx) =>
-        this.clouds?.update(ctx.worldOffset, this.detailPermits('molecularCloudEllipsoids')),
-      setMonochrome: (on) => this.clouds?.setMonochrome(on),
-      dispose: () => this.clouds?.dispose(),
-    });
-    this.layers.register({
       // Re-anchors the skybox mesh to camera.position and refreshes the
       // absolute-camera uniform for the raymarch. Visible during warp.
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
       dispose: () => this.milkyway.dispose(),
-    });
-    this.layers.register({
-      update: (ctx) => this.lgEmission?.update(ctx.worldOffset),
-      setMonochrome: (on) => this.lgEmission?.setChartHidden(on),
-      dispose: () => this.lgEmission?.dispose(),
-    });
-    this.layers.register({
-      // Visibility is event-driven (host focus), no per-frame update.
-      setMonochrome: (on) => this.heliopause.setMonochrome(on),
-      recenter: (newOrigin) => this.heliopause.recenter(newOrigin),
-      dispose: () => this.heliopause.dispose(),
-    });
-    this.layers.register({
-      // Static shell — only the floating-origin recentre moves it.
-      setMonochrome: (on) => this.localBubbleShell.setMonochrome(on),
-      recenter: (newOrigin) => this.localBubbleShell.recenter(newOrigin),
-      dispose: () => this.localBubbleShell.dispose(),
     });
     this.layers.register({
       dispose: () => this.dustParticles.dispose(),
@@ -1925,53 +1752,6 @@ export class Stellata implements FrameAnchor {
    *  (e.g. `stellata.milkywayLayer.setGlowMagOffset(30)`). */
   get milkywayLayer(): MilkyWay { return this.milkyway; }
 
-  /** Attach (or replace, or detach with null) the Local Group wireframe
-   *  layer. Mirrors attachClouds — load is async in main.ts, the layer
-   *  appears once the JSON arrives. Empty catalog detaches. */
-  attachLocalGroup(catalog: LgCatalog | null) {
-    if (this.localGroupLayer) {
-      this.scene.remove(this.localGroupLayer.group);
-      this.localGroupLayer.dispose();
-      this.localGroupLayer = null;
-    }
-    if (this.lgEmission) {
-      this.scene.remove(this.lgEmission.group);
-      this.lgEmission.dispose();
-      this.lgEmission = null;
-    }
-    if (catalog === null || catalog.objects.length === 0) return;
-    this.localGroupLayer = new LocalGroupLayer(catalog);
-    this.localGroupLayer.setMonochrome(this.monochrome);
-    this.scene.add(this.localGroupLayer.group);
-    this.lgEmission = new LocalGroupEmission(catalog.objects, {
-      hdr: this.hdr.emitterUniforms,
-    });
-    this.lgEmission.setChartHidden(this.monochrome);
-    this.applyLgEmissionEnabled();
-    this.scene.add(this.lgEmission.group);
-  }
-
-  /** Attach the parsed Local Bubble shell mesh. The layer is constructed
-   *  in the ctor and already in the scene (Sol-anchored, like the
-   *  heliopause); this just builds its geometry once the async load
-   *  resolves. */
-  attachLocalBubble(mesh: LocalBubbleMesh): void {
-    this.localBubbleShell.attach(mesh);
-    this.localBubbleShell.recenter(this.worldOffset);
-    this.localBubbleShell.setMonochrome(this.monochrome);
-    this.shells.register('local_bubble', {
-      label: LOCAL_BUBBLE_LABEL,
-      sid: SHELL_OBJECT_SIDS.local_bubble,
-      card: LOCAL_BUBBLE_CARD,
-      centerAbsInto: (out) => {
-        out.set(mesh.centroidAbs[0], mesh.centroidAbs[1], mesh.centroidAbs[2]);
-        return true;
-      },
-      extentPc: () => mesh.extentPc,
-      pick: this.localBubbleShell.shellPickSurface(),
-    });
-  }
-
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
    *  once the async load resolves, then binds the artifact's other two
@@ -2012,50 +1792,25 @@ export class Stellata implements FrameAnchor {
     return namer.nameAt(abs.add(this.worldOffset));
   }
 
-  /** The Local Bubble shell layer — read by its silhouette label for the
-   *  surface samples + attach state. */
-  getLocalBubbleShell(): LocalBubbleShell { return this.localBubbleShell; }
-
-  /** Direct access to the Local Group layer for dev-console / label
-   *  wiring in main.ts. null until attachLocalGroup runs. */
-  get localGroup(): LocalGroupLayer | null { return this.localGroupLayer; }
+  /** Direct access to the Local Group wireframe layer for dev-console
+   *  reads. null when local-group.json is absent. */
+  get localGroup(): LocalGroupLayer | null { return this.kinds.lg.layer; }
 
   /** Dev-console access to the LG emission layer (brightness /
-   *  glow-mag-offset levers). null until attachLocalGroup runs. */
-  get localGroupEmission(): LocalGroupEmission | null { return this.lgEmission; }
+   *  glow-mag-offset levers). null when local-group.json is absent. */
+  get localGroupEmission(): LocalGroupEmission | null { return this.kinds.lg.emission; }
 
-  /** Wire the loaded molecular cloud catalog into the scene. Idempotent —
-   *  calling again replaces the layer. Pass null to detach. `surfaces` is
-   *  the optional sid-keyed isosurface mesh map (cloud-surfaces.bin);
-   *  clouds without one fall back to their ellipsoid rim shape. */
-  attachClouds(catalog: CloudCatalog | null, surfaces: Map<number, CloudSurface> | null = null) {
-    if (this.clouds) {
-      this.scene.remove(this.clouds.group);
-      this.clouds.dispose();
-      this.clouds = null;
-    }
-    if (catalog === null || catalog.clouds.length === 0) return;
-    const u = this.starPipeline.discMaterial.uniforms;
-    this.clouds = new MolecularClouds(catalog, surfaces, {
-      uFovYRad: u.uFovYRad as { value: number },
-      uViewport: u.uViewport as { value: THREE.Vector2 },
-    });
-    this.clouds.setMonochrome(this.monochrome);
-    this.scene.add(this.clouds.group);
-  }
-
-  /** Catalog of clouds, or null if none are attached. Exposed for search
-   *  index integration in main.ts. */
+  /** Catalog of clouds, or null when the cloud module has no layer.
+   *  Exposed for chart-mode name rows. */
   getCloudCatalog(): CloudCatalog | null {
-    return this.clouds
-      ? { count: this.clouds.clouds.length, clouds: this.clouds.clouds }
-      : null;
+    const layer = this.kinds.cloud.layer;
+    return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
   /** Direct access to the cloud render layer for dev-console tuning
-   *  (`stellata.cloudLayer.setOpacity(0.5)` etc.). null until
-   *  attachClouds runs. */
-  get cloudLayer(): MolecularClouds | null { return this.clouds; }
+   *  (`stellata.cloudLayer.setOpacity(0.5)` etc.). null when the
+   *  clouds.json artifact is absent. */
+  get cloudLayer(): MolecularClouds | null { return this.kinds.cloud.layer; }
 
   /** Kind-agnostic travel — see FocusController.flyTo. Hard kinds park
    *  via the recentring focus path; soft kinds ride the shared
@@ -2204,8 +1959,9 @@ export class Stellata implements FrameAnchor {
   // Per-element bind adapters (exhaustive over SceneElementId — a new
   // renderable that isn't wired fails tsc). Each writes the permitted
   // cache; the imperative layers (Milky Way / LG-emission enable, orbit
-  // rings, heliopause shell) pass an `extra` push because they have no
-  // per-frame gate that would pick the cache change up on its own.
+  // rings) pass an `extra` push because they have no per-frame gate that
+  // would pick the cache change up on its own — the shells take theirs
+  // from the shell module's `detailBinds` instead.
   // Kind-module pushes route by element id, so migrating a kind needs no
   // edit here.
   private buildSceneElementBinds(): SceneElementBinds {
@@ -2231,8 +1987,8 @@ export class Stellata implements FrameAnchor {
       orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
       binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
       probeTrails: set('probeTrails'),
-      heliopauseShell: set('heliopauseShell', (on) => this.heliopause.setPermitted(on)),
-      localBubbleShell: set('localBubbleShell', (on) => this.localBubbleShell.setPermitted(on)),
+      heliopauseShell: set('heliopauseShell'),
+      localBubbleShell: set('localBubbleShell'),
       constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),
       molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
       dustParticles: set('dustParticles'),
@@ -2261,7 +2017,8 @@ export class Stellata implements FrameAnchor {
       this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar);
   }
   private applyLgEmissionEnabled(): void {
-    this.lgEmission?.setEnabled(this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
+    this.kinds.lg.setEmissionEnabled(
+      this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
   }
 
   setMonochrome(on: boolean) {
@@ -2536,33 +2293,6 @@ export class Stellata implements FrameAnchor {
     return angularToPxPure(viewport.y, u.uFovYRad.value as number);
   }
 
-  /** Cloud analogue of `renderedSizePx` — pixel diameter of the cloud's
-   *  silhouette at the current camera distance, the cloud provider's
-   *  renderedSizePx leg (the distance-vector chevron tip lands on the
-   *  rendered edge instead of the user's `sizeMax` star-size knob) and
-   *  the cloud labels' screen-size gate. Returns 0 when no cloud layer
-   *  is loaded or the index is out of range. */
-  renderedCloudSizePx(cloudIdx: number): number {
-    if (!this.clouds) return 0;
-    const local = this._tmpRenderLocal;
-    if (!this.clouds.cloudLocalPositionInto(cloudIdx, this.worldOffset, local)) return 0;
-    const camPos = this.camera.position;
-    const dx = local.x - camPos.x;
-    const dy = local.y - camPos.y;
-    const dz = local.z - camPos.z;
-    const dCam = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (dCam < 1e-12) {
-      return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx());
-    }
-    // World-space unit direction from the cloud toward the camera. The
-    // ellipsoid-fallback path rotates this into the cloud's local frame
-    // so the silhouette bound tightens for axis-aligned views (prolate
-    // end-on no longer overshoots by the prolate axis ratio).
-    this.tmpCloudDir.set(camPos.x - local.x, camPos.y - local.y, camPos.z - local.z)
-      .multiplyScalar(1 / dCam);
-    return this.clouds.renderedSizePx(cloudIdx, dCam, this.angularToPx(), this.tmpCloudDir);
-  }
-  private tmpCloudDir = new THREE.Vector3();
   // Scratch slots for the non-allocating *LocalPositionInto helpers.
   // Each is owned by one call-stack scope; values are valid only inside
   // that scope and must not be retained across method calls.
@@ -2573,9 +2303,9 @@ export class Stellata implements FrameAnchor {
   //    Adding a new writer that retains the value across another
   //    animate-stack method violates the contract.
   //  - _tmpRenderLocal: owned by per-call read methods invoked outside
-  //    the animate stack (renderedCloudSizePx, etc.). Independent of
-  //    _tmpAnimateLocal; never observed by code that holds a reference
-  //    across calls.
+  //    the animate stack (the planet camera-distance read). Independent
+  //    of _tmpAnimateLocal; never observed by code that holds a
+  //    reference across calls.
   private _tmpAnimateLocal = new THREE.Vector3();
   private _tmpRenderLocal = new THREE.Vector3();
 
@@ -2816,7 +2546,6 @@ export class Stellata implements FrameAnchor {
     this.localDepthPass.dispose();
     this.reduction.dispose();
     this.hdr.dispose();
-    this.lgEmission = null;
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
     // doesn't own it.

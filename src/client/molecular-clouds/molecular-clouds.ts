@@ -334,8 +334,8 @@ export class MolecularClouds {
 
   /**
    * Resolve the cloud under the cursor — the single winner-resolving
-   * entry point behind both `Picker.pickCloud` (click) and
-   * `Picker.pickCloudHit` (hover), so the two can never disagree.
+   * entry point behind the cloud module's pick surface, which the click
+   * FSM and the hover engine share, so the two can never disagree.
    * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
    * cloud the cursor sits proportionally deepest inside (README
    * § Picking + hover). Tier is always `fallback` — stars, planets, LG

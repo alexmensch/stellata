@@ -129,7 +129,6 @@ function makeHarness(): Harness {
             tier: state.pickStarTier,
           }
         : null),
-      pickCloud: () => state.pickCloudResult,
       pickPlanetClick: () => (state.pickPlanetResult !== null
         ? {
             idx: state.pickPlanetResult,
@@ -137,21 +136,26 @@ function makeHarness(): Harness {
             tier: state.pickPlanetTier,
           }
         : null),
-      pickLocalGroupHit: () => (state.pickLgResult !== null
-        ? {
-            idx: state.pickLgResult,
-            cameraDistancePc: state.pickLgDistancePc,
-            tier: state.pickLgTier,
-          }
-        : null),
-      pickKindHit: (kind: string) => (kind === 'probe' && state.pickProbeResult !== null
-        ? {
+      pickKindHit: (kind: string) => {
+        if (kind === 'probe' && state.pickProbeResult !== null) {
+          return {
             idx: state.pickProbeResult,
             cameraDistancePc: state.pickProbeDistancePc,
             tier: state.pickProbeTier,
-          }
-        : null),
-      pickShellHit: () => null,
+          };
+        }
+        if (kind === 'cloud' && state.pickCloudResult !== null) {
+          return { idx: state.pickCloudResult, cameraDistancePc: 1, tier: 'fallback' };
+        }
+        if (kind === 'lg' && state.pickLgResult !== null) {
+          return {
+            idx: state.pickLgResult,
+            cameraDistancePc: state.pickLgDistancePc,
+            tier: state.pickLgTier,
+          };
+        }
+        return null;
+      },
     } as unknown as Picker,
     bus: {
       emit: (name: string) => { emitted.push(name); },
@@ -417,6 +421,28 @@ describe('InputController deferred-click gate', () => {
       expect(emitted).toEqual([]);
     });
   }
+
+  // The cloud pick carried its own warp gate until the kind module took
+  // it over; this predicate is what subsumes it, so the cloud path is
+  // pinned here too rather than only through the star pick above.
+  it('drops a cloud single click while warping (no orbit target, no vector)', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickCloudResult = 2;
+    state.warpActive = true;
+    (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
+    expect(deps.setOrbitTarget).not.toHaveBeenCalled();
+    expect(deps.setVector).not.toHaveBeenCalled();
+    expect(emitted).toEqual([]);
+  });
+
+  it('drops a cloud double click while warping (no travel)', () => {
+    const { input, state, deps, emitted } = makeHarness();
+    state.pickCloudResult = 2;
+    state.warpActive = true;
+    (input as unknown as WithPrivates).dispatchDoubleClick(10, 20);
+    expect(deps.flyTo).not.toHaveBeenCalled();
+    expect(emitted).toEqual([]);
+  });
 
   it('dispatches normally when no gate is set', () => {
     const { input, state, deps } = makeHarness();

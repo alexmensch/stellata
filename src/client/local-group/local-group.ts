@@ -5,8 +5,9 @@ import * as THREE from 'three';
 import type { LgCatalog, LgObject } from './local-group-loader';
 import { maxSemiAxisPc } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from '../galactic/galactic-fade';
+import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
-import { createDistanceGatedLabel } from '../ui/distance-gated-label';
+import { createDistanceGatedLabel, labelHostOf } from '../ui/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
@@ -474,6 +475,24 @@ export function computeVisibleLabels(
   return result;
 }
 
+/** What the shared ranking pass + both label families read per frame —
+ *  satisfied by `KindContext` directly (the lg module's labels leg) and
+ *  built from `Stellata` for the MW label, which is wired outside the
+ *  module (the Milky Way is not an lg catalog object). */
+export type LgLabelHost = Pick<
+  KindContext,
+  'camera' | 'onFrame' | 'getWorldOffset' | 'getMonochrome' | 'detailPermits'
+>;
+
+function lgLabelHostOf(stellata: Stellata): LgLabelHost {
+  return {
+    ...labelHostOf(stellata),
+    getWorldOffset: () => stellata.getWorldOffset(),
+    getMonochrome: () => stellata.getMonochrome(),
+    detailPermits: (id) => stellata.detailPermits(id),
+  };
+}
+
 // Runtime state for the per-frame ranking. The ranking handler runs
 // before any label engine's predicate (because we register it on the
 // first createMilkyWayLabel / createLocalGroupLabels call, ahead of
@@ -482,18 +501,22 @@ export function computeVisibleLabels(
 const candidates: LabelCandidate[] = [];
 let visibleLabelIds = new Set<string>();
 const tmpCamAbs = new THREE.Vector3();
-let rankingHandlerRegistered = false;
+let rankingHolders = 0;
+let stopRanking: (() => void) | null = null;
 
-function ensureRankingHandlerRegistered(stellata: Stellata): void {
-  if (rankingHandlerRegistered) return;
-  rankingHandlerRegistered = true;
-  stellata.on('frame', () => {
-    if (stellata.getMonochrome()) {
+/** Subscribe the shared ranking pass for the first holder and hand back
+ *  that holder's release. The last release unsubscribes it and clears
+ *  the verdict, so a re-created host registers a fresh pass instead of
+ *  reading a disposed host's `visibleLabelIds` forever. */
+function acquireRankingHandler(host: LgLabelHost): () => void {
+  rankingHolders++;
+  stopRanking ??= host.onFrame(() => {
+    if (host.getMonochrome()) {
       visibleLabelIds = new Set();
       return;
     }
-    const c = stellata.camera.position;
-    const w = stellata.getWorldOffset();
+    const c = host.camera.position;
+    const w = host.getWorldOffset();
     tmpCamAbs.set(c.x + w.x, c.y + w.y, c.z + w.z);
     // Make sure the camera's matrices reflect this frame's camera
     // pose — controls.update() mutates camera.position but doesn't
@@ -501,14 +524,14 @@ function ensureRankingHandlerRegistered(stellata: Stellata): void {
     // will refresh them anyway, but our ranking runs before render
     // each frame (it's a 'frame' event handler), so we have to flush
     // explicitly or we read last-frame's projection.
-    stellata.camera.updateMatrixWorld();
+    host.camera.updateMatrixWorld();
     visibleLabelIds = computeVisibleLabels(candidates, {
       cameraAbs: tmpCamAbs,
       galacticCentreAbs: GALACTIC_CENTRE_PC,
       worldOffset: w,
-      matrixWorldInverse: stellata.camera.matrixWorldInverse,
-      projectionMatrix: stellata.camera.projectionMatrix,
-      fovDeg: stellata.camera.fov,
+      matrixWorldInverse: host.camera.matrixWorldInverse,
+      projectionMatrix: host.camera.projectionMatrix,
+      fovDeg: host.camera.fov,
       viewportWidthPx: window.innerWidth,
       viewportHeightPx: window.innerHeight,
       topN,
@@ -516,6 +539,15 @@ function ensureRankingHandlerRegistered(stellata: Stellata): void {
       mwInsideDiscPc,
     });
   });
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--rankingHolders > 0) return;
+    stopRanking?.();
+    stopRanking = null;
+    visibleLabelIds = new Set();
+  };
 }
 
 /** Mount the SVG "Milky Way" label and bind per-frame projection.
@@ -524,18 +556,19 @@ function ensureRankingHandlerRegistered(stellata: Stellata): void {
  *  every LG object for the top-N slots, with the one exception that
  *  when the camera is inside the disc the ranking returns empty. */
 export function createMilkyWayLabel(stellata: Stellata): void {
-  ensureRankingHandlerRegistered(stellata);
+  const host = lgLabelHostOf(stellata);
+  acquireRankingHandler(host);
   candidates.push({
     id: 'mw',
     centerAbs: GALACTIC_CENTRE_PC.clone(),
     maxAxis: MIDPLANE_RADIUS_PC,
   });
   const rimSamplesAbs = buildMwRimSamples();
-  createDistanceGatedLabel(stellata, {
+  createDistanceGatedLabel(host, {
     elementId: 'mw-label',
     sampleCount: rimSamplesAbs.length,
-    getWorldSample: (i, out) => out.copy(rimSamplesAbs[i]).sub(stellata.getWorldOffset()),
-    visible: () => visibleLabelIds.has('mw') && stellata.detailPermits('mwLabel'),
+    getWorldSample: (i, out) => out.copy(rimSamplesAbs[i]).sub(host.getWorldOffset()),
+    visible: () => visibleLabelIds.has('mw') && host.detailPermits('mwLabel'),
     labelDir: LABEL_DIR,
     offsetPx: LABEL_OFFSET_PX,
     lerp: LABEL_LERP,
@@ -563,21 +596,30 @@ function buildMwRimSamples(): THREE.Vector3[] {
 
 /** Mount per-object SVG labels for every LG member. Each label
  *  becomes a candidate in the global apparent-size ranking; the
- *  per-label predicate is just `visibleLabelIds.has(obj.id)`. */
+ *  per-label predicate is just `visibleLabelIds.has(obj.id)`. Called
+ *  from the lg module's `labels()` leg; the returned teardown removes
+ *  the minted nodes, frame handlers, and ranking candidates. */
 export function createLocalGroupLabels(
-  stellata: Stellata,
+  host: LgLabelHost,
   layer: LocalGroupLayer,
-): void {
-  ensureRankingHandlerRegistered(stellata);
+): () => void {
   const group = document.getElementById('lg-labels') as unknown as SVGGElement | null;
-  if (!group) return;
+  if (!group) return () => {};
+  // Acquired before the per-label engines subscribe, so the ranking pass
+  // runs ahead of every predicate that queries its verdict.
+  const releaseRanking = acquireRankingHandler(host);
+  const teardowns: (() => void)[] = [];
+  const texts: SVGTextElement[] = [];
+  const ownCandidates: LabelCandidate[] = [];
   for (let i = 0; i < layer.objects.length; i++) {
     const obj = layer.objects[i];
-    candidates.push({
+    const candidate: LabelCandidate = {
       id: obj.id,
       centerAbs: obj.centerAbs.clone(),
       maxAxis: maxSemiAxisPc(obj),
-    });
+    };
+    candidates.push(candidate);
+    ownCandidates.push(candidate);
     const elementId = `lg-${obj.id}-label`;
     // Mint the SVG <text> element. innerHTML escape is unnecessary
     // since both id and name come from our own build-time output
@@ -589,20 +631,30 @@ export function createLocalGroupLabels(
     text.setAttribute('dominant-baseline', 'hanging');
     text.textContent = obj.name;
     group.appendChild(text);
+    texts.push(text);
 
     const idx = i;
     const id = obj.id;
-    createDistanceGatedLabel(stellata, {
+    teardowns.push(createDistanceGatedLabel(host, {
       elementId,
       sampleCount: layer.sampleCount(idx),
       getWorldSample: (j, out) => {
         layer.getAbsSample(idx, j, out);
-        out.sub(stellata.getWorldOffset());
+        out.sub(host.getWorldOffset());
       },
-      visible: () => visibleLabelIds.has(id) && stellata.detailPermits('lgObjectLabels'),
+      visible: () => visibleLabelIds.has(id) && host.detailPermits('lgObjectLabels'),
       labelDir: LABEL_DIR,
       offsetPx: LABEL_OFFSET_PX,
       lerp: LABEL_LERP,
-    });
+    }));
   }
+  return () => {
+    for (const stop of teardowns) stop();
+    for (const text of texts) text.remove();
+    for (const candidate of ownCandidates) {
+      const at = candidates.indexOf(candidate);
+      if (at >= 0) candidates.splice(at, 1);
+    }
+    releaseRanking();
+  };
 }

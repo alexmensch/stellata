@@ -2,7 +2,7 @@
 // src/client/solar-system/README.md § Heliopause boundary.
 
 import * as THREE from 'three';
-import type { Stellata } from '../../stellata';
+import type { KindContext } from '../../kinds/kind-module';
 import { AU_PC } from '../../util/astronomy-constants';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import {
@@ -11,7 +11,12 @@ import {
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../../fresnel-shell/fresnel-shell';
-import { SHELL_KEYS, type ShellCardInfo, type ShellPickSurface } from '../../fresnel-shell/shell-registry';
+import {
+  SHELL_KEYS,
+  type ShellCardInfo,
+  type ShellPickSurface,
+  type ShellRegistry,
+} from '../../fresnel-shell/shell-registry';
 
 const HELIOPAUSE_SHELL_IDX = SHELL_KEYS.indexOf('heliopause');
 
@@ -99,16 +104,16 @@ export const HELIOPAUSE_EXTENT_PC = DOWNWIND_APEX_AU * AU_PC;
  *  camera near plane means the camera is inside the ellipsoid → hide), so
  *  the label appears exactly when the shell reads on screen. Shared with
  *  the hover picker so the eligibility rule can't drift between them. */
-export function isHeliopauseApexVisible(stellata: Stellata): boolean {
-  return !stellata.getMonochrome()
-    && stellata.detailPermits('heliopauseLabel')
+export function isHeliopauseApexVisible(ctx: KindContext, shells: ShellRegistry): boolean {
+  return !ctx.getMonochrome()
+    && ctx.detailPermits('heliopauseLabel')
     && isShellLabelResolvable(
-      stellata.shells,
+      shells,
       HELIOPAUSE_SHELL_IDX,
-      stellata.getWorldOffset(),
-      stellata.camera.position,
+      ctx.getWorldOffset(),
+      ctx.camera.position,
       window.innerHeight,
-      stellata.camera.fov * Math.PI / 180,
+      ctx.camera.fov * Math.PI / 180,
     );
 }
 
@@ -231,12 +236,12 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
  *  carries the heliopause-specific configuration: the 62-sample
  *  ellipsoid silhouette, the bottom-right anchor direction, and
  *  `isHeliopauseApexVisible`. */
-export function createHeliopauseLabel(stellata: Stellata): void {
-  createShellSilhouetteLabel(stellata, {
+export function createHeliopauseLabel(ctx: KindContext, shells: ShellRegistry): () => void {
+  return createShellSilhouetteLabel(ctx, {
     elementId: HELIOPAUSE_LABEL_ELEMENT_ID,
     sampleCount: HELIOPAUSE_SAMPLE_POINTS_SOL.length,
     getWorldSample: (i, out) =>
-      out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(stellata.getWorldOffset()),
-    visible: () => isHeliopauseApexVisible(stellata),
+      out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(ctx.getWorldOffset()),
+    visible: () => isHeliopauseApexVisible(ctx, shells),
   });
 }

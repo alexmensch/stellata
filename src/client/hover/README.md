@@ -17,11 +17,10 @@ lives entirely under `src/client/hover/`:
 - `hover-engine.ts` — the engine.
 - `hover-types.ts` — the `HoverProvider` contract.
 - `hover-pick-disambiguator.ts` — cross-provider picker tiebreak.
-- `*-hover-provider.ts` (one per layer) — stars, planets, Local Group,
-  boundary shells (`shell-hover-provider.ts`, dispatching over the
-  `ShellRegistry`), clouds. Kinds migrated onto kind modules build
-  their provider in the module instead (probes —
-  `../solar-system/probes/probe-module.ts`).
+- `*-hover-provider.ts` — stars and planets, the two kinds whose
+  wiring is still inline. Every migrated kind (probe, cloud, Local
+  Group, boundary shells) builds its provider in its kind module
+  (`../kinds/README.md`) instead.
 - `formatters/*-hover-format.ts` (one per layer) — pure functions with
   their own vitest coverage.
 
@@ -65,8 +64,9 @@ lives entirely under `src/client/hover/`:
   hit for the same cursor position, pick the closest to the camera, with
   the prime/fallback tier as the higher-priority key. Prime always beats
   fallback regardless of camera distance.
-- **`*-hover-provider.ts`** — one per layer. Owns the pick path,
-  typically mirroring the renderer's draw predicate (see Rule 2 below).
+- **`*-hover-provider.ts`** / the kind modules' `hover()` legs — one
+  per layer. Owns the pick path, typically mirroring the renderer's
+  draw predicate (see Rule 2 below).
 - **`formatters/*-hover-format.ts`** — one per layer. Pure functions
   with their own vitest coverage; the provider calls into them.
 

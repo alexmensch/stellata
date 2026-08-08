@@ -33,13 +33,16 @@ turns off cleanly until that lands.
 
 ## Runtime layer
 
-`local-group-loader.ts` fetches `public/local-group.json` (format
-version 2). Each object carries a frozen Stellata ID (`sid`,
-docs/sid.md § 7); the loader rejects the artifact (warn + null) when
-the version mismatches or any sid is missing or duplicated — a stale
-or pre-stamp `local-group.json` needs `pnpm run build:local-group`.
-When the artifact loads, `main.ts` attaches the `lg` SID domain over
-it (see `../util/sid-resolver/README.md`).
+The lg kind module (`lg-module.ts`) owns the runtime lifecycle: its
+`load` fetches `public/local-group.json` (format version 2) via
+`local-group-loader.ts`, and its `attach` constructs the wireframe +
+emission layer pair at the kind's roster position. Each object carries
+a frozen Stellata ID (`sid`, docs/sid.md § 7); the loader rejects the
+artifact (warn + null) when the version mismatches or any sid is
+missing or duplicated — a stale or pre-stamp `local-group.json` needs
+`pnpm run build:local-group`. The `lg` SID domain is the module's
+`sids()` leg, attached by main.ts's roster loop (see
+`../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity
 model (per-family profile params + density0; `docs/science-local-group.md`
@@ -113,10 +116,11 @@ opacity write hits one slot.
 
 ## Emission layer
 
-> **Status:** Live and unconditional — the shell always constructs the
-> layer. The filter flag (`showLgEmission`) and URL bit 22 are the only
-> gates, and there are no Deep-field emission knobs (§ Zero free
-> parameters).
+> **Status:** Live and unconditional — the lg module's `attach` always
+> constructs the layer beside the wireframes. The filter flag
+> (`showLgEmission`, pushed through the module's `setEmissionEnabled`
+> leg) and URL bit 22 are the only gates, and there are no Deep-field
+> emission knobs (§ Zero free parameters).
 
 `local-group-emission.ts` renders every object's solved luminosity
 model (`emission` block, `docs/science-local-group.md` § Local Group
@@ -319,10 +323,18 @@ Filter order, per candidate:
    viewport still count (the MW disc at grazing incidence).
 
 The ranking lives in the pure `computeVisibleLabels(candidates,
-params)` helper (testable in isolation). A per-frame handler — registered
-the first time `createMilkyWayLabel` or `createLocalGroupLabels` is
-called — runs `computeVisibleLabels` and writes the result into the
-shared `visibleLabelIds` Set; per-label predicates query it.
+params)` helper (testable in isolation). A per-frame handler runs
+`computeVisibleLabels` and writes the result into the shared
+`visibleLabelIds` Set; per-label predicates query it.
+
+**The pass is ref-counted, not owned by either caller.** MW and the LG
+objects compete for the same top-N slots, so one handler serves both:
+`createMilkyWayLabel` and `createLocalGroupLabels` each acquire it, the
+first acquisition subscribes, and the last release unsubscribes and
+clears the verdict. The lg module releases from its scene layer's
+`dispose`; the MW label holds for the page's lifetime. Skipping the
+release would latch a disposed host's `visibleLabelIds` and silently
+hide every label a re-created host mounts.
 
 All three knobs are live-tunable through the **Deep field**
 debug-panel section (`local-group-tuning.ts`):
