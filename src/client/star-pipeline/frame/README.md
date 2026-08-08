@@ -1,24 +1,24 @@
 # Star frame
 
 The CPU-side state every star pass reads: `StarFrame` owns
-`catalog.positions` in the renderer's frame (floating origin, epoch
-advance, derived per-instance buffers, proximity queries). The shared
-uniform map it writes into lives in `../../frame/` (`buildSharedUniforms`);
-the integration shell (`../../stellata.ts`) delegates to both rather
-than owning either. Nothing in `../` imports this folder.
+`catalog.positions` in the renderer's frame (the local-position buffer,
+epoch advance, derived per-instance buffers, proximity queries). The
+floating origin itself and the shared uniform map live in
+`../../frame/` (`FloatingOrigin`, `buildSharedUniforms`) — this class
+consumes both. Nothing in `../` imports this folder.
 
 ## Files in this area
 
 ```
 src/client/star-pipeline/frame/
-  star-frame.ts (+ test)          StarFrame — floating origin, epoch
-                                  advance, the per-instance buffers
-                                  derived at load, and the Sol-distance
-                                  proximity queries including the
-                                  core-mask gate. The test covers origin
-                                  recentre, epoch re-advance + focal
-                                  delta, and the proximity / core-mask
-                                  window.
+  star-frame.ts (+ test)          StarFrame — the local-position
+                                  buffer, epoch advance, the
+                                  per-instance buffers derived at load,
+                                  and the Sol-distance proximity
+                                  queries including the core-mask gate.
+                                  The test covers the recentre rewrite,
+                                  epoch re-advance + focal delta, and
+                                  the proximity / core-mask window.
 ```
 
 ## The star frame
@@ -27,15 +27,14 @@ src/client/star-pipeline/frame/
 renderer's frame — everything CPU-side that depends on where the stars
 actually are:
 
-- **Floating origin.** `worldOffset` (the absolute coordinate at local
-  `(0,0,0)`) and `localPositions` (`catalog.positions − worldOffset`,
-  the buffer bound to the dynamic `iPosition` attribute). `recenterTo`
-  rewrites the buffer in float64 per axis before the float32
-  write-back, moves `worldOffset`, and mirrors the new origin into
-  `uWorldOffset` for the shader's absolute-position reconstruction. The
-  camera / orbit-target shift and the scene-layer recenter fan-out stay
-  on the integration shell's `recenterOrigin`, which wraps this — see
-  `../README.md` § Floating origin.
+- **The local-position buffer.** `localPositions`
+  (`catalog.positions − worldOffset`, bound to the dynamic `iPosition`
+  attribute), rewritten against `FloatingOrigin.worldOffset` — held by
+  readonly reference; the service is the only writer. `rewriteAt` is
+  the frame's leg of a recentre: registered as the FIRST `onRecenter`
+  listener, it rewrites the buffer in float64 per axis before the
+  float32 write-back, ahead of the camera shift and the scene-layer
+  fan-out (`../../frame/README.md` § Recentre fan-out).
 - **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
   `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
   space-motion pass whenever the model clock crosses a

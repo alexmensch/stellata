@@ -119,6 +119,7 @@ import {
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/frame/star-frame';
 import { buildSharedUniforms } from './frame/shared-uniforms';
+import { FloatingOrigin } from './frame/floating-origin';
 import {
   ExtinctionPrepass,
   type ExtinctionPrepassUniforms,
@@ -200,13 +201,15 @@ export class Stellata implements FrameAnchor {
   // src/client/star-pipeline/extinction/README.md.
   private dustParticles!: DustParticleLayer;
 
-  // Floating origin, epoch advance, the derived per-instance buffers,
-  // and the Sol-distance proximity queries — see
-  // star-pipeline/frame/README.md. The shell reads
-  // `worldOffset` / `localPositions` through it and drives the
+  // The floating-origin service — worldOffset, the ordered recentre
+  // fan-out, and the focal anchor policy (frame/README.md).
+  private floatingOrigin!: FloatingOrigin;
+  // Epoch advance, the derived per-instance buffers, and the
+  // Sol-distance proximity queries — see star-pipeline/frame/README.md.
+  // The shell reads `localPositions` through it and drives the
   // per-frame calls.
   private starFrame!: StarFrame;
-  private get worldOffset(): THREE.Vector3 { return this.starFrame.worldOffset; }
+  private get worldOffset(): THREE.Vector3 { return this.floatingOrigin.worldOffset; }
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
   // Composite-suppress flag per catalog instance. 0 = render normally;
@@ -450,6 +453,7 @@ export class Stellata implements FrameAnchor {
       },
     }, DEFAULT_FILTER.instrument);
 
+    this.floatingOrigin = new FloatingOrigin(sharedUniforms.uWorldOffset);
     // Advances catalog.positions to the model clock and derives every
     // per-instance buffer off the result, so the pipeline attributes
     // below and every consumer downstream read current-epoch positions
@@ -457,6 +461,7 @@ export class Stellata implements FrameAnchor {
     this.starFrame = new StarFrame({
       catalog,
       uniforms: sharedUniforms,
+      worldOffset: this.floatingOrigin.worldOffset,
       cameraPosition: this.camera.position,
       t: this.getT(),
       onLocalPositionsWritten: () => {
@@ -464,6 +469,14 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });
+    // Recentre fan-out, in load-bearing order: star buffer rewrite →
+    // camera / orbit-target shift → scene-layer recenter hooks.
+    this.floatingOrigin.onRecenter((origin) => this.starFrame.rewriteAt(origin));
+    this.floatingOrigin.onRecenter((_origin, delta) => {
+      this.camera.position.sub(delta);
+      this.controls.target.sub(delta);
+    });
+    this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     // Built here (not attachBinaries) because the gate is varType-driven
@@ -713,6 +726,7 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.focus.getCameraMode(),
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
+    this.buildFocalAnchorPolicy();
     // Orbit rings are representational layers gated on host-focus. Planet
     // bodies live in PlanetBodyField and render whenever inside the
     // per-host cull distance regardless of focus. (The heliopause is no
@@ -1180,35 +1194,17 @@ export class Stellata implements FrameAnchor {
   private tmpRecenter = new THREE.Vector3();
 
   // Shift the renderer's local origin to `newOrigin` (an absolute-space
-  // coordinate). StarFrame rewrites the instance-position buffer; camera
-  // position and orbit target are shifted by the same delta so the user
-  // sees no visible jump, only numerical precision improves.
+  // coordinate) — FloatingOrigin.recenterTo, whose listener fan-out
+  // rewrites the star buffer, shifts camera + orbit target, and runs
+  // the scene-layer recenter hooks (frame/README.md § Recentre fan-out).
   //
   // Triggered automatically from FocusController.setFocus() and
   // WarpController.tryMidFlyRecentre. Don't call externally — it
   // bypasses the state-change bookkeeping that setFocus threads through.
-  //
-  // Returns the (dx, dy, dz) world-offset delta applied (newOrigin −
-  // previous worldOffset) so callers can migrate auxiliary state
-  // captured in the old frame (e.g. updateWarp's pEnd / pStart / A)
-  // into the new frame without re-deriving the delta themselves.
-  // Returns null on the no-op path (newOrigin equals worldOffset).
-  // The returned Vector3 is shared scratch — copy if you need to
-  // outlive the next recenterOrigin call.
-  //
-  // Public for the `FrameAnchor` seam — FocusController.recenterFocusToStar
-  // and WarpController.tryMidFlyRecentre invoke it. The "don't call
-  // externally" rule still applies to non-warp/non-focus callers; the
-  // recentre is a state-mutation primitive, not a routine API.
+  // Returns the applied delta (shared scratch; null on no-op) so callers
+  // can migrate auxiliary state captured in the old frame.
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    const delta = this.starFrame.recenterTo(newOrigin);
-    if (delta === null) return null;
-    this.camera.position.sub(delta);
-    this.controls.target.sub(delta);
-    // Layers holding local-frame positions (planet hosts, binary
-    // baselines) re-derive them through the registry's recenter hooks.
-    this.layers.recenterAll(newOrigin);
-    return delta;
+    return this.floatingOrigin.recenterTo(newOrigin);
   }
 
   // Scrubber-time star motion: when the model clock crosses a re-advance
@@ -1232,40 +1228,33 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(d);
   }
 
-  // Keep the floating origin locked to the focal object as it moves under
-  // time advance. The focal-frame rides translate the camera to follow the
-  // object, so under scrubber fast-forward the camera drifts far from the
-  // fixed focus-time origin — reviving the float32 modelview cancellation the
-  // floating origin exists to prevent (a growing wobble on the focal body).
-  // Recentring onto the look target (glued to the object by the ride)
-  // restores camera-from-origin ≈ eye distance. Kind-agnostic: every hard
-  // focus kind, current or future, benefits with no per-kind code, because
-  // the origin is shared by every layer. Skipped during camera-owning
-  // animations, which reference the current frame and re-snap themselves.
-  private maybeRecenterOnFocalDrift(): void {
-    if (this.focus.getFocusedHardTarget() === null) return;
-    if (
-      this.warp.isActive()
-      || this.aim.isActive()
-      || this.aim.isObserveAimActive()
-      || this.focus.isFocusLerpActive()
-      || this.observe.isAnyActive()
-    ) return;
-    const eye = this.camera.position.distanceTo(this.controls.target);
-    if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return;
-    this.tmpRecenter.copy(this.controls.target).add(this.worldOffset);
-    if (this.recenterOrigin(this.tmpRecenter) !== null) {
-      // The moving-focal ride caches the focal's full local position; the
-      // recentre shifted the frame under it, so reseed to skip a one-frame
-      // jump. The binary ride tracks baseline-relative perturbation
-      // (frame-invariant) and needs none.
-      this._movingRideIdx = null;
-    }
+  // The focal anchor policy: keep the floating origin locked to the
+  // focal object as it moves under time advance. The focal-frame rides
+  // translate the camera to follow the object, so under scrubber
+  // fast-forward the camera drifts far from the fixed focus-time origin
+  // — reviving the float32 modelview cancellation the floating origin
+  // exists to prevent. Recentring onto the look target (glued to the
+  // object by the ride) restores camera-from-origin ≈ eye distance.
+  // Kind-agnostic; skipped during camera-owning animations, which
+  // reference the current frame and re-snap themselves. Built from
+  // shell closures so frame/ imports no camera code.
+  private buildFocalAnchorPolicy(): void {
+    this.floatingOrigin.setPolicy({
+      desiredOrigin: (out) => {
+        if (this.focus.getFocusedHardTarget() === null) return null;
+        if (
+          this.warp.isActive()
+          || this.aim.isActive()
+          || this.aim.isObserveAimActive()
+          || this.focus.isFocusLerpActive()
+          || this.observe.isAnyActive()
+        ) return null;
+        const eye = this.camera.position.distanceTo(this.controls.target);
+        if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return null;
+        return out.copy(this.controls.target).add(this.worldOffset);
+      },
+    });
   }
-
- // recenterFocusToStar moved to FocusController — it
-  // mutates focus state (focusedStar + per-star minDistance +
-  // planet-system reload), which now lives there.
 
   // Wire a loaded DustField into the star shader. Safe to call after the
   // Stellata is already rendering — uniforms flip atomically on the next
@@ -1959,7 +1948,15 @@ export class Stellata implements FrameAnchor {
     if (this.disposed) return;
     perfMark('frame.total');
     this.maybeReAdvanceEpoch();
-    this.maybeRecenterOnFocalDrift();
+    if (this.floatingOrigin.tick()) {
+      // Policy recentre shifted the frame under the moving ride's cached
+      // position — reseed to skip a one-frame jump. Keyed on tick()'s
+      // return, never a recentre listener: a warp mid-fly recentre must
+      // NOT reseed (focalRideStep owns that transition). The binary ride
+      // tracks baseline-relative perturbation (frame-invariant) and
+      // needs none.
+      this._movingRideIdx = null;
+    }
     // Both can invalidate the local-position buffer; StarFrame
     // coalesces them into a single rewrite. Must run before anything
     // downstream reads localPositions.
@@ -2178,6 +2175,7 @@ export class Stellata implements FrameAnchor {
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
+    this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
     this.reduction.dispose();
     this.hdr.dispose();

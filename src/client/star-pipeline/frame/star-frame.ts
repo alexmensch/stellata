@@ -20,6 +20,10 @@ import type { SharedUniforms } from '../../frame/shared-uniforms';
 export interface StarFrameOptions {
   catalog: Catalog;
   uniforms: SharedUniforms;
+  /** Live reference to `FloatingOrigin.worldOffset` — the absolute
+   *  coordinate at local (0,0,0). Read-only here; the frame is rewritten
+   *  against it by `rewriteAt` (recentre) and `flushLocalPositions`. */
+  worldOffset: Readonly<THREE.Vector3>;
   /** Live reference to `camera.position` — the camera in the same local
    *  frame as `localPositions`. Read by the proximity queries. */
   cameraPosition: THREE.Vector3;
@@ -33,8 +37,9 @@ export interface StarFrameOptions {
 /**
  * Owns `catalog.positions` in the renderer's frame:
  *
- *  - the floating origin (`worldOffset`) and the `localPositions`
- *    buffer bound to the `iPosition` attribute,
+ *  - the `localPositions` buffer (`catalog.positions − worldOffset`)
+ *    bound to the `iPosition` attribute, rewritten against the
+ *    FloatingOrigin service's frame,
  *  - space-motion epoch advance off the immutable J2016.0 baseline,
  *  - the per-instance buffers derived once at load (log radius,
  *    luminosity class, Sol distance, Apsis Teff),
@@ -65,9 +70,6 @@ export class StarFrame {
   /** `catalog.positions − worldOffset`, bound to the dynamic
    *  `iPosition` attribute. Rewritten in place. */
   readonly localPositions: Float32Array;
-  /** Absolute-space coordinate sitting at local (0,0,0). Read-only to
-   *  callers — `recenterTo` is the only writer. */
-  readonly worldOffset = new THREE.Vector3();
 
   /** Catalog indices ordered by ascending distance from Sol, with that
    *  distance in the parallel array. Sol distance is intrinsic (absolute
@@ -85,6 +87,7 @@ export class StarFrame {
 
   private readonly catalog: Catalog;
   private readonly uniforms: SharedUniforms;
+  private readonly worldOffset: Readonly<THREE.Vector3>;
   private readonly cameraPosition: THREE.Vector3;
   private readonly onLocalPositionsWritten: () => void;
 
@@ -92,12 +95,11 @@ export class StarFrame {
   private readonly maxEpochDriftPc: number;
   private localPositionsStale = false;
 
-  private readonly recenterDelta = new THREE.Vector3();
-
   constructor(opts: StarFrameOptions) {
-    const { catalog, uniforms, cameraPosition, t, onLocalPositionsWritten } = opts;
+    const { catalog, uniforms, worldOffset, cameraPosition, t, onLocalPositionsWritten } = opts;
     this.catalog = catalog;
     this.uniforms = uniforms;
+    this.worldOffset = worldOffset;
     this.cameraPosition = cameraPosition;
     this.onLocalPositionsWritten = onLocalPositionsWritten;
 
@@ -164,27 +166,16 @@ export class StarFrame {
   }
 
   /**
-   * Shift the local origin to `newOrigin` (absolute space), rewriting
-   * the instance-position buffer as `absolute − newOrigin` in JS Number
-   * precision (= float64) before the float32 write-back, so local
-   * coordinates near the new origin retain full float32 resolution.
-   *
-   * Returns the applied (dx, dy, dz) so the caller can migrate camera,
-   * orbit target, and any auxiliary state captured in the old frame;
-   * null when `newOrigin` already is the origin. The returned Vector3
-   * is shared scratch — copy it to outlive the next call.
+   * Rewrite the instance-position buffer as `absolute − origin` in JS
+   * Number precision (= float64) before the float32 write-back, so
+   * local coordinates near the new origin retain full float32
+   * resolution. Registered as the FIRST FloatingOrigin recentre
+   * listener — the buffer must be in the new frame before the camera
+   * shift and the scene-layer fan-out read it. Clears any stale flag an
+   * earlier `advanceEpochTo` left, coalescing the two rewrites.
    */
-  recenterTo(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    const dx = newOrigin.x - this.worldOffset.x;
-    const dy = newOrigin.y - this.worldOffset.y;
-    const dz = newOrigin.z - this.worldOffset.z;
-    if (dx === 0 && dy === 0 && dz === 0) return null;
-    this.writeLocalPositions(newOrigin.x, newOrigin.y, newOrigin.z);
-    this.worldOffset.copy(newOrigin);
-    // The shader reconstructs absolute positions for dust sampling as
-    // local-frame iPosition + uWorldOffset.
-    this.uniforms.uWorldOffset.value.copy(newOrigin);
-    return this.recenterDelta.set(dx, dy, dz);
+  rewriteAt(origin: Readonly<THREE.Vector3>): void {
+    this.writeLocalPositions(origin.x, origin.y, origin.z);
   }
 
   /**

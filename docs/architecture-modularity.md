@@ -278,18 +278,17 @@ design gets its own doc and epic. It is named here because it constrains
 the engine-services tier, and each constraint is cheap to honour now and
 expensive to retrofit:
 
-1. **Anchor policy is pluggable.** The frame service owns `worldOffset`
-   + the recentre fan-out with two policies: `focal` (today: origin =
-   focused object) and `follow` (recentre onto the camera position when
-   `|camera − origin|` exceeds a hysteresis threshold). The origin is
-   never assumed to be an object — `recenterOrigin` already takes a free
-   vec3, `SceneLayer.recenter` is already anchor-agnostic, and
-   `maybeRecenterOnFocalDrift` is the working precedent for
-   motion-driven recentring. Camera-follow beats nearest-object
-   anchoring: no spatial query, works in voids, degrades gracefully.
-   (A nearest-object query will likely exist eventually for LOD /
-   "what's near me" — as a separate service, not the precision
-   mechanism.)
+1. **Anchor policy is pluggable.** *(Landed — `FloatingOrigin` in
+   `src/client/frame/` owns `worldOffset` + the ordered recentre
+   fan-out, with `AnchorPolicy` as the seam; the shell's focal policy is
+   the first implementation.)* Free-fly adds a `follow` policy (recentre
+   onto the camera position when `|camera − origin|` exceeds a
+   hysteresis threshold). The origin is never assumed to be an object —
+   `recenterTo` takes a free vec3 and `SceneLayer.recenter` is
+   anchor-agnostic. Camera-follow beats nearest-object anchoring: no
+   spatial query, works in voids, degrades gracefully. (A
+   nearest-object query will likely exist eventually for LOD / "what's
+   near me" — as a separate service, not the precision mechanism.)
 2. **Shard positions are chunk-local.** Float32 absolute coordinates at
    Gly range quantise to ~10² pc — useless when the camera flies in
    (camera-anywhere principle, `CLAUDE.md`). Each shard stores positions

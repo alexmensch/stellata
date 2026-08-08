@@ -220,10 +220,11 @@ follow the focal, so under fast scrub a far-orbiting focal (a planet
 across its orbit; a wide binary) drags the camera tens of AU from the
 fixed focus-time origin — reviving the float32 modelview cancellation
 the floating origin exists to prevent (a growing wobble on the focal
-body). `stellata.ts:maybeRecenterOnFocalDrift` recentres the origin
-back onto the look target once camera-from-origin exceeds
-`FOCAL_ORIGIN_DRIFT_RATIO × eye distance` (`focal-ride-pure.ts`),
-restoring camera-from-origin ≈ eye distance. It is kind-agnostic —
+body). The shell's focal anchor policy (`stellata.ts:
+buildFocalAnchorPolicy`, applied by `FloatingOrigin.tick()` each frame)
+recentres the origin back onto the look target once camera-from-origin
+exceeds `FOCAL_ORIGIN_DRIFT_RATIO × eye distance`
+(`focal-ride-pure.ts`), restoring camera-from-origin ≈ eye distance. It is kind-agnostic —
 keyed on camera geometry, not the focus kind — so every hard focus
 benefits with no per-kind code. The shared origin is the one precision
 lever a per-shader pin (`uPinFocusToCenter`) can't generalise; that pin
