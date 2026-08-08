@@ -21,9 +21,13 @@ describe('KIND_ROSTER', () => {
     expect(new Set(KIND_ROSTER).size).toBe(KIND_ROSTER.length);
   });
 
-  it('leads with probe — its field must update before the planet layer', () => {
-    expect(KIND_ROSTER[0]).toBe('probe');
-    expect(KIND_ROSTER.indexOf('probe')).toBeLessThan(KIND_ROSTER.indexOf('planet'));
+  // Roster order IS module-layer update order, so a reorder changes
+  // what renders when. No inter-kind draw dependency exists inside the
+  // roster — the moving-focal ride reads every module field from the
+  // first INLINE entry, after the whole roster has updated — so this
+  // pins deliberateness, not a dependency.
+  it('pins the exact order — a reorder is a render-order change', () => {
+    expect([...KIND_ROSTER]).toEqual(['probe', 'planet', 'star', 'cloud', 'lg', 'shell']);
   });
 });
 

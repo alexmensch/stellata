@@ -538,9 +538,9 @@ export class Stellata implements FrameAnchor {
       reduced: () => this.reduction.current(),
     });
     // Kind-module attach, in roster order. Each returned scene layer
-    // registers HERE — before every inline-wired layer — so module
-    // layers update first; the probe field must write this frame's
-    // samples before the planet layer's moving-focal ride reads them.
+    // registers HERE — before every inline-wired layer — so every
+    // moving-body field has written this frame's positions by the time
+    // the first inline entry runs the moving-focal ride.
     const kindCtx: KindContext = {
       scene: this.scene,
       camera: this.camera,
@@ -901,8 +901,8 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       update: (ctx) => {
         // Ride runs right after every moving-body field wrote this
-        // frame's positions — the planet module's field layer is the
-        // last of those in the roster — mirroring the binary ride's
+        // frame's positions — the whole module roster updates ahead of
+        // this, the first inline entry — mirroring the binary ride's
         // placement after its orbit walk.
         this.applyMovingFocalRide();
         // Mesh LOD sizes off the post-ride camera: pre-ride it would
