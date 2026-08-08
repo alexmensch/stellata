@@ -48,10 +48,7 @@ export function makeProjectScratch(): ProjectScratch {
   };
 }
 
-export function createDistanceVectorOverlay(
-  stellata: Stellata,
-  starLabels: Map<number, string>,
-) {
+export function createDistanceVectorOverlay(stellata: Stellata) {
   const line = document.getElementById('dist-line') as unknown as SVGPathElement;
   const lineBg = document.getElementById('dist-line-bg') as unknown as SVGPathElement;
   const label = document.getElementById('dist-label') as unknown as SVGTextElement;
@@ -121,7 +118,7 @@ export function createDistanceVectorOverlay(
     if (stellata.focus.getVectorTarget() === null) hide();
   });
 
-  const destLabelOf = (to: Target): string => targetDisplayName(stellata, starLabels, to);
+  const destLabelOf = (to: Target): string => targetDisplayName(stellata, to);
 
   stellata.on('frame', () => {
     const from = stellata.focus.getFocusedTarget();

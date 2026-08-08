@@ -88,24 +88,17 @@ describe('collectKindPicks', () => {
 });
 
 describe('displayNameOf', () => {
-  it('routes star to the injected callback, never the roster', () => {
-    const name = displayNameOf(recordWith('probe', {
-      displayName: () => 'Voyager 1',
-    }), { kind: 'star', idx: 7 }, (idx) => `star-${idx}`);
-    expect(name).toBe('star-7');
-  });
-
-  it('routes a module kind to its displayName leg', () => {
-    const name = displayNameOf(recordWith('probe', {
-      displayName: (idx) => `probe-${idx}`,
-    }), { kind: 'probe', idx: 2 }, () => 'unused');
-    expect(name).toBe('probe-2');
+  it('routes any kind — star included — to its displayName leg', () => {
+    const record = recordWith('probe', { displayName: (idx) => `probe-${idx}` });
+    expect(displayNameOf(record, { kind: 'probe', idx: 2 })).toBe('probe-2');
+    const starRecord = recordWith('star', { displayName: (idx) => `star-${idx}` });
+    expect(displayNameOf(starRecord, { kind: 'star', idx: 7 })).toBe('star-7');
   });
 
   it("answers '' for a kind whose module row is null", () => {
     const name = displayNameOf(recordWith('probe', {
       displayName: () => 'Voyager 1',
-    }), { kind: 'cloud', idx: 0 }, () => 'unused');
+    }), { kind: 'cloud', idx: 0 });
     expect(name).toBe('');
   });
 });

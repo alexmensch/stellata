@@ -1,5 +1,4 @@
 import Fuse from 'fuse.js';
-import { resolveStarName } from '../format/star-companion-format';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
@@ -559,7 +558,6 @@ export function bindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
-  starLabels: Map<number, string>,
 ) {
   const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
 
@@ -570,11 +568,6 @@ export function bindSearch(
   const toInput = document.getElementById('search-to') as HTMLInputElement;
   const toClear = document.getElementById('search-to-clear') as HTMLButtonElement;
   const toRow = document.getElementById('search-to-row')!;
-
-  const describe = (idx: number): string => resolveStarName(
-    { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
-    idx,
-  );
 
   // OBSERVE anchors are hard-kind objects (star / planet / probe) — soft
   // kinds (clouds, LG, shells) don't recentre the floating origin, so
@@ -654,9 +647,7 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
-  // Star names take the rich search-corpus label (describe); every other
-  // kind answers through its module's displayName leg.
-  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t, describe);
+  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t);
   const syncFocusUI = () => {
     const focused = stellata.focus.getFocusedTarget();
     const observe = stellata.focus.getCameraMode() === 'observe';

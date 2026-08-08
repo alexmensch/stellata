@@ -29,6 +29,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     uViewport: { value: new THREE.Vector2(MOCK_VIEWPORT_W, MOCK_VIEWPORT_H) },
     uPixelRatio: { value: 1 },
     uFovYRad: { value: MOCK_FOV_Y_RAD },
+    uHideFocusIdx: { value: -1 },
     // The HDR emitter slots ride the shared map by reference in
     // production (frame/README.md § Shared uniforms).
     ...makeMockHdrEmitterUniforms(),

@@ -1,12 +1,10 @@
-import { loadCatalog } from './loaders/catalog-loader';
-import { CATALOG_MANIFEST_FILENAME } from '../../scripts/catalog/catalog-pure';
 import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
 import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
-import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap, type SearchEntry } from './typeahead/search';
+import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap } from './typeahead/search';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -15,7 +13,6 @@ import { createPlanetLabels } from './solar-system/planets/planet-labels';
 import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
-import { tToJDE } from './solar-system/time/time';
 import { bindUnitToggle } from './ui/unit-toggle';
 import { createCoordSphereLabels } from './galactic/coord-spheres/coord-sphere-labels';
 import {
@@ -38,8 +35,6 @@ import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
-import { createStarFocusProvider } from './focus-card/star-focus-provider';
-import { createStarHoverProvider } from './hover/star-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
 async function main() {
@@ -55,19 +50,7 @@ async function main() {
 
   try {
     const kinds = buildKindModules();
-    const [catalog, searchIndex, binaries, boundaries] = await Promise.all([
-      loadCatalog(
-        `${import.meta.env.BASE_URL}${CATALOG_MANIFEST_FILENAME}`,
-        `${import.meta.env.BASE_URL}constellations.json`,
-        ({ bytes, total }) => {
-          const pct = (bytes / total) * 100;
-          loadingBar.style.width = pct.toFixed(0) + '%';
-          loadingStatus.textContent = `${(bytes / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`;
-        },
-      ),
-      fetch(`${import.meta.env.BASE_URL}search-index.json`).then(
-        (r) => r.json() as Promise<SearchEntry[]>,
-      ),
+    const [binaries, boundaries] = await Promise.all([
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
       // `pnpm run build:binaries`). The renderer renders identically
@@ -78,11 +61,23 @@ async function main() {
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts (probes, clouds, Local Group, the Local
-      // Bubble mesh). Each load never rejects — a missing artifact
-      // leaves that kind's roster empty.
-      ...KIND_ROSTER.map((kind) => kinds[kind]?.load(import.meta.env.BASE_URL)),
+      // Kind-module artifacts. The star module (critical) carries the
+      // catalog + search index and MAY reject — the catch below is the
+      // error screen; every other load never rejects, a missing artifact
+      // just leaves that kind's roster empty.
+      ...KIND_ROSTER.map((kind) => kinds[kind]?.load(
+        import.meta.env.BASE_URL,
+        kind === 'star'
+          ? ({ bytes, total }) => {
+            const pct = (bytes / total) * 100;
+            loadingBar.style.width = pct.toFixed(0) + '%';
+            loadingStatus.textContent = `${(bytes / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`;
+          }
+          : undefined,
+      )),
     ]);
+    const catalog = kinds.star.catalog;
+    const searchIndex = kinds.star.searchIndex;
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
     loadingBar.style.width = '100%';
@@ -90,6 +85,11 @@ async function main() {
     const starLabels = buildStarLabels(catalog, searchIndex);
     const spectralMap = buildSpectralMap(searchIndex);
     const bayerMap = buildBayerMap(searchIndex);
+    kinds.star.setNameTables({
+      starLabels,
+      spectralMap,
+      searchEntries: new Map(searchIndex.map((e) => [e.i, e])),
+    });
 
     const stellata = new Stellata({ canvas, catalog, kinds });
     // Dev-console access: `stellata.setExtinctionStrength(X)` etc. Handy for
@@ -133,7 +133,6 @@ async function main() {
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
     );
-    sidResolver.attach('star', arrayDomain(catalog.sid));
     // Kind-module domains: sids() is localIndex-ordered with
     // localIndex = Target idx — except the planet domain, keyed
     // body-within-host and translated at the URL boundary (idMaps
@@ -195,11 +194,11 @@ async function main() {
     registerThemeStellata(stellata);
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex, starLabels);
+    bindSearch(stellata, catalog, searchIndex);
     bindFindSearch(stellata, catalog, searchIndex);
-    createDistanceVectorOverlay(stellata, starLabels);
+    createDistanceVectorOverlay(stellata);
     createFocusRingOverlay(stellata);
-    createPoiOverlay(stellata, starLabels);
+    createPoiOverlay(stellata);
     createClickRipple(stellata);
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       createCoordSphereLabels(stellata, COORD_SPHERE_SPECS[frame], () =>
@@ -244,25 +243,7 @@ async function main() {
     // Each hover provider mirrors the renderer's "is this drawn?"
     // predicate as its visibility gate — visibility ⇒ hoverable; no
     // focus / mode gates. Provider order is irrelevant.
-    const starHoverProvider = createStarHoverProvider({
-      stellata,
-      context: {
-        starLabels,
-        gaiaSourceId: catalog.gaiaSourceId,
-        sid: catalog.sid,
-        spectralMap,
-        spectClass: catalog.spectClass,
-        luminosityClass: catalog.luminosityClass,
-        flags: catalog.flags,
-        constellation: catalog.constellation,
-        constellations: catalog.constellations,
-        periodDays: catalog.periodDays,
-        amplitudeMag: catalog.amplitudeMag,
-        binaries,
-      },
-    });
-    const hoverProviders: HoverProvider[] = [starHoverProvider];
-    // Kind-module hover surfaces.
+    const hoverProviders: HoverProvider[] = [];
     for (const kind of KIND_ROSTER) {
       const provider = kinds[kind]?.hover?.();
       if (provider) hoverProviders.push(provider);
@@ -273,27 +254,13 @@ async function main() {
       initialProviders: hoverProviders,
     });
 
-    // Tier-2 card rolodex (focus card + per-POI cards). Both distance
-    // functions read the local frame (camera and object share it), so
-    // the values match what hover's pick paths report.
-    const searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
-    const starFocusProvider = createStarFocusProvider({
-      catalog,
-      starLabels,
-      spectralMap,
-      searchEntries,
-      binaries,
-      cameraDistancePc: (idx) => {
-        const lp = stellata.localPositions;
-        const c = stellata.camera.position;
-        return Math.hypot(lp[idx * 3] - c.x, lp[idx * 3 + 1] - c.y, lp[idx * 3 + 2] - c.z);
-      },
-      nowJd: () => tToJDE(stellata.getT()),
-    });
+    // Tier-2 card rolodex (focus card + per-POI cards). Every provider's
+    // distance leg reads the local frame (camera and object share it),
+    // so the values match what hover's pick paths report.
     createCardRolodex({
       stellata,
       providers: {
-        star: starFocusProvider,
+        star: kinds.star.card(),
         planet: kinds.planet.card(),
         probe: kinds.probe.card(),
         cloud: kinds.cloud.card(),

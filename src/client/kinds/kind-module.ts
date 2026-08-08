@@ -56,6 +56,13 @@ export interface KindContext {
  *  and hover can never disagree on a hit. */
 export type KindPick = HoverProvider['pick'];
 
+/** Byte progress of a kind's artifact download — boot threads the
+ *  loading-bar callback through the critical module's `load`. */
+export interface KindLoadProgress {
+  readonly bytes: number;
+  readonly total: number;
+}
+
 /** One search-corpus row contributed by a kind; `index` is the kind's
  *  Target idx. The runner tags rows with the module's kind. */
 export interface KindSearchEntry {
@@ -78,7 +85,12 @@ export interface KindSearchEntry {
  *  other leg is valid only after `attach`. */
 export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   readonly kind: K;
-  load(baseUrl: string): Promise<void>;
+  /** The app cannot boot without this kind's artifact: its `load` MAY
+   *  reject (boot treats that as fatal — the error screen), unlike the
+   *  never-rejects rule every non-critical module follows. Star catalog
+   *  only. */
+  readonly critical?: boolean;
+  load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void>;
   attach(ctx: KindContext): SceneLayer | null;
   focusable(): FocusableProvider;
   card(): FocusCardProvider<K>;
@@ -91,8 +103,10 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   /** Display name for a Target of this kind; '' when unresolvable. */
   displayName(idx: number): string;
   /** SIDs in localIndex order (localIndex = Target idx), or null when
-   *  the domain can never attach this session (resolver concludes it). */
-  sids(): readonly number[] | null;
+   *  the domain can never attach this session (resolver concludes it).
+   *  ArrayLike so the star module answers its Uint32Array column
+   *  without a 313k-element copy. */
+  sids(): ArrayLike<number> | null;
   /** SVG label overlay factory — separate from `attach` because label
    *  overlays mount into the DOM, which the shell constructor must not
    *  require (headless tests attach without one). The module keeps the

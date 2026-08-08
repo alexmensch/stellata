@@ -65,7 +65,6 @@ import {
   mergeKindDetailBinds,
   type BuiltKindModules,
 } from './kinds/kind-modules';
-import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
@@ -467,6 +466,15 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });
+    // The star kind module's legs read the shell-owned star machinery
+    // through these closures — all deref lazily, so the picker and
+    // focus controller constructed below are fine.
+    this.kinds.star.setRuntime({
+      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
+      renderedSizePx: (idx) => this.renderedSizePxFor(idx),
+      pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+    });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
     // camera / orbit-target shift → scene-layer recenter hooks.
     this.floatingOrigin.onRecenter((origin) => this.starFrame.rewriteAt(origin));
@@ -666,31 +674,7 @@ export class Stellata implements FrameAnchor {
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
     this.focusables = {
-      star: {
-        anchorInto: (idx, out) => {
-          if (idx < 0 || idx >= this.catalog.count) return false;
-          const p = this.catalog.positions;
-          out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
-          return true;
-        },
-        localPositionInto: (idx, out) => {
-          if (idx < 0 || idx >= this.catalog.count) return false;
-          this.starLocalPositionInto(idx, out);
-          return true;
-        },
-        focusParkDistance: (idx) => this.focus.parkDistForStar(idx),
-        orbitFloor: (idx) => starPhysics.minOrbitDistForStar({
-          catalog: this.catalog,
-          idx,
-          fovMinorRad: starPhysics.fovMinorRad(this.camera),
-        }),
-        arrivalRadiusPc: (idx) =>
-          Math.max(this.catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
-        renderedSizePx: (idx) => this.renderedSizePxFor(idx),
-        chartPlateauDistance: (idx, magBright) =>
-          chartPlateauDistancePc(this.catalog.absmag[idx], magBright),
-        planetSystemHost: (idx) => idx,
-      },
+      star: this.kinds.star.focusable(),
       cloud: this.kinds.cloud.focusable(),
       lg: this.kinds.lg.focusable(),
       shell: this.kinds.shell.focusable(),
@@ -840,7 +824,7 @@ export class Stellata implements FrameAnchor {
 
     this.pois = new PoiStore({
       pinnable: {
-        star: (idx) => idx >= 0 && idx < catalog.count && catalog.sid[idx] !== 0,
+        star: (idx) => this.kinds.star.pinnable(idx),
         // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
         // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
         // so a future non-Sol host's pin works live yet won't round-trip
@@ -1175,12 +1159,11 @@ export class Stellata implements FrameAnchor {
 
   /** Hide/unhide the rendered body of a hard-focus target — observe
    *  parks the camera AT the object, whose disc would render from the
-   *  interior. One choke point dispatching per kind: star → the
-   *  uHideFocusIdx shader pin, module kinds → their setFocalHidden leg.
-   *  Passing null (or a kind switch) unhides the other kinds' slots. */
+   *  interior. One choke point dispatching through every module's
+   *  setFocalHidden leg (the star module's writes the uHideFocusIdx
+   *  shader pin). Passing null (or a kind switch) unhides the other
+   *  kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
-    this.sharedUniforms.uHideFocusIdx.value =
-      target?.kind === 'star' ? target.idx : -1;
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
     }
@@ -1294,6 +1277,9 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
+    // The star module's card/hover legs read the same table for the
+    // companion lines.
+    this.kinds.star.setBinaries(binaries);
     this.starLocalCluster.setBinaries(binaries);
     if (binaries === null) {
       this.binaryOrbitField = null;
