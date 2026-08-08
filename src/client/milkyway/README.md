@@ -261,13 +261,13 @@ worse before it lands.
 Two facts worth having before touching this:
 
 - **The bulge is invisible from Sol in V.** It sits behind 4.6 τ_V before
-  its own march begins, so the disc carries 99.93 % of the GC column.
+  its own march begins, so the disc carries 99.96 % of the GC column.
   Everything the band shows toward the centre is foreground disc — which
   is what the real sky looks like.
 - **The 32-step in-volume march under-counts the GC column by 1.6 %**
   against a converged march (pinned). Deliberately left: `STEPS` is a
-  visual + perf decision, and it no longer biases the calibration — the
-  anchor is the NGP sightline, where the log distribution converges.
+  visual + perf decision, and it cannot bias the calibration at all — the
+  solve is a volume integral, so no march feeds it.
 
 Under the sightline anchor the same rows ran 35.95 / 14.76 / 12.85 / 8.66
 / 3.86 — the solve is 1.6 mag brighter everywhere. The retired per-pixel
@@ -371,8 +371,8 @@ pinned against dense reference marches in
 
 Blast radius is narrow by construction: only a component the camera is
 outside of pays anything, so sightlines that miss the bulge proxy
-(anticentre, NGP) are bit-identical. The GC sightline dims 0.083 mag,
-tapering to 0.017 mag by l = 30°.
+(anticentre, NGP) are bit-identical. The GC sightline dims 0.028 mag,
+tapering to 0.024 mag by l = 30° (pinned).
 
 The Edenhofer dust voxel grid is **intentionally not sampled here**.
 Voxels have ~5 pc native structure designed for short per-star

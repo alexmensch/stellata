@@ -364,15 +364,11 @@ export interface ColumnOptions {
 }
 
 /**
- * One component's dust-attenuated emission column, in the component's
- * **relative weight** units. Mirrors milkyway.frag.glsl: log-distributed
- * steps from the front face (or `S_MIN_PC` when inside) to the back face,
- * Beer-Lambert attenuation with half-step self-shielding, seeded with the
- * foreground dust column.
- *
- * Every column function here is weight-space. `EMISSIVITY_SCALE` enters
- * exactly once, in `sightlineEmissionColumn` — the march is linear in it,
- * and the scale is derived from a march, so it cannot appear inside one.
+ * One component's dust-attenuated emission column, in the shared flux
+ * unit. Mirrors milkyway.frag.glsl: log-distributed steps from the front
+ * face (or `S_MIN_PC` when inside) to the back face, Beer-Lambert
+ * attenuation with half-step self-shielding, seeded with the foreground
+ * dust column.
  */
 export function componentColumnRgb(
   component: MilkywayComponent,

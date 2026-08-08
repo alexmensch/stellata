@@ -131,9 +131,9 @@ describe('per-component split toward the Galactic centre', () => {
 });
 
 describe('quadrature of the in-volume march', () => {
-  // Left alone deliberately: STEPS is a visual + perf decision. It no
-  // longer biases the calibration — the emissivity anchor is the NGP
-  // sightline, marched dust-free, where the log distribution converges.
+  // Left alone deliberately: STEPS is a visual + perf decision, and it
+  // cannot bias the calibration at all — ρ₀ is solved as a volume
+  // integral, so no march feeds it.
   it('under-counts the GC column by 1.6% against a dense march', () => {
     const shipped = sightlineColumn(SOL, TO_GC);
     const ref = sightlineColumn(SOL, TO_GC, {
