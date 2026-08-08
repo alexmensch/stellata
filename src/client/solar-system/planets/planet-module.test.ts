@@ -128,6 +128,21 @@ describe('planet kind module', () => {
     expect(pick(0, 0, 14)).toBeNull();
   });
 
+  it('setFocalHidden drives the field hide slot; -1 unhides', async () => {
+    const m = createPlanetKindModule();
+    await m.load('/');
+    m.attach(makeCtx());
+    await m.systemsReady;
+
+    // Slot-based on purpose: the hide is shader-side (uHideIdx), and
+    // planet-body-field.test.ts pins the uniform fan-out behind it.
+    expect(m.field.hiddenInstanceIdx).toBe(-1);
+    m.setFocalHidden!(MARS);
+    expect(m.field.hiddenInstanceIdx).toBe(MARS);
+    m.setFocalHidden!(-1);
+    expect(m.field.hiddenInstanceIdx).toBe(-1);
+  });
+
   it('resolves systemsReady with an empty field when there is no Sol', async () => {
     const m = createPlanetKindModule();
     await m.load('/');
