@@ -71,7 +71,7 @@ interface ObserveTransitionState {
   // whether they're returning to navigate-with-focus or fully unfocusing.
   clearFocusOnExit?: boolean;
   // Only meaningful for 'unfocus'. controls.minDistance to set when the
-  // lerp lands. The caller (Stellata.unfocus) clamps minDistance to the
+  // lerp lands. The caller (FocusController.unfocus) clamps minDistance to the
   // pre-animation eye distance before starting the lerp so the camera
   // doesn't get pushed outward when the lerp begins; this value tightens
   // minDistance to the parking distance once the lerp completes.
@@ -127,7 +127,7 @@ export class ObserveTransition {
   }
 
   /** Union of all three kinds — true whenever the state slot is occupied.
-   *  Drives Stellata.isCameraBusy() so a new camera-driving action can't
+   *  Drives FocusController.isCameraBusy() so a new camera-driving action can't
    *  fire while a navigate-mode close-zoom is mid-flight. */
   isAnyActive(): boolean {
     return this.state !== null;
@@ -219,7 +219,7 @@ export class ObserveTransition {
    *      runs on landing)
    *    - the chart-mode disengage path (currently routes through setMode
    *      via the chart-mode orchestrator)
-   *    - Stellata.unfocus()'s observe-animated branch (animate=true,
+   *    - FocusController.unfocus()'s observe-animated branch (animate=true,
    *      clearFocusOnExit=false; the caller invokes setFocus(null) after
    *      startExit so the search box empties immediately while the camera
    *      glides outward)
@@ -281,12 +281,12 @@ export class ObserveTransition {
    *  controls.minDistance is tightened to `finalMinDistance` so manual
    *  zoom-in is bounded.
    *
-   *  Callers (Stellata.unfocus's navigate-close-zoom branch):
+   *  Callers (FocusController.unfocus's navigate-close-zoom branch):
    *  - must have ALREADY cleared focus and clamped controls.minDistance
    *    to ≤ current eye distance — otherwise TrackballControls fights
    *    the lerp's outward motion at the first tick.
    *  - must NOT toggle controls.enabled (see the inline comment in
-   *    Stellata.unfocus for the TrackballControls pointerup race). */
+   *    FocusController.unfocus for the TrackballControls pointerup race). */
   startUnfocusLerp(
     fromPos: THREE.Vector3,
     toPos: THREE.Vector3,
@@ -349,7 +349,7 @@ export class ObserveTransition {
     if (s.arrival) shiftArrivalWaypoints(s.arrival, -delta.x, -delta.y, -delta.z);
   }
 
-  /** Unconditional slot clear. Used by Stellata.setFocus's
+  /** Unconditional slot clear. Used by FocusController.setFocus's
    *  observe-cleanup branch when the focal star is changing mid-flight
    *  — both 'enter' and 'exit' transitions reference the OLD focal star
    *  via fromPos/toPos and must be dropped before the new focus's
@@ -408,7 +408,7 @@ export class ObserveTransition {
     } else if (state.kind === 'unfocus') {
       this.deps.camera.position.copy(state.toPos);
       // Tighten controls.minDistance to the parking distance the camera
-      // just landed at. The caller (Stellata.unfocus) clamped it to the
+      // just landed at. The caller (FocusController.unfocus) clamped it to the
       // (smaller) start eye distance to let the lerp move outward; now
       // that the camera is parked, the same minDistance the focused star
       // had during close orbit becomes the unfocused floor.

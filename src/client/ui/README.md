@@ -66,7 +66,7 @@ shortcut switch):
    focus. Closes both modals (idempotent) and `preventDefault`s.
 2. **Other foreground modals** (`.modal`) — return without action so
    their own document listener can close them.
-3. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
+3. **Active warp** — return so `warp-button.ts` can run `stellata.warp.skip()`.
 4. **Editable target** — return so `search.ts` / typeahead can handle
    their own ESC (clear dropdown + blur).
 5. Otherwise run the cascade.

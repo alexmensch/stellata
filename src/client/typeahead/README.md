@@ -44,7 +44,7 @@ Target idx. Sol's planets and moons enter the corpus
 by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
 deliberately Sol-only, since bk5 exoplanets are visit-to-discover. A
 planet entry carries the body field's flat Target index, baked by the
-planet module's `searchEntries()`; boot awaits `planetSystemsReady`
+planet module's `searchEntries()`; boot awaits `stellata.kinds.planet.systemsReady`
 before binding search so the attach table exists at corpus build.
 The five deep-space probes enter by mission label, secondary line
 "Probe · Interstellar", index = the LOADED-roster index, which is the

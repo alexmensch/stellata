@@ -36,7 +36,7 @@ import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 //     anchor keeps the label-to-object distance constant as FOV changes.
 //     Clicking either the ring's label or the object itself applies the
 //     mode's click semantics (unpin toggle in observe, the click ladder
-//     in navigate — Stellata.applyObjectClick).
+//     in navigate — InputController.applyObjectClick).
 //   - **Off screen**: a chevron arrow on the active ring rim (focus
 //     ring in navigate, HUD ring in observe) points toward the POI
 //     direction, with a name-only label by the chevron tip. Clicking

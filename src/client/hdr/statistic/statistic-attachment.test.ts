@@ -66,7 +66,7 @@ describe('markStatisticEmitter', () => {
 
 // drawBuffers on the default framebuffer accepts only BACK or NONE, so a
 // hook firing on the canvas path has to be a no-op rather than a GL error:
-// chart mode, the float-RT fallback and the setHdrEnabled(false) A/B all
+// chart mode, the float-RT fallback and the hdr.setEnabled(false) A/B all
 // leave the gate unbound while marked meshes keep drawing.
 describe('an unbound gate', () => {
   it('is inert for a mesh marked before the binding existed', () => {

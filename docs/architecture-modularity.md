@@ -347,7 +347,8 @@ dependency-linked in order. Sizing per bead-authoring rules.
    subsumed by the click FSM's `blocksClick()`, and the kind-specific
    `Picker` methods and hover-provider files are gone. What the planet
    pass settled: the module owns the boot host attach behind a
-   `systemsReady` promise the shell forwards (`planetSystemsReady`);
+   `systemsReady` promise boot reads off the module
+   (`stellata.kinds.planet.systemsReady`);
    the module's pick returns the FLAT Target index so one pick serves
    click and hover, and search-corpus rows bake it (boot awaits
    `systemsReady` before building the corpus); the moving-focal ride
