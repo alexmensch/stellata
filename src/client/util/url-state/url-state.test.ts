@@ -209,45 +209,55 @@ function makeStatefulStellata() {
     else state.focusedCloud = t.idx;
   };
   const stub: Partial<Stellata> = {
-    getFilter: () => ({ ...DEFAULT_FILTER }),
-    setFilter: () => {},
-    getEv: () => 0,
-    setEv: () => {},
-    getCameraFov: () => DEFAULT_FOV,
+    filters: {
+      getFilter: () => ({ ...DEFAULT_FILTER }),
+      setFilter: () => {},
+      getCameraFov: () => DEFAULT_FOV,
+    } as unknown as Stellata['filters'],
+    exposure: {
+      getEv: () => 0,
+      setEv: () => {},
+    } as unknown as Stellata['exposure'],
     setCameraFov: () => {},
     getT: () => Date.now() / 1000,
     setT: () => {},
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getWorldOffset: () => mockVec3() as any,
     setWorldOffset: () => {},
-    getFocusedStar: () => state.focusedStar,
-    getFocusedTarget: () => {
-      if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
-      if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
-      if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
-      if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
-      return null;
-    },
-    getVectorTarget: () => {
-      if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
-      if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
-      return null;
-    },
-    getPois: () => state.pois,
-    getCameraMode: () => state.mode,
-    setCameraMode: (m) => { state.mode = m; },
-    focusStar: (idx) => { clearFocus(); state.focusedStar = idx; },
-    setOrbitTarget: (t) => { clearFocus(); setFocusSlot(t); },
-    unfocus: () => {
-      state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
-    },
-    flyTo: (t) => { clearFocus(); setFocusSlot(t); },
-    setVector: (t) => {
-      if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
-      else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
-      else { state.vectorToCloud = t.idx; state.vectorTo = null; }
-    },
-    setPois: (l) => { state.pois = [...l]; },
+    focus: {
+      getFocusedStar: () => state.focusedStar,
+      getFocusedTarget: (): Target | null => {
+        if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
+        if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
+        if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
+        if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
+        return null;
+      },
+      getVectorTarget: (): Target | null => {
+        if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
+        if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
+        return null;
+      },
+      getCameraMode: () => state.mode,
+      focusStar: (idx: number) => { clearFocus(); state.focusedStar = idx; },
+      setOrbitTarget: (t: Target) => { clearFocus(); setFocusSlot(t); },
+      unfocus: () => {
+        state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
+      },
+      flyTo: (t: Target) => { clearFocus(); setFocusSlot(t); },
+      setVector: (t: Target | null) => {
+        if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
+        else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
+        else { state.vectorToCloud = t.idx; state.vectorTo = null; }
+      },
+    } as unknown as Stellata['focus'],
+    observe: {
+      setMode: (m: 'navigate' | 'observe') => { state.mode = m; },
+    } as unknown as Stellata['observe'],
+    pois: {
+      get: () => state.pois,
+      set: (l: readonly Target[]) => { state.pois = [...l]; },
+    } as unknown as Stellata['pois'],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     camera: { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -994,17 +1004,23 @@ describe('url-state', () => {
       const tgt = opts.target ?? [0, 0, 0];
       const up = opts.up ?? GN_UP;
       const stub: Partial<Stellata> = {
-        getFilter: () => ({ ...DEFAULT_FILTER }),
-        getEv: () => 0,
-        setEv: () => {},
-        getCameraFov: () => DEFAULT_FOV,
-        getFocusedStar: () => opts.focusedStar ?? null,
-        getFocusedTarget: () => (opts.focusedStar != null
-          ? { kind: 'star' as const, idx: opts.focusedStar }
-          : null),
-        getVectorTarget: () => null,
-        getCameraMode: () => mode,
-        getPois: () => [],
+        filters: {
+          getFilter: () => ({ ...DEFAULT_FILTER }),
+          getCameraFov: () => DEFAULT_FOV,
+        } as unknown as Stellata['filters'],
+        exposure: {
+          getEv: () => 0,
+          setEv: () => {},
+        } as unknown as Stellata['exposure'],
+        focus: {
+          getFocusedStar: () => opts.focusedStar ?? null,
+          getFocusedTarget: () => (opts.focusedStar != null
+            ? { kind: 'star' as const, idx: opts.focusedStar }
+            : null),
+          getVectorTarget: () => null,
+          getCameraMode: () => mode,
+        } as unknown as Stellata['focus'],
+        pois: { get: () => [] } as unknown as Stellata['pois'],
         // Live `t` — encoder gates emission on isLive(getT()), so returning
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
@@ -1778,29 +1794,40 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     const referenceUp = referenceUpStub();
     const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
     const stub: Partial<Stellata> = {
-      getFilter: () => ({ ...DEFAULT_FILTER }),
-      setFilter: () => {},
-      getEv: () => 0,
-      setEv: () => {},
-      getCameraFov: () => state.fov,
+      filters: {
+        getFilter: () => ({ ...DEFAULT_FILTER }),
+        setFilter: () => {},
+        getCameraFov: () => state.fov,
+      } as unknown as Stellata['filters'],
+      exposure: {
+        getEv: () => 0,
+        setEv: () => {},
+      } as unknown as Stellata['exposure'],
       setCameraFov: (f) => { state.fov = f; },
       getT: () => state.t,
       setT: (t) => { if (t !== null) state.t = t; },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
-      getFocusedStar: () => state.focusedStar,
-      getFocusedTarget: () => (state.focusedStar !== null ? { kind: 'star', idx: state.focusedStar } : null),
-      getVectorTarget: () => null,
-      getPois: () => state.pois,
-      setPois: (l) => { state.pois = [...l]; },
-      getCameraMode: () => state.mode,
-      setCameraMode: (m) => { state.mode = m; },
-      focusStar: (idx) => { state.focusedStar = idx; },
-      setOrbitTarget: () => {},
-      unfocus: () => { state.focusedStar = null; },
-      flyTo: () => {},
-      setVector: () => {},
+      focus: {
+        getFocusedStar: () => state.focusedStar,
+        getFocusedTarget: (): Target | null =>
+          (state.focusedStar !== null ? { kind: 'star', idx: state.focusedStar } : null),
+        getVectorTarget: () => null,
+        getCameraMode: () => state.mode,
+        focusStar: (idx: number) => { state.focusedStar = idx; },
+        setOrbitTarget: () => {},
+        unfocus: () => { state.focusedStar = null; },
+        flyTo: () => {},
+        setVector: () => {},
+      } as unknown as Stellata['focus'],
+      pois: {
+        get: () => state.pois,
+        set: (l: readonly Target[]) => { state.pois = [...l]; },
+      } as unknown as Stellata['pois'],
+      observe: {
+        setMode: (m: 'navigate' | 'observe') => { state.mode = m; },
+      } as unknown as Stellata['observe'],
       isCameraTransitionActive: () => state.transition,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       camera: cam as any,

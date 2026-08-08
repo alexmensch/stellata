@@ -9,33 +9,38 @@ function makeStub(opts: {
   focused?: Target | null;
 } = {}) {
   const calls: string[] = [];
+  const setMode = vi.fn(() => calls.push('setMode'));
+  const setVector = vi.fn(() => calls.push('setVector'));
+  const unfocus = vi.fn(() => calls.push('unfocus'));
   const stub = {
-    getCameraMode: () => opts.mode ?? 'navigate',
-    setCameraMode: vi.fn(() => calls.push('setCameraMode')),
-    getVectorTarget: () => opts.vector ?? null,
-    setVector: vi.fn(() => calls.push('setVector')),
-    getFocusedTarget: () => opts.focused ?? null,
-    unfocus: vi.fn(() => calls.push('unfocus')),
+    observe: { setMode },
+    focus: {
+      getCameraMode: () => opts.mode ?? 'navigate',
+      getVectorTarget: () => opts.vector ?? null,
+      getFocusedTarget: () => opts.focused ?? null,
+      setVector,
+      unfocus,
+    },
   } as unknown as Stellata;
-  return { stub, calls };
+  return { stub, calls, setMode, setVector, unfocus };
 }
 
 describe('escCascade', () => {
   it('observe exits to navigate before anything else', () => {
-    const { stub } = makeStub({ mode: 'observe', focused: { kind: 'star', idx: 1 } });
-    escCascade(stub);
-    expect(stub.setCameraMode).toHaveBeenCalledWith('navigate');
-    expect(stub.unfocus).not.toHaveBeenCalled();
+    const s = makeStub({ mode: 'observe', focused: { kind: 'star', idx: 1 } });
+    escCascade(s.stub);
+    expect(s.setMode).toHaveBeenCalledWith('navigate');
+    expect(s.unfocus).not.toHaveBeenCalled();
   });
 
   it('clears a drawn vector before touching focus', () => {
-    const { stub } = makeStub({
+    const s = makeStub({
       vector: { kind: 'star', idx: 2 },
       focused: { kind: 'star', idx: 1 },
     });
-    escCascade(stub);
-    expect(stub.setVector).toHaveBeenCalledWith(null);
-    expect(stub.unfocus).not.toHaveBeenCalled();
+    escCascade(s.stub);
+    expect(s.setVector).toHaveBeenCalledWith(null);
+    expect(s.unfocus).not.toHaveBeenCalled();
   });
 
   it('unfocuses whichever kind is focused — planets are not special-cased', () => {
@@ -44,9 +49,9 @@ describe('escCascade', () => {
       { kind: 'planet', idx: 3 },
       { kind: 'lg', idx: 0 },
     ] as const) {
-      const { stub } = makeStub({ focused });
-      escCascade(stub);
-      expect(stub.unfocus).toHaveBeenCalled();
+      const s = makeStub({ focused });
+      escCascade(s.stub);
+      expect(s.unfocus).toHaveBeenCalled();
     }
   });
 

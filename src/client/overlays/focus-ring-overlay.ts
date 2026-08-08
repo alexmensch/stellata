@@ -29,14 +29,14 @@ export function createFocusRingOverlay(stellata: Stellata) {
   const show = () => { lastDisplay = setStyle(ring, 'display', '', lastDisplay); };
 
   const syncVisibility = () => {
-    if (stellata.getFocusedHardTarget() === null) hide();
+    if (stellata.focus.getFocusedHardTarget() === null) hide();
     else show();
   };
   stellata.on('focus', syncVisibility);
   syncVisibility();
 
   stellata.on('frame', () => {
-    const target = stellata.getFocusedHardTarget();
+    const target = stellata.focus.getFocusedHardTarget();
     if (target === null) return;
 
     // During the navigate↔observe transition the ring smoothly shrinks to
@@ -44,8 +44,8 @@ export function createFocusRingOverlay(stellata: Stellata) {
     // into the HUD ring instead of popping out. In steady-state observe
     // the ring stays hidden — the HUD ring takes over the "you are here"
     // role.
-    const transition = stellata.getObserveTransitionProgress();
-    if (stellata.getCameraMode() === 'observe' && !transition) {
+    const transition = stellata.observe.getProgress();
+    if (stellata.focus.getCameraMode() === 'observe' && !transition) {
       hide();
       return;
     }
@@ -85,7 +85,7 @@ export function createFocusRingOverlay(stellata: Stellata) {
     // sits at the object) and becomes well-defined as the camera pulls away.
     // Either way, fall back to screen-centre when the projection fails so
     // the shrinking/growing ring still has a sensible centre.
-    if (!stellata.focalLocalPositionInto(v)) { hide(); return; }
+    if (!stellata.focus.focalLocalPositionInto(v)) { hide(); return; }
     const projected = projectToScreenInto(v, camera, window.innerWidth, window.innerHeight, outXY);
     let sx: number, sy: number;
     if (!projected) {

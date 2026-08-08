@@ -14,7 +14,7 @@ import { type DebugSection, makeSlider } from './debug-panel';
 
 export function buildStarSection(stellata: Stellata): DebugSection {
   const body = document.createElement('div');
-  const v = stellata.getStarRenderParams();
+  const v = stellata.filters.getStarRenderParams();
 
   // Derived-K readout. K is a product of instrument density, the
   // multiplier slider and the live plate scale, so the slider value alone
@@ -30,12 +30,12 @@ export function buildStarSection(stellata: Stellata): DebugSection {
   let last = '';
   const onFrame = () => {
     if (!visible) return;
-    const f = stellata.getFilter();
+    const f = stellata.filters.getFilter();
     const text =
-      `K ${stellata.getStarExaggerationK().toFixed(3)}`
-      + `  (×${stellata.getStarKMultiplier().toFixed(2)} slider)\n`
-      + `plate ${stellata.getArcsecPerPx().toFixed(2)}″/px`
-      + `  fov ${stellata.getCameraFov().toFixed(1)}°\n`
+      `K ${stellata.filters.getStarExaggerationK().toFixed(3)}`
+      + `  (×${stellata.filters.getStarKMultiplier().toFixed(2)} slider)\n`
+      + `plate ${stellata.filters.getArcsecPerPx().toFixed(2)}″/px`
+      + `  fov ${stellata.filters.getCameraFov().toFixed(1)}°\n`
       + `sizeMin ${f.sizeMin.toFixed(2)}px  sizeMax ${f.sizeMax.toFixed(2)}px`;
     if (text === last) return;
     last = text;
@@ -51,7 +51,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.005,
     initial: v.visibleThreshold,
     format: (x) => x.toFixed(3),
-    onChange: (x) => stellata.setStarRenderParams({ visibleThreshold: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ visibleThreshold: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -61,7 +61,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.01,
     initial: v.coreThreshold,
     format: (x) => x.toFixed(2),
-    onChange: (x) => stellata.setStarRenderParams({ coreThreshold: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ coreThreshold: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -71,7 +71,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.005,
     initial: v.discardThreshold,
     format: (x) => x.toFixed(3),
-    onChange: (x) => stellata.setStarRenderParams({ discardThreshold: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ discardThreshold: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -81,7 +81,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.1,
     initial: v.distNMin,
     format: (x) => x.toFixed(1),
-    onChange: (x) => stellata.setStarRenderParams({ distNMin: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ distNMin: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -91,7 +91,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.1,
     initial: v.distNMax,
     format: (x) => x.toFixed(1),
-    onChange: (x) => stellata.setStarRenderParams({ distNMax: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ distNMax: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -101,7 +101,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.05,
     initial: v.lumBiasMin,
     format: (x) => x.toFixed(2),
-    onChange: (x) => stellata.setStarRenderParams({ lumBiasMin: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ lumBiasMin: x }),
   }));
 
   body.appendChild(makeSlider({
@@ -111,7 +111,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 0.05,
     initial: v.lumBiasMax,
     format: (x) => x.toFixed(2),
-    onChange: (x) => stellata.setStarRenderParams({ lumBiasMax: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ lumBiasMax: x }),
   }));
 
   // Soft-knee saturation extent (magnitudes). 0 = hard cap on appSize at
@@ -126,7 +126,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
     step: 1,
     initial: v.sizeKnee,
     format: (x) => x.toFixed(0),
-    onChange: (x) => stellata.setStarRenderParams({ sizeKnee: x }),
+    onChange: (x) => stellata.filters.setStarRenderParams({ sizeKnee: x }),
   }));
 
   return {

@@ -464,13 +464,15 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       getT: () => 0,
       getWorldOffset: () => new THREE.Vector3(),
       constellationLabelAnchors: patch.anchors ?? [],
-      getFilter: () => ({
-        instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
-        spectMask: 0xff,
-      }),
+      filters: {
+        getFilter: () => ({
+          instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
+          spectMask: 0xff,
+        }),
+      },
       detailPermits: patch.detailPermits ?? (() => true),
       getCloudCatalog: () => null,
-      planetField: { liveInstanceCount: 0 },
+      kinds: { planet: { field: { liveInstanceCount: 0 } } },
       on: (name: string, fn: () => void) => {
         let set = handlers.get(name);
         if (!set) { set = new Set(); handlers.set(name, set); }

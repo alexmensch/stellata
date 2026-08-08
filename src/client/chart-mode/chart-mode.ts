@@ -39,8 +39,8 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
   let active = false;
 
   const sync = () => {
-    const f = stellata.getFilter();
-    const observed = stellata.getCameraMode() === 'observe';
+    const f = stellata.filters.getFilter();
+    const observed = stellata.focus.getCameraMode() === 'observe';
     const next = f.chart && observed;
     if (next === active) return;
     active = next;
@@ -53,12 +53,12 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     if (active) {
       document.body.classList.add('chart');
       applyTheme('mono');
-      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
+      stellata.filters.applyDetailPreset(stellata.filters.getDetailLevel(), false);
       stellata.chartLabels.start(ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
-      stellata.applyDetailPreset(stellata.getDetailLevel(), false);
+      stellata.filters.applyDetailPreset(stellata.filters.getDetailLevel(), false);
       stellata.chartLabels.stop();
     }
   };
@@ -67,8 +67,8 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     // Leaving observe always deactivates chart — the camera state required
     // to interpret the chart goes away. Clear the user's `chart` flag so
     // the next observe session starts clean unless they re-enable it.
-    if (stellata.getCameraMode() !== 'observe' && stellata.getFilter().chart) {
-      stellata.setFilter({ chart: false });
+    if (stellata.focus.getCameraMode() !== 'observe' && stellata.filters.getFilter().chart) {
+      stellata.filters.setFilter({ chart: false });
       return; // setFilter triggers sync via the 'filter' event
     }
     sync();

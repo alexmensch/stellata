@@ -77,7 +77,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
-      { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkywayLayer) },
+      { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkyway) },
       { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection() },
       { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection(perfGlContext(stellata)) },
       { title: 'Pin',        storageKey: 'pin',        build: () => buildPinSection(stellata) },

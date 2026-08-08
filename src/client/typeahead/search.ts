@@ -650,7 +650,7 @@ export function bindSearch(
   // runner because the distance vector accepts any-kind destinations.
   const focusRunQuery = (q: string): FuzzyEntry[] => {
     const all = runQuery(q);
-    if (stellata.getCameraMode() === 'observe') {
+    if (stellata.focus.getCameraMode() === 'observe') {
       return all.filter((e) => isHardTarget({ kind: e.kind, idx: e.index }));
     }
     return all;
@@ -679,16 +679,16 @@ export function bindSearch(
     rowFor,
     onSelect: (entry) => {
       const target = resolveEntryTarget(entry);
-      if (stellata.getCameraMode() === 'observe' && isHardTarget(target)) {
+      if (stellata.focus.getCameraMode() === 'observe' && isHardTarget(target)) {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
         // arrival, instead of teleporting via flyTo.
-        stellata.warpTo(target);
+        stellata.warp.warpTo(target);
         return;
       }
-      stellata.flyTo(target);
+      stellata.focus.flyTo(target);
     },
-    onClear: () => stellata.unfocus(),
+    onClear: () => stellata.focus.unfocus(),
     positionResults: positionUnder(focusInput),
     group,
     debounceMs: SEARCH_DEBOUNCE_MS,
@@ -705,9 +705,9 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      stellata.setVector(resolveEntryTarget(entry));
+      stellata.focus.setVector(resolveEntryTarget(entry));
     },
-    onClear: () => stellata.setVector(null),
+    onClear: () => stellata.focus.setVector(null),
     positionResults: positionUnder(toInput),
     group,
     debounceMs: SEARCH_DEBOUNCE_MS,
@@ -737,8 +737,8 @@ export function bindSearch(
     }
   };
   const syncFocusUI = () => {
-    const focused = stellata.getFocusedTarget();
-    const observe = stellata.getCameraMode() === 'observe';
+    const focused = stellata.focus.getFocusedTarget();
+    const observe = stellata.focus.getCameraMode() === 'observe';
     // OBSERVE makes the focus row read as "where you are observing from"
     // rather than "what you have selected", which is what FOCUS implies in
     // navigate mode. Same field, different mental model.
@@ -753,7 +753,7 @@ export function bindSearch(
     }
   };
   const syncVectorUI = () => {
-    const vec = stellata.getVectorTarget();
+    const vec = stellata.focus.getVectorTarget();
     toBox.setName(vec !== null ? nameOf(vec) : '');
   };
 

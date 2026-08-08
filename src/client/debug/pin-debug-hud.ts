@@ -51,10 +51,10 @@ export function buildPinSection(stellata: Stellata): DebugSection {
     const c = stellata.camera.position;
     const distCam = Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z);
     const tLen = Math.hypot(t.x, t.y, t.z);
-    const pinNow = stellata.isPinEngaged();
+    const pinNow = stellata.focus.isPinEngaged();
     // Pin engages on target ≈ focal's LIVE local position (baseline +
     // orbital perturbation), not target ≈ origin — a binary focal drifts.
-    const focal = stellata.getFocusedStar();
+    const focal = stellata.focus.getFocusedStar();
     const engageDistSq = focal !== null
       ? t.distanceToSquared(stellata.starLocalPositionInto(focal, engageScratch))
       : t.lengthSq();
@@ -86,11 +86,11 @@ export function buildPinSection(stellata: Stellata): DebugSection {
     if (!visible) return;
 
     body.textContent =
-      `focus: ${stellata.getFocusedStar()}  mode: ${stellata.getCameraMode()}\n` +
-      `warp:${stellata.getWarpActive()}  aim:${stellata.isAimActive()}\n` +
+      `focus: ${stellata.focus.getFocusedStar()}  mode: ${stellata.focus.getCameraMode()}\n` +
+      `warp:${stellata.warp.isActive()}  aim:${stellata.aim.isActive()}\n` +
       `pin: ${pinNow ? 'YES' : 'NO'}  flips:${latch.pinFlips}  off-frames:${latch.pinOffFrames}\n` +
       `\n` +
-      `target↔focal²: ${fmt(engageDistSq)} (engage <${stellata.getPinEngageThresholdSq()})\n` +
+      `target↔focal²: ${fmt(engageDistSq)} (engage <${stellata.focus.getPinEngageThresholdSq()})\n` +
       `target.len now: ${fmt(tLen)}  max: ${fmt(latch.tgtLenMax)}\n` +
       `target.x now: ${fmt(t.x)}  range: [${fmt(latch.tgtMinX)}, ${fmt(latch.tgtMaxX)}]\n` +
       `target.y now: ${fmt(t.y)}  range: [${fmt(latch.tgtMinY)}, ${fmt(latch.tgtMaxY)}]\n` +

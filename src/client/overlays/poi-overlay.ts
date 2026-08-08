@@ -220,7 +220,7 @@ export function createPoiOverlay(
     // a canvas click target, and putting pointer-events on the ring would
     // shadow that.
     onScreenLabel.addEventListener('click', () => {
-      stellata.applyObjectClick(target);
+      stellata.input.applyObjectClick(target);
     });
     arrowLabel.addEventListener('click', () => {
       if (!poiLocalPositionInto(target, tmpAim)) return;
@@ -243,7 +243,7 @@ export function createPoiOverlay(
   }
 
   function syncPool() {
-    const pois = stellata.getPois();
+    const pois = stellata.pois.get();
     const seen = new Set<string>(pois.map(poiPoolKey));
     for (const [key, e] of pool) {
       if (!seen.has(key)) {
@@ -298,14 +298,14 @@ export function createPoiOverlay(
   syncPool();
 
   stellata.on('frame', () => {
-    const pois = stellata.getPois();
+    const pois = stellata.pois.get();
     if (pois.length === 0) {
       hideAll();
       return;
     }
 
-    const filter = stellata.getFilter();
-    if (!filter.showHud || stellata.isObserveTransitionActive()) {
+    const filter = stellata.filters.getFilter();
+    if (!filter.showHud || stellata.observe.isActive()) {
       hideAll();
       return;
     }
@@ -315,14 +315,14 @@ export function createPoiOverlay(
     const camera = stellata.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const cameraMode = stellata.getCameraMode();
+    const cameraMode = stellata.focus.getCameraMode();
     const camPos = camera.position;
-    const focusedTarget = stellata.getFocusedTarget();
+    const focusedTarget = stellata.focus.getFocusedTarget();
 
     // Off-screen arrows mirror the HUD's Sol/GC arrows: shafts attach to
     // whichever ring is active (focus ring in navigate, HUD ring in
     // observe) around the shared HUD anchor.
-    if (!stellata.focalLocalPositionInto(tmpOrigin)) {
+    if (!stellata.focus.focalLocalPositionInto(tmpOrigin)) {
       tmpOrigin.copy(stellata.controls.target);
     }
     hudAnchorInto(tmpOrigin, camera, w, h, tmpAnchor, cameraMode === 'observe');

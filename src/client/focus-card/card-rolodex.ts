@@ -34,7 +34,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   let desiredFront: CardKey | null = null;
   let frontKey: CardKey | null = null;
-  let knownPois: readonly Target[] = stellata.getPois();
+  let knownPois: readonly Target[] = stellata.pois.get();
 
   bindCollapse({
     container: stack,
@@ -53,13 +53,13 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   // Recompute from current state on any input event rather than
   // tracking event payloads; the provider map is exhaustive over kind.
   const focusContent = (): FocusCardContent | null => {
-    const focused = stellata.getFocusedTarget();
+    const focused = stellata.focus.getFocusedTarget();
     return focused !== null ? providers[focused.kind].format(focused.idx) : null;
   };
 
   const dismiss = (key: CardKey) => {
-    if (key === FOCUS_KEY) stellata.unfocus();
-    else stellata.togglePoi(poiTargetOf(key)!);
+    if (key === FOCUS_KEY) stellata.focus.unfocus();
+    else stellata.pois.toggle(poiTargetOf(key)!);
   };
 
   const buildStrip = (key: CardKey, name: string): HTMLElement => {
@@ -87,10 +87,10 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   };
 
   const reconcile = () => {
-    const focus = stellata.getCameraMode() === 'observe' ? null : focusContent();
+    const focus = stellata.focus.getCameraMode() === 'observe' ? null : focusContent();
     const plan = planRolodex({
-      pois: stellata.getPois(),
-      focused: stellata.getFocusedTarget(),
+      pois: stellata.pois.get(),
+      focused: stellata.focus.getFocusedTarget(),
       focusVisible: focus !== null,
       desiredFront,
     });
@@ -142,7 +142,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   const unsubs = [
     stellata.on('focus', () => {
-      desiredFront = stellata.getFocusedTarget() !== null ? FOCUS_KEY : null;
+      desiredFront = stellata.focus.getFocusedTarget() !== null ? FOCUS_KEY : null;
       reconcile();
     }),
     stellata.on('cameraMode', reconcile),

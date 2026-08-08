@@ -66,7 +66,7 @@ export function createDistanceVectorOverlay(
   // the same affordance as the Sol/GC arrow labels. Warping there is
   // deliberately NOT on the label; it stays on the W key only.
   distUi.addEventListener('click', () => {
-    const to = stellata.getVectorTarget();
+    const to = stellata.focus.getVectorTarget();
     if (to !== null && stellata.focusables[to.kind].localPositionInto(to.idx, tmpClickAim)) {
       stellata.aimAt(tmpClickAim);
     }
@@ -118,14 +118,14 @@ export function createDistanceVectorOverlay(
   // A 'vector' emit that leaves the slot null is the canonical "no
   // vector" state — hide immediately rather than on the next frame.
   stellata.on('vector', () => {
-    if (stellata.getVectorTarget() === null) hide();
+    if (stellata.focus.getVectorTarget() === null) hide();
   });
 
   const destLabelOf = (to: Target): string => targetDisplayName(stellata, starLabels, to);
 
   stellata.on('frame', () => {
-    const from = stellata.getFocusedTarget();
-    const to = stellata.getVectorTarget();
+    const from = stellata.focus.getFocusedTarget();
+    const to = stellata.focus.getVectorTarget();
     if (from === null || to === null) { hide(); return; }
 
     const camera = stellata.camera;
@@ -229,8 +229,8 @@ export function createDistanceVectorOverlay(
       : 0;
     const shaftDrawnLenPx = Math.hypot(tipX - shaftStartX, tipY - shaftStartY);
     const arrowAlpha = focusedArrowFadeAlpha(
-      stellata.getCameraMode(),
-      stellata.getObserveTransitionProgress(),
+      stellata.focus.getCameraMode(),
+      stellata.observe.getProgress(),
       discRadiusPx,
       shaftDrawnLenPx,
       SOURCE_OFFSET_PX,

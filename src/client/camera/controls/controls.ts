@@ -85,19 +85,19 @@ export function bindControls(stellata: Stellata) {
     btn.dataset.bit = String(bit);
     btn.textContent = label;
     btn.addEventListener('click', () => {
-      const mask = stellata.getFilter().spectMask ^ (1 << bit);
-      stellata.setFilter({ spectMask: mask });
+      const mask = stellata.filters.getFilter().spectMask ^ (1 << bit);
+      stellata.filters.setFilter({ spectMask: mask });
     });
     chipEls.push(btn);
     chipsHost.appendChild(btn);
   }
   spectAllBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    stellata.setFilter({ spectMask: ALL_SPECT_MASK });
+    stellata.filters.setFilter({ spectMask: ALL_SPECT_MASK });
   });
   spectNoneBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    stellata.setFilter({ spectMask: 0 });
+    stellata.filters.setFilter({ spectMask: 0 });
   });
 
   // Slider → filter.
@@ -105,7 +105,7 @@ export function bindControls(stellata: Stellata) {
     let vMin = Number(distMin.value);
     let vMax = Number(distMax.value);
     if (vMin > vMax) { vMin = vMax; distMin.value = String(vMin); }
-    stellata.setFilter({
+    stellata.filters.setFilter({
       minDistSol: sliderToDist(vMin, true),
       maxDistSol: sliderToDist(vMax, false),
     });
@@ -114,20 +114,20 @@ export function bindControls(stellata: Stellata) {
     let vMin = Number(distMin.value);
     let vMax = Number(distMax.value);
     if (vMax < vMin) { vMax = vMin; distMax.value = String(vMax); }
-    stellata.setFilter({
+    stellata.filters.setFilter({
       minDistSol: sliderToDist(vMin, true),
       maxDistSol: sliderToDist(vMax, false),
     });
   });
   bindStopControl(detailStops, 'detail', DETAIL_LEVELS,
-    (level) => stellata.applyDetailPreset(level));
+    (level) => stellata.filters.applyDetailPreset(level));
   bindStopControl(coordSphereStops, 'coordSphere', COORD_SPHERE_FRAMES,
-    (frame) => stellata.setFilter({ coordSphere: frame }));
+    (frame) => stellata.filters.setFilter({ coordSphere: frame }));
   showHud.addEventListener('change', () => {
-    stellata.setFilter({ showHud: showHud.checked });
+    stellata.filters.setFilter({ showHud: showHud.checked });
   });
   showChart.addEventListener('change', () => {
-    stellata.setFilter({ chart: showChart.checked });
+    stellata.filters.setFilter({ chart: showChart.checked });
   });
 
   fov.addEventListener('input', () => {
@@ -142,10 +142,10 @@ export function bindControls(stellata: Stellata) {
   exag.max = String(STAR_K_MULTIPLIER_MAX);
   exag.step = String(STAR_K_MULTIPLIER_STEP);
   exag.addEventListener('input', () => {
-    stellata.setStarKMultiplier(Number(exag.value));
+    stellata.filters.setStarKMultiplier(Number(exag.value));
   });
   document.getElementById('exag-reset')!.addEventListener('click', () => {
-    stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());
+    stellata.filters.setStarKMultiplier(stellata.filters.getStarKMultiplierDefault());
   });
   // The trim's grid is also the URL field's quantisation, so it comes
   // from the constants rather than from the markup.
@@ -156,16 +156,16 @@ export function bindControls(stellata: Stellata) {
   // the grid (stepUp accumulation), and 0 is the value the readout
   // formats without a sign.
   ev.addEventListener('input', () => {
-    stellata.setEv(steppedEv(Number(ev.value), 0));
+    stellata.exposure.setEv(steppedEv(Number(ev.value), 0));
   });
   document.getElementById('ev-reset')!.addEventListener('click', () => {
-    stellata.setEv(0);
+    stellata.exposure.setEv(0);
   });
 
   // Reverse sync: any filter change (user input, URL restore, presets) updates
   // DOM to match. Writing to .value does not re-dispatch 'input', so no loop.
   const syncFromFilter = () => {
-    const f = stellata.getFilter();
+    const f = stellata.filters.getFilter();
     const sMin = distToSlider(f.minDistSol, true);
     const sMax = distToSlider(f.maxDistSol, false);
     if (distMin.value !== String(sMin)) distMin.value = String(sMin);
@@ -186,18 +186,18 @@ export function bindControls(stellata: Stellata) {
     // Chart toggle is observe-gated. Disable when not in observe so the
     // user sees why it can't be enabled (the title attribute on the row
     // explains it).
-    const observeMode = stellata.getCameraMode() === 'observe';
+    const observeMode = stellata.focus.getCameraMode() === 'observe';
     showChart.disabled = !observeMode;
     if (showChart.checked !== f.chart) showChart.checked = f.chart;
-    const fovVal = stellata.getCameraFov();
+    const fovVal = stellata.filters.getCameraFov();
     const fovStr = String(Math.round(fovVal));
     if (fov.value !== fovStr) fov.value = fovStr;
     fovReadout.textContent = `${Math.round(fovVal)}°`;
 
-    const kStr = stellata.getStarKMultiplier().toString();
+    const kStr = stellata.filters.getStarKMultiplier().toString();
     if (exag.value !== kStr) exag.value = kStr;
 
-    const evVal = stellata.getEv();
+    const evVal = stellata.exposure.getEv();
     if (Math.abs(Number(ev.value) - evVal) > 1e-6) ev.value = String(evVal);
     syncEvReadout();
   };
@@ -206,7 +206,7 @@ export function bindControls(stellata: Stellata) {
   // mutation events the rest of the panel syncs on. Write-on-change keeps
   // it off the per-frame DOM path.
   const syncEvReadout = () => {
-    const text = evLabel(stellata.getEv(), stellata.getEffectiveLimitMag());
+    const text = evLabel(stellata.exposure.getEv(), stellata.exposure.getEffectiveLimitMag());
     if (evReadout.textContent !== text) evReadout.textContent = text;
   };
 

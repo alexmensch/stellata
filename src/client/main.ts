@@ -113,7 +113,7 @@ async function main() {
     // exists only once the attach table populates (a microtask after the
     // constructor) — the search corpus, URL restore, and SID wiring below
     // all read it, so settle it first.
-    await stellata.planetSystemsReady;
+    await stellata.kinds.planet.systemsReady;
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
@@ -159,11 +159,11 @@ async function main() {
       // Target {kind:'planet'} carries the body field's flat instance
       // index. Translate at the URL boundary in both directions.
       planetDomainIndexOf: (targetIdx) => {
-        const host = stellata.planetField.hostPlanetOf(targetIdx);
+        const host = stellata.kinds.planet.field.hostPlanetOf(targetIdx);
         return host && host.hostStarIdx === catalog.solIndex ? host.planetIdx : null;
       },
       planetTargetIndexOf: (domainIndex) =>
-        stellata.planetField.instanceIndexOf(catalog.solIndex, domainIndex),
+        stellata.kinds.planet.field.instanceIndexOf(catalog.solIndex, domainIndex),
     };
 
     const debugTools = setupDebug(stellata, idMaps);
@@ -203,7 +203,7 @@ async function main() {
     createClickRipple(stellata);
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       createCoordSphereLabels(stellata, COORD_SPHERE_SPECS[frame], () =>
-        stellata.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
+        stellata.filters.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
     }
     createPlanetLabels(stellata);
     // Kind-module SVG label overlays (probe, cloud, lg, shell).
