@@ -151,8 +151,8 @@ What the pilot taught, versus the original sketch:
   catalog, phase 5).
 - **`attach` runs in the shell constructor, at the roster position**,
   with artifacts loaded before construction — not post-construction
-  from boot. Scene-layer registration order is update order, and the
-  probe layer must update before the inline planet layer (moving-focal
+  from boot. Scene-layer registration order is update order, and every
+  module layer must update before the first inline entry (moving-focal
   ride freshness), which a post-construction attach could not provide
   while inline layers still register in the constructor.
 - **`hard` / `moving` stay in `KIND_TRAITS`**, not module fields: the

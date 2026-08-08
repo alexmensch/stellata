@@ -13,9 +13,10 @@ import {
 import type { KindPick, ObjectKindModule } from './kind-module';
 
 /** Explicit ordered roster — attach order IS scene-layer update order
- *  for module-supplied layers, and module layers update before every
- *  inline-wired layer. Probe leads: its field must write this frame's
- *  samples before the planet layer's moving-focal ride reads them. */
+ *  for module-supplied layers, and every module layer updates before
+ *  every inline-wired layer. That boundary, not the order within this
+ *  list, is what keeps the moving-body fields fresh for the
+ *  moving-focal ride (`../scene/README.md`). */
 export const KIND_ROSTER = [
   'probe',
   'planet',
