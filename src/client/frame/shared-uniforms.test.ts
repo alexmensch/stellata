@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { BASE_EPOCH_EXPOSURE, cullMagFor } from '../../hdr/exposure/exposure-epoch';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';
+import { BASE_EPOCH_EXPOSURE, cullMagFor } from '../hdr/exposure/exposure-epoch';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,
-} from '../perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from '../local-pass/star-local-mirror';
-import { buildStarSharedUniforms } from './star-shared-uniforms';
+} from '../star-pipeline/perceptual-disc-uniforms';
+import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-local-mirror';
+import { buildSharedUniforms } from './shared-uniforms';
 
 function build(hdr = makeHdrEmitterUniforms()) {
-  return buildStarSharedUniforms({
+  return buildSharedUniforms({
     pixelRatio: 2,
     fovYRad: 0.75,
     viewportW: 1600,
@@ -19,7 +19,7 @@ function build(hdr = makeHdrEmitterUniforms()) {
   });
 }
 
-describe('buildStarSharedUniforms', () => {
+describe('buildSharedUniforms', () => {
   it('seeds the renderer-derived slots from its options', () => {
     const u = build();
     expect(u.uPixelRatio.value).toBe(2);

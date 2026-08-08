@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import type { StarSharedUniforms } from '../star-pipeline/frame/star-shared-uniforms';
+import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { KindContext } from './kind-module';
 
 export const MOCK_VIEWPORT_W = 800;
@@ -32,7 +32,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     // The HDR emitter slots ride the shared map by reference in
     // production (star-pipeline/frame/README.md § Shared uniforms).
     ...makeMockHdrEmitterUniforms(),
-  } as unknown as StarSharedUniforms;
+  } as unknown as SharedUniforms;
   return {
     scene: new THREE.Scene(),
     camera,

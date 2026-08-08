@@ -118,7 +118,7 @@ import {
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/frame/star-frame';
-import { buildStarSharedUniforms } from './star-pipeline/frame/star-shared-uniforms';
+import { buildSharedUniforms } from './frame/shared-uniforms';
 import {
   ExtinctionPrepass,
   type ExtinctionPrepassUniforms,
@@ -427,7 +427,7 @@ export class Stellata implements FrameAnchor {
       () => this.camera.fov,
     );
 
-    const sharedUniforms = buildStarSharedUniforms({
+    const sharedUniforms = buildSharedUniforms({
       pixelRatio: this.renderer.getPixelRatio(),
       fovYRad: (this.camera.fov * Math.PI) / 180,
       viewportW: window.innerWidth,
@@ -436,7 +436,7 @@ export class Stellata implements FrameAnchor {
     });
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all four slots from its own constructor, so the seeds in
-    // buildStarSharedUniforms never reach a shader.
+    // buildSharedUniforms never reach a shader.
     this.exposure = new ExposureController({
       uniforms: {
         uExposure: this.hdr.emitterUniforms.uExposure,

@@ -11,7 +11,7 @@ import {
   MOCK_VIEWPORT_H,
   MOCK_VIEWPORT_W,
 } from '../../kinds/kind-context-mock';
-import { buildStarSharedUniforms } from '../../star-pipeline/frame/star-shared-uniforms';
+import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
@@ -28,7 +28,7 @@ const DECOY_HOST_POS = new THREE.Vector3(0, 0, 1e4);
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
   // Same viewport / FOV as the mock's camera and canvas rect, so pick
   // projections and screen-centre coordinates agree across both maps.
-  const sharedUniforms = buildStarSharedUniforms({
+  const sharedUniforms = buildSharedUniforms({
     pixelRatio: 1,
     fovYRad: MOCK_FOV_Y_RAD,
     viewportW: MOCK_VIEWPORT_W,

@@ -6,7 +6,7 @@ import { julianEpochYearToT } from '../../solar-system/time/time';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { StarFrame } from './star-frame';
-import { buildStarSharedUniforms } from './star-shared-uniforms';
+import { buildSharedUniforms } from '../../frame/shared-uniforms';
 
 const T_LOAD = julianEpochYearToT(2016.0);
 
@@ -22,7 +22,7 @@ function makeCatalog(positions: number[][], radiiRsol?: number[]): Catalog {
 }
 
 function makeFrame(catalog: Catalog, opts: { t?: number } = {}) {
-  const uniforms = buildStarSharedUniforms({
+  const uniforms = buildSharedUniforms({
     pixelRatio: 1,
     fovYRad: Math.PI / 4,
     viewportW: 1000,

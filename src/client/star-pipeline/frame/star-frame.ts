@@ -15,11 +15,11 @@ import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJDE } from '../../solar-system/time/ti
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { bestApsisTeff } from '../star-color-routing-pure';
 import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';
-import type { StarSharedUniforms } from './star-shared-uniforms';
+import type { SharedUniforms } from '../../frame/shared-uniforms';
 
 export interface StarFrameOptions {
   catalog: Catalog;
-  uniforms: StarSharedUniforms;
+  uniforms: SharedUniforms;
   /** Live reference to `camera.position` — the camera in the same local
    *  frame as `localPositions`. Read by the proximity queries. */
   cameraPosition: THREE.Vector3;
@@ -84,7 +84,7 @@ export class StarFrame {
   readonly basePositions: Float32Array;
 
   private readonly catalog: Catalog;
-  private readonly uniforms: StarSharedUniforms;
+  private readonly uniforms: SharedUniforms;
   private readonly cameraPosition: THREE.Vector3;
   private readonly onLocalPositionsWritten: () => void;
 

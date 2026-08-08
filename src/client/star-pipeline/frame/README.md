@@ -1,15 +1,11 @@
-# Star frame and shared uniforms
+# Star frame
 
 The CPU-side state every star pass reads: `StarFrame` owns
 `catalog.positions` in the renderer's frame (floating origin, epoch
-advance, derived per-instance buffers, proximity queries), and
-`buildStarSharedUniforms` builds the one uniform map all three passes
-and every downstream consumer hold **by reference**.
-
-They live together because the frame writes into the map — `uWorldOffset`
-on recentre, `uFovYRad` / `uViewport` for its windows — and both are the
-seam the integration shell (`../../stellata.ts`) delegates to rather than
-owning itself. Nothing in `../` imports this folder.
+advance, derived per-instance buffers, proximity queries). The shared
+uniform map it writes into lives in `../../frame/` (`buildSharedUniforms`);
+the integration shell (`../../stellata.ts`) delegates to both rather
+than owning either. Nothing in `../` imports this folder.
 
 ## Files in this area
 
@@ -23,49 +19,7 @@ src/client/star-pipeline/frame/
                                   recentre, epoch re-advance + focal
                                   delta, and the proximity / core-mask
                                   window.
-  star-shared-uniforms.ts         buildStarSharedUniforms — the one
-    (+ test)                      uniform map all three passes (and the
-                                  planet body field + Milky Way pass)
-                                  share by reference. The test pins
-                                  seeding + the perceptual-disc slot
-                                  identities the planet pipeline picks
-                                  out.
 ```
-
-## Shared uniforms
-
-`buildStarSharedUniforms` (`star-shared-uniforms.ts`) returns the one
-uniform map the disc, glow, and core-mask passes spread into their
-materials — `uRenderMode` is the only divergent slot, bound per
-material by `StarPipeline`. Every other consumer picks slots out of the
-same object **by reference**, so a single write reaches all of them
-with no bookkeeping: `FilterController` (the filter / instrument / render
-knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
-`pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, for its chart-mode
-isobar contour only — the band's own brightness is photometric),
-`StarLocalMirror`, `ExtinctionPrepass`, `StarFrame`
-(`uWorldOffset`, and `uFovYRad` / `uViewport` for its windows), and
-`Picker`. The three renderer-derived seeds (pixel ratio, FOV, viewport)
-are arguments; the rest come from `DEFAULT_FILTER` /
-`STAR_RENDER_DEFAULTS` and the pipeline's own constants.
-
-`uSizeSpan` is the exception to "comes from `DEFAULT_FILTER`": the footprint
-window is no longer a `FilterState` field, so it seeds through
-`sizeSpanOf(DEFAULT_FILTER)` — the instrument record is its only authority
-(`../../filters/README.md` § The multiplier is the ONLY footprint control).
-
-The one set of slots this map does **not** own is
-`HdrPipeline.emitterUniforms` — `uExposure`, `uOmegaPxArcsec2`,
-`uWhitePoint`, `uHighlightDesat`, `uHdrTarget` — passed in as the `hdr`
-option and spread in by reference. `HdrPipeline` rewrites `uHdrTarget` on every
-seam / resolve / chart-mode change, so copying the values instead of
-sharing the objects would leave the star passes tone-mapping inline into
-an already-tone-mapped target. Pinned in the test; see
-`../../hdr/README.md` § Unit.
-
-The integration shell builds the map once and keeps writing through
-`starPipeline.discMaterial.uniforms` per frame — the encapsulation is
-construction, not access discipline.
 
 ## The star frame
 
