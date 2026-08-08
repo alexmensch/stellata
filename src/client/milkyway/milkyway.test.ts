@@ -9,34 +9,36 @@ import {
 } from './milkyway';
 import {
   BULGE_COLOR_RGB,
+  BULGE_DENSITY0,
   BULGE_TINT_RGB,
+  BULGE_VOLUME_INTEGRAL,
   DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
-  BULGE_DENSITY0,
-  BULGE_VOLUME_INTEGRAL,
   DISC_COLOR_RGB,
   DISC_DENSITY0,
   DISC_HALF_THICKNESS_PC,
-  DISC_SCALE_LENGTH_PC,
-  DISC_VOLUME_INTEGRAL,
   DISC_SCALE_HEIGHT_PC,
+  DISC_SCALE_LENGTH_PC,
   DISC_THICK_DENSITY_FRACTION,
   DISC_THICK_SCALE_HEIGHT_PC,
   DISC_TINT_RGB,
+  DISC_VOLUME_INTEGRAL,
   FOREGROUND_DUST_STEPS,
-  discVerticalProfile,
-  sightlineColumn,
   LOCAL_DUST_RATE_MAG_PER_KPC,
   MAG_PER_TAU,
   SOL_GALACTOCENTRIC_PC,
   STEPS,
   S_MIN_PC,
+  discVerticalProfile,
   dustTauVPerPc,
   foregroundDustTauRgb,
   galacticDirection,
+  sightlineColumn,
   sightlineSurfaceBrightness,
 } from './milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
+import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
+import { parseOverrides } from '../../../scripts/local-group/build-local-group';
 import {
   BULGE_TO_TOTAL_V,
   GALAXY_TOTAL_ABSMAG_V,
@@ -191,16 +193,19 @@ describe('MilkyWay vertical profile', () => {
     expect(discVerticalProfile(0)).toBeCloseTo(1.04, 12);
   });
 
-  // The thick disc's share of the vertical column, which is the number the
-  // external cross-check disagrees with: Mosenkov et al. 2021 measure a
-  // thick/thin LUMINOSITY ratio of 0.71 ± 0.45 at 3.4 µm, against 0.12
-  // here. Their thick disc also carries a longer radial scale length and
-  // this model gives both components the same one, so the two are not the
-  // same quantity — stated rather than tuned (README.md § Density profiles).
-  it('pins the thick/thin luminosity ratio the shared scale length implies', () => {
-    const thin = DISC_SCALE_HEIGHT_PC;
-    const thick = DISC_THICK_DENSITY_FRACTION * DISC_THICK_SCALE_HEIGHT_PC;
-    expect(thick / thin).toBeCloseTo(0.12, 12);
+  // The disagreement itself is the assertion, not the arithmetic that
+  // produces it: sharing a radial scale length puts the thick/thin
+  // LUMINOSITY ratio at 0.12, and Mosenkov et al. 2021 measure
+  // 0.71 ± 0.45 at 3.4 µm — outside their interval on the low side, where
+  // their thick disc is radially longer as well. Stated rather than tuned
+  // (README.md § Density profiles), so a future session that "fixes" the
+  // ratio into their band fails here and has to argue with the README.
+  it('sits below Mosenkov 2021 on the thick/thin luminosity ratio', () => {
+    const ratio =
+      (DISC_THICK_DENSITY_FRACTION * DISC_THICK_SCALE_HEIGHT_PC) /
+      DISC_SCALE_HEIGHT_PC;
+    expect(ratio).toBeCloseTo(0.12, 12);
+    expect(ratio).toBeLessThan(0.71 - 0.45);
   });
 
   // The envelope is two thick scale heights, the same rule 600 pc followed
@@ -260,7 +265,8 @@ describe('MilkyWay diffuse reference', () => {
 describe('MilkyWay luminosity solve', () => {
   const totalFlux =
     DISC_DENSITY0 * DISC_VOLUME_INTEGRAL + BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL;
-  const modelAbsMagV = -2.5 * Math.log10(totalFlux / 100);
+  const modelAbsMagV =
+    -2.5 * Math.log10(totalFlux / ABSOLUTE_MAGNITUDE_DISTANCE_PC ** 2);
 
   it('integrates both proxy volumes back to the published M_V and B/T', () => {
     expect(GALAXY_TOTAL_ABSMAG_V).toBe(-21.37);
@@ -332,20 +338,22 @@ describe('MilkyWay luminosity solve', () => {
   // from the build's source of truth so a catalogue edit moves this pin
   // rather than silently invalidating it.
   it('orders the Galaxy from M31 against M31 from Sol', () => {
-    const row = readFileSync(
-      fileURLToPath(new URL('../../../data/local-group/overrides.tsv', import.meta.url)),
-      'utf-8',
-    )
-      .split('\n')
-      .find((l) => l.startsWith('M31\t'));
-    if (row === undefined) throw new Error('M31 row missing from overrides.tsv');
-    const cols = row.split('\t');
-    const m31DistancePc = Number(cols[8]) * 1000;
-    const m31ApparentV = Number(cols[9]);
+    const row = parseOverrides(
+      readFileSync(
+        fileURLToPath(new URL('../../../data/local-group/overrides.tsv', import.meta.url)),
+        'utf-8',
+      ),
+    ).find((o) => o.name === 'M31');
+    if (row?.distanceKpc === undefined || row.mV === undefined) {
+      throw new Error('M31 row in overrides.tsv is missing distance or m_V');
+    }
+    const m31DistancePc = row.distanceKpc * 1000;
+    const m31ApparentV = row.mV;
     expect(m31ApparentV).toBeCloseTo(3.44, 6);
 
     const galaxyFromM31 =
-      modelAbsMagV + 5 * Math.log10(m31DistancePc / 10);
+      modelAbsMagV +
+      5 * Math.log10(m31DistancePc / ABSOLUTE_MAGNITUDE_DISTANCE_PC);
     expect(galaxyFromM31).toBeCloseTo(3.079, 3);
     expect(galaxyFromM31).toBeLessThan(m31ApparentV);
     expect(m31ApparentV - galaxyFromM31).toBeCloseTo(0.361, 3);
