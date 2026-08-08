@@ -23,21 +23,37 @@ export const TOE_BLACK_MAG = 1.5;
  *  8-bit output step, decoded through the sRGB linear segment. */
 const EIGHT_BIT_STEP_L = 0.5 / 255 / 12.92;
 
-/** Exponent of the faint-end toe, derived so a source exactly
- *  `TOE_BLACK_MAG` under threshold lands on `EIGHT_BIT_STEP_L`. */
-export const TOE_GAMMA = Math.log10(L_THRESH / EIGHT_BIT_STEP_L) / (0.4 * TOE_BLACK_MAG);
+/** Displayed depth of the toe's black point, in magnitudes below the
+ *  threshold's display level. */
+const TOE_BLACK_DEPTH_MAG = 2.5 * Math.log10(L_THRESH / EIGHT_BIT_STEP_L);
+
+/** Quadratic coefficient of the faint-end toe, derived so a source
+ *  exactly `TOE_BLACK_MAG` under threshold lands on `EIGHT_BIT_STEP_L`.
+ *  The toe maps `m` magnitudes under threshold to `m + TOE_CURVATURE·m²`
+ *  displayed magnitudes under it — slope 1 at the knee, so the transfer
+ *  is C1 through the threshold and no isophote marks the crossing. */
+export const TOE_CURVATURE =
+  (TOE_BLACK_DEPTH_MAG - TOE_BLACK_MAG) / (TOE_BLACK_MAG * TOE_BLACK_MAG);
 
 /** Detection rolloff below the threshold: sub-threshold light compresses
  *  to black over `TOE_BLACK_MAG` magnitudes instead of rendering at its
  *  near-linear Reinhard value. Identity at and above `L_THRESH`, so the
  *  threshold anchor holds. */
 export function faintToe(y: number, lThresh = L_THRESH): number {
-  return y < lThresh ? lThresh * (y / lThresh) ** TOE_GAMMA : y;
+  if (y >= lThresh) return y;
+  if (y <= 0) return 0;
+  const magsUnder = -2.5 * Math.log10(y / lThresh);
+  return lThresh * (y / lThresh) ** (1 + TOE_CURVATURE * magsUnder);
 }
 
 /** Exact inverse of `faintToe` — the chrome mapping composes it. */
 export function faintToeInverse(yt: number, lThresh = L_THRESH): number {
-  return yt < lThresh ? lThresh * (yt / lThresh) ** (1 / TOE_GAMMA) : yt;
+  if (yt >= lThresh) return yt;
+  if (yt <= 0) return 0;
+  const depth = -2.5 * Math.log10(yt / lThresh);
+  const magsUnder =
+    (Math.sqrt(1 + 4 * TOE_CURVATURE * depth) - 1) / (2 * TOE_CURVATURE);
+  return lThresh * 10 ** (-0.4 * magsUnder);
 }
 
 export function relativeLuminance(rgb: Rgb): number {

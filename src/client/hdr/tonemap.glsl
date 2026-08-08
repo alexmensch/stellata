@@ -19,17 +19,20 @@ float stellataReinhardExtended(float y, float whitePoint) {
     return y * (1.0 + y / (whitePoint * whitePoint)) / (1.0 + y);
 }
 
-// L_THRESH and TOE_GAMMA in tonemap-pure.ts; chunk-constant-drift pins both.
+// L_THRESH and TOE_CURVATURE in tonemap-pure.ts; chunk-constant-drift pins both.
 const float STELLATA_TOE_KNEE = 0.02;
-const float STELLATA_TOE_GAMMA = 3.5331045;
+const float STELLATA_TOE_CURVATURE = 1.6887363;
+const float STELLATA_MAG_PER_LOG2 = 0.7525750;
 
 /** Detection rolloff below the threshold: sub-threshold light compresses
  *  to black over TOE_BLACK_MAG magnitudes rather than rendering at its
- *  near-linear Reinhard value. Identity at and above the knee. */
+ *  near-linear Reinhard value. Identity at and above the knee, leaving
+ *  with slope 1 (C1), the exponent running quadratically below it. */
 float stellataFaintToe(float y) {
-    return y < STELLATA_TOE_KNEE
-        ? STELLATA_TOE_KNEE * pow(y / STELLATA_TOE_KNEE, STELLATA_TOE_GAMMA)
-        : y;
+    if (y >= STELLATA_TOE_KNEE) return y;
+    float magsUnder = log2(STELLATA_TOE_KNEE / y) * STELLATA_MAG_PER_LOG2;
+    return STELLATA_TOE_KNEE
+        * pow(y / STELLATA_TOE_KNEE, 1.0 + STELLATA_TOE_CURVATURE * magsUnder);
 }
 
 vec3 stellataSrgbEncode(vec3 c) {

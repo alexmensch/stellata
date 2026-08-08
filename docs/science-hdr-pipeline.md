@@ -331,7 +331,8 @@ detection toe:**
 
 ```
 Y   = dot(rgb, LUMA_WEIGHTS)            // Rec.709 luminance
-Yt  = Y < L_THRESH ? L_THRESH · (Y/L_THRESH)^TOE_GAMMA : Y
+m   = −2.5·log10(Y/L_THRESH)            // magnitudes under threshold
+Yt  = Y < L_THRESH ? L_THRESH · 10^(−0.4·(m + TOE_CURVATURE·m²)) : Y
 Yd  = Yt · (1 + Yt/Lw²) / (1 + Yt)
 rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
 ```
@@ -359,12 +360,21 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   threshold rendered at 15.6/255. Physically you don't see that residual
   because it sits under a luminous natural sky background; Stellata
   renders a black sky, so the operator carries the detection rolloff
-  instead: identity at and above `L_THRESH` (every anchor holds), a
-  power toe below it. `TOE_GAMMA` is derived, not tuned — a source
-  exactly **`TOE_BLACK_MAG` = 1.5 mag** under threshold lands on half an
+  instead: identity at and above `L_THRESH` (every anchor holds), and a
+  toe below it that **leaves the knee at slope 1 (C1)** — `m` magnitudes
+  under threshold display as `m + TOE_CURVATURE·m²` under it.
+  `TOE_CURVATURE` is derived, not tuned: a source exactly
+  **`TOE_BLACK_MAG` = 1.5 mag** under threshold lands on half an
   8-bit output step, the level the encode cannot distinguish from black.
-  Exactly invertible (a power), and the chrome mapping composes the
-  inverse. The rejected alternative was rendering the sky background as
+  The first cut was a fixed-exponent power with the same endpoints, and
+  its slope-3.5 kink at the knee projected a visible isophote onto every
+  smooth gradient crossing threshold — molecular clouds silhouetted as
+  hard-edged blots, and EV trims sweeping visible bands across the sky
+  as isophotes crossed the contour. Detection near threshold is a
+  graded probability (a frequency-of-seeing curve ~0.5 mag wide), not a
+  cliff; slope 1 at the knee is the display transfer's rendering of
+  that. Exactly invertible (quadratic formula in log-luminance), and
+  the chrome mapping composes the inverse. The rejected alternative was rendering the sky background as
   a real luminance pedestal — more honest (threshold becomes a
   consequence), but it lifts the whole frame's black level and feeds the
   full-frame pedestal into the adaptation statistic and chart mode; the

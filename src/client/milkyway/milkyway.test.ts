@@ -539,9 +539,9 @@ describe('MilkyWay surface-brightness calibration', () => {
 
     expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(70.33, 2);
     expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(38.56, 2);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(27.98, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.92, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.51, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(34.29, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(18.52, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.52, 2);
   });
 
   // How far under threshold each sightline sits, which is the photometric

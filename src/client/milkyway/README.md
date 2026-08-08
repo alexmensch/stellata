@@ -244,8 +244,8 @@ a just-visible star".
 | --- | --- | --- | --- |
 | l = 0, b = 5 | 20.71 | **1.29 OVER** — the maximum | 70.3 |
 | l = 0, b = 0 (GC) | 21.98 | 0.02 over | 38.6 |
-| anticentre | 22.16 | 0.16 under | 28.0 |
-| b = 30 | 22.61 | 0.61 under | 8.9 |
+| anticentre | 22.16 | 0.16 under | 34.4 |
+| b = 30 | 22.61 | 0.61 under | 18.5 |
 | NGP | 23.49 | 1.49 under | 0.5 |
 
 Plane-to-pole contrast **1.51 mag** photometrically. **The midplane is

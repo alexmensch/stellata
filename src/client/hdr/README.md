@@ -197,9 +197,14 @@ brighter than the threshold lands on full white by construction. At the
 gentle end, `L = L_THRESH` resolves to 0.15 of full scale after encode.
 
 **The toe is the detection rolloff below threshold** — identity at and
-above `L_THRESH`, so every anchor holds, and a power below it whose
-exponent (`TOE_GAMMA`, derived) puts a source exactly `TOE_BLACK_MAG`
-under threshold on half an 8-bit step. Sub-threshold light no longer
+above `L_THRESH`, so every anchor holds, and it leaves the knee with
+**slope 1** (C1): a source `m` magnitudes under threshold displays
+`m + TOE_CURVATURE·m²` magnitudes under it, the coefficient derived so
+exactly `TOE_BLACK_MAG` under lands on half an 8-bit step. The C1 knee
+is load-bearing, not taste: the first cut was a fixed-exponent power
+(slope 3.5 at the knee), and that kink projected a visible isophote
+onto every smooth gradient crossing threshold — hard-edged molecular
+clouds, banded EV sweeps. Sub-threshold light no longer
 renders at its near-linear Reinhard value; the Milky Way pole is the
 motivating case (`../milkyway/README.md` § The gradient this produces).
 Exactly invertible, and `inverseTonemapConstant` composes the inverse so

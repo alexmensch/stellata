@@ -821,7 +821,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin
-    // envelope reads ~1/255 where the near-linear curve gave it 18.
+    // envelope reads ~1.5/255 where the near-linear curve gave it 18.
     //
     // Under the retired per-layer opt-out the same rows ran 173 at the core
     // and 0.8 at 40 arcmin — a bright nucleus on a black disc. The core comes
@@ -836,8 +836,8 @@ describe('M31 surface-brightness profile vs published photometry', () => {
         );
       expect(level(0)).toBeCloseTo(120.0, 1);
       expect(level(10)).toBeCloseTo(64.1, 1);
-      expect(level(20)).toBeCloseTo(27.76, 1);
-      expect(level(40)).toBeCloseTo(1.01, 1);
+      expect(level(20)).toBeCloseTo(34.18, 1);
+      expect(level(40)).toBeCloseTo(1.54, 1);
       // Monotonic outward, which "a bright core with a faint oval" requires
       // and a convolution could break if the kernel were asymmetric.
       for (const arcmin of [5, 10, 20, 30, 40]) {

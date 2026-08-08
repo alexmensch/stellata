@@ -4,7 +4,7 @@ import {
   HIGHLIGHT_DESAT,
   L_THRESH,
   TOE_BLACK_MAG,
-  TOE_GAMMA,
+  TOE_CURVATURE,
   displayLevel,
   faintToe,
   faintToeInverse,
@@ -66,15 +66,21 @@ describe('faintToe', () => {
 
   it('lands a source TOE_BLACK_MAG under threshold on half an 8-bit step', () => {
     expect(TOE_BLACK_MAG).toBe(1.5);
-    expect(TOE_GAMMA).toBeCloseTo(3.53310, 5);
+    expect(TOE_CURVATURE).toBeCloseTo(1.68874, 5);
     const black = faintToe(L_THRESH * 10 ** (-0.4 * TOE_BLACK_MAG));
     expect(srgbEncode(black) * 255).toBeCloseTo(0.5, 6);
+  });
+
+  it('leaves the knee with slope 1, so no isophote marks the threshold', () => {
+    const eps = L_THRESH * 1e-6;
+    const slope = (faintToe(L_THRESH) - faintToe(L_THRESH - eps)) / eps;
+    expect(slope).toBeCloseTo(1, 4);
   });
 
   it('keeps light just under threshold visible', () => {
     // 0.16 mag under (the anticentre's margin) still reads plainly.
     const y = L_THRESH * 10 ** (-0.4 * 0.16);
-    expect(displayLevel(y, LW) * 255).toBeCloseTo(28.19, 1);
+    expect(displayLevel(y, LW) * 255).toBeCloseTo(34.4, 1);
   });
 
   it('is monotonic and continuous through the knee', () => {
