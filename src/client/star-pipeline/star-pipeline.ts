@@ -93,10 +93,9 @@ export interface StarPipelineOptions {
  * uniform, so the three materials share the rest of the uniforms map by
  * reference. dispose() walks all owned resources in the right order.
  *
- * Per-frame uniform writes still go through
- * `pipeline.discMaterial.uniforms.<name>.value` from the integration
- * shell — the encapsulation here is resource ownership + dispose, not
- * access discipline.
+ * Per-frame uniform writes land on the shared map itself
+ * (src/client/frame/shared-uniforms.ts), which the materials hold by
+ * reference — the encapsulation here is resource ownership + dispose.
  */
 export class StarPipeline {
   readonly geometry: THREE.InstancedBufferGeometry;

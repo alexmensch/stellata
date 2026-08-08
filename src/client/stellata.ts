@@ -9,10 +9,7 @@ import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
-import {
-  DustParticleLayer,
-  type DustParticleSharedUniforms,
-} from './dust/dust-particle-layer';
+import { DustParticleLayer } from './dust/dust-particle-layer';
 
 // Register the perceptual-disc chunk so star.{vert,frag} (and any
 // future point-source layer) can `#include <stellata_perceptual_disc>`
@@ -118,7 +115,7 @@ import {
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/frame/star-frame';
-import { buildSharedUniforms } from './frame/shared-uniforms';
+import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
 import {
   ExtinctionPrepass,
@@ -193,10 +190,12 @@ export class Stellata implements FrameAnchor {
   private scene: THREE.Scene;
   // Star render pipeline — one InstancedBufferGeometry feeds three
   // ShaderMaterials (core depth-mask / disc / glow). Owns the dispose
-  // contract for the densest resource cluster in the app. Per-frame
-  // uniform writes still go through `starPipeline.discMaterial.uniforms`
-  // from this file; the encapsulation is resource ownership only.
+  // contract for the densest resource cluster in the app.
   private starPipeline!: StarPipeline;
+  // The shared view/screen uniform map (frame/README.md § Shared
+  // uniforms) — every per-frame write goes through this field, never
+  // through a star material's uniforms object.
+  private sharedUniforms!: SharedUniforms;
   // Dust-particle render layer. Currently shelved — see
   // src/client/star-pipeline/extinction/README.md.
   private dustParticles!: DustParticleLayer;
@@ -437,6 +436,7 @@ export class Stellata implements FrameAnchor {
       viewportH: window.innerHeight,
       hdr: this.hdr.emitterUniforms,
     });
+    this.sharedUniforms = sharedUniforms;
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all four slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -507,13 +507,10 @@ export class Stellata implements FrameAnchor {
       sharedUniforms,
     );
 
-    // Star-material uniforms passed by reference so floating-origin
-    // recenters, resize updates, and dust loads propagate to the
-    // particle pass automatically.
-    this.dustParticles = new DustParticleLayer(
-      this.scene,
-      this.starPipeline.discMaterial.uniforms as unknown as DustParticleSharedUniforms,
-    );
+    // Shared uniforms passed by reference so floating-origin recenters,
+    // resize updates, and dust loads propagate to the particle pass
+    // automatically.
+    this.dustParticles = new DustParticleLayer(this.scene, sharedUniforms);
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
@@ -711,7 +708,7 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.focus.getCameraMode(),
       isChartMode: () => this.filter.chart,
       getChartMagBright: () =>
-        this.starPipeline.discMaterial.uniforms.uChartMagBright.value as number,
+        this.sharedUniforms.uChartMagBright.value,
       focus: this.focus,
     });
     this.observe = new ObserveTransition({
@@ -1117,7 +1114,7 @@ export class Stellata implements FrameAnchor {
         idx: t.idx,
         camPos: this.camera.position,
         localPositions: this.localPositions,
-        uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+        uniforms: this.sharedUniforms,
       }) * 0.5;
     }
     if (t?.kind === 'planet') {
@@ -1184,7 +1181,7 @@ export class Stellata implements FrameAnchor {
    *  uHideFocusIdx shader pin, module kinds → their setFocalHidden leg.
    *  Passing null (or a kind switch) unhides the other kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
-    this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
+    this.sharedUniforms.uHideFocusIdx.value =
       target?.kind === 'star' ? target.idx : -1;
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
@@ -1261,7 +1258,7 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
-    const u = this.starPipeline.discMaterial.uniforms;
+    const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
     // ~128 MiB Data3DTexture before swapping the reference, otherwise
     // the old texture would leak. attachDust is called exactly once
@@ -1347,9 +1344,9 @@ export class Stellata implements FrameAnchor {
 
   private updateBinaryOrbits(): void {
     if (!this.binaryOrbitField) return;
-    const uniforms = this.starPipeline.discMaterial.uniforms;
-    const viewport = uniforms.uViewport.value as THREE.Vector2;
-    const fovYRad = uniforms.uFovYRad.value as number;
+    const uniforms = this.sharedUniforms;
+    const viewport = uniforms.uViewport.value;
+    const fovYRad = uniforms.uFovYRad.value;
     this.binaryOrbitField.update(
       this.getT(),
       this.camera.position,
@@ -1481,7 +1478,7 @@ export class Stellata implements FrameAnchor {
       idx,
       camPos: this.camera.position,
       localPositions: this.localPositions,
-      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      uniforms: this.sharedUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     });
@@ -1498,7 +1495,7 @@ export class Stellata implements FrameAnchor {
       idx,
       camPos: this.camera.position,
       localPositions: this.localPositions,
-      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      uniforms: this.sharedUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     }, out);
@@ -1512,7 +1509,7 @@ export class Stellata implements FrameAnchor {
    *  has no effect. Also drives the Milky Way background so the
    *  dust-darkened regions of the band track the same knob. */
   setExtinctionStrength(x: number) {
-    this.starPipeline.discMaterial.uniforms.uExtinctionStrength.value = Math.max(0, x);
+    this.sharedUniforms.uExtinctionStrength.value = Math.max(0, x);
     this.milkyway.setExtinctionStrength(x);
   }
 
@@ -1629,14 +1626,11 @@ export class Stellata implements FrameAnchor {
   // primaries whose pulsation has been gated off.
   get suppressPulsation(): Float32Array { return this._suppressPulsation; }
 
-  // Read-only view of the star-shader uniforms, typed against the subsets
+  // Read-only view of the shared uniform map, typed against the subsets
   // consumed by star-physics.ts. Overlays / chart / debug surfaces that
-  // call the per-star geometry helpers thread these through; keeping the
-  // accessor here means the integration shell is still the single point
-  // that knows the renderer's material identity.
+  // call the per-star geometry helpers thread these through.
   get uniforms(): starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms {
-    return this.starPipeline.discMaterial.uniforms as unknown as
-      starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms;
+    return this.sharedUniforms;
   }
 
   /** FOV mutations stay a shell dispatcher (not `filters.setCameraFov`
@@ -1733,7 +1727,7 @@ export class Stellata implements FrameAnchor {
   setMonochrome(on: boolean) {
     if (this.monochrome === on) return;
     this.monochrome = on;
-    this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
+    this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
     this.hdr.setChartMode(on);
@@ -1903,8 +1897,8 @@ export class Stellata implements FrameAnchor {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
     this.hdr.syncSize();
-    this.starPipeline.discMaterial.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
-    this.starPipeline.discMaterial.uniforms.uViewport.value.set(w, h);
+    this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
+    this.sharedUniforms.uViewport.value.set(w, h);
     // Aspect change → fov_minor moves → orbit floor needs a refresh while
     // a star is focused. (FOV-only changes go through setCameraFov, which
     // does its own recompute.)
@@ -1932,9 +1926,8 @@ export class Stellata implements FrameAnchor {
   // by every screen-space size calc (star disc, cloud silhouette, peak-
   // amplitude disc, glsl `physSizePx` mirror).
   private angularToPx(): number {
-    const u = this.starPipeline.discMaterial.uniforms;
-    const viewport = u.uViewport.value as THREE.Vector2;
-    return angularToPxPure(viewport.y, u.uFovYRad.value as number);
+    const u = this.sharedUniforms;
+    return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
   }
 
   // Scratch slot for the non-allocating *LocalPositionInto helpers.
@@ -2000,20 +1993,19 @@ export class Stellata implements FrameAnchor {
     }
     perfMeasure('controls.update');
     perfMark('pre-render');
-    this.starPipeline.discMaterial.uniforms.uCameraPos.value.copy(this.camera.position);
+    this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
     // Pin the focused star at NDC (0,0) only when the geometric
     // invariant holds: navigate mode, no warp/aim animation, and the
     // user hasn't panned the camera target away from the focused star
     // (target ≈ local origin). Pan moves target away from the star and
     // we want it to render at its actual projected position again.
     const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
-    this.starPipeline.discMaterial.uniforms.uPinFocusToCenter.value = pinTarget ?? -1;
+    this.sharedUniforms.uPinFocusToCenter.value = pinTarget ?? -1;
     // Advance the variability clock on the model time base (shared with the
     // glow material via sharedUniforms). Days since J2000 from getT(), plus
     // the warp rate in model-days/real-second for the anti-strobe floor.
-    const varUniforms = this.starPipeline.discMaterial.uniforms;
-    varUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
-    varUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
+    this.sharedUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
+    this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.
