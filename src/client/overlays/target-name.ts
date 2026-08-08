@@ -5,10 +5,9 @@ import { resolveStarName } from '../format/star-companion-format';
 /** Display name for any Target kind — the shared per-kind lookup behind
  *  the POI overlay labels and the distance-vector destination label.
  *  Star names live on the search corpus (`starLabels`); every migrated
- *  kind answers through its module's `displayName` leg, planets through
- *  the planet field. The `switch` returns on every kind so a
- *  new `TargetKind` fails `tsc` (missing return) rather than silently
- *  falling through to the wrong catalog. */
+ *  kind answers through its module's `displayName` leg. The `switch`
+ *  returns on every kind so a new `TargetKind` fails `tsc` (missing
+ *  return) rather than silently falling through to the wrong catalog. */
 export function targetDisplayName(
   stellata: Stellata,
   starLabels: Map<number, string>,
@@ -25,7 +24,7 @@ export function targetDisplayName(
         t.idx,
       );
     case 'planet':
-      return stellata.planetField.planetAt(t.idx)?.name ?? 'Planet';
+      return stellata.kinds.planet.displayName(t.idx) || 'Planet';
     case 'probe':
       return stellata.kinds.probe.displayName(t.idx) || 'Probe';
     case 'cloud':

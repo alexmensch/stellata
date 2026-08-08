@@ -25,7 +25,9 @@ inside a kind stays module-internal.
   module test suites share.
 
 Modules themselves live in their kind's folder — probe
-(`../solar-system/probes/probe-module.ts`, the pilot), cloud
+(`../solar-system/probes/probe-module.ts`, the pilot), planet
+(`../solar-system/planets/planet-module.ts`, which also owns the
+boot-time host attach behind its `systemsReady` promise), cloud
 (`../molecular-clouds/cloud-module.ts`), lg
 (`../local-group/lg-module.ts`), shell
 (`../fresnel-shell/shell-module.ts`, whose internal `ShellRegistry`
@@ -83,14 +85,24 @@ holds its two instances) — and are only *assembled* here.
 boot `Promise.all` → hand the record to `new Stellata({kinds})` →
 roster loops for SID domains (`sids()`, null ⇒ conclude), hover
 providers, label overlays, and the search corpus
-(`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters).
+(`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters;
+boot awaits `stellata.planetSystemsReady` first, since planet corpus
+rows bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
 attach-loops the roster at the layer-construction point; `setT` fans
 out `clockJumped`, `setFocalBodyHidden` fans out `setFocalHidden`,
 `buildSceneElementBinds` applies the merged `detailBinds()` pushes,
 and `collectKindPicks()` hands the Picker each module's hover `pick`
-for its `pickKindHit` dispatch (the click FSM's cloud / lg / shell /
-probe picks all route through it). The `focusables` record and
+for its `pickKindHit` dispatch (the click FSM's planet / cloud / lg /
+shell / probe picks all route through it). The `focusables` record and
 `PoiStore.pinnable` rows for migrated kinds are the modules'
 `focusable()` / `pinnable` legs; both records stay exhaustive in the
 shell.
+
+Planet-kind exceptions the roster consumers must know: its SID domain
+is keyed body-within-host, not Target idx — url-state translates at
+the boundary (`IdMaps.planetDomainIndexOf`); its SVG labels stay wired
+in `main.ts` (`createPlanetLabels` reads the shell's orbit-rings layer
+and focused planet system, both outside the module); and its mesh
+layer's update lives on the shell, after the moving-focal ride
+(`../scene/README.md`).

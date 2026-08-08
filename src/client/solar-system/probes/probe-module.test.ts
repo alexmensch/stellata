@@ -48,6 +48,25 @@ function makeCtx(): KindContext {
   return ctx;
 }
 
+/** Ctx with the camera aimed at the fixture's t=0 marker (40 AU on +X),
+ *  which then projects to screen centre (400, 300). */
+function makeAimedCtx(): KindContext {
+  const ctx = makeCtx();
+  ctx.camera.lookAt(40 * AU_PC, 0, 0);
+  ctx.camera.updateMatrixWorld();
+  return ctx;
+}
+
+function makeFrameCtx(ctx: KindContext) {
+  return {
+    camera: ctx.camera,
+    worldOffset: new THREE.Vector3(),
+    distFromSol: 41 * AU_PC,
+    t: 0,
+    warpActive: false,
+  };
+}
+
 /** Serve fixture JSON for `present` mission ids, 404 for the rest. */
 function stubFetch(present: readonly string[]): void {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -118,20 +137,32 @@ describe('probe kind module', () => {
     stubFetch(['voyager1']);
     const m = createProbeKindModule();
     await m.load('/');
-    const ctx = makeCtx();
+    const ctx = makeAimedCtx();
     const layer = m.attach(ctx)!;
-    ctx.camera.lookAt(40 * AU_PC, 0, 0);
-    ctx.camera.updateMatrixWorld();
-    layer.update?.({
-      camera: ctx.camera,
-      worldOffset: new THREE.Vector3(),
-      distFromSol: 41 * AU_PC,
-      t: 0,
-      warpActive: false,
-    });
+    layer.update?.(makeFrameCtx(ctx));
     // The marker sits at screen centre: prime pick there, none far away.
     const { pick } = m.hover!();
     expect(pick(400, 300, 14)?.idx).toBe(0);
     expect(pick(0, 0, 14)).toBeNull();
+  });
+
+  it('setFocalHidden suppresses the marker from the pick surface; -1 restores it', async () => {
+    stubFetch(['voyager1']);
+    const m = createProbeKindModule();
+    await m.load('/');
+    const ctx = makeAimedCtx();
+    const layer = m.attach(ctx)!;
+    const { pick } = m.hover!();
+
+    // Behavioural on purpose: the field has no public hide slot — the
+    // hide lands in each sample's per-update `visible` verdict, which
+    // gates the pick path.
+    m.setFocalHidden!(0);
+    layer.update?.(makeFrameCtx(ctx));
+    expect(pick(400, 300, 14)).toBeNull();
+
+    m.setFocalHidden!(-1);
+    layer.update?.(makeFrameCtx(ctx));
+    expect(pick(400, 300, 14)?.idx).toBe(0);
   });
 });

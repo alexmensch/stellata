@@ -2,12 +2,26 @@
 
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
+import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import type { StarSharedUniforms } from '../star-pipeline/frame/star-shared-uniforms';
 import type { KindContext } from './kind-module';
 
 export const MOCK_VIEWPORT_W = 800;
 export const MOCK_VIEWPORT_H = 600;
-const MOCK_FOV_Y_RAD = (50 * Math.PI) / 180;
+export const MOCK_FOV_Y_RAD = (50 * Math.PI) / 180;
+
+/** Unit-valued HDR emitter slots for module suites — the production
+ *  seeds (`makeHdrEmitterUniforms`) carry calibrated exposure /
+ *  white-point values the fixtures deliberately flatten to 1. */
+export function makeMockHdrEmitterUniforms(): HdrEmitterUniforms {
+  return {
+    uHdrTarget: { value: 0 },
+    uWhitePoint: { value: 1 },
+    uHighlightDesat: { value: 0 },
+    uExposure: { value: 1 },
+    uOmegaPxArcsec2: { value: 1 },
+  };
+}
 
 export function makeKindContext(overrides: Partial<KindContext> = {}): KindContext {
   const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
@@ -17,11 +31,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     uFovYRad: { value: MOCK_FOV_Y_RAD },
     // The HDR emitter slots ride the shared map by reference in
     // production (star-pipeline/frame/README.md § Shared uniforms).
-    uHdrTarget: { value: 0 },
-    uWhitePoint: { value: 1 },
-    uHighlightDesat: { value: 0 },
-    uExposure: { value: 1 },
-    uOmegaPxArcsec2: { value: 1 },
+    ...makeMockHdrEmitterUniforms(),
   } as unknown as StarSharedUniforms;
   return {
     scene: new THREE.Scene(),
@@ -38,6 +48,11 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
       return true;
     },
     angularToPx: () => angularToPx(MOCK_VIEWPORT_H, MOCK_FOV_Y_RAD),
+    starPhotometry: () => null,
+    systemMembership: {
+      membersOf: () => [],
+      collapsedClusterOf: () => [],
+    },
     getT: () => 0,
     getWorldOffset: () => new THREE.Vector3(),
     getFocusedTarget: () => null,

@@ -129,14 +129,14 @@ function makeHarness(): Harness {
             tier: state.pickStarTier,
           }
         : null),
-      pickPlanetClick: () => (state.pickPlanetResult !== null
-        ? {
+      pickKindHit: (kind: string) => {
+        if (kind === 'planet' && state.pickPlanetResult !== null) {
+          return {
             idx: state.pickPlanetResult,
             cameraDistancePc: state.pickPlanetDistancePc,
             tier: state.pickPlanetTier,
-          }
-        : null),
-      pickKindHit: (kind: string) => {
+          };
+        }
         if (kind === 'probe' && state.pickProbeResult !== null) {
           return {
             idx: state.pickProbeResult,

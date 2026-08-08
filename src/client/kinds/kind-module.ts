@@ -9,6 +9,7 @@ import type { HoverProvider } from '../hover/hover-types';
 import type { SceneElementId } from '../scene/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { StarSharedUniforms } from '../star-pipeline/frame/star-shared-uniforms';
+import type { SystemMembershipProvider } from '../system-membership/system-membership';
 
 /** What a kind module may depend on — the documented answer to "what may
  *  a layer reach?". Built once by the integration shell and handed to
@@ -31,6 +32,14 @@ export interface KindContext {
   /** Live pixels-per-radian for the active viewport / FOV — the shared
    *  conversion every projected-size leg (renderedSizePx) keys off. */
   angularToPx(): number;
+  /** Photometry of catalog star `idx` — absolute V magnitude and the
+   *  floored physical radius (pc); null out of range. What per-host
+   *  machinery (the planet kind's host attach) reads ahead of the star
+   *  module owning catalog access (phase 5). */
+  starPhotometry(idx: number): { absMag: number; radiusPc: number } | null;
+  /** Kind-generic system-membership read surface (rosters + collapsed
+   *  clusters) — hover roster cards read through it. */
+  readonly systemMembership: SystemMembershipProvider;
   getT(): number;
   getWorldOffset(): Readonly<THREE.Vector3>;
   getFocusedTarget(): Target | null;

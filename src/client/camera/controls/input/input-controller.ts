@@ -248,7 +248,7 @@ export class InputController {
    *  front always wins. */
   private pickLadderObject(x: number, y: number): Target | null {
     const star = this.deps.picker.pickStarHit(x, y, 16);
-    const planet = this.deps.picker.pickPlanetClick(x, y, 16);
+    const planet = this.deps.picker.pickKindHit('planet', x, y, 16);
     const probe = this.deps.picker.pickKindHit('probe', x, y, 16);
     const lg = this.deps.picker.pickKindHit('lg', x, y, 16);
     const shell = this.deps.picker.pickKindHit('shell', x, y);

@@ -2,7 +2,6 @@
 // hosts; gating is via Stellata.getFocusedPlanetSystem(). See
 // src/client/solar-system/README.md § Data model.
 
-import type { Catalog } from '../loaders/catalog-loader';
 import { AU_KM } from '../util/astronomy-constants';
 import {
   getPlanetOrbitShapes,
@@ -613,9 +612,9 @@ export function moonNamesOf(
 // Currently hardwires "planets ⇔ Sol". When the exoplanet epic lands an
 // exoplanet flag bit on the catalog record, this becomes a flag check;
 // callers stay unchanged.
-export function hasPlanets(catalog: Catalog, starIdx: number | null): boolean {
+export function hasPlanets(solIndex: number, starIdx: number | null): boolean {
   if (starIdx === null || starIdx < 0) return false;
-  return starIdx === catalog.solIndex;
+  return starIdx === solIndex;
 }
 
 // Async resolver — supplies the `PlanetSystem` for `starIdx`, or null if
@@ -624,10 +623,10 @@ export function hasPlanets(catalog: Catalog, starIdx: number | null): boolean {
 // shard lazily, caching by index. The Promise wrapper keeps the API
 // stable across that transition.
 export async function getPlanetSystem(
-  catalog: Catalog,
+  solIndex: number,
   starIdx: number | null,
 ): Promise<PlanetSystem | null> {
-  if (!hasPlanets(catalog, starIdx)) return null;
+  if (!hasPlanets(solIndex, starIdx)) return null;
   return {
     hostStarIdx: starIdx as number,
     planets: SOL_BODIES,

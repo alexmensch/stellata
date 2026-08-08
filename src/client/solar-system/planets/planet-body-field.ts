@@ -1109,10 +1109,6 @@ export class PlanetBodyField {
     this.hideIdxUniform.value = instanceIdx;
   }
 
-  hiddenInstance(): number {
-    return this.hideIdxUniform.value;
-  }
-
   dispose(): void {
     this.geometry.dispose();
     this.matGlow.dispose();

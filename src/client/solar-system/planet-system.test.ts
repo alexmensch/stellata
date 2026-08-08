@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { Catalog } from '../loaders/catalog-loader';
 import {
   SOL_BODIES,
   SOL_MOONS,
@@ -22,37 +20,27 @@ import {
   VENUS_PHASE,
 } from './phase-function';
 
-function stubCatalog(solIndex: number, count = Math.max(solIndex + 1, 1)): Catalog {
-  const cat = makeEmptyCatalog(count);
-  cat.solIndex = solIndex;
-  return cat;
-}
-
 describe('hasPlanets', () => {
   it('returns true for Sol only', () => {
-    const cat = stubCatalog(7);
-    expect(hasPlanets(cat, 7)).toBe(true);
-    expect(hasPlanets(cat, 0)).toBe(false);
-    expect(hasPlanets(cat, 42)).toBe(false);
+    expect(hasPlanets(7, 7)).toBe(true);
+    expect(hasPlanets(7, 0)).toBe(false);
+    expect(hasPlanets(7, 42)).toBe(false);
   });
 
   it('returns false for null / negative / unfocused', () => {
-    const cat = stubCatalog(7);
-    expect(hasPlanets(cat, null)).toBe(false);
-    expect(hasPlanets(cat, -1)).toBe(false);
+    expect(hasPlanets(7, null)).toBe(false);
+    expect(hasPlanets(7, -1)).toBe(false);
   });
 
   it('returns false when the catalog has no Sol', () => {
-    const cat = stubCatalog(-1);
-    expect(hasPlanets(cat, -1)).toBe(false);
-    expect(hasPlanets(cat, 0)).toBe(false);
+    expect(hasPlanets(-1, -1)).toBe(false);
+    expect(hasPlanets(-1, 0)).toBe(false);
   });
 });
 
 describe('getPlanetSystem', () => {
   it('resolves with Sol bodies (planets + moons) for the Sol index', async () => {
-    const cat = stubCatalog(3);
-    const ps = await getPlanetSystem(cat, 3);
+    const ps = await getPlanetSystem(3, 3);
     expect(ps).not.toBeNull();
     expect(ps!.hostStarIdx).toBe(3);
     expect(ps!.planets).toBe(SOL_BODIES);
@@ -60,11 +48,10 @@ describe('getPlanetSystem', () => {
   });
 
   it('resolves to null for any other star', async () => {
-    const cat = stubCatalog(3);
-    expect(await getPlanetSystem(cat, 0)).toBeNull();
-    expect(await getPlanetSystem(cat, 99)).toBeNull();
-    expect(await getPlanetSystem(cat, null)).toBeNull();
-    expect(await getPlanetSystem(cat, -1)).toBeNull();
+    expect(await getPlanetSystem(3, 0)).toBeNull();
+    expect(await getPlanetSystem(3, 99)).toBeNull();
+    expect(await getPlanetSystem(3, null)).toBeNull();
+    expect(await getPlanetSystem(3, -1)).toBeNull();
   });
 });
 
@@ -75,8 +62,7 @@ describe('solPositionsAt moon composition', () => {
   const planetCount = PLANET_ORDER.length;
 
   async function positions(): Promise<Float64Array> {
-    const cat = stubCatalog(3);
-    const ps = await getPlanetSystem(cat, 3);
+    const ps = await getPlanetSystem(3, 3);
     const out = new Float64Array(ps!.planets.length * 3);
     ps!.positionsAt!(T_UNIX, out);
     return out;

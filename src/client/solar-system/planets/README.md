@@ -10,6 +10,20 @@ airlight is spliced in from `../atmosphere/`.
 
 ```
 src/client/solar-system/planets/
+  planet-module.ts (+ test)       The planet ObjectKindModule
+                                  (../../kinds/README.md): load/attach,
+                                  the boot-time Sol host attach behind
+                                  `systemsReady`, and the focusable /
+                                  card / hover (whose pick returns the
+                                  FLAT Target index the click FSM
+                                  consumes) / search / SID / pinnable /
+                                  focal-hide legs over the field below.
+                                  Its scene layer updates the field
+                                  only; the mesh layer's update stays
+                                  on the shell after the moving-focal
+                                  ride, and the SVG labels stay wired
+                                  in main.ts (they read the shell's
+                                  orbit-rings layer + focus state).
   planet-body-field.ts (+ test)   Instanced planet-body renderer. One
                                   additive reflected-glare pass (+ its
                                   local-pass mirror); the resolved surface

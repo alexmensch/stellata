@@ -43,9 +43,9 @@ name, secondary line = their type descriptor, index = the `SHELL_KEYS`
 Target idx. Sol's planets and moons enter the corpus
 by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
 deliberately Sol-only, since bk5 exoplanets are visit-to-discover. A
-planet entry carries the SOL_BODIES body-within-host index (planets then
-moons); `resolveEntryTarget` translates it to the body field's flat
-Target index at pick time (the field attaches on a microtask after boot).
+planet entry carries the body field's flat Target index, baked by the
+planet module's `searchEntries()`; boot awaits `planetSystemsReady`
+before binding search so the attach table exists at corpus build.
 The five deep-space probes enter by mission label, secondary line
 "Probe · Interstellar", index = the LOADED-roster index, which is the
 Target idx directly (no translation) — so a probe whose artifact is

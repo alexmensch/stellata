@@ -101,14 +101,16 @@ geometry rather than a `chart-labels` tier) at `all`.
 ## How the shell uses it
 
 `stellata.ts` registers one adapter entry per render layer in its
-constructor, in draw-dependency order (the continuously-ticking trio —
-orbit rings, planet bodies, binary orbits — first; SVG projectors like
-the HUD after the camera-matrix refresh they need). Kind-module layers
+constructor, in draw-dependency order (the continuously-ticking
+entries — the moving-focal ride + planet mesh, orbit rings, binary
+orbits — first; SVG projectors like the HUD after the camera-matrix
+refresh they need). Kind-module layers
 (`../kinds/README.md`) register first of all: the constructor's roster
 attach loop runs before `registerSceneLayers`, so a module layer
 updates ahead of every inline-wired entry — which is what keeps the
-probe field's samples a frame-fresh read for the planet layer's
-moving-focal ride. Each inline entry is a
+probe and planet fields' samples frame-fresh for the first inline
+entry, the moving-focal ride (whose post-ride camera the planet mesh
+update then reads). Each inline entry is a
 closure over the shell's layer field, so a lazily-attached layer
 (binaries) reads whatever is currently attached — `null` before
 attach, the live instance after, with no re-registration.

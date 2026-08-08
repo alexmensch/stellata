@@ -5,7 +5,6 @@ import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
-import { SOL_BODIES } from '../solar-system/planet-system';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
@@ -436,29 +435,11 @@ export function createSearchRunner(
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
     buildSearchIndex(raw, catalog.constellations);
 
-  // Sol's planets and moons — search-by-name is deliberately Sol-only
-  // (bk5 exoplanets are visit-to-discover). Entry index is the SOL_BODIES
-  // body-within-host index; select handlers resolve it to the body
-  // field's flat Target index at pick time via `resolveEntryTarget` (the
-  // field attaches on a microtask after boot, so the corpus can't bake
-  // flat indices).
-  if (catalog.solIndex >= 0) {
-    for (let i = 0; i < SOL_BODIES.length; i++) {
-      const p = SOL_BODIES[i];
-      fuzzyEntries.push({
-        kind: 'planet',
-        index: i,
-        label: p.name,
-        primary: p.name,
-        displayCon: p.parentName ? `Moon · ${p.parentName}` : 'Planet · Sol system',
-      });
-    }
-  }
-
-  // Kind-module corpus rows (deep-space probes today). Each entry's
-  // index is its kind's Target idx by the module contract, so a missing
-  // artifact leaves an object out of the corpus rather than shifting
-  // the others.
+  // Kind-module corpus rows. Each entry's index is its kind's Target idx
+  // by the module contract, so a missing artifact leaves an object out
+  // of the corpus rather than shifting the others. Planet rows carry the
+  // body field's flat index, so the runner is built after boot's
+  // `planetSystemsReady` await.
   if (kinds) {
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
@@ -630,18 +611,11 @@ export function createSearchRunner(
   };
 }
 
-/** FuzzyEntry → kind-tagged Target. Planet entries (planets + moons)
- *  carry the SOL_BODIES body-within-host index and resolve to the body
- *  field's flat instance index at pick time (null when Sol's system
- *  hasn't attached); every other kind's index IS its Target idx. */
-export function resolveEntryTarget(
-  stellata: Stellata,
-  catalog: Catalog,
-  entry: FuzzyEntry,
-): Target | null {
-  if (entry.kind !== 'planet') return { kind: entry.kind, idx: entry.index };
-  const flat = stellata.planetField.instanceIndexOf(catalog.solIndex, entry.index);
-  return flat === null ? null : { kind: 'planet', idx: flat };
+/** FuzzyEntry → kind-tagged Target. Every kind's index IS its Target
+ *  idx — planet rows bake the body field's flat instance index at
+ *  corpus build (createSearchRunner). */
+export function resolveEntryTarget(entry: FuzzyEntry): Target {
+  return { kind: entry.kind, idx: entry.index };
 }
 
 // A dropdown row's primary/sub display. Empty constellation falls back to an
@@ -704,10 +678,7 @@ export function bindSearch(
     runQuery: focusRunQuery,
     rowFor,
     onSelect: (entry) => {
-      const target = entry.kind === 'star'
-        ? { kind: 'star' as const, idx: entry.index }
-        : resolveEntryTarget(stellata, catalog, entry);
-      if (!target) return;
+      const target = resolveEntryTarget(entry);
       if (stellata.getCameraMode() === 'observe' && isHardTarget(target)) {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
@@ -734,8 +705,7 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      const target = resolveEntryTarget(stellata, catalog, entry);
-      if (target) stellata.setVector(target);
+      stellata.setVector(resolveEntryTarget(entry));
     },
     onClear: () => stellata.setVector(null),
     positionResults: positionUnder(toInput),
@@ -759,7 +729,7 @@ export function bindSearch(
   const nameOf = (t: Target): string => {
     switch (t.kind) {
       case 'star': return describe(t.idx);
-      case 'planet': return stellata.planetField.planetAt(t.idx)?.name ?? '';
+      case 'planet': return stellata.kinds.planet.displayName(t.idx);
       case 'probe': return stellata.kinds.probe.displayName(t.idx);
       case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
       case 'lg': return stellata.kinds.lg.displayName(t.idx);
@@ -816,8 +786,7 @@ export function bindFindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      const target = resolveEntryTarget(stellata, catalog, entry);
-      if (!target) return;
+      const target = resolveEntryTarget(entry);
       const pos = new THREE.Vector3();
       if (stellata.focusables[target.kind].localPositionInto(target.idx, pos)) {
         stellata.aimAt(pos);

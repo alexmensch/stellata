@@ -96,8 +96,8 @@ satisfies:
   `orbitGeometryAt(t)` (live per-body ring geometry) for the
   orbit-ring renderer.
 
-Sync probe: `hasPlanets(catalog, idx)` — currently hardwires "planets ⇔ Sol".
-Async resolver: `getPlanetSystem(catalog, idx)` returns the system or
+Sync probe: `hasPlanets(solIndex, idx)` — currently hardwires "planets ⇔ Sol".
+Async resolver: `getPlanetSystem(solIndex, idx)` returns the system or
 `null`. The Promise wrapper is intentional so `bk5` can lazily fetch
 per-host JSON shards without changing the call sites.
 
