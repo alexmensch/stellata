@@ -23,15 +23,15 @@ click handlers (single = pin a POI, double = aim-at).
 Public surface of `ObserveTransition`:
 - `setMode(mode, opts)` — mode-pill toggle, keyboard O, URL restore.
 - `startExit(opts)` — search-row X-button (`clearFocusOnExit`),
-  `Stellata.unfocus()`'s observe-animated branch.
-- `startUnfocusLerp(from, to, finalMinDist)` — `Stellata.unfocus()`'s
+  `FocusController.unfocus()`'s observe-animated branch.
+- `startUnfocusLerp(from, to, finalMinDist)` — `FocusController.unfocus()`'s
   navigate-mode close-zoom branch.
 - `tick(nowMs)` — animate-loop dispatcher.
 - `isActive` / `isAnyActive` / `getProgress` — observer predicates;
   `isActive` excludes the `unfocus` kind so overlays gating on observe
   visibility stay steady-state-navigate during close-zoom.
 - `cancelUnfocusLerp` — `FocusOps` shim for `WarpController`.
-- `cancelTransition` — used by `Stellata.setFocus`'s observe-cleanup
+- `cancelTransition` — used by `FocusController.setFocus`'s observe-cleanup
   branch when the focal star is changing mid-flight.
 - `dispose` — for `Stellata.dispose`.
 
@@ -291,7 +291,7 @@ the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
   and unfocus all share one arrival profile. `isActive()` and
   `getProgress()` exclude it so overlays gating on observe visibility
   stay steady-state-navigate during close-zoom; `isAnyActive()` is
-  the union, used by `Stellata.isCameraBusy()`.
+  the union, used by `FocusController.isCameraBusy()`.
 
 Cross-controller coupling lives behind the `ObserveFocusOps`
 interface (declared in `observe-transition.ts`): focused-star
@@ -301,10 +301,11 @@ entry, `setFocus` on `clearFocusOnExit`, and the `isCameraBusy` gate
 `setMode` consults before claiming the camera. `FocusController` (in
 `../focus/`) is the implementor.
 
-Stellata still owns the `cameraMode` field (~20 unrelated read
-sites) and writes it through the controller's `setCameraModeValue`
-dep callback so the controller's state machine stays the canonical
-mode-switcher. `Stellata.setFocus`'s observe-cleanup branch is the
+`FocusController` owns the `cameraMode` field (~20 unrelated read
+sites) and `ObserveTransition` writes it through the
+`setCameraModeValue` dep callback so the controller's state machine
+stays the canonical mode-switcher. `FocusController.setFocus`'s
+observe-cleanup branch is the
 one remaining inline writer that bypasses `startExit` — it calls
 `observe.cancelTransition()` to clear any in-flight slot, then sets
 `cameraMode = 'navigate'` and runs an abbreviated snap (no

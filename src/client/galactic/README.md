@@ -234,7 +234,7 @@ The reverse direction shrinks it back to 0. The focus ring
 0 on enter, back to 24 on exit — so the two circles morph through each
 other and the arrows feel continuously attached to whichever circle is
 dominant. The eased progress is exposed by
-`Stellata.getObserveTransitionProgress()`.
+`stellata.observe.getProgress()`.
 
 **Shaft start radius (unified).** `hud-overlay.ts` computes a single
 `shaftStartPx` per frame as `activeRing + RING_HALO_GAP_PX` (4 px), where

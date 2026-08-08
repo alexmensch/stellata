@@ -208,7 +208,7 @@ which `IdMaps.planetTargetIndexOf` translates to the body-field flat
 Target index at apply time (and `planetDomainIndexOf` back at encode
 time); a translation miss — host body-field never attached — drops the
 focus like an unknown sid while the rest of the state applies.
-`main.ts` awaits `stellata.planetSystemsReady` before `applyFromUrl`
+`main.ts` awaits `stellata.kinds.planet.systemsReady` before `applyFromUrl`
 so the attach table is populated when a planet ref resolves.
 
 **Console helpers.** `window.debug.decodeView('AQAA…')` decodes a blob

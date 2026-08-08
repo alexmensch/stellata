@@ -938,7 +938,7 @@ values, so dense star fields and the MW band over-brighten slightly
 where sources overlap, and per-channel-max discs blend post-curve.
 Accepted — the fallback population is ~zero on real hardware, and the
 result is approximately right rather than differently-calibrated.
-A `stellata.setHdrEnabled(false)` dev switch parks the renderer on the
+A `stellata.hdr.setEnabled(false)` dev switch parks the renderer on the
 fallback path for A/B, mirroring `setExtinctionPrepassEnabled`.
 
 The fallback is why the operator must live in the shared chunk from H2
@@ -974,7 +974,7 @@ day one — the fullscreen pass and the inline path can never drift.
   would only have traded a correct-looking scene for a mis-calibrated
   one — and H5 flipped it with the last conversion. The render target
   allocates lazily, which is what made the dormant period cost no VRAM
-  and still serves `setHdrEnabled(false)` and chart mode.
+  and still serves `hdr.setEnabled(false)` and chart mode.
   **Consequence that outlives the flip:** with the seam off, an emitter's
   physical luminance reaches the canvas with no operator, so the inline
   `stellata_tonemap` fallback (§ 6) is not exotic-hardware insurance. It

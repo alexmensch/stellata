@@ -83,7 +83,7 @@ Two SVG layers conditionally hide while `cameraMode === 'observe'`:
   object), but during the navigate↔observe transition its radius lerps to
   0 (enter) or back to 24 px (exit) instead of hard-hiding so it visually
   morphs through the HUD ring. The eased progress comes from
-  `Stellata.getObserveTransitionProgress()`.
+  `stellata.observe.getProgress()`.
 - **Distance vector + To-row** — distance-vector measurement is
   meaningless from a camera parked on its own anchor; the search
   box's To-row hides via `syncFocusUI` and the underlying
@@ -148,7 +148,7 @@ groups under `#overlay`:
   the focal star, so it reads as distance from the observed star).
 
 Click affordances (both label classes set `pointer-events: auto`):
-- **On-screen label** → `Stellata.applyObjectClick(target)` — the same
+- **On-screen label** → `stellata.input.applyObjectClick(target)` — the same
   per-mode semantics as clicking the object itself (unpin toggle in
   observe, click ladder in navigate); the label is a second, larger
   click target.

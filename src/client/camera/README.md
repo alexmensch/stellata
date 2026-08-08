@@ -108,7 +108,7 @@ owns the camera, because it only writes `camera.up` and a captured
 slerp endpoint already agrees with it (`controls/input/README.md`
 § Reference up axis).
 
-Six overlapping "is the camera doing something" predicates exist, and
+Five overlapping "is the camera doing something" predicates exist, and
 picking the wrong one is the standing risk every new camera feature
 runs. There are **four independent animation sources** — warp, aim
 slerp, focus-park lerp, and the `ObserveTransition` slot (which itself
@@ -120,8 +120,7 @@ different subset:
 |---|:-:|:-:|:-:|:-:|:-:|
 | `ObserveTransition.isActive` | – | – | – | ✓ | – |
 | `ObserveTransition.isAnyActive` | – | – | – | ✓ | ✓ |
-| `Stellata.isAimActive` | – | ✓ | – | – | – |
-| `Stellata.isObserveTransitionActive` | – | – | – | ✓ | – |
+| `AimController.isActive` | – | ✓ | – | – | – |
 | `Stellata.isCameraTransitionActive` | ✓ | – | – | ✓ | ✓ |
 | `FocusController.isCameraBusy` | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -136,16 +135,14 @@ Why each one exists, and who reads it:
   **translation** is in flight so a transient mid-lerp pose is never
   written to `?v=`. Aim and focus-park are excluded because both settle
   on a pose the writer should capture.
-- **`isObserveTransitionActive`** — observe `enter`/`exit` only.
-  Consumed by anything gating on *observe-mode visibility*
-  (`poi-overlay`, `setVectorSlot`, `warp-controller`): the `unfocus`
-  kind is a navigate-mode lerp borrowing the same state slot, so
-  including it would blank observe-gated UI during an ordinary
-  close-zoom unfocus.
 - **`isAnyActive` vs `isActive`** on `ObserveTransition` — the union vs
-  the observe-mode-only pair, for exactly the reason above.
-- **`isAimActive`** — the aim slerp alone; a focus change may interrupt
-  an aim but not a warp.
+  the observe-`enter`/`exit`-only pair. Anything gating on *observe-mode
+  visibility* (`poi-overlay`, `setVectorSlot`, `warp-controller`) reads
+  `isActive`: the `unfocus` kind is a navigate-mode lerp borrowing the
+  same state slot, so including it would blank observe-gated UI during
+  an ordinary close-zoom unfocus.
+- **`AimController.isActive`** — the aim slerp alone; a focus change may
+  interrupt an aim but not a warp.
 
 ### The claim-the-camera sequence
 

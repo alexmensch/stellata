@@ -328,7 +328,7 @@ panel: linear sliders for `glowMagOffset` / `discDensity` /
 palette + three linear sliders for the reddening RGB multipliers.
 
 The same setters are individually callable under
-`stellata.milkywayLayer.*`:
+`stellata.milkyway.*`:
 
 - `setGlowMagOffset(x)` — surface-brightness anchor, mag/arcsec²
   (raise → dimmer). A calibration constant, not a user knob

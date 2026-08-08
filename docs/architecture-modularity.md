@@ -235,17 +235,26 @@ now serves both the hard and soft entry points. The `makeFocusTarget`
 switch and the six per-kind factories — the single biggest per-kind cost
 centre — are gone, ahead of the module rotation.
 
-### Facade flattening (phase 4)
+### Facade flattening (phase 4 — landed)
 
-The ~90 one-line forwarding shims on `Stellata` are replaced by exposing
-the controllers as readonly namespaces (`stellata.filters`,
-`stellata.exposure`, …); callers write `stellata.filters.set(patch)`.
-~400–500 lines deleted; the facade stops growing per controller method.
-Accepted cost: ~100+ call-site edits and the loss of the (currently
-ceremonial — the shims add no logic) single-choke-point property on
-those surfaces. Shims that *do* add logic (busy-gate dispatchers like
-`aimAt`, `setCameraFov`'s solid-angle sync) are composition, not
-facade — they stay.
+The ~90 one-line forwarding shims on `Stellata` are gone; the
+controllers are readonly namespaces (`stellata.focus`, `stellata.warp`,
+`stellata.observe`, `stellata.aim`, `stellata.filters`,
+`stellata.exposure`, `stellata.adaptation`, `stellata.pois`,
+`stellata.input`, plus the already-public `hdr` / `kinds` and the
+`milkyway` / `hud` layer handles) and callers write
+`stellata.filters.setFilter(patch)`. Accepted cost: the loss of the
+(ceremonial — the shims added no logic) single-choke-point property on
+those surfaces. Dispatchers that *do* add logic are composition, not
+facade — they stayed: `setCameraFov` (pixel-solid-angle sync), `aimAt` /
+`aimAtConstellation` (cross-controller busy gates),
+`isCameraTransitionActive` (warp ∪ observe union), `getT` / `setT`
+(clockJumped fan-out), `setMonochrome`, the `attach*` family, and the
+star-kind reads (`starLocalPositionInto`, `localPositions`, `uniforms`,
+…) that stay inline until phase 5's star module. This phase also
+collapsed the two duplicated per-kind display-name switches into
+`kinds/kind-modules.ts displayNameOf` (star as the injected callback,
+caller-chosen fallback).
 
 ## Guardrails — what this epic must NOT do
 
@@ -347,7 +356,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    writes and the mesh's camera read — and the SVG planet labels stay
    in `main.ts` (they read the orbit-rings layer + focus state, both
    shell machinery).
-4. **Facade flattening.**
+4. **Facade flattening** — landed (§ Facade flattening).
 5. **Engine-services extraction + star module** — frame/anchor service
    out of `StarFrame` ownership, shared view uniforms out of the star
    material, star kind wrapped as a module, shard support (chunk-local

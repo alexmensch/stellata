@@ -316,7 +316,7 @@ materials anyway.
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just
 blow out. Since the ship gate went live this is genuinely the fallback
-path plus the `setHdrEnabled(false)` A/B, not the shipped default it was
+path plus the `hdr.setEnabled(false)` A/B, not the shipped default it was
 during H3–H5. It mirrors the extinction prepass's
 same-chunk-two-paths strategy
 (`../star-pipeline/extinction/README.md` § The prepass cache), and it is
@@ -348,14 +348,14 @@ planet mesh / rings / airlight / reflected glare (H5) — so the target is
 the default path and the operator runs once, at the resolve.
 
 - `hdr-pipeline.test.ts` pins the value, so changing it stays deliberate.
-- `stellata.setHdrEnabled(false)` is the whole-frame A/B (§ Dev switches).
+- `stellata.hdr.setEnabled(false)` is the whole-frame A/B (§ Dev switches).
   It is no longer "what users get" — it is the comparison path.
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
   24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
   large display. The gate
   being live means it now allocates on the first frame in practice; keep
-  the laziness anyway, because `setHdrEnabled(false)` and chart mode both
+  the laziness anyway, because `hdr.setEnabled(false)` and chart mode both
   want a build that never pays for it.
 - **Every emitter is on the scale.** The Local Group emission pass was
   the last one outside it; it now takes the same
@@ -365,15 +365,15 @@ the default path and the operator runs once, at the resolve.
 
 ## Dev switches
 
-- `stellata.setHdrEnabled(true/false)` — the seam itself. False is the
+- `stellata.hdr.setEnabled(true/false)` — the seam itself. False is the
   pre-HDR compositing path entirely: no target, no tone-map, chrome back
   to authored colours, every emitter on its inline operator. It is also
   the path hardware without a float-renderable target takes. **This is
   the full A/B.**
-- `stellata.setTonemapEnabled(false)` — keeps the target bound but makes
+- `stellata.hdr.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through, isolating the target itself (depth,
   alpha, blend precision, pass order) from the operator.
-- `stellata.setDynamicRangeMag(x)` / `stellata.setHighlightDesat(x)` — the
+- `stellata.hdr.setDynamicRangeMag(x)` / `stellata.hdr.setHighlightDesat(x)` — the
   operator's two shape knobs, live, for probing the display axis by eye.
   Both route through `syncMode`, which is what re-authors every chrome
   colour against the new white point (`chrome/README.md`).
@@ -397,7 +397,7 @@ colour space, not the resolve — so with the operator parked,
 `LineBasicMaterial` / `LineMaterial` chrome (grids, orbit paths, the
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
-encode. Custom-shader chrome *is* exact. Use `setHdrEnabled(false)` when
+encode. Custom-shader chrome *is* exact. Use `hdr.setEnabled(false)` when
 you want a whole-frame comparison.
 
 **What the A/B is and is not for.** It compares *compositing*, not

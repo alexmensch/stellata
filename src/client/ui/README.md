@@ -233,7 +233,7 @@ loop. If you add a filter field, remember to handle it in the panel's
 `syncFromFilter`.
 
 The FOV slider's reverse-sync is the one carve-out: it reads
-`stellata.getCameraFov()` directly because FOV lives on the camera,
+`stellata.filters.getCameraFov()` directly because FOV lives on the camera,
 not in `FilterState`. `setCameraFov` fires the filter-change handlers
 so the slider re-syncs after a debug-panel or URL-restore change.
 

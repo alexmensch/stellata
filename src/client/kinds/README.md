@@ -86,7 +86,7 @@ boot `Promise.all` → hand the record to `new Stellata({kinds})` →
 roster loops for SID domains (`sids()`, null ⇒ conclude), hover
 providers, label overlays, and the search corpus
 (`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters;
-boot awaits `stellata.planetSystemsReady` first, since planet corpus
+boot awaits `stellata.kinds.planet.systemsReady` first, since planet corpus
 rows bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
 attach-loops the roster at the layer-construction point; `setT` fans
