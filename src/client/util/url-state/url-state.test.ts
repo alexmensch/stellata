@@ -22,6 +22,11 @@ import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
+// Controller-namespace stub. `Partial<T>` keeps every member checked
+// against the real signature — `as unknown as T` would not, and stub
+// drift is what these tests exist to catch.
+const partialOf = <T,>(o: Partial<T>): T => o as T;
+
 // Round-trips the view through the wire format and returns the decoded
 // view + version. Anything the encoder omits (e.g. default values) reads
 // back as undefined, which is the contract callers downstream rely on.
@@ -209,55 +214,55 @@ function makeStatefulStellata() {
     else state.focusedCloud = t.idx;
   };
   const stub: Partial<Stellata> = {
-    filters: {
+    filters: partialOf<Stellata['filters']>({
       getFilter: () => ({ ...DEFAULT_FILTER }),
       setFilter: () => {},
       getCameraFov: () => DEFAULT_FOV,
-    } as unknown as Stellata['filters'],
-    exposure: {
+    }),
+    exposure: partialOf<Stellata['exposure']>({
       getEv: () => 0,
       setEv: () => {},
-    } as unknown as Stellata['exposure'],
+    }),
     setCameraFov: () => {},
     getT: () => Date.now() / 1000,
     setT: () => {},
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getWorldOffset: () => mockVec3() as any,
     setWorldOffset: () => {},
-    focus: {
+    focus: partialOf<Stellata['focus']>({
       getFocusedStar: () => state.focusedStar,
-      getFocusedTarget: (): Target | null => {
+      getFocusedTarget: () => {
         if (state.focusedStar !== null) return { kind: 'star', idx: state.focusedStar };
         if (state.focusedPlanet !== null) return { kind: 'planet', idx: state.focusedPlanet };
         if (state.focusedProbe !== null) return { kind: 'probe', idx: state.focusedProbe };
         if (state.focusedCloud !== null) return { kind: 'cloud', idx: state.focusedCloud };
         return null;
       },
-      getVectorTarget: (): Target | null => {
+      getVectorTarget: () => {
         if (state.vectorTo !== null) return { kind: 'star', idx: state.vectorTo };
         if (state.vectorToCloud !== null) return { kind: 'cloud', idx: state.vectorToCloud };
         return null;
       },
       getCameraMode: () => state.mode,
-      focusStar: (idx: number) => { clearFocus(); state.focusedStar = idx; },
-      setOrbitTarget: (t: Target) => { clearFocus(); setFocusSlot(t); },
+      focusStar: (idx) => { clearFocus(); state.focusedStar = idx; },
+      setOrbitTarget: (t) => { clearFocus(); setFocusSlot(t); },
       unfocus: () => {
         state.focusedStar = null; state.focusedPlanet = null; state.focusedProbe = null;
       },
-      flyTo: (t: Target) => { clearFocus(); setFocusSlot(t); },
-      setVector: (t: Target | null) => {
+      flyTo: (t) => { clearFocus(); setFocusSlot(t); },
+      setVector: (t) => {
         if (t === null) { state.vectorTo = null; state.vectorToCloud = null; }
         else if (t.kind === 'star') { state.vectorTo = t.idx; state.vectorToCloud = null; }
         else { state.vectorToCloud = t.idx; state.vectorTo = null; }
       },
-    } as unknown as Stellata['focus'],
-    observe: {
-      setMode: (m: 'navigate' | 'observe') => { state.mode = m; },
-    } as unknown as Stellata['observe'],
-    pois: {
+    }),
+    observe: partialOf<Stellata['observe']>({
+      setMode: (m) => { state.mode = m; },
+    }),
+    pois: partialOf<Stellata['pois']>({
       get: () => state.pois,
-      set: (l: readonly Target[]) => { state.pois = [...l]; },
-    } as unknown as Stellata['pois'],
+      set: (l) => { state.pois = [...l]; },
+    }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     camera: { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1004,23 +1009,23 @@ describe('url-state', () => {
       const tgt = opts.target ?? [0, 0, 0];
       const up = opts.up ?? GN_UP;
       const stub: Partial<Stellata> = {
-        filters: {
+        filters: partialOf<Stellata['filters']>({
           getFilter: () => ({ ...DEFAULT_FILTER }),
           getCameraFov: () => DEFAULT_FOV,
-        } as unknown as Stellata['filters'],
-        exposure: {
+        }),
+        exposure: partialOf<Stellata['exposure']>({
           getEv: () => 0,
           setEv: () => {},
-        } as unknown as Stellata['exposure'],
-        focus: {
+        }),
+        focus: partialOf<Stellata['focus']>({
           getFocusedStar: () => opts.focusedStar ?? null,
           getFocusedTarget: () => (opts.focusedStar != null
             ? { kind: 'star' as const, idx: opts.focusedStar }
             : null),
           getVectorTarget: () => null,
           getCameraMode: () => mode,
-        } as unknown as Stellata['focus'],
-        pois: { get: () => [] } as unknown as Stellata['pois'],
+        }),
+        pois: partialOf<Stellata['pois']>({ get: () => [] }),
         // Live `t` — encoder gates emission on isLive(getT()), so returning
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
@@ -1794,40 +1799,40 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     const referenceUp = referenceUpStub();
     const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
     const stub: Partial<Stellata> = {
-      filters: {
+      filters: partialOf<Stellata['filters']>({
         getFilter: () => ({ ...DEFAULT_FILTER }),
         setFilter: () => {},
         getCameraFov: () => state.fov,
-      } as unknown as Stellata['filters'],
-      exposure: {
+      }),
+      exposure: partialOf<Stellata['exposure']>({
         getEv: () => 0,
         setEv: () => {},
-      } as unknown as Stellata['exposure'],
+      }),
       setCameraFov: (f) => { state.fov = f; },
       getT: () => state.t,
       setT: (t) => { if (t !== null) state.t = t; },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
-      focus: {
+      focus: partialOf<Stellata['focus']>({
         getFocusedStar: () => state.focusedStar,
-        getFocusedTarget: (): Target | null =>
+        getFocusedTarget: () =>
           (state.focusedStar !== null ? { kind: 'star', idx: state.focusedStar } : null),
         getVectorTarget: () => null,
         getCameraMode: () => state.mode,
-        focusStar: (idx: number) => { state.focusedStar = idx; },
+        focusStar: (idx) => { state.focusedStar = idx; },
         setOrbitTarget: () => {},
         unfocus: () => { state.focusedStar = null; },
         flyTo: () => {},
         setVector: () => {},
-      } as unknown as Stellata['focus'],
-      pois: {
+      }),
+      pois: partialOf<Stellata['pois']>({
         get: () => state.pois,
-        set: (l: readonly Target[]) => { state.pois = [...l]; },
-      } as unknown as Stellata['pois'],
-      observe: {
-        setMode: (m: 'navigate' | 'observe') => { state.mode = m; },
-      } as unknown as Stellata['observe'],
+        set: (l) => { state.pois = [...l]; },
+      }),
+      observe: partialOf<Stellata['observe']>({
+        setMode: (m) => { state.mode = m; },
+      }),
       isCameraTransitionActive: () => state.transition,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       camera: cam as any,
