@@ -24,6 +24,15 @@ subfolders.
 
 ## Files
 
+- `star-module.ts` (+ test) — the star `ObjectKindModule`
+  (`../kinds/README.md`): catalog + search-index load (`critical:
+  true` — its load may reject and boot treats that as fatal) and the
+  focusable / card / hover / search / SID / pinnable / focal-hide legs.
+  The render layers stay shell-wired (`attach` returns null); the legs
+  read the shell-owned machinery (StarFrame positions, park solve,
+  rendered size, the Picker's star pick) through the shell-injected
+  `StarModuleRuntime`, and the name tables boot derives from the
+  search index arrive via `setNameTables`.
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
   coreMask `ShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the

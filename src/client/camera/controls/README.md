@@ -25,14 +25,14 @@ in both navigate and observe modes.
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
-- `picker.ts` — pure target resolver; click + hover pick paths for
-  the one inline kind, stars. Every migrated kind (planet, probe,
-  cloud, Local Group, boundary shells) picks through `pickKindHit`,
-  which dispatches to the module's hover-provider pick — literally the
-  same function the hover engine runs, so click and hover can't
-  disagree (a cloud's overlapping-winner resolution stays in
-  `MolecularClouds.pick`, `../../molecular-clouds/README.md`
-  § Picking + hover). Both star pick
+- `picker.ts` — pure target resolver. It owns the two-tier star pick
+  (`pickStar` / `pickStarHit` — the star module's hover leg calls back
+  into it, so the engine-owned scan stays here); every other kind picks
+  through `pickKindHit`, which dispatches to the module's
+  hover-provider pick — literally the same function the hover engine
+  runs, so click and hover can't disagree (a cloud's
+  overlapping-winner resolution stays in `MolecularClouds.pick`,
+  `../../molecular-clouds/README.md` § Picking + hover). Both star pick
   surfaces route the winner through `resolveCollapsedLead` (backed by
   the system-membership registry — `src/client/system-membership/`):
   a member of a collapsed cluster resolves to the cluster's primary, so

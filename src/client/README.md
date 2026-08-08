@@ -24,10 +24,9 @@ themselves.
   (`local-group/local-group-loader.ts`) is the shape for shape errors.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
-  kind-module roster: one module per `TargetKind` (probe, planet, cloud,
-  lg, shell migrated; star still inline) supplies load/attach +
-  every capability leg, and the shell/boot iterate the roster instead
-  of hand-wiring each site.
+  kind-module roster: one module per `TargetKind` (all six migrated)
+  supplies load/attach + every capability leg, and the shell/boot
+  iterate the roster instead of hand-wiring each site.
 - `frame/` — the floating-origin service (`FloatingOrigin`: worldOffset,
   recentre fan-out, anchor-policy seam) and the shared view/screen
   uniform map every render pass holds by reference.
@@ -90,8 +89,10 @@ one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAtConstellation` (cross-controller busy gates),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out), the `FrameAnchor` recentre trio, `setMonochrome`,
-the `attach*` family, and the star-kind reads still inline pending the
-star module. A new zero-logic pass-through belongs on the controller.
+the `attach*` family, and the star-frame reads (`localPositions`,
+`starLocalPositionInto`, `uniforms`) exposing the shell-owned star
+render machinery. A new zero-logic pass-through belongs on the
+controller.
 
 ## Event bus on `Stellata`
 

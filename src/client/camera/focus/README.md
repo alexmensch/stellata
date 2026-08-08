@@ -165,11 +165,9 @@ are declared data in `KIND_TRAITS`, readable without the registry
 (`isHardTarget` is the predicate).
 The registry is constructed once in `stellata.ts` (exposed as
 `stellata.focusables`); lazily-attached layers are read through
-closures, so attach cycles need no re-registration. A kind migrated
-onto a kind module supplies its row via the module's `focusable()` leg
-(probe, planet, cloud, lg, shell — `src/client/kinds/README.md`; the
-star row remains inline); the record itself, and its exhaustiveness,
-stay here. Overlays and
+closures, so attach cycles need no re-registration. Every kind supplies its row via its module's `focusable()` leg
+(`src/client/kinds/README.md`); the record itself, and its
+exhaustiveness, stay here. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 

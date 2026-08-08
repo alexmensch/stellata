@@ -32,15 +32,17 @@ boot-time host attach behind its `systemsReady` promise), cloud
 (`../molecular-clouds/cloud-module.ts`), lg
 (`../local-group/lg-module.ts`), shell
 (`../fresnel-shell/shell-module.ts`, whose internal `ShellRegistry`
-holds its two instances) — and are only *assembled* here.
+holds its two instances), star
+(`../star-pipeline/star-module.ts`, the one `critical: true` module —
+its catalog load blocks first paint and may reject) — and are only
+*assembled* here.
 
 ## Contracts that must not drift
 
-- **`KindModules` is EXHAUSTIVE over `TargetKind`.** A kind whose
-  wiring is still inline holds an explicit `null` row; a new kind
-  cannot ship without stating its entry. Never weaken to a partial
-  map. The `null` rows shrink as epic phases migrate kinds and the
-  union of module-vs-inline wiring is always visible in one record.
+- **`KindModules` is EXHAUSTIVE over `TargetKind`.** Every kind is
+  migrated, so every row is a module today; the type keeps admitting
+  an explicit `null` row so a future kind can land its entry before
+  its module. Never weaken to a partial map.
 - **`KIND_ROSTER` coverage is a compile-time pin too.** The record
   alone can't catch an unrostered kind — it still has a row, it just
   never loads, attaches, or answers a roster loop — so
@@ -86,12 +88,15 @@ holds its two instances) — and are only *assembled* here.
 ## How the shell and boot consume it
 
 `main.ts`: `buildKindModules()` → `load` per roster entry inside the
-boot `Promise.all` → hand the record to `new Stellata({kinds})` →
-roster loops for SID domains (`sids()`, null ⇒ conclude), hover
-providers, label overlays, and the search corpus
-(`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters;
-boot awaits `stellata.kinds.planet.systemsReady` first, since planet corpus
-rows bake flat Target indices the attach table supplies).
+boot `Promise.all` (the star module gets the loading-bar `onProgress`
+callback and is the one load allowed to reject — `critical`) → boot
+reads `kinds.star.catalog` / `kinds.star.searchIndex` back, derives the
+name tables, and hands them to `kinds.star.setNameTables` → hand the
+record to `new Stellata({kinds})` → roster loops for SID domains
+(`sids()`, null ⇒ conclude), hover providers, label overlays, and the
+search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
+`stellata.kinds.planet.systemsReady` first, since planet corpus rows
+bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
 attach-loops the roster at the layer-construction point; `setT` fans
 out `clockJumped`, `setFocalBodyHidden` fans out `setFocalHidden`,
@@ -110,3 +115,13 @@ in `main.ts` (`createPlanetLabels` reads the shell's orbit-rings layer
 and focused planet system, both outside the module); and its mesh
 layer's update lives on the shell, after the moving-focal ride
 (`../scene/README.md`).
+
+Star-kind exceptions: the render layers are shell-wired engine
+machinery, so `attach` returns null and the legs read the shell
+through the injected `StarModuleRuntime`
+(`../star-pipeline/README.md`); `searchEntries()` answers empty — the
+star corpus enters `createSearchRunner` through `buildSearchIndex`'s
+richer channel (designation-tier labels + direct-lookup ID maps); and
+`Catalog` stays a `Stellata` constructor param — the shell's engine
+services consume it far too widely to route every read through the
+module.

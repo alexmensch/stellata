@@ -17,10 +17,9 @@ lives entirely under `src/client/hover/`:
 - `hover-engine.ts` — the engine.
 - `hover-types.ts` — the `HoverProvider` contract.
 - `hover-pick-disambiguator.ts` — cross-provider picker tiebreak.
-- `*-hover-provider.ts` — stars, the one kind whose wiring is still
-  inline. Every migrated kind (planet, probe, cloud, Local Group,
-  boundary shells) builds its provider in its kind module
-  (`../kinds/README.md`) instead.
+- Providers themselves live in the kind modules (`../kinds/README.md`)
+  — every kind, stars included, builds its provider from its module's
+  `hover()` leg.
 - `formatters/*-hover-format.ts` (one per layer) — pure functions with
   their own vitest coverage.
 
