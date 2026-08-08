@@ -78,10 +78,9 @@ import {
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
-import { getPlanetSystem, hasPlanets, type PlanetSystem } from './solar-system/planet-system';
+import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
-import { PlanetBodyField } from './solar-system/planets/planet-body-field';
-import { PlanetMeshLayer } from './solar-system/planets/planet-mesh-layer';
+import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
@@ -91,7 +90,7 @@ import {
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/local-pass/star-local-cluster-pure';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
-import { J2000_JD, KM_PC, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { J2000_JD, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -340,14 +339,14 @@ export class Stellata implements FrameAnchor {
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
-  // Physical layer — renders for every attached host regardless of
-  // focus, gated by per-planet apparent magnitude + per-host distance cull.
-  private planetBodyField: PlanetBodyField;
-  private planetMeshLayer: PlanetMeshLayer;
   /** Kind-module record — one module per migrated TargetKind, null while
    *  a kind's wiring is still inline (kinds/README.md). Public so search
    *  and overlays dispatch generic legs (displayName, searchEntries). */
   readonly kinds: BuiltKindModules;
+  // Physical layer — renders for every attached host regardless of
+  // focus, gated by per-planet apparent magnitude + per-host distance
+  // cull. Owned by the planet module; read here for cross-kind wiring.
+  private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   private readonly localDepthPass = new LocalDepthPass();
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -382,10 +381,10 @@ export class Stellata implements FrameAnchor {
   // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
 
-  // Resolves once every boot-time planet system has attached to the
-  // body field (Sol today). URL restore awaits it before applying a
-  // planet-focus ref — see the constructor's attach block.
-  readonly planetSystemsReady!: Promise<void>;
+  /** Resolves once every boot-time planet system has attached to the
+   *  body field (Sol today). URL restore awaits it before applying a
+   *  planet-focus ref. Thin forward to the planet module. */
+  get planetSystemsReady(): Promise<void> { return this.kinds.planet.systemsReady; }
 
   constructor({ canvas, catalog, kinds }: StellataOptions) {
     this.catalog = catalog;
@@ -547,13 +546,6 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.constellationFigureLayer.group);
     this.constellationBoundaryLayer = new ConstellationBoundaryLayer(sharedUniforms);
     this.scene.add(this.constellationBoundaryLayer.group);
-    this.planetBodyField = new PlanetBodyField(sharedUniforms);
-    this.scene.add(this.planetBodyField.group);
-    this.planetMeshLayer = new PlanetMeshLayer(
-      this.planetBodyField,
-      import.meta.env.BASE_URL,
-      this.hdr.emitterUniforms,
-    );
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
@@ -581,6 +573,15 @@ export class Stellata implements FrameAnchor {
         return true;
       },
       angularToPx: () => this.angularToPx(),
+      starPhotometry: (idx) => {
+        if (idx < 0 || idx >= catalog.count) return null;
+        return {
+          absMag: catalog.absmag[idx],
+          radiusPc:
+            Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
+        };
+      },
+      systemMembership: this.systemMembership,
       getT: () => this.getT(),
       getWorldOffset: () => this.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
@@ -594,8 +595,8 @@ export class Stellata implements FrameAnchor {
       if (layer) this.layers.register(layer);
     }
     this.solarCluster = new SolarSystemCluster(
-      this.planetBodyField,
-      this.planetMeshLayer,
+      this.kinds.planet.field,
+      this.kinds.planet.meshLayer,
       this.orbitRingsLayer,
       this.kinds.probe.field,
       this.kinds.probe.pathLayer,
@@ -623,7 +624,7 @@ export class Stellata implements FrameAnchor {
     // Picker resolves every layer's "what's under (x, y)?" — composed
     // by the click FSM in onPointerUp and by the hover providers.
     // Kind-module surfaces dispatch through `kindPicks`; the remaining
-    // getters cover the inline-wired star and planet paths.
+    // getters cover the inline-wired star path.
     // `picker` is `readonly` — assigned via writable cast since field
     // initialisation in TS requires bypassing the readonly guard here.
     (this as { picker: Picker }).picker = new Picker({
@@ -634,7 +635,6 @@ export class Stellata implements FrameAnchor {
       sortedDistFromSol: this.starFrame.sortedDistFromSol,
       getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
-      getPlanetBodyField: () => this.planetBodyField,
       kindPicks: collectKindPicks(this.kinds),
       renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
@@ -674,10 +674,6 @@ export class Stellata implements FrameAnchor {
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
-    const planetRadiusPc = (idx: number): number | null => {
-      const p = this.planetBodyField.planetAt(idx);
-      return p ? p.radiusKm * KM_PC : null;
-    };
     (this as { focusables: FocusableProviders }).focusables = {
       star: {
         anchorInto: (idx, out) => {
@@ -708,30 +704,7 @@ export class Stellata implements FrameAnchor {
       lg: this.kinds.lg.focusable(),
       shell: this.kinds.shell.focusable(),
       probe: this.kinds.probe.focusable(),
-      planet: {
-        anchorInto: (idx, out) =>
-          this.planetBodyField.planetAbsolutePositionInto(idx, out),
-        localPositionInto: (idx, out) =>
-          this.planetBodyField.planetLocalPositionInto(idx, out),
-        focusParkDistance: (idx) => {
-          const r = planetRadiusPc(idx);
-          return r === null
-            ? 0
-            : starPhysics.parkDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
-        },
-        orbitFloor: (idx) => {
-          const r = planetRadiusPc(idx);
-          return r === null
-            ? 0
-            : starPhysics.minOrbitDistForPlanet(r, starPhysics.fovMinorRad(this.camera));
-        },
-        arrivalRadiusPc: planetRadiusPc,
-        renderedSizePx: (idx) =>
-          this.planetBodyField.renderedPlanetSizePx(idx, this.camera.position),
-        chartPlateauDistance: () => null,
-        planetSystemHost: (idx) =>
-          this.planetBodyField.hostPlanetOf(idx)?.hostStarIdx ?? null,
-      },
+      planet: this.kinds.planet.focusable(),
     };
     this.warp = new WarpController({
       camera: this.camera,
@@ -795,36 +768,6 @@ export class Stellata implements FrameAnchor {
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => this.refreshConstellationFigure());
-    // Attach Sol's planet system to the global body field once at
-    // startup. Bodies render from now on independent of focus, gated
-    // only by apparent-mag visibility + the per-host distance cull.
-    // `planetSystemsReady` resolves once the attach table is populated
-    // — URL planet-focus restore awaits it (the attach lands on a
-    // microtask, after this constructor but potentially after a
-    // synchronous applyFromUrl would have run).
-    if (catalog.solIndex >= 0 && hasPlanets(catalog, catalog.solIndex)) {
-      const solIdx = catalog.solIndex;
-      const solAbs = new THREE.Vector3(
-        catalog.positions[solIdx * 3],
-        catalog.positions[solIdx * 3 + 1],
-        catalog.positions[solIdx * 3 + 2],
-      );
-      this.planetSystemsReady = getPlanetSystem(catalog, solIdx).then((ps) => {
-        if (ps !== null) {
-          this.planetBodyField.attachHost(
-            solIdx,
-            ps,
-            catalog.absmag[solIdx],
-            Math.max(catalog.physicalRadius[solIdx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
-            solAbs,
-            solIdx,
-            this.getT(),
-          );
-        }
-      });
-    } else {
-      this.planetSystemsReady = Promise.resolve();
-    }
     this.coordSpheres = {
       galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic),
       equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial),
@@ -910,7 +853,7 @@ export class Stellata implements FrameAnchor {
         // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
         // so a future non-Sol host's pin works live yet won't round-trip
         // through ?v=.
-        planet: (idx) => this.planetBodyField.planetAt(idx) !== null,
+        planet: (idx) => this.kinds.planet.pinnable(idx),
         probe: (idx) => this.kinds.probe.pinnable(idx),
         lg: (idx) => this.kinds.lg.pinnable(idx),
         shell: (idx) => this.kinds.shell.pinnable(idx),
@@ -972,22 +915,18 @@ export class Stellata implements FrameAnchor {
   private registerSceneLayers(): void {
     this.layers.register({
       update: (ctx) => {
-        this.planetBodyField.update(ctx.camera, ctx.t, performance.now());
         // Ride runs right after every moving-body field wrote this
-        // frame's positions, mirroring the binary ride's placement after
-        // its orbit walk.
+        // frame's positions — the planet module's field layer is the
+        // last of those in the roster — mirroring the binary ride's
+        // placement after its orbit walk.
         this.applyMovingFocalRide();
-        // Mesh LOD reads the field's freshly-written positions; its
-        // group mirrors the field's visibility, so monochrome/hidden
-        // need no second hook here.
-        this.planetMeshLayer.update(ctx.camera, ctx.t);
+        // Mesh LOD sizes off the post-ride camera: pre-ride it would
+        // see the focused body a whole per-frame delta away and drop
+        // the mesh under fast scrub. That is why this update lives on
+        // the shell rather than inside the planet module's layer.
+        this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
       },
-      setMonochrome: (on) => this.planetBodyField.setMonochrome(on),
-      recenter: (newOrigin) => this.planetBodyField.recenter(newOrigin),
-      dispose: () => {
-        this.planetBodyField.dispose();
-        this.planetMeshLayer.dispose();
-      },
+      dispose: () => {},
     });
     this.layers.register({
       // AFTER the body field: a moon ring's centre is the parent's
@@ -1330,13 +1269,11 @@ export class Stellata implements FrameAnchor {
   /** Hide/unhide the rendered body of a hard-focus target — observe
    *  parks the camera AT the object, whose disc would render from the
    *  interior. One choke point dispatching per kind: star → the
-   *  uHideFocusIdx shader pin, planet → the body field's uHideIdx,
-   *  module kinds → their setFocalHidden leg. Passing null (or a kind
-   *  switch) unhides the other kinds' slots. */
+   *  uHideFocusIdx shader pin, module kinds → their setFocalHidden leg.
+   *  Passing null (or a kind switch) unhides the other kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
     this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
       target?.kind === 'star' ? target.idx : -1;
-    this.planetBodyField.setHiddenInstance(target?.kind === 'planet' ? target.idx : -1);
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
     }
@@ -2188,41 +2125,10 @@ export class Stellata implements FrameAnchor {
     return this._compositeSuppress[idx] === 1;
   }
 
-  /** Cached PlanetSystem for an attached host, or null if the host
-   *  isn't attached. Used by the planet hover formatter to resolve
-   *  `(hostStarIdx, planetIdx)` from a pick back to a Planet record
-   *  without re-running async `getPlanetSystem`. */
-  getAttachedPlanetSystem(hostStarIdx: number): PlanetSystem | null {
-    return this.planetBodyField.getAttachedPlanetSystem(hostStarIdx);
-  }
-
   /** The global planet-body field — Target {kind:'planet'} identity
    *  (flat instance index ↔ host/planet) + per-body geometry accessors
-   *  consumed by the focus card, search, and URL wiring in main.ts. */
+   *  consumed by chart labels, planet labels, and the URL id maps. */
   get planetField(): PlanetBodyField { return this.planetBodyField; }
-
-
-  /** Live apparent V mag for `(hostStarIdx, planetIdx)`, matching the
-   *  planet shader's reflected-light formula at the current camera
-   *  position. Returns null when the host isn't attached or the index
-   *  is out of range. Decoupled from focus state per the lo5
-   *  visibility-only hover rule. */
-  planetApparentMag(hostStarIdx: number, planetIdx: number): number | null {
-    return this.planetBodyField.appMagFor(
-      hostStarIdx,
-      planetIdx,
-      this.camera.position,
-    );
-  }
-
-  /** Live camera→planet distance in the local frame, pc; null when the
-   *  flat instance index isn't covered by an attached host. */
-  planetCameraDistancePc(instanceIdx: number): number | null {
-    if (!this.planetBodyField.planetLocalPositionInto(instanceIdx, this._tmpRenderLocal)) {
-      return null;
-    }
-    return this._tmpRenderLocal.distanceTo(this.camera.position);
-  }
 
   private attachEvents() {
     window.addEventListener('resize', this.onResize);
@@ -2293,21 +2199,12 @@ export class Stellata implements FrameAnchor {
     return angularToPxPure(viewport.y, u.uFovYRad.value as number);
   }
 
-  // Scratch slots for the non-allocating *LocalPositionInto helpers.
-  // Each is owned by one call-stack scope; values are valid only inside
-  // that scope and must not be retained across method calls.
-  //
-  //  - _tmpAnimateLocal: owned by animate() and the methods it calls
-  //    in sequence (the scene-layer update fan-out). Single writer in
-  //    steady-state.
-  //    Adding a new writer that retains the value across another
-  //    animate-stack method violates the contract.
-  //  - _tmpRenderLocal: owned by per-call read methods invoked outside
-  //    the animate stack (the planet camera-distance read). Independent
-  //    of _tmpAnimateLocal; never observed by code that holds a
-  //    reference across calls.
+  // Scratch slot for the non-allocating *LocalPositionInto helpers.
+  // Owned by animate() and the methods it calls in sequence (the
+  // scene-layer update fan-out); values are valid only inside that
+  // scope. Adding a writer that retains the value across another
+  // animate-stack method violates the contract.
   private _tmpAnimateLocal = new THREE.Vector3();
-  private _tmpRenderLocal = new THREE.Vector3();
 
   /** Public access to the HUD overlay — for the arrow-fade debug HUD only. */
   get hud(): HudOverlay { return this.hudOverlay; }

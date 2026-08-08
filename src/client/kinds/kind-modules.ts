@@ -6,6 +6,7 @@ import { createShellKindModule } from '../fresnel-shell/shell-module';
 import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
 import type { SceneElementId } from '../scene/scene-elements';
+import { createPlanetKindModule } from '../solar-system/planets/planet-module';
 import {
   createProbeKindModule,
 } from '../solar-system/probes/probe-module';
@@ -47,7 +48,7 @@ export function buildKindModules() {
     star: null,
     cloud: createCloudKindModule(),
     lg: createLgKindModule(),
-    planet: null,
+    planet: createPlanetKindModule(),
     shell: createShellKindModule(),
     probe: createProbeKindModule(),
   } satisfies KindModules;

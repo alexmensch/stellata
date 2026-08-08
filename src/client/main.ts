@@ -12,7 +12,6 @@ import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
-import { loadPlanetElementTables } from './solar-system/ephemerides/element-table-loader';
 import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
@@ -35,17 +34,12 @@ import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { SidResolver, arrayDomain } from './util/sid-resolver';
-import { SOL_OBJECT_SIDS } from './solar-system/sol-object-sids';
-import { moonNamesOf, SOL_BODIES } from './solar-system/planet-system';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import { createStarFocusProvider } from './focus-card/star-focus-provider';
-import { createPlanetFocusProvider } from './focus-card/planet-focus-provider';
-import { orbitDescriptorFor } from './solar-system/ephemerides/orbit-descriptor';
 import { createStarHoverProvider } from './hover/star-hover-provider';
-import { createPlanetHoverProvider } from './hover/planet-hover-provider';
 import type { HoverProvider } from './hover/hover-types';
 
 async function main() {
@@ -111,12 +105,15 @@ async function main() {
     // 'all'; absent artifact = no arcs.
     if (boundaries) stellata.attachConstellationBoundaries(boundaries);
 
-    // Horizons planet element tables — 1.5 MB that upgrades the planet
-    // ephemeris from the Standish series' 0.06 AU to ~5e-6 AU across
-    // 1900–2100. Deliberately not awaited: the first frame is Sol-focused,
-    // where the outer planets the tables move are sub-pixel discs, so paying
-    // for it before first paint would buy nothing visible.
-    void loadPlanetElementTables(import.meta.env.BASE_URL);
+    // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
+    // the search corpus shows.
+    stellata.kinds.planet.setHostStarNameOf((idx) => starLabels.get(idx) ?? null);
+
+    // Planet Targets carry the body field's flat instance index, which
+    // exists only once the attach table populates (a microtask after the
+    // constructor) — the search corpus, URL restore, and SID wiring below
+    // all read it, so settle it first.
+    await stellata.planetSystemsReady;
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
@@ -131,23 +128,18 @@ async function main() {
     // attach settles here at boot; `pending` is only reachable for a
     // future genuinely-async domain. `sun` is not in the planet domain —
     // Sol's catalog record carries the same sid, so the star domain
-    // claims it (see util/sid-resolver/README.md). The planet domain is
-    // keyed body-within-host over SOL_BODIES (planets then moons), so a
-    // moon's sid sits at its body index and resolves like any planet.
+    // claims it (see util/sid-resolver/README.md).
     const sidResolver = new SidResolver(
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
     );
     sidResolver.attach('star', arrayDomain(catalog.sid));
-    sidResolver.attach(
-      'planet',
-      arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
-    );
     // Kind-module domains: sids() is localIndex-ordered with
-    // localIndex = Target idx; null concludes the domain. The shell
-    // module's list is static (docs/sid.md § 7), so its domain attaches
-    // even when a layer's artifact is absent — focus/pin then fall
-    // through to null via the empty registry slot.
+    // localIndex = Target idx — except the planet domain, keyed
+    // body-within-host and translated at the URL boundary (idMaps
+    // below). Static lists (planet, shell) attach even when a layer's
+    // artifact is absent — focus/pin then fall through to null via the
+    // empty registry slot.
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
       if (!m) continue;
@@ -236,9 +228,8 @@ async function main() {
     // the same params back into history on load. With no `?v=`, fall back
     // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
     // the galactic centre, HUD on, no constellation highlight).
-    // Planet-focus refs resolve through the body field's attach table,
-    // which populates on a microtask — settle it first.
-    await stellata.planetSystemsReady;
+    // Planet-focus refs need the body field's attach table, settled by
+    // the planetSystemsReady await above.
     if (!applyFromUrl(stellata, idMaps)) {
       applyFirstLoadView(stellata, idMaps);
     }
@@ -270,11 +261,7 @@ async function main() {
         binaries,
       },
     });
-    const planetHoverProvider = createPlanetHoverProvider({ stellata });
-    const hoverProviders: HoverProvider[] = [
-      starHoverProvider,
-      planetHoverProvider,
-    ];
+    const hoverProviders: HoverProvider[] = [starHoverProvider];
     // Kind-module hover surfaces.
     for (const kind of KIND_ROSTER) {
       const provider = kinds[kind]?.hover?.();
@@ -307,28 +294,7 @@ async function main() {
       stellata,
       providers: {
         star: starFocusProvider,
-        planet: createPlanetFocusProvider({
-          planetAt: (idx) => stellata.planetField.planetAt(idx),
-          orbitDescriptorOf: (idx) => {
-            const planet = stellata.planetField.planetAt(idx);
-            const host = stellata.planetField.hostPlanetOf(idx);
-            if (!planet || !host) return null;
-            const ps = stellata.planetField.getAttachedPlanetSystem(host.hostStarIdx);
-            if (!ps) return null;
-            return orbitDescriptorFor(planet, ps, starLabels.get(host.hostStarIdx) ?? null);
-          },
-          cameraDistancePc: (idx) => stellata.planetCameraDistancePc(idx),
-          appMagFor: (idx) =>
-            stellata.planetField.appMagForInstance(idx, stellata.camera.position),
-          constellationName: (idx) => stellata.constellationOf('planet', idx),
-          moonNamesOf: (idx) => {
-            const host = stellata.planetField.hostPlanetOf(idx);
-            const ps = host
-              ? stellata.planetField.getAttachedPlanetSystem(host.hostStarIdx)
-              : null;
-            return ps ? moonNamesOf(ps.planets, host!.planetIdx) : [];
-          },
-        }),
+        planet: kinds.planet.card(),
         probe: kinds.probe.card(),
         cloud: kinds.cloud.card(),
         lg: kinds.lg.card(),

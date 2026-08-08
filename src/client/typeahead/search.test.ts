@@ -17,7 +17,6 @@ import {
   type FuzzyEntry,
   type SearchEntry,
 } from './search';
-import type { Stellata } from '../stellata';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
@@ -700,51 +699,38 @@ describe('search / ranking tiers', () => {
 
 describe('search / Sol planet entries', () => {
   const catalog = { ...makeEmptyCatalog(0), constellations: [], names: new Map(), solIndex: 0 };
+  // The row content (Sol-only, flat Target idx, moon secondary line) is
+  // pinned by planet-module.test.ts; here the module rows just have to
+  // flow through the runner like any other kind's.
+  const kinds = kindsWith('planet', [
+    { index: 3, label: 'Mars', primary: 'Mars', displayCon: 'Planet · Sol system' },
+    { index: 12, label: 'Europa', primary: 'Europa', displayCon: 'Moon · Jupiter' },
+  ]);
 
-  it('planet names resolve to planet-kind entries with the SOL_PLANETS index', () => {
-    const run = createSearchRunner(catalog, []);
+  it('planet names resolve to planet-kind entries with the module index', () => {
+    const run = createSearchRunner(catalog, [], kinds);
     const mars = run('mars')[0];
     expect(mars?.kind).toBe('planet');
     expect(mars?.index).toBe(3);
     expect(mars?.primary).toBe('Mars');
     expect(mars?.displayCon).toBe('Planet · Sol system');
-    expect(run('jupiter')[0]?.index).toBe(4);
-    expect(run('pluto')[0]?.index).toBe(8);
+    expect(run('europa')[0]?.index).toBe(12);
   });
 
-  it('planet entries are omitted when the catalog has no Sol', () => {
-    const noSol = { ...makeEmptyCatalog(0), constellations: [], names: new Map(), solIndex: -1 };
-    const run = createSearchRunner(noSol, []);
+  it('planet entries are absent when the module contributes none', () => {
+    const run = createSearchRunner(catalog, []);
     expect(run('mars')).toEqual([]);
   });
 });
 
 describe('search / resolveEntryTarget', () => {
-  const catalog = { ...makeEmptyCatalog(0), constellations: [], names: new Map(), solIndex: 0 };
   const entry = (kind: FuzzyEntry['kind'], index: number): FuzzyEntry =>
     ({ kind, index, label: 'x', primary: 'x', displayCon: '' });
 
-  it('passes non-planet kinds straight through', () => {
-    const stellata = {} as Stellata;
-    expect(resolveEntryTarget(stellata, catalog, entry('star', 7)))
-      .toEqual({ kind: 'star', idx: 7 });
-    expect(resolveEntryTarget(stellata, catalog, entry('lg', 2)))
-      .toEqual({ kind: 'lg', idx: 2 });
-  });
-
-  it('translates planet entries through the body-field attach table', () => {
-    const stellata = {
-      planetField: { instanceIndexOf: (host: number, i: number) => (host === 0 ? i + 5 : null) },
-    } as unknown as Stellata;
-    expect(resolveEntryTarget(stellata, catalog, entry('planet', 2)))
-      .toEqual({ kind: 'planet', idx: 7 });
-  });
-
-  it('returns null when the host body field has no attach entry', () => {
-    const stellata = {
-      planetField: { instanceIndexOf: () => null },
-    } as unknown as Stellata;
-    expect(resolveEntryTarget(stellata, catalog, entry('planet', 2))).toBeNull();
+  it('the entry index is the Target idx for every kind', () => {
+    expect(resolveEntryTarget(entry('star', 7))).toEqual({ kind: 'star', idx: 7 });
+    expect(resolveEntryTarget(entry('lg', 2))).toEqual({ kind: 'lg', idx: 2 });
+    expect(resolveEntryTarget(entry('planet', 12))).toEqual({ kind: 'planet', idx: 12 });
   });
 });
 

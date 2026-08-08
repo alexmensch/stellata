@@ -9,7 +9,6 @@ import type { HoverHit } from '../../hover/hover-types';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 
 // Canonical test viewport — power-of-two so screen-pixel math lands on
 // integer boundaries. Camera placed at (0,0,30) looking down -Z, so
@@ -153,7 +152,6 @@ function makePicker(
       const limitMag = opts.limitMag ?? 15;
       return drawCutoffMag(limitMag, limitMag, chart);
     },
-    getPlanetBodyField: () => ({ pick: () => null }) as unknown as PlanetBodyField,
     kindPicks: opts.kindPicks ?? {},
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
     resolveCollapsedLead: opts.resolveCollapsedLead ?? ((idx) => idx),

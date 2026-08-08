@@ -4,7 +4,6 @@
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { FilterState } from '../../filters/filter-state';
-import type { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import type { TargetKind } from '../focus/focus-target';
 import type { KindPick } from '../../kinds/kind-module';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
@@ -31,7 +30,6 @@ export interface PickerDeps {
   // the live Float32Array rather than a snapshot reference.
   getLocalPositions: () => Float32Array;
   getFilter: () => Readonly<FilterState>;
-  getPlanetBodyField: () => PlanetBodyField;
   // Kind-module pick surfaces (kinds/kind-module.ts) — one entry per
   // migrated kind, absent for kinds whose pick path is still inline.
   // Hover providers call the same functions, so the two can't disagree.
@@ -79,29 +77,6 @@ export class Picker {
       cameraDistancePc: r.candidate.cameraDistancePc,
       tier: r.tier,
     };
-  }
-
-  pickPlanetHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
-    const rect = this.deps.domElement.getBoundingClientRect();
-    return this.deps.getPlanetBodyField().pick(
-      this.deps.camera,
-      rect,
-      clientX,
-      clientY,
-      pixelThreshold,
-    );
-  }
-
-  /** Click-pick sibling of `pickPlanetHit`: same pick, but `idx` is
-   *  rewritten to the field's FLAT instance index — the Target
-   *  {kind:'planet'} currency the click FSM feeds to flyTo. Tier and
-   *  camera distance ride through for the star-vs-planet tiebreak. */
-  pickPlanetClick(clientX: number, clientY: number, pixelThreshold = 16): HoverHit | null {
-    const hit = this.pickPlanetHit(clientX, clientY, pixelThreshold);
-    if (hit === null || hit.hostStarIdx === undefined) return null;
-    const flat = this.deps.getPlanetBodyField().instanceIndexOf(hit.hostStarIdx, hit.idx);
-    if (flat === null) return null;
-    return { ...hit, idx: flat };
   }
 
   /** Dispatch a hover-shaped pick to a kind module's pick surface.
