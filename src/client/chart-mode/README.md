@@ -150,7 +150,7 @@ inherits no exposure state at all.
   instrument's limiting magnitude" — change instrument and the contour
   moves through the band like a topographic line. Discarded outside the
   line so depth stays clean. Solid black ink (`uMonoColor`), toggled by
-  `setMilkywayIsobar` with the shared `uLimitMag` uniform reference.
+  `MilkyWay.setIsobar` with the shared `uLimitMag` uniform reference.
 - **Molecular clouds** (`../molecular-clouds/cloud-rim.frag.glsl`): the
   rim-shell material's chart branch draws a **stippled silhouette
   outline** of each cloud's isosurface mesh — the SkyAtlas 2000 nebula

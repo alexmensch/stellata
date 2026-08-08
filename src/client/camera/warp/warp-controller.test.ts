@@ -578,7 +578,7 @@ describe('WarpController — 3-phase FSM transitions', () => {
   });
 });
 
-describe('WarpController — skipWarp during each phase', () => {
+describe('WarpController — skip during each phase', () => {
   it('skip during reorient lands and re-enables controls (navigate)', () => {
     const h = makeHarness();
     seedStarStar(h, new THREE.Vector3(0, 0, 0), new THREE.Vector3(50, 0, 0));

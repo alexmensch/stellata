@@ -80,7 +80,7 @@ export function bindKeyboardShortcuts(
   // the target behind the focused star); double tap F-F toggles fullscreen
   // in every mode.
   const findGate = makeDoubleTapGate(
-    () => { if (stellata.getCameraMode() === 'observe') findModal.open(); },
+    () => { if (stellata.focus.getCameraMode() === 'observe') findModal.open(); },
     toggleFullscreen,
   );
 
@@ -117,7 +117,7 @@ export function bindKeyboardShortcuts(
       // so the cascade doesn't run AFTER the modal closes itself.
       if (anyVisibleSelector('.modal')) return;
       // Warp owns ESC via warp-button.ts.
-      if (stellata.getWarpActive()) return;
+      if (stellata.warp.isActive()) return;
       // Search/typeahead inputs handle ESC themselves (clear dropdown +
       // blur). Skip our cascade in that case.
       if (targetIsEditable(e.target)) return;
@@ -147,7 +147,7 @@ export function bindKeyboardShortcuts(
     // handler take it — the scrubber only claims Space when no warp is
     // running. The jump date-field is covered by the targetIsEditable guard
     // above (arrows edit its segments when focused).
-    if (e.key === ' ' && stellata.getWarpActive()) return;
+    if (e.key === ' ' && stellata.warp.isActive()) return;
     const transport = TRANSPORT_KEY_ACTIONS[e.key];
     if (transport) {
       if (deps.timeScrubber.isOpen()) {
@@ -172,7 +172,7 @@ export function bindKeyboardShortcuts(
         conModal.open();
         break;
       case 'h': case 'H':
-        stellata.setFilter({ showHud: !stellata.getFilter().showHud });
+        stellata.filters.setFilter({ showHud: !stellata.filters.getFilter().showHud });
         e.preventDefault();
         break;
       case 's': case 'S':
@@ -201,8 +201,8 @@ export function bindKeyboardShortcuts(
         // focus (star / planet) is a valid anchor. setCameraMode no-ops
         // without one anyway, but bailing here keeps the key from
         // feeling unresponsive.
-        if (isHardTarget(stellata.getFocusedTarget())) {
-          stellata.setCameraMode('observe');
+        if (isHardTarget(stellata.focus.getFocusedTarget())) {
+          stellata.observe.setMode('observe');
           e.preventDefault();
         }
         break;
@@ -212,8 +212,8 @@ export function bindKeyboardShortcuts(
         // labels). No-op outside observe rather than auto-mode-switching:
         // the user should know they're entering observe before chart
         // engages on top.
-        if (stellata.getCameraMode() === 'observe') {
-          stellata.setFilter({ chart: !stellata.getFilter().chart });
+        if (stellata.focus.getCameraMode() === 'observe') {
+          stellata.filters.setFilter({ chart: !stellata.filters.getFilter().chart });
           e.preventDefault();
         }
         break;
@@ -228,15 +228,15 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case '+':
-        stellata.setEv(steppedEv(stellata.getEv(), +1));
+        stellata.exposure.setEv(steppedEv(stellata.exposure.getEv(), +1));
         e.preventDefault();
         break;
       case '-':
-        stellata.setEv(steppedEv(stellata.getEv(), -1));
+        stellata.exposure.setEv(steppedEv(stellata.exposure.getEv(), -1));
         e.preventDefault();
         break;
       case '=':
-        stellata.setEv(0);
+        stellata.exposure.setEv(0);
         e.preventDefault();
         break;
     }
@@ -244,18 +244,18 @@ export function bindKeyboardShortcuts(
 }
 
 function cycleCoordSphere(stellata: Stellata) {
-  stellata.setFilter({
+  stellata.filters.setFilter({
     coordSphere: nextCoordSphereFrame(
-      stellata.getFilter().coordSphere,
+      stellata.filters.getFilter().coordSphere,
       (frame) => stellata.coordSphereReachable(frame),
     ),
   });
 }
 
 function cycleDetailLevel(stellata: Stellata) {
-  const cur = stellata.getDetailLevel();
+  const cur = stellata.filters.getDetailLevel();
   const next = DETAIL_LEVELS[(DETAIL_LEVELS.indexOf(cur) + 1) % DETAIL_LEVELS.length];
-  stellata.applyDetailPreset(next);
+  stellata.filters.applyDetailPreset(next);
 }
 
 // R: reset only the sliders living under the panel's "Camera" section —
@@ -263,8 +263,8 @@ function cycleDetailLevel(stellata: Stellata) {
 // in controls.ts.
 function resetCameraSection(stellata: Stellata) {
   stellata.setCameraFov(DEFAULT_FOV);
-  stellata.setEv(0);
-  stellata.setStarKMultiplier(stellata.getStarKMultiplierDefault());
+  stellata.exposure.setEv(0);
+  stellata.filters.setStarKMultiplier(stellata.filters.getStarKMultiplierDefault());
 }
 
 // ESC progression: observe→navigate (keep focus, animated exit), then
@@ -272,16 +272,16 @@ function resetCameraSection(stellata: Stellata) {
 // across every focusable kind. A no-op if neither is set. Exported for
 // its unit test.
 export function escCascade(stellata: Stellata) {
-  if (stellata.getCameraMode() === 'observe') {
-    stellata.setCameraMode('navigate');
+  if (stellata.focus.getCameraMode() === 'observe') {
+    stellata.observe.setMode('navigate');
     return;
   }
-  if (stellata.getVectorTarget() !== null) {
-    stellata.setVector(null);
+  if (stellata.focus.getVectorTarget() !== null) {
+    stellata.focus.setVector(null);
     return;
   }
-  if (stellata.getFocusedTarget() !== null) {
-    stellata.unfocus();
+  if (stellata.focus.getFocusedTarget() !== null) {
+    stellata.focus.unfocus();
   }
 }
 

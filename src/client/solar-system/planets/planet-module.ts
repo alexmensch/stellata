@@ -23,9 +23,9 @@ import {
 } from '../ephemerides/orbit-descriptor';
 import {
   getPlanetSystem,
-  hasPlanets,
   moonNamesOf,
   SOL_BODIES,
+  type PlanetSystem,
 } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PlanetBodyField } from './planet-body-field';
@@ -68,13 +68,21 @@ export function createPlanetKindModule(): PlanetKindModule {
     return p ? p.radiusKm * KM_PC : null;
   };
 
+  /** Flat instance index → its host's attach-table entry and cached
+   *  PlanetSystem; null when no attached host covers the index. */
+  const attachedHostOf = (
+    idx: number,
+  ): { host: { hostStarIdx: number; planetIdx: number }; ps: PlanetSystem } | null => {
+    const host = field?.hostPlanetOf(idx) ?? null;
+    const ps = host !== null ? field!.getAttachedPlanetSystem(host.hostStarIdx) : null;
+    return host !== null && ps !== null ? { host, ps } : null;
+  };
+
   const orbitDescriptorOf = (idx: number): OrbitDescriptor | null => {
     const planet = field?.planetAt(idx) ?? null;
-    const host = field?.hostPlanetOf(idx) ?? null;
-    if (!planet || !host) return null;
-    const ps = field!.getAttachedPlanetSystem(host.hostStarIdx);
-    if (!ps) return null;
-    return orbitDescriptorFor(planet, ps, hostStarNameOf(host.hostStarIdx));
+    const attached = attachedHostOf(idx);
+    if (planet === null || attached === null) return null;
+    return orbitDescriptorFor(planet, attached.ps, hostStarNameOf(attached.host.hostStarIdx));
   };
 
   // The returned hit's idx is the field's FLAT instance index — the
@@ -133,7 +141,10 @@ export function createPlanetKindModule(): PlanetKindModule {
       const solIdx = kindCtx.solIndex;
       const photo = solIdx >= 0 ? kindCtx.starPhotometry(solIdx) : null;
       const solAbs = new THREE.Vector3();
-      if (hasPlanets(solIdx, solIdx) && photo !== null && kindCtx.solAbsInto(solAbs)) {
+      if (photo !== null && kindCtx.solAbsInto(solAbs)) {
+        // `getPlanetSystem` is the sole "does this host have planets?"
+        // gate — it resolves null for a host without them, the branch
+        // bk5's per-host shard fetch will actually reach.
         void getPlanetSystem(solIdx, solIdx).then((ps) => {
           if (ps !== null) {
             field!.attachHost(
@@ -189,9 +200,8 @@ export function createPlanetKindModule(): PlanetKindModule {
       appMagFor: (idx) => field?.appMagForInstance(idx, ctx!.camera.position) ?? null,
       constellationName: (idx) => ctx?.constellationOf('planet', idx) ?? null,
       moonNamesOf: (idx) => {
-        const host = field?.hostPlanetOf(idx) ?? null;
-        const ps = host ? field!.getAttachedPlanetSystem(host.hostStarIdx) : null;
-        return ps ? moonNamesOf(ps.planets, host!.planetIdx) : [];
+        const attached = attachedHostOf(idx);
+        return attached === null ? [] : moonNamesOf(attached.ps.planets, attached.host.planetIdx);
       },
     }),
 
@@ -199,9 +209,9 @@ export function createPlanetKindModule(): PlanetKindModule {
       kind: 'planet',
       pick,
       format: (hit) => {
-        const host = field?.hostPlanetOf(hit.idx) ?? null;
-        const ps = host ? field!.getAttachedPlanetSystem(host.hostStarIdx) : null;
-        if (!host || !ps) return null;
+        const attached = attachedHostOf(hit.idx);
+        if (attached === null) return null;
+        const { host, ps } = attached;
         return formatPlanetHover(host.planetIdx, hit.cameraDistancePc, {
           planets: ps.planets,
           appMagFor: (i) => field!.appMagFor(host.hostStarIdx, i, ctx!.camera.position),

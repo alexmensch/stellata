@@ -297,7 +297,7 @@ is no per-layer toggle; visibility is the declutter floor.
 
 ## Dev-console levers
 
-Under `stellata.cloudLayer.*`:
+Under `stellata.kinds.cloud.layer.*`:
 - `setOpacity(x)` — master rim-glow gain (dark mode)
 - `setColor(0xRRGGBB)` — override the shared rim blue
 - `setRimParams({alphaLimb, faceOnFloor, fresnelPower})` — rim shape,

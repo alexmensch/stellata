@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
-import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
+import { displayNameOf, KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
@@ -439,7 +439,7 @@ export function createSearchRunner(
   // by the module contract, so a missing artifact leaves an object out
   // of the corpus rather than shifting the others. Planet rows carry the
   // body field's flat index, so the runner is built after boot's
-  // `planetSystemsReady` await.
+  // `kinds.planet.systemsReady` await.
   if (kinds) {
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
@@ -650,7 +650,7 @@ export function bindSearch(
   // runner because the distance vector accepts any-kind destinations.
   const focusRunQuery = (q: string): FuzzyEntry[] => {
     const all = runQuery(q);
-    if (stellata.getCameraMode() === 'observe') {
+    if (stellata.focus.getCameraMode() === 'observe') {
       return all.filter((e) => isHardTarget({ kind: e.kind, idx: e.index }));
     }
     return all;
@@ -679,16 +679,16 @@ export function bindSearch(
     rowFor,
     onSelect: (entry) => {
       const target = resolveEntryTarget(entry);
-      if (stellata.getCameraMode() === 'observe' && isHardTarget(target)) {
+      if (stellata.focus.getCameraMode() === 'observe' && isHardTarget(target)) {
         // Re-route through warp so the camera flies from the current
         // observation anchor to the new one and re-enters observe on
         // arrival, instead of teleporting via flyTo.
-        stellata.warpTo(target);
+        stellata.warp.warpTo(target);
         return;
       }
-      stellata.flyTo(target);
+      stellata.focus.flyTo(target);
     },
-    onClear: () => stellata.unfocus(),
+    onClear: () => stellata.focus.unfocus(),
     positionResults: positionUnder(focusInput),
     group,
     debounceMs: SEARCH_DEBOUNCE_MS,
@@ -705,9 +705,9 @@ export function bindSearch(
     runQuery,
     rowFor,
     onSelect: (entry) => {
-      stellata.setVector(resolveEntryTarget(entry));
+      stellata.focus.setVector(resolveEntryTarget(entry));
     },
-    onClear: () => stellata.setVector(null),
+    onClear: () => stellata.focus.setVector(null),
     positionResults: positionUnder(toInput),
     group,
     debounceMs: SEARCH_DEBOUNCE_MS,
@@ -721,24 +721,12 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
-  // Display names stay a per-kind lookup — the rich star label
-  // (describe) lives in the search corpus, cloud / LG names on their
-  // catalogs; kind identity itself rides the Target.
-  // Returns on every kind so a new TargetKind fails tsc (missing return)
-  // rather than silently falling through to the wrong catalog.
-  const nameOf = (t: Target): string => {
-    switch (t.kind) {
-      case 'star': return describe(t.idx);
-      case 'planet': return stellata.kinds.planet.displayName(t.idx);
-      case 'probe': return stellata.kinds.probe.displayName(t.idx);
-      case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
-      case 'lg': return stellata.kinds.lg.displayName(t.idx);
-      case 'shell': return stellata.kinds.shell.displayName(t.idx);
-    }
-  };
+  // Star names take the rich search-corpus label (describe); every other
+  // kind answers through its module's displayName leg.
+  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t, describe);
   const syncFocusUI = () => {
-    const focused = stellata.getFocusedTarget();
-    const observe = stellata.getCameraMode() === 'observe';
+    const focused = stellata.focus.getFocusedTarget();
+    const observe = stellata.focus.getCameraMode() === 'observe';
     // OBSERVE makes the focus row read as "where you are observing from"
     // rather than "what you have selected", which is what FOCUS implies in
     // navigate mode. Same field, different mental model.
@@ -753,7 +741,7 @@ export function bindSearch(
     }
   };
   const syncVectorUI = () => {
-    const vec = stellata.getVectorTarget();
+    const vec = stellata.focus.getVectorTarget();
     toBox.setName(vec !== null ? nameOf(vec) : '');
   };
 

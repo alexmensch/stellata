@@ -10,9 +10,9 @@ the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
 ## Files
 
 - `poi-store.ts` (+ test) — the pinned-Target list and its mutation
-  rules. `Stellata` composes one instance and exposes thin shims
-  (`getPois` / `togglePoi` / `setPois` / `clearPois`); every consumer
-  (overlay, URL state, click dispatch, rolodex) goes through those.
+  rules. `Stellata` composes one instance, exposed as `stellata.pois`
+  (`get` / `toggle` / `set` / `clear`); every consumer (overlay, URL
+  state, click dispatch, rolodex) goes through it.
 - `click-ladder-pure.ts` (+ test) — decision table for the
   navigate-mode click ladder below.
 
@@ -33,7 +33,7 @@ the ladder steps only its vector rungs and existing pins are left
 untouched; observe-mode clicks are similarly HUD-gated. Observe mode
 is a plain pin/unpin toggle instead of the ladder. Both canvas clicks
 and the POI overlay's on-screen labels route through
-`Stellata.applyObjectClick`, so the object and its label can't drift
+`InputController.applyObjectClick` (`stellata.input`), so the object and its label can't drift
 apart.
 
 ## Pin semantics

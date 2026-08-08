@@ -19,7 +19,7 @@ describe('createPlanetLabels — sentinel-init', () => {
     try {
       const stellata = {
         on: () => () => {},
-        getFocusedPlanetSystem: () => null,
+        focus: { getFocusedPlanetSystem: () => null },
       } as unknown as Stellata;
       createPlanetLabels(stellata);
       expect(group.style.display).toBe('none');

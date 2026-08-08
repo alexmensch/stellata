@@ -1036,7 +1036,7 @@ function fromBase64Url(blob: string): Uint8Array {
 // computed against canonical defaults so omitted fields keep the blob
 // minimal.
 export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView {
-  const f = stellata.getFilter();
+  const f = stellata.filters.getFilter();
   const view: DecodedView = {};
 
   const sMin = distToSlider(f.minDistSol, true);
@@ -1050,10 +1050,10 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (f.showHud) view.showHud = true;
   if (!f.showLgEmission) view.showLgEmission = false;
 
-  const fov = stellata.getCameraFov();
+  const fov = stellata.filters.getCameraFov();
   if (!approx(fov, DEFAULT_FOV)) view.fov = fov;
 
-  const ev = stellata.getEv();
+  const ev = stellata.exposure.getEv();
   if (!approx(ev, 0)) view.ev = ev;
 
   if (getUnit() === 'pc') view.unit = 'pc';
@@ -1063,19 +1063,19 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // so a fully-default state has no `?v=` at all. An object without a
   // SID (never on a shipped catalog) omits the field rather than
   // falling back to a build-volatile index.
-  const focused = stellata.getFocusedTarget();
+  const focused = stellata.focus.getFocusedTarget();
   if (focused === null) {
     view.focus = 'cleared';
   } else if (focused.kind !== 'star' || focused.idx !== idMaps.solIndex) {
     view.focus = sidRefOf(idMaps, focused.kind, focused.idx);
   }
 
-  const to = stellata.getVectorTarget();
+  const to = stellata.focus.getVectorTarget();
   if (to !== null) {
     view.to = sidRefOf(idMaps, to.kind, to.idx);
   }
 
-  const mode = stellata.getCameraMode();
+  const mode = stellata.focus.getCameraMode();
   if (mode !== 'navigate') view.mode = mode;
 
   // Chart on/off rides FLAG_CHART, gated to observe-only at pack time.
@@ -1087,7 +1087,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // untagged-SID wire the focus/to refs use. Capped at POI_MAX_COUNT
   // defensively.
   {
-    const pois = stellata.getPois();
+    const pois = stellata.pois.get();
     if (pois.length > 0) {
       const sidsOut: number[] = [];
       for (const t of pois) {
@@ -1126,7 +1126,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // Sol-relative (matches the legacy default), so omitting saves
   // 12 bytes on every default-pose URL.
   const wo = stellata.getWorldOffset();
-  const woNonSol = stellata.getFocusedStar() === null
+  const woNonSol = stellata.focus.getFocusedStar() === null
     && (!approx(wo.x, 0) || !approx(wo.y, 0) || !approx(wo.z, 0));
   if (woNonSol) {
     view.worldOffset = [wo.x, wo.y, wo.z];
@@ -1229,7 +1229,7 @@ export function applyDecodedView(
   // decluttered share). Runs after layers are constructed (applyFromUrl
   // runs post-construction), so lazily-attached layers pick up the
   // permitted set via their per-frame detailPermits() read.
-  if (view.detailLevel) stellata.applyDetailPreset(view.detailLevel);
+  if (view.detailLevel) stellata.filters.applyDetailPreset(view.detailLevel);
 
   const patch: Partial<FilterState> = {};
   if (view.dmin !== undefined || view.dmax !== undefined) {
@@ -1241,10 +1241,10 @@ export function applyDecodedView(
   if (view.coordSphere !== undefined) patch.coordSphere = view.coordSphere;
   if (view.showHud !== undefined) patch.showHud = view.showHud;
   if (view.showLgEmission !== undefined) patch.showLgEmission = view.showLgEmission;
-  if (Object.keys(patch).length) stellata.setFilter(patch);
+  if (Object.keys(patch).length) stellata.filters.setFilter(patch);
 
   if (view.fov !== undefined && view.fov > 0) stellata.setCameraFov(view.fov);
-  if (view.ev !== undefined) stellata.setEv(view.ev);
+  if (view.ev !== undefined) stellata.exposure.setEv(view.ev);
 
   // Pinned `t` — only present when the sender's `t` was scrubbed away
   // from live (the encoder gates emission on isLive). Apply before any
@@ -1273,7 +1273,7 @@ export function applyDecodedView(
       // cam/tgt below would overwrite camera.position mid-lerp, leaving
       // the transition state to silently drag the camera away from the
       // restored pose on the next frame.
-      stellata.unfocus({ animate: false });
+      stellata.focus.unfocus({ animate: false });
     } else if (view.focus.kind === 'sid') {
       // v4 universal ref. Deferred-resolution contract (docs/sid.md
       // § 8): a sid whose domain hasn't attached yet applies on that
@@ -1285,14 +1285,14 @@ export function applyDecodedView(
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
-        if (snap) stellata.setOrbitTarget({ kind, idx });
-        else stellata.flyTo({ kind, idx }, { animate: false });
+        if (snap) stellata.focus.setOrbitTarget({ kind, idx });
+        else stellata.focus.flyTo({ kind, idx }, { animate: false });
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
-        if (hasCam || hasTgt) stellata.setOrbitTarget({ kind: 'star', idx });
-        else stellata.focusStar(idx, { animate: false });
+        if (hasCam || hasTgt) stellata.focus.setOrbitTarget({ kind: 'star', idx });
+        else stellata.focus.focusStar(idx, { animate: false });
       }
     }
   }
@@ -1300,22 +1300,22 @@ export function applyDecodedView(
   // encoder never emitted both — apply after `focus` so cloud wins on
   // the off chance both are present in a hand-crafted blob.
   if (view.cloud !== undefined && view.cloud >= 0) {
-    if (hasCam || hasTgt) stellata.setOrbitTarget({ kind: 'cloud', idx: view.cloud });
-    else stellata.flyTo({ kind: 'cloud', idx: view.cloud }, { animate: false });
+    if (hasCam || hasTgt) stellata.focus.setOrbitTarget({ kind: 'cloud', idx: view.cloud });
+    else stellata.focus.flyTo({ kind: 'cloud', idx: view.cloud }, { animate: false });
   }
   if (view.toc !== undefined && view.toc >= 0) {
-    stellata.setVector({ kind: 'cloud', idx: view.toc });
+    stellata.focus.setVector({ kind: 'cloud', idx: view.toc });
   }
   if (view.to) {
     if (view.to.kind === 'sid') {
       idMaps.sidResolver.whenResolved(view.to.id, (kind, localIndex) => {
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
-        stellata.setVector({ kind, idx });
+        stellata.focus.setVector({ kind, idx });
       });
     } else {
       const idx = resolveStarRef(view.to, idMaps, -1);
-      if (idx >= 0 && idx < idMaps.starCount) stellata.setVector({ kind: 'star', idx });
+      if (idx >= 0 && idx < idMaps.starCount) stellata.focus.setVector({ kind: 'star', idx });
     }
   }
 
@@ -1353,7 +1353,7 @@ export function applyDecodedView(
   // below preserves that quaternion when it pins position again.
   // setCameraToDefault routes through defaultCamForMode so the elision
   // invariant lives in one place.
-  const willEnterObserve = view.mode === 'observe' && isHardTarget(stellata.getFocusedTarget());
+  const willEnterObserve = view.mode === 'observe' && isHardTarget(stellata.focus.getFocusedTarget());
   if (willEnterObserve && !hasCam) {
     setCameraToDefault(stellata, 'observe');
     controlsDirty = true;
@@ -1361,14 +1361,14 @@ export function applyDecodedView(
   if (controlsDirty) stellata.controls.update();
 
   if (willEnterObserve) {
-    stellata.setCameraMode('observe', { animate: false });
+    stellata.observe.setMode('observe', { animate: false });
   }
 
   // Chart applies after observe mode is engaged so the chart-mode
   // orchestrator's observe-gate sees the right cameraMode on the
   // resulting filter-change event.
-  if (view.chart && stellata.getCameraMode() === 'observe') {
-    stellata.setFilter({ chart: true });
+  if (view.chart && stellata.focus.getCameraMode() === 'observe') {
+    stellata.filters.setFilter({ chart: true });
   }
 
   // Legacy HIP POI lists resolve through idMaps (star-kind by
@@ -1376,7 +1376,7 @@ export function applyDecodedView(
   // kind. Entries that don't resolve are silently dropped (graceful
   // partial restore). SID POIs resolve synchronously rather than via
   // deferred intents: the star domain attaches at catalog load and
-  // main.ts awaits planetSystemsReady, both strictly before
+  // main.ts awaits kinds.planet.systemsReady, both strictly before
   // applyFromUrl — a pending POI sid is therefore as dead as an
   // unknown one.
   {
@@ -1395,7 +1395,7 @@ export function applyDecodedView(
         if (idx !== null) resolved.push({ kind: r.kind, idx });
       }
     }
-    if (resolved.length > 0) stellata.setPois(resolved);
+    if (resolved.length > 0) stellata.pois.set(resolved);
   }
 }
 

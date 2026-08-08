@@ -164,7 +164,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
   // section isn't visible. No latches, no allocations.
   const onFrame = () => {
     if (!visible) return;
-    const w = stellata.getWarpInfo();
+    const w = stellata.warp.getWarpInfo();
     if (!w) {
       const lastWarp = getLastWarp();
       const lastBlock = lastWarp
@@ -184,7 +184,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
       return;
     }
     // Active warp — assemble a single text block so we do one DOM write.
-    const phase = stellata.getWarpPhase();
+    const phase = stellata.warp.getWarpPhase();
     if (!phase) return;
     const distCam = stellata.camera.position.distanceTo(w.B);
     // Regime indicator on the phase line — outer / inner during Fly,

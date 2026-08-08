@@ -11,7 +11,7 @@ export function bindWarpButton(stellata: Stellata) {
   const btn = document.getElementById('warp-btn') as HTMLButtonElement;
 
   const render = () => {
-    if (stellata.getWarpActive()) {
+    if (stellata.warp.isActive()) {
       btn.hidden = false;
       btn.textContent = 'Skip';
     } else {
@@ -20,26 +20,26 @@ export function bindWarpButton(stellata: Stellata) {
   };
 
   btn.addEventListener('click', () => {
-    if (stellata.getWarpActive()) stellata.skipWarp();
+    if (stellata.warp.isActive()) stellata.warp.skip();
     btn.blur();
   });
 
   const triggerWarp = () => {
-    const dest = stellata.getVectorTarget();
-    if (dest !== null) stellata.warpTo(dest);
+    const dest = stellata.focus.getVectorTarget();
+    if (dest !== null) stellata.warp.warpTo(dest);
   };
 
   window.addEventListener('keydown', (e) => {
     // Ignore keys typed in search inputs so "w" doesn't trigger warp while
     // the user is typing a star name.
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (stellata.getWarpActive()) {
+    if (stellata.warp.isActive()) {
       if (e.key === 'Escape' || e.key === ' ') {
         e.preventDefault();
-        stellata.skipWarp();
+        stellata.warp.skip();
       }
     } else if (e.key === 'w' || e.key === 'W') {
-      if (stellata.getVectorTarget() !== null) {
+      if (stellata.focus.getVectorTarget() !== null) {
         e.preventDefault();
         triggerWarp();
       }

@@ -15,7 +15,8 @@ inside a kind stays module-internal.
   `KindSearchEntry`.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
   list), the exhaustive `KindModules` mapped type,
-  `buildKindModules()`, and `mergeKindDetailBinds()`.
+  `buildKindModules()`, `displayNameOf()`, `collectKindPicks()`, and
+  `mergeKindDetailBinds()`.
 - `kind-geometry.ts` — leg helpers shared across modules:
   `absCameraDistancePc(ctx, centerAbs)`, the card
   `cameraDistancePc` leg for every kind whose centre is absolute
@@ -49,9 +50,12 @@ holds its two instances) — and are only *assembled* here.
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`
-  order, ahead of every inline-wired layer, and probe leads because its
-  field must write this frame's samples before the planet layer's
-  moving-focal ride reads them (`../scene/README.md`).
+  order, ahead of every inline-wired layer — and it is that boundary,
+  not the order within the roster, that keeps every moving-body field
+  fresh for the moving-focal ride, which is the first INLINE entry
+  (`../scene/README.md`). No inter-kind draw dependency exists inside
+  the roster today; `kind-modules.test.ts` pins the order so a reorder
+  is a deliberate render-order change.
 - **Modules are stateful, per-shell instances.** `load` stores the
   artifact on the module (a load/attach pair passing the artifact
   through the shell would force `unknown`-typed hand-offs);
@@ -86,7 +90,7 @@ boot `Promise.all` → hand the record to `new Stellata({kinds})` →
 roster loops for SID domains (`sids()`, null ⇒ conclude), hover
 providers, label overlays, and the search corpus
 (`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters;
-boot awaits `stellata.planetSystemsReady` first, since planet corpus
+boot awaits `stellata.kinds.planet.systemsReady` first, since planet corpus
 rows bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
 attach-loops the roster at the layer-construction point; `setT` fans

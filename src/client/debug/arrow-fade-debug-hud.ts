@@ -71,7 +71,7 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
     // computed independently in distance-vector-overlay and not surfaced
     // here — open `debug.distVec()` if a future section is needed.
     const alpha = stellata.hud.getCurrentFadeAlpha();
-    const focused = stellata.getFocusedStar();
+    const focused = stellata.focus.getFocusedStar();
     const discRadius = focused !== null
       ? renderedDiscPxAtPeak({
           catalog: stellata.catalog,
@@ -99,7 +99,7 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
     if (!visible) return;
 
     body.textContent =
-      `focus: ${focused}  mode: ${stellata.getCameraMode()}\n` +
+      `focus: ${focused}  mode: ${stellata.focus.getCameraMode()}\n` +
       `shaftStart: ${fmt(shaftStart)} px\n` +
       `discRadius (peak): ${fmt(discRadius)} px  range:[${fmt(latch.discMin)}, ${fmt(latch.discMax)}]\n` +
       `refLen: ${fmt(refLen)} px  coverage: ${fmt(coverage)}\n` +

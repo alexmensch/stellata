@@ -1,5 +1,5 @@
 // Planet / PlanetSystem contract + SOL_PLANETS table. Generic across
-// hosts; gating is via Stellata.getFocusedPlanetSystem(). See
+// hosts; gating is via FocusController.getFocusedPlanetSystem(). See
 // src/client/solar-system/README.md § Data model.
 
 import { AU_KM } from '../util/astronomy-constants';

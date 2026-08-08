@@ -129,7 +129,7 @@ export class MolecularClouds {
   private readonly pickViewDir = new THREE.Vector3();
   private readonly pickScreen: [number, number] = [0, 0];
 
-  // User-tunable from the dev console via `stellata.cloudLayer.set*()`.
+  // User-tunable from the dev console via `stellata.kinds.cloud.layer.set*()`.
   private rimGain = RIM_GAIN_DEFAULT;
 
   constructor(
@@ -296,9 +296,9 @@ export class MolecularClouds {
   /**
    * Console-accessible debug levers. Live-update the materials so
    * tweaking happens without restart. Examples:
-   *   stellata.cloudLayer.setOpacity(5)        // boost the rim glow
-   *   stellata.cloudLayer.setColor(0xff8844)   // override the rim blue
-   *   stellata.cloudLayer.setRimParams({ fresnelPower: 4 })
+   *   stellata.kinds.cloud.layer.setOpacity(5)        // boost the rim glow
+   *   stellata.kinds.cloud.layer.setColor(0xff8844)   // override the rim blue
+   *   stellata.kinds.cloud.layer.setRimParams({ fresnelPower: 4 })
    */
   setOpacity(x: number) {
     this.rimGain = Math.max(0, x);

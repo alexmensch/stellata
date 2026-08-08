@@ -29,7 +29,7 @@ import { bindStatisticGate } from './statistic/statistic-attachment';
  *  Milky Way, the planet layers and the Local Group glow — emits physical
  *  luminance, so the target is the default path and the operator runs
  *  once at the resolve.
- *  `stellata.setHdrEnabled(false)` is the A/B: it parks every emitter on
+ *  `stellata.hdr.setEnabled(false)` is the A/B: it parks every emitter on
  *  its inline operator and returns chrome to authored colours
  *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value. */
 export const HDR_DEFAULT_ENABLED = true;

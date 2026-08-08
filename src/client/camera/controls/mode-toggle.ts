@@ -19,14 +19,14 @@ export function bindModeToggle(stellata: Stellata) {
       if (btn.disabled) return;
       const mode = btn.dataset.mode;
       if (mode === 'navigate' || mode === 'observe') {
-        stellata.setCameraMode(mode);
+        stellata.observe.setMode(mode);
       }
     });
   }
 
   const sync = () => {
-    const mode = stellata.getCameraMode();
-    const hasFocus = isHardTarget(stellata.getFocusedTarget());
+    const mode = stellata.focus.getCameraMode();
+    const hasFocus = isHardTarget(stellata.focus.getFocusedTarget());
     for (const btn of buttons) {
       const btnMode = btn.dataset.mode;
       btn.classList.toggle('on', btnMode === mode);

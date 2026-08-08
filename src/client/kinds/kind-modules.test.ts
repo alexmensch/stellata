@@ -8,6 +8,7 @@ import type { ObjectKindModule } from './kind-module';
 import {
   buildKindModules,
   collectKindPicks,
+  displayNameOf,
   KIND_ROSTER,
   mergeKindDetailBinds,
   type KindModules,
@@ -20,9 +21,13 @@ describe('KIND_ROSTER', () => {
     expect(new Set(KIND_ROSTER).size).toBe(KIND_ROSTER.length);
   });
 
-  it('leads with probe — its field must update before the planet layer', () => {
-    expect(KIND_ROSTER[0]).toBe('probe');
-    expect(KIND_ROSTER.indexOf('probe')).toBeLessThan(KIND_ROSTER.indexOf('planet'));
+  // Roster order IS module-layer update order, so a reorder changes
+  // what renders when. No inter-kind draw dependency exists inside the
+  // roster — the moving-focal ride reads every module field from the
+  // first INLINE entry, after the whole roster has updated — so this
+  // pins deliberateness, not a dependency.
+  it('pins the exact order — a reorder is a render-order change', () => {
+    expect([...KIND_ROSTER]).toEqual(['probe', 'planet', 'star', 'cloud', 'lg', 'shell']);
   });
 });
 
@@ -79,6 +84,29 @@ describe('collectKindPicks', () => {
   it('skips a module with no hover provider', () => {
     expect(collectKindPicks(recordWith('probe', {}))).toEqual({});
     expect(collectKindPicks(buildKindModules()).probe).toBeTypeOf('function');
+  });
+});
+
+describe('displayNameOf', () => {
+  it('routes star to the injected callback, never the roster', () => {
+    const name = displayNameOf(recordWith('probe', {
+      displayName: () => 'Voyager 1',
+    }), { kind: 'star', idx: 7 }, (idx) => `star-${idx}`);
+    expect(name).toBe('star-7');
+  });
+
+  it('routes a module kind to its displayName leg', () => {
+    const name = displayNameOf(recordWith('probe', {
+      displayName: (idx) => `probe-${idx}`,
+    }), { kind: 'probe', idx: 2 }, () => 'unused');
+    expect(name).toBe('probe-2');
+  });
+
+  it("answers '' for a kind whose module row is null", () => {
+    const name = displayNameOf(recordWith('probe', {
+      displayName: () => 'Voyager 1',
+    }), { kind: 'cloud', idx: 0 }, () => 'unused');
+    expect(name).toBe('');
   });
 });
 

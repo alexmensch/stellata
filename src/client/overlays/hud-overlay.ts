@@ -93,7 +93,7 @@ export interface HudUpdateOpts {
   /** Steady-state camera mode. */
   cameraMode: 'navigate' | 'observe';
   /** Eased progress of the in-flight observe transition, or null. Driven
-   *  by Stellata.getObserveTransitionProgress(). */
+   *  by ObserveTransition.getProgress(). */
   transition: { f: number; kind: 'enter' | 'exit' } | null;
   /** Focused star's peak-amplitude rendered disc *radius* in CSS pixels,
    *  or 0 when no star is focused. The Sol/GC chevrons fade together once

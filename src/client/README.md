@@ -71,6 +71,25 @@ themselves.
   `binaries/` and `solar-system/`.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
 
+## Public surface of `Stellata`
+
+The shell exposes its controllers as readonly namespaces rather than
+forwarding to them: `focus`, `warp`, `observe`, `aim`, `filters`,
+`exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
+`milkyway` / `hud` layer handles and `chartLabels`. Callers write
+`stellata.filters.setFilter(patch)`; each namespace's own README is the
+reference for what it answers. `camera/README.md` § Camera mode covers
+the one split pair (read on `focus`, write on `observe`).
+
+**A method on the shell itself is composition, not forwarding** — it
+does something no single controller can. Keep that property when adding
+one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
+`aimAt` / `aimAtConstellation` (cross-controller busy gates),
+`isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
+(clockJumped fan-out), the `FrameAnchor` recentre trio, `setMonochrome`,
+the `attach*` family, and the star-kind reads still inline pending the
+star module. A new zero-logic pass-through belongs on the controller.
+
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed

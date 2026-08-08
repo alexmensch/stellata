@@ -1,7 +1,7 @@
 // The kind-module roster: KIND_ROSTER order + buildKindModules record.
 // See ./README.md.
 
-import type { TargetKind } from '../camera/focus/focus-target';
+import type { Target, TargetKind } from '../camera/focus/focus-target';
 import { createShellKindModule } from '../fresnel-shell/shell-module';
 import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
@@ -13,9 +13,10 @@ import {
 import type { KindPick, ObjectKindModule } from './kind-module';
 
 /** Explicit ordered roster — attach order IS scene-layer update order
- *  for module-supplied layers, and module layers update before every
- *  inline-wired layer. Probe leads: its field must write this frame's
- *  samples before the planet layer's moving-focal ride reads them. */
+ *  for module-supplied layers, and every module layer updates before
+ *  every inline-wired layer. That boundary, not the order within this
+ *  list, is what keeps the moving-body fields fresh for the
+ *  moving-focal ride (`../scene/README.md`). */
 export const KIND_ROSTER = [
   'probe',
   'planet',
@@ -55,6 +56,19 @@ export function buildKindModules() {
 }
 
 export type BuiltKindModules = ReturnType<typeof buildKindModules>;
+
+/** Display name for any Target through the module roster. The star kind
+ *  is the one injected callback until its module lands (the two callers
+ *  resolve star names from different corpora); a null module row or a
+ *  nameless index answers '' — callers pick their own fallback. */
+export function displayNameOf(
+  modules: KindModules,
+  t: Target,
+  starName: (idx: number) => string,
+): string {
+  if (t.kind === 'star') return starName(t.idx);
+  return modules[t.kind]?.displayName(t.idx) ?? '';
+}
 
 /** Click-pick surfaces for `Picker.pickKindHit`, taken from each
  *  module's hover provider so the click FSM and the hover engine run

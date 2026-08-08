@@ -75,7 +75,7 @@ ride `chartStarNameLabels` (no separate planet-label element — uadc.3
 gave planets star-style labels), and `chartVariableRings` gates **both**
 the variable rings and the binary wings (one row for the paired glyphs).
 `milkyWayIsobar` has no per-frame reader — it *pushes* through its bind
-(`setMilkywayIsobar` + `applyMilkywayEnabled`); the MW group is enabled
+(`MilkyWay.setIsobar` + `applyMilkywayEnabled`); the MW group is enabled
 when either the band (realistic) or the isobar (chart) is permitted.
 
 **What `physical` means in the realistic column:** the naked-eye scene —
@@ -131,6 +131,15 @@ fan-out simply omits the hook (e.g. the heliopause has no per-frame
 update — its visibility is event-driven, and `chart-labels` registers
 `dispose` alone because its per-frame work rides the `'frame'` event
 under `chart-mode.ts`'s start/stop gate).
+
+**Not every entry owns a layer.** The first inline entry owns no GPU
+resources at all (`dispose` is empty): it exists to sequence the
+moving-focal ride between the module layers' position writes and the
+planet mesh's camera read, both of which belong to other owners. The
+registry is the only place that expresses "between these two", so a
+sequencing-only entry is the intended shape rather than a smell — but
+it is the exception, and it is spelled out here so the next one has to
+justify itself.
 
 Not in the registry: camera controllers, the star pipeline, and the
 extinction prepass — they aren't scene layers and keep explicit

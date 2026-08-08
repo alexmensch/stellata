@@ -66,7 +66,7 @@ shortcut switch):
    focus. Closes both modals (idempotent) and `preventDefault`s.
 2. **Other foreground modals** (`.modal`) — return without action so
    their own document listener can close them.
-3. **Active warp** — return so `warp-button.ts` can run `skipWarp()`.
+3. **Active warp** — return so `warp-button.ts` can run `stellata.warp.skip()`.
 4. **Editable target** — return so `search.ts` / typeahead can handle
    their own ESC (clear dropdown + blur).
 5. Otherwise run the cascade.
@@ -233,7 +233,7 @@ loop. If you add a filter field, remember to handle it in the panel's
 `syncFromFilter`.
 
 The FOV slider's reverse-sync is the one carve-out: it reads
-`stellata.getCameraFov()` directly because FOV lives on the camera,
+`stellata.filters.getCameraFov()` directly because FOV lives on the camera,
 not in `FilterState`. `setCameraFov` fires the filter-change handlers
 so the slider re-syncs after a debug-panel or URL-restore change.
 

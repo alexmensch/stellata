@@ -62,7 +62,7 @@ export function bindConstellationTypeahead(stellata: Stellata) {
     runQuery: (q) => filterConstellations(entries, q),
     rowFor: (e) => ({ primary: e.name, sub: e.code }),
     onSelect: (e) => {
-      stellata.setFilter({ highlightCon: e.idx });
+      stellata.filters.setFilter({ highlightCon: e.idx });
       // The synthetic None entry has no constellation to aim at — picking
       // it just clears the highlight.
       if (e.idx >= 0) stellata.aimAtConstellation(e.idx);
@@ -71,7 +71,7 @@ export function bindConstellationTypeahead(stellata: Stellata) {
 
   // Reverse-sync from filter state — URL restore, "None"-pick, etc.
   const syncFromFilter = () => {
-    typeahead.setName(nameForIdx(stellata.getFilter().highlightCon));
+    typeahead.setName(nameForIdx(stellata.filters.getFilter().highlightCon));
   };
   stellata.on('filter', syncFromFilter);
   syncFromFilter();

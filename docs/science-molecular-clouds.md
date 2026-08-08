@@ -434,7 +434,7 @@ Chart mode renders the rim meshes as **stippled silhouette outlines**
 (the SkyAtlas 2000 nebula convention — an fwidth-scaled contour where
 n·v → 0, masked by a screen-space dot grid) and hides the absorption.
 Intensity constants are named uniforms with dev-console levers
-(`stellata.cloudLayer.*`).
+(`stellata.kinds.cloud.layer.*`).
 
 ### 9.1 Sampling and anti-aliasing — banding is the known failure mode
 

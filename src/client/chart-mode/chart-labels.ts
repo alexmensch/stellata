@@ -346,7 +346,7 @@ export class ChartLabels {
   private rebuildEligible(): void {
     const { variableIdxs, binaryIdxs, distSolCache } = this;
     if (!variableIdxs || !binaryIdxs || !distSolCache) return;
-    const f = this.stellata.getFilter();
+    const f = this.stellata.filters.getFilter();
     const cat = this.stellata.catalog;
     this.variableEligible = filterByDistAndSpect(
       variableIdxs, distSolCache, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
@@ -376,7 +376,7 @@ export class ChartLabels {
     if (!layer || !glyphLayer) return;
     const labelLayer = layer;
     const glyphs = glyphLayer;
-    const f = stellata.getFilter();
+    const f = stellata.filters.getFilter();
     const camera = stellata.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -580,7 +580,7 @@ export class ChartLabels {
     // same magnitude rule as the ink disc itself (uadc.3 decision:
     // magnitude disc + star-style name label, no glyph vocabulary).
     perfMark('chart.planets');
-    const planetField = stellata.planetField;
+    const planetField = stellata.kinds.planet.field;
     if (showStarNames) for (let i = 0; i < planetField.liveInstanceCount; i++) {
       const planet = planetField.planetAt(i);
       if (!planet) continue;

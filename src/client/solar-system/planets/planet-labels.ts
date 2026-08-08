@@ -34,7 +34,7 @@ export function createPlanetLabels(stellata: Stellata): void {
 
   function rebuildEntries(): void {
     clearEntries();
-    const ps = stellata.getFocusedPlanetSystem();
+    const ps = stellata.focus.getFocusedPlanetSystem();
     if (!ps) return;
     const NS = 'http://www.w3.org/2000/svg';
     for (const p of ps.planets) {
@@ -95,9 +95,9 @@ export function createPlanetLabels(stellata: Stellata): void {
 
     // The observe-anchor body is shader-hidden (uHideIdx); its label
     // must not float alone at the camera's own position.
-    const ps = stellata.getFocusedPlanetSystem();
-    const hiddenFlat = stellata.planetField.hiddenInstanceIdx;
-    const hiddenHost = hiddenFlat >= 0 ? stellata.planetField.hostPlanetOf(hiddenFlat) : null;
+    const ps = stellata.focus.getFocusedPlanetSystem();
+    const hiddenFlat = stellata.kinds.planet.field.hiddenInstanceIdx;
+    const hiddenHost = hiddenFlat >= 0 ? stellata.kinds.planet.field.hostPlanetOf(hiddenFlat) : null;
     const hiddenPlanetIdx =
       hiddenHost && ps && hiddenHost.hostStarIdx === ps.hostStarIdx
         ? hiddenHost.planetIdx
@@ -110,7 +110,7 @@ export function createPlanetLabels(stellata: Stellata): void {
         e.el.style.display = 'none';
         continue;
       }
-      const flat = ps ? stellata.planetField.instanceIndexOf(ps.hostStarIdx, i) : null;
+      const flat = ps ? stellata.kinds.planet.field.instanceIndexOf(ps.hostStarIdx, i) : null;
       // Resolvability gate — hide a label whose body isn't meaningfully on
       // screen. Every body tracks its orbit ring (planets host-centred,
       // moons parent-centred): a ring the pixel-gap heuristic suppressed
@@ -122,7 +122,7 @@ export function createPlanetLabels(stellata: Stellata): void {
       }
       // A fully eclipsed body (behind the host's physical disc) renders
       // nothing — its label must not float alone on the host's disc.
-      if (flat !== null && stellata.planetField.eclipseDimForInstance(flat) <= 0) {
+      if (flat !== null && stellata.kinds.planet.field.eclipseDimForInstance(flat) <= 0) {
         e.el.style.display = 'none';
         continue;
       }

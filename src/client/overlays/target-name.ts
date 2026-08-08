@@ -1,37 +1,35 @@
 import type { Stellata } from '../stellata';
-import type { Target } from '../camera/focus/focus-target';
+import type { Target, TargetKind } from '../camera/focus/focus-target';
 import { resolveStarName } from '../format/star-companion-format';
+import { displayNameOf } from '../kinds/kind-modules';
 
-/** Display name for any Target kind — the shared per-kind lookup behind
- *  the POI overlay labels and the distance-vector destination label.
- *  Star names live on the search corpus (`starLabels`); every migrated
- *  kind answers through its module's `displayName` leg. The `switch`
- *  returns on every kind so a new `TargetKind` fails `tsc` (missing
- *  return) rather than silently falling through to the wrong catalog. */
+/** Exhaustive over TargetKind so a new kind fails tsc here rather than
+ *  silently labelling as ''. */
+const KIND_FALLBACK: Record<TargetKind, string> = {
+  star: 'Star',
+  planet: 'Planet',
+  probe: 'Probe',
+  cloud: 'Cloud',
+  lg: 'Galaxy',
+  shell: 'Shell',
+};
+
+/** Display name for any Target — the overlay binding of the kind-module
+ *  lookup (`displayNameOf`), shared by the POI overlay labels and the
+ *  distance-vector destination label. Star names resolve over the
+ *  search-corpus `starLabels`. */
 export function targetDisplayName(
   stellata: Stellata,
   starLabels: Map<number, string>,
   t: Target,
 ): string {
-  switch (t.kind) {
-    case 'star':
-      return resolveStarName(
-        {
-          starLabels,
-          gaiaSourceId: stellata.catalog.gaiaSourceId,
-          sid: stellata.catalog.sid,
-        },
-        t.idx,
-      );
-    case 'planet':
-      return stellata.kinds.planet.displayName(t.idx) || 'Planet';
-    case 'probe':
-      return stellata.kinds.probe.displayName(t.idx) || 'Probe';
-    case 'cloud':
-      return stellata.kinds.cloud.displayName(t.idx) || 'Cloud';
-    case 'lg':
-      return stellata.kinds.lg.displayName(t.idx) || 'Galaxy';
-    case 'shell':
-      return stellata.kinds.shell.displayName(t.idx) || 'Shell';
-  }
+  const name = displayNameOf(stellata.kinds, t, (idx) => resolveStarName(
+    {
+      starLabels,
+      gaiaSourceId: stellata.catalog.gaiaSourceId,
+      sid: stellata.catalog.sid,
+    },
+    idx,
+  ));
+  return name || KIND_FALLBACK[t.kind];
 }

@@ -23,8 +23,6 @@ import {
 (THREE.ShaderChunk as Record<string, string>)['stellata_dust_raymarch'] =
   dustRaymarchChunk;
 import { GalacticDisc } from './galactic/galactic-disc';
-import type { LocalGroupLayer } from './local-group/local-group';
-import type { LocalGroupEmission } from './local-group/local-group-emission';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
 import {
@@ -36,7 +34,6 @@ import {
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
-import type { MolecularClouds } from './molecular-clouds/molecular-clouds';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
@@ -54,11 +51,7 @@ import * as starPhysics from './camera/controls/star-physics';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
-import {
-  WarpController,
-  type WarpInfo,
-  type WarpPhaseInfo,
-} from './camera/warp/warp-controller';
+import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
 import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
@@ -111,8 +104,6 @@ import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
   type FilterState,
-  type InstrumentName,
-  type StarRenderParams,
 } from './filters/filter-state';
 import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
@@ -121,7 +112,6 @@ import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import { SceneLayerRegistry, updateWarpGatedRefLayer, type FrameCtx } from './scene/scene-layer';
 import {
-  type DetailLevel,
   type SceneElementBinds,
   type SceneElementId,
   SCENE_ELEMENT_IDS,
@@ -274,15 +264,15 @@ export class Stellata implements FrameAnchor {
   // Filter / preset / render-knob state + mutations live in
   // FilterController (filters/README.md); the shell reads the live
   // state through this getter for per-frame gates and dep closures.
-  private filters!: FilterController;
+  readonly filters!: FilterController;
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
   // Owns the exposure scalar and the three magnitude bounds derived from
   // it — instrument limit, just-visible threshold, population cull
   // (hdr/exposure/README.md § One writer, four slots).
-  private exposure!: ExposureController;
+  readonly exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
-  private adaptation!: SceneAdaptation;
+  readonly adaptation!: SceneAdaptation;
   private readonly reduction = new LuminanceReduction();
   private readonly drawingBufferSize = new THREE.Vector2();
 
@@ -302,23 +292,23 @@ export class Stellata implements FrameAnchor {
   private readonly layers = new SceneLayerRegistry();
   private frameCtx!: { -readonly [K in keyof FrameCtx]: FrameCtx[K] };
 
-  private observe!: ObserveTransition;
+  readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;
 
   private clock = new VirtualClock();
 
   // Focus, distance-vector destination, and cameraMode all live on
-  // FocusController (camera/focus/README.md) as Target sum types; the
-  // shell keeps thin public shims.
-  private focus!: FocusController;
+  // FocusController (camera/focus/README.md) as Target sum types,
+  // exposed as a readonly namespace like every controller below.
+  readonly focus!: FocusController;
   private monochrome = false;
-  private warp!: WarpController;
-  private aim!: AimController;
+  readonly warp!: WarpController;
+  readonly aim!: AimController;
 
-  private poiStore!: PoiStore;
+  readonly pois!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
   // roll gestures. See camera/controls/input/README.md § Input controller.
-  private input!: InputController;
+  readonly input!: InputController;
 
   // Galactic reference layers. Disc fades in by camera-distance
   // from Sol and is always-on. The coordinate spheres are gated by
@@ -352,7 +342,7 @@ export class Stellata implements FrameAnchor {
   private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
-  private hudOverlay: HudOverlay;
+  readonly hud: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
    *  the chart activation predicate; the shell owns its lifetime. */
   readonly chartLabels = new ChartLabels(this);
@@ -360,7 +350,7 @@ export class Stellata implements FrameAnchor {
   // Milky Way analytic background. Constructed eagerly so the
   // band is on during first paint. Dust is wired in once the volumetric
   // texture attaches.
-  private milkyway: MilkyWay;
+  readonly milkyway: MilkyWay;
 
   // Reference to the most recently attached DustField — kept solely so
   // dispose() can release the ~128 MiB Data3DTexture. attachDust(null)
@@ -380,11 +370,6 @@ export class Stellata implements FrameAnchor {
   // and pickers dispatch `focusables[target.kind].<leg>(target.idx)`
   // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
-
-  /** Resolves once every boot-time planet system has attached to the
-   *  body field (Sol today). URL restore awaits it before applying a
-   *  planet-focus ref. Thin forward to the planet module. */
-  get planetSystemsReady(): Promise<void> { return this.kinds.planet.systemsReady; }
 
   constructor({ canvas, catalog, kinds }: StellataOptions) {
     this.catalog = catalog;
@@ -553,9 +538,9 @@ export class Stellata implements FrameAnchor {
       reduced: () => this.reduction.current(),
     });
     // Kind-module attach, in roster order. Each returned scene layer
-    // registers HERE — before every inline-wired layer — so module
-    // layers update first; the probe field must write this frame's
-    // samples before the planet layer's moving-focal ride reads them.
+    // registers HERE — before every inline-wired layer — so every
+    // moving-body field has written this frame's positions by the time
+    // the first inline entry runs the moving-focal ride.
     const kindCtx: KindContext = {
       scene: this.scene,
       camera: this.camera,
@@ -625,9 +610,7 @@ export class Stellata implements FrameAnchor {
     // by the click FSM in onPointerUp and by the hover providers.
     // Kind-module surfaces dispatch through `kindPicks`; the remaining
     // getters cover the inline-wired star path.
-    // `picker` is `readonly` — assigned via writable cast since field
-    // initialisation in TS requires bypassing the readonly guard here.
-    (this as { picker: Picker }).picker = new Picker({
+    this.picker = new Picker({
       domElement: this.renderer.domElement,
       camera: this.camera,
       catalog: this.catalog,
@@ -674,7 +657,7 @@ export class Stellata implements FrameAnchor {
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
     // re-registration. See camera/focus/README.md § FocusableProviders.
-    (this as { focusables: FocusableProviders }).focusables = {
+    this.focusables = {
       star: {
         anchorInto: (idx, out) => {
           if (idx < 0 || idx >= this.catalog.count) return false;
@@ -786,7 +769,7 @@ export class Stellata implements FrameAnchor {
     // local-frame position is just `-worldOffset` (Sol is the catalog
     // origin); GC sits at GALACTIC_CENTRE_PC in absolute space. Handlers are
     // owned by HudOverlay so its dispose() can detach them.
-    this.hudOverlay = new HudOverlay(
+    this.hud = new HudOverlay(
       hudRing, solPath, solBg, gcPath, gcBg, solLabel, gcLabel,
       () => this.aimAt(this.tmpVec3b.copy(this.worldOffset).negate()),
       () => this.aimAt(this.tmpVec3b.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset)),
@@ -846,7 +829,7 @@ export class Stellata implements FrameAnchor {
     this.filters.recomputeStarPxSizes();
     this.syncPixelSolidAngle();
 
-    this.poiStore = new PoiStore({
+    this.pois = new PoiStore({
       pinnable: {
         star: (idx) => idx >= 0 && idx < catalog.count && catalog.sid[idx] !== 0,
         // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
@@ -882,7 +865,8 @@ export class Stellata implements FrameAnchor {
     // while its label, a per-frame reader, showed. `resetOverrides: false`
     // so a later `?v=` restore still owns the within-scene toggles.
     this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
-    this.attachEvents();
+    window.addEventListener('resize', this.onResize);
+    this.input = this.createInputController();
     this.animate();
   }
 
@@ -916,8 +900,8 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       update: (ctx) => {
         // Ride runs right after every moving-body field wrote this
-        // frame's positions — the planet module's field layer is the
-        // last of those in the roster — mirroring the binary ride's
+        // frame's positions — the whole module roster updates ahead of
+        // this, the first inline entry — mirroring the binary ride's
         // placement after its orbit walk.
         this.applyMovingFocalRide();
         // Mesh LOD sizes off the post-ride camera: pre-ride it would
@@ -1020,7 +1004,7 @@ export class Stellata implements FrameAnchor {
         // and it is the single owner of the gone-at-zero-alpha cut.
         const selected = this.filter.coordSphere;
         if (selected !== 'none' && !coordSphereReachableAt(selected, ctx.distFromSol)) {
-          this.setFilter({ coordSphere: 'none' });
+          this.filters.setFilter({ coordSphere: 'none' });
         }
         for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
           const sphere = this.coordSpheres[frame];
@@ -1042,8 +1026,8 @@ export class Stellata implements FrameAnchor {
     });
     this.layers.register({
       update: (ctx) => this.updateHud(ctx.warpActive),
-      setMonochrome: (on) => this.hudOverlay.setMonochrome(on),
-      dispose: () => this.hudOverlay.dispose(),
+      setMonochrome: (on) => this.hud.setMonochrome(on),
+      dispose: () => this.hud.dispose(),
     });
     this.layers.register({
       // Re-anchors the skybox mesh to camera.position and refreshes the
@@ -1071,26 +1055,6 @@ export class Stellata implements FrameAnchor {
   ): () => void {
     return this.bus.on(name, handler);
   }
-  getFocusedStar(): number | null { return this.focus.getFocusedStar(); }
-  /** Focused object of any kind, or null. Kind-dispatching consumers
-   *  pair this with `focusables[kind]`; star-only affordances keep
-   *  guarding on `getFocusedStar()`. */
-  getFocusedTarget(): Target | null { return this.focus.getFocusedTarget(); }
-  /** Focused hard-kind (star / planet) Target, or null when the focus is
-   *  empty or soft. Pairs with `focalLocalPositionInto` for overlays that
-   *  anchor on the focused object regardless of kind. */
-  getFocusedHardTarget(): Target | null { return this.focus.getFocusedHardTarget(); }
-  /** Focused object's live local position (any hard kind) into `out`;
-   *  false when no hard focus is set. Kind-generic — overlays anchoring
-   *  on "the focused object" use this, never a star-only buffer read. */
-  focalLocalPositionInto(out: THREE.Vector3): boolean {
-    return this.focus.focalLocalPositionInto(out);
-  }
-  /** Planet system for the currently focused star, or null if the focus
-   *  has none (or has not finished loading). The solar-system rendering
-   *  layer gates on this — renderers also subscribe to
-   *  the 'planetSystem' event to react to focus swaps. */
-  getFocusedPlanetSystem(): PlanetSystem | null { return this.focus.getFocusedPlanetSystem(); }
   /** True when planet orbit rings OR binary orbit paths are currently
    *  circumscribing the focus — either already marks the focal object, so
    *  the focus ring suppresses itself. Frame-coherent — the scene-layer
@@ -1164,8 +1128,6 @@ export class Stellata implements FrameAnchor {
   setWorldOffset(absX: number, absY: number, absZ: number): void {
     this.recenterOrigin(this.tmpRecenter.set(absX, absY, absZ));
   }
-  /** Distance-vector destination of any kind, or null. */
-  getVectorTarget(): Target | null { return this.focus.getVectorTarget(); }
 
   /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
   get timeClock(): VirtualClock { return this.clock; }
@@ -1193,29 +1155,6 @@ export class Stellata implements FrameAnchor {
     this.bus.emit('state');
   }
   getMonochrome(): boolean { return this.monochrome; }
-  getWarpActive(): boolean { return this.warp.isActive(); }
-
-  /** Jump to the end state of an in-flight warp. Equivalent to letting
-   *  the animation run to completion. No-op when idle. Thin shim over
-   *  WarpController. */
-  skipWarp(): void { this.warp.skip(); }
-
-  /** Read-only snapshot of in-flight warp state for the debug-panel
-   *  warp tuning readout. Thin shim over WarpController.getWarpPhase. */
-  getWarpPhase(): WarpPhaseInfo | null { return this.warp.getWarpPhase(); }
-
-  /** Warp endpoints + destination identity for read-only consumers (e.g.
-   *  the scale-bar focus indicator). B is a shared scratch slot owned by
-   *  WarpController. Callers must NOT mutate either, and must not retain
-   *  B across frames. Thin shim over WarpController.getWarpInfo. */
-  getWarpInfo(): WarpInfo | null { return this.warp.getWarpInfo(); }
-
-  getCameraMode(): CameraMode { return this.focus.getCameraMode(); }
-  // True when an observe-mode transition (enter or exit) is in flight.
-  // The 'unfocus' kind is excluded — it reuses the controller's state slot
-  // for a navigate-mode lerp and shouldn't surface to UI/overlay code
-  // gating on observe-mode visibility.
-  isObserveTransitionActive(): boolean { return this.observe.isActive(); }
 
   // True whenever a camera-position lerp is in flight — warp, observe
   // enter/exit, OR the navigate-mode unfocus zoom-out. URL-state writes
@@ -1224,47 +1163,6 @@ export class Stellata implements FrameAnchor {
   isCameraTransitionActive(): boolean {
     return this.warp.isActive() || this.observe.isAnyActive();
   }
-
-  /** True while *any* camera-driving animation is in flight: warp,
-   *  aim-slerp, focus-park lerp, OR an observe transition (enter / exit /
-   *  navigate-close-zoom unfocus). Sites that need a uniform "the camera
-   *  is currently animating" gate should call this. Several call sites in
-   *  this file deliberately use a narrower predicate — those are
-   *  intentional: focus-change can interrupt aim but not warp, cosmetic
-   *  cloud picking is suppressed during warp only, etc. */
-  isCameraBusy(): boolean { return this.focus.isCameraBusy(); }
-
-  // Cancellation hooks for the focus-park lerp) and the
- // navigate-mode unfocus lerp — both must clear before a new
-  // camera-changing action (focus, warp, aim, click) proceeds. Forward
-  // to FocusController which owns the focus-park slot and delegates the
-  // unfocus path to ObserveTransition.
-  cancelFocusLerp() { this.focus.cancelFocusLerp(); }
-  cancelUnfocusLerp() { this.focus.cancelUnfocusLerp(); }
-
-  /** Threshold squared-length below which `controls.target` engages the
-   *  focused-star pin. Surfaced for the pin debug HUD so the displayed
-   *  rule matches the runtime constant exactly. */
-  getPinEngageThresholdSq(): number { return this.focus.getPinEngageThresholdSq(); }
-
-  /** Whether the focused-star pin (uPinFocusToCenter) would engage right
-   *  now, mirroring the per-frame guard in animate(). Read by the pin
-   *  section of the unified debug panel (`debug.panel()`) to display
-   *  live state. See FocusController.isPinEngaged for the gating rules. */
-  isPinEngaged(): boolean { return this.focus.isPinEngaged(); }
-
-  /** True while an aim animation is in flight. Mirror of getWarpActive
-   *  for the camera's other interpolated transition. */
-  isAimActive(): boolean { return this.aim.isActive(); }
-
-  // Eased progress of the in-flight observe-mode camera translate, or
-  // null if no transition is active. Forwards to the controller; see
-  // ObserveTransition.getProgress.
-  getObserveTransitionProgress(): { f: number; kind: 'enter' | 'exit' } | null {
-    return this.observe.getProgress();
-  }
-
-  // Points of interest — thin shims over PoiStore (poi/README.md).
 
   /** Hide/unhide the rendered body of a hard-focus target — observe
    *  parks the camera AT the object, whose disc would render from the
@@ -1278,25 +1176,6 @@ export class Stellata implements FrameAnchor {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
     }
   }
-
-  getPois(): readonly Target[] { return this.poiStore.get(); }
-  togglePoi(target: Target): boolean { return this.poiStore.toggle(target); }
-  setPois(targets: readonly Target[]) { this.poiStore.set(targets); }
-  clearPois() { this.poiStore.clear(); }
-
-  // Mode-switch entry point. Forwards to the ObserveTransition
-  // controller; see camera/observe-transition.ts for the full FSM
-  // (re-entry / focus-gate / animate=false guards + bus emit shape).
-  // Public so the mode-pill click handler, keyboard 'O' shortcut, and
-  // url-state restore can drive mode changes through a single surface.
-  setCameraMode(mode: CameraMode, opts: { animate?: boolean } = {}) {
-    this.observe.setMode(mode, opts);
-  }
-
-  // Focus / vector / travel routing lives on FocusController; the thin
-  // shims below preserve the public surface for callers outside the
-  // camera/ folder (URL state, search, POI overlay).
-  setFocus(idx: number | null) { this.focus.setFocus(idx); }
 
   private tmpRecenter = new THREE.Vector3();
 
@@ -1657,38 +1536,6 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass?.setEnabled(on);
   }
 
-  /** The HDR seam, off by default until the emitting layers carry
-   *  physical luminance (src/client/hdr/README.md § Ship gate). false is
-   *  the pre-HDR path entirely — direct to canvas, no target, no
-   *  tone-map, chrome at authored colours — and the same path a context
-   *  without a float-renderable buffer takes. true allocates the target
-   *  on the next frame. */
-  setHdrEnabled(on: boolean) {
-    this.hdr.setEnabled(on);
-  }
-
-  /** Dev-console A/B switch for the tone-map operator alone, keeping the
-   *  HDR target bound, to isolate the target from the operator. Built-in
-   *  material chrome renders dark in this mode — the linear target, not
-   *  the resolve, is what drops its sRGB encode; use setHdrEnabled for a
-   *  whole-frame comparison. */
-  setTonemapEnabled(on: boolean) {
-    this.hdr.setTonemapEnabled(on);
-  }
-
-  /** The operator's two shape knobs, live, for probing the display axis by
-   *  eye — `DR_MAG` (magnitudes from the threshold floor to full white)
-   *  and the highlight desaturation strength. Both re-author chrome, since
-   *  its mapping inverts against the white point `DR_MAG` sets. */
-  setDynamicRangeMag(drMag: number) { this.hdr.setDynamicRangeMag(drMag); }
-  getDynamicRangeMag(): number { return this.hdr.getDynamicRangeMag(); }
-  setHighlightDesat(desat: number) { this.hdr.setHighlightDesat(desat); }
-  getHighlightDesat(): number { return this.hdr.getHighlightDesat(); }
-
-  /** Direct access to the Milky Way layer for dev-console tuning
-   *  (e.g. `stellata.milkywayLayer.setGlowMagOffset(30)`). */
-  get milkywayLayer(): MilkyWay { return this.milkyway; }
-
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
    *  once the async load resolves, then binds the artifact's other two
@@ -1729,31 +1576,11 @@ export class Stellata implements FrameAnchor {
     return namer.nameAt(abs.add(this.worldOffset));
   }
 
-  /** Direct access to the Local Group wireframe layer for dev-console
-   *  reads. null when local-group.json is absent. */
-  get localGroup(): LocalGroupLayer | null { return this.kinds.lg.layer; }
-
-  /** Dev-console access to the LG emission layer (brightness /
-   *  glow-mag-offset levers). null when local-group.json is absent. */
-  get localGroupEmission(): LocalGroupEmission | null { return this.kinds.lg.emission; }
-
   /** Catalog of clouds, or null when the cloud module has no layer.
    *  Exposed for chart-mode name rows. */
   getCloudCatalog(): CloudCatalog | null {
     const layer = this.kinds.cloud.layer;
     return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
-  }
-
-  /** Direct access to the cloud render layer for dev-console tuning
-   *  (`stellata.cloudLayer.setOpacity(0.5)` etc.). null when the
-   *  clouds.json artifact is absent. */
-  get cloudLayer(): MolecularClouds | null { return this.kinds.cloud.layer; }
-
-  /** Kind-agnostic travel — see FocusController.flyTo. Hard kinds park
-   *  via the recentring focus path; soft kinds ride the shared
-   *  focus-park path. */
-  flyTo(target: Target, opts: { animate?: boolean } = {}) {
-    this.focus.flyTo(target, opts);
   }
 
   private tmpVec3b = new THREE.Vector3();
@@ -1823,51 +1650,14 @@ export class Stellata implements FrameAnchor {
       starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms;
   }
 
-  /** Set (any kind) or clear (null) the distance-vector destination. */
-  setVector(target: Target | null) { this.focus.setVector(target); }
-
-  /** Click-handler entry point for "clear whatever's focused" —
-   *  including the vector-only case (nothing focused, measurement
-   *  vector drawn). See FocusController.unfocus. */
-  unfocus(opts: { animate?: boolean } = {}) { this.focus.unfocus(opts); }
-
-  // Filter / preset / FOV / render-knob mutations — thin shims over
-  // FilterController (filters/README.md) preserving the public surface
-  // for controls.ts, url-state, keyboard shortcuts, and the debug panel.
-  setFilter(patch: Partial<FilterState>) { this.filters.setFilter(patch); }
-  getFilter(): Readonly<FilterState> { return this.filters.getFilter(); }
-  setInstrument(name: InstrumentName) { this.filters.setInstrument(name); }
+  /** FOV mutations stay a shell dispatcher (not `filters.setCameraFov`
+   *  directly): every surface-brightness emitter scales by the pixel
+   *  solid angle, so a FOV write must reach the HDR seam in the same
+   *  call. */
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
   }
-  getCameraFov(): number { return this.filters.getCameraFov(); }
-  setStarKMultiplier(m: number) { this.filters.setStarKMultiplier(m); }
-  getStarKMultiplier(): number { return this.filters.getStarKMultiplier(); }
-  getStarKMultiplierDefault(): number { return this.filters.getStarKMultiplierDefault(); }
-  /** The derived exaggeration K in effect now — the multiplier above is
-   *  only its middle term (`filters/README.md` § Star pixel size). */
-  getStarExaggerationK(): number { return this.filters.getStarExaggerationK(); }
-  getArcsecPerPx(): number { return this.filters.getArcsecPerPx(); }
-  /** Manual EV trim, ±EV_MAX_STOPS in stops (hdr/README.md
-   *  § The three terms). */
-  setEv(ev: number) { this.exposure.setEv(ev); }
-  getEv(): number { return this.exposure.getEv(); }
-  /** What the observer can perceive right now — instrument limit,
-   *  adaptation and trim together. The panel's readout. */
-  getEffectiveLimitMag(): number { return this.exposure.getEffectiveLimitMag(); }
-  getAdaptationDm(): number { return this.exposure.getAdaptationDm(); }
-  /** Area-weighted mean scene luminance, the statistic behind the
-   *  perception branch of the cut. */
-  getSceneMeanLuminance(): number { return this.adaptation.getMeanLuminance(); }
-  /** Brightest visible per-pixel luminance, the statistic behind the
-   *  highlight guard. Meaningless without its sibling above — which
-   *  branch governs is `max` of the two cuts they imply. */
-  getScenePeakLuminance(): number { return this.adaptation.getPeakLuminance(); }
-  setStarRenderParams(patch: Partial<StarRenderParams>) {
-    this.filters.setStarRenderParams(patch);
-  }
-  getStarRenderParams(): StarRenderParams { return this.filters.getStarRenderParams(); }
 
   /** Stroke alpha `frame`'s sphere draws at from the camera's current distance
    *  from Sol. Its SVG edge labels ride the same value. */
@@ -1884,13 +1674,6 @@ export class Stellata implements FrameAnchor {
 
   // Declutter cycle. detailPermits is the per-frame read path layers gate
   // on (effective = permitted AND the layer's instance gates).
-  getDetailLevel(): DetailLevel { return this.filters.getDetailLevel(); }
-  applyDetailPreset(level: DetailLevel, resetOverrides = true) {
-    this.filters.applyDetailPreset(level, resetOverrides);
-  }
-  setSceneElementVisible(id: SceneElementId, on: boolean) {
-    this.filters.setSceneElementVisible(id, on);
-  }
   detailPermits(id: SceneElementId): boolean { return this.detailPermitted[id]; }
 
   // Per-element bind adapters (exhaustive over SceneElementId — a new
@@ -1915,7 +1698,7 @@ export class Stellata implements FrameAnchor {
       probeMarkers: set('probeMarkers'),
       milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
       milkyWayIsobar: set('milkyWayIsobar', (on) => {
-        this.setMilkywayIsobar(on);
+        this.milkyway.setIsobar(on);
         this.applyMilkywayEnabled();
       }),
       lgEmissionGlow: set('lgEmissionGlow', () => this.applyLgEmissionEnabled()),
@@ -1973,34 +1756,6 @@ export class Stellata implements FrameAnchor {
     this.bus.emit('state');
   }
 
-  /** Chart-mode isobar pass on/off for the milky-way layer. Driven by the
-   *  `milkyWayIsobar` detail bind, not called directly by chart-mode. */
-  setMilkywayIsobar(on: boolean) {
-    this.milkyway.setIsobar(on);
-  }
-
-  /** Focus a star — thin shim over FocusController.focusStar. The
-   *  click FSM in `onPointerUp`, the typeahead, and URL state restore
-   *  all call through here. */
-  focusStar(starIndex: number, opts: { animate?: boolean } = {}) {
-    this.focus.focusStar(starIndex, opts);
-  }
-
-  /** Orbit pivot moves to the object (any kind), the object becomes
-   *  the focus, the camera stays put. See FocusController.setOrbitTarget. */
-  setOrbitTarget(target: Target) { this.focus.setOrbitTarget(target); }
-
-  // The FocusTarget factories (makeFocusTarget / currentFocusTarget)
-  // live on FocusController — they close over the focus state, so they
-  // belong where that state lives. WarpController consumes them through
-  // the `FocusOps` seam.
-
-  /** Start an animated journey from the currently focused thing to
-   *  `target` (any kind). Thin shim over WarpController. */
-  warpTo(target: Target) {
-    this.warp.warpTo(target);
-  }
-
   // Swing the camera to face the selected constellation while keeping the
   // orbit target and orbit radius unchanged — only the camera's position on
   // the orbit sphere moves. The aim point is the brightness-weighted
@@ -2009,9 +1764,9 @@ export class Stellata implements FrameAnchor {
   // dominate from the user's current vantage, even when the user has
   // travelled deep into 3D space.
   aimAtConstellation(conIndex: number) {
-    this.cancelUnfocusLerp();
-    this.cancelFocusLerp();
-    if (this.isObserveTransitionActive()) return;
+    this.focus.cancelUnfocusLerp();
+    this.focus.cancelFocusLerp();
+    if (this.observe.isActive()) return;
     const cons = this.catalog.constellations;
     const lines = conIndex >= 0 && conIndex < cons.length ? cons[conIndex].lines : undefined;
     if (!lines || lines.length === 0) return;
@@ -2082,9 +1837,9 @@ export class Stellata implements FrameAnchor {
    */
   aimAt(pointLocal: THREE.Vector3) {
     if (this.warp.isActive() || this.aim.isActive()) return;
-    this.cancelUnfocusLerp();
-    this.cancelFocusLerp();
-    if (this.isObserveTransitionActive()) return;
+    this.focus.cancelUnfocusLerp();
+    this.focus.cancelFocusLerp();
+    if (this.observe.isActive()) return;
     this.aim.aimAt(pointLocal);
   }
 
@@ -2125,35 +1880,29 @@ export class Stellata implements FrameAnchor {
     return this._compositeSuppress[idx] === 1;
   }
 
-  /** The global planet-body field — Target {kind:'planet'} identity
-   *  (flat instance index ↔ host/planet) + per-body geometry accessors
-   *  consumed by chart labels, planet labels, and the URL id maps. */
-  get planetField(): PlanetBodyField { return this.planetBodyField; }
-
-  private attachEvents() {
-    window.addEventListener('resize', this.onResize);
-    this.input = new InputController({
+  private createInputController(): InputController {
+    return new InputController({
       canvas: this.renderer.domElement,
       camera: this.camera,
       controls: this.controls,
       picker: this.picker,
       bus: this.bus,
-      poiStore: this.poiStore,
+      poiStore: this.pois,
       referenceUp: this.referenceUp,
       getCameraMode: () => this.focus.getCameraMode(),
       getFilter: () => this.filter,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getVectorTarget: () => this.focus.getVectorTarget(),
-      setVector: (target) => this.setVector(target),
+      setVector: (target) => this.focus.setVector(target),
       isWarpActive: () => this.warp.isActive(),
       isAimActive: () => this.aim.isActive(),
-      isObserveTransitionActive: () => this.isObserveTransitionActive(),
-      cancelUnfocusLerp: () => this.cancelUnfocusLerp(),
-      cancelFocusLerp: () => this.cancelFocusLerp(),
-      flyTo: (target) => this.flyTo(target),
-      setOrbitTarget: (target) => this.setOrbitTarget(target),
-      unfocus: () => this.unfocus(),
-      togglePoi: (target) => this.togglePoi(target),
+      isObserveTransitionActive: () => this.observe.isActive(),
+      cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
+      cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+      flyTo: (target) => this.focus.flyTo(target),
+      setOrbitTarget: (target) => this.focus.setOrbitTarget(target),
+      unfocus: () => this.focus.unfocus(),
+      togglePoi: (target) => this.pois.toggle(target),
       aimAt: (p) => this.aimAt(p),
     });
   }
@@ -2205,17 +1954,6 @@ export class Stellata implements FrameAnchor {
   // scope. Adding a writer that retains the value across another
   // animate-stack method violates the contract.
   private _tmpAnimateLocal = new THREE.Vector3();
-
-  /** Public access to the HUD overlay — for the arrow-fade debug HUD only. */
-  get hud(): HudOverlay { return this.hudOverlay; }
-
- // parkDistForStar moved to FocusController — used by
-  // ObserveTransition's ObserveFocusOps seam and the focus-park lerp.
-
-  /** Canonical per-mode click semantics for any point object — the POI
-   *  overlay's on-screen labels route here alongside deferred canvas
-   *  clicks. See InputController.applyObjectClick. */
-  applyObjectClick(target: Target): boolean { return this.input.applyObjectClick(target); }
 
   private animate = () => {
     if (this.disposed) return;
@@ -2372,7 +2110,7 @@ export class Stellata implements FrameAnchor {
   // same as the disc / grid / LG wireframe entries in the registry).
   private updateHud(warpActive: boolean) {
     if (warpActive) {
-      this.hudOverlay.setVisible(false);
+      this.hud.setVisible(false);
       return;
     }
     // Refresh camera matrices before any SVG projection — controls.update()
@@ -2396,7 +2134,7 @@ export class Stellata implements FrameAnchor {
     // (ml8 symptom 1). The distance-vector overlay does the same in its
     // 'frame' handler against its own arrow length (ml8 symptom 2 / per-
     // arrow coverage from the bead's option B).
-    this.hudOverlay.update({
+    this.hud.update({
       enabled: this.filter.showHud,
       camera: this.camera,
       target: this.controls.target,
@@ -2405,7 +2143,7 @@ export class Stellata implements FrameAnchor {
       hideSolArrow: isSolFocus,
       sizeMaxPx: this.filter.sizeMax,
       cameraMode: this.focus.getCameraMode(),
-      transition: this.getObserveTransitionProgress(),
+      transition: this.observe.getProgress(),
       focusedDiscRadiusPx: this.getFocusedDiscRadiusPx(),
       w: window.innerWidth,
       h: window.innerHeight,
