@@ -98,8 +98,11 @@ view-uniform map, `solIndex`, and accessors for the model clock,
 constellation lookup, and the frame tick. Phase 3a added the two legs
 whose first consumers arrived with the soft kinds: `angularToPx()`
 (every projected-size leg) and `solAbsInto()` (the heliopause anchor;
-the planet kind's host attach is its second consumer). Exposure still
-waits for a consumer.
+the planet kind's host attach is its second consumer). Phase 3b added
+`starPhotometry()` (host-star absmag + floored radius for the planet
+host attach — the star module owns catalog access from phase 5) and
+the `systemMembership` read surface (hover roster cards). Exposure
+still waits for a consumer.
 
 ### Tier 2 — kind modules
 
@@ -321,7 +324,8 @@ dependency-linked in order. Sizing per bead-authoring rules.
 3. **Migrate the remaining non-star kinds** — soft kinds (cloud / lg /
    shell) **landed** (`molecular-clouds/cloud-module.ts`,
    `local-group/lg-module.ts`, `fresnel-shell/shell-module.ts`);
-   planet on its own (host-attach machinery). What the soft-kind pass
+   planet **landed** (`solar-system/planets/planet-module.ts`). What
+   the soft-kind pass
    settled: `ShellRegistry` became the shell module's internal runtime
    (two instances of one module, never a top-level registry); the
    shared label engine takes a narrow host interface `KindContext`
@@ -332,7 +336,17 @@ dependency-linked in order. Sizing per bead-authoring rules.
    the last release resets it; one pick per kind
    through `Picker.pickKindHit` — the cloud click's old warp gate is
    subsumed by the click FSM's `blocksClick()`, and the kind-specific
-   `Picker` methods and hover-provider files are gone.
+   `Picker` methods and hover-provider files are gone. What the planet
+   pass settled: the module owns the boot host attach behind a
+   `systemsReady` promise the shell forwards (`planetSystemsReady`);
+   the module's pick returns the FLAT Target index so one pick serves
+   click and hover, and search-corpus rows bake it (boot awaits
+   `systemsReady` before building the corpus); the moving-focal ride
+   and the mesh-layer update stay on the shell as the first inline
+   scene-layer entry — the ride must run between the module fields'
+   writes and the mesh's camera read — and the SVG planet labels stay
+   in `main.ts` (they read the orbit-rings layer + focus state, both
+   shell machinery).
 4. **Facade flattening.**
 5. **Engine-services extraction + star module** — frame/anchor service
    out of `StarFrame` ownership, shared view uniforms out of the star

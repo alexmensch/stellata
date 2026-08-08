@@ -26,7 +26,7 @@ in both navigate and observe modes.
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
 - `picker.ts` — pure target resolver; click + hover pick paths for
-  the two inline kinds, stars and planets. Every migrated kind (probe,
+  the one inline kind, stars. Every migrated kind (planet, probe,
   cloud, Local Group, boundary shells) picks through `pickKindHit`,
   which dispatches to the module's hover-provider pick — literally the
   same function the hover engine runs, so click and hover can't

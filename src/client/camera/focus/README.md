@@ -161,8 +161,8 @@ The registry is constructed once in `stellata.ts` (exposed as
 `stellata.focusables`); lazily-attached layers are read through
 closures, so attach cycles need no re-registration. A kind migrated
 onto a kind module supplies its row via the module's `focusable()` leg
-(probe, cloud, lg, shell — `src/client/kinds/README.md`; star and
-planet rows remain inline); the record itself, and its exhaustiveness,
+(probe, planet, cloud, lg, shell — `src/client/kinds/README.md`; the
+star row remains inline); the record itself, and its exhaustiveness,
 stay here. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
@@ -261,10 +261,11 @@ It is one slot for both kinds, read through
   index collides (planet 3 → probe 3), since the slot is keyed on index
   alone.
 - **It must run after every moving-body field has written this frame's
-  positions.** The probe layer is registered ahead of the planet layer
-  for exactly this: the ride call sits in the planet layer's update, so
-  both fields are fresh when it fires. One frame of lag is invisible at
-  1× and a visible offset at high fast-forward.
+  positions.** The probe and planet module layers register in roster
+  order ahead of every inline layer, and the ride sits in the first
+  inline entry (with the planet mesh update, which needs the post-ride
+  camera) — so both fields are fresh when it fires. One frame of lag is
+  invisible at 1× and a visible offset at high fast-forward.
 
 Float32 precision as the object travels far from the focus-time origin
 is held generically by the origin-follow recentre
