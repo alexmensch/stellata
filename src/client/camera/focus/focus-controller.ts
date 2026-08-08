@@ -464,14 +464,14 @@ export class FocusController implements FocusOps {
   // next microtask, ahead of the next animation frame.
   private refreshPlanetSystem(idx: number | null): void {
     const token = ++this.planetSystemToken;
-    if (idx === null || !hasPlanets(this.deps.catalog, idx)) {
+    if (idx === null || !hasPlanets(this.deps.catalog.solIndex, idx)) {
       if (this.focusedPlanetSystem !== null) {
         this.focusedPlanetSystem = null;
         this.deps.bus.emit('planetSystem', null);
       }
       return;
     }
-    void getPlanetSystem(this.deps.catalog, idx).then((ps) => {
+    void getPlanetSystem(this.deps.catalog.solIndex, idx).then((ps) => {
       if (token !== this.planetSystemToken) return;
       if (this.focusedPlanetSystem === ps) return;
       this.focusedPlanetSystem = ps;
