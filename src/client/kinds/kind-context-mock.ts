@@ -38,6 +38,11 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
       return true;
     },
     angularToPx: () => angularToPx(MOCK_VIEWPORT_H, MOCK_FOV_Y_RAD),
+    starPhotometry: () => null,
+    systemMembership: {
+      membersOf: () => [],
+      collapsedClusterOf: () => [],
+    },
     getT: () => 0,
     getWorldOffset: () => new THREE.Vector3(),
     getFocusedTarget: () => null,
