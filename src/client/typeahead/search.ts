@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { Catalog } from '../loaders/catalog-loader';
-import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
+import { displayNameOf, KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
@@ -721,21 +721,9 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
-  // Display names stay a per-kind lookup — the rich star label
-  // (describe) lives in the search corpus, cloud / LG names on their
-  // catalogs; kind identity itself rides the Target.
-  // Returns on every kind so a new TargetKind fails tsc (missing return)
-  // rather than silently falling through to the wrong catalog.
-  const nameOf = (t: Target): string => {
-    switch (t.kind) {
-      case 'star': return describe(t.idx);
-      case 'planet': return stellata.kinds.planet.displayName(t.idx);
-      case 'probe': return stellata.kinds.probe.displayName(t.idx);
-      case 'cloud': return stellata.kinds.cloud.displayName(t.idx);
-      case 'lg': return stellata.kinds.lg.displayName(t.idx);
-      case 'shell': return stellata.kinds.shell.displayName(t.idx);
-    }
-  };
+  // Star names take the rich search-corpus label (describe); every other
+  // kind answers through its module's displayName leg.
+  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t, describe);
   const syncFocusUI = () => {
     const focused = stellata.focus.getFocusedTarget();
     const observe = stellata.focus.getCameraMode() === 'observe';
