@@ -10,10 +10,16 @@ export class StarShardTable {
   private flatSids: Uint32Array | null = null;
 
   constructor(shards: readonly StarShard[]) {
-    this.shards = shards;
+    this.shards = [...shards];
     this.starts = [];
     let total = 0;
-    for (const s of shards) {
+    for (const s of this.shards) {
+      if (s.positions.length !== s.count * 3 || s.sid.length !== s.count) {
+        throw new Error(
+          `star shard '${s.key}': count ${s.count} disagrees with `
+          + `positions ${s.positions.length} / sid ${s.sid.length}`,
+        );
+      }
       this.starts.push(total);
       total += s.count;
     }

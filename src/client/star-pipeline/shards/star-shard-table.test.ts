@@ -49,6 +49,20 @@ describe('StarShardTable mapping', () => {
     expect(table.flatIndexOf(1, 0)).toBe(-1);
   });
 
+  it('rejects a shard whose columns disagree with its count', () => {
+    expect(() => new StarShardTable([makeShard({ count: 3 })]))
+      .toThrow(/star shard 'lmc'/);
+    expect(() => new StarShardTable([makeShard({ sid: new Uint32Array(5) })]))
+      .toThrow(/sid 5/);
+  });
+
+  it('is unaffected by later mutation of the caller\'s shard array', () => {
+    const shards = [makeShard()];
+    const table = new StarShardTable(shards);
+    shards.push(makeShard({ key: 'smc' }));
+    expect(table.flatCount).toBe(2);
+    expect(table.shards).toHaveLength(1);
+  });
 });
 
 describe('StarShardTable SID domain', () => {

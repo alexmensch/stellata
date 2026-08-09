@@ -8,7 +8,6 @@ import { makeShard } from './star-shard-mock';
 import {
   CATALOG_BOUNDING_RADIUS_PC,
   catalogShard,
-  DEFER_MAX_ERROR_PX,
   FLOAT32_EPS,
   shardRecentreEager,
 } from './star-shards-pure';
@@ -49,16 +48,21 @@ describe('shardRecentreEager', () => {
     expect(shardRecentreEager(lmc, 48_000, 0, 0, ANGULAR_TO_PX)).toBe(true);
   });
 
-  it('holds the sub-pixel clearance just outside the bounding sphere', () => {
-    // d − R = 1 pc, inside the FLOAT32_EPS·d·angularToPx/0.5 ≈ 2.4 pc
-    // clearance the DEFER_MAX_ERROR_PX bound solves to at d ≈ 5 kpc.
-    const dJustOutside = lmc.boundingRadiusPc + 1;
-    const clearance =
-      (FLOAT32_EPS * dJustOutside * ANGULAR_TO_PX) / DEFER_MAX_ERROR_PX;
-    expect(clearance).toBeGreaterThan(1);
-    expect(
-      shardRecentreEager(lmc, 50_000 + dJustOutside, 0, 0, ANGULAR_TO_PX),
-    ).toBe(true);
+  // The rule solves FLOAT32_EPS·d·angularToPx/(d − R) = DEFER_MAX_ERROR_PX,
+  // crossing at d = R/(1 − FLOAT32_EPS·angularToPx/DEFER_MAX_ERROR_PX) =
+  // 5002.385 pc for these inputs. Both sides are pinned: dropping the
+  // DEFER_MAX_ERROR_PX division (or using the half-ulp 2**-24) moves the
+  // crossing to 5001.19 and fails the eager side.
+  it('rewrites eagerly just inside the solved clearance', () => {
+    expect(shardRecentreEager(lmc, 50_000 + 5002, 0, 0, ANGULAR_TO_PX)).toBe(true);
+  });
+
+  it('defers just outside the solved clearance', () => {
+    expect(shardRecentreEager(lmc, 50_000 + 5003, 0, 0, ANGULAR_TO_PX)).toBe(false);
+  });
+
+  it('scales the clearance with angularToPx — a wider plate scale rewrites sooner', () => {
+    expect(shardRecentreEager(lmc, 50_000 + 5003, 0, 0, ANGULAR_TO_PX * 4)).toBe(true);
   });
 
   it('shard 0 rewrites eagerly from every in-catalog origin', () => {
