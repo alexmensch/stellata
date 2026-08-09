@@ -306,6 +306,10 @@ epsilon, as the per-star extinction prepass already is; and correct handling
 of a camera *outside* coverage, which needs an entry as well as an exit
 distance.
 
+Two of those four were written before anything was measured and the
+measurement overrode them — § Against the four requirements says which and
+why.
+
 The per-star march remains a separate structure either way: it cannot take a
 prefiltered input at all without breaking the de-extinction cancellation
 invariant.
@@ -327,34 +331,53 @@ point-sampling the u8-log-encoded grid can never be.
 
 #### Cost
 
-Pin: **13.0′ cells × 32 log slices, one ray per cell, 2 bytes per texel.**
-Fetches are counted against the shipped per-star extinction prepass — 313k
-stars × 48 steps = **15.0M fetches per rebuild**, which recomputes every frame
-during a warp — because that is a shipped GPU workload doing the same fetch
-against the same texture. Wall-clock GPU timings are not measured here.
+Pin: **13.0′ cells × 32 log slices, one ray per cell, 2 bytes per texel, the
+fill marching each ray at half a voxel (2.44 pc, 512 samples to the coverage
+edge).** The cell angle is not a round number chosen for the table — it is one
+summation-patch diameter, derived from `DEFAULT_SUMMATION_ARCSEC2`, so an
+instrument change moves it. Fetches are counted against the shipped per-star
+extinction prepass — 313k stars × 48 steps = **15.0M fetches per rebuild**,
+which recomputes every frame during a warp — because that is a shipped GPU
+workload doing the same fetch against the same texture. Wall-clock GPU timings
+are not measured here.
+
+**A screen-space grid is uniform in tan θ, not in solid angle**, and the cost
+table has to be read in those terms: `dθ/dx = cos²θ`, so the on-axis cell is
+the *coarsest*, every off-axis cell is finer, and holding the coarsest at 13.0′
+costs the tan-space area rather than Ω/cell² — 1.42× more cells at 50°, 5.51×
+at 120°. The accuracy below is measured at the coarsest cell, so it bounds the
+whole frustum.
 
 | grid | cells | memory | fill per rebuild | rebuilt on |
 | --- | --- | --- | --- | --- |
-| all-sky, camera-anchored | 879k | 53.6 MB | 450M (30× the prepass) | translation > ε |
-| frustum, 10° FOV | 3.7k | 0.2 MB | 1.9M (0.1×) | any camera change |
-| **frustum, 50° FOV (default)** | **76k** | **4.7 MB** | **39M (2.6×)** | any camera change |
-| frustum, 120° FOV | 271k | 16.5 MB | 139M (9.2×) | any camera change |
+| all-sky, camera-anchored | 877k | 53.5 MiB | 449M (29.9× the prepass) | translation > ε |
+| frustum, 10° FOV | 3.8k | 0.2 MiB | 1.9M (0.1×) | any camera change |
+| **frustum, 50° FOV (default)** | **108k** | **6.6 MiB** | **55M (3.7×)** | any camera change |
+| frustum, 120° FOV | 1.5M | 90.9 MiB | 763M (50.8×) | any camera change |
 
 The **read** is identical either way and is the larger per-frame term: one fetch
 per march step per band pixel, 166M/frame at 1920 × 1080 @dpr1 (32 disc steps +
-48 bulge steps-plus-pre-march). It *replaces* the same count of analytic
-evaluations rather than adding to them.
+48 bulge steps-plus-pre-march), 664M at dpr 2. It *replaces* the same count of
+analytic evaluations rather than adding to them.
 
-The 11.5× fill ratio is not an implementation detail — a fill touches every
-voxel inside the solid angle it covers, and 4π sr against the ~1.1 sr a 50°
-frustum subtends is the whole of it. The all-sky map's one real advantage is
-that its cells are fixed in the sky, so rotation costs nothing; that does not
-pay for 11.5×, because stellata's camera translates on orbit drag and on every
+The frustum wins on fill by **8.1×** at the default FOV, and the reason is
+almost all solid angle: a fill touches every voxel inside the angle it covers,
+and 4π sr against the ~1.09 sr a 50° frustum subtends is 11.5× of it, given
+back to 8.1× by the tan-space cell count. The all-sky map's one real advantage
+is that its cells are fixed in the sky, so rotation costs nothing; that does not
+pay for 8.1×, because stellata's camera translates on orbit drag and on every
 warp, leaving only a parked camera panning — the regime where the frustum grid's
-39M is affordable anyway. A hybrid (sky-fixed cells, filled only over the
+55M is affordable anyway. A hybrid (sky-fixed cells, filled only over the
 visible cone, per-cell staleness) would take both, at the cost of the all-sky
 memory footprint and a residency map; it is recorded here as the upgrade path,
 not adopted.
+
+**Capping each shell's angular resolution at the source's own** is the one
+optimisation priced but not pinned: the grid carries no structure finer than a
+voxel, so inner shells need fewer cells, which takes the 50° fill to 21M (1.4×)
+on 0.5 MiB and the 120° corner to 293M. Arithmetic only — the accuracy sweep
+measured a single resolution across all slices, so ty4.5 would have to re-measure
+before adopting it.
 
 #### Accuracy
 
@@ -362,38 +385,70 @@ Measured against a direct march at ¼-voxel steps, **after** the 13.0′ flat-di
 summation the resolve convolves the band over — the display carries no finer
 structure than that, so the honest comparison is between two convolved profiles,
 not two pointwise ones. Worst case over 241 sightlines across the Rift (l = 0,
-b = −30…30 at 0.25°), camera at Sol, at the pinned 13.0′ cell.
+b = −30…30 at 0.25°), camera at Sol, at the pinned 13.0′ cell, and worst over
+**five grid poses** — a screen grid meets a given sightline at an arbitrary
+sub-cell offset and an arbitrary roll, so every figure here is the worst of both.
 
 | read | worst ΔS | p99 | worst column | Rift-edge shift |
 | --- | --- | --- | --- | --- |
-| point sample, no prefilter | 1.28 mag | 1.07 | 7.69 mag | 617′ |
-| 16 sub-samples per step | 0.061 | 0.059 | 0.026 | 58′ |
-| 64 sub-samples per step | 0.004 | 0.004 | 0.002 | 3.0′ |
-| froxel, 24 slices | 0.031 | 0.023 | 0.038 | 17.5′ |
-| **froxel, 32 slices** | **0.024** | **0.018** | **0.038** | **9.4′** |
-| froxel, 64 slices | 0.025 | 0.015 | 0.038 | 5.8′ |
+| point sample, no prefilter | 1.269 mag | 1.064 | 7.69 mag | 640′ |
+| 16 sub-samples per step | 0.060 | 0.059 | 0.026 | 56.6′ |
+| 64 sub-samples per step | 0.004 | 0.004 | 0.002 | 2.9′ |
+| froxel, 24 slices | 0.034 | 0.023 | 0.041 | 17.0′ |
+| **froxel, 32 slices** | **0.023** | **0.019** | **0.042** | **11.2′** |
+| froxel, 64 slices | 0.024 | 0.021 | 0.038 | 8.4′ |
 
-A 600-sightline all-sky set tracks it, worst ΔS 0.058 / 0.030 / 0.020 mag at
+A 600-sightline all-sky set tracks it, worst ΔS 0.057 / 0.030 / 0.019 mag at
 24 / 32 / 64 slices. The edge shift is the mag error divided by the local
 gradient of the true profile — how far the Rift's edge actually moves, which is
-the angular error the requirement asks for. At the pin it is **9.4′, inside the
-13.0′ patch the band is displayed through**. Three findings the numbers force:
+the angular error the requirement asks for. At the pin it is **11.2′, inside the
+13.0′ patch the band is displayed through** — inside, but by 14 %, which is the
+margin ty4.5's agreement pin should be written against. Four findings the
+numbers force:
 
-- **The binding axis is along-ray, not transverse.** 32 slices is the knee: 24
-  leaves a 17.5′ edge shift, and 64 halves the shift but leaves the column error
-  at 0.038 mag untouched, because past 32 the whole residual is the angular
-  interpolation.
+- **The binding axis is along-ray, not transverse.** 32 slices is the knee for
+  ΔS: 24 leaves a 17.0′ edge shift, and 64 takes the shift to 8.4′ without
+  moving ΔS or the column error at all, because past 32 the residual is the
+  angular interpolation and the fill's own step.
+- **64 slices is the standing upgrade**, and cheap in the only currency that
+  moves: slices are a memory knob, not a fill knob, so 8.4′ costs 13.2 MiB
+  instead of 6.6 at 50° and nothing per frame. Pinned at 32 because that is
+  where ΔS stops improving; take 64 if the 14 % margin above proves tight in
+  practice.
 - **No transverse supersampling.** One ray per cell is enough — 2 × 2 rays per
   cell moved the worst case by ≤ 0.007 mag at 13′, as often the wrong way as the
-  right one. The grid's own voxel subtends **13.43′ at the coverage edge and more
+  right one (it does damp shimmer, 0.008 → 0.006 mag, which is not worth 4× the
+  fill). The grid's own voxel subtends **13.43′ at the coverage edge and more
   everywhere nearer**, so a 13′ cell already sits at the source's finest angular
   scale and there is nothing left to average. This is what makes the frustum
   grid cheap: the word "prefilter" implies a 4× supersampling cost the source's
   own resolution does not justify.
-- **Shimmer does not condemn the frustum grid.** Its cells slide across the sky
-  as the camera rotates, so one direction is read at a different sub-cell phase
-  each frame; that spread is **0.006 mag** at 13′ cells against 0.07 mag at 26′.
-  The all-sky map's exact zero is not worth buying.
+- **Shimmer does not condemn the frustum grid.** Its cells slide *and rotate*
+  across the sky as the camera turns, so one direction is read at a different
+  pose each frame; that spread is **0.008 mag** at 13′ cells against 0.065 mag
+  at 26′. The all-sky map's exact zero is not worth buying.
+
+#### Against the four requirements
+
+The gate's four (§ Sampling the measured grid in the band march) were written
+before anything was measured. Two hold as written, and two the measurement
+overrode:
+
+- **Along-ray extent equal to the march step — held, by construction.** Storing
+  the column rather than the density is what makes it exact rather than
+  approximate, whatever the slice count.
+- **Camera outside coverage — held.** § Camera outside coverage.
+- **Transverse resolution *finer* than the 13.0′ patch — overridden.** The pin
+  is exactly one patch diameter, because the source itself carries nothing finer
+  (13.43′ per voxel at the coverage edge) and 2 × 2 supersampling inside a cell
+  measurably buys nothing. A finer cell would cost quadratically for structure
+  neither the source nor the display holds.
+- **Rebuild bounded by a camera-displacement ε — given up, knowingly.** A
+  view-parameterised grid is stale the moment the camera *rotates*, so it
+  rebuilds on any camera change; the ε predicate the per-star prepass uses has
+  no analogue here. That is the trade the 8.1× fill advantage pays for, and it
+  is why the fill's absolute cost (3.7× the prepass, every frame the camera
+  moves) is the number ty4.7 has to land rather than a per-frame average.
 
 #### What is not measured, and what to turn if it is too slow
 
@@ -403,34 +458,38 @@ workload. **They are not frame times, and none of this has run on a GPU.**
 **Spike the fill pass on its own before ty4.5 builds the read**
 (stellata-ty4.7). The fill alone, behind a timer query and an A/B toggle
 mirroring `setExtinctionPrepassEnabled`, priced at the default 50° and at the
-**120° FOV × dpr 2** corner — which is the worst case at 139M fetches/frame and
+**120° FOV × dpr 2** corner — which is the worst case at 763M fetches/frame and
 is reached by zooming out on a retina display, not by an exotic configuration.
 Doing this after ty4.5 means discovering the answer at the end of a PR that also
 carves 52 clouds and re-pins every sightline row.
 
-The fill is linear in cell count and so quadratic in cell angle, which is what
-makes the fallbacks priced rather than guessed. Rows are the Rift strip at 32
-slices, so they read against the accuracy table above:
+The fill is linear in cell count and so quadratic in cell angle, and linear in
+the rate each ray marches at — which is what makes the fallbacks priced rather
+than guessed. Rows are the Rift strip at 32 slices and 50° FOV, so they read
+against the accuracy table above:
 
-| lever | fill | worst ΔS | shimmer | column |
-| --- | --- | --- | --- | --- |
-| **13′ cells — the pin** | 39M/frame | 0.024 | 0.006 | 0.038 |
-| 18′ cells | 0.5× | between the rows | | |
-| 26′ cells | 0.25× (~10M) | 0.095 | 0.070 | 0.150 |
-| 24 slices | unchanged | 0.031 | 0.006 | 0.038 |
-| refill a fraction of the cells per frame | spike → smear | none | | |
+| lever | fill | worst ΔS | shimmer | column | edge |
+| --- | --- | --- | --- | --- | --- |
+| **13′ cells, fill 2/voxel — the pin** | 55M/frame | 0.023 | 0.008 | 0.042 | 11.2′ |
+| 18′ cells | 0.5× | between the rows | | | |
+| 26′ cells | 0.25× (14M) | 0.094 | 0.065 | 0.150 | 23.8′ |
+| fill 1/voxel | 0.5× (28M) | 0.037 | 0.014 | 0.057 | 27.7′ |
+| fill 4/voxel | 2× (111M) | 0.024 | 0.007 | 0.038 | 10.0′ |
+| 24 slices | unchanged | 0.034 | 0.007 | 0.041 | 17.0′ |
+| refill a fraction of the cells per frame | spike → smear | none | | | |
 
 At 26′ the fill sits **below** the star prepass and is still an order off the
-1.28 mag that point-sampling costs, so there is a lot of room between correct
-and unshippable. Note slices are a **memory** knob, not a fill knob — the fill
-marches every ray at the same rate whatever the slice count.
+1.27 mag that point-sampling costs, so there is a lot of room between correct
+and unshippable — but note that it costs the *angular* requirement more than the
+photometric one: 23.8′ is nearly twice the display patch. Slices are a **memory**
+knob, not a fill knob; the fill rate is a fill knob and not a memory one.
 
-**One lever is unpriced.** The fill assumes half-voxel sampling along each ray
-(2.44 pc, 512 samples to the coverage edge); one-voxel sampling halves it again,
-and that accuracy cost is not measured. `pnpm run analyse:prefilter` is where to
-measure it — `buildCellCurve`'s integration step in `froxel.ts` is the parameter
-to sweep, and it is deliberately the same constant the reference march uses, so
-it has to be split before it can be swept.
+**Halving the fill rate is the trap.** One-voxel sampling looks like a free 2×
+— it costs 0.037 mag and a **27.7′ edge shift**, worse than doubling the cell
+angle, because the along-ray axis is the binding one at this cell size.
+Quarter-voxel sampling buys 1.2′ for 2× the fill, which is why the pin sits at
+half a voxel: it is the knee, not a guess. `pnpm run analyse:prefilter` sweeps
+all three (`FroxelConfig.fillStepsPerVoxel`).
 
 #### Camera outside coverage
 
@@ -526,16 +585,20 @@ reproduces every pinned row in `milkyway.test.ts` to under 0.001 mag before
 the source is swapped. Cloud geometry and brick steps: `public/clouds.json`
 and `data/molecular-clouds/cloud-surfaces.bin`.
 
-Prefilter sweep: a throwaway Node harness over the same CPU mirror, emulating
-one froxel grid parameterised by cell angle, slice count, sub-cell phase and
-rays per cell — which covers both candidates, since they differ only in what
-indexes the cells. Reference is a ¼-voxel (1.22 pc) march; the grid is sampled
+Prefilter sweep: `scripts/dust/prefilter/` (its own README), a Node harness
+over the same CPU mirror — pinned bit-exact against it with dust off —
+emulating one froxel grid parameterised by cell angle, slice count, grid pose,
+rays per cell and fill rate, which covers both candidates since they differ only
+in what indexes the cells. Grid geometry and the u8-log decode come from
+`data/dust/manifest.json`, so a re-encode cannot silently invalidate the
+numbers. Reference is a ¼-voxel (1.22 pc) march; the grid is sampled
 trilinearly on decoded density, where the GPU filters the u8 log codes (a
 geometric mean, which under-reads a gradient — the prefilter's own storage is
 linear in A_V and does not inherit it). Every number is the read and the
 reference both convolved over a 32-point flat disc of 13.0′ diameter, the
-resolve's summation patch. Costs are exact texel and fetch counts over the
-pinned geometry, not timings.
+resolve's summation patch, and every error figure is the worst over five grid
+poses. Costs are exact texel and fetch counts over the pinned geometry, not
+timings.
 
 ## Constellation stick figures
 
