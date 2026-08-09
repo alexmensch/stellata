@@ -115,28 +115,39 @@ two of lag sits far inside the ramp.
 L̄        = mean over the frame of the statistic attachment's R channel
 peak_max = max  over the frame of its G channel
            both rescaled to the BASE instrument exposure
-dm       = max( min(0, −2.5·log10(L̄ / L_ADAPT)),
-                min(0, −2.5·log10(peak_max / L_CAP)) )
+eye      = min(0, −2.5·log10(L̄ / L_ADAPT))
+guard    = min(0, −2.5·log10(peak_max / L_CAP))
+dm       = guard ≥ eye ? guard
+                       : blend toward max(eye, ADAPT_DISPLAY_FLOOR_DM)
 ```
 
-**Two branches, and only the first is a perception model.** `L̄` drives
-the eye branch; `peak_max` drives the **highlight guard**, which is a
-display compensation — `docs/science-hdr-pipeline.md` § 3.2 (*The
-highlight guard*) is the design gate and the only place the reasoning
-lives. Three properties the implementation must keep, because callers
-depend on them rather than on the formula:
+**One scene measurement, one display model.** `L̄` drives the eye branch,
+the only perceptual claim; the **highlight guard** (`peak_max` pinned to
+`L_CAP`) and the **display floor** (`ADAPT_DISPLAY_FLOOR_DM`, the eye
+branch's own response to a full-white frame) are the same species of
+display compensation at the two ends of the operator's range —
+`docs/science-hdr-pipeline.md` § 3.2 (*The highlight guard*, *The
+display floor*) is the design gate and the only place the reasoning
+lives. Four properties the
+implementation must keep, because callers depend on them rather than on
+the formula:
 
-- **`max` of two ≤ 0 cuts, so the guard can only raise exposure.** No
-  source entering the frame can darken it through the guard.
-- **The branches are equal at coverage
-  `L_ADAPT · DISC_PEAK_OVER_MEAN / L_CAP` (5.1%)**, so the handover is
-  continuous and stateless. Nothing here caches which branch governed last
-  frame, and nothing may start to.
+- **The display model only ever raises the exposure the scene
+  measurement asked for** — `dm ≥ max(eye, guard)` always, so no source
+  entering the frame can darken it past the scene-referred cut.
+- **`guard ≥ eye` is a pure coverage threshold** (5.1% of the frame for
+  the dominant source), so which regime governs is stateless. Nothing
+  here caches which branch governed last frame, and nothing may start to.
+- **The handover ramps over `ADAPT_HANDOVER_BLEND_MAG`** (one stop of
+  branch disagreement — a factor 2 of coverage): the guard's pin and the
+  floor can sit many magnitudes apart, and without the ramp a body
+  drifting through the handover would step the whole frame.
 - **A buffer max is never below a buffer mean**, which is what keeps the
-  `max` well-behaved: a frame bright enough to want a cut cannot hand the
-  guard a peak under `L_CAP` and have the guard's zero win. Feeding the
-  two branches an inconsistent pair — as only a synthetic test can — is
-  the one way to see `max` cancel a cut the mean deserved.
+  regime test well-behaved: a frame bright enough to want a cut cannot
+  hand the guard a peak under `L_CAP` and have the guard's zero win.
+  Feeding the two branches an inconsistent pair — as only a synthetic
+  test can — is the one way to see the guard cancel a cut the mean
+  deserved.
 
 **What the two channels are.** Attachment 1 carries **flux-correct**
 luminance in R and **peak-correct** luminance in G, because the mean and

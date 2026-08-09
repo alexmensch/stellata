@@ -16,6 +16,8 @@ import {
 } from '../../milkyway/milkyway-column-pure';
 import { tonemapWhitePoint } from '../tonemap-pure';
 import {
+  ADAPT_DISPLAY_FLOOR_DM,
+  ADAPT_HANDOVER_BLEND_MAG,
   ADAPT_REF_COVERAGE,
   adaptationDm,
   adaptedDiscMeanL,
@@ -113,23 +115,30 @@ describe('§ 3.1 contribution table', () => {
     expect(eyeAdaptationDm(surfaceL * coverage)).toBeCloseTo(-15.17, 2);
   });
 
-  it('adapts hardest to Sol at 1 AU, and still cannot expose its disc', () => {
+  it('measures Sol at 1 AU hardest, and applies only the display floor', () => {
     const solDiameterPx = (0.53 * 3600) / (206264.806 / angularToPx(VIEWPORT_H, FOV_Y_RAD));
     expect(solDiameterPx).toBeCloseTo(11.45, 2);
     expect(Math.PI * (0.5 * solDiameterPx) ** 2).toBeCloseTo(103, 0);
     const mean = contribution(-26.74);
     expect(mean).toBeCloseTo(6.3e5, -4);
-    const dm = eyeAdaptationDm(mean);
-    expect(dm).toBeCloseTo(-17.54, 2);
-    // § 3.2's accepted exception. Sol's disc reads −10.59 mag/arcsec², so
-    // bringing it under the white point takes −22 mag; adaptation plus a
-    // full negative trim reaches −19.8 and the disc stays clipped white.
+    // The scene measurement is untouched by the floor…
+    expect(eyeAdaptationDm(mean)).toBeCloseTo(-17.54, 2);
+    // …and the applied cut is the floor exactly: the display never
+    // delivered the bleaching that −17.5 simulates.
     const discL = surfaceBrightnessLuminance(EXPOSURE, -10.59, OMEGA_PX);
+    const peak = (luminanceForMagnitude(EXPOSURE, -26.74) / 103) * DISC_PEAK_OVER_MEAN;
+    expect(adaptationDm(mean, peak)).toBe(ADAPT_DISPLAY_FLOOR_DM);
+    // § 3.2's accepted exception survives, by a wider margin than before:
+    // the disc needs −22 mag to fall under the white point and the floor
+    // plus a full negative trim reaches −8.55, so it stays clipped white.
     const neededCut = -2.5 * Math.log10(discL / tonemapWhitePoint());
     expect(neededCut).toBeCloseTo(-22.0, 1);
-    const reach = dm - EV_MAX_STOPS * MAG_PER_STOP;
-    expect(reach).toBeCloseTo(-19.80, 2);
-    expect(reach - neededCut).toBeCloseTo(2.20, 1);
+    const reach = ADAPT_DISPLAY_FLOOR_DM - EV_MAX_STOPS * MAG_PER_STOP;
+    expect(reach).toBeCloseTo(-8.55, 2);
+    expect(reach - neededCut).toBeCloseTo(13.45, 1);
+    // What the floor buys: the field's effective limit with Sol in frame
+    // is m 1.51 — Sirius-class stars survive — where −17.5 left nothing.
+    expect(7.8 + ADAPT_DISPLAY_FLOOR_DM).toBeCloseTo(1.51, 2);
   });
 
   it('ignores the cases that must not adapt', () => {
@@ -211,11 +220,16 @@ describe('the highlight guard', () => {
     }
   });
 
-  it('only ever raises the exposure', () => {
-    for (const meanL of [0, 1e-3, L_ADAPT, 1, 1e4, 1e9]) {
-      for (const peakL of [0, L_CAP, 1e3, 1e12]) {
+  it('only ever raises the exposure the scene measurement asked for', () => {
+    // The display model — floor, blend and guard — can shallow the
+    // scene-referred cut but never deepen it, and dm ≤ 0 is an invariant.
+    for (const meanL of [0, 1e-3, L_ADAPT, 1, 610, 1e4, 6.3e5, 1e9]) {
+      for (const peakL of [0, L_CAP, 1e3, 9e5, 1e12]) {
+        if (peakL < meanL) continue;
         const dm = adaptationDm(meanL, peakL);
-        expect(dm).toBeGreaterThanOrEqual(eyeAdaptationDm(meanL));
+        expect(dm).toBeGreaterThanOrEqual(
+          Math.max(eyeAdaptationDm(meanL), highlightGuardDm(peakL)),
+        );
         expect(dm).toBeLessThanOrEqual(0);
       }
     }
@@ -229,44 +243,112 @@ describe('the highlight guard', () => {
     for (const f of [0.1, 0.4, 0.95]) {
       const dm = adaptationDm(discMeanL * f, peak);
       expect(peak * 10 ** (0.4 * dm)).toBeCloseTo(L_CAP, 4);
-      expect(adaptedDiscMeanL(f) * DISC_PEAK_OVER_MEAN).toBeCloseTo(L_CAP, 12);
+      expect(adaptedDiscMeanL(f, discMeanL) * DISC_PEAK_OVER_MEAN).toBeCloseTo(L_CAP, 9);
     }
   });
 
   it('leaves a point source clipped — it protects surfaces, not points', () => {
     // Sol's disc at 1 AU is 103 px of 2.07e6, far below the handover, so
-    // the perception branch governs and § 3.2's accepted exception stands.
+    // the perception branch governs (floored) and § 3.2's accepted
+    // exception stands.
     const meanL = contribution(-26.74);
     const peak = (luminanceForMagnitude(EXPOSURE, -26.74) / 103) * DISC_PEAK_OVER_MEAN;
+    expect(adaptationDm(meanL, peak)).toBe(ADAPT_DISPLAY_FLOOR_DM);
+    expect(peak * 10 ** (0.4 * ADAPT_DISPLAY_FLOOR_DM)).toBeGreaterThan(tonemapWhitePoint());
+  });
+});
+
+describe('the display floor (§ 3.2)', () => {
+  it('is the perception branch evaluated on a full-white frame', () => {
+    // The strongest stimulus the display can deliver is every pixel at
+    // the white point, so no displayed frame justifies a deeper cut —
+    // derived, not tuned.
+    expect(ADAPT_DISPLAY_FLOOR_DM).toBe(-2.5 * Math.log10(tonemapWhitePoint() / L_ADAPT));
+    expect(ADAPT_DISPLAY_FLOOR_DM).toBeCloseTo(-6.28987, 5);
+  });
+
+  it('does not touch cuts the display could genuinely cause', () => {
+    // The full Moon at 50°: 3.5 mag of cut, well inside the floor, and
+    // the applied value stays the scene measurement.
+    const meanL = contribution(-12.7);
+    const peak = (luminanceForMagnitude(EXPOSURE, -12.7) / 103) * DISC_PEAK_OVER_MEAN;
+    expect(eyeAdaptationDm(meanL)).toBeCloseTo(-3.50, 2);
     expect(adaptationDm(meanL, peak)).toBe(eyeAdaptationDm(meanL));
-    expect(peak * 10 ** (0.4 * eyeAdaptationDm(meanL))).toBeGreaterThan(tonemapWhitePoint());
+  });
+
+  it('leaves the guard regime untouched — a parked body still pins at L_CAP', () => {
+    // Venus at park coverage needs 13.7 mag of cut to land its peak on
+    // L_CAP — far past the floor, and the floor must not shallow it.
+    const surfaceL = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX);
+    const peak = surfaceL * DISC_PEAK_OVER_MEAN;
+    const dm = adaptationDm(surfaceL * ADAPT_REF_COVERAGE, peak);
+    expect(dm).toBeCloseTo(-13.68, 2);
+    expect(peak * 10 ** (0.4 * dm)).toBeCloseTo(L_CAP, 9);
+  });
+
+  it('ramps continuously across the handover instead of stepping', () => {
+    // A Venus-bright disc swept through the handover: the pin (−13.7) and
+    // the floor (−6.29) sit 7.4 mag apart, and the blend walks between
+    // them over the stop of coverage below the handover.
+    const surfaceL = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX);
+    const peak = surfaceL * DISC_PEAK_OVER_MEAN;
+    const handover = guardHandoverCoverage();
+    let prev = adaptationDm(surfaceL * handover * 0.5, peak);
+    let maxStep = 0;
+    for (let k = -63; k <= 64; k++) {
+      const dm = adaptationDm(surfaceL * handover * 2 ** (k / 64), peak);
+      maxStep = Math.max(maxStep, Math.abs(dm - prev));
+      prev = dm;
+    }
+    expect(maxStep).toBeLessThan(0.15);
+    expect(ADAPT_HANDOVER_BLEND_MAG).toBe(MAG_PER_STOP);
   });
 });
 
 describe('coverage sensitivity (§ 3.2)', () => {
+  /** Dim enough that the display floor never binds at these coverages, so
+   *  the perception branch's geometry is what these rows exercise. */
+  const DIM_DISC_L = 100;
+  /** Venus-class — bright enough that the floor binds everywhere below
+   *  the handover. */
+  const BRIGHT_DISC_L = 3.57e5;
+
   it('lands the reference coverage on L_TARGET under the perception branch', () => {
     expect(L_ADAPT / ADAPT_REF_COVERAGE).toBeCloseTo(L_TARGET, 12);
     // Park coverage sits ABOVE the handover, though, so what actually
     // happens there is the guard — 0.43 stops over the measured target.
     expect(ADAPT_REF_COVERAGE).toBeGreaterThan(guardHandoverCoverage());
-    expect(adaptedDiscMeanL(ADAPT_REF_COVERAGE)).toBeCloseTo(1.2, 12);
-    expect(trimStopsForCoverage(ADAPT_REF_COVERAGE)).toBeCloseTo(-0.431, 3);
+    expect(adaptedDiscMeanL(ADAPT_REF_COVERAGE, BRIGHT_DISC_L)).toBeCloseTo(1.2, 9);
+    expect(trimStopsForCoverage(ADAPT_REF_COVERAGE, BRIGHT_DISC_L)).toBeCloseTo(-0.431, 3);
   });
 
   it('drifts by the coverage ratio below the handover, and is flat above', () => {
     // Half the reference coverage is under the handover, so the
     // perception branch governs and the trim buys back log2(f/f_ref).
-    expect(trimStopsForCoverage(0.5 * ADAPT_REF_COVERAGE)).toBeCloseTo(-1, 12);
+    expect(trimStopsForCoverage(0.5 * ADAPT_REF_COVERAGE, DIM_DISC_L)).toBeCloseTo(-1, 9);
     // ±3 stops = ±2.26 mag = a factor 8 in coverage, so the envelope the
     // trim can pull back to L_TARGET starts at 0.86% of the frame.
     const floor = ADAPT_REF_COVERAGE / 2 ** EV_MAX_STOPS;
     expect(floor).toBeCloseTo(0.008563, 6);
-    expect(trimStopsForCoverage(floor)).toBeCloseTo(-EV_MAX_STOPS, 12);
+    expect(trimStopsForCoverage(floor, DIM_DISC_L)).toBeCloseTo(-EV_MAX_STOPS, 9);
     // Above the handover the guard pins the level, so the trim a body
     // needs stops depending on how much of the frame it fills.
     for (const f of [2 * ADAPT_REF_COVERAGE, 0.3, 0.9]) {
-      expect(trimStopsForCoverage(f))
+      expect(trimStopsForCoverage(f, DIM_DISC_L))
         .toBeCloseTo(Math.log2(L_TARGET * DISC_PEAK_OVER_MEAN / L_CAP), 12);
     }
+  });
+
+  it('saturates a bright disc below the handover, beyond what trim pulls back', () => {
+    // The floor caps the cut, so a surface bright enough to need more
+    // settles far over the white point, and pulling it back to L_TARGET
+    // needs twice the trim range. A brilliant dot reads as a brilliant
+    // dot; park it and the pin exposes it.
+    const meanAtHalfPark = adaptedDiscMeanL(0.5 * ADAPT_REF_COVERAGE, BRIGHT_DISC_L);
+    expect(meanAtHalfPark).toBeCloseTo(57.75, 1);
+    expect(meanAtHalfPark).toBeGreaterThan(tonemapWhitePoint());
+    const trimNeeded = trimStopsForCoverage(0.5 * ADAPT_REF_COVERAGE, BRIGHT_DISC_L);
+    expect(trimNeeded).toBeCloseTo(-6.02, 2);
+    expect(trimNeeded).toBeLessThan(-EV_MAX_STOPS);
   });
 });

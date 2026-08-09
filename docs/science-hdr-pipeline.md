@@ -487,13 +487,14 @@ L̄       = Σᵢ (Lᵢ · Aᵢ) / A_viewport
 dm_eye  = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
 ```
 
-This section derives `dm_eye`, the **perception branch**. What the frame
-applies is `max(dm_eye, dm_guard)`, where the second term is a display
-compensation with no perceptual claim behind it at all — § 3.2's
-subsection *The highlight guard* owns it, and it governs whenever a
-resolved surface covers more than `L_ADAPT · (3/2) / L_CAP` of the frame.
-Nothing
-below changes: the guard is a separate maximum taken afterwards.
+This section derives `dm_eye`, the **perception branch** — the scene
+measurement. What the frame applies is the display model's composition
+(§ 3.2's subsections *The highlight guard* and *The display floor*):
+where a resolved surface covers more than `L_ADAPT · (3/2) / L_CAP` of
+the frame the guard's pin governs, and everywhere else `dm_eye` applies
+bounded below by the floor, with a one-stop ramp joining the regimes.
+Neither term carries a perceptual claim, and nothing below changes: the
+measurement stays scene-referred and instantaneous.
 
 `Aᵢ` is source *i*'s **true angular coverage** in pixels — never the
 K-exaggerated kernel, or the footprint exaggeration would drive
@@ -552,10 +553,10 @@ alternatives:
 - **Not a maximum or a high percentile.** One bright pixel would crater
   the frame: Sirius in view would dim the star field around it. (The
   highlight guard *is* a maximum statistic, and this objection does not
-  reach it — a `max` of the two cuts can only ever raise the exposure, so
-  a bright source entering the frame can never darken it through that
-  branch. Sirius, Venus from Earth, the full Moon and Sol at 1 AU all
-  stay on the perception branch and behave exactly as they do without it.)
+  reach it — the guard can only ever raise the exposure, so a bright
+  source entering the frame can never darken it through that branch.
+  Sirius, Venus from Earth, the full Moon and Sol at 1 AU all stay on
+  the perception branch, and the guard changes none of them.)
 - **The discriminator is angular extent, not luminance.** Venus filling
   the frame adapts the eye; Sirius as a point does not. Area weighting
   *is* that discriminator, and it is what pupil response physically
@@ -743,6 +744,12 @@ over a band of coverages:
   not the 4%–55% band an earlier draft quoted (that was 2.26 read as
   stops rather than magnitudes). Pinned in
   `scene-adaptation-pure.test.ts`.
+- **The display floor narrows that claim to surfaces the floor never
+  binds on.** A surface bright enough to need more than the floor's
+  6.29 mag (Venus-class, ~3.6e5) settles far over the white point below
+  the handover, needing ~6 stops against the 3 the trim has — a
+  brilliant dot reads as a brilliant dot, and parking it is what exposes
+  it. Pinned in the same suite.
 
 **Above `f_ref / 8` the drift stops being a drift and becomes a hard
 ceiling, which the perception branch cannot fix at all** — that is what the
@@ -751,14 +758,14 @@ perception branch in isolation, and it is what still happens *below* the
 handover coverage.
 
 **Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
-0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 gives `dm` = −17.5 mag while
-the disc's own −10.59 mag/arcsec² surface needs −22.0 to fall under the
-white point, and −3 stops closes only 2.26 more: **2.2 mag short**. The
-Sun stays clipped white unless the camera is close enough to fill the
-frame. Phenomenologically that is correct: you cannot resolve granulation
-with an unaided eye at 1 AU. The affordance that fixes it is **an
-instrument** — a filtered solar telescope is a small effective aperture
-with a deep negative exposure — not a separate neutral-density control.
+0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 *measures* −17.5 mag, the
+display floor caps what applies at −6.29, and the disc's own −10.59
+mag/arcsec² surface needs −22.0 to fall under the white point: **13.5 mag
+short** even with the trim floored. The Sun stays clipped white unless
+the camera is close enough to fill the frame. Phenomenologically that is
+correct: you cannot resolve granulation with an unaided eye at 1 AU. The
+affordance that fixes it is **an instrument** — the neutral-density
+solar-filter exposure is a deep fixed cut, not adaptation.
 
 **The operator stays GLOBAL, and the statistic does not breach that.**
 `stellata_tonemap` is a pure function of one pixel's luminance and one
@@ -858,11 +865,12 @@ moves.
 
 Three structural properties, in the sense that no refactor may lose them:
 
-- **It can only ever raise the exposure**, being a `max` of two cuts each
-  clamped at 0. That is why § 3.1's rejection of a maximum statistic does
+- **It can only ever raise the exposure** relative to the perception
+  branch. That is why § 3.1's rejection of a maximum statistic does
   not reach it, and it is verified: Sirius, Venus from Earth, the full
-  Moon, and Sol at 1 AU all stay on the perception branch and behave
-  exactly as they did.
+  Moon, and Sol at 1 AU all stay on the perception branch, untouched by
+  the guard. (Sol's *applied* cut did move when the display floor landed
+  — through the floor below, never through this branch.)
 - **The handover is a pure coverage threshold.** The two branches are
   equal at `f* = L_ADAPT · (3/2) / L_CAP` = **5.1%** of the frame,
   independently of how bright the source is, and being equal there the
@@ -897,6 +905,51 @@ This change **demotes** the operator-shoulder work from load-bearing to
 optional: a longer shoulder would widen the 1.05-mag band the guard
 currently works around. It does not remove the constraint that any new
 curve stay analytically invertible (§ 2 / `src/client/hdr/chrome/README.md`).
+
+#### The display floor — the bleaching the display cannot cause
+
+The guard's twin at the other end of the range, and the same species of
+concession: the observer is looking at a monitor emitting a couple of
+hundred nits, so the retinal stimulus a scene-referred cut simulates is
+never delivered. Applying the full physical cut dims the star field
+twice — once because the display cannot render the bright source at its
+true luminance, and again because the model assumes it did.
+
+The bound is derived, not tuned: the strongest stimulus any displayed
+frame can deliver is every pixel at the white point, and the perception
+branch's own response to that frame is
+
+```
+ADAPT_DISPLAY_FLOOR_DM = −2.5·log10(L_w / L_ADAPT) = −6.29 mag
+```
+
+No displayed frame justifies a deeper cut, so the perception branch
+applies `max(dm_eye, floor)`. Three consequences:
+
+- **Sol at 1 AU keeps washing the frame out, but boundedly.** The
+  measurement is still −17.5; the applied cut is −6.29, leaving the
+  field's effective limit at m 1.51 — a handful of Sirius-class stars
+  against a clipped disc, where the unbounded cut left nothing. The
+  full physical wash-out is veiling glare's to model (its own bead),
+  as real light in the optics rather than a retinal state.
+- **The guard regime is untouched.** A dominant resolved surface
+  (coverage over the 5.1% handover) still takes the pin however deep —
+  a parked Venus needs 13.7 mag and gets it. The floor bounds the
+  perception branch, never the pin, and a one-stop coverage ramp joins
+  the two regimes so a body drifting through the handover cannot step
+  the frame. `dm ≥ max(dm_eye, dm_guard)` is the invariant that
+  replaces "the guard can only raise": the *display model* only ever
+  raises the exposure the scene measurement asked for.
+- **Below the handover, a floor-bound surface saturates past the trim's
+  reach.** § 3.2's trim claim narrows accordingly (bulleted above):
+  brilliant dots read as brilliant dots, and parking is what exposes
+  them.
+
+An `L_CAP`-derived bound (the brightest *sustained* frame, since the
+guard slews a full-white one down) would be the tidier fold on paper at
+−3.67 mag, but it leaves hundreds of stars visible around Sol at 1 AU —
+it fails the wash-out requirement by 2.6 mag, so the white point is the
+anchor.
 
 ### 3.3 FOV is magnification; the instrument is aperture
 
@@ -1251,13 +1304,14 @@ day one — the fullscreen pass and the inline path can never drift.
   within the trim's ±3 stops, or the trim range is wrong. That is a
   requirement on the model, not a discovery for smoke: fly to Venus,
   Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
-  reaches surface detail within ±3 stops of EV 0. Above the handover
-  coverage (§ 3.2, 5.1% of the frame) the highlight guard pins every one
-  of their peaks at `L_CAP` and the case is trivially inside the trim; below it
-  the *coverage* band applies (≥ 0.86% of the frame), so a case that fails
-  is a case flown from too far out — check the disc's frame fraction
-  before concluding `L_ADAPT` is wrong. The known exception is Sol at
-  1 AU, 2.2 mag out of reach by design.
+  reaches surface detail within ±3 stops of EV 0 **at park framing**.
+  Above the handover coverage (§ 3.2, 5.1% of the frame) the highlight
+  guard pins every one of their peaks at `L_CAP` and the case is
+  trivially inside the trim; below it a surface the display floor binds
+  on clips *by design* (§ 3.2, *The display floor*), so a case that
+  fails is a case flown from too far out — check the disc's frame
+  fraction before concluding `L_ADAPT` is wrong. The known exception is
+  Sol at 1 AU, 13.5 mag out of reach by design.
 - **FOV invariants (H16)** — star pixel size constant from 120° down to
   the `K = 1` crossover (3.47° on a 1080-px viewport at `TARGET_PX` 2.592),
   below which the resolved 30″ PSF makes the disc *grow*; a close pair

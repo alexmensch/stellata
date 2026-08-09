@@ -112,7 +112,7 @@ describe('SceneAdaptation', () => {
     reduced = frame(L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     expect(settle(adaptation)).toBe(0);
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    const target = eyeAdaptationDm(1e4 * L_ADAPT);
+    const target = adaptationDm(reduced.meanL, reduced.peakL);
     const first = adaptation.measure(false, SETTLED_MS + 16, false);
     expect(first).toBeLessThan(0);
     expect(first).toBeGreaterThan(target);
@@ -124,7 +124,7 @@ describe('SceneAdaptation', () => {
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     adaptation.measure(false, 0, false);
     expect(adaptation.measure(false, 16, true))
-      .toBeCloseTo(eyeAdaptationDm(1e4 * L_ADAPT), 9);
+      .toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 9);
   });
 
   it('measures nothing in chart mode, and re-enters the scene snapped', () => {
@@ -136,7 +136,7 @@ describe('SceneAdaptation', () => {
     // lastNowMs dropped with the reset, so the first scene frame back is a
     // full blend rather than a ramp up from chart's zero cut.
     expect(adaptation.measure(false, 1e6 + 16, false))
-      .toBeCloseTo(eyeAdaptationDm(1e4 * L_ADAPT), 9);
+      .toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 9);
   });
 
   it('reads against the live instrument exposure, not a fixed one', () => {
