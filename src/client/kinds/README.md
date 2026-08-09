@@ -63,9 +63,16 @@ its catalog load blocks first paint and may reject) — and are only
   artifact on the module (a load/attach pair passing the artifact
   through the shell would force `unknown`-typed hand-offs);
   `buildKindModules()` is therefore a factory, not a module-scope
-  constant. `load` NEVER rejects — a missing artifact is an empty
-  roster, and every leg answers absence (false / `[]` / `''` / null)
-  both before `attach` and after an artifact-less one.
+  constant. A missing artifact is an empty roster: every leg answers
+  absence (false / `[]` / `''` / null) both before `attach` and after
+  an artifact-less one.
+- **A rejected `load` is fatal only for a `critical` kind.**
+  `loadKindModules()` — boot's fan-out — propagates the critical
+  module's rejection into boot's catch (the error screen) and swallows
+  every other kind's, so the rule is enforced at the seam rather than
+  trusted per module. `critical` is star-only today: the app has
+  nothing to render without the catalog. Nothing else may set it
+  without the same argument.
 - **`KIND_TRAITS` stays in `../camera/focus/focus-target.ts`.** The
   contract file is a leaf; folding hard/moving into modules would make
   it import every kind folder.
@@ -88,12 +95,13 @@ its catalog load blocks first paint and may reject) — and are only
 
 ## How the shell and boot consume it
 
-`main.ts`: `buildKindModules()` → `load` per roster entry inside the
-boot `Promise.all` (the star module gets the loading-bar `onProgress`
-callback and is the one load allowed to reject — `critical`) → boot
-reads `kinds.star.catalog` / `kinds.star.searchIndex` back, derives the
-name tables, and hands them to `kinds.star.setNameTables` → hand the
-record to `new Stellata({kinds})` → roster loops for SID domains
+`main.ts`: `buildKindModules()` → `loadKindModules()` inside the boot
+`Promise.all` (the critical module gets the loading-bar `onProgress`
+callback and is the one load allowed to reject) → boot reads
+`kinds.star.catalog` / `.searchIndex` / `.starLabels` back for the
+consumers that aren't kind modules (chart mode, the planet card's host
+breadcrumb, the search corpus) → hand the record to
+`new Stellata({kinds})` → roster loops for SID domains
 (`sids()`, null ⇒ conclude), hover providers, label overlays, and the
 search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
 `stellata.kinds.planet.systemsReady` first, since planet corpus rows
@@ -122,7 +130,9 @@ machinery, so `attach` returns null and the legs read the shell
 through the injected `StarModuleRuntime`
 (`../star-pipeline/README.md`); `searchEntries()` answers empty — the
 star corpus enters `createSearchRunner` through `buildSearchIndex`'s
-richer channel (designation-tier labels + direct-lookup ID maps); and
-`Catalog` stays a `Stellata` constructor param — the shell's engine
-services consume it far too widely to route every read through the
-module.
+richer channel (designation-tier labels + direct-lookup ID maps);
+`card()` is the one leg that THROWS instead of answering absence,
+because a card built before load + attach would read the clock as
+J2000 and pass it off as sim time; and `Catalog` stays a `Stellata`
+constructor param — the shell's engine services consume it far too
+widely to route every read through the module.

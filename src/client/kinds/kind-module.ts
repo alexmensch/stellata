@@ -78,12 +78,14 @@ export interface KindSearchEntry {
  *  each capability site; hard/moving traits stay declared in
  *  `KIND_TRAITS` (the contract file must not import kind folders).
  *
- *  Lifecycle: `load` (boot, parallel; never rejects — a missing artifact
- *  loads to an empty roster) stores the artifact on the module, then
- *  `attach` (shell constructor, at the kind's roster position) builds the
- *  render layers and returns the scene-layer entry the shell registers
- *  there — update order is the shell's call, never the module's. Every
- *  other leg is valid only after `attach`. */
+ *  Lifecycle: `load` (boot, parallel) stores the artifact on the module,
+ *  then `attach` (shell constructor, at the kind's roster position)
+ *  builds the render layers and returns the scene-layer entry the shell
+ *  registers there — update order is the shell's call, never the
+ *  module's. Every other leg is valid only after `attach`. A rejected
+ *  `load` is fatal for a `critical` kind and swallowed for every other
+ *  (`loadKindModules`), so a missing artifact loads to an empty
+ *  roster. */
 export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   readonly kind: K;
   /** The app cannot boot without this kind's artifact: its `load` MAY
