@@ -455,6 +455,25 @@ export function sightlineColumnRgb(
   return total;
 }
 
+/** One component's share of the luminance a pixel accumulates across both
+ *  meshes — the flux split as the camera sees it, after dust, rather than
+ *  the `density0` split that produced it. */
+export function componentLuminanceShare(
+  component: MilkywayComponent,
+  originPc: Vec3,
+  dirUnit: Vec3,
+  options: ColumnOptions = {},
+): number {
+  let own = 0;
+  let total = 0;
+  for (const c of MILKYWAY_COMPONENTS) {
+    const lum = relativeLuminance(componentColumnRgb(c, originPc, dirUnit, options));
+    if (c === component) own = lum;
+    total += lum;
+  }
+  return own / total;
+}
+
 /** The luminance-weighted column, in the shared flux unit — what the
  *  shader turns into surface brightness via
  *  `S = uGlowMagOffset − 2.5·log10(column)`. */

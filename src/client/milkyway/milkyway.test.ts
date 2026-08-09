@@ -16,7 +16,6 @@ import {
   DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
-  DISC_COMPONENT,
   DISC_DENSITY0,
   DISC_HALF_THICKNESS_PC,
   DISC_SCALE_HEIGHT_PC,
@@ -31,7 +30,8 @@ import {
   SOL_GALACTOCENTRIC_PC,
   STEPS,
   S_MIN_PC,
-  componentColumnRgb,
+  type Vec3,
+  componentLuminanceShare,
   discVerticalProfile,
   dustTauVPerPc,
   foregroundDustTauRgb,
@@ -292,9 +292,8 @@ describe('MilkyWay luminosity solve', () => {
   // Leinert's total rather than a residual: the catalogue row toward the
   // centre is de-extincted and so not commensurable there
   // (calibration/diffuse-reference.ts), and it would only widen the gap.
-  // Same species
-  // of disagreement as the pole, which is what says it is a scale
-  // difference between two published sources and not a shape error.
+  // Same species of disagreement as the pole, which is what says it is a
+  // scale difference between two published sources and not a shape error.
   it('states the Galactic-centre sightline against Leinert’s total', () => {
     expect(
       LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre -
@@ -341,24 +340,18 @@ describe('MilkyWay luminosity solve', () => {
   // nothing, which is what a real edge-on spiral looks like in V and is why
   // face-on is the only external geometry that constrains the split.
   it('pins the bulge/disc contrast the external view actually shows', () => {
-    const centrePixelBulgeShare = (
-      originPc: readonly [number, number, number],
-    ) => {
+    const centrePixelBulgeShare = (originPc: Vec3) => {
       const scale = Math.hypot(...originPc);
-      const toCentre = originPc.map((c) => -c / scale) as unknown as [
-        number,
-        number,
-        number,
+      const toCentre: Vec3 = [
+        -originPc[0] / scale,
+        -originPc[1] / scale,
+        -originPc[2] / scale,
       ];
-      const lum = (c: typeof DISC_COMPONENT) =>
-        relativeLuminance(componentColumnRgb(c, originPc, toCentre));
-      const disc = lum(DISC_COMPONENT);
-      const bulge = lum(BULGE_COMPONENT);
-      return bulge / (disc + bulge);
+      return componentLuminanceShare(BULGE_COMPONENT, originPc, toCentre);
     };
 
     expect(centrePixelBulgeShare([0, 0, 100_000])).toBeCloseTo(0.305, 3);
-    expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeLessThan(1e-4);
+    expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeCloseTo(4.5533e-5, 8);
 
     // The integrated ratio the density0 split sets, which the face-on
     // number above is the marched consequence of. Under the mass B/T it

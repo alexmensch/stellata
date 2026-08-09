@@ -5,13 +5,12 @@ import {
   DISC_COMPONENT,
   SOL_GALACTOCENTRIC_PC,
   type Vec3,
-  componentColumnRgb,
+  componentLuminanceShare,
   foregroundDustTauRgb,
   galacticDirection,
   meshSpanPc,
   sightlineColumn,
 } from './milkyway-column-pure';
-import { relativeLuminance } from '../hdr/tonemap-pure';
 
 const SOL = SOL_GALACTOCENTRIC_PC;
 const TO_GC = galacticDirection(0, 0);
@@ -124,9 +123,10 @@ describe('effect of seeding τ from the camera', () => {
 // centre is foreground disc, which is what the real sky looks like.
 describe('per-component split toward the Galactic centre', () => {
   it('has the disc carrying essentially the whole column', () => {
-    const disc = relativeLuminance(componentColumnRgb(DISC_COMPONENT, SOL, TO_GC));
-    const bulge = relativeLuminance(componentColumnRgb(BULGE_COMPONENT, SOL, TO_GC));
-    expect(disc / (disc + bulge)).toBeCloseTo(0.99981, 5);
+    expect(componentLuminanceShare(DISC_COMPONENT, SOL, TO_GC)).toBeCloseTo(
+      0.99981,
+      5,
+    );
   });
 });
 
