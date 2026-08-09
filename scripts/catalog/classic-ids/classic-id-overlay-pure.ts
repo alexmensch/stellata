@@ -1,7 +1,7 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
 // Routes, ambiguity policy and precedence: docs/catalog-driver.md § 2, § 4.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
-import { sortSourceIdsNumeric } from '../export-astrometry-request-pure';
+import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
 // Type-only: the merge imports this module's values, so the runtime graph
 // stays one-way.

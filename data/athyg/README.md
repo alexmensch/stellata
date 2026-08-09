@@ -65,11 +65,14 @@ side: its review queue has to describe the same records the record build
 labels (`scripts/catalog/classic-ids/README.md` § The label merge).
 Reference epoch J2000.0.
 
-`athyg_33_classic_ids.csv` is **no longer a build input.** It stays
-committed as the spine's provenance and for two consumers that walk the
-upstream cells directly: `scripts/catalog/export-astrometry-request.ts` (the
-Gaia pull list) and
+`athyg_33_classic_ids.csv` is **no longer a build input, and no build script
+reads it.** It stays committed as the spine's provenance and for two consumers
+that walk the upstream cells directly:
 `src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
-(the boundary-epoch cross-check against the editorial `con` column). A new
-AT-HYG release therefore no longer moves the catalogue — replacing the spine
-is `stellata-3bsf.8`.
+(the boundary-epoch cross-check against the editorial `con` column — the only
+TypeScript reader left, and it spells the path itself) and
+`scripts/refresh/refresh-simbad-sptype.py` (the SIMBAD sp_type request set).
+The Gaia pull list left when `export-astrometry-request.ts` moved onto the
+spine column: request and record build now name the same source_ids by
+construction rather than by agreeing. A new AT-HYG release therefore no longer
+moves the catalogue — replacing the spine is `stellata-3bsf.8`.

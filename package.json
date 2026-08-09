@@ -26,7 +26,7 @@
     "refresh:gaia-astrometry": "python3 scripts/refresh/refresh-gaia-astrometry.py",
     "refresh:gaia-astrometry-catalog": "python3 scripts/refresh/refresh-gaia-astrometry-catalog.py",
     "refresh:gaia-dr2-neighbourhood": "python3 scripts/refresh/refresh-gaia-dr2-neighbourhood.py",
-    "build:astrometry-request": "tsx scripts/catalog/export-astrometry-request.ts",
+    "build:astrometry-request": "tsx scripts/catalog/astrometry-request/export-astrometry-request.ts",
     "build:classic-ids": "tsx scripts/catalog/classic-ids/build-classic-id-overlay.ts",
     "sid:allocate": "tsx scripts/sid/allocate.ts",
     "sid:check": "tsx scripts/sid/allocate.ts --check",

@@ -5,7 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { sortSourceIdsNumeric } from '../catalog/export-astrometry-request-pure';
+import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   REINSTATEMENTS_HEADER,

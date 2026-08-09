@@ -11,13 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // (repo/scripts/util), matching every scripts/<folder>/*.ts consumer.
 export const REPO_ROOT = resolve(__dirname, '..', '..');
 
-/** The upstream AT-HYG catalogue. **Not a build input** — the record build
- *  walks `data/athyg/inherited-spine.tsv` instead, and re-enrolling this path
- *  in a build's mtime set would make a catalogue nothing reads invalidate the
- *  artifact. Its remaining readers each sit in a different folder, which is
- *  why the path resolves here (`data/athyg/README.md` § Consumed by). */
-export const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
-
 export function mtimeIfExists(path: string): number {
   return existsSync(path) ? statSync(path).mtimeMs : 0;
 }
