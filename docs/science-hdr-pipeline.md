@@ -408,8 +408,11 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   is for. Corollary for H7: desaturation preserves luminance only
   pre-clamp, so post-clamp luminance is not a testable invariant above
   the knee.
-- Operator, `DR_MAG`, `L_THRESH`, desaturation strength, and exposure
-  readout are all live on the debug panel (H8).
+- `DR_MAG`, the desaturation strength and the exposure readout are live on
+  the debug panel (*shipped in H8*). `L_THRESH` is a **readout** there and
+  stays baked: it is the unit's own anchor, so a live one would move every
+  layer's calibration with it (`src/client/hdr/exposure/README.md`
+  § Debug panel).
 
 The operator implementation lives in a **shared GLSL chunk**
 (`src/client/hdr/tonemap.glsl`, exported alongside a test-pinned pure
@@ -708,7 +711,8 @@ Two consequences worth stating rather than discovering:
   squared-distance tests that walk ran. A frame reduction has no window:
   every drawn star is already in the buffer.
 
-Expose `f_ref` and `L̄` on the debug panel (H8).
+`f_ref` and `L̄` are on the debug panel, alongside `peak_max`, all three
+branch terms and which of them governs (*shipped in H8*).
 
 Two rows from the same pass bound the other end, and both are consistent
 with the model rather than with a tuning error: Saturn at `L` = 0.259 and
@@ -1570,9 +1574,14 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
 - **H8 retires the per-layer brightness knobs** — MW brightness scalar
   + gate (*deleted in H4*), planet-disc floor/exponent constants
   (*deleted in H5*), dynamic-range exponent — from the tuning surface
-  entirely (they stop existing in code, not just in the panel). The panel gains: operator
-  params (`DR_MAG`, `L_THRESH`, desaturation), the exposure + instrument
-  + mean-luminance readouts, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
+  entirely (they stop existing in code, not just in the panel).
+  *Shipped.* The panel's sliders are the five live scalars — `L_ADAPT`,
+  `L_CAP`, the slew τ, `DR_MAG`, desaturation — over a readout carrying
+  the statistic, all three branch terms, the governing regime, and the
+  exposure decomposition. **`L_THRESH` and `LUMA_CEIL` are readouts, not
+  sliders**: both are compile-time constants in seven emitter shaders,
+  and `L_THRESH` anchors the unit every other calibration is expressed
+  against. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.
 - **§ 3 splits four ways, and the order is forced.** *All four shipped.*
   H15 (instrument

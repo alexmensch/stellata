@@ -329,7 +329,10 @@ that shape so a third input has to be a deliberate edit.
 - `stellata.hdr.setDynamicRangeMag(x)` / `stellata.hdr.setHighlightDesat(x)` — the
   operator's two shape knobs, live, for probing the display axis by eye.
   Both route through `syncMode`, which is what re-authors every chrome
-  colour against the new white point (`chrome/README.md`).
+  colour against the new white point (`chrome/README.md`). Both are also
+  sliders on the panel's Exposure section
+  (`exposure/README.md` § Debug panel), and `DR_MAG` reaches the display
+  floor from there — the floor is derived from the white point.
 
 **What `DR_MAG` does and does not buy.** Extended Reinhard is
 `L(1 + L/Lw²)/(1 + L)`, already at 0.95 of full scale by `L` = 20
@@ -383,9 +386,11 @@ convolution's taps, since `resolve()` runs them.
 
 ## Not here yet
 
-`DR_MAG` and the desaturation strength are live **dev-console** setters
-(§ Dev switches); H8 puts them on the panel, alongside `L_THRESH` and the
-extended-source threshold, both still baked. **`DR_MAG` has no leverage
+`DR_MAG` and the desaturation strength are on the panel as well as the
+dev console (§ Dev switches); `L_THRESH` and the extended-source threshold
+appear there as readouts and stay **baked** — `L_THRESH` is the unit's own
+anchor, so a slider on it would move every layer's calibration with it
+(`exposure/README.md` § Debug panel). **`DR_MAG` has no leverage
 on the band's faint rows** — `y/Lw²` is under 2 × 10⁻³ there, so
 sweeping it 5.5 → 11 moves them under 0.01 mag
 (`docs/science-hdr-pipeline.md` § 8). It works at the top end, on star
