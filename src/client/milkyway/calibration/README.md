@@ -183,6 +183,14 @@ and 1.5 mag under threshold is black by construction — the NGP at 1.40
 under sits on the dither floor instead of 16.7/255. Nothing pins the band
 to the threshold.
 
+**Every row here is dust-attenuated, so the dust cascade moves them and the
+solve does not.** `docs/science-galactic-structure.md` § The dust stack fixes
+which is which: the solve, its inputs and the dust-free NGP residual are
+anchors carrying no slack; this table, the plane-to-pole contrast and the
+Leinert GC check are outcomes that move when the measured tiers land, to
+21.09 / 21.91 / 21.91 / 22.83 / 23.33 and a 1.42 contrast on the measured
+cascade. Re-pin them there; do not treat a moved row as a calibration error.
+
 **The 32-step in-volume march under-counts the GC column by 1.6 %**
 against a converged march (pinned). Deliberately left: `STEPS` is a visual
 + perf decision, and it cannot bias the calibration at all — the solve is

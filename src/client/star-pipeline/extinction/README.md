@@ -8,6 +8,14 @@ The **cancellation invariant** below is the load-bearing content here —
 catalog `absmag` / `ci` are stored de-extincted, so this runtime stack
 restores extinction rather than adding it twice.
 
+The source order this march follows — measured grid inside its coverage,
+analytic slab beyond, with the seam handed over as a coverage-exit distance —
+is a **shared contract**, not a local choice: the Milky Way band composes its
+own dust column the same way. `docs/science-galactic-structure.md` § The dust
+stack is the contract. The two share the analytic term and the ordering but
+**not** the sampling mechanism — this march cannot take a prefiltered field
+without breaking the cancellation invariant below.
+
 ## Files in this area
 
 ```

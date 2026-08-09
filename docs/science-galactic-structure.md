@@ -140,13 +140,12 @@ and the colour channel in the ~15% tier-3 stars that read `iCi`
 directly). Invariant: any change to this runtime stack ships with the
 mirrored build-side integral + catalog rebuild in the same release.
 
-**Volumetric Milky Way dust.** Analytical-only, no voxel sampling.
-Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` —
-Drimmel & Spergel-style thin-disc dust. Per step, opacity converts to
-per-channel optical depth via CCM-derived reddening multipliers
-`(0.76, 1.0, 1.35)` — red transmits most, blue extincts away — applied
-with Beer-Lambert running attenuation including a half-step
-self-shielding term. Default global strength = 1.0.
+**Volumetric Milky Way dust.** The analytic profile is
+`norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — Drimmel & Spergel-style
+thin-disc dust. Per step, opacity converts to per-channel optical depth via
+CCM-derived reddening multipliers `(0.76, 1.0, 1.35)` — red transmits most,
+blue extincts away — applied with Beer-Lambert running attenuation including
+a half-step self-shielding term. Default global strength = 1.0.
 
 `norm` is derived from a declarative rate: 1.0 mag/kpc of V extinction
 at (R₀, z = 0), the top of the range commonly adopted for the
@@ -154,10 +153,9 @@ solar-neighbourhood plane. At the 125 pc scale height that also puts the
 perpendicular column to the pole at A_V = 0.125, inside the SFD polar
 spread — two independent constraints meeting at one normalisation.
 
-The Edenhofer voxel grid is **deliberately not used** for the Milky Way
-band — voxel structure (~5 pc native) aliases into visible streaks
-along long camera→fragment rays (8–15 kpc) regardless of step
-distribution. Voxels stay in use for short per-star sightlines.
+**That analytic profile is the fallback tier, not the whole band column.**
+What composes with it, over which volumes, and why the slab is not rescaled
+to make room is § The dust stack below.
 
 Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
 `src/client/milkyway/milkyway.frag.glsl` (volumetric); see
@@ -179,6 +177,216 @@ mag/kpc is 10–25× below the measured solar-neighbourhood plane rate. The
 under-extinction, not the density profile, was why the band's plane read
 ~3 mag too bright against its poles.
 
+## The dust stack — sources, domains, and the partition
+
+Design gate output (stellata-36y.3). Several sources want to write dust into
+the band's raymarch: the shared analytic function, its spiral-arm term, its
+procedural turbulence, the Edenhofer voxel grid, and a measured mid-shell.
+They cannot be layered — the analytic slab is normalised to a **total**
+extinction rate, so anything measured added inside its volume double-counts.
+This section settles the composition once, so each of those lands against a
+decided contract rather than renegotiating it.
+
+### The cascade
+
+At every point along a ray, the dust comes from **the highest-resolution
+source that covers that point**, and from that one only:
+
+| tier | source | scale | domain |
+| --- | --- | --- | --- |
+| 1 | per-cloud traced density brick | 0.5–4.1 pc | inside a rendered cloud whose brick out-resolves the grid |
+| 2 | Edenhofer voxel grid | 4.88 pc | ≤ 1.25 kpc of Sol, minus tier 1 |
+| 3 | a cloud's own absorption model | brick or envelope | rendered clouds beyond grid coverage |
+| 4 | analytic slab + arms + turbulence | ~kpc | beyond all measured coverage |
+
+This is the cascade the per-star raymarch already follows, adopted whole
+rather than truncated: the band is the one surface that shows all of it. A
+measured mid-shell slots between tiers 2 and 3 when it lands, without
+changing anything else — the analytic term takes "coverage ended at t₀" as
+its input, so the stack composes without tier 4 knowing which tier ended it.
+
+### The partition is by volume, not by fraction
+
+Inside a measured source's coverage, that source is the **only** dust; the
+slab contributes zero there. Beyond all coverage, the slab is the only dust.
+Nothing is rescaled anywhere, and `LOCAL_DUST_RATE_MAG_PER_KPC` keeps both
+its meaning — total V extinction per kpc at (R₀, z = 0) — and its value, 1.0.
+It becomes the *fallback* total rather than the whole-model total; its anchor
+point now sits inside measured coverage, so it is a normalisation statement
+about a value the runtime never evaluates there, and the pin stands unchanged.
+
+**The standing argument against rescaling survives, correctly scoped.** It
+rules out a *global* molecular-fraction scale-down of the slab: the clouds are
+local while the slab spans the Galaxy, so scaling it down everywhere
+under-extincts the far disc — a ~3 mag error to avoid a ~0.05 mag one. That
+says nothing about a domain-local partition, which is what the cascade is.
+
+**Measurement confirms the handoff needs no renormalisation.** Integrated over
+the same 0–1250 pc volume, all-sky, the two sources agree to 5 %:
+
+| | sky-mean A_V | median | p90 |
+| --- | --- | --- | --- |
+| Edenhofer grid | 0.377 | 0.160 | 1.074 |
+| analytic slab | 0.359 | 0.245 | 0.792 |
+
+(5° grid, solid-angle weighted throughout.)
+
+Only 27.6 % of the sky has more measured dust than the slab predicts. The
+handoff is close to flux-neutral on the mean and **redistributes** — windows
+and lanes replacing a smooth field at nearly the same total, which is the
+entire point. Both of the slab's independent constraints also survive: the
+plane-rate anchor is untouched, and the polar constraint transfers from model
+to measurement, the grid's NGP column reading **0.049 mag** against the slab's
+0.125, both inside the SFD polar spread (0.03–0.15).
+
+### Which clouds are carved, and which are folded in
+
+Tiers 1 and 2 are the same switch seen from opposite sides — the cloud's dust
+is present either way, and only the mechanism changes. Tier 1 removes the
+**grid's** contribution over the cloud volume and lets the cloud's absorption
+draw supply it; tier 2 removes the **draw** and lets the grid supply it. A
+cloud takes tier 1 when both hold: its own model out-resolves the grid, and
+the grid resolves it across enough voxels to carry shape at all.
+
+Of 96 rendered clouds, 63 are traced from per-cloud density bricks and 33 fall
+back to an analytic Plummer ellipsoid. 74 sit inside grid coverage, splitting
+**52 tier 1 / 22 tier 2**; the remaining 22 are tier 3. The 22 tier-2 clouds
+are the 21 fallback ellipsoids inside coverage plus Cygnus X, whose brick is
+15.2 pc at 1163 pc — three times coarser than the grid it sits in. They keep
+dimming the band, as part of the continuous measured field rather than as
+discrete objects: the ellipsoid-shaped shadow stops, the true-shaped one
+continues. Their rim shells, outlines, labels and picking are annotation and
+are untouched.
+
+**The prefilter never binds inside coverage.** One 4.88 pc voxel subtends the
+13.0′ rod summation patch only at 1291 pc, past the coverage sphere; across
+the 21 fallback clouds it subtends 15–97′. The grid's own voxel size sets the
+edge, so routing those clouds through the band's prefiltered read softens
+nothing.
+
+**The second criterion is why that is a test and not a roster.** For the
+nearest and smallest of the 21 the grid barely resolves them — Musca spans
+2.23° against a 1.62° voxel, Ara 0.53° against 0.27°, L1293 0.26° against
+0.26° — so the grid carries no more *shape* than the ellipsoid does, only
+better truth about position and column. Those return to tier 1, because a
+one-voxel blob is worse than a calibrated ellipsoid. Raising the grid's
+near-Sol resolution moves them back, which is a second consumer for that work
+beyond the per-star march it was filed for.
+
+**What the partition buys and what it costs.** The accepted slab ↔ cloud
+double-count goes to zero inside coverage: the slab is not evaluated there,
+tier-1 volumes are carved, and tiers 2–3 are mutually exclusive. 14.3 % of
+the measured sky column falls inside rendered-cloud envelopes, so that is the
+share the carve-out hands back to the cloud bricks. What remains is the 22
+clouds beyond coverage, which sit in the analytic zone where the slab *is*
+evaluated and the mesh also multiplies: slab column through each such cloud's
+own extent is a median 0.110 mag, worst 0.475 (L379), against those clouds'
+own 1–3 mag columns and over their own projected discs only. Left uncarved
+deliberately — testing 96 envelopes per analytic step is not worth 2 % of a
+far cloud's column.
+
+### Sampling the measured grid in the band march
+
+The grid is sampled here, and the earlier "aliasing rules this out" position
+is superseded. The aliasing is real but it is a sampling-rate-versus-bandwidth
+problem, and the standard fix applies — with one correction that decides the
+mechanism.
+
+**An isotropic prefilter is the wrong one.** The march is log-distributed, so
+about 24 of its 32 steps fall inside 1.25 kpc, and the step length at the
+coverage edge is ~440 pc while a pixel's transverse footprint there is ~1 pc.
+A Cartesian mip pyramid blurs both axes equally, so at that step it
+over-blurs across the ray by a factor of a few hundred and would smear the
+rift edge over ~20°. The prefilter has to be **anisotropic — extent along the
+ray equal to the march step, extent across it equal to the pixel or summation
+footprint.** Four requirements follow: transverse resolution finer than the
+13.0′ summation patch the resolve already convolves the band over; along-ray
+resolution equal to the local step; rebuild bounded by a camera-displacement
+epsilon, as the per-star extinction prepass already is; and correct handling
+of a camera *outside* coverage, which needs an entry as well as an exit
+distance.
+
+That is the same angular × distance parameterisation the source itself has —
+Edenhofer's resolution is sub-pc within ~150 pc and degrades to ~5 pc only
+near its edge — so the band's prefilter and any near-Sol refinement of the
+grid should agree on it rather than carrying two unrelated warps. They remain
+separate structures: the per-star march cannot take a prefiltered input at all
+without breaking the de-extinction cancellation invariant.
+
+### Continuity, and what is shared with the per-star path
+
+**Hard switch at each coverage boundary, no crossfade.** Extinction is an
+integral, so the column is continuous across a density discontinuity by
+construction and only dκ/ds jumps, which is not visible. A crossfade would
+blend a modelled value with a measured one *inside* measured coverage, which
+the cascade forbids outright. The continuity check is the sky-mean agreement
+above rather than a pointwise match at the boundary shell.
+
+The band and the per-star raymarch share the **analytic function** and the
+**cascade contract**, not the sampling mechanism — their budgets differ by
+orders of magnitude, and one of them carries the de-extinction invariant. What
+keeps them from disagreeing about what dust is where is that both integrate
+the same fields in the same order, and the band's prefiltered read is a
+projection of exactly what the per-star march integrates.
+
+### How the decision grades, and what it does not fix
+
+Graded against ESO eso0932a (`docs/science-hdr-pipeline.md` § 8), at l = 0,
+medians over 15.5° × 1.4° strips, floor-subtracted and inverted through the
+shipped operator. The panorama reads **2.60 mag** brighter at b = −3 than at
+b = +3 — the Great Rift above the plane, the Large Sagittarius Star Cloud
+below it. The shipped axisymmetric slab reads **0.00** by construction, in
+either sign. The measured grid alone carries 3.03 mag of asymmetry there
+(A_V 3.86 at b = +4 against 0.83 at b = −4, where the slab gives 1.06 at
+both), and marching the cascade recovers **+2.03 mag** of the observed 2.60.
+
+The cost is modest and the direction is right:
+
+| sightline | slab | cascade | vs panorama |
+| --- | --- | --- | --- |
+| l = 0, b = +5 | 20.77 | 21.09 | — |
+| l = 0, b = 0 | 21.90 | 21.91 | — |
+| anticentre | 22.07 | 21.91 | — |
+| b = +30 | 22.52 | 22.83 | 0.44 → 0.13 mag bright |
+| NGP | 23.40 | 23.33 | — |
+
+Plane-to-pole contrast moves 1.51 → 1.42. RMS |ΔS| over the whole −30…+30
+profile is flat (1.15 → 1.16); at |b| ≥ 10 it improves 0.72 → 0.67, and the
+northern rows b = +15…+30 go from 0.4–1.0 mag bright to mostly under 0.3 —
+the same high-|b| excess § 8 records, partly explained by dust the smooth slab
+was missing.
+
+**The below-plane half of the motivating case is not a dust problem and is not
+fixed here.** At l = 0, b = −3 the panorama is still 3.08 mag brighter than
+the cascade, because the Large Sagittarius Star Cloud is inner-disc and bulge
+light seen through a low-extinction window while our emissivity is smooth and
+axisymmetric — the bulge sits behind 4.6 τ_V and carries a negligible share of
+the GC column. That belongs to the far-field emissivity grid, not to this
+stack. The low-|b| rows also carry resolved-star light the app draws
+separately, so the plane-row residuals bound the disagreement from below only.
+
+**Camera-anywhere: this is a Sol-neighbourhood improvement.** Grid coverage is
+a 1.25 kpc sphere around Sol, so from 3 kpc off-Sol only 4.5 % of sightlines
+intersect it, from the Galactic centre 0.6 %, and from the LMC none. From
+every off-Sol vantage the band's dust structure comes entirely from the
+analytic tier — which makes the spiral-arm and turbulence terms the *only*
+structure available there, not a second-order correction on top of measured
+data.
+
+### Reproducing the measurements
+
+Panorama: `https://cdn.eso.org/images/screen/eso0932a.jpg`, 1280 × 640 plate
+carrée in galactic coordinates, GC centred, l increasing leftward; medians
+over 15.5° in l × 1.4° in b; 8/255 floor subtracted in linear display space;
+inverted through the shipped toe → extended-Reinhard → sRGB chain at the base
+epoch with no EV trim. Grid columns: `data/dust/` at 1 pc steps to 1250 pc,
+nearest-voxel decode, `A_V = 2.742 · ∫E dl`. Slab columns: the profile above at
+the shipped normalisation. Cascade march: the CPU mirror in
+`milkyway-column-pure.ts`, per-channel, with the measured field replacing the
+slab inside coverage and sub-sampled at ≤ 10 pc within each log step; it
+reproduces every pinned row in `milkyway.test.ts` to under 0.001 mag before
+the source is swapped. Cloud geometry and brick steps: `public/clouds.json`
+and `data/molecular-clouds/cloud-surfaces.bin`.
 
 ## Constellation stick figures
 

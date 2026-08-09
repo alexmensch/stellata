@@ -111,17 +111,26 @@ absorption draw would reach by default. The mesh is `markAbsorber`ed
 alpha-only texel to `location = 2` as well as `location = 0`; one blend
 equation covers both, so the multiply is identical on each. Drop either
 half and the clouds keep drawing, keep sorting correctly, and extinct
-nothing — no error, no missing draw, just no dark rift.
+nothing — no error, no missing draw, just no dark rift. The
+`location = 2` write is what becomes **per-cloud conditional** once the band
+reads the measured grid itself (§ below); `location = 0` is unaffected.
 
-**The MW band is not exempt, and that overlap is deliberate.** Its own
-analytic slab is normalised to a *total* extinction rate, so wherever a
-rendered cloud sits the two stack. Measured: clouds cover 15.4 % of the
-sky at a mean A_V of 0.309 there, against 0.031 from the slab inside
-their 2.5 kpc volume — the overlap costs ~0.006 mag sky-mean, ~0.05 mag
-toward the Galactic centre. Scaling the slab down by a molecular fraction
-would under-extinct the far disc, where no cloud is rendered to make up
-the difference: a ~3 mag error traded for a ~0.05 mag one
-(`../milkyway/README.md` § Analytical-only dust).
+**Which clouds may dim the band is decided per cloud, not per layer**
+(`docs/science-galactic-structure.md` § The dust stack). The band's dust
+comes from the highest-resolution source covering each point, so a cloud
+either supplies its own volume — and is carved out of the band's read of the
+voxel grid — or is left to the grid, which already holds it. The test is
+whether the cloud's own model out-resolves the grid *and* the grid resolves
+the cloud across enough voxels to carry shape. Of 74 clouds inside grid
+coverage that splits 52 / 22: the 22 are the 21 fallback ellipsoids plus
+Cygnus X (brick 15.2 pc at 1163 pc, coarser than the grid it sits in), and
+they stop dimming the band, which then shows their measured shape instead of
+an authored ellipse. The 22 clouds beyond coverage always supply their own.
+Until the band reads the grid this is contract, not code: today every cloud
+dims the band and the overlap with the slab costs ~0.006 mag sky-mean.
+
+A cloud's tier changes only its **absorption** role. Rim shells, chart
+outlines, labels, picking and focus are annotation and never move.
 
 Treating the clouds as a pure foreground *screen* is sound toward the
 inner Galaxy — only 2.3 % of the GC column's emission originates inside

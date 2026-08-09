@@ -1472,13 +1472,21 @@ section opened with — `DR_MAG` as the faint-end lever H7 tunes against
 eso0932a — is retired. It was untrue before the toe as well; the value
 rests on the top-end validation that preceded this run.
 
-One panorama structure the model does not reproduce, filed separately:
-the l = 0 maximum sits at b = −2.5 (the Large
-Sagittarius Star Cloud, 155–175/255), not the slab's smooth b = +5, and
-the Great Rift sits above the plane rather than centred on it. Both are
-foreground-dust structure — a low-extinction window onto inner-disc
-light on one side, the Ophiuchus–Aquila complex on the other — which
-axisymmetric analytic dust cannot express in either sign.
+One panorama structure the model does not reproduce: the l = 0 maximum sits
+at b = −2.5 (the Large Sagittarius Star Cloud, 155–175/255), not the slab's
+smooth b = +5, and the Great Rift sits above the plane rather than centred on
+it. Axisymmetric analytic dust cannot express that in either sign — the
+panorama reads 2.60 mag brighter at b = −3 than at b = +3 and the shipped
+model reads 0.00.
+
+**Settled, and it splits in two.** The rift half is dust and is answered by
+the measured cascade (`docs/science-galactic-structure.md` § The dust stack),
+which recovers 2.03 mag of that 2.60 and incidentally takes the b = +30
+residual above from 0.44 to 0.13 mag model-bright. The window half is not
+dust: at b = −3 the panorama stays 3.08 mag brighter than the cascade,
+because that patch is inner-disc and bulge light through a low-extinction
+window and the emissivity here is smooth and axisymmetric. That half belongs
+to the far-field emissivity grid, alongside the high-|b| excess above.
 
 ## 9. Bead-shape decisions
 
