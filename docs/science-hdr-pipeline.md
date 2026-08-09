@@ -1158,7 +1158,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | --- | --- | --- |
 | Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its published B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
+| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its V-band LIGHT B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
 | LG emission (`local-group-emission.frag.glsl`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `stellataSurfaceBrightnessLuminance`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` since deleted (no multiplier on a physical peak). mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
 | Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
@@ -1320,8 +1320,8 @@ day one — the fullscreen pass and the inline path can never drift.
   shape change does **not** reconcile the two constraints, because the
   pole column and the integrated total are both vertical integrals — the
   thick disc moved their ratio 0.09 mag. The solve now runs on the total
-  and both sightlines are graded checks, disagreeing by 1.59 mag at the
-  pole and 0.94 toward the centre in the same direction
+  and both sightlines are graded checks, disagreeing by 1.68 mag at the
+  pole and 1.02 toward the centre in the same direction
   (`docs/science-galactic-structure.md` § The luminosity solve).
   Confirming against eso0932a stretches per instrument still stands, and
   is now the arbiter between the two published scales rather than a
@@ -1370,7 +1370,7 @@ shipped table (`src/client/milkyway/README.md` § *The gradient*),
 FOV-invariant by construction and computed at `DR_MAG` 7.5 through the
 shipped operator (C1 toe → extended Reinhard → sRGB encode); the two
 Leinert columns shift the model's `S` by the pinned disagreements
-(+0.94 GC-anchored, +1.59 pole-anchored), which bracket that scale.
+(+1.02 GC-anchored, +1.68 pole-anchored), which bracket that scale.
 
 Scope: the Milky Way band only, at the unaided-eye instrument, base
 epoch, no EV trim — the only shipping instrument (the per-preset framing
@@ -1380,13 +1380,13 @@ first-magnitude peaks read 20–75/255, Arcturus at 22 sitting *below* the
 b = 10 band at 80, nothing like the eye's view — and the LMC/SMC/M31 in
 frame are the Local Group layer's validation, not this one's.
 
-| sightline | panorama /255 | shipped | Leinert −0.94 | Leinert −1.59 |
+| sightline | panorama /255 | shipped | Leinert −1.02 | Leinert −1.68 |
 | --- | --- | --- | --- | --- |
-| b = +5, l = 0 | 75.7 | 70.3 | 45.8 | 30.3 |
-| GC | 144 (174 at the px) | 38.6 | 7.5 | 0.3 |
-| anticentre | 61 | 34.3 | 3.6 | 0.1 |
-| b = +30, l = 0 | 15.0 | 18.5 | 0.4 | 0.0 |
-| NGP | 6.0 | 0.5 | 0.0 | 0.0 |
+| b = +5, l = 0 | 75.7 | 68.4 | 42.5 | 24.9 |
+| GC | 144 (174 at the px) | 40.3 | 7.6 | 0.3 |
+| anticentre | 61 | 36.6 | 3.6 | 0.1 |
+| b = +30, l = 0 | 15.0 | 21.9 | 0.4 | 0.0 |
+| NGP | 6.0 | 0.8 | 0.0 | 0.0 |
 
 Panorama cells are medians over 3.1° square patches (star-peak rows: max
 over 2.0°; latitude strips quoted below: 15.5° in l × 1.4° in b). The
@@ -1400,23 +1400,23 @@ excluded.** Three measurements carry it:
 
 - **Latitude extent.** The band stays above the panorama floor to
   |b| ≈ 45–60 at l ≈ 0 (b = 45 reads 11, b = 60 reads 10, the poles 6).
-  Shipped holds the same shape — 4.9 at b = 45, 1.6 at b = 60, reaching
+  Shipped holds the same shape — 6.9 at b = 45, 2.4 at b = 60, reaching
   the toe floor only at the pole. The Leinert scale puts b = 45 at 0.03
   and everything past it at zero, confining the visible band to the
   inner plane.
 - **The inner-plane floor.** The darkest 3.1° patch on the plane (the
   Aquila rift, 24/255) still exceeds the Leinert counterfactual's GC —
-  its *brightest* row — by 1.14 mag on the −0.94 scale and 4.5 mag on
-  the −1.59 one.
+  its *brightest* row — by 1.14 mag on the −1.02 scale and 4.5 mag on
+  the −1.68 one.
 - **Mid-latitude level.** b = +30 is the cleanest row — no discrete
   clouds, and the floor is measurable beside it. The Leinert
   counterfactuals land at 0.38 and 0.005 of 255, i.e. 3.2 and 8.0 mag
   faint and both under one 8-bit step, where the panorama plainly shows
   band. This row excludes Leinert; it does **not** endorse the shipped
-  level, which now runs 1.14 mag bright against the same measurement.
+  level, which now runs 1.40 mag bright against the same measurement.
 
 Per-row residuals are ordered by contamination, not by scale: the
-panorama reads 0.12 mag over shipped at b = +5, 1.14 mag *under* at
+panorama reads 0.18 mag over shipped at b = +5, 1.40 mag *under* at
 b = +30, and over a magnitude over on the plane rows — where the patch
 includes the resolved star field Stellata draws separately (66 % of the
 pole's light is catalogue stars; the plane's fraction is lower but its
@@ -1430,22 +1430,23 @@ below, and the arbitration rests on the three measurements above.
 
 **The b = +30 residual is the one number the C1 toe moved, and it moved
 the wrong way.** Under the first, steep toe (slope 3.5 at the knee) the
-row read 0.23 mag model-bright; the C1 toe leaves 1.14. No photometry
-changed — the gentler rolloff simply stopped crushing a sub-threshold
-row that was already carrying an excess, which is what a toe tuned for
-perceptual honesty rather than for agreement will do.
+row read 0.23 mag model-bright; the C1 toe left 1.14, and correcting B/T
+from a mass ratio to a V-band light one has since taken it to 1.40. The
+toe changed no photometry — the gentler rolloff simply stopped crushing a
+sub-threshold row that was already carrying an excess, which is what a
+toe tuned for perceptual honesty rather than for agreement will do.
 
 Three readings of the same fact:
 
-- **Level**, 1.14 mag model-bright at b = +30, 0.73 at b = +45.
-- **Gradient**, the model spanning 1.90 mag over b = 5 → 30 where the
+- **Level**, 1.40 mag model-bright at b = +30, 1.10 at b = +45.
+- **Gradient**, the model spanning 1.76 mag over b = 5 → 30 where the
   floor-subtracted panorama spans ≈ 4.2.
-- **The Leinert pole check**, 1.59 mag in the same direction
+- **The Leinert pole check**, 1.68 mag in the same direction
   (`docs/science-galactic-structure.md` § The luminosity solve).
 
 Both known measurement biases inflate it — floor subtraction eats real
 high-|b| light, and the b = +5 row carries resolved-star light the model
-draws separately — so 1.14 mag is an upper bound on the disagreement,
+draws separately — so 1.40 mag is an upper bound on the disagreement,
 not an estimate of it. The sign is not in doubt: the disc's vertical
 profile carries too much light at high |b|.
 
