@@ -278,7 +278,7 @@ export function labelFlipsTsv(flips: readonly LabelFlip[]): string {
 /** Which SID designation namespace an identifier keys, per `docs/sid.md` § 3.
  *  A Flamsteed number keys none: it is a display designation the search index
  *  carries, never an identity key. */
-export function designationFor(field: LabelField, value: string): string | null {
+function designationFor(field: LabelField, value: string): string | null {
   if (field === 'flam') return null;
   const empty = {
     isSol: false, hip: null, hd: null, hr: null, gl: null,
@@ -289,6 +289,19 @@ export function designationFor(field: LabelField, value: string): string | null 
     : { ...empty, [field]: Number(value) };
   return starDesignations(fields)[0] ?? null;
 }
+
+/** Whether the disposition writes the overlay's value over the spine's, or
+ *  leaves the record carrying the spine's. Total over the union, so a new
+ *  disposition has to be classified here before anything reading the queue
+ *  compiles. */
+const WRITES_OVER_SPINE: Record<LabelDisposition, boolean> = {
+  added: true,
+  'overlay-wins': true,
+  'override-value': true,
+  'override-spine': false,
+  'suppressed-collision': false,
+  'extra-dropped': false,
+};
 
 /** Net designation change the queue describes, as a multiset delta. Applying
  *  it to the spine's designation tally must reproduce the built catalogue's —
@@ -302,22 +315,27 @@ export function labelFlipDesignationDelta(
     if (designation === null) return;
     delta.set(designation, (delta.get(designation) ?? 0) + by);
   };
+  for (const designation of spineDesignationsRemovedBy(flips)) move(designation, -1);
   for (const flip of flips) {
-    switch (flip.disposition) {
-      case 'added':
-      case 'overlay-wins':
-      case 'override-value':
-        if (flip.spine !== '') move(designationFor(flip.field, flip.spine), -1);
-        move(designationFor(flip.field, flip.applied), +1);
-        break;
-      // The record keeps the spine's value: nothing moves.
-      case 'override-spine':
-      case 'suppressed-collision':
-      case 'extra-dropped':
-        break;
-    }
+    if (!WRITES_OVER_SPINE[flip.disposition]) continue;
+    move(designationFor(flip.field, flip.applied), +1);
   }
   return delta;
+}
+
+/** The spine designations the queue takes off their record, unnetted. The
+ *  delta above cancels one against an addition that lands the same designation
+ *  on another record, which is exactly what a same-as class cares about and
+ *  exactly what a ledger canonical key does not — its row resolves through the
+ *  record it was keyed on (`../spine/README.md` § The swap parity ledger). */
+export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[] {
+  const removed: string[] = [];
+  for (const flip of flips) {
+    if (!WRITES_OVER_SPINE[flip.disposition] || flip.spine === '') continue;
+    const designation = designationFor(flip.field, flip.spine);
+    if (designation !== null) removed.push(designation);
+  }
+  return removed;
 }
 
 /** Read the committed queue back — the sibling of `labelFlipsTsv`, for the

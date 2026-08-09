@@ -35,8 +35,10 @@ scripts/catalog/classic-ids/
                                   Pure.
   label-merge-pure.ts (+ test)    The merge itself: the per-identifier rule,
                                   the collision guard, the curated overrides,
-                                  the review-queue codec, and the designation
-                                  delta the spine parity gate replays. Pure.
+                                  the review-queue codec, the designation
+                                  delta the spine parity gate replays, and
+                                  the unnetted removals the parity ledger's
+                                  canonical-key audit reads. Pure.
   designation-constellation-pure.ts
                                   IV/27A's `cst` keyed by HD/HIP — the
                                   constellation a Bayer / Flamsteed
