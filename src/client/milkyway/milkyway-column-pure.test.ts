@@ -96,9 +96,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.028 mag', () => {
+  it('dims the Galactic-centre sightline by 0.013 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0275, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0132, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -111,9 +111,9 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.0275, 3);
-    expect(offsets[1]).toBeCloseTo(0.0271, 3);
-    expect(offsets[2]).toBeCloseTo(0.0236, 3);
+    expect(offsets[0]).toBeCloseTo(0.0132, 3);
+    expect(offsets[1]).toBeCloseTo(0.0130, 3);
+    expect(offsets[2]).toBeCloseTo(0.0113, 3);
   });
 });
 
@@ -126,7 +126,7 @@ describe('per-component split toward the Galactic centre', () => {
   it('has the disc carrying essentially the whole column', () => {
     const disc = relativeLuminance(componentColumnRgb(DISC_COMPONENT, SOL, TO_GC));
     const bulge = relativeLuminance(componentColumnRgb(BULGE_COMPONENT, SOL, TO_GC));
-    expect(disc / (disc + bulge)).toBeCloseTo(0.9996, 4);
+    expect(disc / (disc + bulge)).toBeCloseTo(0.99981, 5);
   });
 });
 

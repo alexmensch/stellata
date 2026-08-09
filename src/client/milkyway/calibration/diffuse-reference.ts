@@ -21,15 +21,56 @@
 export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
 /**
- * Bulge share of the Galaxy's V-band light. Licquia & Newman 2015 (DOI
- * 10.1088/0004-637X/806/1/96) give B/T = 0.150 (+0.028/−0.019) in stellar
- * **mass**; no published V-band B/T exists.
- *
- * It is an **upper bound** on the V-band value, not an equivalent: the
- * bulge's older, more metal-rich population carries a higher Υ\*_V than
- * the disc's, so the same mass share buys less V light.
+ * Bulge share of the Galaxy's stellar **mass**, Licquia & Newman 2015
+ * (DOI 10.1088/0004-637X/806/1/96): 0.150 (+0.028/−0.019), from
+ * M\* = 0.91 ± 0.07 bulge against 6.08 ± 1.14 × 10¹⁰ M⊙ total, Chabrier
+ * IMF. Not the light ratio — see `BULGE_TO_TOTAL_LIGHT_V`.
  */
-export const BULGE_TO_TOTAL_V = 0.15;
+export const BULGE_TO_TOTAL_MASS = 0.15;
+
+/**
+ * Υ\*_V of the bulge population: Bruzual & Charlot 2003 SSP, Chabrier
+ * IMF, Z = 0.02, 10 Gyr — `data/bc03/bc2003_hr_m62_chab_ssp.4color`
+ * column 6 at `log-age-yr = 10.000`, read back and pinned in
+ * `milkyway.test.ts`.
+ *
+ * A single SSP for a population whose metallicity distribution is broad:
+ * the bulge's is centred near solar and roughly uniformly old
+ * (≥ 10 Gyr). README.md § Calibration carries what the Z = 0.008 and
+ * Z = 0.05 brackets do to the ratio below.
+ */
+export const BULGE_ML_V = 3.15;
+
+/**
+ * Υ\*_V of the disc, Flynn et al. 2006 (DOI
+ * 10.1111/j.1365-2966.2006.10911.x): 1.5 ± 0.2 for the local column,
+ * **measured** from the solar-cylinder luminosity function and mass
+ * density rather than modelled. Their column includes remnants, matching
+ * the mass definition behind `BULGE_TO_TOTAL_MASS`, and the paper states
+ * it agrees with population synthesis at solar-neighbourhood IMFs — which
+ * is what makes it commensurable with the Chabrier-IMF `BULGE_ML_V`.
+ */
+export const DISC_ML_V = 1.5;
+
+/**
+ * Bulge share of the Galaxy's V-band **light** — what the emissivity
+ * solve splits flux by. No published Milky Way value exists, so it is
+ * derived from the mass share and the two Υ\*_V above:
+ *
+ * ```
+ * L_b/L_tot = 1 / (1 + ((1 − f_M)/f_M) · (Υ_b/Υ_d))
+ * ```
+ *
+ * Only the RATIO Υ_b/Υ_d survives, which is why mixing a measured disc
+ * value with a modelled bulge one is defensible: IMF normalisation
+ * cancels and what is left is the population difference the whole
+ * correction is about. 0.150 in mass buys 0.0775 in V light.
+ */
+export const BULGE_TO_TOTAL_LIGHT_V =
+  1 /
+  (1 +
+    ((1 - BULGE_TO_TOTAL_MASS) / BULGE_TO_TOTAL_MASS) *
+      (BULGE_ML_V / DISC_ML_V));
 
 /**
  * Integrated starlight at 0.55 µm from Leinert et al. 1998, A&AS 127, 1

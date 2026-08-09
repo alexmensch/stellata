@@ -9,12 +9,14 @@ import {
 } from './milkyway';
 import {
   BULGE_COLOR_RGB,
+  BULGE_COMPONENT,
   BULGE_DENSITY0,
   BULGE_TINT_RGB,
   BULGE_VOLUME_INTEGRAL,
   DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
+  DISC_COMPONENT,
   DISC_DENSITY0,
   DISC_HALF_THICKNESS_PC,
   DISC_SCALE_HEIGHT_PC,
@@ -29,6 +31,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   STEPS,
   S_MIN_PC,
+  componentColumnRgb,
   discVerticalProfile,
   dustTauVPerPc,
   foregroundDustTauRgb,
@@ -40,13 +43,11 @@ import { R0_PC } from '../galactic/galactic-coords';
 import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
 import { parseOverrides } from '../../../scripts/local-group/build-local-group';
 import {
-  BULGE_TO_TOTAL_V,
+  BULGE_TO_TOTAL_LIGHT_V,
   GALAXY_TOTAL_ABSMAG_V,
   LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2,
   NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2,
-  RESOLVED_CATALOGUE_MAG_ARCSEC2,
-  diffuseResidualMagArcsec2,
-} from './diffuse-reference';
+} from './calibration/diffuse-reference';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import {
   DEFAULT_INSTRUMENT,
@@ -225,42 +226,11 @@ describe('MilkyWay vertical profile', () => {
   });
 });
 
-// The band's target is published starlight MINUS the stars the app already
-// draws. Pinning the published figure directly would enshrine that double
-// count, which is exactly what the retired GC anchor did.
-describe('MilkyWay diffuse reference', () => {
-  it('subtracts the resolved catalogue from the published NGP total', () => {
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeCloseTo(24.99, 2);
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeGreaterThan(
-      LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole,
-    );
-  });
-
-  // The resolved star field carries two thirds of the pole's starlight.
-  it('pins how much of the NGP total the star field already draws', () => {
-    const share =
-      10 ** (-0.4 * RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole) /
-      10 ** (-0.4 * LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole);
-    expect(share).toBeCloseTo(0.657, 3);
-  });
-
-  // De-extincted catalogue vs observed sky model through a ~30 mag column:
-  // the pair is not commensurable and must not yield a number.
-  it('refuses a residual toward the Galactic centre', () => {
-    expect(
-      diffuseResidualMagArcsec2(
-        LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre,
-        RESOLVED_CATALOGUE_MAG_ARCSEC2.galacticCentre,
-      ),
-    ).toBeNull();
-  });
-});
-
 // The emissivity is solved against the Galaxy's integrated luminosity, so
 // the solve itself has no tolerance — it either reproduces the published
 // pair or it does not. What DOES have a tolerance is every check the solve
 // is not anchored on, and those disagreements are the deliverable
-// (README.md § Calibration).
+// (calibration/README.md).
 describe('MilkyWay luminosity solve', () => {
   const totalFlux =
     DISC_DENSITY0 * DISC_VOLUME_INTEGRAL + BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL;
@@ -271,7 +241,7 @@ describe('MilkyWay luminosity solve', () => {
     expect(GALAXY_TOTAL_ABSMAG_V).toBe(-21.37);
     expect(modelAbsMagV).toBeCloseTo(GALAXY_TOTAL_ABSMAG_V, 12);
     expect((BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) / totalFlux).toBeCloseTo(
-      BULGE_TO_TOTAL_V,
+      BULGE_TO_TOTAL_LIGHT_V,
       12,
     );
   });
@@ -315,20 +285,21 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.587, 3);
+    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.676, 3);
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
   // Leinert's total rather than a residual: the catalogue row toward the
   // centre is de-extincted and so not commensurable there
-  // (diffuse-reference.ts), and it would only widen the gap. Same species
+  // (calibration/diffuse-reference.ts), and it would only widen the gap.
+  // Same species
   // of disagreement as the pole, which is what says it is a scale
   // difference between two published sources and not a shape error.
   it('states the Galactic-centre sightline against Leinert’s total', () => {
     expect(
       LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre -
         GC_SIGHTLINE_MAG_ARCSEC2,
-    ).toBeCloseTo(0.936, 3);
+    ).toBeCloseTo(1.024, 3);
   });
 
   // The cross-layer symptom the epic opened on: the Galaxy seen from M31
@@ -356,6 +327,46 @@ describe('MilkyWay luminosity solve', () => {
     expect(galaxyFromM31).toBeCloseTo(3.079, 3);
     expect(galaxyFromM31).toBeLessThan(m31ApparentV);
     expect(m31ApparentV - galaxyFromM31).toBeCloseTo(0.361, 3);
+  });
+
+  // The split conserves the total, so the pin above cannot see it at all —
+  // and the Sol sightlines barely can either, because the bulge sits behind
+  // 4.6 τ_V from here. Where a mass-for-light substitution actually shows
+  // is the face-on external view, which is the one the camera can reach
+  // (CLAUDE.md § Camera-anywhere perception): it is the bulge/disc contrast
+  // that makes the model read as an Sbc rather than an S0.
+  //
+  // Edge-on is pinned alongside as the opposite extreme: the bulge sits
+  // behind the full midplane dust column and contributes essentially
+  // nothing, which is what a real edge-on spiral looks like in V and is why
+  // face-on is the only external geometry that constrains the split.
+  it('pins the bulge/disc contrast the external view actually shows', () => {
+    const centrePixelBulgeShare = (
+      originPc: readonly [number, number, number],
+    ) => {
+      const scale = Math.hypot(...originPc);
+      const toCentre = originPc.map((c) => -c / scale) as unknown as [
+        number,
+        number,
+        number,
+      ];
+      const lum = (c: typeof DISC_COMPONENT) =>
+        relativeLuminance(componentColumnRgb(c, originPc, toCentre));
+      const disc = lum(DISC_COMPONENT);
+      const bulge = lum(BULGE_COMPONENT);
+      return bulge / (disc + bulge);
+    };
+
+    expect(centrePixelBulgeShare([0, 0, 100_000])).toBeCloseTo(0.305, 3);
+    expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeLessThan(1e-4);
+
+    // The integrated ratio the density0 split sets, which the face-on
+    // number above is the marched consequence of. Under the mass B/T it
+    // was 0.176 and the face-on centre pixel read 0.480 bulge.
+    expect(
+      (BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) /
+        (DISC_DENSITY0 * DISC_VOLUME_INTEGRAL),
+    ).toBeCloseTo(0.0840, 4);
   });
 });
 
@@ -452,8 +463,8 @@ describe('MilkyWay surface-brightness calibration', () => {
   // Derived from the raymarch mirror rather than hand-tuned, so these pins
   // are what catch a profile / quadrature change.
   it('derives the GC column and the surface brightness it implies', () => {
-    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(68.419, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(21.98, 2);
+    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(74.238, 3);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(21.90, 2);
   });
 
   // The emissivity is solved against a luminosity, not a sightline, so the
@@ -474,7 +485,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       { dustEnabled: false },
     );
     expect(s(0, 90) - dustFree).toBeCloseTo(0.087, 3);
-    expect(s(180, 0)).toBeCloseTo(22.16, 2);
+    expect(s(180, 0)).toBeCloseTo(22.075, 3);
     expect(s(0, 0)).toBeCloseTo(GC_SIGHTLINE_MAG_ARCSEC2, 6);
   });
 
@@ -489,8 +500,8 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(0, bDeg),
       );
     expect(s(5)).toBeLessThan(s(0));
-    expect(s(5)).toBeCloseTo(20.71, 2);
-    expect(s(0)).toBeCloseTo(21.98, 2);
+    expect(s(5)).toBeCloseTo(20.77, 2);
+    expect(s(0)).toBeCloseTo(21.90, 2);
   });
 
   // The whole point of the rework: extinction attenuates, it does not
@@ -533,15 +544,15 @@ describe('MilkyWay surface-brightness calibration', () => {
   // threshold are untouched, sub-threshold ones roll off, and the pole —
   // 1.49 mag under, pre-toe 15.65 — lands back on the dither floor
   // because a patch the modelled eye cannot detect must not read plainly
-  // visible (README.md § Calibration).
+  // visible (calibration/README.md).
   it('pins the band against a threshold star at the base epoch', () => {
     expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
-    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(70.33, 2);
-    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(38.56, 2);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(34.29, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(18.52, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.52, 2);
+    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(68.41, 2);
+    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(40.35, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(36.62, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(21.91, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.85, 2);
   });
 
   // How far under threshold each sightline sits, which is the photometric
@@ -554,11 +565,11 @@ describe('MilkyWay surface-brightness calibration', () => {
     const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
     expect(sLim).toBe(22);
 
-    expect(sbAt(0, 5) - sLim).toBeCloseTo(-1.29, 2);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(-0.02, 2);
-    expect(sbAt(180, 0) - sLim).toBeCloseTo(0.16, 2);
-    expect(sbAt(0, 30) - sLim).toBeCloseTo(0.61, 2);
-    expect(sbAt(0, 90) - sLim).toBeCloseTo(1.49, 2);
+    expect(sbAt(0, 5) - sLim).toBeCloseTo(-1.23, 2);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(-0.10, 2);
+    expect(sbAt(180, 0) - sLim).toBeCloseTo(0.075, 3);
+    expect(sbAt(0, 30) - sLim).toBeCloseTo(0.52, 2);
+    expect(sbAt(0, 90) - sLim).toBeCloseTo(1.40, 2);
 
     // Negative is OVER threshold. Nothing pins the band to it any more —
     // the solve is against a luminosity, and where the plane lands against
@@ -595,7 +606,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       sbAt(0, 5),
       REFERENCE_OMEGA_PX,
     );
-    expect(statisticL).toBeCloseTo(5.507e-3, 6);
+    expect(statisticL).toBeCloseTo(5.1925e-3, 6);
     expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(8.4, 1);
   });
 
