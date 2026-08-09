@@ -101,9 +101,11 @@ another doc carries; never delete invariants to fit.
 
 Seam: the README's largest self-contained topic plus the leaf module
 owning it. Right when the moved code imports nothing from the parent and a
-session reading it is better served by the moved README. Wrong when the
-subfolder's files all import back into the parent, or the moved README
-would mostly describe code that stayed.
+session asking about that topic is better served landing in the subfolder.
+The moved README may still document constants that stayed behind — say
+where they live and it stays the authority. Wrong when the subfolder's
+files all import back into the parent, or the topic has no module of its
+own to move and the split would be README-only.
 
 ### Four triggers — when to read or update
 
