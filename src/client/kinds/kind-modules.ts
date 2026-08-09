@@ -11,7 +11,7 @@ import {
   createProbeKindModule,
 } from '../solar-system/probes/probe-module';
 import { createStarKindModule } from '../star-pipeline/star-module';
-import type { KindPick, ObjectKindModule } from './kind-module';
+import type { KindLoadProgress, KindPick, ObjectKindModule } from './kind-module';
 
 /** Explicit ordered roster — attach order IS scene-layer update order
  *  for module-supplied layers, and every module layer updates before
@@ -56,6 +56,30 @@ export function buildKindModules() {
 }
 
 export type BuiltKindModules = ReturnType<typeof buildKindModules>;
+
+/** Boot's load fan-out, one promise per roster entry for its
+ *  `Promise.all`. `critical` is what makes the never-rejects rule a
+ *  guarantee rather than a per-module convention: only the critical
+ *  module's rejection propagates (boot's catch is the error screen);
+ *  every other kind's is swallowed here, leaving that kind's roster
+ *  empty. `onProgress` goes to the critical module alone — nothing else
+ *  is on the first-paint path. */
+export function loadKindModules(
+  modules: KindModules,
+  baseUrl: string,
+  onProgress: (p: KindLoadProgress) => void,
+): Promise<void>[] {
+  return KIND_ROSTER.map(async (kind) => {
+    const m = modules[kind];
+    if (!m) return;
+    if (m.critical) return m.load(baseUrl, onProgress);
+    try {
+      await m.load(baseUrl);
+    } catch (err) {
+      console.error(`kind module '${kind}' load rejected; its roster stays empty`, err);
+    }
+  });
+}
 
 /** Display name for any Target through the module roster; a null module
  *  row or a nameless index answers '' — callers pick their own

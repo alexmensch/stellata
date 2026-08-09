@@ -15,8 +15,9 @@ inside a kind stays module-internal.
   `KindSearchEntry`.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
   list), the exhaustive `KindModules` mapped type,
-  `buildKindModules()`, `displayNameOf()`, `collectKindPicks()`, and
-  `mergeKindDetailBinds()`.
+  `buildKindModules()`, `loadKindModules()` (boot's fan-out, where the
+  never-rejects rule is enforced), `displayNameOf()`,
+  `collectKindPicks()`, and `mergeKindDetailBinds()`.
 - `kind-geometry.ts` — leg helpers shared across modules:
   `absCameraDistancePc(ctx, centerAbs)`, the card
   `cameraDistancePc` leg for every kind whose centre is absolute

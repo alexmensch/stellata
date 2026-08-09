@@ -11,7 +11,8 @@ import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
 import { createPlanetLabels } from './solar-system/planets/planet-labels';
-import { buildKindModules, KIND_ROSTER } from './kinds/kind-modules';
+import { buildKindModules, KIND_ROSTER, loadKindModules } from './kinds/kind-modules';
+import type { KindLoadProgress } from './kinds/kind-module';
 import { createScaleBar } from './ui/scale-bar';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { bindUnitToggle } from './ui/unit-toggle';
@@ -49,6 +50,14 @@ async function main() {
   const meta = document.getElementById('meta')!;
   const tooltip = document.getElementById('tooltip')!;
 
+  // Byte progress of the critical artifact — the star catalog is the
+  // only download first paint waits on.
+  const showCatalogProgress = ({ bytes, total }: KindLoadProgress) => {
+    loadingBar.style.width = `${((bytes / total) * 100).toFixed(0)}%`;
+    loadingStatus.textContent =
+      `${(bytes / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`;
+  };
+
   try {
     const kinds = buildKindModules();
     const [binaries, boundaries] = await Promise.all([
@@ -62,20 +71,10 @@ async function main() {
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts. The star module (critical) carries the
-      // catalog + search index and MAY reject — the catch below is the
-      // error screen; every other load never rejects, a missing artifact
-      // just leaves that kind's roster empty.
-      ...KIND_ROSTER.map((kind) => kinds[kind]?.load(
-        import.meta.env.BASE_URL,
-        kind === 'star'
-          ? ({ bytes, total }) => {
-            const pct = (bytes / total) * 100;
-            loadingBar.style.width = pct.toFixed(0) + '%';
-            loadingStatus.textContent = `${(bytes / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`;
-          }
-          : undefined,
-      )),
+      // Kind-module artifacts. Only the critical module (star: catalog +
+      // search index) can reject out of here — the catch below is the
+      // error screen.
+      ...loadKindModules(kinds, import.meta.env.BASE_URL, showCatalogProgress),
     ]);
     const catalog = kinds.star.catalog;
     const searchIndex = kinds.star.searchIndex;
