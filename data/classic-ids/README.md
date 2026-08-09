@@ -18,6 +18,12 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    source_id (357,538 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
                                    (§ HD-route cross-check below).
+hd_hip_route_disagreements_review.tsv
+                                   Hand-curated dispositions for the queue,
+                                   joined row-for-row by
+                                   scripts/catalog/classic-ids/
+                                   parity-ledger.test.ts — a re-pull that
+                                   grows the queue fails until reviewed.
 rejected_bindings.tsv              187 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
@@ -65,10 +71,11 @@ all four; cite the paper per table.
   (`docs/catalog-driver.md` § 5).
 - **`bsc5.tsv`** ← VizieR `V/50/catalog`. Hoffleit & Warren 1991, Bright
   Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
-  carry an HD; the 14 HD-less entries resolve through the inherited spine
-  or land in the parity ledger). `name` is the BSC's own designation
-  string (`"3Alp Lyr"`), committed for the naming ladder and read by
-  nothing today.
+  carry an HD; the 14 HD-less entries are non-stellar — novae/SNe, four
+  clusters, M 31 — so none needs a route and no record carries one,
+  both pinned by `scripts/catalog/classic-ids/parity-ledger.test.ts`).
+  `name` is the BSC's own designation string (`"3Alp Lyr"`), committed
+  for the naming ladder and read by nothing today.
 - **`cns5.tsv`** ← VizieR `J/A+A/670/A19/cns5`, the 2023-12-13 corrected
   version. Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023, *A&A*
   670, A19 — the fifth Catalogue of Nearby Stars. Carries
@@ -104,7 +111,11 @@ HD→TYC→source_id and HIP→source_id routes land on different sources
 (every pair differs only in its low digits — resolved close pairs where
 the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
-resolution.
+resolution. All 21 are disposed `no-identity-event` in
+`hd_hip_route_disagreements_review.tsv`: in every row one spine record
+holds both designations, so the disagreement is over which component's
+source the walks bound, never over which record the star is
+(`scripts/catalog/spine/README.md` § The swap parity ledger).
 
 ## The binding gate
 

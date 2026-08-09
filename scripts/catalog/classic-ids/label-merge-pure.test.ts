@@ -8,9 +8,12 @@ import {
   resolveDesignationConIndex,
 } from './designation-constellation-pure';
 import {
+  labelFlipDesignationDelta,
   labelFlipsTsv,
   mergeClassicIdLabels,
   parseLabelOverridesTsv,
+  spineDesignationsRemovedBy,
+  type LabelFlip,
   type LabelMergeRecord,
 } from './label-merge-pure';
 
@@ -183,6 +186,45 @@ describe('labelFlipsTsv', () => {
       'gaia_source_id\tlabel\tfield\tspine\toverlay\tapplied\tdisposition',
     );
     expect(lines.map((l) => l.split('\t')[2])).toEqual(['field', 'hd', 'hr']);
+  });
+});
+
+describe('spineDesignationsRemovedBy', () => {
+  function flip(over: Partial<LabelFlip>): LabelFlip {
+    return {
+      sourceId: SRC_A, label: 'record 0', field: 'hr',
+      spine: '5505', overlay: '5506', applied: '5506',
+      disposition: 'overlay-wins', ...over,
+    };
+  }
+
+  it('reports the spine value of every disposition that writes over it', () => {
+    expect(spineDesignationsRemovedBy([
+      flip({}),
+      flip({ field: 'hd', spine: '10360', applied: '10361', disposition: 'override-value' }),
+    ])).toEqual(['hr:5505', 'hd:10360']);
+  });
+
+  it('reports nothing where the record keeps the spine value', () => {
+    expect(spineDesignationsRemovedBy([
+      flip({ applied: '5505', disposition: 'override-spine' }),
+      flip({ applied: '5505', disposition: 'suppressed-collision' }),
+      flip({ applied: '5507', disposition: 'extra-dropped' }),
+      flip({ spine: '', disposition: 'added' }),
+      flip({ field: 'flam', spine: '24', applied: '25' }),
+    ])).toEqual([]);
+  });
+
+  // What separates this from the delta: a designation the merge moves from one
+  // record to another still leaves the first record's same-as class, so a
+  // ledger row keyed on it needs a bridge — the net-zero delta cannot say so.
+  it('reports a designation the delta nets away', () => {
+    const moved = [
+      flip({ spine: '5505', applied: '5506' }),
+      flip({ sourceId: SRC_B, spine: '5506', applied: '5505' }),
+    ];
+    expect(labelFlipDesignationDelta(moved)).toEqual(new Map([['hr:5506', 0], ['hr:5505', 0]]));
+    expect(spineDesignationsRemovedBy(moved)).toEqual(['hr:5505', 'hr:5506']);
   });
 });
 

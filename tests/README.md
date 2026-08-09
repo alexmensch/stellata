@@ -37,7 +37,7 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          rewrite means editing the guard itself with
                          explicit user sign-off. Self-skips where
                          ledger.tsv is an LFS pointer stub (the bare CI
-                         test job); runs for real in the build-catalog
+                         test job); runs for real in the sid-ledger-guard
                          job and locally.
 ```
 

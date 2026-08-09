@@ -9,10 +9,12 @@
 // when data/binaries/multiples.tsv is an LFS pointer stub (bare CI test
 // job) — mirroring sid-ledger-guard's skip contract.
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
+
+import { lfsContentReadable } from '../scripts/util/paths';
 
 const ROOT = resolve(__dirname, '..');
 const MULTIPLES_TSV = resolve(ROOT, 'data/binaries/multiples.tsv');
@@ -20,14 +22,8 @@ const CATALOG_MANIFEST = resolve(ROOT, 'public/catalog-manifest.json');
 const ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const BINARIES_BIN = resolve(ROOT, 'public/binaries.bin');
 
-function isLfsPointerStub(path: string): boolean {
-  if (!existsSync(path)) return true;
-  const head = readFileSync(path, { encoding: 'utf8', flag: 'r' }).slice(0, 40);
-  return head.startsWith('version https://git-lfs');
-}
-
 const catalogBuilt = existsSync(CATALOG_MANIFEST);
-const skip = !catalogBuilt || isLfsPointerStub(MULTIPLES_TSV);
+const skip = !catalogBuilt || !lfsContentReadable(MULTIPLES_TSV);
 
 describe.skipIf(skip)('built-artifact coherence (public/)', () => {
   it('binaries.bin exists whenever the catalog has been built', () => {
