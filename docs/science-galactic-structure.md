@@ -395,6 +395,43 @@ the angular error the requirement asks for. At the pin it is **9.4′, inside th
   each frame; that spread is **0.006 mag** at 13′ cells against 0.07 mag at 26′.
   The all-sky map's exact zero is not worth buying.
 
+#### What is not measured, and what to turn if it is too slow
+
+The costs above are exact fetch and texel counts anchored to a shipped GPU
+workload. **They are not frame times, and none of this has run on a GPU.**
+
+**Spike the fill pass on its own before ty4.5 builds the read**
+(stellata-ty4.7). The fill alone, behind a timer query and an A/B toggle
+mirroring `setExtinctionPrepassEnabled`, priced at the default 50° and at the
+**120° FOV × dpr 2** corner — which is the worst case at 139M fetches/frame and
+is reached by zooming out on a retina display, not by an exotic configuration.
+Doing this after ty4.5 means discovering the answer at the end of a PR that also
+carves 52 clouds and re-pins every sightline row.
+
+The fill is linear in cell count and so quadratic in cell angle, which is what
+makes the fallbacks priced rather than guessed. Rows are the Rift strip at 32
+slices, so they read against the accuracy table above:
+
+| lever | fill | worst ΔS | shimmer | column |
+| --- | --- | --- | --- | --- |
+| **13′ cells — the pin** | 39M/frame | 0.024 | 0.006 | 0.038 |
+| 18′ cells | 0.5× | between the rows | | |
+| 26′ cells | 0.25× (~10M) | 0.095 | 0.070 | 0.150 |
+| 24 slices | unchanged | 0.031 | 0.006 | 0.038 |
+| refill a fraction of the cells per frame | spike → smear | none | | |
+
+At 26′ the fill sits **below** the star prepass and is still an order off the
+1.28 mag that point-sampling costs, so there is a lot of room between correct
+and unshippable. Note slices are a **memory** knob, not a fill knob — the fill
+marches every ray at the same rate whatever the slice count.
+
+**One lever is unpriced.** The fill assumes half-voxel sampling along each ray
+(2.44 pc, 512 samples to the coverage edge); one-voxel sampling halves it again,
+and that accuracy cost is not measured. `pnpm run analyse:prefilter` is where to
+measure it — `buildCellCurve`'s integration step in `froxel.ts` is the parameter
+to sweep, and it is deliberately the same constant the reference march uses, so
+it has to be split before it can be swept.
+
 #### Camera outside coverage
 
 The distance axis spans [entry, exit] from a ray-sphere test rather than

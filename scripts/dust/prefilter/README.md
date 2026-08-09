@@ -32,6 +32,14 @@ and the shimmer a screen-space grid shows as its cells slide under rotation
 grid). `cost.ts` is arithmetic only, in dust-texture fetches per fill and texels
 held, against the shipped per-star extinction prepass as the scale.
 
+## The sweep it has not run
+
+`TRUTH_STEP_PC` is one constant doing two jobs: the reference march's step
+*and* the rate the froxel fill integrates each cell ray at. The second is a 2×
+lever on fill cost that has never been priced — split the two and sweep the fill
+rate over {1.22, 2.44, 4.88, 9.77} pc when the GPU spike says the fill is the
+term that hurts (`docs/science-galactic-structure.md` § What is not measured).
+
 ## Two things to know before changing it
 
 - **The grid is sampled trilinearly on decoded density, where the GPU filters
