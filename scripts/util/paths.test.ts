@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { isLfsPointer, isLfsPointerFile, maxMtimeOfSources } from './paths';
+import {
+  isLfsPointer,
+  isLfsPointerFile,
+  lfsContentReadable,
+  maxMtimeOfSources,
+} from './paths';
 
 const LFS_STUB = 'version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 12\n';
 
@@ -74,5 +79,15 @@ describe('paths / LFS pointer detection', () => {
     const tiny = join(dir, 'tiny.tsv');
     writeFileSync(tiny, 'x');
     expect(isLfsPointerFile(tiny)).toBe(false);
+  });
+
+  it('reads content only for a present, smudged file', () => {
+    const stub = join(dir, 'readable-stub.tsv');
+    const real = join(dir, 'readable-real.tsv');
+    writeFileSync(stub, LFS_STUB);
+    writeFileSync(real, 'ra\tdec\tcon\n');
+    expect(lfsContentReadable(real)).toBe(true);
+    expect(lfsContentReadable(stub)).toBe(false);
+    expect(lfsContentReadable(join(dir, 'absent.tsv'))).toBe(false);
   });
 });

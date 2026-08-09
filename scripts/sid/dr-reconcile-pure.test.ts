@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, isLfsPointer } from '../util/paths';
+import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
@@ -68,11 +68,7 @@ describe('classifyDrTransition', () => {
 // SID-ledger-guard job and locally.
 const REQUEST = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
 const NEIGHBOURHOOD = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood.tsv');
-const available =
-  existsSync(REQUEST) &&
-  existsSync(NEIGHBOURHOOD) &&
-  !isLfsPointer(readFileSync(REQUEST, 'utf-8')) &&
-  !isLfsPointer(readFileSync(NEIGHBOURHOOD, 'utf-8'));
+const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
   it('reproduces the docs/sid.md § 6.2 classification exactly', () => {

@@ -44,6 +44,14 @@ export function isLfsPointerFile(path: string): boolean {
   }
 }
 
+/** Whether an LFS-tracked input's real content is on disk: present, and
+ *  smudged rather than a pointer stub. The self-skip predicate for suites that
+ *  probe an input they may not read at all — the text-taking `isLfsPointer` is
+ *  for the ones that have to read it anyway. */
+export function lfsContentReadable(path: string): boolean {
+  return existsSync(path) && !isLfsPointerFile(path);
+}
+
 export function maxMtimeOfSources(paths: string[]): number {
   let newest = 0;
   for (const p of paths) {

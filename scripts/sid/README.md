@@ -72,9 +72,10 @@ locally. A suite that self-skips on a stub only earns its keep if some
 job runs it smudged; check `.github/workflows/test.yml` names the file
 explicitly before relying on it.
 
-The LFS-stub predicates themselves (`isLfsPointer`,
-`isLfsPointerFile`) live in `scripts/util/paths.ts`, not here — see that
-folder's README for why.
+The LFS-stub predicates themselves (`isLfsPointer`, `isLfsPointerFile`,
+and `lfsContentReadable`, the present-and-smudged gate a `skipIf` takes)
+live in `scripts/util/paths.ts`, not here — see that folder's README for
+why.
 
 ## Designation extraction — where each namespace comes from
 

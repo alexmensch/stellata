@@ -6,7 +6,7 @@ import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
-import { ATHYG_CSV, isLfsPointerFile } from '../../../../scripts/util/paths';
+import { ATHYG_CSV, lfsContentReadable } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
@@ -30,7 +30,7 @@ interface Disagreement {
 // The CSV rides LFS, so the bare CI `test` job sees a pointer stub and skips.
 // The sweep runs smudged in the `tier-a-corpus` job, which names this file
 // explicitly — a skipIf suite that no job names runs nowhere.
-const available = !isLfsPointerFile(ATHYG_CSV);
+const available = lfsContentReadable(ATHYG_CSV);
 
 describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column', () => {
   let rowsWithCon = 0;
