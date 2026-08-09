@@ -6,7 +6,7 @@ floating origin's owner, recentre fan-out, and anchor-policy seam — and
 the shared view/screen uniform map every render pass holds by
 reference. Star-specific frame state (the local-position buffer, epoch
 advance, proximity queries) stays on `StarFrame`
-(`../star-pipeline/frame/README.md`), which consumes this service.
+(`../star-pipeline/star-frame/README.md`), which consumes this service.
 
 ## Files in this area
 
@@ -47,7 +47,7 @@ The integration shell registers three listeners, in this order:
 1. **Star buffer rewrite** — `StarFrame.rewriteAt(origin)` rewrites
    `localPositions` in float64 per axis and clears any stale flag a
    same-frame epoch advance left (the one-rewrite-per-frame coalescing
-   invariant, `../star-pipeline/frame/README.md`).
+   invariant, `../star-pipeline/star-frame/README.md`).
 2. **Camera / orbit-target shift** — both translate by the delta so the
    user sees no jump, only numerical precision improves.
 3. **Scene-layer fan-out** — `SceneLayerRegistry.recenterAll`; layers

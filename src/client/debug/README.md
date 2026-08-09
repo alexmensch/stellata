@@ -180,7 +180,7 @@ Ordered by impact. Each item shipped as a separate commit.
 
 ### `forEachStarNearCamera` — sorted-distance binary-search window
 
-`star-pipeline/frame/star-frame.ts`. The core depth-mask gate
+`star-pipeline/star-frame/star-frame.ts`. The core depth-mask gate
 (`shouldEnableCoreMask`) and the star local-depth membership scan
 both need "which stars sit
 within `dThresh` pc of the camera?" The original implementation

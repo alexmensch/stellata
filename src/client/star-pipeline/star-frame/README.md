@@ -10,7 +10,7 @@ consumes both. Nothing in `../` imports this folder.
 ## Files in this area
 
 ```
-src/client/star-pipeline/frame/
+src/client/star-pipeline/star-frame/
   star-frame.ts (+ test)          StarFrame — the local-position
                                   buffer, epoch advance, the
                                   per-instance buffers derived at load,

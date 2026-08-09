@@ -115,7 +115,7 @@ import {
   SCENE_ELEMENT_IDS,
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
-import { StarFrame } from './star-pipeline/frame/star-frame';
+import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
@@ -202,7 +202,7 @@ export class Stellata implements FrameAnchor {
   // fan-out, and the focal anchor policy (frame/README.md).
   private floatingOrigin!: FloatingOrigin;
   // Epoch advance, the derived per-instance buffers, and the
-  // Sol-distance proximity queries — see star-pipeline/frame/README.md.
+  // Sol-distance proximity queries — see star-pipeline/star-frame/README.md.
   // The shell reads `localPositions` through it and drives the
   // per-frame calls.
   private starFrame!: StarFrame;

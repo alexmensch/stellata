@@ -41,7 +41,7 @@ implemented by `stellata.ts` as a thin seam over the `FloatingOrigin`
 service (`../../frame/README.md`), whose recentre fan-out covers the
 star-buffer rewrite, the camera / orbit-target shift, and the
 scene-layer hooks; the star-position legs read `StarFrame`
-(`../../star-pipeline/frame/README.md`).
+(`../../star-pipeline/star-frame/README.md`).
 
 ## Focus state
 

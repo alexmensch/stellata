@@ -7,10 +7,10 @@ subfolders.
 
 ## Subfolders
 
-- `frame/` — `StarFrame` (the CPU star position frame: local-position
-  buffer, epoch advance, derived buffers, proximity queries). The
-  floating origin and the shared uniform map every pass holds by
-  reference live in `../frame/` (`FloatingOrigin`,
+- `star-frame/` — `StarFrame` (the CPU star position frame:
+  local-position buffer, epoch advance, derived buffers, proximity
+  queries). The floating origin and the shared uniform map every pass
+  holds by reference live in `../frame/` (`FloatingOrigin`,
   `buildSharedUniforms`).
 - `extinction/` — the per-star camera→star A_V raymarch and its prepass
   cache, plus the build-time de-extinction cancellation invariant.

@@ -203,7 +203,7 @@ the currently focused star.
   the renderer's (0,0,0), starting at Sol — is owned by the
   `FloatingOrigin` service (`frame/README.md`), together with the
   recentre fan-out and the anchor-policy seam. The star buffer lives on
-  `StarFrame` (`star-pipeline/frame/README.md`): `localPositions`
+  `StarFrame` (`star-pipeline/star-frame/README.md`): `localPositions`
   (exposed via `stellata.localPositions`), a `Float32Array` of
   `catalog.positions − worldOffset` bound to the `iPosition` instance
   attribute, which is what every overlay and pick path projects
