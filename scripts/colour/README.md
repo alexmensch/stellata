@@ -37,6 +37,13 @@ which is why the chain lives there and not beside the CLI. A layer's
 component hue and a single star's are then the same function of B–V,
 differing only in that the layer takes it unquantised.
 
+**That equivalence is pinned, not assumed.** `blackbody-lut.test.ts`
+sweeps the whole B–V range and holds `linearSrgbFromColourIndex` against
+`sampleLut` to **0.669 / 255** worst case — under one quantisation step,
+so the two routes cannot silently diverge. The chain's own behaviour
+(Python parity, peak- not luma-normalisation, monotonic warmth) is
+`blackbody-lut-pure.test.ts`, beside the code.
+
 `ballesteros-glsl-drift.test.ts` — pins the `ballesterosBvFromTeff`
 function body in `src/client/star-pipeline/star.vert.glsl` against the
 TS coefficients in `blackbody-lut-pure.ts`. A coefficient drift on

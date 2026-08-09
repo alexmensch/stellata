@@ -24,14 +24,7 @@ import {
   bvAtIndex,
 } from './blackbody-lut-pure';
 
-export {
-  BV_MAX,
-  BV_MIN,
-  LUT_SIZE,
-  ballesterosTeff,
-  blackbodyToLinearSrgb,
-  bvAtIndex,
-};
+export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
 
 // ---- LUT build --------------------------------------------------------
 
