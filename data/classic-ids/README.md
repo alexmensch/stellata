@@ -18,6 +18,12 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    source_id (357,538 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
                                    (§ HD-route cross-check below).
+hd_hip_route_disagreements_review.tsv
+                                   Hand-curated dispositions for the queue,
+                                   joined row-for-row by
+                                   scripts/catalog/classic-ids/
+                                   parity-ledger.test.ts — a re-pull that
+                                   grows the queue fails until reviewed.
 rejected_bindings.tsv              187 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
@@ -104,7 +110,11 @@ HD→TYC→source_id and HIP→source_id routes land on different sources
 (every pair differs only in its low digits — resolved close pairs where
 the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
-resolution.
+resolution. All 21 are disposed `no-identity-event` in
+`hd_hip_route_disagreements_review.tsv`: in every row one spine record
+holds both designations, so the disagreement is over which component's
+source the walks bound, never over which record the star is
+(`scripts/catalog/spine/README.md` § The swap parity ledger).
 
 ## The binding gate
 

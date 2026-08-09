@@ -82,8 +82,9 @@ Caveats verified at the gate:
   behind that ~62% is pinned in build-counts — the distance figures are
   derived prose, so recompute before gating on them
   (`data/classic-ids/README.md` § Coverage).
-- V/50's 14 HD-less HR entries resolve through the spine backstop or
-  are listed in the parity ledger.
+- V/50's 14 HD-less HR entries are non-stellar (novae/SNe, four
+  clusters, M 31): out of scope by class, pinned as an exact set in
+  the parity ledger's gates.
 
 The frozen files landed in `data/classic-ids/` (plus the `I/239` V slice
 in `data/hipparcos/`), joined into a source_id-keyed overlay by
@@ -287,6 +288,11 @@ test fixture:
 The frozen regression corpora (known-stars, sky-position,
 multi-star-regression) stay green throughout — they pin the
 famous-star surface a driver change is most likely to disturb.
+
+The driver swap's instantiated ledger — all four axes, the disposed
+review queues, and the identity-event enumeration (five Gliese
+bridges, zero ledger writes) — is
+`scripts/catalog/spine/README.md` § The swap parity ledger.
 
 ## 7. Identity and ordering rules
 

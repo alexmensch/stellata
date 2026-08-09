@@ -166,3 +166,47 @@ construction, and a queue that failed to list one would fail this gate.
 Membership itself stays tautological, which is the point: it IS the spine, so
 that equality holds by construction and any future change that breaks it has
 broken the membership term.
+
+## The swap parity ledger
+
+The instantiation of `docs/catalog-driver.md` § 6 for the driver swap,
+audited 2026-08-09. Counts are pinned in `../build-catalog-expected.json`
+unless another home is named; the committed gates are the two suites in
+this folder plus `../classic-ids/parity-ledger.test.ts`.
+
+- **Record parity — zero drops.** `recordCount` (329,657) is unchanged
+  across the swap. Membership is exactly the spine, the five walk gates
+  are pinned at 0 (`spineDropped*`), and `sid:check` resolves every
+  record with zero mints — so the § 6.1 dropped list is empty and its
+  reason enum has no rows. The only per-record routing deltas are the
+  four-record set enumerated above.
+- **Label parity — strict gain.** No previously-labeled record lost a
+  label: per identifier the shipped coverage is the spine's keyed count
+  plus the overlay's additions (hd +148, hr +4, gl +198, flam +69,
+  hip +0). Every departure from the spine's cells is one of the 719
+  disposed rows of `data/classic-ids/label_flips.tsv`, replayed exactly
+  by the designation-multiset gate above.
+- **Field parity.** The swap PR moved no field values beyond the
+  four-record set: V and absmag moved one PR earlier under the V
+  cascade, with the |ΔV| distribution measured per G bin against
+  printed V (`../photometry/README.md` § Where the validity bound comes
+  from) and `vVia` routing pinned; spectral-string changes are the
+  +4/−4 rows of the same four-record table; ci and rv are spine
+  passthroughs until `stellata-3bsf.12`, which pins its own |Δci|
+  distribution.
+- **Identity events — five bridges, zero ledger writes.** The swap
+  appended nothing to `data/sid/ledger.tsv`, `retirements.tsv` or
+  `reinstatements.tsv`; there were no presence events (membership is
+  1:1 with the prior build) and no merges or splits. The complete
+  identity surface is the five CNS5 Gliese renumberings, bridged in
+  `data/sid/sameas-overrides.tsv` — `parity-ledger.test.ts` pins that
+  exact set and fails on any label change that moves an unbridged
+  canonical key off its record.
+- **Review queues, disposed.** All 21 HD/HIP route disagreements:
+  one spine record holds both designations, the two cross-walks bind
+  it to different components of a resolved pair, the HD route keeps
+  label authority — no identity event
+  (`data/classic-ids/hd_hip_route_disagreements_review.tsv`, joined
+  row-for-row to the queue by the same test). The 14 HD-less V/50
+  rows are non-stellar (novae/SNe, four clusters, M 31): out of scope
+  by class, never records, pinned as an exact set.

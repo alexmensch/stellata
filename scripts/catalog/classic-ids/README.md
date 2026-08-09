@@ -48,6 +48,13 @@ scripts/catalog/classic-ids/
                                   Pins the cascade's output on the WIRE
                                   (ρ Aql, 15 LMi, Fomalhaut C) against the
                                   built search index.
+  parity-ledger.test.ts           The swap parity ledger's committed gates:
+                                  route-disagreement review join, the
+                                  canonical-key audit of the label delta
+                                  against the SID ledger + bridges, and the
+                                  V/50 HD-less out-of-scope pin
+                                  (../spine/README.md § The swap parity
+                                  ledger).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var
