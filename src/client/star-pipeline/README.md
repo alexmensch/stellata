@@ -21,6 +21,10 @@ subfolders.
   re-renders them inside its bracket. `MIRROR_CAPACITY` and the
   `RESOLVED_DISC_MIN_PX` / `discWindowPc` pivots the core-mask gate
   shares live there.
+- `shards/` — the population-shard contract (`StarShardTable` flat
+  Target.idx mapping, per-shard SID columns, chunk-local coordinates,
+  the recentre eagerness rule); the catalog is shard 0. Its § What is
+  NOT shard-aware yet lists the legs still indexing `catalog` directly.
 
 ## Files
 

@@ -114,6 +114,7 @@ import {
   SCENE_ELEMENT_IDS,
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
+import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-pure';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
@@ -504,7 +505,7 @@ export class Stellata implements FrameAnchor {
       vertexShader,
       fragmentShader,
       sharedUniforms,
-      boundingSphereRadiusPc: 60_000,
+      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
     });
 
     this.starLocalMirror = new StarLocalMirror(
