@@ -65,6 +65,14 @@ describe('star kind module', () => {
     expect(() => m.catalog).toThrow(/before load/);
     expect(() => m.searchIndex).toThrow(/before load/);
     expect(() => m.starLabels).toThrow(/before load/);
+    expect(() => m.card()).toThrow(/before load \+ attach/);
+  });
+
+  it('refuses a card before attach rather than reading the clock as J2000', async () => {
+    const { m } = await loadedModule();
+    expect(() => m.card()).toThrow(/before load \+ attach/);
+    m.attach(makeKindContext());
+    expect(() => m.card()).not.toThrow();
   });
 
   it('answers photometry once, for the arrival radius and KindContext alike', async () => {

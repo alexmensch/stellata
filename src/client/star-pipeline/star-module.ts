@@ -69,7 +69,7 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let starLabels = new Map<number, string>();
   let spectralMap = new Map<number, string>();
-  let searchEntries = new Map<number, SearchEntry>();
+  let searchEntryById = new Map<number, SearchEntry>();
   const tmpLocal = new THREE.Vector3();
 
   const nameCtx = () => ({
@@ -119,7 +119,7 @@ export function createStarKindModule(): StarKindModule {
       ]);
       starLabels = buildStarLabels(catalog, searchIndex);
       spectralMap = buildSpectralMap(searchIndex);
-      searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
+      searchEntryById = new Map(searchIndex.map((e) => [e.i, e]));
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {
@@ -157,18 +157,23 @@ export function createStarKindModule(): StarKindModule {
       planetSystemHost: (idx) => idx,
     }),
 
+    // The one leg that throws rather than answering absence: every row
+    // it builds needs the catalog and the clock, and a card built
+    // pre-attach would read t=0 (J2000) as if it were the sim time.
     card: (): FocusCardProvider<'star'> => {
-      if (!catalog) throw new Error('star module card read before load');
+      const cat = catalog;
+      const attached = ctx;
+      if (!cat || !attached) throw new Error('star module card read before load + attach');
       return createStarFocusProvider({
-        catalog,
+        catalog: cat,
         starLabels,
         spectralMap,
-        searchEntries,
+        searchEntries: searchEntryById,
         getBinaries: () => runtime?.getBinaries() ?? null,
-        cameraDistancePc: (idx) => (runtime && ctx
-          ? runtime.localPositionInto(idx, tmpLocal).distanceTo(ctx.camera.position)
+        cameraDistancePc: (idx) => (runtime
+          ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
           : 0),
-        nowJd: () => tToJDE(ctx?.getT() ?? 0),
+        nowJd: () => tToJDE(attached.getT()),
       });
     },
 
