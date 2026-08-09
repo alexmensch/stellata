@@ -29,6 +29,7 @@ import { LocalGroupEmission } from './local-group-emission';
 import { parseOverrides } from '../../../../scripts/local-group/build-local-group';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../../hdr/emission/emission-pure';
 import {
+  OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
 } from '../../hdr/emission/population-colour-pure';
@@ -354,12 +355,20 @@ describe('population tints', () => {
 
   // Peak-normalised chromaticities, so neither authored triplet has unit
   // luminance and both would dim their own family without the
-  // normalisation. Redder population, larger loss.
-  it('pins what each family tint would cost unnormalised', () => {
+  // normalisation. The spheroid's own loss is the shared population
+  // constant's, pinned in ../../hdr/emission/population-colour-pure.test.ts;
+  // what this layer owns is its disc seed and the ordering between them.
+  it('pins what the disc tint would cost unnormalised', () => {
     const lost = (rgb: readonly [number, number, number]) =>
       -2.5 * Math.log10(relativeLuminance(rgb));
-    expect(lost(SPHEROID_COLOR_RGB)).toBeCloseTo(0.2277, 4);
     expect(lost(DISC_COLOR_RGB)).toBeCloseTo(0.1769, 4);
+    expect(lost(DISC_COLOR_RGB)).toBeLessThan(lost(SPHEROID_COLOR_RGB));
+  });
+
+  // One population, one triplet: the spheroid seed is not this layer's to
+  // derive, and the band's bulge reads the same constant.
+  it('takes the spheroid seed from the shared population constant', () => {
+    expect(SPHEROID_COLOR_RGB).toBe(OLD_SPHEROID_COLOR_RGB);
   });
 
   // The seeds are colour indices now, not hues picked to look right.

@@ -10,6 +10,7 @@ import {
   softenRadius,
 } from '../../hdr/emission/emission-pure';
 import {
+  OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   discColourIndex,
 } from '../../hdr/emission/population-colour-pure';
@@ -42,8 +43,7 @@ export const DISC_COLOUR_INDEX_BV = discColourIndex(
 
 /** Population tints, each a colour index through the star field's own
  *  Ballesteros → Planck → CIE path. Per-object `emission.color` overrides. */
-export const SPHEROID_COLOR_RGB: [number, number, number] =
-  linearSrgbFromColourIndex(OLD_SPHEROID_COLOUR_INDEX_BV);
+export const SPHEROID_COLOR_RGB: [number, number, number] = OLD_SPHEROID_COLOR_RGB;
 export const DISC_COLOR_RGB: [number, number, number] =
   linearSrgbFromColourIndex(DISC_COLOUR_INDEX_BV);
 

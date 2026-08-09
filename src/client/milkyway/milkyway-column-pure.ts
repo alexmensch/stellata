@@ -16,11 +16,11 @@ import {
   solveDensity0,
 } from '../hdr/emission/density0-solver-pure';
 import {
-  BULGE_COLOUR_INDEX_BV,
   BULGE_TO_TOTAL_LIGHT_V,
   DISC_COLOUR_INDEX_BV,
   GALAXY_TOTAL_ABSMAG_V,
 } from './calibration/diffuse-reference';
+import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
@@ -54,7 +54,7 @@ export const BULGE_RADIUS_PC = 5_000;
 export const BULGE_HALF_THICKNESS_PC = 3_000;
 export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
-export const BULGE_COLOR_RGB: Rgb = linearSrgbFromColourIndex(BULGE_COLOUR_INDEX_BV);
+export const BULGE_COLOR_RGB: Rgb = OLD_SPHEROID_COLOR_RGB;
 export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
 // --- Analytical dust ---------------------------------------------------

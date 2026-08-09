@@ -175,11 +175,12 @@ describe('MilkyWay population tints', () => {
 
   // Peak-normalised chromaticities, so each authored triplet carries its
   // own luminance and neither is 1: unnormalised, the pair would move the
-  // flux split by their difference. The eyeballed palette this replaced
-  // carried 0.390 mag of that (README.md § Population tints).
+  // flux split by their DIFFERENCE, which is the figure pinned here. The
+  // eyeballed palette this replaced carried 0.390 mag of it (README.md
+  // § Population tints). The bulge's own 0.2277 is the shared population
+  // constant's, pinned in ../hdr/emission/population-colour-pure.test.ts.
   it('pins what the authored palette would cost unnormalised', () => {
     const lost = (rgb: Rgb) => -2.5 * Math.log10(relativeLuminance(rgb));
-    expect(lost(BULGE_COLOR_RGB)).toBeCloseTo(0.2277, 4);
     expect(lost(DISC_COLOR_RGB)).toBeCloseTo(0.137, 4);
     expect(lost(BULGE_COLOR_RGB) - lost(DISC_COLOR_RGB)).toBeCloseTo(0.0907, 4);
   });

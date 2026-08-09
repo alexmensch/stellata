@@ -2,6 +2,8 @@
 // render, and the constrained solve that recovers a disc's index from a
 // galaxy's published integrated one. See README.md § Population colours.
 
+import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
+
 /**
  * (B−V) of an old, metal-rich simple stellar population: Bruzual &
  * Charlot 2003, Chabrier IMF, Z = 0.02, 10 Gyr —
@@ -17,6 +19,15 @@
  * `../../local-group/README.md` § Population tints.
  */
 export const OLD_SPHEROID_COLOUR_INDEX_BV = 0.9574;
+
+/**
+ * That population's hue, through the star field's own chain. Shared
+ * rather than derived per layer: the band's bulge and the Local Group's
+ * spheroids are one population, so one triplet — two derivations of the
+ * same index would drift apart the moment either is edited.
+ */
+export const OLD_SPHEROID_COLOR_RGB: [number, number, number] =
+  linearSrgbFromColourIndex(OLD_SPHEROID_COLOUR_INDEX_BV);
 
 /** A colour index as a zero-point-free B/V flux ratio. Zero points cancel
  *  in every expression below because all three indices are in one system. */

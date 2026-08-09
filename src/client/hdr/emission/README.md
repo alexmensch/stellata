@@ -27,10 +27,11 @@ src/client/hdr/emission/
                              (the zero point both volumetric emitters
                              share) and lumaNormalisedTint, the hue-only
                              tint they multiply.
-  population-colour-pure.ts  The old-spheroid SSP colour index both
-                             emitters render, and the constrained solve
-                             that turns a galaxy's published integrated
-                             index into its disc's (§ Population colours).
+  population-colour-pure     The old-spheroid SSP colour index both
+    (+ test)                 emitters render and the hue it derives to,
+                             plus the constrained solve that turns a
+                             galaxy's published integrated index into its
+                             disc's (§ Population colours).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
                              from TypeScript, and the include guards.
 ```
@@ -152,6 +153,11 @@ BC03 Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
 Galactic bulge, M31's bulge and the luminous early-type spheroids are the
 same population. It is **not** the metal-poor dwarf spheroids
 (`../../local-group/README.md` § Population tints).
+
+Its hue, `OLD_SPHEROID_COLOR_RGB`, is derived here for the same reason —
+one population, one triplet. `BULGE_COLOR_RGB` and `SPHEROID_COLOR_RGB`
+are that constant under each layer's local name, not two derivations of
+one index.
 
 Three properties a change here has to keep:
 
