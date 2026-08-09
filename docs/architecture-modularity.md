@@ -88,7 +88,9 @@ first. The frame half is extracted: `src/client/frame/` owns
 the star buffer's recentre rewrite, registered as the first recentre
 listener, and no non-star code reads a star material's uniforms — the
 shell holds the shared map as its own field and every consumer takes
-it by reference.
+it by reference. `buildSharedUniforms` still seeds star-specific slots
+and imports `star-pipeline/`; 5b retires that residual with the star
+kind module.
 
 **`KindContext`** is the one dependency struct handed to every module —
 the documented answer to "what may a layer depend on?". The pilot

@@ -1,12 +1,21 @@
 # Frame services
 
-Kind-agnostic engine services for the renderer's floating local frame
+Engine services for the renderer's floating local frame
 (`docs/architecture-modularity.md` § Tier 1): `FloatingOrigin` — the
 floating origin's owner, recentre fan-out, and anchor-policy seam — and
 the shared view/screen uniform map every render pass holds by
 reference. Star-specific frame state (the local-position buffer, epoch
 advance, proximity queries) stays on `StarFrame`
 (`../star-pipeline/star-frame/README.md`), which consumes this service.
+
+`FloatingOrigin` is kind-agnostic; `buildSharedUniforms` is **not yet**
+— it seeds star-specific slots and imports `../star-pipeline/`
+(`makeColorLutTexture`, `MIRROR_CAPACITY`, the `PerceptualDiscUniforms`
+shape it `satisfies`). The map is the union of what its consumers read,
+so that residual belongs to the star kind module, not here; it clears
+when the star kind lands as a module and owns its own slots. Nothing
+outside the map's own construction may add star knowledge to this
+folder in the meantime.
 
 ## Files in this area
 
