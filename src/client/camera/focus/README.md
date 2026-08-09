@@ -26,6 +26,11 @@ close-approach focused star sitting at exactly NDC origin.
   instance index; (host, planet-within-host) resolve through the
   field's attach table. A probe Target's idx is the ProbeField
   loaded-roster index.
+- `focal-anchor-policy.ts` (+ test) — `makeFocalAnchorPolicy`, the
+  `AnchorPolicy` (`../../frame/README.md`) that keeps the floating
+  origin on the focal object under time advance. Deps are live
+  references + two gate closures; the shell supplies which controllers
+  count as camera-busy (§ Moving-focal ride).
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The

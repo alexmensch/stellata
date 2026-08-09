@@ -67,7 +67,8 @@ import {
 } from './kinds/kind-modules';
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
+import { focalRideStep } from './camera/focus/focal-ride-pure';
+import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -1222,32 +1223,21 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(d);
   }
 
-  // The focal anchor policy: keep the floating origin locked to the
-  // focal object as it moves under time advance. The focal-frame rides
-  // translate the camera to follow the object, so under scrubber
-  // fast-forward the camera drifts far from the fixed focus-time origin
-  // — reviving the float32 modelview cancellation the floating origin
-  // exists to prevent. Recentring onto the look target (glued to the
-  // object by the ride) restores camera-from-origin ≈ eye distance.
-  // Kind-agnostic; skipped during camera-owning animations, which
-  // reference the current frame and re-snap themselves. Built from
-  // shell closures so frame/ imports no camera code.
+  // Which controllers constitute "the camera is busy" is the shell's to
+  // know; the policy itself lives in camera/focus/ so frame/ imports no
+  // camera code.
   private buildFocalAnchorPolicy(): void {
-    this.floatingOrigin.setPolicy({
-      desiredOrigin: (out) => {
-        if (this.focus.getFocusedHardTarget() === null) return null;
-        if (
-          this.warp.isActive()
-          || this.aim.isActive()
-          || this.aim.isObserveAimActive()
-          || this.focus.isFocusLerpActive()
-          || this.observe.isAnyActive()
-        ) return null;
-        const eye = this.camera.position.distanceTo(this.controls.target);
-        if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return null;
-        return out.copy(this.controls.target).add(this.worldOffset);
-      },
-    });
+    this.floatingOrigin.setPolicy(makeFocalAnchorPolicy({
+      hasHardFocus: () => this.focus.getFocusedHardTarget() !== null,
+      isCameraBusy: () => this.warp.isActive()
+        || this.aim.isActive()
+        || this.aim.isObserveAimActive()
+        || this.focus.isFocusLerpActive()
+        || this.observe.isAnyActive(),
+      cameraPosition: this.camera.position,
+      orbitTarget: this.controls.target,
+      worldOffset: this.floatingOrigin.worldOffset,
+    }));
   }
 
   // Wire a loaded DustField into the star shader. Safe to call after the
