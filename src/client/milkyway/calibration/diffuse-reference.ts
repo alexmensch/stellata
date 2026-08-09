@@ -1,6 +1,8 @@
 // The published photometry the band is solved against and checked with:
 // the Galaxy's integrated luminosity and bulge fraction, plus the
-// resolved-star subtraction behind the NGP check. README.md § Calibration.
+// resolved-star subtraction behind the NGP check. See README.md.
+
+import { fluxNumber } from '../../hdr/emission/density0-solver-pure';
 
 /**
  * Integrated V-band absolute magnitude of the Galaxy, Bland-Hawthorn &
@@ -16,20 +18,77 @@
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render
- * time (README.md § Analytical-only dust).
+ * time (../README.md § Analytical-only dust).
  */
 export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
 /**
- * Bulge share of the Galaxy's V-band light. Licquia & Newman 2015 (DOI
- * 10.1088/0004-637X/806/1/96) give B/T = 0.150 (+0.028/−0.019) in stellar
- * **mass**; no published V-band B/T exists.
- *
- * It is an **upper bound** on the V-band value, not an equivalent: the
- * bulge's older, more metal-rich population carries a higher Υ\*_V than
- * the disc's, so the same mass share buys less V light.
+ * Bulge share of the Galaxy's stellar **mass**, Licquia & Newman 2015
+ * (DOI 10.1088/0004-637X/806/1/96): 0.150 (+0.028/−0.019), from
+ * M\* = 0.91 ± 0.07 bulge against 6.08 ± 1.14 × 10¹⁰ M⊙ total, Chabrier
+ * IMF. Not the light ratio — see `BULGE_TO_TOTAL_LIGHT_V`.
  */
-export const BULGE_TO_TOTAL_V = 0.15;
+export const BULGE_TO_TOTAL_MASS = 0.15;
+
+/**
+ * Υ\*_V of the bulge population: Bruzual & Charlot 2003 SSP, Chabrier
+ * IMF, Z = 0.02, 10 Gyr — `data/bc03/bc2003_hr_m62_chab_ssp.4color`
+ * column 6 at `log-age-yr = 10.000`, read back and pinned in
+ * `diffuse-reference.test.ts`.
+ *
+ * A single SSP for a population whose metallicity distribution is broad:
+ * the bulge's is centred near solar and roughly uniformly old
+ * (≥ 10 Gyr). README.md § The light ratio carries what the Z = 0.008 and
+ * Z = 0.05 brackets do to the ratio below.
+ */
+export const BULGE_ML_V = 3.15;
+
+/**
+ * Υ\*_V of the disc, Flynn et al. 2006 (DOI
+ * 10.1111/j.1365-2966.2006.10911.x): 1.5 ± 0.2 for the local column,
+ * **measured** from the solar-cylinder luminosity function and mass
+ * density rather than modelled. Their column includes remnants, matching
+ * the mass definition behind `BULGE_TO_TOTAL_MASS`, and the paper states
+ * it agrees with population synthesis at solar-neighbourhood IMFs — which
+ * is what makes it commensurable with the Chabrier-IMF `BULGE_ML_V`.
+ */
+export const DISC_ML_V = 1.5;
+
+/**
+ * A stellar-mass bulge fraction converted to a V-band **light** fraction
+ * through the two populations' Υ\*_V:
+ *
+ * ```
+ * L_b/L_tot = 1 / (1 + ((1 − f_M)/f_M) · (Υ_b/Υ_d))
+ * ```
+ *
+ * Only the RATIO Υ_b/Υ_d survives, which is why mixing a measured disc
+ * value with a modelled bulge one is defensible: IMF normalisation
+ * cancels and what is left is the population difference the whole
+ * correction is about.
+ *
+ * Parameterised rather than inlined so the metallicity sensitivity is
+ * reproducible from the other two tables in `data/bc03/`
+ * (`diffuse-reference.test.ts`), not just asserted in prose.
+ */
+export function bulgeToTotalLight(
+  massFraction: number,
+  bulgeMlV: number,
+  discMlV: number,
+): number {
+  return 1 / (1 + ((1 - massFraction) / massFraction) * (bulgeMlV / discMlV));
+}
+
+/**
+ * Bulge share of the Galaxy's V-band **light** — what the emissivity
+ * solve splits flux by. No published Milky Way value exists, so it is
+ * derived: 0.150 in mass buys 0.0775 in V light.
+ */
+export const BULGE_TO_TOTAL_LIGHT_V = bulgeToTotalLight(
+  BULGE_TO_TOTAL_MASS,
+  BULGE_ML_V,
+  DISC_ML_V,
+);
 
 /**
  * Integrated starlight at 0.55 µm from Leinert et al. 1998, A&AS 127, 1
@@ -75,7 +134,7 @@ export function diffuseResidualMagArcsec2(
   resolvedMagArcsec2: number,
 ): number | null {
   const residual =
-    10 ** (-0.4 * totalMagArcsec2) - 10 ** (-0.4 * resolvedMagArcsec2);
+    fluxNumber(totalMagArcsec2) - fluxNumber(resolvedMagArcsec2);
   return residual > 0 ? -2.5 * Math.log10(residual) : null;
 }
 
@@ -102,7 +161,7 @@ if (ngpResidual === null) {
  * What is left at the NGP after the star field's own contribution comes
  * off Leinert's total — a **check** on the emissivity, not its anchor:
  * the model is solved against the Galaxy's total luminosity above, and
- * the two do not agree (README.md § Calibration).
+ * the two do not agree (README.md § Two checks).
  *
  * The NGP is the only sightline where the two inputs are commensurable.
  * Extinction there is ~0.03 mag, so the de-extincted catalogue sum and

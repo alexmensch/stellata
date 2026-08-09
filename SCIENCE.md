@@ -303,7 +303,7 @@ enough to see it.
   Public-domain (U.S. Government work).
 
 - **Milky Way integrated properties and structure** (the volumetric band's
-  photometric anchors; no data files, constants only):
+  photometric anchors; constants only, apart from the BC03 grid below):
     - **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
       (DOI 10.1146/annurev-astro-081915-023441). Table 2 gives the Galaxy's
       global absolute magnitudes and colour indices as an external observer
@@ -328,13 +328,30 @@ enough to see it.
       subtraction is only meaningful at the pole, where extinction is
       ~0.03 mag and a de-extincted catalogue sum and an observed sky model
       are commensurable.
+    - **Licquia & Newman 2015**, *ApJ* 806, 96
+      (DOI 10.1088/0004-637X/806/1/96) — hierarchical Bayesian
+      meta-analysis giving M\* = 6.08 ± 1.14 × 10¹⁰ M⊙ split
+      0.91 ± 0.07 bulge / 5.17 ± 1.11 disc, i.e. B/T = 0.150 in stellar
+      **mass**. Chabrier IMF.
+    - **Flynn et al. 2006**, *MNRAS* 372, 1149
+      (DOI 10.1111/j.1365-2966.2006.10911.x) — the local Galactic disc
+      column's measured mass-to-light ratios, (M/L)_B = 1.4 ± 0.2,
+      (M/L)_V = 1.5 ± 0.2, (M/L)_I = 1.2 ± 0.2. Measured for the Milky
+      Way rather than modelled, and the paper states the result agrees
+      with population synthesis at solar-neighbourhood IMFs.
+    - **Bruzual & Charlot 2003**, *MNRAS* 344, 1000
+      (DOI 10.1046/j.1365-8711.2003.06897.x) — GALAXEV SSP grids,
+      `data/bc03/`. Supplies Υ\*_V for the bulge's old, metal-rich
+      population, which is what turns Licquia & Newman's mass B/T into
+      the V-band light ratio the solve actually needs.
   Bland-Hawthorn & Gerhard's M_V = −21.37 is the INPUT: both components'
-  density0 is solved so the proxy volumes integrate to it at Licquia &
-  Newman's B/T. The two Leinert checks then disagree with it by 1.59 mag
-  at the pole and 0.94 toward the centre, in the same direction, and no
+  density0 is solved so the proxy volumes integrate to it at the V-band
+  LIGHT B/T derived from the three sources above. The two Leinert checks
+  then disagree with it by 1.68 mag
+  at the pole and 1.02 toward the centre, in the same direction, and no
   shape parameter bridges that — `docs/science-galactic-structure.md`
   § The luminosity solve argues it out;
-  `src/client/milkyway/README.md` § Calibration carries the numbers.
+  `src/client/milkyway/calibration/README.md` carries the numbers.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the

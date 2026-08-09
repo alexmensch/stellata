@@ -52,7 +52,7 @@ export const GC_SIGHTLINE_COLUMN = sightlineColumn(
 
 /** Surface brightness the Galactic-centre sightline resolves to, a
  *  **check** rather than the calibration it used to be — see
- *  ./README.md § Calibration for what replaced it and why 20.0 was wrong
+ *  ./calibration/README.md for what replaced it and why 20.0 was wrong
  *  by ~3 mag. Pinned against the resolved-star-corrected residual. */
 export const GC_SIGHTLINE_MAG_ARCSEC2 =
   SB_ZERO_POINT - 2.5 * Math.log10(GC_SIGHTLINE_COLUMN);

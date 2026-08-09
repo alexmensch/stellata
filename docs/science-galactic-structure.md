@@ -64,8 +64,9 @@ on its own, and it is what makes the scalar volume integral below the
 luminance integral. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
-`src/client/milkyway/README.md` for the calibrated values, that
-conversion, and the full coordinate-handling chain.
+`src/client/milkyway/calibration/README.md` for the calibrated values and
+that conversion, and `src/client/milkyway/README.md` for the full
+coordinate-handling chain.
 
 ### The luminosity solve, and the constraint it cannot satisfy
 
@@ -73,10 +74,16 @@ Both components' `density0` is **solved**, not authored: each proxy
 volume integrates to its share of the Galaxy's published integrated
 luminosity, through the same `ρ₀ = d²·F/G` the Local Group build solves
 per object, at d = 10 pc because the anchor is an absolute magnitude.
-Inputs are BHG16 Table 2's M_V = −21.37 and Licquia & Newman 2015's
-B/T = 0.150 — the latter measured in stellar *mass*, so it is an upper
-bound on the V-band value (the bulge's older population carries a higher
-Υ\*_V). There is no free parameter left.
+Inputs are BHG16 Table 2's M_V = −21.37 and a V-band **light**
+B/T = 0.0775. No publication gives that second number for the Milky Way,
+so it is derived: Licquia & Newman 2015's B/T = 0.150 is measured in
+stellar *mass*, and the bulge's older, more metal-rich population carries
+a higher Υ\*_V than the disc's, so the same mass share buys less V light.
+Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
+BC03 Chabrier SSP at Z = 0.02, 10 Gyr, against Flynn et al. 2006's
+measured 1.5 for the local disc column. There is no free parameter left;
+`src/client/milkyway/calibration/README.md` § The light ratio carries the
+closed form and the metallicity brackets.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
@@ -85,8 +92,8 @@ catalogue stars Stellata draws itself — a defensible target that removes
 56 % of the pole's light but only 0.2 % of the Galaxy's, because the
 catalogue is a local sample and the pole column is almost entirely local.
 A single emissivity field anchored on the subtracted pole therefore runs
-a factor of three low everywhere else, and the shipped solve is 1.59 mag
-brighter than that residual at the pole and 0.94 mag brighter than
+a factor of three low everywhere else, and the shipped solve is 1.68 mag
+brighter than that residual at the pole and 1.02 mag brighter than
 Leinert's total toward the Galactic centre.
 
 Two things make that a scale disagreement between published sources
@@ -102,8 +109,8 @@ Galaxy viewed from M31 has to be at least as bright as M31 viewed from
 here, and under the sightline anchor it was 1.11 mag fainter. A
 vertical-profile change cannot substitute — the pole column and the
 integrated total are both vertical integrals, and adding the thick disc
-moved their ratio by 0.09 mag. `src/client/milkyway/README.md`
-§ Calibration carries the numbers and the pins.
+moved their ratio by 0.09 mag. `src/client/milkyway/calibration/README.md`
+§ Two checks carries the numbers and the pins.
 
 ## Interstellar dust extinction
 

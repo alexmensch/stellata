@@ -96,7 +96,7 @@ residuals.
 same `Ω_sum`-gained value the band used to write into attachment 0, so the
 convolution is a plain mean of it. A mean over a *uniform* field returns
 that field exactly, which is why the band's shipped display table from Sol
-(`../../milkyway/README.md` § The gradient this produces) is preserved by
+(`../../milkyway/calibration/README.md` § The gradient this produces) is preserved by
 construction rather than to some tolerance. Carrying un-gained flux instead
 would put the band's texels at ~4e-8 — fp16 subnormal range, and quantised
 to nothing.

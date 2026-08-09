@@ -206,7 +206,8 @@ is load-bearing, not taste: the first cut was a fixed-exponent power
 onto every smooth gradient crossing threshold — hard-edged molecular
 clouds, banded EV sweeps. Sub-threshold light no longer
 renders at its near-linear Reinhard value; the Milky Way pole is the
-motivating case (`../milkyway/README.md` § The gradient this produces).
+motivating case (`../milkyway/calibration/README.md` § The gradient this
+produces).
 Exactly invertible, and `inverseTonemapConstant` composes the inverse so
 dark-authored chrome round-trips (`chrome/README.md`). The design
 argument — and why a rendered sky-background pedestal was rejected — is
@@ -395,4 +396,4 @@ No emitter is outside the scale, and both volumetric emitters share one
 zero point (`SB_ZERO_POINT`) and one ρ₀ solve
 (`emission/README.md` § Solving ρ₀). The band is anchored on the Galaxy's
 integrated M_V now; where that leaves it against the sightline photometry
-is `../milkyway/README.md` § Calibration.
+is `../milkyway/calibration/README.md` § Two checks.

@@ -154,9 +154,9 @@ describe('the kernel weights', () => {
   // Every disc kernel of the same radius is the same operator whatever the
   // plate scale, so the mean of a UNIFORM field must be that field exactly.
   // This is not a tolerance: it is the identity the band's shipped display
-  // table from Sol rests on (../../milkyway/README.md § The gradient this
-  // produces), and it holds at every factor because normalising by the
-  // summed weight is scale-free.
+  // table from Sol rests on (../../milkyway/calibration/README.md § The
+  // gradient this produces), and it holds at every factor because
+  // normalising by the summed weight is scale-free.
   it('returns a uniform field untouched at every reachable radius', () => {
     for (const fovDeg of [FOV_MIN_DEG, 20, 30, 50, 90, FOV_MAX_DEG]) {
       for (const viewport of [900, TALLEST_VIEWPORT_CSS_PX]) {

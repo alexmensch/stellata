@@ -1,6 +1,6 @@
 // Milky Way density / dust profiles and a CPU mirror of
-// milkyway.frag.glsl's raymarch. Owns the physical constants the shader
-// receives as uniforms — see README.md § Density profiles, § Calibration.
+// milkyway.frag.glsl's raymarch. Owns the constants the shader receives as
+// uniforms — README.md § Density profiles, calibration/README.md.
 
 import { R0_PC } from '../galactic/galactic-coords';
 import {
@@ -16,9 +16,9 @@ import {
   solveDensity0,
 } from '../hdr/emission/density0-solver-pure';
 import {
-  BULGE_TO_TOTAL_V,
+  BULGE_TO_TOTAL_LIGHT_V,
   GALAXY_TOTAL_ABSMAG_V,
-} from './diffuse-reference';
+} from './calibration/diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -153,7 +153,7 @@ export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
 /**
  * Each component's emissivity in the shared flux unit — what the shader
  * receives as `uDensity0`. Solved so the two proxy volumes integrate to
- * the Galaxy's published M_V split at its published B/T, the same
+ * the Galaxy's published M_V at its V-band LIGHT B/T, the same
  * `ρ₀ = d²·F/G` the Local Group solves per object, with d = 10 pc because
  * the anchor is an absolute magnitude.
  *
@@ -161,17 +161,17 @@ export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
  * relative component weights the sightline anchor needed are gone with
  * it. Truncation compensation rides along: G is over the ACTUAL mesh
  * volume, so the 0.076 mag the disc envelope clips against all space is
- * redistributed inward rather than lost (README.md § Calibration).
+ * redistributed inward rather than lost (calibration/README.md).
  */
 export const DISC_DENSITY0 = solveDensity0(
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
-  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * (1 - BULGE_TO_TOTAL_V),
+  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * (1 - BULGE_TO_TOTAL_LIGHT_V),
   DISC_VOLUME_INTEGRAL,
 );
 
 export const BULGE_DENSITY0 = solveDensity0(
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
-  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * BULGE_TO_TOTAL_V,
+  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * BULGE_TO_TOTAL_LIGHT_V,
   BULGE_VOLUME_INTEGRAL,
 );
 
@@ -453,6 +453,25 @@ export function sightlineColumnRgb(
     for (let k = 0; k < 3; k++) total[k] += c[k];
   }
   return total;
+}
+
+/** One component's share of the luminance a pixel accumulates across both
+ *  meshes — the flux split as the camera sees it, after dust, rather than
+ *  the `density0` split that produced it. */
+export function componentLuminanceShare(
+  component: MilkywayComponent,
+  originPc: Vec3,
+  dirUnit: Vec3,
+  options: ColumnOptions = {},
+): number {
+  let own = 0;
+  let total = 0;
+  for (const c of MILKYWAY_COMPONENTS) {
+    const lum = relativeLuminance(componentColumnRgb(c, originPc, dirUnit, options));
+    if (c === component) own = lum;
+    total += lum;
+  }
+  return own / total;
 }
 
 /** The luminance-weighted column, in the shared flux unit — what the
