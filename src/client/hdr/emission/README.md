@@ -235,7 +235,7 @@ one pixel's span at that distance, matched on the **second moment** of a
 square footprint, which is the order `stellataSoftenRadius`'s Plummer form
 corrects to. No free parameter, and it tracks the exact area average to
 0.1 mag across the whole 10°–120° FOV range
-(`../../local-group/local-group-emission-calibration.test.ts`).
+(`../../local-group/emission/local-group-emission-calibration.test.ts`).
 
 Two things it must get right, both measured:
 

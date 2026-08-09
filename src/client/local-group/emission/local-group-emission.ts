@@ -5,9 +5,9 @@
 import * as THREE from 'three';
 import emissionVert from './local-group-emission.vert.glsl?raw';
 import emissionFrag from './local-group-emission.frag.glsl?raw';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
-import type { LgObject } from './local-group-loader';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { markDiffuseEmitter } from '../../hdr/attachments/attachment-gate';
+import type { LgObject } from '../local-group-loader';
 import {
   buildEmissionInstanceData,
   EMISSION_STEPS_DISC,

@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseLvdb, parseOverrides } from '../../../scripts/local-group/build-local-group';
+import { parseLvdb, parseOverrides } from '../../../../scripts/local-group/build-local-group';
 import {
   buildStandaloneOverride,
   filterForRendering,
@@ -14,7 +14,7 @@ import {
   mergeRowAndOverride,
   roundN,
   type LgObject as BuildLgObject,
-} from '../../../scripts/local-group/build-local-group-pure';
+} from '../../../../scripts/local-group/build-local-group-pure';
 import {
   columnSurfaceBrightness,
   cpuDensityAt,
@@ -29,20 +29,20 @@ import {
 import {
   footprintRadiusPc,
   pixelSolidAngleArcsec2,
-} from '../hdr/emission/emission-pure';
+} from '../../hdr/emission/emission-pure';
 import {
   summationDownsample,
   summationMean,
   summationRadiusPx,
-} from '../hdr/summation/summation-pure';
+} from '../../hdr/summation/summation-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
-} from '../hdr/exposure/exposure-epoch';
-import { angularToPx } from '../camera/controls/star-geometry';
-import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../hdr/tonemap-pure';
+} from '../../hdr/exposure/exposure-epoch';
+import { angularToPx } from '../../camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
+import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -62,7 +62,7 @@ const REFERENCE_STEPS = 256;
 type Vec3 = [number, number, number];
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(here, '..', '..', '..', 'data', 'local-group');
+const dataDir = join(here, '..', '..', '..', '..', 'data', 'local-group');
 const lvdb = parseLvdb(readFileSync(join(dataDir, 'lvdb-snapshot.csv'), 'utf8'));
 const overrides = parseOverrides(readFileSync(join(dataDir, 'overrides.tsv'), 'utf8'));
 const overrideByName = new Map(overrides.map((o) => [o.name, o]));

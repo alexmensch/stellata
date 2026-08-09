@@ -108,7 +108,7 @@ consumes raw numbers and never re-derives photometry.
   Sérsic geometry integral as every spheroid, and the renderer packs
   it as a separate Sérsic-pass instance beside the host disc
   (`emissionComponents` in
-  `src/client/local-group/local-group-emission-pure.ts`). The two
+  `src/client/local-group/emission/local-group-emission-pure.ts`). The two
   volumes overlap; additive blending sums them, so the B/T flux split
   holds without a shared profile cut.
 - Missing photometry, a disc row without `r_d_pc`, or a spheroid
