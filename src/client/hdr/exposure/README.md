@@ -26,7 +26,12 @@ src/client/hdr/exposure/
                              measured L_TARGET, the disc peak-over-mean
                              that separates them, and the slew.
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
-    (+ test)                 measurement into the applied cut.
+    (+ test)                 measurement into the applied cut, and owns
+                             the three debug overrides (§ Debug panel).
+  exposure-tuning.ts         The debug panel's Exposure section: the live
+                             readout plus the five sliders.
+  exposure-tuning-pure.ts    Readout text — the branch labels and the
+    (+ test)                 no-measurement case.
   reduction/                 The GPU reduction of the HDR target's
                              statistic attachment, and its readback. Its
                              own README.
@@ -120,6 +125,23 @@ guard    = min(0, −2.5·log10(peak_max / L_CAP))
 dm       = guard ≥ eye ? guard
                        : blend toward max(eye, ADAPT_DISPLAY_FLOOR_DM)
 ```
+
+`adaptationBranches` is the **only** implementation of that block —
+`adaptationDm` reads its `dm`, and the readout reads the same object, so a
+panel row can never describe a branch the frame did not run. It also names
+which term set the cut (`eye` / `guard` / `floor` / `handover`), the
+distinction three quite differently-caused frames otherwise share a symptom
+over.
+
+**The display floor is derived from the operator's white point, so
+`DR_MAG` has to reach it.** `SceneAdaptation` takes it as a `whitePoint`
+dep off `HdrPipeline.emitterUniforms` rather than reading the
+default-valued `ADAPT_DISPLAY_FLOOR_DM`: a wider range is a brighter
+full-white frame and therefore *justifies a deeper cut*, so a swept
+`DR_MAG` left out of the floor clamps the field to a display range the
+operator no longer has (`DR_MAG` 11 sinks the floor 3.5 mag). The constant
+survives as the default-tuning value the design gate's numbers are quoted
+at.
 
 **One scene measurement, one display model.** `L̄` drives the eye branch,
 the only perceptual claim; the **highlight guard** (`peak_max` pinned to
@@ -226,9 +248,38 @@ Perf row: `adaptation` (now a handful of arithmetic), plus
 `renderedSizeComponents` calls and the O(n) reduce over the source pool are
 all gone; what replaces them is GPU work on half the frames.
 
+## Debug panel
+
+The panel's **Exposure** section (`exposure-tuning.ts`, first section in
+`debug/debug.ts`) reads this folder and writes three overrides.
+
+Readout, per frame: `L̄` and `peak_max` at the base exposure · the three
+branch terms and the governing regime · **measured vs applied `dm`**, which
+is the slew lag made visible · `m_lim`, EV and the effective limiting
+magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH`, `LUMA_CEIL`,
+`S_lim` and the white point print as *baked*, because they are.
+
+Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` and
+defaulting to the module constants — plus `DR_MAG` and the desaturation
+strength, which are `HdrPipeline`'s (`../README.md` § Dev switches). **The
+overrides survive a chart round-trip**: `reset()` clears the statistic and
+the slew, never the knobs.
+
+**τ is the only tunable in the transient, and it is not what a large scene
+change is showing.** The filter is one-pole; the staircase is `LUMA_CEIL`
+bounding each measurement to 8.4 mag of cut and converging from above
+(`reduction/README.md`), stepping every other frame at worst. A regime flip
+is the third mechanism, and the readout's regime row is how to tell the
+three apart before blaming the filter.
+
+**No slider may reach `L_THRESH` or `LUMA_CEIL`.** Both are compile-time
+GLSL constants in seven emitter shaders, and `L_THRESH` is the *unit's own
+anchor* — `SB_ZERO_POINT`, the band's ρ₀ solve, `L_ADAPT`, `L_CAP` and the
+floor are all expressed against it, so a live one would invalidate the
+calibration it was reached for.
+
 ## Not here yet
 
-`f_ref` (`ADAPT_REF_COVERAGE`) and `L̄` become debug-panel readouts in
-H8. Veiling glare — the angular term a single global scalar cannot
+Veiling glare — the angular term a single global scalar cannot
 express — is its own bead and belongs on the emission side, upstream of
 the operator, not in this folder's scalar.

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { exposureForMagLimit } from './exposure-epoch';
 import type { ReducedStatistic } from './reduction/reduction-pass';
+import { tonemapWhitePoint } from '../tonemap-pure';
 import { SceneAdaptation } from './scene-adaptation';
 import {
   adaptationDm,
@@ -32,11 +33,13 @@ const POINT_COVERAGE = 1e-3;
 
 let reduced: ReducedStatistic | null;
 let base: number;
+let whitePoint: number;
 
 function makeAdaptation(): SceneAdaptation {
   return new SceneAdaptation({
     baseExposure: () => base,
     reduced: () => reduced,
+    whitePoint: () => whitePoint,
   });
 }
 
@@ -59,6 +62,7 @@ function settle(adaptation: SceneAdaptation, chart = false): number {
 beforeEach(() => {
   reduced = null;
   base = BASE_EXPOSURE;
+  whitePoint = tonemapWhitePoint();
 });
 
 describe('SceneAdaptation', () => {

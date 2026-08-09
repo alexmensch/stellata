@@ -6,8 +6,12 @@ import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
 import type { ReducedStatistic } from './reduction/reduction-pass';
 import { rescaleToBaseExposure } from './reduction/reduction-pure';
 import {
-  adaptationDm,
+  type AdaptationBranches,
+  type AdaptationTuning,
+  adaptationBranches,
   ADAPT_SLEW_TAU_S,
+  L_ADAPT,
+  L_CAP,
   slewDm,
 } from './scene-adaptation-pure';
 
@@ -18,6 +22,10 @@ export interface SceneAdaptationDeps {
   /** The frame-late reduction of the HDR target's statistic attachment
    *  (`reduction/README.md`), or null before the first one lands. */
   reduced: () => ReducedStatistic | null;
+  /** The operator's live white point. The display floor is derived from
+   *  it, so `DR_MAG` has to reach the floor or the two describe different
+   *  display ranges (`README.md` § Adaptation). */
+  whitePoint: () => number;
 }
 
 /**
@@ -33,6 +41,9 @@ export class SceneAdaptation {
   private meanL = 0;
   private peakL = 0;
   private lastNowMs: number | null = null;
+  private lAdapt = L_ADAPT;
+  private lCap = L_CAP;
+  private slewTauS = ADAPT_SLEW_TAU_S;
 
   constructor(deps: SceneAdaptationDeps) {
     this.deps = deps;
@@ -53,13 +64,44 @@ export class SceneAdaptation {
       this.meanL = rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base);
       this.peakL = rescaleToBaseExposure(reduced.peakL, reduced.renderExposure, base);
     }
-    const measured = adaptationDm(this.meanL, this.peakL);
-    const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, ADAPT_SLEW_TAU_S);
+    const measured = this.branches().dm;
+    const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
     perfMeasure('adaptation');
     return this.dm;
   }
+
+  /** The live levels the branches measure against. */
+  getTuning(): AdaptationTuning {
+    return { lAdapt: this.lAdapt, lCap: this.lCap, whitePoint: this.deps.whitePoint() };
+  }
+
+  /** This frame's decomposition — the three branch terms and which of them
+   *  set the cut. Recomputed on read rather than cached at `measure()`, so
+   *  a knob moved between frames shows its effect on the same statistic
+   *  instead of one frame late. `dm` here is the *measurement*; the applied
+   *  cut is `getDm()`, which trails it by the slew. */
+  branches(): AdaptationBranches {
+    return adaptationBranches(this.meanL, this.peakL, this.getTuning());
+  }
+
+  /** Adaptation anchor — `L̄` at which the perception branch's cut is zero.
+   *  A debug knob only: ships at `L_ADAPT`, which § 3.1 measured. */
+  setLAdapt(l: number): void { this.lAdapt = l; }
+
+  /** The ceiling the highlight guard pins the frame's brightest pixel at —
+   *  the one knob smoke-tuning moves (§ 3.2). */
+  setLCap(l: number): void { this.lCap = l; }
+
+  /** Time constant of the slew limit on the applied cut, in real seconds.
+   *  The only tunable in the transient: the filter is one-pole, and the
+   *  staircase a large scene change shows is `LUMA_CEIL`'s convergence
+   *  from above rather than anything this reaches
+   *  (`reduction/README.md` § Measure at the base exposure). */
+  setSlewTauS(tau: number): void { this.slewTauS = tau; }
+
+  getSlewTauS(): number { return this.slewTauS; }
 
   /** The cut actually applied this frame — slew-limited, so it trails the
    *  measurement by ~`ADAPT_SLEW_TAU_S`. The readout reports this and not

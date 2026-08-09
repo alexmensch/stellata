@@ -50,14 +50,31 @@ export function slewDm(applied: number, measured: number, blend: number): number
   return applied + (measured - applied) * blend;
 }
 
+/** The three levels the branches are measured against. Ships at the
+ *  constants above; the debug panel overrides `lAdapt` / `lCap` live, and
+ *  `whitePoint` tracks the operator's own `DR_MAG` knob — the floor is
+ *  derived from it, so a swept white point that did not reach here would
+ *  leave the floor describing a display range the operator no longer has. */
+export interface AdaptationTuning {
+  lAdapt: number;
+  lCap: number;
+  whitePoint: number;
+}
+
+export const DEFAULT_ADAPTATION_TUNING: AdaptationTuning = {
+  lAdapt: L_ADAPT,
+  lCap: L_CAP,
+  whitePoint: tonemapWhitePoint(),
+};
+
 /**
  * The perception branch: retinal illuminance drives the cut. `dm ≤ 0` is
  * an invariant — a dark-adapted eye at the instrument's limit is the
  * ceiling, so adaptation only ever cuts.
  */
-export function eyeAdaptationDm(meanL: number): number {
-  if (meanL <= L_ADAPT) return 0;
-  return -2.5 * Math.log10(meanL / L_ADAPT);
+export function eyeAdaptationDm(meanL: number, lAdapt = L_ADAPT): number {
+  if (meanL <= lAdapt) return 0;
+  return -2.5 * Math.log10(meanL / lAdapt);
 }
 
 /**
@@ -65,9 +82,9 @@ export function eyeAdaptationDm(meanL: number): number {
  * `L_CAP`. Also clamped at 0 — it is a *limit* on saturation, never a
  * licence to expose past threshold.
  */
-export function highlightGuardDm(peakL: number): number {
-  if (peakL <= L_CAP) return 0;
-  return -2.5 * Math.log10(peakL / L_CAP);
+export function highlightGuardDm(peakL: number, lCap = L_CAP): number {
+  if (peakL <= lCap) return 0;
+  return -2.5 * Math.log10(peakL / lCap);
 }
 
 /** The deepest cut any displayed frame can justify: the perception
@@ -75,7 +92,11 @@ export function highlightGuardDm(peakL: number): number {
  *  the display can deliver. The scene-referred cut past this point
  *  simulates a retinal bleaching the monitor never caused —
  *  `docs/science-hdr-pipeline.md` § 3.2 (The display floor). */
-export const ADAPT_DISPLAY_FLOOR_DM = -2.5 * Math.log10(tonemapWhitePoint() / L_ADAPT);
+export function displayFloorDm(tuning = DEFAULT_ADAPTATION_TUNING): number {
+  return -2.5 * Math.log10(tuning.whitePoint / tuning.lAdapt);
+}
+
+export const ADAPT_DISPLAY_FLOOR_DM = displayFloorDm();
 
 /** Width of the handover blend, in magnitudes of branch disagreement —
  *  one stop, i.e. a factor-2 band of coverage below the handover. The
@@ -83,28 +104,59 @@ export const ADAPT_DISPLAY_FLOOR_DM = -2.5 * Math.log10(tonemapWhitePoint() / L_
  *  ramp the crossing would step. */
 export const ADAPT_HANDOVER_BLEND_MAG = MAG_PER_STOP;
 
+/** Which term set the applied cut — the diagnostic three quite different
+ *  bugs share a symptom over. `handover` is the one-stop ramp, where the
+ *  answer is a blend rather than any single branch. */
+export type AdaptationRegime = 'eye' | 'guard' | 'floor' | 'handover';
+
+/** Every term behind one frame's cut, so a readout never has to recompute
+ *  a branch and risk disagreeing with the frame it describes. */
+export interface AdaptationBranches {
+  eye: number;
+  guard: number;
+  floor: number;
+  dm: number;
+  regime: AdaptationRegime;
+}
+
 /**
- * The frame's cut. Where a resolved surface dominates (`guard ≥ eye`,
- * i.e. coverage at or above the handover) the guard's pin governs
- * untouched; elsewhere the perception branch applies, bounded by the
- * display floor, with a one-stop ramp joining the two continuously.
+ * The frame's cut, decomposed. Where a resolved surface dominates
+ * (`guard ≥ eye`, i.e. coverage at or above the handover) the guard's pin
+ * governs untouched; elsewhere the perception branch applies, bounded by
+ * the display floor, with a one-stop ramp joining the two continuously.
  * Never deeper than `max(eye, guard)` — the display model only ever
  * raises the exposure the scene measurement asked for.
  */
-export function adaptationDm(meanL: number, peakL: number): number {
-  const eye = eyeAdaptationDm(meanL);
-  const guard = highlightGuardDm(peakL);
-  if (guard >= eye) return guard;
-  const floored = Math.max(eye, ADAPT_DISPLAY_FLOOR_DM);
+export function adaptationBranches(
+  meanL: number,
+  peakL: number,
+  tuning = DEFAULT_ADAPTATION_TUNING,
+): AdaptationBranches {
+  const eye = eyeAdaptationDm(meanL, tuning.lAdapt);
+  const guard = highlightGuardDm(peakL, tuning.lCap);
+  const floor = displayFloorDm(tuning);
+  if (guard >= eye) return { eye, guard, floor, dm: guard, regime: 'guard' };
+  const floored = Math.max(eye, floor);
   const blend = Math.max(0, 1 + (guard - eye) / ADAPT_HANDOVER_BLEND_MAG);
-  return Math.max(eye, floored + (guard - floored) * blend);
+  const dm = Math.max(eye, floored + (guard - floored) * blend);
+  const regime: AdaptationRegime =
+    blend > 0 ? 'handover' : floor > eye ? 'floor' : 'eye';
+  return { eye, guard, floor, dm, regime };
+}
+
+export function adaptationDm(
+  meanL: number,
+  peakL: number,
+  tuning = DEFAULT_ADAPTATION_TUNING,
+): number {
+  return adaptationBranches(meanL, peakL, tuning).dm;
 }
 
 /** Coverage at which the two branches agree — above it the guard governs
  *  and a resolved disc's PEAK reads `L_CAP`, below it the perception
  *  model does and a small bright source is allowed to clip. */
-export function guardHandoverCoverage(): number {
-  return L_ADAPT * DISC_PEAK_OVER_MEAN / L_CAP;
+export function guardHandoverCoverage(tuning = DEFAULT_ADAPTATION_TUNING): number {
+  return tuning.lAdapt * DISC_PEAK_OVER_MEAN / tuning.lCap;
 }
 
 /** Disc-mean luminance a body settles at: `L_ADAPT / f` under the
@@ -112,14 +164,26 @@ export function guardHandoverCoverage(): number {
  *  guard governs — and clipped wherever the display floor binds, which is
  *  why the disc's own luminance is now an input (§ 3.2's sensitivity
  *  analysis). */
-export function adaptedDiscMeanL(coverage: number, discMeanL: number): number {
-  const dm = adaptationDm(discMeanL * coverage, discMeanL * DISC_PEAK_OVER_MEAN);
+export function adaptedDiscMeanL(
+  coverage: number,
+  discMeanL: number,
+  tuning = DEFAULT_ADAPTATION_TUNING,
+): number {
+  const dm = adaptationDm(
+    discMeanL * coverage,
+    discMeanL * DISC_PEAK_OVER_MEAN,
+    tuning,
+  );
   return discMeanL * 10 ** (0.4 * dm);
 }
 
 /** Stops of manual trim a body needs to land its disc mean back on
  *  `L_TARGET`. Constant wherever the guard governs, since the guard
  *  already pins the level. */
-export function trimStopsForCoverage(coverage: number, discMeanL: number): number {
-  return Math.log2(L_TARGET / adaptedDiscMeanL(coverage, discMeanL));
+export function trimStopsForCoverage(
+  coverage: number,
+  discMeanL: number,
+  tuning = DEFAULT_ADAPTATION_TUNING,
+): number {
+  return Math.log2(L_TARGET / adaptedDiscMeanL(coverage, discMeanL, tuning));
 }
