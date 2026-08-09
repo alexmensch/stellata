@@ -34,7 +34,9 @@ export interface StarFocusProviderConfig {
   starLabels: Map<number, string>;
   spectralMap: Map<number, string>;
   searchEntries: Map<number, SearchEntry>;
-  binaries: BinariesData | null;
+  /** Orbital elements for the companion rows; null with no artifact.
+   *  Read per format call, so a late `attachBinaries` reaches the card. */
+  getBinaries: () => BinariesData | null;
   /** Live camera→star distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
   /** Current sim time as JD — drives the Tier-1 live companion separation. */
@@ -44,7 +46,7 @@ export interface StarFocusProviderConfig {
 export function createStarFocusProvider(
   config: StarFocusProviderConfig,
 ): FocusCardProvider<'star'> {
-  const { catalog, starLabels, spectralMap, searchEntries, binaries } = config;
+  const { catalog, starLabels, spectralMap, searchEntries } = config;
   const nameCtx = { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid };
 
   return {
@@ -92,7 +94,11 @@ export function createStarFocusProvider(
         catalog.velocities[idx * 3 + 2],
       );
       if (vel) rows.push({ label: 'Velocity', value: formatSpaceVelocity(vel) });
-      const names = companionNames(idx, { ...nameCtx, binaries, nowJd: 0 });
+      const names = companionNames(idx, {
+        ...nameCtx,
+        binaries: config.getBinaries(),
+        nowJd: 0,
+      });
       if (names.length > 0) {
         rows.push({ label: 'Known companions', value: names.join('\n') });
       }
@@ -117,8 +123,11 @@ export function createStarFocusProvider(
       const lines: FocusCardContent['lines'] = [];
       // Live so a Tier-1 pair's ρ tracks the sim clock exactly as the
       // hover card's does — shared fields must agree between tiers.
-      const orbits = () =>
-        companionOfLines(idx, { ...nameCtx, binaries, nowJd: config.nowJd() }).join('\n');
+      const orbits = () => companionOfLines(idx, {
+        ...nameCtx,
+        binaries: config.getBinaries(),
+        nowJd: config.nowJd(),
+      }).join('\n');
       if (orbits()) lines.push(orbits);
 
       return { name, identityLines, rows, lines };

@@ -474,6 +474,7 @@ export class Stellata implements FrameAnchor {
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
       renderedSizePx: (idx) => this.renderedSizePxFor(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+      getBinaries: () => this.binariesData,
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
     // camera / orbit-target shift → scene-layer recenter hooks.
@@ -1270,9 +1271,6 @@ export class Stellata implements FrameAnchor {
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
-    // The star module's card/hover legs read the same table for the
-    // companion lines.
-    this.kinds.star.setBinaries(binaries);
     this.starLocalCluster.setBinaries(binaries);
     if (binaries === null) {
       this.binaryOrbitField = null;

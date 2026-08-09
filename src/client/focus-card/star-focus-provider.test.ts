@@ -34,7 +34,7 @@ function buildConfig(overrides: Partial<StarFocusProviderConfig> = {}): StarFocu
     starLabels: new Map([[0, 'Vega'], [1, 'Star B'], [2, 'Star C']]),
     spectralMap: new Map([[0, 'A0V']]),
     searchEntries,
-    binaries: null,
+    getBinaries: () => null,
     cameraDistancePc: () => 7.68,
     nowJd: () => J2000_JD,
     ...overrides,
@@ -163,7 +163,7 @@ describe('createStarFocusProvider', () => {
       primaryIdxToRelations: new Map([[0, [0, 1]]]),
       secondaryIdxToRelations: new Map([[1, [0]], [2, [1]]]),
     };
-    const out = createStarFocusProvider(buildConfig({ binaries })).format(0);
+    const out = createStarFocusProvider(buildConfig({ getBinaries: () => binaries })).format(0);
     expect(rowValue(out.rows, 'Known companions')).toBe('Star B\nStar C');
     // Primary side renders as a row, not a full-width line block.
     expect(out.lines).toHaveLength(0);
@@ -193,7 +193,7 @@ describe('createStarFocusProvider', () => {
       primaryIdxToRelations: new Map([[0, [0]]]),
       secondaryIdxToRelations: new Map([[1, [0]]]),
     };
-    const out = createStarFocusProvider(buildConfig({ binaries })).format(1);
+    const out = createStarFocusProvider(buildConfig({ getBinaries: () => binaries })).format(1);
     expect(out.lines).toHaveLength(1);
     const line = out.lines[0];
     const text = typeof line === 'function' ? line() : line;

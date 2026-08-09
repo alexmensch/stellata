@@ -8,6 +8,8 @@ import {
   CATALOG_MANIFEST_FILENAME,
   type SearchEntry,
 } from '../../../scripts/catalog/catalog-pure';
+import type { BinariesData } from '../binaries/binaries-loader';
+import { NO_PARENT } from '../binaries/binaries-loader';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
@@ -32,6 +34,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     parkDistForStar: () => 1.5,
     renderedSizePx: () => 12,
     pickStarHit: () => null,
+    getBinaries: () => null,
     ...overrides,
   };
 }
@@ -163,6 +166,42 @@ describe('star kind module', () => {
     expect(pickStarHit).toHaveBeenCalledWith(10, 20, 14);
     const payload = hover.format(hit);
     expect(payload?.name).toBe('Gaia DR3 123');
+  });
+
+  it('reads binaries per format call, so a late attach reaches a built card', async () => {
+    const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
+    const ctx = makeKindContext();
+    m.attach(ctx);
+    let binaries: BinariesData | null = null;
+    m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
+    const card = m.card();
+    const companionsOf = (idx: number) =>
+      card.format(idx).rows.find((r) => r.label === 'Known companions')?.value;
+
+    expect(companionsOf(0)).toBeUndefined();
+    binaries = {
+      version: 1,
+      relations: [{
+        primaryIdx: 0,
+        secondaryIdx: 1,
+        flags: 0,
+        parentRelation: NO_PARENT,
+        pDays: NaN,
+        tJd: NaN,
+        e: NaN,
+        aAU: NaN,
+        iRad: NaN,
+        omegaRad: NaN,
+        OmegaRad: NaN,
+        q: NaN,
+        sepArcsec: 5.3,
+        paDeg: 132,
+        sepPaEpochJd: 0,
+      }],
+      primaryIdxToRelations: new Map([[0, [0]]]),
+      secondaryIdxToRelations: new Map([[1, [0]]]),
+    };
+    expect(companionsOf(0)).toBe('HIP 91262');
   });
 
   it('card rows read the runtime local frame for the live distance', async () => {

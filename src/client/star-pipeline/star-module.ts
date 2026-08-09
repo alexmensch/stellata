@@ -40,6 +40,10 @@ export interface StarModuleRuntime {
   renderedSizePx(idx: number): number;
   /** The Picker's two-tier star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
+  /** Orbital elements for the companion lines; null with no artifact.
+   *  Read per format call — the shell can re-attach binaries after the
+   *  card provider is built. */
+  getBinaries(): BinariesData | null;
 }
 
 export interface StarKindModule extends ObjectKindModule<'star'> {
@@ -56,7 +60,6 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  — the module owns the catalog, so the formula lives here only. */
   photometry(idx: number): { absMag: number; radiusPc: number } | null;
   setRuntime(runtime: StarModuleRuntime): void;
-  setBinaries(binaries: BinariesData | null): void;
 }
 
 export function createStarKindModule(): StarKindModule {
@@ -64,7 +67,6 @@ export function createStarKindModule(): StarKindModule {
   let searchIndex: SearchEntry[] | null = null;
   let ctx: KindContext | null = null;
   let runtime: StarModuleRuntime | null = null;
-  let binaries: BinariesData | null = null;
   let starLabels = new Map<number, string>();
   let spectralMap = new Map<number, string>();
   let searchEntries = new Map<number, SearchEntry>();
@@ -102,9 +104,6 @@ export function createStarKindModule(): StarKindModule {
     photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
-    },
-    setBinaries(b) {
-      binaries = b;
     },
 
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
@@ -165,7 +164,7 @@ export function createStarKindModule(): StarKindModule {
         starLabels,
         spectralMap,
         searchEntries,
-        binaries,
+        getBinaries: () => runtime?.getBinaries() ?? null,
         cameraDistancePc: (idx) => (runtime && ctx
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(ctx.camera.position)
           : 0),
@@ -189,7 +188,7 @@ export function createStarKindModule(): StarKindModule {
           constellations: catalog.constellations,
           periodDays: catalog.periodDays,
           amplitudeMag: catalog.amplitudeMag,
-          binaries,
+          binaries: runtime?.getBinaries() ?? null,
           nowJd: tToJDE(ctx.getT()),
           membership: ctx.systemMembership,
         })
