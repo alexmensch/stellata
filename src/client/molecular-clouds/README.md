@@ -104,6 +104,23 @@ at −1 (galactic disc/grid, Local Bubble shell, the cloud rim shells
 themselves) deliberately draws after the mesh — annotation shouldn't
 be extincted.
 
+**The MW band is not exempt, and that overlap is deliberate.** Its own
+analytic slab is normalised to a *total* extinction rate, so wherever a
+rendered cloud sits the two stack. Measured: clouds cover 15.4 % of the
+sky at a mean A_V of 0.309 there, against 0.031 from the slab inside
+their 2.5 kpc volume — the overlap costs ~0.006 mag sky-mean, ~0.05 mag
+toward the Galactic centre. Scaling the slab down by a molecular fraction
+would under-extinct the far disc, where no cloud is rendered to make up
+the difference: a ~3 mag error traded for a ~0.05 mag one
+(`../milkyway/README.md` § Analytical-only dust).
+
+Treating the clouds as a pure foreground *screen* is sound toward the
+inner Galaxy — only 2.3 % of the GC column's emission originates inside
+500 pc, so they really are in front of the light. It is weakest toward
+the anticentre, where 65 % of that column is within 2.5 kpc and the
+clouds sit *inside* the emitting volume. Second-order, because the
+anticentre column is small.
+
 ## Rim shell render
 
 One shared `ShaderMaterial` across all clouds (`FrontSide`,

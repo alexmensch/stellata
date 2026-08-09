@@ -42,7 +42,8 @@ uniform float uHighlightDesat;
 const int   STEPS = EMISSION_STEPS;
 const float S_MIN_PC = 0.1;
 const float U_FLOOR = 1e-4;
-// Mirrors LG_SB_ZERO_POINT — a column is flux per steradian, so this is
+// Mirrors SB_ZERO_POINT (../hdr/emission-pure.ts) — a column is flux per
+// steradian, so this is
 // just the solid angle of one arcsec².
 const float SB_ZERO_POINT = 26.5721256659;
 

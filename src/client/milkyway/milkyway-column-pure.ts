@@ -3,7 +3,8 @@
 // receives as uniforms — see README.md § Density profiles, § Calibration.
 
 import { R0_PC } from '../galactic/galactic-coords';
-import { lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import { NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 } from './diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -14,7 +15,7 @@ export const DISC_RADIUS_PC = 15_000;
 export const DISC_HALF_THICKNESS_PC = 600;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
-export const DISC_DENSITY0 = 1.5;
+export const DISC_WEIGHT = 1.5;
 export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
 /** The authored palette carrying hue only — what the shader multiplies in.
  *  See README.md § Population tints carry hue, never flux. */
@@ -26,7 +27,7 @@ export const BULGE_RADIUS_PC = 5_000;
 export const BULGE_HALF_THICKNESS_PC = 3_000;
 export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
-export const BULGE_DENSITY0 = 18.0;
+export const BULGE_WEIGHT = 18.0;
 export const BULGE_COLOR_RGB: Rgb = [1.0, 0.9647, 0.9294];
 export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
@@ -34,14 +35,31 @@ export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
 export const ANALYTICAL_DUST_SCALE_LENGTH_PC = 3_500;
 export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
-export const ANALYTICAL_DUST_NORM_PER_PC = 5.5e-5;
+
+/** V-band extinction the slab produces per kpc at (R₀, z = 0) — the
+ *  declarative dust anchor, from which the normalisation is derived.
+ *  1.0 mag/kpc is the upper end of the range commonly adopted for the
+ *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
+ *  to 1.8). Two independent constraints meet here: at the 125 pc scale
+ *  height it also puts the perpendicular column to the pole at
+ *  A_V = 0.125, inside the SFD polar spread. See README.md § Analytical
+ *  dust. */
+export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
+
 export const REDDENING_RGB: Rgb = [0.76, 1.0, 1.35];
-export const DEFAULT_EXTINCTION_STRENGTH = 0.45;
 
 /** `avPerDensityPerPc` from the dust manifest (ZGR_TO_AV). `attachDust`
  *  overwrites the uniform from the loaded field; this is the value the
  *  shipped artifact carries and the one the calibration is derived at. */
 export const DEFAULT_DUST_AV_PER_DENSITY_PC = 2.742;
+
+export const ANALYTICAL_DUST_NORM_PER_PC =
+  LOCAL_DUST_RATE_MAG_PER_KPC / (DEFAULT_DUST_AV_PER_DENSITY_PC * 1000);
+
+/** The dust multiplier is a dev lever, not a calibration term — the
+ *  normalisation above is the calibration. Anything but 1 means the
+ *  shipped extinction disagrees with its own stated anchor. */
+export const DEFAULT_EXTINCTION_STRENGTH = 1.0;
 
 export const MAG_PER_TAU = 1.0857;
 
@@ -60,9 +78,12 @@ export const FOREGROUND_DUST_STEPS = 16;
 
 // --- Profiles ----------------------------------------------------------
 
+/** Disc emissivity at the component's RELATIVE weight. `EMISSIVITY_SCALE`
+ *  puts it in the shared flux unit and is derived from a march of this
+ *  profile, so it cannot be baked in here. */
 export function discDensity(rPc: number, zPc: number): number {
   return (
-    DISC_DENSITY0 *
+    DISC_WEIGHT *
     Math.exp(-(rPc - R0_PC) / DISC_SCALE_LENGTH_PC) *
     Math.exp(-Math.abs(zPc) / DISC_SCALE_HEIGHT_PC)
   );
@@ -71,7 +92,7 @@ export function discDensity(rPc: number, zPc: number): number {
 export function bulgeDensity(rPc: number, zPc: number): number {
   const zEff = zPc / BULGE_AXIS_RATIO;
   const rPrime = Math.sqrt(rPc * rPc + zEff * zEff);
-  return BULGE_DENSITY0 * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
+  return BULGE_WEIGHT * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
 }
 
 export function analyticalDustDensity(rPc: number, zPc: number): number {
@@ -238,11 +259,15 @@ export interface ColumnOptions {
 }
 
 /**
- * One component's dust-attenuated emission column, in the shader's
- * "density × pc × colour" units. Mirrors milkyway.frag.glsl: log-
- * distributed steps from the front face (or `S_MIN_PC` when inside) to
- * the back face, Beer-Lambert attenuation with half-step self-shielding,
- * seeded with the foreground dust column.
+ * One component's dust-attenuated emission column, in the component's
+ * **relative weight** units. Mirrors milkyway.frag.glsl: log-distributed
+ * steps from the front face (or `S_MIN_PC` when inside) to the back face,
+ * Beer-Lambert attenuation with half-step self-shielding, seeded with the
+ * foreground dust column.
+ *
+ * Every column function here is weight-space. `EMISSIVITY_SCALE` enters
+ * exactly once, in `sightlineEmissionColumn` — the march is linear in it,
+ * and the scale is derived from a march, so it cannot appear inside one.
  */
 export function componentColumnRgb(
   component: MilkywayComponent,
@@ -320,16 +345,50 @@ export function sightlineColumnRgb(
   return total;
 }
 
-/**
- * The luminance-weighted column the shader turns into surface brightness
- * via `S = uGlowMagOffset − 2.5·log10(column)`.
- */
+/** The luminance-weighted column in weight space — scale-free, so a
+ *  ratio of two of these is meaningful on its own. */
 export function sightlineColumn(
   originPc: Vec3,
   dirUnit: Vec3,
   options: ColumnOptions = {},
 ): number {
   return relativeLuminance(sightlineColumnRgb(originPc, dirUnit, options));
+}
+
+// --- Emission scale ----------------------------------------------------
+
+/**
+ * Multiplier taking the components' relative weights to the shared
+ * `SB_ZERO_POINT` flux unit, derived so the NGP sightline lands on the
+ * anchor above. Marched **dust-free**, which is the whole point: the
+ * emissivity is an intrinsic property and must not move when the
+ * extinction does.
+ *
+ * Interim: one sightline, not an integrated luminosity, so the model's own
+ * total M_V is a reported outcome rather than an input. See README.md
+ * § Calibration for the solve that replaces this and why it waits.
+ */
+export const EMISSIVITY_SCALE =
+  10 ** (-0.4 * (NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - SB_ZERO_POINT)) /
+  sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 90), {
+    dustEnabled: false,
+  });
+
+/** Per-component emissivity in the shared flux unit — what the shader
+ *  receives as `density0`. */
+export const DISC_DENSITY0 = DISC_WEIGHT * EMISSIVITY_SCALE;
+export const BULGE_DENSITY0 = BULGE_WEIGHT * EMISSIVITY_SCALE;
+
+/** The column the shader turns into surface brightness via
+ *  `S = uGlowMagOffset − 2.5·log10(column)`: the weight-space march in
+ *  the shared flux unit. Declared below `EMISSIVITY_SCALE` so no march
+ *  can reach the scale before it exists. */
+export function sightlineEmissionColumn(
+  originPc: Vec3,
+  dirUnit: Vec3,
+  options: ColumnOptions = {},
+): number {
+  return EMISSIVITY_SCALE * sightlineColumn(originPc, dirUnit, options);
 }
 
 /** Surface brightness in mag/arcsec² for a sightline. */
@@ -340,6 +399,7 @@ export function sightlineSurfaceBrightness(
   options: ColumnOptions = {},
 ): number {
   return (
-    glowMagOffset - 2.5 * Math.log10(sightlineColumn(originPc, dirUnit, options))
+    glowMagOffset -
+    2.5 * Math.log10(sightlineEmissionColumn(originPc, dirUnit, options))
   );
 }

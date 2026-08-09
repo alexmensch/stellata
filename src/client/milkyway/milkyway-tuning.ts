@@ -16,12 +16,22 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   const body = document.createElement('div');
   const v = layer.getValues();
 
-  // Surface-brightness anchor, in mag/arcsec². Range straddles the
-  // derived value; H7 lands the shipped anchor.
+  // Every range below is derived from the shipped value rather than
+  // hardcoded: the emissivity constants are solved now, so a re-solve
+  // would otherwise leave a slider unable to represent its own default.
+  const span = (shipped: number) => ({
+    min: 0,
+    max: 3 * shipped,
+    step: shipped / 100,
+  });
+
+  // Surface-brightness zero point, mag/arcsec². A constant of the shared
+  // emission unit (`../hdr/emission-pure.ts`), not a calibration knob —
+  // moving it desynchronises the band from the Local Group layer.
   body.appendChild(makeSlider({
     label: 'glowMagOffset',
-    min: 26,
-    max: 36,
+    min: v.glowMagOffset - 5,
+    max: v.glowMagOffset + 5,
     step: 0.1,
     initial: v.glowMagOffset,
     format: (x) => x.toFixed(1),
@@ -29,22 +39,18 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   }));
 
   body.appendChild(makeSlider({
+    ...span(v.discDensity),
     label: 'discDensity',
-    min: 0,
-    max: 10,
-    step: 0.05,
     initial: v.discDensity,
-    format: (x) => x.toFixed(2),
+    format: (x) => x.toExponential(2),
     onChange: (x) => layer.setDiscDensity(x),
   }));
 
   body.appendChild(makeSlider({
+    ...span(v.bulgeDensity),
     label: 'bulgeDensity',
-    min: 0,
-    max: 30,
-    step: 0.1,
     initial: v.bulgeDensity,
-    format: (x) => x.toFixed(2),
+    format: (x) => x.toExponential(2),
     onChange: (x) => layer.setBulgeDensity(x),
   }));
 

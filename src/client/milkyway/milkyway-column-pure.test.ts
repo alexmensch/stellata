@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BULGE_COMPONENT,
+  DEFAULT_EXTINCTION_STRENGTH,
   DISC_COMPONENT,
   SOL_GALACTOCENTRIC_PC,
   type Vec3,
@@ -15,6 +16,7 @@ import { relativeLuminance } from '../hdr/tonemap-pure';
 const SOL = SOL_GALACTOCENTRIC_PC;
 const TO_GC = galacticDirection(0, 0);
 const REFERENCE_STEPS = 4096;
+const K = DEFAULT_EXTINCTION_STRENGTH;
 
 function normalise(v: Vec3): Vec3 {
   const n = Math.hypot(...v);
@@ -45,9 +47,9 @@ describe('proxy-mesh spans from Sol', () => {
 });
 
 describe('foreground dust column', () => {
-  it('carries 0.315 τ_V over the Sol→bulge-boundary sightline', () => {
-    const tau = foregroundDustTauRgb(SOL, TO_GC, 3122, 0.45);
-    expect(tau[1]).toBeCloseTo(0.3149, 4);
+  it('carries 4.64 τ_V over the Sol→bulge-boundary sightline', () => {
+    const tau = foregroundDustTauRgb(SOL, TO_GC, 3122, K);
+    expect(tau[1]).toBeCloseTo(4.6407, 4);
     // CCM reddening: blue extincts hardest, so the column warms as well
     // as dims what lies behind it.
     expect(tau[0]).toBeLessThan(tau[1]);
@@ -58,8 +60,8 @@ describe('foreground dust column', () => {
   // rises monotonically toward the boundary, so the in-volume march's log
   // distribution would spend its samples at the wrong end.
   it('converges to a dense reference march in the plane', () => {
-    const ref = foregroundDustTauRgb(SOL, TO_GC, 3122, 0.45, REFERENCE_STEPS);
-    const shipped = foregroundDustTauRgb(SOL, TO_GC, 3122, 0.45);
+    const ref = foregroundDustTauRgb(SOL, TO_GC, 3122, K, REFERENCE_STEPS);
+    const shipped = foregroundDustTauRgb(SOL, TO_GC, 3122, K);
     expect(shipped[1] / ref[1]).toBeCloseTo(1, 3);
   });
 
@@ -70,7 +72,7 @@ describe('foreground dust column', () => {
       BULGE_COMPONENT.meshScalePc,
     );
     expect(span).not.toBeNull();
-    const args = [GRAZING_ORIGIN, GRAZING_DIR, span!.sNear, 0.45] as const;
+    const args = [GRAZING_ORIGIN, GRAZING_DIR, span!.sNear, K] as const;
     const ref = foregroundDustTauRgb(...args, REFERENCE_STEPS);
     // Non-trivial column, or the convergence check below proves nothing.
     expect(ref[1]).toBeGreaterThan(0.05);
@@ -82,7 +84,7 @@ describe('foreground dust column', () => {
   });
 
   it('is zero when the camera is already inside the proxy', () => {
-    expect(foregroundDustTauRgb(SOL, TO_GC, 1, 0.45)).toEqual([0, 0, 0]);
+    expect(foregroundDustTauRgb(SOL, TO_GC, 1, K)).toEqual([0, 0, 0]);
   });
 });
 
@@ -94,9 +96,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.063 mag', () => {
+  it('dims the Galactic-centre sightline by 0.048 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0629, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0479, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -109,35 +111,35 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.0629, 3);
-    expect(offsets[1]).toBeCloseTo(0.0413, 3);
-    expect(offsets[2]).toBeCloseTo(0.0122, 3);
+    expect(offsets[0]).toBeCloseTo(0.0479, 3);
+    expect(offsets[1]).toBeCloseTo(0.0472, 3);
+    expect(offsets[2]).toBeCloseTo(0.0412, 3);
   });
 });
 
-// Contradicts the intuition the bug report was written on: the bulge is
-// NOT the dominant emitter toward the Galactic centre. The disc's
-// exp(−(R−R₀)/hR) rise plus a 23 kpc path to its back face outweighs the
-// bulge's density0 = 18 concentration over 10 kpc, which is why fixing
-// the bulge's missing 0.315 τ_V moves the sightline by only 0.063 mag.
+// At a realistic extinction rate the bulge is essentially invisible from
+// Sol in V — it sits behind 4.6 τ_V before its own march even begins, and
+// the disc's exp(−(R−R₀)/hR) rise over a 23 kpc path is unobscured for its
+// nearest and brightest part. Every photon the band shows toward the
+// centre is foreground disc, which is what the real sky looks like.
 describe('per-component split toward the Galactic centre', () => {
-  it('has the disc carrying five sixths of the column', () => {
+  it('has the disc carrying essentially the whole column', () => {
     const disc = relativeLuminance(componentColumnRgb(DISC_COMPONENT, SOL, TO_GC));
     const bulge = relativeLuminance(componentColumnRgb(BULGE_COMPONENT, SOL, TO_GC));
-    expect(disc / (disc + bulge)).toBeCloseTo(0.828, 2);
+    expect(disc / (disc + bulge)).toBeCloseTo(0.9993, 4);
   });
 });
 
 describe('quadrature of the in-volume march', () => {
-  // Pre-existing, and left alone deliberately: STEPS is a visual + perf
-  // decision, and H7 owns the calibration this biases. Pinned so it is a
-  // known 1.8% under-count rather than a surprise.
-  it('under-counts the GC column by 1.8% against a dense march', () => {
+  // Left alone deliberately: STEPS is a visual + perf decision. It no
+  // longer biases the calibration — the emissivity anchor is the NGP
+  // sightline, marched dust-free, where the log distribution converges.
+  it('under-counts the GC column by 1.6% against a dense march', () => {
     const shipped = sightlineColumn(SOL, TO_GC);
     const ref = sightlineColumn(SOL, TO_GC, {
       steps: REFERENCE_STEPS,
       foregroundSteps: REFERENCE_STEPS,
     });
-    expect(shipped / ref).toBeCloseTo(0.9822, 3);
+    expect(shipped / ref).toBeCloseTo(0.9841, 3);
   });
 });

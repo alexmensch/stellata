@@ -11,6 +11,19 @@ import { type Rgb, relativeLuminance } from './tonemap-pure';
  *  headroom under the fp16 max. */
 export const LUMA_CEIL = 4096;
 
+/** Surface-brightness zero point of a raymarched emission column,
+ *  mag/arcsec² — the constant of the unit system, shared by every
+ *  volumetric emitter.
+ *
+ *  A column Σρ·ds is flux per steradian whenever `density0` was normalised
+ *  against zero-point-free flux `F = 10^(−0.4·m_V)`, because
+ *  Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ. The only conversion left is then the solid
+ *  angle of one arcsec², which is what this is. Nothing about it is
+ *  tunable, and in particular it carries no dependence on dust: an emitter
+ *  whose zero point moves with its own extinction has folded an
+ *  attenuation error into its luminosity. */
+export const SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
+
 /** Linear luminance of a source at V-band apparent magnitude `m`.
  *  Unclamped — the ceiling belongs to whatever writes the fragment. */
 export function luminanceForMagnitude(exposure: number, m: number): number {

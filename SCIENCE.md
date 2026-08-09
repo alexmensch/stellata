@@ -320,14 +320,20 @@ enough to see it.
       (DOI 10.1051/aas:1998105) — "The 1997 reference of diffuse night sky
       brightness". Table 24's integrated starlight at 0.55 µm
       (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
-      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band's sightline
-      surface brightness is checked against. These are SKY-model
-      predictions (Wainscoat et al. 1992) for *total* starlight, so they
-      include the resolved stars the catalogue draws separately —
-      quantifying that overlap is part of `stellata-xypg.29`.
-  Both are checks on a model whose emissivity is currently anchored on a
-  single sightline; `src/client/milkyway/README.md` § Calibration carries
-  the measured disagreement.
+      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band's emissivity is
+      anchored to — but not directly. These are SKY-model predictions
+      (Wainscoat et al. 1992) for *total* starlight, so they include the
+      resolved stars the catalogue draws separately, and at the NGP that
+      overlap is two thirds of the light. The anchor is the residual after
+      the catalogue's own contribution is subtracted (24.99, not 23.83);
+      pinning the published figure would double-count the star field.
+      The subtraction is only meaningful at the pole, where extinction is
+      ~0.03 mag and a de-extincted catalogue sum and an observed sky model
+      are commensurable.
+  Bland-Hawthorn & Gerhard remains a check rather than an input: the
+  emissivity is anchored on that one corrected sightline, not on a total
+  luminosity, and the two constraints do not yet agree.
+  `src/client/milkyway/README.md` § Calibration carries the detail.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the

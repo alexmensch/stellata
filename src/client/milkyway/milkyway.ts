@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
-import { lumaNormalisedTint } from '../hdr/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
 import type { DustField } from '../loaders/dust-loader';
@@ -29,7 +29,7 @@ import {
   REDDENING_RGB,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
-  sightlineColumn,
+  sightlineEmissionColumn,
 } from './milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
@@ -39,28 +39,21 @@ import {
 
 // --- Output calibration ------------------------------------------------
 
-/** V surface brightness the Galactic-centre sightline is anchored to —
- *  the design gate's band-pixel reference
- *  (docs/science-hdr-pipeline.md § 1). H7 replaces this single anchor
- *  with per-sightline published V photometry. */
-export const GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0;
-
 /** Luminance-weighted emission column the Galactic-centre sightline
- *  (l = 0, b = 0) integrates to at the shipped densities and 0.45 dust
- *  strength, from the CPU mirror of the shader's raymarch. Pinned in
- *  ./milkyway.test.ts so a profile or quadrature change is visible. */
-export const GC_SIGHTLINE_COLUMN = sightlineColumn(
+ *  (l = 0, b = 0) integrates to, from the CPU mirror of the shader's
+ *  raymarch. Pinned in ./milkyway.test.ts so a profile or quadrature
+ *  change is visible. */
+export const GC_SIGHTLINE_COLUMN = sightlineEmissionColumn(
   SOL_GALACTOCENTRIC_PC,
   galacticDirection(0, 0),
 );
 
-/** The V surface brightness, in mag/arcsec², of a sightline whose
- *  luminance-weighted emission column integrates to 1 — the layer's
- *  single photometric constant, not a user knob. Derived rather than
- *  tuned: it is whatever puts the GC sightline on the band reference.
- *  See ./README.md § Surface-brightness emission. */
-export const GLOW_MAG_OFFSET =
-  GC_BAND_REFERENCE_MAG_ARCSEC2 + 2.5 * Math.log10(GC_SIGHTLINE_COLUMN);
+/** Surface brightness the Galactic-centre sightline resolves to, a
+ *  **check** rather than the calibration it used to be — see
+ *  ./README.md § Calibration for what replaced it and why 20.0 was wrong
+ *  by ~3 mag. Pinned against the resolved-star-corrected residual. */
+export const GC_SIGHTLINE_MAG_ARCSEC2 =
+  SB_ZERO_POINT - 2.5 * Math.log10(GC_SIGHTLINE_COLUMN);
 
 // Raymarch step count is fixed in the shader (32 steps). Performance
 // has been fine in practice even with two materials each running
@@ -164,7 +157,7 @@ export class MilkyWay {
       uR0Pc: { value: R0_PC },
     };
     this.sharedTone = {
-      uGlowMagOffset: { value: GLOW_MAG_OFFSET },
+      uGlowMagOffset: { value: SB_ZERO_POINT },
     };
     this.sharedChart = {
       uChartIsobar: { value: 0 },
