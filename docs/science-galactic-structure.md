@@ -306,12 +306,113 @@ epsilon, as the per-star extinction prepass already is; and correct handling
 of a camera *outside* coverage, which needs an entry as well as an exit
 distance.
 
-That is the same angular × distance parameterisation the source itself has —
-Edenhofer's resolution is sub-pc within ~150 pc and degrades to ~5 pc only
-near its edge — so the band's prefilter and any near-Sol refinement of the
-grid should agree on it rather than carrying two unrelated warps. They remain
-separate structures: the per-star march cannot take a prefiltered input at all
-without breaking the de-extinction cancellation invariant.
+The per-star march remains a separate structure either way: it cannot take a
+prefiltered input at all without breaking the de-extinction cancellation
+invariant.
+
+### The prefilter mechanism — a view-frustum froxel grid
+
+Decided by measurement (stellata-ty4.4). Both candidates the gate named are the
+**same structure** under different parameterisations: a froxel grid holding the
+measured A_V column per (sky cell × log-distance slice), which the march reads
+as the difference between two slices. They differ only in what indexes the sky
+cells — a camera-anchored all-sky map, or the view frustum. **The frustum wins**,
+on a ratio that is just the solid angle each has to cover.
+
+Storing the **column, not the density**, is what makes the along-ray extent of
+the filter equal to the march step by construction: linear interpolation in log
+distance *is* a uniform density inside each slice, the total column telescopes
+exactly whatever the slice count, and the filtering runs linear in A_V — which
+point-sampling the u8-log-encoded grid can never be.
+
+#### Cost
+
+Pin: **13.0′ cells × 32 log slices, one ray per cell, 2 bytes per texel.**
+Fetches are counted against the shipped per-star extinction prepass — 313k
+stars × 48 steps = **15.0M fetches per rebuild**, which recomputes every frame
+during a warp — because that is a shipped GPU workload doing the same fetch
+against the same texture. Wall-clock GPU timings are not measured here.
+
+| grid | cells | memory | fill per rebuild | rebuilt on |
+| --- | --- | --- | --- | --- |
+| all-sky, camera-anchored | 879k | 53.6 MB | 450M (30× the prepass) | translation > ε |
+| frustum, 10° FOV | 3.7k | 0.2 MB | 1.9M (0.1×) | any camera change |
+| **frustum, 50° FOV (default)** | **76k** | **4.7 MB** | **39M (2.6×)** | any camera change |
+| frustum, 120° FOV | 271k | 16.5 MB | 139M (9.2×) | any camera change |
+
+The **read** is identical either way and is the larger per-frame term: one fetch
+per march step per band pixel, 166M/frame at 1920 × 1080 @dpr1 (32 disc steps +
+48 bulge steps-plus-pre-march). It *replaces* the same count of analytic
+evaluations rather than adding to them.
+
+The 11.5× fill ratio is not an implementation detail — a fill touches every
+voxel inside the solid angle it covers, and 4π sr against the ~1.1 sr a 50°
+frustum subtends is the whole of it. The all-sky map's one real advantage is
+that its cells are fixed in the sky, so rotation costs nothing; that does not
+pay for 11.5×, because stellata's camera translates on orbit drag and on every
+warp, leaving only a parked camera panning — the regime where the frustum grid's
+39M is affordable anyway. A hybrid (sky-fixed cells, filled only over the
+visible cone, per-cell staleness) would take both, at the cost of the all-sky
+memory footprint and a residency map; it is recorded here as the upgrade path,
+not adopted.
+
+#### Accuracy
+
+Measured against a direct march at ¼-voxel steps, **after** the 13.0′ flat-disc
+summation the resolve convolves the band over — the display carries no finer
+structure than that, so the honest comparison is between two convolved profiles,
+not two pointwise ones. Worst case over 241 sightlines across the Rift (l = 0,
+b = −30…30 at 0.25°), camera at Sol, at the pinned 13.0′ cell.
+
+| read | worst ΔS | p99 | worst column | Rift-edge shift |
+| --- | --- | --- | --- | --- |
+| point sample, no prefilter | 1.28 mag | 1.07 | 7.69 mag | 617′ |
+| 16 sub-samples per step | 0.061 | 0.059 | 0.026 | 58′ |
+| 64 sub-samples per step | 0.004 | 0.004 | 0.002 | 3.0′ |
+| froxel, 24 slices | 0.031 | 0.023 | 0.038 | 17.5′ |
+| **froxel, 32 slices** | **0.024** | **0.018** | **0.038** | **9.4′** |
+| froxel, 64 slices | 0.025 | 0.015 | 0.038 | 5.8′ |
+
+A 600-sightline all-sky set tracks it, worst ΔS 0.058 / 0.030 / 0.020 mag at
+24 / 32 / 64 slices. The edge shift is the mag error divided by the local
+gradient of the true profile — how far the Rift's edge actually moves, which is
+the angular error the requirement asks for. At the pin it is **9.4′, inside the
+13.0′ patch the band is displayed through**. Three findings the numbers force:
+
+- **The binding axis is along-ray, not transverse.** 32 slices is the knee: 24
+  leaves a 17.5′ edge shift, and 64 halves the shift but leaves the column error
+  at 0.038 mag untouched, because past 32 the whole residual is the angular
+  interpolation.
+- **No transverse supersampling.** One ray per cell is enough — 2 × 2 rays per
+  cell moved the worst case by ≤ 0.007 mag at 13′, as often the wrong way as the
+  right one. The grid's own voxel subtends **13.43′ at the coverage edge and more
+  everywhere nearer**, so a 13′ cell already sits at the source's finest angular
+  scale and there is nothing left to average. This is what makes the frustum
+  grid cheap: the word "prefilter" implies a 4× supersampling cost the source's
+  own resolution does not justify.
+- **Shimmer does not condemn the frustum grid.** Its cells slide across the sky
+  as the camera rotates, so one direction is read at a different sub-cell phase
+  each frame; that spread is **0.006 mag** at 13′ cells against 0.07 mag at 26′.
+  The all-sky map's exact zero is not worth buying.
+
+#### Camera outside coverage
+
+The distance axis spans [entry, exit] from a ray-sphere test rather than
+[0, exit], which is the whole of requirement 4. Measured 3 kpc off-Sol along
+l = 180° (197 of 209 sightlines crossing the sphere): worst **ΔS 0.007 mag**.
+The measured column itself is misread by up to 0.71 mag there — a 4.88 pc voxel
+subtends 5.6′ at 3 kpc, finer than the cell — but that shell is a small share of
+a 3 kpc emission column and does not reach the band. The cell size is matched to
+the *display*, and no vantage can show structure finer than 13′. The fill is
+gated on the same ray-sphere test, so from 3 kpc it drops to the 4.5 % of
+sightlines that cross coverage at all.
+
+#### What this settles for the source-side warp
+
+stellata-c7u.8 was asked to agree with the band's prefilter on a warp. A frustum
+grid has no world-space warp to agree about — it is parameterised by the view,
+not by the sky — so c7u.8 picks its warp on the source's terms alone, and there
+is one warp rather than two.
 
 ### Continuity, and what is shared with the per-star path
 
@@ -387,6 +488,17 @@ slab inside coverage and sub-sampled at ≤ 10 pc within each log step; it
 reproduces every pinned row in `milkyway.test.ts` to under 0.001 mag before
 the source is swapped. Cloud geometry and brick steps: `public/clouds.json`
 and `data/molecular-clouds/cloud-surfaces.bin`.
+
+Prefilter sweep: a throwaway Node harness over the same CPU mirror, emulating
+one froxel grid parameterised by cell angle, slice count, sub-cell phase and
+rays per cell — which covers both candidates, since they differ only in what
+indexes the cells. Reference is a ¼-voxel (1.22 pc) march; the grid is sampled
+trilinearly on decoded density, where the GPU filters the u8 log codes (a
+geometric mean, which under-reads a gradient — the prefilter's own storage is
+linear in A_V and does not inherit it). Every number is the read and the
+reference both convolved over a 32-point flat disc of 13.0′ diameter, the
+resolve's summation patch. Costs are exact texel and fetch counts over the
+pinned geometry, not timings.
 
 ## Constellation stick figures
 

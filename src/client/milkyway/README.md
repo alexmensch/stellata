@@ -200,7 +200,8 @@ make room for local clouds would under-extinct the far disc, a ~3 mag error
 to avoid a ~0.05 mag one, and that argument still holds against exactly that
 move. `docs/science-galactic-structure.md` § The dust stack is the contract:
 the tier table, which clouds are carved out of the grid and which are folded
-into it, the anisotropic-prefilter requirement, and the eso0932a grading.
+into it, the froxel-grid prefilter and its measured cost, and the eso0932a
+grading.
 
 ### Foreground dust — τ starts at the camera, not at the mesh
 
@@ -226,14 +227,15 @@ outside of pays anything, so sightlines that miss the bulge proxy
 (anticentre, NGP) are bit-identical. The GC sightline dims 0.013 mag,
 tapering to 0.011 mag by l = 30° (pinned).
 
-The Edenhofer voxel grid is **not sampled here yet, and the reason it once
-gave is superseded** — "aliases whatever the step distribution" was true of
-point-sampling and of an isotropic mip pyramid, not of the idea. The march is
-log-distributed, so its step at the coverage edge is ~440 pc against a ~1 pc
-transverse pixel footprint: the prefilter has to be **anisotropic**, and a
-Cartesian pyramid is the wrong shape by a factor of a few hundred across the
-ray. Sampling it is decided (`docs/science-galactic-structure.md` § The dust
-stack); the mechanism is open work.
+The Edenhofer voxel grid is **not sampled here yet**, but both the decision and
+the mechanism are settled (`docs/science-galactic-structure.md` § The dust
+stack). The read comes from a **view-frustum froxel grid** — measured A_V column
+per (screen cell × log-distance slice), 13.0′ cells × 32 slices, one ray per
+cell, its distance axis spanning coverage entry to exit. A grid holding the
+*column* rather than the density is what makes the filter's along-ray extent the
+march step by construction. The all-sky camera-anchored alternative is the same
+structure over 4π sr instead of the ~1.1 sr the viewer sees, and lost on that
+ratio. Building it is stellata-ty4.5.
 
 ## Render path
 
