@@ -351,7 +351,7 @@ enough to see it.
   at the pole and 1.02 toward the centre, in the same direction, and no
   shape parameter bridges that — `docs/science-galactic-structure.md`
   § The luminosity solve argues it out;
-  `src/client/milkyway/README.md` § Calibration carries the numbers.
+  `src/client/milkyway/calibration/README.md` carries the numbers.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the

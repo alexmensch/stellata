@@ -614,7 +614,8 @@ pixels, so a whole-sky star count belongs in it only through the fraction
 of the sphere the frame covers — 10.8% at 50° on a 16:9 viewport, so
 100 000 threshold stars contribute 1.0e-4 rather than 9.6e-4. The band's
 surface brightness is the anticentre-plane figure the Milky Way layer's
-own gradient derives (`src/client/milkyway/README.md`), not a round 22:
+own gradient derives (`src/client/milkyway/calibration/README.md`), not a
+round 22:
 the band is what a frame pointed at it actually contains, and the layer is
 the authority on how bright that is. The test reads it out of the layer
 rather than copying it, because it has moved twice — 22.55 under the
@@ -1314,7 +1315,7 @@ day one — the fullscreen pass and the inline path can never drift.
   the star pipeline already draws as individual quads, so comparing the
   diffuse layer against it double-counted the star field. Subtract the
   resolved catalogue and the pole was already right, to 0.08 mag.
-  `src/client/milkyway/README.md` § Calibration is the authority.
+  `src/client/milkyway/calibration/README.md` is the authority.
 
   What is genuinely left, and it is smaller than this section assumed: a
   shape change does **not** reconcile the two constraints, because the
@@ -1366,7 +1367,8 @@ summation diameter (§ 1, *Extended sources*), so a panorama pixel and
 the model's display anchor average over nearly the same solid angle.
 Levels below are 8-bit sRGB — the panorama is itself a display-referred
 image, which is what the model's pinned levels are. Model rows are the
-shipped table (`src/client/milkyway/README.md` § *The gradient*),
+shipped table (`src/client/milkyway/calibration/README.md`
+§ *The gradient*),
 FOV-invariant by construction and computed at `DR_MAG` 7.5 through the
 shipped operator (C1 toe → extended Reinhard → sRGB encode); the two
 Leinert columns shift the model's `S` by the pinned disagreements

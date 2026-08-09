@@ -178,7 +178,7 @@ one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
 population tint rides through untouched. `SB_ZERO_POINT` lives in
 `../hdr/emission/emission-pure.ts` — it is the emission unit's constant, not this
 layer's, and the Milky Way band takes the same one
-(`../milkyway/README.md` § Calibration). The TypeScript constant and the
+(`../milkyway/calibration/README.md`). The TypeScript constant and the
 shader's `SB_ZERO_POINT` are pinned against each other in
 `local-group-emission.test.ts` — nothing at compile time ties them.
 

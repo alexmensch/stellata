@@ -64,8 +64,9 @@ on its own, and it is what makes the scalar volume integral below the
 luminance integral. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
-`src/client/milkyway/README.md` for the calibrated values, that
-conversion, and the full coordinate-handling chain.
+`src/client/milkyway/calibration/README.md` for the calibrated values and
+that conversion, and `src/client/milkyway/README.md` for the full
+coordinate-handling chain.
 
 ### The luminosity solve, and the constraint it cannot satisfy
 
@@ -81,8 +82,8 @@ a higher Υ\*_V than the disc's, so the same mass share buys less V light.
 Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
 BC03 Chabrier SSP at Z = 0.02, 10 Gyr, against Flynn et al. 2006's
 measured 1.5 for the local disc column. There is no free parameter left;
-`src/client/milkyway/README.md` § Calibration carries the closed form and
-the metallicity brackets.
+`src/client/milkyway/calibration/README.md` § The light ratio carries the
+closed form and the metallicity brackets.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
@@ -108,8 +109,8 @@ Galaxy viewed from M31 has to be at least as bright as M31 viewed from
 here, and under the sightline anchor it was 1.11 mag fainter. A
 vertical-profile change cannot substitute — the pole column and the
 integrated total are both vertical integrals, and adding the thick disc
-moved their ratio by 0.09 mag. `src/client/milkyway/README.md`
-§ Calibration carries the numbers and the pins.
+moved their ratio by 0.09 mag. `src/client/milkyway/calibration/README.md`
+§ Two checks carries the numbers and the pins.
 
 ## Interstellar dust extinction
 

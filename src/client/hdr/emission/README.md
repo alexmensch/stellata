@@ -99,7 +99,7 @@ envelope brightens what remains rather than losing light. Both consumers
 rely on that: the Local Group solves per object against a catalogue
 apparent magnitude at its own distance (`scripts/local-group/README.md`
 § Emission solver), the Milky Way against a published **absolute** one at
-d = 10 pc (`../../milkyway/README.md` § Calibration). Same function, and
+d = 10 pc (`../../milkyway/calibration/README.md`). Same function, and
 the only difference is which distance goes in.
 
 **The shape must be the luminance shape.** ρ₀ is a scalar and the tint it
@@ -195,6 +195,6 @@ Two things it must get right, both measured:
   along the ray would suppress the column rather than average it.
 
 Inert where the plate scale already resolves the profile. From Sol the
-band moves under 0.003 mag at both FOV extremes (`../../milkyway/README.md`
-§ The gradient this produces), which is what keeps the shipped display
-table where it is.
+band moves under 0.003 mag at both FOV extremes
+(`../../milkyway/calibration/README.md` § The gradient this produces),
+which is what keeps the shipped display table where it is.
