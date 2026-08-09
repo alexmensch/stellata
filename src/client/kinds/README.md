@@ -15,8 +15,9 @@ inside a kind stays module-internal.
   `KindSearchEntry`.
 - `kind-modules.ts` (+ test) — `KIND_ROSTER` (the explicit ordered
   list), the exhaustive `KindModules` mapped type,
-  `buildKindModules()`, `displayNameOf()`, `collectKindPicks()`, and
-  `mergeKindDetailBinds()`.
+  `buildKindModules()`, `loadKindModules()` (boot's fan-out, where the
+  never-rejects rule is enforced), `displayNameOf()`,
+  `collectKindPicks()`, and `mergeKindDetailBinds()`.
 - `kind-geometry.ts` — leg helpers shared across modules:
   `absCameraDistancePc(ctx, centerAbs)`, the card
   `cameraDistancePc` leg for every kind whose centre is absolute
@@ -32,15 +33,17 @@ boot-time host attach behind its `systemsReady` promise), cloud
 (`../molecular-clouds/cloud-module.ts`), lg
 (`../local-group/lg-module.ts`), shell
 (`../fresnel-shell/shell-module.ts`, whose internal `ShellRegistry`
-holds its two instances) — and are only *assembled* here.
+holds its two instances), star
+(`../star-pipeline/star-module.ts`, the one `critical: true` module —
+its catalog load blocks first paint and may reject) — and are only
+*assembled* here.
 
 ## Contracts that must not drift
 
-- **`KindModules` is EXHAUSTIVE over `TargetKind`.** A kind whose
-  wiring is still inline holds an explicit `null` row; a new kind
-  cannot ship without stating its entry. Never weaken to a partial
-  map. The `null` rows shrink as epic phases migrate kinds and the
-  union of module-vs-inline wiring is always visible in one record.
+- **`KindModules` is EXHAUSTIVE over `TargetKind`.** Every kind is
+  migrated, so every row is a module today; the type keeps admitting
+  an explicit `null` row so a future kind can land its entry before
+  its module. Never weaken to a partial map.
 - **`KIND_ROSTER` coverage is a compile-time pin too.** The record
   alone can't catch an unrostered kind — it still has a row, it just
   never loads, attaches, or answers a roster loop — so
@@ -60,9 +63,16 @@ holds its two instances) — and are only *assembled* here.
   artifact on the module (a load/attach pair passing the artifact
   through the shell would force `unknown`-typed hand-offs);
   `buildKindModules()` is therefore a factory, not a module-scope
-  constant. `load` NEVER rejects — a missing artifact is an empty
-  roster, and every leg answers absence (false / `[]` / `''` / null)
-  both before `attach` and after an artifact-less one.
+  constant. A missing artifact is an empty roster: every leg answers
+  absence (false / `[]` / `''` / null) both before `attach` and after
+  an artifact-less one.
+- **A rejected `load` is fatal only for a `critical` kind.**
+  `loadKindModules()` — boot's fan-out — propagates the critical
+  module's rejection into boot's catch (the error screen) and swallows
+  every other kind's, so the rule is enforced at the seam rather than
+  trusted per module. `critical` is star-only today: the app has
+  nothing to render without the catalog. Nothing else may set it
+  without the same argument.
 - **`KIND_TRAITS` stays in `../camera/focus/focus-target.ts`.** The
   contract file is a leaf; folding hard/moving into modules would make
   it import every kind folder.
@@ -85,13 +95,17 @@ holds its two instances) — and are only *assembled* here.
 
 ## How the shell and boot consume it
 
-`main.ts`: `buildKindModules()` → `load` per roster entry inside the
-boot `Promise.all` → hand the record to `new Stellata({kinds})` →
-roster loops for SID domains (`sids()`, null ⇒ conclude), hover
-providers, label overlays, and the search corpus
-(`createSearchRunner(catalog, raw, kinds)` — no per-kind parameters;
-boot awaits `stellata.kinds.planet.systemsReady` first, since planet corpus
-rows bake flat Target indices the attach table supplies).
+`main.ts`: `buildKindModules()` → `loadKindModules()` inside the boot
+`Promise.all` (the critical module gets the loading-bar `onProgress`
+callback and is the one load allowed to reject) → boot reads
+`kinds.star.catalog` / `.searchIndex` / `.starLabels` back for the
+consumers that aren't kind modules (chart mode, the planet card's host
+breadcrumb, the search corpus) → hand the record to
+`new Stellata({kinds})` → roster loops for SID domains
+(`sids()`, null ⇒ conclude), hover providers, label overlays, and the
+search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
+`stellata.kinds.planet.systemsReady` first, since planet corpus rows
+bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
 attach-loops the roster at the layer-construction point; `setT` fans
 out `clockJumped`, `setFocalBodyHidden` fans out `setFocalHidden`,
@@ -110,3 +124,15 @@ in `main.ts` (`createPlanetLabels` reads the shell's orbit-rings layer
 and focused planet system, both outside the module); and its mesh
 layer's update lives on the shell, after the moving-focal ride
 (`../scene/README.md`).
+
+Star-kind exceptions: the render layers are shell-wired engine
+machinery, so `attach` returns null and the legs read the shell
+through the injected `StarModuleRuntime`
+(`../star-pipeline/README.md`); `searchEntries()` answers empty — the
+star corpus enters `createSearchRunner` through `buildSearchIndex`'s
+richer channel (designation-tier labels + direct-lookup ID maps);
+`card()` is the one leg that THROWS instead of answering absence,
+because a card built before load + attach would read the clock as
+J2000 and pass it off as sim time; and `Catalog` stays a `Stellata`
+constructor param — the shell's engine services consume it far too
+widely to route every read through the module.

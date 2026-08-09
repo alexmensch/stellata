@@ -10,7 +10,8 @@ import { createPlanetKindModule } from '../solar-system/planets/planet-module';
 import {
   createProbeKindModule,
 } from '../solar-system/probes/probe-module';
-import type { KindPick, ObjectKindModule } from './kind-module';
+import { createStarKindModule } from '../star-pipeline/star-module';
+import type { KindLoadProgress, KindPick, ObjectKindModule } from './kind-module';
 
 /** Explicit ordered roster — attach order IS scene-layer update order
  *  for module-supplied layers, and every module layer updates before
@@ -42,11 +43,10 @@ export type KindModules =
 
 /** Build the per-shell KIND_MODULES record. A factory rather than a
  *  module-scope constant because modules are stateful (they hold their
- *  loaded artifact and attach-time runtime); null entries are kinds
- *  whose wiring is still inline, migrated in later epic phases. */
+ *  loaded artifact and attach-time runtime). */
 export function buildKindModules() {
   return {
-    star: null,
+    star: createStarKindModule(),
     cloud: createCloudKindModule(),
     lg: createLgKindModule(),
     planet: createPlanetKindModule(),
@@ -57,16 +57,34 @@ export function buildKindModules() {
 
 export type BuiltKindModules = ReturnType<typeof buildKindModules>;
 
-/** Display name for any Target through the module roster. The star kind
- *  is the one injected callback until its module lands (the two callers
- *  resolve star names from different corpora); a null module row or a
- *  nameless index answers '' — callers pick their own fallback. */
-export function displayNameOf(
+/** Boot's load fan-out, one promise per roster entry for its
+ *  `Promise.all`. `critical` is what makes the never-rejects rule a
+ *  guarantee rather than a per-module convention: only the critical
+ *  module's rejection propagates (boot's catch is the error screen);
+ *  every other kind's is swallowed here, leaving that kind's roster
+ *  empty. `onProgress` goes to the critical module alone — nothing else
+ *  is on the first-paint path. */
+export function loadKindModules(
   modules: KindModules,
-  t: Target,
-  starName: (idx: number) => string,
-): string {
-  if (t.kind === 'star') return starName(t.idx);
+  baseUrl: string,
+  onProgress: (p: KindLoadProgress) => void,
+): Promise<void>[] {
+  return KIND_ROSTER.map(async (kind) => {
+    const m = modules[kind];
+    if (!m) return;
+    if (m.critical) return m.load(baseUrl, onProgress);
+    try {
+      await m.load(baseUrl);
+    } catch (err) {
+      console.error(`kind module '${kind}' load rejected; its roster stays empty`, err);
+    }
+  });
+}
+
+/** Display name for any Target through the module roster; a null module
+ *  row or a nameless index answers '' — callers pick their own
+ *  fallback. */
+export function displayNameOf(modules: KindModules, t: Target): string {
   return modules[t.kind]?.displayName(t.idx) ?? '';
 }
 

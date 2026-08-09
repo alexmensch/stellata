@@ -103,9 +103,10 @@ whose first consumers arrived with the soft kinds: `angularToPx()`
 (every projected-size leg) and `solAbsInto()` (the heliopause anchor;
 the planet kind's host attach is its second consumer). Phase 3b added
 `starPhotometry()` (host-star absmag + floored radius for the planet
-host attach — the star module owns catalog access from phase 5) and
-the `systemMembership` read surface (hover roster cards). Exposure
-still waits for a consumer.
+host attach) and the `systemMembership` read surface (hover roster
+cards). Exposure still waits for a consumer. Since 5b `starPhotometry`
+delegates to the star module's `photometry()` — the module owns the
+catalog, so the floored-radius formula exists in exactly one place.
 
 ### Tier 2 — kind modules
 
@@ -254,9 +255,10 @@ facade — they stayed: `setCameraFov` (pixel-solid-angle sync), `aimAt` /
 `isCameraTransitionActive` (warp ∪ observe union), `getT` / `setT`
 (clockJumped fan-out), `setMonochrome`, the `attach*` family, and the
 star-kind reads (`starLocalPositionInto`, `localPositions`, `uniforms`,
-…) that stay inline until phase 5's star module. This phase also
+…) that stayed inline until phase 5's star module. This phase also
 collapsed the two duplicated per-kind display-name switches into
-`kinds/kind-modules.ts displayNameOf` (star as the injected callback,
+`kinds/kind-modules.ts displayNameOf` (star as an injected callback
+until 5b folded it into the star module's `displayName` leg,
 caller-chosen fallback).
 
 ## Guardrails — what this epic must NOT do
@@ -364,10 +366,16 @@ dependency-linked in order. Sizing per bead-authoring rules.
    sub-beads under the phase bead. **5a landed**: `FloatingOrigin`
    (frame/anchor service with the policy seam) + shared view uniforms
    out of star code (`src/client/frame/`), no non-star reads of star
-   material uniforms. Remaining: **5b** star kind wrapped as a module
-   (`critical: true`), **5c** shard support (chunk-local coordinates,
-   shard→index mapping) proven by the contract even before a second
-   population ships.
+   material uniforms. **5b landed**: the star kind as the sixth module
+   (`src/client/star-pipeline/star-module.ts`, `critical: true`) —
+   catalog + search-index load behind the contract's new `onProgress`
+   leg, and the focusable / card / hover / SID / pinnable / focal-hide
+   legs off the roster; the render layers stay shell-wired engine
+   machinery read through an injected runtime, `searchEntries()`
+   answers empty (the star corpus keeps `buildSearchIndex`'s richer
+   channel), and `Catalog` stays a shell constructor param. Remaining:
+   **5c** shard support (chunk-local coordinates, shard→index mapping)
+   proven by the contract even before a second population ships.
 
 Each phase leaves the app fully working; no phase depends on a later
 one. LOC expectation across the epic: `stellata.ts` → ~1,200–1,400,

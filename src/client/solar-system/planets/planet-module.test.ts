@@ -75,7 +75,7 @@ describe('planet kind module', () => {
     expect(m.pinnable(0)).toBe(false);
     expect(m.searchEntries()).toEqual([]);
     expect(m.displayName(0)).toBe('');
-    const sids = m.sids()!;
+    const sids = Array.from(m.sids()!);
     expect(sids).toEqual(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()]));
     expect(sids.every((s) => s > 0)).toBe(true);
   });

@@ -160,10 +160,7 @@ export function resetEntrySentinels(state: EntryDirtyState): void {
   state.lastOnScreenLabelY = NaN;
 }
 
-export function createPoiOverlay(
-  stellata: Stellata,
-  starLabels: Map<number, string>,
-): void {
+export function createPoiOverlay(stellata: Stellata): void {
   const arrowsGroup = document.getElementById('poi-arrows') as unknown as SVGGElement | null;
   const ringsGroup = document.getElementById('poi-rings') as unknown as SVGGElement | null;
   const labelsGroup = document.getElementById('poi-labels') as unknown as SVGGElement | null;
@@ -186,7 +183,7 @@ export function createPoiOverlay(
   }
 
   function poiName(t: Target): string {
-    return targetDisplayName(stellata, starLabels, t);
+    return targetDisplayName(stellata, t);
   }
 
   function createEntry(target: Target): Entry {

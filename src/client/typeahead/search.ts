@@ -1,5 +1,4 @@
 import Fuse from 'fuse.js';
-import { resolveStarName } from '../format/star-companion-format';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
@@ -12,8 +11,28 @@ import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
 } from '../../../scripts/catalog/catalog-pure';
+import {
+  BAYER_FULL,
+  BAYER_GREEK,
+  formatBayerDisplay,
+  formatGcvsDesignation,
+  splitBayer,
+} from './star-designations';
 
 export type { SearchEntry };
+export {
+  formatBayerDisplay,
+  formatGcvsDesignation,
+  splitBayer,
+  starDesignations,
+  superscript,
+} from './star-designations';
+export type { BayerInfo } from './star-name-tables';
+export {
+  buildBayerMap,
+  buildSpectralMap,
+  buildStarLabels,
+} from './star-name-tables';
 
 type EntryKind = TargetKind;
 
@@ -29,46 +48,6 @@ export interface FuzzyEntry {
    *  IS a constellation name surfaces the objects named for it (the
    *  Andromeda Galaxy) above every star in the constellation. */
   conExpansion?: boolean;
-}
-
-// Canonical Greek letter forms keyed by AT-HYG's 3-letter Latin abbreviation.
-const BAYER_FULL: Record<string, string> = {
-  Alp: 'Alpha', Bet: 'Beta', Gam: 'Gamma', Del: 'Delta', Eps: 'Epsilon',
-  Zet: 'Zeta', Eta: 'Eta', The: 'Theta', Iot: 'Iota', Kap: 'Kappa',
-  Lam: 'Lambda', Mu: 'Mu', Nu: 'Nu', Xi: 'Xi', Omi: 'Omicron',
-  Pi: 'Pi', Rho: 'Rho', Sig: 'Sigma', Tau: 'Tau', Ups: 'Upsilon',
-  Phi: 'Phi', Chi: 'Chi', Psi: 'Psi', Ome: 'Omega',
-};
-const BAYER_GREEK: Record<string, string> = {
-  Alp: 'α', Bet: 'β', Gam: 'γ', Del: 'δ', Eps: 'ε',
-  Zet: 'ζ', Eta: 'η', The: 'θ', Iot: 'ι', Kap: 'κ',
-  Lam: 'λ', Mu: 'μ', Nu: 'ν', Xi: 'ξ', Omi: 'ο',
-  Pi: 'π', Rho: 'ρ', Sig: 'σ', Tau: 'τ', Ups: 'υ',
-  Phi: 'φ', Chi: 'χ', Psi: 'ψ', Ome: 'ω',
-};
-
-// Returns { letter3, suffix } for a Bayer string like "Alp" or "Alp-2".
-// Unknown letter returns null.
-export function splitBayer(bayer: string): { letter3: string; suffix: string } | null {
-  const m = bayer.match(/^([A-Za-z]+)(?:-(\d))?$/);
-  if (!m) return null;
-  const letter3 = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-  if (!(letter3 in BAYER_FULL)) return null;
-  return { letter3, suffix: m[2] ? `-${m[2]}` : '' };
-}
-
-// Human-facing Bayer display string, e.g. "α¹ Cen".
-export function formatBayerDisplay(bayer: string, conCode: string): string {
-  const split = splitBayer(bayer);
-  if (!split) return `${bayer} ${conCode}`;
-  const greek = BAYER_GREEK[split.letter3];
-  const sup = split.suffix ? superscript(split.suffix.slice(1)) : '';
-  return `${greek}${sup} ${conCode}`;
-}
-
-export function superscript(digit: string): string {
-  const map: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
-  return digit.split('').map((d) => map[d] ?? d).join('');
 }
 
 // Canonical Gliese lookup key: strip a leading Gl/GJ/Gliese prefix and all
@@ -107,14 +86,6 @@ export function buildBayerLabels(
     labels.add(`Alf ${conName}`);
   }
   return [...labels];
-}
-
-// GCVS stores V-number designations zero-padded to four digits
-// ("V0645 Cen"); common usage drops the padding ("V645 Cen"), which is
-// also what users type. Letter-sequence names (R CrB, VY CMa, RR Lyr)
-// carry no numeric run and pass through unchanged.
-export function formatGcvsDesignation(raw: string): string {
-  return raw.replace(/^V0*(\d)/, 'V$1');
 }
 
 // Fuzzy-search labels for a GCVS designation: the designation itself
@@ -166,111 +137,6 @@ export function buildComponentLabels(
     labels.add(`${primary.f} ${conName} ${comp}`);
   }
   return [...labels];
-}
-
-// Best human-readable label for a star, falling back through identifier
-// tiers: proper name → Bayer → Flamsteed → GCVS designation → HIP → HD →
-// HR → Gl. For use in the focus display, meta bar, tooltip, and the
-// search-box value when a star is picked.
-export function buildStarLabels(
-  catalog: Catalog,
-  raw: SearchEntry[],
-): Map<number, string> {
-  const labels = new Map<number, string>();
-  for (const [idx, name] of catalog.names) labels.set(idx, name);
-
-  for (const entry of raw) {
-    if (labels.has(entry.i)) continue;
-    const conIdx = designationConIndex(entry.dc, entry.c);
-    const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
-    const conCode = con?.code ?? '';
-    if (entry.b && conCode) {
-      labels.set(entry.i, formatBayerDisplay(entry.b, conCode));
-    } else if (entry.f !== undefined && conCode) {
-      labels.set(entry.i, `${entry.f} ${conCode}`);
-    } else if (entry.g) {
-      labels.set(entry.i, formatGcvsDesignation(entry.g));
-    } else if (entry.hip !== undefined) {
-      labels.set(entry.i, `HIP ${entry.hip}`);
-    } else if (entry.hd !== undefined) {
-      labels.set(entry.i, `HD ${entry.hd}`);
-    } else if (entry.hr !== undefined) {
-      labels.set(entry.i, `HR ${entry.hr}`);
-    } else if (entry.gl) {
-      labels.set(entry.i, entry.gl);
-    }
-  }
-  return labels;
-}
-
-// Map of star index → spectral designation string ("G2 V", "M1.5Iab-b",
-// "K0III+K7V", etc.), as carried from the source catalog via search-index.
-// Used by the hover tooltip to show full classification info.
-export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
-  const out = new Map<number, string>();
-  for (const entry of raw) {
-    if (entry.s) out.set(entry.i, entry.s);
-  }
-  return out;
-}
-
-// Every display designation for one star, tier-ordered: proper → Bayer →
-// Flamsteed → GCVS → HR → HD → HIP → Gliese → Gaia DR3. The focus card's
-// identity line renders this set (minus the display label, which already
-// heads the card). Gaia rides in from the catalog because search-index
-// entries don't carry the source_id. A GCVS designation in Bayer form
-// ("bet Per" for Algol) is skipped — the real Bayer display ("β Per")
-// already covers it, and the Latinised abbreviation is a search alias,
-// not a display name.
-export function starDesignations(
-  entry: SearchEntry,
-  constellations: { code: string }[],
-  gaiaSourceId: bigint,
-): string[] {
-  const conIdx = designationConIndex(entry.dc, entry.c);
-  const conCode = conIdx !== NO_CONSTELLATION_INDEX
-    ? constellations[conIdx]?.code ?? '' : '';
-  const out: string[] = [];
-  if (entry.p) out.push(entry.p);
-  if (entry.b && conCode) out.push(formatBayerDisplay(entry.b, conCode));
-  if (entry.f !== undefined && conCode) out.push(`${entry.f} ${conCode}`);
-  const gcvsFirst = entry.g?.split(/\s+/)[0] ?? '';
-  // Lowercase-start guard: GCVS letter-sequence designations (R, VY, MU)
-  // are uppercase; only the lowercase Greek forms are Bayer duplicates.
-  if (entry.g && !(/^[a-z]/.test(gcvsFirst) && splitBayer(gcvsFirst))) {
-    out.push(formatGcvsDesignation(entry.g));
-  }
-  if (entry.hr !== undefined) out.push(`HR ${entry.hr}`);
-  if (entry.hd !== undefined) out.push(`HD ${entry.hd}`);
-  if (entry.hip !== undefined) out.push(`HIP ${entry.hip}`);
-  if (entry.gl) out.push(entry.gl);
-  if (gaiaSourceId !== 0n) out.push(`Gaia DR3 ${gaiaSourceId}`);
-  return out;
-}
-
-export interface BayerInfo {
-  /** Greek letter glyph, e.g. "α". */
-  greek: string;
-  /** Optional unicode-superscript suffix for A/B components, e.g. "¹". */
-  suffix: string;
-}
-
-// Map star idx → its Bayer designation parts. Used by chart mode to render
-// Greek-letter labels alongside proper names. Entries without a parseable
-// Bayer string or a designation constellation are skipped — a Bayer letter
-// only means anything paired with one.
-export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
-  const out = new Map<number, BayerInfo>();
-  for (const entry of raw) {
-    if (!entry.b) continue;
-    if (designationConIndex(entry.dc, entry.c) === NO_CONSTELLATION_INDEX) continue;
-    const split = splitBayer(entry.b);
-    if (!split) continue;
-    const greek = BAYER_GREEK[split.letter3];
-    const suffix = split.suffix ? superscript(split.suffix.slice(1)) : '';
-    out.set(entry.i, { greek, suffix });
-  }
-  return out;
 }
 
 export interface SearchIndex {
@@ -626,7 +492,6 @@ export function bindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
-  starLabels: Map<number, string>,
 ) {
   const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
 
@@ -637,11 +502,6 @@ export function bindSearch(
   const toInput = document.getElementById('search-to') as HTMLInputElement;
   const toClear = document.getElementById('search-to-clear') as HTMLButtonElement;
   const toRow = document.getElementById('search-to-row')!;
-
-  const describe = (idx: number): string => resolveStarName(
-    { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid },
-    idx,
-  );
 
   // OBSERVE anchors are hard-kind objects (star / planet / probe) — soft
   // kinds (clouds, LG, shells) don't recentre the floating origin, so
@@ -721,9 +581,7 @@ export function bindSearch(
   // the To row entirely: distance-vector measurement is meaningless from
   // a camera parked on its own anchor, and the underlying setters no-op
   // in that mode anyway.
-  // Star names take the rich search-corpus label (describe); every other
-  // kind answers through its module's displayName leg.
-  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t, describe);
+  const nameOf = (t: Target): string => displayNameOf(stellata.kinds, t);
   const syncFocusUI = () => {
     const focused = stellata.focus.getFocusedTarget();
     const observe = stellata.focus.getCameraMode() === 'observe';

@@ -33,9 +33,10 @@ export interface KindContext {
    *  conversion every projected-size leg (renderedSizePx) keys off. */
   angularToPx(): number;
   /** Photometry of catalog star `idx` — absolute V magnitude and the
-   *  floored physical radius (pc); null out of range. What per-host
-   *  machinery (the planet kind's host attach) reads ahead of the star
-   *  module owning catalog access (phase 5). */
+   *  floored physical radius (pc); null out of range. Answered by the
+   *  star module, which owns the catalog: this is how a non-star module
+   *  (the planet kind's host attach) reads a host star without reaching
+   *  for `Catalog` itself. */
   starPhotometry(idx: number): { absMag: number; radiusPc: number } | null;
   /** Kind-generic system-membership read surface (rosters + collapsed
    *  clusters) — hover roster cards read through it. */
@@ -56,6 +57,13 @@ export interface KindContext {
  *  and hover can never disagree on a hit. */
 export type KindPick = HoverProvider['pick'];
 
+/** Byte progress of a kind's artifact download — boot threads the
+ *  loading-bar callback through the critical module's `load`. */
+export interface KindLoadProgress {
+  readonly bytes: number;
+  readonly total: number;
+}
+
 /** One search-corpus row contributed by a kind; `index` is the kind's
  *  Target idx. The runner tags rows with the module's kind. */
 export interface KindSearchEntry {
@@ -70,15 +78,22 @@ export interface KindSearchEntry {
  *  each capability site; hard/moving traits stay declared in
  *  `KIND_TRAITS` (the contract file must not import kind folders).
  *
- *  Lifecycle: `load` (boot, parallel; never rejects — a missing artifact
- *  loads to an empty roster) stores the artifact on the module, then
- *  `attach` (shell constructor, at the kind's roster position) builds the
- *  render layers and returns the scene-layer entry the shell registers
- *  there — update order is the shell's call, never the module's. Every
- *  other leg is valid only after `attach`. */
+ *  Lifecycle: `load` (boot, parallel) stores the artifact on the module,
+ *  then `attach` (shell constructor, at the kind's roster position)
+ *  builds the render layers and returns the scene-layer entry the shell
+ *  registers there — update order is the shell's call, never the
+ *  module's. Every other leg is valid only after `attach`. A rejected
+ *  `load` is fatal for a `critical` kind and swallowed for every other
+ *  (`loadKindModules`), so a missing artifact loads to an empty
+ *  roster. */
 export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   readonly kind: K;
-  load(baseUrl: string): Promise<void>;
+  /** The app cannot boot without this kind's artifact: its `load` MAY
+   *  reject (boot treats that as fatal — the error screen), unlike the
+   *  never-rejects rule every non-critical module follows. Star catalog
+   *  only. */
+  readonly critical?: boolean;
+  load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void>;
   attach(ctx: KindContext): SceneLayer | null;
   focusable(): FocusableProvider;
   card(): FocusCardProvider<K>;
@@ -91,8 +106,10 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   /** Display name for a Target of this kind; '' when unresolvable. */
   displayName(idx: number): string;
   /** SIDs in localIndex order (localIndex = Target idx), or null when
-   *  the domain can never attach this session (resolver concludes it). */
-  sids(): readonly number[] | null;
+   *  the domain can never attach this session (resolver concludes it).
+   *  ArrayLike so the star module answers its Uint32Array column
+   *  without a 313k-element copy. */
+  sids(): ArrayLike<number> | null;
   /** SVG label overlay factory — separate from `attach` because label
    *  overlays mount into the DOM, which the shell constructor must not
    *  require (headless tests attach without one). The module keeps the

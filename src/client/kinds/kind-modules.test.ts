@@ -2,7 +2,7 @@
 // exhaustiveness, and the two shell-side collectors (pick surfaces and
 // declutter pushes).
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { KIND_TRAITS, type TargetKind } from '../camera/focus/focus-target';
 import type { ObjectKindModule } from './kind-module';
 import {
@@ -10,6 +10,7 @@ import {
   collectKindPicks,
   displayNameOf,
   KIND_ROSTER,
+  loadKindModules,
   mergeKindDetailBinds,
   type KindModules,
 } from './kind-modules';
@@ -69,6 +70,59 @@ function recordWith(kind: TargetKind, module: Partial<ObjectKindModule>): KindMo
   return record as unknown as KindModules;
 }
 
+/** Roster record with the critical row (star) and one ordinary row
+ *  (cloud) stubbed, every other kind null. */
+function loadRecord(
+  star: Partial<ObjectKindModule>,
+  cloud: Partial<ObjectKindModule>,
+): KindModules {
+  const record = Object.fromEntries(KIND_ROSTER.map((k) => {
+    if (k === 'star') return [k, { kind: k, critical: true, ...star }];
+    if (k === 'cloud') return [k, { kind: k, ...cloud }];
+    return [k, null];
+  }));
+  return record as unknown as KindModules;
+}
+
+describe('loadKindModules', () => {
+  it('has exactly one critical module across the real roster', () => {
+    const modules = buildKindModules();
+    expect(KIND_ROSTER.filter((k) => modules[k]?.critical)).toEqual(['star']);
+  });
+
+  it('lets the critical module reject — boot treats that as fatal', async () => {
+    const record = loadRecord(
+      { load: () => Promise.reject(new Error('catalog 404')) },
+      { load: async () => {} },
+    );
+    await expect(Promise.all(loadKindModules(record, '/base/', () => {})))
+      .rejects.toThrow('catalog 404');
+  });
+
+  it('swallows a non-critical rejection so one artifact cannot blank the app', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const record = loadRecord(
+      { load: async () => {} },
+      { load: () => Promise.reject(new Error('clouds 404')) },
+    );
+    await expect(Promise.all(loadKindModules(record, '/base/', () => {})))
+      .resolves.toBeDefined();
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it('hands the progress callback to the critical module alone', async () => {
+    const starLoad = vi.fn(async () => {});
+    const cloudLoad = vi.fn(async () => {});
+    const onProgress = () => {};
+    await Promise.all(
+      loadKindModules(loadRecord({ load: starLoad }, { load: cloudLoad }), '/base/', onProgress),
+    );
+    expect(starLoad).toHaveBeenCalledWith('/base/', onProgress);
+    expect(cloudLoad).toHaveBeenCalledWith('/base/');
+  });
+});
+
 describe('collectKindPicks', () => {
   it('takes the pick off the module hover provider, keyed by kind', () => {
     const pick = () => null;
@@ -88,24 +142,17 @@ describe('collectKindPicks', () => {
 });
 
 describe('displayNameOf', () => {
-  it('routes star to the injected callback, never the roster', () => {
-    const name = displayNameOf(recordWith('probe', {
-      displayName: () => 'Voyager 1',
-    }), { kind: 'star', idx: 7 }, (idx) => `star-${idx}`);
-    expect(name).toBe('star-7');
-  });
-
-  it('routes a module kind to its displayName leg', () => {
-    const name = displayNameOf(recordWith('probe', {
-      displayName: (idx) => `probe-${idx}`,
-    }), { kind: 'probe', idx: 2 }, () => 'unused');
-    expect(name).toBe('probe-2');
+  it('routes any kind — star included — to its displayName leg', () => {
+    const record = recordWith('probe', { displayName: (idx) => `probe-${idx}` });
+    expect(displayNameOf(record, { kind: 'probe', idx: 2 })).toBe('probe-2');
+    const starRecord = recordWith('star', { displayName: (idx) => `star-${idx}` });
+    expect(displayNameOf(starRecord, { kind: 'star', idx: 7 })).toBe('star-7');
   });
 
   it("answers '' for a kind whose module row is null", () => {
     const name = displayNameOf(recordWith('probe', {
       displayName: () => 'Voyager 1',
-    }), { kind: 'cloud', idx: 0 }, () => 'unused');
+    }), { kind: 'cloud', idx: 0 });
     expect(name).toBe('');
   });
 });
