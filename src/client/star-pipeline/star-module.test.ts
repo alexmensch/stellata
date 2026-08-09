@@ -4,7 +4,10 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { CATALOG_MANIFEST_FILENAME } from '../../../scripts/catalog/catalog-pure';
+import {
+  CATALOG_MANIFEST_FILENAME,
+  type SearchEntry,
+} from '../../../scripts/catalog/catalog-pure';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
@@ -33,10 +36,10 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
   };
 }
 
-async function loadedModule() {
+async function loadedModule(searchRows: SearchEntry[] = []) {
   const cat = makeMockCatalog();
   loadCatalogMock.mockResolvedValue(cat);
-  vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => [] })));
+  vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => searchRows })));
   const m = createStarKindModule();
   await m.load('/base/');
   return { m, cat };
@@ -58,6 +61,7 @@ describe('star kind module', () => {
     expect(m.photometry(0)).toBeNull();
     expect(() => m.catalog).toThrow(/before load/);
     expect(() => m.searchIndex).toThrow(/before load/);
+    expect(() => m.starLabels).toThrow(/before load/);
   });
 
   it('answers photometry once, for the arrival radius and KindContext alike', async () => {
@@ -101,14 +105,10 @@ describe('star kind module', () => {
     expect(m.pinnable(4)).toBe(false);
   });
 
-  it('resolves display names through the label tier ladder', async () => {
-    const { m } = await loadedModule();
-    m.setNameTables({
-      starLabels: new Map([[1, 'Vega']]),
-      spectralMap: new Map(),
-      searchEntries: new Map(),
-    });
-    expect(m.displayName(1)).toBe('Vega');
+  it('derives its name tables at load, then resolves the label tier ladder', async () => {
+    const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
+    expect(m.starLabels.get(1)).toBe('HIP 91262');
+    expect(m.displayName(1)).toBe('HIP 91262');
     expect(m.displayName(2)).toBe('Gaia DR3 123');
     expect(m.displayName(0)).toBe('Unnamed (SID #7)');
   });

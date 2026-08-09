@@ -7,12 +7,19 @@ elements are moved into the modal on open and restored on close).
 
 ## Star search
 
-`star-designations.ts` is the leaf holding the pure designation
-formatters (`splitBayer`, `formatBayerDisplay`, `superscript`,
-`formatGcvsDesignation`, `starDesignations`) — split out so the star
-kind module's provider chain can import them without a cycle through
-`search.ts` → `kind-modules.ts`; `search.ts` re-exports them, so both
-import paths stay valid.
+Two leaves sit below `search.ts` so the star kind module's provider
+chain can import them without a cycle through `search.ts` →
+`kind-modules.ts`. `search.ts` re-exports both, so either import path
+stays valid.
+
+- `star-designations.ts` — pure per-entry designation formatters
+  (`splitBayer`, `formatBayerDisplay`, `superscript`,
+  `formatGcvsDesignation`, `starDesignations`).
+- `star-name-tables.ts` — the per-catalog derived maps
+  (`buildStarLabels`, `buildSpectralMap`, `buildBayerMap`). The star
+  module builds the first two inside its own `load`; `buildBayerMap` is
+  the one derivation no module consumes, so boot still calls it for
+  chart mode.
 
 `search.ts` is fuse.js-backed; ranks against name + constellation +
 Bayer designation. Every constellation-relative *designation* — Bayer,

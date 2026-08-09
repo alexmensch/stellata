@@ -4,7 +4,8 @@ import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loa
 import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
-import { bindSearch, bindFindSearch, buildStarLabels, buildSpectralMap, buildBayerMap } from './typeahead/search';
+import { bindSearch, bindFindSearch } from './typeahead/search';
+import { buildBayerMap } from './typeahead/star-name-tables';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -78,18 +79,14 @@ async function main() {
     ]);
     const catalog = kinds.star.catalog;
     const searchIndex = kinds.star.searchIndex;
+    const starLabels = kinds.star.starLabels;
 
     loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
     loadingBar.style.width = '100%';
 
-    const starLabels = buildStarLabels(catalog, searchIndex);
-    const spectralMap = buildSpectralMap(searchIndex);
+    // Chart-mode's Greek-letter labels are the one search-index
+    // derivation no kind module consumes.
     const bayerMap = buildBayerMap(searchIndex);
-    kinds.star.setNameTables({
-      starLabels,
-      spectralMap,
-      searchEntries: new Map(searchIndex.map((e) => [e.i, e])),
-    });
 
     const stellata = new Stellata({ canvas, catalog, kinds });
     // Dev-console access: `stellata.setExtinctionStrength(X)` etc. Handy for

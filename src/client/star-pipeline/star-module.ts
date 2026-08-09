@@ -24,6 +24,7 @@ import type {
 import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
 import { tToJDE } from '../solar-system/time/time';
+import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
 /** Shell-owned star machinery the module's legs read through closures —
@@ -41,28 +42,20 @@ export interface StarModuleRuntime {
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
 }
 
-/** Search-corpus derivations boot builds from the loaded search index
- *  and hands back — the star display-name / spectral / designation
- *  tables every card tier reads. */
-export interface StarNameTables {
-  starLabels: Map<number, string>;
-  spectralMap: Map<number, string>;
-  searchEntries: Map<number, SearchEntry>;
-}
-
 export interface StarKindModule extends ObjectKindModule<'star'> {
   /** The decoded catalog. Valid after `load`. */
   readonly catalog: Catalog;
-  /** The raw search-index rows. Valid after `load`; boot derives the
-   *  name tables from them and hands the maps back via
-   *  `setNameTables`. */
+  /** The raw search-index rows. Valid after `load`. */
   readonly searchIndex: SearchEntry[];
+  /** Star idx → display label, derived from the search index at `load`.
+   *  Chart mode and the planet card's host breadcrumb read the same
+   *  table the module's own name ladder does. */
+  readonly starLabels: Map<number, string>;
   /** Absolute V magnitude + floored physical radius (pc) of star `idx`;
    *  null out of range or before load. Backs `KindContext.starPhotometry`
    *  — the module owns the catalog, so the formula lives here only. */
   photometry(idx: number): { absMag: number; radiusPc: number } | null;
   setRuntime(runtime: StarModuleRuntime): void;
-  setNameTables(tables: StarNameTables): void;
   setBinaries(binaries: BinariesData | null): void;
 }
 
@@ -102,14 +95,13 @@ export function createStarKindModule(): StarKindModule {
       if (!searchIndex) throw new Error('star module read before load');
       return searchIndex;
     },
+    get starLabels(): Map<number, string> {
+      if (!catalog) throw new Error('star module read before load');
+      return starLabels;
+    },
     photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
-    },
-    setNameTables(tables) {
-      starLabels = tables.starLabels;
-      spectralMap = tables.spectralMap;
-      searchEntries = tables.searchEntries;
     },
     setBinaries(b) {
       binaries = b;
@@ -126,6 +118,9 @@ export function createStarKindModule(): StarKindModule {
           (r) => r.json() as Promise<SearchEntry[]>,
         ),
       ]);
+      starLabels = buildStarLabels(catalog, searchIndex);
+      spectralMap = buildSpectralMap(searchIndex);
+      searchEntries = new Map(searchIndex.map((e) => [e.i, e]));
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {
