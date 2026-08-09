@@ -1325,10 +1325,12 @@ day one — the fullscreen pass and the inline path can never drift.
   (`docs/science-galactic-structure.md` § The luminosity solve).
   Confirming against eso0932a stretches per instrument still stands, and
   is now the arbiter between the two published scales rather than a
-  confirmation of one.
-- **`DR_MAG` is validated, not tuned** (§ 2): H7 confirms 7.5 against the
-  panorama rather than searching 5–8, and records any departure as an
-  explicit exaggeration.
+  confirmation of one. Run and settled — *The eso0932a arbitration*
+  below: the panorama sides with the total.
+- **`DR_MAG` is validated, not tuned** (§ 2): 7.5, no departure recorded.
+  H7 scoped the confirmation to this panorama; the run showed the
+  panorama cannot supply it either way (*The eso0932a arbitration* below,
+  last paragraph), so the value rests on its own validation instead.
 - Cross-layer smoke at the unaided eye: threshold stars at the
   just-visible floor; Sirius/Vega ordering *pre-clip*; Venus > Sirius;
   planet resolve-step continuity (glare↔mesh at equal `L(m)`); moon vs
@@ -1352,6 +1354,128 @@ day one — the fullscreen pass and the inline path can never drift.
   MW band holding its level** across the whole range — the summation area
   is fixed in angle (§ 1, *Extended sources*), which replaced this row's
   earlier expectation of quadratic dimming.
+
+### The eso0932a arbitration (H7 result)
+
+Measured against ESO eso0932a (Brunier's 360° panorama,
+`https://cdn.eso.org/images/screen/eso0932a.jpg`, 1280 × 640 plate
+carrée in galactic coordinates, GC centred, l increasing leftward —
+mapping verified on the LMC/SMC/Carina/Sirius positions). One panorama
+pixel subtends 16.9′ at the equator, commensurate with the 13.0′ rod
+summation diameter (§ 1, *Extended sources*), so a panorama pixel and
+the model's display anchor average over nearly the same solid angle.
+Levels below are 8-bit sRGB — the panorama is itself a display-referred
+image, which is what the model's pinned levels are. Model rows are the
+shipped table (`src/client/milkyway/README.md` § *The gradient*),
+FOV-invariant by construction and computed at `DR_MAG` 7.5 through the
+shipped operator (C1 toe → extended Reinhard → sRGB encode); the two
+Leinert columns shift the model's `S` by the pinned disagreements
+(+0.94 GC-anchored, +1.59 pole-anchored), which bracket that scale.
+
+Scope: the Milky Way band only, at the unaided-eye instrument, base
+epoch, no EV trim — the only shipping instrument (the per-preset framing
+the bead opened with predates § 3.4). The panorama cannot grade star
+peaks or planets: at 16.9′/px the camera PSF dilutes point sources —
+first-magnitude peaks read 20–75/255, Arcturus at 22 sitting *below* the
+b = 10 band at 80, nothing like the eye's view — and the LMC/SMC/M31 in
+frame are the Local Group layer's validation, not this one's.
+
+| sightline | panorama /255 | shipped | Leinert −0.94 | Leinert −1.59 |
+| --- | --- | --- | --- | --- |
+| b = +5, l = 0 | 75.7 | 70.3 | 45.8 | 30.3 |
+| GC | 144 (174 at the px) | 38.6 | 7.5 | 0.3 |
+| anticentre | 61 | 34.3 | 3.6 | 0.1 |
+| b = +30, l = 0 | 15.0 | 18.5 | 0.4 | 0.0 |
+| NGP | 6.0 | 0.5 | 0.0 | 0.0 |
+
+Panorama cells are medians over 3.1° square patches (star-peak rows: max
+over 2.0°; latitude strips quoted below: 15.5° in l × 1.4° in b). The
+panorama carries a 6–12/255 floor (median 8.5 over six dark patches —
+airglow, zodiacal light, unresolved stars, JPEG) where the model
+deliberately renders black (§ 2 rejected the pedestal); floor-subtracted
+comparisons remove it in linear luminance.
+
+**Verdict: the sky looks like the BHG16 total; the Leinert scale is
+excluded.** Three measurements carry it:
+
+- **Latitude extent.** The band stays above the panorama floor to
+  |b| ≈ 45–60 at l ≈ 0 (b = 45 reads 11, b = 60 reads 10, the poles 6).
+  Shipped holds the same shape — 4.9 at b = 45, 1.6 at b = 60, reaching
+  the toe floor only at the pole. The Leinert scale puts b = 45 at 0.03
+  and everything past it at zero, confining the visible band to the
+  inner plane.
+- **The inner-plane floor.** The darkest 3.1° patch on the plane (the
+  Aquila rift, 24/255) still exceeds the Leinert counterfactual's GC —
+  its *brightest* row — by 1.14 mag on the −0.94 scale and 4.5 mag on
+  the −1.59 one.
+- **Mid-latitude level.** b = +30 is the cleanest row — no discrete
+  clouds, and the floor is measurable beside it. The Leinert
+  counterfactuals land at 0.38 and 0.005 of 255, i.e. 3.2 and 8.0 mag
+  faint and both under one 8-bit step, where the panorama plainly shows
+  band. This row excludes Leinert; it does **not** endorse the shipped
+  level, which now runs 1.14 mag bright against the same measurement.
+
+Per-row residuals are ordered by contamination, not by scale: the
+panorama reads 0.12 mag over shipped at b = +5, 1.14 mag *under* at
+b = +30, and over a magnitude over on the plane rows — where the patch
+includes the resolved star field Stellata draws separately (66 % of the
+pole's light is catalogue stars; the plane's fraction is lower but its
+absolute column far larger) and the discrete star clouds and rift the
+smooth slab averages over. The panorama's own inner-plane spread is
+2.3 mag (Baade's window 191, Aquila rift 24), wider than the
+BHG16-vs-Leinert gap — so the low-|b| rows bound the scale only from
+below, and the arbitration rests on the three measurements above.
+
+### The high-|b| excess this measurement exposes
+
+**The b = +30 residual is the one number the C1 toe moved, and it moved
+the wrong way.** Under the first, steep toe (slope 3.5 at the knee) the
+row read 0.23 mag model-bright; the C1 toe leaves 1.14. No photometry
+changed — the gentler rolloff simply stopped crushing a sub-threshold
+row that was already carrying an excess, which is what a toe tuned for
+perceptual honesty rather than for agreement will do.
+
+Three readings of the same fact:
+
+- **Level**, 1.14 mag model-bright at b = +30, 0.73 at b = +45.
+- **Gradient**, the model spanning 1.90 mag over b = 5 → 30 where the
+  floor-subtracted panorama spans ≈ 4.2.
+- **The Leinert pole check**, 1.59 mag in the same direction
+  (`docs/science-galactic-structure.md` § The luminosity solve).
+
+Both known measurement biases inflate it — floor subtraction eats real
+high-|b| light, and the b = +5 row carries resolved-star light the model
+draws separately — so 1.14 mag is an upper bound on the disagreement,
+not an estimate of it. The sign is not in doubt: the disc's vertical
+profile carries too much light at high |b|.
+
+That this coexists with a panorama that *excludes* the Leinert global
+scale is not a contradiction. The far-field emissivity-grid work carries
+the reconciliation hypothesis: the Sun sits interarm (the Orion Spur), so the local
+vertical column can sit below the azimuthal mean at the same
+latitude — BHG16's integrated total and Leinert's sightlines can both be
+right, disagreeing only through the smooth axisymmetric interpolation
+between them. A measured emissivity grid captures that; a solved
+constant cannot.
+
+**`DR_MAG` stays 7.5, and this panorama cannot be what confirms it.** At
+band luminances the extended-Reinhard white-point term `y/Lw²` is under
+2 × 10⁻³, so every band row is white-point-independent: sweeping
+`DR_MAG` from 5.5 to 11 moves the b = +5 residual by 0.007 mag and the
+b = +30 residual by 0.001. The panorama cannot grade star peaks either
+(16.9′/px dilutes them), and those are where the white point does work.
+So no `DR_MAG` value is preferred or excluded here, and the framing this
+section opened with — `DR_MAG` as the faint-end lever H7 tunes against
+eso0932a — is retired. It was untrue before the toe as well; the value
+rests on the top-end validation that preceded this run.
+
+One panorama structure the model does not reproduce, filed separately:
+the l = 0 maximum sits at b = −2.5 (the Large
+Sagittarius Star Cloud, 155–175/255), not the slab's smooth b = +5, and
+the Great Rift sits above the plane rather than centred on it. Both are
+foreground-dust structure — a low-extinction window onto inner-disc
+light on one side, the Ophiuchus–Aquila complex on the other — which
+axisymmetric analytic dust cannot express in either sign.
 
 ## 9. Bead-shape decisions
 
