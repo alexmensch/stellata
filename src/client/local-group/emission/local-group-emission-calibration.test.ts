@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseLvdb, parseOverrides } from '../../../scripts/local-group/build-local-group';
+import { parseLvdb, parseOverrides } from '../../../../scripts/local-group/build-local-group';
 import {
   buildStandaloneOverride,
   filterForRendering,
@@ -14,7 +14,7 @@ import {
   mergeRowAndOverride,
   roundN,
   type LgObject as BuildLgObject,
-} from '../../../scripts/local-group/build-local-group-pure';
+} from '../../../../scripts/local-group/build-local-group-pure';
 import {
   columnSurfaceBrightness,
   cpuDensityAt,
@@ -29,20 +29,20 @@ import {
 import {
   footprintRadiusPc,
   pixelSolidAngleArcsec2,
-} from '../hdr/emission/emission-pure';
+} from '../../hdr/emission/emission-pure';
 import {
   summationDownsample,
   summationMean,
   summationRadiusPx,
-} from '../hdr/summation/summation-pure';
+} from '../../hdr/summation/summation-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
-} from '../hdr/exposure/exposure-epoch';
-import { angularToPx } from '../camera/controls/star-geometry';
-import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../hdr/tonemap-pure';
+} from '../../hdr/exposure/exposure-epoch';
+import { angularToPx } from '../../camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
+import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -62,7 +62,7 @@ const REFERENCE_STEPS = 256;
 type Vec3 = [number, number, number];
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(here, '..', '..', '..', 'data', 'local-group');
+const dataDir = join(here, '..', '..', '..', '..', 'data', 'local-group');
 const lvdb = parseLvdb(readFileSync(join(dataDir, 'lvdb-snapshot.csv'), 'utf8'));
 const overrides = parseOverrides(readFileSync(join(dataDir, 'overrides.tsv'), 'utf8'));
 const overrideByName = new Map(overrides.map((o) => [o.name, o]));
@@ -580,7 +580,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../hdr/emission/README.md` § Extended sources). That gain multiplies a
+  // gain (`../../hdr/emission/README.md` § Extended sources). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
@@ -721,7 +721,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
 
     // What the shipped pass actually delivers: the softened profile a
     // fragment writes, box-averaged by the downsample factor, convolved with
-    // the flat summation disc — every stage of `../hdr/summation/README.md`
+    // the flat summation disc — every stage of `../../hdr/summation/README.md`
     // run on the CPU against the same ideal. `10^(−0.4·S̄)·Ω_sum` is the patch
     // flux, so `patchFlux / Ω_sum` is the mean the convolution should return
     // and the Ω_sum gain cancels out of the comparison.
@@ -817,7 +817,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
     // half the § against convolve-then-gain errors above cannot show. A
-    // threshold star lands on 38.25 (../hdr/tonemap-pure.ts), so M31 reads
+    // threshold star lands on 38.25 (../../hdr/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin

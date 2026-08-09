@@ -1,8 +1,12 @@
 // The published photometry the band is solved against and checked with:
-// the Galaxy's integrated luminosity and bulge fraction, plus the
+// the Galaxy's integrated luminosity, colour and bulge fraction, plus the
 // resolved-star subtraction behind the NGP check. See README.md.
 
 import { fluxNumber } from '../../hdr/emission/density0-solver-pure';
+import {
+  OLD_SPHEROID_COLOUR_INDEX_BV,
+  discColourIndex,
+} from '../../hdr/emission/population-colour-pure';
 
 /**
  * Integrated V-band absolute magnitude of the Galaxy, Bland-Hawthorn &
@@ -88,6 +92,42 @@ export const BULGE_TO_TOTAL_LIGHT_V = bulgeToTotalLight(
   BULGE_TO_TOTAL_MASS,
   BULGE_ML_V,
   DISC_ML_V,
+);
+
+/**
+ * Integrated (B−V) of the Galaxy, Bland-Hawthorn & Gerhard 2016 Table 2 —
+ * the same table and the same MW-analogue analysis
+ * (Licquia, Newman & Brinchmann 2015) behind `GALAXY_TOTAL_ABSMAG_V`, so
+ * the layer's luminosity and its colour come from one system.
+ *
+ * BHG16 flags a ~0.1 mag inconsistency between its magnitudes and its
+ * colour indices, which is the uncertainty README.md § Population colours
+ * weighs the alternative against.
+ */
+export const GALAXY_TOTAL_COLOUR_INDEX_BV = 0.73;
+
+/**
+ * (B−V) of the Galactic bulge population. The old metal-rich SSP, taken
+ * from the same BC03 row as `BULGE_ML_V`.
+ */
+export const BULGE_COLOUR_INDEX_BV = OLD_SPHEROID_COLOUR_INDEX_BV;
+
+/**
+ * (B−V) of the disc population — **solved**, not cited: no publication
+ * splits the Galaxy's integrated colour into components, so the published
+ * total and the bulge SSP determine the disc through
+ * `discColourIndex`. 0.7129.
+ *
+ * README.md § Population colours carries why the published total wins
+ * over an independently synthesised pair, and how little the answer turns
+ * on the bulge (0.003 mag across the whole `data/bc03/` metallicity
+ * bracket — the disc carries 92 % of the V light, so this number is
+ * essentially the published total).
+ */
+export const DISC_COLOUR_INDEX_BV = discColourIndex(
+  GALAXY_TOTAL_COLOUR_INDEX_BV,
+  BULGE_COLOUR_INDEX_BV,
+  BULGE_TO_TOTAL_LIGHT_V,
 );
 
 /**

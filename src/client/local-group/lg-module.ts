@@ -17,7 +17,7 @@ import type {
 } from '../kinds/kind-module';
 import { updateWarpGatedRefLayer, type SceneLayer } from '../scene/scene-layer';
 import { createLocalGroupLabels, LocalGroupLayer } from './local-group';
-import { LocalGroupEmission } from './local-group-emission';
+import { LocalGroupEmission } from './emission/local-group-emission';
 import {
   lgViewingDistancePc,
   loadLocalGroup,

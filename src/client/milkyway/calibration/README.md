@@ -1,21 +1,24 @@
 # Milky Way photometric calibration
 
 The published numbers the band's emissivity is solved against, the light
-ratio derived from them, and the two sightline checks the result is graded
-by. The solve itself — `DISC_DENSITY0` / `BULGE_DENSITY0` — lives in
-`../milkyway-column-pure.ts` beside the shape integrals it divides by, and
-its pins live in `../milkyway.test.ts`; everything about *what goes in* and
-*how well it comes out* is here.
+ratio and the two population colours derived from them, and the two
+sightline checks the result is graded by. The solve itself —
+`DISC_DENSITY0` / `BULGE_DENSITY0` — lives in `../milkyway-column-pure.ts`
+beside the shape integrals it divides by, and its pins live in
+`../milkyway.test.ts`; everything about *what goes in* and *how well it
+comes out* is here.
 
 ## Files
 
 - `diffuse-reference.ts` — `GALAXY_TOTAL_ABSMAG_V`, the mass-to-light
   inputs, `bulgeToTotalLight` and the `BULGE_TO_TOTAL_LIGHT_V` it derives,
-  the Leinert totals, the resolved-catalogue subtraction, and
+  `GALAXY_TOTAL_COLOUR_INDEX_BV` and the two component indices, the
+  Leinert totals, the resolved-catalogue subtraction, and
   `diffuseResidualMagArcsec2`.
-- `diffuse-reference.test.ts` — the residual arithmetic and the light-ratio
-  derivation, reading all three `data/bc03/` tables back: the shipped Υ\*_V
-  off `m62` and the metallicity brackets off `m52` / `m72`.
+- `diffuse-reference.test.ts` — the residual arithmetic, the light-ratio
+  derivation and the colour solve, reading all three `data/bc03/` tables
+  back: the shipped Υ\*_V and (B−V) off `m62` and the metallicity
+  brackets off `m52` / `m72`.
 
 ## The zero point is not the band's own — it is the emission unit's
 
@@ -107,15 +110,76 @@ Three things a change here has to know:
 
 **From Sol this correction is nearly invisible and that is the trap.** The
 bulge sits behind 4.6 τ_V from here, so it is 0.02 % of the GC column and
-13.7 % of the b = 5 one; every sightline row below moves under 0.09 mag.
+13.9 % of the b = 5 one; every sightline row below moves under 0.09 mag.
 Where it shows is the face-on external view, which the camera can reach
 (`CLAUDE.md` § Camera-anywhere perception): the centre pixel goes from
 48 % bulge to **31 %**, and the integrated bulge/disc luminance ratio from
 0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
 rather than an S0, and it is pinned in `../milkyway.test.ts` alongside the
 edge-on case — where the bulge sits behind the full midplane dust column
-and carries 4.6e−5 of the centre pixel, exactly as a real edge-on spiral
+and carries 5.0e−5 of the centre pixel, exactly as a real edge-on spiral
 does in V.
+
+## Population colours — the disc's is solved, not cited
+
+Same shape of problem as the light ratio: **nobody publishes the Galaxy's
+colour split by component**, only its integrated index. The shared solve
+(`../../hdr/emission/README.md` § Population colours) takes the bulge off
+the SSP grid and returns the disc:
+
+| term | value | source |
+| --- | --- | --- |
+| `GALAXY_TOTAL_COLOUR_INDEX_BV` | 0.73 | BHG16 Table 2 |
+| `BULGE_COLOUR_INDEX_BV` | 0.9574 | BC03 Chabrier SSP, Z = 0.02, 10 Gyr |
+| `BULGE_TO_TOTAL_LIGHT_V` | 0.0775 | § The light ratio, above |
+| `DISC_COLOUR_INDEX_BV` | **0.7129** | solved |
+
+Both then go through the star field's own chain — Ballesteros → Planck →
+CIE 1931 → linear sRGB (`scripts/colour/README.md`), unquantised — so a
+component's hue and a single star's are the same function of B−V. A
+stellar population is not a blackbody; what survives the chain is the
+colour index, not the SED.
+
+**The decision this encodes: BHG16's integrated colour wins over a
+physically-plausible disc/bulge contrast.** 0.7129 makes the disc only
+0.24 mag bluer than the bulge, which is a weaker contrast than a textbook
+Sbc shows, and the same BC03 grid over a τ ≈ 8 Gyr declining SFH at solar
+Z returns 0.54 for a disc-like population. Four reasons the published
+total still wins:
+
+- **The layer's photometry is already one system.** `GALAXY_TOTAL_ABSMAG_V`
+  and the 0.73 are the same BHG16 table and the same MW-analogue analysis
+  behind it (Licquia, Newman & Brinchmann 2015). Solving preserves that
+  colour by construction; an independent pair puts the rendered Galaxy at
+  **0.567** — 0.163 mag bluer than published, which is *larger* than the
+  ~0.1 mag magnitude-vs-colour inconsistency BHG16 flags in itself, so it
+  cannot be absorbed as that.
+- **The disc carries 92 % of the V light, so the composite colour IS
+  essentially the disc colour** — and the composite is what the camera
+  reads from outside, the one directly checkable observable. Handing it to
+  a synthesised SFH would make a modelling choice (τ, Z) the dominant
+  visible quantity.
+- **"Too red for an Sbc" measures against the wrong reference.** LNB15
+  place the Milky Way in the **green valley** — a bright but relatively red
+  spiral for its mass. A red disc is the published result, not an artefact
+  of the solve.
+- **The bulge barely matters.** Moving it across the whole `data/bc03/`
+  metallicity bracket — with f moving with it, as it must — puts the disc
+  at 0.7163 (Z = 0.008) and 0.7130 (Z = 0.05), under 0.004 mag. So the only
+  load-bearing input is the 0.73; the SSP choice is not in play. Pinned,
+  not asserted.
+
+**A mass B/T here would have biased the disc BLUE** (0.6944), which is the
+direction the eyeballed pale-lavender palette already leaned — using it
+would have quietly ratified the thing this replaces.
+
+**Deriving the palette moved the sightline table, and that is not a bug in
+the "hue never moves flux" invariant.** It holds at emission —
+`relativeLuminance(TINT) = 1`, and every dust-free column is
+bit-identical — but `REDDENING_RGB` attenuates per channel inside the same
+march, so a redder population transmits more of its own light. The plane
+gained 0.026 mag at b = 5 and 0.023 mag toward the centre; the poles did
+not move. Every row below is post-derivation.
 
 ## Two checks, and both disagree by the same sign and order
 
@@ -124,7 +188,7 @@ Neither is an anchor. Both are pinned in `../milkyway.test.ts`.
 | check | published | model | model is |
 | --- | --- | --- | --- |
 | NGP diffuse residual | 24.99 | 23.31 | **1.676 mag brighter** |
-| Galactic centre, Leinert total | 22.92 | 21.90 | **1.024 mag brighter** |
+| Galactic centre, Leinert total | 22.92 | 21.88 | **1.043 mag brighter** |
 
 The 24.99 is *not* published; `diffuse-reference.ts` builds it:
 
@@ -166,13 +230,13 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.77 | **1.23 OVER** — the maximum | 68.4 |
-| l = 0, b = 0 (GC) | 21.90 | 0.10 over | 40.3 |
-| anticentre | 22.07 | 0.08 under | 36.6 |
-| b = 30 | 22.52 | 0.52 under | 21.9 |
-| NGP | 23.40 | 1.40 under | 0.8 |
+| l = 0, b = 5 | 20.74 | **1.26 OVER** — the maximum | 69.2 |
+| l = 0, b = 0 (GC) | 21.88 | 0.12 over | 40.7 |
+| anticentre | 22.06 | 0.06 under | 36.9 |
+| b = 30 | 22.52 | 0.52 under | 22.0 |
+| NGP | 23.40 | 1.40 under | 0.9 |
 
-Plane-to-pole contrast **1.51 mag** photometrically. **The midplane is
+Plane-to-pole contrast **1.52 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
 most dust. The real band behaves the same way; the dark rift is dust,
 not a gap in the stars.

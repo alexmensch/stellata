@@ -21,9 +21,10 @@ disables. Hidden in chart mode.
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
   (`calibration/README.md`); the shader's step counts are pinned against the
   mirror.
-- `calibration/` — the published photometry the solve runs on (M_V, B/T),
-  the light ratio derived from it, and the two sightline checks it is
-  graded against. Its own README.
+- `calibration/` — the published photometry the solve runs on (M_V, B/T,
+  the two components' B−V), the light ratio and the disc colour derived
+  from it, and the two sightline checks it is graded against. Its own
+  README.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
@@ -68,10 +69,12 @@ Constants baked into `milkyway.ts`; no runtime data loads.
   like in iteration.
 
 Each component multiplies a population colour pre-integration, so the
-band's hue varies by line of sight — pale-lavender (171,168,223) for the
-disc, near-white-warm (255,246,237) for the bulge. Neither carries flux,
-and neither component has a hand-set weight any more: both `density0`
-values are solved (`calibration/README.md`).
+band's hue varies by line of sight — warm cream (255,219,196) for the
+disc, warmer still (255,198,151) for the bulge, both derived from their
+populations' (B−V) rather than authored (`calibration/README.md`
+§ Population colours). Neither carries flux at emission, and neither
+component has a hand-set weight any more: both `density0` values are
+solved.
 
 ### Population tints carry hue, never flux
 
@@ -82,27 +85,33 @@ luminance (`lumaNormalisedTint`, `../hdr/emission/emission-pure.ts`).
 
 The reason is that `stellataSurfaceBrightnessLuminance` is a *scalar* gain
 applied per channel, so a tint whose relative luminance isn't 1 rescales
-its own component's emission. The authored palette's two hues differ in
-relative luminance by 1.433× — the bulge rode **0.390 mag brighter than
-the disc purely because its hue is nearer white**, which moved the
-bulge/disc flux split without touching either density. The solve now sets
-that share outright at 0.0775 (`calibration/README.md`), so what it buys
-is that a hue edit cannot move it back.
+its own component's emission. Unnormalised, the shipped palette would dim
+the bulge 0.228 mag and the disc 0.137 mag — and it is the **difference**
+that moves the flux split, which the eyeballed palette this replaced
+carried at 0.390 mag (its bulge was nearer white, and its disc's blue
+channel outran its red). The solve now sets that share outright at 0.0775
+(`calibration/README.md`), so what normalisation buys is that a hue edit
+cannot move it back.
 
-Two consequences a future session needs:
+**But it does not buy a free palette edit.** `REDDENING_RGB` attenuates
+per channel in the same loop (§ Dust), so a redder
+component transmits more of its own light: dust-free columns are
+bit-identical under any hue, extincted ones are not. Deriving the palette
+brightened the plane by 0.026 mag at b = 5 and 0.023 mag at the Galactic
+centre while leaving the poles alone — the whole sightline table below is
+tint-coupled through the dust and nothing above the dust is
+(`../hdr/emission/README.md` § Unit).
+
+Two more consequences a future session needs:
 
 - **`setDiscColor` / `setBulgeColor` normalise their argument.** A colour
   picker cannot move flux. `getValues()` returns the *authored* colour, not
-  the tint, because the tint's channels exceed 1 (the disc's blue sits at
-  1.29) and an `<input type="color">` cannot round-trip that.
-- **The Local Group layer seeds its family tints from the authored
-  constants here** (`../local-group/local-group-emission-pure.ts`) and
-  normalises them itself, so editing this palette moves both layers' hue.
-
-The hues themselves are still **eyeballed, not photometric** — deriving
-them from published population colour indices through the star pipeline's
-Ballesteros → Planck → CIE path is open work. Because the tints are
-normalised, that change cannot move any flux.
+  the tint, because the tint's channels exceed 1 (the disc's red sits at
+  1.13) and an `<input type="color">` cannot round-trip that.
+- **The Local Group layer no longer seeds from here.** It derives its own
+  two family indices (`../local-group/README.md` § Population tints),
+  sharing only the SSP spheroid constant and the solve — so this palette
+  is the band's alone.
 
 ## Surface-brightness emission
 
@@ -149,7 +158,8 @@ stars together, by construction.
 
 **The photometric calibration has its own folder and README**
 (`calibration/`): what `density0` is solved against, how the V-band light
-B/T is derived from a published mass ratio, the two Leinert checks the
+B/T is derived from a published mass ratio, how the two population colours
+are derived from a published integrated one, the two Leinert checks the
 result is graded by, and the sightline table those produce.
 
 ## Coordinate handling
@@ -297,5 +307,7 @@ is also callable as `stellata.milkyway.set<Name>(...)`.
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and
 `setExtinctionStrength` at anything but 1.0 contradicts the dust anchor
-(§ Dust). The colour setters luma-normalise on write, so a
-hue edit cannot move flux (§ Population tints carry hue, never flux).
+(§ Dust). A third is now a *third* kind of thing: the colour pickers
+luma-normalise on write, so a hue edit cannot move flux at emission — but
+both shipped hues are solved from published photometry, and an edit still
+moves the extincted plane (§ Population tints carry hue, never flux).

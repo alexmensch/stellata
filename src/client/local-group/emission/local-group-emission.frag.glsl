@@ -31,7 +31,7 @@ flat in float vUMax;
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec4 outStatistic;
 // Attachment 2 — the diffuse emitters' own, convolved at the resolve
-// (../hdr/summation/README.md).
+// (../../hdr/summation/README.md).
 layout(location = 2) out vec4 outDiffuse;
 
 uniform float uExposure;
@@ -46,7 +46,7 @@ uniform float uHighlightDesat;
 const int   STEPS = EMISSION_STEPS;
 const float S_MIN_PC = 0.1;
 const float U_FLOOR = 1e-4;
-// Mirrors SB_ZERO_POINT (../hdr/emission/emission-pure.ts) — a column is
+// Mirrors SB_ZERO_POINT (../../hdr/emission/emission-pure.ts) — a column is
 // flux per steradian, so this is just the solid angle of one arcsec².
 const float SB_ZERO_POINT = 26.5721256659;
 
@@ -56,7 +56,7 @@ float sersicNu(float u, float invN, float bn, float pn) {
 }
 
 /** `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (../hdr/emission/README.md § Footprint). `zFootprintPc` is its share
+ *  (../../hdr/emission/README.md § Footprint). `zFootprintPc` is its share
  *  along the disc normal, which the caller has already projected — a face-on
  *  disc gets none, or the softening would eat the vertical column instead of
  *  averaging it. */
@@ -136,7 +136,7 @@ void main() {
   // side — so the scalar gain leaves the solved flux alone.
   // The same summation anchor the band takes: these objects are NOT uniform
   // over the patch, which is why the anchor rides attachment 2 and the
-  // resolve averages before it displays (../hdr/summation/README.md).
+  // resolve averages before it displays (../../hdr/summation/README.md).
   stellataEmitExtendedSource(
     vColor * accum,
     uExposure, SB_ZERO_POINT, uOmegaSummationArcsec2, uOmegaPxArcsec2,
