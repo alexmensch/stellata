@@ -3,10 +3,11 @@
 // convolves the band over. See README.md.
 
 import * as THREE from 'three';
-import { loadGrid } from './dust-grid';
+import { loadDustField, type DustField } from './dust-grid';
 import {
   directTotalAv,
   LocalFroxel,
+  tangentBasis,
   truthMeasuredAv,
   type FroxelConfig,
 } from './froxel';
@@ -18,15 +19,23 @@ import {
   type MarchPlan,
 } from './march-plan';
 import {
+  ARCMIN_TO_RAD,
+  PATCH_RADIUS_RAD,
+  PINNED_CELL_RAD,
+  PINNED_FILL_STEPS_PER_VOXEL,
+  PINNED_SLICES,
+} from './prefilter-pins';
+import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   type Vec3,
 } from '../../../src/client/milkyway/milkyway-column-pure';
 
-const ARCMIN = Math.PI / (180 * 60);
-/** Ω_summation = 4.7863e5 arcsec² is a 13.0' critical DIAMETER. */
-const PATCH_RADIUS_RAD = 6.5 * ARCMIN;
 const PATCH_SAMPLES = 32;
+const STRIP_STEP_DEG = 0.25;
+/** The measured column is reported for the disc, whose march spans the whole
+ *  sightline; the bulge's covers its own proxy only. */
+const COLUMN_COMPONENT = 'disc';
 
 interface PatchSample {
   readonly dir: THREE.Vector3;
@@ -42,22 +51,15 @@ interface Sightline {
   readonly hitsCoverage: boolean;
 }
 
-function tangent(u: THREE.Vector3): [THREE.Vector3, THREE.Vector3] {
-  const seed = Math.abs(u.z) < 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
-  const e1 = new THREE.Vector3().crossVectors(seed, u).normalize();
-  const e2 = new THREE.Vector3().crossVectors(u, e1).normalize();
-  return [e1, e2];
-}
-
 function buildSightline(
-  grid: Uint8Array,
+  field: DustField,
   originPc: Vec3,
   lDeg: number,
   bDeg: number,
 ): Sightline {
   const d = galacticDirection(lDeg, bDeg);
   const centre = new THREE.Vector3(d[0], d[1], d[2]);
-  const [e1, e2] = tangent(centre);
+  const [e1, e2] = tangentBasis(centre);
   const golden = Math.PI * (3 - Math.sqrt(5));
   const samples: PatchSample[] = [];
   for (let m = 0; m < PATCH_SAMPLES; m++) {
@@ -69,7 +71,7 @@ function buildSightline(
       .addScaledVector(e2, r * Math.sin(th))
       .normalize();
     samples.push({
-      plan: buildMarchPlan(originPc, [dir.x, dir.y, dir.z]),
+      plan: buildMarchPlan(field, originPc, [dir.x, dir.y, dir.z]),
       dir,
     });
   }
@@ -78,9 +80,9 @@ function buildSightline(
   let hits = false;
   for (const s of samples) {
     const measured = (sa: number, sb: number): number =>
-      truthMeasuredAv(grid, s.plan.ray, s.plan.cov, sa, sb);
-    col += planColumn(s.plan, withAnalytic(s.plan, measured)) / PATCH_SAMPLES;
-    av += planMeasuredColumn(s.plan, measured) / PATCH_SAMPLES;
+      truthMeasuredAv(field, s.plan.ray, s.plan.cov, sa, sb);
+    col += planColumn(s.plan, withAnalytic(measured)) / PATCH_SAMPLES;
+    av += planMeasuredColumn(s.plan, COLUMN_COMPONENT, measured) / PATCH_SAMPLES;
     hits ||= s.plan.cov.hit;
   }
   return {
@@ -98,15 +100,22 @@ interface Reading {
   readonly dAv: number;
 }
 
-function readDirect(grid: Uint8Array, s: Sightline, sub: number): Reading {
+function readDirect(field: DustField, s: Sightline, sub: number): Reading {
   let col = 0;
   let av = 0;
   for (const p of s.samples) {
-    col += planColumn(p.plan, (a, b) => directTotalAv(grid, p.plan.ray, a, b, sub)) / PATCH_SAMPLES;
+    col += planColumn(p.plan, (step) => directTotalAv(field, p.plan.ray, step.sa, step.sb, sub)) /
+      PATCH_SAMPLES;
     av +=
-      planMeasuredColumn(p.plan, (a, b) =>
+      planMeasuredColumn(p.plan, COLUMN_COMPONENT, (a, b) =>
         p.plan.cov.hit
-          ? directTotalAv(grid, p.plan.ray, Math.max(a, p.plan.cov.sIn), Math.min(b, p.plan.cov.sOut), sub)
+          ? directTotalAv(
+              field,
+              p.plan.ray,
+              Math.max(a, p.plan.cov.sIn),
+              Math.min(b, p.plan.cov.sOut),
+              sub,
+            )
           : 0,
       ) / PATCH_SAMPLES;
   }
@@ -114,19 +123,19 @@ function readDirect(grid: Uint8Array, s: Sightline, sub: number): Reading {
 }
 
 function readFroxel(
-  grid: Uint8Array,
+  field: DustField,
   s: Sightline,
   originPc: Vec3,
   cfg: FroxelConfig,
 ): Reading & { cells: number } {
   const origin = new THREE.Vector3(originPc[0], originPc[1], originPc[2]);
-  const froxel = new LocalFroxel(grid, origin, s.centre, cfg);
+  const froxel = new LocalFroxel(field, origin, s.centre, cfg);
   let col = 0;
   let av = 0;
   for (const p of s.samples) {
     const measured = (a: number, b: number): number => froxel.measuredAv(p.dir, a, b);
-    col += planColumn(p.plan, withAnalytic(p.plan, measured)) / PATCH_SAMPLES;
-    av += planMeasuredColumn(p.plan, measured) / PATCH_SAMPLES;
+    col += planColumn(p.plan, withAnalytic(measured)) / PATCH_SAMPLES;
+    av += planMeasuredColumn(p.plan, COLUMN_COMPONENT, measured) / PATCH_SAMPLES;
   }
   return {
     dSb: -2.5 * Math.log10(col / s.truthColumn),
@@ -165,16 +174,20 @@ function stats(values: number[], labels: string[]): Stats {
 
 function line(name: string, sb: Stats, av: Stats): string {
   return (
-    `  ${name.padEnd(30)} dSB max ${sb.max.toFixed(4)} p99 ${sb.p99.toFixed(4)} rms ${sb.rms.toFixed(4)}` +
+    `  ${name.padEnd(34)} dSB max ${sb.max.toFixed(4)} p99 ${sb.p99.toFixed(4)} rms ${sb.rms.toFixed(4)}` +
     ` | dAV max ${av.max.toFixed(4)} p99 ${av.p99.toFixed(4)} | worst ${sb.worst}`
   );
 }
 
-const PHASES: ReadonlyArray<readonly [number, number]> = [
-  [0, 0],
-  [0.5, 0.5],
-  [0.5, 0],
-  [0, 0.5],
+/** Grid poses a screen-space grid passes through as the camera turns: the
+ *  sub-cell offset AND the roll of the cell axes. A sky-fixed grid holds one,
+ *  so the spread across them is the frustum grid's shimmer alone. */
+const POSES: ReadonlyArray<{ phase: readonly [number, number]; rollRad: number }> = [
+  { phase: [0, 0], rollRad: 0 },
+  { phase: [0.5, 0.5], rollRad: 0 },
+  { phase: [0.5, 0], rollRad: (22.5 * Math.PI) / 180 },
+  { phase: [0, 0.5], rollRad: (45 * Math.PI) / 180 },
+  { phase: [0.25, 0.75], rollRad: (67.5 * Math.PI) / 180 },
 ];
 
 /**
@@ -194,20 +207,33 @@ function edgeShiftArcmin(lines: Sightline[], dSb: number[], stepDeg: number): nu
   return worst;
 }
 
+interface SightlineSet {
+  readonly name: string;
+  readonly lines: Sightline[];
+  readonly originPc: Vec3;
+  /** Set for a strip dense enough to differentiate, which is what turns a mag
+   *  error into the angular shift the requirement is stated in. */
+  readonly stripStepDeg?: number;
+}
+
 function run(): void {
   const t0 = Date.now();
-  const grid = loadGrid(process.cwd());
+  const field = loadDustField(process.cwd());
   console.log(`grid loaded in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 
   const origin = SOL_GALACTOCENTRIC_PC;
-  const sets: Array<{ name: string; lines: Sightline[]; originPc?: Vec3 }> = [];
+  const sets: SightlineSet[] = [];
 
-  const STRIP_STEP_DEG = 0.25;
   const strip: Sightline[] = [];
   for (let b = -30; b <= 30.001; b += STRIP_STEP_DEG) {
-    strip.push(buildSightline(grid, origin, 0, b));
+    strip.push(buildSightline(field, origin, 0, b));
   }
-  sets.push({ name: `rift strip l=0, b=-30..30 @${STRIP_STEP_DEG}deg (${strip.length})`, lines: strip });
+  sets.push({
+    name: `rift strip l=0, b=-30..30 @${STRIP_STEP_DEG}deg (${strip.length})`,
+    lines: strip,
+    originPc: origin,
+    stripStepDeg: STRIP_STEP_DEG,
+  });
 
   const sky: Sightline[] = [];
   const n = 600;
@@ -215,16 +241,18 @@ function run(): void {
   for (let i = 0; i < n; i++) {
     const bDeg = (Math.asin(1 - (2 * (i + 0.5)) / n) * 180) / Math.PI;
     const lDeg = ((i * golden * 180) / Math.PI) % 360;
-    sky.push(buildSightline(grid, origin, lDeg, bDeg));
+    sky.push(buildSightline(field, origin, lDeg, bDeg));
   }
-  sets.push({ name: `all-sky fibonacci (${sky.length})`, lines: sky });
+  sets.push({ name: `all-sky fibonacci (${sky.length})`, lines: sky, originPc: origin });
 
   // Requirement 4: camera outside coverage, so the read needs an entry
   // distance as well as an exit. 3 kpc off-Sol toward the Galactic centre;
   // sightlines swept across the 24.6° half-angle the coverage sphere subtends.
   const offSolOrigin: Vec3 = [SOL_GALACTOCENTRIC_PC[0] + 3000, 0, 0];
   const offSol: Sightline[] = [];
-  for (let b = -26; b <= 26.001; b += 0.25) offSol.push(buildSightline(grid, offSolOrigin, 180, b));
+  for (let b = -26; b <= 26.001; b += STRIP_STEP_DEG) {
+    offSol.push(buildSightline(field, offSolOrigin, 180, b));
+  }
   sets.push({
     name: `3 kpc off-Sol, l=180 b=-26..26 (${offSol.length}, ${offSol.filter((s) => s.hitsCoverage).length} hit coverage)`,
     lines: offSol,
@@ -232,61 +260,92 @@ function run(): void {
   });
   console.log(`sightlines built in ${((Date.now() - t0) / 1000).toFixed(1)} s\n`);
 
+  const pinnedCellArcmin = PINNED_CELL_RAD / ARCMIN_TO_RAD;
+  const cellAngles = [PINNED_CELL_RAD, 2 * PINNED_CELL_RAD];
+  const sliceCounts = [24, PINNED_SLICES, 64];
+  const supersamples = [1, 2];
+  const fillRates = [1, PINNED_FILL_STEPS_PER_VOXEL, 4];
+
   for (const set of sets) {
-    const setOrigin = set.originPc ?? origin;
     console.log(`## ${set.name}`);
     const labels = set.lines.map((s) => s.label);
-
-    const isStrip = set === sets[0];
-    const shift = (d: number[]): string =>
-      isStrip ? ` | edge ${edgeShiftArcmin(set.lines, d, 0.25).toFixed(2)}'` : '';
+    const shift = (perPose: number[][]): string =>
+      set.stripStepDeg === undefined
+        ? ''
+        : ` | edge ${Math.max(
+            ...perPose.map((d) => edgeShiftArcmin(set.lines, d, set.stripStepDeg as number)),
+          ).toFixed(2)}'`;
 
     for (const sub of [1, 4, 16, 64]) {
-      const r = set.lines.map((s) => readDirect(grid, s, sub));
+      const r = set.lines.map((s) => readDirect(field, s, sub));
       const d = r.map((x) => x.dSb);
       console.log(
         line(`direct march, ${sub}/step`, stats(d, labels), stats(r.map((x) => x.dAv), labels)) +
-          shift(d),
+          shift([d]),
       );
     }
 
-    for (const cellArcmin of [13, 26]) {
-      for (const slices of [24, 32, 64]) {
-        for (const supersample of [1, 2]) {
-          const perPhase = PHASES.map((phase) =>
-            set.lines.map((s) =>
-              readFroxel(grid, s, setOrigin, {
-                cellRad: cellArcmin * ARCMIN,
-                slices,
-                phase,
-                supersample,
-              }),
-            ),
-          );
-          const flatSb = perPhase.flat().map((x) => x.dSb);
-          const flatAv = perPhase.flat().map((x) => x.dAv);
-          const flatLabels = PHASES.flatMap(() => labels);
-          const shimmer = set.lines.map((_, i) => {
-            const vals = perPhase.map((p) => p[i].dSb);
-            return Math.max(...vals) - Math.min(...vals);
+    const configs: FroxelConfig[] = [];
+    for (const cellRad of cellAngles) {
+      for (const slices of sliceCounts) {
+        for (const supersample of supersamples) {
+          configs.push({
+            cellRad,
+            slices,
+            phase: [0, 0],
+            rollRad: 0,
+            supersample,
+            fillStepsPerVoxel: PINNED_FILL_STEPS_PER_VOXEL,
           });
-          const cells = perPhase[0].reduce((a, x) => a + x.cells, 0) / set.lines.length;
-          console.log(
-            line(
-              `cell ${cellArcmin}' x${supersample} ${slices}sl`,
-              stats(flatSb, flatLabels),
-              stats(flatAv, flatLabels),
-            ) +
-              ` | shimmer ${stats(shimmer, labels).max.toFixed(4)}` +
-              ` | rays/patch ${cells.toFixed(1)}` +
-              shift(perPhase[1].map((x) => x.dSb)),
-          );
         }
       }
     }
+    for (const fillStepsPerVoxel of fillRates) {
+      if (fillStepsPerVoxel === PINNED_FILL_STEPS_PER_VOXEL) continue;
+      configs.push({
+        cellRad: PINNED_CELL_RAD,
+        slices: PINNED_SLICES,
+        phase: [0, 0],
+        rollRad: 0,
+        supersample: 1,
+        fillStepsPerVoxel,
+      });
+    }
+
+    for (const cfg of configs) {
+      const perPose = POSES.map((pose) =>
+        set.lines.map((s) => readFroxel(field, s, set.originPc, { ...cfg, ...pose })),
+      );
+      const flatSb = perPose.flat().map((x) => x.dSb);
+      const flatAv = perPose.flat().map((x) => x.dAv);
+      const flatLabels = POSES.flatMap(() => labels);
+      const shimmer = set.lines.map((_, i) => {
+        const vals = perPose.map((p) => p[i].dSb);
+        return Math.max(...vals) - Math.min(...vals);
+      });
+      const cells = perPose[0].reduce((a, x) => a + x.cells, 0) / set.lines.length;
+      const cellArcmin = cfg.cellRad / ARCMIN_TO_RAD;
+      const fill =
+        cfg.fillStepsPerVoxel === PINNED_FILL_STEPS_PER_VOXEL
+          ? ''
+          : ` fill${cfg.fillStepsPerVoxel}/vox`;
+      console.log(
+        line(
+          `cell ${cellArcmin.toFixed(1)}' x${cfg.supersample} ${cfg.slices}sl${fill}`,
+          stats(flatSb, flatLabels),
+          stats(flatAv, flatLabels),
+        ) +
+          ` | shimmer ${stats(shimmer, labels).max.toFixed(4)}` +
+          ` | rays/patch ${cells.toFixed(1)}` +
+          shift(perPose.map((p) => p.map((x) => x.dSb))),
+      );
+    }
     console.log('');
   }
-  console.log(`total ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(
+    `pinned cell ${pinnedCellArcmin.toFixed(2)}' (patch diameter), ${PINNED_SLICES} slices, ` +
+      `fill ${PINNED_FILL_STEPS_PER_VOXEL}/voxel · total ${((Date.now() - t0) / 1000).toFixed(1)} s`,
+  );
 }
 
 run();

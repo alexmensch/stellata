@@ -6,15 +6,24 @@ import * as THREE from 'three';
 import {
   analyticAvPerPc,
   cascadeAvPerPc,
-  COVERAGE_RADIUS_PC,
+  coverageRadiusPc,
   densityAt,
   galToIcrs,
-  VOXEL_PC,
+  type DustField,
 } from './dust-grid';
-import { DEFAULT_DUST_AV_PER_DENSITY_PC } from '../../../src/client/milkyway/milkyway-column-pure';
+import {
+  ANALYTICAL_DUST_SCALE_HEIGHT_PC,
+  S_MIN_PC,
+} from '../../../src/client/milkyway/milkyway-column-pure';
 
-/** Reference integration step inside coverage: a quarter voxel. */
-export const TRUTH_STEP_PC = VOXEL_PC / 4;
+/** Reference integration rate, in samples per voxel. Independent of the
+ *  grid's own fill rate (`FroxelConfig.fillStepsPerVoxel`) so the reference
+ *  stays converged whatever the fill is priced at. */
+export const REFERENCE_STEPS_PER_VOXEL = 4;
+
+export function referenceStepPc(field: DustField): number {
+  return field.params.voxelPc / REFERENCE_STEPS_PER_VOXEL;
+}
 
 export interface Ray {
   readonly o: THREE.Vector3;
@@ -31,12 +40,12 @@ const tmpO = new THREE.Vector3();
 const tmpU = new THREE.Vector3();
 const tmpP = new THREE.Vector3();
 
-/** Entry / exit distances where a ray crosses the 1.25 kpc coverage sphere. */
-export function coverageSpan(ray: Ray): Coverage {
+/** Entry / exit distances where a ray crosses the coverage sphere. */
+export function coverageSpan(ray: Ray, radiusPc: number): Coverage {
   const o = galToIcrs(tmpO, ray.o.x, ray.o.y, ray.o.z);
   const u = galToIcrs(tmpU, ray.o.x + ray.u.x, ray.o.y + ray.u.y, ray.o.z + ray.u.z).sub(o);
   const b = o.dot(u);
-  const c = o.lengthSq() - COVERAGE_RADIUS_PC * COVERAGE_RADIUS_PC;
+  const c = o.lengthSq() - radiusPc * radiusPc;
   const disc = b * b - c;
   if (disc <= 0) return { hit: false, sIn: 0, sOut: 0 };
   const root = Math.sqrt(disc);
@@ -45,10 +54,16 @@ export function coverageSpan(ray: Ray): Coverage {
   return { hit: true, sIn: Math.max(-b - root, 0), sOut };
 }
 
-/** Measured A_V between two distances, integrated at TRUTH_STEP_PC. */
-export function measuredColumn(grid: Uint8Array, ray: Ray, sa: number, sb: number): number {
+/** Measured A_V between two distances, integrated at `stepPc`. */
+export function measuredColumn(
+  field: DustField,
+  ray: Ray,
+  sa: number,
+  sb: number,
+  stepPc: number,
+): number {
   if (sb <= sa) return 0;
-  const n = Math.max(1, Math.ceil((sb - sa) / TRUTH_STEP_PC));
+  const n = Math.max(1, Math.ceil((sb - sa) / stepPc));
   const ds = (sb - sa) / n;
   let acc = 0;
   for (let i = 0; i < n; i++) {
@@ -59,14 +74,14 @@ export function measuredColumn(grid: Uint8Array, ray: Ray, sa: number, sb: numbe
       ray.o.y + s * ray.u.y,
       ray.o.z + s * ray.u.z,
     );
-    acc += densityAt(grid, p.x, p.y, p.z);
+    acc += densityAt(field, p.x, p.y, p.z);
   }
-  return acc * ds * DEFAULT_DUST_AV_PER_DENSITY_PC;
+  return acc * ds * field.params.avPerDensityPerPc;
 }
 
 /** Measured A_V over a segment, clipped to the coverage span. */
 export function truthMeasuredAv(
-  grid: Uint8Array,
+  field: DustField,
   ray: Ray,
   cov: Coverage,
   sa: number,
@@ -75,18 +90,29 @@ export function truthMeasuredAv(
   if (!cov.hit) return 0;
   const a = Math.max(sa, cov.sIn);
   const b = Math.min(sb, cov.sOut);
-  return b > a ? measuredColumn(grid, ray, a, b) : 0;
+  return b > a ? measuredColumn(field, ray, a, b, referenceStepPc(field)) : 0;
 }
 
 const ANALYTIC_SUBSTEPS_PER_SCALE_HEIGHT = 2;
 
 /** Slab A_V over the parts of a segment that fall outside coverage. */
-export function analyticAv(ray: Ray, cov: Coverage, sa: number, sb: number): number {
+export function analyticAv(
+  field: DustField,
+  ray: Ray,
+  cov: Coverage,
+  sa: number,
+  sb: number,
+): number {
   let acc = 0;
   for (const [a, b] of analyticSpans(cov, sa, sb)) {
     const n = Math.max(
       1,
-      Math.min(512, Math.ceil(((b - a) / 125) * ANALYTIC_SUBSTEPS_PER_SCALE_HEIGHT)),
+      Math.min(
+        512,
+        Math.ceil(
+          ((b - a) / ANALYTICAL_DUST_SCALE_HEIGHT_PC) * ANALYTIC_SUBSTEPS_PER_SCALE_HEIGHT,
+        ),
+      ),
     );
     const ds = (b - a) / n;
     for (let i = 0; i < n; i++) {
@@ -95,6 +121,7 @@ export function analyticAv(ray: Ray, cov: Coverage, sa: number, sb: number): num
         analyticAvPerPc(
           Math.hypot(ray.o.x + s * ray.u.x, ray.o.y + s * ray.u.y),
           ray.o.z + s * ray.u.z,
+          field.params.avPerDensityPerPc,
         ) * ds;
     }
   }
@@ -117,7 +144,7 @@ function* analyticSpans(cov: Coverage, sa: number, sb: number): Generator<[numbe
  * grid; higher values are the brute-force alternative to a prefilter.
  */
 export function directTotalAv(
-  grid: Uint8Array,
+  field: DustField,
   ray: Ray,
   sa: number,
   sb: number,
@@ -129,7 +156,7 @@ export function directTotalAv(
   for (let i = 0; i < sub; i++) {
     const s = sa + (i + 0.5) * ds;
     acc += cascadeAvPerPc(
-      grid,
+      field,
       tmpP,
       ray.o.x + s * ray.u.x,
       ray.o.y + s * ray.u.y,
@@ -146,13 +173,18 @@ export interface FroxelConfig {
   readonly cellRad: number;
   /** Log-distance slices across the coverage span. */
   readonly slices: number;
-  /** Grid phase in cell units, [0,1)². A sky-fixed grid holds one value; a
-   *  screen-space grid slides it under rotation, so the spread across phase
-   *  is that grid's frame-to-frame shimmer. */
+  /** Grid pose: sub-cell offset in cell units, [0,1)², and the roll of the
+   *  cell axes. A sky-fixed grid holds one pose; a screen-space grid slides
+   *  and rotates it as the camera turns, so the spread across poses is that
+   *  grid's frame-to-frame shimmer. */
   readonly phase: readonly [number, number];
+  readonly rollRad: number;
   /** Rays averaged per cell per axis — the transverse box filter. 1 = a bare
    *  point sample in angle, which is not a prefilter at all. */
   readonly supersample: number;
+  /** Rate each cell ray integrates the grid at, in samples per voxel. The
+   *  fill's cost is linear in it. */
+  readonly fillStepsPerVoxel: number;
 }
 
 interface CellCurve {
@@ -161,8 +193,6 @@ interface CellCurve {
   /** Cumulative measured A_V at each slice boundary, slices + 1 entries. */
   readonly cum: Float64Array;
 }
-
-const S_FLOOR_PC = 1;
 
 /**
  * The froxel cells covering one small patch of sky, built on demand. Cells are
@@ -174,15 +204,22 @@ export class LocalFroxel {
   private readonly cells = new Map<number, CellCurve>();
   private readonly e1: THREE.Vector3;
   private readonly e2: THREE.Vector3;
+  private readonly fillStepPc: number;
+  /** Half the key stride. A tangent-plane coordinate is a dot product over the
+   *  cell angle, so no direction can index past 1/cellRad — sizing the stride
+   *  from that is what makes two cells unable to share a key. */
+  private readonly keyHalf: number;
   private built = 0;
 
   constructor(
-    private readonly grid: Uint8Array,
+    private readonly field: DustField,
     private readonly origin: THREE.Vector3,
     private readonly centre: THREE.Vector3,
     private readonly cfg: FroxelConfig,
   ) {
-    [this.e1, this.e2] = tangentBasis(centre);
+    [this.e1, this.e2] = tangentBasis(centre, cfg.rollRad);
+    this.fillStepPc = field.params.voxelPc / cfg.fillStepsPerVoxel;
+    this.keyHalf = Math.ceil(1 / cfg.cellRad) + 2;
   }
 
   get cellsBuilt(): number {
@@ -190,7 +227,7 @@ export class LocalFroxel {
   }
 
   private cell(i: number, j: number): CellCurve {
-    const key = (i + 512) * 1024 + (j + 512);
+    const key = (i + this.keyHalf) * 2 * this.keyHalf + (j + this.keyHalf);
     const hit = this.cells.get(key);
     if (hit !== undefined) return hit;
     const { cellRad, slices, phase, supersample: ss } = this.cfg;
@@ -206,7 +243,7 @@ export class LocalFroxel {
           .addScaledVector(this.e1, ox)
           .addScaledVector(this.e2, oy)
           .normalize();
-        const c = buildCellCurve(this.grid, this.origin, dir, slices);
+        const c = buildCellCurve(this.field, this.origin, dir, slices, this.fillStepPc);
         for (let k = 0; k <= slices; k++) cum[k] += c.cum[k] / (ss * ss);
         sIn += c.sIn / (ss * ss);
         sOut += c.sOut / (ss * ss);
@@ -241,23 +278,24 @@ export class LocalFroxel {
 }
 
 function buildCellCurve(
-  grid: Uint8Array,
+  field: DustField,
   origin: THREE.Vector3,
   dir: THREE.Vector3,
   slices: number,
+  fillStepPc: number,
 ): CellCurve {
   const ray: Ray = { o: origin, u: dir };
-  const cov = coverageSpan(ray);
+  const cov = coverageSpan(ray, coverageRadiusPc(field.params));
   const cum = new Float64Array(slices + 1);
   if (!cov.hit) return { sIn: 0, sOut: 0, cum };
-  const sIn = Math.max(cov.sIn, S_FLOOR_PC);
+  const sIn = Math.max(cov.sIn, S_MIN_PC);
   const sOut = Math.max(cov.sOut, sIn * 1.000001);
   const logIn = Math.log(sIn);
   const logStep = (Math.log(sOut) - logIn) / slices;
   let prev = sIn;
   for (let k = 1; k <= slices; k++) {
     const s = Math.exp(logIn + k * logStep);
-    cum[k] = cum[k - 1] + measuredColumn(grid, ray, prev, s);
+    cum[k] = cum[k - 1] + measuredColumn(field, ray, prev, s, fillStepPc);
     prev = s;
   }
   return { sIn, sOut, cum };
@@ -274,9 +312,20 @@ function readCurve(curve: CellCurve, s: number, slices: number): number {
   return curve.cum[k] + (curve.cum[k + 1] - curve.cum[k]) * (t - k);
 }
 
-export function tangentBasis(u: THREE.Vector3): [THREE.Vector3, THREE.Vector3] {
+/** Cell axes for a patch: `rollRad` is the screen grid's orientation about
+ *  the sightline, which a rotating camera moves along with the phase. */
+export function tangentBasis(
+  u: THREE.Vector3,
+  rollRad = 0,
+): [THREE.Vector3, THREE.Vector3] {
   const seed = Math.abs(u.z) < 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
   const e1 = new THREE.Vector3().crossVectors(seed, u).normalize();
   const e2 = new THREE.Vector3().crossVectors(u, e1).normalize();
-  return [e1, e2];
+  if (rollRad === 0) return [e1, e2];
+  const c = Math.cos(rollRad);
+  const s = Math.sin(rollRad);
+  return [
+    new THREE.Vector3().addScaledVector(e1, c).addScaledVector(e2, s),
+    new THREE.Vector3().addScaledVector(e1, -s).addScaledVector(e2, c),
+  ];
 }
