@@ -35,9 +35,7 @@ import {
 } from './milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
-// bulge), AdditiveBlending. Analytical-only dust here — voxel sampling
-// along 8–15 kpc rays aliases into parallel streaks regardless of step
-// distribution. See src/client/milkyway/README.md.
+// bulge), AdditiveBlending. See src/client/milkyway/README.md.
 
 // --- Output calibration ------------------------------------------------
 

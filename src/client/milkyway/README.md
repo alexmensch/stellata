@@ -165,7 +165,7 @@ construction), and marches 32 log-distributed steps —
 `|vWorldPos - cameraPosition|` gives the world parsec step size the
 optical-depth maths needs.
 
-## Analytical-only dust (no voxel sampling here)
+## Dust — the analytic tier, and what composes with it
 
 Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — Drimmel &
 Spergel-style thin-disc dust. Per step, opacity converts to per-channel
@@ -192,16 +192,15 @@ why the plane read ~3 mag too bright against the poles.
 `setExtinctionStrength(x)` defaults to **1.0** and is a dev lever, not a
 calibration term: anything else contradicts that anchor.
 
-**Overlap with the molecular-cloud layer is known and quantified.** The
-clouds (`../molecular-clouds/README.md`) multiply the same band pixels and
-this slab carries a total rate, not a diffuse-only one, so the two
-double-count wherever a rendered cloud sits: the clouds cover 15.4 % of the
-sky and add 0.309 mag A_V there against 0.031 from this slab inside their
-own 2.5 kpc volume, costing ~0.006 mag sky-mean and ~0.05 mag toward the
-GC. Deliberately **not** partitioned by a molecular-fraction factor — the
-clouds are local while this slab spans the Galaxy, so scaling it down
-globally would under-extinct the far disc where nothing is rendered to
-make up the difference: a ~3 mag error to avoid a ~0.05 mag one.
+**This slab is the cascade's fallback tier, not the whole column.** Inside
+measured coverage the measured source is the only dust and this profile
+contributes nothing; beyond it, this is the only dust. The partition is by
+**volume, never by a rescaled fraction** — scaling the slab down globally to
+make room for local clouds would under-extinct the far disc, a ~3 mag error
+to avoid a ~0.05 mag one, and that argument still holds against exactly that
+move. `docs/science-galactic-structure.md` § The dust stack is the contract:
+the tier table, which clouds are carved out of the grid and which are folded
+into it, the anisotropic-prefilter requirement, and the eso0932a grading.
 
 ### Foreground dust — τ starts at the camera, not at the mesh
 
@@ -227,13 +226,14 @@ outside of pays anything, so sightlines that miss the bulge proxy
 (anticentre, NGP) are bit-identical. The GC sightline dims 0.013 mag,
 tapering to 0.011 mag by l = 30° (pinned).
 
-The Edenhofer dust voxel grid is **intentionally not sampled here**: its
-~5 pc native structure is designed for short per-star sightlines, and
-sampling at coarse step intervals along 8–15 kpc camera→fragment rays
-aliases into visible parallel streaks whatever the step distribution.
-Voxels stay in use for per-star extinction in the star pipeline;
-molecular-cloud ellipsoids carry the discrete near-cloud detail in front
-of the band.
+The Edenhofer voxel grid is **not sampled here yet, and the reason it once
+gave is superseded** — "aliases whatever the step distribution" was true of
+point-sampling and of an isotropic mip pyramid, not of the idea. The march is
+log-distributed, so its step at the coverage edge is ~440 pc against a ~1 pc
+transverse pixel footprint: the prefilter has to be **anisotropic**, and a
+Cartesian pyramid is the wrong shape by a factor of a few hundred across the
+ray. Sampling it is decided (`docs/science-galactic-structure.md` § The dust
+stack); the mechanism is open work.
 
 ## Render path
 
@@ -295,5 +295,5 @@ is also callable as `stellata.milkyway.set<Name>(...)`.
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and
 `setExtinctionStrength` at anything but 1.0 contradicts the dust anchor
-(§ Analytical-only dust). The colour setters luma-normalise on write, so a
+(§ Dust). The colour setters luma-normalise on write, so a
 hue edit cannot move flux (§ Population tints carry hue, never flux).

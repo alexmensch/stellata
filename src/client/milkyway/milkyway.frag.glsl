@@ -29,17 +29,9 @@ precision highp float;
 //     hard mesh outlines, but that's a hack: it just dims the
 //     silhouette; it doesn't represent the actual integrated emission.
 //
-// Why analytical-only dust (no voxel sampling):
-//   - The Edenhofer voxel grid has ~5 pc native resolution, designed
-//     for short per-star sightlines. Sampling it at coarse step
-//     intervals along the long camera→fragment ray (8-15 kpc) aliases
-//     into visible parallel streaks regardless of step distribution.
-//   - The molecular cloud layer (renderOrder = -2) renders named SF
-//     clouds as proper 3D ellipsoids and provides the discrete cloud
-//     detail in front of the band.
-//   - The voxel grid stays in use for per-star extinction
-//     (star.vert.glsl), where short rays + dense per-star sampling
-//     work cleanly.
+// The analytic dust below is the cascade's fallback tier, not the whole
+// column — what composes with it, over which volumes, is
+// docs/science-galactic-structure.md § The dust stack.
 
 in vec3 vMeshLocalPos;
 in vec3 vWorldPos;
@@ -80,7 +72,7 @@ uniform vec3  uColor;               // population palette
 
 uniform float uR0Pc;  // Sol galactocentric radius
 
-// Analytical disc dust profile (no voxel sampling — see top comment).
+// Analytical disc dust profile.
 uniform float uAnalyticalDustScaleLengthPc;
 uniform float uAnalyticalDustScaleHeightPc;
 uniform float uAnalyticalDustNormPerPc;

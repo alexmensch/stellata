@@ -18,7 +18,7 @@ import { fluxNumber } from '../../hdr/emission/density0-solver-pure';
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render
- * time (../README.md § Analytical-only dust).
+ * time (../README.md § Dust).
  */
 export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
