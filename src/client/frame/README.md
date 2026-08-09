@@ -64,10 +64,9 @@ this frame" (`docs/architecture-modularity.md` § Free-fly constraints:
 `focal` today, `follow` for free-fly later). `tick()` — called once per
 frame by `animate()`, before `flushLocalPositions` — asks the policy
 for a desired origin and recentres onto it. The service knows nothing
-about cameras or focus: the shell builds the focal policy from its own
-closures (hard-focus gate, warp / aim / observe / lerp busy gates, the
-`shouldRecenterFocalOrigin` drift ratio from
-`../camera/focus/focal-ride-pure.ts`).
+about cameras or focus: the focal policy is
+`makeFocalAnchorPolicy` (`../camera/focus/focal-anchor-policy.ts`),
+and the shell supplies only which controllers count as camera-busy.
 
 **`tick()`'s return is the policy-recentre signal, not `onRecenter`.**
 The shell reseeds the moving-focal ride only when `tick()` reports a

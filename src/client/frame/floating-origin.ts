@@ -8,9 +8,7 @@ import * as THREE from 'three';
  *  origin where it is. Implementations close over their own gates
  *  (focus state, camera-busy checks) — the service stays free of
  *  camera and focus knowledge. */
-export interface AnchorPolicy {
-  desiredOrigin(out: THREE.Vector3): THREE.Vector3 | null;
-}
+export type AnchorPolicy = (out: THREE.Vector3) => THREE.Vector3 | null;
 
 export type RecenterListener = (
   newOrigin: Readonly<THREE.Vector3>,
@@ -31,7 +29,7 @@ export class FloatingOrigin {
    *  it per frame (StarFrame) hold it by reference. */
   readonly worldOffset = new THREE.Vector3();
 
-  private readonly listeners: RecenterListener[] = [];
+  private readonly listeners = new Set<RecenterListener>();
   private policy: AnchorPolicy | null = null;
   private readonly delta = new THREE.Vector3();
   private readonly desired = new THREE.Vector3();
@@ -41,13 +39,11 @@ export class FloatingOrigin {
   /** Register a recentre listener; fan-out order is registration order.
    *  Order is load-bearing: the star-buffer rewrite must run before the
    *  camera/target shift and the scene-layer fan-out (./README.md
-   *  § Recentre fan-out). Returns an unsubscribe. */
+   *  § Recentre fan-out). Returns an unsubscribe, safe to call from
+   *  inside the fan-out. */
   onRecenter(listener: RecenterListener): () => void {
-    this.listeners.push(listener);
-    return () => {
-      const i = this.listeners.indexOf(listener);
-      if (i >= 0) this.listeners.splice(i, 1);
-    };
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
   }
 
   setPolicy(policy: AnchorPolicy | null): void {
@@ -55,16 +51,10 @@ export class FloatingOrigin {
   }
 
   /**
-   * Shift the local origin to `newOrigin` (absolute space): move
-   * `worldOffset`, mirror it into the `uWorldOffset` shader slot, and
-   * fan out to every listener in registration order. The delta is
-   * computed in JS Number precision (= float64) — the precision
-   * contract every recentre rewrite depends on.
-   *
-   * Returns the applied (dx, dy, dz) so callers can migrate auxiliary
-   * state captured in the old frame; null on the no-op path (`newOrigin`
-   * already is the origin — no listener fires). The returned Vector3 is
-   * shared scratch — copy it to outlive the next call.
+   * Shift the local origin to `newOrigin` (absolute space) — see
+   * ./README.md § Floating origin. Returns the applied (dx, dy, dz),
+   * null on the no-op path (no listener fires). The returned Vector3
+   * is shared scratch — copy it to outlive the next call.
    */
   recenterTo(newOrigin: THREE.Vector3): THREE.Vector3 | null {
     const dx = newOrigin.x - this.worldOffset.x;
@@ -84,13 +74,13 @@ export class FloatingOrigin {
    *  listener, so an externally triggered recentre (warp mid-fly)
    *  doesn't run them. */
   tick(): boolean {
-    const want = this.policy?.desiredOrigin(this.desired);
+    const want = this.policy?.(this.desired);
     if (!want) return false;
     return this.recenterTo(want) !== null;
   }
 
   dispose(): void {
-    this.listeners.length = 0;
+    this.listeners.clear();
     this.policy = null;
   }
 }

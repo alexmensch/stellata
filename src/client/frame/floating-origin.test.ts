@@ -62,6 +62,18 @@ describe('FloatingOrigin.recenterTo', () => {
 
     expect(fired).toBe(1);
   });
+
+  it('still reaches the later listeners when one detaches mid-fan-out', () => {
+    const { origin } = make();
+    const calls: string[] = [];
+    const unsub = origin.onRecenter(() => { calls.push('buffer'); unsub(); });
+    origin.onRecenter(() => calls.push('camera'));
+    origin.onRecenter(() => calls.push('layers'));
+
+    origin.recenterTo(new THREE.Vector3(7, 0, 0));
+
+    expect(calls).toEqual(['buffer', 'camera', 'layers']);
+  });
 });
 
 describe('FloatingOrigin.tick', () => {
@@ -73,7 +85,7 @@ describe('FloatingOrigin.tick', () => {
   it('leaves the origin alone when the policy declines', () => {
     const { origin } = make();
     origin.recenterTo(new THREE.Vector3(3, 0, 0));
-    origin.setPolicy({ desiredOrigin: () => null });
+    origin.setPolicy(() => null);
 
     expect(origin.tick()).toBe(false);
     expect(origin.worldOffset.toArray()).toEqual([3, 0, 0]);
@@ -81,9 +93,7 @@ describe('FloatingOrigin.tick', () => {
 
   it('recentres onto the policy origin and reports it', () => {
     const { origin } = make();
-    const policy: AnchorPolicy = {
-      desiredOrigin: (out) => out.set(5, 6, 7),
-    };
+    const policy: AnchorPolicy = (out) => out.set(5, 6, 7);
     origin.setPolicy(policy);
     let fired = 0;
     origin.onRecenter(() => { fired += 1; });
@@ -96,8 +106,23 @@ describe('FloatingOrigin.tick', () => {
   it('reports false when the policy origin is already current', () => {
     const { origin } = make();
     origin.recenterTo(new THREE.Vector3(5, 6, 7));
-    origin.setPolicy({ desiredOrigin: (out) => out.set(5, 6, 7) });
+    origin.setPolicy((out) => out.set(5, 6, 7));
 
     expect(origin.tick()).toBe(false);
+  });
+});
+
+describe('FloatingOrigin.dispose', () => {
+  it('drops every listener and the policy', () => {
+    const { origin } = make();
+    let fired = 0;
+    origin.onRecenter(() => { fired += 1; });
+    origin.setPolicy((out) => out.set(9, 0, 0));
+
+    origin.dispose();
+
+    expect(origin.tick()).toBe(false);
+    expect(origin.recenterTo(new THREE.Vector3(1, 0, 0))).not.toBeNull();
+    expect(fired).toBe(0);
   });
 });
