@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import type { LgEmission, LgObject } from './local-group-loader';
+import type { LgEmission, LgObject } from '../local-group-loader';
 import {
   buildEmissionInstanceData,
   cpuDensityAt,
@@ -16,17 +16,26 @@ import {
   subPixelExpansion,
   MIN_PROJECTED_RADIUS_PX,
   DISC_COLOR_RGB,
+  DISC_COLOUR_INDEX_BV,
   EMISSION_STEPS_DISC,
   EMISSION_STEPS_SERSIC,
+  M31_BULGE_TO_TOTAL_LIGHT,
+  M31_TOTAL_COLOUR_INDEX_BV,
   SPHEROID_COLOR_RGB,
   type DiscComponent,
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
-import { bindAttachmentGate } from '../hdr/attachments/attachment-gate';
-import { relativeLuminance } from '../hdr/tonemap-pure';
+import { parseOverrides } from '../../../../scripts/local-group/build-local-group';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../../hdr/emission/emission-pure';
+import {
+  OLD_SPHEROID_COLOR_RGB,
+  OLD_SPHEROID_COLOUR_INDEX_BV,
+  combinedColourIndex,
+} from '../../hdr/emission/population-colour-pure';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../hdr/exposure/exposure-epoch';
+import { bindAttachmentGate } from '../../hdr/attachments/attachment-gate';
+import { relativeLuminance } from '../../hdr/tonemap-pure';
 
 const SMC_EMISSION: LgEmission = {
   family: 'sersic',
@@ -309,7 +318,7 @@ describe('surface-brightness zero point', () => {
   // The band's own summation anchor, which this layer used to opt out of by
   // passing Ω_px twice. It can take it now only because the anchor rides
   // attachment 2 and the resolve averages over the patch first
-  // (../hdr/summation/README.md) — so the `location = 2` declaration and the
+  // (../../hdr/summation/README.md) — so the `location = 2` declaration and the
   // summation uniform are one contract. A shader that gained by Ω_sum
   // straight into attachment 0 would put 3.95 mag on M31's nucleus.
   it('displays at the summation area, through the diffuse attachment', () => {
@@ -344,9 +353,55 @@ describe('population tints', () => {
     }
   });
 
-  it('the disc lavender would otherwise dim every disc by 0.42 mag', () => {
-    const lost = -2.5 * Math.log10(relativeLuminance(DISC_COLOR_RGB));
-    expect(lost).toBeCloseTo(0.42, 2);
+  // Peak-normalised chromaticities, so neither authored triplet has unit
+  // luminance and both would dim their own family without the
+  // normalisation. The spheroid's own loss is the shared population
+  // constant's, pinned in ../../hdr/emission/population-colour-pure.test.ts;
+  // what this layer owns is its disc seed and the ordering between them.
+  it('pins what the disc tint would cost unnormalised', () => {
+    const lost = (rgb: readonly [number, number, number]) =>
+      -2.5 * Math.log10(relativeLuminance(rgb));
+    expect(lost(DISC_COLOR_RGB)).toBeCloseTo(0.1769, 4);
+    expect(lost(DISC_COLOR_RGB)).toBeLessThan(lost(SPHEROID_COLOR_RGB));
+  });
+
+  // One population, one triplet: the spheroid seed is not this layer's to
+  // derive, and the band's bulge reads the same constant.
+  it('takes the spheroid seed from the shared population constant', () => {
+    expect(SPHEROID_COLOR_RGB).toBe(OLD_SPHEROID_COLOR_RGB);
+  });
+
+  // The seeds are colour indices now, not hues picked to look right.
+  it('derives the disc index from M31 rather than the Milky Way', () => {
+    expect(DISC_COLOUR_INDEX_BV).toBeCloseTo(0.8189, 4);
+    expect(DISC_COLOUR_INDEX_BV).toBeLessThan(OLD_SPHEROID_COLOUR_INDEX_BV);
+  });
+
+  // The solve is only honest while it splits the light the same way the
+  // flux solve does, and that split lives in the build's input table.
+  it('solves against the B/T the emission solver actually uses', () => {
+    const row = parseOverrides(
+      readFileSync(
+        fileURLToPath(
+          new URL('../../../../data/local-group/overrides.tsv', import.meta.url),
+        ),
+        'utf-8',
+      ),
+    ).find((o) => o.name === 'M31');
+    expect(row?.bulgeToTotal).toBe(M31_BULGE_TO_TOTAL_LIGHT);
+  });
+
+  // Recombining the two seeds at M31's B/T has to return the published
+  // integrated colour — that is the constraint the solve preserves, and
+  // the reason the disc index is not synthesised independently.
+  it('recombines to Tempel 2011 (B−V)₀ for M31', () => {
+    expect(
+      combinedColourIndex(
+        OLD_SPHEROID_COLOUR_INDEX_BV,
+        DISC_COLOUR_INDEX_BV,
+        M31_BULGE_TO_TOTAL_LIGHT,
+      ),
+    ).toBeCloseTo(M31_TOTAL_COLOUR_INDEX_BV, 12);
   });
 });
 

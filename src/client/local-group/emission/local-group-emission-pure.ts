@@ -8,18 +8,44 @@ import {
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../hdr/emission/emission-pure';
+} from '../../hdr/emission/emission-pure';
 import {
-  BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
-  DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
-} from '../milkyway/milkyway-column-pure';
-import type { LgEmission, LgObject } from './local-group-loader';
+  OLD_SPHEROID_COLOR_RGB,
+  OLD_SPHEROID_COLOUR_INDEX_BV,
+  discColourIndex,
+} from '../../hdr/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
+import type { LgEmission, LgObject } from '../local-group-loader';
 
-/** Population tints — the Milky Way's own palette, by import: a spheroid
- *  here is the same old population as its bulge, and an external disc the
- *  same as ours. Per-object `emission.color` overrides. */
-export const SPHEROID_COLOR_RGB: [number, number, number] = [...MW_BULGE_COLOR_RGB];
-export const DISC_COLOR_RGB: [number, number, number] = [...MW_DISC_COLOR_RGB];
+/**
+ * Intrinsic integrated (B−V)₀ of M31, Tempel et al. 2011 (A&A 526, A155,
+ * DOI 10.1051/0004-6361/201015000) Table 2 — the only Local Group disc
+ * galaxy with a published dereddened integrated colour.
+ */
+export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
+
+/**
+ * M31's bulge share of the V light, Courteau et al. 2011 — the **same**
+ * `bulge_to_total` the emission solver splits M31's flux by
+ * (`data/local-group/overrides.tsv`, pinned in
+ * `local-group-emission.test.ts`). Sharing it is what makes the solve
+ * below reproduce Tempel's integrated colour on the rendered pixels
+ * rather than only on paper.
+ */
+export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
+
+/** Solved index of the disc population — README.md § Population tints. */
+export const DISC_COLOUR_INDEX_BV = discColourIndex(
+  M31_TOTAL_COLOUR_INDEX_BV,
+  OLD_SPHEROID_COLOUR_INDEX_BV,
+  M31_BULGE_TO_TOTAL_LIGHT,
+);
+
+/** Population tints, each a colour index through the star field's own
+ *  Ballesteros → Planck → CIE path. Per-object `emission.color` overrides. */
+export const SPHEROID_COLOR_RGB: [number, number, number] = OLD_SPHEROID_COLOR_RGB;
+export const DISC_COLOR_RGB: [number, number, number] =
+  linearSrgbFromColourIndex(DISC_COLOUR_INDEX_BV);
 
 /** Projected radius, in CSS px, that a proxy mesh is expanded to when it
  *  would otherwise render smaller. Below one pixel the rasteriser cannot
@@ -274,7 +300,7 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
  *  unit-ball frame.
  *
  *  `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (`../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
+ *  (`../../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
  *  share along the disc normal, which the caller projects. Both default to 0
  *  — the shipped shader always passes a footprint, but a flux integral over
  *  solid angle has no plate scale to derive one from. */

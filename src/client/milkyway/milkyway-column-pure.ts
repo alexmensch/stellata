@@ -17,8 +17,11 @@ import {
 } from '../hdr/emission/density0-solver-pure';
 import {
   BULGE_TO_TOTAL_LIGHT_V,
+  DISC_COLOUR_INDEX_BV,
   GALAXY_TOTAL_ABSMAG_V,
 } from './calibration/diffuse-reference';
+import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -40,7 +43,7 @@ export const DISC_SCALE_HEIGHT_PC = 300;
 export const DISC_THICK_SCALE_HEIGHT_PC = 900;
 export const DISC_THICK_DENSITY_FRACTION = 0.04;
 
-export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
+export const DISC_COLOR_RGB: Rgb = linearSrgbFromColourIndex(DISC_COLOUR_INDEX_BV);
 /** The authored palette carrying hue only — what the shader multiplies in.
  *  See README.md § Population tints carry hue, never flux. */
 export const DISC_TINT_RGB: Rgb = lumaNormalisedTint(DISC_COLOR_RGB);
@@ -51,7 +54,7 @@ export const BULGE_RADIUS_PC = 5_000;
 export const BULGE_HALF_THICKNESS_PC = 3_000;
 export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
-export const BULGE_COLOR_RGB: Rgb = [1.0, 0.9647, 0.9294];
+export const BULGE_COLOR_RGB: Rgb = OLD_SPHEROID_COLOR_RGB;
 export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
 // --- Analytical dust ---------------------------------------------------

@@ -124,7 +124,7 @@ describe('effect of seeding τ from the camera', () => {
 describe('per-component split toward the Galactic centre', () => {
   it('has the disc carrying essentially the whole column', () => {
     expect(componentLuminanceShare(DISC_COMPONENT, SOL, TO_GC)).toBeCloseTo(
-      0.99981,
+      0.99980,
       5,
     );
   });

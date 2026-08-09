@@ -4,11 +4,11 @@ import {
   BV_MIN,
   LUT_SIZE,
   ballesterosTeff,
-  blackbodyToLinearSrgb,
   buildLut,
   bvAtIndex,
   sampleLut,
 } from './blackbody-lut';
+import { linearSrgbFromColourIndex } from './blackbody-lut-pure';
 import {
   LUT_BYTES,
   LUT_SIZE as CONSUMER_LUT_SIZE,
@@ -143,41 +143,32 @@ describe('sampleLut at named-star B-V values', () => {
   });
 });
 
-// ---- blackbodyToLinearSrgb sanity ------------------------------------
+// ---- The table against the unquantised chain -------------------------
+//
+// Two consumers read the same physics by different routes: the star field
+// samples this table, the volumetric layers call
+// `linearSrgbFromColourIndex` directly. Both READMEs claim a component's
+// hue and a star's are the same function of B-V — this is the pin behind
+// that claim, and it fails if either route drifts.
 
-describe('blackbodyToLinearSrgb', () => {
-  const displayTriplet = (tempK: number): [number, number, number] => {
-    const linear = blackbodyToLinearSrgb(tempK);
-    return [
-      Math.round(srgbEncode(linear[0]) * 255),
-      Math.round(srgbEncode(linear[1]) * 255),
-      Math.round(srgbEncode(linear[2]) * 255),
-    ];
-  };
+describe('linearSrgbFromColourIndex against the quantised table', () => {
+  const lut = buildLut();
 
-  it('cool red 3000K reads warm orange', () => {
-    const [r, g, b] = displayTriplet(3000);
-    expect(r).toBe(255);
-    expect(g).toBeGreaterThan(150);
-    expect(g).toBeLessThan(200);
-    expect(b).toBeLessThan(120);
+  it('agrees with the table to under one quantisation step', () => {
+    let worst = 0;
+    for (let bv = BV_MIN; bv <= BV_MAX + 1e-9; bv += 0.001) {
+      const chain = linearSrgbFromColourIndex(bv);
+      const table = sampleLut(lut, bv);
+      for (let c = 0; c < 3; c++) {
+        worst = Math.max(worst, Math.abs(chain[c] * 255 - table[c]));
+      }
+    }
+    // Rounding alone allows 0.5; the rest is the table's linear
+    // interpolation across one 0.0094-mag step. Pinned rather than
+    // bounded — a loose ceiling would also pass if the chain had been
+    // re-implemented and happened to stay inside a byte.
+    expect(worst).toBeCloseTo(0.6687, 4);
+    expect(worst).toBeLessThan(1);
   });
 
-  it('Sol-like 5778K reads near-white', () => {
-    const [r, g, b] = displayTriplet(5778);
-    expect(r).toBe(255);
-    expect(g).toBeGreaterThan(235);
-    expect(b).toBeGreaterThan(225);
-  });
-
-  it('hot 30000K reads blue-white (Python parity)', () => {
-    expect(displayTriplet(30000)).toEqual([162, 187, 255]);
-  });
-
-  it('peak-normalises rather than luminance-normalises', () => {
-    // The shader divides by Y; a Y-normalised table would run past 1 at
-    // the blue end and clip in the uint8 store.
-    const hot = blackbodyToLinearSrgb(21707);
-    expect(Math.max(...hot)).toBeCloseTo(1, 10);
-  });
 });

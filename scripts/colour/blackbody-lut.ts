@@ -1,7 +1,7 @@
 // Blackbody → linear-sRGB lookup table generator. TypeScript port of
 // research/star-spectral-rendition/blackbody_color.py. Builds a 256-entry
-// RGB table over B-V ∈ [BV_MIN, BV_MAX] via Ballesteros 2012 (B-V → Teff)
-// + Planck + CIE 1931 (Wyman 2013 multi-Gaussian fits) + sRGB D65 transform.
+// RGB table over B-V ∈ [BV_MIN, BV_MAX] by quantising the chromaticity
+// chain in blackbody-lut-pure.ts.
 //
 // Runs at build time via `pnpm run build:lut`. The output module
 // src/client/star-pipeline/blackbody-lut-data.ts is committed; the byte signature is
@@ -20,125 +20,11 @@ import {
   BV_MIN,
   LUT_SIZE,
   ballesterosTeff,
+  blackbodyToLinearSrgb,
   bvAtIndex,
 } from './blackbody-lut-pure';
 
 export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
-
-// ---- Physical constants ------------------------------------------------
-
-const H = 6.62607015e-34;   // Planck (J·s)
-const C = 2.99792458e8;     // speed of light (m/s)
-const KB = 1.380649e-23;    // Boltzmann (J/K)
-
-// Visible band, 5 nm samples — matches blackbody_color.py.
-const LAMBDA_NM_MIN = 380.0;
-const LAMBDA_NM_MAX = 780.0;
-const LAMBDA_NM_STEP = 5.0;
-
-// ---- Planck spectral radiance -----------------------------------------
-
-function planckSpectralRadiance(lambdaNm: number, tempK: number): number {
-  const lam = lambdaNm * 1e-9;
-  const a = (2.0 * H * C * C) / Math.pow(lam, 5);
-  const exponent = (H * C) / (lam * KB * tempK);
-  return a / (Math.exp(exponent) - 1.0);
-}
-
-// ---- CIE 1931 2° colour-matching functions (Wyman 2013) ---------------
-
-function wymanGaussian(
-  lam: number,
-  alpha: number,
-  betaLo: number,
-  betaHi: number,
-): number {
-  const sigma = lam < alpha ? betaLo : betaHi;
-  const t = (lam - alpha) / sigma;
-  return Math.exp(-0.5 * t * t);
-}
-
-function cmfX(lam: number): number {
-  return (
-    0.362 * wymanGaussian(lam, 442.0, 16.0, 26.7) +
-    1.056 * wymanGaussian(lam, 599.8, 37.9, 31.0) -
-    0.065 * wymanGaussian(lam, 501.1, 20.4, 26.2)
-  );
-}
-
-function cmfY(lam: number): number {
-  return (
-    0.821 * wymanGaussian(lam, 568.8, 46.9, 40.5) +
-    0.286 * wymanGaussian(lam, 530.9, 16.3, 31.1)
-  );
-}
-
-function cmfZ(lam: number): number {
-  return (
-    1.217 * wymanGaussian(lam, 437.0, 11.8, 36.0) +
-    0.681 * wymanGaussian(lam, 459.0, 26.0, 13.8)
-  );
-}
-
-// ---- XYZ → linear sRGB (D65) ------------------------------------------
-
-const XYZ_TO_LIN_SRGB: readonly (readonly number[])[] = [
-  [3.2406, -1.5372, -0.4986],
-  [-0.9689, 1.8758, 0.0415],
-  [0.0557, -0.2040, 1.0570],
-];
-
-// ---- Public: blackbody → linear sRGB triplet --------------------------
-
-/**
- * Map T (Kelvin) → linear-light sRGB triplet, peak-normalised to [0, 1].
- * Out-of-gamut negative components are clipped to zero before
- * normalisation (preserves chroma; brightness is renderer-side).
- *
- * Peak-normalised rather than luminance-normalised because the star
- * shader wants `Y = 1` and a Y-normalised triplet runs to 1.88 at the
- * blue end — outside what the uint8 table can hold. The shader divides
- * by `dot(rgb, LUMA_WEIGHTS)` instead; see
- * `src/client/star-pipeline/README.md` § Physical-luminance emission.
- */
-export function blackbodyToLinearSrgb(tempK: number): [number, number, number] {
-  // Trapezoidal integration over the visible band.
-  let X = 0;
-  let Y = 0;
-  let Z = 0;
-  let prevS = planckSpectralRadiance(LAMBDA_NM_MIN, tempK);
-  let prevX = prevS * cmfX(LAMBDA_NM_MIN);
-  let prevY = prevS * cmfY(LAMBDA_NM_MIN);
-  let prevZ = prevS * cmfZ(LAMBDA_NM_MIN);
-  for (let lam = LAMBDA_NM_MIN + LAMBDA_NM_STEP; lam <= LAMBDA_NM_MAX; lam += LAMBDA_NM_STEP) {
-    const s = planckSpectralRadiance(lam, tempK);
-    const xi = s * cmfX(lam);
-    const yi = s * cmfY(lam);
-    const zi = s * cmfZ(lam);
-    X += 0.5 * (prevX + xi) * LAMBDA_NM_STEP;
-    Y += 0.5 * (prevY + yi) * LAMBDA_NM_STEP;
-    Z += 0.5 * (prevZ + zi) * LAMBDA_NM_STEP;
-    prevX = xi;
-    prevY = yi;
-    prevZ = zi;
-  }
-
-  let r = XYZ_TO_LIN_SRGB[0][0] * X + XYZ_TO_LIN_SRGB[0][1] * Y + XYZ_TO_LIN_SRGB[0][2] * Z;
-  let g = XYZ_TO_LIN_SRGB[1][0] * X + XYZ_TO_LIN_SRGB[1][1] * Y + XYZ_TO_LIN_SRGB[1][2] * Z;
-  let b = XYZ_TO_LIN_SRGB[2][0] * X + XYZ_TO_LIN_SRGB[2][1] * Y + XYZ_TO_LIN_SRGB[2][2] * Z;
-
-  r = Math.max(0, r);
-  g = Math.max(0, g);
-  b = Math.max(0, b);
-  const peak = Math.max(r, g, b);
-  if (peak > 0) {
-    r /= peak;
-    g /= peak;
-    b /= peak;
-  }
-
-  return [r, g, b];
-}
 
 // ---- LUT build --------------------------------------------------------
 
