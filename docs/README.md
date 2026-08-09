@@ -73,8 +73,11 @@ ux-tweaks.md            Reference table of UX knobs (orbit feel,
 science-hdr-pipeline.md Design gate for the HDR epic: the
                         threshold-anchored luminance unit, extended-
                         Reinhard tone-map + white point, exposure/epoch
-                        model, per-layer squash replacements, chart-mode
-                        bypass, float-RT fallback. Drives xypg H2–H8;
+                        model, the global-operator rule (spatial variation
+                        upstream of the operator only — local tone mapping
+                        decided out), per-layer squash replacements,
+                        chart-mode bypass, float-RT fallback.
+                        Drives xypg H2–H8;
                         spans star-pipeline, milkyway, solar-system,
                         local-group, chart-mode and the future
                         src/client/hdr/.
