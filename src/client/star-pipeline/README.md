@@ -7,9 +7,11 @@ subfolders.
 
 ## Subfolders
 
-- `frame/` — `StarFrame` (the CPU star position frame: floating
-  origin, epoch advance, derived buffers, proximity queries) and the
-  shared uniform map every pass holds by reference.
+- `star-frame/` — `StarFrame` (the CPU star position frame:
+  local-position buffer, epoch advance, derived buffers, proximity
+  queries). The floating origin and the shared uniform map every pass
+  holds by reference live in `../frame/` (`FloatingOrigin`,
+  `buildSharedUniforms`).
 - `extinction/` — the per-star camera→star A_V raymarch and its prepass
   cache, plus the build-time de-extinction cancellation invariant.
 - `pulsation/` — the per-type variable-star {ρ, ΔB−V} tables and the
@@ -33,7 +35,7 @@ subfolders.
   disc + glow + core-mask trio; planet bodies use the **glow profile
   only**. See `../solar-system/planets/glare/README.md`.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
-  the chunk consumes. `buildStarSharedUniforms` `satisfies` this
+  the chunk consumes. `buildSharedUniforms` `satisfies` this
   interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
   `pickPerceptualDiscUniforms`. Single source of truth so the two

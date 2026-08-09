@@ -5,8 +5,9 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import { julianEpochYearToT } from '../../solar-system/time/time';
 import { R_SUN_PC } from '../../util/astronomy-constants';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { FloatingOrigin } from '../../frame/floating-origin';
 import { StarFrame } from './star-frame';
-import { buildStarSharedUniforms } from './star-shared-uniforms';
+import { buildSharedUniforms } from '../../frame/shared-uniforms';
 
 const T_LOAD = julianEpochYearToT(2016.0);
 
@@ -22,23 +23,26 @@ function makeCatalog(positions: number[][], radiiRsol?: number[]): Catalog {
 }
 
 function makeFrame(catalog: Catalog, opts: { t?: number } = {}) {
-  const uniforms = buildStarSharedUniforms({
+  const uniforms = buildSharedUniforms({
     pixelRatio: 1,
     fovYRad: Math.PI / 4,
     viewportW: 1000,
     viewportH: 1000,
     hdr: makeHdrEmitterUniforms(),
   });
+  const origin = new FloatingOrigin(uniforms.uWorldOffset);
   const cameraPosition = new THREE.Vector3();
   let writes = 0;
   const frame = new StarFrame({
     catalog,
     uniforms,
+    worldOffset: origin.worldOffset,
     cameraPosition,
     t: opts.t ?? T_LOAD,
     onLocalPositionsWritten: () => { writes += 1; },
   });
-  return { frame, uniforms, cameraPosition, writeCount: () => writes };
+  origin.onRecenter((o) => frame.rewriteAt(o));
+  return { frame, origin, uniforms, cameraPosition, writeCount: () => writes };
 }
 
 describe('StarFrame construction', () => {
@@ -71,28 +75,26 @@ describe('StarFrame construction', () => {
   });
 });
 
-describe('StarFrame.recenterTo', () => {
-  it('rewrites the local buffer and mirrors the origin into uWorldOffset', () => {
+describe('StarFrame.rewriteAt via the FloatingOrigin recentre fan-out', () => {
+  it('rewrites the local buffer against the new origin', () => {
     const catalog = makeCatalog([[10, 0, 0], [12, 0, 0]]);
-    const { frame, uniforms, writeCount } = makeFrame(catalog);
+    const { frame, origin, writeCount } = makeFrame(catalog);
 
-    const delta = frame.recenterTo(new THREE.Vector3(10, 0, 0));
+    const delta = origin.recenterTo(new THREE.Vector3(10, 0, 0));
 
     expect(delta?.toArray()).toEqual([10, 0, 0]);
     expect(Array.from(frame.localPositions.slice(0, 6))).toEqual([0, 0, 0, 2, 0, 0]);
-    expect(frame.worldOffset.toArray()).toEqual([10, 0, 0]);
-    expect(uniforms.uWorldOffset.value.toArray()).toEqual([10, 0, 0]);
     expect(writeCount()).toBe(1);
     // Absolute positions are untouched — only the frame moved.
     expect(Array.from(catalog.positions.slice(0, 3))).toEqual([10, 0, 0]);
   });
 
-  it('is a no-op when the origin already matches', () => {
+  it('does not rewrite on the recentre no-op path', () => {
     const catalog = makeCatalog([[10, 0, 0]]);
-    const { frame, writeCount } = makeFrame(catalog);
+    const { origin, writeCount } = makeFrame(catalog);
 
-    frame.recenterTo(new THREE.Vector3(4, 0, 0));
-    expect(frame.recenterTo(new THREE.Vector3(4, 0, 0))).toBeNull();
+    origin.recenterTo(new THREE.Vector3(4, 0, 0));
+    expect(origin.recenterTo(new THREE.Vector3(4, 0, 0))).toBeNull();
     expect(writeCount()).toBe(1);
   });
 });
@@ -138,8 +140,8 @@ describe('StarFrame.advanceEpochTo', () => {
   it('re-derives the local buffer in the current frame, not the load frame', () => {
     const catalog = makeCatalog([[0, 0, 0]]);
     catalog.velocities[0] = 1;
-    const { frame } = makeFrame(catalog);
-    frame.recenterTo(new THREE.Vector3(100, 0, 0));
+    const { frame, origin } = makeFrame(catalog);
+    origin.recenterTo(new THREE.Vector3(100, 0, 0));
 
     frame.advanceEpochTo(julianEpochYearToT(2036.0), null, new THREE.Vector3());
     frame.flushLocalPositions();
@@ -164,10 +166,10 @@ describe('StarFrame local-position rewrite coalescing', () => {
   it('rewrites once when an epoch advance and a recentre fire the same frame', () => {
     const catalog = makeCatalog([[0, 0, 0]]);
     catalog.velocities[0] = 1;
-    const { frame, writeCount } = makeFrame(catalog);
+    const { frame, origin, writeCount } = makeFrame(catalog);
 
     frame.advanceEpochTo(julianEpochYearToT(2036.0), null, new THREE.Vector3());
-    frame.recenterTo(new THREE.Vector3(20, 0, 0));
+    origin.recenterTo(new THREE.Vector3(20, 0, 0));
     frame.flushLocalPositions();
 
     expect(writeCount()).toBe(1);
@@ -205,8 +207,8 @@ describe('StarFrame proximity queries', () => {
 
   it('walks in the local frame after a recentre', () => {
     const catalog = makeCatalog([[100, 0, 0], [100, 0, 1], [0, 0, 0]]);
-    const { frame, cameraPosition } = makeFrame(catalog);
-    frame.recenterTo(new THREE.Vector3(100, 0, 0));
+    const { frame, origin, cameraPosition } = makeFrame(catalog);
+    origin.recenterTo(new THREE.Vector3(100, 0, 0));
     cameraPosition.set(0, 0, 0);
 
     const seen: number[] = [];

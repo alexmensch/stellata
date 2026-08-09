@@ -26,16 +26,22 @@ close-approach focused star sitting at exactly NDC origin.
   instance index; (host, planet-within-host) resolve through the
   field's attach table. A probe Target's idx is the ProbeField
   loaded-roster index.
+- `focal-anchor-policy.ts` (+ test) — `makeFocalAnchorPolicy`, the
+  `AnchorPolicy` (`../../frame/README.md`) that keeps the floating
+  origin on the focal object under time advance. Deps are live
+  references + two gate closures; the shell supplies which controllers
+  count as camera-busy (§ Moving-focal ride).
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
   per-frame motion delegates to `../arrival/camera-motion.ts`.
 
 `FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition) is
-implemented by `stellata.ts`, but only as the camera / orbit-target /
-scene-layer half of a recentre: the buffer itself belongs to
-`StarFrame` (`../../star-pipeline/frame/README.md`), which
-the shell delegates to.
+implemented by `stellata.ts` as a thin seam over the `FloatingOrigin`
+service (`../../frame/README.md`), whose recentre fan-out covers the
+star-buffer rewrite, the camera / orbit-target shift, and the
+scene-layer hooks; the star-position legs read `StarFrame`
+(`../../star-pipeline/star-frame/README.md`).
 
 ## Focus state
 

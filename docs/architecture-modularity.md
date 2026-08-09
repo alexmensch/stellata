@@ -81,13 +81,16 @@ Kind-agnostic platform every module consumes: floating-origin / frame
 anchor service, model clock, exposure + HDR, shared view uniforms,
 scene + `SceneLayerRegistry`, picker engine, camera controllers.
 
-Several of these currently live *inside* star code because stars got
-there first: `StarFrame` owns `worldOffset` and the recentre rewrite;
-`buildStarSharedUniforms` owns the shared view uniforms that clouds,
-planets, and boundary layers reach into the star disc material to read.
-The final phase extracts them into engine services. The
-clouds-read-star-material-uniforms coupling is a latent bug source
-independent of this epic.
+Several of these lived *inside* star code because stars got there
+first. The frame half is extracted: `src/client/frame/` owns
+`FloatingOrigin` (worldOffset, the ordered recentre fan-out, the
+`AnchorPolicy` seam) and `buildSharedUniforms`; `StarFrame` keeps only
+the star buffer's recentre rewrite, registered as the first recentre
+listener, and no non-star code reads a star material's uniforms — the
+shell holds the shared map as its own field and every consumer takes
+it by reference. `buildSharedUniforms` still seeds star-specific slots
+and imports `star-pipeline/`; 5b retires that residual with the star
+kind module.
 
 **`KindContext`** is the one dependency struct handed to every module —
 the documented answer to "what may a layer depend on?". The pilot
@@ -278,18 +281,17 @@ design gets its own doc and epic. It is named here because it constrains
 the engine-services tier, and each constraint is cheap to honour now and
 expensive to retrofit:
 
-1. **Anchor policy is pluggable.** The frame service owns `worldOffset`
-   + the recentre fan-out with two policies: `focal` (today: origin =
-   focused object) and `follow` (recentre onto the camera position when
-   `|camera − origin|` exceeds a hysteresis threshold). The origin is
-   never assumed to be an object — `recenterOrigin` already takes a free
-   vec3, `SceneLayer.recenter` is already anchor-agnostic, and
-   `maybeRecenterOnFocalDrift` is the working precedent for
-   motion-driven recentring. Camera-follow beats nearest-object
-   anchoring: no spatial query, works in voids, degrades gracefully.
-   (A nearest-object query will likely exist eventually for LOD /
-   "what's near me" — as a separate service, not the precision
-   mechanism.)
+1. **Anchor policy is pluggable.** *(Landed — `FloatingOrigin` in
+   `src/client/frame/` owns `worldOffset` + the ordered recentre
+   fan-out, with `AnchorPolicy` as the seam; the shell's focal policy is
+   the first implementation.)* Free-fly adds a `follow` policy (recentre
+   onto the camera position when `|camera − origin|` exceeds a
+   hysteresis threshold). The origin is never assumed to be an object —
+   `recenterTo` takes a free vec3 and `SceneLayer.recenter` is
+   anchor-agnostic. Camera-follow beats nearest-object anchoring: no
+   spatial query, works in voids, degrades gracefully. (A
+   nearest-object query will likely exist eventually for LOD / "what's
+   near me" — as a separate service, not the precision mechanism.)
 2. **Shard positions are chunk-local.** Float32 absolute coordinates at
    Gly range quantise to ~10² pc — useless when the camera flies in
    (camera-anywhere principle, `CLAUDE.md`). Each shard stores positions
@@ -358,11 +360,14 @@ dependency-linked in order. Sizing per bead-authoring rules.
    in `main.ts` (they read the orbit-rings layer + focus state, both
    shell machinery).
 4. **Facade flattening** — landed (§ Facade flattening).
-5. **Engine-services extraction + star module** — frame/anchor service
-   out of `StarFrame` ownership, shared view uniforms out of the star
-   material, star kind wrapped as a module, shard support (chunk-local
-   coordinates, shard→index mapping) proven by the contract even before
-   a second population ships.
+5. **Engine-services extraction + star module** — split into three
+   sub-beads under the phase bead. **5a landed**: `FloatingOrigin`
+   (frame/anchor service with the policy seam) + shared view uniforms
+   out of star code (`src/client/frame/`), no non-star reads of star
+   material uniforms. Remaining: **5b** star kind wrapped as a module
+   (`critical: true`), **5c** shard support (chunk-local coordinates,
+   shard→index mapping) proven by the contract even before a second
+   population ships.
 
 Each phase leaves the app fully working; no phase depends on a later
 one. LOC expectation across the epic: `stellata.ts` → ~1,200–1,400,

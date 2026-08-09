@@ -57,7 +57,7 @@ contradictory answer to the same question.
 magnitude bounds — so the scalar and the bounds cannot disagree. It is
 constructed *before* every consumer of those uniforms and rewrites all
 four from its own constructor, which is why the seeds in
-`buildStarSharedUniforms` never reach a shader. This is the one exception
+`buildSharedUniforms` never reach a shader. This is the one exception
 to "`HdrPipeline` owns `emitterUniforms`", and it moved here from
 `FilterController` when adaptation arrived: the exposure is no longer a
 function of filter state alone.

@@ -28,6 +28,9 @@ themselves.
   lg, shell migrated; star still inline) supplies load/attach +
   every capability leg, and the shell/boot iterate the roster instead
   of hand-wiring each site.
+- `frame/` — the floating-origin service (`FloatingOrigin`: worldOffset,
+  recentre fan-out, anchor-policy seam) and the shared view/screen
+  uniform map every render pass holds by reference.
 - `util/` — project-agnostic plumbing (event bus, URL state).
 - `filters/` — `FilterState` + the instrument record (aperture-derived
   limiting magnitude, plate-scale star sizing) + render knobs and the
@@ -196,21 +199,25 @@ by a few pixels.
 Fix: the renderer runs in a **floating local frame** whose origin tracks
 the currently focused star.
 
-- The buffers themselves live on `StarFrame`
-  (`star-pipeline/frame/README.md`): `worldOffset`, the
-  absolute-space coordinate currently sitting at the renderer's
-  (0,0,0) — starts at Sol — and `localPositions` (exposed via
-  `stellata.localPositions`), a `Float32Array` of
+- `worldOffset` — the absolute-space coordinate currently sitting at
+  the renderer's (0,0,0), starting at Sol — is owned by the
+  `FloatingOrigin` service (`frame/README.md`), together with the
+  recentre fan-out and the anchor-policy seam. The star buffer lives on
+  `StarFrame` (`star-pipeline/star-frame/README.md`): `localPositions`
+  (exposed via `stellata.localPositions`), a `Float32Array` of
   `catalog.positions − worldOffset` bound to the `iPosition` instance
   attribute, which is what every overlay and pick path projects
   through.
 - `Stellata.recenterOrigin(newOrigin)` (exposed via the `FrameAnchor`
-  seam) has `StarFrame` rewrite that buffer using JS Number (= float64)
+  seam) delegates to `FloatingOrigin.recenterTo`, whose ordered
+  listener fan-out rewrites the star buffer using JS Number (= float64)
   subtraction, then shifts `camera.position` and `controls.target` by
-  the same delta so the user sees no jump. The two callers are
+  the same delta so the user sees no jump, then runs the scene-layer
+  recenter hooks. The two callers are
   `FocusController.recenterFocusToStar` (focus mutations) and
   `WarpController.tryMidFlyRecentre` (mid-flight pivot onto the
-  destination).
+  destination); the focal-drift recentre runs through the anchor
+  policy's per-frame `tick()` instead.
 - `FocusController.setFocus(idx)` calls `recenterOrigin` on focus, then
   snaps `controls.target` onto the focal star's **live** local position
   (catalog baseline + orbital perturbation), not the bare local origin —

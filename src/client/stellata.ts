@@ -9,10 +9,7 @@ import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
-import {
-  DustParticleLayer,
-  type DustParticleSharedUniforms,
-} from './dust/dust-particle-layer';
+import { DustParticleLayer } from './dust/dust-particle-layer';
 
 // Register the perceptual-disc chunk so star.{vert,frag} (and any
 // future point-source layer) can `#include <stellata_perceptual_disc>`
@@ -70,7 +67,8 @@ import {
 } from './kinds/kind-modules';
 import { chartPlateauDistancePc } from './chart-mode/chart-disc-pure';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep, shouldRecenterFocalOrigin } from './camera/focus/focal-ride-pure';
+import { focalRideStep } from './camera/focus/focal-ride-pure';
+import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -117,12 +115,10 @@ import {
   SCENE_ELEMENT_IDS,
 } from './scene/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
-import { StarFrame } from './star-pipeline/frame/star-frame';
-import { buildStarSharedUniforms } from './star-pipeline/frame/star-shared-uniforms';
-import {
-  ExtinctionPrepass,
-  type ExtinctionPrepassUniforms,
-} from './star-pipeline/extinction/extinction-prepass';
+import { StarFrame } from './star-pipeline/star-frame/star-frame';
+import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
+import { FloatingOrigin } from './frame/floating-origin';
+import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
@@ -192,21 +188,25 @@ export class Stellata implements FrameAnchor {
   private scene: THREE.Scene;
   // Star render pipeline — one InstancedBufferGeometry feeds three
   // ShaderMaterials (core depth-mask / disc / glow). Owns the dispose
-  // contract for the densest resource cluster in the app. Per-frame
-  // uniform writes still go through `starPipeline.discMaterial.uniforms`
-  // from this file; the encapsulation is resource ownership only.
+  // contract for the densest resource cluster in the app.
   private starPipeline!: StarPipeline;
+  // The shared view/screen uniform map (frame/README.md § Shared
+  // uniforms) — every per-frame write goes through this field, never
+  // through a star material's uniforms object.
+  private sharedUniforms!: SharedUniforms;
   // Dust-particle render layer. Currently shelved — see
   // src/client/star-pipeline/extinction/README.md.
   private dustParticles!: DustParticleLayer;
 
-  // Floating origin, epoch advance, the derived per-instance buffers,
-  // and the Sol-distance proximity queries — see
-  // star-pipeline/frame/README.md. The shell reads
-  // `worldOffset` / `localPositions` through it and drives the
+  // The floating-origin service — worldOffset, the ordered recentre
+  // fan-out, and the focal anchor policy (frame/README.md).
+  private floatingOrigin!: FloatingOrigin;
+  // Epoch advance, the derived per-instance buffers, and the
+  // Sol-distance proximity queries — see star-pipeline/star-frame/README.md.
+  // The shell reads `localPositions` through it and drives the
   // per-frame calls.
   private starFrame!: StarFrame;
-  private get worldOffset(): THREE.Vector3 { return this.starFrame.worldOffset; }
+  private get worldOffset(): THREE.Vector3 { return this.floatingOrigin.worldOffset; }
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
   // Composite-suppress flag per catalog instance. 0 = render normally;
@@ -427,16 +427,17 @@ export class Stellata implements FrameAnchor {
       () => this.camera.fov,
     );
 
-    const sharedUniforms = buildStarSharedUniforms({
+    const sharedUniforms = buildSharedUniforms({
       pixelRatio: this.renderer.getPixelRatio(),
       fovYRad: (this.camera.fov * Math.PI) / 180,
       viewportW: window.innerWidth,
       viewportH: window.innerHeight,
       hdr: this.hdr.emitterUniforms,
     });
+    this.sharedUniforms = sharedUniforms;
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all four slots from its own constructor, so the seeds in
-    // buildStarSharedUniforms never reach a shader.
+    // buildSharedUniforms never reach a shader.
     this.exposure = new ExposureController({
       uniforms: {
         uExposure: this.hdr.emitterUniforms.uExposure,
@@ -450,6 +451,7 @@ export class Stellata implements FrameAnchor {
       },
     }, DEFAULT_FILTER.instrument);
 
+    this.floatingOrigin = new FloatingOrigin(sharedUniforms.uWorldOffset);
     // Advances catalog.positions to the model clock and derives every
     // per-instance buffer off the result, so the pipeline attributes
     // below and every consumer downstream read current-epoch positions
@@ -457,6 +459,7 @@ export class Stellata implements FrameAnchor {
     this.starFrame = new StarFrame({
       catalog,
       uniforms: sharedUniforms,
+      worldOffset: this.floatingOrigin.worldOffset,
       cameraPosition: this.camera.position,
       t: this.getT(),
       onLocalPositionsWritten: () => {
@@ -464,6 +467,14 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });
+    // Recentre fan-out, in load-bearing order: star buffer rewrite →
+    // camera / orbit-target shift → scene-layer recenter hooks.
+    this.floatingOrigin.onRecenter((origin) => this.starFrame.rewriteAt(origin));
+    this.floatingOrigin.onRecenter((_origin, delta) => {
+      this.camera.position.sub(delta);
+      this.controls.target.sub(delta);
+    });
+    this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
     this._compositeSuppress = new Float32Array(catalog.count);
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     // Built here (not attachBinaries) because the gate is varType-driven
@@ -494,13 +505,10 @@ export class Stellata implements FrameAnchor {
       sharedUniforms,
     );
 
-    // Star-material uniforms passed by reference so floating-origin
-    // recenters, resize updates, and dust loads propagate to the
-    // particle pass automatically.
-    this.dustParticles = new DustParticleLayer(
-      this.scene,
-      this.starPipeline.discMaterial.uniforms as unknown as DustParticleSharedUniforms,
-    );
+    // Shared uniforms passed by reference so floating-origin recenters,
+    // resize updates, and dust loads propagate to the particle pass
+    // automatically.
+    this.dustParticles = new DustParticleLayer(this.scene, sharedUniforms);
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
@@ -698,7 +706,7 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.focus.getCameraMode(),
       isChartMode: () => this.filter.chart,
       getChartMagBright: () =>
-        this.starPipeline.discMaterial.uniforms.uChartMagBright.value as number,
+        this.sharedUniforms.uChartMagBright.value,
       focus: this.focus,
     });
     this.observe = new ObserveTransition({
@@ -713,6 +721,7 @@ export class Stellata implements FrameAnchor {
       getCameraMode: () => this.focus.getCameraMode(),
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
+    this.buildFocalAnchorPolicy();
     // Orbit rings are representational layers gated on host-focus. Planet
     // bodies live in PlanetBodyField and render whenever inside the
     // per-host cull distance regardless of focus. (The heliopause is no
@@ -1103,7 +1112,7 @@ export class Stellata implements FrameAnchor {
         idx: t.idx,
         camPos: this.camera.position,
         localPositions: this.localPositions,
-        uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+        uniforms: this.sharedUniforms,
       }) * 0.5;
     }
     if (t?.kind === 'planet') {
@@ -1170,7 +1179,7 @@ export class Stellata implements FrameAnchor {
    *  uHideFocusIdx shader pin, module kinds → their setFocalHidden leg.
    *  Passing null (or a kind switch) unhides the other kinds' slots. */
   private setFocalBodyHidden(target: Target | null): void {
-    this.starPipeline.discMaterial.uniforms.uHideFocusIdx.value =
+    this.sharedUniforms.uHideFocusIdx.value =
       target?.kind === 'star' ? target.idx : -1;
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
@@ -1180,35 +1189,17 @@ export class Stellata implements FrameAnchor {
   private tmpRecenter = new THREE.Vector3();
 
   // Shift the renderer's local origin to `newOrigin` (an absolute-space
-  // coordinate). StarFrame rewrites the instance-position buffer; camera
-  // position and orbit target are shifted by the same delta so the user
-  // sees no visible jump, only numerical precision improves.
+  // coordinate) — FloatingOrigin.recenterTo, whose listener fan-out
+  // rewrites the star buffer, shifts camera + orbit target, and runs
+  // the scene-layer recenter hooks (frame/README.md § Recentre fan-out).
   //
   // Triggered automatically from FocusController.setFocus() and
   // WarpController.tryMidFlyRecentre. Don't call externally — it
   // bypasses the state-change bookkeeping that setFocus threads through.
-  //
-  // Returns the (dx, dy, dz) world-offset delta applied (newOrigin −
-  // previous worldOffset) so callers can migrate auxiliary state
-  // captured in the old frame (e.g. updateWarp's pEnd / pStart / A)
-  // into the new frame without re-deriving the delta themselves.
-  // Returns null on the no-op path (newOrigin equals worldOffset).
-  // The returned Vector3 is shared scratch — copy if you need to
-  // outlive the next recenterOrigin call.
-  //
-  // Public for the `FrameAnchor` seam — FocusController.recenterFocusToStar
-  // and WarpController.tryMidFlyRecentre invoke it. The "don't call
-  // externally" rule still applies to non-warp/non-focus callers; the
-  // recentre is a state-mutation primitive, not a routine API.
+  // Returns the applied delta (shared scratch; null on no-op) so callers
+  // can migrate auxiliary state captured in the old frame.
   recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    const delta = this.starFrame.recenterTo(newOrigin);
-    if (delta === null) return null;
-    this.camera.position.sub(delta);
-    this.controls.target.sub(delta);
-    // Layers holding local-frame positions (planet hosts, binary
-    // baselines) re-derive them through the registry's recenter hooks.
-    this.layers.recenterAll(newOrigin);
-    return delta;
+    return this.floatingOrigin.recenterTo(newOrigin);
   }
 
   // Scrubber-time star motion: when the model clock crosses a re-advance
@@ -1232,47 +1223,29 @@ export class Stellata implements FrameAnchor {
     this.observe.translateFocusFrame(d);
   }
 
-  // Keep the floating origin locked to the focal object as it moves under
-  // time advance. The focal-frame rides translate the camera to follow the
-  // object, so under scrubber fast-forward the camera drifts far from the
-  // fixed focus-time origin — reviving the float32 modelview cancellation the
-  // floating origin exists to prevent (a growing wobble on the focal body).
-  // Recentring onto the look target (glued to the object by the ride)
-  // restores camera-from-origin ≈ eye distance. Kind-agnostic: every hard
-  // focus kind, current or future, benefits with no per-kind code, because
-  // the origin is shared by every layer. Skipped during camera-owning
-  // animations, which reference the current frame and re-snap themselves.
-  private maybeRecenterOnFocalDrift(): void {
-    if (this.focus.getFocusedHardTarget() === null) return;
-    if (
-      this.warp.isActive()
-      || this.aim.isActive()
-      || this.aim.isObserveAimActive()
-      || this.focus.isFocusLerpActive()
-      || this.observe.isAnyActive()
-    ) return;
-    const eye = this.camera.position.distanceTo(this.controls.target);
-    if (!shouldRecenterFocalOrigin(this.camera.position.length(), eye)) return;
-    this.tmpRecenter.copy(this.controls.target).add(this.worldOffset);
-    if (this.recenterOrigin(this.tmpRecenter) !== null) {
-      // The moving-focal ride caches the focal's full local position; the
-      // recentre shifted the frame under it, so reseed to skip a one-frame
-      // jump. The binary ride tracks baseline-relative perturbation
-      // (frame-invariant) and needs none.
-      this._movingRideIdx = null;
-    }
+  // Which controllers constitute "the camera is busy" is the shell's to
+  // know; the policy itself lives in camera/focus/ so frame/ imports no
+  // camera code.
+  private buildFocalAnchorPolicy(): void {
+    this.floatingOrigin.setPolicy(makeFocalAnchorPolicy({
+      hasHardFocus: () => this.focus.getFocusedHardTarget() !== null,
+      isCameraBusy: () => this.warp.isActive()
+        || this.aim.isActive()
+        || this.aim.isObserveAimActive()
+        || this.focus.isFocusLerpActive()
+        || this.observe.isAnyActive(),
+      cameraPosition: this.camera.position,
+      orbitTarget: this.controls.target,
+      worldOffset: this.floatingOrigin.worldOffset,
+    }));
   }
-
- // recenterFocusToStar moved to FocusController — it
-  // mutates focus state (focusedStar + per-star minDistance +
-  // planet-system reload), which now lives there.
 
   // Wire a loaded DustField into the star shader. Safe to call after the
   // Stellata is already rendering — uniforms flip atomically on the next
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
-    const u = this.starPipeline.discMaterial.uniforms;
+    const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
     // ~128 MiB Data3DTexture before swapping the reference, otherwise
     // the old texture would leak. attachDust is called exactly once
@@ -1300,7 +1273,7 @@ export class Stellata implements FrameAnchor {
         renderer: this.renderer,
         positions: this.catalog.positions,
         count: this.catalog.count,
-        uniforms: u as unknown as ExtinctionPrepassUniforms,
+        uniforms: u,
       });
     }
     this.extinctionPrepass.markDirty();
@@ -1358,9 +1331,9 @@ export class Stellata implements FrameAnchor {
 
   private updateBinaryOrbits(): void {
     if (!this.binaryOrbitField) return;
-    const uniforms = this.starPipeline.discMaterial.uniforms;
-    const viewport = uniforms.uViewport.value as THREE.Vector2;
-    const fovYRad = uniforms.uFovYRad.value as number;
+    const uniforms = this.sharedUniforms;
+    const viewport = uniforms.uViewport.value;
+    const fovYRad = uniforms.uFovYRad.value;
     this.binaryOrbitField.update(
       this.getT(),
       this.camera.position,
@@ -1492,7 +1465,7 @@ export class Stellata implements FrameAnchor {
       idx,
       camPos: this.camera.position,
       localPositions: this.localPositions,
-      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      uniforms: this.sharedUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     });
@@ -1509,7 +1482,7 @@ export class Stellata implements FrameAnchor {
       idx,
       camPos: this.camera.position,
       localPositions: this.localPositions,
-      uniforms: this.starPipeline.discMaterial.uniforms as unknown as starPhysics.StarPhysicsUniforms,
+      uniforms: this.sharedUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     }, out);
@@ -1523,7 +1496,7 @@ export class Stellata implements FrameAnchor {
    *  has no effect. Also drives the Milky Way background so the
    *  dust-darkened regions of the band track the same knob. */
   setExtinctionStrength(x: number) {
-    this.starPipeline.discMaterial.uniforms.uExtinctionStrength.value = Math.max(0, x);
+    this.sharedUniforms.uExtinctionStrength.value = Math.max(0, x);
     this.milkyway.setExtinctionStrength(x);
   }
 
@@ -1640,14 +1613,11 @@ export class Stellata implements FrameAnchor {
   // primaries whose pulsation has been gated off.
   get suppressPulsation(): Float32Array { return this._suppressPulsation; }
 
-  // Read-only view of the star-shader uniforms, typed against the subsets
+  // Read-only view of the shared uniform map, typed against the subsets
   // consumed by star-physics.ts. Overlays / chart / debug surfaces that
-  // call the per-star geometry helpers thread these through; keeping the
-  // accessor here means the integration shell is still the single point
-  // that knows the renderer's material identity.
+  // call the per-star geometry helpers thread these through.
   get uniforms(): starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms {
-    return this.starPipeline.discMaterial.uniforms as unknown as
-      starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms;
+    return this.sharedUniforms;
   }
 
   /** FOV mutations stay a shell dispatcher (not `filters.setCameraFov`
@@ -1744,7 +1714,7 @@ export class Stellata implements FrameAnchor {
   setMonochrome(on: boolean) {
     if (this.monochrome === on) return;
     this.monochrome = on;
-    this.starPipeline.discMaterial.uniforms.uMonochrome.value = on ? 1 : 0;
+    this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
     this.hdr.setChartMode(on);
@@ -1914,8 +1884,8 @@ export class Stellata implements FrameAnchor {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
     this.hdr.syncSize();
-    this.starPipeline.discMaterial.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
-    this.starPipeline.discMaterial.uniforms.uViewport.value.set(w, h);
+    this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
+    this.sharedUniforms.uViewport.value.set(w, h);
     // Aspect change → fov_minor moves → orbit floor needs a refresh while
     // a star is focused. (FOV-only changes go through setCameraFov, which
     // does its own recompute.)
@@ -1943,9 +1913,8 @@ export class Stellata implements FrameAnchor {
   // by every screen-space size calc (star disc, cloud silhouette, peak-
   // amplitude disc, glsl `physSizePx` mirror).
   private angularToPx(): number {
-    const u = this.starPipeline.discMaterial.uniforms;
-    const viewport = u.uViewport.value as THREE.Vector2;
-    return angularToPxPure(viewport.y, u.uFovYRad.value as number);
+    const u = this.sharedUniforms;
+    return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
   }
 
   // Scratch slot for the non-allocating *LocalPositionInto helpers.
@@ -1959,7 +1928,15 @@ export class Stellata implements FrameAnchor {
     if (this.disposed) return;
     perfMark('frame.total');
     this.maybeReAdvanceEpoch();
-    this.maybeRecenterOnFocalDrift();
+    if (this.floatingOrigin.tick()) {
+      // Policy recentre shifted the frame under the moving ride's cached
+      // position — reseed to skip a one-frame jump. Keyed on tick()'s
+      // return, never a recentre listener: a warp mid-fly recentre must
+      // NOT reseed (focalRideStep owns that transition). The binary ride
+      // tracks baseline-relative perturbation (frame-invariant) and
+      // needs none.
+      this._movingRideIdx = null;
+    }
     // Both can invalidate the local-position buffer; StarFrame
     // coalesces them into a single rewrite. Must run before anything
     // downstream reads localPositions.
@@ -2003,20 +1980,19 @@ export class Stellata implements FrameAnchor {
     }
     perfMeasure('controls.update');
     perfMark('pre-render');
-    this.starPipeline.discMaterial.uniforms.uCameraPos.value.copy(this.camera.position);
+    this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
     // Pin the focused star at NDC (0,0) only when the geometric
     // invariant holds: navigate mode, no warp/aim animation, and the
     // user hasn't panned the camera target away from the focused star
     // (target ≈ local origin). Pan moves target away from the star and
     // we want it to render at its actual projected position again.
     const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
-    this.starPipeline.discMaterial.uniforms.uPinFocusToCenter.value = pinTarget ?? -1;
+    this.sharedUniforms.uPinFocusToCenter.value = pinTarget ?? -1;
     // Advance the variability clock on the model time base (shared with the
     // glow material via sharedUniforms). Days since J2000 from getT(), plus
     // the warp rate in model-days/real-second for the anti-strobe floor.
-    const varUniforms = this.starPipeline.discMaterial.uniforms;
-    varUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
-    varUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
+    this.sharedUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
+    this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.
@@ -2178,6 +2154,7 @@ export class Stellata implements FrameAnchor {
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
+    this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
     this.reduction.dispose();
     this.hdr.dispose();

@@ -1,22 +1,22 @@
-// The uniform map shared by the star disc / glow / core-mask passes.
-// See ./README.md.
+// The shared view/screen uniform map every render pass and downstream
+// consumer holds by reference. See ./README.md.
 
 import * as THREE from 'three';
-import { ZOOM_FLOOR_FRACTION } from '../../camera/controls/star-physics';
+import { ZOOM_FLOOR_FRACTION } from '../camera/controls/star-physics';
 import {
   DEFAULT_FILTER,
   instrumentLimitMag,
   sizeSpanOf,
   STAR_RENDER_DEFAULTS,
-} from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
-import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
-import { R_SUN_PC } from '../../util/astronomy-constants';
-import { makeColorLutTexture } from '../blackbody-lut';
-import type { PerceptualDiscUniforms } from '../perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from '../local-pass/star-local-mirror';
+} from '../filters/filter-state';
+import { cullMagFor } from '../hdr/exposure/exposure-epoch';
+import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { R_SUN_PC } from '../util/astronomy-constants';
+import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
+import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc-uniforms';
+import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-local-mirror';
 
-export interface StarSharedUniformsOptions {
+export interface SharedUniformsOptions {
   pixelRatio: number;
   /** Camera vertical FOV in radians — mirrored from `camera.fov`
    *  whenever `setCameraFov` runs. */
@@ -28,17 +28,17 @@ export interface StarSharedUniformsOptions {
   hdr: HdrEmitterUniforms;
 }
 
-export type StarSharedUniforms = ReturnType<typeof buildStarSharedUniforms>;
+export type SharedUniforms = ReturnType<typeof buildSharedUniforms>;
 
 /**
- * Build the star pipeline's shared uniform map. All three star passes
+ * Build the shared uniform map. All three star passes
  * point at the same value objects, so any filter / theme / resize write
  * propagates to every pass without duplicate bookkeeping; `uRenderMode`
  * is the only divergent uniform and `StarPipeline` binds it per
  * material. The planet body field and the Milky Way pass pick slots out
  * of the same map by reference for the same reason.
  */
-export function buildStarSharedUniforms(opts: StarSharedUniformsOptions) {
+export function buildSharedUniforms(opts: SharedUniformsOptions) {
   const baseLimitMag = instrumentLimitMag(DEFAULT_FILTER.instrument);
   return {
     // Exposure + the inline-operator branch. Owned by HdrPipeline, which

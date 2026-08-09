@@ -8,7 +8,7 @@ import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import type { HoverProvider } from '../hover/hover-types';
 import type { SceneElementId } from '../scene/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
-import type { StarSharedUniforms } from '../star-pipeline/frame/star-shared-uniforms';
+import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { SystemMembershipProvider } from '../system-membership/system-membership';
 
 /** What a kind module may depend on — the documented answer to "what may
@@ -23,7 +23,7 @@ export interface KindContext {
   /** The shared view/screen uniform map (viewport, FOV, pixel ratio,
    *  magnitude bounds, HDR slots), held by reference. Modules narrow to
    *  the slots they consume. */
-  readonly sharedUniforms: StarSharedUniforms;
+  readonly sharedUniforms: SharedUniforms;
   readonly solIndex: number;
   /** Sol's absolute catalog position into `out`; false with no Sol row.
    *  Distinct from `-worldOffset`: Sol's catalog record sits ~1 AU off

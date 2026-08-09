@@ -25,7 +25,7 @@ const LIMIT = instrumentLimitMag(DEFAULT_INSTRUMENT);
 
 describe('ExposureController', () => {
   it('writes all four slots from its own constructor', () => {
-    // The seeds in buildStarSharedUniforms must never reach a shader, so
+    // The seeds in buildSharedUniforms must never reach a shader, so
     // construction alone has to leave every slot correct.
     const { uniforms } = harness();
     expect(uniforms.uLimitMag.value).toBe(LIMIT);
