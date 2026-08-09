@@ -244,19 +244,19 @@ a just-visible star".
 | --- | --- | --- | --- |
 | l = 0, b = 5 | 20.71 | **1.29 OVER** — the maximum | 70.3 |
 | l = 0, b = 0 (GC) | 21.98 | 0.02 over | 38.6 |
-| anticentre | 22.16 | 0.16 under | 35.1 |
-| b = 30 | 22.61 | 0.61 under | 27.4 |
-| NGP | 23.49 | 1.49 under | 15.6 |
+| anticentre | 22.16 | 0.16 under | 34.4 |
+| b = 30 | 22.61 | 0.61 under | 18.5 |
+| NGP | 23.49 | 1.49 under | 0.5 |
 
-Plane-to-pole contrast **1.51 mag**. **The midplane is not the maximum**
-— b ≈ 5° is, because the in-plane sightline eats the most dust. The real
-band behaves the same way; the dark rift is dust, not a gap in the stars.
-Pinned in `milkyway.test.ts`.
+Plane-to-pole contrast **1.51 mag** photometrically. **The midplane is
+not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
+most dust. The real band behaves the same way; the dark rift is dust,
+not a gap in the stars. Pinned in `milkyway.test.ts`.
 
-**Nothing pins the band to the threshold any more** — the maximum used to
-land exactly on it. That the NGP renders at 15.6/255 while sitting 1.49 mag
-*under* the detection threshold is `stellata-xypg.36`, which this makes
-worse before it lands.
+**Sub-threshold rows carry the operator's faint-end toe** (`../hdr/README.md`
+§ Operator): over-threshold levels are untouched, and 1.5 mag under
+threshold is black by construction — the NGP at 1.49 under sits on the
+dither floor instead of 15.6/255. Nothing pins the band to the threshold.
 
 Two facts worth having before touching this:
 

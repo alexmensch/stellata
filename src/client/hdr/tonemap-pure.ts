@@ -15,6 +15,47 @@ export function tonemapWhitePoint(drMag = DR_MAG, lThresh = L_THRESH): number {
   return lThresh * 10 ** (0.4 * drMag);
 }
 
+/** Magnitudes below the threshold at which the faint-end toe lands on
+ *  black — the detection rolloff's full width. */
+export const TOE_BLACK_MAG = 1.5;
+
+/** The darkest level the encode can distinguish from black: half an
+ *  8-bit output step, decoded through the sRGB linear segment. */
+const EIGHT_BIT_STEP_L = 0.5 / 255 / 12.92;
+
+/** Displayed depth of the toe's black point, in magnitudes below the
+ *  threshold's display level. */
+const TOE_BLACK_DEPTH_MAG = 2.5 * Math.log10(L_THRESH / EIGHT_BIT_STEP_L);
+
+/** Quadratic coefficient of the faint-end toe, derived so a source
+ *  exactly `TOE_BLACK_MAG` under threshold lands on `EIGHT_BIT_STEP_L`.
+ *  The toe maps `m` magnitudes under threshold to `m + TOE_CURVATURE·m²`
+ *  displayed magnitudes under it — slope 1 at the knee, so the transfer
+ *  is C1 through the threshold and no isophote marks the crossing. */
+export const TOE_CURVATURE =
+  (TOE_BLACK_DEPTH_MAG - TOE_BLACK_MAG) / (TOE_BLACK_MAG * TOE_BLACK_MAG);
+
+/** Detection rolloff below the threshold: sub-threshold light compresses
+ *  to black over `TOE_BLACK_MAG` magnitudes instead of rendering at its
+ *  near-linear Reinhard value. Identity at and above `L_THRESH`, so the
+ *  threshold anchor holds. */
+export function faintToe(y: number, lThresh = L_THRESH): number {
+  if (y >= lThresh) return y;
+  if (y <= 0) return 0;
+  const magsUnder = -2.5 * Math.log10(y / lThresh);
+  return lThresh * (y / lThresh) ** (1 + TOE_CURVATURE * magsUnder);
+}
+
+/** Exact inverse of `faintToe` — the chrome mapping composes it. */
+export function faintToeInverse(yt: number, lThresh = L_THRESH): number {
+  if (yt >= lThresh) return yt;
+  if (yt <= 0) return 0;
+  const depth = -2.5 * Math.log10(yt / lThresh);
+  const magsUnder =
+    (Math.sqrt(1 + 4 * TOE_CURVATURE * depth) - 1) / (2 * TOE_CURVATURE);
+  return lThresh * 10 ** (-0.4 * magsUnder);
+}
+
 export function relativeLuminance(rgb: Rgb): number {
   return (
     rgb[0] * LUMA_WEIGHTS[0] + rgb[1] * LUMA_WEIGHTS[1] + rgb[2] * LUMA_WEIGHTS[2]
@@ -41,13 +82,19 @@ export function srgbDecode(c: number): number {
   return v < SRGB_DECODE_KNEE ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
+/** Scalar display transfer: linear luminance → encoded sRGB, the whole
+ *  chain a hue-free level comparison runs through. */
+export function displayLevel(y: number, whitePoint: number): number {
+  return srgbEncode(reinhardExtended(faintToe(y), whitePoint));
+}
+
 /** Linear HDR luminance → display sRGB, hue-preserving. Mirrors
  *  `stellataTonemapUndithered`: the dither is 8-bit quantisation noise
  *  applied after the operator, not part of it. */
 export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): Rgb {
   const y = relativeLuminance(hdr);
   if (y <= 0) return [0, 0, 0];
-  const yd = reinhardExtended(y, whitePoint);
+  const yd = reinhardExtended(faintToe(y), whitePoint);
   const white = 1 - Math.exp(-desat * Math.max(y / whitePoint - 1, 0));
   const chroma = (yd / y) * (1 - white);
   return [
@@ -65,7 +112,7 @@ export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): 
 export function inverseTonemapConstant(linearDisplay: Rgb, whitePoint: number): Rgb {
   const yd = relativeLuminance(linearDisplay);
   if (yd <= 0) return [0, 0, 0];
-  const scale = reinhardExtendedInverse(yd, whitePoint) / yd;
+  const scale = faintToeInverse(reinhardExtendedInverse(yd, whitePoint)) / yd;
   return [
     linearDisplay[0] * scale,
     linearDisplay[1] * scale,

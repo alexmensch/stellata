@@ -326,11 +326,14 @@ linear before lighting (they are sRGB-authored imagery).
 
 ## 2. Tone-map operator
 
-**Luminance-domain extended Reinhard, hue-preserving:**
+**Luminance-domain extended Reinhard, hue-preserving, with a faint-end
+detection toe:**
 
 ```
 Y   = dot(rgb, LUMA_WEIGHTS)            // Rec.709 luminance
-Yd  = Y · (1 + Y/Lw²) / (1 + Y)
+m   = −2.5·log10(Y/L_THRESH)            // magnitudes under threshold
+Yt  = Y < L_THRESH ? L_THRESH · 10^(−0.4·(m + TOE_CURVATURE·m²)) : Y
+Yd  = Yt · (1 + Yt/Lw²) / (1 + Yt)
 rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
 ```
 
@@ -350,6 +353,36 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   search over 5–8; raising it would be an explicit exaggeration on the
   luminance axis (the same move K makes on the size axis) and must be
   recorded as one.
+- **The faint-end toe makes the threshold mean what it says.** Extended
+  Reinhard is near-linear at small `Y` and the sRGB encode then lifts it,
+  so sub-threshold light rendered at its linear value reads plainly on a
+  dark screen — a patch 1.49 mag *under* the extended-source detection
+  threshold rendered at 15.6/255. Physically you don't see that residual
+  because it sits under a luminous natural sky background; Stellata
+  renders a black sky, so the operator carries the detection rolloff
+  instead: identity at and above `L_THRESH` (every anchor holds), and a
+  toe below it that **leaves the knee at slope 1 (C1)** — `m` magnitudes
+  under threshold display as `m + TOE_CURVATURE·m²` under it.
+  `TOE_CURVATURE` is derived, not tuned: a source exactly
+  **`TOE_BLACK_MAG` = 1.5 mag** under threshold lands on half an
+  8-bit output step, the level the encode cannot distinguish from black.
+  The first cut was a fixed-exponent power with the same endpoints, and
+  its slope-3.5 kink at the knee projected a visible isophote onto every
+  smooth gradient crossing threshold — molecular clouds silhouetted as
+  hard-edged blots, and EV trims sweeping visible bands across the sky
+  as isophotes crossed the contour. Detection near threshold is a
+  graded probability (a frequency-of-seeing curve ~0.5 mag wide), not a
+  cliff; slope 1 at the knee is the display transfer's rendering of
+  that. Exactly invertible (quadratic formula in log-luminance), and
+  the chrome mapping composes the inverse. The rejected alternative was rendering the sky background as
+  a real luminance pedestal — more honest (threshold becomes a
+  consequence), but it lifts the whole frame's black level and feeds the
+  full-frame pedestal into the adaptation statistic and chart mode; the
+  toe expresses the same detection claim in the display transfer, where
+  the display's own floor is already a concession. Sub-threshold *stars*
+  cross the toe too, on top of their emission-side taper — the visible
+  faint edge tightens rather than moves, since the taper already ends
+  0.5 mag past threshold.
 - **Scaling luminance and preserving the RGB ratio keeps hue exact** —
   the calibrated Ballesteros/blackbody star colours and the CCM
   reddening ratios survive the operator untouched. ACES/filmic was
