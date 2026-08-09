@@ -2,6 +2,15 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/prime-guard.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Read|Grep|Edit|Write|NotebookEdit",
         "hooks": [
           {
@@ -26,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bd prime --hook-json"
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/prime-guard.sh"
           }
         ]
       }

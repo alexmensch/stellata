@@ -16,6 +16,12 @@ scripts/hooks/
                            this session. Enforces CLAUDE.md § Folder
                            READMEs (the scout pass) as a hard gate.
                            Behaviour pinned by tests/readme-guard.test.ts.
+  prime-guard.sh           SessionStart: persists the full `bd prime`
+                           output and emits a ~460-byte pointer to it.
+                           PreToolUse: blocks every tool call until
+                           that file is Read. Enforces CLAUDE.md
+                           § Session-start hook output. Behaviour
+                           pinned by tests/prime-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
                            without updating its README.md (CLAUDE.md
@@ -74,6 +80,53 @@ harness executing the rule, which Claude cannot bypass without
 fixing it. Same shape as `~/.claude/hooks/worktree-guard.sh` (the
 "every edit must be in a worktree" rule).
 
+## How prime-guard works
+
+`bd prime --hook-json` emits ~24KB of SessionStart context. The host
+inlines a 2KB preview and persists the rest, so the 17 memories sit
+past the cutoff — a session that doesn't read the persisted file runs
+on roughly the first third of the memory list. Shrinking the payload
+doesn't help: the memories alone are 19.6KB, so even
+`bd prime --memories-only` truncates.
+
+prime-guard replaces `bd prime --hook-json` in the SessionStart slot
+and does two jobs, branching on `hook_event_name`:
+
+1. **SessionStart.** Runs `bd prime --full`, writes it to
+   `$STATE_DIR/prime-<session>.md`, drops an `unread-<session>`
+   sentinel, and emits ~460 bytes of `additionalContext` — one
+   unconditional imperative naming the absolute path, with the memory
+   count scraped from the output so the notice states what's being
+   missed. Small enough that no host truncates it, so the surviving
+   text is *only* the instruction.
+2. **PreToolUse** (matcher `*`). While the sentinel exists, every call
+   is denied except a `Read` whose `file_path` is exactly the prime
+   file. That Read removes the sentinel; everything after it passes.
+
+State is keyed on the payload's `session_id`, not `$PPID` the way
+readme-guard is: readme-guard's PPID scoping works because every
+PreToolUse call shares the parent process, but the SessionStart hook
+isn't guaranteed to run under that same parent.
+
+**Fails open.** A `bd prime` that errors or returns nothing leaves no
+sentinel and emits no context — a session with no memories beats a
+session that can't call a tool. `PRIME_GUARD_BD` overrides the binary
+(the test seam).
+
+Re-arming is deliberate: SessionStart fires on compact and resume too,
+and those are exactly the moments the context was just lost.
+
+### Why a gate and not just the CLAUDE.md rule
+
+The global CLAUDE.md already mandates this read in strong language,
+and it was still skipped in every session — the notice arrives *after*
+the user's first message, buried in harness boilerplate (deferred-tool
+names, agent types, skills), where it reads as environment inventory
+rather than an instruction. bd's own line is conditional ("**If** this
+output is truncated by your host…"), and the host's truncation banner
+reads as plumbing metadata. Same conclusion as readme-guard: the
+harness executing the rule beats the model self-checking against it.
+
 ## How commit-sweep-guard works
 
 `PreToolUse` on `Bash`. Filters down to `git commit ...` invocations
@@ -116,7 +169,9 @@ Two paths:
    (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
    For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
    commit message (covers the README check; comment violations still
-   block — fix the comments).
+   block — fix the comments). For `prime-guard`: delete the sentinel
+   — any tool call naming that path is allowed through precisely so
+   the `rm` isn't itself blocked.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
    temporarily move the hook script aside.
