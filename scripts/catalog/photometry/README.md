@@ -62,6 +62,59 @@ V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
 cascade pins `directionVia`. The tier also rides on the record, because it
 answers a question no consumer can answer from the magnitude alone.
 
+## The ci cascade
+
+```
+B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
+  → printed `ci`                      the spine's own cell
+  → intrinsic spectral-class colour   no-Apsis rows only
+  → SOLAR_BV_FALLBACK
+```
+
+`resolveColourIndex` returns the value, the tier, **and** whether the value
+is observed-convention. That last one is not a convenience: build-time
+de-extinction subtracts `A_V / R_V` from an observed B−V and must leave an
+intrinsic one alone, and deciding that at the dust integral means deciding
+it a second time, in a place that no longer knows which tier ran. The two
+measured tiers are observed; the two derived ones are intrinsic.
+`companionCiIsObserved` states the same contract for promoted companions.
+
+The derived tiers are gated on `apsisTeff === null` because the shader is a
+two-tier read — `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so an
+Apsis star never renders its baked `ci`. The measured tiers are ungated:
+storing a measurement costs nothing and the field is read by more than the
+shader.
+
+### Where the colour bound comes from
+
+Table 5.9 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
+this build cannot tell a giant from a dwarf on the no-Apsis population the
+tier serves — `lumClass` is 255 for most of it. So 1.75, not the relation's
+stated 4.0, is what `gaiaBMinusV` gates on.
+
+Measured against the printed cell over the no-Apsis population (both sides
+observed-convention, so the comparison is like-for-like), the published note
+is visible in the data:
+
+| BP−RP | n | p50 | p99 | max |
+|---|---|---|---|---|
+| −0.5 – 0.4 | 22,365 | 0.041 | 0.368 | 2.768 |
+| 0.4 – 0.8 | 15,594 | 0.063 | 0.547 | 1.876 |
+| 0.8 – 1.2 | 3,282 | 0.094 | 0.695 | 1.441 |
+| 1.2 – 1.75 | 1,660 | 0.222 | 0.776 | 2.241 |
+| 1.75 – 2.5 | 503 | 0.209 | 0.951 | 1.385 |
+| 2.5 – 3.0 | 133 | 0.574 | 2.104 | 2.668 |
+| 3.0 – 4.0 | 189 | 1.258 | 2.727 | 3.911 |
+
+Whole accepted range: **p50 0.052, p99 0.513, max 2.768** over 42,901 rows.
+
+**The measured knee is at 2.5, not 1.75** — the published bound is the more
+conservative of the two, and it is the one applied, because a note about
+which luminosity class a fit covers is a statement about validity that a
+disagreement distribution cannot overturn. It costs ~910 no-Apsis rows
+(2% of the population reachable at 4.0), which fall through to the printed
+cell rather than to a derived colour.
+
 ## Which tiers give a system blend — `vTierIsSystemBlend`
 
 A printed tier publishes one magnitude per catalogue entry, and a close pair is
