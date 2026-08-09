@@ -25,6 +25,7 @@ this file carries only the cross-folder policies.
 | [`molecular-clouds/`](molecular-clouds/README.md) | Zucker 2020 / 2021 cloud distances + 3D bounding boxes. |
 | [`local-bubble/`](local-bubble/README.md) | Zucker 2022 Local Bubble inner-surface HEALPix map (dust-wall distance). |
 | [`dust/`](dust/README.md) | Edenhofer 2023 3D dust map (resampled voxel grid + particle field). |
+| [`bc03/`](bc03/README.md) | Bruzual & Charlot 2003 SSP colour / mass-to-light tables (Chabrier IMF). |
 | [`horizons/`](horizons/README.md) | JPL Horizons planet RA/Dec + deep-time vector truth sets for the ephemeris regression corpora. |
 | [`ephemerides/`](ephemerides/README.md) | JPL Horizons osculating-element tables for the nine planets across 1900–2100. |
 | [`probes/`](probes/README.md) | JPL Horizons heliocentric state vectors for the five Sun-escape deep-space probes. |
