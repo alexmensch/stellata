@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
-import { markStatisticEmitter } from '../hdr/statistic/statistic-attachment';
+import { markStatisticEmitter } from '../hdr/attachments/attachment-gate';
 
 // Disc-pass blending state. Applied at material construction and re-applied
 // on chart-mode -> colour-mode swap-back, since chart mode swaps the disc

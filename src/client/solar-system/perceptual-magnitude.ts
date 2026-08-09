@@ -112,7 +112,7 @@ export function hostIrradianceMagnitude(hostAbsmag: number, dHpPc: number): numb
 /**
  * Mean surface brightness of a body's lit disc at full phase, in
  * mag/arcsec² — what the mesh emits through the scene-wide unit
- * (`../hdr/README.md` § Unit).
+ * (`../hdr/emission/README.md` § Unit).
  *
  * Both the body's radius and the viewer distance cancel out of
  * `m_disc + 2.5·log10(Ω_disc)`, leaving host irradiance and geometric

@@ -3,7 +3,13 @@
 // receives as uniforms — see README.md § Density profiles, § Calibration.
 
 import { R0_PC } from '../galactic/galactic-coords';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import {
+  SB_ZERO_POINT,
+  footprintAlong,
+  footprintRadiusPc,
+  lumaNormalisedTint,
+  softenRadius,
+} from '../hdr/emission/emission-pure';
 import { NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 } from './diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
@@ -81,17 +87,22 @@ export const FOREGROUND_DUST_STEPS = 16;
 /** Disc emissivity at the component's RELATIVE weight. `EMISSIVITY_SCALE`
  *  puts it in the shared flux unit and is derived from a march of this
  *  profile, so it cannot be baked in here. */
-export function discDensity(rPc: number, zPc: number): number {
+export function discDensity(
+  rPc: number,
+  zPc: number,
+  footprintPc = 0,
+  zFootprintPc = 0,
+): number {
   return (
     DISC_WEIGHT *
-    Math.exp(-(rPc - R0_PC) / DISC_SCALE_LENGTH_PC) *
-    Math.exp(-Math.abs(zPc) / DISC_SCALE_HEIGHT_PC)
+    Math.exp(-(softenRadius(rPc, footprintPc) - R0_PC) / DISC_SCALE_LENGTH_PC) *
+    Math.exp(-softenRadius(Math.abs(zPc), zFootprintPc) / DISC_SCALE_HEIGHT_PC)
   );
 }
 
-export function bulgeDensity(rPc: number, zPc: number): number {
+export function bulgeDensity(rPc: number, zPc: number, footprintPc = 0): number {
   const zEff = zPc / BULGE_AXIS_RATIO;
-  const rPrime = Math.sqrt(rPc * rPc + zEff * zEff);
+  const rPrime = softenRadius(Math.sqrt(rPc * rPc + zEff * zEff), footprintPc);
   return BULGE_WEIGHT * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
 }
 
@@ -120,7 +131,15 @@ export interface MilkywayComponent {
   readonly name: 'disc' | 'bulge';
   readonly meshScalePc: Vec3;
   readonly colorRgb: Rgb;
-  readonly density: (rPc: number, zPc: number) => number;
+  /** The bulge is a spheroid, so its footprint softening is isotropic and it
+   *  ignores the fourth argument — `stellataSoftenRadius` on an ellipsoidal
+   *  radius is already transverse. */
+  readonly density: (
+    rPc: number,
+    zPc: number,
+    footprintPc?: number,
+    zFootprintPc?: number,
+  ) => number;
 }
 
 export const DISC_COMPONENT: MilkywayComponent = {
@@ -256,6 +275,10 @@ export interface ColumnOptions {
   /** Steps in the foreground pre-march. 0 reproduces the pre-fix shader,
    *  which seeded τ at the mesh boundary and skipped this column. */
   readonly foregroundSteps?: number;
+  /** Turns on the footprint softening the shader always applies. Omit for a
+   *  march with no plate scale — a sightline column is defined without one,
+   *  and from Sol the footprint is metres against a 300 pc scale height. */
+  readonly omegaPxArcsec2?: number;
 }
 
 /**
@@ -280,6 +303,7 @@ export function componentColumnRgb(
     dustEnabled = true,
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
+    omegaPxArcsec2 = 0,
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 
@@ -302,6 +326,8 @@ export function componentColumnRgb(
   const logMin = Math.log(sStart);
   const logStep = (Math.log(sEnd) - logMin) / steps;
   let prevS = sStart;
+  const zFootprintScale =
+    omegaPxArcsec2 > 0 ? footprintAlong(dirUnit, [0, 0, 1]) : 0;
 
   for (let i = 0; i < steps; i++) {
     const sBoundary = Math.exp(logMin + (i + 1) * logStep);
@@ -318,7 +344,13 @@ export function componentColumnRgb(
     if (outside > 0.001) break;
 
     const { rPc, zPc } = cylindrical(p);
-    const density = component.density(rPc, zPc);
+    const footprintPc = omegaPxArcsec2 > 0 ? footprintRadiusPc(sMid, omegaPxArcsec2) : 0;
+    const density = component.density(
+      rPc,
+      zPc,
+      footprintPc,
+      footprintPc * zFootprintScale,
+    );
     const dTau = tauStepRgb(rPc, zPc, dsPc, dustEffective);
 
     for (let k = 0; k < 3; k++) {

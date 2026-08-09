@@ -5,18 +5,19 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { LUMA_WEIGHTS } from './tonemap-pure';
+import { LUMA_WEIGHTS } from '../tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
+  footprintRadiusPc,
   pxPerRadianFromSolidAngle,
 } from './emission-pure';
-import './hdr-pipeline';
+import '../hdr-pipeline';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
-const tonemapChunk = read('./tonemap.glsl');
+const tonemapChunk = read('../tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
 
@@ -72,17 +73,37 @@ describe('shared chunk constants', () => {
     expect(Number.isFinite(extendedThresholdSbFromSolidAngle(0, 7.8))).toBe(true);
   });
 
+  // How far a raymarch step smooths its profile, and therefore whether the
+  // display convolution averages a resolved field or an aliased cusp
+  // (summation/README.md § Footprint). Both the √12 and the arcsec
+  // conversion are GLSL literals; too small leaves the cusp, too large dims
+  // the core, and neither failure mode stops the shader compiling.
+  it('emission.glsl derives the same footprint radius as emission-pure does', () => {
+    const sqrt12 = emissionChunk.match(/const float STELLATA_SQRT12 = ([\d.]+);/);
+    const arcsec = emissionChunk.match(/const float STELLATA_ARCSEC_TO_RAD = ([\d.e-]+);/);
+    expect(sqrt12).not.toBeNull();
+    expect(arcsec).not.toBeNull();
+    expect(Number(sqrt12![1])).toBeCloseTo(Math.sqrt(12), 12);
+    for (const omega of [4, 4_000, 40_000]) {
+      for (const distancePc of [1, 785_000, 2_000_000]) {
+        const pxPerRadian = 1 / (Number(arcsec![1]) * Math.sqrt(omega));
+        const shader = distancePc / (pxPerRadian * Number(sqrt12![1]));
+        expect(shader).toBeCloseTo(footprintRadiusPc(distancePc, omega), 6);
+      }
+    }
+  });
+
   // A stage that pastes the unit already has ln(10) and π in scope, so a
   // local copy is both redundant and free to drift to fewer digits — which
   // is what two of these had done. Redeclaring one is legal GLSL and
   // silently shadows nothing, so only this catches it.
   it('no consumer of the unit redeclares a constant it already has', () => {
     for (const stage of [
-      '../star-pipeline/star.vert.glsl',
-      '../solar-system/planets/glare/planet.vert.glsl',
-      '../milkyway/milkyway.frag.glsl',
-      '../local-group/local-group-emission.frag.glsl',
-      '../local-group/local-group-emission.vert.glsl',
+      '../../star-pipeline/star.vert.glsl',
+      '../../solar-system/planets/glare/planet.vert.glsl',
+      '../../milkyway/milkyway.frag.glsl',
+      '../../local-group/local-group-emission.frag.glsl',
+      '../../local-group/local-group-emission.vert.glsl',
     ]) {
       const src = read(stage);
       // Directly, or through the composite that pulls the unit in.
@@ -130,11 +151,11 @@ describe('include guards', () => {
   });
 
   it('has live consumers on both the composite and the bare unit', () => {
-    expect(read('../milkyway/milkyway.frag.glsl'))
+    expect(read('../../milkyway/milkyway.frag.glsl'))
       .toContain('#include <stellata_extended_emitter>');
-    expect(read('../local-group/local-group-emission.frag.glsl'))
+    expect(read('../../local-group/local-group-emission.frag.glsl'))
       .toContain('#include <stellata_extended_emitter>');
-    expect(read('../local-group/local-group-emission.vert.glsl'))
+    expect(read('../../local-group/local-group-emission.vert.glsl'))
       .toContain('#include <stellata_hdr_emission>');
   });
 });
@@ -152,9 +173,9 @@ describe('chunk resolution', () => {
     });
 
   const STAGES = [
-    '../milkyway/milkyway.frag.glsl',
-    '../local-group/local-group-emission.frag.glsl',
-    '../local-group/local-group-emission.vert.glsl',
+    '../../milkyway/milkyway.frag.glsl',
+    '../../local-group/local-group-emission.frag.glsl',
+    '../../local-group/local-group-emission.vert.glsl',
   ];
 
   it('every stellata include on an extended-source stage resolves', () => {

@@ -103,7 +103,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning every pass. The headline's source, and the only row that prices anything. |
 | `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
 | `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
-| `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope (`../hdr/README.md`). Same caveat. |
+| `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope, **including** the rod-summation downsample it runs first (`../hdr/summation/README.md`). Same caveat. |
 | `gpu.reduction`         | timer query                      | The chain of ever-smaller weighted-mean draws down to one texel. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |

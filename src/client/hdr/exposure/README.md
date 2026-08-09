@@ -68,7 +68,7 @@ function of filter state alone.
 | `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, the MW chart isobar |
 | `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, every CPU "is it drawn?" mirror (`drawCutoffMag`) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
-| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | the MW band's display gain and its chart isobar |
+| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain, and the chart isobar |
 
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
@@ -76,7 +76,8 @@ the point.** It is the offset between two *thresholds* — the point-source
 `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
-`../README.md` § Extended sources.
+`../emission/README.md` § Extended sources; the convolution it gains into is
+`../summation/README.md`.
 
 **There is no `uThresholdMag` analogue on the extended side.** The
 point-source pair ships an anchor *and* a trimmed edge; the extended side
@@ -146,7 +147,7 @@ kernel preserves *peak*, not energy, so summing what attachment 0 holds
 would over-count a threshold star's flux by 1.96x and a knee-saturated
 bright one by 28.9x. R divides that kernel by its own area integral;
 `../../star-pipeline/README.md` § Star intensity profile owns the integral
-and `../README.md` § Statistic attachment owns the texel rule.
+and `../attachments/README.md` owns the texel rule.
 
 **Occlusion, frame clipping and the diffuse field are all automatic now.**
 A surface that overwrote a star's pixels overwrote its statistic texels;

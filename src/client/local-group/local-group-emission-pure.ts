@@ -2,7 +2,13 @@
 // decomposition, instance packing, flux ↔ magnitude inverse, and the
 // CPU raymarch mirror — keep in lockstep with the .frag.glsl.
 
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import {
+  SB_ZERO_POINT,
+  footprintAlong,
+  footprintRadiusPc,
+  lumaNormalisedTint,
+  softenRadius,
+} from '../hdr/emission/emission-pure';
 import {
   BULGE_COLOR_RGB as MW_BULGE_COLOR_RGB,
   DISC_COLOR_RGB as MW_DISC_COLOR_RGB,
@@ -265,17 +271,29 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
 
 /** Density at a unit-ball point for one emission component — the CPU
  *  twin of the shader's densityAt. pLocal is in the component's
- *  unit-ball frame. */
+ *  unit-ball frame.
+ *
+ *  `footprintPc` smooths the profile over one pixel's transverse footprint
+ *  (`../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
+ *  share along the disc normal, which the caller projects. Both default to 0
+ *  — the shipped shader always passes a footprint, but a flux integral over
+ *  solid angle has no plate scale to derive one from. */
 export function cpuDensityAt(
   pLocal: [number, number, number],
   comp: EmissionComponent,
+  footprintPc = 0,
+  zFootprintPc = 0,
 ): number {
   if (comp.family === 'disc') {
-    const R = Math.hypot(pLocal[0] * comp.axesPc[0], pLocal[1] * comp.axesPc[1]);
-    const z = pLocal[2] * comp.axesPc[2];
-    return comp.density0 * Math.exp(-R / comp.rdPc - Math.abs(z) / comp.zdPc);
+    const R = softenRadius(
+      Math.hypot(pLocal[0] * comp.axesPc[0], pLocal[1] * comp.axesPc[1]),
+      footprintPc,
+    );
+    const z = softenRadius(Math.abs(pLocal[2] * comp.axesPc[2]), zFootprintPc);
+    return comp.density0 * Math.exp(-R / comp.rdPc - z / comp.zdPc);
   }
-  const u = Math.hypot(pLocal[0], pLocal[1], pLocal[2]) * comp.uMax;
+  const rPc = Math.hypot(pLocal[0], pLocal[1], pLocal[2]) * comp.axesPc[0];
+  const u = (softenRadius(rPc, footprintPc) * comp.uMax) / comp.axesPc[0];
   return comp.density0 * cpuSersicNu(u, comp.invN, comp.bn, comp.pn);
 }
 
@@ -285,13 +303,18 @@ export function cpuDensityAt(
  *  column units. Returns 0 when the ray misses. `worldPerT` is the
  *  world-pc length of one t-unit (|fragWorld − cameraWorld|).
  *  Samples sit at step midpoints; the shader jitters them per-pixel
- *  (uniform over the step, same expectation). */
+ *  (uniform over the step, same expectation).
+ *
+ *  `omegaPxArcsec2` turns on the footprint softening the shader always
+ *  applies. Omit it for a flux integral over solid angle, which has no plate
+ *  scale — every pre-existing calibration pin marches that way. */
 export function cpuRaymarchColumn(
   camLocal: [number, number, number],
   fragLocal: [number, number, number],
   worldPerT: number,
   comp: EmissionComponent,
   steps: number = emissionStepsFor(comp),
+  omegaPxArcsec2 = 0,
 ): number {
   const dir: [number, number, number] = [
     fragLocal[0] - camLocal[0],
@@ -312,6 +335,11 @@ export function cpuRaymarchColumn(
   const logMin = Math.log(sStart);
   const logStep = (Math.log(sEnd) - logMin) / steps;
 
+  const zFootprintScale =
+    comp.family === 'disc' && omegaPxArcsec2 > 0
+      ? footprintAlong(unitPhysDir(dir, comp.axesPc), [0, 0, 1])
+      : 0;
+
   let accum = 0;
   let prevS = sStart;
   for (let i = 0; i < steps; i++) {
@@ -326,9 +354,26 @@ export function cpuRaymarchColumn(
       camLocal[2] + t * dir[2],
     ];
     if (p[0] * p[0] + p[1] * p[1] + p[2] * p[2] > 1.001) break;
-    accum += cpuDensityAt(p, comp) * dsPc;
+    const footprintPc =
+      omegaPxArcsec2 > 0 ? footprintRadiusPc(sMid, omegaPxArcsec2) : 0;
+    accum += cpuDensityAt(p, comp, footprintPc, footprintPc * zFootprintScale) * dsPc;
   }
   return accum;
+}
+
+/** A unit-ball direction taken to a unit vector in the component's physical
+ *  frame, which is the frame the footprint's axis projection lives in. */
+function unitPhysDir(
+  dirLocal: readonly [number, number, number],
+  axesPc: readonly [number, number, number],
+): [number, number, number] {
+  const v: [number, number, number] = [
+    dirLocal[0] * axesPc[0],
+    dirLocal[1] * axesPc[1],
+    dirLocal[2] * axesPc[2],
+  ];
+  const len = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / len, v[1] / len, v[2] / len];
 }
 
 /** Magnitude of an integrated flux number, and its inverse. `zeroPoint`

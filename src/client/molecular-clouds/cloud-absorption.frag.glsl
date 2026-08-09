@@ -48,7 +48,12 @@ uniform vec2 uViewport;
 in vec3 vPosUnit;
 in vec3 vCamUnit;
 
-out vec4 outColor;
+layout(location = 0) out vec4 outColor;
+// Attachment 2 carries the diffuse emitters until the resolve convolves it,
+// and one blend equation covers every attachment — so the same alpha-only
+// texel written here is what dims the band and the LG glow
+// (../hdr/summation/README.md § Everything that dims the field).
+layout(location = 2) out vec4 outDiffuse;
 
 // Interleaved gradient noise of gl_FragCoord — static per pixel, never
 // reseeded per frame (§ 9.1 rules 3–4: animated jitter shimmers).
@@ -111,4 +116,5 @@ void main() {
   // ±0.5-LSB output dither (§ 9.1 rule 4).
   float dith = (ign(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
   outColor = vec4(vec3(0.0), clamp(alpha + dith, 0.0, ALPHA_CAP));
+  outDiffuse = outColor;
 }

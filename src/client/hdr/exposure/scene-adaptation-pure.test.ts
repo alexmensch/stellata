@@ -7,7 +7,7 @@ import {
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../emission-pure';
+} from '../emission/emission-pure';
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
 import {
   SOL_GALACTOCENTRIC_PC,

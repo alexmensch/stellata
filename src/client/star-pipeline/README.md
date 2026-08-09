@@ -75,7 +75,7 @@ subfolders.
 
 ## Physical-luminance emission
 
-Stars emit into the scene-wide HDR unit (`../hdr/README.md` § Unit).
+Stars emit into the scene-wide HDR unit (`../hdr/emission/README.md` § Unit).
 Brightness is the **peak** of the profile, `vPeakL`, computed per
 instance in the vertex shader from the star's apparent magnitude:
 
@@ -91,7 +91,7 @@ stops being a calibration knob**, trading only legibility against how
 crowded a dense field looks.
 
 The radius argument is the **unclamped** `physSize` in **CSS** pixels;
-`../hdr/README.md` § Unit has why, and it applies whichever term wins
+`../hdr/emission/README.md` § Unit has why, and it applies whichever term wins
 `max(appSize, physSize)` so nothing pops at the disc/glow split.
 
 Two consequences specific to this pipeline:
@@ -117,7 +117,7 @@ K-exaggerated footprint over-counts a star's frame flux by design
 (`docs/science-hdr-pipeline.md` § 1, § 8). The exposure statistic needs
 that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
-`perceptual-disc.glsl`, and `../hdr/statistic/README.md` for what reads it.
+`perceptual-disc.glsl`, and `../hdr/attachments/README.md` for what reads it.
 
 ## Colour routing
 

@@ -43,13 +43,14 @@ import {
   extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../hdr/emission-pure';
+} from '../hdr/emission/emission-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
 } from '../hdr/exposure/exposure-epoch';
 import { L_CAP } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import {
   L_THRESH,
   relativeLuminance,
@@ -400,7 +401,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // does write cannot provoke an adaptation cut. It cannot, by 10 stops —
   // and the margin is measured on the Ω_px value the statistic actually
   // carries, not on the 12x-larger level the band displays at
-  // (statistic/README.md § The unit).
+  // (attachments/README.md § The unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,
@@ -409,6 +410,33 @@ describe('MilkyWay surface-brightness calibration', () => {
     );
     expect(statisticL).toBeCloseTo(1.657e-3, 6);
     expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.1, 1);
+  });
+
+  // The footprint softening exists for the Local Group's Sérsic cusp and for
+  // the band seen from outside; from Sol it must be inert, because the table
+  // above is the shipped look. The camera sits INSIDE the disc, so the
+  // footprint is metres over the near half of the march and a few parsecs at
+  // the far rim — against a 300 pc scale height and a 3 kpc scale length. The
+  // worst residual is 0.0029 mag, so it cannot move a row pinned to 0.01.
+  it('leaves every Sol sightline where it was, at both FOV extremes', () => {
+    let worst = 0;
+    for (const fovDeg of [FOV_MIN_DEG, FOV_MAX_DEG]) {
+      const omegaPxArcsec2 = pixelSolidAngleArcsec2(
+        angularToPx(900, (fovDeg * Math.PI) / 180),
+      );
+      for (const [lDeg, bDeg] of [[0, 5], [0, 0], [180, 0], [0, 30], [0, 90]]) {
+        const softened = sightlineSurfaceBrightness(
+          SB_ZERO_POINT,
+          SOL_GALACTOCENTRIC_PC,
+          galacticDirection(lDeg, bDeg),
+          { omegaPxArcsec2 },
+        );
+        worst = Math.max(worst, Math.abs(softened - sbAt(lDeg, bDeg)));
+      }
+    }
+    // Pinned rather than bounded: the figure the READMEs quote is this one,
+    // and a two-place tolerance would have let 0.005 through.
+    expect(worst).toBeCloseTo(0.00285, 5);
   });
 
   // What the concession is worth at the reference viewport, stated as the

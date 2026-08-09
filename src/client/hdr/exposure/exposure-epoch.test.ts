@@ -11,7 +11,7 @@ import {
   steppedEv,
   thresholdMagFor,
 } from './exposure-epoch';
-import { luminanceForMagnitude } from '../emission-pure';
+import { luminanceForMagnitude } from '../emission/emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 import {
   DEFAULT_FILTER,

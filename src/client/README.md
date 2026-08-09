@@ -315,7 +315,7 @@ exposure statistic's mip reduction, which binds its own targets, writes no
 pixel the user sees, and is read back a frame later
 ([hdr/exposure/reduction/](hdr/exposure/reduction/README.md)). Every row
 below that emits physical light also writes the target's second,
-statistic attachment ([hdr/statistic/](hdr/statistic/README.md)); every
+statistic attachment ([hdr/attachments/](hdr/attachments/README.md)); every
 chrome row is gated out of it.
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints

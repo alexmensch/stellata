@@ -116,7 +116,7 @@ option and spread in by reference. `HdrPipeline` rewrites `uHdrTarget`
 on every seam / resolve / chart-mode change, so copying the values
 instead of sharing the objects would leave the star passes tone-mapping
 inline into an already-tone-mapped target. Pinned in the test; see
-`../hdr/README.md` § Unit.
+`../hdr/emission/README.md` § Unit.
 
 Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 `uPinFocusToCenter`, …) — the map is the union of what its consumers

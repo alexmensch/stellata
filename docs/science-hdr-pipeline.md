@@ -198,55 +198,112 @@ unit already branches on (`stellataPointSourcePeak` vs
 `stellataSurfaceBrightnessLuminance`) — and it moves a *threshold anchor*,
 not `uExposure` and not the operator, both of which stay global.
 
-**The limit, stated rather than papered over: uniformity is a
-per-FRAGMENT property and this ships it as a per-LAYER one.** The
-substitution is the flux in the summation area only for a source
-**uniform across it**, and the band from Sol is the only current emitter
-that qualifies everywhere.
+**Uniformity is a per-FRAGMENT property, so the substitution is a
+convolution rather than a gain.** `10^(−0.4·S)·Ω_sum` is the flux in the
+summation area only for a source **uniform across it**. The band from Sol is
+the only emitter that qualifies everywhere, so what ships is
+*average-then-gain*: the diffuse emitters write their `Ω_sum`-gained value to
+its own render-target attachment and the resolve takes the mean over the
+patch before compositing. Averaging first makes the assumption true by
+construction, so **both volumetric emitters take the same anchor**, both are
+FOV-invariant, and the resolution loss the eye applies comes along —
+naked-eye M31 is a smudge, which a gain cannot reproduce.
+`src/client/hdr/summation/README.md` is the implementation.
 
-- **The Local Group layer opts out** and keeps `Ω_px`. Reusing the band's
-  gain would over-lift M31's nucleus by **3.95 mag** against the operation
-  that would be correct — average the flux over the patch first, then gain
-  by the patch area, which is what `10^(−0.4·S̄)·Ω_sum` *is*. The
-  flux-conservation form of the same statement: at its central surface
-  brightness (15.30) one patch would claim 1.10 mag, **2.34 mag more than
-  the whole galaxy's 3.44**.
-- **What the opt-out costs, and it is not small.** The over-lift is
-  confined to a **3.6′ crossover radius**. Outside it the profile is
-  uniform over a 13.0′ patch to better than 0.02 mag, the ideal collapses
-  onto the band's own gain, and `Ω_px` therefore under-lifts by the full
-  **2.695 mag** the band gained — over most of the object a viewer sees.
-  Both errors and the crossover are pinned in
-  `local-group-emission-calibration.test.ts`. The opt-out is the better of
-  the two available answers, not a correct one: a 4-mag white core is worse
-  than a dim envelope.
-- **Visible from Sol at the default view, not only from outside.** M31 sits
-  at b = −21.6°, where the band's own diffuse component is 24.20
-  mag/arcsec² and now renders 8.6/255 — while an M31 isophote at that same
-  surface brightness renders 0.7/255, a factor of 12 the wrong way, with
-  the two overlapping on screen. Past ~1.5 Mpc the whole Galaxy
-  additionally falls under the summation area. The FOV response splits too:
-  the band holds its level while every LG object still dims quadratically.
-- **The fix is one operation: convolve over the summation kernel, then
-  gain.** Blurring the emission first makes the uniformity assumption true
-  by construction, so both layers take the same anchor, both become
-  FOV-invariant, and the resolution loss the eye actually applies comes
-  along. It belongs on the emission side upstream of the operator — the
-  veiling-glare seam (§ 3.2) — and needs a pass of its own, so it is its
-  own bead (`stellata-xypg.35`).
+- **The ideal has no free parameter**, which is what makes every figure below
+  an absolute error rather than a comparison with previous behaviour:
+  `10^(−0.4·S̄)·Ω_sum` over the patch *is* the patch flux, so the reference
+  needs only an integral of the published profile.
+- **What a per-layer answer cost, and why neither choice was right.** Reusing
+  the band's gain on M31 over-lifts the nucleus **3.95 mag**; the pixel solid
+  angle under-lifts the envelope by the full **2.695 mag** the band gained,
+  and the crossover between them sits at **3.6′** — inside which the profile
+  is not uniform over 13.0′, outside which it is, to better than 0.02 mag.
+  The flux-conservation form of the first: at its central surface brightness
+  (15.30) one patch would claim 1.10 mag, **2.34 mag more than the whole
+  galaxy's 3.44**. All of it pinned in
+  `local-group-emission-calibration.test.ts`.
+- **The seam was visible from Sol at the default view, not only from
+  outside.** M31 sits at b = −21.6°, where the band's own diffuse component
+  is 24.20 mag/arcsec² and renders 8.6/255 — while an M31 isophote at that
+  same surface brightness rendered 0.7/255, a factor of 12 the wrong way,
+  with the two overlapping on screen. The FOV response split too: the band
+  held its level while every LG object dimmed quadratically.
+- **A convolution can only average what the rasteriser sampled**, and a
+  raymarch point-samples its profile at the pixel centre — so an aliased
+  Sérsic cusp survives it intact. Both emitters therefore smooth their
+  profile radius over one pixel's transverse footprint, `ε = s·d/√12`,
+  matched on the second moment of a square pixel. No free parameter there
+  either, and it tracks the exact area average to 0.1 mag across the whole
+  FOV range.
+- **What it delivers**, against that ideal: M31's nucleus **0.03–0.18 mag
+  faint** at every reachable FOV (positive throughout — the core is never
+  brighter than ideal), the smooth envelope inside **0.08 mag**, and the
+  band's shipped display table from Sol unmoved, because a normalised kernel
+  is an identity on a uniform field and the footprint is metres against a
+  300 pc scale height from inside the disc.
 - *Rejected: a per-fragment `fwidth(S)` cap on the effective summation
-  area*, which was the cheap alternative to that pass. The over-count is
+  area*, which was the cheap alternative to the pass. The over-count is
   driven by **curvature** and `fwidth` is a first derivative, so at the
   nucleus — profile flat, error worst — the cap does not bind at all and
   leaves the full 3.95 mag. Everywhere else it over-corrects, landing
   1.75–2.79 mag *fainter* than ideal across 0.5–6.5′, worse than not
-  capping. Measured and pinned alongside the two errors above.
+  capping. Measured and pinned alongside the errors above.
+- *Rejected: a separable Gaussian of matched σ.* The kernel is Ricco's flat
+  patch, and a Gaussian is a different operator rather than a cheap
+  approximation to it — 0.43 mag off at 10° FOV, and still 0.30 mag off when
+  the patch spans 97 px, so it does not converge as the plate scale
+  resolves. That is what forces a non-separable kernel, and therefore the
+  resolution-adaptive downsample that keeps its tap count bounded.
+- **The convolution is not spatially-varying tone mapping** (§ 3.2 rejects
+  that by rule). It redistributes light on the **emission** side, upstream of
+  a global operator, exactly as veiling glare will; the operator still reads
+  one pixel's luminance and one scene-wide scalar.
+- **Off-target there is no attachment and no pass**, so the anchor goes away
+  for both emitters rather than one keeping a private fallback — the
+  concession *is* the pass. That is the float-RT fallback (§ 6) and the
+  chart mode, where the band returns to its per-pixel level.
+- **Everything that dims the emission has to move with it.** Giving the
+  diffuse emitters their own attachment takes them out of the chain that
+  anything drawn in front of them composites against, and the depth-test
+  argument for staying in one framebuffer says nothing about **blend** order.
+  The rule the enumeration has to be derived from, rather than a list of the
+  layers that came to mind: **a draw dims the diffuse field iff its blend's
+  destination factor is not `One`**, so every such draw ordered after the
+  emitters opens attachment 2 and writes black at its own alpha. Depth cannot
+  stand in for it — the emitters draw first and the resolve adds attachment 2
+  unconditionally, so an opaque body drawn later cannot subtract itself by
+  writing depth. Additive and max blends are exempt: neither attenuates.
+  Three consumers, and each is part of this design rather than a detail of it:
+  - *Molecular-cloud absorption* is a multiply drawn after the band
+    (`renderOrder` −2 against −3), so it opens attachment 2 as well and writes
+    the same alpha-only texel to both — one blend equation covers every
+    attachment, so it is a gate flag, not a second draw. Extinction therefore
+    lands **before** the convolution, which is the physical order: light is
+    absorbed in interstellar space, and the eye sums what survives. It is the
+    only *interstellar* absorber in the scene; a future one takes the same mark
+    (`src/client/hdr/attachments/README.md` § The gate).
+  - *Every close-range surface in front of the band* — the planet mesh, the
+    ring annulus, the atmosphere shell, all alpha-composited in the local
+    depth pass. They emit and attenuate, so they open all three attachments.
+    Their own occlusion contracts already said so and were silently void
+    without this: an atmosphere shell is premultiplied-over specifically so a
+    dense limb chord that scatters no light still extincts what is behind it,
+    and a ring annulus dims a source behind it because no z-test could. Both
+    claims are about the whole background, and the band had left it.
+  - *The canvas alpha.* The resolve carried it through from attachment 0,
+    which a diffuse fragment now leaves at the clear's zero while its rgb is
+    the entire band. A premultiplied canvas composites `rgb > a` as nothing,
+    so the band and M31 rendered black. The resolve is the whole frame and
+    owns that channel: it writes alpha 1.
 
 **The concession is absent from the statistic.** Attachment 1 keeps
-`Ω_px` in both channels: the adaptation model reads retinal illuminance,
-and inflating a band pixel 12× there would let the display concession
-drive the exposure cut. `src/client/hdr/statistic/README.md` carries the
-headroom measurement.
+`Ω_px` in both channels, and unconvolved: the adaptation model reads retinal
+illuminance, and inflating a band pixel 12× there would let the display
+concession drive the exposure cut. A normalised convolution conserves total
+flux anyway, so the mean the reduction takes would barely move — the reason
+to keep it out is the unit, not the size of the error.
+`src/client/hdr/attachments/README.md` carries the headroom measurement.
 
 ### Colour — linear chromaticity, luminance-normalized
 
@@ -340,9 +397,9 @@ resolve to the same value either way. This has always been true of the
 Milky Way band, whose disc and bulge proxies overlap toward the Galactic
 centre, and of M31's two components — but § 1's summation gain raised the
 band's per-fragment `L` about 12×, which moves those fragments to a
-steeper part of the curve and widens the gap. It is a property of the
-`setHdrEnabled(false)` A/B and the no-float-RT fallback, not of the
-shipped path, where the operator runs once at the resolve.
+steeper part of the curve and widens the gap. It is a property of chart mode
+and the no-float-RT fallback, not of the shipped path, where the operator
+runs once at the resolve.
 
 ## 3. Exposure model — instrument, adaptation, and the EV trim
 
@@ -467,7 +524,7 @@ Ring annuli, the skylight term and every future emitter had the same hole.
 The frame already contains all of it. Mechanism, units, latency and the
 clamp argument are `src/client/hdr/exposure/reduction/README.md`; what
 writes the measured attachment, and why the display target cannot be
-measured directly, is `src/client/hdr/statistic/README.md`. Four
+measured directly, is `src/client/hdr/attachments/README.md`. Four
 properties of the statistic itself:
 
 - **The eclipse dim needs no separate slot.** It is light the body never
@@ -649,7 +706,7 @@ display target:
 So attachment 1 is RG16F, written by physical emitters only — flux-correct
 luminance in R for the mean, peak-correct in G for the max — and gated per
 draw so chrome is excluded by construction rather than by patching every
-chrome call site. `src/client/hdr/statistic/README.md` is the contract.
+chrome call site. `src/client/hdr/attachments/README.md` is the contract.
 
 **The diffuse-field constant retires with the walk.** Its two rows were
 the frame's share of the threshold-star population and the Milky Way band,
@@ -737,7 +794,10 @@ every cinematic effect walks through:
   cannot express. Standard model: the Vos & van den Berg glare-spread
   function (CIE 135/1, valid 0.1°–100°); the simple form is
   Stiles–Holladay, `L_veil ≈ 10·E/θ²` with θ in degrees. Deferred to
-  its own bead.
+  its own bead, but the seam it needs is now built and load-bearing: rod
+  summation convolves the diffuse attachment upstream of the operator
+  (§ 1, *Extended sources*), and a glare kernel is the same pass over a
+  different radius.
 
 **Apply compensation at emission, never at the resolve.** `uExposure`
 already multiplies at emission and `LUMA_CEIL` clamps there, so a lower
@@ -1074,10 +1134,20 @@ Calibration is identical (same `L`, same operator, same exposure); what
 degrades is compositing: additive accumulation happens on tone-mapped
 values, so dense star fields and the MW band over-brighten slightly
 where sources overlap, and per-channel-max discs blend post-curve.
-Accepted — the fallback population is ~zero on real hardware, and the
-result is approximately right rather than differently-calibrated.
-A `stellata.hdr.setEnabled(false)` dev switch parks the renderer on the
-fallback path for A/B, mirroring `setExtinctionPrepassEnabled`.
+Accepted — the fallback population is ~zero on real hardware, and for a
+point source the result is approximately right rather than
+differently-calibrated.
+
+**§ 1's convolution ended that symmetry for diffuse sources, and took the
+dev switch with it.** Off-target there is no attachment 2 and no pass, so
+both volumetric emitters lose the extended-source anchor and read several
+magnitudes faint. A `stellata.hdr.setEnabled(false)` switch used to park the
+whole frame here for A/B, mirroring `setExtinctionPrepassEnabled`; it is
+**retired**, because a path that changes the calibration is not a
+compositing comparison, and shipping it as a setting invited release notes
+describing a mis-calibrated scene as what older hardware gets. What remains
+is a hardware verdict (`supported`) and chart mode, neither of which anyone
+selects.
 
 The fallback is why the operator must live in the shared chunk from H2
 day one — the fullscreen pass and the inline path can never drift.
@@ -1106,18 +1176,21 @@ day one — the fullscreen pass and the inline path can never drift.
   `RawShaderMaterial` and the blackbody LUT loads `NoColorSpace`), so
   today's authored values are already display-encoded and the pass's
   encode re-encodes them. The two effects are large and opposed.
-- **The seam shipped dormant through H3–H5 and is now live.**
-  `HDR_DEFAULT_ENABLED` (in `src/client/hdr/hdr-pipeline.ts`) was false
-  while emitters were still on their old encodings — enabling it earlier
-  would only have traded a correct-looking scene for a mis-calibrated
-  one — and H5 flipped it with the last conversion. The render target
-  allocates lazily, which is what made the dormant period cost no VRAM
-  and still serves `hdr.setEnabled(false)` and chart mode.
-  **Consequence that outlives the flip:** with the seam off, an emitter's
-  physical luminance reaches the canvas with no operator, so the inline
-  `stellata_tonemap` fallback (§ 6) is not exotic-hardware insurance. It
-  was the default path throughout H3–H5 and remains the A/B and the
-  no-float-RT path, so every emitter keeps both paths working.
+- **The seam shipped dormant through H3–H5, went live, and now has no
+  switch at all.** `HDR_DEFAULT_ENABLED` was false while emitters were
+  still on their old encodings — enabling it earlier would only have traded
+  a correct-looking scene for a mis-calibrated one — and H5 flipped it with
+  the last conversion. The constant and its setter are since **removed**
+  (§ 6): once the diffuse convolution made the off-target path
+  differently-calibrated rather than approximately right, leaving a way to
+  select it was leaving a way to ship a wrong scene. `wantsTarget()` is
+  `supported && !chart`. The render target still allocates lazily, which is
+  what made the dormant period cost no VRAM and still serves chart mode and
+  an unsupported context.
+  **Consequence that outlives all of it:** the inline `stellata_tonemap`
+  fallback (§ 6) cannot be deleted, because **chart mode** runs on it. It
+  was the default path throughout H3–H5 and is still the no-float-RT path,
+  so every emitter keeps both paths compiling.
   The one emitter still outside the scale is the shelved Local Group
   emission pass (stellata-gxx.8) — convert before un-shelving.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and

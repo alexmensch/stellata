@@ -56,7 +56,7 @@ import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './glare/planet.vert.glsl?raw';
 import planetFrag from './glare/planet.frag.glsl?raw';
-import { markStatisticEmitter } from '../../hdr/statistic/statistic-attachment';
+import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 
 /** Screen separation below which a body reads as one point with its
  *  parent (host star / parent planet). Deliberately looser than the

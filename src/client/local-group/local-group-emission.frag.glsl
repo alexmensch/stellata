@@ -30,9 +30,13 @@ flat in float vUMax;
 
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec4 outStatistic;
+// Attachment 2 — the diffuse emitters' own, convolved at the resolve
+// (../hdr/summation/README.md).
+layout(location = 2) out vec4 outDiffuse;
 
 uniform float uExposure;
 uniform float uOmegaPxArcsec2;
+uniform float uOmegaSummationArcsec2;
 uniform float uHdrTarget;
 uniform float uWhitePoint;
 uniform float uHighlightDesat;
@@ -42,9 +46,8 @@ uniform float uHighlightDesat;
 const int   STEPS = EMISSION_STEPS;
 const float S_MIN_PC = 0.1;
 const float U_FLOOR = 1e-4;
-// Mirrors SB_ZERO_POINT (../hdr/emission-pure.ts) — a column is flux per
-// steradian, so this is
-// just the solid angle of one arcsec².
+// Mirrors SB_ZERO_POINT (../hdr/emission/emission-pure.ts) — a column is
+// flux per steradian, so this is just the solid angle of one arcsec².
 const float SB_ZERO_POINT = 26.5721256659;
 
 float sersicNu(float u, float invN, float bn, float pn) {
@@ -52,15 +55,23 @@ float sersicNu(float u, float invN, float bn, float pn) {
   return pow(uc, -pn) * exp(-bn * pow(uc, invN));
 }
 
-float densityAt(vec3 pLocal) {
+/** `footprintPc` smooths the profile over one pixel's transverse footprint
+ *  (../hdr/emission/README.md § Footprint). `zFootprintPc` is its share
+ *  along the disc normal, which the caller has already projected — a face-on
+ *  disc gets none, or the softening would eat the vertical column instead of
+ *  averaging it. */
+float densityAt(vec3 pLocal, float footprintPc, float zFootprintPc) {
 #ifdef FAMILY_DISC
   vec3 phys = pLocal * vAxes;
-  float R = length(phys.xy);
-  return vDisc.x * exp(-R * vDisc.y - abs(phys.z) * vDisc.z);
+  float R = stellataSoftenRadius(length(phys.xy), footprintPc);
+  float z = stellataSoftenRadius(abs(phys.z), zFootprintPc);
+  return vDisc.x * exp(-R * vDisc.y - z * vDisc.z);
 #else
   // Spheroid mesh axes are uMax × R_e, so the ellipsoidal radius in
-  // R_e units is just uMax × the unit-ball radius.
-  float u = length(pLocal) * vUMax;
+  // R_e units is just uMax × the unit-ball radius, and the footprint
+  // converts with the same R_e = vAxes.x / vUMax.
+  float u = stellataSoftenRadius(length(pLocal) * vAxes.x, footprintPc)
+          * vUMax / vAxes.x;
   return vSersic.x * sersicNu(u, vSersic.y, vSersic.z, vSersic.w);
 #endif
 }
@@ -74,12 +85,12 @@ void main() {
   float c = dot(vCamLocal, vCamLocal) - 1.0;
   float disc = b * b - a * c;
   if (disc < 0.0) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
   float tEnter = max((-b - sqrt(disc)) / a, 0.0);
   if (tEnter >= 1.0) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
 
@@ -87,7 +98,7 @@ void main() {
   float sStart = max(tEnter * worldPerT, S_MIN_PC);
   float sEnd = worldPerT;
   if (sStart >= sEnd) {
-    stellataEmitNothing(fragColor, outStatistic);
+    stellataEmitNothing(fragColor, outStatistic, outDiffuse);
     return;
   }
   float logMin = log(sStart);
@@ -97,6 +108,13 @@ void main() {
   // midpoint sampling of the thin-disc vertical profile bands on
   // grazing rays; jitter trades the bands for fine noise.
   float jitter = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+
+#ifdef FAMILY_DISC
+  float zFootprintScale =
+    stellataFootprintAlong(normalize(dirLocal * vAxes), vec3(0.0, 0.0, 1.0));
+#else
+  float zFootprintScale = 0.0;
+#endif
 
   float accum = 0.0;
   float prevS = sStart;
@@ -108,20 +126,20 @@ void main() {
     float t = sSample / worldPerT;
     vec3 pLocal = vCamLocal + t * dirLocal;
     if (dot(pLocal, pLocal) > 1.001) break;
-    accum += densityAt(pLocal) * dsPc;
+    float footprintPc = stellataFootprintPc(sSample, uOmegaPxArcsec2);
+    accum += densityAt(pLocal, footprintPc, footprintPc * zFootprintScale) * dsPc;
   }
 
   // accum is Σρ·ds, which the solver's normalisation makes flux per
   // steradian, so SB_ZERO_POINT is the surface brightness of a unit
   // column. vColor carries hue only — it is luma-normalised on the CPU
   // side — so the scalar gain leaves the solved flux alone.
-  // Displayed at the PIXEL solid angle, not the rod summation area: these
-  // objects carry magnitudes of structure inside it, and a gain assuming
-  // uniformity over it would over-count their cores
-  // (../hdr/README.md § Extended sources).
+  // The same summation anchor the band takes: these objects are NOT uniform
+  // over the patch, which is why the anchor rides attachment 2 and the
+  // resolve averages before it displays (../hdr/summation/README.md).
   stellataEmitExtendedSource(
     vColor * accum,
-    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2, uOmegaPxArcsec2,
+    uExposure, SB_ZERO_POINT, uOmegaSummationArcsec2, uOmegaPxArcsec2,
     uHdrTarget, uWhitePoint, uHighlightDesat,
-    fragColor, outStatistic);
+    fragColor, outStatistic, outDiffuse);
 }

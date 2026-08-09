@@ -160,8 +160,8 @@ mirror keeps deterministic midpoints).
 
 ### Zero free parameters — the emission scale is derived
 
-The layer emits into the scene-wide HDR unit (`../hdr/README.md`
-§ Unit), exactly as the Milky Way band does. **The zero point is
+The layer emits into the scene-wide HDR unit
+(`../hdr/emission/README.md` § Unit), exactly as the Milky Way band does. **The zero point is
 derived, not tuned.** The solver normalises `density0` against
 zero-point-free flux `F = 10^(−0.4·m_V)`, and
 Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a raymarched column *is* flux per
@@ -176,34 +176,35 @@ m_px = S − 2.5·log10(Ω_px)
 Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses to
 one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
 population tint rides through untouched. `SB_ZERO_POINT` lives in
-`../hdr/emission-pure.ts` — it is the emission unit's constant, not this
+`../hdr/emission/emission-pure.ts` — it is the emission unit's constant, not this
 layer's, and the Milky Way band takes the same one
 (`../milkyway/README.md` § Calibration). The TypeScript constant and the
 shader's `SB_ZERO_POINT` are pinned against each other in
 `local-group-emission.test.ts` — nothing at compile time ties them.
 
-**`Ω_px` here, deliberately, where the band takes the eye's summation
-area.** The band's display path substitutes `uOmegaSummationArcsec2` so an
-extended source's threshold lands where the eye's does
-(`../hdr/README.md` § Extended sources), and that substitution is only the
-flux in the summation patch for a source **uniform across it**. So this
-layer passes the pixel solid angle to both of
-`stellataEmitExtendedSource`'s solid-angle arguments. Reaching for the
-summation uniform here is the plausible-looking change that blows M31's
-core to white — **3.95 mag** over the correct answer at the nucleus.
+**The same extended-source anchor the band takes, and it took a convolution
+to earn it.** Both layers gain by `uOmegaSummationArcsec2` — the eye's rod
+summation area — into the HDR target's **attachment 2**, which the resolve
+averages over that patch before compositing
+(`../hdr/summation/README.md`). Averaging first is what makes "uniform over
+the patch" true by construction, so the per-layer opt-out this layer used to
+carry (the pixel solid angle passed to both of
+`stellataEmitExtendedSource`'s solid-angle arguments) is gone, along with the
+**2.695 mag** it cost the envelope and the **3.95 mag** over-lift at M31's
+nucleus it was avoiding. Both figures, the 3.6′ crossover between them, the
+rejected `fwidth(S)` cap and the residuals the shipped pass leaves are all
+pinned in `local-group-emission-calibration.test.ts` § against
+convolve-then-gain.
 
-**But the opt-out is per-layer where uniformity is per-fragment, and it
-costs real accuracy — do not read it as settled.** The over-lift is
-confined to a **3.6′ crossover radius**; outside it M31 *is* uniform over a
-13.0′ patch to better than 0.02 mag, so `Ω_px` under-lifts by the full
-**2.695 mag** the band gained, over most of the object a viewer sees. The
-seam shows from Sol at the default view: M31 sits where the band's own
-diffuse component is 24.20 mag/arcsec² and renders 8.6/255, against
-0.7/255 for an M31 isophote of that same surface brightness. All three
-figures, plus the rejected `fwidth(S)` cap, are pinned in
-`local-group-emission-calibration.test.ts` § against convolve-then-gain.
-`stellata-xypg.35` owns the fix (convolve, then gain — the only operation
-that makes both layers correct at once).
+**Two consequences worth having before touching the raymarch.** The
+convolution can only average what the rasteriser sampled, so the profile is
+smoothed over one pixel's transverse footprint as it is marched
+(`../hdr/emission/README.md` § Footprint) — without that the Sérsic cusp
+survives the convolution intact, which is the whole 3.95 mag. And M31 is now
+**FOV-invariant** like the band: its display level carries no plate scale at
+all, where it used to dim quadratically while the band held. The nucleus
+lands 0.03–0.18 mag *faint* of ideal across the whole 10°–120° range and the
+envelope within 0.08 mag.
 
 **There is no brightness knob, globally or per object.** `density0` is
 solved per object (never scale it here — the flux ratios are physical),
@@ -214,7 +215,7 @@ rather than by knob-matching. It also means the layer holds **no**
 star-pipeline uniform: `uLimitMag` / `uSizeSpan` are gone, and
 `uSizeSpan` is a footprint-only uniform again (`../filters/README.md`).
 
-**The tint is luma-normalised** (`lumaNormalisedTint`, `../hdr/emission-pure.ts`) so it carries hue
+**The tint is luma-normalised** (`lumaNormalisedTint`, `../hdr/emission/emission-pure.ts`) so it carries hue
 only. The shader multiplies the scalar column per channel while the
 solver normalised that column against total flux — an un-normalised
 tint dims the object by its own relative luminance, which is 0.42 mag
@@ -250,22 +251,29 @@ lockstep). Worst measured deviation across 5 objects × k ∈ {1.5, 4, 20}:
 8e-6 mag.
 
 **Both passes write the statistic attachment**
-(`../hdr/statistic/README.md`): an extended source's emission is already
+(`../hdr/attachments/README.md`): an extended source's emission is already
 true surface brightness, so its flux and peak channels are the same
-quantity. Off-target (`uHdrTarget = 0`) each pass applies the operator
-itself, undithered — M31's disc and bulge overlap, and the dither is a
-function of `fragCoord` alone, so it would land twice.
+quantity, and both stay on `Ω_px` and unconvolved. Off-target
+(`uHdrTarget = 0`) there is no diffuse attachment and no convolution, so each
+pass applies the operator itself over the pixel solid angle, undithered —
+M31's disc and bulge overlap, and the dither is a function of `fragCoord`
+alone, so it would land twice.
 
 **What the intra-object range actually costs.** Bulge centre to disc
-envelope spans ~8.7 mag for M31. That fits the operator's range
-(`DR_MAG` 7.5) rather than fighting it: at the base epoch and a
-50° / 900 px viewport the bulge centre resolves to ~0.68 of full scale,
-the disc centre to ~0.11 and the envelope to ~0.003 — a bright core with
-a faint oval fading out around 30–40 arcmin, which is what M31 looks
-like. The earlier worry that a scalar gain would give "a blown core on
-a black disc" does not survive the arithmetic: extended Reinhard plus
-the sRGB encode already supply the log compression the old
-magnitude-domain gate was hand-rolling.
+envelope spans ~8.7 mag for M31, which fits the operator's range
+(`DR_MAG` 7.5) rather than fighting it. Through the summation patch, at the
+base epoch and a 50° / 900 px viewport, the profile reads **120 / 64 / 35 /
+18** of 255 at 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31
+stays brighter than one out to nearly 20 arcmin. A smudge most of a degree
+across, which is what the naked eye gets, and pinned in
+`local-group-emission-calibration.test.ts`.
+
+The patch average is what makes that distribution: it dilutes the Sérsic cusp
+and lifts the smooth envelope, where the retired per-pixel path ran 173 at
+the core and 0.8 at 40 arcmin — a bright nucleus on a black disc. The earlier
+worry that a scalar gain would blow the core out never survived the
+arithmetic either: extended Reinhard plus the sRGB encode already supply the
+log compression the old magnitude-domain gate was hand-rolling.
 
 Instance centres are absolute ICRS in float32 attributes; the vertex
 shader subtracts the per-frame `uWorldOffset` (≤ ~0.25 pc cancellation

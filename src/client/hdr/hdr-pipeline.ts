@@ -6,12 +6,14 @@ import { fullscreenTriangleGeometry } from '../util/fullscreen-pass';
 import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap.glsl?raw';
-import emissionChunk from './emission.glsl?raw';
-import extendedEmitterChunk from './extended-emitter.glsl?raw';
+import emissionChunk from './emission/emission.glsl?raw';
+import extendedEmitterChunk from './emission/extended-emitter.glsl?raw';
+import summationChunk from './summation/summation.glsl?raw';
+import { SummationPass } from './summation/summation-pass';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap-pure';
-import { pixelSolidAngleArcsec2 } from './emission-pure';
+import { pixelSolidAngleArcsec2 } from './emission/emission-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
@@ -21,21 +23,27 @@ import {
   setChromeOperatorActive,
   setChromeWhitePoint,
 } from './chrome/chrome-colour';
-import { bindStatisticGate } from './statistic/statistic-attachment';
+import {
+  bindAttachmentGate,
+  type GatedAttachments,
+} from './attachments/attachment-gate';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_extended_emitter'] =
   extendedEmitterChunk;
+(THREE.ShaderChunk as Record<string, string>)['stellata_summation'] = summationChunk;
 
-/** Ship gate for the HDR epic — **live**. Every emitter — stars, the
- *  Milky Way, the planet layers and the Local Group glow — emits physical
- *  luminance, so the target is the default path and the operator runs
- *  once at the resolve.
- *  `stellata.hdr.setEnabled(false)` is the A/B: it parks every emitter on
- *  its inline operator and returns chrome to authored colours
- *  (README.md § Dev switches). `hdr-pipeline.test.ts` pins this value. */
-export const HDR_DEFAULT_ENABLED = true;
+/** Whether the target is even allocatable. The seam has no switch of its own
+ *  any more (README.md § Fallback), so the only reason to render without it is
+ *  a context that cannot: no `EXT_color_buffer_float` and no
+ *  `EXT_color_buffer_half_float`, which the constructor checks.
+ *
+ *  A build with `supported` false is NOT a calibrated build. Every point
+ *  source lands on its own peak, but a diffuse one loses attachment 2 and the
+ *  convolution with it, so the band and the Local Group read several
+ *  magnitudes faint. That is why this is a hardware verdict rather than a
+ *  setting anybody can reach. */
 
 /** The uniforms every physical emitter binds **by reference**, so the
  *  seam's state reaches all of them with one write. `uHdrTarget` is the
@@ -117,7 +125,7 @@ export class HdrPipeline {
   private rt: THREE.WebGLMultipleRenderTargets | null = null;
   private material: THREE.RawShaderMaterial | null = null;
   private geometry: THREE.BufferGeometry | null = null;
-  private enabled = HDR_DEFAULT_ENABLED;
+  private summation: SummationPass | null = null;
   private tonemapOn = true;
   private chart = false;
   private drMag = DR_MAG;
@@ -136,16 +144,17 @@ export class HdrPipeline {
     this.syncMode();
   }
 
-  /** The target is a full drawing-buffer RGBA16F plus its RG16F statistic
-   *  attachment and a 24-bit depth attachment — a couple of hundred MB of
-   *  VRAM at 2x DPR on a large display. Allocate it on first use so a
-   *  build shipping with HDR_DEFAULT_ENABLED false costs nothing. */
+  /** The target is a full drawing-buffer RGBA16F, its RG16F statistic
+   *  attachment, a second RGBA16F for the diffuse emitters
+   *  (`summation/README.md`) and a 24-bit depth attachment — a few hundred MB
+   *  of VRAM at 2x DPR on a large display. Allocate it on first use so a
+   *  context that cannot render into it never pays for one. */
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
     if (!this.supported) return false;
 
     this.renderer.getDrawingBufferSize(this.size);
-    this.rt = new THREE.WebGLMultipleRenderTargets(this.size.x, this.size.y, 2, {
+    this.rt = new THREE.WebGLMultipleRenderTargets(this.size.x, this.size.y, 3, {
       type: THREE.HalfFloatType,
       format: THREE.RGBAFormat,
       minFilter: THREE.NearestFilter,
@@ -160,12 +169,21 @@ export class HdrPipeline {
     // (exposure/reduction/README.md § The chain).
     this.rt.texture[1].format = THREE.RGFormat;
     this.rt.texture[1].colorSpace = THREE.LinearSRGBColorSpace;
+    // Linear to match the downsample target, though inert at factor 1: the
+    // resolve reads this attachment directly there, at integer offsets from
+    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+    // nearest agree. It stops being inert the moment a tap is off-centre.
+    this.rt.texture[2].minFilter = THREE.LinearFilter;
+    this.rt.texture[2].magFilter = THREE.LinearFilter;
+    this.rt.texture[2].colorSpace = THREE.LinearSRGBColorSpace;
 
+    this.summation = new SummationPass(this.renderer);
     this.geometry = fullscreenTriangleGeometry();
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: {
         uHdrTexture: { value: this.rt.texture[0] },
+        ...this.summation.uniforms,
         uWhitePoint: this.emitterUniforms.uWhitePoint,
         uHighlightDesat: this.emitterUniforms.uHighlightDesat,
         uTonemapEnabled: { value: this.tonemapOn ? 1 : 0 },
@@ -187,22 +205,33 @@ export class HdrPipeline {
    *  main render; the local depth pass inherits the binding, which is
    *  what puts its repaint into the same target.
    *
-   *  The explicit clear is the one place attachment 1 is written with the
-   *  gate open: the renderer's own auto-clear runs after this, with the
-   *  gate shut, so without it the statistic would accumulate across
-   *  frames forever. It costs a redundant clear of attachment 0. */
+   *  The explicit clear is the one place attachments 1 and 2 are written
+   *  with every gate open: the renderer's own auto-clear runs after this,
+   *  with them shut, so without it both would accumulate across frames
+   *  forever. It costs a redundant clear of attachment 0. */
   bind(): void {
     const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
     this.renderer.setRenderTarget(target);
     if (target === null) return;
-    this.openStatisticGate();
+    this.openEveryAttachment();
     this.renderer.clear();
-    this.closeStatisticGate();
+    this.closeEmitterGate();
   }
 
-  /** Tone-map the target onto the canvas. Must pair with every `bind()`. */
+  /** Tone-map the target onto the canvas. Must pair with every `bind()`.
+   *
+   *  The summation convolution's downsample runs first, off the same
+   *  attachment the resolve then averages — it belongs here rather than in
+   *  `animate()` because it reads a target only this class knows the layout
+   *  of, and because pairing it with the resolve is what stops the two
+   *  disagreeing about the factor. */
   resolve(): void {
-    if (!this.wantsTarget() || this.rt === null) return;
+    if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
+    this.summation.render(
+      this.rt.texture[2],
+      this.emitterUniforms.uOmegaSummationArcsec2.value,
+      this.emitterUniforms.uOmegaPxArcsec2.value,
+    );
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
   }
@@ -219,19 +248,50 @@ export class HdrPipeline {
     return this.rt.texture[1];
   }
 
-  /** Attachment 1 is NONE at rest, so a draw that never asks for it can
-   *  never reach the statistic. Three sets its own `drawBuffers` when it
-   *  first binds an MRT target; every write here lands after that and the
-   *  resting state is restored on the way out, so a mid-frame re-bind
-   *  cannot leave the gate open. */
-  private openStatisticGate = (): void => {
+  /** Attachments 1 and 2 are NONE at rest, so a draw that never asks for
+   *  either can neither reach the statistic nor leave the diffuse attachment
+   *  undefined. Three sets its own `drawBuffers` when it first binds an MRT
+   *  target; every write here lands after that and the resting state is
+   *  restored on the way out, so a mid-frame re-bind cannot leave a gate
+   *  open.
+   *
+   *  A volumetric emitter masks attachment **0** off instead: on-target it
+   *  writes zero there and the resolve owns that pixel, so masking makes the
+   *  contract explicit rather than relying on an additive blend of zero. An
+   *  absorber takes both colour attachments and neither emits nor measures,
+   *  and an emitter drawn in front of the diffuse field takes all three:
+   *  `attachments/README.md` § The gate is the table. */
+  private openEmitterGate = (attachments: GatedAttachments): void => {
     const gl = this.gl;
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    switch (attachments) {
+      case 'diffuse':
+        gl.drawBuffers([gl.NONE, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+        return;
+      case 'absorption':
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2]);
+        return;
+      case 'occluding-emitter':
+        gl.drawBuffers([
+          gl.COLOR_ATTACHMENT0,
+          gl.COLOR_ATTACHMENT1,
+          gl.COLOR_ATTACHMENT2,
+        ]);
+        return;
+      default:
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.NONE]);
+    }
   };
 
-  private closeStatisticGate = (): void => {
+  private closeEmitterGate = (): void => {
     const gl = this.gl;
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE]);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.NONE]);
+  };
+
+  /** The clear's own state, and the only one that writes all three: masking
+   *  any of them here would leave last frame's contents to accumulate into. */
+  private openEveryAttachment = (): void => {
+    const gl = this.gl;
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
   };
 
   /** Pixel solid angle for surface-brightness emitters. `pxPerRadian` is
@@ -248,17 +308,13 @@ export class HdrPipeline {
     if (this.rt === null) return;
     this.renderer.getDrawingBufferSize(this.size);
     this.rt.setSize(this.size.x, this.size.y);
+    this.summation?.syncSize();
   }
 
   /** Chart mode is a full bypass — direct to canvas, no tone-map, so
    *  chart output stays pixel-identical across the HDR epic. */
   setChartMode(on: boolean): void {
     this.chart = on;
-    this.syncMode();
-  }
-
-  setEnabled(on: boolean): void {
-    this.enabled = on;
     this.syncMode();
   }
 
@@ -305,7 +361,7 @@ export class HdrPipeline {
   /** Whether the scene should render into the target this frame. Does not
    *  imply the target exists yet — `bind()` allocates on demand. */
   private wantsTarget(): boolean {
-    return this.supported && this.enabled && !this.chart;
+    return this.supported && !this.chart;
   }
 
   /** Fan the seam's state out to the two things outside this class that
@@ -327,9 +383,9 @@ export class HdrPipeline {
     // default framebuffer accepts only BACK or NONE, so an emitter's hook
     // firing on the canvas path would be a GL error, not a no-op.
     const gateLive = targetActive && this.rt !== null;
-    bindStatisticGate(
-      gateLive ? this.openStatisticGate : null,
-      gateLive ? this.closeStatisticGate : null,
+    bindAttachmentGate(
+      gateLive ? this.openEmitterGate : null,
+      gateLive ? this.closeEmitterGate : null,
     );
   }
 
@@ -338,10 +394,11 @@ export class HdrPipeline {
     this.rt?.dispose();
     this.material?.dispose();
     this.geometry?.dispose();
+    this.summation?.dispose();
     this.rt = null;
     this.material = null;
     this.geometry = null;
-    this.enabled = HDR_DEFAULT_ENABLED;
+    this.summation = null;
     this.tonemapOn = true;
     this.chart = false;
     this.drMag = DR_MAG;

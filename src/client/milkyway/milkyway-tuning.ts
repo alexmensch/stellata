@@ -26,7 +26,7 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   });
 
   // Surface-brightness zero point, mag/arcsec². A constant of the shared
-  // emission unit (`../hdr/emission-pure.ts`), not a calibration knob —
+  // emission unit (`../hdr/emission/emission-pure.ts`), not a calibration knob —
   // moving it desynchronises the band from the Local Group layer.
   body.appendChild(makeSlider({
     label: 'glowMagOffset',
