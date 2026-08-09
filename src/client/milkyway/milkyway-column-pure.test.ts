@@ -96,9 +96,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.048 mag', () => {
+  it('dims the Galactic-centre sightline by 0.028 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0479, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0275, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -111,9 +111,9 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.0479, 3);
-    expect(offsets[1]).toBeCloseTo(0.0472, 3);
-    expect(offsets[2]).toBeCloseTo(0.0412, 3);
+    expect(offsets[0]).toBeCloseTo(0.0275, 3);
+    expect(offsets[1]).toBeCloseTo(0.0271, 3);
+    expect(offsets[2]).toBeCloseTo(0.0236, 3);
   });
 });
 
@@ -126,14 +126,14 @@ describe('per-component split toward the Galactic centre', () => {
   it('has the disc carrying essentially the whole column', () => {
     const disc = relativeLuminance(componentColumnRgb(DISC_COMPONENT, SOL, TO_GC));
     const bulge = relativeLuminance(componentColumnRgb(BULGE_COMPONENT, SOL, TO_GC));
-    expect(disc / (disc + bulge)).toBeCloseTo(0.9993, 4);
+    expect(disc / (disc + bulge)).toBeCloseTo(0.9996, 4);
   });
 });
 
 describe('quadrature of the in-volume march', () => {
-  // Left alone deliberately: STEPS is a visual + perf decision. It no
-  // longer biases the calibration — the emissivity anchor is the NGP
-  // sightline, marched dust-free, where the log distribution converges.
+  // Left alone deliberately: STEPS is a visual + perf decision, and it
+  // cannot bias the calibration at all — ρ₀ is solved as a volume
+  // integral, so no march feeds it.
   it('under-counts the GC column by 1.6% against a dense march', () => {
     const shipped = sightlineColumn(SOL, TO_GC);
     const ref = sightlineColumn(SOL, TO_GC, {

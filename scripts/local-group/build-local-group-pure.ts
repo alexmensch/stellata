@@ -1,16 +1,18 @@
-// Pure helpers for build-local-group.ts: distance filter, override
-// merge, orientation quaternions, display-name routing, and per-object
-// emission assembly over emission-solver-pure.ts. Off the I/O path.
+// Pure helpers for build-local-group.ts: distance filter, override merge,
+// orientation quaternions, display-name routing, and per-object emission
+// assembly over the profile geometry + the shared ρ₀ solve. Off the I/O path.
 
+import {
+  fluxNumber,
+  solveDensity0,
+} from '../../src/client/hdr/emission/density0-solver-pure';
 import {
   bnCoeff,
   discGeometryIntegral,
-  fluxNumber,
   pnCoeff,
   sersicGeometryIntegral,
-  solveDensity0,
   u99,
-} from './emission-solver-pure';
+} from './emission-geometry-pure';
 
 /** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
  *  canonical Local Group: M31 + M33 + their satellite subgroup, plus
@@ -100,7 +102,7 @@ export interface LvdbRow {
 
 /** Solved Sérsic component — shared by the spheroid family and the
  *  M31 bulge (DRY at schema level). Axes in parsecs; density0 in the
- *  zero-point-free flux-number units of emission-solver-pure.ts. */
+ *  zero-point-free flux-number units the ρ₀ solve works in. */
 export interface SersicParams {
   reffAxesPc: [number, number, number];
   n: number;

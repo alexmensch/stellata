@@ -1072,7 +1072,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | --- | --- | --- |
 | Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is its `EMISSIVITY_SCALE`, against a resolved-star-corrected NGP residual and marched dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
+| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its published B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
 | LG emission (`local-group-emission.frag.glsl`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `stellataSurfaceBrightnessLuminance`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` since deleted (no multiplier on a physical peak). mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
 | Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
@@ -1214,9 +1214,10 @@ day one — the fullscreen pass and the inline path can never drift.
   by design (§ 1).
 - **MW anchor: settled, and not by re-deriving the offset.** The
   single-point `GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` anchor this section
-  scoped H7 to replace is retired. `uGlowMagOffset` is now the emission
-  unit's `SB_ZERO_POINT`, not the band's to set; the band derives
-  `EMISSIVITY_SCALE` instead, against the NGP.
+  scoped H7 to replace is retired, and so is the resolved-star-corrected
+  NGP sightline that replaced it. `uGlowMagOffset` is now the emission
+  unit's `SB_ZERO_POINT`, not the band's to set; each component's
+  `density0` is solved against the Galaxy's integrated M_V.
 
   Two corrections this section had backwards. The anchor was ~2.9 mag
   brighter than published V surface photometry for that sightline, and the
@@ -1229,10 +1230,16 @@ day one — the fullscreen pass and the inline path can never drift.
   resolved catalogue and the pole was already right, to 0.08 mag.
   `src/client/milkyway/README.md` § Calibration is the authority.
 
-  What is genuinely left: one sightline does not constrain a total
-  luminosity, and the M_V solve needs a *shape* change rather than a gain
-  (the two constraints disagree by ~1.3 mag). Confirming against eso0932a
-  stretches per instrument still stands.
+  What is genuinely left, and it is smaller than this section assumed: a
+  shape change does **not** reconcile the two constraints, because the
+  pole column and the integrated total are both vertical integrals — the
+  thick disc moved their ratio 0.09 mag. The solve now runs on the total
+  and both sightlines are graded checks, disagreeing by 1.59 mag at the
+  pole and 0.94 toward the centre in the same direction
+  (`docs/science-galactic-structure.md` § The luminosity solve).
+  Confirming against eso0932a stretches per instrument still stands, and
+  is now the arbiter between the two published scales rather than a
+  confirmation of one.
 - **`DR_MAG` is validated, not tuned** (§ 2): H7 confirms 7.5 against the
   panorama rather than searching 5–8, and records any departure as an
   explicit exaggeration.

@@ -18,6 +18,10 @@ src/client/hdr/emission/
                              operator off-target. Composes the unit and the
                              operator, so it is the only include a
                              raymarching stage needs (§ Extended sources).
+  density0-solver-pure.ts    The ρ₀ solve both volumetric emitters share:
+    (+ test)                 flux number, Gauss–Legendre quadrature over a
+                             truncated ellipsoid, ρ₀ = d²·F/G
+                             (§ Solving ρ₀).
   emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
                              and their inverses, LUMA_CEIL, SB_ZERO_POINT
                              (the zero point both volumetric emitters
@@ -78,6 +82,39 @@ normalisers that make the shaded disc integrate back to `L(m)` are
 **The mesh reads `uOmegaPxArcsec2` and, unlike the band, must**: the two
 rules agree at 1 px on that solid angle alone, so the summation
 substitution below would break the resolve step it exists to close.
+
+## Solving ρ₀ — a published magnitude into an emitter's density
+
+`density0-solver-pure.ts` is the calibration side of the unit: given a
+profile shape and the proxy volume it is marched in, what ρ₀ makes the
+volume integrate back to a published magnitude.
+
+```
+ρ₀ = d² · 10^(−0.4·m) / ∫ shape dV        (solveDensity0)
+```
+
+**Truncation compensation is inherent**, because `G` integrates over the
+*actual* mesh volume — whatever the envelope clips, ρ₀ makes up, so a tight
+envelope brightens what remains rather than losing light. Both consumers
+rely on that: the Local Group solves per object against a catalogue
+apparent magnitude at its own distance (`scripts/local-group/README.md`
+§ Emission solver), the Milky Way against a published **absolute** one at
+d = 10 pc (`../../milkyway/README.md` § Calibration). Same function, and
+the only difference is which distance goes in.
+
+**The shape must be the luminance shape.** ρ₀ is a scalar and the tint it
+multiplies is luma-normalised (§ Unit), so the scalar volume integral *is*
+the luminance integral — which is what lets a flux share be split between
+two differently-tinted components without either hue moving flux.
+
+`integrateOverEllipsoid` takes `f(r, cosθ)` in unit-ball coordinates, with
+cosθ from the +C axis, and requires axisymmetry about local z plus z → −z
+symmetry. Every profile solved here has both. **A profile stated in
+cylindrical (R, |z|) takes `integrateOverEllipsoidRz` instead** — it owns
+the unit-ball → physical mapping, and taking the two semi-axes as scalars
+is what makes an axis swap inexpressible rather than merely tested-for.
+Only the Sérsic family, whose density depends on the ellipsoidal radius
+alone, uses the raw form.
 
 ## Extended sources — two solid angles, one write tail
 

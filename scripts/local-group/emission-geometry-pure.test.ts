@@ -1,22 +1,19 @@
 // Cross-pins the numeric geometry-integral path against the analytic
 // Sérsic closed forms and the untruncated-disc limit, and pins the
-// solver's shape constants.
+// profile shape constants.
 
 import { describe, expect, it } from 'vitest';
 import {
   bnCoeff,
   discGeometryIntegral,
-  fluxNumber,
-  integrateOverEllipsoid,
   lnGamma,
   pnCoeff,
   regularizedLowerGamma,
   sersicGeometryIntegral,
   sersicGeometryIntegralAnalytic,
   sersicNu,
-  solveDensity0,
   u99,
-} from './emission-solver-pure';
+} from './emission-geometry-pure';
 
 describe('Sérsic shape constants', () => {
   it('pins b_n (Ciotti & Bertin 1999)', () => {
@@ -83,22 +80,6 @@ describe('numeric geometry integral vs analytic closed forms', () => {
     const num = sersicGeometryIntegral([1000, 1000, 1000], 2.2, uMax);
     const ana = sersicGeometryIntegralAnalytic([1000, 1000, 1000], 2.2, uMax);
     expect(Math.abs(num - ana) / ana).toBeLessThan(1e-6);
-  });
-});
-
-describe('solveDensity0', () => {
-  it('round-trips the far-field flux: ρ₀·G / d² = 10^(−0.4·mV)', () => {
-    const g = sersicGeometryIntegral([500, 400, 400], 1, 4.6);
-    const d = 100_000;
-    const rho0 = solveDensity0(d, fluxNumber(7.5), g);
-    expect((rho0 * g) / (d * d)).toBeCloseTo(fluxNumber(7.5), 12);
-  });
-});
-
-describe('integrateOverEllipsoid', () => {
-  it('recovers the ellipsoid volume for f = 1', () => {
-    const v = integrateOverEllipsoid(() => 1, [3, 4, 5]);
-    expect(v).toBeCloseTo((4 / 3) * Math.PI * 3 * 4 * 5, 6);
   });
 });
 

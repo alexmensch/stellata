@@ -4,13 +4,21 @@
 
 import { R0_PC } from '../galactic/galactic-coords';
 import {
-  SB_ZERO_POINT,
   footprintAlong,
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
 } from '../hdr/emission/emission-pure';
-import { NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 } from './diffuse-reference';
+import {
+  ABSOLUTE_MAGNITUDE_DISTANCE_PC,
+  fluxNumber,
+  integrateOverEllipsoidRz,
+  solveDensity0,
+} from '../hdr/emission/density0-solver-pure';
+import {
+  BULGE_TO_TOTAL_V,
+  GALAXY_TOTAL_ABSMAG_V,
+} from './diffuse-reference';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
@@ -18,10 +26,20 @@ export type Vec3 = readonly [number, number, number];
 // --- Disc component ----------------------------------------------------
 
 export const DISC_RADIUS_PC = 15_000;
-export const DISC_HALF_THICKNESS_PC = 600;
+/** Two thick scale heights — the same rule the 600 pc envelope followed
+ *  against the thin one, moved to the component that now sets the extent.
+ *  See README.md § Density profiles for the truncation it costs. */
+export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
-export const DISC_WEIGHT = 1.5;
+
+/** Thick disc, Bland-Hawthorn & Gerhard 2016 § 5.1: z_T = 900 ± 180 pc
+ *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. Shares the
+ *  thin disc's radial scale length, which is the one place this departs
+ *  from the literature — see README.md § Density profiles. */
+export const DISC_THICK_SCALE_HEIGHT_PC = 900;
+export const DISC_THICK_DENSITY_FRACTION = 0.04;
+
 export const DISC_COLOR_RGB: Rgb = [0.6706, 0.6588, 0.8745];
 /** The authored palette carrying hue only — what the shader multiplies in.
  *  See README.md § Population tints carry hue, never flux. */
@@ -33,7 +51,6 @@ export const BULGE_RADIUS_PC = 5_000;
 export const BULGE_HALF_THICKNESS_PC = 3_000;
 export const BULGE_SCALE_RADIUS_PC = 1_000;
 export const BULGE_AXIS_RATIO = 0.6;
-export const BULGE_WEIGHT = 18.0;
 export const BULGE_COLOR_RGB: Rgb = [1.0, 0.9647, 0.9294];
 export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 
@@ -84,26 +101,91 @@ export const FOREGROUND_DUST_STEPS = 16;
 
 // --- Profiles ----------------------------------------------------------
 
-/** Disc emissivity at the component's RELATIVE weight. `EMISSIVITY_SCALE`
- *  puts it in the shared flux unit and is derived from a march of this
- *  profile, so it cannot be baked in here. */
-export function discDensity(
+/** Thin plus thick exponential, at an already-softened |z|. */
+export function discVerticalProfile(absZPc: number): number {
+  return (
+    Math.exp(-absZPc / DISC_SCALE_HEIGHT_PC) +
+    DISC_THICK_DENSITY_FRACTION *
+      Math.exp(-absZPc / DISC_THICK_SCALE_HEIGHT_PC)
+  );
+}
+
+/** Both profiles' SHAPE at unit ρ₀. The disc's radial term is 1 at R₀ and
+ *  its vertical term is 1 + f_ρ at the midplane, so `DISC_DENSITY0` is a
+ *  solved scale rather than the emissivity at any particular point; the
+ *  bulge's is 1 at the centre. The volume integrals below march the shape,
+ *  so neither may reach a `density0` it is mid-way through deriving. */
+function discShape(
   rPc: number,
   zPc: number,
   footprintPc = 0,
   zFootprintPc = 0,
 ): number {
   return (
-    DISC_WEIGHT *
     Math.exp(-(softenRadius(rPc, footprintPc) - R0_PC) / DISC_SCALE_LENGTH_PC) *
-    Math.exp(-softenRadius(Math.abs(zPc), zFootprintPc) / DISC_SCALE_HEIGHT_PC)
+    discVerticalProfile(softenRadius(Math.abs(zPc), zFootprintPc))
   );
 }
 
-export function bulgeDensity(rPc: number, zPc: number, footprintPc = 0): number {
+function bulgeShape(rPc: number, zPc: number, footprintPc = 0): number {
   const zEff = zPc / BULGE_AXIS_RATIO;
   const rPrime = softenRadius(Math.sqrt(rPc * rPc + zEff * zEff), footprintPc);
-  return BULGE_WEIGHT * Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
+  return Math.exp(-rPrime / BULGE_SCALE_RADIUS_PC);
+}
+
+/** ∫ shape dV over the component's own proxy ellipsoid, in pc³. The
+ *  shapes are scalars against luma-normalised tints, so this is the
+ *  LUMINANCE integral and a flux share can be split between the two
+ *  without either hue moving light
+ *  (`../hdr/emission/README.md` § Solving ρ₀). */
+export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
+  discShape,
+  DISC_RADIUS_PC,
+  DISC_HALF_THICKNESS_PC,
+);
+
+export const BULGE_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
+  bulgeShape,
+  BULGE_RADIUS_PC,
+  BULGE_HALF_THICKNESS_PC,
+);
+
+/**
+ * Each component's emissivity in the shared flux unit — what the shader
+ * receives as `uDensity0`. Solved so the two proxy volumes integrate to
+ * the Galaxy's published M_V split at its published B/T, the same
+ * `ρ₀ = d²·F/G` the Local Group solves per object, with d = 10 pc because
+ * the anchor is an absolute magnitude.
+ *
+ * **Zero free parameters, and no march feeds the calibration** — the
+ * relative component weights the sightline anchor needed are gone with
+ * it. Truncation compensation rides along: G is over the ACTUAL mesh
+ * volume, so the 0.076 mag the disc envelope clips against all space is
+ * redistributed inward rather than lost (README.md § Calibration).
+ */
+export const DISC_DENSITY0 = solveDensity0(
+  ABSOLUTE_MAGNITUDE_DISTANCE_PC,
+  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * (1 - BULGE_TO_TOTAL_V),
+  DISC_VOLUME_INTEGRAL,
+);
+
+export const BULGE_DENSITY0 = solveDensity0(
+  ABSOLUTE_MAGNITUDE_DISTANCE_PC,
+  fluxNumber(GALAXY_TOTAL_ABSMAG_V) * BULGE_TO_TOTAL_V,
+  BULGE_VOLUME_INTEGRAL,
+);
+
+export function discDensity(
+  rPc: number,
+  zPc: number,
+  footprintPc = 0,
+  zFootprintPc = 0,
+): number {
+  return DISC_DENSITY0 * discShape(rPc, zPc, footprintPc, zFootprintPc);
+}
+
+export function bulgeDensity(rPc: number, zPc: number, footprintPc = 0): number {
+  return BULGE_DENSITY0 * bulgeShape(rPc, zPc, footprintPc);
 }
 
 export function analyticalDustDensity(rPc: number, zPc: number): number {
@@ -282,15 +364,11 @@ export interface ColumnOptions {
 }
 
 /**
- * One component's dust-attenuated emission column, in the component's
- * **relative weight** units. Mirrors milkyway.frag.glsl: log-distributed
- * steps from the front face (or `S_MIN_PC` when inside) to the back face,
- * Beer-Lambert attenuation with half-step self-shielding, seeded with the
- * foreground dust column.
- *
- * Every column function here is weight-space. `EMISSIVITY_SCALE` enters
- * exactly once, in `sightlineEmissionColumn` — the march is linear in it,
- * and the scale is derived from a march, so it cannot appear inside one.
+ * One component's dust-attenuated emission column, in the shared flux
+ * unit. Mirrors milkyway.frag.glsl: log-distributed steps from the front
+ * face (or `S_MIN_PC` when inside) to the back face, Beer-Lambert
+ * attenuation with half-step self-shielding, seeded with the foreground
+ * dust column.
  */
 export function componentColumnRgb(
   component: MilkywayComponent,
@@ -377,50 +455,15 @@ export function sightlineColumnRgb(
   return total;
 }
 
-/** The luminance-weighted column in weight space — scale-free, so a
- *  ratio of two of these is meaningful on its own. */
+/** The luminance-weighted column, in the shared flux unit — what the
+ *  shader turns into surface brightness via
+ *  `S = uGlowMagOffset − 2.5·log10(column)`. */
 export function sightlineColumn(
   originPc: Vec3,
   dirUnit: Vec3,
   options: ColumnOptions = {},
 ): number {
   return relativeLuminance(sightlineColumnRgb(originPc, dirUnit, options));
-}
-
-// --- Emission scale ----------------------------------------------------
-
-/**
- * Multiplier taking the components' relative weights to the shared
- * `SB_ZERO_POINT` flux unit, derived so the NGP sightline lands on the
- * anchor above. Marched **dust-free**, which is the whole point: the
- * emissivity is an intrinsic property and must not move when the
- * extinction does.
- *
- * Interim: one sightline, not an integrated luminosity, so the model's own
- * total M_V is a reported outcome rather than an input. See README.md
- * § Calibration for the solve that replaces this and why it waits.
- */
-export const EMISSIVITY_SCALE =
-  10 ** (-0.4 * (NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - SB_ZERO_POINT)) /
-  sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 90), {
-    dustEnabled: false,
-  });
-
-/** Per-component emissivity in the shared flux unit — what the shader
- *  receives as `density0`. */
-export const DISC_DENSITY0 = DISC_WEIGHT * EMISSIVITY_SCALE;
-export const BULGE_DENSITY0 = BULGE_WEIGHT * EMISSIVITY_SCALE;
-
-/** The column the shader turns into surface brightness via
- *  `S = uGlowMagOffset − 2.5·log10(column)`: the weight-space march in
- *  the shared flux unit. Declared below `EMISSIVITY_SCALE` so no march
- *  can reach the scale before it exists. */
-export function sightlineEmissionColumn(
-  originPc: Vec3,
-  dirUnit: Vec3,
-  options: ColumnOptions = {},
-): number {
-  return EMISSIVITY_SCALE * sightlineColumn(originPc, dirUnit, options);
 }
 
 /** Surface brightness in mag/arcsec² for a sightline. */
@@ -432,6 +475,6 @@ export function sightlineSurfaceBrightness(
 ): number {
   return (
     glowMagOffset -
-    2.5 * Math.log10(sightlineEmissionColumn(originPc, dirUnit, options))
+    2.5 * Math.log10(sightlineColumn(originPc, dirUnit, options))
   );
 }

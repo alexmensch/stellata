@@ -26,7 +26,8 @@ import {
   type LvdbRow,
   type OverrideRow,
 } from './build-local-group-pure';
-import { fluxNumber, u99 } from './emission-solver-pure';
+import { fluxNumber } from '../../src/client/hdr/emission/density0-solver-pure';
+import { u99 } from './emission-geometry-pure';
 
 const SOL_AXIS_X: [number, number, number] = [1, 0, 0];
 

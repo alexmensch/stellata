@@ -25,11 +25,13 @@ import {
   DISC_RADIUS_PC,
   DISC_SCALE_HEIGHT_PC,
   DISC_SCALE_LENGTH_PC,
+  DISC_THICK_DENSITY_FRACTION,
+  DISC_THICK_SCALE_HEIGHT_PC,
   DISC_TINT_RGB,
   REDDENING_RGB,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
-  sightlineEmissionColumn,
+  sightlineColumn,
 } from './milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
@@ -43,7 +45,7 @@ import {
  *  (l = 0, b = 0) integrates to, from the CPU mirror of the shader's
  *  raymarch. Pinned in ./milkyway.test.ts so a profile or quadrature
  *  change is visible. */
-export const GC_SIGHTLINE_COLUMN = sightlineEmissionColumn(
+export const GC_SIGHTLINE_COLUMN = sightlineColumn(
   SOL_GALACTOCENTRIC_PC,
   galacticDirection(0, 0),
 );
@@ -249,6 +251,8 @@ export class MilkyWay {
         uColor: tint,
         uDiscScaleLengthPc: { value: DISC_SCALE_LENGTH_PC },
         uDiscScaleHeightPc: { value: DISC_SCALE_HEIGHT_PC },
+        uDiscThickScaleHeightPc: { value: DISC_THICK_SCALE_HEIGHT_PC },
+        uDiscThickFraction: { value: DISC_THICK_DENSITY_FRACTION },
         uBulgeScaleRadiusPc: { value: BULGE_SCALE_RADIUS_PC },
         uBulgeAxisRatio: { value: BULGE_AXIS_RATIO },
       },

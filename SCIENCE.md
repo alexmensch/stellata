@@ -320,20 +320,21 @@ enough to see it.
       (DOI 10.1051/aas:1998105) — "The 1997 reference of diffuse night sky
       brightness". Table 24's integrated starlight at 0.55 µm
       (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
-      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band's emissivity is
-      anchored to — but not directly. These are SKY-model predictions
-      (Wainscoat et al. 1992) for *total* starlight, so they include the
-      resolved stars the catalogue draws separately, and at the NGP that
-      overlap is two thirds of the light. The anchor is the residual after
-      the catalogue's own contribution is subtracted (24.99, not 23.83);
-      pinning the published figure would double-count the star field.
-      The subtraction is only meaningful at the pole, where extinction is
+      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band is CHECKED
+      against. These are SKY-model predictions (Wainscoat et al. 1992) for
+      *total* starlight, so they include the resolved stars the catalogue
+      draws separately — at the NGP that overlap is two thirds of the
+      light, and the check subtracts it (24.99, not 23.83). The
+      subtraction is only meaningful at the pole, where extinction is
       ~0.03 mag and a de-extincted catalogue sum and an observed sky model
       are commensurable.
-  Bland-Hawthorn & Gerhard remains a check rather than an input: the
-  emissivity is anchored on that one corrected sightline, not on a total
-  luminosity, and the two constraints do not yet agree.
-  `src/client/milkyway/README.md` § Calibration carries the detail.
+  Bland-Hawthorn & Gerhard's M_V = −21.37 is the INPUT: both components'
+  density0 is solved so the proxy volumes integrate to it at Licquia &
+  Newman's B/T. The two Leinert checks then disagree with it by 1.59 mag
+  at the pole and 0.94 toward the centre, in the same direction, and no
+  shape parameter bridges that — `docs/science-galactic-structure.md`
+  § The luminosity solve argues it out;
+  `src/client/milkyway/README.md` § Calibration carries the numbers.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
 > distances, 3D bounding boxes, and radial profiles drive the

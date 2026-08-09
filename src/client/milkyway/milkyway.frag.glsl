@@ -69,8 +69,10 @@ uniform vec3 uMeshScalePc;
 uniform bool uIsBulge;
 
 // Stellar (emission) density profile parameters.
-uniform float uDiscScaleLengthPc;   // hR
-uniform float uDiscScaleHeightPc;   // hz
+uniform float uDiscScaleLengthPc;      // hR
+uniform float uDiscScaleHeightPc;      // hz, thin
+uniform float uDiscThickScaleHeightPc; // hz, thick
+uniform float uDiscThickFraction;      // thick/thin density at the midplane
 uniform float uBulgeScaleRadiusPc;  // r_b
 uniform float uBulgeAxisRatio;      // q (oblate flattening)
 uniform float uDensity0;            // peak density normalisation
@@ -131,9 +133,12 @@ const int FOREGROUND_DUST_STEPS = 16;
 // they are what keeps the band comparable with a Local Group object at the
 // same distance.
 float discDensityVal(float R, float zVal, float footprintPc, float zFootprintPc) {
+  float absZ = stellataSoftenRadius(abs(zVal), zFootprintPc);
+  float vertical = exp(-absZ / uDiscScaleHeightPc)
+                 + uDiscThickFraction * exp(-absZ / uDiscThickScaleHeightPc);
   return uDensity0
        * exp(-(stellataSoftenRadius(R, footprintPc) - uR0Pc) / uDiscScaleLengthPc)
-       * exp(-stellataSoftenRadius(abs(zVal), zFootprintPc) / uDiscScaleHeightPc);
+       * vertical;
 }
 
 float bulgeDensityVal(float R, float zVal, float footprintPc) {
