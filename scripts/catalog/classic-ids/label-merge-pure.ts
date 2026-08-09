@@ -278,7 +278,7 @@ export function labelFlipsTsv(flips: readonly LabelFlip[]): string {
 /** Which SID designation namespace an identifier keys, per `docs/sid.md` § 3.
  *  A Flamsteed number keys none: it is a display designation the search index
  *  carries, never an identity key. */
-function designationFor(field: LabelField, value: string): string | null {
+export function designationFor(field: LabelField, value: string): string | null {
   if (field === 'flam') return null;
   const empty = {
     isSol: false, hip: null, hd: null, hr: null, gl: null,
