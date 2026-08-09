@@ -24,6 +24,7 @@ import {
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission-pure';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../hdr/exposure/exposure-epoch';
 import { bindStatisticGate } from '../hdr/statistic/statistic-attachment';
 import { relativeLuminance } from '../hdr/tonemap-pure';
 
@@ -304,6 +305,24 @@ describe('surface-brightness zero point', () => {
   it('a unit column reads at the zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(SB_ZERO_POINT, 12);
   });
+
+  // This layer deliberately does NOT take the Milky Way band's rod
+  // summation gain: LG objects carry magnitudes of structure inside the
+  // summation area, and a gain that assumes uniformity over it would have
+  // one 13-arcmin patch of M31's core emit brighter than the whole galaxy
+  // (../hdr/README.md § Extended sources). Passing the pixel solid angle
+  // twice is the opt-out, so pin it — reaching for uOmegaSummationArcsec2
+  // here is the plausible-looking change that breaks M31.
+  it('displays at the pixel solid angle, not the summation area', () => {
+    const frag = readFileSync(
+      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
+      'utf8',
+    );
+    expect(frag).toMatch(
+      /uExposure, SB_ZERO_POINT, uOmegaPxArcsec2, uOmegaPxArcsec2,/,
+    );
+    expect(frag).not.toContain('uOmegaSummationArcsec2');
+  });
 });
 
 describe('population tints', () => {
@@ -359,6 +378,7 @@ describe('LocalGroupEmission controller', () => {
     hdr: {
       uExposure: { value: 26.365 },
       uOmegaPxArcsec2: { value: 40_000 },
+      uOmegaSummationArcsec2: { value: DEFAULT_SUMMATION_ARCSEC2 },
       uWhitePoint: { value: 20 },
       uHighlightDesat: { value: 0.35 },
       uHdrTarget: { value: 1 },

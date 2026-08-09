@@ -7,11 +7,13 @@ import {
   EV_MAX_STOPS,
   MAG_PER_STOP,
   sceneExposure,
+  summationSolidAngleFor,
 } from './exposure-epoch';
 
 function harness() {
   const uniforms: ExposureUniforms = {
     uExposure: { value: -1 },
+    uOmegaSummationArcsec2: { value: -1 },
     uLimitMag: { value: -1 },
     uThresholdMag: { value: -1 },
     uCullMag: { value: -1 },
@@ -24,7 +26,7 @@ function harness() {
 const LIMIT = instrumentLimitMag(DEFAULT_INSTRUMENT);
 
 describe('ExposureController', () => {
-  it('writes all four slots from its own constructor', () => {
+  it('writes all five slots from its own constructor', () => {
     // The seeds in buildSharedUniforms must never reach a shader, so
     // construction alone has to leave every slot correct.
     const { uniforms } = harness();
@@ -32,6 +34,22 @@ describe('ExposureController', () => {
     expect(uniforms.uThresholdMag.value).toBe(LIMIT);
     expect(uniforms.uCullMag.value).toBe(cullMagFor(LIMIT));
     expect(uniforms.uExposure.value).toBe(sceneExposure(LIMIT));
+    expect(uniforms.uOmegaSummationArcsec2.value)
+      .toBe(summationSolidAngleFor(DEFAULT_INSTRUMENT));
+  });
+
+  // The summation area is the offset between two THRESHOLDS, and both move
+  // together under adaptation and the trim — so it is static in the
+  // exposure state and only an instrument change may move it.
+  it('holds the summation solid angle across every trim', () => {
+    const { uniforms, controller } = harness();
+    const base = uniforms.uOmegaSummationArcsec2.value;
+    for (const ev of [-EV_MAX_STOPS, 1, EV_MAX_STOPS]) {
+      controller.setEv(ev);
+      expect(uniforms.uOmegaSummationArcsec2.value).toBe(base);
+    }
+    controller.setAdaptation(-4);
+    expect(uniforms.uOmegaSummationArcsec2.value).toBe(base);
   });
 
   it('moves the scene by exactly one stop per stop of trim', () => {

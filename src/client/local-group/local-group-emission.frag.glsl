@@ -115,9 +115,13 @@ void main() {
   // steradian, so SB_ZERO_POINT is the surface brightness of a unit
   // column. vColor carries hue only — it is luma-normalised on the CPU
   // side — so the scalar gain leaves the solved flux alone.
+  // Displayed at the PIXEL solid angle, not the rod summation area: these
+  // objects carry magnitudes of structure inside it, and a gain assuming
+  // uniformity over it would over-count their cores
+  // (../hdr/README.md § Extended sources).
   stellataEmitExtendedSource(
     vColor * accum,
-    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2,
+    uExposure, SB_ZERO_POINT, uOmegaPxArcsec2, uOmegaPxArcsec2,
     uHdrTarget, uWhitePoint, uHighlightDesat,
     fragColor, outStatistic);
 }

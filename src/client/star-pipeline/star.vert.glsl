@@ -213,8 +213,6 @@ out float vPeakL;
 // both of which are per instance.
 out float vFluxPeakL;
 
-const float LOG10 = 2.302585093;
-
 // Blackbody → sRGB lookup table indexed by B-V. 256×1 texture; the
 // Ballesteros 2012 B-V→Teff conversion and Planck + CIE 1931 + sRGB
 // D65 transform are baked in at LUT build time (see scripts/colour/blackbody-lut.ts).
@@ -305,7 +303,7 @@ void main() {
     // pc for Sol-class) never hits it, so physSize = 2·atan(R/d) can
     // grow all the way to fill the viewport at the manual-zoom limit.
     float dPc = max(distCam, 1e-30);
-    float appMag = iAbsmag + 5.0 * (log(dPc) / LOG10 - 1.0);
+    float appMag = iAbsmag + 5.0 * (log(dPc) / STELLATA_LOG10 - 1.0);
 
     // Variability — the R+T amplitude split (docs/science-stellar-modelling.md
     // § Variable-star pulsation). The three modulations are anchored to a
@@ -366,7 +364,7 @@ void main() {
             emitOffscreenSentinel(0.0, 0.0);
             return;
         }
-        appMag += -2.5 * log(iEclipseDim) / LOG10;
+        appMag += -2.5 * log(iEclipseDim) / STELLATA_LOG10;
     }
 
     // Visibility prefilter — dust-independent. Spectral mask and distance

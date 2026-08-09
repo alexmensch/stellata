@@ -37,18 +37,18 @@ src/client/hdr/
   emission.glsl              The unit: magnitude → linear luminance, the
                              point-source peak rule, the extended-source
                              surface-brightness rule (§ Unit), and the
-                             plate scale recovered from the pixel solid
-                             angle.
+                             plate scale / extended threshold recovered
+                             from the two solid angles.
   extended-emitter.glsl      The write tail a volumetric emitter shares:
                              gain, clamp, both attachments, and the
                              inline operator off-target. Composes the two
                              chunks above, so it is the only include a
                              raymarching stage needs (§ Extended sources).
-  emission-pure.ts (+ test)  CPU mirror, plus the pixel-solid-angle
-                             derivation and its inverse, LUMA_CEIL,
-                             SB_ZERO_POINT (the zero point both volumetric
-                             emitters share) and lumaNormalisedTint, the
-                             hue-only tint they multiply (§ Unit).
+  emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
+                             and their inverses, LUMA_CEIL, SB_ZERO_POINT
+                             (the zero point both volumetric emitters
+                             share) and lumaNormalisedTint, the hue-only
+                             tint they multiply (§ Unit).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
@@ -79,17 +79,20 @@ pixels so a resolved disc's surface brightness doesn't shift with
 it the emission is true surface brightness.
 
 A layer that draws an **extended source** instead of a kernel takes
-`stellataSurfaceBrightnessLuminance` — the pixel's flux magnitude is
-`S − 2.5·log10(Ω_px)` for a surface brightness `S` in mag/arcsec², and
-the log round-trip through `L(m)` collapses to one scalar gain:
+`stellataSurfaceBrightnessLuminance` — the flux magnitude inside a solid
+angle `Ω` is `S − 2.5·log10(Ω)` for a surface brightness `S` in
+mag/arcsec², and the log round-trip through `L(m)` collapses to one
+scalar gain:
 
 ```
-L_px = uExposure · 10^(−0.4·S) · uOmegaPxArcsec2
+L_px = uExposure · 10^(−0.4·S) · Ω
 ```
 
 Being a single scalar is what lets a layer apply it to a coloured column
-without touching chromaticity. It is **unclamped** — the caller clamps
-the product against `LUMA_CEIL`, not the factor.
+without touching chromaticity. It is **unclamped** — the caller clamps the
+product against `LUMA_CEIL`, not the factor. **Which `Ω` is § Extended
+sources' decision**, and it separates the physical answer from the
+displayed one.
 
 **Being a scalar is also why an emitter's tint must carry hue only.** It
 multiplies every channel equally while the emissivity it scales was
@@ -104,20 +107,39 @@ surface-brightness rule with the disc's mean `S` — and past 1 px the two
 are the *same quantity*, so a body crossing from point to resolved mesh
 does not change brightness. The disc-mean derivation and the two
 normalisers that make the shaded disc integrate back to `L(m)` are
-`../solar-system/planets/README.md` § Physical-luminance emission; the
-mesh reads `uOmegaPxArcsec2` for the same reason the Milky Way does.
+`../solar-system/planets/README.md` § Physical-luminance emission. **The
+mesh reads `uOmegaPxArcsec2` and, unlike the band, must**: the two rules
+agree at 1 px on that solid angle alone, so the summation substitution
+below would break the resolve step it exists to close.
 
-### Extended sources — one write tail
+### Extended sources — two solid angles, one write tail
+
+**A point source at `m_lim` is lifted to `L_THRESH`; an extended source
+needs its own anchor or the render inverts the eye's ordering.** Rod
+summation makes its threshold a *surface brightness*, so
+`rodSummationSolidAngleArcsec2` turns that threshold and `m_lim` into
+`uOmegaSummationArcsec2` — 4.7863e5 arcsec², a 13.0′ critical diameter —
+which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
+level cannot move with FOV. Derivation, the threshold's identity with the
+instrument's `skyBackgroundMagArcsec2` (`../filters/filter-state.ts`
+`extendedThresholdSbFor`), and every rejected alternative:
+`docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
+
+`stellataEmitExtendedSource` takes **both** angles, and which one displays
+is per consumer. The band is uniform over the summation patch; M31's core
+is not, so `local-group-emission.frag.glsl` passes `Ω_px` twice — an
+opt-out costing 2.695 mag past 3.6′ to avoid 3.95 at the nucleus
+(`../local-group/README.md`). Statistic: always `Ω_px` (`statistic/README.md`).
 
 Everything after the gain is identical for every volumetric emitter, so
-`extended-emitter.glsl` (`stellata_extended_emitter`) owns it:
-`stellataEmitExtendedSource` applies the gain, clamps at `LUMA_CEIL`,
-writes the statistic texel, and off-target runs the operator undithered;
-`stellataEmitNothing` is the miss case. Both take the attachments as
-`out` params, making "attachment 1 has no default, so every branch must
-write it" one decision rather than one per early return. Consumers:
-`milkyway.frag.glsl` (which keeps its own magnitude step, since the chart
-isobar contours `magPx`) and `local-group-emission.frag.glsl`.
+that chunk owns it: gain, clamp at `LUMA_CEIL`, statistic texel, and
+off-target the undithered operator. `stellataEmitNothing` is the miss case.
+Both take the attachments as `out` params, making "attachment 1 has no
+default, so every branch must write it" one decision rather than one per
+early return. `milkyway.frag.glsl` keeps its own magnitude step because the
+chart isobar contours surface brightness against
+`stellataExtendedThresholdSb`, the inverse of the same pair — so contour
+and emission cannot disagree about where threshold is.
 
 It `#include`s both chunks above — three resolves includes recursively
 and the guards make the extra paste inert. `chunk-constant-drift.test.ts`
@@ -137,17 +159,18 @@ maps to and the axis `physSize` projects through. Every FOV change and
 every resize has to reach it; the integration shell's
 `syncPixelSolidAngle` is the only caller.
 
-**Zooming dims an extended source.** Ω_px falls quadratically with FOV,
-so surface brightness — not per-pixel luminance — is the invariant. That
-matches the point-source rule exactly (a resolved disc's `r_phys_px`
-grows as FOV shrinks, dimming its peak by the same factor) and it is the
-magnification loss the epoch model's aperture multiplier pays for
-(`docs/science-hdr-pipeline.md` § 3). An unresolved point keeps its peak
-at any FOV, which is also correct.
+**Zooming dims an extended source at the detector, but not on screen.**
+Ω_px falls quadratically with FOV, so surface brightness is the physical
+invariant — matching the point-source rule exactly, since a resolved
+disc's `r_phys_px` grows as FOV shrinks. The *display* path no longer
+follows it: the eye's summation area is angular, so a diffuse source holds
+its level at any plate scale (§ Extended sources). The statistic keeps the
+quadratic fall; an unresolved point keeps its peak at any FOV.
 
-`HdrPipeline.emitterUniforms` is how a layer binds to this. Five
+`HdrPipeline.emitterUniforms` is how a layer binds to this. Six
 uniforms, held **by reference** so one write reaches every pass:
-`uExposure`, `uOmegaPxArcsec2`, `uWhitePoint`, `uHighlightDesat`, and
+`uExposure`, `uOmegaSummationArcsec2`, `uOmegaPxArcsec2`, `uWhitePoint`,
+`uHighlightDesat`, and
 `uHdrTarget` — the 0/1 branch telling the shader whether to emit raw `L`
 or run the operator itself. `HdrPipeline` owns every write to
 `uHdrTarget` (via the same `wantsTarget()` the chrome mapping reads, so
@@ -162,15 +185,16 @@ operator in one stage, and three's `resolveIncludes` pastes each
 `#include` textually wherever it appears — without the guards that
 combination fails to compile.
 
-## Exposure — one slot this class does not write
+## Exposure — two slots this class does not write
 
-`uExposure` is the one `emitterUniforms` slot `HdrPipeline` never writes.
-`ExposureController` owns it, along with the three magnitude bounds
-derived from the same state (`uLimitMag`, `uThresholdMag`, `uCullMag`) —
-`exposure/README.md` is the contract, and it is where the per-frame
-adaptation measurement lives too. Nothing in this README's operator or
-target discussion depends on how that scalar was arrived at: emitters
-read it, the resolve never sees it.
+`uExposure` and `uOmegaSummationArcsec2` are the `emitterUniforms` slots
+`HdrPipeline` never writes: both are instrument-derived, so
+`ExposureController` owns them along with the three magnitude bounds
+(`uLimitMag`, `uThresholdMag`, `uCullMag`). `exposure/README.md` is the
+contract, and it is where the per-frame adaptation measurement lives too.
+Nothing in this README's operator or target discussion depends on how
+those numbers were arrived at: emitters read them, the resolve never sees
+them.
 
 ## Statistic attachment — a second, physical-luminance target
 
@@ -205,8 +229,8 @@ the canvas's. Depth semantics, core masks, and the log-depth split are
 untouched: depth encoding is orthogonal to colour encoding.
 
 `reduction.measure()` runs last and touches neither this target nor the
-canvas — it binds its own chain of ever-smaller targets and restores. It
-is after the resolve so the measurement never delays the frame it measured
+canvas — it binds its own chain of targets and restores, after the resolve
+so the measurement never delays the frame it measured
 (`exposure/reduction/README.md`).
 
 **The target's depth is 24-bit.** `depthBuffer: true` with
@@ -241,25 +265,11 @@ so the fullscreen pass and the fallback path can never drift (the
 brighter than the threshold lands on full white by construction. At the
 gentle end, `L = L_THRESH` resolves to 0.15 of full scale after encode.
 
-Two properties a reader will otherwise mis-attribute:
-
-- **Hue survives the operator, not the encode.** Scaling all three
-  channels by `Yd/Y` keeps chromaticity exact. But any luminance-domain
-  operator sends `Y = Lw` to output luminance 1, so a *chromatic* source
-  at the white point necessarily puts its brightest channel over full
-  scale and clips. Clipping — not the operator — is what breaks hue at
-  the top end, and it is the reason highlight desaturation exists.
-  Pinned in `tonemap-pure.test.ts`.
-- **Desaturation preserves luminance pre-clamp only.** It mixes toward
-  `vec3(Yd)`, whose luminance is `Yd` by definition, so the mix is
-  luminance-neutral; post-clamp luminance is lower wherever a channel
-  clipped. Don't test end-to-end luminance preservation above the knee —
-  it isn't a property of the pipeline.
-
-The dither is interleaved-gradient noise at ±0.5/255, applied after the
-encode where 8-bit quantisation actually happens. The design doc calls
-for blue noise; IGN has adequate spectral behaviour without shipping a
-texture, and swapping it is a one-function change.
+Two testing consequences of what `docs/science-hdr-pipeline.md` § 2 says
+about hue and clipping: hue survival is pinned in `tonemap-pure.test.ts`,
+and end-to-end luminance preservation above the knee is **not** a property
+of the pipeline, so don't assert it — desaturation is luminance-neutral
+pre-clamp only.
 
 **`stellataTonemapUndithered` is the variant an overlapping emitter
 wants.** The dither is a function of `fragCoord` alone, so it is the
@@ -268,10 +278,6 @@ star quads would add it N times — a coherent brightness bias over dense
 fields, not noise that cancels. Anything covering each pixel once (the
 resolve, a fullscreen volume) wants the dithered `stellataTonemap`.
 `tonemap-pure.ts` mirrors the undithered variant.
-
-This pass is the single place the output transfer lives. The Display-P3
-investigation (stellata-zsr.2) plugs in here as an alternate encode +
-gamut matrix, nowhere else.
 
 ## Chrome — non-physical layers keep their authored look
 
@@ -292,11 +298,9 @@ when the operator parks.
 
 ## Chart mode — full bypass
 
-Chart renders direct to the canvas exactly as before: no target, no
-tone-map, no exposure. Chart is deliberately non-photometric
-ink-on-paper and every physical premise above is wrong for it, so the
-bypass is both cheaper and more honest than an identity path — and it
-keeps chart output pixel-identical across the whole epic.
+Chart renders direct to the canvas: no target, no tone-map, no exposure,
+and pixel-identical to the pre-HDR build. Why a bypass rather than an
+identity path is `docs/science-hdr-pipeline.md` § 5.
 
 `setMonochrome` is the seam (`stellata.ts`), alongside the existing
 paper clear-colour swap. `applyTheme('mono')` is the only caller, so
@@ -316,13 +320,11 @@ materials anyway.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just
-blow out. Since the ship gate went live this is genuinely the fallback
-path plus the `hdr.setEnabled(false)` A/B, not the shipped default it was
-during H3–H5. It mirrors the extinction prepass's
-same-chunk-two-paths strategy
-(`../star-pipeline/extinction/README.md` § The prepass cache), and it is
-why the operator lives in a chunk rather than inside the fullscreen
-shader.
+blow out. That is why the operator lives in a chunk rather than inside the
+fullscreen shader, the same two-consumers strategy as the extinction
+prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
+Since the ship gate went live it is the fallback path plus the
+`hdr.setEnabled(false)` A/B, not the shipped default it was during H3–H5.
 
 Calibration is identical on both paths — same `L`, same operator, same
 exposure, and the **peak of any source matches exactly**. What differs is
@@ -354,12 +356,11 @@ the default path and the operator runs once, at the resolve.
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
   24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
-  large display. The gate
-  being live means it now allocates on the first frame in practice; keep
-  the laziness anyway, because `hdr.setEnabled(false)` and chart mode both
-  want a build that never pays for it.
+  large display. It allocates on the first frame in practice; keep the
+  laziness anyway, because `hdr.setEnabled(false)` and chart mode both want
+  a build that never pays for it.
 - **Every emitter is on the scale.** The Local Group emission pass was
-  the last one outside it; it now takes the same
+  the last one outside it; it takes the same
   `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
   point derived from the solver's flux units rather than a tuned
   constant (`../local-group/README.md` § Zero free parameters).
@@ -380,13 +381,12 @@ the default path and the operator runs once, at the resolve.
   colour against the new white point (`chrome/README.md`).
 
 **What `DR_MAG` does and does not buy.** Extended Reinhard is
-`L(1 + L/Lw²)/(1 + L)`, which is already at 0.95 of full scale by `L` = 20
+`L(1 + L/Lw²)/(1 + L)`, already at 0.95 of full scale by `L` = 20
 *whatever* `Lw` is — so raising `DR_MAG` buys hue survival at the top end
 and almost no visible gradient. Detail up there needs a longer
-**shoulder**, not a higher white point, and any replacement curve must
-stay analytically invertible: `tonemap-pure.ts` carries the exact inverse
-and `chrome/` depends on it, which rules out ACES and filmic fits. A
-piecewise log shoulder is invertible; that is the shape to reach for.
+**shoulder**, and any replacement must stay analytically invertible
+because `chrome/` inverts it; a piecewise log shoulder is the shape to
+reach for.
 
 **Pass-through shows the scene blown out, and that is the point of it** —
 `uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
@@ -402,19 +402,16 @@ encode. Custom-shader chrome *is* exact. Use `hdr.setEnabled(false)` when
 you want a whole-frame comparison.
 
 **What the A/B is and is not for.** It compares *compositing*, not
-calibration (§ Fallback), so it cannot reveal a mis-calibrated emitter —
-only accumulation and blend-order differences.
+calibration (§ Fallback) — accumulation and blend-order only, and now wider
+for the band (`docs/science-hdr-pipeline.md` § 2, stacked emitters).
 
 **Expected on the A/B, and not a bug: chrome line work reads visibly
-brighter with the seam ON.** Grids, the galactic coordinate sphere, orbit
-rings and binary paths are authored colours pre-mapped through the
-operator's inverse, and § Chrome's mapping is exact only for *a lone
-full-alpha fragment over black*. Line work is neither — antialiased edges
-are partial-alpha, and lines cross each other — so the round trip does not
-return them to authored, and the residual lands on the bright side. The
-"slight look shift accepted in H2" wording undersells it; the shift on thin
-line work is plainly visible. Nothing downstream depends on it, and no
-resolve setting fixes it.
+brighter with the seam ON.** § Chrome's inverse mapping is exact only for
+*a lone full-alpha fragment over black*, and line work is neither —
+antialiased edges are partial-alpha and lines cross each other — so the
+round trip lands on the bright side. The shift on thin line work is
+plainly visible, nothing downstream depends on it, and no resolve setting
+fixes it.
 
 Neither switch is bit-identical to a pre-HDR build, for two further
 reasons worth knowing before chasing a diff:
@@ -438,12 +435,15 @@ exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
 ## Not here yet
 
 `DR_MAG` and the desaturation strength are live **dev-console** setters
-(§ Dev switches); H8 puts them on the panel, alongside `L_THRESH`, which
-is still baked. `DR_MAG` is also the faint-end lever H7 tunes against the
-eso0932a panorama — it moves the star field and the Milky Way band
-together, which is the point of it.
+(§ Dev switches); H8 puts them on the panel, alongside `L_THRESH` and the
+extended-source threshold, both still baked. `DR_MAG` is the faint-end
+lever H7 tunes against the eso0932a panorama — it moves the star field and
+the Milky Way band together, which is the point of it, and it is no longer
+the *only* faint-end lever now that the two thresholds are separable.
 
-No emitter is outside the scale, and both volumetric emitters now share one
-zero point (`SB_ZERO_POINT`) instead of deriving their own. Still outstanding
-*upstream* of the unit: the Milky Way's emissivity is anchored on one
-corrected sightline, not a total luminosity — `../milkyway/README.md`.
+No emitter is outside the scale, and both volumetric emitters share one
+zero point (`SB_ZERO_POINT`). Still outstanding *upstream* of the unit: the
+Milky Way's emissivity is anchored on one corrected sightline, not a total
+luminosity — `../milkyway/README.md`. And **this README is at its cap**:
+the next addition splits the unit (`emission*.glsl`, `emission-pure.ts`,
+`extended-emitter.glsl`) into `hdr/emission/` with its own README.

@@ -23,8 +23,11 @@ export interface Instrument {
    *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/README.md`
    *  § Operator). */
   sizeSpan: number;
-  /** No consumer yet — § 3.4's two remaining preset axes. */
+  /** Doubles as the extended-source detection threshold
+   *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). Not
+   *  yet an additive floor on `L`, which is the other half of the axis. */
   skyBackgroundMagArcsec2: number;
+  /** No consumer yet — § 3.4's remaining preset axis. */
   passband: 'V';
 }
 
@@ -56,6 +59,22 @@ export const DEFAULT_INSTRUMENT: InstrumentName = 'unaided-eye';
 
 export function instrumentLimitMag(name: InstrumentName): number {
   return limitMagForAperture(INSTRUMENTS[name].apertureMm);
+}
+
+/**
+ * The extended-source sibling of `instrumentLimitMag`: the surface
+ * brightness at which a large diffuse source is at the edge of detection.
+ *
+ * It **is** the instrument's sky background, and that identity is the
+ * claim — an extended source is detected as a contrast against the sky it
+ * sits in, and threshold contrast for a large, soft, scotopic target is of
+ * order unity. `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
+ * carries the derivation and the summation area it implies;
+ * `../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor` pairs it
+ * with `m_lim`.
+ */
+export function extendedThresholdSbFor(name: InstrumentName): number {
+  return INSTRUMENTS[name].skyBackgroundMagArcsec2;
 }
 
 /** Convenience for the CPU mirrors that read the limit off filter state

@@ -268,7 +268,7 @@ export class Stellata implements FrameAnchor {
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
   // Owns the exposure scalar and the three magnitude bounds derived from
   // it — instrument limit, just-visible threshold, population cull
-  // (hdr/exposure/README.md § One writer, four slots).
+  // (hdr/exposure/README.md § One writer, five slots).
   readonly exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
@@ -436,11 +436,12 @@ export class Stellata implements FrameAnchor {
     });
     this.sharedUniforms = sharedUniforms;
     // Constructed before every consumer of the magnitude bounds: it
-    // rewrites all four slots from its own constructor, so the seeds in
+    // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
     this.exposure = new ExposureController({
       uniforms: {
         uExposure: this.hdr.emitterUniforms.uExposure,
+        uOmegaSummationArcsec2: this.hdr.emitterUniforms.uOmegaSummationArcsec2,
         uLimitMag: sharedUniforms.uLimitMag,
         uThresholdMag: sharedUniforms.uThresholdMag,
         uCullMag: sharedUniforms.uCullMag,

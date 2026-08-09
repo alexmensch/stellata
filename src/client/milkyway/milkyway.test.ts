@@ -33,13 +33,22 @@ import {
   diffuseResidualMagArcsec2,
 } from './diffuse-reference';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../filters/filter-state';
+import {
+  DEFAULT_INSTRUMENT,
+  extendedThresholdSbFor,
+  instrumentLimitMag,
+} from '../filters/filter-state';
 import {
   SB_ZERO_POINT,
+  extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
 } from '../hdr/emission-pure';
-import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
+import {
+  BASE_EPOCH_EXPOSURE,
+  DEFAULT_SUMMATION_ARCSEC2,
+} from '../hdr/exposure/exposure-epoch';
+import { L_CAP } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
 import {
   L_THRESH,
@@ -69,6 +78,7 @@ describe('MilkyWay uniform wiring', () => {
       'uHighlightDesat',
       'uExposure',
       'uOmegaPxArcsec2',
+      'uOmegaSummationArcsec2',
     ] as const) {
       for (const mat of materials) expect(mat.uniforms[key]).toBe(hdr[key]);
     }
@@ -178,24 +188,33 @@ describe('MilkyWay diffuse reference', () => {
 const SFD_POLAR_AV_MIN = 0.03;
 const SFD_POLAR_AV_MAX = 0.15;
 
-// Rod spatial summation integrates an extended source over roughly a
-// degree of sky, which is why the band's naked-eye visibility is a
-// different question from its per-pixel level.
-const ROD_SUMMATION_PATCH_DEG = 1;
-const ARCSEC_PER_DEG = 3600;
+/** Reference viewport for every figure that still depends on plate scale
+ *  — the statistic, and the pixel-solid-angle level the display path used
+ *  to run on. */
+const REFERENCE_OMEGA_PX = pixelSolidAngleArcsec2(
+  angularToPx(900, (50 * Math.PI) / 180),
+);
 
-/** Display level the GC sightline reaches at the base epoch, on the
- *  reference 900 px / 50° viewport both display assertions use. */
-function bandDisplayLevel(): number {
-  const omega = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
-  return srgbEncode(
-    reinhardExtended(
-      GC_SIGHTLINE_COLUMN *
-        surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, omega),
-      tonemapWhitePoint(),
+const displayLevel = (l: number) => srgbEncode(reinhardExtended(l, tonemapWhitePoint()));
+
+/** Display level a sightline reaches at the base epoch. The rod summation
+ *  solid angle, not the pixel's, so this carries no viewport. */
+function bandDisplayLevel(magArcsec2: number): number {
+  return displayLevel(
+    surfaceBrightnessLuminance(
+      BASE_EPOCH_EXPOSURE,
+      magArcsec2,
+      DEFAULT_SUMMATION_ARCSEC2,
     ),
   );
 }
+
+const sbAt = (lDeg: number, bDeg: number) =>
+  sightlineSurfaceBrightness(
+    SB_ZERO_POINT,
+    SOL_GALACTOCENTRIC_PC,
+    galacticDirection(lDeg, bDeg),
+  );
 
 describe('MilkyWay analytical dust', () => {
   // Marched through the profile rather than re-arranged out of the
@@ -324,52 +343,86 @@ describe('MilkyWay surface-brightness calibration', () => {
     expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.78, 2);
   });
 
-  // At a realistic dust column the band is FAINT at the base epoch: the
-  // GC sightline lands near 1.7/255, inside the range the resolve's dither
-  // breaks up but well under the 4/255 the old 0.45-strength calibration
-  // reached. The brightest part of the band (b ≈ 5°) is the one that
-  // carries the layer visually. Lifting it is the exposure model's job, not
-  // this layer's: raising the emissivity to compensate would put the pole
-  // back above its measured residual. See README.md § Calibration.
-  it('renders the band in the dither-resolvable toe at the base epoch', () => {
-    expect(bandDisplayLevel()).toBeCloseTo(0.0066, 4);
-    expect(bandDisplayLevel()).toBeGreaterThan(1 / 255);
-    expect(bandDisplayLevel()).toBeLessThan(
-      srgbEncode(reinhardExtended(0.02, tonemapWhitePoint())),
+  // The whole band, in 8-bit display levels at the base epoch with no EV
+  // trim. Pinned as a table because the ORDERING is the acceptance — the
+  // brightest sightline reads as a threshold star does and the pole sits at
+  // the dither floor. Under the retired per-pixel mapping the same rows ran
+  // 5.45 / 1.67 / 1.42 / 0.68 / 0.33 of 255, a seventh of a threshold star
+  // at its brightest (docs/science-hdr-pipeline.md § 1, Extended sources).
+  it('pins the band against a threshold star at the base epoch', () => {
+    expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
+
+    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(38.07, 2);
+    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(17.98, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.85, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(8.17, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(3.90, 2);
+  });
+
+  // How far under threshold each sightline sits, which is the photometric
+  // statement the display levels above cannot make: they are tone-mapped and
+  // sRGB-encoded, so a RATIO of them is not a magnitude and reads ~0.5 mag
+  // shy of the real gap. Against S_lim it is a plain subtraction — no
+  // operator, no encode, no viewport — and it is the column a future session
+  // wants when asking whether a sightline should be visible at all.
+  it('pins each sightline as a magnitude gap against the extended threshold', () => {
+    const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
+    expect(sLim).toBe(22);
+
+    expect(sbAt(0, 5) - sLim).toBeCloseTo(0.01, 2);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(1.29, 2);
+    expect(sbAt(180, 0) - sLim).toBeCloseTo(1.47, 2);
+    expect(sbAt(0, 30) - sLim).toBeCloseTo(2.26, 2);
+    expect(sbAt(0, 90) - sLim).toBeCloseTo(3.07, 2);
+
+    // The band's maximum lands ON threshold, which is what the anchor pins;
+    // a threshold star and a threshold surface brightness are the same
+    // display level by construction (emission-pure.test.ts).
+    expect(bandDisplayLevel(sLim)).toBeCloseTo(displayLevel(L_THRESH), 12);
+  });
+
+  // Rod summation is fixed in ANGLE, so narrowing the field cannot lose the
+  // band: the display path takes no plate scale at all, which is why
+  // `bandDisplayLevel` above has no viewport argument. What still dims
+  // quadratically is the STATISTIC, and that is what keeps the concession
+  // out of the adaptation cut.
+  it('dims the statistic quadratically with FOV, not the display', () => {
+    const zoomedPx = pixelSolidAngleArcsec2(angularToPx(900, (5 * Math.PI) / 180));
+    const physical = (omega: number) =>
+      surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, omega);
+    expect(physical(REFERENCE_OMEGA_PX) / physical(zoomedPx)).toBeCloseTo(100, 6);
+    expect(physical(REFERENCE_OMEGA_PX)).toBeLessThan(
+      physical(DEFAULT_SUMMATION_ARCSEC2),
     );
   });
 
-  // The band is faint on screen but not faint in the sky, and the two
-  // disagree by a wide margin. Summed over a rod-summation patch the GC
-  // sightline is well ABOVE the shipped instrument's limit, yet it renders
-  // at a small fraction of a threshold star, because L_THRESH lifts point
-  // sources to a comfortable display level and extended sources get no
-  // equivalent concession. The retired 20.0 anchor was silently supplying
-  // that lift.
-  //
-  // Pinned because these three figures are the whole case for the
-  // extended-source threshold (README.md § Calibration), they are what a
-  // future session will act on, and they were already computed once
-  // against the wrong m_lim.
-  it('pins the extended-source display gap against the shipped instrument', () => {
-    const patchArcsec2 = (ROD_SUMMATION_PATCH_DEG * ARCSEC_PER_DEG) ** 2;
-    const patchMag = GC_SIGHTLINE_MAG_ARCSEC2 - 2.5 * Math.log10(patchArcsec2);
-    expect(patchMag).toBeCloseTo(5.51, 2);
-    expect(instrumentLimitMag(DEFAULT_INSTRUMENT) - patchMag).toBeCloseTo(2.29, 2);
-
-    const thresholdStar = srgbEncode(reinhardExtended(L_THRESH, tonemapWhitePoint()));
-    expect(thresholdStar * 255).toBeCloseTo(38.3, 1);
-    // Brighter than the limit by 2.29 mag, drawn at 1/23 of it.
-    expect(thresholdStar / bandDisplayLevel()).toBeCloseTo(22.88, 2);
+  // Keeping the concession off attachment 1 is only safe if what the band
+  // does write cannot provoke an adaptation cut. It cannot, by 10 stops —
+  // and the margin is measured on the Ω_px value the statistic actually
+  // carries, not on the 12x-larger level the band displays at
+  // (statistic/README.md § The unit).
+  it('writes a statistic the adaptation cut cannot act on', () => {
+    const statisticL = surfaceBrightnessLuminance(
+      BASE_EPOCH_EXPOSURE,
+      sbAt(0, 5),
+      REFERENCE_OMEGA_PX,
+    );
+    expect(statisticL).toBeCloseTo(1.657e-3, 6);
+    expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(10.1, 1);
   });
 
-  it('dims the band quadratically with FOV — magnification costs surface brightness', () => {
-    const wide = pixelSolidAngleArcsec2(angularToPx(900, (50 * Math.PI) / 180));
-    const zoomed = pixelSolidAngleArcsec2(angularToPx(900, (5 * Math.PI) / 180));
-    const ratio =
-      surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, wide) /
-      surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, SB_ZERO_POINT, zoomed);
-    expect(ratio).toBeCloseTo(100, 6);
+  // What the concession is worth at the reference viewport, stated as the
+  // magnitude offset between the two thresholds. It grows as the FOV
+  // narrows, because the pixel shrinks and the summation patch does not.
+  it('pins the extended-source lift at the reference viewport', () => {
+    expect(2.5 * Math.log10(DEFAULT_SUMMATION_ARCSEC2 / REFERENCE_OMEGA_PX))
+      .toBeCloseTo(2.695, 3);
+    expect(
+      extendedThresholdSbFromSolidAngle(
+        DEFAULT_SUMMATION_ARCSEC2,
+        instrumentLimitMag(DEFAULT_INSTRUMENT),
+      ),
+    ).toBeCloseTo(22, 9);
   });
 });
 
@@ -405,5 +458,26 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
   // dropped — the failure mode a reader can't see from the constants.
   it('seeds tauAccum from the foreground column', () => {
     expect(frag).toMatch(/vec3 tauAccum = foregroundDustTau\(/);
+  });
+
+  // Which solid angle reaches which attachment is the whole fix, and it is
+  // one argument order in one call — swap the pair and the band silently
+  // returns to a seventh of a threshold star while the adaptation cut
+  // starts reading the display concession as light.
+  it('displays at the summation solid angle and measures at the pixel’s', () => {
+    expect(frag).toMatch(
+      /uExposure, uGlowMagOffset, uOmegaSummationArcsec2, uOmegaPxArcsec2,/,
+    );
+  });
+
+  // A chart's band outline is a fixed feature of the sky, so the contour
+  // must carry no plate-scale term — and the threshold it crosses is the
+  // extended-source one, not the point-source m_lim it used to read.
+  it('contours surface brightness against the extended-source threshold', () => {
+    expect(frag).toMatch(/float sb = uGlowMagOffset - 2\.5 \* log\(column\)/);
+    expect(frag).toMatch(
+      /stellataExtendedThresholdSb\(uOmegaSummationArcsec2, uLimitMag\)/,
+    );
+    expect(frag).not.toMatch(/abs\(magPx - uLimitMag\)/);
   });
 });

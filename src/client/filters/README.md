@@ -48,8 +48,17 @@ twice, which is what the retired preset table did.
 stars" is a request for a larger aperture — a different instrument — so a
 magnitude control would be a second, contradictory answer to the same
 question. `docs/science-hdr-pipeline.md` § 3.4 carries the record shape
-and the three axes a future instrument needs (`skyBackgroundMagArcsec2`
-and `passband` are named there and have no consumer yet).
+and the three axes a future instrument needs.
+
+**`skyBackgroundMagArcsec2` is the extended-source threshold surface
+brightness**, read through `extendedThresholdSbFor` — the sibling of
+`instrumentLimitMag`, and here rather than in `hdr/` for the same reason
+that one is: an extended source is detected as a contrast against the sky
+it sits in, so the background level *is* where its threshold sits
+(`../hdr/README.md` § Extended sources). Its only consumer is
+`../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor`, which pairs
+it with `m_lim`. It has yet to land as an additive floor on `L`, which is
+the other half of the axis. `passband` still has no consumer.
 
 ## Star pixel size is plate-scale-derived
 

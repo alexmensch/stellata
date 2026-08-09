@@ -54,7 +54,7 @@ uniform float uPixelRatio;
 uniform float uFovYRad;
 
 // Magnitude bounds, shared with the star pipeline
-// (../../../hdr/exposure/README.md § One writer, four slots): uCullMag is the
+// (../../../hdr/exposure/README.md § One writer, five slots): uCullMag is the
 // population
 // bound, uLimitMag the instrument limit chart sizing and the footprint
 // window read. The fragment shader owns the taper against uThresholdMag.
@@ -116,9 +116,6 @@ out float vPeakL;
 out float vFluxPeakL;
 out float vAaWidth;
 
-const float LOG10 = 2.302585093;
-const float PI_CONST = 3.14159265358979323846;
-
 // Phase-curve polynomial in α-degrees; this helper just evaluates
 // whatever the buffer carries (degree 7 — c7 rides coefsC.x, zero for
 // every planet but Mercury).
@@ -134,7 +131,7 @@ float mallamaDV(vec4 coefsA, vec4 coefsB, vec4 coefsC, float aDeg) {
 }
 
 float lambertPhi(float alpha) {
-  return (sin(alpha) + (PI_CONST - alpha) * cos(alpha)) / PI_CONST;
+  return (sin(alpha) + (STELLATA_PI - alpha) * cos(alpha)) / STELLATA_PI;
 }
 
 void main() {
@@ -183,14 +180,14 @@ void main() {
   float alpha = acos(cosA);
   float phi;
   float alphaMaxDeg = iPhaseCoefsB.w;
-  float alphaDeg = alpha * (180.0 / PI_CONST);
+  float alphaDeg = alpha * (180.0 / STELLATA_PI);
   if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg) {
     // Polynomial path. Saturn's ring contribution rides on c0 < 0,
     // which makes φ(0) > 1 (intentional — `albedo` represents the
     // globe's α=0 reflectance, the c0 boost stacks the ring system
     // on top).
     float dV = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaDeg);
-    phi = exp(-dV * 0.4 * LOG10);
+    phi = exp(-dV * 0.4 * STELLATA_LOG10);
   } else if (alphaMaxDeg > 0.0) {
     // Anchor-scaled Lambert past the published validity bound:
     // Lambert(α) × (poly(αmax) / Lambert(αmax)). Preserves brightness
@@ -199,8 +196,8 @@ void main() {
     // extending out instead of snapping to a uniform Lambertian
     // sphere. CPU mirror in phase-function.ts.
     float dVb = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaMaxDeg);
-    float boundaryFlux = exp(-dVb * 0.4 * LOG10);
-    float alphaMaxRad = alphaMaxDeg * (PI_CONST / 180.0);
+    float boundaryFlux = exp(-dVb * 0.4 * STELLATA_LOG10);
+    float alphaMaxRad = alphaMaxDeg * (STELLATA_PI / 180.0);
     phi = lambertPhi(alpha) * (boundaryFlux / lambertPhi(alphaMaxRad));
   } else {
     // No published curve — pure Lambertian (Pluto, Uranus, Neptune, and
@@ -224,10 +221,10 @@ void main() {
   //   • Earth at opposition (d_hp=5.2 AU, d_vp=4.2 AU): −2.7 ✓
   //   • Outside heliopause (d_vp=144.8 AU): +5.2 ✓
   //   • α Cen (1.34 pc): +21 ✓
-  float m_host_at_planet = iHostAbsmag + 5.0 * (log(d_hp) / LOG10 - 1.0);
+  float m_host_at_planet = iHostAbsmag + 5.0 * (log(d_hp) / STELLATA_LOG10 - 1.0);
   float radRatio = iRadiusPc / d_vp;
   float reflFactor = iAlbedoP * radRatio * radRatio * max(phi, 0.0);
-  float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / LOG10;
+  float appMag = m_host_at_planet - 2.5 * log(max(reflFactor, 1e-30)) / STELLATA_LOG10;
 
   // True-eclipse dim — a flux multiplier on the glare intensity (both
   // regimes) rather than an appMag fold, because the locally-active

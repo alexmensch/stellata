@@ -6,7 +6,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { LUMA_WEIGHTS } from './tonemap-pure';
-import { LUMA_CEIL, pxPerRadianFromSolidAngle } from './emission-pure';
+import {
+  LUMA_CEIL,
+  extendedThresholdSbFromSolidAngle,
+  pxPerRadianFromSolidAngle,
+} from './emission-pure';
 import './hdr-pipeline';
 
 const read = (name: string) =>
@@ -49,6 +53,41 @@ describe('shared chunk constants', () => {
     for (const omega of [4, 40, 4_000, 40_000]) {
       const shader = 1 / (arcsecToRad * Math.sqrt(omega));
       expect(shader).toBeCloseTo(pxPerRadianFromSolidAngle(omega), 6);
+    }
+  });
+
+  // The isobar reads the extended-source threshold back out of the same
+  // uniform the gain runs on, and the log conversion is a GLSL literal — so
+  // nothing but this pins it to Math.log10. Ω = 0 is in the sweep because
+  // both sides floor it: the CPU mirror silently returned -Infinity until
+  // this case existed.
+  it('emission.glsl recovers the extended threshold exactly as emission-pure does', () => {
+    const m = emissionChunk.match(/const float STELLATA_LOG10 = ([\d.]+);/);
+    expect(m).not.toBeNull();
+    const log10 = Number(m![1]);
+    for (const omega of [0, 4, 40_000, 478_630.09]) {
+      const shader = 7.8 + (2.5 * Math.log(Math.max(omega, 1e-12))) / log10;
+      expect(shader).toBeCloseTo(extendedThresholdSbFromSolidAngle(omega, 7.8), 9);
+    }
+    expect(Number.isFinite(extendedThresholdSbFromSolidAngle(0, 7.8))).toBe(true);
+  });
+
+  // A stage that pastes the unit already has ln(10) and π in scope, so a
+  // local copy is both redundant and free to drift to fewer digits — which
+  // is what two of these had done. Redeclaring one is legal GLSL and
+  // silently shadows nothing, so only this catches it.
+  it('no consumer of the unit redeclares a constant it already has', () => {
+    for (const stage of [
+      '../star-pipeline/star.vert.glsl',
+      '../solar-system/planets/glare/planet.vert.glsl',
+      '../milkyway/milkyway.frag.glsl',
+      '../local-group/local-group-emission.frag.glsl',
+      '../local-group/local-group-emission.vert.glsl',
+    ]) {
+      const src = read(stage);
+      // Directly, or through the composite that pulls the unit in.
+      expect(src).toMatch(/#include <stellata_(hdr_emission|extended_emitter)>/);
+      expect(src).not.toMatch(/const float (LOG10|PI_CONST|PI)\s*=/);
     }
   });
 });

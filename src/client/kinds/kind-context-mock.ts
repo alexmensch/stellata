@@ -20,6 +20,7 @@ export function makeMockHdrEmitterUniforms(): HdrEmitterUniforms {
     uHighlightDesat: { value: 0 },
     uExposure: { value: 1 },
     uOmegaPxArcsec2: { value: 1 },
+    uOmegaSummationArcsec2: { value: 1 },
   };
 }
 
