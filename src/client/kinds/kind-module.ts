@@ -33,9 +33,10 @@ export interface KindContext {
    *  conversion every projected-size leg (renderedSizePx) keys off. */
   angularToPx(): number;
   /** Photometry of catalog star `idx` — absolute V magnitude and the
-   *  floored physical radius (pc); null out of range. What per-host
-   *  machinery (the planet kind's host attach) reads ahead of the star
-   *  module owning catalog access (phase 5). */
+   *  floored physical radius (pc); null out of range. Answered by the
+   *  star module, which owns the catalog: this is how a non-star module
+   *  (the planet kind's host attach) reads a host star without reaching
+   *  for `Catalog` itself. */
   starPhotometry(idx: number): { absMag: number; radiusPc: number } | null;
   /** Kind-generic system-membership read surface (rosters + collapsed
    *  clusters) — hover roster cards read through it. */

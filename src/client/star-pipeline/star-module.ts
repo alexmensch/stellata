@@ -57,6 +57,10 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  name tables from them and hands the maps back via
    *  `setNameTables`. */
   readonly searchIndex: SearchEntry[];
+  /** Absolute V magnitude + floored physical radius (pc) of star `idx`;
+   *  null out of range or before load. Backs `KindContext.starPhotometry`
+   *  — the module owns the catalog, so the formula lives here only. */
+  photometry(idx: number): { absMag: number; radiusPc: number } | null;
   setRuntime(runtime: StarModuleRuntime): void;
   setNameTables(tables: StarNameTables): void;
   setBinaries(binaries: BinariesData | null): void;
@@ -79,6 +83,13 @@ export function createStarKindModule(): StarKindModule {
     sid: catalog!.sid,
   });
 
+  const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
+    ? {
+      absMag: catalog.absmag[idx],
+      radiusPc: Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
+    }
+    : null);
+
   return {
     kind: 'star',
     critical: true,
@@ -91,6 +102,7 @@ export function createStarKindModule(): StarKindModule {
       if (!searchIndex) throw new Error('star module read before load');
       return searchIndex;
     },
+    photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
     },
@@ -143,9 +155,7 @@ export function createStarKindModule(): StarKindModule {
           fovMinorRad: starPhysics.fovMinorRad(ctx.camera),
         })
         : 0),
-      arrivalRadiusPc: (idx) => (catalog
-        ? Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC
-        : null),
+      arrivalRadiusPc: (idx) => photometryOf(idx)?.radiusPc ?? null,
       renderedSizePx: (idx) => runtime?.renderedSizePx(idx) ?? 0,
       chartPlateauDistance: (idx, magBright) => (catalog
         ? chartPlateauDistancePc(catalog.absmag[idx], magBright)

@@ -103,9 +103,10 @@ whose first consumers arrived with the soft kinds: `angularToPx()`
 (every projected-size leg) and `solAbsInto()` (the heliopause anchor;
 the planet kind's host attach is its second consumer). Phase 3b added
 `starPhotometry()` (host-star absmag + floored radius for the planet
-host attach — the star module owns catalog access from phase 5) and
-the `systemMembership` read surface (hover roster cards). Exposure
-still waits for a consumer.
+host attach) and the `systemMembership` read surface (hover roster
+cards). Exposure still waits for a consumer. Since 5b `starPhotometry`
+delegates to the star module's `photometry()` — the module owns the
+catalog, so the floored-radius formula exists in exactly one place.
 
 ### Tier 2 — kind modules
 

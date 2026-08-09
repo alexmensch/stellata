@@ -55,8 +55,19 @@ describe('star kind module', () => {
     expect(m.displayName(0)).toBe('');
     expect(m.sids()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
+    expect(m.photometry(0)).toBeNull();
     expect(() => m.catalog).toThrow(/before load/);
     expect(() => m.searchIndex).toThrow(/before load/);
+  });
+
+  it('answers photometry once, for the arrival radius and KindContext alike', async () => {
+    const { m } = await loadedModule();
+    const radiusPc = Math.max(1, MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
+    expect(m.photometry(1)).toEqual({ absMag: 0, radiusPc });
+    expect(m.photometry(-1)).toBeNull();
+    expect(m.photometry(4)).toBeNull();
+    expect(m.focusable().arrivalRadiusPc?.(1)).toBe(radiusPc);
+    expect(m.focusable().arrivalRadiusPc?.(4)).toBeNull();
   });
 
   it('loads the catalog + search index pair, forwarding onProgress', async () => {

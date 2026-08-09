@@ -80,7 +80,7 @@ import {
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/local-pass/star-local-cluster-pure';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
-import { J2000_JD, R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from './util/astronomy-constants';
+import { J2000_JD } from './util/astronomy-constants';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -574,14 +574,7 @@ export class Stellata implements FrameAnchor {
         return true;
       },
       angularToPx: () => this.angularToPx(),
-      starPhotometry: (idx) => {
-        if (idx < 0 || idx >= catalog.count) return null;
-        return {
-          absMag: catalog.absmag[idx],
-          radiusPc:
-            Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
-        };
-      },
+      starPhotometry: (idx) => this.kinds.star.photometry(idx),
       systemMembership: this.systemMembership,
       getT: () => this.getT(),
       getWorldOffset: () => this.worldOffset,
