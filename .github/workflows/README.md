@@ -62,5 +62,10 @@ fan-out of jobs beyond the bare checks:
 - `sid-consistency` / `tier-a-corpus` — SID ledger↔artifact consistency
   and the Tier-A star corpus + render-geometry regression against the
   built artifacts.
-- `sid-ledger-guard` — append-only ledger guard + DR-reconciliation
-  classifier.
+- `sid-ledger-guard` — append-only ledger guard, DR-reconciliation
+  classifier, swap parity ledger.
+
+Both LFS jobs run an explicit file list, so a `describe.skipIf` suite no
+list names skips everywhere and reports green. Adding one means adding it
+to `tier-a-corpus` (needs built artifacts) or `sid-ledger-guard` (needs
+committed LFS inputs only).

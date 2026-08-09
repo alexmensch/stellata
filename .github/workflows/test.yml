@@ -162,8 +162,9 @@ jobs:
       - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
-  # read) + the DR-reconciliation classifier against its committed
-  # dry-run snapshots. Both self-skip in the bare `test` job.
+  # read), the DR-reconciliation classifier against its committed dry-run
+  # snapshots, and the swap parity ledger's ledger/spine/V-50 gates. All
+  # self-skip in the bare `test` job.
   sid-ledger-guard:
     name: SID ledger append-only guard
     runs-on: ubuntu-latest
@@ -179,4 +180,4 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts
+      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts scripts/catalog/classic-ids/parity-ledger.test.ts
