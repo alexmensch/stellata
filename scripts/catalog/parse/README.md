@@ -119,7 +119,13 @@ never re-derived).
    magnitude is the system's blend or one component's — companion
    promotion's flux conservation may only subtract a companion's light
    from a blend (`../companions/README.md` § Anchor flux conservation).
-9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+9. **B−V** (`resolveColourIndex`) — the Gaia relation, else the spine's
+   printed cell, else the intrinsic spectral-class colour, else solar. See
+   `../photometry/README.md` § The ci cascade. Its `isObserved` verdict is
+   what decides whether de-extinction de-reddens the value, so the two
+   measured tiers and the two derived ones part company here rather than at
+   the dust integral.
+10. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
@@ -161,8 +167,9 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 | HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers | HIP2 row, null PM |
 | AT-HYG `pm_ra`/`pm_dec` | athyg_printed tier | blank pm cells |
 
-Radial velocity comes from AT-HYG's `rv` cell (km/s; `rv_src` is Gaia RVS
-on the bulk), used directly where present, zero otherwise. **Sol** carries
+Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity`,
+else the spine's printed `rv` cell (`../distance/README.md` § Radial
+velocity) — and is zero where neither tier carries one. **Sol** carries
 no PM row and sits at the origin, so its velocity is forced to exactly zero
 (the advance pass must leave the world origin fixed).
 

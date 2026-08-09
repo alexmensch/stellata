@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  GAIA_PHOTOMETRY_SATURATION_G,
   RIELLO_BP_RP_MAX,
   RIELLO_BP_RP_MIN,
   RIELLO_G_MINUS_V_COEFFS,
@@ -10,8 +9,11 @@ import {
   resolveVMagnitude,
   rielloGMinusV,
   vTierIsSystemBlend,
-  type GaiaPhotometry,
 } from './v-magnitude-pure';
+import {
+  GAIA_PHOTOMETRY_SATURATION_G,
+  type GaiaPhotometry,
+} from './gaia-photometry-pure';
 
 function photometry(overrides: Partial<GaiaPhotometry> = {}): GaiaPhotometry {
   return { gMag: 10, bpMag: 10.5, rpMag: 9.7, ...overrides };

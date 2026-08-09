@@ -182,10 +182,16 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
    *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
   spectralFallback: number;
-  /** No-Apsis-Teff ∩ no-observed-B−V records whose `ci` is baked from the
-   *  parsed spectral class (tier 4/5) instead of the solar fallback — the
-   *  population that would otherwise render solar-yellow. */
+  /** Records whose `ci` came from the Gaia BP−RP relation. */
+  ciGaiaRelation: number;
+  /** Records falling through to the spine's printed B−V cell. */
+  ciCatalogued: number;
+  /** No-Apsis-Teff records whose `ci` is baked from the parsed spectral class
+   *  instead of the solar fallback — the population that would otherwise
+   *  render solar-yellow. */
   ciSpectralDerived: number;
+  /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
+  ciSolarFallback: number;
   /** Identifier-less catalog primaries that gained HIP / Gaia source_id
    *  from a multiples.tsv pair-primary row, joined by HD
    *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */
@@ -396,9 +402,15 @@ export interface BuildCounts extends LabelMergeCounts {
    *  hypervelocity star survives and the artifact tail stays visible for
    *  finer filtering. */
   velocityAboveEscape: number;
-  /** Rows whose velocity carries a non-zero AT-HYG radial velocity
-   *  (rv cell present and non-zero; rv_src is Gaia RVS on the bulk). */
+  /** Rows whose velocity carries a non-zero radial velocity from either
+   *  rv tier below. */
   velocityRvApplied: number;
+  /** Rows taking the radial term from Gaia DR3 `radial_velocity`. */
+  rvGaiaDr3: number;
+  /** Rows RVS did not reach, falling through to the spine's printed cell. */
+  rvCatalogued: number;
+  /** Rows no tier covers — the radial term is zero. */
+  rvNone: number;
   /** Records whose designation constellation came from IV/27A keyed on their
    *  own HD / HIP — the nomenclature source that replaced AT-HYG's editorial
    *  `con` cell. The GCVS pass overwrites it where a variable designation

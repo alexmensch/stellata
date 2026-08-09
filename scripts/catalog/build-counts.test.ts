@@ -69,7 +69,10 @@ function baseCounts(): BuildCounts {
     spectralBySimbad: 280000,
     spectralByGspspec: 25000,
     spectralFallback: 8000,
+    ciGaiaRelation: 280000,
+    ciCatalogued: 29000,
     ciSpectralDerived: 1200,
+    ciSolarFallback: 3000,
     multiplesIdentifierBackfill: 30,
     companionRowsScanned: 13000,
     companionPromoted: 4500,
@@ -126,6 +129,9 @@ function baseCounts(): BuildCounts {
     velocityClamped: 40,
     velocityAboveEscape: 50,
     velocityRvApplied: 267000,
+    rvGaiaDr3: 250000,
+    rvCatalogued: 17000,
+    rvNone: 46000,
   };
 }
 

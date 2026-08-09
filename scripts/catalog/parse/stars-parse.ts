@@ -32,14 +32,17 @@ import {
 } from '../catalog-pure';
 import {
   resolveDirection,
+  resolveRadialVelocity,
   velocityPcPerYr,
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
+  RV_VIA_VALUES,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
   type DirectionSources,
   type DirectionVia,
+  type RvVia,
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
@@ -48,6 +51,11 @@ import {
   V_VIA_VALUES,
   type VVia,
 } from '../photometry/v-magnitude-pure';
+import {
+  resolveColourIndex,
+  CI_VIA_VALUES,
+  type CiVia,
+} from '../photometry/colour-index-pure';
 import { emptyTallyPartition } from '../../util/tally';
 import { iterSpineTsv } from '../spine/inherited-spine-pure';
 import { type ConstellationAssignment } from './constellations';
@@ -209,12 +217,13 @@ export function readStars(
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
     velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
-    rvApplied: number;             // rows whose velocity carries a non-zero AT-HYG radial velocity
+    rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
+    rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
-    ciSpectralDerived: number;     // no-Apsis-Teff ∩ no-observed-B−V rows whose ci is baked from the spectral class (tier 4/5) instead of the solar fallback
+    ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
   };
 } {
   const spineRows = iterSpineTsv(readFileSync(spineTsvPath, 'utf8'));
@@ -243,6 +252,8 @@ export function readStars(
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
   const vVia = emptyTallyPartition(V_VIA_VALUES);
   const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
+  const rvVia = emptyTallyPartition(RV_VIA_VALUES);
+  const ciVia = emptyTallyPartition(CI_VIA_VALUES);
   let rvApplied = 0;
   let velocityClamped = 0;
   const velocityClampedSample: string[] = [];
@@ -252,7 +263,6 @@ export function readStars(
   let spectralBySimbad = 0;
   let spectralByGspspec = 0;
   let spectralFallback = 0;
-  let ciSpectralDerived = 0;
 
   for (const row of spineRows) {
     total++;
@@ -270,17 +280,23 @@ export function readStars(
 
     const hip = parseIntOrNull(row.hip);
     const mag = parseFloatOrNull(row.mag);
-    // Printed proper motion (mas/yr, cos δ-applied) + radial velocity (km/s).
-    // Feed the LMC PM gate, the athyg_printed velocity tier, and the
-    // space-motion velocity's radial term. rv is Gaia RVS on 258k rows
-    // (rv_src=G_R3); used directly, zero when blank.
+    // Printed proper motion (mas/yr, cos δ-applied). Feeds the LMC PM gate and
+    // the athyg_printed velocity tier.
     const athygPmRa = parseFloatOrNull(row.pm_ra);
     const athygPmDec = parseFloatOrNull(row.pm_dec);
-    const rvKmS = parseFloatOrNull(row.rv);
     // Read off the spine column, never re-derived: the native → HIP-cross-walk
     // precedence and both binding gates ran when the spine was generated, and
     // re-running them here would re-decide a binding the spine froze.
     const gaiaSourceId = nonEmpty(row.gaia_source_id);
+    const gaiaRow = gaiaSourceId !== null
+      ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null
+      : null;
+
+    // Radial velocity through Gaia DR3 → the printed cell, feeding the
+    // space-motion velocity's radial term. See ../distance/README.md.
+    const rvRes = resolveRadialVelocity(gaiaRow, parseFloatOrNull(row.rv));
+    const rvKmS = rvRes.rvKmS;
+    rvVia[rvRes.via]++;
 
     // Bailer-Jones (DR3) override fires when (a) the row resolves to a
     // Gaia source_id by either path above and (b) dist_src marks the
@@ -359,7 +375,7 @@ export function readStars(
     // See ../photometry/README.md. Sol is the one record this cannot reach:
     // it sits at distance zero, where the modulus is undefined.
     const vRes = resolveVMagnitude(
-      gaiaSourceId ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null : null,
+      gaiaRow,
       hip !== null ? hipVMag.get(hip) ?? null : null,
       mag,
     );
@@ -425,24 +441,19 @@ export function readStars(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
 
-    // ci routing mirrors the shipped shader's two-tier read
-    // (`iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`): an Apsis-Teff
-    // star ignores iCi, so the baked ci only drives colour for no-Apsis
-    // stars. An observed B−V wins; otherwise a no-Apsis star bakes its
-    // intrinsic spectral-class colour (tier 4/5) here rather than
-    // rendering solar-yellow. spectralClassCi routes an unparseable
-    // class back to the solar fallback.
-    const ciRaw = parseFloatOrNull(row.ci);
-    const ciIsObserved = ciRaw !== null;
-    let ci: number;
-    if (ciIsObserved) {
-      ci = ciRaw;
-    } else if (apsisTeff === null) {
-      ci = spectralClassCi(spectInfo);
-      if (spectralClassColorIsDerivable(spectInfo)) ciSpectralDerived++;
-    } else {
-      ci = SOLAR_BV_FALLBACK;
-    }
+    // B−V through the Gaia relation → printed cell → intrinsic spectral class →
+    // solar. See ../photometry/README.md § The ci cascade. The baked value only
+    // drives colour for no-Apsis stars, which is why the derived tiers gate on
+    // apsisTeff.
+    const ciRes = resolveColourIndex(
+      gaiaRow,
+      parseFloatOrNull(row.ci),
+      apsisTeff,
+      spectralClassColorIsDerivable(spectInfo) ? spectralClassCi(spectInfo) : null,
+      SOLAR_BV_FALLBACK,
+    );
+    let ci = ciRes.ci;
+    ciVia[ciRes.via]++;
 
     // Build-time de-extinction: absmag and an observed ci are
     // observed-convention (embed the real Sol→star A_V), so subtract
@@ -454,7 +465,7 @@ export function readStars(
     if (dustGrid) {
       const av = avSolToStar(dustGrid, x, y, z);
       absmag -= av;
-      if (ciIsObserved) ci -= av / R_V;
+      if (ciRes.isObserved) ci -= av / R_V;
     }
 
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
@@ -525,12 +536,13 @@ export function readStars(
       velocityClampedSample,
       velocityAboveEscape,
       velocityAboveEscapeSample,
+      rvVia,
       rvApplied,
       spectralByCurated,
       spectralBySimbad,
       spectralByGspspec,
       spectralFallback,
-      ciSpectralDerived,
+      ciVia,
     },
   };
 }

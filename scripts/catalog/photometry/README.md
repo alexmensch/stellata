@@ -1,23 +1,53 @@
 # Photometry
 
 Per-record photometric quantities derived from Gaia DR3 broadband
-magnitudes: the Johnson V cascade, and the published relations behind it.
-The contract is `docs/catalog-driver.md` § 5; the per-row pipeline that
-consumes this is `../parse/README.md` § Per-row pipeline.
+magnitudes: the Johnson V and B−V cascades, and the published relations
+behind them. The contract is `docs/catalog-driver.md` § 5; the per-row
+pipeline that consumes this is `../parse/README.md` § Per-row pipeline.
 
 ## Files in this area
 
 ```
 scripts/catalog/photometry/
+  gaia-photometry-pure.ts        The GaiaPhotometry band bundle, the
+    (+ test)                     saturation bound, calibratedPhotometry
+                                 (the validity gate both relations share),
+                                 and the ascending-powers polynomial
+                                 evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, the gated
                                  transform over it, the three-tier V
                                  cascade, and which tiers yield a system
                                  blend. Pure.
+  colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
+                                 difference of the two relations, and the
+                                 four-tier ci cascade with its
+                                 observed-vs-intrinsic verdict. Pure.
   hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
                                  printed Johnson V. Shared by the cascade's
                                  bright tier and ../classic-ids/'s binding
                                  gate, which need the same HIP-keyed V.
 ```
+
+## The published relations
+
+Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
+§ Photometric relationships with other photometric systems, the release-3
+restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
+
+| Relation | Degree | σ | Stated range |
+| --- | --- | --- | --- |
+| `G − V` | cubic | 0.03017 | −0.5 … 5.0 |
+| `G − B` | quartic | 0.0633 | −0.5 … 4.0, M giants only past 1.75 |
+
+That shared provenance is what makes `B − V = (G − V) − (G − B)` a published
+quantity rather than a composed guess: same independent variable, same fit
+population, and `G` cancels out of the difference entirely.
+
+`calibratedPhotometry` is the gate both apply first — every band present and
+finite, and `G` above `GAIA_PHOTOMETRY_SATURATION_G` — returning the values
+rather than a boolean, so the algebra downstream reads the very numbers the
+gate accepted instead of re-deriving them behind non-null assertions. Each
+relation then applies its own colour range on top.
 
 ## The V cascade
 
