@@ -320,13 +320,11 @@ materials anyway.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just
-blow out. Since the ship gate went live this is genuinely the fallback
-path plus the `hdr.setEnabled(false)` A/B, not the shipped default it was
-during H3–H5. It mirrors the extinction prepass's
-same-chunk-two-paths strategy
-(`../star-pipeline/extinction/README.md` § The prepass cache), and it is
-why the operator lives in a chunk rather than inside the fullscreen
-shader.
+blow out. That is why the operator lives in a chunk rather than inside the
+fullscreen shader, the same two-consumers strategy as the extinction
+prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
+Since the ship gate went live it is the fallback path plus the
+`hdr.setEnabled(false)` A/B, not the shipped default it was during H3–H5.
 
 Calibration is identical on both paths — same `L`, same operator, same
 exposure, and the **peak of any source matches exactly**. What differs is
@@ -358,10 +356,9 @@ the default path and the operator runs once, at the resolve.
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its RG16F statistic attachment and its
   24-bit depth attachment is a couple of hundred MB of VRAM at 2x DPR on a
-  large display. The gate
-  being live means it now allocates on the first frame in practice; keep
-  the laziness anyway, because `hdr.setEnabled(false)` and chart mode both
-  want a build that never pays for it.
+  large display. It allocates on the first frame in practice; keep the
+  laziness anyway, because `hdr.setEnabled(false)` and chart mode both want
+  a build that never pays for it.
 - **Every emitter is on the scale.** The Local Group emission pass was
   the last one outside it; it takes the same
   `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
