@@ -300,7 +300,7 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
  *  unit-ball frame.
  *
  *  `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (`../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
+ *  (`../../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
  *  share along the disc normal, which the caller projects. Both default to 0
  *  — the shipped shader always passes a footprint, but a flux integral over
  *  solid angle has no plate scale to derive one from. */

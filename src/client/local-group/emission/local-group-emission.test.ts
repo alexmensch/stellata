@@ -318,7 +318,7 @@ describe('surface-brightness zero point', () => {
   // The band's own summation anchor, which this layer used to opt out of by
   // passing Ω_px twice. It can take it now only because the anchor rides
   // attachment 2 and the resolve averages over the patch first
-  // (../hdr/summation/README.md) — so the `location = 2` declaration and the
+  // (../../hdr/summation/README.md) — so the `location = 2` declaration and the
   // summation uniform are one contract. A shader that gained by Ω_sum
   // straight into attachment 0 would put 3.95 mag on M31's nucleus.
   it('displays at the summation area, through the diffuse attachment', () => {

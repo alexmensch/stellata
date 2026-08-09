@@ -580,7 +580,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../hdr/emission/README.md` § Extended sources). That gain multiplies a
+  // gain (`../../hdr/emission/README.md` § Extended sources). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
@@ -721,7 +721,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
 
     // What the shipped pass actually delivers: the softened profile a
     // fragment writes, box-averaged by the downsample factor, convolved with
-    // the flat summation disc — every stage of `../hdr/summation/README.md`
+    // the flat summation disc — every stage of `../../hdr/summation/README.md`
     // run on the CPU against the same ideal. `10^(−0.4·S̄)·Ω_sum` is the patch
     // flux, so `patchFlux / Ω_sum` is the mean the convolution should return
     // and the Ω_sum gain cancels out of the comparison.
@@ -817,7 +817,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
     // half the § against convolve-then-gain errors above cannot show. A
-    // threshold star lands on 38.25 (../hdr/tonemap-pure.ts), so M31 reads
+    // threshold star lands on 38.25 (../../hdr/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin

@@ -1,6 +1,6 @@
 // Instanced volumetric emission renderer for Local Group objects —
 // the luminous sibling of the wireframe layer. See ./README.md
-// § Emission layer.
+// § The two passes.
 
 import * as THREE from 'three';
 import emissionVert from './local-group-emission.vert.glsl?raw';
