@@ -190,10 +190,12 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
   four-record set: V and absmag moved one PR earlier under the V
   cascade, with the |ΔV| distribution measured per G bin against
   printed V (`../photometry/README.md` § Where the validity bound comes
-  from) and `vVia` routing pinned; spectral-string changes are the
-  +4/−4 rows of the same four-record table; ci and rv are spine
-  passthroughs until `stellata-3bsf.12`, which pins its own |Δci|
-  distribution.
+  from) and `vVia` routing pinned. § 6.3's |Δabsmag| axis needs no
+  second measurement: absmag is derived from that V on a distance the
+  swap did not touch, so it moves by |ΔV| exactly. Spectral-string
+  changes are the +4/−4 rows of the same four-record table; ci and rv
+  are spine passthroughs until `stellata-3bsf.12`, which pins its own
+  |Δci| distribution.
 - **Identity events — five bridges, zero ledger writes.** The swap
   appended nothing to `data/sid/ledger.tsv`, `retirements.tsv` or
   `reinstatements.tsv`; there were no presence events (membership is
@@ -202,11 +204,19 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
   `data/sid/sameas-overrides.tsv` — `parity-ledger.test.ts` pins that
   exact set and fails on any label change that moves an unbridged
   canonical key off its record.
-- **Review queues, disposed.** All 21 HD/HIP route disagreements:
-  one spine record holds both designations, the two cross-walks bind
-  it to different components of a resolved pair, the HD route keeps
-  label authority — no identity event
+- **Review queues, disposed.** The two queues the ledger owns. All 21
+  HD/HIP route disagreements: one spine record holds both designations,
+  the two cross-walks bind it to different components of a resolved
+  pair, the HD route keeps label authority — no identity event
   (`data/classic-ids/hd_hip_route_disagreements_review.tsv`, joined
   row-for-row to the queue by the same test). The 14 HD-less V/50
   rows are non-stellar (novae/SNe, four clusters, M 31): out of scope
-  by class, never records, pinned as an exact set.
+  by class, never records, pinned as an exact set. Both dispositions
+  are backed against the spine rather than asserted — the join and the
+  HR set would each stay green over a stale verdict otherwise.
+
+  `rejected_bindings.tsv` is deliberately not on that list: its 187
+  rows are the binding gate refusing to key a designation on a source
+  that is not the star, so each leaves its record on the spine's label
+  — no departure for the label term to carry, and no identity event to
+  dispose (`data/classic-ids/README.md` § The binding gate).
