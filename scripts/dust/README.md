@@ -13,6 +13,9 @@ contract + the Zucker column-check provenance.
 
 Python deps in `requirements-dust.txt`.
 
+`prefilter/` is analysis only — the sweep that picked the Milky Way band's
+prefilter mechanism against this grid. Its own README.
+
 Particle-layer rendering is currently shelved (strength = 0 → mesh
 hidden); voxel extinction (read per-star in the star pipeline) stays
 live.
