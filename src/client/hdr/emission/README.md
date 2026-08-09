@@ -27,6 +27,10 @@ src/client/hdr/emission/
                              (the zero point both volumetric emitters
                              share) and lumaNormalisedTint, the hue-only
                              tint they multiply.
+  population-colour-pure.ts  The old-spheroid SSP colour index both
+                             emitters render, and the constrained solve
+                             that turns a galaxy's published integrated
+                             index into its disc's (§ Population colours).
   chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
                              from TypeScript, and the include guards.
 ```
@@ -68,8 +72,22 @@ displayed one.
 **Being a scalar is also why an emitter's tint must carry hue only.** It
 multiplies every channel equally while the emissivity it scales was
 normalised against a total flux, so a tint whose relative luminance isn't 1
-rescales that emitter's flux by that luminance — 0.42 mag on the Local
-Group disc family, 0.39 mag on the band. `lumaNormalisedTint` owns it.
+rescales that emitter's flux by that luminance — 0.23 mag on either layer's
+spheroid population, 0.14–0.18 mag on their discs. What moves a
+*two-component* split is the difference, which the band carried at
+0.39 mag under the eyeballed palette that preceded § Population colours.
+`lumaNormalisedTint` owns it.
+
+**The separation holds at the emission site and not one step past it.**
+The Milky Way's raymarch attenuates per channel inside the same loop
+(`../../milkyway/README.md` § Analytical-only dust), so a redder component
+transmits more of its own light through the same dust: every dust-free
+column is bit-identical under any hue, and every extincted one is not.
+0.012 mag toward the Galactic centre for a disc 0.3 mag bluer in B−V,
+pinned in `../../milkyway/milkyway.test.ts`. Real A_V is nearly
+source-independent, so treat the coupling as an artefact of a three-channel
+extinction model rather than a physical prediction — it is small, it is in
+the right direction, and it means a palette edit is not free.
 
 **A reflecting body uses both rules, and that is what closes the resolve
 step.** A planet's glare billboard takes `stellataPointSourcePeak` with
@@ -115,6 +133,41 @@ the unit-ball → physical mapping, and taking the two semi-axes as scalars
 is what makes an axis swap inexpressible rather than merely tested-for.
 Only the Sérsic family, whose density depends on the ellipsoidal radius
 alone, uses the raw form.
+
+## Population colours — one equation, two unknowns, one citation
+
+`population-colour-pure.ts` is the hue side of the same problem
+§ Solving ρ₀ is the flux side: both layers render an old spheroid and a
+star-forming disc, and **no publication gives either galaxy its colour
+split by component.** What is published is the integrated index. So one
+component is modelled and the other is solved:
+
+```
+10^(−0.4·(B−V)_tot) = f·10^(−0.4·(B−V)_sph) + (1−f)·10^(−0.4·(B−V)_disc)
+```
+
+`OLD_SPHEROID_COLOUR_INDEX_BV` = **0.9574** supplies the spheroid term —
+BC03 Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
+Υ\*_V comes off. It is a *population* constant, not either layer's: the
+Galactic bulge, M31's bulge and the luminous early-type spheroids are the
+same population. It is **not** the metal-poor dwarf spheroids
+(`../../local-group/README.md` § Population tints).
+
+Three properties a change here has to keep:
+
+- **`f` is a LIGHT ratio.** The equation mixes V-band luminosities, so a
+  mass share carries exactly the error it carries in the flux split.
+- **Each layer solves against the `f` its own flux split uses**, so the
+  recombined index lands on the published one on the *rendered pixels*
+  rather than only on paper. Both are pinned that way.
+- **`discColourIndex` throws rather than returning NaN** when the spheroid
+  is already bluer than the total at that light share — three inputs that
+  are not describing one galaxy.
+
+Why solving beats predicting both components:
+`../../milkyway/calibration/README.md` § Population colours carries the
+argument and the numbers, including what an independent pair would do to
+the band's integrated colour.
 
 ## Extended sources — two solid angles, one write tail
 
