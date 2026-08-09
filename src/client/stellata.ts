@@ -117,10 +117,7 @@ import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
-import {
-  ExtinctionPrepass,
-  type ExtinctionPrepassUniforms,
-} from './star-pipeline/extinction/extinction-prepass';
+import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
@@ -1286,7 +1283,7 @@ export class Stellata implements FrameAnchor {
         renderer: this.renderer,
         positions: this.catalog.positions,
         count: this.catalog.count,
-        uniforms: u as unknown as ExtinctionPrepassUniforms,
+        uniforms: u,
       });
     }
     this.extinctionPrepass.markDirty();

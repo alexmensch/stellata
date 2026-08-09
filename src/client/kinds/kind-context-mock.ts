@@ -30,7 +30,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     uPixelRatio: { value: 1 },
     uFovYRad: { value: MOCK_FOV_Y_RAD },
     // The HDR emitter slots ride the shared map by reference in
-    // production (star-pipeline/frame/README.md § Shared uniforms).
+    // production (frame/README.md § Shared uniforms).
     ...makeMockHdrEmitterUniforms(),
   } as unknown as SharedUniforms;
   return {
