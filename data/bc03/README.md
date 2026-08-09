@@ -27,8 +27,9 @@ Committed files, by the model's metallicity code:
 The three bracket the Galactic bulge's metallicity distribution, which is
 broad and centred near solar. `m62` is the one the shipped constants are
 read from; the other two exist so the metallicity sensitivity quoted in
-`src/client/milkyway/README.md` § Calibration is reproducible rather than
-asserted.
+`src/client/milkyway/calibration/README.md` § The light ratio is
+reproducible rather than asserted — all three are read back, and the
+brackets they imply are pinned, in `diffuse-reference.test.ts`.
 
 ## Schema
 
@@ -52,12 +53,14 @@ Magnitudes and `M*` are all per 1 M⊙ **formed**, so a colour taken as
 
 ## Consumers
 
-- `src/client/milkyway/diffuse-reference.ts` — Υ\*_V of the bulge
-  population at 10 Gyr, solar Z, which converts the Galaxy's published
-  stellar-mass B/T into the V-band **light** ratio the emissivity solve
-  needs.
-- `src/client/milkyway/milkyway.test.ts` — reads `m62` back and pins the
-  constant against the file, so a hand-edited value fails.
+- `src/client/milkyway/calibration/diffuse-reference.ts` — Υ\*_V of the
+  bulge population at 10 Gyr, solar Z, which converts the Galaxy's
+  published stellar-mass B/T into the V-band **light** ratio the
+  emissivity solve needs.
+- `src/client/milkyway/calibration/diffuse-reference.test.ts` — reads all
+  three tables back, pinning the shipped constant against `m62` so a
+  hand-edited value fails, and the `m52` / `m72` brackets so the quoted
+  sensitivity cannot drift from the files.
 
 ## Refresh
 

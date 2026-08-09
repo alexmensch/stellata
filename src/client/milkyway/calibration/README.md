@@ -10,10 +10,12 @@ its pins live in `../milkyway.test.ts`; everything about *what goes in* and
 ## Files
 
 - `diffuse-reference.ts` — `GALAXY_TOTAL_ABSMAG_V`, the mass-to-light
-  inputs and the derived `BULGE_TO_TOTAL_LIGHT_V`, the Leinert totals, the
-  resolved-catalogue subtraction, and `diffuseResidualMagArcsec2`.
+  inputs, `bulgeToTotalLight` and the `BULGE_TO_TOTAL_LIGHT_V` it derives,
+  the Leinert totals, the resolved-catalogue subtraction, and
+  `diffuseResidualMagArcsec2`.
 - `diffuse-reference.test.ts` — the residual arithmetic and the light-ratio
-  derivation, including reading the bulge Υ\*_V back out of `data/bc03/`.
+  derivation, reading all three `data/bc03/` tables back: the shipped Υ\*_V
+  off `m62` and the metallicity brackets off `m52` / `m72`.
 
 ## The zero point is not the band's own — it is the emission unit's
 
@@ -94,7 +96,10 @@ Three things a change here has to know:
 - **Metallicity, not age, is what the answer turns on.** The bulge's
   metallicity distribution is broad and centred near solar; the Z = 0.008
   and Z = 0.05 brackets in `data/bc03/` put B/T_light at 0.098 and 0.056
-  against the shipped 0.0775. Ages from 8 to 13 Gyr move it far less.
+  against the shipped 0.0775 — read out of those two tables and pinned,
+  not quoted. Ages from 8 to 13 Gyr move it far less. Both brackets stay
+  under the mass ratio, so the MDF moves the size of the correction and
+  never its sign.
 - **The disc value has an independent check.** The same BC03 grid
   composited over an exponentially declining SFH (τ ≈ 8 Gyr, solar Z)
   returns Υ\*_V = 1.34 against Flynn's measured 1.5 ± 0.2 — two routes,
@@ -109,8 +114,8 @@ Where it shows is the face-on external view, which the camera can reach
 0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
 rather than an S0, and it is pinned in `../milkyway.test.ts` alongside the
 edge-on case — where the bulge sits behind the full midplane dust column
-and contributes essentially nothing, exactly as a real edge-on spiral does
-in V.
+and carries 4.6e−5 of the centre pixel, exactly as a real edge-on spiral
+does in V.
 
 ## Two checks, and both disagree by the same sign and order
 
