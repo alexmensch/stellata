@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
 import { MIRROR_CAPACITY } from './local-pass/star-local-mirror';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
+import { CATALOG_BOUNDING_RADIUS_PC } from './shards/star-shards-pure';
 
 function makeOpts(count = 4) {
   const catalog = makeEmptyCatalog(count);
@@ -27,7 +28,7 @@ function makeOpts(count = 4) {
     vertexShader: 'void main(){ gl_Position = vec4(0.0); }',
     fragmentShader: 'void main(){}',
     sharedUniforms,
-    boundingSphereRadiusPc: 60_000,
+    boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
   };
 }
 
