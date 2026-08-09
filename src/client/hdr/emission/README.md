@@ -166,9 +166,10 @@ Three properties a change here has to keep:
 - **Each layer solves against the `f` its own flux split uses**, so the
   recombined index lands on the published one on the *rendered pixels*
   rather than only on paper. Both are pinned that way.
-- **`discColourIndex` throws rather than returning NaN** when the spheroid
-  is already bluer than the total at that light share — three inputs that
-  are not describing one galaxy.
+- **`discColourIndex` throws rather than returning a non-finite hue** when
+  the spheroid carries all the V light, or is alone bluer than the total at
+  that share — three inputs that are not describing one galaxy. `f = 1`
+  divides by zero to `+Infinity` and so needs its own half of the guard.
 
 Why solving beats predicting both components:
 `../../milkyway/calibration/README.md` § Population colours carries the

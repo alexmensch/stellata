@@ -71,9 +71,11 @@ export function combinedColourIndex(
  * uncertainty lands on the disc, whose star-formation history is the
  * messier of the two to synthesise anyway.
  *
- * Throws rather than returning NaN when the spheroid alone is bluer than
- * the total at that light share, which means the three inputs are not
- * describing one galaxy.
+ * Throws rather than reaching a shader with a non-finite hue: either the
+ * spheroid carries all the V light, leaving no disc to colour, or it is
+ * alone bluer than the total at that share. Both mean the three inputs
+ * are not describing one galaxy. `f = 1` needs its own half of the guard
+ * — it divides by zero to `+Infinity`, which passes a positivity test.
  */
 export function discColourIndex(
   totalBv: number,
@@ -83,11 +85,11 @@ export function discColourIndex(
   const f = spheroidLightFraction;
   const discFlux =
     (colourFlux(totalBv) - f * colourFlux(spheroidBv)) / (1 - f);
-  if (!(discFlux > 0)) {
+  if (!(f < 1) || !Number.isFinite(discFlux) || !(discFlux > 0)) {
     throw new Error(
       `No disc colour solves (B−V)_total = ${totalBv} against a spheroid at ` +
-        `${spheroidBv} carrying ${f} of the V light: the spheroid alone is ` +
-        'already bluer than the total.',
+        `${spheroidBv} carrying ${f} of the V light: either no disc light is ` +
+        'left to colour, or the spheroid alone is already bluer than the total.',
     );
   }
   return -2.5 * Math.log10(discFlux);
