@@ -2,19 +2,19 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— the deduped, numerically-sorted `gaia_source_id` column of `../spine/`.
-Not a network pull and not on the `build:catalog` path: this is
-**input preparation** for `scripts/refresh/`, which is why it sits beside
-the record build rather than inside it (`../README.md` owns the output
-contract).
+— **312,654** ids, the union of two contributions the table's two consumers
+need (§ The request is a union). Not a network pull and not on the
+`build:catalog` path: this is **input preparation** for `scripts/refresh/`,
+which is why it sits beside the record build rather than inside it
+(`../README.md` owns the output contract).
 
 ## Files in this area
 
 ```
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the spine through
-                                  iterSpineTsv, collects non-empty
-                                  gaia_source_id, sorts, writes.
+                                  iterSpineTsv for the membership half, adds
+                                  the gate candidates, sorts, writes.
   export-astrometry-request-pure.ts
     (+ test)                      sortSourceIdsNumeric — the BigInt sort.
                                   Also imported by ../classic-ids/ and
@@ -22,6 +22,10 @@ scripts/catalog/astrometry-request/
                                   is a shared source_id helper rather than
                                   this script's private half.
 ```
+
+The candidate half lives in `../classic-ids/binding-candidates.ts`, with the
+gate that consumes it, not here — this folder decides what to *request*, not
+what a classic-ID route may propose.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
@@ -53,15 +57,44 @@ The remaining **four gains are the substantive win**: ξ UMa A, ξ UMa B,
 walk (`../spine/README.md` § The identifier columns are read). Nothing had
 ever requested their tier-1 astrometry.
 
-## What the pulled set bounds
+## The request is a union, and why that is not a compromise
+
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **two** consumers wanting
+different sets, so the request is the union of both:
+
+| Contribution | Ids | Consumer |
+|---|---|---|
+| the spine's `gaia_source_id` column | 311,886 | the record build: direction / rv / V / ci cascades |
+| `../classic-ids/`' binding-gate candidates | +768 beyond the spine | the gate's `phot_g_mean_mag` evidence |
+
+**The second one is not optional, and a spine-only request silently breaks
+the gate.** The gate vets a *candidate* — whatever source a cross-walk
+names for a designation — and the whole reason it exists is that a
+candidate is frequently NOT the star, so candidates are routinely not spine
+members. With no `phot_g_mean_mag` for one, `resolveGaiaSourceId`'s
+magnitude check has nothing to compare and **passes by default**: rejections
+become silent acceptances. Measured, on a spine-only request:
+`gateRejectedMag` 102 → **0** and `rejected_bindings.tsv` 187 → 101 rows.
+
+Nothing shipped moved when that happened — `label_flips.tsv` stayed
+byte-identical and every SID resolved — because the extra bindings key
+sources that are not records, so the label merge never applies them. That
+is what makes it a *latent* fault rather than a visible one, and why it has
+to be fixed rather than pinned: `stellata-3bsf.8` re-sources the spine, and
+a source that becomes a record is one whose binding was never vetted.
+
+`bindingCandidateSourceIds` (`../classic-ids/binding-candidates.ts`) is
+shared with the overlay build so the two cannot drift. It is 768 ids rather
+than the ~59k every route could propose, because `applyBindingGate` skips
+what it cannot weigh: an entry with no HIP (the TYC→HD route never attaches
+one) and a HIP with no printed V are both skipped, so a `G` for either
+decides nothing.
+
+## What the pulled set feeds
 
 The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py` →
-`data/gaia/gaia_dr3_astrometry_catalog.tsv`, which is tier 1 of the
-direction cascade and the rv cascade, and the source of the BP/RP the V
-and ci cascades transform.
-
-It is also the evidence table for `../classic-ids/`' binding gate, which
-reads `phot_g_mean_mag` per candidate source. A candidate the pull does
-not cover cannot be magnitude-vetted and passes that check by default — so
-narrowing this request narrows the gate, and `pnpm run build:classic-ids`
-(CI asserts the overlay byte-identical) is what proves it did not.
+the astrometry catalog, which is tier 1 of the direction cascade and the rv
+cascade, the source of the BP/RP the V and ci cascades transform, and the
+gate's evidence above. `pnpm run build:classic-ids` — CI asserts the
+overlay byte-identical — is what proves a change to this request did not
+move the gate.

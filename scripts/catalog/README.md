@@ -24,9 +24,9 @@ subfolders.
 
 ## Subfolders
 
-- `astrometry-request/` — the Gaia 5p pull's source_id list, read off the
-  spine column. Input preparation for `scripts/refresh/`, not on the
-  `build:catalog` path.
+- `astrometry-request/` — the Gaia 5p pull's source_id list: the spine
+  column plus the classic-ID gate's candidates. Input preparation for
+  `scripts/refresh/`, not on the `build:catalog` path.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, spectral/radius resolution, and
   Stellarium stick figures. Its `gcvs/` subfolder owns the variable-star

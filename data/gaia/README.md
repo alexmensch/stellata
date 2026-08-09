@@ -12,10 +12,12 @@ gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
 gaia_dr3_astrometry.tsv                ~1.2 MB, LFS. 5p astrometry for the
                                        resolved source_ids Stage 2 requests.
-gaia_dr3_astrometry_catalog.tsv        ~45 MB, LFS. 5p astrometry +
+gaia_dr3_astrometry_catalog.tsv        ~49 MB, LFS. 5p astrometry +
                                        radial_velocity for every catalog
-                                       source_id (~312k) — tier 1 of the
-                                       direction, rv, V and ci cascades.
+                                       source_id plus the classic-ID gate's
+                                       candidates (~313k) — tier 1 of the
+                                       direction, rv, V and ci cascades, and
+                                       the binding gate's G evidence.
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~17 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs.
@@ -23,7 +25,8 @@ gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output).
 gaia_catalog_source_id_request.tsv     ~6.2 MB, LFS. Full-catalog deduped
                                        source_id request list — the spine's
-                                       gaia_source_id column
+                                       gaia_source_id column UNION the
+                                       classic-ID binding gate's candidates
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)

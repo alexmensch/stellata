@@ -26,6 +26,11 @@ scripts/catalog/classic-ids/
                                   evidence tables and the spine, writes the
                                   overlay and its three review queues, and
                                   asserts the count snapshot.
+  binding-candidates.ts           The cross-walk loaders, and the source_ids
+                                  the gate can weigh. Shared with
+                                  ../astrometry-request/, which has to pull a
+                                  G magnitude for every one of them
+                                  (§ The gate's evidence has to be pulled).
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-vmag-parse.ts, shared
@@ -89,6 +94,25 @@ every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
 gate's reach: `data/classic-ids/README.md` § The binding gate.
+
+### The gate's evidence has to be pulled
+
+The magnitude check compares a candidate's `phot_g_mean_mag` against the
+printed V of its brightest HIP. That G comes from
+`data/gaia/gaia_dr3_astrometry_catalog.tsv`, and **`gMagOf` returning null
+is not a rejection — it is a pass.** So a candidate the astrometry pull does
+not cover is not merely unvetted, it is silently accepted.
+
+Candidates are not spine rows. A route resolves a designation to whatever
+source a cross-walk names, and the gate exists precisely because that source
+is often not the star, so the request has to carry them explicitly:
+`../astrometry-request/README.md` § The request is a union. Narrowing that
+request to the spine alone was measured at `gateRejectedMag` 102 → **0**.
+
+The set is small (768 ids beyond the spine) because `applyBindingGate` skips
+what it cannot weigh — an entry with no HIP, and a HIP with no printed V
+(`gateSkippedNoHipVMag`) — and `bindingCandidateSourceIds` applies both
+narrowings so the request and the gate agree by construction.
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are

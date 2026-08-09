@@ -60,7 +60,7 @@ venv binary) in the shell that runs them.
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tyco2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
-| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the spine's `gaia_source_id` column, the same binding the record build reads. Not a network pull, and no cross-walk input: it reads `data/athyg/inherited-spine.tsv` alone, so it no longer depends on `refresh:gaia-hip`. |
+| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the spine's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources. Not a network pull. Reads the spine plus both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (~312k) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
@@ -199,9 +199,9 @@ catalogue inconsistent. Order matters:
    `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, in this
-   order): `pnpm run build:astrometry-request` (reads the spine's
-   `gaia_source_id` column — no cross-walk, so it does not wait on
-   `refresh-gaia-hip-xmatch.py`), then
+   order): `pnpm run build:astrometry-request` (the spine's
+   `gaia_source_id` column plus the classic-ID gate's candidates, so it
+   runs after both cross-walk refreshes), then
    `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
    spine's `gaia_dr3:` ids bridge through `docs/sid.md` § 6 first —
    requesting DR3 ids against a DR4 table returns nothing.

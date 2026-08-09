@@ -8,16 +8,20 @@ import {
   type SimbadWdsXidIndex,
 } from '../catalog-pure';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
-import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
 import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
 import { parseFloatOrNull } from '../parse/corpus-tsv';
 import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import {
+  loadClassicIdCrossWalks,
+  SRC_CNS5,
+  SRC_HIP_XMATCH,
+  SRC_TYC2_HD,
+  SRC_TYC_XMATCH,
+} from './binding-candidates';
+import {
   parseBsc5Tsv,
-  parseCns5Tsv,
   parseCrossIndexTsv,
-  parseTyc2HdTsv,
 } from './classic-ids-parse';
 import {
   bindingEvidence,
@@ -43,12 +47,8 @@ import {
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
-const SRC_TYC2_HD = resolve(ROOT, 'data/classic-ids/tyc2_hd.tsv');
 const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
-const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
-const SRC_TYC_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_tyc_xmatch.tsv');
-const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
@@ -199,13 +199,12 @@ function logOverlay(overlay: ClassicIdOverlay, counts: ClassicIdOverlayCounts): 
 }
 
 async function main(): Promise<void> {
-  const tyc2Hd = parseTyc2HdTsv(readRequired(SRC_TYC2_HD));
   const crossIndex = parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX));
   const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5));
-  const cns5 = parseCns5Tsv(readRequired(SRC_CNS5));
 
-  requireExists(SRC_TYC_XMATCH);
-  requireExists(SRC_HIP_XMATCH);
+  for (const p of [SRC_TYC2_HD, SRC_CNS5, SRC_TYC_XMATCH, SRC_HIP_XMATCH]) {
+    requireExists(p);
+  }
 
   // Both best-neighbour walks below are unvetted, so the gate's evidence is a
   // required input, not an enrichment: without it the join would key labels on
@@ -221,11 +220,7 @@ async function main(): Promise<void> {
   }
   const evidence = bindingEvidence(sourceGMag, hipVMag, wdsXids);
 
-  const hipToSource = readGaiaHipXmatch(SRC_HIP_XMATCH);
-  const tycToSource = await readGaiaTycXmatch(
-    SRC_TYC_XMATCH,
-    new Set(tyc2Hd.map((r) => r.tyc)),
-  );
+  const { tyc2Hd, cns5, tycToSource, hipToSource } = await loadClassicIdCrossWalks();
 
   const {
     overlay,
