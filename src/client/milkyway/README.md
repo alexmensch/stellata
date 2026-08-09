@@ -101,12 +101,11 @@ Two consequences a future session needs:
 - **The Local Group layer seeds its family tints from the authored
   constants here** (`../local-group/local-group-emission-pure.ts`) and
   normalises them itself, so editing this palette moves both layers' hue.
-  `stellata-gxx.9` owns the per-object LG colours.
 
 The hues themselves are still **eyeballed, not photometric** — deriving
 them from published population colour indices through the star pipeline's
-Ballesteros → Planck → CIE path is the open half of `stellata-xypg.30`.
-Because the tints are normalised, that change cannot move any flux.
+Ballesteros → Planck → CIE path is open work. Because the tints are
+normalised, that change cannot move any flux.
 
 ## Surface-brightness emission
 
@@ -227,9 +226,10 @@ them** — the argument is `docs/science-galactic-structure.md` § The
 luminosity solve. The total wins because it is what the camera sees from
 outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
 ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
-than M31 — the cross-layer symptom `stellata-xypg` opened on. The cost is
+than M31 — the cross-layer symptom the HDR epic opened on. The cost is
 at the pole: diffuse + catalogue reads 23.07 against Leinert's 23.83.
-The eso0932a panorama sides with the total (`docs/science-hdr-pipeline.md` § 8).
+eso0932a sides with the total but confirms that pole cost independently,
+reading 1.14 mag fainter at b = +30 (`docs/science-hdr-pipeline.md` § 8).
 
 #### The gradient this produces, and what it reads on screen
 
@@ -424,7 +424,7 @@ brightness `S`** — no Ω_px term, so the line is FOV- and
 viewport-invariant, which is what a chart wants — against the
 extended-source threshold `stellataExtendedThresholdSb` recovers from
 `uOmegaSummationArcsec2` (22.0 mag/arcsec² at the shipped instrument).
-`stellata-xypg.22` still owns the treatment and un-hiding the meshes.
+The chart-mode treatment and un-hiding the meshes are still open work.
 
 The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
 floor), not chart-mode.ts directly — the group stays enabled in chart
