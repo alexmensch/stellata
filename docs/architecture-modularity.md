@@ -375,12 +375,14 @@ dependency-linked in order. Sizing per bead-authoring rules.
    answers empty (the star corpus keeps `buildSearchIndex`'s richer
    channel), and `Catalog` stays a shell constructor param. **5c
    landed**: the shard contract
-   (`src/client/star-pipeline/star-shards-pure.ts` — `StarShardTable`
+   (`src/client/star-pipeline/shards/README.md` — `StarShardTable`
    flat-index mapping, per-shard SID columns concatenated into the kind
    domain, chunk-local float32 over float64 chunk origins, the
    `shardRecentreEager` rewrite-or-defer rule), exercised by tests with
-   the catalog as shard 0; the multi-shard render plumbing arrives with
-   the first second population, as data plus a shard entry.
+   the catalog as shard 0. `sids()` is the only leg routed through the
+   table so far; the render plumbing and the remaining catalog-indexed
+   legs arrive with the first second population, as data plus a shard
+   entry (that README's § What is NOT shard-aware yet enumerates them).
 
 Each phase leaves the app fully working; no phase depends on a later
 one. LOC expectation across the epic: `stellata.ts` → ~1,200–1,400,
@@ -393,7 +395,7 @@ reduction ~600–900 lines after adding the module files.
 - Shard→flat-index mapping mechanics — settled in phase 5c: `Catalog`
   IS shard 0, uncut (flat indices concatenate shards in order, so its
   local indices stay its flat indices);
-  `src/client/star-pipeline/README.md` § Population shards.
+  `src/client/star-pipeline/shards/README.md` § Flat Target.idx space.
 - Whether `SystemMembershipRegistry` providers fold into the module
   contract or stay a separate registry (only two implementors today —
   second-consumer rule applies).
