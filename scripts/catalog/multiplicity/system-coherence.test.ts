@@ -10,6 +10,7 @@ import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
+import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 
 function star(overrides: Partial<Star>): Star {
@@ -38,12 +39,11 @@ function pairRow(
 function gaiaRow(
   overrides: Partial<GaiaAstrometryCatalogRow>,
 ): GaiaAstrometryCatalogRow {
-  return {
-    raDeg: 0, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.1,
+  return gaiaAstrometryRow({
+    parallaxMas: 10, parallaxErrorMas: 0.1,
     pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
-    bpMag: null, rpMag: null,
     ...overrides,
-  };
+  });
 }
 
 function hip2Row(overrides: Partial<Hip2AstrometryRow>): Hip2AstrometryRow {

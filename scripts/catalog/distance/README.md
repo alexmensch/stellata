@@ -1,9 +1,10 @@
 # Distance refinement and de-extinction
 
-Direction resolution, build-time de-extinction, and the multi-layer
-distance-override stack that refines AT-HYG's parallax-inverted
-distances. The authoring discipline for adding an override layer is the
-load-bearing part of this file — read it before touching the stack.
+Direction resolution, the radial-velocity cascade, build-time
+de-extinction, and the multi-layer distance-override stack that refines
+AT-HYG's parallax-inverted distances. The authoring discipline for adding
+an override layer is the load-bearing part of this file — read it before
+touching the stack.
 
 ## Files in this area
 
@@ -11,7 +12,15 @@ load-bearing part of this file — read it before touching the stack.
 scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
-                                  precision each carries).
+                                  precision each carries), the radial-
+                                  velocity cascade, and the space-motion
+                                  velocity assembly that consumes both.
+  astrometry-fixture.ts           Test-only GaiaAstrometryCatalogRow
+                                  builder. A module, not an export from a
+                                  test file: three suites across two
+                                  folders build these rows, and the point
+                                  is that a column added to the interface
+                                  lands in one place.
   dust-deextinction.ts (+ test)   Build-time de-extinction against the
     (+ -pure, + pure test)        Edenhofer dust grid; the pure half is
                                   shared with ../companions/.
@@ -60,6 +69,29 @@ placement / tier-routing pin — a wrong source or xyz-assembly sign
 shows up as tens of arcsec. The propagation formula itself (PM sign /
 cos δ / Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
+
+## Radial velocity
+
+`resolveRadialVelocity` supplies the radial term of the space-motion
+velocity (`../parse/README.md` § Space-motion velocity), through two tiers:
+
+```
+Gaia DR3 radial_velocity   the RVS median, on the pull's radial_velocity column
+  → spine printed `rv`     the catalogue's own cell
+```
+
+**The fall-through is not a degraded copy of the tier above it.** RVS is
+magnitude-limited to G_RVS ≲ 14, so it reaches roughly a third of Gaia
+sources; the printed cell is the only velocity most of the catalogue has.
+The two also largely agree where both exist — the spine's `rv_src` is
+already `G_R3` on ~258k rows — so the tier that changes anything is the
+catalogued one, which carries the pre-Gaia velocities.
+
+A genuine zero is a velocity, not an absence: the cascade routes on
+null-vs-present, never on truthiness, or every star with no measured
+line-of-sight motion would fall to the next tier. Per-tier counts are
+pinned as `rvGaiaDr3` / `rvCatalogued` / `rvNone`, the same discipline the
+direction cascade pins `directionVia` under.
 
 ## Build-time de-extinction
 

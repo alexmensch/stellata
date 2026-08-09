@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import {
   SPINE_COLUMNS,
   serializeSpine,
@@ -84,11 +85,11 @@ describe('readStars Gaia source_id', () => {
   it('takes the frozen column even where the G−V gate would scrub it', () => {
     const sourceId = '5853498713190525696';
     const gaiaAstrometry = new Map<string, GaiaAstrometryCatalogRow>([
-      [sourceId, {
-        raDeg: 0, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.1,
+      [sourceId, gaiaAstrometryRow({
+        parallaxMas: 10, parallaxErrorMas: 0.1,
         pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1, ipdFracMultiPeak: 0,
-        gMag: 20.95, bpMag: null, rpMag: null,
-      }],
+        gMag: 20.95,
+      })],
     ]);
     const { stars } = readStars(
       writeSpineTsv([{

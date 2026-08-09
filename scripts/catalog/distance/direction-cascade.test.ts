@@ -15,11 +15,13 @@ import {
   parseHip2Tsv,
   parseNssSourceIdSet,
   resolveDirection,
+  resolveRadialVelocity,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
 } from './direction-cascade';
+import { gaiaAstrometryRow } from './astrometry-fixture';
 import {
   equatorialTangentBasis,
   unitVectorFromRaDec,
@@ -34,14 +36,13 @@ function angSepArcsec(a: UnitVector, b: UnitVector): number {
 }
 
 function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrometryCatalogRow {
-  return {
+  return gaiaAstrometryRow({
     raDeg: 100, decDeg: 20,
-    parallaxMas: 50, parallaxErrorMas: null,
+    parallaxMas: 50,
     pmraMasyr: 10, pmdecMasyr: -10,
     ruwe: 1.0, ipdFracMultiPeak: 0,
-    gMag: null, bpMag: null, rpMag: null,
     ...overrides,
-  };
+  });
 }
 
 function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow {
@@ -308,9 +309,9 @@ describe('direction-cascade / resolveDirection routing', () => {
 describe('direction-cascade / TSV parsers', () => {
   it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
     const tsv = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t',
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t',
       '',
     ].join('\n');
     const map = parseGaiaAstrometryCatalogTsv(tsv);
@@ -321,6 +322,7 @@ describe('direction-cascade / TSV parsers', () => {
       pmraMasyr: 10.5, pmdecMasyr: -3.5,
       ruwe: 1.2, ipdFracMultiPeak: 0,
       gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
+      radialVelocityKmS: -110.51,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
@@ -328,6 +330,7 @@ describe('direction-cascade / TSV parsers', () => {
       pmraMasyr: null, pmdecMasyr: null,
       ruwe: null, ipdFracMultiPeak: null,
       gMag: 9.0, bpMag: null, rpMag: null,
+      radialVelocityKmS: null,
     });
   });
 
@@ -446,12 +449,43 @@ describe('velocityPcPerYr', () => {
   });
 });
 
+describe('resolveRadialVelocity cascade', () => {
+  it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
+    const r = resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -110.51 }), 22.4);
+    expect(r).toEqual({ rvKmS: -110.51, via: 'gaia_dr3' });
+  });
+
+  // RVS is magnitude-limited, so the catalogued cell is not a degraded copy of
+  // the Gaia tier — it is the only velocity most of the catalogue has.
+  it('falls to the catalogued cell when Gaia carries no RV', () => {
+    const r = resolveRadialVelocity(gaiaAstrometryRow(), 22.4);
+    expect(r).toEqual({ rvKmS: 22.4, via: 'catalogued' });
+  });
+
+  it('falls to the catalogued cell when there is no Gaia row at all', () => {
+    expect(resolveRadialVelocity(null, 22.4)).toEqual({ rvKmS: 22.4, via: 'catalogued' });
+  });
+
+  it('keeps a genuine zero rather than falling through it', () => {
+    expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: 0 }), 22.4))
+      .toEqual({ rvKmS: 0, via: 'gaia_dr3' });
+    expect(resolveRadialVelocity(null, 0)).toEqual({ rvKmS: 0, via: 'catalogued' });
+  });
+
+  it('reports no tier when neither source carries one', () => {
+    expect(resolveRadialVelocity(null, null)).toEqual({ rvKmS: null, via: 'none' });
+  });
+
+  it('skips a non-finite catalogued cell rather than propagating it', () => {
+    expect(resolveRadialVelocity(null, NaN)).toEqual({ rvKmS: null, via: 'none' });
+  });
+});
+
 describe('resolveDirection velocity solution', () => {
-  const gaiaRow: GaiaAstrometryCatalogRow = {
-    raDeg: 10, decDeg: 20, parallaxMas: 50, parallaxErrorMas: null,
+  const gaiaRow = gaiaAstrometryRow({
+    raDeg: 10, decDeg: 20, parallaxMas: 50,
     pmraMasyr: 100, pmdecMasyr: -40, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,
-    bpMag: null, rpMag: null,
-  };
+  });
 
   it('carries the Gaia solution + gaia_pm velVia on the gaia_5p tier', () => {
     const sources: DirectionSources = {

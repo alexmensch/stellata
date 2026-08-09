@@ -31,6 +31,7 @@ TSV_COLUMNS = [
     "phot_g_mean_mag",
     "phot_bp_mean_mag",
     "phot_rp_mean_mag",
+    "radial_velocity",
 ]
 
 ADQL_TEMPLATE = (
@@ -61,6 +62,7 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "phot_g_mean_mag": float,
     "phot_bp_mean_mag": float,
     "phot_rp_mean_mag": float,
+    "radial_velocity": float,
 }
 
 # 5000 ids per IN-clause — Gaia archive's IN-list cap and the empirical
@@ -75,11 +77,14 @@ EXPECTED_COVERAGE_MIN = 0.95
 # Astrometric precision retained. Gaia DR3 angular astrometry is sub-mas
 # (~1e-3 arcsec); 9 decimals on ra/dec (degrees) preserves the full
 # precision Gaia publishes. Errors and PMs use 4 decimals — 0.1 µas on
-# parallax/PM is well below the noise floor of any DR3 source.
+# parallax/PM is well below the noise floor of any DR3 source. RVS
+# radial velocities are good to ~0.1 km/s at best, so 4 decimals (0.1 m/s)
+# is likewise below the noise floor.
 DEG_DECIMALS = 9
 ERR_DECIMALS = 4
 RUWE_DECIMALS = 4
 MAG_DECIMALS = 6
+RV_DECIMALS = 4
 REF_EPOCH_DECIMALS = 2
 
 # Per-column rounding rules.
@@ -98,6 +103,7 @@ COLUMN_DECIMALS: dict[str, int] = {
     "phot_g_mean_mag":     MAG_DECIMALS,
     "phot_bp_mean_mag":    MAG_DECIMALS,
     "phot_rp_mean_mag":    MAG_DECIMALS,
+    "radial_velocity":     RV_DECIMALS,
 }
 
 # DR3 reference epoch is J2016.0 for the full catalogue. Pin it so a

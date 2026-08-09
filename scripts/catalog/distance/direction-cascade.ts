@@ -45,6 +45,9 @@ export interface GaiaAstrometryCatalogRow {
   gMag: number | null;
   bpMag: number | null;
   rpMag: number | null;
+  /** DR3 `radial_velocity` (km/s), the RVS median. Null on the ~2/3 of
+   *  sources RVS did not reach — magnitude-limited to G_RVS ≲ 14. */
+  radialVelocityKmS: number | null;
 }
 
 /** van Leeuwen 2007 reduction row from
@@ -90,6 +93,42 @@ export const VELOCITY_VIA_VALUES = [
 ] as const;
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
+
+// Which source supplied the radial term of the space-motion velocity. Pinned
+// per-tier in build-counts alongside `velocityVia`, which covers the
+// tangential term.
+export const RV_VIA_VALUES = [
+  'gaia_dr3',
+  'catalogued',
+  'none',
+] as const;
+
+export type RvVia = (typeof RV_VIA_VALUES)[number];
+
+export interface RadialVelocityResolution {
+  /** km/s, or null when no tier carries one — the radial term is then zero. */
+  rvKmS: number | null;
+  via: RvVia;
+}
+
+/** Radial velocity through the cascade: Gaia DR3 `radial_velocity`, else the
+ *  catalogue's printed cell. `docs/catalog-driver.md` § 5.
+ *
+ *  The two agree on the bulk — the printed cell is itself Gaia RVS on ~258k
+ *  rows — so the tier that matters is the catalogued fall-through, which
+ *  carries the pre-Gaia velocities RVS's G_RVS ≲ 14 limit never reached. */
+export function resolveRadialVelocity(
+  gaia: GaiaAstrometryCatalogRow | null,
+  cataloguedRvKmS: number | null,
+): RadialVelocityResolution {
+  if (gaia !== null && gaia.radialVelocityKmS !== null) {
+    return { rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
+  }
+  if (cataloguedRvKmS !== null && Number.isFinite(cataloguedRvKmS)) {
+    return { rvKmS: cataloguedRvKmS, via: 'catalogued' };
+  }
+  return { rvKmS: null, via: 'none' };
+}
 
 export interface DirectionResolution {
   via: DirectionVia;
@@ -338,7 +377,7 @@ export function parseGaiaAstrometryCatalogTsv(
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'],
+    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity'],
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
@@ -363,6 +402,7 @@ export function parseGaiaAstrometryCatalogTsv(
       gMag: floatCell(cells, idx.phot_g_mean_mag),
       bpMag: floatCell(cells, idx.phot_bp_mean_mag),
       rpMag: floatCell(cells, idx.phot_rp_mean_mag),
+      radialVelocityKmS: floatCell(cells, idx.radial_velocity),
     });
   }
   return out;
