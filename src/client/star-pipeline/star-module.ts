@@ -23,7 +23,8 @@ import type {
 } from '../kinds/kind-module';
 import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
-import { catalogShard, StarShardTable } from './shards/star-shards-pure';
+import { StarShardTable } from './shards/star-shard-table';
+import { catalogShard } from './shards/star-shards-pure';
 import { tToJDE } from '../solar-system/time/time';
 import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
