@@ -105,6 +105,14 @@ export const RV_VIA_VALUES = [
 
 export type RvVia = (typeof RV_VIA_VALUES)[number];
 
+/** Whether the row carries the full five-parameter solution. A 2p row is
+ *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
+ *  the blend the fit could not separate. Both the direction cascade's tier-1
+ *  branch and the rv cascade's Gaia tier turn on this. */
+export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
+  return row.parallaxMas !== null;
+}
+
 export interface RadialVelocityResolution {
   /** km/s, or null when no tier carries one — the radial term is then zero. */
   rvKmS: number | null;
@@ -116,12 +124,17 @@ export interface RadialVelocityResolution {
  *
  *  The two agree on the bulk — the printed cell is itself Gaia RVS on ~258k
  *  rows — so the tier that matters is the catalogued fall-through, which
- *  carries the pre-Gaia velocities RVS's G_RVS ≲ 14 limit never reached. */
+ *  carries the pre-Gaia velocities RVS's G_RVS ≲ 14 limit never reached.
+ *
+ *  The Gaia tier needs a 5p solution, not merely an `rv` cell: RVS measures the
+ *  same window the astrometric fit does, so a row Gaia could not separate into
+ *  parallax + PM is one whose spectrum is a blend of the components too, and its
+ *  median RV is not the primary's. See README.md § Radial velocity. */
 export function resolveRadialVelocity(
   gaia: GaiaAstrometryCatalogRow | null,
   cataloguedRvKmS: number | null,
 ): RadialVelocityResolution {
-  if (gaia !== null && gaia.radialVelocityKmS !== null) {
+  if (gaia !== null && gaia.radialVelocityKmS !== null && gaiaHas5pSolution(gaia)) {
     return { rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
   if (cataloguedRvKmS !== null && Number.isFinite(cataloguedRvKmS)) {
@@ -283,7 +296,7 @@ export function resolveDirection(
   const hip2VelVia = (h: Hip2AstrometryRow): VelocityVia =>
     h.pmRaMasyr !== null && h.pmDeMasyr !== null ? 'hip2_pm' : 'zero';
 
-  if (gaia !== undefined && gaia.parallaxMas !== null) {
+  if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
     const fromGaia = (via: DirectionVia): DirectionResolution => ({
       via,
       dir: directionAtEpoch(

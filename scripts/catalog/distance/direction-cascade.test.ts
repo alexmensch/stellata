@@ -450,25 +450,39 @@ describe('velocityPcPerYr', () => {
 });
 
 describe('resolveRadialVelocity cascade', () => {
+  const withRv = (rv: number | null) =>
+    gaiaAstrometryRow({ parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10, radialVelocityKmS: rv });
+
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
-    const r = resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -110.51 }), 22.4);
-    expect(r).toEqual({ rvKmS: -110.51, via: 'gaia_dr3' });
+    expect(resolveRadialVelocity(withRv(-110.51), 22.4))
+      .toEqual({ rvKmS: -110.51, via: 'gaia_dr3' });
   });
 
   // RVS is magnitude-limited, so the catalogued cell is not a degraded copy of
   // the Gaia tier — it is the only velocity most of the catalogue has.
   it('falls to the catalogued cell when Gaia carries no RV', () => {
-    const r = resolveRadialVelocity(gaiaAstrometryRow(), 22.4);
-    expect(r).toEqual({ rvKmS: 22.4, via: 'catalogued' });
+    expect(resolveRadialVelocity(withRv(null), 22.4))
+      .toEqual({ rvKmS: 22.4, via: 'catalogued' });
   });
 
   it('falls to the catalogued cell when there is no Gaia row at all', () => {
     expect(resolveRadialVelocity(null, 22.4)).toEqual({ rvKmS: 22.4, via: 'catalogued' });
   });
 
+  // ξ UMa's shape: a 2p row whose RVS median is the pair's, 11 km/s from the
+  // printed systemic value. RVS reads the window the astrometric fit failed on.
+  it('refuses the Gaia tier on a 2p row, keeping the printed cell', () => {
+    const twoP = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: -26.78 });
+    expect(resolveRadialVelocity(twoP, -15.9)).toEqual({ rvKmS: -15.9, via: 'catalogued' });
+  });
+
+  it('reports no tier when a 2p row is all the rv there is', () => {
+    expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -26.78 }), null))
+      .toEqual({ rvKmS: null, via: 'none' });
+  });
+
   it('keeps a genuine zero rather than falling through it', () => {
-    expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: 0 }), 22.4))
-      .toEqual({ rvKmS: 0, via: 'gaia_dr3' });
+    expect(resolveRadialVelocity(withRv(0), 22.4)).toEqual({ rvKmS: 0, via: 'gaia_dr3' });
     expect(resolveRadialVelocity(null, 0)).toEqual({ rvKmS: 0, via: 'catalogued' });
   });
 
