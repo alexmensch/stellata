@@ -10,7 +10,11 @@ import {
   type FroxelConfig,
   type Ray,
 } from './froxel';
-import { PINNED_CELL_RAD, PINNED_FILL_STEPS_PER_VOXEL, PINNED_SLICES } from './prefilter-pins';
+import {
+  PINNED_CELL_RAD,
+  PINNED_FILL_STEPS_PER_VOXEL,
+  PINNED_SLICES,
+} from '../../../src/client/dust/froxel/froxel-pins';
 import {
   S_MIN_PC,
   SOL_GALACTOCENTRIC_PC,

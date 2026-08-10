@@ -2,13 +2,14 @@
 // the cost currency that transfers to the GPU. See README.md.
 
 import { coverageRadiusPc, loadDustParams, type DustParams } from './dust-grid';
-import { allSkyCells, frustumCells, frustumSr, screenGridOverhead } from './cost-pure';
+import { allSkyCells, frustumSr, screenGridOverhead } from './cost-pure';
+import { frustumCells } from '../../../src/client/dust/froxel/froxel-grid-pure';
 import {
   ARCMIN_TO_RAD,
   PINNED_CELL_RAD,
   PINNED_FILL_STEPS_PER_VOXEL,
   PINNED_SLICES,
-} from './prefilter-pins';
+} from '../../../src/client/dust/froxel/froxel-pins';
 import { DUST_STEPS } from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
 import {
   FOREGROUND_DUST_STEPS,

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { allSkyCells, frustumSr, screenGridOverhead } from './cost-pure';
 import {
-  allSkyCells,
   frustumCells,
   frustumScreenExtent,
-  frustumSr,
-  screenGridOverhead,
-} from './cost-pure';
-import { PINNED_CELL_RAD } from './prefilter-pins';
+} from '../../../src/client/dust/froxel/froxel-grid-pure';
+import { PINNED_CELL_RAD } from '../../../src/client/dust/froxel/froxel-pins';
 
 const ASPECT = 16 / 9;
 

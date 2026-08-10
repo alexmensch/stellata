@@ -24,7 +24,7 @@ import {
   PINNED_CELL_RAD,
   PINNED_FILL_STEPS_PER_VOXEL,
   PINNED_SLICES,
-} from './prefilter-pins';
+} from '../../../src/client/dust/froxel/froxel-pins';
 import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
