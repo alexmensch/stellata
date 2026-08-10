@@ -32,6 +32,7 @@ TSV_COLUMNS = [
     "phot_bp_mean_mag",
     "phot_rp_mean_mag",
     "radial_velocity",
+    "radial_velocity_error",
 ]
 
 ADQL_TEMPLATE = (
@@ -63,6 +64,7 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "phot_bp_mean_mag": float,
     "phot_rp_mean_mag": float,
     "radial_velocity": float,
+    "radial_velocity_error": float,
 }
 
 # 5000 ids per IN-clause — Gaia archive's IN-list cap and the empirical
@@ -104,6 +106,7 @@ COLUMN_DECIMALS: dict[str, int] = {
     "phot_bp_mean_mag":    MAG_DECIMALS,
     "phot_rp_mean_mag":    MAG_DECIMALS,
     "radial_velocity":     RV_DECIMALS,
+    "radial_velocity_error": RV_DECIMALS,
 }
 
 # DR3 reference epoch is J2016.0 for the full catalogue. Pin it so a
@@ -204,8 +207,13 @@ def run_pull(
 
     matched = len(rows_by_id)
     coverage = matched / total
+    # Report the shortfall as a count, not only a percentage: a handful of
+    # unreturned ids rounds to 100.0% and reads as complete, while for the
+    # catalog scope every unreturned candidate is a binding the gate will accept
+    # without weighing (scripts/catalog/astrometry-request/README.md).
     print(
-        f"matched {matched}/{total} = {coverage*100:.1f}% in "
+        f"matched {matched}/{total} = {coverage*100:.1f}% "
+        f"({total - matched} requested ids returned no row) in "
         f"{(time.time()-start)/60:.1f}m"
     )
     if coverage < coverage_min:

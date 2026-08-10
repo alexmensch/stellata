@@ -178,6 +178,16 @@ module also invalidates both outputs' `is_up_to_date` check (it folds this
 file's mtime), which is what makes the next binaries refresh pick it up
 rather than skip.
 
+**`radial_velocity_error` is in the schema ahead of its data, deliberately.**
+Neither committed TSV carries it yet and no reader requires it — the TypeScript
+parsers state their own required columns, so the header they demand is a subset
+of what the pull writes. It is here because a column can only arrive from the
+archive: adding it later costs a second full-catalog pull (~313k ids, hours),
+while adding it now costs nothing and the next refresh of either scope captures
+it. Its consumer is the rv cascade's reliability gate, which today can only
+distrust a 2p row (`../catalog/distance/README.md` § Radial velocity) — a
+per-row RV uncertainty is what would let it distrust a bad 5p one.
+
 See `RELEASING.md` § Catalogue refresh policy for the cadence
 (event-driven, not scheduled) and the version-bump policy for a
 catalogue-refresh PR.
