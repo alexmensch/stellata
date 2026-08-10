@@ -1,9 +1,10 @@
 # Distance refinement and de-extinction
 
-Direction resolution, build-time de-extinction, and the multi-layer
-distance-override stack that refines AT-HYG's parallax-inverted
-distances. The authoring discipline for adding an override layer is the
-load-bearing part of this file — read it before touching the stack.
+Direction resolution, the radial-velocity cascade, build-time
+de-extinction, and the multi-layer distance-override stack that refines
+AT-HYG's parallax-inverted distances. The authoring discipline for adding
+an override layer is the load-bearing part of this file — read it before
+touching the stack.
 
 ## Files in this area
 
@@ -11,7 +12,15 @@ load-bearing part of this file — read it before touching the stack.
 scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
-                                  precision each carries).
+                                  precision each carries), the radial-
+                                  velocity cascade, and the space-motion
+                                  velocity assembly that consumes both.
+  astrometry-fixture.ts           Test-only GaiaAstrometryCatalogRow
+                                  builder. A module, not an export from a
+                                  test file: three suites across two
+                                  folders build these rows, and the point
+                                  is that a column added to the interface
+                                  lands in one place.
   dust-deextinction.ts (+ test)   Build-time de-extinction against the
     (+ -pure, + pure test)        Edenhofer dust grid; the pure half is
                                   shared with ../companions/.
@@ -34,7 +43,7 @@ through the same trust cascade the binaries pipeline implements in
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~10.0k |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~2.5k |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~138 |
-| `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated. ξ UMa (HIP 55203 excluded from HIP2 as orbit-corrupted, Gaia-saturated) is canonical; Sol also lands here. | 30 |
+| `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated — so a high-PM row here is stale by PM × 16 yr against the scene epoch. Sol lands here; Gl 863.1A is the corpus exemplar, and the worst case in the tier at 1372 mas/yr (~27″ stale). ξ UMa used to be the canonical case and no longer is: the spine's backfilled source_id put it on a Gaia 2p anchor, 11″ closer to its true J2016 place. | 61 |
 
 Epoch propagation (`directionAtEpoch`) advances the measured unit
 vector to the `CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local
@@ -52,14 +61,70 @@ falls through), and the per-route build-counts pins
 
 The sky-position regression corpus (`sky-position-corpus.tsv` +
 `sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per
-non-Gaia tier (Sirius + Vega for hip2_saturated, ξ UMa for
-athyg_printed) against their **J2016.0** positions (the scene epoch).
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per non-Gaia
+tier — Sirius + Vega for hip2_saturated, **Gl 863.1A** (HIP 111293, no
+Gaia source and absent from HIP2) for athyg_printed, which ξ UMa vacated
+when its backfilled source_id reached a Gaia row. Positions are the
+**J2016.0** ones (the scene epoch), except the athyg_printed row, whose
+whole point is that the tier does not propagate: it pins the printed
+~J2000 cell, ~27″ from the star's current place at 1372 mas/yr.
 At J2016.0 the Gaia tier is a zero-Δt no-op, so those rows are a
 placement / tier-routing pin — a wrong source or xyz-assembly sign
 shows up as tens of arcsec. The propagation formula itself (PM sign /
 cos δ / Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
+
+## Radial velocity
+
+`resolveRadialVelocity` supplies the radial term of the space-motion
+velocity (`../parse/README.md` § Space-motion velocity), through two tiers:
+
+```
+Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
+  → spine printed `rv`     the catalogue's own cell
+```
+
+**The Gaia tier needs a 5p solution, not merely an `rv` cell.** RVS measures the
+same window the astrometric fit does, so a 2p row — parallax and PM both
+unfitted — is one whose spectrum is a blend of the components, and its median RV
+is not the primary's. ξ UMa is the case that fixed the bound: source
+756853643638639104 is 2p with `ipd_frac_multi_peak` 24 on a ~2″ pair, and its
+`radial_velocity` is −26.78 km/s against the printed −15.9. `gaiaHas5pSolution`
+is the same predicate the direction cascade's tier-1 branch turns on, so the
+radial term and the tangential term distrust a row for one reason.
+
+That is the only reliability gate the pulled table can support today. RUWE and
+`ipd_frac_multi_peak` flag a contaminated 5p fit without saying whether the RV
+survived it, and `radial_velocity_error` — which would — reaches the table on
+its next refresh (`../../refresh/README.md`). Tightening this gate is that
+column's first consumer, not a threshold to guess now.
+
+**The fall-through is not a degraded copy of the tier above it.** RVS is
+magnitude-limited to G_RVS ≲ 14, so it reaches roughly a third of Gaia
+sources; the printed cell is the only velocity most of the catalogue has.
+The two also largely agree where both exist — the spine's `rv_src` is
+already `G_R3` on ~258k rows — so the tier that changes anything is the
+catalogued one, which carries the pre-Gaia velocities.
+
+A genuine zero is a velocity, not an absence: the cascade routes on
+null-vs-present, never on truthiness, or every star with no measured
+line-of-sight motion would fall to the next tier.
+
+Per-tier counts are pinned as `rvGaiaDr3` **266,128** / `rvCatalogued`
+**7,126** / `rvNone` **40,003**, the same discipline the direction cascade
+pins `directionVia` under. `velocityRvApplied` rose 267,058 → **273,244**:
+the Gaia tier reaches ~6,300 records whose printed cell was blank. The 5p gate
+holds 354 records back from it — 180 have a printed cell to fall to and 174
+take a zero radial term, the same fall-through as the 40,003 rows RVS never
+reached.
+
+**The sanity ceiling did not move.** `velocityClamped` stays at **8** and
+`velocityAboveEscape` at **45** across the swap — a changed radial term feeds
+straight into `v = v_r·û + …`, so a Gaia RV disagreeing wildly with the
+printed cell would surface here first. It doesn't, which is the evidence that
+the new tier is sane rather than merely present. Note what that pair does NOT
+cover: both are ceilings, so they see a 1500 km/s artifact and not the ~11 km/s
+error a blended RVS median carries. That is the gate's job, not theirs.
 
 ## Build-time de-extinction
 

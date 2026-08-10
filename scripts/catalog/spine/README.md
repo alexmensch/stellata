@@ -83,7 +83,7 @@ attribution) ran when the spine was generated, so re-running them in the
 walk would re-decide a frozen binding against reference tables that have
 moved since — and a scrubbed source_id changes the record's designation
 set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
-`build:catalog` path; it survives for `../export-astrometry-request.ts`
+`build:catalog` path; it survives for `../astrometry-request/export-astrometry-request.ts`
 and the classic-ID overlay's own gate.
 
 The classic-ID label merge is not an exception to this. It runs as a post-pass
@@ -104,7 +104,7 @@ moved that is not a retired gate traces to these four**:
 | Count | Δ | Which of the four, and why |
 |---|---|---|
 | `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of via the backfill's reclassify callback |
-| `ciSpectralDerived` | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplies the colour where classIdx=8 had fallen through to solar |
+| `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 118 (`../photometry/README.md` § The ci cascade) |
 | `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
 | `multiplesIdentifierBackfill` | 3 → 0 | the three primaries: the pass finds its work already done |
 | `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
@@ -193,9 +193,11 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
   from) and `vVia` routing pinned. § 6.3's |Δabsmag| axis needs no
   second measurement: absmag is derived from that V on a distance the
   swap did not touch, so it moves by |ΔV| exactly. Spectral-string
-  changes are the +4/−4 rows of the same four-record table; ci and rv
-  are spine passthroughs until `stellata-3bsf.12`, which pins its own
-  |Δci| distribution.
+  changes are the +4/−4 rows of the same four-record table. ci and rv
+  were spine passthroughs at swap time and are no longer: both took a
+  Gaia-native tier above the printed cell in `stellata-3bsf.12`, which
+  carries its own |Δci| measurement (`../photometry/README.md` § The ci
+  cascade) and its own per-tier routing pins.
 - **Identity events — five bridges, zero ledger writes.** The swap
   appended nothing to `data/sid/ledger.tsv`, `retirements.tsv` or
   `reinstatements.tsv`; there were no presence events (membership is
@@ -215,7 +217,7 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
   are backed against the spine rather than asserted — the join and the
   HR set would each stay green over a stale verdict otherwise.
 
-  `rejected_bindings.tsv` is deliberately not on that list: its 187
+  `rejected_bindings.tsv` is deliberately not on that list: its 268
   rows are the binding gate refusing to key a designation on a source
   that is not the star, so each leaves its record on the spine's label
   — no departure for the label term to carry, and no identity event to

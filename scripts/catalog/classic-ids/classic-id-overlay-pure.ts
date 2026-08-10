@@ -1,7 +1,7 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
 // Routes, ambiguity policy and precedence: docs/catalog-driver.md § 2, § 4.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
-import { sortSourceIdsNumeric } from '../export-astrometry-request-pure';
+import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
 // Type-only: the merge imports this module's values, so the runtime graph
 // stays one-way.
@@ -55,6 +55,12 @@ export interface OverlayInput {
  *  star's designations belong to the faint companion Gaia actually fitted. */
 export interface BindingEvidence {
   gMagOf: (sourceId: string) => number | null;
+  /** Whether the astrometry pull returned a row for this source at all. A
+   *  missing G is a PASS at the gate either way, so the two causes have to be
+   *  told apart: no row means the request under-covers the candidate set and is
+   *  fixable there, while a row with a null `phot_g_mean_mag` is a source Gaia
+   *  publishes no G for and no request can supply. */
+  hasPulledRow: (sourceId: string) => boolean;
   vMagOfHip: (hip: number) => number | null;
   wdsXids: SimbadWdsXidIndex | null;
 }
@@ -63,9 +69,11 @@ export function bindingEvidence(
   sourceGMag: ReadonlyMap<string, number>,
   hipVMag: ReadonlyMap<number, number>,
   wdsXids: SimbadWdsXidIndex | null,
+  pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
 ): BindingEvidence {
   return {
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
+    hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
     vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
     wdsXids,
   };
@@ -104,13 +112,28 @@ function designationSummary(entry: OverlayEntry): string {
  *  rather than just its `hip` cell is the point: both walks routinely land on
  *  the same wrong source, so if the source is not the star then every
  *  designation keyed on it is misattributed. The labels then ride the
- *  inherited spine, exactly as they do for the record build's rejected rows. */
+ *  inherited spine, exactly as they do for the record build's rejected rows.
+ *
+ *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId` passes a
+ *  candidate it cannot weigh — so both no-G counts are the gate's own coverage
+ *  alarms, split by cause. `skippedNoGMag` is the fixable one, pinned at zero:
+ *  non-zero means the request stopped covering the candidate set
+ *  (`../astrometry-request/README.md` § The request is a union).
+ *  `skippedNullGMag` is Gaia publishing no `phot_g_mean_mag` for a source it
+ *  does have a row for, which no request can supply. */
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,
-): { rejected: RejectedBinding[]; skippedNoHipVMag: number } {
+): {
+  rejected: RejectedBinding[];
+  skippedNoHipVMag: number;
+  skippedNoGMag: number;
+  skippedNullGMag: number;
+} {
   const rejected: RejectedBinding[] = [];
   let skippedNoHipVMag = 0;
+  let skippedNoGMag = 0;
+  let skippedNullGMag = 0;
   for (const [sourceId, entry] of overlay) {
     // A row carrying several HIPs is a blend; saturation is a property of the
     // brightest of them, so that is the V the gate has to answer for.
@@ -127,6 +150,10 @@ export function applyBindingGate(
       skippedNoHipVMag++;
       continue;
     }
+    if (evidence.gMagOf(sourceId) === null) {
+      if (evidence.hasPulledRow(sourceId)) skippedNullGMag++;
+      else skippedNoGMag++;
+    }
     const verdict = resolveGaiaSourceId(
       sourceId, hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
     );
@@ -141,7 +168,7 @@ export function applyBindingGate(
     });
   }
   for (const r of rejected) overlay.delete(r.sourceId);
-  return { rejected, skippedNoHipVMag };
+  return { rejected, skippedNoHipVMag, skippedNoGMag, skippedNullGMag };
 }
 
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
@@ -183,10 +210,22 @@ export interface OverlayJoinCounts {
 
   /** Rows the binding gate dropped, split by which gate fired, plus the rows
    *  it could not evaluate for want of a printed V under any HIP they carry.
-   *  Every `overlay*` count above is post-gate — it describes the artifact. */
+   *  Every `overlay*` count above is post-gate — it describes the artifact.
+   *  `reason` is the FIRST gate that fired, so the two rejection counts trade
+   *  rows between themselves as `G` coverage changes and only their sum is a
+   *  queue size (README.md § The gate's evidence has to be pulled). */
   gateRejectedMag: number;
   gateRejectedSibling: number;
   gateSkippedNoHipVMag: number;
+  /** Gateable rows the astrometry pull returned no row for — silently accepted,
+   *  not refused. Pinned at zero: the request is a union precisely so that this
+   *  stays empty, and a non-zero value is the pull under-covering the
+   *  candidate set. */
+  gateSkippedNoGMag: number;
+  /** Gateable rows Gaia has a row but no `phot_g_mean_mag` for. Also silently
+   *  accepted, but no request can fix it — the residual the gate's reach simply
+   *  does not cover. */
+  gateSkippedNullGMag: number;
 
   hdHipRouteAgree: number;
   hdHipRouteDisagree: number;
@@ -378,6 +417,8 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
       gateRejectedMag: gate.rejected.filter((r) => r.reason === 'mag').length,
       gateRejectedSibling: gate.rejected.filter((r) => r.reason === 'sibling').length,
       gateSkippedNoHipVMag: gate.skippedNoHipVMag,
+      gateSkippedNoGMag: gate.skippedNoGMag,
+      gateSkippedNullGMag: gate.skippedNullGMag,
 
       hdHipRouteAgree: hipRouteAgree,
       hdHipRouteDisagree: disagreements.length,

@@ -275,7 +275,10 @@ async function main() {
     spectralBySimbad: 0,
     spectralByGspspec: 0,
     spectralFallback: 0,
+    ciGaiaRelation: 0,
+    ciCatalogued: 0,
     ciSpectralDerived: 0,
+    ciSolarFallback: 0,
     multiplesIdentifierBackfill: 0,
     systemCoherenceSystems: 0,
     systemCoherenceRepositioned: 0,
@@ -331,6 +334,9 @@ async function main() {
     velocityClamped: 0,
     velocityAboveEscape: 0,
     velocityRvApplied: 0,
+    rvGaiaDr3: 0,
+    rvCatalogued: 0,
+    rvNone: 0,
   };
 
   const inputs = loadReadStarsInputs();
@@ -379,11 +385,21 @@ async function main() {
     `  V cascade: gaia_riello ${mv.gaia_riello}, printed_hip ${mv.printed_hip}, ` +
       `catalogued ${mv.catalogued}, none ${mv.none}`,
   );
+  const cv = stats.ciVia;
+  console.log(
+    `  ci cascade: gaia_relation ${cv.gaia_relation}, catalogued ${cv.catalogued}, ` +
+      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.solar_fallback}`,
+  );
   const vv = stats.velocityVia;
   console.log(
     `  velocity cascade: gaia_pm ${vv.gaia_pm}, hip2_pm ${vv.hip2_pm}, ` +
       `athyg_pm ${vv.athyg_pm}, zero ${vv.zero} (clamped ${stats.velocityClamped}); ` +
       `rv applied ${stats.rvApplied}`,
+  );
+  const rv = stats.rvVia;
+  console.log(
+    `  rv cascade: gaia_dr3 ${rv.gaia_dr3}, catalogued ${rv.catalogued}, ` +
+      `none ${rv.none}`,
   );
   if (stats.velocityClampedSample.length > 0) {
     console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
@@ -429,11 +445,17 @@ async function main() {
   counts.velocityClamped = stats.velocityClamped;
   counts.velocityAboveEscape = stats.velocityAboveEscape;
   counts.velocityRvApplied = stats.rvApplied;
+  counts.rvGaiaDr3 = stats.rvVia.gaia_dr3;
+  counts.rvCatalogued = stats.rvVia.catalogued;
+  counts.rvNone = stats.rvVia.none;
   counts.spectralByCurated = stats.spectralByCurated;
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
-  counts.ciSpectralDerived = stats.ciSpectralDerived;
+  counts.ciGaiaRelation = stats.ciVia.gaia_relation;
+  counts.ciCatalogued = stats.ciVia.catalogued;
+  counts.ciSpectralDerived = stats.ciVia.spectral_derived;
+  counts.ciSolarFallback = stats.ciVia.solar_fallback;
 
   // Classic-ID label layer: the frozen CDS joins replace AT-HYG's inherited
   // cross-IDs, and IV/27A supplies each Bayer / Flamsteed designation's own

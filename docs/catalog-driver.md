@@ -223,9 +223,9 @@ select per-field sourcing:
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → spine printed (shipped stack, unchanged) |
 | V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside the transform's validity → printed HIP V (`I/239` Vmag) → spine `mag` |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
-| ci (B−V) | published Gaia-photometry relation → spine `ci` where BP−RP is absent |
+| ci (B−V) | published Gaia-photometry relation, inside its validity → spine `ci` → intrinsic spectral-class colour (no-Apsis rows only) → solar |
 | spectral string | SIMBAD sp_type (in-tree, source_id-keyed) → spine `spect` |
-| radial velocity | Gaia DR3 `radial_velocity` (added to the astrometry-catalog pull schema) → spine `rv` |
+| radial velocity | Gaia DR3 `radial_velocity` on a 5p row (added to the astrometry-catalog pull schema) → spine `rv` |
 | constellation (position) | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
 | constellation (designation) | IV/27A `cst` by HD → by HIP → GCVS trailing abbreviation → positional |
 | proper / Bayer display | naming-authority ladder (`docs/star-naming.md`) |
@@ -239,10 +239,15 @@ select per-field sourcing:
   bottoms out at the spine's printed columns.
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
-  is selected at implementation against the parity distribution; the
+  was left to implementation, against the parity distribution; the
   contract here is the fallback (spine `ci`) and the acceptance
-  mechanism (|Δci| distribution in the parity ledger), not the
-  coefficients.
+  mechanism (a measured |Δci| distribution), not the coefficients.
+  **Settled:** `B−V = (G−V) − (G−B)`, both polynomials from DR3
+  documentation Table 5.9 so `G` cancels and the difference is published
+  rather than composed, gated at BP−RP ≤ 1.75 by that table's note (k).
+  Coefficients, the measured |Δci| per colour bin, and what the
+  conservative bound costs: `scripts/catalog/photometry/README.md`
+  § The ci cascade.
 - **The designation constellation is keyed on the DESIGNATION, not on
   `gaia_source_id`.** A Bayer or Flamsteed name is fixed by nomenclature — it
   predates the 1930 Delporte boundaries and does not migrate when proper motion

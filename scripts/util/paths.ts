@@ -1,7 +1,14 @@
 // Repo-root path + mtime helper shared by TypeScript build scripts.
 // See scripts/util/README.md.
 
-import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  readSync,
+  statSync,
+} from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,13 +17,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // scripts/util/paths.ts sits two levels below the repo root
 // (repo/scripts/util), matching every scripts/<folder>/*.ts consumer.
 export const REPO_ROOT = resolve(__dirname, '..', '..');
-
-/** The upstream AT-HYG catalogue. **Not a build input** — the record build
- *  walks `data/athyg/inherited-spine.tsv` instead, and re-enrolling this path
- *  in a build's mtime set would make a catalogue nothing reads invalidate the
- *  artifact. Its remaining readers each sit in a different folder, which is
- *  why the path resolves here (`data/athyg/README.md` § Consumed by). */
-export const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 
 export function mtimeIfExists(path: string): number {
   return existsSync(path) ? statSync(path).mtimeMs : 0;
@@ -50,6 +50,24 @@ export function isLfsPointerFile(path: string): boolean {
  *  for the ones that have to read it anyway. */
 export function lfsContentReadable(path: string): boolean {
   return existsSync(path) && !isLfsPointerFile(path);
+}
+
+/** Exit a build script on a missing input, naming both ways one goes missing: a
+ *  checkout without `git lfs pull`, and a refresh never run. `refreshHint` names
+ *  the pipeline that regenerates this particular file. Every build script wants
+ *  the same message, and the parsers downstream fail on a pointer stub with a
+ *  header error that says nothing about LFS. */
+export function requireExists(path: string, refreshHint: string): void {
+  if (existsSync(path)) return;
+  console.error(
+    `Missing ${path}. Confirm git LFS is pulled (\`git lfs pull\`); ${refreshHint}`,
+  );
+  process.exit(1);
+}
+
+export function readRequired(path: string, refreshHint: string): string {
+  requireExists(path, refreshHint);
+  return readFileSync(path, 'utf8');
 }
 
 export function maxMtimeOfSources(paths: string[]): number {

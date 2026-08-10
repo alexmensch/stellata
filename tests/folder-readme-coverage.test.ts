@@ -14,10 +14,17 @@ const EXCLUDED_DIRS = new Set([
   'screenshots',
 ]);
 
+/** A batched refresh's resume cache (`<output>.tsv.ckpt/`, gitignored, removed
+ *  once every batch lands — scripts/refresh/README.md § Resuming a long pull).
+ *  It exists for hours during a normal pull, so matching it by name would mean
+ *  this suite fails for anyone who runs the tests meanwhile. */
+const EXCLUDED_SUFFIXES = ['.ckpt'];
+
 function collectFolders(dir: string, out: string[]): void {
   out.push(dir);
   for (const entry of readdirSync(dir)) {
     if (EXCLUDED_DIRS.has(entry)) continue;
+    if (EXCLUDED_SUFFIXES.some((s) => entry.endsWith(s))) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       collectFolders(full, out);

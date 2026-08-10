@@ -24,6 +24,9 @@ subfolders.
 
 ## Subfolders
 
+- `astrometry-request/` — the Gaia 5p pull's source_id list: the spine
+  column plus the classic-ID gate's candidates. Input preparation for
+  `scripts/refresh/`, not on the `build:catalog` path.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, spectral/radius resolution, and
   Stellarium stick figures. Its `gcvs/` subfolder owns the variable-star
@@ -42,9 +45,12 @@ subfolders.
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
-- `distance/` — direction resolution, build-time de-extinction, and the
-  multi-layer distance-refinement override stack with its
-  authoring discipline and post-build regression check.
+- `distance/` — direction resolution, the radial-velocity cascade,
+  build-time de-extinction, and the multi-layer distance-refinement
+  override stack with its authoring discipline and post-build regression
+  check.
+- `photometry/` — the published Gaia broadband relations and the two
+  cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
   (`pnpm run build:classic-ids` → `data/classic-ids/`) AND the record build's
   label layer: the per-identifier merge with its collision guard, plus the
@@ -75,30 +81,7 @@ scripts/catalog/
                                   build-catalog-expected.json. Generic over
                                   the count record — classic-ids/ pins its
                                   own snapshot through the same helper.
-  export-astrometry-request.ts    Emits the full-catalog Gaia astrometry
-    (+ -pure, + pure test)        request (§ Full-catalog astrometry
-                                  request). sortSourceIdsNumeric is also
-                                  used by scripts/sid/export-dr-risk-set.ts.
 ```
-
-## Full-catalog astrometry request
-
-`export-astrometry-request.ts` (run `pnpm run build:astrometry-request`)
-emits `data/gaia/gaia_catalog_source_id_request.tsv` — the deduped,
-numerically-sorted Gaia DR3 source_id for every AT-HYG row, resolved through
-`resolveGaiaSourceId`'s native-`gaia`-column → HIP-cross-walk precedence.
-This is the last script reading the AT-HYG CSV and the last caller of that
-function here; the record build takes the binding off the spine column
-instead (`spine/README.md`); rebasing the pull list onto the spine is
-`stellata-3bsf.18`. The pure `sortSourceIdsNumeric` helper does the BigInt sort matching
-the binaries request file's ordering. ~315k source_ids.
-
-The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py`,
-which pulls the 5p astrometry into
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` — the direction-cascade
-input (`docs/science-catalog-ingestion.md` § Driver astrometry). This is a superset of the
-shipped catalog by the handful of rows dropped at the `MAX_DIST_PC`
-cutoff; over-pulling those is harmless.
 
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 

@@ -26,6 +26,18 @@ scripts/catalog/classic-ids/
                                   evidence tables and the spine, writes the
                                   overlay and its three review queues, and
                                   asserts the count snapshot.
+  binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
+                                  the gate can weigh. Shared with
+                                  ../astrometry-request/, which has to pull a
+                                  G magnitude for every one of them
+                                  (§ The gate's evidence has to be pulled).
+                                  Two loaders, because the candidate set needs
+                                  only the HIP cross-walk and CNS5 — the
+                                  request never reads the 2.5 M-row TYC table.
+                                  The test derives its expectation from a built
+                                  overlay, so drift in either producer of
+                                  `entry.hip` fails rather than silently
+                                  shrinking the request.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-vmag-parse.ts, shared
@@ -84,11 +96,60 @@ ledger's review queue rather than resolved mechanically.
 **Every route above is an unvetted best-neighbour walk, so the assembled
 overlay is then gated** — `applyBindingGate` re-runs the record build's own
 `resolveGaiaSourceId` checks and drops any row whose source_id is not the
-star its designations name (187 rows today). It runs BEFORE the counts, so
+star its designations name (268 rows today). It runs BEFORE the counts, so
 every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
 gate's reach: `data/classic-ids/README.md` § The binding gate.
+
+### The gate's evidence has to be pulled
+
+The magnitude check compares a candidate's `phot_g_mean_mag` against the
+printed V of its brightest HIP. That G comes from
+`data/gaia/gaia_dr3_astrometry_catalog.tsv`, and **`gMagOf` returning null
+is not a rejection — it is a pass.** So a candidate the astrometry pull does
+not cover is not merely unvetted, it is silently accepted.
+
+Candidates are not spine rows. A route resolves a designation to whatever
+source a cross-walk names, and the gate exists precisely because that source
+is often not the star, so the request has to carry them explicitly:
+`../astrometry-request/README.md` § The request is a union.
+
+`gateRejectedMag` measures the difference directly, and it is the count to
+watch if this request ever changes again:
+
+| Request | `gateRejectedMag` | `gateRejectedSibling` | rows |
+|---|---|---|---|
+| spine column alone | **0** — every candidate unvettable, all silently accepted | 101 | 101 |
+| the AT-HYG walk this replaced | 102 | 85 | 187 |
+| spine ∪ candidates (today) | **218** | 50 | **268** |
+
+The walk was never complete either — it over-pulled by accident rather than
+covering the candidate set on purpose — so the queue grows by **81 bindings it
+could not weigh and now refuses**. None of the 81 had reached a record: the
+label merge's per-identifier routing is unchanged and `label_flips.tsv` is
+byte-identical, which is what says the gain is coverage, not a label change.
+
+**`gateRejectedMag` moves by 116, not 81, and `gateRejectedSibling` falls — both
+because `reason` is the FIRST gate that fired**, `verdict.magRejected ? 'mag' :
+'sibling'`. A candidate with no `G` cannot fail the magnitude check, so 35 rows
+the sibling-letter check had already refused are now refused by the magnitude
+check instead and re-labelled: 116 = 81 new + 35 re-labelled, and sibling 85 →
+50 is those same 35 leaving. No binding the gate used to refuse is accepted
+today; read the two reason counts as one queue, not as two independent gates.
+
+**Two counts say whether the evidence actually arrived**, because a missing `G`
+is a pass either way and only one of the causes is fixable:
+
+| Count | Today | Meaning |
+|---|---|---|
+| `gateSkippedNoGMag` | **0** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
+| `gateSkippedNullGMag` | 63 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
+
+The set stays small (768 ids beyond the spine) because `applyBindingGate`
+skips what it cannot weigh — an entry with no HIP, and a HIP with no printed V
+(`gateSkippedNoHipVMag`) — and `bindingCandidateSourceIds` applies both
+narrowings so the request and the gate agree by construction.
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are

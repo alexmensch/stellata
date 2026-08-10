@@ -52,7 +52,8 @@ function loadCorpus(): CorpusRow[] {
     delimiter: '\t',
     comment: '#',
     skip_empty_lines: true,
-    // The tier-3 row (xi UMa) omits the trailing total_pm_masyr column.
+    // A row whose record bakes no velocity omits the trailing
+    // total_pm_masyr column (xi UMa's 2p Gaia anchor fits no PM).
     relax_column_count_less: true,
     cast: false,
   }) as Record<string, string>[];
@@ -85,7 +86,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   it('corpus covers the high-PM set plus one pin per non-Gaia tier', () => {
     expect(corpus.map((r) => r.hip ?? r.lookupName)).toEqual([
       87937, 24186, 57939, 104214, 104217, 19849,
-      32349, 91262, 'Alula Australis',
+      111293, 32349, 91262, 'Alula Australis',
     ]);
   });
 

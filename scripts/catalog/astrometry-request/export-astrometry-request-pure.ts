@@ -1,5 +1,5 @@
 // Pure helpers for the full-catalog Gaia astrometry request export.
-// See scripts/catalog/README.md § Full-catalog astrometry request.
+// See README.md.
 
 /** Numerically sort Gaia DR3 source_id decimal strings ascending.
  *  Source_ids routinely exceed 2^53, so a lexicographic sort misorders

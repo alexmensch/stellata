@@ -1,23 +1,60 @@
 # Photometry
 
 Per-record photometric quantities derived from Gaia DR3 broadband
-magnitudes: the Johnson V cascade, and the published relations behind it.
-The contract is `docs/catalog-driver.md` § 5; the per-row pipeline that
-consumes this is `../parse/README.md` § Per-row pipeline.
+magnitudes: the Johnson V and B−V cascades, and the published relations
+behind them. The contract is `docs/catalog-driver.md` § 5; the per-row
+pipeline that consumes this is `../parse/README.md` § Per-row pipeline.
 
 ## Files in this area
 
 ```
 scripts/catalog/photometry/
+  gaia-photometry-pure.ts        The GaiaPhotometry band bundle, the
+    (+ test)                     saturation bound, calibratedPhotometry
+                                 (the validity gate both relations share),
+                                 and the ascending-powers polynomial
+                                 evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, the gated
                                  transform over it, the three-tier V
                                  cascade, and which tiers yield a system
                                  blend. Pure.
+  colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
+                                 difference of the two relations, and the
+                                 four-tier ci cascade with its
+                                 observed-vs-intrinsic verdict. Pure.
   hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
-                                 printed Johnson V. Shared by the cascade's
-                                 bright tier and ../classic-ids/'s binding
-                                 gate, which need the same HIP-keyed V.
+                                 printed Johnson V. Three consumers need the
+                                 same HIP-keyed V: the cascade's bright tier,
+                                 ../classic-ids/'s binding gate, and
+                                 ../astrometry-request/, which narrows the
+                                 gate's candidates by it.
+  photometry-fixture.ts          Test-only GaiaPhotometry builders. A module,
+                                 not an export from a test file: all three
+                                 suites here build these rows, and both
+                                 relations are functions of BP−RP alone, so
+                                 `atColour` belongs with them.
 ```
+
+## The published relations
+
+Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
+§ Photometric relationships with other photometric systems, the release-3
+restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
+
+| Relation | Degree | σ | Stated range |
+| --- | --- | --- | --- |
+| `G − V` | cubic | 0.03017 | −0.5 … 5.0 |
+| `G − B` | quartic | 0.0633 | −0.5 … 4.0, M giants only past 1.75 |
+
+That shared provenance is what makes `B − V = (G − V) − (G − B)` a published
+quantity rather than a composed guess: same independent variable, same fit
+population, and `G` cancels out of the difference entirely.
+
+`calibratedPhotometry` is the gate both apply first — every band present and
+finite, and `G` above `GAIA_PHOTOMETRY_SATURATION_G` — returning the values
+rather than a boolean, so the algebra downstream reads the very numbers the
+gate accepted instead of re-deriving them behind non-null assertions. Each
+relation then applies its own colour range on top.
 
 ## The V cascade
 
@@ -31,6 +68,64 @@ V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
 `vVia` routing counts are pinned in build-counts the same way the direction
 cascade pins `directionVia`. The tier also rides on the record, because it
 answers a question no consumer can answer from the magnitude alone.
+
+## The ci cascade
+
+```
+B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
+  → printed `ci`                      the spine's own cell
+  → intrinsic spectral-class colour   no-Apsis rows only
+  → SOLAR_BV_FALLBACK
+```
+
+Per-tier routing, pinned in build-counts: `gaia_relation` **291,943** ·
+`catalogued` **20,241** · `spectral_derived` **118** · `solar_fallback`
+**955**. The relation carries the bulk, and the spectral tier collapsed from
+2,415 to 118 because it now fires only where BOTH measured tiers miss.
+
+`resolveColourIndex` returns the value, the tier, **and** whether the value
+is observed-convention. That last one is not a convenience: build-time
+de-extinction subtracts `A_V / R_V` from an observed B−V and must leave an
+intrinsic one alone, and deciding that at the dust integral means deciding
+it a second time, in a place that no longer knows which tier ran. The two
+measured tiers are observed; the two derived ones are intrinsic.
+`companionCiIsObserved` states the same contract for promoted companions.
+
+The derived tiers are gated on `apsisTeff === null` because the shader is a
+two-tier read — `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so an
+Apsis star never renders its baked `ci`. The measured tiers are ungated:
+storing a measurement costs nothing and the field is read by more than the
+shader.
+
+### Where the colour bound comes from
+
+Table 5.9 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
+this build cannot tell a giant from a dwarf on the no-Apsis population the
+tier serves — `lumClass` is 255 for most of it. So 1.75, not the relation's
+stated 4.0, is what `gaiaBMinusV` gates on.
+
+Measured against the printed cell over the no-Apsis population (both sides
+observed-convention, so the comparison is like-for-like), the published note
+is visible in the data:
+
+| BP−RP | n | p50 | p99 | max |
+|---|---|---|---|---|
+| −0.5 – 0.4 | 22,406 | 0.041 | 0.368 | 2.768 |
+| 0.4 – 0.8 | 15,642 | 0.063 | 0.545 | 1.876 |
+| 0.8 – 1.2 | 3,304 | 0.094 | 0.685 | 1.441 |
+| 1.2 – 1.75 | 1,672 | 0.222 | 0.776 | 2.241 |
+| 1.75 – 2.5 | 504 | 0.209 | 0.951 | 1.385 |
+| 2.5 – 3.0 | 133 | 0.574 | 2.104 | 2.668 |
+| 3.0 – 4.0 | 189 | 1.258 | 2.727 | 3.911 |
+
+Whole accepted range: **p50 0.052, p99 0.513, max 2.768** over 43,024 rows.
+
+**The measured knee is at 2.5, not 1.75** — the published bound is the more
+conservative of the two, and it is the one applied, because a note about
+which luminosity class a fit covers is a statement about validity that a
+disagreement distribution cannot overturn. It costs 912 no-Apsis rows
+(2% of the population reachable at 4.0), which fall through to the printed
+cell rather than to a derived colour.
 
 ## Which tiers give a system blend — `vTierIsSystemBlend`
 

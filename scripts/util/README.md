@@ -29,13 +29,17 @@ need the same thing — single-use helpers stay with their consumer.
   than in `sid/sid-pure.ts` so this module stays a dependency leaf: the
   SID folder imports `REPO_ROOT` from it, so the reverse edge would put
   a domain module under every consumer of a path helper.
+  `requireExists(path, refreshHint)` / `readRequired(path, refreshHint)` are the
+  build scripts' hard-fail on a missing input: they name `git lfs pull` and the
+  file's own refresh target, because the parsers downstream fail on a pointer
+  stub with a header error that mentions neither. Both the classic-ID overlay
+  build and the astrometry request read the same four cross-walk inputs, which
+  is why the guard is here and not in either.
   `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
-  `ATHYG_CSV` is the one data path here, for the same leaf reason: the
-  catalogue stopped being a build input at the driver swap, so its three
-  remaining readers — the astrometry request, the classic-ID overlay, and the
-  boundary-epoch cross-check — sit in three folders with no module between
-  them, and each spelling the literal is how a path drifts
-  (`data/athyg/README.md` § Consumed by).
+  **No data paths live here.** `ATHYG_CSV` used to, back when three folders
+  read the catalogue; the astrometry request moved onto the spine and the
+  boundary-epoch cross-check is the last reader left, so the literal sits in
+  that suite (`data/athyg/README.md` § Consumed by).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, `dist_src`). Buckets are derived from
