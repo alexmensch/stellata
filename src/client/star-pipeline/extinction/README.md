@@ -31,7 +31,11 @@ src/client/star-pipeline/extinction/
   dust-raymarch.glsl              Shared camera→star Edenhofer raymarch chunk
                                   (stellata_dust_raymarch), included by the
                                   prepass and by ../star.vert.glsl's fallback
-                                  path. Spliced in stellata.ts via ?raw.
+                                  path. Spliced in stellata.ts via ?raw. Its
+                                  single-sample `dustDensityAt` (bbox test +
+                                  log decode) is the one piece the band's
+                                  froxel fill shares — see
+                                  ../../dust/froxel/README.md.
   dust-raymarch-pure.ts (+ test)  CPU mirror of the raymarch decode +
                                   trapezoidal integration and the
                                   E(B−V) = A_V / R_V reddening. Test-only;

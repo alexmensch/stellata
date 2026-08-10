@@ -25,3 +25,15 @@ while shelved — gate the mesh's visibility on it at un-shelve
 `scripts/dust/README.md`).
 
 `DustField` + `dust-loader.ts` live in `src/client/loaders/`.
+
+## What else is in this folder
+
+- `dust-field-uniforms.ts` — `DustFieldUniforms`, the narrowed view of the
+  shared uniform map that carries the Edenhofer texture and its log decode.
+  Both dust readers (the per-star extinction prepass and the band's froxel
+  fill) hold it by reference; its GLSL counterpart is the
+  `stellata_dust_raymarch` chunk's uniform block.
+- [`froxel/`](froxel/README.md) — the band's measured-dust froxel grid and
+  its fill pass. Parked by default; it is the GPU-timing spike behind
+  `docs/science-galactic-structure.md` § The prefilter mechanism, not a
+  shipped layer.

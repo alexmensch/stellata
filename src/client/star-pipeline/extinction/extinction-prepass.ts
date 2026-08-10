@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import prepassVert from '../../util/fullscreen-pass.vert.glsl?raw';
 import prepassFrag from './extinction-prepass.frag.glsl?raw';
 import { fullscreenTriangleGeometry } from '../../util/fullscreen-pass';
+import type { DustFieldUniforms } from '../../dust/dust-field-uniforms';
 import {
   AV_TEX_WIDTH,
   RECOMPUTE_EPSILON_PC,
@@ -17,12 +18,7 @@ import {
 /** Uniform value-objects shared by reference with the star pipeline's
  *  sharedUniforms map: the dust-field inputs the prepass march reads,
  *  and the two consumer uniforms it owns the writes to. */
-export interface ExtinctionPrepassUniforms {
-  uDustTexture: { value: THREE.Data3DTexture | null };
-  uDustBoundsPc: { value: number };
-  uDustDensityMin: { value: number };
-  uDustLogRatio: { value: number };
-  uDustAvPerDensityPc: { value: number };
+export interface ExtinctionPrepassUniforms extends DustFieldUniforms {
   uAvPrepassTex: { value: THREE.Texture | null };
   uAvPrepassEnabled: { value: number };
 }
