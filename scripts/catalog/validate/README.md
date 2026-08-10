@@ -159,6 +159,13 @@ preserved. To add a star or system:
    own per-component Gaia photometry through the Riello transform instead of
    the printed pair blend and its re-split. 4.241 was the WDS-implied value;
    the pins are now the Gaia-measured one.
+
+   The same pull moved ξ Sco's `ci` off its class-derived value, and that one
+   is the warning about **tolerance**: at ±0.03 the stale 0.419 pin still
+   passed against a measured 0.433, so the row kept asserting a tier it no
+   longer took. A pin whose `notes_source` names its provenance has to be
+   re-read whenever the cascade above it gains a tier — passing is not
+   evidence the stated reason still holds.
 6. When curating a multi-star system, also pin its kept-pair set in
    `system-pair-topology.tsv` — the exact-set fixture is what catches
    a later ingest silently adding or dropping a pair for that root.
