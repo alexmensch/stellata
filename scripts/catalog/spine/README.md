@@ -217,7 +217,7 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
   are backed against the spine rather than asserted — the join and the
   HR set would each stay green over a stale verdict otherwise.
 
-  `rejected_bindings.tsv` is deliberately not on that list: its 187
+  `rejected_bindings.tsv` is deliberately not on that list: its 268
   rows are the binding gate refusing to key a designation on a source
   that is not the star, so each leaves its record on the spine's label
   — no departure for the label term to carry, and no identity event to

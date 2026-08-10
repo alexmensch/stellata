@@ -25,6 +25,10 @@ OUT = ROOT / "data" / "gaia" / "gaia_dr3_astrometry_catalog.tsv"
 # PM ≈ (-802, +10362) mas/yr — a strong end-to-end anchor). Sirius A is
 # deliberately absent from this file (Gaia has no 5p solution for it —
 # the HIP2 tier handles it), so it is not a spot-check target here.
+#
+# Barnard's Star also pins `radial_velocity`: RVS reaches only ~a third of
+# sources, so a column that silently came back all-null would still pass the
+# row-count and coverage gates. A row known to carry one is what catches it.
 SPOT_CHECKS: list[dict[str, Any]] = [
     {
         "source_id":          7632157690368,       # request file row 1
@@ -49,6 +53,7 @@ SPOT_CHECKS: list[dict[str, Any]] = [
         "pmra":               (-801.5510, 0.001),
         "pmdec":              (10362.3942, 0.001),
         "phot_g_mean_mag":    (8.193974, 0.0001),
+        "radial_velocity":    (-110.4682, 0.001),
     },
 ]
 

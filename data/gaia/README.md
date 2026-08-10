@@ -87,7 +87,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   the NSS source_id set for the `gaia_nss_systemic` routing tag
   (`scripts/catalog/distance/README.md` § Direction resolution). That same
   table's `phot_{g,bp,rp}_mean_mag` columns are the top tier of the Johnson V
-  cascade every record's absmag is derived from — 310,939 of 313,257 stars
+  cascade every record's absmag is derived from — 311,071 of 313,257 stars
   (`scripts/catalog/photometry/README.md`).
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.

@@ -71,6 +71,11 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → SOLAR_BV_FALLBACK
 ```
 
+Per-tier routing, pinned in build-counts: `gaia_relation` **291,943** ·
+`catalogued` **20,241** · `spectral_derived` **118** · `solar_fallback`
+**955**. The relation carries the bulk, and the spectral tier collapsed from
+2,415 to 118 because it now fires only where BOTH measured tiers miss.
+
 `resolveColourIndex` returns the value, the tier, **and** whether the value
 is observed-convention. That last one is not a convenience: build-time
 de-extinction subtracts `A_V / R_V` from an observed B−V and must leave an
@@ -98,20 +103,20 @@ is visible in the data:
 
 | BP−RP | n | p50 | p99 | max |
 |---|---|---|---|---|
-| −0.5 – 0.4 | 22,365 | 0.041 | 0.368 | 2.768 |
-| 0.4 – 0.8 | 15,594 | 0.063 | 0.547 | 1.876 |
-| 0.8 – 1.2 | 3,282 | 0.094 | 0.695 | 1.441 |
-| 1.2 – 1.75 | 1,660 | 0.222 | 0.776 | 2.241 |
-| 1.75 – 2.5 | 503 | 0.209 | 0.951 | 1.385 |
+| −0.5 – 0.4 | 22,406 | 0.041 | 0.368 | 2.768 |
+| 0.4 – 0.8 | 15,642 | 0.063 | 0.545 | 1.876 |
+| 0.8 – 1.2 | 3,304 | 0.094 | 0.685 | 1.441 |
+| 1.2 – 1.75 | 1,672 | 0.222 | 0.776 | 2.241 |
+| 1.75 – 2.5 | 504 | 0.209 | 0.951 | 1.385 |
 | 2.5 – 3.0 | 133 | 0.574 | 2.104 | 2.668 |
 | 3.0 – 4.0 | 189 | 1.258 | 2.727 | 3.911 |
 
-Whole accepted range: **p50 0.052, p99 0.513, max 2.768** over 42,901 rows.
+Whole accepted range: **p50 0.052, p99 0.513, max 2.768** over 43,024 rows.
 
 **The measured knee is at 2.5, not 1.75** — the published bound is the more
 conservative of the two, and it is the one applied, because a note about
 which luminosity class a fit covers is a statement about validity that a
-disagreement distribution cannot overturn. It costs ~910 no-Apsis rows
+disagreement distribution cannot overturn. It costs 912 no-Apsis rows
 (2% of the population reachable at 4.0), which fall through to the printed
 cell rather than to a derived colour.
 

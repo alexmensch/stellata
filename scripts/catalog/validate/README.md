@@ -152,6 +152,13 @@ preserved. To add a star or system:
    derives from the bad absmag. ξ Scorpii and HD 75632 carried the same pin
    for the same cause; the gate landed and all three now pin real values. No
    row carries a deferred pin today.
+
+   Those three have since moved again, and **not** back toward 4.241 — read
+   their `notes_source` before "correcting" them. `stellata-3bsf.18` put their
+   Gaia sources in the astrometry pull for the first time, so each takes its
+   own per-component Gaia photometry through the Riello transform instead of
+   the printed pair blend and its re-split. 4.241 was the WDS-implied value;
+   the pins are now the Gaia-measured one.
 6. When curating a multi-star system, also pin its kept-pair set in
    `system-pair-topology.tsv` — the exact-set fixture is what catches
    a later ingest silently adding or dropping a pair for that root.

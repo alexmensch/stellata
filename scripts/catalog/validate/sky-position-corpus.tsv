@@ -1,7 +1,6 @@
 # Sky-position regression corpus for the direction cascade: the
-# canonical high-PM set (tier-1 Gaia) plus one pin per non-Gaia tier —
-# Sirius/Vega for tier 2 (hip2_saturated, the Gaia-saturated bright
-# set), xi UMa for tier 3 (athyg_printed).
+# canonical high-PM set (tier-1 Gaia) plus Sirius/Vega for tier 2
+# (hip2_saturated, the Gaia-saturated bright set).
 #
 # Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH):
 # - Gaia tier: the raw Gaia DR3 catalog ra/dec, whose native epoch IS
@@ -13,15 +12,19 @@
 #   pinned independently against SIMBAD J2000 in direction-cascade.test.ts.
 # - Sirius/Vega (tier 2): van-Leeuwen-2007 J1991.25 PM-propagated 24.75
 #   yr forward to J2016.0 — this DOES exercise the propagation.
-# - xi UMa (tier 3, athyg_printed): AT-HYG's printed ra/dec is used
-#   UNPROPAGATED (no Gaia source, HIP 55203 excluded from HIP2), so it
-#   sits at AT-HYG's native ~J2000 epoch regardless of the scene epoch;
-#   its GJ-anchored coord is good to a couple of arcsec against SIMBAD's
-#   UCAC4 coordinate, so it pins loose at 3.0".
+# - xi UMa: WAS the tier-3 (athyg_printed) pin, at AT-HYG's printed
+#   ~J2000 coord, because its spine row resolved no Gaia source. The
+#   backfilled source_id now reaches a Gaia row, so it routes tier 1 as a
+#   2p (position-only) anchor and this row pins that Gaia J2016.0 coord.
+#   The move is worth ~11" of staleness: its 730 mas/yr over the 16 yr
+#   from J2000 is exactly what the printed cell was NOT propagating.
+#   The 2p fit is blended (ipd_frac_multi_peak 24 on a ~2" pair), so the
+#   coord is the pair photocentre rather than A alone — good to ~1",
+#   which is why it stays looser than the 0.5" Gaia rows above.
 #
-# lookup: hip where the AT-HYG row carries one; xi UMa's row carries
-# neither HIP nor Gaia (that is precisely why it routes tier 3), so it
-# is addressed by proper name and its hip cell is blank.
+# lookup: hip where the AT-HYG row carries one. xi UMa's spine row
+# carries no HIP of its own, so it is addressed by proper name and its
+# hip cell is blank.
 #
 # total_pm_masyr is the published total proper motion (mas/yr). The
 # current-epoch velocity test advances the star's BAKED J2016 position +
@@ -40,4 +43,4 @@ Groombridge 1830		57939	178.2673532080	37.692826947	0.5	7058.4
 Keid		19849	63.8079530060	-7.668077815	0.5	4088.0
 Sirius		32349	101.2846216628	-16.721551666	0.5	1339.4
 Vega		91262	279.2358804374	38.784961091	0.5	350.8
-xi UMa	Alula Australis		169.54554950000002	31.529288899999997	3.0
+xi UMa	Alula Australis		169.543285282	31.526916852	1.5

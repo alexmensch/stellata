@@ -43,7 +43,7 @@ through the same trust cascade the binaries pipeline implements in
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~10.0k |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~2.5k |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~138 |
-| `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated. ξ UMa (HIP 55203 excluded from HIP2 as orbit-corrupted, Gaia-saturated) is canonical; Sol also lands here. | 30 |
+| `athyg_printed` | Residual: no Gaia astrometry row AND no HIP2 row. AT-HYG's printed ra/dec as-is, unpropagated — so a high-PM row here is stale by PM × 16 yr against the scene epoch. Sol lands here. ξ UMa used to be the canonical case and no longer is: the spine's backfilled source_id put it on a Gaia 2p anchor, 11″ closer to its true J2016 place. | 61 |
 
 Epoch propagation (`directionAtEpoch`) advances the measured unit
 vector to the `CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local
@@ -61,9 +61,9 @@ falls through), and the per-route build-counts pins
 
 The sky-position regression corpus (`sky-position-corpus.tsv` +
 `sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
-Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per
-non-Gaia tier (Sirius + Vega for hip2_saturated, ξ UMa for
-athyg_printed) against their **J2016.0** positions (the scene epoch).
+Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus Sirius + Vega for
+hip2_saturated, against their **J2016.0** positions (the scene epoch).
+`athyg_printed` has no named exemplar since ξ UMa left it.
 At J2016.0 the Gaia tier is a zero-Δt no-op, so those rows are a
 placement / tier-routing pin — a wrong source or xyz-assembly sign
 shows up as tens of arcsec. The propagation formula itself (PM sign /
@@ -89,9 +89,18 @@ catalogued one, which carries the pre-Gaia velocities.
 
 A genuine zero is a velocity, not an absence: the cascade routes on
 null-vs-present, never on truthiness, or every star with no measured
-line-of-sight motion would fall to the next tier. Per-tier counts are
-pinned as `rvGaiaDr3` / `rvCatalogued` / `rvNone`, the same discipline the
-direction cascade pins `directionVia` under.
+line-of-sight motion would fall to the next tier.
+
+Per-tier counts are pinned as `rvGaiaDr3` **266,482** / `rvCatalogued`
+**6,946** / `rvNone` **39,829**, the same discipline the direction cascade
+pins `directionVia` under. `velocityRvApplied` rose 267,058 → **273,418**:
+the Gaia tier reaches 6,360 records whose printed cell was blank.
+
+**The sanity ceiling did not move.** `velocityClamped` stays at **8** and
+`velocityAboveEscape` at **45** across the swap — a changed radial term feeds
+straight into `v = v_r·û + …`, so a Gaia RV disagreeing wildly with the
+printed cell would surface here first. It doesn't, which is the evidence that
+the new tier is sane rather than merely present.
 
 ## Build-time de-extinction
 
