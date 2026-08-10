@@ -111,9 +111,22 @@ than the pin does — a fill that misses on Chrome and lands on Safari is a
 different decision from one that misses on both. Neither browser is "the"
 answer on its own.
 
+**The frustum is pinned, not inherited.** The grid is sized from the camera's
+aspect, so a reading taken in whatever shape the window happens to be is
+comparable only to that window — a 0.97-aspect window prices *half* the cells
+a 16:9 one does at the same FOV. The bench holds the grid at 16:9 (the cost
+table's aspect) through `setAspectOverride`, reports it in the `aspect`
+column, and restores the live aspect afterwards. Pass
+`{aspect: stellata.camera.aspect}` to price your own window instead.
+
 - **Close the debug panel first** on the timer-query path. WebGL2 allows one
   `TIME_ELAPSED` query per context; an open Perf section holds it and every
   batch times out.
+- **Never poll a fence in a spin loop.** `clientWaitSync`'s timeout is pinned
+  at 0 in WebGL2, and a busy-wait on the main thread hangs the tab outright —
+  the fence's completion arrives through the same event loop the spin is
+  starving. The fence path polls across rAF for that reason, which is what
+  quantises it to the frame period and why only the slope is usable.
 - **The camera pose is an input.** Sol is the easy case. Fly ~3 kpc out and
   run it again to see the ray-sphere gate collapse the cost — only ~4.5 % of
   sightlines cross coverage from there.

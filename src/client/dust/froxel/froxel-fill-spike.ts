@@ -70,6 +70,7 @@ export class FroxelFillSpike {
   private drawCamera = new THREE.OrthographicCamera();
 
   private enabled = false;
+  private aspectOverride: number | null = null;
   private cellsX = 0;
   private cellsY = 0;
   private fills = 0;
@@ -129,6 +130,19 @@ export class FroxelFillSpike {
     return this.enabled;
   }
 
+  /** Price a fixed frustum rather than the live window's. The grid is sized
+   *  from `camera.aspect`, so a docked devtools panel or a portrait window
+   *  silently measures a smaller grid than the cost table prices — half of
+   *  it, at a console docked to the side. Null returns it to the camera. */
+  setAspectOverride(aspect: number | null) {
+    this.aspectOverride = aspect;
+    this.invalidate();
+  }
+
+  private gridAspect(camera: THREE.PerspectiveCamera): number {
+    return this.aspectOverride ?? camera.aspect;
+  }
+
   /** Force the next update() to fill regardless of camera state. */
   invalidate() {
     this.lastCamX = Infinity;
@@ -164,7 +178,8 @@ export class FroxelFillSpike {
   renderFill(camera: THREE.PerspectiveCamera, absCam: THREE.Vector3) {
     if (!this.enabled || this.material === null) return;
     camera.updateMatrixWorld();
-    const dims = froxelGridDims(camera.fov, camera.aspect, PINNED_CELL_RAD);
+    const aspect = this.gridAspect(camera);
+    const dims = froxelGridDims(camera.fov, aspect, PINNED_CELL_RAD);
     if (this.rt === null || dims.x !== this.cellsX || dims.y !== this.cellsY) {
       this.allocateTarget(dims.x, dims.y);
     }
@@ -173,7 +188,7 @@ export class FroxelFillSpike {
     (u.uAbsCameraPos.value as THREE.Vector3).copy(absCam);
     this.basis.setFromMatrix4(camera.matrixWorld);
     const tanY = Math.tan((camera.fov * Math.PI) / 360);
-    (u.uTanHalfFov.value as THREE.Vector2).set(tanY * camera.aspect, tanY);
+    (u.uTanHalfFov.value as THREE.Vector2).set(tanY * aspect, tanY);
     (u.uGridDims.value as THREE.Vector2).set(this.cellsX, this.cellsY);
 
     const prevTarget = this.renderer.getRenderTarget();
@@ -192,7 +207,7 @@ export class FroxelFillSpike {
   }
 
   stats(camera: THREE.PerspectiveCamera, absCam: THREE.Vector3): FroxelFillStats {
-    const dims = froxelGridDims(camera.fov, camera.aspect, PINNED_CELL_RAD);
+    const dims = froxelGridDims(camera.fov, this.gridAspect(camera), PINNED_CELL_RAD);
     const cells = dims.x * dims.y;
     const texels = cells * PINNED_SLICES;
     axisDir.set(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -246,6 +261,7 @@ export class FroxelFillSpike {
 
   dispose() {
     this.releaseTarget();
+    this.aspectOverride = null;
     this.material?.dispose();
     this.geometry?.dispose();
     this.material = null;
