@@ -23,9 +23,16 @@ scripts/catalog/photometry/
                                  four-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
   hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
-                                 printed Johnson V. Shared by the cascade's
-                                 bright tier and ../classic-ids/'s binding
-                                 gate, which need the same HIP-keyed V.
+                                 printed Johnson V. Three consumers need the
+                                 same HIP-keyed V: the cascade's bright tier,
+                                 ../classic-ids/'s binding gate, and
+                                 ../astrometry-request/, which narrows the
+                                 gate's candidates by it.
+  photometry-fixture.ts          Test-only GaiaPhotometry builders. A module,
+                                 not an export from a test file: all three
+                                 suites here build these rows, and both
+                                 relations are functions of BP−RP alone, so
+                                 `atColour` belongs with them.
 ```
 
 ## The published relations

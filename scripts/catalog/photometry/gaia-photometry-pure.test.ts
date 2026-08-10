@@ -5,6 +5,7 @@ import {
   calibratedPhotometry,
   polynomial,
 } from './gaia-photometry-pure';
+import { photometry } from './photometry-fixture';
 
 describe('polynomial', () => {
   // Both published relations are transcribed in ascending powers, so a
@@ -24,23 +25,21 @@ describe('polynomial', () => {
 });
 
 describe('calibratedPhotometry', () => {
-  const row = { gMag: 10, bpMag: 10.5, rpMag: 9.7 };
-
   it('returns G and the colour together for a well-measured source', () => {
-    const calibrated = calibratedPhotometry(row)!;
+    const calibrated = calibratedPhotometry(photometry())!;
     expect(calibrated.gMag).toBe(10);
     expect(calibrated.bpMinusRp).toBeCloseTo(0.8, 12);
   });
 
   it('rejects a null row, a missing band and a non-finite band', () => {
     expect(calibratedPhotometry(null)).toBeNull();
-    expect(calibratedPhotometry({ ...row, bpMag: null })).toBeNull();
-    expect(calibratedPhotometry({ ...row, rpMag: NaN })).toBeNull();
+    expect(calibratedPhotometry(photometry({ bpMag: null }))).toBeNull();
+    expect(calibratedPhotometry(photometry({ rpMag: NaN }))).toBeNull();
   });
 
   it('rejects a saturated source, accepting exactly at the bound', () => {
     const atBound = GAIA_PHOTOMETRY_SATURATION_G;
-    expect(calibratedPhotometry({ ...row, gMag: atBound })).not.toBeNull();
-    expect(calibratedPhotometry({ ...row, gMag: atBound - 0.001 })).toBeNull();
+    expect(calibratedPhotometry(photometry({ gMag: atBound }))).not.toBeNull();
+    expect(calibratedPhotometry(photometry({ gMag: atBound - 0.001 }))).toBeNull();
   });
 });

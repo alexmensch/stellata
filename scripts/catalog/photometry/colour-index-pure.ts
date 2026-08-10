@@ -1,6 +1,7 @@
 // Johnson B−V resolution from Gaia DR3 photometry, the catalogue's printed
 // cell, and the intrinsic spectral-class tiers. See README.md § The ci cascade.
 
+import { SOLAR_BV_FALLBACK } from '../catalog-pure';
 import {
   calibratedPhotometry,
   polynomial,
@@ -18,6 +19,13 @@ export const GAIA_G_MINUS_B_COEFFS = [
 
 /** Published residual scatter of the relation above (mag). */
 export const GAIA_G_MINUS_B_SIGMA = 0.0633;
+
+/** Blue end of the `G − B` relation's stated range. It coincides with the
+ *  `G − V` cubic's {@link RIELLO_BP_RP_MIN}, which is why the difference has one
+ *  blue bound and not two — stated separately so a future table revision that
+ *  moves one relation and not the other shows up here rather than silently
+ *  widening the other's range. */
+export const GAIA_G_MINUS_B_BP_RP_MIN = -0.5;
 
 /** Red end of the `G − B` relation's stated range. Redder than
  *  {@link GAIA_G_MINUS_B_GIANT_ONLY_BP_RP} the table restricts it to M giants,
@@ -46,7 +54,8 @@ export function gaiaBMinusV(photometry: GaiaPhotometry | null): number | null {
   const calibrated = calibratedPhotometry(photometry);
   if (calibrated === null) return null;
   const { bpMinusRp } = calibrated;
-  if (bpMinusRp < RIELLO_BP_RP_MIN || bpMinusRp > GAIA_G_MINUS_B_GIANT_ONLY_BP_RP) {
+  const blueBound = Math.max(RIELLO_BP_RP_MIN, GAIA_G_MINUS_B_BP_RP_MIN);
+  if (bpMinusRp < blueBound || bpMinusRp > GAIA_G_MINUS_B_GIANT_ONLY_BP_RP) {
     return null;
   }
   return rielloGMinusV(bpMinusRp) - gaiaGMinusB(bpMinusRp);
@@ -72,6 +81,19 @@ export interface ColourIndexResolution {
   isObserved: boolean;
 }
 
+/** One row's candidate colours, one per tier below the relation. Named rather
+ *  than positional because three of them are `number | null` and a swap would
+ *  silently reorder the cascade while still typechecking. */
+export interface ColourIndexSources {
+  photometry: GaiaPhotometry | null;
+  /** The spine's printed `ci` cell. */
+  cataloguedCi: number | null;
+  /** Non-null suppresses both derived tiers — see below. */
+  apsisTeff: number | null;
+  /** `spectralClassCi`, or null where the class yields no real colour. */
+  spectralCi: number | null;
+}
+
 /** B−V through the cascade: the Gaia relation, else the catalogue's printed
  *  cell, else — only where no Apsis Teff will override the colour downstream —
  *  the intrinsic spectral-class value, else solar.
@@ -82,13 +104,10 @@ export interface ColourIndexResolution {
  *  Apsis star will never render is work whose only effect would be to move the
  *  routing counts. */
 export function resolveColourIndex(
-  photometry: GaiaPhotometry | null,
-  cataloguedCi: number | null,
-  apsisTeff: number | null,
-  spectralCi: number | null,
-  solarCi: number,
+  sources: ColourIndexSources,
 ): ColourIndexResolution {
-  const transformed = gaiaBMinusV(photometry);
+  const { cataloguedCi, apsisTeff, spectralCi } = sources;
+  const transformed = gaiaBMinusV(sources.photometry);
   if (transformed !== null) {
     return { ci: transformed, via: 'gaia_relation', isObserved: true };
   }
@@ -98,5 +117,5 @@ export function resolveColourIndex(
   if (apsisTeff === null && spectralCi !== null) {
     return { ci: spectralCi, via: 'spectral_derived', isObserved: false };
   }
-  return { ci: solarCi, via: 'solar_fallback', isObserved: false };
+  return { ci: SOLAR_BV_FALLBACK, via: 'solar_fallback', isObserved: false };
 }

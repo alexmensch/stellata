@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   GAIA_G_MINUS_B_BP_RP_MAX,
+  GAIA_G_MINUS_B_BP_RP_MIN,
   GAIA_G_MINUS_B_COEFFS,
   GAIA_G_MINUS_B_GIANT_ONLY_BP_RP,
   GAIA_G_MINUS_B_SIGMA,
@@ -9,20 +10,10 @@ import {
   gaiaGMinusB,
   resolveColourIndex,
 } from './colour-index-pure';
+import { SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
-import {
-  GAIA_PHOTOMETRY_SATURATION_G,
-  type GaiaPhotometry,
-} from './gaia-photometry-pure';
-
-function photometry(overrides: Partial<GaiaPhotometry> = {}): GaiaPhotometry {
-  return { gMag: 10, bpMag: 10.5, rpMag: 9.7, ...overrides };
-}
-
-/** BP−RP giving the requested colour, at an unsaturated G. */
-function atColour(bpMinusRp: number): GaiaPhotometry {
-  return { gMag: 10, bpMag: 10 + bpMinusRp, rpMag: 10 };
-}
+import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
+import { atColour, photometry } from './photometry-fixture';
 
 describe('Gaia DR3 Table 5.9 G−B relation', () => {
   // The literals ARE the assertion: these are the published values, so the
@@ -33,6 +24,7 @@ describe('Gaia DR3 Table 5.9 G−B relation', () => {
       0.01448, -0.6874, -0.3604, 0.06718, -0.006061,
     ]);
     expect(GAIA_G_MINUS_B_SIGMA).toBe(0.0633);
+    expect(GAIA_G_MINUS_B_BP_RP_MIN).toBe(-0.5);
     expect(GAIA_G_MINUS_B_BP_RP_MAX).toBe(4.0);
     expect(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP).toBe(1.75);
   });
@@ -79,7 +71,10 @@ describe('gaiaBMinusV', () => {
     expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_BP_RP_MAX - 0.5))).toBeNull();
   });
 
-  it('rejects colours below the shared blue bound', () => {
+  // Both relations state the same blue end, so the difference has one bound —
+  // asserting they agree is what would catch a revision moving only one.
+  it('rejects colours below the blue bound the two relations share', () => {
+    expect(GAIA_G_MINUS_B_BP_RP_MIN).toBe(RIELLO_BP_RP_MIN);
     expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN))).not.toBeNull();
     expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN - 0.001))).toBeNull();
   });
@@ -92,40 +87,42 @@ describe('gaiaBMinusV', () => {
 });
 
 describe('resolveColourIndex cascade', () => {
-  const SOLAR = 0.65;
+  const sources = (overrides: Partial<Parameters<typeof resolveColourIndex>[0]> = {}) => ({
+    photometry: null, cataloguedCi: 1.2, apsisTeff: null, spectralCi: 1.4, ...overrides,
+  });
 
   it('takes the Gaia relation when it applies, marked observed', () => {
-    const r = resolveColourIndex(atColour(0.8), 1.2, null, 1.4, SOLAR);
+    const r = resolveColourIndex(sources({ photometry: atColour(0.8) }));
     expect(r.via).toBe('gaia_relation');
     expect(r.ci).toBeCloseTo(gaiaBMinusV(atColour(0.8))!, 12);
     expect(r.isObserved).toBe(true);
   });
 
   it('falls to the catalogued cell when the relation does not apply', () => {
-    const r = resolveColourIndex(atColour(3.0), 1.2, null, 1.4, SOLAR);
-    expect(r).toEqual({ ci: 1.2, via: 'catalogued', isObserved: true });
+    expect(resolveColourIndex(sources({ photometry: atColour(3.0) })))
+      .toEqual({ ci: 1.2, via: 'catalogued', isObserved: true });
   });
 
   it('falls to the catalogued cell when there is no photometry row at all', () => {
-    expect(resolveColourIndex(null, 1.2, null, 1.4, SOLAR).via).toBe('catalogued');
+    expect(resolveColourIndex(sources()).via).toBe('catalogued');
   });
 
   it('skips a non-finite catalogued cell rather than propagating it', () => {
-    const r = resolveColourIndex(null, NaN, null, 1.4, SOLAR);
-    expect(r).toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
+    expect(resolveColourIndex(sources({ cataloguedCi: NaN })))
+      .toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
   });
 
   // The two derived tiers are intrinsic — de-extinction must not redden them
   // a second time (companionCiIsObserved gates on the same contract).
   it('derives the spectral colour only for a no-Apsis star, marked intrinsic', () => {
-    const noApsis = resolveColourIndex(null, null, null, 1.4, SOLAR);
-    expect(noApsis).toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
-    const withApsis = resolveColourIndex(null, null, 5200, 1.4, SOLAR);
-    expect(withApsis).toEqual({ ci: SOLAR, via: 'solar_fallback', isObserved: false });
+    expect(resolveColourIndex(sources({ cataloguedCi: null })))
+      .toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
+    expect(resolveColourIndex(sources({ cataloguedCi: null, apsisTeff: 5200 })))
+      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'solar_fallback', isObserved: false });
   });
 
   it('falls to solar when the class yields no derivable colour', () => {
-    const r = resolveColourIndex(null, null, null, null, SOLAR);
-    expect(r).toEqual({ ci: SOLAR, via: 'solar_fallback', isObserved: false });
+    expect(resolveColourIndex(sources({ cataloguedCi: null, spectralCi: null })))
+      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'solar_fallback', isObserved: false });
   });
 });

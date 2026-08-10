@@ -167,9 +167,11 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 | HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers | HIP2 row, null PM |
 | AT-HYG `pm_ra`/`pm_dec` | athyg_printed tier | blank pm cells |
 
-Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity`,
-else the spine's printed `rv` cell (`../distance/README.md` § Radial
-velocity) — and is zero where neither tier carries one. **Sol** carries
+Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
+row with a 5p solution, else the spine's printed `rv` cell
+(`../distance/README.md` § Radial velocity) — and is zero where neither tier
+carries one. The 5p condition is the same one the PM table above turns on: a 2p
+row's RVS spectrum is as blended as its astrometry. **Sol** carries
 no PM row and sits at the origin, so its velocity is forced to exactly zero
 (the advance pass must leave the world origin fixed).
 

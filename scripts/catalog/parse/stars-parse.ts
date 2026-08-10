@@ -19,7 +19,6 @@ import {
   DIST_SRC_HIP,
   spectralClassCi,
   spectralClassColorIsDerivable,
-  SOLAR_BV_FALLBACK,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_PROPER_NAME,
   FLAG_HAS_NAME,
@@ -445,13 +444,14 @@ export function readStars(
     // solar. See ../photometry/README.md § The ci cascade. The baked value only
     // drives colour for no-Apsis stars, which is why the derived tiers gate on
     // apsisTeff.
-    const ciRes = resolveColourIndex(
-      gaiaRow,
-      parseFloatOrNull(row.ci),
+    const ciRes = resolveColourIndex({
+      photometry: gaiaRow,
+      cataloguedCi: parseFloatOrNull(row.ci),
       apsisTeff,
-      spectralClassColorIsDerivable(spectInfo) ? spectralClassCi(spectInfo) : null,
-      SOLAR_BV_FALLBACK,
-    );
+      spectralCi: spectralClassColorIsDerivable(spectInfo)
+        ? spectralClassCi(spectInfo)
+        : null,
+    });
     let ci = ciRes.ci;
     ciVia[ciRes.via]++;
 

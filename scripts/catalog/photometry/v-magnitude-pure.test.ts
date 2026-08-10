@@ -10,14 +10,8 @@ import {
   rielloGMinusV,
   vTierIsSystemBlend,
 } from './v-magnitude-pure';
-import {
-  GAIA_PHOTOMETRY_SATURATION_G,
-  type GaiaPhotometry,
-} from './gaia-photometry-pure';
-
-function photometry(overrides: Partial<GaiaPhotometry> = {}): GaiaPhotometry {
-  return { gMag: 10, bpMag: 10.5, rpMag: 9.7, ...overrides };
-}
+import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
+import { photometry } from './photometry-fixture';
 
 describe('Riello+ 2021 G−V relation', () => {
   // The literals ARE the assertion: these are the published Table 5.7 values
