@@ -26,11 +26,18 @@ scripts/catalog/classic-ids/
                                   evidence tables and the spine, writes the
                                   overlay and its three review queues, and
                                   asserts the count snapshot.
-  binding-candidates.ts           The cross-walk loaders, and the source_ids
+  binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
                                   the gate can weigh. Shared with
                                   ../astrometry-request/, which has to pull a
                                   G magnitude for every one of them
                                   (§ The gate's evidence has to be pulled).
+                                  Two loaders, because the candidate set needs
+                                  only the HIP cross-walk and CNS5 — the
+                                  request never reads the 2.5 M-row TYC table.
+                                  The test derives its expectation from a built
+                                  overlay, so drift in either producer of
+                                  `entry.hip` fails rather than silently
+                                  shrinking the request.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-vmag-parse.ts, shared
@@ -111,17 +118,33 @@ is often not the star, so the request has to carry them explicitly:
 `gateRejectedMag` measures the difference directly, and it is the count to
 watch if this request ever changes again:
 
-| Request | `gateRejectedMag` |
-|---|---|
-| spine column alone | **0** — every candidate unvettable, all silently accepted |
-| the AT-HYG walk this replaced | 102 |
-| spine ∪ candidates (today) | **218** |
+| Request | `gateRejectedMag` | `gateRejectedSibling` | rows |
+|---|---|---|---|
+| spine column alone | **0** — every candidate unvettable, all silently accepted | 101 | 101 |
+| the AT-HYG walk this replaced | 102 | 85 | 187 |
+| spine ∪ candidates (today) | **218** | 50 | **268** |
 
 The walk was never complete either — it over-pulled by accident rather than
-covering the candidate set on purpose, so 116 bindings it could not weigh are
-now refused. None of the 81 extra rejections had reached a record: the label
-merge's per-identifier routing is unchanged and `label_flips.tsv` is
+covering the candidate set on purpose — so the queue grows by **81 bindings it
+could not weigh and now refuses**. None of the 81 had reached a record: the
+label merge's per-identifier routing is unchanged and `label_flips.tsv` is
 byte-identical, which is what says the gain is coverage, not a label change.
+
+**`gateRejectedMag` moves by 116, not 81, and `gateRejectedSibling` falls — both
+because `reason` is the FIRST gate that fired**, `verdict.magRejected ? 'mag' :
+'sibling'`. A candidate with no `G` cannot fail the magnitude check, so 35 rows
+the sibling-letter check had already refused are now refused by the magnitude
+check instead and re-labelled: 116 = 81 new + 35 re-labelled, and sibling 85 →
+50 is those same 35 leaving. No binding the gate used to refuse is accepted
+today; read the two reason counts as one queue, not as two independent gates.
+
+**Two counts say whether the evidence actually arrived**, because a missing `G`
+is a pass either way and only one of the causes is fixable:
+
+| Count | Today | Meaning |
+|---|---|---|
+| `gateSkippedNoGMag` | **0** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
+| `gateSkippedNullGMag` | 63 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 The set stays small (768 ids beyond the spine) because `applyBindingGate`
 skips what it cannot weigh — an entry with no HIP, and a HIP with no printed V

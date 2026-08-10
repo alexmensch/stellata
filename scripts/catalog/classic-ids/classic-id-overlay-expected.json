@@ -24,6 +24,8 @@
   "gateRejectedMag": 218,
   "gateRejectedSibling": 50,
   "gateSkippedNoHipVMag": 257926,
+  "gateSkippedNoGMag": 0,
+  "gateSkippedNullGMag": 63,
   "hdHipRouteAgree": 2637,
   "hdHipRouteDisagree": 21,
   "hdHipRouteHipOnly": 74,

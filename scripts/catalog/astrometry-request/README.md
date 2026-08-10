@@ -84,11 +84,28 @@ to be fixed rather than pinned: `stellata-3bsf.8` re-sources the spine, and
 a source that becomes a record is one whose binding was never vetted.
 
 `bindingCandidateSourceIds` (`../classic-ids/binding-candidates.ts`) is
-shared with the overlay build so the two cannot drift. It is 768 ids rather
-than the ~59k every route could propose, because `applyBindingGate` skips
-what it cannot weigh: an entry with no HIP (the TYC→HD route never attaches
-one) and a HIP with no printed V are both skipped, so a `G` for either
-decides nothing.
+shared with the overlay build so the two cannot drift, and
+`binding-candidates.test.ts` pins the correspondence against a built overlay
+rather than leaving it to inspection. It is 768 ids rather than the ~59k
+every route could propose, because `applyBindingGate` skips what it cannot
+weigh: an entry with no HIP (the TYC→HD route never attaches one) and a HIP
+with no printed V are both skipped, so a `G` for either decides nothing.
+
+That first narrowing is also why this script loads only two of the four
+cross-walk inputs (`loadBindingCandidateInputs`): a `hip` reaches an overlay
+entry from the HIP cross-walk or a CNS5 row and nowhere else, so the 2.5 M-row
+TYC table decides no candidate and the overlay build is the only caller that
+streams it.
+
+**Requesting a candidate is not the same as pulling one.** A requested id the
+archive returns no row for lands the gate right back in pass-by-default, which
+is why `gateSkippedNoGMag` is pinned at **0**: it counts candidates that reached
+the gate with no row in the pull, so a request that quietly stops covering them
+fails the overlay snapshot instead of silently accepting bindings. It reads 0
+today — the pull does return 6 fewer rows than the request (312,648 of 312,654),
+but all 6 are spine members rather than candidates. What it cannot fix is
+`gateSkippedNullGMag` (63): sources Gaia has a row for and publishes no
+`phot_g_mean_mag` for, which stay unvettable at any request size.
 
 ## What the pulled set feeds
 

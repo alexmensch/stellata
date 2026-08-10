@@ -203,6 +203,38 @@ describe('applyBindingGate', () => {
     ));
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoHipVMag).toBe(1);
+    expect(counts.gateSkippedNoGMag).toBe(0);
+  });
+
+  // The fault the union request exists to prevent: no G means the magnitude
+  // check has nothing to compare and PASSES, so the binding ships unvetted.
+  // gateSkippedNoGMag is the only signal that happened — pinned at 0 on the
+  // real build, where it says the pull still covers every candidate.
+  it('counts a candidate absent from the pull as silently accepted, not rejected', () => {
+    const { overlay, counts } = tolimanOverlay(bindingEvidence(
+      new Map(),
+      new Map([[TOLIMAN_HIP, 1.33]]),
+      null,
+    ));
+    expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
+    expect(counts.gateRejectedMag).toBe(0);
+    expect(counts.gateSkippedNoHipVMag).toBe(0);
+    expect(counts.gateSkippedNoGMag).toBe(1);
+    expect(counts.gateSkippedNullGMag).toBe(0);
+  });
+
+  // Same pass-by-default, different cause and different remedy: the pull has
+  // the row, Gaia just publishes no G. Splitting them is what keeps the
+  // request-coverage count pinnable at zero.
+  it('separates a pulled row with a null G from one the pull never returned', () => {
+    const { counts } = tolimanOverlay(bindingEvidence(
+      new Map(),
+      new Map([[TOLIMAN_HIP, 1.33]]),
+      null,
+      new Set([TOLIMAN_BAD_SRC]),
+    ));
+    expect(counts.gateSkippedNoGMag).toBe(0);
+    expect(counts.gateSkippedNullGMag).toBe(1);
   });
 
   it('rejects a similar-brightness sibling the G−V gate cannot see', () => {

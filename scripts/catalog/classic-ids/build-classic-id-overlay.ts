@@ -12,13 +12,7 @@ import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
 import { parseFloatOrNull } from '../parse/corpus-tsv';
 import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
-import {
-  loadClassicIdCrossWalks,
-  SRC_CNS5,
-  SRC_HIP_XMATCH,
-  SRC_TYC2_HD,
-  SRC_TYC_XMATCH,
-} from './binding-candidates';
+import { loadClassicIdCrossWalks } from './binding-candidates';
 import {
   parseBsc5Tsv,
   parseCrossIndexTsv,
@@ -44,7 +38,7 @@ import {
   spineLabelMergeRecord,
   type LabelMergeRecord,
 } from './label-merge-pure';
-import { REPO_ROOT as ROOT } from '../../util/paths';
+import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
@@ -55,6 +49,12 @@ const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
 
 const SRC_SPINE = resolve(ROOT, INHERITED_SPINE_FILE);
 const SRC_OVERRIDES = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
+
+const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
+const ASTROMETRY_HINT = 'run `pnpm run refresh:gaia-astrometry-catalog`.';
+const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
+const SIMBAD_HINT = 'run `python3 scripts/refresh/refresh-simbad-wds-xids.py`.';
+const SPINE_HINT = 'the spine is committed, so a missing one means an incomplete checkout.';
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_LABEL_FLIPS = resolve(ROOT, LABEL_FLIPS_FILE);
@@ -67,20 +67,6 @@ const EXPECTED_COUNTS = resolve(
   ROOT,
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
 );
-
-function requireExists(path: string): void {
-  if (existsSync(path)) return;
-  console.error(
-    `Missing ${path}. Confirm git LFS is pulled (\`git lfs pull\`); refresh ` +
-      `the CDS inputs with \`pnpm run refresh:classic-ids\`.`,
-  );
-  process.exit(1);
-}
-
-function readRequired(path: string): string {
-  requireExists(path);
-  return readFileSync(path, 'utf8');
-}
 
 interface SpineLabelSide {
   records: LabelMergeRecord[];
@@ -104,7 +90,7 @@ function readSpineLabelSide(overlay: ClassicIdOverlay): SpineLabelSide {
     brightRowsWithoutOverlayEntry: 0, rowsWithoutSourceId: 0,
     rowsWithoutOverlayEntry: 0,
   };
-  for (const row of iterSpineTsv(readRequired(SRC_SPINE))) {
+  for (const row of iterSpineTsv(readRequired(SRC_SPINE, SPINE_HINT))) {
     const { record, label } = spineLabelMergeRecord(row);
     side.records.push(record);
     side.labels.push(label);
@@ -194,31 +180,31 @@ function logOverlay(overlay: ClassicIdOverlay, counts: ClassicIdOverlayCounts): 
     `binding gate: dropped ${counts.gateRejectedMag} rows on G−V, ` +
       `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
       `${counts.gateSkippedNoHipVMag} rows carry no printed V under any HIP and ` +
-      `cannot be vetted`,
+      `cannot be vetted; ${counts.gateSkippedNoGMag} gateable rows are absent ` +
+      `from the astrometry pull (must be 0 — the request under-covers the ` +
+      `candidates), ${counts.gateSkippedNullGMag} have a row but no published G`,
   );
 }
 
 async function main(): Promise<void> {
-  const crossIndex = parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX));
-  const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5));
-
-  for (const p of [SRC_TYC2_HD, SRC_CNS5, SRC_TYC_XMATCH, SRC_HIP_XMATCH]) {
-    requireExists(p);
-  }
+  const crossIndex = parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, CDS_HINT));
+  const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5, CDS_HINT));
 
   // Both best-neighbour walks below are unvetted, so the gate's evidence is a
   // required input, not an enrichment: without it the join would key labels on
   // sources the record build refuses. Hard-fail rather than degrade.
-  const gaiaAstrometry = parseGaiaAstrometryCatalogTsv(readRequired(SRC_GAIA_ASTROMETRY));
-  const hipVMag = parseHipVmagTsv(readRequired(SRC_HIP_VMAG));
+  const gaiaAstrometry = parseGaiaAstrometryCatalogTsv(
+    readRequired(SRC_GAIA_ASTROMETRY, ASTROMETRY_HINT),
+  );
+  const hipVMag = parseHipVmagTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
   const wdsXids: SimbadWdsXidIndex = parseSimbadWdsXidsTsv(
-    readRequired(SRC_SIMBAD_WDS_XIDS),
+    readRequired(SRC_SIMBAD_WDS_XIDS, SIMBAD_HINT),
   );
   const sourceGMag = new Map<string, number>();
   for (const [sourceId, row] of gaiaAstrometry) {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
-  const evidence = bindingEvidence(sourceGMag, hipVMag, wdsXids);
+  const evidence = bindingEvidence(sourceGMag, hipVMag, wdsXids, gaiaAstrometry);
 
   const { tyc2Hd, cns5, tycToSource, hipToSource } = await loadClassicIdCrossWalks();
 
