@@ -88,13 +88,32 @@ src/client/dust/froxel/
 `debug.froxelBench()` from the dev console. It enables the fill, sweeps
 FOV × pixel ratio from wherever the camera currently is, and prints a table
 of ms per fill with the grid geometry and predicted fetch count beside it.
-Batches of fills run under a single timer query, so the number is not
-diluted by query overhead or by the pass-boundary over-attribution that
-makes the perf HUD's per-pass `gpu.*` rows a relative signal only
-(`../../debug/README.md` § GPU timing).
+Batches of fills are timed as a unit, so the number is not diluted by query
+overhead or by the pass-boundary over-attribution that makes the perf HUD's
+per-pass `gpu.*` rows a relative signal only (`../../debug/README.md`
+§ GPU timing).
 
-- **Close the debug panel first.** WebGL2 allows one `TIME_ELAPSED` query
-  per context; an open Perf section holds it and every batch times out.
+**Two clocks, and they are not comparable.** The `method` column says which
+one produced the row; carry it with any number that leaves the console.
+
+- **`timer-query`** — `EXT_disjoint_timer_query_webgl2` around the batch.
+  Real GPU execution time. Chrome, Firefox.
+- **`fence-delta`** — Safari exposes no timer query at all, so the fallback
+  submits N fills and 2N fills, fences each, spins on `clientWaitSync`
+  (WebGL2 pins its timeout at 0), and takes the **slope**: `(t₂ₙ − tₙ) / N`
+  cancels submission, fence latency and the spin's granularity, none of
+  which scale with N. The absolute times are unusable; the slope is the
+  measurement.
+
+**Run it on both, and record which.** Safari drives Metal directly where
+Chrome goes through ANGLE's translation layer, so the two can differ by more
+than the pin does — a fill that misses on Chrome and lands on Safari is a
+different decision from one that misses on both. Neither browser is "the"
+answer on its own.
+
+- **Close the debug panel first** on the timer-query path. WebGL2 allows one
+  `TIME_ELAPSED` query per context; an open Perf section holds it and every
+  batch times out.
 - **The camera pose is an input.** Sol is the easy case. Fly ~3 kpc out and
   run it again to see the ray-sphere gate collapse the cost — only ~4.5 % of
   sightlines cross coverage from there.

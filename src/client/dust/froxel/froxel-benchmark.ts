@@ -22,9 +22,16 @@ export interface FroxelBenchmarkOptions {
   batches?: number;
 }
 
+/** Which clock produced `msPerFill`. The two are NOT comparable: a timer
+ *  query measures GPU execution, the fence delta measures wall time to
+ *  completion with constant overhead differenced out. Record the method
+ *  alongside any number that leaves this console. */
+export type FroxelTimingMethod = 'timer-query' | 'fence-delta';
+
 export interface FroxelBenchmarkRow {
   readonly fovDeg: number;
   readonly pixelRatio: number;
+  readonly method: FroxelTimingMethod;
   readonly cells: string;
   readonly mib: number;
   readonly fetchesM: number;
@@ -85,6 +92,43 @@ async function timeBatch(
   return null;
 }
 
+/** Wall time from submitting `fills` fills to the GPU signalling it finished
+ *  them. WebGL2 pins `clientWaitSync`'s timeout at 0, so the wait is a spin —
+ *  acceptable in a benchmark, and the only clock Safari offers. */
+function fenceElapsedMs(gl: WebGL2RenderingContext, fills: number, runFill: () => void): number {
+  const started = performance.now();
+  for (let i = 0; i < fills; i++) runFill();
+  const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (fence === null) return NaN;
+  while (gl.clientWaitSync(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0) === gl.TIMEOUT_EXPIRED) {
+    if (performance.now() - started > 5000) break;
+  }
+  gl.deleteSync(fence);
+  return performance.now() - started;
+}
+
+/**
+ * Per-fill cost from the difference between a 2N-fill batch and an N-fill
+ * one, which cancels submission, fence latency and the spin's own granularity
+ * exactly — none of them scale with N. The absolute times are unusable on
+ * their own; the slope is the measurement.
+ *
+ * Safari exposes no timer query at all, and it is also the interesting
+ * platform: it drives Metal directly where Chrome goes through ANGLE, so the
+ * number here can be the faster one even though the clock is cruder.
+ */
+function timeBatchByFence(
+  gl: WebGL2RenderingContext,
+  fills: number,
+  runFill: () => void,
+): number | null {
+  const single = fenceElapsedMs(gl, fills, runFill);
+  const double = fenceElapsedMs(gl, fills * 2, runFill);
+  if (Number.isNaN(single) || Number.isNaN(double)) return null;
+  const slope = (double - single) / fills;
+  return slope > 0 ? slope : null;
+}
+
 /**
  * Sweep the fill over FOV and pixel ratio and return one row per cell of the
  * matrix. Leaves the camera pose alone — fly where the measurement wants
@@ -102,9 +146,13 @@ export async function runFroxelBenchmark(
 
   const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
   const ext = gl.getExtension('EXT_disjoint_timer_query_webgl2') as DisjointTimerExt | null;
+  const method: FroxelTimingMethod = ext === null ? 'fence-delta' : 'timer-query';
   if (ext === null) {
-    console.warn('froxel bench: EXT_disjoint_timer_query_webgl2 unavailable on this context');
-    return [];
+    console.info(
+      'froxel bench: no timer query on this context (Safari exposes none) — ' +
+      'falling back to the fence-delta clock. Do not compare its numbers against ' +
+      'a timer-query run.',
+    );
   }
 
   const camera = stellata.camera as THREE.PerspectiveCamera;
@@ -127,13 +175,18 @@ export async function runFroxelBenchmark(
 
         const samples: number[] = [];
         for (let b = 0; b < batches; b++) {
-          const ms = await timeBatch(gl, ext, fillsPerBatch, runFill);
+          const ms = ext === null
+            ? timeBatchByFence(gl, fillsPerBatch, runFill)
+            : await timeBatch(gl, ext, fillsPerBatch, runFill);
           if (ms !== null) samples.push(ms);
+          await nextFrame();
         }
         if (samples.length === 0) {
           console.warn(
-            `froxel bench: no timings at ${fovDeg}° — close the debug panel; ` +
-            'its perf timer holds the context\'s single query slot',
+            `froxel bench: no timings at ${fovDeg}° — ` +
+            (ext === null
+              ? 'the fence never signalled'
+              : 'close the debug panel; its perf timer holds the context\'s single query slot'),
           );
           continue;
         }
@@ -142,6 +195,7 @@ export async function runFroxelBenchmark(
         rows.push({
           fovDeg,
           pixelRatio,
+          method,
           cells: `${s.cellsX}x${s.cellsY}`,
           mib: Number(s.mib.toFixed(1)),
           fetchesM: Number((s.predictedFetches / 1e6).toFixed(1)),

@@ -154,7 +154,10 @@ one pass and nothing else** under a query of its own, with the panel closed
 so the rotating timer isn't holding the context's single slot:
 `debug.froxelBench()` (`../dust/froxel/README.md`) is the worked example.
 That costs a purpose-built driver per pass, which is why it exists for a
-measurement spike and not for the shipped stack.
+measurement spike and not for the shipped stack. It also carries the answer
+to "what do I do on Safari, which has no query at all" — fence a batch of N
+and one of 2N and take the slope, which cancels every constant the crude
+clock adds.
 
 Because `gpu.frame` encloses the inner scopes, `begin()` refuses the
 inner ones on its turn and their `end()` calls must leave the enclosing
