@@ -1,8 +1,10 @@
 # Sky-position regression corpus for the direction cascade: the
-# canonical high-PM set (tier-1 Gaia) plus Sirius/Vega for tier 2
-# (hip2_saturated, the Gaia-saturated bright set).
+# canonical high-PM set (tier-1 Gaia) plus one pin per non-Gaia tier —
+# Sirius/Vega for tier 2 (hip2_saturated, the Gaia-saturated bright
+# set), Gl 863.1A for tier 3 (athyg_printed).
 #
-# Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH):
+# Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH), with
+# the tier-3 row the one deliberate exception:
 # - Gaia tier: the raw Gaia DR3 catalog ra/dec, whose native epoch IS
 #   J2016.0 — so the cascade's propagation is a Δt=0 no-op here. These
 #   rows therefore pin source-id selection, tier routing, and xyz
@@ -12,19 +14,27 @@
 #   pinned independently against SIMBAD J2000 in direction-cascade.test.ts.
 # - Sirius/Vega (tier 2): van-Leeuwen-2007 J1991.25 PM-propagated 24.75
 #   yr forward to J2016.0 — this DOES exercise the propagation.
-# - xi UMa: WAS the tier-3 (athyg_printed) pin, at AT-HYG's printed
-#   ~J2000 coord, because its spine row resolved no Gaia source. The
-#   backfilled source_id now reaches a Gaia row, so it routes tier 1 as a
-#   2p (position-only) anchor and this row pins that Gaia J2016.0 coord.
-#   The move is worth ~11" of staleness: its 730 mas/yr over the 16 yr
-#   from J2000 is exactly what the printed cell was NOT propagating.
-#   The 2p fit is blended (ipd_frac_multi_peak 24 on a ~2" pair), so the
-#   coord is the pair photocentre rather than A alone — good to ~1",
-#   which is why it stays looser than the 0.5" Gaia rows above.
+# - Gl 863.1A (tier 3, athyg_printed): AT-HYG's printed ra/dec is used
+#   UNPROPAGATED (no Gaia source, and HIP 111293 is absent from HIP2), so
+#   it sits at AT-HYG's native ~J2000 epoch REGARDLESS of the scene epoch.
+#   That staleness is the tier, not a defect in the pin: at 1372 mas/yr the
+#   printed cell is ~27" from where the star is now, and SIMBAD's BD+53 2911
+#   coordinate is exactly that far away along the PM direction — it
+#   back-propagates onto this row to 0.7" over the ~20 yr between the two
+#   epochs. So the row pins tier routing and xyz assembly (a tier change
+#   moves it ~22"), at 3.0" for the printed cell's own error.
+# - xi UMa: WAS the tier-3 pin, for the same reason, until its spine row's
+#   backfilled source_id reached a Gaia row. It now routes tier 1 as a 2p
+#   (position-only) anchor and this row pins that Gaia J2016.0 coord — worth
+#   ~11" of staleness against the printed cell it left, its 730 mas/yr over
+#   the 16 yr from J2000. The 2p fit is blended (ipd_frac_multi_peak 24 on a
+#   ~2" pair), so the coord is the pair photocentre rather than A alone —
+#   good to ~1", which is why it stays looser than the 0.5" Gaia rows above.
 #
-# lookup: hip where the AT-HYG row carries one. xi UMa's spine row
-# carries no HIP of its own, so it is addressed by proper name and its
-# hip cell is blank.
+# lookup: hip where the AT-HYG row carries one. xi UMa's row carries HIP
+# 55203, but that Hipparcos entry is the unresolved AB pair and xi UMa B
+# holds its own record, so the row is addressed by proper name instead and
+# its hip cell is left blank to keep the lookup unambiguous.
 #
 # total_pm_masyr is the published total proper motion (mas/yr). The
 # current-epoch velocity test advances the star's BAKED J2016 position +
@@ -33,7 +43,9 @@
 # validating end-to-end that catalog.bin's space-motion velocity reproduces
 # the star's real proper motion (a wrong tier / distance-scale / unit / sign
 # would miss badly at a 34 yr baseline). Blank = skip (velocity magnitude
-# not pinned for that row).
+# not pinned for that row) — xi UMa's 2p Gaia row fits no PM at all, so its
+# record bakes no velocity and there is nothing to advance. Gl 863.1A is the
+# only row pinning the athyg_pm velocity tier, off the printed pm cells.
 name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec	total_pm_masyr
 Barnard's Star		87937	269.4485025250	4.739420051	0.5	10392.8
 Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5	8670.5
@@ -41,6 +53,7 @@ Groombridge 1830		57939	178.2673532080	37.692826947	0.5	7058.4
 61 Cyg A		104214	316.7484792940	38.763862446	0.5	5281.0
 61 Cyg B		104217	316.7536627530	38.756072772	0.5	5172.0
 Keid		19849	63.8079530060	-7.668077815	0.5	4088.0
+Gl 863.1A		111293	338.2238100000	53.793808000	3.0	1372.5
 Sirius		32349	101.2846216628	-16.721551666	0.5	1339.4
 Vega		91262	279.2358804374	38.784961091	0.5	350.8
 xi UMa	Alula Australis		169.543285282	31.526916852	1.5
