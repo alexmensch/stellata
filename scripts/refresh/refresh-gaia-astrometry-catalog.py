@@ -54,6 +54,7 @@ SPOT_CHECKS: list[dict[str, Any]] = [
         "pmdec":              (10362.3942, 0.001),
         "phot_g_mean_mag":    (8.193974, 0.0001),
         "radial_velocity":    (-110.4682, 0.001),
+        "radial_velocity_error": (0.1313, 0.001),
     },
 ]
 
