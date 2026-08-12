@@ -155,24 +155,36 @@ and no consumer parses a Bayer string. This retires the `"Alp-1"` /
 `"alf01"` reconciliation the epic feared: the authority ships the glyph, and
 both ASCII conventions become *inputs to a normaliser*, never a stored form.
 
-**NEC normaliser** (`stellata-wgp3.2`), all mechanical:
+**NEC normaliser** (`stellata-wgp3.2`, shipped —
+`scripts/catalog/naming/wgsn-normalise-pure.ts`; every count here is
+pinned in `scripts/catalog/naming/wgsn-expected.json`, which supersedes
+the estimates this section carried from the gate's probe):
 
 - Curly Greek variants fold to standard: `ϕ → φ` (41 rows), `ϵ → ε` (74).
-- `letter <digit> <Genitive>` → glyph + superscript (318 rows).
-- Genitive → 3-letter code, 86 distinct words (`Andromedae → And`).
+- `letter <digit> <Genitive>` → glyph + superscript; genitive → 3-letter
+  code (`Andromedae → And`), matched longest-first for the two-word
+  genitives.
 - SIMBAD-form rows `* kap01 Scl B` (264) carry a component — parse letter,
   index and component, not just the letter.
-- Drop the 234 non-stellar rows (`NGC 129`, `M 31`, `NAME SMC`) and route
-  the 629 variable-star designations to tier 6, never tier 3.
+- The 5,031 non-empty cells classify as: 1,725 Bayer · 1,521 Flamsteed ·
+  938 Gould · 614 variable (routed to tier 6, never tier 3) · 132
+  non-stellar dropped (`NGC 129`, `M 31`, `NAME SMC`, clusters) · 95
+  other-catalogue dropped (BD / CD / Gliese / survey ids — the row still
+  keys via HIP/HR/HD) · 1 corrupt (a Mathematica artifact on ρ² Ara,
+  whose Bayer arrives via the IV/27A tail).
+- Gould numbered Serpens' halves separately (`4 G. Ser Cap` ≠
+  `4 G. Ser Cau`) — the half rides the designation table.
 - Multi-name cells split into name + aliases: `Nganurganity / Unurgunite`,
   `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`.
 
-**IV/27A normaliser** (the V > 6.5 tail): `ksi → ξ`, trailing-period forms
-(`mu.`, `nu.`, `pi.` — 155 rows), zero-padded indices (`alf01` — 318), and
-**reject 111 GCVS-style cells** from the Bayer field (`R And`, `RZ Cas`,
-`AR Aur`, `V380 Cyg`) — they are variable designations, which tier 6 already
-sources from GCVS. Measured composition of its 1,620 Bayer cells: 1,144
-Greek · 279 Latin-lower · 86 Latin-upper (A–Q) · 111 GCVS contaminants.
+**IV/27A normaliser** (the V > 6.5 tail, same module): `ksi → ξ`,
+trailing-period forms (`mu.`, `nu.`, `pi.`), zero-padded indices
+(`alf01`), and **GCVS-style cells rejected** from the Bayer field
+(`R And`, `RZ Cas`, `AR Aur`, `V380 Cyg`) — variable designations tier 6
+already sources from GCVS. Measured over all 2,185 Bayer cells (pinned):
+2,051 parse as Bayer (0 unparsed) · 134 GCVS contaminants rejected. The
+union adds 446 of the 2,051 as the tail; 1,605 are already covered by a
+WGSN designation on the same star.
 
 **Gliese prefix.** Display `GJ <number><component>` uniformly. `Gl` (Gliese
 1969) and `GJ` (Gliese–Jahreiß supplements) are both legitimate printed
