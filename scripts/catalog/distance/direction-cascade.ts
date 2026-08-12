@@ -48,6 +48,9 @@ export interface GaiaAstrometryCatalogRow {
   /** DR3 `radial_velocity` (km/s), the RVS median. Null on the ~2/3 of
    *  sources RVS did not reach — magnitude-limited to G_RVS ≲ 14. */
   radialVelocityKmS: number | null;
+  /** DR3 `radial_velocity_error` (km/s) — the uncertainty on that median.
+   *  Non-null wherever `radial_velocity` is, in the published catalogue. */
+  radialVelocityErrorKmS: number | null;
 }
 
 /** van Leeuwen 2007 reduction row from
@@ -113,6 +116,22 @@ export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
   return row.parallaxMas !== null;
 }
 
+// Calibrated, not asserted: above this quoted uncertainty the median
+// disagreement with an independent printed rv (~24 km/s) reaches the local
+// radial-velocity dispersion, so the measurement no longer distinguishes the
+// star from the population prior. README.md § Radial velocity has the
+// per-bin distribution; DR3's own publication ceiling is 40.
+export const GAIA_RV_ERROR_MAX_KM_S = 20;
+
+/** The RVS median's own uncertainty past the calibrated bound. A null error
+ *  is a pass, not a rejection — same convention as the binding gate's
+ *  missing-G, though the published catalogue never pairs an rv with a null
+ *  error. */
+export function gaiaRvUnreliable(row: GaiaAstrometryCatalogRow): boolean {
+  return row.radialVelocityErrorKmS !== null
+    && row.radialVelocityErrorKmS > GAIA_RV_ERROR_MAX_KM_S;
+}
+
 export interface RadialVelocityResolution {
   /** km/s, or null when no tier carries one — the radial term is then zero. */
   rvKmS: number | null;
@@ -129,12 +148,17 @@ export interface RadialVelocityResolution {
  *  The Gaia tier needs a 5p solution, not merely an `rv` cell: RVS measures the
  *  same window the astrometric fit does, so a row Gaia could not separate into
  *  parallax + PM is one whose spectrum is a blend of the components too, and its
- *  median RV is not the primary's. See README.md § Radial velocity. */
+ *  median RV is not the primary's. A 5p row is then still refused when its own
+ *  `radial_velocity_error` exceeds the calibrated bound — that is the case the
+ *  2p condition cannot see. See README.md § Radial velocity. */
 export function resolveRadialVelocity(
   gaia: GaiaAstrometryCatalogRow | null,
   cataloguedRvKmS: number | null,
 ): RadialVelocityResolution {
-  if (gaia !== null && gaia.radialVelocityKmS !== null && gaiaHas5pSolution(gaia)) {
+  if (
+    gaia !== null && gaia.radialVelocityKmS !== null
+    && gaiaHas5pSolution(gaia) && !gaiaRvUnreliable(gaia)
+  ) {
     return { rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
   if (cataloguedRvKmS !== null && Number.isFinite(cataloguedRvKmS)) {
@@ -390,7 +414,7 @@ export function parseGaiaAstrometryCatalogTsv(
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity'],
+    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error'],
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
@@ -416,6 +440,7 @@ export function parseGaiaAstrometryCatalogTsv(
       bpMag: floatCell(cells, idx.phot_bp_mean_mag),
       rpMag: floatCell(cells, idx.phot_rp_mean_mag),
       radialVelocityKmS: floatCell(cells, idx.radial_velocity),
+      radialVelocityErrorKmS: floatCell(cells, idx.radial_velocity_error),
     });
   }
   return out;

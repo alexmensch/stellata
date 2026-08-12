@@ -80,7 +80,8 @@ independently against SIMBAD J2000 in `direction-cascade.test.ts`.
 velocity (`../parse/README.md` § Space-motion velocity), through two tiers:
 
 ```
-Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
+Gaia DR3 radial_velocity   the RVS median, on a 5p row with
+                           radial_velocity_error ≤ 20 km/s
   → spine printed `rv`     the catalogue's own cell
 ```
 
@@ -93,11 +94,51 @@ is not the primary's. ξ UMa is the case that fixed the bound: source
 is the same predicate the direction cascade's tier-1 branch turns on, so the
 radial term and the tangential term distrust a row for one reason.
 
-That is the only reliability gate the pulled table can support today. RUWE and
-`ipd_frac_multi_peak` flag a contaminated 5p fit without saying whether the RV
-survived it, and `radial_velocity_error` — which would — reaches the table on
-its next refresh (`../../refresh/README.md`). Tightening this gate is that
-column's first consumer, not a threshold to guess now.
+**A 5p row is still refused past `GAIA_RV_ERROR_MAX_KM_S` = 20** — the case the
+2p condition cannot see (RUWE and `ipd_frac_multi_peak` flag a contaminated
+astrometric fit without saying whether the RV survived it; the row's own stated
+uncertainty does). A null error passes rather than refuses, the binding gate's
+missing-evidence convention; the published catalogue never pairs an rv with a
+null error, so the branch is defensive only.
+
+### Where the rv-error bound comes from
+
+Measured over the 259,945 5p rows carrying both a Gaia rv and a printed cell.
+The bulk (~258k) has `rv_src = G_R3` — the printed cell IS the Gaia value, so
+only the independent remainder can score the disagreement. |Δrv| (km/s) against
+the independent printed cell per `radial_velocity_error` bin:
+
+| rv_error | n | p50 | p90 | p99 |
+|---|---|---|---|---|
+| 0 – 0.5 | 1,061 | 1.9 | 10.5 | 63.8 |
+| 0.5 – 1 | 404 | 2.8 | 15.4 | 46.9 |
+| 1 – 2 | 283 | 3.8 | 11.6 | 29.0 |
+| 2 – 3 | 109 | 4.4 | 14.4 | 30.4 |
+| 3 – 5 | 51 | 5.1 | 19.5 | 88.4 |
+| 5 – 7 | 25 | 6.7 | 29.4 | 181.1 |
+| 7 – 10 | 13 | 11.5 | 26.8 | 28.0 |
+| 10 – 15 | 18 | 10.9 | 45.7 | 45.9 |
+| 15 – 20 | 7 | 23.9 | 52.2 | 52.2 |
+| > 20 | 9 | 4.9 | 155.3 | 155.3 |
+
+Two readings fix the bound:
+
+- **The quoted error is honest.** The median disagreement tracks the stated
+  uncertainty roughly 1:1 from ~1 km/s up through the 10–15 bin (the floor at
+  ~2–3 km/s in the lowest bins is the printed side's own precision, not the
+  transform's — the same shape as the V cascade's faint-end rise).
+- **Past ~15–20 the measurement stops informing.** The median disagreement
+  (~24 km/s) reaches the local radial-velocity dispersion, so the value no
+  longer distinguishes the star from the population prior — and the
+  fall-through for a row with no printed cell is a zero radial term, which a
+  measurement that noisy does not beat. DR3's own publication ceiling is 40
+  (no pulled row exceeds it); there is no published downstream bound to defer
+  to, so the measured knee is what applies.
+
+The bound moves 1,340 rows off the Gaia tier: 1,324 fall to a printed cell
+that is itself Gaia RVS (identical value — a provenance relabel), 9 to a
+genuinely independent printed value, and 7 with no printed cell take the zero
+radial term.
 
 **The fall-through is not a degraded copy of the tier above it.** RVS is
 magnitude-limited to G_RVS ≲ 14, so it reaches roughly a third of Gaia
@@ -110,13 +151,13 @@ A genuine zero is a velocity, not an absence: the cascade routes on
 null-vs-present, never on truthiness, or every star with no measured
 line-of-sight motion would fall to the next tier.
 
-Per-tier counts are pinned as `rvGaiaDr3` **266,128** / `rvCatalogued`
-**7,126** / `rvNone` **40,003**, the same discipline the direction cascade
-pins `directionVia` under. `velocityRvApplied` rose 267,058 → **273,244**:
-the Gaia tier reaches ~6,300 records whose printed cell was blank. The 5p gate
-holds 354 records back from it — 180 have a printed cell to fall to and 174
-take a zero radial term, the same fall-through as the 40,003 rows RVS never
-reached.
+Per-tier counts are pinned as `rvGaiaDr3` **264,788** / `rvCatalogued`
+**8,459** / `rvNone` **40,010**, the same discipline the direction cascade
+pins `directionVia` under. `velocityRvApplied` is **273,237**: the Gaia tier
+reaches ~6,300 records whose printed cell was blank. The two reliability
+gates hold 1,694 records back from it — the 5p condition 354, the error bound
+1,340 — most falling to the printed cell, 181 taking a zero radial term, the
+same fall-through as the 40,010 rows RVS never reached.
 
 **The sanity ceiling did not move.** `velocityClamped` stays at **8** and
 `velocityAboveEscape` at **45** across the swap — a changed radial term feeds

@@ -13,11 +13,11 @@ gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
 gaia_dr3_astrometry.tsv                ~1.2 MB, LFS. 5p astrometry for the
                                        resolved source_ids Stage 2 requests.
 gaia_dr3_astrometry_catalog.tsv        ~49 MB, LFS. 5p astrometry +
-                                       radial_velocity for every catalog
-                                       source_id plus the classic-ID gate's
-                                       candidates (~313k) — tier 1 of the
-                                       direction, rv, V and ci cascades, and
-                                       the binding gate's G evidence.
+                                       radial_velocity{,_error} for every
+                                       catalog source_id plus the classic-ID
+                                       gate's candidates (~313k) — tier 1 of
+                                       the direction, rv, V and ci cascades,
+                                       and the binding gate's G evidence.
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~17 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs.

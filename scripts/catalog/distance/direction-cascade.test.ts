@@ -16,6 +16,7 @@ import {
   parseNssSourceIdSet,
   resolveDirection,
   resolveRadialVelocity,
+  GAIA_RV_ERROR_MAX_KM_S,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
@@ -309,9 +310,9 @@ describe('direction-cascade / resolveDirection routing', () => {
 describe('direction-cascade / TSV parsers', () => {
   it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
     const tsv = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t',
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
       '',
     ].join('\n');
     const map = parseGaiaAstrometryCatalogTsv(tsv);
@@ -323,6 +324,7 @@ describe('direction-cascade / TSV parsers', () => {
       ruwe: 1.2, ipdFracMultiPeak: 0,
       gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
       radialVelocityKmS: -110.51,
+      radialVelocityErrorKmS: 0.22,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
@@ -331,6 +333,7 @@ describe('direction-cascade / TSV parsers', () => {
       ruwe: null, ipdFracMultiPeak: null,
       gMag: 9.0, bpMag: null, rpMag: null,
       radialVelocityKmS: null,
+      radialVelocityErrorKmS: null,
     });
   });
 
@@ -479,6 +482,26 @@ describe('resolveRadialVelocity cascade', () => {
   it('reports no tier when a 2p row is all the rv there is', () => {
     expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -26.78 }), null))
       .toEqual({ rvKmS: null, via: 'none' });
+  });
+
+  // The case the 2p condition cannot see: a full 5p solution whose RVS median
+  // carries an uncertainty past the calibrated bound.
+  it('refuses the Gaia tier on a high-uncertainty 5p row, keeping the printed cell', () => {
+    const noisy = gaiaAstrometryRow({
+      parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 25.1,
+    });
+    expect(resolveRadialVelocity(noisy, -15.9)).toEqual({ rvKmS: -15.9, via: 'catalogued' });
+    expect(resolveRadialVelocity(noisy, null)).toEqual({ rvKmS: null, via: 'none' });
+  });
+
+  it('accepts an uncertainty at the bound exactly, and a null one', () => {
+    const atBound = gaiaAstrometryRow({
+      parallaxMas: 5, radialVelocityKmS: -80.3,
+      radialVelocityErrorKmS: GAIA_RV_ERROR_MAX_KM_S,
+    });
+    expect(resolveRadialVelocity(atBound, -15.9)).toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
+    expect(resolveRadialVelocity(withRv(-80.3), -15.9))
+      .toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
   });
 
   it('keeps a genuine zero rather than falling through it', () => {
