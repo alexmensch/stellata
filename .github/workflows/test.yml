@@ -101,6 +101,13 @@ jobs:
               "'pnpm run build:classic-ids' and commit the regenerated files";
             exit 1;
           }
+      - run: pnpm run build:wgsn
+      - run: |
+          git diff --exit-code -- data/iau-wgsn/ || {
+            echo "::error::committed WGSN tables are stale — run" \
+              "'pnpm run build:wgsn' and commit the regenerated files";
+            exit 1;
+          }
       # Hard-fails on any record the SID ledger doesn't cover (the mint
       # side of ledger consistency; the drop side is the job below).
       - run: pnpm run build:catalog

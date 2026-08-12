@@ -28,6 +28,8 @@
     "refresh:gaia-dr2-neighbourhood": "python3 scripts/refresh/refresh-gaia-dr2-neighbourhood.py",
     "build:astrometry-request": "tsx scripts/catalog/astrometry-request/export-astrometry-request.ts",
     "build:classic-ids": "tsx scripts/catalog/classic-ids/build-classic-id-overlay.ts",
+    "build:wgsn": "tsx scripts/catalog/naming/build-wgsn-tables.ts",
+    "refresh:iau-wgsn": "python3 scripts/refresh/refresh-iau-wgsn.py",
     "sid:allocate": "tsx scripts/sid/allocate.ts",
     "sid:check": "tsx scripts/sid/allocate.ts --check",
     "sid:stamp": "tsx scripts/sid/stamp-sibling-sids.ts all",
