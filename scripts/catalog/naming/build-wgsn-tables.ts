@@ -58,6 +58,8 @@ export interface WgsnCounts {
   iv27aUnparsed: number;
   designationRows: number;
   designationsKeyless: number;
+  designationDuplicateRows: number;
+  nameDuplicateRows: number;
   spinePropers: number;
   spineProperMatched: number;
   spineProperResiduals: number;
@@ -82,31 +84,53 @@ interface DesignationRow {
   source: 'nec' | 'faints' | 'iv27a';
 }
 
+type DesignationKeys = Pick<DesignationRow, 'hip' | 'hr' | 'hd' | 'source'>;
+
+function designationRow(
+  kind: DesignationRow['kind'],
+  designation: Partial<DesignationRow>,
+  keys: DesignationKeys,
+): DesignationRow {
+  return {
+    kind,
+    letter: null, sup: null, num: null, half: null, component: null,
+    dc: '', ...designation, ...keys,
+  };
+}
+
+/** Which stars the Bayer designations already reach, by either key. Built
+ *  once before the IV/27A union to decide what the tail adds, and again
+ *  after it to measure spine coverage. */
+function bayerKeySets(rows: DesignationRow[]): {
+  reaches: (hip: number | null, hd: number | null) => boolean;
+} {
+  const hips = new Set<number>();
+  const hds = new Set<number>();
+  for (const d of rows) {
+    if (d.kind !== 'bayer') continue;
+    if (d.hip !== null) hips.add(d.hip);
+    if (d.hd !== null) hds.add(d.hd);
+  }
+  return {
+    reaches: (hip, hd) =>
+      (hd !== null && hds.has(hd)) || (hip !== null && hips.has(hip)),
+  };
+}
+
 function designationFromCell(
   n: NormalisedCell,
   row: WgsnRow,
 ): DesignationRow | null {
-  if (n.class === 'bayer') {
-    return {
-      kind: 'bayer', letter: n.bayer.letter, sup: n.bayer.sup, num: null,
-      dc: n.bayer.dc, half: null, component: n.bayer.component,
-      hip: row.hip, hr: row.hr, hd: row.hd, source: row.source,
-    };
-  }
+  const keys: DesignationKeys = {
+    hip: row.hip, hr: row.hr, hd: row.hd, source: row.source,
+  };
+  if (n.class === 'bayer') return designationRow('bayer', n.bayer, keys);
   if (n.class === 'flamsteed') {
-    return {
-      kind: 'flamsteed', letter: null, sup: null, num: n.flamsteed.num,
-      dc: n.flamsteed.dc, half: null, component: n.flamsteed.component,
-      hip: row.hip, hr: row.hr, hd: row.hd, source: row.source,
-    };
+    return designationRow('flamsteed', n.flamsteed, keys);
   }
   if (n.class === 'gould') {
-    return {
-      kind: 'gould', letter: null, sup: null, num: n.gould.num,
-      dc: n.gould.dc, half: n.gould.serpensHalf,
-      component: n.gould.component,
-      hip: row.hip, hr: row.hr, hd: row.hd, source: row.source,
-    };
+    const { serpensHalf, ...gould } = n.gould;
+    return designationRow('gould', { ...gould, half: serpensHalf }, keys);
   }
   return null;
 }
@@ -147,7 +171,7 @@ function readSpine(): SpineNaming {
   return { propers, bayerKeys };
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const nec = parseNecCsv(readFileSync(NEC_CSV, 'utf8'));
   const faints = parseWgsnFaintsCsv(readFileSync(FAINTS_CSV, 'utf8'));
   const rows = [...nec, ...faints];
@@ -156,6 +180,7 @@ function main(): void {
   const designations: DesignationRow[] = [];
   const nameLines: string[] = [];
   const nameKeys = new Set<string>();
+  const nameRowKeys: string[] = [];
   let namedRows = 0;
   let nameRowsWithAliases = 0;
   let namesKeyless = 0;
@@ -175,6 +200,9 @@ function main(): void {
       const { name, aliases } = splitNameCell(row.name);
       if (aliases.length > 0) nameRowsWithAliases++;
       for (const k of [name, ...aliases]) nameKeys.add(foldNameKey(k));
+      nameRowKeys.push(
+        [foldNameKey(name), row.hip, row.hr, row.hd].join('|'),
+      );
       if (row.hip === null && row.hr === null && row.hd === null) namesKeyless++;
       nameLines.push([
         name, aliases.join('|'), cellStr(row.hip), cellStr(row.hipComponent),
@@ -184,13 +212,7 @@ function main(): void {
     }
   }
 
-  // IV/27A Bayer tail: rows whose star no WGSN Bayer designation reaches.
-  const wgsnBayerHds = new Set(
-    designations.filter((d) => d.kind === 'bayer' && d.hd !== null).map((d) => d.hd),
-  );
-  const wgsnBayerHips = new Set(
-    designations.filter((d) => d.kind === 'bayer' && d.hip !== null).map((d) => d.hip),
-  );
+  const wgsnBayer = bayerKeySets(designations);
   let iv27aBayerCells = 0;
   let iv27aBayerAdded = 0;
   let iv27aBayerCovered = 0;
@@ -202,21 +224,18 @@ function main(): void {
     const n = normaliseIv27aBayer(row.bayer, row.cst);
     if (n.class === 'variable') { iv27aVariableRejected++; continue; }
     if (n.class !== 'bayer') { iv27aUnparsed++; continue; }
-    if (wgsnBayerHds.has(row.hd) || (row.hip !== null && wgsnBayerHips.has(row.hip))) {
+    if (wgsnBayer.reaches(row.hip, row.hd)) {
       iv27aBayerCovered++;
       continue;
     }
     iv27aBayerAdded++;
-    designations.push({
-      kind: 'bayer', letter: n.bayer.letter, sup: n.bayer.sup, num: null,
-      dc: row.cst, half: null, component: null,
-      hip: row.hip, hr: null, hd: row.hd, source: 'iv27a',
-    });
+    designations.push(designationRow(
+      'bayer',
+      { ...n.bayer, dc: row.cst, component: null },
+      { hip: row.hip, hr: null, hd: row.hd, source: 'iv27a' },
+    ));
   }
 
-  // § 2 residuals: every spine proper either matches a WGSN name key or
-  // appears in the committed dispositions file — exact set equality, the
-  // route-disagreements review-join discipline.
   const spine = readSpine();
   const unmatched = new Set<string>();
   let matched = 0;
@@ -245,24 +264,21 @@ function main(): void {
     process.exit(1);
   }
 
-  // Coverage of the spine's own Bayer-bearing rows, the § 9 sequencing
-  // measurement (1,494 of 1,522 at the gate).
-  const desigHds = new Set(
-    designations.filter((d) => d.kind === 'bayer' && d.hd !== null).map((d) => d.hd),
-  );
-  const desigHips = new Set(
-    designations.filter((d) => d.kind === 'bayer' && d.hip !== null).map((d) => d.hip),
-  );
+  const unioned = bayerKeySets(designations);
   const spineBayerRowsCovered = spine.bayerKeys.filter(
-    (k) => (k.hd !== null && desigHds.has(k.hd))
-      || (k.hip !== null && desigHips.has(k.hip)),
+    (k) => unioned.reaches(k.hip, k.hd),
   ).length;
 
+  // Every field participates: a comparator that ties leaves the committed
+  // row order to the engine's sort, and CI diffs these files byte for byte.
   const sortKey = (d: DesignationRow) => [
     d.kind, d.dc, String(d.num ?? '').padStart(4, '0'), d.letter ?? '',
     String(d.sup ?? ''), d.half ?? '', d.component ?? '', String(d.hd ?? ''),
+    String(d.hip ?? ''), String(d.hr ?? ''), d.source,
   ].join(' ');
-  designations.sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1));
+  const keyed = designations.map((d) => ({ key: sortKey(d), d }));
+  keyed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  const sorted = keyed.map((k) => k.d);
 
   writeFileSync(OUT_NAMES, [
     'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id',
@@ -270,7 +286,7 @@ function main(): void {
   ].join('\n') + '\n');
   writeFileSync(OUT_DESIGNATIONS, [
     'kind\tletter\tsup\tnum\tdc\thalf\tcomponent\thip\thr\thd\tsource',
-    ...designations.map((d) => [
+    ...sorted.map((d) => [
       d.kind, cellStr(d.letter), cellStr(d.sup), cellStr(d.num), d.dc,
       cellStr(d.half), cellStr(d.component), cellStr(d.hip), cellStr(d.hr),
       cellStr(d.hd), d.source,
@@ -300,10 +316,12 @@ function main(): void {
     iv27aBayerCovered,
     iv27aVariableRejected,
     iv27aUnparsed,
-    designationRows: designations.length,
-    designationsKeyless: designations.filter(
+    designationRows: sorted.length,
+    designationsKeyless: sorted.filter(
       (d) => d.hip === null && d.hr === null && d.hd === null,
     ).length,
+    designationDuplicateRows: sorted.length - new Set(keyed.map((k) => k.key)).size,
+    nameDuplicateRows: nameRowKeys.length - new Set(nameRowKeys).size,
     spinePropers: spine.propers.size,
     spineProperMatched: matched,
     spineProperResiduals: unmatched.size,
@@ -313,7 +331,7 @@ function main(): void {
 
   console.log(`wgsn_names.tsv: ${nameLines.length} rows`);
   console.log(`wgsn_designations.tsv: ${designations.length} rows`);
-  void assertOrUpdateSnapshot<WgsnCounts>({
+  await assertOrUpdateSnapshot<WgsnCounts>({
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: SNAPSHOT,
     actual: counts,
@@ -329,4 +347,7 @@ function main(): void {
   });
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

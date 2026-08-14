@@ -23,6 +23,8 @@
   "iv27aUnparsed": 0,
   "designationRows": 4630,
   "designationsKeyless": 3,
+  "designationDuplicateRows": 7,
+  "nameDuplicateRows": 7,
   "spinePropers": 491,
   "spineProperMatched": 445,
   "spineProperResiduals": 46,
