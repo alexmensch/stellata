@@ -116,7 +116,7 @@ external coordinates are the only check that bites.
 Declination is measured from Earth's rotational axis and right ascension
 from the vernal equinox, so — unlike galactic coordinates, defined by the
 Milky Way's actual disc plane and centre and therefore meaningful from
-anywhere in the galaxy (CLAUDE.md § Camera-anywhere perception) — the RA/Dec
+anywhere in the galaxy (CLAUDE.md § Camera-anywhere, any-epoch) — the RA/Dec
 frame carries no meaning away from the solar system. So its spec is the only
 one carrying a `fadeWindow` — `EQUATORIAL_FADE_WINDOW_PC` = **0.4 pc → 2.0 pc**,
 run through `solFrameFadeFactor`: full strength across the whole solar system,
