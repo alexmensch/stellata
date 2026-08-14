@@ -36,12 +36,15 @@ import {
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
   RV_VIA_VALUES,
+  RV_ERROR_BANDS,
+  rvErrorBand,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
   type DirectionSources,
   type DirectionVia,
   type RvVia,
+  type RvErrorBand,
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
@@ -217,6 +220,8 @@ export function readStars(
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
     velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
     rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
+    rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
+    rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
@@ -252,6 +257,8 @@ export function readStars(
   const vVia = emptyTallyPartition(V_VIA_VALUES);
   const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
   const rvVia = emptyTallyPartition(RV_VIA_VALUES);
+  const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
+  let rvGaiaErrorMaxKmS = 0;
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
   let rvApplied = 0;
   let velocityClamped = 0;
@@ -296,6 +303,11 @@ export function readStars(
     const rvRes = resolveRadialVelocity(gaiaRow, parseFloatOrNull(row.rv));
     const rvKmS = rvRes.rvKmS;
     rvVia[rvRes.via]++;
+    if (rvRes.via === 'gaia_dr3' && gaiaRow !== null) {
+      const rvErr = gaiaRow.radialVelocityErrorKmS;
+      rvGaiaErrorBand[rvErrorBand(rvErr)]++;
+      if (rvErr !== null && rvErr > rvGaiaErrorMaxKmS) rvGaiaErrorMaxKmS = rvErr;
+    }
 
     // Bailer-Jones (DR3) override fires when (a) the row resolves to a
     // Gaia source_id by either path above and (b) dist_src marks the
@@ -537,6 +549,8 @@ export function readStars(
       velocityAboveEscape,
       velocityAboveEscapeSample,
       rvVia,
+      rvGaiaErrorBand,
+      rvGaiaErrorMaxKmS,
       rvApplied,
       spectralByCurated,
       spectralBySimbad,

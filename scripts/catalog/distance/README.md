@@ -87,17 +87,43 @@ Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
 **The Gaia tier needs a 5p solution, not merely an `rv` cell.** RVS measures the
 same window the astrometric fit does, so a 2p row — parallax and PM both
 unfitted — is one whose spectrum is a blend of the components, and its median RV
-is not the primary's. ξ UMa is the case that fixed the bound: source
+is not the primary's. ξ UMa is the case that fixed the rule: source
 756853643638639104 is 2p with `ipd_frac_multi_peak` 24 on a ~2″ pair, and its
 `radial_velocity` is −26.78 km/s against the printed −15.9. `gaiaHas5pSolution`
 is the same predicate the direction cascade's tier-1 branch turns on, so the
 radial term and the tangential term distrust a row for one reason.
 
-That is the only reliability gate the pulled table can support today. RUWE and
-`ipd_frac_multi_peak` flag a contaminated 5p fit without saying whether the RV
-survived it, and `radial_velocity_error` — which would — reaches the table on
-its next refresh (`../../refresh/README.md`). Tightening this gate is that
-column's first consumer, not a threshold to guess now.
+### `radial_velocity_error` is tracked, never gated
+
+The refresh landed the column, and DR3's value is taken **as published**
+whatever uncertainty it states. There is no reliability threshold on it, for
+one reason: nothing in this project can calibrate where such a threshold would
+go.
+
+Scoring the Gaia value needs a velocity measured somewhere else, and the only
+non-Gaia radial velocities here are the spine's 8,836 legacy cells
+(`rv_src` ∈ {`HYG`, `OTHER`}) — a pre-Gaia compilation quoted to the nearest
+km/s or half, not a better instrument. Nine of them sit on a row stating more
+than 20 km/s of uncertainty, and their median disagreement with Gaia is
+4.9 km/s. The one large disagreement in that set (Gaia 7.26 ± 23.94 against a
+printed −148.00) is a 6σ gap in which the legacy cell is the likelier suspect.
+Nine rows against a coarser reference cannot locate a knee, and the ~258k rows
+whose printed cell IS the Gaia value (`rv_src = G_R3`) score nothing at all.
+
+So the uncertainty is **counted rather than obeyed** — the same treatment
+`velocityAboveEscape` gives an unbound velocity, and for the same reason: an
+extreme value can be real, and a filter tuned on nine stars would remove real
+ones. `rvGaiaErrorBands` bands the Gaia tier's rows by stated uncertainty and
+`rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
+distribution has to be reviewed rather than absorbed silently. Today: 183,039
+rows ≤ 1 km/s, 60,595 ≤ 5, 15,026 ≤ 10, 6,128 ≤ 20, **1,340** above 20, and a
+maximum of **39.9433** — under DR3's own publication ceiling of 40, which no
+pulled row reaches. The `none` band is pinned at **0**: the published
+catalogue always pairs an `rv` with an error, so a non-zero count there is an
+upstream schema change, not a tolerable miss.
+
+Revisit at DR4, which reprocesses RVS and is the first event that could supply
+either a better reference or a published bound to defer to.
 
 **The fall-through is not a degraded copy of the tier above it.** RVS is
 magnitude-limited to G_RVS ≲ 14, so it reaches roughly a third of Gaia
@@ -124,7 +150,8 @@ straight into `v = v_r·û + …`, so a Gaia RV disagreeing wildly with the
 printed cell would surface here first. It doesn't, which is the evidence that
 the new tier is sane rather than merely present. Note what that pair does NOT
 cover: both are ceilings, so they see a 1500 km/s artifact and not the ~11 km/s
-error a blended RVS median carries. That is the gate's job, not theirs.
+error a blended RVS median carries. Distrusting the row it came from is
+the 5p condition's job, not theirs.
 
 ## Build-time de-extinction
 

@@ -182,5 +182,14 @@
   "velocityRvApplied": 273244,
   "rvGaiaDr3": 266128,
   "rvCatalogued": 7126,
-  "rvNone": 40003
+  "rvNone": 40003,
+  "rvGaiaErrorBands": {
+    "none": 0,
+    "le1": 183039,
+    "le5": 60595,
+    "le10": 15026,
+    "le20": 6128,
+    "gt20": 1340
+  },
+  "rvGaiaErrorMaxKmS": 39.9433
 }

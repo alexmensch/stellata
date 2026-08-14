@@ -16,6 +16,7 @@ import {
   parseNssSourceIdSet,
   resolveDirection,
   resolveRadialVelocity,
+  rvErrorBand,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
@@ -309,9 +310,9 @@ describe('direction-cascade / resolveDirection routing', () => {
 describe('direction-cascade / TSV parsers', () => {
   it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
     const tsv = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t',
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
       '',
     ].join('\n');
     const map = parseGaiaAstrometryCatalogTsv(tsv);
@@ -323,6 +324,7 @@ describe('direction-cascade / TSV parsers', () => {
       ruwe: 1.2, ipdFracMultiPeak: 0,
       gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
       radialVelocityKmS: -110.51,
+      radialVelocityErrorKmS: 0.22,
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
@@ -331,6 +333,7 @@ describe('direction-cascade / TSV parsers', () => {
       ruwe: null, ipdFracMultiPeak: null,
       gMag: 9.0, bpMag: null, rpMag: null,
       radialVelocityKmS: null,
+      radialVelocityErrorKmS: null,
     });
   });
 
@@ -450,8 +453,12 @@ describe('velocityPcPerYr', () => {
 });
 
 describe('resolveRadialVelocity cascade', () => {
+  // The published shape: an rv always arrives with its own error.
   const withRv = (rv: number | null) =>
-    gaiaAstrometryRow({ parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10, radialVelocityKmS: rv });
+    gaiaAstrometryRow({
+      parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10,
+      radialVelocityKmS: rv, radialVelocityErrorKmS: rv === null ? null : 0.35,
+    });
 
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
     expect(resolveRadialVelocity(withRv(-110.51), 22.4))
@@ -481,6 +488,15 @@ describe('resolveRadialVelocity cascade', () => {
       .toEqual({ rvKmS: null, via: 'none' });
   });
 
+  // DR3 is taken as published: a large stated uncertainty is banded and
+  // pinned, never a reason to route around the measurement.
+  it('takes the Gaia tier however large the stated uncertainty is', () => {
+    const noisy = gaiaAstrometryRow({
+      parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 39.9,
+    });
+    expect(resolveRadialVelocity(noisy, -15.9)).toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
+  });
+
   it('keeps a genuine zero rather than falling through it', () => {
     expect(resolveRadialVelocity(withRv(0), 22.4)).toEqual({ rvKmS: 0, via: 'gaia_dr3' });
     expect(resolveRadialVelocity(null, 0)).toEqual({ rvKmS: 0, via: 'catalogued' });
@@ -492,6 +508,17 @@ describe('resolveRadialVelocity cascade', () => {
 
   it('skips a non-finite catalogued cell rather than propagating it', () => {
     expect(resolveRadialVelocity(null, NaN)).toEqual({ rvKmS: null, via: 'none' });
+  });
+
+  it('bands the stated uncertainty on its upper edge, nulls to none', () => {
+    expect(rvErrorBand(null)).toBe('none');
+    expect(rvErrorBand(0)).toBe('le1');
+    expect(rvErrorBand(1)).toBe('le1');
+    expect(rvErrorBand(1.01)).toBe('le5');
+    expect(rvErrorBand(10)).toBe('le10');
+    expect(rvErrorBand(20)).toBe('le20');
+    expect(rvErrorBand(20.01)).toBe('gt20');
+    expect(rvErrorBand(39.9433)).toBe('gt20');
   });
 });
 

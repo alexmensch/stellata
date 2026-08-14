@@ -168,20 +168,28 @@ topic. If tempted to add a second sibling doc — or the README grew
 to cover unrelated concerns — **create a subfolder** and move the
 code + README into it. `src/client/camera/` is the canonical example.
 
-## Camera-anywhere perception — a mental-model rule
+## Camera-anywhere, any-epoch — a mental-model rule
 
-Stellata is a 3D model where the camera can fly to **any** point —
-any star focus, LMC warp, OBSERVE-mode from inside a constellation,
-solar-system fly-through. When proposing a precision tradeoff,
-**never** frame the metric as "eye discrimination from Sol." A 5 kpc
-depth spread at 50 kpc is invisible from Sol (~0.1°) but is the
-entire visible structure from the LMC vicinity (~10° at 30 kpc).
+Stellata is a 3D model with two axes of freedom the user controls: the
+camera flies to **any** point (star focus, LMC warp, OBSERVE mode,
+solar-system fly-through), and the clock scrubs
+3000 BC – 3000 AD (~5,000 yr of star propagation either way).
 
-How to apply: state which **viewing distance** the precision is
-evaluated at; default to the **closest realistic** viewpoint, not
-Sol. Physical-accuracy wins over "you can't see the difference."
-SCIENCE.md § Detail-floor principle is the complementary upper-bound
-rule (don't add detail the user can never get close enough to see).
+**Anti-pattern: evaluating a tradeoff from one vantage, at one moment.**
+Any error vanishes if you pick the observer and the instant that hide it
+— from Sol, today, most of the model rounds away. Inadmissible whatever
+is being traded (precision, detail, a dropped term, a substituted
+default), and it smuggles in Sol-relative vocabulary: "depth" and
+"sideways" split a quantity into a part that matters and a part that
+doesn't purely by where Sol sits.
+
+How to apply: state the **vantage** and the **epoch offset** behind any
+claim, defaulting to the extremes the model allows — closest realistic
+viewpoint, clock's limit. "Negligible / invisible / doesn't matter"
+without both is not a claim. Physical accuracy is the mandate; "you
+can't see the difference" never overrides it. SCIENCE.md § Detail-floor
+principle is the complementary upper-bound rule (don't add detail the
+user can never get close enough to see).
 
 ## Repo layout — the structure is the index
 

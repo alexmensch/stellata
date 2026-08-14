@@ -22,6 +22,7 @@ export function gaiaAstrometryRow(
     bpMag: null,
     rpMag: null,
     radialVelocityKmS: null,
+    radialVelocityErrorKmS: null,
     ...overrides,
   };
 }

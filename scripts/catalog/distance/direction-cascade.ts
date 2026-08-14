@@ -48,6 +48,9 @@ export interface GaiaAstrometryCatalogRow {
   /** DR3 `radial_velocity` (km/s), the RVS median. Null on the ~2/3 of
    *  sources RVS did not reach — magnitude-limited to G_RVS ≲ 14. */
   radialVelocityKmS: number | null;
+  /** DR3 `radial_velocity_error` (km/s) — the uncertainty on that median.
+   *  Non-null wherever `radial_velocity` is, in the published catalogue. */
+  radialVelocityErrorKmS: number | null;
 }
 
 /** van Leeuwen 2007 reduction row from
@@ -104,6 +107,39 @@ export const RV_VIA_VALUES = [
 ] as const;
 
 export type RvVia = (typeof RV_VIA_VALUES)[number];
+
+// Coarse `radial_velocity_error` spread over the rows the Gaia tier supplies,
+// pinned in build-counts. Nothing routes on it — README.md § Radial velocity.
+export const RV_ERROR_BANDS = [
+  'none',
+  'le1',
+  'le5',
+  'le10',
+  'le20',
+  'gt20',
+] as const;
+
+export type RvErrorBand = (typeof RV_ERROR_BANDS)[number];
+
+export type RvErrorBandPartition = Record<RvErrorBand, number>;
+
+const RV_ERROR_BAND_EDGES_KM_S: ReadonlyArray<readonly [number, RvErrorBand]> = [
+  [1, 'le1'],
+  [5, 'le5'],
+  [10, 'le10'],
+  [20, 'le20'],
+];
+
+/** Band for one row's stated rv uncertainty. `none` is the shape the
+ *  published catalogue never carries — an rv with no error — and is pinned
+ *  at 0. */
+export function rvErrorBand(errorKmS: number | null): RvErrorBand {
+  if (errorKmS === null) return 'none';
+  for (const [edge, band] of RV_ERROR_BAND_EDGES_KM_S) {
+    if (errorKmS <= edge) return band;
+  }
+  return 'gt20';
+}
 
 /** Whether the row carries the full five-parameter solution. A 2p row is
  *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
@@ -390,7 +426,7 @@ export function parseGaiaAstrometryCatalogTsv(
   if (lines.length === 0) return out;
   const idx = headerIndex(
     lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity'],
+    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error'],
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
@@ -416,6 +452,7 @@ export function parseGaiaAstrometryCatalogTsv(
       bpMag: floatCell(cells, idx.phot_bp_mean_mag),
       rpMag: floatCell(cells, idx.phot_rp_mean_mag),
       radialVelocityKmS: floatCell(cells, idx.radial_velocity),
+      radialVelocityErrorKmS: floatCell(cells, idx.radial_velocity_error),
     });
   }
   return out;

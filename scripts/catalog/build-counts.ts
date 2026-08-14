@@ -2,6 +2,7 @@
 // BuildCounts record against the committed snapshot. See
 // scripts/catalog/README.md § Validation harness.
 import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
+import type { RvErrorBandPartition } from './distance/direction-cascade';
 import type { LabelMergeCounts } from './classic-ids/label-merge-pure';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
@@ -411,6 +412,15 @@ export interface BuildCounts extends LabelMergeCounts {
   rvCatalogued: number;
   /** Rows no tier covers — the radial term is zero. */
   rvNone: number;
+  /** `rvGaiaDr3` rows split by the stated `radial_velocity_error`, a tracked
+   *  ratchet rather than a gate — DR3 is taken as published
+   *  (`distance/README.md` § Radial velocity). `none` is pinned at 0: the
+   *  published catalogue always pairs an rv with an error. */
+  rvGaiaErrorBands: RvErrorBandPartition;
+  /** Largest stated `radial_velocity_error` (km/s) any `rvGaiaDr3` row
+   *  carries. Below DR3's own publication ceiling of 40 by construction; a
+   *  refresh that moves it forces this snapshot to be reviewed. */
+  rvGaiaErrorMaxKmS: number;
   /** Records whose designation constellation came from IV/27A keyed on their
    *  own HD / HIP — the nomenclature source that replaced AT-HYG's editorial
    *  `con` cell. The GCVS pass overwrites it where a variable designation
