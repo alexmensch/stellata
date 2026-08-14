@@ -80,8 +80,14 @@ function isComponentToken(t: string): boolean {
 
 // GCVS one-letter designations run R–Z; A–Q single letters are Latin-upper
 // Bayer. Two capitals and V-number forms are always GCVS.
+const GCVS_V_NUMBER = /^V\d{3,4}$/;
+
 function isGcvsToken(t: string): boolean {
-  return /^[R-Z]$/.test(t) || /^[A-Z]{2}$/.test(t) || /^V\d{3,4}$/.test(t);
+  return /^[R-Z]$/.test(t) || /^[A-Z]{2}$/.test(t) || GCVS_V_NUMBER.test(t);
+}
+
+function isLatinBayerLetter(t: string): boolean {
+  return /^[a-z]$/.test(t) || /^[A-Q]$/.test(t);
 }
 
 function isLatinBayerToken(t: string): boolean {
@@ -176,16 +182,17 @@ export function normaliseWgsnCell(raw: string | null): NormalisedCell {
     if (tail.length > (component !== null ? 1 : 0)) {
       return { class: 'other_catalogue', raw };
     }
-    // GCVS wins over Latin-upper Bayer only where the token IS a GCVS form;
-    // a Greek match wins over both (`nu.` is Greek, never `NU`).
+    // A GCVS form wins over both Bayer readings: the ASCII Greek lookup is
+    // case-insensitive, so `NU Cet` would otherwise mint ν off a two-capital
+    // variable designation. Lowercase `nu.` still reads as Greek.
+    if (isGcvsToken(head)) {
+      return { class: 'variable', designation: `${head} ${con.dc}` };
+    }
     if (greek !== null) {
       return {
         class: 'bayer',
         bayer: { letter: greek.letter, sup, dc: con.dc, component },
       };
-    }
-    if (isGcvsToken(head)) {
-      return { class: 'variable', designation: `${head} ${con.dc}` };
     }
     const m = head.match(/^([A-Za-z])(\d{1,2})?$/);
     return {
@@ -204,17 +211,17 @@ export function normaliseWgsnCell(raw: string | null): NormalisedCell {
 
 /** Normalise one IV/27A `bayer` cell against its own `cst` column:
  *  `alf` / `ksi` / `mu.01` / lowercase Latin / `A01`-style Latin-upper.
- *  GCVS-style cells (`R`, `RZ`, `V380` — 111 of them) are variable
- *  designations tier 6 already sources from GCVS, so they are rejected
- *  here rather than minted as Bayer letters. */
+ *  GCVS-style cells (`R`, `RZ`, `V380`) are variable designations tier 6
+ *  already sources from GCVS, so they are rejected here rather than minted
+ *  as Bayer letters — the build pins how many. */
 export function normaliseIv27aBayer(
   cell: string,
   cst: string,
 ): NormalisedCell {
   const trimmed = cell.trim();
   if (trimmed === '') return { class: 'empty' };
-  if (isGcvsToken(trimmed.replace(/\d{2}$/, ''))
-    || /^V\d{3,4}$/.test(trimmed)) {
+  const withoutIndex = trimmed.replace(/\d{2}$/, '');
+  if (isGcvsToken(withoutIndex) || GCVS_V_NUMBER.test(trimmed)) {
     return { class: 'variable', designation: `${trimmed} ${cst}` };
   }
   const greek = splitGreekToken(trimmed);
@@ -225,7 +232,7 @@ export function normaliseIv27aBayer(
     };
   }
   const m = trimmed.match(/^([a-zA-Z])(\d{2})?$/);
-  if (m !== null && isLatinBayerToken(m[1] + (m[2] === undefined ? '' : String(Number(m[2]))))) {
+  if (m !== null && isLatinBayerLetter(m[1])) {
     return {
       class: 'bayer',
       bayer: {

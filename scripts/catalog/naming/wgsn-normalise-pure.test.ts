@@ -86,6 +86,19 @@ describe('normaliseWgsnCell — NEC Bayer/other grammar', () => {
     expect(normaliseWgsnCell('S Scl')).toEqual({ class: 'variable', designation: 'S Scl' });
   });
 
+  // NU Pav (HD 189124) is the semiregular variable, not the Bayer star
+  // ν Pav (HD 169978) — the ASCII Greek lookup is case-insensitive, so
+  // reading the head as Greek first mints ν onto the wrong star.
+  it('reads a two-capital head as GCVS, not as uppercase ASCII Greek', () => {
+    expect(normaliseWgsnCell('NU Pav')).toEqual({
+      class: 'variable', designation: 'NU Pav',
+    });
+    expect(normaliseWgsnCell('nu. Pavonis')).toEqual({
+      class: 'bayer',
+      bayer: { letter: 'ν', sup: null, dc: 'Pav', component: null },
+    });
+  });
+
   it('takes the parenthetical designation off a variable-labelled cell', () => {
     expect(normaliseWgsnCell('LO Hya (25 G. Hya)')).toEqual({
       class: 'gould',
