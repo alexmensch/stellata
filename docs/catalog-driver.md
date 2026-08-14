@@ -7,7 +7,9 @@ distance stack, `docs/science-catalog-ingestion.md`); this document
 covers everything else. The decision record — audit empirics, per-child
 traceability, phase sequencing — lives in bd (epic `stellata-3bsf`,
 design gate `stellata-3bsf.1`). External tables verified against
-VizieR TAP 2026-07-27. The naming-authority ladder (proper/Bayer
+VizieR TAP 2026-07-27; § 5's value sources (I/360 GSPC, I/259, SIMBAD)
+verified against VizieR/ESA TAP and SIMBAD 2026-08-14
+(`stellata-3bsf.21`). The naming-authority ladder (proper/Bayer
 display names, search aliases) is `docs/star-naming.md`.
 
 ## 1. The driver model
@@ -47,8 +49,9 @@ fields.
 Per `data/README.md` § Frozen external data, the build never touches
 the network; live SIMBAD/VizieR resolution is **rejected** for the
 identifier spine (unreproducible, unauditable, component-level
-cross-IDs churn). SIMBAD stays enrichment-only (sp_type, WDS
-cross-IDs), as today. The authoritative source per identifier:
+cross-IDs churn). SIMBAD supplies enrichment values only (sp_type, WDS
+cross-IDs, and § 5's bibcoded bottom-of-cascade value tiers) — never
+identity. The authoritative source per identifier:
 
 | Source | CDS/ESA id | Rows (TAP) | Supplies | Citation |
 |---|---|---|---|---|
@@ -127,9 +130,11 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
   (§ 5) bottoms out. For everything else the spine contributes
   membership + designations only. `pm_ra`/`pm_dec` are there because two
   cascades bottom out at AT-HYG's printed proper motion — the direction
-  cascade's `athyg_printed` tier (65 records) and the space-motion
-  velocity's `athyg_pm` tier (64) — and a frozen artifact cannot grow a
-  column later.
+  cascade's `athyg_printed` tier and the space-motion velocity's
+  `athyg_pm` tier, pinned as `directionAthygPrinted` /
+  `velocityAthygPm` in build-counts (the pins are the authority; prose
+  counts here have drifted once already) — and a frozen artifact cannot
+  grow a column later.
 - There is no separate keep-list file: no-Gaia rows are ordinary
   spine rows with an empty `gaia_source_id`.
 - Per-column counts are pinned in build-counts, and asserted against the
@@ -212,42 +217,154 @@ rule.
 
 ## 5. Per-field cascades and rescue tiers
 
+**AT-HYG is not a source.** It is an opinionated amalgamation of
+first-order catalogues (Tycho-2, Hipparcos, Gaia, Gliese), so no shipped
+value may be attributed to it: every value traces to a first-order
+catalogue pulled first-hand into `data/`. A value we cannot re-pull
+ourselves cannot be defended or refreshed — traceability beats a
+marginally better but unattributable number (decision 2026-08-15,
+`stellata-3bsf.21`). The spine's printed columns are therefore a
+**transition state, not a tier**: each cascade below names its
+first-order replacement, the epic's value-half children retire the
+printed consumption field by field, and `stellata-3bsf.8` removes it
+entirely.
+
 The bright and no-Gaia rescue tiers are **condition-driven, not
 magnitude-bound**. Membership-wise both are spine rows; the tiers
-select per-field sourcing:
+select per-field sourcing. Struck-through tiers are the printed cells
+being retired; the tier after each is its replacement:
 
 | Field | Cascade (first hit wins) |
 |---|---|
-| direction / xyz | Gaia DR3 5p → HIP2 → printed (shipped direction cascade, unchanged) |
-| space-motion velocity | PM from whichever tier direction selected → spine printed `pm_ra`/`pm_dec` + `rv` (shipped assembly, unchanged) |
-| distance | B-J posterior → LMC kinematic → HIP2 parallax → spine printed (shipped stack, unchanged) |
-| V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside the transform's validity → printed HIP V (`I/239` Vmag) → spine `mag` |
+| direction / xyz | Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 (record's own TYC) → CNS5 astrometry (GJ) → SIMBAD coordinates (bibcoded) → curated (Sol) — ~~spine printed~~ |
+| space-motion velocity | PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; zero tangential term where that tier carries no PM — ~~spine printed `pm_ra`/`pm_dec`~~ |
+| distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
+| V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → SIMBAD flux V → curated (Sol) — ~~spine `mag`~~ |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
-| ci (B−V) | published Gaia-photometry relation, inside its validity → spine `ci` → intrinsic spectral-class colour (no-Apsis rows only) → solar |
-| spectral string | SIMBAD sp_type (in-tree, source_id-keyed) → spine `spect` |
-| radial velocity | Gaia DR3 `radial_velocity` on a 5p row (added to the astrometry-catalog pull schema) → spine `rv` |
+| ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → GSPC synthetic B−V (flag-valid both bands) → printed `I/239` B−V (HIP) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
+| spectral string | SIMBAD sp_type (in-tree; request set keyed source_id → HIP → TYC) → unknown — ~~spine `spect` display fallback~~ |
+| radial velocity | Gaia DR3 `radial_velocity` on a 5p row → SIMBAD `rvz_radvel` (bibcoded; Gaia-bibcode skip rule below) → zero radial term — ~~spine `rv`~~ |
 | constellation (position) | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
 | constellation (designation) | IV/27A `cst` by HD → by HIP → GCVS trailing abbreviation → positional |
 | proper / Bayer display | naming-authority ladder (`docs/star-naming.md`) |
 
+Value sources this contract adds (verified against VizieR/ESA TAP and
+SIMBAD 2026-08-14; coverage sampled over the exact exposure buckets,
+which were reproduced from the pinned counts before probing):
+
+| Source | Id | Supplies | Citation |
+|---|---|---|---|
+| Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ flux errors, per-band validity flags) | Gaia Collaboration, Montegriffo et al. 2023, A&A 674, A33 |
+| Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | Høg et al. 2000, A&A 355, L27 |
+| Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
+| CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
+| SIMBAD values pull | `basic` (+`allfluxes`) | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → GJ | Wenger et al. 2000, A&AS 143, 9 |
+
+Measured exposure and expected coverage (2026-08-14; pins in
+`build-catalog-expected.json` unless noted):
+
+- **ci** — `ciCatalogued` 20,241: BP−RP > 1.75 (red) 18,281 · no
+  source_id 1,324 · G < 4 saturated 566 · photometry gaps 70. GSPC
+  reaches ≈90% of the red rows (sampled 57/60 at BP−RP 1.75–2.5,
+  47–49/60 at 2.5–4, 14–21/60 past 4); `I/239` B−V covers the saturated
+  and the HIP-bearing no-sid rows. Residual ≈1.0–1.5k falls to the
+  spectral/solar tiers — the right colour family, since the residual is
+  M-class dominated. **No Tycho BT−VT ci tier**: the SP-1200 colour
+  transform's validity ends near BT−VT ≈ 1.8, exactly this population —
+  adopting it would rebuild the out-of-validity transform the printed
+  cell embeds. Extending the Table-5.9 relation past 1.75 is equally
+  inadmissible: note (k) publishes that range **for M giants only**, a
+  luminosity class we cannot assert here.
+- **rv** — `rvCatalogued` 7,126 (spine-wide `rv_src`: HYG 7,965 · OTHER
+  871 · G_R2 295 non-first-order). SIMBAD sampled 10/10 on the HYG
+  bright cohort and 8/8 on the unattributed OTHER cohort. Residual
+  takes a zero radial term (`rvNone` semantics), pinned.
+- **V** — `vCatalogued` 140: Tycho-2 reaches 123 by TYC; the GJ cohort
+  (~16) routes CNS5/SIMBAD; Sol is curated.
+- **direction / PM** — `directionAthygPrinted` 61 /
+  `velocityAthygPm` 60: Tycho-2 43 (verified 42, PM on 40 — the mean
+  epochs also fix the printed cells' unpropagated staleness, ~27″ worst
+  case today), CNS5 8, SIMBAD 9, Sol 1.
+- **distance** — printed tail 1,199, today **unpinned** (the only
+  cascade without a routing partition; the value work pins `distVia`):
+  in-tree DR3 parallax 126 · CNS5 38 · SIMBAD parallax the ~1,035
+  remainder (bibcodes typically Gaia DR2 — the printed cell's true
+  upstream, now held first-hand). `applyBailerJonesOverride` currently
+  gates on the spine's `dist_src` cell — an AT-HYG editorial value
+  steering an owned cascade; eligibility re-keys on the record's own
+  resolved-tier predicate.
+- **spect** — the spine cell is already display-only
+  (`resolveSpectralInfo` never classifies from it); it fills the
+  hover/search string on the 1,394 `spectralFallback` rows (~672
+  non-empty). The widened SIMBAD request set absorbs what it can;
+  whatever remains displays as unknown.
+
+Rules:
+
+- **Residual policy — strict, first-hand only.** A tier is *owned* iff
+  its value traces to a frozen in-tree file we pulled from a named
+  catalogue, keyed on `gaia_source_id` / TYC / HIP / HD / GJ /
+  designation. Spine printed cells never qualify — not even
+  provenance-tagged transcriptions whose `*_src` names a citable
+  upstream (considered and rejected: a value we cannot re-pull is a
+  value we cannot verify). Rows no owned source reaches fall to derived
+  tiers (spectral colour, zero rv, zero tangential term), **enumerated
+  and pinned, never implied**. Cells with `*_src = OTHER` are
+  unattributable and drop unconditionally. A row left with **no** owned
+  distance or direction cannot ship silently: it becomes a membership
+  event adjudicated through the § 6 parity ledger with an explicit
+  dropped-list reason code. **Record survival is not a goal in
+  itself** — the spine is not a relic whose every row must be rescued.
+  The `spineDropped*` zero-pins are tripwires against *accidental*
+  drops; a record whose provenance cannot justify its existence is
+  dropped deliberately, on the ledger, with a reason.
+- **SIMBAD's role — second-order by design.** SIMBAD aggregates
+  first-order catalogues; it measures nothing, its "best value"
+  selection is editorial, and it is a living database with no citable
+  release. It is therefore never an authority: its tiers sit at the
+  bottom of a cascade, for enumerated cohorts no first-order catalogue
+  reaches, and every SIMBAD-sourced value ships with its `bibcode` —
+  the bibcode is the source, SIMBAD the index that found it — frozen at
+  retrieval like every pull. **Validation independence:** a row whose
+  shipped value came from a SIMBAD tier is excluded from SIMBAD-based
+  validation of that field (`validate:simbad`, the sample suites) — a
+  value cannot verify itself, and including it would bias the accuracy
+  metric toward artificial agreement.
+- **rv Gaia-bibcode skip rule.** The 5p gate withholds Gaia rv for a
+  physical reason (blended-RVS distrust), and SIMBAD frequently serves
+  the same Gaia value under a Gaia DR bibcode. On rows where the
+  record's own gate withheld Gaia rv, the SIMBAD tier skips values
+  whose `rvz_bibcode` is a Gaia DR bibcode — falling to older
+  literature or zero — so the pull cannot launder a withheld value back
+  in. |Δrv| by bibcode class is measured at implementation.
 - **Bright tier** = rows the direction cascade already routes to
   HIP2/printed, plus rows whose Gaia photometry is missing or outside
   the Riello validity range: printed `I/239` V applies. The validity
   bound is a build-time calibration pinned in build-counts with
   per-tier routing counts (same discipline as the direction cascade).
 - **No-Gaia tier** = empty-`gaia_source_id` spine rows: every cascade
-  bottoms out at the spine's printed columns.
+  bottoms out at **designation-keyed first-order tiers** (Tycho-2 by
+  TYC, CNS5 by GJ, SIMBAD by HIP/GJ ident), no longer at the spine's
+  printed columns.
+- **Binding-gate note.** GSPC and the SIMBAD values pull consume the
+  spine's already-gated `gaia_source_id`/HIP keys (same shape as Apsis
+  and the astrometry catalog): no new designation↔source bindings, so
+  the § 4 gate does not re-run. Tycho-2 and CNS5 value columns join on
+  the record's own TYC/GJ designation — value joins, not identity
+  joins, and never positional.
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the
-  contract here is the fallback (spine `ci`) and the acceptance
-  mechanism (a measured |Δci| distribution), not the coefficients.
+  contract here is the fallback ladder and the acceptance mechanism (a
+  measured |Δci| distribution), not the coefficients.
   **Settled:** `B−V = (G−V) − (G−B)`, both polynomials from DR3
   documentation Table 5.9 so `G` cancels and the difference is published
   rather than composed, gated at BP−RP ≤ 1.75 by that table's note (k).
   Coefficients, the measured |Δci| per colour bin, and what the
   conservative bound costs: `scripts/catalog/photometry/README.md`
-  § The ci cascade.
+  § The ci cascade. GSPC and `I/239` B−V are observed-convention like
+  the relation (they de-redden at build time); the spectral and solar
+  tiers stay intrinsic.
 - **The designation constellation is keyed on the DESIGNATION, not on
   `gaia_source_id`.** A Bayer or Flamsteed name is fixed by nomenclature — it
   predates the 1930 Delporte boundaries and does not migrate when proper motion
@@ -321,13 +438,14 @@ Applications of `docs/sid.md` (which remains the authority):
 
 ## 8. Gaia DR transitions — what re-pulls and what never does
 
-- The classic-side joins (IV/25, IV/27A, V/50, CNS5, I/239) are
-  DR-independent and never re-pull.
+- The classic-side joins and slices (IV/25, IV/27A, V/50, CNS5, I/239,
+  I/259) are DR-independent and never re-pull. The SIMBAD pulls are
+  DR-independent too; they refresh on their own cadence.
 - The DR-scoped hops swap tables: TYC→source_id and HIP→source_id move
   to the new release's best-neighbour analogues; per-source_id pulls
-  (astrometry, Apsis, NSS, distance posteriors) re-run through
-  `scripts/refresh/` (§ DR4 transition order); spine `gaia_dr3:` ids
-  bridge through `docs/sid.md` § 6 reconciliation.
+  (astrometry, Apsis, NSS, synthetic photometry, distance posteriors)
+  re-run through `scripts/refresh/` (§ DR4 transition order); spine
+  `gaia_dr3:` ids bridge through `docs/sid.md` § 6 reconciliation.
 - The photometric transform (§ 5) gets the new release's successor
   calibration.
 - A deeper magnitude pull re-runs § 6 in additive mode: existing
