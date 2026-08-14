@@ -16,7 +16,7 @@ import {
   parseNssSourceIdSet,
   resolveDirection,
   resolveRadialVelocity,
-  GAIA_RV_ERROR_MAX_KM_S,
+  rvErrorBand,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
@@ -453,8 +453,12 @@ describe('velocityPcPerYr', () => {
 });
 
 describe('resolveRadialVelocity cascade', () => {
+  // The published shape: an rv always arrives with its own error.
   const withRv = (rv: number | null) =>
-    gaiaAstrometryRow({ parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10, radialVelocityKmS: rv });
+    gaiaAstrometryRow({
+      parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10,
+      radialVelocityKmS: rv, radialVelocityErrorKmS: rv === null ? null : 0.35,
+    });
 
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
     expect(resolveRadialVelocity(withRv(-110.51), 22.4))
@@ -484,24 +488,13 @@ describe('resolveRadialVelocity cascade', () => {
       .toEqual({ rvKmS: null, via: 'none' });
   });
 
-  // The case the 2p condition cannot see: a full 5p solution whose RVS median
-  // carries an uncertainty past the calibrated bound.
-  it('refuses the Gaia tier on a high-uncertainty 5p row, keeping the printed cell', () => {
+  // DR3 is taken as published: a large stated uncertainty is banded and
+  // pinned, never a reason to route around the measurement.
+  it('takes the Gaia tier however large the stated uncertainty is', () => {
     const noisy = gaiaAstrometryRow({
-      parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 25.1,
+      parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 39.9,
     });
-    expect(resolveRadialVelocity(noisy, -15.9)).toEqual({ rvKmS: -15.9, via: 'catalogued' });
-    expect(resolveRadialVelocity(noisy, null)).toEqual({ rvKmS: null, via: 'none' });
-  });
-
-  it('accepts an uncertainty at the bound exactly, and a null one', () => {
-    const atBound = gaiaAstrometryRow({
-      parallaxMas: 5, radialVelocityKmS: -80.3,
-      radialVelocityErrorKmS: GAIA_RV_ERROR_MAX_KM_S,
-    });
-    expect(resolveRadialVelocity(atBound, -15.9)).toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
-    expect(resolveRadialVelocity(withRv(-80.3), -15.9))
-      .toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
+    expect(resolveRadialVelocity(noisy, -15.9)).toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
   });
 
   it('keeps a genuine zero rather than falling through it', () => {
@@ -515,6 +508,17 @@ describe('resolveRadialVelocity cascade', () => {
 
   it('skips a non-finite catalogued cell rather than propagating it', () => {
     expect(resolveRadialVelocity(null, NaN)).toEqual({ rvKmS: null, via: 'none' });
+  });
+
+  it('bands the stated uncertainty on its upper edge, nulls to none', () => {
+    expect(rvErrorBand(null)).toBe('none');
+    expect(rvErrorBand(0)).toBe('le1');
+    expect(rvErrorBand(1)).toBe('le1');
+    expect(rvErrorBand(1.01)).toBe('le5');
+    expect(rvErrorBand(10)).toBe('le10');
+    expect(rvErrorBand(20)).toBe('le20');
+    expect(rvErrorBand(20.01)).toBe('gt20');
+    expect(rvErrorBand(39.9433)).toBe('gt20');
   });
 });
 

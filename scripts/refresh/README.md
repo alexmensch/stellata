@@ -179,11 +179,11 @@ file's mtime), which is what makes the next binaries refresh pick it up
 rather than skip.
 
 **`radial_velocity_error` landed in the catalog scope on the 2026-08-12
-refresh**, and the rv cascade's reliability gate is its consumer
-(`../catalog/distance/README.md` § Radial velocity) —
-`parseGaiaAstrometryCatalogTsv` now requires the column. The binaries-scope
-`gaia_dr3_astrometry.tsv` still predates it: it gains the column on its own
-next refresh, and nothing reads rv from that file meanwhile.
+refresh**, and `parseGaiaAstrometryCatalogTsv` now requires it. Its consumer
+is the build-counts ratchet, not a filter — the cascade takes DR3's value
+whatever error it states (`../catalog/distance/README.md` § Radial velocity).
+The binaries-scope `gaia_dr3_astrometry.tsv` still predates the column, on the
+same terms as `radial_velocity` above.
 
 See `RELEASING.md` § Catalogue refresh policy for the cadence
 (event-driven, not scheduled) and the version-bump policy for a

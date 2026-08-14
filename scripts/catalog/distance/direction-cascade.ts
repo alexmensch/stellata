@@ -108,28 +108,45 @@ export const RV_VIA_VALUES = [
 
 export type RvVia = (typeof RV_VIA_VALUES)[number];
 
+// Coarse `radial_velocity_error` spread over the rows the Gaia tier supplies,
+// pinned in build-counts. Nothing routes on it — README.md § Radial velocity.
+export const RV_ERROR_BANDS = [
+  'none',
+  'le1',
+  'le5',
+  'le10',
+  'le20',
+  'gt20',
+] as const;
+
+export type RvErrorBand = (typeof RV_ERROR_BANDS)[number];
+
+export type RvErrorBandPartition = Record<RvErrorBand, number>;
+
+const RV_ERROR_BAND_EDGES_KM_S: ReadonlyArray<readonly [number, RvErrorBand]> = [
+  [1, 'le1'],
+  [5, 'le5'],
+  [10, 'le10'],
+  [20, 'le20'],
+];
+
+/** Band for one row's stated rv uncertainty. `none` is the shape the
+ *  published catalogue never carries — an rv with no error — and is pinned
+ *  at 0. */
+export function rvErrorBand(errorKmS: number | null): RvErrorBand {
+  if (errorKmS === null) return 'none';
+  for (const [edge, band] of RV_ERROR_BAND_EDGES_KM_S) {
+    if (errorKmS <= edge) return band;
+  }
+  return 'gt20';
+}
+
 /** Whether the row carries the full five-parameter solution. A 2p row is
  *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
  *  the blend the fit could not separate. Both the direction cascade's tier-1
  *  branch and the rv cascade's Gaia tier turn on this. */
 export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
   return row.parallaxMas !== null;
-}
-
-// Calibrated, not asserted: above this quoted uncertainty the median
-// disagreement with an independent printed rv (~24 km/s) reaches the local
-// radial-velocity dispersion, so the measurement no longer distinguishes the
-// star from the population prior. README.md § Radial velocity has the
-// per-bin distribution; DR3's own publication ceiling is 40.
-export const GAIA_RV_ERROR_MAX_KM_S = 20;
-
-/** The RVS median's own uncertainty past the calibrated bound. A null error
- *  is a pass, not a rejection — same convention as the binding gate's
- *  missing-G, though the published catalogue never pairs an rv with a null
- *  error. */
-export function gaiaRvUnreliable(row: GaiaAstrometryCatalogRow): boolean {
-  return row.radialVelocityErrorKmS !== null
-    && row.radialVelocityErrorKmS > GAIA_RV_ERROR_MAX_KM_S;
 }
 
 export interface RadialVelocityResolution {
@@ -148,17 +165,12 @@ export interface RadialVelocityResolution {
  *  The Gaia tier needs a 5p solution, not merely an `rv` cell: RVS measures the
  *  same window the astrometric fit does, so a row Gaia could not separate into
  *  parallax + PM is one whose spectrum is a blend of the components too, and its
- *  median RV is not the primary's. A 5p row is then still refused when its own
- *  `radial_velocity_error` exceeds the calibrated bound — that is the case the
- *  2p condition cannot see. See README.md § Radial velocity. */
+ *  median RV is not the primary's. See README.md § Radial velocity. */
 export function resolveRadialVelocity(
   gaia: GaiaAstrometryCatalogRow | null,
   cataloguedRvKmS: number | null,
 ): RadialVelocityResolution {
-  if (
-    gaia !== null && gaia.radialVelocityKmS !== null
-    && gaiaHas5pSolution(gaia) && !gaiaRvUnreliable(gaia)
-  ) {
+  if (gaia !== null && gaia.radialVelocityKmS !== null && gaiaHas5pSolution(gaia)) {
     return { rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
   if (cataloguedRvKmS !== null && Number.isFinite(cataloguedRvKmS)) {

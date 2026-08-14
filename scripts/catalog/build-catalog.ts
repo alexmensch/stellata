@@ -94,7 +94,9 @@ import {
 import {
   VELOCITY_SANITY_CEILING_KM_S,
   GALACTIC_ESCAPE_VELOCITY_KM_S,
+  RV_ERROR_BANDS,
 } from './distance/direction-cascade';
+import { emptyTallyPartition } from '../util/tally';
 import {
   applyClassicIdLabels,
   loadClassicIdLabelInputs,
@@ -337,6 +339,8 @@ async function main() {
     rvGaiaDr3: 0,
     rvCatalogued: 0,
     rvNone: 0,
+    rvGaiaErrorBands: emptyTallyPartition(RV_ERROR_BANDS),
+    rvGaiaErrorMaxKmS: 0,
   };
 
   const inputs = loadReadStarsInputs();
@@ -397,9 +401,15 @@ async function main() {
       `rv applied ${stats.rvApplied}`,
   );
   const rv = stats.rvVia;
+  const rvErr = stats.rvGaiaErrorBand;
   console.log(
     `  rv cascade: gaia_dr3 ${rv.gaia_dr3}, catalogued ${rv.catalogued}, ` +
       `none ${rv.none}`,
+  );
+  console.log(
+    `  rv uncertainty on the gaia_dr3 tier: <=1 ${rvErr.le1}, <=5 ${rvErr.le5}, ` +
+      `<=10 ${rvErr.le10}, <=20 ${rvErr.le20}, >20 ${rvErr.gt20}, ` +
+      `absent ${rvErr.none}; max ${stats.rvGaiaErrorMaxKmS} km/s`,
   );
   if (stats.velocityClampedSample.length > 0) {
     console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
@@ -448,6 +458,8 @@ async function main() {
   counts.rvGaiaDr3 = stats.rvVia.gaia_dr3;
   counts.rvCatalogued = stats.rvVia.catalogued;
   counts.rvNone = stats.rvVia.none;
+  counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
+  counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
   counts.spectralByCurated = stats.spectralByCurated;
   counts.spectralBySimbad = stats.spectralBySimbad;
   counts.spectralByGspspec = stats.spectralByGspspec;
