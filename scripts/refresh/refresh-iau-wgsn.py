@@ -13,11 +13,18 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
+import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 OUT_DIR = REPO_ROOT / "data" / "iau-wgsn"
+
+# Must match NULL_SPELLINGS in scripts/catalog/naming/wgsn-parse-pure.ts:
+# a spelling only one side knows makes the named-row gate here disagree
+# with what the build classifies as a name.
+NULL_SPELLINGS = {"", "_", "~", "-", "null"}
 
 FILES = [
     {
@@ -30,10 +37,10 @@ FILES = [
         # but not grow past V<=6.5.
         "row_bounds": (9_000, 10_500),
         "min_named": 370,
-        "spot_rows": {
-            "5": {"HIP": "HIP 88", "Bayer/other": "τ Phoenicis"},
-            "8": {"Bayer/other": "θ Octantis", "HD": "224889"},
-        },
+        "spot_rows": [
+            {"NEC": "5", "HIP": "HIP 88", "Bayer/other": "τ Phoenicis"},
+            {"NEC": "8", "Bayer/other": "θ Octantis", "HD": "224889"},
+        ],
         "id_column": "NEC",
     },
     {
@@ -44,26 +51,22 @@ FILES = [
                   "B-V color,VmagMax,VmagMin,WDS",
         "row_bounds": (120, 400),
         "min_named": 120,
-        "spot_rows": {
-            "10001": {"Name": "Citadelle", "HIP": "HIP 1547"},
-        },
+        "spot_rows": [
+            {"WGSN-ID": "10001", "Name": "Citadelle", "HIP": "HIP 1547"},
+        ],
         "id_column": "WGSN-ID",
     },
 ]
 
 
 def fetch(url: str) -> str:
-    last: Exception | None = None
-    for attempt in range(3):
-        try:
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            resp.encoding = "utf-8-sig"
-            return resp.text
-        except requests.RequestException as exc:  # noqa: PERF203
-            last = exc
-            print(f"  attempt {attempt + 1}/3 failed: {exc}")
-    raise SystemExit(f"could not fetch {url}: {last}")
+    def get() -> str:
+        resp = requests.get(url, timeout=60)
+        resp.raise_for_status()
+        resp.encoding = "utf-8-sig"
+        return resp.text
+
+    return rl.retry(get)
 
 
 def validate(spec: dict, text: str) -> None:
@@ -76,26 +79,35 @@ def validate(spec: dict, text: str) -> None:
             "Review the upstream release before refreshing the frozen slice."
         )
     lo, hi = spec["row_bounds"]
-    if not lo <= len(rows) <= hi:
-        raise SystemExit(f"{spec['name']}: {len(rows)} rows outside [{lo}, {hi}]")
-    named = sum(1 for r in rows if r["Name"].strip() not in ("", "_"))
+    rl.assert_row_count(
+        len(rows), lo, hi, spec["name"],
+        hint="upstream re-released the catalogue — review before committing.",
+    )
+    named = sum(1 for r in rows if r["Name"].strip() not in NULL_SPELLINGS)
     if named < spec["min_named"]:
         raise SystemExit(
             f"{spec['name']}: only {named} named rows (< {spec['min_named']})"
         )
-    by_id = {r[spec["id_column"]]: r for r in rows}
-    for row_id, pins in spec["spot_rows"].items():
-        row = by_id.get(row_id)
-        if row is None:
-            raise SystemExit(f"{spec['name']}: spot row {row_id} missing")
-        for col, want in pins.items():
-            got = row[col].strip()
-            if got != want:
-                raise SystemExit(
-                    f"{spec['name']}: spot row {row_id} {col} = {got!r}, "
-                    f"expected {want!r}"
-                )
+    by_id = {
+        r[spec["id_column"]].strip(): {k: (v or "").strip() for k, v in r.items()}
+        for r in rows
+    }
+    rl.validate_spot_rows(
+        by_id, spec["spot_rows"],
+        script_name=spec["name"], key_field=spec["id_column"],
+        missing_hint="missing from the release — the catalogue was renumbered.",
+    )
     print(f"  {spec['name']}: {len(rows)} rows, {named} named — gates green")
+
+
+def write_atomic(out: Path, text: str) -> None:
+    tmp = out.with_suffix(out.suffix + ".tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8", newline="")
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    os.replace(tmp, out)
 
 
 def main() -> None:
@@ -105,9 +117,7 @@ def main() -> None:
         text = fetch(spec["url"])
         validate(spec, text)
         out = OUT_DIR / spec["name"]
-        tmp = out.with_suffix(out.suffix + ".tmp")
-        tmp.write_text(text, encoding="utf-8", newline="")
-        os.replace(tmp, out)
+        write_atomic(out, text)
         print(f"  wrote {out}")
     print("Now re-run: pnpm run build:wgsn (and commit both if changed)")
 
