@@ -59,8 +59,10 @@ there is no sort key to disagree about.
 `pm_ra` / `pm_dec` / `pm_src` are in the file although § 3's column list
 predates them: the direction cascade's `athyg_printed` tier and the
 space-motion velocity's `athyg_pm` tier both bottom out at AT-HYG's printed
-proper motion (65 and 64 records respectively). A frozen artifact cannot
-grow a column later, so they ship now.
+proper motion — pinned as `directionAthygPrinted` / `velocityAthygPm` in
+`../build-catalog-expected.json`; the pins are the authority, prose counts
+here drifted once already. A frozen artifact cannot grow a column later, so
+they ship now.
 
 ## The membership gates still run, and must stay at zero
 
