@@ -584,7 +584,7 @@ bayer	β			Cnc			40526	3249	69267	nec
 bayer	γ			Cnc			42806	3449	74198	nec
 bayer	δ			Cnc			42911	3461	74442	nec
 bayer	ε			Cnc			42556	3429	73731	nec
-bayer	ζ	1		Cnc				3208	68257	nec
+bayer	ζ	1		Cnc			40167	3208	68257	nec
 bayer	ζ	2		Cnc			40167	3210	68255	nec
 bayer	η			Cnc			41909	3366	72292	nec
 bayer	θ			Cnc			41822	3357	72094	nec
@@ -1988,7 +1988,7 @@ bayer	γ			Tri			10670	664	14055	nec
 bayer	δ			Tri			10644		13974	iv27a
 bayer	ε			Tri			9570	599	12471	nec
 bayer	ι			Tri			10280	642	13480	nec
-bayer	ι			Tri		A		642	13480	nec
+bayer	ι			Tri		A	10280	642	13480	nec
 bayer	χ			Tri			9383		12211	iv27a
 bayer	α			Tuc			110130	8502	211416	nec
 bayer	β	1		Tuc			2484	126	2884	nec
@@ -2372,7 +2372,7 @@ flamsteed			26	Boo			71115	5434	127739	nec
 flamsteed			31	Boo			71832	5480	129312	nec
 flamsteed			33	Boo			71618	5468	129002	nec
 flamsteed			40	Boo			73369	5588	132772	nec
-flamsteed			44	Boo				5618	133640	nec
+flamsteed			44	Boo			73695	5618	133640	nec
 flamsteed			45	Boo			73996	5634	134083	nec
 flamsteed			46	Boo			74087	5638	134320	nec
 flamsteed			47	Boo			73841	5627	133962	nec
@@ -2623,7 +2623,7 @@ flamsteed			41	Com			64022	4954	113996	nec
 flamsteed			7	CrB		B		5833	139891	nec
 flamsteed			17	Crt		A	56280	4444	100287	nec
 flamsteed			17	Crt		B	56280	4443	100286	nec
-flamsteed			22	Crt		A		4469	100893	nec
+flamsteed			22	Crt		A	100893	4469	100893	nec
 flamsteed			31	Crt			58587	4590	104337	nec
 flamsteed			3	Crv			59394	4635	105850	nec
 flamsteed			6	Crv			60425	4711	107815	nec
@@ -3064,7 +3064,7 @@ flamsteed			35	Lyn			43531	3508	75506	nec
 flamsteed			36	Lyn			45290	3652	79158	nec
 flamsteed			37	Lyn			45836	3697	80290	nec
 flamsteed			38	Lyn			45688	3690	80081	nec
-flamsteed			38	Lyn		B		3690	80081	nec
+flamsteed			38	Lyn		B	45688	3690	80081	nec
 flamsteed			42	Lyn			47300	3829	83287	nec
 flamsteed			43	Lyn			47570	3851	83805	nec
 flamsteed			44	Lyn			47965	3870	84335	nec

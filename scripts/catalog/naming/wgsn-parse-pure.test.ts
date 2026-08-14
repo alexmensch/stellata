@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  FAINTS_HEADER,
+  NEC_HEADER,
   parseNecCsv,
   parseWgsnFaintsCsv,
   splitCsvLine,
 } from './wgsn-parse-pure';
-
-const NEC_HEADER = 'NEC,Name,HIP,RA2000,DE2000,Vmag,Gmag,type,HR,HD,Bayer/other,constellation,distance from Sun/ ly,B-V color,VmagMax,VmagMin';
-const FAINTS_HEADER = 'WGSN-ID,Name,HIP,RA2000,DE2000,Vmag,type,HR,HD,Bayer/other,constellation,distance from Sun/ ly,B-V color,VmagMax,VmagMin,WDS';
 
 describe('splitCsvLine', () => {
   it('splits plain cells and preserves empties', () => {
@@ -37,13 +36,33 @@ describe('parseNecCsv', () => {
     });
   });
 
+  it('splits component letters off both key columns, and reads - as null', () => {
+    const rows = parseNecCsv([
+      NEC_HEADER,
+      '1,,HIP 518A,0.1,1.0,5.0,4.9,G0,-,62264AB,κ Ceti,Cetus,10,0.6,,',
+      '2,,-,0.2,2.0,6.0,5.9,B9,-,-,* bet Cen B,Centaurus,20,0.1,,',
+    ].join('\n'));
+    expect(rows[0]).toMatchObject({
+      hip: 518, hipComponent: 'A', hr: null, hd: 62264, hdComponent: 'AB',
+    });
+    expect(rows[1]).toMatchObject({
+      hip: null, hipComponent: null, hr: null, hd: null, hdComponent: null,
+    });
+  });
+
+  it('fails loudly on a key shape neither parsed nor a null spelling', () => {
+    const line = '1,,HIP 518 A,0.1,1.0,5.0,4.9,G0,,1,,Cetus,10,0.6,,';
+    expect(() => parseNecCsv([NEC_HEADER, line].join('\n')))
+      .toThrow(/unparsed HIP cell "HIP 518 A"/);
+  });
+
   it('rejects a drifted header', () => {
     expect(() => parseNecCsv('NEC,Name,HIP\n1,,')).toThrow(/header drifted/);
   });
 });
 
 describe('parseWgsnFaintsCsv', () => {
-  it('decodes the WDS column and names', () => {
+  it('decodes names, keys and the null spellings', () => {
     const rows = parseWgsnFaintsCsv([
       FAINTS_HEADER,
       '10001,Citadelle,HIP 1547,4.82,14.05,8.52,K0,,1502,,Pisces,546.31,0.92,,,',
@@ -55,5 +74,15 @@ describe('parseWgsnFaintsCsv', () => {
     expect(rows[1]).toMatchObject({
       name: 'Mpingo', hip: null, hd: null, bayerOther: 'WASP-71', wds: null,
     });
+  });
+
+  // The 2025-05 release leaves WDS empty in all 132 rows, so the build pins
+  // the cell count at zero — this covers the column the pin protects.
+  it('reads a populated WDS cell when upstream supplies one', () => {
+    const rows = parseWgsnFaintsCsv([
+      FAINTS_HEADER,
+      '10002,Toliman,HIP 71683,219.9,-60.83,-0.01,G2,,128620,,Centaurus,4.4,0.71,,,14396-6050B',
+    ].join('\n'));
+    expect(rows[0].wds).toBe('14396-6050B');
   });
 });

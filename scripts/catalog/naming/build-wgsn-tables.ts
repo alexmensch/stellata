@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { parseCrossIndexTsv } from '../classic-ids/classic-ids-parse';
+import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
@@ -39,6 +40,9 @@ export interface WgsnCounts {
   nameRowsWithAliases: number;
   distinctNameKeys: number;
   namesKeyless: number;
+  hipComponentCells: number;
+  hdComponentCells: number;
+  faintsWdsCells: number;
   cellBayer: number;
   cellFlamsteed: number;
   cellGould: number;
@@ -53,6 +57,7 @@ export interface WgsnCounts {
   iv27aVariableRejected: number;
   iv27aUnparsed: number;
   designationRows: number;
+  designationsKeyless: number;
   spinePropers: number;
   spineProperMatched: number;
   spineProperResiduals: number;
@@ -136,10 +141,7 @@ function readSpine(): SpineNaming {
       propers.set([proper, hip, hd].join('|'), proper);
     }
     if ((cells[bayerIdx] ?? '').trim()) {
-      bayerKeys.push({
-        hip: hip === '' ? null : Number(hip),
-        hd: hd === '' ? null : Number(hd),
-      });
+      bayerKeys.push({ hip: parseIntOrNull(hip), hd: parseIntOrNull(hd) });
     }
   }
   return { propers, bayerKeys };
@@ -158,6 +160,10 @@ function main(): void {
   let nameRowsWithAliases = 0;
   let namesKeyless = 0;
 
+  const hipComponentCells = rows.filter((r) => r.hipComponent !== null).length;
+  const hdComponentCells = rows.filter((r) => r.hdComponent !== null).length;
+  const faintsWdsCells = rows.filter((r) => r.wds !== null).length;
+
   for (const row of rows) {
     const n = normaliseWgsnCell(row.bayerOther);
     classCounts.set(n.class, (classCounts.get(n.class) ?? 0) + 1);
@@ -171,8 +177,8 @@ function main(): void {
       for (const k of [name, ...aliases]) nameKeys.add(foldNameKey(k));
       if (row.hip === null && row.hr === null && row.hd === null) namesKeyless++;
       nameLines.push([
-        name, aliases.join('|'), cellStr(row.hip), cellStr(row.hr),
-        cellStr(row.hd), cellStr(row.hdComponent), cellStr(row.wds),
+        name, aliases.join('|'), cellStr(row.hip), cellStr(row.hipComponent),
+        cellStr(row.hr), cellStr(row.hd), cellStr(row.hdComponent),
         cellStr(row.vmag), row.source, row.id,
       ].join('\t'));
     }
@@ -259,7 +265,7 @@ function main(): void {
   designations.sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1));
 
   writeFileSync(OUT_NAMES, [
-    'name\taliases\thip\thr\thd\thd_component\twds\tvmag\tsource\tsrc_id',
+    'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id',
     ...nameLines,
   ].join('\n') + '\n');
   writeFileSync(OUT_DESIGNATIONS, [
@@ -278,6 +284,9 @@ function main(): void {
     nameRowsWithAliases,
     distinctNameKeys: nameKeys.size,
     namesKeyless,
+    hipComponentCells,
+    hdComponentCells,
+    faintsWdsCells,
     cellBayer: classCounts.get('bayer') ?? 0,
     cellFlamsteed: classCounts.get('flamsteed') ?? 0,
     cellGould: classCounts.get('gould') ?? 0,
@@ -292,6 +301,9 @@ function main(): void {
     iv27aVariableRejected,
     iv27aUnparsed,
     designationRows: designations.length,
+    designationsKeyless: designations.filter(
+      (d) => d.hip === null && d.hr === null && d.hd === null,
+    ).length,
     spinePropers: spine.propers.size,
     spineProperMatched: matched,
     spineProperResiduals: unmatched.size,
