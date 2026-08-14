@@ -22,8 +22,10 @@ scripts/catalog/naming/
                                 star-designations.ts.
   wgsn-parse-pure.ts (+ test)   NEC.csv / wgsnFaints.csv parsers — the
                                 pipeline's one comma-CSV source (quoted
-                                cells), null spellings `_` / `~` / `null`,
-                                `HIP nnn` and `nnnnnA` key cells.
+                                cells), null spellings `_` / `~` / `-` /
+                                `null`, and both key columns' inline
+                                component letters (`HIP 518A`, `62264AB`).
+                                A key shape covered by neither throws.
   wgsn-normalise-pure.ts        Both § 4 normalisers. NEC `Bayer/other`
     (+ test)                    grammar → structured bayer / flamsteed /
                                 gould / variable / non-stellar /
@@ -32,10 +34,16 @@ scripts/catalog/naming/
                                 contaminants rejected to the variable
                                 class. Plus the multi-name cell split and
                                 the diacritic fold used for name matching.
-  build-wgsn-tables.ts          Orchestrator: normalise both WGSN files,
-                                union the IV/27A Bayer tail, verify the
-                                § 2 dispositions, write the two derived
-                                tables, pin the counts.
+  wgsn-tables-pure.ts (+ test)  Row shaping and the two joins: the IV/27A
+                                Bayer union, the § 2 disposition set
+                                comparison, the key sets both sides of the
+                                union share, and the total sort order the
+                                committed table's byte-for-byte CI diff
+                                rests on. `spineProperKey` is the one
+                                place the gate's join key is built.
+  build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
+                                the joins, write the two derived tables,
+                                pin the counts.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
 ```
@@ -51,10 +59,25 @@ designation-constellation cascade, and the cross index adds no glyph
 content to them.
 
 Classes that emit no designation row, all pinned: `variable` routes to
-the GCVS tier (tier 6 sources it from GCVS itself — 614 NEC cells + 134
+the GCVS tier (tier 6 sources it from GCVS itself — 615 WGSN cells + 134
 IV/27A contaminants), `non_stellar` (clusters / nebulae / galaxies, 132),
-`other_catalogue` (BD / CD / Gliese / survey ids — the star still keys
-via HIP / HR / HD, 95), `corrupt` (the ρ² Ara Mathematica artifact, 1).
+`other_catalogue` (BD / CD / Gliese / survey ids, 95), `corrupt` (the
+ρ² Ara Mathematica artifact, 1).
+
+A two-capital head reads as GCVS **before** the Greek lookup, which is
+case-insensitive over the ASCII abbreviations: `NU Pav` is the M6III
+semiregular variable (HD 189124), and reading it as Greek minted a second
+ν Pav onto it — the Bayer star ν Pav is HD 169978.
+
+`other_catalogue` normally costs nothing because the star still keys by
+HIP / HR / HD, with one exception worth knowing before wiring the
+composer: **53 of the 509 approved names have no HIP, HR or HD at all**
+(`namesKeyless`). They are wgsnFaints exoplanet hosts whose only
+identifier is the survey id in the dropped cell — `WASP-32`, `HAT-P-29` —
+and the file's WDS column, which would otherwise root them, is empty in
+every row (`faintsWdsCells`, pinned at 0). Positionally, all but one sit
+outside the spine entirely, so they name stars the catalogue does not
+carry; the pins are there to catch a refresh that changes either fact.
 
 ## The § 2 residual gate
 
@@ -72,3 +95,10 @@ Of the spine's 1,522 Bayer-bearing rows, the unioned table reaches 1,520
 by HD or HIP. The 2 uncovered are close-pair component rows whose Bayer
 belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell) — a WDS rooting question for the composer, not missing data.
+
+Three designation rows carry no key at all (`designationsKeyless`):
+β Cen B, δ Cyg B and ζ Her B spell both key cells `-` upstream. Seven
+rows tie on every field (`designationDuplicateRows`), and seven name rows
+repeat a name against the same keys (`nameDuplicateRows`) — NEC lists the
+components of a close pair as separate serials, so Talitha, Acrab, Sabik
+and the rest arrive twice. Neither table dedupes; the composer picks.

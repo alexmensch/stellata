@@ -36,8 +36,8 @@ renderer the runtime already had.
 
 | Source | Status | Supplies | Citation |
 |---|---|---|---|
-| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 5,031 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
-| IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5, with WDS component | same, 2025-05 |
+| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
+| IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
 | `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | Kostjuk 2004 |
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | `docs/catalog-driver.md` § 2 |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
@@ -56,12 +56,15 @@ names.
 
 Two IAU properties beyond the names make it load-bearing:
 
-- **Component attribution.** Each name carries its WDS designation and
-  component, so *which* star owns a name is answered by the authority, not
-  composed. `Acrab` belongs to β Sco **Aa**; AT-HYG hangs `Acrab B` on the
-  WDS **C** component. Component-lettered names are not per se inventions —
-  `Albireo A` is IAU-approved — so the letter question is always "what does
-  the authority say", never "do we append one".
+- **Component attribution.** The authority answers *which* star owns a
+  name rather than leaving it composed: 35 HIP and 229 HD cells inline the
+  component letter (`HIP 518A`, `62264AB`), and the name itself carries one
+  where the IAU approved it. `Acrab` belongs to β Sco **Aa**; AT-HYG hangs
+  `Acrab B` on the WDS **C** component. Component-lettered names are not
+  per se inventions — `Albireo A` is IAU-approved — so the letter question
+  is always "what does the authority say", never "do we append one". The
+  faints file's own WDS column is empty in every row, so component rooting
+  comes from the key cells, not from it.
 - **Designation constellation ≠ positional constellation.** NEC lists
   `ρ Aquilae` with `constellation = Delphinus`, the same split
   `stellata-sp4q.2` introduces as `dc`. The authority agrees with the
@@ -166,12 +169,22 @@ the estimates this section carried from the gate's probe):
   genitives.
 - SIMBAD-form rows `* kap01 Scl B` (264) carry a component — parse letter,
   index and component, not just the letter.
-- The 5,031 non-empty cells classify as: 1,725 Bayer · 1,521 Flamsteed ·
-  938 Gould · 614 variable (routed to tier 6, never tier 3) · 132
+- The two files carry 5,031 non-empty cells, 5 of which spell null
+  (literal `null`). The 5,026 classified: 1,724 Bayer · 1,521 Flamsteed ·
+  938 Gould · 615 variable (routed to tier 6, never tier 3) · 132
   non-stellar dropped (`NGC 129`, `M 31`, `NAME SMC`, clusters) · 95
-  other-catalogue dropped (BD / CD / Gliese / survey ids — the row still
-  keys via HIP/HR/HD) · 1 corrupt (a Mathematica artifact on ρ² Ara,
-  whose Bayer arrives via the IV/27A tail).
+  other-catalogue dropped (BD / CD / Gliese / survey ids) · 1 corrupt (a
+  Mathematica artifact on ρ² Ara, whose Bayer arrives via the IV/27A
+  tail). NEC alone holds 4,971 of the non-empty cells.
+- A two-capital head is a GCVS designation and is tested before the Greek
+  lookup, which is case-insensitive over the ASCII abbreviations:
+  `NU Pav` is the variable HD 189124, and reading it as Greek mints a
+  second ν Pav onto it (the Bayer star is HD 169978).
+- Dropping an other-catalogue cell normally costs nothing — the row still
+  keys via HIP/HR/HD. The exception: 53 wgsnFaints names whose only
+  identifier was that cell (`WASP-32`, `HAT-P-29`), with an empty WDS
+  column and, bar one, no spine star within 30″. They name stars the
+  catalogue does not carry.
 - Gould numbered Serpens' halves separately (`4 G. Ser Cap` ≠
   `4 G. Ser Cau`) — the half rides the designation table.
 - Multi-name cells split into name + aliases: `Nganurganity / Unurgunite`,

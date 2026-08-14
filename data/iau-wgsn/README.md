@@ -8,16 +8,19 @@ keyed tables `pnpm run build:wgsn` regenerates from them.
 ```
 NEC.csv                        986 KB. Frozen. The WGSN naked-eye catalogue,
                                2025-05: 9,297 rows over the V ≤ 6.5 sky —
-                               377 approved names + 5,031 non-empty
+                               377 approved names + 4,971 non-empty
                                `Bayer/other` designation cells (Unicode
                                glyphs), keyed HIP / HR / HD.
 wgsnFaints.csv                 12 KB. Frozen. 132 approved names below
-                               V 6.5 (exoplanet hosts, faint dwarfs),
-                               with a WDS component column.
+                               V 6.5 (exoplanet hosts, faint dwarfs). Its
+                               WDS column is empty in every row — the
+                               build pins that at 0 rather than carrying an
+                               empty column into the derived table.
 wgsn_names.tsv                 Derived. One row per approved name: display
                                name, published alternates split out of
-                               multi-name cells, HIP / HR / HD (+ HD
-                               component letter), WDS, Vmag, source file.
+                               multi-name cells, HIP / HR / HD (each key
+                               with its component letter), Vmag, source
+                               file.
 wgsn_designations.tsv          Derived. One row per normalised designation:
                                kind (bayer / flamsteed / gould), glyph
                                letter + superscript, dc, Serpens Gould
@@ -55,8 +58,9 @@ Measured over the 2025-05 files; `scripts/catalog/naming/README.md` has
 the per-class counts, `wgsn-expected.json` pins them:
 
 - Comma-CSV with quoted cells (`"C5,5"` carbon-star types) — the one
-  non-TSV source in the pipeline.
-- `_`, `~` and a literal `null` (5 Virgo rows) all spell null.
+  non-TSV source in the pipeline. The corrupt cell below is quoted and
+  contains four commas, so a naive split shifts that row's keys.
+- `_`, `~`, `-` and a literal `null` (5 Virgo rows) all spell null.
 - One corrupt `Bayer/other` cell: a Mathematica formula artifact on
   HIP 83057 (ρ² Ara). Classified `corrupt`, count pinned at 1; the star's
   Bayer designation arrives via the IV/27A tail instead.
@@ -66,8 +70,14 @@ the per-class counts, `wgsn-expected.json` pins them:
   own column.
 - `LO Hya (25 G. Hya)`: a GCVS form with the real designation in the
   parenthetical — the parenthetical wins, GCVS already sources the outer.
-- 226 NEC `HD` cells carry a trailing component letter (`224782A`) —
-  split into `hd` + `hd_component`.
+- Both key columns inline a component letter on close pairs: 229 `HD`
+  cells (`224782A`, and 3 two-letter `62264AB`) and 35 `HIP` cells
+  (`HIP 518A`), split into `hd` / `hip` + their component. A key shape
+  that is neither this nor a null spelling fails the build rather than
+  nulling the row.
+- `NU Pav` is the GCVS variable HD 189124, not a Bayer letter; the ASCII
+  Greek lookup is case-insensitive, so the normaliser tests the GCVS form
+  first (ν Pav proper is HD 169978).
 
 ## Consumed by
 
