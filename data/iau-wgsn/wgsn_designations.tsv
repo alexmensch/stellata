@@ -1,0 +1,4630 @@
+kind	letter	sup	num	dc	half	component	hip	hr	hd	source
+bayer	A			And			6999		9057	iv27a
+bayer	b			And			10340		13520	iv27a
+bayer	c			And			10819		14212	iv27a
+bayer	α			And			677	15	358	nec
+bayer	β			And			5447	337	6860	nec
+bayer	γ	1		And			9640	603	12533	nec
+bayer	γ	2		And					12534	iv27a
+bayer	δ			And			3092	165	3627	nec
+bayer	ε			And			3031	163	3546	nec
+bayer	ζ			And			3693	215	4502	nec
+bayer	η			And			4463	271	5516	nec
+bayer	θ			And			1366	63	1280	nec
+bayer	ι			And			116631	8965	222173	nec
+bayer	κ			And			116805	8976	222439	nec
+bayer	λ			And			116584	8961	222107	nec
+bayer	μ			And			4436	269	5448	nec
+bayer	ν			And			3881	226	4727	nec
+bayer	ξ			And			6411	390	8207	nec
+bayer	ο			And			113726	8762	217675	nec
+bayer	π			And			2912	154	3369	nec
+bayer	ρ			And			1686	82	1671	nec
+bayer	σ			And			1473	68	1404	nec
+bayer	τ			And			7818	477	10205	nec
+bayer	υ			And			7513	458	9826	nec
+bayer	φ			And			5434	335	6811	nec
+bayer	φ			And		A	5434	335	6811	nec
+bayer	φ			And		B	5434	335	6811	nec
+bayer	χ			And			7719	469	10072	nec
+bayer	ψ			And			117221	9003	223047	nec
+bayer	ω			And			6813	417	8799	nec
+bayer	α			Ant			51172	4104	90610	nec
+bayer	δ			Ant			51376	4118	90972	nec
+bayer	ε			Ant			46515	3765	82150	nec
+bayer	ζ	1		Ant			46657	3781	82384	nec
+bayer	ζ	2		Ant			46734	3789	82513	nec
+bayer	η			Ant			48926	3947	86629	nec
+bayer	θ			Ant			47758	3871	84367	nec
+bayer	ι			Ant			53502	4273	94890	nec
+bayer	α			Aps			72370	5470	129078	nec
+bayer	β			Aps			81852	6163	149324	nec
+bayer	γ			Aps			81065	6102	147675	nec
+bayer	δ	1		Aps			80047	6020	145366	nec
+bayer	δ	2		Aps			80057	6021	145388	nec
+bayer	ε			Aps			70248	5336	124771	nec
+bayer	ζ			Aps			84969	6417	156277	nec
+bayer	η			Aps			69896	5303	123998	nec
+bayer	θ			Aps			68815	5261	122250	nec
+bayer	ι			Aps			84979	6411	156190	nec
+bayer	κ	1		Aps			76013	5730	137387	nec
+bayer	κ	2		Aps			76750	5782	138800	nec
+bayer	A			Aql			94982		181333	iv27a
+bayer	b			Aql			95447		182572	iv27a
+bayer	c			Aql			95793		183324	iv27a
+bayer	d			Aql			95073		181440	iv27a
+bayer	e			Aql			95937		183630	iv27a
+bayer	f			Aql			95066		181391	iv27a
+bayer	g			Aql			93526		176984	iv27a
+bayer	h			Aql			93717		177463	iv27a
+bayer	i			Aql			93429		176678	iv27a
+bayer	l			Aql			101847		196574	iv27a
+bayer	α			Aql			97649	7557	187642	nec
+bayer	β			Aql			98036	7602	188512	nec
+bayer	γ			Aql			97278	7525	186791	nec
+bayer	δ			Aql			95501	7377	182640	nec
+bayer	ε			Aql			93244	7176	176411	nec
+bayer	ζ			Aql			93747	7235	177724	nec
+bayer	η			Aql			97804	7570	187929	nec
+bayer	θ			Aql			99473	7710	191692	nec
+bayer	ι			Aql			96468	7447	184930	nec
+bayer	κ			Aql			96483	7446	184915	nec
+bayer	λ			Aql			93805	7236	177756	nec
+bayer	μ			Aql			96229	7429	184406	nec
+bayer	ν			Aql			95585	7387	182835	nec
+bayer	ξ			Aql			97938	7595	188310	nec
+bayer	ο			Aql			97675	7560	187691	nec
+bayer	π			Aql			97473	7544	187259	nec
+bayer	π			Aql					187260	iv27a
+bayer	π			Aql		A	97473	7544	187259	nec
+bayer	ρ			Aql			99742	7724	192425	nec
+bayer	σ			Aql			96665	7474	185507	nec
+bayer	τ			Aql			98823	7669	190327	nec
+bayer	υ			Aql			97229	7519	186689	nec
+bayer	φ			Aql			98103	7610	188728	nec
+bayer	χ			Aql			96957	7497	186203	nec
+bayer	χ			Aql					186204	iv27a
+bayer	χ			Aql		A	96957	7497	186203	nec
+bayer	ψ			Aql			97139	7511	186547	nec
+bayer	ω	1		Aql			94834	7315	180868	nec
+bayer	ω	2		Aql			95002	7332	181383	nec
+bayer	A	1		Aqr			116889		222547	iv27a
+bayer	A	2		Aqr			116904		222561	iv27a
+bayer	A	2		Aqr			116901		222574	iv27a
+bayer	b	1		Aqr			115438		220321	iv27a
+bayer	b	2		Aqr			115669		220704	iv27a
+bayer	b	3		Aqr			116247		221565	iv27a
+bayer	c	1		Aqr			114119		218240	iv27a
+bayer	c	2		Aqr			114341		218594	iv27a
+bayer	c	3		Aqr			114375		218640	iv27a
+bayer	d			Aqr			106944		206067	iv27a
+bayer	e			Aqr			109472		210424	iv27a
+bayer	f			Aqr			110778		212697	iv27a
+bayer	f			Aqr					212698	iv27a
+bayer	g			Aqr			112211		215167	iv27a
+bayer	h			Aqr			113996		218060	iv27a
+bayer	h			Aqr			117756		223807	iv27a
+bayer	i	1		Aqr			117089		222847	iv27a
+bayer	i	2		Aqr		A	117218	9002	223024	nec
+bayer	i	2		Aqr		B	117218	9002	223024	nec
+bayer	i	3		Aqr			117629		223640	iv27a
+bayer	k			Aqr			102624		198026	iv27a
+bayer	α			Aqr			109074	8414	209750	nec
+bayer	β			Aqr			106278	8232	204867	nec
+bayer	γ			Aqr			110395	8518	212061	nec
+bayer	δ			Aqr			113136	8709	216627	nec
+bayer	ε			Aqr			102618	7950	198001	nec
+bayer	ζ	1		Aqr			110960	8558	213051	nec
+bayer	ζ	1		Aqr			110960	8558	213051	nec
+bayer	ζ	2		Aqr			110960	8559	213052	nec
+bayer	η			Aqr			111497	8597	213998	nec
+bayer	θ			Aqr			110003	8499	211391	nec
+bayer	ι			Aqr			109139	8418	209819	nec
+bayer	κ			Aqr			111710	8610	214376	nec
+bayer	λ			Aqr			112961	8698	216386	nec
+bayer	μ			Aqr			103045	7990	198743	nec
+bayer	ν			Aqr			104459	8093	201381	nec
+bayer	ξ			Aqr			106786	8264	205767	nec
+bayer	ο			Aqr			108874	8402	209409	nec
+bayer	π			Aqr			110672	8539	212571	nec
+bayer	ρ			Aqr			110273	8512	211838	nec
+bayer	σ			Aqr			111123	8573	213320	nec
+bayer	τ	1		Aqr			112542	8673	215766	nec
+bayer	τ	2		Aqr			112716	8679	216032	nec
+bayer	υ			Aqr			111449	8592	213845	nec
+bayer	φ			Aqr			114724	8834	219215	nec
+bayer	χ			Aqr			114939	8850	219576	nec
+bayer	ψ	1		Aqr			114855	8841	219449	nec
+bayer	ψ	2		Aqr			115033	8858	219688	nec
+bayer	ψ	3		Aqr			115115	8865	219832	nec
+bayer	ω	1		Aqr			116758	8968	222345	nec
+bayer	ω	2		Aqr			116971	8988	222661	nec
+bayer	α			Ara			85792	6510	158427	nec
+bayer	β			Ara			85258	6461	157244	nec
+bayer	γ			Ara			85267	6462	157246	nec
+bayer	δ			Ara			85727	6500	158094	nec
+bayer	ε	1		Ara			83153	6295	152980	nec
+bayer	ε	2		Ara			83431	6314	153580	nec
+bayer	ζ			Ara			83081	6285	152786	nec
+bayer	η			Ara			82363	6229	151249	nec
+bayer	θ			Ara			88714	6743	165024	nec
+bayer	ι			Ara			85079	6451	157042	nec
+bayer	κ			Ara			85312	6468	157457	nec
+bayer	λ			Ara			86486	6569	160032	nec
+bayer	μ			Ara			86796	6585	160691	nec
+bayer	ν	2		Ara			87379	6632	161917	nec
+bayer	π			Ara			86305	6549	159492	nec
+bayer	ρ	1		Ara			82868	6274	152478	nec
+bayer	σ			Ara			86092	6537	159217	nec
+bayer	υ	1		Ara			87314		161783	iv27a
+bayer	c			Ari			13209		17573	iv27a
+bayer	α			Ari			9884	617	12929	nec
+bayer	β			Ari			8903	553	11636	nec
+bayer	γ	1		Ari			8832	545	11502	nec
+bayer	γ	2		Ari			8832	546		nec
+bayer	γ	2		Ari					11503	iv27a
+bayer	δ			Ari			14838	951	19787	nec
+bayer	ε			Ari			13914	887	18519	nec
+bayer	ε			Ari		A	13914	888	18520	nec
+bayer	ε			Ari		B	13914	887	18519	nec
+bayer	ζ			Ari			15110	972	20150	nec
+bayer	η			Ari			10306	646	13555	nec
+bayer	θ			Ari			10732	669	14191	nec
+bayer	ι			Ari			9110	563	11909	nec
+bayer	κ			Ari			9836	613	12869	nec
+bayer	λ			Ari			9153	569	11973	nec
+bayer	μ			Ari			12640	793	16811	nec
+bayer	ν			Ari			12332	773	16432	nec
+bayer	ξ			Ari			11249	702	14951	nec
+bayer	ο			Ari			12803	809	17036	nec
+bayer	π			Ari		A	13165	836	17543	nec
+bayer	ρ	1		Ari			13579		18091	iv27a
+bayer	ρ	2		Ari			13654	867	18191	nec
+bayer	ρ	3		Ari			13702	869	18256	nec
+bayer	σ			Ari			13327	847	17769	nec
+bayer	τ	1		Ari			15627	1005	20756	nec
+bayer	τ	2		Ari			15737	1015	20893	nec
+bayer	α			Aur			24608	1708	34029	nec
+bayer	β			Aur			28360	2088	40183	nec
+bayer	δ			Aur			28358	2077	40035	nec
+bayer	ε			Aur			23416	1605	31964	nec
+bayer	ζ			Aur			23453	1612	32068	nec
+bayer	η			Aur			23767	1641	32630	nec
+bayer	θ			Aur			28380	2095	40312	nec
+bayer	ι			Aur			23015	1577	31398	nec
+bayer	κ			Aur			29696	2219	43039	nec
+bayer	λ			Aur			24813	1729	34411	nec
+bayer	μ			Aur			24340	1689	33641	nec
+bayer	ν			Aur			27673	2012	39003	nec
+bayer	ξ			Aur			27949	2029	39283	nec
+bayer	ο			Aur			27196	1971	38104	nec
+bayer	π			Aur			28404	2091	40239	nec
+bayer	ρ			Aur			25048	1749	34759	nec
+bayer	σ			Aur			25292	1773	35186	nec
+bayer	τ			Aur			27483	1995	38656	nec
+bayer	υ			Aur			27639	2011	38944	nec
+bayer	φ			Aur			25541	1805	35620	nec
+bayer	χ			Aur			25984	1843	36371	nec
+bayer	ψ	1		Aur			30520	2289	44537	nec
+bayer	ψ	10		Aur			33485	2585	50973	nec
+bayer	ψ	2		Aur			31832	2427	47174	nec
+bayer	ψ	3		Aur			31789	2420	47100	nec
+bayer	ψ	4		Aur			32173	2459	47914	nec
+bayer	ψ	5		Aur			32480	2483	48682	nec
+bayer	ψ	6		Aur			32562	2487	48781	nec
+bayer	ψ	7		Aur			32844	2516	49520	nec
+bayer	ψ	8		Aur			33133	2547	50204	nec
+bayer	ψ	9		Aur			33377	2568	50658	nec
+bayer	ω			Aur			23179	1592	31647	nec
+bayer	A			Boo			69879		125351	iv27a
+bayer	b			Boo			74087		134320	iv27a
+bayer	c			Boo			73996		134083	iv27a
+bayer	d			Boo			69226		123999	iv27a
+bayer	e			Boo			67480		120539	iv27a
+bayer	f			Boo			70602		126661	iv27a
+bayer	g			Boo			70791		127243	iv27a
+bayer	h			Boo			72487		130945	iv27a
+bayer	i			Boo			73695		133640	iv27a
+bayer	k			Boo			73841		133962	iv27a
+bayer	α			Boo			69673	5340	124897	nec
+bayer	β			Boo			73555	5602	133208	nec
+bayer	γ			Boo			71075	5435	127762	nec
+bayer	δ			Boo			74666	5681	135722	nec
+bayer	ε			Boo			72105	5506	129989	nec
+bayer	ε			Boo		B		5505	129988	nec
+bayer	ζ			Boo			71795	5478	129247	nec
+bayer	ζ			Boo		A	71795	5478	129247	nec
+bayer	ζ			Boo		B	71795	5477	129246	nec
+bayer	η			Boo			67927	5235	121370	nec
+bayer	θ			Boo			70497	5404	126660	nec
+bayer	ι			Boo			69713	5350	125161	nec
+bayer	κ	1		Boo			69481		124674	iv27a
+bayer	κ	2		Boo			69483	5329	124675	nec
+bayer	λ			Boo			69732	5351	125162	nec
+bayer	μ	1		Boo			75411	5733	137391	nec
+bayer	μ	2		Boo			75415		137392	iv27a
+bayer	ν	1		Boo			75973	5763	138481	nec
+bayer	ν	2		Boo			76041	5774	138629	nec
+bayer	ξ			Boo			72659	5544	131156	nec
+bayer	ξ			Boo		A	72659	5544	131156	nec
+bayer	ο			Boo			72125	5502	129972	nec
+bayer	π	1		Boo			71762	5475	129174	nec
+bayer	π	2		Boo				5476	129175	nec
+bayer	ρ			Boo			71053	5429	127665	nec
+bayer	σ			Boo			71284	5447	128167	nec
+bayer	τ			Boo			67275	5185	120136	nec
+bayer	υ			Boo			67459	5200	120477	nec
+bayer	φ			Boo			76534	5823	139641	nec
+bayer	χ			Boo			74596	5676	135502	nec
+bayer	ψ			Boo			73745	5616	133582	nec
+bayer	ω			Boo			73568	5600	133124	nec
+bayer	α			CMa			32349	2491	48915	nec
+bayer	β			CMa			30324	2294	44743	nec
+bayer	γ			CMa			34045	2657	53244	nec
+bayer	δ			CMa			34444	2693	54605	nec
+bayer	ε			CMa			33579	2618	52089	nec
+bayer	ζ			CMa			30122	2282	44402	nec
+bayer	η			CMa			35904	2827	58350	nec
+bayer	θ			CMa			33160	2574	50778	nec
+bayer	ι			CMa			33347	2596	51309	nec
+bayer	κ			CMa			32759	2538	50013	nec
+bayer	λ			CMa			30788	2361	45813	nec
+bayer	μ			CMa			33345	2593	51250	nec
+bayer	ν	1		CMa			31564	2423	47138	nec
+bayer	ν	2		CMa			31592	2429	47205	nec
+bayer	ν	3		CMa			31700	2443	47442	nec
+bayer	ξ	1		CMa			31125	2387	46328	nec
+bayer	ξ	2		CMa			31416	2414	46933	nec
+bayer	ο	1		CMa			33152	2580	50877	nec
+bayer	ο	2		CMa			33977	2653	53138	nec
+bayer	π			CMa			33302	2590	51199	nec
+bayer	σ			CMa			33856	2646	52877	nec
+bayer	σ			CMa			33856	2646	52877	nec
+bayer	τ			CMa			35415	2782	57061	nec
+bayer	ω			CMa			35037	2749	56139	nec
+bayer	G			CMi			39311		66141	iv27a
+bayer	α			CMi			37279	2943	61421	nec
+bayer	β			CMi			36188	2845	58715	nec
+bayer	γ			CMi			36284	2854	58972	nec
+bayer	δ	1		CMi			36641	2880	59881	nec
+bayer	δ	2		CMi			36723	2887	60111	nec
+bayer	δ	3		CMi			36812	2901	60357	nec
+bayer	ε			CMi			36041	2828	58367	nec
+bayer	ζ			CMi			38373	3059	63975	nec
+bayer	η			CMi			36265	2851	58923	nec
+bayer	α	1		CVn			63121	4914	112412	nec
+bayer	α	2		CVn			63125	4915	112413	nec
+bayer	β			CVn			61317	4785	109358	nec
+bayer	α			Cae			21770	1502	29875	nec
+bayer	β			Cae			21861	1503	29992	nec
+bayer	γ	1		Cae			23595	1652	32831	nec
+bayer	γ	2		Cae			23596	1653	32846	nec
+bayer	δ			Cae			21060	1443	28873	nec
+bayer	ζ			Cae			22280	1539	30608	nec
+bayer	λ			Cae			21998	1518	30202	nec
+bayer	ν			Cae			22488	1557	30985	nec
+bayer	α			Cam			22783	1542	30614	nec
+bayer	β			Cam			23522	1603	31910	nec
+bayer	γ			Cam			17959	1148	23401	nec
+bayer	A			Cap			104234		200914	iv27a
+bayer	b			Cap			106039		204381	iv27a
+bayer	c			Cap			107382		206834	iv27a
+bayer	α	1		Cap			100027	7747	192876	nec
+bayer	α	2		Cap			100064	7754	192947	nec
+bayer	β			Cap			100345	7776	193495	nec
+bayer	β	2		Cap			100325	7775	193452	nec
+bayer	γ			Cap			106985	8278	206088	nec
+bayer	δ			Cap			107556	8322	207098	nec
+bayer	ε			Cap			106723	8260	205637	nec
+bayer	ζ			Cap			105881	8204	204075	nec
+bayer	η			Cap			104019	8060	200499	nec
+bayer	θ			Cap			104139	8075	200761	nec
+bayer	ι			Cap			105515	8167	203387	nec
+bayer	κ			Cap			107188	8288	206453	nec
+bayer	λ			Cap			107517	8319	207052	nec
+bayer	μ			Cap			108036	8351	207958	nec
+bayer	ν			Cap			100310	7773	193432	nec
+bayer	ξ	1		Cap			99529	7712	191753	nec
+bayer	ξ	2		Cap			99572	7715	191862	nec
+bayer	ο			Cap			101120		195093	iv27a
+bayer	ο	1		Cap			101123	7830	195094	nec
+bayer	π			Cap			100881	7814	194636	nec
+bayer	ρ			Cap		A	101027	7822	194943	nec
+bayer	σ			Cap			100195	7761	193150	nec
+bayer	τ			Cap			101923		196662	iv27a
+bayer	τ	1		Cap			101751		196348	iv27a
+bayer	υ			Cap			101984	7900	196777	nec
+bayer	φ			Cap			104963	8127	202320	nec
+bayer	χ			Cap			104365	8087	201184	nec
+bayer	ψ			Cap			102485	7936	197692	nec
+bayer	ω			Cap			102978	7980	198542	nec
+bayer	A			Car			32761		50337	iv27a
+bayer	B			Car			39903		68456	iv27a
+bayer	C			Car			40429		69863	iv27a
+bayer	D			Car			39138		66591	iv27a
+bayer	E			Car			44626		78764	iv27a
+bayer	G			Car			44599		78791	iv27a
+bayer	H			Car			46741		83095	iv27a
+bayer	I			Car			50954		90589	iv27a
+bayer	K			Car			51438		91375	iv27a
+bayer	L			Car			50847		90264	iv27a
+bayer	M			Car			50083		88981	iv27a
+bayer	N			Car			31407		47306	iv27a
+bayer	O			Car			32531		49877	iv27a
+bayer	P			Car			51192		90772	iv27a
+bayer	Q			Car			36942		61248	iv27a
+bayer	a			Car			45080	3659	79351	nec
+bayer	b	1		Car			43937		77002	iv27a
+bayer	b	2		Car			44143		77370	iv27a
+bayer	c			Car			43783		76728	iv27a
+bayer	d			Car			42568		74375	iv27a
+bayer	e	1		Car			42129		73390	iv27a
+bayer	e	2		Car			42134		73389	iv27a
+bayer	f			Car			43105		75311	iv27a
+bayer	g			Car			45496		80230	iv27a
+bayer	h			Car			46974		83183	iv27a
+bayer	i			Car			45101		79447	iv27a
+bayer	k			Car			45856		81101	iv27a
+bayer	l			Car			47854	3884	84810	nec
+bayer	m			Car			47391		83944	iv27a
+bayer	p			Car			51576	4140	91465	nec
+bayer	q			Car			50371		89388	iv27a
+bayer	r			Car			51849		91942	iv27a
+bayer	s			Car			51232		90853	iv27a
+bayer	t	1		Car			51912		92063	iv27a
+bayer	t	2		Car			52102		92397	iv27a
+bayer	u			Car			53253		94510	iv27a
+bayer	w			Car			52468		93070	iv27a
+bayer	x			Car			54463		96918	iv27a
+bayer	y			Car			54751		97534	iv27a
+bayer	z			Car			54301		96566	iv27a
+bayer	z	2		Car			54461		96919	iv27a
+bayer	α			Car			30438	2326	45348	nec
+bayer	β			Car			45238	3685	80007	nec
+bayer	ε			Car			41037	3307	71129	nec
+bayer	ε			Car		A	41037	3307	71129	nec
+bayer	ε			Car		B	41037	3307	71130	nec
+bayer	η			Car				4210	93308	nec
+bayer	θ			Car			52419	4199	93030	nec
+bayer	ι			Car			45556	3699	80404	nec
+bayer	υ			Car			48002	3890	85123	nec
+bayer	υ			Car		B		3891	85124	nec
+bayer	χ			Car			38827	3117	65575	nec
+bayer	ω			Car			50099	4037	89080	nec
+bayer	A			Cas			9480		12111	iv27a
+bayer	α			Cas			3179	168	3712	nec
+bayer	β			Cas			746	21	432	nec
+bayer	γ			Cas			4427	264	5394	nec
+bayer	δ			Cas			6686	403	8538	nec
+bayer	ε			Cas			8886	542	11415	nec
+bayer	ζ			Cas			2920	153	3360	nec
+bayer	η			Cas			3821	219	4614	nec
+bayer	θ			Cas			5542	343	6961	nec
+bayer	ι			Cas		A	11569	707	15089	nec
+bayer	κ			Cas			2599	130	2905	nec
+bayer	λ			Cas		A	2505	123	2772	nec
+bayer	λ			Cas		B	2505	123	2772	nec
+bayer	μ			Cas			5336	321	6582	nec
+bayer	ν			Cas			3801	223	4636	nec
+bayer	ξ			Cas			3300	179	3901	nec
+bayer	ο			Cas			3504	193	4180	nec
+bayer	π			Cas			3414	184	4058	nec
+bayer	ρ			Cas			117863	9045	224014	nec
+bayer	σ			Cas		A	118243	9071	224572	nec
+bayer	τ			Cas			117301	9008	223165	nec
+bayer	υ	1		Cas			4292	253	5234	nec
+bayer	υ	2		Cas			4422	265	5395	nec
+bayer	φ			Cas			6242	382	7927	nec
+bayer	χ			Cas			7294	442	9408	nec
+bayer	ψ			Cas			6692	399	8491	nec
+bayer	ω			Cas			9009	548	11529	nec
+bayer	A			Cen			56480	4460	100673	nec
+bayer	B			Cen			57803	4546	102964	nec
+bayer	C	1		Cen			56518	4463	100733	nec
+bayer	C	2		Cen			56573	4466	100825	nec
+bayer	C	3		Cen			56700	4476	101067	nec
+bayer	D			Cen			59654	4652	106321	nec
+bayer	D			Cen		A	59654	4652	106321	nec
+bayer	E			Cen			59184	4620	105416	nec
+bayer	F			Cen			60059	4682	107079	nec
+bayer	G			Cen			60710	4732	108257	nec
+bayer	H			Cen			63210	4913	112409	nec
+bayer	J			Cen			65271	5035	116087	nec
+bayer	K			Cen			65810	5071	117150	nec
+bayer	M			Cen			67234	5172	119834	nec
+bayer	N			Cen			67703	5207	120642	nec
+bayer	Q			Cen		A	66821	5141	118991	nec
+bayer	a			Cen			70300		125823	iv27a
+bayer	b			Cen			71865	5471	129116	nec
+bayer	c	1		Cen			72010	5485	129456	nec
+bayer	c	2		Cen			72104	5489	129685	nec
+bayer	d			Cen			65936	5089	117440	nec
+bayer	e			Cen			62867	4888	111915	nec
+bayer	f			Cen			63945	4940	113703	nec
+bayer	g			Cen			67457		120323	iv27a
+bayer	h			Cen			67786		120955	iv27a
+bayer	i			Cen			67153		119756	iv27a
+bayer	j			Cen			57669	4537	102776	nec
+bayer	k			Cen			67669		120709	iv27a
+bayer	k			Cen					120710	iv27a
+bayer	l			Cen			61789	4817	110073	nec
+bayer	m			Cen			65387	5041	116243	nec
+bayer	n			Cen			62896	4889	111968	nec
+bayer	p			Cen			62683	4874	111597	nec
+bayer	r			Cen			64803	5006	115310	nec
+bayer	u			Cen			60855	4748	108541	nec
+bayer	v			Cen			70069	5358	125288	nec
+bayer	w			Cen			62012	4831	110458	nec
+bayer	x	1		Cen			60449	4712	107832	nec
+bayer	x	2		Cen			60610	4724	108114	nec
+bayer	y			Cen		A	67819	5222	120987	nec
+bayer	y			Cen		B	61932	4819	110304	nec
+bayer	z			Cen			67244	5174	119921	nec
+bayer	α			Cen			71683	5459	128620	nec
+bayer	α	1		Cen			71683	5459	128620	nec
+bayer	α	2		Cen			71681	5460	128621	nec
+bayer	β			Cen			68702	5267	122451	nec
+bayer	β			Cen		B				nec
+bayer	γ			Cen			61932	4819	110304	nec
+bayer	γ			Cen		A	61932	4819	110304	nec
+bayer	γ			Cen		B	61932	4819	110304	nec
+bayer	δ			Cen			59196	4621	105435	nec
+bayer	ε			Cen			66657	5132	118716	nec
+bayer	ζ			Cen			68002	5231	121263	nec
+bayer	η			Cen			71352	5440	127972	nec
+bayer	θ			Cen			68933	5288	123139	nec
+bayer	ι			Cen			65109	5028	115892	nec
+bayer	κ			Cen			73334	5576	132200	nec
+bayer	λ			Cen			56561	4467	100841	nec
+bayer	μ			Cen			67472	5193	120324	nec
+bayer	ν			Cen			67464	5190	120307	nec
+bayer	ξ	1		Cen			63724	4933	113314	nec
+bayer	ξ	2		Cen			64004	4942	113791	nec
+bayer	ο	1		Cen			56243	4441	100261	nec
+bayer	ο	2		Cen			56250	4442	100262	nec
+bayer	π			Cen		A	55425	4390	98718	nec
+bayer	π			Cen		B	55425	4390	98718	nec
+bayer	ρ			Cen			59449	4638	105937	nec
+bayer	σ			Cen			60823	4743	108483	nec
+bayer	τ			Cen			61622	4802	109787	nec
+bayer	υ	1		Cen			68282	5249	121790	nec
+bayer	υ	2		Cen			68523	5260	122223	nec
+bayer	φ			Cen			68245	5248	121743	nec
+bayer	χ			Cen			68862	5285	122980	nec
+bayer	ψ			Cen			70090	5367	125473	nec
+bayer	ω			Cen					116790	nec
+bayer	α			Cep			105199	8162	203280	nec
+bayer	β			Cep			106032	8238	205021	nec
+bayer	γ			Cep			116727	8974	222404	nec
+bayer	δ			Cep			110991	8571	213306	nec
+bayer	δ			Cep		C	110988		213307	nec
+bayer	ε			Cep			109857	8494	211336	nec
+bayer	ζ			Cep			109492	8465	210745	nec
+bayer	η			Cep			102422	7957	198149	nec
+bayer	θ			Cep			101093	7850	195725	nec
+bayer	ι			Cep			112724	8694	216228	nec
+bayer	κ			Cep			99255	7750	192907	nec
+bayer	λ			Cep			109556	8469	210839	nec
+bayer	μ			Cep			107259	8316	206936	nec
+bayer	ν			Cep			107418	8334	207260	nec
+bayer	ξ			Cep			108917	8417	209790	nec
+bayer	ξ			Cep		A	108917	8417	209790	nec
+bayer	ξ			Cep		B	108917	8417	209791	nec
+bayer	ο			Cep		A	115088	8872	219916	nec
+bayer	π			Cep			114222	8819	218658	nec
+bayer	π			Cep		A	114222	8819	218658	nec
+bayer	ρ	1		Cep			110787	8578	213403	nec
+bayer	ρ	2		Cep			111056	8591	213798	nec
+bayer	υ			Cep			4843		5679	iv27a
+bayer	υ	1		Cep			102431		198084	iv27a
+bayer	α			Cet			14135	911	18884	nec
+bayer	β			Cet			3419	188	4128	nec
+bayer	γ			Cet			12706	804	16970	nec
+bayer	γ			Cet		A	12706	804	16970	nec
+bayer	γ			Cet		B	12706	804	16970	nec
+bayer	δ			Cet			12387	779	16582	nec
+bayer	ε			Cet			12390	781	16620	nec
+bayer	ζ			Cet			8645	539	11353	nec
+bayer	η			Cet			5364	334	6805	nec
+bayer	θ			Cet			6537	402	8512	nec
+bayer	ι			Cet			1562	74	1522	nec
+bayer	κ	1		Cet			15457	996	20630	nec
+bayer	κ	2		Cet			15619	1007	20791	nec
+bayer	λ			Cet			13954	896	18604	nec
+bayer	μ			Cet			12828	813	17094	nec
+bayer	ν			Cet			12093	754	16161	nec
+bayer	ξ	1		Cet			10324	649	13611	nec
+bayer	ξ	2		Cet			11484	718	15318	nec
+bayer	ο			Cet			10826	681	14386	nec
+bayer	π			Cet			12770	811	17081	nec
+bayer	ρ			Cet			11345	708	15130	nec
+bayer	σ			Cet			11783	740	15798	nec
+bayer	τ			Cet			8102	509	10700	nec
+bayer	υ			Cet			9347	585	12274	nec
+bayer	φ	1		Cet			3455	194	4188	nec
+bayer	φ	2		Cet			3909	235	4813	nec
+bayer	φ	3		Cet			4371	267	5437	nec
+bayer	φ	4		Cet			4587	279	5722	nec
+bayer	χ			Cet			8497	531	11171	nec
+bayer	α			Cha			40702	3318	71243	nec
+bayer	β			Cha			60000	4674	106911	nec
+bayer	γ			Cha			51839	4174	92305	nec
+bayer	δ	1		Cha		A	52595	4231	93779	nec
+bayer	δ	1		Cha		B	52595	4231	93779	nec
+bayer	δ	2		Cha			52633	4234	93845	nec
+bayer	ε			Cha		A	58484	4583	104174	nec
+bayer	ε			Cha		B	58484	4583	104174	nec
+bayer	ζ			Cha			46928	3860	83979	nec
+bayer	η			Cha			42637	3502	75416	nec
+bayer	θ			Cha			40888	3340	71701	nec
+bayer	ι			Cha			46107	3795	82554	nec
+bayer	κ			Cha			58905	4605	104902	nec
+bayer	λ			Cha			59151	4617	105340	nec
+bayer	μ	1		Cha			49065	3983	87971	nec
+bayer	μ	2		Cha			49326		88351	iv27a
+bayer	ν			Cha			47956	3902	85396	nec
+bayer	π			Cha			56675	4479	101132	nec
+bayer	α			Cir			71908	5463	128898	nec
+bayer	β			Cir			74824	5670	135379	nec
+bayer	γ			Cir		A	75323	5704	136415	nec
+bayer	γ			Cir		B	75323	5704		nec
+bayer	δ			Cir			74778	5664	135240	nec
+bayer	ε			Cir			74837	5666	135291	nec
+bayer	ζ			Cir			72965	5539	131058	nec
+bayer	η			Cir			73776	5593	132905	nec
+bayer	θ			Cir			73129	5551	131492	nec
+bayer	A	1		Cnc			42795		74228	iv27a
+bayer	A	2		Cnc			43121		74873	iv27a
+bayer	b			Cnc			42917		74521	iv27a
+bayer	c			Cnc			42265		73143	iv27a
+bayer	d	1		Cnc			41117		70569	iv27a
+bayer	d	2		Cnc			41319		71030	iv27a
+bayer	α			Cnc			44066	3572	76756	nec
+bayer	β			Cnc			40526	3249	69267	nec
+bayer	γ			Cnc			42806	3449	74198	nec
+bayer	δ			Cnc			42911	3461	74442	nec
+bayer	ε			Cnc			42556	3429	73731	nec
+bayer	ζ	1		Cnc			40167	3208	68257	nec
+bayer	ζ	2		Cnc			40167	3210	68255	nec
+bayer	η			Cnc			41909	3366	72292	nec
+bayer	θ			Cnc			41822	3357	72094	nec
+bayer	ι			Cnc			43100		74738	iv27a
+bayer	ι	1		Cnc			43103	3475	74739	nec
+bayer	κ			Cnc			44798	3623	78316	nec
+bayer	λ			Cnc			40881	3268	70011	nec
+bayer	μ	1		Cnc			39659	3169	66875	nec
+bayer	μ	2		Cnc			39780	3176	67228	nec
+bayer	ν			Cnc			44405	3595	77350	nec
+bayer	ξ			Cnc			44946	3627	78515	nec
+bayer	ο	1		Cnc			43970	3561	76543	nec
+bayer	ο	2		Cnc			44001	3565	76582	nec
+bayer	π	2		Cnc			45410	3669	79554	nec
+bayer	ρ	1		Cnc			43587	3522	75732	nec
+bayer	ρ	2		Cnc			43834	3540	76219	nec
+bayer	σ	1		Cnc			43584	3519	75698	nec
+bayer	σ	2		Cnc			43932	3555	76398	nec
+bayer	σ	3		Cnc			44154	3575	76813	nec
+bayer	τ			Cnc			44818	3621	78235	nec
+bayer	υ	1		Cnc			41816	3355	72041	nec
+bayer	υ	2		Cnc			41940	3369	72324	nec
+bayer	φ	1		Cnc			41377	3304	71093	nec
+bayer	φ	2		Cnc		A	41404	3311	71151	nec
+bayer	φ	2		Cnc		B	41404	3310	71150	nec
+bayer	χ			Cnc			40843		69897	iv27a
+bayer	ψ			Cnc			40023	3191	67767	nec
+bayer	ψ	1		Cnc			40007		67690	nec
+bayer	ω	1		Cnc			39191	3124	65714	nec
+bayer	ω	2		Cnc			39263	3132	65856	nec
+bayer	α			Col			26634	1956	37795	nec
+bayer	β			Col			27628	2040	39425	nec
+bayer	γ			Col			28199	2106	40494	nec
+bayer	δ			Col			30277	2296	44762	nec
+bayer	ε			Col			25859	1862	36597	nec
+bayer	η			Col			28328	2120	40808	nec
+bayer	θ			Col			29034	2177	42167	nec
+bayer	κ			Col			29807	2256	43785	nec
+bayer	λ			Col			27810	2056	39764	nec
+bayer	μ			Col			27204	1996	38666	nec
+bayer	ν	1		Col			26412	1926	37430	nec
+bayer	ν	2		Col			26460	1935	37495	nec
+bayer	ξ			Col			28010	2087	40176	nec
+bayer	ο			Col			24659	1743	34642	nec
+bayer	π	1		Col			28957	2171	42078	nec
+bayer	π	2		Col			29064	2181	42303	nec
+bayer	σ			Col			28098	2092	40248	nec
+bayer	α			Com		A	64241	4968	114378	nec
+bayer	α			Com		B	64241	4969	114379	nec
+bayer	α	1		Com			64241	4968	114378	nec
+bayer	β			Com			64394	4983	114710	nec
+bayer	γ			Com			60742	4737	108381	nec
+bayer	α			CrA			94114	7254	178253	nec
+bayer	β			CrA			94160	7259	178345	nec
+bayer	γ			CrA		A	93825	7226	177474	nec
+bayer	γ			CrA		B	93825	7227	177475	nec
+bayer	γ	1		CrA			93825	7226	177474	nec
+bayer	δ			CrA			94005	7242	177873	nec
+bayer	ε			CrA			93174	7152	175813	nec
+bayer	ζ			CrA			93542	7188	176638	nec
+bayer	η	1		CrA			92308	7062	173715	nec
+bayer	η	2		CrA			92382	7068	173861	nec
+bayer	θ			CrA			90982	6951	170845	nec
+bayer	κ	1		CrA			90968	6952	170868	nec
+bayer	κ	2		CrA			90969	6952	170867	nec
+bayer	λ			CrA			91875	7021	172777	nec
+bayer	μ			CrA			92226	7050	173540	nec
+bayer	α			CrB			76267	5793	139006	nec
+bayer	β			CrB			75695	5747	137909	nec
+bayer	γ			CrB		A	76952	5849	140436	nec
+bayer	γ			CrB		B	76952	5849	140436	nec
+bayer	δ			CrB			77512	5889	141714	nec
+bayer	ε			CrB			78159	5947	143107	nec
+bayer	ζ	1		CrB			76669	5833	139891	nec
+bayer	η			CrB					137108	iv27a
+bayer	η			CrB		A	75312	5727	137107	nec
+bayer	η			CrB		B	75312	5727		nec
+bayer	η	1		CrB			75312	5727	137107	nec
+bayer	θ			CrB			76127	5778	138749	nec
+bayer	θ			CrB		A	76127	5778	138749	nec
+bayer	θ			CrB		B	76127	5778	138749	nec
+bayer	ι			CrB			78493	5971	143807	nec
+bayer	κ			CrB			77655	5901	142091	nec
+bayer	λ			CrB			78012	5936	142908	nec
+bayer	μ			CrB			76307	5800	139153	nec
+bayer	ν	1		CrB			80197	6107	147749	nec
+bayer	ν	2		CrB			80214	6108	147767	nec
+bayer	ξ			CrB			80181	6103	147677	nec
+bayer	ο			CrB			75049	5709	136512	nec
+bayer	π			CrB			77048	5855	140716	nec
+bayer	ρ			CrB			78459	5968	143761	nec
+bayer	σ			CrB		A			146361	nec
+bayer	σ			CrB		B		6064	146362	nec
+bayer	τ			CrB			79119	6018	145328	nec
+bayer	υ			CrB			79757	6074	146738	nec
+bayer	α			Crt			53740	4287	95272	nec
+bayer	β			Crt			54682	4343	97277	nec
+bayer	γ			Crt			55705	4405	99211	nec
+bayer	δ			Crt			55282	4382	98430	nec
+bayer	ε			Crt			55687	4402	99167	nec
+bayer	ζ			Crt			57283	4514	102070	nec
+bayer	η			Crt			58188	4567	103632	nec
+bayer	θ			Crt			56633	4468	100889	nec
+bayer	ι			Crt			56802	4488	101198	nec
+bayer	κ			Crt			55874	4416	99564	nec
+bayer	λ			Crt			55598	4395	98991	nec
+bayer	ψ			Crt			54742	4347	97411	nec
+bayer	ψ			Crt		A	54742	4347	97411	nec
+bayer	α	1		Cru				4730	108248	nec
+bayer	α	2		Cru				4731	108249	nec
+bayer	β			Cru			62434	4853	111123	nec
+bayer	γ			Cru			61084	4763	108903	nec
+bayer	γ			Cru					108925	iv27a
+bayer	δ			Cru			59747	4656	106490	nec
+bayer	ε			Cru			60260	4700	107446	nec
+bayer	ζ			Cru			60009	4679	106983	nec
+bayer	η			Cru			59072	4616	105211	nec
+bayer	θ	1		Cru			58758	4599	104671	nec
+bayer	θ	2		Cru			58867	4603	104841	nec
+bayer	ι			Cru			62268	4842	110829	nec
+bayer	κ			Cru			62931	4890	111973	nec
+bayer	λ			Cru			63007	4897	112078	nec
+bayer	μ	1		Cru			63003	4898	112092	nec
+bayer	μ	2		Cru			63005	4899	112091	nec
+bayer	α			Crv			59199	4623	105452	nec
+bayer	β			Crv			61359	4786	109379	nec
+bayer	γ			Crv			59803	4662	106625	nec
+bayer	δ			Crv			60965	4757	108767	nec
+bayer	ε			Crv			59316	4630	105707	nec
+bayer	ζ			Crv			60189	4696	107348	nec
+bayer	η			Crv			61174	4775	109085	nec
+bayer	A			Cyg			105186		203064	iv27a
+bayer	P			Cyg			100044	7763	193237	nec
+bayer	b	1		Cyg			99031		191026	iv27a
+bayer	b	2		Cyg			99303		191610	iv27a
+bayer	b	3		Cyg			99770		192640	iv27a
+bayer	c			Cyg			96895		186408	iv27a
+bayer	c			Cyg			96901		186427	iv27a
+bayer	d			Cyg			97635		188056	iv27a
+bayer	e			Cyg			98571		190147	iv27a
+bayer	f	1		Cyg			103632		200120	iv27a
+bayer	f	2		Cyg			104194		201251	iv27a
+bayer	g			Cyg			106093		204771	iv27a
+bayer	α			Cyg			102098	7924	197345	nec
+bayer	β	1		Cyg			95947	7417	183912	nec
+bayer	β	1		Cyg		A	95947	7417	183912	nec
+bayer	β	1		Cyg		B	95947		183913	nec
+bayer	β	2		Cyg			95951	7418	183914	nec
+bayer	γ			Cyg			100453	7796	194093	nec
+bayer	δ			Cyg			97165	7528	186882	nec
+bayer	δ			Cyg		B				nec
+bayer	ε			Cyg			102488	7949	197989	nec
+bayer	ζ			Cyg			104732	8115	202109	nec
+bayer	η			Cyg			98110	7615	188947	nec
+bayer	θ			Cyg			96441	7469	185395	nec
+bayer	ι	1		Cyg			95656	7408	183534	nec
+bayer	ι	2		Cyg			95853	7420	184006	nec
+bayer	κ			Cyg			94779	7328	181276	nec
+bayer	λ			Cyg			102589	7963	198183	nec
+bayer	λ			Cyg		A	102589	7963	198183	nec
+bayer	λ			Cyg		B	102589	7963	198183	nec
+bayer	μ	1		Cyg			107310	8309	206826	nec
+bayer	μ	2		Cyg			107310	8310	206827	nec
+bayer	ν			Cyg			103413	8028	199629	nec
+bayer	ξ			Cyg			104060	8079	200905	nec
+bayer	ο	1		Cyg			99675	7735	192577	nec
+bayer	ο	2		Cyg			99848	7751	192909	nec
+bayer	π	1		Cyg			107136	8301	206672	nec
+bayer	π	2		Cyg			107533	8335	207330	nec
+bayer	ρ			Cyg			106481	8252	205435	nec
+bayer	σ			Cyg			105102	8143	202850	nec
+bayer	τ			Cyg			104887	8130	202444	nec
+bayer	υ			Cyg			105138	8146	202904	nec
+bayer	φ			Cyg			96683	7478	185734	nec
+bayer	χ			Cyg			97629	7564	187796	nec
+bayer	ψ			Cyg			98055	7619	189037	nec
+bayer	ω	1		Cyg			101138	7844	195556	nec
+bayer	ω	2		Cyg			101243	7851	195774	nec
+bayer	α			Del			101958	7906	196867	nec
+bayer	β			Del			101769	7882	196524	nec
+bayer	γ	1		Del			102531	7947	197963	nec
+bayer	γ	2		Del			102532	7948	197964	nec
+bayer	δ			Del			102281	7928	197461	nec
+bayer	ε			Del			101421	7852	195810	nec
+bayer	ζ			Del			101589	7871	196180	nec
+bayer	η			Del			101483	7858	195943	nec
+bayer	θ			Del			101882	7892	196725	nec
+bayer	ι			Del			101800	7883	196544	nec
+bayer	κ			Del			101916	7896	196755	nec
+bayer	α			Dor			21281	1465	29305	nec
+bayer	β			Dor			26069	1922	37350	nec
+bayer	γ			Dor			19893	1338	27290	nec
+bayer	δ			Dor			27100	2015	39014	nec
+bayer	ε			Dor			27534	2064	39844	nec
+bayer	ζ			Dor			23693	1674	33262	nec
+bayer	η	1		Dor			28909	2194	42525	nec
+bayer	η	2		Dor			29353	2245	43455	nec
+bayer	θ			Dor			24372	1744	34649	nec
+bayer	κ			Dor			22040	1530	30478	nec
+bayer	λ			Dor			25429	1836	36189	nec
+bayer	ν			Dor			29134	2221	43107	nec
+bayer	π	1		Dor			30321	2352	45669	nec
+bayer	π	2		Dor			30565	2377	46116	nec
+bayer	A			Dra			80650		149212	iv27a
+bayer	b			Dra		A	90156	6923	170073	nec
+bayer	c			Dra			91755		173524	iv27a
+bayer	d			Dra			90905		171635	iv27a
+bayer	e			Dra			98583		190544	iv27a
+bayer	f			Dra			85805		159966	iv27a
+bayer	g			Dra			81660		151101	iv27a
+bayer	h			Dra			82860		153597	iv27a
+bayer	i			Dra			67627		121130	iv27a
+bayer	α			Dra			68756	5291	123299	nec
+bayer	β			Dra			85670	6536	159181	nec
+bayer	γ			Dra			87833	6705	164058	nec
+bayer	δ			Dra			94376	7310	180711	nec
+bayer	ε			Dra			97433	7582	188119	nec
+bayer	ζ			Dra			83895	6396	155763	nec
+bayer	η			Dra			80331	6132	148387	nec
+bayer	θ			Dra			78527	5986	144284	nec
+bayer	ι			Dra			75458	5744	137759	nec
+bayer	κ			Dra			61281	4787	109387	nec
+bayer	λ			Dra			56211	4434	100029	nec
+bayer	μ			Dra		A	83608	6370	154906	nec
+bayer	ν	1		Dra			85819	6554	159541	nec
+bayer	ν	2		Dra			85829	6555	159560	nec
+bayer	ξ			Dra			87585	6688	163588	nec
+bayer	ο			Dra			92512	7125	175306	nec
+bayer	π			Dra			95081	7371	182564	nec
+bayer	ρ			Dra			98702	7685	190940	nec
+bayer	σ			Dra			96100	7462	185144	nec
+bayer	τ			Dra			94648	7352	181984	nec
+bayer	υ			Dra			92782	7180	176524	nec
+bayer	φ			Dra			89908	6920	170000	nec
+bayer	χ			Dra			89937	6927	170153	nec
+bayer	ψ	1		Dra			86614	6636	162003	nec
+bayer	ψ	1		Dra			86614	6636	162003	nec
+bayer	ψ	1		Dra		B	86620	6637	162004	nec
+bayer	ψ	2		Dra			87728	6725	164613	nec
+bayer	ω			Dra			86201	6596	160922	nec
+bayer	α			Equ			104987	8131	202447	nec
+bayer	β			Equ			105570	8178	203562	nec
+bayer	γ			Equ			104521	8097	201601	nec
+bayer	δ			Equ			104858	8123	202275	nec
+bayer	ε			Equ		A	103569	8034	199766	nec
+bayer	ε			Equ		B	103569	8034	199766	nec
+bayer	ζ			Equ			104031	8066	200644	nec
+bayer	λ			Equ			103813		200256	iv27a
+bayer	A			Eri			19777		26846	iv27a
+bayer	b			Eri			22958		31512	iv27a
+bayer	c			Eri			21547		29391	iv27a
+bayer	d			Eri			20271		27563	iv27a
+bayer	d			Eri			20535		28028	iv27a
+bayer	e			Eri			15510		20794	iv27a
+bayer	f			Eri		A	17797	1190	24072	nec
+bayer	f			Eri		B	17797	1189	24071	nec
+bayer	g			Eri			17874		24160	iv27a
+bayer	h			Eri			17351		23319	iv27a
+bayer	i			Eri			18213		24626	iv27a
+bayer	l			Eri		A	21594	1481	29503	nec
+bayer	p			Eri		A	7751	486	10360	nec
+bayer	p			Eri		B	7751	487	10361	nec
+bayer	q	1		Eri			7978		10647	iv27a
+bayer	q	2		Eri			8241		10939	iv27a
+bayer	s			Eri			12413		16754	iv27a
+bayer	v			Eri			16341		21790	iv27a
+bayer	w			Eri			18255		24554	iv27a
+bayer	w			Eri					24555	iv27a
+bayer	y			Eri			16870		22663	iv27a
+bayer	α			Eri			7588	472	10144	nec
+bayer	β			Eri			23875	1666	33111	nec
+bayer	γ			Eri			18543	1231	25025	nec
+bayer	δ			Eri			17378	1136	23249	nec
+bayer	ε			Eri			16537	1084	22049	nec
+bayer	ζ			Eri			15197	984	20320	nec
+bayer	η			Eri			13701	874	18322	nec
+bayer	θ	1		Eri			13847	897	18622	nec
+bayer	θ	2		Eri			13847	898	18623	nec
+bayer	ι			Eri			12486	794	16815	nec
+bayer	κ			Eri			11407	721	15371	nec
+bayer	λ			Eri			23972	1679	33328	nec
+bayer	μ			Eri			22109	1520	30211	nec
+bayer	ν			Eri			21444	1463	29248	nec
+bayer	ξ			Eri			20507	1383	27861	nec
+bayer	ο	1		Eri			19587	1298	26574	nec
+bayer	ο	2		Eri			19849	1325	26965	nec
+bayer	ο	2		Eri					26976	iv27a
+bayer	π			Eri			17593	1162	23614	nec
+bayer	ρ	1		Eri			14060	907	18784	nec
+bayer	ρ	2		Eri			14168	917	18953	nec
+bayer	ρ	3		Eri			14293	925	19107	nec
+bayer	τ	1		Eri			12843	818	17206	nec
+bayer	τ	2		Eri			13288	850	17824	nec
+bayer	τ	3		Eri			14146	919	18978	nec
+bayer	τ	4		Eri			15474	1003	20720	nec
+bayer	τ	5		Eri			16611	1088	22203	nec
+bayer	τ	6		Eri			17651	1173	23754	nec
+bayer	τ	7		Eri			17717	1181	23878	nec
+bayer	τ	8		Eri			18216	1213	24587	nec
+bayer	τ	9		Eri			18673	1240	25267	nec
+bayer	υ	1		Eri			21248	1453	29085	nec
+bayer	υ	2		Eri			21393	1464	29291	nec
+bayer	υ	4		Eri			20042	1347	27376	nec
+bayer	φ			Eri			10602	674	14228	nec
+bayer	χ			Eri			9007	566	11937	nec
+bayer	ψ			Eri			23364	1617	32249	nec
+bayer	ω			Eri			22701	1560	31109	nec
+bayer	α			For			14879	963	20010	nec
+bayer	β			For			13147	841	17652	nec
+bayer	γ	1		For			13197	844	17713	nec
+bayer	γ	2		For			13202	845	17729	nec
+bayer	δ			For			17304	1134	23227	nec
+bayer	ε			For			14086	914	18907	nec
+bayer	ζ			For			13942	901	18692	nec
+bayer	η	1		For			13040		17528	iv27a
+bayer	η	2		For			13225	848	17793	nec
+bayer	η	3		For			13265	851	17829	nec
+bayer	ι	1		For			12122	767	16307	nec
+bayer	ι	2		For			12288	777	16538	nec
+bayer	κ			For			11072	695	14802	nec
+bayer	λ	1		For			11867	744	15975	nec
+bayer	λ	2		For			12186	772	16417	nec
+bayer	μ			For			10320	652	13709	nec
+bayer	ν			For			9677	612	12767	nec
+bayer	π			For			9440	594	12438	nec
+bayer	ρ			For			17738	1184	23940	nec
+bayer	σ			For			17618	1171	23738	nec
+bayer	τ			For			17007	1114	22789	nec
+bayer	φ			For			11477	724	15427	nec
+bayer	χ	1		For			15987	1042	21423	nec
+bayer	χ	2		For			16112	1054	21574	nec
+bayer	χ	3		For			16156		21635	iv27a
+bayer	ψ			For			13473	863	18149	nec
+bayer	ω			For			11918	749	16046	nec
+bayer	A			Gem			35846		57727	iv27a
+bayer	b			Gem			36429		59148	iv27a
+bayer	c			Gem			37704		62285	iv27a
+bayer	d			Gem			32921		49908	iv27a
+bayer	e			Gem			33202		50635	iv27a
+bayer	f			Gem			37300		61338	iv27a
+bayer	g			Gem			37908		62721	iv27a
+bayer	α			Gem					60178	iv27a
+bayer	α			Gem			36850	2891	60179	nec
+bayer	β			Gem			37826	2990	62509	nec
+bayer	γ			Gem			31681	2421	47105	nec
+bayer	δ			Gem			35550	2777	56986	nec
+bayer	ε			Gem			32246	2473	48329	nec
+bayer	ζ			Gem			34088	2650	52973	nec
+bayer	η			Gem			29655	2216	42995	nec
+bayer	η			Gem		B	29655		42995	nec
+bayer	θ			Gem			33018	2540	50019	nec
+bayer	ι			Gem			36046	2821	58207	nec
+bayer	κ			Gem			37740	2985	62345	nec
+bayer	λ			Gem			35350	2763	56537	nec
+bayer	μ			Gem			30343	2286	44478	nec
+bayer	ν			Gem					257937	iv27a
+bayer	ν			Gem			30883	2343	45542	nec
+bayer	ξ			Gem			32362	2484	48737	nec
+bayer	ο			Gem			37265	2930	61110	nec
+bayer	π			Gem			38016	3013	62898	nec
+bayer	ρ			Gem			36366	2852	58946	nec
+bayer	σ			Gem			37629	2973	62044	nec
+bayer	τ			Gem			34693	2697	54719	nec
+bayer	υ			Gem			36962	2905	60522	nec
+bayer	φ			Gem			38538	3067	64145	nec
+bayer	χ			Gem			39424	3149	66216	nec
+bayer	ω			Gem			33927	2630	52497	nec
+bayer	α			Gru			109268	8425	209952	nec
+bayer	β			Gru			112122	8636	214952	nec
+bayer	γ			Gru			108085	8353	207971	nec
+bayer	δ	1		Gru			110997	8556	213009	nec
+bayer	δ	2		Gru			111043	8560	213080	nec
+bayer	ε			Gru			112623	8675	215789	nec
+bayer	ζ			Gru			113638	8747	217364	nec
+bayer	η			Gru			112374	8655	215369	nec
+bayer	θ			Gru			114131	8787	218227	nec
+bayer	θ			Gru		A	114131	8787	218227	nec
+bayer	ι			Gru			114421	8820	218670	nec
+bayer	κ			Gru			113957	8774	217902	nec
+bayer	λ			Gru			109111	8411	209688	nec
+bayer	μ	1		Gru			109908	8486	211088	nec
+bayer	μ	2		Gru			109973	8488	211202	nec
+bayer	ν			Gru			110936	8552	212953	nec
+bayer	ξ			Gru			106327	8229	204783	nec
+bayer	ο			Gru			115713	8907	220729	nec
+bayer	π	1		Gru			110478		212087	iv27a
+bayer	π	2		Gru			110506	8524	212132	nec
+bayer	ρ			Gru			112203	8644	215104	nec
+bayer	σ	1		Gru			111594	8600	214085	nec
+bayer	σ	2		Gru			111643	8602	214150	nec
+bayer	τ	1		Gru			113044	8700	216435	nec
+bayer	τ	2		Gru			113191		216655	iv27a
+bayer	τ	2		Gru			113190		216656	iv27a
+bayer	τ	3		Gru			113307	8722	216823	nec
+bayer	υ			Gru		A	114132	8790	218242	nec
+bayer	φ			Gru			115054	8859	219693	nec
+bayer	A			Her			89172		167006	iv27a
+bayer	b			Her			88745		165908	iv27a
+bayer	c			Her			83838		155103	iv27a
+bayer	d			Her			83313		154029	iv27a
+bayer	e			Her			84606		156729	iv27a
+bayer	f			Her			87563		163217	iv27a
+bayer	g			Her			80704		148783	iv27a
+bayer	h			Her			81008		149161	iv27a
+bayer	i			Her			82073		151217	iv27a
+bayer	k			Her			82402		151956	iv27a
+bayer	l			Her			82216		151525	iv27a
+bayer	n			Her			81007	6158	149121	nec
+bayer	o			Her			80351		147869	iv27a
+bayer	q			Her			79332		145647	iv27a
+bayer	r			Her			78481		143666	iv27a
+bayer	s			Her			80843		148897	iv27a
+bayer	t			Her			89935		168914	iv27a
+bayer	u			Her			84573		156633	iv27a
+bayer	w			Her			84862		157214	iv27a
+bayer	x			Her			85379		158414	iv27a
+bayer	y			Her			86182		160290	iv27a
+bayer	z			Her			87280		162732	iv27a
+bayer	α	1		Her			84345	6406	156014	nec
+bayer	α	2		Her					156015	iv27a
+bayer	β			Her			80816	6148	148856	nec
+bayer	γ			Her			80170	6095	147547	nec
+bayer	δ			Her			84379	6410	156164	nec
+bayer	ε			Her			83207	6324	153808	nec
+bayer	ζ			Her			81693	6212	150680	nec
+bayer	ζ			Her		A	81693	6212	150680	nec
+bayer	ζ			Her		B				nec
+bayer	η			Her			81833	6220	150997	nec
+bayer	θ			Her			87808	6695	163770	nec
+bayer	ι			Her			86414	6588	160762	nec
+bayer	κ			Her			79043		145001	iv27a
+bayer	κ			Her		B	79045	6009	145000	nec
+bayer	λ			Her			85693	6526	158899	nec
+bayer	μ			Her			86974	6623	161797	nec
+bayer	ν			Her			87998	6707	164136	nec
+bayer	ξ			Her			87933	6703	163993	nec
+bayer	ο			Her			88794	6779	166014	nec
+bayer	π			Her			84380	6418	156283	nec
+bayer	ρ			Her			85112	6484	157778	nec
+bayer	ρ			Her		A	85112	6485	157779	nec
+bayer	ρ			Her		B	85112	6484	157778	nec
+bayer	σ			Her			81126	6168	149630	nec
+bayer	τ			Her			79992	6092	147394	nec
+bayer	υ			Her			78592	5982	144206	nec
+bayer	φ			Her			79101	6023	145389	nec
+bayer	χ			Her			77760	5914	142373	nec
+bayer	ω			Her			80463	6117	148112	nec
+bayer	α			Hor			19747	1326	26967	nec
+bayer	β			Hor			13884	909	18866	nec
+bayer	γ			Hor			12871	833	17504	nec
+bayer	δ			Hor			19515	1302	26612	nec
+bayer	ζ			Hor			12484	802	16920	nec
+bayer	η			Hor			12225	778	16555	nec
+bayer	ι			Hor			12653	810	17051	nec
+bayer	λ			Hor			11258	714	15233	nec
+bayer	μ			Hor			14240	934	19319	nec
+bayer	ν			Hor			13141	852	17848	nec
+bayer	A			Hya			46982		82870	iv27a
+bayer	C			Hya			41307		71155	iv27a
+bayer	D			Hya			43067		74918	iv27a
+bayer	E			Hya			72571		130694	iv27a
+bayer	F			Hya			42835		74395	iv27a
+bayer	G			Hya			46371		81799	iv27a
+bayer	I			Hya			47522		83953	iv27a
+bayer	P			Hya			45811		80586	iv27a
+bayer	a			Hya			42509		73840	iv27a
+bayer	b	1		Hya			52737		93397	iv27a
+bayer	b	3		Hya			53252		94388	iv27a
+bayer	k			Hya			70306		125932	iv27a
+bayer	l			Hya			70753		126769	iv27a
+bayer	m			Hya		A	72197	5497	129926	nec
+bayer	α			Hya			46390	3748	81797	nec
+bayer	β			Hya			57936	4552	103192	nec
+bayer	β			Hya		A	57936	4552	103192	nec
+bayer	β			Hya		B	57936	4552	103192	nec
+bayer	γ			Hya			64962	5020	115659	nec
+bayer	δ			Hya			42313	3410	73262	nec
+bayer	ε			Hya			43109	3482	74874	nec
+bayer	ζ			Hya			43813	3547	76294	nec
+bayer	η			Hya			42799	3454	74280	nec
+bayer	θ			Hya			45336	3665	79469	nec
+bayer	ι			Hya			47431	3845	83618	nec
+bayer	κ			Hya			47452	3849	83754	nec
+bayer	λ			Hya			49841	3994	88284	nec
+bayer	μ			Hya			51069	4094	90432	nec
+bayer	ν			Hya			52943	4232	93813	nec
+bayer	ξ			Hya			56343	4450	100407	nec
+bayer	ο			Hya			56922	4494	101431	nec
+bayer	π			Hya			68895	5287	123123	nec
+bayer	ρ			Hya			43234	3492	75137	nec
+bayer	σ			Hya			42402	3418	73471	nec
+bayer	τ	1		Hya			46509	3759	81997	nec
+bayer	τ	2		Hya			46776	3787	82446	nec
+bayer	υ	1		Hya			48356	3903	85444	nec
+bayer	υ	2		Hya			49402	3970	87504	nec
+bayer	φ	1		Hya			51614		91369	iv27a
+bayer	φ	2		Hya			51905	4156	91880	nec
+bayer	φ	3		Hya			52085	4171	92214	nec
+bayer	χ	1		Hya			54204	4314	96202	nec
+bayer	χ	2		Hya			54255	4317	96314	nec
+bayer	ψ			Hya			64166	4958	114149	nec
+bayer	ω			Hya			44659	3613	77996	nec
+bayer	α			Hyi			9236	591	12311	nec
+bayer	β			Hyi			2021	98	2151	nec
+bayer	γ			Hyi			17678	1208	24512	nec
+bayer	δ			Hyi			11001	705	15008	nec
+bayer	ε			Hyi			12394	806	16978	nec
+bayer	ζ			Hyi			12876	837	17566	nec
+bayer	η	1		Hyi			8751		11733	iv27a
+bayer	η	2		Hyi			8928	570	11977	nec
+bayer	θ			Hyi			14131	939	19400	nec
+bayer	ι			Hyi			15201	1025	21024	nec
+bayer	κ			Hyi			11095	715	15248	nec
+bayer	λ			Hyi			3781	236	4815	nec
+bayer	μ			Hyi			11757	776	16522	nec
+bayer	ν			Hyi			13244	872	18293	nec
+bayer	π	1		Hyi			10418	667	14141	nec
+bayer	π	2		Hyi			10513	678	14287	nec
+bayer	σ			Hyi			8991	593	12363	nec
+bayer	τ	1		Hyi		A	7879	516	10859	nec
+bayer	τ	2		Hyi			8366	550	11604	nec
+bayer	α			Ind			101772	7869	196171	nec
+bayer	β			Ind			103227	7986	198700	nec
+bayer	γ			Ind			105841	8188	203760	nec
+bayer	δ			Ind			108431	8368	208450	nec
+bayer	ε			Ind			108870	8387	209100	nec
+bayer	ζ			Ind			102790	7952	198048	nec
+bayer	η			Ind			102333	7920	197157	nec
+bayer	θ			Ind			105319	8140	202730	nec
+bayer	ι			Ind			102950	7968	198308	nec
+bayer	κ	1		Ind			108478	8369	208496	nec
+bayer	κ	2		Ind			109081	8409	209529	nec
+bayer	μ			Ind			104085	8055	200365	nec
+bayer	ν			Ind			110618	8515	211998	nec
+bayer	ο			Ind			107835	8333	207241	nec
+bayer	π			Ind			108281	8362	208149	nec
+bayer	ρ			Ind			113137	8701	216437	nec
+bayer	β			LMi			51233	4100	90537	nec
+bayer	α			Lac			111169	8585	213558	nec
+bayer	β			Lac			110538	8538	212496	nec
+bayer	A			Leo			49637		87837	iv27a
+bayer	b			Leo			53954		95608	iv27a
+bayer	c			Leo			53824		95382	iv27a
+bayer	d			Leo			53807		95345	iv27a
+bayer	e			Leo			56127		99998	iv27a
+bayer	f			Leo			47701		84107	iv27a
+bayer	g			Leo			48390		85376	iv27a
+bayer	h			Leo			46774		82381	iv27a
+bayer	k			Leo			52689		93291	iv27a
+bayer	l			Leo			52911		93702	iv27a
+bayer	m			Leo			52686		93257	iv27a
+bayer	n			Leo			55016		97907	iv27a
+bayer	o			Leo			58159		103578	iv27a
+bayer	p	1		Leo			53273		94402	iv27a
+bayer	p	2		Leo			53907		95578	iv27a
+bayer	p	3		Leo			54049		95849	iv27a
+bayer	p	4		Leo			54336		96436	iv27a
+bayer	p	5		Leo			54849		97585	iv27a
+bayer	α			Leo			49669	3982	87901	nec
+bayer	β			Leo			57632	4534	102647	nec
+bayer	γ	1		Leo			50583	4057	89484	nec
+bayer	γ	1		Leo			50583	4057	89484	nec
+bayer	γ	2		Leo					89485	iv27a
+bayer	δ			Leo			54872	4357	97603	nec
+bayer	ε			Leo			47908	3873	84441	nec
+bayer	ζ			Leo			50335	4031	89025	nec
+bayer	η			Leo			49583	3975	87737	nec
+bayer	θ			Leo			54879	4359	97633	nec
+bayer	ι			Leo			55642	4399	99028	nec
+bayer	κ			Leo			46146	3731	81146	nec
+bayer	λ			Leo			46750	3773	82308	nec
+bayer	μ			Leo			48455	3905	85503	nec
+bayer	ν			Leo			48883	3937	86360	nec
+bayer	ξ			Leo			46771	3782	82395	nec
+bayer	ο			Leo			47508	3852	83808	nec
+bayer	ο			Leo					83809	iv27a
+bayer	π			Leo			49029	3950	86663	nec
+bayer	ρ			Leo			51624	4133	91316	nec
+bayer	σ			Leo			55434	4386	98664	nec
+bayer	τ			Leo			55945	4418	99648	nec
+bayer	υ			Leo			56647	4471	100920	nec
+bayer	φ			Leo			55084	4368	98058	nec
+bayer	χ			Leo			54182	4310	96097	nec
+bayer	ψ			Leo			47723	3866	84194	nec
+bayer	ω			Leo		A	46454	3754	81858	nec
+bayer	α			Lep			25985	1865	36673	nec
+bayer	β			Lep			25606	1829	36079	nec
+bayer	γ			Lep					38392	iv27a
+bayer	γ			Lep			27072	1983	38393	nec
+bayer	δ			Lep			27654	2035	39364	nec
+bayer	ε			Lep			23685	1654	32887	nec
+bayer	ζ			Lep			27288	1998	38678	nec
+bayer	η			Lep			28103	2085	40136	nec
+bayer	θ			Lep			28910	2155	41695	nec
+bayer	ι			Lep			24244	1696	33802	nec
+bayer	κ			Lep			24327	1705	33949	nec
+bayer	λ			Lep			24845	1756	34816	nec
+bayer	μ			Lep			24305	1702	33904	nec
+bayer	ν			Lep			24873	1757	34863	nec
+bayer	α	1		Lib			72603	5530	130819	nec
+bayer	α	2		Lib			72622	5531	130841	nec
+bayer	β			Lib			74785	5685	135742	nec
+bayer	γ			Lib			76333	5787	138905	nec
+bayer	δ			Lib			73473	5586	132742	nec
+bayer	ε			Lib			75379	5723	137052	nec
+bayer	ζ	1		Lib			75730	5743	137744	nec
+bayer	ζ	3		Lib			75944	5750	138137	nec
+bayer	ζ	4		Lib			76126	5764	138485	nec
+bayer	η			Lib			77060	5848	140417	nec
+bayer	θ			Lib			77853	5908	142198	nec
+bayer	ι	1		Lib			74392	5652	134759	nec
+bayer	ι	2		Lib			74493	5656	134967	nec
+bayer	κ			Lib			76880	5838	139997	nec
+bayer	λ			Lib			77811	5902	142096	nec
+bayer	μ			Lib			72489	5523	130559	nec
+bayer	μ			Lib		A	72489	5523	130559	nec
+bayer	ν			Lib			73945	5622	133774	nec
+bayer	ξ	1		Lib			72934	5554	131530	nec
+bayer	ξ	2		Lib			73133	5564	131918	nec
+bayer	ο			Lib			75118	5703	136407	nec
+bayer	σ			Lib			73714	5603	133216	nec
+bayer	τ			Lib			76600	5812	139365	nec
+bayer	υ			Lib			76470	5794	139063	nec
+bayer	a			Lup			71500		128266	iv27a
+bayer	b			Lup			72290		129893	iv27a
+bayer	c			Lup			73095		131562	iv27a
+bayer	d			Lup		A	76371	5781	138769	nec
+bayer	e			Lup			74449		134687	iv27a
+bayer	f			Lup			74857		135758	iv27a
+bayer	g			Lup			76829		139664	iv27a
+bayer	h			Lup			76939		139980	iv27a
+bayer	i			Lup			74604		135153	iv27a
+bayer	k			Lup			75501		137058	iv27a
+bayer	α			Lup			71860	5469	129056	nec
+bayer	β			Lup			73273	5571	132058	nec
+bayer	γ			Lup			76297	5776	138690	nec
+bayer	γ			Lup		A	76297	5776	138690	nec
+bayer	γ			Lup		B	76297	5776	138690	nec
+bayer	δ			Lup			75141	5695	136298	nec
+bayer	ε			Lup			75264	5708	136504	nec
+bayer	ζ			Lup			74395	5649	134505	nec
+bayer	η			Lup			78384	5948	143118	nec
+bayer	θ			Lup			78918	5987	144294	nec
+bayer	ι			Lup			69996	5354	125238	nec
+bayer	κ	1		Lup			74376	5646	134481	nec
+bayer	κ	2		Lup			74380	5647	134482	nec
+bayer	λ			Lup			74117	5626	133955	nec
+bayer	μ	1		Lup			74911	5683	135734	nec
+bayer	μ	2		Lup			74911	5683	135734	nec
+bayer	ν	1		Lup			75206	5698	136351	nec
+bayer	ν	2		Lup			75181	5699	136352	nec
+bayer	ξ	1		Lup			78105	5925	142629	nec
+bayer	ξ	2		Lup			78106	5926	142630	nec
+bayer	ο			Lup			72683	5528	130807	nec
+bayer	π			Lup			73807	5605	133242	nec
+bayer	π			Lup		A	73807	5605	133242	nec
+bayer	π			Lup		B	73807	5606	133243	nec
+bayer	ρ			Lup			71536	5453	128345	nec
+bayer	σ			Lup			71121	5425	127381	nec
+bayer	τ	1		Lup			70574	5395	126341	nec
+bayer	τ	2		Lup			70576	5396	126354	nec
+bayer	υ			Lup			75439	5719	136933	nec
+bayer	φ	1		Lup			75177	5705	136422	nec
+bayer	φ	2		Lup			75304	5712	136664	nec
+bayer	χ			Lup			77634	5883	141556	nec
+bayer	ψ	1		Lup			76705	5820	139521	nec
+bayer	ψ	2		Lup			76945	5839	140008	nec
+bayer	ω			Lup			76552	5797	139127	nec
+bayer	α			Lyn			45860	3705	80493	nec
+bayer	α			Lyr			91262	7001	172167	nec
+bayer	β			Lyr			92420	7106	174638	nec
+bayer	β			Lyr					174639	iv27a
+bayer	β			Lyr					174664	iv27a
+bayer	γ			Lyr			93194	7178	176437	nec
+bayer	δ	1		Lyr			92728	7131	175426	nec
+bayer	δ	2		Lyr			92791	7139	175588	nec
+bayer	ε	1		Lyr		A	91919	7051		nec
+bayer	ε	1		Lyr		B	91919	7052	173583	nec
+bayer	ε	2		Lyr		A	91926	7053	173607	nec
+bayer	ε	2		Lyr		B	91926	7054	173608	nec
+bayer	ζ	1		Lyr			91971	7056	173648	nec
+bayer	ζ	2		Lyr			91973	7057	173649	nec
+bayer	η			Lyr			94481	7298	180163	nec
+bayer	θ			Lyr			94713	7314	180809	nec
+bayer	ι			Lyr			93903	7262	178475	nec
+bayer	κ			Lyr			89826	6872	168775	nec
+bayer	λ			Lyr			93279	7192	176670	nec
+bayer	μ			Lyr			90191	6903	169702	nec
+bayer	ν	1		Lyr			92398	7100	174585	nec
+bayer	ν	2		Lyr			92405	7102	174602	nec
+bayer	α			Men			29271	2261	43834	nec
+bayer	β			Men			23467	1677	33285	nec
+bayer	γ			Men			25918	1953	37763	nec
+bayer	δ			Men			20049	1426	28525	nec
+bayer	ε			Men			36039	2919	60816	nec
+bayer	ζ			Men			31897	2559	50506	nec
+bayer	η			Men			22871	1629	32440	nec
+bayer	θ			Men			33384	2689	54239	nec
+bayer	ι			Men			26264	1991	38602	nec
+bayer	κ			Men			27566	2125	40953	nec
+bayer	λ			Men			27369		39810	iv27a
+bayer	μ			Men			21949	1541	30612	nec
+bayer	ν			Men			20297	1456	29116	nec
+bayer	ξ			Men			23148	1716	34172	nec
+bayer	π			Men			26394	2022	39091	nec
+bayer	α			Mic			102831	7965	198232	nec
+bayer	β			Mic			102989	7979	198529	nec
+bayer	γ			Mic			103738	8039	199951	nec
+bayer	δ			Mic			104148	8070	200718	nec
+bayer	ε			Mic			105140	8135	202627	nec
+bayer	ζ			Mic			103882	8048	200163	nec
+bayer	η			Mic			104177	8069	200702	nec
+bayer	θ	1		Mic			105382	8151	203006	nec
+bayer	θ	2		Mic			105696	8180	203585	nec
+bayer	ι			Mic			102693	7943	197937	nec
+bayer	ν			Mic			101477	7846	195569	nec
+bayer	α			Mon			37447	2970	61935	nec
+bayer	β			Mon			30867	2356	45725	nec
+bayer	β			Mon		A	30867	2356	45725	nec
+bayer	β			Mon		B	30867	2357	45726	nec
+bayer	β			Mon		C	30867	2358	45727	nec
+bayer	γ			Mon			29651	2227	43232	nec
+bayer	δ			Mon			34769	2714	55185	nec
+bayer	ε			Mon			30419	2298	44769	nec
+bayer	ε			Mon			30419	2298	44769	nec
+bayer	ε			Mon			30422		44770	iv27a
+bayer	ζ			Mon			39863	3188	67594	nec
+bayer	α			Mus			61585	4798	109668	nec
+bayer	β			Mus		A	62322	4844	110879	nec
+bayer	β			Mus		B	62322	4844	110879	nec
+bayer	γ			Mus			61199	4773	109026	nec
+bayer	δ			Mus			63613	4923	112985	nec
+bayer	ε			Mus			59929	4671	106849	nec
+bayer	ζ	1		Mus			60329	4704	107567	nec
+bayer	ζ	2		Mus			60320	4703	107566	nec
+bayer	η			Mus			64661	4993	114911	nec
+bayer	θ			Mus			64094	4952	113904	nec
+bayer	ι	1		Mus			65468	5042	116244	nec
+bayer	ι	2		Mus			65628		116579	iv27a
+bayer	λ			Mus			57363	4520	102249	nec
+bayer	μ			Mus			57581	4530	102584	nec
+bayer	γ	1		Nor			79790	6058	146143	nec
+bayer	γ	2		Nor			80000	6072	146686	nec
+bayer	δ			Nor			78914	5980	144197	nec
+bayer	ε			Nor			80582	6115	147971	nec
+bayer	ζ			Nor			79497	6019	145361	nec
+bayer	η			Nor			78639	5962	143546	nec
+bayer	θ			Nor			79653	6045	145842	nec
+bayer	ι	1		Nor			78662	5961	143474	nec
+bayer	ι	2		Nor			79153	5994	144480	nec
+bayer	κ			Nor			79509	6024	145397	nec
+bayer	λ			Nor			79963	6071	146667	nec
+bayer	μ			Nor			81122	6155	149038	nec
+bayer	α			Oct			104043	8021	199532	nec
+bayer	β			Oct			112405	8630	214846	nec
+bayer	γ	1		Oct			117689	9032	223647	nec
+bayer	γ	2		Oct			118114	9061	224362	nec
+bayer	γ	3		Oct			814	30	636	nec
+bayer	δ			Oct			70638	5339	124882	nec
+bayer	ε			Oct			110256	8481	210967	nec
+bayer	ζ			Oct			43908	3678	79837	nec
+bayer	η			Oct			53702	4312	96124	nec
+bayer	θ			Oct			122	9084	224889	nec
+bayer	ι			Oct		A	63031	4870	111482	nec
+bayer	κ			Oct			66753	5084	117374	nec
+bayer	λ			Oct			107843	8280	206240	nec
+bayer	λ			Oct		A	107843	8280	206240	nec
+bayer	μ	1		Oct			102162	7863	196051	nec
+bayer	μ	2		Oct			102125	7864	196067	nec
+bayer	ν			Oct			107089	8254	205478	nec
+bayer	ξ			Oct			112781	8663	215573	nec
+bayer	π	1		Oct			73540	5525	130650	nec
+bayer	π	2		Oct			73771	5545	131246	nec
+bayer	ρ			Oct			76996	5729	137333	nec
+bayer	σ			Oct			104382	7228	177482	nec
+bayer	τ			Oct			115836	8862	219765	nec
+bayer	υ			Oct			111196	8505	211539	nec
+bayer	φ			Oct			90133	6829	167468	nec
+bayer	χ			Oct			92824	6721	164461	nec
+bayer	ψ			Oct			110078	8471	210853	nec
+bayer	ω			Oct			74296	5557	131596	nec
+bayer	A			Oph			84405		155885	iv27a
+bayer	A			Oph					155886	iv27a
+bayer	b			Oph			85340		157792	iv27a
+bayer	c			Oph			85755		158643	iv27a
+bayer	d			Oph			85423		157919	iv27a
+bayer	e			Oph			84671		156681	iv27a
+bayer	f			Oph			85998		159480	iv27a
+bayer	p			Oph			88601		165341	iv27a
+bayer	α			Oph			86032	6556	159561	nec
+bayer	β			Oph			86742	6603	161096	nec
+bayer	γ			Oph			87108	6629	161868	nec
+bayer	δ			Oph			79593	6056	146051	nec
+bayer	ε			Oph			79882	6075	146791	nec
+bayer	ζ			Oph			81377	6175	149757	nec
+bayer	η			Oph			84012	6378	155125	nec
+bayer	η			Oph		A	84012	6378	155125	nec
+bayer	η			Oph		B	84012	6378	155125	nec
+bayer	θ			Oph			84970	6453	157056	nec
+bayer	ι			Oph			82673	6281	152614	nec
+bayer	κ			Oph			83000	6299	153210	nec
+bayer	λ			Oph			80883	6149	148857	nec
+bayer	λ			Oph		A	80883	6149	148857	nec
+bayer	λ			Oph		B	80883	6149	148857	nec
+bayer	μ			Oph			86284	6567	159975	nec
+bayer	ν			Oph			88048	6698	163917	nec
+bayer	ξ			Oph			84893	6445	156897	nec
+bayer	ο			Oph			84625		156350	iv27a
+bayer	ο	1		Oph			84626	6424	156349	nec
+bayer	ρ			Oph			80473	6112	147933	nec
+bayer	ρ			Oph					147934	iv27a
+bayer	ρ			Oph		A	80473	6112	147933	nec
+bayer	σ			Oph			85355	6498	157999	nec
+bayer	τ			Oph		A	88404	6734	164765	nec
+bayer	τ			Oph		B	88404	6733	164764	nec
+bayer	τ	1		Oph			88404	6734	164765	nec
+bayer	υ			Oph			80628	6129	148367	nec
+bayer	φ			Oph			80894	6147	148786	nec
+bayer	χ			Oph			80569	6118	148184	nec
+bayer	ψ			Oph			80343	6104	147700	nec
+bayer	ω			Oph			80975	6153	148898	nec
+bayer	A			Ori			25813		36267	iv27a
+bayer	b			Ori			26885		37984	iv27a
+bayer	c			Ori			26237		37018	iv27a
+bayer	d			Ori			26563		37507	iv27a
+bayer	e			Ori			25247		35369	iv27a
+bayer	f	1		Ori			29434		42545	iv27a
+bayer	f	2		Ori			29704		43153	iv27a
+bayer	g			Ori			22833		31283	iv27a
+bayer	h			Ori			23983		33254	iv27a
+bayer	i			Ori		A	23879	1664	33054	nec
+bayer	k			Ori			29800		43386	iv27a
+bayer	l			Ori			29850		43525	iv27a
+bayer	m			Ori			25145		35148	iv27a
+bayer	m			Ori			25142		35149	iv27a
+bayer	n	1		Ori		A	25861	1842	36351	nec
+bayer	n	2		Ori			26126		36777	iv27a
+bayer	o			Ori			25044		35039	iv27a
+bayer	p			Ori			25282		35410	iv27a
+bayer	α			Ori			27989	2061	39801	nec
+bayer	β			Ori			24436	1713	34085	nec
+bayer	γ			Ori			25336	1790	35468	nec
+bayer	δ			Ori					36485	iv27a
+bayer	δ			Ori			25930	1852	36486	nec
+bayer	ε			Ori			26311	1903	37128	nec
+bayer	ζ			Ori			26727	1948	37742	nec
+bayer	ζ			Ori		A	26727	1948	37742	nec
+bayer	ζ			Ori		B	26727	1949	37743	nec
+bayer	η			Ori			25281	1788	35411	nec
+bayer	η			Ori		A	25281	1788	35411	nec
+bayer	η			Ori		B	25281	1788	35411	nec
+bayer	θ	1		Ori			26220		37020	iv27a
+bayer	θ	1		Ori					37021	iv27a
+bayer	θ	1		Ori			26224		37023	iv27a
+bayer	θ	1		Ori		C	26221	1895	37022	nec
+bayer	θ	2		Ori			26235	1897	37041	nec
+bayer	θ	2		Ori		B	26235	1897	37042	nec
+bayer	ι			Ori			26241	1899	37043	nec
+bayer	κ			Ori			27366	2004	38771	nec
+bayer	λ			Ori			26207	1879	36861	nec
+bayer	λ			Ori		A	26207	1879	36861	nec
+bayer	λ			Ori		B		1880	36862	nec
+bayer	μ			Ori			28614	2124	40932	nec
+bayer	ν			Ori			29038	2159	41753	nec
+bayer	ξ			Ori			29426	2199	42560	nec
+bayer	ο	1		Ori			22667	1556	30959	nec
+bayer	ο	2		Ori			22957	1580	31421	nec
+bayer	π	1		Ori			22845	1570	31295	nec
+bayer	π	2		Ori			22509	1544	30739	nec
+bayer	π	3		Ori			22449	1543	30652	nec
+bayer	π	4		Ori			22549	1552	30836	nec
+bayer	π	5		Ori			22797	1567	31237	nec
+bayer	π	6		Ori			23123	1601	31767	nec
+bayer	ρ			Ori			24331	1698	33856	nec
+bayer	σ			Ori			26549	1931	37468	nec
+bayer	σ			Ori		E		1932	37479	nec
+bayer	τ			Ori			24674	1735	34503	nec
+bayer	υ			Ori			25923	1855	36512	nec
+bayer	φ	1		Ori			26176	1876	36822	nec
+bayer	φ	2		Ori			26366	1907	37160	nec
+bayer	χ	1		Ori			27913	2047	39587	nec
+bayer	χ	2		Ori			28716	2135	41117	nec
+bayer	ψ	1		Ori			25302	1789	35439	nec
+bayer	ψ	2		Ori			25473	1811	35715	nec
+bayer	ω			Ori			26594	1934	37490	nec
+bayer	α			Pav			100751	7790	193924	nec
+bayer	β			Pav			102395	7913	197051	nec
+bayer	γ			Pav			105858	8181	203608	nec
+bayer	δ			Pav			99240	7665	190248	nec
+bayer	ε			Pav			98495	7590	188228	nec
+bayer	ζ			Pav			91792	6982	171759	nec
+bayer	η			Pav			86929	6582	160635	nec
+bayer	θ			Pav			92294	7036	173168	nec
+bayer	ι			Pav			89042	6761	165499	nec
+bayer	κ			Pav			93015	7107	174694	nec
+bayer	λ			Pav			92609	7074	173948	nec
+bayer	μ	1		Pav			98478	7603	188584	nec
+bayer	μ	2		Pav			98624	7612	188887	nec
+bayer	ν			Pav			90797	6916	169978	nec
+bayer	ξ			Pav			90098	6855	168339	nec
+bayer	ο			Pav			104755	8092	201371	nec
+bayer	π			Pav			88866	6745	165040	nec
+bayer	ρ			Pav			101773	7859	195961	nec
+bayer	σ			Pav			102773	7934	197635	nec
+bayer	τ			Pav			94724	7274	179009	nec
+bayer	υ			Pav			102157	7881	196519	nec
+bayer	φ	1		Pav			101612	7848	195627	nec
+bayer	φ	2		Pav			101983	7875	196378	nec
+bayer	ω			Pav			93163	7127	175329	nec
+bayer	α			Peg			113963	8781	218045	nec
+bayer	β			Peg			113881	8775	217906	nec
+bayer	γ			Peg			1067	39	886	nec
+bayer	ε			Peg			107315	8308	206778	nec
+bayer	ζ			Peg			112029	8634	214923	nec
+bayer	η			Peg			112158	8650	215182	nec
+bayer	θ			Peg			109427	8450	210418	nec
+bayer	ι			Peg			109176	8430	210027	nec
+bayer	κ			Peg			107354	8315	206901	nec
+bayer	λ			Peg			112440	8667	215665	nec
+bayer	μ			Peg			112748	8684	216131	nec
+bayer	ν			Peg			109068	8413	209747	nec
+bayer	ξ			Peg			112447	8665	215648	nec
+bayer	ο			Peg			112051	8641	214994	nec
+bayer	π	1		Peg			109352	8449	210354	nec
+bayer	π	2		Peg			109410	8454	210459	nec
+bayer	ρ			Peg			113186	8717	216735	nec
+bayer	σ			Peg			112935		216385	iv27a
+bayer	τ			Peg			115250	8880	220061	nec
+bayer	υ			Peg			115623	8905	220657	nec
+bayer	φ			Peg			117718	9036	223768	nec
+bayer	χ			Peg			1168	45	1013	nec
+bayer	ψ			Peg			118131	9064	224427	nec
+bayer	A			Per			18453		24546	iv27a
+bayer	b			Per			20070		26961	iv27a
+bayer	b	2		Per			20234		27192	iv27a
+bayer	c			Per			19343		25940	iv27a
+bayer	d			Per			20354		27396	iv27a
+bayer	e			Per			21476		29094	iv27a
+bayer	f			Per			19811		26673	iv27a
+bayer	g			Per			9505		12303	iv27a
+bayer	i			Per			11060		14489	iv27a
+bayer	k			Per			14382		18970	iv27a
+bayer	l			Per			15648		20677	iv27a
+bayer	m			Per			21242		28704	iv27a
+bayer	n			Per			17886		23848	iv27a
+bayer	o			Per			17313		22951	iv27a
+bayer	α			Per			15863	1017	20902	nec
+bayer	β			Per			14576	936	19356	nec
+bayer	γ			Per			14328	915	18925	nec
+bayer	γ			Per					18926	iv27a
+bayer	δ			Per			17358	1122	22928	nec
+bayer	ε			Per			18532	1220	24760	nec
+bayer	ζ			Per			18246	1203	24398	nec
+bayer	η			Per			13268	834	17506	nec
+bayer	θ			Per			12777	799	16895	nec
+bayer	ι			Per			14632	937	19373	nec
+bayer	κ			Per			14668	941	19476	nec
+bayer	λ			Per			19167	1261	25642	nec
+bayer	μ			Per			19812	1303	26630	nec
+bayer	ν			Per			17529	1135	23230	nec
+bayer	ξ			Per			18614	1228	24912	nec
+bayer	ο			Per			17448	1131	23180	nec
+bayer	π			Per			13879	879	18411	nec
+bayer	ρ			Per			14354	921	19058	nec
+bayer	σ			Per			16335	1052	21552	nec
+bayer	τ			Per			13531	854	17878	nec
+bayer	τ			Per					17879	iv27a
+bayer	υ			Per			7607	464	9927	nec
+bayer	φ			Per			8068	496	10516	nec
+bayer	χ			Per			10729		13994	iv27a
+bayer	ψ			Per			16826	1087	22192	nec
+bayer	ω			Per			14817	947	19656	nec
+bayer	α			Phe			2081	99	2261	nec
+bayer	β			Phe			5165	322	6595	nec
+bayer	β			Phe		A	5165	322	6595	nec
+bayer	β			Phe		B	5165	322	6595	nec
+bayer	γ			Phe			6867	429	9053	nec
+bayer	δ			Phe			7083	440	9362	nec
+bayer	ε			Phe			765	25	496	nec
+bayer	ζ			Phe			5348	338	6882	nec
+bayer	η			Phe			3405	191	4150	nec
+bayer	θ			Phe			116737	8966	222287	nec
+bayer	θ			Phe		A	116737	8966	222287	nec
+bayer	ι			Phe			116389	8949	221760	nec
+bayer	κ			Phe			2072	100	2262	nec
+bayer	λ	1		Phe			2472	125	2834	nec
+bayer	λ	2		Phe			2802	147	3302	nec
+bayer	μ			Phe			3245	180	3919	nec
+bayer	ν			Phe			5862	370	7570	nec
+bayer	ξ			Phe			3277	183	3980	nec
+bayer	π			Phe			118234	9069	224554	nec
+bayer	ρ			Phe			3949	242	4919	nec
+bayer	σ			Phe			117315	9006	223145	nec
+bayer	τ			Phe			88	9081	224834	nec
+bayer	υ			Phe			5300	331	6767	nec
+bayer	φ			Phe			8882	558	11753	nec
+bayer	χ			Phe			9459	602	12524	nec
+bayer	ψ			Phe			8837	555	11695	nec
+bayer	ω			Phe			4829	295	6192	nec
+bayer	α			Pic			32607	2550	50241	nec
+bayer	β			Pic			27321	2020	39060	nec
+bayer	γ			Pic			27530	2042	39523	nec
+bayer	δ			Pic			29276	2212	42933	nec
+bayer	ζ			Pic			24829	1767	35072	nec
+bayer	η	1		Pic			23482	1649	32743	nec
+bayer	η	2		Pic			23649	1663	33042	nec
+bayer	θ			Pic			25303	1818	35860	nec
+bayer	ι			Pic			22531	1563	31203	nec
+bayer	ι			Pic			22534	1564	31204	nec
+bayer	ι			Pic		A	22531	1563	31203	nec
+bayer	κ			Pic			25098	1801	35580	nec
+bayer	λ			Pic			21914	1516	30185	nec
+bayer	μ			Pic			31137	2412	46860	nec
+bayer	ν			Pic			30342	2320	45229	nec
+bayer	α			PsA			113368	8728	216956	nec
+bayer	β			PsA			111188	8576	213398	nec
+bayer	γ			PsA			112948	8695	216336	nec
+bayer	γ			PsA		B	112948	8695	216336	nec
+bayer	δ			PsA			113246	8720	216763	nec
+bayer	ε			PsA			111954	8628	214748	nec
+bayer	ζ			PsA			111138	8570	213296	nec
+bayer	η			PsA		A	108661	8386	209014	nec
+bayer	θ			PsA			107608	8326	207155	nec
+bayer	ι			PsA			107380	8305	206742	nec
+bayer	λ			PsA			109789	8478	210934	nec
+bayer	μ			PsA			109285	8431	210049	nec
+bayer	π			PsA			113860	8767	217792	nec
+bayer	τ			PsA			109422	8447	210302	nec
+bayer	υ			PsA			109289	8433	210066	nec
+bayer	A			Psc			114273		218527	iv27a
+bayer	b			Psc			115227		220009	iv27a
+bayer	c			Psc			194		225003	iv27a
+bayer	d			Psc			1645		1635	iv27a
+bayer	e			Psc			5346		6763	iv27a
+bayer	f			Psc			6061		7804	iv27a
+bayer	g			Psc			5544		7034	iv27a
+bayer	h			Psc			4510		5575	iv27a
+bayer	i			Psc			3885		4757	iv27a
+bayer	i			Psc					4758	iv27a
+bayer	k			Psc			4366		5382	iv27a
+bayer	l			Psc			6315		8126	iv27a
+bayer	α			Psc		A	9487	596	12447	nec
+bayer	α			Psc		B	9487	595	12446	nec
+bayer	β			Psc			113889	8773	217891	nec
+bayer	γ			Psc			114971	8852	219615	nec
+bayer	δ			Psc			3786	224	4656	nec
+bayer	ε			Psc			4906	294	6186	nec
+bayer	ζ			Psc		A	5737	361	7344	nec
+bayer	ζ			Psc		B	5743	362	7345	nec
+bayer	η			Psc			7097	437	9270	nec
+bayer	θ			Psc			115830	8916	220954	nec
+bayer	ι			Psc			116771	8969	222368	nec
+bayer	κ			Psc			115738	8911	220825	nec
+bayer	λ			Psc			116928	8984	222603	nec
+bayer	μ			Psc			7007	434	9138	nec
+bayer	ν			Psc			7884	489	10380	nec
+bayer	ξ			Psc			8833	549	11559	nec
+bayer	ο			Psc			8198	510	10761	nec
+bayer	π			Psc			7535	463	9919	nec
+bayer	ρ			Psc			6706	413	8723	nec
+bayer	σ			Psc			4889	291	6118	nec
+bayer	τ			Psc			5586	352	7106	nec
+bayer	υ			Psc			6193	383	7964	nec
+bayer	φ			Psc			5742	360	7318	nec
+bayer	χ			Psc			5571	351	7087	nec
+bayer	ψ	1		Psc		A	5131	310	6456	nec
+bayer	ψ	1		Psc		B	5132	311	6457	nec
+bayer	ψ	2		Psc			5310	328	6695	nec
+bayer	ψ	3		Psc			5454	339	6903	nec
+bayer	ω			Psc			118268	9072	224617	nec
+bayer	A			Pup			34495	2702	54893	nec
+bayer	C			Pup			34081		53704	iv27a
+bayer	D			Pup			34339	2691	54475	nec
+bayer	E			Pup			34802	2727	55719	nec
+bayer	F			Pup			35393	2791	57240	nec
+bayer	G			Pup			30591	2348	45572	nec
+bayer	G			Pup		A	30591	2348	45572	nec
+bayer	H			Pup			34059	2672	53811	nec
+bayer	I			Pup			34834		55892	iv27a
+bayer	J			Pup			38518		64760	iv27a
+bayer	L	1		Pup			34899		56022	iv27a
+bayer	L	2		Pup			34922	2748	56096	nec
+bayer	M			Pup			35347	2789	57197	nec
+bayer	N			Pup			38872	3116	65551	nec
+bayer	O			Pup			38917	3121	65685	nec
+bayer	P			Pup			38164		63922	iv27a
+bayer	Q			Pup			38089	3046	63744	nec
+bayer	a			Pup			38414		64440	iv27a
+bayer	b			Pup			38455		64503	iv27a
+bayer	c			Pup			37819	3017	63032	nec
+bayer	d	1		Pup			37297		61831	iv27a
+bayer	d	2		Pup			37322		61878	iv27a
+bayer	d	3		Pup			37329		61899	iv27a
+bayer	d	4		Pup			37345		61925	iv27a
+bayer	e			Pup			37223		61641	iv27a
+bayer	f			Pup		C	37096	2937	61330	nec
+bayer	h	1		Pup			40091		68553	iv27a
+bayer	h	2		Pup			40326		69142	iv27a
+bayer	j			Pup			38835		65228	iv27a
+bayer	k	1		Pup			37229	2948	61555	nec
+bayer	k	2		Pup			37229	2949	61556	nec
+bayer	l			Pup			37677		62623	iv27a
+bayer	m			Pup			37173		61429	iv27a
+bayer	n			Pup		A	36817	2909	60584	nec
+bayer	n			Pup		B	36817	2910	60585	nec
+bayer	p			Pup			36917		60863	iv27a
+bayer	q			Pup			40706		70060	iv27a
+bayer	r			Pup			40274		68980	iv27a
+bayer	t			Pup			33558		52092	iv27a
+bayer	v	1		Pup			35363		57150	iv27a
+bayer	v	2		Pup			35406		57219	iv27a
+bayer	w			Pup			40945		70555	iv27a
+bayer	x			Pup			32537		49591	iv27a
+bayer	y			Pup			36363		59635	iv27a
+bayer	y	2		Pup			37043		61391	iv27a
+bayer	y	3		Pup			37174		61715	iv27a
+bayer	z			Pup			36778		60606	iv27a
+bayer	ζ			Pup			39429	3165	66811	nec
+bayer	ν			Pup			31685	2451	47670	nec
+bayer	ξ			Pup			38170	3045	63700	nec
+bayer	ο			Pup			38070	3034	63462	nec
+bayer	π			Pup			35264	2773	56855	nec
+bayer	π			Pup		B	35264	2773	56855	nec
+bayer	ρ			Pup			39757	3185	67523	nec
+bayer	σ			Pup			36377	2878	59717	nec
+bayer	τ			Pup			32768	2553	50310	nec
+bayer	χ			Pup			38901	3113	65456	nec
+bayer	α			Pyx			42828	3468	74575	nec
+bayer	β			Pyx			42515	3438	74006	nec
+bayer	γ			Pyx			43409	3518	75691	nec
+bayer	δ			Pyx			43825	3556	76483	nec
+bayer	ε			Pyx			45001	3644	78922	nec
+bayer	ζ			Pyx			42483	3433	73898	nec
+bayer	η			Pyx			42334	3420	73495	nec
+bayer	θ			Pyx			45902	3718	80874	nec
+bayer	κ			Pyx			44824	3628	78541	nec
+bayer	λ			Pyx			46026	3733	81169	nec
+bayer	α			Ret			19780	1336	27256	nec
+bayer	β			Ret			17440	1175	23817	nec
+bayer	γ			Ret			18744	1264	25705	nec
+bayer	δ			Ret			18597	1247	25422	nec
+bayer	ε			Ret			19921	1355	27442	nec
+bayer	ζ	1		Ret			15330	1006	20766	nec
+bayer	ζ	2		Ret			15371	1010	20807	nec
+bayer	η			Ret			20384	1395	28093	nec
+bayer	θ			Ret		A	20020	1372	27657	nec
+bayer	ι			Ret			18772	1266	25728	nec
+bayer	κ			Ret			16245	1083	22001	nec
+bayer	α			Scl			4577	280	5737	nec
+bayer	β			Scl			116231	8937	221507	nec
+bayer	γ			Scl			115102	8863	219784	nec
+bayer	δ			Scl			117452	9016	223352	nec
+bayer	ε			Scl			8209	514	10830	nec
+bayer	ε			Scl		A	8209	514	10830	nec
+bayer	ζ			Scl			183	9091	224990	nec
+bayer	η			Scl			2210	105	2429	nec
+bayer	θ			Scl			950	35	739	nec
+bayer	ι			Scl			1708	84	1737	nec
+bayer	κ	1		Scl		A	761	24	493	nec
+bayer	κ	1		Scl		B	761	24	493	nec
+bayer	κ	2		Scl			930	34	720	nec
+bayer	λ	1		Scl			3356		4065	iv27a
+bayer	λ	2		Scl			3456	195	4211	nec
+bayer	μ			Scl			116820	8975	222433	nec
+bayer	ξ			Scl			4770	288	6055	nec
+bayer	π			Scl			7955	497	10537	nec
+bayer	σ			Scl			4852	293	6178	nec
+bayer	τ			Scl		A	7463	462	9906	nec
+bayer	A			Sco			77840		142114	iv27a
+bayer	G			Sco			87261		161892	iv27a
+bayer	H			Sco			81304	6166	149447	nec
+bayer	N			Sco			80911	6143	148703	nec
+bayer	Q			Sco			86170	6546	159433	nec
+bayer	b			Sco			77635		141637	iv27a
+bayer	c	1		Sco			79399		145483	iv27a
+bayer	c	2		Sco			79404		145482	iv27a
+bayer	d			Sco			79881		146624	iv27a
+bayer	i			Sco			80815		148605	iv27a
+bayer	k			Sco			83574		154090	iv27a
+bayer	α			Sco			80763	6134	148478	nec
+bayer	α			Sco		B			148479	nec
+bayer	β			Sco			78820	5984	144217	nec
+bayer	β	1		Sco			78820	5984	144217	nec
+bayer	β	2		Sco			78821	5985	144218	nec
+bayer	δ			Sco			78401	5953	143275	nec
+bayer	ε			Sco			82396	6241	151680	nec
+bayer	ζ	1		Sco			82671	6262	152236	nec
+bayer	ζ	2		Sco			82729	6271	152334	nec
+bayer	η			Sco			84143	6380	155203	nec
+bayer	θ			Sco			86228	6553	159532	nec
+bayer	θ			Sco		B			159532	nec
+bayer	ι	1		Sco			87073	6615	161471	nec
+bayer	ι	2		Sco			87294	6631	161912	nec
+bayer	κ			Sco			86670	6580	160578	nec
+bayer	λ			Sco			85927	6527	158926	nec
+bayer	μ	1		Sco			82514	6247	151890	nec
+bayer	μ	2		Sco			82545	6252	151985	nec
+bayer	ν			Sco					145501	iv27a
+bayer	ν			Sco			79374	6027	145502	nec
+bayer	ν			Sco		A	79374	6027	145502	nec
+bayer	ξ			Sco		A	78727	5978	144070	nec
+bayer	ξ			Sco		B	78727			nec
+bayer	ξ			Sco		B	78727	5977	144069	nec
+bayer	ο			Sco			80079	6081	147084	nec
+bayer	π			Sco			78265	5944	143018	nec
+bayer	ρ			Sco			78104	5928	142669	nec
+bayer	σ			Sco			80112	6084	147165	nec
+bayer	τ			Sco			81266	6165	149438	nec
+bayer	υ			Sco			85696	6508	158408	nec
+bayer	χ			Sco			79540	6048	145897	nec
+bayer	ψ			Sco			79375	6031	145570	nec
+bayer	ω	1		Sco			78933	5993	144470	nec
+bayer	ω	2		Sco			78990	5997	144608	nec
+bayer	α			Sct			91117	6973	171443	nec
+bayer	β			Sct			92175	7063	173764	nec
+bayer	γ			Sct			90595	6930	170296	nec
+bayer	δ			Sct			91726	7020	172748	nec
+bayer	ε			Sct			91845	7032	173009	nec
+bayer	ζ			Sct			90135	6884	169156	nec
+bayer	η			Sct			93026	7149	175751	nec
+bayer	A	1		Ser			76133	5772	138562	nec
+bayer	A	2		Ser			77227	5863	140873	nec
+bayer	M			Ser			73193		132132	iv27a
+bayer	b			Ser			77660	5895	141851	nec
+bayer	c			Ser			90642	6935	170474	nec
+bayer	d			Ser			90441		169985	iv27a
+bayer	d			Ser					169986	iv27a
+bayer	e			Ser			91322	6993	171978	nec
+bayer	α			Ser			77070	5854	140573	nec
+bayer	β			Ser			77233	5867	141003	nec
+bayer	γ			Ser			78072	5933	142860	nec
+bayer	δ			Ser		A	76276	5789	138918	nec
+bayer	δ			Ser		B	76276	5788	138917	nec
+bayer	ε			Ser			77622	5892	141795	nec
+bayer	ζ			Ser			88175	6710	164259	nec
+bayer	η			Ser			89962	6869	168723	nec
+bayer	θ	1		Ser			92946	7141	175638	nec
+bayer	θ	2		Ser			92951	7142	175639	nec
+bayer	ι			Ser			76852	5842	140159	nec
+bayer	κ			Ser			77450	5879	141477	nec
+bayer	λ			Ser			77257	5868	141004	nec
+bayer	μ			Ser			77516	5881	141513	nec
+bayer	ν			Ser			84880	6446	156928	nec
+bayer	ξ			Ser			86263	6561	159876	nec
+bayer	ο			Ser			86565	6581	160613	nec
+bayer	π			Ser			78554	5972	143894	nec
+bayer	ρ			Ser			77661	5899	141992	nec
+bayer	σ			Ser			80179	6093	147449	nec
+bayer	τ	1		Ser			75530	5739	137471	nec
+bayer	τ	2		Ser			76069	5770	138527	nec
+bayer	τ	3		Ser			76337	5795	139074	nec
+bayer	τ	4		Ser			76423		139216	iv27a
+bayer	τ	5		Ser			76424	5804	139225	nec
+bayer	τ	6		Ser			76810	5840	140027	nec
+bayer	τ	7		Ser			76878	5845	140232	nec
+bayer	τ	8		Ser			77111	5858	140729	nec
+bayer	υ			Ser			77336	5870	141187	nec
+bayer	φ			Ser			78132	5940	142980	nec
+bayer	χ			Ser			76866	5843	140160	nec
+bayer	ψ			Ser			77052	5853	140538	nec
+bayer	ω			Ser			77578	5888	141680	nec
+bayer	α			Sex			49641	3981	87887	nec
+bayer	β			Sex			51437	4119	90994	nec
+bayer	γ			Sex		A	48437	3909	85558	nec
+bayer	γ			Sex		B	48437	3909	85558	nec
+bayer	δ			Sex			51362	4116	90882	nec
+bayer	ε			Sex			50414	4042	89254	nec
+bayer	α			Sge			96757	7479	185758	nec
+bayer	β			Sge			96837	7488	185958	nec
+bayer	γ			Sge			98337	7635	189319	nec
+bayer	δ			Sge			97365	7536	187076	nec
+bayer	δ			Sge					187077	iv27a
+bayer	ε			Sge			96516	7463	185194	nec
+bayer	ζ			Sge			97496	7546	187362	nec
+bayer	η			Sge			98920	7679	190608	nec
+bayer	θ			Sge			99352		191570	iv27a
+bayer	θ			Sge					191571	iv27a
+bayer	A			Sgr			98353		189005	iv27a
+bayer	b	1		Sgr			98162		188603	iv27a
+bayer	c			Sgr			98688		189763	iv27a
+bayer	d			Sgr			94820		180540	iv27a
+bayer	e	1		Sgr			96808		185644	iv27a
+bayer	e	2		Sgr			96950		186005	iv27a
+bayer	f			Sgr			97290		186648	iv27a
+bayer	g			Sgr			98258		188899	iv27a
+bayer	h	1		Sgr			96406		184552	iv27a
+bayer	h	2		Sgr			96465		184707	iv27a
+bayer	α			Sgr			95347	7348	181869	nec
+bayer	β	1		Sgr			95241	7337	181454	nec
+bayer	β	2		Sgr			95294	7343	181623	nec
+bayer	γ	1		Sgr			88567	6742	164975	nec
+bayer	γ	2		Sgr			88635	6746	165135	nec
+bayer	δ			Sgr			89931	6859	168454	nec
+bayer	ε			Sgr			90185	6879	169022	nec
+bayer	ζ			Sgr			93506	7194	176687	nec
+bayer	η			Sgr			89642	6832	167618	nec
+bayer	θ	1		Sgr			98412	7623	189103	nec
+bayer	θ	2		Sgr			98421	7624	189118	nec
+bayer	ι			Sgr			98032	7581	188114	nec
+bayer	κ	1		Sgr			100469	7779	193571	nec
+bayer	κ	2		Sgr			100591	7787	193807	nec
+bayer	κ	2		Sgr		A	100591	7787	193807	nec
+bayer	λ			Sgr			90496	6913	169916	nec
+bayer	μ			Sgr			89341	6812	166937	nec
+bayer	ν	1		Sgr			92761	7116	174974	nec
+bayer	ν	2		Sgr			92845	7120	175190	nec
+bayer	ξ	1		Sgr			93057	7145	175687	nec
+bayer	ξ	2		Sgr			93085	7150	175775	nec
+bayer	ο			Sgr			93683	7217	177241	nec
+bayer	π			Sgr			94141	7264	178524	nec
+bayer	ρ	1		Sgr			95168	7340	181577	nec
+bayer	ρ	2		Sgr			95188	7344	181645	nec
+bayer	σ			Sgr			92855	7121	175191	nec
+bayer	τ			Sgr			93864	7234	177716	nec
+bayer	υ			Sgr			95176	7342	181615	nec
+bayer	φ			Sgr			92041	7039	173300	nec
+bayer	χ	1		Sgr			95477	7362	182369	nec
+bayer	χ	2		Sgr			95486		182391	iv27a
+bayer	χ	3		Sgr			95503	7363	182416	nec
+bayer	ψ			Sgr			94643	7292	179950	nec
+bayer	ω			Sgr			98066	7597	188376	nec
+bayer	A	1		Tau			19038		25604	iv27a
+bayer	A	2		Tau			19076		25680	iv27a
+bayer	b			Tau			20901		28355	iv27a
+bayer	c	1		Tau			21589		29388	iv27a
+bayer	d			Tau			21402		29140	iv27a
+bayer	e			Tau			17771		23793	iv27a
+bayer	f			Tau			16369		21754	iv27a
+bayer	g			Tau			14915		19926	iv27a
+bayer	h			Tau			20219		27397	iv27a
+bayer	i			Tau			22565		30780	iv27a
+bayer	k			Tau			23088		31592	iv27a
+bayer	l			Tau			23871	1658	32977	nec
+bayer	m			Tau			23835		32923	iv27a
+bayer	n			Tau			24822		34559	iv27a
+bayer	o			Tau			25539		35708	iv27a
+bayer	p			Tau			19513		26322	iv27a
+bayer	q			Tau			17531		23338	iv27a
+bayer	r			Tau			20522		27820	iv27a
+bayer	s			Tau			16322		21686	iv27a
+bayer	t			Tau			16511		21933	iv27a
+bayer	u			Tau			17563		23466	iv27a
+bayer	α			Tau			21421	1457	29139	nec
+bayer	β			Tau			25428	1791	35497	nec
+bayer	γ			Tau			20205	1346	27371	nec
+bayer	δ	1		Tau			20455	1373	27697	nec
+bayer	δ	2		Tau			20542	1380	27819	nec
+bayer	δ	3		Tau			20648	1389	27962	nec
+bayer	ε			Tau			20889	1409	28305	nec
+bayer	ζ			Tau			26451	1910	37202	nec
+bayer	η			Tau					23607	iv27a
+bayer	η			Tau			17702	1165	23630	nec
+bayer	θ	1		Tau			20885	1411	28307	nec
+bayer	θ	2		Tau			20894	1412	28319	nec
+bayer	ι			Tau			23497	1620	32301	nec
+bayer	κ	1		Tau			20635	1387	27934	nec
+bayer	κ	2		Tau			20641	1388	27946	nec
+bayer	λ			Tau			18724	1239	25204	nec
+bayer	μ			Tau			19860	1320	26912	nec
+bayer	ν			Tau			18907	1251	25490	nec
+bayer	ξ			Tau			16083	1038	21364	nec
+bayer	ο			Tau			15900	1030	21120	nec
+bayer	π			Tau			20732	1396	28100	nec
+bayer	ρ			Tau			21273	1444	28910	nec
+bayer	σ	1		Tau			21673	1478	29479	nec
+bayer	σ	2		Tau			21683	1479	29488	nec
+bayer	τ			Tau			21881	1497	29763	nec
+bayer	υ			Tau			20711	1392	28024	nec
+bayer	φ			Tau			20250	1348	27382	nec
+bayer	χ			Tau			20430	1369	27638	nec
+bayer	ψ			Tau			19205	1269	25867	nec
+bayer	ω	1		Tau			19388	1283	26162	nec
+bayer	ω	2		Tau			19990	1329	27045	nec
+bayer	α			Tel			90422	6897	169467	nec
+bayer	δ	1		Tel			90830	6934	170465	nec
+bayer	δ	2		Tel			90853	6938	170523	nec
+bayer	ε			Tel			89112	6783	166063	nec
+bayer	ζ			Tel			90568	6905	169767	nec
+bayer	η			Tel			95261	7329	181296	nec
+bayer	ι			Tel			96341	7424	184127	nec
+bayer	κ			Tel			92646	7087	174295	nec
+bayer	λ			Tel			93148	7134	175510	nec
+bayer	μ			Tel			95932	7393	183028	nec
+bayer	ν			Tel			97421	7510	186543	nec
+bayer	ξ			Tel			99120	7673	190421	nec
+bayer	ρ			Tel			93815	7213	177171	nec
+bayer	α			TrA			82273	6217	150798	nec
+bayer	β			TrA			77952	5897	141891	nec
+bayer	γ			TrA			74946	5671	135382	nec
+bayer	δ			TrA			79664	6030	145544	nec
+bayer	ε			TrA			76440	5771	138538	nec
+bayer	ζ			TrA			80686	6098	147584	nec
+bayer	η	1		TrA			81710	6172	149671	nec
+bayer	θ			TrA			81252	6151	148890	nec
+bayer	ι			TrA			80645	6109	147787	nec
+bayer	κ			TrA			77982	5891	141767	nec
+bayer	α			Tri			8796	544	11443	nec
+bayer	β			Tri			10064	622	13161	nec
+bayer	γ			Tri			10670	664	14055	nec
+bayer	δ			Tri			10644		13974	iv27a
+bayer	ε			Tri			9570	599	12471	nec
+bayer	ι			Tri			10280	642	13480	nec
+bayer	ι			Tri		A	10280	642	13480	nec
+bayer	χ			Tri			9383		12211	iv27a
+bayer	α			Tuc			110130	8502	211416	nec
+bayer	β	1		Tuc			2484	126	2884	nec
+bayer	β	2		Tuc			2487	127	2885	nec
+bayer	β	2		Tuc		A	2487	127	2885	nec
+bayer	β	3		Tuc			2578	136	3003	nec
+bayer	γ			Tuc			114996	8848	219571	nec
+bayer	δ			Tuc			110838	8540	212581	nec
+bayer	ε			Tuc			118322	9076	224686	nec
+bayer	ζ			Tuc			1599	77	1581	nec
+bayer	η			Tuc			118121	9062	224392	nec
+bayer	θ			Tuc			2629	139	3112	nec
+bayer	ι			Tuc			5268	332	6793	nec
+bayer	κ			Tuc			5896	377	7788	nec
+bayer	λ	1		Tuc			4084	252	5190	nec
+bayer	λ	2		Tuc			4293	270	5457	nec
+bayer	ν			Tuc			111310	8582	213442	nec
+bayer	ξ			Tuc			1902		2051	iv27a
+bayer	π			Tuc			1647	83	1685	nec
+bayer	ρ			Tuc			3330	187	4089	nec
+bayer	A			UMa			42080		72037	iv27a
+bayer	b			UMa			43644		75486	iv27a
+bayer	c			UMa			45333		79028	iv27a
+bayer	d			UMa			46977		82210	iv27a
+bayer	e			UMa			45493		79439	iv27a
+bayer	f			UMa			44901		78209	iv27a
+bayer	g			UMa			65477		116842	iv27a
+bayer	h			UMa			46733		81937	iv27a
+bayer	α			UMa			54061	4301	95689	nec
+bayer	α			UMa		A	54061	4301	95689	nec
+bayer	α			UMa		B	54061	4301	95689	nec
+bayer	β			UMa			53910	4295	95418	nec
+bayer	γ			UMa			58001	4554	103287	nec
+bayer	δ			UMa			59774	4660	106591	nec
+bayer	ε			UMa			62956	4905	112185	nec
+bayer	ζ			UMa			65378	5054	116656	nec
+bayer	ζ			UMa					116657	iv27a
+bayer	η			UMa			67301	5191	120315	nec
+bayer	θ			UMa			46853	3775	82328	nec
+bayer	ι			UMa			44127	3569	76644	nec
+bayer	ι			UMa		A	44127	3569	76644	nec
+bayer	κ			UMa			44471	3594	77327	nec
+bayer	λ			UMa			50372	4033	89021	nec
+bayer	μ			UMa			50801	4069	89758	nec
+bayer	ν			UMa			55219	4377	98262	nec
+bayer	ξ			UMa			55203			nec
+bayer	ξ			UMa					98231	iv27a
+bayer	ο			UMa			41704	3323	71369	nec
+bayer	π	1		UMa			42438	3391	72905	nec
+bayer	π	2		UMa			42527	3403	73108	nec
+bayer	ρ			UMa			44390	3576	76827	nec
+bayer	σ	1		UMa			44857	3609	77800	nec
+bayer	σ	2		UMa			45038	3616	78154	nec
+bayer	σ	2		UMa		A	45038	3616	78154	nec
+bayer	τ			UMa			45075	3624	78362	nec
+bayer	τ			UMa					78363	iv27a
+bayer	υ			UMa			48319	3888	84999	nec
+bayer	φ			UMa			48402	3894	85235	nec
+bayer	χ			UMa			57399	4518	102224	nec
+bayer	ψ			UMa			54539	4335	96833	nec
+bayer	ω			UMa			53295	4248	94334	nec
+bayer	α			UMi			11767	424	8890	nec
+bayer	β			UMi			72607	5563	131873	nec
+bayer	γ			UMi			75097	5735	137422	nec
+bayer	δ			UMi			85822	6789	166205	nec
+bayer	ε			UMi			82080	6322	153751	nec
+bayer	ζ			UMi			77055	5903	142105	nec
+bayer	η			UMi			79822		148048	iv27a
+bayer	θ			UMi			76008	5826	139669	nec
+bayer	λ			UMi			84535	7394	183030	nec
+bayer	π	1		UMi			75809		139777	iv27a
+bayer	π	1		UMi			75829		139813	iv27a
+bayer	π	2		UMi			76695		141652	iv27a
+bayer	A			Vel			41616		72108	iv27a
+bayer	B			Vel		A	41039	3294	70930	nec
+bayer	B			Vel		B	41039	3294	70930	nec
+bayer	C			Vel			42088		73155	iv27a
+bayer	D			Vel			42834		74753	iv27a
+bayer	E			Vel			42177		73340	iv27a
+bayer	F			Vel			41483		71935	iv27a
+bayer	H			Vel			43878	3574	76805	nec
+bayer	I			Vel			46283		81848	iv27a
+bayer	J			Vel			50676		89890	iv27a
+bayer	K			Vel			45631		80456	iv27a
+bayer	L			Vel			46950		83058	iv27a
+bayer	M			Vel			47175		83446	iv27a
+bayer	N			Vel			46701		82668	iv27a
+bayer	O			Vel			47717		84461	iv27a
+bayer	Q			Vel			49712		88206	iv27a
+bayer	a			Vel			43023		75063	iv27a
+bayer	b			Vel			42570		74180	iv27a
+bayer	c			Vel			44511		78004	iv27a
+bayer	d			Vel			42884		74772	iv27a
+bayer	e			Vel			42312		73634	iv27a
+bayer	f			Vel			43413		75821	iv27a
+bayer	g			Vel			43347		75710	iv27a
+bayer	h			Vel			43325		75630	iv27a
+bayer	i			Vel			53773		95370	iv27a
+bayer	k			Vel			45448		79940	iv27a
+bayer	k	1		Vel			45386		79807	iv27a
+bayer	l			Vel			45439		79917	iv27a
+bayer	m			Vel			48374		85622	iv27a
+bayer	n			Vel			42624		74272	iv27a
+bayer	p			Vel			51986	4167	92139	nec
+bayer	q			Vel			50191		88955	iv27a
+bayer	r			Vel			50799		89998	iv27a
+bayer	s			Vel			515610	4135	91355	nec
+bayer	t			Vel			51635		91504	iv27a
+bayer	u			Vel			48224		85355	iv27a
+bayer	w			Vel			44191		77258	iv27a
+bayer	x			Vel			52154		92449	iv27a
+bayer	y			Vel			47267		83548	iv27a
+bayer	z			Vel			45344		79735	iv27a
+bayer	γ	1		Vel				3206	68243	nec
+bayer	γ	2		Vel			39953	3207	68273	nec
+bayer	δ			Vel			42913	3485	74956	nec
+bayer	κ			Vel			45941	3734	81188	nec
+bayer	λ			Vel			44816	3634	78647	nec
+bayer	μ			Vel			52727	4216	93497	nec
+bayer	μ			Vel		B	52727	4216	93497	nec
+bayer	ο			Vel			42536	3447	74195	nec
+bayer	φ			Vel			48774	3940	86440	nec
+bayer	ψ			Vel			46651	3786	82434	nec
+bayer	ψ			Vel		A	46651	3786	82434	nec
+bayer	ψ			Vel		B	46651	3786	82434	nec
+bayer	A	1		Vir			57562		102510	iv27a
+bayer	A	2		Vir			58110		103484	iv27a
+bayer	b			Vir			58510		104181	iv27a
+bayer	c			Vir			60172		107328	iv27a
+bayer	d	1		Vir			61968		110423	iv27a
+bayer	d	2		Vir			62267	4847	110951	nec
+bayer	e			Vir			64792		115383	iv27a
+bayer	f			Vir			61558		109704	iv27a
+bayer	g			Vir			64122	4957	114113	nec
+bayer	h			Vir			66098		117818	iv27a
+bayer	i			Vir			65581		116870	iv27a
+bayer	k			Vir			63414		112846	iv27a
+bayer	l			Vir			66006		117675	iv27a
+bayer	m			Vir			66803		119149	iv27a
+bayer	o			Vir			66200		118022	iv27a
+bayer	p			Vir			67929		121299	iv27a
+bayer	q			Vir			61318		109309	iv27a
+bayer	y			Vir			66247	5106	118054	nec
+bayer	α			Vir			65474	5056	116658	nec
+bayer	β			Vir			57757	4540	102870	nec
+bayer	γ			Vir			61941	4825	110379	nec
+bayer	γ			Vir		B		4826	110380	nec
+bayer	δ			Vir			63090	4910	112300	nec
+bayer	ε			Vir			63608	4932	113226	nec
+bayer	ζ			Vir			66249	5107	118098	nec
+bayer	η			Vir			60129	4689	107259	nec
+bayer	θ			Vir			64238	4963	114330	nec
+bayer	ι			Vir			69701	5338	124850	nec
+bayer	κ			Vir			69427	5315	124294	nec
+bayer	λ			Vir			69974	5359	125337	nec
+bayer	μ			Vir			71957	5487	129502	nec
+bayer	ν			Vir			57380	4517	102212	nec
+bayer	ξ			Vir			57328	4515	102124	nec
+bayer	ο			Vir			58948	4608	104979	nec
+bayer	π			Vir			58590	4589	104321	nec
+bayer	ρ			Vir			61960	4828	110411	nec
+bayer	σ			Vir			64852	5015	115521	nec
+bayer	τ			Vir			68520	5264	122408	nec
+bayer	υ			Vir			70012	5366	125454	nec
+bayer	φ			Vir			70755	5409	126868	nec
+bayer	χ			Vir			61740	4813	110014	nec
+bayer	ψ			Vir			62985	4902	112142	nec
+bayer	ω			Vir			56779	4483	101153	nec
+bayer	α			Vol			44382	3615	78045	nec
+bayer	β			Vol			41312	3347	71878	nec
+bayer	γ	1		Vol			34473	2735	55864	nec
+bayer	γ	2		Vol			34481	2736	55865	nec
+bayer	δ			Vol			35228	2803	57623	nec
+bayer	ε			Vol			39794	3223	68520	nec
+bayer	ζ			Vol			37504	3024	63295	nec
+bayer	η			Vol			41003	3334	71576	nec
+bayer	θ			Vol			42425	3460	74405	nec
+bayer	ι			Vol			32912	2602	51557	nec
+bayer	κ	1		Vol			40817	3301	71046	nec
+bayer	κ	2		Vol			40834	3302	71066	nec
+bayer	α			Vul			95771	7405	183439	nec
+flamsteed			2	And		A	113788	8766	217782	nec
+flamsteed			3	And			113919	8780	218031	nec
+flamsteed			4	And			114200	8804	218452	nec
+flamsteed			5	And			114210	8805	218470	nec
+flamsteed			7	And			114570	8830	219080	nec
+flamsteed			8	And			115022	8860	219734	nec
+flamsteed			10	And			115191	8876	219981	nec
+flamsteed			11	And			115152	8874	219945	nec
+flamsteed			12	And			115280	8885	220117	nec
+flamsteed			14	And			116076	8930	221345	nec
+flamsteed			18	And			116709	8967	222304	nec
+flamsteed			22	And			841	27	571	nec
+flamsteed			23	And			1086	41	905	nec
+flamsteed			26	And			1501	70	1438	nec
+flamsteed			32	And			3231	175	3817	nec
+flamsteed			36	And			4288	258	5286	nec
+flamsteed			36	And		A	4288	258	5286	nec
+flamsteed			36	And		B	4288	258	5286	nec
+flamsteed			39	And			4903	290	6116	nec
+flamsteed			44	And			5493	340	6920	nec
+flamsteed			45	And			5550	348	7019	nec
+flamsteed			47	And			6514	395	8374	nec
+flamsteed			49	And			6999	430	9057	nec
+flamsteed			55	And			8814	543	11428	nec
+flamsteed			58	And			9977	620	13041	nec
+flamsteed			59	And		A	10176	628	13294	nec
+flamsteed			60	And			10340	643	13520	nec
+flamsteed			62	And			10819	670	14212	nec
+flamsteed			64	And			11220	694	14770	nec
+flamsteed			65	And			11313	699	14872	nec
+flamsteed			66	And			11465	709	15138	nec
+flamsteed			4	Aql			91975	7040	173370	nec
+flamsteed			5	Aql			92117	7059	173654	nec
+flamsteed			8	Aql			92524	7101	174589	nec
+flamsteed			10	Aql			93179	7167	176232	nec
+flamsteed			11	Aql			93203	7172	176303	nec
+flamsteed			12	Aql			93429	7193	176678	nec
+flamsteed			14	Aql			93526	7209	176984	nec
+flamsteed			15	Aql			93717	7225	177463	nec
+flamsteed			18	Aql			93867	7248	178125	nec
+flamsteed			19	Aql			94068	7266	178596	nec
+flamsteed			20	Aql			94385	7279	179406	nec
+flamsteed			21	Aql			94477	7287	179761	nec
+flamsteed			22	Aql			94727	7303	180482	nec
+flamsteed			23	Aql			94885	7319	180972	nec
+flamsteed			24	Aql			94913	7321	181053	nec
+flamsteed			26	Aql			95066	7333	181391	nec
+flamsteed			27	Aql			95073	7336	181440	nec
+flamsteed			28	Aql			94982	7331	181333	nec
+flamsteed			35	Aql			95793	7400	183324	nec
+flamsteed			36	Aql			95937	7414	183630	nec
+flamsteed			37	Aql			96327	7430	184492	nec
+flamsteed			42	Aql			96556	7460	185124	nec
+flamsteed			45	Aql			96807	7480	185762	nec
+flamsteed			46	Aql			96931	7493	186122	nec
+flamsteed			51	Aql			97650	7553	187532	nec
+flamsteed			56	Aql			97928	7584	188154	nec
+flamsteed			57	Aql		A	97966	7593	188293	nec
+flamsteed			57	Aql		B	97967	7594	188294	nec
+flamsteed			58	Aql			97980	7596	188350	nec
+flamsteed			62	Aql			98844	7667	190299	nec
+flamsteed			64	Aql			99171	7690	191067	nec
+flamsteed			66	Aql			99631	7720	192107	nec
+flamsteed			68	Aql			100977	7821	194939	nec
+flamsteed			69	Aql			101101	7831	195135	nec
+flamsteed			70	Aql			101692	7873	196321	nec
+flamsteed			71	Aql			101847	7884	196574	nec
+flamsteed			1	Aqr			101936	7897	196758	nec
+flamsteed			3	Aqr			102624	7951	198026	nec
+flamsteed			4	Aqr			102945	7982	198571	nec
+flamsteed			4	Aqr		A	102945	7982	198571	nec
+flamsteed			5	Aqr			103005	7985	198667	nec
+flamsteed			7	Aqr			103401	8015	199345	nec
+flamsteed			11	Aqr			103682	8041	199960	nec
+flamsteed			12	Aqr		A	103981	8059	200497	nec
+flamsteed			14	Aqr			105019		202466	nec
+flamsteed			15	Aqr			105164	8141	202753	nec
+flamsteed			16	Aqr			105412	8160	203222	nec
+flamsteed			17	Aqr			105574	8175	203525	nec
+flamsteed			18	Aqr			105668	8187	203705	nec
+flamsteed			19	Aqr			105761	8195	203875	nec
+flamsteed			20	Aqr			105729	8192	203843	nec
+flamsteed			21	Aqr			105767	8199	203926	nec
+flamsteed			25	Aqr			106944	8277	206067	nec
+flamsteed			26	Aqr			107144	8287	206445	nec
+flamsteed			28	Aqr			108691	8390	209128	nec
+flamsteed			30	Aqr			108868	8401	209396	nec
+flamsteed			32	Aqr			108991	8410	209625	nec
+flamsteed			35	Aqr			109332	8439	210191	nec
+flamsteed			38	Aqr			109472	8452	210424	nec
+flamsteed			39	Aqr			109624	8462	210705	nec
+flamsteed			41	Aqr		A	109786	8480	210960	nec
+flamsteed			42	Aqr			110000	8496	211361	nec
+flamsteed			44	Aqr			110023	8504	211434	nec
+flamsteed			45	Aqr			110179	8508	211676	nec
+flamsteed			47	Aqr			110391	8516	212010	nec
+flamsteed			49	Aqr			110529	8529	212271	nec
+flamsteed			50	Aqr			110602	8534	212430	nec
+flamsteed			51	Aqr			110578	8533	212404	nec
+flamsteed			56	Aqr			111086	8567	213236	nec
+flamsteed			58	Aqr			111200	8583	213464	nec
+flamsteed			60	Aqr			111394	8590	213789	nec
+flamsteed			61	Aqr			111539		214028	nec
+flamsteed			66	Aqr			112211	8649	215167	nec
+flamsteed			67	Aqr			112179	8647	215143	nec
+flamsteed			68	Aqr			112529	8670	215721	nec
+flamsteed			70	Aqr			112615	8676	215874	nec
+flamsteed			74	Aqr			113031	8704	216494	nec
+flamsteed			77	Aqr			113148	8711	216640	nec
+flamsteed			78	Aqr			113127	8710	216637	nec
+flamsteed			81	Aqr			113674	8757	217531	nec
+flamsteed			82	Aqr			113781	8763	217701	nec
+flamsteed			83	Aqr			113996	8782	218060	nec
+flamsteed			86	Aqr			114119	8789	218240	nec
+flamsteed			88	Aqr			114341	8812	218594	nec
+flamsteed			89	Aqr			114375	8817	218640	nec
+flamsteed			94	Aqr		A	115126	8866	219834	nec
+flamsteed			97	Aqr			115404	8890	220278	nec
+flamsteed			98	Aqr			115438	8892	220321	nec
+flamsteed			99	Aqr			115669	8906	220704	nec
+flamsteed			100	Aqr			116118	8932	221357	nec
+flamsteed			101	Aqr			116247	8939	221565	nec
+flamsteed			103	Aqr			116889	8980	222547	nec
+flamsteed			104	Aqr		A	116901	8982	222574	nec
+flamsteed			106	Aqr			117089	8998	222847	nec
+flamsteed			108	Aqr			117629	9031	223640	nec
+flamsteed			1	Ari		A	8544	530	11154	nec
+flamsteed			1	Ari		A	8544	530	11154	nec
+flamsteed			4	Ari			8387	522	10982	nec
+flamsteed			7	Ari			8993	559	11763	nec
+flamsteed			10	Ari			9621	605	12558	nec
+flamsteed			10	Ari		A	9621	605	12558	nec
+flamsteed			11	Ari			9859	615	12885	nec
+flamsteed			14	Ari			10053	623	13174	nec
+flamsteed			15	Ari			10155	631	13325	nec
+flamsteed			16	Ari			10203	633	13363	nec
+flamsteed			19	Ari			10328	648	13596	nec
+flamsteed			21	Ari			10535	657	13872	nec
+flamsteed			26	Ari			11678	729	15550	nec
+flamsteed			27	Ari			11698	731	15596	nec
+flamsteed			29	Ari			11843	741	15814	nec
+flamsteed			30	Ari		A	12189	765	16246	nec
+flamsteed			31	Ari			12153	763	16234	nec
+flamsteed			33	Ari			12489	782	16628	nec
+flamsteed			35	Ari			12719	801	16908	nec
+flamsteed			36	Ari			12784	808	17017	nec
+flamsteed			38	Ari			12832	812	17093	nec
+flamsteed			40	Ari			13108	828	17459	nec
+flamsteed			41	Ari			13209	838	17573	nec
+flamsteed			49	Ari			14109	905	18769	nec
+flamsteed			52	Ari		A	14376	927	19134	nec
+flamsteed			53	Ari			14514	938	19374	nec
+flamsteed			54	Ari			14586	940	19460	nec
+flamsteed			55	Ari			14677	944	19548	nec
+flamsteed			56	Ari			14893	954	19832	nec
+flamsteed			59	Ari			15514	995	20618	nec
+flamsteed			60	Ari			15557	1000	20663	nec
+flamsteed			62	Ari			15696	1012	20825	nec
+flamsteed			64	Ari			15861	1022	21017	nec
+flamsteed			65	Ari			15870	1027	21050	nec
+flamsteed			66	Ari			16181	1048	21467	nec
+flamsteed			1	Aur			22453	1533	30504	nec
+flamsteed			2	Aur			22678	1551	30834	nec
+flamsteed			5	Aur			23261	1599	31761	nec
+flamsteed			6	Aur			23268	1602	31780	nec
+flamsteed			18	Aur			24832	1734	34499	nec
+flamsteed			19	Aur			24879	1740	34578	nec
+flamsteed			22	Aur			25192	1768	35076	nec
+flamsteed			26	Aur			26536	1914	37269	nec
+flamsteed			36	Aur			28499	2101	40394	nec
+flamsteed			40	Aur			28946	2143	41357	nec
+flamsteed			41	Aur		A	29388	2175	42126	nec
+flamsteed			43	Aur			29949	2239	43380	nec
+flamsteed			45	Aur			30247	2264	43905	nec
+flamsteed			47	Aur			30972	2338	45466	nec
+flamsteed			49	Aur			31434	2398	46553	nec
+flamsteed			51	Aur			31771	2419	47070	nec
+flamsteed			53	Aur			31737	2425	47152	nec
+flamsteed			54	Aur		A	31852	2438	47395	nec
+flamsteed			59	Aur			33041	2539	50018	nec
+flamsteed			60	Aur		A	33064	2541	50037	nec
+flamsteed			62	Aur			33614	2600	51440	nec
+flamsteed			63	Aur			34752	2696	54716	nec
+flamsteed			64	Aur			35341	2753	56221	nec
+flamsteed			65	Aur			35710	2793	57264	nec
+flamsteed			66	Aur			35907	2805	57669	nec
+flamsteed			1	Boo			66727	5144	119055	nec
+flamsteed			2	Boo			66763	5149	119126	nec
+flamsteed			3	Boo			67239	5182	120064	nec
+flamsteed			6	Boo			67480	5201	120539	nec
+flamsteed			7	Boo			67787	5225	121107	nec
+flamsteed			9	Boo			68103	5247	121710	nec
+flamsteed			10	Boo			68276	5255	121996	nec
+flamsteed			11	Boo			68478	5263	122405	nec
+flamsteed			12	Boo			69226	5304	123999	nec
+flamsteed			15	Boo			69612	5330	124679	nec
+flamsteed			18	Boo			69989	5365	125451	nec
+flamsteed			22	Boo			70602	5405	126661	nec
+flamsteed			26	Boo			71115	5434	127739	nec
+flamsteed			31	Boo			71832	5480	129312	nec
+flamsteed			33	Boo			71618	5468	129002	nec
+flamsteed			40	Boo			73369	5588	132772	nec
+flamsteed			44	Boo			73695	5618	133640	nec
+flamsteed			45	Boo			73996	5634	134083	nec
+flamsteed			46	Boo			74087	5638	134320	nec
+flamsteed			47	Boo			73841	5627	133962	nec
+flamsteed			50	Boo			75178	5718	136849	nec
+flamsteed			10	CMa			32292	2492	48917	nec
+flamsteed			11	CMa			32492	2504	49229	nec
+flamsteed			12	CMa			32504	2509	49333	nec
+flamsteed			15	CMa			33092	2571	50707	nec
+flamsteed			17	CMa			33248	2588	51055	nec
+flamsteed			26	CMa			34798	2718	55522	nec
+flamsteed			27	CMa			34981	2745	56014	nec
+flamsteed			1	CMi			35987	2820	58187	nec
+flamsteed			6	CMi			36425	2864	59294	nec
+flamsteed			11	CMi			37921	3008	62832	nec
+flamsteed			1	CVn			59708	4654	106478	nec
+flamsteed			2	CVn			59831	4666	106690	nec
+flamsteed			3	CVn			60122	4690	107274	nec
+flamsteed			4	CVn			60467	4715	107904	nec
+flamsteed			5	CVn			60485	4716	107950	nec
+flamsteed			6	CVn			60646	4728	108225	nec
+flamsteed			9	CVn			61692	4811	109980	nec
+flamsteed			10	CVn			62207	4845	110897	nec
+flamsteed			11	CVn			62516	4866	111421	nec
+flamsteed			14	CVn			63901	4943	113797	nec
+flamsteed			15	CVn			64217	4967	114376	nec
+flamsteed			17	CVn			64246	4971	114447	nec
+flamsteed			19	CVn			64692	5004	115271	nec
+flamsteed			20	CVn			64844	5017	115604	nec
+flamsteed			21	CVn			64906	5023	115735	nec
+flamsteed			23	CVn			65072	5032	116010	nec
+flamsteed			24	CVn			66234	5112	118232	nec
+flamsteed			25	CVn		A	66458	5127	118623	nec
+flamsteed			1	Cam		A	21148	1417	28446	nec
+flamsteed			3	Cam			21727	1467	29317	nec
+flamsteed			4	Cam			22287	1511	30121	nec
+flamsteed			5	Cam			22854	1555	30958	nec
+flamsteed			7	Cam			23040	1568	31278	nec
+flamsteed			8	Cam			23216	1588	31579	nec
+flamsteed			11	Cam			23734	1622	32343	nec
+flamsteed			12	Cam			23743	1623	32357	nec
+flamsteed			14	Cam			24348	1678	33296	nec
+flamsteed			15	Cam			24836	1719	34233	nec
+flamsteed			16	Cam			25197	1751	34787	nec
+flamsteed			17	Cam			25769	1802	35583	nec
+flamsteed			19	Cam			26408	1857	36570	nec
+flamsteed			23	Cam			27046	1943	37638	nec
+flamsteed			24	Cam			26942	1941	37601	nec
+flamsteed			26	Cam			27249	1969	38091	nec
+flamsteed			30	Cam			27731	2006	38831	nec
+flamsteed			31	Cam			27971	2027	39220	nec
+flamsteed			34	Cam			28385	2079	40062	nec
+flamsteed			35	Cam			28765	2123	40873	nec
+flamsteed			36	Cam			29490	2165	41927	nec
+flamsteed			37	Cam			29246	2152	41597	nec
+flamsteed			39	Cam			29348		41782	nec
+flamsteed			40	Cam			29730	2201	42633	nec
+flamsteed			42	Cam			32864	2490	48879	nec
+flamsteed			43	Cam			33104	2511	49340	nec
+flamsteed			47	Cam			35735	2772	56820	nec
+flamsteed			50	Cam			37701	2969	61931	nec
+flamsteed			51	Cam			37949	2975	62066	nec
+flamsteed			53	Cam			39261	3109	65339	nec
+flamsteed			54	Cam			39348	3119	65626	nec
+flamsteed			55	Cam			40215	3182	67447	nec
+flamsteed			56	Cam			40474	3221	68457	nec
+flamsteed			57	Cam			40772	3245	69148	nec
+flamsteed			3	Cap			99918	7738	192666	nec
+flamsteed			4	Cap			100062	7748	192879	nec
+flamsteed			14	Cap		A	101923	7889	196662	nec
+flamsteed			17	Cap			102487	7937	197725	nec
+flamsteed			19	Cap			103226	8000	199012	nec
+flamsteed			20	Cap			103616	8033	199728	nec
+flamsteed			21	Cap			103703		199947	nec
+flamsteed			24	Cap			104234	8080	200914	nec
+flamsteed			27	Cap			104452	8091	201352	nec
+flamsteed			29	Cap			104974	8128	202369	nec
+flamsteed			30	Cap			105143	8137	202671	nec
+flamsteed			33	Cap			105665	8183	203638	nec
+flamsteed			35	Cap			105928	8207	204139	nec
+flamsteed			36	Cap			106039	8213	204381	nec
+flamsteed			37	Cap			106559	8245	205289	nec
+flamsteed			41	Cap			107128	8285	206356	nec
+flamsteed			42	Cap			107095	8283	206301	nec
+flamsteed			44	Cap			107232	8295	206561	nec
+flamsteed			45	Cap			107302	8302	206677	nec
+flamsteed			46	Cap			107382	8311	206834	nec
+flamsteed			47	Cap			107487	8318	207005	nec
+flamsteed			1	Cas			114104	8797	218376	nec
+flamsteed			2	Cas			114365	8822	218753	nec
+flamsteed			4	Cas			115590	8904	220652	nec
+flamsteed			6	Cas		A	117447	9018	223385	nec
+flamsteed			9	Cas			330	9100	225180	nec
+flamsteed			10	Cas			531	7	144	nec
+flamsteed			12	Cas			1960	93	2011	nec
+flamsteed			13	Cas			2474	121	2729	nec
+flamsteed			16	Cas			2707	137	3038	nec
+flamsteed			23	Cas			3721	208	4382	nec
+flamsteed			31	Cas			5518	336	6829	nec
+flamsteed			32	Cas			5589	345	6972	nec
+flamsteed			35	Cas			6312	384	8003	nec
+flamsteed			40	Cas			7650	456	9774	nec
+flamsteed			42	Cas			8016	480	10250	nec
+flamsteed			43	Cas			7965	478	10221	nec
+flamsteed			44	Cas			8046	491	10425	nec
+flamsteed			47	Cas			9727	581	12230	nec
+flamsteed			48	Cas			9480	575	12111	nec
+flamsteed			48	Cas		A	9480	575	12111	nec
+flamsteed			49	Cas			9763	592	12339	nec
+flamsteed			50	Cas			9598	580	12216	nec
+flamsteed			52	Cas			9564	586	12279	nec
+flamsteed			53	Cas			9573	589	12301	nec
+flamsteed			55	Cas			10438	640	13474	nec
+flamsteed			68	Cas			3478	189	4142	nec
+flamsteed			1	Cen			67153	5168	119756	nec
+flamsteed			2	Cen			67457	5192	120323	nec
+flamsteed			4	Cen			67786	5221	120955	nec
+flamsteed			4	Cep			102253	7945	197950	nec
+flamsteed			6	Cep			105268	8171	203467	nec
+flamsteed			7	Cep			105972	8227	204770	nec
+flamsteed			9	Cep			106801	8279	206165	nec
+flamsteed			12	Cep			107586	8339	207528	nec
+flamsteed			13	Cep			108165	8371	208501	nec
+flamsteed			14	Cep			108772	8406	209481	nec
+flamsteed			18	Cep			108924	8416	209772	nec
+flamsteed			19	Cep			109017	8428	209975	nec
+flamsteed			20	Cep			109005	8426	209960	nec
+flamsteed			24	Cep			109400	8468	210807	nec
+flamsteed			25	Cep			110103	8511	211833	nec
+flamsteed			26	Cep			110817	8561	213087	nec
+flamsteed			30	Cep			111797	8627	214734	nec
+flamsteed			1	Cet			118178	9065	224481	nec
+flamsteed			2	Cet			301	9098	225132	nec
+flamsteed			3	Cet			355	9103	225212	nec
+flamsteed			4	Cet			635	11	315	nec
+flamsteed			5	Cet			664	14	352	nec
+flamsteed			6	Cet			910	33	693	nec
+flamsteed			7	Cet			1170	48	1038	nec
+flamsteed			9	Cet			1803	88	1835	nec
+flamsteed			10	Cet			2100	101	2273	nec
+flamsteed			12	Cet			2353	117	2637	nec
+flamsteed			13	Cet			2762	142	3196	nec
+flamsteed			14	Cet			2787	143	3229	nec
+flamsteed			18	Cet			3559	203	4307	nec
+flamsteed			20	Cet			4147	248	5112	nec
+flamsteed			21	Cet			4257	255	5268	nec
+flamsteed			25	Cet			4914	296	6203	nec
+flamsteed			26	Cet			4979	301	6288	nec
+flamsteed			27	Cet			5121	315	6482	nec
+flamsteed			28	Cet			5164	317	6530	nec
+flamsteed			30	Cet			5296	329	6706	nec
+flamsteed			32	Cet			5485	346	6976	nec
+flamsteed			33	Cet			5510	347	7014	nec
+flamsteed			34	Cet			5594	353	7147	nec
+flamsteed			37	Cet			5799	366	7439	nec
+flamsteed			38	Cet			5833	368	7476	nec
+flamsteed			39	Cet			5951	373	7672	nec
+flamsteed			42	Cet			6226	385	8036	nec
+flamsteed			42	Cet		A	6226	385	8036	nec
+flamsteed			44	Cet			6539	401	8511	nec
+flamsteed			46	Cet			6670	412	8705	nec
+flamsteed			47	Cet			6748	421	8829	nec
+flamsteed			48	Cet			6960	433	9132	nec
+flamsteed			49	Cet			7345	451	9672	nec
+flamsteed			50	Cet			7450	459	9856	nec
+flamsteed			54	Cet			8588	534	11257	nec
+flamsteed			56	Cet			9061	565	11930	nec
+flamsteed			57	Cet			9326	583	12255	nec
+flamsteed			60	Cet			9589	607	12573	nec
+flamsteed			61	Cet			9631	610	12641	nec
+flamsteed			63	Cet			10234	639	13468	nec
+flamsteed			64	Cet			10212	635	13421	nec
+flamsteed			66	Cet			10305	650	13612	nec
+flamsteed			67	Cet			10642	666	14129	nec
+flamsteed			69	Cet			11021	689	14652	nec
+flamsteed			70	Cet			11046	691	14690	nec
+flamsteed			71	Cet			11261	704	15004	nec
+flamsteed			75	Cet			11791	739	15779	nec
+flamsteed			77	Cet			12002	752	16074	nec
+flamsteed			80	Cet			12107	759	16212	nec
+flamsteed			81	Cet			12247	771	16400	nec
+flamsteed			84	Cet			12530	790	16765	nec
+flamsteed			84	Cet		A	12530	790	16765	nec
+flamsteed			85	Cet			12647	797	16861	nec
+flamsteed			93	Cet			14143	910	18883	nec
+flamsteed			94	Cet			14954	962	19994	nec
+flamsteed			95	Cet		A	15383	992	20559	nec
+flamsteed			1	Cnc			38848	3095	64960	nec
+flamsteed			3	Cnc			39177	3128	65759	nec
+flamsteed			5	Cnc			39236	3134	65873	nec
+flamsteed			8	Cnc			39567	3163	66664	nec
+flamsteed			12	Cnc			39874	3184	67483	nec
+flamsteed			15	Cnc			40240	3215	68351	nec
+flamsteed			20	Cnc			41117	3284	70569	nec
+flamsteed			21	Cnc			41163	3290	70734	nec
+flamsteed			27	Cnc			41400	3319	71250	nec
+flamsteed			28	Cnc			41574	3329	71496	nec
+flamsteed			29	Cnc			41578	3333	71555	nec
+flamsteed			34	Cnc			41904	3372	72359	nec
+flamsteed			36	Cnc			42265	3406	73143	nec
+flamsteed			39	Cnc			42516	3427	73665	nec
+flamsteed			45	Cnc			42795	3450	74228	nec
+flamsteed			46	Cnc			42954	3464	74485	nec
+flamsteed			49	Cnc			42917	3465	74521	nec
+flamsteed			50	Cnc			43121	3481	74873	nec
+flamsteed			53	Cnc			43575	3521	75716	nec
+flamsteed			54	Cnc			43454	3510	75528	nec
+flamsteed			57	Cnc		A	43721	3532	75959	nec
+flamsteed			57	Cnc		B	43721	3532	75959	nec
+flamsteed			60	Cnc			43851	3550	76351	nec
+flamsteed			61	Cnc			44031	3563	76572	nec
+flamsteed			66	Cnc			44307	3587	77104	nec
+flamsteed			67	Cnc			44342	3589	77190	nec
+flamsteed			75	Cnc			44892	3626	78418	nec
+flamsteed			79	Cnc			45033	3640	78715	nec
+flamsteed			2	Com		A	58858	4602	104827	nec
+flamsteed			3	Com			59352	4632	105778	nec
+flamsteed			4	Com			59468	4640	105981	nec
+flamsteed			5	Com			59501	4643	106057	nec
+flamsteed			6	Com			59819	4663	106661	nec
+flamsteed			7	Com			59847	4667	106714	nec
+flamsteed			8	Com			60087	4685	107168	nec
+flamsteed			11	Com			60202	4697	107383	nec
+flamsteed			12	Com		A	60351	4707	107700	nec
+flamsteed			13	Com			60514	4717	107966	nec
+flamsteed			14	Com			60697	4733	108283	nec
+flamsteed			16	Com			60746	4738	108382	nec
+flamsteed			17	Com			60904	4752	108662	nec
+flamsteed			18	Com			60941	4753	108722	nec
+flamsteed			20	Com			60957	4756	108765	nec
+flamsteed			21	Com			61071	4766	108945	nec
+flamsteed			22	Com			61295	4780	109307	nec
+flamsteed			23	Com			61394	4789	109485	nec
+flamsteed			24	Com		A	61418	4792	109511	nec
+flamsteed			25	Com			61571	4801	109742	nec
+flamsteed			26	Com			61724	4815	110024	nec
+flamsteed			27	Com			62356	4851	111067	nec
+flamsteed			29	Com			62541	4865	111397	nec
+flamsteed			30	Com			62576	4869	111469	nec
+flamsteed			31	Com			62763	4883	111812	nec
+flamsteed			32	Com			62807	4884	111862	nec
+flamsteed			35	Com			62886	4894	112033	nec
+flamsteed			35	Com		A	62886	4894	112033	nec
+flamsteed			36	Com			63355	4920	112769	nec
+flamsteed			37	Com			63462	4924	112989	nec
+flamsteed			38	Com			63533	4929	113095	nec
+flamsteed			39	Com		A	63948	4946	113848	nec
+flamsteed			41	Com			64022	4954	113996	nec
+flamsteed			7	CrB		B		5833	139891	nec
+flamsteed			17	Crt		A	56280	4444	100287	nec
+flamsteed			17	Crt		B	56280	4443	100286	nec
+flamsteed			22	Crt		A	100893	4469	100893	nec
+flamsteed			31	Crt			58587	4590	104337	nec
+flamsteed			3	Crv			59394	4635	105850	nec
+flamsteed			6	Crv			60425	4711	107815	nec
+flamsteed			2	Cyg			95372	7372	182568	nec
+flamsteed			4	Cyg			95556	7395	183056	nec
+flamsteed			8	Cyg			96052	7426	184171	nec
+flamsteed			9	Cyg			96302	7441	184759	nec
+flamsteed			11	Cyg			96387	7457	185037	nec
+flamsteed			14	Cyg			96693	7483	185872	nec
+flamsteed			15	Cyg			97118	7517	186675	nec
+flamsteed			16	Cyg			96901	7504	186427	nec
+flamsteed			16	Cyg		A	96895	7503	186408	nec
+flamsteed			19	Cyg			97630	7566	187849	nec
+flamsteed			20	Cyg			97635	7576	188056	nec
+flamsteed			22	Cyg			98068	7613	188892	nec
+flamsteed			23	Cyg			97870	7608	188665	nec
+flamsteed			25	Cyg			98425	7647	189687	nec
+flamsteed			26	Cyg			98571	7660	190147	nec
+flamsteed			28	Cyg			99303	7708	191610	nec
+flamsteed			29	Cyg			99770	7736	192640	nec
+flamsteed			30	Cyg			99639	7730	192514	nec
+flamsteed			33	Cyg			99655	7740	192696	nec
+flamsteed			35	Cyg			100122	7770	193370	nec
+flamsteed			36	Cyg			100108	7769	193369	nec
+flamsteed			39	Cyg			100587	7806	194317	nec
+flamsteed			40	Cyg			100907	7826	195050	nec
+flamsteed			41	Cyg			101076	7834	195295	nec
+flamsteed			42	Cyg			101067	7835	195324	nec
+flamsteed			43	Cyg			100859	7828	195068	nec
+flamsteed			44	Cyg			101214	7847	195593	nec
+flamsteed			47	Cyg		A	101474	7866	196093	nec
+flamsteed			48	Cyg			101765	7885	196606	nec
+flamsteed			49	Cyg			102066	7921	197177	nec
+flamsteed			51	Cyg			102177	7929	197511	nec
+flamsteed			52	Cyg			102453	7942	197912	nec
+flamsteed			55	Cyg			102724	7977	198478	nec
+flamsteed			57	Cyg			103089	8001	199081	nec
+flamsteed			59	Cyg			103632	8047	200120	nec
+flamsteed			60	Cyg			103732	8053	200310	nec
+flamsteed			61	Cyg		A	104214	8085	201091	nec
+flamsteed			61	Cyg		B	104217	8086	201092	nec
+flamsteed			63	Cyg			104194	8089	201251	nec
+flamsteed			68	Cyg			105186	8154	203064	nec
+flamsteed			69	Cyg			105811	8209	204172	nec
+flamsteed			70	Cyg			105942	8215	204403	nec
+flamsteed			71	Cyg			106093	8228	204771	nec
+flamsteed			72	Cyg			106551	8255	205512	nec
+flamsteed			74	Cyg			106711	8266	205835	nec
+flamsteed			75	Cyg			106999	8284	206330	nec
+flamsteed			76	Cyg			107097	8291	206538	nec
+flamsteed			77	Cyg			107162	8300	206644	nec
+flamsteed			79	Cyg			107253	8307	206774	nec
+flamsteed			1	Del			101160	7836	195325	nec
+flamsteed			1	Del		A	101160	7836	195325	nec
+flamsteed			10	Del			102080	7918	197121	nec
+flamsteed			13	Del			102633	7953	198069	nec
+flamsteed			14	Del			102819	7974	198391	nec
+flamsteed			15	Del			102805	7973	198390	nec
+flamsteed			16	Del			103298	8012	199254	nec
+flamsteed			17	Del			103294	8011	199253	nec
+flamsteed			3	Dra			57111	4504	101673	nec
+flamsteed			6	Dra			61384	4795	109551	nec
+flamsteed			9	Dra			63432	4928	113092	nec
+flamsteed			15	Dra			80650	6161	149212	nec
+flamsteed			16	Dra			81290	6184	150100	nec
+flamsteed			17	Dra		A	81292	6185	150117	nec
+flamsteed			17	Dra		B	81292	6186	150118	nec
+flamsteed			18	Dra			81660	6223	151101	nec
+flamsteed			19	Dra			82860	6315	153597	nec
+flamsteed			20	Dra			82898	6319	153697	nec
+flamsteed			26	Dra			86036	6573	160269	nec
+flamsteed			27	Dra			85805	6566	159966	nec
+flamsteed			36	Dra			89348	6850	168151	nec
+flamsteed			37	Dra			89448	6865	168653	nec
+flamsteed			40	Dra			88127	6809	166865	nec
+flamsteed			41	Dra			88136	6810	166866	nec
+flamsteed			45	Dra			90905	6978	171635	nec
+flamsteed			46	Dra			91755	7049	173524	nec
+flamsteed			48	Dra			92997	7175	176408	nec
+flamsteed			49	Dra			93340	7218	177249	nec
+flamsteed			50	Dra			92112	7124	175286	nec
+flamsteed			51	Dra			93713	7251	178207	nec
+flamsteed			53	Dra			94302	7295	180006	nec
+flamsteed			54	Dra			94490	7309	180610	nec
+flamsteed			55	Dra			94140	7290	179933	nec
+flamsteed			59	Dra			94083	7312	180777	nec
+flamsteed			64	Dra			98583	7676	190544	nec
+flamsteed			65	Dra			98658	7682	190713	nec
+flamsteed			66	Dra			98962	7701	191277	nec
+flamsteed			68	Dra			99500	7727	192455	nec
+flamsteed			69	Dra			98401	7686	190960	nec
+flamsteed			75	Dra			100965	7901	196787	nec
+flamsteed			76	Dra			102208	8002	199095	nec
+flamsteed			77	Dra			104105	8112	201908	nec
+flamsteed			78	Dra			107230	8324	207130	nec
+flamsteed			80	Dra			109434	8473	210873	nec
+flamsteed			6	Equ			104538	8098	201616	nec
+flamsteed			9	Equ			105413	8163	203291	nec
+flamsteed			4	Eri			13782	883	18454	nec
+flamsteed			5	Eri			13951	899	18633	nec
+flamsteed			6	Eri			13835	889	18535	nec
+flamsteed			7	Eri			14040	904	18760	nec
+flamsteed			14	Eri			15244	988	20395	nec
+flamsteed			15	Eri			15382	994	20610	nec
+flamsteed			17	Eri			16341	1070	21790	nec
+flamsteed			20	Eri			16803	1100	22470	nec
+flamsteed			21	Eri			17027	1111	22713	nec
+flamsteed			22	Eri			17167	1121	22920	nec
+flamsteed			24	Eri			17457	1146	23363	nec
+flamsteed			25	Eri			17506	1150	23413	nec
+flamsteed			30	Eri			18141	1202	24388	nec
+flamsteed			32	Eri		A	18255	1211	24554	nec
+flamsteed			32	Eri		A	18255	1212	24555	nec
+flamsteed			32	Eri		B	18255	1211	24554	nec
+flamsteed			35	Eri			18788	1244	25340	nec
+flamsteed			37	Eri			19483	1290	26409	nec
+flamsteed			39	Eri			19777	1318	26846	nec
+flamsteed			44	Eri			20884	1415	28375	nec
+flamsteed			45	Eri			21139	1437	28749	nec
+flamsteed			46	Eri			21278	1449	29009	nec
+flamsteed			47	Eri			21296	1451	29064	nec
+flamsteed			49	Eri			21515	1469	29335	nec
+flamsteed			51	Eri			21547	1474	29391	nec
+flamsteed			54	Eri			21763	1496	29755	nec
+flamsteed			56	Eri			22024	1508	30076	nec
+flamsteed			58	Eri			22263	1532	30495	nec
+flamsteed			59	Eri			22325	1538	30606	nec
+flamsteed			60	Eri			22479	1549	30814	nec
+flamsteed			62	Eri			22958	1582	31512	nec
+flamsteed			63	Eri			23221	1608	32008	nec
+flamsteed			64	Eri			23231	1611	32045	nec
+flamsteed			66	Eri			23794	1657	32964	nec
+flamsteed			68	Eri			23941	1673	33256	nec
+flamsteed			1	Gem			28734	2134	41116	nec
+flamsteed			3	Gem			29225	2173	42087	nec
+flamsteed			5	Gem			29379	2185	42398	nec
+flamsteed			8	Gem			29789	2230	43261	nec
+flamsteed			9	Gem			29840	2240	43384	nec
+flamsteed			16	Gem			30769	2330	45394	nec
+flamsteed			19	Gem			31105	2371	46031	nec
+flamsteed			20	Gem			31158		46136	nec
+flamsteed			25	Gem			32019	2453	47731	nec
+flamsteed			26	Gem			32104	2466	48097	nec
+flamsteed			28	Gem			32311	2480	48450	nec
+flamsteed			30	Gem			32249	2478	48433	nec
+flamsteed			32	Gem			32404	2489	48843	nec
+flamsteed			33	Gem			32753	2519	49606	nec
+flamsteed			35	Gem			32814	2525	49738	nec
+flamsteed			36	Gem			32921	2529	49908	nec
+flamsteed			37	Gem			33277	2569	50692	nec
+flamsteed			38	Gem			33202	2564	50635	nec
+flamsteed			40	Gem			33650	2605	51688	nec
+flamsteed			41	Gem			33715	2615	52005	nec
+flamsteed			44	Gem			34182	2659	53257	nec
+flamsteed			45	Gem			34440	2684	54131	nec
+flamsteed			47	Gem			34722	2700	54801	nec
+flamsteed			48	Gem			34819	2706	55052	nec
+flamsteed			51	Gem			34909	2717	55383	nec
+flamsteed			52	Gem			35025	2725	55621	nec
+flamsteed			53	Gem			35152	2738	55870	nec
+flamsteed			56	Gem			35699	2795	57423	nec
+flamsteed			57	Gem			35846	2808	57727	nec
+flamsteed			58	Gem			35842	2810	57744	nec
+flamsteed			59	Gem			35941	2816	57927	nec
+flamsteed			61	Gem			36156	2837	58579	nec
+flamsteed			63	Gem			36238	2846	58728	nec
+flamsteed			64	Gem			36393	2857	59037	nec
+flamsteed			65	Gem			36429	2861	59148	nec
+flamsteed			68	Gem			36760	2886	60107	nec
+flamsteed			70	Gem			37204	2924	60986	nec
+flamsteed			74	Gem			37300	2938	61338	nec
+flamsteed			76	Gem			37704	2983	62285	nec
+flamsteed			81	Gem			37908	3003	62721	nec
+flamsteed			82	Gem			38106	3021	63208	nec
+flamsteed			85	Gem			38722	3086	64648	nec
+flamsteed			2	Her			77907	5932	142780	nec
+flamsteed			3	Her			78442	5963	143553	nec
+flamsteed			4	Her			77986	5938	142926	nec
+flamsteed			8	Her			79102	6013	145122	nec
+flamsteed			9	Her			79488	6047	145892	nec
+flamsteed			10	Her			79349	6039	145713	nec
+flamsteed			16	Her			79666	6065	146388	nec
+flamsteed			21	Her			80351	6111	147869	nec
+flamsteed			23	Her			80247	6110	147835	nec
+flamsteed			25	Her			80460	6123	148283	nec
+flamsteed			29	Her			81008	6159	149161	nec
+flamsteed			30	Her			80704	6146	148783	nec
+flamsteed			34	Her			80809	6156	149081	nec
+flamsteed			37	Her			81641	6195	150378	nec
+flamsteed			39	Her			81729	6213	150682	nec
+flamsteed			42	Her			81497	6200	150450	nec
+flamsteed			43	Her			82073	6228	151217	nec
+flamsteed			45	Her			82216	6234	151525	nec
+flamsteed			47	Her			82402	6250	151956	nec
+flamsteed			50	Her			82422	6258	152173	nec
+flamsteed			51	Her			82504	6270	152326	nec
+flamsteed			52	Her			82321	6254	152107	nec
+flamsteed			52	Her		A	82321	6254	152107	nec
+flamsteed			53	Her			82587	6279	152598	nec
+flamsteed			54	Her			82802	6293	152879	nec
+flamsteed			56	Her			82780	6292	152863	nec
+flamsteed			57	Her			82987	6305	153287	nec
+flamsteed			59	Her			83313	6332	154029	nec
+flamsteed			60	Her			83613	6355	154494	nec
+flamsteed			61	Her			83462	6346	154356	nec
+flamsteed			63	Her			84054	6391	155514	nec
+flamsteed			66	Her			84671	6433	156681	nec
+flamsteed			68	Her			84573	6431	156633	nec
+flamsteed			69	Her			84606	6436	156729	nec
+flamsteed			70	Her			84887	6457	157198	nec
+flamsteed			72	Her			84862	6458	157214	nec
+flamsteed			73	Her			85157	6480	157728	nec
+flamsteed			74	Her			84835	6464	157325	nec
+flamsteed			77	Her			85379	6509	158414	nec
+flamsteed			78	Her			85790	6533	159139	nec
+flamsteed			79	Her			86254	6571	160181	nec
+flamsteed			82	Her			86182	6574	160290	nec
+flamsteed			83	Her			86667	6602	161074	nec
+flamsteed			84	Her			86731	6608	161239	nec
+flamsteed			87	Her			87194	6644	162211	nec
+flamsteed			89	Her			87747	6685	163506	nec
+flamsteed			90	Her			87563	6677	163217	nec
+flamsteed			93	Her			88128	6713	164349	nec
+flamsteed			95	Her		A		6730	164669	nec
+flamsteed			95	Her		B		6729	164668	nec
+flamsteed			96	Her			88331	6738	164852	nec
+flamsteed			97	Her			88346	6741	164900	nec
+flamsteed			98	Her			88657	6765	165625	nec
+flamsteed			99	Her			88745	6775	165908	nec
+flamsteed			100	Her			88818	6781	166045	nec
+flamsteed			100	Her			88817	6782	166046	nec
+flamsteed			101	Her			88899	6794	166230	nec
+flamsteed			102	Her			88886	6787	166182	nec
+flamsteed			104	Her			89172	6815	167006	nec
+flamsteed			105	Her			89773	6860	168532	nec
+flamsteed			106	Her			89861	6868	168720	nec
+flamsteed			107	Her			89935	6877	168914	nec
+flamsteed			108	Her			89925	6876	168913	nec
+flamsteed			109	Her			90139	6895	169414	nec
+flamsteed			110	Her			92043	7061	173667	nec
+flamsteed			111	Her			92161	7069	173880	nec
+flamsteed			112	Her			92614	7113	174933	nec
+flamsteed			113	Her			92818	7133	175492	nec
+flamsteed			1	Hya			41211	3297	70958	nec
+flamsteed			2	Hya			41375	3321	71297	nec
+flamsteed			3	Hya			42146	3398	72968	nec
+flamsteed			6	Hya			42509	3431	73840	nec
+flamsteed			9	Hya			42662	3441	74137	nec
+flamsteed			10	Hya			42931	3469	74591	nec
+flamsteed			12	Hya			43067	3484	74918	nec
+flamsteed			14	Hya			43305	3500	75333	nec
+flamsteed			15	Hya		A	43496	3523	75737	nec
+flamsteed			19	Hya			44883	3630	78556	nec
+flamsteed			20	Hya			44961	3641	78732	nec
+flamsteed			21	Hya			45184	3655	79193	nec
+flamsteed			23	Hya			45527	3681	79910	nec
+flamsteed			24	Hya			45526	3683	79931	nec
+flamsteed			26	Hya			45751	3706	80499	nec
+flamsteed			27	Hya			45811	3709	80586	nec
+flamsteed			28	Hya			46221	3738	81420	nec
+flamsteed			33	Hya			46982	3814	82870	nec
+flamsteed			34	Hya			47249	3832	83373	nec
+flamsteed			37	Hya			47427	3846	83650	nec
+flamsteed			44	Hya			51718	4145	91550	nec
+flamsteed			47	Hya			68269	5250	121847	nec
+flamsteed			48	Hya			68390	5257	122066	nec
+flamsteed			50	Hya			69415	5312	124206	nec
+flamsteed			51	Hya			70306	5381	125932	nec
+flamsteed			52	Hya			70753	5407	126769	nec
+flamsteed			55	Hya			72323	5514	130158	nec
+flamsteed			56	Hya			72357	5516	130259	nec
+flamsteed			57	Hya			72378	5517	130274	nec
+flamsteed			58	Hya			72571	5526	130694	nec
+flamsteed			59	Hya		A	73284	5577	132219	nec
+flamsteed			60	Hya			73566	5591	132851	nec
+flamsteed			1	LMi			42365	3409	73192	nec
+flamsteed			4	LMi			42538	3423	73596	nec
+flamsteed			5	LMi			43410	3499	75332	nec
+flamsteed			6	LMi			46058	3723	80956	nec
+flamsteed			7	LMi			46652	3764	82087	nec
+flamsteed			8	LMi			46735	3769	82198	nec
+flamsteed			9	LMi			46904	3791	82522	nec
+flamsteed			10	LMi			46952	3800	82635	nec
+flamsteed			11	LMi			47080	3815	82885	nec
+flamsteed			13	LMi			47631	3857	83951	nec
+flamsteed			15	LMi			48113	3881	84737	nec
+flamsteed			19	LMi			48833	3928	86146	nec
+flamsteed			20	LMi			49081	3951	86728	nec
+flamsteed			21	LMi			49593	3974	87696	nec
+flamsteed			22	LMi			50218	4014	88786	nec
+flamsteed			23	LMi			50303	4024	88960	nec
+flamsteed			24	LMi			50316	4027	88986	nec
+flamsteed			27	LMi			50860	4075	89904	nec
+flamsteed			28	LMi			50935	4081	90040	nec
+flamsteed			29	LMi			51047		90250	nec
+flamsteed			30	LMi			51056	4090	90277	nec
+flamsteed			32	LMi			51420	4113	90840	nec
+flamsteed			33	LMi			51556	4124	91130	nec
+flamsteed			34	LMi			51685	4137	91365	nec
+flamsteed			35	LMi			51914	4150	91752	nec
+flamsteed			36	LMi			52032		92000	nec
+flamsteed			37	LMi			52098	4166	92125	nec
+flamsteed			40	LMi			52422	4189	92769	nec
+flamsteed			41	LMi			52457	4192	92825	nec
+flamsteed			42	LMi			52638	4203	93152	nec
+flamsteed			43	LMi			52882	4223	93636	nec
+flamsteed			44	LMi			52959	4230	93765	nec
+flamsteed			47	LMi			53377	4256	94497	nec
+flamsteed			48	LMi			53355	4254	94480	nec
+flamsteed			50	LMi			53492	4270	94747	nec
+flamsteed			1	Lac			109937	8498	211388	nec
+flamsteed			2	Lac			110351	8523	212120	nec
+flamsteed			4	Lac			110609	8541	212593	nec
+flamsteed			5	Lac			111022	8572	213310	nec
+flamsteed			6	Lac			111104	8579	213420	nec
+flamsteed			8	Lac		A	111546	8603	214167	nec
+flamsteed			9	Lac			111674	8613	214454	nec
+flamsteed			10	Lac			111841	8622	214680	nec
+flamsteed			11	Lac			111944	8632	214868	nec
+flamsteed			12	Lac			112031	8640	214993	nec
+flamsteed			13	Lac			112242	8656	215373	nec
+flamsteed			14	Lac			112778	8690	216200	nec
+flamsteed			15	Lac			112917	8699	216397	nec
+flamsteed			16	Lac			113281	8725	216916	nec
+flamsteed			3	Leo			46457	3755	81873	nec
+flamsteed			6	Leo			46774	3779	82381	nec
+flamsteed			7	Leo			47096	3818	83023	nec
+flamsteed			8	Leo			47189	3826	83189	nec
+flamsteed			10	Leo			47205	3827	83240	nec
+flamsteed			13	Leo			47550	3853	83821	nec
+flamsteed			15	Leo			47701	3861	84107	nec
+flamsteed			18	Leo			47959	3877	84561	nec
+flamsteed			19	Leo			48029	3880	84722	nec
+flamsteed			20	Leo			48218	3889	85040	nec
+flamsteed			23	Leo			48324	3896	85268	nec
+flamsteed			31	Leo			49637	3980	87837	nec
+flamsteed			34	Leo			49929	3998	88355	nec
+flamsteed			37	Leo			50333	4035	89056	nec
+flamsteed			39	Leo			50384	4039	89125	nec
+flamsteed			42	Leo			50755	4070	89774	nec
+flamsteed			43	Leo			50851	4077	89962	nec
+flamsteed			44	Leo			51008	4088	90254	nec
+flamsteed			45	Leo			51213	4101	90569	nec
+flamsteed			46	Leo			51585	4127	91232	nec
+flamsteed			48	Leo			51775	4146	91612	nec
+flamsteed			49	Leo		A	51802	4148	91636	nec
+flamsteed			51	Leo			52686	4208	93257	nec
+flamsteed			52	Leo			52689	4209	93291	nec
+flamsteed			53	Leo			52911	4227	93702	nec
+flamsteed			54	Leo			53417	4259	94601	nec
+flamsteed			54	Leo		A	53417	4259	94601	nec
+flamsteed			54	Leo		B	53417	4260	94602	nec
+flamsteed			55	Leo			53423	4265	94672	nec
+flamsteed			56	Leo			53449	4267	94705	nec
+flamsteed			58	Leo			53807	4291	95345	nec
+flamsteed			59	Leo			53824	4294	95382	nec
+flamsteed			60	Leo			53954	4300	95608	nec
+flamsteed			61	Leo			53907	4299	95578	nec
+flamsteed			62	Leo			54049	4306	95849	nec
+flamsteed			64	Leo			54388	4322	96528	nec
+flamsteed			67	Leo			54487	4332	96738	nec
+flamsteed			69	Leo			54849	4356	97585	nec
+flamsteed			72	Leo			54951	4362	97778	nec
+flamsteed			73	Leo			55016	4365	97907	nec
+flamsteed			75	Leo			55137	4371	98118	nec
+flamsteed			76	Leo			55249	4381	98366	nec
+flamsteed			79	Leo			55650	4400	99055	nec
+flamsteed			80	Leo			55791	4410	99329	nec
+flamsteed			81	Leo			55765	4408	99285	nec
+flamsteed			83	Leo			55846	4414	99491	nec
+flamsteed			83	Leo		A	55846	4414	99491	nec
+flamsteed			85	Leo			56080	4426	99902	nec
+flamsteed			86	Leo			56146	4433	100006	nec
+flamsteed			87	Leo			56127	4432	99998	nec
+flamsteed			90	Leo			56473	4456	100600	nec
+flamsteed			90	Leo		A	56473	4456	100600	nec
+flamsteed			92	Leo			56975	4495	101484	nec
+flamsteed			93	Leo			57565	4527	102509	nec
+flamsteed			95	Leo			58159	4564	103578	nec
+flamsteed			1	Lep			23474	1634	32503	nec
+flamsteed			8	Lep			25202	1783	35337	nec
+flamsteed			10	Lep			25853	1849	36473	nec
+flamsteed			12	Lep			26865	1968	38090	nec
+flamsteed			17	Lep			28816	2148	41511	nec
+flamsteed			19	Lep			29048	2168	42042	nec
+flamsteed			2	Lib			70336	5383	126035	nec
+flamsteed			4	Lib			71974	5484	129433	nec
+flamsteed			5	Lib			72194	5503	129978	nec
+flamsteed			10	Lib			72702		131027	nec
+flamsteed			11	Lib			72631	5535	130952	nec
+flamsteed			12	Lib			72929	5548	131430	nec
+flamsteed			16	Lib			73165	5570	132052	nec
+flamsteed			18	Lib			73310	5582	132345	nec
+flamsteed			22	Lib			73953		133800	nec
+flamsteed			23	Lib			74500	5657	134987	nec
+flamsteed			26	Lib			74600	5662	135230	nec
+flamsteed			28	Lib			75110	5701	136366	nec
+flamsteed			30	Lib			75294		136801	nec
+flamsteed			36	Lib			76259	5775	138688	nec
+flamsteed			37	Lib			76219	5777	138716	nec
+flamsteed			41	Lib			76628	5814	139446	nec
+flamsteed			42	Lib			76742	5824	139663	nec
+flamsteed			47	Lib			77939	5915	142378	nec
+flamsteed			47	Lib		A	77939	5915	142378	nec
+flamsteed			48	Lib			78207	5941	142983	nec
+flamsteed			49	Lib			78400	5954	143333	nec
+flamsteed			50	Lib			78436	5959	143459	nec
+flamsteed			1	Lup			74604	5660	135153	nec
+flamsteed			2	Lup			74857	5686	135758	nec
+flamsteed			1	Lyn			29919	2215	42973	nec
+flamsteed			2	Lyn			30060	2238	43378	nec
+flamsteed			4	Lyn			30272	2257	43812	nec
+flamsteed			4	Lyn		A	30272	2257	43812	nec
+flamsteed			5	Lyn			30679	2293	44708	nec
+flamsteed			6	Lyn			31039	2331	45410	nec
+flamsteed			7	Lyn			31359	2376	46101	nec
+flamsteed			11	Lyn			31665	2402	46590	nec
+flamsteed			12	Lyn		A	32438	2470	48250	nec
+flamsteed			12	Lyn		B	32438	2470	48250	nec
+flamsteed			13	Lyn			32489	2477	48432	nec
+flamsteed			14	Lyn		A	33048	2520	49618	nec
+flamsteed			15	Lyn			33449	2560	50522	nec
+flamsteed			19	Lyn			35785	2784	57103	nec
+flamsteed			21	Lyn			36145	2818	58142	nec
+flamsteed			22	Lyn			36439	2849	58855	nec
+flamsteed			23	Lyn			37406	2929	61106	nec
+flamsteed			24	Lyn			37609	2946	61497	nec
+flamsteed			25	Lyn			38623	3065	64106	nec
+flamsteed			26	Lyn			38639	3066	64144	nec
+flamsteed			27	Lyn			39847	3173	67006	nec
+flamsteed			28	Lyn			39722	3167	66824	nec
+flamsteed			29	Lyn			40646	3235	68930	nec
+flamsteed			30	Lyn			40875	3254	69548	nec
+flamsteed			32	Lyn			41975	3365	72291	nec
+flamsteed			33	Lyn			42090	3377	72524	nec
+flamsteed			34	Lyn			42604	3422	73593	nec
+flamsteed			35	Lyn			43531	3508	75506	nec
+flamsteed			36	Lyn			45290	3652	79158	nec
+flamsteed			37	Lyn			45836	3697	80290	nec
+flamsteed			38	Lyn			45688	3690	80081	nec
+flamsteed			38	Lyn		B	45688	3690	80081	nec
+flamsteed			42	Lyn			47300	3829	83287	nec
+flamsteed			43	Lyn			47570	3851	83805	nec
+flamsteed			44	Lyn			47965	3870	84335	nec
+flamsteed			16	Lyr			93408	7215	177196	nec
+flamsteed			17	Lyr			93917	7261	178449	nec
+flamsteed			19	Lyr			94311	7283	179527	nec
+flamsteed			1	Mon			28321	2107	40535	nec
+flamsteed			2	Mon			28325	2108	40536	nec
+flamsteed			3	Mon			28574	2128	40967	nec
+flamsteed			7	Mon			30073	2273	44112	nec
+flamsteed			10	Mon			30772	2344	45546	nec
+flamsteed			12	Mon			31159	2382	46241	nec
+flamsteed			13	Mon			31216	2385	46300	nec
+flamsteed			14	Mon			31385	2404	46642	nec
+flamsteed			16	Mon			32463	2494	48977	nec
+flamsteed			17	Mon			32533	2503	49161	nec
+flamsteed			18	Mon			32578	2506	49293	nec
+flamsteed			19	Mon			33971	2648	52918	nec
+flamsteed			20	Mon			34622	2701	54810	nec
+flamsteed			21	Mon			34724	2707	55057	nec
+flamsteed			24	Mon			35080	2744	56003	nec
+flamsteed			25	Mon			37088	2927	61064	nec
+flamsteed			27	Mon			39079	3122	65695	nec
+flamsteed			28	Mon			39211	3141	65953	nec
+flamsteed			30	Mon			41307	3314	71155	nec
+flamsteed			31	Mon			42835	3459	74395	nec
+flamsteed			12	Oph			81300	6171	149661	nec
+flamsteed			14	Oph			81734	6205	150557	nec
+flamsteed			16	Oph			82037	6224	151133	nec
+flamsteed			19	Oph			82162	6232	151431	nec
+flamsteed			20	Oph			82369	6243	151769	nec
+flamsteed			21	Oph			82480	6255	152127	nec
+flamsteed			23	Oph			82730	6280	152601	nec
+flamsteed			24	Oph		A	82925	6291	152849	nec
+flamsteed			24	Oph		B	82925	6291	152849	nec
+flamsteed			26	Oph			83196	6310	153363	nec
+flamsteed			29	Oph			83331	6321	153727	nec
+flamsteed			30	Oph			83262	6318	153687	nec
+flamsteed			32	Oph			83430	6337	154143	nec
+flamsteed			33	Oph			83478	6341	154228	nec
+flamsteed			34	Oph			83504	6342	154278	nec
+flamsteed			36	Oph		A	84405	6402	155886	nec
+flamsteed			36	Oph		B	84405	6401	155885	nec
+flamsteed			36	Oph		C	84478		156026	nec
+flamsteed			37	Oph			84177	6393	155644	nec
+flamsteed			41	Oph		A	84514	6415	156266	nec
+flamsteed			43	Oph			85084	6459	157236	nec
+flamsteed			44	Oph			85340	6486	157792	nec
+flamsteed			45	Oph			85423	6492	157919	nec
+flamsteed			47	Oph			85397	6496	157968	nec
+flamsteed			51	Oph			85755	6519	158643	nec
+flamsteed			52	Oph			86060	6545	159376	nec
+flamsteed			53	Oph			85998	6548	159480	nec
+flamsteed			58	Oph			86736	6595	160915	nec
+flamsteed			61	Oph			86831	6609	161270	nec
+flamsteed			63	Oph			87706	6672	162978	nec
+flamsteed			66	Oph			88149	6712	164284	nec
+flamsteed			67	Oph			88192	6714	164353	nec
+flamsteed			68	Oph			88290	6723	164577	nec
+flamsteed			70	Oph			88601	6752	165341	nec
+flamsteed			70	Oph		A			165341	nec
+flamsteed			70	Oph		B	88601	6752	165341	nec
+flamsteed			71	Oph			88765	6770	165760	nec
+flamsteed			72	Oph			88771	6771	165777	nec
+flamsteed			73	Oph		A	88964	6795	166233	nec
+flamsteed			74	Oph			89918	6866	168656	nec
+flamsteed			5	Ori			22730	1562	31139	nec
+flamsteed			6	Ori			22833	1569	31283	nec
+flamsteed			11	Ori			23607	1638	32549	nec
+flamsteed			15	Ori			24010	1676	33276	nec
+flamsteed			16	Ori			23983	1672	33254	nec
+flamsteed			18	Ori			24555	1718	34203	nec
+flamsteed			21	Ori			24817	1746	34658	nec
+flamsteed			22	Ori			25044	1765	35039	nec
+flamsteed			23	Ori			25142	1770	35149	nec
+flamsteed			27	Ori			25282	1787	35410	nec
+flamsteed			29	Ori			25247	1784	35369	nec
+flamsteed			31	Ori			25737	1834	36167	nec
+flamsteed			32	Ori			25813	1839	36267	nec
+flamsteed			32	Ori		A	25813	1839	36267	nec
+flamsteed			32	Ori		B	25813	1839	36267	nec
+flamsteed			33	Ori			25861	1842	36351	nec
+flamsteed			35	Ori			26093	1864	36653	nec
+flamsteed			38	Ori			26126	1872	36777	nec
+flamsteed			42	Ori			26237	1892	37018	nec
+flamsteed			45	Ori			26268	1901	37077	nec
+flamsteed			49	Ori			26563	1937	37507	nec
+flamsteed			51	Ori			26885	1963	37984	nec
+flamsteed			52	Ori		A	27386	1999	38710	nec
+flamsteed			52	Ori		B	27386	1999	38710	nec
+flamsteed			55	Ori			27658	2031	39291	nec
+flamsteed			56	Ori			27750	2037	39400	nec
+flamsteed			57	Ori			27965	2052	39698	nec
+flamsteed			59	Ori			28271	2100	40372	nec
+flamsteed			60	Ori			28296	2103	40446	nec
+flamsteed			63	Ori			28812	2144	41361	nec
+flamsteed			64	Ori			28691	2130	41040	nec
+flamsteed			66	Ori			28814	2145	41380	nec
+flamsteed			68	Ori			29433	2193	42509	nec
+flamsteed			69	Ori			29434	2198	42545	nec
+flamsteed			72	Ori			29704	2223	43153	nec
+flamsteed			73	Ori			29736	2229	43247	nec
+flamsteed			75	Ori			29850	2247	43525	nec
+flamsteed			77	Ori			30717	2334	45416	nec
+flamsteed			78	Ori			30720	2335	45433	nec
+flamsteed			1	Peg			105502	8173	203504	nec
+flamsteed			2	Peg			106140	8225	204724	nec
+flamsteed			3	Peg			106783	8265	205811	nec
+flamsteed			4	Peg			106856	8270	205924	nec
+flamsteed			5	Peg			106787	8267	205852	nec
+flamsteed			7	Peg			107151	8289	206487	nec
+flamsteed			9	Peg			107348	8313	206859	nec
+flamsteed			11	Peg			107575	8328	207203	nec
+flamsteed			12	Peg			107472	8321	207089	nec
+flamsteed			13	Peg			107788	8344	207652	nec
+flamsteed			14	Peg			107763	8343	207650	nec
+flamsteed			15	Peg			107975	8354	207978	nec
+flamsteed			16	Peg			108022	8356	208057	nec
+flamsteed			17	Peg			108339	8373	208565	nec
+flamsteed			18	Peg			108612	8385	209008	nec
+flamsteed			19	Peg			108699	8393	209167	nec
+flamsteed			20	Peg			108693	8392	209166	nec
+flamsteed			21	Peg			108875	8404	209459	nec
+flamsteed			23	Peg			109056	8419	209833	nec
+flamsteed			25	Peg			109240	8438	210129	nec
+flamsteed			28	Peg			109458	8459	210516	nec
+flamsteed			30	Peg			110298	8513	211924	nec
+flamsteed			31	Peg			110386	8520	212076	nec
+flamsteed			32	Peg			110371	8522	212097	nec
+flamsteed			34	Peg			110785	8548	212754	nec
+flamsteed			35	Peg			110882	8551	212943	nec
+flamsteed			36	Peg			110986	8562	213119	nec
+flamsteed			37	Peg		A	111062	8566	213235	nec
+flamsteed			38	Peg			111068	8574	213323	nec
+flamsteed			39	Peg			111278	8586	213617	nec
+flamsteed			40	Peg			111810	8618	214567	nec
+flamsteed			41	Peg			111884	8624	214698	nec
+flamsteed			45	Peg			112358	8660	215510	nec
+flamsteed			52	Peg		A	113503	8739	217232	nec
+flamsteed			55	Peg			114144	8795	218329	nec
+flamsteed			56	Peg			114155	8796	218356	nec
+flamsteed			57	Peg			114347	8815	218634	nec
+flamsteed			58	Peg			114389	8821	218700	nec
+flamsteed			59	Peg			114520	8826	218918	nec
+flamsteed			63	Peg			115271	8882	220088	nec
+flamsteed			64	Peg			115355	8887	220222	nec
+flamsteed			65	Peg			115407	8891	220318	nec
+flamsteed			66	Peg			115444	8893	220363	nec
+flamsteed			67	Peg			115591	8903	220599	nec
+flamsteed			69	Peg			115806	8915	220933	nec
+flamsteed			70	Peg			115919	8923	221115	nec
+flamsteed			71	Peg			116264	8940	221615	nec
+flamsteed			72	Peg			116310	8943	221673	nec
+flamsteed			72	Peg		A	116310	8943	221673	nec
+flamsteed			72	Peg		B	116310	8943	221673	nec
+flamsteed			73	Peg			116355	8948	221758	nec
+flamsteed			74	Peg			116592	8960	222098	nec
+flamsteed			75	Peg			116611	8963	222133	nec
+flamsteed			76	Peg			116972		222683	nec
+flamsteed			77	Peg			117020	8991	222764	nec
+flamsteed			78	Peg			117073	8997	222842	nec
+flamsteed			79	Peg			117500	9025	223461	nec
+flamsteed			80	Peg			117628	9030	223637	nec
+flamsteed			82	Peg			117730	9039	223781	nec
+flamsteed			85	Peg			171	9088	224930	nec
+flamsteed			86	Peg			476	4	87	nec
+flamsteed			87	Peg			729	22	448	nec
+flamsteed			1	Per			8704	533	11241	nec
+flamsteed			2	Per			8714	536	11291	nec
+flamsteed			3	Per			9222	568	11949	nec
+flamsteed			4	Per			9505	590	12303	nec
+flamsteed			5	Per			10227	627	13267	nec
+flamsteed			7	Per			10729	662	13994	nec
+flamsteed			8	Per			10718	661	13982	nec
+flamsteed			9	Per			11060	685	14489	nec
+flamsteed			10	Per			11279	696	14818	nec
+flamsteed			11	Per			12692	785	16727	nec
+flamsteed			12	Per			12623	788	16739	nec
+flamsteed			14	Per			12768	800	16901	nec
+flamsteed			17	Per			13328	843	17709	nec
+flamsteed			20	Per			13490	855	17904	nec
+flamsteed			21	Per			13775	873	18296	nec
+flamsteed			24	Per			13905	882	18449	nec
+flamsteed			29	Per			15404	987	20365	nec
+flamsteed			30	Per			15338	982	20315	nec
+flamsteed			31	Per			15444	989	20418	nec
+flamsteed			32	Per			15648	1002	20677	nec
+flamsteed			34	Per			16244	1044	21428	nec
+flamsteed			36	Per			16499	1069	21770	nec
+flamsteed			40	Per			17313	1123	22951	nec
+flamsteed			42	Per			17886	1177	23848	nec
+flamsteed			48	Per			19343	1273	25940	nec
+flamsteed			52	Per			19811	1306	26673	nec
+flamsteed			53	Per			20354	1350	27396	nec
+flamsteed			54	Per			20252	1343	27348	nec
+flamsteed			55	Per			20579	1377	27777	nec
+flamsteed			56	Per			20591	1379	27786	nec
+flamsteed			57	Per			21242	1434	28704	nec
+flamsteed			58	Per			21476	1454	29094	nec
+flamsteed			59	Per			21928	1494	29722	nec
+flamsteed			2	PsA			104174	8076	200763	nec
+flamsteed			3	PsA			104750	8110	201901	nec
+flamsteed			6	PsA			106340	8230	204854	nec
+flamsteed			7	PsA			106703	8256	205529	nec
+flamsteed			8	PsA			106654	8253	205471	nec
+flamsteed			13	PsA			108952	8405	209476	nec
+flamsteed			19	PsA			112102	8637	214966	nec
+flamsteed			21	PsA			112862	8693	216210	nec
+flamsteed			1	Psc			113167	8715	216701	nec
+flamsteed			2	Psc			113521	8742	217264	nec
+flamsteed			3	Psc			113610	8750	217428	nec
+flamsteed			5	Psc			114273	8807	218527	nec
+flamsteed			7	Psc			115227	8878	220009	nec
+flamsteed			9	Psc			115768	8912	220858	nec
+flamsteed			13	Psc			116146	8934	221409	nec
+flamsteed			14	Psc			116323	8944	221675	nec
+flamsteed			15	Psc			116422		221833	nec
+flamsteed			16	Psc			116495	8954	221950	nec
+flamsteed			19	Psc			117245	9004	223075	nec
+flamsteed			20	Psc			117375	9012	223252	nec
+flamsteed			21	Psc			117491	9022	223438	nec
+flamsteed			22	Psc			117683	9033	223719	nec
+flamsteed			23	Psc			117710	9035	223755	nec
+flamsteed			24	Psc			117761	9041	223825	nec
+flamsteed			25	Psc			117774	9042	223855	nec
+flamsteed			26	Psc			117927	9048	224103	nec
+flamsteed			27	Psc			118209	9067	224533	nec
+flamsteed			29	Psc			145	9087	224926	nec
+flamsteed			30	Psc			154	9089	224935	nec
+flamsteed			31	Psc			186	9092	224995	nec
+flamsteed			32	Psc			194	9093	225003	nec
+flamsteed			33	Psc			443	3	28	nec
+flamsteed			34	Psc			813	26	560	nec
+flamsteed			35	Psc			1196	50	1061	nec
+flamsteed			36	Psc			1319	59	1227	nec
+flamsteed			41	Psc			1645	80	1635	nec
+flamsteed			42	Psc			1772	86	1796	nec
+flamsteed			43	Psc			1948		2035	nec
+flamsteed			44	Psc			2006	97	2114	nec
+flamsteed			46	Psc			2213		2410	nec
+flamsteed			47	Psc			2219	103	2411	nec
+flamsteed			48	Psc			2224	106	2436	nec
+flamsteed			51	Psc			2548	132	2913	nec
+flamsteed			52	Psc			2568	131	2910	nec
+flamsteed			53	Psc			2903	155	3379	nec
+flamsteed			54	Psc			3093	166	3651	nec
+flamsteed			55	Psc			3138	167	3690	nec
+flamsteed			57	Psc			3632	211	4408	nec
+flamsteed			58	Psc			3675	213	4482	nec
+flamsteed			59	Psc			3685	214	4490	nec
+flamsteed			60	Psc			3697	216	4526	nec
+flamsteed			62	Psc			3760	221	4627	nec
+flamsteed			65	Psc		A	3885	231	4758	nec
+flamsteed			65	Psc		B	3885	230	4757	nec
+flamsteed			66	Psc			4267	254	5267	nec
+flamsteed			66	Psc		A	4267	254	5267	nec
+flamsteed			67	Psc			4366	262	5382	nec
+flamsteed			68	Psc			4510	274	5575	nec
+flamsteed			72	Psc			5081	308	6397	nec
+flamsteed			73	Psc			5074	307	6386	nec
+flamsteed			75	Psc			5204	319	6557	nec
+flamsteed			76	Psc			5175		6476	nec
+flamsteed			80	Psc			5346	330	6763	nec
+flamsteed			82	Psc			5544	349	7034	nec
+flamsteed			87	Psc			5778	364	7374	nec
+flamsteed			88	Psc			5824	367	7446	nec
+flamsteed			89	Psc			6061	378	7804	nec
+flamsteed			91	Psc			6315	389	8126	nec
+flamsteed			94	Psc			6732	414	8763	nec
+flamsteed			97	Psc			6981	432	9100	nec
+flamsteed			101	Psc			7436	455	9766	nec
+flamsteed			105	Psc			7740	475	10164	nec
+flamsteed			107	Psc			7981	493	10476	nec
+flamsteed			109	Psc			8159	508	10697	nec
+flamsteed			1	Pup			37648	2993	62576	nec
+flamsteed			2	Pup		A	37843	3010	62864	nec
+flamsteed			3	Pup			37677	2996	62623	nec
+flamsteed			4	Pup			37891	3015	62952	nec
+flamsteed			5	Pup		A	38048	3029	63336	nec
+flamsteed			6	Pup			38211	3044	63697	nec
+flamsteed			8	Pup			38372	3063	64077	nec
+flamsteed			9	Pup		A	38382	3064	64096	nec
+flamsteed			9	Pup		B	38382	3064	64096	nec
+flamsteed			10	Pup			38427	3073	64238	nec
+flamsteed			11	Pup			38835	3102	65228	nec
+flamsteed			12	Pup			39023	3123	65699	nec
+flamsteed			14	Pup			39524	3168	66834	nec
+flamsteed			16	Pup			39906	3192	67797	nec
+flamsteed			18	Pup			40035	3202	68146	nec
+flamsteed			19	Pup			40084	3211	68290	nec
+flamsteed			20	Pup			40259	3229	68752	nec
+flamsteed			21	Pup			40604	3257	69665	nec
+flamsteed			22	Pup			41067	3289	70673	nec
+flamsteed			212	Pup		A	38423	3079	64379	nec
+flamsteed			1	Sco			77635	5885	141637	nec
+flamsteed			2	Sco			77840	5904	142114	nec
+flamsteed			2	Sco		A	77840	5904	142114	nec
+flamsteed			3	Sco			77909	5912	142301	nec
+flamsteed			4	Sco			77984	5917	142445	nec
+flamsteed			11	Sco			79005	6002	144708	nec
+flamsteed			12	Sco		A	79399		145483	nec
+flamsteed			13	Sco			79404	6028	145482	nec
+flamsteed			16	Sco			79387	6033	145607	nec
+flamsteed			18	Sco			79672	6060	146233	nec
+flamsteed			22	Sco			80815	6141	148605	nec
+flamsteed			24	Sco			81724	6196	150416	nec
+flamsteed			27	Sco			82960	6288	152820	nec
+flamsteed			28	Sco			83684	6350	154418	nec
+flamsteed			32	Sco			84947		156992	nec
+flamsteed			33	Sco			85242	6474	157588	nec
+flamsteed			1	Ser			73193	5573	132132	nec
+flamsteed			2	Ser			73536	5594	132933	nec
+flamsteed			2	Ser		A	73536	5594	132933	nec
+flamsteed			3	Ser			74649	5675	135482	nec
+flamsteed			4	Ser			74689	5679	135559	nec
+flamsteed			6	Ser			75119	5710	136514	nec
+flamsteed			7	Ser			75230	5717	136831	nec
+flamsteed			8	Ser			75342	5721	137006	nec
+flamsteed			10	Ser			75761	5746	137898	nec
+flamsteed			16	Ser			76425	5802	139195	nec
+flamsteed			30	Ser			77464	5875	141378	nec
+flamsteed			39	Ser			77801	5911	142267	nec
+flamsteed			40	Ser			77910	5919	142500	nec
+flamsteed			43	Ser			78685	5976	144046	nec
+flamsteed			45	Ser			79007	6004	144874	nec
+flamsteed			47	Ser			79072	6010	145002	nec
+flamsteed			48	Ser			79332	6035	145647	nec
+flamsteed			61	Ser			90844	6957	170920	nec
+flamsteed			62	Ser			92872	7135	175515	nec
+flamsteed			64	Ser			93051	7158	175869	nec
+flamsteed			2	Sex			47310	3834	83425	nec
+flamsteed			6	Sex			48341	3899	85364	nec
+flamsteed			10	Sex			48734	3926	86080	nec
+flamsteed			11	Sex			48876	3938	86369	nec
+flamsteed			13	Sex			49329	3961	87301	nec
+flamsteed			14	Sex			49530	3973	87682	nec
+flamsteed			17	Sex			49812	3989	88195	nec
+flamsteed			18	Sex			49865	3996	88333	nec
+flamsteed			19	Sex			50027	4004	88547	nec
+flamsteed			24	Sex			50887		90043	nec
+flamsteed			25	Sex			50885	4082	90044	nec
+flamsteed			26	Sex			51117		90473	nec
+flamsteed			33	Sex			52316	4182	92588	nec
+flamsteed			35	Sex			52452	4193	92841	nec
+flamsteed			36	Sex			52584	4201	93102	nec
+flamsteed			37	Sex			52660	4207	93244	nec
+flamsteed			41	Sex			52980	4237	93903	nec
+flamsteed			1	Sge			94620	7301	180317	nec
+flamsteed			2	Sge			95398	7369	182490	nec
+flamsteed			9	Sge			97796	7574	188001	nec
+flamsteed			11	Sge			98234	7622	189090	nec
+flamsteed			13	Sge			98438	7645	189577	nec
+flamsteed			14	Sge			98754	7664	190229	nec
+flamsteed			15	Sge			98819	7672	190406	nec
+flamsteed			18	Sge			99913	7746	192836	nec
+flamsteed			1	Sgr			89153	6801	166464	nec
+flamsteed			2	Sgr			86352		160042	nec
+flamsteed			4	Sgr			88116	6700	163955	nec
+flamsteed			6	Sgr			88258	6715	164358	nec
+flamsteed			7	Sgr			88380	6724	164584	nec
+flamsteed			9	Sgr			88469	6736	164794	nec
+flamsteed			14	Sgr			89369	6816	167036	nec
+flamsteed			15	Sgr			89439	6822	167264	nec
+flamsteed			16	Sgr			89440	6823	167263	nec
+flamsteed			18	Sgr			90260	6888	169233	nec
+flamsteed			21	Sgr			90289	6896	169420	nec
+flamsteed			24	Sgr			91004	6961	171115	nec
+flamsteed			26	Sgr			91689	7011	172546	nec
+flamsteed			28	Sgr			92111	7046	173460	nec
+flamsteed			29	Sgr			92390	7078	174116	nec
+flamsteed			33	Sgr			92747	7114	174947	nec
+flamsteed			43	Sgr			94820	7304	180540	nec
+flamsteed			50	Sgr			95564	7375	182629	nec
+flamsteed			51	Sgr			96406	7431	184552	nec
+flamsteed			52	Sgr			96465	7440	184707	nec
+flamsteed			53	Sgr			96729	7470	185404	nec
+flamsteed			54	Sgr			96808	7476	185644	nec
+flamsteed			55	Sgr			96950	7489	186005	nec
+flamsteed			56	Sgr			97290	7515	186648	nec
+flamsteed			57	Sgr			97783	7561	187739	nec
+flamsteed			59	Sgr			98162	7604	188603	nec
+flamsteed			60	Sgr			98353	7618	189005	nec
+flamsteed			61	Sgr			98258	7614	188899	nec
+flamsteed			62	Sgr			98688	7650	189763	nec
+flamsteed			63	Sgr			98633	7649	189741	nec
+flamsteed			70	Sgr			89980	6861	168574	nec
+flamsteed			4	Tau			16322	1061	21686	nec
+flamsteed			5	Tau			16369	1066	21754	nec
+flamsteed			6	Tau			16511	1079	21933	nec
+flamsteed			10	Tau			16852	1101	22484	nec
+flamsteed			11	Tau			17181	1118	22805	nec
+flamsteed			12	Tau			17103	1115	22796	nec
+flamsteed			13	Tau			17309	1126	23016	nec
+flamsteed			14	Tau			17408	1132	23183	nec
+flamsteed			18	Tau			17527	1144	23324	nec
+flamsteed			24	Tau					23629	nec
+flamsteed			26	Tau			17832		23822	nec
+flamsteed			29	Tau			17563	1153	23466	nec
+flamsteed			30	Tau			17771	1174	23793	nec
+flamsteed			31	Tau		A	18089	1199	24263	nec
+flamsteed			32	Tau			18471	1218	24740	nec
+flamsteed			33	Tau			18485	1221	24769	nec
+flamsteed			36	Tau			19009	1252	25555	nec
+flamsteed			37	Tau			19038	1256	25604	nec
+flamsteed			39	Tau			19076	1262	25680	nec
+flamsteed			40	Tau			18957	1253	25558	nec
+flamsteed			41	Tau			19171	1268	25823	nec
+flamsteed			44	Tau			19513	1287	26322	nec
+flamsteed			45	Tau			19554	1292	26462	nec
+flamsteed			46	Tau			19719	1309	26690	nec
+flamsteed			47	Tau		A	19740	1311	26722	nec
+flamsteed			48	Tau			19877	1319	26911	nec
+flamsteed			51	Tau			20087	1331	27176	nec
+flamsteed			53	Tau			20171	1339	27295	nec
+flamsteed			56	Tau			20186	1341	27309	nec
+flamsteed			57	Tau			20219	1351	27397	nec
+flamsteed			58	Tau			20261	1356	27459	nec
+flamsteed			60	Tau			20400	1368	27628	nec
+flamsteed			62	Tau			20533	1378	27778	nec
+flamsteed			63	Tau			20484	1376	27749	nec
+flamsteed			66	Tau			20522	1381	27820	nec
+flamsteed			70	Tau			20661	1391	27991	nec
+flamsteed			71	Tau			20713	1394	28052	nec
+flamsteed			72	Tau			20789	1399	28149	nec
+flamsteed			75	Tau			20877	1407	28292	nec
+flamsteed			76	Tau			20873	1408	28294	nec
+flamsteed			79	Tau			20901	1414	28355	nec
+flamsteed			80	Tau			20995	1422	28485	nec
+flamsteed			80	Tau		A	20995	1422	28485	nec
+flamsteed			81	Tau			21039	1428	28546	nec
+flamsteed			83	Tau			21036	1430	28556	nec
+flamsteed			84	Tau			21082		28595	nec
+flamsteed			85	Tau			21137	1432	28677	nec
+flamsteed			88	Tau			21402	1458	29140	nec
+flamsteed			89	Tau			21588	1472	29375	nec
+flamsteed			90	Tau			21589	1473	29388	nec
+flamsteed			93	Tau			21735	1484	29589	nec
+flamsteed			95	Tau			21961	1499	29859	nec
+flamsteed			96	Tau			22441	1537	30605	nec
+flamsteed			97	Tau			22565	1547	30780	nec
+flamsteed			98	Tau			23088	1590	31592	nec
+flamsteed			99	Tau			23068	1586	31553	nec
+flamsteed			103	Tau			23900	1659	32990	nec
+flamsteed			105	Tau			23883	1660	32991	nec
+flamsteed			108	Tau			24512	1711	34053	nec
+flamsteed			109	Tau			24822	1739	34559	nec
+flamsteed			110	Tau			25216	1774	35189	nec
+flamsteed			113	Tau			25410	1798	35532	nec
+flamsteed			114	Tau			25539	1810	35708	nec
+flamsteed			115	Tau			25499	1808	35671	nec
+flamsteed			116	Tau			25555	1814	35770	nec
+flamsteed			117	Tau			25583	1816	35802	nec
+flamsteed			118	Tau			25695	1821	35943	nec
+flamsteed			118	Tau		A	25695	1821	35943	nec
+flamsteed			119	Tau			25945	1845	36389	nec
+flamsteed			120	Tau			26064	1858	36576	nec
+flamsteed			121	Tau			26248	1875	36819	nec
+flamsteed			122	Tau			26382	1905	37147	nec
+flamsteed			125	Tau			26640	1928	37438	nec
+flamsteed			126	Tau			26777	1946	37711	nec
+flamsteed			129	Tau			27265	1985	38478	nec
+flamsteed			130	Tau			27338	1990	38558	nec
+flamsteed			131	Tau			27316	1989	38545	nec
+flamsteed			132	Tau			27468	2002	38751	nec
+flamsteed			133	Tau			27364	1993	38622	nec
+flamsteed			134	Tau			27511	2010	38899	nec
+flamsteed			135	Tau			27581	2016	39019	nec
+flamsteed			136	Tau			27830	2034	39357	nec
+flamsteed			137	Tau			27743	2033	39317	nec
+flamsteed			139	Tau			28237	2084	40111	nec
+flamsteed			141	Tau			28561	2116	40724	nec
+flamsteed			5	Tri			10220	634	13372	nec
+flamsteed			7	Tri			10559	655	13869	nec
+flamsteed			10	Tri			10793	675	14252	nec
+flamsteed			11	Tri			11432	712	15176	nec
+flamsteed			12	Tri			11486	717	15257	nec
+flamsteed			13	Tri			11548	720	15335	nec
+flamsteed			14	Tri			11784	736	15656	nec
+flamsteed			15	Tri			12086	750	16058	nec
+flamsteed			47	Tuc			1902	95	2051	nec
+flamsteed			2	UMa			42080	3354	72037	nec
+flamsteed			5	UMa			43644	3505	75486	nec
+flamsteed			6	UMa			43903	3531	75958	nec
+flamsteed			10	UMa			44248	3579	76943	nec
+flamsteed			15	UMa			44901	3619	78209	nec
+flamsteed			16	UMa			45333	3648	79028	nec
+flamsteed			17	UMa			45455	3660	79354	nec
+flamsteed			18	UMa			45493	3662	79439	nec
+flamsteed			22	UMa			47013	3768	82189	nec
+flamsteed			23	UMa			46733	3757	81937	nec
+flamsteed			24	UMa			46977	3771	82210	nec
+flamsteed			26	UMa			47006	3799	82621	nec
+flamsteed			27	UMa			47654	3839	83506	nec
+flamsteed			31	UMa			48682	3917	85795	nec
+flamsteed			32	UMa			50448	4026	88983	nec
+flamsteed			35	UMa			51401	4106	90633	nec
+flamsteed			37	UMa			51814	4141	91480	nec
+flamsteed			39	UMa			52478	4187	92728	nec
+flamsteed			41	UMa			52685	4202	93132	nec
+flamsteed			42	UMa			53064	4236	93875	nec
+flamsteed			43	UMa			53043	4235	93859	nec
+flamsteed			44	UMa			53261	4246	94247	nec
+flamsteed			46	UMa			53426	4258	94600	nec
+flamsteed			49	UMa			53838	4288	95310	nec
+flamsteed			51	UMa			54136	4309	95934	nec
+flamsteed			55	UMa			55266	4380	98353	nec
+flamsteed			56	UMa			55560	4392	98839	nec
+flamsteed			57	UMa			56034	4422	99787	nec
+flamsteed			57	UMa		A	56034	4422	99787	nec
+flamsteed			58	UMa			56148	4431	99984	nec
+flamsteed			60	UMa			56789	4480	101133	nec
+flamsteed			61	UMa			56997	4496	101501	nec
+flamsteed			62	UMa			57029	4501	101606	nec
+flamsteed			66	UMa			58181	4566	103605	nec
+flamsteed			68	UMa			59458	4641	106002	nec
+flamsteed			70	UMa			60212	4701	107465	nec
+flamsteed			71	UMa			60584	4726	108135	nec
+flamsteed			73	UMa			60795	4745	108502	nec
+flamsteed			74	UMa			60978	4760	108844	nec
+flamsteed			75	UMa			60992	4762	108861	nec
+flamsteed			76	UMa			61936	4833	110462	nec
+flamsteed			78	UMa			63503	4931	113139	nec
+flamsteed			78	UMa		A	63503	4931	113139	nec
+flamsteed			81	UMa			66198	5109	118214	nec
+flamsteed			82	UMa			66634	5142	119024	nec
+flamsteed			83	UMa			66738	5154	119228	nec
+flamsteed			84	UMa			67231	5187	120198	nec
+flamsteed			86	UMa			67848	5238	121409	nec
+flamsteed			2	UMi			5372	285	5848	nec
+flamsteed			3	UMi			68956	5305	124063	nec
+flamsteed			4	UMi			69112	5321	124547	nec
+flamsteed			5	UMi			70692	5430	127700	nec
+flamsteed			11	UMi			74793	5714	136726	nec
+flamsteed			19	UMi			79280	6079	146926	nec
+flamsteed			20	UMi			79420	6082	147142	nec
+flamsteed			24	UMi			85699	6811	166926	nec
+flamsteed			33	Vel		A	41616	3358	72108	nec
+flamsteed			4	Vir			57562	4528	102510	nec
+flamsteed			6	Vir			58110	4559	103484	nec
+flamsteed			7	Vir			58510	4585	104181	nec
+flamsteed			12	Vir			59608	4650	106251	nec
+flamsteed			13	Vir			60030	4681	107070	nec
+flamsteed			16	Vir			60172	4695	107328	nec
+flamsteed			17	Vir			60353	4708	107705	nec
+flamsteed			20	Vir			61246	4777	109217	nec
+flamsteed			21	Vir			61318	4781	109309	nec
+flamsteed			25	Vir			61558	4799	109704	nec
+flamsteed			27	Vir			61937	4824	110377	nec
+flamsteed			31	Vir			61968	4829	110423	nec
+flamsteed			34	Vir			62394	4855	111164	nec
+flamsteed			35	Vir			62443	4858	111239	nec
+flamsteed			37	Vir			62757	4878	111765	nec
+flamsteed			38	Vir			62875	4891	111998	nec
+flamsteed			41	Vir			62933	4900	112097	nec
+flamsteed			44	Vir			63414	4921	112846	nec
+flamsteed			46	Vir		A	63494	4925	112992	nec
+flamsteed			49	Vir			64078	4955	114038	nec
+flamsteed			50	Vir			64224	4961	114287	nec
+flamsteed			53	Vir			64407	4981	114642	nec
+flamsteed			55	Vir			64577	4995	114946	nec
+flamsteed			57	Vir			64725	5001	115202	nec
+flamsteed			61	Vir			64924	5019	115617	nec
+flamsteed			63	Vir			65301	5044	116292	nec
+flamsteed			64	Vir			65241	5040	116235	nec
+flamsteed			65	Vir			65323	5047	116365	nec
+flamsteed			66	Vir			65420	5050	116568	nec
+flamsteed			68	Vir			65581	5064	116870	nec
+flamsteed			69	Vir			65639	5068	116976	nec
+flamsteed			70	Vir			65721	5072	117176	nec
+flamsteed			71	Vir			65790	5081	117304	nec
+flamsteed			72	Vir			65892	5088	117436	nec
+flamsteed			73	Vir			66015	5094	117661	nec
+flamsteed			74	Vir			66006	5095	117675	nec
+flamsteed			75	Vir			66091	5099	117789	nec
+flamsteed			76	Vir			66098	5100	117818	nec
+flamsteed			78	Vir			66200	5105	118022	nec
+flamsteed			80	Vir			66320	5111	118219	nec
+flamsteed			82	Vir			66803	5150	119149	nec
+flamsteed			83	Vir			67057	5165	119605	nec
+flamsteed			84	Vir			66936	5159	119425	nec
+flamsteed			85	Vir			67139	5170	119786	nec
+flamsteed			86	Vir		A	67172	5173	119853	nec
+flamsteed			87	Vir			67288	5181	120052	nec
+flamsteed			89	Vir			67494	5196	120452	nec
+flamsteed			90	Vir			67929	5232	121299	nec
+flamsteed			92	Vir			68092	5244	121607	nec
+flamsteed			95	Vir			68940	5290	123255	nec
+flamsteed			96	Vir			69127	5298	123630	nec
+flamsteed			104	Vir			70680	5406	126722	nec
+flamsteed			106	Vir			70794	5410	126927	nec
+flamsteed			108	Vir			72154	5501	129956	nec
+flamsteed			109	Vir			72220	5511	130109	nec
+flamsteed			110	Vir			73620	5601	133165	nec
+flamsteed			1	Vul			94703	7306	180554	nec
+flamsteed			2	Vul			94827	7318	180968	nec
+flamsteed			3	Vul			95260	7358	182255	nec
+flamsteed			4	Vul			95498	7385	182762	nec
+flamsteed			5	Vul			95560	7390	182919	nec
+flamsteed			7	Vul			95818	7409	183537	nec
+flamsteed			8	Vul			95785	7406	183491	nec
+flamsteed			9	Vul			96275	7437	184606	nec
+flamsteed			10	Vul			97077	7506	186486	nec
+flamsteed			12	Vul			97679	7565	187811	nec
+flamsteed			13	Vul			97886	7592	188260	nec
+flamsteed			14	Vul			98375	7641	189410	nec
+flamsteed			15	Vul			98543	7653	189849	nec
+flamsteed			16	Vul		A	98636	7657	190004	nec
+flamsteed			16	Vul		B	98636	7657	190004	nec
+flamsteed			17	Vul			99080	7688	190993	nec
+flamsteed			18	Vul			99404	7711	191747	nec
+flamsteed			19	Vul			99518	7718	192004	nec
+flamsteed			20	Vul			99531	7719	192044	nec
+flamsteed			21	Vul			99738	7731	192518	nec
+flamsteed			22	Vul			99853	7741	192713	nec
+flamsteed			23	Vul			99874	7744	192806	nec
+flamsteed			24	Vul			99951	7753	192944	nec
+flamsteed			25	Vul			100435	7789	193911	nec
+flamsteed			26	Vul			101641	7874	196362	nec
+flamsteed			27	Vul			101716	7880	196504	nec
+flamsteed			28	Vul			101868	7894	196740	nec
+flamsteed			29	Vul			101867	7891	196724	nec
+flamsteed			30	Vul			102388	7939	197752	nec
+flamsteed			31	Vul			103004	7995	198809	nec
+flamsteed			32	Vul			103200	8008	199169	nec
+flamsteed			33	Vul			103511	8032	199697	nec
+flamsteed			35	Vul			105966	8217	204414	nec
+gould			4	Aql			92386	7085	174240	nec
+gould			6	Aql			92963	7143	175640	nec
+gould			7	Aql			93138	7163	176095	nec
+gould			12	Aql			93488	7208	176981	nec
+gould			13	Aql			93580	7214	177178	nec
+gould			25	Aql			94149	7269	178744	nec
+gould			34	Aql			94833	7313	180782	nec
+gould			37	Aql			94916	7325	181122	nec
+gould			42	Aql			95222	7349	181907	nec
+gould			43	Aql			95281	7353	182038	nec
+gould			44	Aql			95253	7354	182101	nec
+gould			49	Aql			95732	7397	183227	nec
+gould			52	Aql			95812	7404	183387	nec
+gould			60	Aql			96356	7432	184573	nec
+gould			61	Aql			96351	7438	184663	nec
+gould			67	Aql			96630	7471	185423	nec
+gould			71	Aql			96917		185966	nec
+gould			75	Aql			97144		186535	nec
+gould			77	Aql			97244	7516	186660	nec
+gould			80	Aql			97499	7541	187195	nec
+gould			85	Aql			97687	7559	187660	nec
+gould			88	Aql			97697	7562	187753	nec
+gould			100	Aql			98416	7637	189340	nec
+gould			101	Aql			98385	7636	189322	nec
+gould			103	Aql			98526	7648	189695	nec
+gould			110	Aql			99024	7681	190664	nec
+gould			131	Aql			100232	7768	193329	nec
+gould			132	Aql			100541	7794	194013	nec
+gould			136	Aql			100672		194263	nec
+gould			137	Aql			100758	7809	194454	nec
+gould			142	Aql			101339		195617	nec
+gould			145	Aql			101746	7878	196426	nec
+gould			1	Aqr			101911		196676	nec
+gould			2	Aqr			101921	7890	196712	nec
+gould			7	Aqr			102561	7946	197954	nec
+gould			11	Aqr			102891	7976	198431	nec
+gould			15	Aqr			103077	7994	198802	nec
+gould			18	Aqr			103154	7998	198949	nec
+gould			38	Aqr			104048	8068	200663	nec
+gould			49	Aqr			104557	8096	201567	nec
+gould			55	Aqr			105046	8132	202554	nec
+gould			57	Aqr			105079	8134	202606	nec
+gould			72	Aqr			105819	8203	204041	nec
+gould			80	Aqr			106592	8251	205423	nec
+gould			89	Aqr			107596	8332	207235	nec
+gould			94	Aqr			108102	8360	208111	nec
+gould			96	Aqr			108453	8376	208703	nec
+gould			98	Aqr			108506	8382	208801	nec
+gould			100	Aqr			108784	8394	209240	nec
+gould			113	Aqr			109375		210244	nec
+gould			115	Aqr			109442	8451	210419	nec
+gould			119	Aqr			109509	8457	210464	nec
+gould			121	Aqr			109647	8467	210763	nec
+gould			126	Aqr			110018	8497	211364	nec
+gould			128	Aqr			109984	8495	211356	nec
+gould			138	Aqr			110532	8530	212320	nec
+gould			144	Aqr			110746	8542	212643	nec
+gould			152	Aqr			111066	8565	213198	nec
+gould			155	Aqr			111171	8580	213428	nec
+gould			162	Aqr			111515	8596	213986	nec
+gould			189	Aqr			113080		216553	nec
+gould			196	Aqr			113204		216727	nec
+gould			197	Aqr			113345	8727	216953	nec
+gould			198	Aqr			113531	8741	217251	nec
+gould			200	Aqr			113673	8756	217498	nec
+gould			202	Aqr			113686	8759	217563	nec
+gould			205	Aqr			113801	8764	217703	nec
+gould			213	Aqr			114371	8816	218639	nec
+gould			217	Aqr			114822	8840	219402	nec
+gould			225	Aqr			115144	8869	219879	nec
+gould			233	Aqr			115522		220466	nec
+gould			234	Aqr			115528	8900	220465	nec
+gould			236	Aqr			115709		220766	nec
+gould			237	Aqr			115839	8917	220957	nec
+gould			238	Aqr			115906	8921	221081	nec
+gould			240	Aqr			116060	8928	221308	nec
+gould			246	Aqr			116368	8946	221745	nec
+gould			248	Aqr			116428	8951	221835	nec
+gould			251	Aqr			116624		222125	nec
+gould			255	Aqr			116853	8979	222493	nec
+gould			258	Aqr			116957	8987	222643	nec
+gould			264	Aqr			117314	9009	223170	nec
+gould			266	Aqr			117494	9021	223428	nec
+gould			268	Aqr			117541	9027	223524	nec
+gould			269	Aqr			117567	9029	223559	nec
+gould			271	Aqr			117722	9037	223774	nec
+gould			274	Aqr			117797	9043	223884	nec
+gould			41	Ara			84720	6416	156274	nec
+gould			1	Boo			68498	5262	122365	nec
+gould			2	Boo			68687	5274	122744	nec
+gould			4	Boo			70384	5388	126200	nec
+gould			2	Cen			54264	4318	96407	nec
+gould			3	Cen			54291	4321	96484	nec
+gould			5	Cen			54380		96660	nec
+gould			7	Cen			54718		97413	nec
+gould			9	Cen			54746	4350	97495	nec
+gould			10	Cen			54783	4353	97550	nec
+gould			11	Cen			54811	4354	97576	nec
+gould			13	Cen			54840	4360	97651	nec
+gould			15	Cen			54929	4364	97866	nec
+gould			20	Cen			55130	4372	98161	nec
+gould			22	Cen			55133		98176	nec
+gould			25	Cen			55528	4393	98892	nec
+gould			26	Cen			55588	4396	98993	nec
+gould			27	Cen			55581	4398	99022	nec
+gould			28	Cen			55667	4403	99171	nec
+gould			29	Cen			55756	4409	99322	nec
+gould			30	Cen			55763	4411	99333	nec
+gould			31	Cen			55779	4413	99453	nec
+gould			32	Cen			55849	4417	99574	nec
+gould			33	Cen			55831	4415	99556	nec
+gould			34	Cen			56000	4423	99803	nec
+gould			39	Cen			56319	4447	100378	nec
+gould			43	Cen			56497	4462	100708	nec
+gould			49	Cen			56632	4470	100911	nec
+gould			50	Cen			56606	4472	100929	nec
+gould			52	Cen			56656	4475	101021	nec
+gould			54	Cen			56754	4487	101189	nec
+gould			58	Cen			56986	4499	101570	nec
+gould			59	Cen			57013	4502	101615	nec
+gould			60	Cen			57165	4508	101883	nec
+gould			62	Cen			57211	4513	101995	nec
+gould			63	Cen			57322	4516	102150	nec
+gould			64	Cen			57371	4519	102232	nec
+gould			67	Cen			57497	4524	102397	nec
+gould			70	Cen			57741	4541	102878	nec
+gould			74	Cen			57870	4551	103101	nec
+gould			76	Cen			58041	4556	103400	nec
+gould			77	Cen			58057	4557	103437	nec
+gould			79	Cen			58103	4563	103516	nec
+gould			80	Cen			58177	4568	103637	nec
+gould			81	Cen			58242	4570	103746	nec
+gould			84	Cen			58452		104080	nec
+gould			85	Cen			58453	4582	104081	nec
+gould			88	Cen			58803	4600	104731	nec
+gould			90	Cen			58859		104839	nec
+gould			97	Cen			59353	4631	105776	nec
+gould			100	Cen			59439	4637	105920	nec
+gould			102	Cen			59607	4648	106231	nec
+gould			104	Cen			59785	4658	106572	nec
+gould			106	Cen			59950	4675	106922	nec
+gould			112	Cen			60454	4713	107833	nec
+gould			114	Cen			60463	4714	107860	nec
+gould			116	Cen			60549	4718	107998	nec
+gould			120	Cen			60729	4734	108309	nec
+gould			126	Cen			61328	4782	109312	nec
+gould			127	Cen			61379	4788	109409	nec
+gould			128	Cen			61468	4794	109536	nec
+gould			129	Cen			61498	4796	109573	nec
+gould			130	Cen			61557		109675	nec
+gould			133	Cen			61916	4818	110287	nec
+gould			137	Cen			62081	4836	110575	nec
+gould			138	Cen			62128	4838	110653	nec
+gould			140	Cen			62360	4850	111032	nec
+gould			141	Cen			62655	4871	111519	nec
+gould			142	Cen			62703	4872	111588	nec
+gould			144	Cen			62799	4880	111775	nec
+gould			145	Cen			62786	4879	111774	nec
+gould			147	Cen			62821	4882	111790	nec
+gould			148	Cen			62861	4885	111884	nec
+gould			151	Cen			63033	4903	112164	nec
+gould			152	Cen			63066	4906	112213	nec
+gould			155	Cen			63204		112381	nec
+gould			162	Cen			63490	4922	112935	nec
+gould			168	Cen			63849		113537	nec
+gould			172	Cen			63972	4941	113778	nec
+gould			174	Cen			64033	4944	113823	nec
+gould			176	Cen			64003	4947	113852	nec
+gould			177	Cen			64053	4951	113902	nec
+gould			180	Cen			64395	4972	114461	nec
+gould			181	Cen			64332	4970	114435	nec
+gould			182	Cen			64348	4973	114474	nec
+gould			185	Cen			64408	4979	114613	nec
+gould			186	Cen			64478	4980	114630	nec
+gould			187	Cen			64472	4982	114707	nec
+gould			189	Cen			64515	4985	114772	nec
+gould			190	Cen			64580	4988	114835	nec
+gould			191	Cen			64583	4989	114837	nec
+gould			192	Cen			64557	4991	114873	nec
+gould			193	Cen			64623	4996	114971	nec
+gould			194	Cen			64651	4999	115050	nec
+gould			196	Cen			64822	5008	115331	nec
+gould			198	Cen			64933	5016	115529	nec
+gould			200	Cen			65108	5024	115778	nec
+gould			203	Cen			65129	5027	115842	nec
+gould			205	Cen			65144	5029	115912	nec
+gould			209	Cen			65247	5036	116084	nec
+gould			210	Cen			65303	5039	116226	nec
+gould			213	Cen			65311	5043	116278	nec
+gould			215	Cen			65479	5048	116457	nec
+gould			217	Cen			65535	5058	116713	nec
+gould			220	Cen			65606	5061	116836	nec
+gould			221	Cen			65593	5060	116835	nec
+gould			222	Cen			65630	5063	116862	nec
+gould			223	Cen			65621	5065	116873	nec
+gould			229	Cen			66019	5092	117597	nec
+gould			232	Cen			66236	5103	117919	nec
+gould			233	Cen			66254	5104	118010	nec
+gould			236	Cen			66427	5118	118338	nec
+gould			237	Cen			66405	5117	118319	nec
+gould			238	Cen			66521	5122	118384	nec
+gould			239	Cen			66454	5121	118354	nec
+gould			242	Cen			66575	5124	118520	nec
+gould			243	Cen			66681	5130	118666	nec
+gould			248	Cen			66656	5136	118799	nec
+gould			251	Cen			66849	5140	118978	nec
+gould			253	Cen			66925	5151	119159	nec
+gould			254	Cen			66923	5152	119193	nec
+gould			256	Cen			66924	5155	119250	nec
+gould			258	Cen			66984	5157	119361	nec
+gould			263	Cen			67199		119727	nec
+gould			268	Cen			67292	5175	119938	nec
+gould			269	Cen			67304	5176	119971	nec
+gould			278	Cen			67663	5206	120640	nec
+gould			279	Cen			67648	5208	120672	nec
+gould			282	Cen			67696	5212	120759	nec
+gould			283	Cen			67836	5217	120908	nec
+gould			288	Cen			67973	5230	121190	nec
+gould			291	Cen			68101	5236	121384	nec
+gould			293	Cen			68079	5239	121416	nec
+gould			294	Cen			68191	5241	121474	nec
+gould			298	Cen			68333	5251	121853	nec
+gould			299	Cen			68413	5252	121901	nec
+gould			302	Cen			68493	5259	122210	nec
+gould			305	Cen			68670	5266	122438	nec
+gould			310	Cen			68902	5281	122879	nec
+gould			312	Cen			68872	5286	123004	nec
+gould			313	Cen			69065	5289	123151	nec
+gould			317	Cen			69011		123247	nec
+gould			319	Cen			69113	5294	123445	nec
+gould			321	Cen			69191	5297	123569	nec
+gould			324	Cen			69462	5308	124147	nec
+gould			329	Cen			69655	5319	124454	nec
+gould			330	Cen			69598	5318	124433	nec
+gould			332	Cen			69671	5325	124580	nec
+gould			334	Cen			70035	5349	125158	nec
+gould			337	Cen			69995	5357	125283	nec
+gould			340	Cen			70264	5371	125628	nec
+gould			341	Cen			70243	5376	125745	nec
+gould			347	Cen			70580	5398	126386	nec
+gould			348	Cen			70626	5400	126475	nec
+gould			349	Cen			70798	5403	126610	nec
+gould			350	Cen			70966	5417	127152	nec
+gould			351	Cen			70987	5419	127193	nec
+gould			352	Cen			71154	5428	127624	nec
+gould			354	Cen			71333	5432	127724	nec
+gould			357	Cen			71353	5439	127971	nec
+gould			358	Cen			71429	5446	128152	nec
+gould			359	Cen			71453	5449	128207	nec
+gould			361	Cen			71581	5456	128488	nec
+gould			365	Cen			71746	5461	128713	nec
+gould			367	Cen			71783	5466	128974	nec
+gould			373	Cen			72296	5508	130055	nec
+gould			375	Cen			72432	5519	130328	nec
+gould			377	Cen			72772	5542	131117	nec
+gould			380	Cen			72959	5549	131432	nec
+gould			381	Cen			73049	5558	131625	nec
+gould			382	Cen			73116	5561	131752	nec
+gould			383	Cen			73107	5562	131774	nec
+gould			384	Cen			73279	5572	132096	nec
+gould			386	Cen			73341	5579	132238	nec
+gould			388	Cen			73493	5585	132604	nec
+gould			389	Cen			73559	5587	132763	nec
+gould			1	Cet			118029	9054	224283	nec
+gould			2	Cet			118081		224349	nec
+gould			4	Cet			238	9095	225045	nec
+gould			5	Cet			253	9096	225069	nec
+gould			7	Cet			343	9101	225197	nec
+gould			9	Cet			560	9	203	nec
+gould			10	Cet			602	10	256	nec
+gould			11	Cet			636	12	319	nec
+gould			12	Cet			671	16	360	nec
+gould			14	Cet			873	31	645	nec
+gould			18	Cet			983	37	787	nec
+gould			27	Cet			1191	51	1064	nec
+gould			29	Cet			1402	66	1343	nec
+gould			38	Cet			1821		1879	nec
+gould			39	Cet			2086		2268	nec
+gould			43	Cet			2237	108	2475	nec
+gould			47	Cet			2337	115	2630	nec
+gould			49	Cet			2381	118	2696	nec
+gould			57	Cet			2846	150	3325	nec
+gould			59	Cet			2941	159	3443	nec
+gould			63	Cet			3175	172	3794	nec
+gould			64	Cet			3185	173	3795	nec
+gould			65	Cet			3193	174	3807	nec
+gould			71	Cet			3436	190	4145	nec
+gould			73	Cet			3505	197	4247	nec
+gould			74	Cet			3552	201	4301	nec
+gould			76	Cet			3576	206	4338	nec
+gould			77	Cet			3607	210	4398	nec
+gould			78	Cet			3717	218	4585	nec
+gould			79	Cet			3741	220	4622	nec
+gould			81	Cet			3849	227	4730	nec
+gould			82	Cet			3858	232	4772	nec
+gould			88	Cet			4104	247	5098	nec
+gould			93	Cet			4346	263	5384	nec
+gould			101	Cet			4801		6037	nec
+gould			106	Cet			5170	320	6559	nec
+gould			108	Cet			5259	325	6668	nec
+gould			127	Cet			6283	387	8120	nec
+gould			128	Cet			6272	388	8121	nec
+gould			131	Cet			6432	392	8334	nec
+gould			133	Cet			6427	394	8350	nec
+gould			137	Cet			6564	404	8556	nec
+gould			138	Cet			6605	406	8599	nec
+gould			139	Cet			6589	405	8589	nec
+gould			144	Cet			6717	416	8779	nec
+gould			148	Cet			6789		8896	nec
+gould			149	Cet			6822	425	8921	nec
+gould			165	Cet			7276	448	9562	nec
+gould			166	Cet			7362		9690	nec
+gould			168	Cet			7363		9731	nec
+gould			170	Cet			7580	466	10009	nec
+gould			171	Cet			7597		10024	nec
+gould			172	Cet			7679	473	10148	nec
+gould			175	Cet			7999	500	10550	nec
+gould			176	Cet			8094	507	10658	nec
+gould			179	Cet			8230	513	10824	nec
+gould			186	Cet			8664		11365	nec
+gould			187	Cet			8688		11396	nec
+gould			193	Cet			9237		12116	nec
+gould			202	Cet			9572	608	12583	nec
+gould			203	Cet			9622	611	12642	nec
+gould			205	Cet			9655		12702	nec
+gould			207	Cet			9827	616	12923	nec
+gould			209	Cet			9862		13004	nec
+gould			213	Cet			9999	625	13215	nec
+gould			219	Cet			10215	638	13456	nec
+gould			221	Cet			10273		13546	nec
+gould			226	Cet			10326	651	13692	nec
+gould			227	Cet			10396		13763	nec
+gould			232	Cet			10723	672	14214	nec
+gould			238	Cet			11029	692	14691	nec
+gould			239	Cet			11033	693	14728	nec
+gould			240	Cet			11108	697	14830	nec
+gould			250	Cet			11381	713	15220	nec
+gould			254	Cet			11603	725	15453	nec
+gould			256	Cet			11687	732	15633	nec
+gould			258	Cet			11671	735	15652	nec
+gould			259	Cet			11738	737	15694	nec
+gould			263	Cet			11907	745	15996	nec
+gould			264	Cet			12022	751	16060	nec
+gould			272	Cet			12148	766	16247	nec
+gould			276	Cet			12272	770	16399	nec
+gould			279	Cet			12318	775	16467	nec
+gould			285	Cet			12447	783	16647	nec
+gould			286	Cet			12444	784	16673	nec
+gould			289	Cet			12584	795	16824	nec
+gould			290	Cet			12562	796	16825	nec
+gould			293	Cet			12720		17001	nec
+gould			297	Cet			12862	816	17163	nec
+gould			305	Cet			13679	870	18262	nec
+gould			309	Cet			14104	908	18832	nec
+gould			313	Cet			14315	926	19121	nec
+gould			314	Cet			14607	942	19525	nec
+gould			9	Eri			9022		11965	nec
+gould			10	Eri			9085	573	12042	nec
+gould			12	Eri			9685		12894	nec
+gould			15	Eri			11102	701	14943	nec
+gould			20	Eri			12611	807	17006	nec
+gould			21	Eri			12708	814	17098	nec
+gould			26	Eri			12964	826	17390	nec
+gould			27	Eri			13008	827	17438	nec
+gould			31	Eri			13271	853	17864	nec
+gould			33	Eri			13421	859	17943	nec
+gould			35	Eri			13479	862	18071	nec
+gould			40	Eri			13717	875	18331	nec
+gould			43	Eri			13874	892	18543	nec
+gould			45	Eri			13883	895	18557	nec
+gould			53	Eri			14110	912	18885	nec
+gould			54	Eri			14124	913	18894	nec
+gould			58	Eri			14187	929	19141	nec
+gould			59	Eri			14355		19210	nec
+gould			61	Eri			14456	935	19349	nec
+gould			64	Eri			14819	955	19836	nec
+gould			65	Eri			14757	953	19826	nec
+gould			66	Eri			14797		19850	nec
+gould			67	Eri			14814	957	19887	nec
+gould			71	Eri			14913	968	20121	nec
+gould			74	Eri			15203	983	20319	nec
+gould			75	Eri			15230		20356	nec
+gould			82	Eri			15510	1008	20794	nec
+gould			83	Eri			15643	1016	20894	nec
+gould			86	Eri			15776	1024	21019	nec
+gould			89	Eri			16015	1049	21473	nec
+gould			91	Eri			16142	1050	21530	nec
+gould			93	Eri			16266	1060	21665	nec
+gould			94	Eri			16263	1062	21688	nec
+gould			99	Eri			16285	1075	21882	nec
+gould			100	Eri			16310	1076	21899	nec
+gould			104	Eri			16677	1091	22243	nec
+gould			105	Eri			16779		22379	nec
+gould			106	Eri			16780	1098	22409	nec
+gould			109	Eri			16989	1108	22675	nec
+gould			112	Eri			17086	1116	22798	nec
+gould			113	Eri			17057	1117	22799	nec
+gould			114	Eri			17136	1120	22905	nec
+gould			117	Eri			17214	1125	23010	nec
+gould			122	Eri			17395	1139	23281	nec
+gould			129	Eri			17805	1182	23887	nec
+gould			132	Eri			17798	1187	23978	nec
+gould			133	Eri			17734	1186	23958	nec
+gould			134	Eri			17950		24098	nec
+gould			147	Eri			18173	1206	24497	nec
+gould			153	Eri			18262	1219	24744	nec
+gould			159	Eri			18606	1232	25069	nec
+gould			160	Eri			18647	1235	25165	nec
+gould			163	Eri			18723	1246	25371	nec
+gould			164	Eri			18859	1249	25457	nec
+gould			166	Eri			18926	1258	25631	nec
+gould			168	Eri			18990	1263	25700	nec
+gould			169	Eri			19011	1265	25723	nec
+gould			171	Eri			19037	1267	25803	nec
+gould			172	Eri			19121	1272	25910	nec
+gould			173	Eri			19111	1274	25944	nec
+gould			174	Eri			19095	1275	25945	nec
+gould			184	Eri			19511	1293	26464	nec
+gould			186	Eri			19590		26584	nec
+gould			188	Eri			19509	1299	26575	nec
+gould			189	Eri			19601		26625	nec
+gould			202	Eri			19996	1332	27179	nec
+gould			205	Eri			20106	1353	27411	nec
+gould			211	Eri			20341	1366	27611	nec
+gould			212	Eri			20264	1367	27616	nec
+gould			213	Eri			20360		27660	nec
+gould			216	Eri			20465	1384	27881	nec
+gould			218	Eri			20467	1386	27941	nec
+gould			227	Eri			20892	1421	28479	nec
+gould			229	Eri			20997	1431	28625	nec
+gould			232	Eri			21110	1438	28763	nec
+gould			233	Eri			21042	1439	28776	nec
+gould			236	Eri			21239	1447	28970	nec
+gould			240	Eri			21298	1450	29063	nec
+gould			242	Eri			21297	1452	29065	nec
+gould			246	Eri			21324		29163	nec
+gould			247	Eri			21363	1461	29184	nec
+gould			248	Eri			21428	1462	29227	nec
+gould			253	Eri			21486	1476	29435	nec
+gould			256	Eri			21718	1488	29610	nec
+gould			257	Eri			21685	1487	29613	nec
+gould			258	Eri			21743	1495	29737	nec
+gould			264	Eri			22028	1513	30127	nec
+gould			267	Eri			22086	1521	30238	nec
+gould			272	Eri			22439	1545	30743	nec
+gould			278	Eri			22860	1579	31414	nec
+gould			281	Eri			23060	1595	31726	nec
+gould			287	Eri			23475	1625	32393	nec
+gould			291	Eri			23916	1671	33224	nec
+gould			2	Her			79581	6057	146084	nec
+gould			11	Her			81404		149908	nec
+gould			1	Hya			40107	3212	68312	nec
+gould			3	Hya			40263		68667	nec
+gould			6	Hya			40818	3269	70013	nec
+gould			8	Hya			40858	3271	70110	nec
+gould			9	Hya			40859	3272	70148	nec
+gould			13	Hya			41036	3285	70574	nec
+gould			14	Hya			41080	3288	70652	nec
+gould			16	Hya			41214	3295	70937	nec
+gould			17	Hya			41299	3305	71095	nec
+gould			25	Hya			41564	3337	71663	nec
+gould			26	Hya			41547	3338	71665	nec
+gould			27	Hya			41597	3342	71766	nec
+gould			29	Hya			41893	3374	72462	nec
+gould			33	Hya			42028	3383	72660	nec
+gould			34	Hya			42142	3392	72908	nec
+gould			37	Hya			42299	3411	73281	nec
+gould			48	Hya			42701	3446	74190	nec
+gould			50	Hya			42854	3458	74393	nec
+gould			54	Hya			42981		74685	nec
+gould			56	Hya			43026	3478	74794	nec
+gould			58	Hya			43035	3480	74860	nec
+gould			61	Hya			43142	3486	74988	nec
+gould			63	Hya			43152		75098	nec
+gould			65	Hya			43204	3493	75140	nec
+gould			66	Hya			43246		75217	nec
+gould			71	Hya			43570	3526	75811	nec
+gould			73	Hya			43580	3529	75916	nec
+gould			74	Hya			43623		76027	nec
+gould			80	Hya			43798	3554	76376	nec
+gould			81	Hya			43902	3557	76494	nec
+gould			82	Hya			43850		76478	nec
+gould			84	Hya			43899	3564	76579	nec
+gould			88	Hya			44075	3578	76932	nec
+gould			89	Hya			44162	3584	77084	nec
+gould			90	Hya			44315	3590	77250	nec
+gould			92	Hya			44356	3596	77353	nec
+gould			100	Hya			44888		78614	nec
+gould			101	Hya			44936	3636	78668	nec
+gould			102	Hya			44923	3638	78702	nec
+gould			104	Hya			45150	3649	79066	nec
+gould			105	Hya			45167	3651	79108	nec
+gould			107	Hya			45158	3653	79181	nec
+gould			109	Hya			45305		79481	nec
+gould			111	Hya			45424	3675	79752	nec
+gould			117	Hya			45543		79994	nec
+gould			118	Hya			45559	3687	80050	nec
+gould			121	Hya			45743	3704	80479	nec
+gould			126	Hya			45854	3714	80719	nec
+gould			136	Hya			46288	3741	81567	nec
+gould			144	Hya			46504	3758	81980	nec
+gould			146	Hya			46529	3760	82043	nec
+gould			147	Hya			46543	3762	82074	nec
+gould			148	Hya			46511	3763	82077	nec
+gould			149	Hya			46569	3767	82180	nec
+gould			150	Hya			46618	3772	82232	nec
+gould			153	Hya			46744	3785	82428	nec
+gould			154	Hya			46768	3788	82477	nec
+gould			155	Hya			46840	3794	82543	nec
+gould			156	Hya			46813	3796	82573	nec
+gould			157	Hya			46869	3801	82638	nec
+gould			158	Hya			46859	3802	82660	nec
+gould			159	Hya			46893	3805	82674	nec
+gould			160	Hya			46880	3808	82734	nec
+gould			162	Hya			46897	3810	82747	nec
+gould			165	Hya			47070	3822	83104	nec
+gould			166	Hya			47242		83352	nec
+gould			172	Hya			47454	3848	83731	nec
+gould			179	Hya			48396	3908	85519	nec
+gould			182	Hya			48584	3921	85905	nec
+gould			185	Hya			48763	3931	86266	nec
+gould			188	Hya			48943	3946	86612	nec
+gould			192	Hya			49321	3963	87344	nec
+gould			193	Hya			49339	3965	87427	nec
+gould			195	Hya			49569	3977	87808	nec
+gould			197	Hya			49689	3986	88025	nec
+gould			199	Hya			49802	3988	88182	nec
+gould			200	Hya			49809	3991	88215	nec
+gould			204	Hya			50013	4005	88595	nec
+gould			205	Hya			50066	4011	88699	nec
+gould			206	Hya			50142		88806	nec
+gould			209	Hya			50536	4055	89455	nec
+gould			213	Hya			50728	4071	89816	nec
+gould			217	Hya			50790	4076	89911	nec
+gould			224	Hya			51364	4117	90957	nec
+gould			225	Hya			51491	4123	91120	nec
+gould			227	Hya			51551	4130	91280	nec
+gould			231	Hya			51795	4149	91706	nec
+gould			233	Hya			51852	4152	91790	nec
+gould			236	Hya			51933	4158	91889	nec
+gould			243	Hya			52113	4172	92245	nec
+gould			245	Hya			52391	4190	92770	nec
+gould			252	Hya			52841	4225	93657	nec
+gould			258	Hya			53387	4261	94619	nec
+gould			259	Hya			53699	4282	95221	nec
+gould			260	Hya			53818	4298	95456	nec
+gould			263	Hya			54030	4307	95857	nec
+gould			270	Hya			54430	4331	96723	nec
+gould			272	Hya			54561	4339	97023	nec
+gould			274	Hya			54703		97344	nec
+gould			275	Hya			54725	4346	97393	nec
+gould			279	Hya			55164	4373	98221	nec
+gould			281	Hya			55953	4420	99712	nec
+gould			294	Hya			57001	4498	101563	nec
+gould			297	Hya			57507	4525	102438	nec
+gould			299	Hya			57749	4542	102888	nec
+gould			300	Hya			57841	4548	103026	nec
+gould			302	Hya			57971	4553	103266	nec
+gould			303	Hya			58082	4558	103462	nec
+gould			308	Hya			58436	4579	104039	nec
+gould			311	Hya			59008	4612	105078	nec
+gould			315	Hya			59307	4628	105686	nec
+gould			317	Hya			59622	4651	106257	nec
+gould			320	Hya			60468		107869	nec
+gould			322	Hya			60603	4723	108110	nec
+gould			323	Hya			60735	4735	108323	nec
+gould			325	Hya			61172	4774	109074	nec
+gould			328	Hya			61621	4803	109799	nec
+gould			329	Hya			61720	4810	109960	nec
+gould			330	Hya			62131	4839	110666	nec
+gould			332	Hya			62448	4857	111226	nec
+gould			333	Hya			62500	4860	111295	nec
+gould			337	Hya			63243	4918	112519	nec
+gould			342	Hya			64375	4978	114576	nec
+gould			346	Hya			65682		117033	nec
+gould			348	Hya			65969	5090	117558	nec
+gould			349	Hya			66060	5098	117718	nec
+gould			350	Hya			66065	5097	117716	nec
+gould			351	Hya			66400	5120	118349	nec
+gould			354	Hya			66563	5128	118646	nec
+gould			356	Hya			67071	5166	119623	nec
+gould			357	Hya			67143	5167	119752	nec
+gould			359	Hya			67523	5197	120455	nec
+gould			361	Hya			67890	5228	121156	nec
+gould			363	Hya			68177	5246	121699	nec
+gould			364	Hya			68224		121758	nec
+gould			369	Hya			69398	5309	124162	nec
+gould			371	Hya			69458	5314	124281	nec
+gould			372	Hya			69623	5324	124576	nec
+gould			373	Hya			69977		125279	nec
+gould			374	Hya			69965	5356	125276	nec
+gould			378	Hya			70538	5399	126400	nec
+gould			391	Hya			73171	5565	131919	nec
+gould			5	Leo			47943	3876	84542	nec
+gould			18	Leo			53141	4244	94180	nec
+gould			19	Leo			53167	4245	94237	nec
+gould			20	Leo			53240	4249	94363	nec
+gould			30	Leo			54027	4303	95771	nec
+gould			36	Leo			54863	4358	97605	nec
+gould			50	Leo			55595	4394	98960	nec
+gould			59	Leo			55941	4419	99651	nec
+gould			67	Leo			56500		100659	nec
+gould			3	Oph			78870	5990	144390	nec
+gould			5	Oph			79463	6041	145788	nec
+gould			8	Oph			79781	6067	146514	nec
+gould			10	Oph			80227	6096	147550	nec
+gould			16	Oph			80558	6124	148287	nec
+gould			17	Oph			80620	6128	148349	nec
+gould			19	Oph			80610		148390	nec
+gould			21	Oph			80693	6136	148513	nec
+gould			22	Oph			80793	6140	148604	nec
+gould			23	Oph			80840	6144	148743	nec
+gould			30	Oph			81440	6179	149911	nec
+gould			31	Oph			81499		150052	nec
+gould			33	Oph			81580	6189	150177	nec
+gould			34	Oph			81632	6190	150259	nec
+gould			36	Oph			81728	6193	150366	nec
+gould			38	Oph			81663		150381	nec
+gould			40	Oph			81754	6202	150453	nec
+gould			41	Oph			81687	6201	150451	nec
+gould			42	Oph			81691		150493	nec
+gould			46	Oph			82259	6235	151527	nec
+gould			51	Oph			82405	6248	151900	nec
+gould			54	Oph			82621	6269	152311	nec
+gould			60	Oph			82861	6284	152781	nec
+gould			63	Oph			82979	6296	153021	nec
+gould			64	Oph			83090	6302	153229	nec
+gould			66	Oph			83176	6308	153336	nec
+gould			72	Oph			83342	6329	153914	nec
+gould			77	Oph			83567	6340	154204	nec
+gould			80	Oph			83740	6354	154481	nec
+gould			82	Oph			83635	6353	154445	nec
+gould			83	Oph			83677	6358	154610	nec
+gould			84	Oph			83738	6361	154660	nec
+gould			85	Oph			83854	6365	154779	nec
+gould			87	Oph			83906	6372	154962	nec
+gould			88	Oph			83962	6375	155078	nec
+gould			95	Oph			84175	6387	155401	nec
+gould			97	Oph			84113	6390	155500	nec
+gould			105	Oph			84402	6404	155970	nec
+gould			109	Oph			84524	6413	156227	nec
+gould			115	Oph			84649	6428	156462	nec
+gould			122	Oph			84801	6439	156826	nec
+gould			131	Oph			85042	6465	157347	nec
+gould			132	Oph			85207	6472	157527	nec
+gould			133	Oph			85195	6473	157546	nec
+gould			134	Oph			85139	6476	157617	nec
+gould			136	Oph			85391	6490	157864	nec
+gould			138	Oph			85307	6489	157856	nec
+gould			140	Oph			85442	6494	157955	nec
+gould			142	Oph			85333	6497	157978	nec
+gould			144	Oph			85474	6504	158170	nec
+gould			146	Oph			85537	6507	158352	nec
+gould			151	Oph			85783	6520	158704	nec
+gould			152	Oph			85749	6524	158837	nec
+gould			153	Oph			85922	6534	159170	nec
+gould			159	Oph			86391	6575	160315	nec
+gould			162	Oph			86476	6578	160471	nec
+gould			163	Oph			86725	6593	160839	nec
+gould			164	Oph			86575	6590	160781	nec
+gould			167	Oph			86768	6601	161056	nec
+gould			173	Oph			87150	6633	161941	nec
+gould			174	Oph			87224	6639	162113	nec
+gould			176	Oph			87428	6659	162596	nec
+gould			179	Oph			87491	6667	162774	nec
+gould			180	Oph			87558	6670	162917	nec
+gould			183	Oph			87847	6686	163532	nec
+gould			185	Oph			87866	6690	163641	nec
+gould			187	Oph			88101	6706	164064	nec
+gould			192	Oph			88213	6719	164432	nec
+gould			202	Oph			89065	6800	166460	nec
+gould			205	Oph			89347		167162	nec
+gould			208	Oph			89772	6857	168387	nec
+gould			2	Peg			106021	8219	204445	nec
+gould			3	Peg			106103		204603	nec
+gould			10	Peg			107271		206689	nec
+gould			13	Peg			108090	8359	208110	nec
+gould			29	Peg			109939	8491	211287	nec
+gould			31	Peg			110341	8514	211976	nec
+gould			41	Peg			113445	8737	217166	nec
+gould			47	Peg			116768	8970	222377	nec
+gould			5	Psc			113360	8730	217019	nec
+gould			7	Psc			113433	8735	217131	nec
+gould			8	Psc			113465	8738	217186	nec
+gould			11	Psc			113622	8751	217459	nec
+gould			13	Psc			113705		217590	nec
+gould			15	Psc			113904	8776	217926	nec
+gould			16	Psc			114005	8785	218103	nec
+gould			24	Psc			115476	8897	220406	nec
+gould			30	Psc			115945		221147	nec
+gould			40	Psc			116918	8983	222602	nec
+gould			45	Psc			117445	9015	223346	nec
+gould			67	Psc			840	29	587	nec
+gould			76	Psc			1421	67	1367	nec
+gould			84	Psc			1939	94	2023	nec
+gould			92	Psc			2954	161	3457	nec
+gould			98	Psc			3992	243	4928	nec
+gould			112	Psc			5575		7107	nec
+gould			118	Psc			6868	426	8949	nec
+gould			121	Psc			7243		9496	nec
+gould			124	Psc			7819		10262	nec
+gould			131	Psc			8404	527	11037	nec
+gould			138	Psc			9706		12730	nec
+gould			171	Pup			37853	3018	63077	nec
+gould			2	Ser	Cau		84883	6449	156971	nec
+gould			4	Ser	Cap		74695		135615	nec
+gould			4	Ser	Cau		85405		157969	nec
+gould			6	Ser	Cap		74901	5690	136028	nec
+gould			6	Ser	Cau		86019	6544	159358	nec
+gould			9	Ser	Cau		86266	6562	159877	nec
+gould			10	Ser	Cap		75101	5706	136442	nec
+gould			10	Ser	Cau		86313	6568	160018	nec
+gould			12	Ser	Cau		86769	6600	161023	nec
+gould			13	Ser	Cau		87074	6620	161701	nec
+gould			14	Ser	Cau		87540	6666	162757	nec
+gould			16	Ser	Cau		87813	6681	163336	nec
+gould			19	Ser	Cau		88670	6755	165402	nec
+gould			20	Ser	Cau		88684	6756	165438	nec
+gould			21	Ser	Cau		88671	6757	165462	nec
+gould			22	Ser	Cap		77163	5859	140775	nec
+gould			23	Ser	Cap		77186	5861	140815	nec
+gould			24	Ser	Cau		88981	6785	166103	nec
+gould			27	Ser	Cau		89512	6830	167564	nec
+gould			28	Ser	Cau		89587	6840	167768	nec
+gould			29	Ser	Cau		89623	6843	167833	nec
+gould			32	Ser	Cau		89851	6858	168415	nec
+gould			36	Ser	Cau		90174	6890	169268	nec
+gould			37	Ser	Cau		90253	6898	169493	nec
+gould			38	Ser	Cap		78840	5992	144426	nec
+gould			41	Ser	Cap		79120	6011	145085	nec
+gould			43	Ser	Cap		79195	6016	145206	nec
+gould			44	Ser	Cau		90497	6928	170200	nec
+gould			45	Ser	Cap		79522		145936	nec
+gould			60	Ser	Cau		91394	6999	172088	nec
+gould			63	Ser	Cau		91499	7008	172365	nec
+gould			66	Ser	Cau		92027	7048	173495	nec
+gould			66	Ser	Cau		92027	7048	173495	nec
+gould			67	Ser	Cau		92254	7076	173954	nec
+gould			73	Ser	Cau		92968	7144	175679	nec
+gould			3	Sgr			87099	6617	161664	nec
+gould			9	Sgr			87782	6679	163245	nec
+gould			10	Sgr			87836	6680	163318	nec
+gould			12	Sgr			88038	6691	163652	nec
+gould			13	Sgr			88012	6692	163685	nec
+gould			16	Sgr			88125	6704	164028	nec
+gould			17	Sgr			88294	6708	164245	nec
+gould			21	Sgr			88298	6716	164402	nec
+gould			25	Sgr			88550	6739	164870	nec
+gould			29	Sgr			88694	6748	165185	nec
+gould			32	Sgr			88816	6769	165687	nec
+gould			36	Sgr			89010	6777	165978	nec
+gould			37	Sgr			89020	6780	166023	nec
+gould			38	Sgr			89086	6788	166197	nec
+gould			39	Sgr			89114	6798	166393	nec
+gould			48	Sgr			89620	6836	167665	nec
+gould			49	Sgr			89622	6835	167666	nec
+gould			50	Sgr			89609	6838	167720	nec
+gould			58	Sgr			90012	6864	168646	nec
+gould			60	Sgr			90124	6874	168838	nec
+gould			62	Sgr			90290	6889	169236	nec
+gould			64	Sgr			90336	6893	169398	nec
+gould			69	Sgr			90510	6914	169938	nec
+gould			71	Sgr			90494	6919	169990	nec
+gould			74	Sgr			90687	6933	170433	nec
+gould			75	Sgr			90763	6936	170479	nec
+gould			76	Sgr			90806	6944	170680	nec
+gould			77	Sgr			91014	6960	171034	nec
+gould			80	Sgr			91172	6972	171416	nec
+gould			83	Sgr			91347	6988	171856	nec
+gould			84	Sgr			91405	6990	171961	nec
+gould			90	Sgr			91901	7026	172875	nec
+gould			94	Sgr			91974	7035	173117	nec
+gould			96	Sgr			92016	7038	173282	nec
+gould			108	Sgr			92643	7104	174631	nec
+gould			109	Sgr			92635	7103	174630	nec
+gould			114	Sgr			92882	7126	175317	nec
+gould			115	Sgr			92972		175390	nec
+gould			116	Sgr			92931	7128	175360	nec
+gould			121	Sgr			93134	7151	175794	nec
+gould			123	Sgr			93140	7159	175892	nec
+gould			125	Sgr			93234	7164	176123	nec
+gould			126	Sgr			93225	7166	176162	nec
+gould			127	Sgr			93315	7168	176246	nec
+gould			128	Sgr			93423	7182	176537	nec
+gould			129	Sgr			93418	7186	176593	nec
+gould			131	Sgr			93498	7195	176704	nec
+gould			132	Sgr			93537	7203	176884	nec
+gould			133	Sgr			93543	7205	176903	nec
+gould			134	Sgr			93667	7211	177074	nec
+gould			138	Sgr			93763	7230	177517	nec
+gould			140	Sgr			93925	7240	177846	nec
+gould			141	Sgr			93855	7239	177817	nec
+gould			143	Sgr			93993	7246	178075	nec
+gould			148	Sgr			94144	7265	178555	nec
+gould			150	Sgr			94272	7270	178840	nec
+gould			151	Sgr			94372	7276	179201	nec
+gould			152	Sgr			94434	7277	179323	nec
+gould			153	Sgr			94437	7282	179497	nec
+gould			162	Sgr			94986	7316	180885	nec
+gould			163	Sgr			94929	7317	180928	nec
+gould			165	Sgr			95077	7327	181240	nec
+gould			166	Sgr			95149	7330	181321	nec
+gould			167	Sgr			95211	7334	181401	nec
+gould			178	Sgr			95396	7350	181925	nec
+gould			179	Sgr			95408	7355	182180	nec
+gould			180	Sgr			95456	7360	182286	nec
+gould			184	Sgr			95485	7367	182477	nec
+gould			186	Sgr			95619	7380	182681	nec
+gould			187	Sgr			95557	7378	182645	nec
+gould			189	Sgr			95823	7392	183007	nec
+gould			193	Sgr			95865	7398	183275	nec
+gould			196	Sgr			96095		183577	nec
+gould			197	Sgr			95965	7410	183545	nec
+gould			206	Sgr			96365	7433	184574	nec
+gould			209	Sgr			96496	7443	184835	nec
+gould			212	Sgr			96536	7454	184985	nec
+gould			218	Sgr			96760	7473	185467	nec
+gould			224	Sgr			97067	7491	186042	nec
+gould			226	Sgr			97063	7496	186185	nec
+gould			228	Sgr			97260	7507	186500	nec
+gould			232	Sgr			97423	7532	186984	nec
+gould			233	Sgr			97515	7538	187098	nec
+gould			234	Sgr			97484		187150	nec
+gould			244	Sgr			98012	7585	188158	nec
+gould			254	Sgr			98351	7617	188981	nec
+gould			258	Sgr			98485	7627	189140	nec
+gould			259	Sgr			98512	7630	189198	nec
+gould			260	Sgr			98461	7629	189195	nec
+gould			262	Sgr			98470	7631	189245	nec
+gould			263	Sgr			98579	7639	189388	nec
+gould			264	Sgr			98575	7643	189561	nec
+gould			269	Sgr			98785	7658	190009	nec
+gould			280	Sgr			99570	7706	191584	nec
+gould			282	Sgr			99878	7725	192433	nec
+gould			290	Sgr			100332	7765	193302	nec
+gould			295	Sgr			100764	7799	194184	nec
+gould			296	Sgr			100738	7801	194215	nec
+gould			1	Tau			15807	1023	21018	nec
+gould			2	Tau			15800		21032	nec
+gould			5	Tau			16226		21585	nec
+gould			6	Tau			16358	1067	21755	nec
+gould			9	Tau			16695	1089	22211	nec
+gould			14	Tau			17120	1119	22819	nec
+gould			18	Tau			17595	1159	23526	nec
+gould			24	Tau			18481	1224	24817	nec
+gould			25	Tau			18658	1233	25102	nec
+gould			26	Tau			18805	1243	25330	nec
+gould			37	Tau			19434		26292	nec
+gould			40	Tau			19720	1307	26676	nec
+gould			43	Tau			19799	1315	26793	nec
+gould			47	Tau			20188	1349	27386	nec
+gould			49	Tau			20268	1360	27497	nec
+gould			52	Tau			20771	1400	28191	nec
+gould			53	Tau			20848	1413	28322	nec
+gould			55	Tau			20985	1425	28505	nec
+gould			58	Tau			21152	1436	28736	nec
+gould			59	Tau			21269	1446	28930	nec
+gould			60	Tau			21295	1448	28978	nec
+gould			63	Tau			21670	1480	29499	nec
+gould			1	Vir			56756	4478	101112	nec
+gould			3	Vir			56775	4484	101154	nec
+gould			5	Vir			57214	4510	101933	nec
+gould			9	Vir			57629	4533	102634	nec
+gould			12	Vir			57791	4544	102928	nec
+gould			19	Vir			58445	4580	104055	nec
+gould			20	Vir			58450		104078	nec
+gould			26	Vir			58603	4591	104356	nec
+gould			27	Vir			58741	4598	104625	nec
+gould			33	Vir			59010	4613	105089	nec
+gould			41	Vir			59750	4657	106516	nec
+gould			49	Vir			60418		107794	nec
+gould			50	Vir			60595	4722	108107	nec
+gould			51	Vir			60804	4741	108471	nec
+gould			56	Vir			61103	4770	108985	nec
+gould			57	Vir			61134	4772	109014	nec
+gould			68	Vir			61637	4805	109860	nec
+gould			79	Vir			62103	4837	110646	nec
+gould			85	Vir			62421	4856	111199	nec
+gould			88	Vir			62743	4877	111720	nec
+gould			91	Vir			62915	4896	112048	nec
+gould			92	Vir			62983	4901	112131	nec
+gould			98	Vir			63220		112495	nec
+gould			112	Vir			64181	4959	114203	nec
+gould			129	Vir			64838	5014	115488	nec
+gould			135	Vir			65183	5033	116061	nec
+gould			136	Vir			65198	5037	116160	nec
+gould			141	Vir			65381		116429	nec
+gould			146	Vir			65545	5059	116831	nec
+gould			150	Vir			65796	5078	117267	nec
+gould			153	Vir			65862	5086	117404	nec
+gould			183	Vir			67271	5178	120033	nec
+gould			194	Vir			67545	5205	120602	nec
+gould			204	Vir			68380	5258	122106	nec
+gould			207	Vir			68643		122577	nec
+gould			208	Vir			68705	5272	122703	nec
+gould			209	Vir			68707	5275	122797	nec
+gould			210	Vir			68763	5277	122837	nec
+gould			211	Vir			68739	5276	122815	nec
+gould			213	Vir			68776	5283	122910	nec
+gould			221	Vir			69340	5307	124115	nec
+gould			224	Vir			69493	5317	124425	nec
+gould			225	Vir			69564	5322	124553	nec
+gould			226	Vir			69658	5332	124683	nec
+gould			229	Vir			69727	5341	124915	nec
+gould			230	Vir			69747	5342	124931	nec
+gould			231	Vir			69792	5344	124990	nec
+gould			233	Vir			69773		124973	nec
+gould			235	Vir			69881	5353	125184	nec
+gould			239	Vir			70022	5368	125489	nec
+gould			240	Vir			70038		125490	nec
+gould			243	Vir			70319	5384	126053	nec
+gould			244	Vir			70400	5392	126248	nec
+gould			250	Vir			70894	5418	127167	nec
+gould			252	Vir			70949	5424	127337	nec
+gould			254	Vir			71510		128563	nec
+gould			257	Vir			72122	5496	129902	nec
+gould			261	Vir			72629	5536	130970	nec
+gould			265	Vir			73350	5584	132525	nec
+gould			271	Vir			74026	5631	134047	nec
+gould			4	Vol			32332	2536	50002	nec
+gould			6	Vol			33682	2662	53501	nec
+gould			7	Vol			34270	2712	55151	nec
+gould			11	Vol			35946		59640	nec
+gould			12	Vol			36346	2888	60150	nec
+gould			15	Vol			36914	2979	62153	nec
+gould			17	Vol			37773	3036	63513	nec
+gould			18	Vol			37720	3038	63584	nec
+gould			19	Vol			38210	3081	64484	nec
+gould			20	Vol			39041	3171	66920	nec
+gould			24	Vol			40680	3280	70514	nec
+gould			28	Vol			41321	3346	71863	nec
+gould			30	Vol			41451	3370	72337	nec
+gould			33	Vol			41907	3417	73468	nec
+gould			40	Vol			42850	3491	75116	nec
+gould			41	Vol			42895	3495	75171	nec
+gould			43	Vol			43414	3537	76143	nec
+gould			44	Vol			43351	3544	76270	nec
+gould			45	Vol			44283	3610	77887	nec

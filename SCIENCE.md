@@ -146,6 +146,16 @@ enough to see it.
   Live SIMBAD/VizieR resolution is deliberately **not** used for the
   identifier spine — the build never touches the network, and
   component-level cross-IDs churn between queries.
+- **IAU WGSN naked-eye catalogue + faint approved names** (`NEC.csv`,
+  9,297 rows; `wgsnFaints.csv`, 132 rows; 2025-05 release under
+  `data/iau-wgsn/`): IAU Division C Working Group on Star Names,
+  https://exopla.net/iau-wgsn-catalogs/. Retrieved 2026-08-12, licence
+  CC-BY-4.0. The naming AUTHORITY of `docs/star-naming.md`: the only
+  source with an approval process for star names (509 approved names),
+  and the only in-tree source of Unicode Greek Bayer / Flamsteed / Gould
+  designations with component attribution. Supersedes the 2022 IAU-CSN
+  text file. Normalised + keyed by `pnpm run build:wgsn`
+  (`data/iau-wgsn/README.md`).
 - **Hipparcos printed V** (`I/239/hip_main`, `HIP`+`Vmag` slice at
   `data/hipparcos/hip_main_vmag.tsv`): ESA 1997, SP-1200. The printed
   tier of the V-magnitude cascade for stars whose Gaia photometry is

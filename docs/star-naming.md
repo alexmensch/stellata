@@ -36,8 +36,8 @@ renderer the runtime already had.
 
 | Source | Status | Supplies | Citation |
 |---|---|---|---|
-| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 5,031 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
-| IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5, with WDS component | same, 2025-05 |
+| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
+| IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
 | `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | Kostjuk 2004 |
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | `docs/catalog-driver.md` § 2 |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
@@ -56,12 +56,15 @@ names.
 
 Two IAU properties beyond the names make it load-bearing:
 
-- **Component attribution.** Each name carries its WDS designation and
-  component, so *which* star owns a name is answered by the authority, not
-  composed. `Acrab` belongs to β Sco **Aa**; AT-HYG hangs `Acrab B` on the
-  WDS **C** component. Component-lettered names are not per se inventions —
-  `Albireo A` is IAU-approved — so the letter question is always "what does
-  the authority say", never "do we append one".
+- **Component attribution.** The authority answers *which* star owns a
+  name rather than leaving it composed: 35 HIP and 229 HD cells inline the
+  component letter (`HIP 518A`, `62264AB`), and the name itself carries one
+  where the IAU approved it. `Acrab` belongs to β Sco **Aa**; AT-HYG hangs
+  `Acrab B` on the WDS **C** component. Component-lettered names are not
+  per se inventions — `Albireo A` is IAU-approved — so the letter question
+  is always "what does the authority say", never "do we append one". The
+  faints file's own WDS column is empty in every row, so component rooting
+  comes from the key cells, not from it.
 - **Designation constellation ≠ positional constellation.** NEC lists
   `ρ Aquilae` with `constellation = Delphinus`, the same split
   `stellata-sp4q.2` introduces as `dc`. The authority agrees with the
@@ -155,24 +158,46 @@ and no consumer parses a Bayer string. This retires the `"Alp-1"` /
 `"alf01"` reconciliation the epic feared: the authority ships the glyph, and
 both ASCII conventions become *inputs to a normaliser*, never a stored form.
 
-**NEC normaliser** (`stellata-wgp3.2`), all mechanical:
+**NEC normaliser** (`stellata-wgp3.2`, shipped —
+`scripts/catalog/naming/wgsn-normalise-pure.ts`; every count here is
+pinned in `scripts/catalog/naming/wgsn-expected.json`, which supersedes
+the estimates this section carried from the gate's probe):
 
 - Curly Greek variants fold to standard: `ϕ → φ` (41 rows), `ϵ → ε` (74).
-- `letter <digit> <Genitive>` → glyph + superscript (318 rows).
-- Genitive → 3-letter code, 86 distinct words (`Andromedae → And`).
+- `letter <digit> <Genitive>` → glyph + superscript; genitive → 3-letter
+  code (`Andromedae → And`), matched longest-first for the two-word
+  genitives.
 - SIMBAD-form rows `* kap01 Scl B` (264) carry a component — parse letter,
   index and component, not just the letter.
-- Drop the 234 non-stellar rows (`NGC 129`, `M 31`, `NAME SMC`) and route
-  the 629 variable-star designations to tier 6, never tier 3.
+- The two files carry 5,031 non-empty cells, 5 of which spell null
+  (literal `null`). The 5,026 classified: 1,724 Bayer · 1,521 Flamsteed ·
+  938 Gould · 615 variable (routed to tier 6, never tier 3) · 132
+  non-stellar dropped (`NGC 129`, `M 31`, `NAME SMC`, clusters) · 95
+  other-catalogue dropped (BD / CD / Gliese / survey ids) · 1 corrupt (a
+  Mathematica artifact on ρ² Ara, whose Bayer arrives via the IV/27A
+  tail). NEC alone holds 4,971 of the non-empty cells.
+- A two-capital head is a GCVS designation and is tested before the Greek
+  lookup, which is case-insensitive over the ASCII abbreviations:
+  `NU Pav` is the variable HD 189124, and reading it as Greek mints a
+  second ν Pav onto it (the Bayer star is HD 169978).
+- Dropping an other-catalogue cell normally costs nothing — the row still
+  keys via HIP/HR/HD. The exception: 53 wgsnFaints names whose only
+  identifier was that cell (`WASP-32`, `HAT-P-29`), with an empty WDS
+  column and, bar one, no spine star within 30″. They name stars the
+  catalogue does not carry.
+- Gould numbered Serpens' halves separately (`4 G. Ser Cap` ≠
+  `4 G. Ser Cau`) — the half rides the designation table.
 - Multi-name cells split into name + aliases: `Nganurganity / Unurgunite`,
   `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`.
 
-**IV/27A normaliser** (the V > 6.5 tail): `ksi → ξ`, trailing-period forms
-(`mu.`, `nu.`, `pi.` — 155 rows), zero-padded indices (`alf01` — 318), and
-**reject 111 GCVS-style cells** from the Bayer field (`R And`, `RZ Cas`,
-`AR Aur`, `V380 Cyg`) — they are variable designations, which tier 6 already
-sources from GCVS. Measured composition of its 1,620 Bayer cells: 1,144
-Greek · 279 Latin-lower · 86 Latin-upper (A–Q) · 111 GCVS contaminants.
+**IV/27A normaliser** (the V > 6.5 tail, same module): `ksi → ξ`,
+trailing-period forms (`mu.`, `nu.`, `pi.`), zero-padded indices
+(`alf01`), and **GCVS-style cells rejected** from the Bayer field
+(`R And`, `RZ Cas`, `AR Aur`, `V380 Cyg`) — variable designations tier 6
+already sources from GCVS. Measured over all 2,185 Bayer cells (pinned):
+2,051 parse as Bayer (0 unparsed) · 134 GCVS contaminants rejected. The
+union adds 446 of the 2,051 as the tail; 1,605 are already covered by a
+WGSN designation on the same star.
 
 **Gliese prefix.** Display `GJ <number><component>` uniformly. `Gl` (Gliese
 1969) and `GJ` (Gliese–Jahreiß supplements) are both legitimate printed
