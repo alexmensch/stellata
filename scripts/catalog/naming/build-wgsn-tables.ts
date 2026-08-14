@@ -10,18 +10,22 @@ import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
-import {
-  parseNecCsv,
-  parseWgsnFaintsCsv,
-  type WgsnRow,
-} from './wgsn-parse-pure';
+import { parseNecCsv, parseWgsnFaintsCsv } from './wgsn-parse-pure';
 import {
   foldNameKey,
-  normaliseIv27aBayer,
   normaliseWgsnCell,
   splitNameCell,
-  type NormalisedCell,
 } from './wgsn-normalise-pure';
+import {
+  bayerKeySets,
+  designationFromCell,
+  diffDispositions,
+  parseDispositionKeys,
+  sortDesignations,
+  spineProperKey,
+  unionIv27aBayer,
+  type DesignationRow,
+} from './wgsn-tables-pure';
 
 const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
@@ -70,71 +74,6 @@ export interface WgsnCounts {
 const cellStr = (v: string | number | null): string =>
   v === null ? '' : String(v);
 
-interface DesignationRow {
-  kind: 'bayer' | 'flamsteed' | 'gould';
-  letter: string | null;
-  sup: number | null;
-  num: number | null;
-  dc: string;
-  half: string | null;
-  component: string | null;
-  hip: number | null;
-  hr: number | null;
-  hd: number | null;
-  source: 'nec' | 'faints' | 'iv27a';
-}
-
-type DesignationKeys = Pick<DesignationRow, 'hip' | 'hr' | 'hd' | 'source'>;
-
-function designationRow(
-  kind: DesignationRow['kind'],
-  designation: Partial<DesignationRow>,
-  keys: DesignationKeys,
-): DesignationRow {
-  return {
-    kind,
-    letter: null, sup: null, num: null, half: null, component: null,
-    dc: '', ...designation, ...keys,
-  };
-}
-
-/** Which stars the Bayer designations already reach, by either key. Built
- *  once before the IV/27A union to decide what the tail adds, and again
- *  after it to measure spine coverage. */
-function bayerKeySets(rows: DesignationRow[]): {
-  reaches: (hip: number | null, hd: number | null) => boolean;
-} {
-  const hips = new Set<number>();
-  const hds = new Set<number>();
-  for (const d of rows) {
-    if (d.kind !== 'bayer') continue;
-    if (d.hip !== null) hips.add(d.hip);
-    if (d.hd !== null) hds.add(d.hd);
-  }
-  return {
-    reaches: (hip, hd) =>
-      (hd !== null && hds.has(hd)) || (hip !== null && hips.has(hip)),
-  };
-}
-
-function designationFromCell(
-  n: NormalisedCell,
-  row: WgsnRow,
-): DesignationRow | null {
-  const keys: DesignationKeys = {
-    hip: row.hip, hr: row.hr, hd: row.hd, source: row.source,
-  };
-  if (n.class === 'bayer') return designationRow('bayer', n.bayer, keys);
-  if (n.class === 'flamsteed') {
-    return designationRow('flamsteed', n.flamsteed, keys);
-  }
-  if (n.class === 'gould') {
-    const { serpensHalf, ...gould } = n.gould;
-    return designationRow('gould', { ...gould, half: serpensHalf }, keys);
-  }
-  return null;
-}
-
 interface SpineNaming {
   /** proper-row key ("<proper>|<hip>|<hd>") → the raw proper string. */
   propers: Map<string, string>;
@@ -162,7 +101,7 @@ function readSpine(): SpineNaming {
     const hd = cells[hdIdx]?.trim() ?? '';
     const proper = (cells[properIdx] ?? '').trim();
     if (proper && proper !== 'Sol') {
-      propers.set([proper, hip, hd].join('|'), proper);
+      propers.set(spineProperKey(proper, hip, hd), proper);
     }
     if ((cells[bayerIdx] ?? '').trim()) {
       bayerKeys.push({ hip: parseIntOrNull(hip), hd: parseIntOrNull(hd) });
@@ -212,29 +151,11 @@ async function main(): Promise<void> {
     }
   }
 
-  const wgsnBayer = bayerKeySets(designations);
-  let iv27aBayerCells = 0;
-  let iv27aBayerAdded = 0;
-  let iv27aBayerCovered = 0;
-  let iv27aVariableRejected = 0;
-  let iv27aUnparsed = 0;
-  for (const row of parseCrossIndexTsv(readFileSync(CROSS_INDEX, 'utf8'))) {
-    if (row.bayer === null || row.cst === null) continue;
-    iv27aBayerCells++;
-    const n = normaliseIv27aBayer(row.bayer, row.cst);
-    if (n.class === 'variable') { iv27aVariableRejected++; continue; }
-    if (n.class !== 'bayer') { iv27aUnparsed++; continue; }
-    if (wgsnBayer.reaches(row.hip, row.hd)) {
-      iv27aBayerCovered++;
-      continue;
-    }
-    iv27aBayerAdded++;
-    designations.push(designationRow(
-      'bayer',
-      { ...n.bayer, dc: row.cst, component: null },
-      { hip: row.hip, hr: null, hd: row.hd, source: 'iv27a' },
-    ));
-  }
+  const iv27a = unionIv27aBayer(
+    designations,
+    parseCrossIndexTsv(readFileSync(CROSS_INDEX, 'utf8')),
+  );
+  designations.push(...iv27a.added);
 
   const spine = readSpine();
   const unmatched = new Set<string>();
@@ -243,15 +164,10 @@ async function main(): Promise<void> {
     if (nameKeys.has(foldNameKey(proper))) matched++;
     else unmatched.add(key);
   }
-  const dispositionLines = readFileSync(DISPOSITIONS, 'utf8')
-    .split('\n').filter((l) => l.trim() !== '');
-  const disposed = new Set<string>();
-  for (const line of dispositionLines.slice(1)) {
-    const [proper, , hip = '', hd = ''] = line.split('\t');
-    disposed.add([proper, hip, hd].join('|'));
-  }
-  const missing = [...unmatched].filter((k) => !disposed.has(k));
-  const stale = [...disposed].filter((k) => !unmatched.has(k));
+  const { missing, stale } = diffDispositions(
+    unmatched,
+    parseDispositionKeys(readFileSync(DISPOSITIONS, 'utf8')),
+  );
   if (missing.length > 0 || stale.length > 0) {
     for (const k of missing) console.error(`undisposed spine proper: ${k}`);
     for (const k of stale) {
@@ -269,16 +185,7 @@ async function main(): Promise<void> {
     (k) => unioned.reaches(k.hip, k.hd),
   ).length;
 
-  // Every field participates: a comparator that ties leaves the committed
-  // row order to the engine's sort, and CI diffs these files byte for byte.
-  const sortKey = (d: DesignationRow) => [
-    d.kind, d.dc, String(d.num ?? '').padStart(4, '0'), d.letter ?? '',
-    String(d.sup ?? ''), d.half ?? '', d.component ?? '', String(d.hd ?? ''),
-    String(d.hip ?? ''), String(d.hr ?? ''), d.source,
-  ].join(' ');
-  const keyed = designations.map((d) => ({ key: sortKey(d), d }));
-  keyed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-  const sorted = keyed.map((k) => k.d);
+  const { sorted, duplicateRows } = sortDesignations(designations);
 
   writeFileSync(OUT_NAMES, [
     'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id',
@@ -311,16 +218,16 @@ async function main(): Promise<void> {
     cellOtherCatalogue: classCounts.get('other_catalogue') ?? 0,
     cellCorrupt: classCounts.get('corrupt') ?? 0,
     cellEmpty: classCounts.get('empty') ?? 0,
-    iv27aBayerCells,
-    iv27aBayerAdded,
-    iv27aBayerCovered,
-    iv27aVariableRejected,
-    iv27aUnparsed,
+    iv27aBayerCells: iv27a.cells,
+    iv27aBayerAdded: iv27a.added.length,
+    iv27aBayerCovered: iv27a.covered,
+    iv27aVariableRejected: iv27a.variableRejected,
+    iv27aUnparsed: iv27a.unparsed,
     designationRows: sorted.length,
     designationsKeyless: sorted.filter(
       (d) => d.hip === null && d.hr === null && d.hd === null,
     ).length,
-    designationDuplicateRows: sorted.length - new Set(keyed.map((k) => k.key)).size,
+    designationDuplicateRows: duplicateRows,
     nameDuplicateRows: nameRowKeys.length - new Set(nameRowKeys).size,
     spinePropers: spine.propers.size,
     spineProperMatched: matched,
