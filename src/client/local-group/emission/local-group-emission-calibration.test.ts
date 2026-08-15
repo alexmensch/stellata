@@ -544,7 +544,13 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   //
   // The reference is a brute-force average of the unsoftened profile over the
   // pixel square, which is what the softening approximates to second order.
-  it('softens the nucleus to the area average a pixel should carry', () => {
+  //
+  // 24×24 brute-force samples per plate scale, each a full combined-profile
+  // evaluation, across three FOVs — tens of seconds solo, and past the 30 s
+  // global under full-suite parallel load. Carries its own timeout for the
+  // same reason its sibling above does; see tests/README.md
+  // § Suite-wide timeouts.
+  it('softens the nucleus to the area average a pixel should carry', { timeout: 120_000 }, () => {
     const areaAverageSb = (thetaArcsec: number, pxArcsec: number) => {
       const n = 24;
       let acc = 0;
@@ -792,7 +798,9 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // error does NOT grow as the pixel does — positive throughout, so the
     // core lands slightly faint rather than bright, which is the direction a
     // 4-magnitude white nucleus made non-negotiable.
-    it('lands the nucleus within a tenth of a magnitude at every FOV', () => {
+    // The slowest test in the file at ~6.5 s solo, so the first to cross
+    // the 30 s global once the suite runs it alongside everything else.
+    it('lands the nucleus within a tenth of a magnitude at every FOV', { timeout: 120_000 }, () => {
       const nucleus: Record<number, number> = {
         [FOV_MIN_DEG]: 0.029,
         20: 0.079,
