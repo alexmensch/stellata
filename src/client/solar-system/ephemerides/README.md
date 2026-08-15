@@ -390,10 +390,15 @@ accidentally default to the ecliptic.
 
 ## Gotchas
 
-- **Ecliptic ↔ equatorial obliquity.** Use J2000 ε = 23.4392911°
-  consistently when composing the Sol-host quaternion. Do not reach
-  for the time-varying obliquity term — Standish's accuracy budget
-  doesn't need it and the apparent-position match is unaffected.
+- **Ecliptic ↔ equatorial obliquity.** Don't open-code it a fifth time:
+  `../../util/ecliptic-frame.ts` is the one scalar `Rx(±ε)` pair, and
+  `orbit-rings-layer.ts`'s `refPlaneToEclipticQuat` the one quaternion
+  form. Use J2000 ε = 23.4392911° consistently when composing the
+  Sol-host quaternion, and do not reach for the time-varying obliquity
+  term — Standish's accuracy budget doesn't need it and the
+  apparent-position match is unaffected. (The lunar theory's
+  equinox-of-date frame is a different question and does move — see
+  § Moon ephemeris.)
 - **Ecliptic-pole sign.** The north ecliptic pole in ICRS is
   `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°; the y-component is
   NEGATIVE (cos 66.56° · sin 270° = −sin ε). The mirrored `+sin ε`

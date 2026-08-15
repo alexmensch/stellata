@@ -22,17 +22,13 @@ import {
   moonOffsetEcliptic,
 } from '../../ephemerides/moon-ephemeris';
 import { jdeToT, julianEpochYearToT } from '../../time/time';
-import {
-  AU_PER_PC,
-  J2000_OBLIQUITY_RAD,
-  LIGHT_TIME_PER_AU_S,
-} from '../../../util/astronomy-constants';
+import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../util/astronomy-constants';
+import { wrapDegrees } from '../../../util/angles';
+import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../../data/horizons/earth-orientation-truth.tsv');
 
-const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
-const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);
 const MOON = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
 
 interface TruthRow {
@@ -65,25 +61,13 @@ function modelSubSolarLonDeg(jdUt: number): number {
   earthMoonSplit(bary, geo, earth, moon);
 
   const lightTimeS = Math.hypot(earth.x, earth.y, earth.z) * AU_PER_PC * LIGHT_TIME_PER_AU_S;
-  const ey = -earth.y;
-  const ez = -earth.z;
-  const dir = {
-    x: -earth.x,
-    y: COS_OBLIQUITY * ey - SIN_OBLIQUITY * ez,
-    z: SIN_OBLIQUITY * ey + COS_OBLIQUITY * ez,
-  };
+  const dir = { x: -earth.x, y: -earth.y, z: -earth.z };
+  eclipticToIcrs(dir, dir);
   const n = Math.hypot(dir.x, dir.y, dir.z);
   dir.x /= n;
   dir.y /= n;
   dir.z /= n;
   return subObserverLongitudeEastDeg(EARTH_ROTATION, t - lightTimeS, dir);
-}
-
-function wrapDeg(d: number): number {
-  let w = d;
-  while (w > 180) w -= 360;
-  while (w < -180) w += 360;
-  return w;
 }
 
 beforeEach(() => {
@@ -97,7 +81,7 @@ describe('Earth sub-solar longitude vs JPL Horizons', () => {
     // uniform time and Earth does not.
     let worst = 0;
     for (const row of TRUTH) {
-      const d = Math.abs(wrapDeg(modelSubSolarLonDeg(row.jdUt) - row.lonEastDeg));
+      const d = Math.abs(wrapDegrees(modelSubSolarLonDeg(row.jdUt) - row.lonEastDeg));
       worst = Math.max(worst, d);
     }
     expect(worst).toBeLessThan(0.1);
@@ -106,7 +90,7 @@ describe('Earth sub-solar longitude vs JPL Horizons', () => {
   it('holds 0.03° across the epochs a modern eclipse falls in', () => {
     let worst = 0;
     for (const row of TRUTH.filter((r) => Math.abs(r.jdUt - 2451545) < 73050)) {
-      const d = Math.abs(wrapDeg(modelSubSolarLonDeg(row.jdUt) - row.lonEastDeg));
+      const d = Math.abs(wrapDegrees(modelSubSolarLonDeg(row.jdUt) - row.lonEastDeg));
       worst = Math.max(worst, d);
     }
     expect(worst).toBeLessThan(0.03);
@@ -125,7 +109,7 @@ describe('Earth orientation model', () => {
     const t = julianEpochYearToT(-1000);
     const linearW = (EARTH_ROTATION.w0Deg
       + EARTH_ROTATION.wDegPerDay * ((t - julianEpochYearToT(2000)) / 86400)) % 360;
-    expect(Math.abs(wrapDeg(spinDegAt(EARTH_ROTATION, t) - linearW))).toBeGreaterThan(1);
+    expect(Math.abs(wrapDegrees(spinDegAt(EARTH_ROTATION, t) - linearW))).toBeGreaterThan(1);
     expect(spinDegAt(EARTH_ROTATION, t)).toBeCloseTo(
       ((earthSpinDeg(t) % 360) + 360) % 360, 9,
     );
@@ -145,7 +129,7 @@ describe('Earth orientation model', () => {
     // and the model is built from ERA and the precession frames with
     // nothing fitted to it, so this is mutual confirmation rather than a
     // tolerance either side has to meet.
-    expect(Math.abs(wrapDeg(model - published))).toBeLessThan(0.4);
+    expect(Math.abs(wrapDegrees(model - published))).toBeLessThan(0.4);
   });
 
   it('carries the pole to Thuban at the lower clamp bound', () => {
@@ -164,7 +148,7 @@ describe('Earth orientation model', () => {
   it('advances sidereal time by a full turn per sidereal day', () => {
     const t0 = julianEpochYearToT(2000);
     const SIDEREAL_DAY_S = 86164.0905;
-    const drift = wrapDeg(
+    const drift = wrapDegrees(
       greenwichSiderealDeg(t0 + SIDEREAL_DAY_S) - greenwichSiderealDeg(t0),
     );
     expect(Math.abs(drift)).toBeLessThan(0.001);

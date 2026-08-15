@@ -3,19 +3,8 @@ import {
   cartesianToOrbitalElements,
   orbitalStateToCartesian,
   solveKepler,
-  wrapAngle,
 } from './kepler-solver';
-
-describe('wrapAngle', () => {
-  it('reduces angles to (-π, π]', () => {
-    expect(wrapAngle(0)).toBeCloseTo(0, 15);
-    expect(wrapAngle(Math.PI)).toBeCloseTo(Math.PI, 15);
-    expect(wrapAngle(Math.PI + 0.1)).toBeCloseTo(-Math.PI + 0.1, 12);
-    expect(wrapAngle(-Math.PI - 0.1)).toBeCloseTo(Math.PI - 0.1, 12);
-    expect(wrapAngle(3 * Math.PI)).toBeCloseTo(Math.PI, 12);
-    expect(wrapAngle(-3 * Math.PI)).toBeCloseTo(Math.PI, 12);
-  });
-});
+import { wrapAngle } from './angles';
 
 describe('solveKepler — residual', () => {
   // M − E + e·sin(E) must vanish at the solver's tolerance for every

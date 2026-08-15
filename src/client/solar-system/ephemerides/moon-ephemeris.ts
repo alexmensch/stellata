@@ -2,11 +2,8 @@
 // that composes their heliocentric ecliptic positions. Sibling of
 // ephemeris.ts (planets). See src/client/solar-system/README.md § Moons.
 
-import {
-  J2000_JD,
-  J2000_OBLIQUITY_RAD,
-  KM_PC,
-} from '../../util/astronomy-constants';
+import { J2000_JD, KM_PC } from '../../util/astronomy-constants';
+import { icrsToEcliptic } from '../../util/ecliptic-frame';
 import {
   cartesianToOrbitalElements,
   orbitalStateToCartesian,
@@ -20,8 +17,6 @@ import { moonGeocentricOfDate } from './lunar-theory-pure';
 import { tToJdTdb } from '../time/time';
 
 const DEG = Math.PI / 180;
-const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
-const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);
 
 export interface MoonElements {
   // Matches the moon's `Planet.name` and its `sol:<lowercase>` SID key.
@@ -243,14 +238,14 @@ export function moonGeocentricKmAtJdTt(jdTt: number, out: Vec3): void {
   const lon = lonDeg * DEG;
   const lat = latDeg * DEG;
   const cosLat = Math.cos(lat);
-  const icrs = unprecessDirection(longTermEclipticRotationFromJ2000(jdTt), {
-    x: distKm * cosLat * Math.cos(lon),
-    y: distKm * cosLat * Math.sin(lon),
-    z: distKm * Math.sin(lat),
-  });
-  out.x = icrs.x;
-  out.y = COS_OBLIQUITY * icrs.y + SIN_OBLIQUITY * icrs.z;
-  out.z = -SIN_OBLIQUITY * icrs.y + COS_OBLIQUITY * icrs.z;
+  icrsToEcliptic(
+    unprecessDirection(longTermEclipticRotationFromJ2000(jdTt), {
+      x: distKm * cosLat * Math.cos(lon),
+      y: distKm * cosLat * Math.sin(lon),
+      z: distKm * Math.sin(lat),
+    }),
+    out,
+  );
 }
 
 /** `moonGeocentricKmAtJdTt` on the model clock. */
@@ -359,12 +354,11 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
   const xr = out.x, yr = out.y, zr = out.z;
   const y1 = cosTheta * yr - sinTheta * zr;
   const z1 = sinTheta * yr + cosTheta * zr;
-  const xi = cosPsi * xr - sinPsi * y1;
-  const yi = sinPsi * xr + cosPsi * y1;
 
-  out.x = xi;
-  out.y = COS_OBLIQUITY * yi + SIN_OBLIQUITY * z1;
-  out.z = -SIN_OBLIQUITY * yi + COS_OBLIQUITY * z1;
+  out.x = cosPsi * xr - sinPsi * y1;
+  out.y = sinPsi * xr + cosPsi * y1;
+  out.z = z1;
+  icrsToEcliptic(out, out);
 }
 
 /** Split the Earth–Moon barycentre into Earth-centre and Moon positions.

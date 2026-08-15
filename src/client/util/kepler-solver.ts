@@ -1,12 +1,8 @@
-// Newton solver for Kepler's equation M = E − e·sin(E). Shared between
-// planet ephemerides and binary orbits.
+// Newton solver for Kepler's equation M = E − e·sin(E), plus the
+// element↔state pair either side of it. Shared between planet
+// ephemerides and binary orbits.
 
-export function wrapAngle(a: number): number {
-  const twoPi = 2 * Math.PI;
-  let r = a - Math.floor(a / twoPi) * twoPi;
-  if (r > Math.PI) r -= twoPi;
-  return r;
-}
+import { wrapAngle } from './angles';
 
 export function solveKepler(
   M: number,

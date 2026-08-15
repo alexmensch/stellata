@@ -4,11 +4,11 @@
 
 import {
   AU_PER_PC,
-  J2000_OBLIQUITY_RAD,
   KM_PC,
   LIGHT_TIME_PER_AU_S,
   R_SUN_PC,
 } from '../../../util/astronomy-constants';
+import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 import {
   getPlanetPositions,
   resetPositionCache,
@@ -36,8 +36,6 @@ import {
 } from './eclipse-geometry-pure';
 
 const DEG = Math.PI / 180;
-const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
-const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);
 
 const bodyRadiusPc = (name: string): number =>
   SOL_BODIES.find((b) => b.name === name)!.radiusKm * KM_PC;
@@ -92,12 +90,6 @@ function earthMoonLightTimeS(pair: { earth: Vec3; moon: Vec3 }): number {
   return Math.hypot(
     pair.moon.x - pair.earth.x, pair.moon.y - pair.earth.y, pair.moon.z - pair.earth.z,
   ) * AU_PER_PC * LIGHT_TIME_PER_AU_S;
-}
-
-function eclipticToIcrs(v: Readonly<Vec3>, out: Vec3): void {
-  out.x = v.x;
-  out.y = COS_OBLIQUITY * v.y - SIN_OBLIQUITY * v.z;
-  out.z = SIN_OBLIQUITY * v.y + COS_OBLIQUITY * v.z;
 }
 
 export interface GroundPoint {

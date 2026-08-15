@@ -21,6 +21,7 @@ import type { PlanetElementTableFile } from '../../../../../scripts/ephemerides/
 import { jdTdbToT } from '../../time/time';
 import { deltaTSeconds } from '../../time/delta-t-pure';
 import { J2000_JD } from '../../../util/astronomy-constants';
+import { wrapDegrees } from '../../../util/angles';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CANON_DIR = resolve(__dirname, '../../../../../data/eclipse-canon');
@@ -41,13 +42,6 @@ const LUNAR = loadCanon('lunar-eclipse-canon.tsv');
 const KM_PER_DEG = 111.32;
 const MODERN_JD_HALF_SPAN = 36525; // 1900–2100, the element tables' window.
 
-function wrapDeg(d: number): number {
-  let w = d;
-  while (w > 180) w -= 360;
-  while (w < -180) w += 360;
-  return w;
-}
-
 /** Great-circle-ish offset (km) between a model ground point and the
  *  canon's, which is tabulated to whole degrees — so ~55 km of any
  *  residual here is the catalogue's own rounding, not the model. */
@@ -57,7 +51,7 @@ function groundOffsetKm(
   lonEastDeg: number,
 ): number {
   const dLat = model.latDeg - latDeg;
-  const dLon = wrapDeg(model.lonEastDeg - lonEastDeg) * Math.cos((latDeg * Math.PI) / 180);
+  const dLon = wrapDegrees(model.lonEastDeg - lonEastDeg) * Math.cos((latDeg * Math.PI) / 180);
   return Math.hypot(dLat, dLon) * KM_PER_DEG;
 }
 
