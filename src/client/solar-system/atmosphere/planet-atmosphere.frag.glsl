@@ -46,13 +46,24 @@ void main() {
   // the mesh shader paints their airlight; the shell handles only the limb.
   if (stellata_hitsBodyAhead(o, dir)) discard;
 
+  float tStart = max(t0, 0.0);
   vec3 inscatter;
   vec3 transmittance;
   stellata_atmosphereRadiance(
-    o, dir, max(t0, 0.0), t1, uAtmoRadius, sunDir,
+    o, dir, tStart, t1, uAtmoRadius, sunDir,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);
+
+  // Share of the chord outside the planetary shadow — the same span solve the
+  // march weights its samples by, taken over the chord as one segment. The
+  // mask needs it because a night-limb chord is dense (it occludes, § Airlight
+  // is applied on both surfaces) and dark, and coverage without light in R
+  // over-exposes the surface the pin holds (../../hdr/attachments/README.md).
+  float s0, s1;
+  stellata_shadowSpan(o, dir, sunDir, s0, s1);
+  float halfChord = max(0.5 * (t1 - tStart), 1e-12);
+  float litFrac = stellata_litFraction(tStart + halfChord, halfChord, s0, s1);
 
   // Alpha = medium opacity along the chord (1 − luminance transmittance), so
   // the premultiplied-over shell occludes the background even where it adds no
@@ -68,7 +79,7 @@ void main() {
   // well as the alpha.
   float airL = dot(col, STELLATA_LUMA_WEIGHTS) * uFade;
   float a = opacity * uFade;
-  outStatistic = stellataStatisticTexel(airL, a, a);
+  outStatistic = stellataStatisticTexel(airL, a * litFrac, a);
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }

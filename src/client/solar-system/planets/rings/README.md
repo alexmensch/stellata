@@ -39,11 +39,21 @@ not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
 
 **The annulus is part of the subject the exposure pin exposes for**: it
-claims lit-surface coverage at mask 1, and the one blend equation scales
-that by the same strip opacity it scales the flux by, so the ratio the pin
-reads comes out alpha-invariant (`../../../hdr/attachments/README.md`
-§ The unit). A parked Saturn is therefore exposed for globe and rings
-together, area-weighted, rather than for whichever is brighter.
+claims lit-surface coverage over the strip it actually illuminates, and the
+one blend equation scales that by the same strip opacity it scales the flux
+by, so the ratio the pin reads comes out alpha-invariant
+(`../../../hdr/attachments/README.md` § The unit). A parked Saturn is
+therefore exposed for globe and rings together, area-weighted, rather than
+for whichever is brighter.
+
+**`lit` is the mask's gate and the flux's shadow term at once**, which is
+why the shadow test and the edge-on fade are factored out of `light`: the
+band inside the planet's shadow sits at `SHADOW_FLOOR` and the whole annulus
+goes dark as the sun crosses the ring plane. Either counted as coverage is a
+dark vote — and the annulus runs ~3.6x the globe's own disc area face-on, so
+it outweighs every other coverage term the frame has. The **transmitted face
+still counts**: `TRANSMIT` dims real illumination rather than removing it,
+the same way the mesh keeps its grazing-incidence limb.
 
 **Rings do dim a source behind them in the exposure statistic** — no
 z-test could, they write no depth. The annulus composites over its

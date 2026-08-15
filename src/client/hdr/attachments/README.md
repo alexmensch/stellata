@@ -51,8 +51,13 @@ target. Three reasons, each on its own fatal:
 
 ```
 R = flux-correct luminance     → reduce MEAN → L̄
-G = lit-surface mask, 0 or 1   → reduce MEAN → coverage, and R×G → S̄
+G = lit-surface mask ∈ [0, 1]  → reduce MEAN → coverage, and R×G → S̄
 ```
+
+**The mask is a fraction, not a flag.** A surface that alpha-composites
+writes 0 or 1 and lets the one blend equation scale it; one compositing
+premultiplied has to arrive pre-scaled, so it writes the fraction itself.
+Both land the same number in the buffer.
 
 `stellataStatisticTexel` (`../emission/emission.glsl`) is the texel rule. R
 clamps at `LUMA_CEIL`, for the reason the display peak does: a clamped read
@@ -67,14 +72,30 @@ most. It now carries the coverage term the exposure pin divides by
 memory and no extra pass.
 
 **Which emitters may claim coverage is part of the contract, and it is
-pinned** (`statistic-mask.test.ts`): the planet mesh over its **lit
-hemisphere only**, the ring annulus over its annulus, the atmosphere shell
-premultiplied by its own opacity — and **zero for everything that draws a
+pinned** (`statistic-mask.test.ts`) — and **zero for everything that draws a
 kernel or a diffuse column**: stars, planet glare, both volumetric
 emitters. A texel counted as coverage without light in R pulls `D` down and
 over-exposes the surface the pin holds; light in R without coverage inflates
 it. The night side is the case big enough to matter — geometric coverage
 would halve `D` at full phase and gut it on a crescent.
+
+**Every claimer gates on its own illumination, not on its geometry**, and
+each of the three has a different dark region to exclude:
+
+| emitter | claims | the dark region it excludes |
+| --- | --- | --- |
+| planet mesh | its **lit hemisphere** — `step(0, sunCos)·step(0.5, shadow)` | the night side, and an eclipsed surface |
+| ring annulus | the **sunlit strip** — `step(0.5, lit)` | the band in the planet's shadow, and the whole annulus as the sun crosses the ring plane |
+| atmosphere shell | opacity × **`litFrac`** | the night-limb chord, which is the dense one — it occludes fully while scattering nothing toward the eye |
+
+The two non-mesh rows are the ones geometry gets wrong the hardest, because
+neither dark region shrinks when the lit one does. Saturn's annulus is
+~3.6x the globe's own disc area face-on, so a shadowed band outvotes every
+other coverage term in the frame; and a shell's night limb is a constant
+share of the disc whatever the phase, so a crescent that halves the mesh's
+claim leaves the shell's untouched — Earth's 100 km shell is ~3 % of its
+disc area and rounds away, Titan's 300 km on 2575 km is ~25 % and
+near-opaque, which renders a crescent multiples too bright.
 
 **An extended source's R is its true surface brightness**, computed at the
 **pixel** solid angle and **unconvolved**: a

@@ -41,22 +41,28 @@ describe('the statistic attachment mask', () => {
     expect(src).toContain('float lit = step(0.0, sunCos) * step(0.5, shadow);');
   });
 
-  it('claims its whole annulus for the ring strip', () => {
-    // Alpha-composited, so the one blend equation scales the mask by the same
-    // strip opacity it scales the flux by — the ratio the pin reads is
-    // therefore alpha-invariant and needs no premultiply here.
-    expect(maskArg('../../solar-system/planets/rings/planet-rings.frag.glsl'))
-      .toBe('1.0');
+  it('claims the sunlit annulus alone for the ring strip', () => {
+    // The band in the planet's shadow is the annulus's night side, and the
+    // annulus runs several times the globe's own disc area — counted as
+    // coverage at SHADOW_FLOOR it is the largest dark-coverage term the model
+    // has. Alpha-composited, so the one blend equation scales mask and flux by
+    // the same strip opacity and the ratio the pin reads stays alpha-invariant.
+    const src = read('../../solar-system/planets/rings/planet-rings.frag.glsl');
+    expect(glslCallArgs(src, 'stellataStatisticTexel')[1]).toBe('step(0.5, lit)');
+    expect(src).toContain('float unshadowed = step(bodyRoots(frag, uSunDirLocal).y, 0.0);');
   });
 
-  it('premultiplies the mask on the atmosphere shell, as it does the flux', () => {
+  it('premultiplies the shell mask by its opacity and its sunlit share', () => {
     // The one blend whose source factor is One, so the shell's own
     // contribution has to arrive already scaled by its opacity or the limb
-    // would claim area it does not cover.
+    // would claim area it does not cover. The night-limb chord is the dense
+    // one — it occludes at full opacity while scattering nothing toward the
+    // eye — so opacity alone would claim the whole limb on a crescent.
     const src = read('../../solar-system/atmosphere/planet-atmosphere.frag.glsl');
     const args = glslCallArgs(src, 'stellataStatisticTexel');
-    expect(args[1]).toBe('a');
+    expect(args[1]).toBe('a * litFrac');
     expect(args[2]).toBe('a');
     expect(src).toContain('float a = opacity * uFade;');
+    expect(src).toContain('stellata_shadowSpan(o, dir, sunDir, s0, s1);');
   });
 });
