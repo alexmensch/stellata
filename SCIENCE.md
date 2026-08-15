@@ -249,7 +249,9 @@ enough to see it.
   carrying the `bibcode` of the measurement SIMBAD compiled it from —
   the bottom tier of the per-field cascades in
   `docs/catalog-driver.md` § 5, where SIMBAD is the index and the
-  bibcode is the source. Scoped to an enumerated cohort (the spine
+  bibcode is the source. Values SIMBAD publishes without one are
+  dropped at write time rather than shipped for a consumer to filter,
+  so every column's value count equals its bibcode count. Scoped to an enumerated cohort (the spine
   rows whose printed cell is non-first-order, plus the no-Gaia tier —
   11,050 rows), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
   as `data/simbad/simbad_values.tsv` (11,037 rows, ~2.7 MB, LFS).

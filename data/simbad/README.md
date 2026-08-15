@@ -38,6 +38,16 @@ policy. That is why the fluxes come from SIMBAD's long-format `flux`
 table rather than the wider, simpler `allfluxes` view: `allfluxes`
 carries no bibcode at all.
 
+**And the file holds no unbibcoded value at all** — the writer drops the
+whole quantity (value, error, quality flag) wherever its bibcode is
+empty, so every field's value count equals its bibcode count by
+construction rather than by observation (`BibcodedGroup`,
+`scripts/refresh/simbad/specs.py`). A consumer therefore cannot reach a
+cell it may not use, and admitting one would be a **re-pull, not a filter
+change** — the same terms the cohort itself is widened on. What that
+costs is visible in the pull's own report, which prints values reached
+before it prints values shipped.
+
 **The request set is an enumerated cohort, not the catalogue.** It is the
 spine rows some field's printed cell marks non-first-order (`HYG`,
 `OTHER`, `G_R2`, `GJ`) plus the whole no-Gaia tier — 11,050 rows, keyed
@@ -47,29 +57,28 @@ SIMBAD outside the cohort. **Widening the cohort is a re-pull**, not a
 filter change: the predicate is `is_simbad_value_cohort` in
 `scripts/refresh/simbad/inputs.py`.
 
-Coverage over the cohort, measured at the 2026-08-15 pull. In every
-**basic-table** field the value count and the bibcode count are equal
-(coordinates 11,037 · PM 10,984 · parallax 10,826 · rv 9,501), so nothing
-shipped from that table is unattributable. **The fluxes are the
-exception** and the reason the § 5 residual policy has to be applied at
-consumption: B carries 10,258 values against 8,218 bibcodes, V 9,707
-against the same 8,218. The unbibcoded remainder is in the file — the
-pull reports it rather than dropping it — and is not consumable.
+Coverage over the cohort, measured at the 2026-08-15 pull. Every column
+below is what **ships**, i.e. post-policy: coordinates 11,037 · PM
+10,984 · parallax 10,826 · rv 9,501 · flux B 8,218 · flux V 8,218, each
+equal to its bibcode count.
 
-| Spine cohort | Field | SIMBAD reaches |
-|---|---|---|
-| `rv_src=HYG` 7,965 | rv | 7,673 (96.3%) |
-| `rv_src=OTHER` 871 | rv | 556 (63.8%) |
-| `rv_src=G_R2` 295 | rv | 241 (81.7%) |
-| `dist_src=G_R2` 898 | parallax | 882 (98.2%) |
-| `dist_src=GJ` 38 | parallax | 28 (73.7%) |
-| `pos_src=GJ` 981 | coordinates | 975 (99.4%) |
-| `pm_src=HYG` 2,472 | PM | 2,421 (97.9%) |
-| `mag_src=GJ` 981 | V flux | 471 (48.0%), **359 bibcoded** |
+| Spine cohort | Field | SIMBAD reaches | Ships |
+|---|---|---|---|
+| `rv_src=HYG` 7,965 | rv | 7,673 (96.3%) | same |
+| `rv_src=OTHER` 871 | rv | 556 (63.8%) | same |
+| `rv_src=G_R2` 295 | rv | 241 (81.7%) | same |
+| `dist_src=G_R2` 898 | parallax | 882 (98.2%) | same |
+| `dist_src=GJ` 38 | parallax | 28 (73.7%) | same |
+| `pos_src=GJ` 981 | coordinates | 975 (99.4%) | same |
+| `pm_src=HYG` 2,472 | PM | 2,421 (97.9%) | same |
+| `mag_src=GJ` 981 | V flux | 471 (48.0%) | **359 (36.6%)** |
 
-112 of that last 471 carry no bibcode and so cannot ship. The single
-`*_src=OTHER` row in the position / magnitude / PM columns is Sol, which
-is curated rather than sourced.
+**V flux is the one field the bibcode policy actually bites.** SIMBAD has
+a V flux for 471 of that cohort but publishes a bibcode for only 359, so
+112 are dropped and the cascade sees 36.6%, not 48.0%. Pull-wide the
+drop is 2,040 B and 1,489 V. Nothing else in the cohort loses a row.
+The single `*_src=OTHER` row in the position / magnitude / PM columns is
+Sol, which is curated rather than sourced.
 
 **rv Gaia-bibcode skip rule** (§ 5): of the 9,501 rv values in the pull,
 **1,417 carry a Gaia catalogue bibcode** — 1,216 `2018yCat.1345....0G`

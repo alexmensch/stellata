@@ -10,7 +10,8 @@ from typing import Any, Iterable, Mapping, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
 
-from .specs import ColumnSpec, FluxBand, IdentLookup, OID
+from . import coverage
+from .specs import BibcodedGroup, ColumnSpec, FluxBand, IdentLookup, OID
 
 
 Block = tuple[Sequence[str], Mapping[int, Mapping[str, Any]]]
@@ -44,11 +45,13 @@ def build_row_dict(
     basic_row: Mapping[str, Any] | None,
     columns: Sequence[ColumnSpec],
     blocks: Sequence[Block],
+    bibcoded_groups: Sequence[BibcodedGroup] = (),
 ) -> dict[str, Any]:
     """One output dict, one oid. OID's TSV cell is filled from the
     master ``oid`` parameter so a row with no basic-table match still
     has its primary key. Other cells come from basic_row / the blocks
-    or default to None (→ empty TSV cell)."""
+    or default to None (→ empty TSV cell). A ``bibcoded_groups`` entry
+    whose bibcode cell is empty takes its values down with it."""
     out: dict[str, Any] = {}
     for c in columns:
         out[c.tsv_name] = oid if c is OID else (basic_row or {}).get(c.alias)
@@ -56,6 +59,10 @@ def build_row_dict(
         cells = rows.get(oid) or {}
         for name in names:
             out[name] = cells.get(name)
+    for group in bibcoded_groups:
+        if not coverage.is_filled(out, group.bibcode):
+            for name in group.values:
+                out[name] = None
     return out
 
 
@@ -65,12 +72,13 @@ def write_simbad_tsv(
     basic_rows: Mapping[int, Mapping[str, Any]],
     columns: Sequence[ColumnSpec],
     blocks: Sequence[Block] = (),
+    bibcoded_groups: Sequence[BibcodedGroup] = (),
 ) -> int:
     """Emit one TSV row per oid, sorted ascending so re-runs produce
     byte-identical output. Returns the number of rows written."""
     sorted_oids = sorted(set(oids))
     rows = (
-        build_row_dict(oid, basic_rows.get(oid), columns, blocks)
+        build_row_dict(oid, basic_rows.get(oid), columns, blocks, bibcoded_groups)
         for oid in sorted_oids
     )
     return rl.write_tsv(

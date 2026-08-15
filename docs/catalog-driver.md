@@ -389,8 +389,11 @@ Rules:
   uncorroborated remainder is counted per pull
   (`scripts/refresh/simbad/README.md` § The TYC widening carries its own
   veto). Fluxes come from the long-format `flux` table, never
-  `allfluxes` — the wider view publishes no bibcode, and a value without
-  one is not consumable here.
+  `allfluxes` — the wider view publishes no bibcode. **An unbibcoded
+  value is dropped at write time**, whole quantity at a time, so the
+  frozen file cannot hand a cascade a cell this policy forbids and
+  admitting one is a re-pull rather than a filter change. It costs 112
+  of the 471 V fluxes the `mag_src=GJ` cohort reaches.
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the

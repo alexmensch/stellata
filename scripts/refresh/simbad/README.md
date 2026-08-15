@@ -10,7 +10,9 @@ specs.py     Declarative dataclasses — ColumnSpec for basic-table
              columns (sp_type / otype / the § 5 value columns and
              their bibcodes), IdentLookup for an identifier namespace
              (HIP, Gaia DR3, TYC, GJ), FluxBand for one band of the
-             long-format flux table. Canonical catalogue of instances.
+             long-format flux table, BibcodedGroup for the columns that
+             ship only alongside their bibcode. Canonical catalogue of
+             instances.
 inputs.py    Spine-driven feeders — spine_request_keys partitions rows
              into per-namespace lookup keys AND collects the widening
              map in the same pass, is_simbad_value_cohort is the § 5
@@ -28,8 +30,9 @@ coverage.py  Fill counting and floor gates over a pull's
              is filled" (neither None nor blank) and one gate message,
              shared by every shell's coverage phase.
 tsv.py       Spec-driven TSV writer — basic columns, then ordered
-             blocks (ident cross-IDs, pivoted flux bands); atomic
-             rename via the shared refresh_lib path.
+             blocks (ident cross-IDs, pivoted flux bands); applies the
+             bibcode policy below; atomic rename via the shared
+             refresh_lib path.
 simbad.test.py   stdlib unittest pins covering spec definitions,
                  spine feeders, request composition, the widening
                  veto, query builders, coverage gates and TSV emit.
@@ -48,6 +51,27 @@ keying on the raw returned id silently loses those rows.
 **A suffix is interpolated into an ADQL string literal**, so
 `resolve_oids_by_prefix` refuses any suffix outside
 `[A-Za-z0-9 .+-]` rather than composing a query it cannot quote.
+
+## An unbibcoded value never reaches the file
+
+`docs/catalog-driver.md` § 5 makes the bibcode the source and SIMBAD only
+the index that found it, so a value SIMBAD publishes without one is an
+orphan: nothing to cite, nothing to re-pull, nothing a cascade may
+defend. `write_simbad_tsv` therefore drops the whole quantity — value,
+error, quality flag — wherever its `BibcodedGroup`'s bibcode cell is
+empty or blank.
+
+Enforced rather than observed: value and bibcode counts happen to be
+equal in SIMBAD's basic table today, but SIMBAD is a living database with
+no release to pin that to, so `BASIC_BIBCODED_GROUPS` states the pairing
+and the writer applies it. The fluxes are where it currently bites — the
+`flux` table publishes plenty of bands with no reference at all.
+
+A shell that declares no groups is unaffected, which is why the sp_type
+pull is untouched. Admitting an unbibcoded value later is a **re-pull,
+not a filter change**, on the same terms as widening the cohort; the
+per-run report prints values reached before values shipped so the cost is
+never invisible.
 
 ## The TYC widening carries its own veto
 

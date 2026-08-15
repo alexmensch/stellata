@@ -19,6 +19,8 @@ import simbad  # noqa: E402
 from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
+    PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
+    RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE,
     ColumnSpec, FluxBand, IdentLookup,
 )
 
@@ -338,6 +340,74 @@ class TsvShapeTests(unittest.TestCase):
             blocks=[],
         )
         self.assertEqual(row, {"sp_type": "G2V"})
+
+
+class BibcodedGroupTests(unittest.TestCase):
+
+    def test_unbibcoded_flux_value_and_error_are_dropped(self):
+        band = FluxBand("V")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_V": 7.34, "flux_V_err": 0.01, "flux_V_bibcode": None,
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertIsNone(row["flux_V"])
+        self.assertIsNone(row["flux_V_err"])
+
+    def test_bibcoded_flux_value_survives(self):
+        band = FluxBand("V")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_V": 7.34, "flux_V_err": 0.01, "flux_V_bibcode": "2000A&A..1H",
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertEqual(row["flux_V"], 7.34)
+        self.assertEqual(row["flux_V_err"], 0.01)
+
+    def test_blank_bibcode_counts_as_absent(self):
+        band = FluxBand("B")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_B": 9.1, "flux_B_bibcode": "   ",
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertIsNone(row["flux_B"])
+
+    def test_basic_table_groups_take_their_whole_quantity_down(self):
+        from simbad.specs import BASIC_BIBCODED_GROUPS
+        row = tsv.build_row_dict(
+            oid=1,
+            basic_row={
+                "oid": 1, "plx_value": 12.3, "plx_err": 0.4, "plx_qual": "A",
+                "plx_bibcode": None,
+                "rvz_radvel": -5.0, "rvz_err": 0.2, "rvz_type": "v",
+                "rvz_qual": "B", "rvz_bibcode": "2006AstL...32..759G",
+            },
+            columns=[OID, PLX_VALUE, PLX_ERR, PLX_QUAL, PLX_BIBCODE,
+                     RVZ_RADVEL, RVZ_ERR, RVZ_TYPE, RVZ_QUAL, RVZ_BIBCODE],
+            blocks=[],
+            bibcoded_groups=BASIC_BIBCODED_GROUPS,
+        )
+        # parallax has no bibcode: value, error and quality all go.
+        self.assertIsNone(row["plx_value"])
+        self.assertIsNone(row["plx_err"])
+        self.assertIsNone(row["plx_qual"])
+        # rv is bibcoded and is untouched.
+        self.assertEqual(row["rvz_radvel"], -5.0)
+        self.assertEqual(row["rvz_qual"], "B")
+
+    def test_a_pull_declaring_no_groups_is_unaffected(self):
+        row = tsv.build_row_dict(
+            oid=1, basic_row={"oid": 1, "sp_type": "G2V"},
+            columns=[OID, SP_TYPE], blocks=[],
+        )
+        self.assertEqual(row["sp_type"], "G2V")
 
 
 class TsvRoundtripTests(unittest.TestCase):

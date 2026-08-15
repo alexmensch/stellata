@@ -70,6 +70,21 @@ class IdentLookup:
 
 
 @dataclass(frozen=True)
+class BibcodedGroup:
+    """Columns that only ship alongside their bibcode.
+
+    § 5 makes the bibcode the source and SIMBAD merely the index that
+    found it, so a value whose bibcode is empty is unattributable and no
+    consumer may use it. The writer drops the whole group rather than
+    emit a cell that has to be filtered again downstream — which means
+    admitting one is a re-pull, not a filter change, the same terms the
+    cohort itself is widened on."""
+
+    bibcode: str
+    values: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class FluxBand:
     """One band of the long-format ``flux`` table, pivoted into wide TSV
     columns ``flux_<F>`` / ``flux_<F>_err`` / ``flux_<F>_bibcode``."""
@@ -87,6 +102,10 @@ class FluxBand:
     @property
     def tsv_names(self) -> tuple[str, ...]:
         return tuple(name for name, _ in self.column_sources())
+
+    def bibcoded_group(self) -> BibcodedGroup:
+        value, err, bibcode = self.tsv_names
+        return BibcodedGroup(bibcode=bibcode, values=(value, err))
 
 
 # Canonical basic-table columns. The orchestration shell picks the
@@ -128,6 +147,23 @@ RVZ_TYPE = ColumnSpec(adql="b.rvz_type", alias="rvz_type", tsv_name="rvz_type", 
 RVZ_QUAL = ColumnSpec(adql="b.rvz_qual", alias="rvz_qual", tsv_name="rvz_qual", dtype=str)
 RVZ_BIBCODE = ColumnSpec(
     adql="b.rvz_bibcode", alias="rvz_bibcode", tsv_name="rvz_bibcode", dtype=str
+)
+
+
+# Every basic-table value travels with its bibcode or not at all. Equal
+# value and bibcode counts are the observed state today, not a guarantee
+# SIMBAD offers — it is a living database, so the writer enforces it.
+BASIC_BIBCODED_GROUPS = (
+    BibcodedGroup(COO_BIBCODE.tsv_name, (RA.tsv_name, DEC.tsv_name, COO_QUAL.tsv_name)),
+    BibcodedGroup(PM_BIBCODE.tsv_name, (PMRA.tsv_name, PMDEC.tsv_name, PM_QUAL.tsv_name)),
+    BibcodedGroup(
+        PLX_BIBCODE.tsv_name,
+        (PLX_VALUE.tsv_name, PLX_ERR.tsv_name, PLX_QUAL.tsv_name),
+    ),
+    BibcodedGroup(
+        RVZ_BIBCODE.tsv_name,
+        (RVZ_RADVEL.tsv_name, RVZ_ERR.tsv_name, RVZ_TYPE.tsv_name, RVZ_QUAL.tsv_name),
+    ),
 )
 
 

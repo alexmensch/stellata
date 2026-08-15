@@ -17,9 +17,10 @@ from paths import REPO_ROOT  # noqa: E402
 import simbad  # noqa: E402
 from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
-    COO_BIBCODE, COO_QUAL, DEC, FluxBand, GAIA_DR3, GJ, HIP, MAIN_ID, OID,
-    PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE, PMDEC, PMRA, PM_BIBCODE,
-    PM_QUAL, RA, RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE, TYC,
+    BASIC_BIBCODED_GROUPS, COO_BIBCODE, COO_QUAL, DEC, FluxBand, GAIA_DR3, GJ,
+    HIP, MAIN_ID, OID, PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE, PMDEC, PMRA,
+    PM_BIBCODE, PM_QUAL, RA, RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL,
+    RVZ_TYPE, TYC,
 )
 
 ROOT = REPO_ROOT
@@ -110,12 +111,12 @@ def main() -> None:
         coverage.report_fill(label, basic_rows, column.alias, total)
     for band in FLUX_BANDS:
         value_name, _, bibcode_name = band.tsv_names
-        filled = coverage.report_fill(
+        reached = coverage.report_fill(
             f"flux {band.filter}", flux_rows, value_name, total,
         )
         bibcoded = coverage.count_filled(flux_rows, bibcode_name)
-        print(f"  {'':16s} {'':6s}  of which bibcoded: {bibcoded} "
-              f"({filled - bibcoded} unattributable, not consumable)")
+        print(f"  {'':16s} {'':6s}  {bibcoded} ship, {reached - bibcoded} "
+              f"dropped as unattributable")
 
     coverage.assert_floor(
         "coordinate fill", coords / max(1, total), COORD_COVERAGE_MIN,
@@ -131,6 +132,10 @@ def main() -> None:
         blocks=[
             tsv.ident_block(IDENT_LOOKUPS, ident_rows),
             tsv.flux_block(FLUX_BANDS, flux_rows),
+        ],
+        bibcoded_groups=[
+            *BASIC_BIBCODED_GROUPS,
+            *(band.bibcoded_group() for band in FLUX_BANDS),
         ],
     )
     print(
