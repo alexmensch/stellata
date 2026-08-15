@@ -10,6 +10,13 @@ import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
 import { buildExposureSection } from '../hdr/exposure/exposure-tuning';
 import {
+  buildPassToggles,
+  runPriceFrame,
+  runPriceFrameRepeat,
+  type PriceFrameOptions,
+  type PriceFrameRow,
+} from './frame-cost';
+import {
   type DecodedView,
   type IdMaps,
   currentStateOf,
@@ -28,6 +35,13 @@ export interface DebugTools {
   decodeView(blob: string): DecodedView;
   /** Encode the current Stellata state into a `?v=` blob string. */
   encodeView(): string;
+  /** Price each render pass by gpu.frame differential from the current
+   *  viewpoint. Camera stationary, panel CLOSED — its perf timer holds
+   *  the context's single query slot. */
+  priceFrame(options?: PriceFrameOptions): Promise<PriceFrameRow[]>;
+  /** priceFrame N times over; prints per-pass savedMs ranges across
+   *  runs (the repeatability check). */
+  priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;
 }
 
 /** Wrap a DebugSection in a collapsible-section and mount it on the panel.
@@ -104,6 +118,10 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       return view;
     },
     encodeView: () => encodeBlob(currentStateOf(stellata, idMaps)),
+    priceFrame: (options) =>
+      runPriceFrame(stellata, buildPassToggles(stellata), options),
+    priceFrameRepeat: (runs, options) =>
+      runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
   };
 
   (window as unknown as { debug: DebugTools }).debug = tools;
