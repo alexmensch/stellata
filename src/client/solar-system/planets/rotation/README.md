@@ -9,11 +9,58 @@ that composition reaches texture UVs. Consumed by
 ```
 src/client/solar-system/planets/rotation/
   rotation-elements-pure.ts       IAU rotation elements per body (pole +
-    (+ test)                      prime meridian on the model clock).
+    (+ test)                      prime meridian on the model clock), and
+                                  the BodyOrientationModel escape hatch
+                                  the linear rows hand off to.
+  earth-orientation-pure.ts       Earth's pole and prime meridian from the
+    (+ test)                      long-term precession frames + the Earth
+                                  rotation angle. See § Earth is not a
+                                  linear row.
   texture-orientation.test.ts     Rendered IAU-orientation → texture-UV
                                   chain vs Horizons sub-observer lon/lat
                                   (pole-up, no mirror, prime meridian).
 ```
+
+## Earth is not a linear row
+
+Every other body is modelled as a uniform rotator with a linearly
+precessing pole, which is what the IAU convention's own expressions
+assume. Earth is the exception on **both** counts, and each failure is
+worth most of a hemisphere at the clock's bounds:
+
+- **Its spin is not uniform in dynamical time.** ΔT *is* the accumulated
+  lag of Earth's rotation behind uniform time, and it reaches 20.6 h —
+  310° of rotation — at 3000 BC. So the spin runs on the Earth rotation
+  angle, which is linear in UT1 by definition, and every other body keeps
+  the TT argument (`../../time/README.md` § Timescales).
+- **Its prime meridian is not linear in any timescale.** W is measured
+  from the node of the equator of date on the ICRS equator, and that node
+  precesses non-linearly. `earthSpinDeg` therefore composes W as
+  *node→equinox arc* + *Greenwich mean sidereal time*, the first straight
+  off the Vondrák precession frames and the second as ERA plus the IAU
+  2006 precession-in-right-ascension polynomial.
+- **Its pole rate is not linear either.** `poleRaDegPerCty: -0.641` is a
+  chord across a 25 772-yr circle of 23.4° radius; over 3000 yr it misses
+  by ~10°. The pole comes from `longTermEquatorPole` instead, which
+  carries it to within 0.045° of Thuban at 2785 BC.
+
+`EARTH_ROTATION` keeps its published pck linear rows and adds
+`orientationModel`; `poleRaDecDegAt` / `spinDegAt` read the model when
+present, so no call site changes. The rows stay as the near-J2000
+reference the model is checked against — **don't delete them, and don't
+"fix" the model to reproduce them away from J2000.**
+
+**Comparing W alone against the pck row will mislead you near J2000.**
+Earth's pole sits on the ICRS pole there, so α0 = atan2(y, x) is
+degenerate — it can return anything, and W absorbs exactly the same
+offset. Only α0 + W is well-defined, which is all the composition
+`Rz(90+α0)·Rx(90−δ0)·Rz(W)` uses there, because `Rx(90−δ0)` → identity.
+On that basis the model and the published row agree to 0.31°.
+
+`earth-orientation.test.ts` pins the whole chain against frozen Horizons
+sub-solar lon/lat at 18 epochs spanning the clamp: **0.076° worst case,
+8.4 km at the equator**, retarding the spin by one light time to match
+Horizons' apparent-quantity convention.
 
 `rotation-elements-pure.ts` carries per-body IAU rotation elements —
 pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
@@ -27,9 +74,8 @@ a J2000 linearisation (see the MARS_ROTATION comment) — and the
 dropped short-period librations are not all sub-degree (Moon E1
 terms ~3.9°, Europa ~1°, Neptune's ±0.7° pole nod; follow-up bead
 filed). The linear pole rates carry the visually meaningful secular
-part (Earth's axial precession drifts the pole ~30° across the
-model-clock window). `t` is treated as TDB via `tToJDE` — the ~69 s
-UTC↔TDB gap is ~0.3° of Earth spin, accepted repo-wide.
+part. Their argument is TT via `tToJdTdb`; Earth alone leaves this whole
+scheme behind (§ Earth is not a linear row).
 `texture-orientation.test.ts` pins the whole orientation → texture-UV
 chain (pole-up, no mirror, prime meridian) against frozen JPL
 Horizons sub-observer lon/lat for Mars, Ganymede, and Io

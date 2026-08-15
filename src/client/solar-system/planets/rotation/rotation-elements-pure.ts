@@ -4,6 +4,7 @@
 
 import { J2000_JD } from '../../../util/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
+import { earthPoleRaDecDeg, earthSpinDeg } from './earth-orientation-pure';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
@@ -24,6 +25,16 @@ export interface RotationElements {
    *  adds it to the spin angle so texture features land on their true
    *  longitudes. Omitted = 0 (map centred on the prime meridian). */
   readonly mapCenterLonDeg?: number;
+  /** Supersedes the four linear rows above with a full orientation
+   *  model. Earth only — README.md § Earth is not a linear row. */
+  readonly orientationModel?: BodyOrientationModel;
+}
+
+/** Pole + prime meridian for a body whose orientation the linear IAU
+ *  rows cannot express across the model clock. */
+export interface BodyOrientationModel {
+  poleRaDecDeg(t: number): { raDeg: number; decDeg: number };
+  spinDeg(t: number): number;
 }
 
 export const MERCURY_ROTATION: RotationElements = {
@@ -38,10 +49,20 @@ export const VENUS_ROTATION: RotationElements = {
   w0Deg: 160.20, wDegPerDay: -1.4813688,
 };
 
+// The linear rows are the published pck00011 ones and stay as the
+// near-J2000 reference the model is checked against; `orientationModel`
+// is what actually drives the render. Don't drop them and don't "fix"
+// the model to reproduce them away from J2000 — they are a
+// few-centuries approximation, ~10° of pole and most of a hemisphere of
+// spin adrift at the clock's bounds.
 export const EARTH_ROTATION: RotationElements = {
   poleRaDeg: 0, poleRaDegPerCty: -0.641,
   poleDecDeg: 90, poleDecDegPerCty: -0.557,
   w0Deg: 190.147, wDegPerDay: 360.9856235,
+  orientationModel: {
+    poleRaDecDeg: earthPoleRaDecDeg,
+    spinDeg: earthSpinDeg,
+  },
 };
 
 // NOT the raw pck00011 linear row: Mars's linear terms are incomplete
@@ -209,6 +230,7 @@ export function poleRaDecDegAt(
   rot: RotationElements,
   t: number,
 ): { raDeg: number; decDeg: number } {
+  if (rot.orientationModel) return rot.orientationModel.poleRaDecDeg(t);
   const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
   return {
     raDeg: rot.poleRaDeg + rot.poleRaDegPerCty * T,
@@ -221,8 +243,10 @@ export function poleRaDecDegAt(
  *  model-clock bounds, where an unwrapped float64 radian value has
  *  degraded precision. */
 export function spinDegAt(rot: RotationElements, t: number): number {
-  const d = tToJdTdb(t) - J2000_JD;
-  const w = (rot.w0Deg + rot.wDegPerDay * d) % 360;
+  const raw = rot.orientationModel
+    ? rot.orientationModel.spinDeg(t)
+    : rot.w0Deg + rot.wDegPerDay * (tToJdTdb(t) - J2000_JD);
+  const w = raw % 360;
   return w < 0 ? w + 360 : w;
 }
 
