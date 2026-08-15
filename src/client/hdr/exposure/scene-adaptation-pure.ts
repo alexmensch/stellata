@@ -105,8 +105,9 @@ export const ADAPT_DISPLAY_FLOOR_DM = displayFloorDm();
 export const ADAPT_HANDOVER_BLEND_MAG = MAG_PER_STOP;
 
 /** Which term set the applied cut — the diagnostic three quite different
- *  bugs share a symptom over. `handover` is the one-stop ramp, where the
- *  answer is a blend rather than any single branch. */
+ *  bugs share a symptom over. Read off the answer, never off the blend
+ *  weight: the ramp is a no-op wherever the floor is slack, so a nonzero
+ *  weight does not mean the blend governed. */
 export type AdaptationRegime = 'eye' | 'guard' | 'floor' | 'handover';
 
 /** Every term behind one frame's cut, so a readout never has to recompute
@@ -140,7 +141,7 @@ export function adaptationBranches(
   const blend = Math.max(0, 1 + (guard - eye) / ADAPT_HANDOVER_BLEND_MAG);
   const dm = Math.max(eye, floored + (guard - floored) * blend);
   const regime: AdaptationRegime =
-    blend > 0 ? 'handover' : floor > eye ? 'floor' : 'eye';
+    dm === eye ? 'eye' : blend > 0 ? 'handover' : 'floor';
   return { eye, guard, floor, dm, regime };
 }
 

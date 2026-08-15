@@ -346,6 +346,20 @@ describe('the branch decomposition', () => {
     expect(ramp.dm).toBeGreaterThan(ramp.eye);
   });
 
+  // Same coverage as the ramp case above, on a body dim enough that the
+  // floor never binds. The ramp then walks from `eye` itself, and the
+  // outer clamp takes every step of it back: the cut IS the perception
+  // branch, so naming it off the nonzero blend weight would label a whole
+  // stop of the approach as a blend that contributed nothing.
+  it('names the perception branch where the ramp is a no-op', () => {
+    const slack = adaptationBranches(...body(12, guardHandoverCoverage() * 0.7));
+    expect(slack.floor).toBeLessThan(slack.eye);
+    expect(slack.guard).toBeLessThan(slack.eye);
+    expect(slack.guard).toBeGreaterThan(slack.eye - ADAPT_HANDOVER_BLEND_MAG);
+    expect(slack.dm).toBe(slack.eye);
+    expect(slack.regime).toBe('eye');
+  });
+
   it('reports the branches the cut was actually computed from', () => {
     const [meanL, peakL] = body(BRIGHT, 0.4);
     const b = adaptationBranches(meanL, peakL);

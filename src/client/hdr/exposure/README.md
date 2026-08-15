@@ -122,8 +122,9 @@ peak_max = max  over the frame of its G channel
            both rescaled to the BASE instrument exposure
 eye      = min(0, −2.5·log10(L̄ / L_ADAPT))
 guard    = min(0, −2.5·log10(peak_max / L_CAP))
+floor    =         −2.5·log10(Lw / L_ADAPT)
 dm       = guard ≥ eye ? guard
-                       : blend toward max(eye, ADAPT_DISPLAY_FLOOR_DM)
+                       : blend toward max(eye, floor)
 ```
 
 `adaptationBranches` is the **only** implementation of that block —
@@ -167,7 +168,12 @@ the formula:
 - **The handover ramps over `ADAPT_HANDOVER_BLEND_MAG`** (one stop of
   branch disagreement — a factor 2 of coverage): the guard's pin and the
   floor can sit many magnitudes apart, and without the ramp a body
-  drifting through the handover would step the whole frame.
+  drifting through the handover would step the whole frame. **It only
+  ramps where the floor binds** — with a slack floor the blend walks down
+  from `eye` and the `max(eye, …)` clamp takes it straight back, so the
+  cut is the perception branch across the whole band. The regime is read
+  off the answer for exactly that reason; a nonzero blend weight is not
+  evidence the blend governed.
 - **A buffer max is never below a buffer mean**, which is what keeps the
   regime test well-behaved: a frame bright enough to want a cut cannot
   hand the guard a peak under `L_CAP` and have the guard's zero win.
