@@ -11,6 +11,16 @@ build scripts, tests, and shader uniforms.
   `LIGHT_TIME_PER_AU_S`. Import from here
   rather than re-derive — drift between sites is the failure mode this module
   is designed to prevent.
+- `attribute-upload.ts` (+ test) — partial GPU re-upload for an
+  instanced attribute whose per-frame writes land on a small, fixed
+  subset of items. `DirtyItemUploader` diffs those items against the
+  previous flush and adds three.js update ranges over what moved,
+  uploading nothing when nothing did; `uploadFull` is the whole-buffer
+  flush, which must also be how any wholesale rewrite flushes, since a
+  non-empty range list wins over the full array. `MAX_PARTIAL_RANGES`
+  caps the driver-call budget, `RANGE_MERGE_GAP_ITEMS` the clean payload
+  worth carrying to avoid an extra call. Consumer + the invariants it
+  rides on: `../binaries/README.md` § Partial re-upload.
 - `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
   projection resolves against: `equatorialTangentBasisRad` (core) /
   `equatorialTangentBasis` (degrees) / `equatorialTangentBasisAt(x, y, z)`

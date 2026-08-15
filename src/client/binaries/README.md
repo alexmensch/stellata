@@ -31,7 +31,9 @@ star catalog records.
   finite-elements gate → tier + elements), the per-attach cache builder
   (`buildOrbitRelationCaches`, which adds the baseline
   `R(sep_pa_epoch_jd)`), and the per-frame
-  `evaluateOrbitRelationDeltaPc` dispatch. Both runtime fields consume
+  `evaluateOrbitRelationDeltaPc` dispatch, plus `orbitMemberSlots` — the
+  ascending slot set the walk can write, which § Partial re-upload
+  diffs. Both runtime fields consume
   it, and so do the hover / focus card formatters
   (`../format/star-companion-format.ts`) — the gate is what stops a card
   advertising Kepler elements for a record the walk refuses to animate.
@@ -299,14 +301,50 @@ Beyond that, the screen-separation gate fires before Kepler runs:
 Kepler relations (everything gated out or sub-pixel-suppressed — the
 shipping idle state at any wide view), every buffer write is a pure
 function of (camera, slider, viewport, fov, focal), so an `update()`
-with identical inputs skips the walk AND both `needsUpdate` flags.
-Without it three.js re-uploads the full ~5 MB backing arrays every idle
-frame. Focal-chain relations are always Kepler-active (they bypass the
-gates above), so a focused orbit never skips. `recenter()` and
+with identical inputs skips the walk itself. It saves the CPU pass only;
+what the frame uploads is decided separately (§ Partial re-upload).
+Focal-chain relations are always Kepler-active (they bypass the gates
+above), so a focused orbit never skips. `recenter()` and
 `markBaselinesDirty()` — the latter called by the shell whenever it
 rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
 — force the next walk, so suppressed secondaries get their `baseDiffPc`
 placement re-applied on top of the fresh baselines.
+
+## Partial re-upload
+
+The walk can only touch the ~6.5k catalog slots that are members of a
+Kepler-evaluable relation (`orbitMemberSlots`) — 2% of the rows backing
+`iPosition` (~4 MB) and `iCompositeSuppress` (~1.3 MB). Both
+attributes flush through a `DirtyItemUploader`
+(`../util/attribute-upload.ts`), which diffs those slots against the
+previous flush and adds three.js update ranges over the ones whose
+float32 bits actually moved. **A frame reproducing the previous values
+uploads nothing at all**, so camera motion and a focused binary — neither
+of which can satisfy the static-frame skip — no longer re-arm the full
+~5 MB. At 1× the walk's Kepler writes are mostly sub-ULP (the median
+pair's period is ~48 yr against a ~10⁻⁷ pc position quantum), so what
+survives the diff is the handful of short-period pairs and the relations
+crossing an LOD gate that frame. Past `MAX_PARTIAL_RANGES` scattered
+ranges the whole buffer goes up instead — the fast-scrub regime, where
+the data genuinely did move everywhere.
+
+Two rules keep that honest, both because three.js honours a non-empty
+range list *over* the full array:
+
+- **A wholesale rewrite must upload in full.** `markBaselinesDirty()` /
+  `recenter()` mark the next flush full: the shell's rewrite reaches
+  every star, not just the member slots this uploader tracks, so ranges
+  over the members would strand the rest at their old GPU values. The
+  shell's own `onLocalPositionsWritten` goes through `uploadFull` for the
+  same reason — it discards ranges a previous flush left pending.
+- **Ranges accumulate until a render consumes them** (the renderer clears
+  the list on upload), so a flush appends rather than replacing, and
+  falls back to a full upload once the accumulation exceeds the budget.
+
+Camera-epsilon and Kepler-chain-aware variants of the static-frame skip
+were considered and rejected: while genuinely navigating, the camera
+moves far more than any epsilon that would still keep the LOD gates
+honest, so neither reaches the regime this diff covers.
 
 ## Hierarchical walk
 
