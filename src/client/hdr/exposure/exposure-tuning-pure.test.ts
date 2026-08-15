@@ -99,12 +99,21 @@ describe('formatExposureReadout', () => {
     expect(text).toContain('f_ref 6.85%');
   });
 
-  it('labels the baked constants as baked', () => {
+  it('separates the derived levels from the baked constants', () => {
     const text = formatExposureReadout(SETTLED);
-    expect(text).toContain('baked: L_THRESH 0.02');
-    expect(text).toContain('Lw 20.00');
-    expect(text).toContain('LUMA_CEIL 4096');
-    expect(text).toContain('S_lim 22.00');
+    expect(text).toContain('derived: Lw 20.00  S_lim 22.00');
+    expect(text).toContain('baked:   L_THRESH 0.02  LUMA_CEIL 4096');
+  });
+
+  // Lw is the live uniform, and the DR_MAG slider sits two rows under it —
+  // printing it beside the two compile-time GLSL constants would call the
+  // one number on the panel that the panel itself moves a baked one.
+  it('follows a swept white point', () => {
+    const swept = formatExposureReadout({
+      ...SETTLED,
+      whitePoint: tonemapWhitePoint(11),
+    });
+    expect(swept).toContain('derived: Lw 502.38');
   });
 
   it('signs a positive trim so it cannot read as a cut', () => {

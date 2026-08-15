@@ -68,7 +68,7 @@ export function formatExposureReadout(r: ExposureReadout): string {
     `uExposure ${r.exposure.toExponential(3)}`,
     `f* ${pct(r.handoverCoverage)}   f_ref ${pct(r.refCoverage)}`,
     '',
-    `baked: L_THRESH ${L_THRESH}  Lw ${r.whitePoint.toFixed(2)}`,
-    `       LUMA_CEIL ${LUMA_CEIL}  S_lim ${r.extendedThresholdSb.toFixed(2)}`,
+    `derived: Lw ${r.whitePoint.toFixed(2)}  S_lim ${r.extendedThresholdSb.toFixed(2)}`,
+    `baked:   L_THRESH ${L_THRESH}  LUMA_CEIL ${LUMA_CEIL}`,
   ].join('\n');
 }

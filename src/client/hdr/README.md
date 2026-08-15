@@ -388,7 +388,7 @@ convolution's taps, since `resolve()` runs them.
 
 `DR_MAG` and the desaturation strength are on the panel as well as the
 dev console (§ Dev switches); `L_THRESH` and the extended-source threshold
-appear there as readouts and stay **baked** — `L_THRESH` is the unit's own
+appear there as **readouts, never sliders** — `L_THRESH` is the unit's own
 anchor, so a slider on it would move every layer's calibration with it
 (`exposure/README.md` § Debug panel). **`DR_MAG` has no leverage
 on the band's faint rows** — `y/Lw²` is under 2 × 10⁻³ there, so

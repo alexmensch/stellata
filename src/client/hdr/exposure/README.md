@@ -266,8 +266,10 @@ The panel's **Exposure** section (`exposure-tuning.ts`, first section in
 Readout, per frame: `L̄` and `peak_max` at the base exposure · the three
 branch terms and the governing regime · **measured vs applied `dm`**, which
 is the slew lag made visible · `m_lim`, EV and the effective limiting
-magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH`, `LUMA_CEIL`,
-`S_lim` and the white point print as *baked*, because they are.
+magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH` and
+`LUMA_CEIL` print as *baked*, because they are. `Lw` and `S_lim` print as
+*derived* and are neither baked nor slidable here: `Lw` follows the
+`DR_MAG` slider through `uWhitePoint`, and `S_lim` follows the instrument.
 
 Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` and
 defaulting to the module constants — plus `DR_MAG` and the desaturation
