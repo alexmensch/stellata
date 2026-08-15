@@ -10,11 +10,14 @@ pnpm run analyse:prefilter   # accuracy sweep, ~95 s, needs data/dust/ (LFS)
 pnpm run analyse:prefilter-cost   # texel + fetch counts, instant
 ```
 
+The pinned geometry — summation patch, the cell angle derived from it, slice
+count, fill rate — is **not** here: the client's froxel fill reads the same
+pins, so they live in `src/client/dust/froxel/froxel-pins.ts` with the
+tan-space cell counts (`froxel-grid-pure.ts`) beside them. Everything below
+imports from there.
+
 ```
 scripts/dust/prefilter/
-  prefilter-pins.ts     The pinned geometry both entry points share: the
-                        summation patch, the cell angle derived from it, the
-                        slice count, the fill rate.
   dust-grid.ts          Chunk reader + the cascade's analytic tier. Grid
                         geometry and the u8-log decode come from
                         data/dust/manifest.json, never from constants here.
@@ -23,7 +26,8 @@ scripts/dust/prefilter/
   march-plan.ts         The band march factored so the dust read is a
     (+ test)            plug-in. Pinned bit-exact against
                         milkyway-column-pure's mirror with dust off.
-  cost-pure.ts (+ test) Cell-count geometry for both parameterisations.
+  cost-pure.ts (+ test) The sky-fixed half of the cell-count geometry; the
+                        screen-space half is the client's.
   measure.ts            Entry point: the accuracy sweep.
   cost.ts               Entry point: texel and fetch counts.
 ```
@@ -39,7 +43,7 @@ a slice count, a grid pose, rays per cell and a fill rate.
 
 Every figure is the read and the reference **both convolved over a 32-point flat
 disc** of the resolve's summation patch (`src/client/hdr/summation/README.md`),
-whose 13.0′ diameter `prefilter-pins.ts` derives from
+whose 13.0′ diameter `froxel-pins.ts` derives from
 `DEFAULT_SUMMATION_ARCSEC2` — so an instrument change moves the sweep with it.
 Comparing pointwise instead would score a correct prefilter as error, since the
 display never carries finer structure.
@@ -59,8 +63,9 @@ shipped per-star extinction prepass as the scale.
 - **A screen-space grid is uniform in tan θ, not in solid angle.**
   `dθ/dx = cos²θ`, so the on-axis cell is the coarsest and the cell count is
   the tan-space area — 1.42× the solid-angle count at 50° FOV and 5.51× at
-  120°. `cost-pure.ts` owns that distinction; the accuracy sweep measures the
-  coarsest cell, so its numbers apply to the whole frustum.
+  120°. `src/client/dust/froxel/froxel-grid-pure.ts` owns that distinction;
+  the accuracy sweep measures the coarsest cell, so its numbers apply to the
+  whole frustum.
 - **The grid is sampled trilinearly on decoded density, where the GPU filters
   the u8 log codes.** That is a geometric mean and under-reads a gradient; the
   deviation is deliberate, because the prefilter's own storage is linear in A_V

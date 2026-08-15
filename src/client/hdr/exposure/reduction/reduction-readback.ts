@@ -33,6 +33,12 @@ export class ReductionReadback {
     const gl = this.gl;
     if (this.buffer === null || this.fence !== null || count <= 0) return;
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.buffer);
+    // Orphan before the write. Without it the driver must treat the previous
+    // contents as live across this readPixels, and ANGLE spends a shadow copy
+    // staging them for a getBufferSubData that never comes — warning once per
+    // request, i.e. continuously. Re-declaring the storage says the old texel
+    // is dead; nothing reads it after poll() has landed it.
+    gl.bufferData(gl.PIXEL_PACK_BUFFER, this.pixels.byteLength, gl.STREAM_READ);
     gl.readPixels(0, 0, count, 1, gl.RGBA, gl.FLOAT, 0);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);

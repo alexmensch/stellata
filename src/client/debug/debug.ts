@@ -8,6 +8,12 @@ import { buildPinSection } from './pin-debug-hud';
 import { buildArrowSection } from './arrow-fade-debug-hud';
 import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
+import { buildFroxelSection } from '../dust/froxel/froxel-debug-hud';
+import {
+  runFroxelBenchmark,
+  type FroxelBenchmarkOptions,
+  type FroxelBenchmarkRow,
+} from '../dust/froxel/froxel-benchmark';
 import {
   type DecodedView,
   type IdMaps,
@@ -27,6 +33,10 @@ export interface DebugTools {
   decodeView(blob: string): DecodedView;
   /** Encode the current Stellata state into a `?v=` blob string. */
   encodeView(): string;
+  /** GPU-time the band's froxel fill across the FOV × pixel-ratio matrix from
+   *  wherever the camera currently sits. Close the panel first — its perf
+   *  timer holds the context's single query slot. */
+  froxelBench(options?: FroxelBenchmarkOptions): Promise<FroxelBenchmarkRow[]>;
 }
 
 /** Wrap a DebugSection in a collapsible-section and mount it on the panel.
@@ -84,6 +94,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       { title: 'Arrows',     storageKey: 'arrows',     build: () => buildArrowSection(stellata) },
       { title: 'Warp',       storageKey: 'warp',       build: () => buildWarpSection(stellata) },
       { title: 'Eclipse',    storageKey: 'eclipse',    build: () => buildEclipseSection(stellata) },
+      { title: 'Froxel',     storageKey: 'froxel',     build: () => buildFroxelSection(stellata) },
     ];
     for (const s of sections) {
       disposers.push(mountSection(built.body, s.title, s.storageKey, s.build()));
@@ -102,6 +113,14 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       return view;
     },
     encodeView: () => encodeBlob(currentStateOf(stellata, idMaps)),
+    froxelBench: async (options) => {
+      const spike = stellata.froxelFill;
+      if (spike === null) {
+        console.warn('froxel bench: no dust field attached');
+        return [];
+      }
+      return runFroxelBenchmark(stellata, spike, options);
+    },
   };
 
   (window as unknown as { debug: DebugTools }).debug = tools;

@@ -1,8 +1,8 @@
-// The pinned froxel geometry the accuracy sweep and the cost model share,
-// and the display patch both are scored over.
+// The pinned froxel geometry the client fill, the accuracy sweep and the cost
+// model share, and the display patch all three are scored over.
 
-import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../src/client/hdr/exposure/exposure-epoch';
+import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../hdr/exposure/exposure-epoch';
 
 export const ARCMIN_TO_RAD = 60 * ARCSEC_TO_RAD;
 
@@ -17,7 +17,7 @@ export const PATCH_DIAMETER_ARCMIN = (2 * PATCH_RADIUS_RAD) / ARCMIN_TO_RAD;
 export const PINNED_CELL_RAD = 2 * PATCH_RADIUS_RAD;
 export const PINNED_SLICES = 32;
 
-/** Fill rate along each cell ray, in samples per voxel. The accuracy sweep
- *  and the fetch counts must read the same value or they price different
- *  grids. */
+/** Fill rate along each cell ray, in samples per voxel. The accuracy sweep,
+ *  the fetch counts and the GPU fill must read the same value or they price
+ *  different grids. */
 export const PINNED_FILL_STEPS_PER_VOXEL = 2;

@@ -94,6 +94,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `controls.update`       | `stellata.ts` `animate()`       | TrackballControls / observe-controls update branch. |
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
+| `submit.froxelFill` / `gpu.froxelFill` | `stellata.ts` `animate()` | The band's measured-dust froxel fill. Present **only** while the spike is enabled (`../dust/froxel/README.md`) — parked, it claims no rotation-ring slot. |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then a linear reduce over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
@@ -147,6 +148,16 @@ frame: one query, no cross-scope arithmetic. **To price a single pass,
 disable it and difference `gpu.frame`.** The per-pass rows are a
 relative signal — does this scope respond to this change — and nothing
 more.
+
+The other way out of the over-attribution problem is to time a **batch of
+one pass and nothing else** under a query of its own, with the panel closed
+so the rotating timer isn't holding the context's single slot:
+`debug.froxelBench()` (`../dust/froxel/README.md`) is the worked example.
+That costs a purpose-built driver per pass, which is why it exists for a
+measurement spike and not for the shipped stack. It also carries the answer
+to "what do I do on Safari, which has no query at all" — fence a batch of N
+and one of 2N and take the slope, which cancels every constant the crude
+clock adds.
 
 Because `gpu.frame` encloses the inner scopes, `begin()` refuses the
 inner ones on its turn and their `end()` calls must leave the enclosing
@@ -348,14 +359,16 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with eight sections:
+collapsible host with nine sections:
 Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
-(`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
+(`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), Eclipse
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,
 rendered pair separation vs disc-radius sum, θ/Σα ratio, front/back,
 target and buffered dim; the fastest way to see WHY a pair is or
-isn't dimming from the current vantage). Drag the
+isn't dimming from the current vantage), and Froxel
+(`../dust/froxel/froxel-debug-hud.ts` — the band dust grid's geometry,
+predicted fetch count, and rebuild rate). Drag the
 title bar to move it, click any section header to fold/unfold; both the
 position and per-section collapse state persist in `sessionStorage`
 (resets on reload, since calibration state shouldn't survive between

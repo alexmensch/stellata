@@ -119,6 +119,7 @@ import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
+import { FroxelFillSpike } from './dust/froxel/froxel-fill-spike';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
@@ -360,6 +361,11 @@ export class Stellata implements FrameAnchor {
   // Per-star A_V cache. Constructed lazily on the first attachDust so a
   // dust-less session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepass | null = null;
+
+  // Band measured-dust froxel fill. Same lazy lifecycle as the prepass, but
+  // parked (setEnabled(false)) until a measurement asks for it — see
+  // dust/froxel/README.md.
+  private froxel: FroxelFillSpike | null = null;
 
   // Pure target resolver; the click FSM in onPointerUp + the observe
   // single/double-click dispatchers stay here as composition-layer
@@ -1238,6 +1244,8 @@ export class Stellata implements FrameAnchor {
       u.uDustEnabled.value = 0;
       this.extinctionPrepass?.dispose();
       this.extinctionPrepass = null;
+      this.froxel?.dispose();
+      this.froxel = null;
       this.milkyway.attachDust(null);
       return;
     }
@@ -1255,10 +1263,21 @@ export class Stellata implements FrameAnchor {
         uniforms: u,
       });
     }
+    if (this.froxel === null) {
+      this.froxel = new FroxelFillSpike({
+        renderer: this.renderer,
+        uniforms: u,
+        coverageRadiusPc: dust.params.boundsHalfPc,
+        voxelPc: dust.manifest.voxelSizePc,
+      });
+    }
     this.extinctionPrepass.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
     // cache as the texture densifies.
-    dust.onProgress(() => this.extinctionPrepass?.markDirty());
+    dust.onProgress(() => {
+      this.extinctionPrepass?.markDirty();
+      this.froxel?.invalidate();
+    });
     // Share the same DustField with the Milky Way pass so the band's dust
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
@@ -1486,6 +1505,29 @@ export class Stellata implements FrameAnchor {
    *  (where the fallback is permanent). */
   setExtinctionPrepassEnabled(on: boolean) {
     this.extinctionPrepass?.setEnabled(on);
+  }
+
+  /** Dev-console A/B switch for the band's froxel fill, the sibling of
+   *  `setExtinctionPrepassEnabled` — off by default, since the fill costs
+   *  multiples of the prepass on every camera change. */
+  setFroxelFillEnabled(on: boolean) {
+    this.froxel?.setEnabled(on);
+  }
+
+  /** The froxel fill spike, null until dust attaches. The debug section and
+   *  the benchmark driver reach the pass through this. */
+  get froxelFill(): FroxelFillSpike | null {
+    return this.froxel;
+  }
+
+  /** The camera's absolute (heliocentric ICRS) position, summed in JS float64
+   *  so it stays exact against a kpc-scale worldOffset. Every consumer of the
+   *  absolute frame — the prepass march, the disc-fade distance, the froxel
+   *  fill — reads it from here. */
+  absCameraPosition(out: THREE.Vector3): THREE.Vector3 {
+    const cam = this.camera.position;
+    const w = this.worldOffset;
+    return out.set(cam.x + w.x, cam.y + w.y, cam.z + w.z);
   }
 
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
@@ -1902,6 +1944,7 @@ export class Stellata implements FrameAnchor {
   // scope. Adding a writer that retains the value across another
   // animate-stack method violates the contract.
   private _tmpAnimateLocal = new THREE.Vector3();
+  private _absCamera = new THREE.Vector3();
 
   private animate = () => {
     if (this.disposed) return;
@@ -1972,26 +2015,17 @@ export class Stellata implements FrameAnchor {
     // the warp rate in model-days/real-second for the anti-strobe floor.
     this.sharedUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
     this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
+    // Same frame convention as the shader-side iPosition + uWorldOffset
+    // reconstruction. The disc-fade smoothstep consuming distFromSol spans a
+    // small range, so the float64 sum matters at kpc-scale worldOffset.
+    const absCam = this.absCameraPosition(this._absCamera);
     if (this.extinctionPrepass !== null) {
-      // Absolute camera position in JS float64 — same frame convention as
-      // the shader-side iPosition + uWorldOffset reconstruction.
       perfMark('extinction.prepass');
-      this.extinctionPrepass.update(
-        this.camera.position.x + this.worldOffset.x,
-        this.camera.position.y + this.worldOffset.y,
-        this.camera.position.z + this.worldOffset.z,
-      );
+      this.extinctionPrepass.update(absCam.x, absCam.y, absCam.z);
       perfMeasure('extinction.prepass');
     }
-    // Per-frame layer fan-out through the registry. distFromSol is the
-    // camera's absolute ICRS distance, summed in JS float64 so it stays
-    // exact with kpc-scale worldOffset values (the disc-fade smoothstep
-    // consuming it spans a small range, so precision matters).
-    const cam = this.camera.position;
-    const ax = cam.x + this.worldOffset.x;
-    const ay = cam.y + this.worldOffset.y;
-    const az = cam.z + this.worldOffset.z;
-    this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
+    // Per-frame layer fan-out through the registry.
+    this.frameCtx.distFromSol = absCam.length();
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.layers.updateAll(this.frameCtx);
@@ -2010,6 +2044,17 @@ export class Stellata implements FrameAnchor {
     ));
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
+    // Inside the whole-frame scope: the A/B that prices this pass is a
+    // gpu.frame difference, which only sees it here (debug/README.md § GPU
+    // timing). Gated on enabled rather than no-opping inside, so a parked
+    // spike never claims a slot in the timer's rotation ring.
+    if (this.froxel?.isEnabled()) {
+      perfMark('submit.froxelFill');
+      perfGpuBegin('froxelFill');
+      this.froxel.update(this.camera, absCam);
+      perfGpuEnd('froxelFill');
+      perfMeasure('submit.froxelFill');
+    }
     perfMark('submit.main');
     perfGpuBegin('main');
     this.hdr.bind();
@@ -2130,6 +2175,8 @@ export class Stellata implements FrameAnchor {
     this.starPipeline.dispose();
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
+    this.froxel?.dispose();
+    this.froxel = null;
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();
