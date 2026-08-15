@@ -57,17 +57,14 @@ class OidRequest:
 
 
 def resolve_spine_keys(
-    client: rl.TapClient,
-    keys: SpineRequestKeys,
-    *,
-    tyc_by_source_id: Mapping[int, str] | None = None,
+    client: rl.TapClient, keys: SpineRequestKeys
 ) -> OidRequest:
     """Resolve a spine key partition to SIMBAD oids.
 
-    Gaia DR3 first, then — where ``tyc_by_source_id`` is given — the
-    record's own TYC for every source_id that namespace did not reach,
-    which is the widening that carries a Gaia-keyed row SIMBAD holds under
-    its Tycho id only. The no-Gaia tier's HIP / TYC / GJ keys follow.
+    Gaia DR3 first, then the record's own TYC for every source_id that
+    namespace did not reach — the widening that carries a Gaia-keyed row
+    SIMBAD holds under its Tycho id only. The no-Gaia tier's HIP / TYC / GJ
+    keys follow.
     """
     request = OidRequest()
 
@@ -83,11 +80,11 @@ def resolve_spine_keys(
     gj_resolved = query.resolve_oids_by_prefix(client, keys.gls, GJ)
     request.add(GJ.tsv_name, keys.gls, gj_resolved)
 
-    if tyc_by_source_id:
+    if keys.tyc_by_source_id:
         widening = [
-            tyc_by_source_id[s]
+            keys.tyc_by_source_id[s]
             for s in keys.source_ids
-            if s not in gaia_resolved and s in tyc_by_source_id
+            if s not in gaia_resolved and s in keys.tyc_by_source_id
         ]
         widened = query.resolve_oids_by_prefix(
             client, widening, TYC, progress_label="TYC widening"

@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-from simbad import inputs, query, request, tsv  # noqa: E402
+import simbad  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     COO_BIBCODE, COO_QUAL, DEC, FluxBand, GAIA_DR3, GJ, HIP, MAIN_ID, OID,
     PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE, PMDEC, PMRA, PM_BIBCODE,
@@ -54,45 +55,25 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
     keys = inputs.spine_request_keys(SPINE, inputs.is_simbad_value_cohort)
     print(f"value cohort: {keys.total} spine rows "
           f"({keys.keyless} carrying no key)")
-    resolved = request.resolve_spine_keys(
-        client,
-        keys,
-        tyc_by_source_id=inputs.spine_tyc_by_source_id(
-            SPINE, inputs.is_simbad_value_cohort
-        ),
-    )
+    resolved = request.resolve_spine_keys(client, keys)
     for line in resolved.report_lines():
         print(line)
-    if resolved.coverage(GAIA_DR3.tsv_name) < GAIA_RESOLUTION_MIN:
-        raise SystemExit(
-            f"refresh-simbad-values: Gaia DR3 ident resolution "
-            f"{resolved.coverage(GAIA_DR3.tsv_name):.1%} below floor "
-            f"{GAIA_RESOLUTION_MIN:.0%} — the request set or SIMBAD's ident "
-            f"table has drifted; investigate before pinning."
-        )
+    coverage.assert_floor(
+        "Gaia DR3 ident resolution",
+        resolved.coverage(GAIA_DR3.tsv_name),
+        GAIA_RESOLUTION_MIN,
+        script="refresh-simbad-values",
+        diagnosis="the request set or SIMBAD's ident table has drifted",
+    )
     print(f"oids: {len(resolved.oids)} "
           f"(+{resolved.gained_by_widening} the TYC widening reached alone)")
     return sorted(resolved.oids)
 
 
-def report_fill(label: str, rows: dict, alias: str, total: int) -> int:
-    filled = sum(
-        1 for r in rows.values()
-        if r.get(alias) is not None and str(r[alias]).strip()
-    )
-    print(f"  {label:16s} {filled:6d}/{total} = {filled/max(1,total):6.1%}")
-    return filled
-
-
 def main() -> None:
     force = "--force" in sys.argv
 
-    simbad_pkg = Path(__file__).resolve().parent / "simbad"
-    sources = [SPINE, Path(__file__)]
-    sources.extend(
-        p for p in sorted(simbad_pkg.glob("*.py"))
-        if not p.name.startswith("_") and "test" not in p.name
-    )
+    sources = [SPINE, Path(__file__), *simbad.source_files()]
     if not force and rl.is_up_to_date(OUT, sources):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
@@ -120,27 +101,27 @@ def main() -> None:
 
     print("\n=== Phase E: coverage gate + write TSV ===")
     total = len(basic_rows)
-    coords = report_fill("coordinates", basic_rows, RA.alias, total)
+    coords = coverage.report_fill("coordinates", basic_rows, RA.alias, total)
     for label, column in (
         ("radial velocity", RVZ_RADVEL), ("rv bibcode", RVZ_BIBCODE),
         ("parallax", PLX_VALUE), ("parallax bibcode", PLX_BIBCODE),
         ("proper motion", PMRA), ("pm bibcode", PM_BIBCODE),
     ):
-        report_fill(label, basic_rows, column.alias, total)
+        coverage.report_fill(label, basic_rows, column.alias, total)
     for band in FLUX_BANDS:
         value_name, _, bibcode_name = band.tsv_names
-        filled = sum(1 for r in flux_rows.values() if r.get(value_name) is not None)
-        bibcoded = sum(1 for r in flux_rows.values() if r.get(bibcode_name))
-        print(f"  flux {band.filter:11s} {filled:6d}/{total} = "
-              f"{filled/max(1,total):6.1%} ({bibcoded} bibcoded)")
-
-    if coords / max(1, total) < COORD_COVERAGE_MIN:
-        raise SystemExit(
-            f"refresh-simbad-values: coordinate fill "
-            f"{coords/max(1,total):.1%} below floor {COORD_COVERAGE_MIN:.0%} — "
-            f"SIMBAD response shape or the ColumnSpec list has drifted; "
-            f"investigate before pinning."
+        filled = coverage.report_fill(
+            f"flux {band.filter}", flux_rows, value_name, total,
         )
+        bibcoded = coverage.count_filled(flux_rows, bibcode_name)
+        print(f"  {'':16s} {'':6s}  of which bibcoded: {bibcoded} "
+              f"({filled - bibcoded} unattributable, not consumable)")
+
+    coverage.assert_floor(
+        "coordinate fill", coords / max(1, total), COORD_COVERAGE_MIN,
+        script="refresh-simbad-values",
+        diagnosis="SIMBAD response shape or the ColumnSpec list has drifted",
+    )
 
     written = tsv.write_simbad_tsv(
         output=OUT,

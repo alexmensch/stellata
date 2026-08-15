@@ -15,7 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from test_helpers import load_kebab_sibling  # noqa: E402
-from simbad import inputs, query, request, tsv  # noqa: E402
+import simbad  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
     ColumnSpec, FluxBand, IdentLookup,
@@ -401,13 +402,25 @@ class SpineRequestKeysTests(unittest.TestCase):
         keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
         self.assertEqual(keys.source_ids, [2])
 
-    def test_tyc_by_source_id_covers_only_keyed_rows(self):
+    def test_tyc_by_source_id_covers_only_source_id_keyed_rows(self):
+        # Same pass as the partition, so the widening map can never cover a
+        # different cohort than the request set it widens.
         path = self._spine([
             {"gaia_source_id": "1", "tyc": "1-2-1"},
             {"gaia_source_id": "2"},
             {"tyc": "9-9-1"},
         ])
-        self.assertEqual(inputs.spine_tyc_by_source_id(path), {1: "1-2-1"})
+        keys = inputs.spine_request_keys(path)
+        self.assertEqual(keys.tyc_by_source_id, {1: "1-2-1"})
+        self.assertEqual(keys.tycs, ["9-9-1"])
+
+    def test_row_filter_narrows_the_widening_map_too(self):
+        path = self._spine([
+            {"gaia_source_id": "1", "tyc": "1-2-1", "rv_src": "G_R3"},
+            {"gaia_source_id": "2", "tyc": "3-4-1", "rv_src": "HYG"},
+        ])
+        keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
+        self.assertEqual(keys.tyc_by_source_id, {2: "3-4-1"})
 
 
 class ValueCohortTests(unittest.TestCase):
@@ -450,6 +463,55 @@ class GlSuffixTests(unittest.TestCase):
         self.assertEqual(inputs.gl_suffix("9140"), "9140")
 
 
+class CoverageTests(unittest.TestCase):
+
+    ROWS = {
+        1: {"sp_type": "G2V", "bibcode": "2000A&A...355L..27H"},
+        2: {"sp_type": "   ", "bibcode": None},
+        3: {"sp_type": None},
+    }
+
+    def test_blank_and_absent_cells_both_count_as_unfilled(self):
+        self.assertEqual(coverage.count_filled(self.ROWS, "sp_type"), 1)
+        self.assertEqual(coverage.count_filled(self.ROWS, "bibcode"), 1)
+        self.assertEqual(coverage.count_filled(self.ROWS, "absent"), 0)
+
+    def test_report_fill_returns_the_count_and_logs_one_line(self):
+        lines: list[str] = []
+        n = coverage.report_fill(
+            "sp_type", self.ROWS, "sp_type", 4, log=lines.append,
+        )
+        self.assertEqual(n, 1)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("1/4", lines[0])
+        self.assertIn("25.0%", lines[0])
+
+    def test_floor_gate_exits_below_and_passes_at_the_floor(self):
+        with self.assertRaises(SystemExit) as caught:
+            coverage.assert_floor(
+                "sp_type coverage", 0.49, 0.50,
+                script="refresh-simbad-sptype", diagnosis="the shape drifted",
+            )
+        self.assertIn("49.0%", str(caught.exception))
+        self.assertIn("the shape drifted", str(caught.exception))
+        coverage.assert_floor(
+            "sp_type coverage", 0.50, 0.50,
+            script="refresh-simbad-sptype", diagnosis="the shape drifted",
+        )
+
+
+class SourceFilesTests(unittest.TestCase):
+
+    def test_lists_every_module_and_no_test_file(self):
+        names = {p.name for p in simbad.source_files()}
+        self.assertLessEqual(
+            {"__init__.py", "specs.py", "inputs.py", "request.py",
+             "query.py", "coverage.py", "tsv.py"},
+            names,
+        )
+        self.assertNotIn("simbad.test.py", names)
+
+
 class IterWdsXidsOidsTests(unittest.TestCase):
 
     def test_skips_blank_and_non_integer_cells(self):
@@ -468,17 +530,17 @@ class IterWdsXidsOidsTests(unittest.TestCase):
 class ResolveSpineKeysTests(unittest.TestCase):
 
     def test_widens_on_tyc_only_where_the_gaia_namespace_missed(self):
-        keys = inputs.SpineRequestKeys(source_ids=[1, 2], hips=[], tycs=[], gls=[])
+        keys = inputs.SpineRequestKeys(
+            source_ids=[1, 2], tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
+        )
         backend = FakeBackend([
             ("'Gaia DR3 1','Gaia DR3 2'", ident_table([
                 {"oidref": 100, "id": "Gaia DR3 1"},
             ])),
             ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([])),
         ])
-        resolved = request.resolve_spine_keys(
-            FakeClient(backend), keys,
-            tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
-        )
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         # source_id 1 resolved, so only 2's TYC is asked for.
         self.assertEqual(resolved.oids, {100, 300})
         self.assertEqual(resolved.gained_by_widening, 1)

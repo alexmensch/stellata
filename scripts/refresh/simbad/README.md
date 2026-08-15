@@ -12,9 +12,10 @@ specs.py     Declarative dataclasses — ColumnSpec for basic-table
              (HIP, Gaia DR3, TYC, GJ), FluxBand for one band of the
              long-format flux table. Canonical catalogue of instances.
 inputs.py    Spine-driven feeders — spine_request_keys partitions rows
-             into per-namespace lookup keys, is_simbad_value_cohort is
-             the § 5 value-tier predicate, gl_suffix normalises the
-             GJ/Gl spellings. Plus the WDS-component oid iterator.
+             into per-namespace lookup keys AND collects the widening
+             map in the same pass, is_simbad_value_cohort is the § 5
+             value-tier predicate, gl_suffix normalises the GJ/Gl
+             spellings. Plus the WDS-component oid iterator.
 request.py   Phase A — resolve a SpineRequestKeys partition to the
              deduplicated oid set, with the TYC widening and the
              per-namespace coverage report.
@@ -22,13 +23,18 @@ query.py     ADQL builders + batched TAP executor. Wraps each
              ColumnSpec's adql fragment with `AS <alias>` so ORDER BY
              can reference the alias (SIMBAD rejects qualified names
              in ORDER BY).
+coverage.py  Fill counting and floor gates over a pull's
+             {oid: {alias: value}} rows — one definition of "this cell
+             is filled" (neither None nor blank) and one gate message,
+             shared by every shell's coverage phase.
 tsv.py       Spec-driven TSV writer — basic columns, then ordered
              blocks (ident cross-IDs, pivoted flux bands); atomic
              rename via the shared refresh_lib path.
 simbad.test.py   stdlib unittest pins covering spec definitions,
-                 spine feeders, request composition, query builders
-                 and TSV emit.
-__init__.py      Package marker.
+                 spine feeders, request composition, the widening
+                 veto, query builders, coverage gates and TSV emit.
+__init__.py      Package marker + source_files(), the module list a
+                 shell folds into its is_up_to_date sources.
 ```
 
 ## Two invariants the ADQL depends on

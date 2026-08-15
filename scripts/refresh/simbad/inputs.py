@@ -22,12 +22,18 @@ RowFilter = Callable[[SpineRow], bool]
 class SpineRequestKeys:
     """Spine rows partitioned by the SIMBAD ident prefix each is looked up
     under. A row contributes exactly one key, so the four lists sum to the
-    cohort's row count minus the rows carrying no usable key at all."""
+    cohort's row count minus the rows carrying no usable key at all.
+
+    ``tyc_by_source_id`` rides along from the same pass: it is the widening
+    key for source_id-keyed rows SIMBAD's ident table does not hold, and
+    reading it here rather than from a second walk is what stops the two
+    from covering different cohorts."""
 
     source_ids: list[int] = field(default_factory=list)
     hips: list[int] = field(default_factory=list)
     tycs: list[str] = field(default_factory=list)
     gls: list[str] = field(default_factory=list)
+    tyc_by_source_id: dict[int, str] = field(default_factory=dict)
     keyless: int = 0
 
     @property
@@ -54,6 +60,8 @@ def spine_request_keys(
             continue
         if source_id := row[rl.SPINE_SOURCE_ID_COLUMN].strip():
             keys.source_ids.append(int(source_id))
+            if tyc := row["tyc"].strip():
+                keys.tyc_by_source_id[int(source_id)] = tyc
         elif hip := row["hip"].strip():
             keys.hips.append(int(hip))
         elif tyc := row["tyc"].strip():
@@ -78,23 +86,6 @@ def gl_suffix(cell: str) -> str | None:
     if word in _GL_CATALOGUE_WORDS:
         return rest.strip() or None
     return text or None
-
-
-def spine_tyc_by_source_id(
-    spine_path: Path, row_filter: RowFilter | None = None
-) -> dict[int, str]:
-    """The record's own TYC per source_id-keyed spine row that carries one.
-    The widening key for rows SIMBAD's ident table does not hold under
-    their Gaia DR3 id."""
-    out: dict[int, str] = {}
-    for row in rl.iter_spine_rows(spine_path):
-        if row_filter is not None and not row_filter(row):
-            continue
-        source_id = row[rl.SPINE_SOURCE_ID_COLUMN].strip()
-        tyc = row["tyc"].strip()
-        if source_id and tyc:
-            out[int(source_id)] = tyc
-    return out
 
 
 # Spine `*_src` marks that do NOT open a SIMBAD tier. Tycho-2 (`T`),

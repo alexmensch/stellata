@@ -13,7 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-from simbad import inputs, query, request, tsv  # noqa: E402
+import simbad  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, GAIA_DR3, GJ, HIP, TYC,
 )
@@ -39,9 +40,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
     print("[1/2] spine identifier keys → SIMBAD oid (via ident)…")
     keys = inputs.spine_request_keys(SPINE)
     print(f"      spine rows: {keys.total} ({keys.keyless} carrying no key)")
-    resolved = request.resolve_spine_keys(
-        client, keys, tyc_by_source_id=inputs.spine_tyc_by_source_id(SPINE)
-    )
+    resolved = request.resolve_spine_keys(client, keys)
     for line in resolved.report_lines():
         print(line)
     print(f"      oids from the spine: {len(resolved.oids)} "
@@ -60,12 +59,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    simbad_pkg = Path(__file__).resolve().parent / "simbad"
-    sources = [SPINE, WDS_XIDS_TSV, Path(__file__)]
-    sources.extend(
-        p for p in sorted(simbad_pkg.glob("*.py"))
-        if not p.name.startswith("_") and "test" not in p.name
-    )
+    sources = [SPINE, WDS_XIDS_TSV, Path(__file__), *simbad.source_files()]
     if not force and rl.is_up_to_date(OUT, sources):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
@@ -89,18 +83,13 @@ def main() -> None:
     )
 
     print("\n=== Phase D: coverage gate + write TSV ===")
-    sp_type_filled = sum(
-        1 for r in basic_rows.values()
-        if r.get(SP_TYPE.alias) is not None and str(r[SP_TYPE.alias]).strip()
+    total = len(basic_rows)
+    sp_type_filled = coverage.report_fill("sp_type", basic_rows, SP_TYPE.alias, total)
+    coverage.assert_floor(
+        "sp_type coverage", sp_type_filled / max(1, total), SP_TYPE_COVERAGE_MIN,
+        script="refresh-simbad-sptype",
+        diagnosis="SIMBAD response shape or the ColumnSpec list has drifted",
     )
-    coverage = sp_type_filled / max(1, len(basic_rows))
-    print(f"sp_type non-null: {sp_type_filled}/{len(basic_rows)} = {coverage:.1%}")
-    if coverage < SP_TYPE_COVERAGE_MIN:
-        raise SystemExit(
-            f"refresh-simbad-sptype: sp_type coverage {coverage:.1%} below "
-            f"floor {SP_TYPE_COVERAGE_MIN:.0%} — SIMBAD response shape or the "
-            f"ColumnSpec list has drifted; investigate before pinning."
-        )
 
     written = tsv.write_simbad_tsv(
         output=OUT,
