@@ -158,8 +158,8 @@ so the measurement never delays the frame it measured
 (`exposure/reduction/README.md`).
 
 **The target's depth is 24-bit.** `depthBuffer: true` with
-`stencilBuffer: false` gives `DEPTH_COMPONENT24` on WebGL2 (three
-r160 `setupRenderBufferStorage`). This is load-bearing — the local
+`stencilBuffer: false` and no depth *texture* gives `DEPTH_COMPONENT24` on
+WebGL2 (three's `getInternalDepthFormat`). This is load-bearing — the local
 depth pass derives its slice-ratio bound from a 24-bit buffer
 (`../local-depth/README.md` § Precision analysis), so switching the
 attachment to a 16-bit renderbuffer or a depth *texture* of the wrong

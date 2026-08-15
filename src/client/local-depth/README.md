@@ -34,7 +34,7 @@ Non-raw materials get the renderer's log encoding
 (`log2(1+w) / log2(1+far)`), which is logarithmic only for `w ≫ 1`;
 every intra-system distance is `w ≪ 1 pc`, inside its *linear*
 regime with one depth quantum ≈ `ln(1+far)/2²⁴` ≈ **0.14 AU**. The
-star passes (RawShaderMaterial — no `USE_LOGDEPTHBUF`) write plain
+star passes (RawShaderMaterial — no `USE_LOGARITHMIC_DEPTH_BUFFER`) write plain
 standard depth over the full range, quantising everything beyond
 ~3 AU to exactly 1.0. Moon↔parent, ring↔body, and close-binary
 separations land inside a single quantum either way and z-order as

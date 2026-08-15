@@ -246,7 +246,7 @@ entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
 
 The renderer is constructed with
 `WebGLRenderer({ logarithmicDepthBuffer: true })`, but that flag only
-injects `USE_LOGDEPTHBUF` into NON-raw materials (planet billboards,
+injects `USE_LOGARITHMIC_DEPTH_BUFFER` into NON-raw materials (planet billboards,
 meshes, lines, volumes) — that is what enables `camera.near = 1e-12`
 for the layers that need intra-system depth. **The star materials are
 RawShaderMaterial, which three.js gives only `material.defines` — so
