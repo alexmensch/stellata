@@ -29,7 +29,6 @@ import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import {
   emptySimbadValueIndex,
   parseSimbadValuesTsv,
-  simbadValueRowCount,
   type SimbadValueIndex,
 } from '../simbad-values-parse';
 import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
@@ -173,7 +172,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     console.log('Parsing SIMBAD bibcoded values...');
     const t = Date.now();
     simbadValues = parseSimbadValuesTsv(readFileSync(SRC_SIMBAD_VALUES, 'utf8'));
-    sizes.simbadValuesEntries = simbadValueRowCount(simbadValues);
+    sizes.simbadValuesEntries = simbadValues.rowCount;
     console.log(`  ${sizes.simbadValuesEntries} rows in ${Date.now() - t}ms`);
   } else {
     console.warn(

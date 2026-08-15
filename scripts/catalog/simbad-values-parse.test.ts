@@ -5,7 +5,6 @@ import {
   lookupSimbadValues,
   normaliseGjKey,
   parseSimbadValuesTsv,
-  simbadValueRowCount,
 } from './simbad-values-parse';
 
 const HEADER = [
@@ -29,7 +28,7 @@ describe('parseSimbadValuesTsv', () => {
       rv: '-8.6', bibcode: '1953GCRV..C......0W',
       hip: '104417', sourceId: '1872008813630353024', tyc: '3168-56-1', gj: '9728 A',
     })));
-    expect(simbadValueRowCount(index)).toBe(1);
+    expect(index.rowCount).toBe(1);
     for (const keys of [
       { ...NO_KEYS, sourceId: '1872008813630353024' },
       { ...NO_KEYS, hip: 104417 },
@@ -60,6 +59,28 @@ describe('parseSimbadValuesTsv', () => {
   it('keeps a genuine zero', () => {
     const index = parseSimbadValuesTsv(tsv(row({ rv: '0', bibcode: 'X', hip: '3' })));
     expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 3 })?.rv?.kmS).toBe(0);
+  });
+
+  // The cascade takes `kmS` as finite without re-testing it, so the parser is
+  // where a malformed cell has to become an absent value.
+  it('drops a value no number parses out of', () => {
+    const index = parseSimbadValuesTsv(tsv(
+      row({ rv: '~', bibcode: 'X', hip: '4' }),
+      row({ rv: 'NaN', bibcode: 'X', hip: '5' }),
+    ));
+    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 4 })?.rv).toBeNull();
+    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 5 })?.rv).toBeNull();
+  });
+
+  // The pull also enumerates by SIMBAD oid, so a row carrying none of the four
+  // ids is legitimate — unjoinable, but still a row the count must report.
+  it('counts a row no namespace can reach', () => {
+    const index = parseSimbadValuesTsv(tsv(
+      row({ oid: '1', rv: '5', bibcode: 'X', hip: '6' }),
+      row({ oid: '2', rv: '6', bibcode: 'Y' }),
+    ));
+    expect(index.rowCount).toBe(2);
+    expect(index.byHip.size).toBe(1);
   });
 
   // A collision means two SIMBAD objects claim one identifier: the cascade

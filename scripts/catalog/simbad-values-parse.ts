@@ -30,30 +30,27 @@ export interface SimbadValueIndex {
   byHip: Map<number, SimbadValueRow>;
   byTyc: Map<string, SimbadValueRow>;
   byGj: Map<string, SimbadValueRow>;
+  /** Data rows read, counted at the walk rather than derived from the maps:
+   *  the pull also enumerates by SIMBAD oid, so a row carrying none of the
+   *  four ids is joinable by nothing and must still be counted. */
+  rowCount: number;
 }
 
 export function emptySimbadValueIndex(): SimbadValueIndex {
   return {
     bySourceId: new Map(), byHip: new Map(), byTyc: new Map(), byGj: new Map(),
+    rowCount: 0,
   };
-}
-
-/** Rows in the file, i.e. the `bySourceId` map plus the rows no source_id
- *  reached — the no-Gaia tier the designation namespaces carry. */
-export function simbadValueRowCount(index: SimbadValueIndex): number {
-  const rows = new Set<SimbadValueRow>();
-  for (const map of [index.bySourceId, index.byHip, index.byTyc, index.byGj]) {
-    for (const row of map.values()) rows.add(row);
-  }
-  return rows.size;
 }
 
 /** The designation part of a spine `gl` cell or a SIMBAD `gj` id, folded to
  *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
  *  sides spell the same star differently — the spine carries both catalogue
  *  words and SIMBAD stores its own spacing — so both go through this before
- *  they meet. Mirrors `gl_suffix` in `scripts/refresh/simbad/inputs.py`,
- *  which composed the request these rows answer. */
+ *  they meet. It folds strictly more than `gl_suffix` in
+ *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
+ *  when composing the request: inner spacing and case are folded here because
+ *  this is where the two spellings actually have to match. */
 export function normaliseGjKey(cell: string | null): string | null {
   const text = (cell ?? '').trim();
   if (!text) return null;
@@ -93,6 +90,7 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
     if (hip !== null) put(index.byHip, hip, row, 'hip');
     if (tyc !== null) put(index.byTyc, tyc, row, 'tyc');
     if (gj !== null) put(index.byGj, gj, row, 'gj');
+    index.rowCount++;
   }
   return index;
 }
