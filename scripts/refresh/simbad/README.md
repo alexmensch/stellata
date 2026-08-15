@@ -17,8 +17,8 @@ inputs.py    Spine-driven feeders — spine_request_keys partitions rows
              value-tier predicate, gl_suffix normalises the GJ/Gl
              spellings. Plus the WDS-component oid iterator.
 request.py   Phase A — resolve a SpineRequestKeys partition to the
-             deduplicated oid set, with the TYC widening and the
-             per-namespace coverage report.
+             deduplicated oid set, with the TYC widening, its veto, and
+             the per-namespace coverage report.
 query.py     ADQL builders + batched TAP executor. Wraps each
              ColumnSpec's adql fragment with `AS <alias>` so ORDER BY
              can reference the alias (SIMBAD rejects qualified names
@@ -48,6 +48,27 @@ keying on the raw returned id silently loses those rows.
 **A suffix is interpolated into an ADQL string literal**, so
 `resolve_oids_by_prefix` refuses any suffix outside
 `[A-Za-z0-9 .+-]` rather than composing a query it cannot quote.
+
+## The TYC widening carries its own veto
+
+A source_id SIMBAD's `ident` table does not hold leaves its row
+unreachable under the Gaia namespace, so `resolve_spine_keys` retries it
+on the record's own TYC. That retry is the one binding in the stack made
+on a designation alone — and a TYC names the **Tycho entry**, which for a
+close pair is the system, not the component the spine resolved. Left
+unchecked it attaches rv / parallax / PM / coordinates from the wrong
+star, the same failure the GJ keys avoid by refusing to strip a component
+letter.
+
+`_veto_contradicted` closes it with the evidence the pull already has:
+where SIMBAD holds a Gaia DR3 cross-ID for the widened oid and it is not
+the source_id that asked, the two disagree about which star this is and
+the binding is dropped. (It can only ever disagree — had SIMBAD held the
+asking source_id, the Gaia pass would have resolved the row and it would
+never have been a widening candidate.) A TYC two source_ids both claim
+binds neither and is dropped before the request. What survives is the
+uncorroborated remainder: SIMBAD holds no Gaia id for the object at all,
+so the TYC binding stands unverified — reported per pull, never silent.
 
 ## Used by
 
