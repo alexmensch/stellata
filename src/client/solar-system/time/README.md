@@ -76,8 +76,8 @@ which was the dominant term left once the element tables landed.
 
 **ΔT is not a constant, and at this clock's range it is not small.**
 `delta-t-pure.ts` is the Espenak & Meeus polynomial set (−1999 to +3000),
-sixteen fitted intervals joined by the Morrison & Stephenson long-term
-parabola outside them. It is 69 s today and **20.6 hours at 3000 BC** —
+thirteen fitted intervals with the Morrison & Stephenson long-term
+parabola carrying each tail. It is 69 s today and **20.6 hours at 3000 BC** —
 310° of Earth rotation. A fixed offset put every ancient eclipse track
 most of a hemisphere from where it belongs.
 

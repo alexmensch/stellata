@@ -18,9 +18,10 @@ function longTermParabola(y: number): number {
 }
 
 /**
- * ΔT in seconds at decimal year `y`. Sixteen fitted intervals joined by
- * the long-term parabola outside them; each interval is a polynomial in
- * its own re-centred argument, so the branch order below is load-bearing.
+ * ΔT in seconds at decimal year `y`. Fifteen intervals — thirteen
+ * fitted, plus the long-term parabola on each tail; each fitted one is a
+ * polynomial in its own re-centred argument, so the branch order below
+ * is load-bearing.
  */
 export function deltaTSecondsAtYear(y: number): number {
   if (y < -500) return longTermParabola(y);

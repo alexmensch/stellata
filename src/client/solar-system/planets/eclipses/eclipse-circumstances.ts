@@ -71,12 +71,15 @@ export function earthMoonAt(t: number): { earth: Vec3; moon: Vec3 } {
  * was one Earth–Moon light time earlier, which is the one whose shadow is
  * arriving now.
  *
- * Worth 38 km, because the Moon moves ~30 km/s in the inertial frame and
- * Earth does not follow it over 1.28 s. That is a systematic +36 s of
- * greatest-eclipse timing, and it dominated the residual against the
- * canons once the element tables were in. The mesh shader deliberately
- * does NOT do this (see README.md § Light time) — the two paths differ by
- * 0.3 % of Earth's disc.
+ * Worth 38 km: over 1.28 s the Moon covers that much of its ~30 km/s
+ * barycentric path, and the axis is a ray from the SUN, so the shift does
+ * not cancel against Earth's own orbital motion the way a geocentric
+ * difference would. Each body is simply taken at its own correct epoch —
+ * the Moon when it blocked the light, Earth when the light arrives. Worth
+ * a systematic +36 s of greatest-eclipse timing, which dominated the
+ * residual against the canons once the element tables were in. The mesh
+ * shader deliberately does NOT do this (README.md § Three conventions) —
+ * the two paths differ by 0.3 % of Earth's disc.
  */
 function earthAndRetardedMoon(t: number): { earth: Vec3; moon: Vec3 } {
   const now = earthMoonAt(t);

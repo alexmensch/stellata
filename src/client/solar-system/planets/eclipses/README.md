@@ -67,11 +67,16 @@ landing where it belongs.
 
 **Light time is not negligible here.** The shadow arriving at Earth now
 was cast by the Moon one Earth–Moon light time ago — 1.28 s, over which
-the Moon moves ~38 km in the inertial frame and Earth does not follow it.
-That is a systematic **+36 s** of greatest-eclipse timing, and it was the
-single largest residual against the canons once the element tables were
-in. `solarEclipseAt` retards the Moon; `lunarEclipseAt` retards Earth.
-The Sun's own retardation is worth 13 m and is skipped.
+the Moon covers ~38 km of its ~30 km/s barycentric path. Earth shares
+that orbital motion, but the shift does **not** cancel: the shadow axis
+is a ray from the *Sun*, so what matters is where the Moon was when it
+blocked the light, against where Earth is when the light lands. Each body
+is taken at its own correct epoch; the residual is not the 1.3 km of
+differential geocentric motion. That is a systematic **+36 s** of
+greatest-eclipse timing, and it was the single largest residual against
+the canons once the element tables were in. `solarEclipseAt` retards the
+Moon; `lunarEclipseAt` retards Earth. The Sun's own retardation is worth
+13 m and is skipped.
 
 **The mesh shader deliberately does NOT do this.** It shades from
 simultaneous positions, so the drawn shadow sits ~38 km — 0.3 % of Earth's

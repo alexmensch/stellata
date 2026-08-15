@@ -161,8 +161,8 @@ export interface MoonGeocentric {
  * is exactly the precession-only chain.
  *
  * Meeus quotes ~10″ in λ and ~4″ in β near the present epoch, degrading
- * away from it; `lunar-truth.test.ts` measures the real figure across the
- * model clock's whole span against JPL Horizons.
+ * away from it; `moon-vector-truth.test.ts` measures the real figure
+ * across the model clock's whole span against JPL Horizons.
  */
 export function moonGeocentricOfDate(jdTt: number): MoonGeocentric {
   const T = (jdTt - J2000_JD) / DAYS_PER_JULIAN_CENTURY;

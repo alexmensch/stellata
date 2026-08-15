@@ -103,8 +103,8 @@ beforeAll(() => {
 
 describe('the canon corpus', () => {
   it('spans four millennia and both eclipse kinds', () => {
-    expect(SOLAR.length).toBeGreaterThanOrEqual(20);
-    expect(LUNAR.length).toBeGreaterThanOrEqual(10);
+    expect(SOLAR.length).toBe(23);
+    expect(LUNAR.length).toBe(12);
     const jds = SOLAR.map((r) => Number(r.jd_tt));
     expect(Math.min(...jds)).toBeLessThan(J2000_JD - 39 * 36525);
     expect(Math.max(...jds)).toBeGreaterThan(J2000_JD + 9 * 36525);
@@ -170,7 +170,7 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
 
   it('lands greatest eclipse within 10 s across 1900–2100', () => {
     const modern = solarResults.filter((r) => Math.abs(r.jdTt - J2000_JD) < MODERN_JD_HALF_SPAN);
-    expect(modern.length).toBeGreaterThanOrEqual(7);
+    expect(modern.length).toBe(9);
     for (const r of modern) {
       expect(Math.abs(r.offsetS), r.row.date).toBeLessThan(10);
     }

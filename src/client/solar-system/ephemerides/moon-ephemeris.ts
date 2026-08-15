@@ -254,8 +254,8 @@ export function moonGeocentricKm(t: number, out: Vec3): void {
 }
 
 // Half-step of the central difference that gives the Moon's velocity for
-// the osculating-element solve. Short against the 27-day orbit (the
-// truncation error is ~1e-8 of the speed) and long enough that
+// the osculating-element solve. Short against the 27-day orbit — the
+// truncation error is (ωh)²/6 ≈ 1e-7 of the speed — and long enough that
 // differencing two 4e5 km positions keeps ~10 significant digits.
 const VELOCITY_HALF_STEP_S = 300;
 
