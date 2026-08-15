@@ -37,6 +37,10 @@ export class LuminanceReduction {
   private readback: ReductionReadback | null = null;
   private pendingExposure = 0;
   private latest: ReducedStatistic | null = null;
+  // Whether the readback in flight was requested with the draws skipped,
+  // and so carries a texel from an older frame than pendingExposure
+  // describes. Landing it would feed the cut a mismatched pair.
+  private pendingIsStale = false;
 
   constructor() {
     this.material = new THREE.RawShaderMaterial({
@@ -115,10 +119,12 @@ export class LuminanceReduction {
       renderer.setRenderTarget(this.levels[this.levels.length - 1].target);
     }
     // The last level is still bound, which is the framebuffer readPixels
-    // reads from — re-reading the stale texel when disabled, which is what
-    // holds the statistic still.
+    // reads from. Disabled, that texel is from an older frame: the request
+    // goes out anyway to keep the fence in the frame, and poll() drops
+    // what it lands so the statistic holds still.
     this.readback.request(1);
-    this.pendingExposure = renderExposure;
+    this.pendingIsStale = !this.enabled;
+    if (this.enabled) this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);
   }
 
@@ -146,6 +152,7 @@ export class LuminanceReduction {
     this.floatRenderable = null;
     this.latest = null;
     this.pendingExposure = 0;
+    this.pendingIsStale = false;
     this.geometry.dispose();
     this.material.dispose();
     this.scene.clear();
@@ -154,6 +161,10 @@ export class LuminanceReduction {
   private poll(): void {
     const landed = this.readback?.poll();
     if (landed === undefined || landed === null) return;
+    if (this.pendingIsStale) {
+      this.pendingIsStale = false;
+      return;
+    }
     this.latest = {
       meanL: landed.pixels[0],
       surfaceL: landed.pixels[1],

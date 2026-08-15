@@ -187,5 +187,16 @@ ends in `gl.flush()`, and on ANGLE that flush is the frame's only
 submission barrier: drop it and the driver batches deeper, so
 `TIME_ELAPSED` spans more overlapped work and the frame reads *slower*
 with the pass off. The disabled path therefore still binds the last
-level and re-requests the same stale texel — same fence, same every-
-other-frame cadence, only the draws removed.
+level and re-requests it — same fence, same every-other-frame cadence,
+only the draws removed.
+
+**What it lands is then thrown away, and that part is not optional.**
+The texel is from whichever frame last ran the draws, while
+`renderExposure` is live; pairing them breaks the invariant above and
+the cut is computed from a mismatched ratio. That is a feedback loop,
+not a one-off error — a wrong cut moves the exposure, which moves
+`renderExposure`, which moves the next wrong cut. Measured at the
+default Sol view, where the cut is deep, it drove the frame 22–58 ms
+*slower* with the pass disabled; at an LG viewpoint, where the cut is
+shallow, the same code read a clean +10 ms. `pendingIsStale` marks the
+in-flight request so `poll()` drops it and `latest` genuinely freezes.
