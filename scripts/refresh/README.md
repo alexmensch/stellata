@@ -71,16 +71,43 @@ venv binary) in the shell that runs them.
 | `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
+| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the 11,050 spine rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
 `refresh-msc.py` don't yet have dedicated pnpm targets — invoke
-directly with `python3 scripts/refresh/<script>.py`. The two SIMBAD
+directly with `python3 scripts/refresh/<script>.py`. The SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
-`inputs.py`, `query.py`, `tsv.py`) so adding new SIMBAD-anchored pulls
-reuses the entire stack. `refresh-msc.py` pulls the three Pulkovo MSC
-tables (VizieR `J/ApJS/235/6`) into `data/msc/` with per-table schema
-validation and row bounds — source detail in `data/msc/README.md`.
+`inputs.py`, `request.py`, `query.py`, `tsv.py`) so adding new
+SIMBAD-anchored pulls reuses the entire stack. `refresh-msc.py` pulls the
+three Pulkovo MSC tables (VizieR `J/ApJS/235/6`) into `data/msc/` with
+per-table schema validation and row bounds — source detail in
+`data/msc/README.md`.
+
+### Request sets are spine-derived
+
+**No refresh script reads `data/athyg/athyg_33_classic_ids.csv`.** Every
+catalog-scoped request set now traces to `data/athyg/inherited-spine.tsv` —
+the membership term (`docs/catalog-driver.md` § 3) — by one of two routes:
+directly, through `refresh_lib.read_spine_source_ids` / `iter_spine_rows`
+(Bailer-Jones, Apsis, the SIMBAD pulls), or through a request file
+`export-astrometry-request.ts` exported off the same spine column
+(astrometry-catalog, GSPC — see `read_source_id_request` below).
+`data/simbad/README.md` § Request sets come off the spine carries the
+measured drop/gain of the SIMBAD rebase.
+
+The spine's `gaia_source_id` is the binding the frozen build **resolved**,
+past both gates, so a request derived from it and the record build name the
+same sources by construction. The AT-HYG `gaia` cell is the ungated raw
+value, which is why a walk over the CSV over-pulls rows that never became
+records — the failure `scripts/catalog/astrometry-request/README.md`
+§ Request and record build name the same set diagnoses at length.
+
+**A rebased request set does not rewrite its output.** The rebase changes
+what the *next* run asks for; the committed TSV keeps whatever the previous
+run pulled until that run happens — the same terms as `radial_velocity`
+above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
+`is_up_to_date`, so the next invocation re-pulls rather than skips.
 
 `read_source_id_request` lives in `refresh_lib` rather than beside any
 one pull, because three scopes now read the same one-column TSV contract:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bailer-Jones 2021
-(VizieR I/352) Bayesian DR3 distance posteriors per AT-HYG source_id."""
+(VizieR I/352) Bayesian DR3 distance posteriors per spine source_id."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-ATHYG = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
+SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
 # 5000 ids → ~98 KB query, ~80 s round-trip on CDS TAP. 10000 was ~5 min
@@ -135,17 +135,17 @@ def rename_row(row, vizier_to_paper: dict[str, str]) -> dict[str, object]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), ATHYG]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), SPINE]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_athyg_source_ids(ATHYG)
+    source_ids = rl.read_spine_source_ids(SPINE)
     total = len(source_ids)
     if total == 0:
-        raise SystemExit(f"refresh-bailer-jones: no source_ids in {ATHYG}")
+        raise SystemExit(f"refresh-bailer-jones: no source_ids in {SPINE}")
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
-        f"reading {total} AT-HYG source_ids → {n_batches} batches of "
+        f"reading {total} spine source_ids → {n_batches} batches of "
         f"{BATCH_SIZE} on CDS TAP (I/352/gedr3dis)"
     )
 
