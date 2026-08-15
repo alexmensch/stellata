@@ -8,17 +8,13 @@ import {
   makeSlider,
 } from '../../debug/debug-panel';
 import { extendedThresholdSbFor } from '../../filters/filter-state';
-import { DR_MAG, HIGHLIGHT_DESAT } from '../tonemap-pure';
 import {
   type ExposureReadout,
   formatExposureReadout,
 } from './exposure-tuning-pure';
 import {
   ADAPT_REF_COVERAGE,
-  ADAPT_SLEW_TAU_S,
   guardHandoverCoverage,
-  L_ADAPT,
-  L_CAP,
 } from './scene-adaptation-pure';
 
 function readState(stellata: Stellata): ExposureReadout {
@@ -63,16 +59,15 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
   onFrame();
   const unsubscribe = stellata.on('frame', onFrame);
 
-  // The two levels the branches measure against. Both ship at values the
-  // design gate derived rather than chose (§ 3.1's smoke pass for L_ADAPT,
-  // the Lambert peak-over-mean for L_CAP), so a slider here is for
-  // re-running that judgement, not for taste.
+  // Every slider seeds from live state, not from the module constant: the
+  // panel rebuilds each section on open while the overrides outlive it, so
+  // a constant seed would show defaults over a swept build.
   body.appendChild(makeSlider({
     label: 'L_ADAPT (perception anchor)',
     min: 0.005,
     max: 0.3,
     step: 0.001,
-    initial: L_ADAPT,
+    initial: stellata.adaptation.getLAdapt(),
     format: (x) => x.toFixed(3),
     onChange: (x) => stellata.adaptation.setLAdapt(x),
   }));
@@ -82,7 +77,7 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
     min: 0.5,
     max: 6,
     step: 0.05,
-    initial: L_CAP,
+    initial: stellata.adaptation.getLCap(),
     format: (x) => x.toFixed(2),
     onChange: (x) => stellata.adaptation.setLCap(x),
   }));
@@ -94,19 +89,17 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
     min: 0.05,
     max: 2,
     step: 0.05,
-    initial: ADAPT_SLEW_TAU_S,
+    initial: stellata.adaptation.getSlewTauS(),
     format: (x) => x.toFixed(2),
     onChange: (x) => stellata.adaptation.setSlewTauS(x),
   }));
 
-  // Both re-author every chrome colour through syncMode, and DR_MAG also
-  // moves the display floor the readout above reports.
   body.appendChild(makeSlider({
     label: 'DR_MAG (threshold → white)',
     min: 5.5,
     max: 11,
     step: 0.1,
-    initial: DR_MAG,
+    initial: stellata.hdr.getDynamicRangeMag(),
     format: (x) => x.toFixed(1),
     onChange: (x) => stellata.hdr.setDynamicRangeMag(x),
   }));
@@ -116,7 +109,7 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
     min: 0,
     max: 1,
     step: 0.01,
-    initial: HIGHLIGHT_DESAT,
+    initial: stellata.hdr.getHighlightDesat(),
     format: (x) => x.toFixed(2),
     onChange: (x) => stellata.hdr.setHighlightDesat(x),
   }));

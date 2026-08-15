@@ -271,11 +271,14 @@ magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH` and
 *derived* and are neither baked nor slidable here: `Lw` follows the
 `DR_MAG` slider through `uWhitePoint`, and `S_lim` follows the instrument.
 
-Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` and
-defaulting to the module constants — plus `DR_MAG` and the desaturation
-strength, which are `HdrPipeline`'s (`../README.md` § Dev switches). **The
-overrides survive a chart round-trip**: `reset()` clears the statistic and
-the slew, never the knobs.
+Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` —
+plus `DR_MAG` and the desaturation strength, which are `HdrPipeline`'s
+(`../README.md` § Dev switches). **The overrides survive a chart
+round-trip**: `reset()` clears the statistic and the slew, never the
+knobs. **They survive a panel close too, so every slider seeds off its
+live getter rather than the module constant** — `togglePanel` rebuilds
+each section on open, and a constant seed would put five sliders at
+defaults over a swept build.
 
 **τ is the only tunable in the transient, and it is not what a large scene
 change is showing.** The filter is one-pole; the staircase is `LUMA_CEIL`

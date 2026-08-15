@@ -90,9 +90,13 @@ export class SceneAdaptation {
    *  A debug knob only: ships at `L_ADAPT`, which § 3.1 measured. */
   setLAdapt(l: number): void { this.lAdapt = l; }
 
+  getLAdapt(): number { return this.lAdapt; }
+
   /** The ceiling the highlight guard pins the frame's brightest pixel at —
    *  the one knob smoke-tuning moves (§ 3.2). */
   setLCap(l: number): void { this.lCap = l; }
+
+  getLCap(): number { return this.lCap; }
 
   /** Time constant of the slew limit on the applied cut, in real seconds.
    *  The only tunable in the transient: the filter is one-pole, and the
