@@ -30,6 +30,13 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          session is creating, and the neighbouring cases
                          that must stay gated (unread README on disk,
                          committed folder missing one).
+shader-frag-depth.test.ts
+                         gl_FragDepth roster: only star.frag.glsl may
+                         write frag depth (a static write defeats
+                         early-z draw-wide). Allowlist shrinks to empty
+                         when the WebGPU port lands the depth-honest
+                         redesign (star-pipeline README § Depth
+                         encoding).
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          § 4.5): structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
@@ -43,6 +50,11 @@ three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
                          bump of the dependency range.
+walk-files.ts            Not a test — the recursive file walk the
+                         scanners above share (code-comment-rules,
+                         bundle-content, shader-frag-depth), taking
+                         `include` / `skipDir` predicates. Follows
+                         symlinked directories, which public/ carries.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`

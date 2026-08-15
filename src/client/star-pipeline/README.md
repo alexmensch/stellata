@@ -42,7 +42,7 @@ subfolders.
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
-  coreMask `ShaderMaterial`s + meshes. Owns
+  coreMask `RawShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
@@ -231,7 +231,7 @@ shell when the focused star qualifies; the engage / disengage rules +
 load-bearing `controls.target` invariant are managed in the focus
 controller.
 
-`ShaderMaterial({ glslVersion: THREE.GLSL3 })`. Vertex shader uses
+`RawShaderMaterial({ glslVersion: THREE.GLSL3 })`. Vertex shader uses
 `uint` uniforms and bitwise ops for the spectral-class mask. Do **not**
 downgrade to GLSL1 — the mask logic would need to be rewritten as
 per-class bools.
@@ -298,6 +298,22 @@ any disc-pass star mirrors into the bracketed pass
 (`local-pass/README.md`), whose standard-depth bracket resolves sub-AU
 pair separations natively and whose repaint over the finished frame
 occludes main-pass glow by construction.
+
+### Early-z — the depth-honest redesign (WebGPU port contract)
+
+Any static `gl_FragDepth` write disables early-z for the whole draw
+(in WGSL: pipeline) and no conservative-depth qualifier exists in
+either language, so the shared-program defensive write above costs
+all three passes their early-z, not just the halo branch needing it.
+Port contract, valid on any renderer or encoding: one program per
+pass (compile-time define replacing `uRenderMode`); glow carries no
+depth output (removal of the defensive write is bit-exact); the
+core-mask member stamp moves to the vertex stage (per-instance, so
+clip z pins to the near end of the active depth convention); the disc
+pass splits into a depth-writing core draw plus a depthWrite-off halo
+draw (a far-pinned halo write only ever re-wrote 1.0 over 1.0, so
+buffer state is unchanged; a viewport-depth-range far pin is the
+bit-exact fallback if the halo's now-physical test regresses smoke).
 
 ## Physical-size rendering
 

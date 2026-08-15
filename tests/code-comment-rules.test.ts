@@ -4,8 +4,9 @@
 // docs/authoring-patterns.md § Code comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'scripts'];
@@ -88,20 +89,11 @@ const FORBIDDEN: Pattern[] = [
   },
 ];
 
-function* walk(dir: string): Generator<string> {
-  let entries: ReturnType<typeof readdirSync>;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (EXCLUDED_DIRS.has(entry.name)) continue;
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) yield* walk(path);
-    else if (/\.(?:ts|py)$/.test(path) && !/\.d\.ts$/.test(path)) yield path;
-  }
-}
+const walk = (dir: string): Generator<string> =>
+  walkFiles(dir, {
+    skipDir: (name) => EXCLUDED_DIRS.has(name),
+    include: (path) => /\.(?:ts|py)$/.test(path) && !/\.d\.ts$/.test(path),
+  });
 
 interface Violation {
   file: string;
