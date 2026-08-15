@@ -5,6 +5,7 @@ import {
   summarizeDwell,
   differentialNoiseMs,
   buildPriceRow,
+  buildInterleavedRow,
 } from './frame-cost-pure';
 
 describe('frame-cost-pure', () => {
@@ -68,6 +69,38 @@ describe('frame-cost-pure', () => {
     const baseline = { samples: 10, medianMs: 10, iqrMs: 2 };
     const disabled = { samples: 10, medianMs: 12, iqrMs: 2 };
     expect(buildPriceRow('x', 'raf-delta', baseline, disabled).savedMs).toBe(-2);
+  });
+
+  it('bracketing cancels linear drift a single baseline charges to the pass', () => {
+    // The instrument walks 60 -> 50 ms across the three dwells; the pass
+    // itself is free.
+    const before = { samples: 120, medianMs: 60, iqrMs: 4 };
+    const disabled = { samples: 120, medianMs: 55, iqrMs: 4 };
+    const after = { samples: 120, medianMs: 50, iqrMs: 4 };
+
+    expect(buildPriceRow('free', 'timer-query', before, disabled).savedMs).toBe(5);
+    expect(
+      buildInterleavedRow('free', 'timer-query', before, after, disabled).savedMs,
+    ).toBe(0);
+  });
+
+  it('interleaved row reports the bracket the measurement sat in', () => {
+    const row = buildInterleavedRow(
+      'hdrChain',
+      'timer-query',
+      { samples: 120, medianMs: 50, iqrMs: 6 },
+      { samples: 120, medianMs: 42, iqrMs: 6 },
+      { samples: 120, medianMs: 9, iqrMs: 2 },
+    );
+    expect(row.baselineMs).toBe(46);
+    expect(row.savedMs).toBe(37);
+    expect(row.bracketMs).toBe(8);
+    expect(row.iqrMs).toBe(6);
+  });
+
+  it('a single-baseline row carries no bracket', () => {
+    const stats = { samples: 10, medianMs: 10, iqrMs: 1 };
+    expect(buildPriceRow('x', 'timer-query', stats, stats).bracketMs).toBeUndefined();
   });
 
   it('buildPriceRow: zero baseline yields 0 pct, not NaN', () => {

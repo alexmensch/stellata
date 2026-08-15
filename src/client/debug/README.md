@@ -25,10 +25,8 @@ src/client/debug/
   gpu-timer.ts (+ test)           EXT_disjoint_timer_query_webgl2 wrapper
                                   — real GPU execution time, one rotating
                                   scope per frame. See § GPU timing.
-  frame-cost.ts                   debug.priceFrame() — automated per-pass
-                                  gpu.frame differentials. See § Frame
-                                  pricing.
-  frame-cost-pure.ts (+ test)     Dwell statistics + differential rows.
+  frame-cost/                     debug.priceFrame() — automated per-pass
+                                  gpu.frame differentials. Own README.
   fake-gl.ts                      Test-only WebGL2 timer-query stub,
                                   shared by gpu-timer + perf-hud tests.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
@@ -173,51 +171,11 @@ Two further properties a reader will otherwise get wrong:
 
 ## Frame pricing — `debug.priceFrame()`
 
-The automated form of "disable it and difference `gpu.frame`"
-(frame-cost.ts). From wherever the camera sits, it dwells ~120 frames on
-the whole-frame scope, then re-dwells with ONE pass disabled at a time
-and differences the medians. Preconditions: camera stationary (it warns
-if the pose moved) and the debug panel CLOSED — the run borrows the
-swappable perf hooks via `acquireGpuFrameSampler` (perf-hud.ts), a
-single-scope timer that samples `gpu.frame` EVERY frame because WebGL2's
-one-query-per-context limit is not shared with any rotating scope.
-Without a timer query (Safari) it falls back to rAF-delta wall time,
-where differentials under the vsync quantum read as zero unless the
-frame is already over budget — never compare the two methods' numbers.
-
-Priced passes and their toggles (`buildPassToggles`): the local depth
-pass (`stellata.localDepthPass.enabled`), MW band
-(`milkyway.setEnabled`), LG volumetric emission, molecular-cloud
-absorption (`setAbsorptionEnabled`), the HDR chain
-(`hdr.setChartMode(true)` — the whole-target park, which also flips
-emitters to inline tone-mapping and stops the statistic attachment, so
-its row is target-chain-vs-direct-to-canvas, not the resolve draw
-alone), the luminance reduction (`stellata.reduction.enabled` — draws
-only; the readback fence stays, `../hdr/exposure/reduction/README.md`),
-the star core depth-mask (`setCoreMaskEnabled`), and the extinction
-prepass A/B (`setExtinctionPrepassEnabled` — disabling ADDS the
-in-vertex raymarch, so savedMs is normally negative: what the cache
-saves). A pass inactive at the current view/state is skipped, not
-measured as zero.
-
-**Reading a row.** `noiseMs` is the gate: the combined standard error of
-the two medians, from a robust σ (IQR/1.349) so one hitched frame cannot
-inflate it. A `savedMs` under it did not resolve. `iqrMs` is the wider
-dwell's spread, context for how jittery the frames were — never a gate
-in its own right, and max−min emphatically is not one either: over 120
-frames a single outlier sets it at tens of times the real uncertainty.
-`noiseMs` covers only within-run scatter, so the authoritative floor is
-the run-to-run range from `debug.priceFrameRepeat(n)` read together with
-the end-of-run baseline drift, whichever is larger.
-
-**Never sum the column.** Each row is a marginal cost against the same
-baseline, and passes share bandwidth — disabling `hdrChain` also makes
-`mwBand` cheaper, so both rows count some of the same milliseconds. The
-column will happily "explain" more than 100% of a frame.
-
-A discarded warm-up runs before the baseline dwell (`warmupFrames`, 60):
-the baseline is every row's subtrahend, so a cold one biases the whole
-sweep in one direction.
+The automated form of "disable it and difference `gpu.frame`": dwell,
+re-dwell with one pass disabled, difference the medians. Lives in its
+own folder — `frame-cost/README.md` owns the priced-pass roster, the
+preconditions (panel CLOSED, camera still, clock paused), the drift
+bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 
 Adding a GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so

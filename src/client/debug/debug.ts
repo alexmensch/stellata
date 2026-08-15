@@ -15,7 +15,7 @@ import {
   runPriceFrameRepeat,
   type PriceFrameOptions,
   type PriceFrameRow,
-} from './frame-cost';
+} from './frame-cost/frame-cost';
 import {
   type DecodedView,
   type IdMaps,

@@ -159,7 +159,7 @@ export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
 /**
- * Exclusive whole-frame GPU sampler for console harnesses (frame-cost.ts).
+ * Exclusive whole-frame GPU sampler for console harnesses (frame-cost/frame-cost.ts).
  *
  * Installs a single-scope timer into the swappable hooks so EVERY frame
  * samples `gpu.frame` — no rotation, unlike the panel's multi-scope timer.

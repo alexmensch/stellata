@@ -1,10 +1,11 @@
 // Console-driven differential frame pricing: dwell on gpu.frame with one
 // pass disabled at a time and difference the medians.
-// See README.md § Frame pricing.
+// See README.md.
 
-import type { Stellata } from '../stellata';
-import { acquireGpuFrameSampler } from './perf-hud';
+import type { Stellata } from '../../stellata';
+import { acquireGpuFrameSampler } from '../perf-hud';
 import {
+  buildInterleavedRow,
   buildPriceRow,
   summarizeDwell,
   type DwellStats,
@@ -30,12 +31,23 @@ export interface PriceFrameOptions {
   /** Frames discarded after each state flip — absorbs rebuilds, shader
    *  recompiles, and the previous state's in-flight query results. */
   settleFrames?: number;
-  /** Frames discarded before the baseline dwell. A cold first dwell
-   *  biases every row against it, since it alone is the subtrahend. */
+  /** Frames discarded before the first baseline dwell. Long by default:
+   *  an Apple-silicon GPU ramps its clocks under sustained load, and a
+   *  sweep started cold walks its frame time down for tens of seconds. */
   warmupFrames?: number;
+  /** Re-measure the baseline between every pass and difference each
+   *  disabled dwell against the mean of its two neighbours. Costs 2N+1
+   *  dwells instead of N+2; the only honest mode on a drifting
+   *  instrument. Set false for a fast, drift-exposed sweep. */
+  interleave?: boolean;
 }
 
-const DEFAULTS = { dwellFrames: 120, settleFrames: 12, warmupFrames: 60 } as const;
+const DEFAULTS = {
+  dwellFrames: 120,
+  settleFrames: 12,
+  warmupFrames: 180,
+  interleave: true,
+} as const;
 
 /** Whole-sweep ceiling. A run that cannot finish still has to hand the
  *  tab back with every pass restored, not sit on a broken frame. */
@@ -104,8 +116,9 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
 /**
  * Price every present pass from wherever the camera sits: dwell on the
  * whole-frame GPU scope with the pass disabled, difference the median
- * against the enabled baseline. One pass at a time — differentials are
- * the only honest per-pass price on ANGLE/Metal (README.md § GPU timing).
+ * against baselines measured either side of it. One pass at a time —
+ * differentials are the only honest per-pass price on ANGLE/Metal
+ * (README.md § GPU timing).
  *
  * Timer-query where the driver has one; rAF-delta fallback otherwise
  * (Safari), where a differential smaller than the vsync quantum reads as
@@ -119,6 +132,7 @@ export async function runPriceFrame(
   const dwellFrames = options.dwellFrames ?? DEFAULTS.dwellFrames;
   const settleFrames = options.settleFrames ?? DEFAULTS.settleFrames;
   const warmupFrames = options.warmupFrames ?? DEFAULTS.warmupFrames;
+  const interleave = options.interleave ?? DEFAULTS.interleave;
   const deadline = performance.now() + SWEEP_BUDGET_MS;
 
   const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
@@ -178,14 +192,15 @@ export async function runPriceFrame(
   let restore: (() => void) | null = null;
   try {
     for (let f = 0; f < warmupFrames; f++) await nextFrame();
-    const baseline = await dwell();
-    if (baseline === null) {
+    const firstBaseline = await dwell();
+    if (firstBaseline === null) {
       console.warn(
         'priceFrame: no baseline samples — the query slot was taken ' +
         'mid-run (debug panel opened?) or the context is lost',
       );
       return [];
     }
+    let baseline = firstBaseline;
 
     for (const [i, toggle] of eligible.entries()) {
       if (performance.now() > deadline) {
@@ -208,17 +223,33 @@ export async function runPriceFrame(
         console.warn(`priceFrame: no samples with '${toggle.key}' disabled — dropped`);
         continue;
       }
-      rows.push(buildPriceRow(toggle.key, method, baseline, disabled));
+      if (!interleave) {
+        rows.push(buildPriceRow(toggle.key, method, baseline, disabled));
+        continue;
+      }
+      const after = await dwell();
+      if (after === null) {
+        console.warn(
+          `priceFrame: no trailing baseline after '${toggle.key}' — row dropped`,
+        );
+        continue;
+      }
+      rows.push(buildInterleavedRow(toggle.key, method, baseline, after, disabled));
+      // The trailing baseline is the next row's leading one: 2N+1 dwells,
+      // not 3N.
+      baseline = after;
     }
 
-    const recheck = await dwell();
+    const recheck = interleave ? baseline : await dwell();
     if (recheck !== null) {
-      const driftMs = recheck.medianMs - baseline.medianMs;
+      const driftMs = recheck.medianMs - firstBaseline.medianMs;
       console.info(
-        `priceFrame: baseline ${baseline.medianMs.toFixed(3)} ms, ` +
+        `priceFrame: baseline ${firstBaseline.medianMs.toFixed(3)} ms, ` +
         `re-measured ${recheck.medianMs.toFixed(3)} ms ` +
-        `(drift ${driftMs.toFixed(3)} ms — differentials near or below ` +
-        'this are noise)',
+        `(drift ${driftMs.toFixed(3)} ms over the sweep` +
+        (interleave
+          ? '; bracketed rows already absorb it — read each row\'s bracketMs)'
+          : ' — differentials near or below this are noise)'),
       );
     }
   } finally {

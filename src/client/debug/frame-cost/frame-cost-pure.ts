@@ -1,5 +1,5 @@
 // Pure statistics for the frame-cost harness: dwell summaries and
-// baseline-vs-disabled differential rows. See README.md § Frame pricing.
+// baseline-vs-disabled differential rows. See README.md.
 
 export interface DwellStats {
   readonly samples: number;
@@ -17,6 +17,10 @@ export interface PriceFrameRow {
   readonly samples: number;
   readonly iqrMs: number;
   readonly noiseMs: number;
+  /** Interleaved rows only: how far the instrument moved between the two
+   *  baselines bracketing this measurement. A savedMs under it is drift,
+   *  whatever noiseMs says. */
+  readonly bracketMs?: number;
 }
 
 /** IQR → σ for a normal sample; the divisor is 2·Φ⁻¹(0.75). */
@@ -70,24 +74,73 @@ function medianStandardError(stats: DwellStats): number {
   return (MEDIAN_SE_FACTOR * stats.iqrMs * IQR_TO_SIGMA) / Math.sqrt(stats.samples);
 }
 
-/** One table row: what disabling `pass` saved against the baseline dwell. */
+/** One table row: what disabling `pass` saved against a single baseline
+ *  dwell measured once, at the start of the sweep. */
 export function buildPriceRow(
   pass: string,
   method: PriceFrameRow['method'],
   baseline: DwellStats,
   disabled: DwellStats,
 ): PriceFrameRow {
-  const savedMs = baseline.medianMs - disabled.medianMs;
+  return assembleRow(pass, method, baseline.medianMs, disabled.medianMs, {
+    samples: Math.min(baseline.samples, disabled.samples),
+    iqrMs: Math.max(baseline.iqrMs, disabled.iqrMs),
+    noiseMs: differentialNoiseMs(baseline, disabled),
+  });
+}
+
+/**
+ * One table row from a bracketed measurement: the disabled dwell sits
+ * between two baseline dwells and is differenced against their mean.
+ *
+ * A single leading baseline is only valid on a stationary instrument.
+ * This one is not — a GPU ramping its clocks under sustained load walks
+ * the frame time tens of percent over a sweep, which a lone baseline
+ * then charges to whichever passes happened to be measured late.
+ * Bracketing cancels drift that is linear across the pair.
+ */
+export function buildInterleavedRow(
+  pass: string,
+  method: PriceFrameRow['method'],
+  before: DwellStats,
+  after: DwellStats,
+  disabled: DwellStats,
+): PriceFrameRow {
+  const referenceMs = (before.medianMs + after.medianMs) / 2;
+  const referenceSe =
+    Math.hypot(medianStandardError(before), medianStandardError(after)) / 2;
+  return assembleRow(pass, method, referenceMs, disabled.medianMs, {
+    samples: Math.min(before.samples, after.samples, disabled.samples),
+    iqrMs: Math.max(before.iqrMs, after.iqrMs, disabled.iqrMs),
+    noiseMs: Math.hypot(referenceSe, medianStandardError(disabled)),
+    bracketMs: Math.abs(after.medianMs - before.medianMs),
+  });
+}
+
+function assembleRow(
+  pass: string,
+  method: PriceFrameRow['method'],
+  referenceMs: number,
+  disabledMs: number,
+  stats: {
+    samples: number;
+    iqrMs: number;
+    noiseMs: number;
+    bracketMs?: number;
+  },
+): PriceFrameRow {
+  const savedMs = referenceMs - disabledMs;
   return {
     pass,
     method,
-    baselineMs: round3(baseline.medianMs),
-    disabledMs: round3(disabled.medianMs),
+    baselineMs: round3(referenceMs),
+    disabledMs: round3(disabledMs),
     savedMs: round3(savedMs),
-    savedPct: baseline.medianMs > 0 ? round1((savedMs / baseline.medianMs) * 100) : 0,
-    samples: Math.min(baseline.samples, disabled.samples),
-    iqrMs: round3(Math.max(baseline.iqrMs, disabled.iqrMs)),
-    noiseMs: round3(differentialNoiseMs(baseline, disabled)),
+    savedPct: referenceMs > 0 ? round1((savedMs / referenceMs) * 100) : 0,
+    samples: stats.samples,
+    iqrMs: round3(stats.iqrMs),
+    noiseMs: round3(stats.noiseMs),
+    ...(stats.bracketMs === undefined ? {} : { bracketMs: round3(stats.bracketMs) }),
   };
 }
 
