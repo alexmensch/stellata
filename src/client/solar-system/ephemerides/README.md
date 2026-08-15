@@ -295,8 +295,8 @@ the osculating ellipse through the lunar theory's own state, via
 body within a single month), never the
 display-only `Planet.semiMajorAxisAu`/`.eccentricity` fields. The two
 tables were once unreconciled and rings visibly missed their bodies.
-Geometry — **every ring, host-centred and parent-centred alike** — is
-checked against the live elements every frame and
+Geometry — **every DRAWN ring, host-centred and parent-centred alike** —
+is checked against the live elements every frame and
 rewritten only when they have drifted past `RING_GEOMETRY_DRIFT_TOLERANCE`
 — **the polyline's own resolution**, so a skipped rewrite is provably
 invisible. Moon rings were once excluded from that refresh entirely, on
@@ -304,7 +304,16 @@ the reasoning that moon elements carry no secular terms; that holds for
 the 17 Kepler moons and not for Earth's Moon, whose ring froze at attach
 time and drifted up to 19 000 km — 5 % of its distance — off the body.
 The drift gate, not the body kind, is what keeps the refresh cheap: a
-Kepler moon fails it on five float compares and is never rewritten. Evaluating nine sets of elements is the cheap half (and shares
+Kepler moon fails it on five float compares and is never rewritten.
+
+**Two gates, in this order: visibility, then drift.** `update` decides
+what is on screen first and `refreshGeometry` runs only over the
+survivors — with every ring sub-pixel it does not evaluate the elements
+at all, which for Sol is three lunar-theory evaluations and their
+precession frames saved per frame. Skipping while invisible is only safe
+because catching up is not deferred: a ring flipping visible is
+rewritten and rebaked in that same frame, pinned both ways in
+`orbit-rings-layer.test.ts`. Evaluating nine sets of elements is the cheap half (and shares
 `getPlanetOrbitShapes`' per-`t` cache with the body positions); rewriting
 8192 vertices and re-uploading the buffer is what costs. Keying the rewrite
 on elapsed *sim* time is what this replaced, and it had no rate limit at

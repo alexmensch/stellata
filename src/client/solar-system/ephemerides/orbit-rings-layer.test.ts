@@ -796,6 +796,17 @@ describe('ring geometry passes through the body (single element source)', () => 
       return true;
     };
 
+    const MOON_A_PC = 384400 * KM_PC;
+    // Close enough that the Moon's ring clears the pixel-legibility gate:
+    // the layer refreshes only what it is drawing, so a 5 AU camera —
+    // where the ring is sub-pixel — exercises nothing. `expectDrawn`
+    // asserts that rather than trusting it, or this whole block goes
+    // quietly vacuous the next time the gate moves.
+    const NEAR_MOON = makeCamera(20 * MOON_A_PC);
+    const expectDrawn = (ss: OrbitRingsLayer): void => {
+      expect(ss.isOrbitRingVisible(MOON_IDX), 'Moon ring must be drawn').toBe(true);
+    };
+
     const moonRingVerts = (ss: OrbitRingsLayer): Float32Array => {
       const line = ss.group.children[MOON_IDX] as THREE.LineLoop;
       const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -805,19 +816,21 @@ describe('ring geometry passes through the body (single element source)', () => 
     it('rewrites the buffer — a frozen ring is byte-identical a month on', () => {
       const ss = new OrbitRingsLayer();
       ss.setPlanetSystem(solSystem(), 0, T0);
-      ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
+      ss.update(NEAR_MOON, 800, null, T0, originCentres);
+      expectDrawn(ss);
       const atT0 = moonRingVerts(ss);
-      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 30 * 86400, originCentres);
+      ss.update(NEAR_MOON, 800, null, T0 + 30 * 86400, originCentres);
       const atT1 = moonRingVerts(ss);
       expect(atT1.some((v, i) => v !== atT0[i])).toBe(true);
       ss.dispose();
     });
 
-    // Bounded at 0.001·a ≈ 384 km, not the 0.02·a the sibling test uses.
-    // That looser figure bounds polyline discretisation with room to
-    // spare, and a stale ring sits 1 500–19 000 km out depending on where
-    // in the cycle it froze — so 0.02·a lets some staleness through. The
-    // real discretisation limit is half the vertex spacing, 147 km.
+    // Bounded at 1e-5·a ≈ 3.8 km. The anchored vertex lands on the body
+    // exactly, so the only floor left is the float32 GPU bake this reads
+    // through — ~60 m at the Moon's radius — and a stale ring sits
+    // 1 500–19 000 km out depending on where in the cycle it froze. That
+    // leaves 60x of headroom below and 40x of signal above the 147 km
+    // half-vertex spacing.
     //
     // Several offsets because the error is cyclic, not monotonic: a
     // 30-day scrub happens to land near a minimum, and a single sample
@@ -828,7 +841,8 @@ describe('ring geometry passes through the body (single element source)', () => 
         const ss = new OrbitRingsLayer();
         ss.setPlanetSystem(solSystem(), 0, T0);
         const t = T0 + days * 86400;
-        ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
+        ss.update(NEAR_MOON, 800, null, t, originCentres);
+        expectDrawn(ss);
 
         // The layer rotates its rings onto the host plane; the resolver
         // works in the ecliptic, so the expected point takes the same turn.
@@ -841,11 +855,49 @@ describe('ring geometry passes through the body (single element source)', () => 
         const expected = new THREE.Vector3(offset.x, offset.y, offset.z)
           .applyQuaternion(hostQuat);
 
-        const aPc = 384400 * KM_PC;
-        expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(0.001 * aPc);
+        expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(1e-5 * MOON_A_PC);
         ss.dispose();
       },
     );
+
+    it('spends nothing on a ring it is not drawing', () => {
+      // The other side of the same gate. The Moon's ring crosses the
+      // drift tolerance in ~1 s of model time, so without this it would
+      // rewrite 8192 vertices and re-upload the buffer every frame under
+      // scrub while sub-pixel — and drag three lunar-theory evaluations
+      // along per frame for a ring nothing can see.
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
+      expect(ss.isOrbitRingVisible(MOON_IDX)).toBe(false);
+      const atT0 = moonRingVerts(ss);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 365 * 86400, originCentres);
+      expect(moonRingVerts(ss)).toEqual(atT0);
+      ss.dispose();
+    });
+
+    it('catches a ring up the frame it becomes visible again', () => {
+      // Skipping while invisible is only safe because coming back is not
+      // deferred: visibility is decided first, then the geometry pass
+      // runs over what survived.
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      const t = T0 + 365 * 86400;
+      ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
+      ss.update(NEAR_MOON, 800, null, t, originCentres);
+      expectDrawn(ss);
+
+      const hostQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        ECLIPTIC_NORTH_POLE_ICRS.clone(),
+      );
+      const offset = { x: 0, y: 0, z: 0 };
+      moonOffsetEcliptic(MOON_ELEMENTS.find((m) => m.name === 'Moon')!, t, offset);
+      const expected = new THREE.Vector3(offset.x, offset.y, offset.z)
+        .applyQuaternion(hostQuat);
+      expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(1e-5 * MOON_A_PC);
+      ss.dispose();
+    });
   });
 
   it('solOrbitGeometryAt covers SOL_BODIES with parentIdx pointing at each moon’s parent', () => {

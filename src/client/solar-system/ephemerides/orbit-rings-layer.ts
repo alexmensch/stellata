@@ -456,12 +456,23 @@ export class OrbitRingsLayer {
    * buffer is what costs, so only a ring whose elements actually moved
    * gets rewritten. That is what keeps the cost bounded at any scrub rate,
    * where keying on elapsed sim time did not.
+   *
+   * Runs AFTER the visibility pass, and only over rings that survived it.
+   * A ring nothing is drawing has no vertices worth rewriting, and the
+   * Moon's is the expensive case both ways: it crosses the drift
+   * tolerance in ~1 s of model time, so it would otherwise rewrite and
+   * re-upload every frame under scrub whether or not it is on screen.
+   * With every ring sub-pixel the element evaluation itself is skipped —
+   * for Sol that is three lunar-theory evaluations and their precession
+   * frames, per frame, for nothing.
    */
   private refreshGeometry(t: number): void {
+    if (!this.rings.some((r) => r.line.visible)) return;
     const geoms = this.ps?.orbitGeometryAt?.(t);
     if (!geoms) return;
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
+      if (!r.line.visible) continue;
       if (!ringGeometryDrifted(r.built, geoms[i])) continue;
       r.semiMajorPc = writeRingVerts(r.master, geoms[i], this.hostQuat);
       r.built = geoms[i];
@@ -498,7 +509,6 @@ export class OrbitRingsLayer {
     this.group.visible = true;
     perfMark('solar.rings');
     if (hostLocalPos) this.hostLocal.copy(hostLocalPos);
-    this.refreshGeometry(t);
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dHost = camera.position.distanceTo(this.hostLocal);
@@ -533,8 +543,10 @@ export class OrbitRingsLayer {
         this.rings[g.idxs[k]].line.visible = visible[k];
       }
     }
-    // Position pass, after visibility so an invisible ring never pays a
-    // rebake. A ring flipping visible is positioned the same frame.
+    // Geometry and position passes both run after visibility, so an
+    // invisible ring pays neither a rewrite nor a rebake. A ring flipping
+    // visible gets both the same frame.
+    this.refreshGeometry(t);
     for (const r of this.rings) {
       if (!r.line.visible) continue;
       trackAnchoredLine(r.line, r.master, r.bakedCentre, r.centre);
