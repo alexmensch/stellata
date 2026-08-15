@@ -116,25 +116,6 @@ EXPECTED_REF_EPOCH = 2016.0
 REF_EPOCH_TOL = 0.01
 
 
-def read_source_ids(path: Path) -> list[int]:
-    """Read the one-column request TSV; skip the header row. Contract:
-    one ``gaia_source_id`` column, sorted, unique, non-null (produced by
-    build-binaries Stage 2 or export-astrometry-request.ts)."""
-    ids: list[int] = []
-    with path.open() as f:
-        header = f.readline().strip()
-        if header != "gaia_source_id":
-            raise SystemExit(
-                f"gaia_astrometry_pull: unexpected header {header!r} in "
-                f"{path} — expected 'gaia_source_id'."
-            )
-        for line in f:
-            line = line.strip()
-            if line:
-                ids.append(int(line))
-    return ids
-
-
 def query_batch(client: rl.TapClient, ids: list[int]):
     inlist = ",".join(str(i) for i in ids)
     return client.run(ADQL_TEMPLATE.format(inlist=inlist))
@@ -181,7 +162,7 @@ def run_pull(
             f"— generate it first (see scripts/refresh/README.md)."
         )
 
-    source_ids = read_source_ids(request)
+    source_ids = rl.read_source_id_request(request)
     total = len(source_ids)
     if total == 0:
         raise SystemExit(f"{script_name}: no source_ids in {request.relative_to(root)}")
