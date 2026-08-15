@@ -87,6 +87,12 @@ one pull, because three scopes now read the same one-column TSV contract:
 the binaries astrometry list, the full-catalog list, and the DR2
 neighbourhood risk set.
 
+Non-network dependency: `refresh-gaia-gspc.test.py` covers that pull's
+write widths, the per-band-null shape a both-bands-or-nothing writer
+would corrupt, and `assert_flag_domain` — the only automated guard on the
+`0`/`1` flag domain whose polarity the ci cascade reads. Run it with
+`python3 scripts/refresh/refresh-gaia-gspc.test.py`.
+
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
 atomic-rename plumbing every refresh script imports — handles retry,
 batched pulls (`run_in_batches`), schema validation, row-count and

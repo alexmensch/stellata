@@ -79,11 +79,11 @@ EXPECTED_COVERAGE_MIN = 0.80
 
 # Magnitudes are float32 (~7 significant digits); 6 decimals is the same
 # width the broadband magnitudes are written at. Fluxes span ~1e-19 W
-# nm-1 m-2 and need an exponent, so they are written in scientific
-# notation at float32's full precision rather than rounded to a fixed
-# number of decimal places.
+# nm-1 m-2 and need an exponent, so they go out in scientific notation —
+# where `.Ne` emits N+1 significant digits, making 6 float32's own width
+# and anything wider committed noise.
 MAG_DECIMALS = 6
-FLUX_SIG_FIGS = 8
+FLUX_DECIMALS = 6
 
 # Self-consistency spot-checks pinned from the live ESA archive on
 # 2026-08-15, chosen to span the flag's validated-range boundary in both
@@ -157,7 +157,7 @@ def write_row(row: Any) -> dict[str, Any]:
         elif col in FLAG_COLUMNS:
             out[col] = int(v)
         elif col in FLUX_COLUMNS:
-            out[col] = f"{float(v):.{FLUX_SIG_FIGS}e}"
+            out[col] = f"{float(v):.{FLUX_DECIMALS}e}"
         else:
             out[col] = f"{float(v):.{MAG_DECIMALS}f}"
     return out
