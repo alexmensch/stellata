@@ -1136,6 +1136,31 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
     expect(fx.iPositionAttr.version).toBe(version + 1);
   });
 
+  it('a flipped suppress verdict re-uploads as a bounded range', () => {
+    const closeCamera = new THREE.Vector3(1.999, 0, 0);
+    field.update(t0, closeCamera, 15, 1080, 0.8);
+    expect(fx.compositeSuppress[2]).toBe(0);
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    expect(fx.compositeSuppress[2]).toBe(1);
+    // Slot 0 is the shared primary and never suppresses; the control star
+    // at slot 3 is untracked, so no range can reach it.
+    expect(fx.iCompositeSuppressAttr.updateRanges).toEqual([{ start: 1, count: 2 }]);
+  });
+
+  it('a wholesale localPositions rewrite does not force the suppress buffer up', () => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
+    const version = fx.iCompositeSuppressAttr.version;
+    fx.localPositions.set(fx.absolutePositions);
+    field.markBaselinesDirty();
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    // The shell rewrites localPositions only — the gate verdicts this walk
+    // reproduces are already on the GPU.
+    expect(fx.iCompositeSuppressAttr.updateRanges).toHaveLength(0);
+    expect(fx.iCompositeSuppressAttr.version).toBe(version);
+  });
+
   it('markBaselinesDirty walk restores suppressed placements over a wholesale buffer rewrite', () => {
     field.update(t0, idleCamera, 15, 1080, 0.8);
     const placedX = fx.localPositions[2 * 3];

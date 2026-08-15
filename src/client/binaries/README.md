@@ -331,12 +331,16 @@ the data genuinely did move everywhere.
 Two rules keep that honest, both because three.js honours a non-empty
 range list *over* the full array:
 
-- **A wholesale rewrite must upload in full.** `markBaselinesDirty()` /
-  `recenter()` mark the next flush full: the shell's rewrite reaches
-  every star, not just the member slots this uploader tracks, so ranges
-  over the members would strand the rest at their old GPU values. The
-  shell's own `onLocalPositionsWritten` goes through `uploadFull` for the
-  same reason — it discards ranges a previous flush left pending.
+- **A wholesale rewrite must upload in full — `iPosition` only.**
+  `markBaselinesDirty()` / `recenter()` mark the next *position* flush
+  full: the shell's rewrite reaches every star, not just the member slots
+  this uploader tracks, so ranges over the members would strand the rest
+  at their old GPU values. The shell's own `onLocalPositionsWritten` goes
+  through `uploadFull` for the same reason — it discards ranges a
+  previous flush left pending. `iCompositeSuppress` has no writer outside
+  this field, so it always flushes partial; forcing it full alongside
+  would re-send its ~1.3 MB on every epoch-bucket crossing and recentre,
+  which is the fast-scrub regime this exists for.
 - **Ranges accumulate until a render consumes them** (the renderer clears
   the list on upload), so a flush appends rather than replacing, and
   falls back to a full upload once the accumulation exceeds the budget.

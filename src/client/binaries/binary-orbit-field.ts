@@ -281,11 +281,11 @@ export class BinaryOrbitField {
       local[sBase + 2] = local[pBase + 2] + rc.baseDiffPc.z + dzDelta;
     }
 
-    // Re-upload only the member slots whose values actually moved. A
-    // wholesale rewrite by the shell (epoch re-advance, recentre) reaches
-    // every star, not just these, so its own full upload has to stand.
+    // Only localPositions is rewritten wholesale from outside this field,
+    // so only it falls back to a full upload; nothing else writes
+    // compositeSuppress. See README § Partial re-upload.
     this.positionUploader.flush(this.baselinesDirty);
-    this.suppressUploader.flush(this.baselinesDirty);
+    this.suppressUploader.flush(false);
     this.baselinesDirty = false;
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;
