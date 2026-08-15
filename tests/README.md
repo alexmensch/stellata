@@ -50,6 +50,11 @@ three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
                          bump of the dependency range.
+walk-files.ts            Not a test — the recursive file walk the
+                         scanners above share (code-comment-rules,
+                         bundle-content, shader-frag-depth), taking
+                         `include` / `skipDir` predicates. Follows
+                         symlinked directories, which public/ carries.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
