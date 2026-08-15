@@ -22,7 +22,6 @@ void main() {
   float mask = 1.0 - smoothstep(0.5 - aa, 0.5, d);
   if (mask <= 0.0 || vAlpha <= 0.0) discard;
 
-  gl_FragDepth = gl_FragCoord.z;
   #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_fragment>
   #endif

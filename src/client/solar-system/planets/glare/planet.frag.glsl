@@ -46,7 +46,6 @@ void main() {
   float r = length(vUv);
   if (r > 0.5) discard;
 
-  gl_FragDepth = gl_FragCoord.z;
   #ifndef LOCAL_DEPTH_PASS
   #include <logdepthbuf_fragment>
   #endif
