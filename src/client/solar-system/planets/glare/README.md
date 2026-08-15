@@ -50,6 +50,14 @@ star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
 That occlusion is the local depth pass; the old core mask is gone.
 
+`planet.frag.glsl` writes no `gl_FragDepth`, and may not: a static write
+costs the whole draw its early-z, so only `star.frag.glsl` carries one
+(`../../../star-pipeline/README.md` § Early-z, pinned by
+`tests/shader-frag-depth.test.ts`). The glare is a non-raw
+`ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
+writes the depth; in the local pass fixed-function depth is already
+exactly `gl_FragCoord.z`.
+
 The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
 channel (`../../../hdr/attachments/README.md`).

@@ -70,7 +70,9 @@ occluded fragments from painting at all:
   guarantees nothing renderable sits between camera and disc. The
   shell ORs `starLocalCluster.hasMembers()` into the core-mask mesh
   gate so an appSize-driven member disc outside the physSize window
-  still stamps.
+  still stamps. `vLocalMember` is per-instance, so the WebGPU port
+  moves this stamp to the vertex stage as a clip-z pin and the draw
+  regains its early-z — `../README.md` § Early-z.
 - **Local pass** — the mirror carries a third depth-only core-mask
   mesh (in-pass renderOrder −1, before the disc mirror) so an occluded
   member core depth-fails against the front core's bracket depth

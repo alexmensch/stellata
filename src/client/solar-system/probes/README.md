@@ -194,6 +194,14 @@ slices the planet members already need.
 `makeOrbitLineMaterial`'s `localPass` flag — the repo-wide requirement for
 anything rendering in both passes.
 
+Neither shader writes `gl_FragDepth`, and neither may: a static write
+costs the whole draw its early-z, so only `star.frag.glsl` carries one
+(`../../star-pipeline/README.md` § Early-z, pinned by
+`tests/shader-frag-depth.test.ts`). The marker is a non-raw
+`ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
+writes the depth; in the local pass fixed-function depth is already
+exactly `gl_FragCoord.z`.
+
 ## Trails
 
 `ProbePathLayer` draws the **traversed** segment only — first sample to
