@@ -47,7 +47,7 @@ themselves.
   colour inverse-mapping. `hdr/exposure/` owns the scalar they run on —
   instrument limit, per-frame scene adaptation, EV trim — and
   `hdr/exposure/reduction/` reduces the target's statistic attachment
-  to the two numbers the cut runs on. Chart mode bypasses all of it.
+  to the three numbers the cut runs on. Chart mode bypasses all of it.
 - `local-depth/` — the bracketed local depth pass: camera-relative
   depth slices giving close bodies (moons, rings, binary pairs) true
   z-buffer occlusion the main pass's log depth cannot. The planet

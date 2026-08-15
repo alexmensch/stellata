@@ -258,8 +258,9 @@ false` (the local bounding sphere is at origin but world position is
 meshes.
 
 Both meshes draw into the HDR target's **diffuse** attachment, and into the
-statistic attachment where the band's surface brightness is both the flux and
-the peak channel (`../hdr/attachments/README.md`). Neither writes attachment 0
+statistic attachment's flux channel — claiming **no lit-surface coverage**,
+so a band filling the frame can never reach the exposure's resolved-surface
+pin (`../hdr/attachments/README.md`). Neither writes attachment 0
 on-target: the resolve owns that pixel once it has averaged the diffuse
 attachment over the summation patch. Off-target both apply the operator
 themselves over the pixel solid angle (`uHdrTarget = 0`, the float-RT

@@ -13,7 +13,8 @@ src/client/debug/
                                   handle, collapsible sections, slider /
                                   colour helpers). `makeMonoReadout` is
                                   the green-on-black block every live
-                                  readout writes textContent into —
+                                  readout writes through `setReadoutText`
+                                  (§ Live readouts) —
                                   `buildDiagnosticReadout` is it plus the
                                   latch-reset link.
   perf-hud.ts                     Ring-buffer instrumentation +
@@ -407,7 +408,7 @@ re-prosecuted.
 collapsible host with nine sections:
 Exposure (`../hdr/exposure/exposure-tuning.ts` — the exposure statistic,
 the three adaptation branches and which governs, the exposure
-decomposition, over `L_ADAPT` / `L_CAP` / slew τ / `DR_MAG` /
+decomposition, over `L_ADAPT` / `L_TARGET` / slew τ / `DR_MAG` /
 desaturation; `../hdr/exposure/README.md` § Debug panel),
 Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
@@ -426,3 +427,18 @@ writing a builder returning a `DebugSection`
 `sections` array in `togglePanel` (debug.ts). Static slider banks use
 no-op dispose + setVisible; live readouts own their per-frame
 subscription and gate DOM writes on `setVisible`.
+
+### Live readouts — write through `setReadoutText`
+
+**A per-frame readout must never assign `textContent` directly.** The
+assignment replaces the text node, which collapses any selection over it —
+so a block updating every frame cannot be drag-selected at all, and the
+numbers in it cannot be copied out. `setReadoutText` holds the write while
+a selection touches the element (`selectionTouches` in
+`debug-panel-pure.ts` tests both directions: a drag *within* one readout,
+and one *spanning* several sections). It owns the identical-text dedupe
+too, so a section keeping its own `last` cache is duplicating it.
+
+Readouts wrap rather than scroll (`white-space: pre-wrap`): the panel is
+`PANEL_WIDTH` = 300 px, and a row wider than that used to run under the
+edge with only a hidden horizontal scrollbar to reach it.

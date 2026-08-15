@@ -71,7 +71,7 @@ import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
 } from '../hdr/exposure/exposure-epoch';
-import { L_CAP } from '../hdr/exposure/scene-adaptation-pure';
+import { L_ADAPT } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
 import {
@@ -643,10 +643,12 @@ describe('MilkyWay surface-brightness calibration', () => {
   });
 
   // Keeping the concession off attachment 1 is only safe if what the band
-  // does write cannot provoke an adaptation cut. It cannot, by 10 stops —
-  // and the margin is measured on the Ω_px value the statistic actually
-  // carries, not on the 12x-larger level the band displays at
-  // (attachments/README.md § The unit).
+  // does write cannot provoke an adaptation cut. It cannot, twice over: a
+  // diffuse column writes no lit-surface mask, so it can never reach the
+  // resolved-surface pin, and its own level sits 3.5 stops under the
+  // perception branch's anchor. The margin is measured on the Ω_px value the
+  // statistic actually carries, not on the 12x-larger level the band
+  // displays at (attachments/README.md § The unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,
@@ -654,7 +656,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       REFERENCE_OMEGA_PX,
     );
     expect(statisticL).toBeCloseTo(5.3167e-3, 6);
-    expect(Math.log2(L_CAP / statisticL)).toBeCloseTo(8.4, 1);
+    expect(Math.log2(L_ADAPT / statisticL)).toBeCloseTo(3.5, 1);
   });
 
   // The footprint softening exists for the Local Group's Sérsic cusp and for

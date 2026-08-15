@@ -37,7 +37,11 @@ describe('perf-hud / no-op API', () => {
 // teardown tests only need the build to complete; nothing is inspected.
 // vitest runs in the node environment for this project, so document is
 // unavailable by default. Pattern mirrors heliopause.test.ts.
-function makeDomStub(): { createElement: () => unknown; createTextNode: () => unknown } {
+function makeDomStub(): {
+  createElement: () => unknown;
+  createTextNode: () => unknown;
+  getSelection: () => null;
+} {
   type Node = {
     style: Record<string, string>;
     children: Node[];
@@ -73,6 +77,9 @@ function makeDomStub(): { createElement: () => unknown; createTextNode: () => un
   return {
     createElement: makeNode,
     createTextNode: makeNode,
+    // setReadoutText consults the live selection before every write, so a
+    // stub without this reports a table that never updates.
+    getSelection: () => null,
   };
 }
 

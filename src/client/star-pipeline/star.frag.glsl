@@ -110,7 +110,7 @@ void starEmission(float glow) {
     outColor = uHdrTarget > 0.5
         ? vec4(emitted, glow)
         : vec4(stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), glow);
-    outStatistic = stellataStatisticTexel(vFluxPeakL * glow, vPeakL * glow, 1.0);
+    outStatistic = stellataStatisticTexel(vFluxPeakL * glow, 0.0, 1.0);
 }
 
 void main() {

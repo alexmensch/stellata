@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { PANEL_WIDTH, clampToViewport, hexToRgb, parsePosition, rgbToHex } from './debug-panel-pure';
+import {
+  type ContainsNode,
+  PANEL_WIDTH,
+  clampToViewport,
+  hexToRgb,
+  parsePosition,
+  rgbToHex,
+  selectionTouches,
+} from './debug-panel-pure';
 
 describe('debug-panel-pure / clampToViewport', () => {
   it('clamps below-margin on all four edges', () => {
@@ -47,6 +55,53 @@ describe('debug-panel-pure / rgbToHex + hexToRgb', () => {
   it('pads single-digit channels', () => {
     // 0.05 * 255 ≈ 13 = 0x0d
     expect(rgbToHex(0.05, 0, 0)).toBe('#0d0000');
+  });
+});
+
+describe('debug-panel-pure / selectionTouches', () => {
+  // A tree standing in for two readouts under one panel body. `contains`
+  // is inclusive of the node itself, as Node.contains is.
+  interface IdNode extends ContainsNode { id: string }
+
+  function node(...descendants: string[]): IdNode {
+    return {
+      id: descendants[0] ?? '',
+      contains: (other: ContainsNode | null) =>
+        other !== null && descendants.includes((other as IdNode).id),
+    };
+  }
+
+  const exposure = node('exposure', 'exposure-text');
+  const perf = node('perf', 'perf-text');
+  const panel = node('panel', 'exposure', 'exposure-text', 'perf', 'perf-text');
+
+  it('holds for a selection dragged inside the readout', () => {
+    expect(selectionTouches(exposure, [{ commonAncestorContainer: node('exposure-text') }]))
+      .toBe(true);
+  });
+
+  it('holds for a selection spanning the whole panel', () => {
+    // Drag across two sections and the common ancestor sits ABOVE the
+    // readout, so the inside-out test alone would miss it and the readout
+    // would keep rewriting mid-drag.
+    expect(selectionTouches(exposure, [{ commonAncestorContainer: panel }])).toBe(true);
+    expect(selectionTouches(perf, [{ commonAncestorContainer: panel }])).toBe(true);
+  });
+
+  it('releases a readout the selection does not reach', () => {
+    expect(selectionTouches(exposure, [{ commonAncestorContainer: node('perf-text') }]))
+      .toBe(false);
+  });
+
+  it('releases when there is no range at all', () => {
+    expect(selectionTouches(exposure, [])).toBe(false);
+  });
+
+  it('holds when any one of several ranges touches', () => {
+    expect(selectionTouches(exposure, [
+      { commonAncestorContainer: node('perf-text') },
+      { commonAncestorContainer: node('exposure-text') },
+    ])).toBe(true);
   });
 });
 

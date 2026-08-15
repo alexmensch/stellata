@@ -94,18 +94,22 @@ float stellataKernelFluxPeak(
     return min(flux / max(area, 1e-9), STELLATA_LUMA_CEIL);
 }
 
-/** One texel of the statistic attachment: flux-correct luminance in R,
- *  peak-correct in G. `alpha` must be whatever the same fragment writes to
- *  attachment 0, because one blend equation runs over both attachments —
- *  an emitter that wants its flux SUMMED under an alpha-scaled additive
- *  blend passes a pre-divided R. Both channels clamp at the ceiling for the
- *  reason the display peak does: a clamped read is a lower bound the
- *  adaptation loop closes from above
- *  (exposure/reduction/README.md § Measure at the base exposure). */
-vec4 stellataStatisticTexel(float fluxL, float peakL, float alpha) {
+/** One texel of the statistic attachment: flux-correct luminance in R, the
+ *  lit-resolved-surface mask in G. `litSurface` is 0 for anything that
+ *  draws a kernel or a diffuse column, and for the unlit part of a body —
+ *  the reduction divides the masked mean by it, so a texel counted here
+ *  without light in R pulls the exposure the surface is pinned at down.
+ *  `alpha` must be whatever the same fragment writes to attachment 0,
+ *  because one blend equation runs over both attachments — an emitter that
+ *  wants its flux SUMMED under an alpha-scaled additive blend passes a
+ *  pre-divided R, and one compositing premultiplied premultiplies the mask
+ *  too. The flux clamps at the ceiling for the reason the display peak
+ *  does: a clamped read is a lower bound the adaptation loop closes from
+ *  above (exposure/reduction/README.md § Measure at the base exposure). */
+vec4 stellataStatisticTexel(float fluxL, float litSurface, float alpha) {
     return vec4(
         min(fluxL, STELLATA_LUMA_CEIL),
-        min(peakL, STELLATA_LUMA_CEIL),
+        clamp(litSurface, 0.0, 1.0),
         0.0,
         alpha);
 }

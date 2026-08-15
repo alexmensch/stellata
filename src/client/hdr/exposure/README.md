@@ -22,9 +22,9 @@ src/client/hdr/exposure/
     (+ test)                 uExposure and the three magnitude bounds,
                              and the effective-limit readout's source.
   scene-adaptation-pure.ts   The two branches — the eye's anchor
-    (+ test)                 L_ADAPT, the highlight guard's L_CAP, the
-                             measured L_TARGET, the disc peak-over-mean
-                             that separates them, and the slew.
+    (+ test)                 L_ADAPT, the resolved-surface pin's
+                             measured L_TARGET, the coverage ramp
+                             joining them, and the slew.
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
     (+ test)                 measurement into the applied cut, and owns
                              the three debug overrides (§ Debug panel).
@@ -118,21 +118,35 @@ two of lag sits far inside the ramp.
 
 ```
 L̄        = mean over the frame of the statistic attachment's R channel
-peak_max = max  over the frame of its G channel
-           both rescaled to the BASE instrument exposure
+S̄        = mean over the frame of R × the lit-surface mask in G
+f        = mean over the frame of that mask alone — the coverage
+           L̄ and S̄ rescaled to the BASE instrument exposure; f is a
+           fraction and must NOT be
+D        = S̄ / f — the lit surface's OWN mean brightness
 eye      = min(0, −2.5·log10(L̄ / L_ADAPT))
-guard    = min(0, −2.5·log10(peak_max / L_CAP))
+pin      = min(0, −2.5·log10(D  / L_TARGET))
 floor    =         −2.5·log10(Lw / L_ADAPT)
-dm       = guard ≥ eye ? guard
-                       : blend toward max(eye, floor)
+w        = smoothstep over log f from ADAPT_DOT_COVERAGE to
+           ADAPT_PIN_COVERAGE
+dm       = mix(max(eye, floor), pin, w)
 ```
+
+**`D` is the whole point, and it is the statistic the ported guard did not
+have.** A frame mean alone is `D × f`, so it tracks coverage and a body
+dims as the camera closes on it; a frame *max* is `D ×` the body's own
+peak-over-mean, so it tracks texture and every body wants a different
+constant. Dividing two frame means recovers `D` free of both, which is what
+lets one setting expose every body and lets an approach neither dim nor
+brighten the subject.
 
 `adaptationBranches` is the **only** implementation of that block —
 `adaptationDm` reads its `dm`, and the readout reads the same object, so a
 panel row can never describe a branch the frame did not run. It also names
-which term set the cut (`eye` / `guard` / `floor` / `handover`), the
-distinction three quite differently-caused frames otherwise share a symptom
-over.
+which term set the cut (`open` / `eye` / `floor` / `surface` / `handover`),
+the distinction quite differently-caused frames otherwise share a symptom
+over. **`open` is a frame no term asked for a cut on** — the tie the old
+`guard ≥ eye` test broke silently toward the guard, reporting a governing
+branch on a frame where nothing set anything.
 
 **The display floor is derived from the operator's white point, so
 `DR_MAG` has to reach it.** `SceneAdaptation` takes it as a `whitePoint`
@@ -144,53 +158,49 @@ operator no longer has (`DR_MAG` 11 sinks the floor 3.5 mag). The constant
 survives as the default-tuning value the design gate's numbers are quoted
 at.
 
-**One scene measurement, one display model.** `L̄` drives the eye branch,
-the only perceptual claim; the **highlight guard** (`peak_max` pinned to
-`L_CAP`) and the **display floor** (`ADAPT_DISPLAY_FLOOR_DM`, the eye
-branch's own response to a full-white frame) are the same species of
-display compensation at the two ends of the operator's range —
-`docs/science-hdr-pipeline.md` § 3.2 (*The highlight guard*, *The
-display floor*) is the design gate and the only place the reasoning
-lives. Four properties the
-implementation must keep, because callers depend on them rather than on
-the formula:
+**One scene measurement, two display models.** `L̄` drives the eye branch,
+the only perceptual claim; the **resolved-surface pin** (`D` held at
+`L_TARGET`) and the **display floor** (`ADAPT_DISPLAY_FLOOR_DM`, the eye
+branch's own response to a full-white frame) are display compensations at
+the two ends of the operator's range — `docs/science-hdr-pipeline.md`
+§ 3.2 (*The resolved-surface pin*, *The display floor*) is the design gate
+and the only place the reasoning lives. Four properties the implementation
+must keep, because callers depend on them rather than on the formula:
 
-- **The display model only ever raises the exposure the scene
-  measurement asked for** — `dm ≥ max(eye, guard)` always, so no source
-  entering the frame can darken it past the scene-referred cut.
-- **`guard ≥ eye` is stateless** — nothing here caches which branch
-  governed last frame, and nothing may start to. It reduces to a coverage
-  threshold (5.1%) only where a body's brightest pixel sits
-  `DISC_PEAK_OVER_MEAN` over its own mean; the threshold it actually
-  imposes is `5.1% × (peak-over-mean ÷ 1.5)`, so a textured body — cloud
-  tops, ice, polar frost — must cover several times more of the frame to
-  take the pin than a Lambert disc does.
-- **The handover ramps over `ADAPT_HANDOVER_BLEND_MAG`** (one stop of
-  branch disagreement — a factor 2 of coverage): the guard's pin and the
-  floor can sit many magnitudes apart, and without the ramp a body
-  drifting through the handover would step the whole frame. **It only
-  ramps where the floor binds** — with a slack floor the blend walks down
-  from `eye` and the `max(eye, …)` clamp takes it straight back, so the
-  cut is the perception branch across the whole band. The regime is read
-  off the answer for exactly that reason; a nonzero blend weight is not
-  evidence the blend governed.
-- **A buffer max is never below a buffer mean**, which is what keeps the
-  regime test well-behaved: a frame bright enough to want a cut cannot
-  hand the guard a peak under `L_CAP` and have the guard's zero win.
-  Feeding the two branches an inconsistent pair — as only a synthetic
-  test can — is the one way to see the guard cancel a cut the mean
-  deserved.
+- **The floor bounds every frame the pin does not govern.** Nothing
+  entering the frame as a kernel or a diffuse column can darken it past
+  `ADAPT_DISPLAY_FLOOR_DM`, because none of them writes a mask. The pin
+  *is* allowed past the floor, and must be: a parked Venus needs 14 mag
+  and the floor stops at 6.29. This replaces the walk-era
+  `dm ≥ max(eye, guard)`, which the pin deliberately breaks.
+- **The ramp is stateless and its two ends are derived** — nothing caches
+  which branch governed last frame, and nothing may start to.
+  `ADAPT_PIN_COVERAGE` is the park framing, where the two branches agree
+  exactly for a body-dominated frame (`L_ADAPT = L_TARGET · f_ref` is that
+  identity), so the top closes with no step of its own.
+  `ADAPT_DOT_COVERAGE` is `f_ref / 2^EV_MAX_STOPS` — the smallest framing
+  the trim could still pull back to `L_TARGET`, under which § 3.2's
+  brilliant dot is the honest reading. Neither is a tuned constant.
+- **Approaching a body only ever deepens the cut.** `pin` is constant in
+  coverage and `w` rises with it, so `dm` is monotone along an approach —
+  the model cannot brighten a body and then dim it again on the way in.
+- **`D` is undefined without coverage, and reads 0 there** — a frame with
+  no lit resolved surface hands the pin a zero, which clamps its branch to
+  zero, and `w` is zero anyway. The two agree rather than one covering for
+  the other.
 
 **What the two channels are.** Attachment 1 carries **flux-correct**
-luminance in R and **peak-correct** luminance in G, because the mean and
-the max need different normalisations of the same light and one channel
-cannot carry both. For an extended source the two are the same quantity —
-its true surface brightness. For a point source they are not: the display
-kernel preserves *peak*, not energy, so summing what attachment 0 holds
-would over-count a threshold star's flux by 1.96x and a knee-saturated
-bright one by 28.9x. R divides that kernel by its own area integral;
-`../../star-pipeline/README.md` § Star intensity profile owns the integral
-and `../attachments/README.md` owns the texel rule.
+luminance in R and the **lit-surface mask** in G. R needs its own
+normalisation because the display kernel preserves *peak*, not energy, so
+summing what attachment 0 holds would over-count a threshold star's flux
+by 1.96x and a knee-saturated bright one by 28.9x; R divides that kernel
+by its own area integral (`../../star-pipeline/README.md` § Star intensity
+profile owns the integral, `../attachments/README.md` the texel rule).
+**G was peak-correct luminance and is not any more.** The highlight guard
+was its only consumer and retired with it, and for a resolved surface R
+and G were the same number anyway — so the channel was free, which is why
+the coverage term costs no memory. The masked mean it feeds is formed in
+the reduction's first pass, out of R × G (`reduction/README.md`).
 
 **Occlusion, frame clipping and the diffuse field are all automatic now.**
 A surface that overwrote a star's pixels overwrote its statistic texels;
@@ -228,12 +238,15 @@ scanned-observer premise implies; centre weighting or a fovea-like radial
 term would re-introduce the gaze dependence it rejects, and the buffer
 gives the plain mean for free.
 
-**`L_CAP` is 1.80, and that is the same level 1.2 was.** A buffer max
-returns the frame's true brightest pixel where the source walk returned a
-disc *mean*, and a Lambert disc's peak over mean is exactly 3/2
-(`DISC_PEAK_OVER_MEAN`, 0.44 mag — the margin the walk-era README already
-flagged). `adaptedDiscMeanL` and `trimStopsForCoverage` are defined on disc
-means and thread the ratio back out, so day-side exposure is unchanged.
+**`DISC_PEAK_OVER_MEAN` retired with the guard, and must not come back as
+a real-body ratio.** The 3/2 was the exact Lambert value for a *smooth
+untextured sphere*, and the ported guard used it to convert a buffer max
+back to a disc mean — valid for nothing the model actually draws. Smoke
+measured real bodies at 2.25 (Venus, a featureless cloud deck) to 6.7+
+(Mercury, bare cratered rock), a different number each, which is why no
+single `L_CAP` could work and why the statistic had to change rather than
+the constant. `adaptedDiscMeanL` and `trimStopsForCoverage` reason about a
+lone body's disc mean and now need no peak at all.
 
 **Two invariants a change here must not break:**
 
@@ -263,15 +276,18 @@ all gone; what replaces them is GPU work on half the frames.
 The panel's **Exposure** section (`exposure-tuning.ts`, first section in
 `debug/debug.ts`) reads this folder and writes three overrides.
 
-Readout, per frame: `L̄` and `peak_max` at the base exposure · the three
-branch terms and the governing regime · **measured vs applied `dm`**, which
-is the slew lag made visible · `m_lim`, EV and the effective limiting
-magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH` and
+Readout, per frame: `L̄`, the lit-surface coverage and the `D` they divide
+to, all at the base exposure · the three branch terms, the ramp weight and
+the governing regime · **measured vs applied `dm`**, which is the slew lag
+made visible · `m_lim`, EV and the effective limiting magnitude · live
+`uExposure` · both ends of the coverage ramp. **`dm_eye` minus the applied
+`dm` is the one-line diagnostic** for a frame exposed wrong: it is how much
+cut the scene measurement asked for and did not get. `L_THRESH` and
 `LUMA_CEIL` print as *baked*, because they are. `Lw` and `S_lim` print as
 *derived* and are neither baked nor slidable here: `Lw` follows the
 `DR_MAG` slider through `uWhitePoint`, and `S_lim` follows the instrument.
 
-Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` —
+Sliders: `L_ADAPT`, `L_TARGET` and the slew τ, held on `SceneAdaptation` —
 plus `DR_MAG` and the desaturation strength, which are `HdrPipeline`'s
 (`../README.md` § Dev switches). **The overrides survive a chart
 round-trip**: `reset()` clears the statistic and the slew, never the
@@ -282,14 +298,14 @@ defaults over a swept build.
 
 **τ is the only tunable in the transient, and it is not what a large scene
 change is showing.** The filter is one-pole; the staircase is `LUMA_CEIL`
-bounding each measurement to 8.4 mag of cut and converging from above
+bounding each measurement to 9.2 mag of cut and converging from above
 (`reduction/README.md`), stepping every other frame at worst. A regime flip
 is the third mechanism, and the readout's regime row is how to tell the
 three apart before blaming the filter.
 
 **No slider may reach `L_THRESH` or `LUMA_CEIL`.** Both are compile-time
 GLSL constants in seven emitter shaders, and `L_THRESH` is the *unit's own
-anchor* — `SB_ZERO_POINT`, the band's ρ₀ solve, `L_ADAPT`, `L_CAP` and the
+anchor* — `SB_ZERO_POINT`, the band's ρ₀ solve, `L_ADAPT`, `L_TARGET` and the
 floor are all expressed against it, so a live one would invalidate the
 calibration it was reached for.
 
