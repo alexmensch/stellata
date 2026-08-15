@@ -87,12 +87,14 @@ per-table schema validation and row bounds — source detail in
 ### Request sets are spine-derived
 
 **No refresh script reads `data/athyg/athyg_33_classic_ids.csv`.** Every
-catalog-scoped request set comes off `data/athyg/inherited-spine.tsv` — the
-membership term (`docs/catalog-driver.md` § 3) — through
-`refresh_lib.read_spine_source_ids` / `iter_spine_rows`. Bailer-Jones,
-Apsis and the SIMBAD pulls all rebased onto it, following
-`export-astrometry-request.ts`; `data/simbad/README.md` § Request sets come
-off the spine carries the measured drop/gain.
+catalog-scoped request set now traces to `data/athyg/inherited-spine.tsv` —
+the membership term (`docs/catalog-driver.md` § 3) — by one of two routes:
+directly, through `refresh_lib.read_spine_source_ids` / `iter_spine_rows`
+(Bailer-Jones, Apsis, the SIMBAD pulls), or through a request file
+`export-astrometry-request.ts` exported off the same spine column
+(astrometry-catalog, GSPC — see `read_source_id_request` below).
+`data/simbad/README.md` § Request sets come off the spine carries the
+measured drop/gain of the SIMBAD rebase.
 
 The spine's `gaia_source_id` is the binding the frozen build **resolved**,
 past both gates, so a request derived from it and the record build name the
