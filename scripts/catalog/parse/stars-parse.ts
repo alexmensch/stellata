@@ -58,6 +58,8 @@ import {
   CI_VIA_VALUES,
   type CiVia,
 } from '../photometry/colour-index-pure';
+import type { GspcColour } from '../photometry/gspc-parse';
+import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
 import { iterSpineTsv } from '../spine/inherited-spine-pure';
 import { type ConstellationAssignment } from './constellations';
@@ -177,11 +179,17 @@ export interface ReadStarsOptions {
   bjMap?: Map<string, number>;
   simbadSpectral?: SimbadSpectralIndex;
   apsisMap?: Map<string, ApsisRow>;
+  /** Gaia synthetic Johnson B−V per source_id — the ci cascade's tier below
+   *  the Table-5.9 relation. */
+  gspcMap?: Map<string, GspcColour>;
   directions?: DirectionSources;
   /** Printed Johnson V per HIP — the V cascade's bright tier. Absent leaves
-   *  every saturated row on the catalogued cell, which shows up as vVia drift
+   *  every saturated row on the tier below, which shows up as vVia drift
    *  against the pinned count snapshot. */
   hipVMag?: Map<number, number>;
+  /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
+   *  only measured colour reaching rows with no Gaia source at all. */
+  hipBv?: Map<number, number>;
   dustGrid?: DustGrid | null;
 }
 
@@ -192,12 +200,14 @@ export function readStars(
     bjMap = new Map(),
     simbadSpectral = { bySource: new Map(), byHip: new Map() },
     apsisMap = new Map(),
+    gspcMap = new Map(),
     directions = {
       gaiaAstrometry: new Map(),
       hip2: new Map(),
       nssSourceIds: new Set(),
     },
     hipVMag = new Map(),
+    hipBv = new Map(),
     dustGrid = null,
   }: ReadStarsOptions,
 ): {
@@ -228,6 +238,7 @@ export function readStars(
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
+    ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
 } {
   const spineRows = iterSpineTsv(readFileSync(spineTsvPath, 'utf8'));
@@ -260,6 +271,7 @@ export function readStars(
   const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
   let rvGaiaErrorMaxKmS = 0;
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
+  let ciGspcValidatedRange = 0;
   let rvApplied = 0;
   let velocityClamped = 0;
   const velocityClampedSample: string[] = [];
@@ -385,11 +397,7 @@ export function readStars(
     // absmag from that V and the distance the whole override stack settled on.
     // See ../photometry/README.md. Sol is the one record this cannot reach:
     // it sits at distance zero, where the modulus is undefined.
-    const vRes = resolveVMagnitude(
-      gaiaRow,
-      hip !== null ? hipVMag.get(hip) ?? null : null,
-      mag,
-    );
+    const vRes = resolveVMagnitude(gaiaRow, printedByHip(hipVMag, hip), mag);
     vVia[vRes.via]++;
     if (vRes.v === null) {
       dropped.noVMagnitude++;
@@ -452,13 +460,16 @@ export function readStars(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
 
-    // B−V through the Gaia relation → printed cell → intrinsic spectral class →
-    // solar. See ../photometry/README.md § The ci cascade. The baked value only
-    // drives colour for no-Apsis stars, which is why the derived tiers gate on
-    // apsisTeff.
+    // B−V through the Gaia relation → printed I/239 B−V → synthetic
+    // photometry → intrinsic spectral class → solar. Printed above synthetic
+    // inverts docs/catalog-driver.md § 5 — ../photometry/README.md § The ci
+    // cascade. The baked value only drives colour for no-Apsis stars, which is
+    // why the derived tiers gate on apsisTeff.
+    const gspc = gaiaSourceId ? gspcMap.get(gaiaSourceId) ?? null : null;
     const ciRes = resolveColourIndex({
       photometry: gaiaRow,
-      cataloguedCi: parseFloatOrNull(row.ci),
+      gspc,
+      printedHipBv: printedByHip(hipBv, hip),
       apsisTeff,
       spectralCi: spectralClassColorIsDerivable(spectInfo)
         ? spectralClassCi(spectInfo)
@@ -466,6 +477,7 @@ export function readStars(
     });
     let ci = ciRes.ci;
     ciVia[ciRes.via]++;
+    if (ciRes.via === 'gspc' && gspc?.inValidatedRange) ciGspcValidatedRange++;
 
     // Build-time de-extinction: absmag and an observed ci are
     // observed-convention (embed the real Sol→star A_V), so subtract
@@ -557,6 +569,7 @@ export function readStars(
       spectralByGspspec,
       spectralFallback,
       ciVia,
+      ciGspcValidatedRange,
     },
   };
 }

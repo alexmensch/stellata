@@ -161,6 +161,9 @@ export interface BuildCounts extends LabelMergeCounts {
   gaiaSourceIdResolved: number;
   /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
   apsisEntries: number;
+  /** Total entries in the Gaia DR3 synthetic-photometry TSV carrying both
+   *  bands (parsed map size) — the ci cascade's synthetic-tier reach. */
+  gspcEntries: number;
   /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
    *  upper bound on per-record Apsis coverage. */
   apsisMatched: number;
@@ -185,8 +188,19 @@ export interface BuildCounts extends LabelMergeCounts {
   spectralFallback: number;
   /** Records whose `ci` came from the Gaia BP−RP relation. */
   ciGaiaRelation: number;
-  /** Records falling through to the spine's printed B−V cell. */
-  ciCatalogued: number;
+  /** Records taking Gaia's synthetic B−V — past the relation's colour bound,
+   *  inside the measured one, and with no printed colour above it. */
+  ciGspc: number;
+  /** The `ciGspc` subset the archive's own flag calls inside the JKC
+   *  standardisation's validated range — **zero**, and pinned there as a
+   *  tripwire rather than as a coverage figure. The flag's region and this
+   *  tier's window do not intersect on any row of this catalogue (measured,
+   *  `../../data/gaia/README.md` § The GSPC validated-range flag), so a
+   *  nonzero value means the flag moved upstream, not that coverage
+   *  improved. */
+  ciGspcValidatedRange: number;
+  /** Records falling through to printed `I/239` B−V keyed on their own HIP. */
+  ciPrintedHipBv: number;
   /** No-Apsis-Teff records whose `ci` is baked from the parsed spectral class
    *  instead of the solar fallback — the population that would otherwise
    *  render solar-yellow. */
@@ -340,6 +354,10 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Total entries in the printed-V slice of I/239/hip_main (parsed map
    *  size) — the V cascade's bright-tier coverage. */
   hipVMagEntries: number;
+  /** Total printed B−V entries in the same slice — the ci cascade's
+   *  printed-tier coverage. Lower than `hipVMagEntries`: 1,281 Hipparcos rows
+   *  carry a V with no colour. */
+  hipBvEntries: number;
   /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
    *  input to the gaia_nss_systemic routing tag. */
   nssSourceIdEntries: number;

@@ -5,9 +5,9 @@ Two distinct Hipparcos-derived pulls:
 ```
 hip_ccdm.tsv              ~2.2 MB, LFS. HIP↔CCDM cross-reference +
                           MultFlag — the curated visual-doubles flag.
-hip_main_vmag.tsv         ~1.4 MB, LFS. Printed Johnson V per HIP —
-                          the bright/printed tier of the V-magnitude
-                          cascade.
+hip_main_vmag.tsv         ~1.9 MB, LFS. Printed Johnson V and B−V per
+                          HIP — the printed tiers of the V-magnitude
+                          and ci cascades.
 hip2_van_leeuwen.tsv      ~8.5 MB, LFS. Hipparcos-2 reduction —
                           long-baseline astrometry for Gaia-saturated
                           bright primaries.
@@ -44,25 +44,34 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 
 ## `hip_main_vmag.tsv`
 
-- **Source**: VizieR `I/239/hip_main`, two-column slice (`HIP`, `Vmag`),
-  118,218 rows (one with a null `Vmag`). Rounded to 3 dp on write so the
-  committed file is byte-stable across numpy versions.
+- **Source**: VizieR `I/239/hip_main`, three-column slice (`HIP`, `Vmag`,
+  `B-V`), 118,218 rows — one with a null `Vmag`, 1,281 with a null `B-V`
+  (98.9% fill). Rounded to 3 dp on write so the committed file is
+  byte-stable across numpy versions.
+- **The `_vmag` in the filename is historical** and so are the names built
+  on it — `pnpm run refresh:hip-vmag`, `refresh-hipparcos-vmag.py`, the
+  `hipVMagEntries` count key. The slice carries both printed columns; the
+  parser reading it is `hip-photometry-parse.ts`. Renaming the file would
+  rewrite an LFS object and a pinned count key to no consumer's benefit,
+  so the name stays and this line is the pointer.
 - **Licence**: Public domain via CDS.
 - **Citation**: ESA 1997, *The Hipparcos and Tycho Catalogues*, ESA SP-1200.
-  The `Vmag` column is Johnson V on the catalogue's own photometric system;
-  for a resolved double it is the entry's combined magnitude, which is what
+  `Vmag` and `B-V` are Johnson on the catalogue's own photometric system;
+  for a resolved double both are the entry's combined value, which is what
   makes this tier a system blend where a Gaia-derived V is not
   (`scripts/catalog/photometry/README.md` § Which tiers give a system blend).
-- **Role**: printed Johnson V for the bright / printed tier of the
-  V-magnitude cascade (`docs/catalog-driver.md` § 5) — the rows whose Gaia
-  photometry is missing or outside the Riello+ 2021 transform's validity
-  range. 2,174 records take it in the current build.
-- **Read by**: `scripts/catalog/photometry/` (`resolveVMagnitude`, via
-  `parseHipVmagTsv`) as that tier, and the classic-ID overlay's binding gate
-  (`scripts/catalog/classic-ids/`) — which needs a V keyed by a designation
-  the overlay itself carries, not by an AT-HYG row, so the gate survives
-  AT-HYG's retirement. `data/classic-ids/README.md` § The binding gate. Both
-  share the one parser.
+- **Role**: the printed tier of two cascades (`docs/catalog-driver.md` § 5).
+  `Vmag` serves the V-magnitude cascade for rows whose Gaia photometry is
+  missing or outside the Riello+ 2021 transform's validity range — 2,174
+  records in the current build. `B-V` serves the ci cascade below the
+  synthetic-photometry tier, and is the only **measured** colour reaching
+  the rows with no Gaia source at all.
+- **Read by**: `scripts/catalog/photometry/` (`resolveVMagnitude` and
+  `resolveColourIndex`, via `parseHipPhotometryTsv`) as those tiers, and the
+  classic-ID overlay's binding gate (`scripts/catalog/classic-ids/`) — which
+  needs a V keyed by a designation the overlay itself carries, not by an
+  AT-HYG row, so the gate survives AT-HYG's retirement.
+  `data/classic-ids/README.md` § The binding gate. All share the one parser.
 - **Refresh**: `pnpm run refresh:hip-vmag`.
 
 ## `hip2_van_leeuwen.tsv`

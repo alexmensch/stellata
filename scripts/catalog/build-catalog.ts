@@ -270,6 +270,7 @@ async function main() {
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
     apsisEntries: 0,
+    gspcEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
     simbadSptypeEntries: 0,
@@ -278,7 +279,9 @@ async function main() {
     spectralByGspspec: 0,
     spectralFallback: 0,
     ciGaiaRelation: 0,
-    ciCatalogued: 0,
+    ciPrintedHipBv: 0,
+    ciGspc: 0,
+    ciGspcValidatedRange: 0,
     ciSpectralDerived: 0,
     ciSolarFallback: 0,
     multiplesIdentifierBackfill: 0,
@@ -318,6 +321,7 @@ async function main() {
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
+    hipBvEntries: 0,
     nssSourceIdEntries: 0,
     hipDistFullPrecision: 0,
     directionGaia5p: 0,
@@ -391,7 +395,9 @@ async function main() {
   );
   const cv = stats.ciVia;
   console.log(
-    `  ci cascade: gaia_relation ${cv.gaia_relation}, catalogued ${cv.catalogued}, ` +
+    `  ci cascade: gaia_relation ${cv.gaia_relation}, ` +
+      `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc} ` +
+      `(${stats.ciGspcValidatedRange} flagged in-range), ` +
       `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.solar_fallback}`,
   );
   const vv = stats.velocityVia;
@@ -465,7 +471,9 @@ async function main() {
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
-  counts.ciCatalogued = stats.ciVia.catalogued;
+  counts.ciPrintedHipBv = stats.ciVia.printed_hip_bv;
+  counts.ciGspc = stats.ciVia.gspc;
+  counts.ciGspcValidatedRange = stats.ciGspcValidatedRange;
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
   counts.ciSolarFallback = stats.ciVia.solar_fallback;
 

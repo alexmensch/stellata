@@ -241,7 +241,7 @@ being retired; the tier after each is its replacement:
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
 | V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → SIMBAD flux V → curated (Sol) — ~~spine `mag`~~ |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
-| ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → GSPC synthetic B−V (flag-valid both bands) → printed `I/239` B−V (HIP) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
+| ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
 | spectral string | SIMBAD sp_type (in-tree; request set keyed source_id → HIP → TYC) → unknown — ~~spine `spect` display fallback~~ |
 | radial velocity | Gaia DR3 `radial_velocity` on a 5p row → SIMBAD `rvz_radvel` (bibcoded; Gaia-bibcode skip rule below) → zero radial term — ~~spine `rv`~~ |
 | constellation (position) | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
@@ -254,7 +254,7 @@ which were reproduced from the pinned counts before probing):
 
 | Source | Id | Supplies | Citation |
 |---|---|---|---|
-| Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ flux errors, per-band validity flags) | Gaia Collaboration, Montegriffo et al. 2023, A&A 674, A33 |
+| Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ fluxes, flux errors, per-band validated-range flags) — SHIPPED `data/gaia/gaia_dr3_gspc.tsv` | Gaia Collaboration, Montegriffo et al. 2023, A&A 674, A33 |
 | Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | Høg et al. 2000, A&A 355, L27 |
 | Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
 | CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
@@ -263,18 +263,48 @@ which were reproduced from the pinned counts before probing):
 Measured exposure and expected coverage (2026-08-14; pins in
 `build-catalog-expected.json` unless noted):
 
-- **ci** — `ciCatalogued` 20,241: BP−RP > 1.75 (red) 18,281 · no
-  source_id 1,324 · G < 4 saturated 566 · photometry gaps 70. GSPC
-  reaches ≈90% of the red rows (sampled 57/60 at BP−RP 1.75–2.5,
-  47–49/60 at 2.5–4, 14–21/60 past 4); `I/239` B−V covers the saturated
-  and the HIP-bearing no-sid rows. Residual ≈1.0–1.5k falls to the
-  spectral/solar tiers — the right colour family, since the residual is
-  M-class dominated. **No Tycho BT−VT ci tier**: the SP-1200 colour
-  transform's validity ends near BT−VT ≈ 1.8, exactly this population —
-  adopting it would rebuild the out-of-validity transform the printed
-  cell embeds. Extending the Table-5.9 relation past 1.75 is equally
-  inadmissible: note (k) publishes that range **for M giants only**, a
-  luminosity class we cannot assert here.
+- **ci** — SHIPPED (`stellata-3bsf.22`/`.25`, 2026-08-15). The exposure
+  the spine's printed cell carried was 20,241: BP−RP > 1.75 (red) 18,281 ·
+  no source_id 1,324 · G < 4 saturated 566 · photometry gaps 70. It now
+  routes `printed_hip_bv` **10,341** · `gspc` **9,169** ·
+  `spectral_derived` **279** · `solar_fallback` **1,525** — a 1,804-row
+  derived residual against the ≈1.0–1.5k this section projected, and the
+  right colour family since it is M-class dominated. **No Tycho BT−VT ci
+  tier**: the SP-1200 colour transform's validity ends near BT−VT ≈ 1.8,
+  exactly this population — adopting it would rebuild the out-of-validity
+  transform the printed cell embeds. Extending the Table-5.9 relation past
+  1.75 is equally inadmissible: note (k) publishes that range **for M
+  giants only**, a luminosity class we cannot assert here.
+
+  **Two corrections to what this section projected**, both measured at
+  implementation and both recorded in
+  `scripts/catalog/photometry/README.md` § Why the GSPC tier does not gate
+  on the flag:
+
+  1. *"GSPC reaches ≈90% of the red rows"* measured GSPC **row presence**
+     (91.0% of the request set), not validity. The per-band flag reads
+     `1` for in-range, not `0` — the archive publishes no polarity;
+     Montegriffo+ 2023 § 6.2 does, and the numeric region was measured.
+     It does not intersect the red rows on a single row of this
+     catalogue, which is bright enough that 96% of it sits below the
+     flag's bright bound. A flag-valid gate would have shipped the tier
+     serving zero rows.
+  2. GSPC therefore runs **outside** its standardisation, so it sits
+     BELOW printed `I/239` B−V rather than above it, and carries a
+     measured red bound of BP−RP 3.0. This is not the extrapolation the
+     paragraph above rejects twice: GSPC integrates each star's own
+     BP/RP spectrum through the passband, and § 6.2 calls a flag-0
+     magnitude an extrapolation of the *standardisation* — the
+     ground-tying correction — not of the integration. Out-of-flag
+     values agree with the Table-5.9 relation as closely as in-flag ones
+     (p50 0.023 vs 0.020) and with printed `I/239` B−V to p50 0.031–0.043
+     up to BP−RP 3.0, breaking to 0.135 above it; § 3.2 independently
+     reports the standardisation holding to <10 mmag on red giants out
+     to BP−RP 3.5. The one caveat the paper adds rather than removes is
+     on the **bright** side: past `G` ≈ 11.5 a BP/RP spectrometer
+     configuration change costs XP's internal calibration its millimag
+     accuracy, so this tier knowingly reads XP spectra outside their
+     best-calibrated regime, bounded by the |Δ| measurement above.
 - **rv** — `rvCatalogued` 7,126 (spine-wide `rv_src`: HYG 7,965 · OTHER
   871 · G_R2 295 non-first-order). SIMBAD sampled 10/10 on the HYG
   bright cohort and 8/8 on the unattributed OTHER cohort. Residual

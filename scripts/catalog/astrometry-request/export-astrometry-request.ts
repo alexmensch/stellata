@@ -9,7 +9,7 @@ import {
   bindingCandidateSourceIds,
   loadBindingCandidateInputs,
 } from '../classic-ids/binding-candidates';
-import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -31,7 +31,7 @@ function main(): void {
   }
   const membership = ids.size;
 
-  const hipVMag = parseHipVmagTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
+  const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
   const candidates = bindingCandidateSourceIds(loadBindingCandidateInputs(), hipVMag);
   for (const id of candidates) ids.add(id);
 

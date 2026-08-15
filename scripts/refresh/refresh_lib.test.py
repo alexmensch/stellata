@@ -939,6 +939,29 @@ class ReadAthygSourceIdsTests(unittest.TestCase):
         self.assertEqual(ids, [2341871673090078592])
 
 
+class ReadSourceIdRequestTests(unittest.TestCase):
+    def _write(self, text: str) -> Path:
+        f = tempfile.NamedTemporaryFile("w", suffix=".tsv", delete=False)
+        f.write(text)
+        f.close()
+        return Path(f.name)
+
+    def test_parses_ids_and_skips_header(self) -> None:
+        p = self._write("gaia_source_id\n7632157690368\n4472832130942575872\n")
+        self.assertEqual(
+            rl.read_source_id_request(p), [7632157690368, 4472832130942575872]
+        )
+
+    def test_ignores_blank_lines(self) -> None:
+        p = self._write("gaia_source_id\n1\n\n2\n")
+        self.assertEqual(rl.read_source_id_request(p), [1, 2])
+
+    def test_rejects_wrong_header(self) -> None:
+        p = self._write("source_id\n1\n")
+        with self.assertRaises(SystemExit):
+            rl.read_source_id_request(p)
+
+
 # ─── check_spot_row ──────────────────────────────────────────────────
 
 class CheckSpotRowTests(unittest.TestCase):

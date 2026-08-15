@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "3.24.1",
+  "version": "3.25.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.17.0",
@@ -26,6 +26,7 @@
     "refresh:gaia-astrometry": "python3 scripts/refresh/refresh-gaia-astrometry.py",
     "refresh:gaia-astrometry-catalog": "python3 scripts/refresh/refresh-gaia-astrometry-catalog.py",
     "refresh:gaia-dr2-neighbourhood": "python3 scripts/refresh/refresh-gaia-dr2-neighbourhood.py",
+    "refresh:gaia-gspc": "python3 scripts/refresh/refresh-gaia-gspc.py",
     "build:astrometry-request": "tsx scripts/catalog/astrometry-request/export-astrometry-request.ts",
     "build:classic-ids": "tsx scripts/catalog/classic-ids/build-classic-id-overlay.ts",
     "build:wgsn": "tsx scripts/catalog/naming/build-wgsn-tables.ts",

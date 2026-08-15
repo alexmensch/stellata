@@ -13,7 +13,6 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
-import gaia_astrometry_pull as gap  # noqa: E402
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
@@ -101,7 +100,7 @@ def main() -> None:
             f"— see data/gaia/README.md for the derivation recipe."
         )
 
-    dr3_ids = gap.read_source_ids(REQUEST)
+    dr3_ids = rl.read_source_id_request(REQUEST)
     total = len(dr3_ids)
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
