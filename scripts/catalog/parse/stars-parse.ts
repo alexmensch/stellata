@@ -59,6 +59,7 @@ import {
   type CiVia,
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
+import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
 import { iterSpineTsv } from '../spine/inherited-spine-pure';
 import { type ConstellationAssignment } from './constellations';
@@ -396,11 +397,7 @@ export function readStars(
     // absmag from that V and the distance the whole override stack settled on.
     // See ../photometry/README.md. Sol is the one record this cannot reach:
     // it sits at distance zero, where the modulus is undefined.
-    const vRes = resolveVMagnitude(
-      gaiaRow,
-      hip !== null ? hipVMag.get(hip) ?? null : null,
-      mag,
-    );
+    const vRes = resolveVMagnitude(gaiaRow, printedByHip(hipVMag, hip), mag);
     vVia[vRes.via]++;
     if (vRes.v === null) {
       dropped.noVMagnitude++;
@@ -472,7 +469,7 @@ export function readStars(
     const ciRes = resolveColourIndex({
       photometry: gaiaRow,
       gspc,
-      printedHipBv: hip !== null ? hipBv.get(hip) ?? null : null,
+      printedHipBv: printedByHip(hipBv, hip),
       apsisTeff,
       spectralCi: spectralClassColorIsDerivable(spectInfo)
         ? spectralClassCi(spectInfo)

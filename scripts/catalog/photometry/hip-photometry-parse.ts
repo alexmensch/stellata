@@ -21,6 +21,16 @@ export interface HipPhotometryTables {
   bv: Map<number, number>;
 }
 
+/** One printed value for a record's own HIP, `null` where the record has no
+ *  HIP or the slice has no such row. Both cascades key their printed tier
+ *  this way, and both want the two misses to look alike. */
+export function printedByHip(
+  table: Map<number, number>,
+  hip: number | null,
+): number | null {
+  return hip === null ? null : table.get(hip) ?? null;
+}
+
 /** `data/hipparcos/hip_main_vmag.tsv` → the two printed-photometry tables. */
 export function parseHipPhotometryTsv(text: string): HipPhotometryTables {
   const vmag = new Map<number, number>();

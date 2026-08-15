@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseHipPhotometryTsv } from './hip-photometry-parse';
+import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse';
 
 describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   const HIP_PHOTOMETRY = [
@@ -30,6 +30,13 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
     expect(bv.has(88888)).toBe(false);
     expect(bv.has(0)).toBe(false);
     expect(bv.size).toBe(3);
+  });
+
+  it('reads a value for a record HIP, and null for both kinds of miss', () => {
+    const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY);
+    expect(printedByHip(bv, 32349)).toBe(0.009);
+    expect(printedByHip(bv, 88888)).toBeNull();
+    expect(printedByHip(bv, null)).toBeNull();
   });
 
   it('throws on an empty file rather than yielding an empty gate', () => {

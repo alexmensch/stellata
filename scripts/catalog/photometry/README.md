@@ -28,7 +28,9 @@ scripts/catalog/photometry/
                                  validated-range flag.
   hip-photometry-parse.ts        data/hipparcos/hip_main_vmag.tsv → HIP →
     (+ test)                     printed Johnson V and B−V, as two maps off
-                                 one walk. Four consumers, disjoint by column:
+                                 one walk, plus `printedByHip` — the lookup
+                                 both cascades key their printed tier
+                                 through. Four consumers, disjoint by column:
                                  the V cascade's bright tier, ../classic-ids/'s
                                  binding gate and ../astrometry-request/ (which
                                  narrows the gate's candidates by it) all take
