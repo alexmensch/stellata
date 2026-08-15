@@ -415,7 +415,7 @@ async function main() {
   console.log(
     `  rv cascade: gaia_dr3 ${rv.gaia_dr3}, simbad ${rv.simbad} ` +
       `(${stats.rvSimbadGaiaBibcode} citing a Gaia release), none ${rv.none}; ` +
-      `${stats.rvGaiaBibcodeSkipped} Gaia-bibcoded values skipped on gate-withheld rows`,
+      `${stats.rvGaiaBibcodeSkipped} Gaia-bibcoded values skipped on 2p rows`,
   );
   console.log(
     `  rv uncertainty on the gaia_dr3 tier: <=1 ${rvErr.le1}, <=5 ${rvErr.le5}, ` +

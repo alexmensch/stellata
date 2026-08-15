@@ -243,7 +243,7 @@ export function readStars(
     velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
     rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
     rvSimbadGaiaBibcode: number;   // simbad-tier rows citing a Gaia catalogue release
-    rvGaiaBibcodeSkipped: number;  // gate-withheld rows whose SIMBAD value the skip rule rejected
+    rvGaiaBibcodeSkipped: number;  // 2p rows whose Gaia-bibcoded SIMBAD value the skip rule rejected
     rvRadialRejected: number;      // rows whose radial term alone exceeded the sanity ceiling
     rvRadialRejectedSample: string[]; // per-rejected-star "id: rv @ dist" for build-log review
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty

@@ -82,8 +82,8 @@ export interface RadialVelocityResolution {
   /** The bibcode the shipped value cites. Set on the `simbad` tier only —
    *  the Gaia tier's citation is the release itself. */
   bibcode: string | null;
-  /** The shipped value cites a Gaia release. Sibling of the field below:
-   *  nothing was withheld on this row, so the citation is an ordinary one. */
+  /** The shipped value cites a Gaia release. Sibling of the field below: this
+   *  row is not the blend the skip rule refuses, so the citation is ordinary. */
   gaiaBibcodeCited: boolean;
   /** A SIMBAD value the Gaia-bibcode skip rule rejected on this row. */
   gaiaBibcodeSkipped: boolean;
@@ -98,10 +98,12 @@ export interface RadialVelocityResolution {
  *  parallax + PM is one whose spectrum is a blend of the components too, and its
  *  median RV is not the primary's. See README.md § The 5p gate.
  *
- *  **The skip rule** closes the way back in. Where that gate withheld a Gaia
- *  rv, SIMBAD frequently serves the very same value under a Gaia catalogue
- *  bibcode, so taking it would launder a value this build distrusts for a
- *  physical reason. Those candidates fall to zero rather than to SIMBAD. */
+ *  **The skip rule** closes the way back in. SIMBAD frequently serves a
+ *  Gaia-bibcoded velocity for a 2p row — the same blended spectrum under
+ *  Gaia's own reduction — so taking it would launder in a value this build
+ *  distrusts for a physical reason. Those candidates fall to zero rather than
+ *  to SIMBAD. It turns on the blend, not on whether our own pull happens to
+ *  hold the competing Gaia value. See README.md § The Gaia-bibcode skip rule. */
 export function resolveRadialVelocity(
   gaia: GaiaAstrometryCatalogRow | null,
   simbad: SimbadRadialVelocity | null,
@@ -110,13 +112,12 @@ export function resolveRadialVelocity(
     rvKmS: null, via: 'none', bibcode: null,
     gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
   };
-  if (gaia !== null && gaia.radialVelocityKmS !== null) {
-    if (gaiaHas5pSolution(gaia)) {
-      return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
-    }
-    if (simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
-      return { ...none, gaiaBibcodeSkipped: true };
-    }
+  if (gaia !== null && gaiaHas5pSolution(gaia) && gaia.radialVelocityKmS !== null) {
+    return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
+  }
+  if (gaia !== null && !gaiaHas5pSolution(gaia)
+      && simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
+    return { ...none, gaiaBibcodeSkipped: true };
   }
   if (simbad !== null) {
     return {

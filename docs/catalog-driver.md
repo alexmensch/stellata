@@ -307,16 +307,18 @@ Measured exposure and expected coverage (2026-08-14; pins in
      best-calibrated regime, bounded by the |Δ| measurement above.
 - **rv** — SHIPPED (`stellata-3bsf.27`, 2026-08-15). The printed cell
   covered 7,126 rows (spine-wide `rv_src`: HYG 7,965 · OTHER 871 · G_R2 295
-  non-first-order); the bibcoded SIMBAD tier covers **7,273**, dropping 655
-  of the old set and adding 804 rows that never had a printed velocity.
-  Residual `rvNone` **39,856**, pinned. The **skip rule fires on 205** of
-  the 354 gate-withheld rows, and the measurement justifying it is sharper
-  than this section projected: over those rows |Δrv| against the withheld
-  Gaia value is p50 **0.0026 km/s** for a DR3 bibcode (the same value
-  returning) against 0.98 for DR2 and 3.01 for literature. A Gaia bibcode
-  on a row Gaia never measured is an ordinary citation and is kept — 465
-  rows, 380 DR2 and 85 DR3, every DR3 one on a record carrying no
-  `gaia_source_id` at all. Two corrections at implementation: `rvz_radvel`
+  non-first-order); the bibcoded SIMBAD tier covers **7,171**, dropping 689
+  of the old set and adding 734 rows that never had a printed velocity.
+  Residual `rvNone` **39,958**, pinned. The **skip rule fires on 307** rows,
+  and the measurement justifying it is sharper than this section projected:
+  over the 354 gate-withheld rows |Δrv| against the withheld Gaia value is
+  p50 **0.0026 km/s** for a DR3 bibcode (the same value returning) against
+  0.98 for DR2 and 3.01 for literature. The rule turns on the 2p blend, not
+  on holding the competing value — 205 of the 307 are rows Gaia published an
+  rv for, the other 102 rows it did not, and both are the same unseparated
+  spectrum. A Gaia bibcode with no 2p solution behind it is an ordinary
+  citation and is kept — 363 rows, 278 DR2 and 85 DR3, every DR3 one on a
+  record carrying no `gaia_source_id` at all. Two corrections at implementation: `rvz_radvel`
   is a velocity only where `rvz_type` reads `v` (EGGR 252's `z` row reads
   243,879 km/s), and the tier ships one published-but-nonphysical value
   (EZ Aqr, 6,824.7 km/s). No quality or magnitude gate was added; the

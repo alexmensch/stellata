@@ -71,13 +71,22 @@ describe('resolveRadialVelocity cascade', () => {
       .toEqual(simbad(22.4, GAIA_DR3, true));
   });
 
-  // The boundary the skip rule does NOT cover: a blended 2p row Gaia published
-  // no rv for, so there is no withheld value to launder back in and the tier
-  // ships the citation. 102 rows of this build, all DR2.
-  it('keeps a Gaia-bibcoded value on a 2p row Gaia published no rv for', () => {
+  // The rule turns on the blend, not on holding the competing value: a 2p row
+  // Gaia published no rv for is the same unseparated spectrum, and its
+  // Gaia-bibcoded candidate is that spectrum under Gaia's own reduction.
+  // 102 rows of this build, all DR2.
+  it('skips a Gaia-bibcoded value on a 2p row even with no Gaia rv to compare', () => {
     const twoPNoRv = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: null });
     expect(resolveRadialVelocity(twoPNoRv, simbadRv(-15.9, GAIA_DR2)))
-      .toEqual(simbad(-15.9, GAIA_DR2, true));
+      .toEqual({ ...NONE, gaiaBibcodeSkipped: true });
+  });
+
+  // ...and the literature value on that same row is untouched: the rule is
+  // about Gaia's own reduction reappearing, not about distrusting the row's
+  // every velocity.
+  it('keeps a literature value on a 2p row Gaia published no rv for', () => {
+    const twoPNoRv = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: null });
+    expect(resolveRadialVelocity(twoPNoRv, simbadRv(-15.9))).toEqual(simbad(-15.9));
   });
 
   it('reports no tier when a 2p row is all the rv there is', () => {
