@@ -108,9 +108,6 @@ export class CoordSphere {
       depthTest: true,
       worldUnits: false,
     });
-    // Resolution must be set or the line renders at the wrong width.
-    // Stellata's onResize keeps this in sync with the canvas.
-    this.equatorMaterial.resolution.set(window.innerWidth, window.innerHeight);
     // depthWrite isn't on LineMaterial's typed constructor; assign directly.
     this.equatorMaterial.depthWrite = false;
 
@@ -139,12 +136,6 @@ export class CoordSphere {
   /** Centre the sphere on the camera each frame. */
   update(cameraPosition: THREE.Vector3) {
     this.group.position.copy(cameraPosition);
-  }
-
-  /** Keep LineMaterial.resolution in sync with the canvas — Line2's
-   *  pixel-width is computed in the shader from this uniform. */
-  setResolution(w: number, h: number) {
-    this.equatorMaterial.resolution.set(w, h);
   }
 
   /** Multiply both stroke alphas by `scale`. Safe to call every frame: the
