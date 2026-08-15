@@ -11,11 +11,13 @@ consumes both are `../README.md` § Direction resolution and
 ```
 scripts/catalog/distance/radial-velocity/
   radial-velocity.ts (+ test)   The cascade, the Gaia-bibcode taxonomy the
-                                skip rule turns on, and the error banding.
-                                Imports `gaiaHas5pSolution` from
-                                ../direction-cascade — one predicate, so
-                                the radial and tangential terms distrust a
-                                row for the same reason.
+                                skip rule turns on, the error banding, and
+                                the ceiling test that rejects a nonphysical
+                                radial term on its own. Imports
+                                `gaiaHas5pSolution` and the sanity ceiling
+                                from ../direction-cascade — one predicate and
+                                one bound, so the radial and tangential terms
+                                distrust a row for the same reason.
 ```
 
 ## The cascade
@@ -85,10 +87,34 @@ rule keys on the bibcode rather than on agreement.
 
 **Nothing was withheld on a row Gaia never measured**, so a Gaia catalogue
 bibcode there is an ordinary citation, not laundering: **465** shipped rows
-carry one (all DR2), and the skip rule leaves them alone. `rvSimbad`,
-`rvSimbadGaiaBibcode` and `rvGaiaBibcodeSkipped` pin all three populations.
+carry one — **380 DR2 and 85 DR3** — and the skip rule leaves them alone.
+Every one of the 85 is a record the spine carries no `gaia_source_id` for, so
+no gate could have withheld anything: SIMBAD resolved the object to a Gaia
+source this build cannot key, and that DR3 velocity reaches the record only
+through the citation. `rvSimbad`, `rvSimbadGaiaBibcode` and
+`rvGaiaBibcodeSkipped` pin all three populations.
+
+**Where the rule stops, and why.** Its precondition is a *withheld* value —
+the record's own Gaia row carries an rv the 5p gate refused. A 2p row Gaia
+published no rv for has nothing to launder back, so its SIMBAD candidate
+ships: **102** rows, all DR2. The blend argument distrusts those spectra
+equally, but the only alternative on offer is a zero radial term, and for a
+bound pair the blended systemic velocity is nearer the component's truth than
+zero is. They ship deliberately; `radial-velocity.test.ts` pins the boundary
+so widening the rule is a decision rather than a drift.
 
 A DR4 release adds one entry to `GAIA_CATALOGUE_BIBCODES`.
+
+## What the tier reaches is decided by other fields
+
+`is_simbad_value_cohort` (`scripts/refresh/simbad/inputs.py`) enumerates a
+spine row when **any** of `pos_src` / `dist_src` / `mag_src` / `rv_src` /
+`pm_src` carries a non-first-order mark, or the row has no source_id at all.
+So this tier's reach is the union cohort, not an rv-specific one: it is why
+804 rows gain a velocity they never had a printed cell for, and why 560 rows
+the printed cell used to cover are not in the pull. A row whose rv was absent
+and whose every other mark is first-order is unreachable here however good a
+velocity SIMBAD holds for it.
 
 **No SIMBAD-based rv validation exists to exclude these rows from.** § 5's
 validation-independence rule bites where a SIMBAD tier and a SIMBAD validator
@@ -117,15 +143,32 @@ or magnitude gate here. Both moved when the tier landed, and both are pinned:
   (`2020AJ....160..120J`) plus τ Sco at 650 km/s — near-certainly upstream
   fit artifacts on hot stars, but legitimately published and cited. Keeping
   them visible in the ratchet is exactly its stated job.
-- `velocityClamped` **8 → 9**. One value exceeds the 1500 km/s ceiling:
-  **EZ Aqr** (Gl 866A, 3.4 pc) at **6,824.7 km/s**, quality `D`, bibcode
-  `2021MNRAS.508.5148C`. The clamp zeroes the whole velocity, so a 3.3″/yr
-  proper motion is lost with the bad radial term. Its printed cell was
-  `rv_src=OTHER` and dropped by policy regardless, so nothing recoverable was
-  traded away — but a |rv| bound on this tier would keep the tangential
-  motion, and § 5 authorises no such bound today.
+- `rvRadialRejected` **1**, `velocityClamped` unmoved at **8**. One tier value
+  exceeds the 1500 km/s ceiling: **EZ Aqr** (Gl 866A, 3.4 pc) at
+  **6,824.7 km/s**, quality `D`, bibcode `2021MNRAS.508.5148C`.
 
-Note what that pair does NOT cover: both are ceilings, so they see a
+**A radial term past the ceiling is rejected on its own** —
+`radialTermExceedsCeiling`, applied before the velocity is assembled, so a
+nonphysical rv costs the row its radial term and not its tangential motion.
+The whole-vector clamp is the wrong instrument here: it exists for a
+PM×distance artifact, where the *tangential* term is what cannot be trusted.
+
+**On EZ Aqr specifically this moves no shipped bytes**, and the earlier claim
+that the clamp cost it a 3.3″/yr proper motion was wrong. Its Gaia row is 2p
+with no PM at all, and the 2,314.8 / 2,295.3 mas/yr the spine prints under
+`pm_src=GJ` never reaches the velocity assembly — so the record ships at zero
+velocity either way. That gap is real and separate — 1,537 rows carry a
+printed PM their 2p Gaia row does not, 27 of them inside 25 pc — and is
+`stellata-13dx`, not fixed here.
+
+What the rejection buys is that the ratchet now names the right failure, and
+that the first row arriving with both a real PM and a nonphysical rv keeps
+the PM. The rejected row is still counted under the tier that supplied the
+value (`rvSimbad`) — the cascade routed correctly and the threshold, not the
+cascade, refused it. No |rv| bound is added to the tier itself: § 5
+authorises none, and this reuses the ceiling the assembly already enforces.
+
+Note what these thresholds do NOT cover: all are ceilings, so they see a
 1500 km/s artifact and not the ~11 km/s error a blended RVS median carries.
 Distrusting the row it came from is the 5p condition's job, not theirs.
 

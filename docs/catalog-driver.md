@@ -315,12 +315,15 @@ Measured exposure and expected coverage (2026-08-14; pins in
   Gaia value is p50 **0.0026 km/s** for a DR3 bibcode (the same value
   returning) against 0.98 for DR2 and 3.01 for literature. A Gaia bibcode
   on a row Gaia never measured is an ordinary citation and is kept — 465
-  rows, all DR2. Two corrections at implementation: `rvz_radvel` is a
-  velocity only where `rvz_type` reads `v` (EGGR 252's `z` row reads
+  rows, 380 DR2 and 85 DR3, every DR3 one on a record carrying no
+  `gaia_source_id` at all. Two corrections at implementation: `rvz_radvel`
+  is a velocity only where `rvz_type` reads `v` (EGGR 252's `z` row reads
   243,879 km/s), and the tier ships one published-but-nonphysical value
-  (EZ Aqr, 6,824.7 km/s) which the existing 1500 km/s velocity ceiling
-  clamps — no quality or magnitude gate was added, so the cost is one
-  record's tangential motion, pinned as `velocityClamped` 8 → 9.
+  (EZ Aqr, 6,824.7 km/s). No quality or magnitude gate was added; the
+  1500 km/s ceiling the velocity assembly already enforces now rejects a
+  radial term breaching it **on its own**, so a bad rv costs a row its
+  radial term rather than its tangential motion — pinned as
+  `rvRadialRejected` 1, `velocityClamped` unmoved at 8.
   Full detail: `scripts/catalog/distance/radial-velocity/README.md`.
 - **V** — `vCatalogued` 140: Tycho-2 reaches 123 by TYC; the GJ cohort
   (~16) routes CNS5/SIMBAD; Sol is curated.
