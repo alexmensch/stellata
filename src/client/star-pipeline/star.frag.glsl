@@ -118,12 +118,9 @@ void main() {
     if (r > 0.5) discard;
 
     // Defensive default — the halo branch below conditionally writes
-    // gl_FragDepth = 1.0, and once any path in the shader writes it,
-    // unwritten paths leave the value undefined per GLSL spec. The
-    // logdepthbuf_fragment chunk overwrites this with the log-encoded
-    // depth when USE_LOGDEPTHBUF is defined (the renderer's current
-    // config), but keeping the unconditional write means the shader
-    // stays correct if logarithmicDepthBuffer is ever toggled off.
+    // gl_FragDepth, and once any path writes it the unwritten paths leave
+    // it undefined per GLSL spec. The chunk below adds nothing on top:
+    // README.md § Depth encoding.
     gl_FragDepth = gl_FragCoord.z;
     #include <logdepthbuf_fragment>
 

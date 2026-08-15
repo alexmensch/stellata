@@ -1862,6 +1862,9 @@ export class Stellata implements FrameAnchor {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    // TrackballControls caches the canvas rect once, in its constructor, and
+    // its rotate math measures the drag against that cached centre and width.
+    this.controls.handleResize();
     this.hdr.syncSize();
     this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.sharedUniforms.uViewport.value.set(w, h);
@@ -1870,10 +1873,6 @@ export class Stellata implements FrameAnchor {
     // does its own recompute.)
     this.focus.refreshOrbitFloor();
     this.syncPixelSolidAngle();
-    // Line2 needs the canvas resolution for its screen-space line width.
-    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      this.coordSpheres[frame].setResolution(w, h);
-    }
     // Recompute pixel sizes from the instrument's plate scale so
     // non-overridden fields stay proportional to the bulge across screen
     // sizes and orientation changes. sizeSpan doesn't depend on the

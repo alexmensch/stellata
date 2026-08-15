@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { HDR_ATTACHMENT_COUNT, createHdrTarget } from './hdr-pipeline';
 
 // HdrPipeline itself needs a live WebGL2 context, so the class is
 // manual-smoke only.
@@ -32,27 +33,36 @@ describe('the seam has no off switch', () => {
   });
 });
 
-/**
- * The target is MRT (README.md § Three attachments), built on
- * `WebGLMultipleRenderTargets` — which three deprecates at r162 in favour
- * of `new WebGLRenderTarget(w, h, { count: 2 })` and removes thereafter.
- *
- * Migrating is not a rename: `rt.texture` becomes `rt.textures`, and the
- * statistic gate's per-draw `gl.drawBuffers` calls run behind three's
- * per-framebuffer `WebGLState.drawBuffers` cache, which the seam depends on
- * never re-issuing `[0, 1]` after `bind()` shuts the gate. Re-verify that
- * against the new version rather than assuming it survives.
- */
-describe('the MRT target three supplies', () => {
-  it('still exists — removing it is the migration, not a version bump', () => {
-    expect(THREE.WebGLMultipleRenderTargets).toBeTypeOf('function');
+// Per-attachment format and filters are three's to keep, and a resize is where
+// it could drop them: attachment 1 falling back to RGBA would silently double
+// the statistic's memory and change what the reduction reads. The gate's other
+// three-side dependency, the `WebGLState.drawBuffers` cache, needs a context —
+// attachments/README.md § The cache the gate rides.
+describe('the MRT target the seam builds', () => {
+  it('gives each attachment the format and filters its consumer needs', () => {
+    const rt = createHdrTarget(8, 8);
+    expect(rt.textures).toHaveLength(HDR_ATTACHMENT_COUNT);
+    expect(rt.textures[0].format).toBe(THREE.RGBAFormat);
+    expect(rt.textures[1].format).toBe(THREE.RGFormat);
+    expect(rt.textures[2].minFilter).toBe(THREE.LinearFilter);
+    expect(rt.textures[2].magFilter).toBe(THREE.LinearFilter);
   });
 
-  it('is not yet deprecated at the version this repo pins', () => {
-    const pkg = JSON.parse(
-      readFileSync(fileURLToPath(new URL('../../../package.json', import.meta.url)), 'utf8'),
-    ) as { dependencies: Record<string, string> };
-    const minor = Number(pkg.dependencies.three.replace(/^\D*\d+\./, '').split('.')[0]);
-    expect(minor).toBeLessThan(162);
+  it('keeps that per-attachment state across a resize', () => {
+    const rt = createHdrTarget(8, 8);
+    rt.setSize(16, 16);
+    expect(rt.textures[1].format).toBe(THREE.RGFormat);
+    expect(rt.textures[2].minFilter).toBe(THREE.LinearFilter);
+    expect((rt.textures[1].image as { width: number }).width).toBe(16);
+  });
+
+  // The three inputs three's getInternalDepthFormat reads to land on
+  // DEPTH_COMPONENT24 rather than a 16-bit renderbuffer, which would coarsen
+  // every close-range z-test by 256x (../local-depth/README.md § Precision).
+  it('carries the 24-bit depth attachment the local-depth bound assumes', () => {
+    const rt = createHdrTarget(8, 8);
+    expect(rt.depthBuffer).toBe(true);
+    expect(rt.stencilBuffer).toBe(false);
+    expect(rt.depthTexture).toBe(null);
   });
 });

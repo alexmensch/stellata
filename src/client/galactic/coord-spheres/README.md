@@ -66,9 +66,9 @@ grid it sticks to: the guide levels against the displayed sphere's pole, `none`
 → galactic (`../../camera/controls/input/README.md` § Snap-to-level).
 
 **Nothing outside the table names a sphere.** `DRAWN_COORD_SPHERE_FRAMES` is
-the peer set; the scene layer, the resize hook, and the label pools all iterate
-it and index `COORD_SPHERE_SPECS`, so a third frame is a table entry rather
-than an edit in five files. `CoordSphere` itself is frame-agnostic — the
+the peer set; the scene layer, the dispose fan-out, and the label pools all
+iterate it and index `COORD_SPHERE_SPECS`, so a third frame is a table entry
+rather than an edit in five files. `CoordSphere` itself is frame-agnostic — the
 equatorial sphere is *not* a subclass, it is the same class handed the other
 spec plus the fade its spec declares.
 
@@ -84,10 +84,17 @@ external coordinates are the only check that bites.
   platforms, so Line2 is the only reliable way to get a thicker stroke.
   256 segments around the full loop; the small joint-wedge "ticks" you
   may notice are an inherent artefact of fat-line miters at non-trivial
-  angles. `LineMaterial` requires its `resolution` uniform to track the
-  canvas, so `Stellata.onResize` calls `setResolution(w, h)` on both spheres.
-  Bumping segment count to 1024 hides the ticks but was rejected as
-  visually similar; we kept 256.
+  angles. Bumping segment count to 1024 hides the ticks but was rejected
+  as visually similar; we kept 256.
+  **Nothing here writes `LineMaterial.resolution`, and nothing should.**
+  The screen-space width divides by that uniform, so it has to track the
+  canvas — but since r185 `LineSegments2.onBeforeRender` sets it from
+  `renderer.getViewport()` before every draw. That is the same number an
+  app-side write could supply (the renderer is sized in CSS pixels and
+  nothing calls `renderer.setViewport`), so a resize hook here would be a
+  second writer of a uniform three already owns, going stale the moment
+  either side changed. `tests/README.md` § The three upgrade audit carries
+  it as a line to re-check on the next bump.
 - **Latitude rings + meridians** are basic `LineLoop` / `Line` at 0.45
   opacity. Polar bunching is eased by trimming every *odd-indexed*
   meridian to ±80° latitude (`meridianMaxAbsLatDeg`) — the even set still

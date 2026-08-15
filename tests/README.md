@@ -39,11 +39,54 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+three-version-audit.test.ts
+                         Tripwire pinning the three version the runtime
+                         audit below was last run against. Fails on any
+                         bump of the dependency range.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants
 belong here.
+
+## The three upgrade audit
+
+`three` is the one dependency whose breakages are mostly **invisible to
+typecheck**: shader chunks resolve at GL compile time, renderer internals are
+reached through casts, and the `examples/jsm` modules carry no compatibility
+promise at all. A green typecheck after a bump means nothing about whether the
+scene still renders. So the surface below is audited by hand, against the
+installed copy in `node_modules/three`, and
+`three-version-audit.test.ts` fails until `AUDITED_THREE_RANGE` is moved —
+which is the only thing making the audit non-optional.
+
+Work every line, then record the findings in the PR body:
+
+- **`<common>` still supplies every helper our GLSL calls.** r185 dropped
+  `luminance()` and `transposeMat3()`; a shader calling a removed helper is a
+  runtime-only compile failure.
+- **The log-depth define name and the `gl_FragDepth` spelling** three injects
+  into non-raw materials — `src/client/star-pipeline/README.md` § Depth
+  encoding turns on the raw/non-raw split.
+- **`resolveIncludes` still runs before the raw-material gate** in
+  `WebGLProgram`, or the `stellata_*` chunks stop resolving in the raw star
+  shaders.
+- **The `WebGLState.drawBuffers` re-issue condition** —
+  `src/client/hdr/attachments/README.md` § The cache the gate rides. A gate
+  three decides to reopen is scene-wide exposure drift, not an error.
+- **`getInternalDepthFormat` still returns `DEPTH_COMPONENT24`** for the
+  seam's target — `src/client/hdr/README.md` § Three attachments.
+- **The four `logdepthbuf` includes `src/client/util/orbit-line.ts` strips by
+  string replace** are still present verbatim in three's line shader.
+- **`renderer.properties.get(tex).__webglTexture`** in
+  `src/client/loaders/dust-loader.ts` — cast through `unknown`, so tsc sees
+  nothing.
+- **Who owns `LineMaterial.resolution`** — three writes it per frame from
+  `LineSegments2.onBeforeRender`; `src/client/galactic/coord-spheres/README.md`
+  is why nothing app-side does.
+- **Every `TrackballControls` member `src/client/camera/controls/` touches**,
+  including the `!noZoom || !noPan` gate its distance clamp sits behind
+  (`src/client/camera/controls/input/README.md`).
 
 ## Suite-wide timeouts
 
