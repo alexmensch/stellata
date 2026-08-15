@@ -55,11 +55,9 @@ void main() {
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);
 
-  // Share of the chord outside the planetary shadow — the same span solve the
-  // march weights its samples by, taken over the chord as one segment. The
-  // mask needs it because a night-limb chord is dense (it occludes, § Airlight
-  // is applied on both surfaces) and dark, and coverage without light in R
-  // over-exposes the surface the pin holds (../../hdr/attachments/README.md).
+  // Share of the chord outside the shadow, over the chord as one segment. The
+  // mask cannot collapse to opacity alone: the night-limb chord is the DENSE
+  // one, so it would claim the whole limb while scattering nothing.
   float s0, s1;
   stellata_shadowSpan(o, dir, sunDir, s0, s1);
   float halfChord = max(0.5 * (t1 - tStart), 1e-12);

@@ -222,8 +222,12 @@ coverage**, the term the exposure pin divides its masked mean by
 (`../../hdr/exposure/README.md` § Adaptation). The mesh claims its **lit
 hemisphere alone** — `step(0, sunCos) · step(0.5, shadow)`, the geometric
 terminator, so a crescent exposes its crescent rather than being pulled
-dark by the night side it happens to present. The glare claims nothing: it
-draws a kernel, and its flux belongs in the frame mean only.
+dark by the night side it happens to present. **Each of the other two gates
+on its own illumination the same way** and for the same reason, over a dark
+region of its own — the shadowed strip for the annulus (`rings/README.md`),
+the unlit chord for the shell (`../atmosphere/README.md`); the pinned table
+is `../../hdr/attachments/README.md` § The unit. The glare claims nothing:
+it draws a kernel, and its flux belongs in the frame mean only.
 
 ## Planet mesh LOD
 
