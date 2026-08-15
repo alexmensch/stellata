@@ -6,6 +6,7 @@ import {
   type DebugSection,
   makeMonoReadout,
   makeSlider,
+  setReadoutText,
 } from '../../debug/debug-panel';
 import { extendedThresholdSbFor } from '../../filters/filter-state';
 import {
@@ -50,13 +51,9 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
   body.appendChild(readout);
 
   let visible = true;
-  let last = '';
   const onFrame = () => {
     if (!visible) return;
-    const text = formatExposureReadout(readState(stellata));
-    if (text === last) return;
-    last = text;
-    readout.textContent = text;
+    setReadoutText(readout, formatExposureReadout(readState(stellata)));
   };
   onFrame();
   const unsubscribe = stellata.on('frame', onFrame);

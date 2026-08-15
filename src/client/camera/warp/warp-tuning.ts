@@ -2,7 +2,7 @@
 // into `camera-config.ts`; the readout reads `warp-telemetry.ts`.
 
 import type { Stellata } from '../../stellata';
-import type { DebugSection } from '../../debug/debug-panel';
+import { type DebugSection, setReadoutText } from '../../debug/debug-panel';
 import { cameraConfig, setCameraConfig } from '../camera-config';
 import { getLastWarp } from './warp-telemetry';
 
@@ -121,14 +121,9 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
   root.appendChild(readoutHeader);
 
   const readout = document.createElement('div');
-  readout.style.cssText = 'white-space:pre;color:#cfe;';
+  readout.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;color:#cfe;';
   readout.textContent = '(idle)';
   root.appendChild(readout);
-
-  // Per-readout dirty cache — skips DOM writes when the text is unchanged
-  // (mirrors the perf-hud pattern). Cheap to maintain, and matters when
-  // the section is expanded for many seconds across idle warps.
-  let lastReadoutText = '';
 
   // Copy-pastable knob summary at the bottom. Updated when any knob
   // changes; click the value block to copy it. Lets Alex paste exact
@@ -176,11 +171,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
             ? ` (d=${(lastWarp.plateauDistPc ?? 0).toFixed(3)} pc)`
             : '')
         : '';
-      const text = '(idle)' + lastBlock;
-      if (text !== lastReadoutText) {
-        readout.textContent = text;
-        lastReadoutText = text;
-      }
+      setReadoutText(readout, '(idle)' + lastBlock);
       return;
     }
     // Active warp — assemble a single text block so we do one DOM write.
@@ -205,10 +196,7 @@ export function buildWarpSection(stellata: Stellata): DebugSection {
       `recentred: ${phase.recenteredToDest ? 'Y' : 'N'}  plateau: ${
         phase.chartPlateauDist != null ? phase.chartPlateauDist.toFixed(3) + ' pc' : '—'
       }  fired: ${phase.chartPlateauTriggered ? 'Y' : 'N'}`;
-    if (text !== lastReadoutText) {
-      readout.textContent = text;
-      lastReadoutText = text;
-    }
+    setReadoutText(readout, text);
   };
 
   const unsubscribe = stellata.on('frame', onFrame);

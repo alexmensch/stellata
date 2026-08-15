@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
+import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
 
 // Focused-star-pin diagnostics. Latched signed min/max per axis
 // capture transient excursions (trackpad pans can swing target by
@@ -85,7 +85,7 @@ export function buildPinSection(stellata: Stellata): DebugSection {
 
     if (!visible) return;
 
-    body.textContent =
+    setReadoutText(body,
       `focus: ${stellata.focus.getFocusedStar()}  mode: ${stellata.focus.getCameraMode()}\n` +
       `warp:${stellata.warp.isActive()}  aim:${stellata.aim.isActive()}\n` +
       `pin: ${pinNow ? 'YES' : 'NO'}  flips:${latch.pinFlips}  off-frames:${latch.pinOffFrames}\n` +
@@ -102,7 +102,7 @@ export function buildPinSection(stellata: Stellata): DebugSection {
       `\n` +
       `distCam now: ${fmt(distCam)} pc\n` +
       `distCam range: [${fmt(latch.distCamMin)}, ${fmt(latch.distCamMax)}] pc\n` +
-      `controls.minDistance: ${fmt(stellata.controls.minDistance)} pc`;
+      `controls.minDistance: ${fmt(stellata.controls.minDistance)} pc`);
 
     root.style.color = pinNow ? '#0f0' : '#f33';
   };

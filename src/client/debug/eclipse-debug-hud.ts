@@ -2,7 +2,7 @@
 // readout for the focused star (or all active dims when unfocused).
 
 import type { Stellata } from '../stellata';
-import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
+import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
 import { AU_PC } from '../util/astronomy-constants';
 
 const UPDATE_EVERY_N_FRAMES = 12;
@@ -46,7 +46,7 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
       );
     }
     if (rows.length > 12) lines.push(`… +${rows.length - 12} more`);
-    body.textContent = lines.join('\n');
+    setReadoutText(body, lines.join('\n'));
   };
 
   const unsubscribe = stellata.on('frame', onFrame);

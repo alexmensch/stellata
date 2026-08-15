@@ -21,6 +21,27 @@ export function clampToViewport(
   };
 }
 
+/** The one `Node` capability the selection guard needs. Spelt structurally
+ *  because the suite runs on `environment: 'node'` — there is no `Node` to
+ *  construct a fixture from. */
+export interface ContainsNode {
+  contains(other: ContainsNode | null): boolean;
+}
+
+/** Whether a selection range lies inside `el` or spans across it. A live
+ *  readout that rewrites `textContent` while this holds collapses the
+ *  selection out from under the drag, so every per-frame write must gate on
+ *  it. Both directions are load-bearing: a drag within one readout gives a
+ *  range under `el`, a drag across sections gives one above it. */
+export function selectionTouches(
+  el: ContainsNode,
+  ranges: readonly { commonAncestorContainer: ContainsNode }[],
+): boolean {
+  return ranges.some(
+    (r) => el.contains(r.commonAncestorContainer) || r.commonAncestorContainer.contains(el),
+  );
+}
+
 export function rgbToHex(r: number, g: number, b: number): string {
   const c = (v: number) =>
     Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
