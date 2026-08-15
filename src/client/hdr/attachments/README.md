@@ -135,6 +135,24 @@ Two further things the gate has to get right:
 - **The resting state is restored on the way out of every draw**, so a
   mid-frame re-bind of the target cannot leave the gate open behind it.
 
+## The cache the gate rides
+
+Every `drawBuffers` call above is issued **straight to the context**, behind
+three's back. It survives only because three caches the draw buffers it
+believes each framebuffer has (`WebGLState.drawBuffers`) and re-issues them
+just on a change of **attachment count** or of **slot 0** — neither of which
+any mark touches, since all four keep three attachments and all but
+`markDiffuseEmitter` keep `COLOR_ATTACHMENT0` in slot 0. `markDiffuseEmitter`
+puts `NONE` in slot 0, and three still won't re-issue, because it compares
+against its own cached array rather than against the context.
+
+That asymmetry is the whole mechanism: three's cache goes stale the moment a
+mark fires, and staying stale is what keeps the gate shut until `bind()`
+re-opens it. It is also why this is a **read of three's source, re-checked at
+every version bump** rather than something a test can pin — `WebGLState` needs
+a live context. `tests/three-version-audit.test.ts` is the tripwire that forces
+the re-read.
+
 `markStatisticEmitter` composes with whatever hooks the object already
 carries, so it is order-independent against a layer that wants its own.
 
