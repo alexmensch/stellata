@@ -57,7 +57,9 @@ build scripts, tests, and shader uniforms.
   `cartesianToOrbitalElements` — the inverse is what lets a body
   positioned by a *series* rather than by elements still get an orbit
   ring that passes through it (the Moon; `../solar-system/ephemerides/README.md`
-  § Orbit rings).
+  § Orbit rings). The inverse also returns the eccentric anomaly, which
+  the ring layer anchors its first vertex on; it comes out of `r` and
+  `r·v` directly rather than from a second Kepler solve.
 - `orbit-line.ts` — shared bits of the line overlays
   (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
   `solar-system/probes/probe-path-layer.ts`,

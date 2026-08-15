@@ -252,8 +252,10 @@ pole; composing about the IAU pole mirrors every Uranian orbit), and
 the ecliptic for the Moon (no pole — the Moon tracks the ecliptic,
 not Earth's equator). Sidereal periods carry full published precision
 (a truncated mean motion scrambles phase within years), Triton models
-its slow node precession, and Mimas carries the Mimas–Tethys
-resonance libration — `moon-sky-truth.test.ts` pins all of it against
+its slow node precession — which its **ring** reads too, via the shared
+`keplerMoonAnglesAt`; taking the static `nodeDeg` there left the ring 14°
+off Triton's actual orbit by the present day — and Mimas carries the
+Mimas–Tethys resonance libration — `moon-sky-truth.test.ts` pins all of it against
 frozen Horizons truth, including a present-day epoch where phase
 drift is at its most visible.
 
@@ -312,6 +314,32 @@ secular drift under scrubbing, and there is no attach-time wall-clock
 snapshot. Hosts without an
 element source fall back to `defaultOrbitGeometry` (static a/e, flat
 on the host plane).
+
+### The polyline starts a vertex on the body
+
+`buildEllipsePoints`' loop parameter IS the eccentric anomaly, so
+`BodyOrbitGeometry.eccentricAnomaly` — the body's own E at this `t`, from
+the same evaluation that positions it — makes vertex 0 land exactly on
+the body.
+
+Without it a body lies on the true ellipse while the ring is an inscribed
+N-gon that falls up to `a·(π/N)²/2` inside it: **429 km at Pluto, a third
+of its radius**. That offset cycles 0 → max → 0 as the body crosses each
+vertex, which reads as the ring drifting while the planet is held in
+focus. Anchored, it is identically zero, and the ring near the body is a
+chord that departs from the true ellipse only quadratically in distance
+away from it — 2 km at 5000 km out, sub-pixel at any framing.
+
+Anchoring only helps while it is fresh, so `ringGeometryDrifted` carries a
+phase leg with its own, much looser `RING_PHASE_ANCHOR_TOLERANCE`. It asks
+a different question from the other five — not "has the ellipse moved"
+(it has not) but "has the body run off its vertex" — and sharing the shape
+tolerance would rewrite every ring every frame.
+
+**Vertex count is not the lever it looks like.** Anchoring removes the
+offset at the body but not the chord sag away from it, which grows as
+N⁻²: at N = 512 the ring visibly lifts off the true path within a few
+thousand km of a focused body. 8192 stays.
 
 Geometry rebuilds whenever the focused star's PlanetSystem changes; a
 per-frame tick drives the pixel-gap visibility heuristic.

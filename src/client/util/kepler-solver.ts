@@ -69,6 +69,7 @@ export function cartesianToOrbitalElements(
   mu: number,
 ): {
   a: number; e: number; incRad: number; nodeRad: number; argPeriRad: number;
+  eccAnomalyRad: number;
 } {
   const rMag = Math.hypot(r.x, r.y, r.z);
   const v2 = v.x * v.x + v.y * v.y + v.z * v.z;
@@ -95,5 +96,10 @@ export function cartesianToOrbitalElements(
   // and the in-plane normal to it) gives ω directly.
   const along = ex * cosN + ey * sinN;
   const across = (-ex * sinN + ey * cosN) * cosI + ez * sinI;
-  return { a, e, incRad, nodeRad, argPeriRad: Math.atan2(across, along) };
+  // r = a(1 − e·cos E) and r·v = e·√(μa)·sin E together fix E without a
+  // second solve.
+  const eccAnomalyRad = Math.atan2(rDotV / (e * Math.sqrt(mu * a)), 1 - rMag / a);
+  return {
+    a, e, incRad, nodeRad, argPeriRad: Math.atan2(across, along), eccAnomalyRad,
+  };
 }

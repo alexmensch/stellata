@@ -670,7 +670,10 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
 });
 
 /** Min distance from `p` to any vertex of the ring polyline. */
-function minDistToRing(p: { x: number; y: number; z: number }, verts: Float32Array): number {
+function minDistToRing(
+  p: { x: number; y: number; z: number },
+  verts: Float32Array | Float64Array,
+): number {
   let min = Infinity;
   for (let i = 0; i < verts.length; i += 3) {
     const d = Math.hypot(p.x - verts[i], p.y - verts[i + 1], p.z - verts[i + 2]);
@@ -697,6 +700,48 @@ describe('ring geometry passes through the body (single element source)', () => 
         const aPc = writeRingVerts(verts, geoms[i], IDENTITY);
         expect(minDistToRing(positions[PLANET_ORDER[i]], verts))
           .toBeLessThan(0.02 * aPc);
+      }
+    }
+  });
+
+  it('anchors a vertex ON each body, not merely near the polyline', () => {
+    // Distance to the nearest VERTEX, not to the drawn line. Unanchored,
+    // a body floats up to half a vertex interval (π·a/N ≈ 2.2 million km
+    // at Pluto) from the nearest one, and its offset from the drawn chord
+    // cycles 0 → a·(π/N)²/2 → 0 as it crosses each — which reads as the
+    // ring drifting while the planet is held in focus.
+    //
+    // Float64 buffer so this measures the geometry: the float32 GPU bake
+    // quantises to ~2.3 km at Pluto on its own.
+    const verts = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
+    for (const tYears of [0, 137.4, -880.2]) {
+      const t = T0 + tYears * 365.25 * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      const positions = getPlanetPositions(t);
+      for (let i = 0; i < PLANET_ORDER.length; i++) {
+        const aPc = writeRingVerts(verts, geoms[i], IDENTITY);
+        expect(minDistToRing(positions[PLANET_ORDER[i]], verts), PLANET_ORDER[i])
+          .toBeLessThan(1e-9 * aPc);
+      }
+    }
+  });
+
+  it('anchors a vertex on every moon too, the Moon included', () => {
+    const verts = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
+    const planetCount = PLANET_ORDER.length;
+    const offset = { x: 0, y: 0, z: 0 };
+    for (const dayOffset of [0, 3.1, 40.4]) {
+      const t = T0 + dayOffset * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      for (let m = 0; m < MOON_ELEMENTS.length; m++) {
+        const aPc = writeRingVerts(verts, geoms[planetCount + m], IDENTITY);
+        moonOffsetEcliptic(MOON_ELEMENTS[m], t, offset);
+        // The Moon's ring is an osculating fit through a series, not the
+        // ellipse it is literally solved from, so it gets the looser of
+        // the two bounds — still 300× tighter than a half vertex interval.
+        const bound = MOON_ELEMENTS[m].useLunarTheory ? 1e-3 : 1e-9;
+        expect(minDistToRing(offset, verts), MOON_ELEMENTS[m].name)
+          .toBeLessThan(bound * aPc);
       }
     }
   });

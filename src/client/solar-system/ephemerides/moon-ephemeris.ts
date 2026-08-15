@@ -278,7 +278,10 @@ const _stateNow: Vec3 = { x: 0, y: 0, z: 0 };
 export function moonOsculatingOrbit(
   t: number,
   earthGravParamGM: number,
-): { aKm: number; e: number; incRad: number; nodeRad: number; argPeriRad: number } {
+): {
+  aKm: number; e: number; incRad: number; nodeRad: number; argPeriRad: number;
+  eccAnomalyRad: number;
+} {
   moonGeocentricKm(t, _stateNow);
   moonGeocentricKm(t - VELOCITY_HALF_STEP_S, _statePrev);
   moonGeocentricKm(t + VELOCITY_HALF_STEP_S, _stateNext);
@@ -288,12 +291,12 @@ export function moonOsculatingOrbit(
     y: (_stateNext.y - _statePrev.y) * inv,
     z: (_stateNext.z - _statePrev.z) * inv,
   };
-  const { a, e, incRad, nodeRad, argPeriRad } = cartesianToOrbitalElements(
+  const { a, e, incRad, nodeRad, argPeriRad, eccAnomalyRad } = cartesianToOrbitalElements(
     _stateNow,
     vel,
     earthGravParamGM * (1 + MOON_EARTH_MASS_RATIO),
   );
-  return { aKm: a, e, incRad, nodeRad, argPeriRad };
+  return { aKm: a, e, incRad, nodeRad, argPeriRad, eccAnomalyRad };
 }
 
 /** Position of a moon relative to its parent's centre at Unix-seconds
@@ -301,15 +304,13 @@ export function moonOsculatingOrbit(
  *  already rotated into the ecliptic axes so the caller adds it straight
  *  onto the parent's ecliptic position). Kepler solve in the moon's
  *  reference plane, then reference-plane → ecliptic. */
-export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
-  if (elem.useLunarTheory) {
-    moonGeocentricKm(t, out);
-    out.x *= KM_PC;
-    out.y *= KM_PC;
-    out.z *= KM_PC;
-    return;
-  }
-
+/** Mean anomaly and node of a Kepler moon at `t` (radians), carrying its
+ *  optional node precession and resonance libration. Shared so the ring's
+ *  vertex phase and the body's position cannot drift apart. */
+export function keplerMoonAnglesAt(
+  elem: MoonElements,
+  t: number,
+): { mRad: number; nodeRad: number } {
   const days = tToJdTdb(t) - J2000_JD;
   const nodeRate = elem.nodeDegPerDay ?? 0;
   let mDeg = elem.m0Deg
@@ -319,13 +320,26 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
     mDeg += elem.libAmpDeg
       * (Math.sin(ph0 + (2 * Math.PI * days) / elem.libPeriodDays!) - Math.sin(ph0));
   }
+  return { mRad: mDeg * DEG, nodeRad: (elem.nodeDeg + nodeRate * days) * DEG };
+}
+
+export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
+  if (elem.useLunarTheory) {
+    moonGeocentricKm(t, out);
+    out.x *= KM_PC;
+    out.y *= KM_PC;
+    out.z *= KM_PC;
+    return;
+  }
+
+  const { mRad, nodeRad } = keplerMoonAnglesAt(elem, t);
   orbitalStateToCartesian(
     elem.aKm * KM_PC,
     elem.e,
     elem.incDeg * DEG,
-    (elem.nodeDeg + nodeRate * days) * DEG,
+    nodeRad,
     elem.periDeg * DEG,
-    mDeg * DEG,
+    mRad,
     out,
   );
 

@@ -118,7 +118,10 @@ of truth. Scope + citations in `docs/science-solar-system.md` § Moons.
 Those `a`/`e` fields stay display-only for every moon, and for Earth's
 Moon the whole element row is: it is positioned by a truncated ELP
 series rather than a Kepler solve, and its orbit ring comes from the
-osculating ellipse through that series' state. `ephemerides/README.md`
+osculating ellipse through that series' state. Every body's ring
+geometry additionally carries the body's own eccentric anomaly, so the
+polyline starts a vertex on it — `ephemerides/README.md` § The polyline
+starts a vertex on the body. `ephemerides/README.md`
 § Moon ephemeris carries the why — a fixed ellipse cannot place an
 eclipse.
 

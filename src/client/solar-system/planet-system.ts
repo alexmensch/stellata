@@ -3,6 +3,7 @@
 // src/client/solar-system/README.md § Data model.
 
 import { AU_KM } from '../util/astronomy-constants';
+import { solveKepler } from '../util/kepler-solver';
 import {
   getPlanetOrbitShapes,
   getPlanetPositions,
@@ -13,6 +14,7 @@ import {
 } from './ephemerides/ephemeris';
 import {
   earthMoonSplit,
+  keplerMoonAnglesAt,
   MOON_ELEMENTS,
   moonOffsetEcliptic,
   moonOsculatingOrbit,
@@ -190,6 +192,11 @@ export interface BodyOrbitGeometry {
   /** Index into `planets` of the centre body a moon orbits; null ⇒
    *  the body orbits the host star. */
   readonly parentIdx: number | null;
+  /** The body's own eccentric anomaly at this `t`, so the ring polyline
+   *  can start a vertex on it. Omitted ⇒ start at periapsis; a ring built
+   *  that way still contains the body, but the body floats up to half a
+   *  chord off the drawn line. */
+  readonly eccentricAnomaly?: number;
 }
 
 const ZERO_ORIENTATION: OrbitOrientationRad = {
@@ -557,17 +564,25 @@ export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
     const osc = elem.useLunarTheory
       ? moonOsculatingOrbit(t, EARTH_GRAV_PARAM_GM)
       : null;
+    // Kepler moons read their node from the same helper the resolver
+    // positions them with, so Triton's precessing node moves its ring
+    // too — reading the static `elem.nodeDeg` here left the ring 14°
+    // out by the present day.
+    const kepler = osc ? null : keplerMoonAnglesAt(elem, t);
     out.push({
       aAu: (osc ? osc.aKm : elem.aKm) / AU_KM,
       e: osc ? osc.e : elem.e,
       orientation: {
         inclination: osc ? osc.incRad : elem.incDeg * DEG,
-        longAscNode: osc ? osc.nodeRad : elem.nodeDeg * DEG,
+        longAscNode: osc ? osc.nodeRad : kepler!.nodeRad,
         argPerihelion: osc ? osc.argPeriRad : elem.periDeg * DEG,
       },
       refPoleRaDeg: elem.refPoleRaDeg,
       refPoleDecDeg: elem.refPoleDecDeg,
       parentIdx: PLANET_ORDER.indexOf(parent),
+      eccentricAnomaly: osc
+        ? osc.eccAnomalyRad
+        : solveKepler(kepler!.mRad, elem.e),
     });
   }
   return out;
