@@ -117,6 +117,14 @@ enough to see it.
       assumed (`scripts/catalog/photometry/README.md`).
     - **Astrophysical parameters** — `gspphot ∪ gspspec` Teff / log g / [M/H]
       feed the spectral resolver and the Stefan-Boltzmann radii.
+    - **Synthetic photometry** — Johnson-Kron-Cousins B and V integrated from
+      each source's own BP/RP spectrum (`gaiadr3.synthetic_photometry_gspc`,
+      **Gaia Collaboration, Montegriffo P., Bellazzini M., De Angeli F. et al.
+      2023, *A&A* 674, A33**). B − V from it is the ci cascade's tier below the
+      Table-5.9 relation, and unlike that relation it measures the individual
+      star rather than fitting a population — which is what lets it serve the
+      red rows the relation's colour bound excludes
+      (`scripts/catalog/photometry/README.md` § The ci cascade).
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
   — maintained by David Nash. The classic-IDs subset at
   `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
@@ -156,10 +164,12 @@ enough to see it.
   designations with component attribution. Supersedes the 2022 IAU-CSN
   text file. Normalised + keyed by `pnpm run build:wgsn`
   (`data/iau-wgsn/README.md`).
-- **Hipparcos printed V** (`I/239/hip_main`, `HIP`+`Vmag` slice at
-  `data/hipparcos/hip_main_vmag.tsv`): ESA 1997, SP-1200. The printed
-  tier of the V-magnitude cascade for stars whose Gaia photometry is
-  saturated or outside the Riello+ 2021 transform's validity range.
+- **Hipparcos printed V and B − V** (`I/239/hip_main`, `HIP`+`Vmag`+`B-V`
+  slice at `data/hipparcos/hip_main_vmag.tsv`): ESA 1997, SP-1200. The
+  printed tier of the V-magnitude cascade for stars whose Gaia photometry
+  is saturated or outside the Riello+ 2021 transform's validity range,
+  and the printed tier of the ci cascade below the synthetic photometry —
+  the only measured colour reaching the rows with no Gaia source at all.
   Public domain via CDS.
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
   http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
