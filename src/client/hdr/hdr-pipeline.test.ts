@@ -33,26 +33,43 @@ describe('the seam has no off switch', () => {
 });
 
 /**
- * The target is MRT (README.md § Three attachments), built on
- * `WebGLMultipleRenderTargets` — which three deprecates at r162 in favour
- * of `new WebGLRenderTarget(w, h, { count: 2 })` and removes thereafter.
+ * Two properties of the MRT target (README.md § Three attachments) belong to
+ * three rather than to the seam, and a version bump can take either away:
  *
- * Migrating is not a rename: `rt.texture` becomes `rt.textures`, and the
- * statistic gate's per-draw `gl.drawBuffers` calls run behind three's
- * per-framebuffer `WebGLState.drawBuffers` cache, which the seam depends on
- * never re-issuing `[0, 1]` after `bind()` shuts the gate. Re-verify that
- * against the new version rather than assuming it survives.
+ * - Attachments past 0 carry their own format and filters, and a resize must
+ *   not reset them — a resize that dropped attachment 1 back to RGBA would
+ *   silently double the statistic's memory and change what the reduction reads.
+ * - The per-draw `gl.drawBuffers` gate is issued straight to the context, so it
+ *   holds only while three's per-framebuffer `WebGLState.drawBuffers` cache
+ *   leaves it alone. That cache re-issues on a change of attachment count or of
+ *   slot 0, neither of which the gate touches — verified by reading three's
+ *   source, since `WebGLState` is not reachable from a test without a context.
+ *
+ * Re-verify both on a version bump rather than assuming they survive.
  */
 describe('the MRT target three supplies', () => {
-  it('still exists — removing it is the migration, not a version bump', () => {
-    expect(THREE.WebGLMultipleRenderTargets).toBeTypeOf('function');
+  const target = (): THREE.WebGLRenderTarget =>
+    new THREE.WebGLRenderTarget(8, 8, {
+      count: 3,
+      type: THREE.HalfFloatType,
+      format: THREE.RGBAFormat,
+    });
+
+  it('gives every attachment independent texture state', () => {
+    const rt = target();
+    expect(rt.textures).toHaveLength(3);
+    rt.textures[1].format = THREE.RGFormat;
+    expect(rt.textures[0].format).toBe(THREE.RGBAFormat);
+    expect(rt.textures[2].format).toBe(THREE.RGBAFormat);
   });
 
-  it('is not yet deprecated at the version this repo pins', () => {
-    const pkg = JSON.parse(
-      readFileSync(fileURLToPath(new URL('../../../package.json', import.meta.url)), 'utf8'),
-    ) as { dependencies: Record<string, string> };
-    const minor = Number(pkg.dependencies.three.replace(/^\D*\d+\./, '').split('.')[0]);
-    expect(minor).toBeLessThan(162);
+  it('keeps per-attachment format and filters across a resize', () => {
+    const rt = target();
+    rt.textures[1].format = THREE.RGFormat;
+    rt.textures[2].minFilter = THREE.LinearFilter;
+    rt.setSize(16, 16);
+    expect(rt.textures[1].format).toBe(THREE.RGFormat);
+    expect(rt.textures[2].minFilter).toBe(THREE.LinearFilter);
+    expect((rt.textures[1].image as { width: number }).width).toBe(16);
   });
 });

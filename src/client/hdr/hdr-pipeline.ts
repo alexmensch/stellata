@@ -122,7 +122,7 @@ export class HdrPipeline {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera();
   private readonly size = new THREE.Vector2();
-  private rt: THREE.WebGLMultipleRenderTargets | null = null;
+  private rt: THREE.WebGLRenderTarget | null = null;
   private material: THREE.RawShaderMaterial | null = null;
   private geometry: THREE.BufferGeometry | null = null;
   private summation: SummationPass | null = null;
@@ -154,7 +154,8 @@ export class HdrPipeline {
     if (!this.supported) return false;
 
     this.renderer.getDrawingBufferSize(this.size);
-    this.rt = new THREE.WebGLMultipleRenderTargets(this.size.x, this.size.y, 3, {
+    this.rt = new THREE.WebGLRenderTarget(this.size.x, this.size.y, {
+      count: 3,
       type: THREE.HalfFloatType,
       format: THREE.RGBAFormat,
       minFilter: THREE.NearestFilter,
@@ -163,26 +164,26 @@ export class HdrPipeline {
       stencilBuffer: false,
       generateMipmaps: false,
     });
-    this.rt.texture[0].colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt.textures[0].colorSpace = THREE.LinearSRGBColorSpace;
     // Half attachment 0's memory, and the reduction reads its missing
     // alpha as 1 — which is exactly the level-0 weight
     // (exposure/reduction/README.md § The chain).
-    this.rt.texture[1].format = THREE.RGFormat;
-    this.rt.texture[1].colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt.textures[1].format = THREE.RGFormat;
+    this.rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
     // Linear to match the downsample target, though inert at factor 1: the
     // resolve reads this attachment directly there, at integer offsets from
     // gl_FragCoord, so every tap lands on a texel centre where bilinear and
     // nearest agree. It stops being inert the moment a tap is off-centre.
-    this.rt.texture[2].minFilter = THREE.LinearFilter;
-    this.rt.texture[2].magFilter = THREE.LinearFilter;
-    this.rt.texture[2].colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt.textures[2].minFilter = THREE.LinearFilter;
+    this.rt.textures[2].magFilter = THREE.LinearFilter;
+    this.rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
 
     this.summation = new SummationPass(this.renderer);
     this.geometry = fullscreenTriangleGeometry();
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: {
-        uHdrTexture: { value: this.rt.texture[0] },
+        uHdrTexture: { value: this.rt.textures[0] },
         ...this.summation.uniforms,
         uWhitePoint: this.emitterUniforms.uWhitePoint,
         uHighlightDesat: this.emitterUniforms.uHighlightDesat,
@@ -228,7 +229,7 @@ export class HdrPipeline {
   resolve(): void {
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     this.summation.render(
-      this.rt.texture[2],
+      this.rt.textures[2],
       this.emitterUniforms.uOmegaSummationArcsec2.value,
       this.emitterUniforms.uOmegaPxArcsec2.value,
     );
@@ -245,7 +246,7 @@ export class HdrPipeline {
    *  renders into the target at all. */
   statisticTexture(): THREE.Texture | null {
     if (this.rt === null || !this.wantsTarget()) return null;
-    return this.rt.texture[1];
+    return this.rt.textures[1];
   }
 
   /** Attachments 1 and 2 are NONE at rest, so a draw that never asks for
