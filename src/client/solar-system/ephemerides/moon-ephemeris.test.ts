@@ -137,11 +137,16 @@ describe('SOL_MOONS', () => {
 describe('moonOffsetEcliptic', () => {
   const out: Vec3 = { x: 0, y: 0, z: 0 };
 
+  // The Moon is resolved by the ELP series, not the Kepler solve over its
+  // element row, so the two-body invariants below do not describe it. It
+  // gets its own, sharper pins straight after.
+  const KEPLER_MOONS = MOON_ELEMENTS.filter((m) => !m.useLunarTheory);
+
   it('keeps parent distance within [a(1−e), a(1+e)] across ±3000 yr', () => {
     // 40 samples spanning the Standish window for every moon.
     const tMin = julianEpochYearToT(-1000.0);
     const tMax = julianEpochYearToT(3000.0);
-    for (const m of MOON_ELEMENTS) {
+    for (const m of KEPLER_MOONS) {
       const aPc = m.aKm * KM_PC;
       const lo = aPc * (1 - m.e);
       const hi = aPc * (1 + m.e);
@@ -156,7 +161,7 @@ describe('moonOffsetEcliptic', () => {
   });
 
   it('returns to the same position after one sidereal period', () => {
-    for (const m of MOON_ELEMENTS) {
+    for (const m of KEPLER_MOONS) {
       const start: Vec3 = { x: 0, y: 0, z: 0 };
       const after: Vec3 = { x: 0, y: 0, z: 0 };
       moonOffsetEcliptic(m, T_J2000, start);
@@ -169,6 +174,46 @@ describe('moonOffsetEcliptic', () => {
       const tol = m.libAmpDeg !== undefined || m.nodeDegPerDay !== undefined ? 1e-3 : 1e-6;
       expect(drift / mag(start), m.name).toBeLessThan(tol);
     }
+  });
+
+  it('exactly one moon is resolved by the lunar theory', () => {
+    const theoryMoons = MOON_ELEMENTS.filter((m) => m.useLunarTheory).map((m) => m.name);
+    expect(theoryMoons).toEqual(['Moon']);
+  });
+
+  it('sweeps the Moon through its true perigee–apogee range, not the mean ellipse', () => {
+    // 356 400 – 406 700 km is the published extreme range; the mean
+    // ellipse a(1±e) only reaches 363 100 – 405 700, so a regression to
+    // the element row shows up as a range that never gets near perigee.
+    const moon = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
+    let lo = Infinity;
+    let hi = 0;
+    for (let i = 0; i < 4000; i++) {
+      moonOffsetEcliptic(moon, T_J2000 + i * 6 * 3600, out);
+      const km = mag(out) / KM_PC;
+      lo = Math.min(lo, km);
+      hi = Math.max(hi, km);
+    }
+    expect(lo).toBeGreaterThan(356000);
+    expect(lo).toBeLessThan(359000);
+    expect(hi).toBeGreaterThan(405500);
+    expect(hi).toBeLessThan(407000);
+  });
+
+  it('does NOT repeat after one sidereal month — evection and the advancing apse', () => {
+    // The tripwire against a silent fall-back to the fixed ellipse: a
+    // Kepler solve returns to within 1e-6 of its start after exactly
+    // periodDays, and the real Moon cannot.
+    const moon = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
+    const start: Vec3 = { x: 0, y: 0, z: 0 };
+    const after: Vec3 = { x: 0, y: 0, z: 0 };
+    moonOffsetEcliptic(moon, T_J2000, start);
+    moonOffsetEcliptic(moon, T_J2000 + moon.periodDays * 86400, after);
+    const drift = mag({
+      x: after.x - start.x, y: after.y - start.y, z: after.z - start.z,
+    }) / mag(start);
+    expect(drift).toBeGreaterThan(1e-3);
+    expect(drift).toBeLessThan(0.05);
   });
 
   it('produces a measurable displacement at a quarter period', () => {

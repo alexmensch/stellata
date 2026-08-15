@@ -1,12 +1,8 @@
-// Newton solver for Kepler's equation M = E − e·sin(E). Shared between
-// planet ephemerides and binary orbits.
+// Newton solver for Kepler's equation M = E − e·sin(E), plus the
+// element↔state pair either side of it. Shared between planet
+// ephemerides and binary orbits.
 
-export function wrapAngle(a: number): number {
-  const twoPi = 2 * Math.PI;
-  let r = a - Math.floor(a / twoPi) * twoPi;
-  if (r > Math.PI) r -= twoPi;
-  return r;
-}
+import { wrapAngle } from './angles';
 
 export function solveKepler(
   M: number,
@@ -56,4 +52,51 @@ export function orbitalStateToCartesian(
   out.z =
     (sinO * sinI) * xP +
     (cosO * sinI) * yP;
+}
+
+/** Classical elements of the osculating orbit through a state vector —
+ *  the inverse of `orbitalStateToCartesian`. `mu` is the two-body
+ *  gravitational parameter in the same length unit as `r`, per (time unit
+ *  of `v`)². Returned angles are radians; `i` comes back in [0, π] with
+ *  the node measured in the reference plane. */
+export function cartesianToOrbitalElements(
+  r: { x: number; y: number; z: number },
+  v: { x: number; y: number; z: number },
+  mu: number,
+): {
+  a: number; e: number; incRad: number; nodeRad: number; argPeriRad: number;
+  eccAnomalyRad: number;
+} {
+  const rMag = Math.hypot(r.x, r.y, r.z);
+  const v2 = v.x * v.x + v.y * v.y + v.z * v.z;
+
+  const hx = r.y * v.z - r.z * v.y;
+  const hy = r.z * v.x - r.x * v.z;
+  const hz = r.x * v.y - r.y * v.x;
+  const hMag = Math.hypot(hx, hy, hz);
+
+  const a = 1 / (2 / rMag - v2 / mu);
+  const incRad = Math.acos(Math.min(1, Math.max(-1, hz / hMag)));
+  const nodeRad = Math.atan2(hx, -hy);
+
+  const rDotV = r.x * v.x + r.y * v.y + r.z * v.z;
+  const c = v2 / mu - 1 / rMag;
+  const ex = c * r.x - (rDotV / mu) * v.x;
+  const ey = c * r.y - (rDotV / mu) * v.y;
+  const ez = c * r.z - (rDotV / mu) * v.z;
+  const e = Math.hypot(ex, ey, ez);
+
+  const cosN = Math.cos(nodeRad), sinN = Math.sin(nodeRad);
+  const cosI = Math.cos(incRad), sinI = Math.sin(incRad);
+  // Eccentricity vector resolved on the in-plane basis (node direction,
+  // and the in-plane normal to it) gives ω directly.
+  const along = ex * cosN + ey * sinN;
+  const across = (-ex * sinN + ey * cosN) * cosI + ez * sinI;
+  // r = a(1 − e·cos E) and r·v = e·√(μa)·sin E together fix E without a
+  // second solve. Both arguments carry the SAME factor of e — atan2 is
+  // invariant under a shared positive scale and nothing else.
+  const eccAnomalyRad = Math.atan2(rDotV / Math.sqrt(mu * a), 1 - rMag / a);
+  return {
+    a, e, incRad, nodeRad, argPeriRad: Math.atan2(across, along), eccAnomalyRad,
+  };
 }

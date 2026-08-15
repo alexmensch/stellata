@@ -670,7 +670,10 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
 });
 
 /** Min distance from `p` to any vertex of the ring polyline. */
-function minDistToRing(p: { x: number; y: number; z: number }, verts: Float32Array): number {
+function minDistToRing(
+  p: { x: number; y: number; z: number },
+  verts: Float32Array | Float64Array,
+): number {
   let min = Infinity;
   for (let i = 0; i < verts.length; i += 3) {
     const d = Math.hypot(p.x - verts[i], p.y - verts[i + 1], p.z - verts[i + 2]);
@@ -701,25 +704,200 @@ describe('ring geometry passes through the body (single element source)', () => 
     }
   });
 
+  it('anchors a vertex ON each body, not merely near the polyline', () => {
+    // Distance to the nearest VERTEX, not to the drawn line. Unanchored,
+    // a body floats up to half a vertex interval (π·a/N ≈ 2.2 million km
+    // at Pluto) from the nearest one, and its offset from the drawn chord
+    // cycles 0 → a·(π/N)²/2 → 0 as it crosses each — which reads as the
+    // ring drifting while the planet is held in focus.
+    //
+    // Float64 buffer so this measures the geometry: the float32 GPU bake
+    // quantises to ~2.3 km at Pluto on its own.
+    const verts = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
+    for (const tYears of [0, 137.4, -880.2]) {
+      const t = T0 + tYears * 365.25 * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      const positions = getPlanetPositions(t);
+      for (let i = 0; i < PLANET_ORDER.length; i++) {
+        const aPc = writeRingVerts(verts, geoms[i], IDENTITY);
+        expect(minDistToRing(positions[PLANET_ORDER[i]], verts), PLANET_ORDER[i])
+          .toBeLessThan(1e-9 * aPc);
+      }
+    }
+  });
+
+  it('anchors a vertex on every moon too, the Moon included', () => {
+    const verts = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
+    const planetCount = PLANET_ORDER.length;
+    const offset = { x: 0, y: 0, z: 0 };
+    for (const dayOffset of [0, 3.1, 40.4]) {
+      const t = T0 + dayOffset * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      for (let m = 0; m < MOON_ELEMENTS.length; m++) {
+        const aPc = writeRingVerts(verts, geoms[planetCount + m], IDENTITY);
+        moonOffsetEcliptic(MOON_ELEMENTS[m], t, offset);
+        // One bound for all 18, the Moon included. Its ring is the
+        // osculating ellipse inverted from the body's own state, so the
+        // anchor is exact there too — not a fit that has to be given
+        // room. Anything above π/N ≈ 3.8e-4 of `a` passes unanchored and
+        // asserts nothing.
+        expect(minDistToRing(offset, verts), MOON_ELEMENTS[m].name)
+          .toBeLessThan(1e-9 * aPc);
+      }
+    }
+  });
+
   it('every moon ring contains the moon resolver’s parent-relative track', () => {
     // Parity pin for refPlaneToEclipticQuat: the quaternion chain in
     // writeRingVerts must reproduce the scalar reference-plane →
     // ecliptic rotation moonOffsetEcliptic applies, for every tabulated
     // reference pole (Laplace planes, Uranus equator, Triton) and the
     // no-pole ecliptic case (the Moon).
+    //
+    // Geometry is re-derived at each sample rather than reused from T0:
+    // the 17 Kepler moons return identical elements at every t, but the
+    // Moon's ring is the osculating ellipse through the lunar theory's
+    // own state and legitimately evolves within a single orbit.
     const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
-    const geoms = solOrbitGeometryAt(T0);
     const planetCount = PLANET_ORDER.length;
     const offset = { x: 0, y: 0, z: 0 };
-    for (let m = 0; m < MOON_ELEMENTS.length; m++) {
-      const elem = MOON_ELEMENTS[m];
-      const g = geoms[planetCount + m];
-      const aPc = writeRingVerts(verts, g, IDENTITY);
-      for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
-        moonOffsetEcliptic(elem, T0 + dayOffset * 86400, offset);
+    for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
+      const t = T0 + dayOffset * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      for (let m = 0; m < MOON_ELEMENTS.length; m++) {
+        const aPc = writeRingVerts(verts, geoms[planetCount + m], IDENTITY);
+        moonOffsetEcliptic(MOON_ELEMENTS[m], t, offset);
         expect(minDistToRing(offset, verts)).toBeLessThan(0.02 * aPc);
       }
     }
+  });
+
+  // The test above re-derives geometry at each sample, so it proves the
+  // element→vertex chain is right but CANNOT see whether the live layer
+  // ever refreshes a moon ring. refreshGeometry used to skip every
+  // parent-centred ring outright, which froze the Moon's at attach time —
+  // 19 000 km, 5 % of its distance, off the body after a year of
+  // scrubbing. These two go through OrbitRingsLayer itself.
+  describe('the layer refreshes the Moon’s ring as the clock moves', () => {
+    const MOON_IDX = PLANET_ORDER.length
+      + MOON_ELEMENTS.findIndex((m) => m.name === 'Moon');
+
+    /** Sol's system as the planet module attaches it. */
+    const solSystem = (): PlanetSystem => ({
+      hostStarIdx: 0,
+      planets: SOL_BODIES,
+      orbitGeometryAt: solOrbitGeometryAt,
+    });
+
+    /** Every ring centred on the local origin, so the baked GPU buffer is
+     *  the master geometry unshifted. */
+    const originCentres = (_idx: number, out: THREE.Vector3): boolean => {
+      out.set(0, 0, 0);
+      return true;
+    };
+
+    const MOON_A_PC = 384400 * KM_PC;
+    // Close enough that the Moon's ring clears the pixel-legibility gate:
+    // the layer refreshes only what it is drawing, so a 5 AU camera —
+    // where the ring is sub-pixel — exercises nothing. `expectDrawn`
+    // asserts that rather than trusting it, or this whole block goes
+    // quietly vacuous the next time the gate moves.
+    const NEAR_MOON = makeCamera(20 * MOON_A_PC);
+    const expectDrawn = (ss: OrbitRingsLayer): void => {
+      expect(ss.isOrbitRingVisible(MOON_IDX), 'Moon ring must be drawn').toBe(true);
+    };
+
+    const moonRingVerts = (ss: OrbitRingsLayer): Float32Array => {
+      const line = ss.group.children[MOON_IDX] as THREE.LineLoop;
+      const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+      return (attr.array as Float32Array).slice();
+    };
+
+    it('rewrites the buffer — a frozen ring is byte-identical a month on', () => {
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      ss.update(NEAR_MOON, 800, null, T0, originCentres);
+      expectDrawn(ss);
+      const atT0 = moonRingVerts(ss);
+      ss.update(NEAR_MOON, 800, null, T0 + 30 * 86400, originCentres);
+      const atT1 = moonRingVerts(ss);
+      expect(atT1.some((v, i) => v !== atT0[i])).toBe(true);
+      ss.dispose();
+    });
+
+    // Bounded at 1e-5·a ≈ 3.8 km. The anchored vertex lands on the body
+    // exactly, so the only floor left is the float32 GPU bake this reads
+    // through — ~60 m at the Moon's radius — and a stale ring sits
+    // 1 500–19 000 km out depending on where in the cycle it froze. That
+    // leaves 60x of headroom below and 40x of signal above the 147 km
+    // half-vertex spacing.
+    //
+    // Several offsets because the error is cyclic, not monotonic: a
+    // 30-day scrub happens to land near a minimum, and a single sample
+    // there passes with the refresh disabled.
+    it.each([7, 14, 90, 365])(
+      'keeps the Moon on the rendered ring after scrubbing %i days',
+      (days) => {
+        const ss = new OrbitRingsLayer();
+        ss.setPlanetSystem(solSystem(), 0, T0);
+        const t = T0 + days * 86400;
+        ss.update(NEAR_MOON, 800, null, t, originCentres);
+        expectDrawn(ss);
+
+        // The layer rotates its rings onto the host plane; the resolver
+        // works in the ecliptic, so the expected point takes the same turn.
+        const hostQuat = new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          ECLIPTIC_NORTH_POLE_ICRS.clone(),
+        );
+        const offset = { x: 0, y: 0, z: 0 };
+        moonOffsetEcliptic(MOON_ELEMENTS.find((m) => m.name === 'Moon')!, t, offset);
+        const expected = new THREE.Vector3(offset.x, offset.y, offset.z)
+          .applyQuaternion(hostQuat);
+
+        expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(1e-5 * MOON_A_PC);
+        ss.dispose();
+      },
+    );
+
+    it('spends nothing on a ring it is not drawing', () => {
+      // The other side of the same gate. The Moon's ring crosses the
+      // drift tolerance in ~1 s of model time, so without this it would
+      // rewrite 8192 vertices and re-upload the buffer every frame under
+      // scrub while sub-pixel — and drag three lunar-theory evaluations
+      // along per frame for a ring nothing can see.
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
+      expect(ss.isOrbitRingVisible(MOON_IDX)).toBe(false);
+      const atT0 = moonRingVerts(ss);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 365 * 86400, originCentres);
+      expect(moonRingVerts(ss)).toEqual(atT0);
+      ss.dispose();
+    });
+
+    it('catches a ring up the frame it becomes visible again', () => {
+      // Skipping while invisible is only safe because coming back is not
+      // deferred: visibility is decided first, then the geometry pass
+      // runs over what survived.
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      const t = T0 + 365 * 86400;
+      ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
+      ss.update(NEAR_MOON, 800, null, t, originCentres);
+      expectDrawn(ss);
+
+      const hostQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        ECLIPTIC_NORTH_POLE_ICRS.clone(),
+      );
+      const offset = { x: 0, y: 0, z: 0 };
+      moonOffsetEcliptic(MOON_ELEMENTS.find((m) => m.name === 'Moon')!, t, offset);
+      const expected = new THREE.Vector3(offset.x, offset.y, offset.z)
+        .applyQuaternion(hostQuat);
+      expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(1e-5 * MOON_A_PC);
+      ss.dispose();
+    });
   });
 
   it('solOrbitGeometryAt covers SOL_BODIES with parentIdx pointing at each moon’s parent', () => {

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { J2000_JD } from '../../util/astronomy-constants';
+import { deltaTSeconds } from './delta-t-pure';
 import {
   MAX_RATE,
-  TT_MINUS_UTC_S,
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
   VirtualClock,
@@ -42,21 +43,31 @@ describe('tToJDE', () => {
 });
 
 describe('tToJdTdb', () => {
-  it('runs TT_MINUS_UTC_S ahead of the UTC-scale sibling', () => {
+  it('runs ΔT ahead of the universal-time sibling', () => {
     // Differencing two ~2.44e6 Julian Dates leaves ~1e-5 s of float64 noise.
-    expect((tToJdTdb(0) - tToJDE(0)) * 86400).toBeCloseTo(TT_MINUS_UTC_S, 4);
+    const gap = (tToJdTdb(0) - tToJDE(0)) * 86400;
+    expect(gap).toBeCloseTo(deltaTSeconds(tToJDE(0)), 4);
+    // 1970 sat at ΔT ≈ 40 s, well clear of today's ~69 s: a regression to
+    // a fixed TT−UTC constant reads the same at every epoch.
+    expect(gap).toBeGreaterThan(38);
+    expect(gap).toBeLessThan(42);
   });
 
   it('lands J2000.0 on JD 2451545.0 — the epoch the element tables count from', () => {
-    // The UTC instant is 12:00:00Z; J2000.0 is 12:00:00 TT, 69.184 s later on
-    // this clock. Feeding the UTC-scale JD to the ephemeris instead moves
-    // Mercury by 2.2e-5 AU.
-    expect(tToJdTdb(946728000 - TT_MINUS_UTC_S)).toBeCloseTo(2451545.0, 12);
+    // The UT instant is 12:00:00Z; J2000.0 is 12:00:00 TT, ΔT later on this
+    // clock. Feeding the UT-scale JD to the ephemeris instead moves Mercury
+    // by 2.2e-5 AU.
+    const j2000Ut = 946728000 - deltaTSeconds(J2000_JD);
+    expect(tToJdTdb(j2000Ut)).toBeCloseTo(2451545.0, 8);
   });
 
-  it('round-trips through jdTdbToT', () => {
-    const t = 1.78e9;
-    expect(Math.abs(jdTdbToT(tToJdTdb(t)) - t)).toBeLessThan(1e-3);
+  it('round-trips through jdTdbToT, at both clamp bounds', () => {
+    // ΔT reaches 20.6 h at the lower bound, so the inverse is a fixed
+    // point rather than a subtraction; a single-pass version still lands
+    // inside a millisecond, and this is what catches it going missing.
+    for (const t of [1.78e9, T_CLAMP_MIN_S, T_CLAMP_MAX_S]) {
+      expect(Math.abs(jdTdbToT(tToJdTdb(t)) - t)).toBeLessThan(1e-3);
+    }
   });
 });
 

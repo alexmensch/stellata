@@ -9,7 +9,9 @@ codebase reads `Date.now()` for the model clock.
 
 ```
 src/client/solar-system/time/
-  time.ts (+ test)                Simulation time `t` + the UTC ↔ Julian-day
+  delta-t-pure.ts (+ test)        ΔT = TT − UT, Espenak & Meeus, -1999 to
+                                  +3000. See § Timescales.
+  time.ts (+ test)                Simulation time `t` + the UT ↔ Julian-day
                                   and TDB helpers (§ Timescales). Owns
                                   VirtualClock, the clock behind
                                   Stellata.getT(), plus the FF/RW rate
@@ -66,15 +68,38 @@ whose epoch argument is a wall-clock instant — the readout, the scrubber,
 the star-catalogue epoch advance, binary orbits — reads that pair.
 
 **The ephemerides do not.** JPL's element tables and the Standish series
-are both defined against **TDB**, which runs `TT_MINUS_UTC_S` = 69.184 s
-ahead of UTC (32.184 s of TT − TAI plus the 37 leap seconds in force
-since 2017). `tToJdTdb` / `jdTdbToT` add and remove that offset, and
-`../ephemerides/` reads through them exclusively — planets and moons
-alike. Feeding a UTC-scale JD to the element evaluation instead moves
-Mercury by 2.2e-5 AU, which was the dominant term left once the element
-tables landed. The offset is held constant rather than tabulated:
-leap seconds accrued at a few seconds per decade, and ±5 s of drift is
-1.6e-6 AU at Mercury, three orders under the tables' own bound.
+are both defined against **TDB**, which runs ahead of universal time by
+ΔT. `tToJdTdb` / `jdTdbToT` add and remove it, and `../ephemerides/`
+reads through them exclusively — planets and moons alike. Feeding a
+UT-scale JD to the element evaluation instead moves Mercury by 2.2e-5 AU,
+which was the dominant term left once the element tables landed.
+
+**ΔT is not a constant, and at this clock's range it is not small.**
+`delta-t-pure.ts` is the Espenak & Meeus polynomial set (−1999 to +3000),
+thirteen fitted intervals with the Morrison & Stephenson long-term
+parabola carrying each tail. It is 69 s today and **20.6 hours at 3000 BC** —
+310° of Earth rotation. A fixed offset put every ancient eclipse track
+most of a hemisphere from where it belongs.
+
+The split that makes eclipses work is therefore:
+
+| quantity | scale | why |
+|---|---|---|
+| the clock `t`, the readout, star epochs, binaries | UT | what a user means by a date, and what historical records give |
+| planet + moon ephemerides | TT = UT + ΔT | the element sources are defined there |
+| every body's spin except Earth's | TT | uniform rotators, the IAU convention's own argument |
+| **Earth's spin** | **UT** | ΔT *is* Earth's rotational lag — see `../planets/rotation/README.md` § Earth is not a linear row |
+
+`jdTdbToT` is a fixed-point iteration rather than a subtraction, because
+ΔT depends on the epoch being solved for. It converges immediately: ΔT
+changes by under 1e-6 of itself across one ΔT.
+
+**Known departure.** Espenak's 2005–2050 segment was extrapolated in
+2006 and Earth's rotation did not slow as projected, so it reads ~75 s in
+2026 against an observed ~69 s. Using it uniformly rather than splicing
+in the exact leap-second constant keeps the function continuous; the 6 s
+costs 6 km of Moon and 1.9e-6 AU of Mercury, both under the bounds those
+chains already hold (12 km and 1e-5 AU respectively).
 
 Jump-to-date is a native `datetime-local` input whose value is
 read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`

@@ -3,6 +3,7 @@
 // src/client/solar-system/README.md § Data model.
 
 import { AU_KM } from '../util/astronomy-constants';
+import { solveKepler } from '../util/kepler-solver';
 import {
   getPlanetOrbitShapes,
   getPlanetPositions,
@@ -13,8 +14,10 @@ import {
 } from './ephemerides/ephemeris';
 import {
   earthMoonSplit,
+  keplerMoonAnglesAt,
   MOON_ELEMENTS,
   moonOffsetEcliptic,
+  moonOsculatingOrbit,
   type MoonElements,
 } from './ephemerides/moon-ephemeris';
 import {
@@ -189,6 +192,11 @@ export interface BodyOrbitGeometry {
   /** Index into `planets` of the centre body a moon orbits; null ⇒
    *  the body orbits the host star. */
   readonly parentIdx: number | null;
+  /** The body's own eccentric anomaly at this `t`, so the ring polyline
+   *  can start a vertex on it. Omitted ⇒ start at periapsis; a ring built
+   *  that way still contains the body, but the body floats up to half a
+   *  chord off the drawn line. */
+  readonly eccentricAnomaly?: number;
 }
 
 const ZERO_ORIENTATION: OrbitOrientationRad = {
@@ -539,27 +547,42 @@ const _moonAbs: Vec3 = { x: 0, y: 0, z: 0 };
 
 const DEG = Math.PI / 180;
 
+const EARTH_GRAV_PARAM_GM = SOL_PLANETS.find((p) => p.name === 'Earth')!.gravParamGM!;
+
 /** Sol's orbitGeometryAt — planets from the live Standish elements
  *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS (J2000
  *  osculating, no secular terms — constant in `t`, matching the
- *  resolver that positions them), in SOL_BODIES order. */
+ *  resolver that positions them), in SOL_BODIES order. The Moon is the
+ *  exception on both counts: its ring is the osculating ellipse through
+ *  the lunar theory's own state, because that is what positions it. */
 export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
   const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
     ...s,
     parentIdx: null,
   }));
   for (const { elem, parent } of MOON_COMPOSE) {
+    const osc = elem.useLunarTheory
+      ? moonOsculatingOrbit(t, EARTH_GRAV_PARAM_GM)
+      : null;
+    // Kepler moons read their node from the same helper the resolver
+    // positions them with, so Triton's precessing node moves its ring
+    // too — reading the static `elem.nodeDeg` here left the ring 14°
+    // out by the present day.
+    const kepler = osc ? null : keplerMoonAnglesAt(elem, t);
     out.push({
-      aAu: elem.aKm / AU_KM,
-      e: elem.e,
+      aAu: (osc ? osc.aKm : elem.aKm) / AU_KM,
+      e: osc ? osc.e : elem.e,
       orientation: {
-        inclination: elem.incDeg * DEG,
-        longAscNode: elem.nodeDeg * DEG,
-        argPerihelion: elem.periDeg * DEG,
+        inclination: osc ? osc.incRad : elem.incDeg * DEG,
+        longAscNode: osc ? osc.nodeRad : kepler!.nodeRad,
+        argPerihelion: osc ? osc.argPeriRad : elem.periDeg * DEG,
       },
       refPoleRaDeg: elem.refPoleRaDeg,
       refPoleDecDeg: elem.refPoleDecDeg,
       parentIdx: PLANET_ORDER.indexOf(parent),
+      eccentricAnomaly: osc
+        ? osc.eccAnomalyRad
+        : solveKepler(kepler!.mRad, elem.e),
     });
   }
   return out;

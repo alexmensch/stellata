@@ -4,6 +4,7 @@ import { getPlanetPositions, resetPositionCache } from '../ephemerides/ephemeris
 import { earthMoonSplit, MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
 import { eclipseDimFromOffsets } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { julianEpochYearToT } from '../time/time';
 
 const J2000_UNIX = 946728000;
 
@@ -103,11 +104,20 @@ describe('shadow events on the real ephemeris', () => {
     expect(minShadow).toBeLessThan(0.05);
   });
 
-  it("the Moon enters Earth's shadow (eclipse dim < 1) within a year", () => {
-    // Eclipse seasons come twice a year when the sun passes the Moon's
-    // node; a half-hour sweep over one year must catch at least a
-    // partial eclipse — mean elements shift the exact dates but not the
-    // node-alignment geometry.
+  // Eclipse seasons come twice a year when the sun passes the Moon's
+  // node, so a half-hour sweep over one year must catch a total lunar
+  // eclipse — the Moon's illumination reaching 0.
+  //
+  // This ran at J2000 only, on the reasoning that "mean elements shift
+  // the exact dates but not the node-alignment geometry". That was false:
+  // the node line regresses a full turn every 18.6 years, so a fixed
+  // J2000 ellipse IS a broken node alignment away from J2000, and the
+  // year-2000 window was the only one it could have passed in. Both
+  // epochs run now, and the present-day one is the load-bearing case.
+  it.each([
+    ['J2000, where the old fixed-element model still worked', J2000_UNIX],
+    ['2026, where it did not', julianEpochYearToT(2026)],
+  ])("the Moon is totally eclipsed within a year of %s", (_label, t0) => {
     const moonEl = MOON_ELEMENTS.find((m) => m.name === 'Moon')!;
     const R_E = 6371 * KM_PC;
     const geo = { x: 0, y: 0, z: 0 };
@@ -116,7 +126,7 @@ describe('shadow events on the real ephemeris', () => {
     let minDim = 1;
     for (let k = 0; k < 17520; k++) {
       resetPositionCache();
-      const t = J2000_UNIX + k * 1800;
+      const t = t0 + k * 1800;
       const bary = getPlanetPositions(t).earth;
       moonOffsetEcliptic(moonEl, t, geo);
       earthMoonSplit(bary, geo, earth, moon);
@@ -131,6 +141,6 @@ describe('shadow events on the real ephemeris', () => {
       );
       if (r.front === 'secondary' && r.dim < minDim) minDim = r.dim;
     }
-    expect(minDim).toBeLessThan(1);
+    expect(minDim).toBe(0);
   });
 });

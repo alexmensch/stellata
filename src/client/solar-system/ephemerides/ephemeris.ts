@@ -3,7 +3,7 @@
 // reach and the Standish series elsewhere. See README.md § Planet ephemeris.
 
 import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
-import { orbitalStateToCartesian } from '../../util/kepler-solver';
+import { orbitalStateToCartesian, solveKepler } from '../../util/kepler-solver';
 import { tToJdTdb } from '../time/time';
 import { elementTableSampleAt, type PlanetElementTable } from './element-table';
 import {
@@ -320,6 +320,11 @@ export interface PlanetOrbitShape {
   readonly aAu: number;
   readonly e: number;
   readonly orientation: OrbitOrientationRad;
+  /** The body's own eccentric anomaly at this `t`. The ring polyline
+   *  starts a vertex here, so the body always sits exactly ON a vertex
+   *  rather than up to half a chord off it — see
+   *  orbit-rings-layer.ts § buildEllipsePoints. */
+  readonly eccentricAnomaly: number;
 }
 
 /** Per-planet orbit shapes at Unix-seconds `t`, in PLANET_ORDER — from the
@@ -345,6 +350,7 @@ export function getPlanetOrbitShapes(t: number): PlanetOrbitShape[] {
         longAscNode: scratchClassical.nodeRad,
         argPerihelion: scratchClassical.argPeriRad,
       },
+      eccentricAnomaly: solveKepler(scratchClassical.mRad, scratchClassical.e),
     });
   }
   cachedShapesT = t;

@@ -2,18 +2,21 @@
 // that composes their heliocentric ecliptic positions. Sibling of
 // ephemeris.ts (planets). See src/client/solar-system/README.md § Moons.
 
+import { J2000_JD, KM_PC } from '../../util/astronomy-constants';
+import { icrsToEcliptic } from '../../util/ecliptic-frame';
 import {
-  J2000_JD,
-  J2000_OBLIQUITY_RAD,
-  KM_PC,
-} from '../../util/astronomy-constants';
-import { orbitalStateToCartesian } from '../../util/kepler-solver';
+  cartesianToOrbitalElements,
+  orbitalStateToCartesian,
+} from '../../util/kepler-solver';
+import {
+  longTermEclipticRotationFromJ2000,
+  unprecessDirection,
+} from '../../util/precession';
 import type { Vec3 } from './ephemeris';
+import { moonGeocentricOfDate } from './lunar-theory-pure';
 import { tToJdTdb } from '../time/time';
 
 const DEG = Math.PI / 180;
-const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
-const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);
 
 export interface MoonElements {
   // Matches the moon's `Planet.name` and its `sol:<lowercase>` SID key.
@@ -54,6 +57,13 @@ export interface MoonElements {
   readonly libAmpDeg?: number;
   readonly libPeriodDays?: number;
   readonly libPhaseDeg?: number;
+  // Position comes from the truncated ELP series (lunar-theory-pure.ts),
+  // NOT from the Kepler solve over the fields above. A fixed ellipse has
+  // no node regression, so by 2026 the node line is 25° out and the
+  // Moon's shadow misses Earth at every real solar eclipse. The row stays
+  // because the ring, the focus card's orbit descriptor, and the tidal-
+  // lock rotation parity all read it as the mean orbit.
+  readonly useLunarTheory?: true;
 }
 
 // Reference-plane poles shared across a parent's regular satellites: the
@@ -85,6 +95,7 @@ export const MOON_ELEMENTS: readonly MoonElements[] = [
     name: 'Moon', parent: 'Earth',
     aKm: 384400, e: 0.0554, incDeg: 5.16,
     nodeDeg: 125.08, periDeg: 318.15, m0Deg: 135.27, periodDays: 27.321661,
+    useLunarTheory: true,
   },
 
   // Jupiter — Galileans
@@ -211,14 +222,90 @@ export const MOON_ELEMENTS: readonly MoonElements[] = [
 // Earth's centre lies this fraction of the geocentric Moon vector back
 // from the barycentre (~4700 km — sub-pixel at disc scale, resolvable at
 // Earth-zoom).
-export const MOON_MASS_FRACTION = 0.0123000371 / (1 + 0.0123000371);
+export const MOON_EARTH_MASS_RATIO = 0.0123000371;
+export const MOON_MASS_FRACTION = MOON_EARTH_MASS_RATIO / (1 + MOON_EARTH_MASS_RATIO);
+
+/** Geocentric position of the Moon in **km**, J2000-ecliptic axes, at
+ *  Julian Date `jdTt` (TT): the truncated ELP series' λ/β/Δ referred to
+ *  the mean ecliptic and equinox of date, then ecliptic-of-date → ICRS →
+ *  J2000 ecliptic. The two rotations are what a fixed-frame Kepler solve
+ *  cannot express — over the model clock's span the equinox sweeps ~42°.
+ *
+ *  Clock-free so `moon-vector-truth.test.ts` can pin the chain against
+ *  frozen TT epochs with no timescale in the way. */
+export function moonGeocentricKmAtJdTt(jdTt: number, out: Vec3): void {
+  const { lonDeg, latDeg, distKm } = moonGeocentricOfDate(jdTt);
+  const lon = lonDeg * DEG;
+  const lat = latDeg * DEG;
+  const cosLat = Math.cos(lat);
+  icrsToEcliptic(
+    unprecessDirection(longTermEclipticRotationFromJ2000(jdTt), {
+      x: distKm * cosLat * Math.cos(lon),
+      y: distKm * cosLat * Math.sin(lon),
+      z: distKm * Math.sin(lat),
+    }),
+    out,
+  );
+}
+
+/** `moonGeocentricKmAtJdTt` on the model clock. */
+export function moonGeocentricKm(t: number, out: Vec3): void {
+  moonGeocentricKmAtJdTt(tToJdTdb(t), out);
+}
+
+// Half-step of the central difference that gives the Moon's velocity for
+// the osculating-element solve. Short against the 27-day orbit — the
+// truncation error is (ωh)²/6 ≈ 1e-7 of the speed — and long enough that
+// differencing two 4e5 km positions keeps ~10 significant digits.
+const VELOCITY_HALF_STEP_S = 300;
+
+const _statePrev: Vec3 = { x: 0, y: 0, z: 0 };
+const _stateNext: Vec3 = { x: 0, y: 0, z: 0 };
+const _stateNow: Vec3 = { x: 0, y: 0, z: 0 };
+
+/** Osculating geocentric elements of the Moon's orbit at `t`, in the
+ *  J2000 ecliptic frame — `aKm` plus the three orientation angles
+ *  (radians). `earthGravParamGM` is Earth's GM (km³/s²); the relative
+ *  two-body motion runs on the Earth+Moon total, so it is scaled here.
+ *
+ *  The orbit ring reads this rather than MOON_ELEMENTS: the row's fixed
+ *  ellipse would leave the ring behind the body it is drawn for. */
+export function moonOsculatingOrbit(
+  t: number,
+  earthGravParamGM: number,
+): {
+  aKm: number; e: number; incRad: number; nodeRad: number; argPeriRad: number;
+  eccAnomalyRad: number;
+} {
+  moonGeocentricKm(t, _stateNow);
+  moonGeocentricKm(t - VELOCITY_HALF_STEP_S, _statePrev);
+  moonGeocentricKm(t + VELOCITY_HALF_STEP_S, _stateNext);
+  const inv = 1 / (2 * VELOCITY_HALF_STEP_S);
+  const vel = {
+    x: (_stateNext.x - _statePrev.x) * inv,
+    y: (_stateNext.y - _statePrev.y) * inv,
+    z: (_stateNext.z - _statePrev.z) * inv,
+  };
+  const { a, e, incRad, nodeRad, argPeriRad, eccAnomalyRad } = cartesianToOrbitalElements(
+    _stateNow,
+    vel,
+    earthGravParamGM * (1 + MOON_EARTH_MASS_RATIO),
+  );
+  return { aKm: a, e, incRad, nodeRad, argPeriRad, eccAnomalyRad };
+}
 
 /** Position of a moon relative to its parent's centre at Unix-seconds
  *  `t`, in **heliocentric-ecliptic-aligned parsecs** (parent-centred, but
  *  already rotated into the ecliptic axes so the caller adds it straight
  *  onto the parent's ecliptic position). Kepler solve in the moon's
  *  reference plane, then reference-plane → ecliptic. */
-export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
+/** Mean anomaly and node of a Kepler moon at `t` (radians), carrying its
+ *  optional node precession and resonance libration. Shared so the ring's
+ *  vertex phase and the body's position cannot drift apart. */
+export function keplerMoonAnglesAt(
+  elem: MoonElements,
+  t: number,
+): { mRad: number; nodeRad: number } {
   const days = tToJdTdb(t) - J2000_JD;
   const nodeRate = elem.nodeDegPerDay ?? 0;
   let mDeg = elem.m0Deg
@@ -228,13 +315,26 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
     mDeg += elem.libAmpDeg
       * (Math.sin(ph0 + (2 * Math.PI * days) / elem.libPeriodDays!) - Math.sin(ph0));
   }
+  return { mRad: mDeg * DEG, nodeRad: (elem.nodeDeg + nodeRate * days) * DEG };
+}
+
+export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): void {
+  if (elem.useLunarTheory) {
+    moonGeocentricKm(t, out);
+    out.x *= KM_PC;
+    out.y *= KM_PC;
+    out.z *= KM_PC;
+    return;
+  }
+
+  const { mRad, nodeRad } = keplerMoonAnglesAt(elem, t);
   orbitalStateToCartesian(
     elem.aKm * KM_PC,
     elem.e,
     elem.incDeg * DEG,
-    (elem.nodeDeg + nodeRate * days) * DEG,
+    nodeRad,
     elem.periDeg * DEG,
-    mDeg * DEG,
+    mRad,
     out,
   );
 
@@ -254,12 +354,11 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
   const xr = out.x, yr = out.y, zr = out.z;
   const y1 = cosTheta * yr - sinTheta * zr;
   const z1 = sinTheta * yr + cosTheta * zr;
-  const xi = cosPsi * xr - sinPsi * y1;
-  const yi = sinPsi * xr + cosPsi * y1;
 
-  out.x = xi;
-  out.y = COS_OBLIQUITY * yi + SIN_OBLIQUITY * z1;
-  out.z = -SIN_OBLIQUITY * yi + COS_OBLIQUITY * z1;
+  out.x = cosPsi * xr - sinPsi * y1;
+  out.y = sinPsi * xr + cosPsi * y1;
+  out.z = z1;
+  icrsToEcliptic(out, out);
 }
 
 /** Split the Earth–Moon barycentre into Earth-centre and Moon positions.

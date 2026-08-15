@@ -102,6 +102,16 @@ trains readers to re-run rather than read failures.
 
 The timeout is a hang detector, not a perf gate — `slowTestThreshold`
 is what surfaces slowness. Raise a test's own `{ timeout }` for a
-deliberate outlier (`local-group-emission-calibration.test.ts` renders
-every viewpoint × object and takes ~9 s) rather than lifting the
-global.
+deliberate outlier rather than lifting the global.
+`local-group-emission-calibration.test.ts` is the standing example: its
+three brute-force tests run 1.6 s / 3.6 s / 6.5 s solo and each carries
+`{ timeout: 120_000 }`.
+
+**Budget for roughly an order of magnitude, not a factor of two.** A
+seconds-long CPU-bound test is not competing with the other 4 600 tests
+for a core, it is competing with whatever else the machine is doing —
+a dev server, a second agent session, another suite. The 3.6 s test above
+was measured at **47.7 s** in one full-suite run, a 13× amplification, and
+it was the 30 s global rather than any real hang that failed it. Anything
+over ~1 s solo wants its own timeout before it becomes a load-dependent
+flake that trains readers to re-run.

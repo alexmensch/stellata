@@ -12,6 +12,7 @@ import {
 import { AU_PC, J2000_OBLIQUITY_RAD } from '../../util/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { wrapAngle } from '../../util/angles';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import {
   makeOrbitLineMaterial,
@@ -64,6 +65,22 @@ const RING_COLOUR = 0x88aacc;
 export const RING_GEOMETRY_DRIFT_TOLERANCE =
   (Math.PI / ORBIT_LINE_SEGMENTS) ** 2 / 2;
 
+/**
+ * How far the body's eccentric anomaly may run past the vertex the ring
+ * was anchored on before that ring is rewritten.
+ *
+ * Anchoring is only worth anything while it stays fresh. A body that has
+ * advanced a fraction `f` of one vertex interval sits `4f(1−f)` of the
+ * full chord sagitta off the polyline, so holding the offset inside the
+ * bound the other legs already use needs `f ≤ 0.146`; an eighth is that
+ * with margin. Costed in rewrites, an eighth of a vertex interval is 1.4
+ * days of Pluto, 8 minutes of Earth and 36 seconds of the Moon — rare at
+ * 1×, every frame under heavy scrub, which is the regime the planet rings
+ * were already in.
+ */
+export const RING_PHASE_ANCHOR_TOLERANCE =
+  (2 * Math.PI) / ORBIT_LINE_SEGMENTS / 8;
+
 const DEG = Math.PI / 180;
 
 interface PlanetRing {
@@ -109,9 +126,19 @@ export function ringGeometryDrifted(
   if (Math.abs(live.e - built.e) > tolerance) return true;
   const a = built.orientation;
   const b = live.orientation;
-  return Math.abs(b.inclination - a.inclination) > tolerance
+  if (Math.abs(b.inclination - a.inclination) > tolerance
     || Math.abs(b.longAscNode - a.longAscNode) > tolerance
-    || Math.abs(b.argPerihelion - a.argPerihelion) > tolerance;
+    || Math.abs(b.argPerihelion - a.argPerihelion) > tolerance) return true;
+  // The phase leg has its own, much looser tolerance: it is not asking
+  // whether the ELLIPSE moved (it has not) but whether the body has run
+  // far enough along it to fall off the vertex the polyline was anchored
+  // on. Sharing the shape tolerance here would rewrite every ring every
+  // frame, since a body crosses that much phase almost immediately.
+  if (live.eccentricAnomaly === undefined || built.eccentricAnomaly === undefined) {
+    return false;
+  }
+  return Math.abs(wrapAngle(live.eccentricAnomaly - built.eccentricAnomaly))
+    > RING_PHASE_ANCHOR_TOLERANCE;
 }
 
 /**
@@ -167,17 +194,28 @@ export function ringVisibility(
  * - `out` — buffer of length `segments * 3` (xyz triples). The
  *   ellipse is laid out in the local xy plane (z = 0); the caller
  *   rotates it into the host's orbital plane afterwards.
+ * - `startEccAnomalyRad` — where vertex 0 sits. The loop parameter IS the
+ *   eccentric anomaly here (x = a·cos E − ae, y = b·sin E), so passing the
+ *   body's own E puts a vertex exactly ON the body.
+ *
+ * That last argument is what stops a focused planet swimming against its
+ * own ring. The body lies on the true ellipse; the ring is an inscribed
+ * `segments`-gon that falls up to `a·(π/N)²/2` inside it — 429 km at
+ * Pluto, a third of its radius — and the offset cycles 0 → max → 0 as the
+ * body crosses each vertex, which reads as the ring drifting while the
+ * planet is held still. Anchored, the offset is identically zero.
  */
 export function buildEllipsePoints(
   aPc: number,
   e: number,
   segments: number,
   out: Float32Array | Float64Array,
+  startEccAnomalyRad = 0,
 ): void {
   const b = aPc * Math.sqrt(1 - e * e);
   const c = aPc * e;
   for (let i = 0; i < segments; i++) {
-    const t = (i / segments) * Math.PI * 2;
+    const t = startEccAnomalyRad + (i / segments) * Math.PI * 2;
     out[i * 3 + 0] = aPc * Math.cos(t) - c;
     out[i * 3 + 1] = b * Math.sin(t);
     out[i * 3 + 2] = 0;
@@ -298,7 +336,7 @@ export function writeRingVerts(
   hostQuat: Readonly<THREE.Quaternion>,
 ): number {
   const aPc = g.aAu * AU_PC;
-  buildEllipsePoints(aPc, g.e, ORBIT_LINE_SEGMENTS, verts);
+  buildEllipsePoints(aPc, g.e, ORBIT_LINE_SEGMENTS, verts, g.eccentricAnomaly ?? 0);
   _writeQuat.copy(hostQuat);
   if (g.refPoleRaDeg !== undefined && g.refPoleDecDeg !== undefined) {
     _writeQuat.multiply(
@@ -395,22 +433,46 @@ export class OrbitRingsLayer {
   }
 
   /**
-   * Re-derive host-centred ring geometry from the live element source
-   * (secular a/e + orientation move planet rings; moon elements carry no
-   * secular terms, so parent-centred rings are constant in `t`).
+   * Re-derive ring geometry from the live element source — **every ring,
+   * host-centred and parent-centred alike**.
    *
-   * Evaluating the elements is nine cheap solves the same `t` already pays
-   * for the body positions; rewriting 8192 vertices and re-uploading the
-   * buffer is what costs, so only a ring whose elements actually moved gets
-   * rewritten. That is what keeps the cost bounded at any scrub rate, where
-   * keying on elapsed sim time did not.
+   * Moon rings were skipped here on the reasoning that moon elements carry
+   * no secular terms and are constant in `t`. That is true of the 17
+   * Kepler moons and false of Earth's Moon, whose ring is the osculating
+   * ellipse through the lunar theory's own state and moves continuously:
+   * skipping it froze the ring at whatever `t` the system was attached at,
+   * leaving the Moon up to 19 000 km — 5 % of its distance — off its own
+   * ring after a year of scrubbing.
+   *
+   * The drift gate, not the body kind, is what keeps this cheap. A Kepler
+   * moon returns identical elements at every `t`, so it fails the gate on
+   * five float compares and is never rewritten; the Moon's fastest element
+   * (its rapidly precessing osculating apse) crosses the tolerance in
+   * ~1 s of model time, so at 1× it rewrites every few seconds and under
+   * scrub every frame — the same regime the planet rings already run in.
+   *
+   * Evaluating the elements is cheap solves the same `t` already pays for
+   * the body positions; rewriting 8192 vertices and re-uploading the
+   * buffer is what costs, so only a ring whose elements actually moved
+   * gets rewritten. That is what keeps the cost bounded at any scrub rate,
+   * where keying on elapsed sim time did not.
+   *
+   * Runs AFTER the visibility pass, and only over rings that survived it.
+   * A ring nothing is drawing has no vertices worth rewriting, and the
+   * Moon's is the expensive case both ways: it crosses the drift
+   * tolerance in ~1 s of model time, so it would otherwise rewrite and
+   * re-upload every frame under scrub whether or not it is on screen.
+   * With every ring sub-pixel the element evaluation itself is skipped —
+   * for Sol that is three lunar-theory evaluations and their precession
+   * frames, per frame, for nothing.
    */
   private refreshGeometry(t: number): void {
+    if (!this.rings.some((r) => r.line.visible)) return;
     const geoms = this.ps?.orbitGeometryAt?.(t);
     if (!geoms) return;
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
-      if (r.parentIdx !== null) continue;
+      if (!r.line.visible) continue;
       if (!ringGeometryDrifted(r.built, geoms[i])) continue;
       r.semiMajorPc = writeRingVerts(r.master, geoms[i], this.hostQuat);
       r.built = geoms[i];
@@ -447,7 +509,6 @@ export class OrbitRingsLayer {
     this.group.visible = true;
     perfMark('solar.rings');
     if (hostLocalPos) this.hostLocal.copy(hostLocalPos);
-    this.refreshGeometry(t);
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dHost = camera.position.distanceTo(this.hostLocal);
@@ -482,8 +543,10 @@ export class OrbitRingsLayer {
         this.rings[g.idxs[k]].line.visible = visible[k];
       }
     }
-    // Position pass, after visibility so an invisible ring never pays a
-    // rebake. A ring flipping visible is positioned the same frame.
+    // Geometry and position passes both run after visibility, so an
+    // invisible ring pays neither a rewrite nor a rebake. A ring flipping
+    // visible gets both the same frame.
+    this.refreshGeometry(t);
     for (const r of this.rings) {
       if (!r.line.visible) continue;
       trackAnchoredLine(r.line, r.master, r.bakedCentre, r.centre);

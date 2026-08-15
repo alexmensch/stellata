@@ -71,6 +71,11 @@ src/client/solar-system/planets/
                                   mirror of the mesh shader's caster loop.
                                   Io-transit / lunar-eclipse search tests
                                   on the real ephemeris.
+  eclipses/                       The event-level half of the same story:
+                                  where a shadow axis meets a surface, and
+                                  the named-eclipse regression corpus that
+                                  pins it against NASA's Five Millennium
+                                  Canon. Its own README.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
   planet-mesh.vert.glsl,

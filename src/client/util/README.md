@@ -5,12 +5,20 @@ also hosts `astronomy-constants.ts`, the single source of truth for
 physical / astronomical constants shared across the client runtime,
 build scripts, tests, and shader uniforms.
 
-- `astronomy-constants.ts` — `AU_PER_PC` / `AU_PC` / `AU_KM` / `KM_PC` /
-  `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` / `ARCSEC_TO_RAD` /
-  `J2000_JD` / `J2000_OBLIQUITY_RAD` / `DAYS_PER_JULIAN_YEAR` /
-  `LIGHT_TIME_PER_AU_S`. Import from here
-  rather than re-derive — drift between sites is the failure mode this module
-  is designed to prevent.
+- `angles.ts` (+ test) — `wrapAngle(a)` / `wrapDegrees(d)`, the signed
+  wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
+  a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
+  clock's bounds and a loop would iterate millions of times to bring that
+  back. `wrapAngle` used to live in `kepler-solver.ts`.
+- `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
+  `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
+  `ARCSEC_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
+  `DAYS_PER_JULIAN_YEAR` / `LIGHT_TIME_PER_AU_S` / `RA_HOURS_TO_DEG`.
+  Canonical values, one definition each, so client / build-script /
+  shader consumers can't drift on precision — import from here rather
+  than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
+  catalogue RA column and sexagesimal boundary coordinate goes through;
+  tests import it rather than restating 15.
 - `attribute-upload.ts` (+ test) — partial GPU re-upload for an
   instanced attribute whose per-frame writes land on a small, fixed
   subset of items. `DirtyItemUploader` diffs those items against the
@@ -27,6 +35,13 @@ build scripts, tests, and shader uniforms.
   after either reports every tracked item, which is the truth in both
   cases (no GPU buffer yet / a stale one). Consumer + the invariants it
   rides on: `../binaries/README.md` § Partial re-upload.
+- `ecliptic-frame.ts` (+ test) — `icrsToEcliptic` / `eclipticToIcrs`, the
+  fixed `Rx(±ε)` pair about the J2000 obliquity, on plain `{x, y, z}`
+  and safe to alias `out` with `v` (the moon resolver does). This is the
+  scalar form; `orbit-rings-layer.ts`'s `refPlaneToEclipticQuat` is the
+  quaternion one the ring vertices ride, and the two are parity-pinned
+  against each other. Sign trap: the north ecliptic pole comes back with
+  a NEGATIVE y — see `../solar-system/ephemerides/README.md` § Gotchas.
 - `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
   projection resolves against: `equatorialTangentBasisRad` (core) /
   `equatorialTangentBasis` (degrees) / `equatorialTangentBasisAt(x, y, z)`
@@ -50,9 +65,16 @@ build scripts, tests, and shader uniforms.
   indexed**: with no `position` attribute the renderer derives its draw
   count from `index.count`, so an un-indexed geometry silently draws
   nothing.
-- `kepler-solver.ts` — `solveKepler(M, e)` + `wrapAngle(a)` Newton
+- `kepler-solver.ts` (+ test) — `solveKepler(M, e)`, the Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
-  orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults.
+  orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults. Also the
+  element↔state pair `orbitalStateToCartesian` and its inverse
+  `cartesianToOrbitalElements` — the inverse is what lets a body
+  positioned by a *series* rather than by elements still get an orbit
+  ring that passes through it (the Moon; `../solar-system/ephemerides/README.md`
+  § Orbit rings). The inverse also returns the eccentric anomaly, which
+  the ring layer anchors its first vertex on; it comes out of `r` and
+  `r·v` directly rather than from a second Kepler solve.
 - `orbit-line.ts` — shared bits of the line overlays
   (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
   `solar-system/probes/probe-path-layer.ts`,
@@ -87,18 +109,30 @@ build scripts, tests, and shader uniforms.
   two large float32 quantities per vertex and the line visibly jitters
   under camera motion at close framings (the Pluto-focus wobble).
 - `precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
-  of another epoch: the IAU 1976 (Lieske) angles
-  (`precessionAnglesFromJ2000`), the rotation they compose
-  (`precessionRotationFromJ2000`), and its forward / inverse application
-  to a direction or a `SkyPosition`. `besselianEpochToJd` supplies
-  `B1875_JD`, the equinox the IAU constellation boundaries are drawn at —
-  the θ sign and the epoch are both silent-failure modes, documented in
-  `../constellation-boundaries/iau-geometry/README.md` § B1875.
-- `astronomy-constants.ts` — canonical values, one definition each, so
-  client / build-script / shader consumers can't drift on precision.
-  `RA_HOURS_TO_DEG` is the hours→degrees factor every catalogue RA column
-  and sexagesimal boundary coordinate goes through; tests import it
-  rather than restating 15.
+  of another epoch, in **two models with different validity windows**:
+  - **IAU 1976 (Lieske)** — `precessionAnglesFromJ2000`, the rotation
+    they compose (`precessionRotationFromJ2000`), and its forward /
+    inverse application to a direction or a `SkyPosition`.
+    `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
+    constellation boundaries are drawn at — the θ sign and the epoch are
+    both silent-failure modes, documented in
+    `../constellation-boundaries/iau-geometry/README.md` § B1875. Cubic
+    polynomials: right for the 125 years back to B1875, arcminutes off at
+    the model clock's bounds.
+  - **Vondrák, Capitaine & Wallace 2011** — `longTermEclipticPole` /
+    `longTermEquatorPole` / `longTermEquinox` and the two frames they
+    build (`longTermEclipticRotationFromJ2000`,
+    `longTermEquatorRotationFromJ2000`), valid ±200 kyr. This is the one
+    the model clock's span needs: the lunar theory's equinox-of-date
+    frame and Earth's own pole both read it.
+
+  The two coexist deliberately and are pinned against each other inside
+  the overlap (they agree to 0.15″ near the present, 0.37″ at B1875).
+  Don't replace the Lieske path with the long-term one to "DRY them up" —
+  the boundary geometry is pinned to arcsecond edge cases at B1875.
+  Vondrák carries its own obliquity constant (84381.406″, IAU 2006) for
+  the same reason: it is part of the published series, not a duplicate of
+  `J2000_OBLIQUITY_RAD`.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.

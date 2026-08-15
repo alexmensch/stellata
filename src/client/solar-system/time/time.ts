@@ -2,6 +2,7 @@
 // See src/client/solar-system/README.md § Time.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
+import { deltaTSeconds } from './delta-t-pure';
 
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z). Subtracting
 // from any JD gives Unix-seconds × 86400.
@@ -19,27 +20,22 @@ export function tToJDE(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
 
-/**
- * TT − UTC, seconds: 32.184 s (TT − TAI) plus the 37 leap seconds in force
- * since 2017-01-01. TDB departs from TT by under 2 ms, which no ephemeris here
- * resolves.
- *
- * Held constant across the whole clock rather than tabulated: leap seconds
- * only ever accrued at a few seconds per decade, and ±5 s of drift moves
- * Mercury by 1.6e-6 AU — three orders under the element tables' bound.
- */
-export const TT_MINUS_UTC_S = 69.184;
-
 /** Unix-seconds → Julian Date in the **TDB** scale the JPL element tables and
  *  the Standish series are both defined against. Every ephemeris evaluation
- *  reads through here; `tToJDE` is the UTC-scale sibling and is 69 s earlier. */
+ *  reads through here; `tToJDE` is the universal-time sibling, ΔT earlier.
+ *  TDB departs from TT by under 2 ms, which no ephemeris here resolves. */
 export function tToJdTdb(t: number): number {
-  return tToJDE(t) + TT_MINUS_UTC_S / 86400;
+  const jdUt = tToJDE(t);
+  return jdUt + deltaTSeconds(jdUt) / 86400;
 }
 
-/** Julian Date TDB → Unix-seconds. Inverse of `tToJdTdb`. */
+/** Julian Date TDB → Unix-seconds. Inverse of `tToJdTdb`. ΔT changes by
+ *  under 1e-6 of itself across one ΔT, so the fixed point converges to
+ *  well under a microsecond in a single pass; three are taken for free. */
 export function jdTdbToT(jdTdb: number): number {
-  return jdeToT(jdTdb - TT_MINUS_UTC_S / 86400);
+  let jdUt = jdTdb;
+  for (let i = 0; i < 3; i++) jdUt = jdTdb - deltaTSeconds(jdUt) / 86400;
+  return jdeToT(jdUt);
 }
 
 /** Julian Date → Unix-seconds. Inverse of `tToJDE`. */
