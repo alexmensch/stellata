@@ -1862,6 +1862,9 @@ export class Stellata implements FrameAnchor {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    // TrackballControls caches the canvas rect once, in its constructor, and
+    // its rotate math measures the drag against that cached centre and width.
+    this.controls.handleResize();
     this.hdr.syncSize();
     this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.sharedUniforms.uViewport.value.set(w, h);

@@ -58,8 +58,15 @@ Current settings:
 - `staticMoving = false` (keeps damping on)
 - `noPan = true`, permanently — there is no camera-translate gesture at
   all (orbit, dolly, roll). `panSpeed` is therefore unset: `update()`
-  never calls `panCamera`. Note `checkDistances` (the min/max-distance
+  never calls `_panCamera`. Note `_checkDistances` (the min/max-distance
   clamp) only runs while `!noZoom || !noPan`, so it survives on `noZoom`.
+- **`handleResize()` has to be called on every window resize**, from
+  `Stellata.onResize`. TrackballControls measures a drag against a `screen`
+  rect it caches once in its constructor and never refreshes itself, and the
+  rotate gesture divides by that cached width and centres on it — so after a
+  resize the trackball's virtual centre sits at the old canvas centre and the
+  rotation rate is scaled by the old width. Not a fat-finger bug: it survives
+  a page's whole session and only ever gets worse.
 - `keys = ['', '', '']` — empty drag-mode slots retire TrackballControls'
   A/S/D defaults, which otherwise swallow the `S` grid and `D` debug
   shortcuts. Load-bearing; don't restore the defaults.
