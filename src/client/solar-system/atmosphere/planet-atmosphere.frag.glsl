@@ -67,10 +67,11 @@ void main() {
   // whose source factor is One, so the fade has to ride the channels as
   // well as the alpha.
   float airL = dot(col, STELLATA_LUMA_WEIGHTS) * uFade;
-  outStatistic = stellataStatisticTexel(airL, airL, opacity * uFade);
+  float a = opacity * uFade;
+  outStatistic = stellataStatisticTexel(airL, a, a);
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
-  outColor = vec4(col * uFade, opacity * uFade);
-  outDiffuse = stellataOccluderTexel(opacity * uFade);
+  outColor = vec4(col * uFade, a);
+  outDiffuse = stellataOccluderTexel(a);
 }

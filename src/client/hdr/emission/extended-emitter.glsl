@@ -78,7 +78,7 @@ void stellataEmitExtendedSource(
 ) {
     float physicalL = dot(column, STELLATA_LUMA_WEIGHTS)
         * stellataSurfaceBrightnessLuminance(exposure, magPerArcsec2, omegaPxArcsec2);
-    statistic = stellataStatisticTexel(physicalL, physicalL, 1.0);
+    statistic = stellataStatisticTexel(physicalL, 0.0, 1.0);
 
     // Clamped before the convolution rather than after, so fp16 additive
     // accumulation across overlapping volumes cannot overflow. Nothing

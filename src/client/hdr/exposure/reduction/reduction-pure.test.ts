@@ -7,6 +7,7 @@ import {
   type ReductionTexel,
   reductionLevelSizes,
   rescaleToBaseExposure,
+  statisticTexelToReduction,
 } from './reduction-pure';
 
 const shader = readFileSync(
@@ -16,12 +17,17 @@ const shader = readFileSync(
 
 /** Run a whole frame of level-0 texels through the chain the shader draws,
  *  so the 1x1 result can be compared against the true mean directly. */
-function reduceFrame(width: number, height: number, flux: (x: number, y: number) => number) {
+function reduceFrame(
+  width: number,
+  height: number,
+  flux: (x: number, y: number) => number,
+  mask: (x: number, y: number) => number = () => 0,
+) {
   let level: ReductionTexel[][] = [];
   for (let y = 0; y < height; y++) {
     level.push([]);
     for (let x = 0; x < width; x++) {
-      level[y].push({ mean: flux(x, y), peak: flux(x, y), weight: 1 });
+      level[y].push(statisticTexelToReduction(flux(x, y), mask(x, y)));
     }
   }
   for (const [w, h] of reductionLevelSizes(width, height)) {
@@ -87,21 +93,46 @@ describe('the reduced mean', () => {
   });
 });
 
-describe('the reduced peak', () => {
-  it('is the frame max, not a mean of any kind', () => {
+describe('the masked mean and the coverage', () => {
+  /** A 16x16 lit surface of true brightness 40 in the corner of a 64x64
+   *  frame, over a faint star field the mask never claims. */
+  const litSquare = (x: number, y: number) => (x < 16 && y < 16 ? 1 : 0);
+
+  it('divides out to the lit surface own mean, whatever it covers', () => {
+    // The property the exposure pin rests on: D is the masked mean over the
+    // masked area, so it is the surface's brightness and nothing else's.
+    for (const side of [4, 16, 48, 64]) {
+      const inside = (x: number, y: number) => (x < side && y < side ? 1 : 0);
+      const reduced = reduceFrame(64, 64, (x, y) => 40 * inside(x, y) + 0.01, inside);
+      expect(reduced.coverage).toBeCloseTo((side * side) / 4096, 12);
+      expect(reduced.surface / reduced.coverage).toBeCloseTo(40.01, 9);
+    }
+  });
+
+  it('leaves the pin untouched by light outside the mask', () => {
+    const dim = reduceFrame(64, 64, (x, y) => 40 * litSquare(x, y), litSquare);
+    const glared = reduceFrame(
+      64, 64, (x, y) => 40 * litSquare(x, y) + 900 * (1 - litSquare(x, y)), litSquare);
+    expect(glared.mean).toBeGreaterThan(20 * dim.mean);
+    expect(glared.surface / glared.coverage).toBeCloseTo(dim.surface / dim.coverage, 9);
+  });
+
+  it('reads zero coverage on a frame with no lit surface in it', () => {
     const reduced = reduceFrame(13, 7, (x, y) => (x === 9 && y === 2 ? 500 : 1));
-    expect(reduced.peak).toBe(500);
+    expect(reduced.coverage).toBe(0);
+    expect(reduced.surface).toBe(0);
   });
 
   it('survives a level whose taps are all out of bounds but one', () => {
-    expect(combineReductionTexels([{ mean: 7, peak: 500, weight: 0.25 }]))
-      .toEqual({ mean: 7, peak: 500, weight: 0.0625 });
+    expect(combineReductionTexels([{ mean: 7, surface: 3, coverage: 0.5, weight: 0.25 }]))
+      .toEqual({ mean: 7, surface: 3, coverage: 0.5, weight: 0.0625 });
   });
 });
 
 describe('combineReductionTexels', () => {
   it('reads an all-empty output texel as zero rather than NaN', () => {
-    expect(combineReductionTexels([])).toEqual({ mean: 0, peak: 0, weight: 0 });
+    expect(combineReductionTexels([]))
+      .toEqual({ mean: 0, surface: 0, coverage: 0, weight: 0 });
   });
 });
 
@@ -115,7 +146,9 @@ describe('GLSL drift', () => {
   });
 
   it('divides the outgoing weight by the same window area', () => {
-    const combined = combineReductionTexels([{ mean: 0, peak: 0, weight: 1 }]);
+    const combined = combineReductionTexels([
+      { mean: 0, surface: 0, coverage: 0, weight: 1 },
+    ]);
     expect(shader).toContain('weight * 0.25');
     expect(combined.weight).toBe(0.25);
   });
@@ -123,16 +156,22 @@ describe('GLSL drift', () => {
   it('drops out-of-bounds taps from the weight, not just the numerator', () => {
     expect(shader).toMatch(/if \(c\.x >= bound\.x \|\| c\.y >= bound\.y\) continue;/);
     expect(shader).toContain('weight += t.a');
-    expect(shader).toContain('numerator += t.a * t.r');
+    expect(shader).toContain('numerator += t.a * s');
   });
 
   it('reads an all-empty output texel as zero rather than NaN, like the spec', () => {
-    expect(shader).toContain('weight > 0.0 ? numerator / weight : 0.0');
+    expect(shader).toContain('weight > 0.0 ? numerator / weight : vec3(0.0)');
     expect(combineReductionTexels([]).mean).toBe(0);
   });
 
-  it('maxes the peak channel instead of averaging it', () => {
-    expect(shader).toContain('peak = max(peak, t.g)');
+  it('forms the masked-mean numerator only on the pass reading the attachment', () => {
+    // Level 0 is the RG16F statistic, which carries the flux and the mask
+    // but no product of the two; every level after it already has one, and
+    // multiplying again there would square the mask.
+    expect(shader).toContain('uFromStatistic > 0.5 ? vec3(t.r, t.r * t.g, t.g) : t.rgb');
+    const level0 = statisticTexelToReduction(9, 1);
+    expect(level0).toEqual({ mean: 9, surface: 9, coverage: 1, weight: 1 });
+    expect(statisticTexelToReduction(9, 0).surface).toBe(0);
   });
 });
 

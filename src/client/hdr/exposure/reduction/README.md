@@ -1,10 +1,11 @@
 # Reduction — the frame measures itself
 
 The mip chain that turns the HDR target's **statistic attachment** into
-two numbers — the frame's area-weighted mean luminance and its brightest
-pixel — and the frame-late readback of them. `../README.md` § Adaptation
-owns what the two numbers then do; `../../README.md` § Statistic
-attachment owns what writes them.
+three numbers — the frame's area-weighted mean luminance, the same mean
+restricted to lit resolved surfaces, and the frame fraction those surfaces
+cover — and the frame-late readback of them. `../README.md` § Adaptation
+owns what the three numbers then do; `../../attachments/README.md` owns
+what writes the two channels they come out of.
 
 ## Files
 
@@ -12,10 +13,11 @@ attachment owns what writes them.
 src/client/hdr/exposure/reduction/
   reduction-pure.ts (+ test)  The level sizes, the weighted 2x2 combine the
                               shader runs (the EXECUTABLE SPEC, not a CPU
-                              mirror anything invokes at runtime), and the
+                              mirror anything invokes at runtime), the
+                              level-0 channel expansion, and the
                               base-exposure rescale.
-  reduce.frag.glsl            One level: weighted mean of the flux channel,
-                              max of the peak channel.
+  reduce.frag.glsl            One level: three weighted means, and the
+                              masked-mean product formed at level 0.
   reduction-pass.ts           LuminanceReduction — the chain of targets, the
                               draws, and the readback. Needs a live GL
                               context, hence no test of its own.
@@ -46,8 +48,23 @@ Level 0 is the statistic attachment itself. Each level after it is
 the (at most four) parent texels that exist:
 
 ```
-mean = Σ wᵢ·meanᵢ / Σ wᵢ        peak = max peakᵢ        w = Σ wᵢ / 4
+mean = Σ wᵢ·meanᵢ / Σ wᵢ    surface, coverage likewise    w = Σ wᵢ / 4
 ```
+
+**Every channel is a weighted mean, including the coverage one**, because
+the fraction of a region that is lit surface is the mean of a 0/1 indicator
+over it. The exposure pin then divides two of them — `surface / coverage`
+is the mean of `L` over the masked texels alone, so light *outside* the
+mask (a glare halo, the star field, the band) raises `L̄` and cannot touch
+the pin.
+
+**The masked product is formed at level 0 and nowhere else.** The
+attachment is RG16F — flux in R, mask in G — so the first pass expands
+`(r, g)` into `(r, r·g, g)` under `uFromStatistic`, and every level after
+it already carries three means. Multiplying again at a later level would
+square the mask. Level 0 is also where the weight comes free: RG16F has no
+alpha, so `texelFetch` returns 1, which is exactly the weight one
+attachment texel should carry.
 
 **The weight channel is what makes a non-power-of-two frame exact.** A
 texel's `w · 4^k` is the number of level-0 texels behind it, that product
@@ -64,6 +81,12 @@ That is the reason the weight rides alpha rather than blue.
 RGBA/FLOAT pair for that format and not for RGBA16F; one texel of it costs
 nothing, and the fp16 levels above keep the chain's memory in the
 megabytes.
+
+**Three means fit the four channels an RGBA level target already had** —
+R, G, B and the weight in A — so the coverage term costs no new pass, no
+new target and no widening of the attachment. What paid for it was the
+highlight guard retiring: the max of the peak channel had no consumer left
+(`../README.md` § Adaptation).
 
 fp16 flushes a level texel whose local mean falls under ~6e-8 to zero.
 That is a bound on *isolated* faint light — a lone threshold star
@@ -100,13 +123,21 @@ frame it describes.
 With that division the measurement is invariant to `dm` and there is no
 loop. The one remaining nonlinearity is `LUMA_CEIL`.
 
-**The `LUMA_CEIL` clamp is fine, and this is why.** Both channels clamp at
-4096 before the write, so a wide-open frame containing Sol reads a lower
-bound rather than the truth. A lower bound can only under-cut, so the loop
-converges **from above**, bounded at `2.5·log10(LUMA_CEIL / L_CAP)` = 8.4
-magnitudes of cut per measurement — Sol from wide open settles in two
-frames, well inside `ADAPT_SLEW_TAU_S`. At a settled cut nothing is
-clamped: Sol's pixels sit near 3500.
+**The `LUMA_CEIL` clamp is fine, and this is why.** The flux channel
+clamps at 4096 before the write, so a wide-open frame containing Sol reads
+a lower bound rather than the truth. A lower bound can only under-cut, so
+the loop converges **from above**, bounded at
+`2.5·log10(LUMA_CEIL / L_TARGET)` = 9.2 magnitudes of cut per measurement —
+Sol from wide open settles in two frames, well inside `ADAPT_SLEW_TAU_S`.
+At a settled cut nothing is clamped: Sol's pixels sit near 3500.
+
+**The mask channel never clamps and never rescales**, which is what keeps
+the pin open-loop where the retired guard was not. A railed *peak* fed the
+cut it had produced — clamp before `rescaleToBaseExposure` and the reported
+peak becomes `LUMA_CEIL · base / live`, so a deeper cut demanded a deeper
+one still, which is what Mars's hunting at park was. Coverage is a fraction
+of texels: it is invariant to the exposure by construction, and only the
+flux half of `D` passes through the rescale at all.
 
 ## Latency
 

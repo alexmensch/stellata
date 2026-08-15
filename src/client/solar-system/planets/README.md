@@ -217,6 +217,14 @@ diffuse attachment by their own opacity as well as emitting. The additive
 glare needs nothing: an additive blend cannot attenuate
 (`../../hdr/attachments/README.md` § The gate).
 
+**They are also the only emitters in the client that claim lit-surface
+coverage**, the term the exposure pin divides its masked mean by
+(`../../hdr/exposure/README.md` § Adaptation). The mesh claims its **lit
+hemisphere alone** — `step(0, sunCos) · step(0.5, shadow)`, the geometric
+terminator, so a crescent exposes its crescent rather than being pulled
+dark by the night side it happens to present. The glare claims nothing: it
+draws a kernel, and its flux belongs in the frame mean only.
+
 ## Planet mesh LOD
 
 On close approach the reflected glare hands off to a real oblate

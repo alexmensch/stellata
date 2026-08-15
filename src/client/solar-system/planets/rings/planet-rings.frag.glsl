@@ -85,7 +85,7 @@ void main() {
   vec3 col = min(
       strip.rgb * light * uAirlightLuminance * INV_PI, vec3(STELLATA_LUMA_CEIL));
   float ringL = dot(col, STELLATA_LUMA_WEIGHTS);
-  outStatistic = stellataStatisticTexel(ringL, ringL, strip.a * uFade);
+  outStatistic = stellataStatisticTexel(ringL, 1.0, strip.a * uFade);
   // Undithered — the annulus alpha-blends over the body mesh, so a pixel
   // can take both fragments (../../../hdr/README.md § Operator).
   if (uHdrTarget < 0.5) {

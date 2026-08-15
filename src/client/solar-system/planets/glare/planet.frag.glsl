@@ -86,7 +86,7 @@ void main() {
   // Alpha 1 on the statistic attachment: one blend equation runs over both,
   // so the additive pass's SrcAlpha factor would scale the flux channel a
   // second time and its integral would come out short.
-  outStatistic = stellataStatisticTexel(vFluxPeakL * glow, vPeakL * glow, 1.0);
+  outStatistic = stellataStatisticTexel(vFluxPeakL * glow, 0.0, 1.0);
   if (uHdrTarget > 0.5) {
     outColor = vec4(emitted, glow);
     return;

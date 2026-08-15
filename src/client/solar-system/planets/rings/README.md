@@ -38,6 +38,13 @@ pass cannot do this) — new close-range geometry belongs in the local pass,
 not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
 
+**The annulus is part of the subject the exposure pin exposes for**: it
+claims lit-surface coverage at mask 1, and the one blend equation scales
+that by the same strip opacity it scales the flux by, so the ratio the pin
+reads comes out alpha-invariant (`../../../hdr/attachments/README.md`
+§ The unit). A parked Saturn is therefore exposed for globe and rings
+together, area-weighted, rather than for whichever is brighter.
+
 **Rings do dim a source behind them in the exposure statistic** — no
 z-test could, they write no depth. The annulus composites over its
 statistic texel like any other alpha-blended emitter, at the strip's
