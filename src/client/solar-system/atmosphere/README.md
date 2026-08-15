@@ -100,7 +100,8 @@ airlight drives the exposure like any other light
 statistic used to walk a per-source model carrying reflected host light
 alone, and at `α → 180°` — exactly where the Mie forward peak paints the
 Cassini ring this model was built for — the two disagreed by ~11
-magnitudes and a backlit Titan blew out.
+magnitudes and a backlit Titan blew out. Its coverage claim rides opacity and
+`litFrac`, the chord's sunlit share (`../../hdr/attachments/README.md`).
 
 ## Skylight — the lit air scattering light back down
 

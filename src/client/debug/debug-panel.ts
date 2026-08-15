@@ -9,6 +9,7 @@ import {
   hexToRgb,
   parsePosition,
   rgbToHex,
+  selectionTouches,
 } from './debug-panel-pure';
 
 const POS_KEY = 'stellata.debug.position';
@@ -257,14 +258,33 @@ export interface DiagnosticReadoutOpts {
 }
 
 /** Green-on-black selectable mono block — the shape every live readout in
- *  the panel writes `textContent` into. */
+ *  the panel takes. Write into it with `setReadoutText`, never
+ *  `textContent` directly. */
 export function makeMonoReadout(extraCss = ''): HTMLDivElement {
   const el = document.createElement('div');
   el.style.cssText =
     'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
     'color:#0f0;padding:6px 8px;border-radius:4px;' +
-    'white-space:pre;overflow-x:auto;user-select:text;cursor:text;' + extraCss;
+    'white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;cursor:text;' + extraCss;
   return el;
+}
+
+function selectionRanges(sel: Selection): Range[] {
+  const out: Range[] = [];
+  for (let i = 0; i < sel.rangeCount; i++) out.push(sel.getRangeAt(i));
+  return out;
+}
+
+/** Write a live readout's text, holding the write while a selection touches
+ *  it. Rewriting `textContent` replaces the text node and collapses any
+ *  selection over it, so a per-frame readout is impossible to drag-select
+ *  without this gate — which is every readout in the panel. The dedupe
+ *  lives here too, so no caller keeps its own last-text cache. */
+export function setReadoutText(el: HTMLElement, text: string): void {
+  if (el.textContent === text) return;
+  const sel = document.getSelection();
+  if (sel && !sel.isCollapsed && selectionTouches(el, selectionRanges(sel))) return;
+  el.textContent = text;
 }
 
 /** Mono readout plus the [click to reset latches] link — pin-debug-hud and

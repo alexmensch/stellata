@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { type DebugSection, makeMonoReadout, makeSlider } from './debug-panel';
+import { type DebugSection, makeMonoReadout, makeSlider, setReadoutText } from './debug-panel';
 
 // Dev-only tuning section for star-disc rendering. Each slider drives one
 // uniform on the shared star material. Defaults match the production
@@ -23,19 +23,17 @@ export function buildStarSection(stellata: Stellata): DebugSection {
   body.appendChild(kReadout);
 
   let visible = true;
-  let last = '';
   const onFrame = () => {
     if (!visible) return;
     const f = stellata.filters.getFilter();
-    const text =
+    setReadoutText(
+      kReadout,
       `K ${stellata.filters.getStarExaggerationK().toFixed(3)}`
       + `  (×${stellata.filters.getStarKMultiplier().toFixed(2)} slider)\n`
       + `plate ${stellata.filters.getArcsecPerPx().toFixed(2)}″/px`
       + `  fov ${stellata.filters.getCameraFov().toFixed(1)}°\n`
-      + `sizeMin ${f.sizeMin.toFixed(2)}px  sizeMax ${f.sizeMax.toFixed(2)}px`;
-    if (text === last) return;
-    last = text;
-    kReadout.textContent = text;
+      + `sizeMin ${f.sizeMin.toFixed(2)}px  sizeMax ${f.sizeMax.toFixed(2)}px`,
+    );
   };
   onFrame();
   const unsubscribe = stellata.on('frame', onFrame);

@@ -43,7 +43,7 @@ nothing translucent, blurred, or filtered over it. Adding a
 | § | Patches | What it catches |
 | --- | --- | --- |
 | Black point | `1 2 3 4 6 8 11 16` on `0` | shadow crush — the failure that matters most, since the scene is faint sources on black |
-| Highlights | `238…254` on `255` | top-end crush, which is what the highlight guard compensates for |
+| Highlights | `238…254` on `255` | top-end crush, which is what the resolved-surface pin compensates for |
 | Grey ramp | 16 steps `0`→`255` | whole-transfer sanity check |
 | Gamma | `174 180 186 191 195` | the display's actual exponent, γ `1.8`–`2.6` |
 

@@ -8,12 +8,14 @@ import reduceFrag from './reduce.frag.glsl?raw';
 import { ReductionReadback } from './reduction-readback';
 import { reductionLevelSizes } from './reduction-pure';
 
-/** One frame's reduced statistic, still in the exposure the frame was
- *  RENDERED with — `rescaleToBaseExposure` is the caller's step, because
- *  only the caller knows the instrument's base exposure. */
+/** One frame's reduced statistic. The two luminance channels are still in
+ *  the exposure the frame was RENDERED with — `rescaleToBaseExposure` is
+ *  the caller's step, because only the caller knows the instrument's base
+ *  exposure. `coverage` is a fraction and needs no rescale. */
 export interface ReducedStatistic {
   meanL: number;
-  peakL: number;
+  surfaceL: number;
+  coverage: number;
   renderExposure: number;
 }
 
@@ -42,6 +44,7 @@ export class LuminanceReduction {
       uniforms: {
         uSource: { value: null },
         uSourceSize: { value: new THREE.Vector2() },
+        uFromStatistic: { value: 0 },
       },
       vertexShader: fullscreenVert,
       fragmentShader: reduceFrag,
@@ -90,9 +93,10 @@ export class LuminanceReduction {
     let src = source;
     let srcW = width;
     let srcH = height;
-    for (const level of this.levels) {
+    for (const [i, level] of this.levels.entries()) {
       this.material.uniforms.uSource.value = src;
       (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
+      this.material.uniforms.uFromStatistic.value = i === 0 ? 1 : 0;
       renderer.setRenderTarget(level.target);
       renderer.render(this.scene, this.camera);
       src = level.target.texture;
@@ -140,7 +144,8 @@ export class LuminanceReduction {
     if (landed === undefined || landed === null) return;
     this.latest = {
       meanL: landed.pixels[0],
-      peakL: landed.pixels[1],
+      surfaceL: landed.pixels[1],
+      coverage: landed.pixels[2],
       renderExposure: this.pendingExposure,
     };
   }

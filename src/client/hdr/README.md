@@ -107,8 +107,8 @@ them.
 
 The target is MRT. **Attachment 0** is display luminance, from every emitter
 that draws a kernel or a surface. **Attachment 1 is RG16F**, carrying
-flux-correct luminance in R and peak-correct luminance in G for the exposure
-statistic to reduce. **Attachment 2** is the volumetric emitters' own: their
+flux-correct luminance in R and the lit-surface coverage mask in G for the
+exposure statistic to reduce. **Attachment 2** is the volumetric emitters' own: their
 display value gained by the eye's summation area but not yet averaged over
 it, which is what the resolve does (`summation/README.md`). Both extra
 attachments are gated per draw, so nothing reaches either by accident — the

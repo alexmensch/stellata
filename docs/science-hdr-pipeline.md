@@ -512,8 +512,8 @@ this premise coexists with a strictly global operator.
 the eye.** `dm` is slew-limited by a one-pole filter at 300 ms before it
 reaches `uExposure`. The reason is that the statistic is genuinely
 discontinuous in places the observer model has nothing to say about: a
-body crossing the frame edge, an occluder clearing, a brighter source
-entering and taking `peak_max` off the guard. Filtering the applied value
+body crossing the frame edge, an occluder clearing, a resolved surface
+crossing the coverage ramp. Filtering the applied value
 rather than the measurement keeps the model's claim intact — the
 measurement is still instantaneous best-case — while stopping a
 one-frame geometry change from reading as a flash. Warp bypasses it,
@@ -529,12 +529,12 @@ dm_eye  = min(0, −2.5 · log10(max(1, L̄ / L_ADAPT)))
 
 This section derives `dm_eye`, the **perception branch** — the scene
 measurement. What the frame applies is the display model's composition
-(§ 3.2's subsections *The highlight guard* and *The display floor*):
-where a resolved surface covers more than `L_ADAPT · (3/2) / L_CAP` of
-the frame the guard's pin governs, and everywhere else `dm_eye` applies
-bounded below by the floor, with a one-stop ramp joining the regimes.
-Neither term carries a perceptual claim, and nothing below changes: the
-measurement stays scene-referred and instantaneous.
+(§ 3.2's subsections *The resolved-surface pin* and *The display floor*):
+where a lit resolved surface covers `f_ref` or more of the frame the pin
+governs, everywhere under `f_ref/8` `dm_eye` applies bounded below by the
+floor, and a smoothstep over log coverage joins the two. Neither term
+carries a perceptual claim, and nothing below changes: the measurement
+stays scene-referred and instantaneous.
 
 `Aᵢ` is source *i*'s **true angular coverage** in pixels — never the
 K-exaggerated kernel, or the footprint exaggeration would drive
@@ -591,12 +591,11 @@ alternatives:
   resolved planet stays blown out — it fails the exact case the
   mechanism exists for.
 - **Not a maximum or a high percentile.** One bright pixel would crater
-  the frame: Sirius in view would dim the star field around it. (The
-  highlight guard *is* a maximum statistic, and this objection does not
-  reach it — the guard can only ever raise the exposure, so a bright
-  source entering the frame can never darken it through that branch.
-  Sirius, Venus from Earth, the full Moon and Sol at 1 AU all stay on
-  the perception branch, and the guard changes none of them.)
+  the frame: Sirius in view would dim the star field around it. This
+  objection killed the highlight guard too, one shipped version late — a
+  frame `max` is exactly a maximum statistic, and § 3.2 records what it
+  cost. What replaces it is a second *mean*, restricted to lit resolved
+  surfaces, which inherits none of the objection.
 - **The discriminator is angular extent, not luminance.** Venus filling
   the frame adapts the eye; Sirius as a point does not. Area weighting
   *is* that discriminator, and it is what pupil response physically
@@ -702,17 +701,21 @@ retires the earlier mid-band guess of 0.15. Ship `L_ADAPT` = **0.061**.
 
 Two consequences worth stating rather than discovering:
 
-- **The park framing is above the guard's handover**, so what actually
-  happens at park is the guard pinning the peak to `L_CAP` — 0.43 stops
-  over `L_TARGET`. `f_ref` therefore sets the *handover coverage* and the
-  behaviour below it, not the level at park (§ 3.2's subsection).
+- **The park framing IS where the pin takes over**, and the two branches
+  agree there exactly — `L_ADAPT = L_TARGET · f_ref` is that identity read
+  the other way. So `f_ref` sets both the level at park and the top of the
+  coverage ramp, and the ramp closes with no step of its own. (Through
+  v3.3 the guard governed at park instead, at `L_CAP` — 0.43 stops over
+  `L_TARGET` on a smooth sphere, and 1.2 to 3.5 mag over on a textured
+  one, which is the defect § 3.2 records.)
 - **The anchor no longer costs anything to lower.** It set the star
   walk's camera window, and dropping it 0.85 mag roughly tripled the
   squared-distance tests that walk ran. A frame reduction has no window:
   every drawn star is already in the buffer.
 
-`f_ref` and `L̄` are on the debug panel, alongside `peak_max`, all three
-branch terms and which of them governs (*shipped in H8*).
+`f_ref` and `L̄` are on the debug panel, alongside the measured coverage,
+the `D` they divide to, all three branch terms, the ramp weight and which
+of them governs (*shipped in H8*).
 
 Two rows from the same pass bound the other end, and both are consistent
 with the model rather than with a tuning error: Saturn at `L` = 0.259 and
@@ -747,9 +750,11 @@ display target:
   equatorial sphere darken the frame by ~0.3 mag.
 
 So attachment 1 is RG16F, written by physical emitters only — flux-correct
-luminance in R for the mean, peak-correct in G for the max — and gated per
+luminance in R, and the lit-resolved-surface mask in G — and gated per
 draw so chrome is excluded by construction rather than by patching every
 chrome call site. `src/client/hdr/attachments/README.md` is the contract.
+G carried peak-correct luminance for one shipped version; § 3.2 is where
+that channel changed hands.
 
 **The diffuse-field constant retires with the walk.** Its two rows were
 the frame's share of the threshold-star population and the Milky Way band,
@@ -789,15 +794,22 @@ over a band of coverages:
 - **The display floor narrows that claim to surfaces the floor never
   binds on.** A surface bright enough to need more than the floor's
   6.29 mag (Venus-class, ~3.6e5) settles far over the white point below
-  the handover, needing ~6 stops against the 3 the trim has — a
-  brilliant dot reads as a brilliant dot, and parking it is what exposes
-  it. Pinned in the same suite.
+  `f_ref/8`, needing ~6 stops against the 3 the trim has — a brilliant
+  dot reads as a brilliant dot, and parking it is what exposes it.
 
 **Above `f_ref / 8` the drift stops being a drift and becomes a hard
 ceiling, which the perception branch cannot fix at all** — that is what the
-highlight guard below is for. Everything in this list describes the
-perception branch in isolation, and it is what still happens *below* the
-handover coverage.
+resolved-surface pin below is for, and the ramp between `f_ref/8` and
+`f_ref` is where the two hand over. Everything in this list describes the
+perception branch in isolation, and it is what still happens *under* the
+ramp's foot.
+
+**A host star's photosphere never takes the pin, at any distance.** It is
+drawn by the point-source kernel, which writes no lit-surface mask, so Sol
+stays on the perception branch even filling the frame — clipped white,
+bounded by the floor. Deliberate and consistent with the paragraph below:
+the pin protects *resolved surfaces*, and the affordance for looking at a
+star is an instrument, not adaptation.
 
 **Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
 0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 *measures* −17.5 mag, the
@@ -855,8 +867,8 @@ every cinematic effect walks through:
   detail in a bright region and a faint one, in one frame, from a
   stationary camera. That is real, it is what the opening observation was
   about, and the answer to it is the camera and the trim rather than the
-  operator. It is also the one case the highlight guard patches — for the
-  dominant surface only.
+  operator. It is also the one case the resolved-surface pin patches — for
+  the dominant surface only.
 
   **The rule that replaces the discarded reason: spatial variation is
   permitted upstream of the operator, where it moves light, and forbidden
@@ -885,7 +897,7 @@ every cinematic effect walks through:
   operator change alone pays it.
 
   **Revisiting it.** If it ever ships, it ships as a **display
-  concession** in the highlight guard's sense — never as a perceptual
+  concession** in the resolved-surface pin's sense — never as a perceptual
   claim — and owes the same accounting: which display limit it works
   around, what it costs, and a name for what it exaggerates. The bar is
   the three constraints above: analytic invertibility for `chrome/` (or
@@ -917,7 +929,7 @@ magnitude. It once also named the source carrying most of the frame's
 flux; a frame-wide reduction has no per-source attribution to name, so
 that clause retired with the walk (§ 3.1).
 
-#### The highlight guard — a display concession, not a perceptual claim
+#### The resolved-surface pin — a display concession, not a perceptual claim
 
 Everything above this point in § 3 is a claim about an observer. This one
 is not, and it is the first thing in the pipeline that isn't:
@@ -930,11 +942,11 @@ is not, and it is the first thing in the pipeline that isn't:
 
 **This is the bounded, scalar form of what a local operator would do, and
 that is why accepting it is not the loophole § 3.2 warns about.** One
-scene-wide number protects the dominant surface's peak, so the guard cannot
+scene-wide number protects the dominant surface's level, so the pin cannot
 invent a gradient the luminance field does not have, cannot reveal detail
 that field does not carry, stays analytically invertible for `chrome/`, and
 names its own cost below. A local operator's appeal is precisely the part
-the guard refuses: a transfer function that varies per region. The
+the pin refuses: a transfer function that varies per region. The
 concession is the **pin**, not the locality.
 
 The perception branch alone leaves a resolved surface at `L_ADAPT / f`, and
@@ -947,68 +959,88 @@ pass — the centre is 1.0 exactly — so this is the operator's top end, not
 a stray amplitude.) So:
 
 ```
-dm       = max(dm_eye, dm_guard),  both ≤ 0
-dm_guard = −2.5·log10(peak_max / L_CAP)
-peak_max = max over the statistic attachment's peak channel
+D      = S̄ / f,  the lit surface's OWN mean brightness
+dm_pin = −2.5·log10(D / L_TARGET),  ≤ 0
+S̄      = mean over the statistic attachment of R × the lit-surface mask
+f      = mean over the same frame of that mask alone
 ```
 
-`peak_max` is the frame's brightest per-pixel luminance at the base
-exposure. "Visible" is automatic in a buffer max — an occluded source's
-pixels were overwritten and an off-frame one wrote none — which is a
-simplification worth claiming rather than letting happen.
+**What is pinned is a mean, and what makes that possible is measuring
+coverage.** Two frame means divide to the surface's own brightness, free of
+both how much of the frame it fills and how its texture is distributed.
+"Visible" is automatic — an occluded surface's texels were overwritten and
+an off-frame one wrote none — and so is phase: the mask is the lit
+hemisphere, so a crescent is exposed for its crescent.
 
-`L_CAP` ships at **1.80**, and that is the same level the 1.2 of the
-source-walk era set. The walk's `L(m)/max(1, π·r_px²)` was a disc *mean*;
-a buffer max is the true brightest pixel, and a Lambert disc's peak over
-mean is exactly **3/2** — the ~0.4 mag margin this section used to flag as
-something to account for before raising `L_CAP` is now accounted for in the
-constant itself. The 1.2 came from the geometric mean of the two smoke
-readings that bracket it (Jupiter at park wanted −1.33 EV, i.e. 0.775;
-Betelgeuse at the zoom floor wanted +3.00 EV with the trim maxed out and
-still asked for more headroom, i.e. ≥ 1.73), and it survives as the disc
-mean a guard-governed body settles at. It is the one knob smoke-tuning
-moves.
+**Lit, not merely drawn, is the whole content of the mask**, and it binds
+every claimer rather than the body mesh alone. `D` is a ratio, so area
+counted with no light behind it is indistinguishable from the surface being
+that much dimmer, and the pin obediently under-cuts. A body's night side is
+the largest such region but not the only one: a ring annulus carries the
+band inside the planet's shadow, and an atmosphere shell carries a
+night-limb chord that is *denser* than the lit one — it occludes at full
+opacity while scattering nothing toward the eye. Neither shrinks when the
+lit area does, so a crescent is exactly where geometric coverage fails
+worst. Each emitter therefore gates on its own illumination term
+(`src/client/hdr/attachments/README.md` § The unit is the pinned table).
+
+`L_TARGET` is the level the pin holds, and it is the **measured** 0.89 of
+§ 3.1 rather than a second constant. It is the one knob smoke-tuning moves.
 
 Three structural properties, in the sense that no refactor may lose them:
 
-- **It can only ever raise the exposure** relative to the perception
-  branch. That is why § 3.1's rejection of a maximum statistic does
-  not reach it, and it is verified: Sirius, Venus from Earth, the full
-  Moon, and Sol at 1 AU all stay on the perception branch, untouched by
-  the guard. (Sol's *applied* cut did move when the display floor landed
-  — through the floor below, never through this branch.)
-- **The handover is a pure coverage threshold.** The two branches are
-  equal at `f* = L_ADAPT · (3/2) / L_CAP` = **5.1%** of the frame,
-  independently of how bright the source is, and being equal there the
-  crossing is continuous — no fade band, no hysteresis, no state. An
-  occluded source hands back to the perception branch smoothly as its
-  *visible* coverage falls through `f*`.
-- **It protects surfaces, not points.** Below `f*` the perception model
-  governs and a small bright source clips on purpose: a point of light
-  should read as blinding and has no detail to protect. Sol at 1 AU stays
-  clipped white, and § 3.2's accepted exception above survives intact.
+- **A body must not dim as the camera approaches it.** `D` is independent
+  of coverage, so from `f_ref` to full-viewport fill the reading is
+  identical — approach makes a body bigger and never darker. This is the
+  binding constraint the pin exists to satisfy, and the reason a
+  frame-mean pin (which reads `D · f`) cannot be the answer however the
+  floor is set.
+- **The handover is a pure coverage ramp, and both ends are derived.** The
+  top is `f_ref` itself, where `dm_pin` and `dm_eye` agree exactly for a
+  body-dominated frame — `L_ADAPT = L_TARGET · f_ref` read the other way —
+  so the crossing needs no fade of its own. The foot is `f_ref/8`, the
+  reach of the ±3-stop trim. Between them a smoothstep over log coverage,
+  stateless, no hysteresis; `dm` is monotone in coverage, so an approach
+  cannot brighten a body and then dim it again.
+- **It protects surfaces, not points.** Anything drawing a kernel or a
+  diffuse column writes no mask at all, so Sirius, Sol at 1 AU and the
+  band cannot reach this branch at any framing. A point of light should
+  read as blinding and has no detail to protect.
 
-And it **pins the peak, not the disc mean**, which is what keeps any part
-of a disc off the white point rather than just its average — and with the
-measurement reading the frame's own texels that is now literally true,
-where the walk could only ever offer a per-source mean. `L_CAP` = 1.80
-still has 2+ magnitudes of margin to the operator's own clipping onset
-(~8–20).
+**What this replaced, and why the replacement was not a retune.** Through
+v3.3 the concession was a **highlight guard**: `max` over a peak-correct
+channel, pinned to `L_CAP` = 1.80. It was ported from a source walk that
+measured each body's disc *mean* and pinned it at 1.2, and the port
+converted between the two with the Lambert peak-over-mean of exactly 3/2 —
+correct for a smooth untextured sphere and for nothing the model draws.
+Smoke measured the real ratio at 2.25 (Venus, a featureless cloud deck) to
+6.7+ (Mercury, bare cratered rock), a different value per body, so no
+single `L_CAP` could expose them all. Worse, `dm_guard ≥ dm_eye` reduces to
+a clean coverage threshold *only* under that same 3/2: what it actually
+imposed was `5.08% × (peak-over-mean ÷ 1.5)`, so a textured body needed
+13–15% coverage to take the pin where park framing supplies ~7%. **Every
+parked planet therefore fell out of the pin regime into the floor-bounded
+perception branch** — the regime the display-floor subsection below says
+they must never reach — and Earth, Mars, Venus and Mercury rendered as flat
+white discs 3.5 to 5.8 mag over-exposed. A maximum statistic also inherits
+§ 3.1's own objection to maxima, one shipped version late.
 
 **The known cost, stated rather than quietly fixed: every resolved surface
-now reads the same level.** A stellar photosphere and a planet disc become
-indistinguishable in brightness, where the two smoke anchors say a star
-should sit ~0.87 mag over a planet. If smoke says that ordering is missed,
-the fallback is an incomplete-adaptation exponent on the perception branch
-— `dm_eye = −2.5·k·log10(L̄/L_ADAPT)` with `k` = 0.776 and `L_ADAPT` =
-4.65e-3 fits both anchors exactly — but it over-dims the full Moon to
-−5.06 against a real sky's −2.5 to −3, so it is a fallback and not the
-ship. The second cost is that **in the guard-governed regime the star
-field sits brighter than the perception model alone would put it.** That is
-the display compensation doing its job, not a claim about the observer.
+still reads the same level.** A stellar photosphere and a planet disc would
+be indistinguishable in brightness — except that a photosphere is never a
+resolved surface here (it draws a kernel), so the case does not arise in
+the build. The smoke anchors put a star ~0.87 mag over a planet; if that
+ordering is ever missed, the fallback is an incomplete-adaptation exponent
+on the perception branch — `dm_eye = −2.5·k·log10(L̄/L_ADAPT)` with
+`k` = 0.776 and `L_ADAPT` = 4.65e-3 fits both anchors exactly — but it
+over-dims the full Moon to −5.06 against a real sky's −2.5 to −3, so it
+is a fallback and not the ship. The second cost is that **in the pinned
+regime the star field sits brighter than the perception model alone would
+put it.** That is the display compensation doing its job, not a claim about
+the observer.
 
 This change **demotes** the operator-shoulder work from load-bearing to
-optional: a longer shoulder would widen the 1.05-mag band the guard
+optional: a longer shoulder would widen the 1.05-mag band the pin
 currently works around. It does not remove the constraint that any new
 curve stay analytically invertible (§ 2 / `src/client/hdr/chrome/README.md`).
 
@@ -1038,24 +1070,25 @@ applies `max(dm_eye, floor)`. Three consequences:
   against a clipped disc, where the unbounded cut left nothing. The
   full physical wash-out is veiling glare's to model (its own bead),
   as real light in the optics rather than a retinal state.
-- **The guard regime is untouched.** A dominant resolved surface
-  (coverage over the 5.1% handover) still takes the pin however deep —
-  a parked Venus needs 13.7 mag and gets it. The floor bounds the
-  perception branch, never the pin, and a one-stop coverage ramp joins
-  the two regimes so a body drifting through the handover cannot step
-  the frame. `dm ≥ max(dm_eye, dm_guard)` is the invariant that
-  replaces "the guard can only raise": the *display model* only ever
-  raises the exposure the scene measurement asked for.
-- **Below the handover, a floor-bound surface saturates past the trim's
+- **The pinned regime is untouched.** A dominant lit surface (coverage at
+  or over `f_ref`) takes the pin however deep — a parked Venus needs
+  14.0 mag and gets it. The floor bounds the perception branch, never the
+  pin, and the coverage ramp joins the two so a body drifting through
+  cannot step the frame. The invariant is therefore **the floor bounds
+  every frame the pin does not govern**, not the walk-era
+  `dm ≥ max(dm_eye, dm_guard)`: nothing that writes no mask can darken the
+  frame past the floor, and the pin is deliberately allowed past it.
+  (v3.3 stated this bullet and did not implement it — the regime test sent
+  every parked planet to the floor instead. See the pin subsection above.)
+- **Under the ramp's foot, a floor-bound surface saturates past the trim's
   reach.** § 3.2's trim claim narrows accordingly (bulleted above):
   brilliant dots read as brilliant dots, and parking is what exposes
   them.
 
-An `L_CAP`-derived bound (the brightest *sustained* frame, since the
-guard slews a full-white one down) would be the tidier fold on paper at
-−3.67 mag, but it leaves hundreds of stars visible around Sol at 1 AU —
-it fails the wash-out requirement by 2.6 mag, so the white point is the
-anchor.
+A pin-derived bound (the brightest *sustained* frame, since the cut slews
+a full-white one down) would be the tidier fold on paper at −3.67 mag, but
+it leaves hundreds of stars visible around Sol at 1 AU — it fails the
+wash-out requirement by 2.6 mag, so the white point is the anchor.
 
 ### 3.3 FOV is magnification; the instrument is aperture
 
@@ -1413,10 +1446,10 @@ day one — the fullscreen pass and the inline path can never drift.
   requirement on the model, not a discovery for smoke: fly to Venus,
   Mars, Jupiter and Pluto (the 9-magnitude spread) and confirm each disc
   reaches surface detail within ±3 stops of EV 0 **at park framing**.
-  Above the handover coverage (§ 3.2, 5.1% of the frame) the highlight
-  guard pins every one of their peaks at `L_CAP` and the case is
-  trivially inside the trim; below it a surface the display floor binds
-  on clips *by design* (§ 3.2, *The display floor*), so a case that
+  At or above `f_ref` (§ 3.2, 6.85% of the frame — park framing by
+  construction) the pin holds every one of their disc means at `L_TARGET`
+  and the case is exactly inside the trim; under the ramp's foot a surface
+  the display floor binds on clips *by design* (§ 3.2, *The display floor*), so a case that
   fails is a case flown from too far out — check the disc's frame
   fraction before concluding `L_ADAPT` is wrong. The known exception is
   Sol at 1 AU, 13.5 mag out of reach by design.
@@ -1576,9 +1609,9 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
   (*deleted in H5*), dynamic-range exponent — from the tuning surface
   entirely (they stop existing in code, not just in the panel).
   *Shipped.* The panel's sliders are the five live scalars — `L_ADAPT`,
-  `L_CAP`, the slew τ, `DR_MAG`, desaturation — over a readout carrying
-  the statistic, all three branch terms, the governing regime, and the
-  exposure decomposition. **`L_THRESH` and `LUMA_CEIL` are readouts, not
+  `L_TARGET`, the slew τ, `DR_MAG`, desaturation — over a readout carrying
+  the statistic and its coverage, all three branch terms, the ramp weight,
+  the governing regime, and the exposure decomposition. **`L_THRESH` and `LUMA_CEIL` are readouts, not
   sliders**: both are compile-time constants in seven emitter shaders,
   and `L_THRESH` anchors the unit every other calibration is expressed
   against. `uGlowMagOffset` survives as a *calibration

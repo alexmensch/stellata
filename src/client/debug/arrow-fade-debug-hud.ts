@@ -1,7 +1,7 @@
 import type { Stellata } from '../stellata';
 import type { ArrowDebugRecord } from '../overlays/hud-overlay';
 import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
-import { type DebugSection, buildDiagnosticReadout } from './debug-panel';
+import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
 
 // Live diagnostic readouts for the navigate-mode Sol/GC arrow fade.
 // Mounted as a section inside the unified debug panel (see debug.ts).
@@ -98,7 +98,7 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
 
     if (!visible) return;
 
-    body.textContent =
+    setReadoutText(body,
       `focus: ${focused}  mode: ${stellata.focus.getCameraMode()}\n` +
       `shaftStart: ${fmt(shaftStart)} px\n` +
       `discRadius (peak): ${fmt(discRadius)} px  range:[${fmt(latch.discMin)}, ${fmt(latch.discMax)}]\n` +
@@ -109,7 +109,7 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
       arrowLine(' GC', lengths.gc, dbg.gc) + `\n` +
       `\n` +
       `latch: solMax=${fmt(latch.solMax)}  gcMax=${fmt(latch.gcMax)}\n` +
-      `       sol-behind-max=${fmt(latch.solBehindMaxLen)}  gc-behind-max=${fmt(latch.gcBehindMaxLen)}`;
+      `       sol-behind-max=${fmt(latch.solBehindMaxLen)}  gc-behind-max=${fmt(latch.gcBehindMaxLen)}`);
 
     // Red border when at least one arrow is drawn but disagrees with the
     // other on opacity-relevant state — fast visual cue that an

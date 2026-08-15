@@ -146,11 +146,13 @@ void main() {
   }
 
   col = min(col, vec3(STELLATA_LUMA_CEIL));
-  // True surface brightness, so the statistic's two channels are the same
-  // quantity, and the alpha mirrors attachment 0's so the LOD crossfade
-  // composites both attachments alike.
+  // True surface brightness, and the alpha mirrors attachment 0's so the
+  // LOD crossfade composites both attachments alike. The mask cuts at the
+  // geometric terminator because that is where the disc mean the exposure
+  // pin holds at L_TARGET is defined (../../hdr/exposure/README.md).
   float surfaceL = dot(col, STELLATA_LUMA_WEIGHTS);
-  outStatistic = stellataStatisticTexel(surfaceL, surfaceL, uFade);
+  float lit = step(0.0, sunCos) * step(0.5, shadow);
+  outStatistic = stellataStatisticTexel(surfaceL, lit, uFade);
   // Undithered: the ring annulus and the atmosphere shell alpha-blend over
   // this surface, so a pixel can take more than one planet fragment and the
   // fragCoord-keyed dither would bias it once per layer.

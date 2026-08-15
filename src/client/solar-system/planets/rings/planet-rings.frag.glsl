@@ -73,19 +73,21 @@ void main() {
   float u = clamp((r - uInnerRatio) / (1.0 - uInnerRatio), 0.0, 1.0);
   vec4 strip = texture(uRingMap, vec2(u, 0.5));
 
-  // Reflected on the sunlit face, dimmer transmitted light on the
-  // far face; both die off as illumination goes edge-on to the plane.
-  float sameSide = step(0.0, uSunDirLocal.z * uCamPosLocal.z);
-  float light = mix(TRANSMIT, 1.0, sameSide)
+  // Whether the strip is illuminated at all: out of the body's shadow (the
+  // ray toward the sun misses it), and the sun far enough off the plane to
+  // light the annulus. Both faces count — transmitted light is light.
+  float unshadowed = step(bodyRoots(frag, uSunDirLocal).y, 0.0);
+  float lit = mix(SHADOW_FLOOR, 1.0, unshadowed)
     * smoothstep(0.0, 0.02, abs(uSunDirLocal.z));
 
-  // In the body's shadow when the ray toward the sun hits it.
-  if (bodyRoots(frag, uSunDirLocal).y > 0.0) light *= SHADOW_FLOOR;
+  // Reflected on the sunlit face, dimmer transmitted light on the far face.
+  float sameSide = step(0.0, uSunDirLocal.z * uCamPosLocal.z);
+  float light = mix(TRANSMIT, 1.0, sameSide) * lit;
 
   vec3 col = min(
       strip.rgb * light * uAirlightLuminance * INV_PI, vec3(STELLATA_LUMA_CEIL));
   float ringL = dot(col, STELLATA_LUMA_WEIGHTS);
-  outStatistic = stellataStatisticTexel(ringL, ringL, strip.a * uFade);
+  outStatistic = stellataStatisticTexel(ringL, step(0.5, lit), strip.a * uFade);
   // Undithered — the annulus alpha-blends over the body mesh, so a pixel
   // can take both fragments (../../../hdr/README.md § Operator).
   if (uHdrTarget < 0.5) {

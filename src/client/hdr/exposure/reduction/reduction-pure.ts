@@ -1,15 +1,22 @@
 // The mip reduction's math: the level sizes, the weighted 2x2 combine the
 // shader runs, and the base-exposure rescale. See README.md.
 
-/** One texel of a reduction level: the area-weighted mean of the flux
- *  channel, the max of the peak channel, and `weight` — the fraction of
- *  the level's nominal 4^k source texels this one actually represents.
- *  Level 0 is the RG16F statistic attachment itself, whose absent alpha
- *  reads as 1, which is exactly the weight it should carry. */
+/** One texel of a reduction level: three area-weighted means and
+ *  `weight` — the fraction of the level's nominal 4^k source texels this
+ *  one actually represents. */
 export interface ReductionTexel {
   mean: number;
-  peak: number;
+  surface: number;
+  coverage: number;
   weight: number;
+}
+
+/** Level 0 is the RG16F statistic attachment, which carries only two of
+ *  the three quantities: the masked mean's numerator is formed there, out
+ *  of the flux channel times the mask. Its absent alpha reads as 1, which
+ *  is exactly the weight it should carry. */
+export function statisticTexelToReduction(fluxL: number, litMask: number): ReductionTexel {
+  return { mean: fluxL, surface: fluxL * litMask, coverage: litMask, weight: 1 };
 }
 
 /** Halving with `ceil` down to 1x1, so the ragged last row and column of an
@@ -41,16 +48,20 @@ export function reductionLevelSizes(
  */
 export function combineReductionTexels(taps: readonly ReductionTexel[]): ReductionTexel {
   let weight = 0;
-  let numerator = 0;
-  let peak = 0;
+  let mean = 0;
+  let surface = 0;
+  let coverage = 0;
   for (const tap of taps) {
     weight += tap.weight;
-    numerator += tap.weight * tap.mean;
-    peak = Math.max(peak, tap.peak);
+    mean += tap.weight * tap.mean;
+    surface += tap.weight * tap.surface;
+    coverage += tap.weight * tap.coverage;
   }
+  const norm = weight > 0 ? 1 / weight : 0;
   return {
-    mean: weight > 0 ? numerator / weight : 0,
-    peak,
+    mean: mean * norm,
+    surface: surface * norm,
+    coverage: coverage * norm,
     weight: weight / 4,
   };
 }
@@ -62,6 +73,9 @@ export function combineReductionTexels(taps: readonly ReductionTexel[]): Reducti
  * live adapted-and-trimmed scalar, so the ratio divides back out. It is
  * the render-time scalar, not the current one: the readback lands frames
  * after the draw it measures.
+ *
+ * The mask channel is a coverage fraction rather than a luminance, so it
+ * is invariant to the exposure and never passes through here.
  */
 export function rescaleToBaseExposure(
   measured: number,

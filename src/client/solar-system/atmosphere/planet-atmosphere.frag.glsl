@@ -46,13 +46,22 @@ void main() {
   // the mesh shader paints their airlight; the shell handles only the limb.
   if (stellata_hitsBodyAhead(o, dir)) discard;
 
+  float tStart = max(t0, 0.0);
   vec3 inscatter;
   vec3 transmittance;
   stellata_atmosphereRadiance(
-    o, dir, max(t0, 0.0), t1, uAtmoRadius, sunDir,
+    o, dir, tStart, t1, uAtmoRadius, sunDir,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
     stellata_atmoJitter(gl_FragCoord.xy),
     inscatter, transmittance);
+
+  // Share of the chord outside the shadow, over the chord as one segment. The
+  // mask cannot collapse to opacity alone: the night-limb chord is the DENSE
+  // one, so it would claim the whole limb while scattering nothing.
+  float s0, s1;
+  stellata_shadowSpan(o, dir, sunDir, s0, s1);
+  float halfChord = max(0.5 * (t1 - tStart), 1e-12);
+  float litFrac = stellata_litFraction(tStart + halfChord, halfChord, s0, s1);
 
   // Alpha = medium opacity along the chord (1 − luminance transmittance), so
   // the premultiplied-over shell occludes the background even where it adds no
@@ -67,10 +76,11 @@ void main() {
   // whose source factor is One, so the fade has to ride the channels as
   // well as the alpha.
   float airL = dot(col, STELLATA_LUMA_WEIGHTS) * uFade;
-  outStatistic = stellataStatisticTexel(airL, airL, opacity * uFade);
+  float a = opacity * uFade;
+  outStatistic = stellataStatisticTexel(airL, a * litFrac, a);
   if (uHdrTarget < 0.5) {
     col = stellataTonemapUndithered(col, uWhitePoint, uHighlightDesat);
   }
-  outColor = vec4(col * uFade, opacity * uFade);
-  outDiffuse = stellataOccluderTexel(opacity * uFade);
+  outColor = vec4(col * uFade, a);
+  outDiffuse = stellataOccluderTexel(a);
 }

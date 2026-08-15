@@ -158,7 +158,7 @@ export function frame(): void { _frame(); }
 export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
-import type { DebugSection } from './debug-panel';
+import { type DebugSection, setReadoutText } from './debug-panel';
 
 export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSection {
   if (!installed) {
@@ -375,8 +375,7 @@ function renderPanel(): void {
   }
 
   // Project rowScratch into the row pool: visible rows update, the rest
-  // hide. textContent/colour writes are still cheap, but skip identical
-  // text to spare DOM mutations on stable workloads.
+  // hide.
   for (let i = 0; i < MAX_TABLE_ROWS; i++) {
     const slot = rowPool[i];
     if (i >= rowScratch.length) {
@@ -385,9 +384,8 @@ function renderPanel(): void {
     }
     const r = rowScratch[i];
     if (slot.line.style.display !== 'flex') slot.line.style.display = 'flex';
-    if (slot.label.textContent !== r.label) slot.label.textContent = r.label;
-    const valStr = `${fmtMs(r.avg)} / ${fmtMs(r.max)}`;
-    if (slot.values.textContent !== valStr) slot.values.textContent = valStr;
+    setReadoutText(slot.label, r.label);
+    setReadoutText(slot.values, `${fmtMs(r.avg)} / ${fmtMs(r.max)}`);
     const colour = colourForAvg(r.avg);
     if (rowLastColour[i] !== colour) {
       slot.line.style.color = colour;
@@ -403,7 +401,7 @@ function renderPanel(): void {
     const cap = MS_PER_FRAME_60 * HISTO_HEIGHT_CAP_MULT;
     const amberMs = MS_PER_FRAME_60 * HISTO_AMBER_RATIO;
     if (captionEl && lastCaptionN !== N) {
-      captionEl.textContent = `frame.total · last ${N}f · 16.7ms ref`;
+      setReadoutText(captionEl, `frame.total · last ${N}f · 16.7ms ref`);
       lastCaptionN = N;
     }
     for (let i = 0; i < RING_SIZE; i++) {

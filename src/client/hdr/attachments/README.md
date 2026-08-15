@@ -12,6 +12,8 @@ src/client/hdr/attachments/
   attachment-gate.ts        The per-draw gate on every attachment past 0 —
     (+ test)                one mark per role (§ The gate) plus the seam
                             HdrPipeline drives it through.
+  statistic-mask.test.ts    Which emitters may claim lit-surface coverage,
+                            read off the shader sources (§ The unit).
 ```
 
 **The mark a layer calls is its whole declaration of how it stands to the
@@ -38,26 +40,65 @@ target. Three reasons, each on its own fatal:
   and cloud rim shells all render into the target with authored colours
   inverse-mapped through the operator. A mean would count switching on the
   equatorial sphere as ~0.3 mag of scene light, and a full-white chrome
-  line inverse-maps to `L` = 20 — above `L_CAP`, so it would corrupt the
-  peak too.
-- **The mean and the max want different normalisations** of the same
-  light, and one channel cannot carry both.
+  line inverse-maps to `L` = 20 — 300x the perception branch's own anchor,
+  so it would corrupt the mean outright.
+- **A display target has no idea what is a resolved surface.** The mask
+  below is a declaration each emitter makes, not something a threshold on
+  luminance could recover — a bright star's core and a dim planet's disc
+  overlap in level, and the band is in the same frame.
 
 ## The unit
 
 ```
-R = flux-correct luminance   → reduce MEAN → L̄
-G = peak-correct luminance   → reduce MAX  → peak_max
+R = flux-correct luminance     → reduce MEAN → L̄
+G = lit-surface mask ∈ [0, 1]  → reduce MEAN → coverage, and R×G → S̄
 ```
 
-`stellataStatisticTexel` (`../emission/emission.glsl`) is the texel rule. Both
-channels clamp at `LUMA_CEIL`, for the reason the display peak does: a
-clamped read is a lower bound the adaptation loop closes from above
+**The mask is a fraction, not a flag.** A surface that alpha-composites
+writes 0 or 1 and lets the one blend equation scale it; one compositing
+premultiplied has to arrive pre-scaled, so it writes the fraction itself.
+Both land the same number in the buffer.
+
+`stellataStatisticTexel` (`../emission/emission.glsl`) is the texel rule. R
+clamps at `LUMA_CEIL`, for the reason the display peak does: a clamped read
+is a lower bound the adaptation loop closes from above
 (`../exposure/reduction/README.md` § Measure at the base exposure).
 
-**An extended source has `R = G`** — its emission is already true surface
-brightness, so its flux over the pixels it covers is what a mean wants.
-Both are computed at the **pixel** solid angle, and **unconvolved**: a
+**G carried peak-correct luminance until the highlight guard retired.** The
+guard was its only consumer, and for a resolved surface R and G were the
+same number anyway — so the channel was already redundant where it mattered
+most. It now carries the coverage term the exposure pin divides by
+(`../exposure/README.md` § Adaptation), which is why that fix cost no
+memory and no extra pass.
+
+**Which emitters may claim coverage is part of the contract, and it is
+pinned** (`statistic-mask.test.ts`) — and **zero for everything that draws a
+kernel or a diffuse column**: stars, planet glare, both volumetric
+emitters. A texel counted as coverage without light in R pulls `D` down and
+over-exposes the surface the pin holds; light in R without coverage inflates
+it. The night side is the case big enough to matter — geometric coverage
+would halve `D` at full phase and gut it on a crescent.
+
+**Every claimer gates on its own illumination, not on its geometry**, and
+each of the three has a different dark region to exclude:
+
+| emitter | claims | the dark region it excludes |
+| --- | --- | --- |
+| planet mesh | its **lit hemisphere** — `step(0, sunCos)·step(0.5, shadow)` | the night side, and an eclipsed surface |
+| ring annulus | the **sunlit strip** — `step(0.5, lit)` | the band in the planet's shadow, and the whole annulus as the sun crosses the ring plane |
+| atmosphere shell | opacity × **`litFrac`** | the night-limb chord, which is the dense one — it occludes fully while scattering nothing toward the eye |
+
+The two non-mesh rows are the ones geometry gets wrong the hardest, because
+neither dark region shrinks when the lit one does. Saturn's annulus is
+~3.6x the globe's own disc area face-on, so a shadowed band outvotes every
+other coverage term in the frame; and a shell's night limb is a constant
+share of the disc whatever the phase, so a crescent that halves the mesh's
+claim leaves the shell's untouched — Earth's 100 km shell is ~3 % of its
+disc area and rounds away, Titan's 300 km on 2575 km is ~25 % and
+near-opaque, which renders a crescent multiples too bright.
+
+**An extended source's R is its true surface brightness**, computed at the
+**pixel** solid angle and **unconvolved**: a
 volumetric emitter's display value goes to attachment 2 gained by the eye's
 rod summation area and averaged over it (`../summation/README.md`), and that
 whole path is a display concession rather than light, so none of it may reach
@@ -66,11 +107,12 @@ convolution conserves total flux anyway, so the mean the reduction takes
 would barely move — the reason to keep it out is the unit, not the size of
 the error. What this channel therefore
 sees from the band's brightest sightline at the base epoch is
-`L` = 1.657e-3 — **10.1 stops under `L_CAP` 1.8**, so no cut can originate
+`L` = 1.657e-3 — **3.5 stops under `L_ADAPT`**, so no cut can originate
 here (the 0.02 the band *displays* at never reaches this channel, which is
-the point). Pinned in `milkyway.test.ts`.
+the point), and it writes no mask, so it can never reach the pin at all.
+Pinned in `milkyway.test.ts`.
 
-**A point source does not.** Its R divides the display kernel by the
+**A point source's does not.** Its R divides the display kernel by the
 kernel's own area integral, `Φ(n)·D²`, where Φ is
 `perceptualDiscFluxIntegral` (`../../star-pipeline/perceptual-disc.glsl`, a
 degree-4 fit in 1/n good to 0.0029 mag) and `D` is the quad's **CSS**
@@ -198,9 +240,10 @@ rather than a second draw.
   38/255
   the shift is a fraction of a bright chrome line, and it applies to nothing
   photometric.
-- **A point source's G over-reads in the kernel's wings** under an additive
-  blend, because alpha 1 drops the second `glow` factor attachment 0 gets.
-  Exact at the peak, which is the only place a frame `max` reads it.
+- **The crossfade band scales both channels alike.** A body's R and its
+  mask both ride `uFade`, so `D` reads `uFade` × the truth for the one
+  octave of body size the disc↔mesh crossfade spans — well under the ramp's
+  foot, where the pin does not govern anyway.
 - **A ring annulus extinguishes at face-on opacity.** A rasterised fragment
   carries no opening angle, so the slant-path term the source walk applied
   analytically — `T = (1 − α)^(1/|sin B|)`, opaque edge-on — is gone. It

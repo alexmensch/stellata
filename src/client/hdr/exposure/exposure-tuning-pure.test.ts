@@ -8,54 +8,59 @@ import {
 } from './exposure-tuning-pure';
 import {
   ADAPT_DISPLAY_FLOOR_DM,
-  ADAPT_REF_COVERAGE,
+  ADAPT_DOT_COVERAGE,
+  ADAPT_PIN_COVERAGE,
   ADAPT_SLEW_SETTLE_MAG,
-  guardHandoverCoverage,
 } from './scene-adaptation-pure';
 
 const SETTLED: ExposureReadout = {
   meanL: 7.13e4,
-  peakL: 3.6e5,
+  discL: 3.57e5,
+  coverage: 0.2,
+  weight: 1,
   eye: -17.52,
-  guard: -13.21,
+  pin: -14.01,
   floor: ADAPT_DISPLAY_FLOOR_DM,
-  measuredDm: -13.21,
-  appliedDm: -13.21,
-  regime: 'guard',
+  measuredDm: -14.01,
+  appliedDm: -14.01,
+  regime: 'surface',
   limitMag: 7.8,
   ev: 0,
   effectiveLimitMag: -5.41,
   exposure: 17.1,
   whitePoint: tonemapWhitePoint(),
   extendedThresholdSb: 22,
-  handoverCoverage: guardHandoverCoverage(),
-  refCoverage: ADAPT_REF_COVERAGE,
+  pinCoverage: ADAPT_PIN_COVERAGE,
+  dotCoverage: ADAPT_DOT_COVERAGE,
 };
 
 describe('hasMeasurement', () => {
-  // adaptationBranches on a zero statistic returns guard >= eye and labels
-  // the regime 'guard', which would read as a governing branch on a frame
-  // that has measured nothing at all — a cold start or chart's reset.
-  it('is false only when neither channel carries light', () => {
-    expect(hasMeasurement({ ...SETTLED, meanL: 0, peakL: 0 })).toBe(false);
+  // A cold start and chart's reset both leave a zero statistic, which the
+  // branches read as the `open` regime — a true statement about a frame,
+  // and a wrong one about a frame nothing has measured yet.
+  it('is false only when neither channel carries anything', () => {
+    expect(hasMeasurement({ ...SETTLED, meanL: 0, coverage: 0 })).toBe(false);
     expect(hasMeasurement({ ...SETTLED, meanL: 0 })).toBe(true);
-    expect(hasMeasurement({ ...SETTLED, peakL: 0 })).toBe(true);
+    expect(hasMeasurement({ ...SETTLED, coverage: 0 })).toBe(true);
   });
 
   it('says so rather than naming a branch', () => {
-    expect(regimeLine({ ...SETTLED, meanL: 0, peakL: 0 }))
+    expect(regimeLine({ ...SETTLED, meanL: 0, coverage: 0 }))
       .toBe('no measurement — no cut');
   });
 });
 
 describe('regimeLine', () => {
-  it('names each of the four regimes', () => {
-    expect(regimeLine(SETTLED)).toBe('GUARD (highlight pin)');
+  it('names each of the five regimes', () => {
+    expect(regimeLine(SETTLED)).toBe('SURFACE (resolved pin)');
     expect(regimeLine({ ...SETTLED, regime: 'eye' })).toBe('EYE (perception)');
     expect(regimeLine({ ...SETTLED, regime: 'floor' }))
       .toBe('FLOOR (display bound)');
     expect(regimeLine({ ...SETTLED, regime: 'handover' }))
       .toBe('HANDOVER (ramp)');
+    // A frame no term cut says exactly that, instead of handing the credit
+    // to whichever branch happened to clamp at zero.
+    expect(regimeLine({ ...SETTLED, regime: 'open' })).toBe('OPEN (no term cut)');
   });
 
   // The slew flag is the panel's answer to "is the frame still ramping?",
@@ -74,13 +79,15 @@ describe('formatExposureReadout', () => {
   it('carries every term behind the cut', () => {
     const text = formatExposureReadout(SETTLED);
     expect(text).toContain('L̄ 7.13e+4');
-    expect(text).toContain('peak 3.60e+5');
+    expect(text).toContain('cover 20.00%');
+    expect(text).toContain('D 3.57e+5');
     expect(text).toContain('dm_eye -17.52');
-    expect(text).toContain('guard -13.21');
+    expect(text).toContain('pin -14.01');
     expect(text).toContain('floor -6.29');
-    expect(text).toContain('measured -13.21');
-    expect(text).toContain('applied -13.21');
-    expect(text).toContain('GUARD (highlight pin)');
+    expect(text).toContain('w 1.00');
+    expect(text).toContain('measured -14.01');
+    expect(text).toContain('applied -14.01');
+    expect(text).toContain('SURFACE (resolved pin)');
   });
 
   it('carries the exposure decomposition and its effective limit', () => {
@@ -91,12 +98,10 @@ describe('formatExposureReadout', () => {
     expect(text).toContain('uExposure 1.710e+1');
   });
 
-  // f* is derived from the live L_ADAPT / L_CAP, so it moves with the
-  // sliders — the reason it is a readout rather than a printed constant.
-  it('reports the handover and reference coverages as percentages', () => {
+  it('reports both ends of the coverage ramp as percentages', () => {
     const text = formatExposureReadout(SETTLED);
-    expect(text).toContain('f* 5.08%');
-    expect(text).toContain('f_ref 6.85%');
+    expect(text).toContain('f_pin 6.85%');
+    expect(text).toContain('f_dot 0.86%');
   });
 
   it('separates the derived levels from the baked constants', () => {
