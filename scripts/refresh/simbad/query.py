@@ -4,6 +4,7 @@ shell never hand-builds ADQL strings."""
 
 from __future__ import annotations
 
+import re
 import sys
 import time
 from pathlib import Path
@@ -12,7 +13,7 @@ from typing import Any, Callable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
 
-from .specs import ColumnSpec, IdentLookup
+from .specs import ColumnSpec, FluxBand, IdentLookup
 
 
 # Per-batch IN-clause size. SIMBAD TAP accepts ~64 KB POST body in
@@ -101,44 +102,89 @@ def fetch_basic_columns(
     )
 
 
+_QUOTABLE_SUFFIX = re.compile(r"^[A-Za-z0-9 .+\-]+$")
+
+
 def resolve_oids_by_prefix(
     client: rl.TapClient,
-    values: Sequence[int],
-    prefix: str,
+    values: Sequence[int | str],
+    lookup: IdentLookup,
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
     progress_label: str | None = None,
-) -> dict[int, int]:
-    """Translate ``values`` → SIMBAD oids via ``ident``. Returns {value: oid}.
-    Values absent from SIMBAD ident are absent from the result map; ident
-    rows with a suffix (``HIP 12345 A``) fail the integer cast and are
-    silently skipped — the canonical-integer row appears separately for
-    the same oid."""
+) -> dict[int | str, int]:
+    """Translate ``values`` (suffixes, no prefix) → SIMBAD oids via
+    ``ident``. Returns {suffix: oid} keyed on the suffix parsed back off the
+    returned row, so a space-padded stored id joins its request. Values
+    absent from SIMBAD ident are absent from the result map."""
+    rejected = [v for v in values if not _QUOTABLE_SUFFIX.match(str(v))]
+    if rejected:
+        raise SystemExit(
+            f"resolve_oids_by_prefix: {len(rejected)} {lookup.prefix.strip()} "
+            f"suffixes carry characters the ADQL literal cannot hold "
+            f"(first: {rejected[0]!r})."
+        )
 
-    def build_query(batch: Sequence[int]) -> str:
-        # Gaia DR3 source_ids are 19-digit ints, HIPs are <=6 digits;
-        # neither can contain a quote, so direct interpolation is safe.
-        id_list = ",".join(f"'{prefix}{v}'" for v in batch)
+    def build_query(batch: Sequence[int | str]) -> str:
+        id_list = ",".join(f"'{lookup.compose(v)}'" for v in batch)
         return f"SELECT oidref, id FROM ident WHERE id IN ({id_list}) ORDER BY oidref, id"
 
-    def dispatch(table, out: dict[int, int]) -> None:
+    def dispatch(table, out: dict[int | str, int]) -> None:
         for row in table:
-            oid = int(row["oidref"])
-            id_str = str(rl.coerce_masked(row["id"]) or "")
-            if not id_str.startswith(prefix):
-                continue
-            try:
-                value = int(id_str[len(prefix):])
-            except ValueError:
-                continue
-            out[value] = oid
+            suffix = lookup.parse_suffix(str(rl.coerce_masked(row["id"]) or ""))
+            if suffix is not None:
+                out[suffix] = int(row["oidref"])
 
     return _run_batched(
         client,
         values,
         build_query,
         dispatch,
-        label=f"resolve {progress_label or prefix.strip()}",
+        label=f"resolve {progress_label or lookup.prefix.strip()}",
+        batch_size=batch_size,
+    )
+
+
+def fetch_flux_bands(
+    client: rl.TapClient,
+    oids: Sequence[int],
+    bands: Sequence[FluxBand],
+    *,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    progress_label: str = "flux",
+) -> dict[int, dict[str, Any]]:
+    """Pull the long-format ``flux`` table for ``bands`` and pivot it wide.
+    Returns {oid: {tsv_name: value}} over each band's value / error /
+    bibcode columns. ``flux`` rather than ``allfluxes`` because only it
+    carries the per-band bibcode a § 5 SIMBAD tier must ship."""
+    if not bands:
+        return {}
+    by_filter = {b.filter: b for b in bands}
+    filter_list = ",".join(f"'{b.filter}'" for b in bands)
+
+    def build_query(batch: Sequence[int]) -> str:
+        inlist = ",".join(str(o) for o in batch)
+        return (
+            f"SELECT oidref, filter, flux, flux_err, bibcode FROM flux "
+            f"WHERE oidref IN ({inlist}) AND filter IN ({filter_list}) "
+            f"ORDER BY oidref, filter"
+        )
+
+    def dispatch(table, out: dict[int, dict[str, Any]]) -> None:
+        for row in table:
+            band = by_filter.get(str(rl.coerce_masked(row["filter"]) or "").strip())
+            if band is None:
+                continue
+            cells = out.setdefault(int(row["oidref"]), {})
+            for tsv_name, source in band.column_sources():
+                cells[tsv_name] = rl.coerce_masked(row[source])
+
+    return _run_batched(
+        client,
+        oids,
+        build_query,
+        dispatch,
+        label=progress_label,
         batch_size=batch_size,
     )
 
@@ -150,9 +196,9 @@ def fetch_ident_lookups(
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
     progress_label: str = "ident",
-) -> dict[int, dict[str, int]]:
+) -> dict[int, dict[str, int | str]]:
     """For each oid resolve every cross-identifier in ``lookups``.
-    Returns {oid: {tsv_name: int}}. A single OR-ed LIKE clause covers
+    Returns {oid: {tsv_name: suffix}}. A single OR-ed LIKE clause covers
     every lookup per batch; first matching prefix wins on collisions
     (vanishingly rare)."""
     if not lookups:
@@ -167,18 +213,15 @@ def fetch_ident_lookups(
             f"ORDER BY oidref, id"
         )
 
-    def dispatch(table, out: dict[int, dict[str, int]]) -> None:
+    def dispatch(table, out: dict[int, dict[str, int | str]]) -> None:
         for row in table:
-            oid = int(row["oidref"])
             id_str = str(rl.coerce_masked(row["id"]) or "")
             for lookup in lookups:
                 if not id_str.startswith(lookup.prefix):
                     continue
-                try:
-                    value = int(id_str[lookup.prefix_len:])
-                except ValueError:
-                    break
-                out.setdefault(oid, {})[lookup.tsv_name] = value
+                suffix = lookup.parse_suffix(id_str)
+                if suffix is not None:
+                    out.setdefault(int(row["oidref"]), {})[lookup.tsv_name] = suffix
                 break
 
     return _run_batched(

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_sptype.tsv — SIMBAD per-source sp_type,
-sp_qual, sp_bibcode, otype, and HIP / Gaia DR3 cross-IDs."""
+sp_qual, sp_bibcode, otype, and HIP / Gaia DR3 / TYC / GJ cross-IDs."""
 
 from __future__ import annotations
 
@@ -13,19 +13,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-from simbad import inputs, query, tsv  # noqa: E402
+from simbad import inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
-    OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, HIP, GAIA_DR3,
+    OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, GAIA_DR3, GJ, HIP, TYC,
 )
 
 ROOT = REPO_ROOT
-ATHYG_CSV = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
+SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
 WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
 
 
 BASIC_COLUMNS = [OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE]
-IDENT_LOOKUPS = [HIP, GAIA_DR3]
+IDENT_LOOKUPS = [HIP, GAIA_DR3, TYC, GJ]
 
 
 # SIMBAD sp_type non-null rate — drops sharply in the faint Tycho tail.
@@ -36,42 +36,32 @@ SP_TYPE_COVERAGE_MIN = 0.50
 def collect_oid_requests(client: rl.TapClient) -> list[int]:
     """Compose every input source, resolve non-oid identifiers via the
     ident table, union into a deduplicated sorted oid list."""
-    oids: set[int] = set()
-
-    print("[1/3] AT-HYG Gaia DR3 source_ids → SIMBAD oid (via ident)…")
-    athyg_gaia = rl.read_athyg_source_ids(ATHYG_CSV)
-    print(f"      AT-HYG rows with gaia: {len(athyg_gaia)}")
-    gaia_to_oid = query.resolve_oids_by_prefix(
-        client, athyg_gaia, prefix=GAIA_DR3.prefix,
+    print("[1/2] spine identifier keys → SIMBAD oid (via ident)…")
+    keys = inputs.spine_request_keys(SPINE)
+    print(f"      spine rows: {keys.total} ({keys.keyless} carrying no key)")
+    resolved = request.resolve_spine_keys(
+        client, keys, tyc_by_source_id=inputs.spine_tyc_by_source_id(SPINE)
     )
-    print(f"      Resolved to {len(gaia_to_oid)} SIMBAD oids "
-          f"({len(gaia_to_oid)/max(1,len(athyg_gaia)):.1%} coverage)")
-    oids.update(gaia_to_oid.values())
+    for line in resolved.report_lines():
+        print(line)
+    print(f"      oids from the spine: {len(resolved.oids)} "
+          f"(+{resolved.gained_by_widening} the TYC widening reached alone)")
 
-    print("[2/3] AT-HYG HIP-only rows → SIMBAD oid (via ident)…")
-    athyg_hip = list(inputs.iter_athyg_hip_for_no_gaia(ATHYG_CSV))
-    print(f"      AT-HYG rows with HIP but no Gaia: {len(athyg_hip)}")
-    hip_to_oid = query.resolve_oids_by_prefix(
-        client, athyg_hip, prefix=HIP.prefix,
-    )
-    print(f"      Resolved to {len(hip_to_oid)} additional SIMBAD oids")
-    oids.update(hip_to_oid.values())
-
-    print("[3/3] simbad_wds_xids.tsv simbad_oid → direct…")
+    print("[2/2] simbad_wds_xids.tsv simbad_oid → direct…")
     wds_oids = list(inputs.iter_wds_xids_oids(WDS_XIDS_TSV))
-    print(f"      WDS-xref oids: {len(wds_oids)}")
-    new_from_wds = len(set(wds_oids) - oids)
-    oids.update(wds_oids)
-    print(f"      Added {new_from_wds} oids not already covered by AT-HYG paths")
+    new_from_wds = len(set(wds_oids) - resolved.oids)
+    print(f"      WDS-xref oids: {len(wds_oids)}; "
+          f"{new_from_wds} not already covered by the spine")
+    resolved.oids.update(wds_oids)
 
-    return sorted(oids)
+    return sorted(resolved.oids)
 
 
 def main() -> None:
     force = "--force" in sys.argv
 
     simbad_pkg = Path(__file__).resolve().parent / "simbad"
-    sources = [ATHYG_CSV, WDS_XIDS_TSV, Path(__file__)]
+    sources = [SPINE, WDS_XIDS_TSV, Path(__file__)]
     sources.extend(
         p for p in sorted(simbad_pkg.glob("*.py"))
         if not p.name.startswith("_") and "test" not in p.name
@@ -116,9 +106,8 @@ def main() -> None:
         output=OUT,
         oids=oids,
         basic_rows=basic_rows,
-        ident_rows=ident_rows,
         columns=BASIC_COLUMNS,
-        ident_lookups=IDENT_LOOKUPS,
+        blocks=[tsv.ident_block(IDENT_LOOKUPS, ident_rows)],
     )
     print(
         f"\nwrote {OUT.relative_to(ROOT)} ({written} rows) "
