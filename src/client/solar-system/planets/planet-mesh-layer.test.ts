@@ -1,27 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { glslCallArgs } from '../../util/glsl-call-args';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
-/** Last top-level argument of the first `name(` call — the alpha of a
- *  `vec4(rgb, a)` write, or the sole argument of an occluder texel. Walks the
- *  parens rather than matching a regex, so a nested call in the rgb slot
- *  cannot split the argument list in the wrong place. */
-function lastArgOf(src: string, name: string): string {
-  const open = src.indexOf(`${name}(`) + name.length + 1;
-  let depth = 1;
-  let start = open;
-  for (let i = open; depth > 0; i++) {
-    const c = src[i];
-    if (c === '(') depth++;
-    else if (c === ')') depth--;
-    else if (c === ',' && depth === 1) start = i + 1;
-    if (depth === 0) return src.slice(start, i).trim();
-  }
-  throw new Error(`unbalanced ${name}( in shader`);
-}
+/** The alpha of a `vec4(rgb, a)` write, or the sole argument of an occluder
+ *  texel. */
+const lastArgOf = (src: string, name: string) => glslCallArgs(src, name).at(-1);
 
 // Every surface this layer draws alpha-composites in FRONT of the volumetric
 // emitters, which live in attachment 2 until the resolve convolves them
