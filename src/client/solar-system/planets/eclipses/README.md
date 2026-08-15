@@ -32,6 +32,14 @@ These modules exist so the drawn shadow can be checked against an
 independent authority, the same way `../body-shadow-pure.ts`'s CPU mirror
 exists to be test-pinned.
 
+**They stay safe to call from one, though, and that is a live
+constraint.** `earthMoonAt` reads `getPlanetPositions` and mutates
+nothing shared; it must not reach for `resetPositionCache`, which exists
+for the element-table swap and drops the entry every other consumer in
+that frame is reading (`../../ephemerides/ephemeris.ts`). It did call it
+once, which cost nothing only because no render path had imported this
+module yet — and cost the greatest-eclipse search its cache regardless.
+
 ## What is pinned
 
 `data/eclipse-canon/` freezes Espenak's catalogue rows; the test

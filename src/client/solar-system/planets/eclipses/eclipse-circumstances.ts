@@ -11,7 +11,6 @@ import {
 import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 import {
   getPlanetPositions,
-  resetPositionCache,
   type Vec3 as EphemVec3,
 } from '../../ephemerides/ephemeris';
 import {
@@ -58,7 +57,6 @@ const _hit: Vec3 = { x: 0, y: 0, z: 0 };
  *  time, and shared scratch would leave the first one aliased to the
  *  second. */
 export function earthMoonAt(t: number): { earth: Vec3; moon: Vec3 } {
-  resetPositionCache();
   const bary = getPlanetPositions(t).earth;
   moonOffsetEcliptic(MOON_ELEM, t, _geo);
   earthMoonSplit(bary, _geo, _earth, _moon);
