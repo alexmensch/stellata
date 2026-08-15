@@ -97,8 +97,9 @@ export function cartesianToOrbitalElements(
   const along = ex * cosN + ey * sinN;
   const across = (-ex * sinN + ey * cosN) * cosI + ez * sinI;
   // r = a(1 − e·cos E) and r·v = e·√(μa)·sin E together fix E without a
-  // second solve.
-  const eccAnomalyRad = Math.atan2(rDotV / (e * Math.sqrt(mu * a)), 1 - rMag / a);
+  // second solve. Both arguments carry the SAME factor of e — atan2 is
+  // invariant under a shared positive scale and nothing else.
+  const eccAnomalyRad = Math.atan2(rDotV / Math.sqrt(mu * a), 1 - rMag / a);
   return {
     a, e, incRad, nodeRad, argPeriRad: Math.atan2(across, along), eccAnomalyRad,
   };

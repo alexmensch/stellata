@@ -736,12 +736,13 @@ describe('ring geometry passes through the body (single element source)', () => 
       for (let m = 0; m < MOON_ELEMENTS.length; m++) {
         const aPc = writeRingVerts(verts, geoms[planetCount + m], IDENTITY);
         moonOffsetEcliptic(MOON_ELEMENTS[m], t, offset);
-        // The Moon's ring is an osculating fit through a series, not the
-        // ellipse it is literally solved from, so it gets the looser of
-        // the two bounds — still 300× tighter than a half vertex interval.
-        const bound = MOON_ELEMENTS[m].useLunarTheory ? 1e-3 : 1e-9;
+        // One bound for all 18, the Moon included. Its ring is the
+        // osculating ellipse inverted from the body's own state, so the
+        // anchor is exact there too — not a fit that has to be given
+        // room. Anything above π/N ≈ 3.8e-4 of `a` passes unanchored and
+        // asserts nothing.
         expect(minDistToRing(offset, verts), MOON_ELEMENTS[m].name)
-          .toBeLessThan(bound * aPc);
+          .toBeLessThan(1e-9 * aPc);
       }
     }
   });
