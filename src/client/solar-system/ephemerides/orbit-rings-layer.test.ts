@@ -726,6 +726,82 @@ describe('ring geometry passes through the body (single element source)', () => 
     }
   });
 
+  // The test above re-derives geometry at each sample, so it proves the
+  // element→vertex chain is right but CANNOT see whether the live layer
+  // ever refreshes a moon ring. refreshGeometry used to skip every
+  // parent-centred ring outright, which froze the Moon's at attach time —
+  // 19 000 km, 5 % of its distance, off the body after a year of
+  // scrubbing. These two go through OrbitRingsLayer itself.
+  describe('the layer refreshes the Moon’s ring as the clock moves', () => {
+    const MOON_IDX = PLANET_ORDER.length
+      + MOON_ELEMENTS.findIndex((m) => m.name === 'Moon');
+
+    /** Sol's system as the planet module attaches it. */
+    const solSystem = (): PlanetSystem => ({
+      hostStarIdx: 0,
+      planets: SOL_BODIES,
+      orbitGeometryAt: solOrbitGeometryAt,
+    });
+
+    /** Every ring centred on the local origin, so the baked GPU buffer is
+     *  the master geometry unshifted. */
+    const originCentres = (_idx: number, out: THREE.Vector3): boolean => {
+      out.set(0, 0, 0);
+      return true;
+    };
+
+    const moonRingVerts = (ss: OrbitRingsLayer): Float32Array => {
+      const line = ss.group.children[MOON_IDX] as THREE.LineLoop;
+      const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+      return (attr.array as Float32Array).slice();
+    };
+
+    it('rewrites the buffer — a frozen ring is byte-identical a month on', () => {
+      const ss = new OrbitRingsLayer();
+      ss.setPlanetSystem(solSystem(), 0, T0);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
+      const atT0 = moonRingVerts(ss);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 30 * 86400, originCentres);
+      const atT1 = moonRingVerts(ss);
+      expect(atT1.some((v, i) => v !== atT0[i])).toBe(true);
+      ss.dispose();
+    });
+
+    // Bounded at 0.001·a ≈ 384 km, not the 0.02·a the sibling test uses.
+    // That looser figure bounds polyline discretisation with room to
+    // spare, and a stale ring sits 1 500–19 000 km out depending on where
+    // in the cycle it froze — so 0.02·a lets some staleness through. The
+    // real discretisation limit is half the vertex spacing, 147 km.
+    //
+    // Several offsets because the error is cyclic, not monotonic: a
+    // 30-day scrub happens to land near a minimum, and a single sample
+    // there passes with the refresh disabled.
+    it.each([7, 14, 90, 365])(
+      'keeps the Moon on the rendered ring after scrubbing %i days',
+      (days) => {
+        const ss = new OrbitRingsLayer();
+        ss.setPlanetSystem(solSystem(), 0, T0);
+        const t = T0 + days * 86400;
+        ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
+
+        // The layer rotates its rings onto the host plane; the resolver
+        // works in the ecliptic, so the expected point takes the same turn.
+        const hostQuat = new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          ECLIPTIC_NORTH_POLE_ICRS.clone(),
+        );
+        const offset = { x: 0, y: 0, z: 0 };
+        moonOffsetEcliptic(MOON_ELEMENTS.find((m) => m.name === 'Moon')!, t, offset);
+        const expected = new THREE.Vector3(offset.x, offset.y, offset.z)
+          .applyQuaternion(hostQuat);
+
+        const aPc = 384400 * KM_PC;
+        expect(minDistToRing(expected, moonRingVerts(ss))).toBeLessThan(0.001 * aPc);
+        ss.dispose();
+      },
+    );
+  });
+
   it('solOrbitGeometryAt covers SOL_BODIES with parentIdx pointing at each moon’s parent', () => {
     const geoms = solOrbitGeometryAt(T0);
     expect(geoms.length).toBe(SOL_BODIES.length);

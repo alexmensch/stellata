@@ -395,22 +395,35 @@ export class OrbitRingsLayer {
   }
 
   /**
-   * Re-derive host-centred ring geometry from the live element source
-   * (secular a/e + orientation move planet rings; moon elements carry no
-   * secular terms, so parent-centred rings are constant in `t`).
+   * Re-derive ring geometry from the live element source — **every ring,
+   * host-centred and parent-centred alike**.
    *
-   * Evaluating the elements is nine cheap solves the same `t` already pays
-   * for the body positions; rewriting 8192 vertices and re-uploading the
-   * buffer is what costs, so only a ring whose elements actually moved gets
-   * rewritten. That is what keeps the cost bounded at any scrub rate, where
-   * keying on elapsed sim time did not.
+   * Moon rings were skipped here on the reasoning that moon elements carry
+   * no secular terms and are constant in `t`. That is true of the 17
+   * Kepler moons and false of Earth's Moon, whose ring is the osculating
+   * ellipse through the lunar theory's own state and moves continuously:
+   * skipping it froze the ring at whatever `t` the system was attached at,
+   * leaving the Moon up to 19 000 km — 5 % of its distance — off its own
+   * ring after a year of scrubbing.
+   *
+   * The drift gate, not the body kind, is what keeps this cheap. A Kepler
+   * moon returns identical elements at every `t`, so it fails the gate on
+   * five float compares and is never rewritten; the Moon's fastest element
+   * (its rapidly precessing osculating apse) crosses the tolerance in
+   * ~1 s of model time, so at 1× it rewrites every few seconds and under
+   * scrub every frame — the same regime the planet rings already run in.
+   *
+   * Evaluating the elements is cheap solves the same `t` already pays for
+   * the body positions; rewriting 8192 vertices and re-uploading the
+   * buffer is what costs, so only a ring whose elements actually moved
+   * gets rewritten. That is what keeps the cost bounded at any scrub rate,
+   * where keying on elapsed sim time did not.
    */
   private refreshGeometry(t: number): void {
     const geoms = this.ps?.orbitGeometryAt?.(t);
     if (!geoms) return;
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
-      if (r.parentIdx !== null) continue;
       if (!ringGeometryDrifted(r.built, geoms[i])) continue;
       r.semiMajorPc = writeRingVerts(r.master, geoms[i], this.hostQuat);
       r.built = geoms[i];
