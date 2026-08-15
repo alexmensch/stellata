@@ -243,7 +243,7 @@ being retired; the tier after each is its replacement:
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
 | ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
 | spectral string | SIMBAD sp_type (in-tree; request set keyed source_id → HIP → TYC) → unknown — ~~spine `spect` display fallback~~ |
-| radial velocity | Gaia DR3 `radial_velocity` on a 5p row → SIMBAD `rvz_radvel` (bibcoded; Gaia-bibcode skip rule below) → zero radial term — ~~spine `rv`~~ |
+| radial velocity | SHIPPED — Gaia DR3 `radial_velocity` on a 5p row → SIMBAD `rvz_radvel` (bibcoded; Gaia-bibcode skip rule below) → zero radial term — ~~spine `rv`~~ |
 | constellation (position) | IAU-positional assignment, catalogue-wide — an AT-HYG-free pipeline has no editorial `con` for any row |
 | constellation (designation) | IV/27A `cst` by HD → by HIP → GCVS trailing abbreviation → positional |
 | proper / Bayer display | naming-authority ladder (`docs/star-naming.md`) |
@@ -305,10 +305,23 @@ Measured exposure and expected coverage (2026-08-14; pins in
      configuration change costs XP's internal calibration its millimag
      accuracy, so this tier knowingly reads XP spectra outside their
      best-calibrated regime, bounded by the |Δ| measurement above.
-- **rv** — `rvCatalogued` 7,126 (spine-wide `rv_src`: HYG 7,965 · OTHER
-  871 · G_R2 295 non-first-order). SIMBAD sampled 10/10 on the HYG
-  bright cohort and 8/8 on the unattributed OTHER cohort. Residual
-  takes a zero radial term (`rvNone` semantics), pinned.
+- **rv** — SHIPPED (`stellata-3bsf.27`, 2026-08-15). The printed cell
+  covered 7,126 rows (spine-wide `rv_src`: HYG 7,965 · OTHER 871 · G_R2 295
+  non-first-order); the bibcoded SIMBAD tier covers **7,273**, dropping 655
+  of the old set and adding 804 rows that never had a printed velocity.
+  Residual `rvNone` **39,856**, pinned. The **skip rule fires on 205** of
+  the 354 gate-withheld rows, and the measurement justifying it is sharper
+  than this section projected: over those rows |Δrv| against the withheld
+  Gaia value is p50 **0.0026 km/s** for a DR3 bibcode (the same value
+  returning) against 0.98 for DR2 and 3.01 for literature. A Gaia bibcode
+  on a row Gaia never measured is an ordinary citation and is kept — 465
+  rows, all DR2. Two corrections at implementation: `rvz_radvel` is a
+  velocity only where `rvz_type` reads `v` (EGGR 252's `z` row reads
+  243,879 km/s), and the tier ships one published-but-nonphysical value
+  (EZ Aqr, 6,824.7 km/s) which the existing 1500 km/s velocity ceiling
+  clamps — no quality or magnitude gate was added, so the cost is one
+  record's tangential motion, pinned as `velocityClamped` 8 → 9.
+  Full detail: `scripts/catalog/distance/radial-velocity/README.md`.
 - **V** — `vCatalogued` 140: Tycho-2 reaches 123 by TYC; the GJ cohort
   (~16) routes CNS5/SIMBAD; Sol is curated.
 - **direction / PM** — `directionAthygPrinted` 61 /

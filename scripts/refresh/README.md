@@ -221,7 +221,7 @@ rather than skip.
 **`radial_velocity_error` landed in the catalog scope on the 2026-08-12
 refresh**, and `parseGaiaAstrometryCatalogTsv` now requires it. Its consumer
 is the build-counts ratchet, not a filter — the cascade takes DR3's value
-whatever error it states (`../catalog/distance/README.md` § Radial velocity).
+whatever error it states (`../catalog/distance/radial-velocity/README.md`).
 The binaries-scope `gaia_dr3_astrometry.tsv` still predates the column, on the
 same terms as `radial_velocity` above.
 
