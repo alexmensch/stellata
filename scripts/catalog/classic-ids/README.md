@@ -40,7 +40,7 @@ scripts/catalog/classic-ids/
                                   shrinking the request.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
-                                  ../photometry/hip-vmag-parse.ts, shared
+                                  ../photometry/hip-photometry-parse.ts, shared
                                   with the V cascade's bright tier.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).

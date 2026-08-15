@@ -19,15 +19,20 @@ scripts/catalog/photometry/
                                  cascade, and which tiers yield a system
                                  blend. Pure.
   colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
-                                 difference of the two relations, and the
-                                 four-tier ci cascade with its
+                                 difference of the two relations, the
+                                 synthetic tier's measured colour bound, and
+                                 the five-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
-  hip-vmag-parse.ts (+ test)     data/hipparcos/hip_main_vmag.tsv → HIP →
-                                 printed Johnson V. Three consumers need the
-                                 same HIP-keyed V: the cascade's bright tier,
-                                 ../classic-ids/'s binding gate, and
-                                 ../astrometry-request/, which narrows the
-                                 gate's candidates by it.
+  gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
+                                 synthetic Johnson B−V + the archive's
+                                 validated-range flag.
+  hip-photometry-parse.ts        data/hipparcos/hip_main_vmag.tsv → HIP →
+    (+ test)                     printed Johnson V and B−V, as two maps off
+                                 one walk. Four consumers, disjoint by column:
+                                 the V cascade's bright tier, ../classic-ids/'s
+                                 binding gate and ../astrometry-request/ (which
+                                 narrows the gate's candidates by it) all take
+                                 V; the ci cascade takes B−V.
   photometry-fixture.ts          Test-only GaiaPhotometry builders. A module,
                                  not an export from a test file: all three
                                  suites here build these rows, and both
@@ -73,15 +78,24 @@ answers a question no consumer can answer from the magnitude alone.
 
 ```
 B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
-  → printed `ci`                      the spine's own cell
+  → printed `I/239` B−V               data/hipparcos/, keyed on the record's HIP
+  → Gaia synthetic B−V                data/gaia/gaia_dr3_gspc.tsv, BP−RP ≤ 3.0
   → intrinsic spectral-class colour   no-Apsis rows only
   → SOLAR_BV_FALLBACK
 ```
 
 Per-tier routing, pinned in build-counts: `gaia_relation` **291,943** ·
-`catalogued` **20,241** · `spectral_derived` **118** · `solar_fallback`
-**955**. The relation carries the bulk, and the spectral tier collapsed from
-2,415 to 118 because it now fires only where BOTH measured tiers miss.
+`printed_hip_bv` **10,341** · `gspc` **9,169** · `spectral_derived` **279** ·
+`solar_fallback` **1,525**. The relation carries the bulk; the two tiers under
+it split the 21,314 rows past its colour and saturation bounds, and **1,804**
+reach neither and take a derived colour.
+
+The spine's printed `ci` cell used to sit where those two tiers now do,
+carrying all 20,241 of them. It is not a source — it is AT-HYG's
+amalgamation of catalogues we can pull ourselves
+(`docs/catalog-driver.md` § 5) — so retiring it costs 731 rows a measured
+colour and hands them to the derived tiers. That is the trade the residual
+policy asks for.
 
 `resolveColourIndex` returns the value, the tier, **and** whether the value
 is observed-convention. That last one is not a convenience: build-time
@@ -96,6 +110,54 @@ two-tier read — `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so an
 Apsis star never renders its baked `ci`. The measured tiers are ungated:
 storing a measurement costs nothing and the field is read by more than the
 shader.
+
+### Why the GSPC tier does not gate on the flag
+
+The synthetic photometry ships a per-band flag for whether the source sits
+inside the range the Johnson standardisation was *validated* over. Gating on
+it would leave the tier serving **zero** rows: the flag's region and this
+tier's window do not intersect anywhere in this catalogue, which is bright
+enough that 96% of it sits below the flag's own bright bound
+(`data/gaia/README.md` § The GSPC validated-range flag has the measured
+region). `ciGspcValidatedRange` pins that zero as a tripwire.
+
+Ignoring a published validity bound is what § Where the colour bound comes
+from refuses to do for the Table-5.9 relation, so the difference matters:
+**that bound is on a fit, this one is on a correction.** The relation is a
+polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
+GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
+passband — a measurement of that star — and the flag bounds only the small
+empirical correction tying the result to the ground system. Outside it the
+value is the uncorrected integration, not a fabricated one.
+
+Two measurements say the uncorrected integration is usable, and one says
+where it stops being so. Against the Table-5.9 relation over the rows the
+relation *does* cover, the flag makes no difference — flag-valid rows
+disagree by p50 0.020 / p99 0.141 (n=21,863), flag-invalid ones by p50 0.023
+/ p99 0.139 (n=242,534), and the flag-invalid median holds between 0.037
+(`G` 4–5) and 0.016 (`G` 11–12). Against printed `I/239` B−V, binned by
+colour:
+
+| BP−RP | n | p50 | p90 |
+|---|---|---|---|
+| 1.75 – 2.50 | 5,775 | 0.031 | 0.108 |
+| 2.50 – 3.00 | 858 | 0.043 | 0.127 |
+| 3.00 – 4.00 | 339 | 0.135 | 0.253 |
+| 4.00+ | 40 | 0.338 | 0.444 |
+
+`GSPC_BP_RP_MAX = 3.0` is that knee — the same discipline as
+`GAIA_PHOTOMETRY_SATURATION_G`, a bound calibrated against a distribution
+rather than adopted from a header.
+
+**Printed sits ABOVE synthetic**, inverting the tier order
+`docs/catalog-driver.md` § 5 states, and for the same reason the bound
+exists: outside the standardisation the synthetic value is not tied to the
+ground system, while `I/239` B−V is a calibrated measurement on it. Both
+corpus rows carrying values from both tiers prefer printed — Barnard's Star
+(pinned 1.57; printed 1.570, synthetic 1.694) and HD 75632 (pinned 1.39;
+printed 1.385, synthetic 1.357) — and both fail the corpus at the ±0.03
+tolerance under the contract's order. The synthetic tier's job is the ~9.2k
+rows Hipparcos never observed, which no other measured source reaches.
 
 ### Where the colour bound comes from
 

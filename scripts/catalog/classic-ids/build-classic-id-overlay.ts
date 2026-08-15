@@ -10,7 +10,7 @@ import {
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { parseGaiaAstrometryCatalogTsv } from '../distance/direction-cascade';
 import { parseFloatOrNull } from '../parse/corpus-tsv';
-import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import {
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
   const gaiaAstrometry = parseGaiaAstrometryCatalogTsv(
     readRequired(SRC_GAIA_ASTROMETRY, ASTROMETRY_HINT),
   );
-  const hipVMag = parseHipVmagTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
+  const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
   const wdsXids: SimbadWdsXidIndex = parseSimbadWdsXidsTsv(
     readRequired(SRC_SIMBAD_WDS_XIDS, SIMBAD_HINT),
   );

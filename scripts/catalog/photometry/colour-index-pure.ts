@@ -7,6 +7,7 @@ import {
   polynomial,
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
+import type { GspcColour } from './gspc-parse';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 
 /** Gaia DR3 documentation Table 5.9 (the release-3 restatement of Riello+
@@ -61,9 +62,34 @@ export function gaiaBMinusV(photometry: GaiaPhotometry | null): number | null {
   return rielloGMinusV(bpMinusRp) - gaiaGMinusB(bpMinusRp);
 }
 
+/** Red bound on the synthetic-photometry tier, calibrated against printed
+ *  `I/239` B−V over the rows carrying both: median |Δ| holds at 0.031–0.043
+ *  mag out to here and breaks to 0.135 in the bin above it. The GSPC flag's
+ *  own bound is 2.6, but it bounds a standardisation fit rather than the
+ *  colour — README.md § Why the GSPC tier does not gate on the flag. */
+export const GSPC_BP_RP_MAX = 3.0;
+
+/** Johnson B−V from Gaia's synthetic photometry, or null where the colour
+ *  bound above cannot be evaluated or is exceeded.
+ *
+ *  Shares `calibratedPhotometry` with the relations rather than only reading
+ *  the colour: the saturation bound is a statement about Gaia's CCDs, and the
+ *  BP/RP spectra these magnitudes are integrated from come off the same
+ *  saturated detector. The printed tier below covers all 566 of those rows. */
+export function gspcBMinusV(
+  photometry: GaiaPhotometry | null,
+  gspc: GspcColour | null,
+): number | null {
+  if (gspc === null) return null;
+  const calibrated = calibratedPhotometry(photometry);
+  if (calibrated === null) return null;
+  return calibrated.bpMinusRp > GSPC_BP_RP_MAX ? null : gspc.bMinusV;
+}
+
 export const CI_VIA_VALUES = [
   'gaia_relation',
-  'catalogued',
+  'printed_hip_bv',
+  'gspc',
   'spectral_derived',
   'solar_fallback',
 ] as const;
@@ -82,22 +108,30 @@ export interface ColourIndexResolution {
 }
 
 /** One row's candidate colours, one per tier below the relation. Named rather
- *  than positional because three of them are `number | null` and a swap would
+ *  than positional because three of them are nullable and a swap would
  *  silently reorder the cascade while still typechecking. */
 export interface ColourIndexSources {
   photometry: GaiaPhotometry | null;
-  /** The spine's printed `ci` cell. */
-  cataloguedCi: number | null;
+  /** Gaia synthetic photometry for this source, or null where the pull has
+   *  no row for it (9% of the request set) or only one band. */
+  gspc: GspcColour | null;
+  /** Printed `I/239` B−V keyed on the record's own HIP. */
+  printedHipBv: number | null;
   /** Non-null suppresses both derived tiers — see below. */
   apsisTeff: number | null;
   /** `spectralClassCi`, or null where the class yields no real colour. */
   spectralCi: number | null;
 }
 
-/** B−V through the cascade: the Gaia relation, else the catalogue's printed
- *  cell, else — only where no Apsis Teff will override the colour downstream —
- *  the intrinsic spectral-class value, else solar.
+/** B−V through the cascade: the Gaia relation, else printed `I/239` B−V, else
+ *  Gaia's synthetic photometry, else — only where no Apsis Teff will override
+ *  the colour downstream — the intrinsic spectral-class value, else solar.
  *  `docs/catalog-driver.md` § 5.
+ *
+ *  **Printed sits above synthetic**, which inverts the order that contract
+ *  states, because the synthetic tier now runs outside the standardisation
+ *  that ties it to the ground system — README.md § Why the GSPC tier does not
+ *  gate on the flag. Every corpus row carrying both prefers printed.
  *
  *  The two derived tiers are gated on `apsisTeff === null` because the shader
  *  reads `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`: deriving a colour an
@@ -106,13 +140,17 @@ export interface ColourIndexSources {
 export function resolveColourIndex(
   sources: ColourIndexSources,
 ): ColourIndexResolution {
-  const { cataloguedCi, apsisTeff, spectralCi } = sources;
+  const { printedHipBv, apsisTeff, spectralCi } = sources;
   const transformed = gaiaBMinusV(sources.photometry);
   if (transformed !== null) {
     return { ci: transformed, via: 'gaia_relation', isObserved: true };
   }
-  if (cataloguedCi !== null && Number.isFinite(cataloguedCi)) {
-    return { ci: cataloguedCi, via: 'catalogued', isObserved: true };
+  if (printedHipBv !== null && Number.isFinite(printedHipBv)) {
+    return { ci: printedHipBv, via: 'printed_hip_bv', isObserved: true };
+  }
+  const synthetic = gspcBMinusV(sources.photometry, sources.gspc);
+  if (synthetic !== null) {
+    return { ci: synthetic, via: 'gspc', isObserved: true };
   }
   if (apsisTeff === null && spectralCi !== null) {
     return { ci: spectralCi, via: 'spectral_derived', isObserved: false };
