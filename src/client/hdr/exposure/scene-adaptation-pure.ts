@@ -1,7 +1,7 @@
 // Scene-driven exposure adaptation: the two branches the reduced frame
 // statistic drives, and the cut they imply. See README.md § Adaptation.
 
-import { MAG_PER_STOP } from './exposure-epoch';
+import { EV_MAX_STOPS } from './exposure-epoch';
 import { tonemapWhitePoint } from '../tonemap-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
@@ -19,19 +19,17 @@ export const ADAPT_REF_COVERAGE = 0.0685;
  *  exactly zero. */
 export const L_ADAPT = L_TARGET * ADAPT_REF_COVERAGE;
 
-/** Peak over mean of a Lambert disc at full phase: `∫√(1−ρ²)·2ρ dρ` = 2/3
- *  of the sub-solar radiance. Exact, and the only reason `L_CAP` and
- *  `adaptedDiscMeanL` are different numbers. */
-export const DISC_PEAK_OVER_MEAN = 1.5;
+/** Coverage at or above which the resolved-surface pin governs alone.
+ *  The park framing, where the pin and the perception branch agree
+ *  exactly for a body-dominated frame — so the top of the ramp is
+ *  continuous by construction rather than by a fade. */
+export const ADAPT_PIN_COVERAGE = ADAPT_REF_COVERAGE;
 
-/** Ceiling the highlight guard holds the frame's brightest **visible
- *  pixel** at — a display compensation, not a perceptual claim; § 3.2
- *  (The highlight guard) carries the reasoning. The buffer max returns a
- *  true brightest pixel where the source walk returned a disc MEAN, so
- *  this is the 1.2 that shipped through the walk era times
- *  `DISC_PEAK_OVER_MEAN`: the level a resolved disc settles at is
- *  unchanged. The one knob smoke-tuning moves. */
-export const L_CAP = 1.8;
+/** Coverage at or below which the perception branch governs alone: the
+ *  smallest framing the EV trim can still pull back to `L_TARGET`
+ *  (§ 3.2). Under it a body is past the trim's reach and reads as the
+ *  brilliant dot § 3.2 says it should. */
+export const ADAPT_DOT_COVERAGE = ADAPT_REF_COVERAGE / 2 ** EV_MAX_STOPS;
 
 /** Time constant of the slew limit on the **applied** cut, in real
  *  seconds. The measurement stays instantaneous, and the filter runs in
@@ -50,20 +48,39 @@ export function slewDm(applied: number, measured: number, blend: number): number
   return applied + (measured - applied) * blend;
 }
 
-/** The three levels the branches are measured against. Ships at the
- *  constants above; the debug panel overrides `lAdapt` / `lCap` live, and
- *  `whitePoint` tracks the operator's own `DR_MAG` knob — the floor is
+/** The three numbers one frame's reduction returns, all at the base
+ *  instrument exposure (`reduction/README.md`). `surfaceL` and
+ *  `coverage` are both frame means, so their ratio is the lit surface's
+ *  own mean brightness — free of both its texture and its coverage. */
+export interface FrameStatistic {
+  /** Area-weighted mean of the flux channel over the whole frame. */
+  meanL: number;
+  /** Area-weighted mean of `L · lit-surface mask` over the whole frame. */
+  surfaceL: number;
+  /** Frame fraction covered by a lit resolved surface. */
+  coverage: number;
+}
+
+export const EMPTY_FRAME_STATISTIC: FrameStatistic = {
+  meanL: 0,
+  surfaceL: 0,
+  coverage: 0,
+};
+
+/** The two levels the branches are measured against. Ships at the
+ *  constants above; the debug panel overrides `lAdapt` / `lTarget` live,
+ *  and `whitePoint` tracks the operator's own `DR_MAG` knob — the floor is
  *  derived from it, so a swept white point that did not reach here would
  *  leave the floor describing a display range the operator no longer has. */
 export interface AdaptationTuning {
   lAdapt: number;
-  lCap: number;
+  lTarget: number;
   whitePoint: number;
 }
 
 export const DEFAULT_ADAPTATION_TUNING: AdaptationTuning = {
   lAdapt: L_ADAPT,
-  lCap: L_CAP,
+  lTarget: L_TARGET,
   whitePoint: tonemapWhitePoint(),
 };
 
@@ -77,14 +94,22 @@ export function eyeAdaptationDm(meanL: number, lAdapt = L_ADAPT): number {
   return -2.5 * Math.log10(meanL / lAdapt);
 }
 
+/** The lit surface's own mean brightness: the masked mean over the masked
+ *  area. Zero where nothing lit and resolved is in frame. */
+export function surfaceMeanL(stat: FrameStatistic): number {
+  return stat.coverage > 0 ? stat.surfaceL / stat.coverage : 0;
+}
+
 /**
- * The display branch: hold the frame's brightest visible pixel at
- * `L_CAP`. Also clamped at 0 — it is a *limit* on saturation, never a
- * licence to expose past threshold.
+ * The resolved-surface branch: hold the dominant lit surface's own mean
+ * brightness at `L_TARGET`. Independent of that surface's texture and of
+ * how much of the frame it fills, which is what makes approach neither
+ * dim nor brighten it. Clamped at 0 like the perception branch.
  */
-export function highlightGuardDm(peakL: number, lCap = L_CAP): number {
-  if (peakL <= lCap) return 0;
-  return -2.5 * Math.log10(peakL / lCap);
+export function surfacePinDm(stat: FrameStatistic, lTarget = L_TARGET): number {
+  const d = surfaceMeanL(stat);
+  if (d <= lTarget) return 0;
+  return -2.5 * Math.log10(d / lTarget);
 }
 
 /** The deepest cut any displayed frame can justify: the perception
@@ -98,89 +123,104 @@ export function displayFloorDm(tuning = DEFAULT_ADAPTATION_TUNING): number {
 
 export const ADAPT_DISPLAY_FLOOR_DM = displayFloorDm();
 
-/** Width of the handover blend, in magnitudes of branch disagreement —
- *  one stop, i.e. a factor-2 band of coverage below the handover. The
- *  floor and the guard's pin can sit many magnitudes apart, so without a
- *  ramp the crossing would step. */
-export const ADAPT_HANDOVER_BLEND_MAG = MAG_PER_STOP;
+/** How much of the frame the resolved-surface pin governs, ramped over
+ *  log coverage between the two derived bounds and smoothstepped so the
+ *  crossing is C1 at both ends. A body drifting through the band cannot
+ *  step the frame, and neither bound is a free constant. */
+export function surfacePinWeight(coverage: number): number {
+  if (coverage <= ADAPT_DOT_COVERAGE) return 0;
+  if (coverage >= ADAPT_PIN_COVERAGE) return 1;
+  const t =
+    Math.log(coverage / ADAPT_DOT_COVERAGE) /
+    Math.log(ADAPT_PIN_COVERAGE / ADAPT_DOT_COVERAGE);
+  return t * t * (3 - 2 * t);
+}
 
 /** Which term set the applied cut — the diagnostic three quite different
- *  bugs share a symptom over. Read off the answer, never off the blend
- *  weight: the ramp is a no-op wherever the floor is slack, so a nonzero
- *  weight does not mean the blend governed. */
-export type AdaptationRegime = 'eye' | 'guard' | 'floor' | 'handover';
+ *  bugs share a symptom over. Read off the answer: `open` is the frame
+ *  where no term asked for a cut at all, which is not the same as the
+ *  perception branch measuring one and landing on zero. */
+export type AdaptationRegime = 'open' | 'eye' | 'floor' | 'surface' | 'handover';
 
 /** Every term behind one frame's cut, so a readout never has to recompute
  *  a branch and risk disagreeing with the frame it describes. */
 export interface AdaptationBranches {
   eye: number;
-  guard: number;
+  pin: number;
   floor: number;
+  /** The lit surface's own mean brightness — the pin's input. */
+  discL: number;
+  coverage: number;
+  weight: number;
   dm: number;
   regime: AdaptationRegime;
 }
 
 /**
- * The frame's cut, decomposed. Where a resolved surface dominates
- * (`guard ≥ eye`, i.e. coverage at or above the handover) the guard's pin
- * governs untouched; elsewhere the perception branch applies, bounded by
- * the display floor, with a one-stop ramp joining the two continuously.
- * Never deeper than `max(eye, guard)` — the display model only ever
- * raises the exposure the scene measurement asked for.
+ * The frame's cut, decomposed. A dominant lit surface takes the pin with
+ * the display floor lifted; a frame without one runs the perception
+ * branch bounded by that floor; the coverage ramp joins them
+ * continuously. Nothing here caches which branch governed last frame,
+ * and nothing may start to.
  */
 export function adaptationBranches(
-  meanL: number,
-  peakL: number,
+  stat: FrameStatistic,
   tuning = DEFAULT_ADAPTATION_TUNING,
 ): AdaptationBranches {
-  const eye = eyeAdaptationDm(meanL, tuning.lAdapt);
-  const guard = highlightGuardDm(peakL, tuning.lCap);
+  const eye = eyeAdaptationDm(stat.meanL, tuning.lAdapt);
+  const pin = surfacePinDm(stat, tuning.lTarget);
   const floor = displayFloorDm(tuning);
-  if (guard >= eye) return { eye, guard, floor, dm: guard, regime: 'guard' };
-  const floored = Math.max(eye, floor);
-  const blend = Math.max(0, 1 + (guard - eye) / ADAPT_HANDOVER_BLEND_MAG);
-  const dm = Math.max(eye, floored + (guard - floored) * blend);
-  const regime: AdaptationRegime =
-    dm === eye ? 'eye' : blend > 0 ? 'handover' : 'floor';
-  return { eye, guard, floor, dm, regime };
+  const weight = surfacePinWeight(stat.coverage);
+  const perception = Math.max(eye, floor);
+  const dm = perception + (pin - perception) * weight;
+  return {
+    eye,
+    pin,
+    floor,
+    discL: surfaceMeanL(stat),
+    coverage: stat.coverage,
+    weight,
+    dm,
+    regime: adaptationRegime(dm, eye, weight),
+  };
+}
+
+function adaptationRegime(dm: number, eye: number, weight: number): AdaptationRegime {
+  if (dm === 0) return 'open';
+  if (weight >= 1) return 'surface';
+  if (weight > 0) return 'handover';
+  return dm === eye ? 'eye' : 'floor';
 }
 
 export function adaptationDm(
-  meanL: number,
-  peakL: number,
+  stat: FrameStatistic,
   tuning = DEFAULT_ADAPTATION_TUNING,
 ): number {
-  return adaptationBranches(meanL, peakL, tuning).dm;
+  return adaptationBranches(stat, tuning).dm;
 }
 
-/** Coverage at which the two branches agree — above it the guard governs
- *  and a resolved disc's PEAK reads `L_CAP`, below it the perception
- *  model does and a small bright source is allowed to clip. */
-export function guardHandoverCoverage(tuning = DEFAULT_ADAPTATION_TUNING): number {
-  return tuning.lAdapt * DISC_PEAK_OVER_MEAN / tuning.lCap;
+/** The frame a lone body of `discMeanL` at `coverage` presents: every lit
+ *  texel is that body, so the masked mean is the frame mean. */
+export function loneBodyStatistic(coverage: number, discMeanL: number): FrameStatistic {
+  return { meanL: discMeanL * coverage, surfaceL: discMeanL * coverage, coverage };
 }
 
-/** Disc-mean luminance a body settles at: `L_ADAPT / f` under the
- *  perception branch, `L_CAP` over the Lambert peak-to-mean where the
- *  guard governs — and clipped wherever the display floor binds, which is
- *  why the disc's own luminance is now an input (§ 3.2's sensitivity
- *  analysis). */
+/** Disc-mean luminance a body settles at — `L_TARGET` wherever the pin
+ *  governs, `L_ADAPT / f` under the perception branch, and clipped
+ *  wherever the display floor binds, which is why the disc's own
+ *  luminance is an input (§ 3.2's sensitivity analysis). */
 export function adaptedDiscMeanL(
   coverage: number,
   discMeanL: number,
   tuning = DEFAULT_ADAPTATION_TUNING,
 ): number {
-  const dm = adaptationDm(
-    discMeanL * coverage,
-    discMeanL * DISC_PEAK_OVER_MEAN,
-    tuning,
-  );
+  const dm = adaptationDm(loneBodyStatistic(coverage, discMeanL), tuning);
   return discMeanL * 10 ** (0.4 * dm);
 }
 
 /** Stops of manual trim a body needs to land its disc mean back on
- *  `L_TARGET`. Constant wherever the guard governs, since the guard
- *  already pins the level. */
+ *  `L_TARGET`. Zero wherever the pin governs, since the pin already puts
+ *  it there. */
 export function trimStopsForCoverage(
   coverage: number,
   discMeanL: number,

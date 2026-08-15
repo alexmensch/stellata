@@ -8,30 +8,28 @@ import {
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_SLEW_TAU_S,
   DEFAULT_ADAPTATION_TUNING,
-  DISC_PEAK_OVER_MEAN,
   displayFloorDm,
   eyeAdaptationDm,
   L_ADAPT,
-  L_CAP,
+  L_TARGET,
 } from './scene-adaptation-pure';
 
 const BASE_EXPOSURE = exposureForMagLimit(7.8);
 
 /** A frame holding one body of disc-mean luminance `discMeanL` over
- *  `coverage` of the pixels, as the reduction would return it. The peak
- *  rides the mean rather than being free: a buffer max cannot come out
- *  below the buffer mean, so the two branches are never fed a pair the
- *  frame could not produce. */
+ *  `coverage` of the pixels, as the reduction would return it: every lit
+ *  texel belongs to that body, so the masked mean is the frame mean. */
 function frame(discMeanL: number, coverage: number): ReducedStatistic {
   return {
     meanL: discMeanL * coverage,
-    peakL: discMeanL * DISC_PEAK_OVER_MEAN,
+    surfaceL: discMeanL * coverage,
+    coverage,
     renderExposure: BASE_EXPOSURE,
   };
 }
 
-/** Coverage far under the guard handover, so the perception branch is the
- *  one being exercised. */
+/** Coverage far under the ramp's foot, so the perception branch is the one
+ *  being exercised. */
 const POINT_COVERAGE = 1e-3;
 
 let reduced: ReducedStatistic | null;
@@ -44,6 +42,12 @@ function makeAdaptation(): SceneAdaptation {
     reduced: () => reduced,
     whitePoint: () => whitePoint,
   });
+}
+
+/** The pure branch layer's answer for the frame the class was handed. */
+function target(): number {
+  if (reduced === null) return 0;
+  return adaptationDm(reduced);
 }
 
 const SETTLE_FRAMES = 200;
@@ -73,7 +77,7 @@ describe('SceneAdaptation', () => {
     const adaptation = makeAdaptation();
     expect(settle(adaptation)).toBe(0);
     expect(adaptation.getMeanLuminance()).toBe(0);
-    expect(adaptation.getPeakLuminance()).toBe(0);
+    expect(adaptation.getStatistic()).toEqual({ meanL: 0, surfaceL: 0, coverage: 0 });
   });
 
   it('cuts on the reduced mean once it does', () => {
@@ -86,31 +90,36 @@ describe('SceneAdaptation', () => {
   it('divides out the exposure the frame was rendered with', () => {
     // The attachment carries the live adapted scalar; the statistic has to
     // read at the base one, or the loop feeds itself. Four magnitudes of
-    // cut in the render exposure must leave the measurement unmoved.
+    // cut in the render exposure must leave the measurement unmoved — and
+    // the coverage channel is a fraction, so it must NOT be rescaled.
     const adaptation = makeAdaptation();
     const cutExposure = BASE_EXPOSURE * 10 ** (0.4 * -4);
     reduced = {
       meanL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
-      peakL: L_CAP * (cutExposure / BASE_EXPOSURE),
+      surfaceL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
+      coverage: 0.3,
       renderExposure: cutExposure,
     };
     expect(adaptation.measure(false, 0, false)).toBe(0);
     expect(adaptation.getMeanLuminance()).toBeCloseTo(L_ADAPT, 9);
+    expect(adaptation.getStatistic().coverage).toBe(0.3);
   });
 
-  it('lets the guard raise the exposure but never lower it', () => {
+  it('takes the pin where a surface dominates, shallower than the eye alone', () => {
     const adaptation = makeAdaptation();
-    // A body filling most of the frame: coverage is above the handover, so
-    // the guard governs and the cut is SHALLOWER than the eye branch alone.
+    // A body filling most of the frame: over the ramp, so the pin governs
+    // and holds the disc at L_TARGET instead of following the frame mean
+    // down — which is what stops an approach dimming it.
     reduced = frame(100 * L_ADAPT, 0.9);
-    const withPeak = settle(adaptation);
-    expect(withPeak).toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 6);
-    expect(withPeak).toBeGreaterThan(eyeAdaptationDm(reduced.meanL));
+    const pinned = settle(adaptation);
+    expect(pinned).toBeCloseTo(target(), 6);
+    expect(pinned).toBeGreaterThan(eyeAdaptationDm(reduced.meanL));
+    expect(100 * L_ADAPT * 10 ** (0.4 * pinned)).toBeCloseTo(L_TARGET, 6);
   });
 
-  it('leaves a peak under the cap alone', () => {
+  it('leaves a surface under the target alone', () => {
     const adaptation = makeAdaptation();
-    reduced = frame(0.5 * L_CAP / DISC_PEAK_OVER_MEAN, 1);
+    reduced = frame(0.5 * L_TARGET, 1);
     expect(settle(adaptation)).toBe(0);
   });
 
@@ -119,19 +128,18 @@ describe('SceneAdaptation', () => {
     reduced = frame(L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     expect(settle(adaptation)).toBe(0);
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    const target = adaptationDm(reduced.meanL, reduced.peakL);
+    const settled = target();
     const first = adaptation.measure(false, SETTLED_MS + 16, false);
     expect(first).toBeLessThan(0);
-    expect(first).toBeGreaterThan(target);
-    expect(settle(adaptation)).toBeCloseTo(target, 6);
+    expect(first).toBeGreaterThan(settled);
+    expect(settle(adaptation)).toBeCloseTo(settled, 6);
   });
 
   it('snaps under warp instead of ramping from the old scene', () => {
     const adaptation = makeAdaptation();
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     adaptation.measure(false, 0, false);
-    expect(adaptation.measure(false, 16, true))
-      .toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 9);
+    expect(adaptation.measure(false, 16, true)).toBeCloseTo(target(), 9);
   });
 
   it('measures nothing in chart mode, and re-enters the scene snapped', () => {
@@ -142,8 +150,7 @@ describe('SceneAdaptation', () => {
     expect(adaptation.getMeanLuminance()).toBe(0);
     // lastNowMs dropped with the reset, so the first scene frame back is a
     // full blend rather than a ramp up from chart's zero cut.
-    expect(adaptation.measure(false, 1e6 + 16, false))
-      .toBeCloseTo(adaptationDm(reduced.meanL, reduced.peakL), 9);
+    expect(adaptation.measure(false, 1e6 + 16, false)).toBeCloseTo(target(), 9);
   });
 
   it('reads against the live instrument exposure, not a fixed one', () => {
@@ -165,13 +172,13 @@ describe('SceneAdaptation — the panel overrides', () => {
   it('rounds the levels back out for the sliders to seed from', () => {
     const adaptation = makeAdaptation();
     adaptation.setLAdapt(2 * L_ADAPT);
-    adaptation.setLCap(2 * L_CAP);
+    adaptation.setLTarget(2 * L_TARGET);
     adaptation.setSlewTauS(4 * ADAPT_SLEW_TAU_S);
     expect(adaptation.getLAdapt()).toBe(2 * L_ADAPT);
-    expect(adaptation.getLCap()).toBe(2 * L_CAP);
+    expect(adaptation.getLTarget()).toBe(2 * L_TARGET);
     expect(adaptation.getSlewTauS()).toBe(4 * ADAPT_SLEW_TAU_S);
     expect(adaptation.getTuning())
-      .toEqual({ lAdapt: 2 * L_ADAPT, lCap: 2 * L_CAP, whitePoint });
+      .toEqual({ lAdapt: 2 * L_ADAPT, lTarget: 2 * L_TARGET, whitePoint });
   });
 
   it('decomposes the frame it actually ran, not a recomputed one', () => {
@@ -190,11 +197,11 @@ describe('SceneAdaptation — the panel overrides', () => {
     expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
   });
 
-  it('applies a swept L_CAP to a guard-governed cut', () => {
+  it('applies a swept L_TARGET to a pin-governed cut', () => {
     reduced = frame(100 * L_ADAPT, 0.9);
     const shipped = settle(makeAdaptation());
     const swept = makeAdaptation();
-    swept.setLCap(2 * L_CAP);
+    swept.setLTarget(2 * L_TARGET);
     expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
   });
 

@@ -13,8 +13,8 @@ import {
   formatExposureReadout,
 } from './exposure-tuning-pure';
 import {
-  ADAPT_REF_COVERAGE,
-  guardHandoverCoverage,
+  ADAPT_DOT_COVERAGE,
+  ADAPT_PIN_COVERAGE,
 } from './scene-adaptation-pure';
 
 function readState(stellata: Stellata): ExposureReadout {
@@ -23,9 +23,11 @@ function readState(stellata: Stellata): ExposureReadout {
   const tuning = adaptation.getTuning();
   return {
     meanL: adaptation.getMeanLuminance(),
-    peakL: adaptation.getPeakLuminance(),
+    discL: branches.discL,
+    coverage: branches.coverage,
+    weight: branches.weight,
     eye: branches.eye,
-    guard: branches.guard,
+    pin: branches.pin,
     floor: branches.floor,
     measuredDm: branches.dm,
     appliedDm: adaptation.getDm(),
@@ -36,8 +38,8 @@ function readState(stellata: Stellata): ExposureReadout {
     exposure: hdr.emitterUniforms.uExposure.value,
     whitePoint: tuning.whitePoint,
     extendedThresholdSb: extendedThresholdSbFor(exposure.getInstrument()),
-    handoverCoverage: guardHandoverCoverage(tuning),
-    refCoverage: ADAPT_REF_COVERAGE,
+    pinCoverage: ADAPT_PIN_COVERAGE,
+    dotCoverage: ADAPT_DOT_COVERAGE,
   };
 }
 
@@ -73,13 +75,13 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
   }));
 
   body.appendChild(makeSlider({
-    label: 'L_CAP (highlight pin)',
-    min: 0.5,
-    max: 6,
-    step: 0.05,
-    initial: stellata.adaptation.getLCap(),
+    label: 'L_TARGET (resolved-surface pin)',
+    min: 0.2,
+    max: 4,
+    step: 0.01,
+    initial: stellata.adaptation.getLTarget(),
     format: (x) => x.toFixed(2),
-    onChange: (x) => stellata.adaptation.setLCap(x),
+    onChange: (x) => stellata.adaptation.setLTarget(x),
   }));
 
   // Floored well above zero: at tau 0 a frame pair landing in the same

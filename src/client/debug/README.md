@@ -355,7 +355,7 @@ re-prosecuted.
 collapsible host with nine sections:
 Exposure (`../hdr/exposure/exposure-tuning.ts` — the exposure statistic,
 the three adaptation branches and which governs, the exposure
-decomposition, over `L_ADAPT` / `L_CAP` / slew τ / `DR_MAG` /
+decomposition, over `L_ADAPT` / `L_TARGET` / slew τ / `DR_MAG` /
 desaturation; `../hdr/exposure/README.md` § Debug panel),
 Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
