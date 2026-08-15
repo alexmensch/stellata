@@ -463,10 +463,11 @@ export function readStars(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
 
-    // B−V through the Gaia relation → synthetic photometry → printed I/239
-    // B−V → intrinsic spectral class → solar. See ../photometry/README.md
-    // § The ci cascade. The baked value only drives colour for no-Apsis stars,
-    // which is why the derived tiers gate on apsisTeff.
+    // B−V through the Gaia relation → printed I/239 B−V → synthetic
+    // photometry → intrinsic spectral class → solar. Printed above synthetic
+    // inverts docs/catalog-driver.md § 5 — ../photometry/README.md § The ci
+    // cascade. The baked value only drives colour for no-Apsis stars, which is
+    // why the derived tiers gate on apsisTeff.
     const gspc = gaiaSourceId ? gspcMap.get(gaiaSourceId) ?? null : null;
     const ciRes = resolveColourIndex({
       photometry: gaiaRow,
