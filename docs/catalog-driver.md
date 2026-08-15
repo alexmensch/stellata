@@ -258,7 +258,7 @@ which were reproduced from the pinned counts before probing):
 | Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | Høg et al. 2000, A&A 355, L27 |
 | Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
 | CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
-| SIMBAD values pull | `basic` (+`allfluxes`) | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → GJ | Wenger et al. 2000, A&AS 143, 9 |
+| SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a vetoed TYC widening | Wenger et al. 2000, A&AS 143, 9 |
 
 Measured exposure and expected coverage (2026-08-14; pins in
 `build-catalog-expected.json` unless noted):
@@ -378,10 +378,19 @@ Rules:
   printed columns.
 - **Binding-gate note.** GSPC and the SIMBAD values pull consume the
   spine's already-gated `gaia_source_id`/HIP keys (same shape as Apsis
-  and the astrometry catalog): no new designation↔source bindings, so
-  the § 4 gate does not re-run. Tycho-2 and CNS5 value columns join on
-  the record's own TYC/GJ designation — value joins, not identity
-  joins, and never positional.
+  and the astrometry catalog), so the § 4 gate does not re-run. Tycho-2
+  and CNS5 value columns join on the record's own TYC/GJ designation —
+  value joins, not identity joins, and never positional. The SIMBAD
+  pulls' **TYC widening** is the one place a value join carries binding
+  risk: a source_id SIMBAD's `ident` table lacks is retried on the
+  record's own TYC, and a TYC names the Tycho entry, which for a close
+  pair is the system rather than the component. It is therefore vetoed
+  where SIMBAD's own Gaia DR3 cross-ID names a different star, and the
+  uncorroborated remainder is counted per pull
+  (`scripts/refresh/simbad/README.md` § The TYC widening carries its own
+  veto). Fluxes come from the long-format `flux` table, never
+  `allfluxes` — the wider view publishes no bibcode, and a value without
+  one is not consumable here.
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the

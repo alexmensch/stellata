@@ -252,7 +252,7 @@ enough to see it.
   bibcode is the source. Scoped to an enumerated cohort (the spine
   rows whose printed cell is non-first-order, plus the no-Gaia tier —
   11,050 rows), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
-  as `data/simbad/simbad_values.tsv` (11,043 rows, ~2.8 MB, LFS).
+  as `data/simbad/simbad_values.tsv` (11,037 rows, ~2.7 MB, LFS).
   Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
   long-format `flux` table rather than the `allfluxes` view, which
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in

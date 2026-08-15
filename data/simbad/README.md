@@ -11,9 +11,10 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
 simbad_sptype.tsv          ~21 MB, LFS. Per-source sp_type / sp_qual /
-                           sp_bibcode / otype + HIP / Gaia DR3 / TYC /
-                           GJ IDs.
-simbad_values.tsv          ~2.8 MB, LFS. 11,043 rows. Bibcoded rv,
+                           sp_bibcode / otype + HIP / Gaia DR3 IDs. The
+                           script also emits TYC / GJ; the committed file
+                           gains those two columns on its next run.
+simbad_values.tsv          ~2.7 MB, LFS. 11,037 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the § 5 value cohort — see § The values pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -46,33 +47,37 @@ SIMBAD outside the cohort. **Widening the cohort is a re-pull**, not a
 filter change: the predicate is `is_simbad_value_cohort` in
 `scripts/refresh/simbad/inputs.py`.
 
-Coverage over the cohort, measured at the 2026-08-15 pull — value counts
-and bibcode counts are equal in every field, so nothing shipped is
-unattributable:
+Coverage over the cohort, measured at the 2026-08-15 pull. In every
+**basic-table** field the value count and the bibcode count are equal
+(coordinates 11,037 · PM 10,984 · parallax 10,826 · rv 9,501), so nothing
+shipped from that table is unattributable. **The fluxes are the
+exception** and the reason the § 5 residual policy has to be applied at
+consumption: B carries 10,258 values against 8,218 bibcodes, V 9,707
+against the same 8,218. The unbibcoded remainder is in the file — the
+pull reports it rather than dropping it — and is not consumable.
 
 | Spine cohort | Field | SIMBAD reaches |
 |---|---|---|
-| `rv_src=HYG` 7,965 | rv | 7,676 (96.4%) |
+| `rv_src=HYG` 7,965 | rv | 7,673 (96.3%) |
 | `rv_src=OTHER` 871 | rv | 556 (63.8%) |
 | `rv_src=G_R2` 295 | rv | 241 (81.7%) |
-| `dist_src=G_R2` 898 | parallax | 885 (98.6%) |
+| `dist_src=G_R2` 898 | parallax | 882 (98.2%) |
 | `dist_src=GJ` 38 | parallax | 28 (73.7%) |
 | `pos_src=GJ` 981 | coordinates | 975 (99.4%) |
-| `pm_src=HYG` 2,472 | PM | 2,424 (98.1%) |
+| `pm_src=HYG` 2,472 | PM | 2,421 (97.9%) |
 | `mag_src=GJ` 981 | V flux | 471 (48.0%), **359 bibcoded** |
 
-The V flux is the one field where bibcode coverage lags the value
-coverage — 112 of the 471 fluxes carry none and so cannot ship. The
-single `*_src=OTHER` row in the position / magnitude / PM columns is Sol,
-which is curated rather than sourced.
+112 of that last 471 carry no bibcode and so cannot ship. The single
+`*_src=OTHER` row in the position / magnitude / PM columns is Sol, which
+is curated rather than sourced.
 
-**rv Gaia-bibcode skip rule** (§ 5): of the 9,504 rv values in the pull,
-**1,418 carry a Gaia catalogue bibcode** — 1,216 `2018yCat.1345....0G`
-(DR2) and 202 `2022yCat.1355....0G` (DR3). Those are the values the rv
+**rv Gaia-bibcode skip rule** (§ 5): of the 9,501 rv values in the pull,
+**1,417 carry a Gaia catalogue bibcode** — 1,216 `2018yCat.1345....0G`
+(DR2) and 201 `2022yCat.1355....0G` (DR3). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The other 207 references are
 literature, led by `2006AstL...32..759G` (2,809) and
-`2007AN....328..889K` (926).
+`2007AN....328..889K` (925).
 
 ## Provenance
 
@@ -109,14 +114,27 @@ Resolution against SIMBAD's `ident` table is 100% for HIP and TYC and
 does not index, and stripping the letter would key the system rather than
 the component, so they stay unresolved rather than mis-bound.
 
-**TYC widening.** A source_id SIMBAD's `ident` table does not carry
-leaves its row unreachable under the Gaia namespace, so each pull retries
-those rows on the record's own TYC. Over the value cohort it recovered
-141 oids. Over the rows the committed sp_type pull left with no `sp_type`
-at all (34,849 of them carrying a TYC), the widening resolves 34,842 and
+**TYC widening, and its veto.** A source_id SIMBAD's `ident` table does
+not carry leaves its row unreachable under the Gaia namespace, so each
+pull retries those rows on the record's own TYC. That is the one binding
+here made on a designation alone, and a TYC names the Tycho entry — for a
+close pair, the system rather than the component the spine resolved. It
+is therefore vetoed wherever SIMBAD's own Gaia DR3 cross-ID names a
+different star: over the value cohort, 141 candidates → **6 vetoed** (all
+six adjacent source_ids in the same HEALPix cell, i.e. the other
+component: HD 236699, HD 73786, HD 225284, HD 350000, HD 198550,
+HD 36219A) → 135 kept, every one of them uncorroborated in the sense that
+SIMBAD holds no Gaia id for the object to check against. Mechanism and
+why a surviving binding can never be a false veto:
+`scripts/refresh/simbad/README.md` § The TYC widening carries its own
+veto.
+
+Over the rows the committed sp_type pull left with no `sp_type` at all
+(34,849 of them carrying a TYC), the widening resolves 34,842 and
 **2,882 — 8.3% — come back with a spectral type**; the rest displays as
 unknown, which is the § 5 disposition for the spect residual. That gain
-lands on the sp_type pull's next run, not in the committed TSV.
+lands on the sp_type pull's next run, not in the committed TSV, and the
+veto applies there too.
 
 ## Consumed by
 
