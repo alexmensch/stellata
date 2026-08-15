@@ -93,10 +93,10 @@ export class LuminanceReduction {
     let src = source;
     let srcW = width;
     let srcH = height;
-    for (const level of this.levels) {
+    for (const [i, level] of this.levels.entries()) {
       this.material.uniforms.uSource.value = src;
       (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
-      this.material.uniforms.uFromStatistic.value = src === source ? 1 : 0;
+      this.material.uniforms.uFromStatistic.value = i === 0 ? 1 : 0;
       renderer.setRenderTarget(level.target);
       renderer.render(this.scene, this.camera);
       src = level.target.texture;

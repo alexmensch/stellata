@@ -76,7 +76,7 @@ describe('SceneAdaptation', () => {
   it('reports no cut before the first measurement lands', () => {
     const adaptation = makeAdaptation();
     expect(settle(adaptation)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBe(0);
+    expect(adaptation.getStatistic().meanL).toBe(0);
     expect(adaptation.getStatistic()).toEqual({ meanL: 0, surfaceL: 0, coverage: 0 });
   });
 
@@ -84,7 +84,7 @@ describe('SceneAdaptation', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     expect(settle(adaptation)).toBeCloseTo(eyeAdaptationDm(100 * L_ADAPT), 6);
-    expect(adaptation.getMeanLuminance()).toBeCloseTo(100 * L_ADAPT, 9);
+    expect(adaptation.getStatistic().meanL).toBeCloseTo(100 * L_ADAPT, 9);
   });
 
   it('divides out the exposure the frame was rendered with', () => {
@@ -101,7 +101,7 @@ describe('SceneAdaptation', () => {
       renderExposure: cutExposure,
     };
     expect(adaptation.measure(false, 0, false)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBeCloseTo(L_ADAPT, 9);
+    expect(adaptation.getStatistic().meanL).toBeCloseTo(L_ADAPT, 9);
     expect(adaptation.getStatistic().coverage).toBe(0.3);
   });
 
@@ -147,7 +147,7 @@ describe('SceneAdaptation', () => {
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     settle(adaptation);
     expect(adaptation.measure(true, 1e6, false)).toBe(0);
-    expect(adaptation.getMeanLuminance()).toBe(0);
+    expect(adaptation.getStatistic().meanL).toBe(0);
     // lastNowMs dropped with the reset, so the first scene frame back is a
     // full blend rather than a ramp up from chart's zero cut.
     expect(adaptation.measure(false, 1e6 + 16, false)).toBeCloseTo(target(), 9);
@@ -157,10 +157,10 @@ describe('SceneAdaptation', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     settle(adaptation);
-    const atDefault = adaptation.getMeanLuminance();
+    const atDefault = adaptation.getStatistic().meanL;
     base = exposureForMagLimit(12.8);
     adaptation.measure(false, 1e6, false);
-    expect(adaptation.getMeanLuminance() / atDefault)
+    expect(adaptation.getStatistic().meanL / atDefault)
       .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
   });
 });

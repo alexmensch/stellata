@@ -118,11 +118,6 @@ export class SceneAdaptation {
     return this.dm;
   }
 
-  /** `L̄` itself — the debug panel's row. */
-  getMeanLuminance(): number {
-    return this.stat.meanL;
-  }
-
   /** The whole frame statistic at the base exposure: `L̄`, the masked mean
    *  and the lit-surface coverage the pin divides them into. */
   getStatistic(): FrameStatistic {

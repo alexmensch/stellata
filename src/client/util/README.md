@@ -65,10 +65,12 @@ build scripts, tests, and shader uniforms.
   indexed**: with no `position` attribute the renderer derives its draw
   count from `index.count`, so an un-indexed geometry silently draws
   nothing.
-- `glsl-call-args.ts` — `glslCallArgs(src, name)`, the top-level argument
-  list of a call in shader source. Walks the parens rather than matching a
-  regex, so a nested call in an earlier slot cannot split the list in the
-  wrong place. The drift tests that pin what a shader passes where run on
+- `glsl-call-args.ts` (+ test) — `glslCallArgs(src, name)`, the top-level
+  argument list of a call in shader source. Walks the parens rather than
+  matching a regex, so a nested call in an earlier slot cannot split the list
+  in the wrong place, and matches a **whole identifier** — callers assert on
+  argument text, so a hit inside a longer name would pin a different call and
+  still pass. The drift tests that pin what a shader passes where run on
   it — which alpha an occluder texel dims by
   (`../solar-system/planets/planet-mesh-layer.test.ts`), which emitters may
   claim lit-surface coverage (`../hdr/attachments/statistic-mask.test.ts`).

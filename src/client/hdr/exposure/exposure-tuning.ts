@@ -22,7 +22,7 @@ function readState(stellata: Stellata): ExposureReadout {
   const branches = adaptation.branches();
   const tuning = adaptation.getTuning();
   return {
-    meanL: adaptation.getMeanLuminance(),
+    meanL: adaptation.getStatistic().meanL,
     discL: branches.discL,
     coverage: branches.coverage,
     weight: branches.weight,
