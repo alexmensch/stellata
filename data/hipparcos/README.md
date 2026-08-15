@@ -48,6 +48,12 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   `B-V`), 118,218 rows — one with a null `Vmag`, 1,281 with a null `B-V`
   (98.9% fill). Rounded to 3 dp on write so the committed file is
   byte-stable across numpy versions.
+- **The `_vmag` in the filename is historical** and so are the names built
+  on it — `pnpm run refresh:hip-vmag`, `refresh-hipparcos-vmag.py`, the
+  `hipVMagEntries` count key. The slice carries both printed columns; the
+  parser reading it is `hip-photometry-parse.ts`. Renaming the file would
+  rewrite an LFS object and a pinned count key to no consumer's benefit,
+  so the name stays and this line is the pointer.
 - **Licence**: Public domain via CDS.
 - **Citation**: ESA 1997, *The Hipparcos and Tycho Catalogues*, ESA SP-1200.
   `Vmag` and `B-V` are Johnson on the catalogue's own photometric system;

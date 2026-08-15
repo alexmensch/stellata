@@ -121,6 +121,14 @@ re-deriving:
   30 — so **the build needs no S/N gate of its own**. It is also why B is
   absent where V is present: B is the JKC band the cut bites hardest
   after U (≈87% of GSPC sources keep it).
+- **The four flux columns ship unconsumed, by design.** The build reads
+  the two magnitudes and the two flags and nothing else; `*_flux_error` is
+  an absolute flux in W nm⁻¹ m⁻², so it is unreadable without `*_flux`
+  beside it, and the pair is what a future magnitude-uncertainty consumer
+  would need. They are also two-thirds of the file: `FLUX_DECIMALS` in the
+  pull writes float32's own 7 significant digits, and the committed TSV
+  predates that constant by two digits per cell — it narrows on the next
+  refresh, which nothing needs to be scheduled for.
 - **The JKC flux units are correct.** The paper's note-added-in-proof
   erratum — units should read Hz⁻¹, not nm⁻¹ — covers the **SDSS and PS1**
   flux fields only, and the `y_ps1` hockey-stick bug likewise. Neither
