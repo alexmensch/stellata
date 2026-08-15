@@ -26,6 +26,11 @@ import {
 } from './constellations';
 import { parseGspcTsv, type GspcColour } from '../photometry/gspc-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
+import {
+  emptySimbadValueIndex,
+  parseSimbadValuesTsv,
+  type SimbadValueIndex,
+} from '../simbad-values-parse';
 import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
@@ -39,6 +44,7 @@ const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
 const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
+const SRC_SIMBAD_VALUES = resolve(ROOT, 'data/simbad/simbad_values.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
 const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 
@@ -47,7 +53,7 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
   INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
-  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
+  SRC_SIMBAD_VALUES, SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
@@ -58,6 +64,7 @@ export type ReadStarsInputSizes = Pick<
   | 'apsisEntries'
   | 'gspcEntries'
   | 'simbadSptypeEntries'
+  | 'simbadValuesEntries'
   | 'gaiaAstrometryEntries'
   | 'hip2Entries'
   | 'hipVMagEntries'
@@ -82,6 +89,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     apsisEntries: 0,
     gspcEntries: 0,
     simbadSptypeEntries: 0,
+    simbadValuesEntries: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
@@ -152,6 +160,25 @@ export function loadReadStarsInputs(): ReadStarsInputs {
       `         fall through to Gaia DR3 GSP-Spec and the unknown sentinel.\n` +
       `         Re-run scripts/refresh/refresh-simbad-sptype.py to restore\n` +
       `         the SIMBAD tier.`,
+    );
+  }
+
+  // SIMBAD bibcoded values over the § 5 cohort — the bottom tier of the rv
+  // cascade. Optional on the same terms as the tables above; without it the
+  // rows no first-order catalogue reaches take a zero radial term, which
+  // shows up as an rvVia drift in the count snapshot.
+  let simbadValues: SimbadValueIndex = emptySimbadValueIndex();
+  if (existsSync(SRC_SIMBAD_VALUES)) {
+    console.log('Parsing SIMBAD bibcoded values...');
+    const t = Date.now();
+    simbadValues = parseSimbadValuesTsv(readFileSync(SRC_SIMBAD_VALUES, 'utf8'));
+    sizes.simbadValuesEntries = simbadValues.rowCount;
+    console.log(`  ${sizes.simbadValuesEntries} rows in ${Date.now() - t}ms`);
+  } else {
+    console.warn(
+      `WARNING: ${SRC_SIMBAD_VALUES} not found — the rv cascade's SIMBAD tier\n` +
+      `         is unavailable; its rows fall to a zero radial term.\n` +
+      `         Re-run \`pnpm run refresh:simbad-values\`.`,
     );
   }
 
@@ -243,7 +270,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   console.log(`  built the region grid in ${Date.now() - tCon}ms`);
 
   return {
-    bjMap, apsisMap, gspcMap, simbadSpectral, directions, hipVMag, hipBv,
-    dustGrid, conAssignment, sizes,
+    bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
+    hipVMag, hipBv, dustGrid, conAssignment, sizes,
   };
 }

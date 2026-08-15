@@ -45,10 +45,10 @@ subfolders.
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
-- `distance/` — direction resolution, the radial-velocity cascade,
-  build-time de-extinction, and the multi-layer distance-refinement
-  override stack with its authoring discipline and post-build regression
-  check.
+- `distance/` — direction resolution, build-time de-extinction, and the
+  multi-layer distance-refinement override stack with its authoring
+  discipline and post-build regression check. Its `radial-velocity/`
+  subfolder owns the rv cascade and the Gaia-bibcode skip rule.
 - `photometry/` — the published Gaia broadband relations and the two
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
@@ -73,6 +73,11 @@ scripts/catalog/
                                   layout, override math, and the spectral
                                   resolver. Pure; imported by every
                                   subfolder and by src/client/loaders/.
+  simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
+                                  every namespace the pull keyed on, plus the
+                                  record-side source_id → HIP → TYC → GJ
+                                  lookup. The § 5 value cascades share it;
+                                  the rv one consumes it today.
   catalog-lookup.ts               Reads a built catalog back (loadCatalog) —
                                   the shared reader for verify-catalog,
                                   validate-simbad-sample, and sid:allocate.

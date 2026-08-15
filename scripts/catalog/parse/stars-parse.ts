@@ -31,23 +31,31 @@ import {
 } from '../catalog-pure';
 import {
   resolveDirection,
-  resolveRadialVelocity,
   velocityPcPerYr,
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
-  RV_VIA_VALUES,
-  RV_ERROR_BANDS,
-  rvErrorBand,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
   type DirectionSources,
   type DirectionVia,
-  type RvVia,
-  type RvErrorBand,
   type VelocityVia,
 } from '../distance/direction-cascade';
+import {
+  radialTermExceedsCeiling,
+  resolveRadialVelocity,
+  rvErrorBand,
+  RV_VIA_VALUES,
+  RV_ERROR_BANDS,
+  type RvVia,
+  type RvErrorBand,
+} from '../distance/radial-velocity/radial-velocity';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import {
+  emptySimbadValueIndex,
+  lookupSimbadValues,
+  type SimbadValueIndex,
+} from '../simbad-values-parse';
 import {
   resolveVMagnitude,
   V_VIA_VALUES,
@@ -178,6 +186,9 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   bjMap?: Map<string, number>;
   simbadSpectral?: SimbadSpectralIndex;
+  /** Bibcoded SIMBAD values over the § 5 cohort — the rv cascade's bottom
+   *  tier. Absent leaves its rows on a zero radial term. */
+  simbadValues?: SimbadValueIndex;
   apsisMap?: Map<string, ApsisRow>;
   /** Gaia synthetic Johnson B−V per source_id — the ci cascade's tier below
    *  the Table-5.9 relation. */
@@ -199,6 +210,7 @@ export function readStars(
     conAssignment,
     bjMap = new Map(),
     simbadSpectral = { bySource: new Map(), byHip: new Map() },
+    simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
     gspcMap = new Map(),
     directions = {
@@ -230,6 +242,10 @@ export function readStars(
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
     velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
     rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
+    rvSimbadGaiaBibcode: number;   // simbad-tier rows citing a Gaia catalogue release
+    rvGaiaBibcodeSkipped: number;  // 2p rows whose Gaia-bibcoded SIMBAD value the skip rule rejected
+    rvRadialRejected: number;      // rows whose radial term alone exceeded the sanity ceiling
+    rvRadialRejectedSample: string[]; // per-rejected-star "id: rv @ dist" for build-log review
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
     rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
@@ -270,6 +286,10 @@ export function readStars(
   const rvVia = emptyTallyPartition(RV_VIA_VALUES);
   const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
   let rvGaiaErrorMaxKmS = 0;
+  let rvSimbadGaiaBibcode = 0;
+  let rvGaiaBibcodeSkipped = 0;
+  let rvRadialRejected = 0;
+  const rvRadialRejectedSample: string[] = [];
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
   let ciGspcValidatedRange = 0;
   let rvApplied = 0;
@@ -310,11 +330,24 @@ export function readStars(
       ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null
       : null;
 
-    // Radial velocity through Gaia DR3 → the printed cell, feeding the
-    // space-motion velocity's radial term. See ../distance/README.md.
-    const rvRes = resolveRadialVelocity(gaiaRow, parseFloatOrNull(row.rv));
-    const rvKmS = rvRes.rvKmS;
+    // Radial velocity through Gaia DR3 → bibcoded SIMBAD, feeding the
+    // space-motion velocity's radial term.
+    // See ../distance/radial-velocity/README.md.
+    const simbadRow = lookupSimbadValues(simbadValues, {
+      sourceId: gaiaSourceId,
+      hip,
+      tyc: nonEmpty(row.tyc),
+      gl: nonEmpty(row.gl),
+    });
+    const rvRes = resolveRadialVelocity(gaiaRow, simbadRow?.rv ?? null);
+    // A radial term past the sanity ceiling on its own is rejected here rather
+    // than left to the whole-vector clamp below, which would drop the row's
+    // measured proper motion with it.
+    const rvRejected = radialTermExceedsCeiling(rvRes.rvKmS);
+    const rvKmS = rvRejected ? null : rvRes.rvKmS;
     rvVia[rvRes.via]++;
+    if (rvRes.gaiaBibcodeCited) rvSimbadGaiaBibcode++;
+    if (rvRes.gaiaBibcodeSkipped) rvGaiaBibcodeSkipped++;
     if (rvRes.via === 'gaia_dr3' && gaiaRow !== null) {
       const rvErr = gaiaRow.radialVelocityErrorKmS;
       rvGaiaErrorBand[rvErrorBand(rvErr)]++;
@@ -408,9 +441,9 @@ export function readStars(
       : apparentToAbsoluteMagnitude(vRes.v, dist);
 
     // Space-motion velocity from the SAME tier's solution + the final
-    // stack distance + AT-HYG RV. Sol carries no PM row and sits at the
-    // origin — force it to exactly zero so the advance pass leaves the
-    // world origin fixed.
+    // stack distance + the rv cascade's radial term. Sol carries no PM row
+    // and sits at the origin — force it to exactly zero so the advance pass
+    // leaves the world origin fixed.
     let vel = isSol
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
@@ -425,6 +458,12 @@ export function readStars(
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
     const idLabel = (): string => proper
       ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
+    if (rvRejected) {
+      rvRadialRejected++;
+      rvRadialRejectedSample.push(
+        `${idLabel()}: ${rvRes.rvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`,
+      );
+    }
     if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) {
       velocityClampedSample.push(
         `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`,
@@ -561,6 +600,10 @@ export function readStars(
       velocityAboveEscape,
       velocityAboveEscapeSample,
       rvVia,
+      rvSimbadGaiaBibcode,
+      rvGaiaBibcodeSkipped,
+      rvRadialRejected,
+      rvRadialRejectedSample,
       rvGaiaErrorBand,
       rvGaiaErrorMaxKmS,
       rvApplied,

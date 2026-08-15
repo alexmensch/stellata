@@ -164,10 +164,14 @@ veto applies there too.
   already gated, so the gate runs where bindings are still being decided
   (`scripts/catalog/spine/README.md` § The identifier columns are read,
   never re-derived).
-- `simbad_values.tsv` → **nothing yet.** It is the frozen input the rv,
-  distance, direction/PM and V cascade beads (`stellata-3bsf.26`, `.27`,
-  `.28`) consume; the file ships ahead of them so each is a build change
-  against a reviewed pull rather than a pull and a build change at once.
+- `simbad_values.tsv` → `scripts/catalog/simbad-values-parse.ts`, indexed by
+  every namespace the pull keyed on and joined per record source_id → HIP →
+  TYC → GJ. The **rv** cascade consumes it today
+  (`scripts/catalog/distance/radial-velocity/README.md`); the direction/PM,
+  V and distance cascades follow at `stellata-3bsf.26` / `.28`. The file
+  shipped ahead of all of them so each is a build change against a reviewed
+  pull rather than a pull and a build change at once. Only the `rv*` columns
+  are read so far — the parser adds a field per bead.
 
 ## Refresh
 

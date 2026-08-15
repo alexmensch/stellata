@@ -168,9 +168,14 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 | HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers | HIP2 row, null PM |
 | AT-HYG `pm_ra`/`pm_dec` | athyg_printed tier | blank pm cells |
 
+`velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
+published-but-wrong velocity is what these thresholds are for, and which rows
+moved is recorded in `../distance/radial-velocity/README.md` § The sanity
+thresholds.
+
 Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
-row with a 5p solution, else the spine's printed `rv` cell
-(`../distance/README.md` § Radial velocity) — and is zero where neither tier
+row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
+(`../distance/radial-velocity/README.md`) — and is zero where neither tier
 carries one. The 5p condition is the same one the PM table above turns on: a 2p
 row's RVS spectrum is as blended as its astrometry. **Sol** carries
 no PM row and sits at the origin, so its velocity is forced to exactly zero
@@ -178,9 +183,15 @@ no PM row and sits at the origin, so its velocity is forced to exactly zero
 
 **Sanity ceiling + escape-velocity ratchet.** `v = d·μ` inflates a noisy
 sub-arcsec/yr PM on a faint distant star into thousands of km/s, and a bad
-`rv` cell shows up as a nonphysical radial term. Two tracked thresholds
+`rv` cell shows up as a nonphysical radial term. Three tracked thresholds
 guard this:
 
+- A radial term that alone exceeds `VELOCITY_SANITY_CEILING_KM_S` is dropped
+  **before** assembly (`radialTermExceedsCeiling`), leaving the row's measured
+  PM intact — the clamp below would otherwise take a real proper motion down
+  with a bad velocity. Counted `rvRadialRejected` and logged per star;
+  `../distance/radial-velocity/README.md` § The sanity thresholds carries the
+  case that fixed the rule.
 - `VELOCITY_SANITY_CEILING_KM_S` (1500, ~3× escape): a hard clamp — the
   velocity is zeroed (kept at J2016.0, same as no-PM rows) so the star
   doesn't streak under the advance. Counted `velocityClamped` (a subset of

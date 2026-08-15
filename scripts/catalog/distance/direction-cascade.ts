@@ -97,86 +97,12 @@ export const VELOCITY_VIA_VALUES = [
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
 
-// Which source supplied the radial term of the space-motion velocity. Pinned
-// per-tier in build-counts alongside `velocityVia`, which covers the
-// tangential term.
-export const RV_VIA_VALUES = [
-  'gaia_dr3',
-  'catalogued',
-  'none',
-] as const;
-
-export type RvVia = (typeof RV_VIA_VALUES)[number];
-
-// Coarse `radial_velocity_error` spread over the rows the Gaia tier supplies,
-// pinned in build-counts. Nothing routes on it — README.md § Radial velocity.
-export const RV_ERROR_BANDS = [
-  'none',
-  'le1',
-  'le5',
-  'le10',
-  'le20',
-  'gt20',
-] as const;
-
-export type RvErrorBand = (typeof RV_ERROR_BANDS)[number];
-
-export type RvErrorBandPartition = Record<RvErrorBand, number>;
-
-const RV_ERROR_BAND_EDGES_KM_S: ReadonlyArray<readonly [number, RvErrorBand]> = [
-  [1, 'le1'],
-  [5, 'le5'],
-  [10, 'le10'],
-  [20, 'le20'],
-];
-
-/** Band for one row's stated rv uncertainty. `none` is the shape the
- *  published catalogue never carries — an rv with no error — and is pinned
- *  at 0. */
-export function rvErrorBand(errorKmS: number | null): RvErrorBand {
-  if (errorKmS === null) return 'none';
-  for (const [edge, band] of RV_ERROR_BAND_EDGES_KM_S) {
-    if (errorKmS <= edge) return band;
-  }
-  return 'gt20';
-}
-
 /** Whether the row carries the full five-parameter solution. A 2p row is
  *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
  *  the blend the fit could not separate. Both the direction cascade's tier-1
  *  branch and the rv cascade's Gaia tier turn on this. */
 export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
   return row.parallaxMas !== null;
-}
-
-export interface RadialVelocityResolution {
-  /** km/s, or null when no tier carries one — the radial term is then zero. */
-  rvKmS: number | null;
-  via: RvVia;
-}
-
-/** Radial velocity through the cascade: Gaia DR3 `radial_velocity`, else the
- *  catalogue's printed cell. `docs/catalog-driver.md` § 5.
- *
- *  The two agree on the bulk — the printed cell is itself Gaia RVS on ~258k
- *  rows — so the tier that matters is the catalogued fall-through, which
- *  carries the pre-Gaia velocities RVS's G_RVS ≲ 14 limit never reached.
- *
- *  The Gaia tier needs a 5p solution, not merely an `rv` cell: RVS measures the
- *  same window the astrometric fit does, so a row Gaia could not separate into
- *  parallax + PM is one whose spectrum is a blend of the components too, and its
- *  median RV is not the primary's. See README.md § Radial velocity. */
-export function resolveRadialVelocity(
-  gaia: GaiaAstrometryCatalogRow | null,
-  cataloguedRvKmS: number | null,
-): RadialVelocityResolution {
-  if (gaia !== null && gaia.radialVelocityKmS !== null && gaiaHas5pSolution(gaia)) {
-    return { rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
-  }
-  if (cataloguedRvKmS !== null && Number.isFinite(cataloguedRvKmS)) {
-    return { rvKmS: cataloguedRvKmS, via: 'catalogued' };
-  }
-  return { rvKmS: null, via: 'none' };
 }
 
 export interface DirectionResolution {
