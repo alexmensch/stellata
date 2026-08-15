@@ -10,8 +10,10 @@ import { focalChainRelationSet } from './focal-chain';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
+  orbitMemberSlots,
   type OrbitRelationCache,
 } from './orbit-relation-cache';
+import { DirtyItemUploader } from '../util/attribute-upload';
 import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
@@ -59,6 +61,8 @@ export class BinaryOrbitField {
   private opts: BinaryOrbitFieldOptions;
   private worldOffset = new THREE.Vector3();
   private relations: OrbitRelationCache[] = [];
+  private positionUploader: DirtyItemUploader;
+  private suppressUploader: DirtyItemUploader;
 
   // Relations (by BinariesData.relations index) on the current focal
   // star's slot-chain — every relation that writes the focal's slot
@@ -93,6 +97,9 @@ export class BinaryOrbitField {
       opts.binaries,
       opts.absolutePositions,
     );
+    const memberSlots = orbitMemberSlots(this.relations, opts.binaries);
+    this.positionUploader = new DirtyItemUploader(memberSlots, 3);
+    this.suppressUploader = new DirtyItemUploader(memberSlots, 1);
   }
 
   /** Read-only access to the cached relation list. Tests and the
@@ -274,8 +281,13 @@ export class BinaryOrbitField {
       local[sBase + 2] = local[pBase + 2] + rc.baseDiffPc.z + dzDelta;
     }
 
-    this.opts.iPositionAttr.needsUpdate = true;
-    this.opts.iCompositeSuppressAttr.needsUpdate = true;
+    // Re-upload only the member slots whose values actually moved. A
+    // wholesale rewrite by the shell (epoch re-advance, recentre) reaches
+    // every star, not just these, so its own full upload has to stand.
+    this.positionUploader.flush(this.opts.iPositionAttr, local, this.baselinesDirty);
+    this.suppressUploader.flush(
+      this.opts.iCompositeSuppressAttr, suppress, this.baselinesDirty,
+    );
     this.baselinesDirty = false;
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;

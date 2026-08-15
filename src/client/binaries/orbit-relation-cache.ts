@@ -130,6 +130,22 @@ export function buildOrbitRelationCaches(
   return out;
 }
 
+/** Ascending, deduplicated catalog indices of every star a cached
+ *  relation writes — the only slots the per-frame walk can touch, and so
+ *  the only ones its attribute re-upload has to cover. */
+export function orbitMemberSlots(
+  caches: readonly OrbitRelationCache[],
+  binaries: BinariesData,
+): Int32Array {
+  const slots = new Set<number>();
+  for (const rc of caches) {
+    const r = binaries.relations[rc.relationIdx];
+    slots.add(r.primaryIdx);
+    slots.add(r.secondaryIdx);
+  }
+  return Int32Array.from(slots).sort();
+}
+
 /** Per-frame ΔR(t) = R(t) − R(baseline) in ICRS pc for a cached
  *  relation. `systemXyzPc` anchors the Tier-1 tangent basis (ignored
  *  for Tier 2) — the same anchor `baseDiffPc` was built with, so the
