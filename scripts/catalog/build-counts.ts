@@ -2,7 +2,7 @@
 // BuildCounts record against the committed snapshot. See
 // scripts/catalog/README.md § Validation harness.
 import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
-import type { RvErrorBandPartition } from './distance/direction-cascade';
+import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { LabelMergeCounts } from './classic-ids/label-merge-pure';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
@@ -173,6 +173,8 @@ export interface BuildCounts extends LabelMergeCounts {
   apsisTeffEither: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;
+  /** Rows in `data/simbad/simbad_values.tsv` — the § 5 value cohort. */
+  simbadValuesEntries: number;
   /** Records classified via the curated HIP→sp_type override tier
    *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
    *  carries neither hip nor source_id (Castor). */
@@ -426,13 +428,21 @@ export interface BuildCounts extends LabelMergeCounts {
   velocityRvApplied: number;
   /** Rows taking the radial term from Gaia DR3 `radial_velocity`. */
   rvGaiaDr3: number;
-  /** Rows RVS did not reach, falling through to the spine's printed cell. */
-  rvCatalogued: number;
+  /** Rows RVS did not reach, taking a bibcoded SIMBAD `rvz_radvel`. */
+  rvSimbad: number;
+  /** `rvSimbad` rows whose bibcode is a Gaia catalogue release rather than
+   *  the literature — legitimate here (Gaia published no rv of its own for
+   *  them), and the split the skip rule's own cohort is measured against. */
+  rvSimbadGaiaBibcode: number;
+  /** Rows whose own 5p gate withheld a Gaia rv AND whose SIMBAD candidate
+   *  cited a Gaia release — the skip rule's catch, falling to zero rather
+   *  than laundering the withheld value back in. */
+  rvGaiaBibcodeSkipped: number;
   /** Rows no tier covers — the radial term is zero. */
   rvNone: number;
   /** `rvGaiaDr3` rows split by the stated `radial_velocity_error`, a tracked
    *  ratchet rather than a gate — DR3 is taken as published
-   *  (`distance/README.md` § Radial velocity). `none` is pinned at 0: the
+   *  (`distance/radial-velocity/README.md`). `none` is pinned at 0: the
    *  published catalogue always pairs an rv with an error. */
   rvGaiaErrorBands: RvErrorBandPartition;
   /** Largest stated `radial_velocity_error` (km/s) any `rvGaiaDr3` row

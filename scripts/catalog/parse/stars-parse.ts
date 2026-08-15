@@ -31,23 +31,31 @@ import {
 } from '../catalog-pure';
 import {
   resolveDirection,
-  resolveRadialVelocity,
   velocityPcPerYr,
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
-  RV_VIA_VALUES,
-  RV_ERROR_BANDS,
-  rvErrorBand,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
   type DirectionSources,
   type DirectionVia,
-  type RvVia,
-  type RvErrorBand,
   type VelocityVia,
 } from '../distance/direction-cascade';
+import {
+  isGaiaCatalogueBibcode,
+  resolveRadialVelocity,
+  rvErrorBand,
+  RV_VIA_VALUES,
+  RV_ERROR_BANDS,
+  type RvVia,
+  type RvErrorBand,
+} from '../distance/radial-velocity/radial-velocity';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import {
+  emptySimbadValueIndex,
+  lookupSimbadValues,
+  type SimbadValueIndex,
+} from '../simbad-values-parse';
 import {
   resolveVMagnitude,
   V_VIA_VALUES,
@@ -178,6 +186,9 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   bjMap?: Map<string, number>;
   simbadSpectral?: SimbadSpectralIndex;
+  /** Bibcoded SIMBAD values over the § 5 cohort — the rv cascade's bottom
+   *  tier. Absent leaves its rows on a zero radial term. */
+  simbadValues?: SimbadValueIndex;
   apsisMap?: Map<string, ApsisRow>;
   /** Gaia synthetic Johnson B−V per source_id — the ci cascade's tier below
    *  the Table-5.9 relation. */
@@ -199,6 +210,7 @@ export function readStars(
     conAssignment,
     bjMap = new Map(),
     simbadSpectral = { bySource: new Map(), byHip: new Map() },
+    simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
     gspcMap = new Map(),
     directions = {
@@ -230,6 +242,8 @@ export function readStars(
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
     velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
     rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
+    rvSimbadGaiaBibcode: number;   // simbad-tier rows citing a Gaia catalogue release
+    rvGaiaBibcodeSkipped: number;  // gate-withheld rows whose SIMBAD value the skip rule rejected
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
     rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
@@ -270,6 +284,8 @@ export function readStars(
   const rvVia = emptyTallyPartition(RV_VIA_VALUES);
   const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
   let rvGaiaErrorMaxKmS = 0;
+  let rvSimbadGaiaBibcode = 0;
+  let rvGaiaBibcodeSkipped = 0;
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
   let ciGspcValidatedRange = 0;
   let rvApplied = 0;
@@ -310,11 +326,19 @@ export function readStars(
       ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null
       : null;
 
-    // Radial velocity through Gaia DR3 → the printed cell, feeding the
+    // Radial velocity through Gaia DR3 → bibcoded SIMBAD, feeding the
     // space-motion velocity's radial term. See ../distance/README.md.
-    const rvRes = resolveRadialVelocity(gaiaRow, parseFloatOrNull(row.rv));
+    const simbadRow = lookupSimbadValues(simbadValues, {
+      sourceId: gaiaSourceId,
+      hip,
+      tyc: nonEmpty(row.tyc),
+      gl: nonEmpty(row.gl),
+    });
+    const rvRes = resolveRadialVelocity(gaiaRow, simbadRow?.rv ?? null);
     const rvKmS = rvRes.rvKmS;
     rvVia[rvRes.via]++;
+    if (rvRes.bibcode !== null && isGaiaCatalogueBibcode(rvRes.bibcode)) rvSimbadGaiaBibcode++;
+    if (rvRes.gaiaBibcodeSkipped) rvGaiaBibcodeSkipped++;
     if (rvRes.via === 'gaia_dr3' && gaiaRow !== null) {
       const rvErr = gaiaRow.radialVelocityErrorKmS;
       rvGaiaErrorBand[rvErrorBand(rvErr)]++;
@@ -561,6 +585,8 @@ export function readStars(
       velocityAboveEscape,
       velocityAboveEscapeSample,
       rvVia,
+      rvSimbadGaiaBibcode,
+      rvGaiaBibcodeSkipped,
       rvGaiaErrorBand,
       rvGaiaErrorMaxKmS,
       rvApplied,
