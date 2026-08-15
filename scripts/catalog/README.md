@@ -412,10 +412,10 @@ Today's downstream consumers:
   `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so `bestApsisTeff`
   (`star-color-routing-pure.ts`) writes the best Apsis Teff to the
   `iTeffApsis` attribute, and the lower tiers are baked into `iCi` at
-  build: the spine's printed B−V, or the intrinsic spectral-class colour
-  `spectralClassCi` (`catalog-pure.ts`) derives when a no-Apsis star has
-  no B−V but a parseable class (`ciSpectralDerived` in build-counts),
-  else the solar fallback.
+  build: a measured B−V from `photometry/`'s three-tier cascade, or the
+  intrinsic spectral-class colour `spectralClassCi` (`catalog-pure.ts`)
+  derives when a no-Apsis star has no measured B−V but a parseable class
+  (`ciSpectralDerived` in build-counts), else the solar fallback.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
   `catalog-pure.ts`) — when SIMBAD has no sp_type under either the
   source_id or HIP key, GSP-Spec's `spectraltype_esphs` enum is the

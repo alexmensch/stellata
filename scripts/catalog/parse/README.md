@@ -119,8 +119,9 @@ never re-derived).
    magnitude is the system's blend or one component's — companion
    promotion's flux conservation may only subtract a companion's light
    from a blend (`../companions/README.md` § Anchor flux conservation).
-9. **B−V** (`resolveColourIndex`) — the Gaia relation, else the spine's
-   printed cell, else the intrinsic spectral-class colour, else solar. See
+9. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
+   `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
+   spectral-class colour, else solar. See
    `../photometry/README.md` § The ci cascade. Its `isObserved` verdict is
    what decides whether de-extinction de-reddens the value, so the two
    measured tiers and the two derived ones part company here rather than at

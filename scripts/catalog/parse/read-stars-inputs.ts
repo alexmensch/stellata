@@ -24,7 +24,8 @@ import {
   createConstellationAssignment,
   STELLARIUM_SKYCULTURE_JSON,
 } from './constellations';
-import { parseHipVmagTsv } from '../photometry/hip-vmag-parse';
+import { parseGspcTsv, type GspcColour } from '../photometry/gspc-parse';
+import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
@@ -32,6 +33,7 @@ import { REPO_ROOT as ROOT } from '../../util/paths';
 export const INHERITED_SPINE_TSV = resolve(ROOT, INHERITED_SPINE_FILE);
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
+const SRC_GAIA_GSPC = resolve(ROOT, 'data/gaia/gaia_dr3_gspc.tsv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
 const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
@@ -43,7 +45,7 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 /** Every file a readStars walk reads — the mtime set an artifact derived
  *  from that walk must invalidate against. */
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
-  INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS,
+  INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
   SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
@@ -54,10 +56,12 @@ export type ReadStarsInputSizes = Pick<
   BuildCounts,
   | 'bjEntries'
   | 'apsisEntries'
+  | 'gspcEntries'
   | 'simbadSptypeEntries'
   | 'gaiaAstrometryEntries'
   | 'hip2Entries'
   | 'hipVMagEntries'
+  | 'hipBvEntries'
   | 'nssSourceIdEntries'
 >;
 
@@ -76,10 +80,12 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   const sizes: ReadStarsInputSizes = {
     bjEntries: 0,
     apsisEntries: 0,
+    gspcEntries: 0,
     simbadSptypeEntries: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
+    hipBvEntries: 0,
     nssSourceIdEntries: 0,
   };
 
@@ -109,6 +115,25 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     sizes.apsisEntries = apsisMap.size;
   } else {
     console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
+  }
+
+  // Gaia DR3 synthetic photometry — the ci cascade's tier below the
+  // Table-5.9 relation. Optional on the same terms as Apsis; without it the
+  // red rows fall to printed I/239 B−V and then to the derived tiers, which
+  // shows up as a ciVia drift in the count snapshot.
+  let gspcMap = new Map<string, GspcColour>();
+  if (existsSync(SRC_GAIA_GSPC)) {
+    console.log('Parsing Gaia DR3 synthetic photometry...');
+    const t = Date.now();
+    gspcMap = parseGspcTsv(readFileSync(SRC_GAIA_GSPC, 'utf8'));
+    console.log(`  ${gspcMap.size} entries in ${Date.now() - t}ms`);
+    sizes.gspcEntries = gspcMap.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_GAIA_GSPC} not found — the ci cascade's synthetic tier\n` +
+      `         is unavailable; red rows fall to printed I/239 B−V and the\n` +
+      `         derived tiers. Re-run \`pnpm run refresh:gaia-gspc\`.`,
+    );
   }
 
   // SIMBAD sp_type indexed by Gaia DR3 source_id and by HIP. First tier
@@ -178,21 +203,24 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
-  // Printed Johnson V per HIP — the V cascade's bright tier. Optional on the
-  // same terms as the direction-cascade tables: without it every saturated or
-  // out-of-range row falls through to the catalogued magnitude, which is the
-  // pre-cascade behaviour and shows up as a vVia drift in the count snapshot.
+  // Printed Johnson V and B−V per HIP — the V cascade's bright tier and the
+  // ci cascade's printed tier. Optional on the same terms as the
+  // direction-cascade tables: without it saturated and out-of-range rows fall
+  // to the tier below, which shows up as a vVia / ciVia drift in the count
+  // snapshot.
   let hipVMag = new Map<number, number>();
+  let hipBv = new Map<number, number>();
   if (existsSync(SRC_HIP_VMAG)) {
-    console.log('Parsing printed Hipparcos V magnitudes...');
+    console.log('Parsing printed Hipparcos V magnitudes and colours...');
     const t = Date.now();
-    hipVMag = parseHipVmagTsv(readFileSync(SRC_HIP_VMAG, 'utf8'));
-    console.log(`  ${hipVMag.size} entries in ${Date.now() - t}ms`);
+    ({ vmag: hipVMag, bv: hipBv } = parseHipPhotometryTsv(readFileSync(SRC_HIP_VMAG, 'utf8')));
+    console.log(`  ${hipVMag.size} V / ${hipBv.size} B−V entries in ${Date.now() - t}ms`);
     sizes.hipVMagEntries = hipVMag.size;
+    sizes.hipBvEntries = hipBv.size;
   } else {
     console.warn(
-      `WARNING: ${SRC_HIP_VMAG} not found — the V cascade's bright tier is\n` +
-      `         unavailable; saturated rows keep the catalogued magnitude.\n` +
+      `WARNING: ${SRC_HIP_VMAG} not found — the V cascade's bright tier and\n` +
+      `         the ci cascade's printed tier are unavailable.\n` +
       `         Re-run \`pnpm run refresh:hip-vmag\`.`,
     );
   }
@@ -215,7 +243,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   console.log(`  built the region grid in ${Date.now() - tCon}ms`);
 
   return {
-    bjMap, apsisMap, simbadSpectral, directions, hipVMag,
+    bjMap, apsisMap, gspcMap, simbadSpectral, directions, hipVMag, hipBv,
     dustGrid, conAssignment, sizes,
   };
 }

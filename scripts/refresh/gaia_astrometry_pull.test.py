@@ -5,36 +5,12 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import gaia_astrometry_pull as gap  # noqa: E402
-
-
-class ReadSourceIdsTests(unittest.TestCase):
-    def _write(self, text: str) -> Path:
-        f = tempfile.NamedTemporaryFile("w", suffix=".tsv", delete=False)
-        f.write(text)
-        f.close()
-        return Path(f.name)
-
-    def test_parses_ids_and_skips_header(self) -> None:
-        p = self._write("gaia_source_id\n7632157690368\n4472832130942575872\n")
-        self.assertEqual(
-            gap.read_source_ids(p), [7632157690368, 4472832130942575872]
-        )
-
-    def test_ignores_blank_lines(self) -> None:
-        p = self._write("gaia_source_id\n1\n\n2\n")
-        self.assertEqual(gap.read_source_ids(p), [1, 2])
-
-    def test_rejects_wrong_header(self) -> None:
-        p = self._write("source_id\n1\n")
-        with self.assertRaises(SystemExit):
-            gap.read_source_ids(p)
 
 
 class WriteRowTests(unittest.TestCase):

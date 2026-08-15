@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh data/hipparcos/hip_main_vmag.tsv — printed Johnson V from the
-Hipparcos main catalogue (VizieR I/239/hip_main), the bright/printed tier of
-the V-magnitude cascade (docs/catalog-driver.md § 5)."""
+"""Refresh data/hipparcos/hip_main_vmag.tsv — printed Johnson V and B-V
+from the Hipparcos main catalogue (VizieR I/239/hip_main), the printed
+tiers of the V and ci cascades (docs/catalog-driver.md § 5)."""
 
 from __future__ import annotations
 
@@ -17,16 +17,16 @@ from vizier_slice import VizierSlice, pull_slices  # noqa: E402
 HIP_MAIN_VMAG = VizierSlice(
     table="I/239/hip_main",
     output=REPO_ROOT / "data" / "hipparcos" / "hip_main_vmag.tsv",
-    columns={"HIP": "hip", "Vmag": "vmag"},
-    schema={"HIP": int, "Vmag": float},
+    columns={"HIP": "hip", "Vmag": "vmag", "B-V": "bv"},
+    schema={"HIP": int, "Vmag": float, "B-V": float},
     row_count_min=117_000,
     row_count_max=119_000,
     order_by=("HIP",),
     spot_key="HIP",
     spot_rows=(
-        {"HIP": 32349, "Vmag": (-1.44, 0.005)},
-        {"HIP": 71683, "Vmag": (-0.01, 0.005)},
-        {"HIP": 91262, "Vmag": (0.03, 0.005)},
+        {"HIP": 32349, "Vmag": (-1.44, 0.005), "B-V": (0.009, 0.005)},
+        {"HIP": 71683, "Vmag": (-0.01, 0.005), "B-V": (0.710, 0.005)},
+        {"HIP": 91262, "Vmag": (0.03, 0.005), "B-V": (0.000, 0.005)},
     ),
     round_floats=3,
 )

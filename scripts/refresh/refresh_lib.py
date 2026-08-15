@@ -102,6 +102,33 @@ def read_athyg_source_ids(csv_path: Path) -> list[int]:
     return ids
 
 
+# ─── source_id request files ──────────────────────────────────────────
+
+SOURCE_ID_REQUEST_HEADER = "gaia_source_id"
+
+
+def read_source_id_request(path: Path) -> list[int]:
+    """Read a one-column source_id request TSV; skip the header row.
+    Contract: one ``gaia_source_id`` column, sorted, unique, non-null —
+    produced by build-binaries Stage 2 or export-astrometry-request.ts,
+    and consumed by every pull scoped to a request list rather than to a
+    whole table.
+    """
+    ids: list[int] = []
+    with path.open() as f:
+        header = f.readline().strip()
+        if header != SOURCE_ID_REQUEST_HEADER:
+            raise SystemExit(
+                f"read_source_id_request: unexpected header {header!r} in "
+                f"{path} — expected {SOURCE_ID_REQUEST_HEADER!r}."
+            )
+        for line in f:
+            line = line.strip()
+            if line:
+                ids.append(int(line))
+    return ids
+
+
 # ─── Retry ────────────────────────────────────────────────────────────
 
 class TransientError(Exception):
