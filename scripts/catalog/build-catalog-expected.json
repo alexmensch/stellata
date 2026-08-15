@@ -182,7 +182,7 @@
   "velocityHip2Pm": 2696,
   "velocityAthygPm": 60,
   "velocityZero": 282,
-  "velocityClamped": 9,
+  "velocityClamped": 8,
   "velocityAboveEscape": 56,
   "velocityRvApplied": 273368,
   "rvGaiaDr3": 266128,
@@ -190,6 +190,7 @@
   "rvSimbadGaiaBibcode": 465,
   "rvGaiaBibcodeSkipped": 205,
   "rvNone": 39856,
+  "rvRadialRejected": 1,
   "rvGaiaErrorBands": {
     "none": 0,
     "le1": 183039,

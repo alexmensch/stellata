@@ -139,6 +139,7 @@ function baseCounts(): BuildCounts {
     rvSimbadGaiaBibcode: 240,
     rvGaiaBibcodeSkipped: 205,
     rvNone: 46000,
+    rvRadialRejected: 1,
     rvGaiaErrorBands: {
       none: 0, le1: 200000, le5: 40000, le10: 6000, le20: 3000, gt20: 1000,
     },

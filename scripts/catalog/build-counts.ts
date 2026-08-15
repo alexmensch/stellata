@@ -440,6 +440,13 @@ export interface BuildCounts extends LabelMergeCounts {
   rvGaiaBibcodeSkipped: number;
   /** Rows no tier covers — the radial term is zero. */
   rvNone: number;
+  /** Rows whose resolved radial term alone exceeded
+   *  `VELOCITY_SANITY_CEILING_KM_S` and was dropped, leaving the measured
+   *  proper motion in place rather than losing it to the whole-vector clamp
+   *  (`distance/radial-velocity/README.md` § The sanity thresholds). Counted
+   *  under the tier that supplied the value — the cascade routed correctly
+   *  and the threshold, not the cascade, rejected it. */
+  rvRadialRejected: number;
   /** `rvGaiaDr3` rows split by the stated `radial_velocity_error`, a tracked
    *  ratchet rather than a gate — DR3 is taken as published
    *  (`distance/radial-velocity/README.md`). `none` is pinned at 0: the

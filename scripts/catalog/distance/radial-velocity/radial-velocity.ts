@@ -1,7 +1,11 @@
 // The radial-velocity cascade: Gaia DR3 RVS on a 5p row → bibcoded SIMBAD
 // → zero radial term, with the Gaia-bibcode skip rule. See README.md.
 
-import { gaiaHas5pSolution, type GaiaAstrometryCatalogRow } from '../direction-cascade';
+import {
+  gaiaHas5pSolution,
+  VELOCITY_SANITY_CEILING_KM_S,
+  type GaiaAstrometryCatalogRow,
+} from '../direction-cascade';
 import type { SimbadRadialVelocity } from '../../simbad-values-parse';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
@@ -63,6 +67,14 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
   return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }
 
+/** Whether a radial term alone is past the space-velocity sanity ceiling.
+ *  Rejecting just this term leaves the row its measured proper motion, which
+ *  the whole-vector clamp would otherwise take with it — README.md § The
+ *  sanity thresholds. */
+export function radialTermExceedsCeiling(rvKmS: number | null): boolean {
+  return rvKmS !== null && Math.abs(rvKmS) > VELOCITY_SANITY_CEILING_KM_S;
+}
+
 export interface RadialVelocityResolution {
   /** km/s, or null when no tier carries one — the radial term is then zero. */
   rvKmS: number | null;
@@ -70,6 +82,9 @@ export interface RadialVelocityResolution {
   /** The bibcode the shipped value cites. Set on the `simbad` tier only —
    *  the Gaia tier's citation is the release itself. */
   bibcode: string | null;
+  /** The shipped value cites a Gaia release. Sibling of the field below:
+   *  nothing was withheld on this row, so the citation is an ordinary one. */
+  gaiaBibcodeCited: boolean;
   /** A SIMBAD value the Gaia-bibcode skip rule rejected on this row. */
   gaiaBibcodeSkipped: boolean;
 }
@@ -92,23 +107,21 @@ export function resolveRadialVelocity(
   simbad: SimbadRadialVelocity | null,
 ): RadialVelocityResolution {
   const none: RadialVelocityResolution = {
-    rvKmS: null, via: 'none', bibcode: null, gaiaBibcodeSkipped: false,
+    rvKmS: null, via: 'none', bibcode: null,
+    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
   };
   if (gaia !== null && gaia.radialVelocityKmS !== null) {
     if (gaiaHas5pSolution(gaia)) {
-      return {
-        rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3',
-        bibcode: null, gaiaBibcodeSkipped: false,
-      };
+      return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
     }
     if (simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
       return { ...none, gaiaBibcodeSkipped: true };
     }
   }
-  if (simbad !== null && Number.isFinite(simbad.kmS)) {
+  if (simbad !== null) {
     return {
-      rvKmS: simbad.kmS, via: 'simbad',
-      bibcode: simbad.bibcode, gaiaBibcodeSkipped: false,
+      ...none, rvKmS: simbad.kmS, via: 'simbad', bibcode: simbad.bibcode,
+      gaiaBibcodeCited: isGaiaCatalogueBibcode(simbad.bibcode),
     };
   }
   return none;

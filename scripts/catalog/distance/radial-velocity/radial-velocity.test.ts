@@ -3,9 +3,11 @@ import { describe, it, expect } from 'vitest';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import {
   isGaiaCatalogueBibcode,
+  radialTermExceedsCeiling,
   resolveRadialVelocity,
   rvErrorBand,
 } from './radial-velocity';
+import { VELOCITY_SANITY_CEILING_KM_S } from '../direction-cascade';
 
 describe('resolveRadialVelocity cascade', () => {
   // The published shape: an rv always arrives with its own error.
@@ -16,15 +18,20 @@ describe('resolveRadialVelocity cascade', () => {
     });
 
   const LITERATURE = '2006AstL...32..759G';
+  const GAIA_DR2 = '2018yCat.1345....0G';
   const GAIA_DR3 = '2022yCat.1355....0G';
   const simbadRv = (kmS: number, bibcode = LITERATURE) => ({ kmS, bibcode });
   const gaia = (rvKmS: number) => ({
-    rvKmS, via: 'gaia_dr3' as const, bibcode: null, gaiaBibcodeSkipped: false,
+    rvKmS, via: 'gaia_dr3' as const, bibcode: null,
+    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
   });
-  const simbad = (rvKmS: number, bibcode = LITERATURE) => ({
-    rvKmS, via: 'simbad' as const, bibcode, gaiaBibcodeSkipped: false,
+  const simbad = (rvKmS: number, bibcode = LITERATURE, gaiaBibcodeCited = false) => ({
+    rvKmS, via: 'simbad' as const, bibcode, gaiaBibcodeCited, gaiaBibcodeSkipped: false,
   });
-  const NONE = { rvKmS: null, via: 'none' as const, bibcode: null, gaiaBibcodeSkipped: false };
+  const NONE = {
+    rvKmS: null, via: 'none' as const, bibcode: null,
+    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
+  };
 
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
     expect(resolveRadialVelocity(withRv(-110.51), simbadRv(22.4))).toEqual(gaia(-110.51));
@@ -56,12 +63,21 @@ describe('resolveRadialVelocity cascade', () => {
   });
 
   // Nothing was withheld on a row Gaia never measured, so a Gaia catalogue
-  // bibcode there is an ordinary citation — DR2 for 240 rows of this build.
+  // bibcode there is an ordinary citation, and the shipped value says so.
   it('keeps a Gaia-bibcoded SIMBAD value where Gaia published no rv', () => {
     expect(resolveRadialVelocity(withRv(null), simbadRv(22.4, GAIA_DR3)))
-      .toEqual(simbad(22.4, GAIA_DR3));
+      .toEqual(simbad(22.4, GAIA_DR3, true));
     expect(resolveRadialVelocity(null, simbadRv(22.4, GAIA_DR3)))
-      .toEqual(simbad(22.4, GAIA_DR3));
+      .toEqual(simbad(22.4, GAIA_DR3, true));
+  });
+
+  // The boundary the skip rule does NOT cover: a blended 2p row Gaia published
+  // no rv for, so there is no withheld value to launder back in and the tier
+  // ships the citation. 102 rows of this build, all DR2.
+  it('keeps a Gaia-bibcoded value on a 2p row Gaia published no rv for', () => {
+    const twoPNoRv = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: null });
+    expect(resolveRadialVelocity(twoPNoRv, simbadRv(-15.9, GAIA_DR2)))
+      .toEqual(simbad(-15.9, GAIA_DR2, true));
   });
 
   it('reports no tier when a 2p row is all the rv there is', () => {
@@ -87,12 +103,21 @@ describe('resolveRadialVelocity cascade', () => {
     expect(resolveRadialVelocity(null, null)).toEqual(NONE);
   });
 
-  it('skips a non-finite SIMBAD value rather than propagating it', () => {
-    expect(resolveRadialVelocity(null, simbadRv(NaN))).toEqual(NONE);
+  // EZ Aqr's value: a published 6,824.7 km/s at 3.4 pc. Rejecting the term on
+  // its own leaves the tangential motion alone — the whole-vector clamp is for
+  // a PM×distance artifact, where it is the PM that cannot be trusted.
+  it('rejects a radial term past the sanity ceiling, and only past it', () => {
+    expect(radialTermExceedsCeiling(6824.7)).toBe(true);
+    expect(radialTermExceedsCeiling(-6824.7)).toBe(true);
+    expect(radialTermExceedsCeiling(VELOCITY_SANITY_CEILING_KM_S)).toBe(false);
+    expect(radialTermExceedsCeiling(VELOCITY_SANITY_CEILING_KM_S + 0.01)).toBe(true);
+    expect(radialTermExceedsCeiling(650)).toBe(false);
+    expect(radialTermExceedsCeiling(0)).toBe(false);
+    expect(radialTermExceedsCeiling(null)).toBe(false);
   });
 
   it('classes only the Gaia catalogue releases as Gaia bibcodes', () => {
-    expect(isGaiaCatalogueBibcode('2018yCat.1345....0G')).toBe(true);
+    expect(isGaiaCatalogueBibcode(GAIA_DR2)).toBe(true);
     expect(isGaiaCatalogueBibcode('2020yCat.1350....0G')).toBe(true);
     expect(isGaiaCatalogueBibcode(GAIA_DR3)).toBe(true);
     // Gontcharov's Pulkovo compilation — a G-initialled author, not Gaia.

@@ -346,6 +346,7 @@ async function main() {
     rvSimbadGaiaBibcode: 0,
     rvGaiaBibcodeSkipped: 0,
     rvNone: 0,
+    rvRadialRejected: 0,
     rvGaiaErrorBands: emptyTallyPartition(RV_ERROR_BANDS),
     rvGaiaErrorMaxKmS: 0,
   };
@@ -421,6 +422,12 @@ async function main() {
       `<=10 ${rvErr.le10}, <=20 ${rvErr.le20}, >20 ${rvErr.gt20}, ` +
       `absent ${rvErr.none}; max ${stats.rvGaiaErrorMaxKmS} km/s`,
   );
+  if (stats.rvRadialRejectedSample.length > 0) {
+    console.log(
+      `  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`,
+    );
+    for (const s of stats.rvRadialRejectedSample) console.log(`    ${s}`);
+  }
   if (stats.velocityClampedSample.length > 0) {
     console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
     for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
@@ -470,6 +477,7 @@ async function main() {
   counts.rvSimbadGaiaBibcode = stats.rvSimbadGaiaBibcode;
   counts.rvGaiaBibcodeSkipped = stats.rvGaiaBibcodeSkipped;
   counts.rvNone = stats.rvVia.none;
+  counts.rvRadialRejected = stats.rvRadialRejected;
   counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
   counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
   counts.spectralByCurated = stats.spectralByCurated;
