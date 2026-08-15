@@ -108,6 +108,38 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   };
 }
 
+export const HDR_ATTACHMENT_COUNT = 3;
+
+/** The seam's render target: three half-float attachments over one 24-bit
+ *  depth buffer, each carrying the format and filters its own consumer needs
+ *  (README.md § Three attachments). */
+export function createHdrTarget(width: number, height: number): THREE.WebGLRenderTarget {
+  const rt = new THREE.WebGLRenderTarget(width, height, {
+    count: HDR_ATTACHMENT_COUNT,
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    depthBuffer: true,
+    stencilBuffer: false,
+    generateMipmaps: false,
+  });
+  rt.textures[0].colorSpace = THREE.LinearSRGBColorSpace;
+  // Half attachment 0's memory, and the reduction reads its missing
+  // alpha as 1 — which is exactly the level-0 weight
+  // (exposure/reduction/README.md § The chain).
+  rt.textures[1].format = THREE.RGFormat;
+  rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
+  // Linear to match the downsample target, though inert at factor 1: the
+  // resolve reads this attachment directly there, at integer offsets from
+  // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+  // nearest agree. It stops being inert the moment a tap is off-centre.
+  rt.textures[2].minFilter = THREE.LinearFilter;
+  rt.textures[2].magFilter = THREE.LinearFilter;
+  rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+  return rt;
+}
+
 export class HdrPipeline {
   /** False when no float-renderable colour buffer exists. The instance
    *  is inert and every layer renders straight to the canvas —
@@ -154,29 +186,7 @@ export class HdrPipeline {
     if (!this.supported) return false;
 
     this.renderer.getDrawingBufferSize(this.size);
-    this.rt = new THREE.WebGLRenderTarget(this.size.x, this.size.y, {
-      count: 3,
-      type: THREE.HalfFloatType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      depthBuffer: true,
-      stencilBuffer: false,
-      generateMipmaps: false,
-    });
-    this.rt.textures[0].colorSpace = THREE.LinearSRGBColorSpace;
-    // Half attachment 0's memory, and the reduction reads its missing
-    // alpha as 1 — which is exactly the level-0 weight
-    // (exposure/reduction/README.md § The chain).
-    this.rt.textures[1].format = THREE.RGFormat;
-    this.rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
-    // Linear to match the downsample target, though inert at factor 1: the
-    // resolve reads this attachment directly there, at integer offsets from
-    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
-    // nearest agree. It stops being inert the moment a tap is off-centre.
-    this.rt.textures[2].minFilter = THREE.LinearFilter;
-    this.rt.textures[2].magFilter = THREE.LinearFilter;
-    this.rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt = createHdrTarget(this.size.x, this.size.y);
 
     this.summation = new SummationPass(this.renderer);
     this.geometry = fullscreenTriangleGeometry();
