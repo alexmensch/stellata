@@ -54,12 +54,19 @@ function uniformDustGrid(): DustGrid {
 describe('readStars build-time de-extinction of ci', () => {
   it('de-reddens an observed ci but never the solar fallback', () => {
     const grid = uniformDustGrid();
+    // The observed colour arrives through the printed I/239 tier — the spine's
+    // own `ci` cell is no longer a tier, so a row with one would still take the
+    // fallback and the assertion below would be vacuous.
     const { stars } = readStars(
       writeSpineTsv([
         { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
-        { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', ci: '0.5' },
+        { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
       ]),
-      { conAssignment: CON_ASSIGNMENT, dustGrid: grid },
+      {
+        conAssignment: CON_ASSIGNMENT,
+        dustGrid: grid,
+        hipBv: new Map([[11111, 0.5]]),
+      },
     );
     expect(stars).toHaveLength(2);
     const av = avSolToStar(grid, 100, 0, 0);

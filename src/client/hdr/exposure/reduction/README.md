@@ -127,6 +127,13 @@ on a cold start is zero — no cut. That direction is deliberate: the
 opposite default would let a frame go dark because a measurement had not
 arrived.
 
+**The pack buffer is orphaned before every `readPixels`.** One `STREAM_READ`
+buffer re-read every other frame otherwise leaves the driver preserving the
+previous texel across the new write; ANGLE stages a shadow copy to make the
+`getBufferSubData` cheap, then discards it, and says so in the console once
+per request. Re-declaring the storage says the old texel is dead — nothing
+reads it after `poll()` has landed it.
+
 ## Where it runs in the frame
 
 `stellata.ts` `animate()`, after `hdr.resolve()`, so reducing the
