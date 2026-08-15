@@ -123,20 +123,29 @@ region). `ciGspcValidatedRange` pins that zero as a tripwire.
 
 Ignoring a published validity bound is what § Where the colour bound comes
 from refuses to do for the Table-5.9 relation, so the difference matters:
-**that bound is on a fit, this one is on a correction.** The relation is a
-polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
+**that bound is on a fit, this one is mostly on a correction.** The relation
+is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
-passband — a measurement of that star — and the flag bounds only the small
-empirical correction tying the result to the ground system. Outside it the
-value is the uncorrected integration, not a fabricated one.
+passband — a measurement of that star — and Montegriffo+ 2023 § 6.2 calls a
+flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
+the correction tying the result to the ground system, not of the integration.
 
-Two measurements say the uncorrected integration is usable, and one says
-where it stops being so. Against the Table-5.9 relation over the rows the
-relation *does* cover, the flag makes no difference — flag-valid rows
-disagree by p50 0.020 / p99 0.141 (n=21,863), flag-invalid ones by p50 0.023
-/ p99 0.139 (n=242,534), and the flag-invalid median holds between 0.037
-(`G` 4–5) and 0.016 (`G` 11–12). Against printed `I/239` B−V, binned by
-colour:
+**"Mostly" is load-bearing on the bright side.** Past the flag's `G` ≈ 10.7
+edge, § 3.2 of the same paper attributes the loss of millimag accuracy to a
+BP/RP spectrometer configuration change at `G` ≈ 11.5 — that one degrades
+XP's *internal* calibration, not just the standardisation on top. This whole
+catalogue sits there, so the tier is knowingly using XP spectra outside their
+best-calibrated regime, and the measurement below is what bounds the cost.
+
+Against the Table-5.9 relation over the rows the relation *does* cover, the
+flag makes no difference — flag-valid rows disagree by p50 0.020 / p99 0.141
+(n=21,863), flag-invalid ones by p50 0.023 / p99 0.139 (n=242,534), and the
+flag-invalid median holds between 0.037 (`G` 4–5) and 0.016 (`G` 11–12).
+That is inside the composed σ of the two relations (0.030 ⊕ 0.063 = 0.070),
+so the bright-side cost is real but small against the alternative, which for
+these rows is a colour guessed from a spectral-class letter.
+
+Against printed `I/239` B−V, binned by colour:
 
 | BP−RP | n | p50 | p90 |
 |---|---|---|---|
@@ -147,7 +156,12 @@ colour:
 
 `GSPC_BP_RP_MAX = 3.0` is that knee — the same discipline as
 `GAIA_PHOTOMETRY_SATURATION_G`, a bound calibrated against a distribution
-rather than adopted from a header.
+rather than adopted from a header. The paper backs it independently: the
+flag's red edge sits at 2.6 because the Landolt/Stetson standard collections
+thin out past `BP−RP` ≈ 2 and disagree by 3–5% there, but § 3.2 reports that
+the handful of red giants they do carry over `1.5 < BP−RP < 3.5` *"match the
+same locus of the bulk of the other stars ... within <10.0 mmag"*. The
+standardisation was checked past its own flag, and held.
 
 **Printed sits ABOVE synthetic**, inverting the tier order
 `docs/catalog-driver.md` § 5 states, and for the same reason the bound

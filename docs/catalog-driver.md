@@ -283,20 +283,28 @@ Measured exposure and expected coverage (2026-08-14; pins in
 
   1. *"GSPC reaches ≈90% of the red rows"* measured GSPC **row presence**
      (91.0% of the request set), not validity. The per-band flag reads
-     `1` for in-range, not `0` — a polarity the archive does not publish,
-     established by measurement. Its region and the red rows do not
-     intersect on a single row of this catalogue, which is bright enough
-     that 96% of it sits below the flag's bright bound. A flag-valid gate
-     would have shipped the tier serving zero rows.
+     `1` for in-range, not `0` — the archive publishes no polarity;
+     Montegriffo+ 2023 § 6.2 does, and the numeric region was measured.
+     It does not intersect the red rows on a single row of this
+     catalogue, which is bright enough that 96% of it sits below the
+     flag's bright bound. A flag-valid gate would have shipped the tier
+     serving zero rows.
   2. GSPC therefore runs **outside** its standardisation, so it sits
      BELOW printed `I/239` B−V rather than above it, and carries a
      measured red bound of BP−RP 3.0. This is not the extrapolation the
      paragraph above rejects twice: GSPC integrates each star's own
-     BP/RP spectrum through the passband, and the flag bounds the
-     ground-tying correction, not the integration. Out-of-flag values
-     agree with the Table-5.9 relation as closely as in-flag ones
+     BP/RP spectrum through the passband, and § 6.2 calls a flag-0
+     magnitude an extrapolation of the *standardisation* — the
+     ground-tying correction — not of the integration. Out-of-flag
+     values agree with the Table-5.9 relation as closely as in-flag ones
      (p50 0.023 vs 0.020) and with printed `I/239` B−V to p50 0.031–0.043
-     up to BP−RP 3.0, breaking to 0.135 above it.
+     up to BP−RP 3.0, breaking to 0.135 above it; § 3.2 independently
+     reports the standardisation holding to <10 mmag on red giants out
+     to BP−RP 3.5. The one caveat the paper adds rather than removes is
+     on the **bright** side: past `G` ≈ 11.5 a BP/RP spectrometer
+     configuration change costs XP's internal calibration its millimag
+     accuracy, so this tier knowingly reads XP spectra outside their
+     best-calibrated regime, bounded by the |Δ| measurement above.
 - **rv** — `rvCatalogued` 7,126 (spine-wide `rv_src`: HYG 7,965 · OTHER
   871 · G_R2 295 non-first-order). SIMBAD sampled 10/10 on the HYG
   bright cohort and 8/8 on the unattributed OTHER cohort. Residual

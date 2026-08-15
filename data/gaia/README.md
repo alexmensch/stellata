@@ -86,29 +86,45 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 
 ## The GSPC validated-range flag — `1` means IN range
 
-`b_jkc_flag` / `v_jkc_flag` are published as *"Flag indicating if G mag
-and BP−RP color of the source lie in the validated range"*. **The archive
-states no polarity**, and the datamodel page defers to the paper for the
-range itself, so both were established by measurement against
-`gaiadr3.gaia_source` (2026-08-15). `flag = 1` fills a clean rectangle
-with sharp edges:
+The archive publishes `b_jkc_flag` / `v_jkc_flag` as *"Flag indicating if
+G mag and BP−RP color of the source lie in the validated range"* and
+states no polarity. Montegriffo+ 2023 § 6.2 does: the flag *"has a value
+of 1 if the G_BP−G_RP colour and G magnitude of the considered star are
+within the ranges where standardisation and validation have been
+performed. In practice, the X magnitude of a source with Xflag = 0 should
+be considered as an extrapolation of the adopted standardisation."*
 
-| axis | flag = 1 where | edge measured between |
-|---|---|---|
-| `G` | ≳ 10.7 | the 10.50–10.75 and 10.75–11.00 bins |
-| `BP − RP` | −0.5 … ≈ 2.6 | the 2.5–2.6 and 2.6–2.7 bins |
+The paper gives no numeric box, so the region was measured against
+`gaiadr3.gaia_source` (2026-08-15). `flag = 1` has sharp edges:
 
-(The faint side needs no bound — GSPC itself stops near `G` 17.65.)
+| axis | flag = 1 where | edge measured between | what sets it (§ 3.2) |
+|---|---|---|---|
+| `G` | ≳ 10.7 | the 10.50–10.75 and 10.75–11.00 bins | the BP/RP spectrometer configuration change at `G` ≈ 11.5 — onset of gates, window-class switch — which costs XP's *internal* calibration its millimag accuracy |
+| `BP − RP` | −0.5 … ≈ 2.6 | the 2.5–2.6 and 2.6–2.7 bins | the Landolt/Stetson standard collections thin out past `BP−RP` ≈ 2 and disagree by 3–5% there |
+
+(The faint side needs no bound — GSPC itself stops at `G` 17.65.)
 
 **This catalogue is almost entirely outside that box**: 96% of it is
 brighter than `G` 11, so only 7.0% of the pulled rows are flag-valid in
 both bands, and **none at all** of the red rows the ci cascade needs. The
-flag bounds where a *standardisation correction* was fitted against
-ground standard stars — not where the underlying spectrum integration is
-meaningful — which is why the ci cascade records the flag on the row and
-gates on a measured colour bound instead
-(`scripts/catalog/photometry/README.md` § Why the GSPC tier does not gate
-on the flag).
+ci cascade therefore records the flag on the row and gates on a measured
+colour bound instead — including what the bright edge above costs, which
+is not only a standardisation matter (`scripts/catalog/photometry/
+README.md` § Why the GSPC tier does not gate on the flag).
+
+Two more things the paper settles about this table, both worth not
+re-deriving:
+
+- **The S/N > 30 per-band cut is already applied upstream** (§ 6.2, Eq.
+  21): a band whose `flux/flux_error` fails it ships no magnitude at all.
+  Verified over all 565,505 magnitudes held here — none is at or below
+  30 — so **the build needs no S/N gate of its own**. It is also why B is
+  absent where V is present: B is the JKC band the cut bites hardest
+  after U (≈87% of GSPC sources keep it).
+- **The JKC flux units are correct.** The paper's note-added-in-proof
+  erratum — units should read Hz⁻¹, not nm⁻¹ — covers the **SDSS and PS1**
+  flux fields only, and the `y_ps1` hockey-stick bug likewise. Neither
+  touches the JKC columns pulled here.
 
 ## Consumed by
 

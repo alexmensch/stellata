@@ -87,8 +87,9 @@ FLUX_SIG_FIGS = 8
 
 # Self-consistency spot-checks pinned from the live ESA archive on
 # 2026-08-15, chosen to span the flag's validated-range boundary in both
-# directions and to pin the flag polarity itself (see data/gaia/README.md
-# § The GSPC validated-range flag):
+# directions and to pin the flag polarity itself (Montegriffo+ 2023 § 6.2
+# defines it; data/gaia/README.md § The GSPC validated-range flag carries
+# the quote and the measured region):
 #
 #   - IN_RANGE     : G 11.05, BP-RP 0.85 — inside the validated box, both
 #                    flags 1, both bands present.

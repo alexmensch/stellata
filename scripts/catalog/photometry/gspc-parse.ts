@@ -7,9 +7,10 @@ const GSPC_COLUMNS = [
   'source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag',
 ] as const;
 
-/** The archive publishes `1` for a source inside the range the JKC
- *  standardisation was validated over. The polarity is measured, not
- *  published — `data/gaia/README.md` § The GSPC validated-range flag. */
+/** `1` = the source's G and BP−RP lie where the JKC standardisation was
+ *  validated (Montegriffo+ 2023 § 6.2). The archive states no polarity;
+ *  `data/gaia/README.md` § The GSPC validated-range flag carries the quote
+ *  and the measured region. */
 const FLAG_IN_VALIDATED_RANGE = '1';
 
 export interface GspcColour {
