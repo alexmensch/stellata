@@ -972,6 +972,18 @@ both how much of the frame it fills and how its texture is distributed.
 an off-frame one wrote none — and so is phase: the mask is the lit
 hemisphere, so a crescent is exposed for its crescent.
 
+**Lit, not merely drawn, is the whole content of the mask**, and it binds
+every claimer rather than the body mesh alone. `D` is a ratio, so area
+counted with no light behind it is indistinguishable from the surface being
+that much dimmer, and the pin obediently under-cuts. A body's night side is
+the largest such region but not the only one: a ring annulus carries the
+band inside the planet's shadow, and an atmosphere shell carries a
+night-limb chord that is *denser* than the lit one — it occludes at full
+opacity while scattering nothing toward the eye. Neither shrinks when the
+lit area does, so a crescent is exactly where geometric coverage fails
+worst. Each emitter therefore gates on its own illumination term
+(`src/client/hdr/attachments/README.md` § The unit is the pinned table).
+
 `L_TARGET` is the level the pin holds, and it is the **measured** 0.89 of
 § 3.1 rather than a second constant. It is the one knob smoke-tuning moves.
 

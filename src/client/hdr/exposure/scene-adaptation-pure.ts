@@ -199,10 +199,31 @@ export function adaptationDm(
   return adaptationBranches(stat, tuning).dm;
 }
 
+/** One masked emitter's share of a frame: the mean luminance over the texels
+ *  it claims, and the fraction of the frame those texels are. */
+export interface SurfacePatch {
+  coverage: number;
+  discMeanL: number;
+}
+
+/** The frame a set of lit resolved surfaces presents, with nothing unmasked
+ *  in it. `D` comes out area-weighted across them — a globe and its ring
+ *  annulus are one subject, exposed together rather than for whichever is
+ *  brighter. */
+export function surfacesStatistic(patches: readonly SurfacePatch[]): FrameStatistic {
+  let surfaceL = 0;
+  let coverage = 0;
+  for (const patch of patches) {
+    surfaceL += patch.discMeanL * patch.coverage;
+    coverage += patch.coverage;
+  }
+  return { meanL: surfaceL, surfaceL, coverage };
+}
+
 /** The frame a lone body of `discMeanL` at `coverage` presents: every lit
  *  texel is that body, so the masked mean is the frame mean. */
 export function loneBodyStatistic(coverage: number, discMeanL: number): FrameStatistic {
-  return { meanL: discMeanL * coverage, surfaceL: discMeanL * coverage, coverage };
+  return surfacesStatistic([{ coverage, discMeanL }]);
 }
 
 /** Disc-mean luminance a body settles at — `L_TARGET` wherever the pin
@@ -226,5 +247,5 @@ export function trimStopsForCoverage(
   discMeanL: number,
   tuning = DEFAULT_ADAPTATION_TUNING,
 ): number {
-  return Math.log2(L_TARGET / adaptedDiscMeanL(coverage, discMeanL, tuning));
+  return Math.log2(tuning.lTarget / adaptedDiscMeanL(coverage, discMeanL, tuning));
 }

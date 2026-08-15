@@ -29,6 +29,7 @@ import {
   L_ADAPT,
   L_TARGET,
   loneBodyStatistic,
+  surfacesStatistic,
   surfaceMeanL,
   surfacePinDm,
   surfacePinWeight,
@@ -246,6 +247,33 @@ describe('the resolved-surface pin', () => {
     const withField = { ...body, meanL: body.meanL * 40 };
     expect(surfaceMeanL(withField)).toBe(surfaceMeanL(body));
     expect(adaptationDm(withField)).toBe(adaptationDm(body));
+  });
+
+  it('area-weights the surfaces sharing one frame', () => {
+    // A globe and its ring annulus are one subject: D is the mean over every
+    // masked texel, so the larger area leads and neither is exposed for alone.
+    const globe = { coverage: 0.02, discMeanL: 4e5 };
+    const rings = { coverage: 0.07, discMeanL: 1e5 };
+    const stat = surfacesStatistic([globe, rings]);
+    expect(stat.coverage).toBeCloseTo(0.09, 12);
+    expect(surfaceMeanL(stat)).toBeCloseTo((0.02 * 4e5 + 0.07 * 1e5) / 0.09, 6);
+    // Between the two, and nearer the annulus, which covers 3.5x the globe.
+    expect(surfaceMeanL(stat)).toBeGreaterThan(rings.discMeanL);
+    expect(surfaceMeanL(stat)).toBeLessThan(globe.discMeanL);
+  });
+
+  it('over-exposes by exactly the dark area a mis-masked emitter claims', () => {
+    // The defect the ring-shadow and night-limb gates exist to prevent: a
+    // claimer counting area its own light term has gone to zero over. D falls
+    // by the coverage ratio, and every stop of that lands on the subject.
+    // Both framings sit above ADAPT_PIN_COVERAGE, so the pin governs alone in
+    // each and the ramp weight cannot muddy the comparison.
+    const body = { coverage: 0.2, discMeanL: 3.6e5 };
+    const honest = surfacesStatistic([body]);
+    const withDark = surfacesStatistic([body, { coverage: 0.2, discMeanL: 0 }]);
+    expect(surfaceMeanL(withDark)).toBeCloseTo(0.5 * surfaceMeanL(honest), 6);
+    // Half the measured surface brightness is 0.75 mag of cut not applied.
+    expect(adaptationDm(withDark) - adaptationDm(honest)).toBeCloseTo(0.753, 3);
   });
 
   it('lifts the display floor, which the perception branch never does', () => {
