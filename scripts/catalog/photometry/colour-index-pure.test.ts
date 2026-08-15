@@ -110,6 +110,13 @@ describe('gspcBMinusV', () => {
     expect(gspcBMinusV(atColour(3.5), synthetic(1.6, true))).toBeNull();
   });
 
+  it('keeps a colour blue of the flag box, which is bounded on one side only', () => {
+    // The nine catalogue rows blue of −0.5 all reach printed first, so a blue
+    // gate would only ever cost a measured colour — README.md § Why the GSPC
+    // tier does not gate on the flag.
+    expect(gspcBMinusV(atColour(-1.0), synthetic(-0.33))).toBe(-0.33);
+  });
+
   it('drops a saturated source — its BP/RP spectrum came off the same CCDs', () => {
     const saturated = photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 });
     expect(gspcBMinusV(saturated, synthetic(2.0))).toBeNull();

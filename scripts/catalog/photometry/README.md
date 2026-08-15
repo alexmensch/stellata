@@ -163,6 +163,14 @@ the handful of red giants they do carry over `1.5 < BP−RP < 3.5` *"match the
 same locus of the bulk of the other stars ... within <10.0 mmag"*. The
 standardisation was checked past its own flag, and held.
 
+**The bound is red-only on purpose.** The flag's box closes at `BP−RP` −0.5
+on the blue side and so does the relation, but nine unsaturated catalogue
+rows sit blue of it, eight of those carry a GSPC row, and all eight carry a
+HIP — so printed takes every one of them before this tier is reached. A blue
+gate is unreachable today, and on the day a row did reach it, it would trade
+a synthetic colour near −0.33 (the value those eight carry, and the right
+one for the hot stars they are) for a spectral-class guess.
+
 **Printed sits ABOVE synthetic**, inverting the tier order
 `docs/catalog-driver.md` § 5 states, and for the same reason the bound
 exists: outside the standardisation the synthetic value is not tied to the

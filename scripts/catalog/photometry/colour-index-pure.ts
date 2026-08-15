@@ -66,7 +66,11 @@ export function gaiaBMinusV(photometry: GaiaPhotometry | null): number | null {
  *  `I/239` B−V over the rows carrying both: median |Δ| holds at 0.031–0.043
  *  mag out to here and breaks to 0.135 in the bin above it. The GSPC flag's
  *  own bound is 2.6, but it bounds a standardisation fit rather than the
- *  colour — README.md § Why the GSPC tier does not gate on the flag. */
+ *  colour — README.md § Why the GSPC tier does not gate on the flag.
+ *
+ *  There is deliberately no blue counterpart: printed reaches every catalogue
+ *  row blue of the flag's own −0.5 edge, so the gate would be unreachable and
+ *  would cost a measured colour on the day it wasn't (same section). */
 export const GSPC_BP_RP_MAX = 3.0;
 
 /** Johnson B−V from Gaia's synthetic photometry, or null where the colour
