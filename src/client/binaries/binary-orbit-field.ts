@@ -98,8 +98,8 @@ export class BinaryOrbitField {
       opts.absolutePositions,
     );
     const memberSlots = orbitMemberSlots(this.relations, opts.binaries);
-    this.positionUploader = new DirtyItemUploader(memberSlots, 3);
-    this.suppressUploader = new DirtyItemUploader(memberSlots, 1);
+    this.positionUploader = new DirtyItemUploader(opts.iPositionAttr, memberSlots);
+    this.suppressUploader = new DirtyItemUploader(opts.iCompositeSuppressAttr, memberSlots);
   }
 
   /** Read-only access to the cached relation list. Tests and the
@@ -284,10 +284,8 @@ export class BinaryOrbitField {
     // Re-upload only the member slots whose values actually moved. A
     // wholesale rewrite by the shell (epoch re-advance, recentre) reaches
     // every star, not just these, so its own full upload has to stand.
-    this.positionUploader.flush(this.opts.iPositionAttr, local, this.baselinesDirty);
-    this.suppressUploader.flush(
-      this.opts.iCompositeSuppressAttr, suppress, this.baselinesDirty,
-    );
+    this.positionUploader.flush(this.baselinesDirty);
+    this.suppressUploader.flush(this.baselinesDirty);
     this.baselinesDirty = false;
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;
@@ -364,6 +362,8 @@ export class BinaryOrbitField {
     this.baselinesDirty = true;
     this.lastKeplerCount = -1;
     this.lastCamPos.set(NaN, NaN, NaN);
+    this.positionUploader.reset();
+    this.suppressUploader.reset();
   }
 
   // ── private ─────────────────────────────────────────────────────────

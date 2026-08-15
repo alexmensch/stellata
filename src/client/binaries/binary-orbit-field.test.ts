@@ -1087,11 +1087,8 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
     ['recenter', (f: BinaryOrbitField) => f.recenter(new THREE.Vector3(1, 0, 0))],
   ] as const)('%s forces the next update to walk again', (_name, poke) => {
     field.update(t0, idleCamera, 15, 1080, 0.8);
-    const before = versions();
     poke(field);
-    field.update(t0, idleCamera, 15, 1080, 0.8);
-    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
-    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+    expect(walkRan((f) => f.update(t0, idleCamera, 15, 1080, 0.8))).toBe(true);
   });
 
   it('a walk reproducing the previous frame\'s buffers uploads nothing', () => {
@@ -1108,7 +1105,9 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
   it('re-uploads a moved member as a bounded range, never the whole buffer', () => {
     const closeCamera = new THREE.Vector3(1.999, 0, 0);
     field.update(t0, closeCamera, 15, 1080, 0.8);
-    fx.iPositionAttr.clearUpdateRanges(); // stand in for the renderer's upload
+    // Stand in for the renderer's upload, which consumes both attributes.
+    fx.iPositionAttr.clearUpdateRanges();
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
     // A day advances the P = 2.87 d inner pair by a third of its orbit.
     field.update(t0 + 86400, closeCamera, 15, 1080, 0.8);
     const ranges = fx.iPositionAttr.updateRanges;
@@ -1127,10 +1126,14 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
   ] as const)('%s uploads in full — a wholesale rewrite reaches untracked stars', (_name, poke) => {
     field.update(t0, idleCamera, 15, 1080, 0.8);
     fx.iPositionAttr.clearUpdateRanges();
+    const version = fx.iPositionAttr.version;
     poke(field);
     field.update(t0, idleCamera, 15, 1080, 0.8);
     expect(fx.iPositionAttr.updateRanges).toHaveLength(0);
-    expect(fx.iPositionAttr.version).toBeGreaterThan(0);
+    // Strictly greater, not merely non-empty: the walk reproduces the
+    // previous values here, so a dropped forceFull would leave the version
+    // untouched AND the range list empty.
+    expect(fx.iPositionAttr.version).toBe(version + 1);
   });
 
   it('markBaselinesDirty walk restores suppressed placements over a wholesale buffer rewrite', () => {

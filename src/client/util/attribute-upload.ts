@@ -81,37 +81,50 @@ export function uploadFull(attr: THREE.BufferAttribute): void {
 /** Re-uploads only the tracked items whose values changed since the last
  *  flush. One instance per attribute; `items` must be ascending. */
 export class DirtyItemUploader {
+  private readonly array: Float32Array;
+  private readonly itemSize: number;
   private readonly shadow: Float32Array;
   private readonly starts = new Int32Array(MAX_PARTIAL_RANGES);
   private readonly counts = new Int32Array(MAX_PARTIAL_RANGES);
 
   constructor(
+    private readonly attr: THREE.BufferAttribute,
     private readonly items: Int32Array,
-    private readonly itemSize: number,
   ) {
-    this.shadow = new Float32Array(items.length * itemSize);
+    this.array = attr.array as Float32Array;
+    this.itemSize = attr.itemSize;
+    this.shadow = new Float32Array(items.length * this.itemSize);
+    this.reset();
+  }
+
+  /** Seed the shadow so the next flush reports every tracked item dirty.
+   *  NaN never compares equal, so no live value can read as already
+   *  uploaded — which is the truth at construction (the GPU buffer does
+   *  not exist yet) and after dispose (whatever it holds is stale). */
+  reset(): void {
+    this.shadow.fill(NaN);
   }
 
   /** `forceFull` still runs the diff, so a caller that rewrote items this
    *  uploader doesn't track (a wholesale buffer rewrite) resyncs the
    *  shadow in the same flush instead of leaking a stale baseline. */
-  flush(attr: THREE.BufferAttribute, array: Float32Array, forceFull: boolean): void {
+  flush(forceFull: boolean): void {
     const n = diffItemsIntoRanges(
-      this.items, this.itemSize, array, this.shadow, this.starts, this.counts,
+      this.items, this.itemSize, this.array, this.shadow, this.starts, this.counts,
     );
     if (forceFull || n < 0) {
-      uploadFull(attr);
+      uploadFull(this.attr);
       return;
     }
     if (n === 0) return;
     // Ranges a previous flush added are still pending when no render has
     // consumed them (the renderer clears the list on upload), so they
     // accumulate rather than being replaced.
-    if (attr.updateRanges.length + n > MAX_PARTIAL_RANGES) {
-      uploadFull(attr);
+    if (this.attr.updateRanges.length + n > MAX_PARTIAL_RANGES) {
+      uploadFull(this.attr);
       return;
     }
-    for (let i = 0; i < n; i++) attr.addUpdateRange(this.starts[i], this.counts[i]);
-    attr.needsUpdate = true;
+    for (let i = 0; i < n; i++) this.attr.addUpdateRange(this.starts[i], this.counts[i]);
+    this.attr.needsUpdate = true;
   }
 }

@@ -19,7 +19,13 @@ build scripts, tests, and shader uniforms.
   flush, which must also be how any wholesale rewrite flushes, since a
   non-empty range list wins over the full array. `MAX_PARTIAL_RANGES`
   caps the driver-call budget, `RANGE_MERGE_GAP_ITEMS` the clean payload
-  worth carrying to avoid an extra call. Consumer + the invariants it
+  worth carrying to avoid an extra call. The uploader binds its
+  attribute at construction and reads `itemSize` + the backing array off
+  it, so the ranges it emits cannot address a different stride than the
+  buffer they upload into. Its shadow is NaN-seeded at construction and
+  by `reset()` — NaN compares unequal to everything, so the first flush
+  after either reports every tracked item, which is the truth in both
+  cases (no GPU buffer yet / a stale one). Consumer + the invariants it
   rides on: `../binaries/README.md` § Partial re-upload.
 - `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
   projection resolves against: `equatorialTangentBasisRad` (core) /

@@ -102,14 +102,33 @@ describe('DirtyItemUploader', () => {
   const attrOf = (array: Float32Array, itemSize: number) =>
     new THREE.InstancedBufferAttribute(array, itemSize);
 
+  it('reports every tracked item on the first flush — the GPU holds nothing yet', () => {
+    const array = new Float32Array(9);
+    const attr = attrOf(array, 3);
+    const uploader = new DirtyItemUploader(attr, Int32Array.from([0, 1, 2]));
+    uploader.flush(false);
+    expect(attr.updateRanges).toEqual([{ start: 0, count: 9 }]);
+  });
+
+  it('reset re-reports every tracked item even though no value moved', () => {
+    const array = new Float32Array(9);
+    const attr = attrOf(array, 3);
+    const uploader = new DirtyItemUploader(attr, Int32Array.from([0, 1, 2]));
+    uploader.flush(false);
+    attr.clearUpdateRanges();
+    uploader.reset();
+    uploader.flush(false);
+    expect(attr.updateRanges).toEqual([{ start: 0, count: 9 }]);
+  });
+
   it('leaves the attribute alone when nothing changed', () => {
     const array = new Float32Array(9);
     const attr = attrOf(array, 3);
-    const uploader = new DirtyItemUploader(Int32Array.from([0, 1, 2]), 3);
-    uploader.flush(attr, array, false);
+    const uploader = new DirtyItemUploader(attr, Int32Array.from([0, 1, 2]));
+    uploader.flush(false);
     attr.clearUpdateRanges();
     const version = attr.version;
-    uploader.flush(attr, array, false);
+    uploader.flush(false);
     expect(attr.version).toBe(version);
     expect(attr.updateRanges).toHaveLength(0);
   });
@@ -117,12 +136,13 @@ describe('DirtyItemUploader', () => {
   it('forceFull uploads whole and discards pending ranges', () => {
     const array = new Float32Array(9);
     const attr = attrOf(array, 3);
-    const uploader = new DirtyItemUploader(Int32Array.from([0, 1, 2]), 3);
+    const uploader = new DirtyItemUploader(attr, Int32Array.from([0, 1, 2]));
+    uploader.flush(true);
     array[0] = 1;
-    uploader.flush(attr, array, false);
+    uploader.flush(false);
     expect(attr.updateRanges).toHaveLength(1);
     array[4] = 1;
-    uploader.flush(attr, array, true);
+    uploader.flush(true);
     expect(attr.updateRanges).toHaveLength(0);
   });
 
@@ -131,14 +151,36 @@ describe('DirtyItemUploader', () => {
     const array = new Float32Array(3 * stride);
     const attr = attrOf(array, 1);
     const uploader = new DirtyItemUploader(
-      Int32Array.from([0, stride, 2 * stride]), 1,
+      attr, Int32Array.from([0, stride, 2 * stride]),
     );
-    uploader.flush(attr, array, true);
+    uploader.flush(true);
     array[0] = 1;
-    uploader.flush(attr, array, false);
+    uploader.flush(false);
     array[stride] = 1;
-    uploader.flush(attr, array, false);
+    uploader.flush(false);
     expect(attr.updateRanges).toEqual([{ start: 0, count: 1 }, { start: stride, count: 1 }]);
+  });
+
+  it('uploads in full once accumulated ranges cross the budget', () => {
+    const stride = RANGE_MERGE_GAP_ITEMS + 1;
+    // Two batches of three-quarters of the budget: each diff stays under
+    // MAX_PARTIAL_RANGES, their accumulation does not.
+    const perFlush = Math.ceil(MAX_PARTIAL_RANGES * 0.75);
+    const items = Array.from({ length: perFlush * 2 }, (_, i) => i * stride);
+    const array = new Float32Array(items.length * stride);
+    const attr = attrOf(array, 1);
+    const uploader = new DirtyItemUploader(attr, Int32Array.from(items));
+    uploader.flush(true);
+    for (let i = 0; i < perFlush; i++) array[items[i]] = 1;
+    uploader.flush(false);
+    expect(attr.updateRanges).toHaveLength(perFlush);
+    const version = attr.version;
+    // No render consumed the first batch, so the second batch's ranges push
+    // the pending total past the budget and the whole buffer goes up.
+    for (let i = perFlush; i < items.length; i++) array[items[i]] = 1;
+    uploader.flush(false);
+    expect(attr.updateRanges).toHaveLength(0);
+    expect(attr.version).toBe(version + 1);
   });
 });
 
