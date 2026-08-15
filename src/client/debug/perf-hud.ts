@@ -158,6 +158,46 @@ export function frame(): void { _frame(); }
 export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
+/**
+ * Exclusive whole-frame GPU sampler for console harnesses (frame-cost.ts).
+ *
+ * Installs a single-scope timer into the swappable hooks so EVERY frame
+ * samples `gpu.frame` — no rotation, unlike the panel's multi-scope timer.
+ * Returns null while the panel is open (its timer holds the context's
+ * single TIME_ELAPSED slot) or when the driver exposes no timer query.
+ *
+ * The returned release() restores the no-op hooks only if they are still
+ * this sampler's own — a panel opened mid-hold owns them now, and its
+ * queries must not be clobbered. Samples stop arriving in that case;
+ * callers must treat a dried-up sample stream as an abort, not a zero.
+ */
+export function acquireGpuFrameSampler(
+  gl: WebGL2RenderingContext,
+  onSample: (ms: number) => void,
+): (() => void) | null {
+  if (installed) return null;
+  const timer = GpuTimer.create(gl);
+  if (timer === null) return null;
+  const begin = (label: string): void => {
+    if (label === GPU_WHOLE_FRAME_SCOPE) timer.begin(label);
+  };
+  const end = (label: string): void => {
+    if (label === GPU_WHOLE_FRAME_SCOPE) timer.end(label);
+  };
+  const drain = (): void => timer.advanceFrame((_label, ms) => onSample(ms));
+  _gpuBegin = begin;
+  _gpuEnd = end;
+  _frame = drain;
+  return () => {
+    if (_gpuBegin === begin) {
+      _gpuBegin = () => {};
+      _gpuEnd = () => {};
+      _frame = () => {};
+    }
+    timer.dispose();
+  };
+}
+
 import type { DebugSection } from './debug-panel';
 
 export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSection {

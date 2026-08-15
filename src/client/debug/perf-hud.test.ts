@@ -6,6 +6,7 @@ import {
   gpuBegin,
   gpuEnd,
   buildPerfSection,
+  acquireGpuFrameSampler,
   _sectionsForTest,
 } from './perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timer';
@@ -164,6 +165,55 @@ describe('perf-hud / install → dispose teardown', () => {
     // Headline children: [FPS text, low span, ' ', gpu span].
     expect(headline.children[3].firstChild.nodeValue).toBe('gpu 20.0ms');
 
+    section.dispose();
+  });
+
+  it('acquireGpuFrameSampler returns null while the panel is installed', () => {
+    const section = buildPerfSection(null);
+    expect(acquireGpuFrameSampler(asGl(new FakeGl()), () => {})).toBeNull();
+    section.dispose();
+  });
+
+  it('sampler: whole-frame scope samples EVERY frame, inner scopes ignored', () => {
+    const gl = new FakeGl();
+    const samples: number[] = [];
+    const release = acquireGpuFrameSampler(asGl(gl), (ms) => samples.push(ms));
+    expect(release).not.toBeNull();
+
+    for (let f = 0; f < 5; f++) {
+      gpuBegin(GPU_WHOLE_FRAME_SCOPE);
+      const query = gl.activeQuery;
+      expect(query).not.toBeNull();
+      gl.results.set(query!, (10 + f) * 1e6);
+      gpuBegin('main');
+      gpuEnd('main');
+      gpuEnd(GPU_WHOLE_FRAME_SCOPE);
+      frame();
+    }
+    // A multi-scope timer would rotate and sample 1/N frames; the sampler
+    // registers only the whole-frame scope, so all 5 frames land.
+    expect(samples).toEqual([10, 11, 12, 13, 14]);
+
+    release!();
+    // Hooks are no-ops again — a begin after release opens no query.
+    gpuBegin(GPU_WHOLE_FRAME_SCOPE);
+    expect(gl.activeQuery).toBeNull();
+  });
+
+  it('sampler release does not clobber a panel opened mid-hold', () => {
+    const samplerGl = new FakeGl();
+    const release = acquireGpuFrameSampler(asGl(samplerGl), () => {});
+    expect(release).not.toBeNull();
+
+    const panelGl = new FakeGl();
+    const section = buildPerfSection(asGl(panelGl));
+    release!();
+
+    // The panel's hooks survived the release: its timer still opens
+    // queries on its own context.
+    gpuBegin(GPU_WHOLE_FRAME_SCOPE);
+    expect(panelGl.activeQuery).not.toBeNull();
+    gpuEnd(GPU_WHOLE_FRAME_SCOPE);
     section.dispose();
   });
 
