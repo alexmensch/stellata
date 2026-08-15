@@ -15,11 +15,32 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from test_helpers import load_kebab_sibling  # noqa: E402
-from simbad import inputs, query, tsv  # noqa: E402
+import simbad  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
-    OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, HIP, GAIA_DR3,
-    ColumnSpec, IdentLookup,
+    OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
+    PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
+    RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE,
+    ColumnSpec, FluxBand, IdentLookup,
 )
+
+
+SPINE_HEADER = (
+    "tyc\thip\thd\thr\tgl\tflam\tbayer\tproper\tgaia_source_id\tra\tdec\tdist\t"
+    "mag\tci\tspect\trv\tpm_ra\tpm_dec\tpos_src\tdist_src\tmag_src\trv_src\t"
+    "pm_src\tspect_src"
+)
+SPINE_COLUMNS = SPINE_HEADER.split("\t")
+
+
+def write_spine(directory: Path, rows: list[dict[str, str]]) -> Path:
+    """Materialise a spine fixture — named cells set, the rest blank."""
+    path = directory / "inherited-spine.tsv"
+    lines = [SPINE_HEADER]
+    for row in rows:
+        lines.append("\t".join(row.get(c, "") for c in SPINE_COLUMNS))
+    path.write_text("\n".join(lines) + "\n")
+    return path
 
 
 class FakeBackend:
@@ -38,6 +59,12 @@ class FakeBackend:
         raise AssertionError(f"unexpected query (no matching needle):\n{q}")
 
 
+def ident_table(rows):
+    return FakeTable(
+        colnames=["oidref", "id"], dtypes={"oidref": int, "id": str}, rows=rows,
+    )
+
+
 class SpecsTests(unittest.TestCase):
 
     def test_column_spec_basic_shape(self):
@@ -48,11 +75,35 @@ class SpecsTests(unittest.TestCase):
         self.assertIs(c.dtype, str)
         self.assertFalse(c.required)
 
-    def test_ident_lookup_like_pattern(self):
+    def test_ident_lookup_like_pattern_and_compose(self):
         self.assertEqual(HIP.like_pattern, "HIP %")
-        self.assertEqual(HIP.prefix_len, 4)
         self.assertEqual(GAIA_DR3.like_pattern, "Gaia DR3 %")
-        self.assertEqual(GAIA_DR3.prefix_len, 9)
+        self.assertEqual(HIP.compose(12345), "HIP 12345")
+        self.assertEqual(TYC.compose("144-1004-1"), "TYC 144-1004-1")
+
+    def test_parse_suffix_numeric(self):
+        self.assertEqual(HIP.parse_suffix("HIP 12345"), 12345)
+        # Component suffix — the canonical-integer row carries the same oid.
+        self.assertIsNone(HIP.parse_suffix("HIP 12345 A"))
+        self.assertIsNone(HIP.parse_suffix("Gaia DR3 12345"))
+
+    def test_parse_suffix_string_strips_simbad_padding(self):
+        # SIMBAD right-aligns the TYC's first field, so the stored id is
+        # padded while the request that matched it was not.
+        self.assertEqual(TYC.parse_suffix("TYC  144-1004-1"), "144-1004-1")
+        self.assertEqual(TYC.parse_suffix("TYC 1026-2127-1"), "1026-2127-1")
+        self.assertEqual(GJ.parse_suffix("GJ 3207"), "3207")
+        self.assertIsNone(TYC.parse_suffix("TYC "))
+
+    def test_flux_band_column_names(self):
+        self.assertEqual(
+            FluxBand("V").tsv_names, ("flux_V", "flux_V_err", "flux_V_bibcode"),
+        )
+        self.assertEqual(
+            FluxBand("B").column_sources(),
+            (("flux_B", "flux"), ("flux_B_err", "flux_err"),
+             ("flux_B_bibcode", "bibcode")),
+        )
 
 
 class BuildBasicSelectTests(unittest.TestCase):
@@ -111,77 +162,157 @@ class FetchBasicColumnsTests(unittest.TestCase):
 class ResolveOidsByPrefixTests(unittest.TestCase):
 
     def test_gaia_dr3_lookup_resolves_value_to_oid(self):
-        table = FakeTable(
-            colnames=["oidref", "id"],
-            dtypes={"oidref": int, "id": str},
-            rows=[
-                {"oidref": 100, "id": "Gaia DR3 12345"},
-                {"oidref": 200, "id": "Gaia DR3 67890"},
-            ],
-        )
-        backend = FakeBackend([("FROM ident", table)])
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "Gaia DR3 12345"},
+            {"oidref": 200, "id": "Gaia DR3 67890"},
+        ]))])
         result = query.resolve_oids_by_prefix(
-            FakeClient(backend), values=[12345, 67890], prefix="Gaia DR3 ",
+            FakeClient(backend), values=[12345, 67890], lookup=GAIA_DR3,
         )
         self.assertEqual(result, {12345: 100, 67890: 200})
 
     def test_suffixed_ident_silently_skipped(self):
-        # "HIP 12345 A" — component suffix — fails int cast, skipped.
-        table = FakeTable(
-            colnames=["oidref", "id"],
-            dtypes={"oidref": int, "id": str},
-            rows=[
-                {"oidref": 100, "id": "HIP 12345 A"},
-                {"oidref": 100, "id": "HIP 12345"},
-            ],
-        )
-        backend = FakeBackend([("FROM ident", table)])
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 12345 A"},
+            {"oidref": 100, "id": "HIP 12345"},
+        ]))])
         result = query.resolve_oids_by_prefix(
-            FakeClient(backend), values=[12345], prefix="HIP ",
+            FakeClient(backend), values=[12345], lookup=HIP,
         )
         self.assertEqual(result, {12345: 100})
+
+    def test_padded_tyc_row_joins_its_unpadded_request(self):
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 6384906, "id": "TYC  144-1004-1"},
+        ]))])
+        result = query.resolve_oids_by_prefix(
+            FakeClient(backend), values=["144-1004-1"], lookup=TYC,
+        )
+        self.assertIn("'TYC 144-1004-1'", backend.calls[0])
+        self.assertEqual(result, {"144-1004-1": 6384906})
+
+    def test_suffix_that_cannot_be_quoted_is_refused(self):
+        backend = FakeBackend([])
+        with self.assertRaises(SystemExit):
+            query.resolve_oids_by_prefix(
+                FakeClient(backend), values=["144'--"], lookup=TYC,
+            )
+        self.assertEqual(backend.calls, [])
 
 
 class FetchIdentLookupsTests(unittest.TestCase):
 
     def test_or_clause_covers_every_lookup(self):
-        table = FakeTable(
-            colnames=["oidref", "id"],
-            dtypes={"oidref": int, "id": str},
-            rows=[
-                {"oidref": 100, "id": "HIP 1"},
-                {"oidref": 100, "id": "Gaia DR3 9999"},
-                {"oidref": 200, "id": "Gaia DR3 8888"},
-            ],
-        )
-        backend = FakeBackend([("FROM ident", table)])
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 1"},
+            {"oidref": 100, "id": "Gaia DR3 9999"},
+            {"oidref": 100, "id": "TYC  144-1004-1"},
+            {"oidref": 200, "id": "Gaia DR3 8888"},
+        ]))])
         result = query.fetch_ident_lookups(
-            FakeClient(backend), oids=[100, 200], lookups=[HIP, GAIA_DR3],
+            FakeClient(backend), oids=[100, 200], lookups=[HIP, GAIA_DR3, TYC],
         )
         self.assertEqual(
             result,
-            {100: {"hip": 1, "source_id": 9999},
+            {100: {"hip": 1, "source_id": 9999, "tyc": "144-1004-1"},
              200: {"source_id": 8888}},
         )
         self.assertIn("id LIKE 'HIP %'", backend.calls[0])
         self.assertIn("id LIKE 'Gaia DR3 %'", backend.calls[0])
+        self.assertIn("id LIKE 'TYC %'", backend.calls[0])
+
+
+class FetchFluxBandsTests(unittest.TestCase):
+
+    def _table(self, rows):
+        return FakeTable(
+            colnames=["oidref", "filter", "flux", "flux_err", "bibcode"],
+            dtypes={"oidref": int, "filter": str, "flux": float,
+                    "flux_err": float, "bibcode": str},
+            rows=rows,
+        )
+
+    def test_pivots_long_rows_into_per_band_columns(self):
+        backend = FakeBackend([("FROM flux", self._table([
+            {"oidref": 6853, "filter": "B", "flux": 7.42,
+             "flux_err": 0.01, "bibcode": "2000A&A...355L..27H"},
+            {"oidref": 6853, "filter": "V", "flux": 7.34,
+             "flux_err": 0.01, "bibcode": "2000A&A...355L..27H"},
+        ]))])
+        result = query.fetch_flux_bands(
+            FakeClient(backend), oids=[6853], bands=[FluxBand("B"), FluxBand("V")],
+        )
+        self.assertEqual(result, {6853: {
+            "flux_B": 7.42, "flux_B_err": 0.01,
+            "flux_B_bibcode": "2000A&A...355L..27H",
+            "flux_V": 7.34, "flux_V_err": 0.01,
+            "flux_V_bibcode": "2000A&A...355L..27H",
+        }})
+        self.assertIn("filter IN ('B','V')", backend.calls[0])
+
+    def test_band_absent_from_the_request_is_ignored(self):
+        backend = FakeBackend([("FROM flux", self._table([
+            {"oidref": 1, "filter": "K", "flux": 3.0,
+             "flux_err": None, "bibcode": None},
+        ]))])
+        result = query.fetch_flux_bands(
+            FakeClient(backend), oids=[1], bands=[FluxBand("V")],
+        )
+        self.assertEqual(result, {})
+
+    def test_no_bands_skips_query(self):
+        backend = FakeBackend([])
+        self.assertEqual(
+            query.fetch_flux_bands(FakeClient(backend), oids=[1], bands=[]), {},
+        )
+        self.assertEqual(backend.calls, [])
+
+    def test_one_band_present_leaves_the_other_null_not_shifted(self):
+        # The long-format table publishes a row per band it has, so an oid
+        # with B and no V must null V's three cells rather than slide B's
+        # into them.
+        backend = FakeBackend([("FROM flux", self._table([
+            {"oidref": 5, "filter": "B", "flux": 9.1,
+             "flux_err": 0.02, "bibcode": "2000A&A...355L..27H"},
+        ]))])
+        flux_rows = query.fetch_flux_bands(
+            FakeClient(backend), oids=[5], bands=[FluxBand("B"), FluxBand("V")],
+        )
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "values.tsv"
+            tsv.write_simbad_tsv(
+                output=out, oids=[5], basic_rows={5: {"oid": 5}}, columns=[OID],
+                blocks=[tsv.flux_block([FluxBand("B"), FluxBand("V")], flux_rows)],
+            )
+            text = out.read_text().splitlines()
+        self.assertEqual(
+            text[0],
+            "simbad_oid\tflux_B\tflux_B_err\tflux_B_bibcode"
+            "\tflux_V\tflux_V_err\tflux_V_bibcode",
+        )
+        self.assertEqual(text[1], "5\t9.1\t0.02\t2000A&A...355L..27H\t\t\t")
 
 
 class TsvShapeTests(unittest.TestCase):
 
-    def test_header_order_columns_then_idents(self):
+    def test_header_order_columns_then_blocks(self):
         header = tsv.build_tsv_header(
-            [OID, SP_TYPE], [HIP, GAIA_DR3],
+            [OID, SP_TYPE],
+            [tsv.ident_block([HIP, GAIA_DR3], {}),
+             tsv.flux_block([FluxBand("V")], {})],
         )
-        self.assertEqual(header, ["simbad_oid", "sp_type", "hip", "source_id"])
+        self.assertEqual(header, [
+            "simbad_oid", "sp_type", "hip", "source_id",
+            "flux_V", "flux_V_err", "flux_V_bibcode",
+        ])
 
-    def test_row_dict_merges_basic_and_ident(self):
+    def test_row_dict_merges_basic_and_blocks(self):
         row = tsv.build_row_dict(
             oid=42,
             basic_row={"oid": 42, "sp_type": "G2V"},
-            ident_values={"hip": 7, "source_id": 99},
             columns=[OID, SP_TYPE],
-            ident_lookups=[HIP, GAIA_DR3],
+            blocks=[tsv.ident_block([HIP, GAIA_DR3],
+                                    {42: {"hip": 7, "source_id": 99}})],
         )
         self.assertEqual(row, {
             "simbad_oid": 42, "sp_type": "G2V",
@@ -192,9 +323,8 @@ class TsvShapeTests(unittest.TestCase):
         row = tsv.build_row_dict(
             oid=42,
             basic_row=None,
-            ident_values=None,
             columns=[OID, SP_TYPE],
-            ident_lookups=[HIP],
+            blocks=[tsv.ident_block([HIP], {})],
         )
         self.assertEqual(row["simbad_oid"], 42)
         self.assertIsNone(row["sp_type"])
@@ -206,18 +336,83 @@ class TsvShapeTests(unittest.TestCase):
         row = tsv.build_row_dict(
             oid=42,
             basic_row={"sp_type": "G2V"},
-            ident_values=None,
             columns=[SP_TYPE],
-            ident_lookups=[],
+            blocks=[],
         )
         self.assertEqual(row, {"sp_type": "G2V"})
+
+
+class BibcodedGroupTests(unittest.TestCase):
+
+    def test_unbibcoded_flux_value_and_error_are_dropped(self):
+        band = FluxBand("V")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_V": 7.34, "flux_V_err": 0.01, "flux_V_bibcode": None,
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertIsNone(row["flux_V"])
+        self.assertIsNone(row["flux_V_err"])
+
+    def test_bibcoded_flux_value_survives(self):
+        band = FluxBand("V")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_V": 7.34, "flux_V_err": 0.01, "flux_V_bibcode": "2000A&A..1H",
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertEqual(row["flux_V"], 7.34)
+        self.assertEqual(row["flux_V_err"], 0.01)
+
+    def test_blank_bibcode_counts_as_absent(self):
+        band = FluxBand("B")
+        row = tsv.build_row_dict(
+            oid=1, basic_row=None, columns=[OID],
+            blocks=[tsv.flux_block([band], {1: {
+                "flux_B": 9.1, "flux_B_bibcode": "   ",
+            }})],
+            bibcoded_groups=[band.bibcoded_group()],
+        )
+        self.assertIsNone(row["flux_B"])
+
+    def test_basic_table_groups_take_their_whole_quantity_down(self):
+        from simbad.specs import BASIC_BIBCODED_GROUPS
+        row = tsv.build_row_dict(
+            oid=1,
+            basic_row={
+                "oid": 1, "plx_value": 12.3, "plx_err": 0.4, "plx_qual": "A",
+                "plx_bibcode": None,
+                "rvz_radvel": -5.0, "rvz_err": 0.2, "rvz_type": "v",
+                "rvz_qual": "B", "rvz_bibcode": "2006AstL...32..759G",
+            },
+            columns=[OID, PLX_VALUE, PLX_ERR, PLX_QUAL, PLX_BIBCODE,
+                     RVZ_RADVEL, RVZ_ERR, RVZ_TYPE, RVZ_QUAL, RVZ_BIBCODE],
+            blocks=[],
+            bibcoded_groups=BASIC_BIBCODED_GROUPS,
+        )
+        # parallax has no bibcode: value, error and quality all go.
+        self.assertIsNone(row["plx_value"])
+        self.assertIsNone(row["plx_err"])
+        self.assertIsNone(row["plx_qual"])
+        # rv is bibcoded and is untouched.
+        self.assertEqual(row["rvz_radvel"], -5.0)
+        self.assertEqual(row["rvz_qual"], "B")
+
+    def test_a_pull_declaring_no_groups_is_unaffected(self):
+        row = tsv.build_row_dict(
+            oid=1, basic_row={"oid": 1, "sp_type": "G2V"},
+            columns=[OID, SP_TYPE], blocks=[],
+        )
+        self.assertEqual(row["sp_type"], "G2V")
 
 
 class TsvRoundtripTests(unittest.TestCase):
 
     def test_minimal_pull_produces_expected_tsv(self):
-        cols = [OID, SP_TYPE]
-        idents = [HIP]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "sptype.tsv"
             n = tsv.write_simbad_tsv(
@@ -227,9 +422,8 @@ class TsvRoundtripTests(unittest.TestCase):
                     1: {"oid": 1, "sp_type": "G2V"},
                     2: {"oid": 2, "sp_type": "DA2"},
                 },
-                ident_rows={1: {"hip": 100}, 2: {"hip": 200}},
-                columns=cols,
-                ident_lookups=idents,
+                columns=[OID, SP_TYPE],
+                blocks=[tsv.ident_block([HIP], {1: {"hip": 100}, 2: {"hip": 200}})],
             )
             self.assertEqual(n, 2)
             text = out.read_text().splitlines()
@@ -237,47 +431,180 @@ class TsvRoundtripTests(unittest.TestCase):
             self.assertEqual(text[1], "1\tG2V\t100")
             self.assertEqual(text[2], "2\tDA2\t200")
 
+    def test_flux_block_lands_after_the_ident_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "values.tsv"
+            tsv.write_simbad_tsv(
+                output=out,
+                oids=[1],
+                basic_rows={1: {"oid": 1}},
+                columns=[OID],
+                blocks=[
+                    tsv.ident_block([HIP], {1: {"hip": 7}}),
+                    tsv.flux_block([FluxBand("V")],
+                                   {1: {"flux_V": 7.34, "flux_V_bibcode": "B"}}),
+                ],
+            )
+            text = out.read_text().splitlines()
+            self.assertEqual(
+                text[0], "simbad_oid\thip\tflux_V\tflux_V_err\tflux_V_bibcode",
+            )
+            self.assertEqual(text[1], "1\t7\t7.34\t\tB")
+
     def test_appending_column_to_spec_adds_tsv_column(self):
         """Spec extensibility: appending OTYPE to the column list extends
         the TSV with no other code change."""
-        cols = [OID, SP_TYPE, OTYPE]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "sptype.tsv"
             tsv.write_simbad_tsv(
                 output=out,
                 oids=[1],
                 basic_rows={1: {"oid": 1, "sp_type": "G2V", "otype": "*"}},
-                ident_rows={},
-                columns=cols,
-                ident_lookups=[],
+                columns=[OID, SP_TYPE, OTYPE],
             )
             text = out.read_text().splitlines()
             self.assertEqual(text[0], "simbad_oid\tsp_type\totype")
             self.assertEqual(text[1], "1\tG2V\t*")
 
 
-class IterAthygHipForNoGaiaTests(unittest.TestCase):
+class SpineRequestKeysTests(unittest.TestCase):
 
-    def _write_csv(self, rows: str) -> Path:
+    def _spine(self, rows):
         d = self.enterContext(tempfile.TemporaryDirectory())
-        p = Path(d) / "athyg.csv"
-        p.write_text(rows)
-        return p
+        return write_spine(Path(d), rows)
 
-    def test_yields_hip_only_for_gaialess_rows(self):
-        # gaia present (incl. sentinel-'0' → treated as absent), hip
-        # sentinels '' / '0', and gaia-absent+hip-present all exercised.
-        csv_path = self._write_csv(
-            "hip,gaia\n"
-            "100,\n"       # no gaia, hip 100 → yield
-            "200,4567\n"   # gaia present → skip
-            ",8888\n"      # gaia present, hip blank → skip
-            "300,0\n"      # gaia sentinel '0' → absent; hip 300 → yield
-            ",\n"          # no gaia, no hip → skip
-            "0,\n"         # no gaia, hip sentinel '0' → skip
-            "400,0\n"      # gaia sentinel; hip 400 → yield
+    def test_partitions_by_the_no_gaia_key_ladder(self):
+        path = self._spine([
+            {"gaia_source_id": "12345", "hip": "1", "tyc": "1-2-1"},
+            {"hip": "777", "tyc": "3-4-1"},
+            {"tyc": "5-6-1", "gl": "GJ 3207"},
+            {"gl": "Gl 165A"},
+            {"proper": "Sol"},
+        ])
+        keys = inputs.spine_request_keys(path)
+        self.assertEqual(keys.source_ids, [12345])
+        self.assertEqual(keys.hips, [777])
+        self.assertEqual(keys.tycs, ["5-6-1"])
+        self.assertEqual(keys.gls, ["165A"])
+        self.assertEqual(keys.keyless, 1)
+        self.assertEqual(keys.total, 5)
+
+    def test_row_filter_narrows_the_partition(self):
+        path = self._spine([
+            {"gaia_source_id": "1", "rv_src": "G_R3"},
+            {"gaia_source_id": "2", "rv_src": "HYG"},
+        ])
+        keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
+        self.assertEqual(keys.source_ids, [2])
+
+    def test_tyc_by_source_id_covers_only_source_id_keyed_rows(self):
+        # Same pass as the partition, so the widening map can never cover a
+        # different cohort than the request set it widens.
+        path = self._spine([
+            {"gaia_source_id": "1", "tyc": "1-2-1"},
+            {"gaia_source_id": "2"},
+            {"tyc": "9-9-1"},
+        ])
+        keys = inputs.spine_request_keys(path)
+        self.assertEqual(keys.tyc_by_source_id, {1: "1-2-1"})
+        self.assertEqual(keys.tycs, ["9-9-1"])
+
+    def test_row_filter_narrows_the_widening_map_too(self):
+        path = self._spine([
+            {"gaia_source_id": "1", "tyc": "1-2-1", "rv_src": "G_R3"},
+            {"gaia_source_id": "2", "tyc": "3-4-1", "rv_src": "HYG"},
+        ])
+        keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
+        self.assertEqual(keys.tyc_by_source_id, {2: "3-4-1"})
+
+
+class ValueCohortTests(unittest.TestCase):
+
+    def _row(self, **cells):
+        return {c: cells.get(c, "") for c in SPINE_COLUMNS}
+
+    def test_first_order_marks_open_no_simbad_tier(self):
+        row = self._row(
+            gaia_source_id="1", pos_src="T", dist_src="G_R3",
+            mag_src="HIP", rv_src="G_R3", pm_src="G_R3",
         )
-        self.assertEqual(list(inputs.iter_athyg_hip_for_no_gaia(csv_path)), [100, 300, 400])
+        self.assertFalse(inputs.is_simbad_value_cohort(row))
+
+    def test_absent_rv_is_not_a_non_first_order_mark(self):
+        row = self._row(gaia_source_id="1", pos_src="T", rv_src="N")
+        self.assertFalse(inputs.is_simbad_value_cohort(row))
+
+    def test_any_retired_mark_admits_the_row(self):
+        for mark in ("HYG", "OTHER", "G_R2", "GJ"):
+            with self.subTest(mark=mark):
+                row = self._row(gaia_source_id="1", pos_src="T", rv_src=mark)
+                self.assertTrue(inputs.is_simbad_value_cohort(row))
+
+    def test_no_gaia_row_is_always_in_the_cohort(self):
+        row = self._row(hip="7", pos_src="T", dist_src="HIP", rv_src="N")
+        self.assertTrue(inputs.is_simbad_value_cohort(row))
+
+
+class GlSuffixTests(unittest.TestCase):
+
+    def test_both_spellings_normalise_to_one_suffix(self):
+        self.assertEqual(inputs.gl_suffix("GJ 3207"), "3207")
+        self.assertEqual(inputs.gl_suffix("Gl 3207"), "3207")
+        self.assertEqual(inputs.gl_suffix(" Gl 165A "), "165A")
+
+    def test_blank_and_prefixless_cells(self):
+        self.assertIsNone(inputs.gl_suffix(""))
+        self.assertIsNone(inputs.gl_suffix("GJ "))
+        self.assertEqual(inputs.gl_suffix("9140"), "9140")
+
+
+class CoverageTests(unittest.TestCase):
+
+    ROWS = {
+        1: {"sp_type": "G2V", "bibcode": "2000A&A...355L..27H"},
+        2: {"sp_type": "   ", "bibcode": None},
+        3: {"sp_type": None},
+    }
+
+    def test_blank_and_absent_cells_both_count_as_unfilled(self):
+        self.assertEqual(coverage.count_filled(self.ROWS, "sp_type"), 1)
+        self.assertEqual(coverage.count_filled(self.ROWS, "bibcode"), 1)
+        self.assertEqual(coverage.count_filled(self.ROWS, "absent"), 0)
+
+    def test_report_fill_returns_the_count_and_logs_one_line(self):
+        lines: list[str] = []
+        n = coverage.report_fill(
+            "sp_type", self.ROWS, "sp_type", 4, log=lines.append,
+        )
+        self.assertEqual(n, 1)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("1/4", lines[0])
+        self.assertIn("25.0%", lines[0])
+
+    def test_floor_gate_exits_below_and_passes_at_the_floor(self):
+        with self.assertRaises(SystemExit) as caught:
+            coverage.assert_floor(
+                "sp_type coverage", 0.49, 0.50,
+                script="refresh-simbad-sptype", diagnosis="the shape drifted",
+            )
+        self.assertIn("49.0%", str(caught.exception))
+        self.assertIn("the shape drifted", str(caught.exception))
+        coverage.assert_floor(
+            "sp_type coverage", 0.50, 0.50,
+            script="refresh-simbad-sptype", diagnosis="the shape drifted",
+        )
+
+
+class SourceFilesTests(unittest.TestCase):
+
+    def test_lists_every_module_and_no_test_file(self):
+        names = {p.name for p in simbad.source_files()}
+        self.assertLessEqual(
+            {"__init__.py", "specs.py", "inputs.py", "request.py",
+             "query.py", "coverage.py", "tsv.py"},
+            names,
+        )
+        self.assertNotIn("simbad.test.py", names)
 
 
 class IterWdsXidsOidsTests(unittest.TestCase):
@@ -295,27 +622,147 @@ class IterWdsXidsOidsTests(unittest.TestCase):
         self.assertEqual(list(inputs.iter_wds_xids_oids(p)), [100, 200])
 
 
+class ResolveSpineKeysTests(unittest.TestCase):
+
+    def test_widens_on_tyc_only_where_the_gaia_namespace_missed(self):
+        keys = inputs.SpineRequestKeys(
+            source_ids=[1, 2], tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 1','Gaia DR3 2'", ident_table([
+                {"oidref": 100, "id": "Gaia DR3 1"},
+            ])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        # source_id 1 resolved, so only 2's TYC is asked for.
+        self.assertEqual(resolved.oids, {100, 300})
+        self.assertEqual(resolved.gained_by_widening, 1)
+        self.assertEqual(resolved.requested[request.TYC_WIDENING], 1)
+
+    def test_widened_binding_is_vetoed_when_simbad_names_another_source(self):
+        # oid 300 answers 'TYC 5-6-1' but SIMBAD calls it Gaia DR3 999 —
+        # a different star from the source_id 2 that asked, so the TYC
+        # bound the system rather than the component.
+        keys = inputs.SpineRequestKeys(
+            source_ids=[1, 2], tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 1','Gaia DR3 2'", ident_table([
+                {"oidref": 100, "id": "Gaia DR3 1"},
+            ])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR3 999"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {100})
+        self.assertEqual(resolved.widening_vetoed, 1)
+        self.assertEqual(resolved.gained_by_widening, 0)
+        self.assertEqual(resolved.resolved[request.TYC_WIDENING], 0)
+
+    def test_widened_binding_survives_when_simbad_names_no_gaia_id(self):
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2], tyc_by_source_id={2: "5-6-1"},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "HIP 4"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {300})
+        self.assertEqual(resolved.widening_vetoed, 0)
+        self.assertEqual(resolved.widening_uncorroborated, 1)
+
+    def test_tyc_two_source_ids_claim_is_never_widened(self):
+        keys = inputs.SpineRequestKeys(
+            source_ids=[1, 2], tyc_by_source_id={1: "5-6-1", 2: "5-6-1"},
+        )
+        backend = FakeBackend([("'Gaia DR3 1','Gaia DR3 2'", ident_table([]))])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, set())
+        self.assertEqual(resolved.requested[request.TYC_WIDENING], 0)
+
+    def test_no_widening_map_leaves_the_request_at_its_namespaces(self):
+        keys = inputs.SpineRequestKeys(source_ids=[1], hips=[7], tycs=[], gls=[])
+        backend = FakeBackend([
+            ("Gaia DR3 1", ident_table([{"oidref": 100, "id": "Gaia DR3 1"}])),
+            ("HIP 7", ident_table([{"oidref": 200, "id": "HIP 7"}])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {100, 200})
+        self.assertEqual(resolved.gained_by_widening, 0)
+        self.assertNotIn(request.TYC_WIDENING, resolved.requested)
+        self.assertAlmostEqual(resolved.coverage(GAIA_DR3.tsv_name), 1.0)
+
+
 class CollectOidRequestsTests(unittest.TestCase):
 
-    def test_unions_and_sorts_three_sources(self):
+    def test_unions_spine_keys_and_wds_oids(self):
         sptype = load_kebab_sibling(
             __file__, "refresh_simbad_sptype", "../refresh-simbad-sptype.py",
         )
-        gaia_table = FakeTable(
-            colnames=["oidref", "id"], dtypes={"oidref": int, "id": str},
-            rows=[{"oidref": 100, "id": "Gaia DR3 12345"}],
-        )
-        hip_table = FakeTable(
-            colnames=["oidref", "id"], dtypes={"oidref": int, "id": str},
-            rows=[{"oidref": 300, "id": "HIP 777"}],
-        )
-        backend = FakeBackend([("Gaia DR3 12345", gaia_table), ("HIP 777", hip_table)])
-        with mock.patch.object(sptype.rl, "read_athyg_source_ids", return_value=[12345]), \
-             mock.patch.object(sptype.inputs, "iter_athyg_hip_for_no_gaia", return_value=iter([777])), \
-             mock.patch.object(sptype.inputs, "iter_wds_xids_oids", return_value=iter([200, 100])):
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        spine = write_spine(Path(d), [
+            {"gaia_source_id": "12345", "tyc": "1-2-1"},
+            {"hip": "777"},
+        ])
+        backend = FakeBackend([
+            ("Gaia DR3 12345", ident_table([
+                {"oidref": 100, "id": "Gaia DR3 12345"},
+            ])),
+            ("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+        ])
+        with mock.patch.object(sptype, "SPINE", spine), \
+             mock.patch.object(sptype.inputs, "iter_wds_xids_oids",
+                               return_value=iter([200, 100])):
             oids = sptype.collect_oid_requests(FakeClient(backend))
         # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped + sorted.
         self.assertEqual(oids, [100, 200, 300])
+
+
+class ValuesCollectOidRequestsTests(unittest.TestCase):
+
+    def _shell(self):
+        return load_kebab_sibling(
+            __file__, "refresh_simbad_values", "../refresh-simbad-values.py",
+        )
+
+    def test_cohort_predicate_narrows_the_request_set(self):
+        shell = self._shell()
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        spine = write_spine(Path(d), [
+            # first-order in every field → no SIMBAD tier reaches it
+            {"gaia_source_id": "1", "pos_src": "T", "dist_src": "G_R3",
+             "mag_src": "HIP", "rv_src": "G_R3", "pm_src": "G_R3"},
+            {"gaia_source_id": "2", "rv_src": "HYG"},
+            {"hip": "777"},
+        ])
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([{"oidref": 100, "id": "Gaia DR3 2"}])),
+            ("'HIP 777'", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+        ])
+        with mock.patch.object(shell, "SPINE", spine):
+            oids = shell.collect_oid_requests(FakeClient(backend))
+        self.assertEqual(oids, [100, 300])
+
+    def test_gaia_resolution_floor_fails_the_pull(self):
+        shell = self._shell()
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        spine = write_spine(Path(d), [
+            {"gaia_source_id": "2", "rv_src": "HYG"},
+            {"gaia_source_id": "3", "rv_src": "HYG"},
+        ])
+        backend = FakeBackend([("FROM ident", ident_table([]))])
+        with mock.patch.object(shell, "SPINE", spine):
+            with self.assertRaises(SystemExit) as caught:
+                shell.collect_oid_requests(FakeClient(backend))
+        self.assertIn("Gaia DR3 ident resolution", str(caught.exception))
 
 
 class FakeTable:

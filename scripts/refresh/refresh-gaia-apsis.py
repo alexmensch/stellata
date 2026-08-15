@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical
-parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per
-AT-HYG source_id."""
+parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per spine
+source_id."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-ATHYG = ROOT / "data" / "athyg" / "athyg_33_classic_ids.csv"
+SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
 
 TSV_COLUMNS = [
@@ -183,17 +183,17 @@ def write_row(row: Any) -> dict[str, Any]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), ATHYG]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), SPINE]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_athyg_source_ids(ATHYG)
+    source_ids = rl.read_spine_source_ids(SPINE)
     total = len(source_ids)
     if total == 0:
-        raise SystemExit(f"refresh-gaia-apsis: no source_ids in {ATHYG}")
+        raise SystemExit(f"refresh-gaia-apsis: no source_ids in {SPINE}")
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
-        f"reading {total} AT-HYG source_ids → {n_batches} batches of "
+        f"reading {total} spine source_ids → {n_batches} batches of "
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.astrophysical_parameters)"
     )
 
