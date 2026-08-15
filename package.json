@@ -39,6 +39,7 @@
     "refresh:hip-vmag": "python3 scripts/refresh/refresh-hipparcos-vmag.py",
     "refresh:classic-ids": "python3 scripts/refresh/refresh-classic-ids.py",
     "refresh:simbad": "python3 scripts/refresh/refresh-simbad-sample.py",
+    "refresh:simbad-values": "python3 scripts/refresh/refresh-simbad-values.py",
     "fetch:probes": "tsx scripts/probes/fetch-probe-trajectories.ts",
     "fetch:ephemerides": "tsx scripts/ephemerides/fetch-planet-elements.ts",
     "validate:simbad": "tsx scripts/catalog/validate/validate-simbad-sample.ts",

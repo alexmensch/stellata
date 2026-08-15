@@ -234,6 +234,19 @@ enough to see it.
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite Wenger et
   al (2000), A&AS 143, 9.
+- **SIMBAD bibcoded values** (CDS Strasbourg). Radial velocity,
+  parallax, proper motion, coordinates and Johnson B/V fluxes, each
+  carrying the `bibcode` of the measurement SIMBAD compiled it from —
+  the bottom tier of the per-field cascades in
+  `docs/catalog-driver.md` § 5, where SIMBAD is the index and the
+  bibcode is the source. Scoped to an enumerated cohort (the spine
+  rows whose printed cell is non-first-order, plus the no-Gaia tier —
+  11,050 rows), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
+  as `data/simbad/simbad_values.tsv` (11,043 rows, ~2.8 MB, LFS).
+  Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
+  long-format `flux` table rather than the `allfluxes` view, which
+  publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
+  `data/simbad/README.md` § The values pull. Same citation as above.
 - **Gaia DR2↔(E)DR3 cross-match** (`gaiadr3.dr2_neighbourhood`):
   Torra et al. 2021, *A&A* 649, A10,
   DOI [10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6361/202039637)
