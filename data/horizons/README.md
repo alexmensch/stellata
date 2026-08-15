@@ -38,6 +38,12 @@ ecliptic state vectors** rather than an on-sky direction — see its own
 section below. It is the only table here that reaches outside the
 1800–2050 window the RA/Dec epochs sit in.
 
+A fifth table, `moon-vector-truth.tsv`, freezes **geocentric ecliptic
+state vectors for the Moon** at 174 epochs spanning the model clock's
+whole 3000 BC – 3000 AD clamp — by far the widest corpus here. Consumed
+by `src/client/solar-system/ephemerides/moon-vector-truth.test.ts`. See
+its own section below.
+
 ## Provenance
 
 - Source: JPL Horizons API (`https://ssd.jpl.nasa.gov/api/horizons.api`),
@@ -99,6 +105,29 @@ one near each end of the model clock's 3000 BC – 3000 AD clamp, which
 no other corpus here reaches. Query shape: `EPHEM_TYPE=VECTORS`,
 `CENTER='500@10'`, `REF_PLANE='ECLIPTIC'`, `VEC_TABLE='1'`,
 `OUT_UNITS='AU-D'`, `CSV_FORMAT='YES'`, `TLIST` = the two JDs.
+
+## `moon-vector-truth.tsv`
+
+| Column | Meaning |
+|---|---|
+| `set` | `fit` or `check` — see below. |
+| `jd_tt` | Julian Date, **TT**. Fed straight to the theory; no clock. |
+| `x_km` / `y_km` / `z_km` | Geocentric position, km, **J2000 ecliptic** axes. |
+
+Query shape: `COMMAND='301'`, `EPHEM_TYPE=VECTORS`, `CENTER='500@399'`,
+`REF_PLANE='ECLIPTIC'`, `VEC_TABLE='1'`, `OUT_UNITS='KM-S'`,
+`TLIST_TYPE='JD'`. Retrieved 2026-08-15, DE441.
+
+The two sets exist because the lunar theory's mean-longitude
+recalibration was **derived from** part of this corpus, and a test that
+only checked the fit against its own basis would prove nothing:
+
+- **`fit`** — 134 epochs at a 16033.7-day step from T = −49.5 to +9.2
+  centuries. The step is deliberately non-commensurate with the synodic
+  (29.53 d), anomalistic (27.55 d) and draconic (27.21 d) months, so the
+  sample cannot alias a periodic term into a secular fit.
+- **`check`** — 40 epochs on a plain 150-year grid, never used in the
+  fit. `moon-vector-truth.test.ts` bounds these separately and tighter.
 
 ## Refresh
 

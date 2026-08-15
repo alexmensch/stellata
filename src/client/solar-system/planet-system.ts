@@ -15,6 +15,7 @@ import {
   earthMoonSplit,
   MOON_ELEMENTS,
   moonOffsetEcliptic,
+  moonOsculatingOrbit,
   type MoonElements,
 } from './ephemerides/moon-ephemeris';
 import {
@@ -539,23 +540,30 @@ const _moonAbs: Vec3 = { x: 0, y: 0, z: 0 };
 
 const DEG = Math.PI / 180;
 
+const EARTH_GRAV_PARAM_GM = SOL_PLANETS.find((p) => p.name === 'Earth')!.gravParamGM!;
+
 /** Sol's orbitGeometryAt — planets from the live Standish elements
  *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS (J2000
  *  osculating, no secular terms — constant in `t`, matching the
- *  resolver that positions them), in SOL_BODIES order. */
+ *  resolver that positions them), in SOL_BODIES order. The Moon is the
+ *  exception on both counts: its ring is the osculating ellipse through
+ *  the lunar theory's own state, because that is what positions it. */
 export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
   const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
     ...s,
     parentIdx: null,
   }));
   for (const { elem, parent } of MOON_COMPOSE) {
+    const osc = elem.useLunarTheory
+      ? moonOsculatingOrbit(t, EARTH_GRAV_PARAM_GM)
+      : null;
     out.push({
-      aAu: elem.aKm / AU_KM,
-      e: elem.e,
+      aAu: (osc ? osc.aKm : elem.aKm) / AU_KM,
+      e: osc ? osc.e : elem.e,
       orientation: {
-        inclination: elem.incDeg * DEG,
-        longAscNode: elem.nodeDeg * DEG,
-        argPerihelion: elem.periDeg * DEG,
+        inclination: osc ? osc.incRad : elem.incDeg * DEG,
+        longAscNode: osc ? osc.nodeRad : elem.nodeDeg * DEG,
+        argPerihelion: osc ? osc.argPeriRad : elem.periDeg * DEG,
       },
       refPoleRaDeg: elem.refPoleRaDeg,
       refPoleDecDeg: elem.refPoleDecDeg,

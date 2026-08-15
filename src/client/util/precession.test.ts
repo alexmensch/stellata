@@ -5,6 +5,10 @@ import { unitVectorFromRaDec } from './equatorial-basis';
 import {
   B1875_JD,
   besselianEpochToJd,
+  longTermEclipticPole,
+  longTermEclipticRotationFromJ2000,
+  longTermEquatorPole,
+  longTermEquatorRotationFromJ2000,
   precessDirection,
   precessRaDec,
   precessionAnglesFromJ2000,
@@ -124,5 +128,77 @@ describe('matrix composition vs the closed-form precession rates', () => {
     const got = precessRaDec(B1875, star);
     expect(Math.abs(got.raDeg - expectedRaDeg)).toBeLessThan(TOLERANCE_DEG);
     expect(Math.abs(got.decDeg - expectedDecDeg)).toBeLessThan(TOLERANCE_DEG);
+  });
+});
+
+describe('Vondrák long-term precession', () => {
+  const jdOfYear = (y: number) => J2000_JD + (y - 2000) * 365.25;
+
+  /** Angle (deg) between the ecliptic and equator poles = obliquity of date. */
+  function obliquityDeg(jd: number): number {
+    const e = longTermEclipticPole(jd);
+    const q = longTermEquatorPole(jd);
+    return (Math.acos(e.x * q.x + e.y * q.y + e.z * q.z) * 180) / Math.PI;
+  }
+
+  it('reproduces the J2000 obliquity from the two poles', () => {
+    expect(obliquityDeg(J2000_JD)).toBeCloseTo(23.439279, 5);
+  });
+
+  it('tracks the obliquity back to 3000 BC', () => {
+    // Laskar 1986's 10th-degree expression gives 24.0165° at year −2950;
+    // the two models are independent, so agreement to a few arcseconds
+    // says the ecliptic and equator series are both being read right.
+    expect(obliquityDeg(jdOfYear(-2950))).toBeCloseTo(24.0165, 2);
+    expect(obliquityDeg(jdOfYear(2950))).toBeLessThan(23.43);
+  });
+
+  it('carries the celestial pole past Thuban in the third millennium BC', () => {
+    // α Draconis was the pole star around 2787 BC. Nothing else in the
+    // chain reproduces that: the linear IAU row misses it by ~10°.
+    const thuban = unitVectorFromRaDec(211.09725, 64.37585);
+    let best = Infinity;
+    let bestYear = 0;
+    for (let y = -3000; y <= -2000; y += 5) {
+      const p = longTermEquatorPole(jdOfYear(y));
+      const sep = Math.acos(Math.min(1, p.x * thuban.x + p.y * thuban.y + p.z * thuban.z));
+      if (sep < best) {
+        best = sep;
+        bestYear = y;
+      }
+    }
+    expect((best * 180) / Math.PI).toBeLessThan(0.1);
+    expect(bestYear).toBeGreaterThan(-2820);
+    expect(bestYear).toBeLessThan(-2750);
+  });
+
+  it('agrees with the IAU 1976 rotation where that model is valid', () => {
+    // The two coexist deliberately: IAU 1976 owns the B1875 constellation
+    // boundaries, the long-term model owns the model clock. They must not
+    // disagree in the overlap, or the boundaries and the sky drift apart.
+    for (const jd of [B1875_JD, jdOfYear(1950), jdOfYear(2050)]) {
+      const a = longTermEquatorRotationFromJ2000(jd);
+      const b = precessionRotationFromJ2000(jd);
+      for (const v of [
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 },
+      ]) {
+        const p = precessDirection(a, v);
+        const q = precessDirection(b, v);
+        const sepArcsec = Math.acos(Math.min(1, p.x * q.x + p.y * q.y + p.z * q.z)) / ARCSEC_TO_RAD;
+        expect(sepArcsec).toBeLessThan(0.5);
+      }
+    }
+  });
+
+  it('is the identity at J2000 for both frames', () => {
+    const equ = longTermEquatorRotationFromJ2000(J2000_JD);
+    const ecl = longTermEclipticRotationFromJ2000(J2000_JD);
+    // The equator frame is the ICRS frame at J2000 to within the model's
+    // own sub-arcsecond offset; the ecliptic frame is that tilted by ε.
+    expect(equ[8]).toBeGreaterThan(1 - 1e-12);
+    expect(ecl[0]).toBeGreaterThan(1 - 1e-12);
+    expect(ecl[8]).toBeCloseTo(Math.cos((23.439279 * Math.PI) / 180), 6);
   });
 });

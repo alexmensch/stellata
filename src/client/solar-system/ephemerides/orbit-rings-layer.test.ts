@@ -707,16 +707,20 @@ describe('ring geometry passes through the body (single element source)', () => 
     // ecliptic rotation moonOffsetEcliptic applies, for every tabulated
     // reference pole (Laplace planes, Uranus equator, Triton) and the
     // no-pole ecliptic case (the Moon).
+    //
+    // Geometry is re-derived at each sample rather than reused from T0:
+    // the 17 Kepler moons return identical elements at every t, but the
+    // Moon's ring is the osculating ellipse through the lunar theory's
+    // own state and legitimately evolves within a single orbit.
     const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
-    const geoms = solOrbitGeometryAt(T0);
     const planetCount = PLANET_ORDER.length;
     const offset = { x: 0, y: 0, z: 0 };
-    for (let m = 0; m < MOON_ELEMENTS.length; m++) {
-      const elem = MOON_ELEMENTS[m];
-      const g = geoms[planetCount + m];
-      const aPc = writeRingVerts(verts, g, IDENTITY);
-      for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
-        moonOffsetEcliptic(elem, T0 + dayOffset * 86400, offset);
+    for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
+      const t = T0 + dayOffset * 86400;
+      const geoms = solOrbitGeometryAt(t);
+      for (let m = 0; m < MOON_ELEMENTS.length; m++) {
+        const aPc = writeRingVerts(verts, geoms[planetCount + m], IDENTITY);
+        moonOffsetEcliptic(MOON_ELEMENTS[m], t, offset);
         expect(minDistToRing(offset, verts)).toBeLessThan(0.02 * aPc);
       }
     }

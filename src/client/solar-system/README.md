@@ -115,6 +115,13 @@ orbital `a`/`e` are read from `MOON_ELEMENTS`
 (`ephemerides/moon-ephemeris.ts`) by name so they have a single source
 of truth. Scope + citations in `docs/science-solar-system.md` § Moons.
 
+Those `a`/`e` fields stay display-only for every moon, and for Earth's
+Moon the whole element row is: it is positioned by a truncated ELP
+series rather than a Kepler solve, and its orbit ring comes from the
+osculating ellipse through that series' state. `ephemerides/README.md`
+§ Moon ephemeris carries the why — a fixed ellipse cannot place an
+eclipse.
+
 `SOL_MOONS` is **not** part of `SOL_PLANETS`; the two concatenate into
 `SOL_BODIES` (the nine planets then the 18 moons), which is what
 `getPlanetSystem` returns as `planets`. The body field, mesh layer, and

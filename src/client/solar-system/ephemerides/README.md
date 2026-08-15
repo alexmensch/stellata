@@ -10,6 +10,14 @@ per-host orbital-plane quaternion.
 
 ```
 src/client/solar-system/ephemerides/
+  lunar-theory-pure.ts            Truncated ELP-2000/82 (Meeus ch. 47):
+                                  the Moon's λ/β/Δ in the mean ecliptic
+                                  and equinox of date. See § Moon
+                                  ephemeris.
+  moon-vector-truth.test.ts       The theory + precession chain vs frozen
+                                  Horizons geocentric vectors spanning
+                                  the whole clock, plus Meeus's own
+                                  worked example 47.a.
   ephemeris.ts (+ test)           The two element sources and the seam
                                   between them: JPL Standish 1992
                                   Keplerian elements + cubic Jupiter–Pluto
@@ -30,7 +38,9 @@ src/client/solar-system/ephemerides/
                                   elements for the 18 major moons, each
                                   with its reference-plane pole — plus the
                                   resolver (moonOffsetEcliptic,
-                                  earthMoonSplit).
+                                  earthMoonSplit) and the Moon's series
+                                  path (moonGeocentricKm,
+                                  moonOsculatingOrbit).
   orbit-descriptor.ts (+ test)    Parent/orbit descriptor for the focus
                                   card — every body's breadcrumb, orbit
                                   distance, and period from its parent
@@ -178,6 +188,61 @@ noise next to the 18 moon solves that already ran unbucketed.
 
 ## Moon ephemeris
 
+### The Moon runs on a series, not on its element row
+
+Earth's Moon is the one satellite **not** positioned by a Kepler solve.
+`lunar-theory-pure.ts` is the truncated ELP-2000/82 series (Meeus,
+*Astronomical Algorithms* 2nd ed., ch. 47): 60 longitude / 60 latitude /
+46 distance periodic terms over the five fundamental arguments, returning
+λ, β, Δ in the **mean ecliptic and equinox of date**.
+
+A fixed ellipse cannot place an eclipse. The real ascending node
+regresses 0.0529°/day (18.6 yr) and the apse advances ~40.7°/yr, so by
+2026 the J2000 element row put the node line ~25° out — eclipse seasons
+slid by ~25 days and the Moon's shadow missed Earth at every real solar
+eclipse. Secular rates alone would not have fixed it either: evection
+(1.27°) and variation (0.66°) are each many Earth radii of shadow
+displacement on their own.
+
+The row stays in `MOON_ELEMENTS` behind `useLunarTheory`, as the mean
+orbit that the focus card's orbit descriptor and the tidally-locked
+rotation parity read. **It is not the position source**, and the orbit
+ring does not read it either — see § Orbit rings.
+
+Frame: the series is referred to the equinox of date, and the model works
+in the J2000 ecliptic. Over the clock's span the equinox sweeps ~42° and
+the ecliptic plane itself moves ~0.5°, so the conversion is a full
+three-angle rotation, not a longitude offset —
+`../../util/precession.ts`'s Vondrák long-term model supplies it.
+Nutation is deliberately omitted: mean-of-date → mean-of-J2000 is exactly
+the precession-only chain, and the Sun's position carries no nutation
+either, so the pair stays consistent.
+
+### Mean-longitude recalibration
+
+ELP-2000/82 was fitted over a few centuries around J2000. Measured
+against DE441 across the model clock, its error is **entirely
+along-track**: latitude holds to 62″ and distance to 42 km at the bounds,
+while longitude drifts to +518″ (≈1000 km) by 3000 BC — a full umbra
+width of eclipse-path displacement and ~17 minutes of timing.
+
+The series' mean longitude therefore carries a T²/T³ recalibration,
+least-squared over the 134 irregularly-spaced Horizons epochs tagged
+`fit` in `data/horizons/moon-vector-truth.tsv`. It is the same kind of
+correction Espenak's eclipse canons apply for the lunar tidal
+acceleration, and the same kind of measured fit Triton's node rate and
+Mimas's libration amplitude already carry in `MOON_ELEMENTS`. Deeper
+polynomials do not help — T⁴ raises the worst residual — because what
+remains is the truncation floor. Latitude gets no such term: a secular
+fit moves its worst case only from 62″ to 58″.
+
+Resulting geocentric accuracy vs Horizons/DE441, pinned in
+`moon-vector-truth.test.ts`: **≲12 km across 1900–2100, ≲20 km over the
+independent `check` grid, ≲150 km at the clamp bounds** (was ~1000 km
+before the recalibration, and tens of thousands from the element row).
+
+### Every other moon
+
 Orbital elements (`moon-ephemeris.ts`) are J2000 osculating, each
 referred to the plane JPL tabulates it against, with that plane's ICRS
 pole stored per moon (`refPoleRaDeg`/`refPoleDecDeg`): the local
@@ -192,7 +257,8 @@ resonance libration — `moon-sky-truth.test.ts` pins all of it against
 frozen Horizons truth, including a present-day epoch where phase
 drift is at its most visible.
 
-`moonOffsetEcliptic(elem, t, out)` is the resolver: a Kepler solve in
+`moonOffsetEcliptic(elem, t, out)` is the resolver for both paths — it
+branches to the series on `useLunarTheory` and otherwise runs a Kepler solve in
 the moon's reference plane (shared `orbitalStateToCartesian` core with
 the planet ephemeris), then reference-plane → ICRS `Rz(α0+90°)·Rx(90°−δ0)`
 (IAU pole convention — node from the plane's ascending node on the ICRS
@@ -221,7 +287,10 @@ the moon resolver applies — parity vitest-pinned).
 
 **Geometry comes from `PlanetSystem.orbitGeometryAt(t)` — the SAME
 element source that positions the bodies** (Sol: live Standish
-elements for planets, `MOON_ELEMENTS` for moons), never the
+elements for planets, `MOON_ELEMENTS` for moons, and for **the Moon**
+the osculating ellipse through the lunar theory's own state, via
+`moonOsculatingOrbit` — its element row would leave the ring behind the
+body within a single month), never the
 display-only `Planet.semiMajorAxisAu`/`.eccentricity` fields. The two
 tables were once unreconciled and rings visibly missed their bodies.
 Host-centred geometry is checked against the live elements every frame and

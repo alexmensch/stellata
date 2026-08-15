@@ -57,3 +57,43 @@ export function orbitalStateToCartesian(
     (sinO * sinI) * xP +
     (cosO * sinI) * yP;
 }
+
+/** Classical elements of the osculating orbit through a state vector —
+ *  the inverse of `orbitalStateToCartesian`. `mu` is the two-body
+ *  gravitational parameter in the same length unit as `r`, per (time unit
+ *  of `v`)². Returned angles are radians; `i` comes back in [0, π] with
+ *  the node measured in the reference plane. */
+export function cartesianToOrbitalElements(
+  r: { x: number; y: number; z: number },
+  v: { x: number; y: number; z: number },
+  mu: number,
+): {
+  a: number; e: number; incRad: number; nodeRad: number; argPeriRad: number;
+} {
+  const rMag = Math.hypot(r.x, r.y, r.z);
+  const v2 = v.x * v.x + v.y * v.y + v.z * v.z;
+
+  const hx = r.y * v.z - r.z * v.y;
+  const hy = r.z * v.x - r.x * v.z;
+  const hz = r.x * v.y - r.y * v.x;
+  const hMag = Math.hypot(hx, hy, hz);
+
+  const a = 1 / (2 / rMag - v2 / mu);
+  const incRad = Math.acos(Math.min(1, Math.max(-1, hz / hMag)));
+  const nodeRad = Math.atan2(hx, -hy);
+
+  const rDotV = r.x * v.x + r.y * v.y + r.z * v.z;
+  const c = v2 / mu - 1 / rMag;
+  const ex = c * r.x - (rDotV / mu) * v.x;
+  const ey = c * r.y - (rDotV / mu) * v.y;
+  const ez = c * r.z - (rDotV / mu) * v.z;
+  const e = Math.hypot(ex, ey, ez);
+
+  const cosN = Math.cos(nodeRad), sinN = Math.sin(nodeRad);
+  const cosI = Math.cos(incRad), sinI = Math.sin(incRad);
+  // Eccentricity vector resolved on the in-plane basis (node direction,
+  // and the in-plane normal to it) gives ω directly.
+  const along = ex * cosN + ey * sinN;
+  const across = (-ex * sinN + ey * cosN) * cosI + ez * sinI;
+  return { a, e, incRad, nodeRad, argPeriRad: Math.atan2(across, along) };
+}
