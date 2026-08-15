@@ -66,6 +66,11 @@ export class LuminanceReduction {
    * Leaves the render target at the canvas, the same contract the local
    * depth pass keeps.
    */
+  /** Debug kill switch (frame-cost differentials): false skips new GPU
+   *  work while freezing the statistic at its last landed reading —
+   *  unlike reset(), which drops it. */
+  enabled = true;
+
   measure(
     renderer: THREE.WebGLRenderer,
     source: THREE.Texture,
@@ -74,6 +79,7 @@ export class LuminanceReduction {
     renderExposure: number,
   ): void {
     this.poll();
+    if (!this.enabled) return;
     const gl = renderer.getContext() as WebGL2RenderingContext;
     // The chain's last level is RGBA32F, which needs the full float
     // extension — half-float-only hardware gets no measurement at all and

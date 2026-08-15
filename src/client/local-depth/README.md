@@ -314,6 +314,9 @@ runs after every main render — a no-op frame when no cluster is
 active (deep field, chart mode). Perf labels: `submit.localDepth` (CPU
 submission wall-time) and, where the driver exposes a timer query,
 `gpu.localDepth` (real GPU ms) — see `../debug/README.md` § GPU timing.
+`stellata.localDepthPass.enabled = false` kills the pass entirely (all
+close-range occlusion with it) — a frame-cost measurement lever
+(`../debug/README.md` § Frame pricing), never a shipped state.
 
 Smoke (Saturn + moons): focus Saturn, scrub time; check ring↔body
 occlusion incl. the oblate limb, a sub-pixel moon transiting IN FRONT

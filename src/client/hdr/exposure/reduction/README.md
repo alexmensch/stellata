@@ -146,4 +146,7 @@ reports `dm = 0` rather than adapting to a stale frame.
 
 Perf rows: `submit.reduction` (CPU submission) and, where the driver
 exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
-§ GPU timing.
+§ GPU timing. `stellata.reduction.enabled = false` skips new GPU work
+while FREEZING the statistic at its last reading (unlike chart mode's
+reset-and-drop) — a frame-cost measurement lever
+(`../../../debug/README.md` § Frame pricing).

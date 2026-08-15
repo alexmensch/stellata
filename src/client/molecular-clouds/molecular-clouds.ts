@@ -112,6 +112,7 @@ export class MolecularClouds {
   private focusExtents: number[] = [];
   private traced: boolean[] = [];
   private mono = false;
+  private absorptionEnabled = true;
   /** Rim-shell meshes in catalog order — the pick / hover target. This is
    *  the *depicted* shape (traced isosurface, or the u = uEnv ellipsoid for
    *  fallback clouds), the same geometry that renders the fresnel rim and
@@ -266,7 +267,7 @@ export class MolecularClouds {
    *  realistic mode regardless of `rimPermitted`. */
   update(worldOffset: THREE.Vector3, rimPermitted: boolean) {
     this.group.position.copy(worldOffset).negate();
-    this.absorptionGroup.visible = !this.mono;
+    this.absorptionGroup.visible = !this.mono && this.absorptionEnabled;
     this.rimGroup.visible = rimPermitted;
   }
 
@@ -314,6 +315,12 @@ export class MolecularClouds {
   }
   setMonoColor(hex: number) {
     (this.rimMaterial.uniforms.uInk.value as THREE.Color).setHex(hex);
+  }
+  /** Debug kill switch for the absorption pass (frame-cost
+   *  differentials) — never a user-facing declutter gate: absorption is
+   *  physics and stays on in realistic mode. */
+  setAbsorptionEnabled(on: boolean) {
+    this.absorptionEnabled = on;
   }
   /** Absorption raymarch step count (§ 9.1 lever — the sampling rules
    *  are not). */

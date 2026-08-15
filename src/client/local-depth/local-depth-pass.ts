@@ -19,6 +19,11 @@ export interface LocalCluster {
 export class LocalDepthPass {
   readonly scene = new THREE.Scene();
 
+  /** Debug-scoped kill switch (frame-cost differentials). Disabling the
+   *  pass loses close-range occlusion — never ship a code path that
+   *  leaves this false outside a measurement dwell. */
+  enabled = true;
+
   private readonly clusters = new Set<LocalCluster>();
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpSize = new THREE.Vector2();
@@ -40,6 +45,7 @@ export class LocalDepthPass {
    *  between slices. No-op when no cluster reports members. Restores
    *  camera near/far and renderer autoClear before returning. */
   render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera): void {
+    if (!this.enabled) return;
     this.spheres.length = 0;
     for (const cluster of this.clusters) {
       cluster.collectSpheres(camera, this.spheres);
