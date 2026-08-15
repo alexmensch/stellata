@@ -81,6 +81,7 @@ import {
 } from './star-pipeline/local-pass/star-local-cluster-pure';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
+import { uploadFull } from './util/attribute-upload';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
@@ -464,7 +465,7 @@ export class Stellata implements FrameAnchor {
       cameraPosition: this.camera.position,
       t: this.getT(),
       onLocalPositionsWritten: () => {
-        this.starPipeline.iPositionAttr.needsUpdate = true;
+        uploadFull(this.starPipeline.iPositionAttr);
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });

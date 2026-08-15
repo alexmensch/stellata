@@ -10,8 +10,10 @@ import { focalChainRelationSet } from './focal-chain';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
+  orbitMemberSlots,
   type OrbitRelationCache,
 } from './orbit-relation-cache';
+import { DirtyItemUploader } from '../util/attribute-upload';
 import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
@@ -59,6 +61,8 @@ export class BinaryOrbitField {
   private opts: BinaryOrbitFieldOptions;
   private worldOffset = new THREE.Vector3();
   private relations: OrbitRelationCache[] = [];
+  private positionUploader: DirtyItemUploader;
+  private suppressUploader: DirtyItemUploader;
 
   // Relations (by BinariesData.relations index) on the current focal
   // star's slot-chain — every relation that writes the focal's slot
@@ -93,6 +97,9 @@ export class BinaryOrbitField {
       opts.binaries,
       opts.absolutePositions,
     );
+    const memberSlots = orbitMemberSlots(this.relations, opts.binaries);
+    this.positionUploader = new DirtyItemUploader(opts.iPositionAttr, memberSlots);
+    this.suppressUploader = new DirtyItemUploader(opts.iCompositeSuppressAttr, memberSlots);
   }
 
   /** Read-only access to the cached relation list. Tests and the
@@ -274,8 +281,11 @@ export class BinaryOrbitField {
       local[sBase + 2] = local[pBase + 2] + rc.baseDiffPc.z + dzDelta;
     }
 
-    this.opts.iPositionAttr.needsUpdate = true;
-    this.opts.iCompositeSuppressAttr.needsUpdate = true;
+    // Only localPositions is rewritten wholesale from outside this field,
+    // so only it falls back to a full upload; nothing else writes
+    // compositeSuppress. See README § Partial re-upload.
+    this.positionUploader.flush(this.baselinesDirty);
+    this.suppressUploader.flush(false);
     this.baselinesDirty = false;
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;
@@ -352,6 +362,8 @@ export class BinaryOrbitField {
     this.baselinesDirty = true;
     this.lastKeplerCount = -1;
     this.lastCamPos.set(NaN, NaN, NaN);
+    this.positionUploader.reset();
+    this.suppressUploader.reset();
   }
 
   // ── private ─────────────────────────────────────────────────────────

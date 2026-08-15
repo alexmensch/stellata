@@ -19,7 +19,7 @@ import {
   projectSkyToICRS,
   projectGalacticPlaneToICRS,
 } from './binary-orbit-pure';
-import { relationToElements } from './orbit-relation-cache';
+import { orbitMemberSlots, relationToElements } from './orbit-relation-cache';
 
 /** Bake the secondary's catalog xyz at primary + projected R(sepPaEpoch)
  *  so the fixture is a realistic measured pair — its baked placement
@@ -147,6 +147,14 @@ describe('BinaryOrbitField construction', () => {
     expect(field.cachedRelations[1].relationIdx).toBe(1);
     expect(field.cachedRelations[0].tier).toBe(1);
     expect(field.cachedRelations[1].tier).toBe(1);
+  });
+
+  it('member slots are ascending and deduplicated, and exclude non-members', () => {
+    const fx = makeFixture();
+    const field = new BinaryOrbitField(fx);
+    // Star 0 is the primary of both relations; star 3 is in neither.
+    expect(Array.from(orbitMemberSlots(field.cachedRelations, fx.binaries)))
+      .toEqual([0, 1, 2]);
   });
 
   it.each(['q', 'aAU', 'e', 'pDays', 'tJd', 'omegaRad'] as const)(
@@ -1030,6 +1038,16 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
 
   const versions = () => [fx.iPositionAttr.version, fx.iCompositeSuppressAttr.version];
 
+  // A walk that reproduces the previous frame's values uploads nothing, so
+  // the attribute version can't report whether the walk ran. Corrupting a
+  // slot the walk always rewrites can: restored means it ran.
+  const walkRan = (call: (f: BinaryOrbitField) => void): boolean => {
+    const CORRUPT = -999;
+    fx.localPositions[2 * 3] = CORRUPT;
+    call(field);
+    return fx.localPositions[2 * 3] !== CORRUPT;
+  };
+
   it('skips the walk + re-upload on identical inputs once zero Kepler evals settled', () => {
     const first = field.update(t0, idleCamera, 15, 1080, 0.8);
     expect(fx.compositeSuppress[1]).toBe(1);
@@ -1045,10 +1063,7 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
   it('never skips while any relation is Kepler-active (focused orbit keeps animating)', () => {
     const closeCamera = new THREE.Vector3(1.999, 0, 0);
     field.update(t0, closeCamera, 15, 1080, 0.8);
-    const before = versions();
-    field.update(t0 + 3600, closeCamera, 15, 1080, 0.8);
-    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
-    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+    expect(walkRan((f) => f.update(t0 + 3600, closeCamera, 15, 1080, 0.8))).toBe(true);
   });
 
   it.each([
@@ -1064,10 +1079,7 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
       f.update(t0, idleCamera, 15, 1080, 0.8, 0)],
   ] as const)('re-runs when %s', (_name, call) => {
     field.update(t0, idleCamera, 15, 1080, 0.8);
-    const before = versions();
-    call(field);
-    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
-    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+    expect(walkRan(call)).toBe(true);
   });
 
   it.each([
@@ -1075,11 +1087,78 @@ describe('BinaryOrbitField.update — static-frame skip', () => {
     ['recenter', (f: BinaryOrbitField) => f.recenter(new THREE.Vector3(1, 0, 0))],
   ] as const)('%s forces the next update to walk again', (_name, poke) => {
     field.update(t0, idleCamera, 15, 1080, 0.8);
+    poke(field);
+    expect(walkRan((f) => f.update(t0, idleCamera, 15, 1080, 0.8))).toBe(true);
+  });
+
+  it('a walk reproducing the previous frame\'s buffers uploads nothing', () => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
     const before = versions();
+    // Camera motion alone: the walk re-runs (gates re-evaluate) but every
+    // suppressed placement lands on the same float32 value as last frame.
+    field.update(t0, new THREE.Vector3(0.1, 0, 0), 15, 1080, 0.8);
+    field.update(t0, new THREE.Vector3(0.2, 0, 0), 15, 1080, 0.8);
+    expect(versions()).toEqual(before);
+    expect(fx.iPositionAttr.updateRanges).toHaveLength(0);
+  });
+
+  it('re-uploads a moved member as a bounded range, never the whole buffer', () => {
+    const closeCamera = new THREE.Vector3(1.999, 0, 0);
+    field.update(t0, closeCamera, 15, 1080, 0.8);
+    // Stand in for the renderer's upload, which consumes both attributes.
+    fx.iPositionAttr.clearUpdateRanges();
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
+    // A day advances the P = 2.87 d inner pair by a third of its orbit.
+    field.update(t0 + 86400, closeCamera, 15, 1080, 0.8);
+    const ranges = fx.iPositionAttr.updateRanges;
+    expect(ranges).toHaveLength(1);
+    // Slots 0-2 are the pair members; the control star at slot 3 is not in
+    // the tracked set, so no range can reach its elements 9-11.
+    expect(ranges[0].start).toBe(0);
+    expect(ranges[0].start + ranges[0].count).toBeLessThanOrEqual(9);
+    // Gate verdicts are unchanged, so the suppress buffer stays put.
+    expect(fx.iCompositeSuppressAttr.updateRanges).toHaveLength(0);
+  });
+
+  it.each([
+    ['markBaselinesDirty', (f: BinaryOrbitField) => f.markBaselinesDirty()],
+    ['recenter', (f: BinaryOrbitField) => f.recenter(new THREE.Vector3(1, 0, 0))],
+  ] as const)('%s uploads in full — a wholesale rewrite reaches untracked stars', (_name, poke) => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    fx.iPositionAttr.clearUpdateRanges();
+    const version = fx.iPositionAttr.version;
     poke(field);
     field.update(t0, idleCamera, 15, 1080, 0.8);
-    expect(fx.iPositionAttr.version).toBeGreaterThan(before[0]);
-    expect(fx.iCompositeSuppressAttr.version).toBeGreaterThan(before[1]);
+    expect(fx.iPositionAttr.updateRanges).toHaveLength(0);
+    // Strictly greater, not merely non-empty: the walk reproduces the
+    // previous values here, so a dropped forceFull would leave the version
+    // untouched AND the range list empty.
+    expect(fx.iPositionAttr.version).toBe(version + 1);
+  });
+
+  it('a flipped suppress verdict re-uploads as a bounded range', () => {
+    const closeCamera = new THREE.Vector3(1.999, 0, 0);
+    field.update(t0, closeCamera, 15, 1080, 0.8);
+    expect(fx.compositeSuppress[2]).toBe(0);
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    expect(fx.compositeSuppress[2]).toBe(1);
+    // Slot 0 is the shared primary and never suppresses; the control star
+    // at slot 3 is untracked, so no range can reach it.
+    expect(fx.iCompositeSuppressAttr.updateRanges).toEqual([{ start: 1, count: 2 }]);
+  });
+
+  it('a wholesale localPositions rewrite does not force the suppress buffer up', () => {
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    fx.iCompositeSuppressAttr.clearUpdateRanges();
+    const version = fx.iCompositeSuppressAttr.version;
+    fx.localPositions.set(fx.absolutePositions);
+    field.markBaselinesDirty();
+    field.update(t0, idleCamera, 15, 1080, 0.8);
+    // The shell rewrites localPositions only — the gate verdicts this walk
+    // reproduces are already on the GPU.
+    expect(fx.iCompositeSuppressAttr.updateRanges).toHaveLength(0);
+    expect(fx.iCompositeSuppressAttr.version).toBe(version);
   });
 
   it('markBaselinesDirty walk restores suppressed placements over a wholesale buffer rewrite', () => {
