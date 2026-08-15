@@ -24,9 +24,14 @@ src/client/debug/frame-cost/
   limit is not shared with any rotating scope. Panel open → the call
   warns and returns `[]`. Panel opened mid-run → samples dry up and the
   run aborts rather than reporting zeros.
-- **Camera stationary, clock paused.** The pose is snapshotted and a move
-  warns at the end. A running clock re-arms the binary orbit field's full
-  per-frame upload inside the timed scope.
+- **Camera stationary.** The pose is snapshotted and a move warns at the
+  end.
+- **Clock paused — done for you.** The sweep pauses the `VirtualClock`
+  and restores its exact rate (not `play()`, which would lose a rewind)
+  in the same `finally` that restores the passes. A running clock re-arms
+  the binary orbit field's full per-frame upload and moves every
+  ephemeris body, both inside the timed scope. `{ pauseClock: false }`
+  prices the live path instead.
 - **A timer query.** Without one (Safari) it falls back to rAF-delta wall
   time, where differentials under the vsync quantum read as zero unless
   the frame is already over budget. `method` labels every row; never
@@ -92,9 +97,32 @@ baseline, and passes share bandwidth — disabling `hdrChain` also makes
 `mwBand` cheaper, so both rows count some of the same milliseconds. The
 column will happily "explain" more than 100% of a frame.
 
-## Budget
+## Budget — dwells are sized to fit, not truncated
 
-`SWEEP_BUDGET_MS` caps a sweep at 180 s; past it the run stops and the
-warning **names the passes it did not price**. Slow viewpoints need
-`{ dwellFrames: 40 }` or a split `{ passes: [...] }` run — each split run
-re-measures its own baselines, which is a free consistency check.
+`budgetMs` caps a sweep at 180 s by default. Bracketing a slow viewpoint
+blows straight through that: 2N+1 dwells of 150 frames at ~120 ms is
+~5 minutes, and the naive response — stop at the ceiling — silently
+drops whichever passes sit at the end of the roster.
+
+So the first dwell is timed, and the rest are **shortened to fit** the
+remaining budget, with a log line saying by how much. Every pass gets
+priced; the cost lands in `noiseMs`, where it is visible, instead of in
+a truncation nobody reads. Only a sweep that cannot fit even at
+`MIN_DWELL_FRAMES` (30) truncates, and that path warns up front rather
+than at the ceiling.
+
+Full-length dwells at a slow viewpoint: raise `{ budgetMs }`. Or split
+the roster with `{ passes: [...] }` — each split run re-measures its own
+baselines, which is a free consistency check.
+
+## Restore transients
+
+A toggle that resets the exposure statistic leaves the frame recovering
+after it is restored, and the trailing baseline is sampled during that
+recovery. The chart-mode park behind `hdrChain` does exactly this: at
+`settleFrames` 12 it showed as an 8–14 ms `bracketMs` on the `hdrChain`
+and `reduction` rows while every other row sat under 4.5, with those two
+rows' baselines depressed 5–7 ms below the sweep's others — so both
+costs read slightly LOW. `settleFrames` defaults to 30 to cover several
+`ADAPT_SLEW_TAU_S`. A large `bracketMs` on one row when its neighbours
+are small is this effect, not drift.

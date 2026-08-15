@@ -7,6 +7,7 @@ import { acquireGpuFrameSampler } from '../perf-hud';
 import {
   buildInterleavedRow,
   buildPriceRow,
+  fitDwellFrames,
   summarizeDwell,
   type DwellStats,
   type PriceFrameRow,
@@ -29,7 +30,8 @@ export interface PriceFrameOptions {
   /** Frames whose samples count, per state. */
   dwellFrames?: number;
   /** Frames discarded after each state flip — absorbs rebuilds, shader
-   *  recompiles, and the previous state's in-flight query results. */
+   *  recompiles, the previous state's in-flight query results, and the
+   *  exposure re-converging after a toggle that reset the statistic. */
   settleFrames?: number;
   /** Frames discarded before the first baseline dwell. Long by default:
    *  an Apple-silicon GPU ramps its clocks under sustained load, and a
@@ -40,18 +42,33 @@ export interface PriceFrameOptions {
    *  dwells instead of N+2; the only honest mode on a drifting
    *  instrument. Set false for a fast, drift-exposed sweep. */
   interleave?: boolean;
+  /** Pause the simulation clock for the sweep and restore its rate after.
+   *  A running clock re-arms the binary orbit field's full per-frame
+   *  upload and moves every ephemeris body, both inside the timed scope.
+   *  Set false to price the live path instead of a static frame. */
+  pauseClock?: boolean;
+  /** Whole-sweep wall-clock ceiling. Dwells are shortened to fit it
+   *  before the sweep starts; only a sweep that cannot fit even at
+   *  `MIN_DWELL_FRAMES` truncates. */
+  budgetMs?: number;
 }
 
 const DEFAULTS = {
   dwellFrames: 120,
-  settleFrames: 12,
+  // Long enough for the exposure to re-converge after a toggle that reset
+  // the statistic: the chart-mode park does, and at 12 frames the trailing
+  // baseline was still recovering — visible as an 8-14 ms bracketMs on the
+  // hdrChain and reduction rows while every other row sat under 4.5.
+  settleFrames: 30,
   warmupFrames: 180,
   interleave: true,
+  pauseClock: true,
+  budgetMs: 180_000,
 } as const;
 
-/** Whole-sweep ceiling. A run that cannot finish still has to hand the
- *  tab back with every pass restored, not sit on a broken frame. */
-const SWEEP_BUDGET_MS = 180_000;
+/** Shortening past this stops buying anything — the medians get noisy
+ *  faster than the sweep gets shorter. Below it, truncate instead. */
+const MIN_DWELL_FRAMES = 30;
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
@@ -123,17 +140,22 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
  * Timer-query where the driver has one; rAF-delta fallback otherwise
  * (Safari), where a differential smaller than the vsync quantum reads as
  * zero unless the frame is already over budget.
+ *
+ * Pauses the simulation clock for the duration and restores its rate,
+ * and sizes the dwells to the time budget once the first one has shown
+ * what a frame costs here.
  */
 export async function runPriceFrame(
   stellata: Stellata,
   toggles: readonly PassToggle[],
   options: PriceFrameOptions = {},
 ): Promise<PriceFrameRow[]> {
-  const dwellFrames = options.dwellFrames ?? DEFAULTS.dwellFrames;
+  let dwellFrames = options.dwellFrames ?? DEFAULTS.dwellFrames;
   const settleFrames = options.settleFrames ?? DEFAULTS.settleFrames;
   const warmupFrames = options.warmupFrames ?? DEFAULTS.warmupFrames;
   const interleave = options.interleave ?? DEFAULTS.interleave;
-  const deadline = performance.now() + SWEEP_BUDGET_MS;
+  const pauseClock = options.pauseClock ?? DEFAULTS.pauseClock;
+  const deadline = performance.now() + (options.budgetMs ?? DEFAULTS.budgetMs);
 
   const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
   const hasTimerExt =
@@ -162,6 +184,16 @@ export async function runPriceFrame(
   const startPos = stellata.camera.position.clone();
   const startQuat = stellata.camera.quaternion.clone();
 
+  const clock = stellata.timeClock;
+  const startRate = clock.getRate();
+  if (pauseClock && startRate !== 0) {
+    clock.setRate(0);
+    console.info(
+      `priceFrame: clock paused for the sweep (rate ${startRate}× restored ` +
+      'after). Pass { pauseClock: false } to price the live path instead.',
+    );
+  }
+
   const dwell = async (): Promise<DwellStats | null> => {
     for (let f = 0; f < settleFrames; f++) await nextFrame();
     sink.length = 0;
@@ -179,6 +211,34 @@ export async function runPriceFrame(
     return summarizeDwell(sink);
   };
 
+  const fitDwellToBudget = (firstDwellMs: number): void => {
+    const affordableMs = deadline - performance.now();
+    const fit = fitDwellFrames({
+      firstDwellMs,
+      dwellFrames,
+      settleFrames,
+      remainingDwells: interleave ? 2 * eligible.length : eligible.length + 1,
+      affordableMs,
+      minDwellFrames: MIN_DWELL_FRAMES,
+    });
+    if (fit.willTruncate) {
+      console.warn(
+        `priceFrame: ${Math.round(fit.neededMs / 1000)} s needed against a ` +
+        `${Math.round(affordableMs / 1000)} s budget, and shortening cannot ` +
+        'close that. The sweep WILL truncate. Split the roster with ' +
+        '{ passes: [...] }, or raise { budgetMs }.',
+      );
+    } else if (fit.shortened) {
+      console.info(
+        `priceFrame: ${Math.round(fit.perFrameMs)} ms/frame here — dwells ` +
+        `shortened ${dwellFrames} → ${fit.frames} frames to fit the ` +
+        `${Math.round(affordableMs / 1000)} s budget. Medians get noisier; ` +
+        'read noiseMs. Raise { budgetMs } for full-length dwells.',
+      );
+    }
+    dwellFrames = fit.frames;
+  };
+
   const eligible = toggles.filter((t) => {
     if (options.passes && !options.passes.includes(t.key)) return false;
     if (!t.present()) {
@@ -192,7 +252,9 @@ export async function runPriceFrame(
   let restore: (() => void) | null = null;
   try {
     for (let f = 0; f < warmupFrames; f++) await nextFrame();
+    const baselineStartedMs = performance.now();
     const firstBaseline = await dwell();
+    fitDwellToBudget(performance.now() - baselineStartedMs);
     if (firstBaseline === null) {
       console.warn(
         'priceFrame: no baseline samples — the query slot was taken ' +
@@ -255,6 +317,7 @@ export async function runPriceFrame(
   } finally {
     restore?.();
     release?.();
+    if (pauseClock && clock.getRate() !== startRate) clock.setRate(startRate);
   }
 
   if (

@@ -6,7 +6,14 @@ import {
   differentialNoiseMs,
   buildPriceRow,
   buildInterleavedRow,
+  fitDwellFrames,
 } from './frame-cost-pure';
+
+const FIT = {
+  dwellFrames: 120,
+  settleFrames: 30,
+  minDwellFrames: 30,
+};
 
 describe('frame-cost-pure', () => {
   it('median: odd, even, single', () => {
@@ -101,6 +108,60 @@ describe('frame-cost-pure', () => {
   it('a single-baseline row carries no bracket', () => {
     const stats = { samples: 10, medianMs: 10, iqrMs: 1 };
     expect(buildPriceRow('x', 'timer-query', stats, stats).bracketMs).toBeUndefined();
+  });
+
+  it('fitDwellFrames: a sweep that already fits is left alone', () => {
+    // 150 frames at 5 ms = 750 ms per dwell, 16 dwells = 12 s.
+    const fit = fitDwellFrames({
+      ...FIT,
+      firstDwellMs: 750,
+      remainingDwells: 16,
+      affordableMs: 180_000,
+    });
+    expect(fit.frames).toBe(120);
+    expect(fit.shortened).toBe(false);
+    expect(fit.willTruncate).toBe(false);
+  });
+
+  it('fitDwellFrames: the default Sol view shortens rather than truncates', () => {
+    // 150 frames at ~120 ms = 18 s per dwell; 16 more dwells is ~288 s
+    // against a 180 s budget.
+    const fit = fitDwellFrames({
+      ...FIT,
+      firstDwellMs: 18_000,
+      remainingDwells: 16,
+      affordableMs: 180_000,
+    });
+    expect(fit.shortened).toBe(true);
+    expect(fit.willTruncate).toBe(false);
+    expect(fit.frames).toBeGreaterThanOrEqual(FIT.minDwellFrames);
+    expect(fit.frames).toBeLessThan(120);
+    // What it picked must actually fit.
+    expect(
+      16 * (fit.frames + FIT.settleFrames) * fit.perFrameMs,
+    ).toBeLessThanOrEqual(180_000);
+  });
+
+  it('fitDwellFrames: flags truncation when even the floor cannot fit', () => {
+    const fit = fitDwellFrames({
+      ...FIT,
+      firstDwellMs: 60_000,
+      remainingDwells: 16,
+      affordableMs: 30_000,
+    });
+    expect(fit.willTruncate).toBe(true);
+    expect(fit.frames).toBe(FIT.minDwellFrames);
+  });
+
+  it('fitDwellFrames: no remaining dwells and zero-cost frames are no-ops', () => {
+    expect(
+      fitDwellFrames({ ...FIT, firstDwellMs: 9e9, remainingDwells: 0, affordableMs: 1 })
+        .frames,
+    ).toBe(120);
+    expect(
+      fitDwellFrames({ ...FIT, firstDwellMs: 0, remainingDwells: 16, affordableMs: 1 })
+        .frames,
+    ).toBe(120);
   });
 
   it('buildPriceRow: zero baseline yields 0 pct, not NaN', () => {

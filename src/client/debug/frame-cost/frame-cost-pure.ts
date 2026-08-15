@@ -23,6 +23,60 @@ export interface PriceFrameRow {
   readonly bracketMs?: number;
 }
 
+export interface DwellFit {
+  /** Dwell length to use for the rest of the sweep. */
+  readonly frames: number;
+  /** Whether that is shorter than what was asked for. */
+  readonly shortened: boolean;
+  /** Whether the sweep will run out of budget even at the floor. */
+  readonly willTruncate: boolean;
+  readonly perFrameMs: number;
+  readonly neededMs: number;
+}
+
+/**
+ * Size the remaining dwells to the time budget, from what the first one
+ * cost. Shortening prices every pass at a noise floor the rows report;
+ * truncating instead drops whichever passes sit last in the roster and
+ * says so only at the ceiling.
+ */
+export function fitDwellFrames(params: {
+  firstDwellMs: number;
+  dwellFrames: number;
+  settleFrames: number;
+  remainingDwells: number;
+  affordableMs: number;
+  minDwellFrames: number;
+}): DwellFit {
+  const { dwellFrames, settleFrames, remainingDwells, affordableMs } = params;
+  const framesPerDwell = settleFrames + dwellFrames;
+  const perFrameMs = params.firstDwellMs / framesPerDwell;
+  const neededMs = remainingDwells * framesPerDwell * perFrameMs;
+  const unchanged = {
+    frames: dwellFrames,
+    shortened: false,
+    willTruncate: false,
+    perFrameMs,
+    neededMs,
+  };
+  if (remainingDwells <= 0 || perFrameMs <= 0) return unchanged;
+  if (neededMs <= affordableMs) return unchanged;
+
+  const fitted = Math.floor(
+    affordableMs / perFrameMs / remainingDwells - settleFrames,
+  );
+  if (fitted < params.minDwellFrames) {
+    return {
+      frames: params.minDwellFrames,
+      shortened: dwellFrames > params.minDwellFrames,
+      willTruncate: true,
+      perFrameMs,
+      neededMs,
+    };
+  }
+  return { frames: fitted, shortened: true, willTruncate: false, perFrameMs, neededMs };
+}
+
 /** IQR → σ for a normal sample; the divisor is 2·Φ⁻¹(0.75). */
 const IQR_TO_SIGMA = 1 / 1.349;
 /** SE of a median is this multiple of the SE of a mean, asymptotically. */
