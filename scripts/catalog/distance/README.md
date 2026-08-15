@@ -1,10 +1,12 @@
 # Distance refinement and de-extinction
 
-Direction resolution, the radial-velocity cascade, build-time
-de-extinction, and the multi-layer distance-override stack that refines
-AT-HYG's parallax-inverted distances. The authoring discipline for adding
-an override layer is the load-bearing part of this file — read it before
-touching the stack.
+Direction resolution, build-time de-extinction, and the multi-layer
+distance-override stack that refines AT-HYG's parallax-inverted distances.
+The authoring discipline for adding an override layer is the load-bearing
+part of this file — read it before touching the stack.
+
+The **radial** term of the space-motion velocity has its own subfolder:
+`radial-velocity/`. This one owns the tangential term and the assembly.
 
 ## Files in this area
 
@@ -12,9 +14,13 @@ touching the stack.
 scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
-                                  precision each carries), the radial-
-                                  velocity cascade, and the space-motion
-                                  velocity assembly that consumes both.
+                                  precision each carries) plus the
+                                  space-motion velocity assembly. Owns
+                                  `gaiaHas5pSolution`, which radial-velocity/
+                                  shares.
+  radial-velocity/                The radial-velocity cascade and the
+                                  Gaia-bibcode skip rule, with its own
+                                  README.
   astrometry-fixture.ts           Test-only GaiaAstrometryCatalogRow
                                   builder. A module, not an export from a
                                   test file: three suites across two
@@ -73,85 +79,6 @@ placement / tier-routing pin — a wrong source or xyz-assembly sign
 shows up as tens of arcsec. The propagation formula itself (PM sign /
 cos δ / Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
-
-## Radial velocity
-
-`resolveRadialVelocity` supplies the radial term of the space-motion
-velocity (`../parse/README.md` § Space-motion velocity), through two tiers:
-
-```
-Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
-  → spine printed `rv`     the catalogue's own cell
-```
-
-**The Gaia tier needs a 5p solution, not merely an `rv` cell.** RVS measures the
-same window the astrometric fit does, so a 2p row — parallax and PM both
-unfitted — is one whose spectrum is a blend of the components, and its median RV
-is not the primary's. ξ UMa is the case that fixed the rule: source
-756853643638639104 is 2p with `ipd_frac_multi_peak` 24 on a ~2″ pair, and its
-`radial_velocity` is −26.78 km/s against the printed −15.9. `gaiaHas5pSolution`
-is the same predicate the direction cascade's tier-1 branch turns on, so the
-radial term and the tangential term distrust a row for one reason.
-
-### `radial_velocity_error` is tracked, never gated
-
-The refresh landed the column, and DR3's value is taken **as published**
-whatever uncertainty it states. There is no reliability threshold on it, for
-one reason: nothing in this project can calibrate where such a threshold would
-go.
-
-Scoring the Gaia value needs a velocity measured somewhere else, and the only
-non-Gaia radial velocities here are the spine's 8,836 legacy cells
-(`rv_src` ∈ {`HYG`, `OTHER`}) — a pre-Gaia compilation quoted to the nearest
-km/s or half, not a better instrument. Nine of them sit on a row stating more
-than 20 km/s of uncertainty, and their median disagreement with Gaia is
-4.9 km/s. The one large disagreement in that set (Gaia 7.26 ± 23.94 against a
-printed −148.00) is a 6σ gap in which the legacy cell is the likelier suspect.
-Nine rows against a coarser reference cannot locate a knee, and the ~258k rows
-whose printed cell IS the Gaia value (`rv_src = G_R3`) score nothing at all.
-
-So the uncertainty is **counted rather than obeyed** — the same treatment
-`velocityAboveEscape` gives an unbound velocity, and for the same reason: an
-extreme value can be real, and a filter tuned on nine stars would remove real
-ones. `rvGaiaErrorBands` bands the Gaia tier's rows by stated uncertainty and
-`rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
-distribution has to be reviewed rather than absorbed silently. Today: 183,039
-rows ≤ 1 km/s, 60,595 ≤ 5, 15,026 ≤ 10, 6,128 ≤ 20, **1,340** above 20, and a
-maximum of **39.9433** — under DR3's own publication ceiling of 40, which no
-pulled row reaches. The `none` band is pinned at **0**: the published
-catalogue always pairs an `rv` with an error, so a non-zero count there is an
-upstream schema change, not a tolerable miss.
-
-Revisit at DR4, which reprocesses RVS and is the first event that could supply
-either a better reference or a published bound to defer to.
-
-**The fall-through is not a degraded copy of the tier above it.** RVS is
-magnitude-limited to G_RVS ≲ 14, so it reaches roughly a third of Gaia
-sources; the printed cell is the only velocity most of the catalogue has.
-The two also largely agree where both exist — the spine's `rv_src` is
-already `G_R3` on ~258k rows — so the tier that changes anything is the
-catalogued one, which carries the pre-Gaia velocities.
-
-A genuine zero is a velocity, not an absence: the cascade routes on
-null-vs-present, never on truthiness, or every star with no measured
-line-of-sight motion would fall to the next tier.
-
-Per-tier counts are pinned as `rvGaiaDr3` **266,128** / `rvCatalogued`
-**7,126** / `rvNone` **40,003**, the same discipline the direction cascade
-pins `directionVia` under. `velocityRvApplied` rose 267,058 → **273,244**:
-the Gaia tier reaches ~6,300 records whose printed cell was blank. The 5p gate
-holds 354 records back from it — 180 have a printed cell to fall to and 174
-take a zero radial term, the same fall-through as the 40,003 rows RVS never
-reached.
-
-**The sanity ceiling did not move.** `velocityClamped` stays at **8** and
-`velocityAboveEscape` at **45** across the swap — a changed radial term feeds
-straight into `v = v_r·û + …`, so a Gaia RV disagreeing wildly with the
-printed cell would surface here first. It doesn't, which is the evidence that
-the new tier is sane rather than merely present. Note what that pair does NOT
-cover: both are ceilings, so they see a 1500 km/s artifact and not the ~11 km/s
-error a blended RVS median carries. Distrusting the row it came from is
-the 5p condition's job, not theirs.
 
 ## Build-time de-extinction
 

@@ -15,8 +15,6 @@ import {
   parseHip2Tsv,
   parseNssSourceIdSet,
   resolveDirection,
-  resolveRadialVelocity,
-  rvErrorBand,
   velocityPcPerYr,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
@@ -449,76 +447,6 @@ describe('velocityPcPerYr', () => {
     const muArcsec = Math.hypot(798.71, 10337.77) / 1000;
     const tangentialKmS = Math.sqrt(speedKmS ** 2 - radialKmS ** 2);
     expect(tangentialKmS).toBeCloseTo(4.740470 * muArcsec * d, 1);
-  });
-});
-
-describe('resolveRadialVelocity cascade', () => {
-  // The published shape: an rv always arrives with its own error.
-  const withRv = (rv: number | null) =>
-    gaiaAstrometryRow({
-      parallaxMas: 50, pmraMasyr: 10, pmdecMasyr: -10,
-      radialVelocityKmS: rv, radialVelocityErrorKmS: rv === null ? null : 0.35,
-    });
-
-  it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
-    expect(resolveRadialVelocity(withRv(-110.51), 22.4))
-      .toEqual({ rvKmS: -110.51, via: 'gaia_dr3' });
-  });
-
-  // RVS is magnitude-limited, so the catalogued cell is not a degraded copy of
-  // the Gaia tier — it is the only velocity most of the catalogue has.
-  it('falls to the catalogued cell when Gaia carries no RV', () => {
-    expect(resolveRadialVelocity(withRv(null), 22.4))
-      .toEqual({ rvKmS: 22.4, via: 'catalogued' });
-  });
-
-  it('falls to the catalogued cell when there is no Gaia row at all', () => {
-    expect(resolveRadialVelocity(null, 22.4)).toEqual({ rvKmS: 22.4, via: 'catalogued' });
-  });
-
-  // ξ UMa's shape: a 2p row whose RVS median is the pair's, 11 km/s from the
-  // printed systemic value. RVS reads the window the astrometric fit failed on.
-  it('refuses the Gaia tier on a 2p row, keeping the printed cell', () => {
-    const twoP = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: -26.78 });
-    expect(resolveRadialVelocity(twoP, -15.9)).toEqual({ rvKmS: -15.9, via: 'catalogued' });
-  });
-
-  it('reports no tier when a 2p row is all the rv there is', () => {
-    expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -26.78 }), null))
-      .toEqual({ rvKmS: null, via: 'none' });
-  });
-
-  // DR3 is taken as published: a large stated uncertainty is banded and
-  // pinned, never a reason to route around the measurement.
-  it('takes the Gaia tier however large the stated uncertainty is', () => {
-    const noisy = gaiaAstrometryRow({
-      parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 39.9,
-    });
-    expect(resolveRadialVelocity(noisy, -15.9)).toEqual({ rvKmS: -80.3, via: 'gaia_dr3' });
-  });
-
-  it('keeps a genuine zero rather than falling through it', () => {
-    expect(resolveRadialVelocity(withRv(0), 22.4)).toEqual({ rvKmS: 0, via: 'gaia_dr3' });
-    expect(resolveRadialVelocity(null, 0)).toEqual({ rvKmS: 0, via: 'catalogued' });
-  });
-
-  it('reports no tier when neither source carries one', () => {
-    expect(resolveRadialVelocity(null, null)).toEqual({ rvKmS: null, via: 'none' });
-  });
-
-  it('skips a non-finite catalogued cell rather than propagating it', () => {
-    expect(resolveRadialVelocity(null, NaN)).toEqual({ rvKmS: null, via: 'none' });
-  });
-
-  it('bands the stated uncertainty on its upper edge, nulls to none', () => {
-    expect(rvErrorBand(null)).toBe('none');
-    expect(rvErrorBand(0)).toBe('le1');
-    expect(rvErrorBand(1)).toBe('le1');
-    expect(rvErrorBand(1.01)).toBe('le5');
-    expect(rvErrorBand(10)).toBe('le10');
-    expect(rvErrorBand(20)).toBe('le20');
-    expect(rvErrorBand(20.01)).toBe('gt20');
-    expect(rvErrorBand(39.9433)).toBe('gt20');
   });
 });
 
