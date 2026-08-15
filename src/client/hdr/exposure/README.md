@@ -26,7 +26,12 @@ src/client/hdr/exposure/
                              measured L_TARGET, the disc peak-over-mean
                              that separates them, and the slew.
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
-    (+ test)                 measurement into the applied cut.
+    (+ test)                 measurement into the applied cut, and owns
+                             the three debug overrides (§ Debug panel).
+  exposure-tuning.ts         The debug panel's Exposure section: the live
+                             readout plus the five sliders.
+  exposure-tuning-pure.ts    Readout text — the branch labels and the
+    (+ test)                 no-measurement case.
   reduction/                 The GPU reduction of the HDR target's
                              statistic attachment, and its readback. Its
                              own README.
@@ -117,9 +122,27 @@ peak_max = max  over the frame of its G channel
            both rescaled to the BASE instrument exposure
 eye      = min(0, −2.5·log10(L̄ / L_ADAPT))
 guard    = min(0, −2.5·log10(peak_max / L_CAP))
+floor    =         −2.5·log10(Lw / L_ADAPT)
 dm       = guard ≥ eye ? guard
-                       : blend toward max(eye, ADAPT_DISPLAY_FLOOR_DM)
+                       : blend toward max(eye, floor)
 ```
+
+`adaptationBranches` is the **only** implementation of that block —
+`adaptationDm` reads its `dm`, and the readout reads the same object, so a
+panel row can never describe a branch the frame did not run. It also names
+which term set the cut (`eye` / `guard` / `floor` / `handover`), the
+distinction three quite differently-caused frames otherwise share a symptom
+over.
+
+**The display floor is derived from the operator's white point, so
+`DR_MAG` has to reach it.** `SceneAdaptation` takes it as a `whitePoint`
+dep off `HdrPipeline.emitterUniforms` rather than reading the
+default-valued `ADAPT_DISPLAY_FLOOR_DM`: a wider range is a brighter
+full-white frame and therefore *justifies a deeper cut*, so a swept
+`DR_MAG` left out of the floor clamps the field to a display range the
+operator no longer has (`DR_MAG` 11 sinks the floor 3.5 mag). The constant
+survives as the default-tuning value the design gate's numbers are quoted
+at.
 
 **One scene measurement, one display model.** `L̄` drives the eye branch,
 the only perceptual claim; the **highlight guard** (`peak_max` pinned to
@@ -135,13 +158,22 @@ the formula:
 - **The display model only ever raises the exposure the scene
   measurement asked for** — `dm ≥ max(eye, guard)` always, so no source
   entering the frame can darken it past the scene-referred cut.
-- **`guard ≥ eye` is a pure coverage threshold** (5.1% of the frame for
-  the dominant source), so which regime governs is stateless. Nothing
-  here caches which branch governed last frame, and nothing may start to.
+- **`guard ≥ eye` is stateless** — nothing here caches which branch
+  governed last frame, and nothing may start to. It reduces to a coverage
+  threshold (5.1%) only where a body's brightest pixel sits
+  `DISC_PEAK_OVER_MEAN` over its own mean; the threshold it actually
+  imposes is `5.1% × (peak-over-mean ÷ 1.5)`, so a textured body — cloud
+  tops, ice, polar frost — must cover several times more of the frame to
+  take the pin than a Lambert disc does.
 - **The handover ramps over `ADAPT_HANDOVER_BLEND_MAG`** (one stop of
   branch disagreement — a factor 2 of coverage): the guard's pin and the
   floor can sit many magnitudes apart, and without the ramp a body
-  drifting through the handover would step the whole frame.
+  drifting through the handover would step the whole frame. **It only
+  ramps where the floor binds** — with a slack floor the blend walks down
+  from `eye` and the `max(eye, …)` clamp takes it straight back, so the
+  cut is the perception branch across the whole band. The regime is read
+  off the answer for exactly that reason; a nonzero blend weight is not
+  evidence the blend governed.
 - **A buffer max is never below a buffer mean**, which is what keeps the
   regime test well-behaved: a frame bright enough to want a cut cannot
   hand the guard a peak under `L_CAP` and have the guard's zero win.
@@ -226,9 +258,43 @@ Perf row: `adaptation` (now a handful of arithmetic), plus
 `renderedSizeComponents` calls and the O(n) reduce over the source pool are
 all gone; what replaces them is GPU work on half the frames.
 
+## Debug panel
+
+The panel's **Exposure** section (`exposure-tuning.ts`, first section in
+`debug/debug.ts`) reads this folder and writes three overrides.
+
+Readout, per frame: `L̄` and `peak_max` at the base exposure · the three
+branch terms and the governing regime · **measured vs applied `dm`**, which
+is the slew lag made visible · `m_lim`, EV and the effective limiting
+magnitude · live `uExposure` · `f*` and `f_ref`. `L_THRESH` and
+`LUMA_CEIL` print as *baked*, because they are. `Lw` and `S_lim` print as
+*derived* and are neither baked nor slidable here: `Lw` follows the
+`DR_MAG` slider through `uWhitePoint`, and `S_lim` follows the instrument.
+
+Sliders: `L_ADAPT`, `L_CAP` and the slew τ, held on `SceneAdaptation` —
+plus `DR_MAG` and the desaturation strength, which are `HdrPipeline`'s
+(`../README.md` § Dev switches). **The overrides survive a chart
+round-trip**: `reset()` clears the statistic and the slew, never the
+knobs. **They survive a panel close too, so every slider seeds off its
+live getter rather than the module constant** — `togglePanel` rebuilds
+each section on open, and a constant seed would put five sliders at
+defaults over a swept build.
+
+**τ is the only tunable in the transient, and it is not what a large scene
+change is showing.** The filter is one-pole; the staircase is `LUMA_CEIL`
+bounding each measurement to 8.4 mag of cut and converging from above
+(`reduction/README.md`), stepping every other frame at worst. A regime flip
+is the third mechanism, and the readout's regime row is how to tell the
+three apart before blaming the filter.
+
+**No slider may reach `L_THRESH` or `LUMA_CEIL`.** Both are compile-time
+GLSL constants in seven emitter shaders, and `L_THRESH` is the *unit's own
+anchor* — `SB_ZERO_POINT`, the band's ρ₀ solve, `L_ADAPT`, `L_CAP` and the
+floor are all expressed against it, so a live one would invalidate the
+calibration it was reached for.
+
 ## Not here yet
 
-`f_ref` (`ADAPT_REF_COVERAGE`) and `L̄` become debug-panel readouts in
-H8. Veiling glare — the angular term a single global scalar cannot
+Veiling glare — the angular term a single global scalar cannot
 express — is its own bead and belongs on the emission side, upstream of
 the operator, not in this folder's scalar.

@@ -408,8 +408,11 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   is for. Corollary for H7: desaturation preserves luminance only
   pre-clamp, so post-clamp luminance is not a testable invariant above
   the knee.
-- Operator, `DR_MAG`, `L_THRESH`, desaturation strength, and exposure
-  readout are all live on the debug panel (H8).
+- `DR_MAG`, the desaturation strength and the exposure readout are live on
+  the debug panel (*shipped in H8*). `L_THRESH` is a **readout** there and
+  stays baked: it is the unit's own anchor, so a live one would move every
+  layer's calibration with it (`src/client/hdr/exposure/README.md`
+  § Debug panel).
 
 The operator implementation lives in a **shared GLSL chunk**
 (`src/client/hdr/tonemap.glsl`, exported alongside a test-pinned pure
@@ -500,6 +503,10 @@ The reference observer is **optimistic best case**: fully dark-adapted,
 no adaptation delay, and presumed to have scanned the whole field. So the
 *measurement* is a function of frame content with no time constant and no
 dependence on which object is focused.
+
+**The scan is a claim about the measurement, never a licence to composite
+fixations into one frame** — the distinction § 3.2 turns on, and the reason
+this premise coexists with a strictly global operator.
 
 **The applied cut does carry a time constant, and it is not a claim about
 the eye.** `dm` is slew-limited by a one-pole filter at 300 ms before it
@@ -704,7 +711,8 @@ Two consequences worth stating rather than discovering:
   squared-distance tests that walk ran. A frame reduction has no window:
   every drawn star is already in the buffer.
 
-Expose `f_ref` and `L̄` on the debug panel (H8).
+`f_ref` and `L̄` are on the debug panel, alongside `peak_max`, all three
+branch terms and which of them governs (*shipped in H8*).
 
 Two rows from the same pass bound the other end, and both are consistent
 with the model rather than with a tuning error: Saturn at `L` = 0.259 and
@@ -813,24 +821,79 @@ every cinematic effect walks through:
   by preference. "Render planets dimmer than the stars" is per-object
   exposure — the same per-layer squash H5 deleted.
 - **Spatially-varying (local) tone mapping is out.** It is the only
-  thing that *would* show 17 magnitudes at once, it is the cinematic
-  HDR-photograph look, and nothing in the physical chain does it —
-  not the eye at an instant, not any instrument.
+  thing that *would* show 17 magnitudes at once, and it is the cinematic
+  HDR-photograph look. The reason it is out is **structural**, not the
+  claim that "nothing in the physical chain does it — not the eye at an
+  instant": that reason contradicted § 3.1's scanning observer, since a
+  fovea re-adapting per fixation is exactly a locally-tone-mapped
+  percept. That contradiction is settled here rather than left open, and
+  the conclusion survives it. Five findings, in the order they bind.
 
-  **This rejection rests on a premise § 3.1 contradicts, and the
-  contradiction is open rather than resolved.** § 3.1 justifies having no
-  radial weighting by assuming a *scanning* observer; a scanning observer
-  whose fovea re-adapts per fixation is exactly a locally-tone-mapped
-  percept. § 3.2 here evaluates the eye at an **instant** while § 3.1
-  evaluates it **over a scan**, and the two need the same observer. The
-  observation that opened it: an eye resolves detail in something very
-  bright if the fovea spends time on it, where the monitor washes out into
-  saturation — and 8-bit sRGB at a ~1% JND carries only ~6 magnitudes at
-  once whatever the operator does. Its own design bead owns the verdict.
-- **Veiling glare is in scope later, and does not breach the rule.**
-  Ocular scatter is real light redistributed in the optics *before*
-  detection, so it belongs on the emission side as a convolution
-  upstream of the operator. It is the mechanism that makes a bright
+  **The scanning observer stands, in both sections.** § 3.1's premise is
+  not weakened, and this section no longer contests it: averaging over
+  every fixation is what *makes* an unweighted statistic the right one, so
+  the scan is the reason there is no radial term. What the scan does not
+  license is presenting its union as one instant. A locally-tone-mapped
+  frame is a composite of many fixations — bright detail from fixation N
+  beside faint detail from fixation M — and no observer, scanning or
+  otherwise, ever perceives that composite. § 2's `DR_MAG` pin already
+  says so: the eye's range is achieved over time *and across the retina*,
+  never simultaneously in one glance.
+
+  **The scan is the user's, and it is already live.** Stellata is not a
+  still photograph. The user's own fovea scans their own monitor, and the
+  camera moves — so per-fixation re-adaptation is already in the build,
+  indexed by **framing** rather than by screen position: approach a bright
+  body, its coverage rises, `dm` cuts, and the detail appears. § 3.1's
+  coverage statistic *is* that mechanism, and it is physically honest
+  because a real observer moving closer also gains coverage. Framing is
+  stellata's fixation. A local operator would run the scan on the user's
+  behalf and bake the result, double-counting what interactivity already
+  supplies.
+
+  **The accepted cost, stated rather than discovered:** simultaneous
+  detail in a bright region and a faint one, in one frame, from a
+  stationary camera. That is real, it is what the opening observation was
+  about, and the answer to it is the camera and the trim rather than the
+  operator. It is also the one case the highlight guard patches — for the
+  dominant surface only.
+
+  **The rule that replaces the discarded reason: spatial variation is
+  permitted upstream of the operator, where it moves light, and forbidden
+  inside it, where it moves the mapping.** Rod summation (§ 1) and veiling
+  glare (below) both convolve the luminance *field* — they change what
+  reaches a pixel, they are real light redistributed in the optics, and the
+  operator downstream of them is still one function of one luminance.
+  Local tone mapping changes the *transfer function* per pixel, so the
+  same luminance means different display values at different screen
+  positions — which is exactly the cross-layer comparability this seam
+  exists to establish. Per-layer and per-object exposure fall to the same
+  clause one level up, which is why they need no separate argument.
+
+  **And it is structurally incompatible with `chrome/` — a harder blocker
+  than anything above.** `inverseTonemapConstant` bakes the inverse at
+  material set-time against a scene-wide white point
+  (`src/client/hdr/chrome/README.md`). A per-pixel mapping cannot be
+  inverted at set-time: the local field is not known until the frame is
+  drawn, and chrome draws into that same target, so the field a chrome
+  fragment inverts against would depend on chrome itself. Deriving the
+  neighbourhood from the chrome-excluded statistic attachment breaks the
+  circularity but not the set-time bake. Shipping a local operator
+  therefore means moving every chrome layer into a pass composited *after*
+  the resolve, losing the depth test against the scene that is the reason
+  those layers render into the target at all. That is the price, and no
+  operator change alone pays it.
+
+  **Revisiting it.** If it ever ships, it ships as a **display
+  concession** in the highlight guard's sense — never as a perceptual
+  claim — and owes the same accounting: which display limit it works
+  around, what it costs, and a name for what it exaggerates. The bar is
+  the three constraints above: analytic invertibility for `chrome/` (or
+  the composite-after pass and its depth cost), no camera-centred term
+  (§ 3.1's gaze dependence), and no per-object or per-layer branch.
+- **Veiling glare is in scope later, on the permitted side of that
+  rule** — ocular scatter is real light, convolved upstream of the
+  operator on the emission side. It is the mechanism that makes a bright
   source destroy *nearby* faint detail — which a single global scalar
   cannot express. Standard model: the Vos & van den Berg glare-spread
   function (CIE 135/1, valid 0.1°–100°); the simple form is
@@ -864,6 +927,15 @@ is not, and it is the first thing in the pipeline that isn't:
 > limit saturation. It is not accurate: it really would be much brighter.
 > But we can't show that on a monitor, so we show what you can perceive
 > without blowing it out.
+
+**This is the bounded, scalar form of what a local operator would do, and
+that is why accepting it is not the loophole § 3.2 warns about.** One
+scene-wide number protects the dominant surface's peak, so the guard cannot
+invent a gradient the luminance field does not have, cannot reveal detail
+that field does not carry, stays analytically invertible for `chrome/`, and
+names its own cost below. A local operator's appeal is precisely the part
+the guard refuses: a transfer function that varies per region. The
+concession is the **pin**, not the locality.
 
 The perception branch alone leaves a resolved surface at `L_ADAPT / f`, and
 smoke measured what that costs. Retreating from Betelgeuse at EV 0, the
@@ -1502,9 +1574,14 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
 - **H8 retires the per-layer brightness knobs** — MW brightness scalar
   + gate (*deleted in H4*), planet-disc floor/exponent constants
   (*deleted in H5*), dynamic-range exponent — from the tuning surface
-  entirely (they stop existing in code, not just in the panel). The panel gains: operator
-  params (`DR_MAG`, `L_THRESH`, desaturation), the exposure + instrument
-  + mean-luminance readouts, and `LUMA_CEIL`. `uGlowMagOffset` survives as a *calibration
+  entirely (they stop existing in code, not just in the panel).
+  *Shipped.* The panel's sliders are the five live scalars — `L_ADAPT`,
+  `L_CAP`, the slew τ, `DR_MAG`, desaturation — over a readout carrying
+  the statistic, all three branch terms, the governing regime, and the
+  exposure decomposition. **`L_THRESH` and `LUMA_CEIL` are readouts, not
+  sliders**: both are compile-time constants in seven emitter shaders,
+  and `L_THRESH` anchors the unit every other calibration is expressed
+  against. `uGlowMagOffset` survives as a *calibration
   constant* set by H7, debug-visible but not a user knob.
 - **§ 3 splits four ways, and the order is forced.** *All four shipped.*
   H15 (instrument
@@ -1529,7 +1606,9 @@ own bead, deferred) · Display-P3 output (zsr.2 — plugs into the § 2
 encode) · BC_photopic (a7d.2.10 — substitutes into `L(m)` when it lands)
 · time-domain adaptation dynamics (§ 3.1 is deliberately instantaneous:
 no light/dark-adapt time constants, no feedback loop) · bloom/lens-flare
-post effects (the existing PSF footprint is the bloom).
+post effects (the existing PSF footprint is the bloom) · local
+(spatially-varying) tone mapping — **decided out**, not deferred, with the
+conditions for revisiting it stated where the verdict is (§ 3.2).
 
 **Rod spatial summation came into scope and shipped** (§ 1, *Extended
 sources*). This section used to waive scotopic/mesopic eye modelling on the

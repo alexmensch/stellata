@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { type DebugSection, makeSlider } from './debug-panel';
+import { type DebugSection, makeMonoReadout, makeSlider } from './debug-panel';
 
 // Dev-only tuning section for star-disc rendering. Each slider drives one
 // uniform on the shared star material. Defaults match the production
@@ -19,11 +19,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
   // Derived-K readout. K is a product of instrument density, the
   // multiplier slider and the live plate scale, so the slider value alone
   // doesn't tell you what the stars are actually being drawn at.
-  const kReadout = document.createElement('div');
-  kReadout.style.cssText =
-    'font:11px/1.4 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
-    'color:#0f0;padding:6px 8px;border-radius:4px;margin-bottom:8px;' +
-    'white-space:pre;user-select:text;cursor:text;';
+  const kReadout = makeMonoReadout('margin-bottom:8px;');
   body.appendChild(kReadout);
 
   let visible = true;

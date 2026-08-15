@@ -556,6 +556,7 @@ export class Stellata implements FrameAnchor {
     this.adaptation = new SceneAdaptation({
       baseExposure: () => exposureForMagLimit(this.exposure.getLimitMag()),
       reduced: () => this.reduction.current(),
+      whitePoint: () => this.hdr.emitterUniforms.uWhitePoint.value,
     });
     // Kind-module attach, in roster order. Each returned scene layer
     // registers HERE — before every inline-wired layer — so every

@@ -19,9 +19,12 @@ import {
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_HANDOVER_BLEND_MAG,
   ADAPT_REF_COVERAGE,
+  adaptationBranches,
   adaptationDm,
   adaptedDiscMeanL,
+  DEFAULT_ADAPTATION_TUNING,
   DISC_PEAK_OVER_MEAN,
+  displayFloorDm,
   eyeAdaptationDm,
   guardHandoverCoverage,
   highlightGuardDm,
@@ -302,6 +305,107 @@ describe('the display floor (§ 3.2)', () => {
     }
     expect(maxStep).toBeLessThan(0.15);
     expect(ADAPT_HANDOVER_BLEND_MAG).toBe(MAG_PER_STOP);
+  });
+});
+
+describe('the branch decomposition', () => {
+  const BRIGHT = 3.6e5;
+
+  /** One body of disc mean `discMeanL` over `coverage` of the frame, as a
+   *  (mean, peak) pair the rasteriser could actually produce. */
+  function body(discMeanL: number, coverage: number): [number, number] {
+    return [discMeanL * coverage, discMeanL * DISC_PEAK_OVER_MEAN];
+  }
+
+  it('is the only implementation — adaptationDm reads its dm', () => {
+    for (const [meanL, peakL] of [
+      body(BRIGHT, 0.4), body(BRIGHT, 1e-3), body(12, 0.02), [0, 0] as const,
+    ]) {
+      expect(adaptationDm(meanL, peakL)).toBe(adaptationBranches(meanL, peakL).dm);
+    }
+  });
+
+  it('names the term that actually set the cut, in all four regimes', () => {
+    // Well above the handover: the pin governs untouched.
+    expect(adaptationBranches(...body(BRIGHT, 0.4)).regime).toBe('guard');
+    // Far below it, on a surface bright enough that the floor binds.
+    const floorBound = adaptationBranches(...body(BRIGHT, 1e-4));
+    expect(floorBound.regime).toBe('floor');
+    expect(floorBound.dm).toBe(ADAPT_DISPLAY_FLOOR_DM);
+    // A dim body whose own cut never reaches the floor.
+    const eyeBound = adaptationBranches(...body(12, 0.02));
+    expect(eyeBound.regime).toBe('eye');
+    expect(eyeBound.dm).toBe(eyeBound.eye);
+    // Inside one stop of coverage under the handover, the answer is the
+    // ramp rather than either branch: it walks from the floored perception
+    // value toward the pin, so it lands between the two.
+    const ramp = adaptationBranches(...body(BRIGHT, guardHandoverCoverage() * 0.7));
+    expect(ramp.regime).toBe('handover');
+    expect(ramp.dm).toBeGreaterThan(ramp.guard);
+    expect(ramp.dm).toBeLessThan(ramp.floor);
+    expect(ramp.dm).toBeGreaterThan(ramp.eye);
+  });
+
+  // Same coverage as the ramp case above, on a body dim enough that the
+  // floor never binds. The ramp then walks from `eye` itself, and the
+  // outer clamp takes every step of it back: the cut IS the perception
+  // branch, so naming it off the nonzero blend weight would label a whole
+  // stop of the approach as a blend that contributed nothing.
+  it('names the perception branch where the ramp is a no-op', () => {
+    const slack = adaptationBranches(...body(12, guardHandoverCoverage() * 0.7));
+    expect(slack.floor).toBeLessThan(slack.eye);
+    expect(slack.guard).toBeLessThan(slack.eye);
+    expect(slack.guard).toBeGreaterThan(slack.eye - ADAPT_HANDOVER_BLEND_MAG);
+    expect(slack.dm).toBe(slack.eye);
+    expect(slack.regime).toBe('eye');
+  });
+
+  it('reports the branches the cut was actually computed from', () => {
+    const [meanL, peakL] = body(BRIGHT, 0.4);
+    const b = adaptationBranches(meanL, peakL);
+    expect(b.eye).toBe(eyeAdaptationDm(meanL));
+    expect(b.guard).toBe(highlightGuardDm(peakL));
+    expect(b.floor).toBe(ADAPT_DISPLAY_FLOOR_DM);
+  });
+});
+
+describe('the tuning override (debug panel)', () => {
+  it('defaults to the shipped constants', () => {
+    expect(DEFAULT_ADAPTATION_TUNING).toEqual({
+      lAdapt: L_ADAPT,
+      lCap: L_CAP,
+      whitePoint: tonemapWhitePoint(),
+    });
+    expect(displayFloorDm()).toBe(ADAPT_DISPLAY_FLOOR_DM);
+  });
+
+  it('moves each branch by the level it is measured against', () => {
+    const tuning = { ...DEFAULT_ADAPTATION_TUNING, lAdapt: 2 * L_ADAPT, lCap: 2 * L_CAP };
+    // Doubling a branch's anchor shallows that branch by exactly one stop.
+    expect(eyeAdaptationDm(1, tuning.lAdapt))
+      .toBeCloseTo(eyeAdaptationDm(1) + MAG_PER_STOP, 12);
+    expect(highlightGuardDm(1e3, tuning.lCap))
+      .toBeCloseTo(highlightGuardDm(1e3) + MAG_PER_STOP, 12);
+    // The handover is the ratio of the two, so doubling both leaves it put.
+    expect(guardHandoverCoverage(tuning)).toBeCloseTo(guardHandoverCoverage(), 12);
+  });
+
+  // The floor is derived from the white point, so DR_MAG has to reach it.
+  // A wider range is a brighter full-white frame, which JUSTIFIES a deeper
+  // cut — so sweeping DR_MAG to 11 sinks the floor 3.5 mag and unbinds the
+  // perception branch that far. Left on the default constant, a swept build
+  // would clamp the field to a display range the operator no longer has.
+  it('tracks a swept DR_MAG through to the display floor', () => {
+    const swept = { ...DEFAULT_ADAPTATION_TUNING, whitePoint: tonemapWhitePoint(11) };
+    expect(displayFloorDm(swept)).toBeCloseTo(-9.79, 2);
+    expect(displayFloorDm(swept) - ADAPT_DISPLAY_FLOOR_DM).toBeCloseTo(-3.5, 1);
+    // One frame, floor-bound either way, 3.5 mag apart in what it applies.
+    const floorBound = [3.6e5 * 3e-3, 3.6e5 * DISC_PEAK_OVER_MEAN] as const;
+    expect(adaptationBranches(...floorBound).regime).toBe('floor');
+    expect(adaptationBranches(...floorBound).dm).toBe(ADAPT_DISPLAY_FLOOR_DM);
+    const b = adaptationBranches(...floorBound, swept);
+    expect(b.regime).toBe('floor');
+    expect(b.dm).toBe(displayFloorDm(swept));
   });
 });
 

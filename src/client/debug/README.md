@@ -11,7 +11,11 @@ src/client/debug/
                                   surface). Owns the panel-open path.
   debug-panel.ts                  Unified debug panel chrome (drag
                                   handle, collapsible sections, slider /
-                                  readout helpers).
+                                  colour helpers). `makeMonoReadout` is
+                                  the green-on-black block every live
+                                  readout writes textContent into —
+                                  `buildDiagnosticReadout` is it plus the
+                                  latch-reset link.
   perf-hud.ts                     Ring-buffer instrumentation +
                                   histogram + per-label table. Module-
                                   level mark/measure/frame/gpuBegin/
@@ -38,7 +42,7 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of ten
+  panel; the Perf section is one of nine
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations).
@@ -95,7 +99,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Scene-luminance measurement: drawn bodies plus the near-camera star walk, then a linear reduce over what survives the flux gate (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
@@ -348,7 +352,11 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with eight sections:
+collapsible host with nine sections:
+Exposure (`../hdr/exposure/exposure-tuning.ts` — the exposure statistic,
+the three adaptation branches and which governs, the exposure
+decomposition, over `L_ADAPT` / `L_CAP` / slew τ / `DR_MAG` /
+desaturation; `../hdr/exposure/README.md` § Debug panel),
 Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse

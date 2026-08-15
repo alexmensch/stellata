@@ -25,9 +25,9 @@ function savePosition(p: Pos): void {
   try { sessionStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
 }
 
-// Collapsed is the default: the panel has ten sections and several drive
-// per-frame work while open, so an unseeded panel opens as a section list
-// rather than a wall. Only an explicit stored '0' expands one.
+// Collapsed is the default: several sections drive per-frame work while
+// open, so an unseeded panel opens as a section list rather than a wall.
+// Only an explicit stored '0' expands one.
 function loadCollapsed(key: string): boolean {
   try { return sessionStorage.getItem(collapsedKey(key)) !== '0'; } catch { return true; }
 }
@@ -256,17 +256,23 @@ export interface DiagnosticReadoutOpts {
   onResetLatches: () => void;
 }
 
-/** Green-on-black mono readout chrome shared by pin-debug-hud and
- *  arrow-fade-debug-hud: root div with monospace text, optional left
- *  border (arrow only), selectable body, and the [click to reset
- *  latches] link. */
-export function buildDiagnosticReadout(opts: DiagnosticReadoutOpts): DiagnosticReadout {
-  const root = document.createElement('div');
-  root.style.cssText =
+/** Green-on-black selectable mono block — the shape every live readout in
+ *  the panel writes `textContent` into. */
+export function makeMonoReadout(extraCss = ''): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.cssText =
     'font:11px/1.3 ui-monospace,monospace;background:rgba(0,0,0,.85);' +
     'color:#0f0;padding:6px 8px;border-radius:4px;' +
-    'white-space:pre;overflow-x:auto;user-select:text;' +
-    (opts.withLeftBorder ? 'border-left:3px solid #0f0;' : '');
+    'white-space:pre;overflow-x:auto;user-select:text;cursor:text;' + extraCss;
+  return el;
+}
+
+/** Mono readout plus the [click to reset latches] link — pin-debug-hud and
+ *  arrow-fade-debug-hud, the two sections with latched extremes. */
+export function buildDiagnosticReadout(opts: DiagnosticReadoutOpts): DiagnosticReadout {
+  const root = makeMonoReadout(
+    opts.withLeftBorder ? 'border-left:3px solid #0f0;' : '',
+  );
 
   const body = document.createElement('div');
   body.style.cssText = 'user-select:text;cursor:text;';

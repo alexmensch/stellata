@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { exposureForMagLimit } from './exposure-epoch';
+import { exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
 import type { ReducedStatistic } from './reduction/reduction-pass';
+import { tonemapWhitePoint } from '../tonemap-pure';
 import { SceneAdaptation } from './scene-adaptation';
 import {
   adaptationDm,
+  ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_SLEW_TAU_S,
+  DEFAULT_ADAPTATION_TUNING,
   DISC_PEAK_OVER_MEAN,
+  displayFloorDm,
   eyeAdaptationDm,
   L_ADAPT,
   L_CAP,
@@ -32,11 +36,13 @@ const POINT_COVERAGE = 1e-3;
 
 let reduced: ReducedStatistic | null;
 let base: number;
+let whitePoint: number;
 
 function makeAdaptation(): SceneAdaptation {
   return new SceneAdaptation({
     baseExposure: () => base,
     reduced: () => reduced,
+    whitePoint: () => whitePoint,
   });
 }
 
@@ -59,6 +65,7 @@ function settle(adaptation: SceneAdaptation, chart = false): number {
 beforeEach(() => {
   reduced = null;
   base = BASE_EXPOSURE;
+  whitePoint = tonemapWhitePoint();
 });
 
 describe('SceneAdaptation', () => {
@@ -148,5 +155,72 @@ describe('SceneAdaptation', () => {
     adaptation.measure(false, 1e6, false);
     expect(adaptation.getMeanLuminance() / atDefault)
       .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
+  });
+});
+
+// The pure branch layer takes a tuning argument; these pin that the class
+// actually threads the panel's overrides into the cut it applies, which is
+// the half a miswiring would leave silent.
+describe('SceneAdaptation — the panel overrides', () => {
+  it('rounds the levels back out for the sliders to seed from', () => {
+    const adaptation = makeAdaptation();
+    adaptation.setLAdapt(2 * L_ADAPT);
+    adaptation.setLCap(2 * L_CAP);
+    adaptation.setSlewTauS(4 * ADAPT_SLEW_TAU_S);
+    expect(adaptation.getLAdapt()).toBe(2 * L_ADAPT);
+    expect(adaptation.getLCap()).toBe(2 * L_CAP);
+    expect(adaptation.getSlewTauS()).toBe(4 * ADAPT_SLEW_TAU_S);
+    expect(adaptation.getTuning())
+      .toEqual({ lAdapt: 2 * L_ADAPT, lCap: 2 * L_CAP, whitePoint });
+  });
+
+  it('decomposes the frame it actually ran, not a recomputed one', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    adaptation.setLAdapt(2 * L_ADAPT);
+    adaptation.measure(false, 0, false);
+    expect(adaptation.branches().dm).toBe(adaptation.getDm());
+  });
+
+  it('applies a swept L_ADAPT to an eye-governed cut', () => {
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    const shipped = settle(makeAdaptation());
+    const swept = makeAdaptation();
+    swept.setLAdapt(2 * L_ADAPT);
+    expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
+  });
+
+  it('applies a swept L_CAP to a guard-governed cut', () => {
+    reduced = frame(100 * L_ADAPT, 0.9);
+    const shipped = settle(makeAdaptation());
+    const swept = makeAdaptation();
+    swept.setLCap(2 * L_CAP);
+    expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
+  });
+
+  it('ramps at the slew tau it was given', () => {
+    const fast = makeAdaptation();
+    const slow = makeAdaptation();
+    slow.setSlewTauS(4 * ADAPT_SLEW_TAU_S);
+    reduced = frame(L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(settle(fast)).toBe(0);
+    expect(settle(slow)).toBe(0);
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    const fastStep = fast.measure(false, SETTLED_MS + 16, false);
+    const slowStep = slow.measure(false, SETTLED_MS + 16, false);
+    expect(slowStep).toBeLessThan(0);
+    expect(fastStep).toBeLessThan(slowStep);
+  });
+
+  // The floor is derived from the white point, so a swept DR_MAG has to
+  // reach the applied cut through the dep and not through the constant.
+  it('cuts to the display floor the live white point implies', () => {
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(settle(makeAdaptation())).toBeCloseTo(ADAPT_DISPLAY_FLOOR_DM, 6);
+    whitePoint = tonemapWhitePoint(11);
+    const swept = settle(makeAdaptation());
+    expect(swept)
+      .toBeCloseTo(displayFloorDm({ ...DEFAULT_ADAPTATION_TUNING, whitePoint }), 6);
+    expect(swept - ADAPT_DISPLAY_FLOOR_DM).toBeCloseTo(-3.5, 1);
   });
 });
