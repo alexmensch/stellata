@@ -173,6 +173,17 @@ printed 1.385, synthetic 1.357) — and both fail the corpus at the ±0.03
 tolerance under the contract's order. The synthetic tier's job is the ~9.2k
 rows Hipparcos never observed, which no other measured source reaches.
 
+**Neither |Δ|-against-the-relation figure on this page ranks the two tiers**,
+and read side by side they appear to — synthetic disagrees with Table 5.9 by
+p50 0.023 where § Where the colour bound comes from has a printed cell
+disagreeing by p50 0.052. Two reasons that is not a ranking. The references
+differ: that section measures the **spine's** cell, not the `I/239` tier.
+And both are measured only where the relation itself applies, `BP−RP` ≤ 1.75
+— which is precisely where neither of these tiers runs. Where they do
+compete, past the relation's bound, there is no third measurement to rank
+them by, so the ordering rests on the physical argument above and on the two
+corpus rows that carry both.
+
 ### Where the colour bound comes from
 
 Table 5.9 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
@@ -180,8 +191,9 @@ this build cannot tell a giant from a dwarf on the no-Apsis population the
 tier serves — `lumClass` is 255 for most of it. So 1.75, not the relation's
 stated 4.0, is what `gaiaBMinusV` gates on.
 
-Measured against the printed cell over the no-Apsis population (both sides
-observed-convention, so the comparison is like-for-like), the published note
+Measured against the **spine's** printed `ci` cell over the no-Apsis
+population — not the `I/239` tier that replaced it, and both sides
+observed-convention, so the comparison is like-for-like — the published note
 is visible in the data:
 
 | BP−RP | n | p50 | p99 | max |
@@ -200,8 +212,8 @@ Whole accepted range: **p50 0.052, p99 0.513, max 2.768** over 43,024 rows.
 conservative of the two, and it is the one applied, because a note about
 which luminosity class a fit covers is a statement about validity that a
 disagreement distribution cannot overturn. It costs 912 no-Apsis rows
-(2% of the population reachable at 4.0), which fall through to the printed
-cell rather than to a derived colour.
+(2% of the population reachable at 4.0), which fall through to the two
+measured tiers below rather than to a derived colour.
 
 ## Which tiers give a system blend — `vTierIsSystemBlend`
 
