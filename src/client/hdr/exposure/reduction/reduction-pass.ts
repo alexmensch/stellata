@@ -66,9 +66,11 @@ export class LuminanceReduction {
    * Leaves the render target at the canvas, the same contract the local
    * depth pass keeps.
    */
-  /** Debug kill switch (frame-cost differentials): false skips new GPU
-   *  work while freezing the statistic at its last landed reading —
-   *  unlike reset(), which drops it. */
+  /** Debug kill switch (frame-cost differentials): false skips the chain's
+   *  DRAWS while still requesting the readback, so the statistic freezes
+   *  at its last landed reading (unlike reset(), which drops it) and the
+   *  fence stays in the frame. Dropping the fence too would price the
+   *  loss of the frame's only submission barrier, not the draws. */
   enabled = true;
 
   measure(
@@ -79,7 +81,6 @@ export class LuminanceReduction {
     renderExposure: number,
   ): void {
     this.poll();
-    if (!this.enabled) return;
     const gl = renderer.getContext() as WebGL2RenderingContext;
     // The chain's last level is RGBA32F, which needs the full float
     // extension — half-float-only hardware gets no measurement at all and
@@ -93,20 +94,25 @@ export class LuminanceReduction {
     this.ensureLevels(width, height);
     if (this.levels.length === 0) return;
 
-    let src = source;
-    let srcW = width;
-    let srcH = height;
-    for (const level of this.levels) {
-      this.material.uniforms.uSource.value = src;
-      (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
-      renderer.setRenderTarget(level.target);
-      renderer.render(this.scene, this.camera);
-      src = level.target.texture;
-      srcW = level.width;
-      srcH = level.height;
+    if (this.enabled) {
+      let src = source;
+      let srcW = width;
+      let srcH = height;
+      for (const level of this.levels) {
+        this.material.uniforms.uSource.value = src;
+        (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
+        renderer.setRenderTarget(level.target);
+        renderer.render(this.scene, this.camera);
+        src = level.target.texture;
+        srcW = level.width;
+        srcH = level.height;
+      }
+    } else {
+      renderer.setRenderTarget(this.levels[this.levels.length - 1].target);
     }
     // The last level is still bound, which is the framebuffer readPixels
-    // reads from.
+    // reads from — re-reading the stale texel when disabled, which is what
+    // holds the statistic still.
     this.readback.request(1);
     this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);

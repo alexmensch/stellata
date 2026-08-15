@@ -146,7 +146,15 @@ reports `dm = 0` rather than adapting to a stale frame.
 
 Perf rows: `submit.reduction` (CPU submission) and, where the driver
 exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
-§ GPU timing. `stellata.reduction.enabled = false` skips new GPU work
-while FREEZING the statistic at its last reading (unlike chart mode's
-reset-and-drop) — a frame-cost measurement lever
+§ GPU timing. `stellata.reduction.enabled = false` skips the chain's
+draws while FREEZING the statistic at its last reading (unlike chart
+mode's reset-and-drop) — a frame-cost measurement lever
 (`../../../debug/README.md` § Frame pricing).
+
+**The readback keeps running while disabled, and must.** `request()`
+ends in `gl.flush()`, and on ANGLE that flush is the frame's only
+submission barrier: drop it and the driver batches deeper, so
+`TIME_ELAPSED` spans more overlapped work and the frame reads *slower*
+with the pass off. The disabled path therefore still binds the last
+level and re-requests the same stale texel — same fence, same every-
+other-frame cadence, only the draws removed.
