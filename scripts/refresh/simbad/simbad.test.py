@@ -265,6 +265,31 @@ class FetchFluxBandsTests(unittest.TestCase):
         )
         self.assertEqual(backend.calls, [])
 
+    def test_one_band_present_leaves_the_other_null_not_shifted(self):
+        # The long-format table publishes a row per band it has, so an oid
+        # with B and no V must null V's three cells rather than slide B's
+        # into them.
+        backend = FakeBackend([("FROM flux", self._table([
+            {"oidref": 5, "filter": "B", "flux": 9.1,
+             "flux_err": 0.02, "bibcode": "2000A&A...355L..27H"},
+        ]))])
+        flux_rows = query.fetch_flux_bands(
+            FakeClient(backend), oids=[5], bands=[FluxBand("B"), FluxBand("V")],
+        )
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "values.tsv"
+            tsv.write_simbad_tsv(
+                output=out, oids=[5], basic_rows={5: {"oid": 5}}, columns=[OID],
+                blocks=[tsv.flux_block([FluxBand("B"), FluxBand("V")], flux_rows)],
+            )
+            text = out.read_text().splitlines()
+        self.assertEqual(
+            text[0],
+            "simbad_oid\tflux_B\tflux_B_err\tflux_B_bibcode"
+            "\tflux_V\tflux_V_err\tflux_V_bibcode",
+        )
+        self.assertEqual(text[1], "5\t9.1\t0.02\t2000A&A...355L..27H\t\t\t")
+
 
 class TsvShapeTests(unittest.TestCase):
 
@@ -629,6 +654,45 @@ class CollectOidRequestsTests(unittest.TestCase):
             oids = sptype.collect_oid_requests(FakeClient(backend))
         # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped + sorted.
         self.assertEqual(oids, [100, 200, 300])
+
+
+class ValuesCollectOidRequestsTests(unittest.TestCase):
+
+    def _shell(self):
+        return load_kebab_sibling(
+            __file__, "refresh_simbad_values", "../refresh-simbad-values.py",
+        )
+
+    def test_cohort_predicate_narrows_the_request_set(self):
+        shell = self._shell()
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        spine = write_spine(Path(d), [
+            # first-order in every field → no SIMBAD tier reaches it
+            {"gaia_source_id": "1", "pos_src": "T", "dist_src": "G_R3",
+             "mag_src": "HIP", "rv_src": "G_R3", "pm_src": "G_R3"},
+            {"gaia_source_id": "2", "rv_src": "HYG"},
+            {"hip": "777"},
+        ])
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([{"oidref": 100, "id": "Gaia DR3 2"}])),
+            ("'HIP 777'", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+        ])
+        with mock.patch.object(shell, "SPINE", spine):
+            oids = shell.collect_oid_requests(FakeClient(backend))
+        self.assertEqual(oids, [100, 300])
+
+    def test_gaia_resolution_floor_fails_the_pull(self):
+        shell = self._shell()
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        spine = write_spine(Path(d), [
+            {"gaia_source_id": "2", "rv_src": "HYG"},
+            {"gaia_source_id": "3", "rv_src": "HYG"},
+        ])
+        backend = FakeBackend([("FROM ident", ident_table([]))])
+        with mock.patch.object(shell, "SPINE", spine):
+            with self.assertRaises(SystemExit) as caught:
+                shell.collect_oid_requests(FakeClient(backend))
+        self.assertIn("Gaia DR3 ident resolution", str(caught.exception))
 
 
 class FakeTable:
