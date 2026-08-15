@@ -30,9 +30,12 @@ export interface PriceFrameOptions {
   /** Frames discarded after each state flip — absorbs rebuilds, shader
    *  recompiles, and the previous state's in-flight query results. */
   settleFrames?: number;
+  /** Frames discarded before the baseline dwell. A cold first dwell
+   *  biases every row against it, since it alone is the subtrahend. */
+  warmupFrames?: number;
 }
 
-const DEFAULTS = { dwellFrames: 120, settleFrames: 12 } as const;
+const DEFAULTS = { dwellFrames: 120, settleFrames: 12, warmupFrames: 60 } as const;
 
 /** Whole-sweep ceiling. A run that cannot finish still has to hand the
  *  tab back with every pass restored, not sit on a broken frame. */
@@ -115,6 +118,7 @@ export async function runPriceFrame(
 ): Promise<PriceFrameRow[]> {
   const dwellFrames = options.dwellFrames ?? DEFAULTS.dwellFrames;
   const settleFrames = options.settleFrames ?? DEFAULTS.settleFrames;
+  const warmupFrames = options.warmupFrames ?? DEFAULTS.warmupFrames;
   const deadline = performance.now() + SWEEP_BUDGET_MS;
 
   const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
@@ -173,6 +177,7 @@ export async function runPriceFrame(
   const rows: PriceFrameRow[] = [];
   let restore: (() => void) | null = null;
   try {
+    for (let f = 0; f < warmupFrames; f++) await nextFrame();
     const baseline = await dwell();
     if (baseline === null) {
       console.warn(
@@ -182,9 +187,13 @@ export async function runPriceFrame(
       return [];
     }
 
-    for (const toggle of eligible) {
+    for (const [i, toggle] of eligible.entries()) {
       if (performance.now() > deadline) {
-        console.warn('priceFrame: out of budget, sweep truncated');
+        const dropped = eligible.slice(i).map((t) => t.key).join(', ');
+        console.warn(
+          `priceFrame: out of budget, sweep truncated — NOT priced: ${dropped}. ` +
+          'Re-run those with { passes: [...] }, or shorten dwellFrames.',
+        );
         break;
       }
       restore = toggle.disable();

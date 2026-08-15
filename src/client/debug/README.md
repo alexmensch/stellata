@@ -191,14 +191,32 @@ absorption (`setAbsorptionEnabled`), the HDR chain
 (`hdr.setChartMode(true)` — the whole-target park, which also flips
 emitters to inline tone-mapping and stops the statistic attachment, so
 its row is target-chain-vs-direct-to-canvas, not the resolve draw
-alone), the luminance reduction (`stellata.reduction.enabled`), the star
-core depth-mask (`setCoreMaskEnabled`), and the extinction prepass A/B
-(`setExtinctionPrepassEnabled` — disabling ADDS the in-vertex raymarch,
-so savedMs is normally negative: what the cache saves). A pass inactive
-at the current view/state is skipped, not measured as zero. Each row
-carries `spreadMs` (the wider dwell's max−min) and the run ends with a
-baseline re-measure; differentials near either are noise.
-`debug.priceFrameRepeat(n)` prints per-pass savedMs ranges across runs.
+alone), the luminance reduction (`stellata.reduction.enabled` — draws
+only; the readback fence stays, `../hdr/exposure/reduction/README.md`),
+the star core depth-mask (`setCoreMaskEnabled`), and the extinction
+prepass A/B (`setExtinctionPrepassEnabled` — disabling ADDS the
+in-vertex raymarch, so savedMs is normally negative: what the cache
+saves). A pass inactive at the current view/state is skipped, not
+measured as zero.
+
+**Reading a row.** `noiseMs` is the gate: the combined standard error of
+the two medians, from a robust σ (IQR/1.349) so one hitched frame cannot
+inflate it. A `savedMs` under it did not resolve. `iqrMs` is the wider
+dwell's spread, context for how jittery the frames were — never a gate
+in its own right, and max−min emphatically is not one either: over 120
+frames a single outlier sets it at tens of times the real uncertainty.
+`noiseMs` covers only within-run scatter, so the authoritative floor is
+the run-to-run range from `debug.priceFrameRepeat(n)` read together with
+the end-of-run baseline drift, whichever is larger.
+
+**Never sum the column.** Each row is a marginal cost against the same
+baseline, and passes share bandwidth — disabling `hdrChain` also makes
+`mwBand` cheaper, so both rows count some of the same milliseconds. The
+column will happily "explain" more than 100% of a frame.
+
+A discarded warm-up runs before the baseline dwell (`warmupFrames`, 60):
+the baseline is every row's subtrahend, so a cold one biases the whole
+sweep in one direction.
 
 Adding a GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so
