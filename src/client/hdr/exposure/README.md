@@ -157,9 +157,13 @@ the formula:
 - **The display model only ever raises the exposure the scene
   measurement asked for** — `dm ≥ max(eye, guard)` always, so no source
   entering the frame can darken it past the scene-referred cut.
-- **`guard ≥ eye` is a pure coverage threshold** (5.1% of the frame for
-  the dominant source), so which regime governs is stateless. Nothing
-  here caches which branch governed last frame, and nothing may start to.
+- **`guard ≥ eye` is stateless** — nothing here caches which branch
+  governed last frame, and nothing may start to. It reduces to a coverage
+  threshold (5.1%) only where a body's brightest pixel sits
+  `DISC_PEAK_OVER_MEAN` over its own mean; the threshold it actually
+  imposes is `5.1% × (peak-over-mean ÷ 1.5)`, so a textured body — cloud
+  tops, ice, polar frost — must cover several times more of the frame to
+  take the pin than a Lambert disc does.
 - **The handover ramps over `ADAPT_HANDOVER_BLEND_MAG`** (one stop of
   branch disagreement — a factor 2 of coverage): the guard's pin and the
   floor can sit many magnitudes apart, and without the ramp a body
