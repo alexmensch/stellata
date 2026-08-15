@@ -257,8 +257,7 @@ export interface DiagnosticReadoutOpts {
 }
 
 /** Green-on-black selectable mono block — the shape every live readout in
- *  the panel writes `textContent` into. `extraCss` appends; it cannot
- *  override, so a caller wanting a different colour builds its own. */
+ *  the panel writes `textContent` into. */
 export function makeMonoReadout(extraCss = ''): HTMLDivElement {
   const el = document.createElement('div');
   el.style.cssText =

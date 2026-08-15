@@ -59,9 +59,9 @@ export function buildExposureSection(stellata: Stellata): DebugSection {
   onFrame();
   const unsubscribe = stellata.on('frame', onFrame);
 
-  // Every slider seeds from live state, not from the module constant: the
-  // panel rebuilds each section on open while the overrides outlive it, so
-  // a constant seed would show defaults over a swept build.
+  // Every slider seeds from live state: the panel rebuilds each section on
+  // open while the overrides outlive it, so a module-constant seed would
+  // show defaults over a swept build.
   body.appendChild(makeSlider({
     label: 'L_ADAPT (perception anchor)',
     min: 0.005,
