@@ -11,7 +11,7 @@ import random
 import re
 import time
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Sequence, TypeVar
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -84,22 +84,33 @@ def athyg_str_or_none(cell: str | None) -> str | None:
     return s
 
 
-def read_athyg_source_ids(csv_path: Path) -> list[int]:
-    """Return the AT-HYG Gaia DR3 source_id list. Empty- and '0'-
-    sentinel rows are dropped per the AT-HYG missing convention; the
-    Bailer-Jones and Apsis refresh scripts share this contract because
-    both queries are keyed on AT-HYG.gaia.
+# ─── The inherited spine ──────────────────────────────────────────────
+
+SPINE_SOURCE_ID_COLUMN = "gaia_source_id"
+
+
+def iter_spine_rows(path: Path) -> Iterator[Mapping[str, str]]:
+    """Stream `data/athyg/inherited-spine.tsv` as raw cell mappings.
+
+    The spine is the membership term (`docs/catalog-driver.md` § 3), so a
+    catalog-scoped request set derives from it and never from AT-HYG's own
+    CSV — which no refresh script reads.
     """
-    ids: list[int] = []
-    with csv_path.open(newline="") as fh:
-        reader = csv.reader(fh)
-        header = next(reader)
-        gi = header.index("gaia")
-        for row in reader:
-            sid = athyg_int_or_none(row[gi])
-            if sid is not None:
-                ids.append(sid)
-    return ids
+    with path.open(newline="") as fh:
+        yield from csv.DictReader(fh, delimiter="\t")
+
+
+def read_spine_source_ids(path: Path) -> list[int]:
+    """Gaia DR3 source_ids off the spine's `gaia_source_id` column, in file
+    order. The column holds what the frozen build resolved rather than an
+    AT-HYG cell, so it carries no '0' sentinel and an empty cell means the
+    no-Gaia tier.
+    """
+    return [
+        int(cell)
+        for row in iter_spine_rows(path)
+        if (cell := row[SPINE_SOURCE_ID_COLUMN].strip())
+    ]
 
 
 # ─── Retry ────────────────────────────────────────────────────────────

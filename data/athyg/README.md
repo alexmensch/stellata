@@ -65,14 +65,20 @@ side: its review queue has to describe the same records the record build
 labels (`scripts/catalog/classic-ids/README.md` § The label merge).
 Reference epoch J2000.0.
 
-`athyg_33_classic_ids.csv` is **no longer a build input, and no build script
-reads it.** It stays committed as the spine's provenance and for two consumers
-that walk the upstream cells directly:
+`athyg_33_classic_ids.csv` is **no longer an input to the record build, and no
+refresh script reads it.** It stays committed as the spine's provenance and for
+two consumers that walk the upstream cells directly:
 `src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
 (the boundary-epoch cross-check against the editorial `con` column — the only
 TypeScript reader left, and it spells the path itself) and
-`scripts/refresh/refresh-simbad-sptype.py` (the SIMBAD sp_type request set).
-The Gaia pull list left when `export-astrometry-request.ts` moved onto the
-spine column: request and record build now name the same source_ids by
-construction rather than by agreeing. A new AT-HYG release therefore no longer
-moves the catalogue — replacing the spine is `stellata-3bsf.8`.
+`scripts/binaries/build-binaries.py` (Stage 1's AT-HYG parse, on the
+`build:binaries` path, not `build:catalog`).
+
+Every request set moved onto the spine's own columns. The Gaia pull list went
+first with `export-astrometry-request.ts`; the Bailer-Jones, Apsis and SIMBAD
+pulls followed. Request and record build now name the same source_ids by
+construction rather than by agreeing, and each rebase drops what the CSV walk
+over-pulled — for the SIMBAD sp_type set, 3,172 source_ids the walk requested
+that never became records, against 193 the spine's resolved column gains
+(measured 2026-08-15). A new AT-HYG release therefore no longer moves the
+catalogue — replacing the spine is `stellata-3bsf.8`.
