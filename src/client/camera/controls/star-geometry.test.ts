@@ -4,6 +4,9 @@ import {
   physSizePx,
   pickScore,
   pickFromCandidates,
+  pickFromCandidatesResolved,
+  discHitRadiusPx,
+  MIN_DISC_HIT_RADIUS_PX,
   type StarPickCandidate,
   sortedDistRange,
   distAtFillFraction,
@@ -284,6 +287,89 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(r?.candidate.idx).toBe(81);
     expect(r?.candidate.cameraDistancePc).toBe(50_000);
     expect(r?.tier).toBe('prime');
+  });
+});
+
+describe('star-geometry / discHitRadiusPx', () => {
+  it('halves the drawn diameter once past the floor', () => {
+    expect(discHitRadiusPx(20)).toBe(10);
+    expect(discHitRadiusPx(2 * MIN_DISC_HIT_RADIUS_PX)).toBe(MIN_DISC_HIT_RADIUS_PX);
+  });
+
+  it('floors a sub-pixel disc so the cursor can still land on it', () => {
+    expect(discHitRadiusPx(0)).toBe(MIN_DISC_HIT_RADIUS_PX);
+    expect(discHitRadiusPx(1.5)).toBe(MIN_DISC_HIT_RADIUS_PX);
+  });
+});
+
+describe('star-geometry / pickFromCandidatesResolved', () => {
+  const c = (
+    idx: number,
+    pxDist: number,
+    hitRadius: number,
+    appMag: number,
+  ): StarPickCandidate => ({ idx, pxDist, hitRadius, appMag, cameraDistancePc: 1 });
+  const starScore = (cand: StarPickCandidate) => pickScore(cand.pxDist, cand.appMag);
+  const lit = (hitRadius: number) => () => ({ visible: true, hitRadius });
+
+  it('skips the best-scoring candidate when the frame draws nothing for it', () => {
+    // The whole point of the gate: idx 10 wins on score but renders
+    // black (dust / toe / adaptation), so the pick falls to idx 11.
+    const cands = [c(10, 1, 5, 4.0), c(11, 3, 5, 4.0)];
+    const r = pickFromCandidatesResolved(cands, 16, starScore, (cand) => ({
+      visible: cand.idx === 11,
+      hitRadius: 5,
+    }));
+    expect(r?.candidate.idx).toBe(11);
+    expect(r?.tier).toBe('prime');
+  });
+
+  it('returns null when nothing in either tier renders', () => {
+    const cands = [c(10, 1, 5, 4.0), c(11, 12, 5, 4.0)];
+    expect(
+      pickFromCandidatesResolved(cands, 16, starScore, () => ({ visible: false, hitRadius: 5 })),
+    ).toBeNull();
+  });
+
+  it('resolves each candidate at most once, even across the demotion path', () => {
+    // A demoted prime candidate is reconsidered in the fallback pass;
+    // each resolve is a GPU readback, so the memo is a correctness-
+    // adjacent perf invariant, not an optimisation.
+    const cands = [c(10, 4, 5, 4.0), c(11, 6, 8, 4.0)];
+    const seen: number[] = [];
+    pickFromCandidatesResolved(cands, 16, starScore, (cand) => {
+      seen.push(cand.idx);
+      return { visible: false, hitRadius: 0 };
+    });
+    expect(seen).toEqual([...new Set(seen)]);
+  });
+
+  it('demotes a shrunken prime candidate rather than dropping it', () => {
+    // Prefilter admitted a 5 px radius; extinction shrinks the drawn
+    // disc under the cursor distance. Still pickable — as fallback.
+    const cands = [c(10, 4, 5, 4.0)];
+    const r = pickFromCandidatesResolved(cands, 16, starScore, lit(1));
+    expect(r?.candidate.idx).toBe(10);
+    expect(r?.tier).toBe('fallback');
+  });
+
+  it('a surviving prime hit still beats a closer fallback candidate', () => {
+    // Tier dominance is the contract pickFromCandidates already keeps;
+    // laziness must not quietly reorder it.
+    const cands = [c(10, 5, 6, 4.0), c(11, 1, 0.5, 4.0)];
+    const r = pickFromCandidatesResolved(cands, 16, starScore, lit(6));
+    expect(r?.candidate.idx).toBe(10);
+    expect(r?.tier).toBe('prime');
+  });
+
+  it('stops resolving once a winner is found — the laziness the readback pays for', () => {
+    const cands = [c(10, 1, 5, 4.0), c(11, 2, 5, 4.0), c(12, 3, 5, 4.0)];
+    let calls = 0;
+    pickFromCandidatesResolved(cands, 16, starScore, () => {
+      calls++;
+      return { visible: true, hitRadius: 5 };
+    });
+    expect(calls).toBe(1);
   });
 });
 
