@@ -274,8 +274,6 @@ export async function runPriceFrame(
 
   const rows: PriceFrameRow[] = [];
   let restore: (() => void) | null = null;
-  // The dwells count samples per frame; with the camera still and the
-  // clock paused the render gate would otherwise skip every one.
   const releaseRenderHold = stellata.renderGate.hold();
   try {
     for (let f = 0; f < warmupFrames; f++) await nextFrame();

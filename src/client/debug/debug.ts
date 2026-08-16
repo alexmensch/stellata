@@ -92,8 +92,6 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
 
     const built = makeDebugPanel({ onClose: closePanel });
     panel = built.element;
-    // The panel's readouts and perf ring buffers are per-frame; a gated
-    // idle frame would freeze them mid-read.
     releaseRenderHold = stellata.renderGate.hold();
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
