@@ -13,11 +13,17 @@ per-rAF heartbeat.
 
 ```
 src/client/render-gate/
-  render-gate.ts               RenderGate — holds, DOM wake listeners,
+  render-gate.ts (+ test)      RenderGate — holds, DOM wake listeners,
                                the per-tick decision.
   render-gate-pure.ts (+ test) Pose snapshot compare + the render/skip
                                decision.
 ```
+
+Both sentinels reset on `dispose()` — the pose snapshot back to NaN, the
+hold count to zero. A hold released *after* that zeroing floors at 0
+rather than going negative: `Stellata.dispose()` does not close an open
+debug panel, so its release outlives the gate, and a negative count
+would silently make the next `hold()` a no-op.
 
 ## The decision, in priority order
 

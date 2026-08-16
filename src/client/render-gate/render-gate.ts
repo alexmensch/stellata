@@ -34,7 +34,10 @@ export class RenderGate {
     return () => {
       if (released) return;
       released = true;
-      this.holds--;
+      // Floored, not decremented: dispose() zeroes the count while a
+      // hold can still be outstanding (the debug panel outlives the
+      // shell), and a negative count makes the NEXT hold a no-op.
+      this.holds = Math.max(0, this.holds - 1);
     };
   }
 

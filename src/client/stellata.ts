@@ -2271,6 +2271,7 @@ export class Stellata implements FrameAnchor {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
+    this.lastAppliedDm = Number.NaN;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
