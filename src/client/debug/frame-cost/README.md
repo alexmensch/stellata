@@ -52,7 +52,8 @@ src/client/debug/frame-cost/
 
 `buildPassToggles`: the local depth pass (`localDepthPass.enabled`), MW
 band (`milkyway.setEnabled`), LG volumetric emission, molecular-cloud
-absorption (`setAbsorptionEnabled`), the HDR chain, the luminance
+absorption (`setAbsorptionEnabled`), the HDR chain and its four
+decomposition rows (§ Decomposing the HDR chain), the luminance
 reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), and the extinction prepass A/B. A pass inactive
 at the current view/state is skipped, not measured as zero.
@@ -77,6 +78,41 @@ Three rows are not what they look like:
   default Sol view with the fence held, the readback cadence identical
   in both states, and `bracketMs` at 0.23. Unexplained; check
   `disabledLimitMag` against `baselineLimitMag` before believing it.
+
+## Decomposing the HDR chain
+
+Four rows split the `hdrChain` aggregate. Each is a marginal cost
+against the same baseline and they overlap — `mrtAttachments` contains
+most of `statisticWrites`, `summation` and `reduction` — so never sum
+them; read each against the aggregate.
+
+- **`tonemapOp`** — `hdr.setTonemapEnabled(false)`: the resolve goes
+  straight pass-through with the target and attachments untouched. The
+  operator's ALU alone.
+- **`statisticWrites`** — masks attachment 1 out of every emitter draw;
+  the clear keeps writing it, so the reduction runs over an empty
+  attachment. Prices the emitters' statistic write bandwidth — NOT the
+  attachment's load/store, which only `mrtAttachments` removes.
+- **`summation`** — skips the downsample and collapses the resolve's
+  kernel to one centre tap: the convolution machinery, with the diffuse
+  writes still paid.
+- **`mrtAttachments`** — rebuilds the target with attachment 0 alone
+  (holding the fence, as `hdrChain` does): attachments 1 and 2 outright —
+  writes, load/store, the summation's source and the reduction's. What
+  `hdrChain` saves beyond this row plus `tonemapOp` is the single fp16
+  target itself against direct-to-canvas.
+
+### The compression probe — does the reduction's cost track content?
+
+The reduction reads 12–23 ms at vantages whose cut is exactly zero and
+~zero at Earth close approach, same buffer; the working hypothesis is
+lossless framebuffer compression — reducing a nearly-empty attachment is
+nearly free. The test, at a vantage where the row is expensive:
+`stellata.hdr.setStatisticWritesEnabled(false)`, then
+`debug.priceFrame({ passes: ['reduction'] })`. The attachment is
+cleared-to-zero, maximally compressible; a reduction row that collapses
+to ~zero means the cost tracks the attachment's content, not the chain's
+draws. Restore with `setStatisticWritesEnabled(true)`.
 
 ## The readback cadence — measured, and NOT the confound
 
