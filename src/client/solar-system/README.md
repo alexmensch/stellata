@@ -42,7 +42,9 @@ src/client/solar-system/
                                   table (eight majors + Pluto) + SOL_MOONS
                                   table (18 major moons) + the SOL_BODIES
                                   concatenation. Also carries the
-                                  PlanetAtmosphere rows (atmosphere/README.md).
+                                  PlanetAtmosphere rows (atmosphere/README.md;
+                                  per-body optical-depth sources in
+                                  docs/science-solar-system.md).
   sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written key →
                                   frozen Stellata ID pins (Sun + planets +
                                   moons + probes). See § Sol-system SID

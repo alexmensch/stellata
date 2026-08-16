@@ -77,7 +77,15 @@ writes the frozen reduction here at the width `dem_relief.py` declares.
 Raising that width (the Moon at 8192 once block compression lands) is a
 re-pull, not a resize: the frozen file carries no headroom, by the same
 trade the rows above make. Add a body by giving it a `DEM_BODIES` entry
-carrying its decode, both map centres, and its drawn radius.
+carrying its decode, its no-data sentinel, both map centres, and its
+drawn radius.
+
+**Budget memory for it.** `reduce_dem.py` converts the whole mosaic to
+float32 in one array before resampling — 4.2 GB for the 46080×23040
+MOLA grid, and Pillow's resize holds its own copy — so the Mars run
+wants something like 8 GB free on top of the 2.0 GB download. It is
+one-shot and run by hand, which is why it is written for clarity rather
+than tiled to a fixed memory ceiling.
 
 NASA Photojournal full-res assets live at
 `https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia<NN>/pia<NNNNN>/PIA<NNNNN>.jpg`
