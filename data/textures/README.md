@@ -8,11 +8,15 @@ folder:
   plus the authored ring tables (LFS for the JPEGs and TIFFs; see
   `src/README.md` for the per-file provenance table).
 - `*.jpg` + `<body>-rings.png` + `<body>-normal.webp` (this level) — the
-  built runtime artifacts, committed on regular git (~24 MB total, of
-  which the three normal maps are ~16 MB). Produced by
+  built runtime artifacts. Produced by
   `scripts/textures/build-textures.py` (manual, infrequent — like the
   dust build); `scripts/textures/sync-textures.ts` mirrors them to
-  `public/textures/` on every `pnpm run build` / `dev`.
+  `public/textures/` on every `pnpm run build` / `dev`. The colour maps
+  and ring strips stay on regular git (each well under `data/README.md`'s
+  ~1 MB LFS threshold, ~8 MB in total); the **normal maps ride LFS**
+  (`data/textures/*.webp`) at 3.8–7.5 MB each, like `data/dust/`'s
+  chunks — same shape, a built artifact whose canonical home is here and
+  whose `public/` copy is a gitignored mirror.
 
 ## Artifact contract
 
