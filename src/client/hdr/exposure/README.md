@@ -32,6 +32,10 @@ src/client/hdr/exposure/
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
     (+ test)                 no-measurement case.
+  emitter-visibility-pure.ts Whether an emitter puts a non-zero pixel on
+    (+ test)                 screen — the taper, the peak, the toe and
+                             the operator, resolved to one boolean
+                             (§ What "visible" means to a pick path).
   reduction/                 The GPU reduction of the HDR target's
                              statistic attachment, and its readback. Its
                              own README.
@@ -71,7 +75,7 @@ function of filter state alone.
 | uniform | value | who reads it |
 | --- | --- | --- |
 | `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, the MW chart isobar |
-| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, every CPU "is it drawn?" mirror (`drawCutoffMag`) |
+| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test (§ What "visible" means to a pick path) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
 | `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain, and the chart isobar |
 
@@ -104,9 +108,49 @@ it would thrash — and the dark-adapted limit is a property of the
 instrument, not of what happens to be in frame.
 `getEffectiveLimitMag()` (`uThresholdMag + dm`) is the one place
 adaptation moves a magnitude, and it feeds the readout and nothing else.
+The prohibition is on **cached and per-frame** consumers, which is what
+would thrash — an on-demand consumer that recomputes from scratch and
+stores nothing may read adaptation, and the pick paths do, through the
+live `uExposure` rather than through this readout.
 
 `setAdaptation` is the one setter that does **not** fire `onChange`: it
 runs every frame, and the URL sync and panel listen to that event.
+
+## What "visible" means to a pick path
+
+`uThresholdMag + SOFT_TAPER_MARGIN_MAG` is where the shaders stop
+emitting. It is **not** where the user stops seeing, and the gap is
+large enough to have shipped as a bug: clicks landed on stars in
+apparently empty sky. Three terms sit between the two.
+
+- **The taper's own endpoint.** `tap` is `1 − smoothstep(m_t, m_t + 0.5,
+  m)`, so at the bound it is exactly 0. The last magnitude the cutoff
+  admits emits nothing.
+- **The faint-end toe.** It compresses sub-threshold light to black over
+  `TOE_BLACK_MAG`, so the peak pixel crosses under half an 8-bit step at
+  **0.3066 mag** past threshold, not 0.5.
+- **Adaptation.** It is absent from all three magnitude bounds and rides
+  `uExposure` instead, so a cut moves the visible edge and leaves every
+  bound where it was. Past ~1.5 mag of cut the whole faint end is black
+  while the bounds have not moved at all.
+
+A fourth is not an exposure term but reaches the same conclusion:
+`catalog.absmag` is stored **de-extincted**, so any CPU magnitude is
+`A_V` brighter than what renders (`../../star-pipeline/extinction/README.md`).
+
+`emitterPutsInkOnScreen` answers the question the bounds cannot, by
+running the chain instead of approximating it: point-source peak → taper
+→ toe → extended Reinhard → sRGB, true iff the brightest pixel survives
+8-bit quantisation. It takes the **live** `uExposure`, which is how
+adaptation reaches it without any bound having to move.
+
+**Every term above only ever dims**, and that is what keeps the cheap
+bounds useful: an intrinsic magnitude inside `drawCutoffMag` is a
+conservative superset of what renders, so it stays the right *prefilter*
+for a catalog-wide scan. Prefilter with the bound, decide with the
+predicate — the star pick path (`../../camera/controls/picker.ts`) is
+the worked example, and it resolves candidates lazily because the
+extinction term costs a GPU readback.
 
 ## Adaptation — the frame measures itself
 

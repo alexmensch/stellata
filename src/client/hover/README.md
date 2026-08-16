@@ -142,9 +142,35 @@ How to apply:
   objects, distance / extent culling for wireframes, layer-shelved flags
   for un-registered providers. The same visibility logic the renderer
   uses to decide "draw this quad or not" is the right gate.
+
+**"The renderer's draw predicate" is not the vertex shader's discard.**
+A quad that survives every discard can still resolve to 0/255 — the soft
+taper reaches zero at the cutoff, and the faint-end toe blacks a source
+out ~0.2 mag before it. For anything on the HDR unit the honest question
+is whether its brightest pixel survives 8-bit quantisation, which is
+`emitterPutsInkOnScreen` (`../hdr/exposure/README.md` § What "visible"
+means to a pick path) and not a magnitude comparison. Emissive gates
+must also read the terms the shader applies and a CPU magnitude does
+not: dust extinction (the catalog is stored de-extincted, so the
+intrinsic value is always *brighter* than what renders) and the
+per-frame adaptation cut, which is absent from `uThresholdMag` by design
+and rides `uExposure` instead.
+
+A cheap magnitude test is still the right *prefilter* — every one of
+those terms only ever dims, so an intrinsic cutoff is a conservative
+superset — but it must not be the gate. The star path is the worked
+example: `picker.ts` prunes on the intrinsic magnitude and decides on
+`resolveStarPick`.
 - For the planet layer specifically: the planet shader emits no quad
-  when `appMag > uThresholdMag + 0.5`; the picker mirrors that exact kill
-  condition. NO additional gate on `focusedPlanetSystem !== null`.
+  when `appMag > uThresholdMag + 0.5`, and `forEachDrawnBodyView` mirrors
+  that — as an OR with `physDiscPx >= MESH_FADE_MIN_PX`, since a body
+  whose mesh is up is visible whatever its glare does. NO additional gate
+  on `focusedPlanetSystem !== null`. The magnitude half of that OR still
+  compares against `uThresholdMag` and so carries the adaptation blind
+  spot described above; the mesh half does not, which is why a parked
+  body — the case that drives the cut deepest — still picks correctly.
+  Converting it means moving `forEachDrawnBodyView`, which the label and
+  mirror-draw paths share, so it is not a pick-local change.
   The one non-visibility drop: a body collapsed onto its parent
   (`isCollapsedOntoParent` — sub-pixel from host / parent planet) is
   not individually hoverable; its point belongs to the parent's pick

@@ -68,10 +68,15 @@ export function cullMagFor(limitMag: number): number {
 }
 
 /**
- * The faintest magnitude that still puts pixels on screen — the CPU
- * mirror of the fragment shaders' taper, and the one rule every
- * "is it drawn, so is it pickable?" gate reads. Chart hard-clips at the
- * instrument limit: no taper, and it inherits no exposure state.
+ * The taper's far endpoint: past this the fragment shaders emit nothing
+ * at all. A **conservative prefilter**, not a visibility test — at the
+ * bound itself the taper is exactly zero, and three terms it cannot see
+ * (dust extinction, the adaptation cut, the faint-end toe) black a
+ * source out well before it. Since all three only ever dim, an
+ * intrinsic magnitude inside this bound is a valid superset of what
+ * renders, which is what makes it a sound prefilter and an unsound
+ * gate — `emitter-visibility-pure.ts` is the gate. Chart hard-clips at
+ * the instrument limit: no taper, and it inherits no exposure state.
  */
 export function drawCutoffMag(
   limitMag: number,

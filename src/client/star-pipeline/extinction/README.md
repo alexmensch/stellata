@@ -8,13 +8,17 @@ The **cancellation invariant** below is the load-bearing content here —
 catalog `absmag` / `ci` are stored de-extincted, so this runtime stack
 restores extinction rather than adding it twice.
 
-The source order this march follows — measured grid inside its coverage,
-analytic slab beyond, with the seam handed over as a coverage-exit distance —
-is a **shared contract**, not a local choice: the Milky Way band composes its
-own dust column the same way. `docs/science-galactic-structure.md` § The dust
-stack is the contract. The two share the analytic term and the ordering but
-**not** the sampling mechanism — this march cannot take a prefiltered field
-without breaking the cancellation invariant below.
+**This march has no analytic slab term** — it integrates the measured
+grid alone, and a sample outside the cube clamps to the zero-padded edge
+rather than handing over to a slab. So extinction beyond the 1.25 kpc
+coverage adds ≈0, which is what `scripts/catalog/distance/README.md`
+§ Build-time de-extinction states from the build side and what the
+cancellation invariant below requires: the runtime addition can only
+cancel the terms the build subtraction actually used. The Milky Way
+band's own dust column (`docs/science-galactic-structure.md` § The dust
+stack) *does* carry the slab, and shares the ordering — but not the
+sampling mechanism, and this march cannot take a prefiltered field
+without breaking the cancellation.
 
 ## Files in this area
 
@@ -90,6 +94,34 @@ recomputations per visible star per frame.
 The prepass stores raw physical A_V; `uDustEnabled ×
 uExtinctionStrength` scales it at the point of consumption, so
 strength changes never invalidate the cache.
+
+## Reading A_V back on the CPU
+
+`readAvMag(idx)` returns one star's raw A_V out of the cache texel
+`star.vert.glsl` fetches. The pick paths are the only caller: a star's
+extinction decides whether the renderer puts a pixel on screen for it at
+all, and a pick gated on the intrinsic magnitude selects stars the frame
+drew black (`../../hdr/exposure/README.md` § What "visible" means to a
+pick path).
+
+**Reading the texel is the point** — the alternative, a CPU march, needs
+the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and
+drops, and would be a second implementation of the integral free to
+drift from this one. `dust-raymarch-pure.ts` stays test-only for exactly
+that reason.
+
+Two constraints on any new caller:
+
+- **Event rate only.** It is a synchronous `readPixels`, so it stalls the
+  pipeline — the thing the reduction's fence exists to avoid
+  (`../../hdr/exposure/reduction/README.md` § Latency). Per pointer
+  event is fine; per frame or per star is not. The pick path resolves
+  candidates lazily in score order so a pick normally costs one read.
+- **Null means no cache, not no dust.** On the fallback path (no
+  `EXT_color_buffer_float`) the shader still dims the star through its
+  in-vertex march while this returns null, so a consumer that treats
+  null as "no extinction" degrades to the pre-existing behaviour rather
+  than to a wrong answer.
 
 ## The cancellation invariant
 
