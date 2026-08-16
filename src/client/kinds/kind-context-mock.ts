@@ -62,6 +62,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     detailPermits: () => true,
     constellationOf: () => null,
     onFrame: () => () => {},
+    requestRender: () => {},
     ...overrides,
   };
 }

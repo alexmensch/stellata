@@ -223,6 +223,7 @@ export class PlanetMeshLayer {
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
   private readonly loader = new THREE.TextureLoader();
+  private readonly requestRender: () => void;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
 
@@ -241,9 +242,11 @@ export class PlanetMeshLayer {
     field: PlanetBodyField,
     textureBaseUrl: string,
     hdr: HdrEmitterUniforms,
+    requestRender: () => void,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
+    this.requestRender = requestRender;
     this.hdr = pickHdrEmitterUniforms(hdr);
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
@@ -756,15 +759,23 @@ export class PlanetMeshLayer {
         const meanLuminance = measureMean
           ? measureMapMeanLuminance(tex.image as TexImageSource)
           : null;
-        this.textures.set(key, { state: 'ready', tex, meanLuminance });
+        this.resolveTexture(key, { state: 'ready', tex, meanLuminance });
       },
       undefined,
       () => {
         // Texture-less bodies (Uranus, future exoplanets) take the
         // representative-colour base path — a 404 is expected data.
-        this.textures.set(key, { state: 'missing' });
+        this.resolveTexture(key, { state: 'missing' });
       },
     );
+  }
+
+  /** Both outcomes change what the body draws, and both land between
+   *  ticks — a body left on the placeholder would sit there until
+   *  something else woke the render gate. */
+  private resolveTexture(key: string, state: TextureState): void {
+    this.textures.set(key, state);
+    this.requestRender();
   }
 
   dispose(): void {

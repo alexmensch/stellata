@@ -87,6 +87,12 @@ its catalog load blocks first paint and may reject) — and are only
   `HoverProvider['pick']`, and `collectKindPicks()` reads it off the
   module's hover provider for the Picker. A kind that wants a click
   pick supplies a hover provider.
+- **Work that lands between ticks calls `ctx.requestRender()`.** Frames
+  are on demand (`../render-gate/README.md`) and the gate cannot see a
+  module's async landings, so a texture resolving or a deferred fetch
+  completing must ask for the frame that shows it. The planet mesh
+  layer's texture load is the one live caller; a module whose landings
+  all route through `attach` or a bus emit already has it covered.
 - **Kind-specific machinery stays out of the contract.** The shell may
   hold a module's concrete type for cross-kind wiring (the solar-system
   cluster reads `kinds.probe.field` for its local-depth mirror); the

@@ -50,6 +50,12 @@ export interface KindContext {
   /** Subscribe to the per-frame tick (fires after the scene-layer update
    *  fan-out). Returns an unsubscribe. */
   onFrame(handler: () => void): () => void;
+  /** Ask for a frame. Frames are on demand
+   *  (`../render-gate/README.md`), and the gate sees only the camera,
+   *  the clock, and the bus — so anything landing between ticks that
+   *  changes what a layer draws (a texture resolving, a deferred fetch)
+   *  must say so here or it renders on whatever tick happens next. */
+  requestRender(): void;
 }
 
 /** One kind's pick path. It IS `HoverProvider.pick` — the Picker

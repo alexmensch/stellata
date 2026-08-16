@@ -121,7 +121,9 @@ export function createPlanetKindModule(): PlanetKindModule {
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
       field = new PlanetBodyField(kindCtx.sharedUniforms);
-      meshLayer = new PlanetMeshLayer(field, baseUrl, kindCtx.sharedUniforms);
+      meshLayer = new PlanetMeshLayer(
+        field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
+      );
       kindCtx.scene.add(field.group);
 
       // Horizons element tables — 1.5 MB that upgrades the ephemeris from

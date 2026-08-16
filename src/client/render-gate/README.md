@@ -63,11 +63,18 @@ src/client/render-gate/
 - The `attach*` family (dust, binaries, dust particles, constellation
   boundaries) and each streamed dust voxel chunk landing.
 - An applied adaptation `dm` that moved this frame (see above).
+- `KindContext.requestRender()` — the seam for a kind module's own
+  async landings, which reach neither the shell nor the bus. Its one
+  caller today is the planet mesh layer's lazy texture load
+  (`../solar-system/planets/README.md` § Planet mesh LOD): the body
+  draws a white placeholder until the map resolves, and with the clock
+  paused nothing else would ask for the frame that swaps it in.
 
 **A missed source shows as a frozen frame, which is a worse bug than a
 slow one** — when adding a mutation that changes what the frame draws
 without moving the camera, the clock, or emitting `'state'`, call
-`stellata.renderGate.invalidate()` from it. Dev-console setters that
+`stellata.renderGate.invalidate()` from it (or `ctx.requestRender()`
+from inside a kind module, which is the same call). Dev-console setters that
 bypass the bus (`stellata.hdr.*` switches, `setExtinctionStrength`, …)
 are covered in practice by the keydown/panel wake paths, but a console
 poke with hands off the keyboard can force a repaint with

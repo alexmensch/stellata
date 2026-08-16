@@ -321,6 +321,9 @@ crossfade.
   render the representative-colour + limb-darkening base path; there
   is no separate renderer for them. Textures load with
   `NoColorSpace` to match the pipeline's raw-framebuffer convention.
+  Either outcome resolving requests a frame (`ctx.requestRender`): a
+  load landing between ticks changes what the body draws, and frames
+  are on demand (`../../render-gate/README.md`).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
