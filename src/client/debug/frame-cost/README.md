@@ -78,9 +78,13 @@ Three rows are not what they look like:
   default Sol view with the fence held, the readback cadence identical
   in both states, and `bracketMs` at 0.23. Reproduced 2026-08-16 with
   the exposure pinned: −18.2 ms at bracket 15.1 and −52.4 ms at bracket
-  0.33, limit mags equal. Unexplained; check `disabledLimitMag` against
-  `baselineLimitMag` before believing it, and expect the negative at
-  this vantage.
+  0.33, limit mags equal — and at Earth close approach (−10.5 and
+  −14.1, brackets 6.6 / 7.0). The sign tracks the vantage: negative at
+  both deep-cut views, positive at both dm-0 views, and it flips
+  positive when the statistic writes are masked (§ The compression
+  probe). Unexplained; check `disabledLimitMag` against
+  `baselineLimitMag` before believing any one reading, and expect the
+  negative at deep-cut vantages.
 
 ## Decomposing the HDR chain
 
@@ -126,6 +130,15 @@ empty compresses well" is refuted. Working hypothesis, unverified: a
 cleared-but-never-written surface stays in fast-clear metadata state and
 sampling it forces a per-frame resolve, while a surface fully
 overwritten by smooth resolved-disc texels samples cheap.
+
+Replicated at the default Sol view: +43.1 ms at bracket 3.2 — the sign
+flips from that vantage's live-writes negative, and the ~45 ms cost of
+reducing a cleared attachment is vantage-independent. One gotcha the
+replication exposed: masking the writes BEFORE the sweep lets the cut
+fade to zero during the warmup, so the pin captures the wide-open limit
+(7.8) rather than the live one — the differential stays internally
+clean, but the scene is not comparable to unmasked runs at the same
+vantage. The `limitMag` columns are the tell.
 
 ## The readback cadence — measured, and NOT the confound
 
