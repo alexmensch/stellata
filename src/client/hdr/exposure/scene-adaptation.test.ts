@@ -13,6 +13,10 @@ import {
   L_ADAPT,
   L_TARGET,
 } from './scene-adaptation-pure';
+import {
+  ADAPT_PARK_PROBE_INTERVAL_FRAMES,
+  ADAPT_PARK_ZERO_LANDINGS,
+} from './adaptation-park-pure';
 
 const BASE_EXPOSURE = exposureForMagLimit(7.8);
 
@@ -186,6 +190,103 @@ describe('SceneAdaptation', () => {
     adaptation.measure(false, 1e6, false);
     expect(adaptation.getStatistic().meanL / atDefault)
       .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
+  });
+});
+
+// The park machine is pure and tested on its own; these pin the class's
+// wiring of it — what counts as a fresh landing, and which of the hold,
+// chart and warp seams reach it.
+describe('SceneAdaptation — the measurement park', () => {
+  /** One landed reading of a frame with nothing bright in it — a NEW object
+   *  per landing, since freshness is reference identity, exactly as a new
+   *  `poll()` landing is in the reduction. */
+  function darkLanding(): ReducedStatistic {
+    return { meanL: 0.1 * L_ADAPT, surfaceL: 0, coverage: 0, renderExposure: BASE_EXPOSURE };
+  }
+
+  let now = 0;
+  const step = (adaptation: SceneAdaptation) =>
+    adaptation.measure(false, (now += 16), false);
+
+  function parkIt(adaptation: SceneAdaptation): void {
+    for (let i = 0; i < ADAPT_PARK_ZERO_LANDINGS; i++) {
+      reduced = darkLanding();
+      step(adaptation);
+    }
+  }
+
+  /** Frames with no fresh landing — `reduced` holds the same object, as the
+   *  frozen `latest` does while the reduction's draws are parked. */
+  function idle(adaptation: SceneAdaptation, frames: number): void {
+    for (let i = 0; i < frames; i++) step(adaptation);
+  }
+
+  beforeEach(() => { now = 0; });
+
+  it('parks after the required run of zero landings, and not before', () => {
+    const adaptation = makeAdaptation();
+    for (let i = 0; i < ADAPT_PARK_ZERO_LANDINGS; i++) {
+      expect(adaptation.isMeasurementParked()).toBe(false);
+      reduced = darkLanding();
+      step(adaptation);
+    }
+    expect(adaptation.isMeasurementParked()).toBe(true);
+    expect(adaptation.getDm()).toBe(0);
+  });
+
+  it('counts landings, not the frames a reading stays current for', () => {
+    const adaptation = makeAdaptation();
+    reduced = darkLanding();
+    idle(adaptation, 10 * ADAPT_PARK_ZERO_LANDINGS);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+  });
+
+  it('opens a probe after the interval and re-parks on a zero landing', () => {
+    const adaptation = makeAdaptation();
+    parkIt(adaptation);
+    idle(adaptation, ADAPT_PARK_PROBE_INTERVAL_FRAMES - 1);
+    expect(adaptation.getParkPhase()).toBe('parked');
+    step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('probing');
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    reduced = darkLanding();
+    step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('parked');
+  });
+
+  it('unparks on a bright probe landing and slews from zero', () => {
+    const adaptation = makeAdaptation();
+    parkIt(adaptation);
+    idle(adaptation, ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    const first = step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('active');
+    expect(first).toBeLessThan(0);
+    expect(first).toBeGreaterThan(target());
+  });
+
+  it('clears the park on chart entry', () => {
+    const adaptation = makeAdaptation();
+    parkIt(adaptation);
+    adaptation.measure(true, (now += 16), false);
+    expect(adaptation.getParkPhase()).toBe('active');
+  });
+
+  it('freezes under a hold, collapsing a probe in flight to parked', () => {
+    const adaptation = makeAdaptation();
+    parkIt(adaptation);
+    idle(adaptation, ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.getParkPhase()).toBe('probing');
+    adaptation.setHeld(true);
+    expect(adaptation.getParkPhase()).toBe('parked');
+    // Held frames never re-open a probe, so every dwell of a sweep prices
+    // the same parked frame.
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    idle(adaptation, 10 * ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.getParkPhase()).toBe('parked');
+    adaptation.setHeld(false);
+    step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('active');
   });
 });
 
