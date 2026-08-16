@@ -20,12 +20,15 @@ live in `data/textures/README.md`; this folder owns the scripts.
   to `SOL_PLANETS` and the strips' 8-bit visibility claims.
 - `dem_relief.py` — surface-relief half of the build (imported by
   it): the `DEM_BODIES` per-body contract and the DEM →
-  tangent-space normal-map derivation. Owns the two facts nothing
+  tangent-space normal-map derivation. Owns the three facts nothing
   else can state — each frozen DEM's own map centre versus its
-  **colour** map's (the build rolls the first onto the second), and
-  the radius the body is drawn at, which sets the slope scale.
-  `dem-relief.test.ts` pins both against `SOL_BODIES` /
-  `RotationElements.mapCenterLonDeg`, plus the achieved tilt
+  **colour** map's (the build rolls the first onto the second), the
+  radius the body is drawn at, which sets the slope scale, and the
+  elevation span, which both decodes the reduction and gives the
+  renderer its limb bound on relief lighting.
+  `dem-relief.test.ts` pins all three against `SOL_BODIES` /
+  `RotationElements.mapCenterLonDeg` /
+  `surface-relief-pure.ts:RELIEF_ELEV_SPAN_M`, plus the achieved tilt
   statistics in `data/textures/relief.json`, the shipped maps' own
   dimensions read from their WebP headers, and the +1 encoding of the
   unused third channel. Rationale: `data/textures/README.md`

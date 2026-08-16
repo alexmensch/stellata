@@ -22,6 +22,10 @@ uniform float uHasMap;
 // § Surface relief.
 uniform sampler2D uNormalMap;
 uniform float uHasNormalMap;
+// Sines of the solar depression that bound how far past the geometric
+// terminator relief may light ground: x still full, y none at all
+// (surface-relief/surface-relief-pure.ts:reliefHorizonSines).
+uniform vec2 uReliefHorizon;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -80,7 +84,7 @@ const float LIMB_EXP = 0.5;
 
 // Equirect tangent frame, exact on the drawn spheroid because a surface of
 // revolution puts its normal in the meridian plane. Mirror + the frame's
-// contract: surface-relief-pure.ts.
+// contract: surface-relief/surface-relief-pure.ts.
 vec3 stellataReliefNormal(vec3 n, vec3 pole, vec2 enc) {
   vec3 e = cross(pole, n);
   float eLen = length(e);
@@ -102,6 +106,14 @@ void main() {
     ? stellataReliefNormal(n, uPoleView, texture(uNormalMap, vUvM).rg)
     : n;
   float sunCosRelief = dot(nRelief, uSunDirView);
+  // Slope alone buys nothing once the body's own limb is in the way, so the
+  // relief term is fenced at the depression no elevation on this body can see
+  // past. Rides the GEOMETRIC cosine — the bound is the body, not the facet —
+  // and is 1 wherever the smooth-sphere terminator itself is lit, so it can
+  // only ever remove light relief added (README.md § Surface relief).
+  float horizonGate = uHasNormalMap > 0.5
+    ? smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)
+    : 1.0;
   // Lambert cosine away from the terminator; a smoothstep band of
   // half-width uTermSoftness carries twilight past it on atmospheric
   // bodies. The 1e-4 floor keeps the airless w=0 case a hard cut
@@ -109,7 +121,8 @@ void main() {
   // cosine, so a sunward slope stays lit past the geometric terminator
   // (README.md § Surface relief).
   float w = max(uTermSoftness, 1e-4);
-  float dayside = smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w);
+  float dayside =
+    smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;
   // Inter-body shadows: attenuate per caster on the ray toward the sun.
   // Penumbra half-width grows as tAlong·uSunAngRad, so shadows are
   // soft-edged and the antumbral (annular) case falls out naturally.

@@ -84,6 +84,11 @@ owns the derivation and the per-body contract.
 - Vertical exaggeration is **none**: slopes are true, computed against
   the radius the body is *drawn* at, so relief is honest at any camera
   distance.
+- Each body's **elevation span** (`span_m`, asserted against the published
+  one by `reduce_dem.py`) is read twice: it decodes the reduction, and the
+  renderer fences relief lighting at the depression that span's summit can
+  see past the limb —
+  `src/client/solar-system/planets/README.md` § Surface relief.
 - Measured area-weighted tilt off the local vertical, over the same
   ±85° window, ships in `relief.json` and is pinned by
   `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),

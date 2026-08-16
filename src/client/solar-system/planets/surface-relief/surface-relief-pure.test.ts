@@ -1,10 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { RELIEF_POLE_EPS, reliefNormal } from './surface-relief-pure';
+import { SOL_BODIES } from '../../planet-system';
+import {
+  RELIEF_ELEV_SPAN_M,
+  RELIEF_POLE_EPS,
+  reliefHorizonSines,
+  reliefNormal,
+} from './surface-relief-pure';
 
 const frag = readFileSync(
-  fileURLToPath(new URL('./planet-mesh.frag.glsl', import.meta.url)),
+  fileURLToPath(new URL('../planet-mesh.frag.glsl', import.meta.url)),
   'utf8',
 );
 
@@ -100,7 +106,12 @@ describe('relief feeds the direct term only', () => {
     expect(frag.match(/nRelief/g)).toHaveLength(2);
     expect(frag.match(/sunCosRelief/g)).toHaveLength(3);
     expect(frag).toContain(
-      'float dayside = smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w);');
+      'smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;');
+  });
+
+  it('bounds the term at the body, on the geometric cosine', () => {
+    expect(frag).toContain(
+      'smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)');
   });
 
   it('leaves the geometric consumers of sunCos untouched', () => {
@@ -110,5 +121,59 @@ describe('relief feeds the direct term only', () => {
     expect(frag).toContain('float ndotv = clamp(dot(n, v), 0.0, 1.0);');
     expect(frag).toContain(
       'vec3 surf = normalize(stellata_scalePolar(normalize(vNormalV), uPoleView, uPolarRadiusR));');
+  });
+});
+
+const degOf = (sin: number): number => (Math.asin(sin) * 180) / Math.PI;
+const bodyOf = (name: string) =>
+  SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
+const boundsOf = (name: string) =>
+  reliefHorizonSines(RELIEF_ELEV_SPAN_M[name], bodyOf(name).radiusKm);
+
+describe('the limb bound on how far relief may light', () => {
+  it('gives each body a bound off its own DEM span and radius', () => {
+    // Solar depression in degrees. The Moon's 19.9 km of relief over a 1737 km
+    // radius is the widest of the three; Mercury's 9.9 km over 2440 km the
+    // narrowest, less than half the Moon's.
+    const pins: Record<string, [number, number]> = {
+      moon: [6.3603, 8.6469],
+      mercury: [3.4694, 5.1479],
+      mars: [6.3956, 7.5316],
+    };
+    expect(Object.keys(pins).sort()).toEqual(Object.keys(RELIEF_ELEV_SPAN_M).sort());
+    for (const [name, [full, none]] of Object.entries(pins)) {
+      const [fullSin, noneSin] = boundsOf(name);
+      expect(degOf(fullSin), `${name} full`).toBeCloseTo(full, 2);
+      expect(degOf(noneSin), `${name} none`).toBeCloseTo(none, 2);
+    }
+  });
+
+  it('opens before it closes, on every body', () => {
+    for (const name of Object.keys(RELIEF_ELEV_SPAN_M)) {
+      const [fullSin, noneSin] = boundsOf(name);
+      expect(noneSin, `${name}`).toBeGreaterThan(fullSin);
+    }
+  });
+
+  it('never reaches the terminator the smooth sphere lights on its own', () => {
+    // The gate multiplies `dayside` whole, so it has to be saturated across the
+    // terminator band or it would dim light relief never added — including the
+    // by-eye softness widening an atmospheric body carries.
+    for (const name of Object.keys(RELIEF_ELEV_SPAN_M)) {
+      const [fullSin] = boundsOf(name);
+      expect(fullSin, `${name} vs its softness band`).toBeGreaterThan(
+        bodyOf(name).terminatorSoftness ?? 0,
+      );
+    }
+  });
+
+  it('is the body that bounds it, not the slope', () => {
+    // Flat ground on a body with no elevation at all sees the sun exactly to
+    // the geometric terminator, however the map tilts its normal there.
+    expect(reliefHorizonSines([0, 0], 1737.4)).toEqual([0, 0]);
+    // Doubling the radius under the same relief narrows the bound.
+    const [, near] = reliefHorizonSines([-9110, 10760], 1737.4);
+    const [, far] = reliefHorizonSines([-9110, 10760], 3474.8);
+    expect(far).toBeLessThan(near);
   });
 });

@@ -9,6 +9,10 @@ import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-s
 import { measureMapMeanLuminance } from './emission/map-mean-luminance';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
+  RELIEF_ELEV_SPAN_M,
+  reliefHorizonSines,
+} from './surface-relief/surface-relief-pure';
+import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
@@ -185,6 +189,15 @@ const RINGS_SUFFIX = '-rings';
  *  lowercased, so `textures` and the fetched URL cannot disagree on case. */
 const textureKey = (name: string, suffix = ''): string =>
   `${name.toLowerCase()}${suffix}`;
+
+/** The body's own limb bound on relief lighting, in the shader's units.
+ *  Zero for bodies with no map — the shader never reads it there. */
+const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
+  const span = RELIEF_ELEV_SPAN_M[textureKey(planet.name)];
+  return span
+    ? new THREE.Vector2(...reliefHorizonSines(span, planet.radiusKm))
+    : new THREE.Vector2();
+};
 
 type TextureExt = 'jpg' | 'png' | 'webp';
 
@@ -598,6 +611,7 @@ export class PlanetMeshLayer {
         uHasMap: { value: 0 },
         uNormalMap: { value: this.placeholder },
         uHasNormalMap: { value: 0 },
+        uReliefHorizon: { value: reliefHorizonOf(planet) },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
