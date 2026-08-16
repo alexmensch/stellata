@@ -12,8 +12,8 @@ import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
-  MIN_DISC_HIT_RADIUS_PX,
   angularDiameterPx,
+  discHitRadiusPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../camera/controls/star-geometry';
@@ -207,7 +207,7 @@ export class LocalGroupLayer {
       const pxDist = Math.hypot(cursorX - screenX, cursorY - screenY);
 
       const pxSize = 2 * Math.atan(maxSemiAxisPc(obj) / Math.max(cameraDistancePc, 1)) * pxPerRad;
-      const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
+      const hitRadius = discHitRadiusPx(pxSize);
 
       if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
       candidates.push({ idx: i, pxDist, hitRadius, cameraDistancePc });
