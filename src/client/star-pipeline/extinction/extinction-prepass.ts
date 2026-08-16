@@ -158,6 +158,40 @@ export class ExtinctionPrepass {
     this.syncConsumerUniforms();
   }
 
+  /**
+   * Raw physical A_V for one star, read out of the very texel
+   * `star.vert.glsl` fetches — so a CPU consumer cannot drift from the
+   * shader the way a re-implemented march would. Null when the cache is
+   * inert (no `EXT_color_buffer_float`, no dust yet, or the dev A/B
+   * switch parked it), where the shader is on its in-vertex fallback and
+   * there is nothing to read.
+   *
+   * Synchronous, and therefore for **event-rate callers only** — the
+   * pick paths. Never call it per frame or per star: `readPixels` stalls
+   * the pipeline, which is exactly what the reduction's fence exists to
+   * avoid (`../../hdr/exposure/reduction/README.md` § Latency).
+   */
+  readAvMag(idx: number): number | null {
+    if (this.rt === null || !this.isActive()) return null;
+    const gl = this.renderer.getContext() as WebGL2RenderingContext;
+    const prev = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.rt);
+    // RGBA/FLOAT is the pair readPixels guarantees on a float
+    // attachment; the target's own RED/FLOAT is implementation-defined
+    // and rejected outright by some drivers.
+    gl.readPixels(
+      idx % AV_TEX_WIDTH,
+      (idx / AV_TEX_WIDTH) | 0,
+      1, 1,
+      gl.RGBA, gl.FLOAT,
+      this.avScratch,
+    );
+    this.renderer.setRenderTarget(prev);
+    return this.avScratch[0];
+  }
+
+  private readonly avScratch = new Float32Array(4);
+
   private syncConsumerUniforms() {
     const on = this.isActive();
     this.uniforms.uAvPrepassEnabled.value = on ? 1 : 0;
