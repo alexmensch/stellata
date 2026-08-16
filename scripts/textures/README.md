@@ -7,12 +7,29 @@ live in `data/textures/README.md`; this folder owns the two scripts.
   artifacts (per-body ≤2048-wide equirect JPEG + the 2048×1 RGBA
   `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,
   Uranus/Neptune from authored ring tables at true opacity —
-  `data/textures/README.md` § Ring strips). Manual, infrequent
-  (`pnpm run build:textures`); needs Pillow. Idempotent via mtime
-  against source + script. Uranus is deliberately absent from
+  `data/textures/README.md` § Ring strips — + the 4096-wide
+  `<body>-normal.webp` relief maps for the three bodies with a usable
+  global DEM). Manual, infrequent
+  (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
+  mtime against source + script. Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
   strip is separate). `ring-strips.test.ts` pins `RING_TABLES` spans
   to `SOL_PLANETS` and the strips' 8-bit visibility claims.
+- `dem_relief.py` — surface-relief half of the build (imported by
+  it): the `DEM_BODIES` per-body contract and the DEM →
+  tangent-space normal-map derivation. Owns the two facts nothing
+  else can state — each frozen DEM's own map centre versus its
+  **colour** map's (the build rolls the first onto the second), and
+  the radius the body is drawn at, which sets the slope scale.
+  `dem-relief.test.ts` pins both against `SOL_BODIES` /
+  `RotationElements.mapCenterLonDeg`, plus the achieved tilt
+  statistics in `data/textures/relief.json`. Rationale:
+  `data/textures/README.md` § Surface relief.
+- `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
+  downloaded 0.5–2.0 GB global DEM → the frozen
+  `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode
+  traps (USGS int16-in-mode-`I` strips, the SVS half-metre datum) and
+  asserts the elevation span against the published one.
 - `texture_calibration.py` — index-anchored colour calibration
   (imported by the build): per-map linear-RGB gains that move each
   map's sphere-weighted mean chromaticity onto the body's adopted

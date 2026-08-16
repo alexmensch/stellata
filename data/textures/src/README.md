@@ -2,9 +2,9 @@
 
 Frozen originals, downloaded 2026-07-18 unless a row states
 otherwise, plus two authored ring tables compiled from the literature.
-Consumed only by `scripts/textures/build-textures.py`. JPEGs ride LFS
-(`data/textures/src/*.jpg` in `.gitattributes`); the ring-profile
-text tables are small and stay on regular git.
+Consumed only by `scripts/textures/build-textures.py`. JPEGs and TIFFs
+ride LFS (`data/textures/src/*.jpg`, `*.tif` in `.gitattributes`); the
+ring-profile text tables are small and stay on regular git.
 
 | File | Body | Source & credit | License | URL |
 |---|---|---|---|---|
@@ -33,6 +33,9 @@ text tables are small and stay on regular git.
 | `triton-pia18668.jpg` | Triton | Voyager 2 global colour mosaic (PIA18668, Schenk/LPI 2014). Black region = un-imaged northern hemisphere (real data gap) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18668 |
 | `rings-uranus.tsv` | Uranus rings | Authored table (not a download), values compiled 2026-07-18: the 10 narrow main rings' mid radii, mean widths and mid-range normal optical depths from the Earth-based + Voyager 2 occultation canon (French, Nicholson, Porco & Elliot 1991, in *Uranus*, Univ. of Arizona Press) | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F/abstract |
 | `rings-neptune.tsv` | Neptune rings | Authored table (not a download), values compiled 2026-07-18: Galle/Le Verrier/Lassell/Arago/Adams radii, widths and normal optical depths from Voyager 2 + stellar occultations (Porco et al. 1995, in *Neptune and Triton*, Univ. of Arizona Press); Adams τ is the azimuthal average folding in its arcs | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N/abstract |
+| `moon-dem-svs.tif` | Moon (relief) | NASA SVS CGI Moon Kit `ldem_64_uint.tif` (LRO LOLA, 23040×11520 uint16), 4096-px area-average reduction made at retrieval 2026-08-16 from the 506 MB original. **Carries NO GDAL scale tag and is NOT metres** — samples are half-metres above a 1727400 m datum; the published LOLA span −9110…+10760 m is the check. Centre 0°E, positive-east | Public domain | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_64_uint.tif |
+| `mercury-dem-messenger.tif` | Mercury (relief) | USGS MESSENGER Global DEM 665 m v2 (23040×11520 int16, GDAL `SCALE` 0.5, nodata −32768, sphere radius 2439400 m), 4096-px area-average reduction made at retrieval 2026-08-16 from the 506 MB original. **Centre 180°E** — unlike its colour map, so the build rolls it | Public domain | https://planetarymaps.usgs.gov/mosaic/Mercury_Messenger_USGS_DEM_Global_665m_v2.tif |
+| `mars-dem-mola.tif` | Mars (relief) | USGS MGS MOLA DEM 463 m global mosaic (46080×23040 int16 metres, no scale tag, nodata −32768), 4096-px area-average reduction made at retrieval 2026-08-16 from the 2.0 GB original. Centre 0°E, positive-east | Public domain | https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif |
 
 Venus is deliberately the **cloud deck**, not the Magellan radar
 surface — the physically honest naked-eye appearance (2f6.6 design
@@ -49,13 +52,33 @@ never use (the same trade the Mars row makes by freezing the 1 km/px
 browse). The refresh recipe below re-derives them from the linked
 originals.
 
+The three `*-dem-*.tif` rows make the same trade against 0.5–2.0 GB
+originals, and are stored as **uint16 metres biased by 32768** — a
+signed elevation in a format every tool reads back identically.
+Reducing to the pipeline's width is area-average, never LANCZOS: a
+DEM must not ring, because overshoot at a crater rim becomes a slope
+that isn't there. Both USGS DEMs are int16 in one strip per row, which
+Pillow mis-decodes as int32 mode `I`; `reduce_dem.py` reads the strip
+block directly and asserts the decoded elevation span against the
+published one, so a missed scale tag fails loudly instead of shipping
+doubled slopes.
+
 ## Refresh recipe
 
 These are one-shot frozen snapshots, not a `scripts/refresh/`
 pipeline. To upgrade a body: download a better map (vet the license,
 prefer NASA/USGS PD), replace the file here, update the table row and
 the `BODIES` map in `scripts/textures/build-textures.py`, rerun
-`pnpm run build:textures`, and commit both layers. NASA Photojournal
-full-res assets live at
+`pnpm run build:textures`, and commit both layers.
+
+For a **DEM**, download the original from its row's URL and run
+`python3 scripts/textures/reduce_dem.py <body> <downloaded.tif>` — it
+writes the frozen reduction here at the width `dem_relief.py` declares.
+Raising that width (the Moon at 8192 once block compression lands) is a
+re-pull, not a resize: the frozen file carries no headroom, by the same
+trade the rows above make. Add a body by giving it a `DEM_BODIES` entry
+carrying its decode, both map centres, and its drawn radius.
+
+NASA Photojournal full-res assets live at
 `https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia<NN>/pia<NNNNN>/PIA<NNNNN>.jpg`
 (the old `photojournal.jpl.nasa.gov/jpeg/…` pattern now serves HTML).
