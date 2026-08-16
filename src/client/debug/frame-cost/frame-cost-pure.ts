@@ -5,6 +5,9 @@ export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
   readonly iqrMs: number;
+  /** Serial structure in the samples, not a duration — see
+   *  `lag1Autocorrelation`. */
+  readonly lag1: number;
 }
 
 export interface PriceFrameRow {
@@ -21,6 +24,10 @@ export interface PriceFrameRow {
    *  baselines bracketing this measurement. A savedMs under it is drift,
    *  whatever noiseMs says. */
   readonly bracketMs?: number;
+  /** Lag-1 autocorrelation of the reference dwell(s) and of the disabled
+   *  one — whether each dwell's spread is alternation, noise, or drift. */
+  readonly baselineLag1: number;
+  readonly disabledLag1: number;
 }
 
 export interface DwellFit {
@@ -99,12 +106,49 @@ export function percentile(xs: readonly number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.max(0, rank))];
 }
 
+/** Average rank, ties shared, so one hitched frame carries the weight of
+ *  one sample instead of the weight of its magnitude. */
+function ranks(xs: readonly number[]): number[] {
+  const order = xs
+    .map((x, i) => ({ x, i }))
+    .sort((a, b) => a.x - b.x);
+  const out = new Array<number>(xs.length);
+  let i = 0;
+  while (i < order.length) {
+    let j = i;
+    while (j + 1 < order.length && order[j + 1].x === order[i].x) j++;
+    const shared = (i + j) / 2;
+    for (let k = i; k <= j; k++) out[order[k].i] = shared;
+    i = j + 1;
+  }
+  return out;
+}
+
+/** Lag-1 autocorrelation of a dwell's frame times, on ranks. Negative is
+ *  alternation, zero independent scatter, positive drift — and `noiseMs`
+ *  is only an honest standard error in the middle case. Reading one:
+ *  README.md § Reading a row. */
+export function lag1Autocorrelation(samples: readonly number[]): number {
+  if (samples.length < 3) return 0;
+  const r = ranks(samples);
+  const mean = (r.length - 1) / 2;
+  let covariance = 0;
+  let variance = 0;
+  for (const [i, rank] of r.entries()) {
+    const deviation = rank - mean;
+    variance += deviation * deviation;
+    if (i + 1 < r.length) covariance += deviation * (r[i + 1] - mean);
+  }
+  return variance === 0 ? 0 : covariance / variance;
+}
+
 export function summarizeDwell(samples: readonly number[]): DwellStats | null {
   if (samples.length === 0) return null;
   return {
     samples: samples.length,
     medianMs: median(samples),
     iqrMs: percentile(samples, 0.75) - percentile(samples, 0.25),
+    lag1: lag1Autocorrelation(samples),
   };
 }
 
@@ -140,6 +184,8 @@ export function buildPriceRow(
     samples: Math.min(baseline.samples, disabled.samples),
     iqrMs: Math.max(baseline.iqrMs, disabled.iqrMs),
     noiseMs: differentialNoiseMs(baseline, disabled),
+    baselineLag1: baseline.lag1,
+    disabledLag1: disabled.lag1,
   });
 }
 
@@ -168,6 +214,8 @@ export function buildInterleavedRow(
     iqrMs: Math.max(before.iqrMs, after.iqrMs, disabled.iqrMs),
     noiseMs: Math.hypot(referenceSe, medianStandardError(disabled)),
     bracketMs: Math.abs(after.medianMs - before.medianMs),
+    baselineLag1: (before.lag1 + after.lag1) / 2,
+    disabledLag1: disabled.lag1,
   });
 }
 
@@ -181,6 +229,8 @@ function assembleRow(
     iqrMs: number;
     noiseMs: number;
     bracketMs?: number;
+    baselineLag1: number;
+    disabledLag1: number;
   },
 ): PriceFrameRow {
   const savedMs = referenceMs - disabledMs;
@@ -195,6 +245,8 @@ function assembleRow(
     iqrMs: round3(stats.iqrMs),
     noiseMs: round3(stats.noiseMs),
     ...(stats.bracketMs === undefined ? {} : { bracketMs: round3(stats.bracketMs) }),
+    baselineLag1: round3(stats.baselineLag1),
+    disabledLag1: round3(stats.disabledLag1),
   };
 }
 

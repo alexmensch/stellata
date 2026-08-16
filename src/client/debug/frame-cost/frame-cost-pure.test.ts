@@ -4,6 +4,7 @@ import {
   percentile,
   summarizeDwell,
   differentialNoiseMs,
+  lag1Autocorrelation,
   buildPriceRow,
   buildInterleavedRow,
   fitDwellFrames,
@@ -14,6 +15,13 @@ const FIT = {
   settleFrames: 30,
   minDwellFrames: 30,
 };
+
+const dwell = (samples: number, medianMs: number, iqrMs: number, lag1 = 0) => ({
+  samples,
+  medianMs,
+  iqrMs,
+  lag1,
+});
 
 describe('frame-cost-pure', () => {
   it('median: odd, even, single', () => {
@@ -36,6 +44,7 @@ describe('frame-cost-pure', () => {
       samples: 4,
       medianMs: 2.5,
       iqrMs: 2,
+      lag1: 0.25,
     });
   });
 
@@ -62,8 +71,8 @@ describe('frame-cost-pure', () => {
   });
 
   it('buildPriceRow differences medians and reports the wider IQR', () => {
-    const baseline = { samples: 100, medianMs: 20, iqrMs: 3 };
-    const disabled = { samples: 90, medianMs: 14, iqrMs: 8 };
+    const baseline = dwell(100, 20, 3);
+    const disabled = dwell(90, 14, 8);
     const row = buildPriceRow('localDepth', 'timer-query', baseline, disabled);
     expect(row.savedMs).toBe(6);
     expect(row.savedPct).toBe(30);
@@ -73,17 +82,17 @@ describe('frame-cost-pure', () => {
   });
 
   it('buildPriceRow: negative differential survives (a pass that got cheaper when enabled)', () => {
-    const baseline = { samples: 10, medianMs: 10, iqrMs: 2 };
-    const disabled = { samples: 10, medianMs: 12, iqrMs: 2 };
-    expect(buildPriceRow('x', 'raf-delta', baseline, disabled).savedMs).toBe(-2);
+    expect(
+      buildPriceRow('x', 'raf-delta', dwell(10, 10, 2), dwell(10, 12, 2)).savedMs,
+    ).toBe(-2);
   });
 
   it('bracketing cancels linear drift a single baseline charges to the pass', () => {
     // The instrument walks 60 -> 50 ms across the three dwells; the pass
     // itself is free.
-    const before = { samples: 120, medianMs: 60, iqrMs: 4 };
-    const disabled = { samples: 120, medianMs: 55, iqrMs: 4 };
-    const after = { samples: 120, medianMs: 50, iqrMs: 4 };
+    const before = dwell(120, 60, 4);
+    const disabled = dwell(120, 55, 4);
+    const after = dwell(120, 50, 4);
 
     expect(buildPriceRow('free', 'timer-query', before, disabled).savedMs).toBe(5);
     expect(
@@ -95,9 +104,9 @@ describe('frame-cost-pure', () => {
     const row = buildInterleavedRow(
       'hdrChain',
       'timer-query',
-      { samples: 120, medianMs: 50, iqrMs: 6 },
-      { samples: 120, medianMs: 42, iqrMs: 6 },
-      { samples: 120, medianMs: 9, iqrMs: 2 },
+      dwell(120, 50, 6),
+      dwell(120, 42, 6),
+      dwell(120, 9, 2),
     );
     expect(row.baselineMs).toBe(46);
     expect(row.savedMs).toBe(37);
@@ -106,7 +115,7 @@ describe('frame-cost-pure', () => {
   });
 
   it('a single-baseline row carries no bracket', () => {
-    const stats = { samples: 10, medianMs: 10, iqrMs: 1 };
+    const stats = dwell(10, 10, 1);
     expect(buildPriceRow('x', 'timer-query', stats, stats).bracketMs).toBeUndefined();
   });
 
@@ -164,8 +173,41 @@ describe('frame-cost-pure', () => {
     ).toBe(120);
   });
 
+  it('lag1: frame-to-frame alternation reads strongly negative', () => {
+    const alternating = Array.from({ length: 8 }, (_, i) => (i % 2 ? 30 : 20));
+    expect(lag1Autocorrelation(alternating)).toBe(-0.875);
+  });
+
+  it('lag1: drift within a dwell reads positive, and a flat dwell reads zero', () => {
+    expect(lag1Autocorrelation([1, 2, 3, 4, 5, 6, 7, 8])).toBe(0.625);
+    expect(lag1Autocorrelation([5, 5, 5, 5, 5, 5])).toBe(0);
+  });
+
+  it('lag1: too few samples to have a lag read zero', () => {
+    expect(lag1Autocorrelation([])).toBe(0);
+    expect(lag1Autocorrelation([10, 20])).toBe(0);
+  });
+
+  it('lag1: one hitched frame cannot hide alternation (ranks, not magnitudes)', () => {
+    const alternating = Array.from({ length: 120 }, (_, i) => (i % 2 ? 30 : 20));
+    const hitched = [...alternating.slice(1), 900];
+    expect(lag1Autocorrelation(hitched)).toBeLessThan(-0.9);
+  });
+
+  it('a row carries both dwells lag1, so a zero row can be told from a noisy one', () => {
+    const row = buildInterleavedRow(
+      'reduction',
+      'timer-query',
+      dwell(120, 50, 12, -0.9),
+      dwell(120, 48, 12, -0.8),
+      dwell(120, 40, 3, -0.1),
+    );
+    expect(row.baselineLag1).toBe(-0.85);
+    expect(row.disabledLag1).toBe(-0.1);
+  });
+
   it('buildPriceRow: zero baseline yields 0 pct, not NaN', () => {
-    const zero = { samples: 5, medianMs: 0, iqrMs: 0 };
+    const zero = dwell(5, 0, 0);
     expect(buildPriceRow('x', 'timer-query', zero, zero).savedPct).toBe(0);
     expect(buildPriceRow('x', 'timer-query', zero, zero).noiseMs).toBe(0);
   });

@@ -89,6 +89,17 @@ single-baseline sweep when the instrument is known to be settled.
 - **`iqrMs`** — the widest dwell's spread, context only. Never a gate,
   and max−min emphatically is not one either: over 120 frames a single
   outlier sets it at tens of times the real uncertainty.
+- **`baselineLag1` / `disabledLag1`** — what that spread actually is,
+  since `iqrMs` cannot tell three different things apart. Negative is
+  frame-to-frame alternation, which is structure rather than
+  uncertainty: the reduction chain only does GPU work on a frame whose
+  predecessor's readback landed, so cheap and expensive frames interleave
+  by construction. Near zero is the independent scatter `noiseMs`
+  assumes. Positive is drift inside the dwell. **`noiseMs` is only an
+  honest standard error in the middle case** — under alternation it is
+  conservative, so a row that read as zero because `savedMs` fell under
+  the floor may not be zero. Computed on ranks, so a hitched frame moves
+  it by one sample rather than by its magnitude.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 
