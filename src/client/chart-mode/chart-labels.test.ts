@@ -417,6 +417,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     /** One star per entry, at `[0, 0, -distPc]` so it projects to screen
      *  centre. `con` is the byte-34 index the membership walk buckets by. */
     stars?: { con: number; absmag: number; distPc: number }[];
+    names?: Map<number, string>;
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
     detailPermits?: (id: string) => boolean;
@@ -432,7 +433,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     const absmag = new Float32Array(stars.map((s) => s.absmag));
     const catalog = {
       count: stars.length,
-      names: new Map<number, string>(),
+      names: patch.names ?? new Map<number, string>(),
       constellations: patch.constellations ?? ([] as unknown[]),
       constellation: new Uint8Array(stars.map((s) => s.con)),
       // With no star names, no Bayer glyphs and no variables, the only readers
@@ -551,25 +552,25 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     expect(h.ticks()).toBe(1);
   });
 
-  it('hides both SVG layers and drains their pooled children on stop', () => {
+  it('hides every SVG layer and drains their pooled children on stop', () => {
     const groups = installDomStubs();
     const h = makeHarness();
     const labels = new ChartLabels(h.stellata);
 
     labels.start(h.ctx);
-    const labelLayer = groups.get('chart-labels')!;
-    const glyphLayer = groups.get('chart-glyphs')!;
-    expect(labelLayer.style.display).toBe('');
-    expect(glyphLayer.style.display).toBe('');
-    // Stand in for pooled <text> / <circle> entries from a prior frame.
-    labelLayer.appendChild({});
-    glyphLayer.appendChild({});
+    const layers = ['chart-con-labels', 'chart-labels', 'chart-glyphs']
+      .map((id) => groups.get(id)!);
+    for (const g of layers) {
+      expect(g.style.display).toBe('');
+      // Stand in for pooled <text> / <circle> entries from a prior frame.
+      g.appendChild({});
+    }
 
     labels.stop();
-    expect(labelLayer.style.display).toBe('none');
-    expect(glyphLayer.style.display).toBe('none');
-    expect(labelLayer.children).toHaveLength(0);
-    expect(glyphLayer.children).toHaveLength(0);
+    for (const g of layers) {
+      expect(g.style.display).toBe('none');
+      expect(g.children).toHaveLength(0);
+    }
   });
 
   it('stop keeps the catalog-derived caches; dispose drops them', () => {
@@ -652,7 +653,39 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       labels.start(h.ctx);
       h.emit('frame');
 
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
+
+    // SVG has no z-index — paint order is document order, and the pool appends
+    // a <text> the first frame its key is seen. Sharing one group therefore let
+    // a con label that left and re-entered the viewport land after the star
+    // names it overlaps, and its translucent 36px wash ate their halo. Two
+    // groups fix the rank statically; same-group labels never wash over each
+    // other.
+    it('puts constellation names in their own group, apart from star names', () => {
+      const groups = installDomStubs();
+      // Anchors well above screen centre so the con AABB doesn't swallow the
+      // star name in the collision pass — this test is about grouping.
+      const above = new THREE.Vector3(0, 30, -100);
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+        names: new Map([[0, 'Unukalhai']]),
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+        ],
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
       labels.dispose();
     });
 
@@ -670,7 +703,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       labels.start(h.ctx);
       h.emit('frame');
 
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
       labels.dispose();
     });
 
@@ -711,7 +744,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       const labels = new ChartLabels(h.stellata);
       labels.start(h.ctx);
       h.emit('frame');
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
 
       // Well under BRIGHTEST_RECOMPUTE_DIST_SQ, so the walk's own distance
       // gate would skip — but enough to defeat the full-tick skip and get a
@@ -720,7 +753,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       h.stellata.camera.position.x += 0.01;
       h.stellata.camera.updateMatrixWorld(true);
       h.emit('frame');
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
       labels.dispose();
     });
   });

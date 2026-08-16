@@ -138,6 +138,18 @@
            grid sits behind the HUD / POI / star-name overlays. -->
       <g id="gal-grid-labels"></g>
       <g id="eq-grid-labels"></g>
+      <!-- Chart-mode label + glyph layers, populated per frame by
+           chart-labels.ts and drained on chart exit. Declared here rather
+           than minted on demand because SVG has no z-index: paint order is
+           document order, so the pool's append-on-first-sight would
+           otherwise let a label's paint rank follow the history of which
+           labels have entered and left the viewport. Constellation Latin
+           names take their own group so their translucent 36px wash always
+           sits UNDER the star names that punch a halo through it. All three
+           precede the HUD stack below, which is the topmost SVG layer. -->
+      <g id="chart-con-labels" class="chart-label-layer" style="display: none"></g>
+      <g id="chart-labels" class="chart-label-layer" style="display: none"></g>
+      <g id="chart-glyphs" style="display: none"></g>
       <!-- HUD ring — translucent screen-centred guide visible in OBSERVE mode
            when the HUD is on. Sized and positioned each frame by
            hud-overlay.ts. Drawn before the Sol/GC arrows so the arrow strokes
