@@ -18,9 +18,8 @@ uniform float uHighlightDesat;
 // — sampling an unbound texture is undefined in WebGL.
 uniform sampler2D uMap;
 uniform float uHasMap;
-// DEM-derived tangent-space relief, RG only (data/textures/README.md
-// § Surface relief). Shipped for three bodies; absent everywhere else, so
-// the geometric normal is the base case, not a fallback.
+// DEM-derived tangent-space relief, RG only — data/textures/README.md
+// § Surface relief.
 uniform sampler2D uNormalMap;
 uniform float uHasNormalMap;
 uniform vec3 uColour;
@@ -79,12 +78,9 @@ layout(location = 2) out vec4 outDiffuse;
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
-// Geometric normal perturbed by one relief texel, in the equirect tangent
-// frame: east = cross(pole, n) is the direction of increasing longitude,
-// north the meridian tangent completing it. Blue carries no signal — z is
-// positive by construction on a heightfield, so it reconstructs — and both
-// tangents degenerate at the poles, where the map's own longitude
-// derivative is already zeroed. CPU mirror: surface-relief-pure.ts.
+// Equirect tangent frame, exact on the drawn spheroid because a surface of
+// revolution puts its normal in the meridian plane. Mirror + the frame's
+// contract: surface-relief-pure.ts.
 vec3 stellataReliefNormal(vec3 n, vec3 pole, vec2 enc) {
   vec3 e = cross(pole, n);
   float eLen = length(e);
@@ -99,10 +95,9 @@ void main() {
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
   float sunCos = dot(n, uSunDirView);
-  // Relief modulates the DIRECT term and nothing else: every other consumer
-  // of sunCos below keeps the geometric normal, each for its own reason
-  // (README.md § Surface relief). A crater rim catching the light is this
-  // one cosine.
+  // The perturbed normal reaches this one cosine and nothing else — every
+  // other consumer of sunCos below keeps the geometric normal, each for its
+  // own reason (README.md § Surface relief).
   vec3 nRelief = uHasNormalMap > 0.5
     ? stellataReliefNormal(n, uPoleView, texture(uNormalMap, vUvM).rg)
     : n;
@@ -110,10 +105,9 @@ void main() {
   // Lambert cosine away from the terminator; a smoothstep band of
   // half-width uTermSoftness carries twilight past it on atmospheric
   // bodies. The 1e-4 floor keeps the airless w=0 case a hard cut
-  // without a divide-by-zero smoothstep. Both ride the LOCAL horizon: a
-  // sunward slope stays lit past the GEOMETRIC terminator, which is the
-  // Moon's field of lit peaks. Physical twilight is a separate term and
-  // stays geometric (../atmosphere/README.md § Skylight).
+  // without a divide-by-zero smoothstep. Both edges ride the perturbed
+  // cosine, so a sunward slope stays lit past the geometric terminator
+  // (README.md § Surface relief).
   float w = max(uTermSoftness, 1e-4);
   float dayside = smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w);
   // Inter-body shadows: attenuate per caster on the ray toward the sun.

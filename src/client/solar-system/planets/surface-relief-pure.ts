@@ -9,19 +9,9 @@ export const RELIEF_POLE_EPS = 1e-6;
 /**
  * Geometric normal `n` perturbed by one texel of a `<body>-normal.webp`
  * map, all in one consistent frame (view space in the shader). `pole` is
- * the body's north pole; `enc` is the texel's raw R,G in [0, 1].
- *
- * The map's frame is (+x east, +y north, +z out of the surface)
- * — `data/textures/README.md` § Surface relief. East is the direction of
- * increasing longitude, `cross(pole, n)`, and north the meridian tangent
- * that completes the frame; on the drawn spheroid both are exact, since a
- * surface of revolution puts its normal in the meridian plane. Blue is
- * dropped: z is positive by construction on a heightfield, so it
- * reconstructs, and the encoded channel is a constant.
- *
- * Both tangents degenerate at the poles. The map's own longitude
- * derivative is already zeroed past ±85°, so only the arbitrary meridian
- * is lost there, and the geometric normal stands in.
+ * the body's north pole; `enc` is the texel's raw R,G in [0, 1], carrying
+ * the map's (+x east, +y north, +z out) frame —
+ * `data/textures/README.md` § Surface relief.
  */
 export function reliefNormal(
   n: readonly [number, number, number],
