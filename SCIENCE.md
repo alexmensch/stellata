@@ -284,10 +284,10 @@ enough to see it.
 - **Planet surface/cloud maps** (per-body equirectangular textures,
   retrieved 2026-07-18): NASA Photojournal mosaics for Mercury
   (MESSENGER, PIA15063), Jupiter (Cassini, PIA07782), and Pluto (New
-  Horizons, PIA11707) — public domain; NASA Earth Observatory Blue
-  Marble NG + Black Marble 2016 for Earth day/night — public domain;
-  Björn Jónsson's Galileo Venus cloud map, Cassini Saturn map, Voyager
-  Neptune map, and Saturn-ring radial profiles
+  Horizons, PIA11707) — public domain; NASA Earth Observatory's The Blue
+  Marble 2002 for Earth's day side — public domain;
+  Björn Jónsson's Galileo Venus cloud map, Cassini + Voyager 2 Saturn
+  map, Voyager Neptune map, and Saturn-ring radial profiles
   (https://bjj.mmedia.is/) — free use with attribution; USGS Viking
   MDIM 2.1 colorized mosaic for Mars — public domain. Uranus and
   Neptune ring strips are built from authored tables of occultation +
