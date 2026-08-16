@@ -56,8 +56,11 @@ a re-pull to execute rather than a design constraint:
 refresh.
 
 LFS coverage is per-folder via `.gitattributes`; `stellarium/`,
-`local-group/`, `molecular-clouds/`, `distance-validation/` stay on
-regular git as the files are small.
+`local-group/`, `distance-validation/` stay on regular git as the files
+are small, as do `textures/`'s sub-megabyte colour maps and ring strips.
+The threshold is per-file, not per-folder: `textures/` keeps its small
+artifacts on regular git while its multi-megabyte `*.webp` normal maps
+ride LFS alongside the `src/` originals.
 
 When adding a new external source:
 

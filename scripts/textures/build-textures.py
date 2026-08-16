@@ -7,6 +7,7 @@ from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageStat
 
+from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
 from texture_calibration import COLOUR_INDICES, LUMA, calibrate
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
@@ -16,8 +17,10 @@ ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "data" / "textures" / "src"
 OUT = ROOT / "data" / "textures"
 MANIFEST = OUT / "calibration.json"
+RELIEF_MANIFEST = OUT / "relief.json"
 SCRIPT = Path(__file__)
 CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
+RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
 
 TARGET_W = 2048
 JPEG_QUALITY = 82
@@ -140,12 +143,13 @@ RING_TABLES = {
 
 
 def up_to_date(out_path: Path, *inputs: Path) -> bool:
+    """Stale unless `out_path` postdates every input. Callers pass the helper
+    modules their own artifact derives from — only SCRIPT is global, so
+    editing one leg of the build does not rewrite the others' outputs."""
     if not out_path.exists():
         return False
     out_mtime = out_path.stat().st_mtime
-    return all(
-        out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT, CALIB_SCRIPT)
-    )
+    return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
 
 
 def tint_grayscale(
@@ -186,7 +190,7 @@ def desaturate(im: Image.Image, strength: float) -> Image.Image:
 def build_body(name: str, src_name: str, manifest: dict) -> None:
     src_path = SRC / src_name
     out_path = OUT / f"{name}.jpg"
-    if up_to_date(out_path, src_path):
+    if up_to_date(out_path, src_path, CALIB_SCRIPT):
         print(f"  {name}: up to date")
         return
     im = Image.open(src_path)
@@ -214,6 +218,30 @@ def build_body(name: str, src_name: str, manifest: dict) -> None:
     im.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
     kb = out_path.stat().st_size // 1024
     print(f"  {name}: {im.width}x{im.height} {im.mode} -> {kb} KB")
+
+
+def build_normal_map(name: str, relief: dict) -> None:
+    spec = DEM_BODIES[name]
+    src_path = SRC / spec["src"]
+    out_path = OUT / f"{name}-normal.webp"
+    assert name in BODIES, f"{name} ships relief without a colour map"
+    assert name not in FLIP_HORIZONTAL, (
+        f"{name}'s colour map is mirrored at build but its DEM is not — "
+        "the two would disagree about which way is east"
+    )
+    if up_to_date(out_path, src_path, RELIEF_SCRIPT):
+        print(f"  {name}-normal: up to date")
+        return
+    rgb, relief[name] = surface_normals(read_frozen_dem(src_path), spec)
+    # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
+    # tilt on the Moon, which is most of the signal (README.md § Surface relief).
+    Image.fromarray(rgb).save(out_path, "WEBP", lossless=True, method=6)
+    kb = out_path.stat().st_size // 1024
+    print(
+        f"  {name}-normal: {rgb.shape[1]}x{rgb.shape[0]} -> {kb} KB, "
+        f"tilt median {relief[name]['medianTiltDeg']}deg "
+        f"p90 {relief[name]['p90TiltDeg']}deg"
+    )
 
 
 def resample_rows(rows: list[list[float]], width: int) -> list[list[float]]:
@@ -307,11 +335,18 @@ def main() -> None:
     for stale in manifest.keys() - calibrated:
         del manifest[stale]
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    relief = json.loads(RELIEF_MANIFEST.read_text()) if RELIEF_MANIFEST.exists() else {}
+    for name in DEM_BODIES:
+        build_normal_map(name, relief)
+    for stale in relief.keys() - DEM_BODIES.keys():
+        del relief[stale]
+    RELIEF_MANIFEST.write_text(json.dumps(relief, indent=2, sort_keys=True) + "\n")
     build_saturn_rings()
     for body, spec in RING_TABLES.items():
         build_ring_table(body, spec)
     total = sum(
-        p.stat().st_size for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"))
+        p.stat().st_size
+        for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"), *OUT.glob("*-normal.webp"))
     )
     print(f"total artifact size: {total / 1e6:.2f} MB")
 

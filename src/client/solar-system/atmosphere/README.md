@@ -236,8 +236,8 @@ running the **same march the shader runs**, not an analytic stand-in:
 — the haze model alone is 14 % brighter than the measured body, and its
 ⟨μ·T_view⟩ = 0.006 means the ground supplies nothing to trade against it. The
 surface scalar clamps to zero and the residual stands: that is a per-body
-optical-depth error (§ Per-body sources — τ_Mie 2.5 sits mid-range in the
-measured 2–5), not something to absorb into a gain on a calibrated airlight.
+optical-depth error (τ_Mie 2.5 sits mid-range in the measured 2–5), not
+something to absorb into a gain on a calibrated airlight.
 
 The fold is a luma scalar at full phase, so per-channel hue and phase-angle
 residuals remain, each bounded by its own term's size. The disc means follow
@@ -351,39 +351,15 @@ white-balance-processed, so pixel-matching is a trap. Instead:
   > Earth 0.43 > Titan 0.22 ≈ Mars 0.17) — Venus should read brightest.
 - **Rayleigh `rayleighCoeff`** is the body's TRUE molecular vertical optical
   depth at the shader's (650, 550, 450) nm channels — sourced, never read off
-  a slider (§ per-body sources below). Limb reddening at these depths is
-  sunset physics, not an error: a real Earth limb runs warm at its base and
-  blue above.
+  a slider (per-body citations: `docs/science-solar-system.md` § Atmosphere
+  optical depths). Limb reddening at these depths is sunset physics, not an
+  error: a real Earth limb runs warm at its base and blue above.
 - **`absorbCoeff`** is blue-heaviest for the coloured hazes (Titan, Mars dust,
   Venus) — it removes blue from airlight and transmittance. Do not invert.
 - Target appearance: Earth = blue limb with a warm base, dark oceans, white
   clouds; Venus = featureless pale yellow; Mars = butterscotch; Titan =
   featureless orange. Near-raw full-disc references: DSCOVR/EPIC daily Earth
   images.
-
-### Per-body sources
-
-- **Earth** — τ_R = [0.049, 0.097, 0.221]: sea-level Rayleigh optical depth,
-  Bodhaine et al. 1999 (J. Atmos. Oceanic Technol. 16, 1854) eq. 30.
-  τ_Mie = 0.05: clean maritime background aerosol (Smirnov et al. 2002).
-- **Venus** — τ_R = Earth's scaled by the CO₂ column above the τ=1 cloud tops
-  (~74 km, P ≈ 40 hPa — Ignatiev et al. 2009) × the CO₂/air Rayleigh
-  cross-section ratio ≈ 2.45 (Sneep & Ubachs 2005): 0.070× Earth. The clouds
-  below are the *texture*; only the column above it belongs to the overlay.
-  τ_Mie = 0.12 sits in the measured 0.05–0.3 upper-haze range (Wilquet et al.
-  2009). `absorbCoeff` stands in for the unidentified UV-blue absorber, whose
-  visible-band τ has no published table — the one judged value left, kept
-  small enough to tint without hiding the cloud texture.
-- **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling):
-  0.026× Earth. τ_Mie = 0.2: the LOW end of the measured 0.2–0.5 background
-  dust column (Lemmon et al. 2015) — the global mosaics are imaged through
-  that same dust, so the low end limits double-counting (§ The texture
-  carries the disc). `absorbCoeff` from measured dust single-scattering
-  albedo ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al. 2009): τ_a = τ_Mie·(1/ω̃ − 1).
-- **Titan** — τ_R from the full 1.5-bar N₂ column (Lindal et al. 1983;
-  10.9× Earth's column at 1.35 m/s²): mostly buried under the haze, but its
-  top is the real high-altitude blue limb Cassini images show. τ_Mie = 2.5
-  sits in the measured visible haze range τ ≈ 2–5 (Tomasko et al. 2008).
 
 ### No global knobs
 
