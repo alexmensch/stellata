@@ -359,22 +359,38 @@ quietly:
   smooth ellipsoid.
 
 **The direct term's own terminator is the LOCAL horizon, not the geometric
-one**, and that is the whole point of the exercise: a sunward slope stays
-lit past the geometric terminator, which is why a real airless terminator
-is a field of lit peaks in darkness rather than a clean edge. Both halves
-of `dayside` therefore ride the perturbed cosine — the Lambert term and
-`terminatorSoftness`, which is a by-eye widening of that same Lambert edge.
-Nothing atmospheric follows it there: physical twilight is
+one.** Both halves of `dayside` ride the perturbed cosine — the Lambert
+term and `terminatorSoftness`, a by-eye widening of that same Lambert
+edge — so a sunward slope still catches the sun where the smooth sphere
+has turned away, and the terminator reads as ragged ground rather than a
+clean arc. Nothing atmospheric follows it there: physical twilight is
 `stellata_skyIrradiance`, additive and strictly geometric
 (`../atmosphere/README.md` § Skylight). Neither does the exposure pin —
-the light past the geometric terminator carries no coverage claim, so it
-joins the frame mean and leaves the lit-hemisphere mean the pin holds
-untouched (`../../hdr/attachments/README.md` § The unit).
+light past the geometric terminator carries no coverage claim, so it joins
+the frame mean and leaves the lit-hemisphere mean the pin holds untouched
+(`../../hdr/attachments/README.md` § The unit).
 
-What is missing there is **terrain occlusion**: a sunward slope lights up
-even with a ridge between it and the sun, because the direct term knows
-slope and not horizon. That is a separate map (`stellata-2f6.43`), and it
-can only shadow terrain this term has lit.
+**How far past the terminator is bounded by the body, and this term does
+not know it.** Ground at elevation Δh sees the sun down to a depression of
+only √(2Δh/R) — 2.0° for a 1 km rise on the Moon, 6.2° for 10 km — because
+past that the body's own limb is in the way. **Slope alone buys nothing**:
+at zero elevation the sun goes under the horizon the instant the geometric
+terminator passes, whichever way the ground faces. Measured off the shipped
+map, sun along an equatorial row, horizon integrated to 426 km:
+
+| solar depression | lit by this term | lit once the horizon is honoured |
+|---|---|---|
+| 0–2° | 30 % of area | 13 % |
+| 2–5° | 27 % | 2 % |
+| 5–10° | 10 % | 0 % |
+| 10–20° | 3 % | 0 % |
+
+So the error is **lit area, not lit brightness** — each lit facet is at
+`cos(i)` on its true normal, area-mean 0.07 and p99 0.30 of the sub-solar
+value, and the disc integral moves under 0.01 mag. It reads as a speckle
+past the terminator, not as a flux error. `stellata-2f6.43` is the fix, and
+it can only shadow terrain this term has lit, which is why the two are
+ordered this way.
 
 There is deliberately **no flux renormalisation** —
 `emission/README.md` carries why.
