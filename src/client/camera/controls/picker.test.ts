@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { Picker, type PickerDeps } from './picker';
+import { discHitRadiusPx } from './star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
@@ -136,6 +137,7 @@ function makePicker(
      *  cases run at EV 0 and no adaptation). */
     limitMag?: number;
     kindPicks?: PickerDeps['kindPicks'];
+    resolveStarPick?: PickerDeps['resolveStarPick'];
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
@@ -154,6 +156,13 @@ function makePicker(
     },
     kindPicks: opts.kindPicks ?? {},
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
+    // Default: everything the prefilter admits also renders, at the
+    // prefilter's own radius — the pre-extinction behaviour these cases
+    // were written against.
+    resolveStarPick: opts.resolveStarPick ?? ((idx) => ({
+      visible: true,
+      hitRadius: discHitRadiusPx(opts.renderedSizePxFn?.(idx) ?? 20),
+    })),
     resolveCollapsedLead: opts.resolveCollapsedLead ?? ((idx) => idx),
   };
   return { picker: new Picker(deps), camera, dom };
@@ -200,6 +209,61 @@ describe('Picker / pickStar', () => {
       // Far corner of the viewport — way outside the 20 px disc at the
       // centre and outside the 16 px fallback threshold.
       expect(picker.pickStar(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBe(-1);
+    });
+  });
+
+  // The reported bug: the magnitude prefilter is intrinsic and
+  // extinction-blind, so a star the frame renders black stayed
+  // clickable. resolveStarPick is the gate that actually decides.
+  describe('visibility gate — a star the renderer draws nothing for', () => {
+    it('is not picked, even with the cursor dead on its centre', () => {
+      const data = makeCatalog([[0, 0, 0]]);
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        resolveStarPick: () => ({ visible: false, hitRadius: 10 }),
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStar(screen.x, screen.y)).toBe(-1);
+      expect(picker.pickStarHit(screen.x, screen.y)).toBeNull();
+    });
+
+    it('does not shadow a visible star sharing its catchment', () => {
+      // Star 0 at centre (invisible), star 1 six px away (visible).
+      const data = makeCatalog([[0, 0, 0], [0, 0, 0]]);
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        renderedSizePxFn: () => 2,
+        resolveStarPick: (idx) => ({ visible: idx === 1, hitRadius: 1 }),
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStar(screen.x, screen.y)).toBe(1);
+    });
+
+    it('resolves each candidate at most once', () => {
+      const data = makeCatalog([[0, 0, 0]]);
+      const seen: number[] = [];
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        // hitRadius shrinks below pxDist, so the candidate demotes out
+        // of the prime pool and is reconsidered in the fallback pass.
+        resolveStarPick: (idx) => {
+          seen.push(idx);
+          return { visible: true, hitRadius: 0 };
+        },
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStarHit(screen.x + 6, screen.y)?.tier).toBe('fallback');
+      expect(seen).toEqual([0]);
+    });
+
+    it('demotes a dimmed star to fallback rather than dropping it', () => {
+      const data = makeCatalog([[0, 0, 0]]);
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        // Prefilter admits a 20 px disc; the resolved disc is 4 px.
+        resolveStarPick: () => ({ visible: true, hitRadius: 2 }),
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStarHit(screen.x, screen.y)?.tier).toBe('prime');
+      const off = picker.pickStarHit(screen.x + 6, screen.y);
+      expect(off?.idx).toBe(0);
+      expect(off?.tier).toBe('fallback');
     });
   });
 
