@@ -48,7 +48,9 @@ The HUD is an opt-in dev tool, not a user feature. Activation paths:
   panel; the Perf section is one of nine
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
-  `mark`/`measure`/`frame` functions to real implementations).
+  `mark`/`measure`/`frame` functions to real implementations) and
+  holds the render gate open, so every tick renders while the panel
+  is up (`../render-gate/README.md`).
   Calling again closes the panel, which disposes every section — the
   Perf section's dispose re-arms the no-op `mark`/`measure`/`frame`
   stubs and clears the ring buffers, so a re-open starts fresh with an

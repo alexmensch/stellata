@@ -212,8 +212,8 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           milkyway/, galactic/, molecular-clouds/, chart-mode/,
           star-pipeline/, hover/, focus-card/, format/, overlays/,
           camera/, filters/, scene/, poi/, ui/, typeahead/, modals/,
-          debug/, util/, loaders/, dust/, binaries/) — each with its
-          own README.
+          debug/, util/, loaders/, dust/, binaries/, render-gate/) —
+          each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default to "find the
@@ -241,7 +241,7 @@ pnpm test                # vitest (regression-prevention suite)
 pnpm run deploy          # wrangler deploy (requires auth)
 ```
 
-Watch / coverage variants of `pnpm test`, the catalogue verify script,
+Watch/coverage variants of `pnpm test`, the catalogue verify script,
 and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
 are documented in `scripts/refresh/README.md` and `RELEASING.md`
 § Catalogue refresh policy.
