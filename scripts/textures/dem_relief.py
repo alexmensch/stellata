@@ -19,19 +19,13 @@ DEM_TARGET_W = 4096
 # the same window, so they measure only where both derivatives are real.
 POLE_CUTOFF_DEG = 85.0
 
-# Per-body relief contract. `dtype`/`scale`/`offset`/`span_m` decode the
-# DOWNLOADED original (reduce_dem.py); the rest drive every build.
-#
-# `dem_center_lon` is the frozen reduction's own map-centre east longitude and
-# `map_center_lon` is that body's COLOUR map's — the build rolls the first onto
-# the second. A normal map centred differently from the colour map it shades
-# puts every slope on the wrong feature and has no other symptom, so
-# dem-relief.test.ts pins map_center_lon against the runtime's
-# RotationElements.mapCenterLonDeg.
-#
-# `radius_km` sets the vertical exaggeration and is the radius the body is
-# DRAWN at (SOL_BODIES), not the DEM's georeferencing radius — the relief has
-# to belong to the sphere it shades. The same test pins it.
+# Per-body relief contract (data/textures/README.md § Surface relief).
+# `dtype`/`scale`/`offset`/`span_m`/`nodata` decode the DOWNLOADED original
+# for reduce_dem.py; the rest drive every build. Two fields name the thing
+# they are NOT: `map_center_lon` is the COLOUR map's centre rather than the
+# DEM's, and `radius_km` is the radius the body is DRAWN at rather than the
+# DEM's georeferencing radius. dem-relief.test.ts pins both against the
+# runtime tables.
 DEM_BODIES = {
     "moon": {
         "src": "moon-dem-svs.tif",

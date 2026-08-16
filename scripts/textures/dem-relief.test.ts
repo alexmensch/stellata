@@ -5,11 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 
-// Pin of the committed relief manifest (data/textures/relief.json, written by
-// build-textures.py) and of the cross-language registration contract.
-// dem_relief.py can't import the TS tables, so it carries its own map-centre
-// and radius copies; either drifting ships a normal map whose slopes sit on
-// the wrong features, and nothing about the render says so.
+// dem_relief.py cannot import these tables, so it keeps its own copies of the
+// map centre and radius; this pins them back against the originals, along with
+// the committed manifest and the shipped maps. Why it matters:
+// data/textures/README.md § Surface relief.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
 
@@ -88,9 +87,7 @@ describe('surface-relief normal maps', () => {
   });
 
   it('registers each normal map to its colour map, not to the DEM source', () => {
-    // Mercury is the live case: the MESSENGER DEM is centred on 180°E while
-    // PIA15063 is centred on 0°, so the build rolls it. Reading the DEM's own
-    // convention straight through would put Caloris half a world away.
+    // Mercury is the live case — the only body whose DEM needs the roll.
     expect(demBodies.mercury.demCenterLon).toBe(180);
     expect(demBodies.mercury.mapCenterLon).toBe(0);
     for (const [name, spec] of Object.entries(demBodies)) {
@@ -120,10 +117,8 @@ describe('surface-relief normal maps', () => {
   });
 
   it('ships none for the cloud, haze and giant bodies', () => {
-    // Relief applies only where the rendered texture IS the solid surface.
-    // Venus is the cloud deck by design, Titan's 938 nm map is surface seen
-    // THROUGH the haze whose appearance dominates, and the giants have no
-    // surface at all.
+    // Relief applies only where the rendered texture IS the solid surface —
+    // per-body reasoning in data/textures/README.md § Surface relief.
     for (const name of ['venus', 'titan', 'jupiter', 'saturn', 'uranus', 'neptune']) {
       expect(shippedNormalMaps).not.toContain(name);
     }
