@@ -315,8 +315,9 @@ describe('atmosphere shells', () => {
   const atmoOf = (name: string) => SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
 
   it('Earth carries the Bodhaine 1999 sea-level Rayleigh depths', () => {
-    // The published table IS the calibration (README.md § Per-body sources);
-    // a drift back toward slider values is the regression this pins against.
+    // The published table IS the calibration (docs/science-solar-system.md
+    // § Atmosphere optical depths); a drift back toward slider values is the
+    // regression this pins against.
     expect(atmoOf('Earth').rayleighCoeff).toEqual([0.049, 0.097, 0.221]);
   });
 
@@ -331,7 +332,7 @@ describe('atmosphere shells', () => {
   });
 
   it('Venus, Mars, and Titan Rayleigh columns scale from Earth\'s by molecular column', () => {
-    // Column N = P/(m·g) per README.md § Per-body sources; CO₂ scatters ~2.45x
+    // Column N = P/(m·g) per docs/science-solar-system.md; CO₂ scatters ~2.45x
     // air per molecule, N₂ ~0.96x. Green channel carries the check.
     const earthG = atmoOf('Earth').rayleighCoeff[1];
     expect(atmoOf('Venus').rayleighCoeff[1] / earthG).toBeCloseTo(0.070, 2);

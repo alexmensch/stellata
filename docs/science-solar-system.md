@@ -114,6 +114,33 @@ Venus's inferior conjunction. Gas giants carry no shell: no detached
 haze exists distinct from their cloud decks at render scale.
 Implementation in `src/client/solar-system/atmosphere/README.md`.
 
+**Atmosphere optical depths — per-body sources.** The `PlanetAtmosphere`
+rows in `src/client/solar-system/planet-system.ts` carry each body's
+TRUE vertical optical depths at the shader's (650, 550, 450) nm
+channels, sourced rather than read off a slider:
+
+- **Earth** — τ_R = [0.049, 0.097, 0.221]: sea-level Rayleigh optical depth,
+  Bodhaine et al. 1999 (J. Atmos. Oceanic Technol. 16, 1854) eq. 30.
+  τ_Mie = 0.05: clean maritime background aerosol (Smirnov et al. 2002).
+- **Venus** — τ_R = Earth's scaled by the CO₂ column above the τ=1 cloud tops
+  (~74 km, P ≈ 40 hPa — Ignatiev et al. 2009) × the CO₂/air Rayleigh
+  cross-section ratio ≈ 2.45 (Sneep & Ubachs 2005): 0.070× Earth. The clouds
+  below are the *texture*; only the column above it belongs to the overlay.
+  τ_Mie = 0.12 sits in the measured 0.05–0.3 upper-haze range (Wilquet et al.
+  2009). `absorbCoeff` stands in for the unidentified UV-blue absorber, whose
+  visible-band τ has no published table — the one judged value left, kept
+  small enough to tint without hiding the cloud texture.
+- **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling):
+  0.026× Earth. τ_Mie = 0.2: the LOW end of the measured 0.2–0.5 background
+  dust column (Lemmon et al. 2015) — the global mosaics are imaged through
+  that same dust, so the low end limits double-counting. `absorbCoeff` from
+  measured dust single-scattering albedo ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al.
+  2009): τ_a = τ_Mie·(1/ω̃ − 1).
+- **Titan** — τ_R from the full 1.5-bar N₂ column (Lindal et al. 1983;
+  10.9× Earth's column at 1.35 m/s²): mostly buried under the haze, but its
+  top is the real high-altitude blue limb Cassini images show. τ_Mie = 2.5
+  sits in the measured visible haze range τ ≈ 2–5 (Tomasko et al. 2008).
+
 **Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
 Rhea, Titan, Iapetus; Uranus's Miranda, Ariel, Umbriel, Titania,

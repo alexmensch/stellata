@@ -298,7 +298,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     // optically thin over it (a limb/airlight overlay, not a second cloud
     // layer that would double-count), mild blue absorption → pale-yellow tint.
     // Rayleigh: the CO₂ column above the τ=1 cloud tops. Sources:
-    // atmosphere/README.md § Calibrating per-body values.
+    // docs/science-solar-system.md § Atmosphere optical depths.
     atmosphere: {
       heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
       rayleighCoeff: [0.0035, 0.0068, 0.0156], mieCoeff: 0.12,
@@ -320,7 +320,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     terminatorSoftness: 0.05,
     // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999); the
     // Mie term is the clean maritime background aerosol column. Sources +
-    // derivations: atmosphere/README.md § Calibrating per-body values.
+    // derivations: docs/science-solar-system.md § Atmosphere optical depths.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
       rayleighCoeff: [0.049, 0.097, 0.221], mieCoeff: 0.05,
@@ -342,7 +342,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     // Dust-dominated: the 6.1 hPa CO₂ column's near-zero Rayleigh, the
     // measured background dust column as grey Mie, and blue-absorbing dust
     // (measured single-scattering albedo) → butterscotch sky. Sources:
-    // atmosphere/README.md § Calibrating per-body values.
+    // docs/science-solar-system.md § Atmosphere optical depths.
     atmosphere: {
       heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
       rayleighCoeff: [0.0013, 0.0025, 0.0057], mieCoeff: 0.2,
@@ -478,7 +478,8 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // the other bodies (per-row params); do not invert the absorption.
     // Rayleigh: the full 1.5-bar N₂ column, ~11x Earth's — mostly hidden
     // beneath the absorbing haze, but its top is Titan's real high-altitude
-    // blue limb. Sources: atmosphere/README.md § Calibrating per-body values.
+    // blue limb. Sources: docs/science-solar-system.md § Atmosphere optical
+    // depths.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
       rayleighCoeff: [0.51, 1.01, 2.31], mieCoeff: 2.5,

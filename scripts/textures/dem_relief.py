@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Surface-relief half of the texture build: the frozen-DEM contract and the
+DEM -> tangent-space normal-map derivation (rationale in
+data/textures/README.md § Surface relief)."""
+
+import numpy as np
+from PIL import Image
+
+# The frozen reductions store metres above the body's reference sphere as
+# uint16 biased by this, so a signed elevation survives a format every tool
+# reads back identically.
+DEM_ZERO_LEVEL = 32768
+DEM_TARGET_W = 4096
+
+# Latitude past which the equirect longitude derivative degenerates: texels
+# converge on the pole, so a metre of east-west relief spans a vanishing
+# distance and the slope diverges. Zeroed there rather than clamped — a pole
+# reading flat beats a pole reading vertical. The reported tilt statistics use
+# the same window, so they measure only where both derivatives are real.
+POLE_CUTOFF_DEG = 85.0
+
+# Per-body relief contract (data/textures/README.md § Surface relief).
+# `dtype`/`scale`/`offset`/`span_m`/`nodata` decode the DOWNLOADED original
+# for reduce_dem.py; the rest drive every build. Two fields name the thing
+# they are NOT: `map_center_lon` is the COLOUR map's centre rather than the
+# DEM's, and `radius_km` is the radius the body is DRAWN at rather than the
+# DEM's georeferencing radius. dem-relief.test.ts pins both against the
+# runtime tables.
+DEM_BODIES = {
+    "moon": {
+        "src": "moon-dem-svs.tif",
+        "dtype": "<u2",
+        # The SVS LDEMs carry NO GDAL scale tag and are NOT metres: samples are
+        # half-metres above a 1727400 m datum. Missing the factor doubles every
+        # slope and puts the highest summit at +31 km.
+        "scale": 0.5,
+        "offset": -10000.0,
+        "span_m": (-9110, 10760),
+        # Unsigned samples with no sentinel value — this product is gap-free,
+        # so there is nothing for reduce_dem.py to check.
+        "nodata": None,
+        "dem_center_lon": 0,
+        "map_center_lon": 0,
+        "radius_km": 1737.4,
+    },
+    "mercury": {
+        "src": "mercury-dem-messenger.tif",
+        "dtype": "<i2",
+        "scale": 0.5,
+        "offset": 0.0,
+        "span_m": (-5380, 4480),
+        "nodata": -32768,
+        "dem_center_lon": 180,
+        "map_center_lon": 0,
+        "radius_km": 2440,
+    },
+    "mars": {
+        "src": "mars-dem-mola.tif",
+        "dtype": "<i2",
+        "scale": 1.0,
+        "offset": 0.0,
+        "span_m": (-8200, 21230),
+        "nodata": -32768,
+        "dem_center_lon": 0,
+        "map_center_lon": 0,
+        "radius_km": 3390,
+    },
+}
+
+
+def read_frozen_dem(path) -> np.ndarray:
+    """The frozen reduction as metres above the body's reference sphere."""
+    a = np.asarray(Image.open(path), dtype=np.int32)
+    return (a - DEM_ZERO_LEVEL).astype(np.float32)
+
+
+def _roll_to_map_centre(elev: np.ndarray, spec: dict) -> np.ndarray:
+    w = elev.shape[1]
+    shift = (spec["dem_center_lon"] - spec["map_center_lon"]) * w // 360
+    return np.roll(elev, shift, axis=1) if shift % w else elev
+
+
+def _weighted_quantile(values: np.ndarray, weights: np.ndarray, q: float) -> float:
+    order = np.argsort(values)
+    v, w = values[order], weights[order]
+    cdf = (np.cumsum(w) - 0.5 * w) / w.sum()
+    return float(np.interp(q, cdf, v))
+
+
+def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
+    """Tangent-space normal map + its tilt statistics.
+
+    The encoded frame is (+x east, +y north, +z out of the surface), which is
+    what a GL-sampled equirect map gives with flipY — v increases northward.
+    Blue carries no signal: z is positive by construction, so the consumer
+    reconstructs it as sqrt(1 - x^2 - y^2).
+    """
+    elev = _roll_to_map_centre(elev, spec)
+    h, w = elev.shape
+    lat = 90.0 - (np.arange(h) + 0.5) * 180.0 / h
+    cos_lat = np.cos(np.radians(lat))[:, None]
+
+    # North-south texel spacing in metres. Equirect with h = w/2 makes the
+    # east-west spacing the same number scaled by cos(latitude).
+    step_m = 2 * np.pi * spec["radius_km"] * 1000.0 / w
+
+    d_east = (np.roll(elev, -1, axis=1) - np.roll(elev, 1, axis=1)) / (
+        2 * step_m * cos_lat
+    )
+    d_east[np.abs(lat) > POLE_CUTOFF_DEG, :] = 0.0
+    # The row beyond a pole is that same row half a world away in longitude,
+    # so the top and bottom rows difference across the pole rather than
+    # against themselves — a clamp there would halve their gradient.
+    north = np.vstack([np.roll(elev[:1], w // 2, axis=1), elev[:-1]])
+    south = np.vstack([elev[1:], np.roll(elev[-1:], w // 2, axis=1)])
+    d_north = (north - south) / (2 * step_m)
+
+    n = np.stack([-d_east, -d_north, np.ones_like(d_east)], axis=-1)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+
+    keep = np.abs(lat) <= POLE_CUTOFF_DEG
+    tilt = np.degrees(np.arccos(np.clip(n[keep, :, 2], -1.0, 1.0))).ravel()
+    weights = np.repeat(cos_lat[keep, 0], w)
+    stats = {
+        "medianTiltDeg": round(_weighted_quantile(tilt, weights, 0.5), 3),
+        "p90TiltDeg": round(_weighted_quantile(tilt, weights, 0.9), 3),
+        "width": w,
+    }
+
+    # Blue is the encoding of z = +1 under the same n*0.5 + 0.5 the other two
+    # channels use, not 0: a consumer that samples all three and skips the
+    # reconstruction then reads a shallow normal instead of an inverted one.
+    rgb = np.full((h, w, 3), 255, dtype=np.uint8)
+    rgb[..., :2] = np.rint(np.clip(n[..., :2] * 0.5 + 0.5, 0.0, 1.0) * 255)
+    return rgb, stats

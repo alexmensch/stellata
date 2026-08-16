@@ -3,6 +3,7 @@
 // originals stay out of the public bundle.
 
 const BODY_PATTERN = /^[a-z-]+\.jpg$/;
+const NORMAL_PATTERN = /^[a-z-]+-normal\.webp$/;
 const ALLOWED_EXACT = new Set([
   'saturn-rings.png',
   'uranus-rings.png',
@@ -10,5 +11,7 @@ const ALLOWED_EXACT = new Set([
 ]);
 
 export function isTexturePublicAsset(name: string): boolean {
-  return ALLOWED_EXACT.has(name) || BODY_PATTERN.test(name);
+  return (
+    ALLOWED_EXACT.has(name) || BODY_PATTERN.test(name) || NORMAL_PATTERN.test(name)
+  );
 }

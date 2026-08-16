@@ -4,14 +4,19 @@ Per-body equirectangular surface/cloud maps for the Sol planets and
 major moons, plus the ring-system radial strips. Two layers in this
 folder:
 
-- `src/` — frozen source maps as downloaded, plus the authored ring
-  tables (LFS for the JPEGs; see `src/README.md` for the per-file
-  provenance table).
-- `*.jpg` + `<body>-rings.png` (this level) — the built runtime
-  artifacts, committed on regular git (~8 MB total). Produced by
+- `src/` — frozen source maps as downloaded, the frozen DEM reductions,
+  plus the authored ring tables (LFS for the JPEGs and TIFFs; see
+  `src/README.md` for the per-file provenance table).
+- `*.jpg` + `<body>-rings.png` + `<body>-normal.webp` (this level) — the
+  built runtime artifacts. Produced by
   `scripts/textures/build-textures.py` (manual, infrequent — like the
   dust build); `scripts/textures/sync-textures.ts` mirrors them to
-  `public/textures/` on every `pnpm run build` / `dev`.
+  `public/textures/` on every `pnpm run build` / `dev`. The colour maps
+  and ring strips stay on regular git (each well under `data/README.md`'s
+  ~1 MB LFS threshold, ~8 MB in total); the **normal maps ride LFS**
+  (`data/textures/*.webp`) at 3.8–7.5 MB each, like `data/dust/`'s
+  chunks — same shape, a built artifact whose canonical home is here and
+  whose `public/` copy is a gitignored mirror.
 
 ## Artifact contract
 
@@ -40,6 +45,94 @@ folder:
   **40,900 → 63,100 km**. Each span must match the body's `rings`
   entry in `src/client/solar-system/planet-system.ts` —
   `scripts/textures/ring-strips.test.ts` pins the parity.
+
+## Surface relief — DEM-derived normal maps
+
+`<body>-normal.webp` is a **4096×2048 lossless WebP tangent-space
+surface-normal map** derived from that body's real global DEM, shipped
+alongside the colour map for the three bodies where it buys something
+measurable: **Moon, Mercury, Mars**. Frozen DEM reductions and their
+provenance are in `src/README.md`; `scripts/textures/dem_relief.py`
+owns the derivation and the per-body contract.
+
+- **Encoded frame is (+x east, +y north, +z out of the surface)** —
+  what a GL-sampled equirect map gives with `flipY`, v increasing
+  northward. **Blue carries no signal**: z is positive by construction
+  on a heightfield, so the consumer reconstructs it as
+  `sqrt(1 − x² − y²)`. It is nonetheless written as the encoding of
+  z = +1 (255) rather than 0, because a consumer that samples all three
+  channels and skips the reconstruction then reads a merely shallow
+  normal instead of an inverted one. Constant either way, so it costs
+  ~1 % of file size; encoding the true z would cost 5–21 %, which is
+  what makes dropping it worthwhile.
+- **Registered to the body's COLOUR map, not to its DEM.** The
+  MESSENGER Mercury DEM is centred on 180°E while PIA15063 is centred
+  on 0°, so the build rolls it; `dem_relief.py` carries both centres
+  per body and `dem-relief.test.ts` pins the target against the
+  runtime's `mapCenterLonDeg`. This is the failure with no other
+  symptom — a mis-rolled map shades real terrain in the wrong place
+  and everything else about the render looks fine.
+- Derivation: area-average the DEM to the target width (never
+  LANCZOS — ringing at a crater rim is a slope that isn't there),
+  central-difference in metres, divide the longitude derivative by
+  cos(latitude), zero it past **±85°** where the equirect
+  u-derivative degenerates, then `normalize(−dz/du, −dz/dv, 1)`
+  encoded `n·0.5 + 0.5`. The v-derivative needs no such cutoff, and the
+  top and bottom rows take it across the pole — the row beyond a pole
+  is that same row half a world away in longitude, so differencing
+  against itself would halve its gradient.
+- Vertical exaggeration is **none**: slopes are true, computed against
+  the radius the body is *drawn* at, so relief is honest at any camera
+  distance.
+- Measured area-weighted tilt off the local vertical, over the same
+  ±85° window, ships in `relief.json` and is pinned by
+  `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
+  **1.14° / 3.94°** (Mercury), **0.44° / 2.58°** (Mars). The ordering
+  Moon ≫ Mercury > Mars holds at every map width, which is why the
+  Moon is the body this work is scoped around — at a 15° sun its p90
+  slope is a ~4× terminator brightness contrast.
+
+**Lossless, and that is not a default.** WebP q98 errs 1.62° of normal
+angle against the Moon's 2.65° median tilt — most of the signal — so
+lossy encoding is rejected at file level. (GPU block compression is a
+separate question: BC5 is the standard normal-map format and the KTX2
+work should evaluate it rather than inherit this verdict.) Shipping the
+**height** map and differencing in the shader is also rejected: 8-bit
+height quantises to 0.82° of slope terracing, a third of the median
+tilt, and a 16-bit height PNG is larger than the normal map it would
+produce while costing three taps per fragment.
+
+**Why 4096 when the colour maps are 2048.** The slope signal is what
+buys terminator contrast, and it keeps climbing past the colour map's
+useful width — the Moon's p90 tilt goes 9.7° → 11.6° from 2048 to
+4096. 4096 uncompressed is ~45 MB of VRAM per body, which is
+affordable for a lazily-loaded body; 8192 is ~179 MB and is not, so it
+waits on KTX2/Basis block compression.
+
+Those two figures assume **RGBA8 plus mipmaps**, which is what a WebP
+decoded to an `ImageBitmap` uploads as by default. Since blue carries
+no signal, an `RG8` upload (WebGL2) halves both: ~22 MB at 4096 and
+~89 MB at 8192. Whether that lands is 2f6.42's call, but it has to be
+settled before the 8192 question is reopened — it moves 8192 from
+unaffordable to arguable, so quoting ~179 MB as the blocker without
+the channel assumption would decide that question by accident.
+
+**Which bodies are eligible at all.** Relief applies only where the
+rendered texture IS the solid surface. That excludes **Venus** (we
+render the cloud deck by design), **Titan** (the 938 nm map is surface
+seen *through* the haze, and the haze is the visible appearance), and
+**all four giants**, which have no surface. No global DEM exists for
+Io, Europa, Ganymede, Callisto, Triton, or the Saturnian mids;
+Enceladus and Pluto have one each, and Pluto's covers the encounter
+hemisphere only — matching its colour map's real data gap.
+
+**Earth is deliberately absent.** Its land relief is the flattest of
+the four candidates by a wide margin (p90 0.93° at 2048, 2.27° at
+8192) and is not worth shipping below 8192, so it waits on the same
+block-compression work. When it lands, its elevation **must be clamped
+to ≥ 0 before differencing**: over water the visible surface is the sea
+surface, and shipping raw bathymetry as relief raises the measured p90
+from 0.93° to 1.37°, all of it wrong.
 
 ## Ring strips — true opacity and the 8-bit floor
 
@@ -160,14 +253,15 @@ match the disc the body renders as at distance.
 ## Rebuilding
 
 ```
-pnpm run build:textures     # src/ -> artifacts (needs Pillow)
+pnpm run build:textures     # src/ -> artifacts (needs Pillow + NumPy)
 ```
 
 Idempotent (mtime-gated). NOT part of `pnpm run build` — CI and deploy
 only run the pure-copy sync step, so Pillow is never a build
 dependency. To replace a source map, drop the new file into `src/`,
 update `src/README.md` + `BODIES` in the build script, rerun, and
-commit both layers.
+commit both layers. Replacing a **DEM** additionally goes through
+`scripts/textures/reduce_dem.py` — `src/README.md` § Refresh recipe.
 
 ## Credits
 
