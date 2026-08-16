@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import {
@@ -13,6 +14,9 @@ const frag = readFileSync(
   fileURLToPath(new URL('../planet-mesh.frag.glsl', import.meta.url)),
   'utf8',
 );
+/** Counting identifiers over the raw source would fail the moment a comment
+ *  named one of them, which is a spurious failure with a confusing message. */
+const fragCode = frag.replace(/\/\/[^\n]*/g, '');
 
 /** Equator at longitude 0 with the pole on +z: east is +y, north is +z. */
 const N: readonly [number, number, number] = [1, 0, 0];
@@ -103,8 +107,8 @@ describe('the shader mirrors this frame', () => {
 // and nothing else, which is exactly one derived cosine spent in one place.
 describe('relief feeds the direct term only', () => {
   it('perturbs nothing but the Lambert cosine', () => {
-    expect(frag.match(/nRelief/g)).toHaveLength(2);
-    expect(frag.match(/sunCosRelief/g)).toHaveLength(3);
+    expect(fragCode.match(/nRelief/g)).toHaveLength(2);
+    expect(fragCode.match(/sunCosRelief/g)).toHaveLength(3);
     expect(frag).toContain(
       'smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;');
   });
@@ -118,9 +122,55 @@ describe('relief feeds the direct term only', () => {
     expect(frag).toContain('float sunCos = dot(n, uSunDirView);');
     expect(frag).toContain('float lit = step(0.0, sunCos) * step(0.5, shadow);');
     expect(frag).toContain('stellata_skyIrradiance(sunCos, uScaleHeightR,');
-    expect(frag).toContain('float ndotv = clamp(dot(n, v), 0.0, 1.0);');
-    expect(frag).toContain(
-      'vec3 surf = normalize(stellata_scalePolar(normalize(vNormalV), uPoleView, uPolarRadiusR));');
+    // Narrow enough to survive an argument-list reflow in the atmosphere
+    // march: what matters is which normal goes in, not the whole call.
+    expect(frag).toMatch(/float ndotv = clamp\(dot\(n, v\)/);
+    expect(frag).toMatch(/vec3 surf = normalize\(stellata_scalePolar\(normalize\(vNormalV\)/);
+  });
+});
+
+// The frame above calls cross(pole, n) east and cross(n, east) north, and the
+// map is authored positive-east left-to-right with v increasing northward
+// (data/textures/README.md § Artifact contract). Nothing pinned that the
+// RENDERED sphere agrees — and it is the one disagreement with no other
+// symptom: relief would shade real terrain lit from the wrong side and look
+// entirely plausible doing it. Pure geometry, so the IAU rotation chain on top
+// cannot change the answer: a rotation carries a cross product with it.
+describe('the mesh geometry the frame is built on', () => {
+  const W = 128;
+  const H = 64;
+  const geometry = new THREE.SphereGeometry(1, W, H);
+  const uv = geometry.attributes.uv;
+  const position = geometry.attributes.position;
+  const normal = geometry.attributes.normal;
+  const POLE_Y = new THREE.Vector3(0, 1, 0);
+  const at = (ix: number, iy: number) => iy * (W + 1) + ix;
+  const vec = (
+    attr: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+    i: number,
+  ) => new THREE.Vector3().fromBufferAttribute(attr, i);
+
+  // Rows 0 and H carry three.js's pole-seam u offset; the map's own longitude
+  // derivative is zeroed past ±85° anyway, so relief never leans on them.
+  it('steps toward cross(pole, n) as u increases — the map east', () => {
+    for (const iy of [16, 32, 48]) {
+      const a = at(40, iy);
+      const b = at(41, iy);
+      expect(uv.getY(b), `row ${iy} is one row`).toBeCloseTo(uv.getY(a), 12);
+      expect(uv.getX(b), `row ${iy} steps +u`).toBeGreaterThan(uv.getX(a));
+      const east = new THREE.Vector3()
+        .crossVectors(POLE_Y, vec(normal, a))
+        .normalize();
+      const step = vec(position, b).sub(vec(position, a));
+      expect(step.dot(east), `row ${iy} east`).toBeGreaterThan(0);
+    }
+  });
+
+  it('steps toward the +Y pole as v increases — the map north', () => {
+    const a = at(40, 33);
+    const b = at(40, 32);
+    expect(uv.getY(b)).toBeGreaterThan(uv.getY(a));
+    expect(vec(position, b).sub(vec(position, a)).dot(POLE_Y)).toBeGreaterThan(0);
   });
 });
 

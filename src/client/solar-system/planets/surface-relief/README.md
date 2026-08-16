@@ -33,6 +33,14 @@ and north the meridian tangent completing it, both exact on a surface of
 revolution. `surface-relief-pure.ts` is the pinned CPU mirror; the map's blue
 channel is a constant and is never read (z reconstructs from x and y).
 
+That frame only lines up with the map if the drawn sphere agrees on which way
+east and north run, which is the disagreement with no other symptom — terrain
+would shade lit from the wrong side and look plausible doing it. The test pins
+both against the real `SphereGeometry`: increasing u steps along
+`cross(pole, n)`, increasing v steps toward the +Y pole that `POLE_TILT` maps
+to the body's north. Pure geometry, so the IAU rotation chain on top cannot
+change the answer — a rotation carries a cross product with it.
+
 ## The perturbed normal feeds the direct term and nothing else
 
 Everything else in the shader keeps the geometric normal, each for its own
