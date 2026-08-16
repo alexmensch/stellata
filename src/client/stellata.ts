@@ -2056,6 +2056,11 @@ export class Stellata implements FrameAnchor {
     } else {
       this.referenceUp.correct(this.camera);
     }
+    // Cleared by the two steady-state branches alone, so a transition
+    // added to this chain renders every frame by default — the safe
+    // direction: a gate that guesses wrong here freezes the animation
+    // it cannot see (render-gate/README.md).
+    let cameraAnimating = true;
     if (this.warp.isActive()) {
       this.warp.tick(performance.now());
     } else if (this.aim.isActive()) {
@@ -2071,6 +2076,7 @@ export class Stellata implements FrameAnchor {
     } else if (this.observe.isAnyActive()) {
       this.observe.tick(performance.now());
     } else if (this.focus.getCameraMode() === 'observe') {
+      cameraAnimating = false;
       // Look-around input (yaw/pitch/roll/FOV) mutates the camera directly
       // via observeControls + the existing two-finger handlers. update()
       // here advances any post-release momentum from a flick. Per-frame
@@ -2080,16 +2086,11 @@ export class Stellata implements FrameAnchor {
       this.observeControls.update();
       this.observeUpdateTarget();
     } else {
+      cameraAnimating = false;
       this.controls.update();
     }
     perfMeasure('controls.update');
-    const continuous =
-      this.clock.getRate() !== 0 ||
-      this.warp.isActive() ||
-      this.aim.isActive() ||
-      this.focus.isFocusLerpActive() ||
-      this.aim.isObserveAimActive() ||
-      this.observe.isAnyActive();
+    const continuous = this.clock.getRate() !== 0 || cameraAnimating;
     if (!this.renderGate.tick(
       this.camera, this.controls.target, this.worldOffset, continuous, performance.now(),
     )) {

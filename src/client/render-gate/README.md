@@ -30,8 +30,13 @@ src/client/render-gate/
 2. **Continuous conditions**, recomputed each tick by `animate()`:
    clock rate ≠ 0 (variables pulsate, binaries orbit, and ephemeris
    bodies move on the sim clock — note the clock's **default is live
-   1×**, so the idle win requires the clock paused), or any camera
-   transition in flight (warp, aim, focus lerp, observe enter/exit).
+   1×**, so the idle win requires the clock paused), or a camera
+   transition in flight. The transition half is **not re-derived** — it
+   falls out of the controller dispatch chain that runs immediately
+   above, which already picked the branch: `cameraAnimating` defaults
+   true and only the two steady-state branches (observe look-around,
+   trackball) clear it. Re-asking the five predicates would be a second
+   definition of "camera busy" for a new transition to drift out of.
 3. **Pose change**: a 14-slot exact-equality snapshot — camera position,
    quaternion, fov, `controls.target`, `worldOffset`. Catches every
    camera mutation whatever its source (trackball damping, observe
