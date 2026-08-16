@@ -1154,10 +1154,17 @@ export class Stellata implements FrameAnchor {
       this.clock.setRate(0);
       this.clock.setTimeAbsolute(t);
     }
-    // A URL restore jumps the clock and then applies its focus, both before
-    // the next frame — t-sampled kind state (probe samples) has to be
-    // reseeded at the NEW `t` or a restored focus recentres onto where the
-    // object was when the page loaded.
+    this.notifyClockJumped();
+  }
+
+  /** Owed by every discrete jump of the clock, whoever moved it — the
+   *  scrubber's Jump and Reset mutate the `VirtualClock` directly to keep
+   *  the current rate, so they cannot rely on `setT`. Reseeds t-sampled
+   *  kind state at the NEW `t` (a URL restore applies its focus before the
+   *  next frame, and a stale probe sample recentres onto where the object
+   *  was at page load), then emits — which is also what repaints a jump
+   *  made while the clock is paused (`render-gate/README.md`). */
+  notifyClockJumped(): void {
     for (const kind of KIND_ROSTER) this.kinds[kind]?.clockJumped?.(this.getT());
     this.bus.emit('state');
   }

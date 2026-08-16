@@ -145,7 +145,10 @@ from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
-state mutation), and the warp-end edge emit alone.
+state mutation), and the warp-end edge emit alone. The pairing also runs
+the other way once: a discrete clock jump has no fine-grained event of
+its own and emits bare `'state'` from
+`Stellata.notifyClockJumped()`.
 
 ## Click-state machine (`camera/controls/input/input-controller.ts`)
 

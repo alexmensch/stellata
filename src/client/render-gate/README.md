@@ -52,9 +52,11 @@ src/client/render-gate/
 
 ## Invalidation sources (`invalidate()` callers)
 
-- Bus `'state'` (paired with every discrete mutation: focus, vector,
-  filter, cameraMode, pois, warp start, `setT`, monochrome) and
-  `'planetSystem'` (emits alone; a loaded system adds drawables).
+- Bus `'state'` — focus, vector, filter (every `FilterController`
+  mutation, and every `ExposureController` one through its `onChange`),
+  cameraMode, pois, warp start, monochrome, and every discrete clock
+  jump through `Stellata.notifyClockJumped()` — plus `'planetSystem'`
+  (emits alone; a loaded system adds drawables).
 - Canvas `pointerdown/move/up/cancel` + `wheel`, window `keydown`
   (`attachDom`) — hover, drags, and shortcuts repaint within one tick.
 - Resize (`onResize`).

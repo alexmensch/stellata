@@ -103,7 +103,10 @@ export function createTimeScrubberWidget(
   controls.className = 'scrubber-controls';
   const press = (action: TransportAction): void => {
     clock[action]();
-    if (action === 'reset') syncJump();
+    if (action === 'reset') {
+      syncJump();
+      stellata.notifyClockJumped();
+    }
     refresh();
   };
 
@@ -142,6 +145,7 @@ export function createTimeScrubberWidget(
     const ms = parseLocalDatetimeValue(jumpInput.value);
     if (Number.isNaN(ms)) return;
     clock.setTimeAbsolute(ms / 1000);
+    stellata.notifyClockJumped();
     refresh();
   };
   jumpBtn.addEventListener('click', doJump);
