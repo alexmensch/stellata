@@ -233,6 +233,16 @@ slew faster. Three things this has to get right:
 The readout follows the **applied** cut, not the measurement, so the
 number on screen always describes the frame on screen.
 
+**`setHeld` freezes the applied cut, and outranks chart's reset.** A
+frame-cost lever (`../../debug/frame-cost/README.md`): every pass that
+writes the statistic attachment is an *input* to the cut, so toggling one
+moves it — the local depth pass measured 1.51 → 7.8 mag of effective
+limit across its own A/B, i.e. the differential priced a six-magnitude
+denser star field rather than the pass. Held has to beat the chart branch
+too, or parking the HDR chain would zero the cut and change the scene the
+same way. Releasing drops `lastNowMs`, so the next frame snaps instead of
+ramping from a cut stale by the whole hold.
+
 **No spatial weighting.** A plain mean over the target is the shape the
 scanned-observer premise implies; centre weighting or a fovea-like radial
 term would re-introduce the gaze dependence it rejects, and the buffer

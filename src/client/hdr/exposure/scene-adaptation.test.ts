@@ -153,6 +153,30 @@ describe('SceneAdaptation', () => {
     expect(adaptation.measure(false, 1e6 + 16, false)).toBeCloseTo(target(), 9);
   });
 
+  it('holds the cut against a changed measurement, and outranks chart', () => {
+    // The frame-cost lever: a toggled pass that writes the statistic
+    // attachment would otherwise move the cut, and the differential would
+    // price a different star population instead of the pass. Chart's park
+    // is one such toggle, so the hold has to beat its reset too.
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    const pinned = settle(adaptation);
+    expect(pinned).not.toBe(0);
+
+    adaptation.setHeld(true);
+    reduced = frame(1e6 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(adaptation.measure(false, SETTLED_MS + 16, false)).toBe(pinned);
+    expect(adaptation.measure(true, SETTLED_MS + 32, false)).toBe(pinned);
+    expect(adaptation.getStatistic().meanL).toBeCloseTo(100 * L_ADAPT, 6);
+
+    // Released, the next frame snaps to the live measurement rather than
+    // ramping from a cut that is now stale by the whole hold.
+    adaptation.setHeld(false);
+    const snapped = adaptation.measure(false, SETTLED_MS + 48, false);
+    expect(snapped).toBeCloseTo(adaptation.branches().dm, 9);
+    expect(snapped).toBeLessThan(pinned);
+  });
+
   it('reads against the live instrument exposure, not a fixed one', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);

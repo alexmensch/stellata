@@ -45,6 +45,7 @@ export class SceneAdaptation {
   private lAdapt = L_ADAPT;
   private lTarget = L_TARGET;
   private slewTauS = ADAPT_SLEW_TAU_S;
+  private held = false;
 
   constructor(deps: SceneAdaptationDeps) {
     this.deps = deps;
@@ -57,6 +58,7 @@ export class SceneAdaptation {
    * time-warped frame must not slew faster; warp itself snaps.
    */
   measure(chart: boolean, nowMs: number, warpActive: boolean): number {
+    if (this.held) return this.dm;
     if (chart) return this.reset();
     perfMark('adaptation');
     const reduced = this.deps.reduced();
@@ -110,6 +112,24 @@ export class SceneAdaptation {
   setSlewTauS(tau: number): void { this.slewTauS = tau; }
 
   getSlewTauS(): number { return this.slewTauS; }
+
+  /**
+   * Freeze the applied cut where it stands, measurement and slew both.
+   * A frame-cost lever (`../../debug/frame-cost/README.md`): a pass that
+   * writes the statistic attachment moves the cut when it is toggled, so
+   * the differential would price a scene with a different star population
+   * rather than the pass. **Held outranks chart's reset**, or parking the
+   * HDR chain would zero the cut and change the scene the same way.
+   *
+   * Releasing drops `lastNowMs` so the next frame snaps to the live
+   * measurement instead of ramping from a cut minutes stale.
+   */
+  setHeld(on: boolean): void {
+    this.held = on;
+    if (!on) this.lastNowMs = null;
+  }
+
+  isHeld(): boolean { return this.held; }
 
   /** The cut actually applied this frame — slew-limited, so it trails the
    *  measurement by ~`ADAPT_SLEW_TAU_S`. The readout reports this and not

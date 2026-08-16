@@ -51,6 +51,11 @@ export interface PriceFrameOptions {
    *  before the sweep starts; only a sweep that cannot fit even at
    *  `MIN_DWELL_FRAMES` truncates. */
   budgetMs?: number;
+  /** Freeze the exposure cut for the sweep, after the warmup has let it
+   *  converge. Passes that write the statistic attachment move the cut
+   *  when toggled, and the differential then prices a different star
+   *  population instead of the pass. Set false to price the live path. */
+  pinExposure?: boolean;
 }
 
 const DEFAULTS = {
@@ -64,6 +69,7 @@ const DEFAULTS = {
   interleave: true,
   pauseClock: true,
   budgetMs: 180_000,
+  pinExposure: true,
 } as const;
 
 /** Shortening past this stops buying anything — the medians get noisy
@@ -166,6 +172,7 @@ export async function runPriceFrame(
   const warmupFrames = options.warmupFrames ?? DEFAULTS.warmupFrames;
   const interleave = options.interleave ?? DEFAULTS.interleave;
   const pauseClock = options.pauseClock ?? DEFAULTS.pauseClock;
+  const pinExposure = options.pinExposure ?? DEFAULTS.pinExposure;
   const deadline = performance.now() + (options.budgetMs ?? DEFAULTS.budgetMs);
 
   const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
@@ -269,6 +276,17 @@ export async function runPriceFrame(
   let restore: (() => void) | null = null;
   try {
     for (let f = 0; f < warmupFrames; f++) await nextFrame();
+    // After the warmup, so the cut is pinned where it converged rather
+    // than wherever it happened to be when the sweep was called.
+    if (pinExposure) {
+      stellata.adaptation.setHeld(true);
+      console.info(
+        `priceFrame: exposure pinned at dm ${stellata.adaptation.getDm().toFixed(3)} ` +
+        `(effective limit ${stellata.exposure.getEffectiveLimitMag().toFixed(2)} mag) — ` +
+        'every row now prices its pass against the same star population. ' +
+        'Pass { pinExposure: false } to price the live path.',
+      );
+    }
     const baselineStartedMs = performance.now();
     const firstBaseline = await dwell();
     fitDwellToBudget(performance.now() - baselineStartedMs);
@@ -334,6 +352,7 @@ export async function runPriceFrame(
   } finally {
     restore?.();
     release?.();
+    if (pinExposure) stellata.adaptation.setHeld(false);
     if (pauseClock && clock.getRate() !== startRate) clock.setRate(startRate);
   }
 

@@ -32,6 +32,15 @@ src/client/debug/frame-cost/
   the binary orbit field's full per-frame upload and moves every
   ephemeris body, both inside the timed scope. `{ pauseClock: false }`
   prices the live path instead.
+- **Exposure pinned — done for you.** After the warmup, the sweep freezes
+  the adaptation cut where it converged and releases it in the same
+  `finally` as the passes. **Every pass that writes the statistic
+  attachment is an input to the exposure**, so toggling one moves the cut
+  and the row would price a different star population instead of the
+  pass — the local depth pass swings the effective limit 1.51 → 7.8 mag
+  unpinned, which is six magnitudes of extra stars. `{ pinExposure:
+  false }` prices the live path. `baselineLimitMag` / `disabledLimitMag`
+  stay in the output as the check that it held.
 - **A timer query.** Without one (Safari) it falls back to rAF-delta wall
   time, where differentials under the vsync quantum read as zero unless
   the frame is already over budget. `method` labels every row; never
