@@ -62,30 +62,33 @@ Three rows are not what they look like:
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
   `../../hdr/exposure/reduction/README.md`. Keeping it is necessary and
-  **not sufficient**: read the row against § The readback cadence
-  confound before believing it.
+  **still not sufficient** — the row reads solidly negative at the
+  default Sol view with the fence held, the readback cadence identical
+  in both states, and `bracketMs` at 0.23. Unexplained; check
+  `disabledLimitMag` against `baselineLimitMag` before believing it.
 
-## The readback cadence confound
+## The readback cadence — measured, and NOT the confound
 
 The reduction's `gl.flush()` is the frame's only ANGLE submission
-barrier, and **how often it fires is emergent, not pinned**: the
-readback's fence clears only when the GPU drains, so a cheaper frame
-issues more readbacks. Disabling a pass therefore changes the barrier
-rate as well as the work, and always in the direction that penalises the
-cheaper state — shallower batching, `TIME_ELAPSED` spanning more
-overlapped work.
+barrier, and the rate it fires at is emergent rather than pinned — the
+fence clears only when the GPU drains. The obvious worry follows:
+disabling a pass makes the frame cheaper, the fence lands sooner, the
+barrier fires more often, and the row prices batching depth instead of
+the pass.
 
-`baselineReadback` / `disabledReadback` report the rate each state
-actually ran at, in readbacks per frame. **Equal rates mean the row is
-clean.** Diverging rates mean the row priced a barrier change on top of
-the pass, and `savedMs` is an underestimate — the more the row saves,
-the larger the bias. The pathological case is `reduction` itself, where
-the artifact can exceed the pass: −38.1 ms at the default Sol view
-against +10 ms at an LG viewpoint, whose 43 ms frame lands the fence
-inside one frame either way.
+**Measured, it does not happen.** `baselineReadback` /
+`disabledReadback` report readbacks per frame per state, and at the
+default Sol view every dwell of every row read **0.25 exactly** — one
+readback per four frames, identical in both states, across frames
+ranging 31 ms (HDR parked) to 112 ms. The latency is constant in
+*frames*, not in wall time, which is pipeline-depth buffering rather
+than GPU-drain latency: it does not care what the frame costs. Keep the
+columns as a standing check, but the hypothesis is refuted at this
+viewpoint.
 
-`../../hdr/exposure/reduction/README.md` § Latency owns the mechanism.
-Pinning the cadence rather than only reporting it is not done yet.
+Both remain gates worth reading — **equal rates mean the row is clean on
+this axis** — and a viewpoint that does move them would invalidate the
+rows that moved.
 
 ## The instrument drifts, so the baseline is bracketed
 
@@ -128,9 +131,15 @@ single-baseline sweep when the instrument is known to be settled.
   conservative, so a row that read as zero because `savedMs` fell under
   the floor may not be zero. Computed on ranks, so a hitched frame moves
   it by one sample rather than by its magnitude.
-- **`baselineReadback` / `disabledReadback`** — the third gate, and the
-  one that can invalidate a row outright rather than widen it. Equal is
-  clean; diverging means § The readback cadence confound applies.
+- **`baselineReadback` / `disabledReadback`** — equal is clean; diverging
+  means the row priced a change in submission-barrier rate on top of the
+  pass (§ The readback cadence).
+- **`baselineLimitMag` / `disabledLimitMag`** — the gate that invalidates
+  a row outright rather than widening it. The faintest magnitude each
+  state rendered: **if these differ, the toggle changed what the frame
+  DREW**, and `savedMs` is the price of a different scene, not of the
+  pass. A toggle that resets or freezes the exposure statistic is the way
+  this happens.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 

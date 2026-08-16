@@ -11,6 +11,15 @@ export interface DwellStats {
   /** Reduction readbacks issued per frame over the dwell. 0.5 is the
    *  every-other-frame rhythm; 1.0 is one per frame. */
   readonly readbackPerFrame: number;
+  /** Faintest magnitude the frame was rendering — threshold plus the
+   *  adaptation cut. What the dwell DREW, as opposed to how long it took. */
+  readonly effectiveLimitMag: number;
+}
+
+/** What a dwell was, beyond the frame times themselves. */
+export interface DwellContext {
+  readonly readbackPerFrame: number;
+  readonly effectiveLimitMag: number;
 }
 
 export interface PriceFrameRow {
@@ -37,6 +46,11 @@ export interface PriceFrameRow {
    *  of the pass — README.md § The readback cadence confound. */
   readonly baselineReadback: number;
   readonly disabledReadback: number;
+  /** Faintest magnitude rendered in each state. **These two differing is
+   *  the row failing, not a detail**: the toggle changed what the frame
+   *  drew, so `savedMs` prices a different scene rather than the pass. */
+  readonly baselineLimitMag: number;
+  readonly disabledLimitMag: number;
 }
 
 export interface DwellFit {
@@ -151,9 +165,11 @@ export function lag1Autocorrelation(samples: readonly number[]): number {
   return variance === 0 ? 0 : covariance / variance;
 }
 
+const NO_CONTEXT: DwellContext = { readbackPerFrame: 0, effectiveLimitMag: 0 };
+
 export function summarizeDwell(
   samples: readonly number[],
-  readbackPerFrame = 0,
+  context: DwellContext = NO_CONTEXT,
 ): DwellStats | null {
   if (samples.length === 0) return null;
   return {
@@ -161,7 +177,8 @@ export function summarizeDwell(
     medianMs: median(samples),
     iqrMs: percentile(samples, 0.75) - percentile(samples, 0.25),
     lag1: lag1Autocorrelation(samples),
-    readbackPerFrame,
+    readbackPerFrame: context.readbackPerFrame,
+    effectiveLimitMag: context.effectiveLimitMag,
   };
 }
 
@@ -201,6 +218,8 @@ export function buildPriceRow(
     disabledLag1: disabled.lag1,
     baselineReadback: baseline.readbackPerFrame,
     disabledReadback: disabled.readbackPerFrame,
+    baselineLimitMag: baseline.effectiveLimitMag,
+    disabledLimitMag: disabled.effectiveLimitMag,
   });
 }
 
@@ -233,6 +252,8 @@ export function buildInterleavedRow(
     disabledLag1: disabled.lag1,
     baselineReadback: (before.readbackPerFrame + after.readbackPerFrame) / 2,
     disabledReadback: disabled.readbackPerFrame,
+    baselineLimitMag: (before.effectiveLimitMag + after.effectiveLimitMag) / 2,
+    disabledLimitMag: disabled.effectiveLimitMag,
   });
 }
 
@@ -250,6 +271,8 @@ function assembleRow(
     disabledLag1: number;
     baselineReadback: number;
     disabledReadback: number;
+    baselineLimitMag: number;
+    disabledLimitMag: number;
   },
 ): PriceFrameRow {
   const savedMs = referenceMs - disabledMs;
@@ -268,6 +291,8 @@ function assembleRow(
     disabledLag1: round3(stats.disabledLag1),
     baselineReadback: round3(stats.baselineReadback),
     disabledReadback: round3(stats.disabledReadback),
+    baselineLimitMag: round3(stats.baselineLimitMag),
+    disabledLimitMag: round3(stats.disabledLimitMag),
   };
 }
 

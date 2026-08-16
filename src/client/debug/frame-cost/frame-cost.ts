@@ -222,7 +222,10 @@ export async function runPriceFrame(
       }
     }
     const readbacks = stellata.reduction.readbackRequests - readbacksBefore;
-    return summarizeDwell(sink, readbacks / frames);
+    return summarizeDwell(sink, {
+      readbackPerFrame: readbacks / frames,
+      effectiveLimitMag: stellata.exposure.getEffectiveLimitMag(),
+    });
   };
 
   const fitDwellToBudget = (firstDwellMs: number): void => {

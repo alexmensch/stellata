@@ -22,7 +22,8 @@ const dwell = (
   iqrMs: number,
   lag1 = 0,
   readbackPerFrame = 0,
-) => ({ samples, medianMs, iqrMs, lag1, readbackPerFrame });
+  effectiveLimitMag = 0,
+) => ({ samples, medianMs, iqrMs, lag1, readbackPerFrame, effectiveLimitMag });
 
 describe('frame-cost-pure', () => {
   it('median: odd, even, single', () => {
@@ -41,12 +42,15 @@ describe('frame-cost-pure', () => {
 
   it('summarizeDwell: empty is null, stats otherwise', () => {
     expect(summarizeDwell([])).toBeNull();
-    expect(summarizeDwell([1, 2, 3, 4], 0.5)).toEqual({
+    expect(
+      summarizeDwell([1, 2, 3, 4], { readbackPerFrame: 0.5, effectiveLimitMag: 12.5 }),
+    ).toEqual({
       samples: 4,
       medianMs: 2.5,
       iqrMs: 2,
       lag1: 0.25,
       readbackPerFrame: 0.5,
+      effectiveLimitMag: 12.5,
     });
   });
 
@@ -221,6 +225,20 @@ describe('frame-cost-pure', () => {
     );
     expect(row.baselineReadback).toBe(0.5);
     expect(row.disabledReadback).toBe(0.97);
+  });
+
+  it('a row carries what each state drew, not just how long it took', () => {
+    // A toggle that moves the adaptation cut changes the scene, so the
+    // differential prices a different frame rather than the pass.
+    const row = buildInterleavedRow(
+      'reduction',
+      'timer-query',
+      dwell(120, 96, 48, 0, 0.25, 14.2),
+      dwell(120, 96, 48, 0, 0.25, 14.2),
+      dwell(120, 112, 48, 0, 0.25, 15.6),
+    );
+    expect(row.baselineLimitMag).toBe(14.2);
+    expect(row.disabledLimitMag).toBe(15.6);
   });
 
   it('buildPriceRow: zero baseline yields 0 pct, not NaN', () => {

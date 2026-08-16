@@ -196,24 +196,26 @@ submission barrier: drop it and the driver batches deeper, so
 with the pass off. The disabled path therefore still binds the last
 level and re-requests it — same fence, only the draws removed.
 
-**But the cadence is emergent, not pinned, and that confound is still
-open.** `pending` is just `fence !== null`, cleared in `poll()` only once
-the fence has SIGNALED — so the rate is set by how backed-up the GPU is.
-Remove the draws and the GPU drains sooner, the fence signals sooner,
-`request()` stops no-opping, and the `gl.flush()` fires on more frames.
-More barriers, shallower batching, and `TIME_ELAPSED` inflates again —
-the same failure as dropping the fence, arriving through frequency
-instead of presence. Measured at the default Sol view (~160 ms frame)
-the `reduction` row read **−38.1 ms** with the stale-readback fix in
-place, against a clean +10 ms at an LG viewpoint (~43 ms frame) where
-the fence lands inside one frame whether or not the chain runs.
-`requestsIssued` counts what actually went out; the frame-cost harness
-reports it per dwell so a row can be read against the rate it ran at.
+**The cadence is emergent, not pinned — and measurement says that does
+not matter.** `pending` is just `fence !== null`, cleared in `poll()`
+only once the fence has SIGNALED, so nothing pins the rate. The worry
+that follows is that removing the draws lets the GPU drain sooner, the
+fence signal sooner, and the `gl.flush()` fire more often — pricing
+batching depth rather than the pass.
 
-The coupling is not specific to this pass: **any** pass whose removal
-makes the frame cheaper speeds the fence, and always in the direction
-that penalises the cheaper state — so a differential row understates
-what disabling saved, most for the rows that save most.
+`requestsIssued` counts what actually went out, and the frame-cost
+harness reports it per dwell. At the default Sol view it read **0.25
+exactly in every state of every row** — one readback per four frames,
+unchanged across frames from 31 ms to 112 ms. The latency is constant in
+*frames* rather than wall time, i.e. pipeline-depth buffering, which is
+indifferent to what the frame costs. **Hypothesis refuted**; the counter
+stays as a standing check.
+
+What is still unexplained is the row itself: at the default Sol view,
+with the fence held and the cadence identical either side, `reduction`
+prices **−15.8 ms** against a `bracketMs` of 0.23 — the tightest bracket
+in the dataset, so the sign is not noise. Neither the missing fence, the
+stale readback, nor the cadence accounts for it.
 
 **What it lands is then thrown away, and that part is not optional.**
 The texel is from whichever frame last ran the draws, while
