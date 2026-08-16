@@ -34,7 +34,13 @@ def read_samples(path: Path, dtype: str) -> np.ndarray:
 def reduce_dem(body: str, downloaded: Path) -> None:
     spec = DEM_BODIES[body]
     raw = read_samples(downloaded, spec["dtype"])
-    assert not (raw == -32768).any(), "nodata present — needs a fill rule"
+    nodata = spec["nodata"]
+    # Read from the spec, never hardcoded: against an unsigned dtype a signed
+    # sentinel compares false everywhere, so a literal here would silently
+    # check nothing on exactly the body that declares no sentinel at all.
+    assert nodata is None or not (raw == nodata).any(), (
+        f"nodata {nodata} present — needs a fill rule"
+    )
     elev = raw.astype(np.float32) * spec["scale"] + spec["offset"]
     lo, hi = float(elev.min()), float(elev.max())
     want_lo, want_hi = spec["span_m"]

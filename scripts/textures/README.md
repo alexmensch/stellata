@@ -31,7 +31,10 @@ live in `data/textures/README.md`; this folder owns the scripts.
   downloaded 0.5–2.0 GB global DEM → the frozen
   `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode
   traps (USGS int16-in-mode-`I` strips, the SVS half-metre datum) and
-  asserts the elevation span against the published one.
+  asserts the elevation span against the published one plus the
+  absence of each body's declared no-data sentinel — declared per body
+  because the SVS product is unsigned and has none, and a signed
+  literal would compare false against it everywhere.
 - `texture_calibration.py` — index-anchored colour calibration
   (imported by the build): per-map linear-RGB gains that move each
   map's sphere-weighted mean chromaticity onto the body's adopted
