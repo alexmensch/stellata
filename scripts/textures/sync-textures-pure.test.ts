@@ -9,6 +9,8 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('saturn-rings.png')).toBe(true);
     expect(isTexturePublicAsset('uranus-rings.png')).toBe(true);
     expect(isTexturePublicAsset('neptune-rings.png')).toBe(true);
+    expect(isTexturePublicAsset('moon-normal.webp')).toBe(true);
+    expect(isTexturePublicAsset('mercury-normal.webp')).toBe(true);
   });
 
   it('rejects docs and source originals', () => {
@@ -19,5 +21,8 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('rings-uranus.tsv')).toBe(false);
     expect(isTexturePublicAsset('earth.jpg.bak')).toBe(false);
     expect(isTexturePublicAsset('other.png')).toBe(false);
+    expect(isTexturePublicAsset('moon-dem-svs.tif')).toBe(false);
+    expect(isTexturePublicAsset('relief.json')).toBe(false);
+    expect(isTexturePublicAsset('moon-normal.webp.bak')).toBe(false);
   });
 });

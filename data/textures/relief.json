@@ -1,0 +1,17 @@
+{
+  "mars": {
+    "medianTiltDeg": 0.442,
+    "p90TiltDeg": 2.572,
+    "width": 4096
+  },
+  "mercury": {
+    "medianTiltDeg": 1.136,
+    "p90TiltDeg": 3.933,
+    "width": 4096
+  },
+  "moon": {
+    "medianTiltDeg": 3.269,
+    "p90TiltDeg": 11.648,
+    "width": 4096
+  }
+}
