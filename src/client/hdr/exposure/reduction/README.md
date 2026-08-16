@@ -175,6 +175,13 @@ Chart mode and the float-RT fallback render nothing into the target at
 all, so the pass is skipped and its last reading dropped — the statistic
 reports `dm = 0` rather than adapting to a stale frame.
 
+`fenceWhileParked` is the one exception, and it is debug-only: with it
+set, `measure()` still runs across the park with a null source, issuing
+the readback and nothing else. The `hdrChain` frame-cost row needs it,
+because parking the chain otherwise takes the frame's only submission
+barrier with it and the row would price that instead. Production chart
+mode leaves it off — a readback it has no use for is not free.
+
 Perf rows: `submit.reduction` (CPU submission) and, where the driver
 exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
 § GPU timing. `stellata.reduction.enabled = false` skips the chain's
@@ -187,8 +194,26 @@ ends in `gl.flush()`, and on ANGLE that flush is the frame's only
 submission barrier: drop it and the driver batches deeper, so
 `TIME_ELAPSED` spans more overlapped work and the frame reads *slower*
 with the pass off. The disabled path therefore still binds the last
-level and re-requests it — same fence, same every-other-frame cadence,
-only the draws removed.
+level and re-requests it — same fence, only the draws removed.
+
+**But the cadence is emergent, not pinned, and that confound is still
+open.** `pending` is just `fence !== null`, cleared in `poll()` only once
+the fence has SIGNALED — so the rate is set by how backed-up the GPU is.
+Remove the draws and the GPU drains sooner, the fence signals sooner,
+`request()` stops no-opping, and the `gl.flush()` fires on more frames.
+More barriers, shallower batching, and `TIME_ELAPSED` inflates again —
+the same failure as dropping the fence, arriving through frequency
+instead of presence. Measured at the default Sol view (~160 ms frame)
+the `reduction` row read **−38.1 ms** with the stale-readback fix in
+place, against a clean +10 ms at an LG viewpoint (~43 ms frame) where
+the fence lands inside one frame whether or not the chain runs.
+`requestsIssued` counts what actually went out; the frame-cost harness
+reports it per dwell so a row can be read against the rate it ran at.
+
+The coupling is not specific to this pass: **any** pass whose removal
+makes the frame cheaper speeds the fence, and always in the direction
+that penalises the cheaper state — so a differential row understates
+what disabling saved, most for the rows that save most.
 
 **What it lands is then thrown away, and that part is not optional.**
 The texel is from whichever frame last ran the draws, while

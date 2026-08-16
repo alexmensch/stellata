@@ -110,7 +110,18 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
     {
       key: 'hdrChain',
       present: () => stellata.hdr.statisticTexture() !== null,
-      disable: () => flag((on) => stellata.hdr.setChartMode(!on)),
+      // The park drops the statistic, so `measure()` stops being called at
+      // all and the frame loses its only ANGLE submission barrier — the
+      // same defect the reduction row was fixed for. Hold the fence across
+      // the park so the row prices the chain, not the barrier.
+      disable: () => {
+        stellata.reduction.fenceWhileParked = true;
+        stellata.hdr.setChartMode(true);
+        return () => {
+          stellata.hdr.setChartMode(false);
+          stellata.reduction.fenceWhileParked = false;
+        };
+      },
     },
     {
       key: 'reduction',
@@ -197,18 +208,21 @@ export async function runPriceFrame(
   const dwell = async (): Promise<DwellStats | null> => {
     for (let f = 0; f < settleFrames; f++) await nextFrame();
     sink.length = 0;
+    const frames = dwellFrames;
+    const readbacksBefore = stellata.reduction.readbackRequests;
     if (method === 'timer-query') {
-      for (let f = 0; f < dwellFrames; f++) await nextFrame();
+      for (let f = 0; f < frames; f++) await nextFrame();
     } else {
       let last = performance.now();
-      for (let f = 0; f < dwellFrames; f++) {
+      for (let f = 0; f < frames; f++) {
         await nextFrame();
         const now = performance.now();
         sink.push(now - last);
         last = now;
       }
     }
-    return summarizeDwell(sink);
+    const readbacks = stellata.reduction.readbackRequests - readbacksBefore;
+    return summarizeDwell(sink, readbacks / frames);
   };
 
   const fitDwellToBudget = (firstDwellMs: number): void => {

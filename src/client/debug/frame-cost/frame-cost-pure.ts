@@ -8,6 +8,9 @@ export interface DwellStats {
   /** Serial structure in the samples, not a duration — see
    *  `lag1Autocorrelation`. */
   readonly lag1: number;
+  /** Reduction readbacks issued per frame over the dwell. 0.5 is the
+   *  every-other-frame rhythm; 1.0 is one per frame. */
+  readonly readbackPerFrame: number;
 }
 
 export interface PriceFrameRow {
@@ -28,6 +31,12 @@ export interface PriceFrameRow {
    *  one — whether each dwell's spread is alternation, noise, or drift. */
   readonly baselineLag1: number;
   readonly disabledLag1: number;
+  /** Readbacks per frame in each state. The reduction's fence is the
+   *  frame's only ANGLE submission barrier and its cadence is emergent, so
+   *  a row whose two values differ priced a change in barrier rate on top
+   *  of the pass — README.md § The readback cadence confound. */
+  readonly baselineReadback: number;
+  readonly disabledReadback: number;
 }
 
 export interface DwellFit {
@@ -142,13 +151,17 @@ export function lag1Autocorrelation(samples: readonly number[]): number {
   return variance === 0 ? 0 : covariance / variance;
 }
 
-export function summarizeDwell(samples: readonly number[]): DwellStats | null {
+export function summarizeDwell(
+  samples: readonly number[],
+  readbackPerFrame = 0,
+): DwellStats | null {
   if (samples.length === 0) return null;
   return {
     samples: samples.length,
     medianMs: median(samples),
     iqrMs: percentile(samples, 0.75) - percentile(samples, 0.25),
     lag1: lag1Autocorrelation(samples),
+    readbackPerFrame,
   };
 }
 
@@ -186,6 +199,8 @@ export function buildPriceRow(
     noiseMs: differentialNoiseMs(baseline, disabled),
     baselineLag1: baseline.lag1,
     disabledLag1: disabled.lag1,
+    baselineReadback: baseline.readbackPerFrame,
+    disabledReadback: disabled.readbackPerFrame,
   });
 }
 
@@ -216,6 +231,8 @@ export function buildInterleavedRow(
     bracketMs: Math.abs(after.medianMs - before.medianMs),
     baselineLag1: (before.lag1 + after.lag1) / 2,
     disabledLag1: disabled.lag1,
+    baselineReadback: (before.readbackPerFrame + after.readbackPerFrame) / 2,
+    disabledReadback: disabled.readbackPerFrame,
   });
 }
 
@@ -231,6 +248,8 @@ function assembleRow(
     bracketMs?: number;
     baselineLag1: number;
     disabledLag1: number;
+    baselineReadback: number;
+    disabledReadback: number;
   },
 ): PriceFrameRow {
   const savedMs = referenceMs - disabledMs;
@@ -247,6 +266,8 @@ function assembleRow(
     ...(stats.bracketMs === undefined ? {} : { bracketMs: round3(stats.bracketMs) }),
     baselineLag1: round3(stats.baselineLag1),
     disabledLag1: round3(stats.disabledLag1),
+    baselineReadback: round3(stats.baselineReadback),
+    disabledReadback: round3(stats.disabledReadback),
   };
 }
 

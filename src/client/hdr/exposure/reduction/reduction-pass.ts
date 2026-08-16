@@ -80,9 +80,22 @@ export class LuminanceReduction {
    *  loss of the frame's only submission barrier, not the draws. */
   enabled = true;
 
+  /** Debug (frame-cost differentials): keep issuing the readback while the
+   *  statistic is unavailable — chart mode — so the frame keeps its only
+   *  ANGLE submission barrier and the `hdrChain` row prices the chain
+   *  rather than the loss of that barrier. Off in production, where chart
+   *  mode has no use for a readback it would pay for every frame. */
+  fenceWhileParked = false;
+
+  /** Readbacks issued so far. Cadence is emergent, not pinned — README.md
+   *  § Latency. */
+  get readbackRequests(): number {
+    return this.readback?.requestsIssued ?? 0;
+  }
+
   measure(
     renderer: THREE.WebGLRenderer,
-    source: THREE.Texture,
+    source: THREE.Texture | null,
     width: number,
     height: number,
     renderExposure: number,
@@ -101,7 +114,8 @@ export class LuminanceReduction {
     this.ensureLevels(width, height);
     if (this.levels.length === 0) return;
 
-    if (this.enabled) {
+    const drawing = this.enabled && source !== null;
+    if (drawing) {
       let src = source;
       let srcW = width;
       let srcH = height;
@@ -123,8 +137,8 @@ export class LuminanceReduction {
     // goes out anyway to keep the fence in the frame, and poll() drops
     // what it lands so the statistic holds still.
     this.readback.request(1);
-    this.pendingIsStale = !this.enabled;
-    if (this.enabled) this.pendingExposure = renderExposure;
+    this.pendingIsStale = !drawing;
+    if (drawing) this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);
   }
 

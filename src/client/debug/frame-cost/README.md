@@ -51,13 +51,41 @@ Three rows are not what they look like:
 - **`hdrChain`** disables via `hdr.setChartMode(true)` — the whole-target
   park, which also stops the statistic attachment and flips emitters to
   inline tone-mapping. Its row prices target-chain-vs-direct-to-canvas,
-  not the resolve draw alone.
+  not the resolve draw alone. The park also stops `measure()` being
+  called at all, so the toggle sets `reduction.fenceWhileParked` for the
+  duration: without it the row prices the loss of the frame's only
+  submission barrier on top of the chain (§ The readback cadence
+  confound).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
-  `../../hdr/exposure/reduction/README.md`.
+  `../../hdr/exposure/reduction/README.md`. Keeping it is necessary and
+  **not sufficient**: read the row against § The readback cadence
+  confound before believing it.
+
+## The readback cadence confound
+
+The reduction's `gl.flush()` is the frame's only ANGLE submission
+barrier, and **how often it fires is emergent, not pinned**: the
+readback's fence clears only when the GPU drains, so a cheaper frame
+issues more readbacks. Disabling a pass therefore changes the barrier
+rate as well as the work, and always in the direction that penalises the
+cheaper state — shallower batching, `TIME_ELAPSED` spanning more
+overlapped work.
+
+`baselineReadback` / `disabledReadback` report the rate each state
+actually ran at, in readbacks per frame. **Equal rates mean the row is
+clean.** Diverging rates mean the row priced a barrier change on top of
+the pass, and `savedMs` is an underestimate — the more the row saves,
+the larger the bias. The pathological case is `reduction` itself, where
+the artifact can exceed the pass: −38.1 ms at the default Sol view
+against +10 ms at an LG viewpoint, whose 43 ms frame lands the fence
+inside one frame either way.
+
+`../../hdr/exposure/reduction/README.md` § Latency owns the mechanism.
+Pinning the cadence rather than only reporting it is not done yet.
 
 ## The instrument drifts, so the baseline is bracketed
 
@@ -100,6 +128,9 @@ single-baseline sweep when the instrument is known to be settled.
   conservative, so a row that read as zero because `savedMs` fell under
   the floor may not be zero. Computed on ranks, so a hitched frame moves
   it by one sample rather than by its magnitude.
+- **`baselineReadback` / `disabledReadback`** — the third gate, and the
+  one that can invalidate a row outright rather than widen it. Equal is
+  clean; diverging means § The readback cadence confound applies.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 

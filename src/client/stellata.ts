@@ -2067,7 +2067,7 @@ export class Stellata implements FrameAnchor {
     const statistic = this.hdr.statisticTexture();
     if (statistic === null) {
       this.reduction.reset();
-      return;
+      if (!this.reduction.fenceWhileParked) return;
     }
     this.renderer.getDrawingBufferSize(this.drawingBufferSize);
     this.reduction.measure(

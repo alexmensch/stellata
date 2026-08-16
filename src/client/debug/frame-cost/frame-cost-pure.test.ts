@@ -16,12 +16,13 @@ const FIT = {
   minDwellFrames: 30,
 };
 
-const dwell = (samples: number, medianMs: number, iqrMs: number, lag1 = 0) => ({
-  samples,
-  medianMs,
-  iqrMs,
-  lag1,
-});
+const dwell = (
+  samples: number,
+  medianMs: number,
+  iqrMs: number,
+  lag1 = 0,
+  readbackPerFrame = 0,
+) => ({ samples, medianMs, iqrMs, lag1, readbackPerFrame });
 
 describe('frame-cost-pure', () => {
   it('median: odd, even, single', () => {
@@ -40,11 +41,12 @@ describe('frame-cost-pure', () => {
 
   it('summarizeDwell: empty is null, stats otherwise', () => {
     expect(summarizeDwell([])).toBeNull();
-    expect(summarizeDwell([1, 2, 3, 4])).toEqual({
+    expect(summarizeDwell([1, 2, 3, 4], 0.5)).toEqual({
       samples: 4,
       medianMs: 2.5,
       iqrMs: 2,
       lag1: 0.25,
+      readbackPerFrame: 0.5,
     });
   });
 
@@ -204,6 +206,21 @@ describe('frame-cost-pure', () => {
     );
     expect(row.baselineLag1).toBe(-0.85);
     expect(row.disabledLag1).toBe(-0.1);
+  });
+
+  it('a row carries the readback cadence each state actually ran at', () => {
+    // The fence is the frame's only ANGLE submission barrier, so a row
+    // whose two rates differ priced a change in barrier rate on top of the
+    // pass — the reduction row at a frame-time-limited viewpoint.
+    const row = buildInterleavedRow(
+      'reduction',
+      'timer-query',
+      dwell(120, 155, 94, 0.06, 0.48),
+      dwell(120, 155, 94, 0.06, 0.52),
+      dwell(120, 193, 94, 0.06, 0.97),
+    );
+    expect(row.baselineReadback).toBe(0.5);
+    expect(row.disabledReadback).toBe(0.97);
   });
 
   it('buildPriceRow: zero baseline yields 0 pct, not NaN', () => {
