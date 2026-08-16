@@ -183,14 +183,14 @@ to its material). The disc pass discards fragments with `vPhysRatio <
 0.5`; the glow pass discards `vPhysRatio ≥ 0.5`; the core mask
 discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
-`uHideFocusIdx` (int) suppresses a single star across all three passes
-by collapsing its vertex to a clip-space sentinel
-(`gl_Position = vec4(2, 2, 2, 1)`) when
-`gl_InstanceID == uHideFocusIdx`. Defaults to `-1` (no suppression).
-Set to the focal-star index in OBSERVE mode (camera parked at the
-focal star — disc would render from inside) and held pinned to the
-source star throughout an observe-launched warp so the reorient phase
-doesn't flash the focal disc as the camera pulls away.
+`uHideFocusIdx` (int) suppresses a single star across all three passes by
+collapsing its vertex to a clip-space sentinel
+(`gl_Position = vec4(2, 2, 2, 1)`) when `gl_InstanceID == uHideFocusIdx`.
+Defaults to `-1` (no suppression). Set to the focal-star index in OBSERVE
+mode (camera parked at the focal star — disc would render from inside) and
+held pinned to the source star throughout an observe-launched warp so the
+reorient phase doesn't flash the focal disc as the camera pulls away; the
+pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
 
 `iCompositeSuppress` (float, per-instance) collapses a star's disc
 (mode 1) and core depth-mask (mode 2) passes — but not the additive

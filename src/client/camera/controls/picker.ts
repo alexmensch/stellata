@@ -18,6 +18,7 @@ import {
   type ResolvedCandidate,
   type StarPickCandidate,
 } from './star-geometry';
+import { activePulsationAmp } from './star-physics';
 import type { HoverHit } from '../../hover/hover-types';
 
 export interface PickerDeps {
@@ -38,6 +39,10 @@ export interface PickerDeps {
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
+  // Live `iSuppressPulsation` mirror, read once per pick so the scan's
+  // bright-extreme reach agrees with `renderedSizeComponents` on which
+  // stars actually pulse. Null before the mask is built.
+  getSuppressPulsation: () => Float32Array | null;
   // Cheap upper bound on the faintest drawn magnitude, evaluated against
   // the star's INTRINSIC brightness to prune the catalog scan. Every term
   // it omits — dust extinction, the adaptation cut, the faint-end toe —
@@ -121,9 +126,10 @@ export class Picker {
     // (the camera lives in local frame under the floating origin). distSol
     // values are precomputed in sortedDistFromSol — no per-star sqrt needed.
     const locPos = this.deps.getLocalPositions();
-    const { absmag, spectClass, amplitudeMag, periodDays } = catalog;
+    const { absmag, spectClass } = catalog;
     const f = this.deps.getFilter();
     const cutoff = this.deps.drawCutoffMagFn(f.chart);
+    const suppressPulsation = this.deps.getSuppressPulsation();
     const v = new THREE.Vector3();
 
     // Window the scan to the slice of sortedDistFromSol that lies inside
@@ -152,7 +158,7 @@ export class Picker {
       // whole cycle. Without this, a variable with static appMag just
       // above the limit gets dropped here even though the GPU shows
       // its disc whenever magMod swings negative.
-      const amp = periodDays[i] > 0 ? amplitudeMag[i] : 0;
+      const amp = activePulsationAmp(catalog, i, suppressPulsation);
       const filterMag = appMag - amp * 0.5;
       if (filterMag > cutoff) continue;
 

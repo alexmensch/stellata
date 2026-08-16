@@ -149,6 +149,22 @@ export interface RenderedSizeArgs {
   extinctionAvMag?: number;
 }
 
+/** The GCVS amplitude the vertex shader will actually swing this star
+ *  by — zero wherever `iSuppressPulsation` gates the pulsation block off
+ *  (`../../star-pipeline/star.vert.glsl`). Every CPU mirror of that gate
+ *  routes through here: the disc-size mirror below, and the pick path's
+ *  bright-extreme reach. Two mirrors of one shader gate is how the two
+ *  came to disagree over 1,342 eclipsing rows. */
+export function activePulsationAmp(
+  catalog: Pick<Catalog, 'periodDays' | 'amplitudeMag'>,
+  idx: number,
+  suppressPulsation?: Float32Array | null,
+): number {
+  const amp = catalog.amplitudeMag[idx];
+  if (catalog.periodDays[idx] <= 0 || amp <= 0) return 0;
+  return suppressPulsation && suppressPulsation[idx] > 0.5 ? 0 : amp;
+}
+
 export interface RenderedSizeComponents {
   /** Apparent magnitude incl. the pulsation modulation, and the dust
    *  term only when the caller supplied `extinctionAvMag`. */
@@ -173,7 +189,7 @@ export function renderedSizeComponents(
   out: RenderedSizeComponents,
 ): RenderedSizeComponents {
   const { catalog, idx, camPos, localPositions, uniforms: u, filter } = args;
-  const { physicalRadius, absmag, periodDays, amplitudeMag } = catalog;
+  const { physicalRadius, absmag } = catalog;
 
   const dx = localPositions[idx * 3] - camPos.x;
   const dy = localPositions[idx * 3 + 1] - camPos.y;
@@ -187,21 +203,14 @@ export function renderedSizeComponents(
   const maxPhysSize = ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y);
 
   let radiusFactor = 1;
-  const period = periodDays[idx];
-  const amp = amplitudeMag[idx];
-  // Mirror the shader's `iSuppressPulsation` gate so the SVG focus
-  // ring + distance-vector tip track the rendered disc on eclipsing
-  // binaries whose pulsation has been gated off.
-  const suppressed = args.suppressPulsation
-    ? args.suppressPulsation[idx] > 0.5
-    : false;
-  if (period > 0 && amp > 0 && !suppressed) {
+  const amp = activePulsationAmp(catalog, idx, args.suppressPulsation);
+  if (amp > 0) {
     // Mirror star.vert.glsl: model-clock phase (days since J2000) with the
     // uMinPeriodSec anti-strobe floor, φ = 0 = maximum light (cos).
     // magMod carries the full V-band amplitude; radiusFactor swings the
     // ρ-bounded disc with its minimum at maximum light (negative exponent).
     const periodDaysEff = Math.max(
-      period,
+      catalog.periodDays[idx],
       u.uModelDaysPerRealSec.value * u.uMinPeriodSec.value,
     );
     const phaseRaw = u.uModelDays.value / periodDaysEff;

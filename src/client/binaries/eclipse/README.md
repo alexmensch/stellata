@@ -113,6 +113,13 @@ pair's line-of-sight separation sits inside one log-depth bucket).
 drops below the floor, since the exponential smoothing alone never
 reaches the shader's `<= 0` gate.
 
+The pick path mirrors both halves — the totality collapse and the
+partial dim's magnitude penalty — in
+`../../camera/controls/star-pick-visibility-pure.ts`, and mirrors them
+**glow-pass only**, matching the `uRenderMode == 0` gate above. Applying
+the dim to a disc-dominant star would hide one that is plainly on
+screen: its disc keeps drawing and the local depth pass orders the pair.
+
 #### Pulsation gate for eclipsing binaries
 
 `iSuppressPulsation` is a per-instance flag built once at
