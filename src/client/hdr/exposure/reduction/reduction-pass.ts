@@ -70,6 +70,11 @@ export class LuminanceReduction {
    * `renderExposure` is the scalar the frame was drawn with, captured here
    * because the readback outlives it.
    *
+   * `parked` skips the draws exactly as `enabled = false` does — fence
+   * kept, landed texel dropped — driven per frame by the adaptation park
+   * (`../README.md` § Parking the measurement) rather than by a debug
+   * toggle.
+   *
    * Leaves the render target at the canvas, the same contract the local
    * depth pass keeps.
    */
@@ -99,6 +104,7 @@ export class LuminanceReduction {
     width: number,
     height: number,
     renderExposure: number,
+    parked = false,
   ): void {
     this.poll();
     const gl = renderer.getContext() as WebGL2RenderingContext;
@@ -114,7 +120,7 @@ export class LuminanceReduction {
     this.ensureLevels(width, height);
     if (this.levels.length === 0) return;
 
-    const drawing = this.enabled && source !== null;
+    const drawing = this.enabled && !parked && source !== null;
     if (drawing) {
       let src = source;
       let srcW = width;

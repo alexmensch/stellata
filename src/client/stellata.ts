@@ -2161,6 +2161,7 @@ export class Stellata implements FrameAnchor {
       this.filter.chart, nowMs, this.frameCtx.warpActive,
     );
     this.exposure.setAdaptation(appliedDm);
+    this.hdr.setStatisticWritesParked(this.adaptation.isMeasurementParked());
     // A moved cut changes the next frame's scene, so a slew in flight
     // must keep frames coming until it snaps — the gate cannot see it
     // otherwise.
@@ -2217,6 +2218,7 @@ export class Stellata implements FrameAnchor {
       this.renderer, statistic,
       this.drawingBufferSize.x, this.drawingBufferSize.y,
       this.hdr.emitterUniforms.uExposure.value,
+      this.adaptation.isMeasurementParked(),
     );
   }
 
