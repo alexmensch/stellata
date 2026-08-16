@@ -36,7 +36,12 @@ in both navigate and observe modes.
   "visible" means to a pick path); making it the *gate* is the bug that
   had clicks landing on stars in empty sky. The confirm step costs a GPU
   readback per candidate, so `pickFromCandidatesResolved` walks the score
-  order lazily and stops at the first candidate that renders.
+  order lazily and stops at the first candidate that renders. The
+  prefilter's radius must be an **upper bound** of the resolved one or
+  the prime/fallback partition mis-tiers — in chart mode that means
+  bounding the magnitude-mapped ink disc as well as the realistic
+  footprint, since either can be the larger
+  (`Stellata.pickPrefilterSizePxFor`).
   It owns the two-tier star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks

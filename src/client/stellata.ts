@@ -369,7 +369,7 @@ export class Stellata implements FrameAnchor {
   // dust-less session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepass | null = null;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
-    { appMag: 0, appSizePx: 0, physSizePx: 0 };
+    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
   // Pure target resolver; the click FSM in onPointerUp + the observe
   // single/double-click dispatchers stay here as composition-layer
@@ -642,7 +642,7 @@ export class Stellata implements FrameAnchor {
       getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
-      renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
+      renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveStarPick: (idx) => this.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
@@ -1479,6 +1479,28 @@ export class Stellata implements FrameAnchor {
     }, out);
   }
 
+  private chartDiscPxFor(appMag: number): number {
+    return chartDiscPxForAppMag(
+      appMag,
+      starPhysics.getChartDiscParams(this.sharedUniforms),
+      this.exposure.getLimitMag(),
+    );
+  }
+
+  /** Upper bound on the radius `resolveStarPick` will report — what
+   *  `pickFromCandidatesResolved`'s prime/fallback partition requires of
+   *  the prefilter, and the reason the two can't just call the same
+   *  function: chart inks a magnitude-mapped disc rather than the
+   *  realistic footprint and either curve can be the larger, so the
+   *  bound has to cover both. Extinction only dims, and a dimmer star
+   *  maps to a smaller disc on both curves, so the resolved radius can
+   *  only shrink from here. */
+  private pickPrefilterSizePxFor(idx: number): number {
+    const c = this.renderedSizeComponentsFor(idx, this.pickSizeScratch);
+    const px = Math.max(c.appSizePx, c.physSizePx);
+    return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
+  }
+
   /** Dust extinction the shader will apply to this star, in magnitudes.
    *  Zero when the prepass is inert — the in-vertex fallback still dims
    *  the star, but reproducing its march on the CPU would need the
@@ -1512,14 +1534,9 @@ export class Stellata implements FrameAnchor {
     if (this.filter.chart) {
       // Chart inherits no exposure state and hard-clips at the
       // instrument limit; its ink is the flat disc, not the HDR kernel.
-      const discPx = chartDiscPxForAppMag(
-        c.appMag,
-        starPhysics.getChartDiscParams(this.sharedUniforms),
-        this.exposure.getLimitMag(),
-      );
       return {
         visible: c.appMag <= this.exposure.getLimitMag(),
-        hitRadius: discHitRadiusPx(discPx),
+        hitRadius: discHitRadiusPx(this.chartDiscPxFor(c.appMag)),
       };
     }
 
@@ -1529,7 +1546,7 @@ export class Stellata implements FrameAnchor {
         appMag: c.appMag,
         exposure: this.hdr.emitterUniforms.uExposure.value,
         thresholdMag: this.exposure.getThresholdMag(),
-        physRadiusPx: 0.5 * c.physSizePx,
+        physRadiusPx: 0.5 * c.physSizePxUncapped,
         whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
         tapered: c.physSizePx < PHYS_RATIO_THRESHOLD * Math.max(pxSize, 0.001),
       }),

@@ -106,7 +106,12 @@ function members(fx: Fixture): number[] {
 }
 
 function resolvedDisc(fx: Fixture, idx: number): void {
-  fx.sizes.set(idx, { appMag: 0, appSizePx: 4, physSizePx: RESOLVED_DISC_MIN_PX * 4 });
+  fx.sizes.set(idx, {
+    appMag: 0,
+    appSizePx: 4,
+    physSizePx: RESOLVED_DISC_MIN_PX * 4,
+    physSizePxUncapped: RESOLVED_DISC_MIN_PX * 4,
+  });
 }
 
 describe('StarLocalCluster membership', () => {
@@ -140,8 +145,10 @@ describe('StarLocalCluster membership', () => {
 
   it('skips scan stars past the magnitude limit or glow-sized', () => {
     fx.nearStars.push(3, 4);
-    fx.sizes.set(3, { appMag: 20, appSizePx: 4, physSizePx: 40 });     // slider-hidden
-    fx.sizes.set(4, { appMag: 0, appSizePx: 40, physSizePx: 4 });      // glow pass
+    // slider-hidden
+    fx.sizes.set(3, { appMag: 20, appSizePx: 4, physSizePx: 40, physSizePxUncapped: 40 });
+    // glow pass
+    fx.sizes.set(4, { appMag: 0, appSizePx: 40, physSizePx: 4, physSizePxUncapped: 4 });
     fx.cluster.update(fx.camera, fx.frame);
     expect(members(fx)).toEqual([]);
   });

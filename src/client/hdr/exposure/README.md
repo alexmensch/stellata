@@ -144,6 +144,15 @@ running the chain instead of approximating it: point-source peak → taper
 8-bit quantisation. It takes the **live** `uExposure`, which is how
 adaptation reaches it without any bound having to move.
 
+It reads the emitter's peak from the star's **true** angular radius, the
+one `star.vert.glsl` divides by before the viewport-fraction up-clamp
+(`renderedSizeComponents`' `physSizePxUncapped`) — the clamped value
+over-brightens a star at the zoom floor. Its half-step test is also one
+side of the encode only: the pipeline dithers *after* the operator, so a
+source a hair under half a step still lights a pixel on some frames. The
+predicate is that much stricter than the frame at the very edge, which
+errs toward "not pickable" on a star the user can barely see.
+
 **Every term above only ever dims**, and that is what keeps the cheap
 bounds useful: an intrinsic magnitude inside `drawCutoffMag` is a
 conservative superset of what renders, so it stays the right *prefilter*

@@ -155,6 +155,11 @@ export interface RenderedSizeComponents {
   appMag: number;
   appSizePx: number;
   physSizePx: number;
+  /** `physSizePx` BEFORE the viewport-fraction up-clamp. star.vert.glsl
+   *  divides the point-source peak by the true angular radius and clamps
+   *  only afterwards, so a visibility mirror must take this one — the
+   *  clamped value over-brightens a star at the zoom floor. */
+  physSizePxUncapped: number;
 }
 
 // The two size terms behind the GPU-rendered quad size — the CPU mirror
@@ -217,14 +222,16 @@ export function renderedSizeComponents(
   const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, sizeSpan);
 
   // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
-  const physSize = Math.min(physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor), maxPhysSize);
+  const physSizeTrue = physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor);
   out.appMag = appMag;
   out.appSizePx = appSize;
-  out.physSizePx = physSize;
+  out.physSizePx = Math.min(physSizeTrue, maxPhysSize);
+  out.physSizePxUncapped = physSizeTrue;
   return out;
 }
 
-const sizeScratch: RenderedSizeComponents = { appMag: 0, appSizePx: 0, physSizePx: 0 };
+const sizeScratch: RenderedSizeComponents =
+  { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
 // Rendered quad diameter (px) — `max(appSize, physSize)` over the
 // components above. What SVG / overlay code (focus ring, distance-vector
