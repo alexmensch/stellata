@@ -76,6 +76,22 @@ function webpSize(name: string): { width: number; height: number } {
   return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
 }
 
+// These maps ride LFS, and the Unit tests job does not pull it — a checkout
+// without the objects leaves pointer stubs whose first bytes are text. Anything
+// reading pixels or headers self-skips there, the way the catalogue corpora do,
+// and says so rather than passing quietly.
+const mapsArePointers = shippedNormalMaps.some((name) =>
+  readFileSync(resolve(TEXTURES, `${name}-normal.webp`))
+    .subarray(0, 7)
+    .toString('ascii') === 'version',
+);
+if (mapsArePointers) {
+  console.warn(
+    '[dem-relief] skipping artifact-header pins — normal maps are LFS ' +
+      'pointers, not WebP. Run `git lfs pull` to exercise them.',
+  );
+}
+
 describe('surface-relief normal maps', () => {
   it('parses every DEM body out of dem_relief.py', () => {
     expect(Object.keys(demBodies).sort()).toEqual(['mars', 'mercury', 'moon']);
@@ -150,13 +166,16 @@ describe('surface-relief normal maps', () => {
   it('builds every map at the declared target width', () => {
     const target = pySource.match(/DEM_TARGET_W = (\d+)/);
     expect(target).not.toBeNull();
-    const width = Number(target![1]);
     for (const [name, row] of Object.entries(manifest)) {
-      expect(row.width, `${name} manifest width`).toBe(width);
+      expect(row.width, `${name} manifest width`).toBe(Number(target![1]));
     }
+  });
+
+  it.skipIf(mapsArePointers)('ships artifacts at that same width', () => {
     // The manifest is written by the same call that writes the image, so it
     // can only disagree with the artifact through a hand-edit or a bad merge.
     // Read the shipped file's own header so the pin survives that.
+    const width = Number(pySource.match(/DEM_TARGET_W = (\d+)/)![1]);
     for (const name of shippedNormalMaps) {
       expect(webpSize(name), `${name} artifact`).toEqual({
         width,
