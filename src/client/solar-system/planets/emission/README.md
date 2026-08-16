@@ -44,12 +44,20 @@ than assumed.** A normal map redistributes the direct term across the disc
 without changing the mean by much: integrating the shaded Moon under its
 own map moves the disc total **+0.002 mag at full phase, −0.003 at 90°,
 −0.008 at 120°** — three orders under anything visible, and a correction
-term would be a fitted quantity sitting on top of a closed form. Past 150°
-it grows (−0.07 at 150°, −0.69 at 170°) because relief and Mallama's curve
-then double-count the same roughness, and there the disc is already at
-1.5 % of full brightness with `uPhaseScale`'s [¼, 4] clamp bounding the
-residual. `../README.md` § Surface relief owns which terms the perturbed
-normal reaches.
+term would be a fitted quantity sitting on top of a closed form.
+
+Past 150° it grows — **−0.07 at 150°, −0.69 at 170°** — and on the Moon,
+which is where those numbers were measured, nothing bounds it: the body
+carries no `phaseCoefficients`, so `uPhaseScale` is pinned at 1 and neither
+Mallama's curve nor its [¼, 4] clamp is in the picture at all. What keeps the
+error out of sight is the disc, already at 1.5 % of full brightness by 170°.
+It is the same missing physics that has the Moon rendering ~1.4 mag over at
+half phase, and `stellata-2f6.51` fixes both at once — deliberately after the
+relief work, so the two corrections cannot double-count. On a body that DOES
+carry a measured curve, relief and Mallama double-count the same roughness
+past 150° and the clamp bounds what is left.
+
+`../surface-relief/README.md` owns which terms the perturbed normal reaches.
 
 **Two disc means divide out**, which is what makes everything the shader
 multiplies on top a pure redistribution rather than a dimming:

@@ -48,10 +48,11 @@ src/client/solar-system/planets/
                                   uHideIdx (one uniform shared by both
                                   glare passes) hides the observe-anchor
                                   body via setHiddenInstance.
-  planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
+  planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD. Owns the shared
                                   atmosphere uniform block
-                                  (sharedAtmoUniforms).
+                                  (sharedAtmoUniforms). Its test pins the
+                                  three surfaces' diffuse-attachment gate.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
