@@ -76,8 +76,11 @@ Three rows are not what they look like:
   `../../hdr/exposure/reduction/README.md`. Keeping it is necessary and
   **still not sufficient** — the row reads solidly negative at the
   default Sol view with the fence held, the readback cadence identical
-  in both states, and `bracketMs` at 0.23. Unexplained; check
-  `disabledLimitMag` against `baselineLimitMag` before believing it.
+  in both states, and `bracketMs` at 0.23. Reproduced 2026-08-16 with
+  the exposure pinned: −18.2 ms at bracket 15.1 and −52.4 ms at bracket
+  0.33, limit mags equal. Unexplained; check `disabledLimitMag` against
+  `baselineLimitMag` before believing it, and expect the negative at
+  this vantage.
 
 ## Decomposing the HDR chain
 
@@ -113,6 +116,16 @@ nearly free. The test, at a vantage where the row is expensive:
 cleared-to-zero, maximally compressible; a reduction row that collapses
 to ~zero means the cost tracks the attachment's content, not the chain's
 draws. Restore with `setStatisticWritesEnabled(true)`.
+
+Measured 2026-08-16 at MW-plane 50°, exposure pinned, 6.774 Mpx: the row
+did **not** collapse — reduction over the cleared attachment read
+48.1 ms against 18.4 ms live (brackets 6.4 / 2.1), with the
+reduction-off floors matching across the two states. Reducing the
+emptiest possible attachment costs 2.6× the full star field, so "nearly
+empty compresses well" is refuted. Working hypothesis, unverified: a
+cleared-but-never-written surface stays in fast-clear metadata state and
+sampling it forces a per-frame resolve, while a surface fully
+overwritten by smooth resolved-disc texels samples cheap.
 
 ## The readback cadence — measured, and NOT the confound
 
