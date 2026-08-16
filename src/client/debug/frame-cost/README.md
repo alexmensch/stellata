@@ -70,6 +70,16 @@ Three rows are not what they look like:
   confound).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
+A fourth thing to know before reading rows at a no-cut vantage: the
+adaptation park (`../../hdr/exposure/README.md` § Parking the
+measurement) stops the reduction draws and the statistic writes wherever
+the settled cut is exactly 0, and the exposure pin freezes it there
+(collapsing a mid-probe park to parked, so every dwell prices the same
+state). At those vantages the `reduction` and `statisticWrites` rows
+price an already-parked frame and should read ~0 — the park working, not
+the instrument failing. Both rows still price the pass wherever a cut is
+live.
+
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see

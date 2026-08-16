@@ -187,7 +187,11 @@ exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
 § GPU timing. `stellata.reduction.enabled = false` skips the chain's
 draws while FREEZING the statistic at its last reading (unlike chart
 mode's reset-and-drop) — a frame-cost measurement lever
-(`../../../debug/frame-cost/README.md`).
+(`../../../debug/frame-cost/README.md`). `measure()`'s `parked` argument
+is the same skip driven per frame by the adaptation park
+(`../README.md` § Parking the measurement) instead of by a debug toggle;
+everything below about the disabled path — fence kept, landing dropped —
+holds for it verbatim.
 
 **The readback keeps running while disabled, and must.** `request()`
 ends in `gl.flush()`, and on ANGLE that flush is the frame's only

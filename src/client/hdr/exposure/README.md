@@ -28,6 +28,9 @@ src/client/hdr/exposure/
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
     (+ test)                 measurement into the applied cut, and owns
                              the three debug overrides (§ Debug panel).
+  adaptation-park-pure.ts    The park machine: when the measurement's GPU
+    (+ test)                 work may stop and how it wakes (§ Parking
+                             the measurement).
   exposure-tuning.ts         The debug panel's Exposure section: the live
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
@@ -295,6 +298,45 @@ denser star field rather than the pass. Held has to beat the chart branch
 too, or parking the HDR chain would zero the cut and change the scene the
 same way. Releasing drops `lastNowMs`, so the next frame snaps instead of
 ramping from a cut stale by the whole hold.
+
+### Parking the measurement
+
+The measurement is most expensive exactly where it applies no cut — the
+reduction row read 18–26 % of frame at three vantages whose measured `dm`
+was exactly 0, and ~zero where a bright body fills the screen — so the
+park machine (`adaptation-park-pure.ts`, ticked from `measure()` once per
+**rendered** frame) stops its GPU work there. After
+`ADAPT_PARK_ZERO_LANDINGS` consecutive landed measurements reading exactly
+`dm` 0 with the applied cut settled at 0, the reduction's draws and the
+statistic attachment's emitter writes both stop
+(`stellata.ts` fans the one `isMeasurementParked()` boolean out to
+`HdrPipeline.setStatisticWritesParked` and `reduction.measure`'s `parked`
+argument, both ahead of the frame they gate). What stays: the attachment's
+**clear** (it must read zero, not stale) and the **readback fence** — the
+1-texel readback is the frame's only ANGLE submission barrier, which chart
+mode may drop and scene mode must not (`reduction/README.md` § Where it
+runs).
+
+Wake: every `ADAPT_PARK_PROBE_INTERVAL_FRAMES`-th rendered frame opens a
+probe — writes open, chain runs — which stays open until its readback
+lands; a landing measuring any `dm < 0` unparks immediately and the slew
+ramps from 0, so detection is bounded by the interval plus the slew.
+Rendered frames rather than rAF ticks is load-bearing twice over: the
+render gate skips ticks at a static view, so a parked static frame never
+pays a probe, and the duty cycle runs exactly while the camera moves
+through no-cut space — which is where the win is.
+
+- **A probe frame must open the writes for its own frame.** Reducing the
+  cleared attachment costs ~3x reducing live content (~45 ms at 6.774 Mpx,
+  vantage-independent), so a measure-over-zeros cadence would be the most
+  expensive schedule available — and would measure nothing.
+- **`setHeld` outranks the park**, as it outranks chart: the machine
+  freezes under a hold, and a hold landing mid-probe collapses it to
+  parked, so a frame-cost sweep prices one state rather than whichever the
+  pin happened to land on (`../../debug/frame-cost/README.md`).
+- **Chart's reset clears the park** with the rest of the statistic state.
+  Warp needs nothing of its own: a parked warp probes on the interval and
+  the unpark snaps, as any warp-frame measurement does.
 
 **No spatial weighting.** A plain mean over the target is the shape the
 scanned-observer premise implies; centre weighting or a fovea-like radial
