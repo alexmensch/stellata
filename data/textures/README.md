@@ -112,10 +112,17 @@ waits on KTX2/Basis block compression.
 Those two figures assume **RGBA8 plus mipmaps**, which is what a WebP
 decoded to an `ImageBitmap` uploads as by default. Since blue carries
 no signal, an `RG8` upload (WebGL2) halves both: ~22 MB at 4096 and
-~89 MB at 8192. Whether that lands is 2f6.42's call, but it has to be
-settled before the 8192 question is reopened — it moves 8192 from
-unaffordable to arguable, so quoting ~179 MB as the blocker without
-the channel assumption would decide that question by accident.
+~89 MB at 8192 — which moves 8192 from unaffordable to arguable, so
+quoting ~179 MB as the blocker without stating the channel assumption
+would decide that question by accident.
+
+**The renderer ships RGBA8.** The `RG8` upload is a DOM-source
+`texImage2D` format conversion with no CPU-side mirror to test and a
+per-browser failure mode, and a wrong upload reads as *wrong terrain* —
+the same symptomless class as a mis-rolled map above — so landing it
+alongside the relief shading itself would confound the one manual smoke
+that can catch either. It is filed on its own, ahead of the KTX2/Basis
+work that supersedes it for the 8192 case.
 
 **Which bodies are eligible at all.** Relief applies only where the
 rendered texture IS the solid surface. That excludes **Venus** (we

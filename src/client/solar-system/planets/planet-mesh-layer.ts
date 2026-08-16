@@ -178,6 +178,8 @@ interface MeshEntry {
   atmoBase?: AtmoBase;
 }
 
+const reliefKey = (name: string): string => `${name.toLowerCase()}-normal`;
+
 type TextureState =
   | { state: 'loading' }
   /** `meanLuminance` is the map's sphere-weighted mean LINEAR luminance,
@@ -275,6 +277,7 @@ export class PlanetMeshLayer {
       const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(planet.name);
+        this.ensureTexture(reliefKey(planet.name), 'webp');
         if (planet.rings) this.ensureTexture(`${planet.name}-rings`, 'png');
       }
       const fade = meshFadeFromPhysPx(physPx);
@@ -339,6 +342,7 @@ export class PlanetMeshLayer {
       this.tmpPoleView.set(0, 1, 0)
         .applyQuaternion(mesh.quaternion)
         .transformDirection(this.viewInverse);
+      (material.uniforms.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
 
       if (entry.ring) {
         this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, airlightL);
@@ -384,6 +388,14 @@ export class PlanetMeshLayer {
       }
 
       material.uniforms.uFade.value = fade;
+      const reliefState = this.textures.get(reliefKey(planet.name));
+      if (reliefState?.state === 'ready') {
+        material.uniforms.uNormalMap.value = reliefState.tex;
+        material.uniforms.uHasNormalMap.value = 1;
+      } else {
+        material.uniforms.uNormalMap.value = this.placeholder;
+        material.uniforms.uHasNormalMap.value = 0;
+      }
       if (texState?.state === 'ready') {
         material.uniforms.uMap.value = texState.tex;
         material.uniforms.uHasMap.value = 1;
@@ -519,8 +531,9 @@ export class PlanetMeshLayer {
 
   /** Write the shared single-scattering uniforms (planet-radius-unit base
    *  params × the global debug tuning) onto a mesh or shell material.
-   *  `tmpCenterView` and `tmpPoleView` must already hold the body's view-space
-   *  centre and north pole. */
+   *  `tmpCenterView` must already hold the body's view-space centre. The pole
+   *  travels with each material's other view-space directions instead — the
+   *  relief tangent frame needs it on airless bodies too. */
   private applyAtmoUniforms(
     u: Record<string, THREE.IUniform>,
     base: AtmoBase,
@@ -528,7 +541,6 @@ export class PlanetMeshLayer {
   ): void {
     const p = base.params;
     (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
-    (u.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     u.uPolarRadiusR.value = base.polarR;
     u.uRadiusPc.value = radiusPc;
     u.uAtmoRadius.value = p.rAtmo;
@@ -559,6 +571,7 @@ export class PlanetMeshLayer {
     atmo.mesh.visible = true;
     atmo.mesh.position.copy(this.tmpPlanet);
     this.applyAtmoUniforms(atmo.material.uniforms, base, radiusPc);
+    (atmo.material.uniforms.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
     atmo.material.uniforms.uAirlightLuminance.value = airlightL;
     atmo.material.uniforms.uFade.value = fade;
@@ -573,6 +586,8 @@ export class PlanetMeshLayer {
         ...pickHdrEmitterUniforms(this.hdr),
         uMap: { value: this.placeholder },
         uHasMap: { value: 0 },
+        uNormalMap: { value: this.placeholder },
+        uHasNormalMap: { value: 0 },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
@@ -699,7 +714,7 @@ export class PlanetMeshLayer {
     return { mesh, material, geometry };
   }
 
-  private ensureTexture(name: string, ext: 'jpg' | 'png' = 'jpg'): void {
+  private ensureTexture(name: string, ext: 'jpg' | 'png' | 'webp' = 'jpg'): void {
     const key = name.toLowerCase();
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
@@ -712,9 +727,8 @@ export class PlanetMeshLayer {
         tex.colorSpace = THREE.NoColorSpace;
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
-        // Ring strips are a 1-D radial profile, not an equirect albedo map,
-        // and the ring shader reads their RGB as reflectance directly — so
-        // only day maps get measured.
+        // Ring strips are a 1-D radial profile and relief maps are slopes,
+        // neither an equirect albedo — so only day maps get measured.
         const meanLuminance = ext === 'jpg'
           ? measureMapMeanLuminance(tex.image as TexImageSource)
           : null;

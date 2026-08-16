@@ -55,6 +55,9 @@ src/client/solar-system/planets/
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
+  surface-relief-pure.ts (+ test) The equirect tangent frame the relief map
+                                  is sampled in, CPU mirror of the mesh
+                                  shader's — see § Surface relief.
   emission/                       The HDR-unit normalisers — the mesh
                                   anchor, the two disc means that divide
                                   out, and the day map's measured mean
@@ -320,6 +323,61 @@ crossfade.
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+
+### Surface relief
+
+Moon, Mercury and Mars ship a DEM-derived tangent-space normal map
+(`<body>-normal.webp`, `data/textures/README.md` § Surface relief),
+lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
+map. Nothing branches on which bodies have one: a 404 is expected data and
+leaves `uHasNormalMap` at 0, so the smooth spheroid normal is the base
+case rather than a fallback. Slopes are true and unexaggerated, so a
+crater reads as its real relief at any camera distance.
+
+The frame is built analytically from the equirect UV rather than shipped
+as a vertex attribute — east is `cross(pole, n)`, the direction of
+increasing longitude, and north the meridian tangent completing it, both
+exact on a surface of revolution. `surface-relief-pure.ts` is the pinned
+CPU mirror; the map's blue channel is a constant and is never read
+(z reconstructs from x and y).
+
+**The perturbed normal feeds the direct term and nothing else** —
+everything else in the shader keeps the geometric normal, each for its own
+reason, and the test counts the mentions so another use cannot appear
+quietly:
+
+- `lit` (attachment 1) — the exposure pin divides the masked mean by
+  claimed lit coverage, and the pin is defined at the geometric
+  terminator (`../../hdr/exposure/README.md`). A speckled coverage mask
+  moves the whole scene's exposure.
+- `ndotv` — `lambertLimbDiscMean` divides the limb term out in closed
+  form, which perturbing it breaks.
+- `stellata_skyIrradiance(sunCos, …)` — solar depression is measured
+  against the ground observer's true local horizontal, and a mountainside
+  tilted away from the sun still sees the whole sky hemisphere.
+- The airlight march's `surf` / shell-entry geometry — the shell is a
+  smooth ellipsoid.
+
+**The direct term's own terminator is the LOCAL horizon, not the geometric
+one**, and that is the whole point of the exercise: a sunward slope stays
+lit past the geometric terminator, which is why a real airless terminator
+is a field of lit peaks in darkness rather than a clean edge. Both halves
+of `dayside` therefore ride the perturbed cosine — the Lambert term and
+`terminatorSoftness`, which is a by-eye widening of that same Lambert edge.
+Nothing atmospheric follows it there: physical twilight is
+`stellata_skyIrradiance`, additive and strictly geometric
+(`../atmosphere/README.md` § Skylight). Neither does the exposure pin —
+the light past the geometric terminator carries no coverage claim, so it
+joins the frame mean and leaves the lit-hemisphere mean the pin holds
+untouched (`../../hdr/attachments/README.md` § The unit).
+
+What is missing there is **terrain occlusion**: a sunward slope lights up
+even with a ridge between it and the sun, because the direct term knows
+slope and not horizon. That is a separate map (`stellata-2f6.43`), and it
+can only shadow terrain this term has lit.
+
+There is deliberately **no flux renormalisation** —
+`emission/README.md` carries why.
 
 ### Ring systems
 

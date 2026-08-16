@@ -39,6 +39,18 @@ same `p` that anchors the −12.7 flux; both are vitest-pinned.
 own, and `uPhaseScale` corrects that to the body's measured Mallama
 curve. Folding φ into the anchor as well would count it twice.
 
+**Surface relief carries no renormalisation, and that is measured rather
+than assumed.** A normal map redistributes the direct term across the disc
+without changing the mean by much: integrating the shaded Moon under its
+own map moves the disc total **+0.002 mag at full phase, −0.003 at 90°,
+−0.008 at 120°** — three orders under anything visible, and a correction
+term would be a fitted quantity sitting on top of a closed form. Past 150°
+it grows (−0.07 at 150°, −0.69 at 170°) because relief and Mallama's curve
+then double-count the same roughness, and there the disc is already at
+1.5 % of full brightness with `uPhaseScale`'s [¼, 4] clamp bounding the
+residual. `../README.md` § Surface relief owns which terms the perturbed
+normal reaches.
+
 **Two disc means divide out**, which is what makes everything the shader
 multiplies on top a pure redistribution rather than a dimming:
 
