@@ -18,6 +18,14 @@ uniform float uHighlightDesat;
 // — sampling an unbound texture is undefined in WebGL.
 uniform sampler2D uMap;
 uniform float uHasMap;
+// DEM-derived tangent-space relief, RG only — data/textures/README.md
+// § Surface relief.
+uniform sampler2D uNormalMap;
+uniform float uHasNormalMap;
+// Sines of the solar depression that bound how far past the geometric
+// terminator relief may light ground: x still full, y none at all
+// (surface-relief/surface-relief-pure.ts:reliefHorizonSines).
+uniform vec2 uReliefHorizon;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -74,16 +82,47 @@ layout(location = 2) out vec4 outDiffuse;
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
+// Equirect tangent frame, exact on the drawn spheroid because a surface of
+// revolution puts its normal in the meridian plane. Mirror + the frame's
+// contract: surface-relief/surface-relief-pure.ts.
+vec3 stellataReliefNormal(vec3 n, vec3 pole, vec2 enc) {
+  vec3 e = cross(pole, n);
+  float eLen = length(e);
+  if (eLen < 1e-6) return n;
+  vec3 east = e / eLen;
+  vec3 north = cross(n, east);
+  vec2 t = enc * 2.0 - 1.0;
+  return normalize(east * t.x + north * t.y + n * sqrt(max(1.0 - dot(t, t), 0.0)));
+}
+
 void main() {
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
   float sunCos = dot(n, uSunDirView);
+  // The perturbed normal reaches this one cosine and nothing else — every
+  // other consumer of sunCos below keeps the geometric normal, each for its
+  // own reason (surface-relief/README.md).
+  vec3 nRelief = uHasNormalMap > 0.5
+    ? stellataReliefNormal(n, uPoleView, texture(uNormalMap, vUvM).rg)
+    : n;
+  float sunCosRelief = dot(nRelief, uSunDirView);
+  // Slope alone buys nothing once the body's own limb is in the way, so the
+  // relief term is fenced at the depression no elevation on this body can see
+  // past. Rides the GEOMETRIC cosine — the bound is the body, not the facet —
+  // and is 1 wherever the smooth-sphere terminator itself is lit, so it can
+  // only ever remove light relief added (surface-relief/README.md).
+  float horizonGate = uHasNormalMap > 0.5
+    ? smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)
+    : 1.0;
   // Lambert cosine away from the terminator; a smoothstep band of
   // half-width uTermSoftness carries twilight past it on atmospheric
   // bodies. The 1e-4 floor keeps the airless w=0 case a hard cut
-  // without a divide-by-zero smoothstep.
+  // without a divide-by-zero smoothstep. Both edges ride the perturbed
+  // cosine, so a sunward slope stays lit past the geometric terminator
+  // (surface-relief/README.md).
   float w = max(uTermSoftness, 1e-4);
-  float dayside = smoothstep(-w, w, sunCos) * max(sunCos, w);
+  float dayside =
+    smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;
   // Inter-body shadows: attenuate per caster on the ray toward the sun.
   // Penumbra half-width grows as tAlong·uSunAngRad, so shadows are
   // soft-edged and the antumbral (annular) case falls out naturally.

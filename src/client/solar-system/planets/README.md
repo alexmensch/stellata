@@ -48,13 +48,17 @@ src/client/solar-system/planets/
                                   uHideIdx (one uniform shared by both
                                   glare passes) hides the observe-anchor
                                   body via setHiddenInstance.
-  planet-mesh-layer.ts            Close-range spheroid mesh LOD — see
+  planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD. Owns the shared
                                   atmosphere uniform block
-                                  (sharedAtmoUniforms).
+                                  (sharedAtmoUniforms). Its test pins the
+                                  three surfaces' diffuse-attachment gate.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
+  surface-relief/                 DEM relief on the mesh: the tangent frame,
+                                  which terms the perturbed normal reaches,
+                                  and the limb bound. Its own README.
   emission/                       The HDR-unit normalisers — the mesh
                                   anchor, the two disc means that divide
                                   out, and the day map's measured mean
@@ -320,6 +324,15 @@ crossfade.
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+
+### Surface relief
+
+Moon, Mercury and Mars shade with a DEM-derived tangent-space normal map on
+top of the colour map, lazily loaded on the same approach lane. The tangent
+frame, the single term the perturbed normal is allowed to reach, and the
+body's own limb bound on how far past the terminator it may light are
+`surface-relief/README.md`; the shader that consumes them is
+`planet-mesh.frag.glsl` here.
 
 ### Ring systems
 

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
+import { RELIEF_ELEV_SPAN_M } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
 
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
@@ -29,6 +30,7 @@ interface DemSpec {
   demCenterLon: number;
   mapCenterLon: number;
   radiusKm: number;
+  spanM: [number, number];
 }
 
 function pyDemBodies(): Record<string, DemSpec> {
@@ -45,11 +47,14 @@ function pyDemBodies(): Record<string, DemSpec> {
     };
     const src = block.match(/"src": "([^"]+)"/);
     expect(src, `${name}.src`).not.toBeNull();
+    const span = block.match(/"span_m": \((-?\d+), (-?\d+)\)/);
+    expect(span, `${name}.span_m`).not.toBeNull();
     out[name] = {
       src: src![1],
       demCenterLon: num('dem_center_lon'),
       mapCenterLon: num('map_center_lon'),
       radiusKm: num('radius_km'),
+      spanM: [Number(span![1]), Number(span![2])],
     };
   }
   return out;
@@ -112,6 +117,18 @@ describe('surface-relief normal maps', () => {
       expect(body!.rotation?.mapCenterLonDeg ?? 0, `${name} map centre`).toBe(
         spec.mapCenterLon,
       );
+    }
+  });
+
+  it('hands the renderer the same elevation span the reduction asserted', () => {
+    // The shader fences relief lighting at the depression the body's own limb
+    // allows, which is a function of this span — so the client keeps a copy of
+    // it, and reduce_dem.py checks the span against the downloaded original.
+    expect(Object.keys(RELIEF_ELEV_SPAN_M).sort()).toEqual(
+      Object.keys(demBodies).sort(),
+    );
+    for (const [name, spec] of Object.entries(demBodies)) {
+      expect(RELIEF_ELEV_SPAN_M[name], `${name} span`).toEqual(spec.spanM);
     }
   });
 

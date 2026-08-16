@@ -9,6 +9,10 @@ import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-s
 import { measureMapMeanLuminance } from './emission/map-mean-luminance';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
+  RELIEF_ELEV_SPAN_M,
+  reliefHorizonSines,
+} from './surface-relief/surface-relief-pure';
+import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
@@ -178,6 +182,25 @@ interface MeshEntry {
   atmoBase?: AtmoBase;
 }
 
+const RELIEF_SUFFIX = '-normal';
+const RINGS_SUFFIX = '-rings';
+
+/** The one place a body name becomes a texture key — and the one place it is
+ *  lowercased, so `textures` and the fetched URL cannot disagree on case. */
+const textureKey = (name: string, suffix = ''): string =>
+  `${name.toLowerCase()}${suffix}`;
+
+/** The body's own limb bound on relief lighting, in the shader's units.
+ *  Zero for bodies with no map — the shader never reads it there. */
+const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
+  const span = RELIEF_ELEV_SPAN_M[textureKey(planet.name)];
+  return span
+    ? new THREE.Vector2(...reliefHorizonSines(span, planet.radiusKm))
+    : new THREE.Vector2();
+};
+
+type TextureExt = 'jpg' | 'png' | 'webp';
+
 type TextureState =
   | { state: 'loading' }
   /** `meanLuminance` is the map's sphere-weighted mean LINEAR luminance,
@@ -274,8 +297,11 @@ export class PlanetMeshLayer {
       const radiusPc = planet.radiusKm * KM_PC;
       const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
       if (physPx >= TEXTURE_PREFETCH_PX) {
-        this.ensureTexture(planet.name);
-        if (planet.rings) this.ensureTexture(`${planet.name}-rings`, 'png');
+        this.ensureTexture(textureKey(planet.name), { ext: 'jpg', measureMean: true });
+        this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), { ext: 'webp' });
+        if (planet.rings) {
+          this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
+        }
       }
       const fade = meshFadeFromPhysPx(physPx);
       if (fade <= 0) continue;
@@ -317,7 +343,7 @@ export class PlanetMeshLayer {
       // Emission into the scene-wide HDR unit. Both scalars fall to 0
       // without a host: an unlit body reflects nothing, where the old
       // display encoding fell back to a full-brightness 1.
-      const texState = this.textures.get(planet.name.toLowerCase());
+      const texState = this.textures.get(textureKey(planet.name));
       const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
       const exposure = this.hdr.uExposure.value;
       const omegaPx = this.hdr.uOmegaPxArcsec2.value;
@@ -339,6 +365,7 @@ export class PlanetMeshLayer {
       this.tmpPoleView.set(0, 1, 0)
         .applyQuaternion(mesh.quaternion)
         .transformDirection(this.viewInverse);
+      (material.uniforms.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
 
       if (entry.ring) {
         this.updateRing(entry.ring, planet, hp, t, camera, hasSun, fade, airlightL);
@@ -384,6 +411,14 @@ export class PlanetMeshLayer {
       }
 
       material.uniforms.uFade.value = fade;
+      const reliefState = this.textures.get(textureKey(planet.name, RELIEF_SUFFIX));
+      if (reliefState?.state === 'ready') {
+        material.uniforms.uNormalMap.value = reliefState.tex;
+        material.uniforms.uHasNormalMap.value = 1;
+      } else {
+        material.uniforms.uNormalMap.value = this.placeholder;
+        material.uniforms.uHasNormalMap.value = 0;
+      }
       if (texState?.state === 'ready') {
         material.uniforms.uMap.value = texState.tex;
         material.uniforms.uHasMap.value = 1;
@@ -483,7 +518,7 @@ export class PlanetMeshLayer {
     fade: number,
     airlightL: number,
   ): void {
-    const texState = this.textures.get(`${planet.name.toLowerCase()}-rings`);
+    const texState = this.textures.get(textureKey(planet.name, RINGS_SUFFIX));
     if (texState?.state !== 'ready' || !hasSun) {
       ring.mesh.visible = false;
       return;
@@ -519,8 +554,9 @@ export class PlanetMeshLayer {
 
   /** Write the shared single-scattering uniforms (planet-radius-unit base
    *  params × the global debug tuning) onto a mesh or shell material.
-   *  `tmpCenterView` and `tmpPoleView` must already hold the body's view-space
-   *  centre and north pole. */
+   *  `tmpCenterView` must already hold the body's view-space centre. The pole
+   *  travels with each material's other view-space directions instead — the
+   *  relief tangent frame needs it on airless bodies too. */
   private applyAtmoUniforms(
     u: Record<string, THREE.IUniform>,
     base: AtmoBase,
@@ -528,7 +564,6 @@ export class PlanetMeshLayer {
   ): void {
     const p = base.params;
     (u.uCenterView.value as THREE.Vector3).copy(this.tmpCenterView);
-    (u.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     u.uPolarRadiusR.value = base.polarR;
     u.uRadiusPc.value = radiusPc;
     u.uAtmoRadius.value = p.rAtmo;
@@ -559,6 +594,7 @@ export class PlanetMeshLayer {
     atmo.mesh.visible = true;
     atmo.mesh.position.copy(this.tmpPlanet);
     this.applyAtmoUniforms(atmo.material.uniforms, base, radiusPc);
+    (atmo.material.uniforms.uPoleView.value as THREE.Vector3).copy(this.tmpPoleView);
     (atmo.material.uniforms.uSunDirView.value as THREE.Vector3).copy(this.tmpSunView);
     atmo.material.uniforms.uAirlightLuminance.value = airlightL;
     atmo.material.uniforms.uFade.value = fade;
@@ -573,6 +609,9 @@ export class PlanetMeshLayer {
         ...pickHdrEmitterUniforms(this.hdr),
         uMap: { value: this.placeholder },
         uHasMap: { value: 0 },
+        uNormalMap: { value: this.placeholder },
+        uHasNormalMap: { value: 0 },
+        uReliefHorizon: { value: reliefHorizonOf(planet) },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
@@ -699,8 +738,10 @@ export class PlanetMeshLayer {
     return { mesh, material, geometry };
   }
 
-  private ensureTexture(name: string, ext: 'jpg' | 'png' = 'jpg'): void {
-    const key = name.toLowerCase();
+  private ensureTexture(
+    key: string,
+    { ext, measureMean = false }: { ext: TextureExt; measureMean?: boolean },
+  ): void {
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
     this.loader.load(
@@ -712,10 +753,7 @@ export class PlanetMeshLayer {
         tex.colorSpace = THREE.NoColorSpace;
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
-        // Ring strips are a 1-D radial profile, not an equirect albedo map,
-        // and the ring shader reads their RGB as reflectance directly — so
-        // only day maps get measured.
-        const meanLuminance = ext === 'jpg'
+        const meanLuminance = measureMean
           ? measureMapMeanLuminance(tex.image as TexImageSource)
           : null;
         this.textures.set(key, { state: 'ready', tex, meanLuminance });
