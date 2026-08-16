@@ -143,6 +143,11 @@ single-baseline sweep when the instrument is known to be settled.
 - **`baselineReadback` / `disabledReadback`** — equal is clean; diverging
   means the row priced a change in submission-barrier rate on top of the
   pass (§ The readback cadence).
+- **`bufferMpx`** — the drawing buffer the sweep ran at. Run metadata, not
+  a statistic, and stamped on every row so a pasted table stays
+  self-describing. **Only compare tables at the same buffer size**: the
+  frame is fill-bound, so halving the window area moved the whole frame
+  ~3x and moved `mwBand` ~7x.
 - **`baselineLimitMag` / `disabledLimitMag`** — the gate that invalidates
   a row outright rather than widening it. The faintest magnitude each
   state rendered: **if these differ, the toggle changed what the frame

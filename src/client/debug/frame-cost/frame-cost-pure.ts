@@ -51,6 +51,10 @@ export interface PriceFrameRow {
    *  drew, so `savedMs` prices a different scene rather than the pass. */
   readonly baselineLimitMag: number;
   readonly disabledLimitMag: number;
+  /** Drawing-buffer megapixels the sweep ran at, stamped by the harness —
+   *  run metadata, not a dwell statistic. Both dominant passes scale with
+   *  it, so a table without it cannot be compared to another table. */
+  readonly bufferMpx?: number;
 }
 
 export interface DwellFit {

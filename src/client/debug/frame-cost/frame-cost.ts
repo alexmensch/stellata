@@ -366,8 +366,16 @@ export async function runPriceFrame(
     );
   }
 
-  console.table(rows);
-  return rows;
+  const bufferMpx =
+    Number(((gl.drawingBufferWidth * gl.drawingBufferHeight) / 1e6).toFixed(3));
+  const stamped = rows.map((row) => ({ ...row, bufferMpx }));
+  console.info(
+    `priceFrame: drawing buffer ${gl.drawingBufferWidth}x${gl.drawingBufferHeight} ` +
+    `(${bufferMpx} Mpx) — both dominant passes scale with it, so only compare ` +
+    'tables at the same buffer size.',
+  );
+  console.table(stamped);
+  return stamped;
 }
 
 /** Smoke aid: run the sweep N times and print each pass's savedMs range
