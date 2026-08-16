@@ -2031,6 +2031,11 @@ export class Stellata implements FrameAnchor {
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
+    // One wall-clock read for the whole tick — the camera transitions,
+    // the gate's activity stamp, and the adaptation slew all have to
+    // agree on when this frame is. (`getT()` is the SIM clock and a
+    // separate quantity; see solar-system/time/README.md.)
+    const nowMs = performance.now();
     this.maybeReAdvanceEpoch();
     if (this.floatingOrigin.tick()) {
       // Policy recentre shifted the frame under the moving ride's cached
@@ -2062,19 +2067,19 @@ export class Stellata implements FrameAnchor {
     // it cannot see (render-gate/README.md).
     let cameraAnimating = true;
     if (this.warp.isActive()) {
-      this.warp.tick(performance.now());
+      this.warp.tick(nowMs);
     } else if (this.aim.isActive()) {
-      this.aim.tick(performance.now());
+      this.aim.tick(nowMs);
     } else if (this.focus.isFocusLerpActive()) {
-      this.focus.tick(performance.now());
+      this.focus.tick(nowMs);
     } else if (this.aim.isObserveAimActive()) {
-      this.aim.tickObserve(performance.now());
+      this.aim.tickObserve(nowMs);
       // Observe-mode aim slerps the camera quaternion in place. The
       // controls.target still needs the per-frame re-pin so URL state stays
       // truthful mid-flight.
       this.observeUpdateTarget();
     } else if (this.observe.isAnyActive()) {
-      this.observe.tick(performance.now());
+      this.observe.tick(nowMs);
     } else if (this.focus.getCameraMode() === 'observe') {
       cameraAnimating = false;
       // Look-around input (yaw/pitch/roll/FOV) mutates the camera directly
@@ -2092,7 +2097,7 @@ export class Stellata implements FrameAnchor {
     perfMeasure('controls.update');
     const continuous = this.clock.getRate() !== 0 || cameraAnimating;
     if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.worldOffset, continuous, performance.now(),
+      this.camera, this.controls.target, this.worldOffset, continuous, nowMs,
     )) {
       requestAnimationFrame(this.animate);
       return;
@@ -2145,7 +2150,7 @@ export class Stellata implements FrameAnchor {
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
     const appliedDm = this.adaptation.measure(
-      this.filter.chart, performance.now(), this.frameCtx.warpActive,
+      this.filter.chart, nowMs, this.frameCtx.warpActive,
     );
     this.exposure.setAdaptation(appliedDm);
     // A moved cut changes the next frame's scene, so a slew in flight
