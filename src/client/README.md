@@ -83,7 +83,9 @@ themselves.
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
-`milkyway` / `hud` layer handles and `chartLabels`. Callers write
+`milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
+`localDepthPass` / `reduction` handles (frame-cost levers,
+`debug/frame-cost/README.md`). Callers write
 `stellata.filters.setFilter(patch)`; each namespace's own README is the
 reference for what it answers. `camera/README.md` § Camera mode covers
 the one split pair (read on `focus`, write on `observe`).

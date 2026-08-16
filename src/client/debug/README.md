@@ -25,6 +25,8 @@ src/client/debug/
   gpu-timer.ts (+ test)           EXT_disjoint_timer_query_webgl2 wrapper
                                   — real GPU execution time, one rotating
                                   scope per frame. See § GPU timing.
+  frame-cost/                     debug.priceFrame() — automated per-pass
+                                  gpu.frame differentials. Own README.
   fake-gl.ts                      Test-only WebGL2 timer-query stub,
                                   shared by gpu-timer + perf-hud tests.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
@@ -166,6 +168,14 @@ Two further properties a reader will otherwise get wrong:
   `GPU_DISJOINT_EXT` clears it, so it is read exactly once per drain and
   applied to every result in that pass; those samples are dropped, not
   reported low.
+
+## Frame pricing — `debug.priceFrame()`
+
+The automated form of "disable it and difference `gpu.frame`": dwell,
+re-dwell with one pass disabled, difference the medians. Lives in its
+own folder — `frame-cost/README.md` owns the priced-pass roster, the
+preconditions (panel CLOSED, camera still, clock paused), the drift
+bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 
 Adding a GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so

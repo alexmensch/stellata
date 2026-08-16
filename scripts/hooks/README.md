@@ -30,6 +30,8 @@ scripts/hooks/
                            diff introduces forbidden code-comment
                            patterns (same set as
                            tests/code-comment-rules.test.ts).
+                           Behaviour pinned by
+                           tests/commit-sweep-guard.test.ts.
 ```
 
 ## How readme-guard works
@@ -146,6 +148,15 @@ matched commit:
    counts — without that, a HEREDOC message that wraps the bracketed
    reason was silently ignored (`[^]]*` doesn't span newlines under
    line-mode `grep -E`).
+
+   **`-F` / `--file` / `--body-file` message files are read too**, and
+   have to be: the command string then carries only a path, so a tag
+   inside the file is invisible to a grep over the command. That is
+   the *only* route a worktree-isolated session has for a long message
+   — the worktree guard rejects `$( )` substitution and heredoc commit
+   bodies — so without this the opt-out was unusable precisely where
+   it was needed. A named file that is missing or unreadable is
+   skipped rather than fatal, and only the first 64KB is scanned.
 
 2. **Comment-rule sweep.** Runs `git diff --cached -U0` filtered to
    added lines (`^\+`, excluding `+++` headers) against the same

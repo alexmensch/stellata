@@ -115,10 +115,18 @@ export class ExtinctionPrepass {
   }
 
   /** Dev-console A/B switch: false parks star.vert on the in-vertex
-   *  raymarch fallback without touching the cache. */
+   *  raymarch fallback and pauses cache maintenance (so the A/B never
+   *  pays fill cost on the fallback side); the cache itself is kept and
+   *  re-validates against camera displacement on re-enable. */
   setEnabled(on: boolean) {
     this.forceDisabled = !on;
     this.syncConsumerUniforms();
+  }
+
+  /** Whether star.vert is consuming the cache this frame (computed,
+   *  float target present, not parked by the A/B switch). */
+  isActive(): boolean {
+    return this.hasComputed && !this.forceDisabled && this.rt !== null;
   }
 
   /** Per-frame hook, called with the camera's absolute (heliocentric
@@ -127,6 +135,7 @@ export class ExtinctionPrepass {
   update(absCamX: number, absCamY: number, absCamZ: number) {
     if (this.rt === null || this.material === null) return;
     if (this.uniforms.uDustTexture.value === null) return;
+    if (this.forceDisabled) return;
     const moved = movedBeyondEpsilon(
       this.lastCamX, this.lastCamY, this.lastCamZ,
       absCamX, absCamY, absCamZ,
@@ -150,7 +159,7 @@ export class ExtinctionPrepass {
   }
 
   private syncConsumerUniforms() {
-    const on = this.hasComputed && !this.forceDisabled && this.rt !== null;
+    const on = this.isActive();
     this.uniforms.uAvPrepassEnabled.value = on ? 1 : 0;
     this.uniforms.uAvPrepassTex.value = on ? this.rt!.texture : null;
   }

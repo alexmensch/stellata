@@ -338,6 +338,9 @@ Under `stellata.kinds.cloud.layer.*`:
 - `setRimParams({alphaLimb, faceOnFloor, fresnelPower})` — rim shape,
   shared vocabulary with the fresnel shells
 - `setSteps(n)` — absorption raymarch step count
+- `setAbsorptionEnabled(on)` — absorption-pass kill switch for
+  frame-cost differentials (`../debug/frame-cost/README.md`);
+  never a declutter gate
 - `setMonoOpacity(x)` / `setMonoColor(0xRRGGBB)` — chart outline tuning
 - `setDebugBoost(strength)` — boost the rim glow (or `null` to
   restore); use this first when "I can't see anything" to confirm the

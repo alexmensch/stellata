@@ -82,9 +82,10 @@ recomputations per visible star per frame.
   step ≈ 5 voxels of the texture's native ~5 pc resolution; more
   samples cost proportionally with marginal quality gain.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
-  console) parks the shader on the fallback path — the honest way to
-  measure the prepass win on identical scenes; `true` restores the
-  cache.
+  console) parks the shader on the fallback path AND pauses cache
+  maintenance, so the fallback side never pays fill cost — the honest
+  way to measure the prepass win on identical scenes; `true` restores
+  the cache (re-validating against camera displacement).
 
 The prepass stores raw physical A_V; `uDustEnabled ×
 uExtinctionStrength` scales it at the point of consumption, so

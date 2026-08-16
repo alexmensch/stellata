@@ -37,6 +37,10 @@ export class LuminanceReduction {
   private readback: ReductionReadback | null = null;
   private pendingExposure = 0;
   private latest: ReducedStatistic | null = null;
+  // Whether the readback in flight was requested with the draws skipped,
+  // and so carries a texel from an older frame than pendingExposure
+  // describes. Landing it would feed the cut a mismatched pair.
+  private pendingIsStale = false;
 
   constructor() {
     this.material = new THREE.RawShaderMaterial({
@@ -69,9 +73,29 @@ export class LuminanceReduction {
    * Leaves the render target at the canvas, the same contract the local
    * depth pass keeps.
    */
+  /** Debug kill switch (frame-cost differentials): false skips the chain's
+   *  DRAWS while still requesting the readback, so the statistic freezes
+   *  at its last landed reading (unlike reset(), which drops it) and the
+   *  fence stays in the frame. Dropping the fence too would price the
+   *  loss of the frame's only submission barrier, not the draws. */
+  enabled = true;
+
+  /** Debug (frame-cost differentials): keep issuing the readback while the
+   *  statistic is unavailable — chart mode — so the frame keeps its only
+   *  ANGLE submission barrier and the `hdrChain` row prices the chain
+   *  rather than the loss of that barrier. Off in production, where chart
+   *  mode has no use for a readback it would pay for every frame. */
+  fenceWhileParked = false;
+
+  /** Readbacks issued so far. Cadence is emergent, not pinned — README.md
+   *  § Latency. */
+  get readbackRequests(): number {
+    return this.readback?.requestsIssued ?? 0;
+  }
+
   measure(
     renderer: THREE.WebGLRenderer,
-    source: THREE.Texture,
+    source: THREE.Texture | null,
     width: number,
     height: number,
     renderExposure: number,
@@ -90,23 +114,31 @@ export class LuminanceReduction {
     this.ensureLevels(width, height);
     if (this.levels.length === 0) return;
 
-    let src = source;
-    let srcW = width;
-    let srcH = height;
-    for (const [i, level] of this.levels.entries()) {
-      this.material.uniforms.uSource.value = src;
-      (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
-      this.material.uniforms.uFromStatistic.value = i === 0 ? 1 : 0;
-      renderer.setRenderTarget(level.target);
-      renderer.render(this.scene, this.camera);
-      src = level.target.texture;
-      srcW = level.width;
-      srcH = level.height;
+    const drawing = this.enabled && source !== null;
+    if (drawing) {
+      let src = source;
+      let srcW = width;
+      let srcH = height;
+      for (const [i, level] of this.levels.entries()) {
+        this.material.uniforms.uSource.value = src;
+        (this.material.uniforms.uSourceSize.value as THREE.Vector2).set(srcW, srcH);
+        this.material.uniforms.uFromStatistic.value = i === 0 ? 1 : 0;
+        renderer.setRenderTarget(level.target);
+        renderer.render(this.scene, this.camera);
+        src = level.target.texture;
+        srcW = level.width;
+        srcH = level.height;
+      }
+    } else {
+      renderer.setRenderTarget(this.levels[this.levels.length - 1].target);
     }
     // The last level is still bound, which is the framebuffer readPixels
-    // reads from.
+    // reads from. Disabled, that texel is from an older frame: the request
+    // goes out anyway to keep the fence in the frame, and poll() drops
+    // what it lands so the statistic holds still.
     this.readback.request(1);
-    this.pendingExposure = renderExposure;
+    this.pendingIsStale = !drawing;
+    if (drawing) this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);
   }
 
@@ -134,6 +166,7 @@ export class LuminanceReduction {
     this.floatRenderable = null;
     this.latest = null;
     this.pendingExposure = 0;
+    this.pendingIsStale = false;
     this.geometry.dispose();
     this.material.dispose();
     this.scene.clear();
@@ -142,6 +175,10 @@ export class LuminanceReduction {
   private poll(): void {
     const landed = this.readback?.poll();
     if (landed === undefined || landed === null) return;
+    if (this.pendingIsStale) {
+      this.pendingIsStale = false;
+      return;
+    }
     this.latest = {
       meanL: landed.pixels[0],
       surfaceL: landed.pixels[1],

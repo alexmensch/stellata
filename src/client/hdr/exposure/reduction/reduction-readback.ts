@@ -7,6 +7,15 @@ export class ReductionReadback {
   private readonly pixels: Float32Array;
   private fence: WebGLSync | null = null;
   private pendingCount = 0;
+  private issued = 0;
+
+  /** Readbacks actually issued since construction; a `request` that
+   *  no-ops on an in-flight fence does not count. The cadence is emergent
+   *  — see README.md § Latency — so the frame-cost harness reads this to
+   *  report the rate each dwell actually ran at. */
+  get requestsIssued(): number {
+    return this.issued;
+  }
 
   constructor(gl: WebGL2RenderingContext, maxTexels: number) {
     this.gl = gl;
@@ -46,6 +55,7 @@ export class ReductionReadback {
     gl.flush();
     this.fence = fence;
     this.pendingCount = count;
+    this.issued++;
   }
 
   /** The pixels once the GPU is done with them, else null. Never blocks:

@@ -175,6 +175,55 @@ Chart mode and the float-RT fallback render nothing into the target at
 all, so the pass is skipped and its last reading dropped — the statistic
 reports `dm = 0` rather than adapting to a stale frame.
 
+`fenceWhileParked` is the one exception, and it is debug-only: with it
+set, `measure()` still runs across the park with a null source, issuing
+the readback and nothing else. The `hdrChain` frame-cost row needs it,
+because parking the chain otherwise takes the frame's only submission
+barrier with it and the row would price that instead. Production chart
+mode leaves it off — a readback it has no use for is not free.
+
 Perf rows: `submit.reduction` (CPU submission) and, where the driver
 exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
-§ GPU timing.
+§ GPU timing. `stellata.reduction.enabled = false` skips the chain's
+draws while FREEZING the statistic at its last reading (unlike chart
+mode's reset-and-drop) — a frame-cost measurement lever
+(`../../../debug/frame-cost/README.md`).
+
+**The readback keeps running while disabled, and must.** `request()`
+ends in `gl.flush()`, and on ANGLE that flush is the frame's only
+submission barrier: drop it and the driver batches deeper, so
+`TIME_ELAPSED` spans more overlapped work and the frame reads *slower*
+with the pass off. The disabled path therefore still binds the last
+level and re-requests it — same fence, only the draws removed.
+
+**The cadence is emergent, not pinned — and measurement says that does
+not matter.** `pending` is just `fence !== null`, cleared in `poll()`
+only once the fence has SIGNALED, so nothing pins the rate. The worry
+that follows is that removing the draws lets the GPU drain sooner, the
+fence signal sooner, and the `gl.flush()` fire more often — pricing
+batching depth rather than the pass.
+
+`requestsIssued` counts what actually went out, and the frame-cost
+harness reports it per dwell. At the default Sol view it read **0.25
+exactly in every state of every row** — one readback per four frames,
+unchanged across frames from 31 ms to 112 ms. The latency is constant in
+*frames* rather than wall time, i.e. pipeline-depth buffering, which is
+indifferent to what the frame costs. **Hypothesis refuted**; the counter
+stays as a standing check.
+
+What is still unexplained is the row itself: at the default Sol view,
+with the fence held and the cadence identical either side, `reduction`
+prices **−15.8 ms** against a `bracketMs` of 0.23 — the tightest bracket
+in the dataset, so the sign is not noise. Neither the missing fence, the
+stale readback, nor the cadence accounts for it.
+
+**What it lands is then thrown away, and that part is not optional.**
+The texel is from whichever frame last ran the draws, while
+`renderExposure` is live; pairing them breaks the invariant above and
+the cut is computed from a mismatched ratio. That is a feedback loop,
+not a one-off error — a wrong cut moves the exposure, which moves
+`renderExposure`, which moves the next wrong cut. Measured at the
+default Sol view, where the cut is deep, it drove the frame 22–58 ms
+*slower* with the pass disabled; at an LG viewpoint, where the cut is
+shallow, the same code read a clean +10 ms. `pendingIsStale` marks the
+in-flight request so `poll()` drops it and `latest` genuinely freezes.

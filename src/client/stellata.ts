@@ -274,7 +274,7 @@ export class Stellata implements FrameAnchor {
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
   readonly adaptation!: SceneAdaptation;
-  private readonly reduction = new LuminanceReduction();
+  readonly reduction = new LuminanceReduction();
   private readonly drawingBufferSize = new THREE.Vector2();
 
   // Declutter cycle (scene/README.md § Detail-level declutter cycle).
@@ -338,7 +338,8 @@ export class Stellata implements FrameAnchor {
   // focus, gated by per-planet apparent magnitude + per-host distance
   // cull. Owned by the planet module; read here for cross-kind wiring.
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
-  private readonly localDepthPass = new LocalDepthPass();
+  readonly localDepthPass = new LocalDepthPass();
+  private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
@@ -1490,6 +1491,21 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass?.setEnabled(on);
   }
 
+  /** Whether the A_V prepass cache is live this frame (dust attached,
+   *  float target, not parked by the A/B switch) — the frame-cost
+   *  harness's presence probe. */
+  isExtinctionPrepassActive(): boolean {
+    return this.extinctionPrepass?.isActive() ?? false;
+  }
+
+  /** Debug kill switch for the star core depth-mask draw AND the
+   *  per-frame near-camera scan that gates it (frame-cost
+   *  differentials). Backgrounds bleed through close star cores while
+   *  false — never leave it off outside a measurement dwell. */
+  setCoreMaskEnabled(on: boolean) {
+    this.coreMaskEnabled = on;
+  }
+
   /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
    *  already in the scene; this builds its geometry and seeds the fade window
    *  once the async load resolves, then binds the artifact's other two
@@ -2000,8 +2016,8 @@ export class Stellata implements FrameAnchor {
     // current-frame: a member's core-mask stamp must render even when
     // the physSize-only window misses an appSize-driven member disc.
     perfMark('coreMask');
-    this.starPipeline.coreMaskMesh.visible =
-      this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask();
+    this.starPipeline.coreMaskMesh.visible = this.coreMaskEnabled &&
+      (this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask());
     perfMeasure('coreMask');
     // Also after the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
@@ -2051,7 +2067,7 @@ export class Stellata implements FrameAnchor {
     const statistic = this.hdr.statisticTexture();
     if (statistic === null) {
       this.reduction.reset();
-      return;
+      if (!this.reduction.fenceWhileParked) return;
     }
     this.renderer.getDrawingBufferSize(this.drawingBufferSize);
     this.reduction.measure(
