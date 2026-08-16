@@ -41,6 +41,10 @@ themselves.
   `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
   per-layer update / monochrome / recenter / dispose fan-outs.
+- `render-gate/` — the on-demand render gate: `animate()` skips the
+  draw (and the `'frame'` emit) on ticks where nothing invalidated the
+  frame. Its README owns the invalidation-source inventory and the
+  hold contract.
 - `hdr/` — the float render target every light-emitting layer draws
   into and the fullscreen tone-map that resolves it to the canvas.
   Owns the shared operator chunk, its CPU mirror, and the chrome
@@ -85,7 +89,8 @@ forwarding to them: `focus`, `warp`, `observe`, `aim`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
-`debug/frame-cost/README.md`). Callers write
+`debug/frame-cost/README.md`), and `renderGate`
+(`render-gate/README.md`). Callers write
 `stellata.filters.setFilter(patch)`; each namespace's own README is the
 reference for what it answers. `camera/README.md` § Camera mode covers
 the one split pair (read on `focus`, write on `observe`).
@@ -126,7 +131,8 @@ The payload map is `StellataEventMap` in `stellata.ts`.
   click-ripple feedback overlay; clicks that did something don't emit
   it.
 - `'frame'` (no payload) — called after each render, used by all SVG
-  overlays.
+  overlays. Not a per-rAF heartbeat: a tick the render gate skips
+  emits nothing (`render-gate/README.md`).
 - `'state'` (no payload) — fires on any discrete state mutation. This
   is what the URL-sync module listens to. Don't fire it from a
   `'frame'` handler for camera changes — the URL sync has its own
@@ -139,7 +145,10 @@ from the same mutation site, so a `'state'` subscriber observes every
 mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
-state mutation), and the warp-end edge emit alone.
+state mutation), and the warp-end edge emit alone. The pairing also runs
+the other way once: a discrete clock jump has no fine-grained event of
+its own and emits bare `'state'` from
+`Stellata.notifyClockJumped()`.
 
 ## Click-state machine (`camera/controls/input/input-controller.ts`)
 

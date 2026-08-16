@@ -48,6 +48,14 @@ saturates at `2³²` (~4.29e9×). `Stellata.setT(n)` freezes the clock at a
 specific instant (URL-restore of a scrubbed view); `setT(null)` resets to
 live.
 
+**The two transports that move `t` discontinuously — Jump and Reset —
+owe `Stellata.notifyClockJumped()`.** They write the `VirtualClock`
+directly rather than through `setT`, which would force rate 0 and so
+lose a jump made while playing; the epilogue is what reseeds every
+kind's t-sampled state at the new instant and repaints a jump made with
+the clock paused (`../../render-gate/README.md`). A rate change is not a
+jump — FF/RW/play/pause snapshot `t` and need nothing.
+
 `t` itself is clamped to the Standish ephemeris validity window
 (3000 BC – 3000 AD; `T_CLAMP_MIN_S` / `T_CLAMP_MAX_S`) — every clock
 mutation and `getT()` read clamps, so no consumer ever sees an epoch

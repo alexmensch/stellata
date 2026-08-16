@@ -25,7 +25,9 @@ src/client/debug/frame-cost/
   warns and returns `[]`. Panel opened mid-run → samples dry up and the
   run aborts rather than reporting zeros.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
-  end.
+  end. The run holds the render gate for its duration — a still camera
+  over a paused clock would otherwise be exactly the state the gate
+  skips (`../../render-gate/README.md`).
 - **Clock paused — done for you.** The sweep pauses the `VirtualClock`
   and restores its exact rate (not `play()`, which would lose a rewind)
   in the same `finally` that restores the passes. A running clock re-arms

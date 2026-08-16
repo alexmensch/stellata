@@ -17,6 +17,11 @@ gestures below toggle its `noRotate` / `noPan` flags.
   pole-cone weight, signed roll angles, camera-local up.
 - `pinch-zoom-pure.ts` (+ test) — pinch-delta → wheel-notch normalisation
   (`PINCH_NOTCH_GAIN`, `pinchStep`).
+- `trackball-settle.ts` (+ test) — `TrackballSettle`: stops the damping
+  tail once a frame moves less than a tenth of a pixel. § Damping settle
+  floor.
+- `trackball-settle-pure.ts` (+ test) — the on-screen motion of one
+  frame's step (`eyeSwingRad`, `trackballMotionPx`) and the floor itself.
 
 The click decision tables live in `../../../README.md` § Click-state
 machine; the ladder's pure decision function is
@@ -74,6 +79,46 @@ Current settings:
   § Roll gestures).
 - `minDistance = GLOBAL_MIN_DIST_PC = 5e-3` (when no star is focused;
   per-star `minOrbitDistForStar` overrides on focus). `maxDistance = 100_000`.
+- `staticMoving` is also written **per frame** by `TrackballSettle` —
+  § Damping settle floor. The `false` above is the seed, not a constant.
+
+## Damping settle floor
+
+`dynamicDampingFactor` decays the residual rotation by
+`sqrt(1 − 0.15)` = 0.922 per frame and the dolly by 0.85, and
+TrackballControls never zeroes either. Left alone a release therefore
+runs about a second of settle you can see and then **~2.3 minutes** of
+sub-pixel drift decaying toward float underflow — a tail that reads as
+the view never quite arriving, and that changes `camera.position` every
+frame, so the render gate can never idle after a camera move
+(`../../../render-gate/README.md`).
+
+`trackball-settle.ts` measures what each `update()` actually moved on
+screen and sets `staticMoving = true` under `TRACKBALL_SETTLE_PX`
+(0.1 CSS px/frame), which is the library's own path for dropping the
+residuals — the rotate tail stops being applied and the dolly's
+`_zoomStart.copy(_zoomEnd)` clears itself, with no reach into
+underscore-private state that a three upgrade could rename.
+
+**Why cutting at a per-frame rate is safe:** a geometric tail owes
+`step / (1 − r)` in total, so at the floor the whole remaining journey
+is ~13 further steps — **under 1.3 px**, discarded once. The visible
+part of the settle (roughly the first second) is untouched by
+construction; only the part below one tenth of a pixel per frame goes.
+
+Two writers, in order: a `pointerdown` / `wheel` listener hands damping
+back **before** the gesture's first `update()`, because that call lands
+ahead of any motion the per-frame measurement could see and a wheel notch
+would otherwise apply whole. The measurement then governs for the rest of
+the gesture, so a drag that starts slow and speeds up re-smooths on the
+frame it crosses the floor.
+
+The floor is in **pixels** deliberately: a pixel means the same thing
+from any vantage at any epoch, where a world-space or per-parsec cut-off
+would settle differently at Sol and at the LMC (CLAUDE.md
+§ Camera-anywhere). It is the navigate-mode sibling of observe's
+`MOMENTUM_MIN_SPEED` (`../../observe/observe-controls.ts`), which has
+floored its own momentum on the same argument from the start.
 
 ## Reference up axis
 

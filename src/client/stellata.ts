@@ -42,6 +42,9 @@ import {
   gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
+import { RenderGate } from './render-gate/render-gate';
+import { TrackballSettle } from './camera/controls/input/trackball-settle';
+import { exposureCutMoved } from './render-gate/render-gate-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import {
   angularToPx as angularToPxPure,
@@ -345,6 +348,9 @@ export class Stellata implements FrameAnchor {
   // cull. Owned by the planet module; read here for cross-kind wiring.
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
+  readonly renderGate = new RenderGate();
+  private readonly trackballSettle: TrackballSettle;
+  private lastInvalidatedDm = Number.NaN;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -426,6 +432,7 @@ export class Stellata implements FrameAnchor {
     // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
     // otherwise claim the S grid / D debug shortcuts.
     this.controls.keys = ['', '', ''];
+    this.trackballSettle = new TrackballSettle(this.controls);
 
     // OBSERVE-mode look-around controller. Starts disabled; enable() runs
     // when the camera mode flips, with TrackballControls.enabled toggled
@@ -597,6 +604,7 @@ export class Stellata implements FrameAnchor {
       detailPermits: (id) => this.detailPermits(id),
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
+      requestRender: () => this.renderGate.invalidate(),
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);
@@ -867,6 +875,10 @@ export class Stellata implements FrameAnchor {
     // so a later `?v=` restore still owns the within-scene toggles.
     this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
     window.addEventListener('resize', this.onResize);
+    this.renderGate.attachDom(canvas);
+    this.trackballSettle.attachDom(canvas);
+    this.bus.on('state', () => this.renderGate.invalidate());
+    this.bus.on('planetSystem', () => this.renderGate.invalidate());
     this.input = this.createInputController();
     this.animate();
   }
@@ -1148,10 +1160,17 @@ export class Stellata implements FrameAnchor {
       this.clock.setRate(0);
       this.clock.setTimeAbsolute(t);
     }
-    // A URL restore jumps the clock and then applies its focus, both before
-    // the next frame — t-sampled kind state (probe samples) has to be
-    // reseeded at the NEW `t` or a restored focus recentres onto where the
-    // object was when the page loaded.
+    this.notifyClockJumped();
+  }
+
+  /** Owed by every discrete jump of the clock, whoever moved it — the
+   *  scrubber's Jump and Reset mutate the `VirtualClock` directly to keep
+   *  the current rate, so they cannot rely on `setT`. Reseeds t-sampled
+   *  kind state at the NEW `t` (a URL restore applies its focus before the
+   *  next frame, and a stale probe sample recentres onto where the object
+   *  was at page load), then emits — which is also what repaints a jump
+   *  made while the clock is paused (`render-gate/README.md`). */
+  notifyClockJumped(): void {
     for (const kind of KIND_ROSTER) this.kinds[kind]?.clockJumped?.(this.getT());
     this.bus.emit('state');
   }
@@ -1236,6 +1255,7 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
+    this.renderGate.invalidate();
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
     // ~128 MiB Data3DTexture before swapping the reference, otherwise
@@ -1270,7 +1290,10 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
     // cache as the texture densifies.
-    dust.onProgress(() => this.extinctionPrepass?.markDirty());
+    dust.onProgress(() => {
+      this.extinctionPrepass?.markDirty();
+      this.renderGate.invalidate();
+    });
     // Share the same DustField with the Milky Way pass so the band's dust
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
@@ -1282,6 +1305,7 @@ export class Stellata implements FrameAnchor {
    *  frame walks the binary relation list and perturbs the relevant
    *  star-pipeline `iPosition` slots against `getT()`. */
   attachBinaries(binaries: BinariesData | null): void {
+    this.renderGate.invalidate();
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
@@ -1596,6 +1620,7 @@ export class Stellata implements FrameAnchor {
    *  readings — the chart label anchors, and the membership lookup every
    *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
+    this.renderGate.invalidate();
     this.constellationBoundaryLayer.attach(artifact, this.exposure.getLimitMag());
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
     const regions = createConstellationRegions(artifact, this.catalog.constellations);
@@ -1644,6 +1669,7 @@ export class Stellata implements FrameAnchor {
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */
   attachDustParticles(data: DustParticleData) {
+    this.renderGate.invalidate();
     this.dustParticles.attach(data);
   }
 
@@ -1671,9 +1697,11 @@ export class Stellata implements FrameAnchor {
         if (data === null || this.disposed) return;
         this.dustParticles.attach(data);
         this.dustParticles.setStrength(this.lastParticleStrength);
+        this.renderGate.invalidate();
       });
     }
     this.dustParticles.setStrength(x);
+    this.renderGate.invalidate();
   }
 
 
@@ -1959,6 +1987,7 @@ export class Stellata implements FrameAnchor {
   }
 
   private onResize = () => {
+    this.renderGate.invalidate();
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
@@ -2007,6 +2036,11 @@ export class Stellata implements FrameAnchor {
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
+    // One wall-clock read for the whole tick — the camera transitions,
+    // the gate's activity stamp, and the adaptation slew all have to
+    // agree on when this frame is. (`getT()` is the SIM clock and a
+    // separate quantity; see solar-system/time/README.md.)
+    const nowMs = performance.now();
     this.maybeReAdvanceEpoch();
     if (this.floatingOrigin.tick()) {
       // Policy recentre shifted the frame under the moving ride's cached
@@ -2032,21 +2066,27 @@ export class Stellata implements FrameAnchor {
     } else {
       this.referenceUp.correct(this.camera);
     }
+    // Cleared by the two steady-state branches alone, so a transition
+    // added to this chain renders every frame by default — the safe
+    // direction: a gate that guesses wrong here freezes the animation
+    // it cannot see (render-gate/README.md).
+    let cameraAnimating = true;
     if (this.warp.isActive()) {
-      this.warp.tick(performance.now());
+      this.warp.tick(nowMs);
     } else if (this.aim.isActive()) {
-      this.aim.tick(performance.now());
+      this.aim.tick(nowMs);
     } else if (this.focus.isFocusLerpActive()) {
-      this.focus.tick(performance.now());
+      this.focus.tick(nowMs);
     } else if (this.aim.isObserveAimActive()) {
-      this.aim.tickObserve(performance.now());
+      this.aim.tickObserve(nowMs);
       // Observe-mode aim slerps the camera quaternion in place. The
       // controls.target still needs the per-frame re-pin so URL state stays
       // truthful mid-flight.
       this.observeUpdateTarget();
     } else if (this.observe.isAnyActive()) {
-      this.observe.tick(performance.now());
+      this.observe.tick(nowMs);
     } else if (this.focus.getCameraMode() === 'observe') {
+      cameraAnimating = false;
       // Look-around input (yaw/pitch/roll/FOV) mutates the camera directly
       // via observeControls + the existing two-finger handlers. update()
       // here advances any post-release momentum from a flick. Per-frame
@@ -2056,9 +2096,20 @@ export class Stellata implements FrameAnchor {
       this.observeControls.update();
       this.observeUpdateTarget();
     } else {
+      cameraAnimating = false;
       this.controls.update();
+      this.trackballSettle.tick(
+        this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
+      );
     }
     perfMeasure('controls.update');
+    const continuous = this.clock.getRate() !== 0 || cameraAnimating;
+    if (!this.renderGate.tick(
+      this.camera, this.controls.target, this.worldOffset, continuous, nowMs,
+    )) {
+      requestAnimationFrame(this.animate);
+      return;
+    }
     perfMark('pre-render');
     this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
     // Pin the focused star at NDC (0,0) only when the geometric
@@ -2106,9 +2157,17 @@ export class Stellata implements FrameAnchor {
     // Also after the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
-    this.exposure.setAdaptation(this.adaptation.measure(
-      this.filter.chart, performance.now(), this.frameCtx.warpActive,
-    ));
+    const appliedDm = this.adaptation.measure(
+      this.filter.chart, nowMs, this.frameCtx.warpActive,
+    );
+    this.exposure.setAdaptation(appliedDm);
+    // A moved cut changes the next frame's scene, so a slew in flight
+    // must keep frames coming until it snaps — the gate cannot see it
+    // otherwise.
+    if (exposureCutMoved(appliedDm, this.lastInvalidatedDm)) {
+      this.lastInvalidatedDm = appliedDm;
+      this.renderGate.invalidate();
+    }
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
@@ -2219,6 +2278,9 @@ export class Stellata implements FrameAnchor {
   dispose() {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
+    this.renderGate.dispose();
+    this.trackballSettle.dispose();
+    this.lastInvalidatedDm = Number.NaN;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.

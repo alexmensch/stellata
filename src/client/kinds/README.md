@@ -87,6 +87,12 @@ its catalog load blocks first paint and may reject) — and are only
   `HoverProvider['pick']`, and `collectKindPicks()` reads it off the
   module's hover provider for the Picker. A kind that wants a click
   pick supplies a hover provider.
+- **Work that lands between ticks calls `ctx.requestRender()`.** Frames
+  are on demand (`../render-gate/README.md`) and the gate cannot see a
+  module's async landings, so a texture resolving or a deferred fetch
+  completing must ask for the frame that shows it. The planet mesh
+  layer's texture load is the one live caller; a module whose landings
+  all route through `attach` or a bus emit already has it covered.
 - **Kind-specific machinery stays out of the contract.** The shell may
   hold a module's concrete type for cross-kind wiring (the solar-system
   cluster reads `kinds.probe.field` for its local-depth mirror); the
@@ -107,8 +113,10 @@ search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
 `stellata.kinds.planet.systemsReady` first, since planet corpus rows
 bake flat Target indices the attach table supplies).
 `stellata.ts`: the constructor builds one `KindContext` and
-attach-loops the roster at the layer-construction point; `setT` fans
-out `clockJumped`, `setFocalBodyHidden` fans out `setFocalHidden`,
+attach-loops the roster at the layer-construction point;
+`notifyClockJumped` fans out `clockJumped` — called by `setT` and by the
+scrubber's Jump / Reset, which move the `VirtualClock` directly to keep
+the current rate; `setFocalBodyHidden` fans out `setFocalHidden`,
 `buildSceneElementBinds` applies the merged `detailBinds()` pushes,
 and `collectKindPicks()` hands the Picker each module's hover `pick`
 for its `pickKindHit` dispatch (the click FSM's planet / cloud / lg /
