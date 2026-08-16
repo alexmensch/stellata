@@ -51,7 +51,10 @@ would silently make the next `hold()` a no-op.
    rendered frames, so drift accumulated across skipped ticks still
    triggers. Exact equality is deliberate: as long as anything actually
    moves, we render; when damping converges to bit-identical floats, we
-   stop.
+   stop. That convergence is not free — a TrackballControls tail decays
+   forever, so navigate-mode damping carries its own pixel-scale floor
+   (`../camera/controls/input/README.md` § Damping settle floor), without
+   which one camera nudge holds the gate open for over two minutes.
 4. **The settle tail**: `SETTLE_MS` (1500 ms) of frames after the last
    activity or `invalidate()`. This is what covers frame-late feedback
    and wall-clock blends with no queryable flag — the exposure

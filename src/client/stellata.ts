@@ -43,6 +43,7 @@ import {
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
 import { RenderGate } from './render-gate/render-gate';
+import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import { exposureCutMoved } from './render-gate/render-gate-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import {
@@ -348,6 +349,7 @@ export class Stellata implements FrameAnchor {
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
+  private readonly trackballSettle: TrackballSettle;
   private lastInvalidatedDm = Number.NaN;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
@@ -430,6 +432,7 @@ export class Stellata implements FrameAnchor {
     // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
     // otherwise claim the S grid / D debug shortcuts.
     this.controls.keys = ['', '', ''];
+    this.trackballSettle = new TrackballSettle(this.controls);
 
     // OBSERVE-mode look-around controller. Starts disabled; enable() runs
     // when the camera mode flips, with TrackballControls.enabled toggled
@@ -873,6 +876,7 @@ export class Stellata implements FrameAnchor {
     this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
+    this.trackballSettle.attachDom(canvas);
     this.bus.on('state', () => this.renderGate.invalidate());
     this.bus.on('planetSystem', () => this.renderGate.invalidate());
     this.input = this.createInputController();
@@ -2094,6 +2098,9 @@ export class Stellata implements FrameAnchor {
     } else {
       cameraAnimating = false;
       this.controls.update();
+      this.trackballSettle.tick(
+        this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
+      );
     }
     perfMeasure('controls.update');
     const continuous = this.clock.getRate() !== 0 || cameraAnimating;
@@ -2272,6 +2279,7 @@ export class Stellata implements FrameAnchor {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
+    this.trackballSettle.dispose();
     this.lastInvalidatedDm = Number.NaN;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
