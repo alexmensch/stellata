@@ -143,13 +143,13 @@ RING_TABLES = {
 
 
 def up_to_date(out_path: Path, *inputs: Path) -> bool:
+    """Stale unless `out_path` postdates every input. Callers pass the helper
+    modules their own artifact derives from — only SCRIPT is global, so
+    editing one leg of the build does not rewrite the others' outputs."""
     if not out_path.exists():
         return False
     out_mtime = out_path.stat().st_mtime
-    return all(
-        out_mtime >= p.stat().st_mtime
-        for p in (*inputs, SCRIPT, CALIB_SCRIPT, RELIEF_SCRIPT)
-    )
+    return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
 
 
 def tint_grayscale(
@@ -190,7 +190,7 @@ def desaturate(im: Image.Image, strength: float) -> Image.Image:
 def build_body(name: str, src_name: str, manifest: dict) -> None:
     src_path = SRC / src_name
     out_path = OUT / f"{name}.jpg"
-    if up_to_date(out_path, src_path):
+    if up_to_date(out_path, src_path, CALIB_SCRIPT):
         print(f"  {name}: up to date")
         return
     im = Image.open(src_path)
@@ -229,7 +229,7 @@ def build_normal_map(name: str, relief: dict) -> None:
         f"{name}'s colour map is mirrored at build but its DEM is not — "
         "the two would disagree about which way is east"
     )
-    if up_to_date(out_path, src_path):
+    if up_to_date(out_path, src_path, RELIEF_SCRIPT):
         print(f"  {name}-normal: up to date")
         return
     rgb, relief[name] = surface_normals(read_frozen_dem(src_path), spec)

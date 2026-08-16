@@ -11,7 +11,10 @@ live in `data/textures/README.md`; this folder owns the scripts.
   `<body>-normal.webp` relief maps for the three bodies with a usable
   global DEM). Manual, infrequent
   (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
-  mtime against source + script. Uranus is deliberately absent from
+  mtime, per artifact, against its own sources and the helper module
+  it derives from — only this script gates everything, so editing the
+  relief leg does not rewrite the colour maps or the ring strips.
+  Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
   strip is separate). `ring-strips.test.ts` pins `RING_TABLES` spans
   to `SOL_PLANETS` and the strips' 8-bit visibility claims.
