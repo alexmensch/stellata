@@ -61,6 +61,21 @@ would silently make the next `hold()` a no-op.
    calls `invalidate()` whenever the applied `dm` moved, so a slew in
    flight keeps frames coming until it snaps.
 
+**"Moved" is not exact inequality for the cut, and must not become
+one.** Unlike the pose — a CPU value that genuinely stops — the applied
+`dm` is read back off the GPU and feeds the exposure it was measured at,
+and fp16 rounding in the statistic attachment leaves that loop
+alternating between two values ~1e-4 mag apart forever
+(`../hdr/exposure/reduction/README.md` § Measure at the base exposure
+owns why the division cannot cancel it). Close to a lit surface that
+alternation is permanent, so an `!==` test wakes the gate every frame
+and the idle win disappears at exactly the viewpoints it matters most.
+`exposureCutMoved` therefore compares against `ADAPT_SLEW_SETTLE_MAG` —
+the exposure subsystem's own "this much `dm` is the same `dm`", borrowed
+rather than re-picked — and anchors on the cut at the **last
+invalidate**, never the last frame's, so sub-threshold steps that all go
+one way still accumulate into a wake.
+
 ## Invalidation sources (`invalidate()` callers)
 
 - Bus `'state'` — focus, vector, filter (every `FilterController`

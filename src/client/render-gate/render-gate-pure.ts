@@ -1,6 +1,8 @@
 // Decision logic for the on-demand render gate: pose snapshot compare +
 // the render/skip decision. See README.md.
 
+import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
+
 export const POSE_SLOTS = 14;
 
 export const SETTLE_MS = 1500;
@@ -39,6 +41,24 @@ export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean
     if (a[i] !== b[i]) return true;
   }
   return false;
+}
+
+/** Did the applied exposure cut move enough to be a different scene?
+ *
+ *  The cut is a continuous quantity read back off the GPU, so exact
+ *  inequality is not a "changed" test the way it is for the pose: the
+ *  measurement feeds the exposure it was rendered at, and fp16 rounding
+ *  in the statistic attachment leaves that loop alternating between two
+ *  values ~1e-4 mag apart indefinitely. `ADAPT_SLEW_SETTLE_MAG` is the
+ *  exposure subsystem's OWN "this much dm is the same dm" — borrowed
+ *  rather than re-picked so the two cannot disagree.
+ *
+ *  Compare against the cut at the last invalidate, never the last
+ *  frame's, or sub-threshold steps in one direction accumulate into a
+ *  visible drift the gate never wakes for. NaN-seeded: unseeded reads as
+ *  moved. */
+export function exposureCutMoved(dm: number, lastInvalidatedDm: number): boolean {
+  return !(Math.abs(dm - lastInvalidatedDm) <= ADAPT_SLEW_SETTLE_MAG);
 }
 
 export interface GateDecision {

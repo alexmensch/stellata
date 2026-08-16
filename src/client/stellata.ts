@@ -43,6 +43,7 @@ import {
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
 import { RenderGate } from './render-gate/render-gate';
+import { exposureCutMoved } from './render-gate/render-gate-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import {
   angularToPx as angularToPxPure,
@@ -347,7 +348,7 @@ export class Stellata implements FrameAnchor {
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
-  private lastAppliedDm = Number.NaN;
+  private lastInvalidatedDm = Number.NaN;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -2156,8 +2157,8 @@ export class Stellata implements FrameAnchor {
     // A moved cut changes the next frame's scene, so a slew in flight
     // must keep frames coming until it snaps — the gate cannot see it
     // otherwise.
-    if (appliedDm !== this.lastAppliedDm) {
-      this.lastAppliedDm = appliedDm;
+    if (exposureCutMoved(appliedDm, this.lastInvalidatedDm)) {
+      this.lastInvalidatedDm = appliedDm;
       this.renderGate.invalidate();
     }
     perfMeasure('pre-render');
@@ -2271,7 +2272,7 @@ export class Stellata implements FrameAnchor {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
-    this.lastAppliedDm = Number.NaN;
+    this.lastInvalidatedDm = Number.NaN;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
