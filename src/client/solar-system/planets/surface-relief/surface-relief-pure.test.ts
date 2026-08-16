@@ -102,8 +102,8 @@ describe('the shader mirrors this frame', () => {
 });
 
 // The exposure pin, the closed-form limb mean, solar depression and the
-// airlight march geometry all read the GEOMETRIC normal — see README.md
-// § Surface relief for what each would break. Relief reaches the direct term
+// airlight march geometry all read the GEOMETRIC normal — see README.md for
+// what each would break. Relief reaches the direct term
 // and nothing else, which is exactly one derived cosine spent in one place.
 describe('relief feeds the direct term only', () => {
   it('perturbs nothing but the Lambert cosine', () => {

@@ -101,7 +101,7 @@ void main() {
   float sunCos = dot(n, uSunDirView);
   // The perturbed normal reaches this one cosine and nothing else — every
   // other consumer of sunCos below keeps the geometric normal, each for its
-  // own reason (README.md § Surface relief).
+  // own reason (surface-relief/README.md).
   vec3 nRelief = uHasNormalMap > 0.5
     ? stellataReliefNormal(n, uPoleView, texture(uNormalMap, vUvM).rg)
     : n;
@@ -110,7 +110,7 @@ void main() {
   // relief term is fenced at the depression no elevation on this body can see
   // past. Rides the GEOMETRIC cosine — the bound is the body, not the facet —
   // and is 1 wherever the smooth-sphere terminator itself is lit, so it can
-  // only ever remove light relief added (README.md § Surface relief).
+  // only ever remove light relief added (surface-relief/README.md).
   float horizonGate = uHasNormalMap > 0.5
     ? smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)
     : 1.0;
@@ -119,7 +119,7 @@ void main() {
   // bodies. The 1e-4 floor keeps the airless w=0 case a hard cut
   // without a divide-by-zero smoothstep. Both edges ride the perturbed
   // cosine, so a sunward slope stays lit past the geometric terminator
-  // (README.md § Surface relief).
+  // (surface-relief/README.md).
   float w = max(uTermSoftness, 1e-4);
   float dayside =
     smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;
