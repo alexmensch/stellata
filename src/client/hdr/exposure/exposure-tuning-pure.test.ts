@@ -24,6 +24,7 @@ const SETTLED: ExposureReadout = {
   measuredDm: -14.01,
   appliedDm: -14.01,
   regime: 'surface',
+  parkPhase: 'active',
   limitMag: 7.8,
   ev: 0,
   effectiveLimitMag: -5.41,
@@ -72,6 +73,18 @@ describe('regimeLine', () => {
     expect(regimeLine(nudge(ADAPT_SLEW_SETTLE_MAG))).not.toContain('slewing');
     expect(regimeLine(nudge(2 * ADAPT_SLEW_SETTLE_MAG))).toContain('slewing');
     expect(regimeLine(nudge(-2 * ADAPT_SLEW_SETTLE_MAG))).toContain('slewing');
+  });
+
+  // A parked frame reads "OPEN" off its frozen statistic, which is true and
+  // insufficient: without the suffix there is no way to tell a live zero cut
+  // from a gated measurement when checking that the park engaged.
+  it('names the park phase, on measured and unmeasured frames alike', () => {
+    expect(regimeLine(SETTLED)).not.toContain('·');
+    expect(regimeLine({ ...SETTLED, parkPhase: 'parked' }))
+      .toBe('SURFACE (resolved pin) · PARKED (measurement gated)');
+    expect(regimeLine({ ...SETTLED, parkPhase: 'probing' })).toContain('· probing');
+    expect(regimeLine({ ...SETTLED, meanL: 0, coverage: 0, parkPhase: 'parked' }))
+      .toBe('no measurement — no cut · PARKED (measurement gated)');
   });
 });
 

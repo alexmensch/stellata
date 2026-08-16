@@ -33,6 +33,7 @@ function readState(stellata: Stellata): ExposureReadout {
     measuredDm: branches.dm,
     appliedDm: adaptation.getDm(),
     regime: branches.regime,
+    parkPhase: adaptation.getParkPhase(),
     limitMag: exposure.getLimitMag(),
     ev: exposure.getEv(),
     effectiveLimitMag: exposure.getEffectiveLimitMag(),
