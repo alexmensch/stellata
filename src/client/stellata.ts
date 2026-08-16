@@ -42,6 +42,7 @@ import {
   gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
+import { RenderGate } from './render-gate/render-gate';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import {
   angularToPx as angularToPxPure,
@@ -345,6 +346,8 @@ export class Stellata implements FrameAnchor {
   // cull. Owned by the planet module; read here for cross-kind wiring.
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
+  readonly renderGate = new RenderGate();
+  private lastAppliedDm = Number.NaN;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -867,6 +870,9 @@ export class Stellata implements FrameAnchor {
     // so a later `?v=` restore still owns the within-scene toggles.
     this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
     window.addEventListener('resize', this.onResize);
+    this.renderGate.attachDom(canvas);
+    this.bus.on('state', () => this.renderGate.invalidate());
+    this.bus.on('planetSystem', () => this.renderGate.invalidate());
     this.input = this.createInputController();
     this.animate();
   }
@@ -1236,6 +1242,7 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
+    this.renderGate.invalidate();
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
     // ~128 MiB Data3DTexture before swapping the reference, otherwise
@@ -1270,7 +1277,10 @@ export class Stellata implements FrameAnchor {
     this.extinctionPrepass.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
     // cache as the texture densifies.
-    dust.onProgress(() => this.extinctionPrepass?.markDirty());
+    dust.onProgress(() => {
+      this.extinctionPrepass?.markDirty();
+      this.renderGate.invalidate();
+    });
     // Share the same DustField with the Milky Way pass so the band's dust
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
@@ -1282,6 +1292,7 @@ export class Stellata implements FrameAnchor {
    *  frame walks the binary relation list and perturbs the relevant
    *  star-pipeline `iPosition` slots against `getT()`. */
   attachBinaries(binaries: BinariesData | null): void {
+    this.renderGate.invalidate();
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
@@ -1596,6 +1607,7 @@ export class Stellata implements FrameAnchor {
    *  readings — the chart label anchors, and the membership lookup every
    *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
+    this.renderGate.invalidate();
     this.constellationBoundaryLayer.attach(artifact, this.exposure.getLimitMag());
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
     const regions = createConstellationRegions(artifact, this.catalog.constellations);
@@ -1644,6 +1656,7 @@ export class Stellata implements FrameAnchor {
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */
   attachDustParticles(data: DustParticleData) {
+    this.renderGate.invalidate();
     this.dustParticles.attach(data);
   }
 
@@ -1671,9 +1684,11 @@ export class Stellata implements FrameAnchor {
         if (data === null || this.disposed) return;
         this.dustParticles.attach(data);
         this.dustParticles.setStrength(this.lastParticleStrength);
+        this.renderGate.invalidate();
       });
     }
     this.dustParticles.setStrength(x);
+    this.renderGate.invalidate();
   }
 
 
@@ -1959,6 +1974,7 @@ export class Stellata implements FrameAnchor {
   }
 
   private onResize = () => {
+    this.renderGate.invalidate();
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
@@ -2059,6 +2075,19 @@ export class Stellata implements FrameAnchor {
       this.controls.update();
     }
     perfMeasure('controls.update');
+    const continuous =
+      this.clock.getRate() !== 0 ||
+      this.warp.isActive() ||
+      this.aim.isActive() ||
+      this.focus.isFocusLerpActive() ||
+      this.aim.isObserveAimActive() ||
+      this.observe.isAnyActive();
+    if (!this.renderGate.tick(
+      this.camera, this.controls.target, this.worldOffset, continuous, performance.now(),
+    )) {
+      requestAnimationFrame(this.animate);
+      return;
+    }
     perfMark('pre-render');
     this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
     // Pin the focused star at NDC (0,0) only when the geometric
@@ -2106,9 +2135,17 @@ export class Stellata implements FrameAnchor {
     // Also after the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
-    this.exposure.setAdaptation(this.adaptation.measure(
+    const appliedDm = this.adaptation.measure(
       this.filter.chart, performance.now(), this.frameCtx.warpActive,
-    ));
+    );
+    this.exposure.setAdaptation(appliedDm);
+    // A moved cut changes the next frame's scene, so a slew in flight
+    // must keep frames coming until it snaps — the gate cannot see it
+    // otherwise.
+    if (appliedDm !== this.lastAppliedDm) {
+      this.lastAppliedDm = appliedDm;
+      this.renderGate.invalidate();
+    }
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
@@ -2219,6 +2256,7 @@ export class Stellata implements FrameAnchor {
   dispose() {
     this.disposed = true;
     window.removeEventListener('resize', this.onResize);
+    this.renderGate.dispose();
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.

@@ -75,6 +75,7 @@ function perfGlContext(stellata: Stellata): WebGL2RenderingContext | null {
 export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   let panel: HTMLDivElement | null = null;
   let disposers: Array<() => void> = [];
+  let releaseRenderHold: (() => void) | null = null;
 
   const closePanel = () => {
     if (!panel) return;
@@ -82,6 +83,8 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     panel = null;
     for (const dispose of disposers) dispose();
     disposers = [];
+    releaseRenderHold?.();
+    releaseRenderHold = null;
   };
 
   const togglePanel = () => {
@@ -89,6 +92,9 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
 
     const built = makeDebugPanel({ onClose: closePanel });
     panel = built.element;
+    // The panel's readouts and perf ring buffers are per-frame; a gated
+    // idle frame would freeze them mid-read.
+    releaseRenderHold = stellata.renderGate.hold();
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
       { title: 'Exposure',   storageKey: 'exposure',   build: () => buildExposureSection(stellata) },

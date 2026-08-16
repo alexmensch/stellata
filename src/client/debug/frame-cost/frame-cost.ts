@@ -274,6 +274,9 @@ export async function runPriceFrame(
 
   const rows: PriceFrameRow[] = [];
   let restore: (() => void) | null = null;
+  // The dwells count samples per frame; with the camera still and the
+  // clock paused the render gate would otherwise skip every one.
+  const releaseRenderHold = stellata.renderGate.hold();
   try {
     for (let f = 0; f < warmupFrames; f++) await nextFrame();
     // After the warmup, so the cut is pinned where it converged rather
@@ -352,6 +355,7 @@ export async function runPriceFrame(
   } finally {
     restore?.();
     release?.();
+    releaseRenderHold();
     if (pinExposure) stellata.adaptation.setHeld(false);
     if (pauseClock && clock.getRate() !== startRate) clock.setRate(startRate);
   }
