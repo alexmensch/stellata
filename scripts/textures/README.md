@@ -1,7 +1,7 @@
 # Texture pipeline
 
 Planet texture build + sync. Data contract and per-body provenance
-live in `data/textures/README.md`; this folder owns the two scripts.
+live in `data/textures/README.md`; this folder owns the scripts.
 
 - `build-textures.py` — `data/textures/src/` → `data/textures/`
   artifacts (per-body ≤2048-wide equirect JPEG + the 2048×1 RGBA
@@ -23,8 +23,10 @@ live in `data/textures/README.md`; this folder owns the two scripts.
   the radius the body is drawn at, which sets the slope scale.
   `dem-relief.test.ts` pins both against `SOL_BODIES` /
   `RotationElements.mapCenterLonDeg`, plus the achieved tilt
-  statistics in `data/textures/relief.json`. Rationale:
-  `data/textures/README.md` § Surface relief.
+  statistics in `data/textures/relief.json`, the shipped maps' own
+  dimensions read from their WebP headers, and the +1 encoding of the
+  unused third channel. Rationale: `data/textures/README.md`
+  § Surface relief.
 - `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
   downloaded 0.5–2.0 GB global DEM → the frozen
   `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode

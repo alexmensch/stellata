@@ -66,6 +66,17 @@ const shippedNormalMaps = readdirSync(TEXTURES)
   .map((f) => f.replace('-normal.webp', ''))
   .sort();
 
+// Dimensions straight out of the lossless-WebP (VP8L) header, so the pin reads
+// the artifact rather than the manifest written beside it: 14-bit width-1 and
+// height-1 packed little-endian after the 0x2f signature byte.
+function webpSize(name: string): { width: number; height: number } {
+  const buf = readFileSync(resolve(TEXTURES, `${name}-normal.webp`));
+  expect(buf.subarray(0, 4).toString('ascii'), `${name} RIFF`).toBe('RIFF');
+  expect(buf.subarray(12, 16).toString('ascii'), `${name} lossless`).toBe('VP8L');
+  const bits = buf.readUInt32LE(21);
+  return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+}
+
 describe('surface-relief normal maps', () => {
   it('parses every DEM body out of dem_relief.py', () => {
     expect(Object.keys(demBodies).sort()).toEqual(['mars', 'mercury', 'moon']);
@@ -119,13 +130,14 @@ describe('surface-relief normal maps', () => {
   });
 
   it('pins the measured tilt of every shipped map', () => {
-    // Area-weighted off the local vertical, poles past ±88° excluded — the
-    // quantity that modulates the lighting. A source swap, a dropped
-    // cos-latitude correction, or a lossy re-encode all move these.
+    // Area-weighted off the local vertical, over the same ±85° window the
+    // east-west derivative is valid in — the quantity that modulates the
+    // lighting. A source swap, a dropped cos-latitude correction, or a lossy
+    // re-encode all move these.
     const pins: Record<string, [number, number]> = {
-      moon: [3.269, 11.648],
-      mercury: [1.136, 3.933],
-      mars: [0.442, 2.572],
+      moon: [3.273, 11.656],
+      mercury: [1.138, 3.938],
+      mars: [0.443, 2.577],
     };
     for (const [name, [median, p90]] of Object.entries(pins)) {
       expect(manifest[name].medianTiltDeg, `${name} median`).toBe(median);
@@ -143,8 +155,26 @@ describe('surface-relief normal maps', () => {
   it('builds every map at the declared target width', () => {
     const target = pySource.match(/DEM_TARGET_W = (\d+)/);
     expect(target).not.toBeNull();
+    const width = Number(target![1]);
     for (const [name, row] of Object.entries(manifest)) {
-      expect(row.width, `${name} width`).toBe(Number(target![1]));
+      expect(row.width, `${name} manifest width`).toBe(width);
     }
+    // The manifest is written by the same call that writes the image, so it
+    // can only disagree with the artifact through a hand-edit or a bad merge.
+    // Read the shipped file's own header so the pin survives that.
+    for (const name of shippedNormalMaps) {
+      expect(webpSize(name), `${name} artifact`).toEqual({
+        width,
+        height: width / 2,
+      });
+    }
+  });
+
+  it('encodes the unused third channel as +1, never 0', () => {
+    // Blue carries no signal, but it is still read: a consumer that samples
+    // all three and skips the sqrt(1 - x² - y²) reconstruction gets a shallow
+    // normal from 255 and an INVERTED one from 0. Costs ~1% of file size.
+    expect(pySource).toMatch(/np\.full\(\(h, w, 3\), 255, dtype=np\.uint8\)/);
+    expect(pySource).toMatch(/rgb\[\.\.\., :2\] = /);
   });
 });

@@ -57,9 +57,14 @@ owns the derivation and the per-body contract.
 
 - **Encoded frame is (+x east, +y north, +z out of the surface)** —
   what a GL-sampled equirect map gives with `flipY`, v increasing
-  northward. **Blue is unused**: z is positive by construction on a
-  heightfield, so the consumer reconstructs it as
-  `sqrt(1 − x² − y²)` and the third channel costs nothing left flat.
+  northward. **Blue carries no signal**: z is positive by construction
+  on a heightfield, so the consumer reconstructs it as
+  `sqrt(1 − x² − y²)`. It is nonetheless written as the encoding of
+  z = +1 (255) rather than 0, because a consumer that samples all three
+  channels and skips the reconstruction then reads a merely shallow
+  normal instead of an inverted one. Constant either way, so it costs
+  ~1 % of file size; encoding the true z would cost 5–21 %, which is
+  what makes dropping it worthwhile.
 - **Registered to the body's COLOUR map, not to its DEM.** The
   MESSENGER Mercury DEM is centred on 180°E while PIA15063 is centred
   on 0°, so the build rolls it; `dem_relief.py` carries both centres
@@ -72,14 +77,17 @@ owns the derivation and the per-body contract.
   central-difference in metres, divide the longitude derivative by
   cos(latitude), zero it past **±85°** where the equirect
   u-derivative degenerates, then `normalize(−dz/du, −dz/dv, 1)`
-  encoded `n·0.5 + 0.5`.
+  encoded `n·0.5 + 0.5`. The v-derivative needs no such cutoff, and the
+  top and bottom rows take it across the pole — the row beyond a pole
+  is that same row half a world away in longitude, so differencing
+  against itself would halve its gradient.
 - Vertical exaggeration is **none**: slopes are true, computed against
   the radius the body is *drawn* at, so relief is honest at any camera
   distance.
-- Measured area-weighted tilt off the local vertical (poles past ±88°
-  excluded) ships in `relief.json` and is pinned by
-  `dem-relief.test.ts`: median / p90 of **3.27° / 11.65°** (Moon),
-  **1.14° / 3.93°** (Mercury), **0.44° / 2.57°** (Mars). The ordering
+- Measured area-weighted tilt off the local vertical, over the same
+  ±85° window, ships in `relief.json` and is pinned by
+  `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
+  **1.14° / 3.94°** (Mercury), **0.44° / 2.58°** (Mars). The ordering
   Moon ≫ Mercury > Mars holds at every map width, which is why the
   Moon is the body this work is scoped around — at a 15° sun its p90
   slope is a ~4× terminator brightness contrast.
@@ -100,6 +108,14 @@ useful width — the Moon's p90 tilt goes 9.7° → 11.6° from 2048 to
 4096. 4096 uncompressed is ~45 MB of VRAM per body, which is
 affordable for a lazily-loaded body; 8192 is ~179 MB and is not, so it
 waits on KTX2/Basis block compression.
+
+Those two figures assume **RGBA8 plus mipmaps**, which is what a WebP
+decoded to an `ImageBitmap` uploads as by default. Since blue carries
+no signal, an `RG8` upload (WebGL2) halves both: ~22 MB at 4096 and
+~89 MB at 8192. Whether that lands is 2f6.42's call, but it has to be
+settled before the 8192 question is reopened — it moves 8192 from
+unaffordable to arguable, so quoting ~179 MB as the blocker without
+the channel assumption would decide that question by accident.
 
 **Which bodies are eligible at all.** Relief applies only where the
 rendered texture IS the solid surface. That excludes **Venus** (we

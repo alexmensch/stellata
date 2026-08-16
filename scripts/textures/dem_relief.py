@@ -15,12 +15,9 @@ DEM_TARGET_W = 4096
 # Latitude past which the equirect longitude derivative degenerates: texels
 # converge on the pole, so a metre of east-west relief spans a vanishing
 # distance and the slope diverges. Zeroed there rather than clamped — a pole
-# reading flat beats a pole reading vertical.
+# reading flat beats a pole reading vertical. The reported tilt statistics use
+# the same window, so they measure only where both derivatives are real.
 POLE_CUTOFF_DEG = 85.0
-
-# Latitude excluded from the reported tilt statistics, matching the probe the
-# pinned numbers come from.
-STATS_CUTOFF_DEG = 88.0
 
 # Per-body relief contract. `dtype`/`scale`/`offset`/`span_m` decode the
 # DOWNLOADED original (reduce_dem.py); the rest drive every build.
@@ -96,8 +93,8 @@ def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
 
     The encoded frame is (+x east, +y north, +z out of the surface), which is
     what a GL-sampled equirect map gives with flipY — v increases northward.
-    Blue is unused: z is positive by construction, so the shader reconstructs
-    it and the channel costs nothing to leave flat.
+    Blue carries no signal: z is positive by construction, so the consumer
+    reconstructs it as sqrt(1 - x^2 - y^2).
     """
     elev = _roll_to_map_centre(elev, spec)
     h, w = elev.shape
@@ -109,17 +106,20 @@ def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
     step_m = 2 * np.pi * spec["radius_km"] * 1000.0 / w
 
     d_east = (np.roll(elev, -1, axis=1) - np.roll(elev, 1, axis=1)) / (
-        2 * step_m * np.maximum(cos_lat, 1e-6)
+        2 * step_m * cos_lat
     )
     d_east[np.abs(lat) > POLE_CUTOFF_DEG, :] = 0.0
-    north = np.vstack([elev[:1], elev[:-1]])
-    south = np.vstack([elev[1:], elev[-1:]])
+    # The row beyond a pole is that same row half a world away in longitude,
+    # so the top and bottom rows difference across the pole rather than
+    # against themselves — a clamp there would halve their gradient.
+    north = np.vstack([np.roll(elev[:1], w // 2, axis=1), elev[:-1]])
+    south = np.vstack([elev[1:], np.roll(elev[-1:], w // 2, axis=1)])
     d_north = (north - south) / (2 * step_m)
 
     n = np.stack([-d_east, -d_north, np.ones_like(d_east)], axis=-1)
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
 
-    keep = np.abs(lat) <= STATS_CUTOFF_DEG
+    keep = np.abs(lat) <= POLE_CUTOFF_DEG
     tilt = np.degrees(np.arccos(np.clip(n[keep, :, 2], -1.0, 1.0))).ravel()
     weights = np.repeat(cos_lat[keep, 0], w)
     stats = {
@@ -128,6 +128,9 @@ def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
         "width": w,
     }
 
-    rgb = np.zeros((h, w, 3), dtype=np.uint8)
+    # Blue is the encoding of z = +1 under the same n*0.5 + 0.5 the other two
+    # channels use, not 0: a consumer that samples all three and skips the
+    # reconstruction then reads a shallow normal instead of an inverted one.
+    rgb = np.full((h, w, 3), 255, dtype=np.uint8)
     rgb[..., :2] = np.rint(np.clip(n[..., :2] * 0.5 + 0.5, 0.0, 1.0) * 255)
     return rgb, stats
