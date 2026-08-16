@@ -37,6 +37,7 @@ import {
   planetApparentMagnitude,
 } from '../perceptual-magnitude';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
+import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   discHitRadiusPx,
@@ -213,7 +214,7 @@ export class PlanetBodyField {
   // Shared uniform bundle — references, not copies. The picker reads
   // current values directly so it stays in lockstep with the shaders
   // and any debug-panel writes to the same `{ value }` slots.
-  private magShared: PerceptualDiscUniforms & ChartDiscUniforms;
+  private magShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms;
   // Per-instance attribute buffers keyed per INSTANCE_ATTR_SPECS.
   // Re-allocated on capacity grow.
   private bufs!: Record<InstanceBufKey, Float32Array>;
@@ -979,6 +980,7 @@ export class PlanetBodyField {
       // picker for a host, the parent planet's own candidacy for a
       // moon), so the member is not individually pickable.
       if (this.isViewCollapsedOntoParent(host, i, view, camera)) return;
+      if (!this.bodyInkVisible(host, i, view)) return;
 
       v.set(planetX, planetY, planetZ);
       const screen = projectToScreen(v, camera, viewportW, viewportH);
@@ -1007,6 +1009,38 @@ export class PlanetBodyField {
       cameraDistancePc: winner.candidate.cameraDistancePc,
       tier: winner.tier,
     };
+  }
+
+  /**
+   * Adaptation-aware visibility, for the on-demand pick path only.
+   * `forEachDrawnBodyView`'s `drawCutoffMag` deliberately excludes the
+   * per-frame adaptation cut, because every CACHED consumer of it would
+   * thrash on a value that moves each frame
+   * (`../../hdr/exposure/README.md`). A pick caches nothing: it runs on a
+   * pointer event and discards everything, so it can read the live
+   * exposure — and must, since a resolved surface in frame drives the cut
+   * deep enough to black out every faint body along with the star field.
+   *
+   * The glare test is the star pipeline's, unchanged: the billboard IS
+   * the shared star-perceptual point (`glare/README.md`). The mesh
+   * OR-branch mirrors `forEachDrawnBodyView`'s — an opaque surface is
+   * pickable whatever the exposure, which is why a parked body already
+   * picked correctly. Chart inherits no exposure state at all.
+   */
+  private bodyInkVisible(host: AttachedHost, i: number, view: PlanetView): boolean {
+    const physPx = this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, view.dVp);
+    if (physPx >= MESH_FADE_MIN_PX) return true;
+    if (this.mono) return view.appMag <= this.magShared.uLimitMag.value;
+    return emitterPutsInkOnScreen({
+      appMag: view.appMag,
+      exposure: this.magShared.uExposure.value,
+      thresholdMag: this.magShared.uThresholdMag.value,
+      physRadiusPx: 0.5 * physPx,
+      whitePoint: this.magShared.uWhitePoint.value,
+      // The body carries no opaque disc pass — the glare is the additive
+      // billboard alone, so the fragment taper always applies.
+      tapered: true,
+    });
   }
 
   /**

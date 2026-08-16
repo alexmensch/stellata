@@ -31,6 +31,11 @@ src/client/solar-system/planets/
                                   Shares the glow half of perceptual-disc.glsl
                                   with stars — see
                                   ../../star-pipeline/README.md.
+                                  pick() adds one gate over
+                                  forEachDrawnBodyView: bodyInkVisible,
+                                  which reads the LIVE uExposure so the
+                                  adaptation cut reaches the pick (§ The
+                                  pick's adapted gate).
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
                                   verdict (drawn this frame AND within
@@ -174,6 +179,25 @@ halo and the z-buffer natively orders ring↔body, moon↔planet,
 transits, and near-side orbit-ring arcs (`../../local-depth/README.md`).
 Distant, not-locally-active bodies draw in the main pass as a faint
 additive point that needs no depth occlusion (like a star).
+
+## The pick's adapted gate
+
+`forEachDrawnBodyView` gates on `drawCutoffMag`, which deliberately
+**excludes** the per-frame adaptation cut — every cached consumer of it
+would thrash on a value that moves each frame
+(`../../hdr/exposure/README.md`). A pick caches nothing: it runs on a
+pointer event, walks the hosts fresh and discards everything, so it can
+read the live `uExposure` — and must, or a parked body blacks out the
+whole faint end while leaving every one of those bodies clickable.
+
+`bodyInkVisible` is that extra gate, and it is the star pipeline's own
+test: the glare IS the shared star-perceptual point (`glare/README.md`),
+so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
+true because a body carries no opaque disc pass. The mesh OR-branch is
+`forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
+any exposure, which is why a **parked** body always picked correctly and
+the gap only ever showed on a distant faint one. Chart inherits no
+exposure state and keeps its hard clip at the instrument limit.
 
 ## True-eclipse dim
 
