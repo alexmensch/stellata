@@ -112,11 +112,17 @@ that reason.
 
 Two constraints on any new caller:
 
-- **Event rate only.** It is a synchronous `readPixels`, so it stalls the
-  pipeline — the thing the reduction's fence exists to avoid
-  (`../../hdr/exposure/reduction/README.md` § Latency). Per pointer
-  event is fine; per frame or per star is not. The pick path resolves
-  candidates lazily in score order so a pick normally costs one read.
+- **Event rate only.** A cold read is a synchronous `readPixels`, so it
+  stalls the pipeline — the thing the reduction's fence exists to avoid
+  (`../../hdr/exposure/reduction/README.md` § Latency). Reads are
+  **memoised per star** and the memo is cleared exactly where the target
+  is rewritten (`update()`'s recompute) — that one line is the whole
+  invalidation rule, because the target's contents are the only other
+  input. It matters because hover picks ride `pointermove`, which
+  outruns the frame rate on a fast pointer; without the memo a sweep
+  across a dusty field pays a stall per candidate. The pick path also
+  resolves candidates lazily in score order, so a cold pick normally
+  costs one read. Never sweep it over the catalog.
 - **Null means no cache, not no dust.** On the fallback path (no
   `EXT_color_buffer_float`) the shader still dims the star through its
   in-vertex march while this returns null, so a consumer that treats

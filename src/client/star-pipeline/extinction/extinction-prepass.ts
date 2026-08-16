@@ -50,6 +50,14 @@ export class ExtinctionPrepass {
   private scene = new THREE.Scene();
   private camera = new THREE.OrthographicCamera();
 
+  private readonly avScratch = new Float32Array(4);
+  // Readback memo, keyed by star index. The target's contents are the
+  // only other input, and update() is the only thing that writes them —
+  // so clearing it there is the whole invalidation rule. Without this a
+  // hover in a dense field stalls the pipeline once per candidate, and
+  // pointermove outruns the frame rate.
+  private readonly avCache = new Map<number, number>();
+
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
@@ -150,6 +158,7 @@ export class ExtinctionPrepass {
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(prevTarget);
 
+    this.avCache.clear();
     this.lastCamX = absCamX;
     this.lastCamY = absCamY;
     this.lastCamZ = absCamZ;
@@ -166,13 +175,16 @@ export class ExtinctionPrepass {
    * switch parked it), where the shader is on its in-vertex fallback and
    * there is nothing to read.
    *
-   * Synchronous, and therefore for **event-rate callers only** — the
-   * pick paths. Never call it per frame or per star: `readPixels` stalls
-   * the pipeline, which is exactly what the reduction's fence exists to
-   * avoid (`../../hdr/exposure/reduction/README.md` § Latency).
+   * Memoised per star until the next `update()` recompute, so a repeat
+   * read is free. A COLD read is a synchronous `readPixels` and stalls
+   * the pipeline — the thing the reduction's fence exists to avoid
+   * (`../../hdr/exposure/reduction/README.md` § Latency) — so this stays
+   * an event-rate entry point: never sweep it over the catalog.
    */
   readAvMag(idx: number): number | null {
     if (this.rt === null || !this.isActive()) return null;
+    const cached = this.avCache.get(idx);
+    if (cached !== undefined) return cached;
     const gl = this.renderer.getContext() as WebGL2RenderingContext;
     const prev = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(this.rt);
@@ -187,10 +199,10 @@ export class ExtinctionPrepass {
       this.avScratch,
     );
     this.renderer.setRenderTarget(prev);
-    return this.avScratch[0];
+    const av = this.avScratch[0];
+    this.avCache.set(idx, av);
+    return av;
   }
-
-  private readonly avScratch = new Float32Array(4);
 
   private syncConsumerUniforms() {
     const on = this.isActive();
@@ -209,6 +221,7 @@ export class ExtinctionPrepass {
     this.posTex = null;
     this.material = null;
     this.geometry = null;
+    this.avCache.clear();
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;
