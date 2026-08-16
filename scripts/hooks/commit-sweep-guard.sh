@@ -49,15 +49,31 @@ fi
 # Opt-out detection. The HEREDOC commit pattern bd recommends puts the
 # message body literally into the command string, so a grep over the
 # command catches `[readme-skip: ...]` whether it's a `-m`-arg or
-# HEREDOC inline message.
+# HEREDOC inline message. `-F <file>` does not, and is handled below.
 #
 # Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
 # span newlines in line-mode grep) still spans a multi-line skip
 # reason. Without this a HEREDOC message that wraps the bracketed
 # reason across lines is silently ignored — surprise denials on
 # what looks like a valid opt-out.
+# `-F <file>` puts the message in a file, so the command carries only a
+# path and a tag inside it would never be seen. In a worktree that is the
+# ONLY route for a long message — the worktree guard rejects `$( )` and
+# heredoc commit bodies — so without this the opt-out is unusable exactly
+# where it is needed most.
+msg_files="$(printf '%s' "$cmd" \
+  | grep -oE '(^|[[:space:]])(-F|--file|--body-file)[[:space:]]*=?[[:space:]]*[^[:space:]]+' \
+  | sed -E 's/^[[:space:]]*(-F|--file|--body-file)[[:space:]]*=?[[:space:]]*//' || true)"
+
+skip_scan="$cmd"
+for mf in $msg_files; do
+  if [ "$mf" != "-" ] && [ -f "$mf" ] && [ -r "$mf" ]; then
+    skip_scan="$skip_scan $(head -c 65536 "$mf")"
+  fi
+done
+
 opt_out=0
-if printf '%s' "$cmd" | tr '\n' ' ' | grep -qE '\[readme-skip:[^]]*\]'; then
+if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[readme-skip:[^]]*\]'; then
   opt_out=1
 fi
 
