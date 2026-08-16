@@ -50,6 +50,14 @@ export class ExtinctionPrepass {
   private scene = new THREE.Scene();
   private camera = new THREE.OrthographicCamera();
 
+  private readonly avScratch = new Float32Array(4);
+  // Readback memo, keyed by star index. The target's contents are the
+  // only other input, and update() is the only thing that writes them —
+  // so clearing it there is the whole invalidation rule. Without this a
+  // hover in a dense field stalls the pipeline once per candidate, and
+  // pointermove outruns the frame rate.
+  private readonly avCache = new Map<number, number>();
+
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
@@ -150,12 +158,50 @@ export class ExtinctionPrepass {
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(prevTarget);
 
+    this.avCache.clear();
     this.lastCamX = absCamX;
     this.lastCamY = absCamY;
     this.lastCamZ = absCamZ;
     this.dirty = false;
     this.hasComputed = true;
     this.syncConsumerUniforms();
+  }
+
+  /**
+   * Raw physical A_V for one star, read out of the very texel
+   * `star.vert.glsl` fetches — so a CPU consumer cannot drift from the
+   * shader the way a re-implemented march would. Null when the cache is
+   * inert (no `EXT_color_buffer_float`, no dust yet, or the dev A/B
+   * switch parked it), where the shader is on its in-vertex fallback and
+   * there is nothing to read.
+   *
+   * Memoised per star until the next `update()` recompute, so a repeat
+   * read is free. A COLD read is a synchronous `readPixels` and stalls
+   * the pipeline — the thing the reduction's fence exists to avoid
+   * (`../../hdr/exposure/reduction/README.md` § Latency) — so this stays
+   * an event-rate entry point: never sweep it over the catalog.
+   */
+  readAvMag(idx: number): number | null {
+    if (this.rt === null || !this.isActive()) return null;
+    const cached = this.avCache.get(idx);
+    if (cached !== undefined) return cached;
+    const gl = this.renderer.getContext() as WebGL2RenderingContext;
+    const prev = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.rt);
+    // RGBA/FLOAT is the pair readPixels guarantees on a float
+    // attachment; the target's own RED/FLOAT is implementation-defined
+    // and rejected outright by some drivers.
+    gl.readPixels(
+      idx % AV_TEX_WIDTH,
+      (idx / AV_TEX_WIDTH) | 0,
+      1, 1,
+      gl.RGBA, gl.FLOAT,
+      this.avScratch,
+    );
+    this.renderer.setRenderTarget(prev);
+    const av = this.avScratch[0];
+    this.avCache.set(idx, av);
+    return av;
   }
 
   private syncConsumerUniforms() {
@@ -175,6 +221,7 @@ export class ExtinctionPrepass {
     this.posTex = null;
     this.material = null;
     this.geometry = null;
+    this.avCache.clear();
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;

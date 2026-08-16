@@ -71,7 +71,7 @@ export class StarLocalCluster implements LocalCluster {
   private readonly memberSet = new Set<number>();
   private readonly spheres: MemberSphere[] = [];
   private readonly sizeScratch: RenderedSizeComponents = {
-    appMag: 0, appSizePx: 0, physSizePx: 0,
+    appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0,
   };
 
   constructor(

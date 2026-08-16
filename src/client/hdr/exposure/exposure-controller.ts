@@ -65,9 +65,16 @@ export class ExposureController {
   }
 
   /** What the observer can actually perceive this frame — adaptation
-   *  folded in. The limiting-magnitude readout's number, and nothing
-   *  else: no cull, gate or footprint may key on it (adaptation moves
-   *  every frame, and their caches would thrash). */
+   *  folded in.
+   *
+   *  **Nothing cached or per-frame may key on it**: adaptation moves
+   *  every frame, so a cull, a footprint window or any dirty-tracked
+   *  cache would thrash. That is a constraint on the *consumer*, not on
+   *  the number — an on-demand consumer that recomputes from scratch
+   *  and stores nothing is free to read it, and the pick paths are
+   *  exactly that. They reach adaptation through `uExposure` and
+   *  `emitter-visibility-pure.ts` rather than through this readout,
+   *  which stays a magnitude for the panel to print. */
   getEffectiveLimitMag(): number { return this.getThresholdMag() + this.dm; }
 
   setInstrument(name: InstrumentName): void {

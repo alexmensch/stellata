@@ -10,11 +10,12 @@ import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { projectToScreen } from '../../overlays/overlay-project';
 import {
-  MIN_DISC_HIT_RADIUS_PX,
-  pickFromCandidates,
+  discHitRadiusPx,
+  pickFromCandidatesResolved,
   pickScore,
   sortedDistRange,
   type PickResult,
+  type ResolvedCandidate,
   type StarPickCandidate,
 } from './star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
@@ -37,10 +38,18 @@ export interface PickerDeps {
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
-  // Faintest drawn magnitude, so a pick can never disagree with the
-  // fragment shader's taper. Chart hard-clips; navigate fades over the
-  // soft taper. `ExposureController.drawCutoffMag`.
+  // Cheap upper bound on the faintest drawn magnitude, evaluated against
+  // the star's INTRINSIC brightness to prune the catalog scan. Every term
+  // it omits — dust extinction, the adaptation cut, the faint-end toe —
+  // only ever dims, so nothing drawn can fall outside it; `resolveStarPick`
+  // is the gate that actually decides. `ExposureController.drawCutoffMag`.
   drawCutoffMagFn: (chart: boolean) => number;
+  // Whether the renderer puts a pixel on screen for this star, and the
+  // disc radius it actually draws — the terms the prefilter above cannot
+  // see, resolved per candidate because per-star extinction costs a GPU
+  // readback. Threaded as a callback so Picker stays decoupled from
+  // material uniforms.
+  resolveStarPick: (idx: number) => ResolvedCandidate;
   // Collapsed-cluster lead resolver: when the winning star renders as
   // one point with other members of its system (composite-suppressed),
   // every pick surface resolves to the cluster's primary — hover card,
@@ -145,8 +154,6 @@ export class Picker {
       // its disc whenever magMod swings negative.
       const amp = periodDays[i] > 0 ? amplitudeMag[i] : 0;
       const filterMag = appMag - amp * 0.5;
-      // Pickable exactly where the disc renders — the shared cutoff rule
-      // closes the renders-but-unpickable band at the visibility edge.
       if (filterMag > cutoff) continue;
 
       v.set(x, y, z);
@@ -154,16 +161,19 @@ export class Picker {
       if (!screen) continue;
       const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
       const pxSize = this.deps.renderedSizePxFn(i);
-      const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
+      // Extinction-blind, so an upper bound of the resolved radius —
+      // which is what pickFromCandidatesResolved requires of it.
+      const hitRadius = discHitRadiusPx(pxSize);
       // Prune to candidates that could win in either tier; the reducer
       // re-checks tier eligibility, this is just to keep the array tiny.
       if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
       candidates.push({ idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam });
     }
-    return pickFromCandidates(
+    return pickFromCandidatesResolved(
       candidates,
       pixelThreshold,
       (c) => pickScore(c.pxDist, c.appMag),
+      (c) => this.deps.resolveStarPick(c.idx),
     );
   }
 }

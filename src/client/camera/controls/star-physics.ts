@@ -140,15 +140,26 @@ export interface RenderedSizeArgs {
    *  access to the runtime suppress array fall through to the
    *  unsuppressed behaviour. */
   suppressPulsation?: Float32Array;
+  /** Dust extinction to fold into the magnitude, as the shader does.
+   *  Omitted by the overlay consumers (focus ring, distance-vector tip),
+   *  which track a star the user is already looking at and would pay a
+   *  GPU readback per frame for a sub-pixel size change. The pick paths
+   *  pass it: there the dust term decides whether the star is on screen
+   *  at all (`../../hdr/exposure/emitter-visibility-pure.ts`). */
+  extinctionAvMag?: number;
 }
 
 export interface RenderedSizeComponents {
-  /** Apparent magnitude incl. the pulsation modulation (no extinction —
-   *  the CPU mirror deliberately skips the dust term, same as every
-   *  overlay consumer). */
+  /** Apparent magnitude incl. the pulsation modulation, and the dust
+   *  term only when the caller supplied `extinctionAvMag`. */
   appMag: number;
   appSizePx: number;
   physSizePx: number;
+  /** `physSizePx` BEFORE the viewport-fraction up-clamp. star.vert.glsl
+   *  divides the point-source peak by the true angular radius and clamps
+   *  only afterwards, so a visibility mirror must take this one — the
+   *  clamped value over-brightens a star at the zoom floor. */
+  physSizePxUncapped: number;
 }
 
 // The two size terms behind the GPU-rendered quad size — the CPU mirror
@@ -168,7 +179,7 @@ export function renderedSizeComponents(
   const dy = localPositions[idx * 3 + 1] - camPos.y;
   const dz = localPositions[idx * 3 + 2] - camPos.z;
   const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-  let appMag = apparentMagnitude(absmag[idx], dCam);
+  let appMag = apparentMagnitude(absmag[idx], dCam) + (args.extinctionAvMag ?? 0);
 
   const fovYRad = u.uFovYRad.value;
   const viewport = u.uViewport.value;
@@ -211,14 +222,16 @@ export function renderedSizeComponents(
   const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, sizeSpan);
 
   // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
-  const physSize = Math.min(physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor), maxPhysSize);
+  const physSizeTrue = physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor);
   out.appMag = appMag;
   out.appSizePx = appSize;
-  out.physSizePx = physSize;
+  out.physSizePx = Math.min(physSizeTrue, maxPhysSize);
+  out.physSizePxUncapped = physSizeTrue;
   return out;
 }
 
-const sizeScratch: RenderedSizeComponents = { appMag: 0, appSizePx: 0, physSizePx: 0 };
+const sizeScratch: RenderedSizeComponents =
+  { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
 // Rendered quad diameter (px) — `max(appSize, physSize)` over the
 // components above. What SVG / overlay code (focus ring, distance-vector

@@ -193,6 +193,10 @@ describe('StarPipeline', () => {
     expect(pipe.discMaterial.depthTest).toBe(false);
     expect(pipe.glowMaterial.blending).toBe(THREE.MultiplyBlending);
     expect(pipe.glowMaterial.depthTest).toBe(false);
+    // Without this three.js drops the blendFunc entirely and the discs
+    // draw with the previous material's state — see disc-blend.test.ts.
+    expect(pipe.discMaterial.premultipliedAlpha).toBe(true);
+    expect(pipe.glowMaterial.premultipliedAlpha).toBe(true);
   });
 
   it('setMonochromeBlend(false) restores the calibrated defaults', () => {
@@ -205,6 +209,8 @@ describe('StarPipeline', () => {
     expect(pipe.discMaterial.depthTest).toBe(true);
     expect(pipe.glowMaterial.blending).toBe(THREE.AdditiveBlending);
     expect(pipe.glowMaterial.depthTest).toBe(true);
+    expect(pipe.discMaterial.premultipliedAlpha).toBe(false);
+    expect(pipe.glowMaterial.premultipliedAlpha).toBe(false);
   });
 
   it('dispose() releases geometry + all three materials and detaches meshes', () => {

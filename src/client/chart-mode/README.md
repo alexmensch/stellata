@@ -126,6 +126,17 @@ float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
 outColor = vec4(vec3(1.0 - disc), 1.0);  // black ink under MultiplyBlending
 ```
 
+The ink only lands because the material is in `MultiplyBlending` — and
+three.js **refuses that blending unless `premultipliedAlpha` is true**,
+logging but issuing no `blendFunc` at all while still caching the swap as
+applied. The draw then inherits the previous material's blend state, so
+the failure is order-dependent rather than consistent: it shipped as
+chart discs rendering white when chart was toggled on from observe, while
+entering chart directly on load happened to inherit a benign state. Every
+emitter that inks on paper takes the swap through
+`applyMonochromeBlend` (`../star-pipeline/star-pipeline.ts`) for that
+reason — the flag is not optional decoration.
+
 `vAaWidth = 1 / pxSize` is computed per-vertex and passed as a
 varying. **Don't switch to `fwidth(r)`** — `length(vUv)` has an
 undefined screen-space derivative at the quad centre (vUv = (0,0)),
@@ -268,10 +279,14 @@ Click-pick tracks **render visibility** identically for every kind: a
 body is click-pinnable iff it is currently drawn. Chart mode hard-clips
 the star disc at `uLimitMag` (no soft taper — § Star disc sizing), so
 `pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
-navigate; `PlanetBodyField.pick` applies the same hard clip in chart
-mode and sizes its hit radius from the chart disc px
-(`chartDiscPxForAppMag`) instead of the physical/perceptual disc. The
-shared cutoff constant lives in
+navigate. **Both** kinds size the hit radius from the chart disc px
+(`chartDiscPxForAppMag`) rather than the physical/perceptual disc —
+`PlanetBodyField.pick` inline, the star path through `resolveStarPick`,
+whose radius is the ink disc the chart actually draws. Sizing stars off
+the realistic footprint is what let a resolved primary swallow every
+nearby hit. The catalog-wide prefilter still prunes on the realistic
+footprint, so in chart it must bound the ink disc too
+(`../camera/controls/README.md`). The shared cutoff constant lives in
 `solar-system/perceptual-magnitude.ts`.
 
 `Picker.pickStar` (`camera/controls/picker.ts`) three fixes for the small-disc /

@@ -12,6 +12,7 @@ export function applyDiscBlendDefaults(m: THREE.ShaderMaterial) {
   m.blendSrc = THREE.OneFactor;
   m.blendDst = THREE.OneFactor;
   m.blendEquation = THREE.MaxEquation;
+  m.premultipliedAlpha = false;
   m.depthWrite = true;
   m.depthTest = true;
 }
@@ -28,6 +29,24 @@ export function applyGlowBlendDefaults(m: THREE.ShaderMaterial) {
   m.depthWrite = false;
   m.depthTest = true;
   m.blending = THREE.AdditiveBlending;
+  m.premultipliedAlpha = false;
+}
+
+// Chart-mode ink blending — the swap every emitter drawing flat ink on
+// paper takes, shared so the three call sites cannot diverge.
+//
+// `premultipliedAlpha` is load-bearing, not cosmetic: three.js REFUSES
+// MultiplyBlending without it, and the refusal is silent-ish — it logs,
+// issues no blendFunc at all, then caches the swap as applied so it
+// never retries. The draw inherits whatever blend func the previous
+// material left, which is why the symptom is order-dependent (correct
+// entering chart on load, white discs toggling in) rather than a
+// consistent failure.
+export function applyMonochromeBlend(m: THREE.ShaderMaterial) {
+  m.blending = THREE.MultiplyBlending;
+  m.premultipliedAlpha = true;
+  m.depthWrite = false;
+  m.depthTest = false;
 }
 
 export interface StarPipelineOptions {
@@ -250,11 +269,8 @@ export class StarPipeline {
    *  the caller — only the per-material blend state lives here. */
   setMonochromeBlend(on: boolean) {
     if (on) {
-      this.discMaterial.blending = THREE.MultiplyBlending;
-      this.discMaterial.depthWrite = false;
-      this.discMaterial.depthTest = false;
-      this.glowMaterial.blending = THREE.MultiplyBlending;
-      this.glowMaterial.depthTest = false;
+      applyMonochromeBlend(this.discMaterial);
+      applyMonochromeBlend(this.glowMaterial);
     } else {
       applyDiscBlendDefaults(this.discMaterial);
       applyGlowBlendDefaults(this.glowMaterial);

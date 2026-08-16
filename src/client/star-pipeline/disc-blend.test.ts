@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { applyDiscBlendDefaults } from './star-pipeline';
+import {
+  applyDiscBlendDefaults,
+  applyGlowBlendDefaults,
+  applyMonochromeBlend,
+} from './star-pipeline';
 
 // Pin the disc-pass blend equation across the helper's lifecycle.
 // PR #25 had to update two parallel sites for the AddEquation →
@@ -20,6 +24,7 @@ describe('applyDiscBlendDefaults', () => {
     expect(m.blendSrc).toBe(THREE.OneFactor);
     expect(m.blendDst).toBe(THREE.OneFactor);
     expect(m.blendEquation).toBe(THREE.MaxEquation);
+    expect(m.premultipliedAlpha).toBe(false);
     expect(m.depthWrite).toBe(true);
     expect(m.depthTest).toBe(true);
   });
@@ -51,5 +56,41 @@ describe('applyDiscBlendDefaults', () => {
       dw: m.depthWrite, dt: m.depthTest,
     };
     expect(snap2).toEqual(snap1);
+  });
+});
+
+// three.js REFUSES MultiplyBlending on a material with
+// premultipliedAlpha = false: it logs, issues no blendFunc at all, and
+// still caches the swap as applied, so the draw silently inherits the
+// previous material's blend state. That shipped as chart-mode star discs
+// rendering white when chart was toggled on from observe, while entering
+// chart directly on load happened to inherit a benign state.
+describe('applyMonochromeBlend', () => {
+  function makeMaterial(): THREE.ShaderMaterial {
+    return new THREE.ShaderMaterial({});
+  }
+
+  it('sets premultipliedAlpha alongside MultiplyBlending', () => {
+    const m = makeMaterial();
+    applyMonochromeBlend(m);
+    expect(m.blending).toBe(THREE.MultiplyBlending);
+    expect(m.premultipliedAlpha).toBe(true);
+    expect(m.depthWrite).toBe(false);
+    expect(m.depthTest).toBe(false);
+  });
+
+  it('round-trips through both defaults appliers', () => {
+    // The chart toggle runs this cycle on every entry and exit; neither
+    // direction may leave premultipliedAlpha disagreeing with blending.
+    for (const restore of [applyDiscBlendDefaults, applyGlowBlendDefaults]) {
+      const m = makeMaterial();
+      applyMonochromeBlend(m);
+      restore(m);
+      expect(m.premultipliedAlpha).toBe(false);
+      expect(m.blending).not.toBe(THREE.MultiplyBlending);
+      applyMonochromeBlend(m);
+      expect(m.premultipliedAlpha).toBe(true);
+      expect(m.blending).toBe(THREE.MultiplyBlending);
+    }
   });
 });
