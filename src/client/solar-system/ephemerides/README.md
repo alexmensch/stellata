@@ -300,11 +300,13 @@ is checked against the live elements every frame and
 rewritten only when they have drifted past `RING_GEOMETRY_DRIFT_TOLERANCE`
 — **the polyline's own resolution**, so a skipped rewrite is provably
 invisible. Moon rings were once excluded from that refresh entirely, on
-the reasoning that moon elements carry no secular terms; that holds for
-the 17 Kepler moons and not for Earth's Moon, whose ring froze at attach
-time and drifted up to 19 000 km — 5 % of its distance — off the body.
+the reasoning that moon elements carry no secular terms — which is true
+of 16 of the 18 and of neither one that matters. Earth's Moon froze at
+attach time and drifted up to 19 000 km, 5 % of its distance, off the
+body; Triton's node precesses out of the frozen plane at 0.00146°/day.
 The drift gate, not the body kind, is what keeps the refresh cheap: a
-Kepler moon fails it on five float compares and is never rewritten.
+static Kepler moon fails it on five float compares and is never
+rewritten, while Triton's `longAscNode` leg trips it on schedule.
 
 **Two gates, in this order: visibility, then drift.** `update` decides
 what is on screen first and `refreshGeometry` runs only over the

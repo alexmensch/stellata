@@ -31,6 +31,13 @@ import {
 // builds rings at.
 const T0 = 946728000;
 
+// Day offsets the moon parity pins sample. A secular element term is
+// exactly zero at J2000 and grows from there, so samples clustered
+// around T0 cannot see one: Triton's node drift put its ring 21 500 km
+// off the body by 2026 while a 40-day sample still read 2 km. The outer
+// pair is the model clock's own 3000 BC / 3000 AD clamp.
+const MOON_SAMPLE_DAY_OFFSETS = [0, 3.1, 11.7, 40.4, 9700, -365250, 365250];
+
 function makePlanet(overrides: Partial<Planet> = {}): Planet {
   return {
     name: 'Test',
@@ -730,7 +737,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     const verts = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
     const planetCount = PLANET_ORDER.length;
     const offset = { x: 0, y: 0, z: 0 };
-    for (const dayOffset of [0, 3.1, 40.4]) {
+    for (const dayOffset of MOON_SAMPLE_DAY_OFFSETS) {
       const t = T0 + dayOffset * 86400;
       const geoms = solOrbitGeometryAt(t);
       for (let m = 0; m < MOON_ELEMENTS.length; m++) {
@@ -761,7 +768,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
     const planetCount = PLANET_ORDER.length;
     const offset = { x: 0, y: 0, z: 0 };
-    for (const dayOffset of [0, 3.1, 11.7, 40.4]) {
+    for (const dayOffset of MOON_SAMPLE_DAY_OFFSETS) {
       const t = T0 + dayOffset * 86400;
       const geoms = solOrbitGeometryAt(t);
       for (let m = 0; m < MOON_ELEMENTS.length; m++) {
