@@ -25,7 +25,24 @@ in both navigate and observe modes.
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
-- `picker.ts` — pure target resolver. It owns the two-tier star pick
+- `picker.ts` — pure target resolver. **Two-stage brightness gate:** the
+  catalog-wide scan prunes on the star's *intrinsic* magnitude against
+  `drawCutoffMag`, then each surviving candidate goes through
+  `resolveStarPick`, which folds in the terms that magnitude cannot see —
+  per-star dust extinction, the live adaptation cut, the faint-end toe —
+  and reports both whether the frame renders the star and the disc radius
+  it actually draws. Prefiltering on the intrinsic value is sound only
+  because every omitted term dims (`../../hdr/exposure/README.md` § What
+  "visible" means to a pick path); making it the *gate* is the bug that
+  had clicks landing on stars in empty sky. The confirm step costs a GPU
+  readback per candidate, so `pickFromCandidatesResolved` walks the score
+  order lazily and stops at the first candidate that renders. The
+  prefilter's radius must be an **upper bound** of the resolved one or
+  the prime/fallback partition mis-tiers — in chart mode that means
+  bounding the magnitude-mapped ink disc as well as the realistic
+  footprint, since either can be the larger
+  (`Stellata.pickPrefilterSizePxFor`).
+  It owns the two-tier star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks
   through `pickKindHit`, which dispatches to the module's

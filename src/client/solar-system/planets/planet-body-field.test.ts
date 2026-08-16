@@ -1230,6 +1230,22 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     expect(f.hiddenInstanceIdx).toBe(-1);
   });
 
+  it('chart mode swaps the glare pass to multiply WITH premultipliedAlpha', () => {
+    // three.js silently declines MultiplyBlending without it and leaves
+    // the previous material's blend func in place — the star pipeline
+    // shipped exactly that as white chart discs. Same helper, same pin.
+    const f = makeField();
+    attach(f, 0, 2);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyF = f as any;
+    f.setMonochrome(true);
+    expect(anyF.matGlow.blending).toBe(THREE.MultiplyBlending);
+    expect(anyF.matGlow.premultipliedAlpha).toBe(true);
+    f.setMonochrome(false);
+    expect(anyF.matGlow.blending).toBe(THREE.AdditiveBlending);
+    expect(anyF.matGlow.premultipliedAlpha).toBe(false);
+  });
+
   it('hostPlanetOf / instanceIndexOf are inverses across multiple hosts', () => {
     const f = makeField();
     attach(f, 0, 2);

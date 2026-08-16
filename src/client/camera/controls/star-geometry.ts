@@ -65,6 +65,13 @@ export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 // star and planet pick paths share a single source.
 export const MIN_DISC_HIT_RADIUS_PX = 4;
 
+// Prime-tier hit radius for a drawn diameter. The floor applies to the
+// resolved radius as much as the prefilter's, so a star dimmed to a
+// sub-pixel disc stays as reachable as a chart-mode one.
+export function discHitRadiusPx(drawnDiameterPx: number): number {
+  return Math.max(drawnDiameterPx * 0.5, MIN_DISC_HIT_RADIUS_PX);
+}
+
 // Pick score: pxDist + sub-pixel appMag bias. The bias only matters
 // for near-coincident candidates (catalogue rows sharing x/y/z, e.g.
 // Alula Australis A/B). Camera distance is deliberately NOT a
@@ -156,6 +163,69 @@ export function pickFromCandidates<T extends PickCandidate>(
   }
   if (prime !== null) return { candidate: prime, tier: 'prime' };
   if (fb !== null) return { candidate: fb, tier: 'fallback' };
+  return null;
+}
+
+/** What a `Resolve` reports about one candidate once the expensive
+ *  per-star terms (dust extinction) have actually been fetched. */
+export type ResolvedCandidate = {
+  /** False when the renderer puts no pixel on screen for it. */
+  visible: boolean;
+  /** Prime-tier radius recomputed against those terms — a dimmer star
+   *  draws a smaller disc, so this only ever shrinks. */
+  hitRadius: number;
+};
+
+/**
+ * The same two-tier contract as `pickFromCandidates`, but each candidate
+ * is confirmed through `resolve` before it can win, and only as far down
+ * the score order as it takes to find a winner.
+ *
+ * Laziness is the point, not an optimisation: `resolve` reads per-star
+ * extinction back off the GPU, so evaluating every candidate would cost
+ * one synchronous readback each. In score order the first visible
+ * candidate is almost always the first one tried.
+ *
+ * Callers must pass a `hitRadius` that is an upper bound of the resolved
+ * one, so the initial partition can never miss a prime candidate. A
+ * candidate whose resolved radius no longer reaches the cursor demotes
+ * into the fallback pool rather than being dropped.
+ */
+export function pickFromCandidatesResolved<T extends PickCandidate>(
+  candidates: Iterable<T>,
+  pixelThreshold: number,
+  scoreFn: (c: T) => number,
+  resolve: (c: T) => ResolvedCandidate,
+): PickResult<T> | null {
+  const prime: T[] = [];
+  const fallback: T[] = [];
+  for (const c of candidates) {
+    if (c.pxDist <= c.hitRadius) prime.push(c);
+    else if (c.pxDist <= pixelThreshold) fallback.push(c);
+  }
+  // A demoted prime candidate is re-examined in the fallback pass, so
+  // memoise: no candidate may cost two readbacks.
+  const memo = new Map<T, ResolvedCandidate>();
+  const resolveOnce = (c: T): ResolvedCandidate => {
+    let r = memo.get(c);
+    if (r === undefined) {
+      r = resolve(c);
+      memo.set(c, r);
+    }
+    return r;
+  };
+  const byScore = (a: T, b: T) => scoreFn(a) - scoreFn(b);
+  prime.sort(byScore);
+  for (const c of prime) {
+    const r = resolveOnce(c);
+    if (!r.visible) continue;
+    if (c.pxDist <= r.hitRadius) return { candidate: c, tier: 'prime' };
+    fallback.push(c);
+  }
+  fallback.sort(byScore);
+  for (const c of fallback) {
+    if (resolveOnce(c).visible) return { candidate: c, tier: 'fallback' };
+  }
   return null;
 }
 

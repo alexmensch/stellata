@@ -43,8 +43,14 @@ import {
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
 import { HdrPipeline } from './hdr/hdr-pipeline';
-import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
+import {
+  angularToPx as angularToPxPure,
+  discHitRadiusPx,
+  type ResolvedCandidate,
+} from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
+import { emitterPutsInkOnScreen } from './hdr/exposure/emitter-visibility-pure';
+import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
@@ -362,6 +368,8 @@ export class Stellata implements FrameAnchor {
   // Per-star A_V cache. Constructed lazily on the first attachDust so a
   // dust-less session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepass | null = null;
+  private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
+    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
   // Pure target resolver; the click FSM in onPointerUp + the observe
   // single/double-click dispatchers stay here as composition-layer
@@ -634,8 +642,9 @@ export class Stellata implements FrameAnchor {
       getLocalPositions: () => this.localPositions,
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
-      renderedSizePxFn: (idx) => this.renderedSizePxFor(idx),
+      renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
+      resolveStarPick: (idx) => this.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
     });
     // The warp / focus-lerp / observe-transition busy checks stay on
@@ -1468,6 +1477,81 @@ export class Stellata implements FrameAnchor {
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
     }, out);
+  }
+
+  private chartDiscPxFor(appMag: number): number {
+    return chartDiscPxForAppMag(
+      appMag,
+      starPhysics.getChartDiscParams(this.sharedUniforms),
+      this.exposure.getLimitMag(),
+    );
+  }
+
+  /** Upper bound on the radius `resolveStarPick` will report — what
+   *  `pickFromCandidatesResolved`'s prime/fallback partition requires of
+   *  the prefilter, and the reason the two can't just call the same
+   *  function: chart inks a magnitude-mapped disc rather than the
+   *  realistic footprint and either curve can be the larger, so the
+   *  bound has to cover both. Extinction only dims, and a dimmer star
+   *  maps to a smaller disc on both curves, so the resolved radius can
+   *  only shrink from here. */
+  private pickPrefilterSizePxFor(idx: number): number {
+    const c = this.renderedSizeComponentsFor(idx, this.pickSizeScratch);
+    const px = Math.max(c.appSizePx, c.physSizePx);
+    return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
+  }
+
+  /** Dust extinction the shader will apply to this star, in magnitudes.
+   *  Zero when the prepass is inert — the in-vertex fallback still dims
+   *  the star, but reproducing its march on the CPU would need the
+   *  ~128 MiB voxel grid the loader uploads and drops. Erring toward
+   *  "pickable" there keeps the fallback path's behaviour unchanged. */
+  private extinctionAvMagFor(idx: number): number {
+    const raw = this.extinctionPrepass?.readAvMag(idx);
+    if (raw === null || raw === undefined) return 0;
+    return raw * this.sharedUniforms.uDustEnabled.value
+      * this.sharedUniforms.uExtinctionStrength.value;
+  }
+
+  /** Whether the renderer puts a pixel on screen for this star, and the
+   *  disc radius it actually draws — the pick gate proper, as against
+   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Costs a GPU
+   *  readback, so it runs per pick candidate and never per frame
+   *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
+  private resolveStarPick(idx: number): ResolvedCandidate {
+    const avMag = this.extinctionAvMagFor(idx);
+    const c = starPhysics.renderedSizeComponents({
+      catalog: this.catalog,
+      idx,
+      camPos: this.camera.position,
+      localPositions: this.localPositions,
+      uniforms: this.sharedUniforms,
+      filter: this.filter,
+      suppressPulsation: this._suppressPulsation,
+      extinctionAvMag: avMag,
+    }, this.pickSizeScratch);
+
+    if (this.filter.chart) {
+      // Chart inherits no exposure state and hard-clips at the
+      // instrument limit; its ink is the flat disc, not the HDR kernel.
+      return {
+        visible: c.appMag <= this.exposure.getLimitMag(),
+        hitRadius: discHitRadiusPx(this.chartDiscPxFor(c.appMag)),
+      };
+    }
+
+    const pxSize = Math.max(c.appSizePx, c.physSizePx);
+    return {
+      visible: emitterPutsInkOnScreen({
+        appMag: c.appMag,
+        exposure: this.hdr.emitterUniforms.uExposure.value,
+        thresholdMag: this.exposure.getThresholdMag(),
+        physRadiusPx: 0.5 * c.physSizePxUncapped,
+        whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
+        tapered: c.physSizePx < PHYS_RATIO_THRESHOLD * Math.max(pxSize, 0.001),
+      }),
+      hitRadius: discHitRadiusPx(pxSize),
+    };
   }
 
   /** User-facing extinction multiplier scaling the A_V re-added on top of

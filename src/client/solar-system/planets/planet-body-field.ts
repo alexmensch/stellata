@@ -7,7 +7,7 @@ import {
   alphaZeroPhaseFactor,
   phaseFactorFor,
 } from '../phase-function';
-import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,
@@ -39,7 +39,7 @@ import {
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
-  MIN_DISC_HIT_RADIUS_PX,
+  discHitRadiusPx,
   pickFromCandidates,
   physSizePx,
   type PickCandidate,
@@ -987,7 +987,7 @@ export class PlanetBodyField {
 
       const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
       const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
-      const hitRadius = Math.max(pxSize * 0.5, MIN_DISC_HIT_RADIUS_PX);
+      const hitRadius = discHitRadiusPx(pxSize);
 
       if (pxDist > hitRadius && pxDist > pxThreshold) return;
       candidates.push({
@@ -1082,8 +1082,7 @@ export class PlanetBodyField {
   setMonochrome(on: boolean): void {
     this.mono = on;
     if (on) {
-      this.matGlow.blending = THREE.MultiplyBlending;
-      this.matGlow.depthTest = false;
+      applyMonochromeBlend(this.matGlow);
     } else {
       applyGlowBlendDefaults(this.matGlow);
     }

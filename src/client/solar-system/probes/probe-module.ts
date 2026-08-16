@@ -3,7 +3,7 @@
 
 import type { FocusableProvider } from '../../camera/focus/focus-target';
 import {
-  MIN_DISC_HIT_RADIUS_PX,
+  discHitRadiusPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
@@ -54,7 +54,7 @@ export function createProbeKindModule(): ProbeKindModule {
     // `visible` verdict) with the glyph's fixed pixel size as the hit
     // radius — a probe is never focus-gated on the pick side, unlike its
     // trail. Prime tier inside the glyph, fallback within the threshold.
-    const hitRadius = Math.max(PROBE_MARKER_PX * 0.5, MIN_DISC_HIT_RADIUS_PX);
+    const hitRadius = discHitRadiusPx(PROBE_MARKER_PX);
     const candidates: Array<PickCandidate & { cameraDistancePc: number }> = [];
     for (let idx = 0; idx < field.probeCount(); idx++) {
       const sample = field.sampleFor(idx);
