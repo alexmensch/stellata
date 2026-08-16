@@ -80,12 +80,13 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
-/** The eight passes the 2026-08 audit prices. hdrChain (the chart-mode
+/** The passes the 2026-08 audit prices. hdrChain (the chart-mode
  *  park) also stops writing the statistic attachment, flips emitters to
  *  inline tone-mapping and parks the reduction — its row is the whole
  *  target chain against direct-to-canvas, not the resolve draw alone.
- *  extinctionPrepass reports the consumer A/B: disabling ADDS the
- *  in-vertex raymarch, so its savedMs is normally negative (what the
+ *  The four rows after it decompose that aggregate (README.md § Priced
+ *  passes). extinctionPrepass reports the consumer A/B: disabling ADDS
+ *  the in-vertex raymarch, so its savedMs is normally negative (what the
  *  cache saves). */
 export function buildPassToggles(stellata: Stellata): PassToggle[] {
   const flag = (set: (on: boolean) => void): (() => void) => {
@@ -125,6 +126,35 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
         stellata.hdr.setChartMode(true);
         return () => {
           stellata.hdr.setChartMode(false);
+          stellata.reduction.fenceWhileParked = false;
+        };
+      },
+    },
+    {
+      key: 'tonemapOp',
+      present: () => stellata.hdr.statisticTexture() !== null,
+      disable: () => flag((on) => stellata.hdr.setTonemapEnabled(on)),
+    },
+    {
+      key: 'statisticWrites',
+      present: () => stellata.hdr.statisticTexture() !== null,
+      disable: () => flag((on) => stellata.hdr.setStatisticWritesEnabled(on)),
+    },
+    {
+      key: 'summation',
+      present: () => stellata.hdr.statisticTexture() !== null,
+      disable: () => flag((on) => stellata.hdr.setSummationEnabled(on)),
+    },
+    {
+      key: 'mrtAttachments',
+      present: () => stellata.hdr.statisticTexture() !== null,
+      // Dropping to a single attachment parks the statistic, so hold the
+      // fence for the same reason the hdrChain row does.
+      disable: () => {
+        stellata.reduction.fenceWhileParked = true;
+        stellata.hdr.setExtraAttachmentsEnabled(false);
+        return () => {
+          stellata.hdr.setExtraAttachmentsEnabled(true);
           stellata.reduction.fenceWhileParked = false;
         };
       },

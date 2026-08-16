@@ -13,6 +13,46 @@ export type GatedAttachments =
   | 'absorption'
   | 'occluding-emitter';
 
+/** The two non-mark states the gate also passes through: the all-open clear
+ *  and the attachment-0-only rest. */
+export type GateState = GatedAttachments | 'clear' | 'rest';
+
+/** The frame-cost levers that mask slots out of every state
+ *  (`../README.md` § Dev switches). */
+export interface GateSlotOptions {
+  /** False masks attachment 1 out of every draw while the clear keeps
+   *  writing it, so the statistic attachment reads zero rather than stale. */
+  statisticWrites: boolean;
+  /** False masks attachments 1 and 2 everywhere, the clear included —
+   *  the single-attachment target has nothing behind either slot. */
+  extraAttachments: boolean;
+}
+
+const GATE_SLOT_TABLE: Record<GateState, readonly [boolean, boolean, boolean]> = {
+  statistic: [true, true, false],
+  diffuse: [false, true, true],
+  absorption: [true, false, true],
+  'occluding-emitter': [true, true, true],
+  clear: [true, true, true],
+  rest: [true, false, false],
+};
+
+/** Which of the target's three attachments a `drawBuffers` write opens for
+ *  the given state, with the frame-cost masks applied. */
+export function gateDrawSlots(
+  state: GateState,
+  options: GateSlotOptions,
+): readonly [boolean, boolean, boolean] {
+  const [display, statistic, diffuse] = GATE_SLOT_TABLE[state];
+  return [
+    display,
+    statistic &&
+      options.extraAttachments &&
+      (options.statisticWrites || state === 'clear'),
+    diffuse && options.extraAttachments,
+  ];
+}
+
 let openGate: ((attachments: GatedAttachments) => void) | null = null;
 let closeGate: (() => void) | null = null;
 

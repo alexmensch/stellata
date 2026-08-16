@@ -56,6 +56,14 @@ describe('the MRT target the seam builds', () => {
     expect((rt.textures[1].image as { width: number }).width).toBe(16);
   });
 
+  // The MRT-vs-single-target frame-cost lever rebuilds the target with
+  // attachment 0 alone; the default stays the full three.
+  it('builds a single-attachment target when the lever asks for one', () => {
+    const rt = createHdrTarget(8, 8, 1);
+    expect(rt.textures).toHaveLength(1);
+    expect(rt.textures[0].format).toBe(THREE.RGBAFormat);
+  });
+
   // The three inputs three's getInternalDepthFormat reads to land on
   // DEPTH_COMPONENT24 rather than a 16-bit renderbuffer, which would coarsen
   // every close-range z-test by 256x (../local-depth/README.md § Precision).
