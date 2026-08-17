@@ -199,12 +199,21 @@ halo of any star name created before it. Hence the separate con group
 rather than a per-frame re-append in priority order, which would
 reintroduce exactly the DOM churn the pool exists to avoid.
 
+The sequence is the fix, so it is pinned rather than trusted:
+`CHART_LAYER_IDS` (exported by `chart-labels.ts`) is the one authority
+for the ids **and their order**, `layerById` throws on a group the
+markup doesn't declare, and `chart-labels.test.ts` reads `index.html`
+to assert both the inter-group order and that all three precede
+`#hud-ring`.
+
 **Greedy collision pass** with axis-aligned bounding rectangles, sorted
 by priority (proper name 1 → Bayer 2 → cloud 3). Constellation names
 **bypass** the collision pass entirely — they always render at
-`#chart-labels .chart-label.kind-con`'s sparse semi-transparent outline
-typography, allowed to overlap small star symbols underneath à la Sky
-Atlas; see styles.css for the live size / weight / letter-spacing.
+`.chart-label-layer .chart-label.kind-con`'s sparse semi-transparent
+outline typography, allowed to overlap small star symbols underneath à
+la Sky Atlas; see styles.css for the live size / weight / letter-spacing.
+They are never measured either, so what a star name collides against is
+the padded anchor *point*, not the 36 px block.
 
 **Star-name + Bayer label offsets** scale with the rendered disc.
 `starLabelOffsetPx(discPx) = max(STAR_LABEL_OFFSET_MIN_PX,
