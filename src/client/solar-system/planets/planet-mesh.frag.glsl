@@ -115,7 +115,12 @@ float stellataHorizonSin(vec2 uv, float sunE, float sunN) {
   vec4 b = texture(uHorizonB, uv);
   float enc[STELLATA_HORIZON_AZIMUTHS] =
     float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
-  float slot = fract(atan(sunN, sunE) * (0.5 / PI)) * float(STELLATA_HORIZON_AZIMUTHS);
+  // atan(0, 0) is undefined in GLSL, and a NaN slot indexes enc out of range.
+  // Both components vanish only with the sun at the local zenith, where every
+  // azimuth answers alike; due east is the one the CPU mirror's atan2 picks.
+  vec2 bearing = sunE == 0.0 && sunN == 0.0 ? vec2(1.0, 0.0) : vec2(sunE, sunN);
+  float slot =
+    fract(atan(bearing.y, bearing.x) * (0.5 / PI)) * float(STELLATA_HORIZON_AZIMUTHS);
   float base = floor(slot);
   // fract() returns exactly 1.0 for a small enough negative angle, which puts
   // base one past the last azimuth — the wrap is what keeps the index in range.

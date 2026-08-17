@@ -185,6 +185,7 @@ interface MeshEntry {
 const RELIEF_SUFFIX = '-normal';
 /** The two halves of one body's horizon map, azimuths 0–3 then 4–7. */
 const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
+const RELIEF_MAP_SUFFIXES = [RELIEF_SUFFIX, ...HORIZON_SUFFIXES] as const;
 const RINGS_SUFFIX = '-rings';
 
 /** The one place a body name becomes a texture key — and the one place it is
@@ -192,10 +193,15 @@ const RINGS_SUFFIX = '-rings';
 const textureKey = (name: string, suffix = ''): string =>
   `${name.toLowerCase()}${suffix}`;
 
+/** The body's DEM elevation span, or null where it ships no relief maps —
+ *  which bodies fetch them and the fallback limb bound are the same question. */
+const reliefSpanOf = (planet: Planet): readonly [number, number] | null =>
+  RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null;
+
 /** The body's own limb bound on relief lighting, in the shader's units.
  *  Zero for bodies with no map — the shader never reads it there. */
 const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
-  const span = RELIEF_ELEV_SPAN_M[textureKey(planet.name)];
+  const span = reliefSpanOf(planet);
   return span
     ? new THREE.Vector2(...reliefHorizonSines(span, planet.radiusKm))
     : new THREE.Vector2();
@@ -303,9 +309,10 @@ export class PlanetMeshLayer {
       const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(textureKey(planet.name), { ext: 'jpg', measureMean: true });
-        this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), { ext: 'webp' });
-        for (const suffix of HORIZON_SUFFIXES) {
-          this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
+        if (reliefSpanOf(planet)) {
+          for (const suffix of RELIEF_MAP_SUFFIXES) {
+            this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
+          }
         }
         if (planet.rings) {
           this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
