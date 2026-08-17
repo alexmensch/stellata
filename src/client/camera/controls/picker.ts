@@ -41,8 +41,8 @@ export interface PickerDeps {
   renderedSizePxFn: (idx: number) => number;
   // Live `iSuppressPulsation` mirror, read once per pick so the scan's
   // bright-extreme reach agrees with `renderedSizeComponents` on which
-  // stars actually pulse. Null before the mask is built.
-  getSuppressPulsation: () => Float32Array | null;
+  // stars actually pulse.
+  getSuppressPulsation: () => Float32Array;
   // Cheap upper bound on the faintest drawn magnitude, evaluated against
   // the star's INTRINSIC brightness to prune the catalog scan. Every term
   // it omits — dust extinction, the adaptation cut, the faint-end toe —

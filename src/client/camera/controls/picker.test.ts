@@ -157,7 +157,10 @@ function makePicker(
     },
     kindPicks: opts.kindPicks ?? {},
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
-    getSuppressPulsation: () => opts.suppressPulsation ?? null,
+    // Stellata builds the mask at catalog load, so the harness supplies a
+    // real all-clear one rather than a null the shell never produces.
+    getSuppressPulsation: () =>
+      opts.suppressPulsation ?? new Float32Array(data.catalog.count),
     // Default: everything the prefilter admits also renders, at the
     // prefilter's own radius — the pre-extinction behaviour these cases
     // were written against.
