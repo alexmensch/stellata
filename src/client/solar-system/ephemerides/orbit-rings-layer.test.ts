@@ -20,6 +20,7 @@ import { AU_KM, AU_PC, KM_PC } from '../../util/astronomy-constants';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
+import { T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../time/time';
 import {
   SOL_BODIES,
   solOrbitGeometryAt,
@@ -35,8 +36,17 @@ const T0 = 946728000;
 // exactly zero at J2000 and grows from there, so samples clustered
 // around T0 cannot see one: Triton's node drift put its ring 21 500 km
 // off the body by 2026 while a 40-day sample still read 2 km. The outer
-// pair is the model clock's own 3000 BC / 3000 AD clamp.
-const MOON_SAMPLE_DAY_OFFSETS = [0, 3.1, 11.7, 40.4, 9700, -365250, 365250];
+// pair is derived from the clock's own clamp rather than written out, so
+// it cannot fall short of the epochs the model actually reaches.
+const MOON_SAMPLE_DAY_OFFSETS = [
+  0,
+  3.1,
+  11.7,
+  40.4,
+  9700,
+  (T_CLAMP_MIN_S - T0) / 86400,
+  (T_CLAMP_MAX_S - T0) / 86400,
+];
 
 function makePlanet(overrides: Partial<Planet> = {}): Planet {
   return {
@@ -762,9 +772,9 @@ describe('ring geometry passes through the body (single element source)', () => 
     // no-pole ecliptic case (the Moon).
     //
     // Geometry is re-derived at each sample rather than reused from T0:
-    // the 17 Kepler moons return identical elements at every t, but the
+    // 16 of the 18 rows return identical elements at every t, but the
     // Moon's ring is the osculating ellipse through the lunar theory's
-    // own state and legitimately evolves within a single orbit.
+    // own state and Triton's node precesses out of its J2000 plane.
     const verts = new Float32Array(ORBIT_LINE_SEGMENTS * 3);
     const planetCount = PLANET_ORDER.length;
     const offset = { x: 0, y: 0, z: 0 };
