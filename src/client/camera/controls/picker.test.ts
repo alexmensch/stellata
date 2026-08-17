@@ -138,6 +138,7 @@ function makePicker(
     limitMag?: number;
     kindPicks?: PickerDeps['kindPicks'];
     resolveStarPick?: PickerDeps['resolveStarPick'];
+    suppressPulsation?: Float32Array;
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
@@ -156,6 +157,10 @@ function makePicker(
     },
     kindPicks: opts.kindPicks ?? {},
     renderedSizePxFn: opts.renderedSizePxFn ?? (() => 20), // default 20 px disc
+    // Stellata builds the mask at catalog load, so the harness supplies a
+    // real all-clear one rather than a null the shell never produces.
+    getSuppressPulsation: () =>
+      opts.suppressPulsation ?? new Float32Array(data.catalog.count),
     // Default: everything the prefilter admits also renders, at the
     // prefilter's own radius — the pre-extinction behaviour these cases
     // were written against.
@@ -382,6 +387,24 @@ describe('Picker / pickStar', () => {
       const { picker, camera } = makePicker(data, defaultFilter(), { limitMag: 6 });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
       expect(picker.pickStar(screen.x, screen.y)).toBe(0);
+    });
+
+    it('withholds that bright-extreme reach where iSuppressPulsation is set', () => {
+      // Same variable again, but flagged eclipsing: star.vert.glsl gates
+      // the pulsation block off, so the disc never swings bright and the
+      // scan must not credit half an amplitude of extra reach. 1,342
+      // eclipsing rows rode on the picker's missing varType check.
+      const data = makeCatalog([[0, 0, 0]], {
+        absmag: [5],
+        periodDays: [10],
+        amplitudeMag: [3],
+      });
+      const { picker, camera } = makePicker(data, defaultFilter(), {
+        limitMag: 6,
+        suppressPulsation: new Float32Array([1]),
+      });
+      const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
+      expect(picker.pickStar(screen.x, screen.y)).toBe(-1);
     });
 
     it('picks in the soft-taper band where the disc still renders (navigate) but not in chart', () => {

@@ -138,6 +138,14 @@
            grid sits behind the HUD / POI / star-name overlays. -->
       <g id="gal-grid-labels"></g>
       <g id="eq-grid-labels"></g>
+      <!-- Chart-mode label + glyph layers, populated per frame by
+           chart-labels.ts (which refuses to mint a missing one). This
+           sequence is their paint order and it is load-bearing: con names
+           under star names, all three under the HUD stack below — see
+           chart-mode/README.md § Label engine. -->
+      <g id="chart-con-labels" class="chart-label-layer" style="display: none"></g>
+      <g id="chart-labels" class="chart-label-layer" style="display: none"></g>
+      <g id="chart-glyphs" style="display: none"></g>
       <!-- HUD ring — translucent screen-centred guide visible in OBSERVE mode
            when the HUD is on. Sized and positioned each frame by
            hud-overlay.ts. Drawn before the Sol/GC arrows so the arrow strokes

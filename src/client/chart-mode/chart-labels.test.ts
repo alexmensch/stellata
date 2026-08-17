@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, afterEach } from 'vitest';
 import * as THREE from 'three';
 import {
   ChartLabels,
+  CHART_LAYER_IDS,
   computeAppMag,
   collides,
   measureCandidate,
@@ -388,19 +391,58 @@ describe('chart-labels / starLabelOffsetPx', () => {
   });
 });
 
+// SVG has no z-index — paint order is document order, and `layerById`
+// refuses to mint a group, so the markup below IS the fix. Grouping alone
+// proves nothing: swap two <g> lines in index.html and the con wash eats
+// the star-name halos again, or the chart paints over the HUD, with every
+// other test still green.
+describe('chart-labels / index.html paint order', () => {
+  const markup = readFileSync(
+    fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8',
+  );
+  const positionOf = (id: string): number => {
+    const at = markup.indexOf(`id="${id}"`);
+    expect(at, `#${id} is declared in index.html`).toBeGreaterThan(-1);
+    expect(markup.indexOf(`id="${id}"`, at + 1), `#${id} is declared once`).toBe(-1);
+    return at;
+  };
+
+  it('declares the chart groups in CHART_LAYER_IDS order', () => {
+    const at = CHART_LAYER_IDS.map(positionOf);
+    expect(at).toEqual([...at].sort((a, b) => a - b));
+  });
+
+  it('puts every chart group under the HUD stack', () => {
+    // #hud-ring opens the HUD stack; everything after it is HUD chrome.
+    const hud = positionOf('hud-ring');
+    for (const id of CHART_LAYER_IDS) expect(positionOf(id)).toBeLessThan(hud);
+  });
+});
+
 describe('chart-labels / ChartLabels lifecycle', () => {
   // Minimal SVG-group stand-in: chart-labels only ever touches style,
   // appendChild, and the firstChild / removeChild drain loop.
+  interface StubNode {
+    parent?: { removeChild: (c: unknown) => void };
+  }
+
   function makeGroup() {
     const children: unknown[] = [];
-    return {
+    const group = {
       children,
       style: {} as Record<string, string>,
       setAttribute: () => {},
-      appendChild: (c: unknown) => { children.push(c); },
+      appendChild: (c: unknown) => {
+        (c as StubNode).parent = group;
+        children.push(c);
+      },
       removeChild: (c: unknown) => { children.splice(children.indexOf(c), 1); },
+      // Mirrors ChildNode.remove — the engine detaches a dropped label through
+      // the node itself, so the stub carries its own parent link.
+      remove() { (group as StubNode).parent?.removeChild(group); },
       get firstChild() { return children.length > 0 ? children[0] : null; },
     };
+    return group;
   }
 
   interface Harness {
@@ -417,6 +459,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     /** One star per entry, at `[0, 0, -distPc]` so it projects to screen
      *  centre. `con` is the byte-34 index the membership walk buckets by. */
     stars?: { con: number; absmag: number; distPc: number }[];
+    names?: Map<number, string>;
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
     detailPermits?: (id: string) => boolean;
@@ -432,7 +475,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     const absmag = new Float32Array(stars.map((s) => s.absmag));
     const catalog = {
       count: stars.length,
-      names: new Map<number, string>(),
+      names: patch.names ?? new Map<number, string>(),
       constellations: patch.constellations ?? ([] as unknown[]),
       constellation: new Uint8Array(stars.map((s) => s.con)),
       // With no star names, no Bayer glyphs and no variables, the only readers
@@ -494,14 +537,15 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   const realDocument = globalThis.document;
   const realWindow = globalThis.window;
 
-  function installDomStubs() {
+  // Only the groups index.html actually declares resolve; an unknown id
+  // answers null the way the real document does. Auto-vivifying instead
+  // would hide a group going missing from the markup, which is the single
+  // failure `layerById` exists to make loud.
+  function installDomStubs(ids: readonly string[] = CHART_LAYER_IDS) {
     const groups = new Map<string, ReturnType<typeof makeGroup>>();
+    for (const id of ids) groups.set(id, makeGroup());
     (globalThis as { document?: unknown }).document = {
-      getElementById: (id: string) => {
-        let g = groups.get(id);
-        if (!g) { g = makeGroup(); groups.set(id, g); }
-        return g;
-      },
+      getElementById: (id: string) => groups.get(id) ?? null,
       createElementNS: () => makeGroup(),
     };
     (globalThis as { window?: unknown }).window = { innerWidth: 800, innerHeight: 600 };
@@ -551,25 +595,33 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     expect(h.ticks()).toBe(1);
   });
 
-  it('hides both SVG layers and drains their pooled children on stop', () => {
+  it('hides every SVG layer and drains their pooled children on stop', () => {
     const groups = installDomStubs();
     const h = makeHarness();
     const labels = new ChartLabels(h.stellata);
 
     labels.start(h.ctx);
-    const labelLayer = groups.get('chart-labels')!;
-    const glyphLayer = groups.get('chart-glyphs')!;
-    expect(labelLayer.style.display).toBe('');
-    expect(glyphLayer.style.display).toBe('');
-    // Stand in for pooled <text> / <circle> entries from a prior frame.
-    labelLayer.appendChild({});
-    glyphLayer.appendChild({});
+    const layers = CHART_LAYER_IDS.map((id) => groups.get(id)!);
+    for (const g of layers) {
+      expect(g.style.display).toBe('');
+      // Stand in for pooled <text> / <circle> entries from a prior frame.
+      g.appendChild({});
+    }
 
     labels.stop();
-    expect(labelLayer.style.display).toBe('none');
-    expect(glyphLayer.style.display).toBe('none');
-    expect(labelLayer.children).toHaveLength(0);
-    expect(glyphLayer.children).toHaveLength(0);
+    for (const g of layers) {
+      expect(g.style.display).toBe('none');
+      expect(g.children).toHaveLength(0);
+    }
+  });
+
+  it.each(CHART_LAYER_IDS)('start throws when index.html is missing #%s', (missing) => {
+    installDomStubs(CHART_LAYER_IDS.filter((id) => id !== missing));
+    const h = makeHarness();
+    const labels = new ChartLabels(h.stellata);
+
+    expect(() => labels.start(h.ctx)).toThrow(missing);
+    expect(labels.running).toBe(false);
   });
 
   it('stop keeps the catalog-derived caches; dispose drops them', () => {
@@ -652,7 +704,39 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       labels.start(h.ctx);
       h.emit('frame');
 
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
+
+    // SVG has no z-index — paint order is document order, and the pool appends
+    // a <text> the first frame its key is seen. Sharing one group therefore let
+    // a con label that left and re-entered the viewport land after the star
+    // names it overlaps, and its translucent 36px wash ate their halo. Two
+    // groups fix the rank statically; same-group labels never wash over each
+    // other.
+    it('puts constellation names in their own group, apart from star names', () => {
+      const groups = installDomStubs();
+      // Anchors well above screen centre so the con label's padded anchor
+      // point can't collide with the star name — this test is about grouping.
+      const above = new THREE.Vector3(0, 30, -100);
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+        names: new Map([[0, 'Unukalhai']]),
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+        ],
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
       labels.dispose();
     });
 
@@ -670,7 +754,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       labels.start(h.ctx);
       h.emit('frame');
 
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
       labels.dispose();
     });
 
@@ -711,7 +795,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       const labels = new ChartLabels(h.stellata);
       labels.start(h.ctx);
       h.emit('frame');
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
 
       // Well under BRIGHTEST_RECOMPUTE_DIST_SQ, so the walk's own distance
       // gate would skip — but enough to defeat the full-tick skip and get a
@@ -720,7 +804,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       h.stellata.camera.position.x += 0.01;
       h.stellata.camera.updateMatrixWorld(true);
       h.emit('frame');
-      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
       labels.dispose();
     });
   });

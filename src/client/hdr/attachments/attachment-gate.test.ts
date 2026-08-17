@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   bindAttachmentGate,
+  gateDrawSlots,
   markAbsorber,
   markDiffuseEmitter,
   markOccludingEmitter,
@@ -134,6 +135,41 @@ describe('markOccludingEmitter', () => {
     const mesh = new THREE.Object3D();
     markOccludingEmitter(mesh);
     expect(() => draw(mesh)).not.toThrow();
+  });
+});
+
+// The drawBuffers triple each state resolves to, and the two frame-cost masks
+// over it. README.md § The gate is the table this pins.
+describe('gateDrawSlots', () => {
+  const live = { statisticWrites: true, extraAttachments: true };
+
+  it('resolves each state to its README triple', () => {
+    expect(gateDrawSlots('statistic', live)).toEqual([true, true, false]);
+    expect(gateDrawSlots('diffuse', live)).toEqual([false, true, true]);
+    expect(gateDrawSlots('absorption', live)).toEqual([true, false, true]);
+    expect(gateDrawSlots('occluding-emitter', live)).toEqual([true, true, true]);
+    expect(gateDrawSlots('clear', live)).toEqual([true, true, true]);
+    expect(gateDrawSlots('rest', live)).toEqual([true, false, false]);
+  });
+
+  it('masks the statistic slot out of every draw but never out of the clear', () => {
+    const masked = { statisticWrites: false, extraAttachments: true };
+    expect(gateDrawSlots('statistic', masked)).toEqual([true, false, false]);
+    expect(gateDrawSlots('diffuse', masked)).toEqual([false, false, true]);
+    expect(gateDrawSlots('occluding-emitter', masked)).toEqual([true, false, true]);
+    // The clear keeps it, so the attachment reads zero rather than stale —
+    // and the reduction over that empty attachment is the compression probe.
+    expect(gateDrawSlots('clear', masked)).toEqual([true, true, true]);
+  });
+
+  it('masks both extra slots everywhere when the target is single-attachment', () => {
+    const single = { statisticWrites: true, extraAttachments: false };
+    expect(gateDrawSlots('statistic', single)).toEqual([true, false, false]);
+    expect(gateDrawSlots('diffuse', single)).toEqual([false, false, false]);
+    expect(gateDrawSlots('absorption', single)).toEqual([true, false, false]);
+    expect(gateDrawSlots('occluding-emitter', single)).toEqual([true, false, false]);
+    expect(gateDrawSlots('clear', single)).toEqual([true, false, false]);
+    expect(gateDrawSlots('rest', single)).toEqual([true, false, false]);
   });
 });
 

@@ -52,7 +52,8 @@ src/client/debug/frame-cost/
 
 `buildPassToggles`: the local depth pass (`localDepthPass.enabled`), MW
 band (`milkyway.setEnabled`), LG volumetric emission, molecular-cloud
-absorption (`setAbsorptionEnabled`), the HDR chain, the luminance
+absorption (`setAbsorptionEnabled`), the HDR chain and its four
+decomposition rows (§ Decomposing the HDR chain), the luminance
 reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), and the extinction prepass A/B. A pass inactive
 at the current view/state is skipped, not measured as zero.
@@ -75,8 +76,69 @@ Three rows are not what they look like:
   `../../hdr/exposure/reduction/README.md`. Keeping it is necessary and
   **still not sufficient** — the row reads solidly negative at the
   default Sol view with the fence held, the readback cadence identical
-  in both states, and `bracketMs` at 0.23. Unexplained; check
-  `disabledLimitMag` against `baselineLimitMag` before believing it.
+  in both states, and `bracketMs` at 0.23. Reproduced 2026-08-16 with
+  the exposure pinned: −18.2 ms at bracket 15.1 and −52.4 ms at bracket
+  0.33, limit mags equal — and at Earth close approach (−10.5 and
+  −14.1, brackets 6.6 / 7.0). The sign tracks the vantage: negative at
+  both deep-cut views, positive at both dm-0 views, and it flips
+  positive when the statistic writes are masked (§ The compression
+  probe). Unexplained; check `disabledLimitMag` against
+  `baselineLimitMag` before believing any one reading, and expect the
+  negative at deep-cut vantages.
+
+## Decomposing the HDR chain
+
+Four rows split the `hdrChain` aggregate. Each is a marginal cost
+against the same baseline and they overlap — `mrtAttachments` contains
+most of `statisticWrites`, `summation` and `reduction` — so never sum
+them; read each against the aggregate.
+
+- **`tonemapOp`** — `hdr.setTonemapEnabled(false)`: the resolve goes
+  straight pass-through with the target and attachments untouched. The
+  operator's ALU alone.
+- **`statisticWrites`** — masks attachment 1 out of every emitter draw;
+  the clear keeps writing it, so the reduction runs over an empty
+  attachment. Prices the emitters' statistic write bandwidth — NOT the
+  attachment's load/store, which only `mrtAttachments` removes.
+- **`summation`** — skips the downsample and collapses the resolve's
+  kernel to one centre tap: the convolution machinery, with the diffuse
+  writes still paid.
+- **`mrtAttachments`** — rebuilds the target with attachment 0 alone
+  (holding the fence, as `hdrChain` does): attachments 1 and 2 outright —
+  writes, load/store, the summation's source and the reduction's. What
+  `hdrChain` saves beyond this row plus `tonemapOp` is the single fp16
+  target itself against direct-to-canvas.
+
+### The compression probe — does the reduction's cost track content?
+
+The reduction reads 12–23 ms at vantages whose cut is exactly zero and
+~zero at Earth close approach, same buffer; the working hypothesis is
+lossless framebuffer compression — reducing a nearly-empty attachment is
+nearly free. The test, at a vantage where the row is expensive:
+`stellata.hdr.setStatisticWritesEnabled(false)`, then
+`debug.priceFrame({ passes: ['reduction'] })`. The attachment is
+cleared-to-zero, maximally compressible; a reduction row that collapses
+to ~zero means the cost tracks the attachment's content, not the chain's
+draws. Restore with `setStatisticWritesEnabled(true)`.
+
+Measured 2026-08-16 at MW-plane 50°, exposure pinned, 6.774 Mpx: the row
+did **not** collapse — reduction over the cleared attachment read
+48.1 ms against 18.4 ms live (brackets 6.4 / 2.1), with the
+reduction-off floors matching across the two states. Reducing the
+emptiest possible attachment costs 2.6× the full star field, so "nearly
+empty compresses well" is refuted. Working hypothesis, unverified: a
+cleared-but-never-written surface stays in fast-clear metadata state and
+sampling it forces a per-frame resolve, while a surface fully
+overwritten by smooth resolved-disc texels samples cheap.
+
+Replicated at the default Sol view: +43.1 ms at bracket 3.2 — the sign
+flips from that vantage's live-writes negative, and the ~45 ms cost of
+reducing a cleared attachment is vantage-independent. One gotcha the
+replication exposed: masking the writes BEFORE the sweep lets the cut
+fade to zero during the warmup, so the pin captures the wide-open limit
+(7.8) rather than the live one — the differential stays internally
+clean, but the scene is not comparable to unmasked runs at the same
+vantage. The `limitMag` columns are the tell.
 
 ## The readback cadence — measured, and NOT the confound
 

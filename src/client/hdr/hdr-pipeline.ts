@@ -25,7 +25,9 @@ import {
 } from './chrome/chrome-colour';
 import {
   bindAttachmentGate,
+  gateDrawSlots,
   type GatedAttachments,
+  type GateState,
 } from './attachments/attachment-gate';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
@@ -113,9 +115,13 @@ export const HDR_ATTACHMENT_COUNT = 3;
 /** The seam's render target: three half-float attachments over one 24-bit
  *  depth buffer, each carrying the format and filters its own consumer needs
  *  (README.md § Three attachments). */
-export function createHdrTarget(width: number, height: number): THREE.WebGLRenderTarget {
+export function createHdrTarget(
+  width: number,
+  height: number,
+  count: number = HDR_ATTACHMENT_COUNT,
+): THREE.WebGLRenderTarget {
   const rt = new THREE.WebGLRenderTarget(width, height, {
-    count: HDR_ATTACHMENT_COUNT,
+    count,
     type: THREE.HalfFloatType,
     format: THREE.RGBAFormat,
     minFilter: THREE.NearestFilter,
@@ -125,18 +131,22 @@ export function createHdrTarget(width: number, height: number): THREE.WebGLRende
     generateMipmaps: false,
   });
   rt.textures[0].colorSpace = THREE.LinearSRGBColorSpace;
-  // Half attachment 0's memory, and the reduction reads its missing
-  // alpha as 1 — which is exactly the level-0 weight
-  // (exposure/reduction/README.md § The chain).
-  rt.textures[1].format = THREE.RGFormat;
-  rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
-  // Linear to match the downsample target, though inert at factor 1: the
-  // resolve reads this attachment directly there, at integer offsets from
-  // gl_FragCoord, so every tap lands on a texel centre where bilinear and
-  // nearest agree. It stops being inert the moment a tap is off-centre.
-  rt.textures[2].minFilter = THREE.LinearFilter;
-  rt.textures[2].magFilter = THREE.LinearFilter;
-  rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+  if (count > 1) {
+    // Half attachment 0's memory, and the reduction reads its missing
+    // alpha as 1 — which is exactly the level-0 weight
+    // (exposure/reduction/README.md § The chain).
+    rt.textures[1].format = THREE.RGFormat;
+    rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
+  }
+  if (count > 2) {
+    // Linear to match the downsample target, though inert at factor 1: the
+    // resolve reads this attachment directly there, at integer offsets from
+    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+    // nearest agree. It stops being inert the moment a tap is off-centre.
+    rt.textures[2].minFilter = THREE.LinearFilter;
+    rt.textures[2].magFilter = THREE.LinearFilter;
+    rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+  }
   return rt;
 }
 
@@ -162,6 +172,9 @@ export class HdrPipeline {
   private chart = false;
   private drMag = DR_MAG;
   private highlightDesat = HIGHLIGHT_DESAT;
+  private statisticWrites = true;
+  private summationOn = true;
+  private extraAttachments = true;
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer;
@@ -186,7 +199,11 @@ export class HdrPipeline {
     if (!this.supported) return false;
 
     this.renderer.getDrawingBufferSize(this.size);
-    this.rt = createHdrTarget(this.size.x, this.size.y);
+    this.rt = createHdrTarget(
+      this.size.x,
+      this.size.y,
+      this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
+    );
 
     this.summation = new SummationPass(this.renderer);
     this.geometry = fullscreenTriangleGeometry();
@@ -238,11 +255,23 @@ export class HdrPipeline {
    *  disagreeing about the factor. */
   resolve(): void {
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
-    this.summation.render(
-      this.rt.textures[2],
-      this.emitterUniforms.uOmegaSummationArcsec2.value,
-      this.emitterUniforms.uOmegaPxArcsec2.value,
-    );
+    if (this.summationOn && this.extraAttachments) {
+      this.summation.render(
+        this.rt.textures[2],
+        this.emitterUniforms.uOmegaSummationArcsec2.value,
+        this.emitterUniforms.uOmegaPxArcsec2.value,
+      );
+    } else {
+      // Zero radius is a single centre tap of the raw attachment (the kernel's
+      // own weight rule), so the band keeps its unconvolved level while the
+      // downsample and every off-centre tap drop out of the frame.
+      const u = this.summation.uniforms;
+      u.uDiffuseTexture.value = this.extraAttachments ? this.rt.textures[2] : null;
+      u.uSummationRadiusTexels.value = 0;
+      u.uSummationTexelScale.value = 1;
+      this.renderer.getDrawingBufferSize(this.size);
+      u.uSummationExtent.value.set(this.size.x, this.size.y);
+    }
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
   }
@@ -255,7 +284,7 @@ export class HdrPipeline {
    *  exists, under the fallback path, and in chart mode, where nothing
    *  renders into the target at all. */
   statisticTexture(): THREE.Texture | null {
-    if (this.rt === null || !this.wantsTarget()) return null;
+    if (this.rt === null || !this.wantsTarget() || !this.extraAttachments) return null;
     return this.rt.textures[1];
   }
 
@@ -272,37 +301,33 @@ export class HdrPipeline {
    *  absorber takes both colour attachments and neither emits nor measures,
    *  and an emitter drawn in front of the diffuse field takes all three:
    *  `attachments/README.md` § The gate is the table. */
-  private openEmitterGate = (attachments: GatedAttachments): void => {
+  private applyGateState(state: GateState): void {
     const gl = this.gl;
-    switch (attachments) {
-      case 'diffuse':
-        gl.drawBuffers([gl.NONE, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
-        return;
-      case 'absorption':
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2]);
-        return;
-      case 'occluding-emitter':
-        gl.drawBuffers([
-          gl.COLOR_ATTACHMENT0,
-          gl.COLOR_ATTACHMENT1,
-          gl.COLOR_ATTACHMENT2,
-        ]);
-        return;
-      default:
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.NONE]);
-    }
+    const slots = gateDrawSlots(state, {
+      statisticWrites: this.statisticWrites,
+      extraAttachments: this.extraAttachments,
+    });
+    gl.drawBuffers([
+      slots[0] ? gl.COLOR_ATTACHMENT0 : gl.NONE,
+      slots[1] ? gl.COLOR_ATTACHMENT1 : gl.NONE,
+      slots[2] ? gl.COLOR_ATTACHMENT2 : gl.NONE,
+    ]);
+  }
+
+  private openEmitterGate = (attachments: GatedAttachments): void => {
+    this.applyGateState(attachments);
   };
 
   private closeEmitterGate = (): void => {
-    const gl = this.gl;
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE, gl.NONE]);
+    this.applyGateState('rest');
   };
 
   /** The clear's own state, and the only one that writes all three: masking
-   *  any of them here would leave last frame's contents to accumulate into. */
+   *  any of them here would leave last frame's contents to accumulate into.
+   *  (`gateDrawSlots` keeps a masked statistic slot open here for the same
+   *  reason — the attachment must read zero, not stale.) */
   private openEveryAttachment = (): void => {
-    const gl = this.gl;
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+    this.applyGateState('clear');
   };
 
   /** Pixel solid angle for surface-brightness emitters. `pxPerRadian` is
@@ -369,6 +394,34 @@ export class HdrPipeline {
     this.syncMode();
   }
 
+  /** Frame-cost lever (`../debug/frame-cost/README.md`): mask the statistic
+   *  attachment out of every emitter draw while the clear keeps writing it,
+   *  so attachment 1 reads zero rather than stale and the reduction keeps
+   *  running — over an empty attachment, which is the compression probe.
+   *  Live, with the cut not held, it fades the adaptation to zero. */
+  setStatisticWritesEnabled(on: boolean): void {
+    this.statisticWrites = on;
+  }
+
+  /** Frame-cost lever: skip the rod-summation downsample and collapse the
+   *  resolve's kernel to one centre tap. The band keeps its level (a uniform
+   *  field is the identity case); resolved diffuse objects sharpen. */
+  setSummationEnabled(on: boolean): void {
+    this.summationOn = on;
+  }
+
+  /** Frame-cost lever — the MRT-vs-single-target cut: rebuild the target with
+   *  attachment 0 alone. The statistic parks (hold `fenceWhileParked` across
+   *  it, as the chart park does) and every diffuse write discards, so the band
+   *  and the Local Group vanish for the span. Reallocates the target both
+   *  ways. */
+  setExtraAttachmentsEnabled(on: boolean): void {
+    if (on === this.extraAttachments) return;
+    this.extraAttachments = on;
+    this.releaseTarget();
+    this.syncMode();
+  }
+
   /** Whether the scene should render into the target this frame. Does not
    *  imply the target exists yet — `bind()` allocates on demand. */
   private wantsTarget(): boolean {
@@ -400,7 +453,7 @@ export class HdrPipeline {
     );
   }
 
-  dispose(): void {
+  private releaseTarget(): void {
     this.scene.clear();
     this.rt?.dispose();
     this.material?.dispose();
@@ -410,10 +463,17 @@ export class HdrPipeline {
     this.material = null;
     this.geometry = null;
     this.summation = null;
+  }
+
+  dispose(): void {
+    this.releaseTarget();
     this.tonemapOn = true;
     this.chart = false;
     this.drMag = DR_MAG;
     this.highlightDesat = HIGHLIGHT_DESAT;
+    this.statisticWrites = true;
+    this.summationOn = true;
+    this.extraAttachments = true;
     this.syncMode();
     clearChromeBindings();
   }

@@ -127,6 +127,8 @@ than device pixels is what keeps the frame mean
 
 The target binds with `drawBuffers [0, NONE, NONE]`, and only a mesh passed
 to one of the marks below flips anything else on for the span of its own draw.
+Every state resolves through one table, `gateDrawSlots`, which is also where
+`HdrPipeline`'s two frame-cost masks apply (`../README.md` § Dev switches).
 Nothing else can reach the statistic, **including a chrome layer added
 later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.

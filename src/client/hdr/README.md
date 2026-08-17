@@ -326,6 +326,20 @@ that shape so a third input has to be a deliberate edit.
 - `stellata.hdr.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through, isolating the target itself (depth,
   alpha, blend precision, pass order) from the operator.
+- `stellata.hdr.setStatisticWritesEnabled(false)` — masks attachment 1 out of
+  every emitter draw while the clear keeps writing it, so the statistic reads
+  zero rather than stale and the reduction keeps running over an empty
+  attachment. A frame-cost lever (`../debug/frame-cost/README.md` § Priced
+  passes); live, with the cut not held, it fades the adaptation to zero.
+- `stellata.hdr.setSummationEnabled(false)` — skips the rod-summation
+  downsample and collapses the resolve's kernel to one centre tap. The band
+  keeps its level (the uniform-field identity); M31 sharpens. Frame-cost
+  lever.
+- `stellata.hdr.setExtraAttachmentsEnabled(false)` — rebuilds the target with
+  attachment 0 alone, the MRT-vs-single-target cut: the statistic parks (hold
+  `reduction.fenceWhileParked` across it, as the chart park does) and every
+  diffuse write discards, so the band and the Local Group vanish for the
+  span. Reallocates the target both ways. Frame-cost lever.
 - `stellata.hdr.setDynamicRangeMag(x)` / `stellata.hdr.setHighlightDesat(x)` — the
   operator's two shape knobs, live, for probing the display axis by eye.
   Both route through `syncMode`, which is what re-authors every chrome
