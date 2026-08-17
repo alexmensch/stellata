@@ -67,7 +67,8 @@ src/client/solar-system/planets/
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
   surface-relief/                 DEM relief on the mesh: the tangent frame,
                                   which terms the perturbed normal reaches,
-                                  and the limb bound. Its own README.
+                                  and the horizon that casts its shadows.
+                                  Its own README.
   emission/                       The HDR-unit normalisers — the mesh
                                   anchor, the two disc means that divide
                                   out, and the day map's measured mean
@@ -364,10 +365,11 @@ crossfade.
 
 ### Surface relief
 
-Moon, Mercury and Mars shade with a DEM-derived tangent-space normal map on
-top of the colour map, lazily loaded on the same approach lane. The tangent
-frame, the single term the perturbed normal is allowed to reach, and the
-body's own limb bound on how far past the terminator it may light are
+Moon, Mercury and Mars shade with a DEM-derived tangent-space normal map and a
+per-texel horizon map on top of the colour map, lazily loaded on the same
+approach lane. The tangent frame both are sampled in, the single term the
+perturbed normal is allowed to reach, and how the facet's own slope composes
+with the skyline beyond it — the body's own limb included — are
 `surface-relief/README.md`; the shader that consumes them is
 `planet-mesh.frag.glsl` here.
 

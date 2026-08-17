@@ -4,10 +4,14 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import {
+  HORIZON_AZIMUTHS,
+  HORIZON_SIN_RANGE,
   RELIEF_ELEV_SPAN_M,
   RELIEF_POLE_EPS,
+  horizonSin,
   reliefHorizonSines,
   reliefNormal,
+  tangentFrame,
 } from './surface-relief-pure';
 
 const frag = readFileSync(
@@ -81,6 +85,57 @@ describe('the equirect tangent frame', () => {
     expect(reliefNormal(POLE, POLE, encode(0.5, 0.5))).toEqual([0, 0, 1]);
     const nearPole: readonly [number, number, number] = [RELIEF_POLE_EPS / 2, 0, 1];
     expect(reliefNormal(nearPole, POLE, encode(0.5, 0.5))).toEqual([...nearPole]);
+    expect(tangentFrame(POLE, POLE)).toBeNull();
+  });
+
+  it('hands both consumers the one frame', () => {
+    const frame = tangentFrame(N, POLE)!;
+    expect(frame.east).toEqual([0, 1, 0]);
+    expect(frame.north).toEqual([0, 0, 1]);
+  });
+});
+
+// Azimuth 0 is east and they run toward north, so the eight channels of the
+// two maps concatenated are E, NE, N, NW, W, SW, S, SE.
+describe('the horizon lookup', () => {
+  const enc = Array.from({ length: HORIZON_AZIMUTHS }, (_, k) => (k + 1) / 16);
+  const decode = (v: number) => (v * 2 - 1) * HORIZON_SIN_RANGE;
+  const diag = Math.SQRT1_2;
+
+  it('reads a half-scale texel as a skyline at the geometric horizon', () => {
+    expect(horizonSin(new Array(HORIZON_AZIMUTHS).fill(0.5), 1, 0)).toBe(0);
+  });
+
+  it('decodes full scale to the encoding range, both signs', () => {
+    expect(horizonSin(new Array(HORIZON_AZIMUTHS).fill(1), 1, 0)).toBeCloseTo(
+      HORIZON_SIN_RANGE, 12);
+    expect(horizonSin(new Array(HORIZON_AZIMUTHS).fill(0), 1, 0)).toBeCloseTo(
+      -HORIZON_SIN_RANGE, 12);
+  });
+
+  it('lands each compass direction on its own channel', () => {
+    for (const [i, [e, n]] of ([
+      [1, 0], [diag, diag], [0, 1], [-diag, diag],
+      [-1, 0], [-diag, -diag], [0, -1], [diag, -diag],
+    ] as const).entries()) {
+      expect(horizonSin(enc, e, n), `azimuth ${i}`).toBeCloseTo(decode(enc[i]), 12);
+    }
+  });
+
+  it('interpolates between the two channels bracketing the direction', () => {
+    const half = Math.PI / HORIZON_AZIMUTHS;
+    expect(horizonSin(enc, Math.cos(half), Math.sin(half))).toBeCloseTo(
+      decode((enc[0] + enc[1]) / 2), 12);
+    // The wrap is the case a plain index would miss: last channel back to first.
+    expect(horizonSin(enc, Math.cos(-half), Math.sin(-half))).toBeCloseTo(
+      decode((enc[7] + enc[0]) / 2), 12);
+  });
+
+  it('stays in range when the turn fraction rounds to a whole turn', () => {
+    // A small enough negative azimuth makes 1 - turn round to exactly 1, which
+    // puts the channel index one past the last — the wrap is load-bearing, not
+    // defensive, and the same edge exists in the GLSL's fract().
+    expect(horizonSin(enc, 1, -1e-30)).toBeCloseTo(decode(enc[0]), 12);
   });
 });
 
@@ -89,8 +144,8 @@ describe('the equirect tangent frame', () => {
 describe('the shader mirrors this frame', () => {
   it('builds east and north the same way', () => {
     expect(frag).toContain('vec3 e = cross(pole, n);');
-    expect(frag).toContain('vec3 north = cross(n, east);');
-    expect(frag).toContain('if (eLen < 1e-6) return n;');
+    expect(frag).toContain('north = cross(n, east);');
+    expect(frag).toContain('if (eLen < 1e-6) return false;');
     expect(RELIEF_POLE_EPS).toBe(1e-6);
   });
 
@@ -98,6 +153,19 @@ describe('the shader mirrors this frame', () => {
     expect(frag).toContain('vec2 t = enc * 2.0 - 1.0;');
     expect(frag).toContain('n * sqrt(max(1.0 - dot(t, t), 0.0))');
     expect(frag).toContain('texture(uNormalMap, vUvM).rg');
+  });
+
+  it('carries the same azimuth count and encoding scale', () => {
+    expect(frag).toContain(
+      `const int STELLATA_HORIZON_AZIMUTHS = ${HORIZON_AZIMUTHS};`);
+    expect(frag).toContain(
+      `const float STELLATA_HORIZON_SIN_RANGE = ${HORIZON_SIN_RANGE};`);
+  });
+
+  it('walks the two maps in one azimuth order', () => {
+    expect(frag).toContain('float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a)');
+    expect(frag).toContain('int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;');
+    expect(frag).toContain('int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;');
   });
 });
 

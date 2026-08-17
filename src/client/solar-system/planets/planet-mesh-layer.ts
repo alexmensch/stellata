@@ -183,6 +183,8 @@ interface MeshEntry {
 }
 
 const RELIEF_SUFFIX = '-normal';
+/** The two halves of one body's horizon map, azimuths 0–3 then 4–7. */
+const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
 const RINGS_SUFFIX = '-rings';
 
 /** The one place a body name becomes a texture key — and the one place it is
@@ -302,6 +304,9 @@ export class PlanetMeshLayer {
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(textureKey(planet.name), { ext: 'jpg', measureMean: true });
         this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), { ext: 'webp' });
+        for (const suffix of HORIZON_SUFFIXES) {
+          this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
+        }
         if (planet.rings) {
           this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
         }
@@ -421,6 +426,20 @@ export class PlanetMeshLayer {
       } else {
         material.uniforms.uNormalMap.value = this.placeholder;
         material.uniforms.uHasNormalMap.value = 0;
+      }
+      // Half a horizon is worse than none: the shader interpolates across the
+      // seam between the two maps, so one placeholder would read as a skyline
+      // at the encoding's floor over the azimuths it covers.
+      const horizonA = this.textures.get(textureKey(planet.name, HORIZON_SUFFIXES[0]));
+      const horizonB = this.textures.get(textureKey(planet.name, HORIZON_SUFFIXES[1]));
+      if (horizonA?.state === 'ready' && horizonB?.state === 'ready') {
+        material.uniforms.uHorizonA.value = horizonA.tex;
+        material.uniforms.uHorizonB.value = horizonB.tex;
+        material.uniforms.uHasHorizonMap.value = 1;
+      } else {
+        material.uniforms.uHorizonA.value = this.placeholder;
+        material.uniforms.uHorizonB.value = this.placeholder;
+        material.uniforms.uHasHorizonMap.value = 0;
       }
       if (texState?.state === 'ready') {
         material.uniforms.uMap.value = texState.tex;
@@ -615,6 +634,9 @@ export class PlanetMeshLayer {
         uNormalMap: { value: this.placeholder },
         uHasNormalMap: { value: 0 },
         uReliefHorizon: { value: reliefHorizonOf(planet) },
+        uHorizonA: { value: this.placeholder },
+        uHorizonB: { value: this.placeholder },
+        uHasHorizonMap: { value: 0 },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },
