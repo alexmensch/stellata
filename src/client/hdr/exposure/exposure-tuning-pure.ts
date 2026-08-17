@@ -4,6 +4,7 @@
 import { LUMA_CEIL } from '../emission/emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 import { type AdaptationRegime, ADAPT_SLEW_SETTLE_MAG } from './scene-adaptation-pure';
+import type { ParkPhase } from './adaptation-park-pure';
 
 export interface ExposureReadout {
   /** Both rescaled to the base instrument exposure, as the branches read
@@ -20,6 +21,7 @@ export interface ExposureReadout {
   /** What the frame actually ran on — trails `measuredDm` by the slew. */
   appliedDm: number;
   regime: AdaptationRegime;
+  parkPhase: ParkPhase;
   limitMag: number;
   ev: number;
   effectiveLimitMag: number;
@@ -53,10 +55,17 @@ export function hasMeasurement(r: ExposureReadout): boolean {
   return r.meanL > 0 || r.coverage > 0;
 }
 
+const PARK_SUFFIX: Record<ParkPhase, string> = {
+  active: '',
+  parked: ' · PARKED (measurement gated)',
+  probing: ' · probing',
+};
+
 export function regimeLine(r: ExposureReadout): string {
-  if (!hasMeasurement(r)) return 'no measurement — no cut';
+  const park = PARK_SUFFIX[r.parkPhase];
+  if (!hasMeasurement(r)) return 'no measurement — no cut' + park;
   const settling = Math.abs(r.appliedDm - r.measuredDm) > ADAPT_SLEW_SETTLE_MAG;
-  return REGIME_LABEL[r.regime] + (settling ? ' · slewing' : '');
+  return REGIME_LABEL[r.regime] + (settling ? ' · slewing' : '') + park;
 }
 
 export function formatExposureReadout(r: ExposureReadout): string {

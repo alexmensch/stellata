@@ -86,6 +86,35 @@ Three rows are not what they look like:
   `baselineLimitMag` before believing any one reading, and expect the
   negative at deep-cut vantages.
 
+A fourth thing to know before reading rows at a no-cut vantage: the
+adaptation park (`../../hdr/exposure/README.md` § Parking the
+measurement) stops the reduction draws and the statistic writes wherever
+the settled cut is inside the slew's settle band, and the exposure pin
+freezes it there (collapsing a mid-probe park to parked, so every dwell
+prices the same state). At those vantages the `reduction` and
+`statisticWrites` rows price an already-parked frame and should read ~0 —
+the park working, not the instrument failing. Both rows still price the
+pass wherever a cut is live.
+
+Measured over all five canon vantages, 3 runs each, 6.774 Mpx: neither
+row resolved at any of the three dm-0 vantages, against canon's resolved
+`reduction` of +17.6 % (MW50), +26.3 % (MW120) and +32–45 % (LG). The
+decisive row is MW-plane 120° on a settled instrument — a 29.67 ms frame
+at a 0.007 ms bracket, `reduction` reading −0.027 ms. Sol is the positive
+control: `statisticWrites` still resolves +40.5 to +54.6 % (canon +47.7 /
++50.2), so the park stays off wherever the cut is live.
+
+**These rows price the fully parked frame, not the duty cycle.** The pin
+collapses the machine to parked for the whole sweep, so no probe runs
+inside a dwell and the differential cannot see one. The steady-state cost
+has to be reasoned from the cadence instead: the chain already only ran
+on one rendered frame in four (`baselineReadback` 0.25 in every row at
+every vantage), and a parked cycle is the probe interval, the wait for a
+frame the chain can draw on, and the frames its readback is in flight — so
+the measurement's GPU work falls by roughly 60 %, not the ~83 % the
+interval alone suggests. Quoting these ~0 rows as the real-world saving
+overstates it.
+
 ## Decomposing the HDR chain
 
 Four rows split the `hdrChain` aggregate. Each is a marginal cost

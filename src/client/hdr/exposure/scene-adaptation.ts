@@ -16,6 +16,13 @@ import {
   L_TARGET,
   slewDm,
 } from './scene-adaptation-pure';
+import {
+  INITIAL_PARK_STATE,
+  type ParkPhase,
+  type ParkState,
+  parkTick,
+  parkUnderHold,
+} from './adaptation-park-pure';
 
 export interface SceneAdaptationDeps {
   /** The instrument's own exposure — no adaptation, no trim. Measuring
@@ -24,6 +31,11 @@ export interface SceneAdaptationDeps {
   /** The frame-late reduction of the HDR target's statistic attachment
    *  (`reduction/README.md`), or null before the first one lands. */
   reduced: () => ReducedStatistic | null;
+  /** Whether the reduction can draw this frame — false while a readback is
+   *  in flight. Read after `reduced()`, which polls: a probe opened on a
+   *  frame the chain sits out pays the statistic writes with nothing
+   *  reducing what they wrote. */
+  measurementReady: () => boolean;
   /** The operator's live white point. The display floor is derived from
    *  it, so `DR_MAG` has to reach the floor or the two describe different
    *  display ranges (`README.md` § Adaptation). */
@@ -41,6 +53,8 @@ export class SceneAdaptation {
 
   private dm = 0;
   private stat: FrameStatistic = EMPTY_FRAME_STATISTIC;
+  private park: ParkState = INITIAL_PARK_STATE;
+  private lastLanded: ReducedStatistic | null = null;
   private lastNowMs: number | null = null;
   private lAdapt = L_ADAPT;
   private lTarget = L_TARGET;
@@ -62,7 +76,9 @@ export class SceneAdaptation {
     if (chart) return this.reset();
     perfMark('adaptation');
     const reduced = this.deps.reduced();
+    const landedFresh = reduced !== null && reduced !== this.lastLanded;
     if (reduced !== null) {
+      this.lastLanded = reduced;
       const base = this.deps.baseExposure();
       this.stat = {
         meanL: rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base),
@@ -74,8 +90,27 @@ export class SceneAdaptation {
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
+    this.park = parkTick(
+      this.park, landedFresh, measured, this.dm, this.deps.measurementReady(),
+    );
     perfMeasure('adaptation');
     return this.dm;
+  }
+
+  /**
+   * True while the measurement is parked: the reduction's draws and the
+   * statistic-attachment emitter writes both stop, the clear and the
+   * readback fence stay (`README.md` § Parking the measurement). False on
+   * a probe frame — a probe reducing the cleared attachment would cost
+   * ~3x reducing live content, so its writes must be open.
+   */
+  isMeasurementParked(): boolean {
+    return this.park.phase === 'parked';
+  }
+
+  /** The park machine's phase, for the readout. */
+  getParkPhase(): ParkPhase {
+    return this.park.phase;
   }
 
   /** The live levels the branches measure against. */
@@ -123,9 +158,15 @@ export class SceneAdaptation {
    *
    * Releasing drops `lastNowMs` so the next frame snaps to the live
    * measurement instead of ramping from a cut minutes stale.
+   *
+   * A hold landing mid-probe collapses the probe back to parked: frozen
+   * probing keeps the chain live for the whole hold, so a sweep's rows
+   * would price a parked or a live measurement depending on which frame
+   * the pin happened to land on.
    */
   setHeld(on: boolean): void {
     this.held = on;
+    if (on) this.park = parkUnderHold(this.park);
     if (!on) this.lastNowMs = null;
   }
 
@@ -150,6 +191,8 @@ export class SceneAdaptation {
   private reset(): number {
     this.dm = 0;
     this.stat = EMPTY_FRAME_STATISTIC;
+    this.park = INITIAL_PARK_STATE;
+    this.lastLanded = null;
     this.lastNowMs = null;
     return 0;
   }

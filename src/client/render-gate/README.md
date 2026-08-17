@@ -117,3 +117,9 @@ poke with hands off the keyboard can force a repaint with
   consistent — and describes a frame identical to the one on screen.
 - Three.js buffer writes on skipped ticks (`flushLocalPositions`) only
   set `needsUpdate`; the upload happens inside the next real render.
+- The adaptation park counts its wake probes in **rendered** frames, not
+  ticks, because `adaptation.measure()` sits below the gate's early
+  return — which is what stops a parked static view paying a probe every
+  six ticks forever. Hoisting that call above the gate to keep the cut
+  current would silently undo it
+  (`../hdr/exposure/README.md` § Parking the measurement).

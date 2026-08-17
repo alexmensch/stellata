@@ -173,6 +173,7 @@ export class HdrPipeline {
   private drMag = DR_MAG;
   private highlightDesat = HIGHLIGHT_DESAT;
   private statisticWrites = true;
+  private statisticParked = false;
   private summationOn = true;
   private extraAttachments = true;
 
@@ -304,7 +305,7 @@ export class HdrPipeline {
   private applyGateState(state: GateState): void {
     const gl = this.gl;
     const slots = gateDrawSlots(state, {
-      statisticWrites: this.statisticWrites,
+      statisticWrites: this.statisticWrites && !this.statisticParked,
       extraAttachments: this.extraAttachments,
     });
     gl.drawBuffers([
@@ -403,6 +404,14 @@ export class HdrPipeline {
     this.statisticWrites = on;
   }
 
+  /** The adaptation park's half of the same mask, held separately so the
+   *  park and the frame-cost lever cannot clobber each other's restore
+   *  (`exposure/README.md` § Parking the measurement). The shell rewrites
+   *  it every rendered frame, before `bind()`. */
+  setStatisticWritesParked(on: boolean): void {
+    this.statisticParked = on;
+  }
+
   /** Frame-cost lever: skip the rod-summation downsample and collapse the
    *  resolve's kernel to one centre tap. The band keeps its level (a uniform
    *  field is the identity case); resolved diffuse objects sharpen. */
@@ -472,6 +481,7 @@ export class HdrPipeline {
     this.drMag = DR_MAG;
     this.highlightDesat = HIGHLIGHT_DESAT;
     this.statisticWrites = true;
+    this.statisticParked = false;
     this.summationOn = true;
     this.extraAttachments = true;
     this.syncMode();
