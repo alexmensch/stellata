@@ -23,10 +23,14 @@ Moon, Mercury and Mars ship a DEM-derived tangent-space normal map
 (`<body>-normal.webp`, `data/textures/README.md` § Surface relief) and a pair
 of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
-map. Nothing branches on which bodies have them: a 404 is expected data and
-leaves `uHasNormalMap` / `uHasHorizonMap` at 0, so the smooth spheroid normal
-is the base case rather than a fallback. Slopes are true and unexaggerated,
-so a crater reads as its real relief at any camera distance.
+map. Three planes for three of ~30 bodies, so the fetch is gated on
+`RELIEF_ELEV_SPAN_M` — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
+lookup, shared with the fallback limb bound, because "does this body ship
+relief" and "how far past the terminator may it light" are one question. The
+SHADER still branches on nothing: a body that somehow arrives without the
+maps leaves `uHasNormalMap` / `uHasHorizonMap` at 0 and the smooth spheroid
+normal is the base case rather than a fallback. Slopes are true and
+unexaggerated, so a crater reads as its real relief at any camera distance.
 
 The horizon pair is all-or-nothing — `uHasHorizonMap` waits for **both**
 files. The shader interpolates across the seam between them, so one
@@ -94,9 +98,21 @@ different scales:
   ground at your feet, because that is the normal map's job at four times the
   resolution.
 
-`dayside` multiplies the two, which is exactly `max` of the two horizons — and
-it is why the coarse map cannot veto a fine lit facet, and why the coarse
-map's own texel-scale curvature drop over flat ground is harmless.
+`dayside` multiplies the two, so the sun has to clear whichever of them stands
+higher — `max` of the two horizons, saturated; inside the penumbra band the
+product is darker than either factor alone.
+
+**The coarse map therefore CAN veto a facet the fine map lights, and that is
+the point** — it is the whole 38.7 % → 8.5 % of § What the composition is worth.
+The cost of that power is that a 2048 skyline it over-estimates darkens real
+lit ground: linear interpolation between stored azimuths over-shadows, because
+a skyline has narrow peaks and averaging two neighbours over-states the gap
+between them (`data/textures/README.md` § Cast shadows measures it — 0.32°
+mean at 8 azimuths). What keeps this one-sided rather than compounding is that
+the map's OWN error over flat ground runs the other way: the march never
+samples closer than its first step, so flat ground at the reference sphere
+reads that step's curvature drop — −0.044° at the shipped 4096 DEM, never 0 —
+which is slack toward lighting, not shadowing.
 
 The horizon test rides the **GEOMETRIC** cosine, and that is not the same
 choice as the list above: a skyline is measured from the ground's true local
@@ -129,11 +145,13 @@ no-map path stays byte-identical. Its "not at all past" column is the same
 drift.
 
 **What the composition is worth**, Moon, sun in the equatorial plane, lit area
-against an exact per-texel horizon (`scripts/textures/measure_relief_lighting.py`,
+against the same march run at full DEM width — the reference isolates the cost
+of the output grid and the encoding, and shares the first-step floor above
+rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
 method and the width/azimuth evidence in `data/textures/README.md`
 § Cast shadows):
 
-| solar depression | normal map + fence | + horizon maps | exact |
+| solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|
 | 0–2° | 38.7 % | 8.5 % | 8.4 % |
 | 2–5° | 17.7 % | 0.2 % | 0.2 % |

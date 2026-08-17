@@ -44,9 +44,15 @@ live in `data/textures/README.md`; this folder owns the scripts.
   fallback limb bound, and the manifest rows against the shipped
   planes' own headers. Rationale: `data/textures/README.md`
   § Cast shadows.
+- `horizon_map.test.py` — stdlib unittest pins for the geometry the
+  TS suite can only source-pin: the flat-ground floor's closed form,
+  azimuth registration and its east/west handedness against a
+  synthetic wall, the isolated-summit limb identity, and the encoding
+  round-trip. Run directly: `python3 horizon_map.test.py` (needs
+  NumPy). Not in CI, like every `*.test.py` here.
 - `measure_relief_lighting.py` — manual, run by hand, NOT part of the
   build: reads the SHIPPED maps and reports how much ground each relief
-  term lights past the terminator against an exact per-texel horizon,
+  term lights past the terminator against the same march at full DEM width,
   plus the disc integral against phase. The verification behind both
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before

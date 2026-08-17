@@ -65,14 +65,16 @@ def horizon_angles(
 
     The elevation angle of a candidate blocker is taken against the sample
     point's true local horizontal on the sphere, so the body's own limb is one
-    of the occluders: over flat ground at the reference sphere the answer is 0,
-    and no slope anywhere can see the sun past that.
+    of the occluders and no slope anywhere can see the sun past it.
 
     **The ray is always stepped at the DEM's resolution**, however coarse the
-    output grid. Marching at the output texel instead loses the horizon's own
-    curvature drop over that first step — half an output texel of solar
-    depression, which at any width worth shipping is a large fraction of the
-    band this map exists to darken.
+    output grid, and the first step is the closest blocker ever tested. Flat
+    ground at the reference sphere therefore reads that step's own curvature
+    drop rather than 0 — slack toward lighting, and `flat_floor` in
+    `horizon_map.test.py` pins the closed form. Marching at the output texel
+    would move the floor to half an OUTPUT texel of solar depression, which at
+    any width worth shipping is a large fraction of the band this map exists
+    to darken.
 
     `surface_normals` zeroes its east-west derivative past ±85° because the
     equirect u-derivative degenerates there; this walks real geodesics and has
