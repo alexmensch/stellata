@@ -8,6 +8,7 @@ from pathlib import Path
 from PIL import Image, ImageFilter, ImageStat
 
 from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
+from horizon_map import horizon_maps
 from texture_calibration import COLOUR_INDICES, LUMA, calibrate
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
@@ -21,6 +22,7 @@ RELIEF_MANIFEST = OUT / "relief.json"
 SCRIPT = Path(__file__)
 CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
 RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
+HORIZON_SCRIPT = SCRIPT.parent / "horizon_map.py"
 
 TARGET_W = 2048
 JPEG_QUALITY = 82
@@ -232,15 +234,41 @@ def build_normal_map(name: str, relief: dict) -> None:
     if up_to_date(out_path, src_path, RELIEF_SCRIPT):
         print(f"  {name}-normal: up to date")
         return
-    rgb, relief[name] = surface_normals(read_frozen_dem(src_path), spec)
+    rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
+    # Merge, never replace: the two halves of a body's relief row are written by
+    # separate up-to-date gates, so either can be skipped while the other runs.
+    relief.setdefault(name, {}).update(stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
     # tilt on the Moon, which is most of the signal (README.md § Surface relief).
     Image.fromarray(rgb).save(out_path, "WEBP", lossless=True, method=6)
     kb = out_path.stat().st_size // 1024
     print(
         f"  {name}-normal: {rgb.shape[1]}x{rgb.shape[0]} -> {kb} KB, "
-        f"tilt median {relief[name]['medianTiltDeg']}deg "
-        f"p90 {relief[name]['p90TiltDeg']}deg"
+        f"tilt median {stats['medianTiltDeg']}deg "
+        f"p90 {stats['p90TiltDeg']}deg"
+    )
+
+
+def build_horizon_map(name: str, relief: dict) -> None:
+    spec = DEM_BODIES[name]
+    src_path = SRC / spec["src"]
+    outs = [OUT / f"{name}-horizon-{half}.webp" for half in "ab"]
+    if all(up_to_date(p, src_path, HORIZON_SCRIPT, RELIEF_SCRIPT) for p in outs):
+        print(f"  {name}-horizon: up to date")
+        return
+    first, second, stats = horizon_maps(read_frozen_dem(src_path), spec)
+    relief.setdefault(name, {})["horizon"] = stats
+    for plane, out_path in zip((first, second), outs):
+        # exact=True or libwebp rewrites RGB wherever alpha is 0 — which here
+        # is one azimuth's horizon quietly overwriting three others.
+        Image.fromarray(plane, "RGBA").save(
+            out_path, "WEBP", lossless=True, exact=True, method=6
+        )
+    kb = sum(p.stat().st_size for p in outs) // 1024
+    print(
+        f"  {name}-horizon: 2 x {first.shape[1]}x{first.shape[0]} -> {kb} KB, "
+        f"median {stats['medianHorizonDeg']}deg p99 {stats['p99HorizonDeg']}deg "
+        f"clamped {stats['clampedPct']}%"
     )
 
 
@@ -338,6 +366,7 @@ def main() -> None:
     relief = json.loads(RELIEF_MANIFEST.read_text()) if RELIEF_MANIFEST.exists() else {}
     for name in DEM_BODIES:
         build_normal_map(name, relief)
+        build_horizon_map(name, relief)
     for stale in relief.keys() - DEM_BODIES.keys():
         del relief[stale]
     RELIEF_MANIFEST.write_text(json.dumps(relief, indent=2, sort_keys=True) + "\n")
@@ -346,7 +375,7 @@ def main() -> None:
         build_ring_table(body, spec)
     total = sum(
         p.stat().st_size
-        for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"), *OUT.glob("*-normal.webp"))
+        for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"), *OUT.glob("*.webp"))
     )
     print(f"total artifact size: {total / 1e6:.2f} MB")
 

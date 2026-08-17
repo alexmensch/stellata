@@ -74,13 +74,13 @@ def read_frozen_dem(path) -> np.ndarray:
     return (a - DEM_ZERO_LEVEL).astype(np.float32)
 
 
-def _roll_to_map_centre(elev: np.ndarray, spec: dict) -> np.ndarray:
+def roll_to_map_centre(elev: np.ndarray, spec: dict) -> np.ndarray:
     w = elev.shape[1]
     shift = (spec["dem_center_lon"] - spec["map_center_lon"]) * w // 360
     return np.roll(elev, shift, axis=1) if shift % w else elev
 
 
-def _weighted_quantile(values: np.ndarray, weights: np.ndarray, q: float) -> float:
+def weighted_quantile(values: np.ndarray, weights: np.ndarray, q: float) -> float:
     order = np.argsort(values)
     v, w = values[order], weights[order]
     cdf = (np.cumsum(w) - 0.5 * w) / w.sum()
@@ -95,7 +95,7 @@ def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
     Blue carries no signal: z is positive by construction, so the consumer
     reconstructs it as sqrt(1 - x^2 - y^2).
     """
-    elev = _roll_to_map_centre(elev, spec)
+    elev = roll_to_map_centre(elev, spec)
     h, w = elev.shape
     lat = 90.0 - (np.arange(h) + 0.5) * 180.0 / h
     cos_lat = np.cos(np.radians(lat))[:, None]
@@ -122,8 +122,8 @@ def surface_normals(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
     tilt = np.degrees(np.arccos(np.clip(n[keep, :, 2], -1.0, 1.0))).ravel()
     weights = np.repeat(cos_lat[keep, 0], w)
     stats = {
-        "medianTiltDeg": round(_weighted_quantile(tilt, weights, 0.5), 3),
-        "p90TiltDeg": round(_weighted_quantile(tilt, weights, 0.9), 3),
+        "medianTiltDeg": round(weighted_quantile(tilt, weights, 0.5), 3),
+        "p90TiltDeg": round(weighted_quantile(tilt, weights, 0.9), 3),
         "width": w,
     }
 

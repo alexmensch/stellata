@@ -40,22 +40,33 @@ own, and `uPhaseScale` corrects that to the body's measured Mallama
 curve. Folding φ into the anchor as well would count it twice.
 
 **Surface relief carries no renormalisation, and that is measured rather
-than assumed.** A normal map redistributes the direct term across the disc
-without changing the mean by much: integrating the shaded Moon under its
-own map moves the disc total **+0.002 mag at full phase, −0.003 at 90°,
-−0.008 at 120°** — three orders under anything visible, and a correction
-term would be a fitted quantity sitting on top of a closed form.
+than assumed** — by `scripts/textures/measure_relief_lighting.py`, which
+integrates the disc off the shipped maps under the shader's own shading.
+Relief redistributes the direct term across the disc without changing the
+mean, against the smooth sphere, in magnitudes:
 
-Past 150° it grows — **−0.07 at 150°, −0.69 at 170°** — and on the Moon,
-which is where those numbers were measured, nothing bounds it: the body
-carries no `phaseCoefficients`, so `uPhaseScale` is pinned at 1 and neither
-Mallama's curve nor its [¼, 4] clamp is in the picture at all. What keeps the
-error out of sight is the disc, already at 1.5 % of full brightness by 170°.
-It is the same missing physics that has the Moon rendering ~1.4 mag over at
-half phase, and `stellata-2f6.51` fixes both at once — deliberately after the
-relief work, so the two corrections cannot double-count. On a body that DOES
-carry a measured curve, relief and Mallama double-count the same roughness
-past 150° and the clamp bounds what is left.
+| phase | 0° | 90° | 120° | 150° | 170° |
+|---|---|---|---|---|---|
+| normal map alone | +0.007 | −0.014 | −0.007 | −0.033 | −0.390 |
+| with horizon maps | +0.007 | −0.001 | +0.003 | +0.010 | −0.053 |
+
+The normal map alone runs away past 150° because it lights slopes the sun
+cannot reach; the horizon maps take that back and hold the disc inside
+0.01 mag out to 150°. Mercury and Mars are smaller in both columns
+(−0.157 → −0.032 and −0.093 → +0.000 at 170°). Nothing bounds the residual on
+the Moon — the body carries no `phaseCoefficients`, so `uPhaseScale` is pinned
+at 1 and neither Mallama's curve nor its [¼, 4] clamp is in the picture — but
+by 170° the disc is at 1.5 % of full brightness. A correction term here would
+be a fitted quantity sitting on top of a closed form.
+
+**What this settles for `stellata-2f6.51`.** Honest terrain shadowing moves
+the half-phase disc by **−0.001 mag**, so essentially none of the Moon's
+~1.4 mag over-brightness at half phase is macroscopic terrain: the missing
+physics is sub-texel regolith roughness and the opposition surge, below any
+DEM. The two corrections therefore cannot double-count, and 2f6.51 inherits
+the full deficit rather than a partly-closed one. On a body that DOES carry a
+measured curve, relief and Mallama would double-count the same roughness past
+150°, and the clamp bounds what is left.
 
 `../surface-relief/README.md` owns which terms the perturbed normal reaches.
 

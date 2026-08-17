@@ -24,8 +24,14 @@ uniform sampler2D uNormalMap;
 uniform float uHasNormalMap;
 // Sines of the solar depression that bound how far past the geometric
 // terminator relief may light ground: x still full, y none at all
-// (surface-relief/surface-relief-pure.ts:reliefHorizonSines).
+// (surface-relief/surface-relief-pure.ts:reliefHorizonSines). Only the
+// fallback while the per-texel horizon below is still loading.
 uniform vec2 uReliefHorizon;
+// Encoded sines of the local skyline's elevation in STELLATA_HORIZON_AZIMUTHS
+// directions, azimuths 0–3 then 4–7 — data/textures/README.md § Cast shadows.
+uniform sampler2D uHorizonA;
+uniform sampler2D uHorizonB;
+uniform float uHasHorizonMap;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -82,38 +88,76 @@ layout(location = 2) out vec4 outDiffuse;
 const float LIMB_FLOOR = 0.45;
 const float LIMB_EXP = 0.5;
 
+const int STELLATA_HORIZON_AZIMUTHS = 8;
+const float STELLATA_HORIZON_SIN_RANGE = 0.4;
+
 // Equirect tangent frame, exact on the drawn spheroid because a surface of
 // revolution puts its normal in the meridian plane. Mirror + the frame's
 // contract: surface-relief/surface-relief-pure.ts.
-vec3 stellataReliefNormal(vec3 n, vec3 pole, vec2 enc) {
+bool stellataTangentFrame(vec3 n, vec3 pole, out vec3 east, out vec3 north) {
   vec3 e = cross(pole, n);
   float eLen = length(e);
-  if (eLen < 1e-6) return n;
-  vec3 east = e / eLen;
-  vec3 north = cross(n, east);
+  if (eLen < 1e-6) return false;
+  east = e / eLen;
+  north = cross(n, east);
+  return true;
+}
+
+vec3 stellataReliefNormal(vec3 n, vec3 east, vec3 north, vec2 enc) {
   vec2 t = enc * 2.0 - 1.0;
   return normalize(east * t.x + north * t.y + n * sqrt(max(1.0 - dot(t, t), 0.0)));
+}
+
+// Sine of the skyline's elevation toward (sunE, sunN), between the two stored
+// azimuths bracketing it.
+float stellataHorizonSin(vec2 uv, float sunE, float sunN) {
+  vec4 a = texture(uHorizonA, uv);
+  vec4 b = texture(uHorizonB, uv);
+  float enc[STELLATA_HORIZON_AZIMUTHS] =
+    float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
+  // atan(0, 0) is undefined in GLSL, and a NaN slot indexes enc out of range.
+  // Both components vanish only with the sun at the local zenith, where every
+  // azimuth answers alike; due east is the one the CPU mirror's atan2 picks.
+  vec2 bearing = sunE == 0.0 && sunN == 0.0 ? vec2(1.0, 0.0) : vec2(sunE, sunN);
+  float slot =
+    fract(atan(bearing.y, bearing.x) * (0.5 / PI)) * float(STELLATA_HORIZON_AZIMUTHS);
+  float base = floor(slot);
+  // fract() returns exactly 1.0 for a small enough negative angle, which puts
+  // base one past the last azimuth — the wrap is what keeps the index in range.
+  int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;
+  int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;
+  return (mix(enc[i0], enc[i1], slot - base) * 2.0 - 1.0)
+    * STELLATA_HORIZON_SIN_RANGE;
 }
 
 void main() {
   vec3 n = normalize(vNormalV);
   vec3 v = normalize(-vPosV);
   float sunCos = dot(n, uSunDirView);
+  vec3 east, north;
+  bool hasFrame = stellataTangentFrame(n, uPoleView, east, north);
   // The perturbed normal reaches this one cosine and nothing else — every
   // other consumer of sunCos below keeps the geometric normal, each for its
   // own reason (surface-relief/README.md).
-  vec3 nRelief = uHasNormalMap > 0.5
-    ? stellataReliefNormal(n, uPoleView, texture(uNormalMap, vUvM).rg)
+  vec3 nRelief = uHasNormalMap > 0.5 && hasFrame
+    ? stellataReliefNormal(n, east, north, texture(uNormalMap, vUvM).rg)
     : n;
   float sunCosRelief = dot(nRelief, uSunDirView);
-  // Slope alone buys nothing once the body's own limb is in the way, so the
-  // relief term is fenced at the depression no elevation on this body can see
-  // past. Rides the GEOMETRIC cosine — the bound is the body, not the facet —
-  // and is 1 wherever the smooth-sphere terminator itself is lit, so it can
-  // only ever remove light relief added (surface-relief/README.md).
-  float horizonGate = uHasNormalMap > 0.5
-    ? smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)
-    : 1.0;
+  // Everything the facet's own slope cannot see over: the terrain around it and
+  // the body's own limb, one per-texel skyline. Both branches ride the
+  // GEOMETRIC cosine — a horizon is measured against the true local horizontal,
+  // and the fallback's bound is the body rather than the facet. The penumbra is
+  // the host's disc crossing that skyline, like the caster loop's below
+  // (surface-relief/README.md).
+  float horizonGate = 1.0;
+  if (uHasHorizonMap > 0.5 && hasFrame) {
+    float sinH = stellataHorizonSin(
+      vUvM, dot(uSunDirView, east), dot(uSunDirView, north));
+    float pen = max(uSunAngRad, 1e-6);
+    horizonGate = smoothstep(sinH - pen, sinH + pen, sunCos);
+  } else if (uHasNormalMap > 0.5) {
+    horizonGate = smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos);
+  }
   // Lambert cosine away from the terminator; a smoothstep band of
   // half-width uTermSoftness carries twilight past it on atmospheric
   // bodies. The 1e-4 floor keeps the airless w=0 case a hard cut

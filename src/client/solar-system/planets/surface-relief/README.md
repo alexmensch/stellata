@@ -1,29 +1,41 @@
 # Surface relief
 
-DEM-derived normal maps shading the Moon, Mercury and Mars on the planet
-mesh: the frame the map is sampled in, which terms the perturbed normal is
-allowed to reach, and the limb bound on how far past the terminator it may
-light. The shader consuming all three is `../planet-mesh.frag.glsl` and the
-uniforms are written in `../planet-mesh-layer.ts`; this README is the
+DEM-derived maps shading the Moon, Mercury and Mars on the planet mesh: the
+frame they are sampled in, which terms the perturbed normal is allowed to
+reach, and how the two occluders that can hide the sun from a patch of ground
+are composed. The shader consuming all of it is `../planet-mesh.frag.glsl`
+and the uniforms are written in `../planet-mesh-layer.ts`; this README is the
 authority on the relief half of both.
 
 ```
 src/client/solar-system/planets/surface-relief/
-  surface-relief-pure.ts (+ test)   The equirect tangent frame (CPU mirror of
-                                    the mesh shader's) and the per-body limb
-                                    bound off the DEM elevation span. The test
-                                    also source-pins the shader it mirrors.
+  surface-relief-pure.ts (+ test)   The equirect tangent frame, the normal
+                                    perturbation and the horizon lookup built
+                                    on it (CPU mirrors of the mesh shader's),
+                                    plus the per-body limb bound off the DEM
+                                    elevation span. The test also source-pins
+                                    the shader it mirrors.
 ```
 
 ## What ships
 
 Moon, Mercury and Mars ship a DEM-derived tangent-space normal map
-(`<body>-normal.webp`, `data/textures/README.md` § Surface relief),
+(`<body>-normal.webp`, `data/textures/README.md` § Surface relief) and a pair
+of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
-map. Nothing branches on which bodies have one: a 404 is expected data and
-leaves `uHasNormalMap` at 0, so the smooth spheroid normal is the base case
-rather than a fallback. Slopes are true and unexaggerated, so a crater reads
-as its real relief at any camera distance.
+map. Three planes for three of ~30 bodies, so the fetch is gated on
+`RELIEF_ELEV_SPAN_M` — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
+lookup, shared with the fallback limb bound, because "does this body ship
+relief" and "how far past the terminator may it light" are one question. The
+SHADER still branches on nothing: a body that somehow arrives without the
+maps leaves `uHasNormalMap` / `uHasHorizonMap` at 0 and the smooth spheroid
+normal is the base case rather than a fallback. Slopes are true and
+unexaggerated, so a crater reads as its real relief at any camera distance.
+
+The horizon pair is all-or-nothing — `uHasHorizonMap` waits for **both**
+files. The shader interpolates across the seam between them, so one
+placeholder would read as a skyline pinned at the encoding's floor over the
+azimuths that file covers.
 
 ## The tangent frame
 
@@ -72,18 +84,52 @@ no coverage claim, so it joins the frame mean and leaves the lit-hemisphere
 mean the pin holds untouched (`../../../hdr/attachments/README.md` § The
 unit).
 
-## How far past the terminator — the body bounds it, and the term is fenced
+## Two occluders, composed — the facet's own slope and the skyline
 
-Ground at elevation Δh sees the sun only down to a depression of √(2Δh/R),
-because past that the body's own limb is in the way. **Slope alone buys
-nothing**: at zero elevation the sun goes under the horizon the instant the
-geometric terminator passes, whichever way the ground faces. So `dayside`
-carries a gate on the GEOMETRIC cosine, derived per body from its DEM
-elevation span (`reliefHorizonSines`; the span is the build's own, pinned by
+A patch of ground sees the sun only if the sun clears **both** the patch's own
+slope and everything beyond it, and those are two different maps at two
+different scales:
+
+- The **normal map** is the slope, at 4096. It is the ψ → 0 limit of the
+  horizon — what you can see standing on the facet itself — and it already
+  rides `dayside` through `sunCosRelief`.
+- The **horizon map** is everything else: terrain from one DEM texel out to
+  the body's limb bound, at 2048 in 8 azimuths. It deliberately excludes the
+  ground at your feet, because that is the normal map's job at four times the
+  resolution.
+
+`dayside` multiplies the two, so the sun has to clear whichever of them stands
+higher — `max` of the two horizons, saturated; inside the penumbra band the
+product is darker than either factor alone.
+
+**The coarse map therefore CAN veto a facet the fine map lights, and that is
+the point** — it is the whole 38.7 % → 8.5 % of § What the composition is worth.
+The cost of that power is that a 2048 skyline it over-estimates darkens real
+lit ground: linear interpolation between stored azimuths over-shadows, because
+a skyline has narrow peaks and averaging two neighbours over-states the gap
+between them (`data/textures/README.md` § Cast shadows measures it — 0.32°
+mean at 8 azimuths). What keeps this one-sided rather than compounding is that
+the map's OWN error over flat ground runs the other way: the march never
+samples closer than its first step, so flat ground at the reference sphere
+reads that step's curvature drop — −0.044° at the shipped 4096 DEM, never 0 —
+which is slack toward lighting, not shadowing.
+
+The horizon test rides the **GEOMETRIC** cosine, and that is not the same
+choice as the list above: a skyline is measured from the ground's true local
+horizontal, so the facet's tilt must not enter it twice. Its penumbra is
+`uSunAngRad` — the host's disc crossing that skyline, the same physical
+softening the inter-body caster loop uses, rather than a tuned width.
+
+**The limb bound is now only the fallback.** Ground at elevation Δh sees the
+sun only down to a depression of √(2Δh/R), and **slope alone buys nothing** —
+at zero elevation the sun goes under the horizon the instant the geometric
+terminator passes, whichever way the ground faces. Before the horizon maps
+land (they are a separate fetch on the same lane) `dayside` carries a
+per-body gate standing in for them, derived from the DEM elevation span
+(`reliefHorizonSines`; the span is the build's own, pinned by
 `scripts/textures/dem-relief.test.ts`) — full out to a summit's bound over
 ground at the reference sphere, nothing past that same summit over terrain at
-the span's floor, tapering between, where only high ground over a basin is
-lit:
+the span's floor, tapering between:
 
 | body | relief lights in full to | and not at all past |
 |---|---|---|
@@ -91,29 +137,35 @@ lit:
 | Mercury | 3.47° | 5.15° |
 | Mars | 6.40° | 7.53° |
 
-The gate is saturated across the entire terminator band a smooth sphere
+That gate is saturated across the entire terminator band a smooth sphere
 lights on its own — an atmospheric body's `terminatorSoftness` widening
 included — so it can only ever remove light the relief term added, and the
-no-map path stays byte-identical.
+no-map path stays byte-identical. Its "not at all past" column is the same
+`arccos(r_floor / r_summit)` the precompute searches to, so the two cannot
+drift.
 
-**Inside the bound the term still over-lights.** Measured off the shipped map
-before the fence, sun along an equatorial row, horizon integrated to 426 km:
+**What the composition is worth**, Moon, sun in the equatorial plane, lit area
+against the same march run at full DEM width — the reference isolates the cost
+of the output grid and the encoding, and shares the first-step floor above
+rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
+method and the width/azimuth evidence in `data/textures/README.md`
+§ Cast shadows):
 
-| solar depression | lit by this term | lit once the horizon is honoured |
-|---|---|---|
-| 0–2° | 30 % of area | 13 % |
-| 2–5° | 27 % | 2 % |
-| 5–10° | 10 % | 0 % |
-| 10–20° | 3 % | 0 % |
+| solar depression | normal map + fence | + horizon maps | full-DEM |
+|---|---|---|---|
+| 0–2° | 38.7 % | 8.5 % | 8.4 % |
+| 2–5° | 17.7 % | 0.2 % | 0.2 % |
+| 5–10° | 6.7 % | 0.0 % | 0.0 % |
 
-The fence takes the bottom row out entirely and the 5–10° row from 6.4° up;
-what is left is the 0–5° bulk, where only a real per-texel horizon can tell a
-lit ridge from a shadowed one. That residual is **lit area, not lit
-brightness** — each lit facet is at `cos(i)` on its true normal, area-mean
-0.07 and p99 0.30 of the sub-solar value, and the disc integral moves under
-0.01 mag — so it reads as a speckle near the terminator, not as a flux error.
-`stellata-2f6.43` is the fix, and it can only shadow terrain this term has
-lit, which is why the two are ordered this way.
+## The exposure coverage mask stays geometric
+
+`lit` (attachment 1) is still `step(0, sunCos) · step(0.5, shadow)` — terrain
+shadow is deliberately **not** in it, unlike the inter-body caster term that
+is. A moon's shadow is one large coherent disc; a terrain shadow is
+fine-grained speckle, and a speckled coverage mask moves the whole scene's
+exposure (`../../../hdr/exposure/README.md`). The lit hemisphere the pin is
+defined over is slightly over-claimed as a result, which is the cheaper of
+the two errors.
 
 ## No flux renormalisation
 
