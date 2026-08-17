@@ -1,9 +1,9 @@
 {
   "name": "stellata",
-  "version": "3.29.2",
+  "version": "3.29.3",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.17.0",
+  "packageManager": "pnpm@11.22.0",
   "license": "AGPL-3.0-only",
   "author": "Alex Marshall",
   "scripts": {

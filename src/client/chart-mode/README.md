@@ -171,7 +171,7 @@ inherits no exposure state at all.
 
 ## Label engine + glyphs (`chart-labels.ts`)
 
-Per-frame engine that emits two SVG layers under `#overlay`. Each tier is
+Per-frame engine that fills three SVG layers under `#overlay`. Each tier is
 gated by the detail cycle — `tick()` reads `detailPermits(id)` per group
 (star names + planets → `chartStarNameLabels`, Bayer → `chartBayerGlyphs`,
 rings + wings → `chartVariableRings`, constellation names →
@@ -179,19 +179,41 @@ rings + wings → `chartVariableRings`, constellation names →
 group's build loop when the current level doesn't reach its chart floor.
 See `../scene/README.md` § Chart-content wiring for the couplings.
 
+- `<g id="chart-con-labels">` — `<text>` per constellation Latin name.
 - `<g id="chart-labels">` — `<text>` elements for proper-named stars,
   Bayer-letter Greek glyphs (drawn from `bayerMap` built in
-  `search.ts`), constellation Latin names, and molecular cloud names.
+  `search.ts`), planet names, and molecular cloud names.
 - `<g id="chart-glyphs">` — `<circle class="chart-variable-ring">`
   per visible variable, `<line class="chart-binary-wings">` per
   visible binary primary (catalog flag bit 4).
 
+**All three are declared in `index.html`, never minted on demand**, and
+sit *before* the HUD stack so the HUD paints over the chart. SVG has no
+z-index — paint order is document order — and the pool appends a `<text>`
+the frame its key is first seen, so DOM order within a group is the
+history of which labels have entered and left the viewport, not this
+frame's priority. That is harmless between labels that all punch a halo
+through what's behind them, and was not harmless between those and the
+`kind-con` wash (`fill: rgba(0,0,0,0.18); stroke: none`), which ate the
+halo of any star name created before it. Hence the separate con group
+rather than a per-frame re-append in priority order, which would
+reintroduce exactly the DOM churn the pool exists to avoid.
+
+The sequence is the fix, so it is pinned rather than trusted:
+`CHART_LAYER_IDS` (exported by `chart-labels.ts`) is the one authority
+for the ids **and their order**, `layerById` throws on a group the
+markup doesn't declare, and `chart-labels.test.ts` reads `index.html`
+to assert both the inter-group order and that all three precede
+`#hud-ring`.
+
 **Greedy collision pass** with axis-aligned bounding rectangles, sorted
 by priority (proper name 1 → Bayer 2 → cloud 3). Constellation names
 **bypass** the collision pass entirely — they always render at
-`#chart-labels .chart-label.kind-con`'s sparse semi-transparent outline
-typography, allowed to overlap small star symbols underneath à la Sky
-Atlas; see styles.css for the live size / weight / letter-spacing.
+`.chart-label-layer .chart-label.kind-con`'s sparse semi-transparent
+outline typography, allowed to overlap small star symbols underneath à
+la Sky Atlas; see styles.css for the live size / weight / letter-spacing.
+They are never measured either, so what a star name collides against is
+the padded anchor *point*, not the 36 px block.
 
 **Star-name + Bayer label offsets** scale with the rendered disc.
 `starLabelOffsetPx(discPx) = max(STAR_LABEL_OFFSET_MIN_PX,

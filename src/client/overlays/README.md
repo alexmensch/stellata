@@ -97,14 +97,17 @@ arrows stay tangent to whichever circle is dominant.
 
 ## Chart-mode labels and glyphs
 
-`chart-labels.ts` adds two SVG layers under `#overlay` while chart
-mode is active:
+`chart-labels.ts` fills three SVG layers under `#overlay` while chart
+mode is active. All three are declared in `index.html` ahead of the HUD
+stack, so the HUD paints over them and the con wash paints under the
+star names — `../chart-mode/README.md` § Label engine owns why.
 
+- `<g id="chart-con-labels">` — constellation Latin names. Bypass the
+  collision pass entirely (outline-style typography that reads as a
+  sparse semi-transparent overlay à la Sky Atlas).
 - `<g id="chart-labels">` — `<text>` elements for proper-named stars,
-  Bayer-letter Greek glyphs, constellation Latin names, and molecular
-  cloud names. Greedy collision pass over axis-aligned bounding rects;
-  constellation names bypass it entirely (outline-style typography
-  that reads as a sparse semi-transparent overlay à la Sky Atlas).
+  Bayer-letter Greek glyphs, planet names, and molecular cloud names.
+  Greedy collision pass over axis-aligned bounding rects.
 - `<g id="chart-glyphs">` — `<circle class="chart-variable-ring">`
   around variable stars, `<line class="chart-binary-wings">` through
   binary primaries. Both screen-aligned by construction (SVG line
