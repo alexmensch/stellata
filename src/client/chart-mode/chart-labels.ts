@@ -92,9 +92,6 @@ export interface Candidate {
 
 interface PooledText {
   el: SVGTextElement;
-  // The group `el` was appended to — con labels live in their own group,
-  // and the drop pass has to detach from the right one.
-  layer: SVGGElement;
   width: number; // last measured text width
   height: number; // last measured height
   // Dirty-tracked attribute writes — every visible label updates x/y per
@@ -120,9 +117,16 @@ interface PooledLine {
   lastY: number; // y1 and y2 are equal — wings are horizontal
 }
 
-// The three groups are declared in index.html, in the order that fixes
-// their paint rank against each other and against the HUD. Minting one
-// here on a miss would append it last and silently undo that.
+const CON_LAYER_ID = 'chart-con-labels';
+const LABEL_LAYER_ID = 'chart-labels';
+const GLYPH_LAYER_ID = 'chart-glyphs';
+// Paint order, front-most last: index.html must declare the groups in this
+// sequence, ahead of the HUD stack. `chart-labels.test.ts` pins the markup
+// against it.
+export const CHART_LAYER_IDS = [CON_LAYER_ID, LABEL_LAYER_ID, GLYPH_LAYER_ID] as const;
+
+// Minting a missing group here would append it last and silently undo the
+// order above.
 function layerById(id: string): SVGGElement {
   const el = document.getElementById(id) as SVGGElement | null;
   if (!el) throw new Error(`chart-labels: missing SVG group #${id} in index.html`);
@@ -258,9 +262,9 @@ export class ChartLabels {
   start(ctx: ChartModeContext): void {
     if (this.running) return;
     this.ctx = ctx;
-    this.conLayer = layerById('chart-con-labels');
-    this.layer = layerById('chart-labels');
-    this.glyphLayer = layerById('chart-glyphs');
+    this.conLayer = layerById(CON_LAYER_ID);
+    this.layer = layerById(LABEL_LAYER_ID);
+    this.glyphLayer = layerById(GLYPH_LAYER_ID);
     this.forEachLayer((g) => { g.style.display = ''; });
 
     const stellata = this.stellata;
@@ -643,13 +647,13 @@ export class ChartLabels {
       used.add(cand.key);
       let p = this.pool.get(cand.key);
       if (!p) {
+        const isCon = cand.kind === 'con';
         const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         el.setAttribute('class', `chart-label kind-${cand.kind}`);
-        el.setAttribute('text-anchor', cand.kind === 'con' ? 'middle' : 'start');
+        el.setAttribute('text-anchor', isCon ? 'middle' : 'start');
         el.setAttribute('dominant-baseline', 'central');
-        const target = cand.kind === 'con' ? conLabelLayer : labelLayer;
-        target.appendChild(el);
-        p = { el, layer: target, width: 0, height: 0, lastX: -Infinity, lastY: -Infinity };
+        (isCon ? conLabelLayer : labelLayer).appendChild(el);
+        p = { el, width: 0, height: 0, lastX: -Infinity, lastY: -Infinity };
         this.pool.set(cand.key, p);
       }
       if (p.el.textContent !== cand.text) p.el.textContent = cand.text;
@@ -658,7 +662,7 @@ export class ChartLabels {
     }
     for (const [key, p] of this.pool) {
       if (!used.has(key)) {
-        p.layer.removeChild(p.el);
+        p.el.remove();
         this.pool.delete(key);
       }
     }
