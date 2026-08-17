@@ -21,6 +21,7 @@ import {
   type ParkPhase,
   type ParkState,
   parkTick,
+  parkUnderHold,
 } from './adaptation-park-pure';
 
 export interface SceneAdaptationDeps {
@@ -30,6 +31,11 @@ export interface SceneAdaptationDeps {
   /** The frame-late reduction of the HDR target's statistic attachment
    *  (`reduction/README.md`), or null before the first one lands. */
   reduced: () => ReducedStatistic | null;
+  /** Whether the reduction can draw this frame — false while a readback is
+   *  in flight. Read after `reduced()`, which polls: a probe opened on a
+   *  frame the chain sits out pays the statistic writes with nothing
+   *  reducing what they wrote. */
+  measurementReady: () => boolean;
   /** The operator's live white point. The display floor is derived from
    *  it, so `DR_MAG` has to reach the floor or the two describe different
    *  display ranges (`README.md` § Adaptation). */
@@ -84,7 +90,9 @@ export class SceneAdaptation {
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
-    this.park = parkTick(this.park, landedFresh, measured, this.dm);
+    this.park = parkTick(
+      this.park, landedFresh, measured, this.dm, this.deps.measurementReady(),
+    );
     perfMeasure('adaptation');
     return this.dm;
   }
@@ -158,9 +166,7 @@ export class SceneAdaptation {
    */
   setHeld(on: boolean): void {
     this.held = on;
-    if (on && this.park.phase === 'probing') {
-      this.park = { phase: 'parked', zeroLandings: 0, framesSinceProbe: 0 };
-    }
+    if (on) this.park = parkUnderHold(this.park);
     if (!on) this.lastNowMs = null;
   }
 

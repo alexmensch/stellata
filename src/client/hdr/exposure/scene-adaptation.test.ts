@@ -39,11 +39,13 @@ const POINT_COVERAGE = 1e-3;
 let reduced: ReducedStatistic | null;
 let base: number;
 let whitePoint: number;
+let measurementReady: boolean;
 
 function makeAdaptation(): SceneAdaptation {
   return new SceneAdaptation({
     baseExposure: () => base,
     reduced: () => reduced,
+    measurementReady: () => measurementReady,
     whitePoint: () => whitePoint,
   });
 }
@@ -74,6 +76,7 @@ beforeEach(() => {
   reduced = null;
   base = BASE_EXPOSURE;
   whitePoint = tonemapWhitePoint();
+  measurementReady = true;
 });
 
 describe('SceneAdaptation', () => {
@@ -252,6 +255,17 @@ describe('SceneAdaptation — the measurement park', () => {
     reduced = darkLanding();
     step(adaptation);
     expect(adaptation.getParkPhase()).toBe('parked');
+  });
+
+  it('waits for a frame the reduction can draw before opening the probe', () => {
+    const adaptation = makeAdaptation();
+    parkIt(adaptation);
+    measurementReady = false;
+    idle(adaptation, 4 * ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.getParkPhase()).toBe('parked');
+    measurementReady = true;
+    step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('probing');
   });
 
   it('unparks on a bright probe landing and slews from zero', () => {

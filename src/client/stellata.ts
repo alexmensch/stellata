@@ -571,6 +571,7 @@ export class Stellata implements FrameAnchor {
     this.adaptation = new SceneAdaptation({
       baseExposure: () => exposureForMagLimit(this.exposure.getLimitMag()),
       reduced: () => this.reduction.current(),
+      measurementReady: () => !this.reduction.readbackPending,
       whitePoint: () => this.hdr.emitterUniforms.uWhitePoint.value,
     });
     // Kind-module attach, in roster order. Each returned scene layer
@@ -2150,7 +2151,11 @@ export class Stellata implements FrameAnchor {
       this.filter.chart, nowMs, this.frameCtx.warpActive,
     );
     this.exposure.setAdaptation(appliedDm);
-    this.hdr.setStatisticWritesParked(this.adaptation.isMeasurementParked());
+    // One read for both halves of the park: the writes this frame draws and
+    // the chain that reduces what they wrote have to gate together, or the
+    // frame pays one without the other.
+    const measurementParked = this.adaptation.isMeasurementParked();
+    this.hdr.setStatisticWritesParked(measurementParked);
     // A moved cut changes the next frame's scene, so a slew in flight
     // must keep frames coming until it snaps — the gate cannot see it
     // otherwise.
@@ -2181,7 +2186,7 @@ export class Stellata implements FrameAnchor {
     // inside the slew (hdr/exposure/reduction/README.md § Latency).
     perfMark('submit.reduction');
     perfGpuBegin('reduction');
-    this.measureAdaptationStatistic();
+    this.measureAdaptationStatistic(measurementParked);
     perfGpuEnd('reduction');
     perfMeasure('submit.reduction');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
@@ -2196,7 +2201,7 @@ export class Stellata implements FrameAnchor {
   /** Reduce the statistic attachment the frame just wrote. Chart and the
    *  fallback path render nothing into it, so the reduction is dropped
    *  rather than run over a stale attachment. */
-  private measureAdaptationStatistic() {
+  private measureAdaptationStatistic(parked: boolean) {
     const statistic = this.hdr.statisticTexture();
     if (statistic === null) {
       this.reduction.reset();
@@ -2207,7 +2212,7 @@ export class Stellata implements FrameAnchor {
       this.renderer, statistic,
       this.drawingBufferSize.x, this.drawingBufferSize.y,
       this.hdr.emitterUniforms.uExposure.value,
-      this.adaptation.isMeasurementParked(),
+      parked,
     );
   }
 

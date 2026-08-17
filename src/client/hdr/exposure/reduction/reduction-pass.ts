@@ -98,13 +98,21 @@ export class LuminanceReduction {
     return this.readback?.requestsIssued ?? 0;
   }
 
+  /** A readback in flight, so `measure()` will do no GPU work this frame
+   *  whatever it is passed. The adaptation park reads it to open a probe
+   *  on a frame the chain can actually draw (`../README.md` § Parking the
+   *  measurement). */
+  get readbackPending(): boolean {
+    return this.readback?.pending ?? false;
+  }
+
   measure(
     renderer: THREE.WebGLRenderer,
     source: THREE.Texture | null,
     width: number,
     height: number,
     renderExposure: number,
-    parked = false,
+    parked: boolean,
   ): void {
     this.poll();
     const gl = renderer.getContext() as WebGL2RenderingContext;
