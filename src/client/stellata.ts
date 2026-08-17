@@ -48,11 +48,10 @@ import { exposureCutMoved } from './render-gate/render-gate-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import {
   angularToPx as angularToPxPure,
-  discHitRadiusPx,
   type ResolvedCandidate,
 } from './camera/controls/star-geometry';
 import * as starPhysics from './camera/controls/star-physics';
-import { emitterPutsInkOnScreen } from './hdr/exposure/emitter-visibility-pure';
+import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
 import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
@@ -651,6 +650,7 @@ export class Stellata implements FrameAnchor {
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
       renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
+      getSuppressPulsation: () => this._suppressPulsation,
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveStarPick: (idx) => this.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
@@ -1543,7 +1543,6 @@ export class Stellata implements FrameAnchor {
    *  readback, so it runs per pick candidate and never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
-    const avMag = this.extinctionAvMagFor(idx);
     const c = starPhysics.renderedSizeComponents({
       catalog: this.catalog,
       idx,
@@ -1552,30 +1551,20 @@ export class Stellata implements FrameAnchor {
       uniforms: this.sharedUniforms,
       filter: this.filter,
       suppressPulsation: this._suppressPulsation,
-      extinctionAvMag: avMag,
+      extinctionAvMag: this.extinctionAvMagFor(idx),
     }, this.pickSizeScratch);
-
-    if (this.filter.chart) {
-      // Chart inherits no exposure state and hard-clips at the
-      // instrument limit; its ink is the flat disc, not the HDR kernel.
-      return {
-        visible: c.appMag <= this.exposure.getLimitMag(),
-        hitRadius: discHitRadiusPx(this.chartDiscPxFor(c.appMag)),
-      };
-    }
-
-    const pxSize = Math.max(c.appSizePx, c.physSizePx);
-    return {
-      visible: emitterPutsInkOnScreen({
-        appMag: c.appMag,
-        exposure: this.hdr.emitterUniforms.uExposure.value,
-        thresholdMag: this.exposure.getThresholdMag(),
-        physRadiusPx: 0.5 * c.physSizePxUncapped,
-        whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
-        tapered: c.physSizePx < PHYS_RATIO_THRESHOLD * Math.max(pxSize, 0.001),
-      }),
-      hitRadius: discHitRadiusPx(pxSize),
-    };
+    return resolveStarPickVisibility({
+      focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
+      eclipseDim: this._eclipseDim[idx],
+      chartDiscPx: this.filter.chart ? this.chartDiscPxFor(c.appMag) : null,
+      limitMag: this.exposure.getLimitMag(),
+      components: c,
+      appSizePxForMag: (m) =>
+        starPhysics.appSizePxForMag(m, this.filter, this.sharedUniforms.uSizeKnee.value),
+      exposure: this.hdr.emitterUniforms.uExposure.value,
+      thresholdMag: this.exposure.getThresholdMag(),
+      whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
+    });
   }
 
   /** User-facing extinction multiplier scaling the A_V re-added on top of

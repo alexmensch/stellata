@@ -551,11 +551,13 @@ const DEG = Math.PI / 180;
 const EARTH_GRAV_PARAM_GM = SOL_PLANETS.find((p) => p.name === 'Earth')!.gravParamGM!;
 
 /** Sol's orbitGeometryAt — planets from the live Standish elements
- *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS (J2000
- *  osculating, no secular terms — constant in `t`, matching the
- *  resolver that positions them), in SOL_BODIES order. The Moon is the
- *  exception on both counts: its ring is the osculating ellipse through
- *  the lunar theory's own state, because that is what positions it. */
+ *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS through
+ *  `keplerMoonAnglesAt`, the same helper that positions them, in
+ *  SOL_BODIES order. Those elements are J2000 osculating, so most rows
+ *  are constant in `t` — but not all: Triton's node precesses, and its
+ *  ring has to precess with it. The Moon is the exception on both
+ *  counts: its ring is the osculating ellipse through the lunar
+ *  theory's own state, because that is what positions it. */
 export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
   const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
     ...s,

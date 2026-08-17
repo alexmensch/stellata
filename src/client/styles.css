@@ -1378,13 +1378,13 @@ body.monochrome #con-results {
 }
 
 /* ---- Chart-mode labels ---- */
-/* Single SVG <g id="chart-labels"> container holds every dynamic label
-   rendered while chart mode is active. Outside chart mode the layer is
-   hidden via display:none from chart-labels.ts; CSS only defines the
-   rest pose. The paint-order: stroke + white halo gives the labels a
-   paper-chart legibility against the beige background even when they
-   land over a star glyph. */
-#chart-labels {
+/* The .chart-label-layer groups (#chart-con-labels, #chart-labels) hold
+   every dynamic label rendered while chart mode is active. Outside chart
+   mode both are hidden via display:none from chart-labels.ts; CSS only
+   defines the rest pose. The paint-order: stroke + white halo gives the
+   labels a paper-chart legibility against the beige background even when
+   they land over a star glyph. */
+.chart-label-layer {
   font-family: var(--font-ui, system-ui, sans-serif);
   fill: #000;
   stroke: rgba(255, 255, 255, 0.9);
@@ -1393,11 +1393,11 @@ body.monochrome #con-results {
   pointer-events: none;
   letter-spacing: 0.02em;
 }
-#chart-labels .chart-label.kind-name {
+.chart-label-layer .chart-label.kind-name {
   font-size: 11.5px;
   font-weight: 500;
 }
-#chart-labels .chart-label.kind-bayer {
+.chart-label-layer .chart-label.kind-bayer {
   font-size: 11px;
 }
 /* Constellation Latin labels are large overlay typography à la Sky Atlas
@@ -1405,8 +1405,9 @@ body.monochrome #con-results {
    over star fields without collision. The .chart-label.kind-con elements
    bypass the engine's collision pass entirely; they always render and
    yield to nothing. The halo is suppressed so the type reads as
-   transparent ink rather than competing with star-name labels. */
-#chart-labels .chart-label.kind-con {
+   transparent ink rather than competing with star-name labels — which is
+   also why they get their own, earlier-painting group. */
+.chart-label-layer .chart-label.kind-con {
   font-size: 36px;
   font-weight: 700;
   letter-spacing: 0.22em;
@@ -1414,13 +1415,13 @@ body.monochrome #con-results {
   fill: rgba(0, 0, 0, 0.18);
   stroke: none;
 }
-#chart-labels .chart-label.kind-cloud {
+.chart-label-layer .chart-label.kind-cloud {
   font-size: 10.5px;
   font-style: italic;
 }
 /* Planet names read like proper-named stars — the disc is the same
    magnitude-driven ink, so the label is the only planet marker. */
-#chart-labels .chart-label.kind-planet {
+.chart-label-layer .chart-label.kind-planet {
   font-size: 11.5px;
   font-weight: 500;
 }

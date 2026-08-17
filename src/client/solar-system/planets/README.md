@@ -31,6 +31,11 @@ src/client/solar-system/planets/
                                   Shares the glow half of perceptual-disc.glsl
                                   with stars — see
                                   ../../star-pipeline/README.md.
+                                  pick() adds one gate over
+                                  forEachDrawnBodyView: bodyInkVisible,
+                                  which reads the LIVE uExposure so the
+                                  adaptation cut reaches the pick (§ The
+                                  pick's adapted gate).
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
                                   verdict (drawn this frame AND within
@@ -47,7 +52,11 @@ src/client/solar-system/planets/
                                   size accessors keyed on the flat index.
                                   uHideIdx (one uniform shared by both
                                   glare passes) hides the observe-anchor
-                                  body via setHiddenInstance.
+                                  body via setHiddenInstance;
+                                  forEachDrawnBodyView skips that instance
+                                  too, so the body the camera is parked at
+                                  is unpickable rather than invisible and
+                                  clickable.
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD. Owns the shared
                                   atmosphere uniform block
@@ -174,6 +183,31 @@ halo and the z-buffer natively orders ring↔body, moon↔planet,
 transits, and near-side orbit-ring arcs (`../../local-depth/README.md`).
 Distant, not-locally-active bodies draw in the main pass as a faint
 additive point that needs no depth occlusion (like a star).
+
+## The pick's adapted gate
+
+`forEachDrawnBodyView` gates on `drawCutoffMag`, which deliberately
+**excludes** the per-frame adaptation cut — every cached consumer of it
+would thrash on a value that moves each frame
+(`../../hdr/exposure/README.md`). A pick caches nothing: it runs on a
+pointer event, walks the hosts fresh and discards everything, so it can
+read the live `uExposure` — and must, or a parked body blacks out the
+whole faint end while leaving every one of those bodies clickable.
+
+`bodyInkVisible` is that extra gate, and it is the star pipeline's own
+test: the glare IS the shared star-perceptual point (`glare/README.md`),
+so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
+true because a body carries no opaque disc pass. The mesh OR-branch is
+`forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
+any exposure, which is why a **parked** body always picked correctly and
+the gap only ever showed on a distant faint one.
+
+**Chart adds no test of its own here.** It inherits no exposure state, and
+`drawCutoffMag` already hard-clips it at the instrument limit upstream, so
+every body reaching this gate in chart mode has passed that clip — the
+branch returns true rather than restating it. Both gates read the one
+`PlanetView.physDiscPx`, derived in `evalPlanetView`, so the
+mesh-presence measure has a single source.
 
 ## True-eclipse dim
 

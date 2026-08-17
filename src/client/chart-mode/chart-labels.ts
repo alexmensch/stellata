@@ -14,9 +14,10 @@ import { limitMagOf } from '../filters/filter-state';
 // label (proper-named star, Bayer-letter star, constellation Latin name,
 // molecular cloud) through the camera, prioritises by (kind, brightness),
 // runs a greedy collision pass against an axis-aligned screen-rect index,
-// and writes the survivors into a single `<g id="chart-labels">` SVG
-// container. Unused `<text>` elements are pooled across frames — adding /
-// removing nodes is free as long as we cap reuse.
+// and writes the survivors into the `<g id="chart-labels">` SVG container
+// (`<g id="chart-con-labels">` for the Latin names). Unused `<text>`
+// elements are pooled across frames — adding / removing nodes is free as
+// long as we cap reuse.
 //
 // Constellation Latin names are placed first (priority 0) so they survive
 // every collision. Stars + Bayer + cloud labels then fill the remaining
@@ -116,14 +117,20 @@ interface PooledLine {
   lastY: number; // y1 and y2 are equal — wings are horizontal
 }
 
-function ensureLayer(id: string): SVGGElement {
-  const existing = document.getElementById(id) as SVGGElement | null;
-  if (existing) return existing;
-  const overlay = document.getElementById('overlay') as unknown as SVGSVGElement;
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('id', id);
-  overlay.appendChild(g);
-  return g;
+const CON_LAYER_ID = 'chart-con-labels';
+const LABEL_LAYER_ID = 'chart-labels';
+const GLYPH_LAYER_ID = 'chart-glyphs';
+// Paint order, front-most last: index.html must declare the groups in this
+// sequence, ahead of the HUD stack. `chart-labels.test.ts` pins the markup
+// against it.
+export const CHART_LAYER_IDS = [CON_LAYER_ID, LABEL_LAYER_ID, GLYPH_LAYER_ID] as const;
+
+// Minting a missing group here would append it last and silently undo the
+// order above.
+function layerById(id: string): SVGGElement {
+  const el = document.getElementById(id) as SVGGElement | null;
+  if (!el) throw new Error(`chart-labels: missing SVG group #${id} in index.html`);
+  return el;
 }
 
 interface ConMembership {
@@ -182,6 +189,7 @@ export class ChartLabels {
   private readonly stellata: Stellata;
   private ctx: ChartModeContext | null = null;
   private layer: SVGGElement | null = null;
+  private conLayer: SVGGElement | null = null;
   private glyphLayer: SVGGElement | null = null;
   private conStars: Map<number, ConMembership> | null = null;
   private variableIdxs: number[] | null = null;
@@ -254,12 +262,10 @@ export class ChartLabels {
   start(ctx: ChartModeContext): void {
     if (this.running) return;
     this.ctx = ctx;
-    const layer = ensureLayer('chart-labels');
-    const glyphLayer = ensureLayer('chart-glyphs');
-    this.layer = layer;
-    this.glyphLayer = glyphLayer;
-    layer.style.display = '';
-    glyphLayer.style.display = '';
+    this.conLayer = layerById(CON_LAYER_ID);
+    this.layer = layerById(LABEL_LAYER_ID);
+    this.glyphLayer = layerById(GLYPH_LAYER_ID);
+    this.forEachLayer((g) => { g.style.display = ''; });
 
     const stellata = this.stellata;
     if (!this.conStars) this.conStars = buildConstellationMembership(stellata);
@@ -309,19 +315,19 @@ export class ChartLabels {
     this.eligibleDirty = true;
   }
 
+  private forEachLayer(fn: (g: SVGGElement) => void): void {
+    for (const g of [this.conLayer, this.layer, this.glyphLayer]) if (g) fn(g);
+  }
+
   stop(): void {
     if (!this.running) return;
     for (const unsub of this.unsubs) unsub();
     this.unsubs = [];
     this.ctx = null;
-    if (this.layer) {
-      this.layer.style.display = 'none';
-      while (this.layer.firstChild) this.layer.removeChild(this.layer.firstChild);
-    }
-    if (this.glyphLayer) {
-      this.glyphLayer.style.display = 'none';
-      while (this.glyphLayer.firstChild) this.glyphLayer.removeChild(this.glyphLayer.firstChild);
-    }
+    this.forEachLayer((g) => {
+      g.style.display = 'none';
+      while (g.firstChild) g.removeChild(g.firstChild);
+    });
     this.pool.clear();
     this.ringPool.clear();
     this.wingPool.clear();
@@ -334,6 +340,7 @@ export class ChartLabels {
   dispose(): void {
     this.stop();
     this.layer = null;
+    this.conLayer = null;
     this.glyphLayer = null;
     this.conStars = null;
     this.variableIdxs = null;
@@ -372,9 +379,10 @@ export class ChartLabels {
     ctx: ChartModeContext,
     conStars: Map<number, ConMembership>,
   ): void {
-    const { layer, glyphLayer, stellata } = this;
-    if (!layer || !glyphLayer) return;
+    const { layer, conLayer, glyphLayer, stellata } = this;
+    if (!layer || !conLayer || !glyphLayer) return;
     const labelLayer = layer;
+    const conLabelLayer = conLayer;
     const glyphs = glyphLayer;
     const f = stellata.filters.getFilter();
     const camera = stellata.camera;
@@ -639,11 +647,12 @@ export class ChartLabels {
       used.add(cand.key);
       let p = this.pool.get(cand.key);
       if (!p) {
+        const isCon = cand.kind === 'con';
         const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         el.setAttribute('class', `chart-label kind-${cand.kind}`);
-        el.setAttribute('text-anchor', cand.kind === 'con' ? 'middle' : 'start');
+        el.setAttribute('text-anchor', isCon ? 'middle' : 'start');
         el.setAttribute('dominant-baseline', 'central');
-        labelLayer.appendChild(el);
+        (isCon ? conLabelLayer : labelLayer).appendChild(el);
         p = { el, width: 0, height: 0, lastX: -Infinity, lastY: -Infinity };
         this.pool.set(cand.key, p);
       }
@@ -653,7 +662,7 @@ export class ChartLabels {
     }
     for (const [key, p] of this.pool) {
       if (!used.has(key)) {
-        labelLayer.removeChild(p.el);
+        p.el.remove();
         this.pool.delete(key);
       }
     }

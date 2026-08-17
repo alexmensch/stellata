@@ -14,6 +14,16 @@ export const RESOLVED_DISC_MIN_PX = 5;
  *  physSize ≥ this fraction of its final quad size. */
 export const PHYS_RATIO_THRESHOLD = 0.5;
 
+/** The pass split itself, with no size floor: true when the opaque disc
+ *  pass owns the star, false when the glow pass does. Mirrors
+ *  `star.frag.glsl`'s `vPhysRatio` test on the same
+ *  `pxSize = max(appSize, physSize)` the vertex stage divides by. The one
+ *  CPU mirror of that split — the local-depth membership test below and
+ *  the pick gate's taper / eclipse-dim branches all read it. */
+export function isDiscDominant(appSizePx: number, physSizePx: number): boolean {
+  return physSizePx >= PHYS_RATIO_THRESHOLD * Math.max(appSizePx, physSizePx);
+}
+
 /** True when the star renders as a disc-pass quad at least `minPx`
  *  wide — the local-depth membership trigger (a glow-pass star writes
  *  no depth, so it has nothing for the bracket to fix). */
@@ -22,8 +32,8 @@ export function isResolvedDiscStar(
   physSizePx: number,
   minPx: number = RESOLVED_DISC_MIN_PX,
 ): boolean {
-  const pxSize = Math.max(appSizePx, physSizePx);
-  return physSizePx >= PHYS_RATIO_THRESHOLD * pxSize && pxSize >= minPx;
+  return isDiscDominant(appSizePx, physSizePx)
+    && Math.max(appSizePx, physSizePx) >= minPx;
 }
 
 /** Camera-distance bound: past this range not even the catalog's
