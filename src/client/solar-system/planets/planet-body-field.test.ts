@@ -988,6 +988,40 @@ describe('PlanetBodyField.pick', () => {
     f.dispose();
   });
 
+  // The observe anchor is the planet analogue of the star field's
+  // uHideFocusIdx: both glare passes collapse the instance and the mesh
+  // layer skips it, so the body the camera is parked at draws nothing while
+  // sitting dead centre of the screen. The probe field's picker already
+  // honoured its own hide slot through `visible`; this one did not.
+  it('the observe-anchor body is unpickable while hidden', () => {
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [makePlanet({ radiusKm: 6000, semiMajorAxisAu: 1, eccentricity: 0, albedo: 0.9 })],
+        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = -1 * AU_PC; },
+      },
+      4.83, R_SUN_PC, new THREE.Vector3(0, 0, 0), 0, 0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (f as any).hosts.get(0)!.orientation.identity();
+    const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    f.update(camera, 0, 0);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
+
+    f.setHiddenInstance(0);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
+
+    f.setHiddenInstance(-1);
+    expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
+    f.dispose();
+  });
+
   // uExposure carries the per-frame adaptation cut; drawCutoffMag
   // deliberately does not, because its cached consumers would thrash on a
   // per-frame value. A pick caches nothing, so it reads the live exposure

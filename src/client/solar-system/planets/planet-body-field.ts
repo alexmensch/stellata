@@ -1056,6 +1056,11 @@ export class PlanetBodyField {
    * body out of the occluder set, so the star it hides kept its full
    * flux in the adaptation statistic. The whole field is skipped while it
    * renders nothing at all.
+   *
+   * The observe anchor outranks both paths: `uHideIdx` collapses the body
+   * in either glare pass and the mesh layer skips the same instance, so
+   * the body the camera is parked at draws nothing anywhere while sitting
+   * dead centre of the screen.
    */
   private forEachDrawnBodyView(
     cameraPosLocal: Readonly<THREE.Vector3>,
@@ -1063,8 +1068,10 @@ export class PlanetBodyField {
   ): void {
     if (this.hidden) return;
     const cutoff = this.drawCutoffMag();
+    const hiddenInstance = this.hideIdxUniform.value;
     for (const host of this.hosts.values()) {
       for (let i = 0; i < host.count; i++) {
+        if (host.startInstance + i === hiddenInstance) continue;
         const view = this.evalPlanetView(host, i, cameraPosLocal);
         if (view.dVp <= 0) continue;
         if (view.appMag > cutoff

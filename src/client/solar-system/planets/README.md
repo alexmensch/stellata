@@ -52,7 +52,11 @@ src/client/solar-system/planets/
                                   size accessors keyed on the flat index.
                                   uHideIdx (one uniform shared by both
                                   glare passes) hides the observe-anchor
-                                  body via setHiddenInstance.
+                                  body via setHiddenInstance;
+                                  forEachDrawnBodyView skips that instance
+                                  too, so the body the camera is parked at
+                                  is unpickable rather than invisible and
+                                  clickable.
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD. Owns the shared
                                   atmosphere uniform block
