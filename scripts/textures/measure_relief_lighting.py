@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""What the relief terms light: ground past the terminator against the exact
-horizon, and the disc integral against phase. Manual, run by hand; method and
-results in data/textures/README.md § Cast shadows."""
+"""What the relief terms light: ground past the terminator against the same
+march at full DEM width, and the disc integral against phase. Manual, run by
+hand; method and results in data/textures/README.md § Cast shadows."""
 
 import sys
 from pathlib import Path
@@ -10,12 +10,7 @@ import numpy as np
 from PIL import Image
 
 from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals
-from horizon_map import (
-    HORIZON_AZIMUTHS,
-    HORIZON_SIN_RANGE,
-    decode_horizon_sin,
-    horizon_angles,
-)
+from horizon_map import HORIZON_AZIMUTHS, decode_horizon_sin, horizon_angles
 
 TEXTURES = Path(__file__).resolve().parents[2] / "data" / "textures"
 BINS = ((0, 2), (2, 5), (5, 10), (10, 20))
@@ -29,30 +24,27 @@ LIMB_FLOOR = 0.45
 LIMB_EXP = 0.5
 TERM_SOFTNESS_FLOOR = 1e-4
 
-# Sun in the body's equatorial plane, so its bearing at every texel near the
-# terminator is due east or west — one of the stored azimuths. That isolates
-# the map's WIDTH and encoding from its azimuth resolution, which is measured
-# separately (README.md § Cast shadows).
-EAST_CHANNEL = 0
-WEST_CHANNEL = 4
-
 
 def _smoothstep(a, b, x):
     t = np.clip((x - a) / (b - a), 0, 1)
     return t * t * (3 - 2 * t)
 
 
-def _shipped_horizon_sin(body: str, channel: int) -> np.ndarray:
-    half = "a" if channel < 4 else "b"
-    plane = np.asarray(
-        Image.open(TEXTURES / f"{body}-horizon-{half}.webp").convert("RGBA")
-    )
-    enc = plane[..., channel % 4].astype(np.float32) / 255.0
-    return (enc * 2 - 1) * HORIZON_SIN_RANGE
-
-
 def _upsample(a: np.ndarray, factor: int) -> np.ndarray:
     return np.repeat(np.repeat(a, factor, 0), factor, 1)
+
+
+def _horizon_gate(
+    planes: np.ndarray, sun_east: np.ndarray, sun_north: np.ndarray, factor: int
+) -> np.ndarray:
+    """Skyline sine per DEM texel: the shipped planes decoded at their own
+    resolution against the sun's bearing there, then repeated back up."""
+    return _upsample(
+        decode_horizon_sin(
+            planes, sun_east[::factor, ::factor], sun_north[::factor, ::factor]
+        ),
+        factor,
+    )
 
 
 def _shipped_planes(body: str) -> np.ndarray:
@@ -85,8 +77,7 @@ def _tangent_frame(lat: np.ndarray, lon: np.ndarray):
 def _dayside(sun_cos: np.ndarray) -> np.ndarray:
     """The shader's airless direct term, on whichever cosine it is handed."""
     w = TERM_SOFTNESS_FLOOR
-    t = np.clip((sun_cos + w) / (2 * w), 0, 1)
-    return t * t * (3 - 2 * t) * np.maximum(sun_cos, w)
+    return _smoothstep(-w, w, sun_cos) * np.maximum(sun_cos, w)
 
 
 def phase_curve(body: str) -> None:
@@ -121,13 +112,11 @@ def phase_curve(body: str) -> None:
         limb = LIMB_FLOOR + (1 - LIMB_FLOOR) * np.power(np.maximum(ndotv, 0), LIMB_EXP)
         weight = np.where(visible, area * np.maximum(ndotv, 0) * limb, 0.0)
         sun_cos = up @ sun
-        gate = decode_horizon_sin(
-            planes, (east @ sun)[::factor, ::factor], (north @ sun)[::factor, ::factor]
-        )
+        gate = _horizon_gate(planes, east @ sun, north @ sun, factor)
         lit_by = {
             "smooth": _dayside(sun_cos),
             "relief": _dayside(facet @ sun),
-            "horizon": _dayside(facet @ sun) * (sun_cos > _upsample(gate, factor)),
+            "horizon": _dayside(facet @ sun) * (sun_cos > gate),
         }
         total = {k: float((v * weight).sum()) for k, v in lit_by.items()}
         dmag = {
@@ -160,21 +149,26 @@ def measure(body: str) -> None:
     full = np.sqrt(max(0.0, 1 - (r / summit) ** 2))
     none = np.sqrt(max(0.0, 1 - ((r + spec["span_m"][0]) / summit) ** 2))
 
-    shipped = _shipped_horizon_sin(body, EAST_CHANNEL)
-    factor = w // shipped.shape[1]
-    sin_map = np.where(
-        sun_east >= 0,
-        _upsample(shipped, factor),
-        _upsample(_shipped_horizon_sin(body, WEST_CHANNEL), factor),
-    )
-    exact = horizon_angles(elev, spec, 2)
-    sin_true = np.sin(np.where(sun_east >= 0, exact[..., 0], exact[..., 1]))
-    del exact
+    # Due east/west is deliberate, not an approximation of the true bearing:
+    # the sun sits in the equatorial plane, so at the terminator that IS the
+    # bearing, and landing on a stored azimuth with zero interpolation weight
+    # holds width and encoding under test without azimuth count — which is
+    # measured separately, and lets the reference stand on two azimuths.
+    planes = _shipped_planes(body)
+    factor = w // planes.shape[1]
+    due_east = np.where(sun_east >= 0, 1.0, -1.0) * np.ones_like(sun_up)
+    sin_map = _horizon_gate(planes, due_east, np.zeros_like(due_east), factor)
+    reference = horizon_angles(elev, spec, 2)
+    sin_ref = np.sin(np.where(sun_east >= 0, reference[..., 0], reference[..., 1]))
+    del reference
 
+    # The reference column is this same march at the DEM's own width, so it
+    # shares the algorithm's first-step floor rather than being ground truth —
+    # what it isolates is the cost of the OUTPUT grid and the encoding.
     columns = {
         "normal map only": facet_lit & (_smoothstep(-none, -full, sun_up) > 0),
         "+ horizon maps": facet_lit & (sun_up > sin_map),
-        "exact horizon": facet_lit & (sun_up > sin_true),
+        "full-DEM horizon": facet_lit & (sun_up > sin_ref),
     }
 
     keep = np.abs(np.degrees(lat[:, 0])) <= POLE_CUTOFF_DEG

@@ -234,15 +234,18 @@ def build_normal_map(name: str, relief: dict) -> None:
     if up_to_date(out_path, src_path, RELIEF_SCRIPT):
         print(f"  {name}-normal: up to date")
         return
-    rgb, relief[name] = surface_normals(read_frozen_dem(src_path), spec)
+    rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
+    # Merge, never replace: the two halves of a body's relief row are written by
+    # separate up-to-date gates, so either can be skipped while the other runs.
+    relief.setdefault(name, {}).update(stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
     # tilt on the Moon, which is most of the signal (README.md § Surface relief).
     Image.fromarray(rgb).save(out_path, "WEBP", lossless=True, method=6)
     kb = out_path.stat().st_size // 1024
     print(
         f"  {name}-normal: {rgb.shape[1]}x{rgb.shape[0]} -> {kb} KB, "
-        f"tilt median {relief[name]['medianTiltDeg']}deg "
-        f"p90 {relief[name]['p90TiltDeg']}deg"
+        f"tilt median {stats['medianTiltDeg']}deg "
+        f"p90 {stats['p90TiltDeg']}deg"
     )
 
 
