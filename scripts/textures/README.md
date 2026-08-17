@@ -8,7 +8,8 @@ live in `data/textures/README.md`; this folder owns the scripts.
   `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,
   Uranus/Neptune from authored ring tables at true opacity —
   `data/textures/README.md` § Ring strips — + the 4096-wide
-  `<body>-normal.webp` relief maps for the three bodies with a usable
+  `<body>-normal.webp` and paired 2048-wide `<body>-horizon-{a,b}.webp`
+  relief maps for the three bodies with a usable
   global DEM). Manual, infrequent
   (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
   mtime, per artifact, against its own sources and the helper module
@@ -33,6 +34,27 @@ live in `data/textures/README.md`; this folder owns the scripts.
   dimensions read from their WebP headers, and the +1 encoding of the
   unused third channel. Rationale: `data/textures/README.md`
   § Surface relief.
+- `horizon_map.py` — cast-shadow half of the build (imported by it):
+  per-texel skyline elevation in 8 azimuths, encoded as sines into the
+  two `<body>-horizon-{a,b}.webp` planes. Owns the exact spherical
+  elevation-angle geometry that makes the body's own limb an occluder,
+  the search arc that bounds it, and the encoding scale.
+  `horizon-map.test.ts` pins the azimuth count and that scale against
+  `surface-relief-pure.ts`, the search arc against the renderer's
+  fallback limb bound, and the manifest rows against the shipped
+  planes' own headers. Rationale: `data/textures/README.md`
+  § Cast shadows.
+- `measure_relief_lighting.py` — manual, run by hand, NOT part of the
+  build: reads the SHIPPED maps and reports how much ground each relief
+  term lights past the terminator against an exact per-texel horizon,
+  plus the disc integral against phase. The verification behind both
+  § Cast shadows and
+  `src/client/solar-system/planets/emission/README.md`; re-run it before
+  anything fits a phase curve.
+- `webp-header-pure.ts` — dimensions and the LFS-pointer check straight
+  out of a lossless WebP's own header, so an artifact pin reads the
+  artifact rather than the manifest beside it. Shared by both relief
+  test suites.
 - `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
   downloaded 0.5–2.0 GB global DEM → the frozen
   `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode

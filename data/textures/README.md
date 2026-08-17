@@ -7,15 +7,17 @@ folder:
 - `src/` — frozen source maps as downloaded, the frozen DEM reductions,
   plus the authored ring tables (LFS for the JPEGs and TIFFs; see
   `src/README.md` for the per-file provenance table).
-- `*.jpg` + `<body>-rings.png` + `<body>-normal.webp` (this level) — the
-  built runtime artifacts. Produced by
+- `*.jpg` + `<body>-rings.png` + `<body>-normal.webp` +
+  `<body>-horizon-{a,b}.webp` (this level) — the built runtime artifacts.
+  Produced by
   `scripts/textures/build-textures.py` (manual, infrequent — like the
   dust build); `scripts/textures/sync-textures.ts` mirrors them to
   `public/textures/` on every `pnpm run build` / `dev`. The colour maps
   and ring strips stay on regular git (each well under `data/README.md`'s
-  ~1 MB LFS threshold, ~8 MB in total); the **normal maps ride LFS**
-  (`data/textures/*.webp`) at 3.8–7.5 MB each, like `data/dust/`'s
-  chunks — same shape, a built artifact whose canonical home is here and
+  ~1 MB LFS threshold, ~8 MB in total); the **relief maps ride LFS**
+  (`data/textures/*.webp`) — normals at 3.8–7.5 MB each and a horizon
+  pair at 5.6–9.4 MB — like `data/dust/`'s
+  chunks: same shape, a built artifact whose canonical home is here and
   whose `public/` copy is a gitignored mirror.
 
 ## Artifact contract
@@ -145,6 +147,85 @@ block-compression work. When it lands, its elevation **must be clamped
 to ≥ 0 before differencing**: over water the visible surface is the sea
 surface, and shipping raw bathymetry as relief raises the measured p90
 from 0.93° to 1.37°, all of it wrong.
+
+## Cast shadows — DEM-derived horizon maps
+
+`<body>-horizon-a.webp` + `-b.webp` are a **pair of 2048×1024 lossless RGBA
+WebP** carrying, per texel, the elevation of the local skyline in **8
+azimuths** — the eight channels of the two files concatenated, azimuth 0 on
+east and running toward north. A normal map says which way the ground tilts;
+this says what the ground can *see*. `scripts/textures/horizon_map.py` owns
+the derivation, on the same three bodies and the same frozen DEMs.
+
+- **Encoded value is the SINE of the skyline elevation**, `sin/0.4` mapped
+  onto [0, 1] — the shader compares it against `dot(n, sunDir)`, so an
+  inverse trig per fragment would buy nothing. ±0.4 (±23.6°) covers the
+  measured range with 0.058 % of Moon texels clamped, all of them steep
+  walls seen at high sun; the negative half never comes close, because the
+  floor is the body's own limb bound (8.65° on the Moon).
+- **Saved with libwebp `exact=True`.** Without it libwebp is free to rewrite
+  RGB wherever alpha is 0, which here is one azimuth's skyline silently
+  overwriting three others.
+- **Both occluders in one number.** The elevation angle to a candidate
+  blocker is exact spherical geometry against the sample point's true local
+  horizontal, so it carries the `d²/2R` the ground drops away by. Over flat
+  ground at the reference sphere the answer is 0 — which *is* the statement
+  that the sun sets at the geometric terminator — and a crater wall reads as
+  a positive skyline on top. Omit the drop and the body's own limb blocks
+  nothing, which is the larger of the two terms.
+- **The search runs to `arccos(r_floor / r_summit)`** — 262 km on the Moon,
+  219 on Mercury, 446 on Mars. Not a cut-off: for the extremal pair (highest
+  summit over deepest floor) the elevation angle *peaks* exactly there and
+  every gentler pair peaks earlier, so nothing past it can win. It is the
+  same quantity as the renderer's fallback limb bound, and
+  `horizon-map.test.ts` pins the identity.
+- **The ray steps at the DEM's 4096 resolution however coarse the output
+  grid.** Stepping at the output texel loses the skyline's own curvature drop
+  over that first step — half an output texel of solar depression — which
+  measured as 15.8 % of area lit just past the terminator against a true
+  8.4 %.
+- Registered to the body's **colour** map, rolled exactly like the normal
+  map. Unlike the normal map there is **no ±85° cutoff**: the march walks
+  real geodesics and has no equirect derivative to degenerate.
+
+**Why 2048 and 8 azimuths — measured, not assumed.** The scoping guess was
+that a 512-wide map would do, on the grounds that the skyline signal lives at
+tens to hundreds of km. It does not: the limiting factor is how well the map
+knows the **elevation of the point it answers for**, because the limb term is
+a height effect and height varies at texel scale. Lit area 0–2° past the
+terminator, Moon, against an exact per-texel horizon at 8.4 %:
+
+| output width | 512 | 1024 | 2048 |
+|---|---|---|---|
+| lit area | 5.4 % | 7.2 % | 8.5 % |
+| pair size (Moon) | 0.8 MB | 2.7 MB | 9.4 MB |
+| VRAM, RGBA8 + mips | 1.4 MB | 5.6 MB | 22.4 MB |
+
+Azimuth count trades against width at a fixed byte budget, and loses. Linear
+interpolation between stored azimuths **over-shadows** — the skyline has
+narrow peaks, so averaging two neighbours over-estimates the gap between
+them — and at the worst-case bearing (exactly between two samples) the same
+0–2 % band reads 6.7 % at 8 azimuths and 4.2 % at 4. Four azimuths at 2048
+costs the same bytes as eight at 1024 and is worse than either. Sixteen would
+need four files; its mean skyline error is 0.11° against 0.32° for eight,
+which does not pay for the third and fourth texture fetch.
+
+That 22.4 MB per body sits on top of the normal map's 45 MB, so a session
+that visits all three relief bodies holds ~200 MB of texture — the same
+KTX2/Basis block-compression work that would let the normal maps reach 8192
+is what makes this cheap, and it supersedes the RG8 note above for both.
+
+**Verification** is `scripts/textures/measure_relief_lighting.py` (manual,
+needs the LFS objects): it reads the *shipped* artifacts, so it exercises the
+encoding, the channel packing and the search bound end to end, and prints both
+the lit-area table and the disc integral against phase. Shipped Moon numbers,
+sun in the equatorial plane:
+
+| solar depression | normal map only | + horizon maps | exact horizon |
+|---|---|---|---|
+| 0–2° | 38.7 % | 8.5 % | 8.4 % |
+| 2–5° | 17.7 % | 0.2 % | 0.2 % |
+| 5–10° | 6.7 % | 0.0 % | 0.0 % |
 
 ## Ring strips — true opacity and the 8-bit floor
 

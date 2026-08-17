@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 import { RELIEF_ELEV_SPAN_M } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
+import { isLfsPointer, webpSize } from './webp-header-pure';
 
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
@@ -70,25 +71,15 @@ const shippedNormalMaps = readdirSync(TEXTURES)
   .map((f) => f.replace('-normal.webp', ''))
   .sort();
 
-// Dimensions straight out of the lossless-WebP (VP8L) header, so the pin reads
-// the artifact rather than the manifest written beside it: 14-bit width-1 and
-// height-1 packed little-endian after the 0x2f signature byte.
-function webpSize(name: string): { width: number; height: number } {
-  const buf = readFileSync(resolve(TEXTURES, `${name}-normal.webp`));
-  expect(buf.subarray(0, 4).toString('ascii'), `${name} RIFF`).toBe('RIFF');
-  expect(buf.subarray(12, 16).toString('ascii'), `${name} lossless`).toBe('VP8L');
-  const bits = buf.readUInt32LE(21);
-  return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
-}
+const normalMap = (name: string) =>
+  readFileSync(resolve(TEXTURES, `${name}-normal.webp`));
 
 // These maps ride LFS, and the Unit tests job does not pull it — a checkout
 // without the objects leaves pointer stubs whose first bytes are text. Anything
 // reading pixels or headers self-skips there, the way the catalogue corpora do,
 // and says so rather than passing quietly.
 const mapsArePointers = shippedNormalMaps.some((name) =>
-  readFileSync(resolve(TEXTURES, `${name}-normal.webp`))
-    .subarray(0, 7)
-    .toString('ascii') === 'version',
+  isLfsPointer(normalMap(name)),
 );
 if (mapsArePointers) {
   console.warn(
@@ -194,7 +185,7 @@ describe('surface-relief normal maps', () => {
     // Read the shipped file's own header so the pin survives that.
     const width = Number(pySource.match(/DEM_TARGET_W = (\d+)/)![1]);
     for (const name of shippedNormalMaps) {
-      expect(webpSize(name), `${name} artifact`).toEqual({
+      expect(webpSize(normalMap(name), name), `${name} artifact`).toEqual({
         width,
         height: width / 2,
       });
