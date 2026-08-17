@@ -21,6 +21,10 @@ import { isLfsPointer, webpSize } from './webp-header-pure';
 // artifacts. Why it matters: data/textures/README.md § Cast shadows.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
+const MESH_FRAG = resolve(
+  __dirname,
+  '../../src/client/solar-system/planets/planet-mesh.frag.glsl',
+);
 const pySource = readFileSync(resolve(__dirname, 'horizon_map.py'), 'utf-8');
 const buildSource = readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8');
 
@@ -46,13 +50,17 @@ const HALVES = ['a', 'b'] as const;
 const planePath = (body: string, half: string) =>
   resolve(TEXTURES, `${body}-horizon-${half}.webp`);
 
-const shipped = [
-  ...new Set(
-    readdirSync(TEXTURES)
-      .filter((f) => /-horizon-[ab]\.webp$/.test(f))
-      .map((f) => f.replace(/-horizon-[ab]\.webp$/, '')),
-  ),
+const halvesOnDisk = readdirSync(TEXTURES).filter((f) =>
+  /-horizon-[ab]\.webp$/.test(f),
+);
+const bodiesWithAnyHalf = [
+  ...new Set(halvesOnDisk.map((f) => f.replace(/-horizon-[ab]\.webp$/, ''))),
 ].sort();
+/** Only bodies with BOTH halves, so nothing below reads a file that is not
+ *  there — a body holding one half is the assertion's job, not an ENOENT. */
+const shipped = bodiesWithAnyHalf.filter((body) =>
+  HALVES.every((half) => halvesOnDisk.includes(`${body}-horizon-${half}.webp`)),
+);
 
 const mapsArePointers = shipped.some((body) =>
   HALVES.some((half) => isLfsPointer(readFileSync(planePath(body, half)))),
@@ -68,12 +76,8 @@ describe('horizon maps', () => {
   it('ships both halves for exactly the relief bodies', () => {
     // Every azimuth or none: the shader interpolates across the seam between
     // the two planes, so a body with one is a body with a wrong skyline.
+    expect(bodiesWithAnyHalf).toEqual(shipped);
     expect(shipped).toEqual(Object.keys(RELIEF_ELEV_SPAN_M).sort());
-    for (const body of shipped) {
-      for (const half of HALVES) {
-        expect(() => readFileSync(planePath(body, half)), `${body}-${half}`).not.toThrow();
-      }
-    }
   });
 
   it('splits the azimuths evenly over the two planes', () => {
@@ -126,6 +130,16 @@ describe('horizon maps', () => {
     expect(pySource).toContain('elev = roll_to_map_centre(elev, spec)');
   });
 
+  it('merges both halves of a body relief row instead of replacing it', () => {
+    // The normal map and the horizon pair sit behind separate up-to-date gates
+    // with different dependency sets, so either can be skipped while the other
+    // runs. An assignment on either side drops the skipped half's stats from
+    // relief.json, and the manifest pins below are what would then fail.
+    expect(buildSource).toContain('relief.setdefault(name, {}).update(stats)');
+    expect(buildSource).toContain('relief.setdefault(name, {})["horizon"] = stats');
+    expect(buildSource).not.toMatch(/^\s*rgb, relief\[name\] = /m);
+  });
+
   it('writes the planes with libwebp exact, so alpha cannot eat RGB', () => {
     // Without it libwebp is free to rewrite RGB wherever alpha is 0, which here
     // is one azimuth's skyline silently overwriting three others.
@@ -166,6 +180,12 @@ describe('horizon maps', () => {
     const measure = readFileSync(resolve(__dirname, 'measure_relief_lighting.py'), 'utf-8');
     expect(measure).toContain(`LIMB_FLOOR = ${LIMB_FLOOR}`);
     expect(measure).toContain(`LIMB_EXP = ${LIMB_EXP}`);
+    // The third mirrored constant is a shader literal rather than a TS export,
+    // so it pins against the GLSL directly instead of an import.
+    const floor = measure.match(/^TERM_SOFTNESS_FLOOR = (\S+)$/m);
+    expect(floor, 'TERM_SOFTNESS_FLOOR').not.toBeNull();
+    expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
+      `max(uTermSoftness, ${floor![1]})`);
   });
 
   it.skipIf(mapsArePointers)('ships both planes at the declared width', () => {

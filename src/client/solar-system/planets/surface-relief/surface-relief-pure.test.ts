@@ -137,6 +137,13 @@ describe('the horizon lookup', () => {
     // defensive, and the same edge exists in the GLSL's fract().
     expect(horizonSin(enc, 1, -1e-30)).toBeCloseTo(decode(enc[0]), 12);
   });
+
+  it('answers on azimuth 0 with the sun at the local zenith', () => {
+    // Both components vanish there and the bearing is meaningless. atan2(0, 0)
+    // is 0 in JS but UNDEFINED in GLSL, where a NaN index would read off the
+    // end of the array — the shader guards to land on this same answer.
+    expect(horizonSin(enc, 0, 0)).toBeCloseTo(decode(enc[0]), 12);
+  });
 });
 
 // The shader is the render path and this module is only its mirror, so the
@@ -166,6 +173,39 @@ describe('the shader mirrors this frame', () => {
     expect(frag).toContain('float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a)');
     expect(frag).toContain('int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;');
     expect(frag).toContain('int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;');
+  });
+
+  it('keeps the zenith bearing defined, which GLSL atan does not', () => {
+    expect(frag).toContain(
+      'vec2 bearing = sunE == 0.0 && sunN == 0.0 ? vec2(1.0, 0.0) : vec2(sunE, sunN);');
+    expect(frag).toContain('atan(bearing.y, bearing.x)');
+  });
+});
+
+// Which bodies fetch relief planes and how far past the terminator the fallback
+// lights them are one question, so they read one table through one accessor —
+// otherwise every body on the approach lane pays 404s for maps only three have.
+describe('the layer gates every relief fetch on the span table', () => {
+  const layer = readFileSync(
+    fileURLToPath(new URL('../planet-mesh-layer.ts', import.meta.url)),
+    'utf8',
+  );
+
+  it('looks the table up in exactly one place', () => {
+    expect(layer.match(/RELIEF_ELEV_SPAN_M\[/g)).toHaveLength(1);
+    expect(layer).toContain('RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null');
+  });
+
+  it('fetches the normal map and both horizon halves behind that gate', () => {
+    expect(layer).toContain(
+      'const RELIEF_MAP_SUFFIXES = [RELIEF_SUFFIX, ...HORIZON_SUFFIXES] as const;');
+    expect(layer).toContain('if (reliefSpanOf(planet)) {');
+    expect(layer).toContain('for (const suffix of RELIEF_MAP_SUFFIXES) {');
+  });
+
+  it('raises uHasHorizonMap only with both halves ready', () => {
+    expect(layer).toContain(
+      "if (horizonA?.state === 'ready' && horizonB?.state === 'ready') {");
   });
 });
 
