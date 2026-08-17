@@ -200,8 +200,14 @@ so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
 true because a body carries no opaque disc pass. The mesh OR-branch is
 `forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
 any exposure, which is why a **parked** body always picked correctly and
-the gap only ever showed on a distant faint one. Chart inherits no
-exposure state and keeps its hard clip at the instrument limit.
+the gap only ever showed on a distant faint one.
+
+**Chart adds no test of its own here.** It inherits no exposure state, and
+`drawCutoffMag` already hard-clips it at the instrument limit upstream, so
+every body reaching this gate in chart mode has passed that clip — the
+branch returns true rather than restating it. Both gates read the one
+`PlanetView.physDiscPx`, derived in `evalPlanetView`, so the
+mesh-presence measure has a single source.
 
 ## True-eclipse dim
 

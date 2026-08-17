@@ -68,14 +68,18 @@ import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 export const BODY_COLLAPSE_THRESHOLD_PX = 6;
 
 /** One planet's per-frame view geometry: apparent magnitude, world-local
- *  position, and camera distance. Computed once by evalPlanetView and reused
- *  by the pick walk and the collapse test. */
+ *  position, camera distance, and true angular disc. Computed once by
+ *  evalPlanetView and reused by the pick walk and the collapse test. */
 interface PlanetView {
   appMag: number;
   planetX: number;
   planetY: number;
   planetZ: number;
   dVp: number;
+  /** True angular diameter in px, carrying no magnitude term — the
+   *  mesh-presence measure. Both draw gates and the pick's ink gate read
+   *  it, so it is derived here rather than at each of them. */
+  physDiscPx: number;
 }
 
 // Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
@@ -626,7 +630,10 @@ export class PlanetBodyField {
       radiusPc,
       phi,
     );
-    return { appMag, planetX, planetY, planetZ, dVp };
+    return {
+      appMag, planetX, planetY, planetZ, dVp,
+      physDiscPx: this.physDiscPx(radiusPc, dVp),
+    };
   }
 
   /** Read-only handle to the PlanetSystem the field has cached for a
@@ -790,9 +797,8 @@ export class PlanetBodyField {
     const host = this.hostOfInstance(instanceIdx);
     if (!host) return 0;
     const i = instanceIdx - host.startInstance;
-    const { dVp } = this.evalPlanetView(host, i, cameraPosLocal);
-    if (dVp <= 0) return 0;
-    return this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, dVp);
+    const { dVp, physDiscPx } = this.evalPlanetView(host, i, cameraPosLocal);
+    return dVp <= 0 ? 0 : physDiscPx;
   }
 
   /** True when the body currently renders as one on-screen point with
@@ -980,7 +986,7 @@ export class PlanetBodyField {
       // picker for a host, the parent planet's own candidacy for a
       // moon), so the member is not individually pickable.
       if (this.isViewCollapsedOntoParent(host, i, view, camera)) return;
-      if (!this.bodyInkVisible(host, i, view)) return;
+      if (!this.bodyInkVisible(view)) return;
 
       v.set(planetX, planetY, planetZ);
       const screen = projectToScreen(v, camera, viewportW, viewportH);
@@ -1025,17 +1031,18 @@ export class PlanetBodyField {
    * the shared star-perceptual point (`glare/README.md`). The mesh
    * OR-branch mirrors `forEachDrawnBodyView`'s — an opaque surface is
    * pickable whatever the exposure, which is why a parked body already
-   * picked correctly. Chart inherits no exposure state at all.
+   * picked correctly. Chart adds nothing: it inherits no exposure state,
+   * and `drawCutoffMag` has already applied its hard clip at the
+   * instrument limit, so anything reaching here has passed it.
    */
-  private bodyInkVisible(host: AttachedHost, i: number, view: PlanetView): boolean {
-    const physPx = this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, view.dVp);
-    if (physPx >= MESH_FADE_MIN_PX) return true;
-    if (this.mono) return view.appMag <= this.magShared.uLimitMag.value;
+  private bodyInkVisible(view: PlanetView): boolean {
+    if (view.physDiscPx >= MESH_FADE_MIN_PX) return true;
+    if (this.mono) return true;
     return emitterPutsInkOnScreen({
       appMag: view.appMag,
       exposure: this.magShared.uExposure.value,
       thresholdMag: this.magShared.uThresholdMag.value,
-      physRadiusPx: 0.5 * physPx,
+      physRadiusPx: 0.5 * view.physDiscPx,
       whitePoint: this.magShared.uWhitePoint.value,
       // The body carries no opaque disc pass — the glare is the additive
       // billboard alone, so the fragment taper always applies.
@@ -1074,10 +1081,7 @@ export class PlanetBodyField {
         if (host.startInstance + i === hiddenInstance) continue;
         const view = this.evalPlanetView(host, i, cameraPosLocal);
         if (view.dVp <= 0) continue;
-        if (view.appMag > cutoff
-          && this.physDiscPx(host.ps.planets[i].radiusKm * KM_PC, view.dVp) < MESH_FADE_MIN_PX) {
-          continue;
-        }
+        if (view.appMag > cutoff && view.physDiscPx < MESH_FADE_MIN_PX) continue;
         visit(host, i, view);
       }
     }
