@@ -356,6 +356,13 @@ crossfade.
   render the representative-colour + limb-darkening base path; there
   is no separate renderer for them. Textures load with
   `NoColorSpace` to match the pipeline's raw-framebuffer convention.
+  They decode through `ImageBitmapLoader` on `TEXTURE_DECODE_OPTIONS`,
+  never `TextureLoader`: the flip is baked into the bitmap and
+  `flipY` is off, so orientation never rests on the driver honouring
+  `UNPACK_FLIP_Y_WEBGL` — a map that arrives unflipped shades the
+  mirrored hemisphere and looks like nothing else is wrong. The same
+  options forbid premultiplication, which would let the horizon pair's
+  alpha-borne azimuth scale the other three.
   Either outcome resolving requests a frame (`ctx.requestRender`): a
   load landing between ticks changes what the body draws, and frames
   are on demand (`../../render-gate/README.md`).

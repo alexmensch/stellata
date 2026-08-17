@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
+import { TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -53,5 +54,28 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
     const src = read('./planet-mesh-layer.ts');
     expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
     expect(src).not.toContain('markStatisticEmitter');
+  });
+});
+
+// A map that arrives unflipped shades the mirrored hemisphere and changes
+// nothing else, so neither half of this pairing survives alone: the bitmap
+// carries the flip, and the texture must therefore not ask for one at upload.
+// Reverting to TextureLoader puts the flip back on UNPACK_FLIP_Y_WEBGL, which
+// is the step that failed in the wild.
+describe('planet maps decode with an explicit orientation', () => {
+  const src = read('./planet-mesh-layer.ts');
+
+  it('bakes the flip into the bitmap and disables the upload flip', () => {
+    expect(TEXTURE_DECODE_OPTIONS.imageOrientation).toBe('flipY');
+    expect(src).toContain('tex.flipY = false');
+    expect(src).not.toContain('new THREE.TextureLoader');
+  });
+
+  // The horizon pair's fourth and eighth azimuths ride the alpha channel
+  // (surface-relief/README.md), so a premultiplying decode scales the other
+  // three by a neighbouring azimuth's skyline.
+  it('never premultiplies and never converts colour space', () => {
+    expect(TEXTURE_DECODE_OPTIONS.premultiplyAlpha).toBe('none');
+    expect(TEXTURE_DECODE_OPTIONS.colorSpaceConversion).toBe('none');
   });
 });

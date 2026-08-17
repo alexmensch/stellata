@@ -209,6 +209,18 @@ const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
 
 type TextureExt = 'jpg' | 'png' | 'webp';
 
+/** Decode options for every planet map. `imageOrientation` bakes the flip into
+ *  the bitmap, so the upload never asks the driver for UNPACK_FLIP_Y_WEBGL —
+ *  which Chrome does not honour on all decode paths, and a map that arrives
+ *  unflipped shades the mirrored hemisphere with no other symptom.
+ *  `premultiplyAlpha: 'none'` is what keeps the horizon pair's fourth azimuth,
+ *  which rides the alpha channel, from scaling the other three. */
+export const TEXTURE_DECODE_OPTIONS = {
+  imageOrientation: 'flipY',
+  premultiplyAlpha: 'none',
+  colorSpaceConversion: 'none',
+} as const;
+
 type TextureState =
   | { state: 'loading' }
   /** `meanLuminance` is the map's sphere-weighted mean LINEAR luminance,
@@ -230,7 +242,8 @@ export class PlanetMeshLayer {
   private readonly hdr: HdrEmitterUniforms;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
-  private readonly loader = new THREE.TextureLoader();
+  private readonly loader = new THREE.ImageBitmapLoader()
+    .setOptions(TEXTURE_DECODE_OPTIONS);
   private readonly requestRender: () => void;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
@@ -778,15 +791,22 @@ export class PlanetMeshLayer {
     this.textures.set(key, { state: 'loading' });
     this.loader.load(
       `${this.textureBaseUrl}textures/${key}.${ext}`,
-      (tex) => {
+      (bitmap) => {
+        const tex = new THREE.Texture(bitmap);
+        // The bitmap already carries the flip (TEXTURE_DECODE_OPTIONS); a
+        // second one at upload would undo it.
+        tex.flipY = false;
         // Raw sRGB values, matching the pipeline's convention of
         // writing colours to the framebuffer without a colorspace
         // transform (star/planet shaders do the same).
         tex.colorSpace = THREE.NoColorSpace;
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
+        tex.needsUpdate = true;
+        // Orientation-invariant: the row weights are cos(latitude), even
+        // about the equator.
         const meanLuminance = measureMean
-          ? measureMapMeanLuminance(tex.image as TexImageSource)
+          ? measureMapMeanLuminance(bitmap)
           : null;
         this.resolveTexture(key, { state: 'ready', tex, meanLuminance });
       },
@@ -823,7 +843,10 @@ export class PlanetMeshLayer {
     }
     this.entries.clear();
     for (const t of this.textures.values()) {
-      if (t.state === 'ready') t.tex.dispose();
+      if (t.state !== 'ready') continue;
+      t.tex.dispose();
+      // Texture.dispose frees the GL object; the decoded bitmap is ours.
+      (t.tex.image as ImageBitmap | undefined)?.close?.();
     }
     this.textures.clear();
     this.geometry.dispose();
