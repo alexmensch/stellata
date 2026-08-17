@@ -151,7 +151,10 @@ the whole thing the fence exists to avoid.
 **One readback in flight.** A frame whose predecessor has not landed does
 no GPU work at all rather than queueing a second, so the measurement
 refreshes every other frame at worst (~33 ms at 60 Hz), and the chain's
-cost is paid on half the frames.
+cost is paid on half the frames. `readbackPending` exposes that state
+because the adaptation park has to respect it: a probe opened on a frame
+this class will sit out pays the statistic writes with nothing reducing
+what they wrote (`../README.md` § Parking the measurement).
 
 **Before the first one lands the statistic holds its last reading**, which
 on a cold start is zero — no cut. That direction is deliberate: the
