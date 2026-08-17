@@ -1,33 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { resolveStarPickVisibility } from './star-pick-visibility-pure';
-import type { RenderedSizeComponents } from './star-physics';
+import {
+  resolveStarPickVisibility,
+  type StarPickVisibilityArgs,
+} from './star-pick-visibility-pure';
+import { appSizePxForMag, type RenderedSizeComponents } from './star-physics';
+import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
 import { exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 
 // A comfortably-visible naked-eye star: glow-dominant (physSize far
 // under half the quad), a few magnitudes inside the threshold.
 const LIMIT_MAG = 6.5;
+
+// `discHitRadiusPx` floors at MIN_DISC_HIT_RADIUS_PX, so a quad under
+// 2 x that floor has no observable radius at all — which is every
+// glow-dominant star at DEFAULT_FILTER's placeholder sizeMax. The derived
+// sizeMax passes it in the PSF-dominated regime and under the star-size
+// exaggeration multiplier, and that is the only regime where the eclipse
+// dim can move a hit radius.
+const BIG_QUAD_FILTER = { ...DEFAULT_FILTER, sizeMin: 2, sizeMax: 40 };
+// The production curve rather than a stand-in, so the dim-shrinks-the-quad
+// cases below pin what the shader actually draws.
+const appSize = (m: number) => appSizePxForMag(m, BIG_QUAD_FILTER, STAR_RENDER_DEFAULTS.sizeKnee);
+
 function components(over: Partial<RenderedSizeComponents> = {}): RenderedSizeComponents {
   return {
     appMag: 2,
-    appSizePx: 8,
+    appSizePx: appSize(2),
     physSizePx: 1e-4,
     physSizePxUncapped: 1e-4,
     ...over,
   };
 }
 
-function args(over: Record<string, unknown> = {}) {
+function args(over: Partial<StarPickVisibilityArgs> = {}): StarPickVisibilityArgs {
   return {
     focalHidden: false,
     eclipseDim: 1,
     chartDiscPx: null,
     limitMag: LIMIT_MAG,
     components: components(),
+    appSizePxForMag: appSize,
     exposure: exposureForMagLimit(LIMIT_MAG),
     thresholdMag: LIMIT_MAG,
     whitePoint: 1,
     ...over,
-  } as Parameters<typeof resolveStarPickVisibility>[0];
+  };
 }
 
 describe('resolveStarPickVisibility / baseline', () => {
@@ -78,6 +95,33 @@ describe('resolveStarPickVisibility / eclipse dim', () => {
     expect(resolveStarPickVisibility(
       args({ components: marginal, eclipseDim: 0.001 }),
     ).visible).toBe(false);
+  });
+
+  // The shader folds the dim into appMag before deriving pxSize, so the
+  // quad shrinks as well as fading. Without the re-solve the pick kept its
+  // undimmed reach and clicks landed outside the drawn footprint.
+  it('shrinks the hit radius with the dim, not just the brightness', () => {
+    const undimmed = resolveStarPickVisibility(args()).hitRadius;
+    const dimmed = resolveStarPickVisibility(args({ eclipseDim: 0.05 })).hitRadius;
+    expect(dimmed).toBeLessThan(undimmed);
+    expect(dimmed).toBeGreaterThan(0);
+  });
+
+  it('leaves the hit radius alone when nothing is dimming the star', () => {
+    // eclipseDim = 1 must not route through the re-solve at all: the
+    // components' own appSizePx is what the frame drew.
+    const r = resolveStarPickVisibility(
+      args({ appSizePxForMag: () => { throw new Error('must not re-solve at dim = 1'); } }),
+    );
+    expect(r.hitRadius).toBeGreaterThan(0);
+  });
+
+  // A disc-dominant star never takes the dim, so its radius must not move
+  // either — the local depth pass orders the pair geometrically.
+  it('leaves a disc-dominant star its full radius at totality', () => {
+    const resolved = components({ appMag: -10, appSizePx: 12, physSizePx: 40, physSizePxUncapped: 40 });
+    expect(resolveStarPickVisibility(args({ components: resolved, eclipseDim: 0 })).hitRadius)
+      .toBe(resolveStarPickVisibility(args({ components: resolved })).hitRadius);
   });
 
   // star.vert.glsl gates the dim on uRenderMode == 0. A resolved pair

@@ -120,6 +120,11 @@ partial dim's magnitude penalty — in
 the dim to a disc-dominant star would hide one that is plainly on
 screen: its disc keeps drawing and the local depth pass orders the pair.
 
+The penalty lands on the pick's **radius** as well as its visibility: the
+shader folds the dim into `appMag` before deriving `pxSize`, so a dimmed
+glow quad is smaller as well as fainter, and a pick that kept the
+undimmed radius would accept clicks outside the drawn footprint.
+
 #### Pulsation gate for eclipsing binaries
 
 `iSuppressPulsation` is a per-instance flag built once at

@@ -165,6 +165,21 @@ export function activePulsationAmp(
   return suppressPulsation && suppressPulsation[idx] > 0.5 ? 0 : amp;
 }
 
+/** The perceptual, brightness-driven half of a star's quad size in px.
+ *  Split out of `renderedSizeComponents` because the pick path re-solves
+ *  it at the eclipse-dimmed magnitude: `star.vert.glsl` folds the dim into
+ *  `appMag` before deriving `pxSize`, so a dimmed star draws a smaller
+ *  quad and the pick radius has to follow. */
+export function appSizePxForMag(
+  appMag: number,
+  filter: Readonly<FilterState>,
+  sizeKnee: number,
+): number {
+  const sizeSpan = sizeSpanOf(filter);
+  const dMEff = perceptualDmEff(appMag, limitMagOf(filter), sizeSpan, sizeKnee);
+  return perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, sizeSpan);
+}
+
 export interface RenderedSizeComponents {
   /** Apparent magnitude incl. the pulsation modulation, and the dust
    *  term only when the caller supplied `extinctionAvMag`. */
@@ -226,9 +241,7 @@ export function renderedSizeComponents(
   // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local
   // reimplementation here previously hard-clamped brightness at sizeMax
   // and undersized the focus ring / pick radius on the brightest stars.
-  const sizeSpan = sizeSpanOf(filter);
-  const dMEff = perceptualDmEff(appMag, limitMagOf(filter), sizeSpan, u.uSizeKnee.value);
-  const appSize = perceptualAppSizePx(dMEff, filter.sizeMin, filter.sizeMax, sizeSpan);
+  const appSize = appSizePxForMag(appMag, filter, u.uSizeKnee.value);
 
   // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
   const physSizeTrue = physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor);

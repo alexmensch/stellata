@@ -1559,6 +1559,8 @@ export class Stellata implements FrameAnchor {
       chartDiscPx: this.filter.chart ? this.chartDiscPxFor(c.appMag) : null,
       limitMag: this.exposure.getLimitMag(),
       components: c,
+      appSizePxForMag: (m) =>
+        starPhysics.appSizePxForMag(m, this.filter, this.sharedUniforms.uSizeKnee.value),
       exposure: this.hdr.emitterUniforms.uExposure.value,
       thresholdMag: this.exposure.getThresholdMag(),
       whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,

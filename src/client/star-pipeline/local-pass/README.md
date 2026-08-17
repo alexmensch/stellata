@@ -21,7 +21,11 @@ bracket. Pass mechanics and the other member layers are
 - `star-local-cluster-pure.ts` — `isResolvedDiscStar` membership
   predicate + `discWindowPc` camera-window bound, shared with the
   core-mask gate via `RESOLVED_DISC_MIN_PX`. `PHYS_RATIO_THRESHOLD`
-  mirrors `star.frag.glsl`'s disc/glow split.
+  mirrors `star.frag.glsl`'s disc/glow split, and `isDiscDominant` is
+  that split as a predicate — the **one** CPU mirror of it. Membership
+  above is `isDiscDominant` plus the size floor; the star pick gate
+  (`../../camera/controls/star-pick-visibility-pure.ts`) reads it for
+  both its taper flag and its glow-pass-only eclipse dim.
 - `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-local-cluster.test.ts` (+ `-pure.test.ts`) — membership pins.
 
