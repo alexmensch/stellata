@@ -28,6 +28,11 @@ async function boot() {
     fail('WebGPU is not available in this browser — the spike (and the migration) require it.');
   }
 
+  console.info(
+    'wgslLanguageFeatures:',
+    [...((navigator.gpu as { wgslLanguageFeatures?: Set<string> }).wgslLanguageFeatures ?? [])],
+  );
+
   const uniforms = buildSpikeUniforms();
   const stars = makeSyntheticStars();
   const dustTex = makeSyntheticDust(

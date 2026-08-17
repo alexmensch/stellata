@@ -1,6 +1,6 @@
 // Raw-WGSL port of the star shader pair — same four depth-honest pipelines
 // as star-tsl.ts, with all logic in WGSL strings and TSL binding only I/O.
-// Varyings leave the vertex fn via ptr<function> out-params (./README.md).
+// Varyings exit via ptr<private> out-params — README.md § Files has why.
 
 import * as THREE from 'three/webgpu';
 import {
@@ -136,12 +136,12 @@ fn spikeStarVertex(
   dustSamp: sampler,
   lutTex: texture_2d<f32>,
   lutSamp: sampler,
-  outAppMag: ptr<function, f32>,
-  outColor: ptr<function, vec3f>,
-  outUv: ptr<function, vec2f>,
-  outPhysRatio: ptr<function, f32>,
-  outSoftness: ptr<function, f32>,
-  outPeakL: ptr<function, f32>,
+  outAppMag: ptr<private, f32>,
+  outColor: ptr<private, vec3f>,
+  outUv: ptr<private, vec2f>,
+  outPhysRatio: ptr<private, f32>,
+  outSoftness: ptr<private, f32>,
+  outPeakL: ptr<private, f32>,
 ) -> vec4f {
   let sentinel = vec4f(2.0, 2.0, 2.0, 1.0);
 

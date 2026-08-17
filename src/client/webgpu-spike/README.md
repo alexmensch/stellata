@@ -55,8 +55,13 @@ the inline undithered tone-map, the `uHdrTarget = 0` path), and the
   pass specialization is a JS-level constant, so each material compiles
   its own branch-free program).
 - `star-wgsl.ts` — raw-WGSL implementation (`wgslFn`); varyings leave
-  the vertex function through `ptr<function>` out-params because struct
-  returns from `wgslFn` are unproven in r185.
+  the vertex function through pointer out-params because struct returns
+  from `wgslFn` are unproven in r185. The address space must be
+  `ptr<private>`, not `ptr<function>`: three hoists vertex-stage
+  `.toVar()` vars to module scope (`var<private>`), so the generated
+  call site passes private-space pointers — which also makes the
+  variant depend on the `unrestricted_pointer_parameters` WGSL language
+  feature (the HUD boot log prints `wgslLanguageFeatures`).
 - `synthetic-stars.ts` — deterministic 50k-star field + scripted probes
   (Sol twin, 5 AU companion, supergiant, Mira) + encoded dust blob.
 - `main.ts` / `spike.html` — boot, controls, HUD, toggle keys.
