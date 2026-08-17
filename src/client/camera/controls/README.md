@@ -31,7 +31,10 @@ in both navigate and observe modes.
   `resolveStarPick`, which folds in the terms that magnitude cannot see —
   per-star dust extinction, the live adaptation cut, the faint-end toe —
   and reports both whether the frame renders the star and the disc radius
-  it actually draws. Prefiltering on the intrinsic value is sound only
+  it actually draws. The scan's bright-extreme reach for variables comes
+  from `activePulsationAmp`, the one CPU mirror of the shader's
+  `iSuppressPulsation` gate — an eclipser gets no reach, because its disc
+  never swings bright. Prefiltering on the intrinsic value is sound only
   because every omitted term dims (`../../hdr/exposure/README.md` § What
   "visible" means to a pick path); making it the *gate* is the bug that
   had clicks landing on stars in empty sky. The confirm step costs a GPU
@@ -61,6 +64,24 @@ in both navigate and observe modes.
   onto its parent drops out of `PlanetBodyField.pick`, so the parent's
   own pick surface (the star picker for a host, the parent planet for
   a moon) wins the point.
+- `star-pick-visibility-pure.ts` (+ test) — the decision half of
+  `resolveStarPick`, split out so it is testable without a live shell.
+  Beyond the photometric gate it mirrors the two **off-screen-sentinel
+  collapses** a pick would otherwise sail straight through:
+  `uHideFocusIdx` (the focal star in OBSERVE — drawn nowhere, sitting
+  dead centre of the screen) and `iEclipseDim` at totality. The eclipse
+  term is **glow-pass only**, matching the shader's `uRenderMode == 0`
+  gate: a disc-dominant star keeps drawing at any dim and the local depth
+  pass orders the resolved pair geometrically, so mirroring the dim there
+  would hide a star that is on screen. The pass split itself is
+  `isDiscDominant` (`../../star-pipeline/local-pass/README.md`), not a
+  local re-derivation. A partial dim also **shrinks the quad**, because
+  the shader folds it into `appMag` before deriving `pxSize` — so the
+  radius re-solves through `appSizePxForMag` rather than reporting the
+  undimmed size. Below a quad of `2 × MIN_DISC_HIT_RADIUS_PX` the
+  hit-radius floor absorbs that entirely; it bites in the
+  PSF-dominated regime and under the star-size exaggeration multiplier,
+  where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), shared `aimDurationMs` ramp.
 - `star-geometry.ts` — pure star angular-geometry formulae
@@ -69,7 +90,12 @@ in both navigate and observe modes.
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx` (+ its `renderedSizeComponents` split — the star
   local cluster's disc/glow membership test reads the two size terms
-  separately), `renderedDiscPxAtPeak`, `getChartDiscParams` +
+  separately), `appSizePxForMag` (the perceptual half of that split,
+  exposed because the pick re-solves it at the eclipse-dimmed
+  magnitude), `activePulsationAmp` (the shared
+  `iSuppressPulsation` mirror both the disc-size and pick paths read —
+  two mirrors of one shader gate is how they came to disagree),
+  `renderedDiscPxAtPeak`, `getChartDiscParams` +
   canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular

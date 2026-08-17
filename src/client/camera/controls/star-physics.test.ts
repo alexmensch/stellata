@@ -4,6 +4,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import { limitMagOf, type FilterState } from '../../filters/filter-state';
 import {
+  activePulsationAmp,
   fovMinorRad,
   peakAmplitudeFactor,
   minOrbitDistForStar,
@@ -89,6 +90,69 @@ describe('star-physics / fovMinorRad', () => {
   it('returns fovY for a square viewport (degenerate aspect = 1)', () => {
     const cam = new THREE.PerspectiveCamera(60, 1, 0.001, 1e9);
     expect(fovMinorRad(cam)).toBeCloseTo(Math.PI / 3, 12);
+  });
+});
+
+// The one CPU mirror of star.vert.glsl's pulsation gate. It exists
+// because there used to be two, and they disagreed: the disc-size mirror
+// honoured iSuppressPulsation, the pick path's bright-extreme reach
+// checked periodDays alone and handed every eclipsing row half an
+// amplitude of pick reach the shader never grants.
+describe('star-physics / activePulsationAmp', () => {
+  const variable = (c: Catalog) => { c.periodDays[0] = 100; c.amplitudeMag[0] = 1.5; };
+
+  it('is the catalogue amplitude for an unsuppressed variable', () => {
+    expect(activePulsationAmp(makeCatalog(1, variable), 0)).toBe(1.5);
+  });
+
+  it('is zero once the suppress mask flags the slot', () => {
+    const mask = new Float32Array([1]);
+    expect(activePulsationAmp(makeCatalog(1, variable), 0, mask)).toBe(0);
+  });
+
+  it('is zero without a period (irregular — no model to swing)', () => {
+    const cat = makeCatalog(1, c => { c.amplitudeMag[0] = 1.5; });
+    expect(activePulsationAmp(cat, 0)).toBe(0);
+  });
+
+  it('is zero without an amplitude', () => {
+    const cat = makeCatalog(1, c => { c.periodDays[0] = 100; });
+    expect(activePulsationAmp(cat, 0)).toBe(0);
+  });
+
+  it('treats a missing mask as unsuppressed', () => {
+    const cat = makeCatalog(1, variable);
+    expect(activePulsationAmp(cat, 0, null)).toBe(1.5);
+    expect(activePulsationAmp(cat, 0, undefined)).toBe(1.5);
+  });
+
+  // The disc-size mirror reads the same helper: a suppressed variable
+  // must render the static disc, phase or no phase.
+  it('agrees with renderedSizePx — a suppressed variable stops pulsing', () => {
+    const cat = makeCatalog(1, c => {
+      variable(c);
+      c.absmag[0] = 5;
+      c.physicalRadius[0] = 1;
+      c.pulsRho[0] = 1.4;
+    });
+    const base = {
+      catalog: cat,
+      idx: 0,
+      camPos: new THREE.Vector3(0, 0, 0),
+      localPositions: new Float32Array([0, 0, -10]),
+      // Half phase: cos = −1, the swing's far extreme. Quarter phase is
+      // the null point and would pass whether the gate fired or not.
+      uniforms: makeUniforms({ uModelDays: 50 }),
+      filter: makeFilter(),
+    };
+    const pulsing = renderedSizePx(base);
+    const suppressed = renderedSizePx({ ...base, suppressPulsation: new Float32Array([1]) });
+    const nonVariable = renderedSizePx({
+      ...base,
+      catalog: makeCatalog(1, c => { c.absmag[0] = 5; c.physicalRadius[0] = 1; c.pulsRho[0] = 1.4; }),
+    });
+    expect(suppressed).toBeCloseTo(nonVariable, 10);
+    expect(pulsing).not.toBeCloseTo(nonVariable, 6);
   });
 });
 
