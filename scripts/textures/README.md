@@ -64,6 +64,17 @@ rather than shipping it.
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
+- `measure_block_compression.py` (+ `block_compression.test.py`) —
+  manual, run by hand, NOT part of the build: encodes the shipped
+  normal maps through a reference BC4/BC5 codec and through lossy
+  WebP against the same 8-bit source, so the file-level verdict and
+  the GPU-block-format verdict are one measurement. Also sweeps BC5
+  error against map width, which is how the 8192 tier gets decided
+  without an 8192 map to test. Rationale and the numbers:
+  `data/textures/README.md` § BC5 measured. Its unittest pins the
+  codec itself — endpoint exactness, the per-mode error bound, and the
+  uint8-wraparound trap in the distance metric that silently inflates
+  every reported error.
 - `webp-header-pure.ts` — dimensions and the LFS-pointer check straight
   out of a lossless WebP's own header, so an artifact pin reads the
   artifact rather than the manifest beside it. Shared by both relief
