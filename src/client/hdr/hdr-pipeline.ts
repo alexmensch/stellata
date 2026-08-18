@@ -159,8 +159,9 @@ export class HdrPipeline {
   /** Bound by reference into every physical emitter's uniform map. */
   readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
-  private readonly renderer: THREE.WebGLRenderer;
-  private readonly gl: WebGL2RenderingContext;
+  /** Both null on a WebGPU boot, which parks the seam in § Fallback. */
+  private readonly rendererGL: THREE.WebGLRenderer | null;
+  private readonly gl: WebGL2RenderingContext | null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera();
   private readonly size = new THREE.Vector2();
@@ -177,13 +178,19 @@ export class HdrPipeline {
   private summationOn = true;
   private extraAttachments = true;
 
-  constructor(renderer: THREE.WebGLRenderer) {
-    this.renderer = renderer;
-    const gl = renderer.getContext() as WebGL2RenderingContext;
+  /** Null renderer = the WebGPU dual boot, where no GL context exists at
+   *  all: the seam parks in § Fallback (inert bind, no target, emitters
+   *  own the operator inline) until the HDR port child replaces it. */
+  constructor(renderer: THREE.WebGLRenderer | null) {
+    this.rendererGL = renderer;
+    const gl = renderer === null
+      ? null
+      : (renderer.getContext() as WebGL2RenderingContext);
     this.gl = gl;
     this.supported =
-      gl.getExtension('EXT_color_buffer_float') !== null ||
-      gl.getExtension('EXT_color_buffer_half_float') !== null;
+      gl !== null &&
+      (gl.getExtension('EXT_color_buffer_float') !== null ||
+        gl.getExtension('EXT_color_buffer_half_float') !== null);
     // Before any layer is constructed, so chrome registers its colours
     // and emitters seed their branch against the right mode on a context
     // that can't take the target.
@@ -197,16 +204,16 @@ export class HdrPipeline {
    *  context that cannot render into it never pays for one. */
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
-    if (!this.supported) return false;
+    if (!this.supported || this.rendererGL === null) return false;
 
-    this.renderer.getDrawingBufferSize(this.size);
+    this.rendererGL.getDrawingBufferSize(this.size);
     this.rt = createHdrTarget(
       this.size.x,
       this.size.y,
       this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
     );
 
-    this.summation = new SummationPass(this.renderer);
+    this.summation = new SummationPass(this.rendererGL);
     this.geometry = fullscreenTriangleGeometry();
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -240,10 +247,10 @@ export class HdrPipeline {
    *  forever. It costs a redundant clear of attachment 0. */
   bind(): void {
     const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
-    this.renderer.setRenderTarget(target);
-    if (target === null) return;
+    this.rendererGL?.setRenderTarget(target);
+    if (target === null || this.rendererGL === null) return;
     this.openEveryAttachment();
-    this.renderer.clear();
+    this.rendererGL.clear();
     this.closeEmitterGate();
   }
 
@@ -255,6 +262,8 @@ export class HdrPipeline {
    *  of, and because pairing it with the resolve is what stops the two
    *  disagreeing about the factor. */
   resolve(): void {
+    const renderer = this.rendererGL;
+    if (renderer === null) return;
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     if (this.summationOn && this.extraAttachments) {
       this.summation.render(
@@ -270,11 +279,11 @@ export class HdrPipeline {
       u.uDiffuseTexture.value = this.extraAttachments ? this.rt.textures[2] : null;
       u.uSummationRadiusTexels.value = 0;
       u.uSummationTexelScale.value = 1;
-      this.renderer.getDrawingBufferSize(this.size);
+      renderer.getDrawingBufferSize(this.size);
       u.uSummationExtent.value.set(this.size.x, this.size.y);
     }
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.scene, this.camera);
+    renderer.setRenderTarget(null);
+    renderer.render(this.scene, this.camera);
   }
 
   /** The statistic attachment — flux-correct luminance in R, peak-correct
@@ -304,6 +313,7 @@ export class HdrPipeline {
    *  `attachments/README.md` § The gate is the table. */
   private applyGateState(state: GateState): void {
     const gl = this.gl;
+    if (gl === null) return;
     const slots = gateDrawSlots(state, {
       statisticWrites: this.statisticWrites && !this.statisticParked,
       extraAttachments: this.extraAttachments,
@@ -342,8 +352,8 @@ export class HdrPipeline {
   /** Re-derives from the renderer's drawing-buffer size, so it covers
    *  window resize and pixel-ratio changes alike. */
   syncSize(): void {
-    if (this.rt === null) return;
-    this.renderer.getDrawingBufferSize(this.size);
+    if (this.rt === null || this.rendererGL === null) return;
+    this.rendererGL.getDrawingBufferSize(this.size);
     this.rt.setSize(this.size.x, this.size.y);
     this.summation?.syncSize();
   }

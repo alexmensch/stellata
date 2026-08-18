@@ -5,6 +5,7 @@ import {
   frame,
   gpuBegin,
   gpuEnd,
+  gpuSampleSink,
   buildPerfSection,
   acquireGpuFrameSampler,
   _sectionsForTest,
@@ -119,6 +120,22 @@ describe('perf-hud / install → dispose teardown', () => {
     measure('test.b');
     for (let i = 0; i < 100; i++) frame();
     expect(perfNowSpy.mock.calls.length).toBe(0);
+  });
+
+  it('gpuSampleSink: null while closed, records gpu.<label> while open, null again after dispose', () => {
+    // The WebGPU boot has no GL timer object. animate() resolves the
+    // renderer's timestamps every frame regardless — the resolve recycles
+    // the query pool — and this sink decides whether the sample lands.
+    expect(gpuSampleSink()).toBe(null);
+
+    const section = buildPerfSection(null);
+    const sink = gpuSampleSink();
+    expect(sink).not.toBe(null);
+    sink!('render', 4.2);
+    expect(_sectionsForTest().has('gpu.render')).toBe(true);
+
+    section.dispose();
+    expect(gpuSampleSink()).toBe(null);
   });
 
   it('section-GC: drops labels silent for a full ring window', () => {

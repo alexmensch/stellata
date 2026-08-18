@@ -154,3 +154,13 @@ from the bead-authoring-scope memory, not a case for both labels.
 **Do not put either label on an epic.** Children inherit parent labels
 at creation, and a roster is almost always mixed — an epic-level label
 silently mislabels every child filed under it afterwards.
+
+**Converting a task to an epic: strip its model label in the same pass**,
+before filing any child. The `bead-authoring-scope` memory makes
+`--type=epic` the trigger once a bead acquires children; the label removal
+belongs at that same moment. A labelled *task* is correct right up until
+it becomes a parent, at which point every child inherits its label
+silently — and an inherited-wrong label is worse than a missing one,
+because the roster looks complete and nothing prompts a re-read. Observed:
+converting the star-pipeline port to an epic propagated `needs-fable` to
+all eight children, half of which are specified implementation.
