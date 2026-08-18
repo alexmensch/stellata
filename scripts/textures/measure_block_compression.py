@@ -11,13 +11,14 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from dem_relief import POLE_CUTOFF_DEG, weighted_quantile
+
 REPO = Path(__file__).resolve().parents[2]
 TEXTURES = REPO / 'data' / 'textures'
 BODIES = ('moon', 'mercury', 'mars')
 
-# Blue is a constant on these maps and alpha is unused, so only R and G are
-# encoded — which is exactly what BC5 stores and what the RG8 upload ships.
 BLOCK = 4
+QS = (0.5, 0.9, 0.99)
 
 
 def _palettes(lo: np.ndarray, hi: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -38,8 +39,13 @@ def _palettes(lo: np.ndarray, hi: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return p8, p6
 
 
-def encode_bc5(plane: np.ndarray) -> np.ndarray:
-    """Round-trip one 8-bit channel through BC5's per-channel BC4 codec."""
+def encode_bc4_plane(plane: np.ndarray) -> np.ndarray:
+    """Round-trip one 8-bit channel through BC4.
+
+    Blocks are widened to int32 first: on raw uint8 the palette distance
+    wraps, which silently picks the wrong code for any block spanning more
+    than half the range.
+    """
     h, w = plane.shape
     assert h % BLOCK == 0 and w % BLOCK == 0, f'{w}x{h} is not block-aligned'
     blocks = (plane
@@ -67,6 +73,36 @@ def encode_bc5(plane: np.ndarray) -> np.ndarray:
             .reshape(h, w))
 
 
+def encode_bc5(rg: np.ndarray) -> np.ndarray:
+    """BC5 is two independent BC4 planes, which is exactly what the map
+    needs: blue is a constant by construction and alpha is unused, so R and
+    G are the whole signal — the same two the RG8 upload ships."""
+    return np.dstack([encode_bc4_plane(rg[..., 0]), encode_bc4_plane(rg[..., 1])])
+
+
+def encode_webp_rgb(img: np.ndarray, quality: int) -> np.ndarray:
+    """The arm § Lossless rejected: both channels through one photographic
+    codec, so libwebp's shared 4:2:0 chroma plane carries G at quarter
+    resolution. This is the historical baseline, not a fair codec."""
+    buf = io.BytesIO()
+    Image.fromarray(img).save(buf, format='WEBP', quality=quality, lossless=False)
+    buf.seek(0)
+    return np.asarray(Image.open(buf).convert('RGB'))[..., :2]
+
+
+def encode_webp_planes(img: np.ndarray, quality: int) -> np.ndarray:
+    """One grayscale WebP per channel. Same DCT, no shared chroma plane —
+    which is what isolates the codec's cost from the packing's."""
+    out = []
+    for c in (0, 1):
+        buf = io.BytesIO()
+        Image.fromarray(img[..., c], mode='L').save(
+            buf, format='WEBP', quality=quality, lossless=False)
+        buf.seek(0)
+        out.append(np.asarray(Image.open(buf).convert('L')))
+    return np.dstack(out)
+
+
 def _normals(rg: np.ndarray) -> np.ndarray:
     """Decode the map's own convention: n = rg*2-1, z = sqrt(1 - x^2 - y^2)."""
     xy = rg.astype(np.float64) / 255.0 * 2.0 - 1.0
@@ -79,66 +115,67 @@ def _angles_deg(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.degrees(np.arccos(dot))
 
 
-def encode_webp(img: np.ndarray, quality: int) -> np.ndarray:
-    """Round-trip the map through lossy WebP — the file-level codec that
-    `data/textures/README.md` § Surface relief already rejected."""
-    buf = io.BytesIO()
-    Image.fromarray(img).save(buf, format='WEBP', quality=quality, lossless=False)
-    buf.seek(0)
-    return np.asarray(Image.open(buf).convert('RGB'))[..., :2]
+def _weighted_stats(err: np.ndarray) -> tuple[float, list[float]]:
+    """cos(latitude)-weighted mean and percentiles, over the same
+    |lat| <= POLE_CUTOFF_DEG window and through the same estimator
+    `dem_relief.py` reports its tilt statistics under — the tilt figures
+    these errors are quoted against."""
+    h, w = err.shape
+    lat = 90.0 - (np.arange(h) + 0.5) * 180.0 / h
+    keep = np.abs(lat) <= POLE_CUTOFF_DEG
+    values = err[keep].ravel()
+    weights = np.repeat(np.cos(np.radians(lat[keep])), w)
+    mean = float((values * weights).sum() / weights.sum())
+    return mean, [weighted_quantile(values, weights, q) for q in QS]
 
 
-def _weighted_percentiles(err: np.ndarray, qs: tuple[float, ...]) -> list[float]:
-    """cos(latitude)-weighted percentiles — the same area weighting
-    `dem_relief.py` reports its tilt statistics under."""
-    h = err.shape[0]
-    lat = (0.5 - (np.arange(h) + 0.5) / h) * np.pi
-    w = np.repeat(np.cos(lat)[:, None], err.shape[1], axis=1)
-    order = np.argsort(err, axis=None)
-    e = err.ravel()[order]
-    cw = np.cumsum(w.ravel()[order])
-    cw /= cw[-1]
-    return [float(np.interp(q, cw, e)) for q in qs]
+HEADER = (f"{'body':<9} {'codec':<18} {'mean':>8} {'p50':>8} {'p90':>8} "
+          f"{'p99':>8} {'max':>8}")
 
 
-QS = (0.5, 0.9, 0.99)
+def _report(body: str, label: str, exact: np.ndarray, coded: np.ndarray) -> None:
+    err = _angles_deg(exact, _normals(coded))
+    mean, (p50, p90, p99) = _weighted_stats(err)
+    print(f'{body:<9} {label:<18} {mean:7.3f}° {p50:7.3f}° {p90:7.3f}° '
+          f'{p99:7.3f}° {err.max():7.3f}°')
+
+
+def _source(body: str) -> np.ndarray:
+    return np.asarray(Image.open(TEXTURES / f'{body}-normal.webp').convert('RGB'))
 
 
 def measure(body: str) -> None:
-    img = np.asarray(Image.open(TEXTURES / f'{body}-normal.webp').convert('RGB'))
+    img = _source(body)
     exact = _normals(img[..., :2])
     arms = {
-        'BC5': np.dstack([encode_bc5(img[..., 0]), encode_bc5(img[..., 1])]),
-        'WebP q98': encode_webp(img, 98),
-        'WebP q90': encode_webp(img, 90),
+        'BC5': encode_bc5(img[..., :2]),
+        'WebP q98 RGB': encode_webp_rgb(img, 98),
+        'WebP q98 2-plane': encode_webp_planes(img, 98),
+        'WebP q90 2-plane': encode_webp_planes(img, 90),
     }
     for label, coded in arms.items():
-        err = _angles_deg(exact, _normals(coded))
-        p50, p90, p99 = _weighted_percentiles(err, QS)
-        print(f'{body:<9} {label:<9} {p50:7.3f}° {p90:7.3f}° '
-              f'{p99:7.3f}° {err.max():7.3f}°')
+        _report(body, label, exact, coded)
 
 
 def sweep(body: str) -> None:
     """BC5 error against map width. The 8192 tier does not exist yet, so
     whether block compression scales to it has to be read off the trend
-    across the widths that do — area-averaged down from the shipped map,
-    the same reduction `dem_relief.py` uses, then renormalised."""
-    full = np.asarray(Image.open(TEXTURES / f'{body}-normal.webp').convert('RGB'))
+    across the widths that do. The narrower maps are proxies: area-averaged
+    encoded normals, renormalised by the sqrt decode, rather than maps
+    re-derived from a reduced DEM the way `reduce_dem.py` builds the
+    shipped one."""
+    full = _source(body)
     w0 = full.shape[1]
     for width in (w0 // 4, w0 // 2, w0):
         img = (full if width == w0 else np.asarray(
-            Image.fromarray(full).resize((width, width // 2), Image.BOX)))
-        exact = _normals(img[..., :2])
-        coded = np.dstack([encode_bc5(img[..., 0]), encode_bc5(img[..., 1])])
-        err = _angles_deg(exact, _normals(coded))
-        p50, p90, p99 = _weighted_percentiles(err, QS)
-        print(f'{body:<9} {"BC5 @" + str(width):<9} {p50:7.3f}° {p90:7.3f}° '
-              f'{p99:7.3f}° {err.max():7.3f}°')
+            Image.fromarray(full).resize(
+                (width, width // 2), Image.Resampling.BOX)))
+        _report(body, f'BC5 @{width}', _normals(img[..., :2]),
+                encode_bc5(img[..., :2]))
 
 
 def main() -> int:
-    print(f"{'body':<9} {'codec':<9} {'p50':>8} {'p90':>8} {'p99':>8} {'max':>8}")
+    print(HEADER)
     for body in BODIES:
         measure(body)
     print()
