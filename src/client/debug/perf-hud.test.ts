@@ -123,8 +123,9 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('gpuSampleSink: null while closed, records gpu.<label> while open, null again after dispose', () => {
-    // The WebGPU boot has no GL timer object; animate() reads this sink
-    // to decide whether to pay the timestamp readback at all.
+    // The WebGPU boot has no GL timer object. animate() resolves the
+    // renderer's timestamps every frame regardless — the resolve recycles
+    // the query pool — and this sink decides whether the sample lands.
     expect(gpuSampleSink()).toBe(null);
 
     const section = buildPerfSection(null);

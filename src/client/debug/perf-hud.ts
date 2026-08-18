@@ -162,8 +162,8 @@ let _gpuSample: ((label: string, ms: number) => void) | null = null;
 
 /** Sink for externally measured GPU durations (the WebGPU boot's
  *  timestamp queries — no GL timer object involved). Records under
- *  `gpu.<label>`. Null while the HUD is closed, so callers skip the
- *  readback that would produce the sample. */
+ *  `gpu.<label>`; null while the HUD is closed, so a sample measured
+ *  anyway is dropped rather than accumulated. */
 export function gpuSampleSink(): ((label: string, ms: number) => void) | null {
   return _gpuSample;
 }

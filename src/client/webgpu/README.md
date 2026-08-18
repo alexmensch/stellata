@@ -197,10 +197,15 @@ verifying no actual math.
 
 ## Timestamps
 
-The renderer boots with `trackTimestamp: true`; while the perf HUD is
-open, `animate()` resolves the render-pass timestamps each frame
-(`resolveTimestampsAsync`) and feeds the milliseconds into the HUD as
-the `gpu.render` row via `perf-hud.ts`'s `gpuSampleSink` (null while
-the HUD is closed, so an unwatched frame never pays the readback). The
-WebGL2 `gpu.*` rotation, `gpu.frame` headline, and the frame-pricing
-harness stay WebGL2-only until the instrumentation port child lands.
+The renderer boots with `trackTimestamp: true`, and `animate()` calls
+`resolveTimestampsAsync()` on **every rendered frame** — not only while
+the HUD is open. The resolve is what recycles the query pool: tracking
+allocates a query pair per render pass regardless of whether anyone
+reads the result, so a gated resolve overruns the 2048-query pool after
+~1024 frames and three logs `Maximum number of queries exceeded`, then
+stops sampling until something resolves. The milliseconds reach the HUD
+as the `gpu.render` row through `perf-hud.ts`'s `gpuSampleSink`, which
+is null while the HUD is closed — the frame still resolves, the sample
+is just dropped. The WebGL2 `gpu.*` rotation, `gpu.frame` headline, and
+the frame-pricing harness stay WebGL2-only until the instrumentation
+port child lands.

@@ -2201,12 +2201,13 @@ export class Stellata implements FrameAnchor {
       // (webgpu/README.md § What the flag boots today).
       this.webgpu.syncUniformNodes();
       this.renderer.render(this.webgpu.scene, this.camera);
-      const gpuSink = perfGpuSampleSink();
-      if (gpuSink !== null) {
-        void this.webgpu.renderer.resolveTimestampsAsync().then((ms) => {
-          if (ms !== undefined) gpuSink('render', ms);
-        });
-      }
+      // Every rendered frame must resolve: the resolve is what recycles
+      // the timestamp query pool, and trackTimestamp allocates a pair per
+      // render pass whether or not anyone reads them. Skipping it while
+      // the HUD is closed overruns the 2048-query pool in ~1024 frames.
+      void this.webgpu.renderer.resolveTimestampsAsync().then((ms) => {
+        if (ms !== undefined) perfGpuSampleSink()?.('render', ms);
+      });
     } else {
       this.renderer.render(this.scene, this.camera);
     }
