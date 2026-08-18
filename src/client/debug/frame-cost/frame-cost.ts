@@ -205,7 +205,14 @@ export async function runPriceFrame(
   const pinExposure = options.pinExposure ?? DEFAULTS.pinExposure;
   const deadline = performance.now() + (options.budgetMs ?? DEFAULTS.budgetMs);
 
-  const gl = stellata.renderer.getContext() as WebGL2RenderingContext;
+  if (stellata.rendererGL === null) {
+    console.warn(
+      'priceFrame: the pricing harness reads WebGL2 timer queries — not ' +
+      'ported to the WebGPU boot yet',
+    );
+    return [];
+  }
+  const gl = stellata.rendererGL.getContext() as WebGL2RenderingContext;
   const hasTimerExt =
     gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null;
 

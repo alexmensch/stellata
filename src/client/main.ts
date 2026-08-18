@@ -32,6 +32,7 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
+import { parseRendererFlag } from './webgpu/renderer-flag';
 import { SidResolver, arrayDomain } from './util/sid-resolver';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
@@ -87,7 +88,18 @@ async function main() {
     // derivation no kind module consumes.
     const bayerMap = buildBayerMap(searchIndex);
 
-    const stellata = new Stellata({ canvas, catalog, kinds });
+    // The dynamic import is the bundle boundary: webgpu/README.md
+    // § Import boundary.
+    let webgpu = null;
+    if (parseRendererFlag(location.hash) === 'webgpu') {
+      const { bootWebGpu } = await import('./webgpu/boot-webgpu');
+      webgpu = await bootWebGpu(canvas);
+      if (webgpu === null) {
+        console.warn('WebGPU unavailable — booting the WebGL2 renderer instead');
+      }
+    }
+
+    const stellata = new Stellata({ canvas, catalog, kinds, webgpu });
     // Dev-console access: `stellata.setExtinctionStrength(X)` etc. Handy for
     // dust debugging and not worth gating behind an env check on a solo
     // project.
@@ -167,24 +179,28 @@ async function main() {
     // Extinction fades in as each voxel chunk lands on the GPU. If the
     // manifest is missing (fresh clone without data/dust/, CI without the
     // preprocessor, etc.) the stellata renders exactly as it did before
-    // dust was introduced.
-    void (async () => {
-      const dustBase = `${import.meta.env.BASE_URL}dust/`;
-      const manifest = await loadDustManifest(dustBase);
-      if (!manifest) {
-        console.info('dust manifest not found; skipping extinction layer');
-        return;
-      }
-      const dust = new DustField(stellata.renderer, dustBase, manifest);
-      stellata.attachDust(dust);
-      // Particles are lazy — the shelved layer's ~800 KiB fetch fires
-      // only on the first console opt-in (setParticleStrength > 0).
-      if (manifest.particles) {
-        const particlesMeta = manifest.particles;
-        stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
-      }
-      await dust.startLoading();
-    })();
+    // dust was introduced. The voxel upload path is WebGL2-only until its
+    // WebGPU port lands, so a WebGPU boot skips the load entirely.
+    const rendererGL = stellata.rendererGL;
+    if (rendererGL !== null) {
+      void (async () => {
+        const dustBase = `${import.meta.env.BASE_URL}dust/`;
+        const manifest = await loadDustManifest(dustBase);
+        if (!manifest) {
+          console.info('dust manifest not found; skipping extinction layer');
+          return;
+        }
+        const dust = new DustField(rendererGL, dustBase, manifest);
+        stellata.attachDust(dust);
+        // Particles are lazy — the shelved layer's ~800 KiB fetch fires
+        // only on the first console opt-in (setParticleStrength > 0).
+        if (manifest.particles) {
+          const particlesMeta = manifest.particles;
+          stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
+        }
+        await dust.startLoading();
+      })();
+    }
 
     bindUnitToggle();
     registerThemeStellata(stellata);

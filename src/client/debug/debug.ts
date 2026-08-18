@@ -65,8 +65,9 @@ function mountSection(
   return module.dispose;
 }
 
-/** The live WebGL2 context, or null on a WebGL1 fallback context — the
- *  Perf section needs it to feature-detect the GPU timer query. */
+/** The live WebGL2 context, or null on a WebGL1 fallback context or a
+ *  WebGPU boot — the Perf section needs it to feature-detect the GPU
+ *  timer query. */
 function perfGlContext(stellata: Stellata): WebGL2RenderingContext | null {
   const gl = stellata.renderer.getContext();
   return gl instanceof WebGL2RenderingContext ? gl : null;

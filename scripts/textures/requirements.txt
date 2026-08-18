@@ -1,4 +1,4 @@
-# Dependencies for the texture build (manual-run) and the two measurement
+# Dependencies for the texture build (manual-run) and the measurement
 # scripts beside it. Install into the project venv:
 #
 #   python3 -m venv .venv

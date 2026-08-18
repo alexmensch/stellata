@@ -202,7 +202,7 @@ terms carry the same cosine, so **the ratio ρ·F is free of solar elevation** �
 walls of a given height give the same ratio at a 3° sun and at noon alike.
 
 `uPhaseScale` rides it exactly as it rides the direct term. It corrects the
-whole **reflected** disc to the measured Mallama curve, so leaving it off the
+whole **reflected** disc to the measured phase curve, so leaving it off the
 fill alone would divide in: Mercury sits on the clamp's 0.25 floor from 60°
 through 150°, which would make its shadows 4× brighter relative to lit ground
 there than at full phase, and the elevation-free ratio above would stop being

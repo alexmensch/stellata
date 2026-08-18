@@ -30,6 +30,14 @@ for *any* path, `applyFromUrl` strips the address bar back to bare `/`
 when the URL carries nothing decodable — a bogus path, a stray query, or
 a `/v/<blob>/` whose blob won't decode — so the bar never lingers on junk.
 
+The **fragment is never URL state**: both writers (`writeUrl`, the junk
+reset) re-append `location.hash` verbatim to whatever they write, because
+`history.replaceState` with a bare path resolves to a URL without a
+fragment and would silently drop it. Boot flags ride the fragment —
+today the dual-boot renderer flag `#renderer=webgpu`
+(`src/client/webgpu/README.md`), read once at boot and deliberately
+outside the blob (it can't apply without a reload).
+
 ## Files in this area
 
 ```

@@ -197,11 +197,37 @@ describe('the layer gates every relief fetch on the span table', () => {
     expect(layer).toContain('RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null');
   });
 
+  // All three planes ride the one span gate. They are two fetch statements
+  // rather than one loop only because the normal map narrows to RG8 and the
+  // horizon halves cannot (data/textures/README.md § Surface relief).
+  const gated = layer.slice(
+    layer.indexOf('if (reliefSpanOf(planet)) {'),
+    layer.indexOf('if (planet.rings) {'),
+  );
+  const normalFetch = gated.slice(0, gated.indexOf('for (const suffix of'));
+  const horizonFetch = gated.slice(gated.indexOf('for (const suffix of'));
+
   it('fetches the normal map and both horizon halves behind that gate', () => {
     expect(layer).toContain(
-      'const RELIEF_MAP_SUFFIXES = [RELIEF_SUFFIX, ...HORIZON_SUFFIXES] as const;');
+      "const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;");
     expect(layer).toContain('if (reliefSpanOf(planet)) {');
-    expect(layer).toContain('for (const suffix of RELIEF_MAP_SUFFIXES) {');
+    expect(normalFetch).toContain('textureKey(planet.name, RELIEF_SUFFIX)');
+    expect(horizonFetch).toContain('for (const suffix of HORIZON_SUFFIXES) {');
+  });
+
+  // A whole-branch RG8 is the plausible-looking mistake: every channel of
+  // each horizon plane carries an azimuth, alpha included, so it would
+  // delete four of the eight — and that reads as wrong terrain, not as a
+  // missing texture, which is why it needs a pin and not a smoke.
+  it('narrows the normal map to RG8 and nothing else', () => {
+    expect(normalFetch).toContain('THREE.RGFormat');
+    expect(horizonFetch).not.toContain('RGFormat');
+  });
+
+  it('overrides the upload format in exactly one fetch', () => {
+    // Colour maps and ring strips carry signal in all four channels, so
+    // the count is the invariant — not the absence of one named format.
+    expect(layer.match(/format: THREE\.\w+/g)).toEqual(['format: THREE.RGFormat']);
   });
 
   it('raises uHasHorizonMap only with both halves ready', () => {
@@ -257,7 +283,7 @@ describe('the terrain view factor', () => {
 
   it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
     // The scale-free claim below is a claim about the RATIO, and it holds only
-    // if the Mallama correction multiplies the fill and the direct term alike.
+    // if the phase correction multiplies the fill and the direct term alike.
     // Off the fill alone it would divide in, and Mercury sits on the clamp
     // floor of 0.25 from 60° through 150° — a 4x brighter shadow there.
     expect(frag).toContain('vec3 col = surfaceScale * (dayside * limb * uPhaseScale);');
@@ -303,7 +329,7 @@ describe('relief feeds the direct term only', () => {
     // terrain around the patch, whose illumination is set by the sun's true
     // elevation there and not by which way this one facet happens to tilt.
     // uPhaseScale rides it as well — without that the shadow-to-lit ratio would
-    // be a function of phase angle on every body carrying a Mallama curve.
+    // be a function of phase angle on every body carrying an empirical curve.
     expect(frag).toContain(
       '* (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);');
     // Narrow enough to survive an argument-list reflow in the atmosphere

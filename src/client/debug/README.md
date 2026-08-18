@@ -101,7 +101,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | ----------------------- | -------------------------------- | ---------------- |
 | `frame.total`           | `stellata.ts` `animate()`       | Full frame body, the histogram source. |
 | `controls.update`       | `stellata.ts` `animate()`       | TrackballControls / observe-controls update branch. |
-| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
+| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold and core-mask gate. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
@@ -127,11 +127,39 @@ after exiting chart mode (otherwise the average would lag forever).
 | `chart.glyphs.var`      | `chart-labels.ts` `tick()`       | Variable-ring `<circle>` projection + emission. |
 | `chart.glyphs.bin`      | `chart-labels.ts` `tick()`       | Binary-wing `<line>` projection + emission. |
 
+## Where the numbers come from — and when not to trust them
+
+Every CPU row is a bare `performance.now()` delta into a 60-frame ring; no
+User Timing entries, no observers. So a row reports real elapsed wall time
+inside its bracket, and nothing the HUD does scales with how much the
+browser is instrumenting.
+
+The environment does, though. **Safari 26 with Web Inspector open against
+the dev server runs the fan-out ~50× slower — `pre-render` 2 ms → 100 ms,
+and the frame rate collapses with it, so the work really is that slow
+rather than misreported.** Scope, measured: Safari only (Chrome DevTools
+shows no effect at all), dev server only (a production build is clean),
+and identical on both renderer backends. It is not the HUD, and it is not
+logging — nothing in the fan-out logs per frame and the prod build strips
+no `console` calls — so it is deoptimised execution of Vite's unbundled
+module graph, a cost the shipped app never pays. **Take Safari CPU numbers
+from a production build, or with the inspector closed.** Under the
+inspector even the *ratios* between rows are unusable: the per-star loops
+lose far more than the DOM and submit rows do.
+
+Second comparison trap while the port is in flight: a `#renderer=webgpu`
+boot draws an **empty scene** (`../webgpu/README.md`), so its rows read
+fast for a reason that has nothing to do with WebGPU. Cross-backend
+numbers only mean something once a port child actually draws stars.
+
 ## GPU timing
 
 `gpu-timer.ts` wraps `EXT_disjoint_timer_query_webgl2`. The extension is
 feature-detected at panel open; absent it, `gpuBegin`/`gpuEnd` stay
-no-ops and no `gpu.*` rows appear at all.
+no-ops and no `gpu.*` rows appear at all. On a WebGPU dual-boot there is
+no GL context either — the one `gpu.*` row is `gpu.render`, fed by the
+renderer's own timestamp queries through `gpuSampleSink`
+(`../webgpu/README.md` § Timestamps), and the headline stays `submit`.
 
 **One query at a time — this shapes everything.** WebGL2 permits exactly
 one active `TIME_ELAPSED` query per context and exposes no timestamp
