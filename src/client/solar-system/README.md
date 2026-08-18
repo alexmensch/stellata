@@ -57,8 +57,8 @@ src/client/solar-system/
                                   PlanetBodyField.isCollapsedOntoParent
                                   verdicts. Covers exoplanet hosts as
                                   soon as bk5 attaches them.
-  perceptual-magnitude.ts         Per-planet apparent-magnitude model
-                                  (Lambertian + Mallama phase factors)
+  perceptual-magnitude.ts         Per-body apparent-magnitude model
+                                  (Lambertian + empirical phase factors)
                                   + the host-irradiance magnitude and the
                                   mesh's disc surface brightness (see
                                   planets/README.md § Physical-luminance
@@ -67,9 +67,9 @@ src/client/solar-system/
                                   sizing/brightness and per-planet label
                                   gating. Also consumed by ../binaries/
                                   and ../camera/controls/ for stars.
-  phase-function.ts (+ test)      Lambertian + Mallama phase functions
-                                  + phaseRatioToLambert (mesh phase
-                                  scalar). Pure helpers.
+  phase-function.ts (+ test)      Lambertian + empirical phase
+                                  functions + phaseRatioToLambert
+                                  (mesh phase scalar). Pure helpers.
   local-cluster.ts                SolarSystemCluster — per-frame local-
                                   depth-pass membership + bracket
                                   spheres; owns the "system is locally
@@ -183,8 +183,8 @@ there and kills every planet of the focused host (the
 planets-invisible-in-observe regression).
 
 `α = ∠(viewer–planet–host)` is the phase angle and `φ(α)` is
-the per-planet phase factor — Mallama 2018 empirical polynomial
-`10^(−ΔV(α)/2.5)` inside each planet's published α range, anchor-
+the per-body phase factor — a published empirical polynomial
+`10^(−ΔV(α)/2.5)` inside each body's fitted α range, anchor-
 scaled Lambertian past it (Lambert(α) × poly(αmax)/Lambert(αmax) so
 brightness stays continuous and each planet's empirical character
 extends past αmax instead of snapping to a uniform Lambertian
@@ -193,7 +193,7 @@ without published curves. Mallama covers Mercury, Venus, Earth, Mars,
 Jupiter and Saturn; Earth's Moon takes the classic lunar phase law in
 the same polynomial form (`MOON_PHASE`, the only moon with a curve
 measured across the phases a camera can occupy). Uranus, Neptune, Pluto,
-the other 17 moons and every exoplanet take the Lambertian fallback —
+every other moon and every exoplanet take the Lambertian fallback —
 `docs/science-solar-system.md` § Planet phase functions says why for
 each. Verified Jupiter values (under Lambert):
 −2.7 from Earth at opposition, +5.2 from ~150 AU outside the

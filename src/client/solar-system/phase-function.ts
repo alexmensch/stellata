@@ -1,11 +1,12 @@
-// Per-planet phase functions φ(α) for reflected-light apparent magnitude
-// — Lambertian default + Mallama 2018 polynomials where published. See
-// docs/science-solar-system.md § Planet phase functions.
+// Per-body phase functions φ(α) for reflected-light apparent magnitude
+// — Lambertian default + a published empirical curve where one exists.
+// See docs/science-solar-system.md § Planet phase functions.
 
-/** Mallama 2018 ΔV(α°) = c0 + c1·α + … + c7·α⁷. c0 = 0 for every
- *  planet except Saturn, which absorbs a static ring-tilt brightness
- *  boost via c0 < 0. c7 = 0 for every planet except Mercury — the
- *  only published fit beyond degree 6. */
+/** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2018 for the
+ *  planets that have a fit, Allen's lunar law for the Moon. c0 = 0 for
+ *  every body except Saturn, which absorbs a static ring-tilt
+ *  brightness boost via c0 < 0. c7 = 0 for every body except Mercury —
+ *  the only published fit beyond degree 6. */
 export interface PhaseCoefficients {
   readonly c0: number;
   readonly c1: number;
@@ -32,10 +33,10 @@ export function lambertianPhaseFactor(alphaRad: number): number {
   return (Math.sin(a) + (Math.PI - a) * Math.cos(a)) / Math.PI;
 }
 
-/** Horner-evaluated Mallama 2018 ΔV polynomial in α-degrees. Helper
- *  exists so the in-validity-bound and at-boundary-anchor paths share
- *  one definition. */
-function mallamaDV(coefs: PhaseCoefficients, aDeg: number): number {
+/** Horner-evaluated ΔV polynomial in α-degrees. Helper exists so the
+ *  in-validity-bound and at-boundary-anchor paths share one
+ *  definition. */
+function phaseDV(coefs: PhaseCoefficients, aDeg: number): number {
   return (
     coefs.c0 +
     aDeg *
@@ -50,12 +51,12 @@ function mallamaDV(coefs: PhaseCoefficients, aDeg: number): number {
   );
 }
 
-/** Mallama 2018 empirical phase factor. Inside [0, αmax°] uses the
+/** Empirical phase factor. Inside [0, αmax°] uses the published
  *  polynomial; beyond αmax falls back to anchor-scaled Lambert
  *  (continuous at the boundary). α clamped to [0, π] — Horner
  *  diverges wildly past its fitted domain, so the αmax fallback is
  *  load-bearing against accidental degrees/radians swaps. */
-export function mallamaPhaseFactor(
+export function empiricalPhaseFactor(
   coefs: PhaseCoefficients,
   alphaRad: number,
 ): number {
@@ -63,11 +64,11 @@ export function mallamaPhaseFactor(
   const a = Math.max(0, Math.min(Math.PI, alphaRad));
   const aDeg = a * RAD_TO_DEG;
   if (aDeg <= coefs.alphaMaxDeg) {
-    return Math.exp(-mallamaDV(coefs, aDeg) * 0.4 * LOG10);
+    return Math.exp(-phaseDV(coefs, aDeg) * 0.4 * LOG10);
   }
   // Past αmax: anchor-scaled Lambert. k folds the empirical-vs-Lambert
   // ratio at the boundary into a single multiplier.
-  const boundaryFlux = Math.exp(-mallamaDV(coefs, coefs.alphaMaxDeg) * 0.4 * LOG10);
+  const boundaryFlux = Math.exp(-phaseDV(coefs, coefs.alphaMaxDeg) * 0.4 * LOG10);
   const boundaryLambert = lambertianPhaseFactor(coefs.alphaMaxDeg / RAD_TO_DEG);
   return lambertianPhaseFactor(a) * (boundaryFlux / boundaryLambert);
 }
@@ -122,9 +123,10 @@ export function phaseAngleFor(
 
 /**
  * Phase factor φ(α) given viewer→planet and viewer→host displacement
- * vectors. Computes α via `phaseAngleFor` and dispatches into Mallama
- * (when a polynomial exists) or Lambertian (the default fallback for
- * Pluto + every exoplanet). Mirrors the
+ * vectors. Computes α via `phaseAngleFor` and dispatches into the
+ * empirical polynomial (when the body has one) or Lambertian (the
+ * default fallback for Pluto, every moon but Earth's, and every
+ * exoplanet). Mirrors the
  * `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
  * `planet.vert.glsl` exactly through the shared helpers above.
  * Degenerate zero-length legs land at α = 0 ⇒ φ = 1.
@@ -139,13 +141,14 @@ export function phaseFactorFor(
   coefs: PhaseCoefficients | undefined,
 ): number {
   const alpha = phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz);
-  return coefs ? mallamaPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
+  return coefs ? empiricalPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
 }
 
 /** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
- *  — 1 at full phase (α = 0), 0 at new (α = 180). Gates the resolved-
- *  regime reflected glare so a crescent body's dark limb emits ~none;
- *  mirrored in planet.vert.glsl as (1 + cosA)·0.5. α clamped to [0, π]. */
+ *  — 1 at full phase (α = 0), 0 at new (α = 180). CPU mirror of
+ *  `illumFrac` in planet.vert.glsl, which drives the glare photocentre
+ *  shift (glare/README.md); no TS caller, so the mirror is what the
+ *  vitest pin holds. α clamped to [0, π]. */
 export function illuminatedFraction(alphaRad: number): number {
   const a = Math.max(0, Math.min(Math.PI, alphaRad));
   return (1 + Math.cos(a)) / 2;
@@ -174,13 +177,14 @@ export function phaseRatioToLambert(
   if (!coefs || coefs.alphaMaxDeg <= 0) return 1;
   const a = Math.max(0, Math.min(Math.PI, alphaRad));
   const aCap = Math.min(a, coefs.alphaMaxDeg / RAD_TO_DEG);
-  const ratio = mallamaPhaseFactor(coefs, aCap) / lambertianPhaseFactor(aCap);
+  const ratio = empiricalPhaseFactor(coefs, aCap) / lambertianPhaseFactor(aCap);
   return Math.min(PHASE_RATIO_MAX, Math.max(PHASE_RATIO_MIN, ratio));
 }
 
-// Per-planet coefficients from Mallama 2018 (Icarus 282). Each
-// alphaMaxDeg is the upper bound observed in the cited data; outside
-// that range the renderer falls back to anchor-scaled Lambert.
+// Per-body coefficients: Mallama 2018 (Icarus 282) for the planets it
+// fits, Allen's lunar law for the Moon. Each alphaMaxDeg is the upper
+// bound observed in the cited data; outside that range the renderer
+// falls back to anchor-scaled Lambert.
 
 /** Mercury — Mallama 2018 Table A-1.2 full 7th-order fit, valid to
  *  the paper's 170° bound. c7 rides the third per-instance vec4
@@ -273,26 +277,12 @@ export const SATURN_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 6.5,
 };
 
-// Uranus and Neptune fall through to Lambert by design — Mallama
-// 2018 Tables A-7.2 / A-8.2 model sub-latitude (Uranus) and temporal
-// (Neptune) effects, not α, because Earth-bound max α is negligible
-// for both. Pluto and every exoplanet share the Lambert fallback.
-
-/** Earth's Moon — the classic lunar phase law, not Mallama (the paper
- *  covers planets only). Allen's Astrophysical Quantities gives
- *  m = −12.73 + 1.49·|φ| + 0.043·φ⁴ for φ in radians; converting to
- *  degrees puts 1.49·(π/180) in c1 and 0.043·(π/180)⁴ in c4, which is
- *  the ΔV(α°) = 0.026·α + 4e-9·α⁴ this row encodes. It reproduces the
- *  measured full-to-quarter ratio of ~11× (10.99× here).
- *
- *  αmax = 150° is the law's fitted range; the α⁴ term is an
- *  extrapolation beyond it and Lambert takes over. The opposition
- *  surge inside ~5° is sharper than the linear term, which averages
- *  over it — the α = 0 anchor is still exact, so the −12.74 full-Moon
- *  calibration is untouched.
- *
- *  Every other moon keeps the Lambert fallback: see
- *  docs/science-solar-system.md § Moons for why. */
+/** Earth's Moon — Allen's lunar phase law, not Mallama (that paper
+ *  fits planets only): ΔV(α°) = 0.026·α + 4e-9·α⁴, its fitted range
+ *  ending at 150°. Derivation from Allen's radian form, the
+ *  full-to-quarter check, the clamp arithmetic, and why no other moon
+ *  gets a curve: docs/science-solar-system.md § Planet phase
+ *  functions. */
 export const MOON_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 2.6e-2,
@@ -304,3 +294,9 @@ export const MOON_PHASE: PhaseCoefficients = {
   c7: 0,
   alphaMaxDeg: 150,
 };
+
+// Uranus and Neptune fall through to Lambert by design — Mallama
+// 2018 Tables A-7.2 / A-8.2 model sub-latitude (Uranus) and temporal
+// (Neptune) effects, not α, because Earth-bound max α is negligible
+// for both. Pluto, every moon but Earth's, and every exoplanet share
+// the Lambert fallback.

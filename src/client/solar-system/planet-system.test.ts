@@ -211,10 +211,8 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('the Moon is the one moon carrying a phase curve', () => {
-    // Every other in-scope moon is only observed from Earth within a
-    // few degrees of full, so a published curve would be extrapolation
-    // across the phases the camera actually occupies — see
-    // docs/science-solar-system.md § Moons.
+    // Why the others do not: docs/science-solar-system.md
+    // § Why no other moon carries one.
     for (const m of SOL_MOONS) {
       if (m.name === 'Moon') expect(m.phaseCoefficients).toBe(MOON_PHASE);
       else expect(m.phaseCoefficients).toBeUndefined();

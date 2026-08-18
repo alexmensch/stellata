@@ -257,7 +257,7 @@ describe('the terrain view factor', () => {
 
   it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
     // The scale-free claim below is a claim about the RATIO, and it holds only
-    // if the Mallama correction multiplies the fill and the direct term alike.
+    // if the phase correction multiplies the fill and the direct term alike.
     // Off the fill alone it would divide in, and Mercury sits on the clamp
     // floor of 0.25 from 60° through 150° — a 4x brighter shadow there.
     expect(frag).toContain('vec3 col = surfaceScale * (dayside * limb * uPhaseScale);');
@@ -303,7 +303,7 @@ describe('relief feeds the direct term only', () => {
     // terrain around the patch, whose illumination is set by the sun's true
     // elevation there and not by which way this one facet happens to tilt.
     // uPhaseScale rides it as well — without that the shadow-to-lit ratio would
-    // be a function of phase angle on every body carrying a Mallama curve.
+    // be a function of phase angle on every body carrying an empirical curve.
     expect(frag).toContain(
       '* (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);');
     // Narrow enough to survive an argument-list reflow in the atmosphere

@@ -305,9 +305,9 @@ export class PlanetBodyField {
       const aPc = planet.semiMajorAxisAu * AU_PC;
       const RoverA = (planet.radiusKm * KM_PC) / Math.max(aPc, 1e-30);
       // Saturn's rings raise its α=0 brightness above globe-only
-      // reflectance via the Mallama c0 term — fold it into the cull
-      // proxy so the cull distance widens to match. Other planets
-      // have c0=0 ⇒ α=0 factor 1, leaving the formula unchanged.
+      // reflectance via its c0 term — fold it into the cull proxy so
+      // the cull distance widens to match. Every other body has
+      // c0=0 ⇒ α=0 factor 1, leaving the formula unchanged.
       const phiZero = alphaZeroPhaseFactor(planet.phaseCoefficients);
       const refl = planet.albedo * RoverA * RoverA * phiZero;
       if (refl > brightestReflectance) brightestReflectance = refl;

@@ -36,7 +36,7 @@ same `p` that anchors the −12.7 flux; both are vitest-pinned.
 
 **Phase is carried once, by the shading.** `S₀` deliberately excludes
 φ(α): the shader's own Lambert terminator integrates to φ_Lambert on its
-own, and `uPhaseScale` corrects that to the body's measured Mallama
+own, and `uPhaseScale` corrects that to the body's measured empirical
 curve. Folding φ into the anchor as well would count it twice.
 
 **Surface relief carries no renormalisation, and that is measured rather

@@ -27,12 +27,13 @@ in vec2 aCorner;
 //   iSolidity     — 1 = rocky (crisp edge), 0 = gas-giant (fuzzy).
 //   iAlbedoP      — geometric albedo p, V-band.
 //   iHostAbsmag   — host star's absolute magnitude.
-//   iPhaseCoefsA  — Mallama 2018 phase polynomial (c0,c1,c2,c3) in
+//   iPhaseCoefsA  — empirical phase polynomial (c0,c1,c2,c3) in
 //                   α-degrees, ΔV in mag. See phase-function.ts.
 //   iPhaseCoefsB  — (c4,c5,c6,alphaMaxDeg). The .w slot doubles as
-//                   a sentinel: alphaMaxDeg = 0 disables Mallama and
-//                   the renderer uses Lambertian for every α — the
-//                   default Pluto and every exoplanet hit.
+//                   a sentinel: alphaMaxDeg = 0 disables the
+//                   polynomial and the renderer uses Lambertian for
+//                   every α — the default Pluto, every moon but
+//                   Earth's, and every exoplanet hit.
 //   iPhaseCoefsC  — (c7,_,_,_). Only Mercury carries a degree-7 term;
 //                   the other three slots are reserved.
 //   iEclipseDim   — true-eclipse flux dim on a planet behind the
@@ -119,7 +120,7 @@ out float vAaWidth;
 // Phase-curve polynomial in α-degrees; this helper just evaluates
 // whatever the buffer carries (degree 7 — c7 rides coefsC.x, zero for
 // every planet but Mercury).
-float mallamaDV(vec4 coefsA, vec4 coefsB, vec4 coefsC, float aDeg) {
+float phaseDV(vec4 coefsA, vec4 coefsB, vec4 coefsC, float aDeg) {
   return coefsA.x
        + aDeg * (coefsA.y
        + aDeg * (coefsA.z
@@ -170,10 +171,10 @@ void main() {
   }
 
   // Phase angle α = ∠(viewer → planet → host). vph = planet → viewer,
-  // hph = planet → host. The phase factor φ(α) prefers the Mallama
-  // 2018 empirical polynomial when one is supplied for the body and α
-  // sits inside its validity range; otherwise Lambert is the
-  // fallback. CPU mirror in `phase-function.ts` is vitest-pinned.
+  // hph = planet → host. The phase factor φ(α) prefers the body's
+  // published empirical polynomial when one is supplied and α sits
+  // inside its validity range; otherwise Lambert is the fallback.
+  // CPU mirror in `phase-function.ts` is vitest-pinned.
   vec3 vphHat = normalize(-planetView.xyz);
   vec3 hphHat = normalize(hostView.xyz - planetView.xyz);
   float cosA = clamp(dot(vphHat, hphHat), -1.0, 1.0);
@@ -186,22 +187,22 @@ void main() {
     // which makes φ(0) > 1 (intentional — `albedo` represents the
     // globe's α=0 reflectance, the c0 boost stacks the ring system
     // on top).
-    float dV = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaDeg);
+    float dV = phaseDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaDeg);
     phi = exp(-dV * 0.4 * STELLATA_LOG10);
   } else if (alphaMaxDeg > 0.0) {
     // Anchor-scaled Lambert past the published validity bound:
     // Lambert(α) × (poly(αmax) / Lambert(αmax)). Preserves brightness
-    // continuity at αmax and keeps each planet's empirical character
+    // continuity at αmax and keeps each body's empirical character
     // (Saturn's c0 boost; Mars's faster-than-Lambert darkening)
     // extending out instead of snapping to a uniform Lambertian
     // sphere. CPU mirror in phase-function.ts.
-    float dVb = mallamaDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaMaxDeg);
+    float dVb = phaseDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaMaxDeg);
     float boundaryFlux = exp(-dVb * 0.4 * STELLATA_LOG10);
     float alphaMaxRad = alphaMaxDeg * (STELLATA_PI / 180.0);
     phi = lambertPhi(alpha) * (boundaryFlux / lambertPhi(alphaMaxRad));
   } else {
-    // No published curve — pure Lambertian (Pluto, Uranus, Neptune, and
-    // future exoplanet hosts).
+    // No published curve — pure Lambertian (Pluto, Uranus, Neptune,
+    // every moon but Earth's, and future exoplanet hosts).
     phi = lambertPhi(alpha);
   }
 

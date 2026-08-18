@@ -7,7 +7,7 @@ import {
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { MOON_PHASE, lambertianPhaseFactor, mallamaPhaseFactor } from './phase-function';
+import { MOON_PHASE, lambertianPhaseFactor, empiricalPhaseFactor } from './phase-function';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
@@ -246,10 +246,10 @@ describe('planetApparentMagnitude', () => {
     const moonMag = (phi: number): number => planetApparentMagnitude(
       SUN_ABSMAG_V, 384_400 * KM_PC, AU_PC, 0.12, 1737.4 * KM_PC, phi,
     );
-    expect(moonMag(mallamaPhaseFactor(MOON_PHASE, 0))).toBeCloseTo(-12.7, 1);
+    expect(moonMag(empiricalPhaseFactor(MOON_PHASE, 0))).toBeCloseTo(-12.7, 1);
 
     const half = Math.PI / 2;
-    const onCurve = moonMag(mallamaPhaseFactor(MOON_PHASE, half));
+    const onCurve = moonMag(empiricalPhaseFactor(MOON_PHASE, half));
     const onLambert = moonMag(lambertianPhaseFactor(half));
     expect(onCurve - onLambert).toBeCloseTo(1.36, 2);
   });
