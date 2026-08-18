@@ -116,6 +116,26 @@ export function reliefNormal(
  * is the facet's own slope, which this term is composed with rather than
  * duplicating (README.md § Two occluders).
  */
+/**
+ * Cosine-weighted fraction of the upper hemisphere the patch's own skyline
+ * fills, from the same `HORIZON_AZIMUTHS` raw channels — `1 − mean(cos²h)`,
+ * which is `mean(sin²h)` over the stored azimuths.
+ *
+ * A skyline BELOW the local horizontal is sky, not terrain: a horizontal patch
+ * receives nothing from under its own horizontal plane, so those azimuths
+ * contribute zero rather than `sin²h`. Open ground reads the body's own limb
+ * bound there — negative on every azimuth — and without the clamp every flat
+ * plain would claim the fill light of a crater floor.
+ */
+export function terrainViewFactor(enc: readonly number[]): number {
+  let sum = 0;
+  for (let i = 0; i < HORIZON_AZIMUTHS; i++) {
+    const s = Math.max((enc[i] * 2 - 1) * HORIZON_SIN_RANGE, 0);
+    sum += s * s;
+  }
+  return sum / HORIZON_AZIMUTHS;
+}
+
 export function horizonSin(
   enc: readonly number[],
   sunE: number,
