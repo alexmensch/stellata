@@ -117,13 +117,35 @@ describe('horizon maps', () => {
     }
   });
 
-  it('steps the ray at the DEM resolution, not the output grid', () => {
-    // Stepping at the output texel drops the horizon's own curvature drop over
-    // that first step — half an output texel of solar depression, 0.09° here,
-    // which measured as 15.8% of area lit just past the terminator against a
-    // true 8.4% (README.md § Cast shadows).
+  it('starts the march two output texels out and steps at the DEM resolution', () => {
+    // Two independent choices. The start distance keeps the map off ground the
+    // colour and normal maps own — inside one output texel a caster is half a
+    // colour-map texel, so nothing on screen can throw the shadow. The step
+    // stays at the DEM's resolution so a narrow ridge at range is sampled
+    // rather than averaged away (README.md § Cast shadows).
+    expect(pyNumber('HORIZON_MARCH_START_TEXELS')).toBe(2);
+    expect(pySource).toContain(
+      'return HORIZON_MARCH_START_TEXELS * 2 * np.pi / out_width');
     expect(pySource).toContain('step = 2 * np.pi / w_d');
-    expect(pySource).toContain('steps = max(1, int(np.ceil(psi_max / step)))');
+    expect(pySource).toContain(
+      'steps = max(2, int(np.ceil((psi_max - psi_min) / step)) + 1)');
+  });
+
+  it('starts past the caster the colour map could resolve, on every body', () => {
+    // The start distance is set in output texels, so the kilometres it buys
+    // differ per body — this is the number that has to clear a colour-map texel
+    // for the shadow to have a visible caster.
+    const startKm: Record<string, number> = { moon: 10.7, mercury: 15.0, mars: 20.8 };
+    const texels = pyNumber('HORIZON_MARCH_START_TEXELS');
+    const width = pyNumber('HORIZON_TARGET_W');
+    expect(Object.keys(startKm).sort()).toEqual(shipped);
+    // Below two the nearest caster sits inside a single colour-map texel again,
+    // which is the whole defect this distance exists to fix.
+    expect(texels).toBeGreaterThanOrEqual(2);
+    for (const [name, km] of Object.entries(startKm)) {
+      const body = SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
+      expect((texels * 2 * Math.PI * body.radiusKm) / width, name).toBeCloseTo(km, 1);
+    }
   });
 
   it('registers each map to the colour map, like its normal map', () => {
@@ -148,9 +170,9 @@ describe('horizon maps', () => {
 
   it('records the achieved width, azimuths and clamping for every body', () => {
     const pins: Record<string, [number, number, number]> = {
-      moon: [1.158, 14.858, 0.0575],
-      mercury: [0.333, 6.87, 0.0018],
-      mars: [0.037, 5.339, 0.0002],
+      moon: [0.556, 10.835, 0.0002],
+      mercury: [0.057, 4.861, 0.0],
+      mars: [-0.141, 3.428, 0.0],
     };
     const width = pyNumber('HORIZON_TARGET_W');
     expect(Object.keys(pins).sort()).toEqual(shipped);
@@ -186,6 +208,23 @@ describe('horizon maps', () => {
     expect(floor, 'TERM_SOFTNESS_FLOOR').not.toBeNull();
     expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
       `max(uTermSoftness, ${floor![1]})`);
+  });
+
+  it('mirrors each body albedo the interreflected term pays twice', () => {
+    // The fourth column of the phase table is the only place the fill term's
+    // flux is measured, and it scales linearly with this number — a stale copy
+    // would answer the renormalisation question about a different body.
+    const measure = readFileSync(resolve(__dirname, 'measure_relief_lighting.py'), 'utf-8');
+    const row = measure.match(/^ALBEDO = \{(.+)\}$/m);
+    expect(row, 'ALBEDO').not.toBeNull();
+    const mirrored = Object.fromEntries(
+      [...row![1].matchAll(/"(\w+)": ([\d.]+)/g)].map(([, k, v]) => [k, Number(v)]),
+    );
+    expect(Object.keys(mirrored).sort()).toEqual(shipped);
+    for (const [name, albedo] of Object.entries(mirrored)) {
+      const body = SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
+      expect(albedo, `${name} albedo`).toBe(body.albedo);
+    }
   });
 
   it.skipIf(mapsArePointers)('ships both planes at the declared width', () => {

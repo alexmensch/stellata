@@ -32,6 +32,11 @@ uniform vec2 uReliefHorizon;
 uniform sampler2D uHorizonA;
 uniform sampler2D uHorizonB;
 uniform float uHasHorizonMap;
+// Reflectance of the terrain that lights a shadowed patch — the body's
+// geometric albedo (Planet.albedo). The interreflected term carries it on top
+// of the one surfaceScale already holds, which is why a shadow on a dark body
+// is darker than the albedo ratio alone.
+uniform float uTerrainAlbedo;
 uniform vec3 uColour;
 // Planet → host-star direction in VIEW space; per-fragment Lambert
 // against it is what produces the day/night terminator.
@@ -108,13 +113,39 @@ vec3 stellataReliefNormal(vec3 n, vec3 east, vec3 north, vec2 enc) {
   return normalize(east * t.x + north * t.y + n * sqrt(max(1.0 - dot(t, t), 0.0)));
 }
 
-// Sine of the skyline's elevation toward (sunE, sunN), between the two stored
-// azimuths bracketing it.
-float stellataHorizonSin(vec2 uv, float sunE, float sunN) {
+// One raw channel back to the skyline sine it encodes — mirrors decodeSin in
+// surface-relief-pure.ts.
+float stellataDecodeSin(float raw) {
+  return (raw * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE;
+}
+
+// This texel's STELLATA_HORIZON_AZIMUTHS raw channels, both planes concatenated.
+// Fetched once: the sunward skyline and the sky the patch can see are two reads
+// of the one pair of texels.
+void stellataHorizonEncoded(vec2 uv, out float enc[STELLATA_HORIZON_AZIMUTHS]) {
   vec4 a = texture(uHorizonA, uv);
   vec4 b = texture(uHorizonB, uv);
-  float enc[STELLATA_HORIZON_AZIMUTHS] =
-    float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
+  enc = float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
+}
+
+// Cosine-weighted fraction of the upper hemisphere this patch's own skyline
+// fills, mean(max(sin h, 0)²) over the stored azimuths. A skyline BELOW the
+// local horizontal is sky rather than terrain, and over open ground the body's
+// own limb bound puts it there — clamping is what keeps flat plains from
+// claiming fill light (surface-relief/README.md § Shadows are lit by the
+// terrain).
+float stellataTerrainViewFactor(float enc[STELLATA_HORIZON_AZIMUTHS]) {
+  float sum = 0.0;
+  for (int i = 0; i < STELLATA_HORIZON_AZIMUTHS; i++) {
+    float s = max(stellataDecodeSin(enc[i]), 0.0);
+    sum += s * s;
+  }
+  return sum / float(STELLATA_HORIZON_AZIMUTHS);
+}
+
+// Sine of the skyline's elevation toward (sunE, sunN), between the two stored
+// azimuths bracketing it.
+float stellataHorizonSin(float enc[STELLATA_HORIZON_AZIMUTHS], float sunE, float sunN) {
   // atan(0, 0) is undefined in GLSL, and a NaN slot indexes enc out of range.
   // Both components vanish only with the sun at the local zenith, where every
   // azimuth answers alike; due east is the one the CPU mirror's atan2 picks.
@@ -126,8 +157,7 @@ float stellataHorizonSin(vec2 uv, float sunE, float sunN) {
   // base one past the last azimuth — the wrap is what keeps the index in range.
   int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;
   int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;
-  return (mix(enc[i0], enc[i1], slot - base) * 2.0 - 1.0)
-    * STELLATA_HORIZON_SIN_RANGE;
+  return stellataDecodeSin(mix(enc[i0], enc[i1], slot - base));
 }
 
 void main() {
@@ -150,11 +180,15 @@ void main() {
   // the host's disc crossing that skyline, like the caster loop's below
   // (surface-relief/README.md).
   float horizonGate = 1.0;
+  float terrainView = 0.0;
   if (uHasHorizonMap > 0.5 && hasFrame) {
+    float enc[STELLATA_HORIZON_AZIMUTHS];
+    stellataHorizonEncoded(vUvM, enc);
     float sinH = stellataHorizonSin(
-      vUvM, dot(uSunDirView, east), dot(uSunDirView, north));
+      enc, dot(uSunDirView, east), dot(uSunDirView, north));
     float pen = max(uSunAngRad, 1e-6);
     horizonGate = smoothstep(sinH - pen, sinH + pen, sunCos);
+    terrainView = stellataTerrainViewFactor(enc);
   } else if (uHasNormalMap > 0.5) {
     horizonGate = smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos);
   }
@@ -194,6 +228,17 @@ void main() {
   // it needs no albedo factor of its own.
   vec3 surfaceScale = base * uSurfaceLuminance * shadow;
   vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
+  // Terrain interreflection — the sunlit slopes around this patch scattering
+  // light into it, and on an airless body the ONLY thing lighting ground the
+  // skyline has shadowed. Added to col rather than folded into dayside because
+  // it is not direct light, and so it cannot reach the exposure coverage mask.
+  // uTerrainAlbedo is the illuminating slope's own reflectance: surfaceScale
+  // carries this patch's, and the bounce pays for both. uPhaseScale rides it
+  // like the direct term — it corrects the whole reflected disc to the measured
+  // curve, so leaving it off would make the shadow-to-lit ratio a function of
+  // phase angle (surface-relief/README.md § Shadows are lit by the terrain).
+  col += surfaceScale
+    * (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
     // Skylight: the air overhead scattering host light down — noon skylight on

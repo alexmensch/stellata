@@ -661,6 +661,7 @@ export class PlanetMeshLayer {
         uHorizonA: { value: this.placeholder },
         uHorizonB: { value: this.placeholder },
         uHasHorizonMap: { value: 0 },
+        uTerrainAlbedo: { value: planet.albedo },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
         uFade: { value: 0 },

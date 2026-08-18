@@ -180,20 +180,33 @@ the derivation, on the same three bodies and the same frozen DEMs.
   what makes the body's own limb an occluder, the larger of the two terms.
   A crater wall reads as a positive skyline on top. Flat ground at the
   reference sphere does **not** read exactly 0, though: the march never samples
-  closer than its first step, so it reads that step's own drop — −0.044° at the
-  shipped 4096 DEM, `flat_floor` in `horizon_map.test.py`. Bounded, and slack
-  toward lighting rather than shadowing, so it errs on the safe side of "the
-  sun sets at the geometric terminator".
+  closer than its start distance, so it reads that distance's own drop —
+  −0.176° at two output texels, `flat_floor` in `horizon_map.test.py`. Bounded,
+  and slack toward lighting rather than shadowing, so it errs on the safe side
+  of "the sun sets at the geometric terminator".
 - **The search runs to `arccos(r_floor / r_summit)`** — 262 km on the Moon,
   219 on Mercury, 446 on Mars. Not a cut-off: for the extremal pair (highest
   summit over deepest floor) the elevation angle *peaks* exactly there and
   every gentler pair peaks earlier, so nothing past it can win. It is the
   same quantity as the renderer's fallback limb bound, and
   `horizon-map.test.ts` pins the identity.
-- **The ray steps at the DEM's 4096 resolution however coarse the output
-  grid.** That first step sets the floor above, so stepping at the output texel
-  instead would put it at half an OUTPUT texel of solar depression — which
-  measured as 15.8 % of area lit just past the terminator against 8.4 %.
+- **The march starts two output texels out and steps at the DEM's 4096
+  resolution from there** — two independent parameters, and only the first
+  moved. `HORIZON_MARCH_START_TEXELS` sets the near bound: 10.7 km on the Moon,
+  15.0 on Mercury, 20.8 on Mars, past both the normal map's domain and what the
+  colour map can draw. It used to be one DEM texel, 2.7 km, and that single step
+  set **35 %** of every stored value — a third of the cast shadows thrown by a
+  caster no camera distance can resolve, and double-counted against the facet
+  slope the normal map already applies. The step size is unchanged and stays at
+  the DEM's resolution however coarse the output grid, so a narrow ridge at
+  range is sampled rather than averaged away.
+- **The observer is NOT sampled at a different scale from the blockers**, which
+  looks like it should be a bias and is not. `r_p` is a box average over the
+  output cell while a blocker is a bilinear sample of the DEM; at the shipped
+  4096 → 2048 ratio the bilinear sample at a cell centre IS that box average, to
+  2×10⁻¹⁰ m. It stops being true the moment the ratio is not 2 — refine the DEM
+  to 8192 without widening the output and the observer really does smooth
+  against sharp neighbours, biasing the skyline upward in rough terrain.
 - Registered to the body's **colour** map, rolled exactly like the normal
   map. Unlike the normal map there is **no ±85° cutoff**: the march walks
   real geodesics and has no equirect derivative to degenerate.
@@ -203,7 +216,15 @@ that a 512-wide map would do, on the grounds that the skyline signal lives at
 tens to hundreds of km. It does not: the limiting factor is how well the map
 knows the **elevation of the point it answers for**, because the limb term is
 a height effect and height varies at texel scale. Lit area 0–2° past the
-terminator, Moon, against the same march at full DEM width — 8.4 %:
+terminator, Moon, against the same march at full DEM width — 8.4 %.
+
+**Both tables in this subsection were measured at the previous 2.7 km march
+start**, so their absolute levels no longer match the verification table above.
+What they establish is the comparison down each row, and the start distance
+moves every column of a row together — a coarser grid still knows its own
+texel's elevation worse, and interpolating between stored azimuths still
+over-shadows. Refreshing the levels is `stellata-2f6.57`; the choice of 2048
+and 8 is not reopened by it.
 
 | output width | 512 | 1024 | 2048 |
 |---|---|---|---|
@@ -237,9 +258,13 @@ equatorial plane:
 
 | solar depression | normal map only | + horizon maps | full-DEM horizon |
 |---|---|---|---|
-| 0–2° | 38.7 % | 8.5 % | 8.4 % |
-| 2–5° | 17.7 % | 0.2 % | 0.2 % |
+| 0–2° | 38.7 % | 9.6 % | 8.7 % |
+| 2–5° | 17.7 % | 0.3 % | 0.2 % |
 | 5–10° | 6.7 % | 0.0 % | 0.0 % |
+
+Mercury reads 22.0 % → 6.3 % against a 5.6 % reference in the 0–2° band, Mars
+15.6 % → 8.2 % against 7.0 %. Both columns moved together when the march's
+start distance did, since the reference shares it.
 
 ## Ring strips — true opacity and the 8-bit floor
 

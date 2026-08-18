@@ -2,9 +2,9 @@
   "mars": {
     "horizon": {
       "azimuths": 8,
-      "clampedPct": 0.0002,
-      "medianHorizonDeg": 0.037,
-      "p99HorizonDeg": 5.339,
+      "clampedPct": 0.0,
+      "medianHorizonDeg": -0.141,
+      "p99HorizonDeg": 3.428,
       "width": 2048
     },
     "medianTiltDeg": 0.443,
@@ -14,9 +14,9 @@
   "mercury": {
     "horizon": {
       "azimuths": 8,
-      "clampedPct": 0.0018,
-      "medianHorizonDeg": 0.333,
-      "p99HorizonDeg": 6.87,
+      "clampedPct": 0.0,
+      "medianHorizonDeg": 0.057,
+      "p99HorizonDeg": 4.861,
       "width": 2048
     },
     "medianTiltDeg": 1.138,
@@ -26,9 +26,9 @@
   "moon": {
     "horizon": {
       "azimuths": 8,
-      "clampedPct": 0.0575,
-      "medianHorizonDeg": 1.158,
-      "p99HorizonDeg": 14.858,
+      "clampedPct": 0.0002,
+      "medianHorizonDeg": 0.556,
+      "p99HorizonDeg": 10.835,
       "width": 2048
     },
     "medianTiltDeg": 3.273,

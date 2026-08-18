@@ -16,10 +16,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dem_relief import DEM_BODIES  # noqa: E402
 from horizon_map import (  # noqa: E402
     HORIZON_AZIMUTHS,
+    HORIZON_MARCH_START_TEXELS,
     HORIZON_SIN_RANGE,
+    HORIZON_TARGET_W,
     decode_horizon_sin,
     encode_horizon,
     horizon_angles,
+    march_start,
     search_arc,
 )
 
@@ -41,17 +44,12 @@ def limb_sin(ground_m: float, summit_m: float) -> float:
     return math.sqrt(max(0.0, 1 - (ground_m / summit_m) ** 2))
 
 
-def first_step(spec: dict, dem_width: int = W) -> float:
-    """The march's first sample. Nothing closer than this is ever tested, so it
-    alone sets what flat ground at the reference sphere reads."""
-    psi_max = search_arc(spec)
-    return psi_max / math.ceil(psi_max / (2 * math.pi / dem_width))
-
-
-def flat_floor(spec: dict, dem_width: int = W) -> float:
+def flat_floor(out_width: int = W) -> float:
     """Horizon angle of flat ground at the reference sphere: the sphere falling
-    away over that first step, and NOT zero."""
-    psi = first_step(spec, dem_width)
+    away over the march's start distance, and NOT zero. It is a maximum over a
+    ray whose angle decreases monotonically outward, so the start distance is
+    the whole answer and nothing further along the march can raise it."""
+    psi = march_start(out_width)
     return math.atan2(math.cos(psi) - 1, math.sin(psi))
 
 
@@ -78,24 +76,45 @@ class SearchArcTests(unittest.TestCase):
 
 
 class FlatGroundTests(unittest.TestCase):
-    def test_reads_the_curvature_drop_over_the_first_step(self) -> None:
-        """Flat ground reads the first step's own drop, not 0 — the sun stays up
-        that far past the geometric terminator. Bounded, and it is why the
-        composition's coarse-map slack runs toward lighting, never shadowing."""
+    def test_reads_the_curvature_drop_over_the_start_distance(self) -> None:
+        """Flat ground reads the march's start distance's own drop, not 0 — the
+        sun stays up that far past the geometric terminator. Bounded, and it is
+        why the composition's coarse-map slack runs toward lighting, never
+        shadowing."""
         angles = horizon_angles(np.zeros((H, W), np.float32), MOON, 8, W)
-        expected = flat_floor(MOON)
-        self.assertAlmostEqual(math.degrees(expected), -0.332571, places=5)
+        expected = flat_floor()
+        self.assertAlmostEqual(math.degrees(expected), -0.703125, places=5)
         self.assertEqual(np.ptp(angles), 0.0)
         self.assertAlmostEqual(float(angles[0, 0, 0]), expected, places=6)
 
-    def test_the_floor_follows_the_dem_step_not_the_output_grid(self) -> None:
-        """Refining the DEM refines the floor with the output width held fixed,
-        which is what stepping at the output texel would forfeit. The step count
-        is a ceiling, so the two floors are not a clean factor of two apart."""
+    def test_the_floor_follows_the_output_grid_not_the_dem_step(self) -> None:
+        """The two march parameters are independent, and this is the half the
+        start distance owns: refining the DEM refines where a narrow ridge is
+        sampled along the ray but moves the near bound not at all, so the floor
+        is identical. Halving the OUTPUT width doubles it."""
         coarse = horizon_angles(np.zeros((H, W), np.float32), MOON, 8, W)
         fine = horizon_angles(np.zeros((2 * H, 2 * W), np.float32), MOON, 8, W)
-        self.assertAlmostEqual(float(fine[0, 0, 0]), flat_floor(MOON, 2 * W), places=6)
-        self.assertLess(abs(float(fine[0, 0, 0])), abs(float(coarse[0, 0, 0])))
+        self.assertAlmostEqual(float(fine[0, 0, 0]), float(coarse[0, 0, 0]), places=6)
+        wider = horizon_angles(np.zeros((H, W), np.float32), MOON, 8, W // 2)
+        self.assertAlmostEqual(float(wider[0, 0, 0]), flat_floor(W // 2), places=6)
+        self.assertAlmostEqual(
+            float(wider[0, 0, 0]) / float(coarse[0, 0, 0]), 2.0, places=3
+        )
+
+    def test_refuses_an_output_grid_coarser_than_the_search_arc(self) -> None:
+        """A near bound past the search arc would put every sample inside the
+        near field the march exists to skip, silently restoring the defect. The
+        Moon's arc is 0.151 rad, so a 32-wide output asks for 0.393."""
+        with self.assertRaises(AssertionError):
+            horizon_angles(np.zeros((H, W), np.float32), MOON, 8, 32)
+
+    def test_starts_past_what_the_colour_map_can_resolve(self) -> None:
+        """The reason for the start distance rather than its consequence: a
+        caster inside one output texel is half a colour-map texel, so the ground
+        throwing the shadow cannot be drawn at any camera distance."""
+        self.assertGreaterEqual(HORIZON_MARCH_START_TEXELS, 2.0)
+        km = march_start(HORIZON_TARGET_W) * MOON["radius_km"]
+        self.assertAlmostEqual(km, 10.66, places=2)
 
 
 class AzimuthRegistrationTests(unittest.TestCase):
@@ -103,13 +122,21 @@ class AzimuthRegistrationTests(unittest.TestCase):
     wrong side and looks entirely plausible doing it, so the handedness is
     pinned here rather than left to the browser."""
 
+    # The output width is the DEM width here, so the march's samples land on
+    # whole texels and this puts the wall on the very first one — any closer and
+    # it sits inside the near field the march deliberately skips.
+    WALL = int(HORIZON_MARCH_START_TEXELS)
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.row, cls.col = H // 2, W // 2
         elev = np.zeros((H, W), np.float32)
-        elev[cls.row, cls.col + 1] = 20000.0
+        # Three rows rather than one texel: the diagonal rays leave the row they
+        # started on, so a point wall is off their bearing entirely and every
+        # azimuth but due east reads the floor. A rim has meridional extent.
+        elev[cls.row - 1 : cls.row + 2, cls.col + cls.WALL] = 20000.0
         cls.angles = horizon_angles(elev, MOON, 8, W)
-        cls.floor = flat_floor(MOON)
+        cls.floor = flat_floor()
 
     def by_name(self, col: int) -> dict[str, float]:
         return dict(zip(AZIMUTHS, (float(v) for v in self.angles[self.row, col])))
@@ -126,14 +153,17 @@ class AzimuthRegistrationTests(unittest.TestCase):
 
     def test_the_two_diagonals_bracketing_east_agree(self) -> None:
         seen = self.by_name(self.col)
-        self.assertAlmostEqual(seen["NE"], seen["SE"], places=4)
+        # No output row falls exactly on the equator (they are cell centres of
+        # an even count), so this one sits 0.35° south of it and the two
+        # diagonals are near-mirrors rather than exact ones.
+        self.assertAlmostEqual(seen["NE"], seen["SE"], delta=2e-4)
         self.assertLess(seen["NE"], seen["E"])
         self.assertGreater(seen["NE"], self.floor)
 
     def test_the_far_side_sees_the_same_wall_due_west(self) -> None:
-        """East and west are one axis read from both ends: the texel beyond the
-        wall must see it at azimuth 4 exactly as strongly."""
-        east_of_wall = self.by_name(self.col + 2)
+        """East and west are one axis read from both ends: the texel as far past
+        the wall must see it at azimuth 4 exactly as strongly."""
+        east_of_wall = self.by_name(self.col + 2 * self.WALL)
         self.assertEqual(
             max(east_of_wall, key=lambda k: east_of_wall[k]), "W"
         )

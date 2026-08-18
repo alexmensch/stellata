@@ -319,6 +319,11 @@ crossfade.
     Venus's forward-scattered crescent brightens where the data says.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
+    It multiplies **every** reflected term, terrain interreflection
+    included — on one of them alone it would divide into the ratio
+    between them (`surface-relief/README.md` § Shadows are lit by the
+    terrain). Scattered air light is the exception and normalises
+    separately (`emission/README.md` § Two disc means).
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
     unit, pre-divided by the disc means of everything the shader

@@ -48,19 +48,37 @@ mean, against the smooth sphere, in magnitudes:
 | phase | 0° | 90° | 120° | 150° | 170° |
 |---|---|---|---|---|---|
 | normal map alone | +0.007 | −0.014 | −0.007 | −0.033 | −0.390 |
-| with horizon maps | +0.007 | −0.001 | +0.003 | +0.010 | −0.053 |
+| with horizon maps | +0.007 | −0.002 | +0.002 | +0.007 | −0.065 |
+| + interreflection | +0.006 | −0.002 | +0.002 | +0.007 | −0.065 |
 
 The normal map alone runs away past 150° because it lights slopes the sun
 cannot reach; the horizon maps take that back and hold the disc inside
-0.01 mag out to 150°. Mercury and Mars are smaller in both columns
-(−0.157 → −0.032 and −0.093 → +0.000 at 170°). Nothing bounds the residual on
+0.01 mag out to 150°. Mercury and Mars are smaller in every column
+(−0.157 → −0.037 and −0.093 → −0.007 at 170°).
+
+**The third row is the answer to whether interreflection needs dividing out: it
+does not.** Terrain fill adds light the disc integral did not previously carry,
+so it had to be measured rather than waved through — it moves the Moon by
+0.001 mag at full phase and Mars by 0.001 at 150°, and nothing at all to three
+decimals anywhere else. It is bounded by construction: the term is the body's albedo times a
+terrain view factor that is near zero over the open ground making up most of
+the disc — and at the shipped map's resolution it is far smaller even in
+craters than the derivation suggests, small enough not to reach the screen at
+all (`../surface-relief/README.md` § What the fill term is actually worth).
+
+`uPhaseScale` is absent from every column here because it multiplies the fill
+and the direct term alike, so it cancels in the ratio these magnitudes are. That
+is only true because the shader applies it to both; off the fill alone the
+fourth column would understate the term by 1/`uPhaseScale`, up to 4× on Mercury.
+
+Nothing bounds the residual on
 the Moon — the body carries no `phaseCoefficients`, so `uPhaseScale` is pinned
 at 1 and neither Mallama's curve nor its [¼, 4] clamp is in the picture — but
 by 170° the disc is at 1.5 % of full brightness. A correction term here would
 be a fitted quantity sitting on top of a closed form.
 
 **What this settles for `stellata-2f6.51`.** Honest terrain shadowing moves
-the half-phase disc by **−0.001 mag**, so essentially none of the Moon's
+the half-phase disc by **−0.002 mag**, so essentially none of the Moon's
 ~1.4 mag over-brightness at half phase is macroscopic terrain: the missing
 physics is sub-texel regolith roughness and the opposition surge, below any
 DEM. The two corrections therefore cannot double-count, and 2f6.51 inherits

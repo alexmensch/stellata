@@ -3,6 +3,13 @@
 Planet texture build + sync. Data contract and per-body provenance
 live in `data/textures/README.md`; this folder owns the scripts.
 
+Everything Python here runs on the project venv —
+`requirements.txt` carries the install line. A rebuild is
+pixel-reproducible but not byte-reproducible: Pillow's zlib build
+picks the compressed stream, so a version change can rewrite an
+artifact to identical pixels under a different tail. Revert that churn
+rather than shipping it.
+
 - `build-textures.py` — `data/textures/src/` → `data/textures/`
   artifacts (per-body ≤2048-wide equirect JPEG + the 2048×1 RGBA
   `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,

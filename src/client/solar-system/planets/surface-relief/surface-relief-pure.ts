@@ -12,6 +12,11 @@ export const RELIEF_POLE_EPS = 1e-6;
 export const HORIZON_AZIMUTHS = 8;
 export const HORIZON_SIN_RANGE = 0.4;
 
+/** One raw channel in [0, 1] back to the skyline sine it encodes — the inverse
+ *  of `encode_horizon`, shared by every reading of a horizon texel. */
+export const decodeSin = (raw: number): number =>
+  (raw * 2 - 1) * HORIZON_SIN_RANGE;
+
 /** Each relief body's DEM elevation span in metres, `[lowest, highest]` above
  *  the reference sphere it is drawn at — `DEM_BODIES[…].span_m` in
  *  `scripts/textures/dem_relief.py`, which `dem-relief.test.ts` pins these
@@ -127,5 +132,29 @@ export function horizonSin(
   const i0 = base % HORIZON_AZIMUTHS;
   const i1 = (i0 + 1) % HORIZON_AZIMUTHS;
   const f = slot - base;
-  return ((enc[i0] * (1 - f) + enc[i1] * f) * 2 - 1) * HORIZON_SIN_RANGE;
+  return decodeSin(enc[i0] * (1 - f) + enc[i1] * f);
+}
+
+/**
+ * Cosine-weighted fraction of the upper hemisphere the patch's own skyline
+ * fills, from the same `HORIZON_AZIMUTHS` raw channels: `mean(max(sin h, 0)²)`
+ * over the stored azimuths. Unclamped that would be `1 − mean(cos²h)`, but the
+ * clamp is the point and the two differ wherever a skyline is negative.
+ *
+ * A skyline BELOW the local horizontal is sky, not terrain: a horizontal patch
+ * receives nothing from under its own horizontal plane, so those azimuths
+ * contribute zero rather than `sin²h`. Open ground reads the body's own limb
+ * bound there — negative on every azimuth — and without the clamp every flat
+ * plain would claim the fill light of a crater floor.
+ *
+ * At the shipped map's resolution this is far smaller than a crater's true sky
+ * occlusion — README.md § What the fill term is actually worth.
+ */
+export function terrainViewFactor(enc: readonly number[]): number {
+  let sum = 0;
+  for (let i = 0; i < HORIZON_AZIMUTHS; i++) {
+    const s = Math.max(decodeSin(enc[i]), 0);
+    sum += s * s;
+  }
+  return sum / HORIZON_AZIMUTHS;
 }

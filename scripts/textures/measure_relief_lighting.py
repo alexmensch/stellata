@@ -10,7 +10,12 @@ import numpy as np
 from PIL import Image
 
 from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals
-from horizon_map import HORIZON_AZIMUTHS, decode_horizon_sin, horizon_angles
+from horizon_map import (
+    HORIZON_AZIMUTHS,
+    decode_horizon_sin,
+    decode_sin,
+    horizon_angles,
+)
 
 TEXTURES = Path(__file__).resolve().parents[2] / "data" / "textures"
 BINS = ((0, 2), (2, 5), (5, 10), (10, 20))
@@ -23,6 +28,10 @@ PHASE_ANGLES_DEG = (0, 90, 120, 150, 170)
 LIMB_FLOOR = 0.45
 LIMB_EXP = 0.5
 TERM_SOFTNESS_FLOOR = 1e-4
+# Geometric albedo per relief body — Planet.albedo / SolMoon.albedo in
+# src/client/solar-system/planet-system.ts, the reflectance the interreflected
+# term pays a second time. horizon-map.test.ts pins these against the originals.
+ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170}
 
 
 def _smoothstep(a, b, x):
@@ -45,6 +54,14 @@ def _horizon_gate(
         ),
         factor,
     )
+
+
+def _terrain_view(planes: np.ndarray, factor: int) -> np.ndarray:
+    """Cosine-weighted terrain fraction of each patch's sky, mirroring
+    `stellataTerrainViewFactor`: the mean of `max(sin h, 0)²` over the stored
+    azimuths, clamped so a skyline under the local horizontal reads as sky."""
+    s = np.maximum(decode_sin(planes), 0.0)
+    return _upsample((s * s).mean(axis=2), factor)
 
 
 def _shipped_planes(body: str) -> np.ndarray:
@@ -102,8 +119,9 @@ def phase_curve(body: str) -> None:
     factor = w // planes.shape[1]
     view = np.array([0.0, 0.0, 1.0])
 
+    terrain_view = _terrain_view(planes, factor)
     print(f"\n{body}: disc integral vs the smooth sphere, magnitudes")
-    print("  phase     normal map only    + horizon maps")
+    print("  phase     normal map only    + horizon maps  + interreflection")
     for alpha in PHASE_ANGLES_DEG:
         rad = np.radians(alpha)
         sun = np.array([np.sin(rad), 0.0, np.cos(rad)])
@@ -113,17 +131,25 @@ def phase_curve(body: str) -> None:
         weight = np.where(visible, area * np.maximum(ndotv, 0) * limb, 0.0)
         sun_cos = up @ sun
         gate = _horizon_gate(planes, east @ sun, north @ sun, factor)
+        shadowed = _dayside(facet @ sun) * (sun_cos > gate)
+        # The shader adds this to col rather than into dayside, and it carries
+        # the albedo a second time — the bounce off the illuminating slope.
+        # uPhaseScale is absent from every column because it rides the fill and
+        # the direct term alike, so it cancels in the ratio these magnitudes are.
+        fill = ALBEDO[body] * terrain_view * np.maximum(sun_cos, 0.0)
         lit_by = {
             "smooth": _dayside(sun_cos),
             "relief": _dayside(facet @ sun),
-            "horizon": _dayside(facet @ sun) * (sun_cos > gate),
+            "horizon": shadowed,
+            "fill": shadowed + fill,
         }
         total = {k: float((v * weight).sum()) for k, v in lit_by.items()}
         dmag = {
             k: -2.5 * np.log10(total[k] / total["smooth"]) if total[k] > 0 else np.inf
-            for k in ("relief", "horizon")
+            for k in ("relief", "horizon", "fill")
         }
-        print(f"  {alpha:>4}      {dmag['relief']:>+16.3f}  {dmag['horizon']:>+16.3f}")
+        print(f"  {alpha:>4}      {dmag['relief']:>+16.3f}  {dmag['horizon']:>+16.3f}"
+              f"  {dmag['fill']:>+17.3f}")
 
 
 def measure(body: str) -> None:

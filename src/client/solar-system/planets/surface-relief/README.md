@@ -93,26 +93,38 @@ different scales:
 - The **normal map** is the slope, at 4096. It is the ψ → 0 limit of the
   horizon — what you can see standing on the facet itself — and it already
   rides `dayside` through `sunCosRelief`.
-- The **horizon map** is everything else: terrain from one DEM texel out to
-  the body's limb bound, at 2048 in 8 azimuths. It deliberately excludes the
-  ground at your feet, because that is the normal map's job at four times the
-  resolution.
+- The **horizon map** is everything else: terrain from **two output texels**
+  out to the body's limb bound, at 2048 in 8 azimuths. It excludes the ground
+  at your feet, because that is the normal map's job at four times the
+  resolution — 10.7 km on the Moon, 15.0 on Mercury, 20.8 on Mars.
+
+**Where the march starts is a physical claim, not a tuning knob.** It used to
+begin one DEM texel out, 2.7 km on the Moon, and that first step alone set
+**35 %** of every stored skyline value. Two things were wrong with it. The
+caster was unrenderable — 2.7 km is half a colour-map texel, so a third of the
+cast shadows were thrown by ground the screen has no way to draw, which reads
+as a shadow on an empty plain however right the physics. And it double-counted
+against the normal map, whose own facet slope already rides `sunCosRelief`
+before `dayside` multiplies the two. Starting past both domains costs real
+near-field shadowing that the normal map only partly substitutes for — it
+carries the facet's own tilt, not a neighbour blocking it — and that is the
+trade this distance makes deliberately.
 
 `dayside` multiplies the two, so the sun has to clear whichever of them stands
 higher — `max` of the two horizons, saturated; inside the penumbra band the
 product is darker than either factor alone.
 
 **The coarse map therefore CAN veto a facet the fine map lights, and that is
-the point** — it is the whole 38.7 % → 8.5 % of § What the composition is worth.
+the point** — it is the whole 38.7 % → 9.6 % of § What the composition is worth.
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
 between them (`data/textures/README.md` § Cast shadows measures it — 0.32°
 mean at 8 azimuths). What keeps this one-sided rather than compounding is that
 the map's OWN error over flat ground runs the other way: the march never
-samples closer than its first step, so flat ground at the reference sphere
-reads that step's curvature drop — −0.044° at the shipped 4096 DEM, never 0 —
-which is slack toward lighting, not shadowing.
+samples closer than its start distance, so flat ground at the reference sphere
+reads that distance's curvature drop — **−0.176°** at two output texels, never
+0 — which is slack toward lighting, not shadowing.
 
 The horizon test rides the **GEOMETRIC** cosine, and that is not the same
 choice as the list above: a skyline is measured from the ground's true local
@@ -153,9 +165,104 @@ method and the width/azimuth evidence in `data/textures/README.md`
 
 | solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|
-| 0–2° | 38.7 % | 8.5 % | 8.4 % |
-| 2–5° | 17.7 % | 0.2 % | 0.2 % |
+| 0–2° | 38.7 % | 9.6 % | 8.7 % |
+| 2–5° | 17.7 % | 0.3 % | 0.2 % |
 | 5–10° | 6.7 % | 0.0 % | 0.0 % |
+
+The reference column shares the start distance, so both moved together when it
+did — the shipped map lights 9.6 % of the 0–2° band against the reference's
+8.7 %, and that 0.9-point gap is what the output grid and the encoding cost.
+
+## Shadows are lit by the terrain
+
+A shadowed patch on an airless body has no ambient path, so `horizonGate`
+reaching 0 used to emit exactly nothing and the shadows read as holes. What
+actually lights lunar shadow is **terrain interreflection** — the sunlit slopes
+around the patch scattering light into it. The other candidates are not worth
+modelling: earthshine is ~5×10⁻⁵ of sunlight and reaches the near side only,
+zodiacal light ~10⁻⁸, and the solar disc's own penumbra is already `uSunAngRad`.
+
+**The horizon map already carries the input, so this costs no fetch.** For a
+horizontal patch the cosine-weighted sky view factor is the mean of cos²h over
+the stored azimuths, and the map stores sin h — so the terrain's share is
+`mean(sin²h)` over the eight channels `stellataHorizonSin` has already read.
+Writing ρ for the body's geometric albedo and F for that terrain fraction:
+
+```
+L_fill = surfaceScale · ρ · F · max(sunCos, 0) · limb
+```
+
+Each factor earns its place. `surfaceScale` already carries **this** patch's
+reflectance, so `uTerrainAlbedo` is the **second** bounce — the one off the
+illuminating slope, which is why a shadow on a dark body is darker than the
+albedo ratio alone. `max(sunCos, 0)` stands in for the mean illumination of the
+terrain in view, taken at the sun's true elevation here rather than at this
+facet's tilt: the light is coming off the neighbours, not off this facet. Both
+terms carry the same cosine, so **the ratio ρ·F is free of solar elevation** —
+walls of a given height give the same ratio at a 3° sun and at noon alike.
+
+`uPhaseScale` rides it exactly as it rides the direct term. It corrects the
+whole **reflected** disc to the measured Mallama curve, so leaving it off the
+fill alone would divide in: Mercury sits on the clamp's 0.25 floor from 60°
+through 150°, which would make its shadows 4× brighter relative to lit ground
+there than at full phase, and the elevation-free ratio above would stop being
+phase-free. Skylight is the one additive term legitimately outside
+`uPhaseScale` — air scatter carries no surface albedo and its disc mean divides
+out separately (`../emission/README.md` § Two disc means).
+
+**A skyline below the local horizontal is sky, not terrain.** Over open ground
+every azimuth reads the body's own limb bound — negative — and squaring that
+unclamped would give every flat plain a crater floor's fill light. `max(sinH,
+0)` before the square is what keeps the term self-scaling: deep craters get
+fill, plains get essentially none, and on open ground near the terminator the
+honest answer really is close to black.
+
+It is added to `col`, never folded into `dayside`. Folding it in would put it
+inside the direct term, and `dayside` is what the coverage mask below is cut
+from. The CPU mirror is `terrainViewFactor` in `surface-relief-pure.ts`, source-
+pinned to the GLSL clamp because a `max()` dropped on the shader side alone
+would brighten every plain with nothing in the TS suite noticing.
+
+**No flux renormalisation**, and measured rather than assumed — the fourth
+column of `../emission/README.md`'s phase table.
+
+### What the fill term is actually worth — it does not reach the screen
+
+The formula above is right and the term is nonzero everywhere the skyline is
+positive, but at the shipped map's resolution it lands **below one 8-bit code
+value** over essentially the whole surface. Measured off the shipped planes,
+area-weighted by `cos(lat)`, with `ρ·F` read as the shadow-to-lit ratio:
+
+| body | F p50 | F p99 | F max | ρ·F at p99 | ρ·F at max |
+|---|---|---|---|---|---|
+| Moon | 0.00066 | 0.0230 | 0.101 | 0.28 % | 1.21 % |
+| Mercury | 0.00007 | 0.0053 | 0.029 | 0.08 % | 0.41 % |
+| Mars | 0.00000 | 0.0031 | 0.057 | 0.05 % | 0.97 % |
+
+Two things follow, and both are load-bearing:
+
+- **The 1.4 % worked example is above what the data contains.** It assumes
+  `F = sin²20° = 0.117`; the maximum anywhere in the shipped Moon map is 0.101,
+  and the p99 is 0.023 — fifty times smaller. A 2048-wide, 8-azimuth skyline
+  starting 10.7 km out cannot represent a crater whose walls occlude 20° of
+  sky, because those walls are a few km away, inside the near field the march
+  deliberately skips. The derivation is sound; the input is not there.
+- **The faint-end toe then removes what is left.** `../../../hdr/README.md`
+  § Operator crushes anything more than `TOE_BLACK_MAG` = 1.5 mag under
+  `L_THRESH` to black by construction. A shadow at 0.28 % of lit ground is 6.4
+  mag fainter, so it clears the toe only when the lit ground beside it is
+  itself pushed to ~214/255. Through the real operator, at any exposure where
+  the lunar surface is not blown out, the fill quantises to **0/255** at every
+  percentile up to p99.9.
+
+Moving the march start out cost a factor of ~1.8 at p99 (0.0401 → 0.0230 on the
+Moon, both measured at 2048) — real, but not the reason the term is invisible;
+it was two orders of magnitude short before that change too. **The honest
+statement is that this term is physically correct and currently has no visible
+effect.** It is kept because it is the right physics and costs no fetch, not
+because it changes a pixel. Giving it a visible effect needs a near-field sky
+view factor computed over the range the shadow march excludes — its own channel,
+its own artifact — which is `stellata-2f6.58`, not this term.
 
 ## The exposure coverage mask stays geometric
 

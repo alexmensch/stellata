@@ -12,6 +12,7 @@ import {
   reliefHorizonSines,
   reliefNormal,
   tangentFrame,
+  terrainViewFactor,
 } from './surface-relief-pure';
 
 const frag = readFileSync(
@@ -209,6 +210,74 @@ describe('the layer gates every relief fetch on the span table', () => {
   });
 });
 
+// The one input a shadowed patch has: how much of its sky the terrain around it
+// fills. Same eight channels the skyline lookup reads, so it costs no fetch.
+describe('the terrain view factor', () => {
+  const all = (sine: number): number[] =>
+    new Array(HORIZON_AZIMUTHS).fill(sine / (2 * HORIZON_SIN_RANGE) + 0.5);
+  const MOON_ALBEDO = SOL_BODIES.find((b) => b.name === 'Moon')!.albedo;
+
+  it('sees no terrain from ground whose skyline is the geometric horizon', () => {
+    expect(terrainViewFactor(all(0))).toBe(0);
+  });
+
+  it('counts a skyline below the local horizontal as sky, not terrain', () => {
+    // Open ground reads the body's own limb bound on every azimuth — negative.
+    // Squaring it unclamped would light every plain like a crater floor.
+    const [, none] = reliefHorizonSines(RELIEF_ELEV_SPAN_M.moon, 1737.4);
+    expect(none).toBeGreaterThan(0);
+    expect(terrainViewFactor(all(-none))).toBe(0);
+  });
+
+  it('fills the hemisphere as sin squared of the wall height', () => {
+    expect(terrainViewFactor(all(Math.sin(Math.PI / 9)))).toBeCloseTo(
+      Math.sin(Math.PI / 9) ** 2, 12);
+    expect(terrainViewFactor(all(0.2))).toBeCloseTo(0.04, 15);
+  });
+
+  it('averages over the azimuths, so one wall is an eighth of eight', () => {
+    const oneWall = all(0);
+    oneWall[2] = 0.2 / (2 * HORIZON_SIN_RANGE) + 0.5;
+    expect(terrainViewFactor(oneWall)).toBeCloseTo(0.04 / HORIZON_AZIMUTHS, 15);
+  });
+
+  it('clamps in the shader too, where the divergence would be silent', () => {
+    // The CPU side is the mirror; only the GLSL lights pixels. A max() dropped
+    // there brightens every plain and nothing in this file would notice.
+    expect(frag).toContain('float s = max(stellataDecodeSin(enc[i]), 0.0);');
+    expect(frag).toContain('sum += s * s;');
+    expect(frag).toContain('return sum / float(STELLATA_HORIZON_AZIMUTHS);');
+    // Both readings of a texel decode through the one helper, so the encoding
+    // cannot drift between the skyline lookup and the view factor.
+    expect(frag).toContain(
+      'return (raw * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE;');
+    expect(frag).toContain(
+      'return stellataDecodeSin(mix(enc[i0], enc[i1], slot - base));');
+  });
+
+  it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
+    // The scale-free claim below is a claim about the RATIO, and it holds only
+    // if the Mallama correction multiplies the fill and the direct term alike.
+    // Off the fill alone it would divide in, and Mercury sits on the clamp
+    // floor of 0.25 from 60° through 150° — a 4x brighter shadow there.
+    expect(frag).toContain('vec3 col = surfaceScale * (dayside * limb * uPhaseScale);');
+    expect(frag).toContain('* limb * uPhaseScale);');
+    // Skylight is the one additive term that stays OUTSIDE it: air scatter
+    // carries no surface albedo, and its disc mean divides out through
+    // atmoDiscMeans instead (../emission/README.md § Two disc means).
+    const skylight = frag.match(/col \+= surfaceScale \* stellata_skyIrradiance[\s\S]*?;/)!;
+    expect(skylight[0]).not.toContain('uPhaseScale');
+  });
+
+  it('lands a 20° crater floor at 1.4% of the ground lit beside it', () => {
+    // Both the fill and the direct term carry the same cos(i), so the ratio is
+    // the solar elevation's to lose — it is 1.4% at a 3° sun and at noon alike.
+    // The albedo is paid twice: once off the wall, once off the floor.
+    expect(MOON_ALBEDO * terrainViewFactor(all(Math.sin(Math.PI / 9))))
+      .toBeCloseTo(0.014, 3);
+  });
+});
+
 // The exposure pin, the closed-form limb mean, solar depression and the
 // airlight march geometry all read the GEOMETRIC normal — see README.md for
 // what each would break. Relief reaches the direct term
@@ -230,6 +299,13 @@ describe('relief feeds the direct term only', () => {
     expect(frag).toContain('float sunCos = dot(n, uSunDirView);');
     expect(frag).toContain('float lit = step(0.0, sunCos) * step(0.5, shadow);');
     expect(frag).toContain('stellata_skyIrradiance(sunCos, uScaleHeightR,');
+    // Interreflection is the fourth: the light filling a shadow comes off the
+    // terrain around the patch, whose illumination is set by the sun's true
+    // elevation there and not by which way this one facet happens to tilt.
+    // uPhaseScale rides it as well — without that the shadow-to-lit ratio would
+    // be a function of phase angle on every body carrying a Mallama curve.
+    expect(frag).toContain(
+      '* (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);');
     // Narrow enough to survive an argument-list reflow in the atmosphere
     // march: what matters is which normal goes in, not the whole call.
     expect(frag).toMatch(/float ndotv = clamp\(dot\(n, v\)/);
