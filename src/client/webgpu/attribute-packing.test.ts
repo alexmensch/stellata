@@ -13,6 +13,11 @@ describe('buildPackedAttributes', () => {
     expect(attrs[0].attribute.count).toBe(1);
     expect([...(attrs[1].attribute.array as Float32Array)]).toEqual([5, 0, 0, 0]);
   });
+
+  it('takes its buffer names from the plan prefix', () => {
+    const plan = planVec4Packing(['a'], 'iDyn');
+    expect(buildPackedAttributes(plan, { a: [1] }, 1).map((x) => x.name)).toEqual(['iDyn0']);
+  });
 });
 
 describe('packedScalar', () => {

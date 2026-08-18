@@ -151,14 +151,36 @@ Before adding an entry, compile-probe the gap against the installed
 ## Attribute packing
 
 WebGPU's default `maxVertexBuffers` is 8 and three binds one GPU vertex
-buffer per `BufferAttribute`, so the star pipeline's aCorner + 14 scalar
-instanced attributes (15 buffers) cannot port as-is.
-`planVec4Packing(names)` assigns each scalar a (buffer, component) slot
-in declaration order; `buildPackedAttributes` interleaves the source
-arrays into `iPack<N>` vec4 attributes; `packedScalar(plan, name)` is
-the accessor node replacing `attribute('iScalarName')`. Storage buffers
-indexed by `instance_index` supersede packing when the compute prepass
-lands — packing is the port-time answer, not the endgame.
+buffer per `BufferAttribute`, so the star pipeline's **15** attributes
+cannot port as-is. What those 15 are, and why the split matters:
+
+- `aCorner` (vec2), `iPosition` (vec3) and `iPuls` (vec2) are **not
+  packable** — the planner slots one component per name, so a
+  multi-component attribute stays as it is. Three buffers.
+- **9 static scalars** — `iAbsmag`, `iCi`, `iSpectClass`, `iLogRadius`,
+  `iPeriodDays`, `iAmplitudeMag`, `iLumClass`, `iDistSol`, `iTeffApsis`
+  — written once at catalog load. Three packed buffers.
+- **3 `DynamicDrawUsage` scalars** — `iCompositeSuppress`,
+  `iEclipseDim`, `iSuppressPulsation` — rewritten per frame by the
+  binary / eclipse fields. **Pack these separately.** A vec4 uploads as
+  one buffer, so mixing a per-frame scalar in with static neighbours
+  turns each dim update into a 4×-wide re-upload of data that never
+  changes. One packed buffer.
+
+That is 7 of the 8 buffers — the limit is the binding constraint the
+port lives under, not a comfortable margin, which is why storage buffers
+indexed by `instance_index` supersede packing once the compute prepass
+lands. Packing is the port-time answer, not the endgame.
+
+`planVec4Packing(names, prefix)` assigns each name a (buffer, component)
+slot in declaration order and **fixes the attribute-name prefix on the
+plan** — the two cadence groups are two plans (`iPack<N>` / `iDyn<N>`),
+and a prefix passed at build time but forgotten at access time would
+read an attribute nothing ever set, silently. `buildPackedAttributes`
+interleaves the source arrays into the plan's vec4 attributes;
+`packedScalar(plan, name)` is the accessor node replacing
+`attribute('iScalarName')`, over `packedAccess`'s pure (buffer name,
+swizzle) resolution.
 
 ## TSL test pattern — what a port child writes
 

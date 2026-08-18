@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { packVec4Buffers, planVec4Packing } from './attribute-packing-pure';
+import {
+  DEFAULT_PACK_PREFIX,
+  packVec4Buffers,
+  packedAccess,
+  packedBufferName,
+  planVec4Packing,
+} from './attribute-packing-pure';
 
 const STAR_ATTRS_14 = [
   'iAbsMag', 'iCi', 'iDistSol', 'iSpectClass', 'iLumClass', 'iLogRadius',
@@ -23,6 +29,36 @@ describe('planVec4Packing', () => {
 
   it('rejects a duplicate name', () => {
     expect(() => planVec4Packing(['a', 'b', 'a'])).toThrow(/duplicate/);
+  });
+
+  it('treats an Object.prototype key as an ordinary name', () => {
+    const plan = planVec4Packing(['toString', 'constructor']);
+    expect(plan.slots.toString).toEqual({ buffer: 0, component: 0 });
+    expect(packedAccess(plan, 'constructor').component).toBe('y');
+    expect(() => packedAccess(plan, 'valueOf')).toThrow(/not in the pack plan/);
+  });
+});
+
+describe('packedBufferName / packedAccess', () => {
+  it('names buffers from the plan prefix and maps components to swizzles in order', () => {
+    const plan = planVec4Packing(['a', 'b', 'c', 'd', 'e']);
+    expect(plan.prefix).toBe(DEFAULT_PACK_PREFIX);
+    expect(packedBufferName(plan, 0)).toBe('iPack0');
+    expect(packedAccess(plan, 'a')).toEqual({ buffer: 'iPack0', component: 'x' });
+    expect(packedAccess(plan, 'b')).toEqual({ buffer: 'iPack0', component: 'y' });
+    expect(packedAccess(plan, 'c')).toEqual({ buffer: 'iPack0', component: 'z' });
+    expect(packedAccess(plan, 'd')).toEqual({ buffer: 'iPack0', component: 'w' });
+    expect(packedAccess(plan, 'e')).toEqual({ buffer: 'iPack1', component: 'x' });
+  });
+
+  it('a custom prefix reaches both the buffer names and the accessors', () => {
+    const plan = planVec4Packing(['a', 'b'], 'iDyn');
+    expect(packedBufferName(plan, 0)).toBe('iDyn0');
+    expect(packedAccess(plan, 'b')).toEqual({ buffer: 'iDyn0', component: 'y' });
+  });
+
+  it('throws on a name outside the plan', () => {
+    expect(() => packedAccess(planVec4Packing(['a']), 'nope')).toThrow(/not in the pack plan/);
   });
 });
 
