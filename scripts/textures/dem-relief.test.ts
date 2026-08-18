@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 import { RELIEF_ELEV_SPAN_M } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
-import { isLfsPointer, webpSize } from './webp-header-pure';
+import { isLfsPointer, webpSize } from './image-header-pure';
 
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with

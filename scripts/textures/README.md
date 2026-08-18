@@ -64,10 +64,20 @@ rather than shipping it.
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
-- `webp-header-pure.ts` — dimensions and the LFS-pointer check straight
-  out of a lossless WebP's own header, so an artifact pin reads the
-  artifact rather than the manifest beside it. Shared by both relief
-  test suites.
+- `audit_sources.py` — manual, run by hand, NOT part of the build:
+  measures every frozen source against the claims its provenance row
+  makes — dimensions, near-black polar bands, the mirror test, mean
+  chroma. Run it after ANY source swap. What each check can and cannot
+  settle (the mirror test in particular does not identify a mirror on
+  its own) is `data/textures/src/README.md` § Auditing.
+- `source-provenance.test.ts` — the mechanical half of that audit in
+  CI: parses the provenance table and asserts every stated size
+  against the file's own header, plus the 2:1 equirect ratio. Skips
+  rows whose LFS object was never pulled.
+- `image-header-pure.ts` — dimensions and the LFS-pointer check
+  straight out of a WebP, JPEG or TIFF header, so a pin reads the
+  artifact rather than the prose beside it. Shared by both relief test
+  suites and the provenance test.
 - `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
   downloaded 0.5–2.0 GB global DEM → the frozen
   `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode

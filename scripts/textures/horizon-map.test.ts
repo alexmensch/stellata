@@ -14,7 +14,7 @@ import {
   LIMB_EXP,
   LIMB_FLOOR,
 } from '../../src/client/solar-system/planets/emission/mesh-surface-pure';
-import { isLfsPointer, webpSize } from './webp-header-pure';
+import { isLfsPointer, webpSize } from './image-header-pure';
 
 // horizon_map.py cannot import the runtime tables, so this pins its constants
 // back against the shader's mirror of them, and both against the shipped
