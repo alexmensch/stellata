@@ -101,7 +101,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | ----------------------- | -------------------------------- | ---------------- |
 | `frame.total`           | `stellata.ts` `animate()`       | Full frame body, the histogram source. |
 | `controls.update`       | `stellata.ts` `animate()`       | TrackballControls / observe-controls update branch. |
-| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes + galactic + Milky Way reposition. |
+| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold and core-mask gate. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
@@ -126,6 +126,23 @@ after exiting chart mode (otherwise the average would lag forever).
 | `chart.dom`             | `chart-labels.ts` `tick()`       | SVG attribute writes for surviving labels. |
 | `chart.glyphs.var`      | `chart-labels.ts` `tick()`       | Variable-ring `<circle>` projection + emission. |
 | `chart.glyphs.bin`      | `chart-labels.ts` `tick()`       | Binary-wing `<line>` projection + emission. |
+
+## Where the numbers come from — and when not to trust them
+
+Every CPU row is a bare `performance.now()` delta into a 60-frame ring; no
+User Timing entries, no observers. So a row reports real elapsed wall time
+inside its bracket, and nothing the HUD does scales with how much the
+browser is instrumenting.
+
+The environment does, though. **Safari 26 with Web Inspector open against
+the dev server inflates `pre-render` by ~50× (2 ms → 100 ms); the same
+page from a production build does not**, and it is independent of the
+renderer backend. Nothing in the fan-out logs per frame and the prod build
+strips no `console` calls, so this is the inspector instrumenting Vite's
+unbundled module graph, not frame work. Take Safari numbers from a
+production build, or with the inspector closed. `frame.total` and the FPS
+headline are the cross-check: if a section inflates while they hold
+steady, the environment is lying to you, not the section.
 
 ## GPU timing
 
