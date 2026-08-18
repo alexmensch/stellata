@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import {
   computeDepthSlices,
   type MemberSphere,
-} from './slice-pure';
+} from './bracket/slice-pure';
 
 export interface LocalCluster {
   /** Root of the cluster's local-pass renderables. Parked in the

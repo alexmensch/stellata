@@ -1,6 +1,6 @@
-// Depth-slice partition math for the local depth pass: member bounding
-// spheres → K ratio-bounded [near, far] brackets, rendered far→near.
-// Derivation + precision analysis in README.md § Precision.
+// Bracket math for the local depth pass: member bounding spheres → K
+// ratio-bounded [near, far] brackets, rendered far→near, plus the depth
+// quantum of both encodings. Derivations in README.md.
 
 export interface MemberSphere {
   /** Camera → sphere-centre distance, pc. */
@@ -20,7 +20,11 @@ export const NEAR_MIN_PC = 1e-17;
 /** near = this fraction of the nearest member surface distance. */
 export const NEAR_FRACTION = 0.5;
 export const FAR_MARGIN = 1.05;
+/** Fixed-point depth bits — the WebGL2 sliced path only. The WebGPU path
+ *  stores depth as float32; see `REVERSED_DEPTH_MANTISSA_BITS`. */
 export const DEPTH_BUFFER_BITS = 24;
+/** float32 mantissa bits behind `ulp(d) ≤ d·2⁻²³`, the reversed-z bound. */
+export const REVERSED_DEPTH_MANTISSA_BITS = 23;
 /** Headroom between the far-edge depth quantum and a one-pixel feature:
  *  at the maximal slice ratio, the smallest z-orderable feature at the
  *  slice's far plane subtends 1/SLICE_RATIO_SAFETY px. */
@@ -39,6 +43,14 @@ export function maxSliceRatio(fovYRad: number, viewportHeightPx: number): number
  *  the world-space Δz that moves the depth value by one buffer step. */
 export function depthQuantumPc(zPc: number, nearPc: number, farPc: number): number {
   return (zPc * zPc * (farPc - nearPc)) / (farPc * nearPc * 2 ** DEPTH_BUFFER_BITS);
+}
+
+/** Reversed-z Depth32Float quantum at distance z under a finite far plane.
+ *  Free of near and of far/near — the property that retires the partition.
+ *  An upper bound: `ulp(d) ≤ d·2⁻²³` is worst-case over the binade, and it
+ *  models storage only, not the projection's own cancellation as z → far. */
+export function reversedDepthQuantumPc(zPc: number, farPc: number): number {
+  return zPc * 2 ** -REVERSED_DEPTH_MANTISSA_BITS * (1 - zPc / farPc);
 }
 
 /** Partition the members' depth range into equal-ratio slices, each

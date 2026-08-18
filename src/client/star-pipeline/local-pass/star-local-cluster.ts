@@ -11,7 +11,7 @@ import {
   type RenderedSizeComponents,
 } from '../../camera/controls/star-physics';
 import type { LocalCluster } from '../../local-depth/local-depth-pass';
-import type { MemberSphere } from '../../local-depth/slice-pure';
+import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { MIRROR_CAPACITY, type StarLocalMirror } from './star-local-mirror';
