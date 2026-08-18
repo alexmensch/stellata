@@ -1,18 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
   MARS_PHASE,
   MERCURY_PHASE,
+  MOON_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
   type PhaseCoefficients,
   lambertianPhaseFactor,
-  mallamaPhaseFactor,
+  empiricalPhaseFactor,
   alphaZeroPhaseFactor,
   phaseAngleFor,
   phaseFactorFor,
   phaseRatioToLambert,
+  illuminatedFraction,
   PHASE_RATIO_MAX,
   PHASE_RATIO_MIN,
 } from './phase-function';
@@ -47,13 +51,13 @@ describe('lambertianPhaseFactor', () => {
   });
 });
 
-describe('mallamaPhaseFactor', () => {
+describe('empiricalPhaseFactor', () => {
   it('returns Lambertian when alphaMaxDeg sentinel = 0', () => {
     const empty: PhaseCoefficients = {
       c0: 0, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
     for (const aDeg of [0, 30, 90, 150]) {
-      expect(mallamaPhaseFactor(empty, aDeg * DEG))
+      expect(empiricalPhaseFactor(empty, aDeg * DEG))
         .toBeCloseTo(lambertianPhaseFactor(aDeg * DEG), 12);
     }
   });
@@ -64,11 +68,11 @@ describe('mallamaPhaseFactor', () => {
     // — anchor-scaled, NOT pure Lambert (which would step) and NOT
     // the extrapolated polynomial (which would over-brighten).
     const aMax = MARS_PHASE.alphaMaxDeg * DEG;
-    const polyAtBoundary = mallamaPhaseFactor(MARS_PHASE, aMax);
+    const polyAtBoundary = empiricalPhaseFactor(MARS_PHASE, aMax);
     const lambertAtBoundary = lambertianPhaseFactor(aMax);
     const k = polyAtBoundary / lambertAtBoundary;
     const a60 = 60 * DEG;
-    expect(mallamaPhaseFactor(MARS_PHASE, a60))
+    expect(empiricalPhaseFactor(MARS_PHASE, a60))
       .toBeCloseTo(lambertianPhaseFactor(a60) * k, 10);
     // Mars darkens faster than a Lambertian sphere at moderate α:
     // k < 1, so the anchor-scaled Lambert past 50° stays dimmer than
@@ -84,8 +88,8 @@ describe('mallamaPhaseFactor', () => {
     // construction (right-limit ≡ left-limit).
     const eps = 1e-6;
     const aMax = SATURN_PHASE.alphaMaxDeg * DEG;
-    const lhs = mallamaPhaseFactor(SATURN_PHASE, aMax - eps);
-    const rhs = mallamaPhaseFactor(SATURN_PHASE, aMax + eps);
+    const lhs = empiricalPhaseFactor(SATURN_PHASE, aMax - eps);
+    const rhs = empiricalPhaseFactor(SATURN_PHASE, aMax + eps);
     expect(rhs).toBeCloseTo(lhs, 5);
     // Sanity: the anchor preserves Saturn's ring boost past αmax —
     // anchored Lambert sits well above 1, not the ~0.99 a naive
@@ -98,23 +102,23 @@ describe('mallamaPhaseFactor', () => {
     // direction — polynomial dimmer than Lambert at 50°).
     const eps = 1e-6;
     const aMax = MARS_PHASE.alphaMaxDeg * DEG;
-    const lhs = mallamaPhaseFactor(MARS_PHASE, aMax - eps);
-    const rhs = mallamaPhaseFactor(MARS_PHASE, aMax + eps);
+    const lhs = empiricalPhaseFactor(MARS_PHASE, aMax - eps);
+    const rhs = empiricalPhaseFactor(MARS_PHASE, aMax + eps);
     expect(rhs).toBeCloseTo(lhs, 5);
   });
 
   it('clamps α defensively outside [0, π] (sibling-symmetric with Lambert)', () => {
     // Negative α → clamped to 0. For c0 = 0 planets, the polynomial
     // value at α = 0 is exactly 1.
-    expect(mallamaPhaseFactor(MARS_PHASE, -1)).toBeCloseTo(1, 12);
+    expect(empiricalPhaseFactor(MARS_PHASE, -1)).toBeCloseTo(1, 12);
     // α > π → clamped to π. π in degrees = 180°, beyond every
     // published αmax, so this lands on the anchor-Lambert path with
     // Lambert(π) = 0 ⇒ φ = 0 regardless of the anchor multiplier.
-    expect(mallamaPhaseFactor(MARS_PHASE, Math.PI + 1)).toBeCloseTo(0, 12);
+    expect(empiricalPhaseFactor(MARS_PHASE, Math.PI + 1)).toBeCloseTo(0, 12);
     // Saturn at negative α → clamped to 0 → polynomial gives the c0
     // ring boost (≈ 1.66×). Defensive symmetry: a misuse with
     // out-of-range α can't trigger Horner extrapolation.
-    expect(mallamaPhaseFactor(SATURN_PHASE, -1)).toBeCloseTo(
+    expect(empiricalPhaseFactor(SATURN_PHASE, -1)).toBeCloseTo(
       10 ** (0.55 / 2.5),
       6,
     );
@@ -130,14 +134,14 @@ describe('mallamaPhaseFactor', () => {
       ['Jupiter', JUPITER_PHASE],
     ];
     for (const [name, p] of planets) {
-      const v = mallamaPhaseFactor(p, 0);
+      const v = empiricalPhaseFactor(p, 0);
       expect(v, `${name} α=0`).toBeCloseTo(1, 12);
     }
   });
 
   it('Saturn at α = 0 is brighter than 1× (ring boost)', () => {
     // c0 = -0.55 mag → 10^(0.55/2.5) ≈ 1.660.
-    const v = mallamaPhaseFactor(SATURN_PHASE, 0);
+    const v = empiricalPhaseFactor(SATURN_PHASE, 0);
     expect(v).toBeCloseTo(10 ** (0.55 / 2.5), 6);
     expect(v).toBeGreaterThan(1.6);
     expect(v).toBeLessThan(1.7);
@@ -160,7 +164,7 @@ describe('mallamaPhaseFactor', () => {
       MERCURY_PHASE.c6 * aDeg ** 6 +
       MERCURY_PHASE.c7 * aDeg ** 7;
     const renderedDV = (aDeg: number): number => {
-      const factor = mallamaPhaseFactor(MERCURY_PHASE, aDeg * DEG);
+      const factor = empiricalPhaseFactor(MERCURY_PHASE, aDeg * DEG);
       return (-Math.log(factor) * 2.5) / Math.log(10);
     };
     expect(MERCURY_PHASE.alphaMaxDeg).toBe(170);
@@ -182,7 +186,7 @@ describe('mallamaPhaseFactor', () => {
     // polynomial's runaway first shipped. ΔV grows ⇒ flux falls.
     let prev = -Infinity;
     for (let aDeg = 2; aDeg <= 170; aDeg += 2) {
-      const factor = mallamaPhaseFactor(MERCURY_PHASE, aDeg * DEG);
+      const factor = empiricalPhaseFactor(MERCURY_PHASE, aDeg * DEG);
       const dV = (-Math.log(factor) * 2.5) / Math.log(10);
       expect(dV, `α=${aDeg}°`).toBeGreaterThan(prev);
       prev = dV;
@@ -194,7 +198,7 @@ describe('mallamaPhaseFactor', () => {
     // Hand-checked to land near 1.15 mag. This is a sanity bound,
     // not a hard pin.
     const a = 30 * DEG;
-    const factor = mallamaPhaseFactor(MERCURY_PHASE, a);
+    const factor = empiricalPhaseFactor(MERCURY_PHASE, a);
     const dV = -Math.log(factor) * 2.5 / Math.log(10);
     expect(dV).toBeGreaterThan(1.0);
     expect(dV).toBeLessThan(1.3);
@@ -208,7 +212,7 @@ describe('mallamaPhaseFactor', () => {
       [90, 2.069],
       [135, 3.801],
     ] as const) {
-      const factor = mallamaPhaseFactor(EARTH_PHASE, aDeg * DEG);
+      const factor = empiricalPhaseFactor(EARTH_PHASE, aDeg * DEG);
       const dV = -Math.log(factor) * 2.5 / Math.log(10);
       expect(dV, `Earth α=${aDeg}°`).toBeCloseTo(expectedDV, 2);
     }
@@ -221,21 +225,48 @@ describe('mallamaPhaseFactor', () => {
     // would predict. The asymmetry grows with α — at 130° Mallama
     // is ~1.6× Lambert; by 160° it's nearly an order of magnitude.
     const a130 = 130 * DEG;
-    expect(mallamaPhaseFactor(VENUS_PHASE, a130))
+    expect(empiricalPhaseFactor(VENUS_PHASE, a130))
       .toBeGreaterThan(lambertianPhaseFactor(a130) * 1.4);
     const a160 = 160 * DEG;
-    expect(mallamaPhaseFactor(VENUS_PHASE, a160))
+    expect(empiricalPhaseFactor(VENUS_PHASE, a160))
       .toBeGreaterThan(lambertianPhaseFactor(a160) * 5);
+  });
+
+  it('Moon reproduces the measured full-to-quarter brightness ratio (~11×)', () => {
+    // The empirical anchor for the whole lunar phase law: a quarter
+    // Moon is ~11× fainter than a full one, not the 3.1× Lambert
+    // predicts. If this drifts, the coefficients are wrong.
+    const ratio = empiricalPhaseFactor(MOON_PHASE, 0) / empiricalPhaseFactor(MOON_PHASE, 90 * DEG);
+    expect(ratio).toBeCloseTo(10.989, 3);
+    const lambertRatio = lambertianPhaseFactor(0) / lambertianPhaseFactor(90 * DEG);
+    expect(lambertRatio).toBeCloseTo(3.142, 3);
+  });
+
+  it('Moon over-brightness under Lambert matches the published deficit', () => {
+    // How much too bright the Moon rendered before it carried a curve,
+    // in magnitudes. Full phase is exactly right (the −12.74 anchor);
+    // the gap opens across the phases a user parks at.
+    const expected: ReadonlyArray<readonly [number, number]> = [
+      [0, 0], [10, 0.24404], [30, 0.64549], [60, 1.07338],
+      [90, 1.35957], [120, 1.54298], [150, 1.35193],
+    ];
+    for (const [aDeg, overMag] of expected) {
+      const a = aDeg * DEG;
+      const measured = 2.5 * Math.log10(
+        lambertianPhaseFactor(a) / empiricalPhaseFactor(MOON_PHASE, a),
+      );
+      expect(measured).toBeCloseTo(overMag, 5);
+    }
   });
 
   it('all curves return positive, finite factors over their validity range', () => {
     const all = [
       MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, MARS_PHASE,
-      JUPITER_PHASE, SATURN_PHASE,
+      JUPITER_PHASE, SATURN_PHASE, MOON_PHASE,
     ];
     for (const p of all) {
       for (let aDeg = 0; aDeg <= p.alphaMaxDeg; aDeg += 0.5) {
-        const v = mallamaPhaseFactor(p, aDeg * DEG);
+        const v = empiricalPhaseFactor(p, aDeg * DEG);
         expect(Number.isFinite(v)).toBe(true);
         expect(v).toBeGreaterThan(0);
       }
@@ -257,7 +288,7 @@ describe('alphaZeroPhaseFactor', () => {
     expect(alphaZeroPhaseFactor(SATURN_PHASE)).toBeCloseTo(10 ** (0.55 / 2.5), 6);
   });
 
-  it('returns 1 when alphaMaxDeg = 0 (sentinel — Mallama disabled)', () => {
+  it('returns 1 when alphaMaxDeg = 0 (sentinel — polynomial disabled)', () => {
     const sentinel: PhaseCoefficients = {
       c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
@@ -277,7 +308,7 @@ describe('phaseFactorFor', () => {
       .toBeCloseTo(1 / Math.PI, 6);
   });
 
-  it('Mallama branch matches a direct mallamaPhaseFactor call at known α', () => {
+  it('polynomial branch matches a direct empiricalPhaseFactor call at known α', () => {
     // Construct a geometry where the angle at the planet between the
     // viewer and host directions is exactly α = 30°. Planet at the
     // origin (relative to viewer), viewer along -x, host at α relative
@@ -289,7 +320,7 @@ describe('phaseFactorFor', () => {
     const dvx = 1, dvy = 0, dvz = 0;
     const dhx = 1 - Math.cos(a), dhy = Math.sin(a), dhz = 0;
     const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, MARS_PHASE);
-    expect(phi).toBeCloseTo(mallamaPhaseFactor(MARS_PHASE, a), 6);
+    expect(phi).toBeCloseTo(empiricalPhaseFactor(MARS_PHASE, a), 6);
   });
 
   it('returns 1 when the viewer→planet leg is degenerate (lenV = 0)', () => {
@@ -345,7 +376,7 @@ describe('phaseRatioToLambert', () => {
 
   it('matches the raw curve ratio inside the validity bound', () => {
     const a = (30 * Math.PI) / 180;
-    const raw = mallamaPhaseFactor(MARS_PHASE, a) / lambertianPhaseFactor(a);
+    const raw = empiricalPhaseFactor(MARS_PHASE, a) / lambertianPhaseFactor(a);
     expect(phaseRatioToLambert(MARS_PHASE, a)).toBeCloseTo(raw, 12);
   });
 
@@ -355,8 +386,59 @@ describe('phaseRatioToLambert', () => {
     expect(Number.isFinite(phaseRatioToLambert(MERCURY_PHASE, Math.PI))).toBe(true);
   });
 
+  it('Moon: the mesh scalar the shader reads, clamp included', () => {
+    const expected: ReadonlyArray<readonly [number, number]> = [
+      [0, 1], [30, 0.551830], [90, 0.285873],
+      // 120° sits inside the clamp band pinned below, so the raw
+      // ratio is floored rather than reported.
+      [120, PHASE_RATIO_MIN], [150, 0.287891],
+    ];
+    for (const [aDeg, scalar] of expected) {
+      expect(phaseRatioToLambert(MOON_PHASE, aDeg * DEG)).toBeCloseTo(scalar, 6);
+    }
+  });
+
+  it("Moon's curve dips under PHASE_RATIO_MIN over a bounded crescent band", () => {
+    // The floor bites where the lunar curve is steepest. Both band
+    // edges are pinned, not just "it happens somewhere": widening the
+    // truncated span is the regression to catch, and a bound would
+    // pass a band twice this size.
+    const rawRatio = (deg: number): number => {
+      const a = deg * DEG;
+      return empiricalPhaseFactor(MOON_PHASE, a) / lambertianPhaseFactor(a);
+    };
+    let minRaw = Infinity;
+    let argMinDeg = NaN;
+    let loDeg = NaN;
+    let hiDeg = NaN;
+    for (let deg = 0; deg <= 150; deg += 0.01) {
+      const raw = rawRatio(deg);
+      if (raw < minRaw) { minRaw = raw; argMinDeg = deg; }
+      if (raw < PHASE_RATIO_MIN) { if (Number.isNaN(loDeg)) loDeg = deg; hiDeg = deg; }
+    }
+    expect(minRaw).toBeCloseTo(0.23772, 5);
+    expect(argMinDeg).toBeCloseTo(128.87, 2);
+    expect(loDeg).toBeCloseTo(111.57, 2);
+    expect(hiDeg).toBeCloseTo(141.25, 2);
+    expect(2.5 * Math.log10(PHASE_RATIO_MIN / minRaw)).toBeCloseTo(0.05470, 5);
+
+    // Mercury already loses an order of magnitude more to the same
+    // floor, which is what makes the shared bound defensible — so its
+    // worst case is pinned too rather than compared loosely.
+    let mercuryMin = Infinity;
+    let mercuryArgMinDeg = NaN;
+    for (let deg = 0; deg <= MERCURY_PHASE.alphaMaxDeg; deg += 0.01) {
+      const a = deg * DEG;
+      const raw = empiricalPhaseFactor(MERCURY_PHASE, a) / lambertianPhaseFactor(a);
+      if (raw < mercuryMin) { mercuryMin = raw; mercuryArgMinDeg = deg; }
+    }
+    expect(mercuryMin).toBeCloseTo(0.17308, 5);
+    expect(mercuryArgMinDeg).toBeCloseTo(151.86, 2);
+    expect(2.5 * Math.log10(PHASE_RATIO_MIN / mercuryMin)).toBeCloseTo(0.39922, 5);
+  });
+
   it('clamps to [PHASE_RATIO_MIN, PHASE_RATIO_MAX]', () => {
-    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, SATURN_PHASE]) {
+    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, SATURN_PHASE, MOON_PHASE]) {
       for (let deg = 0; deg <= 180; deg += 5) {
         const r = phaseRatioToLambert(coefs, (deg * Math.PI) / 180);
         expect(r).toBeGreaterThanOrEqual(PHASE_RATIO_MIN);
@@ -377,5 +459,29 @@ describe('phaseAngleFor', () => {
   it('returns 0 on degenerate legs', () => {
     expect(phaseAngleFor(0, 0, 0, 1, 0, 0)).toBe(0);
     expect(phaseAngleFor(1, 0, 0, 1, 0, 0)).toBe(0);
+  });
+});
+
+// No TS caller reads this — the shader computes illumFrac itself — so the
+// mirror IS the contract, and only a pin keeps the two in step.
+describe('illuminatedFraction mirrors the shader', () => {
+  it('runs full to new over [0, π]', () => {
+    expect(illuminatedFraction(0)).toBe(1);
+    expect(illuminatedFraction(90 * DEG)).toBeCloseTo(0.5, 12);
+    expect(illuminatedFraction(180 * DEG)).toBeCloseTo(0, 12);
+  });
+
+  it('clamps α rather than running past the endpoints', () => {
+    expect(illuminatedFraction(-1)).toBe(1);
+    expect(illuminatedFraction(Math.PI + 1)).toBeCloseTo(0, 12);
+  });
+
+  it('carries the shader expression that drives the photocentre shift', () => {
+    const glareVert = readFileSync(
+      fileURLToPath(new URL('./planets/glare/planet.vert.glsl', import.meta.url)),
+      'utf8',
+    );
+    expect(glareVert).toContain('float illumFrac = (1.0 + cosA) * 0.5;');
+    expect(glareVert).toContain('(1.0 - illumFrac)');
   });
 });

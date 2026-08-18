@@ -1855,11 +1855,18 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   // history.replaceState mutates the mocked location so writeUrl's
   // "already at this URL?" idempotence check observes the rewrite.
   function installUrl(initial: string) {
-    const loc = { pathname: '/', search: '' };
+    const loc = { pathname: '/', search: '', hash: '' };
     const set = (url: string) => {
-      const q = url.indexOf('?');
-      if (q === -1) { loc.pathname = url; loc.search = ''; }
-      else { loc.pathname = url.slice(0, q); loc.search = url.slice(q); }
+      const h = url.indexOf('#');
+      // replaceState resolves the URL against the document: a path with
+      // no '#' yields a URL with no fragment, so an omitted hash CLEARS
+      // loc.hash — that's the drop replacePathKeepHash exists to avoid,
+      // and the mock has to reproduce it for the tests to mean anything.
+      loc.hash = h === -1 ? '' : url.slice(h);
+      const rest = h === -1 ? url : url.slice(0, h);
+      const q = rest.indexOf('?');
+      if (q === -1) { loc.pathname = rest; loc.search = ''; }
+      else { loc.pathname = rest.slice(0, q); loc.search = rest.slice(q); }
     };
     set(initial);
     const replaceState = vi.fn((_s: unknown, _t: unknown, url: string) => set(url));
@@ -1907,6 +1914,15 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(replaceState).not.toHaveBeenCalled();
     });
+
+    it('preserves the fragment while stripping junk (the renderer flag rides it)', () => {
+      const { loc } = installUrl('/garbage?v=_w#renderer=webgpu');
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(loc.pathname).toBe('/');
+      expect(loc.search).toBe('');
+      expect(loc.hash).toBe('#renderer=webgpu');
+    });
   });
 
   describe('legacy ?v= → canonical /v/<blob>/ rewrite', () => {
@@ -1922,6 +1938,16 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(loc.pathname.startsWith('/v/')).toBe(true);
       expect(loc.search).toBe('');
       expect(decodeBlob(loc.pathname.slice(3, -1)).view.fov).toBe(90);
+    });
+
+    it('carries the fragment through the query→path rewrite', () => {
+      const blob = encodeBlob({ fov: 90 });
+      const { loc } = installUrl(`/?v=${blob}#renderer=webgpu`);
+      const { stellata } = makeSyncStellata();
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 
@@ -1965,6 +1991,17 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       frame();
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/v/')).toBe(true);
+    });
+
+    it('a routine state write keeps the fragment in the address bar', () => {
+      const { loc } = installUrl('/#renderer=webgpu');
+      const { stellata, cam, frame } = makeSyncStellata();
+      startUrlSync(stellata, syncIdMaps());
+      cam.position.set(0, 0, 0);
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 });

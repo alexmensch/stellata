@@ -81,6 +81,12 @@ themselves.
   and collapsed-pick-to-primary resolution; implemented by
   `binaries/` and `solar-system/`.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
+- `webgpu/` — the WebGPU dual-boot seam: the `#renderer=webgpu` flag,
+  the async renderer boot behind a dynamic-import boundary, and the
+  port scaffolding (shared uniform nodes, TSL shim, attribute packing,
+  the TSL test pattern). Flag on renders the seam's own scene — empty
+  until port children land — while every CPU subsystem runs identically;
+  flag off leaves the shipped boot untouched.
 
 ## Public surface of `Stellata`
 

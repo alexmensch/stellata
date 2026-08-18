@@ -324,7 +324,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('writes the Mallama coefficients into iPhaseCoefsA/B/C for the right slot', () => {
+  it('writes the phase coefficients into iPhaseCoefsA/B/C for the right slot', () => {
     // iPhaseCoefsA = (c0,c1,c2,c3), iPhaseCoefsB = (c4,c5,c6,alphaMaxDeg),
     // iPhaseCoefsC = (c7,_,_,_) per-instance buffers plumbed through
     // allocate / grow / write-static / flush / shift-down. The
@@ -830,15 +830,15 @@ describe('PlanetBodyField.appMagFor', () => {
     const dVp = 1 * AU_PC + 0.1;
     const dHp = 1 * AU_PC;
     const radiusPc = 6000 * KM_PC;
-    // No Mallama coefs → Lambertian; α = 0 → φ = 1.
+    // No phase coefs → Lambertian; α = 0 → φ = 1.
     const expected = planetApparentMagnitude(4.83, dVp, dHp, 0.5, radiusPc, 1);
     expect(got).toBeCloseTo(expected, 5);
     f.dispose();
   });
 
-  it('passes the Mallama phase factor through evalPlanetView for coef-bearing planets', () => {
+  it('passes the empirical phase factor through evalPlanetView for coef-bearing bodies', () => {
     // Same idiom as the happy-path test but with VENUS_PHASE coefs
-    // and a non-zero α so the Mallama branch fires through
+    // and a non-zero α so the polynomial branch fires through
     // phaseFactorFor. Plane-frame plant at +x (positionsAt) with
     // identity orientation → renderer-local plant at +x. Viewer
     // off-axis along +y so α ≠ 0.

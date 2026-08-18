@@ -88,7 +88,7 @@ export function perceptualAppSizePx(
  * - `albedo` is the planet's geometric albedo p (dimensionless).
  * - `radiusPc` is the planet's physical radius in parsecs.
  * - `phaseFactor` is φ(α) — pass 1 for full-phase, or use
- *   `lambertianPhaseFactor` / `mallamaPhaseFactor` from `phase-function.ts`.
+ *   `lambertianPhaseFactor` / `empiricalPhaseFactor` from `phase-function.ts`.
  *
  * Distances and the reflectance product floor at 1e-30 to match the
  * shader's defensive clamps at the singular zero-distance point.
