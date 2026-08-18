@@ -185,7 +185,6 @@ interface MeshEntry {
 const RELIEF_SUFFIX = '-normal';
 /** The two halves of one body's horizon map, azimuths 0–3 then 4–7. */
 const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
-const RELIEF_MAP_SUFFIXES = [RELIEF_SUFFIX, ...HORIZON_SUFFIXES] as const;
 const RINGS_SUFFIX = '-rings';
 
 /** The one place a body name becomes a texture key — and the one place it is
@@ -327,7 +326,12 @@ export class PlanetMeshLayer {
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureTexture(textureKey(planet.name), { ext: 'jpg', measureMean: true });
         if (reliefSpanOf(planet)) {
-          for (const suffix of RELIEF_MAP_SUFFIXES) {
+          this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), {
+            ext: 'webp', format: THREE.RGFormat,
+          });
+          // Not RG: all four channels of each horizon plane carry an
+          // azimuth, alpha included.
+          for (const suffix of HORIZON_SUFFIXES) {
             this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
           }
         }
@@ -788,9 +792,19 @@ export class PlanetMeshLayer {
     return { mesh, material, geometry };
   }
 
+  /** `format` narrows the GPU upload below RGBA8 where channels carry no
+   *  signal — the only such map is the normal, whose blue is a constant
+   *  and whose alpha is unused, so RG8 halves its VRAM with nothing for
+   *  the shader to notice (`stellataReliefNormal` samples `.rg` and
+   *  reconstructs z). WebGL2 RG8 is colour-renderable and filterable, so
+   *  mipmaps and anisotropy carry over unchanged. */
   private ensureTexture(
     key: string,
-    { ext, measureMean = false }: { ext: TextureExt; measureMean?: boolean },
+    { ext, measureMean = false, format }: {
+      ext: TextureExt;
+      measureMean?: boolean;
+      format?: THREE.PixelFormat;
+    },
   ): void {
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
@@ -806,6 +820,7 @@ export class PlanetMeshLayer {
         // writing colours to the framebuffer without a colorspace
         // transform (star/planet shaders do the same).
         tex.colorSpace = THREE.NoColorSpace;
+        if (format) tex.format = format;
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
         tex.needsUpdate = true;

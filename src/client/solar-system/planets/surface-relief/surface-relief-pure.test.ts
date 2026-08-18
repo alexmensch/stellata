@@ -197,11 +197,19 @@ describe('the layer gates every relief fetch on the span table', () => {
     expect(layer).toContain('RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null');
   });
 
+  // All three planes ride the one span gate. They are two fetch statements
+  // rather than one loop only because the normal map narrows to RG8 and the
+  // horizon halves cannot (data/textures/README.md § Surface relief).
   it('fetches the normal map and both horizon halves behind that gate', () => {
     expect(layer).toContain(
-      'const RELIEF_MAP_SUFFIXES = [RELIEF_SUFFIX, ...HORIZON_SUFFIXES] as const;');
+      "const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;");
     expect(layer).toContain('if (reliefSpanOf(planet)) {');
-    expect(layer).toContain('for (const suffix of RELIEF_MAP_SUFFIXES) {');
+    const gated = layer.slice(
+      layer.indexOf('if (reliefSpanOf(planet)) {'),
+      layer.indexOf('if (planet.rings) {'),
+    );
+    expect(gated).toContain('textureKey(planet.name, RELIEF_SUFFIX)');
+    expect(gated).toContain('for (const suffix of HORIZON_SUFFIXES) {');
   });
 
   it('raises uHasHorizonMap only with both halves ready', () => {
