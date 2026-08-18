@@ -8,23 +8,23 @@ local system over the finished frame in tight standard-depth brackets
 where the z-buffer resolves everything natively.
 
 This README is the design record for the primitive (stellata-shvs):
-architecture, precision analysis, cluster API, and migration plan
-(all four steps live). The reusable core is `slice-pure.ts` +
-`local-depth-pass.ts`. Two clusters consume it: the solar system
-(mesh LOD + ring annuli, planet billboard mirrors, orbit rings —
-`../solar-system/local-cluster.ts`) and the star cluster (host-star +
+architecture, cluster API, compositing rules, and migration plan (all
+four steps live). **How far the bracket reaches and how finely depth
+resolves inside it — the partition, both depth encodings, and the
+reversed-z decision that collapses the partition to K = 1 on WebGPU —
+is `bracket/README.md`.** Two clusters consume the pass: the solar
+system (mesh LOD + ring annuli, planet billboard mirrors, orbit rings
+— `../solar-system/local-cluster.ts`) and the star cluster (host-star +
 binary-chain + resolved-disc mirror draws, binary orbit-path
 ellipses — `../star-pipeline/local-pass/star-local-cluster.ts`).
 
 ## Files
 
-- `slice-pure.ts` — member bounding spheres → K ratio-bounded
-  [near, far] depth slices; the precision constants and quantum math.
-  Vitest-pinned (`slice-pure.test.ts`), including the headline
-  scenarios below.
 - `local-depth-pass.ts` — `LocalDepthPass`: owns the local scene,
   cluster registration, and the per-frame slice loop
   (`clearDepth` + bracketed render, far→near).
+- `bracket/` — the bracket math and the precision record. `MemberSphere`
+  (the cluster-API input type) is defined there, in `slice-pure.ts`.
 
 ## Why the main pass cannot do this
 
@@ -55,7 +55,8 @@ Celestia, Outerra), generalised:
    universe: stars, MW, grids, and every body of systems with no
    active cluster.
 2. **Local pass** — for each active cluster: `autoClear = false`,
-   then per depth slice far→near: `clearDepth()` (colour kept),
+   then per depth slice far→near (K = 1 on WebGPU, so one pass):
+   `clearDepth()` (colour kept),
    camera near/far set to the slice bracket, standard (non-log)
    depth, render the cluster's renderables. The z-buffer then handles
    ALL close-range occlusion natively: oblate limbs, moon↔planet,
@@ -104,74 +105,6 @@ here (planet mesh, ring annulus) simply omit the includes; shaders
 shared with the main pass (the billboard mirror draws of step 2) wrap
 them in `#ifndef LOCAL_DEPTH_PASS` and their local-pass material
 clones set that define.
-
-### Depth slices — unconditionally correct painter's partitioning
-
-One bracket cannot span a metre-scale probe (near ~0.3 m) and
-Saturn's rings at 10⁵ km. `computeDepthSlices` therefore splits the
-members' depth range into K equal-ratio slices, each within
-`maxSliceRatio`, rendered **far→near with `clearDepth` between**.
-
-- **Correctness needs no gaps.** A fragment farther than another can
-  never land in a strictly nearer slice, so far→near painting with
-  per-slice z-tests reproduces global depth ordering exactly.
-  Geometry spanning a boundary (an orbit ring) simply draws in every
-  slice; the slice near/far planes clip-partition its fragments, and
-  the union is the complete primitive with correct per-slice depth.
-- **Cost** is one extra render of a small scene per slice. K = 1–2
-  for mesh-only brackets, ~4 when an orbit-ring bound contains the
-  camera (near floors at `NEAR_MIN_PC`); the probe era needs no new
-  machinery. Refinement hook if K ever matters: let a member report a
-  true nearest-approach distance instead of the conservative
-  centre−radius when the camera is inside its bound.
-- **Seam artefacts:** a fragment exactly on a boundary is measure-zero
-  (float equality); no visible seam is expected. Verify in smoke; an
-  epsilon overlap is the fallback if one ever shows.
-
-## Precision analysis
-
-Standard perspective depth quantum at distance `z` in `[near, far]`
-(24-bit buffer, the WebGL2 default renderbuffer):
-
-```
-δz(z) = z²·(far − near) / (far·near·2²⁴)   ⇒   δz(z)/z ≤ (far/near)/2²⁴
-```
-
-A feature of physical size `s` at distance `z` is z-orderable iff
-`s > δz(z)`, i.e. iff its angular size exceeds `(far/near)/2²⁴` rad at
-the slice's far edge. Setting
-
-```
-maxSliceRatio = 2²⁴ · (fovY/viewportH) / SLICE_RATIO_SAFETY    (SAFETY = 4)
-```
-
-makes the smallest orderable feature at the far edge subtend **¼ px**
-— everything the user can see is orderable, with margin growing
-linearly toward the near plane. The bound adapts to FOV: zooming to
-10° tightens the ratio (more slices), 120° relaxes it. At the default
-50° / 1080 px view, `maxSliceRatio ≈ 3389`.
-
-Pinned scenarios (`slice-pure.test.ts`):
-
-| Scenario | Bracket | Result |
-| --- | --- | --- |
-| Saturn + rings from Mimas' orbit floor | 181 km → 342,000 km | 1 slice; quantum ≪ any body |
-| … stretched to Titan | 181 km → 1.29e6 km | 2 slices |
-| Uranus limb from Miranda's orbit floor | 165 km near, Uranus at 129,900 km | δz ≈ 6 km ≪ R = 25,559 km |
-| Full system incl. Neptune's orbit ring | 0.3 m → 41.8 AU | 4 slices |
-| Metre-scale probe near Saturn | 0.3 m → 41.8 AU | 4 slices |
-
-**Rejected encodings** (decision record):
-
-- *Reversed-Z* — best-in-class, but needs a three.js upgrade
-  (`reverseDepthBuffer`, r166+) + `EXT_clip_control` gating with a
-  fallback path, for headroom the slice bound already guarantees.
-  The escalation path if a future case breaks the ¼-px budget.
-- *Local log depth* — with a tight far it degenerates to linear-in-w
-  (uniform quantum `far/2²⁴`), which *fails* the small-moon case the
-  moment far is generous (quantum 357 km at far = 40 AU vs Miranda's
-  235 km radius). Standard depth's z² falloff concentrates precision
-  exactly where bodies resolve.
 
 ## Cluster API
 
@@ -227,6 +160,11 @@ halo `gl_FragDepth = 1.0` convention carries over unchanged. The
 corrupt/restore pair did not carry over — it existed only because the
 main pass's depth can't order ring vs body, which is the problem this
 pass solves.
+
+Across slices the partition itself did the ordering, which is the one
+semantic K = 1 drops on WebGPU — safe here because `renderOrder` pins
+intra-body order and orbit lines blend commutatively, argued in
+`bracket/README.md` § Decision.
 
 ## Interactions
 
