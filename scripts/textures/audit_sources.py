@@ -121,12 +121,6 @@ def _chroma(rgb: np.ndarray) -> float:
     return float((f.max(axis=2) - f.min(axis=2)).mean())
 
 
-def _band(rgb: np.ndarray, lat_lo: float, lat_hi: float) -> np.ndarray:
-    h = rgb.shape[0]
-    lat = 90.0 - (np.arange(h) + 0.5) * 180.0 / h
-    return rgb[(np.abs(lat) >= lat_lo) & (np.abs(lat) <= lat_hi)]
-
-
 def _longitudinal_detail(band: np.ndarray) -> float:
     """Mean |east−west first difference| over a latitude band, as a fraction
     of the band's mean luminance. Scale-free, so a bright band and a dim one
