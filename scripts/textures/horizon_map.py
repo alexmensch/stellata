@@ -108,6 +108,12 @@ def horizon_angles(
 
     psi_max = search_arc(spec)
     psi_min = march_start(w_o)
+    # Sampling inside psi_min is the defect the start distance exists to remove,
+    # and a body whose search arc falls short of it would do exactly that.
+    assert psi_max > psi_min, (
+        f"search arc {psi_max:.6g} rad is inside the march start {psi_min:.6g} "
+        f"at out_width={w_o}: every sample would be in the skipped near field"
+    )
     step = 2 * np.pi / w_d
     steps = max(2, int(np.ceil((psi_max - psi_min) / step)) + 1)
     out = np.full((h_o, w_o, n_az), -np.pi / 2, dtype=np.float32)

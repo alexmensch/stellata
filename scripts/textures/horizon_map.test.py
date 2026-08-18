@@ -101,6 +101,13 @@ class FlatGroundTests(unittest.TestCase):
             float(wider[0, 0, 0]) / float(coarse[0, 0, 0]), 2.0, places=3
         )
 
+    def test_refuses_an_output_grid_coarser_than_the_search_arc(self) -> None:
+        """A near bound past the search arc would put every sample inside the
+        near field the march exists to skip, silently restoring the defect. The
+        Moon's arc is 0.151 rad, so a 32-wide output asks for 0.393."""
+        with self.assertRaises(AssertionError):
+            horizon_angles(np.zeros((H, W), np.float32), MOON, 8, 32)
+
     def test_starts_past_what_the_colour_map_can_resolve(self) -> None:
         """The reason for the start distance rather than its consequence: a
         caster inside one output texel is half a colour-map texel, so the ground
