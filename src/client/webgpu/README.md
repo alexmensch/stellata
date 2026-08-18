@@ -197,6 +197,22 @@ interleaves the source arrays into the plan's vec4 attributes;
 `attribute('iScalarName')`, over `packedAccess`'s pure (buffer name,
 swizzle) resolution.
 
+## Early-z — the star layer's depth-honest redesign
+
+Any static `gl_FragDepth` write disables early-z for the whole draw (in
+WGSL: pipeline) and no conservative-depth qualifier exists in either
+language, so the defensive write the three star passes share
+(`../star-pipeline/README.md` § Depth encoding) costs all three their
+early-z, not just the halo branch needing it. Port contract, valid on any
+renderer or encoding: one program per pass (compile-time define replacing
+`uRenderMode`); glow carries no depth output (removal of the defensive
+write is bit-exact); the core-mask member stamp moves to the vertex stage
+(per-instance, so clip z pins to the near end of the active depth
+convention); the disc pass splits into a depth-writing core draw plus a
+depthWrite-off halo draw (a far-pinned halo write only ever re-wrote 1.0
+over 1.0, so buffer state is unchanged; a viewport-depth-range far pin is
+the bit-exact fallback if the halo's now-physical test regresses smoke).
+
 ## TSL test pattern — what a port child writes
 
 The WebGL2 build's shader tests are text scans over `.glsl` sources.

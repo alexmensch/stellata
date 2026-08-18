@@ -303,21 +303,9 @@ any disc-pass star mirrors into the bracketed pass
 pair separations natively and whose repaint over the finished frame
 occludes main-pass glow by construction.
 
-### Early-z — the depth-honest redesign (WebGPU port contract)
-
-Any static `gl_FragDepth` write disables early-z for the whole draw
-(in WGSL: pipeline) and no conservative-depth qualifier exists in
-either language, so the shared-program defensive write above costs
-all three passes their early-z, not just the halo branch needing it.
-Port contract, valid on any renderer or encoding: one program per
-pass (compile-time define replacing `uRenderMode`); glow carries no
-depth output (removal of the defensive write is bit-exact); the
-core-mask member stamp moves to the vertex stage (per-instance, so
-clip z pins to the near end of the active depth convention); the disc
-pass splits into a depth-writing core draw plus a depthWrite-off halo
-draw (a far-pinned halo write only ever re-wrote 1.0 over 1.0, so
-buffer state is unchanged; a viewport-depth-range far pin is the
-bit-exact fallback if the halo's now-physical test regresses smoke).
+The defensive write above costs all three passes their early-z, and the
+redesign that recovers it is the star layer's port contract:
+`../webgpu/README.md` § Early-z.
 
 ## Physical-size rendering
 
