@@ -135,14 +135,22 @@ inside its bracket, and nothing the HUD does scales with how much the
 browser is instrumenting.
 
 The environment does, though. **Safari 26 with Web Inspector open against
-the dev server inflates `pre-render` by ~50× (2 ms → 100 ms); the same
-page from a production build does not**, and it is independent of the
-renderer backend. Nothing in the fan-out logs per frame and the prod build
-strips no `console` calls, so this is the inspector instrumenting Vite's
-unbundled module graph, not frame work. Take Safari numbers from a
-production build, or with the inspector closed. `frame.total` and the FPS
-headline are the cross-check: if a section inflates while they hold
-steady, the environment is lying to you, not the section.
+the dev server runs the fan-out ~50× slower — `pre-render` 2 ms → 100 ms,
+and the frame rate collapses with it, so the work really is that slow
+rather than misreported.** Scope, measured: Safari only (Chrome DevTools
+shows no effect at all), dev server only (a production build is clean),
+and identical on both renderer backends. It is not the HUD, and it is not
+logging — nothing in the fan-out logs per frame and the prod build strips
+no `console` calls — so it is deoptimised execution of Vite's unbundled
+module graph, a cost the shipped app never pays. **Take Safari CPU numbers
+from a production build, or with the inspector closed.** Under the
+inspector even the *ratios* between rows are unusable: the per-star loops
+lose far more than the DOM and submit rows do.
+
+Second comparison trap while the port is in flight: a `#renderer=webgpu`
+boot draws an **empty scene** (`../webgpu/README.md`), so its rows read
+fast for a reason that has nothing to do with WebGPU. Cross-backend
+numbers only mean something once a port child actually draws stars.
 
 ## GPU timing
 
