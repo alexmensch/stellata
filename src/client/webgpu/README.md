@@ -73,6 +73,28 @@ fallbacks: the HDR seam runs in its unsupported mode (direct-to-canvas,
 `hdr/README.md` § Fallback), the reduction never fences, the local-depth
 pass and the dust voxel upload are gated off until their port children.
 
+### Every park is a gate someone has to delete
+
+Each GL-only path parks behind a `rendererGL !== null` test (or, for the
+HDR seam, a null renderer). **A port child that lands its feature but
+leaves its gate in place ships a feature that is silently dead on
+WebGPU** — tests pass, nothing warns, the code simply never runs. So
+deleting the gate is part of the port, in the same PR:
+
+| Parked path | Gate site | Deleted by |
+| --- | --- | --- |
+| Dust voxel upload | `main.ts` skips the load; `attachDust` warns and returns | dust voxel streaming port (`0it.19`) |
+| Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
+| Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
+| HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |
+| GPU timer rotation, frame pricing | `perfGlContext` returns null; `runPriceFrame` returns `[]` | instrumentation port (`0it.21`) |
+
+At cutover (`0it.13`) `rendererGL` is null forever and every surviving
+gate becomes a permanently-false branch, so the WebGL2 deletion
+(`0it.14`) sweeps whatever is left. That sweep is the backstop, not the
+plan — a gate still standing then means its feature was dead for a
+release.
+
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
 remapped, clear inverted, all upstream in three r185 — and
