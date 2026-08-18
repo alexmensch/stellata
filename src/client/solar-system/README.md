@@ -190,9 +190,12 @@ brightness stays continuous and each planet's empirical character
 extends past αmax instead of snapping to a uniform Lambertian
 sphere), pure Lambertian `(sin α + (π − α)·cos α)/π` for bodies
 without published curves. Mallama covers Mercury, Venus, Earth, Mars,
-Jupiter and Saturn; Uranus, Neptune, Pluto and every exoplanet take the
-Lambertian fallback, since Mallama 2018 publishes no phase-angle
-polynomial for those. Verified Jupiter values (under Lambert):
+Jupiter and Saturn; Earth's Moon takes the classic lunar phase law in
+the same polynomial form (`MOON_PHASE`, the only moon with a curve
+measured across the phases a camera can occupy). Uranus, Neptune, Pluto,
+the other 17 moons and every exoplanet take the Lambertian fallback —
+`docs/science-solar-system.md` § Planet phase functions says why for
+each. Verified Jupiter values (under Lambert):
 −2.7 from Earth at opposition, +5.2 from ~150 AU outside the
 heliopause, +21 from α Cen at 1.34 pc.
 
