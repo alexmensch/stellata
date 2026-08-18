@@ -413,6 +413,9 @@ export class MolecularClouds {
   }
 
   dispose() {
+    // Re-arms the fail-closed sentinel: a hover tick landing after
+    // teardown would otherwise raycast disposed geometry.
+    this.rimGroup.visible = false;
     this.absorptionGeometry.dispose();
     this.rimFallbackGeometry.dispose();
     for (const g of this.rimSurfaceGeometries) g.dispose();

@@ -368,6 +368,15 @@ describe('MolecularClouds / picking geometry', () => {
       const cam = cameraAt(inside, inside.clone().add(down));
       expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)).toBeNull();
     });
+
+    it('re-arms the sentinel on dispose, so a late tick never raycasts dead geometry', () => {
+      const c = liveClouds(catalog);
+      const cam = cameraAt(inside, inside.clone().add(down));
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)?.idx).toBe(0);
+      c.dispose();
+      expect(rimGroup(c).visible).toBe(false);
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)).toBeNull();
+    });
   });
 
   it('reports the effective-centre camera distance at the fallback hover tier', () => {
