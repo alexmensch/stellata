@@ -20,6 +20,12 @@ src/client/webgpu/
                                     The dynamic-import boundary.
   shared-uniform-nodes.ts (+ test)  TSL uniform-node mirror of
                                     frame/shared-uniforms.ts.
+  tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
+                                    surface — verified gaps only.
+  attribute-packing-pure.ts         Plan + interleave N per-instance
+    (+ test)                        scalars into ceil(N/4) vec4 buffers.
+  attribute-packing.ts (+ test)     Geometry attributes + per-scalar
+                                    accessor node from a pack plan.
 ```
 
 ## The flag — `#renderer=webgpu`
@@ -115,3 +121,78 @@ The test pins key parity against `buildSharedUniforms`, so adding a
 WebGL slot without its node counterpart fails CI. Port-child materials
 take slots from `stellata.webgpu.uniformNodes` — shared node objects are
 what replaces shared uniform objects.
+
+## TSL typing shim
+
+`tsl-shim.ts` carries ONLY compile-verified gaps in @types/three's TSL
+typings, each deletable when upstream catches up. As of 0.185.4 the eaul
+spike's worst findings are already fixed upstream (`pow`/`mix` take
+vectors, getter swizzles are typed); what survives:
+
+- `attribute(name, 'vec4')` infers its generic as `string`, losing every
+  swizzle and operator — use `attrFloat/attrVec2/attrVec3/attrVec4`.
+- `step` is float-pinned while the runtime is vec-capable — import
+  `step` from the shim instead.
+- `ShaderNodeObject` is exported from neither `three/tsl` nor
+  `three/webgpu`; the shim re-exports the typing's `NodeObject` under
+  the runtime's name.
+
+Before adding an entry, compile-probe the gap against the installed
+@types — a cast that upstream already fixed is a shim that never dies.
+
+## Attribute packing
+
+WebGPU's default `maxVertexBuffers` is 8 and three binds one GPU vertex
+buffer per `BufferAttribute`, so the star pipeline's aCorner + 14 scalar
+instanced attributes (15 buffers) cannot port as-is.
+`planVec4Packing(names)` assigns each scalar a (buffer, component) slot
+in declaration order; `buildPackedAttributes` interleaves the source
+arrays into `iPack<N>` vec4 attributes; `packedScalar(plan, name)` is
+the accessor node replacing `attribute('iScalarName')`. Storage buffers
+indexed by `instance_index` supersede packing when the compute prepass
+lands — packing is the port-time answer, not the endgame.
+
+## TSL test pattern — what a port child writes
+
+The WebGL2 build's shader tests are text scans over `.glsl` sources.
+Those keep guarding the live GLSL until the WebGL2 path is deleted; a
+ported layer's TSL variant is covered by three legs, none of which read
+generated code:
+
+1. **Constants can't drift, by construction.** TSL is TypeScript: a
+   shader constant is imported from the same module the test imports.
+   The GLSL-era constant-drift guards (regex-pinning TS mirrors against
+   shader text) have no TSL successor because the mirror IS the shader's
+   own import — when a port child retires a `.glsl` file at cutover, its
+   drift guard retires with it, replaced by direct `toBe(CONSTANT)`
+   pins on the shared module.
+2. **Policy/roster guards scan TS the way they scanned GLSL.** The
+   frag-depth class of invariant ("no pipeline outside the allowlist
+   writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
+   TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
+   `tests/shader-frag-depth.test.ts`. `tests/webgpu-import-boundary.test.ts`
+   is the first of the family.
+3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
+   The canonical scalar form of any shader rule belongs in a `*-pure.ts`
+   TS function (most already exist as CPU mirrors — tonemap-pure,
+   emission-pure, star-physics) with its unit tests; the TSL graph stays
+   thin composition over the same constants. What a node graph *renders*
+   is verified by the port child's parity smoke (same `?v=` state, flip
+   the renderer), not by unit tests — executing shaders in vitest
+   remains the hhaw WebGL2-test-seam epic's territory, and no port
+   gates on it.
+
+Node-graph introspection (walking the built node tree and asserting
+structure) was considered and rejected: it pins three's internal node
+representation, so every three bump breaks every shader test while
+verifying no actual math.
+
+## Timestamps
+
+The renderer boots with `trackTimestamp: true`; while the perf HUD is
+open, `animate()` resolves the render-pass timestamps each frame
+(`resolveTimestampsAsync`) and feeds the milliseconds into the HUD as
+the `gpu.render` row via `perf-hud.ts`'s `gpuSampleSink` (null while
+the HUD is closed, so an unwatched frame never pays the readback). The
+WebGL2 `gpu.*` rotation, `gpu.frame` headline, and the frame-pricing
+harness stay WebGL2-only until the instrumentation port child lands.

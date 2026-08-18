@@ -131,7 +131,10 @@ after exiting chart mode (otherwise the average would lag forever).
 
 `gpu-timer.ts` wraps `EXT_disjoint_timer_query_webgl2`. The extension is
 feature-detected at panel open; absent it, `gpuBegin`/`gpuEnd` stay
-no-ops and no `gpu.*` rows appear at all.
+no-ops and no `gpu.*` rows appear at all. On a WebGPU dual-boot there is
+no GL context either — the one `gpu.*` row is `gpu.render`, fed by the
+renderer's own timestamp queries through `gpuSampleSink`
+(`../webgpu/README.md` § Timestamps), and the headline stays `submit`.
 
 **One query at a time — this shapes everything.** WebGL2 permits exactly
 one active `TIME_ELAPSED` query per context and exposes no timestamp

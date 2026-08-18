@@ -123,3 +123,8 @@ Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 read, and narrowing per consumer happens at the type level
 (`PerceptualDiscUniforms`, `DustParticleSharedUniforms`,
 `StarPhysicsUniforms`), not by cloning slots.
+
+The WebGPU dual boot mirrors this map as TSL uniform nodes
+(`../webgpu/README.md` § Shared uniform nodes); a key-parity test pins
+the mirror, so adding a slot here fails CI until the node counterpart
+exists.
