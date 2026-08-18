@@ -77,7 +77,7 @@ class SearchArcTests(unittest.TestCase):
 
 class FlatGroundTests(unittest.TestCase):
     def test_reads_the_curvature_drop_over_the_start_distance(self) -> None:
-        """Flat ground reads the march's start distance own drop, not 0 — the
+        """Flat ground reads the march's start distance's own drop, not 0 — the
         sun stays up that far past the geometric terminator. Bounded, and it is
         why the composition's coarse-map slack runs toward lighting, never
         shadowing."""

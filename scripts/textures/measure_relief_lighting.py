@@ -12,8 +12,8 @@ from PIL import Image
 from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals
 from horizon_map import (
     HORIZON_AZIMUTHS,
-    HORIZON_SIN_RANGE,
     decode_horizon_sin,
+    decode_sin,
     horizon_angles,
 )
 
@@ -60,7 +60,7 @@ def _terrain_view(planes: np.ndarray, factor: int) -> np.ndarray:
     """Cosine-weighted terrain fraction of each patch's sky, mirroring
     `stellataTerrainViewFactor`: the mean of `max(sin h, 0)²` over the stored
     azimuths, clamped so a skyline under the local horizontal reads as sky."""
-    s = np.maximum((planes / 255.0 * 2 - 1) * HORIZON_SIN_RANGE, 0.0)
+    s = np.maximum(decode_sin(planes), 0.0)
     return _upsample((s * s).mean(axis=2), factor)
 
 

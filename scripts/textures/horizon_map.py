@@ -21,6 +21,12 @@ HORIZON_MARCH_START_TEXELS = 2.0
 HORIZON_SIN_RANGE = 0.4
 
 
+def decode_sin(raw: np.ndarray) -> np.ndarray:
+    """Raw 0-255 channels back to the skyline sines they encode — the inverse of
+    `encode_horizon`, shared by every reading of a shipped plane."""
+    return (raw / 255.0 * 2 - 1) * HORIZON_SIN_RANGE
+
+
 def box_reduce(a: np.ndarray, width: int) -> np.ndarray:
     """Area-average an equirect array down to `width`, integer factors only."""
     f = a.shape[1] // width
@@ -148,7 +154,7 @@ def decode_horizon_sin(
     cols = np.arange(planes.shape[1])[None, :]
     f = (slot - base).astype(np.float32)
     enc = planes[rows, cols, i0] * (1 - f) + planes[rows, cols, i1] * f
-    return (enc / 255.0 * 2 - 1) * HORIZON_SIN_RANGE
+    return decode_sin(enc)
 
 
 def horizon_maps(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, np.ndarray, dict]:

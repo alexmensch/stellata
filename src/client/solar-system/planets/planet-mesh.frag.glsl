@@ -113,6 +113,12 @@ vec3 stellataReliefNormal(vec3 n, vec3 east, vec3 north, vec2 enc) {
   return normalize(east * t.x + north * t.y + n * sqrt(max(1.0 - dot(t, t), 0.0)));
 }
 
+// One raw channel back to the skyline sine it encodes — mirrors decodeSin in
+// surface-relief-pure.ts.
+float stellataDecodeSin(float raw) {
+  return (raw * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE;
+}
+
 // This texel's STELLATA_HORIZON_AZIMUTHS raw channels, both planes concatenated.
 // Fetched once: the sunward skyline and the sky the patch can see are two reads
 // of the one pair of texels.
@@ -123,14 +129,15 @@ void stellataHorizonEncoded(vec2 uv, out float enc[STELLATA_HORIZON_AZIMUTHS]) {
 }
 
 // Cosine-weighted fraction of the upper hemisphere this patch's own skyline
-// fills, 1 − mean(cos²h) over the stored azimuths. A skyline BELOW the local
-// horizontal is sky rather than terrain, and over open ground the body's own
-// limb bound puts it there — clamping is what keeps flat plains from claiming
-// fill light (surface-relief/README.md § Shadows are lit by the terrain).
+// fills, mean(max(sin h, 0)²) over the stored azimuths. A skyline BELOW the
+// local horizontal is sky rather than terrain, and over open ground the body's
+// own limb bound puts it there — clamping is what keeps flat plains from
+// claiming fill light (surface-relief/README.md § Shadows are lit by the
+// terrain).
 float stellataTerrainViewFactor(float enc[STELLATA_HORIZON_AZIMUTHS]) {
   float sum = 0.0;
   for (int i = 0; i < STELLATA_HORIZON_AZIMUTHS; i++) {
-    float s = max((enc[i] * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE, 0.0);
+    float s = max(stellataDecodeSin(enc[i]), 0.0);
     sum += s * s;
   }
   return sum / float(STELLATA_HORIZON_AZIMUTHS);
@@ -150,8 +157,7 @@ float stellataHorizonSin(float enc[STELLATA_HORIZON_AZIMUTHS], float sunE, float
   // base one past the last azimuth — the wrap is what keeps the index in range.
   int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;
   int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;
-  return (mix(enc[i0], enc[i1], slot - base) * 2.0 - 1.0)
-    * STELLATA_HORIZON_SIN_RANGE;
+  return stellataDecodeSin(mix(enc[i0], enc[i1], slot - base));
 }
 
 void main() {

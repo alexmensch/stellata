@@ -244,10 +244,15 @@ describe('the terrain view factor', () => {
   it('clamps in the shader too, where the divergence would be silent', () => {
     // The CPU side is the mirror; only the GLSL lights pixels. A max() dropped
     // there brightens every plain and nothing in this file would notice.
-    expect(frag).toContain(
-      'float s = max((enc[i] * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE, 0.0);');
+    expect(frag).toContain('float s = max(stellataDecodeSin(enc[i]), 0.0);');
     expect(frag).toContain('sum += s * s;');
     expect(frag).toContain('return sum / float(STELLATA_HORIZON_AZIMUTHS);');
+    // Both readings of a texel decode through the one helper, so the encoding
+    // cannot drift between the skyline lookup and the view factor.
+    expect(frag).toContain(
+      'return (raw * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE;');
+    expect(frag).toContain(
+      'return stellataDecodeSin(mix(enc[i0], enc[i1], slot - base));');
   });
 
   it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
