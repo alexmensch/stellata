@@ -76,7 +76,14 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          Data3DTexture (DustField). Progressive upload:
                          zero-fill GPU texture upfront, fetch chunks
                          priority-ordered, gl.texSubImage3D each as it
-                         lands. Manifest is the contract with
+                         lands. Each chunk clears UNPACK_FLIP_Y /
+                         PREMULTIPLY / ALIGNMENT through `renderer.state`
+                         and never on the raw context — three's state
+                         cache suppresses a call whose tracked value
+                         already matches, so a raw poke desyncs that
+                         cache from GL and the NEXT flipY 2D upload
+                         anywhere in the app lands mirrored with no
+                         other symptom. Manifest is the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
                          Build-side counterpart: scripts/catalog/
