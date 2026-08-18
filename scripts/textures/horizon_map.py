@@ -10,6 +10,11 @@ from dem_relief import roll_to_map_centre, weighted_quantile
 HORIZON_AZIMUTHS = 8
 HORIZON_TARGET_W = 2048
 
+# Where the march begins, in OUTPUT texels. Ground closer than this is the
+# normal map's, and a caster inside one output texel is half a colour-map texel
+# — a shadow the screen has nothing to throw it with.
+HORIZON_MARCH_START_TEXELS = 2.0
+
 # Full-scale of the encoded horizon SINE, both signs. Wider than any body's own
 # limb bound, which is where the negative side saturates on its own; the
 # positive side has to reach a crater wall seen from its floor.
@@ -34,6 +39,12 @@ def search_arc(spec: dict) -> float:
     """
     r = spec["radius_km"] * 1000.0
     return float(np.arccos((r + spec["span_m"][0]) / (r + spec["span_m"][1])))
+
+
+def march_start(out_width: int) -> float:
+    """Central angle the march begins at — the closest blocker ever tested, and
+    so the sole term in what flat ground at the reference sphere reads."""
+    return HORIZON_MARCH_START_TEXELS * 2 * np.pi / out_width
 
 
 def _sample_ring(field: np.ndarray, lat2: np.ndarray, col: np.ndarray) -> np.ndarray:
@@ -67,14 +78,13 @@ def horizon_angles(
     point's true local horizontal on the sphere, so the body's own limb is one
     of the occluders and no slope anywhere can see the sun past it.
 
-    **The ray is always stepped at the DEM's resolution**, however coarse the
-    output grid, and the first step is the closest blocker ever tested. Flat
-    ground at the reference sphere therefore reads that step's own curvature
-    drop rather than 0 — slack toward lighting, and `flat_floor` in
-    `horizon_map.test.py` pins the closed form. Marching at the output texel
-    would move the floor to half an OUTPUT texel of solar depression, which at
-    any width worth shipping is a large fraction of the band this map exists
-    to darken.
+    **The march starts `HORIZON_MARCH_START_TEXELS` output texels out and steps
+    at the DEM's resolution from there** — two independent choices. Starting
+    further out hands the near field to the normal map; stepping finer than the
+    output grid keeps a narrow ridge at range from being averaged away. Flat
+    ground at the reference sphere therefore reads the START distance's own
+    curvature drop rather than 0 — slack toward lighting, and `flat_floor` in
+    `horizon_map.test.py` pins the closed form.
 
     `surface_normals` zeroes its east-west derivative past ±85° because the
     equirect u-derivative degenerates there; this walks real geodesics and has
@@ -91,13 +101,14 @@ def horizon_angles(
     col_base = ((np.arange(w_o) + 0.5) * (w_d / w_o) - 0.5)[None, :]
 
     psi_max = search_arc(spec)
+    psi_min = march_start(w_o)
     step = 2 * np.pi / w_d
-    steps = max(1, int(np.ceil(psi_max / step)))
+    steps = max(2, int(np.ceil((psi_max - psi_min) / step)) + 1)
     out = np.full((h_o, w_o, n_az), -np.pi / 2, dtype=np.float32)
     for a in range(n_az):
         phi = 2 * np.pi * a / n_az
         for k in range(steps):
-            psi = psi_max * (k + 1) / steps
+            psi = psi_min + (psi_max - psi_min) * k / (steps - 1)
             sin_psi, cos_psi = np.sin(psi), np.cos(psi)
             sin_lat2 = np.clip(sin_lat * cos_psi + cos_lat * sin_psi * np.sin(phi), -1, 1)
             lat2 = np.arcsin(sin_lat2)
