@@ -40,6 +40,7 @@ import {
   frame as perfFrame,
   gpuBegin as perfGpuBegin,
   gpuEnd as perfGpuEnd,
+  gpuSampleSink as perfGpuSampleSink,
 } from './debug/perf-hud';
 import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
 import { RenderGate } from './render-gate/render-gate';
@@ -2200,6 +2201,12 @@ export class Stellata implements FrameAnchor {
       // (webgpu/README.md § What the flag boots today).
       this.webgpu.syncUniformNodes();
       this.renderer.render(this.webgpu.scene, this.camera);
+      const gpuSink = perfGpuSampleSink();
+      if (gpuSink !== null) {
+        void this.webgpu.renderer.resolveTimestampsAsync().then((ms) => {
+          if (ms !== undefined) gpuSink('render', ms);
+        });
+      }
     } else {
       this.renderer.render(this.scene, this.camera);
     }

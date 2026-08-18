@@ -158,6 +158,16 @@ export function frame(): void { _frame(); }
 export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
+let _gpuSample: ((label: string, ms: number) => void) | null = null;
+
+/** Sink for externally measured GPU durations (the WebGPU boot's
+ *  timestamp queries — no GL timer object involved). Records under
+ *  `gpu.<label>`. Null while the HUD is closed, so callers skip the
+ *  readback that would produce the sample. */
+export function gpuSampleSink(): ((label: string, ms: number) => void) | null {
+  return _gpuSample;
+}
+
 /**
  * Exclusive whole-frame GPU sampler for console harnesses (frame-cost/frame-cost.ts).
  *
@@ -211,6 +221,7 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _gpuBegin = realGpuBegin;
       _gpuEnd = realGpuEnd;
     }
+    _gpuSample = recordGpuSample;
   }
 
   // Reset DOM handles & per-bar caches so a re-open gets a fresh build.
@@ -339,6 +350,7 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _frame = () => {};
       _gpuBegin = () => {};
       _gpuEnd = () => {};
+      _gpuSample = null;
       installed = false;
       gpuTimer?.dispose();
       gpuTimer = null;
