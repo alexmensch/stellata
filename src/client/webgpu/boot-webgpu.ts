@@ -22,7 +22,8 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   try {
     await renderer.init();
   } catch (err) {
-    console.warn('WebGPU init failed; falling back to WebGL2:', err);
+    // The reason only; the caller owns the fallback decision and says so.
+    console.warn('WebGPURenderer.init() rejected:', err);
     renderer.dispose();
     return null;
   }

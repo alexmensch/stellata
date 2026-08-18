@@ -88,10 +88,8 @@ async function main() {
     // derivation no kind module consumes.
     const bayerMap = buildBayerMap(searchIndex);
 
-    // Dual-boot renderer flag (webgpu/README.md): #renderer=webgpu boots
-    // the WebGPU seam via dynamic import — the WebGL2 bundle never
-    // downloads three/webgpu. Unavailable/failed init falls back to the
-    // shipped WebGL2 boot.
+    // The dynamic import is the bundle boundary: webgpu/README.md
+    // § Import boundary.
     let webgpu = null;
     if (parseRendererFlag(location.hash) === 'webgpu') {
       const { bootWebGpu } = await import('./webgpu/boot-webgpu');
@@ -184,23 +182,25 @@ async function main() {
     // dust was introduced. The voxel upload path is WebGL2-only until its
     // WebGPU port lands, so a WebGPU boot skips the load entirely.
     const rendererGL = stellata.rendererGL;
-    if (rendererGL !== null) void (async () => {
-      const dustBase = `${import.meta.env.BASE_URL}dust/`;
-      const manifest = await loadDustManifest(dustBase);
-      if (!manifest) {
-        console.info('dust manifest not found; skipping extinction layer');
-        return;
-      }
-      const dust = new DustField(rendererGL, dustBase, manifest);
-      stellata.attachDust(dust);
-      // Particles are lazy — the shelved layer's ~800 KiB fetch fires
-      // only on the first console opt-in (setParticleStrength > 0).
-      if (manifest.particles) {
-        const particlesMeta = manifest.particles;
-        stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
-      }
-      await dust.startLoading();
-    })();
+    if (rendererGL !== null) {
+      void (async () => {
+        const dustBase = `${import.meta.env.BASE_URL}dust/`;
+        const manifest = await loadDustManifest(dustBase);
+        if (!manifest) {
+          console.info('dust manifest not found; skipping extinction layer');
+          return;
+        }
+        const dust = new DustField(rendererGL, dustBase, manifest);
+        stellata.attachDust(dust);
+        // Particles are lazy — the shelved layer's ~800 KiB fetch fires
+        // only on the first console opt-in (setParticleStrength > 0).
+        if (manifest.particles) {
+          const particlesMeta = manifest.particles;
+          stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
+        }
+        await dust.startLoading();
+      })();
+    }
 
     bindUnitToggle();
     registerThemeStellata(stellata);
