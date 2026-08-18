@@ -101,9 +101,7 @@ owns the derivation and the per-body contract.
 
 **Lossless, and that is not a default.** WebP q98 errs 1.62° of normal
 angle against the Moon's 2.65° median tilt — most of the signal — so
-lossy encoding is rejected at file level. (GPU block compression is a
-separate question: BC5 is the standard normal-map format and the KTX2
-work should evaluate it rather than inherit this verdict.) Shipping the
+lossy encoding is rejected at file level. Shipping the
 **height** map and differencing in the shader is also rejected: 8-bit
 height quantises to 0.82° of slope terracing, a third of the median
 tilt, and a 16-bit height PNG is larger than the normal map it would
@@ -112,24 +110,56 @@ produce while costing three taps per fragment.
 **Why 4096 when the colour maps are 2048.** The slope signal is what
 buys terminator contrast, and it keeps climbing past the colour map's
 useful width — the Moon's p90 tilt goes 9.7° → 11.6° from 2048 to
-4096. 4096 uncompressed is ~45 MB of VRAM per body, which is
-affordable for a lazily-loaded body; 8192 is ~179 MB and is not, so it
-waits on KTX2/Basis block compression.
+4096.
 
-Those two figures assume **RGBA8 plus mipmaps**, which is what a WebP
-decoded to an `ImageBitmap` uploads as by default. Since blue carries
-no signal, an `RG8` upload (WebGL2) halves both: ~22 MB at 4096 and
-~89 MB at 8192 — which moves 8192 from unaffordable to arguable, so
-quoting ~179 MB as the blocker without stating the channel assumption
-would decide that question by accident.
+**The normal map uploads as `RG8`, not `RGBA8`** — blue is a constant
+by construction and alpha is unused, so two of the four channels were
+paying VRAM for nothing. With mipmaps that is **~22 MB per body at
+4096** and ~89 MB at 8192, against 45 and 179 for the RGBA8 upload a
+decoded `ImageBitmap` gives by default. Any VRAM figure for these maps
+has to state its channel assumption: ~179 MB reads as the blocker on
+the 8192 tier and ~89 MB does not.
 
-**The renderer ships RGBA8.** The `RG8` upload is a DOM-source
-`texImage2D` format conversion with no CPU-side mirror to test and a
-per-browser failure mode, and a wrong upload reads as *wrong terrain* —
-the same symptomless class as a mis-rolled map above — so landing it
-alongside the relief shading itself would confound the one manual smoke
-that can catch either. It is filed on its own, ahead of the KTX2/Basis
-work that supersedes it for the 8192 case.
+**Only the normal map may narrow.** Each horizon plane carries an
+azimuth in *every* channel, alpha included, so the same conversion
+would silently delete four of the eight — a whole-branch `RG8` is the
+plausible-looking mistake here, and it reads as wrong terrain rather
+than a missing map. `planet-mesh-layer.test.ts` pins the split.
+
+### BC5 measured — the file-level verdict does not transfer
+
+`measure_block_compression.py` runs the shipped maps through a reference
+BC4/BC5 codec and through lossy WebP, against the same 8-bit source, so
+the number that rejected WebP and the number deciding block compression
+are the same measurement. cos(lat)-weighted normal-angle error:
+
+| body | BC5 p50 / p90 / p99 | WebP q98 p50 / p90 / p99 |
+|---|---|---|
+| Moon | 0.45° / 1.01° / 1.91° | 1.01° / 3.42° / 7.41° |
+| Mercury | 0.00° / 0.45° / 0.90° | 0.64° / 1.42° / 3.05° |
+| Mars | 0.00° / 0.45° / 0.90° | 0.45° / 1.35° / 3.28° |
+
+BC5 costs about **a third** of q98 at p90 on every body, so § Lossless
+above is a statement about DCT at file level and genuinely does not
+carry over — which is what it said, now measured rather than suspected.
+On the Moon 1.01° sits against the map's own 11.66° p90 tilt: **8.6 % of
+the signal**, where q98 spends 29 %.
+
+**The error is flat in resolution, and that is the argument for 8192.**
+Same codec across widths area-averaged down from the shipped map — p90
+1.006° at 1024, 1.043° at 2048, 1.007° at 4096 — while the signal keeps
+climbing (p90 tilt 9.7° → 11.66° from 2048 to 4096). Every rung
+therefore improves the ratio, and 8192-BC5 buys a doubling's slope for
+about 1° of added angle. VRAM at 1 byte/texel with mips: **11 MB at
+4096, 45 MB at 8192** — half the `RG8` upload again.
+
+**It does not meet the bar stellata-2f6.46 set**, which was "near the
+0.177° of an exact 8-bit encode"; BC5 is 5.7× that at p90. The bar is
+the wrong comparison — error against the *signal*, and against what a
+resolution doubling buys, is what decides whether a tier is worth
+shipping — but that is a call to make deliberately, not by quietly
+substituting a friendlier test. The caveat that matters: no 8192 map
+exists yet, so the trend above is measured at ≤4096 and extrapolated.
 
 **Which bodies are eligible at all.** Relief applies only where the
 rendered texture IS the solid surface. That excludes **Venus** (we
@@ -241,10 +271,11 @@ costs the same bytes as eight at 1024 and is worse than either. Sixteen would
 need four files; its mean skyline error is 0.11° against 0.32° for eight,
 which does not pay for the third and fourth texture fetch.
 
-That 22.4 MB per body sits on top of the normal map's 45 MB, so a session
-that visits all three relief bodies holds ~200 MB of texture — the same
-KTX2/Basis block-compression work that would let the normal maps reach 8192
-is what makes this cheap, and it supersedes the RG8 note above for both.
+That 22.4 MB per body sits on top of the normal map's own 22.4, so a session
+that visits all three relief bodies holds ~134 MB of relief texture. The
+horizon pair cannot take the normal map's `RG8` narrowing — every channel of
+both planes carries an azimuth — so block compression is the only lever left
+on this half.
 
 **Verification** is `scripts/textures/measure_relief_lighting.py` (manual,
 needs the LFS objects): it reads the *shipped* artifacts, so it exercises the
