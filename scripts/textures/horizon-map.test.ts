@@ -14,7 +14,8 @@ import {
   LIMB_EXP,
   LIMB_FLOOR,
 } from '../../src/client/solar-system/planets/emission/mesh-surface-pure';
-import { isLfsPointer, webpSize } from './image-header-pure';
+import { lfsContentReadable } from '../util/paths';
+import { webpSize } from './image-header-pure';
 
 // horizon_map.py cannot import the runtime tables, so this pins its constants
 // back against the shader's mirror of them, and both against the shipped
@@ -63,7 +64,7 @@ const shipped = bodiesWithAnyHalf.filter((body) =>
 );
 
 const mapsArePointers = shipped.some((body) =>
-  HALVES.some((half) => isLfsPointer(readFileSync(planePath(body, half)))),
+  HALVES.some((half) => !lfsContentReadable(planePath(body, half))),
 );
 if (mapsArePointers) {
   console.warn(

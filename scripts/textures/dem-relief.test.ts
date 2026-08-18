@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 import { RELIEF_ELEV_SPAN_M } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
-import { isLfsPointer, webpSize } from './image-header-pure';
+import { lfsContentReadable } from '../util/paths';
+import { webpSize } from './image-header-pure';
 
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
@@ -78,8 +79,8 @@ const normalMap = (name: string) =>
 // without the objects leaves pointer stubs whose first bytes are text. Anything
 // reading pixels or headers self-skips there, the way the catalogue corpora do,
 // and says so rather than passing quietly.
-const mapsArePointers = shippedNormalMaps.some((name) =>
-  isLfsPointer(normalMap(name)),
+const mapsArePointers = shippedNormalMaps.some(
+  (name) => !lfsContentReadable(resolve(TEXTURES, `${name}-normal.webp`)),
 );
 if (mapsArePointers) {
   console.warn(

@@ -1,18 +1,11 @@
 // Reading a shipped image's own header, so a pin reads the artifact rather
 // than the manifest or the prose written beside it.
 
-/** True when the file is an LFS pointer stub rather than the object — a
- *  checkout that never pulled LFS, where anything reading bytes must skip
- *  rather than fail. */
-export const isLfsPointer = (buf: Buffer): boolean =>
-  buf.subarray(0, 7).toString('ascii') === 'version';
+export interface ImageSize { width: number; height: number }
 
 /** Dimensions out of a lossless-WebP (VP8L) header: 14-bit width−1 and
  *  height−1 packed little-endian after the 0x2f signature byte. */
-export function webpSize(buf: Buffer, label: string): {
-  width: number;
-  height: number;
-} {
+export function webpSize(buf: Buffer, label: string): ImageSize {
   if (buf.subarray(0, 4).toString('ascii') !== 'RIFF') {
     throw new Error(`${label}: not a RIFF container`);
   }
@@ -23,19 +16,23 @@ export function webpSize(buf: Buffer, label: string): {
   return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
 }
 
-export interface ImageSize { width: number; height: number }
-
 /** Dimensions from a JPEG's first start-of-frame marker. Walks the segment
  *  chain rather than scanning for the marker bytes, which appear inside
  *  entropy-coded data too. */
 export function jpegSize(buf: Buffer, label: string): ImageSize {
-  if (buf.readUInt16BE(0) !== 0xffd8) throw new Error(`${label}: not a JPEG`);
+  if (buf.length < 4 || buf.readUInt16BE(0) !== 0xffd8) {
+    throw new Error(`${label}: not a JPEG`);
+  }
   let p = 2;
-  while (p + 4 <= buf.length) {
+  // A frame header is 8 bytes past the marker, so stop before the read can
+  // run off a truncated buffer — otherwise the failure is a RangeError with
+  // no filename in it.
+  while (p + 9 <= buf.length) {
     if (buf[p] !== 0xff) throw new Error(`${label}: desynced at ${p}`);
     const marker = buf[p + 1];
-    // Standalone markers carry no length; SOF0-SOF15 hold the frame header,
-    // less the four arithmetic-coding and DHT/JPG slots sharing that range.
+    // 0xc0–0xcf is the SOF range less three squatters: DHT (0xc4), the
+    // reserved JPG (0xc8), and DAC (0xcc). All three carry a length, so the
+    // segment walk below steps over them.
     if (marker >= 0xc0 && marker <= 0xcf
         && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
       return { height: buf.readUInt16BE(p + 5), width: buf.readUInt16BE(p + 7) };
@@ -53,9 +50,11 @@ export function tiffSize(buf: Buffer, label: string): ImageSize {
   }
   const u16 = (o: number) => (le ? buf.readUInt16LE(o) : buf.readUInt16BE(o));
   const u32 = (o: number) => (le ? buf.readUInt32LE(o) : buf.readUInt32BE(o));
+  if (u16(2) !== 42) throw new Error(`${label}: not a baseline TIFF`);
   const ifd = u32(4);
+  const entries = u16(ifd);
   const out: Partial<ImageSize> = {};
-  for (let i = 0; i < u16(ifd); i++) {
+  for (let i = 0; i < entries; i++) {
     const e = ifd + 2 + i * 12;
     const tag = u16(e);
     if (tag !== 0x0100 && tag !== 0x0101) continue;
