@@ -313,6 +313,13 @@ describe('MolecularClouds / picking geometry', () => {
     return hit?.idx ?? null;
   }
 
+  function liveClouds(cat: CloudCatalog, worldOffset: THREE.Vector3 = ORIGIN): MolecularClouds {
+    const c = new MolecularClouds(cat);
+    c.update(worldOffset, true);
+    c.group.updateMatrixWorld(true);
+    return c;
+  }
+
   // Screen-pixel position a world point projects to under `cam`.
   function screenOf(p: THREE.Vector3, cam: THREE.PerspectiveCamera): [number, number] {
     const v = p.clone().project(cam);
@@ -364,9 +371,7 @@ describe('MolecularClouds / picking geometry', () => {
   });
 
   it('reports the effective-centre camera distance at the fallback hover tier', () => {
-    const c = new MolecularClouds(catalog);
-    c.update(ORIGIN, true);
-    c.group.updateMatrixWorld(true);
+    const c = liveClouds(catalog);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
     const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
     expect(hit?.idx).toBe(0);
@@ -375,12 +380,10 @@ describe('MolecularClouds / picking geometry', () => {
   });
 
   it('projects against the floating-origin-shifted centre', () => {
-    const c = new MolecularClouds(makeMockCatalog([
-      makeMockCloud({ centerAbs: new THREE.Vector3(1000, 0, 0), axes: [10, 10, 10] }),
-    ]));
     const worldOffset = new THREE.Vector3(1000, 0, 0);
-    c.update(worldOffset, true);
-    c.group.updateMatrixWorld(true);
+    const c = liveClouds(makeMockCatalog([
+      makeMockCloud({ centerAbs: new THREE.Vector3(1000, 0, 0), axes: [10, 10, 10] }),
+    ]), worldOffset);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
     const hit = c.pick(cam, worldOffset, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
     expect(hit?.idx).toBe(0);
@@ -401,9 +404,7 @@ describe('MolecularClouds / picking geometry', () => {
     ]);
 
     function pickThrough(target: THREE.Vector3, catalog = overlapping): number | null {
-      const c = new MolecularClouds(catalog);
-      c.update(ORIGIN, true);
-      c.group.updateMatrixWorld(true);
+      const c = liveClouds(catalog);
       const cam = cameraAt(new THREE.Vector3(0, 0, 400), ORIGIN);
       const [x, y] = screenOf(target, cam);
       return c.pick(cam, ORIGIN, rect, x, y, pxPerRad)?.idx ?? null;
