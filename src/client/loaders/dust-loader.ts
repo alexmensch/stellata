@@ -240,15 +240,9 @@ export class DustField {
 
   private uploadChunk(chunk: DustChunkMeta, data: Uint8Array) {
     const gl = this.renderer.getContext() as WebGL2RenderingContext;
-    // Three.js stashes the GL handle on a "properties" side-map keyed off
-    // the texture. Accessing it is a published pattern for low-level
-    // interop (see renderer.copyTextureToTexture3D for the same trick),
-    // though technically undocumented — if three rearranges this in a
-    // future major we'll need to revisit.
-    const props = (this.renderer as unknown as {
-      properties: { get: (tex: THREE.Texture) => { __webglTexture?: WebGLTexture } };
-    }).properties;
-    const glTex = props.get(this.texture).__webglTexture;
+    const glTex = (this.renderer.properties.get(this.texture) as {
+      __webglTexture?: WebGLTexture;
+    }).__webglTexture;
     if (!glTex) {
       // Can happen if initTexture hasn't flushed yet (rare); skip this
       // chunk silently and the caller's listeners will see us fall one
@@ -257,14 +251,18 @@ export class DustField {
       return;
     }
     gl.bindTexture(gl.TEXTURE_3D, glTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    // three.js leaves UNPACK_FLIP_Y / UNPACK_PREMULTIPLY_ALPHA behind after
-    // its own 2D uploads (e.g. planet textures lazy-loading mid-stream), and
-    // WebGL2 rejects texSubImage3D outright when either is set — reset both
-    // or this upload INVALID_OPERATIONs and the chunk drops. No restore
-    // needed: three re-runs pixelStorei per upload.
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+    // WebGL2 rejects texSubImage3D outright while flip or premultiply is set,
+    // and three leaves both behind after its own 2D uploads (planet textures
+    // lazy-loading mid-stream), so this upload INVALID_OPERATIONs and the
+    // chunk drops unless both are cleared. Clear them THROUGH three's state
+    // cache, never straight onto the context: the cache skips a call whose
+    // tracked value already matches, so a raw poke leaves it claiming a flip
+    // that is no longer set, and the next flipY upload silently lands
+    // mirrored.
+    const { state } = this.renderer;
+    state.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    state.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    state.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     const c = this.manifest.chunkSize;
     // Chunk bytes are z-major per the Python writer (innermost=x), which
     // matches WebGL's width/height/depth interpretation of texSubImage3D.
