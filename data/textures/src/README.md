@@ -20,14 +20,14 @@ believe it", which is how 3 of the first 6 rows checked stayed wrong.
 | `mars-viking-mdim21.jpg` | Mars | USGS Viking MDIM 2.1 colorized global mosaic, 1 km/px browse (21339×10670), NASA/USGS/AMES | Public domain | https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m |
 | `jupiter-pia07782.jpg` | Jupiter | Cassini Dec 2000 flyby cylindrical map (PIA07782, 3601×1801), NASA/JPL/Space Science Institute | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA07782 |
 | `saturn-bjj.jpg` | Saturn | Southern hemisphere from 56 Cassini images (Sep 2004); northern hemisphere from 31 Voyager 2 images, via the author's own 2002 Voyager map (2880×1440), map by Björn Jónsson. **Both hemispheres are real imagery, 23 yr apart** — nothing is mirrored. Green channel is synthesised from the other filters (Cassini carried no green filter) | Free use with attribution | https://bjj.mmedia.is/data/saturn/index.html |
-| `neptune-bjj.jpg` | Neptune | Voyager 2 Aug 1989 mosaic (1800×900), map by Björn Jónsson. North of ~50°N is reconstructed (no Voyager coverage) **per the author's description — this could NOT be confirmed from pixels**: that band's longitudinal detail (0.403) matches the south polar band's (0.378), which projection alone explains. It is not a mirror-fill of the south (r = 0.72). Depicts 1989 appearance — the Great Dark Spot has since dissipated | Free use with attribution | https://bjj.mmedia.is/data/neptune/index.html |
-| `pluto-pia11707.jpg` | Pluto | New Horizons LORRI/MVIC global mosaic (PIA11707, 5926×2963), NASA/JHU-APL/SwRI. Un-imaged south polar band, **−90° to −54.2°** (19.9% of the map, measured; real data gap, kept — the band above it fades rather than cutting) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA11707 |
+| `neptune-bjj.jpg` | Neptune | Voyager 2 Aug 1989 mosaic (1800×900), map by Björn Jónsson. North of ~50°N is reconstructed (no Voyager coverage) **per the author's description — this could NOT be confirmed from pixels**: that band's longitudinal detail measures 0.38 % against the mirrored southern band's 0.38 %, which the equirect projection explains on its own. Nor is it a fill copied from the south: r = 0.96 aligned but 0.96 shifted too, and only a gap between those is evidence of a copy. Depicts 1989 appearance — the Great Dark Spot has since dissipated | Free use with attribution | https://bjj.mmedia.is/data/neptune/index.html |
+| `pluto-pia11707.jpg` | Pluto | New Horizons LORRI/MVIC global mosaic (PIA11707, 5926×2963), NASA/JHU-APL/SwRI. Un-imaged south polar band, **−90° to −54.1°** (19.9% of the map, measured; real data gap, kept — the band above it fades rather than cutting) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA11707 |
 | `rings-color-bjj.txt` | Saturn rings | Radial colour profile, 13 177 samples spanning 74 510–140 390 km, from Voyager + Cassini data by Björn Jónsson | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
 | `rings-transparency-bjj.txt` | Saturn rings | Radial transparency profile, same sampling/span (1 = no ring material) | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
 | `moon-lroc-svs.tif` | Moon | NASA SVS CGI Moon Kit colour map (LRO LROC WAC, 2048×1024), NASA's Scientific Visualization Studio. Retrieved 2026-07-19 | Public domain | https://svs.gsfc.nasa.gov/4720 |
 | `io-usgs-clrmerge.jpg` | Io | USGS "Io Galileo SSI / Voyager Color Merged Global Mosaic 1km", frozen at 4096×2048 RGB, a browse reduction made at retrieval 2026-07-19 (full 11445×5723 GeoTIFF is 189 MB), NASA/JPL/USGS. PDS label: PositiveWest, centre 0° — build flips to positive-east | Public domain | https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km |
-| `europa-usgs-global.jpg` | Europa | USGS "Europa Voyager - Galileo SSI Global Mosaic 500m", frozen at 4096×2048 grayscale (measured chroma 0.00), a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS. PositiveWest, centre 180° — build flips. **Un-imaged south polar band, −90° to −84.2°** (3.3% of the map, measured, previously undisclosed here). Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m |
-| `ganymede-usgs-clr.jpg` | Ganymede | USGS "Ganymede Voyager - Galileo SSI Global Color Mosaic 1435m" (Kersten et al. 2021), frozen at 4096×2048 RGB, a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS/DLR. PositiveEast, centre 180°. Genuine colour, not tinted (measured chroma 13.6). Five black rows at the north pole are the equirect singularity, not a data gap | Public domain | https://astrogeology.usgs.gov/search/map/Ganymede/Voyager-Galileo/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m |
+| `europa-usgs-global.jpg` | Europa | USGS "Europa Voyager - Galileo SSI Global Mosaic 500m", frozen at 4096×2048 grayscale (measured chroma 0.00), a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS. PositiveWest, centre 180° — build flips. **Un-imaged south polar band, −90° to −84.1°** (3.3% of the map, measured, previously undisclosed here). Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m |
+| `ganymede-usgs-clr.jpg` | Ganymede | USGS "Ganymede Voyager - Galileo SSI Global Color Mosaic 1435m" (Kersten et al. 2021), frozen at 4096×2048 RGB, a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS/DLR. PositiveEast, centre 180°. Genuine colour, not tinted (measured chroma 13.6). Its 5 black rows at the north pole are 0.24% of the map — the equirect singularity, under the 1% band floor, not a data gap | Public domain | https://astrogeology.usgs.gov/search/map/Ganymede/Voyager-Galileo/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m |
 | `callisto-usgs-global.jpg` | Callisto | USGS "Callisto Voyager - Galileo SSI Global Mosaic 1km", frozen at 4096×2048 grayscale (measured chroma 0.00), a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS. PositiveWest, centre 180° — build flips. Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/callisto_voyager_galileo_ssi_global_mosaic_1km |
 | `mimas-pia18437.jpg` | Mimas | Cassini ISS global colour mosaic (PIA18437, 6356×3178, Schenk/LPI 2014 series, IR-G-UV enhanced colour), NASA/JPL-Caltech/SSI/LPI. Retrieved 2026-07-19. Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18437 |
 | `enceladus-pia18435.jpg` | Enceladus | Cassini ISS global colour mosaic (PIA18435, 15960×7980, same series). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18435 |
@@ -36,7 +36,7 @@ believe it", which is how 3 of the first 6 rows checked stayed wrong.
 | `rhea-pia18438.jpg` | Rhea | Cassini ISS global colour mosaic (PIA18438, 12015×6008, same series). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18438 |
 | `titan-iss-p19658.tif` | Titan | USGS "Titan ISS PIA19658 Global Mosaic 4km" (938 nm surface mosaic behind the haze, 4040×2020 grayscale, measured chroma 0.00), NASA/JPL/USGS. Build applies the FULL representative orange chroma — the visible body is haze, and none of this map's colour is imaged. PositiveWest, centre 180° — build flips. Retrieved 2026-07-19 | Public domain | https://astrogeology.usgs.gov/search/map/Titan/Cassini/Global-Mosaic/Titan_ISS_P19658_Mosaic_Global_4km |
 | `iapetus-pia18436.jpg` | Iapetus | Cassini ISS global colour mosaic (PIA18436, 11741×5871, same 2014 series). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18436 |
-| `triton-pia18668.jpg` | Triton | Voyager 2 global colour mosaic (PIA18668, 14138×7069, Schenk/LPI 2014). Un-imaged north polar band, **+90° to +43.5°** (25.9% of the map, measured; real data gap). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18668 |
+| `triton-pia18668.jpg` | Triton | Voyager 2 global colour mosaic (PIA18668, 14138×7069, Schenk/LPI 2014). Un-imaged north polar band, **+90° to +43.2°** (26.0% of the map, measured; real data gap). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18668 |
 | `rings-uranus.tsv` | Uranus rings | Authored table (not a download), values compiled 2026-07-18: the 10 narrow main rings' mid radii, mean widths and mid-range normal optical depths from the Earth-based + Voyager 2 occultation canon (French, Nicholson, Porco & Elliot 1991, in *Uranus*, Univ. of Arizona Press) | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F/abstract |
 | `rings-neptune.tsv` | Neptune rings | Authored table (not a download), values compiled 2026-07-18: Galle/Le Verrier/Lassell/Arago/Adams radii, widths and normal optical depths from Voyager 2 + stellar occultations (Porco et al. 1995, in *Neptune and Triton*, Univ. of Arizona Press); Adams τ is the azimuthal average folding in its arcs | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N/abstract |
 | `moon-dem-svs.tif` | Moon (relief) | NASA SVS CGI Moon Kit `ldem_64_uint.tif` (LRO LOLA), frozen at 4096×2048 — an area-average reduction made at retrieval 2026-08-16 from the 23040×11520 uint16, 506 MB original. **Carries NO GDAL scale tag and is NOT metres** — samples are half-metres above a 1727400 m datum; the published LOLA span −9110…+10760 m is the check. Centre 0°E, positive-east | Public domain | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_64_uint.tif |
@@ -86,12 +86,22 @@ What each check settles, and what it does not:
 - **Dimensions** are mechanical and now pinned. This is where the rot
   was: 14 of 24 rows described a file without stating its size, the
   DEM rows quoting the original they were reduced from instead.
-- **Polar gaps** are read as contiguous near-black bands. A band under
-  1 % of rows is the equirect pole singularity, not a gap — Ganymede
-  has 5 black rows of 2048 and is fully imaged.
+- **Polar gaps** are read as contiguous near-black bands, measured at the
+  file's **native row count** — the working reduction the mirror and
+  chroma passes run on quantises the band edge to 0.7° and would stop
+  matching the tenths quoted above. Edge and map fraction come from the
+  one run, so a row cannot pair them from different measurements. A band
+  under 1 % of rows is the equirect pole singularity, not a gap —
+  Ganymede's 5 rows of 2048 are 0.24 % and it is fully imaged.
 - **Chroma** settles every "grayscale mosaic" claim outright: Mercury,
   Europa, Callisto and Titan all measure 0.00, and Ganymede's 13.6
   confirms its colour is imaged rather than applied.
+- **Chroma *invention* is not measured at all** — the rows saying half,
+  full or halfway-to-gray are reading `TINT_STRENGTH` and `DESATURATE`
+  in `build-textures.py`, and the halfway-to-gray choice is by eye.
+  `source-provenance.test.ts` pins each row's wording against the
+  constant so the prose cannot drift off the build, which is all a test
+  can do here: the judgement itself has no ground truth.
 - **The mirror test cannot identify a mirror on its own.** North
   against a flipped south correlates highly for two innocent reasons —
   latitudinal banding (Venus 0.971, Saturn 0.802) and a longitudinal
@@ -103,7 +113,12 @@ What each check settles, and what it does not:
   Neptune row now says outright rather than implying it was verified.
   A flat-region test has no power on a gas giant, where the whole map
   is low-contrast, and high-latitude smoothness is what the equirect
-  projection produces regardless.
+  projection produces regardless. The script measures the band anyway,
+  through the same shifted-baseline discipline as the mirror test: the
+  claimed band correlates with the mirrored south at r = 0.96, and at
+  0.96 under longitude shift too, so banding explains it and no copy is
+  indicated. Reported without the shifted figure, that 0.96 would read
+  as evidence of exactly the fill it rules out.
 
 ## Refresh recipe
 
