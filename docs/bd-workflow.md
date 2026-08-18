@@ -129,3 +129,28 @@ Conventions: PR numbers become the label `pr-<num>` (bare digits clash
 with bead IDs); URLs, DOIs, and dashboards go in metadata keyed by
 source type. Labels are lowercase kebab-case, metadata keys lowercase
 snake_case. Check `bd label list-all` before coining a new label.
+
+### Model-routing labels — every implementation bead carries exactly one
+
+`needs-fable` and `opus5-ok` say which model to hand a bead to, and they
+are the reason a scoping pass is not finished when the children exist:
+filing a roster without them leaves the routing to be re-derived from
+sibling usage, which is how two consecutive passes over the WebGPU
+migration epic shipped 21 unlabelled children.
+
+- **`needs-fable`** — diagnosis, design gates, and numerics under
+  uncertainty. The work is deciding *what* to do: mechanism-hunting a
+  perf cost, deriving a precision bound, weighing a tradeoff with no
+  written recipe, interpreting a measurement into a go/no-go.
+- **`opus5-ok`** — well-specified implementation. The work is *doing* a
+  known thing carefully: porting a shader against an established
+  pattern, wiring a knob, a mechanical deletion, a UI surface, running a
+  measurement someone else already framed.
+
+Split a bead rather than hedging: if the design half needs Fable and the
+implementation half does not, that is the decompose-along-a-seam signal
+from the bead-authoring-scope memory, not a case for both labels.
+
+**Do not put either label on an epic.** Children inherit parent labels
+at creation, and a roster is almost always mixed — an epic-level label
+silently mislabels every child filed under it afterwards.
