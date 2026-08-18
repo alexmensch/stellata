@@ -226,6 +226,44 @@ would brighten every plain with nothing in the TS suite noticing.
 **No flux renormalisation**, and measured rather than assumed — the fourth
 column of `../emission/README.md`'s phase table.
 
+### What the fill term is actually worth — it does not reach the screen
+
+The formula above is right and the term is nonzero everywhere the skyline is
+positive, but at the shipped map's resolution it lands **below one 8-bit code
+value** over essentially the whole surface. Measured off the shipped planes,
+area-weighted by `cos(lat)`, with `ρ·F` read as the shadow-to-lit ratio:
+
+| body | F p50 | F p99 | F max | ρ·F at p99 | ρ·F at max |
+|---|---|---|---|---|---|
+| Moon | 0.00066 | 0.0230 | 0.101 | 0.28 % | 1.21 % |
+| Mercury | 0.00007 | 0.0053 | 0.029 | 0.08 % | 0.41 % |
+| Mars | 0.00000 | 0.0031 | 0.057 | 0.05 % | 0.97 % |
+
+Two things follow, and both are load-bearing:
+
+- **The 1.4 % worked example is above what the data contains.** It assumes
+  `F = sin²20° = 0.117`; the maximum anywhere in the shipped Moon map is 0.101,
+  and the p99 is 0.023 — fifty times smaller. A 2048-wide, 8-azimuth skyline
+  starting 10.7 km out cannot represent a crater whose walls occlude 20° of
+  sky, because those walls are a few km away, inside the near field the march
+  deliberately skips. The derivation is sound; the input is not there.
+- **The faint-end toe then removes what is left.** `../../../hdr/README.md`
+  § Operator crushes anything more than `TOE_BLACK_MAG` = 1.5 mag under
+  `L_THRESH` to black by construction. A shadow at 0.28 % of lit ground is 6.4
+  mag fainter, so it clears the toe only when the lit ground beside it is
+  itself pushed to ~214/255. Through the real operator, at any exposure where
+  the lunar surface is not blown out, the fill quantises to **0/255** at every
+  percentile up to p99.9.
+
+Moving the march start out cost a factor of ~1.8 at p99 (0.0401 → 0.0230 on the
+Moon, both measured at 2048) — real, but not the reason the term is invisible;
+it was two orders of magnitude short before that change too. **The honest
+statement is that this term is physically correct and currently has no visible
+effect.** It is kept because it is the right physics and costs no fetch, not
+because it changes a pixel. Giving it a visible effect needs a near-field sky
+view factor computed over the range the shadow march excludes — its own channel,
+its own artifact — which is `stellata-2f6.58`, not this term.
+
 ## The exposure coverage mask stays geometric
 
 `lit` (attachment 1) is still `step(0, sunCos) · step(0.5, shadow)` — terrain

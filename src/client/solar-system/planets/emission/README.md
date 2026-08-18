@@ -59,8 +59,8 @@ cannot reach; the horizon maps take that back and hold the disc inside
 **The third row is the answer to whether interreflection needs dividing out: it
 does not.** Terrain fill adds light the disc integral did not previously carry,
 so it had to be measured rather than waved through — it moves the Moon by
-0.001 mag at full phase and by nothing at all, to three decimals, everywhere
-else. It is bounded by construction: the term is the body's albedo times a
+0.001 mag at full phase and Mars by 0.001 at 150°, and nothing at all to three
+decimals anywhere else. It is bounded by construction: the term is the body's albedo times a
 terrain view factor that is near zero over the open ground making up most of
 the disc — and at the shipped map's resolution it is far smaller even in
 craters than the derivation suggests, small enough not to reach the screen at
