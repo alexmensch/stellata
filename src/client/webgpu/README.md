@@ -130,8 +130,18 @@ WebGL map and never learns about the port. The contract:
 - **Texture slots** (`TEXTURE_SLOTS`) are not mirrored: textures bind as
   per-layer `texture()`/`texture3D()` nodes where the texture lives.
 
-The test pins key parity against `buildSharedUniforms`, so adding a
-WebGL slot without its node counterpart fails CI. Port-child materials
+The mirror is a **transcription, not a loop** — `uniform()`'s node type
+comes from its overloads resolving against a concrete value, so a derived
+version would need `UniformNode` (exported by neither `three/webgpu` nor
+`three/tsl`) plus a value-kind ladder: a second deep import into three's
+internals to save a transcription CI already guards. Within it, only the
+vector lines are load-bearing; a mis-transcribed scalar is overwritten by
+the first `sync()`.
+
+Three legs pin it: key parity against `buildSharedUniforms` (adding a
+WebGL slot without its node counterpart fails CI), every vector slot
+holding its map object by identity, and a unique value per scalar proving
+`sync()`'s reflective key filter reaches all of them. Port-child materials
 take slots from `stellata.webgpu.uniformNodes` — shared node objects are
 what replaces shared uniform objects.
 

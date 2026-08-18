@@ -22,6 +22,14 @@ export interface SharedUniformNodeRegistry {
   sync(): void;
 }
 
+// Transcribed rather than derived from a loop over `shared`, deliberately:
+// each node's type comes from three's own uniform() overloads resolving
+// against a concrete value, and a loop cannot give them one. Typing a
+// derived version needs UniformNode — which neither three/webgpu nor
+// three/tsl exports — plus a hand-written value-kind ladder, i.e. a second
+// deep import into three's internals to save a transcription that key
+// parity already guards. Only the VECTOR lines are load-bearing here; every
+// scalar's construction value is overwritten by the first sync().
 function buildNodes(shared: SharedUniforms) {
   const m = shared.uLocalMemberIdx.value;
   return {
