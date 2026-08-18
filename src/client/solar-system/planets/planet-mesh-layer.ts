@@ -209,12 +209,14 @@ const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
 
 type TextureExt = 'jpg' | 'png' | 'webp';
 
-/** Decode options for every planet map. `imageOrientation` bakes the flip into
- *  the bitmap, so the upload never asks the driver for UNPACK_FLIP_Y_WEBGL —
- *  which Chrome does not honour on all decode paths, and a map that arrives
+/** Decode options for every planet map. `imageOrientation` puts the flip in the
+ *  bitmap, where no GL state can skip it: three issues no UNPACK_FLIP_Y_WEBGL
+ *  at all for an ImageBitmap source, so a pixel-store cache desynced from GL
+ *  (`../../loaders/README.md`) cannot reach these maps, and a map that arrives
  *  unflipped shades the mirrored hemisphere with no other symptom.
- *  `premultiplyAlpha: 'none'` is what keeps the horizon pair's fourth azimuth,
- *  which rides the alpha channel, from scaling the other three. */
+ *  `premultiplyAlpha: 'none'` keeps each horizon map's fourth azimuth, which
+ *  rides the alpha channel, from scaling the other three — spelled out because
+ *  `setOptions` replaces the loader's own defaults instead of merging. */
 export const TEXTURE_DECODE_OPTIONS = {
   imageOrientation: 'flipY',
   premultiplyAlpha: 'none',
@@ -242,8 +244,10 @@ export class PlanetMeshLayer {
   private readonly hdr: HdrEmitterUniforms;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
+  // A copy: the loader assigns its own forced options over whatever it is
+  // handed, and the exported constant is what the tests read.
   private readonly loader = new THREE.ImageBitmapLoader()
-    .setOptions(TEXTURE_DECODE_OPTIONS);
+    .setOptions({ ...TEXTURE_DECODE_OPTIONS });
   private readonly requestRender: () => void;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
@@ -793,8 +797,9 @@ export class PlanetMeshLayer {
       `${this.textureBaseUrl}textures/${key}.${ext}`,
       (bitmap) => {
         const tex = new THREE.Texture(bitmap);
-        // The bitmap already carries the flip (TEXTURE_DECODE_OPTIONS); a
-        // second one at upload would undo it.
+        // The bitmap carries the flip. Belt-and-braces: three skips the upload
+        // flip entirely for a bitmap source, so this changes nothing today and
+        // holds the orientation if that ever stops being true.
         tex.flipY = false;
         // Raw sRGB values, matching the pipeline's convention of
         // writing colours to the framebuffer without a colorspace
@@ -811,9 +816,12 @@ export class PlanetMeshLayer {
         this.resolveTexture(key, { state: 'ready', tex, meanLuminance });
       },
       undefined,
-      () => {
+      (err) => {
         // Texture-less bodies (Uranus, future exoplanets) take the
-        // representative-colour base path — a 404 is expected data.
+        // representative-colour base path — a 404 is expected data. A failed
+        // decode is not, and lands here too: it would strip every body's map
+        // at once, so log rather than let the only signal be flat planets.
+        console.warn(`planet map ${key} unavailable`, err);
         this.resolveTexture(key, { state: 'missing' });
       },
     );
@@ -845,8 +853,10 @@ export class PlanetMeshLayer {
     for (const t of this.textures.values()) {
       if (t.state !== 'ready') continue;
       t.tex.dispose();
-      // Texture.dispose frees the GL object; the decoded bitmap is ours.
-      (t.tex.image as ImageBitmap | undefined)?.close?.();
+      // Texture.dispose frees the GL object; the decoded bitmap is ours. Safe
+      // only while THREE.Cache stays off — an enabled Cache keys bitmaps by
+      // URL and would hand this closed one to the next load.
+      (t.tex.image as ImageBitmap).close();
     }
     this.textures.clear();
     this.geometry.dispose();
