@@ -227,9 +227,12 @@ void main() {
   // skyline has shadowed. Added to col rather than folded into dayside because
   // it is not direct light, and so it cannot reach the exposure coverage mask.
   // uTerrainAlbedo is the illuminating slope's own reflectance: surfaceScale
-  // carries this patch's, and the bounce pays for both
-  // (surface-relief/README.md § Shadows are lit by the terrain).
-  col += surfaceScale * (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb);
+  // carries this patch's, and the bounce pays for both. uPhaseScale rides it
+  // like the direct term — it corrects the whole reflected disc to the measured
+  // curve, so leaving it off would make the shadow-to-lit ratio a function of
+  // phase angle (surface-relief/README.md § Shadows are lit by the terrain).
+  col += surfaceScale
+    * (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);
 
   if (uHasAtmosphere > 0.5) {
     // Skylight: the air overhead scattering host light down — noon skylight on

@@ -134,6 +134,8 @@ def phase_curve(body: str) -> None:
         shadowed = _dayside(facet @ sun) * (sun_cos > gate)
         # The shader adds this to col rather than into dayside, and it carries
         # the albedo a second time — the bounce off the illuminating slope.
+        # uPhaseScale is absent from every column because it rides the fill and
+        # the direct term alike, so it cancels in the ratio these magnitudes are.
         fill = ALBEDO[body] * terrain_view * np.maximum(sun_cos, 0.0)
         lit_by = {
             "smooth": _dayside(sun_cos),

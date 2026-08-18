@@ -198,9 +198,17 @@ illuminating slope, which is why a shadow on a dark body is darker than the
 albedo ratio alone. `max(sunCos, 0)` stands in for the mean illumination of the
 terrain in view, taken at the sun's true elevation here rather than at this
 facet's tilt: the light is coming off the neighbours, not off this facet. Both
-terms carry the same cosine, so **the ratio is scale-free** — a crater floor
-under 20° walls sits at 1.4 % of the ground lit beside it at a 3° sun and at
-noon alike, which is the 1–2 % a lunar shadow is observed at.
+terms carry the same cosine, so **the ratio ρ·F is free of solar elevation** —
+walls of a given height give the same ratio at a 3° sun and at noon alike.
+
+`uPhaseScale` rides it exactly as it rides the direct term. It corrects the
+whole **reflected** disc to the measured Mallama curve, so leaving it off the
+fill alone would divide in: Mercury sits on the clamp's 0.25 floor from 60°
+through 150°, which would make its shadows 4× brighter relative to lit ground
+there than at full phase, and the elevation-free ratio above would stop being
+phase-free. Skylight is the one additive term legitimately outside
+`uPhaseScale` — air scatter carries no surface albedo and its disc mean divides
+out separately (`../emission/README.md` § Two disc means).
 
 **A skyline below the local horizontal is sky, not terrain.** Over open ground
 every azimuth reads the body's own limb bound — negative — and squaring that

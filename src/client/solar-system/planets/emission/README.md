@@ -62,7 +62,14 @@ so it had to be measured rather than waved through — it moves the Moon by
 0.001 mag at full phase and by nothing at all, to three decimals, everywhere
 else. It is bounded by construction: the term is the body's albedo times a
 terrain view factor that is near zero over the open ground making up most of
-the disc (`../surface-relief/README.md` § Shadows are lit by the terrain).
+the disc — and at the shipped map's resolution it is far smaller even in
+craters than the derivation suggests, small enough not to reach the screen at
+all (`../surface-relief/README.md` § What the fill term is actually worth).
+
+`uPhaseScale` is absent from every column here because it multiplies the fill
+and the direct term alike, so it cancels in the ratio these magnitudes are. That
+is only true because the shader applies it to both; off the fill alone the
+fourth column would understate the term by 1/`uPhaseScale`, up to 4× on Mercury.
 
 Nothing bounds the residual on
 the Moon — the body carries no `phaseCoefficients`, so `uPhaseScale` is pinned

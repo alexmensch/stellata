@@ -250,6 +250,20 @@ describe('the terrain view factor', () => {
     expect(frag).toContain('return sum / float(STELLATA_HORIZON_AZIMUTHS);');
   });
 
+  it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
+    // The scale-free claim below is a claim about the RATIO, and it holds only
+    // if the Mallama correction multiplies the fill and the direct term alike.
+    // Off the fill alone it would divide in, and Mercury sits on the clamp
+    // floor of 0.25 from 60° through 150° — a 4x brighter shadow there.
+    expect(frag).toContain('vec3 col = surfaceScale * (dayside * limb * uPhaseScale);');
+    expect(frag).toContain('* limb * uPhaseScale);');
+    // Skylight is the one additive term that stays OUTSIDE it: air scatter
+    // carries no surface albedo, and its disc mean divides out through
+    // atmoDiscMeans instead (../emission/README.md § Two disc means).
+    const skylight = frag.match(/col \+= surfaceScale \* stellata_skyIrradiance[\s\S]*?;/)!;
+    expect(skylight[0]).not.toContain('uPhaseScale');
+  });
+
   it('lands a 20° crater floor at 1.4% of the ground lit beside it', () => {
     // Both the fill and the direct term carry the same cos(i), so the ratio is
     // the solar elevation's to lose — it is 1.4% at a 3° sun and at noon alike.
@@ -283,8 +297,10 @@ describe('relief feeds the direct term only', () => {
     // Interreflection is the fourth: the light filling a shadow comes off the
     // terrain around the patch, whose illumination is set by the sun's true
     // elevation there and not by which way this one facet happens to tilt.
+    // uPhaseScale rides it as well — without that the shadow-to-lit ratio would
+    // be a function of phase angle on every body carrying a Mallama curve.
     expect(frag).toContain(
-      'col += surfaceScale * (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb);');
+      '* (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);');
     // Narrow enough to survive an argument-list reflow in the atmosphere
     // march: what matters is which normal goes in, not the whole call.
     expect(frag).toMatch(/float ndotv = clamp\(dot\(n, v\)/);
