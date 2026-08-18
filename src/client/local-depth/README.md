@@ -127,8 +127,13 @@ members' depth range into K equal-ratio slices, each within
 - **Seam artefacts:** a fragment exactly on a boundary is measure-zero
   (float equality); no visible seam is expected. Verify in smoke; an
   epsilon overlap is the fallback if one ever shows.
+- **WebGPU:** the reversed-z decision (§ Precision analysis) collapses
+  the partition to K = 1; the sliced form stays live on WebGL2 until
+  cutover deletes that path.
 
 ## Precision analysis
+
+### 24-bit standard depth, sliced — the shipped WebGL2 mechanism
 
 Standard perspective depth quantum at distance `z` in `[near, far]`
 (24-bit buffer, the WebGL2 default renderbuffer):
@@ -161,17 +166,95 @@ Pinned scenarios (`slice-pure.test.ts`):
 | Full system incl. Neptune's orbit ring | 0.3 m → 41.8 AU | 4 slices |
 | Metre-scale probe near Saturn | 0.3 m → 41.8 AU | 4 slices |
 
-**Rejected encodings** (decision record):
+### Reversed-z Depth32Float — decision record (stellata-0it.18)
 
-- *Reversed-Z* — best-in-class, but needs a three.js upgrade
-  (`reverseDepthBuffer`, r166+) + `EXT_clip_control` gating with a
-  fallback path, for headroom the slice bound already guarantees.
-  The escalation path if a future case breaks the ¼-px budget.
-- *Local log depth* — with a tight far it degenerates to linear-in-w
-  (uniform quantum `far/2²⁴`), which *fails* the small-moon case the
-  moment far is generous (quantum 357 km at far = 40 AU vs Miranda's
-  235 km radius). Standard depth's z² falloff concentrates precision
-  exactly where bodies resolve.
+The WebGPU migration ships reversed-z renderer-wide
+(`reversedDepthBuffer: true`): three's finite-far reversed mapping
+`d = n·(f−z) / (z·(f−n))` (depth 1 at near, 0 at far) into a
+Depth32Float attachment. Depth is stored as a *float*, whose ulp
+scales with the value — `ulp(d) ≤ d·2⁻²³` — so the world-space
+quantum is
+
+```
+δz(z)/z ≤ 2⁻²³ · (1 − z/f)  ≈  1.2e-7,  independent of f/n
+```
+
+The bound is scale-free: it holds at every camera distance, bracket
+ratio, and epoch, so the camera-anywhere check passes structurally
+rather than case-by-case. A feature is z-orderable iff it subtends
+≥ 2⁻²³ rad ≈ 0.025″ — 1.5e-4 px at the default 50°/1080 px view,
+7.4e-4 px at the tightest FOV the app allows (`FOV_MIN_DEG` = 10°) —
+so the ¼-px criterion above holds with ≥ 300× margin at any slice
+ratio. That is ~1700× tighter than the sliced 24-bit guarantee
+(`maxSliceRatio/2²⁴ ≈ 2.0e-4`). The finite-far term is negligible for
+members (`z ≤ 0.1 pc` against `f = 1e5 pc` ⇒ `1 − z/f ≈ 1`);
+float cancellation in `n/z − n/f` bites only as `z → f`, where
+nothing needs ordering. The eaul spike corroborates empirically:
+AU-scale disc ordering with zero z-flicker at the main pass's own
+planes (near 1e-12 / far 1e5 pc).
+
+Pinned scenarios re-derived at those main-pass planes (vantage as
+pinned in `slice-pure.test.ts`; the relative bound makes every claim
+epoch-uniform):
+
+| Scenario (vantage) | δz reversed-z | sliced 24-bit |
+| --- | --- | --- |
+| Saturn centre from Mimas' orbit floor (z = 185,500 km) | 22 m | ≪ any body |
+| Uranus limb from Miranda's orbit floor (z = 129,900 km) | 15.5 m | 6.1 km |
+| Metre probe at 0.3 m | 36 nm — but the main-pass near (1e-12 pc ≈ 31 km) clips it | n/a (4 slices) |
+| Neptune's orbit ring at 30.1 AU | 537 km = the same 1.5e-4 px | 4 slices |
+
+So the main pass, at its own unchanged planes, out-orders the sliced
+bracket everywhere it can see: the binding constraint moves from depth
+precision to the near plane.
+
+### Decision — keep the pass, collapse to K = 1
+
+Slicing existed solely because one 24-bit standard-depth bracket
+cannot span probe → Neptune within the ratio bound; reversed-z float32
+is ratio-free, so the partition retires. The pass itself survives on
+properties that are not depth precision and do not fall out of
+reversed-z:
+
+1. **Painter's compositing over the finished frame.** Members overlay
+   volumetric and screen-space layers (MW band raymarch, molecular-
+   cloud absorption, additive glow already blended into the frame)
+   that have no per-fragment depth relation to them — valid because
+   nothing non-member sits between the camera and a local body.
+   Folding members into the main pass would force depth-aware ray
+   termination into each such layer plus a layer-graph reorder.
+2. **Dynamic near.** The bracket doubles as near-plane management:
+   the camera parks at 0.3 m (`NEAR_MIN_PC`) while the main camera
+   keeps near = 1e-12 pc. Retirement would need a global or dynamic
+   main-pass near instead.
+3. **Member suppression** keeps close-range compositing isolated from
+   the main pass's Max/additive blend semantics; the mirror machinery
+   is sunk cost that ports mechanically.
+
+Retiring the pass buys none of that back and breaks WebGL2/WebGPU A/B
+parity during dual-boot. Keeping slicing carries a partition whose
+guarantee is now redundant and multiplies the repaint cost by K
+(≈ 4 near stars, where the orbit-path bound contains the camera).
+K = 1 keeps every compositing semantic, deletes the slice loop
+(single `clearDepth` + one bracketed render), draws boundary-spanning
+geometry once, and inherits reversed-z in-bracket automatically (the
+pass camera's projection is built by the same reversed
+`makePerspective`). Implementation: stellata-0it.12; the mirror
+machinery ports unchanged (0it.4 / 0it.8); the WebGL2 sliced path
+lives until 0it.14 deletes it.
+
+**Rejected encodings** (updated 2026-08-18):
+
+- *Reversed-Z* — REVERSED: formerly rejected here as an upgrade-gated
+  escalation path for headroom the slice bound already guaranteed; it
+  now ships renderer-wide with the WebGPU migration and subsumes the
+  slice bound (above). No longer an encoding this pass chooses — it
+  inherits it.
+- *Local log depth* — rejection stands: with a tight far it
+  degenerates to linear-in-w (uniform quantum `far/2²⁴`), which
+  *fails* the small-moon case the moment far is generous (quantum
+  357 km at far = 40 AU vs Miranda's 235 km radius). Standard depth's
+  z² falloff concentrates precision exactly where bodies resolve.
 
 ## Cluster API
 
