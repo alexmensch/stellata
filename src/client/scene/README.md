@@ -12,6 +12,9 @@ guarantee.
 
 - `scene-layer.ts` — `FrameCtx`, `SceneLayer`, `SceneLayerRegistry`.
 - `scene-layer.test.ts` — fan-out order + optional-hook semantics.
+- `frame-ctx-mock.ts` — `makeFrameCtx`, the neutral per-frame fixture
+  (camera at Sol, clock zero, no warp) every layer / kind-module suite
+  builds its `update` call from, overriding the one field under test.
 - `scene-elements.ts` — the declutter-cycle floor table + derivation
   (§ Detail-level declutter cycle).
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
