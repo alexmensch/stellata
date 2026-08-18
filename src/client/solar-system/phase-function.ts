@@ -277,3 +277,30 @@ export const SATURN_PHASE: PhaseCoefficients = {
 // 2018 Tables A-7.2 / A-8.2 model sub-latitude (Uranus) and temporal
 // (Neptune) effects, not α, because Earth-bound max α is negligible
 // for both. Pluto and every exoplanet share the Lambert fallback.
+
+/** Earth's Moon — the classic lunar phase law, not Mallama (the paper
+ *  covers planets only). Allen's Astrophysical Quantities gives
+ *  m = −12.73 + 1.49·|φ| + 0.043·φ⁴ for φ in radians; converting to
+ *  degrees puts 1.49·(π/180) in c1 and 0.043·(π/180)⁴ in c4, which is
+ *  the ΔV(α°) = 0.026·α + 4e-9·α⁴ this row encodes. It reproduces the
+ *  measured full-to-quarter ratio of ~11× (10.99× here).
+ *
+ *  αmax = 150° is the law's fitted range; the α⁴ term is an
+ *  extrapolation beyond it and Lambert takes over. The opposition
+ *  surge inside ~5° is sharper than the linear term, which averages
+ *  over it — the α = 0 anchor is still exact, so the −12.74 full-Moon
+ *  calibration is untouched.
+ *
+ *  Every other moon keeps the Lambert fallback: see
+ *  docs/science-solar-system.md § Moons for why. */
+export const MOON_PHASE: PhaseCoefficients = {
+  c0: 0,
+  c1: 2.6e-2,
+  c2: 0,
+  c3: 0,
+  c4: 4e-9,
+  c5: 0,
+  c6: 0,
+  c7: 0,
+  alphaMaxDeg: 150,
+};

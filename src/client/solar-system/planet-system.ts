@@ -25,6 +25,7 @@ import {
   JUPITER_PHASE,
   MARS_PHASE,
   MERCURY_PHASE,
+  MOON_PHASE,
   type PhaseCoefficients,
   SATURN_PHASE,
   VENUS_PHASE,
@@ -439,6 +440,7 @@ interface MoonPhysical {
   readonly albedo: number;
   readonly type: PlanetType;
   readonly colour: readonly [number, number, number];
+  readonly phaseCoefficients?: PhaseCoefficients;
   readonly terminatorSoftness?: number;
   readonly atmosphere?: PlanetAtmosphere;
 }
@@ -449,7 +451,12 @@ interface MoonPhysical {
 // — SOL_MOONS reads them from MOON_ELEMENTS by name, so each has a single
 // source of truth.
 const MOON_PHYSICAL: readonly MoonPhysical[] = [
-  { name: 'Moon', parentName: 'Earth', radiusKm: 1737.4, albedo: 0.12, type: 'rocky', colour: [0.55, 0.54, 0.52] },
+  // The one moon with a phase curve measured across the full range a
+  // camera can occupy — every other in-scope moon is only ever seen
+  // from Earth within a few degrees of full, so its published curve
+  // would be an extrapolation everywhere the user actually flies.
+  { name: 'Moon', parentName: 'Earth', radiusKm: 1737.4, albedo: 0.12, type: 'rocky', colour: [0.55, 0.54, 0.52],
+    phaseCoefficients: MOON_PHASE },
 
   { name: 'Io', parentName: 'Jupiter', radiusKm: 1821.6, albedo: 0.63, type: 'rocky', colour: [0.86, 0.78, 0.45] },
   { name: 'Europa', parentName: 'Jupiter', radiusKm: 1560.8, albedo: 0.67, type: 'icy', colour: [0.82, 0.76, 0.68] },
@@ -516,6 +523,7 @@ export const SOL_MOONS: readonly Planet[] = MOON_PHYSICAL.map((m) => {
     type: m.type,
     albedo: m.albedo,
     colour: m.colour,
+    phaseCoefficients: m.phaseCoefficients,
     terminatorSoftness: m.terminatorSoftness,
     rotation: MOON_ROTATION_BY_NAME.get(m.name),
     atmosphere: m.atmosphere,

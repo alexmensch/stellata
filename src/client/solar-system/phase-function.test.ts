@@ -4,6 +4,7 @@ import {
   JUPITER_PHASE,
   MARS_PHASE,
   MERCURY_PHASE,
+  MOON_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
   type PhaseCoefficients,
@@ -228,10 +229,37 @@ describe('mallamaPhaseFactor', () => {
       .toBeGreaterThan(lambertianPhaseFactor(a160) * 5);
   });
 
+  it('Moon reproduces the measured full-to-quarter brightness ratio (~11×)', () => {
+    // The empirical anchor for the whole lunar phase law: a quarter
+    // Moon is ~11× fainter than a full one, not the 3.1× Lambert
+    // predicts. If this drifts, the coefficients are wrong.
+    const ratio = mallamaPhaseFactor(MOON_PHASE, 0) / mallamaPhaseFactor(MOON_PHASE, 90 * DEG);
+    expect(ratio).toBeCloseTo(10.989, 3);
+    const lambertRatio = lambertianPhaseFactor(0) / lambertianPhaseFactor(90 * DEG);
+    expect(lambertRatio).toBeCloseTo(3.142, 3);
+  });
+
+  it('Moon over-brightness under Lambert matches the published deficit', () => {
+    // How much too bright the Moon rendered before it carried a curve,
+    // in magnitudes. Full phase is exactly right (the −12.74 anchor);
+    // the gap opens across the phases a user parks at.
+    const expected: ReadonlyArray<readonly [number, number]> = [
+      [0, 0], [10, 0.244], [30, 0.645], [60, 1.073],
+      [90, 1.360], [120, 1.543], [150, 1.352],
+    ];
+    for (const [aDeg, overMag] of expected) {
+      const a = aDeg * DEG;
+      const measured = 2.5 * Math.log10(
+        lambertianPhaseFactor(a) / mallamaPhaseFactor(MOON_PHASE, a),
+      );
+      expect(measured).toBeCloseTo(overMag, 3);
+    }
+  });
+
   it('all curves return positive, finite factors over their validity range', () => {
     const all = [
       MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, MARS_PHASE,
-      JUPITER_PHASE, SATURN_PHASE,
+      JUPITER_PHASE, SATURN_PHASE, MOON_PHASE,
     ];
     for (const p of all) {
       for (let aDeg = 0; aDeg <= p.alphaMaxDeg; aDeg += 0.5) {
@@ -355,8 +383,40 @@ describe('phaseRatioToLambert', () => {
     expect(Number.isFinite(phaseRatioToLambert(MERCURY_PHASE, Math.PI))).toBe(true);
   });
 
+  it('Moon: the mesh scalar the shader reads, clamp included', () => {
+    const expected: ReadonlyArray<readonly [number, number]> = [
+      [0, 1], [30, 0.551830], [90, 0.285873],
+      // 120° is inside the clamp band below — 0.241 raw, floored to 0.25.
+      [120, PHASE_RATIO_MIN], [150, 0.287891],
+    ];
+    for (const [aDeg, scalar] of expected) {
+      expect(phaseRatioToLambert(MOON_PHASE, aDeg * DEG)).toBeCloseTo(scalar, 6);
+    }
+  });
+
+  it("Moon's curve dips under PHASE_RATIO_MIN over a bounded crescent band", () => {
+    // The floor bites where the lunar curve is steepest, bottoming at
+    // 0.2377 near 129°. The truncation is 0.0547 mag at worst — an
+    // order of magnitude less than Mercury already loses to the same
+    // floor (0.173 raw at 152°, 0.40 mag), so the shared bound stands.
+    let below = 0;
+    let minRaw = Infinity;
+    for (let deg = 0; deg <= 150; deg += 0.01) {
+      const a = deg * DEG;
+      const raw = mallamaPhaseFactor(MOON_PHASE, a) / lambertianPhaseFactor(a);
+      if (raw < PHASE_RATIO_MIN) below++;
+      minRaw = Math.min(minRaw, raw);
+    }
+    expect(minRaw).toBeCloseTo(0.2377, 4);
+    expect(below).toBeGreaterThan(0);
+    expect(2.5 * Math.log10(PHASE_RATIO_MIN / minRaw)).toBeCloseTo(0.0547, 4);
+    const mercuryMin = mallamaPhaseFactor(MERCURY_PHASE, 151.86 * DEG)
+      / lambertianPhaseFactor(151.86 * DEG);
+    expect(mercuryMin).toBeLessThan(minRaw);
+  });
+
   it('clamps to [PHASE_RATIO_MIN, PHASE_RATIO_MAX]', () => {
-    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, SATURN_PHASE]) {
+    for (const coefs of [MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, SATURN_PHASE, MOON_PHASE]) {
       for (let deg = 0; deg <= 180; deg += 5) {
         const r = phaseRatioToLambert(coefs, (deg * Math.PI) / 180);
         expect(r).toBeGreaterThanOrEqual(PHASE_RATIO_MIN);
