@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
+import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { createLgKindModule, formatLgSearchDistance } from './lg-module';
 
 function rawObject(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -134,13 +135,7 @@ describe('lg kind module', () => {
     const sceneLayer = m.attach(ctx)!;
     // The wireframe pick gates on group.visible, which update() flips on
     // once the camera sits past the Sol-distance fade.
-    sceneLayer.update?.({
-      camera: ctx.camera,
-      worldOffset: new THREE.Vector3(),
-      distFromSol: 10_000,
-      t: 0,
-      warpActive: false,
-    });
+    sceneLayer.update?.(makeFrameCtx(ctx.camera, { distFromSol: 10_000 }));
     const { pick } = m.hover!();
     // Sculptor's centroid sits dead ahead at screen centre (400, 300).
     const hit = pick(400, 300, 14);
@@ -148,13 +143,7 @@ describe('lg kind module', () => {
     expect(hit?.cameraDistancePc).toBeCloseTo(84_000, 0);
     expect(pick(10, 10, 14)).toBeNull();
     // Warp hides the reference wireframe — and with it the pick.
-    sceneLayer.update?.({
-      camera: ctx.camera,
-      worldOffset: new THREE.Vector3(),
-      distFromSol: 10_000,
-      t: 0,
-      warpActive: true,
-    });
+    sceneLayer.update?.(makeFrameCtx(ctx.camera, { distFromSol: 10_000, warpActive: true }));
     expect(pick(400, 300, 14)).toBeNull();
   });
 

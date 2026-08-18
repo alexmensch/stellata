@@ -161,6 +161,17 @@ those terms only ever dims, so an intrinsic cutoff is a conservative
 superset — but it must not be the gate. The star path is the worked
 example: `picker.ts` prunes on the intrinsic magnitude and decides on
 `resolveStarPick`.
+
+**Drawn means the marks a layer paints, never the marks it removes.** A
+pass that only attenuates what other layers put down — the molecular
+clouds' absorption raymarch — is not a hover affordance however visible
+the resulting dark lane is: the ink on those pixels belongs to the star
+field and the Milky Way band behind it. What earns a card is the
+emission, glyph or ink the layer itself puts on screen; a chart stipple
+outline is dark ink on light paper and counts, so the test is authorship,
+not luminosity. This is also what keeps a gate local — a provider never
+has to interrogate what is drawn behind it, which is unknowable from
+inside the layer.
 - For the planet layer specifically: the planet shader emits no quad
   when `appMag > uThresholdMag + 0.5`, and `forEachDrawnBodyView` mirrors
   that — as an OR with `physDiscPx >= MESH_FADE_MIN_PX`, since a body
@@ -180,6 +191,11 @@ example: `picker.ts` prunes on the intrinsic magnitude and decides on
   provider gates each `ShellPickSurface.visible()` on the shell's
   `isVisible()` (mirrors `group.visible` — the actual rendered state), so
   a decluttered / chart-hidden / camera-inside shell isn't hoverable.
+- For molecular clouds: `MolecularClouds.pick` gates on
+  `rimGroup.visible`, written by the same `update` from the
+  `molecularCloudEllipsoids` permit. The absorption raymarch paints no
+  mark of its own, so the rim/outline is both the depiction and the
+  pick geometry (`../molecular-clouds/README.md` § Picking + hover).
 - For deep-space probes: the probe kind module's hover pick
   (`../solar-system/probes/probe-module.ts`) gates on the marker
   field's own per-frame `visible` verdict — the same record the glyph's

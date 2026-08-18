@@ -8,6 +8,8 @@ import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-traje
 import { PROBE_ORBIT_FLOOR_PC, PROBE_PARK_DIST_PC } from './probe-focus-geometry';
 import type { KindContext } from '../../kinds/kind-module';
 import { makeKindContext } from '../../kinds/kind-context-mock';
+import { makeFrameCtx } from '../../scene/frame-ctx-mock';
+import type { FrameCtx } from '../../scene/scene-layer';
 import { AU_PC } from '../../util/astronomy-constants';
 import { tToJDE } from '../time/time';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
@@ -57,15 +59,8 @@ function makeAimedCtx(): KindContext {
   return ctx;
 }
 
-function makeFrameCtx(ctx: KindContext) {
-  return {
-    camera: ctx.camera,
-    worldOffset: new THREE.Vector3(),
-    distFromSol: 41 * AU_PC,
-    t: 0,
-    warpActive: false,
-  };
-}
+const probeFrameCtx = (ctx: KindContext): FrameCtx =>
+  makeFrameCtx(ctx.camera, { distFromSol: 41 * AU_PC });
 
 /** Serve fixture JSON for `present` mission ids, 404 for the rest. */
 function stubFetch(present: readonly string[]): void {
@@ -139,7 +134,7 @@ describe('probe kind module', () => {
     await m.load('/');
     const ctx = makeAimedCtx();
     const layer = m.attach(ctx)!;
-    layer.update?.(makeFrameCtx(ctx));
+    layer.update?.(probeFrameCtx(ctx));
     // The marker sits at screen centre: prime pick there, none far away.
     const { pick } = m.hover!();
     expect(pick(400, 300, 14)?.idx).toBe(0);
@@ -158,11 +153,11 @@ describe('probe kind module', () => {
     // hide lands in each sample's per-update `visible` verdict, which
     // gates the pick path.
     m.setFocalHidden!(0);
-    layer.update?.(makeFrameCtx(ctx));
+    layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)).toBeNull();
 
     m.setFocalHidden!(-1);
-    layer.update?.(makeFrameCtx(ctx));
+    layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)?.idx).toBe(0);
   });
 });

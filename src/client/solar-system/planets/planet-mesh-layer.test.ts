@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
+import { TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -53,5 +54,33 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
     const src = read('./planet-mesh-layer.ts');
     expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
     expect(src).not.toContain('markStatisticEmitter');
+  });
+});
+
+// Orientation has to arrive from the decode. An HTMLImageElement upload puts
+// it back on UNPACK_FLIP_Y_WEBGL, whose tracked value a write elsewhere in the
+// app can desync from GL (../../loaders/README.md) — and a map that arrives
+// unflipped shades the mirrored hemisphere while changing nothing else.
+describe('planet maps decode with an explicit orientation', () => {
+  const src = read('./planet-mesh-layer.ts');
+
+  it('bakes the flip into the bitmap, and never loads through TextureLoader', () => {
+    expect(TEXTURE_DECODE_OPTIONS.imageOrientation).toBe('flipY');
+    expect(src).toContain('tex.flipY = false');
+    expect(src).not.toContain('new THREE.TextureLoader');
+  });
+
+  // Each horizon map's fourth azimuth rides the alpha channel
+  // (surface-relief/README.md), so a premultiplying decode scales the other
+  // three by it. Both are spelled out because setOptions replaces the loader's
+  // own defaults rather than merging into them.
+  it('never premultiplies and never converts colour space', () => {
+    expect(TEXTURE_DECODE_OPTIONS.premultiplyAlpha).toBe('none');
+    expect(TEXTURE_DECODE_OPTIONS.colorSpaceConversion).toBe('none');
+  });
+
+  // The loader assigns its own forced options over the object it is given.
+  it('hands the loader a copy of the options, not the exported constant', () => {
+    expect(src).toContain('setOptions({ ...TEXTURE_DECODE_OPTIONS })');
   });
 });
