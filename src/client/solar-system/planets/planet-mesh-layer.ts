@@ -2,7 +2,7 @@
 // § Planet mesh LOD for the crossfade + lazy-texture contract.
 
 import * as THREE from 'three';
-import type { MemberSphere } from '../../local-depth/slice-pure';
+import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';

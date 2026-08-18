@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
-import type { MemberSphere } from '../local-depth/slice-pure';
+import type { MemberSphere } from '../local-depth/bracket/slice-pure';
 import { KM_PC } from '../util/astronomy-constants';
 import {
   isHostLocallyActive,

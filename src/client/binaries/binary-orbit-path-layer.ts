@@ -2,7 +2,7 @@
 // multi-star system. See src/client/binaries/README.md § Binary orbit paths.
 
 import * as THREE from 'three';
-import type { MemberSphere } from '../local-depth/slice-pure';
+import type { MemberSphere } from '../local-depth/bracket/slice-pure';
 import { RING_EXTENT_MARGIN } from '../solar-system/local-cluster-pure';
 import { AU_PC } from '../util/astronomy-constants';
 import { type BinariesData } from './binaries-loader';
