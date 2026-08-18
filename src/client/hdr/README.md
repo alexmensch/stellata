@@ -272,8 +272,10 @@ materials anyway.
 `supported` is false when neither `EXT_color_buffer_float` nor
 `EXT_color_buffer_half_float` is present. The instance is then inert:
 `bind()` binds the canvas and `resolve()` no-ops. A WebGPU dual-boot
-(`../webgpu/README.md`) parks here too — no GL context at all — until
-the HDR chain's port child replaces the seam.
+(`../webgpu/README.md`) parks here too: no GL context exists at all, so
+the shell constructs the pipeline with a **null renderer** and every
+path that would touch a target drops out — until the HDR chain's port
+child replaces the seam.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just

@@ -29,7 +29,6 @@ import {
   type GatedAttachments,
   type GateState,
 } from './attachments/attachment-gate';
-import type { StellataRenderer } from '../webgpu/seam';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
@@ -160,7 +159,6 @@ export class HdrPipeline {
   /** Bound by reference into every physical emitter's uniform map. */
   readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
-  private readonly renderer: StellataRenderer;
   /** Both null on a WebGPU boot, which parks the seam in § Fallback. */
   private readonly rendererGL: THREE.WebGLRenderer | null;
   private readonly gl: WebGL2RenderingContext | null;
@@ -180,18 +178,14 @@ export class HdrPipeline {
   private summationOn = true;
   private extraAttachments = true;
 
-  constructor(renderer: StellataRenderer) {
-    this.renderer = renderer;
-    // A WebGPU boot has no GL context: the seam parks in § Fallback
-    // (inert bind, no target, emitters own the operator inline) until
-    // the HDR port child replaces it.
-    this.rendererGL =
-      (renderer as { isWebGPURenderer?: boolean }).isWebGPURenderer === true
-        ? null
-        : (renderer as THREE.WebGLRenderer);
-    const gl = this.rendererGL === null
+  /** Null renderer = the WebGPU dual boot, where no GL context exists at
+   *  all: the seam parks in § Fallback (inert bind, no target, emitters
+   *  own the operator inline) until the HDR port child replaces it. */
+  constructor(renderer: THREE.WebGLRenderer | null) {
+    this.rendererGL = renderer;
+    const gl = renderer === null
       ? null
-      : (this.rendererGL.getContext() as WebGL2RenderingContext);
+      : (renderer.getContext() as WebGL2RenderingContext);
     this.gl = gl;
     this.supported =
       gl !== null &&
@@ -212,7 +206,7 @@ export class HdrPipeline {
     if (this.rt !== null) return true;
     if (!this.supported || this.rendererGL === null) return false;
 
-    this.renderer.getDrawingBufferSize(this.size);
+    this.rendererGL.getDrawingBufferSize(this.size);
     this.rt = createHdrTarget(
       this.size.x,
       this.size.y,
@@ -253,10 +247,10 @@ export class HdrPipeline {
    *  forever. It costs a redundant clear of attachment 0. */
   bind(): void {
     const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
-    this.renderer.setRenderTarget(target);
-    if (target === null) return;
+    this.rendererGL?.setRenderTarget(target);
+    if (target === null || this.rendererGL === null) return;
     this.openEveryAttachment();
-    this.renderer.clear();
+    this.rendererGL.clear();
     this.closeEmitterGate();
   }
 
@@ -268,6 +262,8 @@ export class HdrPipeline {
    *  of, and because pairing it with the resolve is what stops the two
    *  disagreeing about the factor. */
   resolve(): void {
+    const renderer = this.rendererGL;
+    if (renderer === null) return;
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     if (this.summationOn && this.extraAttachments) {
       this.summation.render(
@@ -283,11 +279,11 @@ export class HdrPipeline {
       u.uDiffuseTexture.value = this.extraAttachments ? this.rt.textures[2] : null;
       u.uSummationRadiusTexels.value = 0;
       u.uSummationTexelScale.value = 1;
-      this.renderer.getDrawingBufferSize(this.size);
+      renderer.getDrawingBufferSize(this.size);
       u.uSummationExtent.value.set(this.size.x, this.size.y);
     }
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.scene, this.camera);
+    renderer.setRenderTarget(null);
+    renderer.render(this.scene, this.camera);
   }
 
   /** The statistic attachment — flux-correct luminance in R, peak-correct
@@ -356,8 +352,8 @@ export class HdrPipeline {
   /** Re-derives from the renderer's drawing-buffer size, so it covers
    *  window resize and pixel-ratio changes alike. */
   syncSize(): void {
-    if (this.rt === null) return;
-    this.renderer.getDrawingBufferSize(this.size);
+    if (this.rt === null || this.rendererGL === null) return;
+    this.rendererGL.getDrawingBufferSize(this.size);
     this.rt.setSize(this.size.x, this.size.y);
     this.summation?.syncSize();
   }

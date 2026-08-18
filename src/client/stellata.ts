@@ -419,7 +419,7 @@ export class Stellata implements FrameAnchor {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
-    this.hdr = new HdrPipeline(this.renderer);
+    this.hdr = new HdrPipeline(this.rendererGL);
 
     this.scene = new THREE.Scene();
 
