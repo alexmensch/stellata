@@ -242,17 +242,20 @@ old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
 Hover tier is always `fallback`: stars, planets, LG objects and shells
 win any overlap with a cloud body.
 
-**The permit that gates the draw gates the pick.** `pick` returns null
+**The permit that gates the rim gates the pick.** `pick` returns null
 whenever `rimGroup.visible` is false, so below the `representational`
-floor the cloud is neither hoverable nor clickable. Three raycasts
-hidden objects, so without that read the layer answers the cursor from
-states where it draws nothing at all — parked at the Moon, black sky
-raised a cloud card. A cloud is a non-luminous absorber, so there is no
-emission to read instead: the rim/outline **is** the depiction, and it
-is already the pick geometry. Absorption cannot stand in — it is
-physics and always on in realistic mode, but it puts pixels on screen
-only where there is a background to dim. The group starts hidden so the
-gate fails closed until the first `update` states the permit.
+floor a cloud is neither hoverable nor clickable. Three raycasts hidden
+objects, so without that read the layer answered the cursor from states
+where it painted nothing — parked at the Moon, black sky raised a cloud
+card. The rim/outline is the only mark this layer paints for itself:
+absorption is physics and stays on in realistic mode, but it merely
+attenuates light the star field and the band put down, so it is never
+the hover affordance (`../hover/README.md` Rule 2). Deliberate
+consequence, not an oversight: at the `physical` floor a cloud whose
+absorption still visibly dims a rich background is unhoverable — that
+dark lane is other layers' light minus what the cloud took, and the
+cloud paints nothing there. The group starts hidden so the gate fails
+closed until the first `update` states the permit.
 
 **Proportionally-deepest-inside wins.** The raycast is *only* the
 hit-vs-miss gate (every hit means the cursor is genuinely inside that

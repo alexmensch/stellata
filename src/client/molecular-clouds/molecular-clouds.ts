@@ -355,12 +355,8 @@ export class MolecularClouds {
    * Only cloud geometry is tested: foreground stars don't block a cloud
    * pick here, the caller picks those first and falls back to a cloud.
    *
-   * Returns null whenever the rim shells are not permitted. A cloud is a
-   * non-luminous absorber, so the rim/outline this raycast tests IS the
-   * depiction — below the `representational` floor the layer draws
-   * nothing the cursor could have been on. Absorption cannot stand in:
-   * it is always on in realistic mode but puts pixels on screen only
-   * where there is a background to dim.
+   * Returns null whenever the rim shells are not permitted — the rim is
+   * the only mark the layer paints for itself (README § Picking + hover).
    */
   pick(
     camera: THREE.PerspectiveCamera,

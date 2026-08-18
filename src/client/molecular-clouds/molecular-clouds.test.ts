@@ -339,7 +339,7 @@ describe('MolecularClouds / picking geometry', () => {
     expect(pickAlongForward(c, new THREE.Vector3(20, 0, 20), down)).toBeNull(); // clears it
   });
 
-  describe('declutter gate — the layer draws nothing for the cloud', () => {
+  describe('declutter gate — the rim is the only mark the layer paints', () => {
     const inside = new THREE.Vector3(5, 5, 20);
 
     it('refuses a hit the rim would have taken, below the representational floor', () => {

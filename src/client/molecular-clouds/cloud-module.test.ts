@@ -165,8 +165,6 @@ describe('cloud kind module', () => {
     expect(winners).toEqual(new Set([0, 1]));
   });
 
-  // A cloud is a non-luminous absorber: below the representational floor
-  // nothing depicts it, so black sky must not answer the cursor.
   it('refuses the pick that would have hit once the declutter permit drops', async () => {
     stubFetch(true);
     const m = createCloudKindModule();
