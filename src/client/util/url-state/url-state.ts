@@ -1399,6 +1399,13 @@ export function applyDecodedView(
   }
 }
 
+// The fragment is not URL state — boot flags (`#renderer=webgpu`,
+// src/client/webgpu/README.md) ride it, and a bare-path replaceState
+// resolves to a URL without one, silently dropping the flag.
+function replacePathKeepHash(path: string): void {
+  history.replaceState(null, '', path + location.hash);
+}
+
 function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   const view = currentStateOf(stellata, idMaps);
   // Single computePresence pass — the mask gates the path segment itself
@@ -1407,7 +1414,7 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   const mask = computePresence(view);
   const path = mask === 0 ? '/' : buildSharePath(encodeBlobWithMask(view, mask));
   if (path !== location.pathname + location.search) {
-    history.replaceState(null, '', path);
+    replacePathKeepHash(path);
   }
 }
 
@@ -1418,7 +1425,7 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
 // rather than leaving the unmatched path sitting there.
 function resetJunkUrl(): void {
   if (location.pathname !== '/' || location.search !== '') {
-    history.replaceState(null, '', '/');
+    replacePathKeepHash('/');
   }
 }
 
