@@ -26,6 +26,11 @@ src/client/webgpu/
     (+ test)                        scalars into ceil(N/4) vec4 buffers.
   attribute-packing.ts (+ test)     Geometry attributes + per-scalar
                                     accessor node from a pack plan.
+  star-attribute-roster.ts          Which star attributes pack, split by
+    (+ test)                        upload cadence. The test derives the
+                                    partition from the live WebGL
+                                    geometry, so a new attribute there
+                                    fails CI until this is updated.
 ```
 
 ## The flag — `#renderer=webgpu`

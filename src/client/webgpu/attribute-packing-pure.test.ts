@@ -7,16 +7,11 @@ import {
   planVec4Packing,
 } from './attribute-packing-pure';
 
-const STAR_ATTRS_14 = [
-  'iAbsMag', 'iCi', 'iDistSol', 'iSpectClass', 'iLumClass', 'iLogRadius',
-  'iTeffApsis', 'iPeriodDays', 'iAmplitudeMag', 'iPulseRho', 'iCiSwing',
-  'iSuppress', 'iPosX', 'iPosY',
-] as const;
-
 describe('planVec4Packing', () => {
-  it("the star pair's 14 scalars land in 4 buffers — under the 8-buffer device limit with aCorner + iPosition", () => {
-    const plan = planVec4Packing(STAR_ATTRS_14);
-    expect(plan.bufferCount).toBe(4);
+  it('fills each buffer before opening the next', () => {
+    expect(planVec4Packing(['a']).bufferCount).toBe(1);
+    expect(planVec4Packing(['a', 'b', 'c', 'd']).bufferCount).toBe(1);
+    expect(planVec4Packing(['a', 'b', 'c', 'd', 'e']).bufferCount).toBe(2);
   });
 
   it('assigns buffer/component in declaration order', () => {

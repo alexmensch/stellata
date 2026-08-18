@@ -69,6 +69,10 @@ subfolders.
   peak-normalised. Regenerate via `pnpm run build:lut`. The vertex
   shader renormalises each sample to luminance 1 (§ Physical-luminance
   emission).
+- `star-pipeline-mock.ts` — zero-filled `StarPipelineOptions` for tests
+  that need a real geometry without a GL context. Shared with
+  `../webgpu/star-attribute-roster.test.ts`, which derives the port's
+  packable-attribute partition from the geometry this builds.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
