@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   EARTH_PHASE,
@@ -14,6 +16,7 @@ import {
   phaseAngleFor,
   phaseFactorFor,
   phaseRatioToLambert,
+  illuminatedFraction,
   PHASE_RATIO_MAX,
   PHASE_RATIO_MIN,
 } from './phase-function';
@@ -244,15 +247,15 @@ describe('empiricalPhaseFactor', () => {
     // in magnitudes. Full phase is exactly right (the −12.74 anchor);
     // the gap opens across the phases a user parks at.
     const expected: ReadonlyArray<readonly [number, number]> = [
-      [0, 0], [10, 0.244], [30, 0.645], [60, 1.073],
-      [90, 1.360], [120, 1.543], [150, 1.352],
+      [0, 0], [10, 0.24404], [30, 0.64549], [60, 1.07338],
+      [90, 1.35957], [120, 1.54298], [150, 1.35193],
     ];
     for (const [aDeg, overMag] of expected) {
       const a = aDeg * DEG;
       const measured = 2.5 * Math.log10(
         lambertianPhaseFactor(a) / empiricalPhaseFactor(MOON_PHASE, a),
       );
-      expect(measured).toBeCloseTo(overMag, 3);
+      expect(measured).toBeCloseTo(overMag, 5);
     }
   });
 
@@ -386,7 +389,8 @@ describe('phaseRatioToLambert', () => {
   it('Moon: the mesh scalar the shader reads, clamp included', () => {
     const expected: ReadonlyArray<readonly [number, number]> = [
       [0, 1], [30, 0.551830], [90, 0.285873],
-      // 120° is inside the clamp band below — 0.241 raw, floored to 0.25.
+      // 120° sits inside the clamp band pinned below, so the raw
+      // ratio is floored rather than reported.
       [120, PHASE_RATIO_MIN], [150, 0.287891],
     ];
     for (const [aDeg, scalar] of expected) {
@@ -395,24 +399,42 @@ describe('phaseRatioToLambert', () => {
   });
 
   it("Moon's curve dips under PHASE_RATIO_MIN over a bounded crescent band", () => {
-    // The floor bites where the lunar curve is steepest, bottoming at
-    // 0.2377 near 129°. The truncation is 0.0547 mag at worst — an
-    // order of magnitude less than Mercury already loses to the same
-    // floor (0.173 raw at 152°, 0.40 mag), so the shared bound stands.
-    let below = 0;
-    let minRaw = Infinity;
-    for (let deg = 0; deg <= 150; deg += 0.01) {
+    // The floor bites where the lunar curve is steepest. Both band
+    // edges are pinned, not just "it happens somewhere": widening the
+    // truncated span is the regression to catch, and a bound would
+    // pass a band twice this size.
+    const rawRatio = (deg: number): number => {
       const a = deg * DEG;
-      const raw = empiricalPhaseFactor(MOON_PHASE, a) / lambertianPhaseFactor(a);
-      if (raw < PHASE_RATIO_MIN) below++;
-      minRaw = Math.min(minRaw, raw);
+      return empiricalPhaseFactor(MOON_PHASE, a) / lambertianPhaseFactor(a);
+    };
+    let minRaw = Infinity;
+    let argMinDeg = NaN;
+    let loDeg = NaN;
+    let hiDeg = NaN;
+    for (let deg = 0; deg <= 150; deg += 0.01) {
+      const raw = rawRatio(deg);
+      if (raw < minRaw) { minRaw = raw; argMinDeg = deg; }
+      if (raw < PHASE_RATIO_MIN) { if (Number.isNaN(loDeg)) loDeg = deg; hiDeg = deg; }
     }
-    expect(minRaw).toBeCloseTo(0.2377, 4);
-    expect(below).toBeGreaterThan(0);
-    expect(2.5 * Math.log10(PHASE_RATIO_MIN / minRaw)).toBeCloseTo(0.0547, 4);
-    const mercuryMin = empiricalPhaseFactor(MERCURY_PHASE, 151.86 * DEG)
-      / lambertianPhaseFactor(151.86 * DEG);
-    expect(mercuryMin).toBeLessThan(minRaw);
+    expect(minRaw).toBeCloseTo(0.23772, 5);
+    expect(argMinDeg).toBeCloseTo(128.87, 2);
+    expect(loDeg).toBeCloseTo(111.57, 2);
+    expect(hiDeg).toBeCloseTo(141.25, 2);
+    expect(2.5 * Math.log10(PHASE_RATIO_MIN / minRaw)).toBeCloseTo(0.05470, 5);
+
+    // Mercury already loses an order of magnitude more to the same
+    // floor, which is what makes the shared bound defensible — so its
+    // worst case is pinned too rather than compared loosely.
+    let mercuryMin = Infinity;
+    let mercuryArgMinDeg = NaN;
+    for (let deg = 0; deg <= MERCURY_PHASE.alphaMaxDeg; deg += 0.01) {
+      const a = deg * DEG;
+      const raw = empiricalPhaseFactor(MERCURY_PHASE, a) / lambertianPhaseFactor(a);
+      if (raw < mercuryMin) { mercuryMin = raw; mercuryArgMinDeg = deg; }
+    }
+    expect(mercuryMin).toBeCloseTo(0.17308, 5);
+    expect(mercuryArgMinDeg).toBeCloseTo(151.86, 2);
+    expect(2.5 * Math.log10(PHASE_RATIO_MIN / mercuryMin)).toBeCloseTo(0.39922, 5);
   });
 
   it('clamps to [PHASE_RATIO_MIN, PHASE_RATIO_MAX]', () => {
@@ -437,5 +459,29 @@ describe('phaseAngleFor', () => {
   it('returns 0 on degenerate legs', () => {
     expect(phaseAngleFor(0, 0, 0, 1, 0, 0)).toBe(0);
     expect(phaseAngleFor(1, 0, 0, 1, 0, 0)).toBe(0);
+  });
+});
+
+// No TS caller reads this — the shader computes illumFrac itself — so the
+// mirror IS the contract, and only a pin keeps the two in step.
+describe('illuminatedFraction mirrors the shader', () => {
+  it('runs full to new over [0, π]', () => {
+    expect(illuminatedFraction(0)).toBe(1);
+    expect(illuminatedFraction(90 * DEG)).toBeCloseTo(0.5, 12);
+    expect(illuminatedFraction(180 * DEG)).toBeCloseTo(0, 12);
+  });
+
+  it('clamps α rather than running past the endpoints', () => {
+    expect(illuminatedFraction(-1)).toBe(1);
+    expect(illuminatedFraction(Math.PI + 1)).toBeCloseTo(0, 12);
+  });
+
+  it('carries the shader expression that drives the photocentre shift', () => {
+    const glareVert = readFileSync(
+      fileURLToPath(new URL('./planets/glare/planet.vert.glsl', import.meta.url)),
+      'utf8',
+    );
+    expect(glareVert).toContain('float illumFrac = (1.0 + cosA) * 0.5;');
+    expect(glareVert).toContain('(1.0 - illumFrac)');
   });
 });
