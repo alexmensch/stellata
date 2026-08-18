@@ -76,6 +76,7 @@ import {
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
+import type { StellataRenderer, WebGpuSeam } from './webgpu/seam';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -152,6 +153,9 @@ export interface StellataOptions {
    *  constructor attaches each module, and an unloaded one attaches to
    *  an empty roster (kinds/kind-modules.ts). */
   kinds: BuiltKindModules;
+  /** Pre-initialised WebGPU boot seam (webgpu/README.md). Absent =
+   *  the shipped WebGL2 boot, byte-identical to before the seam. */
+  webgpu?: WebGpuSeam | null;
 }
 
 export type CameraMode = 'navigate' | 'observe';
@@ -188,7 +192,14 @@ export type StellataEventMap = {
 
 export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
-  readonly renderer: THREE.WebGLRenderer;
+  readonly renderer: StellataRenderer;
+  /** Narrowed WebGL2 renderer — null on a WebGPU boot. GL-only consumers
+   *  (dust upload, GPU timer, frame pricing) gate on it instead of
+   *  casting `renderer`. */
+  readonly rendererGL: THREE.WebGLRenderer | null;
+  /** WebGPU boot seam — null on the shipped WebGL2 boot. Port children
+   *  reach their scene and the shared uniform nodes through it. */
+  readonly webgpu: WebGpuSeam | null;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
   readonly hdr: HdrPipeline;
@@ -386,17 +397,24 @@ export class Stellata implements FrameAnchor {
   // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
 
-  constructor({ canvas, catalog, kinds }: StellataOptions) {
+  constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
     this.catalog = catalog;
     this.kinds = kinds;
 
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: false,
-      alpha: true,
-      powerPreference: 'high-performance',
-      logarithmicDepthBuffer: true,
-    });
+    this.webgpu = webgpu ?? null;
+    if (this.webgpu !== null) {
+      this.renderer = this.webgpu.renderer;
+      this.rendererGL = null;
+    } else {
+      this.rendererGL = new THREE.WebGLRenderer({
+        canvas,
+        antialias: false,
+        alpha: true,
+        powerPreference: 'high-performance',
+        logarithmicDepthBuffer: true,
+      });
+      this.renderer = this.rendererGL;
+    }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
@@ -451,6 +469,7 @@ export class Stellata implements FrameAnchor {
       hdr: this.hdr.emitterUniforms,
     });
     this.sharedUniforms = sharedUniforms;
+    this.webgpu?.bindSharedUniforms(sharedUniforms);
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -1256,6 +1275,13 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
+    // The voxel upload path and the prepass are WebGL2-only until their
+    // WebGPU ports land; main.ts skips the dust load on a WebGPU boot,
+    // so this guard only catches console-driven attaches.
+    if (this.rendererGL === null && dust !== null) {
+      console.warn('attachDust: dust is not ported to the WebGPU boot yet');
+      return;
+    }
     this.renderGate.invalidate();
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
@@ -1280,15 +1306,15 @@ export class Stellata implements FrameAnchor {
     u.uDustLogRatio.value = dust.params.logRatio;
     u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
     u.uDustEnabled.value = 1;
-    if (this.extinctionPrepass === null) {
+    if (this.extinctionPrepass === null && this.rendererGL !== null) {
       this.extinctionPrepass = new ExtinctionPrepass({
-        renderer: this.renderer,
+        renderer: this.rendererGL,
         positions: this.catalog.positions,
         count: this.catalog.count,
         uniforms: u,
       });
     }
-    this.extinctionPrepass.markDirty();
+    this.extinctionPrepass?.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
     // cache as the texture densifies.
     dust.onProgress(() => {
@@ -2168,12 +2194,22 @@ export class Stellata implements FrameAnchor {
     perfMark('submit.main');
     perfGpuBegin('main');
     this.hdr.bind();
-    this.renderer.render(this.scene, this.camera);
+    if (this.webgpu !== null) {
+      // Dual boot renders the seam's own scene — the shell's scene holds
+      // GLSL materials that would fail WebGPU pipeline creation
+      // (webgpu/README.md § What the flag boots today).
+      this.webgpu.syncUniformNodes();
+      this.renderer.render(this.webgpu.scene, this.camera);
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
     perfGpuEnd('main');
     perfMeasure('submit.main');
     perfMark('submit.localDepth');
     perfGpuBegin('localDepth');
-    this.localDepthPass.render(this.renderer, this.camera);
+    if (this.rendererGL !== null) {
+      this.localDepthPass.render(this.rendererGL, this.camera);
+    }
     perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
     perfMark('submit.tonemap');
@@ -2202,6 +2238,7 @@ export class Stellata implements FrameAnchor {
    *  fallback path render nothing into it, so the reduction is dropped
    *  rather than run over a stale attachment. */
   private measureAdaptationStatistic(parked: boolean) {
+    if (this.rendererGL === null) return;
     const statistic = this.hdr.statisticTexture();
     if (statistic === null) {
       this.reduction.reset();
@@ -2209,7 +2246,7 @@ export class Stellata implements FrameAnchor {
     }
     this.renderer.getDrawingBufferSize(this.drawingBufferSize);
     this.reduction.measure(
-      this.renderer, statistic,
+      this.rendererGL, statistic,
       this.drawingBufferSize.x, this.drawingBufferSize.y,
       this.hdr.emitterUniforms.uExposure.value,
       parked,

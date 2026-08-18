@@ -29,6 +29,7 @@ import {
   type GatedAttachments,
   type GateState,
 } from './attachments/attachment-gate';
+import type { StellataRenderer } from '../webgpu/seam';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
@@ -159,8 +160,10 @@ export class HdrPipeline {
   /** Bound by reference into every physical emitter's uniform map. */
   readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
-  private readonly renderer: THREE.WebGLRenderer;
-  private readonly gl: WebGL2RenderingContext;
+  private readonly renderer: StellataRenderer;
+  /** Both null on a WebGPU boot, which parks the seam in § Fallback. */
+  private readonly rendererGL: THREE.WebGLRenderer | null;
+  private readonly gl: WebGL2RenderingContext | null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera();
   private readonly size = new THREE.Vector2();
@@ -177,13 +180,23 @@ export class HdrPipeline {
   private summationOn = true;
   private extraAttachments = true;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  constructor(renderer: StellataRenderer) {
     this.renderer = renderer;
-    const gl = renderer.getContext() as WebGL2RenderingContext;
+    // A WebGPU boot has no GL context: the seam parks in § Fallback
+    // (inert bind, no target, emitters own the operator inline) until
+    // the HDR port child replaces it.
+    this.rendererGL =
+      (renderer as { isWebGPURenderer?: boolean }).isWebGPURenderer === true
+        ? null
+        : (renderer as THREE.WebGLRenderer);
+    const gl = this.rendererGL === null
+      ? null
+      : (this.rendererGL.getContext() as WebGL2RenderingContext);
     this.gl = gl;
     this.supported =
-      gl.getExtension('EXT_color_buffer_float') !== null ||
-      gl.getExtension('EXT_color_buffer_half_float') !== null;
+      gl !== null &&
+      (gl.getExtension('EXT_color_buffer_float') !== null ||
+        gl.getExtension('EXT_color_buffer_half_float') !== null);
     // Before any layer is constructed, so chrome registers its colours
     // and emitters seed their branch against the right mode on a context
     // that can't take the target.
@@ -197,7 +210,7 @@ export class HdrPipeline {
    *  context that cannot render into it never pays for one. */
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
-    if (!this.supported) return false;
+    if (!this.supported || this.rendererGL === null) return false;
 
     this.renderer.getDrawingBufferSize(this.size);
     this.rt = createHdrTarget(
@@ -206,7 +219,7 @@ export class HdrPipeline {
       this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
     );
 
-    this.summation = new SummationPass(this.renderer);
+    this.summation = new SummationPass(this.rendererGL);
     this.geometry = fullscreenTriangleGeometry();
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -304,6 +317,7 @@ export class HdrPipeline {
    *  `attachments/README.md` § The gate is the table. */
   private applyGateState(state: GateState): void {
     const gl = this.gl;
+    if (gl === null) return;
     const slots = gateDrawSlots(state, {
       statisticWrites: this.statisticWrites && !this.statisticParked,
       extraAttachments: this.extraAttachments,
