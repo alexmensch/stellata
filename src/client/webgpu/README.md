@@ -98,6 +98,14 @@ removes an eagerly-imported renderer. The rule:
 
 `tests/webgpu-import-boundary.test.ts` scans for violations.
 
+Measured at the seam's first build (vite 8 / rolldown): the async chunk
+is 649 kB min / 182 kB gz, and its mere existence grows the entry
+~31 kB min / ~7 kB gz — ~2.6 kB is the seam wiring itself, the rest is
+chunking shape: the entry keeps three.core bindings exported for the
+async chunk to share, which is what stops the async chunk duplicating
+core (verified by rebuilding with a stubbed, import-free boot module;
+no WebGPU identifier appears in the entry either way).
+
 ## Shared uniform nodes
 
 `buildSharedUniformNodes(shared)` mirrors the WebGL-side
