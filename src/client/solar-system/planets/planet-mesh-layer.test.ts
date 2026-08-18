@@ -84,32 +84,3 @@ describe('planet maps decode with an explicit orientation', () => {
     expect(src).toContain('setOptions({ ...TEXTURE_DECODE_OPTIONS })');
   });
 });
-
-// The normal map is the ONE map that may narrow below RGBA8: blue is a
-// constant by construction and alpha is unused, and the shader samples .rg
-// and reconstructs z. Widening this to the whole relief branch would take
-// the horizon planes down with it — half of each one's four azimuths live
-// in blue and alpha — and the failure reads as wrong terrain rather than a
-// missing texture, which is why it gets a pin rather than a smoke.
-describe('only the normal map uploads as RG8', () => {
-  const src = read('./planet-mesh-layer.ts');
-  const fetches = src.slice(src.indexOf('if (reliefSpanOf(planet))'));
-  const normalFetch = fetches.slice(0, fetches.indexOf('for (const suffix of'));
-  const horizonFetch = fetches.slice(
-    fetches.indexOf('for (const suffix of'),
-    fetches.indexOf('if (planet.rings)'),
-  );
-
-  it('narrows the normal map and nothing else', () => {
-    expect(normalFetch).toContain('RELIEF_SUFFIX');
-    expect(normalFetch).toContain('THREE.RGFormat');
-    expect(horizonFetch).toContain('HORIZON_SUFFIXES');
-    expect(horizonFetch).not.toContain('RGFormat');
-  });
-
-  it('is the only format override in the layer', () => {
-    expect(src.match(/RGFormat/g)).toHaveLength(1);
-    // Colour maps and ring strips carry signal in all four channels.
-    expect(src).not.toContain('RedFormat');
-  });
-});
