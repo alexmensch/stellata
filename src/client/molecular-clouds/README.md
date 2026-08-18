@@ -225,8 +225,8 @@ isosurface, or the `u = uEnv` ellipsoid for fallback clouds), the same
 geometry behind the fresnel rim and the chart stipple outline — so the
 hitbox matches the silhouette in both modes rather than the far-larger
 absorption ellipsoid (its `SphereGeometry` is only the raymarch domain).
-Raycasting ignores mesh visibility, so picking works while the rim is
-decluttered or in chart mode. The click handler in `onPointerUp` falls
+Chart mode keeps picking: the stipple outline is that same mesh drawing
+a different material. The click handler in `onPointerUp` falls
 back to a cloud pick when no star is hit (stars take priority because
 they're the smaller, more precise target), and the hover engine runs
 the cloud module's provider, so hovering over a cloud's body shows its
@@ -241,6 +241,18 @@ handler instead would drift the moment either surface changes. (The
 old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
 Hover tier is always `fallback`: stars, planets, LG objects and shells
 win any overlap with a cloud body.
+
+**The permit that gates the draw gates the pick.** `pick` returns null
+whenever `rimGroup.visible` is false, so below the `representational`
+floor the cloud is neither hoverable nor clickable. Three raycasts
+hidden objects, so without that read the layer answers the cursor from
+states where it draws nothing at all — parked at the Moon, black sky
+raised a cloud card. A cloud is a non-luminous absorber, so there is no
+emission to read instead: the rim/outline **is** the depiction, and it
+is already the pick geometry. Absorption cannot stand in — it is
+physics and always on in realistic mode, but it puts pixels on screen
+only where there is a background to dim. The group starts hidden so the
+gate fails closed until the first `update` states the permit.
 
 **Proportionally-deepest-inside wins.** The raycast is *only* the
 hit-vs-miss gate (every hit means the cursor is genuinely inside that

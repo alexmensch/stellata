@@ -117,8 +117,7 @@ export class MolecularClouds {
    *  the *depicted* shape (traced isosurface, or the u = uEnv ellipsoid for
    *  fallback clouds), the same geometry that renders the fresnel rim and
    *  the chart stipple outline, so the hitbox matches the silhouette in both
-   *  modes. Picking ignores mesh visibility (three raycasts hidden objects),
-   *  so it works while the rim is decluttered or in chart mode. Cloud index
+   *  modes, chart mode included. Cloud index
    *  rides `mesh.userData.cloudIdx`. The absorption meshes deliberately do
    *  NOT pick — their ellipsoid is only the raymarch domain, far larger than
    *  the shell for complex clouds (Aquila Rift). */
@@ -148,6 +147,9 @@ export class MolecularClouds {
     // absorption, silently defeating the § 9.1 render-order contract.
     this.absorptionGroup = new THREE.Group();
     this.rimGroup = new THREE.Group();
+    // Fails closed: `pick` reads this, and no declutter permit is known
+    // until the first `update`.
+    this.rimGroup.visible = false;
     this.group.add(this.absorptionGroup, this.rimGroup);
 
     this.absorptionGeometry = new THREE.SphereGeometry(
@@ -352,6 +354,13 @@ export class MolecularClouds {
    *
    * Only cloud geometry is tested: foreground stars don't block a cloud
    * pick here, the caller picks those first and falls back to a cloud.
+   *
+   * Returns null whenever the rim shells are not permitted. A cloud is a
+   * non-luminous absorber, so the rim/outline this raycast tests IS the
+   * depiction — below the `representational` floor the layer draws
+   * nothing the cursor could have been on. Absorption cannot stand in:
+   * it is always on in realistic mode but puts pixels on screen only
+   * where there is a background to dim.
    */
   pick(
     camera: THREE.PerspectiveCamera,
@@ -361,6 +370,7 @@ export class MolecularClouds {
     clientY: number,
     angularToPx: number,
   ): HoverHit | null {
+    if (!this.rimGroup.visible) return null;
     const cursorX = clientX - rect.left;
     const cursorY = clientY - rect.top;
     this.pickNdc.set(

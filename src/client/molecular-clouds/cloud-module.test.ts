@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
+import type { FrameCtx } from '../scene/scene-layer';
 import { makeLabelDom } from '../ui/label-dom-mock';
 import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
@@ -61,12 +62,22 @@ function stubFetch(present: boolean): void {
   }));
 }
 
-function makeCtx(): KindContext {
-  const ctx = makeKindContext();
+function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+  const ctx = makeKindContext(overrides);
   ctx.camera.position.set(0, 0, 30);
   ctx.camera.lookAt(0, 0, 0);
   ctx.camera.updateMatrixWorld();
   return ctx;
+}
+
+function frameCtx(ctx: KindContext): FrameCtx {
+  return {
+    camera: ctx.camera,
+    worldOffset: new THREE.Vector3(),
+    distFromSol: 0,
+    t: 0,
+    warpActive: false,
+  };
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -132,7 +143,7 @@ describe('cloud kind module', () => {
     const m = createCloudKindModule();
     await m.load('/');
     const ctx = makeCtx();
-    m.attach(ctx);
+    m.attach(ctx)!.update!(frameCtx(ctx));
     ctx.scene.updateMatrixWorld(true);
 
     const { pick } = m.hover!();
@@ -152,6 +163,26 @@ describe('cloud kind module', () => {
       if (hit) winners.add(hit.idx);
     }
     expect(winners).toEqual(new Set([0, 1]));
+  });
+
+  // A cloud is a non-luminous absorber: below the representational floor
+  // nothing depicts it, so black sky must not answer the cursor.
+  it('refuses the pick that would have hit once the declutter permit drops', async () => {
+    stubFetch(true);
+    const m = createCloudKindModule();
+    await m.load('/');
+    let permitted = true;
+    const ctx = makeCtx({ detailPermits: () => permitted });
+    const layer = m.attach(ctx)!;
+    ctx.scene.updateMatrixWorld(true);
+    const { pick } = m.hover!();
+
+    layer.update!(frameCtx(ctx));
+    expect(pick(400, 300, 14)?.idx).toBe(0);
+
+    permitted = false;
+    layer.update!(frameCtx(ctx));
+    expect(pick(400, 300, 14)).toBeNull();
   });
 
   it('runs the label teardown from its scene layer dispose', async () => {

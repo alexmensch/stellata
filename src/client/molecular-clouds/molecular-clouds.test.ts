@@ -304,7 +304,9 @@ describe('MolecularClouds / picking geometry', () => {
     c: MolecularClouds,
     origin: THREE.Vector3,
     dir: THREE.Vector3,
+    rimPermitted = true,
   ): number | null {
+    c.update(ORIGIN, rimPermitted);
     c.group.updateMatrixWorld(true);
     const cam = cameraAt(origin, origin.clone().add(dir));
     const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
@@ -337,8 +339,33 @@ describe('MolecularClouds / picking geometry', () => {
     expect(pickAlongForward(c, new THREE.Vector3(20, 0, 20), down)).toBeNull(); // clears it
   });
 
+  describe('declutter gate — the layer draws nothing for the cloud', () => {
+    const inside = new THREE.Vector3(5, 5, 20);
+
+    it('refuses a hit the rim would have taken, below the representational floor', () => {
+      const c = new MolecularClouds(catalog);
+      expect(pickAlongForward(c, inside, down, true)).toBe(0);
+      expect(pickAlongForward(c, inside, down, false)).toBeNull();
+    });
+
+    it('keeps the chart-mode stipple outline pickable — the rim mesh still draws', () => {
+      const c = new MolecularClouds(catalog);
+      c.setMonochrome(true);
+      expect(pickAlongForward(c, inside, down, true)).toBe(0);
+      expect(pickAlongForward(c, inside, down, false)).toBeNull();
+    });
+
+    it('refuses a pick before the first update states the permit', () => {
+      const c = new MolecularClouds(catalog);
+      c.group.updateMatrixWorld(true);
+      const cam = cameraAt(inside, inside.clone().add(down));
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)).toBeNull();
+    });
+  });
+
   it('reports the effective-centre camera distance at the fallback hover tier', () => {
     const c = new MolecularClouds(catalog);
+    c.update(ORIGIN, true);
     c.group.updateMatrixWorld(true);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
     const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
@@ -375,6 +402,7 @@ describe('MolecularClouds / picking geometry', () => {
 
     function pickThrough(target: THREE.Vector3, catalog = overlapping): number | null {
       const c = new MolecularClouds(catalog);
+      c.update(ORIGIN, true);
       c.group.updateMatrixWorld(true);
       const cam = cameraAt(new THREE.Vector3(0, 0, 400), ORIGIN);
       const [x, y] = screenOf(target, cam);

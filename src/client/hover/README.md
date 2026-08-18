@@ -180,6 +180,12 @@ example: `picker.ts` prunes on the intrinsic magnitude and decides on
   provider gates each `ShellPickSurface.visible()` on the shell's
   `isVisible()` (mirrors `group.visible` — the actual rendered state), so
   a decluttered / chart-hidden / camera-inside shell isn't hoverable.
+- For molecular clouds: `MolecularClouds.pick` gates on
+  `rimGroup.visible`, written by the same `update` from the
+  `molecularCloudEllipsoids` permit. A cloud is a non-luminous
+  absorber, so there is no emission to read — the representational
+  rim/outline is the depiction, and already the pick geometry
+  (`../molecular-clouds/README.md` § Picking + hover).
 - For deep-space probes: the probe kind module's hover pick
   (`../solar-system/probes/probe-module.ts`) gates on the marker
   field's own per-frame `visible` verdict — the same record the glyph's
