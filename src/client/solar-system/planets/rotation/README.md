@@ -66,19 +66,16 @@ Horizons' apparent-quantity convention.
 pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
-(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`. The
-periodic nutation/precession terms are dropped, with two caveats:
-Mars's pck linear row is incomplete WITHOUT its ~71-kyr slow terms
-(1.55° of pole Dec, 0.58° of W) — those are folded into the table as
-a J2000 linearisation (see the MARS_ROTATION comment) — and the
-dropped short-period librations are not all sub-degree (Moon E1
-terms ~3.9°, Europa ~1°, Neptune's ±0.7° pole nod; follow-up bead
-filed). The linear pole rates carry the visually meaningful secular
-part. Their argument is TT via `tToJdTdb`; Earth alone leaves this whole
-scheme behind (§ Earth is not a linear row).
+(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`, plus the
+periodic terms above the visibility bar (§ Librations). Mars is the one
+body whose linear row is incomplete WITHOUT its ~71-kyr slow terms
+(1.55° of pole Dec, 0.58° of W): those linearise cleanly at J2000 and are
+folded into its linear row instead (see the MARS_ROTATION comment). The
+argument is TT via `tToJdTdb`; Earth alone leaves this whole scheme
+behind (§ Earth is not a linear row).
 `texture-orientation.test.ts` pins the whole orientation → texture-UV
 chain (pole-up, no mirror, prime meridian) against frozen JPL
-Horizons sub-observer lon/lat for Mars, Ganymede, and Io
+Horizons sub-observer lon/lat for Mars, Ganymede, Io and the Moon
 (`../../../../../data/horizons/sub-observer-truth.tsv`).
 
 The mesh layer composes body→ICRS as `Rz(90°+α0)·Rx(90°−δ0)·Rz(W)`
@@ -100,3 +97,49 @@ see `data/textures/README.md` § Artifact contract. Gas-giant and
 Venus cloud maps are epoch snapshots of rotating cloud decks, so
 their longitude alignment is inherently arbitrary; 0 is used.
 
+
+## Librations
+
+`RotationElements.terms` carries the periodic nutation/precession terms of
+the IAU model — the `NUT_PREC` coefficients of `pck00011.tpc`. Each is one
+shared angle `θ = θ₀ + θ̇·T` whose **sine** drives pole RA and the prime
+meridian and whose **cosine** drives declination. That mixed phase is the
+convention, not a choice: it is what makes the pole trace a small circle
+rather than swing along an arc and back.
+
+**The bar is one texture rung.** At the ladder's 8192 top rung a map texel
+spans 360/8192 = 0.044° of longitude, so a 0.1° term displaces features by
+about two texels and is visible; anything under that is sub-texel and stays
+dropped. Io is the near miss — its largest is 0.094°.
+
+**The amplitudes are much larger than "sub-degree librations" suggests**,
+and they are not led by the Moon:
+
+| body | leading term | RA | Dec | W | period |
+|---|---|---|---|---|---|
+| Triton | N1 | −32.35° | +22.55° | +22.25° | 688 yr |
+| Mimas | S3 | +13.56° | −1.53° | −13.48° | 0.99 yr |
+| Tethys | S4 | +9.66° | −1.09° | −9.60° | 4.98 yr |
+| Moon | E1 | −3.88° | +1.54° | +3.56° | 18.6 yr |
+| Rhea | S6 | +3.10° | −0.35° | −3.08° | 35.4 yr |
+| Europa | J4 | +1.09° | +0.47° | −0.98° | 30.2 yr |
+| Callisto | J6 | +0.59° | +0.25° | −0.53° | 560 yr |
+| Ganymede | J5 | +0.43° | +0.19° | −0.39° | 137 yr |
+| Neptune | N | +0.70° | −0.51° | −0.48° | 688 yr |
+
+Mimas also carries a **−44.85°** prime-meridian term on 71 yr, the largest
+single coefficient anywhere in the table. Without these a body is not
+slightly off — it is pointed the wrong way.
+
+**What verifies them.** The Moon's three rows in the sub-observer corpus
+are the pin, because its sub-Earth point is the one libration a reader can
+check by eye. With the terms the rendered map point matches Horizons to
+**0.01°**; with them disabled the sub-observer *latitude* misses by up to
+**1.53°** — precisely the E1 declination amplitude, ~46 km of lunar
+surface. Folding Ganymede's J5 in also took the Galilean longitude budget
+from 2.0° to the same 0.3° Mars uses.
+
+Longitude is far less sensitive than latitude here, and that is expected
+rather than luck: on a tidally locked body a pole-RA shift rotates the body
+about its own pole and the prime-meridian term of the same family largely
+cancels it, while the declination term has nothing to cancel against.
