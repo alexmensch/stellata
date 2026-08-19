@@ -179,28 +179,24 @@ async function main() {
     // Extinction fades in as each voxel chunk lands on the GPU. If the
     // manifest is missing (fresh clone without data/dust/, CI without the
     // preprocessor, etc.) the stellata renders exactly as it did before
-    // dust was introduced. The voxel upload path is WebGL2-only until its
-    // WebGPU port lands, so a WebGPU boot skips the load entirely.
-    const rendererGL = stellata.rendererGL;
-    if (rendererGL !== null) {
-      void (async () => {
-        const dustBase = `${import.meta.env.BASE_URL}dust/`;
-        const manifest = await loadDustManifest(dustBase);
-        if (!manifest) {
-          console.info('dust manifest not found; skipping extinction layer');
-          return;
-        }
-        const dust = new DustField(rendererGL, dustBase, manifest);
-        stellata.attachDust(dust);
-        // Particles are lazy — the shelved layer's ~800 KiB fetch fires
-        // only on the first console opt-in (setParticleStrength > 0).
-        if (manifest.particles) {
-          const particlesMeta = manifest.particles;
-          stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
-        }
-        await dust.startLoading();
-      })();
-    }
+    // dust was introduced.
+    void (async () => {
+      const dustBase = `${import.meta.env.BASE_URL}dust/`;
+      const manifest = await loadDustManifest(dustBase);
+      if (!manifest) {
+        console.info('dust manifest not found; skipping extinction layer');
+        return;
+      }
+      const dust = new DustField(stellata.renderer, dustBase, manifest);
+      stellata.attachDust(dust);
+      // Particles are lazy — the shelved layer's ~800 KiB fetch fires
+      // only on the first console opt-in (setParticleStrength > 0).
+      if (manifest.particles) {
+        const particlesMeta = manifest.particles;
+        stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
+      }
+      await dust.startLoading();
+    })();
 
     bindUnitToggle();
     registerThemeStellata(stellata);

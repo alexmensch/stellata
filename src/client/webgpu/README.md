@@ -70,8 +70,14 @@ children land. The shell's WebGL scene still exists and is never
 rendered on a WebGPU boot — no per-layer gating, no material ever
 reaches the wrong backend. GPU-side subsystems park on their existing
 fallbacks: the HDR seam runs in its unsupported mode (direct-to-canvas,
-`hdr/README.md` § Fallback), the reduction never fences, the local-depth
-pass and the dust voxel upload are gated off until their port children.
+`hdr/README.md` § Fallback), the reduction never fences, and the
+local-depth pass is gated off until its port child.
+
+The dust voxel volume is the exception that already crossed: it streams
+and uploads on both backends (`loaders/README.md` § Dust voxel upload),
+and nothing samples it yet. Ported first on purpose — the star raymarch,
+the band's measured stack and the extinction prepass are each smoke-blind
+without dust in the texture.
 
 ### Every park is a gate someone has to delete
 
@@ -83,7 +89,6 @@ deleting the gate is part of the port, in the same PR:
 
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
-| Dust voxel upload | `main.ts` skips the load; `attachDust` warns and returns | dust voxel streaming port (`0it.19`) |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
 | HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |

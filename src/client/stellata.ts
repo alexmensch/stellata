@@ -195,7 +195,7 @@ export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
   readonly renderer: StellataRenderer;
   /** Narrowed WebGL2 renderer — null on a WebGPU boot. GL-only consumers
-   *  (dust upload, GPU timer, frame pricing) gate on it instead of
+   *  (extinction prepass, GPU timer, frame pricing) gate on it instead of
    *  casting `renderer`. */
   readonly rendererGL: THREE.WebGLRenderer | null;
   /** WebGPU boot seam — null on the shipped WebGL2 boot. Port children
@@ -1276,13 +1276,6 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
-    // The voxel upload path and the prepass are WebGL2-only until their
-    // WebGPU ports land; main.ts skips the dust load on a WebGPU boot,
-    // so this guard only catches console-driven attaches.
-    if (this.rendererGL === null && dust !== null) {
-      console.warn('attachDust: dust is not ported to the WebGPU boot yet');
-      return;
-    }
     this.renderGate.invalidate();
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
