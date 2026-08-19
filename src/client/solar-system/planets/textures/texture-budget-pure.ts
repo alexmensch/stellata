@@ -20,6 +20,29 @@
  */
 export const TEXTURE_VRAM_BUDGET_BYTES = 512 * 1024 * 1024;
 
+/**
+ * `TEXTURE_VRAM_BUDGET_BYTES` for a device whose widest accepted texture is
+ * `maxTextureSize`, which is the only capability WebGL exposes that tracks how
+ * much texture memory a GPU is likely to have.
+ *
+ * A fixed 512 MB is a desktop number, and on a weaker device it does not merely
+ * over-allocate — it is INERT, because eviction fires only above the budget. A
+ * cap of 4096 both bounds what the ladder can reach and stands in for the
+ * device tier, so the budget follows it. Each rung holds the same property the
+ * 512 MB figure does: the worst legitimate working set — one body parked at the
+ * camera floor — fits, with the rest as headroom for distant bodies.
+ *
+ * - `>= 8192`: 358 MB for Earth's 8192 colour + 8192 normal + 4096 horizon pair.
+ * - `>= 4096`: 134 MB, that body's 4096 colour plus a 4096 horizon pair — its
+ *   8192 normal map is refused outright at this cap, so relief drops out.
+ * - below: 34 MB, a 2048 colour map plus a 2048 horizon pair.
+ */
+export function textureVramBudgetBytes(maxTextureSize: number): number {
+  if (maxTextureSize >= 8192) return TEXTURE_VRAM_BUDGET_BYTES;
+  if (maxTextureSize >= 4096) return 192 * 1024 * 1024;
+  return 48 * 1024 * 1024;
+}
+
 /** Bytes a decoded texture occupies once uploaded, mip chain included.
  *
  *  The full chain adds exactly 1/3 (1 + 1/4 + 1/16 + …), and it is not

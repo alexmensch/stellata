@@ -158,3 +158,45 @@ describe('selectRung', () => {
     expect(selectRung('mars', requiredMapWidth(4, 2), null)).toBe(1024);
   });
 });
+
+describe('the device cap bounds the ladder', () => {
+  // WebGL2 only guarantees MAX_TEXTURE_SIZE 2048, and an upload past the
+  // device's own limit fails outright — the body stays on its white
+  // placeholder with nothing else looking wrong.
+  it('never asks for a rung the device cannot accept', () => {
+    expect(selectRung('moon', 99999, null, 4096)).toBe(4096);
+    expect(selectRung('moon', 99999, null, 2048)).toBe(2048);
+    // Not a rung width: round DOWN to one, never up past the cap.
+    expect(selectRung('moon', 99999, null, 3000)).toBe(2048);
+  });
+
+  it('caps the lead-the-swap rule too', () => {
+    // Rule 2 climbs to the next rung above what is resident; uncapped it would
+    // step straight over the limit at exactly the moment the body is closest.
+    expect(selectRung('moon', 4000, 4096, 4096)).toBe(4096);
+  });
+
+  it('leaves the ladder alone on a device that can take the top rung', () => {
+    expect(selectRung('moon', 99999, null, 8192)).toBe(selectRung('moon', 99999, null));
+    expect(selectRung('moon', 99999, null, 16384)).toBe(8192);
+  });
+
+  it('still holds one rung when even the narrowest exceeds the cap', () => {
+    // Nothing else to draw, and no device in reach of the WebGL2 floor is
+    // actually here — but returning null would silently drop the map.
+    expect(selectRung('moon', 99999, null, 512)).toBe(1024);
+  });
+
+  it('stays a fixed point under a cap', () => {
+    for (const demand of [1, 40, 900, 5000, 20000]) {
+      let rung = selectRung('moon', demand, null, 4096)!;
+      for (let i = 0; i < 20; i++) {
+        const next = selectRung('moon', demand, rung, 4096)!;
+        if (next === rung) break;
+        rung = next;
+      }
+      expect(selectRung('moon', demand, rung, 4096), `demand ${demand}`).toBe(rung);
+      expect(rung).toBeLessThanOrEqual(4096);
+    }
+  });
+});

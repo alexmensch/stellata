@@ -90,19 +90,61 @@ export function selectRung(
   body: string,
   requiredWidth: number,
   resident: number | null,
+  maxWidth = Infinity,
 ): number | null {
   const rungs = rungsOf(body);
   if (rungs === null || rungs.length === 0) return null;
-  const top = rungs[rungs.length - 1];
-  const roundUp = (w: number) => rungs.find((r) => r >= w) ?? top;
+  const cap = deviceCappedTop(rungs, maxWidth);
 
-  const want = roundUp(requiredWidth);
+  const want = rungAtOrAbove(rungs, requiredWidth, cap);
   if (resident === null) return want;
   if (requiredWidth >= TEXTURE_TIER_LEAD * resident) {
-    return Math.max(want, rungs.find((r) => r > resident) ?? top);
+    return Math.max(want, rungAbove(rungs, resident, cap));
   }
   if (requiredWidth < TEXTURE_TIER_DROP * resident) {
-    return Math.min(resident, roundUp(requiredWidth / TEXTURE_TIER_LEAD));
+    return Math.min(
+      resident,
+      rungAtOrAbove(rungs, requiredWidth / TEXTURE_TIER_LEAD, cap),
+    );
   }
   return resident;
+}
+
+/**
+ * The body's top rung, lowered to the widest one this device will accept.
+ *
+ * WebGL2 only guarantees `MAX_TEXTURE_SIZE` 2048, and an upload past the
+ * device's own limit fails outright — leaving the body on its white
+ * placeholder with nothing else looking wrong. A body whose NARROWEST rung
+ * already exceeds the cap keeps that rung anyway: there is nothing else to
+ * draw, and no device in reach of the WebGL2 floor is in that position.
+ */
+function deviceCappedTop(rungs: readonly number[], maxWidth: number): number {
+  let cap = rungs[0];
+  for (let i = 0; i < rungs.length; i++) {
+    if (rungs[i] <= maxWidth) cap = rungs[i];
+  }
+  return cap;
+}
+
+/** Smallest rung at or above `w`, never past `cap`. A loop rather than
+ *  `find`, because selection runs per body per frame and a predicate closure
+ *  there is per-frame garbage. */
+function rungAtOrAbove(
+  rungs: readonly number[],
+  w: number,
+  cap: number,
+): number {
+  for (let i = 0; i < rungs.length; i++) {
+    if (rungs[i] >= w) return Math.min(rungs[i], cap);
+  }
+  return cap;
+}
+
+/** Smallest rung strictly above `w`, never past `cap`. */
+function rungAbove(rungs: readonly number[], w: number, cap: number): number {
+  for (let i = 0; i < rungs.length; i++) {
+    if (rungs[i] > w) return Math.min(rungs[i], cap);
+  }
+  return cap;
 }

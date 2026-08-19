@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   TEXTURE_VRAM_BUDGET_BYTES,
+  textureVramBudgetBytes,
   evictionOrder,
   otherRungs,
   textureBytes,
@@ -129,5 +130,30 @@ describe('the layer actually applies all of this', () => {
     expect(src).not.toContain('this.textures.get(textureKey(');
     expect(src).toContain('this.useTexture(textureKey(planet.name, RELIEF_SUFFIX))');
     expect(src).toContain('this.useTexture(textureKey(planet.name, RINGS_SUFFIX))');
+  });
+});
+
+describe('the budget follows the device, not the desktop', () => {
+  it('keeps the measured 512 MB where the top rung is reachable', () => {
+    expect(textureVramBudgetBytes(8192)).toBe(TEXTURE_VRAM_BUDGET_BYTES);
+    expect(textureVramBudgetBytes(16384)).toBe(TEXTURE_VRAM_BUDGET_BYTES);
+  });
+
+  it('shrinks with the cap, because a fixed budget is INERT below it', () => {
+    // Eviction fires only above the budget, so 512 MB on a device with less
+    // texture memory than that never evicts at all — the protection is absent
+    // exactly where it is needed.
+    expect(textureVramBudgetBytes(4096)).toBeLessThan(TEXTURE_VRAM_BUDGET_BYTES);
+    expect(textureVramBudgetBytes(2048)).toBeLessThan(textureVramBudgetBytes(4096));
+  });
+
+  it('still fits one body at the camera floor on every tier', () => {
+    // The property the 512 MB figure was sized on has to hold at each rung, or
+    // the drawn body alone is over budget and the pass sheds what it can and
+    // stops — no thrash, but no headroom either.
+    const colourAndHorizons = (w: number) =>
+      textureBytes(w, w / 2, 4) + 2 * textureBytes(w, w / 2, 4);
+    expect(textureVramBudgetBytes(4096)).toBeGreaterThan(colourAndHorizons(4096));
+    expect(textureVramBudgetBytes(2048)).toBeGreaterThan(colourAndHorizons(2048));
   });
 });

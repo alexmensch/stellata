@@ -44,6 +44,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
       } as DOMRect),
     } as unknown as HTMLElement,
     sharedUniforms,
+    maxTextureSize: 8192,
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

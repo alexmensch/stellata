@@ -123,6 +123,7 @@ export function createPlanetKindModule(): PlanetKindModule {
       field = new PlanetBodyField(kindCtx.sharedUniforms);
       meshLayer = new PlanetMeshLayer(
         field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
+        kindCtx.maxTextureSize,
       );
       kindCtx.scene.add(field.group);
 

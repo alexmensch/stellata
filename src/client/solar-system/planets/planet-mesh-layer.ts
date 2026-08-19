@@ -16,8 +16,8 @@ import {
 import {
   evictionOrder,
   otherRungs,
-  TEXTURE_VRAM_BUDGET_BYTES,
   textureBytes,
+  textureVramBudgetBytes,
   type ResidentTexture,
 } from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
@@ -262,6 +262,10 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.ImageBitmapLoader()
     .setOptions({ ...TEXTURE_DECODE_OPTIONS });
   private readonly requestRender: () => void;
+  /** Widest texture this device accepts. Bounds the ladder, and stands in for
+   *  the device tier the VRAM budget is sized on. */
+  private readonly maxTextureSize: number;
+  private readonly vramBudgetBytes: number;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
   /** Frames are counted only to answer "was this drawn just now" during
@@ -298,10 +302,13 @@ export class PlanetMeshLayer {
     textureBaseUrl: string,
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: () => void,
+    maxTextureSize: number,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
+    this.maxTextureSize = maxTextureSize;
+    this.vramBudgetBytes = textureVramBudgetBytes(maxTextureSize);
     this.hdr = pickHdrEmitterUniforms(hdr);
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
@@ -560,7 +567,12 @@ export class PlanetMeshLayer {
   private ensureColourRung(planet: Planet, physPx: number): void {
     const body = ladderKey(planet.name);
     const shown = this.shownRung.get(body) ?? null;
-    const want = selectRung(body, requiredMapWidth(physPx, this.pixelRatio()), shown);
+    const want = selectRung(
+      body,
+      requiredMapWidth(physPx, this.pixelRatio()),
+      shown,
+      this.maxTextureSize,
+    );
     // A body with no ladder row ships no map at all (Uranus, future
     // exoplanets) and takes the representative-colour base path.
     if (want === null) return;
@@ -674,7 +686,7 @@ export class PlanetMeshLayer {
   }
 
   /** Evict least-recently-drawn maps until the resident set is back inside
-   *  TEXTURE_VRAM_BUDGET_BYTES. Nothing drawn this frame is a candidate. */
+   *  this device's texture budget. Nothing drawn this frame is a candidate. */
   private enforceTextureBudget(): void {
     // Summed before anything is allocated: this runs every frame and is over
     // budget on almost none of them, which is the same reason evictionOrder
@@ -683,14 +695,14 @@ export class PlanetMeshLayer {
     for (const state of this.textures.values()) {
       if (state.state === 'ready') total += state.bytes;
     }
-    if (total <= TEXTURE_VRAM_BUDGET_BYTES) return;
+    if (total <= this.vramBudgetBytes) return;
 
     const resident: ResidentTexture[] = [];
     for (const [key, state] of this.textures) {
       if (state.state !== 'ready') continue;
       resident.push({ key, bytes: state.bytes, lastFrame: state.lastFrame });
     }
-    for (const key of evictionOrder(resident, TEXTURE_VRAM_BUDGET_BYTES, this.frame)) {
+    for (const key of evictionOrder(resident, this.vramBudgetBytes, this.frame)) {
       const rung = this.rungOf.get(key);
       this.releaseTexture(key);
       // A colour rung that goes must stop being the drawn one, or the body
@@ -1006,6 +1018,16 @@ export class PlanetMeshLayer {
     this.loader.load(
       `${this.textureBaseUrl}textures/${key}.${ext}`,
       (bitmap) => {
+        // The colour ladder is clamped before it asks, but the relief and ring
+        // maps ship one fixed width each — Earth's normal map is 8192 — so the
+        // cap has to be enforced where every map passes. An oversized upload
+        // fails and leaves the body white; refusing here takes the
+        // representative-colour path instead, which is a designed fallback.
+        if (bitmap.width > this.maxTextureSize || bitmap.height > this.maxTextureSize) {
+          bitmap.close();
+          this.resolveTexture(key, { state: 'missing' });
+          return;
+        }
         const tex = new THREE.Texture(bitmap);
         // The bitmap carries the flip. Belt-and-braces: three skips the upload
         // flip entirely for a bitmap source, so this changes nothing today and
