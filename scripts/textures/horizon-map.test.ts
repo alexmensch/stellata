@@ -48,6 +48,27 @@ const pyNumber = (name: string): number => {
   return Number(m![1]);
 };
 
+const demSource = readFileSync(resolve(__dirname, 'dem_relief.py'), 'utf-8');
+
+/** The output grid is exactly half the body's DEM width, and that is a
+ *  physical identity rather than two independent constants: the observer's
+ *  own elevation is a box average over the output cell while every blocker is
+ *  a bilinear sample of the DEM, and only at ratio 2 are those the same
+ *  number. Derived here from the DEM table so a body that widens its DEM
+ *  without widening its horizon pair fails rather than silently biasing its
+ *  skyline upward in rough terrain. */
+const halfOfDemWidth = (body: string): number => {
+  const ratio = Number(pySource.match(/^HORIZON_DEM_RATIO = (\d+)$/m)![1]);
+  expect(ratio, 'HORIZON_DEM_RATIO').toBe(2);
+  const defaultW = Number(demSource.match(/^DEM_TARGET_W = (\d+)$/m)![1]);
+  const block = demSource.match(
+    new RegExp(`"${body}": \\{\\n([\\s\\S]*?)\\n {4}\\},`),
+  );
+  expect(block, `${body} in DEM_BODIES`).not.toBeNull();
+  const override = block![1].match(/"target_w": (\d+)/);
+  return (override ? Number(override[1]) : defaultW) / ratio;
+};
+
 const HALVES = ['a', 'b'] as const;
 const planePath = (body: string, half: string) =>
   resolve(RELIEF, `${body}-horizon-${half}.webp`);
@@ -137,15 +158,19 @@ describe('horizon maps', () => {
     // The start distance is set in output texels, so the kilometres it buys
     // differ per body — this is the number that has to clear a colour-map texel
     // for the shadow to have a visible caster.
-    const startKm: Record<string, number> = { moon: 10.7, mercury: 15.0, mars: 20.8 };
+    // Earth's pair is 4096 wide rather than 2048, so two of ITS output texels
+    // are a smaller angle on a much larger body.
+    const startKm: Record<string, number> = {
+      moon: 10.7, mercury: 15.0, mars: 20.8, earth: 19.5,
+    };
     const texels = pyNumber('HORIZON_MARCH_START_TEXELS');
-    const width = pyNumber('HORIZON_TARGET_W');
     expect(Object.keys(startKm).sort()).toEqual(shipped);
     // Below two the nearest caster sits inside a single colour-map texel again,
     // which is the whole defect this distance exists to fix.
     expect(texels).toBeGreaterThanOrEqual(2);
     for (const [name, km] of Object.entries(startKm)) {
       const body = SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
+      const width = manifest[name].horizon!.width;
       expect((texels * 2 * Math.PI * body.radiusKm) / width, name).toBeCloseTo(km, 1);
     }
   });
@@ -175,12 +200,12 @@ describe('horizon maps', () => {
       moon: [0.556, 10.835, 0.0002],
       mercury: [0.057, 4.861, 0.0],
       mars: [-0.141, 3.428, 0.0],
+      earth: [-0.088, 1.279, 0.0],
     };
-    const width = pyNumber('HORIZON_TARGET_W');
     expect(Object.keys(pins).sort()).toEqual(shipped);
     for (const [name, [median, p99, clamped]] of Object.entries(pins)) {
       const row = manifest[name].horizon!;
-      expect(row.width, `${name} width`).toBe(width);
+      expect(row.width, `${name} width`).toBe(halfOfDemWidth(name));
       expect(row.azimuths, `${name} azimuths`).toBe(HORIZON_AZIMUTHS);
       expect(row, `${name} stats`).toMatchObject({
         medianHorizonDeg: median,
@@ -230,8 +255,8 @@ describe('horizon maps', () => {
   });
 
   it.skipIf(mapsArePointers)('ships both planes at the declared width', () => {
-    const width = pyNumber('HORIZON_TARGET_W');
     for (const body of shipped) {
+      const width = halfOfDemWidth(body);
       for (const half of HALVES) {
         expect(
           webpSize(readFileSync(planePath(body, half)), `${body}-${half}`),

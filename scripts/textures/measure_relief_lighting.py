@@ -31,7 +31,7 @@ TERM_SOFTNESS_FLOOR = 1e-4
 # Geometric albedo per relief body — Planet.albedo / SolMoon.albedo in
 # src/client/solar-system/planet-system.ts, the reflectance the interreflected
 # term pays a second time. horizon-map.test.ts pins these against the originals.
-ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170}
+ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170, "earth": 0.434}
 
 
 def _smoothstep(a, b, x):

@@ -65,7 +65,8 @@ src/client/solar-system/planets/
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
-  surface-relief/                 DEM relief on the mesh: the tangent frame,
+  surface-relief/                 DEM relief on the mesh (Moon, Mercury, Mars,
+                                  Earth): the tangent frame,
                                   which terms the perturbed normal reaches,
                                   and the horizon that casts its shadows.
                                   Its own README.
@@ -392,9 +393,10 @@ brightness. Its own README.
 
 ### Surface relief
 
-Moon, Mercury and Mars shade with a DEM-derived tangent-space normal map and a
-per-texel horizon map on top of the colour map, lazily loaded on the same
-approach lane. The tangent frame both are sampled in, the single term the
+Moon, Mercury, Mars and Earth shade with a DEM-derived tangent-space normal
+map and a per-texel horizon map on top of the colour map, lazily loaded on the
+same approach lane. Earth's pair is twice the width of the other three — its
+relief is far the flattest and buys nothing below 8192. The tangent frame both are sampled in, the single term the
 perturbed normal is allowed to reach, and how the facet's own slope composes
 with the skyline beyond it — the body's own limb included — are
 `surface-relief/README.md`; the shader that consumes them is

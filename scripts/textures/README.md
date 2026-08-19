@@ -26,9 +26,9 @@ rather than shipping it.
   `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,
   Uranus/Neptune from authored ring tables at true opacity —
   `data/textures/README.md` § Ring strips — + the 4096-wide
-  `<body>-normal.webp` and paired 2048-wide `<body>-horizon-{a,b}.webp`
-  relief maps for the three bodies with a usable
-  global DEM). Manual, infrequent
+  `<body>-normal.webp` and paired half-width
+  `<body>-horizon-{a,b}.webp` relief maps for the four bodies with a
+  usable global DEM — Earth at double the rest). Manual, infrequent
   (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
   mtime, per artifact, against its own sources and the helper module
   it derives from — only this script gates everything, so editing the
@@ -120,8 +120,13 @@ rather than shipping it.
   is the one every artifact-backed suite rides.
 - `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
   downloaded 0.5–2.0 GB global DEM → the frozen
-  `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode
-  traps (USGS int16-in-mode-`I` strips, the SVS half-metre datum) and
+  `data/textures/src/<body>-dem-*.tif` reduction, at the body's own
+  `target_w` (8192 for Earth, `DEM_TARGET_W`'s 4096 for the rest).
+  Applies a body's `clamp_min_m` BEFORE the area-average — Earth's sea
+  surface — and asserts against `raw_span_m` where a body clamps, since
+  the shipped span is then not the original's. Carries the decode
+  traps (USGS int16-in-mode-`I` strips, the SVS half-metre datum, and
+  ETOPO's tiled-compressed layout that has no strip block to memmap) and
   asserts the elevation span against the published one plus the
   absence of each body's declared no-data sentinel — declared per body
   because the SVS product is unsigned and has none, and a signed

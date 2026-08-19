@@ -14,7 +14,7 @@ import {
 import { polarRadiusRatio } from './spheroid-pure';
 import {
   RELIEF_ELEV_SPAN_M,
-  reliefHorizonSines,
+  reliefHorizonUniform,
 } from './surface-relief/surface-relief-pure';
 import {
   pickHdrEmitterUniforms,
@@ -211,7 +211,7 @@ const reliefSpanOf = (planet: Planet): readonly [number, number] | null =>
 const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
   const span = reliefSpanOf(planet);
   return span
-    ? new THREE.Vector2(...reliefHorizonSines(span, planet.radiusKm))
+    ? new THREE.Vector2(...reliefHorizonUniform(span, planet.radiusKm))
     : new THREE.Vector2();
 };
 

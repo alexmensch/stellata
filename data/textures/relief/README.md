@@ -1,24 +1,25 @@
 # DEM-derived relief maps
 
-The surface-relief and cast-shadow artifacts for the three bodies with a
-usable global DEM — **Moon, Mercury, Mars** — plus the measurements that
-decided their width, encoding and channel packing. The colour maps they
+The surface-relief and cast-shadow artifacts for the four bodies with a
+usable global DEM — **Moon, Mercury, Mars, Earth** — plus the measurements
+that decided their width, encoding and channel packing. The colour maps they
 modulate, and the ladder those ride, are `../README.md`; the frozen DEM
 reductions and their provenance are `../src/README.md`;
 `scripts/textures/dem_relief.py` and `horizon_map.py` own the derivations.
 
 These ship as **LFS** (`data/textures/relief/*.webp`) — normals at
-3.8–7.5 MB each and a horizon pair at 5.6–9.4 MB. `sync-textures.ts`
+3.7–7.4 MB each and a horizon pair at 4.1–9.4 MB. `sync-textures.ts`
 mirrors them **flat** into `public/textures/`, alongside the colour rungs:
 this folder groups them at rest, and the renderer's URLs are unchanged by
 that grouping.
 
 ## Surface relief — DEM-derived normal maps
 
-`<body>-normal.webp` is a **4096×2048 lossless WebP tangent-space
-surface-normal map** derived from that body's real global DEM, shipped
-alongside the colour map for the three bodies where it buys something
-measurable: **Moon, Mercury, Mars**. Frozen DEM reductions and their
+`<body>-normal.webp` is a **lossless WebP tangent-space surface-normal
+map** derived from that body's real global DEM, shipped alongside the
+colour map for the four bodies where it buys something measurable:
+**Moon, Mercury, Mars at 4096×2048, and Earth at 8192×4096** — the width
+is per body (`DEM_TARGET_W` is a default a body may override). Frozen DEM reductions and their
 provenance are in `src/README.md`; `scripts/textures/dem_relief.py`
 owns the derivation and the per-body contract.
 
@@ -59,10 +60,11 @@ owns the derivation and the per-body contract.
 - Measured area-weighted tilt off the local vertical, over the same
   ±85° window, ships in `relief.json` and is pinned by
   `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
-  **1.14° / 3.94°** (Mercury), **0.44° / 2.58°** (Mars). The ordering
-  Moon ≫ Mercury > Mars holds at every map width, which is why the
-  Moon is the body this work is scoped around — at a 15° sun its p90
-  slope is a ~4× terminator brightness contrast.
+  **1.14° / 3.94°** (Mercury), **0.44° / 2.58°** (Mars), **0.0° / 0.52°**
+  (Earth, all-texel — see the Earth note below for why that row is not
+  comparable). The ordering Moon ≫ Mercury > Mars holds at every map
+  width, which is why the Moon is the body this work is scoped around —
+  at a 15° sun its p90 slope is a ~4× terminator brightness contrast.
 
 **Lossless, and that is not a default.** Both channels through one lossy
 WebP at q98 errs **1.58° of normal angle, mean**, against the Moon's
@@ -126,10 +128,12 @@ full 22 MB. That is the axis to decide 8192 on.
 **The error is flat in resolution.** Same codec across widths — p90
 1.006° at 1024, 1.052° at 2048, 1.007° at 4096 — while the signal keeps
 climbing (p90 tilt 9.7° → 11.66° from 2048 to 4096), so every rung
-improves the ratio. Two caveats: no 8192 map exists, so the trend is
-measured at ≤4096 and extrapolated, and the narrower rungs are
+improves the ratio. One caveat stands: the narrower rungs are
 area-averaged encoded normals, not maps re-derived from a reduced DEM
-the way `reduce_dem.py` builds the shipped one.
+the way `reduce_dem.py` builds the shipped one. The other has since been
+answered — Earth's map is a real 8192, so the tier is no longer measured
+only by extrapolation, though Earth's own slope signal is too weak to
+re-test the codec against.
 
 **It does not meet the bar stellata-2f6.46 set**, which was "near the
 0.177° of an exact 8-bit encode"; BC5 is 5.7× that at p90. Recorded as
@@ -147,22 +151,47 @@ Io, Europa, Ganymede, Callisto, Triton, or the Saturnian mids;
 Enceladus and Pluto have one each, and Pluto's covers the encounter
 hemisphere only — matching its colour map's real data gap.
 
-**Earth is deliberately absent.** Its land relief is the flattest of
-the four candidates by a wide margin (p90 0.93° at 2048, 2.27° at
-8192) and is not worth shipping below 8192, so it waits on the same
-block-compression work. When it lands, its elevation **must be clamped
-to ≥ 0 before differencing**: over water the visible surface is the sea
-surface, and shipping raw bathymetry as relief raises the measured p90
-from 0.93° to 1.37°, all of it wrong.
+**Earth ships at 8192, and its DEM is clamped at the sea surface.** Its
+land relief is the flattest of the four candidates by a wide margin and is
+not worth shipping below 8192, which is why it waited; the colour ladder
+reaching 8192 and the `RG8` upload settled that. Two things about it are
+unlike the other three:
+
+- **Elevation is clamped to ≥ 0 before the reduction averages.** Over
+  water the visible surface is the sea surface, not the seabed — shipping
+  raw bathymetry as relief measures a p90 of 1.37° against 0.93°, all of
+  it wrong. Clamping *before* the area-average rather than after is what
+  makes a coastal cell the mean visible surface height instead of a
+  land-and-ocean mean dragged under by the seabed beside it. It also
+  flattens the few real dry basins below datum (the Dead Sea shore at
+  −430 m); separating those from ocean needs a land mask this product does
+  not carry, and against an 8354 m span they cost nothing measurable.
+- **Its `relief.json` tilt row is NOT comparable to the other three**,
+  because 70.7 % of its surface is now flat ocean. All-texel median 0.0° /
+  p90 0.521°; over land alone the same map measures **median 0.265° / p90
+  2.157°**, max 35.3°. The land figure is the one the 8192 width was
+  chosen on, and the one to read against the Moon's 11.66°.
+
+Its horizon pair is therefore **4096×2048**, not 2048×1024 — the output
+grid is half the DEM width by the identity in § Cast shadows.
+
+**One consequence in the renderer.** With the floor at the reference sphere
+there is no basin for a summit to stand over, so Earth's two limb bounds
+coincide (2.93° both) — and the shader feeds that pair straight to
+`smoothstep`, which is undefined when its edges are equal.
+`reliefHorizonUniform` widens the band by 1e-4 at the uniform, leaving
+`reliefHorizonSines` exactly the geometry so its `none` stays
+`sin(search_arc)`.
 
 ## Cast shadows — DEM-derived horizon maps
 
-`<body>-horizon-a.webp` + `-b.webp` are a **pair of 2048×1024 lossless RGBA
-WebP** carrying, per texel, the elevation of the local skyline in **8
+`<body>-horizon-a.webp` + `-b.webp` are a **pair of lossless RGBA WebP**
+— 2048×1024, and 4096×2048 on Earth, always half the body's own DEM width —
+carrying, per texel, the elevation of the local skyline in **8
 azimuths** — the eight channels of the two files concatenated, azimuth 0 on
 east and running toward north. A normal map says which way the ground tilts;
 this says what the ground can *see*. `scripts/textures/horizon_map.py` owns
-the derivation, on the same three bodies and the same frozen DEMs.
+the derivation, on the same four bodies and the same frozen DEMs.
 
 - **Encoded value is the SINE of the skyline elevation**, `sin/0.4` mapped
   onto [0, 1] — the shader compares it against `dot(n, sunDir)`, so an
@@ -192,16 +221,17 @@ the derivation, on the same three bodies and the same frozen DEMs.
   and slack toward lighting rather than shadowing, so it errs on the safe side
   of "the sun sets at the geometric terminator".
 - **The search runs to `arccos(r_floor / r_summit)`** — 262 km on the Moon,
-  219 on Mercury, 446 on Mars. Not a cut-off: for the extremal pair (highest
+  219 on Mercury, 446 on Mars, 326 on Earth (short, because its floor is
+  the reference sphere rather than a basin). Not a cut-off: for the extremal pair (highest
   summit over deepest floor) the elevation angle *peaks* exactly there and
   every gentler pair peaks earlier, so nothing past it can win. It is the
   same quantity as the renderer's fallback limb bound, and
   `horizon-map.test.ts` pins the identity.
-- **The march starts two output texels out and steps at the DEM's 4096
+- **The march starts two output texels out and steps at the DEM's own
   resolution from there** — two independent parameters, and only the first
   moved. `HORIZON_MARCH_START_TEXELS` sets the near bound: 10.7 km on the Moon,
-  15.0 on Mercury, 20.8 on Mars, past both the normal map's domain and what the
-  colour map can draw. It used to be one DEM texel, 2.7 km, and that single step
+  15.0 on Mercury, 20.8 on Mars, 19.5 on Earth, past both the normal map's
+  domain and what the colour map can draw. It used to be one DEM texel, 2.7 km, and that single step
   set **35 %** of every stored value — a third of the cast shadows thrown by a
   caster no camera distance can resolve, and double-counted against the facet
   slope the normal map already applies. The step size is unchanged and stays at

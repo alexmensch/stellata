@@ -1,4 +1,16 @@
 {
+  "earth": {
+    "horizon": {
+      "azimuths": 8,
+      "clampedPct": 0.0,
+      "medianHorizonDeg": -0.088,
+      "p99HorizonDeg": 1.279,
+      "width": 4096
+    },
+    "medianTiltDeg": 0.0,
+    "p90TiltDeg": 0.521,
+    "width": 8192
+  },
   "mars": {
     "horizon": {
       "azimuths": 8,

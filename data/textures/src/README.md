@@ -41,6 +41,7 @@ believe it", which is how 3 of the first 6 rows checked stayed wrong.
 | `rings-neptune.tsv` | Neptune rings | Authored table (not a download), values compiled 2026-07-18: Galle/Le Verrier/Lassell/Arago/Adams radii, widths and normal optical depths from Voyager 2 + stellar occultations (Porco et al. 1995, in *Neptune and Triton*, Univ. of Arizona Press); Adams τ is the azimuthal average folding in its arcs | n/a (measured values) | https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N/abstract |
 | `moon-dem-svs.tif` | Moon (relief) | NASA SVS CGI Moon Kit `ldem_64_uint.tif` (LRO LOLA), frozen at 4096×2048 — an area-average reduction made at retrieval 2026-08-16 from the 23040×11520 uint16, 506 MB original. **Carries NO GDAL scale tag and is NOT metres** — samples are half-metres above a 1727400 m datum; the published LOLA span −9110…+10760 m is the check. Centre 0°E, positive-east | Public domain | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_64_uint.tif |
 | `mercury-dem-messenger.tif` | Mercury (relief) | USGS MESSENGER Global DEM 665 m v2 frozen at 4096×2048 — an area-average reduction made at retrieval 2026-08-16 from the 23040×11520 int16, 506 MB original (GDAL `SCALE` 0.5, nodata −32768, sphere radius 2439400 m). **Centre 180°E** — unlike its colour map, so the build rolls it | Public domain | https://planetarymaps.usgs.gov/mosaic/Mercury_Messenger_USGS_DEM_Global_665m_v2.tif |
+| `earth-dem-etopo.tif` | Earth (relief) | NOAA NCEI ETOPO 2022 v1, 30 arc-second **surface** elevation (ice surface, which is what is visible), frozen at 8192×4096 — an area-average reduction made at retrieval 2026-08-19 from the 43200×21600 float32, 1.59 GB original. **Stored CLAMPED to ≥ 0**: over water the visible surface is the sea surface, so the frozen file's span is 0…8354 m while the original's is −10776…8354, which is what `reduce_dem.py` asserts before clamping. Everest reads 8354 rather than 8849 because a 30 arc-second cell averages ~900 m of ground. The original is TILED and deflate-compressed, so it decodes through Pillow rather than the strip memmap. Centre 0°E, positive-east | Public domain | https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/ETOPO_2022_v1_30s_N90W180_surface.tif |
 | `mars-dem-mola.tif` | Mars (relief) | USGS MGS MOLA DEM 463 m global mosaic frozen at 4096×2048 — an area-average reduction made at retrieval 2026-08-16 from the 46080×23040 int16-metres, 2.0 GB original (no scale tag, nodata −32768). Centre 0°E, positive-east | Public domain | https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif |
 
 Venus is deliberately the **cloud deck**, not the Magellan radar
@@ -63,7 +64,7 @@ runtime capped every artifact at 2048. The ladder is what changed that, so
 they were re-pulled from the linked originals at 8192; `reduce_source.py`
 in the recipe below is what re-derives them.
 
-The three `*-dem-*.tif` rows make the same trade against 0.5–2.0 GB
+The four `*-dem-*.tif` rows make the same trade against 0.5–2.0 GB
 originals, and are stored as **uint16 metres biased by 32768** — a
 signed elevation in a format every tool reads back identically.
 Reducing to the pipeline's width is area-average, never LANCZOS: a
@@ -72,7 +73,13 @@ that isn't there. Both USGS DEMs are int16 in one strip per row, which
 Pillow mis-decodes as int32 mode `I`; `reduce_dem.py` reads the strip
 block directly and asserts the decoded elevation span against the
 published one, so a missed scale tag fails loudly instead of shipping
-doubled slopes.
+doubled slopes. ETOPO takes the other branch — tiled and compressed, with
+no flat block to memmap and no such decode trap to dodge.
+
+Each DEM is frozen at **its own body's** width, not one global one:
+4096 for the Moon, Mercury and Mars, **8192 for Earth**, whose relief is
+far the flattest and buys nothing narrower
+(`data/textures/relief/README.md` § Surface relief).
 
 ## Auditing
 

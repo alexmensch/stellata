@@ -10,6 +10,9 @@ from PIL import Image
 # uint16 biased by this, so a signed elevation survives a format every tool
 # reads back identically.
 DEM_ZERO_LEVEL = 32768
+# Default frozen-reduction width. Per-body `target_w` overrides it: Earth's
+# relief is far the flattest of the four and buys nothing below 8192
+# (data/textures/relief/README.md § Surface relief).
 DEM_TARGET_W = 4096
 
 # Latitude past which the equirect longitude derivative degenerates: texels
@@ -65,7 +68,40 @@ DEM_BODIES = {
         "map_center_lon": 0,
         "radius_km": 3390,
     },
+    "earth": {
+        "src": "earth-dem-etopo.tif",
+        # ETOPO ships float32 metres, and TILED + deflate rather than the USGS
+        # one-strip-per-row layout — so reduce_dem.py decodes it through Pillow
+        # instead of memmapping the strip block.
+        "dtype": "<f4",
+        "scale": 1.0,
+        "offset": 0.0,
+        # SHIPPED span, after the clamp below. The renderer fences relief
+        # lighting on this, and no ground sits under the sea surface.
+        "span_m": (0, 8354),
+        # Asserted against the decoded ORIGINAL, before the clamp. Everest
+        # reads 8354 rather than 8849 because a 30 arc-second cell averages
+        # over ~900 m of ground.
+        "raw_span_m": (-10776, 8354),
+        # ETOPO 2022 is gap-free; the tag declares -99999 and no cell carries it.
+        "nodata": -99999,
+        # Over water the visible surface is the SEA surface. Shipping raw
+        # bathymetry as relief raises the measured p90 tilt from 0.93° to
+        # 1.37°, all of it wrong. Clamped BEFORE the area-average, so a coastal
+        # cell is the mean visible surface height rather than a land-and-ocean
+        # average dragged negative.
+        "clamp_min_m": 0.0,
+        "dem_center_lon": 0,
+        "map_center_lon": 0,
+        "radius_km": 6371,
+        "target_w": 8192,
+    },
 }
+
+
+def dem_target_w(spec: dict) -> int:
+    """Width the body's frozen DEM reduction is stored at."""
+    return spec.get("target_w", DEM_TARGET_W)
 
 
 def read_frozen_dem(path) -> np.ndarray:

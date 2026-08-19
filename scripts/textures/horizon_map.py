@@ -5,10 +5,23 @@ data/textures/relief/README.md § Cast shadows)."""
 
 import numpy as np
 
-from dem_relief import roll_to_map_centre, weighted_quantile
+from dem_relief import dem_target_w, roll_to_map_centre, weighted_quantile
 
 HORIZON_AZIMUTHS = 8
-HORIZON_TARGET_W = 2048
+
+# The output grid is HALF the DEM's width, and that ratio is load-bearing
+# rather than a pair of independent constants. The observer's own elevation
+# `r_p` is a box average over the output cell while every blocker is a
+# bilinear sample of the DEM; at exactly 2 the bilinear sample at a cell
+# centre IS that box average, to 2e-10 m. At any other ratio the observer
+# smooths against sharp neighbours and the stored skyline biases upward in
+# rough terrain (data/textures/relief/README.md § Cast shadows).
+HORIZON_DEM_RATIO = 2
+
+
+def horizon_target_w(spec: dict) -> int:
+    return dem_target_w(spec) // HORIZON_DEM_RATIO
+
 
 # Where the march begins, in OUTPUT texels. Ground closer than this is the
 # normal map's, and a caster inside one output texel is half a colour-map texel
@@ -165,14 +178,14 @@ def decode_horizon_sin(
 
 def horizon_maps(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, np.ndarray, dict]:
     """The two shipped planes for one body, plus its manifest row."""
-    ang = horizon_angles(elev, spec, HORIZON_AZIMUTHS, HORIZON_TARGET_W)
+    ang = horizon_angles(elev, spec, HORIZON_AZIMUTHS, horizon_target_w(spec))
     h = ang.shape[0]
     lat = np.radians(90.0 - (np.arange(h) + 0.5) * 180.0 / h)
     weights = np.repeat(np.cos(lat), ang.shape[1] * HORIZON_AZIMUTHS)
     deg = np.degrees(ang).ravel()
     a, b = encode_horizon(ang)
     stats = {
-        "width": HORIZON_TARGET_W,
+        "width": horizon_target_w(spec),
         "azimuths": HORIZON_AZIMUTHS,
         "medianHorizonDeg": round(weighted_quantile(deg, weights, 0.5), 3),
         "p99HorizonDeg": round(weighted_quantile(deg, weights, 0.99), 3),

@@ -10,6 +10,7 @@ import {
   RELIEF_POLE_EPS,
   horizonSin,
   reliefHorizonSines,
+  reliefHorizonUniform,
   reliefNormal,
   tangentFrame,
   terrainViewFactor,
@@ -389,6 +390,9 @@ const bodyOf = (name: string) =>
   SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
 const boundsOf = (name: string) =>
   reliefHorizonSines(RELIEF_ELEV_SPAN_M[name], bodyOf(name).radiusKm);
+/** What the shader is actually handed — the pair above, band-width guarded. */
+const uniformOf = (name: string) =>
+  reliefHorizonUniform(RELIEF_ELEV_SPAN_M[name], bodyOf(name).radiusKm);
 
 describe('the limb bound on how far relief may light', () => {
   it('gives each body a bound off its own DEM span and radius', () => {
@@ -399,6 +403,10 @@ describe('the limb bound on how far relief may light', () => {
       moon: [6.3603, 8.6469],
       mercury: [3.4694, 5.1479],
       mars: [6.3956, 7.5316],
+      // Earth's two bounds COINCIDE: its DEM is clamped at the sea surface,
+      // so there is no basin for a summit to stand over. The taper band it
+      // renders with is widened at the uniform instead — see below.
+      earth: [2.9325, 2.9325],
     };
     expect(Object.keys(pins).sort()).toEqual(Object.keys(RELIEF_ELEV_SPAN_M).sort());
     for (const [name, [full, none]] of Object.entries(pins)) {
@@ -408,11 +416,18 @@ describe('the limb bound on how far relief may light', () => {
     }
   });
 
-  it('opens before it closes, on every body', () => {
+  it('hands the shader a band with width, on every body', () => {
+    // smoothstep is UNDEFINED when its two edges coincide, and Earth's are:
+    // a DEM clamped at the reference sphere has no floor under its summits.
+    // The guard lives on the uniform rather than on the geometry, so
+    // `reliefHorizonSines().none` stays exactly sin(search_arc) — the identity
+    // the horizon precompute is pinned against.
     for (const name of Object.keys(RELIEF_ELEV_SPAN_M)) {
-      const [fullSin, noneSin] = boundsOf(name);
+      const [fullSin, noneSin] = uniformOf(name);
       expect(noneSin, `${name}`).toBeGreaterThan(fullSin);
     }
+    expect(boundsOf('earth')[0]).toBe(boundsOf('earth')[1]);
+    expect(uniformOf('earth')[1]).toBeGreaterThan(uniformOf('earth')[0]);
   });
 
   it('never reaches the terminator the smooth sphere lights on its own', () => {
