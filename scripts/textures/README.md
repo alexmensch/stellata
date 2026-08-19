@@ -90,6 +90,17 @@ rather than shipping it.
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
+- `first-approach-probe.js` — manual, pasted into the browser
+  console, NOT part of the build: wraps the GL entry points a first
+  approach blocks on — `texImage2D` / `generateMipmap` / `linkProgram`
+  and friends — and attributes each slow frame to upload, mipmap chain
+  or program link. Answers the measure-first gate on
+  `stellata-2f6.32`, whose earlier attempt could only log rAF gaps and
+  so could not tell a one-shot upload from sustained per-frame cost:
+  the report classifies each slow frame ISOLATED or burst, and only the
+  first belongs to that bead. Wraps calls that are per-texture or
+  per-program, never per-draw, so it cannot distort the frame it
+  measures.
 - `measure_block_compression.py` (+ `block_compression.test.py`) —
   manual, run by hand, NOT part of the build: encodes the shipped
   normal maps through a reference BC4/BC5 codec and through lossy WebP
