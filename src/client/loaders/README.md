@@ -75,21 +75,55 @@ catalog-mock.ts          test-only Catalog factory. NaN-fills Apsis
 dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          Data3DTexture (DustField). Progressive upload:
                          zero-fill GPU texture upfront, fetch chunks
-                         priority-ordered, gl.texSubImage3D each as it
-                         lands. Each chunk clears UNPACK_FLIP_Y /
-                         PREMULTIPLY / ALIGNMENT through `renderer.state`
-                         and never on the raw context — three's state
-                         cache suppresses a call whose tracked value
-                         already matches, so a raw poke desyncs that
-                         cache from GL and the NEXT flipY 2D upload
-                         anywhere in the app lands mirrored with no
-                         other symptom. Manifest is the contract with
+                         priority-ordered, hand each to the voxel uploader
+                         as it lands (§ Dust voxel upload). Manifest is
+                         the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
                          Build-side counterpart: scripts/catalog/
                          dust-deextinction.ts reads the same artifact to
                          de-extinct absmag/ci (mirrored decode + integral).
+dust-voxel-upload.ts     Landing one chunk inside the volume texture —
+  (+ test)               the single step the dual boot splits per backend
+                         (§ Dust voxel upload).
+dust-renderer-mock.ts    Recording WebGL2 / WebGPU renderer stand-ins,
+                         enough surface for the upload tests to run
+                         headless.
 ```
+
+## Dust voxel upload
+
+`DustField` owns the ~128 MiB volume texture, the priority-ordered fetch,
+the progress listeners and the dispose. The only backend-specific step is
+writing one chunk's bytes inside the volume, and
+`createVoxelChunkUploader` picks that per renderer. Both paths first run
+`renderer.initTexture` on the volume: a partial write needs storage to
+target, and three's WebGPU backend serves a 1×1 placeholder for any
+texture the backend has not seen marked for update.
+
+- **WebGL2** — `gl.texSubImage3D` straight at the chunk's grid offset.
+  Each chunk clears UNPACK_FLIP_Y / PREMULTIPLY / ALIGNMENT through
+  `renderer.state` and never on the raw context: three's state cache
+  suppresses a call whose tracked value already matches, so a raw poke
+  desyncs that cache from GL and the NEXT flipY 2D upload anywhere in the
+  app lands mirrored with no other symptom.
+- **WebGPU** — three's backend exposes no sub-region texture write, so a
+  chunk-sized staging `Data3DTexture` takes the bytes as a whole upload
+  and `renderer.copyTextureToTexture` moves them into the volume's
+  region. That staging texture is reused across chunks and **must be
+  re-marked `needsUpdate` every time** — three's texture cache
+  short-circuits on an unchanged version, and the copy would then re-land
+  the previous chunk's bytes at the new offset. Its format and type track
+  the volume's, because WebGPU rejects a copy between differing formats.
+
+Chunk bytes are z-major with x innermost per the Python writer, which is
+what both backends read as width/height/depth.
+
+Nothing samples the volume on a WebGPU boot yet: the star vertex
+raymarch, the band's measured dust stack and the extinction prepass are
+separate port children. A WebGPU boot therefore streams a texture no
+pixel reads — the migration's intended ordering, since each of those
+ports is smoke-blind without dust already in the texture.
 
 ## Where the other layer loaders live
 
