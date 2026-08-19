@@ -388,12 +388,12 @@ export class PlanetBodyField {
   }
 
   /** Attach/detach shifts flat indices, invalidating any mid-decay dim
-   *  slot the active set points at — reset both per-frame flux buffers
-   *  to 1 (correct within one anti-strobe time constant, and
-   *  attach/detach is a rare lifecycle event, not a per-frame path).
-   *  The ring buffer is only ever written for a ringed body, so a
-   *  shifted slot would otherwise keep flux belonging to another
-   *  body. */
+   *  slot the active set points at — reset both per-frame flux buffers to
+   *  their identity: 1 for the eclipse dim (a multiplier), 0 for the ring
+   *  flux (an addend). Correct within one anti-strobe time constant, and
+   *  attach/detach is a rare lifecycle event, not a per-frame path. The
+   *  ring buffer is only ever written for a ringed body, so a shifted
+   *  slot would otherwise keep flux belonging to another body. */
   private resetPerInstanceFactors(): void {
     this.bufs.eclipseDim.fill(1);
     this.bufs.ringFlux.fill(0);
@@ -413,7 +413,7 @@ export class PlanetBodyField {
       host.hostLocalPos.copy(host.hostAbsPos).sub(this.worldOffset);
       this.writeHostLocalPos(host);
     }
-    this.markAttributeDirty('iHostLocalPos');
+    this.markAttributeDirty('hostLocalPos');
   }
 
   /**
@@ -466,14 +466,14 @@ export class PlanetBodyField {
       if (this.writeRingFluxes(host, camera.position)) ringTouched = true;
     }
     if (render) {
-      if (touched) this.markAttributeDirty('iLocalRel');
-      if (ringTouched) this.markAttributeDirty('iRingFlux');
+      if (touched) this.markAttributeDirty('localRel');
+      if (ringTouched) this.markAttributeDirty('ringFlux');
     }
 
     const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
     this.lastDimNowMs = nowMs;
     if (blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend)) {
-      this.markAttributeDirty('iEclipseDim');
+      this.markAttributeDirty('eclipseDim');
     }
     this.dimTargets.clear();
     perfMeasure('solar.bodies');
@@ -551,8 +551,13 @@ export class PlanetBodyField {
         host.hostLocalPos.y - cameraPos.y,
         host.hostLocalPos.z - cameraPos.z,
       );
-      this.bufs.ringFlux[idx] = this.ringFluxOf(host, i, alpha, dvx, dvy, dvz);
-      wrote = true;
+      // fround so the comparison is against what the Float32Array holds:
+      // a parked camera on a paused clock must not re-upload every frame.
+      const flux = Math.fround(this.ringFluxOf(host, i, alpha, dvx, dvy, dvz));
+      if (this.bufs.ringFlux[idx] !== flux) {
+        this.bufs.ringFlux[idx] = flux;
+        wrote = true;
+      }
     }
     return wrote;
   }
@@ -1523,12 +1528,14 @@ export class PlanetBodyField {
     }
   }
 
-  /** Queue one per-instance attribute for re-upload. Every flush path
-   *  goes through here: at bk5 scale (hundreds of hosts × thousands of
-   *  planets) a per-frame re-upload of the statics would be measurable
-   *  wasted bus bandwidth, so each caller flags only what it wrote. */
-  private markAttributeDirty(attr: string): void {
-    const buffer = this.geometry?.attributes[attr] as
+  /** Queue one per-instance attribute for re-upload, keyed on the buffer
+   *  name so a mistyped target is a compile error rather than a silently
+   *  skipped upload. Every flush path goes through here: at bk5 scale
+   *  (hundreds of hosts × thousands of planets) a per-frame re-upload of
+   *  the statics would be measurable wasted bus bandwidth, so each caller
+   *  flags only what it wrote. */
+  private markAttributeDirty(key: InstanceBufKey): void {
+    const buffer = this.geometry?.attributes[INSTANCE_ATTR_SPECS[key].attr] as
       | THREE.InstancedBufferAttribute
       | undefined;
     if (buffer) buffer.needsUpdate = true;
@@ -1538,8 +1545,8 @@ export class PlanetBodyField {
    *  dirty (the host's slot was just written; or a tail-shift moved
    *  every other host's data). */
   private flushAllAttributes(): void {
-    for (const [, spec] of SPEC_ENTRIES) {
-      this.markAttributeDirty(spec.attr);
+    for (const [key] of SPEC_ENTRIES) {
+      this.markAttributeDirty(key);
     }
   }
 
