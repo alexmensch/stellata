@@ -9,6 +9,7 @@ from PIL import Image, ImageFilter, ImageStat
 
 from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
 from horizon_map import horizon_maps
+from sky_view import sky_view_factor
 from texture_calibration import (
     COLOUR_INDICES,
     LUMA,
@@ -34,6 +35,7 @@ SCRIPT = Path(__file__)
 CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
 RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
 HORIZON_SCRIPT = SCRIPT.parent / "horizon_map.py"
+SKY_VIEW_SCRIPT = SCRIPT.parent / "sky_view.py"
 LADDER_SCRIPT = SCRIPT.parent / "texture_ladder.py"
 
 JPEG_QUALITY = 82
@@ -316,6 +318,27 @@ def build_horizon_map(name: str, relief: dict) -> None:
     )
 
 
+def build_sky_view(name: str, relief: dict) -> None:
+    spec = DEM_BODIES[name]
+    src_path = SRC / spec["src"]
+    out_path = RELIEF / f"{name}-skyview.webp"
+    if up_to_date(out_path, src_path, SKY_VIEW_SCRIPT, HORIZON_SCRIPT, RELIEF_SCRIPT):
+        print(f"  {name}-skyview: up to date")
+        return
+    raw, stats = sky_view_factor(read_frozen_dem(src_path), spec)
+    relief.setdefault(name, {})["skyView"] = stats
+    # One channel, and grayscale WebP writes it as three identical ones — the
+    # upload narrows to R8, so the duplication costs file size the lossless
+    # coder mostly removes and no VRAM at all.
+    Image.fromarray(raw, "L").save(out_path, "WEBP", lossless=True, method=6)
+    kb = out_path.stat().st_size // 1024
+    print(
+        f"  {name}-skyview: {raw.shape[1]}x{raw.shape[0]} -> {kb} KB, "
+        f"median {stats['medianFactor']} p99 {stats['p99Factor']} "
+        f"max {stats['maxFactor']} clamped {stats['clampedPct']}%"
+    )
+
+
 def resample_rows(rows: list[list[float]], width: int) -> list[list[float]]:
     """Box-average len(rows) samples down to `width` bins."""
     n = len(rows)
@@ -454,6 +477,7 @@ def main() -> None:
     for name in DEM_BODIES:
         build_normal_map(name, relief)
         build_horizon_map(name, relief)
+        build_sky_view(name, relief)
     for stale in relief.keys() - DEM_BODIES.keys():
         del relief[stale]
     RELIEF_MANIFEST.write_text(json.dumps(relief, indent=2, sort_keys=True) + "\n")

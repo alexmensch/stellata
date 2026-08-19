@@ -16,6 +16,7 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('mercury-normal.webp')).toBe(true);
     expect(isTexturePublicAsset('moon-horizon-a.webp')).toBe(true);
     expect(isTexturePublicAsset('moon-horizon-b.webp')).toBe(true);
+    expect(isTexturePublicAsset('moon-skyview.webp')).toBe(true);
   });
 
   it('rejects docs and source originals', () => {
@@ -34,5 +35,6 @@ describe('sync-textures / isTexturePublicAsset', () => {
     expect(isTexturePublicAsset('moon-normal.webp.bak')).toBe(false);
     expect(isTexturePublicAsset('moon-horizon-c.webp')).toBe(false);
     expect(isTexturePublicAsset('moon-horizon.webp')).toBe(false);
+    expect(isTexturePublicAsset('moon-skyviews.webp')).toBe(false);
   });
 });

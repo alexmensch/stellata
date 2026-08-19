@@ -88,6 +88,7 @@ def horizon_angles(
     spec: dict,
     n_az: int = HORIZON_AZIMUTHS,
     out_width: int | None = None,
+    psi_range: tuple[float, float] | None = None,
 ) -> np.ndarray:
     """`(h, w, n_az)` horizon elevation angles in radians on an `out_width`
     grid, azimuth measured from east toward north — the frame the mesh
@@ -108,6 +109,11 @@ def horizon_angles(
     `surface_normals` zeroes its east-west derivative past ±85° because the
     equirect u-derivative degenerates there; this walks real geodesics and has
     no such term, so it stays valid to the pole.
+
+    `psi_range` overrides that near/far split for a caller reading a different
+    quantity off the same geometry — the near-field sky view factor marches the
+    arc this one skips (`sky_view.py`), where an unresolvable caster still
+    blocks sky even though it cannot throw a drawable shadow.
     """
     elev = roll_to_map_centre(elev, spec)
     h_d, w_d = elev.shape
@@ -119,8 +125,7 @@ def horizon_angles(
     sin_lat, cos_lat = np.sin(lat), np.cos(lat)
     col_base = ((np.arange(w_o) + 0.5) * (w_d / w_o) - 0.5)[None, :]
 
-    psi_max = search_arc(spec)
-    psi_min = march_start(w_o)
+    psi_min, psi_max = psi_range or (march_start(w_o), search_arc(spec))
     # Sampling inside psi_min is the defect the start distance exists to remove,
     # and a body whose search arc falls short of it would do exactly that.
     assert psi_max > psi_min, (
@@ -145,17 +150,45 @@ def horizon_angles(
     return out
 
 
-def encode_horizon(angles: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """The two RGBA planes the renderer samples: azimuths 0–3, then 4–7.
+def encode_sin(angles: np.ndarray) -> np.ndarray:
+    """Skyline angles to the raw 0–255 codes a plane stores, at any azimuth
+    count — the inverse of `decode_sin`.
 
     The sine rather than the angle, because the shader compares against
     `dot(n, sunDir)` and an inverse trig per fragment buys nothing at these
     amplitudes.
     """
-    assert angles.shape[2] == HORIZON_AZIMUTHS, angles.shape
     e = np.clip(np.sin(angles) / HORIZON_SIN_RANGE, -1.0, 1.0) * 0.5 + 0.5
-    q = np.rint(e * 255).astype(np.uint8)
+    return np.rint(e * 255).astype(np.uint8)
+
+
+def encode_horizon(angles: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """The two RGBA planes the renderer samples: azimuths 0–3, then 4–7."""
+    assert angles.shape[2] == HORIZON_AZIMUTHS, angles.shape
+    q = encode_sin(angles)
     return q[..., :4], q[..., 4:]
+
+
+def azimuth_lerp(
+    values: np.ndarray, sun_east: np.ndarray, sun_north: np.ndarray
+) -> np.ndarray:
+    """Linear interpolation of a per-texel azimuth stack toward
+    `(sun_east, sun_north)` — the weighting `stellataHorizonSin` applies in the
+    mesh shader, over whatever the stack holds and however many azimuths it has.
+
+    Azimuth count comes from the stack rather than `HORIZON_AZIMUTHS` so the
+    same interpolation can be measured against other counts.
+    """
+    n_az = values.shape[2]
+    turn = np.arctan2(sun_north, sun_east) / (2 * np.pi)
+    slot = (turn - np.floor(turn)) * n_az
+    base = np.floor(slot)
+    i0 = base.astype(np.intp) % n_az
+    i1 = (i0 + 1) % n_az
+    rows = np.arange(values.shape[0])[:, None]
+    cols = np.arange(values.shape[1])[None, :]
+    f = (slot - base).astype(np.float32)
+    return values[rows, cols, i0] * (1 - f) + values[rows, cols, i1] * f
 
 
 def decode_horizon_sin(
@@ -163,17 +196,8 @@ def decode_horizon_sin(
 ) -> np.ndarray:
     """Sine of the skyline toward `(sun_east, sun_north)` out of the two shipped
     planes' `HORIZON_AZIMUTHS` raw channels — the Python side of
-    `encode_horizon`, mirroring `stellataHorizonSin` in the mesh shader."""
-    turn = np.arctan2(sun_north, sun_east) / (2 * np.pi)
-    slot = (turn - np.floor(turn)) * HORIZON_AZIMUTHS
-    base = np.floor(slot)
-    i0 = base.astype(np.intp) % HORIZON_AZIMUTHS
-    i1 = (i0 + 1) % HORIZON_AZIMUTHS
-    rows = np.arange(planes.shape[0])[:, None]
-    cols = np.arange(planes.shape[1])[None, :]
-    f = (slot - base).astype(np.float32)
-    enc = planes[rows, cols, i0] * (1 - f) + planes[rows, cols, i1] * f
-    return decode_sin(enc)
+    `encode_horizon`."""
+    return decode_sin(azimuth_lerp(planes, sun_east, sun_north))
 
 
 def horizon_maps(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, np.ndarray, dict]:

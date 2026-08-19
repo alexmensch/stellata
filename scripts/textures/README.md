@@ -62,6 +62,17 @@ rather than shipping it.
   fallback limb bound, and the manifest rows against the shipped
   planes' own headers. Rationale:
   `data/textures/relief/README.md` § Cast shadows.
+- `sky_view.py` — the third relief artifact (imported by the build):
+  one scalar per texel, the cosine-weighted share of its sky that
+  terrain fills, packed into a grayscale `<body>-skyview.webp`. Owns
+  the one thing the horizon pair cannot state — that the near field it
+  skips for shadowing still blocks sky, so this marches from **one DEM
+  texel** where that one starts at two OUTPUT texels — plus the
+  encoding range. `sky-view.test.ts` pins that range against the mesh
+  shader, the grid against the horizon pair's, the manifest rows
+  against the shipped maps' own headers, and the R8 upload and its
+  fallback in the layer. Rationale:
+  `data/textures/relief/README.md` § Sky view factor.
 - `horizon_map.test.py` — stdlib unittest pins for the geometry the
   TS suite can only source-pin: the flat-ground floor's closed form,
   azimuth registration and its east/west handedness against a
@@ -70,8 +81,12 @@ rather than shipping it.
   NumPy). Not in CI, like every `*.test.py` here.
 - `measure_relief_lighting.py` — manual, run by hand, NOT part of the
   build: reads the SHIPPED maps and reports how much ground each relief
-  term lights past the terminator against the same march at full DEM width,
-  plus the disc integral against phase. The verification behind both
+  term lights past the terminator against the same march at full DEM width
+  **from the same start distance**, plus the disc integral against phase.
+  `--sweep` costs output width and azimuth count against what each buys
+  (the two justification tables in § Cast shadows); `--sweep-width` and
+  `--sweep-azimuths` run one half, the azimuth half being slow enough to
+  want that. The verification behind both
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.

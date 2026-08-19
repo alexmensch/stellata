@@ -32,6 +32,11 @@ uniform vec2 uReliefHorizon;
 uniform sampler2D uHorizonA;
 uniform sampler2D uHorizonB;
 uniform float uHasHorizonMap;
+// Terrain's cosine-weighted share of this texel's sky, marched over the whole
+// arc rather than the far field the two planes above cover — R8, one channel
+// (data/textures/relief/README.md § Sky view factor).
+uniform sampler2D uSkyView;
+uniform float uHasSkyView;
 // Reflectance of the terrain that lights a shadowed patch — the body's
 // geometric albedo (Planet.albedo). The interreflected term carries it on top
 // of the one surfaceScale already holds, which is why a shadow on a dark body
@@ -98,6 +103,7 @@ const float LIMB_EXP = 0.5;
 
 const int STELLATA_HORIZON_AZIMUTHS = 8;
 const float STELLATA_HORIZON_SIN_RANGE = 0.4;
+const float STELLATA_SKY_VIEW_RANGE = 0.25;
 
 // Equirect tangent frame, exact on the drawn spheroid because a surface of
 // revolution puts its normal in the meridian plane. Mirror + the frame's
@@ -191,7 +197,14 @@ void main() {
       enc, dot(uSunDirView, east), dot(uSunDirView, north));
     float pen = max(uSunAngRad, 1e-6);
     horizonGate = smoothstep(sinH - pen, sinH + pen, sunCos);
-    terrainView = stellataTerrainViewFactor(enc);
+    // The planes above skip the near field on purpose — a caster that close
+    // throws a shadow the colour map cannot draw — but that same near field is
+    // where a crater floor loses most of its sky. Deriving the fill from them
+    // therefore under-reads it by ~2x, so the precomputed map wins whenever it
+    // has arrived and this stays the byte-identical fallback until it does.
+    terrainView = uHasSkyView > 0.5
+      ? texture(uSkyView, vUvM).r * STELLATA_SKY_VIEW_RANGE
+      : stellataTerrainViewFactor(enc);
   } else if (uHasNormalMap > 0.5) {
     horizonGate = smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos);
   }

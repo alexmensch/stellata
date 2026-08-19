@@ -250,57 +250,150 @@ the derivation, on the same four bodies and the same frozen DEMs.
 
 **Why 2048 and 8 azimuths — measured, not assumed.** The scoping guess was
 that a 512-wide map would do, on the grounds that the skyline signal lives at
-tens to hundreds of km. It does not: the limiting factor is how well the map
-knows the **elevation of the point it answers for**, because the limb term is
-a height effect and height varies at texel scale. Lit area 0–2° past the
-terminator, Moon, against the same march at full DEM width — 8.4 %.
-
-**Both tables in this subsection were measured at the previous 2.7 km march
-start**, so their absolute levels no longer match the verification table above.
-What they establish is the comparison down each row, and the start distance
-moves every column of a row together — a coarser grid still knows its own
-texel's elevation worse, and interpolating between stored azimuths still
-over-shadows. Refreshing the levels is `stellata-2f6.57`; the choice of 2048
-and 8 is not reopened by it.
+tens to hundreds of km. It does not, and for two reasons that pull opposite
+ways. Lit area 0–2° past the terminator, Moon, against the reference march the
+verification table below uses:
 
 | output width | 512 | 1024 | 2048 |
 |---|---|---|---|
-| lit area | 5.4 % | 7.2 % | 8.5 % |
-| pair size (Moon) | 0.8 MB | 2.7 MB | 9.4 MB |
+| march starts at | 42.6 km | 21.3 km | 10.7 km |
+| lit area | 15.3 % | 11.1 % | 9.6 % |
+| lit area, all marching from 10.7 km | 8.7 % | 9.4 % | 9.6 % |
+| pair size (Moon) | 0.5 MB | 2.1 MB | 8.1 MB |
 | VRAM, RGBA8 + mips | 1.4 MB | 5.6 MB | 22.4 MB |
 
-Azimuth count trades against width at a fixed byte budget, and loses. Linear
-interpolation between stored azimuths **over-shadows** — the skyline has
-narrow peaks, so averaging two neighbours over-estimates the gap between
-them — and at the worst-case bearing (exactly between two samples) the same
-0–2 % band reads 6.7 % at 8 azimuths and 4.2 % at 4. Four azimuths at 2048
-costs the same bytes as eight at 1024 and is worse than either. Sixteen would
-need four files; its mean skyline error is 0.11° against 0.32° for eight,
-which does not pay for the third and fourth texture fetch.
+**The two lit-area rows differ because the near bound is measured in OUTPUT
+texels**, so halving the width doubles the distance the march begins at and
+hands twice as much real terrain to a normal map that carries facet tilt
+rather than a neighbour blocking the sun. That effect dominates, and it runs
+toward lighting: a 512 map leaves 15.3 % of the band lit against the
+reference's 9.5 %. The third row removes it by marching every width from the
+shipped distance, and what is left is the original argument — the map knows
+the **elevation of the point it answers for** less well as it coarsens, the
+limb term is a height effect, and height varies at texel scale, so a coarse
+grid over-shadows. The two errors have opposite sign and neither cancels the
+other at any width below 2048.
 
-That 22.4 MB per body sits on top of the normal map's own 22.4, so a session
-that visits all three relief bodies holds ~134 MB of relief texture. The
+Azimuth count trades against width at a fixed byte budget, and loses. Measured
+at 2048, over the bearings a grid has to interpolate:
+
+| azimuths | 4 | 8 | 16 |
+|---|---|---|---|
+| mean skyline error | 0.63° | 0.37° | 0.23° |
+| lit area, worst-case bearing | 6.3 % | 8.2 % | 9.1 % |
+
+Every count reads **9.6 %** with the sun on a stored azimuth, which is the
+control: azimuth count costs nothing there and the whole error is
+interpolation. Linear interpolation between stored azimuths **over-shadows** —
+the skyline has narrow peaks, so averaging two neighbours over-states the gap
+between them — and the worst-case row is the sun exactly between two samples.
+Four azimuths at 2048 costs the same bytes as eight at 1024 and is worse than
+either. Sixteen would need four files to halve an error already under the
+0.556° median skyline, which does not pay for the third and fourth texture
+fetch.
+
+Both tables come from `measure_relief_lighting.py --sweep`. The azimuth errors
+are read against a 48-direction march — divisible by every candidate, so each
+is a subset of one march rather than a march of its own — and scored only on
+the bearings **no** candidate stores, since a bearing a grid holds outright
+scores zero and would reward the denser grid for coincidence. They are
+unquantised: this is the azimuth count's error alone, with the encoding's own
+floor left out.
+
+That 22.4 MB per body sits on top of the normal map's own 22.4 and the sky-view
+factor's 2.8, so the three 4096-DEM bodies hold ~48 MB of relief texture each
+and Earth, at twice the width on every plane, holds ~190 on its own. The
 horizon pair cannot take the normal map's `RG8` narrowing — every channel of
 both planes carries an azimuth — so block compression is the only lever left
 on this half.
+
+## Sky view factor — what terrain takes out of the sky
+
+`<body>-skyview.webp` is a **lossless grayscale WebP** on the same
+2048×1024 grid as the horizon pair, carrying one scalar per texel: the
+cosine-weighted fraction of the sky that texel's own terrain fills,
+`mean(max(sin h, 0)²)` over the same 8 azimuths.
+`scripts/textures/sky_view.py` owns it, and the mesh shader reads it as the
+`terrainView` the interreflected fill term multiplies
+(`src/client/solar-system/planets/surface-relief/README.md` § Shadows are lit
+by the terrain).
+
+**It exists because the horizon pair cannot answer this question.** Those
+planes march from **two OUTPUT texels** out and skip everything nearer,
+deliberately: a caster that close throws a shadow no camera distance can
+resolve (§ Cast shadows). Sky occlusion carries no such requirement — a wall
+too small to draw still blocks its share of the sky — and the near field is
+exactly where a crater floor loses most of its. So the same eight channels
+cannot serve both readings, and this map marches from **one DEM texel**,
+2.7 km against the shadow march's 10.7 on the Moon.
+
+- **Encoded value is the factor over `SKY_VIEW_RANGE` = 0.25**, mapped onto
+  [0, 1]. A view factor's ceiling is 1, but nothing measures past 0.171, and
+  spending the range where no terrain reaches would throw away most of the
+  8 bits. One code is 0.001 of sky, which reaches the screen as 0.012 % of
+  lit ground on the Moon — two orders under the faintest shadow the tone-map
+  can show, so the quantisation is invisible. Nothing clamps on any body.
+- **Uploads as `R8`** — one channel, so **2.8 MB per body** resident with
+  mips, against 22.4 for the horizon pair. Grayscale WebP stores three
+  identical channels and the lossless coder removes almost all of that; the
+  upload narrows regardless.
+- **Reduced from the DEM's own width, not marched at the output grid.** The
+  factor is smooth where a skyline is not, so area-averaging it after the
+  march costs less than marching a coarse grid would: p99 0.0501 at 4096
+  against 0.0445 reduced to 2048, and 0.0368 marched at 1024.
+
+Measured on the shipped maps, area-weighted by `cos(lat)`, with ρ the body's
+geometric albedo and ρ·F the shadow-to-lit ratio the fill term produces:
+
+| body | F p50 | F p99 | F max | ρ·F p99 | ρ·F max |
+|---|---|---|---|---|---|
+| Moon | 0.00239 | 0.0445 | 0.1424 | 0.53 % | 1.71 % |
+| Mercury | 0.00021 | 0.0114 | 0.1069 | 0.16 % | 1.52 % |
+| Mars | 0.00003 | 0.0082 | 0.0781 | 0.14 % | 1.33 % |
+| Earth | 0.00000 | 0.0021 | 0.0463 | 0.09 % | 2.01 % |
+
+**What it buys.** Against the far-field-only factor the horizon planes give,
+ρ·F p99 roughly doubles on every body — the Moon 0.28 % → 0.53 %, Mercury
+0.08 % → 0.16 %, Mars 0.05 % → 0.14 % — and the maxima rise further, the Moon
+1.21 % → 1.71 %. The 1.4 % worked example in
+`src/client/solar-system/planets/surface-relief/README.md` assumed
+F = sin²20° = 0.117; that is now **inside** what the data contains rather than
+fifty times the p99, which is the substantive change.
+
+**The p50 column is the other half of the result.** Half of every body reads
+essentially zero, because over open ground every azimuth sees only the body's
+own limb — negative, and clamped away before the square. So the term lights
+crater floors and leaves plains black, which is the split it should produce
+and not one that had to be tuned.
+
+**Earth is the odd row and reads correctly.** Its p99 is the lowest of the
+four — its DEM is clamped at the sea surface and its land relief is the
+flattest — yet its ρ·F maximum is the highest, because it is by far the
+brightest body of the four (ρ = 0.434 against the Moon's 0.12). Nothing is
+tuned per body: the same factor times each body's own albedo produces both.
 
 **Verification** is `scripts/textures/measure_relief_lighting.py` (manual,
 needs the LFS objects): it reads the *shipped* artifacts, so it exercises the
 encoding, the channel packing and the search bound end to end, and prints both
 the lit-area table and the disc integral against phase. Its reference column is
-the same march at full DEM width rather than ground truth — it isolates what
-the output grid and the encoding cost, and carries the first-step floor above
-itself. The geometry underneath is pinned separately by
-`scripts/textures/horizon_map.test.py`. Shipped Moon numbers, sun in the
-equatorial plane:
+the same march at full DEM width, **from the same start distance**, rather than
+ground truth — so it isolates the output grid and the encoding, and carries the
+first-step floor above itself. Left to its own width the reference would begin
+at half the shipped distance (the near bound is in output texels, and its grid
+is twice as wide), which put 0.8 of a point of pure start-distance difference
+into a column read as the grid's cost. The geometry underneath is pinned
+separately by `scripts/textures/horizon_map.test.py`. Shipped Moon numbers, sun
+in the equatorial plane:
 
 | solar depression | normal map only | + horizon maps | full-DEM horizon |
 |---|---|---|---|
-| 0–2° | 38.7 % | 9.6 % | 8.7 % |
-| 2–5° | 17.7 % | 0.3 % | 0.2 % |
+| 0–2° | 38.7 % | 9.6 % | 9.5 % |
+| 2–5° | 17.7 % | 0.3 % | 0.3 % |
 | 5–10° | 6.7 % | 0.0 % | 0.0 % |
 
-Mercury reads 22.0 % → 6.3 % against a 5.6 % reference in the 0–2° band, Mars
-15.6 % → 8.2 % against 7.0 %. Both columns moved together when the march's
-start distance did, since the reference shares it.
+**The output grid and the encoding cost 0.1 of a point**, not the 0.9 the
+mismatched reference used to show. What the horizon maps are worth is the
+other column: 38.7 % → 9.6 %. Mercury reads 22.0 % → 6.3 % against a 6.2 %
+reference, Mars 15.6 % → 8.2 % against 8.1 % — the same 0.1 everywhere, which
+is what a cost that is the output grid alone should look like.
 

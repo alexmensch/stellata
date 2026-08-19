@@ -198,37 +198,56 @@ describe('the layer gates every relief fetch on the span table', () => {
     expect(layer).toContain('RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null');
   });
 
-  // All three planes ride the one span gate. They are two fetch statements
-  // rather than one loop only because the normal map narrows to RG8 and the
-  // horizon halves cannot (data/textures/relief/README.md § Surface relief).
+  // All four planes ride the one span gate. They are three fetch statements
+  // rather than one loop because each narrows differently — RG8 for the
+  // normal, R8 for the scalar view factor, and the horizon halves not at all
+  // (data/textures/relief/README.md § Surface relief).
   const gated = layer.slice(
     layer.indexOf('if (reliefSpanOf(planet)) {'),
     layer.indexOf('if (planet.rings) {'),
   );
   const normalFetch = gated.slice(0, gated.indexOf('for (const suffix of'));
-  const horizonFetch = gated.slice(gated.indexOf('for (const suffix of'));
+  const horizonFetch = gated.slice(
+    gated.indexOf('for (const suffix of'),
+    gated.indexOf('textureKey(planet.name, SKY_VIEW_SUFFIX)'),
+  );
+  const skyViewFetch = gated.slice(
+    gated.indexOf('textureKey(planet.name, SKY_VIEW_SUFFIX)'));
 
-  it('fetches the normal map and both horizon halves behind that gate', () => {
+  it('fetches the normal map, both horizon halves and the view factor', () => {
     expect(layer).toContain(
       "const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;");
+    expect(layer).toContain("const SKY_VIEW_SUFFIX = '-skyview';");
     expect(layer).toContain('if (reliefSpanOf(planet)) {');
     expect(normalFetch).toContain('textureKey(planet.name, RELIEF_SUFFIX)');
     expect(horizonFetch).toContain('for (const suffix of HORIZON_SUFFIXES) {');
+    expect(skyViewFetch).toContain('THREE.RedFormat');
   });
 
   // A whole-branch RG8 is the plausible-looking mistake: every channel of
   // each horizon plane carries an azimuth, alpha included, so it would
   // delete four of the eight — and that reads as wrong terrain, not as a
   // missing texture, which is why it needs a pin and not a smoke.
-  it('narrows the normal map to RG8 and nothing else', () => {
+  it('narrows the normal map to RG8 and the horizon halves not at all', () => {
     expect(normalFetch).toContain('THREE.RGFormat');
     expect(horizonFetch).not.toContain('RGFormat');
+    expect(horizonFetch).not.toContain('RedFormat');
   });
 
-  it('overrides the upload format in exactly one fetch', () => {
+  it('overrides the upload format in exactly the two narrowing fetches', () => {
     // Colour maps and ring strips carry signal in all four channels, so
     // the count is the invariant — not the absence of one named format.
-    expect(layer.match(/format: THREE\.\w+/g)).toEqual(['format: THREE.RGFormat']);
+    expect(layer.match(/format: THREE\.\w+/g)).toEqual([
+      'format: THREE.RGFormat', 'format: THREE.RedFormat',
+    ]);
+  });
+
+  // Charged from a table rather than a ternary: a narrowed map with no row
+  // would be billed RGBA8 and evict maps that actually fit.
+  it('charges VRAM per format from one table', () => {
+    expect(layer).toContain('TEXEL_BYTES.get(format ?? THREE.RGBAFormat) ?? 4');
+    expect(layer).toContain('[THREE.RedFormat, 1],');
+    expect(layer).toContain('[THREE.RGFormat, 2],');
   });
 
   it('raises uHasHorizonMap only with both halves ready', () => {
