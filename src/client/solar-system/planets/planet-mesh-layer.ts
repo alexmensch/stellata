@@ -6,6 +6,7 @@ import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
+import { umbralDepthRad, umbralGlow } from './eclipses/umbral-glow-pure';
 import {
   meanLuminanceOf,
   requiredMapWidth,
@@ -270,6 +271,7 @@ export class PlanetMeshLayer {
   private readonly viewInverse = new THREE.Matrix4();
   private readonly tmpQuatRing = new THREE.Quaternion();
   private readonly tmpQuatInv = new THREE.Quaternion();
+  private readonly tmpUmbra: [number, number, number] = [0, 0, 0];
 
   constructor(
     field: PlanetBodyField,
@@ -419,6 +421,13 @@ export class PlanetMeshLayer {
 
       material.uniforms.uSurfaceLuminance.value = surfaceL;
       material.uniforms.uAirlightLuminance.value = airlightL;
+      // Refracted sunlight in the parent's umbra — the coppery red of a
+      // totally eclipsed body, which the caster loop alone drives to black.
+      if (hasSun && hp && this.umbralGlowFor(hp, dHpPc, this.tmpUmbra)) {
+        (material.uniforms.uUmbralGlow.value as THREE.Vector3).set(...this.tmpUmbra);
+      } else {
+        (material.uniforms.uUmbralGlow.value as THREE.Vector3).set(0, 0, 0);
+      }
       material.uniforms.uPhaseScale.value = hasSun && planet.phaseCoefficients
         ? phaseRatioToLambert(
             planet.phaseCoefficients,
@@ -534,6 +543,60 @@ export class PlanetMeshLayer {
     const key = textureKey(planet.name, `-${want}`);
     this.ensureTexture(key, { ext: 'jpg' });
     if (this.textures.get(key)?.state === 'ready') this.shownRung.set(body, want);
+  }
+
+  /**
+   * Per-channel refracted-sunlight illuminance in the parent's umbra, as a
+   * fraction of direct host irradiance — the coppery red of a totally
+   * eclipsed Moon. Zero unless this body is a moon whose parent HAS an
+   * atmosphere to refract through: an airless caster really does throw a
+   * black shadow, and the giants carry no `atmosphere` row.
+   *
+   * The depth is measured at the body CENTRE and the shader spreads it with
+   * `1 − shadow`, so the eclipsed part of a partly-immersed disc glows while
+   * the uneclipsed limb stays bright. The umbra's own edge-to-centre colour
+   * gradient — the turquoise rim — is therefore not resolved across the disc;
+   * it would need this geometry per fragment.
+   */
+  private umbralGlowFor(
+    hp: { hostStarIdx: number; planetIdx: number },
+    dHpPc: number,
+    out: [number, number, number],
+  ): boolean {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
+    if (!ps || dHpPc <= 0) return false;
+    const parentIdx = systemFamily(ps.planets).parentIdx[hp.planetIdx];
+    if (parentIdx < 0) return false;
+    const parent = ps.planets[parentIdx];
+    if (!parent.atmosphere) return false;
+    const flat = this.field.instanceIndexOf(hp.hostStarIdx, parentIdx);
+    const hostRadiusPc = this.field.hostRadiusOf(hp.hostStarIdx);
+    if (flat === null || hostRadiusPc === null) return false;
+    if (!this.field.planetLocalPositionInto(flat, this.tmpCaster)) return false;
+
+    // Body → parent, and the body → host direction already in tmpSun.
+    this.tmpCaster.sub(this.tmpPlanet);
+    const distPc = this.tmpCaster.length();
+    if (distPc <= 0) return false;
+    const parentRadiusPc = parent.radiusKm * KM_PC;
+    // Angular separation of the two centres seen from the body: the parent's
+    // offset from the host direction, small-angle.
+    const along = this.tmpCaster.dot(this.tmpSun);
+    if (along <= 0) return false;
+    const missRad = Math.sqrt(
+      Math.max(0, this.tmpCaster.lengthSq() - along * along),
+    ) / distPc;
+    const depth = umbralDepthRad(
+      parentRadiusPc / distPc, missRad, hostRadiusPc / dHpPc,
+    );
+    umbralGlow(
+      parent.atmosphere, parent.radiusKm, distPc / KM_PC,
+      hostRadiusPc / dHpPc, depth, out,
+    );
+    return out[0] > 0 || out[1] > 0 || out[2] > 0;
   }
 
   /** The colour-map state for the rung currently drawn, if any. */
@@ -712,6 +775,7 @@ export class PlanetMeshLayer {
         uFade: { value: 0 },
         uPhaseScale: { value: 1 },
         uSurfaceLuminance: { value: 0 },
+        uUmbralGlow: { value: new THREE.Vector3() },
         uAirlightLuminance: { value: 0 },
         uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
         uCasters: {

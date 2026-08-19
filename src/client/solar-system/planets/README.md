@@ -90,10 +90,11 @@ src/client/solar-system/planets/
                                   Io-transit / lunar-eclipse search tests
                                   on the real ephemeris.
   eclipses/                       The event-level half of the same story:
-                                  where a shadow axis meets a surface, and
-                                  the named-eclipse regression corpus that
-                                  pins it against NASA's Five Millennium
-                                  Canon. Its own README.
+                                  where a shadow axis meets a surface, the
+                                  named-eclipse regression corpus pinning it
+                                  against NASA's Five Millennium Canon, and
+                                  the refracted glow that makes a totally
+                                  eclipsed body red. Its own README.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
   planet-mesh.vert.glsl,
@@ -238,7 +239,10 @@ radiance rather than appMag. A FULL eclipse
 writes exactly 0 and the shader collapses the quad — a floored +7.5
 mag residual is still visible on a mag −1 Mercury, and the planet-
 scale depth buffer can't hide it — and the planet's label hides with
-it (the fully eclipsed body renders nothing). Glare through the host's
+it. **Unless the caster has an atmosphere**: Earth refracts sunlight into
+its own umbra, so the dim floors at that glow rather than 0 and a totally
+eclipsed Moon stays visible, coppery red, label and all
+(`eclipses/README.md` § Umbral glow). Glare through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
 through. A planet in *front* (transit) dims the

@@ -67,6 +67,9 @@ uniform int uCasterCount;
 // Host angular radius from the body — penumbra half-width per unit
 // distance along the sun ray.
 uniform float uSunAngRad;
+// Per-channel refracted sunlight in a caster's umbra, as a fraction of
+// direct host irradiance — zero unless the caster has an atmosphere.
+uniform vec3 uUmbralGlow;
 // Atmosphere airlight over the lit disc (final = surface·T_view + L_air).
 // uHasAtmosphere gates the whole block; the scatter uniforms it reads are the
 // shared contract (planet-atmosphere.frag.glsl reads the same set).
@@ -228,6 +231,15 @@ void main() {
   // it needs no albedo factor of its own.
   vec3 surfaceScale = base * uSurfaceLuminance * shadow;
   vec3 col = surfaceScale * (dayside * limb * uPhaseScale);
+  // Refracted, Rayleigh-reddened sunlight inside a caster's umbra — the one
+  // light a totally eclipsed body has, and the reason it glows coppery red
+  // rather than going out. An ADDITIVE illuminant, not a floor on `shadow`:
+  // the shadow factor correctly reaches zero, and this is a different light
+  // arriving from the caster's atmosphere (eclipses/README.md § Umbral glow).
+  // Weighted by 1 - shadow so it fills exactly what the caster removed, which
+  // leaves a partly-immersed disc bright on its uneclipsed limb and red inside.
+  col += base * uSurfaceLuminance * (1.0 - shadow)
+    * uUmbralGlow * (dayside * limb * uPhaseScale);
   // Terrain interreflection — the sunlit slopes around this patch scattering
   // light into it, and on an airless body the ONLY thing lighting ground the
   // skyline has shadowed. Added to col rather than folded into dayside because
