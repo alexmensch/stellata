@@ -222,11 +222,11 @@ Lighting of the drawn annulus is a deliberately simple model:
 full strip colour on the sunlit face, a dimmed transmitted factor on
 the unlit face, both dying off as illumination goes edge-on to the
 ring plane, and an analytic ray–ellipsoid planet-shadow test that
-drops the occluded far-side segment to a residual floor. The
-resolved-mesh regime makes no photometric claim beyond that — in
-particular no phase term, so the ring opposition surge reaches the
-*disc/glow* path only, and no forward-scatter term, which is where
-Jupiter's dust rings would live.
+drops the occluded far-side segment to a residual floor. Beyond that
+the drawn annulus carries a phase-angle term and nothing else: no
+forward-scatter term, which is where Jupiter's dust rings would live,
+and no grazing-illumination falloff, so it still takes the host's full
+irradiance at any solar elevation above ~1° (`stellata-2f6.61`).
 
 **Saturn's ring brightness.** The ring system carries most of
 Saturn's light and its contribution swings with the tilt of the ring
@@ -242,7 +242,21 @@ ring-plane crossing to rings wide open at opposition (a factor of
 9.0–10.1 AU distance variation is removed. The fit is Earth-based and
 stellata is camera-anywhere, so all three of its bounds are handled
 explicitly rather than extrapolated through — α > 6.5°, β > 27°, and
-the backlit geometry the published rule zeroes outright:
+the backlit geometry the published rule zeroes outright.
+
+The **drawn annulus rides the same curve**, normalised to 1 at
+opposition — which is the anchor its strip already carries, a
+zero-phase geometric albedo — so the resolved rings brighten through
+opposition by what the point source does and the resolvedness band
+cannot step. Cassini/ISS corroborates the width independently: Déau
+et al. 2013 measure the surge half-width at 0.20° in the A and B rings
+and 0.26–0.28° in the C ring and Cassini Division, against the
+`ln2/2.25` = 0.308° of Mallama's Earth-based exponential. The surge is
+strip-averaged rather than per-radius because the per-region amplitudes
+(1.25 B, 1.39 A, 1.45 C, 1.47 Cassini Division) collapse to a few
+percent once flux-weighted, and because amplitude's correlation with
+optical depth turns over near τ ≈ 0.5–1 — so the strip's own opacity
+channel is not a usable proxy for it.
 `src/client/solar-system/planets/rings/README.md` § Ring photometry.
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
