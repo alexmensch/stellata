@@ -14,6 +14,10 @@ export interface WebGpuSeam {
   /** Rendered in place of the shell's scene on a WebGPU boot — empty
    *  until port children add their TSL layers to it. */
   readonly scene: THREE.Scene;
+  /** Whether the adapter granted `timestamp-query`. `trackTimestamp: true`
+   *  is a request: three clears it silently when the feature is absent, so
+   *  every GPU-timing consumer must ask here rather than assume. */
+  readonly timestampsAvailable: boolean;
   /** Built by the shell right after buildSharedUniforms; null before. */
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;

@@ -11,7 +11,8 @@ import {
   type RingStats,
   type RowDatum,
 } from './perf-hud-pure';
-import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timer';
+import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timing/gpu-timer';
+import { onGpuFrameSample } from './gpu-timing/gpu-frame-samples';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -158,18 +159,14 @@ export function frame(): void { _frame(); }
 export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
-let _gpuSample: ((label: string, ms: number) => void) | null = null;
-
-/** Sink for externally measured GPU durations (the WebGPU boot's
- *  timestamp queries — no GL timer object involved). Records under
- *  `gpu.<label>`; null while the HUD is closed, so a sample measured
- *  anyway is dropped rather than accumulated. */
-export function gpuSampleSink(): ((label: string, ms: number) => void) | null {
-  return _gpuSample;
-}
+let unsubGpuFrame: (() => void) | null = null;
 
 /**
  * Exclusive whole-frame GPU sampler for console harnesses (frame-cost/frame-cost.ts).
+ *
+ * WebGL2 only — the WebGPU renderer measures its own frames and the
+ * harness subscribes to `onGpuFrameSample` instead
+ * (`frame-cost/gpu-frame-source.ts`).
  *
  * Installs a single-scope timer into the swappable hooks so EVERY frame
  * samples `gpu.frame` — no rotation, unlike the panel's multi-scope timer.
@@ -221,7 +218,9 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _gpuBegin = realGpuBegin;
       _gpuEnd = realGpuEnd;
     }
-    _gpuSample = recordGpuSample;
+    unsubGpuFrame = onGpuFrameSample(
+      (ms) => recordGpuSample(GPU_WHOLE_FRAME_SCOPE, ms),
+    );
   }
 
   // Reset DOM handles & per-bar caches so a re-open gets a fresh build.
@@ -350,7 +349,8 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _frame = () => {};
       _gpuBegin = () => {};
       _gpuEnd = () => {};
-      _gpuSample = null;
+      unsubGpuFrame?.();
+      unsubGpuFrame = null;
       installed = false;
       gpuTimer?.dispose();
       gpuTimer = null;
@@ -387,24 +387,19 @@ function renderPanel(): void {
   const fpsAvg = deltaStats.avg > 0 ? 1000 / deltaStats.avg : 0;
   const fpsLow = deltaStats.max > 0 ? 1000 / deltaStats.max : 0;
 
-  // The headline is one query's measurement of a whole frame, never a sum
-  // of the per-scope rows: scopes rotate one per frame, so their averages
+  // The headline is a whole-frame measurement, never a sum of the
+  // per-scope rows: WebGL2 scopes rotate one per frame, so their averages
   // describe disjoint frame sets and adding them yields a total that can
-  // exceed the frame period. Summing is the fallback only when nothing has
-  // registered the whole-frame scope at all.
+  // exceed the frame period. The whole-frame row is keyed the same on both
+  // backends — a GL frame-scope query, or the WebGPU renderer's timestamp
+  // resolve — so its presence, not which timer object exists, is what
+  // decides whether the headline can say `gpu` at all.
+  const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
   let busyLabel = 'submit';
   let busyMs = 0;
-  if (gpuTimer) {
+  if (whole) {
     busyLabel = 'gpu';
-    if (gpuTimer.scopeLabels().includes(GPU_WHOLE_FRAME_SCOPE)) {
-      const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
-      busyMs = whole ? summarize(whole).avg : 0;
-    } else {
-      for (const scope of gpuTimer.scopeLabels()) {
-        const s = sections.get(`gpu.${scope}`);
-        if (s) busyMs += summarize(s).avg;
-      }
-    }
+    busyMs = summarize(whole).avg;
   } else {
     for (const [label, s] of sections) {
       if (label.startsWith('submit.')) busyMs += summarize(s).avg;

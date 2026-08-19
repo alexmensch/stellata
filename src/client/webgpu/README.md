@@ -97,7 +97,6 @@ deleting the gate is part of the port, in the same PR:
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
 | HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |
-| GPU timer rotation, frame pricing | `perfGlContext` returns null; `runPriceFrame` returns `[]` | instrumentation port (`0it.21`) |
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion
@@ -108,7 +107,7 @@ release.
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
 remapped, clear inverted, all upstream in three r185 — and
-`trackTimestamp: true` for the `gpu.render` perf row.
+`trackTimestamp: true` for the `gpu.frame` perf row (§ Timestamps).
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,
@@ -282,15 +281,32 @@ verifying no actual math.
 
 ## Timestamps
 
-The renderer boots with `trackTimestamp: true`, and `animate()` calls
-`resolveTimestampsAsync()` on **every rendered frame** — not only while
-the HUD is open. The resolve is what recycles the query pool: tracking
-allocates a query pair per render pass regardless of whether anyone
-reads the result, so a gated resolve overruns the 2048-query pool after
-~1024 frames and three logs `Maximum number of queries exceeded`, then
-stops sampling until something resolves. The milliseconds reach the HUD
-as the `gpu.render` row through `perf-hud.ts`'s `gpuSampleSink`, which
-is null while the HUD is closed — the frame still resolves, the sample
-is just dropped. The WebGL2 `gpu.*` rotation, `gpu.frame` headline, and
-the frame-pricing harness stay WebGL2-only until the instrumentation
-port child lands.
+The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
+**every rendered frame** — not only while the HUD is open. The resolve is
+what recycles the query pool: tracking allocates a query pair per render
+pass regardless of whether anyone reads the result, so a gated resolve
+overruns the 2048-query pool after ~1024 frames and three logs
+`Maximum number of queries exceeded`, then stops sampling until something
+resolves.
+
+Two properties the seam carries for it, both in
+`debug/gpu-timing/README.md`. **The flag is a request:** three ANDs it with
+`hasFeature('timestamp-query')` and clears it silently where the adapter
+withholds the feature, so the boot records the granted answer as
+`timestampsAvailable` and consumers degrade off that instead of assuming.
+**One resolve in flight:** a concurrent resolve returns the same promise and
+the same number, so `resolveAndPublishGpuFrame` publishes once per
+completion rather than once per frame the readback spanned. **And a grant is
+not a working clock:** Chrome grants the feature and then resolves whole
+frames as a large negative number, so the channel drops any duration that is
+not finite and positive and degrades exactly as the withheld case does.
+
+The resolved figure is the summed real duration of every render pass in
+one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
+query fills, and the perf HUD's headline reads `gpu` rather than `submit`
+on either backend. Subscribers (the HUD, a `debug.priceFrame()` sweep)
+come and go through `debug/gpu-timing/gpu-frame-samples.ts` while the
+resolve itself stays unconditional. Per-pass `gpu.*` rows have no WebGPU
+counterpart on purpose: three keys per-pass timestamps by an internal
+uid, and the pricing differential answers the same question without
+pinning three's internals. Detail in `debug/gpu-timing/README.md`.

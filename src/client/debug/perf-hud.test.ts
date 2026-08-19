@@ -5,13 +5,13 @@ import {
   frame,
   gpuBegin,
   gpuEnd,
-  gpuSampleSink,
   buildPerfSection,
   acquireGpuFrameSampler,
   _sectionsForTest,
 } from './perf-hud';
-import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timer';
-import { FakeGl, asGl } from './fake-gl';
+import { publishGpuFrameSample } from './gpu-timing/gpu-frame-samples';
+import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timing/gpu-timer';
+import { FakeGl, asGl } from './gpu-timing/fake-gl';
 
 describe('perf-hud / no-op API', () => {
   it('mark/measure/frame are safe to call without installing the HUD', () => {
@@ -84,6 +84,16 @@ function makeDomStub(): {
   };
 }
 
+type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
+
+/** The headline's `gpu`/`submit` segment. Headline children are
+ *  [FPS text, low span, ' ', gpu span]; the production code writes through
+ *  typed refs precisely to avoid this walk, so it lives in one place. */
+function headlineBusyText(section: { element: unknown }): string {
+  const headline = (section.element as StubNode).children[0];
+  return headline.children[3].firstChild.nodeValue;
+}
+
 describe('perf-hud / install → dispose teardown', () => {
   let prevDoc: unknown;
   let perfNowSpy: ReturnType<typeof vi.spyOn>;
@@ -122,20 +132,23 @@ describe('perf-hud / install → dispose teardown', () => {
     expect(perfNowSpy.mock.calls.length).toBe(0);
   });
 
-  it('gpuSampleSink: null while closed, records gpu.<label> while open, null again after dispose', () => {
+  it('records a published frame sample as the whole-frame scope only while open', () => {
     // The WebGPU boot has no GL timer object. animate() resolves the
-    // renderer's timestamps every frame regardless — the resolve recycles
-    // the query pool — and this sink decides whether the sample lands.
-    expect(gpuSampleSink()).toBe(null);
+    // renderer's timestamps every rendered frame regardless — the resolve
+    // is what recycles the query pool — so a sample arrives whether or not
+    // anything is listening, and an unsubscribed HUD must drop it rather
+    // than accumulate one.
+    const whole = `gpu.${GPU_WHOLE_FRAME_SCOPE}`;
+    publishGpuFrameSample(4.2);
+    expect(_sectionsForTest().has(whole)).toBe(false);
 
     const section = buildPerfSection(null);
-    const sink = gpuSampleSink();
-    expect(sink).not.toBe(null);
-    sink!('render', 4.2);
-    expect(_sectionsForTest().has('gpu.render')).toBe(true);
+    publishGpuFrameSample(4.2);
+    expect(_sectionsForTest().has(whole)).toBe(true);
 
     section.dispose();
-    expect(gpuSampleSink()).toBe(null);
+    publishGpuFrameSample(4.2);
+    expect(_sectionsForTest().has(whole)).toBe(false);
   });
 
   it('section-GC: drops labels silent for a full ring window', () => {
@@ -184,10 +197,46 @@ describe('perf-hud / install → dispose teardown', () => {
       frame();
     }
 
-    type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
-    const headline = (section.element as unknown as StubNode).children[0];
-    // Headline children: [FPS text, low span, ' ', gpu span].
-    expect(headline.children[3].firstChild.nodeValue).toBe('gpu 20.0ms');
+    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
+
+    section.dispose();
+  });
+
+  it('headline reads gpu on a WebGPU boot, where there is no GL timer at all', () => {
+    // The WebGPU resolve is a real whole-frame GPU measurement, so gating
+    // the label on "does a GpuTimer object exist" left the headline saying
+    // `submit` — CPU wall-time around the render calls — while an exact GPU
+    // number sat in the ring. Presence of the whole-frame row is the gate.
+    let clock = 0;
+    perfNowSpy.mockImplementation(() => (clock += 100));
+    const section = buildPerfSection(null);
+
+    for (let f = 0; f < 6; f++) {
+      publishGpuFrameSample(20);
+      frame();
+    }
+
+    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
+
+    section.dispose();
+  });
+
+  it('headline stays submit where no backend produces a whole-frame row', () => {
+    // Presence of `gpu.frame` is the ONLY gate. Nothing publishes here —
+    // a WebGPU adapter without timestamp-query, or WebGL2 Safari — so the
+    // headline must report CPU submission wall-time and say so, never sum
+    // the per-pass scopes into a number that can exceed the frame period.
+    let clock = 0;
+    perfNowSpy.mockImplementation(() => (clock += 100));
+    const section = buildPerfSection(null);
+
+    for (let f = 0; f < 6; f++) {
+      mark('submit.main');
+      measure('submit.main');
+      frame();
+    }
+
+    expect(headlineBusyText(section)).toBe('submit 100.0ms');
 
     section.dispose();
   });
