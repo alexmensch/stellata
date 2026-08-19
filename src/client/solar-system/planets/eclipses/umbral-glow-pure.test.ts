@@ -10,6 +10,7 @@ import {
   UMBRA_DILUTION,
   limbColumnRatio,
   limbTransmittance,
+  umbralDepthFromOffsets,
   umbralDepthRad,
   umbralGlow,
 } from './umbral-glow-pure';
@@ -158,6 +159,71 @@ describe('umbralDepthRad', () => {
   it('puts the Moon well inside Earth umbra at a central eclipse', () => {
     expect(MID_UMBRA_RAD).toBeGreaterThan(0);
     expect((MID_UMBRA_RAD * 180) / Math.PI).toBeCloseTo(0.683, 2);
+  });
+});
+
+describe('umbralDepthFromOffsets', () => {
+  it('reproduces the mid-umbra depth from the offsets a layer holds', () => {
+    // Moon at the origin, Earth one mean distance away toward the Sun. Both
+    // render layers arrive here with exactly this pair, and the value has to
+    // match the umbralDepthRad the rest of this suite is pinned against.
+    expect(
+      umbralDepthFromOffsets(
+        0, 0, MOON_DIST_KM, MOON_DIST_KM,
+        0, 0, 1,
+        earth.radiusKm, SUN_ANG_RAD,
+      ),
+    ).toBeCloseTo(MID_UMBRA_RAD, 12);
+  });
+
+  it('shallows off-axis by the miss distance', () => {
+    const offKm = 3000;
+    const dist = Math.hypot(offKm, MOON_DIST_KM);
+    const depth = umbralDepthFromOffsets(
+      offKm, 0, MOON_DIST_KM, dist,
+      0, 0, 1,
+      earth.radiusKm, SUN_ANG_RAD,
+    );
+    expect(depth).toBeLessThan(MID_UMBRA_RAD);
+    expect(depth).toBeCloseTo(
+      umbralDepthRad(earth.radiusKm / dist, offKm / dist, SUN_ANG_RAD),
+      12,
+    );
+  });
+
+  it('reports no shadow geometry when the caster is behind the body', () => {
+    // A caster on the far side from the host casts away from the body, never
+    // onto it. -Infinity is what the glow's contact gate reads as "nowhere
+    // near the umbra"; returning a plain negative depth would let the
+    // uncapped-band branch light an unshadowed body.
+    expect(
+      umbralDepthFromOffsets(
+        0, 0, -MOON_DIST_KM, MOON_DIST_KM, 0, 0, 1, earth.radiusKm, SUN_ANG_RAD,
+      ),
+    ).toBe(Number.NEGATIVE_INFINITY);
+    expect(
+      umbralDepthFromOffsets(0, 0, 0, 0, 0, 0, 1, earth.radiusKm, SUN_ANG_RAD),
+    ).toBe(Number.NEGATIVE_INFINITY);
+  });
+});
+
+describe('the glow costs nothing outside the shadow', () => {
+  it('gives nothing before penumbral contact', () => {
+    // Contact is where the caster's disc first touches the host's, at
+    // depth = -2*hostAngRad. Past it there is no shadow for this light to
+    // fill, and both layers discard it — so the 64-sample quadrature must not
+    // run. Before the gate existed it ran every frame of every non-eclipse.
+    expect(glowAt(-2 * SUN_ANG_RAD - 1e-6)).toEqual([0, 0, 0]);
+    expect(glowAt(-1)).toEqual([0, 0, 0]);
+    expect(glowAt(Number.NEGATIVE_INFINITY)).toEqual([0, 0, 0]);
+  });
+
+  it('still takes the full ring across the penumbra', () => {
+    // The penumbra deliberately has no special case: the direct beam outshines
+    // this by orders of magnitude there, and gating on totality instead put a
+    // step at the one instant the eye is watching.
+    expect(lumOf(glowAt(-2 * SUN_ANG_RAD + 1e-5))).toBeGreaterThan(0);
+    expect(lumOf(glowAt(-SUN_ANG_RAD))).toBeGreaterThan(0);
   });
 });
 

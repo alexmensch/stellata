@@ -54,7 +54,7 @@ import {
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { parentIndexOf } from '../ephemerides/orbit-descriptor';
-import { umbralDepthRad, umbralGlow } from './eclipses/umbral-glow-pure';
+import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
 import { relativeLuminance } from '../../hdr/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './glare/planet.vert.glsl?raw';
@@ -547,18 +547,15 @@ export class PlanetBodyField {
     const pz = this.localRel64[pBase + 2] - mz;
     const dParent = Math.hypot(px, py, pz);
     if (dHost <= 0 || dParent <= 0) return 0;
-    // Angular separation of host and parent centres seen from the body.
-    const along = -(px * mx + py * my + pz * mz) / dHost;
-    if (along <= 0) return 0;
-    const miss = Math.sqrt(Math.max(0, dParent * dParent - along * along)) / dParent;
-    const depth = umbralDepthRad(
-      this.bufs.radius[host.startInstance + parentIdx] / dParent,
-      miss,
-      host.hostRadiusPc / dHost,
+    const hostAngRad = host.hostRadiusPc / dHost;
+    const depth = umbralDepthFromOffsets(
+      px, py, pz, dParent,
+      -mx / dHost, -my / dHost, -mz / dHost,
+      this.bufs.radius[host.startInstance + parentIdx], hostAngRad,
     );
     const glow = umbralGlow(
       parent.atmosphere, parent.radiusKm, dParent / KM_PC,
-      host.hostRadiusPc / dHost, depth, this.tmpUmbraGlow,
+      hostAngRad, depth, this.tmpUmbraGlow,
     );
     return relativeLuminance(glow);
   }

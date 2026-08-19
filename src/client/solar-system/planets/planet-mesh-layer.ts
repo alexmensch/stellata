@@ -6,7 +6,7 @@ import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
-import { umbralDepthRad, umbralGlow } from './eclipses/umbral-glow-pure';
+import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
 import {
   meanLuminanceOf,
   requiredMapWidth,
@@ -599,20 +599,15 @@ export class PlanetMeshLayer {
     this.tmpCaster.sub(this.tmpPlanet);
     const distPc = this.tmpCaster.length();
     if (distPc <= 0) return false;
-    const parentRadiusPc = parent.radiusKm * KM_PC;
-    // Angular separation of the two centres seen from the body: the parent's
-    // offset from the host direction, small-angle.
-    const along = this.tmpCaster.dot(this.tmpSun);
-    if (along <= 0) return false;
-    const missRad = Math.sqrt(
-      Math.max(0, this.tmpCaster.lengthSq() - along * along),
-    ) / distPc;
-    const depth = umbralDepthRad(
-      parentRadiusPc / distPc, missRad, hostRadiusPc / dHpPc,
+    const hostAngRad = hostRadiusPc / dHpPc;
+    const depth = umbralDepthFromOffsets(
+      this.tmpCaster.x, this.tmpCaster.y, this.tmpCaster.z, distPc,
+      this.tmpSun.x, this.tmpSun.y, this.tmpSun.z,
+      parent.radiusKm * KM_PC, hostAngRad,
     );
     umbralGlow(
       parent.atmosphere, parent.radiusKm, distPc / KM_PC,
-      hostRadiusPc / dHpPc, depth, out,
+      hostAngRad, depth, out,
     );
     return out[0] > 0 || out[1] > 0 || out[2] > 0;
   }

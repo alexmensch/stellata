@@ -42,6 +42,10 @@ export const OZONE_SLAB_KM: readonly [number, number] = [15, 35];
  *  model error the dilution anchor already absorbs. */
 const SAMPLES = 64;
 
+/** Per-sample transmittance scratch. Both render layers evaluate the glow per
+ *  body per frame, so the quadrature must not allocate. */
+const _limbT: [number, number, number] = [0, 0, 0];
+
 /**
  * Slant column through an exponential atmosphere for a ray tangent at
  * altitude h, over the vertical column above the same point: `sqrt(2πR/H)`.
@@ -60,18 +64,15 @@ function ozoneFractionAbove(hKm: number): number {
   return Math.min(1, Math.max(0, (hi - hKm) / (hi - lo)));
 }
 
-/**
- * Per-channel transmittance of a limb path tangent at altitude `hKm`, off the
- * body's own published vertical optical depths plus ozone.
- */
-export function limbTransmittance(
+/** The altitude-independent half of `limbTransmittance`, split out so the
+ *  quadrature below hoists both square roots out of its sample loop. */
+function limbTransmittanceAt(
   atmo: PlanetAtmosphere,
-  radiusKm: number,
+  rayleighRatio: number,
+  mieRatio: number,
   hKm: number,
-  out: [number, number, number] = [0, 0, 0],
+  out: [number, number, number],
 ): [number, number, number] {
-  const rayleighRatio = limbColumnRatio(radiusKm, atmo.rayleighHeightKm);
-  const mieRatio = limbColumnRatio(radiusKm, atmo.mieHeightKm);
   const rayleigh = Math.exp(-hKm / atmo.rayleighHeightKm);
   const mie = Math.exp(-hKm / atmo.mieHeightKm);
   const ozone = ozoneFractionAbove(hKm);
@@ -84,6 +85,25 @@ export function limbTransmittance(
     out[c] = Math.exp(-tau);
   }
   return out;
+}
+
+/**
+ * Per-channel transmittance of a limb path tangent at altitude `hKm`, off the
+ * body's own published vertical optical depths plus ozone.
+ */
+export function limbTransmittance(
+  atmo: PlanetAtmosphere,
+  radiusKm: number,
+  hKm: number,
+  out: [number, number, number] = [0, 0, 0],
+): [number, number, number] {
+  return limbTransmittanceAt(
+    atmo,
+    limbColumnRatio(radiusKm, atmo.rayleighHeightKm),
+    limbColumnRatio(radiusKm, atmo.mieHeightKm),
+    hKm,
+    out,
+  );
 }
 
 /**
@@ -118,6 +138,37 @@ export function umbralDepthRad(
   hostAngRad: number,
 ): number {
   return casterAngRad - missRad - hostAngRad;
+}
+
+/**
+ * `umbralDepthRad` from the two offsets both render layers already hold: the
+ * body→caster vector and the body→host UNIT direction. Same offset-scalar shape
+ * as `eclipseDimFromOffsets`, and for the same reason — one layer holds these as
+ * `Vector3` components and the other as raw `Float64Array` reads.
+ *
+ * `-Infinity` where no shadow geometry exists at all, which the gate in
+ * `umbralGlow` reads as "nowhere near the umbra": a caster behind the body
+ * (`along <= 0`) casts away from it, never onto it.
+ */
+export function umbralDepthFromOffsets(
+  toCasterX: number,
+  toCasterY: number,
+  toCasterZ: number,
+  distToCaster: number,
+  toHostUnitX: number,
+  toHostUnitY: number,
+  toHostUnitZ: number,
+  casterRadius: number,
+  hostAngRad: number,
+): number {
+  if (distToCaster <= 0) return Number.NEGATIVE_INFINITY;
+  const along =
+    toCasterX * toHostUnitX + toCasterY * toHostUnitY + toCasterZ * toHostUnitZ;
+  if (along <= 0) return Number.NEGATIVE_INFINITY;
+  const lenSq =
+    toCasterX * toCasterX + toCasterY * toCasterY + toCasterZ * toCasterZ;
+  const missRad = Math.sqrt(Math.max(0, lenSq - along * along)) / distToCaster;
+  return umbralDepthRad(casterRadius / distToCaster, missRad, hostAngRad);
 }
 
 /**
@@ -157,6 +208,14 @@ export function umbralGlow(
   out[2] = 0;
   if (depthRad >= LIMB_REFRACTION_RAD) return out;
   if (distanceKm <= 0 || hostAngularRadiusRad <= 0) return out;
+  // Before penumbral contact there is no shadow for this light to fill, and
+  // both consumers discard it there — the mesh weights it by `1 - shadow` and
+  // the glare floors a dim of 1 with it. Contact is where the caster's disc
+  // first touches the host's, which is exactly `depth = -2·hostAngRad`. Without
+  // this the quadrature below runs every frame of every non-eclipse, since a
+  // body far from the shadow has a hugely negative depth and takes the
+  // uncapped-band branch. `!(>)` so -Infinity and NaN land here too.
+  if (!(depthRad > -2 * hostAngularRadiusRad)) return out;
 
   const uncapped =
     depthRad <= 0
@@ -165,12 +224,13 @@ export function umbralGlow(
   const hMaxKm = Math.min(uncapped, atmo.heightKm);
   if (hMaxKm <= 0) return out;
   const step = hMaxKm / SAMPLES;
-  const t: [number, number, number] = [0, 0, 0];
+  const rayleighRatio = limbColumnRatio(casterRadiusKm, atmo.rayleighHeightKm);
+  const mieRatio = limbColumnRatio(casterRadiusKm, atmo.mieHeightKm);
   for (let i = 0; i < SAMPLES; i++) {
-    limbTransmittance(atmo, casterRadiusKm, step * (i + 0.5), t);
-    out[0] += t[0] * step;
-    out[1] += t[1] * step;
-    out[2] += t[2] * step;
+    limbTransmittanceAt(atmo, rayleighRatio, mieRatio, step * (i + 0.5), _limbT);
+    out[0] += _limbT[0] * step;
+    out[1] += _limbT[1] * step;
+    out[2] += _limbT[2] * step;
   }
 
   // Ring solid angle over the host's. The band's angular thickness is its
