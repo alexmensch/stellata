@@ -30,7 +30,15 @@ import {
   type HdrEmitterUniforms,
 } from '../../hdr/hdr-pipeline';
 import { relativeLuminance } from '../../hdr/tonemap-pure';
-import { phaseAngleFor, phaseRatioToLambert } from '../phase-function';
+import {
+  phaseAngleFor,
+  phaseAngleFromLegs,
+  phaseRatioToLambert,
+} from '../phase-function';
+import {
+  ringPhaseFactor,
+  ringPlaneElevationDeg,
+} from './rings/ring-photometry-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import {
   systemFamily,
@@ -805,13 +813,25 @@ export class PlanetMeshLayer {
     ring.mesh.quaternion.copy(this.tmpQuatRing);
 
     this.tmpQuatInv.copy(this.tmpQuatRing).invert();
-    (ring.material.uniforms.uSunDirLocal.value as THREE.Vector3)
+    const sunLocal = (ring.material.uniforms.uSunDirLocal.value as THREE.Vector3)
       .copy(this.tmpSun)
       .applyQuaternion(this.tmpQuatInv);
-    (ring.material.uniforms.uCamPosLocal.value as THREE.Vector3)
+    const camLocal = (ring.material.uniforms.uCamPosLocal.value as THREE.Vector3)
       .copy(camera.position)
       .sub(this.tmpPlanet)
       .applyQuaternion(this.tmpQuatInv);
+    // Both legs meet at the planet in this frame, and +z IS the pole, so
+    // α and Mallama's β_E / β_S all read straight off them.
+    ring.material.uniforms.uRingPhaseScale.value = ringPhaseFactor(
+      planet.rings?.systemPhotometry,
+      phaseAngleFromLegs(
+        camLocal.x, camLocal.y, camLocal.z,
+        sunLocal.x, sunLocal.y, sunLocal.z,
+      ),
+      ringPlaneElevationDeg(camLocal.x, camLocal.y, camLocal.z, 0, 0, 1),
+      ringPlaneElevationDeg(sunLocal.x, sunLocal.y, sunLocal.z, 0, 0, 1),
+      planet.phaseCoefficients,
+    );
   }
 
   /** Write the shared single-scattering uniforms (planet-radius-unit base
@@ -984,6 +1004,7 @@ export class PlanetMeshLayer {
         uPolarRadiusPc: { value: planet.radiusKm * KM_PC * polarRadiusRatio(planet) },
         uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
         uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
+        uRingPhaseScale: { value: 1 },
         uFade: { value: 0 },
         uAirlightLuminance: { value: 0 },
       },

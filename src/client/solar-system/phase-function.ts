@@ -106,20 +106,34 @@ export function phaseAngleFor(
   dhy: number,
   dhz: number,
 ): number {
-  // vphHat = planet → viewer (= −view-space planet direction).
-  // hphHat = planet → host. Both normalised; cos α is the dot product.
-  const lenV = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
-  const lenHp = Math.sqrt(
-    (dhx - dvx) ** 2 + (dhy - dvy) ** 2 + (dhz - dvz) ** 2,
+  // The two legs meeting at the planet: planet → viewer (= −the
+  // viewer → planet displacement) and planet → host.
+  return phaseAngleFromLegs(
+    -dvx, -dvy, -dvz,
+    dhx - dvx, dhy - dvy, dhz - dvz,
   );
-  if (lenV <= 0 || lenHp <= 0) return 0;
-  const vphX = -dvx / lenV;
-  const vphY = -dvy / lenV;
-  const vphZ = -dvz / lenV;
-  const hphX = (dhx - dvx) / lenHp;
-  const hphY = (dhy - dvy) / lenHp;
-  const hphZ = (dhz - dvz) / lenHp;
-  const cosA = Math.max(-1, Math.min(1, vphX * hphX + vphY * hphY + vphZ * hphZ));
+}
+
+/**
+ * α from the two legs that meet AT the planet — planet → viewer and
+ * planet → host, either frame, neither needing to be normalised. The
+ * ring-local frame already holds both (`planet-mesh-layer.ts` poses the
+ * annulus there), so it reads α straight off them instead of rebuilding
+ * viewer-centred displacements. Returns 0 if either leg is degenerate.
+ */
+export function phaseAngleFromLegs(
+  vpx: number,
+  vpy: number,
+  vpz: number,
+  hpx: number,
+  hpy: number,
+  hpz: number,
+): number {
+  const lenV = Math.sqrt(vpx * vpx + vpy * vpy + vpz * vpz);
+  const lenH = Math.sqrt(hpx * hpx + hpy * hpy + hpz * hpz);
+  if (lenV <= 0 || lenH <= 0) return 0;
+  const cosA = Math.max(-1, Math.min(1,
+    (vpx * hpx + vpy * hpy + vpz * hpz) / (lenV * lenH)));
   return Math.acos(cosA);
 }
 

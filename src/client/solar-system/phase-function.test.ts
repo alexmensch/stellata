@@ -14,6 +14,7 @@ import {
   empiricalPhaseFactor,
   alphaZeroPhaseFactor,
   phaseAngleFor,
+  phaseAngleFromLegs,
   phaseFactorFor,
   phaseRatioToLambert,
   illuminatedFraction,
@@ -291,6 +292,32 @@ describe('alphaZeroPhaseFactor', () => {
       c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
     expect(alphaZeroPhaseFactor(sentinel)).toBe(1);
+  });
+});
+
+describe('phaseAngleFromLegs', () => {
+  it('is the angle between the two legs meeting at the planet', () => {
+    // Planet → viewer along +x, planet → host along +y ⇒ α = 90°.
+    expect(phaseAngleFromLegs(1, 0, 0, 0, 1, 0)).toBeCloseTo(Math.PI / 2, 12);
+    expect(phaseAngleFromLegs(1, 0, 0, 1, 0, 0)).toBe(0);
+    expect(phaseAngleFromLegs(1, 0, 0, -1, 0, 0)).toBeCloseTo(Math.PI, 12);
+  });
+
+  it('ignores leg lengths — only the directions matter', () => {
+    expect(phaseAngleFromLegs(7, 0, 0, 0, 0.001, 0))
+      .toBeCloseTo(phaseAngleFromLegs(1, 0, 0, 0, 1, 0), 12);
+  });
+
+  it('agrees with the viewer-centred phaseAngleFor it backs', () => {
+    // Viewer at the origin, planet at (1,0,0), host at (1,1,0): the legs
+    // meeting at the planet are (-1,0,0) and (0,1,0).
+    expect(phaseAngleFor(1, 0, 0, 1, 1, 0))
+      .toBeCloseTo(phaseAngleFromLegs(-1, 0, 0, 0, 1, 0), 12);
+  });
+
+  it('is 0 for a degenerate leg rather than NaN', () => {
+    expect(phaseAngleFromLegs(0, 0, 0, 0, 1, 0)).toBe(0);
+    expect(phaseAngleFromLegs(1, 0, 0, 0, 0, 0)).toBe(0);
   });
 });
 
