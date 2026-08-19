@@ -40,7 +40,8 @@ import {
 } from '../planet-system';
 import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
 import {
-  poleRaDecDegAt,
+  poleRaDecDegInto,
+  type PoleRaDec,
   type RotationElements,
   spinDegAt,
 } from './rotation/rotation-elements-pure';
@@ -140,6 +141,7 @@ export const POLE_TILT = new THREE.Quaternion().setFromAxisAngle(
 
 const _iauTmpA = new THREE.Quaternion();
 const _iauTmpB = new THREE.Quaternion();
+const _iauPole: PoleRaDec = { raDeg: 0, decDeg: 0 };
 
 /** IAU pole frame `Rz(90°+α0)·Rx(90°−δ0)` at model time `t` → `out`. */
 export function iauPoleQuat(
@@ -147,7 +149,7 @@ export function iauPoleQuat(
   t: number,
   out: THREE.Quaternion,
 ): THREE.Quaternion {
-  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
+  const { raDeg, decDeg } = poleRaDecDegInto(rot, t, _iauPole);
   return out
     .setFromAxisAngle(Z_AXIS, THREE.MathUtils.degToRad(90 + raDeg))
     .multiply(_iauTmpA.setFromAxisAngle(X_AXIS, THREE.MathUtils.degToRad(90 - decDeg)));

@@ -54,17 +54,22 @@ export interface RotationTerm {
 }
 
 /** Σ over a body's terms, in degrees, for one element. `phase` picks sine
- *  (RA and W) or cosine (Dec) — the IAU convention above. */
+ *  (RA and W) or cosine (Dec) — the IAU convention above.
+ *
+ *  The element is NAMED rather than reached through an accessor, and `phase`
+ *  takes `Math.sin` / `Math.cos` themselves: the mesh layer evaluates all three
+ *  of these per body per frame, so a closure built per call is per-frame
+ *  garbage on a render path. */
 function periodicSum(
   terms: readonly RotationTerm[] | undefined,
   T: number,
-  pick: (term: RotationTerm) => number | undefined,
+  elem: 'raDeg' | 'decDeg' | 'wDeg',
   phase: (rad: number) => number,
 ): number {
   if (terms === undefined) return 0;
   let sum = 0;
   for (const term of terms) {
-    const amp = pick(term);
+    const amp = term[elem];
     if (amp === undefined) continue;
     sum += amp * phase((term.theta0Deg + term.thetaDegPerCty * T) * DEG);
   }
@@ -192,7 +197,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 64.51, poleDecDegPerCty: 0.003,
     w0Deg: 36.022, wDegPerDay: 101.3747235,
     mapCenterLonDeg: 180,
-     // J4, the 30 yr Jovian-system term.
+    // J4, the 30 yr Jovian-system term.
     terms: [
       { raDeg: 1.086, decDeg: 0.468, wDeg: -0.98, theta0Deg: 355.8, thetaDegPerCty: 1191.3 },
     ],
@@ -202,7 +207,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 64.57, poleDecDegPerCty: 0.003,
     w0Deg: 44.064, wDegPerDay: 50.3176081,
     mapCenterLonDeg: 180,
-     // J5, 137 yr.
+    // J5, 137 yr.
     terms: [
       { raDeg: 0.431, decDeg: 0.186, wDeg: -0.389, theta0Deg: 119.9, thetaDegPerCty: 262.1 },
     ],
@@ -212,7 +217,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 64.83, poleDecDegPerCty: 0.003,
     w0Deg: 259.51, wDegPerDay: 21.5710715,
     mapCenterLonDeg: 180,
-     // J6, 560 yr.
+    // J6, 560 yr.
     terms: [
       { raDeg: 0.59, decDeg: 0.254, wDeg: -0.533, theta0Deg: 229.8, thetaDegPerCty: 64.3 },
     ],
@@ -222,7 +227,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
     w0Deg: 333.46, wDegPerDay: 381.9945550,
     mapCenterLonDeg: 180,
-     // S3 and S5. The largest librations anywhere in the table: a 13.6 deg pole
+    // S3 and S5. The largest librations anywhere in the table: a 13.6 deg pole
     // swing on an annual period, and a 44.9 deg prime-meridian term on 71 yr.
     // Mimas without these is pointed the wrong way, not slightly off.
     terms: [
@@ -241,7 +246,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
     w0Deg: 8.95, wDegPerDay: 190.6979085,
     mapCenterLonDeg: 180,
-     // S4 (5 yr) and S5 (71 yr).
+    // S4 (5 yr) and S5 (71 yr).
     terms: [
       { raDeg: 9.66, decDeg: -1.09, wDeg: -9.6, theta0Deg: 300.0, thetaDegPerCty: -7225.9 },
       { wDeg: 2.23, theta0Deg: 316.45, thetaDegPerCty: 506.2 },
@@ -258,7 +263,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 83.55, poleDecDegPerCty: -0.004,
     w0Deg: 235.16, wDegPerDay: 79.6900478,
     mapCenterLonDeg: 180,
-     // S6, 35 yr.
+    // S6, 35 yr.
     terms: [
       { raDeg: 3.1, decDeg: -0.35, wDeg: -3.08, theta0Deg: 345.2, thetaDegPerCty: -1016.3 },
     ],
@@ -305,7 +310,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 41.17, poleDecDegPerCty: 0,
     w0Deg: 296.53, wDegPerDay: -61.2572637,
     mapCenterLonDeg: 180,
-     // N1-N6 harmonics of Neptune's 688 yr pole precession. The whole series is
+    // N1-N6 harmonics of Neptune's 688 yr pole precession. The whole series is
     // the largest in the table by amplitude — the leading term alone swings
     // the pole 32 deg in RA and 23 deg in Dec, because Triton's orbit is
     // dragged around by Neptune's oblateness on that period.
@@ -320,23 +325,44 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
   }],
 ]);
 
+/** The pole pair, as `poleRaDecDegInto` fills it. */
+export interface PoleRaDec {
+  raDeg: number;
+  decDeg: number;
+}
+
+/** Pole RA/Dec (deg, ICRS) at Unix-seconds `t`, into `out`. The form the
+ *  render path takes — the mesh orientation runs it per body per frame and
+ *  reads the pair straight back out. */
+export function poleRaDecDegInto(
+  rot: RotationElements,
+  t: number,
+  out: PoleRaDec,
+): PoleRaDec {
+  if (rot.orientationModel) {
+    const model = rot.orientationModel.poleRaDecDeg(t);
+    out.raDeg = model.raDeg;
+    out.decDeg = model.decDeg;
+    return out;
+  }
+  const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
+  out.raDeg =
+    rot.poleRaDeg
+    + rot.poleRaDegPerCty * T
+    + periodicSum(rot.terms, T, 'raDeg', Math.sin);
+  out.decDeg =
+    rot.poleDecDeg
+    + rot.poleDecDegPerCty * T
+    + periodicSum(rot.terms, T, 'decDeg', Math.cos);
+  return out;
+}
+
 /** Pole RA/Dec (deg, ICRS) at Unix-seconds `t`. */
 export function poleRaDecDegAt(
   rot: RotationElements,
   t: number,
-): { raDeg: number; decDeg: number } {
-  if (rot.orientationModel) return rot.orientationModel.poleRaDecDeg(t);
-  const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
-  return {
-    raDeg:
-      rot.poleRaDeg
-      + rot.poleRaDegPerCty * T
-      + periodicSum(rot.terms, T, (term) => term.raDeg, Math.sin),
-    decDeg:
-      rot.poleDecDeg
-      + rot.poleDecDegPerCty * T
-      + periodicSum(rot.terms, T, (term) => term.decDeg, Math.cos),
-  };
+): PoleRaDec {
+  return poleRaDecDegInto(rot, t, { raDeg: 0, decDeg: 0 });
 }
 
 /** Prime-meridian angle W (deg, wrapped to [0, 360)) at Unix-seconds
@@ -349,13 +375,13 @@ export function spinDegAt(rot: RotationElements, t: number): number {
     ? rot.orientationModel.spinDeg(t)
     : rot.w0Deg
       + rot.wDegPerDay * days
-      + periodicSum(
-          rot.terms, days / DAYS_PER_JULIAN_CENTURY,
-          (term) => term.wDeg, Math.sin,
-        );
+      + periodicSum(rot.terms, days / DAYS_PER_JULIAN_CENTURY, 'wDeg', Math.sin);
   const w = raw % 360;
   return w < 0 ? w + 360 : w;
 }
+
+/** Scratch for the accessors below that only read the pair back out. */
+const _poleScratch: PoleRaDec = { raDeg: 0, decDeg: 0 };
 
 /** Pole unit vector in ICRS cartesian (x → vernal equinox, z → NCP). */
 export function poleVectorAt(
@@ -363,9 +389,9 @@ export function poleVectorAt(
   t: number,
   out: { x: number; y: number; z: number },
 ): void {
-  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
-  const ra = raDeg * DEG;
-  const dec = decDeg * DEG;
+  poleRaDecDegInto(rot, t, _poleScratch);
+  const ra = _poleScratch.raDeg * DEG;
+  const dec = _poleScratch.decDeg * DEG;
   out.x = Math.cos(dec) * Math.cos(ra);
   out.y = Math.cos(dec) * Math.sin(ra);
   out.z = Math.sin(dec);
