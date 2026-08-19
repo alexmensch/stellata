@@ -48,9 +48,13 @@ subfolders.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `perceptual-disc.glsl` — super-Gaussian disc/glow chunk, shared with
   `../solar-system/planets/glare/planet.frag.glsl` so stars and planet
-  bodies run the same brightness-PSF saturation physics. Stars use the full
-  disc + glow + core-mask trio; planet bodies use the **glow profile
-  only**. See `../solar-system/planets/glare/README.md`.
+  bodies run the same brightness-PSF saturation physics. Which passes each
+  uses: `../solar-system/planets/glare/README.md`.
+- `perceptual-disc-pure.ts` + `perceptual-disc-flux-pure.ts` (+ tests) —
+  the chunk's **one** CPU mirror (dmEff / appSizePx / exponent / profile
+  + divisor guards) and the kernel's area integral `Φ(n)`. The pick path,
+  planet body field, and the port's TSL graph compose over them rather
+  than re-deriving.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms
   the chunk consumes. `buildSharedUniforms` `satisfies` this
   interface, and
@@ -308,9 +312,8 @@ any disc-pass star mirrors into the bracketed pass
 pair separations natively and whose repaint over the finished frame
 occludes main-pass glow by construction.
 
-The defensive write above costs all three passes their early-z, and the
-redesign that recovers it is the star layer's port contract:
-`../webgpu/README.md` § Early-z.
+That write costs all three passes their early-z; the redesign recovering
+it is `../webgpu/README.md` § Early-z.
 
 ## Physical-size rendering
 

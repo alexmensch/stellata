@@ -38,11 +38,11 @@ import {
   planetLocalPosition,
   solidityForType,
 } from '../ephemerides/orbit-rings-layer';
+import { planetApparentMagnitude } from '../perceptual-magnitude';
 import {
   perceptualAppSizePx,
   perceptualDmEff,
-  planetApparentMagnitude,
-} from '../perceptual-magnitude';
+} from '../../star-pipeline/perceptual-disc-pure';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';

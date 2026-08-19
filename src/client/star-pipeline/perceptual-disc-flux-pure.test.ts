@@ -6,9 +6,9 @@ import {
   KERNEL_FLUX_FIT,
   KERNEL_FLUX_FIT_N_MAX,
   KERNEL_FLUX_FIT_N_MIN,
-  perceptualDiscExponent,
   perceptualDiscFluxIntegral,
 } from './perceptual-disc-flux-pure';
+import { perceptualDiscExponent } from './perceptual-disc-pure';
 
 const { visibleThreshold, distNMin, distNMax, lumBiasMin, lumBiasMax } = STAR_RENDER_DEFAULTS;
 const visibleK = -Math.log(visibleThreshold);

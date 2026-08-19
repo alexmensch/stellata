@@ -1,28 +1,6 @@
-// The perceptual-disc kernel's exponent and its area integral — what turns
-// the peak-normalised display kernel into a flux-correct one. CPU mirror of
-// perceptual-disc.glsl; see that chunk's header for the profile itself.
-
-/** Super-Gaussian exponent the profile runs at. Extracted so a caller that
- *  needs the kernel's area integral gets the same `n` the profile shaped
- *  itself with, rather than re-deriving the morph. */
-export function perceptualDiscExponent(
-  softness: number,
-  physRatio: number,
-  distNMin: number,
-  distNMax: number,
-  lumBiasMin: number,
-  lumBiasMax: number,
-): number {
-  const t = smoothstep01(physRatio / 0.5);
-  const distN = distNMin + (distNMax - distNMin) * t;
-  const lumBias = lumBiasMin + (lumBiasMax - lumBiasMin) * softness;
-  return distN * lumBias;
-}
-
-function smoothstep01(x: number): number {
-  const t = Math.min(1, Math.max(0, x));
-  return t * t * (3 - 2 * t);
-}
+// The perceptual-disc kernel's area integral — what turns the
+// peak-normalised display kernel into a flux-correct one. The kernel
+// itself is ./perceptual-disc-pure.ts.
 
 /**
  * Coefficients of `perceptualDiscFluxIntegral`, in ascending powers of
