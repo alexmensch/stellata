@@ -315,8 +315,9 @@ crossfade.
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
-    the disc-integrated output to the body's measured Mallama curve —
-    Venus's forward-scattered crescent brightens where the data says.
+    the disc-integrated output to the body's measured phase curve —
+    Venus's forward-scattered crescent brightens where the data says,
+    and the Moon's half phase darkens 1.36 mag onto the lunar law.
     A pure function of phase angle (1 at α = 0); an appMag match was
     rejected: it depends on viewer distance and blows out on approach.
     It multiplies **every** reflected term, terrain interreflection

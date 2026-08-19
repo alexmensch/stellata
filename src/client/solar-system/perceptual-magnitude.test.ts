@@ -7,6 +7,7 @@ import {
   perceptualAppSizePx,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
+import { MOON_PHASE, lambertianPhaseFactor, empiricalPhaseFactor } from './phase-function';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 
 describe('apparentMagnitude', () => {
@@ -235,6 +236,22 @@ describe('planetApparentMagnitude', () => {
       1,
     );
     expect(m).toBeCloseTo(-12.7, 1);
+  });
+
+  it('the Moon runs the whole lunation on its own curve, anchor untouched', () => {
+    // End-to-end through MOON_PHASE rather than a hand-passed φ: the
+    // −12.74 anchor survives because the law has c0 = 0, and the half
+    // Moon lands 1.36 mag fainter than the Lambert sphere it used to
+    // render as.
+    const moonMag = (phi: number): number => planetApparentMagnitude(
+      SUN_ABSMAG_V, 384_400 * KM_PC, AU_PC, 0.12, 1737.4 * KM_PC, phi,
+    );
+    expect(moonMag(empiricalPhaseFactor(MOON_PHASE, 0))).toBeCloseTo(-12.7, 1);
+
+    const half = Math.PI / 2;
+    const onCurve = moonMag(empiricalPhaseFactor(MOON_PHASE, half));
+    const onLambert = moonMag(lambertianPhaseFactor(half));
+    expect(onCurve - onLambert).toBeCloseTo(1.36, 2);
   });
 });
 

@@ -16,6 +16,7 @@ import {
   JUPITER_PHASE,
   MARS_PHASE,
   MERCURY_PHASE,
+  MOON_PHASE,
   SATURN_PHASE,
   VENUS_PHASE,
 } from './phase-function';
@@ -206,6 +207,15 @@ describe('SOL_PLANETS data', () => {
       } else {
         expect(p.phaseCoefficients).toBe(expected[p.name]);
       }
+    }
+  });
+
+  it('the Moon is the one moon carrying a phase curve', () => {
+    // Why the others do not: docs/science-solar-system.md
+    // § Why no other moon carries one.
+    for (const m of SOL_MOONS) {
+      if (m.name === 'Moon') expect(m.phaseCoefficients).toBe(MOON_PHASE);
+      else expect(m.phaseCoefficients).toBeUndefined();
     }
   });
 

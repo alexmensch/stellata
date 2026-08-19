@@ -36,7 +36,7 @@ same `p` that anchors the −12.7 flux; both are vitest-pinned.
 
 **Phase is carried once, by the shading.** `S₀` deliberately excludes
 φ(α): the shader's own Lambert terminator integrates to φ_Lambert on its
-own, and `uPhaseScale` corrects that to the body's measured Mallama
+own, and `uPhaseScale` corrects that to the body's measured empirical
 curve. Folding φ into the anchor as well would count it twice.
 
 **Surface relief carries no renormalisation, and that is measured rather
@@ -71,20 +71,15 @@ and the direct term alike, so it cancels in the ratio these magnitudes are. That
 is only true because the shader applies it to both; off the fill alone the
 fourth column would understate the term by 1/`uPhaseScale`, up to 4× on Mercury.
 
-Nothing bounds the residual on
-the Moon — the body carries no `phaseCoefficients`, so `uPhaseScale` is pinned
-at 1 and neither Mallama's curve nor its [¼, 4] clamp is in the picture — but
-by 170° the disc is at 1.5 % of full brightness. A correction term here would
-be a fitted quantity sitting on top of a closed form.
-
-**What this settles for `stellata-2f6.51`.** Honest terrain shadowing moves
-the half-phase disc by **−0.002 mag**, so essentially none of the Moon's
-~1.4 mag over-brightness at half phase is macroscopic terrain: the missing
-physics is sub-texel regolith roughness and the opposition surge, below any
-DEM. The two corrections therefore cannot double-count, and 2f6.51 inherits
-the full deficit rather than a partly-closed one. On a body that DOES carry a
-measured curve, relief and Mallama would double-count the same roughness past
-150°, and the clamp bounds what is left.
+The Moon now carries a curve of its own, so past 150° its `uPhaseScale`
+freezes at the αmax anchor (0.288) and the [¼, 4] clamp bounds what relief
+and the curve could otherwise double-count — the two describe the same
+roughness there. Below 150° they do not overlap: honest terrain shadowing
+moves the half-phase disc by **−0.002 mag** against a ~1.4 mag deficit, so
+what the lunar law corrects is sub-texel regolith roughness and the
+opposition surge, below any DEM. That measurement is why the Moon's curve
+could be fitted to the full deficit rather than a partly-closed one
+(`../../phase-function.ts:MOON_PHASE`).
 
 `../surface-relief/README.md` owns which terms the perturbed normal reaches.
 

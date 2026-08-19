@@ -35,7 +35,7 @@ If one clamps inputs, the other clamps. If one asserts a bit budget,
 the other asserts. If one logs on degenerate input, the other logs.
 Asymmetry invites "I'll just call X — same shape" mistakes downstream.
 
-Representative finding: `mallamaPhaseFactor` didn't clamp α while
+Representative finding: `empiricalPhaseFactor` didn't clamp α while
 `lambertianPhaseFactor` did. The sibling pair needs to clamp
 identically or document the asymmetry as intentional.
 

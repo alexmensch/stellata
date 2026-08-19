@@ -182,8 +182,9 @@ out of scope. Parent gravitational parameters GM (Kepler III → a moon's
 period) live on the parent `Planet` entries. The resolver
 (`moonOffsetEcliptic`) Kepler-solves each moon in its reference plane
 and rotates it into the ecliptic; `earthMoonSplit` divides Standish's
-Earth–Moon barycentre into Earth-centre and Moon. Rendering, orbit
-rings, and phase are layered on in later work.
+Earth–Moon barycentre into Earth-centre and Moon. Phase photometry is
+per-body: only the Moon carries a measured curve (§ Planet phase
+functions), the rest render Lambertian.
 
 **Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic
@@ -271,6 +272,31 @@ instead), Pluto because the paper doesn't cover it. Those three —
 and every future exoplanet — fall back to the Lambertian phase
 function `φ(α) = (sin α + (π − α)·cos α)/π`. See
 `src/client/solar-system/phase-function.ts` for the per-planet coefficients.
+
+**The Moon's phase curve.** Mallama 2018 covers planets only, so Earth's
+Moon takes the classic lunar phase law from Allen's *Astrophysical
+Quantities*: `m = −12.73 + 1.49·|φ| + 0.043·φ⁴` for φ in radians, which
+in the ΔV(α°) form the renderer stores is
+`ΔV = 0.026·α + 4e-9·α⁴`, valid to α ≈ 150°. It reproduces the measured
+full-to-quarter brightness ratio of ~11×, against the 3.14× a Lambertian
+sphere predicts — a regolith surface is far darker off full phase than a
+diffuse one, and the gap peaks at 1.54 mag near α = 120°. Because c0 = 0
+the −12.74 full-Moon calibration is untouched; the opposition surge
+inside ~5° is sharper than the linear term, which averages over it.
+The curve's ratio to Lambert dips to 0.238 near α = 129°, just under the
+shared `PHASE_RATIO_MIN` floor on the mesh scalar, costing at most
+0.055 mag over α ∈ [112°, 141°] — an order of magnitude less than
+Mercury already loses to the same floor.
+
+**Why no other moon carries one.** The Moon is the only body in
+`MOON_PHYSICAL` whose phase curve is measured across the range a camera
+can occupy, because it is the only one Earth sees at every phase. Every
+other in-scope moon is observed from Earth within a few degrees of full
+— the Galileans reach α ≈ 12°, Jupiter's own bound — so a published
+curve would be an extrapolation everywhere the user actually flies, and
+the renderer would anchor-scale it back to Lambert past its αmax anyway.
+Those moons keep the Lambertian fallback, for the same reason Uranus and
+Neptune do.
 
 **Orbital plane orientation.** Sol's planet system is rendered in its
 native ecliptic plane (J2000 obliquity ε = 23.4392911°), so the ring
