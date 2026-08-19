@@ -63,10 +63,14 @@ def sky_view_factor(elev: np.ndarray, spec: dict) -> tuple[np.ndarray, dict]:
     ang = horizon_angles(
         elev, spec, HORIZON_AZIMUTHS, w_dem, (near_bound(w_dem), search_arc(spec))
     )
-    s = np.maximum(np.sin(ang), 0.0)
+    # In place, and that is load-bearing rather than terse: the march is at the
+    # DEM's own width, so `ang` is 1.07 GB of float32 on Earth and each
+    # out-of-place step would hold a second copy of it.
+    np.sin(ang, out=ang)
+    np.maximum(ang, 0.0, out=ang)
+    ang *= ang
+    factor = box_reduce(ang.mean(axis=2), sky_view_target_w(spec))
     del ang
-    factor = box_reduce((s * s).mean(axis=2), sky_view_target_w(spec))
-    del s
 
     h, w = factor.shape
     lat = np.radians(90.0 - (np.arange(h) + 0.5) * 180.0 / h)

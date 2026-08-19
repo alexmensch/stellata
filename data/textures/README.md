@@ -225,6 +225,29 @@ Moon treatments:
 The remaining hand treatments live in `build-textures.py` (`DESATURATE`,
 gap-fill + flip helpers).
 
+### The disc colour is the same quantity, and only the moons are on it
+
+`Planet.colour` in `src/client/solar-system/planet-system.ts` is a **second**
+rendering of a body's disc-integrated colour: it tints the reflected-glare
+billboard at every distance (`iColour`), and it shades the mesh as `uColour`
+until the map arrives. So a body whose map is calibrated and whose disc colour
+is not changes hue the moment its texture lands — which reads as a texture bug,
+not as a stale constant.
+
+The **eight calibrated moons are pinned to their own target** by
+`scripts/textures/texture-colours.test.ts`, at each body's existing relative
+luminance so only hue moved. Titan was the worst offender at 16 % off its
+measured chromaticity, which is the same hand-picked orange the retired tint
+applied; Io, Europa, Callisto and Rhea were 7–9 % off.
+
+**The planets are NOT pinned, and diverge further** — Mars by 83 % in the red
+channel, Earth 33 %, Venus 24 %. That is older than the satellite work and is
+deliberately left alone here: `Planet.colour` also carries brightness, because
+the planet glare passes it to the shader unnormalised where the star pipeline
+divides its own colour to relative luminance 1 (`star.vert.glsl:ciToColor`).
+Aligning the planets means settling that asymmetry first and re-eyeing six
+bodies, so it is tracked rather than smuggled in — `stellata-2f6.63`.
+
 ## Rebuilding
 
 ```
