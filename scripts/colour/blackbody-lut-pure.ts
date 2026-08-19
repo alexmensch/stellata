@@ -14,15 +14,27 @@ export const BV_MAX = 2.0;
 
 // ---- Ballesteros 2012 ---------------------------------------------------
 
+/** The relation's coefficients. Three implementations read them: the two
+ *  functions below, `star.vert.glsl`'s `ballesterosBvFromTeff` (literals,
+ *  held against these by `ballesteros-glsl-drift.test.ts`), and the TSL
+ *  graph in `src/client/webgpu/star/star-glow-tsl.ts` (imports them). */
+export const BALLESTEROS_T0 = 4600.0;
+export const BALLESTEROS_BV_SCALE = 0.92;
+/** Linear coefficient of the inverse's quadratic, and the k² coefficient
+ *  of its discriminant — `1.7 + 0.62` and `(1.7 − 0.62)²`, written out
+ *  rather than derived so every mirror carries the same float64 literal. */
+export const BALLESTEROS_QUAD_LINEAR = 2.32;
+export const BALLESTEROS_DISC_K2 = 1.1664;
+
 /**
  * Ballesteros 2012 empirical relation: B-V → Teff in Kelvin.
  *
  *   Teff = 4600 × ( 1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62) )
  */
 export function ballesterosTeff(bv: number): number {
-  const a = 0.92 * bv + 1.7;
-  const b = 0.92 * bv + 0.62;
-  return 4600.0 * (1.0 / a + 1.0 / b);
+  const a = BALLESTEROS_BV_SCALE * bv + 1.7;
+  const b = BALLESTEROS_BV_SCALE * bv + 0.62;
+  return BALLESTEROS_T0 * (1.0 / a + 1.0 / b);
 }
 
 /**
@@ -30,14 +42,13 @@ export function ballesterosTeff(bv: number): number {
  * positive root of the quadratic that recovers `u = 0.92 · bv` from
  * `T = 4600 · (2u + 2.32) / (u² + 2.32u + 1.054)`. Discriminant
  * `4 + 1.1664·k²` is always positive (k = T/4600), so the inverse is
- * defined for all Teff > 0. Mirrored byte-for-byte in star.vert.glsl —
- * keep the two in sync.
+ * defined for all Teff > 0.
  */
 export function ballesterosBvFromTeff(teff: number): number {
-  const k = teff / 4600.0;
-  const disc = Math.sqrt(4.0 + 1.1664 * k * k);
-  const u = (2.0 - 2.32 * k + disc) / (2.0 * k);
-  return u / 0.92;
+  const k = teff / BALLESTEROS_T0;
+  const disc = Math.sqrt(4.0 + BALLESTEROS_DISC_K2 * k * k);
+  const u = (2.0 - BALLESTEROS_QUAD_LINEAR * k + disc) / (2.0 * k);
+  return u / BALLESTEROS_BV_SCALE;
 }
 
 /** B-V value at LUT index i ∈ [0, LUT_SIZE-1]. Endpoints map to BV_MIN / BV_MAX. */

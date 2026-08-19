@@ -10,6 +10,9 @@ import {
 } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import type * as THREE from 'three';
+import {
+  BALLESTEROS_BV_SCALE, BALLESTEROS_DISC_K2, BALLESTEROS_QUAD_LINEAR, BALLESTEROS_T0,
+} from '../../../../scripts/colour/blackbody-lut-pure';
 import { BV_MAX, BV_MIN } from '../../star-pipeline/blackbody-lut';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
@@ -28,13 +31,11 @@ import {
 
 type NF = Node<'float'>;
 
-// Analytic inverse of Ballesteros 2012, mirroring `ballesterosBvFromTeff`
-// in scripts/colour/blackbody-lut-pure.ts — keep the two in sync.
 const ballesterosBvFromTeffTsl = /* @__PURE__ */ Fn(([teff]: [NF]) => {
-  const k = teff.div(4600.0);
-  const disc = sqrt(k.mul(k).mul(1.1664).add(4.0));
-  const u = float(2.0).sub(k.mul(2.32)).add(disc).div(k.mul(2.0));
-  return u.div(0.92);
+  const k = teff.div(BALLESTEROS_T0);
+  const disc = sqrt(k.mul(k).mul(BALLESTEROS_DISC_K2).add(4.0));
+  const u = float(2.0).sub(k.mul(BALLESTEROS_QUAD_LINEAR)).add(disc).div(k.mul(2.0));
+  return u.div(BALLESTEROS_BV_SCALE);
 });
 
 export interface StarGlowTslDeps {
