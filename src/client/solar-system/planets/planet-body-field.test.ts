@@ -16,9 +16,17 @@ import {
   SATURN_PHASE,
   VENUS_PHASE,
   alphaZeroPhaseFactor,
+  phaseAngleFor,
   phaseFactorFor,
 } from '../phase-function';
 import { planetApparentMagnitude } from '../perceptual-magnitude';
+import {
+  SATURN_RING_PHOTOMETRY,
+  maxRingSystemFluxFactor,
+  ringPlaneElevationDeg,
+  ringSystemFluxFactor,
+} from './rings/ring-photometry-pure';
+import { SATURN_ROTATION, poleVectorAt } from './rotation/rotation-elements-pure';
 import {
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
@@ -379,12 +387,14 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('alphaZeroPhaseFactor widens cullDistance for Saturn-style hosts', () => {
-    // Saturn's c0 = -0.55 ⇒ alphaZeroPhaseFactor ≈ 1.66, ⇒ cull widens by
-    // √1.66 ≈ 1.29×. A future refactor that drops the
-    // alphaZeroPhaseFactor multiplication on the grounds that φ ≤ 1 would
-    // silently re-narrow Saturn's cull and Mercury would vanish at
-    // distances where it should still render — pin the widening.
+  it('the ring term widens cullDistance at its MAXIMUM opening', () => {
+    // Saturn's ring system reaches 2.43x the globe's flux at maximum
+    // opening and opposition ⇒ cull widens by √2.43 ≈ 1.56×. The bound
+    // has to be the maximum, not the current tilt: a Saturn evaluated
+    // near a ring-plane crossing would otherwise be culled at a distance
+    // it becomes visible from as the rings open. A refactor that drops
+    // the multiplication on the grounds that φ ≤ 1 re-narrows it
+    // silently — pin the widening.
     const baseR = 6000 * KM_PC;
     const aPc = 1 * AU_PC;
     const baseRefl = 0.5 * (baseR / aPc) ** 2;
@@ -399,8 +409,8 @@ describe('PlanetBodyField lifecycle', () => {
       0,
       0,
     );
-    // Saturn-coefs planet (same albedo / R / a) → cull widened by
-    // √alphaZeroPhaseFactor(SATURN_PHASE).
+    // Ringed planet (same albedo / R / a) → cull widened by
+    // √maxRingSystemFluxFactor.
     f.attachHost(
       1,
       {
@@ -410,6 +420,11 @@ describe('PlanetBodyField lifecycle', () => {
             semiMajorAxisAu: 1,
             radiusKm: 6000,
             phaseCoefficients: SATURN_PHASE,
+            rings: {
+              innerRadiusKm: 7000,
+              outerRadiusKm: 14000,
+              systemPhotometry: SATURN_RING_PHOTOMETRY,
+            },
           }),
         ],
       },
@@ -423,14 +438,17 @@ describe('PlanetBodyField lifecycle', () => {
     const hosts = (f as any).hosts as Map<number, { cullDistance: number }>;
     const dBare = hosts.get(0)!.cullDistance;
     const dSaturn = hosts.get(1)!.cullDistance;
-    const expectedRatio = Math.sqrt(alphaZeroPhaseFactor(SATURN_PHASE));
+    const ringMax = maxRingSystemFluxFactor(SATURN_RING_PHOTOMETRY, SATURN_PHASE);
+    const expectedRatio = Math.sqrt(ringMax);
     expect(dSaturn / dBare).toBeCloseTo(expectedRatio, 6);
-    // Sanity bound — the widening is non-trivial (~1.29×).
-    expect(expectedRatio).toBeGreaterThan(1.25);
-    expect(expectedRatio).toBeLessThan(1.35);
-    // And the cull derivation matches `cullDistancePc` directly.
+    // Sanity bound — the widening is non-trivial (~1.56×).
+    expect(expectedRatio).toBeCloseTo(1.559, 3);
+    // And the cull derivation matches `cullDistancePc` directly. The
+    // globe curve contributes nothing: it is albedo-anchored, so
+    // alphaZeroPhaseFactor is 1.
+    expect(alphaZeroPhaseFactor(SATURN_PHASE)).toBe(1);
     expect(dSaturn).toBeCloseTo(
-      cullDistancePc(4.83, baseRefl * alphaZeroPhaseFactor(SATURN_PHASE), cullMagFor(6.5)),
+      cullDistancePc(4.83, baseRefl * ringMax, cullMagFor(6.5)),
       6,
     );
     f.dispose();
@@ -658,13 +676,14 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only iLocalRel — the static attributes stay clean per frame', () => {
+  it('update() flushes only what it wrote — the statics stay clean per frame', () => {
     // At hundreds-of-hosts scale, per-frame re-uploads of the static
     // attributes (iRadiusPc, iColour, iSolidity, iAlbedoP, iHostAbsmag,
     // iPhaseCoefsA/B/C, iHostLocalPos) would be measurable wasted bus
-    // bandwidth. Pin the dynamic-only flush: after attach (which
-    // legitimately touches every attribute) a single update() tick
-    // only flips iLocalRel (the planet positions tick).
+    // bandwidth. Pin the write-gated flush: after attach (which
+    // legitimately touches every attribute) a single update() tick over
+    // a ringless planet only flips iLocalRel (the positions tick), and
+    // iRingBoost stays quiescent with nothing to boost.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -694,10 +713,115 @@ describe('PlanetBodyField lifecycle', () => {
     camera.position.set(0, 0, 0);
     f.update(camera, 1, 0);
     // Only iLocalRel should have been touched. iHostLocalPos / iRadiusPc /
-    // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C stay
-    // quiescent.
+    // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C /
+    // iRingBoost stay quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
     expect(flagged.size).toBe(1);
+    f.dispose();
+  });
+
+  it('update() flushes iRingBoost, and appMag folds the joint law', () => {
+    // The ring term is β-dependent, so unlike the phase polynomial it
+    // cannot ride a static attribute — the CPU evaluates it per frame
+    // against the live camera and ships one multiplier per instance.
+    const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
+    const ringed = makePlanet({
+      radiusKm: 60000,
+      semiMajorAxisAu: 9.5,
+      phaseCoefficients: SATURN_PHASE,
+      rotation: SATURN_ROTATION,
+      rings: {
+        innerRadiusKm: 74510,
+        outerRadiusKm: 140390,
+        systemPhotometry: SATURN_RING_PHOTOMETRY,
+      },
+    });
+    const pole = { x: 0, y: 0, z: 0 };
+    poleVectorAt(SATURN_ROTATION, 0, pole);
+    // Expected factor at an arbitrary vantage, from the pole directly —
+    // the physics itself is pinned in rings/ring-photometry-pure.test.ts.
+    const expectedFactor = (cam: THREE.Vector3): number => {
+      const dv = planetPos.clone().sub(cam);
+      return ringSystemFluxFactor(
+        SATURN_RING_PHOTOMETRY,
+        phaseAngleFor(dv.x, dv.y, dv.z, -cam.x, -cam.y, -cam.z),
+        ringPlaneElevationDeg(-dv.x, -dv.y, -dv.z, pole.x, pole.y, pole.z),
+        ringPlaneElevationDeg(-planetPos.x, -planetPos.y, -planetPos.z,
+          pole.x, pole.y, pole.z),
+        SATURN_PHASE,
+      );
+    };
+
+    const f = new PlanetBodyField(makeSharedUniforms(20));
+    f.attachHost(
+      0,
+      {
+        hostStarIdx: 0,
+        planets: [ringed],
+        positionsAt: (_t, out) => {
+          out[0] = planetPos.x; out[1] = planetPos.y; out[2] = planetPos.z;
+        },
+      },
+      4.83,
+      R_SUN_PC,
+      new THREE.Vector3(),
+      0,
+      0,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const geom = (f as any).geometry as THREE.InstancedBufferGeometry;
+    const flagged = new Set<string>();
+    for (const [name, attr] of Object.entries(geom.attributes)) {
+      Object.defineProperty(attr, 'needsUpdate', {
+        configurable: true,
+        get(): boolean { return false; },
+        set(_v: boolean): void { flagged.add(name); },
+      });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bufs = (f as any).bufs as { ringBoost: Float32Array };
+    const camera = new THREE.PerspectiveCamera();
+
+    // A near-opposition viewer just outside the host: the Earth-like
+    // vantage the published law was fitted from.
+    camera.position.set(1 * AU_PC, 0, 0);
+    f.update(camera, 0, 0);
+    expect(flagged.has('iRingBoost')).toBe(true);
+    const sameSide = bufs.ringBoost[0];
+    expect(sameSide).toBeCloseTo(expectedFactor(camera.position), 6);
+    expect(sameSide).toBeGreaterThan(1);
+
+    // appMag folds exactly the factor the attribute carries — the mirror
+    // the hover formatter and the focus card read.
+    const dv = planetPos.clone().sub(camera.position);
+    const globeOnly = planetApparentMagnitude(
+      4.83, dv.length(), planetPos.length(), ringed.albedo, 60000 * KM_PC,
+      phaseFactorFor(
+        dv.x, dv.y, dv.z,
+        -camera.position.x, -camera.position.y, -camera.position.z,
+        SATURN_PHASE,
+      ),
+    );
+    expect(globeOnly - f.appMagFor(0, 0, camera.position)!)
+      .toBeCloseTo(2.5 * Math.log10(sameSide), 6);
+
+    // Move the viewer high over each face in turn. The host's own
+    // elevation decides which is the lit one, so read its sign rather
+    // than assuming a hemisphere. Backlit must be the dimmer of the two
+    // — the disagreement with the resolved annulus this closes; the
+    // exact transmitted fraction is pinned in the pure test.
+    const poleVec = new THREE.Vector3(pole.x, pole.y, pole.z);
+    const hostElev = ringPlaneElevationDeg(
+      -planetPos.x, -planetPos.y, -planetPos.z, pole.x, pole.y, pole.z);
+    expect(hostElev).not.toBe(0);
+    const litSign = Math.sign(hostElev);
+    const faceBoost = (sign: number): number => {
+      camera.position.copy(planetPos).addScaledVector(poleVec, sign * 20 * AU_PC);
+      f.update(camera, 0, 0);
+      expect(bufs.ringBoost[0]).toBeCloseTo(expectedFactor(camera.position), 6);
+      return bufs.ringBoost[0];
+    };
+    expect(faceBoost(litSign) - 1).toBeGreaterThan(faceBoost(-litSign) - 1);
     f.dispose();
   });
 

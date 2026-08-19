@@ -29,8 +29,10 @@ star field does.
 
 `appMag` already folds the phase factor φ(α)
 (`../../perceptual-magnitude.ts`), so a crescent is correctly dimmer — no
-separate illumFrac on brightness. Eclipse folds in as a flux multiplier on
-the peak.
+separate illumFrac on brightness. A ring system folds in the same way, on
+`iRingBoost` (`../rings/README.md` § Ring photometry): its flux belongs in
+the magnitude, so it multiplies φ rather than the peak. Eclipse is the
+opposite call and folds in as a flux multiplier on the peak.
 
 **The photocentre shift is shape only, never brightness.** A shift toward
 the sub-solar limb, scaled by crescentness `(1−illumFrac)` and

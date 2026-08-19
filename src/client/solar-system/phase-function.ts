@@ -3,10 +3,12 @@
 // See docs/science-solar-system.md § Planet phase functions.
 
 /** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2018 for the
- *  planets that have a fit, Allen's lunar law for the Moon. c0 = 0 for
- *  every body except Saturn, which absorbs a static ring-tilt
- *  brightness boost via c0 < 0. c7 = 0 for every body except Mercury —
- *  the only published fit beyond degree 6. */
+ *  planets that have a fit, Allen's lunar law for the Moon. Every curve
+ *  describes the body's GLOBE and is anchored at its α=0 geometric
+ *  albedo, so c0 = 0 throughout; a ring system's contribution rides the
+ *  separate joint α/tilt law in
+ *  `planets/rings/ring-photometry-pure.ts`. c7 = 0 for every body
+ *  except Mercury — the only published fit beyond degree 6. */
 export interface PhaseCoefficients {
   readonly c0: number;
   readonly c1: number;
@@ -35,8 +37,8 @@ export function lambertianPhaseFactor(alphaRad: number): number {
 
 /** Horner-evaluated ΔV polynomial in α-degrees. Helper exists so the
  *  in-validity-bound and at-boundary-anchor paths share one
- *  definition. */
-function phaseDV(coefs: PhaseCoefficients, aDeg: number): number {
+ *  definition; the ring law subtracts the globe curve through it too. */
+export function phaseDV(coefs: PhaseCoefficients, aDeg: number): number {
   return (
     coefs.c0 +
     aDeg *
@@ -75,9 +77,9 @@ export function empiricalPhaseFactor(
 
 /** Phase-factor flux multiplier at α = 0 — i.e. `10^(−c0/2.5)`. Drives
  *  the per-host visibility cull (see `cullDistancePc` in
- *  `planet-body-field.ts`): for almost every planet this is 1, but
- *  Saturn's ring term raises it materially and the cull distance has
- *  to widen to match.
+ *  `planet-body-field.ts`). Every globe curve is albedo-anchored, so
+ *  this is 1 for every body; the cull's one non-unit term is Saturn's
+ *  ring system, which enters through `maxRingSystemFluxFactor` instead.
  *
  *  The α=0 framing is deliberate, not a proxy for the polynomial's
  *  maximum: for Venus the true polynomial peak sits ~3° above zero,
@@ -140,8 +142,17 @@ export function phaseFactorFor(
   dhz: number,
   coefs: PhaseCoefficients | undefined,
 ): number {
-  const alpha = phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz);
-  return coefs ? empiricalPhaseFactor(coefs, alpha) : lambertianPhaseFactor(alpha);
+  return phaseFactorAt(coefs, phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz));
+}
+
+/** The empirical-or-Lambertian dispatch on its own, for callers that
+ *  already hold α — a ringed body needs the same angle for its ring-tilt
+ *  term, and re-deriving it would let the two drift. */
+export function phaseFactorAt(
+  coefs: PhaseCoefficients | undefined,
+  alphaRad: number,
+): number {
+  return coefs ? empiricalPhaseFactor(coefs, alphaRad) : lambertianPhaseFactor(alphaRad);
 }
 
 /** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
@@ -261,20 +272,23 @@ export const JUPITER_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 12,
 };
 
-/** Saturn — static-β = 16° (long-run mean) approximation of the
- *  Mallama 2018 Table A-6.2 joint α/ring-tilt formula. c0 absorbs
- *  the ring contribution + opposition-surge exp-term-at-α=0 bias;
- *  c1 carries the linear α modulation. */
+/** Saturn's GLOBE — Mallama & Hilton 2018 Eq. 12, the 4th-order fit to
+ *  Dyudina's Pioneer-derived scattering model, valid 6°–150° and carried
+ *  down to 0° where it tracks the α < 6.5° globe fit (Eq. 11) inside
+ *  0.01 mag. Eq. 12's own +0.01 zero-point splice is dropped: φ(0) = 1
+ *  is what anchors the curve on the geometric albedo, the same
+ *  normalisation every other body's curve uses. The ring system is a
+ *  separate joint α/tilt term — `planets/rings/ring-photometry-pure.ts`. */
 export const SATURN_PHASE: PhaseCoefficients = {
-  c0: -0.55,
-  c1: 0.026,
-  c2: 0,
-  c3: 0,
-  c4: 0,
+  c0: 0,
+  c1: 2.446e-4,
+  c2: 2.672e-4,
+  c3: -1.505e-6,
+  c4: 4.767e-9,
   c5: 0,
   c6: 0,
   c7: 0,
-  alphaMaxDeg: 6.5,
+  alphaMaxDeg: 150,
 };
 
 /** Earth's Moon — Allen's lunar phase law, not Mallama (that paper

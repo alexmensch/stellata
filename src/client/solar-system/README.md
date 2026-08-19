@@ -17,7 +17,7 @@ Rendering, ephemerides, and the clock live in the subfolders.
 
 - `planets/` — the two render layers (instanced glare field + close-range
   spheroid mesh LOD), shaders, rotation elements, inter-body shadows,
-  per-body labels.
+  ring systems (annulus + the ring share of appMag), per-body labels.
 - `atmosphere/` — first-principles single-scattering airlight for Venus,
   Earth, Mars, and Titan; the integrator and its CPU mirror.
 - `time/` — simulation time `t`, the `VirtualClock` behind
@@ -189,10 +189,14 @@ scaled Lambertian past it (Lambert(α) × poly(αmax)/Lambert(αmax) so
 brightness stays continuous and each planet's empirical character
 extends past αmax instead of snapping to a uniform Lambertian
 sphere), pure Lambertian `(sin α + (π − α)·cos α)/π` for bodies
-without published curves. Mallama covers Mercury, Venus, Earth, Mars,
-Jupiter and Saturn; Earth's Moon takes the classic lunar phase law in
-the same polynomial form (`MOON_PHASE`, the only moon with a curve
-measured across the phases a camera can occupy). Uranus, Neptune, Pluto,
+without published curves. Every curve is the body's **globe** anchored on
+its α=0 geometric albedo, so `c0 = 0` throughout — a ring system's share
+rides its own joint α/ring-tilt law
+(`planets/rings/README.md` § Ring photometry), never `c0`. Mallama covers
+Mercury, Venus, Earth, Mars, Jupiter and Saturn; Earth's Moon takes the
+classic lunar phase law in the same polynomial form (`MOON_PHASE`, the
+only moon with a curve measured across the phases a camera can occupy).
+Uranus, Neptune, Pluto,
 every other moon and every exoplanet take the Lambertian fallback —
 `docs/science-solar-system.md` § Planet phase functions says why for
 each. Verified Jupiter values (under Lambert):
@@ -209,7 +213,10 @@ d_cull = 10 pc · √(p · (R/a)²) · 10^((uCullMag − M_host) / 5)
 ```
 
 where `(R/a)` for the brightest planet (proxy for "roundtrip flux")
-makes the formula geometry-independent. Sol's Jupiter at the unaided
+makes the formula geometry-independent, folded with each planet's
+brightest attainable phase and ring-tilt boost — MAXIMA, or a Saturn
+parked near a ring-plane crossing would be culled at a distance it
+becomes visible from once the rings open. Sol's Jupiter at the unaided
 eye's cull bound (10.56) gives ~1900 AU — still confirming that any
 non-Sol focus collapses Sol's bodies far past the cull distance,
 exactly as intended. `PlanetBodyField.setCullMag` recomputes the cache

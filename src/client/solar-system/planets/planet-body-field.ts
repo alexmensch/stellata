@@ -5,8 +5,15 @@ import * as THREE from 'three';
 import { systemFamily, type Planet, type PlanetSystem } from '../planet-system';
 import {
   alphaZeroPhaseFactor,
-  phaseFactorFor,
+  phaseAngleFor,
+  phaseFactorAt,
 } from '../phase-function';
+import {
+  maxRingSystemFluxFactor,
+  ringPlaneElevationDeg,
+  ringSystemFluxFactor,
+} from './rings/ring-photometry-pure';
+import { poleVectorAt } from './rotation/rotation-elements-pure';
 import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
 import {
   pickChartDiscUniforms,
@@ -124,6 +131,7 @@ const INSTANCE_ATTR_SPECS = attrSpecs({
   phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
   phaseC: { attr: 'iPhaseCoefsC', dims: 4 },
   eclipseDim: { attr: 'iEclipseDim', dims: 1, dynamicUsage: true, fill: 1 },
+  ringBoost: { attr: 'iRingBoost', dims: 1, dynamicUsage: true, fill: 1 },
 });
 
 type InstanceBufKey = keyof typeof INSTANCE_ATTR_SPECS;
@@ -146,13 +154,15 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
  *   d_cull = 10 pc · √(p · (R/a)²) · 10^((cullMag − M_host) / 5)
  *         = 10 pc · sqrt(p) · (R/a) · 10^((cullMag − M_host) / 5)
  *
- * The caller folds `alphaZeroPhaseFactor(coefs)` into
- * `brightestReflectance` before passing it in (see `attachHost`). For
- * most planets that's a 1× no-op (c0 = 0 ⇒ φ(0) = 1); Saturn's c0 =
- * −0.55 ring boost lifts φ(0) to ~1.66, widening Saturn's cull by
- * ~√1.66 ≈ 1.29×. The cull remains a conservative outer bound: at any
- * α the actual flux factor is ≤ φ(0) plus a sub-millimagnitude Venus
- * polynomial-peak margin, so a host past d_cull is sub-cutoff.
+ * The caller folds `alphaZeroPhaseFactor(coefs)` and
+ * `maxRingSystemFluxFactor` into `brightestReflectance` before passing
+ * it in (see `attachHost`). Every globe curve is albedo-anchored so the
+ * first is a 1× no-op; Saturn's ring system at maximum opening and
+ * opposition lifts its term to ~2.43×, widening Saturn's cull by
+ * ~√2.43 ≈ 1.56×. Both terms are per-body MAXIMA, which is what keeps
+ * the cull a conservative outer bound while the ring term now varies
+ * with tilt: a Saturn parked near a ring-plane crossing must not be
+ * culled at a distance it will be visible from once the rings open.
  *
  * Pure function — exported for tests.
  */
@@ -183,11 +193,10 @@ interface AttachedHost {
   orientation: THREE.Quaternion;
   positionsAt: ((t: number, out: Float64Array) => void) | null;
   positionsScratch: Float64Array | null;
-  /** max over planets of `p · (R / a)² · alphaZeroPhaseFactor(coefs)`
-   *  — the geometry-independent reflectance proxy folded with each
-   *  planet's α=0 phase boost. Drives cullDistancePc. Saturn's ring
-   *  c0 lifts its term above the globe-only reflectance; for every
-   *  other planet alphaZeroPhaseFactor = 1. */
+  /** max over planets of `p · (R / a)² · alphaZeroPhaseFactor(coefs) ·
+   *  maxRingSystemFluxFactor(rings)` — the geometry-independent
+   *  reflectance proxy folded with each planet's brightest attainable
+   *  phase and ring-tilt boost. Drives cullDistancePc. */
   brightestReflectance: number;
   /** Cached cull distance for the current uCullMag. */
   cullDistance: number;
@@ -255,6 +264,12 @@ export class PlanetBodyField {
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
+  private ringPoleTmp = { x: 0, y: 0, z: 1 };
+  // Model time of the last positions walk. The ring-tilt term needs the
+  // body's pole at `t`, and the hover/pick entry points carry a viewer
+  // but no clock; IAU century rates move a pole by nanoarcseconds
+  // across the one frame this can lag.
+  private lastT = 0;
 
   constructor(
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
@@ -307,12 +322,11 @@ export class PlanetBodyField {
     for (const planet of ps.planets) {
       const aPc = planet.semiMajorAxisAu * AU_PC;
       const RoverA = (planet.radiusKm * KM_PC) / Math.max(aPc, 1e-30);
-      // Saturn's rings raise its α=0 brightness above globe-only
-      // reflectance via its c0 term — fold it into the cull proxy so
-      // the cull distance widens to match. Every other body has
-      // c0=0 ⇒ α=0 factor 1, leaving the formula unchanged.
       const phiZero = alphaZeroPhaseFactor(planet.phaseCoefficients);
-      const refl = planet.albedo * RoverA * RoverA * phiZero;
+      const ringMax = maxRingSystemFluxFactor(
+        planet.rings?.systemPhotometry, planet.phaseCoefficients,
+      );
+      const refl = planet.albedo * RoverA * RoverA * phiZero * ringMax;
       if (refl > brightestReflectance) brightestReflectance = refl;
     }
 
@@ -334,7 +348,8 @@ export class PlanetBodyField {
     this.hosts.set(hostStarIdx, host);
     this.liveCount += n;
     this.rebuildInstanceMap();
-    this.resetEclipseDims();
+    this.resetPerInstanceFactors();
+    this.lastT = t;
 
     // Initial fill — bodies, host position, and one immediate
     // ephemeris-or-placeholder pass so the first frame after attach
@@ -368,16 +383,20 @@ export class PlanetBodyField {
     this.flushAllAttributes();
     this.hosts.delete(hostStarIdx);
     this.rebuildInstanceMap();
-    this.resetEclipseDims();
+    this.resetPerInstanceFactors();
     if (this.liveCount === 0) this.group.visible = false;
   }
 
   /** Attach/detach shifts flat indices, invalidating any mid-decay dim
-   *  slot the active set points at — reset the whole buffer to 1
-   *  (correct within one anti-strobe time constant, and attach/detach
-   *  is a rare lifecycle event, not a per-frame path). */
-  private resetEclipseDims(): void {
+   *  slot the active set points at — reset both per-frame flux buffers
+   *  to 1 (correct within one anti-strobe time constant, and
+   *  attach/detach is a rare lifecycle event, not a per-frame path).
+   *  The ring buffer is only ever written for a ringed body, so a
+   *  shifted slot would otherwise keep a boost belonging to another
+   *  body. */
+  private resetPerInstanceFactors(): void {
     this.bufs.eclipseDim.fill(1);
+    this.bufs.ringBoost.fill(1);
     this.dimActive.clear();
     this.dimTargets.clear();
   }
@@ -394,7 +413,7 @@ export class PlanetBodyField {
       host.hostLocalPos.copy(host.hostAbsPos).sub(this.worldOffset);
       this.writeHostLocalPos(host);
     }
-    this.flushHostLocalPosAttributes();
+    this.markAttributeDirty('iHostLocalPos');
   }
 
   /**
@@ -431,9 +450,11 @@ export class PlanetBodyField {
     // there strands the anchor's orbital motion. Only the GPU upload is
     // skipped while invisible (the CPU buffer still advances).
     perfMark('solar.bodies');
+    this.lastT = t;
     const render = !this.hidden;
     this.group.visible = render;
     let touched = false;
+    let ringTouched = false;
     for (const host of this.hosts.values()) {
       const dToHost = camera.position.distanceTo(host.hostLocalPos);
       if (dToHost > host.cullDistance) continue;
@@ -442,17 +463,98 @@ export class PlanetBodyField {
         touched = true;
       }
       this.collectEclipseDimTargets(host, camera.position);
+      if (this.writeRingBoosts(host, camera.position)) ringTouched = true;
     }
-    if (touched && render) this.flushDynamicAttributes();
+    if (render) {
+      if (touched) this.markAttributeDirty('iLocalRel');
+      if (ringTouched) this.markAttributeDirty('iRingBoost');
+    }
 
     const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
     this.lastDimNowMs = nowMs;
     if (blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend)) {
-      (this.geometry.attributes.iEclipseDim as THREE.InstancedBufferAttribute)
-        .needsUpdate = true;
+      this.markAttributeDirty('iEclipseDim');
     }
     this.dimTargets.clear();
     perfMeasure('solar.bodies');
+  }
+
+  /** Ring-plane normal of one of the host's bodies at `lastT`, into
+   *  `ringPoleTmp`. IAU pole where the body publishes elements, the
+   *  host's orbital-plane normal otherwise — the same fallback ladder
+   *  `planet-mesh-layer.ts` poses the resolved annulus on, so the
+   *  point-source ring term and the drawn annulus cannot disagree about
+   *  where the ring plane is. */
+  private ringPoleInto(host: AttachedHost, planet: Planet): void {
+    if (planet.rotation) {
+      poleVectorAt(planet.rotation, this.lastT, this.ringPoleTmp);
+      return;
+    }
+    this.rotateTmp.set(0, 0, 1).applyQuaternion(host.orientation);
+    this.ringPoleTmp.x = this.rotateTmp.x;
+    this.ringPoleTmp.y = this.rotateTmp.y;
+    this.ringPoleTmp.z = this.rotateTmp.z;
+  }
+
+  /** Ring-system flux multiplier on one body's globe phase factor, from
+   *  the viewer's and the host's elevation above its ring plane
+   *  (Mallama's β_E / β_S). `(dvx, dvy, dvz)` is the planet-minus-viewer
+   *  displacement the phase angle was taken from; the host leg is the
+   *  body's own host-relative position, negated. 1 for every body
+   *  without ring photometry. */
+  private ringSystemFactor(
+    host: AttachedHost,
+    planetIdx: number,
+    alphaRad: number,
+    dvx: number,
+    dvy: number,
+    dvz: number,
+  ): number {
+    const planet = host.ps.planets[planetIdx];
+    const photometry = planet.rings?.systemPhotometry;
+    if (!photometry) return 1;
+    this.ringPoleInto(host, planet);
+    const { x: px, y: py, z: pz } = this.ringPoleTmp;
+    const base = (host.startInstance + planetIdx) * 3;
+    return ringSystemFluxFactor(
+      photometry,
+      alphaRad,
+      ringPlaneElevationDeg(-dvx, -dvy, -dvz, px, py, pz),
+      ringPlaneElevationDeg(
+        -this.localRel64[base + 0],
+        -this.localRel64[base + 1],
+        -this.localRel64[base + 2],
+        px, py, pz,
+      ),
+      planet.phaseCoefficients,
+    );
+  }
+
+  /** Refresh `iRingBoost` for one host's ringed bodies against the live
+   *  camera. Returns whether anything was written — a host with no ring
+   *  photometry costs one `rings` probe per body and no upload. */
+  private writeRingBoosts(
+    host: AttachedHost,
+    cameraPos: Readonly<THREE.Vector3>,
+  ): boolean {
+    let wrote = false;
+    for (let i = 0; i < host.count; i++) {
+      if (!host.ps.planets[i].rings?.systemPhotometry) continue;
+      const idx = host.startInstance + i;
+      const base = idx * 3;
+      const dvx = host.hostLocalPos.x + this.localRel64[base + 0] - cameraPos.x;
+      const dvy = host.hostLocalPos.y + this.localRel64[base + 1] - cameraPos.y;
+      const dvz = host.hostLocalPos.z + this.localRel64[base + 2] - cameraPos.z;
+      const alpha = phaseAngleFor(
+        dvx, dvy, dvz,
+        host.hostLocalPos.x - cameraPos.x,
+        host.hostLocalPos.y - cameraPos.y,
+        host.hostLocalPos.z - cameraPos.z,
+      );
+      this.bufs.ringBoost[idx] = this.ringSystemFactor(host, i, alpha, dvx, dvy, dvz);
+      wrote = true;
+    }
+    return wrote;
   }
 
   /** True-eclipse targets for one host's planets: a planet whose disc
@@ -668,7 +770,10 @@ export class PlanetBodyField {
         this.localRel64[base + 1] ** 2 +
         this.localRel64[base + 2] ** 2,
     );
-    const phi = phaseFactorFor(dvx, dvy, dvz, dhx, dhy, dhz, planet.phaseCoefficients);
+    const alpha = phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz);
+    const phi =
+      phaseFactorAt(planet.phaseCoefficients, alpha) *
+      this.ringSystemFactor(host, planetIdx, alpha, dvx, dvy, dvz);
     const radiusPc = planet.radiusKm * KM_PC;
     const appMag = planetApparentMagnitude(
       host.hostAbsmag,
@@ -1416,33 +1521,23 @@ export class PlanetBodyField {
     }
   }
 
-  /** Per-frame: only iLocalRel (positions tick) changes in `update()`;
-   *  host position, radius, colour, albedo, phase coefficients are static
-   *  for the host's lifetime. At bk5 scale (hundreds of hosts × thousands
-   *  of planets) flagging only the dirty buffer matters — the statics
-   *  would re-upload every frame otherwise. */
-  private flushDynamicAttributes(): void {
-    if (!this.geometry) return;
-    (this.geometry.attributes.iLocalRel as THREE.InstancedBufferAttribute)
-      .needsUpdate = true;
-  }
-
-  /** Recenter path: only iHostLocalPos changes (each host's local
-   *  offset is recomputed against the new floating-origin). */
-  private flushHostLocalPosAttributes(): void {
-    if (!this.geometry) return;
-    (this.geometry.attributes.iHostLocalPos as THREE.InstancedBufferAttribute)
-      .needsUpdate = true;
+  /** Queue one per-instance attribute for re-upload. Every flush path
+   *  goes through here: at bk5 scale (hundreds of hosts × thousands of
+   *  planets) a per-frame re-upload of the statics would be measurable
+   *  wasted bus bandwidth, so each caller flags only what it wrote. */
+  private markAttributeDirty(attr: string): void {
+    const buffer = this.geometry?.attributes[attr] as
+      | THREE.InstancedBufferAttribute
+      | undefined;
+    if (buffer) buffer.needsUpdate = true;
   }
 
   /** Attach / detach / grow: every per-instance attribute could be
    *  dirty (the host's slot was just written; or a tail-shift moved
    *  every other host's data). */
   private flushAllAttributes(): void {
-    if (!this.geometry) return;
     for (const [, spec] of SPEC_ENTRIES) {
-      (this.geometry.attributes[spec.attr] as THREE.InstancedBufferAttribute)
-        .needsUpdate = true;
+      this.markAttributeDirty(spec.attr);
     }
   }
 

@@ -36,6 +36,9 @@ in vec2 aCorner;
 //                   Earth's, and every exoplanet hit.
 //   iPhaseCoefsC  — (c7,_,_,_). Only Mercury carries a degree-7 term;
 //                   the other three slots are reserved.
+//   iRingBoost    — ring-system flux multiplier on phi, from the joint
+//                   phase-angle / ring-tilt law (1 = no ring system).
+//                   CPU-side per frame: ../rings/ring-photometry-pure.ts.
 //   iEclipseDim   — true-eclipse flux dim on a planet behind the
 //                   host's physical disc (1 = no dim).
 in vec3 iHostLocalPos;
@@ -48,6 +51,7 @@ in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
 in vec4 iPhaseCoefsC;
+in float iRingBoost;
 in float iEclipseDim;
 
 uniform vec2 uViewport;       // CSS pixels
@@ -183,19 +187,17 @@ void main() {
   float alphaMaxDeg = iPhaseCoefsB.w;
   float alphaDeg = alpha * (180.0 / STELLATA_PI);
   if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg) {
-    // Polynomial path. Saturn's ring contribution rides on c0 < 0,
-    // which makes φ(0) > 1 (intentional — `albedo` represents the
-    // globe's α=0 reflectance, the c0 boost stacks the ring system
-    // on top).
+    // Polynomial path. Every curve describes the body's globe and is
+    // anchored at its α=0 geometric albedo, so c0 = 0 throughout.
     float dV = phaseDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaDeg);
     phi = exp(-dV * 0.4 * STELLATA_LOG10);
   } else if (alphaMaxDeg > 0.0) {
     // Anchor-scaled Lambert past the published validity bound:
     // Lambert(α) × (poly(αmax) / Lambert(αmax)). Preserves brightness
     // continuity at αmax and keeps each body's empirical character
-    // (Saturn's c0 boost; Mars's faster-than-Lambert darkening)
-    // extending out instead of snapping to a uniform Lambertian
-    // sphere. CPU mirror in phase-function.ts.
+    // (Mars's faster-than-Lambert darkening) extending out instead of
+    // snapping to a uniform Lambertian sphere. CPU mirror in
+    // phase-function.ts.
     float dVb = phaseDV(iPhaseCoefsA, iPhaseCoefsB, iPhaseCoefsC, alphaMaxDeg);
     float boundaryFlux = exp(-dVb * 0.4 * STELLATA_LOG10);
     float alphaMaxRad = alphaMaxDeg * (STELLATA_PI / 180.0);
@@ -205,6 +207,10 @@ void main() {
     // every moon but Earth's, and future exoplanet hosts).
     phi = lambertPhi(alpha);
   }
+  // A ring system's share of the unresolved flux — β-dependent, so the
+  // CPU evaluates the joint law and ships one multiplier per instance
+  // rather than a pole and a second polynomial.
+  phi *= iRingBoost;
 
   // Reflected-light apparent magnitude:
   //
