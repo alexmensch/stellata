@@ -14,9 +14,10 @@ and without the fragment.
 ```
 src/client/webgpu/star/
   star-geometry.ts (+ test)    Packed instanced geometry: aCorner,
-                               iPosition (shared), iPuls, iPack0-2,
-                               iDyn0 — 7 of the 8 vertex buffers
-                               (../README.md § Attribute packing).
+                               iPosition + iPuls (both shared by object
+                               identity), iPack0-2, iDyn0 — 7 of the 8
+                               vertex buffers (../README.md
+                               § Attribute packing).
   star-glow-tsl.ts             The D2 material: vertex stage + glow
                                fragment as TSL graphs over the shared
                                uniform nodes and the pack plans.
@@ -62,9 +63,10 @@ buffers** every writer (BinaryOrbitField, EclipsePhotometryField,
 StarFrame's recentre, the shell's re-attach inits) keeps writing. This
 layer taps them without any writer learning about the port:
 
-- **iPosition** joins this geometry **by object identity** — the same
-  `InstancedBufferAttribute`; a `needsUpdate` flip reaches whichever
-  renderer draws it.
+- **iPosition and iPuls** join this geometry **by object identity** — the
+  same `InstancedBufferAttribute` objects, so neither pays a second copy
+  and iPosition's `needsUpdate` flip reaches whichever renderer draws it.
+  (iPuls is static; it shares for the memory, not the writes.)
 - **The three per-frame scalars** (`iCompositeSuppress`, `iEclipseDim`,
   `iSuppressPulsation`) interleave into the packed `iDyn0` vec4, so they
   cannot share the object. `StarLayer` version-watches each source

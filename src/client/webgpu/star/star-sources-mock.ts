@@ -23,6 +23,7 @@ export function makeStarGeometrySources(count = 4): {
       teffApsis: opts.teffApsis,
       boundingSphereRadiusPc: opts.boundingSphereRadiusPc,
       iPositionAttr: pipe.iPositionAttr,
+      iPulsAttr: pipe.iPulsAttr,
       iCompositeSuppressAttr: pipe.iCompositeSuppressAttr,
       iEclipseDimAttr: pipe.iEclipseDimAttr,
       iSuppressPulsationAttr: pipe.iSuppressPulsationAttr,

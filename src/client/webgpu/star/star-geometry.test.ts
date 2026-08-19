@@ -18,10 +18,11 @@ describe('buildStarGeometry', () => {
     expect(names.length).toBe(MAX_VERTEX_BUFFERS - 1);
   });
 
-  it('joins the WebGL iPosition attribute by object identity', () => {
+  it('joins the WebGL iPosition and iPuls attributes by object identity', () => {
     const { sources, pipe } = makeStarGeometrySources();
     const { geometry } = buildStarGeometry(sources);
     expect(geometry.getAttribute('iPosition')).toBe(pipe.iPositionAttr);
+    expect(geometry.getAttribute('iPuls')).toBe(pipe.iPulsAttr);
   });
 
   it('interleaves static scalars into their planned slots', () => {

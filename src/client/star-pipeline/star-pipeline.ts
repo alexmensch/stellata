@@ -138,6 +138,9 @@ export class StarPipeline {
   /** Built once per attachBinaries; the integration shell flips
    *  `needsUpdate` after rewriting the backing buffer. */
   readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
+  /** Static. Exposed so the WebGPU port's geometry can join it by object
+   *  identity rather than interleaving a second copy of the same pair. */
+  readonly iPulsAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -182,8 +185,9 @@ export class StarPipeline {
     this.geometry.setAttribute('iLogRadius', new THREE.InstancedBufferAttribute(logRadii, 1));
     this.geometry.setAttribute('iPeriodDays', new THREE.InstancedBufferAttribute(catalog.periodDays, 1));
     this.geometry.setAttribute('iAmplitudeMag', new THREE.InstancedBufferAttribute(catalog.amplitudeMag, 1));
-    this.geometry.setAttribute('iPuls', new THREE.InstancedBufferAttribute(
-      interleavePulsParams(catalog.pulsRho, catalog.pulsColorSwing), 2));
+    this.iPulsAttr = new THREE.InstancedBufferAttribute(
+      interleavePulsParams(catalog.pulsRho, catalog.pulsColorSwing), 2);
+    this.geometry.setAttribute('iPuls', this.iPulsAttr);
     this.geometry.setAttribute('iLumClass', new THREE.InstancedBufferAttribute(lumClassF32, 1));
     this.geometry.setAttribute('iDistSol', new THREE.InstancedBufferAttribute(distSol, 1));
     this.geometry.setAttribute('iTeffApsis', new THREE.InstancedBufferAttribute(teffApsis, 1));

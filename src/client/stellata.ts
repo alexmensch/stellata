@@ -570,6 +570,7 @@ export class Stellata implements FrameAnchor {
       teffApsis: this.starFrame.teffApsis,
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
       iPositionAttr: this.starPipeline.iPositionAttr,
+      iPulsAttr: this.starPipeline.iPulsAttr,
       iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
       iSuppressPulsationAttr: this.starPipeline.iSuppressPulsationAttr,

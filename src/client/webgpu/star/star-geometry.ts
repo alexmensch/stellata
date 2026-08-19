@@ -3,7 +3,6 @@
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
-import { interleavePulsParams } from '../../star-pipeline/pulsation/pulsation-params-pure';
 import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-pipeline';
 import { buildPackedAttributes } from '../attribute-packing';
 import { planVec4Packing, type Vec4PackPlan } from '../attribute-packing-pure';
@@ -21,11 +20,12 @@ export interface StarGeometrySources {
   distSol: Float32Array;
   teffApsis: Float32Array;
   boundingSphereRadiusPc: number;
-  /** The shell-owned WebGL geometry's dynamic attributes. iPosition joins
-   *  this geometry by object identity, so the shell's needsUpdate writes
-   *  reach this renderer with no copy; the three scalars cannot (they
-   *  interleave into iDyn0) and are version-watched by the layer. */
+  /** Shell-owned WebGL geometry attributes this geometry joins by object
+   *  identity — no second copy, and iPosition's needsUpdate writes reach
+   *  whichever renderer draws it. The three packed scalars cannot join
+   *  (they interleave into iDyn0) and are version-watched by the layer. */
   iPositionAttr: THREE.InstancedBufferAttribute;
+  iPulsAttr: THREE.InstancedBufferAttribute;
   iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
   iEclipseDimAttr: THREE.InstancedBufferAttribute;
   iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
@@ -57,8 +57,7 @@ export function buildStarGeometry(s: StarGeometrySources): StarGeometryBuild {
   geometry.setAttribute('aCorner', new THREE.BufferAttribute(STAR_QUAD_CORNERS, 2));
   geometry.setIndex(STAR_QUAD_INDEX);
   geometry.setAttribute('iPosition', s.iPositionAttr);
-  geometry.setAttribute('iPuls', new THREE.InstancedBufferAttribute(
-    interleavePulsParams(s.catalog.pulsRho, s.catalog.pulsColorSwing), 2));
+  geometry.setAttribute('iPuls', s.iPulsAttr);
 
   const staticPlan = planVec4Packing(STAR_STATIC_SCALARS, STAR_PACK_PREFIX_STATIC);
   const staticSources: Record<string, ArrayLike<number>> = {
