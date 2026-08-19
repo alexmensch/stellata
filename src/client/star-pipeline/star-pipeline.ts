@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
 import { markStatisticEmitter } from '../hdr/attachments/attachment-gate';
+import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 
 // Disc-pass blending state. Applied at material construction and re-applied
 // on chart-mode -> colour-mode swap-back, since chart mode swaps the disc
@@ -207,7 +208,7 @@ export class StarPipeline {
     // glow pass can depth-test against the disc silhouettes.
     this.discMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 1 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_DISC } },
       vertexShader,
       fragmentShader,
       transparent: true,
@@ -220,7 +221,7 @@ export class StarPipeline {
     // drawn in the disc pass are correctly occluded.
     this.glowMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 0 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_GLOW } },
       vertexShader,
       fragmentShader,
     });
@@ -234,7 +235,7 @@ export class StarPipeline {
     // the integration shell.
     this.coreMaskMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 2 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_CORE_MASK } },
       vertexShader,
       fragmentShader,
       depthWrite: true,

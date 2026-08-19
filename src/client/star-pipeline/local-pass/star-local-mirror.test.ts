@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { MIRROR_CAPACITY, StarLocalMirror } from './star-local-mirror';
+import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from '../star-pass';
 
 const DUMMY_SHADER = 'void main(){}';
 
@@ -81,16 +82,16 @@ describe('StarLocalMirror construction', () => {
     expect(glowMat.defines?.LOCAL_DEPTH_PASS).toBe('');
     // Mask: depth-only core prepass — an occluded core must depth-fail
     // before the disc pass blends (MaxEquation cannot paint over it).
-    expect(maskMat.uniforms.uRenderMode.value).toBe(2);
+    expect(maskMat.uniforms.uRenderMode.value).toBe(STAR_PASS_CORE_MASK);
     expect(maskMat.colorWrite).toBe(false);
     expect(maskMat.depthWrite).toBe(true);
     expect(maskMat.depthTest).toBe(true);
     // Disc: applyDiscBlendDefaults (opaque max-blend, writes depth).
-    expect(discMat.uniforms.uRenderMode.value).toBe(1);
+    expect(discMat.uniforms.uRenderMode.value).toBe(STAR_PASS_DISC);
     expect(discMat.blending).toBe(THREE.CustomBlending);
     expect(discMat.depthWrite).toBe(true);
     // Glow: applyGlowBlendDefaults (additive, no depth write, depth test on).
-    expect(glowMat.uniforms.uRenderMode.value).toBe(0);
+    expect(glowMat.uniforms.uRenderMode.value).toBe(STAR_PASS_GLOW);
     expect(glowMat.blending).toBe(THREE.AdditiveBlending);
     expect(glowMat.depthWrite).toBe(false);
     expect(glowMat.depthTest).toBe(true);

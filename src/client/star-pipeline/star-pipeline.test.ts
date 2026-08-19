@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
 import { MIRROR_CAPACITY } from './local-pass/star-local-mirror';
+import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 import { makeStarPipelineOptions as makeOpts } from './star-pipeline-mock';
 
 describe('StarPipeline', () => {
@@ -44,10 +45,11 @@ describe('StarPipeline', () => {
     expect(pipe.glowMaterial.uniforms.uCameraPos).toBe(opts.sharedUniforms.uCameraPos);
     expect(pipe.coreMaskMaterial.uniforms.uCameraPos).toBe(opts.sharedUniforms.uCameraPos);
     expect(pipe.discMaterial.uniforms.uTime).toBe(pipe.glowMaterial.uniforms.uTime);
-    // uRenderMode differs per pass.
-    expect(pipe.discMaterial.uniforms.uRenderMode.value).toBe(1);
-    expect(pipe.glowMaterial.uniforms.uRenderMode.value).toBe(0);
-    expect(pipe.coreMaskMaterial.uniforms.uRenderMode.value).toBe(2);
+    // uRenderMode differs per pass. The numeric identities are pinned
+    // once in star-pass.test.ts.
+    expect(pipe.discMaterial.uniforms.uRenderMode.value).toBe(STAR_PASS_DISC);
+    expect(pipe.glowMaterial.uniforms.uRenderMode.value).toBe(STAR_PASS_GLOW);
+    expect(pipe.coreMaskMaterial.uniforms.uRenderMode.value).toBe(STAR_PASS_CORE_MASK);
   });
 
   // Integer-uniform precision must match between vert and frag. ShaderMaterial

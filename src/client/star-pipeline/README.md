@@ -57,6 +57,11 @@ subfolders.
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
   `pickPerceptualDiscUniforms`. Single source of truth so the two
   pipelines can't drift at the chunk's interface.
+- `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
+  `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
+  values) and `colourPassFor`, the size-terms → colour-pass routing the
+  pick mirror shares. The WebGPU port keys its compile-time pass
+  specialization on the same constants.
 - `star-color-routing-pure.ts` (+ test) — `bestApsisTeff`: picks
   gspphot over gspspec for the per-instance `iTeffApsis` attribute.
   See § Colour routing.
