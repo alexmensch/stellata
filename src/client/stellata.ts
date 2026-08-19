@@ -5,6 +5,11 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
+import {
+  formatVerifyReports,
+  verifyDustChunks,
+  type ChunkVerifyReport,
+} from './loaders/dust-voxel-readback';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
@@ -1319,6 +1324,26 @@ export class Stellata implements FrameAnchor {
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
     this.milkyway.attachDust(dust);
+  }
+
+  /** Numeric check that streamed dust really is in the volume texture where
+   *  the uploader put it: samples voxels off the GPU and compares them
+   *  against the chunk files. Identical on both backends, and the only
+   *  verification a WebGPU boot has until something samples the volume.
+   *  Logs a summary and returns the reports.
+   *  `loaders/README.md` § Dust voxel readback. */
+  async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
+    if (this.dust === null) {
+      console.warn('verifyDust: no dust attached');
+      return [];
+    }
+    const reports = await verifyDustChunks({
+      renderer: this.renderer,
+      dust: this.dust,
+      count,
+    });
+    for (const line of formatVerifyReports(reports)) console.log(line);
+    return reports;
   }
 
   /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;

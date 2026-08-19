@@ -77,7 +77,12 @@ The dust voxel volume is the exception that already crossed: it streams
 and uploads on both backends (`loaders/README.md` § Dust voxel upload),
 and nothing samples it yet. Ported first on purpose — the star raymarch,
 the band's measured stack and the extinction prepass are each smoke-blind
-without dust in the texture.
+without dust in the texture. Because no pixel can confirm it, that upload
+is verified numerically instead: `stellata.verifyDust()` reads voxels back
+off the GPU and compares them against the chunk files
+(`loaders/README.md` § Dust voxel readback). A port child whose layer
+renders nothing on the WebGPU boot should run it before suspecting its own
+shader.
 
 ### Every park is a gate someone has to delete
 
