@@ -84,7 +84,9 @@ up as a hot path in its own measurements.
   per-pass `gpu.*` rows — on WebGL2 those rotate across frames and
   over-attribute, so their total runs well above the frame period.
   Where the backend offers nothing — WebGL2 Safari exposes no timer query,
-  and a WebGPU adapter can withhold `timestamp-query` — the headline says
+  a WebGPU adapter can withhold `timestamp-query`, and Chrome grants it but
+  resolves garbage ([`gpu-timing/`](gpu-timing/README.md) § A granted
+  feature can still resolve garbage) — the headline says
   **`submit Xms`** instead and reports CPU wall-time
   around the render calls. Submission is asynchronous, so a large `submit`
   means the main thread is *blocking* on the driver — a real symptom, but

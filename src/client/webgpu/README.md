@@ -286,7 +286,10 @@ withholds the feature, so the boot records the granted answer as
 `timestampsAvailable` and consumers degrade off that instead of assuming.
 **One resolve in flight:** a concurrent resolve returns the same promise and
 the same number, so `resolveAndPublishGpuFrame` publishes once per
-completion rather than once per frame the readback spanned.
+completion rather than once per frame the readback spanned. **And a grant is
+not a working clock:** Chrome grants the feature and then resolves whole
+frames as a large negative number, so the channel drops any duration that is
+not finite and positive and degrades exactly as the withheld case does.
 
 The resolved figure is the summed real duration of every render pass in
 one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer

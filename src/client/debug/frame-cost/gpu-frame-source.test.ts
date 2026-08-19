@@ -1,7 +1,10 @@
 import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { acquireGpuFrameSource, type GpuFrameSourceHost } from './gpu-frame-source';
-import { publishGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
+import {
+  publishGpuFrameSample,
+  resolveAndPublishGpuFrame,
+} from '../gpu-timing/gpu-frame-samples';
 import { FakeGl, asGl } from '../gpu-timing/fake-gl';
 
 const glHost = (fake: FakeGl): GpuFrameSourceHost => ({
@@ -76,5 +79,23 @@ describe('the pricing sweep picks its sample source per backend', () => {
     expect(second?.method).toBe('timestamp');
     first!.release();
     second!.release();
+  });
+
+  // Last: latching the channel unsound is a one-way door for the module.
+  it('falls back to rAF deltas where a granted feature resolves garbage', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    resolveAndPublishGpuFrame({ resolveTimestampsAsync: async () => -1706603456.88 });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+
+    // The grant is necessary, not sufficient: every sample is being dropped,
+    // so claiming 'timestamp' would spend the warmup before aborting.
+    const source = acquireGpuFrameSource(webgpuHost(true), () => {});
+    expect(source?.method).toBe('raf-delta');
+    expect(info).toHaveBeenCalled();
+
+    warn.mockRestore();
+    info.mockRestore();
   });
 });

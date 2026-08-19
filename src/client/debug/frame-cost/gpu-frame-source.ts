@@ -3,7 +3,7 @@
 
 import type * as THREE from 'three';
 import { acquireGpuFrameSampler } from '../perf-hud';
-import { onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
+import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
 import type { GpuFrameMethod } from './frame-cost-pure';
 
 export interface GpuFrameSource {
@@ -40,6 +40,12 @@ export function acquireGpuFrameSource(
   if (host.rendererGL === null) {
     if (host.webgpu?.timestampsAvailable !== true) {
       return rafDelta('this adapter withheld the timestamp-query feature');
+    }
+    if (!gpuFrameSamplesAreSound()) {
+      return rafDelta(
+        'this backend granted timestamp-query but resolves durations no ' +
+        'frame can have, so every sample is being dropped',
+      );
     }
     // Nothing is exclusive here: the render loop resolves for whoever is
     // listening, so the debug panel may stay open.

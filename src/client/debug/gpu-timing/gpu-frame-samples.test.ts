@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  gpuFrameSamplesAreSound,
   onGpuFrameSample,
   publishGpuFrameSample,
   resolveAndPublishGpuFrame,
@@ -111,6 +112,22 @@ describe('resolving publishes one sample per resolve', () => {
     off();
   });
 
+  it('drops three\'s zero seed without calling the backend unsound', async () => {
+    const seen: number[] = [];
+    const off = onGpuFrameSample((ms) => seen.push(ms));
+    const renderer = fakeResolver();
+
+    // three seeds lastValue at 0 and returns it from every early-out, so a
+    // resolve that measured nothing is routine rather than a fault.
+    resolveAndPublishGpuFrame(renderer);
+    renderer.settle(0, 0);
+    await flush();
+
+    expect(seen).toEqual([]);
+    expect(gpuFrameSamplesAreSound()).toBe(true);
+    off();
+  });
+
   it('clears the guard on a rejected resolve rather than stopping for good', async () => {
     const seen: number[] = [];
     const off = onGpuFrameSample((ms) => seen.push(ms));
@@ -129,5 +146,44 @@ describe('resolving publishes one sample per resolve', () => {
     expect(seen).toEqual([5]);
 
     off();
+  });
+});
+
+describe('a duration no frame can have is dropped, not recorded', () => {
+  it('drops it, says so once, and latches the backend unsound', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const seen: number[] = [];
+    const off = onGpuFrameSample((ms) => seen.push(ms));
+    const renderer = fakeResolver();
+
+    // Measured on Chrome/Dawn: one half of a pass's timestamp pair resolves
+    // unwritten, so the frame reads as the negation of a raw GPU timestamp.
+    // Recorded, it sorts gpu.frame off the bottom of the HUD's top-8 table
+    // while the headline still reads `gpu`, and poisons every dwell median.
+    resolveAndPublishGpuFrame(renderer);
+    renderer.settle(0, -1706603456.88);
+    await flush();
+
+    expect(seen).toEqual([]);
+    expect(gpuFrameSamplesAreSound()).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    // Once per tab, not once per frame.
+    resolveAndPublishGpuFrame(renderer);
+    renderer.settle(1, Number.NaN);
+    await flush();
+    expect(seen).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    // A backend that recovers still gets its good frames recorded; only the
+    // sweep's clock choice stays demoted.
+    resolveAndPublishGpuFrame(renderer);
+    renderer.settle(2, 8);
+    await flush();
+    expect(seen).toEqual([8]);
+    expect(gpuFrameSamplesAreSound()).toBe(false);
+
+    off();
+    warn.mockRestore();
   });
 });

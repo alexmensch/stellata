@@ -12,12 +12,37 @@ export interface GpuFrameResolver {
 }
 
 let resolveInFlight = false;
+let impossibleSeen = false;
 
 /** Publish one frame's measured GPU milliseconds. WebGPU only — a WebGL2
  *  frame is timed by whichever GL timer owns the context's single query
  *  slot, so publishing here too would record `gpu.frame` twice per frame. */
 export function publishGpuFrameSample(ms: number): void {
   for (const s of subscribers) s(ms);
+}
+
+/** False once the backend has resolved a duration no frame can have, which
+ *  latches for the tab: a granted `timestamp-query` is necessary but not
+ *  sufficient (README.md § A granted feature can still resolve garbage). */
+export function gpuFrameSamplesAreSound(): boolean {
+  return !impossibleSeen;
+}
+
+function publishResolved(ms: number | undefined): void {
+  // undefined is the withheld feature; 0 is three's own seed, returned from
+  // the early-outs that resolve nothing.
+  if (ms === undefined || ms === 0) return;
+  if (Number.isFinite(ms) && ms > 0) {
+    publishGpuFrameSample(ms);
+    return;
+  }
+  if (impossibleSeen) return;
+  impossibleSeen = true;
+  console.warn(
+    `[gpu.frame] the backend resolved ${ms} ms for one frame. Impossible, so ` +
+    'this and every later sample is dropped: the HUD headline falls back to ' +
+    'submit and priceFrame to rAF-delta.',
+  );
 }
 
 /**
@@ -34,7 +59,7 @@ export function resolveAndPublishGpuFrame(renderer: GpuFrameResolver): void {
   resolveInFlight = true;
   void renderer
     .resolveTimestampsAsync()
-    .then((ms) => { if (ms !== undefined) publishGpuFrameSample(ms); })
+    .then(publishResolved)
     // A lost device rejects, and three has already logged it. The flag must
     // clear regardless, or timing stops for the tab's lifetime.
     .catch(() => {})

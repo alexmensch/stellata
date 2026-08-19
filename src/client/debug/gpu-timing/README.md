@@ -93,6 +93,29 @@ and consumers ask that rather than assuming the flag took: with no
 timestamps the headline stays `submit` and a pricing sweep degrades to
 `raf-delta` instead of claiming a clock it does not have.
 
+### A granted feature can still resolve garbage
+
+**Chrome grants `timestamp-query` and then resolves nonsense.** Measured on
+Chrome/Dawn, a whole frame comes back at ≈ **−1.7 × 10⁹ ms** — the negation
+of a raw GPU timestamp (1.7 × 10¹⁵ ns ≈ 20 days of counter), so one half of
+a pass's timestamp pair resolves unwritten while the other holds an
+absolute counter. Safari 26 grants the same feature and resolves honestly,
+so this is a backend fault, not a property of the API.
+
+Recording it produced both halves of the symptom, and neither looked like a
+bad number: the headline reads `gpu` off the row's *presence*, so it kept
+claiming a GPU measurement, while the table lists its top 8 rows by average
+**descending** — an average of −1.7 × 10⁹ sorts `gpu.frame` off the bottom.
+A `gpu` headline above a table with no `gpu.*` row in it at all.
+
+So the channel drops any duration that is not finite and positive, says so
+once per tab, and latches `gpuFrameSamplesAreSound()` false; the headline
+falls back to `submit` and a sweep to `raf-delta`. That is the same
+degradation the withheld-feature path already had, reached one step later —
+**the grant is necessary, never sufficient.** A zero is NOT a fault: three
+seeds `lastValue` at 0 and returns it from every early-out that measured
+nothing, so zeros are dropped silently and leave the backend sound.
+
 Three consequences, none of them a limitation to work around:
 
 - **No one-query ceiling and no rotation.** Passes are timed

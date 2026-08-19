@@ -58,8 +58,11 @@ src/client/debug/frame-cost/
   stay in the output as the check that it held.
 - **A GPU clock.** `timestamp` on WebGPU where the adapter granted
   `timestamp-query`, `timer-query` on WebGL2 with the extension, and
-  `raf-delta` wall time otherwise — WebGL2 Safari, and any adapter that
-  withheld the timestamp feature (`../gpu-timing/README.md` § WebGPU).
+  `raf-delta` wall time otherwise — WebGL2 Safari, any adapter that
+  withheld the timestamp feature, and any backend that granted it but
+  resolves durations no frame can have, which is Chrome today
+  (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
+  resolve garbage).
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget. `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
