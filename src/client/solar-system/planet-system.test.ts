@@ -20,6 +20,7 @@ import {
   SATURN_PHASE,
   VENUS_PHASE,
 } from './phase-function';
+import { SATURN_RING_PHOTOMETRY } from './planets/rings/ring-photometry-pure';
 
 describe('hasPlanets', () => {
   it('returns true for Sol only', () => {
@@ -206,6 +207,33 @@ describe('SOL_PLANETS data', () => {
         expect(p.phaseCoefficients).toBeUndefined();
       } else {
         expect(p.phaseCoefficients).toBe(expected[p.name]);
+      }
+    }
+  });
+
+  it('Saturn is the one body whose rings carry system photometry', () => {
+    // Uranus and Neptune ship ring strips but no photometry: their rings
+    // are true-opacity charcoal threads, and the brightness-vs-
+    // inclination Mallama publishes for Uranus is polar methane
+    // depletion, not a ring term.
+    const ringed = SOL_BODIES.filter((b) => b.rings);
+    expect(ringed.map((b) => b.name)).toEqual(['Saturn', 'Uranus', 'Neptune']);
+    for (const body of ringed) {
+      if (body.name === 'Saturn') {
+        expect(body.rings!.systemPhotometry).toBe(SATURN_RING_PHOTOMETRY);
+      } else {
+        expect(body.rings!.systemPhotometry).toBeUndefined();
+      }
+    }
+  });
+
+  it('ring photometry always ships with a globe curve to subtract', () => {
+    // The joint law is a DIFFERENCE against the globe-alone curve, so a
+    // body declaring photometry without phaseCoefficients would silently
+    // lose its whole ring term (ring-photometry-pure.ts).
+    for (const body of SOL_BODIES) {
+      if (body.rings?.systemPhotometry) {
+        expect(body.phaseCoefficients, `${body.name}`).toBeDefined();
       }
     }
   });

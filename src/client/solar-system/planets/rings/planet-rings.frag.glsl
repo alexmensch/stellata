@@ -24,6 +24,12 @@ uniform float uPolarRadiusPc;
 uniform vec3 uSunDirLocal;
 uniform vec3 uCamPosLocal;
 uniform float uFade;
+// Ring phase factor, 1 at opposition — the strip's RGB is anchored on a
+// zero-phase geometric albedo, so without this it renders its opposition
+// brightness at every phase angle. Same law the billboard's iRingFlux
+// rides, so the resolvedness band stays stepless (ring-photometry-pure.ts
+// ringPhaseFactor).
+uniform float uRingPhaseScale;
 // Host irradiance in the scene-wide HDR unit — the same scalar the body
 // mesh's airlight rides (mesh-surface-pure.ts hostIrradianceLuminance), so
 // ring↔body contrast is fixed by the shared exposure rather than matched.
@@ -80,9 +86,12 @@ void main() {
   float lit = mix(SHADOW_FLOOR, 1.0, unshadowed)
     * smoothstep(0.0, 0.02, abs(uSunDirLocal.z));
 
-  // Reflected on the sunlit face, dimmer transmitted light on the far face.
+  // Reflected on the sunlit face, dimmer transmitted light on the far
+  // face. The phase factor rides `light` and NOT `lit`: it scales flux,
+  // and folding it into the coverage mask below would have the opposition
+  // surge voting on how much lit surface the exposure pin sees.
   float sameSide = step(0.0, uSunDirLocal.z * uCamPosLocal.z);
-  float light = mix(TRANSMIT, 1.0, sameSide) * lit;
+  float light = mix(TRANSMIT, 1.0, sameSide) * lit * uRingPhaseScale;
 
   vec3 col = min(
       strip.rgb * light * uAirlightLuminance * INV_PI, vec3(STELLATA_LUMA_CEIL));

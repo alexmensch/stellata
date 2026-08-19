@@ -218,15 +218,60 @@ an azimuthal average) sit at 2–4/255 alpha, and the τ~10⁻⁴ Galle and
 Lassell sheets quantise to zero. Jupiter's rings (τ ≤ 10⁻⁵) fall
 three orders below the 8-bit floor and ship no strip at all —
 scoping analysis in `data/textures/README.md` § Ring strips.
-Lighting is a deliberately simple model:
+Lighting of the drawn annulus is a deliberately simple model:
 full strip colour on the sunlit face, a dimmed transmitted factor on
 the unlit face, both dying off as illumination goes edge-on to the
 ring plane, and an analytic ray–ellipsoid planet-shadow test that
-drops the occluded far-side segment to a residual floor. Phase-angle
-brightening of the rings already reaches the *disc/glow* path through
-the Mallama Saturn `c0` term; the resolved-mesh regime makes no
-photometric claim beyond the above (in particular no forward-scatter
-term, which is where Jupiter's dust rings would live).
+drops the occluded far-side segment to a residual floor. Beyond that
+the drawn annulus carries a phase-angle term and nothing else: no
+forward-scatter term, which is where Jupiter's dust rings would live,
+and no grazing-illumination falloff, so it still takes the host's full
+irradiance at any solar elevation above ~1° (`stellata-2f6.61`).
+
+**Saturn's ring brightness.** The ring system carries most of
+Saturn's light and its contribution swings with the tilt of the ring
+plane, so the *unresolved* magnitude runs the joint phase-angle /
+ring-tilt law of Mallama & Hilton 2018 Eq. 10 (Mallama 2012),
+`ΔV = −1.825·sin β + 0.026·α − 0.378·sin β·e^(−2.25·α)`, differenced
+against the globe-alone curve to give a flux multiplier on φ(α). β is
+the effective inclination `√(β_v·β_h)` built from the viewer's and
+the Sun's Saturnicentric latitudes about the body's IAU pole — the
+same pole the annulus is posed on. Saturn swings 0.96 mag from a
+ring-plane crossing to rings wide open at opposition (a factor of
+2.43), against the ~1.0–1.2 mag the real planet shows once its
+9.0–10.1 AU distance variation is removed. The fit is Earth-based and
+stellata is camera-anywhere, so all three of its bounds are handled
+explicitly rather than extrapolated through — α > 6.5°, β > 27°, and
+the backlit geometry the published rule zeroes outright.
+
+The law is evaluated as an **opposition amplitude times one phase
+shape**. The amplitude is the difference at α = 0, where the two papers'
+zero points are directly comparable; it carries the whole β dependence
+and floors at zero near edge-on, below β ≈ 0.94°, where the 0.036 mag
+between those zero points swamps the tilt term. The α-response is taken
+at the fit's own β = 27° bound and reused at every tilt, because a
+per-tilt one is not usable: the 0.026 mag/deg slope was fitted where the
+rings dominate the system and is unconstrained near edge-on, so below
+β ≈ 6.06° it drives the *system* fainter than the globe alone and the
+difference crosses zero inside the fitted α range. Ring flux and the
+surge term both scale with the rings' projected area, so the *fractional*
+phase response is nearly tilt-invariant in any case — the apparent tilt
+dependence of a per-tilt difference is the low-β dilution artefact.
+
+The **drawn annulus rides the same curve**, normalised to 1 at
+opposition — which is the anchor its strip already carries, a
+zero-phase geometric albedo — so the resolved rings brighten through
+opposition by what the point source does and the resolvedness band
+cannot step. Cassini/ISS corroborates the width independently: Déau
+et al. 2013 measure the surge half-width at 0.20° in the A and B rings
+and 0.26–0.28° in the C ring and Cassini Division, against the
+`ln2/2.25` = 0.308° of Mallama's Earth-based exponential. The surge is
+strip-averaged rather than per-radius because the per-region amplitudes
+(1.25 B, 1.39 A, 1.45 C, 1.47 Cassini Division) collapse to a few
+percent once flux-weighted, and because amplitude's correlation with
+optical depth turns over near τ ≈ 0.5–1 — so the strip's own opacity
+channel is not a usable proxy for it.
+`src/client/solar-system/planets/rings/README.md` § Ring photometry.
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
 blended in as an *emissive* term — no limb darkening, unlike the
@@ -259,10 +304,13 @@ https://doi.org/10.1016/j.icarus.2016.09.023). Mercury,
 Venus, Mars and Jupiter each carry a polynomial
 `ΔV(α°) = c1·α + c2·α² + …` from the paper's Tables A-1.2, A-2.2,
 A-4.2, A-5.2; Earth uses a cubic fit through the four discrete
-values published in Table A-3.1; Saturn uses a static-β = 16°
-approximation of the joint α/ring-tilt formula in Table A-6.2 (the
-ring contribution lands as a constant `c0 = −0.55 mag` brightness
-boost). The renderer multiplies the flux factor `10^(−ΔV/2.5)` into
+values published in Table A-3.1; Saturn's **globe** uses Mallama &
+Hilton 2018 Eq. 12, the 4th-order fit to Dyudina's Pioneer-derived
+scattering model, valid 6°–150° and carried down to 0° where it tracks
+the α < 6.5° globe fit (Eq. 11) inside 0.011 mag. Every curve is a
+globe anchored on its α=0 geometric albedo, so `c0 = 0` throughout;
+Saturn's rings are a separate term (§ Saturn's ring brightness above).
+The renderer multiplies the flux factor `10^(−ΔV/2.5)` into
 the apparent-magnitude formula in place of the Lambertian default
 whenever a planet carries coefficients and α is inside the published
 validity bound. Mallama 2018 publishes no phase polynomial for

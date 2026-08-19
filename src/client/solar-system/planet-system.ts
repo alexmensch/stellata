@@ -43,6 +43,10 @@ import {
   URANUS_ROTATION,
   VENUS_ROTATION,
 } from './planets/rotation/rotation-elements-pure';
+import {
+  SATURN_RING_PHOTOMETRY,
+  type RingSystemPhotometry,
+} from './planets/rings/ring-photometry-pure';
 
 export type PlanetType = 'rocky' | 'gas_giant' | 'ice_giant' | 'icy';
 
@@ -144,6 +148,12 @@ export interface PlanetRings {
   /** Inner/outer edge of the textured annulus, km from body centre. */
   readonly innerRadiusKm: number;
   readonly outerRadiusKm: number;
+  /** Joint phase-angle / ring-tilt law for the ring system's share of
+   *  the body's unresolved apparent magnitude. Absent for Uranus and
+   *  Neptune: their rings are true-opacity charcoal threads, and the
+   *  brightness-vs-inclination Mallama publishes for Uranus is methane
+   *  depletion toward its poles, not a ring term. */
+  readonly systemPhotometry?: RingSystemPhotometry;
 }
 
 export interface PlanetSystem {
@@ -379,7 +389,11 @@ export const SOL_PLANETS: readonly Planet[] = [
     terminatorSoftness: 0.02,
     // Radial span of the shipped ring profile (data/textures/README.md
     // § Artifact contract) — D-ring inner edge to F-ring outer.
-    rings: { innerRadiusKm: 74510, outerRadiusKm: 140390 },
+    rings: {
+      innerRadiusKm: 74510,
+      outerRadiusKm: 140390,
+      systemPhotometry: SATURN_RING_PHOTOMETRY,
+    },
   },
   // Uranus and Neptune deliberately omit `phaseCoefficients` — see
   // the comment in `phase-function.ts` for the reason. Both fall

@@ -8,6 +8,9 @@ import { SOL_BODIES } from '../planet-system';
 import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
+import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { phaseAngleFromLegs } from '../phase-function';
+import { ringPhaseFactor } from './rings/ring-photometry-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -262,5 +265,103 @@ describe('the layer releases what it stops drawing', () => {
 
     h.layer.dispose();
     expect(map.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the ring annulus phase scalar', () => {
+  /** A lit Saturn with its ring strip resolved, so updateRing runs whole. */
+  function litHarness(camera: THREE.Vector3) {
+    const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
+    const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
+    vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
+      ((url: string, onLoad: (bitmap: unknown) => void) => {
+        loads.push({ url, onLoad });
+      }) as never,
+    );
+    // Saturn on +x at 9.5 AU, host at the local origin.
+    const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
+    const field = {
+      group: new THREE.Group(),
+      monochrome: false,
+      liveInstanceCount: 1,
+      hiddenInstanceIdx: -1,
+      planetAt: () => saturn,
+      planetLocalPositionInto: (_i: number, out: THREE.Vector3) => {
+        out.copy(planetPos);
+        return true;
+      },
+      physicalPlanetSizePx: () => 600,
+      hostPlanetOf: () => ({ hostStarIdx: 0, planetIdx: 0 }),
+      getHostLocalPositionInto: (_h: number, out: THREE.Vector3) => {
+        out.set(0, 0, 0);
+        return true;
+      },
+      hostAbsmagOf: () => 4.83,
+      hostRadiusOf: () => R_SUN_PC,
+      hostOrientationOf: () => new THREE.Quaternion(),
+      getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [saturn] }),
+      eclipseDimForInstance: () => 1,
+    } as unknown as PlanetBodyField;
+    const layer = new PlanetMeshLayer(
+      field,
+      '/',
+      { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
+      () => {},
+      8192,
+    );
+    const cam = new THREE.PerspectiveCamera();
+    cam.position.copy(camera);
+    cam.updateMatrixWorld(true);
+    layer.update(cam, 0);
+    // Land every pending map, the ring strip included, then draw again.
+    for (const pending of loads.splice(0)) {
+      pending.onLoad({ width: 2048, height: 1024, close: vi.fn() });
+    }
+    layer.update(cam, 0);
+    const ring = layer.group.getObjectByName('planet-rings') as
+      | THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
+      | undefined;
+    return { layer, ring, planetPos };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reaches the annulus material, and agrees with the pure law', () => {
+    // Near-opposition Earth-like vantage.
+    const camPos = new THREE.Vector3(1 * AU_PC, 0, 0);
+    const { layer, ring, planetPos } = litHarness(camPos);
+    expect(ring, 'no ring annulus drawn').toBeDefined();
+    expect(ring!.visible).toBe(true);
+
+    const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
+    const toCam = camPos.clone().sub(planetPos);
+    const toHost = planetPos.clone().negate();
+    const expected = ringPhaseFactor(
+      saturn.rings!.systemPhotometry,
+      phaseAngleFromLegs(toCam.x, toCam.y, toCam.z, toHost.x, toHost.y, toHost.z),
+      saturn.phaseCoefficients,
+    );
+    expect(ring!.material.uniforms.uRingPhaseScale.value).toBeCloseTo(expected, 6);
+    expect(expected).toBeGreaterThan(0);
+    layer.dispose();
+  });
+
+  it('is 1 at opposition and falls off inside the first fraction of a degree', () => {
+    // The surge is 0.3 deg wide, so the vantages that bracket it are a
+    // hair apart: on the host→planet line (alpha = 0), then 0.02 AU off
+    // it at 8.5 AU range — alpha ~ 0.13 deg, a fifth of the way down.
+    const scaleAt = (y: number): number => {
+      const h = litHarness(new THREE.Vector3(1 * AU_PC, y * AU_PC, 0));
+      const v = h.ring!.material.uniforms.uRingPhaseScale.value;
+      h.layer.dispose();
+      vi.restoreAllMocks();
+      return v;
+    };
+    expect(scaleAt(0)).toBe(1);
+    const justOff = scaleAt(0.02);
+    expect(justOff).toBeLessThan(0.95);
+    expect(justOff).toBeGreaterThan(0.85);
   });
 });
