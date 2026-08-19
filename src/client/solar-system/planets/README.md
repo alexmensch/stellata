@@ -403,14 +403,14 @@ still ON screen but small — used every frame, so beyond that budget's reach.
 
 ### Surface relief
 
-Moon, Mercury, Mars and Earth shade with a DEM-derived tangent-space normal
-map and a per-texel horizon map on top of the colour map, lazily loaded on the
-same approach lane. Earth's pair is twice the width of the other three — its
-relief is far the flattest and buys nothing below 8192. The tangent frame both are sampled in, the single term the
-perturbed normal is allowed to reach, and how the facet's own slope composes
-with the skyline beyond it — the body's own limb included — are
-`surface-relief/README.md`; the shader that consumes them is
-`planet-mesh.frag.glsl` here.
+Moon, Mercury, Mars and Earth shade with a DEM-derived normal map, a horizon
+map and a sky-view factor over the colour map, all on the same approach lane.
+Earth's are twice the width of the other three — its relief is far the
+flattest and buys nothing below 8192. The tangent frame, the single term the
+perturbed normal may reach, how the facet's own slope composes with the
+skyline beyond it — the body's own limb included — and why the sky the ground
+sees needs a different march from the sun it sees, are
+`surface-relief/README.md`; the shader is `planet-mesh.frag.glsl` here.
 
 ### Ring systems
 

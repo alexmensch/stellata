@@ -62,6 +62,18 @@ rather than shipping it.
   fallback limb bound, and the manifest rows against the shipped
   planes' own headers. Rationale:
   `data/textures/relief/README.md` § Cast shadows.
+- `sky_view.py` — the third relief artifact (imported by the build):
+  one scalar per texel, the cosine-weighted share of its sky that
+  terrain fills, packed into a grayscale `<body>-skyview.webp`. Owns
+  the one thing the horizon pair cannot state — that the near field it
+  skips for shadowing still blocks sky, so this marches from **one DEM
+  texel** where that one starts at two OUTPUT texels. The encoding range
+  is NOT its own: `SKY_VIEW_RANGE` is owned by
+  `surface-relief-pure.ts`, and `sky-view.test.ts` pins both this script
+  and the mesh shader against that one export, plus the grid against the
+  horizon pair's, the manifest rows against the shipped maps' own
+  headers, and the R8 upload and its fallback in the layer. Rationale:
+  `data/textures/relief/README.md` § Sky view factor.
 - `horizon_map.test.py` — stdlib unittest pins for the geometry the
   TS suite can only source-pin: the flat-ground floor's closed form,
   azimuth registration and its east/west handedness against a
@@ -70,11 +82,26 @@ rather than shipping it.
   NumPy). Not in CI, like every `*.test.py` here.
 - `measure_relief_lighting.py` — manual, run by hand, NOT part of the
   build: reads the SHIPPED maps and reports how much ground each relief
-  term lights past the terminator against the same march at full DEM width,
-  plus the disc integral against phase. The verification behind both
+  term lights past the terminator against the same march at full DEM width
+  **from the same start distance**, plus the disc integral against phase.
+  `--sweep` costs output width and azimuth count against what each buys
+  (the two justification tables in § Cast shadows); `--sweep-width` and
+  `--sweep-azimuths` run one half, the azimuth half being slow enough to
+  want that. The verification behind both
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
+- `first-approach-probe.js` — manual, pasted into the browser
+  console, NOT part of the build: wraps the GL entry points a first
+  approach blocks on — `texImage2D` / `generateMipmap` / `linkProgram`
+  and friends — and attributes each slow frame to upload, mipmap chain
+  or program link. Answers the measure-first gate on
+  `stellata-2f6.32`, whose earlier attempt could only log rAF gaps and
+  so could not tell a one-shot upload from sustained per-frame cost:
+  the report classifies each slow frame ISOLATED or burst, and only the
+  first belongs to that bead. Wraps calls that are per-texture or
+  per-program, never per-draw, so it cannot distort the frame it
+  measures.
 - `measure_block_compression.py` (+ `block_compression.test.py`) —
   manual, run by hand, NOT part of the build: encodes the shipped
   normal maps through a reference BC4/BC5 codec and through lossy WebP
@@ -109,9 +136,11 @@ rather than shipping it.
   the file's own header (the FIRST size a row states, which is the
   README's own rule), the 2:1 equirect ratio, exact row and image-row
   counts so a source cannot leave coverage silently, and each row's
-  colour-invention wording against `TINT_STRENGTH` / `DESATURATE` in
-  `build-textures.py` — the one half of a row that is invented rather
-  than measured. Self-skips per row on an unpulled LFS object, warning
+  colour-invention wording against `DESATURATE` in `build-textures.py`
+  — the one half of a row that is invented rather than measured. It
+  also asserts that NO row still promises a representative-chroma tint,
+  since the build applies none: a grayscale source takes its colour
+  from its measured index. Self-skips per row on an unpulled LFS object, warning
   rather than passing quietly, like the two relief suites.
 - `image-header-pure.ts` — dimensions straight out of a WebP, JPEG or
   TIFF header, so a pin reads the artifact rather than the prose beside
@@ -133,12 +162,15 @@ rather than shipping it.
   literal would compare false against it everywhere.
 - `texture_calibration.py` — index-anchored colour calibration
   (imported by the build): per-map linear-RGB gains that move each
-  map's sphere-weighted mean chromaticity onto the body's adopted
-  Mallama 2017 B−V / V−Rc target, solar-spectrum reference white,
-  luminance-preserving. Writes per-body numbers into
-  `data/textures/calibration.json`;
-  `texture-calibration.test.ts` pins targets, achieved means, and the
-  index table. Rationale: `data/textures/README.md` § Colour fidelity.
+  map's sphere-weighted mean chromaticity onto the body's published
+  B−V / V−R target, solar-spectrum reference white. Owns the one fact
+  neither source states — that they are on DIFFERENT photometric
+  systems, so each row carries its own and `vrc_of` converts a Johnson
+  V−R onto the Cousins system `SUN_VRC` is measured on. Planets from
+  Mallama 2017, satellites from Frey & Lowman 1974. Writes per-body
+  numbers into `data/textures/calibration.json`;
+  `texture-calibration.test.ts` pins targets, achieved means, the
+  index table and that conversion. Rationale: `data/textures/README.md` § Colour fidelity.
 - `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The

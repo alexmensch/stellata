@@ -9,6 +9,15 @@
     },
     "medianTiltDeg": 0.0,
     "p90TiltDeg": 0.521,
+    "skyView": {
+      "azimuths": 8,
+      "clampedPct": 0.0,
+      "maxFactor": 0.04629,
+      "medianFactor": 0.0,
+      "p99Factor": 0.00206,
+      "range": 0.25,
+      "width": 4096
+    },
     "width": 8192
   },
   "mars": {
@@ -21,6 +30,15 @@
     },
     "medianTiltDeg": 0.443,
     "p90TiltDeg": 2.577,
+    "skyView": {
+      "azimuths": 8,
+      "clampedPct": 0.0,
+      "maxFactor": 0.07813,
+      "medianFactor": 3e-05,
+      "p99Factor": 0.00824,
+      "range": 0.25,
+      "width": 2048
+    },
     "width": 4096
   },
   "mercury": {
@@ -33,6 +51,15 @@
     },
     "medianTiltDeg": 1.138,
     "p90TiltDeg": 3.938,
+    "skyView": {
+      "azimuths": 8,
+      "clampedPct": 0.0,
+      "maxFactor": 0.10688,
+      "medianFactor": 0.00021,
+      "p99Factor": 0.01136,
+      "range": 0.25,
+      "width": 2048
+    },
     "width": 4096
   },
   "moon": {
@@ -45,6 +72,15 @@
     },
     "medianTiltDeg": 3.273,
     "p90TiltDeg": 11.656,
+    "skyView": {
+      "azimuths": 8,
+      "clampedPct": 0.0,
+      "maxFactor": 0.14236,
+      "medianFactor": 0.00239,
+      "p99Factor": 0.0445,
+      "range": 0.25,
+      "width": 2048
+    },
     "width": 4096
   }
 }

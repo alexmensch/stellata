@@ -63,17 +63,19 @@ gitignored mirror.
 
 ## Surface relief and cast shadows
 
-`relief/` — the DEM-derived `<body>-normal.webp` and the
-`<body>-horizon-{a,b}.webp` pair, on the three bodies with a usable global
-DEM (Moon, Mercury, Mars). A normal map says which way the ground tilts; a
-horizon map says what that ground can *see*, which is what makes the body's
-own limb an occluder. Both are registered to the body's **colour** map
+`relief/` — the DEM-derived `<body>-normal.webp`, the
+`<body>-horizon-{a,b}.webp` pair and `<body>-skyview.webp`, on the four
+bodies with a usable global DEM (Moon, Mercury, Mars, Earth). A normal map
+says which way the ground tilts; a horizon map says what that ground can
+*see*, which is what makes the body's own limb an occluder; the sky-view
+factor says how much of the sky terrain takes away, over the near field the
+horizon map skips. All are registered to the body's **colour** map
 rather than to its DEM — the failure with no other symptom, since a
 mis-rolled map shades real terrain in the wrong place and everything else
 looks fine.
 
-Widths, the lossless-and-not-by-default encoding, the RG8 narrowing that
-only the normal map may take, the BC5 measurements, and the lit-area
+Widths, the lossless-and-not-by-default encoding, the RG8 and R8 narrowings
+the normal and sky-view maps take, the BC5 measurements, and the lit-area
 verification tables are `relief/README.md`.
 
 ## Ring strips — true opacity and the 8-bit floor
@@ -121,10 +123,24 @@ calibrates every map with a published disc-integrated colour to a
 - **Reference white is the solar spectrum**, not D65 — a body
   reflecting sunlight neutrally renders R = G = B. Decision record in
   `docs/science-solar-system.md` § Naked-eye colour calibration.
-- Each body's target chromaticity is its adopted **B−V / V−Rc** from
-  Mallama, Krobusek & Pavlov 2017 (Icarus 282, 19, Table 3),
+- Each body's target chromaticity is its published **B−V / V−R**,
   expressed as flux ratios against the Sun's own indices and mapped
-  B→blue, V→green, Rc→red.
+  B→blue, V→green, Rc→red. Planets take Mallama, Krobusek & Pavlov 2017
+  (Icarus 282, 19, Table 3); satellites take Frey & Lowman, NASA Goddard
+  X-922-74-112 (1974), Table IV, carrying Harris 1961 via Newburn &
+  Gulkis 1973.
+- **The photometric system is stored per row**, because the two sources
+  are not on the same one. Frey & Lowman's Table III puts its R filter at
+  0.69 µm — Johnson R, against Cousins Rc's ~0.64 — and the solar anchor
+  (`SUN_VRC` = 0.352) is Cousins. Reading a Johnson index against it
+  reddens the body: **0.26 mag on Titan**, worse than the hand tint it
+  replaces. Each row keeps the number its source published and
+  `vrc_of` converts, interpolating the paired Johnson/Cousins columns of
+  Fitzgerald 1970 + Ducati et al. 2001 as tabulated by STScI, whose
+  Cousins side is Bessell 1979. Inverting that transform at the adopted
+  solar V−Rc returns a Johnson solar V−R of 0.53 against the ~0.52 the
+  system is usually quoted at, which is the cross-check that it is
+  pointing the right way.
 - Per-map linear-RGB gains move the map's **sphere-weighted mean**
   (rows weighted by cos-latitude; no-data gaps excluded) onto the
   target. The triple is **normalised so its largest member is 1**, so a
@@ -137,10 +153,12 @@ calibrates every map with a published disc-integrated colour to a
   mean-luminance-preserving property that clipping broke anyway.
   Achieved-vs-target numbers live in the committed `calibration.json`,
   pinned by `scripts/textures/texture-calibration.test.ts`.
-- **Moons are not yet index-calibrated** — Mallama 2017 covers the
-  planets only, so the moon maps keep the hand treatments below until
-  a vetted satellite index table exists. The machinery extends with
-  one row per body in `COLOUR_INDICES`.
+- **Eight moons are now index-calibrated** — Io, Europa, Ganymede,
+  Callisto, Dione, Rhea, Titan and Triton, the bodies Frey & Lowman give
+  both indices for. Enceladus, Tethys and Iapetus have a published B−V
+  but **no V−R**, and Mimas has neither, so they keep the hand
+  treatment: a red target cannot be invented for them, and half a
+  measured target is not better than an honest one.
 
 What the calibration corrects, per planet:
 
@@ -169,36 +187,66 @@ What the calibration corrects, per planet:
   mean imaged colour, feathered at the boundary, so it reads as
   "no data", not as a contrasting terrain band.
 
-Moon treatments (hand-tuned pending measured targets):
+Moon treatments:
 
-- **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched.
-- **Io / Ganymede** — USGS Galileo/Voyager colour merges, natural-ish
-  colour, untouched (Ganymede's un-imaged polar wedges gap-fill with
-  the map's feathered mean colour).
-- **Europa / Callisto** — the only global USGS mosaics are grayscale;
-  the build tints them with each body's representative colour at half
-  chroma (both are near-neutral bodies).
+- **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched. Frey &
+  Lowman covers outer-planet satellites only, so it carries no lunar row;
+  its map is already natural colour rather than tinted or enhanced, which
+  is why it is the one body that loses nothing by waiting.
+- **Io / Ganymede** — USGS Galileo/Voyager colour merges, now calibrated
+  to their measured indices (Ganymede's un-imaged polar wedges gap-fill
+  with the map's feathered mean colour).
+- **Europa / Callisto** — the only global USGS mosaics are grayscale, so
+  the calibration gains ARE the tint, exactly as on Mercury. This
+  replaces the old half-chroma hand tint against each body's
+  representative colour.
 - **Saturnian mids (Mimas, Enceladus, Tethys, Dione, Rhea, Iapetus)
   and Triton** — Schenk 2014 IR-G-UV *enhanced-colour* mosaics; the
   colour separation is exaggerated far past what the eye would see on
   these near-neutral ices, so the build pulls chroma halfway back
-  toward gray (`DESATURATE`). Triton's un-imaged northern hemisphere
-  gap-fills with the map's feathered mean colour, like Pluto's band.
+  toward gray (`DESATURATE`). **Desaturation runs before calibration**
+  where a body takes both (Dione, Rhea, Triton): the two are orthogonal —
+  one pulls back the exaggerated separation, the other puts the resulting
+  mean on the measured index — but only in that order, since desaturating
+  afterwards would drag the calibrated mean back toward gray. Triton's
+  un-imaged northern hemisphere gap-fills with the map's feathered mean
+  colour, like Pluto's band.
 - **Titan** — Cassini ISS 938 nm mosaic: surface detail seen THROUGH
-  the opaque haze, not the visible-light appearance. The build tints
-  the grayscale with Titan's full representative orange so the
-  naked-eye haze colour dominates and the surface reads as faint
-  markings (the Venus-style "features colourised to visible tones"
-  caveat).
+  the opaque haze, not the visible-light appearance. Calibrated to
+  Titan's measured B−V 1.29 / V−R 0.84, which IS the naked-eye haze
+  colour, so the grayscale reads as faint markings under it (the
+  Venus-style "features colourised to visible tones" caveat). The
+  measurement replaces a hand-picked full-chroma orange.
 - **Uranian moons** — no texture by design: Voyager southern-
   hemisphere-only coverage; they exercise the renderer's texture-less
-  base path.
+  base path. Frey & Lowman does give Titania and Oberon, so a row exists
+  if one ever ships a map.
 
-The moon treatments live in `build-textures.py`
-(`REPRESENTATIVE_COLOURS`, tint + desaturate + gap-fill + flip
-helpers); the tint colours are pinned to `SOL_BODIES` by
-`scripts/textures/texture-colours.test.ts`, so the tinted maps always
-match the disc the body renders as at distance.
+The remaining hand treatments live in `build-textures.py` (`DESATURATE`,
+gap-fill + flip helpers).
+
+### The disc colour is the same quantity, and only the moons are on it
+
+`Planet.colour` in `src/client/solar-system/planet-system.ts` is a **second**
+rendering of a body's disc-integrated colour: it tints the reflected-glare
+billboard at every distance (`iColour`), and it shades the mesh as `uColour`
+until the map arrives. So a body whose map is calibrated and whose disc colour
+is not changes hue the moment its texture lands — which reads as a texture bug,
+not as a stale constant.
+
+The **eight calibrated moons are pinned to their own target** by
+`scripts/textures/texture-colours.test.ts`, at each body's existing relative
+luminance so only hue moved. Titan was the worst offender at 16 % off its
+measured chromaticity, which is the same hand-picked orange the retired tint
+applied; Io, Europa, Callisto and Rhea were 7–9 % off.
+
+**The planets are NOT pinned, and diverge further** — Mars by 83 % in the red
+channel, Earth 33 %, Venus 24 %. That is older than the satellite work and is
+deliberately left alone here: `Planet.colour` also carries brightness, because
+the planet glare passes it to the shader unnormalised where the star pipeline
+divides its own colour to relative luminance 1 (`star.vert.glsl:ciToColor`).
+Aligning the planets means settling that asymmetry first and re-eyeing six
+bodies, so it is tracked rather than smuggled in — `stellata-2f6.63`.
 
 ## Rebuilding
 

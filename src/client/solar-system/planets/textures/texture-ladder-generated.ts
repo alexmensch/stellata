@@ -10,14 +10,14 @@ export interface TextureLadderRow {
 }
 
 export const TEXTURE_LADDER: Readonly<Record<string, TextureLadderRow>> = {
-  callisto: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.049952 },
-  dione: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.20746 },
+  callisto: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.046939 },
+  dione: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.205283 },
   earth: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.062722 },
   enceladus: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.225797 },
-  europa: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.315024 },
-  ganymede: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.179134 },
+  europa: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.302636 },
+  ganymede: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.17235 },
   iapetus: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.163293 },
-  io: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.262267 },
+  io: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.18262 },
   jupiter: { rungs: [1024, 2048, 3601], meanLuminance: 0.358355 },
   mars: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.129191 },
   mercury: { rungs: [1024, 2048, 4096, 6132], meanLuminance: 0.03051 },
@@ -25,10 +25,10 @@ export const TEXTURE_LADDER: Readonly<Record<string, TextureLadderRow>> = {
   moon: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.299922 },
   neptune: { rungs: [1024, 1800], meanLuminance: 0.290918 },
   pluto: { rungs: [1024, 2048, 4096, 5926], meanLuminance: 0.179515 },
-  rhea: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.182652 },
+  rhea: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.174347 },
   saturn: { rungs: [1024, 2048, 2880], meanLuminance: 0.577222 },
   tethys: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.193779 },
-  titan: { rungs: [1024, 2048, 4040], meanLuminance: 0.256504 },
-  triton: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.325081 },
+  titan: { rungs: [1024, 2048, 4040], meanLuminance: 0.199199 },
+  triton: { rungs: [1024, 2048, 4096, 8192], meanLuminance: 0.304592 },
   venus: { rungs: [1024, 1800], meanLuminance: 0.298114 },
 };

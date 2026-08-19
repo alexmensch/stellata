@@ -13,6 +13,8 @@ import { describe, expect, it } from 'vitest';
 
 interface CalibrationRow {
   bv: number;
+  vr: number;
+  system: 'cousins' | 'johnson';
   vrc: number;
   target: [number, number, number];
   meanBefore: [number, number, number];
@@ -24,16 +26,41 @@ const manifest: Record<string, CalibrationRow> = JSON.parse(
   readFileSync(resolve(__dirname, '../../data/textures/calibration.json'), 'utf-8'),
 );
 
-// (B−V, V−Rc) per body — Mallama et al. 2017, Table 3 reference rows
-// (Saturn V−Rc from its internally-consistent synthetic pair).
-const INDICES: Record<string, [number, number]> = {
-  mercury: [0.97, 0.52],
-  venus: [0.7, 0.35],
-  earth: [0.47, 0.29],
-  mars: [1.36, 0.82],
-  jupiter: [0.86, 0.35],
-  saturn: [1.07, 0.51],
-  neptune: [0.39, -0.33],
+// (B−V, V−R, system) per body, as PUBLISHED. Planets: Mallama et al. 2017,
+// Table 3 reference rows (Saturn V−Rc from its internally-consistent
+// synthetic pair). Satellites: Frey & Lowman 1974, Table IV, whose R band
+// its Table III places at 0.69 µm — Johnson, not Cousins.
+const INDICES: Record<string, [number, number, 'cousins' | 'johnson']> = {
+  mercury: [0.97, 0.52, 'cousins'],
+  venus: [0.7, 0.35, 'cousins'],
+  earth: [0.47, 0.29, 'cousins'],
+  mars: [1.36, 0.82, 'cousins'],
+  jupiter: [0.86, 0.35, 'cousins'],
+  saturn: [1.07, 0.51, 'cousins'],
+  neptune: [0.39, -0.33, 'cousins'],
+  io: [1.17, 0.66, 'johnson'],
+  europa: [0.87, 0.57, 'johnson'],
+  ganymede: [0.83, 0.59, 'johnson'],
+  callisto: [0.86, 0.61, 'johnson'],
+  dione: [0.71, 0.48, 'johnson'],
+  rhea: [0.76, 0.61, 'johnson'],
+  titan: [1.29, 0.84, 'johnson'],
+  triton: [0.77, 0.58, 'johnson'],
+};
+
+// What the published Johnson V−R becomes on the Cousins system the solar
+// anchor is measured on. Pinned as committed numbers rather than by
+// re-implementing the interpolation, so a change to the transform table has
+// to be looked at rather than silently followed.
+const JOHNSON_TO_COUSINS: Record<string, number> = {
+  io: 0.4533,
+  europa: 0.3889,
+  ganymede: 0.4044,
+  callisto: 0.42,
+  dione: 0.318,
+  rhea: 0.42,
+  titan: 0.5833,
+  triton: 0.3967,
 };
 
 const SUN_BV = 0.653;
@@ -46,10 +73,25 @@ describe('texture colour calibration manifest', () => {
     expect(Object.keys(manifest).sort()).toEqual(Object.keys(INDICES).sort());
   });
 
-  it('each body pins the adopted Mallama 2017 indices', () => {
-    for (const [body, [bv, vrc]] of Object.entries(INDICES)) {
+  it('each body pins its published indices and their system', () => {
+    for (const [body, [bv, vr, system]] of Object.entries(INDICES)) {
       expect(manifest[body].bv, body).toBe(bv);
-      expect(manifest[body].vrc, body).toBe(vrc);
+      expect(manifest[body].vr, body).toBe(vr);
+      expect(manifest[body].system, body).toBe(system);
+    }
+  });
+
+  // Feeding a Johnson V−R straight into the Cousins-anchored target is the
+  // failure this conversion exists to stop: it would redden every satellite,
+  // by 0.26 mag on Titan — worse than the hand tints it replaced.
+  it('converts a Johnson V−R to Cousins and leaves a Cousins one alone', () => {
+    for (const [body, row] of Object.entries(manifest)) {
+      if (row.system === 'cousins') {
+        expect(row.vrc, body).toBe(row.vr);
+      } else {
+        expect(row.vrc, body).toBe(JOHNSON_TO_COUSINS[body]);
+        expect(row.vrc, body).toBeLessThan(row.vr);
+      }
     }
   });
 
@@ -97,6 +139,24 @@ describe('texture colour calibration manifest', () => {
     // measured (Irwin-consistent) tone.
     expect(manifest.neptune.meanBefore[2]).toBeGreaterThan(1.5);
     expect(manifest.neptune.achieved[2]).toBeLessThan(1.35);
+  });
+
+  it('lands each satellite on the tone the body actually shows', () => {
+    // Targets are V-normalised, so target[0] is R/G and target[2] is B/G.
+    // Titan's haze is the strongest colour in the set and the Saturnian ices
+    // the weakest — a calibration that swapped them would still pass the
+    // per-channel tolerance above, which only checks the map hit ITS target.
+    expect(manifest.titan.target[0]).toBeGreaterThan(1.2);
+    expect(manifest.titan.target[2]).toBeLessThan(0.6);
+    expect(manifest.io.target[0]).toBeGreaterThan(1.05);
+    expect(manifest.io.target[2]).toBeLessThan(0.7);
+    // 0.15 separates the ices cleanly from the two coloured bodies without
+    // pretending they are exactly grey: the furthest ice sits 0.10 off
+    // neutral in blue, Io 0.38 and Titan 0.44.
+    for (const ice of ['dione', 'rhea', 'triton']) {
+      expect(Math.abs(manifest[ice].target[0] - 1), ice).toBeLessThan(0.15);
+      expect(Math.abs(manifest[ice].target[2] - 1), ice).toBeLessThan(0.15);
+    }
   });
 
   it('pins the committed gains + achieved of the correction bodies', () => {

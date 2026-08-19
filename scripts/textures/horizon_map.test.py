@@ -18,10 +18,10 @@ from horizon_map import (  # noqa: E402
     HORIZON_AZIMUTHS,
     HORIZON_MARCH_START_TEXELS,
     HORIZON_SIN_RANGE,
-    HORIZON_TARGET_W,
     decode_horizon_sin,
     encode_horizon,
     horizon_angles,
+    horizon_target_w,
     march_start,
     search_arc,
 )
@@ -71,7 +71,7 @@ class SearchArcTests(unittest.TestCase):
         }
         self.assertEqual(
             {k: round(v) for k, v in arcs_km.items()},
-            {"moon": 262, "mercury": 219, "mars": 446},
+            {"moon": 262, "mercury": 219, "mars": 446, "earth": 326},
         )
 
 
@@ -113,7 +113,7 @@ class FlatGroundTests(unittest.TestCase):
         caster inside one output texel is half a colour-map texel, so the ground
         throwing the shadow cannot be drawn at any camera distance."""
         self.assertGreaterEqual(HORIZON_MARCH_START_TEXELS, 2.0)
-        km = march_start(HORIZON_TARGET_W) * MOON["radius_km"]
+        km = march_start(horizon_target_w(MOON)) * MOON["radius_km"]
         self.assertAlmostEqual(km, 10.66, places=2)
 
 

@@ -1,7 +1,7 @@
 // Enforces the comment-rule "law" section of CLAUDE.md across src/ and
 // scripts/ TS/Py source. Fails CI when bead-IDs, PR references, memory-
 // key wikilinks, or oversized module docstrings appear — see
-// docs/authoring-patterns.md § Code comment hygiene for the rules.
+// docs/authoring-patterns.md § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
@@ -92,7 +92,7 @@ const FORBIDDEN: Pattern[] = [
 const walk = (dir: string): Generator<string> =>
   walkFiles(dir, {
     skipDir: (name) => EXCLUDED_DIRS.has(name),
-    include: (path) => /\.(?:ts|py)$/.test(path) && !/\.d\.ts$/.test(path),
+    include: (path) => /\.(?:ts|js|py)$/.test(path) && !/\.d\.ts$/.test(path),
   });
 
 interface Violation {
@@ -149,7 +149,7 @@ function moduleDocstringLines(path: string): number {
   while (i < lines.length && (lines[i].trim() === '' || lines[i].startsWith('#!'))) i++;
   if (i >= lines.length) return 0;
   let count = 0;
-  if (path.endsWith('.ts')) {
+  if (path.endsWith('.ts') || path.endsWith('.js')) {
     if (lines[i].trim().startsWith('//')) {
       while (i < lines.length && lines[i].trim().startsWith('//')) {
         count++; i++;

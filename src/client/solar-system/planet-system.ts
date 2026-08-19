@@ -468,22 +468,22 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Moon', parentName: 'Earth', radiusKm: 1737.4, albedo: 0.12, type: 'rocky', colour: [0.55, 0.54, 0.52],
     phaseCoefficients: MOON_PHASE },
 
-  { name: 'Io', parentName: 'Jupiter', radiusKm: 1821.6, albedo: 0.63, type: 'rocky', colour: [0.86, 0.78, 0.45] },
-  { name: 'Europa', parentName: 'Jupiter', radiusKm: 1560.8, albedo: 0.67, type: 'icy', colour: [0.82, 0.76, 0.68] },
-  { name: 'Ganymede', parentName: 'Jupiter', radiusKm: 2634.1, albedo: 0.43, type: 'icy', colour: [0.58, 0.53, 0.47] },
-  { name: 'Callisto', parentName: 'Jupiter', radiusKm: 2410.3, albedo: 0.22, type: 'icy', colour: [0.45, 0.41, 0.37] },
+  { name: 'Io', parentName: 'Jupiter', radiusKm: 1821.6, albedo: 0.63, type: 'rocky', colour: [0.854, 0.778, 0.483] },
+  { name: 'Europa', parentName: 'Jupiter', radiusKm: 1560.8, albedo: 0.67, type: 'icy', colour: [0.798, 0.771, 0.632] },
+  { name: 'Ganymede', parentName: 'Jupiter', radiusKm: 2634.1, albedo: 0.43, type: 'icy', colour: [0.563, 0.536, 0.456] },
+  { name: 'Callisto', parentName: 'Jupiter', radiusKm: 2410.3, albedo: 0.22, type: 'icy', colour: [0.442, 0.415, 0.343] },
 
   { name: 'Mimas', parentName: 'Saturn', radiusKm: 198.2, albedo: 0.96, type: 'icy', colour: [0.72, 0.72, 0.72] },
   { name: 'Enceladus', parentName: 'Saturn', radiusKm: 252.1, albedo: 0.99, type: 'icy', colour: [0.92, 0.93, 0.95] },
   { name: 'Tethys', parentName: 'Saturn', radiusKm: 531.1, albedo: 0.80, type: 'icy', colour: [0.80, 0.80, 0.80] },
-  { name: 'Dione', parentName: 'Saturn', radiusKm: 561.4, albedo: 0.70, type: 'icy', colour: [0.75, 0.75, 0.74] },
-  { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.78, 0.78, 0.77] },
+  { name: 'Dione', parentName: 'Saturn', radiusKm: 561.4, albedo: 0.70, type: 'icy', colour: [0.734, 0.757, 0.718] },
+  { name: 'Rhea', parentName: 'Saturn', radiusKm: 763.8, albedo: 0.95, type: 'icy', colour: [0.824, 0.774, 0.701] },
   // Titan is the one moon with a dense atmosphere (1.5 bar N2 haze) —
   // Earth-like terminator softness; every other in-scope moon is airless.
   // Its detached haze layers extend ~300 km above the surface —
   // proportionally the largest shell of the four atmosphere bodies
   // (~12 % of R); the famous Cassini back-lit ring.
-  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.83, 0.60, 0.28],
+  { name: 'Titan', parentName: 'Saturn', radiusKm: 2574.7, albedo: 0.22, type: 'icy', colour: [0.76, 0.614, 0.342],
     terminatorSoftness: 0.05,
     // Thick tholin haze: strong grey Mie scatter, strongly forward (Cassini
     // back-lit ring), and heavy blue absorption (high-in-blue absorbCoeff)
@@ -510,7 +510,7 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
   { name: 'Titania', parentName: 'Uranus', radiusKm: 788.4, albedo: 0.27, type: 'icy', colour: [0.58, 0.55, 0.53] },
   { name: 'Oberon', parentName: 'Uranus', radiusKm: 761.4, albedo: 0.23, type: 'icy', colour: [0.55, 0.50, 0.47] },
 
-  { name: 'Triton', parentName: 'Neptune', radiusKm: 1353.4, albedo: 0.76, type: 'icy', colour: [0.85, 0.80, 0.76] },
+  { name: 'Triton', parentName: 'Neptune', radiusKm: 1353.4, albedo: 0.76, type: 'icy', colour: [0.84, 0.806, 0.724] },
 ] as const;
 
 const MOON_ELEMENTS_BY_NAME = new Map(MOON_ELEMENTS.map((m) => [m.name, m]));

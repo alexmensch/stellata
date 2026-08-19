@@ -114,23 +114,28 @@ const rowFor = (body: string): string => {
 // prose behind fails, and so does prose claiming a treatment the build
 // doesn't apply. data/textures/src/README.md § Auditing.
 describe('every colour-invention claim matches the constant behind it', () => {
-  const HALF_CHROMA = /half the representative chroma/;
-  const FULL_CHROMA = /FULL representative/;
+  const CHROMA_TINT = /half the representative chroma|FULL representative/;
   const HALFWAY_GRAY = /pulled halfway to gray/;
+  const FROM_GAINS = /rendered colour comes from the index-anchored calibration gains/;
 
-  it('states the grayscale-source tint each row actually gets', () => {
-    const tint = pyStrengths('TINT_STRENGTH');
-    for (const [body, strength] of Object.entries(tint)) {
-      const row = rowFor(body);
-      if (strength === 0.5) expect(row, body).toMatch(HALF_CHROMA);
-      else if (strength === 1.0) expect(row, body).toMatch(FULL_CHROMA);
-      else throw new Error(`${body}: no row wording for tint ${strength}`);
-    }
-    // And no row may claim a tint the build does not apply.
+  it('claims no representative-chroma tint, because none is applied', () => {
+    // The hand tints are retired: every grayscale source now takes its colour
+    // from its measured index, exactly as Mercury always did. A row still
+    // promising a representative chroma would be describing a build step that
+    // no longer exists, which is the one direction the dimension checks above
+    // can never catch.
+    expect(readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8'))
+      .not.toContain('TINT_STRENGTH');
     for (const row of imageRows) {
-      if (!HALF_CHROMA.test(row) && !FULL_CHROMA.test(row)) continue;
-      const body = Object.keys(tint).find(b => fileOf(row).startsWith(`${b}-`));
-      expect(body, `${fileOf(row)} claims a tint`).toBeDefined();
+      expect(row, `${fileOf(row)} claims a tint`).not.toMatch(CHROMA_TINT);
+    }
+  });
+
+  it('says so on every row whose colour is entirely calibration gains', () => {
+    // The grayscale sources: nothing about their rendered colour is imaged,
+    // so the row is the only place that fact is recorded.
+    for (const body of ['mercury', 'europa', 'callisto', 'titan']) {
+      expect(rowFor(body), body).toMatch(FROM_GAINS);
     }
   });
 

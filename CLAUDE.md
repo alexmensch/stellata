@@ -19,7 +19,7 @@ intensity profile, layer composition — in `src/client/*/README.md`.
 
 The rule (default none, the gate, forbidden categories, 1–3-line module
 docstrings, the substitution table) is a standing global rule. Stellata adds
-enforcement: `tests/code-comment-rules.test.ts` scans `*.ts` / `*.py` under
+enforcement: `tests/code-comment-rules.test.ts` scans `*.{ts,js,py}` under
 `src/` and `scripts/`. Literal forms that fail the suite:
 
 - **Bead IDs**, any form — `(stellata-9mm.NNN)`, `9mm.NNN`, `dch.NN`, `per the

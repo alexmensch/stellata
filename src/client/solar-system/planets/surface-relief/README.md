@@ -124,7 +124,7 @@ the point** — it is the whole 38.7 % → 9.6 % of § What the composition is w
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
-between them (`data/textures/relief/README.md` § Cast shadows measures it — 0.32°
+between them (`data/textures/relief/README.md` § Cast shadows measures it — 0.37°
 mean at 8 azimuths). What keeps this one-sided rather than compounding is that
 the map's OWN error over flat ground runs the other way: the march never
 samples closer than its start distance, so flat ground at the reference sphere
@@ -177,13 +177,14 @@ method and the width/azimuth evidence in `data/textures/relief/README.md` § Cas
 
 | solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|
-| 0–2° | 38.7 % | 9.6 % | 8.7 % |
-| 2–5° | 17.7 % | 0.3 % | 0.2 % |
+| 0–2° | 38.7 % | 9.6 % | 9.5 % |
+| 2–5° | 17.7 % | 0.3 % | 0.3 % |
 | 5–10° | 6.7 % | 0.0 % | 0.0 % |
 
-The reference column shares the start distance, so both moved together when it
-did — the shipped map lights 9.6 % of the 0–2° band against the reference's
-8.7 %, and that 0.9-point gap is what the output grid and the encoding cost.
+The reference marches from the shipped map's start distance, not from its own
+width's — so the 0.1-point gap in the 0–2° band is what the output grid and the
+encoding cost, and nothing else. It used to read 0.9, which was mostly the
+reference beginning at half the distance.
 
 ## Shadows are lit by the terrain
 
@@ -194,11 +195,13 @@ around the patch scattering light into it. The other candidates are not worth
 modelling: earthshine is ~5×10⁻⁵ of sunlight and reaches the near side only,
 zodiacal light ~10⁻⁸, and the solar disc's own penumbra is already `uSunAngRad`.
 
-**The horizon map already carries the input, so this costs no fetch.** For a
-horizontal patch the cosine-weighted sky view factor is the mean of cos²h over
-the stored azimuths, and the map stores sin h — so the terrain's share is
-`mean(sin²h)` over the eight channels `stellataHorizonSin` has already read.
-Writing ρ for the body's geometric albedo and F for that terrain fraction:
+For a horizontal patch the cosine-weighted sky view factor is the mean of cos²h
+over the azimuths, and a skyline is stored as sin h — so the terrain's share is
+`mean(max(sin h, 0)²)`. That is one scalar per texel and it rides its own map,
+`<body>-skyview.webp`, for the reason § F comes from its own map gives: the
+horizon planes deliberately skip the near field, which is where the answer
+mostly lives. Writing ρ for the body's geometric albedo and F for that terrain
+fraction:
 
 ```
 L_fill = surfaceScale · ρ · F · max(sunCos, 0) · limb
@@ -231,50 +234,71 @@ honest answer really is close to black.
 
 It is added to `col`, never folded into `dayside`. Folding it in would put it
 inside the direct term, and `dayside` is what the coverage mask below is cut
-from. The CPU mirror is `terrainViewFactor` in `surface-relief-pure.ts`, source-
-pinned to the GLSL clamp because a `max()` dropped on the shader side alone
-would brighten every plain with nothing in the TS suite noticing.
+from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
+`decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
+next section describes — and `SKY_VIEW_RANGE` lives there too, so the shader
+and `sky_view.py` are both pinned against one owner rather than against each
+other. The clamp inside `terrainViewFactor` is source-pinned to the GLSL
+because a `max()` dropped on the shader side alone would brighten every plain
+with nothing in the TS suite noticing.
 
 **No flux renormalisation**, and measured rather than assumed — the fourth
 column of `../emission/README.md`'s phase table.
 
-### What the fill term is actually worth — it does not reach the screen
+### F comes from its own map, not from the horizon planes
 
-The formula above is right and the term is nonzero everywhere the skyline is
-positive, but at the shipped map's resolution it lands **below one 8-bit code
-value** over essentially the whole surface. Measured off the shipped planes,
-area-weighted by `cos(lat)`, with `ρ·F` read as the shadow-to-lit ratio:
+Deriving `F` from the eight horizon channels is what the shader does while the
+sky-view map is still loading, and it **under-reads by about half**: those
+planes march from two output texels out and skip everything nearer, because a
+caster that close throws a shadow no camera distance can resolve. A crater
+floor's sky is taken mostly by walls inside that skipped near field. Sky
+occlusion carries no renderability requirement — a wall too small to draw still
+blocks its share — so the two readings need different marches, and `terrainView`
+now samples `<body>-skyview.webp`, marched from one DEM texel out
+(`data/textures/relief/README.md` § Sky view factor).
 
-| body | F p50 | F p99 | F max | ρ·F at p99 | ρ·F at max |
+Measured off the shipped maps, area-weighted by `cos(lat)`, with `ρ·F` read as
+the shadow-to-lit ratio, against what the horizon planes alone gave:
+
+| body | F p99 | F max | ρ·F p99 | ρ·F max | ρ·F p99, planes only |
 |---|---|---|---|---|---|
-| Moon | 0.00066 | 0.0230 | 0.101 | 0.28 % | 1.21 % |
-| Mercury | 0.00007 | 0.0053 | 0.029 | 0.08 % | 0.41 % |
-| Mars | 0.00000 | 0.0031 | 0.057 | 0.05 % | 0.97 % |
+| Moon | 0.0445 | 0.1424 | 0.53 % | 1.71 % | 0.28 % |
+| Mercury | 0.0114 | 0.1069 | 0.16 % | 1.52 % | 0.08 % |
+| Mars | 0.0082 | 0.0781 | 0.14 % | 1.33 % | 0.05 % |
+| Earth | 0.0021 | 0.0463 | 0.09 % | 2.01 % | 0.02 % |
 
-Two things follow, and both are load-bearing:
+**The 1.4 % worked example is now inside the data.** It assumes
+`F = sin²20°` = 0.117; the shipped Moon map reaches 0.142, where the far-field
+planes topped out at 0.101 and sat fifty times under it at p99.
 
-- **The 1.4 % worked example is above what the data contains.** It assumes
-  `F = sin²20° = 0.117`; the maximum anywhere in the shipped Moon map is 0.101,
-  and the p99 is 0.023 — fifty times smaller. A 2048-wide, 8-azimuth skyline
-  starting 10.7 km out cannot represent a crater whose walls occlude 20° of
-  sky, because those walls are a few km away, inside the near field the march
-  deliberately skips. The derivation is sound; the input is not there.
-- **The faint-end toe then removes what is left.** `../../../hdr/README.md`
-  § Operator crushes anything more than `TOE_BLACK_MAG` = 1.5 mag under
-  `L_THRESH` to black by construction. A shadow at 0.28 % of lit ground is 6.4
-  mag fainter, so it clears the toe only when the lit ground beside it is
-  itself pushed to ~214/255. Through the real operator, at any exposure where
-  the lunar surface is not blown out, the fill quantises to **0/255** at every
-  percentile up to p99.9.
+### What the exposure has to be for it to show
 
-Moving the march start out cost a factor of ~1.8 at p99 (0.0401 → 0.0230 on the
-Moon, both measured at 2048) — real, but not the reason the term is invisible;
-it was two orders of magnitude short before that change too. **The honest
-statement is that this term is physically correct and currently has no visible
-effect.** It is kept because it is the right physics and costs no fetch, not
-because it changes a pixel. Giving it a visible effect needs a near-field sky
-view factor computed over the range the shadow march excludes — its own channel,
-its own artifact — which is `stellata-2f6.58`, not this term.
+The faint-end toe (`../../../hdr/README.md` § Operator) crushes anything more
+than `TOE_BLACK_MAG` = 1.5 mag under `L_THRESH` to black, and it measures that
+against the GLOBAL threshold rather than against the lit ground beside it. So
+"will this shadow show" is a question about the lit surface's own level, not
+about the ratio alone. Pushing the ratio through `faintToe` →
+`reinhardExtended` → `srgbEncode`, the smallest shadow-to-lit ratio that still
+clears one 8-bit code:
+
+| lit surface reads | 128/255 | 160/255 | 200/255 |
+|---|---|---|---|
+| smallest visible ρ·F | 1.85 % | 0.94 % | 0.375 % |
+| share of the Moon's surface above it | 0.00 % | 0.13 % | 2.6 % |
+
+**None of those exposures is clipping**, which is the result that matters: the
+observed 1–2 % lunar shadow brightness survives the operator from about
+128/255 upward, so the toe was never what made this term invisible — the
+missing near field was. At a bright-but-unclipped 200/255 the deepest ~2.6 % of
+the surface carries visible fill and open plain stays at 0/255, which is the
+physically right split rather than a threshold to tune: a plain's every azimuth
+reads the body's own limb bound, negative, and `max(sinH, 0)` puts it at zero.
+
+Mercury and Mars stay far below the Moon at p99 — their p99 skylines are 4.9°
+and 3.4° against 10.8° — so on those two the term reaches the screen only in
+their deepest craters, where ρ·F still tops 1.3 %. That is a fact about their
+terrain, not about the pipeline: the Moon is the rough one, which is why the
+whole of surface relief is scoped around it.
 
 ## The exposure coverage mask stays geometric
 

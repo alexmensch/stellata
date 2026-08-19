@@ -160,9 +160,12 @@ sheds what it can and stops. No thrash.
 
 The budget is sized on the worst legitimate working set rather than a round
 number: one body parked at the camera floor on a high-DPI display. That is
-Earth at its 8192 colour rung plus its own 8192 normal map and 4096 horizon
-pair — 358 MB for the single body the camera is looking at — with the
-remainder as headroom for distant bodies holding 1024s at 2.8 MB each.
+Earth at its 8192 colour rung plus **all three** of its relief planes — the
+8192 normal map, the 4096 horizon pair and the 4096 sky-view factor — which is
+369 MB for the single body the camera is looking at, with the remainder as
+headroom for distant bodies holding 1024s at 2.8 MB each. Every relief plane
+that ships has to be counted here: each one is a fixed width the ladder's clamp
+cannot lower, so they enter the worst case in full or not at all.
 
 **It follows the device cap, because a fixed budget is inert below it.**
 Eviction fires only *above* the budget, so a flat 512 MB on a device with less

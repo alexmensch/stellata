@@ -9,6 +9,7 @@ from PIL import Image, ImageFilter, ImageStat
 
 from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
 from horizon_map import horizon_maps
+from sky_view import sky_view_factor
 from texture_calibration import (
     COLOUR_INDICES,
     LUMA,
@@ -34,6 +35,7 @@ SCRIPT = Path(__file__)
 CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
 RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
 HORIZON_SCRIPT = SCRIPT.parent / "horizon_map.py"
+SKY_VIEW_SCRIPT = SCRIPT.parent / "sky_view.py"
 LADDER_SCRIPT = SCRIPT.parent / "texture_ladder.py"
 
 JPEG_QUALITY = 82
@@ -65,33 +67,6 @@ BODIES = {
     "titan": "titan-iss-p19658.tif",
     "iapetus": "iapetus-pia18436.jpg",
     "triton": "triton-pia18668.jpg",
-}
-
-# Representative body colours, [0,1] RGB — MUST match SOL_BODIES in
-# src/client/solar-system/planet-system.ts (texture-colours.test.ts
-# pins the parity). Used for the grayscale tints so the tinted map
-# matches the disc the body renders as at distance. (Gap fills use
-# each map's own mean imaged colour, not these; Mercury's grayscale
-# mosaic is tinted by its measured colour index via `calibrate`.)
-REPRESENTATIVE_COLOURS = {
-    "europa": (0.82, 0.76, 0.68),
-    "callisto": (0.45, 0.41, 0.37),
-    "titan": (0.83, 0.60, 0.28),
-}
-
-# Grayscale-source tints: chroma fraction of the representative
-# colour applied over the mosaic's luminance detail — MOON hand-tuning
-# only. Europa/Callisto are near-neutral bodies shipped as grayscale
-# mosaics (half chroma keeps them honest); Titan's ISS map is 938 nm
-# surface detail under an opaque orange haze, so it takes the full
-# representative chroma. Planets with a published disc-integrated
-# colour index are calibrated to it instead (texture_calibration.py);
-# extending measured targets to the moons awaits a vetted satellite
-# index table.
-TINT_STRENGTH = {
-    "europa": 0.5,
-    "callisto": 0.5,
-    "titan": 1.0,
 }
 
 # Schenk IR-G-UV enhanced-colour mosaics (the 2014 Cassini icy-moon
@@ -168,21 +143,6 @@ def up_to_date(out_path: Path, *inputs: Path) -> bool:
     return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
 
 
-def tint_grayscale(
-    im: Image.Image,
-    colour: tuple[float, float, float],
-    strength: float,
-) -> Image.Image:
-    """Luminance-preserving tint: hue from `colour` at `strength`
-    (0 = stay gray, 1 = full chroma), detail from `im`."""
-    lum = sum(w * c for w, c in zip(LUMA, colour))
-    gains = [1 + (c / lum - 1) * strength for c in colour]
-    l = im.convert("L")
-    return Image.merge("RGB", [
-        l.point(lambda v, g=g: min(255, round(v * g))) for g in gains
-    ])
-
-
 def fill_gap(im: Image.Image, threshold: int) -> Image.Image:
     """Replace no-data (near-black) pixels with the mean colour of the
     imaged pixels, feathered across the boundary so the fill reads as
@@ -231,12 +191,15 @@ def build_body(name: str, src_name: str, manifest: dict, ladder: dict) -> None:
     # colour untouched.
     if name in FLIP_HORIZONTAL:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
-    if name in COLOUR_INDICES:
-        im, manifest[name] = calibrate(im, name, GAP_LUMINANCE.get(name))
-    if name in TINT_STRENGTH:
-        im = tint_grayscale(im, REPRESENTATIVE_COLOURS[name], TINT_STRENGTH[name])
+    # Desaturation runs FIRST where a body takes both. The two are
+    # orthogonal — desaturation pulls back an enhanced mosaic's exaggerated
+    # colour SEPARATION, calibration puts the resulting MEAN on the measured
+    # index — but only in this order, since desaturating after would drag the
+    # calibrated mean back toward gray and off the target it just hit.
     if name in DESATURATE:
         im = desaturate(im, DESATURATE[name])
+    if name in COLOUR_INDICES:
+        im, manifest[name] = calibrate(im, name, GAP_LUMINANCE.get(name))
     if name in GAP_LUMINANCE:
         im = fill_gap(im, GAP_LUMINANCE[name])
     for w, out_path in zip(rungs, outs):
@@ -313,6 +276,27 @@ def build_horizon_map(name: str, relief: dict) -> None:
         f"  {name}-horizon: 2 x {first.shape[1]}x{first.shape[0]} -> {kb} KB, "
         f"median {stats['medianHorizonDeg']}deg p99 {stats['p99HorizonDeg']}deg "
         f"clamped {stats['clampedPct']}%"
+    )
+
+
+def build_sky_view(name: str, relief: dict) -> None:
+    spec = DEM_BODIES[name]
+    src_path = SRC / spec["src"]
+    out_path = RELIEF / f"{name}-skyview.webp"
+    if up_to_date(out_path, src_path, SKY_VIEW_SCRIPT, HORIZON_SCRIPT, RELIEF_SCRIPT):
+        print(f"  {name}-skyview: up to date")
+        return
+    raw, stats = sky_view_factor(read_frozen_dem(src_path), spec)
+    relief.setdefault(name, {})["skyView"] = stats
+    # One channel, and grayscale WebP writes it as three identical ones — the
+    # upload narrows to R8, so the duplication costs file size the lossless
+    # coder mostly removes and no VRAM at all.
+    Image.fromarray(raw, "L").save(out_path, "WEBP", lossless=True, method=6)
+    kb = out_path.stat().st_size // 1024
+    print(
+        f"  {name}-skyview: {raw.shape[1]}x{raw.shape[0]} -> {kb} KB, "
+        f"median {stats['medianFactor']} p99 {stats['p99Factor']} "
+        f"max {stats['maxFactor']} clamped {stats['clampedPct']}%"
     )
 
 
@@ -454,6 +438,7 @@ def main() -> None:
     for name in DEM_BODIES:
         build_normal_map(name, relief)
         build_horizon_map(name, relief)
+        build_sky_view(name, relief)
     for stale in relief.keys() - DEM_BODIES.keys():
         del relief[stale]
     RELIEF_MANIFEST.write_text(json.dumps(relief, indent=2, sort_keys=True) + "\n")

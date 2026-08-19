@@ -88,7 +88,12 @@ satisfies:
 
 - `Planet` — name, equatorial radius (km), semi-major axis (AU),
   eccentricity, type (`rocky` / `gas_giant` / `ice_giant` / `icy`),
-  representative RGB colour. Optional `parentName` marks a body that
+  representative RGB colour — **linear**, and the eight
+  index-calibrated moons take theirs from the same measured target their
+  texture is calibrated to, at their own unchanged luminance
+  (`data/textures/README.md` § Colour fidelity; pinned by
+  `scripts/textures/texture-colours.test.ts`). Every other row is still
+  hand-picked. Optional `parentName` marks a body that
   orbits a planet rather than the host star (a moon); optional
   `gravParamGM` (km³/s²) is carried by moon parents so a moon's period
   derives from its parent's mass, not the host star's.

@@ -17,6 +17,17 @@ export const HORIZON_SIN_RANGE = 0.4;
 export const decodeSin = (raw: number): number =>
   (raw * 2 - 1) * HORIZON_SIN_RANGE;
 
+/** Full-scale of the sky view factor the `<body>-skyview.webp` map encodes —
+ *  `SKY_VIEW_RANGE` in `scripts/textures/sky_view.py` and
+ *  `STELLATA_SKY_VIEW_RANGE` in the mesh shader, both pinned against this by
+ *  `sky-view.test.ts`. */
+export const SKY_VIEW_RANGE = 0.25;
+
+/** One raw sky-view channel in [0, 1] back to the terrain view factor it
+ *  encodes — the inverse of `encode_sky_view`, and the mirror of the shipped
+ *  path `terrainViewFactor` below is only the fallback for. */
+export const decodeSkyView = (raw: number): number => raw * SKY_VIEW_RANGE;
+
 /** Each relief body's DEM elevation span in metres, `[lowest, highest]` above
  *  the reference sphere it is drawn at — `DEM_BODIES[…].span_m` in
  *  `scripts/textures/dem_relief.py`, which `dem-relief.test.ts` pins these
@@ -175,8 +186,8 @@ export function horizonSin(
  * bound there — negative on every azimuth — and without the clamp every flat
  * plain would claim the fill light of a crater floor.
  *
- * At the shipped map's resolution this is far smaller than a crater's true sky
- * occlusion — README.md § What the fill term is actually worth.
+ * This reading marches only the far field, so it under-reads a crater floor's
+ * true occlusion about twofold — README.md § F comes from its own map.
  */
 export function terrainViewFactor(enc: readonly number[]): number {
   let sum = 0;

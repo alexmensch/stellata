@@ -205,7 +205,17 @@ interface MeshEntry {
 const RELIEF_SUFFIX = '-normal';
 /** The two halves of one body's horizon map, azimuths 0–3 then 4–7. */
 const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
+const SKY_VIEW_SUFFIX = '-skyview';
 const RINGS_SUFFIX = '-rings';
+
+/** Resident bytes per texel of each upload format the layer narrows to. The
+ *  VRAM budget is charged from this, so a map that narrows without a row here
+ *  would be over-charged and evict maps that fit. */
+const TEXEL_BYTES = new Map<THREE.PixelFormat, number>([
+  [THREE.RedFormat, 1],
+  [THREE.RGFormat, 2],
+  [THREE.RGBAFormat, 4],
+]);
 
 /** The one place a body name becomes a texture key — and the one place it is
  *  lowercased, so `textures` and the fetched URL cannot disagree on case.
@@ -381,6 +391,11 @@ export class PlanetMeshLayer {
           for (const suffix of HORIZON_SUFFIXES) {
             this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
           }
+          // One scalar per texel, so R8 — a quarter of the RGBA8 an
+          // ImageBitmap of the same grayscale file would otherwise upload as.
+          this.ensureTexture(textureKey(planet.name, SKY_VIEW_SUFFIX), {
+            ext: 'webp', format: THREE.RedFormat,
+          });
         }
         if (planet.rings) {
           this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
@@ -514,6 +529,14 @@ export class PlanetMeshLayer {
       // at the encoding's floor over the azimuths it covers.
       const horizonA = this.useTexture(textureKey(planet.name, HORIZON_SUFFIXES[0]));
       const horizonB = this.useTexture(textureKey(planet.name, HORIZON_SUFFIXES[1]));
+      const skyView = this.useTexture(textureKey(planet.name, SKY_VIEW_SUFFIX));
+      if (skyView?.state === 'ready') {
+        material.uniforms.uSkyView.value = skyView.tex;
+        material.uniforms.uHasSkyView.value = 1;
+      } else {
+        material.uniforms.uSkyView.value = this.placeholder;
+        material.uniforms.uHasSkyView.value = 0;
+      }
       if (horizonA?.state === 'ready' && horizonB?.state === 'ready') {
         material.uniforms.uHorizonA.value = horizonA.tex;
         material.uniforms.uHorizonB.value = horizonB.tex;
@@ -890,6 +913,8 @@ export class PlanetMeshLayer {
         uHorizonA: { value: this.placeholder },
         uHorizonB: { value: this.placeholder },
         uHasHorizonMap: { value: 0 },
+        uSkyView: { value: this.placeholder },
+        uHasSkyView: { value: 0 },
         uTerrainAlbedo: { value: planet.albedo },
         uColour: { value: new THREE.Color(1, 1, 1) },
         uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
@@ -1020,11 +1045,11 @@ export class PlanetMeshLayer {
   }
 
   /** `format` narrows the GPU upload below RGBA8 where channels carry no
-   *  signal — the only such map is the normal, whose blue is a constant
-   *  and whose alpha is unused, so RG8 halves its VRAM with nothing for
-   *  the shader to notice (`stellataReliefNormal` samples `.rg` and
-   *  reconstructs z). WebGL2 RG8 is colour-renderable and filterable, so
-   *  mipmaps and anisotropy carry over unchanged. */
+   *  signal. Two maps qualify: the normal, whose blue is a constant and
+   *  whose alpha is unused (`stellataReliefNormal` samples `.rg` and
+   *  reconstructs z), and the sky-view factor, which is one scalar written
+   *  to a grayscale file. WebGL2 RG8 and R8 are both colour-renderable and
+   *  filterable, so mipmaps and anisotropy carry over unchanged. */
   private ensureTexture(
     key: string,
     { ext, format }: { ext: TextureExt; format?: THREE.PixelFormat },
@@ -1057,9 +1082,7 @@ export class PlanetMeshLayer {
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
         tex.needsUpdate = true;
-        // RG8 halves what an RGBA8 upload of the same map would cost; the
-        // relief branch is the only one that narrows (.50).
-        const bytesPerTexel = format === THREE.RGFormat ? 2 : 4;
+        const bytesPerTexel = TEXEL_BYTES.get(format ?? THREE.RGBAFormat) ?? 4;
         this.resolveTexture(key, {
           state: 'ready',
           tex,

@@ -53,7 +53,7 @@ mean, against the smooth sphere, in magnitudes:
 |---|---|---|---|---|---|
 | normal map alone | +0.007 | −0.014 | −0.007 | −0.033 | −0.390 |
 | with horizon maps | +0.007 | −0.002 | +0.002 | +0.007 | −0.065 |
-| + interreflection | +0.006 | −0.002 | +0.002 | +0.007 | −0.065 |
+| + interreflection | +0.006 | −0.002 | +0.001 | +0.007 | −0.065 |
 
 The normal map alone runs away past 150° because it lights slopes the sun
 cannot reach; the horizon maps take that back and hold the disc inside
@@ -62,13 +62,17 @@ cannot reach; the horizon maps take that back and hold the disc inside
 
 **The third row is the answer to whether interreflection needs dividing out: it
 does not.** Terrain fill adds light the disc integral did not previously carry,
-so it had to be measured rather than waved through — it moves the Moon by
-0.001 mag at full phase and Mars by 0.001 at 150°, and nothing at all to three
-decimals anywhere else. It is bounded by construction: the term is the body's albedo times a
+so it had to be measured rather than waved through — and re-measured when the
+sky-view map roughly doubled the factor it reads
+(`../surface-relief/README.md` § F comes from its own map), which is the test
+that mattered: a term that needed no renormalisation at half the input might
+not survive twice it. It still does. The largest cell moves 0.001 mag — the
+Moon at full phase and at 120°, Mercury at 120°, Mars at 150° — and nothing at
+all to three decimals anywhere else. It is bounded by construction: the term is the body's albedo times a
 terrain view factor that is near zero over the open ground making up most of
-the disc — and at the shipped map's resolution it is far smaller even in
-craters than the derivation suggests, small enough not to reach the screen at
-all (`../surface-relief/README.md` § What the fill term is actually worth).
+the disc, so the deep craters where it is worth anything are far too small a
+share of the disc to move the integral
+(`../surface-relief/README.md` § F comes from its own map).
 
 `uPhaseScale` is absent from every column here because it multiplies the fill
 and the direct term alike, so it cancels in the ratio these magnitudes are. That

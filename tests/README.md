@@ -17,6 +17,15 @@ bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/; dust
                          assets restricted to the sync allowlist.
                          Self-skips when public/ is unbuilt.
+code-comment-rules.test.ts
+                         Comment-hygiene scanner over `*.ts` / `*.js` /
+                         `*.py` under src/ and scripts/ (CLAUDE.md
+                         § Code comments): forbidden bead IDs, PR
+                         numbers and [[wikilinks]], plus the 3-line
+                         module-docstring cap, whose pre-existing
+                         offenders sit in the sibling allowlist .txt and
+                         are meant to shrink. `.glsl` is NOT scanned, so
+                         shader comments rest on review alone.
 claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
                          380 lines / 18 KB so it stays load-once-per-
                          session affordable; the failure message
