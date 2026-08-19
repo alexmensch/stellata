@@ -168,16 +168,23 @@ imported, so a dynamic import returns the same instance and the same
 subscriber list rather than a second copy of the channel:
 
 ```js
-const { onGpuFrameSample } = await import('/debug/gpu-timing/gpu-frame-samples.ts');
-const seen = [];
-const off = onGpuFrameSample((ms) => seen.push(ms));
-setTimeout(() => {
-  off();
-  const dupes = seen.filter((v, i) => i > 0 && v === seen[i - 1]).length;
-  console.log(`${seen.length} samples, ${dupes} adjacent duplicates`);
-  console.log(seen.map((v) => v.toFixed(3)).join(' '));
-}, 5000);
+import('/debug/gpu-timing/gpu-frame-samples.ts').then(({ onGpuFrameSample }) => {
+  const seen = [];
+  const off = onGpuFrameSample((ms) => seen.push(ms));
+  setTimeout(() => {
+    off();
+    const dupes = seen.filter((v, i) => i > 0 && v === seen[i - 1]).length;
+    console.log(`${seen.length} samples, ${dupes} adjacent duplicates`);
+    console.log(seen.map((v) => v.toFixed(3)).join(' '));
+  }, 5000);
+});
 ```
+
+`.then` rather than `await`: Safari's console has no top-level await, and
+parses `await import(...)` as an identifier followed by a keyword —
+`SyntaxError: Unexpected keyword 'import'`. Safari is also the only browser
+this check can run in (§ A granted feature can still resolve garbage), so
+the awaited form is unusable, not merely less portable.
 
 Keep frames coming for the window — the render gate skips ticks where
 nothing invalidated the frame (`../../render-gate/README.md`), and a still
