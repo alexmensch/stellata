@@ -93,7 +93,10 @@ different scales:
 
 - The **normal map** is the slope, at 4096 (8192 on Earth). It is the ψ → 0 limit of the
   horizon — what you can see standing on the facet itself — and it already
-  rides `dayside` through `sunCosRelief`.
+  rides `dayside` through `sunCosRelief`. Both widths are **fixed per artifact**,
+  so unlike a colour rung neither can be lowered to fit a device: a body whose
+  map exceeds `KindContext.maxTextureSize` is refused it and shades without
+  relief (`../textures/README.md` § Four rules).
 - The **horizon map** is everything else: terrain from **two output texels**
   out to the body's limb bound, at half the DEM's width in 8 azimuths. It
   excludes the ground at your feet, because that is the normal map's job at

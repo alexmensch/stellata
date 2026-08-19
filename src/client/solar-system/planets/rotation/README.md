@@ -45,8 +45,9 @@ worth most of a hemisphere at the clock's bounds:
   carries it to within 0.045° of Thuban at 2785 BC.
 
 `EARTH_ROTATION` keeps its published pck linear rows and adds
-`orientationModel`; `poleRaDecDegAt` / `spinDegAt` read the model when
-present, so no call site changes. The rows stay as the near-J2000
+`orientationModel`; `poleRaDecDegAt` / `poleRaDecDegInto` / `spinDegAt` read the
+model when present, so no call site changes. The mesh orientation takes the
+`...Into` form — it runs per body per frame and only reads the pair back out. The rows stay as the near-J2000
 reference the model is checked against — **don't delete them, and don't
 "fix" the model to reproduce them away from J2000.**
 

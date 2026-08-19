@@ -26,8 +26,9 @@ src/client/solar-system/planets/eclipses/
                                   NASA's Five Millennium Canon, 1978 BC to
                                   2928 AD. See § What is pinned.
   umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
-                                  caster's umbra. See § Umbral glow — this
-                                  one IS on a render path.
+                                  caster's umbra, and the umbral depth both
+                                  render layers measure it at. See § Umbral
+                                  glow — this one IS on a render path.
 ```
 
 **The circumstances modules are not on a render path** — the shader already
@@ -181,3 +182,18 @@ vanishes at billboard range and takes its label with it.
 **A caster with no `atmosphere` row contributes nothing**, which is correct:
 Jupiter's shadow on a Galilean really is black to this model, and the giants
 deliberately carry no atmosphere row (`../../atmosphere/README.md`).
+
+**Both layers reach the depth through one helper, and the glow gates on it.**
+`umbralDepthFromOffsets` takes the body→caster vector and the body→host unit
+direction — the offset-scalar shape `eclipseDimFromOffsets` already uses, because
+one layer holds these as `Vector3` components and the other as raw
+`Float64Array` reads. It answers `-Infinity` where no shadow geometry exists at
+all (a caster behind the body casts away from it), and `umbralGlow` returns
+early below **penumbral contact**, `depth = -2·hostAngRad`.
+
+That gate is a cost gate, not a physics change: outside the shadow the mesh
+weights this by `1 - shadow` and the glare floors a dim of 1 with it, so the
+64-sample quadrature was integrated and then discarded on every frame of every
+non-eclipse — a body far from the shadow has a hugely negative depth and took
+the uncapped-band branch. Putting it inside `umbralGlow` rather than at a call
+site is what keeps the two layers from drifting apart on it again.
