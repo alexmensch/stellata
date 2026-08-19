@@ -64,6 +64,24 @@ rather than shipping it.
   § Cast shadows and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
+- `measure_block_compression.py` (+ `block_compression.test.py`) —
+  manual, run by hand, NOT part of the build: encodes the shipped
+  normal maps through a reference BC4/BC5 codec and through lossy WebP
+  three ways against the same 8-bit source, so the file-level verdict
+  and the GPU-block-format verdict are one measurement. Reads the
+  cos(lat) weighting, the ±85° window and the quantile estimator from
+  `dem_relief.py` rather than restating them — the tilt figures these
+  errors are quoted against come from there. Both WebP packings are
+  measured because one RGB file puts the G channel in libwebp's shared
+  4:2:0 chroma plane, which costs 3× what the DCT does and is what the
+  file-level rejection actually caught. Also sweeps BC5 error against
+  map width, which is how the 8192 tier gets decided without an 8192
+  map to test. Rationale and the numbers: `data/textures/README.md`
+  § BC5 measured. Its unittest pins the codec — endpoint exactness, the
+  per-mode error bound, the two-plane split, and the uint8-wraparound
+  trap in the distance metric, on an **interior** texel: a block's min
+  and max are exact palette entries under the wrapping metric too, so a
+  fixture asserting only the extremes passes against the bug.
 - `webp-header-pure.ts` — dimensions and the LFS-pointer check straight
   out of a lossless WebP's own header, so an artifact pin reads the
   artifact rather than the manifest beside it. Shared by both relief
