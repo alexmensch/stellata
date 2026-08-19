@@ -271,6 +271,15 @@ export class PlanetMeshLayer {
    *  from what has been requested: a wider rung loads in the background
    *  and only replaces this once it is ready. */
   private readonly shownRung = new Map<string, number>();
+  /** Body -> the rung selection asked for most recently, drawn or still in
+   *  flight. Anything else that lands is dead on arrival: promotion can only
+   *  free what is already resident, so without this a rung the demand moved
+   *  past mid-fetch stayed resident and undrawn until budget pressure found
+   *  it — and a body could hold its whole ladder rather than one rung. */
+  private readonly requestedRung = new Map<string, number>();
+  /** Colour-map key -> the body and rung width behind it. The inverse of
+   *  `textureKey`, kept as a record rather than re-parsed out of the key. */
+  private readonly rungOf = new Map<string, { body: string; width: number }>();
 
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
@@ -554,8 +563,14 @@ export class PlanetMeshLayer {
     const want = selectRung(body, requiredMapWidth(physPx, this.pixelRatio()), shown);
     // A body with no ladder row ships no map at all (Uranus, future
     // exoplanets) and takes the representative-colour base path.
-    if (want === null || want === shown) return;
+    if (want === null) return;
+    // Recorded even when it is what we already draw, so a rung still in flight
+    // from a demand that has since receded is recognised as superseded when it
+    // lands rather than sitting resident and undrawn.
+    this.requestedRung.set(body, want);
+    if (want === shown) return;
     const key = textureKey(planet.name, `-${want}`);
+    this.rungOf.set(key, { body, width: want });
     this.ensureTexture(key, { ext: 'jpg' });
     if (this.useTexture(key)?.state === 'ready') {
       this.shownRung.set(body, want);
@@ -642,6 +657,7 @@ export class PlanetMeshLayer {
     state.tex.dispose();
     (state.tex.image as ImageBitmap).close();
     this.textures.delete(key);
+    this.rungOf.delete(key);
   }
 
   /** Free every rung of a body except the one now drawn. Narrower rungs are
@@ -660,21 +676,27 @@ export class PlanetMeshLayer {
   /** Evict least-recently-drawn maps until the resident set is back inside
    *  TEXTURE_VRAM_BUDGET_BYTES. Nothing drawn this frame is a candidate. */
   private enforceTextureBudget(): void {
-    const resident: ResidentTexture[] = [];
+    // Summed before anything is allocated: this runs every frame and is over
+    // budget on almost none of them, which is the same reason evictionOrder
+    // returns before its own filter and sort.
     let total = 0;
+    for (const state of this.textures.values()) {
+      if (state.state === 'ready') total += state.bytes;
+    }
+    if (total <= TEXTURE_VRAM_BUDGET_BYTES) return;
+
+    const resident: ResidentTexture[] = [];
     for (const [key, state] of this.textures) {
       if (state.state !== 'ready') continue;
       resident.push({ key, bytes: state.bytes, lastFrame: state.lastFrame });
-      total += state.bytes;
     }
-    if (total <= TEXTURE_VRAM_BUDGET_BYTES) return;
     for (const key of evictionOrder(resident, TEXTURE_VRAM_BUDGET_BYTES, this.frame)) {
+      const rung = this.rungOf.get(key);
       this.releaseTexture(key);
       // A colour rung that goes must stop being the drawn one, or the body
       // renders its placeholder until it happens to grow into a new rung.
-      const dash = key.lastIndexOf('-');
-      if (dash > 0 && /^\d+$/.test(key.slice(dash + 1))) {
-        this.shownRung.delete(key.slice(0, dash));
+      if (rung && this.shownRung.get(rung.body) === rung.width) {
+        this.shownRung.delete(rung.body);
       }
     }
   }
@@ -1024,6 +1046,16 @@ export class PlanetMeshLayer {
    *  something else woke the render gate. */
   private resolveTexture(key: string, state: TextureState): void {
     this.textures.set(key, state);
+    // A colour rung the demand outgrew or fell back past while it was in
+    // flight is never going to be drawn. This is the only place it can be
+    // reclaimed: promotion frees resident rungs, and a loading one is not
+    // resident yet. Fetches can land out of order — an evicted wider rung
+    // comes back off the HTTP cache while a narrower one is still on the
+    // wire — so ordering cannot be relied on instead.
+    const rung = this.rungOf.get(key);
+    if (rung && this.requestedRung.get(rung.body) !== rung.width) {
+      this.releaseTexture(key);
+    }
     this.requestRender();
   }
 
@@ -1051,6 +1083,9 @@ export class PlanetMeshLayer {
       (t.tex.image as ImageBitmap).close();
     }
     this.textures.clear();
+    this.shownRung.clear();
+    this.requestedRung.clear();
+    this.rungOf.clear();
     this.geometry.dispose();
     this.placeholder.dispose();
   }
