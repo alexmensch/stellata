@@ -124,9 +124,11 @@ rather than shipping it.
   the file's own header (the FIRST size a row states, which is the
   README's own rule), the 2:1 equirect ratio, exact row and image-row
   counts so a source cannot leave coverage silently, and each row's
-  colour-invention wording against `TINT_STRENGTH` / `DESATURATE` in
-  `build-textures.py` — the one half of a row that is invented rather
-  than measured. Self-skips per row on an unpulled LFS object, warning
+  colour-invention wording against `DESATURATE` in `build-textures.py`
+  — the one half of a row that is invented rather than measured. It
+  also asserts that NO row still promises a representative-chroma tint,
+  since the build applies none: a grayscale source takes its colour
+  from its measured index. Self-skips per row on an unpulled LFS object, warning
   rather than passing quietly, like the two relief suites.
 - `image-header-pure.ts` — dimensions straight out of a WebP, JPEG or
   TIFF header, so a pin reads the artifact rather than the prose beside
@@ -148,12 +150,15 @@ rather than shipping it.
   literal would compare false against it everywhere.
 - `texture_calibration.py` — index-anchored colour calibration
   (imported by the build): per-map linear-RGB gains that move each
-  map's sphere-weighted mean chromaticity onto the body's adopted
-  Mallama 2017 B−V / V−Rc target, solar-spectrum reference white,
-  luminance-preserving. Writes per-body numbers into
-  `data/textures/calibration.json`;
-  `texture-calibration.test.ts` pins targets, achieved means, and the
-  index table. Rationale: `data/textures/README.md` § Colour fidelity.
+  map's sphere-weighted mean chromaticity onto the body's published
+  B−V / V−R target, solar-spectrum reference white. Owns the one fact
+  neither source states — that they are on DIFFERENT photometric
+  systems, so each row carries its own and `vrc_of` converts a Johnson
+  V−R onto the Cousins system `SUN_VRC` is measured on. Planets from
+  Mallama 2017, satellites from Frey & Lowman 1974. Writes per-body
+  numbers into `data/textures/calibration.json`;
+  `texture-calibration.test.ts` pins targets, achieved means, the
+  index table and that conversion. Rationale: `data/textures/README.md` § Colour fidelity.
 - `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The

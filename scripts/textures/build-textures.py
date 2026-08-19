@@ -69,33 +69,6 @@ BODIES = {
     "triton": "triton-pia18668.jpg",
 }
 
-# Representative body colours, [0,1] RGB — MUST match SOL_BODIES in
-# src/client/solar-system/planet-system.ts (texture-colours.test.ts
-# pins the parity). Used for the grayscale tints so the tinted map
-# matches the disc the body renders as at distance. (Gap fills use
-# each map's own mean imaged colour, not these; Mercury's grayscale
-# mosaic is tinted by its measured colour index via `calibrate`.)
-REPRESENTATIVE_COLOURS = {
-    "europa": (0.82, 0.76, 0.68),
-    "callisto": (0.45, 0.41, 0.37),
-    "titan": (0.83, 0.60, 0.28),
-}
-
-# Grayscale-source tints: chroma fraction of the representative
-# colour applied over the mosaic's luminance detail — MOON hand-tuning
-# only. Europa/Callisto are near-neutral bodies shipped as grayscale
-# mosaics (half chroma keeps them honest); Titan's ISS map is 938 nm
-# surface detail under an opaque orange haze, so it takes the full
-# representative chroma. Planets with a published disc-integrated
-# colour index are calibrated to it instead (texture_calibration.py);
-# extending measured targets to the moons awaits a vetted satellite
-# index table.
-TINT_STRENGTH = {
-    "europa": 0.5,
-    "callisto": 0.5,
-    "titan": 1.0,
-}
-
 # Schenk IR-G-UV enhanced-colour mosaics (the 2014 Cassini icy-moon
 # series + Triton): the colour separation is exaggerated far past
 # what the eye would see on these near-neutral ices, so pull the
@@ -170,21 +143,6 @@ def up_to_date(out_path: Path, *inputs: Path) -> bool:
     return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
 
 
-def tint_grayscale(
-    im: Image.Image,
-    colour: tuple[float, float, float],
-    strength: float,
-) -> Image.Image:
-    """Luminance-preserving tint: hue from `colour` at `strength`
-    (0 = stay gray, 1 = full chroma), detail from `im`."""
-    lum = sum(w * c for w, c in zip(LUMA, colour))
-    gains = [1 + (c / lum - 1) * strength for c in colour]
-    l = im.convert("L")
-    return Image.merge("RGB", [
-        l.point(lambda v, g=g: min(255, round(v * g))) for g in gains
-    ])
-
-
 def fill_gap(im: Image.Image, threshold: int) -> Image.Image:
     """Replace no-data (near-black) pixels with the mean colour of the
     imaged pixels, feathered across the boundary so the fill reads as
@@ -233,12 +191,15 @@ def build_body(name: str, src_name: str, manifest: dict, ladder: dict) -> None:
     # colour untouched.
     if name in FLIP_HORIZONTAL:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
-    if name in COLOUR_INDICES:
-        im, manifest[name] = calibrate(im, name, GAP_LUMINANCE.get(name))
-    if name in TINT_STRENGTH:
-        im = tint_grayscale(im, REPRESENTATIVE_COLOURS[name], TINT_STRENGTH[name])
+    # Desaturation runs FIRST where a body takes both. The two are
+    # orthogonal — desaturation pulls back an enhanced mosaic's exaggerated
+    # colour SEPARATION, calibration puts the resulting MEAN on the measured
+    # index — but only in this order, since desaturating after would drag the
+    # calibrated mean back toward gray and off the target it just hit.
     if name in DESATURATE:
         im = desaturate(im, DESATURATE[name])
+    if name in COLOUR_INDICES:
+        im, manifest[name] = calibrate(im, name, GAP_LUMINANCE.get(name))
     if name in GAP_LUMINANCE:
         im = fill_gap(im, GAP_LUMINANCE[name])
     for w, out_path in zip(rungs, outs):
