@@ -25,7 +25,7 @@ const TRUTH_TSV = resolve(__dirname, '../../../../../data/horizons/sub-observer-
 const C_KM_S = 299792.458;
 
 interface TruthRow {
-  body: 'mars' | 'ganymede' | 'io';
+  body: 'mars' | 'ganymede' | 'io' | 'moon';
   jdUt: number;
   obLonWestDeg: number;
   obLatDeg: number;
@@ -49,9 +49,11 @@ const ECL_TO_ICRS = new THREE.Quaternion().setFromUnitVectors(
   ECLIPTIC_NORTH_POLE_ICRS.clone(),
 );
 
+const MOON_NAME = { ganymede: 'Ganymede', io: 'Io', moon: 'Moon' } as const;
+
 function rotationFor(body: TruthRow['body']): RotationElements {
   if (body === 'mars') return MARS_ROTATION;
-  return MOON_ROTATION_BY_NAME.get(body === 'ganymede' ? 'Ganymede' : 'Io')!;
+  return MOON_ROTATION_BY_NAME.get(MOON_NAME[body])!;
 }
 
 /** Body→Earth unit direction (ICRS) and the body's distance (pc)
@@ -63,7 +65,10 @@ function bodyToEarthIcrs(
 ): { dir: THREE.Vector3; distPc: number } {
   resetPositionCache();
   const pos = getPlanetPositions(t);
-  const p = { ...(body === 'mars' ? pos.mars : pos.jupiter) };
+  // Each moon rides its own parent: the Galileans Jupiter, the Moon Earth.
+  const p = {
+    ...(body === 'mars' ? pos.mars : body === 'moon' ? pos.earth : pos.jupiter),
+  };
   if (body !== 'mars') {
     const elem = MOON_ELEMENTS.find(
       (m) => m.name.toLowerCase() === body,
@@ -109,20 +114,28 @@ function angularDiffDeg(a: number, b: number): number {
   return Math.abs(d);
 }
 
-// Error budget per row — tolerances hold the measured residuals with
-// margin while staying far below the 180° flip / mirror errors this
-// corpus exists to catch. Contributors: UT-vs-TDB is ~0.3° of Mars
-// spin, Galilean pole/PM librations are dropped from the linear W
-// terms (up to ~1°), and planetographic-vs-centric latitude differs
-// ≤ 0.35° (Mars flattening).
-const LON_TOL_DEG = { mars: 1.0, ganymede: 2.0, io: 2.0 } as const;
-const LAT_TOL_DEG = 1.0;
+// Error budget — tolerances hold the measured residuals with margin while
+// staying far below the 180° flip / mirror errors this corpus exists to
+// catch. Worst measured: 0.15° of longitude, 0.25° of latitude.
+//
+// One budget for every body now, where the Galileans used to need double
+// Mars's. Their pole/PM librations were the reason and they are no longer
+// dropped (`rotation-elements-pure.ts` § terms) — folding Ganymede's J5
+// in took the whole corpus under 0.15°. What is left is UT-vs-TDB, ~0.3°
+// of Mars spin at worst, and planetographic-vs-centric latitude, ≤ 0.35°
+// on Mars's flattening — which is why latitude keeps the looser of the two.
+const LON_TOL_DEG = { mars: 0.3, ganymede: 0.3, io: 0.3, moon: 0.3 } as const;
+const LAT_TOL_DEG = 0.35;
 
 describe('texture orientation vs Horizons sub-observer truth', () => {
   const rows = loadTruth();
 
-  it('covers Mars and one straight / one flipped-source Galilean at three epochs', () => {
-    expect(rows.length).toBe(9);
+  it('covers Mars, two Galileans and the Moon at three epochs', () => {
+    expect(rows.length).toBe(12);
+    // The Moon is the row that pins the E1 libration fold: its terms are the
+    // largest on any body users can check by eye, and a sub-observer point is
+    // exactly what they move.
+    expect(rows.filter((r) => r.body === 'moon')).toHaveLength(3);
   });
 
   for (const row of rows) {

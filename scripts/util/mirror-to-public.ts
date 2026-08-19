@@ -14,6 +14,14 @@ export type MirrorSpec = {
   isPublicAsset: (name: string) => boolean;
   /** Prefix for the one-line console summary. */
   label: string;
+  /**
+   * Subfolders of `srcDir` whose files are **flattened** into the same
+   * destination. Lets a data folder group large artifacts at rest without
+   * moving them in `public/` — so no consumer URL changes when it does.
+   * Names must stay unique across all of them; the allowlist is by name
+   * and the purge pass cannot tell two same-named files apart.
+   */
+  flattenSubDirs?: readonly string[];
 };
 
 export function mirrorDataFolder(spec: MirrorSpec): void {
@@ -28,21 +36,24 @@ export function mirrorDataFolder(spec: MirrorSpec): void {
 
   let copied = 0;
   let skipped = 0;
-  for (const name of readdirSync(src)) {
-    if (!spec.isPublicAsset(name)) continue;
-    const srcPath = resolve(src, name);
-    const dstPath = resolve(dst, name);
-    const srcStat = statSync(srcPath);
-    if (!srcStat.isFile()) continue;
-    if (existsSync(dstPath)) {
-      const dstStat = statSync(dstPath);
-      if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) {
-        skipped++;
-        continue;
+  for (const from of [src, ...(spec.flattenSubDirs ?? []).map((d) => resolve(src, d))]) {
+    if (!existsSync(from)) continue;
+    for (const name of readdirSync(from)) {
+      if (!spec.isPublicAsset(name)) continue;
+      const srcPath = resolve(from, name);
+      const dstPath = resolve(dst, name);
+      const srcStat = statSync(srcPath);
+      if (!srcStat.isFile()) continue;
+      if (existsSync(dstPath)) {
+        const dstStat = statSync(dstPath);
+        if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) {
+          skipped++;
+          continue;
+        }
       }
+      copyFileSync(srcPath, dstPath);
+      copied++;
     }
-    copyFileSync(srcPath, dstPath);
-    copied++;
   }
 
   let purged = 0;

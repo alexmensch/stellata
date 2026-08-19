@@ -608,6 +608,11 @@ export class Stellata implements FrameAnchor {
       camera: this.camera,
       canvas: this.renderer.domElement,
       sharedUniforms,
+      // WebGPU exposes no equivalent through three's public surface, so that
+      // boot takes the spec's guaranteed floor for maxTextureDimension2D —
+      // 8192, which is the texture ladder's top rung anyway, so nothing
+      // clamps on a device whose real limit is only ever higher.
+      maxTextureSize: this.rendererGL?.capabilities.maxTextureSize ?? 8192,
       solIndex: catalog.solIndex,
       solAbsInto: (out) => {
         const si = catalog.solIndex;

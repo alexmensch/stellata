@@ -65,14 +65,19 @@ src/client/solar-system/planets/
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
-  surface-relief/                 DEM relief on the mesh: the tangent frame,
+  surface-relief/                 DEM relief on the mesh (Moon, Mercury, Mars,
+                                  Earth): the tangent frame,
                                   which terms the perturbed normal reaches,
                                   and the horizon that casts its shadows.
                                   Its own README.
   emission/                       The HDR-unit normalisers — the mesh
-                                  anchor, the two disc means that divide
-                                  out, and the day map's measured mean
-                                  luminance. Its own README.
+                                  anchor and the two disc means that
+                                  divide out. Its own README.
+  textures/                       Which rung of a body's texture ladder to
+                                  hold, from the live viewport, the
+                                  build-generated table it reads, and the
+                                  VRAM budget that releases the rest. Its
+                                  own README.
   glare/                          Reflected-glare billboard shaders: the
                                   shared star-perceptual point and the
                                   photocentre shift. Its own README.
@@ -86,10 +91,11 @@ src/client/solar-system/planets/
                                   Io-transit / lunar-eclipse search tests
                                   on the real ephemeris.
   eclipses/                       The event-level half of the same story:
-                                  where a shadow axis meets a surface, and
-                                  the named-eclipse regression corpus that
-                                  pins it against NASA's Five Millennium
-                                  Canon. Its own README.
+                                  where a shadow axis meets a surface, the
+                                  named-eclipse regression corpus pinning it
+                                  against NASA's Five Millennium Canon, and
+                                  the refracted glow that makes a totally
+                                  eclipsed body red. Its own README.
   planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
                                   resolvability-gated. See § Labels.
   planet-mesh.vert.glsl,
@@ -234,7 +240,10 @@ radiance rather than appMag. A FULL eclipse
 writes exactly 0 and the shader collapses the quad — a floored +7.5
 mag residual is still visible on a mag −1 Mercury, and the planet-
 scale depth buffer can't hide it — and the planet's label hides with
-it (the fully eclipsed body renders nothing). Glare through the host's
+it. **Unless the caster has an atmosphere**: Earth refracts sunlight into
+its own umbra, so the dim floors at that glow rather than 0 and a totally
+eclipsed Moon stays visible, coppery red, label and all
+(`eclipses/README.md` § Umbral glow). Glare through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
 through. A planet in *front* (transit) dims the
@@ -355,9 +364,10 @@ crossfade.
   planet-scale separations share one log-depth bucket in any shadow
   map the main pass could render — and the local pass's z-buffer
   orders camera rays, not sun rays.
-- **Textures**: lazy-fetched from `public/textures/<body>.jpg`
+- **Textures**: lazy-fetched from `public/textures/<body>-<rung>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
-  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
+  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. Which rung is
+  § Texture tier selection. A 404 is
   expected data — texture-less bodies (Uranus, future exoplanets)
   render the representative-colour + limb-darkening base path; there
   is no separate renderer for them. Textures load with
@@ -377,11 +387,26 @@ crossfade.
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
 
+### Texture tier selection
+
+`textures/` — each body ships a ladder of map widths and the renderer holds
+the smallest rung its display can resolve, from
+`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap up, hold
+across a dead band, drop once the body has shrunk well past what it holds;
+every rung shares one build-measured mean luminance, or a swap would step the
+disc's brightness.
+
+**Maps are released, which the ladder makes mandatory rather than tidy** — an
+8192 map is 179 MB against a 2048's 11 MB. A body keeps exactly one rung; the
+rest rides a least-recently-drawn budget. Dropping matters most for a body
+still ON screen but small — used every frame, so beyond that budget's reach.
+
 ### Surface relief
 
-Moon, Mercury and Mars shade with a DEM-derived tangent-space normal map and a
-per-texel horizon map on top of the colour map, lazily loaded on the same
-approach lane. The tangent frame both are sampled in, the single term the
+Moon, Mercury, Mars and Earth shade with a DEM-derived tangent-space normal
+map and a per-texel horizon map on top of the colour map, lazily loaded on the
+same approach lane. Earth's pair is twice the width of the other three — its
+relief is far the flattest and buys nothing below 8192. The tangent frame both are sampled in, the single term the
 perturbed normal is allowed to reach, and how the facet's own slope composes
 with the skyline beyond it — the body's own limb included — are
 `surface-relief/README.md`; the shader that consumes them is

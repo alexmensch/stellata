@@ -25,9 +25,55 @@ export interface RotationElements {
    *  adds it to the spin angle so texture features land on their true
    *  longitudes. Omitted = 0 (map centred on the prime meridian). */
   readonly mapCenterLonDeg?: number;
+  /** Periodic libration terms on top of the linear rows — README.md
+   *  § Librations. Omitted where every published amplitude is below the
+   *  visibility bar. */
+  readonly terms?: readonly RotationTerm[];
   /** Supersedes the four linear rows above with a full orientation
    *  model. Earth only — README.md § Earth is not a linear row. */
   readonly orientationModel?: BodyOrientationModel;
+}
+
+/**
+ * One periodic term of the IAU rotation model, in the form the
+ * `NUT_PREC` coefficients of a NAIF PCK carry: a shared angle
+ * `θ = θ₀ + θ̇·T` (T in Julian centuries past J2000) whose SINE drives the
+ * pole's right ascension and the prime meridian, and whose COSINE drives
+ * the declination. The mixed sine/cosine is the convention, not a choice —
+ * it is what makes the pair trace a circle on the sky rather than a line.
+ */
+export interface RotationTerm {
+  /** Amplitude on pole RA, deg, applied as `ampDeg · sin θ`. */
+  readonly raDeg?: number;
+  /** Amplitude on pole Dec, deg, applied as `ampDeg · cos θ`. */
+  readonly decDeg?: number;
+  /** Amplitude on the prime meridian, deg, applied as `ampDeg · sin θ`. */
+  readonly wDeg?: number;
+  readonly theta0Deg: number;
+  readonly thetaDegPerCty: number;
+}
+
+/** Σ over a body's terms, in degrees, for one element. `phase` picks sine
+ *  (RA and W) or cosine (Dec) — the IAU convention above.
+ *
+ *  The element is NAMED rather than reached through an accessor, and `phase`
+ *  takes `Math.sin` / `Math.cos` themselves: the mesh layer evaluates all three
+ *  of these per body per frame, so a closure built per call is per-frame
+ *  garbage on a render path. */
+function periodicSum(
+  terms: readonly RotationTerm[] | undefined,
+  T: number,
+  elem: 'raDeg' | 'decDeg' | 'wDeg',
+  phase: (rad: number) => number,
+): number {
+  if (terms === undefined) return 0;
+  let sum = 0;
+  for (const term of terms) {
+    const amp = term[elem];
+    if (amp === undefined) continue;
+    sum += amp * phase((term.theta0Deg + term.thetaDegPerCty * T) * DEG);
+  }
+  return sum;
 }
 
 /** Pole + prime meridian for a body whose orientation the linear IAU
@@ -100,6 +146,11 @@ export const NEPTUNE_ROTATION: RotationElements = {
   poleRaDeg: 299.36, poleRaDegPerCty: 0,
   poleDecDeg: 43.46, poleDecDegPerCty: 0,
   w0Deg: 249.978, wDegPerDay: 541.1397757,
+  // N, the 688 yr pole precession. Its own cloud map's longitude is
+  // arbitrary, so only the +-0.7 deg pole nod is observable here.
+  terms: [
+    { raDeg: 0.70, decDeg: -0.51, wDeg: -0.48, theta0Deg: 357.85, thetaDegPerCty: 52.316 },
+  ],
 };
 
 export const PLUTO_ROTATION: RotationElements = {
@@ -126,6 +177,15 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleRaDeg: 269.9949, poleRaDegPerCty: 0.0031,
     poleDecDeg: 66.5392, poleDecDegPerCty: 0.0130,
     w0Deg: 38.3213, wDegPerDay: 13.17635815,
+    // E1/E2 of the lunar libration series — the 18.6 yr nodal regression and
+    // its half-period harmonic. E1 alone is ~4 deg, the largest dropped term
+    // on any body users know by eye: Tycho sits ~100 km off without it.
+    terms: [
+      { raDeg: -3.8787, decDeg: 1.5419, wDeg: 3.561,
+        theta0Deg: 125.045, thetaDegPerCty: -1935.5364525 },
+      { raDeg: -0.1204, decDeg: 0.0239, wDeg: 0.1208,
+        theta0Deg: 250.089, thetaDegPerCty: -3871.072905 },
+    ],
   }],
   ['Io', {
     poleRaDeg: 268.05, poleRaDegPerCty: -0.009,
@@ -137,24 +197,43 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 64.51, poleDecDegPerCty: 0.003,
     w0Deg: 36.022, wDegPerDay: 101.3747235,
     mapCenterLonDeg: 180,
+    // J4, the 30 yr Jovian-system term.
+    terms: [
+      { raDeg: 1.086, decDeg: 0.468, wDeg: -0.98, theta0Deg: 355.8, thetaDegPerCty: 1191.3 },
+    ],
   }],
   ['Ganymede', {
     poleRaDeg: 268.20, poleRaDegPerCty: -0.009,
     poleDecDeg: 64.57, poleDecDegPerCty: 0.003,
     w0Deg: 44.064, wDegPerDay: 50.3176081,
     mapCenterLonDeg: 180,
+    // J5, 137 yr.
+    terms: [
+      { raDeg: 0.431, decDeg: 0.186, wDeg: -0.389, theta0Deg: 119.9, thetaDegPerCty: 262.1 },
+    ],
   }],
   ['Callisto', {
     poleRaDeg: 268.72, poleRaDegPerCty: -0.009,
     poleDecDeg: 64.83, poleDecDegPerCty: 0.003,
     w0Deg: 259.51, wDegPerDay: 21.5710715,
     mapCenterLonDeg: 180,
+    // J6, 560 yr.
+    terms: [
+      { raDeg: 0.59, decDeg: 0.254, wDeg: -0.533, theta0Deg: 229.8, thetaDegPerCty: 64.3 },
+    ],
   }],
   ['Mimas', {
     poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
     poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
     w0Deg: 333.46, wDegPerDay: 381.9945550,
     mapCenterLonDeg: 180,
+    // S3 and S5. The largest librations anywhere in the table: a 13.6 deg pole
+    // swing on an annual period, and a 44.9 deg prime-meridian term on 71 yr.
+    // Mimas without these is pointed the wrong way, not slightly off.
+    terms: [
+      { raDeg: 13.56, decDeg: -1.53, wDeg: -13.48, theta0Deg: 177.4, thetaDegPerCty: -36505.5 },
+      { wDeg: -44.85, theta0Deg: 316.45, thetaDegPerCty: 506.2 },
+    ],
   }],
   ['Enceladus', {
     poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
@@ -167,6 +246,11 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 83.52, poleDecDegPerCty: -0.004,
     w0Deg: 8.95, wDegPerDay: 190.6979085,
     mapCenterLonDeg: 180,
+    // S4 (5 yr) and S5 (71 yr).
+    terms: [
+      { raDeg: 9.66, decDeg: -1.09, wDeg: -9.6, theta0Deg: 300.0, thetaDegPerCty: -7225.9 },
+      { wDeg: 2.23, theta0Deg: 316.45, thetaDegPerCty: 506.2 },
+    ],
   }],
   ['Dione', {
     poleRaDeg: 40.66, poleRaDegPerCty: -0.036,
@@ -179,6 +263,10 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 83.55, poleDecDegPerCty: -0.004,
     w0Deg: 235.16, wDegPerDay: 79.6900478,
     mapCenterLonDeg: 180,
+    // S6, 35 yr.
+    terms: [
+      { raDeg: 3.1, decDeg: -0.35, wDeg: -3.08, theta0Deg: 345.2, thetaDegPerCty: -1016.3 },
+    ],
   }],
   ['Titan', {
     poleRaDeg: 39.4827, poleRaDegPerCty: 0,
@@ -222,20 +310,59 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleDecDeg: 41.17, poleDecDegPerCty: 0,
     w0Deg: 296.53, wDegPerDay: -61.2572637,
     mapCenterLonDeg: 180,
+    // N1-N6 harmonics of Neptune's 688 yr pole precession. The whole series is
+    // the largest in the table by amplitude — the leading term alone swings
+    // the pole 32 deg in RA and 23 deg in Dec, because Triton's orbit is
+    // dragged around by Neptune's oblateness on that period.
+    terms: [
+      { raDeg: -32.35, decDeg: 22.55, wDeg: 22.25, theta0Deg: 177.85, thetaDegPerCty: 52.316 },
+      { raDeg: -6.28, decDeg: 2.1, wDeg: 6.73, theta0Deg: 355.7, thetaDegPerCty: 104.632 },
+      { raDeg: -2.08, decDeg: 0.55, wDeg: 2.05, theta0Deg: 533.55, thetaDegPerCty: 156.948 },
+      { raDeg: -0.74, decDeg: 0.16, wDeg: 0.74, theta0Deg: 711.4, thetaDegPerCty: 209.264 },
+      { raDeg: -0.28, decDeg: 0.05, wDeg: 0.28, theta0Deg: 889.25, thetaDegPerCty: 261.58 },
+      { raDeg: -0.11, decDeg: 0.02, wDeg: 0.11, theta0Deg: 1067.1, thetaDegPerCty: 313.896 },
+    ],
   }],
 ]);
+
+/** The pole pair, as `poleRaDecDegInto` fills it. */
+export interface PoleRaDec {
+  raDeg: number;
+  decDeg: number;
+}
+
+/** Pole RA/Dec (deg, ICRS) at Unix-seconds `t`, into `out`. The form the
+ *  render path takes — the mesh orientation runs it per body per frame and
+ *  reads the pair straight back out. */
+export function poleRaDecDegInto(
+  rot: RotationElements,
+  t: number,
+  out: PoleRaDec,
+): PoleRaDec {
+  if (rot.orientationModel) {
+    const model = rot.orientationModel.poleRaDecDeg(t);
+    out.raDeg = model.raDeg;
+    out.decDeg = model.decDeg;
+    return out;
+  }
+  const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
+  out.raDeg =
+    rot.poleRaDeg
+    + rot.poleRaDegPerCty * T
+    + periodicSum(rot.terms, T, 'raDeg', Math.sin);
+  out.decDeg =
+    rot.poleDecDeg
+    + rot.poleDecDegPerCty * T
+    + periodicSum(rot.terms, T, 'decDeg', Math.cos);
+  return out;
+}
 
 /** Pole RA/Dec (deg, ICRS) at Unix-seconds `t`. */
 export function poleRaDecDegAt(
   rot: RotationElements,
   t: number,
-): { raDeg: number; decDeg: number } {
-  if (rot.orientationModel) return rot.orientationModel.poleRaDecDeg(t);
-  const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
-  return {
-    raDeg: rot.poleRaDeg + rot.poleRaDegPerCty * T,
-    decDeg: rot.poleDecDeg + rot.poleDecDegPerCty * T,
-  };
+): PoleRaDec {
+  return poleRaDecDegInto(rot, t, { raDeg: 0, decDeg: 0 });
 }
 
 /** Prime-meridian angle W (deg, wrapped to [0, 360)) at Unix-seconds
@@ -243,12 +370,18 @@ export function poleRaDecDegAt(
  *  model-clock bounds, where an unwrapped float64 radian value has
  *  degraded precision. */
 export function spinDegAt(rot: RotationElements, t: number): number {
+  const days = tToJdTdb(t) - J2000_JD;
   const raw = rot.orientationModel
     ? rot.orientationModel.spinDeg(t)
-    : rot.w0Deg + rot.wDegPerDay * (tToJdTdb(t) - J2000_JD);
+    : rot.w0Deg
+      + rot.wDegPerDay * days
+      + periodicSum(rot.terms, days / DAYS_PER_JULIAN_CENTURY, 'wDeg', Math.sin);
   const w = raw % 360;
   return w < 0 ? w + 360 : w;
 }
+
+/** Scratch for the accessors below that only read the pair back out. */
+const _poleScratch: PoleRaDec = { raDeg: 0, decDeg: 0 };
 
 /** Pole unit vector in ICRS cartesian (x → vernal equinox, z → NCP). */
 export function poleVectorAt(
@@ -256,9 +389,9 @@ export function poleVectorAt(
   t: number,
   out: { x: number; y: number; z: number },
 ): void {
-  const { raDeg, decDeg } = poleRaDecDegAt(rot, t);
-  const ra = raDeg * DEG;
-  const dec = decDeg * DEG;
+  poleRaDecDegInto(rot, t, _poleScratch);
+  const ra = _poleScratch.raDeg * DEG;
+  const dec = _poleScratch.decDeg * DEG;
   out.x = Math.cos(dec) * Math.cos(ra);
   out.y = Math.cos(dec) * Math.sin(ra);
   out.z = Math.sin(dec);

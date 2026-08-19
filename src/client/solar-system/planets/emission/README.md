@@ -10,10 +10,14 @@ src/client/solar-system/planets/emission/
   mesh-surface-pure.ts (+ test)   Mirrored limb constants, the disc-mean
                                   normalisers, and the two per-body
                                   luminance scalars the mesh shader reads.
-  map-mean-luminance.ts (+ test)  Sphere-weighted mean linear luminance of a
-                                  day map, measured once on load — reduces a
-                                  stretched mosaic to an albedo pattern.
 ```
+
+The day map's own mean linear luminance is no longer measured here: it is
+computed at build from each body's top rung and shipped in
+`../textures/texture-ladder-generated.ts`. It had to move for the texture ladder —
+measuring per map would give every rung of a body a slightly different
+normaliser, and each tier swap would then step the disc's brightness
+(`../README.md` § Texture tier selection).
 
 Both planet layers emit into the scene-wide HDR unit — the glare through
 the point-source rule, the mesh through the surface-brightness rule. There
@@ -95,13 +99,17 @@ multiplies on top a pure redistribution rather than a dimming:
   **`LIMB_FLOOR` / `LIMB_EXP` are mirrored as literals in
   `../planet-mesh.frag.glsl`** and drift-pinned; changing one side alone
   shifts every body off its flux with no other symptom.
-- The **day map's own mean linear luminance** (`map-mean-luminance.ts`),
-  measured once on load from a downscaled copy, cos-latitude weighted.
+- The **day map's own mean linear luminance**
+  (`../textures/texture-ladder-generated.ts`), measured at build from the
+  body's top rung, cos-latitude weighted, and shared by every rung.
   The maps are brightness-stretched mosaics whose absolute level is not
-  radiometric — the build calibrates their mean *chromaticity* and
-  preserves whatever mean luminance the source had
-  (`data/textures/README.md` § Colour fidelity) — so the map may supply
-  only the pattern and the level has to come from `p`. Texture-less
+  radiometric — the build calibrates only their mean *chromaticity*, and
+  since nothing downstream reads the level it normalises the gains to
+  avoid clipping rather than to preserve it (`data/textures/README.md`
+  § Colour fidelity) — so the map supplies the pattern and the level has
+  to come from `p`. **This division is what makes that safe**: darken a
+  map by any factor and its mean darkens with it, so the ratio the shader
+  uses is unchanged. Texture-less
   bodies use the representative colour's own luminance, which is exactly
   what that branch emits, so it is exact. Dividing by the measured mean
   also makes the texture arriving mid-approach **flux-neutral**: both

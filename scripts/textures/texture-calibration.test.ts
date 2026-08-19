@@ -63,17 +63,30 @@ describe('texture colour calibration manifest', () => {
     }
   });
 
-  it('achieved mean chromaticity lands on target (within LUT/clip tolerance)', () => {
-    // The gain algebra is exact; residuals come from 8-bit LUT
-    // rounding and highlight clipping — Earth's blue gain clips on
-    // its bright cloud/ice fields, the largest case at ~0.021.
+  it('achieved mean chromaticity lands on target (within LUT tolerance)', () => {
+    // The gain algebra is exact and the gains never exceed 1, so nothing
+    // clips and the only residual is 8-bit LUT rounding. The bound is
+    // 0.003 rather than the old 0.03 BECAUSE of that normalisation: while
+    // gains could amplify, Earth's 1.34x blue pinned its snow and ice at
+    // 255 and landed 0.124 off target — forty times this tolerance, and
+    // under the old bound it still passed.
     for (const [body, row] of Object.entries(manifest)) {
       for (const c of [0, 1, 2]) {
         expect(
           Math.abs(row.achieved[c] - row.target[c]),
           `${body} channel ${c}`,
-        ).toBeLessThan(0.03);
+        ).toBeLessThan(0.003);
       }
+    }
+  });
+
+  it('never amplifies: no gain exceeds 1, and each body has one at 1', () => {
+    // The normalisation that makes clipping structurally impossible. The
+    // triple is scaled so its largest member is exactly 1, so a body is
+    // only ever darkened — and only the ratios reach the screen, since the
+    // renderer divides each map's own mean luminance back out.
+    for (const [body, row] of Object.entries(manifest)) {
+      expect(Math.max(...row.gains), body).toBeCloseTo(1, 4);
     }
   });
 
@@ -92,9 +105,9 @@ describe('texture colour calibration manifest', () => {
     // numbers, so a silent retune (or source-image swap) that leaves the
     // artifacts stale fails until they are rebuilt and recommitted.
     const pins: Record<string, { gains: [number, number, number]; achievedB: number }> = {
-      mars: { gains: [0.9692, 1.0566, 0.574], achievedB: 0.5214 },
-      neptune: { gains: [0.8701, 1.0818, 0.7123], achievedB: 1.2735 },
-      venus: { gains: [0.7977, 1.0331, 1.8085], achievedB: 0.9393 },
+      mars: { gains: [0.9256, 1.0, 0.5417], achievedB: 0.5214 },
+      neptune: { gains: [0.8043, 1.0, 0.6585], achievedB: 1.2742 },
+      venus: { gains: [0.4411, 0.5713, 1.0], achievedB: 0.9577 },
     };
     for (const [body, { gains, achievedB }] of Object.entries(pins)) {
       for (const c of [0, 1, 2]) {

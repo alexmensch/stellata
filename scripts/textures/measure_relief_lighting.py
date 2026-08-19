@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What the relief terms light: ground past the terminator against the same
 march at full DEM width, and the disc integral against phase. Manual, run by
-hand; method and results in data/textures/README.md § Cast shadows."""
+hand; method and results in data/textures/relief/README.md § Cast shadows."""
 
 import sys
 from pathlib import Path
@@ -31,7 +31,7 @@ TERM_SOFTNESS_FLOOR = 1e-4
 # Geometric albedo per relief body — Planet.albedo / SolMoon.albedo in
 # src/client/solar-system/planet-system.ts, the reflectance the interreflected
 # term pays a second time. horizon-map.test.ts pins these against the originals.
-ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170}
+ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170, "earth": 0.434}
 
 
 def _smoothstep(a, b, x):
