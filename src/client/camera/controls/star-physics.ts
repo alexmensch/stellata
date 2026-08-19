@@ -13,11 +13,11 @@ import {
 import { parkDistance } from '../focus/focus-transition';
 import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import {
-  apparentMagnitude,
   perceptualAppSizePx,
   perceptualDmEff,
-} from '../../solar-system/perceptual-magnitude';
+} from '../../star-pipeline/perceptual-disc-pure';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-

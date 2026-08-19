@@ -221,9 +221,10 @@ uniform sampler2D uColorLut;
 const float BV_MIN = -0.4;
 const float BV_MAX = 2.0;
 
-// Analytic inverse of Ballesteros 2012. Mirrored from
-// `ballesterosBvFromTeff` in scripts/colour/blackbody-lut-pure.ts — keep
-// the two in sync. Picks the positive quadratic root.
+// Analytic inverse of Ballesteros 2012, picking the positive quadratic
+// root. GLSL cannot import, so these literals are held against the
+// exported BALLESTEROS_* coefficients by
+// scripts/colour/ballesteros-glsl-drift.test.ts.
 float ballesterosBvFromTeff(float teff) {
     float k = teff / 4600.0;
     float disc = sqrt(4.0 + 1.1664 * k * k);

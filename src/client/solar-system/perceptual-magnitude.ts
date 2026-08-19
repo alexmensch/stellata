@@ -1,6 +1,6 @@
-// CPU-side mirror of shaders/perceptual-disc.glsl — apparent-magnitude
-// math and brightness → disc-radius mapping the star and planet vertex
-// shaders use. Shader is the source of truth; this mirror is test-pinned.
+// Apparent-magnitude math the star and planet vertex shaders use: the
+// standard formula, the reflected-light model, and the mesh's disc surface
+// brightness. The disc-size kernel is ../star-pipeline/perceptual-disc-pure.ts.
 
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 
@@ -27,46 +27,6 @@ export const SOFT_TAPER_MARGIN_MAG = 0.5;
 export function apparentMagnitude(absmag: number, dPc: number): number {
   const d = Math.max(dPc, 1e-30);
   return absmag + 5 * (Math.log10(d) - 1);
-}
-
-/**
- * Soft-knee `dM_eff` curve. `dM = limitMag − appMag` is "magnitudes
- * brighter than the instrument's limit."
- *
- * - For `dM ≤ sizeSpan`, returns `max(dM, 0)` — the linear region.
- * - For `dM > sizeSpan`, bends through a Michaelis-Menten asymptote
- *   that approaches `sizeSpan + sizeKnee` as `dM → ∞`. Lets very
- *   bright sources keep growing past the linear ceiling instead of
- *   hard-clamping there.
- *
- * Identical arithmetic to `perceptualDmEff` in
- * shaders/perceptual-disc.glsl.
- */
-export function perceptualDmEff(
-  appMag: number,
-  limitMag: number,
-  sizeSpan: number,
-  sizeKnee: number,
-): number {
-  const dM = limitMag - appMag;
-  if (dM <= sizeSpan) return Math.max(dM, 0);
-  const over = dM - sizeSpan;
-  return sizeSpan + (sizeKnee * over) / Math.max(sizeKnee + over, 1e-6);
-}
-
-/**
- * Apparent-magnitude → disc pixel diameter. `√(dMEff / sizeSpan)`
- * blended through `[sizeMin, sizeMax]`. Identical arithmetic to
- * `perceptualAppSizePx` in shaders/perceptual-disc.glsl.
- */
-export function perceptualAppSizePx(
-  dMEff: number,
-  sizeMin: number,
-  sizeMax: number,
-  sizeSpan: number,
-): number {
-  const t = Math.sqrt(dMEff / Math.max(sizeSpan, 0.001));
-  return sizeMin + t * (sizeMax - sizeMin);
 }
 
 /**

@@ -44,11 +44,18 @@ so the two routes cannot silently diverge. The chain's own behaviour
 (Python parity, peak- not luma-normalisation, monotonic warmth) is
 `blackbody-lut-pure.test.ts`, beside the code.
 
-`ballesteros-glsl-drift.test.ts` — pins the `ballesterosBvFromTeff`
-function body in `src/client/star-pipeline/star.vert.glsl` against the
-TS coefficients in `blackbody-lut-pure.ts`. A coefficient drift on
-either side fails the test; intentional edits update both sides AND
-the inline snapshot.
+## One definition of the coefficients, three implementations
+
+`BALLESTEROS_T0` / `BALLESTEROS_BV_SCALE` / `BALLESTEROS_QUAD_LINEAR` /
+`BALLESTEROS_DISC_K2` are exported from `blackbody-lut-pure.ts` and are
+the single definition. Two of the three implementations import them
+(the functions here, and the TSL graph in
+`src/client/webgpu/star/star-glow-tsl.ts`); GLSL cannot, so
+`star.vert.glsl` carries literals and
+`ballesteros-glsl-drift.test.ts` pins each one at its position in the
+expression against the exported constant, plus an inline snapshot of the
+whole body so a reshuffle or sign flip fails too. Intentional edits
+change the constants AND the snapshot.
 
 The LUT is consumed at render time via `DataTexture` sampling in the
 star vertex shader.

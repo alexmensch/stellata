@@ -68,12 +68,55 @@ export function packVec4Buffers(
   for (const name of plan.names) {
     const src = sources[name];
     if (src === undefined) throw new Error(`missing packed attribute source: ${name}`);
-    if (src.length !== count) {
-      throw new Error(`packed attribute ${name}: ${src.length} values for ${count} instances`);
-    }
-    const { buffer, component } = slotFor(plan, name);
-    const dst = buffers[buffer];
-    for (let i = 0; i < count; i++) dst[i * 4 + component] = src[i];
+    repackScalarInPlace(plan, buffers, name, src);
   }
   return buffers;
+}
+
+/** Rewrite one scalar's component of its packed buffer in place — the
+ *  path a DynamicDrawUsage source takes when it alone changed. Returns
+ *  the index of the buffer written so the caller can flag its upload. */
+export function repackScalarInPlace(
+  plan: Vec4PackPlan,
+  buffers: readonly Float32Array[],
+  name: string,
+  src: ArrayLike<number>,
+): number {
+  const { buffer } = slotFor(plan, name);
+  return repackScalarRange(plan, buffers, name, src, 0, buffers[buffer].length >> 2);
+}
+
+/** The half-open-item-range form: rewrite only instances
+ *  `[startItem, startItem + itemCount)`. A writer that reports which
+ *  slots it touched turns a whole-buffer pass into this one. */
+export function repackScalarRange(
+  plan: Vec4PackPlan,
+  buffers: readonly Float32Array[],
+  name: string,
+  src: ArrayLike<number>,
+  startItem: number,
+  itemCount: number,
+): number {
+  const { buffer, component } = slotFor(plan, name);
+  const dst = buffers[buffer];
+  const count = dst.length >> 2;
+  if (src.length !== count) {
+    throw new Error(`packed attribute ${name}: ${src.length} values for ${count} instances`);
+  }
+  const end = startItem + itemCount;
+  if (startItem < 0 || end > count) {
+    throw new Error(`packed attribute ${name}: range [${startItem}, ${end}) outside ${count}`);
+  }
+  for (let i = startItem; i < end; i++) dst[i * 4 + component] = src[i];
+  return buffer;
+}
+
+/** Element span of a packed buffer covering `itemCount` instances from
+ *  `startItem` — all four components, which is what an upload range has
+ *  to be: the neighbours already hold their current values. */
+export function packedUploadRange(
+  startItem: number,
+  itemCount: number,
+): { start: number; count: number } {
+  return { start: startItem * 4, count: itemCount * 4 };
 }

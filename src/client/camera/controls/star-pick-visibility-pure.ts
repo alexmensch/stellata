@@ -2,7 +2,7 @@
 // every star.vert.glsl gate a pick has to honour. See README.md § picker.ts.
 
 import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
-import { isDiscDominant } from '../../star-pipeline/local-pass/star-local-cluster-pure';
+import { STAR_PASS_GLOW, colourPassFor } from '../../star-pipeline/star-pass';
 import { discHitRadiusPx, type ResolvedCandidate } from './star-geometry';
 import type { RenderedSizeComponents } from './star-physics';
 
@@ -41,12 +41,12 @@ export function resolveStarPickVisibility(a: StarPickVisibilityArgs): ResolvedCa
     };
   }
 
-  // Both the soft taper and the eclipse dim are glow-pass-only
-  // (`uRenderMode == 0`). A disc-dominant star keeps drawing at any dim —
-  // the pair's overlap orders geometrically in the local depth pass — so
+  // Both the soft taper and the eclipse dim belong to the glow pass
+  // alone. A star the disc pass draws keeps drawing at any dim — the
+  // pair's overlap orders geometrically in the local depth pass — so
   // mirroring the dim there would hide a star that is on screen.
-  const glowDominant = !isDiscDominant(c.appSizePx, c.physSizePx);
-  const dim = glowDominant ? a.eclipseDim : 1;
+  const pass = colourPassFor(c.appSizePx, c.physSizePx);
+  const dim = pass === STAR_PASS_GLOW ? a.eclipseDim : 1;
   if (dim <= 0) return { visible: false, hitRadius: 0 };
 
   // The shader folds the dim into appMag BEFORE deriving pxSize, so a
@@ -62,7 +62,7 @@ export function resolveStarPickVisibility(a: StarPickVisibilityArgs): ResolvedCa
       thresholdMag: a.thresholdMag,
       physRadiusPx: 0.5 * c.physSizePxUncapped,
       whitePoint: a.whitePoint,
-      tapered: glowDominant,
+      tapered: pass === STAR_PASS_GLOW,
     }),
     hitRadius: discHitRadiusPx(Math.max(appSizePx, c.physSizePx)),
   };

@@ -141,6 +141,38 @@ describe('resolveStarPickVisibility / eclipse dim', () => {
   });
 });
 
+// The mirror now reasons in pass terms (star-pipeline/star-pass.ts)
+// rather than uRenderMode uniform values. Same verdicts as the
+// uniform-value form, pinned per pass.
+describe('resolveStarPickVisibility / pass routing', () => {
+  it('a glow-pass star takes the taper: a star past the threshold is invisible', () => {
+    const pastThreshold = components({ appMag: LIMIT_MAG + 1 });
+    expect(resolveStarPickVisibility(
+      args({ components: pastThreshold }),
+    ).visible).toBe(false);
+  });
+
+  it('a disc-pass star takes neither taper nor dim at the same magnitude', () => {
+    const pastThreshold = components({
+      appMag: LIMIT_MAG + 1, physSizePx: 40, physSizePxUncapped: 40,
+    });
+    expect(resolveStarPickVisibility(
+      args({ components: pastThreshold, eclipseDim: 0 }),
+    ).visible).toBe(false); // still bounded by the threshold clip...
+    const bright = components({ appMag: -10, physSizePx: 40, physSizePxUncapped: 40 });
+    expect(resolveStarPickVisibility(
+      args({ components: bright, eclipseDim: 0 }),
+    ).visible).toBe(true); // ...but immune to the glow-only dim.
+  });
+
+  it('the core mask has no pick verdict of its own — chart aside, only the two colour passes route', () => {
+    // colourPassFor returns only GLOW or DISC; the chart branch is the
+    // one non-colour route and it bypasses the pass split entirely.
+    const r = resolveStarPickVisibility(args({ chartDiscPx: 12 }));
+    expect(r.visible).toBe(true);
+  });
+});
+
 describe('resolveStarPickVisibility / adaptation', () => {
   // uExposure carries the per-frame adaptation cut. A parked planet drives
   // it deep enough to black out the faint end; the pick gate has to follow.

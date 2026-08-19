@@ -70,12 +70,13 @@ in both navigate and observe modes.
   collapses** a pick would otherwise sail straight through:
   `uHideFocusIdx` (the focal star in OBSERVE — drawn nowhere, sitting
   dead centre of the screen) and `iEclipseDim` at totality. The eclipse
-  term is **glow-pass only**, matching the shader's `uRenderMode == 0`
-  gate: a disc-dominant star keeps drawing at any dim and the local depth
+  term is **glow-pass only**, matching the shader's glow-pass gate: a
+  disc-dominant star keeps drawing at any dim and the local depth
   pass orders the resolved pair geometrically, so mirroring the dim there
-  would hide a star that is on screen. The pass split itself is
-  `isDiscDominant` (`../../star-pipeline/local-pass/README.md`), not a
-  local re-derivation. A partial dim also **shrinks the quad**, because
+  would hide a star that is on screen. The pass routing is
+  `colourPassFor` (`../../star-pipeline/star-pass.ts`, over
+  `isDiscDominant`), not a local re-derivation. A partial dim also
+  **shrinks the quad**, because
   the shader folds it into `appMag` before deriving `pxSize` — so the
   radius re-solves through `appSizePxForMag` rather than reporting the
   undimmed size. Below a quad of `2 × MIN_DISC_HIT_RADIUS_PX` the

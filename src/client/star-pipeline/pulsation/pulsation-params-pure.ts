@@ -64,3 +64,18 @@ export function buildPulsationParams(varType: Uint8Array): {
   }
   return { rho, colorSwing };
 }
+
+/** {ρ, ΔB−V} interleaved as the iPuls vec2 attribute's backing array —
+ *  one attribute rather than two to stay within the WebGL2 16-attribute
+ *  budget. Shared by the WebGL2 geometry and the WebGPU port's. */
+export function interleavePulsParams(
+  rho: Float32Array,
+  colorSwing: Float32Array,
+): Float32Array {
+  const out = new Float32Array(rho.length * 2);
+  for (let i = 0; i < rho.length; i++) {
+    out[i * 2] = rho[i];
+    out[i * 2 + 1] = colorSwing[i];
+  }
+  return out;
+}

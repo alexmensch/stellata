@@ -2,7 +2,7 @@
 // gaps live here — delete each entry when upstream types catch up
 // (README.md § TSL typing shim).
 
-import { attribute, step as stepFloatPinned } from 'three/tsl';
+import { attribute, mix as mixFloatPinnedT, step as stepFloatPinned } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { Vector2, Vector3, Vector4 } from 'three';
 import type { NodeObject } from 'three/src/nodes/tsl/TSLCore.js';
@@ -33,3 +33,14 @@ interface StepVec {
   (edge: N4 | NF, x: N4): Node<'vec4'>;
 }
 export const step = stepFloatPinned as unknown as StepVec;
+
+// mix()'s vector overloads pin `t` to FloatOrNumber while the runtime
+// (and WGSL mix) takes a vector t — the per-channel branch select in the
+// sRGB encode.
+interface MixVecT {
+  (a: NF, b: NF, t: NF): Node<'float'>;
+  (a: N2 | NF, b: N2 | NF, t: N2 | NF): Node<'vec2'>;
+  (a: N3 | NF, b: N3 | NF, t: N3 | NF): Node<'vec3'>;
+  (a: N4 | NF, b: N4 | NF, t: N4 | NF): Node<'vec4'>;
+}
+export const mix = mixFloatPinnedT as unknown as MixVecT;

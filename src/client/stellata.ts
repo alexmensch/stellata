@@ -82,7 +82,7 @@ import {
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
-import type { StellataRenderer, WebGpuSeam } from './webgpu/seam';
+import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -206,6 +206,7 @@ export class Stellata implements FrameAnchor {
   /** WebGPU boot seam — null on the shipped WebGL2 boot. Port children
    *  reach their scene and the shared uniform nodes through it. */
   readonly webgpu: WebGpuSeam | null;
+  private webgpuStarLayer: WebGpuStarLayer | null = null;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
   readonly hdr: HdrPipeline;
@@ -556,6 +557,24 @@ export class Stellata implements FrameAnchor {
       fragmentShader,
       sharedUniforms,
     );
+
+    // The TSL star layer renders in place of the GLSL pipeline above on a
+    // WebGPU boot (the shell's scene is never rendered there). The GLSL
+    // pipeline still constructs either way: its attributes are the live
+    // source buffers this layer watches, and the writers keep writing them.
+    this.webgpuStarLayer = this.webgpu?.attachStarLayer({
+      catalog,
+      logRadii: this.starFrame.logRadii,
+      lumClassF32: this.starFrame.lumClassF32,
+      distSol: this.starFrame.distSol,
+      teffApsis: this.starFrame.teffApsis,
+      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
+      iPositionAttr: this.starPipeline.iPositionAttr,
+      iPulsAttr: this.starPipeline.iPulsAttr,
+      iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
+      iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
+      iSuppressPulsationAttr: this.starPipeline.iSuppressPulsationAttr,
+    }) ?? null;
 
     // Shared uniforms passed by reference so floating-origin recenters,
     // resize updates, and dust loads propagate to the particle pass
@@ -2353,6 +2372,8 @@ export class Stellata implements FrameAnchor {
     this.focus.dispose();
     this.controls.dispose();
     this.starPipeline.dispose();
+    this.webgpuStarLayer?.dispose();
+    this.webgpuStarLayer = null;
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
     // Every scene layer (eager or lazily attached) disposes through the

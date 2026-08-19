@@ -5,6 +5,9 @@
 import * as THREE from 'three';
 import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
 import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
+import {
+  STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW, type StarPass,
+} from '../star-pass';
 
 export const MIRROR_CAPACITY = 8;
 
@@ -54,10 +57,10 @@ export class StarLocalMirror {
     this.geometry.instanceCount = 0;
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
 
-    const makeMat = (mode: number, params: THREE.ShaderMaterialParameters) => {
+    const makeMat = (pass: StarPass, params: THREE.ShaderMaterialParameters) => {
       const m = new THREE.RawShaderMaterial({
         glslVersion: THREE.GLSL3,
-        uniforms: { ...sharedUniforms, uRenderMode: { value: mode } },
+        uniforms: { ...sharedUniforms, uRenderMode: { value: pass } },
         defines: { LOCAL_DEPTH_PASS: '' },
         vertexShader,
         fragmentShader,
@@ -65,14 +68,14 @@ export class StarLocalMirror {
       });
       return m;
     };
-    this.maskMaterial = makeMat(2, {
+    this.maskMaterial = makeMat(STAR_PASS_CORE_MASK, {
       depthWrite: true,
       depthTest: true,
       colorWrite: false,
     });
-    this.discMaterial = makeMat(1, { transparent: true });
+    this.discMaterial = makeMat(STAR_PASS_DISC, { transparent: true });
     applyDiscBlendDefaults(this.discMaterial);
-    this.glowMaterial = makeMat(0, {});
+    this.glowMaterial = makeMat(STAR_PASS_GLOW, {});
     applyGlowBlendDefaults(this.glowMaterial);
 
     this.group = new THREE.Group();

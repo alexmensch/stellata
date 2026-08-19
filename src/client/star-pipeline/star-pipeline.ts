@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
 import { markStatisticEmitter } from '../hdr/attachments/attachment-gate';
+import { interleavePulsParams } from './pulsation/pulsation-params-pure';
+import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 
 // Disc-pass blending state. Applied at material construction and re-applied
 // on chart-mode -> colour-mode swap-back, since chart mode swaps the disc
@@ -19,12 +21,14 @@ export function applyDiscBlendDefaults(m: THREE.ShaderMaterial) {
 
 // Glow-pass blending state — the additive sibling of
 // applyDiscBlendDefaults, shared by the star pipeline, its local-pass
-// mirror, and the planet body field so the four fields live in one
-// place. Additive so overlapping distant glows accumulate; no depth
-// write so co-located glows all contribute; depth test on so a glow
-// behind a disc drawn earlier is occluded. Re-applied on chart-mode ->
-// colour-mode swap-back (chart flips glow to MultiplyBlending).
-export function applyGlowBlendDefaults(m: THREE.ShaderMaterial) {
+// mirror, the planet body field, and the WebGPU port's NodeMaterial
+// (hence THREE.Material — every field set here lives on the base class)
+// so the four fields live in one place. Additive so overlapping distant
+// glows accumulate; no depth write so co-located glows all contribute;
+// depth test on so a glow behind a disc drawn earlier is occluded.
+// Re-applied on chart-mode -> colour-mode swap-back (chart flips glow to
+// MultiplyBlending).
+export function applyGlowBlendDefaults(m: THREE.Material) {
   m.transparent = true;
   m.depthWrite = false;
   m.depthTest = true;
@@ -48,6 +52,12 @@ export function applyMonochromeBlend(m: THREE.ShaderMaterial) {
   m.depthWrite = false;
   m.depthTest = false;
 }
+
+/** The per-vertex unit-square corner + index pair every star quad
+ *  geometry starts from (main pipeline, local mirror by reference, and
+ *  the WebGPU port's). Corners span [-0.5, +0.5]². */
+export const STAR_QUAD_CORNERS = new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]);
+export const STAR_QUAD_INDEX = [0, 1, 2, 1, 3, 2];
 
 export interface StarPipelineOptions {
   scene: THREE.Scene;
@@ -128,6 +138,9 @@ export class StarPipeline {
   /** Built once per attachBinaries; the integration shell flips
    *  `needsUpdate` after rewriting the backing buffer. */
   readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
+  /** Static. Exposed so the WebGPU port's geometry can join it by object
+   *  identity rather than interleaving a second copy of the same pair. */
+  readonly iPulsAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -152,14 +165,8 @@ export class StarPipeline {
     // 64-511 px) — too small for the angular-diameter rendering to reach the
     // viewport-filling sizes we want for supergiants at close range.
     this.geometry = new THREE.InstancedBufferGeometry();
-    this.geometry.setAttribute(
-      'aCorner',
-      new THREE.BufferAttribute(
-        new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]),
-        2,
-      ),
-    );
-    this.geometry.setIndex([0, 1, 2, 1, 3, 2]);
+    this.geometry.setAttribute('aCorner', new THREE.BufferAttribute(STAR_QUAD_CORNERS, 2));
+    this.geometry.setIndex(STAR_QUAD_INDEX);
     this.iPositionAttr = new THREE.InstancedBufferAttribute(localPositions, 3);
     this.iPositionAttr.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('iPosition', this.iPositionAttr);
@@ -178,14 +185,9 @@ export class StarPipeline {
     this.geometry.setAttribute('iLogRadius', new THREE.InstancedBufferAttribute(logRadii, 1));
     this.geometry.setAttribute('iPeriodDays', new THREE.InstancedBufferAttribute(catalog.periodDays, 1));
     this.geometry.setAttribute('iAmplitudeMag', new THREE.InstancedBufferAttribute(catalog.amplitudeMag, 1));
-    // Pack ρ + ΔB−V into one vec2 attribute to stay within the WebGL2
-    // 16-attribute budget (star.vert.glsl reads iPuls.x / iPuls.y).
-    const pulsParams = new Float32Array(catalog.count * 2);
-    for (let i = 0; i < catalog.count; i++) {
-      pulsParams[i * 2] = catalog.pulsRho[i];
-      pulsParams[i * 2 + 1] = catalog.pulsColorSwing[i];
-    }
-    this.geometry.setAttribute('iPuls', new THREE.InstancedBufferAttribute(pulsParams, 2));
+    this.iPulsAttr = new THREE.InstancedBufferAttribute(
+      interleavePulsParams(catalog.pulsRho, catalog.pulsColorSwing), 2);
+    this.geometry.setAttribute('iPuls', this.iPulsAttr);
     this.geometry.setAttribute('iLumClass', new THREE.InstancedBufferAttribute(lumClassF32, 1));
     this.geometry.setAttribute('iDistSol', new THREE.InstancedBufferAttribute(distSol, 1));
     this.geometry.setAttribute('iTeffApsis', new THREE.InstancedBufferAttribute(teffApsis, 1));
@@ -207,7 +209,7 @@ export class StarPipeline {
     // glow pass can depth-test against the disc silhouettes.
     this.discMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 1 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_DISC } },
       vertexShader,
       fragmentShader,
       transparent: true,
@@ -220,7 +222,7 @@ export class StarPipeline {
     // drawn in the disc pass are correctly occluded.
     this.glowMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 0 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_GLOW } },
       vertexShader,
       fragmentShader,
     });
@@ -234,7 +236,7 @@ export class StarPipeline {
     // the integration shell.
     this.coreMaskMaterial = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { ...sharedUniforms, uRenderMode: { value: 2 } },
+      uniforms: { ...sharedUniforms, uRenderMode: { value: STAR_PASS_CORE_MASK } },
       vertexShader,
       fragmentShader,
       depthWrite: true,

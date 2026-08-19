@@ -6,8 +6,15 @@ import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
+import type { StarGeometrySources } from './star/star-geometry';
 
 export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
+
+export type { StarGeometrySources } from './star/star-geometry';
+
+export interface WebGpuStarLayer {
+  dispose(): void;
+}
 
 export interface WebGpuSeam {
   readonly renderer: WebGPURenderer;
@@ -25,4 +32,8 @@ export interface WebGpuSeam {
    *  called from animate() before the render (README.md § Shared
    *  uniform nodes). */
   syncUniformNodes(): void;
+  /** Build the TSL star layer into the seam's scene. Requires
+   *  bindSharedUniforms to have run — the materials take their slots
+   *  from the uniform-node mirror. */
+  attachStarLayer(sources: StarGeometrySources): WebGpuStarLayer;
 }
