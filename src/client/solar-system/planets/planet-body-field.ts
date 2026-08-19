@@ -156,13 +156,13 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
  *
  * The caller folds `alphaZeroPhaseFactor(coefs)` and
  * `maxRingSystemFluxFactor` into `brightestReflectance` before passing
- * it in (see `attachHost`). Every globe curve is albedo-anchored so the
- * first is a 1× no-op; Saturn's ring system at maximum opening and
- * opposition lifts its term to ~2.43×, widening Saturn's cull by
- * ~√2.43 ≈ 1.56×. Both terms are per-body MAXIMA, which is what keeps
- * the cull a conservative outer bound while the ring term now varies
- * with tilt: a Saturn parked near a ring-plane crossing must not be
- * culled at a distance it will be visible from once the rings open.
+ * it in (see `attachHost`). Both are per-body MAXIMA, which keeps the
+ * cull a conservative outer bound now that the ring term varies with
+ * tilt: a Saturn parked near a ring-plane crossing must not be culled at
+ * a distance it will be visible from once the rings open. One distance
+ * per HOST though, maximised over `ps.planets` — which for Sol is a moon,
+ * so the ring factor moves no shipped cull today. `../README.md`
+ * § Per-host distance cull.
  *
  * Pure function — exported for tests.
  */

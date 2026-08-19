@@ -212,16 +212,25 @@ planet of an attached host:
 d_cull = 10 pc · √(p · (R/a)²) · 10^((uCullMag − M_host) / 5)
 ```
 
-where `(R/a)` for the brightest planet (proxy for "roundtrip flux")
-makes the formula geometry-independent, folded with each planet's
+where `(R/a)` for the brightest body (proxy for "roundtrip flux")
+makes the formula geometry-independent, folded with each body's
 brightest attainable phase and ring-tilt boost — MAXIMA, or a Saturn
 parked near a ring-plane crossing would be culled at a distance it
-becomes visible from once the rings open. Sol's Jupiter at the unaided
-eye's cull bound (10.56) gives ~1900 AU — still confirming that any
-non-Sol focus collapses Sol's bodies far past the cull distance,
-exactly as intended. `PlanetBodyField.setCullMag` recomputes the cache
-on every instrument change; the bound is static in the EV trim and in
-adaptation, so it never moves per frame.
+becomes visible from once the rings open.
+`PlanetBodyField.setCullMag` recomputes the cache on every instrument
+change; the bound is static in the EV trim and in adaptation, so it
+never moves per frame.
+
+**The maximum is taken over every body, and for Sol that is a moon.**
+`a` is each body's own `semiMajorAxisAu`, which for a moon is its orbit
+about its PARENT rather than its distance from the host — so `R/a` is not
+a roundtrip-flux proxy for a moon at all. Io takes the bound at ~0.48 pc
+(98 956 AU), 52× what Jupiter alone would give (~1900 AU at the unaided
+eye's cull bound of 10.56); Saturn ranks 21st, so its ring-tilt boost
+never reaches the bound. Still conservative — nothing is culled that
+should draw, and any non-Sol focus (nearest star 1.3 pc) does still
+collapse Sol's bodies past it — but on a much thinner margin than the
+Jupiter figure suggests. `stellata-2f6.62`.
 
 ## Local activation
 
