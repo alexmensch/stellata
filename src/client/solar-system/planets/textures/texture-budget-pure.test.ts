@@ -99,28 +99,16 @@ describe('otherRungs', () => {
   });
 });
 
-describe('the layer actually applies all of this', () => {
+// What the layer DOES with all of this is driven for real in
+// ../planet-mesh-layer.test.ts § the layer releases what it stops drawing —
+// promotion, the in-flight loser, eviction and dispose each land there against
+// a stub loader. What survives here is the one invariant no behavioural test
+// reaches: a policy scan over every draw-path lookup in the file.
+describe('every draw-path texture lookup stamps its use', () => {
   const src = readFileSync(
     fileURLToPath(new URL('../planet-mesh-layer.ts', import.meta.url)),
     'utf8',
   );
-
-  it('enforces the budget every frame and frees superseded rungs on promotion', () => {
-    expect(src).toContain('this.enforceTextureBudget();');
-    expect(src).toContain('this.releaseOtherRungs(planet, want);');
-  });
-
-  it('closes the decoded bitmap as well as the GL object', () => {
-    // Texture.dispose frees the GL texture; the ImageBitmap behind it is ours
-    // to close, and leaking those leaks CPU memory the GPU budget never sees.
-    expect(src).toContain('(state.tex.image as ImageBitmap).close();');
-  });
-
-  it('drops the drawn-rung record when a colour rung is evicted', () => {
-    // Otherwise the body keeps claiming a rung it no longer holds and renders
-    // its placeholder until it happens to grow into a new one.
-    expect(src).toContain('this.shownRung.delete(');
-  });
 
   it('stamps relief and ring maps as used, not just the colour map', () => {
     // Eviction keys on last use, so every DRAW-path lookup has to go through
