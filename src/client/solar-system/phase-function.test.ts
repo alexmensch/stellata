@@ -14,6 +14,7 @@ import {
   empiricalPhaseFactor,
   alphaZeroPhaseFactor,
   phaseAngleFor,
+  phaseAngleFromLegs,
   phaseFactorFor,
   phaseRatioToLambert,
   illuminatedFraction,
@@ -81,20 +82,16 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Saturn continuity: no brightness step across α = αmax', () => {
-    // Saturn's c0 = −0.55 lifts polynomial flux to ~1.42 just inside
-    // αmax = 6.5°; pure Lambert at 6.5° is ~0.99, so the prior
-    // implementation showed a ~30% brightness drop at the boundary.
-    // Anchor-scaled Lambert past αmax eliminates the step by
-    // construction (right-limit ≡ left-limit).
+    // Saturn's globe curve runs to 150°, where it has dimmed 3.38 mag
+    // and pure Lambert is 0.043 — the anchor is what keeps the handover
+    // stepless (right-limit ≡ left-limit) rather than snapping onto a
+    // Lambertian sphere.
     const eps = 1e-6;
     const aMax = SATURN_PHASE.alphaMaxDeg * DEG;
     const lhs = empiricalPhaseFactor(SATURN_PHASE, aMax - eps);
     const rhs = empiricalPhaseFactor(SATURN_PHASE, aMax + eps);
     expect(rhs).toBeCloseTo(lhs, 5);
-    // Sanity: the anchor preserves Saturn's ring boost past αmax —
-    // anchored Lambert sits well above 1, not the ~0.99 a naive
-    // Lambert would give.
-    expect(rhs).toBeGreaterThan(1.4);
+    expect(rhs).toBeCloseTo(0.0444, 4);
   });
 
   it('Mars continuity: no brightness step across α = αmax', () => {
@@ -115,36 +112,30 @@ describe('empiricalPhaseFactor', () => {
     // published αmax, so this lands on the anchor-Lambert path with
     // Lambert(π) = 0 ⇒ φ = 0 regardless of the anchor multiplier.
     expect(empiricalPhaseFactor(MARS_PHASE, Math.PI + 1)).toBeCloseTo(0, 12);
-    // Saturn at negative α → clamped to 0 → polynomial gives the c0
-    // ring boost (≈ 1.66×). Defensive symmetry: a misuse with
-    // out-of-range α can't trigger Horner extrapolation.
-    expect(empiricalPhaseFactor(SATURN_PHASE, -1)).toBeCloseTo(
-      10 ** (0.55 / 2.5),
-      6,
-    );
+    // Saturn's 4th-order globe fit runs the furthest out (150°) and so
+    // has the most Horner divergence to guard against past its bound.
+    expect(empiricalPhaseFactor(SATURN_PHASE, -1)).toBeCloseTo(1, 12);
+    expect(empiricalPhaseFactor(SATURN_PHASE, Math.PI + 1)).toBeCloseTo(0, 12);
   });
 
-  it('returns 1 at α = 0 for every planet with c0 = 0', () => {
-    // Saturn opts out — see the Saturn-specific test below.
+  it('returns exactly 1 at α = 0 for every planet — no exceptions', () => {
+    // Every curve describes a GLOBE anchored on its α=0 geometric
+    // albedo, Saturn's included: its ring system rides the separate
+    // joint α/tilt law, never c0. A body reappearing here with c0 ≠ 0
+    // would be double-counting reflectance the albedo already carries.
     const planets: [string, PhaseCoefficients][] = [
       ['Mercury', MERCURY_PHASE],
       ['Venus', VENUS_PHASE],
       ['Earth', EARTH_PHASE],
       ['Mars', MARS_PHASE],
       ['Jupiter', JUPITER_PHASE],
+      ['Saturn', SATURN_PHASE],
+      ['Moon', MOON_PHASE],
     ];
     for (const [name, p] of planets) {
-      const v = empiricalPhaseFactor(p, 0);
-      expect(v, `${name} α=0`).toBeCloseTo(1, 12);
+      expect(p.c0, `${name} c0`).toBe(0);
+      expect(empiricalPhaseFactor(p, 0), `${name} α=0`).toBeCloseTo(1, 12);
     }
-  });
-
-  it('Saturn at α = 0 is brighter than 1× (ring boost)', () => {
-    // c0 = -0.55 mag → 10^(0.55/2.5) ≈ 1.660.
-    const v = empiricalPhaseFactor(SATURN_PHASE, 0);
-    expect(v).toBeCloseTo(10 ** (0.55 / 2.5), 6);
-    expect(v).toBeGreaterThan(1.6);
-    expect(v).toBeLessThan(1.7);
   });
 
   it('Mercury matches the published 7th-order Mallama fit across 0°–170°', () => {
@@ -284,8 +275,16 @@ describe('alphaZeroPhaseFactor', () => {
     expect(alphaZeroPhaseFactor(JUPITER_PHASE)).toBeCloseTo(1, 12);
   });
 
-  it('returns the c0-boost flux multiplier for Saturn', () => {
-    expect(alphaZeroPhaseFactor(SATURN_PHASE)).toBeCloseTo(10 ** (0.55 / 2.5), 6);
+  it('is 1 for every shipped body — no curve carries a c0 any more', () => {
+    for (const coefs of [
+      MERCURY_PHASE, VENUS_PHASE, EARTH_PHASE, MARS_PHASE,
+      JUPITER_PHASE, SATURN_PHASE, MOON_PHASE,
+    ]) {
+      expect(alphaZeroPhaseFactor(coefs)).toBe(1);
+    }
+    // Still the generic reader the cull wants, not a hardcoded 1.
+    expect(alphaZeroPhaseFactor({ ...SATURN_PHASE, c0: -0.55 }))
+      .toBeCloseTo(10 ** (0.55 / 2.5), 6);
   });
 
   it('returns 1 when alphaMaxDeg = 0 (sentinel — polynomial disabled)', () => {
@@ -293,6 +292,32 @@ describe('alphaZeroPhaseFactor', () => {
       c0: -1, c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0, c7: 0, alphaMaxDeg: 0,
     };
     expect(alphaZeroPhaseFactor(sentinel)).toBe(1);
+  });
+});
+
+describe('phaseAngleFromLegs', () => {
+  it('is the angle between the two legs meeting at the planet', () => {
+    // Planet → viewer along +x, planet → host along +y ⇒ α = 90°.
+    expect(phaseAngleFromLegs(1, 0, 0, 0, 1, 0)).toBeCloseTo(Math.PI / 2, 12);
+    expect(phaseAngleFromLegs(1, 0, 0, 1, 0, 0)).toBe(0);
+    expect(phaseAngleFromLegs(1, 0, 0, -1, 0, 0)).toBeCloseTo(Math.PI, 12);
+  });
+
+  it('ignores leg lengths — only the directions matter', () => {
+    expect(phaseAngleFromLegs(7, 0, 0, 0, 0.001, 0))
+      .toBeCloseTo(phaseAngleFromLegs(1, 0, 0, 0, 1, 0), 12);
+  });
+
+  it('agrees with the viewer-centred phaseAngleFor it backs', () => {
+    // Viewer at the origin, planet at (1,0,0), host at (1,1,0): the legs
+    // meeting at the planet are (-1,0,0) and (0,1,0).
+    expect(phaseAngleFor(1, 0, 0, 1, 1, 0))
+      .toBeCloseTo(phaseAngleFromLegs(-1, 0, 0, 0, 1, 0), 12);
+  });
+
+  it('is 0 for a degenerate leg rather than NaN', () => {
+    expect(phaseAngleFromLegs(0, 0, 0, 0, 1, 0)).toBe(0);
+    expect(phaseAngleFromLegs(1, 0, 0, 0, 0, 0)).toBe(0);
   });
 });
 
@@ -362,9 +387,16 @@ describe('phaseRatioToLambert', () => {
     }
   });
 
-  it("Saturn's ring-boost c0 lifts the α = 0 ratio above 1", () => {
-    expect(phaseRatioToLambert(SATURN_PHASE, 0)).toBeCloseTo(
-      alphaZeroPhaseFactor(SATURN_PHASE), 9);
+  it("Saturn's mesh scalar corrects its GLOBE, not its ring system", () => {
+    // The scalar multiplies the resolved globe's Lambert output, and the
+    // annulus is a separate draw — so while the ring boost lived on c0
+    // it made a parked Saturn's globe ~1.66x too bright on top of rings
+    // that were already being drawn.
+    expect(phaseRatioToLambert(SATURN_PHASE, 0)).toBe(1);
+    // Off full phase the globe darkens slightly faster than a diffuse
+    // sphere, the way Jupiter's does — Eq. 12 is fitted to the same
+    // giant-planet scattering behaviour.
+    expect(phaseRatioToLambert(SATURN_PHASE, 30 * DEG)).toBeCloseTo(0.9347, 4);
   });
 
   it("Venus's forward scattering exceeds Lambert at high α", () => {

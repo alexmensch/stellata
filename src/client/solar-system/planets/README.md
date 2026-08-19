@@ -81,8 +81,8 @@ src/client/solar-system/planets/
   glare/                          Reflected-glare billboard shaders: the
                                   shared star-perceptual point and the
                                   photocentre shift. Its own README.
-  rings/                          Ring-annulus shaders and the radial
-                                  strip. Its own README.
+  rings/                          Ring-annulus shaders, the radial strip,
+                                  and a ring system's share of appMag.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
                                   README (§ Planet rotation).
@@ -414,11 +414,11 @@ sees needs a different march from the sun it sees, are
 
 ### Ring systems
 
-Saturn, plus Uranus + Neptune's faint rings at true opacity. The annulus
-shaders, the radial strip's lit/transmitted faces, the body-shadow term,
-and why rings dim a source behind them in the exposure statistic while
-writing no depth all live in `rings/README.md`. Rendered only in the
-mesh-LOD regime, on the same crossfade `uFade` as the mesh.
+`rings/README.md` owns all of it: the annulus shaders, the strip's
+lit/transmitted faces, why rings dim a source behind them while writing no
+depth, and the joint phase-angle / ring-tilt law carrying a ring system's
+share of the *unresolved* magnitude — on a per-frame attribute
+(`iRingFlux`), unlike the phase polynomial, because β is camera-dependent.
 
 ## Planet rotation
 
