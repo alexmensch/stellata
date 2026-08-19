@@ -186,10 +186,10 @@ describe('the backlit branch', () => {
 });
 
 describe('the annulus phase scalar', () => {
-  const scale = (alphaDeg: number, betaV = 20, betaH = 20) =>
-    ringPhaseFactor(P, alphaDeg * DEG, betaV, betaH, SATURN_PHASE);
+  const scale = (alphaDeg: number) =>
+    ringPhaseFactor(P, alphaDeg * DEG, SATURN_PHASE);
 
-  it('is exactly 1 at opposition — the strip’s own albedo anchor', () => {
+  it('is exactly 1 at opposition — the strip\u2019s own albedo anchor', () => {
     // data/textures/README.md § Ring strips anchors the strip RGB on a
     // ~0.05 particle GEOMETRIC albedo, which is the zero-phase value.
     expect(scale(0)).toBe(1);
@@ -226,25 +226,53 @@ describe('the annulus phase scalar', () => {
     expect(scale(180)).toBeCloseTo(0, 12);
   });
 
-  it('is the billboard’s own α response, so the handoff cannot step', () => {
+  it('never reaches zero short of α = 180°, at any tilt', () => {
+    // The shader multiplies `light` by this and leaves alpha at the strip's
+    // own opacity, so a zero scalar paints an OPAQUE BLACK annulus over the
+    // globe and the Milky Way rather than fading it out. Evaluating the
+    // shape at the fit's reference tilt is what keeps it positive: a
+    // per-tilt quotient of globe-differenced fluxes hit exactly 0 for every
+    // β ≤ 6.06° (README.md § One shape, scaled by one amplitude).
+    for (let aDeg = 0; aDeg < 180; aDeg += 0.25) {
+      expect(scale(aDeg)).toBeGreaterThan(0);
+    }
+    // The tilts that used to black out, at phase angles reachable from
+    // anywhere off the Sun–Saturn line.
+    for (const betaDeg of [1, 2, 4.5, 6]) {
+      for (const aDeg of [6.5, 20, 90]) {
+        expect(fluxAt(aDeg, betaDeg)).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('is one shape at every tilt, so the handoff cannot step', () => {
     // Inside the resolvedness band the annulus and the billboard both
-    // draw. Ratio of ring fluxes at two phase angles must be identical
-    // whichever surface reports it.
-    for (const aDeg of [0.2, 1, 4, 6.5, 30, 90]) {
-      expect(scale(aDeg)).toBeCloseTo(fluxAt(aDeg, 20) / fluxAt(0, 20), 12);
+    // draw. The billboard's α-response is the annulus scalar exactly — the
+    // flux is this shape scaled by the opposition amplitude — so the ratio
+    // is identical whichever surface reports it, and identical across
+    // tilts.
+    for (const betaDeg of [1, 4.5, 10, 16, 20, P.betaMaxDeg, 49]) {
+      const atOpposition = fluxAt(0, betaDeg);
+      expect(atOpposition).toBeGreaterThan(0);
+      for (const aDeg of [0.2, 1, 4, 6.5, 30, 90]) {
+        expect(fluxAt(aDeg, betaDeg) / atOpposition).toBeCloseTo(scale(aDeg), 12);
+      }
     }
   });
 
   it('ignores the backlit split the shader owns itself', () => {
-    // TRANSMIT is a constant multiplier on both flux legs, so it cancels
-    // out of the quotient — applying it here would dim the far face twice.
-    expect(ringPhaseFactor(P, 30 * DEG, -20, 20, SATURN_PHASE))
-      .toBeCloseTo(ringPhaseFactor(P, 30 * DEG, 20, 20, SATURN_PHASE), 12);
+    // TRANSMIT is a constant multiplier on the flux, so it cancels out of
+    // the shape — applying it here would dim the far face twice.
+    expect(fluxAt(30, 20, true) / fluxAt(0, 20, true)).toBeCloseTo(scale(30), 12);
   });
 
-  it('falls back to 1 edge-on, where there is no curve to normalise', () => {
-    expect(scale(30, 0, 20)).toBe(1);
-    expect(scale(30, 0.5, 0.5)).toBe(1);
+  it('falls back to the Lambertian shape when the reference tilt degenerates', () => {
+    // Unreachable for Saturn (the reference amplitude at β = 27° is 1.43),
+    // so pin the guard against a photometry whose tilt term cannot beat its
+    // own zero-point offset.
+    const flat = { ...P, tiltMag: 0, surgeMag: 0 };
+    expect(ringPhaseFactor(flat, 30 * DEG, SATURN_PHASE))
+      .toBeCloseTo(lambertianPhaseFactor(30 * DEG), 12);
   });
 });
 
@@ -287,7 +315,7 @@ describe('the cull bound', () => {
     expect(maxRingSystemFluxFactor(P, undefined)).toBe(1);
     expect(ringFluxFor(undefined, 0, 20, 20, SATURN_PHASE)).toBe(0);
     expect(ringFluxFor(P, 0, 20, 20, undefined)).toBe(0);
-    expect(ringPhaseFactor(undefined, 0, 20, 20, SATURN_PHASE)).toBe(1);
-    expect(ringPhaseFactor(P, 0, 20, 20, undefined)).toBe(1);
+    expect(ringPhaseFactor(undefined, 0, SATURN_PHASE)).toBe(1);
+    expect(ringPhaseFactor(P, 0, undefined)).toBe(1);
   });
 });

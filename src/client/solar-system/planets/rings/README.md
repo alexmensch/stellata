@@ -110,17 +110,56 @@ viewer. Nothing in `planet.vert.glsl` knows the law, only that the float
 as a physical one: as α → 180° the globe's flux and the rings' both
 vanish, and a multiplier would be 0/0 there.
 
+### One shape, scaled by one amplitude
+
+The law is evaluated as an **opposition amplitude** times a **phase
+shape**, and that split is what makes it renderable:
+
+- `ringOppositionFlux(β)` is the difference at α = 0, the one place the
+  two zero points are directly comparable. It carries the whole β
+  dependence and **floors at zero**: below β ≈ 0.94° the 0.036 mag
+  between the two papers' independently determined zero points (2012
+  photometry vs 2017 synthetic spectrophotometry) swamps the tilt term
+  and would leave the rings emitting negative flux. That gap is inside
+  the mutual uncertainty of the two, so it is a calibration offset to
+  floor rather than an edge-on occultation to model.
+- `ringPhaseShape(α)` is the α-response, normalised to 1 at opposition
+  and evaluated at the fit's own `betaMaxDeg`. **One shape for every
+  tilt**, so it takes no β.
+
+Evaluating the shape per-tilt — a quotient of globe-differenced fluxes —
+is **not** renderable. The 0.026 mag/deg α slope was fitted where the
+rings dominate the system and is unconstrained near edge-on, so at low
+tilt it drives the *system* fainter than the globe alone and the
+difference crosses zero **inside the fitted α range**: at α = 6.5° for
+every β ≤ 6.06°, and by α ≈ 2° at β = 2°. Normalised that is exactly 0,
+and `planet-rings.frag.glsl` leaves the annulus's alpha at the strip's own
+opacity — so the rings paint an **opaque black band** over the globe and
+the Milky Way instead of fading out. Holding the shape at the reference
+tilt keeps it strictly positive short of α = 180° and makes the
+billboard's α-response *identical* to the annulus's at every tilt rather
+than merely close. Both pinned.
+
+Physically: ring flux and the surge term both scale with the rings'
+projected area, so the *fractional* phase response is nearly
+tilt-invariant — the apparent tilt dependence of a per-tilt quotient is
+the low-β dilution artefact, which is why it diverges instead of
+converging. The cost is that the surge's own sin β amplitude no longer
+varies the shape (it is baked at β = 27°), so low-tilt rings dim a little
+faster with α than a well-conditioned per-tilt fit would give. That
+against a black band is the trade.
+
 ### Three places the published fit runs out, and what happens instead
 
 - **α > 6.5°.** The paper states outright that there is not enough
-  information to extend the system magnitude past it. The ring **flux**
-  becomes anchor-scaled Lambert from its 6.5° value — the same
+  information to extend the system magnitude past it. The **shape**
+  continues as anchor-scaled Lambert from its 6.5° value — the same
   convention `../../phase-function.ts` uses past a globe polynomial's
-  bound. It has to be the flux and not the ring/globe *ratio*: extending
-  the ratio compounds Lambert with the globe's own curve and buries the
-  rings, 3.4× too faint by α = 90° and 23× by 150°. The law's α slope is
-  the ring opposition surge and is spent by ~2°, so nothing measured is
-  being discarded.
+  bound. It scales the ring flux and not the ring/globe *ratio*:
+  extending the ratio compounds Lambert with the globe's own curve and
+  buries the rings, 3.4× too faint by α = 90° and 23× by 150°. The law's
+  α slope is the ring opposition surge and is spent by ~2°, so nothing
+  measured is being discarded.
 - **β > 27°.** A camera over Saturn's pole reaches β ≈ 49°, far outside
   anything an Earth-bound fit saw. Held at the 27° value: a stated
   clamp, not a silent extrapolation.
@@ -133,22 +172,12 @@ vanish, and a multiplier would be 0/0 there.
   source. That shared fraction is what makes resolved and unresolved
   agree that crossing the ring plane dims the rings.
 
-**The ring flux floors at zero**, which two separate things reach for.
-Below β ≈ 0.94° `globeZeroPointDelta` = 0.036 mag — the gap between two
-independently determined zero points (2012 photometry vs 2017 synthetic
-spectrophotometry) — swamps the tilt term and would leave the rings
-emitting negative flux; that is inside the mutual uncertainty of the two,
-so it is a calibration offset to floor rather than an edge-on
-occultation to model. Separately, at small β the 0.026 mag/deg α slope
-outruns the tilt term within the fitted α range (by α ≈ 6.5° at
-β ≈ 4.5°), because the slope was fitted where the rings dominate the
-system and is not constrained near edge-on. Rings that near the plane
-contribute little either way.
-
 **The cull reads the term's MAXIMUM** (`maxRingSystemFluxFactor`, α = 0
-at β = 27°, ≈ 2.43×), which widens Saturn's `cullDistancePc` by ≈ 1.56×.
-A per-frame value there would drop a Saturn parked near a ring-plane
-crossing at a distance it becomes visible from once the rings open.
+at β = 27°, ≈ 2.43×). A per-frame value there would drop a Saturn parked
+near a ring-plane crossing at a distance it becomes visible from once the
+rings open. It moves no cull distance as shipped: the bound is one
+distance per HOST maximised over every body, and for Sol that maximum is
+a moon — `../../README.md` § Per-host distance cull.
 
 **Uranus and Neptune ship strips but no photometry.** Their rings are
 true-opacity charcoal threads, and the brightness-vs-inclination Mallama
@@ -156,19 +185,21 @@ publishes for Uranus is polar methane depletion — not a ring term.
 
 ### The drawn annulus rides the same curve
 
-`uRingPhaseScale` is the ring flux at α over the ring flux at
-opposition, so **1 at α = 0** — which is the anchor the strip already
-carries: its RGB is pinned to a ~0.05 particle **geometric** albedo
-(`data/textures/README.md` § Ring strips), and geometric albedo is by
-definition the zero-phase value. Without the scalar the strip renders its
-opposition brightness at every phase angle.
+`uRingPhaseScale` **is** `ringPhaseShape(α)` — the same shape whose
+amplitude-scaled form is the billboard's `iRingFlux`. So it is **1 at
+α = 0**, which is the anchor the strip already carries: its RGB is pinned
+to a ~0.05 particle **geometric** albedo (`data/textures/README.md`
+§ Ring strips), and geometric albedo is by definition the zero-phase
+value. Without the scalar the strip renders its opposition brightness at
+every phase angle.
 
-Driving it from the same law as `iRingFlux`, rather than from a ring
-phase curve fitted independently, is what keeps the resolvedness band
-stepless: inside that band the billboard and the annulus both draw, and
-a surge on one alone would step the handoff. The backlit factor cancels
-out of the quotient — `planet-rings.frag.glsl` owns that split itself
-through `TRANSMIT`.
+Because the shape is tilt-invariant the scalar takes **no β** — the
+annulus needs only α, and the resolvedness band is stepless by
+construction rather than by calibration: inside that band the billboard
+and the annulus both draw, and a surge on one alone would step the
+handoff. The backlit factor is a constant on the flux and cancels out of
+the shape — `planet-rings.frag.glsl` owns that split itself through
+`TRANSMIT`.
 
 **It scales `light`, never `lit`.** `lit` gates the coverage mask as well
 as carrying the shadow term, so folding the phase factor in there would

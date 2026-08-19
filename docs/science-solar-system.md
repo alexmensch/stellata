@@ -244,6 +244,20 @@ stellata is camera-anywhere, so all three of its bounds are handled
 explicitly rather than extrapolated through — α > 6.5°, β > 27°, and
 the backlit geometry the published rule zeroes outright.
 
+The law is evaluated as an **opposition amplitude times one phase
+shape**. The amplitude is the difference at α = 0, where the two papers'
+zero points are directly comparable; it carries the whole β dependence
+and floors at zero near edge-on, below β ≈ 0.94°, where the 0.036 mag
+between those zero points swamps the tilt term. The α-response is taken
+at the fit's own β = 27° bound and reused at every tilt, because a
+per-tilt one is not usable: the 0.026 mag/deg slope was fitted where the
+rings dominate the system and is unconstrained near edge-on, so below
+β ≈ 6.06° it drives the *system* fainter than the globe alone and the
+difference crosses zero inside the fitted α range. Ring flux and the
+surge term both scale with the rings' projected area, so the *fractional*
+phase response is nearly tilt-invariant in any case — the apparent tilt
+dependence of a per-tilt difference is the low-β dilution artefact.
+
 The **drawn annulus rides the same curve**, normalised to 1 at
 opposition — which is the anchor its strip already carries, a
 zero-phase geometric albedo — so the resolved rings brighten through

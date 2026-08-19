@@ -10,8 +10,7 @@ import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
-import { ringPhaseFactor, ringPlaneElevationDeg } from './rings/ring-photometry-pure';
-import { poleVectorAt } from './rotation/rotation-elements-pure';
+import { ringPhaseFactor } from './rings/ring-photometry-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -337,20 +336,15 @@ describe('the ring annulus phase scalar', () => {
     expect(ring!.visible).toBe(true);
 
     const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
-    const pole = { x: 0, y: 0, z: 0 };
-    poleVectorAt(saturn.rotation!, 0, pole);
-    const poleVec = new THREE.Vector3(pole.x, pole.y, pole.z);
     const toCam = camPos.clone().sub(planetPos);
     const toHost = planetPos.clone().negate();
     const expected = ringPhaseFactor(
       saturn.rings!.systemPhotometry,
       phaseAngleFromLegs(toCam.x, toCam.y, toCam.z, toHost.x, toHost.y, toHost.z),
-      ringPlaneElevationDeg(toCam.x, toCam.y, toCam.z, poleVec.x, poleVec.y, poleVec.z),
-      ringPlaneElevationDeg(
-        toHost.x, toHost.y, toHost.z, poleVec.x, poleVec.y, poleVec.z),
       saturn.phaseCoefficients,
     );
     expect(ring!.material.uniforms.uRingPhaseScale.value).toBeCloseTo(expected, 6);
+    expect(expected).toBeGreaterThan(0);
     layer.dispose();
   });
 

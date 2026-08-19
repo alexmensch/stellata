@@ -4,7 +4,8 @@
 
 import {
   lambertianPhaseFactor,
-  phaseDV,
+  magToFlux,
+  phaseFactorAt,
   type PhaseCoefficients,
 } from '../../phase-function';
 
@@ -27,7 +28,8 @@ export interface RingSystemPhotometry {
   readonly globeZeroPointDelta: number;
   /** Upper α bound of the published joint fit, degrees. */
   readonly alphaMaxDeg: number;
-  /** Upper β bound of the published joint fit, degrees. */
+  /** Upper β bound of the published joint fit, degrees. Doubles as the
+   *  reference tilt the one phase shape is evaluated at. */
   readonly betaMaxDeg: number;
 }
 
@@ -48,18 +50,14 @@ export const SATURN_RING_PHOTOMETRY: RingSystemPhotometry = {
 
 /**
  * Fraction of the reflected ring flux that reaches a viewer on the
- * opposite side of the ring plane from the host. Mallama's own answer
- * is β = 0 — no ring term at all — because from Earth the geometry is
- * rare and faint; stellata's camera reaches it routinely, so the term
- * survives at the transmitted fraction `planet-rings.frag.glsl` already
- * commits the resolved annulus to (`TRANSMIT`), which is what keeps the
- * point-source and resolved models agreeing on which side is lit.
- * `ring-photometry-pure.test.ts` pins the two together.
+ * opposite side of the ring plane from the host. Pinned to the
+ * `TRANSMIT` the annulus shader dims its unlit face by, which is what
+ * keeps the point-source and resolved models agreeing on which side is
+ * lit. README.md § Three places the published fit runs out.
  */
 export const RING_BACKLIT_TRANSMIT = 0.35;
 
 const DEG = Math.PI / 180;
-const LOG10 = Math.log(10);
 
 /**
  * Ring-plane elevation of a direction, in degrees, signed north-positive
@@ -106,27 +104,84 @@ export function effectiveRingTiltDeg(
   return { betaDeg, backlit };
 }
 
+/** The joint law's system magnitude at (α, β), against the globe-alone
+ *  zero point the body's `phaseCoefficients` are anchored to. α is
+ *  capped at the fit's bound; callers extend past it themselves. */
+function systemDV(
+  photometry: RingSystemPhotometry,
+  alphaDeg: number,
+  betaDeg: number,
+): number {
+  const aCap = Math.min(Math.max(0, alphaDeg), photometry.alphaMaxDeg);
+  const sinB = Math.sin(betaDeg * DEG);
+  return (
+    photometry.globeZeroPointDelta +
+    photometry.tiltMag * sinB +
+    photometry.alphaSlope * aCap +
+    photometry.surgeMag * sinB * Math.exp(photometry.surgeDecayPerDeg * aCap)
+  );
+}
+
+/** Ring flux inside the joint fit's α bound: the system the law gives,
+ *  less the globe curve, in units of the globe's own flux at α = 0.
+ *  Floored at zero — the law and the globe curve carry independently
+ *  determined zero points. README.md § Ring photometry. */
+function ringFluxInFit(
+  photometry: RingSystemPhotometry,
+  alphaDeg: number,
+  betaDeg: number,
+  globe: PhaseCoefficients,
+): number {
+  const aCap = Math.min(Math.max(0, alphaDeg), photometry.alphaMaxDeg);
+  return Math.max(
+    0,
+    magToFlux(systemDV(photometry, aCap, betaDeg)) -
+      phaseFactorAt(globe, aCap * DEG),
+  );
+}
+
 /**
- * Ring flux at (α, β), in units of the **globe's own flux at α = 0** —
- * the same unit `empiricalPhaseFactor` reports the globe in, so the two
- * simply add to give the system's φ(α). The joint law gives the system
- * in that unit; subtracting the globe curve leaves the rings.
- *
- * Past the joint fit's `alphaMaxDeg` the ring flux becomes anchor-scaled
- * Lambert — the convention `empiricalPhaseFactor` uses past a globe
- * polynomial's bound. It extends the ring FLUX and not the ring/globe
- * ratio, which would compound Lambert with the globe's own curve and
- * bury the rings (3.4x too faint by α = 90°). The law's α slope is the
- * ring opposition surge, spent by ~2°, and the paper states outright
- * that there is not enough information to extend the system magnitude
- * beyond 6.5°, so nothing measured is discarded.
- *
- * Floored at zero: `globeZeroPointDelta` separates two independently
- * determined zero points (2012 photometry against 2017 synthetic
- * spectrophotometry), and below β ≈ 0.94° it swamps the tilt term and
- * would leave the rings emitting negative flux. 0.036 mag is inside the
- * mutual uncertainty of the two determinations, so it is a calibration
- * offset to floor, not an edge-on ring occultation to model.
+ * The ring system's flux at opposition, in units of the **globe's own
+ * flux at α = 0** — the amplitude the one phase shape scales. Floors at
+ * zero below β ≈ 0.94°, where the 0.036 mag between the two papers'
+ * zero points swamps the tilt term. README.md § Ring photometry.
+ */
+export function ringOppositionFlux(
+  photometry: RingSystemPhotometry,
+  betaDeg: number,
+  globe: PhaseCoefficients,
+): number {
+  return ringFluxInFit(photometry, 0, betaDeg, globe);
+}
+
+/**
+ * The ring phase curve's α-response, normalised to 1 at opposition and
+ * evaluated at the fit's own `betaMaxDeg` — one shape for every tilt.
+ * Past `alphaMaxDeg` it continues as anchor-scaled Lambert.
+ * README.md § One shape, scaled by one amplitude.
+ */
+export function ringPhaseShape(
+  photometry: RingSystemPhotometry,
+  alphaDeg: number,
+  globe: PhaseCoefficients,
+): number {
+  const betaRef = photometry.betaMaxDeg;
+  const reference = ringFluxInFit(photometry, 0, betaRef, globe);
+  if (reference <= 0) return lambertianPhaseFactor(alphaDeg * DEG);
+  const shape = ringFluxInFit(photometry, alphaDeg, betaRef, globe) / reference;
+  if (alphaDeg <= photometry.alphaMaxDeg) return shape;
+  const aClamped = Math.min(alphaDeg, 180);
+  return (
+    shape *
+    (lambertianPhaseFactor(aClamped * DEG) /
+      lambertianPhaseFactor(photometry.alphaMaxDeg * DEG))
+  );
+}
+
+/**
+ * Ring flux at (α, β), in units of the globe's own flux at α = 0 — the
+ * opposition amplitude times the one phase shape, so every tilt rides
+ * the same α-response. README.md § One shape, scaled by one amplitude.
  */
 export function ringFluxAt(
   photometry: RingSystemPhotometry,
@@ -135,21 +190,9 @@ export function ringFluxAt(
   backlit: boolean,
   globe: PhaseCoefficients,
 ): number {
-  const aCap = Math.min(Math.max(0, alphaDeg), photometry.alphaMaxDeg);
-  const sinB = Math.sin(betaDeg * DEG);
-  const dvSystem =
-    photometry.tiltMag * sinB +
-    photometry.alphaSlope * aCap +
-    photometry.surgeMag * sinB * Math.exp(photometry.surgeDecayPerDeg * aCap);
-  const system = Math.exp(
-    -(photometry.globeZeroPointDelta + dvSystem) * 0.4 * LOG10,
-  );
-  let flux = Math.max(0, system - Math.exp(-phaseDV(globe, aCap) * 0.4 * LOG10));
-  if (alphaDeg > photometry.alphaMaxDeg) {
-    flux *=
-      lambertianPhaseFactor(Math.min(alphaDeg, 180) * DEG) /
-      lambertianPhaseFactor(photometry.alphaMaxDeg * DEG);
-  }
+  const flux =
+    ringOppositionFlux(photometry, betaDeg, globe) *
+    ringPhaseShape(photometry, alphaDeg, globe);
   return backlit ? flux * RING_BACKLIT_TRANSMIT : flux;
 }
 
@@ -179,35 +222,19 @@ export function ringFluxFor(
 }
 
 /**
- * The drawn annulus's phase scalar: ring flux at α over ring flux at
- * opposition, so **1 at α = 0** — the anchor the strip's RGB already
- * carries, a ~0.05 particle *geometric* albedo (data/textures/README.md
- * § Ring strips), which is by definition the zero-phase value. Without
- * this the strip renders its opposition brightness at every phase angle.
- *
- * Driving it from the same law as `ringFluxFor` rather than from an
- * independent fit is what keeps the resolvedness band stepless — inside
- * it the billboard and the annulus both draw. The backlit factor cancels
- * out of the quotient, and `planet-rings.frag.glsl` owns that split
- * itself through `TRANSMIT`.
- *
- * 1 when there is no ring photometry, or when β is edge-on enough that
- * the floored flux leaves no curve to normalise against.
+ * The drawn annulus's phase scalar — the same shape `ringFluxFor` scales
+ * its amplitude by, so the two surfaces cannot step against each other
+ * inside the resolvedness band. 1 at opposition, which is the anchor the
+ * strip's RGB already carries (a geometric albedo is by definition the
+ * zero-phase value). README.md § The drawn annulus rides the same curve.
  */
 export function ringPhaseFactor(
   photometry: RingSystemPhotometry | undefined,
   alphaRad: number,
-  viewerElevationDeg: number,
-  hostElevationDeg: number,
   globe: PhaseCoefficients | undefined,
 ): number {
   if (!photometry || !globe) return 1;
-  const { betaDeg } = effectiveRingTiltDeg(
-    photometry, viewerElevationDeg, hostElevationDeg,
-  );
-  const atOpposition = ringFluxAt(photometry, 0, betaDeg, false, globe);
-  if (atOpposition <= 0) return 1;
-  return ringFluxAt(photometry, alphaRad / DEG, betaDeg, false, globe) / atOpposition;
+  return ringPhaseShape(photometry, alphaRad / DEG, globe);
 }
 
 /**
@@ -221,5 +248,5 @@ export function maxRingSystemFluxFactor(
   globe: PhaseCoefficients | undefined,
 ): number {
   if (!photometry || !globe) return 1;
-  return 1 + ringFluxAt(photometry, 0, photometry.betaMaxDeg, false, globe);
+  return 1 + ringOppositionFlux(photometry, photometry.betaMaxDeg, globe);
 }

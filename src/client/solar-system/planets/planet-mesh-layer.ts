@@ -35,10 +35,7 @@ import {
   phaseAngleFromLegs,
   phaseRatioToLambert,
 } from '../phase-function';
-import {
-  ringPhaseFactor,
-  ringPlaneElevationDeg,
-} from './rings/ring-photometry-pure';
+import { ringPhaseFactor } from './rings/ring-photometry-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import {
   systemFamily,
@@ -820,16 +817,12 @@ export class PlanetMeshLayer {
       .copy(camera.position)
       .sub(this.tmpPlanet)
       .applyQuaternion(this.tmpQuatInv);
-    // Both legs meet at the planet in this frame, and +z IS the pole, so
-    // α and Mallama's β_E / β_S all read straight off them.
     ring.material.uniforms.uRingPhaseScale.value = ringPhaseFactor(
       planet.rings?.systemPhotometry,
       phaseAngleFromLegs(
         camLocal.x, camLocal.y, camLocal.z,
         sunLocal.x, sunLocal.y, sunLocal.z,
       ),
-      ringPlaneElevationDeg(camLocal.x, camLocal.y, camLocal.z, 0, 0, 1),
-      ringPlaneElevationDeg(sunLocal.x, sunLocal.y, sunLocal.z, 0, 0, 1),
       planet.phaseCoefficients,
     );
   }
