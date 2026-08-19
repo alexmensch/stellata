@@ -10,8 +10,16 @@ import { umbralDepthRad, umbralGlow } from './eclipses/umbral-glow-pure';
 import {
   meanLuminanceOf,
   requiredMapWidth,
+  rungsOf,
   selectRung,
 } from './textures/texture-ladder';
+import {
+  evictionOrder,
+  supersededRungs,
+  TEXTURE_VRAM_BUDGET_BYTES,
+  textureBytes,
+  type ResidentTexture,
+} from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
   RELIEF_ELEV_SPAN_M,
@@ -234,7 +242,7 @@ export const TEXTURE_DECODE_OPTIONS = {
 
 type TextureState =
   | { state: 'loading' }
-  | { state: 'ready'; tex: THREE.Texture }
+  | { state: 'ready'; tex: THREE.Texture; bytes: number; lastFrame: number }
   | { state: 'missing' };
 
 export class PlanetMeshLayer {
@@ -256,6 +264,9 @@ export class PlanetMeshLayer {
   private readonly requestRender: () => void;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
+  /** Frames are counted only to answer "was this drawn just now" during
+   *  eviction; nothing else reads it. */
+  private frame = 0;
   /** Body -> the colour rung currently DRAWN (fully resident). Distinct
    *  from what has been requested: a wider rung loads in the background
    *  and only replaces this once it is ready. */
@@ -317,6 +328,7 @@ export class PlanetMeshLayer {
     this.group.visible = this.field.group.visible && !this.field.monochrome;
     if (!this.group.visible) return;
     perfMark('solar.mesh');
+    this.frame++;
 
     // camera.matrixWorldInverse is refreshed inside render(), AFTER
     // this update — the stored value is one frame stale, so view-space
@@ -466,7 +478,7 @@ export class PlanetMeshLayer {
       }
 
       material.uniforms.uFade.value = fade;
-      const reliefState = this.textures.get(textureKey(planet.name, RELIEF_SUFFIX));
+      const reliefState = this.useTexture(textureKey(planet.name, RELIEF_SUFFIX));
       if (reliefState?.state === 'ready') {
         material.uniforms.uNormalMap.value = reliefState.tex;
         material.uniforms.uHasNormalMap.value = 1;
@@ -477,8 +489,8 @@ export class PlanetMeshLayer {
       // Half a horizon is worse than none: the shader interpolates across the
       // seam between the two maps, so one placeholder would read as a skyline
       // at the encoding's floor over the azimuths it covers.
-      const horizonA = this.textures.get(textureKey(planet.name, HORIZON_SUFFIXES[0]));
-      const horizonB = this.textures.get(textureKey(planet.name, HORIZON_SUFFIXES[1]));
+      const horizonA = this.useTexture(textureKey(planet.name, HORIZON_SUFFIXES[0]));
+      const horizonB = this.useTexture(textureKey(planet.name, HORIZON_SUFFIXES[1]));
       if (horizonA?.state === 'ready' && horizonB?.state === 'ready') {
         material.uniforms.uHorizonA.value = horizonA.tex;
         material.uniforms.uHorizonB.value = horizonB.tex;
@@ -507,6 +519,9 @@ export class PlanetMeshLayer {
         if (entry.atmosphere) entry.atmosphere.mesh.visible = false;
       }
     }
+    // After the hide pass, so a body that stopped being drawn this frame is
+    // already a candidate rather than waiting a frame to become one.
+    this.enforceTextureBudget();
     perfMeasure('solar.mesh');
   }
 
@@ -542,7 +557,10 @@ export class PlanetMeshLayer {
     if (want === null || want === shown) return;
     const key = textureKey(planet.name, `-${want}`);
     this.ensureTexture(key, { ext: 'jpg' });
-    if (this.textures.get(key)?.state === 'ready') this.shownRung.set(body, want);
+    if (this.useTexture(key)?.state === 'ready') {
+      this.shownRung.set(body, want);
+      this.releaseSupersededRungs(planet, want);
+    }
   }
 
   /**
@@ -599,12 +617,70 @@ export class PlanetMeshLayer {
     return out[0] > 0 || out[1] > 0 || out[2] > 0;
   }
 
-  /** The colour-map state for the rung currently drawn, if any. */
+  /** The colour-map state for the rung currently drawn, if any. Touching it
+   *  marks it used this frame, which is what keeps eviction off anything on
+   *  screen. */
   private colourState(planet: Planet): TextureState | undefined {
     const shown = this.shownRung.get(ladderKey(planet.name));
-    return shown === undefined
-      ? undefined
-      : this.textures.get(textureKey(planet.name, `-${shown}`));
+    if (shown === undefined) return undefined;
+    return this.useTexture(textureKey(planet.name, `-${shown}`));
+  }
+
+  /** Is this map resident, WITHOUT claiming it was drawn. Residency and use
+   *  are different questions: stamping here would keep a superseded rung
+   *  looking fresh at exactly the moment it is being released. */
+  private isResident(key: string): boolean {
+    return this.textures.get(key)?.state === 'ready';
+  }
+
+  /** Look a texture up and stamp it as used this frame. */
+  private useTexture(key: string): TextureState | undefined {
+    const state = this.textures.get(key);
+    if (state?.state === 'ready') state.lastFrame = this.frame;
+    return state;
+  }
+
+  /** Drop one resident map and its decoded bitmap. */
+  private releaseTexture(key: string): void {
+    const state = this.textures.get(key);
+    if (state?.state !== 'ready') return;
+    state.tex.dispose();
+    (state.tex.image as ImageBitmap).close();
+    this.textures.delete(key);
+  }
+
+  /** Free the narrower rungs of a body now showing a wider one. Selection
+   *  never downgrades, so nothing will ask for them again. */
+  private releaseSupersededRungs(planet: Planet, shownWidth: number): void {
+    const body = ladderKey(planet.name);
+    const rungs = rungsOf(body);
+    if (rungs === null) return;
+    const held = rungs.filter((w) => this.isResident(textureKey(planet.name, `-${w}`)));
+    for (const w of supersededRungs(held, shownWidth)) {
+      this.releaseTexture(textureKey(planet.name, `-${w}`));
+    }
+  }
+
+  /** Evict least-recently-drawn maps until the resident set is back inside
+   *  TEXTURE_VRAM_BUDGET_BYTES. Nothing drawn this frame is a candidate. */
+  private enforceTextureBudget(): void {
+    const resident: ResidentTexture[] = [];
+    let total = 0;
+    for (const [key, state] of this.textures) {
+      if (state.state !== 'ready') continue;
+      resident.push({ key, bytes: state.bytes, lastFrame: state.lastFrame });
+      total += state.bytes;
+    }
+    if (total <= TEXTURE_VRAM_BUDGET_BYTES) return;
+    for (const key of evictionOrder(resident, TEXTURE_VRAM_BUDGET_BYTES, this.frame)) {
+      this.releaseTexture(key);
+      // A colour rung that goes must stop being the drawn one, or the body
+      // renders its placeholder until it happens to grow into a new rung.
+      const dash = key.lastIndexOf('-');
+      if (dash > 0 && /^\d+$/.test(key.slice(dash + 1))) {
+        this.shownRung.delete(key.slice(0, dash));
+      }
+    }
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres
@@ -672,7 +748,7 @@ export class PlanetMeshLayer {
     fade: number,
     airlightL: number,
   ): void {
-    const texState = this.textures.get(textureKey(planet.name, RINGS_SUFFIX));
+    const texState = this.useTexture(textureKey(planet.name, RINGS_SUFFIX));
     if (texState?.state !== 'ready' || !hasSun) {
       ring.mesh.visible = false;
       return;
@@ -925,7 +1001,15 @@ export class PlanetMeshLayer {
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
         tex.needsUpdate = true;
-        this.resolveTexture(key, { state: 'ready', tex });
+        // RG8 halves what an RGBA8 upload of the same map would cost; the
+        // relief branch is the only one that narrows (.50).
+        const bytesPerTexel = format === THREE.RGFormat ? 2 : 4;
+        this.resolveTexture(key, {
+          state: 'ready',
+          tex,
+          bytes: textureBytes(bitmap.width, bitmap.height, bytesPerTexel),
+          lastFrame: this.frame,
+        });
       },
       undefined,
       (err) => {

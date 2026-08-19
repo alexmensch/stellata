@@ -74,9 +74,10 @@ src/client/solar-system/planets/
                                   anchor and the two disc means that
                                   divide out. Its own README.
   textures/                       Which rung of a body's texture ladder to
-                                  hold, from the live viewport, and the
-                                  build-generated table it reads. Its own
-                                  README.
+                                  hold, from the live viewport, the
+                                  build-generated table it reads, and the
+                                  VRAM budget that releases the rest. Its
+                                  own README.
   glare/                          Reflected-glare billboard shaders: the
                                   shared star-perceptual point and the
                                   photocentre shift. Its own README.
@@ -389,11 +390,14 @@ crossfade.
 ### Texture tier selection
 
 `textures/` — each body ships a ladder of map widths and the renderer holds
-the smallest rung its display can actually resolve, from
-`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap at 0.75 of
-the resident width, never downgrade; and every rung of a body shares one
-build-measured mean luminance, or a tier swap would step the disc's
-brightness. Its own README.
+the smallest rung its display can resolve, from
+`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap, never
+downgrade; every rung of a body shares one build-measured mean luminance, or
+a tier swap would step the disc's brightness.
+
+**Maps are released, which the ladder makes mandatory rather than tidy** — an
+8192 map is 179 MB resident against a 2048's 11 MB. Superseded rungs go on
+promotion; the rest rides a least-recently-drawn budget. Its own README.
 
 ### Surface relief
 
