@@ -1,30 +1,31 @@
-import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { createVoxelChunkUploader } from './dust-voxel-upload';
+import { createVoxelChunkUploader, createVoxelTexture } from './dust-voxel-upload';
 import { GL_ENUM, glRendererMock, webGpuRendererMock } from './dust-renderer-mock';
 
 const CHUNK = 4;
 const GRID = 8;
 
-function volumeTexture() {
-  const tex = new THREE.Data3DTexture(new Uint8Array(GRID ** 3), GRID, GRID, GRID);
-  tex.format = THREE.RedFormat;
-  tex.type = THREE.UnsignedByteType;
-  return tex;
-}
+const volumeTexture = () => createVoxelTexture(GRID, new Uint8Array(GRID ** 3));
 
 const chunkBytes = (fill = 0) => new Uint8Array(CHUNK ** 3).fill(fill);
 
 describe('the voxel chunk uploader picks its backend', () => {
-  it('makes the volume GPU-resident before the first partial upload', () => {
+  // An unmarked texture is one three's WebGPU backend pins to a shared 1×1
+  // placeholder and then refuses to grow: the first chunk's own update
+  // throws 'Texture already initialized', the loader's per-chunk catch eats
+  // it, and the sky is dust-free with nothing but chunk warnings to show.
+  it('marks the volume for update before making it GPU-resident', () => {
     const tex = volumeTexture();
+    expect(tex.version).toBe(0);
     const gl = glRendererMock();
     createVoxelChunkUploader(gl.renderer, tex, CHUNK);
+
     expect(gl.initTextures).toEqual([tex]);
+    expect(gl.initVersions[0]).toBeGreaterThan(0);
 
     const gpu = webGpuRendererMock();
-    createVoxelChunkUploader(gpu.renderer, tex, CHUNK);
-    expect(gpu.initTextures).toEqual([tex]);
+    createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK);
+    expect(gpu.initVersions[0]).toBeGreaterThan(0);
   });
 
   it('routes a WebGPU renderer to the region-copy path', () => {
@@ -32,6 +33,23 @@ describe('the voxel chunk uploader picks its backend', () => {
     createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK)
       .upload(1, 0, 0, chunkBytes());
     expect(gpu.copies).toHaveLength(1);
+  });
+
+  // Chunk fetches outlive a dispose, and on WebGPU a write to a released
+  // texture walks three's create-on-demand path and resurrects the whole
+  // ~128 MiB volume.
+  it('drops uploads that arrive after dispose, on either backend', () => {
+    const gl = glRendererMock();
+    const glUploader = createVoxelChunkUploader(gl.renderer, volumeTexture(), CHUNK);
+    glUploader.dispose();
+    glUploader.upload(0, 0, 0, chunkBytes());
+    expect(gl.subImages).toEqual([]);
+
+    const gpu = webGpuRendererMock();
+    const gpuUploader = createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK);
+    gpuUploader.dispose();
+    gpuUploader.upload(0, 0, 0, chunkBytes());
+    expect(gpu.copies).toEqual([]);
   });
 });
 

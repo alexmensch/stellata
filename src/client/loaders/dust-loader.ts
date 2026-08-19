@@ -2,9 +2,13 @@
 // Data3DTexture, fetch chunks priority-ordered, upload each arrival
 // through the per-backend voxel uploader. See src/client/loaders/README.md.
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { StellataRenderer } from '../webgpu/seam';
-import { createVoxelChunkUploader, type VoxelChunkUploader } from './dust-voxel-upload';
+import {
+  createVoxelChunkUploader,
+  createVoxelTexture,
+  type VoxelChunkUploader,
+} from './dust-voxel-upload';
 
 export interface DustManifest {
   version: number;
@@ -111,6 +115,14 @@ export interface DustChunkMeta {
   centerPc: [number, number, number];
 }
 
+/** Stream order, and the order the readback verifier samples in — the
+ *  chunks it reaches first are the ones certain to have landed. */
+export function closestChunksFirst(chunks: DustChunkMeta[]): DustChunkMeta[] {
+  const distSq = (c: DustChunkMeta) =>
+    c.centerPc[0] ** 2 + c.centerPc[1] ** 2 + c.centerPc[2] ** 2;
+  return [...chunks].sort((a, b) => distSq(a) - distSq(b));
+}
+
 export interface DustFieldParams {
   boundsHalfPc: number;      // 1250
   densityMin: number;        // 1e-7
@@ -140,25 +152,15 @@ export class DustField {
   private loadedCount = 0;
 
   private readonly uploader: VoxelChunkUploader;
-  private baseUrl: string;
+  readonly baseUrl: string;
 
   constructor(renderer: StellataRenderer, baseUrl: string, manifest: DustManifest) {
     this.baseUrl = baseUrl;
     this.manifest = manifest;
 
     const n = manifest.gridSize;
-    const data = new Uint8Array(n * n * n); // zero-filled → no extinction yet
-    const tex = new THREE.Data3DTexture(data, n, n, n);
-    tex.format = THREE.RedFormat;
-    tex.type = THREE.UnsignedByteType;
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.wrapR = THREE.ClampToEdgeWrapping;
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.unpackAlignment = 1;
-    tex.needsUpdate = true;
-
+    const zeroFill = new Uint8Array(n * n * n); // no extinction until chunks land
+    const tex = createVoxelTexture(n, zeroFill);
     this.uploader = createVoxelChunkUploader(renderer, tex, manifest.chunkSize);
     this.texture = tex;
     this.params = {
@@ -191,11 +193,7 @@ export class DustField {
     // Sol the camera is typically revisiting the dense inner volume we've
     // already loaded; the far-corner chunks only matter for distant-fog
     // rendering which is a secondary concern anyway.
-    const ordered = [...this.manifest.chunks].sort((a, b) => {
-      const da = a.centerPc[0] ** 2 + a.centerPc[1] ** 2 + a.centerPc[2] ** 2;
-      const db = b.centerPc[0] ** 2 + b.centerPc[1] ** 2 + b.centerPc[2] ** 2;
-      return da - db;
-    });
+    const ordered = closestChunksFirst(this.manifest.chunks);
 
     // Simple semaphore — cap parallel fetches so mobile Safari doesn't
     // hang with 64 inflight requests. Workers static assets are served

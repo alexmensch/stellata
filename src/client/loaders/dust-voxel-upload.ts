@@ -6,6 +6,40 @@ import * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { StellataRenderer } from '../webgpu/seam';
 
+/** Reads three's own flag through the `WebGPURenderer` type rather than an
+ *  `in` test, so a mistyped property name fails to compile. */
+export function isWebGpuRenderer(r: StellataRenderer): r is WebGPURenderer {
+  return (r as WebGPURenderer).isWebGPURenderer === true;
+}
+
+export function glTextureOf(
+  renderer: THREE.WebGLRenderer,
+  texture: THREE.Texture,
+): WebGLTexture | undefined {
+  return (renderer.properties.get(texture) as {
+    __webglTexture?: WebGLTexture;
+  }).__webglTexture;
+}
+
+/** The volume and every staging texture come from here so their format and
+ *  type cannot drift apart — WebGPU rejects a copy between differing
+ *  formats. */
+export function createVoxelTexture(
+  size: number,
+  data: Uint8Array | null,
+): THREE.Data3DTexture {
+  const tex = new THREE.Data3DTexture(data, size, size, size);
+  tex.format = THREE.RedFormat;
+  tex.type = THREE.UnsignedByteType;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.wrapR = THREE.ClampToEdgeWrapping;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.unpackAlignment = 1;
+  return tex;
+}
+
 export interface VoxelChunkUploader {
   /** Write one chunkSize³ block of the grid at the given chunk indices. */
   upload(ix: number, iy: number, iz: number, data: Uint8Array): void;
@@ -17,39 +51,59 @@ export function createVoxelChunkUploader(
   texture: THREE.Data3DTexture,
   chunkSize: number,
 ): VoxelChunkUploader {
-  // Must run before any partial upload, and after the texture is marked
-  // for update — otherwise chunks land in unallocated storage or in a 1×1
-  // placeholder, silently. README.md § Dust voxel upload.
+  // Marking before initTexture is the load-bearing order, which is why the
+  // factory owns both halves of it. README.md § Dust voxel upload.
+  texture.needsUpdate = true;
   renderer.initTexture(texture);
-  return 'isWebGPURenderer' in renderer
+  return isWebGpuRenderer(renderer)
     ? new WebGpuVoxelChunkUploader(renderer, texture, chunkSize)
     : new GlVoxelChunkUploader(renderer, texture, chunkSize);
 }
 
-class GlVoxelChunkUploader implements VoxelChunkUploader {
+abstract class ChunkUploader implements VoxelChunkUploader {
+  private disposed = false;
+
+  constructor(protected readonly chunkSize: number) {}
+
+  upload(ix: number, iy: number, iz: number, data: Uint8Array) {
+    if (this.disposed) return;
+    const c = this.chunkSize;
+    this.write(ix * c, iy * c, iz * c, data);
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.release();
+  }
+
+  /** Land `data` with its near corner at the given voxel offset. */
+  protected abstract write(x: number, y: number, z: number, data: Uint8Array): void;
+
+  protected release() {}
+}
+
+class GlVoxelChunkUploader extends ChunkUploader {
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly texture: THREE.Data3DTexture,
-    private readonly chunkSize: number,
-  ) {}
+    chunkSize: number,
+  ) {
+    super(chunkSize);
+  }
 
-  upload(ix: number, iy: number, iz: number, data: Uint8Array) {
+  protected write(x: number, y: number, z: number, data: Uint8Array) {
     const gl = this.renderer.getContext() as WebGL2RenderingContext;
-    const glTex = (this.renderer.properties.get(this.texture) as {
-      __webglTexture?: WebGLTexture;
-    }).__webglTexture;
+    const glTex = glTextureOf(this.renderer, this.texture);
     if (!glTex) {
-      // Can happen if initTexture hasn't flushed yet (rare); skip this
-      // chunk silently and the caller's listeners will see us fall one
-      // short of total. Alternative would be to defer upload a frame.
+      // Reachable when initTexture has not flushed, so the branch is live
+      // even though the progress listeners then fall one chunk short.
       console.warn('dust texture not yet GPU-resident, dropping chunk');
       return;
     }
     gl.bindTexture(gl.TEXTURE_3D, glTex);
-    // Required (texSubImage3D fails outright under flip or premultiply) and
-    // required to go through three's cache — a raw context poke desyncs it
-    // and the next flipY upload anywhere in the app lands mirrored.
-    // README.md § Dust voxel upload.
+    // Through three's state cache, never the raw context — a poke leaves the
+    // cache claiming a flip that is no longer set. README.md § Dust voxel
+    // upload.
     const { state } = this.renderer;
     state.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     state.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -58,18 +112,16 @@ class GlVoxelChunkUploader implements VoxelChunkUploader {
     gl.texSubImage3D(
       gl.TEXTURE_3D,
       0,
-      ix * c, iy * c, iz * c, // offsets
-      c, c, c,                // size
+      x, y, z,
+      c, c, c,
       gl.RED,
       gl.UNSIGNED_BYTE,
       data,
     );
   }
-
-  dispose() {}
 }
 
-class WebGpuVoxelChunkUploader implements VoxelChunkUploader {
+class WebGpuVoxelChunkUploader extends ChunkUploader {
   // three's WebGPU backend exposes no sub-region texture write, so a chunk
   // reaches the volume as a whole upload of this chunk-sized scratch
   // texture plus a region copy. README.md § Dust voxel upload.
@@ -80,31 +132,30 @@ class WebGpuVoxelChunkUploader implements VoxelChunkUploader {
   constructor(
     private readonly renderer: WebGPURenderer,
     private readonly texture: THREE.Data3DTexture,
-    private readonly chunkSize: number,
+    chunkSize: number,
   ) {
-    const c = chunkSize;
-    this.staging = new THREE.Data3DTexture(null, c, c, c);
-    this.staging.format = texture.format;
-    this.staging.type = texture.type;
+    super(chunkSize);
+    this.staging = createVoxelTexture(chunkSize, null);
     this.srcRegion = new THREE.Box3(
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(c, c, c),
+      new THREE.Vector3(chunkSize, chunkSize, chunkSize),
     );
   }
 
-  upload(ix: number, iy: number, iz: number, data: Uint8Array) {
-    const c = this.chunkSize;
+  protected write(x: number, y: number, z: number, data: Uint8Array) {
     this.staging.image.data = data;
+    // three's texture cache short-circuits on an unchanged version, and the
+    // copy would then re-land the previous chunk's bytes at the new offset.
     this.staging.needsUpdate = true;
     this.renderer.copyTextureToTexture(
       this.staging,
       this.texture,
       this.srcRegion,
-      this.dstPosition.set(ix * c, iy * c, iz * c),
+      this.dstPosition.set(x, y, z),
     );
   }
 
-  dispose() {
+  protected release() {
     this.staging.dispose();
   }
 }
