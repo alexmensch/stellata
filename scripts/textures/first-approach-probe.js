@@ -25,9 +25,19 @@
     upload: ['texImage2D', 'texSubImage2D', 'texStorage2D', 'compressedTexImage2D'],
     mipmap: ['generateMipmap'],
     link: ['compileShader', 'linkProgram', 'getProgramParameter'],
+    // The stall suspects, and the reason a frame can be enormous with no
+    // texture or shader work in it at all. The exposure adaptation reads its
+    // statistic back through readPixels into a pack buffer and picks it up
+    // with getBufferSubData behind a fence; a fence waited on before it
+    // signals blocks the main thread here rather than inside any draw.
+    readback: ['readPixels', 'getBufferSubData'],
+    sync: ['clientWaitSync', 'fenceSync', 'finish', 'flush'],
   };
 
-  let live = { upload: 0, mipmap: 0, link: 0, n: 0, bytes: 0 };
+  const zero = () => ({
+    upload: 0, mipmap: 0, link: 0, readback: 0, sync: 0, n: 0, bytes: 0,
+  });
+  let live = zero();
   const frames = [];
 
   for (const [bucket, names] of Object.entries(BUCKETS)) {
@@ -56,7 +66,7 @@
     // GL work done during the frame just ended lands in `live`; snapshot it
     // against that frame's own gap.
     frames.push({ gap: now - last, ...live });
-    live = { upload: 0, mipmap: 0, link: 0, n: 0, bytes: 0 };
+    live = zero();
     last = now;
     requestAnimationFrame(tick);
   };
@@ -88,6 +98,8 @@
         upload: round(f.upload),
         mipmap: round(f.mipmap),
         link: round(f.link),
+        readback: round(f.readback),
+        sync: round(f.sync),
         glCalls: f.n,
         widestSrc: f.bytes || '',
         kind:
@@ -97,21 +109,25 @@
 
       const sum = (k) => slow.reduce((a, f) => a + f[k], 0);
       const isolated = rows.filter((r) => r.kind === 'ISOLATED');
-      const attributed = sum('upload') + sum('mipmap') + sum('link');
+      const attributed =
+        sum('upload') + sum('mipmap') + sum('link') + sum('readback') + sum('sync');
       console.log(
         `[approach-probe] ${frames.length} frames · ${slow.length} over ` +
           `${slowMs} ms (${isolated.length} isolated, ` +
           `${slow.length - isolated.length} in bursts) · worst ` +
           `${round(Math.max(...slow.map((f) => f.gap)))} ms\n` +
           `  attributed to GL: upload ${round(sum('upload'))} ms, mipmap ` +
-          `${round(sum('mipmap'))} ms, link ${round(sum('link'))} ms ` +
+          `${round(sum('mipmap'))} ms, link ${round(sum('link'))} ms, readback ` +
+          `${round(sum('readback'))} ms, sync ${round(sum('sync'))} ms ` +
           `= ${round(attributed)} ms of ${round(sum('gap'))} ms slow-frame time ` +
           `(${Math.round((100 * attributed) / sum('gap'))} %)`,
       );
       console.log(
-        'Read it as: ISOLATED rows with most of their gap in upload/mipmap/link ' +
-          'are the first-approach cost. Burst rows with little attributed GL ' +
-          'time are not — they are sustained per-frame render cost.',
+        'Read it as: upload/mipmap/link is the first-approach cost. ' +
+          'readback/sync is the main thread blocking on the GPU, which is what ' +
+          'a fence waited on too early looks like. A big gap with NO bucket ' +
+          'accounted is CPU work outside GL, or the driver blocking inside a ' +
+          'draw call — neither of which this probe can see.',
       );
     },
   };
