@@ -8,7 +8,8 @@ reductions and their provenance are `../src/README.md`;
 `scripts/textures/dem_relief.py` and `horizon_map.py` own the derivations.
 
 These ship as **LFS** (`data/textures/relief/*.webp`) — normals at
-3.7–7.4 MB each and a horizon pair at 4.1–9.4 MB. `sync-textures.ts`
+3.7–7.4 MB each, a horizon pair at 4.1–9.4 MB, and a sky-view factor at
+0.16–0.84 MB. `sync-textures.ts`
 mirrors them **flat** into `public/textures/`, alongside the colour rungs:
 this folder groups them at rest, and the renderer's URLs are unchanged by
 that grouping.
@@ -309,10 +310,11 @@ on this half.
 
 ## Sky view factor — what terrain takes out of the sky
 
-`<body>-skyview.webp` is a **lossless grayscale WebP** on the same
-2048×1024 grid as the horizon pair, carrying one scalar per texel: the
-cosine-weighted fraction of the sky that texel's own terrain fills,
-`mean(max(sin h, 0)²)` over the same 8 azimuths.
+`<body>-skyview.webp` is a **lossless grayscale WebP** on the same grid as the
+horizon pair — 2048×1024, and 4096×2048 on Earth, always half the body's own
+DEM width — carrying one scalar per texel: the cosine-weighted fraction of the
+sky that texel's own terrain fills, `mean(max(sin h, 0)²)` over the same 8
+azimuths.
 `scripts/textures/sky_view.py` owns it, and the mesh shader reads it as the
 `terrainView` the interreflected fill term multiplies
 (`src/client/solar-system/planets/surface-relief/README.md` § Shadows are lit
@@ -336,10 +338,14 @@ cannot serve both readings, and this map marches from **one DEM texel**,
   is invisible. Nothing clamps on any body. The constant itself is owned by
   `surface-relief-pure.ts`, which both `sky_view.py` and the mesh shader are
   pinned against.
-- **Uploads as `R8`** — one channel, so **2.8 MB per body** resident with
-  mips, against 22.4 for the horizon pair. Grayscale WebP stores three
-  identical channels and the lossless coder removes almost all of that; the
-  upload narrows regardless.
+- **Uploads as `R8`** — one channel, so **2.8 MB** resident with mips at 2048
+  against the horizon pair's 22.4, and **11.2 MB on Earth** at 4096 against
+  its pair's 89.5. Quote the per-body number with its width: this is the
+  cheapest of the three planes either way, but Earth's is four times the
+  others' and it enters the renderer's VRAM budget in full
+  (`src/client/solar-system/planets/textures/README.md` § Staying inside
+  VRAM). Grayscale WebP stores three identical channels and the lossless coder
+  removes almost all of that; the upload narrows regardless.
 - **Reduced from the DEM's own width, not marched at the output grid.** The
   factor is smooth where a skyline is not, so area-averaging it after the
   march costs less than marching a coarse grid would: p99 0.0501 at 4096

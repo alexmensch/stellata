@@ -186,8 +186,8 @@ export function horizonSin(
  * bound there — negative on every azimuth — and without the clamp every flat
  * plain would claim the fill light of a crater floor.
  *
- * At the shipped map's resolution this is far smaller than a crater's true sky
- * occlusion — README.md § What the fill term is actually worth.
+ * This reading marches only the far field, so it under-reads a crater floor's
+ * true occlusion about twofold — README.md § F comes from its own map.
  */
 export function terrainViewFactor(enc: readonly number[]): number {
   let sum = 0;

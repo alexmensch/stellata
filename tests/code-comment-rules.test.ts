@@ -1,7 +1,7 @@
 // Enforces the comment-rule "law" section of CLAUDE.md across src/ and
 // scripts/ TS/Py source. Fails CI when bead-IDs, PR references, memory-
 // key wikilinks, or oversized module docstrings appear — see
-// docs/authoring-patterns.md § Code comment hygiene for the rules.
+// docs/authoring-patterns.md § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
