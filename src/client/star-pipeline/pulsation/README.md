@@ -18,7 +18,9 @@ src/client/star-pipeline/pulsation/
                                  iPuls attribute + the CPU disc mirror.
                                  Called at catalog load
                                  (catalog.pulsRho / catalog.pulsColorSwing).
-                                 Vitest-pinned.
+                                 interleavePulsParams packs the pair into
+                                 the vec2 backing array (WebGL2 + WebGPU
+                                 geometries). Vitest-pinned.
   pulsation-suppress-pure.ts     buildPulsationSuppressMask(varType): the
     (+ test)                     per-instance iSuppressPulsation mask
                                  (1 on every eclipsing binary — an eclipse

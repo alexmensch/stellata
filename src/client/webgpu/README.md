@@ -31,6 +31,13 @@ src/client/webgpu/
                                     partition from the live WebGL
                                     geometry, so a new attribute there
                                     fails CI until this is updated.
+  tonemap-tsl.ts                    TSL mirror of stellata_tonemap's
+                                    undithered operator, over
+                                    tonemap-pure's constants.
+  emission-tsl.ts                   TSL mirror of the emission unit's
+                                    point-source peak rule.
+  star/                             The star layer: packed geometry + the
+                                    D2 glow pipeline — its own README.
 ```
 
 ## The flag — `#renderer=webgpu`
@@ -62,11 +69,13 @@ user-facing "requires WebGPU" gate page is a separate concern.
 
 ## What the flag boots today
 
-An **empty sky with the full app alive**: every CPU subsystem (catalog,
-star frame, focus, picker, typeahead, URL state, overlays, HUD, render
-gate) runs identically; the renderer draws the seam's own scene
-(`WebGpuSeam.scene`), which starts empty and gains layers as port
-children land. The shell's WebGL scene still exists and is never
+The **star glow field with the full app alive**: every CPU subsystem
+(catalog, star frame, focus, picker, typeahead, URL state, overlays, HUD,
+render gate) runs identically; the renderer draws the seam's own scene
+(`WebGpuSeam.scene`), which gains layers as port children land. The star
+layer (`star/README.md`) is the first — glow pass only, with its
+still-missing siblings (discs, extinction, chart, MRT, mirrors) listed
+there. The shell's WebGL scene still exists and is never
 rendered on a WebGPU boot — no per-layer gating, no material ever
 reaches the wrong backend. GPU-side subsystems park on their existing
 fallbacks: the HDR seam runs in its unsupported mode (direct-to-canvas,
@@ -108,6 +117,27 @@ The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
 remapped, clear inverted, all upstream in three r185 — and
 `trackTimestamp: true` for the `gpu.frame` perf row (§ Timestamps).
+
+## Output colour space — pinned to the working space
+
+The boot sets `renderer.outputColorSpace = LinearSRGBColorSpace` (the
+working space), and the pin is load-bearing twice over. Ported shaders
+own the whole transfer chain — operator plus sRGB encode — exactly as
+the GLSL `RawShaderMaterial`s do, so any renderer-side conversion would
+encode their output a second time. And `WebGPURenderer` implements
+"output ≠ working" by rendering the whole scene into a hidden
+full-resolution framebuffer target and running a fullscreen
+colour-transform quad after it (`Renderer._renderOutput`) — an extra
+pass plus a drawing-buffer-sized allocation on every frame, invisible in
+the scene graph. With output pinned to working, three renders straight
+to the canvas and the shaders' encoded values land untouched — the
+WebGL2 semantics.
+
+The cost lands on three's **built-in materials**, which relied on that
+output transform for their encode: they render linear-dark until their
+port child restores the encode on their own path (`Line2` / chrome
+parity). Do not "fix" a dark built-in by unpinning the output space —
+that re-breaks every ported emitter and re-prices the hidden pass.
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,
@@ -187,6 +217,9 @@ vectors, getter swizzles are typed); what survives:
   swizzle and operator — use `attrFloat/attrVec2/attrVec3/attrVec4`.
 - `step` is float-pinned while the runtime is vec-capable — import
   `step` from the shim instead.
+- `mix`'s vector overloads pin `t` to a float while the runtime (and
+  WGSL `mix`) takes a vector `t` — import `mix` from the shim where the
+  interpolant is per-channel (the sRGB encode's branch select).
 - `ShaderNodeObject` is exported from neither `three/tsl` nor
   `three/webgpu`; the shim re-exports the typing's `NodeObject` under
   the runtime's name.

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildPulsationParams,
+  interleavePulsParams,
   pulsationParamsForType,
   PULSATION_PARAMS_DEFAULT,
 } from './pulsation-params-pure';
@@ -55,5 +56,15 @@ describe('buildPulsationParams', () => {
     expect(colorSwing[0]).toBeCloseTo(0.35, 6);
     expect(colorSwing[1]).toBeCloseTo(0.3, 6);
     expect(colorSwing[2]).toBeCloseTo(0.1, 6);
+  });
+});
+
+describe('interleavePulsParams', () => {
+  it('packs ρ into .x and ΔB−V into .y per instance', () => {
+    const packed = interleavePulsParams(
+      new Float32Array([1.5, 1.25]),
+      new Float32Array([0.75, 0.5]),
+    );
+    expect(Array.from(packed)).toEqual([1.5, 0.75, 1.25, 0.5]);
   });
 });

@@ -68,12 +68,26 @@ export function packVec4Buffers(
   for (const name of plan.names) {
     const src = sources[name];
     if (src === undefined) throw new Error(`missing packed attribute source: ${name}`);
-    if (src.length !== count) {
-      throw new Error(`packed attribute ${name}: ${src.length} values for ${count} instances`);
-    }
-    const { buffer, component } = slotFor(plan, name);
-    const dst = buffers[buffer];
-    for (let i = 0; i < count; i++) dst[i * 4 + component] = src[i];
+    repackScalarInPlace(plan, buffers, name, src);
   }
   return buffers;
+}
+
+/** Rewrite one scalar's component of its packed buffer in place — the
+ *  path a DynamicDrawUsage source takes when it alone changed. Returns
+ *  the index of the buffer written so the caller can flag its upload. */
+export function repackScalarInPlace(
+  plan: Vec4PackPlan,
+  buffers: readonly Float32Array[],
+  name: string,
+  src: ArrayLike<number>,
+): number {
+  const { buffer, component } = slotFor(plan, name);
+  const dst = buffers[buffer];
+  const count = dst.length >> 2;
+  if (src.length !== count) {
+    throw new Error(`packed attribute ${name}: ${src.length} values for ${count} instances`);
+  }
+  for (let i = 0; i < count; i++) dst[i * 4 + component] = src[i];
+  return buffer;
 }
