@@ -81,16 +81,25 @@ timestamp query **pair per render pass**, automatically, with no scope
 calls from us. `resolveTimestampsAsync('render')` returns the summed real
 duration of every pass belonging to one frame. So `gpu.frame` here is a
 sum of true per-pass measurements rather than one derived elapsed span —
-strictly better than the WebGL2 figure, and available on Safari, which has
-no WebGL2 timer query at all.
+strictly better than the WebGL2 figure, and available wherever the adapter
+grants the feature.
+
+**`trackTimestamp: true` is a request, not a grant.** three ANDs it with
+`hasFeature('timestamp-query')` at backend init and clears it silently
+where the adapter withholds the feature; every resolve then returns
+`undefined` after one `warnOnce`. So the boot records the answer once as
+`WebGpuSeam.timestampsAvailable` (`../../webgpu/README.md` § Timestamps)
+and consumers ask that rather than assuming the flag took: with no
+timestamps the headline stays `submit` and a pricing sweep degrades to
+`raf-delta` instead of claiming a clock it does not have.
 
 Three consequences, none of them a limitation to work around:
 
 - **No one-query ceiling and no rotation.** Passes are timed
   concurrently, so nothing samples at 1/N the frame rate.
 - **A timestamp resolve is not an exclusive resource.** The render loop
-  resolves unconditionally and `gpu-frame-samples.ts` fans the result out,
-  so the HUD and a pricing sweep can read the same frames. The
+  resolves every rendered frame and `gpu-frame-samples.ts` fans the result
+  out, so the HUD and a pricing sweep can read the same frames. The
   closed-panel precondition in `../frame-cost/README.md` is WebGL2-only.
 - **Per-pass durations exist but are not public API.** three keys them by
   an internal `timestampUID` (`<uid>:f<frameId>`) reachable only through
@@ -107,8 +116,21 @@ the 2048-query pool after ~1024 frames (~17 s), logged
 stopped sampling until something resolved. `animate()` resolves
 unconditionally; the subscriber list decides only whether a sample lands.
 
-One reporting caveat: a resolve coalesces with any resolve already in
-flight, and the returned figure is the newest frame in the batch — earlier
-frames' passes are dropped, not summed into it. So samples can arrive at
-fewer than one per frame under load. Each sample is still one honest
-frame, which is what the ring average needs.
+**One resolve in flight at a time — the guard is load-bearing.** A resolve
+spans the frames its `mapAsync` readback takes, and three coalesces: a
+concurrent caller gets back the SAME promise, so it recycles no queries and
+yields the same number. Publishing per call therefore put ONE frame's
+duration in the ring k times, k being the frames the readback spanned. That
+is not a cosmetic duplicate — it inflates the sample count `noiseMs`
+divides by (√k too tight, so rows read as resolved that did not), and the
+adjacent repeats drive `baselineLag1` / `disabledLag1` positive, which
+`../frame-cost/README.md` § Reading a row tells you to read as drift.
+`resolveAndPublishGpuFrame` holds one resolve in flight and publishes once
+per completion; skipping the call while one is pending costs the pool
+nothing, because three resets the pool's counter before the GPU work.
+
+The batch also covers every frame since the last resolve but returns only
+the newest frame's total — earlier frames' passes are dropped, not summed
+into it. So samples arrive at fewer than one per rendered frame under load,
+and each one is a single honest frame, which is what the ring average and
+the dwell medians need.

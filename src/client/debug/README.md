@@ -83,8 +83,9 @@ up as a hot path in its own measurements.
   ([`gpu-timing/`](gpu-timing/README.md)). It is **not** the sum of the
   per-pass `gpu.*` rows — on WebGL2 those rotate across frames and
   over-attribute, so their total runs well above the frame period.
-  Where the backend offers nothing (WebGL2 Safari exposes no timer query),
-  the headline says **`submit Xms`** instead and reports CPU wall-time
+  Where the backend offers nothing — WebGL2 Safari exposes no timer query,
+  and a WebGPU adapter can withhold `timestamp-query` — the headline says
+  **`submit Xms`** instead and reports CPU wall-time
   around the render calls. Submission is asynchronous, so a large `submit`
   means the main thread is *blocking* on the driver — a real symptom, but
   not a measure of GPU work. Never compare a `submit` number against a
@@ -170,8 +171,8 @@ single pass, disable it and difference `gpu.frame`** — automated below.
 The automated form of "disable it and difference `gpu.frame`": dwell,
 re-dwell with one pass disabled, difference the medians. Lives in its
 own folder — `frame-cost/README.md` owns the priced-pass roster, the
-preconditions (camera still, clock paused, and on WebGL2 a CLOSED panel), the drift
-bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
+preconditions (camera still, clock paused, and on WebGL2 a CLOSED panel),
+the drift bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 
 Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so

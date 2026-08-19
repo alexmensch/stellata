@@ -97,7 +97,7 @@ release.
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
 remapped, clear inverted, all upstream in three r185 — and
-`trackTimestamp: true` for the `gpu.render` perf row.
+`trackTimestamp: true` for the `gpu.frame` perf row (§ Timestamps).
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,
@@ -271,13 +271,22 @@ verifying no actual math.
 
 ## Timestamps
 
-The renderer boots with `trackTimestamp: true`, and `animate()` calls
-`resolveTimestampsAsync()` on **every rendered frame** — not only while
-the HUD is open. The resolve is what recycles the query pool: tracking
-allocates a query pair per render pass regardless of whether anyone
-reads the result, so a gated resolve overruns the 2048-query pool after
-~1024 frames and three logs `Maximum number of queries exceeded`, then
-stops sampling until something resolves.
+The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
+**every rendered frame** — not only while the HUD is open. The resolve is
+what recycles the query pool: tracking allocates a query pair per render
+pass regardless of whether anyone reads the result, so a gated resolve
+overruns the 2048-query pool after ~1024 frames and three logs
+`Maximum number of queries exceeded`, then stops sampling until something
+resolves.
+
+Two properties the seam carries for it, both in
+`debug/gpu-timing/README.md`. **The flag is a request:** three ANDs it with
+`hasFeature('timestamp-query')` and clears it silently where the adapter
+withholds the feature, so the boot records the granted answer as
+`timestampsAvailable` and consumers degrade off that instead of assuming.
+**One resolve in flight:** a concurrent resolve returns the same promise and
+the same number, so `resolveAndPublishGpuFrame` publishes once per
+completion rather than once per frame the readback spanned.
 
 The resolved figure is the summed real duration of every render pass in
 one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
