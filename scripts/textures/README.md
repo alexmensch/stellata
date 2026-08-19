@@ -82,10 +82,30 @@ rather than shipping it.
   trap in the distance metric, on an **interior** texel: a block's min
   and max are exact palette entries under the wrapping metric too, so a
   fixture asserting only the extremes passes against the bug.
-- `webp-header-pure.ts` — dimensions and the LFS-pointer check straight
-  out of a lossless WebP's own header, so an artifact pin reads the
-  artifact rather than the manifest beside it. Shared by both relief
-  test suites.
+- `audit_sources.py` — manual, run by hand, NOT part of the build:
+  measures every frozen source against the claims its provenance row
+  makes — dimensions, near-black polar bands, the mirror test, mean
+  chroma, and the longitudinal detail of any band a row calls
+  reconstructed. Run it after ANY source swap. Polar bands are measured
+  at the file's NATIVE row count so the edge matches the tenths the rows
+  quote; the mirror and chroma passes run on a reduction, being
+  scale-free. Every correlation is reported aligned AND longitude-shifted
+  because only the gap between them is evidence. What each check can and
+  cannot settle is `data/textures/src/README.md` § Auditing.
+- `source-provenance.test.ts` — the mechanical half of that audit in
+  CI: parses the provenance table and asserts every stated size against
+  the file's own header (the FIRST size a row states, which is the
+  README's own rule), the 2:1 equirect ratio, exact row and image-row
+  counts so a source cannot leave coverage silently, and each row's
+  colour-invention wording against `TINT_STRENGTH` / `DESATURATE` in
+  `build-textures.py` — the one half of a row that is invented rather
+  than measured. Self-skips per row on an unpulled LFS object, warning
+  rather than passing quietly, like the two relief suites.
+- `image-header-pure.ts` — dimensions straight out of a WebP, JPEG or
+  TIFF header, so a pin reads the artifact rather than the prose beside
+  it. Shared by both relief test suites and the provenance test. The
+  LFS-stub gate is not here: `lfsContentReadable` in `../util/paths.ts`
+  is the one every artifact-backed suite rides.
 - `reduce_dem.py` — one-shot, run by hand, NOT part of the build:
   downloaded 0.5–2.0 GB global DEM → the frozen
   `data/textures/src/<body>-dem-*.tif` reduction. Carries the decode
