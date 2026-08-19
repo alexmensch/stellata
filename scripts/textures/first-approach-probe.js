@@ -80,7 +80,7 @@
       }
       // The discriminator the earlier measurement lacked. A one-shot upload or
       // link is an ISOLATED spike; a sustained per-frame cost shows as a run of
-      // slow frames, which is a different bead entirely (stellata-8cg.14).
+      // slow frames, which is the frame-cost epic's problem, not this one.
       const isSlow = new Set(slow.map((f) => f.i));
       const rows = slow.map((f) => ({
         frame: f.i,
@@ -110,8 +110,8 @@
       );
       console.log(
         'Read it as: ISOLATED rows with most of their gap in upload/mipmap/link ' +
-          'are this bead. Burst rows with little attributed GL time are not — ' +
-          'they are per-frame render cost and belong to stellata-8cg.14.',
+          'are the first-approach cost. Burst rows with little attributed GL ' +
+          'time are not — they are sustained per-frame render cost.',
       );
     },
   };
