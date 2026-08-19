@@ -15,7 +15,7 @@ import {
 } from './textures/texture-ladder';
 import {
   evictionOrder,
-  supersededRungs,
+  otherRungs,
   TEXTURE_VRAM_BUDGET_BYTES,
   textureBytes,
   type ResidentTexture,
@@ -559,7 +559,7 @@ export class PlanetMeshLayer {
     this.ensureTexture(key, { ext: 'jpg' });
     if (this.useTexture(key)?.state === 'ready') {
       this.shownRung.set(body, want);
-      this.releaseSupersededRungs(planet, want);
+      this.releaseOtherRungs(planet, want);
     }
   }
 
@@ -649,14 +649,15 @@ export class PlanetMeshLayer {
     this.textures.delete(key);
   }
 
-  /** Free the narrower rungs of a body now showing a wider one. Selection
-   *  never downgrades, so nothing will ask for them again. */
-  private releaseSupersededRungs(planet: Planet, shownWidth: number): void {
+  /** Free every rung of a body except the one now drawn. Narrower rungs are
+   *  outgrown; wider ones are only ever left behind after the body shrank
+   *  well past them, so both are memory the screen cannot show. */
+  private releaseOtherRungs(planet: Planet, shownWidth: number): void {
     const body = ladderKey(planet.name);
     const rungs = rungsOf(body);
     if (rungs === null) return;
     const held = rungs.filter((w) => this.isResident(textureKey(planet.name, `-${w}`)));
-    for (const w of supersededRungs(held, shownWidth)) {
+    for (const w of otherRungs(held, shownWidth)) {
       this.releaseTexture(textureKey(planet.name, `-${w}`));
     }
   }

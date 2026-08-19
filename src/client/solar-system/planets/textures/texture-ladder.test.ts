@@ -6,6 +6,7 @@ import {
   requiredMapWidth,
   rungsOf,
   selectRung,
+  TEXTURE_TIER_DROP,
   TEXTURE_TIER_LEAD,
 } from './texture-ladder';
 
@@ -106,12 +107,49 @@ describe('selectRung', () => {
     expect(selectRung('venus', 1700, 1800)).toBe(1800);
   });
 
-  it('never downgrades on retreat', () => {
-    // Flying away, a narrower map spends an upload to make the image worse.
-    // One-way ratcheting is also why no down-hysteresis is needed: thrash is
-    // structurally impossible rather than damped.
-    expect(selectRung('moon', 100, 8192)).toBe(8192);
-    expect(selectRung('moon', 1, 2048)).toBe(2048);
+  it('holds across the band rather than swapping on every wobble', () => {
+    // Between DROP and LEAD of the resident width nothing moves. Most camera
+    // motion lives here and costs nothing.
+    expect(selectRung('moon', 0.5 * 8192, 8192)).toBe(8192);
+    expect(selectRung('moon', TEXTURE_TIER_DROP * 8192 + 1, 8192)).toBe(8192);
+    expect(selectRung('moon', TEXTURE_TIER_LEAD * 8192 - 1, 8192)).toBe(8192);
+  });
+
+  it('drops once the body has shrunk well past what it holds', () => {
+    // The case the eviction budget cannot reach on its own: a body still
+    // drawn every frame is stamped used every frame, so an 8192 it no longer
+    // needs would be pinned forever. Dropping is also the CHEAP direction —
+    // 2.8 MB uploaded to free 176 MB.
+    expect(selectRung('moon', 20, 8192)).toBeLessThan(8192);
+    expect(selectRung('moon', 1, 8192)).toBe(1024);
+  });
+
+  it('lands where neither rule fires again — a true fixed point', () => {
+    // The whole safety argument for allowing downgrades. Feed the selector
+    // its own answer at a fixed demand and it must settle, not oscillate.
+    for (const demand of [1, 7, 40, 200, 900, 1500, 3000, 5000, 9000, 20000]) {
+      let rung = selectRung('moon', demand, null)!;
+      const seen = new Set<number>();
+      for (let i = 0; i < 20; i++) {
+        const next = selectRung('moon', demand, rung)!;
+        if (next === rung) break;
+        // Revisiting a width means a cycle, which is exactly the thrash the
+        // dead band exists to make impossible.
+        expect(seen.has(next), `demand ${demand} cycled at ${next}`).toBe(false);
+        seen.add(next);
+        rung = next;
+      }
+      expect(selectRung('moon', demand, rung), `demand ${demand}`).toBe(rung);
+    }
+  });
+
+  it('keeps the dead band wide enough to be a band at all', () => {
+    // If DROP ever reached LEAD the two rules would meet and every body near
+    // a boundary would swap every frame.
+    expect(TEXTURE_TIER_DROP).toBeLessThan(TEXTURE_TIER_LEAD);
+    // Dropping targets demand/LEAD, so the landing rung sits at least this
+    // far under its own upgrade threshold.
+    expect(TEXTURE_TIER_DROP).toBeLessThan(TEXTURE_TIER_LEAD * TEXTURE_TIER_LEAD);
   });
 
   it('holds a small map on a distant body whatever the display', () => {

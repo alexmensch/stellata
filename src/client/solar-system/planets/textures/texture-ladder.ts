@@ -46,21 +46,45 @@ export function meanLuminanceOf(body: string): number | null {
 }
 
 /**
+ * Fraction of the resident rung's width below which a body has shrunk far
+ * enough to give that rung up.
+ *
+ * Paired with `TEXTURE_TIER_LEAD` to leave a dead band: a body is only
+ * dropped once the demand is well under what it holds, and it lands where
+ * neither rule fires again. Without the gap the two thresholds would meet and
+ * a body sitting near a boundary would swap every frame.
+ */
+export const TEXTURE_TIER_DROP = 0.3;
+
+/**
  * The rung to hold now. `resident` is the width already loaded, or null
  * before the first load.
  *
- * Three rules, and only the third is about hysteresis:
+ * Four rules. Rules 3 and 4 are one mechanism — a hysteresis band with the
+ * demand somewhere inside it — rather than a preference and its exception:
  *
  * 1. **Round up.** The smallest rung at or above what the display can
  *    resolve, clamped to the body's top rung — a body simply has no rung
  *    above its master, and asking for one would 404 every frame.
- * 2. **Lead the swap.** Once the requirement reaches `TEXTURE_TIER_LEAD`
- *    of the resident width, move to the next rung up even though the
- *    resident one still satisfies rule 1.
- * 3. **Never downgrade.** Retreating from a body would otherwise spend an
- *    upload to make the image worse. One-way ratcheting also makes thrash
- *    structurally impossible, which is why there is no matching
- *    down-hysteresis: release belongs to eviction, not to selection.
+ * 2. **Lead the swap.** Once the demand reaches `TEXTURE_TIER_LEAD` of the
+ *    resident width, move to the next rung up even though the resident one
+ *    still satisfies rule 1.
+ * 3. **Hold across the band.** Between `TEXTURE_TIER_DROP` and
+ *    `TEXTURE_TIER_LEAD` of the resident width, keep what is loaded. Most
+ *    camera motion lives here and costs nothing.
+ * 4. **Drop when the body has shrunk well past it**, to the smallest rung at
+ *    or above `demand / TEXTURE_TIER_LEAD`. Dividing by the lead is what
+ *    guarantees the landing rung does not immediately re-trigger rule 2 — the
+ *    result is a fixed point, and the test iterates it to prove that.
+ *
+ * Downgrading is the CHEAP direction and giving it up was the mistake this
+ * corrects. An 8192 → 1024 drop uploads 2.8 MB to free 176 MB; the reverse
+ * uploads 179 MB. And it is not a quality loss: rule 1 says the smallest rung
+ * at or above the demand is *sufficient*, so anything above it is memory the
+ * screen cannot show. Without this, a body that stays on screen keeps
+ * whatever rung it once reached forever — it is drawn every frame, so the
+ * eviction pass may never touch it, and eight planets left at 5 px would pin
+ * ~1.4 GB that nothing could reclaim.
  */
 export function selectRung(
   body: string,
@@ -70,11 +94,15 @@ export function selectRung(
   const rungs = rungsOf(body);
   if (rungs === null || rungs.length === 0) return null;
   const top = rungs[rungs.length - 1];
+  const roundUp = (w: number) => rungs.find((r) => r >= w) ?? top;
 
-  let want = rungs.find((r) => r >= requiredWidth) ?? top;
-  if (resident !== null && requiredWidth >= TEXTURE_TIER_LEAD * resident) {
-    const next = rungs.find((r) => r > resident) ?? top;
-    if (next > want) want = next;
+  const want = roundUp(requiredWidth);
+  if (resident === null) return want;
+  if (requiredWidth >= TEXTURE_TIER_LEAD * resident) {
+    return Math.max(want, rungs.find((r) => r > resident) ?? top);
   }
-  return resident === null ? want : Math.max(want, resident);
+  if (requiredWidth < TEXTURE_TIER_DROP * resident) {
+    return Math.min(resident, roundUp(requiredWidth / TEXTURE_TIER_LEAD));
+  }
+  return resident;
 }

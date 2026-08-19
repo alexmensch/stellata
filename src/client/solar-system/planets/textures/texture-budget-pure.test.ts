@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   TEXTURE_VRAM_BUDGET_BYTES,
   evictionOrder,
-  supersededRungs,
+  otherRungs,
   textureBytes,
   type ResidentTexture,
 } from './texture-budget-pure';
@@ -79,21 +79,22 @@ describe('evictionOrder', () => {
   });
 });
 
-describe('supersededRungs', () => {
+describe('otherRungs', () => {
   it('frees every narrower rung once a wider one is drawn', () => {
-    // Holding the whole ladder costs a third more than the top rung alone,
-    // and selection never downgrades — so nothing will ask for these again.
-    expect(supersededRungs([1024, 2048, 4096, 8192], 8192)).toEqual([1024, 2048, 4096]);
+    expect(otherRungs([1024, 2048, 4096, 8192], 8192)).toEqual([1024, 2048, 4096]);
   });
 
-  it('keeps the drawn rung and anything above it', () => {
-    // A wider rung may already be loading; it is not superseded by a narrower
-    // one being on screen.
-    expect(supersededRungs([1024, 2048, 4096], 2048)).toEqual([1024]);
+  it('frees WIDER rungs too, once the body has dropped back down', () => {
+    // The expensive half. Selection only drops after a body has shrunk well
+    // past what it holds, so an 8192 left behind is 179 MB the screen cannot
+    // show — and because the body is still drawn every frame, the eviction
+    // pass would never reclaim it on its own.
+    expect(otherRungs([1024, 8192], 1024)).toEqual([8192]);
+    expect(otherRungs([2048, 4096, 8192], 2048)).toEqual([4096, 8192]);
   });
 
-  it('frees nothing when the smallest rung is the one drawn', () => {
-    expect(supersededRungs([1024], 1024)).toEqual([]);
+  it('leaves a body holding exactly the one rung it draws', () => {
+    expect(otherRungs([4096], 4096)).toEqual([]);
   });
 });
 
@@ -105,7 +106,7 @@ describe('the layer actually applies all of this', () => {
 
   it('enforces the budget every frame and frees superseded rungs on promotion', () => {
     expect(src).toContain('this.enforceTextureBudget();');
-    expect(src).toContain('this.releaseSupersededRungs(planet, want);');
+    expect(src).toContain('this.releaseOtherRungs(planet, want);');
   });
 
   it('closes the decoded bitmap as well as the GL object', () => {

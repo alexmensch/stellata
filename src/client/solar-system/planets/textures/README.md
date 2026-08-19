@@ -39,21 +39,41 @@ carry; it is read live off the shared uniform the renderer itself draws at,
 so a resize or a drag onto a different-DPR monitor re-selects without a
 listener of its own.
 
-## Three rules, and only the third is hysteresis
+## Four rules, and two of them are one hysteresis band
 
 1. **Round up, never nearest.** The smallest rung at or above the demand,
-   clamped to what the body actually ships — a body has no rung above its
-   own master, and asking for one would 404 every frame. Venus tops out at
-   1800 however close the camera gets.
+   clamped to what the body actually ships — a body has no rung above its own
+   master, and asking for one would 404 every frame. Venus tops out at 1800
+   however close the camera gets.
 2. **Lead the swap.** Move up at `TEXTURE_TIER_LEAD` (0.75) of the resident
-   width, before the resident rung is actually outgrown. This is the rule
-   that preserves the guarantee: waiting until the demand exceeds the
-   resident width means the map is already soft at the moment the fetch
-   *starts*, and its arrival then reads as a visible sharpening pop.
-3. **Never downgrade.** Flying away, a narrower map would spend an upload to
-   make the image worse. One-way ratcheting also makes thrash structurally
-   impossible, which is why there is no matching down-hysteresis — release
-   belongs to eviction, not to selection.
+   width, before the resident rung is actually outgrown. This is the rule that
+   preserves the guarantee: waiting until the demand exceeds the resident
+   width means the map is already soft when the fetch *starts*, and its
+   arrival reads as a visible sharpening pop.
+3. **Hold across the band.** Between `TEXTURE_TIER_DROP` (0.30) and the lead
+   threshold, keep what is loaded. Most camera motion lives here and costs
+   nothing.
+4. **Drop when the body has shrunk well past it**, to the smallest rung at or
+   above `demand / TEXTURE_TIER_LEAD`.
+
+**Rule 4 replaced a never-downgrade ratchet, and the ratchet was wrong.** Two
+reasons. It is not a quality trade: rule 1 says the smallest rung at or above
+the demand is *sufficient*, so anything above it is memory the screen cannot
+show. And it is the cheap direction — an 8192 → 1024 drop uploads 2.8 MB to
+free 176 MB, where the reverse uploads 179 MB.
+
+What the ratchet actually cost was the one case the eviction budget below
+cannot reach. A body still on screen is stamped used every frame, so it is
+never an eviction candidate; under the ratchet it also never gave up whatever
+rung it once reached. Fly close to all eight planets and zoom out until each
+is 5 px and every one of them holds an 8192 it cannot use — **~1.4 GB that
+nothing is able to reclaim.**
+
+**Dividing by the lead on the way down is what makes it safe.** It puts the
+landing rung far enough under its own upgrade threshold that rule 2 cannot
+fire again, so the pair is a fixed point rather than an oscillator — the test
+iterates the selector against its own output at ten demands and asserts it
+settles without revisiting a width.
 
 A rung is promoted to *drawn* only once it is fully resident — decoded,
 uploaded, mips built. Swapping on first byte shows a frame of black or
@@ -98,11 +118,11 @@ session length rather than in what is on screen: visiting the Moon, Earth and
 Mars held ~980 MB of colour and relief until the layer was torn down. Two
 mechanisms fix that, and they answer different questions.
 
-**Superseded rungs go on promotion.** Once a body draws its 8192, selection
-will never ask that body for its 2048 again — rule 3 above is one-way — so
-every narrower rung is dead the moment the wider one is drawn. Freeing them
-there rather than waiting for pressure takes a body from 237.7 MB back to the
-179.0 MB it actually uses.
+**A body keeps exactly one rung.** Every other rung it holds is freed the
+moment a new one is drawn — narrower ones because the demand outgrew them,
+wider ones because rule 4 only drops after the body shrank well past them.
+Freeing both there rather than waiting for pressure is what keeps resident
+memory tracking demand instead of the session's high-water mark.
 
 **Everything else goes on a budget.** `TEXTURE_VRAM_BUDGET_BYTES` (512 MB)
 bounds the resident set; over it, maps are released least-recently-drawn

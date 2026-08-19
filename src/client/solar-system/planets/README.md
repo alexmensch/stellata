@@ -391,13 +391,15 @@ crossfade.
 
 `textures/` — each body ships a ladder of map widths and the renderer holds
 the smallest rung its display can resolve, from
-`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap, never
-downgrade; every rung of a body shares one build-measured mean luminance, or
-a tier swap would step the disc's brightness.
+`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap up, hold
+across a dead band, drop once the body has shrunk well past what it holds;
+every rung shares one build-measured mean luminance, or a swap would step the
+disc's brightness.
 
 **Maps are released, which the ladder makes mandatory rather than tidy** — an
-8192 map is 179 MB resident against a 2048's 11 MB. Superseded rungs go on
-promotion; the rest rides a least-recently-drawn budget. Its own README.
+8192 map is 179 MB against a 2048's 11 MB. A body keeps exactly one rung; the
+rest rides a least-recently-drawn budget. Dropping matters most for a body
+still ON screen but small — used every frame, so beyond that budget's reach.
 
 ### Surface relief
 

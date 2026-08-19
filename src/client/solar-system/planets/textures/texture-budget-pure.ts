@@ -75,17 +75,22 @@ export function evictionOrder(
 }
 
 /**
- * Rungs of one body superseded by `shownWidth` — every narrower rung it
- * still holds.
+ * Rungs of one body to release once `shownWidth` is the one drawn — every
+ * other rung it holds, narrower OR wider.
  *
- * Freed as soon as the wider one is drawn rather than waiting for budget
- * pressure, because selection never downgrades: once a body is showing its
- * 8192 map, nothing will ask that body for its 2048 again. Holding the whole
- * ladder costs a third more than the top rung alone and buys nothing.
+ * A body keeps exactly one ready colour rung. Narrower ones are dead because
+ * the demand has outgrown them; wider ones are dead because selection only
+ * ever drops after the body has shrunk well past them (the hysteresis band in
+ * `texture-ladder.ts`), so they are memory the screen cannot show. Freeing
+ * both here rather than waiting for budget pressure is what keeps resident
+ * memory tracking demand instead of tracking the session's high-water mark.
+ *
+ * A rung still LOADING is not resident and so is not passed in — the swap
+ * only happens once its replacement is fully uploaded.
  */
-export function supersededRungs(
+export function otherRungs(
   residentWidths: readonly number[],
   shownWidth: number,
 ): number[] {
-  return residentWidths.filter((w) => w < shownWidth);
+  return residentWidths.filter((w) => w !== shownWidth);
 }
