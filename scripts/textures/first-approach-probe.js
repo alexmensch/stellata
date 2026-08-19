@@ -1,15 +1,6 @@
-// Console probe for stellata-2f6.32: does the first-approach texture upload
-// and shader link actually cost a visible frame gap?
-//
-// Paste into the DevTools console on a FRESH page load, before flying
-// anywhere, then run one Voyager 2 flythrough past the four giants and call
-// __approachProbe.report(). Manual only — the WebGL render loop holds the GPU
-// and headless capture stalls on readback (bd: stellata-smoke-tests).
-//
-// It wraps the GL entry points the bead is actually about, so a slow frame is
-// attributed rather than guessed at: the decode already runs off-thread
-// through ImageBitmapLoader, so what can still block the render thread is the
-// upload, the mipmap chain, and the program link.
+// Console probe attributing a first approach's slow frames to the GL work in
+// them — upload, mipmap chain, program link, or a readback stalling on a
+// fence. Paste into DevTools on a fresh load; see README.md for what it settles.
 (() => {
   const proto = WebGL2RenderingContext.prototype;
   if (proto.__approachProbeInstalled) {
@@ -35,7 +26,7 @@
   };
 
   const zero = () => ({
-    upload: 0, mipmap: 0, link: 0, readback: 0, sync: 0, n: 0, bytes: 0,
+    upload: 0, mipmap: 0, link: 0, readback: 0, sync: 0, n: 0,
     // Uploads counted SEPARATELY from n. n is every wrapped call of any
     // bucket, so it cannot answer the only question the upload-rate cap turns
     // on: how many TEXTURES landed in this one frame. Widths name them.
@@ -53,13 +44,12 @@
         const out = orig.apply(this, args);
         live[bucket] += performance.now() - t0;
         live.n++;
-        // Source dimensions where the call carries them, so an 8192 rung is
-        // distinguishable from a 1024 one in the log.
-        const src = args[args.length - 1];
-        const w = src && typeof src === 'object' ? src.width : 0;
-        if (w) live.bytes = Math.max(live.bytes, w);
         if (bucket === 'upload') {
           live.uploads++;
+          // Source width where the call carries it, so an 8192 rung is
+          // distinguishable from a 1024 one in the log.
+          const src = args[args.length - 1];
+          const w = src && typeof src === 'object' ? src.width : 0;
           if (w) live.widths.push(w);
         }
         return out;
