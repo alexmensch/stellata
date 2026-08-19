@@ -27,6 +27,11 @@ export interface PhaseCoefficients {
 const LOG10 = Math.log(10);
 const RAD_TO_DEG = 180 / Math.PI;
 
+/** ΔV magnitudes → flux ratio, 10^(−ΔV/2.5). */
+export function magToFlux(deltaMag: number): number {
+  return Math.exp(-deltaMag * 0.4 * LOG10);
+}
+
 /** Lambertian (perfectly diffuse sphere) phase factor — the default
  *  fallback when no empirical curve is published for a body. Clamps α
  *  to [0, π] defensively. */
@@ -66,29 +71,26 @@ export function empiricalPhaseFactor(
   const a = Math.max(0, Math.min(Math.PI, alphaRad));
   const aDeg = a * RAD_TO_DEG;
   if (aDeg <= coefs.alphaMaxDeg) {
-    return Math.exp(-phaseDV(coefs, aDeg) * 0.4 * LOG10);
+    return magToFlux(phaseDV(coefs, aDeg));
   }
   // Past αmax: anchor-scaled Lambert. k folds the empirical-vs-Lambert
   // ratio at the boundary into a single multiplier.
-  const boundaryFlux = Math.exp(-phaseDV(coefs, coefs.alphaMaxDeg) * 0.4 * LOG10);
+  const boundaryFlux = magToFlux(phaseDV(coefs, coefs.alphaMaxDeg));
   const boundaryLambert = lambertianPhaseFactor(coefs.alphaMaxDeg / RAD_TO_DEG);
   return lambertianPhaseFactor(a) * (boundaryFlux / boundaryLambert);
 }
 
-/** Phase-factor flux multiplier at α = 0 — i.e. `10^(−c0/2.5)`. Drives
- *  the per-host visibility cull (see `cullDistancePc` in
- *  `planet-body-field.ts`). Every globe curve is albedo-anchored, so
- *  this is 1 for every body; the cull's one non-unit term is Saturn's
- *  ring system, which enters through `maxRingSystemFluxFactor` instead.
+/** Phase-factor flux multiplier at α = 0, `10^(−c0/2.5)` — a guard in the
+ *  per-host cull proxy (`cullDistancePc`) against a future curve that is
+ *  not albedo-anchored. Exactly 1 for every shipped body, pinned by the
+ *  c0 = 0 assertion in this module's test.
  *
- *  The α=0 framing is deliberate, not a proxy for the polynomial's
- *  maximum: for Venus the true polynomial peak sits ~3° above zero,
- *  ~0.1% above φ(0). The cull stays a conservative outer bound — at
- *  any α the actual flux is ≤ this value plus that sub-millimagnitude
- *  Venus margin — so the α=0 reading is what the cache wants. */
+ *  Reading the cull at α = 0 rather than at the polynomial's true maximum
+ *  still bounds it: Venus's peak sits ~3° off zero and only ~0.1% above
+ *  φ(0). */
 export function alphaZeroPhaseFactor(coefs: PhaseCoefficients | undefined): number {
   if (!coefs || coefs.alphaMaxDeg <= 0) return 1;
-  return Math.exp(-coefs.c0 * 0.4 * LOG10);
+  return magToFlux(coefs.c0);
 }
 
 /**
