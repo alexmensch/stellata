@@ -70,10 +70,35 @@ layer taps them without any writer learning about the port:
   cannot share the object. `StarLayer` version-watches each source
   attribute from the glow mesh's `onBeforeRender` and re-packs the
   changed component; watcher sentinels start at -1 so the first rendered
-  frame always packs. A dirty frame re-uploads the whole vec4 buffer
-  (4× the WebGL scalar upload) — the packing-era cost;
-  `instance_index`-indexed storage buffers supersede it after the
-  compute prepass.
+  frame always packs.
+
+### What a dirty frame costs, and which writer decides
+
+Two paths, picked by whether the writer reported three.js update ranges:
+
+- **Ranged** — the writer named the slots it touched
+  (`BinaryOrbitField`'s `DirtyItemUploader`, `util/README.md`
+  § attribute-upload). The layer re-packs those items only and adds the
+  matching `iDyn0` element ranges, so a sub-pixel binary flip costs a
+  handful of floats. The layer also **clears the source's range list** —
+  on a WebGPU boot the WebGL geometry never renders, so no renderer
+  consumes them and they would otherwise accumulate to
+  `MAX_PARTIAL_RANGES` and collapse into a full upload.
+- **Whole-buffer** — a bare `needsUpdate`, which is what
+  `EclipsePhotometryField` and the shell's re-attach inits set. Costs a
+  313k-iteration re-pack on the CPU plus a **5.0 MB** `writeBuffer`
+  (313k × vec4 × 4 B), against 1.25 MB for the WebGL scalar it replaces.
+  During an active eclipse that is **every frame**: ~300 MB/s of upload
+  traffic at 60 Hz, which on a low-end integrated or mobile GPU sharing
+  system memory with the display is the kind of figure that shows up in
+  the frame time. Ranges would remove it — `EclipsePhotometryField`
+  already knows which slots it touched — and that is `stellata-apkh`,
+  which improves the WebGL path in the same move.
+
+Neither figure is measured; both are byte counts, not `gpu.frame`
+differentials. Pricing the eclipse frame belongs to the perf program
+(`stellata-8cg`). `instance_index`-indexed storage buffers supersede
+packing entirely after the compute prepass.
 
 ## Suppression semantics carried by the glow specialization
 

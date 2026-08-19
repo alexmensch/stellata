@@ -66,15 +66,51 @@ describe('StarLayer', () => {
     expect((dyn.array as Float32Array)[2 * 4 + 1]).toBe(1);
   });
 
-  it('dispose removes the mesh and releases geometry + material', () => {
+  it('re-packs and uploads only the slots a ranged source reports', () => {
+    const { layer, sources } = makeLayer(8);
+    sync(layer);
+    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
+    dyn.clearUpdateRanges();
+    const src = sources.iEclipseDimAttr;
+    (src.array as Float32Array)[5] = 0.5;
+    src.addUpdateRange(5, 1);
+    src.needsUpdate = true;
+    sync(layer);
+    expect((dyn.array as Float32Array)[5 * 4 + 1]).toBe(0.5);
+    // iEclipseDim is iDyn0.y, so the range spans instance 5's whole vec4.
+    expect(dyn.updateRanges).toEqual([{ start: 20, count: 4 }]);
+    // Consumed, or they accumulate to the uploader's cap unnoticed.
+    expect(src.updateRanges).toHaveLength(0);
+  });
+
+  it('a full pass on the same buffer discards ranges — three honours ranges over the array', () => {
+    const { layer, sources } = makeLayer(8);
+    sync(layer);
+    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
+    dyn.clearUpdateRanges();
+    (sources.iEclipseDimAttr.array as Float32Array)[5] = 0.5;
+    sources.iEclipseDimAttr.addUpdateRange(5, 1);
+    sources.iEclipseDimAttr.needsUpdate = true;
+    (sources.iCompositeSuppressAttr.array as Float32Array)[7] = 1;
+    sources.iCompositeSuppressAttr.needsUpdate = true; // no ranges → full
+    sync(layer);
+    expect((dyn.array as Float32Array)[5 * 4 + 1]).toBe(0.5);
+    expect((dyn.array as Float32Array)[7 * 4 + 0]).toBe(1);
+    expect(dyn.updateRanges).toHaveLength(0);
+  });
+
+  it('dispose removes the mesh and releases geometry, material, and the LUT', () => {
     const { scene, layer } = makeLayer();
-    const geometry = layer.glowMesh.geometry;
-    const material = layer.glowMesh.material as THREE.Material;
-    let geomDisposed = false;
-    geometry.addEventListener('dispose', () => { geomDisposed = true; });
+    const disposed = new Set<string>();
+    const watch = (
+      o: { addEventListener(type: 'dispose', listener: () => void): void },
+      tag: string,
+    ) => o.addEventListener('dispose', () => { disposed.add(tag); });
+    watch(layer.glowMesh.geometry, 'geometry');
+    watch(layer.glowMesh.material as THREE.Material, 'material');
+    watch(layer.colorLut, 'lut');
     layer.dispose();
     expect(scene.children).not.toContain(layer.glowMesh);
-    expect(geomDisposed).toBe(true);
-    expect(material.name).toBe('star-glow-tsl');
+    expect([...disposed].sort()).toEqual(['geometry', 'lut', 'material']);
   });
 });
