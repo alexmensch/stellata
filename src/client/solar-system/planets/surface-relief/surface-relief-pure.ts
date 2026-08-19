@@ -27,10 +27,21 @@ export const RELIEF_ELEV_SPAN_M: Readonly<
   moon: [-9110, 10760],
   mercury: [-5380, 4480],
   mars: [-8200, 21230],
+  // Earth's floor is the SEA surface, not the seabed — its DEM is clamped to
+  // >= 0 at the reduction, because over water that is what is visible.
+  earth: [0, 8354],
 };
 
 const limbSin = (groundRadiusM: number, summitRadiusM: number): number =>
   Math.sqrt(Math.max(0, 1 - (groundRadiusM / summitRadiusM) ** 2));
+
+/** Floor on the taper band's width, in the same sine units. The shader feeds
+ *  the pair straight to `smoothstep`, which is UNDEFINED when its two edges
+ *  coincide — and they do on a body whose DEM floor is its reference sphere,
+ *  since there is then no basin for a summit to stand over. Earth is that
+ *  body: its elevations are clamped at the sea surface. Matches the 1e-4 the
+ *  terminator's own smoothstep uses to keep the airless case a hard cut. */
+const BAND_EPS = 1e-4;
 
 /**
  * How far past the geometric terminator ground on the body can still see the
@@ -53,6 +64,23 @@ export function reliefHorizonSines(
     limbSin(referenceM, summitM),
     limbSin(referenceM + span[0], summitM),
   ];
+}
+
+/**
+ * The same pair as the shader's `uReliefHorizon`, with the taper band widened
+ * to `BAND_EPS` if it would otherwise be empty.
+ *
+ * Kept separate from `reliefHorizonSines` so that stays exactly the geometry:
+ * its `none` IS `sin(arccos(r_floor / r_summit))`, the identity the horizon
+ * precompute's search arc is pinned against, and widening it there would quietly
+ * make the fallback bound stop being the distance the precompute searches.
+ */
+export function reliefHorizonUniform(
+  span: readonly [number, number],
+  radiusKm: number,
+): [number, number] {
+  const [full, none] = reliefHorizonSines(span, radiusKm);
+  return [full, Math.max(none, full + BAND_EPS)];
 }
 
 type Vec3 = readonly [number, number, number];
@@ -87,7 +115,7 @@ export function tangentFrame(
  * map, all in one consistent frame (view space in the shader). `pole` is
  * the body's north pole; `enc` is the texel's raw R,G in [0, 1], carrying
  * the map's (+x east, +y north, +z out) frame —
- * `data/textures/README.md` § Surface relief.
+ * `data/textures/relief/README.md` § Surface relief.
  */
 export function reliefNormal(
   n: Vec3,

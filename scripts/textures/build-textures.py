@@ -9,7 +9,13 @@ from PIL import Image, ImageFilter, ImageStat
 
 from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
 from horizon_map import horizon_maps
-from texture_calibration import COLOUR_INDICES, LUMA, calibrate
+from texture_calibration import (
+    COLOUR_INDICES,
+    LUMA,
+    calibrate,
+    sphere_mean_linear,
+)
+from texture_ladder import rungs_for
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -18,13 +24,18 @@ ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "data" / "textures" / "src"
 OUT = ROOT / "data" / "textures"
 MANIFEST = OUT / "calibration.json"
-RELIEF_MANIFEST = OUT / "relief.json"
+RELIEF = OUT / "relief"
+RELIEF_MANIFEST = RELIEF / "relief.json"
+LADDER_MODULE = (
+    ROOT / "src" / "client" / "solar-system" / "planets" / "textures"
+    / "texture-ladder-generated.ts"
+)
 SCRIPT = Path(__file__)
 CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
 RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
 HORIZON_SCRIPT = SCRIPT.parent / "horizon_map.py"
+LADDER_SCRIPT = SCRIPT.parent / "texture_ladder.py"
 
-TARGET_W = 2048
 JPEG_QUALITY = 82
 
 # body artifact name -> source file. Uranus and its five moons are
@@ -35,13 +46,13 @@ JPEG_QUALITY = 82
 BODIES = {
     "mercury": "mercury-pia15063.jpg",
     "venus": "venus-bjj.jpg",
-    "earth": "earth-blue-marble-2002.jpg",
+    "earth": "earth-bmng-200404.jpg",
     "mars": "mars-viking-mdim21.jpg",
     "jupiter": "jupiter-pia07782.jpg",
     "saturn": "saturn-bjj.jpg",
     "neptune": "neptune-bjj.jpg",
     "pluto": "pluto-pia11707.jpg",
-    "moon": "moon-lroc-svs.tif",
+    "moon": "moon-lroc-svs.jpg",
     "io": "io-usgs-clrmerge.jpg",
     "europa": "europa-usgs-global.jpg",
     "ganymede": "ganymede-usgs-clr.jpg",
@@ -117,9 +128,12 @@ GAP_LUMINANCE = {
     "triton": 10,
 }
 
-# Feather radius (px at artifact scale) blending the gap fill into the
-# surrounding imagery.
-GAP_FEATHER_PX = 10
+# Feather blending the gap fill into the surrounding imagery, as a
+# FRACTION of map width — the fill now happens once at the body's top
+# rung, so a pixel count would feather four times more narrowly on an
+# 8192 body than a 2048 one and the boundary would harden as a body
+# gained rungs. 10 px at the old fixed 2048 width.
+GAP_FEATHER_FRAC = 10 / 2048
 
 RINGS_COLOR = "rings-color-bjj.txt"
 RINGS_TRANSPARENCY = "rings-transparency-bjj.txt"
@@ -180,7 +194,7 @@ def fill_gap(im: Image.Image, threshold: int) -> Image.Image:
     mean = ImageStat.Stat(rgb, mask=imaged).mean
     solid = Image.new("RGB", rgb.size, tuple(round(c) for c in mean))
     gap = lum.point(lambda v: 255 if v < threshold else 0)
-    feather = gap.filter(ImageFilter.GaussianBlur(GAP_FEATHER_PX))
+    feather = gap.filter(ImageFilter.GaussianBlur(im.width * GAP_FEATHER_FRAC))
     return Image.composite(solid, rgb, feather)
 
 
@@ -189,16 +203,24 @@ def desaturate(im: Image.Image, strength: float) -> Image.Image:
     return Image.blend(im.convert("RGB"), im.convert("L").convert("RGB"), strength)
 
 
-def build_body(name: str, src_name: str, manifest: dict) -> None:
+def build_body(name: str, src_name: str, manifest: dict, ladder: dict) -> None:
     src_path = SRC / src_name
-    out_path = OUT / f"{name}.jpg"
-    if up_to_date(out_path, src_path, CALIB_SCRIPT):
-        print(f"  {name}: up to date")
+    with Image.open(src_path) as probe:
+        rungs = rungs_for(probe.width)
+    outs = [OUT / f"{name}-{w}.jpg" for w in rungs]
+    if all(up_to_date(p, src_path, CALIB_SCRIPT, LADDER_SCRIPT) for p in outs):
+        print(f"  {name}: up to date ({len(rungs)} rungs)")
+        ladder[name] = ladder_row(name, rungs)
         return
     im = Image.open(src_path)
-    if im.width > TARGET_W:
-        h = round(im.height * TARGET_W / im.width)
-        im = im.resize((TARGET_W, h), Image.LANCZOS)
+    # Every treatment runs ONCE, at the top rung, and the narrower rungs are
+    # resampled from the result. Treating each rung separately would let the
+    # sphere-weighted mean each one measures differ, and the mean is what the
+    # renderer divides its surface luminance by — so a tier swap would step
+    # in brightness on a body whose magnitude is physically pinned.
+    top = rungs[-1]
+    if im.width != top:
+        im = im.resize((top, round(im.height * top / im.width)), Image.LANCZOS)
     if im.mode not in ("RGB", "L"):
         im = im.convert("RGB")
     # Per-body treatments — rationale in data/textures/README.md
@@ -217,15 +239,36 @@ def build_body(name: str, src_name: str, manifest: dict) -> None:
         im = desaturate(im, DESATURATE[name])
     if name in GAP_LUMINANCE:
         im = fill_gap(im, GAP_LUMINANCE[name])
-    im.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
-    kb = out_path.stat().st_size // 1024
-    print(f"  {name}: {im.width}x{im.height} {im.mode} -> {kb} KB")
+    for w, out_path in zip(rungs, outs):
+        rung = im if w == top else im.resize(
+            (w, round(im.height * w / im.width)), Image.LANCZOS
+        )
+        rung.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
+    ladder[name] = ladder_row(name, rungs)
+    kb = sum(p.stat().st_size for p in outs) // 1024
+    print(
+        f"  {name}: {im.mode} {'/'.join(str(w) for w in rungs)} -> {kb} KB "
+        f"(mean L {ladder[name]['meanLuminance']})"
+    )
+
+
+def ladder_row(name: str, rungs: tuple[int, ...]) -> dict:
+    """The body's manifest row, measured off the SAVED top rung rather than
+    the in-memory image it came from. Two things follow: the number is the
+    same whether or not this run rebuilt the artifact, and it is the mean of
+    the bytes the browser actually decodes, JPEG quantisation included."""
+    with Image.open(OUT / f"{name}-{rungs[-1]}.jpg") as top:
+        mean = sphere_mean_linear(top, None)
+    return {
+        "rungs": list(rungs),
+        "meanLuminance": round(sum(k * c for k, c in zip(LUMA, mean)), 6),
+    }
 
 
 def build_normal_map(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
-    out_path = OUT / f"{name}-normal.webp"
+    out_path = RELIEF / f"{name}-normal.webp"
     assert name in BODIES, f"{name} ships relief without a colour map"
     assert name not in FLIP_HORIZONTAL, (
         f"{name}'s colour map is mirrored at build but its DEM is not — "
@@ -239,7 +282,8 @@ def build_normal_map(name: str, relief: dict) -> None:
     # separate up-to-date gates, so either can be skipped while the other runs.
     relief.setdefault(name, {}).update(stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
-    # tilt on the Moon, which is most of the signal (README.md § Surface relief).
+    # tilt on the Moon, which is most of the signal
+    # (data/textures/relief/README.md § Surface relief).
     Image.fromarray(rgb).save(out_path, "WEBP", lossless=True, method=6)
     kb = out_path.stat().st_size // 1024
     print(
@@ -252,7 +296,7 @@ def build_normal_map(name: str, relief: dict) -> None:
 def build_horizon_map(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
-    outs = [OUT / f"{name}-horizon-{half}.webp" for half in "ab"]
+    outs = [RELIEF / f"{name}-horizon-{half}.webp" for half in "ab"]
     if all(up_to_date(p, src_path, HORIZON_SCRIPT, RELIEF_SCRIPT) for p in outs):
         print(f"  {name}-horizon: up to date")
         return
@@ -352,17 +396,60 @@ def build_ring_table(body: str, spec: dict) -> None:
     save_strip(out_path, [spec["rgb"]] * RINGS_W, alpha)
 
 
+def write_ladder_module(ladder: dict) -> None:
+    """Emit the renderer's copy of the ladder. Generated rather than fetched
+    because tier selection has to answer before the first map is requested —
+    a manifest arriving over the wire would leave the first approach picking
+    a rung it cannot yet know exists. Its hand-written wrapper is
+    `texture-ladder.ts` beside it."""
+    rows = "".join(
+        f"  {name}: {{ rungs: [{', '.join(str(w) for w in row['rungs'])}], "
+        f"meanLuminance: {row['meanLuminance']} }},\n"
+        for name, row in sorted(ladder.items())
+    )
+    LADDER_MODULE.write_text(
+        "// AUTO-GENERATED by scripts/textures/build-textures.py — do not edit.\n"
+        "// Per-body texture rungs and the one mean luminance every rung of a\n"
+        "// body shares (data/textures/README.md § Size ladder).\n\n"
+        "export interface TextureLadderRow {\n"
+        "  /** Widths this body ships, ascending; the last is its master. */\n"
+        "  readonly rungs: readonly number[];\n"
+        "  /** Sphere-weighted mean linear luminance of the top rung. */\n"
+        "  readonly meanLuminance: number;\n"
+        "}\n\n"
+        "export const TEXTURE_LADDER: Readonly<Record<string, TextureLadderRow>> = {\n"
+        f"{rows}"
+        "};\n"
+    )
+    print(f"  wrote {LADDER_MODULE.relative_to(ROOT)}")
+
+
+def prune_stale_rungs(ladder: dict) -> None:
+    """Delete colour artifacts the ladder no longer claims. A rung that stops
+    being built otherwise stays on disk, ships, and — because selection clamps
+    to what the manifest lists — becomes a file nothing ever requests. This
+    also clears the pre-ladder flat `<body>.jpg` names on the first run."""
+    live = {f"{n}-{w}.jpg" for n, row in ladder.items() for w in row["rungs"]}
+    for path in sorted(OUT.glob("*.jpg")):
+        if path.name not in live:
+            path.unlink()
+            print(f"  pruned {path.name}")
+
+
 def main() -> None:
     print("building planet texture artifacts:")
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
+    ladder: dict = {}
     for name, src_name in BODIES.items():
-        build_body(name, src_name, manifest)
+        build_body(name, src_name, manifest, ladder)
     # Drop rows for bodies no longer built + calibrated, so a removed body
     # can't leave a stale entry across incremental (up-to-date) runs.
     calibrated = {name for name in BODIES if name in COLOUR_INDICES}
     for stale in manifest.keys() - calibrated:
         del manifest[stale]
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    write_ladder_module(ladder)
+    prune_stale_rungs(ladder)
     relief = json.loads(RELIEF_MANIFEST.read_text()) if RELIEF_MANIFEST.exists() else {}
     for name in DEM_BODIES:
         build_normal_map(name, relief)
@@ -375,7 +462,7 @@ def main() -> None:
         build_ring_table(body, spec)
     total = sum(
         p.stat().st_size
-        for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"), *OUT.glob("*.webp"))
+        for p in (*OUT.glob("*.jpg"), *OUT.glob("*-rings.png"), *RELIEF.glob("*.webp"))
     )
     print(f"total artifact size: {total / 1e6:.2f} MB")
 

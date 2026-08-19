@@ -72,6 +72,12 @@ need the same thing — single-use helpers stay with their consumer.
   up-to-date files; **allowlist**, never denylist, because Vite copies
   `public/` wholesale — anything left in the destination ships, so the
   mirror also purges non-allowlisted strays a previous sync left behind.
+  `flattenSubDirs` copies named subfolders of the source into the same
+  flat destination, which is how a data folder groups big artifacts at
+  rest without moving them in `public/` — so no consumer URL changes when
+  it does (`data/textures/relief/`). Names must stay unique across all of
+  them: the allowlist is by name, and the purge pass cannot tell two
+  same-named files apart.
   `tests/bundle-content.test.ts` asserts the built tree against the same
   predicates. The single-file copies (`sync-local-bubble.ts`,
   `sync-cloud-surfaces.ts`) are a different shape and stay standalone.

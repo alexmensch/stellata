@@ -18,8 +18,8 @@ const table = readFileSync(README, 'utf8')
 /** Rows in the table, and rows naming a file this module can read a header
  *  out of. Both are pinned: the difference is the silent-coverage-loss gap —
  *  four authored ring tables carry no image to check. */
-const ROW_COUNT = 28;
-const IMAGE_ROW_COUNT = 24;
+const ROW_COUNT = 29;
+const IMAGE_ROW_COUNT = 25;
 const READABLE = /\.(jpg|tif|webp)$/;
 /** Extensions a row may carry without an image header. Anything else is a
  *  new source type that would drop out of coverage unannounced. */

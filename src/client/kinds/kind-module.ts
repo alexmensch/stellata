@@ -24,6 +24,13 @@ export interface KindContext {
    *  magnitude bounds, HDR slots), held by reference. Modules narrow to
    *  the slots they consume. */
   readonly sharedUniforms: SharedUniforms;
+  /** Widest texture the active renderer will accept, in texels. A device
+   *  constant, so the shell reads it once off the renderer's capabilities
+   *  rather than every layer probing a GL context of its own — which the
+   *  WebGPU boot path would not answer. WebGL2 only guarantees 2048, so any
+   *  layer sizing a texture from the viewport has to clamp against it: an
+   *  oversized upload fails and leaves the body on its placeholder. */
+  readonly maxTextureSize: number;
   readonly solIndex: number;
   /** Sol's absolute catalog position into `out`; false with no Sol row.
    *  Distinct from `-worldOffset`: Sol's catalog record sits ~1 AU off

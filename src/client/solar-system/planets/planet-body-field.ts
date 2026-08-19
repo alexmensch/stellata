@@ -54,6 +54,8 @@ import {
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { parentIndexOf } from '../ephemerides/orbit-descriptor';
+import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
+import { relativeLuminance } from '../../hdr/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './glare/planet.vert.glsl?raw';
 import planetFrag from './glare/planet.frag.glsl?raw';
@@ -228,6 +230,7 @@ export class PlanetBodyField {
   // Grown, shifted, and written in lockstep with bufs.localRel.
   private localRel64!: Float64Array;
   private dimTargets = new Map<number, number>();
+  private readonly tmpUmbraGlow: [number, number, number] = [0, 0, 0];
   private dimActive = new Set<number>();
   private lastDimNowMs: number | null = null;
   // Reverse index: flat instance → owning hostStarIdx (-1 = unused
@@ -506,10 +509,55 @@ export class PlanetBodyField {
         );
         if (shadow.front === 'secondary' && shadow.dim < 1) {
           dim *= shadow.dim;
+          // A FULL eclipse writes exactly 0 and the vertex shader collapses
+          // the quad — correct for an airless caster, and wrong for one with
+          // an atmosphere, which refracts sunlight into its own umbra. Without
+          // this floor a totally eclipsed Moon vanishes outright at billboard
+          // range and takes its label with it, where the resolved mesh draws
+          // it coppery red (eclipses/README.md § Umbral glow).
+          const glow = this.umbralGlowFraction(host, idx, parentIdx);
+          if (glow > dim) dim = glow;
         }
       }
       if (dim < 1) this.dimTargets.set(idx, dim);
     }
+  }
+
+  /** Luminance fraction of direct host light that refracted sunlight puts on
+   *  a moon inside its parent's umbra — 0 when the parent has no atmosphere
+   *  to refract through. The glare is a single point, so this is the disc
+   *  mean rather than the mesh's per-fragment vec3. */
+  private umbralGlowFraction(
+    host: AttachedHost,
+    idx: number,
+    parentIdx: number,
+  ): number {
+    const parent = host.ps.planets[parentIdx];
+    if (!parent.atmosphere) return 0;
+    const base = idx * 3;
+    const pBase = (host.startInstance + parentIdx) * 3;
+    // Host sits at the local frame's origin, so the body's own position IS
+    // its host offset.
+    const mx = this.localRel64[base + 0];
+    const my = this.localRel64[base + 1];
+    const mz = this.localRel64[base + 2];
+    const dHost = Math.hypot(mx, my, mz);
+    const px = this.localRel64[pBase + 0] - mx;
+    const py = this.localRel64[pBase + 1] - my;
+    const pz = this.localRel64[pBase + 2] - mz;
+    const dParent = Math.hypot(px, py, pz);
+    if (dHost <= 0 || dParent <= 0) return 0;
+    const hostAngRad = host.hostRadiusPc / dHost;
+    const depth = umbralDepthFromOffsets(
+      px, py, pz, dParent,
+      -mx / dHost, -my / dHost, -mz / dHost,
+      this.bufs.radius[host.startInstance + parentIdx], hostAngRad,
+    );
+    const glow = umbralGlow(
+      parent.atmosphere, parent.radiusKm, dParent / KM_PC,
+      hostAngRad, depth, this.tmpUmbraGlow,
+    );
+    return relativeLuminance(glow);
   }
 
   /** Current eclipse-dim slot for a flat instance (1 = undimmed). */

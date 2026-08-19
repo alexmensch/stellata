@@ -4,6 +4,7 @@ dist/
 .vite/
 .claude/*
 !.claude/settings.json
+!.claude/skills/
 .DS_Store
 *.log
 # Root-anchored: vitest writes ./coverage, and an unanchored rule silently
