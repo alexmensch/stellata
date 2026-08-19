@@ -157,3 +157,35 @@ the newest frame's total — earlier frames' passes are dropped, not summed
 into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
+
+### Watching the raw sample stream
+
+**The HUD cannot show you this.** The panel displays the ring's *average*,
+so neither the arrival rate nor a run of repeated values is visible in it —
+and the coalescing bug above is only ever visible as repeats. Subscribe
+instead. On the dev server the module URL is the one the app itself
+imported, so a dynamic import returns the same instance and the same
+subscriber list rather than a second copy of the channel:
+
+```js
+const { onGpuFrameSample } = await import('/debug/gpu-timing/gpu-frame-samples.ts');
+const seen = [];
+const off = onGpuFrameSample((ms) => seen.push(ms));
+setTimeout(() => {
+  off();
+  const dupes = seen.filter((v, i) => i > 0 && v === seen[i - 1]).length;
+  console.log(`${seen.length} samples, ${dupes} adjacent duplicates`);
+  console.log(seen.map((v) => v.toFixed(3)).join(' '));
+}, 5000);
+```
+
+Keep frames coming for the window — the render gate skips ticks where
+nothing invalidated the frame (`../../render-gate/README.md`), and a still
+camera over a paused clock produces no samples at all because it produces no
+frames. An open debug panel holds the gate open, which is the easy way.
+
+Expect **zero adjacent duplicates** and appreciably fewer samples than
+rendered frames. Duplicates are bit-identical when they occur (it is
+literally the same resolved number handed to k callers), so exact equality
+is the right test and no tolerance is wanted. A count approaching one per
+rendered frame *with* duplicates is the in-flight guard regressed.
