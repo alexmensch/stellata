@@ -25,8 +25,9 @@ export const srgbEncodeTsl = /* @__PURE__ */ Fn(([c]: [N3]) => {
 export const tonemapUnditheredTsl = /* @__PURE__ */ Fn(
   ([hdr, whitePoint, desat]: [N3, NF, NF]) => {
     const y = dot(hdr, lumaWeightsTsl());
-    // The GLSL's `y <= 0 → return black` early-out becomes a select over
-    // both branches, so the toe must stay finite at y = 0.
+    // The toe must stay finite at y = 0: it feeds the mapped branch, and
+    // TSL builds a node where it is first referenced rather than where the
+    // GLSL's early-out would have skipped it.
     const ySafe = max(y, 1e-9);
     const magsUnder = log2(float(L_THRESH).div(ySafe)).mul(MAG_PER_LOG2);
     const toe = select(

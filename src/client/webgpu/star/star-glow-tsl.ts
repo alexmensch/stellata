@@ -82,9 +82,8 @@ export function buildStarGlowMaterial(deps: StarGlowTslDeps): NodeMaterial {
       .or(self.equal(m1.x)).or(self.equal(m1.y))
       .or(self.equal(m1.z)).or(self.equal(m1.w));
     const eclipseDim = dyn('iEclipseDim');
-    // Glow collapses for the hidden focal star, for local-pass members
-    // (their mirror draws render instead), and at eclipse totality. The
-    // composite-suppress flag is disc/core-mask-only and never gates glow.
+    // Which flags collapse glow, and why iCompositeSuppress is absent:
+    // README.md § Suppression semantics.
     const suppressed = self.equal(u.uHideFocusIdx)
       .or(isMember)
       .or(eclipseDim.lessThanEqual(0.0));
@@ -110,8 +109,6 @@ export function buildStarGlowMaterial(deps: StarGlowTslDeps): NodeMaterial {
         ciMod.assign(puls.y.mul(-0.5).mul(c));
       });
 
-      // Partial eclipse dim, glow-only: fold into appMag before every
-      // size/brightness derivation (totality took the sentinel above).
       If(eclipseDim.lessThan(1.0), () => {
         appMag.addAssign(log(eclipseDim).mul(-2.5 / Math.LN10));
       });

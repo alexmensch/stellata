@@ -65,18 +65,13 @@ export class StarLayer {
     scene.add(this.glowMesh);
   }
 
-  /** Re-pack any per-frame scalar whose WebGL-side source attribute was
-   *  flagged since the last rendered frame. The writers (binary/eclipse
-   *  fields, the shell) keep writing the WebGL attributes and never learn
-   *  about the port; iPosition needs no watcher — it joins this geometry
-   *  by object identity.
+  /** Re-pack any per-frame scalar whose source attribute was flagged
+   *  since the last rendered frame (README.md § Dynamic attributes).
    *
-   *  A source reporting three.js update ranges is repacked and uploaded
-   *  over those slots only; one flagged with a bare `needsUpdate` takes
-   *  the whole-buffer pass. Ranges must lose to a full upload on the same
-   *  buffer in the same frame — three.js honours a non-empty range list
-   *  INSTEAD of the full array, so a range added beside a full pass would
-   *  drop every slot outside it. */
+   *  Load-bearing: ranges must lose to a full upload on the same buffer in
+   *  the same frame. three.js honours a non-empty range list INSTEAD of
+   *  the full array, so a range added beside a full pass would drop every
+   *  slot outside it. */
   private syncDynamicAttributes(): void {
     const fullPass = this.pendingFull;
     const ranged = this.pendingRanges;
