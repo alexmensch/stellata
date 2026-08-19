@@ -84,6 +84,16 @@ function makeDomStub(): {
   };
 }
 
+type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
+
+/** The headline's `gpu`/`submit` segment. Headline children are
+ *  [FPS text, low span, ' ', gpu span]; the production code writes through
+ *  typed refs precisely to avoid this walk, so it lives in one place. */
+function headlineBusyText(section: { element: unknown }): string {
+  const headline = (section.element as StubNode).children[0];
+  return headline.children[3].firstChild.nodeValue;
+}
+
 describe('perf-hud / install → dispose teardown', () => {
   let prevDoc: unknown;
   let perfNowSpy: ReturnType<typeof vi.spyOn>;
@@ -187,10 +197,7 @@ describe('perf-hud / install → dispose teardown', () => {
       frame();
     }
 
-    type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
-    const headline = (section.element as unknown as StubNode).children[0];
-    // Headline children: [FPS text, low span, ' ', gpu span].
-    expect(headline.children[3].firstChild.nodeValue).toBe('gpu 20.0ms');
+    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
 
     section.dispose();
   });
@@ -209,9 +216,27 @@ describe('perf-hud / install → dispose teardown', () => {
       frame();
     }
 
-    type StubNode = { children: StubNode[]; firstChild: { nodeValue: string } };
-    const headline = (section.element as unknown as StubNode).children[0];
-    expect(headline.children[3].firstChild.nodeValue).toBe('gpu 20.0ms');
+    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
+
+    section.dispose();
+  });
+
+  it('headline stays submit where no backend produces a whole-frame row', () => {
+    // Presence of `gpu.frame` is the ONLY gate. Nothing publishes here —
+    // a WebGPU adapter without timestamp-query, or WebGL2 Safari — so the
+    // headline must report CPU submission wall-time and say so, never sum
+    // the per-pass scopes into a number that can exceed the frame period.
+    let clock = 0;
+    perfNowSpy.mockImplementation(() => (clock += 100));
+    const section = buildPerfSection(null);
+
+    for (let f = 0; f < 6; f++) {
+      mark('submit.main');
+      measure('submit.main');
+      frame();
+    }
+
+    expect(headlineBusyText(section)).toBe('submit 100.0ms');
 
     section.dispose();
   });

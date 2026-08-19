@@ -393,20 +393,13 @@ function renderPanel(): void {
   // exceed the frame period. The whole-frame row is keyed the same on both
   // backends — a GL frame-scope query, or the WebGPU renderer's timestamp
   // resolve — so its presence, not which timer object exists, is what
-  // decides whether the headline can say `gpu` at all. Summing scopes is
-  // the fallback only when nothing registered the whole-frame scope.
+  // decides whether the headline can say `gpu` at all.
   const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
   let busyLabel = 'submit';
   let busyMs = 0;
   if (whole) {
     busyLabel = 'gpu';
     busyMs = summarize(whole).avg;
-  } else if (gpuTimer) {
-    busyLabel = 'gpu';
-    for (const scope of gpuTimer.scopeLabels()) {
-      const s = sections.get(`gpu.${scope}`);
-      if (s) busyMs += summarize(s).avg;
-    }
   } else {
     for (const [label, s] of sections) {
       if (label.startsWith('submit.')) busyMs += summarize(s).avg;
