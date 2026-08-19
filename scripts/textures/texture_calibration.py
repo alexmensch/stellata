@@ -2,6 +2,7 @@
 each map's sphere-weighted mean chromaticity onto the body's published
 disc-integrated colour (data/textures/README.md § Colour fidelity)."""
 
+import numpy as np
 from PIL import Image
 
 # Disc-integrated Johnson-Cousins colour indices (B−V, V−Rc) from the
@@ -51,38 +52,33 @@ def _linear_to_srgb(v: float) -> float:
 _LIN_LUT = [_srgb_to_linear(i / 255) for i in range(256)]
 
 
-def _sphere_mean_linear(im: Image.Image, gap_threshold: int | None) -> list[float]:
+def sphere_mean_linear(im: Image.Image, gap_threshold: int | None) -> list[float]:
     """Per-channel linear mean over the map as a SPHERE: rows weighted by
     cos(latitude) so the equirect grid's polar oversampling doesn't bias
     the mean. Near-black no-data pixels (below `gap_threshold` luminance)
-    are excluded — they are data gaps, not terrain."""
-    from math import cos, pi
+    are excluded — they are data gaps, not terrain.
 
-    w, h = im.size
+    A row that is entirely gap contributes nothing and drops out of the
+    weight sum, so a body whose data gap spans whole rows (Pluto's south,
+    Triton's north) is not pulled toward whatever the fill happens to be.
+    """
     rgb = im.convert("RGB")
-    gray = rgb.convert("L")
-    sums = [0.0, 0.0, 0.0]
-    total_weight = 0.0
-    px = rgb.load()
-    gx = gray.load()
-    for y in range(h):
-        lat_weight = cos((y + 0.5) / h * pi - pi / 2)
-        row_sums = [0.0, 0.0, 0.0]
-        row_n = 0
-        for x in range(w):
-            if gap_threshold is not None and gx[x, y] < gap_threshold:
-                continue
-            r, g, b = px[x, y]
-            row_sums[0] += _LIN_LUT[r]
-            row_sums[1] += _LIN_LUT[g]
-            row_sums[2] += _LIN_LUT[b]
-            row_n += 1
-        if row_n == 0:
-            continue
-        for c in range(3):
-            sums[c] += lat_weight * row_sums[c] / row_n
-        total_weight += lat_weight
-    return [s / total_weight for s in sums]
+    h = rgb.height
+    a = np.asarray(rgb, dtype=np.uint8)
+    lin = np.asarray(_LIN_LUT, dtype=np.float64)[a]
+
+    if gap_threshold is None:
+        keep = np.ones(a.shape[:2], dtype=bool)
+    else:
+        keep = np.asarray(rgb.convert("L"), dtype=np.uint8) >= gap_threshold
+
+    row_n = keep.sum(axis=1)
+    row_sums = (lin * keep[..., None]).sum(axis=1)
+    lat_weight = np.cos((np.arange(h) + 0.5) / h * np.pi - np.pi / 2)
+    live = row_n > 0
+    w = lat_weight[live][:, None]
+    row_mean = row_sums[live] / row_n[live][:, None]
+    return list((w * row_mean).sum(axis=0) / lat_weight[live].sum())
 
 
 def calibrate(
@@ -96,11 +92,24 @@ def calibrate(
     bv, vrc = COLOUR_INDICES[body]
     target = target_rgb(bv, vrc)
     rgb = im.convert("RGB")
-    mean = _sphere_mean_linear(rgb, gap_threshold)
+    mean = sphere_mean_linear(rgb, gap_threshold)
 
     mean_y = sum(w * m for w, m in zip(LUMA, mean))
     target_y = sum(w * t for w, t in zip(LUMA, target))
     gains = [target[c] * mean_y / target_y / mean[c] for c in range(3)]
+    # Never amplify: scale the whole triple so the largest gain is 1, which
+    # only ever darkens and so cannot clip. A gain above 1 pins every already-
+    # bright texel at 255 and the mean stops short of the target — Earth's
+    # blue wanted 1.34x over a map whose snow and ice are already at the top
+    # of the channel, and missed its target by four times the tolerance.
+    #
+    # Free because the map's ABSOLUTE level carries no information: the
+    # renderer divides each map's own mean luminance back out
+    # (planets/emission/README.md § Two disc means), so only the ratios
+    # between channels survive to the screen. What this drops is the old
+    # mean-luminance-preserving property, which was never observable and
+    # which clipping silently broke anyway.
+    gains = [g / max(1.0, *gains) for g in gains]
 
     luts = [
         [
@@ -113,7 +122,7 @@ def calibrate(
         ch.point(lut) for ch, lut in zip(rgb.split(), luts)
     ])
 
-    achieved = _sphere_mean_linear(out, gap_threshold)
+    achieved = sphere_mean_linear(out, gap_threshold)
     norm = lambda m: [c / m[1] for c in m]  # noqa: E731 — V-normalised chromaticity
     return out, {
         "bv": bv,

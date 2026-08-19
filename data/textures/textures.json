@@ -1,0 +1,184 @@
+{
+  "callisto": {
+    "meanLuminance": 0.050226,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "dione": {
+    "meanLuminance": 0.207034,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "earth": {
+    "meanLuminance": 0.083044,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "enceladus": {
+    "meanLuminance": 0.225237,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "europa": {
+    "meanLuminance": 0.314791,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "ganymede": {
+    "meanLuminance": 0.179285,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "iapetus": {
+    "meanLuminance": 0.16293,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "io": {
+    "meanLuminance": 0.262226,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "jupiter": {
+    "meanLuminance": 0.365295,
+    "rungs": [
+      1024,
+      2048,
+      3601
+    ]
+  },
+  "mars": {
+    "meanLuminance": 0.1363,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "mercury": {
+    "meanLuminance": 0.035323,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      6132
+    ]
+  },
+  "mimas": {
+    "meanLuminance": 0.233032,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      6356
+    ]
+  },
+  "moon": {
+    "meanLuminance": 0.299826,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "neptune": {
+    "meanLuminance": 0.314956,
+    "rungs": [
+      1024,
+      1800
+    ]
+  },
+  "pluto": {
+    "meanLuminance": 0.179664,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      5926
+    ]
+  },
+  "rhea": {
+    "meanLuminance": 0.182127,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "saturn": {
+    "meanLuminance": 0.610773,
+    "rungs": [
+      1024,
+      2048,
+      2880
+    ]
+  },
+  "tethys": {
+    "meanLuminance": 0.193333,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "titan": {
+    "meanLuminance": 0.256607,
+    "rungs": [
+      1024,
+      2048,
+      4040
+    ]
+  },
+  "triton": {
+    "meanLuminance": 0.324468,
+    "rungs": [
+      1024,
+      2048,
+      4096,
+      8192
+    ]
+  },
+  "venus": {
+    "meanLuminance": 0.53847,
+    "rungs": [
+      1024,
+      1800
+    ]
+  }
+}

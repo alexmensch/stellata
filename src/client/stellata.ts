@@ -5,6 +5,11 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
+import {
+  formatVerifyReports,
+  verifyDustChunks,
+  type ChunkVerifyReport,
+} from './loaders/dust-voxel-readback';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
@@ -195,7 +200,7 @@ export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
   readonly renderer: StellataRenderer;
   /** Narrowed WebGL2 renderer — null on a WebGPU boot. GL-only consumers
-   *  (dust upload, GPU timer, frame pricing) gate on it instead of
+   *  (extinction prepass, GPU timer, frame pricing) gate on it instead of
    *  casting `renderer`. */
   readonly rendererGL: THREE.WebGLRenderer | null;
   /** WebGPU boot seam — null on the shipped WebGL2 boot. Port children
@@ -603,6 +608,11 @@ export class Stellata implements FrameAnchor {
       camera: this.camera,
       canvas: this.renderer.domElement,
       sharedUniforms,
+      // WebGPU exposes no equivalent through three's public surface, so that
+      // boot takes the spec's guaranteed floor for maxTextureDimension2D —
+      // 8192, which is the texture ladder's top rung anyway, so nothing
+      // clamps on a device whose real limit is only ever higher.
+      maxTextureSize: this.rendererGL?.capabilities.maxTextureSize ?? 8192,
       solIndex: catalog.solIndex,
       solAbsInto: (out) => {
         const si = catalog.solIndex;
@@ -1276,13 +1286,6 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
-    // The voxel upload path and the prepass are WebGL2-only until their
-    // WebGPU ports land; main.ts skips the dust load on a WebGPU boot,
-    // so this guard only catches console-driven attaches.
-    if (this.rendererGL === null && dust !== null) {
-      console.warn('attachDust: dust is not ported to the WebGPU boot yet');
-      return;
-    }
     this.renderGate.invalidate();
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
@@ -1326,6 +1329,26 @@ export class Stellata implements FrameAnchor {
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
     this.milkyway.attachDust(dust);
+  }
+
+  /** Numeric check that streamed dust really is in the volume texture where
+   *  the uploader put it: samples voxels off the GPU and compares them
+   *  against the chunk files. Identical on both backends, and the only
+   *  verification a WebGPU boot has until something samples the volume.
+   *  Logs a summary and returns the reports.
+   *  `loaders/README.md` § Dust voxel readback. */
+  async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
+    if (this.dust === null) {
+      console.warn('verifyDust: no dust attached');
+      return [];
+    }
+    const reports = await verifyDustChunks({
+      renderer: this.renderer,
+      dust: this.dust,
+      count,
+    });
+    for (const line of formatVerifyReports(reports)) console.log(line);
+    return reports;
   }
 
   /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;

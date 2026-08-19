@@ -1,6 +1,7 @@
 # Surface relief
 
-DEM-derived maps shading the Moon, Mercury and Mars on the planet mesh: the
+DEM-derived maps shading the Moon, Mercury, Mars and Earth on the planet
+mesh: the
 frame they are sampled in, which terms the perturbed normal is allowed to
 reach, and how the two occluders that can hide the sun from a patch of ground
 are composed. The shader consuming all of it is `../planet-mesh.frag.glsl`
@@ -19,11 +20,11 @@ src/client/solar-system/planets/surface-relief/
 
 ## What ships
 
-Moon, Mercury and Mars ship a DEM-derived tangent-space normal map
-(`<body>-normal.webp`, `data/textures/README.md` § Surface relief) and a pair
+Moon, Mercury, Mars and Earth ship a DEM-derived tangent-space normal map
+(`<body>-normal.webp`, `data/textures/relief/README.md` § Surface relief) and a pair
 of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
-map. Three planes for three of ~30 bodies, so the fetch is gated on
+map. Three planes for four of ~30 bodies, so the fetch is gated on
 `RELIEF_ELEV_SPAN_M` — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
 lookup, shared with the fallback limb bound, because "does this body ship
 relief" and "how far past the terminator may it light" are one question. The
@@ -90,13 +91,17 @@ A patch of ground sees the sun only if the sun clears **both** the patch's own
 slope and everything beyond it, and those are two different maps at two
 different scales:
 
-- The **normal map** is the slope, at 4096. It is the ψ → 0 limit of the
+- The **normal map** is the slope, at 4096 (8192 on Earth). It is the ψ → 0 limit of the
   horizon — what you can see standing on the facet itself — and it already
-  rides `dayside` through `sunCosRelief`.
+  rides `dayside` through `sunCosRelief`. Both widths are **fixed per artifact**,
+  so unlike a colour rung neither can be lowered to fit a device: a body whose
+  map exceeds `KindContext.maxTextureSize` is refused it and shades without
+  relief (`../textures/README.md` § Four rules).
 - The **horizon map** is everything else: terrain from **two output texels**
-  out to the body's limb bound, at 2048 in 8 azimuths. It excludes the ground
-  at your feet, because that is the normal map's job at four times the
-  resolution — 10.7 km on the Moon, 15.0 on Mercury, 20.8 on Mars.
+  out to the body's limb bound, at half the DEM's width in 8 azimuths. It
+  excludes the ground at your feet, because that is the normal map's job at
+  four times the resolution — 10.7 km on the Moon, 15.0 on Mercury, 20.8 on
+  Mars, 19.5 on Earth.
 
 **Where the march starts is a physical claim, not a tuning knob.** It used to
 begin one DEM texel out, 2.7 km on the Moon, and that first step alone set
@@ -119,7 +124,7 @@ the point** — it is the whole 38.7 % → 9.6 % of § What the composition is w
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
-between them (`data/textures/README.md` § Cast shadows measures it — 0.32°
+between them (`data/textures/relief/README.md` § Cast shadows measures it — 0.32°
 mean at 8 azimuths). What keeps this one-sided rather than compounding is that
 the map's OWN error over flat ground runs the other way: the march never
 samples closer than its start distance, so flat ground at the reference sphere
@@ -148,6 +153,14 @@ the span's floor, tapering between:
 | Moon | 6.36° | 8.65° |
 | Mercury | 3.47° | 5.15° |
 | Mars | 6.40° | 7.53° |
+| Earth | 2.93° | 2.93° |
+
+Earth's two columns COINCIDE, because its DEM is clamped at the sea surface
+and no ground sits below the reference sphere for a summit to stand over. The
+shader hands that pair to `smoothstep`, which is undefined on equal edges, so
+`reliefHorizonUniform` widens the band by 1e-4 where the uniform is written —
+`reliefHorizonSines` itself stays exactly the geometry, since its `none` is the
+same `arccos(r_floor / r_summit)` the precompute searches to.
 
 That gate is saturated across the entire terminator band a smooth sphere
 lights on its own — an atmospheric body's `terminatorSoftness` widening
@@ -160,8 +173,7 @@ drift.
 against the same march run at full DEM width — the reference isolates the cost
 of the output grid and the encoding, and shares the first-step floor above
 rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
-method and the width/azimuth evidence in `data/textures/README.md`
-§ Cast shadows):
+method and the width/azimuth evidence in `data/textures/relief/README.md` § Cast shadows):
 
 | solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|

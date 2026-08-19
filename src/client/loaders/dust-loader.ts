@@ -1,8 +1,14 @@
 // Progressive loader for the 3D dust-extinction voxel grid: zero-fill
-// Data3DTexture, fetch chunks priority-ordered, gl.texSubImage3D each
-// arrival. See src/client/loaders/README.md.
+// Data3DTexture, fetch chunks priority-ordered, upload each arrival
+// through the per-backend voxel uploader. See src/client/loaders/README.md.
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
+import type { StellataRenderer } from '../webgpu/seam';
+import {
+  createVoxelChunkUploader,
+  createVoxelTexture,
+  type VoxelChunkUploader,
+} from './dust-voxel-upload';
 
 export interface DustManifest {
   version: number;
@@ -109,6 +115,14 @@ export interface DustChunkMeta {
   centerPc: [number, number, number];
 }
 
+/** Stream order, and the order the readback verifier samples in — the
+ *  chunks it reaches first are the ones certain to have landed. */
+export function closestChunksFirst(chunks: DustChunkMeta[]): DustChunkMeta[] {
+  const distSq = (c: DustChunkMeta) =>
+    c.centerPc[0] ** 2 + c.centerPc[1] ** 2 + c.centerPc[2] ** 2;
+  return [...chunks].sort((a, b) => distSq(a) - distSq(b));
+}
+
 export interface DustFieldParams {
   boundsHalfPc: number;      // 1250
   densityMin: number;        // 1e-7
@@ -137,32 +151,17 @@ export class DustField {
   private listeners: Array<(p: DustLoadProgress) => void> = [];
   private loadedCount = 0;
 
-  private renderer: THREE.WebGLRenderer;
-  private baseUrl: string;
+  private readonly uploader: VoxelChunkUploader;
+  readonly baseUrl: string;
 
-  constructor(renderer: THREE.WebGLRenderer, baseUrl: string, manifest: DustManifest) {
-    this.renderer = renderer;
+  constructor(renderer: StellataRenderer, baseUrl: string, manifest: DustManifest) {
     this.baseUrl = baseUrl;
     this.manifest = manifest;
 
     const n = manifest.gridSize;
-    const data = new Uint8Array(n * n * n); // zero-filled → no extinction yet
-    const tex = new THREE.Data3DTexture(data, n, n, n);
-    tex.format = THREE.RedFormat;
-    tex.type = THREE.UnsignedByteType;
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.wrapR = THREE.ClampToEdgeWrapping;
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.unpackAlignment = 1;
-    tex.needsUpdate = true;
-
-    // Force initial GPU allocation so subsequent texSubImage3D uploads have
-    // a valid texture object to target. Without this the first chunk
-    // upload would fail silently (no storage allocated yet).
-    renderer.initTexture(tex);
-
+    const zeroFill = new Uint8Array(n * n * n); // no extinction until chunks land
+    const tex = createVoxelTexture(n, zeroFill);
+    this.uploader = createVoxelChunkUploader(renderer, tex, manifest.chunkSize);
     this.texture = tex;
     this.params = {
       boundsHalfPc: Math.abs(manifest.boundsPc[1]),
@@ -182,6 +181,7 @@ export class DustField {
   // no-op.
   dispose() {
     this.texture.dispose();
+    this.uploader.dispose();
     this.listeners.length = 0;
   }
 
@@ -193,11 +193,7 @@ export class DustField {
     // Sol the camera is typically revisiting the dense inner volume we've
     // already loaded; the far-corner chunks only matter for distant-fog
     // rendering which is a secondary concern anyway.
-    const ordered = [...this.manifest.chunks].sort((a, b) => {
-      const da = a.centerPc[0] ** 2 + a.centerPc[1] ** 2 + a.centerPc[2] ** 2;
-      const db = b.centerPc[0] ** 2 + b.centerPc[1] ** 2 + b.centerPc[2] ** 2;
-      return da - db;
-    });
+    const ordered = closestChunksFirst(this.manifest.chunks);
 
     // Simple semaphore — cap parallel fetches so mobile Safari doesn't
     // hang with 64 inflight requests. Workers static assets are served
@@ -235,46 +231,7 @@ export class DustField {
     if (buf.byteLength !== chunk.bytes) {
       throw new Error(`size mismatch: ${buf.byteLength} vs ${chunk.bytes}`);
     }
-    this.uploadChunk(chunk, new Uint8Array(buf));
-  }
-
-  private uploadChunk(chunk: DustChunkMeta, data: Uint8Array) {
-    const gl = this.renderer.getContext() as WebGL2RenderingContext;
-    const glTex = (this.renderer.properties.get(this.texture) as {
-      __webglTexture?: WebGLTexture;
-    }).__webglTexture;
-    if (!glTex) {
-      // Can happen if initTexture hasn't flushed yet (rare); skip this
-      // chunk silently and the caller's listeners will see us fall one
-      // short of total. Alternative would be to defer upload a frame.
-      console.warn('dust texture not yet GPU-resident, dropping chunk');
-      return;
-    }
-    gl.bindTexture(gl.TEXTURE_3D, glTex);
-    // WebGL2 rejects texSubImage3D outright while flip or premultiply is set,
-    // and three leaves both behind after its own 2D uploads (planet textures
-    // lazy-loading mid-stream), so this upload INVALID_OPERATIONs and the
-    // chunk drops unless both are cleared. Clear them THROUGH three's state
-    // cache, never straight onto the context: the cache skips a call whose
-    // tracked value already matches, so a raw poke leaves it claiming a flip
-    // that is no longer set, and the next flipY upload silently lands
-    // mirrored.
-    const { state } = this.renderer;
-    state.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    state.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    state.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    const c = this.manifest.chunkSize;
-    // Chunk bytes are z-major per the Python writer (innermost=x), which
-    // matches WebGL's width/height/depth interpretation of texSubImage3D.
-    gl.texSubImage3D(
-      gl.TEXTURE_3D,
-      0,
-      chunk.ix * c, chunk.iy * c, chunk.iz * c, // offsets
-      c, c, c,                                   // size
-      gl.RED,
-      gl.UNSIGNED_BYTE,
-      data,
-    );
+    this.uploader.upload(chunk.ix, chunk.iy, chunk.iz, new Uint8Array(buf));
   }
 }
 

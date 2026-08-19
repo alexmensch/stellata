@@ -25,12 +25,18 @@ src/client/solar-system/planets/eclipses/
   eclipse-canon.test.ts           23 solar and 12 lunar named eclipses from
                                   NASA's Five Millennium Canon, 1978 BC to
                                   2928 AD. See § What is pinned.
+  umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
+                                  caster's umbra, and the umbral depth both
+                                  render layers measure it at. See § Umbral
+                                  glow — this one IS on a render path.
 ```
 
-Nothing here is on a render path — the shader already draws the shadow.
-These modules exist so the drawn shadow can be checked against an
-independent authority, the same way `../body-shadow-pure.ts`'s CPU mirror
-exists to be test-pinned.
+**The circumstances modules are not on a render path** — the shader already
+draws the shadow, and they exist so the drawn shadow can be checked against
+an independent authority, the way `../body-shadow-pure.ts`'s CPU mirror is.
+`umbral-glow-pure.ts` is the exception: it is evaluated per body per frame,
+by both planet layers. It reads nothing global and holds no state, so the
+constraint below is unaffected by it.
 
 **They stay safe to call from one, though, and that is a live
 constraint.** `earthMoonAt` reads `getPlanetPositions` and mutates
@@ -116,3 +122,78 @@ first millennium of the clamp carries no independent eclipse authority.
 The position and orientation chains underneath it are still pinned there,
 against Horizons, by `../../ephemerides/moon-vector-truth.test.ts` and
 `../rotation/earth-orientation.test.ts`.
+
+## Umbral glow — why a totally eclipsed Moon is red, not black
+
+The shadow factor correctly reaches **zero** inside the umbra, and for an
+airless caster that is the whole story. Earth is not airless: it refracts
+sunlight into its own shadow, which is why a totally eclipsed Moon glows
+coppery red rather than going out. `umbral-glow-pure.ts` is that illuminant.
+
+It is **additive, not a floor on the shadow factor**. The direct beam really
+is fully occulted; this is different light, arriving from the caster's
+atmosphere. Flooring `shadow` instead would light the body from the wrong
+direction and break the canon test's pin that the factor bottoms out at 0.
+
+Three physical terms, and each is load-bearing:
+
+- **Refraction puts light there at all.** A ray grazing the surface and out
+  again is bent ~1.16°, which exceeds the 0.68° the Sun's limb sits below
+  Earth's at mid-umbra — so refracted light reaches the whole shadow. A ray
+  tangent at altitude h bends by `ω₀·exp(−h/H)`, so a point at depth δ is
+  reached only from tangent altitudes below `H·ln(ω₀/δ)`. That band shrinks
+  inward, which is why the umbra darkens and reddens toward its centre
+  instead of being uniform.
+- **The limb path makes it red.** The slant column through an exponential
+  atmosphere is `sqrt(2πR/H)` ≈ **70×** the vertical one, which turns blue's
+  vertical optical depth of 0.221 into 15.6 — extinction by six million —
+  while red's 0.049 reaches only 3.5.
+- **Ozone makes the outer umbra turquoise.** The Chappuis band peaks near
+  600 nm, so on the limb path it removes most of the red and green and
+  almost no blue. Near the rim, where the tangent rays are high enough that
+  Rayleigh has stopped killing blue, ozone decides — and blue outruns green.
+  The airlight model does not carry ozone at all, so its column lives in this
+  module (`OZONE_CHAPPUIS_TAU`, 300 DU).
+
+**Aerosol is why the Danjon scale exists.** At h = 0 Mie extinction alone is
+τ 9.1 — the everyday fact that you cannot see through 300 km of sea-level
+air — so the light reaching the umbra comes from above the muck, and a
+volcanic year darkens the eclipse. That falls out of Earth's published `mieCoeff`
+rather than being modelled for.
+
+**One scalar is measured rather than derived.** The geometric ring-flux
+argument lands ~4× over observation; what it omits is refractive dilution,
+which is a hard integral and is not attempted. `UMBRA_DILUTION` stands in for
+it, fixed so mid-umbra lands on the measured Danjon L=2 appearance — visual
+magnitude ~0.0 against the full Moon's −12.74, a flux ratio of 8.0e-6. It is
+achromatic, so it moves brightness and never hue: **the colour stays
+derived**, which is the point. Same shape as `uPhaseScale` anchoring the
+reflected disc to a measured phase curve.
+
+**Both layers read it.** The mesh takes the depth at the body centre and
+spreads it with `1 − shadow`, so a partly-immersed disc is bright on its
+uneclipsed limb and red inside; the umbra's own edge-to-centre gradient is
+therefore not resolved across the disc, which would need this geometry per
+fragment. The glare billboard takes the disc-mean luminance as a **floor on
+the eclipse dim**, because a FULL eclipse writes exactly 0 and the vertex
+shader collapses the quad — without the floor a totally eclipsed Moon
+vanishes at billboard range and takes its label with it.
+
+**A caster with no `atmosphere` row contributes nothing**, which is correct:
+Jupiter's shadow on a Galilean really is black to this model, and the giants
+deliberately carry no atmosphere row (`../../atmosphere/README.md`).
+
+**Both layers reach the depth through one helper, and the glow gates on it.**
+`umbralDepthFromOffsets` takes the body→caster vector and the body→host unit
+direction — the offset-scalar shape `eclipseDimFromOffsets` already uses, because
+one layer holds these as `Vector3` components and the other as raw
+`Float64Array` reads. It answers `-Infinity` where no shadow geometry exists at
+all (a caster behind the body casts away from it), and `umbralGlow` returns
+early below **penumbral contact**, `depth = -2·hostAngRad`.
+
+That gate is a cost gate, not a physics change: outside the shadow the mesh
+weights this by `1 - shadow` and the glare floors a dim of 1 with it, so the
+64-sample quadrature was integrated and then discarded on every frame of every
+non-eclipse — a body far from the shadow has a hugely negative depth and took
+the uncapped-band branch. Putting it inside `umbralGlow` rather than at a call
+site is what keeps the two layers from drifting apart on it again.

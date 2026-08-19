@@ -11,9 +11,10 @@ import { webpSize } from './image-header-pure';
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
 // the committed manifest and the shipped maps. Why it matters:
-// data/textures/README.md § Surface relief.
+// data/textures/relief/README.md § Surface relief.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
+const RELIEF = resolve(TEXTURES, 'relief');
 
 interface ReliefRow {
   medianTiltDeg: number;
@@ -22,13 +23,14 @@ interface ReliefRow {
 }
 
 const manifest: Record<string, ReliefRow> = JSON.parse(
-  readFileSync(resolve(TEXTURES, 'relief.json'), 'utf-8'),
+  readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'),
 );
 
 const pySource = readFileSync(resolve(__dirname, 'dem_relief.py'), 'utf-8');
 
 interface DemSpec {
   src: string;
+  targetW: number;
   demCenterLon: number;
   mapCenterLon: number;
   radiusKm: number;
@@ -51,8 +53,12 @@ function pyDemBodies(): Record<string, DemSpec> {
     expect(src, `${name}.src`).not.toBeNull();
     const span = block.match(/"span_m": \((-?\d+), (-?\d+)\)/);
     expect(span, `${name}.span_m`).not.toBeNull();
+    // Per-body override of DEM_TARGET_W. Earth carries one because its
+    // relief buys nothing below 8192; everything else takes the default.
+    const targetW = block.match(/"target_w": (\d+)/);
     out[name] = {
       src: src![1],
+      targetW: targetW ? Number(targetW[1]) : defaultTargetW,
       demCenterLon: num('dem_center_lon'),
       mapCenterLon: num('map_center_lon'),
       radiusKm: num('radius_km'),
@@ -62,25 +68,26 @@ function pyDemBodies(): Record<string, DemSpec> {
   return out;
 }
 
+const defaultTargetW = Number(pySource.match(/^DEM_TARGET_W = (\d+)/m)![1]);
 const demBodies = pyDemBodies();
 
 const bodyOf = (name: string) =>
   SOL_BODIES.find((b) => b.name.toLowerCase() === name);
 
-const shippedNormalMaps = readdirSync(TEXTURES)
+const shippedNormalMaps = readdirSync(RELIEF)
   .filter((f) => f.endsWith('-normal.webp'))
   .map((f) => f.replace('-normal.webp', ''))
   .sort();
 
 const normalMap = (name: string) =>
-  readFileSync(resolve(TEXTURES, `${name}-normal.webp`));
+  readFileSync(resolve(RELIEF, `${name}-normal.webp`));
 
 // These maps ride LFS, and the Unit tests job does not pull it — a checkout
 // without the objects leaves pointer stubs whose first bytes are text. Anything
 // reading pixels or headers self-skips there, the way the catalogue corpora do,
 // and says so rather than passing quietly.
 const mapsArePointers = shippedNormalMaps.some(
-  (name) => !lfsContentReadable(resolve(TEXTURES, `${name}-normal.webp`)),
+  (name) => !lfsContentReadable(resolve(RELIEF, `${name}-normal.webp`)),
 );
 if (mapsArePointers) {
   console.warn(
@@ -91,7 +98,9 @@ if (mapsArePointers) {
 
 describe('surface-relief normal maps', () => {
   it('parses every DEM body out of dem_relief.py', () => {
-    expect(Object.keys(demBodies).sort()).toEqual(['mars', 'mercury', 'moon']);
+    expect(Object.keys(demBodies).sort()).toEqual([
+      'earth', 'mars', 'mercury', 'moon',
+    ]);
   });
 
   it('ships exactly the bodies the build script claims', () => {
@@ -134,7 +143,7 @@ describe('surface-relief normal maps', () => {
     const colourMaps = new Set(
       readdirSync(TEXTURES)
         .filter((f) => f.endsWith('.jpg'))
-        .map((f) => f.replace('.jpg', '')),
+        .map((f) => f.replace(/-\d+\.jpg$/, '')),
     );
     for (const name of shippedNormalMaps) {
       expect(colourMaps.has(name), `${name} colour map`).toBe(true);
@@ -143,7 +152,7 @@ describe('surface-relief normal maps', () => {
 
   it('ships none for the cloud, haze and giant bodies', () => {
     // Relief applies only where the rendered texture IS the solid surface —
-    // per-body reasoning in data/textures/README.md § Surface relief.
+    // per-body reasoning in data/textures/relief/README.md § Surface relief.
     for (const name of ['venus', 'titan', 'jupiter', 'saturn', 'uranus', 'neptune']) {
       expect(shippedNormalMaps).not.toContain(name);
     }
@@ -158,6 +167,12 @@ describe('surface-relief normal maps', () => {
       moon: [3.273, 11.656],
       mercury: [1.138, 3.938],
       mars: [0.443, 2.577],
+      // Earth's row is NOT comparable to the other three: 70.7% of its
+      // surface is ocean clamped flat, which is what pulls the median to
+      // exactly 0 and the p90 to 0.521. Over land alone the same map
+      // measures median 0.265 / p90 2.157 — the figure the 8192 width was
+      // chosen on (data/textures/relief/README.md § Surface relief).
+      earth: [0.0, 0.521],
     };
     for (const [name, [median, p90]] of Object.entries(pins)) {
       expect(manifest[name].medianTiltDeg, `${name} median`).toBe(median);
@@ -172,20 +187,23 @@ describe('surface-relief normal maps', () => {
     expect(manifest.mercury.p90TiltDeg).toBeGreaterThan(manifest.mars.p90TiltDeg);
   });
 
-  it('builds every map at the declared target width', () => {
-    const target = pySource.match(/DEM_TARGET_W = (\d+)/);
-    expect(target).not.toBeNull();
+  it('builds every map at its own declared target width', () => {
+    // Not one global width any more: Earth's relief is far the flattest of
+    // the four and is not worth shipping below 8192, so DEM_TARGET_W is a
+    // default that a body may override.
     for (const [name, row] of Object.entries(manifest)) {
-      expect(row.width, `${name} manifest width`).toBe(Number(target![1]));
+      expect(row.width, `${name} manifest width`).toBe(demBodies[name].targetW);
     }
+    expect(demBodies.earth.targetW).toBe(8192);
+    expect(demBodies.moon.targetW).toBe(defaultTargetW);
   });
 
   it.skipIf(mapsArePointers)('ships artifacts at that same width', () => {
     // The manifest is written by the same call that writes the image, so it
     // can only disagree with the artifact through a hand-edit or a bad merge.
     // Read the shipped file's own header so the pin survives that.
-    const width = Number(pySource.match(/DEM_TARGET_W = (\d+)/)![1]);
     for (const name of shippedNormalMaps) {
+      const width = demBodies[name].targetW;
       expect(webpSize(normalMap(name), name), `${name} artifact`).toEqual({
         width,
         height: width / 2,

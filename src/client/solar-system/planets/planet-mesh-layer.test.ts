@@ -1,8 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
-import { TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
+import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
+import { SOL_BODIES } from '../planet-system';
+import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
+import type { PlanetBodyField } from './planet-body-field';
+import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -82,5 +87,180 @@ describe('planet maps decode with an explicit orientation', () => {
   // The loader assigns its own forced options over the object it is given.
   it('hands the loader a copy of the options, not the exported constant', () => {
     expect(src).toContain('setOptions({ ...TEXTURE_DECODE_OPTIONS })');
+  });
+});
+
+// The release path is what makes the texture ladder affordable: an 8192 map is
+// 179 MB resident and before it existed nothing was ever freed. These drive the
+// real layer — a stub field and a stub loader — because the mechanism lives in
+// the ordering between a fetch landing, a rung being promoted, and the budget
+// pass, and none of that is visible in the pure helpers it calls.
+describe('the layer releases what it stops drawing', () => {
+  const BYTES_8192_SQ = Math.round((8192 * 8192 * 4 * 4) / 3);
+
+  interface FakeBitmap {
+    width: number;
+    height: number;
+    close: ReturnType<typeof vi.fn>;
+  }
+
+  function harness(bodyNames: string[], maxTextureSize = 8192) {
+    const planets = bodyNames.map((n) => SOL_BODIES.find((b) => b.name === n)!);
+    const physPx = new Map<number, number>();
+    const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
+    vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
+      ((url: string, onLoad: (bitmap: unknown) => void) => {
+        loads.push({ url, onLoad });
+      }) as never,
+    );
+    const field = {
+      group: new THREE.Group(),
+      monochrome: false,
+      liveInstanceCount: planets.length,
+      hiddenInstanceIdx: -1,
+      planetAt: (i: number) => planets[i] ?? null,
+      planetLocalPositionInto: (i: number, out: THREE.Vector3) => {
+        out.set(i + 1, 0, 0);
+        return true;
+      },
+      physicalPlanetSizePx: (i: number) => physPx.get(i) ?? 0,
+      // No host: an unlit body skips the sun, caster and atmosphere legs, none
+      // of which this is about.
+      hostPlanetOf: () => null,
+    } as unknown as PlanetBodyField;
+    const layer = new PlanetMeshLayer(
+      field,
+      '/',
+      { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
+      () => {},
+      maxTextureSize,
+    );
+    const camera = new THREE.PerspectiveCamera();
+    return {
+      layer,
+      loads,
+      /** One frame, with each body at the given projected diameter. */
+      frame(sizes: number[]): void {
+        physPx.clear();
+        sizes.forEach((px, i) => physPx.set(i, px));
+        layer.update(camera, 0);
+      },
+      pendingFor(key: string): boolean {
+        return loads.some((l) => l.url.includes(key));
+      },
+      /** Land a pending fetch, as a bitmap of the given dimensions. */
+      resolve(key: string, width: number, height = width / 2): FakeBitmap {
+        const i = loads.findIndex((l) => l.url.includes(key));
+        expect(i, `no fetch pending for ${key}`).toBeGreaterThanOrEqual(0);
+        const [pending] = loads.splice(i, 1);
+        const bitmap: FakeBitmap = { width, height, close: vi.fn() };
+        pending.onLoad(bitmap);
+        return bitmap;
+      },
+    };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('frees the narrower rung once a wider one is drawn', () => {
+    const h = harness(['Europa']);
+    h.frame([600]);
+    const narrow = h.resolve('europa-2048', 2048);
+    h.frame([600]);
+
+    h.frame([3000]);
+    const wide = h.resolve('europa-8192', 8192);
+    expect(narrow.close).not.toHaveBeenCalled();
+    h.frame([3000]);
+
+    // Both halves of a release: the GL object AND the decoded bitmap, which no
+    // GPU budget can see.
+    expect(narrow.close).toHaveBeenCalledTimes(1);
+    expect(wide.close).not.toHaveBeenCalled();
+  });
+
+  it('releases a rung the demand moved past while it was still in flight', () => {
+    // The case promotion cannot reach: releaseOtherRungs frees only RESIDENT
+    // rungs, and a loading one is not resident yet. Fetches land out of order
+    // for real — an evicted wider rung returns off the HTTP cache while a
+    // narrower one is still on the wire — so the loser has to be caught on
+    // arrival or it sits resident and undrawn until budget pressure finds it.
+    const h = harness(['Europa']);
+    h.frame([600]);
+    expect(h.pendingFor('europa-2048')).toBe(true);
+
+    // Demand outruns the fetch, so a wider rung is asked for and lands first.
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(true);
+    h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+
+    const superseded = h.resolve('europa-2048', 2048);
+    expect(superseded.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('never evicts a map drawn this frame, however far over budget', () => {
+    const h = harness(['Europa', 'Ganymede']);
+    h.frame([3000, 3000]);
+    // Square maps, so two of them are 716 MB against the 512 MB budget.
+    const a = h.resolve('europa-8192', 8192, 8192);
+    const b = h.resolve('ganymede-8192', 8192, 8192);
+    expect(BYTES_8192_SQ * 2).toBeGreaterThan(TEXTURE_VRAM_BUDGET_BYTES);
+
+    h.frame([3000, 3000]);
+    // Evicting either flips a body on screen to its placeholder mid-view, which
+    // is worse than being over budget: the pass sheds what it can and stops.
+    expect(a.close).not.toHaveBeenCalled();
+    expect(b.close).not.toHaveBeenCalled();
+  });
+
+  it('evicts the least-recently-drawn map, and forgets it was drawn', () => {
+    const h = harness(['Europa', 'Ganymede']);
+    h.frame([3000, 3000]);
+    const kept = h.resolve('europa-8192', 8192, 8192);
+    const dropped = h.resolve('ganymede-8192', 8192, 8192);
+    h.frame([3000, 3000]);
+
+    // Ganymede leaves the crossfade band, so it stops being stamped and becomes
+    // the only candidate.
+    h.frame([3000, 0]);
+    expect(dropped.close).toHaveBeenCalledTimes(1);
+    expect(kept.close).not.toHaveBeenCalled();
+
+    // And the body must stop claiming a rung it no longer holds, or it renders
+    // its placeholder until it happens to grow into a new one.
+    h.frame([3000, 3000]);
+    expect(h.pendingFor('ganymede-8192')).toBe(true);
+  });
+
+  it('refuses a map wider than the device accepts, without retrying it', () => {
+    // Relief and ring maps ship one fixed width each, so the ladder's own clamp
+    // cannot cover them — an oversized upload fails and leaves the body white.
+    const h = harness(['Europa'], 4096);
+    h.frame([3000]);
+    const tooBig = h.resolve('europa-4096', 8192, 4096);
+    expect(tooBig.close).toHaveBeenCalledTimes(1);
+
+    h.frame([3000]);
+    expect(h.pendingFor('europa-4096')).toBe(false);
+  });
+
+  it('never asks for a rung past the device cap in the first place', () => {
+    const h = harness(['Europa'], 4096);
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(false);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+  });
+
+  it('closes every bitmap it still holds on dispose', () => {
+    const h = harness(['Europa']);
+    h.frame([600]);
+    const map = h.resolve('europa-2048', 2048);
+    h.frame([600]);
+
+    h.layer.dispose();
+    expect(map.close).toHaveBeenCalledTimes(1);
   });
 });

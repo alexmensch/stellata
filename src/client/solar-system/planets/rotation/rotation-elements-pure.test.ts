@@ -191,3 +191,82 @@ describe('MOON_ROTATION_BY_NAME', () => {
     }
   });
 });
+
+describe('periodic libration terms', () => {
+  // The visibility bar is the top texture rung: at 8192 a map texel spans
+  // 360/8192 = 0.044° of longitude, so a 0.1° term moves features ~2 texels
+  // and is visible. Terms under that are below one texel and stay dropped.
+  const BAR_DEG = 0.1;
+
+  const withTerms = [...MOON_ROTATION_BY_NAME].filter(([, r]) => r.terms);
+
+  it('carries terms for exactly the bodies with a published amplitude over the bar', () => {
+    expect(withTerms.map(([name]) => name).sort()).toEqual([
+      'Callisto', 'Europa', 'Ganymede', 'Mimas', 'Moon', 'Rhea', 'Tethys', 'Triton',
+    ]);
+    // Io's largest is 0.094°, just under — the reason it is absent, and the
+    // reason a "why has Io no terms" question has an answer here.
+    expect(MOON_ROTATION_BY_NAME.get('Io')!.terms).toBeUndefined();
+  });
+
+  it('keeps every stored term at or above the bar', () => {
+    for (const [name, rot] of withTerms) {
+      for (const term of rot.terms!) {
+        const amp = Math.max(
+          Math.abs(term.raDeg ?? 0),
+          Math.abs(term.decDeg ?? 0),
+          Math.abs(term.wDeg ?? 0),
+        );
+        expect(amp, `${name} term t0=${term.theta0Deg}`).toBeGreaterThanOrEqual(BAR_DEG);
+      }
+    }
+  });
+
+  it('pins the amplitudes that dominate each body', () => {
+    // Straight from NAIF pck00011 NUT_PREC coefficients. Mimas and Triton are
+    // far larger than the Moon — a point the scoping note for this work had
+    // flagged as "verify before trusting", now verified.
+    const dominant: Record<string, [number, number, number]> = {
+      Moon: [-3.8787, 1.5419, 3.561],
+      Europa: [1.086, 0.468, -0.98],
+      Ganymede: [0.431, 0.186, -0.389],
+      Callisto: [0.59, 0.254, -0.533],
+      Mimas: [13.56, -1.53, -13.48],
+      Tethys: [9.66, -1.09, -9.6],
+      Rhea: [3.1, -0.35, -3.08],
+      Triton: [-32.35, 22.55, 22.25],
+    };
+    for (const [name, [ra, dec, w]] of Object.entries(dominant)) {
+      const first = MOON_ROTATION_BY_NAME.get(name)!.terms![0];
+      expect(first.raDeg ?? 0, `${name} RA`).toBeCloseTo(ra, 4);
+      expect(first.decDeg ?? 0, `${name} Dec`).toBeCloseTo(dec, 4);
+      expect(first.wDeg ?? 0, `${name} W`).toBeCloseTo(w, 4);
+    }
+  });
+
+  it('moves the pole on a circle, not a line — sine on RA, cosine on Dec', () => {
+    // The mixed phase IS the convention. Applying the same trig to both would
+    // swing the pole along a great-circle arc and back rather than tracing the
+    // small circle a nodal regression actually describes.
+    const moon = MOON_ROTATION_BY_NAME.get('Moon')!;
+    const bare = { ...moon, terms: undefined };
+    // Both terms, summed: E1 = 125.045 deg and E2 = 250.089 deg at J2000.
+    // Checking E1 alone leaves E2's 0.113 deg on the table and would read as
+    // a broken evaluator.
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const at = poleRaDecDegAt(moon, T_J2000);
+    const off = poleRaDecDegAt(bare, T_J2000);
+    expect(at.raDeg - off.raDeg).toBeCloseTo(
+      -3.8787 * Math.sin(rad(125.045)) - 0.1204 * Math.sin(rad(250.089)), 3);
+    expect(at.decDeg - off.decDeg).toBeCloseTo(
+      1.5419 * Math.cos(rad(125.045)) + 0.0239 * Math.cos(rad(250.089)), 3);
+  });
+
+  it('leaves a body without terms exactly where the linear rows put it', () => {
+    const io = MOON_ROTATION_BY_NAME.get('Io')!;
+    const T = 0.37;
+    const t = jdeToT(J2000_JD + T * 36525);
+    expect(poleRaDecDegAt(io, t).raDeg).toBeCloseTo(
+      io.poleRaDeg + io.poleRaDegPerCty * T, 9);
+  });
+});
