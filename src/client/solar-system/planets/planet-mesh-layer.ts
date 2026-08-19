@@ -6,7 +6,11 @@ import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
-import { measureMapMeanLuminance } from './emission/map-mean-luminance';
+import {
+  meanLuminanceOf,
+  requiredMapWidth,
+  selectRung,
+} from './textures/texture-ladder';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
   RELIEF_ELEV_SPAN_M,
@@ -188,9 +192,14 @@ const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
 const RINGS_SUFFIX = '-rings';
 
 /** The one place a body name becomes a texture key — and the one place it is
- *  lowercased, so `textures` and the fetched URL cannot disagree on case. */
+ *  lowercased, so `textures` and the fetched URL cannot disagree on case.
+ *  A colour map's suffix is its rung width (`-8192`); the relief and ring
+ *  maps ship one width each and carry a named suffix instead. */
 const textureKey = (name: string, suffix = ''): string =>
   `${name.toLowerCase()}${suffix}`;
+
+/** The ladder key for a body — the colour map's key without any rung. */
+const ladderKey = (name: string): string => name.toLowerCase();
 
 /** The body's DEM elevation span, or null where it ships no relief maps —
  *  which bodies fetch them and the fallback limb bound are the same question. */
@@ -224,12 +233,7 @@ export const TEXTURE_DECODE_OPTIONS = {
 
 type TextureState =
   | { state: 'loading' }
-  /** `meanLuminance` is the map's sphere-weighted mean LINEAR luminance,
-   *  measured once on load. It divides out of the surface scale so the
-   *  brightness-stretched mosaic supplies only the albedo pattern and the
-   *  level comes from the geometric albedo — null when the browser gave no
-   *  pixels back, which falls through to the representative colour. */
-  | { state: 'ready'; tex: THREE.Texture; meanLuminance: number | null }
+  | { state: 'ready'; tex: THREE.Texture }
   | { state: 'missing' };
 
 export class PlanetMeshLayer {
@@ -241,6 +245,7 @@ export class PlanetMeshLayer {
    *  and pixel solid angle, and spread into every material so the
    *  inline-operator branch tracks `HdrPipeline`. */
   private readonly hdr: HdrEmitterUniforms;
+  private readonly uPixelRatio: THREE.IUniform<number> | undefined;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
   // A copy: the loader assigns its own forced options over whatever it is
@@ -250,6 +255,10 @@ export class PlanetMeshLayer {
   private readonly requestRender: () => void;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
+  /** Body -> the colour rung currently DRAWN (fully resident). Distinct
+   *  from what has been requested: a wider rung loads in the background
+   *  and only replaces this once it is ready. */
+  private readonly shownRung = new Map<string, number>();
 
   private readonly tmpPlanet = new THREE.Vector3();
   private readonly tmpHost = new THREE.Vector3();
@@ -265,13 +274,14 @@ export class PlanetMeshLayer {
   constructor(
     field: PlanetBodyField,
     textureBaseUrl: string,
-    hdr: HdrEmitterUniforms,
+    hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: () => void,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
     this.hdr = pickHdrEmitterUniforms(hdr);
+    this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
     this.geometry = new THREE.SphereGeometry(1, 128, 64);
@@ -324,7 +334,7 @@ export class PlanetMeshLayer {
       const radiusPc = planet.radiusKm * KM_PC;
       const physPx = this.field.physicalPlanetSizePx(idx, camera.position);
       if (physPx >= TEXTURE_PREFETCH_PX) {
-        this.ensureTexture(textureKey(planet.name), { ext: 'jpg', measureMean: true });
+        this.ensureColourRung(planet, physPx);
         if (reliefSpanOf(planet)) {
           this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), {
             ext: 'webp', format: THREE.RGFormat,
@@ -379,7 +389,7 @@ export class PlanetMeshLayer {
       // Emission into the scene-wide HDR unit. Both scalars fall to 0
       // without a host: an unlit body reflects nothing, where the old
       // display encoding fell back to a full-brightness 1.
-      const texState = this.textures.get(textureKey(planet.name));
+      const texState = this.colourState(planet);
       const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
       const exposure = this.hdr.uExposure.value;
       const omegaPx = this.hdr.uOmegaPxArcsec2.value;
@@ -497,10 +507,41 @@ export class PlanetMeshLayer {
    *  luminance — which is exactly what the flat-colour branch emits, so
    *  that path is exact. */
   private baseMeanLuminance(planet: Planet, texState: TextureState | undefined): number {
-    if (texState?.state === 'ready' && texState.meanLuminance !== null) {
-      return texState.meanLuminance;
-    }
+    const mean = meanLuminanceOf(ladderKey(planet.name));
+    if (texState?.state === 'ready' && mean !== null) return mean;
     return relativeLuminance([planet.colour[0], planet.colour[1], planet.colour[2]]);
+  }
+
+  /** The drawing buffer's pixel ratio, `min(devicePixelRatio, 2)`. Read live
+   *  off the shared uniform rather than `window`, so a resize, an FOV change
+   *  and a drag onto a different-DPR monitor all reach tier selection through
+   *  the one value the renderer itself is using. */
+  private pixelRatio(): number {
+    return this.uPixelRatio?.value ?? 1;
+  }
+
+  /** Request the rung this body needs at its current projected size, and
+   *  promote it to the drawn rung once it is FULLY resident — decoded,
+   *  uploaded, mips built. Swapping on first byte would show a frame of
+   *  bottom-mip, which is the pop the lead-the-swap rule exists to avoid. */
+  private ensureColourRung(planet: Planet, physPx: number): void {
+    const body = ladderKey(planet.name);
+    const shown = this.shownRung.get(body) ?? null;
+    const want = selectRung(body, requiredMapWidth(physPx, this.pixelRatio()), shown);
+    // A body with no ladder row ships no map at all (Uranus, future
+    // exoplanets) and takes the representative-colour base path.
+    if (want === null || want === shown) return;
+    const key = textureKey(planet.name, `-${want}`);
+    this.ensureTexture(key, { ext: 'jpg' });
+    if (this.textures.get(key)?.state === 'ready') this.shownRung.set(body, want);
+  }
+
+  /** The colour-map state for the rung currently drawn, if any. */
+  private colourState(planet: Planet): TextureState | undefined {
+    const shown = this.shownRung.get(ladderKey(planet.name));
+    return shown === undefined
+      ? undefined
+      : this.textures.get(textureKey(planet.name, `-${shown}`));
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres
@@ -800,11 +841,7 @@ export class PlanetMeshLayer {
    *  mipmaps and anisotropy carry over unchanged. */
   private ensureTexture(
     key: string,
-    { ext, measureMean = false, format }: {
-      ext: TextureExt;
-      measureMean?: boolean;
-      format?: THREE.PixelFormat;
-    },
+    { ext, format }: { ext: TextureExt; format?: THREE.PixelFormat },
   ): void {
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
@@ -824,12 +861,7 @@ export class PlanetMeshLayer {
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
         tex.needsUpdate = true;
-        // Orientation-invariant: the row weights are cos(latitude), even
-        // about the equator.
-        const meanLuminance = measureMean
-          ? measureMapMeanLuminance(bitmap)
-          : null;
-        this.resolveTexture(key, { state: 'ready', tex, meanLuminance });
+        this.resolveTexture(key, { state: 'ready', tex });
       },
       undefined,
       (err) => {

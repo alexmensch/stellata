@@ -18,8 +18,8 @@ uniform float uHighlightDesat;
 // — sampling an unbound texture is undefined in WebGL.
 uniform sampler2D uMap;
 uniform float uHasMap;
-// DEM-derived tangent-space relief, RG only — data/textures/README.md
-// § Surface relief.
+// DEM-derived tangent-space relief, RG only —
+// data/textures/relief/README.md § Surface relief.
 uniform sampler2D uNormalMap;
 uniform float uHasNormalMap;
 // Sines of the solar depression that bound how far past the geometric
@@ -28,7 +28,7 @@ uniform float uHasNormalMap;
 // fallback while the per-texel horizon below is still loading.
 uniform vec2 uReliefHorizon;
 // Encoded sines of the local skyline's elevation in STELLATA_HORIZON_AZIMUTHS
-// directions, azimuths 0–3 then 4–7 — data/textures/README.md § Cast shadows.
+// directions, azimuths 0–3 then 4–7 — data/textures/relief/README.md § Cast shadows.
 uniform sampler2D uHorizonA;
 uniform sampler2D uHorizonB;
 uniform float uHasHorizonMap;

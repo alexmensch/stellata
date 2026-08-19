@@ -87,7 +87,7 @@ export function tangentFrame(
  * map, all in one consistent frame (view space in the shader). `pole` is
  * the body's north pole; `enc` is the texel's raw R,G in [0, 1], carrying
  * the map's (+x east, +y north, +z out) frame —
- * `data/textures/README.md` § Surface relief.
+ * `data/textures/relief/README.md` § Surface relief.
  */
 export function reliefNormal(
   n: Vec3,

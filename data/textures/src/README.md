@@ -16,7 +16,7 @@ believe it", which is how 3 of the first 6 rows checked stayed wrong.
 |---|---|---|---|---|
 | `mercury-pia15063.jpg` | Mercury | MESSENGER MDIS global mosaic (PIA15063, 6132×3066 grayscale, measured chroma 0.00), NASA/JHU-APL/Carnegie. All of its rendered colour comes from the index-anchored calibration gains, not from the source | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA15063 |
 | `venus-bjj.jpg` | Venus (cloud deck) | Galileo 1990 flyby UV cloud mosaic (1800×900), map by Björn Jónsson | Free use with attribution (https://bjj.mmedia.is/acknow.html) | https://bjj.mmedia.is/data/venus/venus.html |
-| `earth-blue-marble-2002.jpg` | Earth (day) | The Blue Marble, 2002 (land + ocean colour + sea ice + clouds composite, 2048×1024), NASA Earth Observatory / MODIS, downloaded 2026-07-19 | Public domain | https://visibleearth.nasa.gov/images/57735 |
+| `earth-bmng-200404.jpg` | Earth (day) | Blue Marble Next Generation **April 2004** with topography, no bathymetry (MODIS surface reflectance), frozen at 8192×4096 — an area-average reduction made at retrieval 2026-08-19 from the eight 21600² tiles that mosaic to 86400×43200 (500 m/px), NASA Earth Observatory. **Cloudless by construction** — a monthly composite, not a snapshot. April is the month whose snow and ice sit closest to the annual mean (NH snow-cover extent 30 of a 25 Mkm² mean; Jun 9.5, Jan 46), so no season is misrepresented as typical. Ocean is flat surface reflectance: **the bathymetry variant is deliberately NOT used** — seafloor relief is not visible from space, and the pale blue of Earth-from-orbit is Rayleigh airlight the renderer adds, never baked into an albedo map | Public domain | https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-topography/ |
 | `mars-viking-mdim21.jpg` | Mars | USGS Viking MDIM 2.1 colorized global mosaic, 1 km/px browse (21339×10670), NASA/USGS/AMES | Public domain | https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m |
 | `jupiter-pia07782.jpg` | Jupiter | Cassini Dec 2000 flyby cylindrical map (PIA07782, 3601×1801), NASA/JPL/Space Science Institute | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA07782 |
 | `saturn-bjj.jpg` | Saturn | Southern hemisphere from 56 Cassini images (Sep 2004); northern hemisphere from 31 Voyager 2 images, via the author's own 2002 Voyager map (2880×1440), map by Björn Jónsson. **Both hemispheres are real imagery, 23 yr apart** — nothing is mirrored. Green channel is synthesised from the other filters (Cassini carried no green filter) | Free use with attribution | https://bjj.mmedia.is/data/saturn/index.html |
@@ -24,11 +24,11 @@ believe it", which is how 3 of the first 6 rows checked stayed wrong.
 | `pluto-pia11707.jpg` | Pluto | New Horizons LORRI/MVIC global mosaic (PIA11707, 5926×2963), NASA/JHU-APL/SwRI. Un-imaged south polar band, **−90° to −54.1°** (19.9% of the map, measured; real data gap, kept — the band above it fades rather than cutting) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA11707 |
 | `rings-color-bjj.txt` | Saturn rings | Radial colour profile, 13 177 samples spanning 74 510–140 390 km, from Voyager + Cassini data by Björn Jónsson | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
 | `rings-transparency-bjj.txt` | Saturn rings | Radial transparency profile, same sampling/span (1 = no ring material) | Free use with attribution | https://bjj.mmedia.is/data/s_rings/index.html |
-| `moon-lroc-svs.tif` | Moon | NASA SVS CGI Moon Kit colour map (LRO LROC WAC, 2048×1024), NASA's Scientific Visualization Studio. Retrieved 2026-07-19 | Public domain | https://svs.gsfc.nasa.gov/4720 |
-| `io-usgs-clrmerge.jpg` | Io | USGS "Io Galileo SSI / Voyager Color Merged Global Mosaic 1km", frozen at 4096×2048 RGB, a browse reduction made at retrieval 2026-07-19 (full 11445×5723 GeoTIFF is 189 MB), NASA/JPL/USGS. PDS label: PositiveWest, centre 0° — build flips to positive-east | Public domain | https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km |
-| `europa-usgs-global.jpg` | Europa | USGS "Europa Voyager - Galileo SSI Global Mosaic 500m", frozen at 4096×2048 grayscale (measured chroma 0.00), a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS. PositiveWest, centre 180° — build flips. **Un-imaged south polar band, −90° to −84.1°** (3.3% of the map, measured, previously undisclosed here). Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m |
-| `ganymede-usgs-clr.jpg` | Ganymede | USGS "Ganymede Voyager - Galileo SSI Global Color Mosaic 1435m" (Kersten et al. 2021), frozen at 4096×2048 RGB, a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS/DLR. PositiveEast, centre 180°. Genuine colour, not tinted (measured chroma 13.6). Its 5 black rows at the north pole are 0.24% of the map — the equirect singularity, under the 1% band floor, not a data gap | Public domain | https://astrogeology.usgs.gov/search/map/Ganymede/Voyager-Galileo/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m |
-| `callisto-usgs-global.jpg` | Callisto | USGS "Callisto Voyager - Galileo SSI Global Mosaic 1km", frozen at 4096×2048 grayscale (measured chroma 0.00), a browse reduction made at retrieval 2026-07-19, NASA/JPL/USGS. PositiveWest, centre 180° — build flips. Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/callisto_voyager_galileo_ssi_global_mosaic_1km |
+| `moon-lroc-svs.jpg` | Moon | NASA SVS CGI Moon Kit colour map (LRO LROC WAC), frozen at 8192×4096 — a reduction made at retrieval 2026-08-19 from the 27360×13680 RGBA original (518 MB). Its alpha is uniformly opaque and is dropped. Centre 0°E, so the nearside is at map centre | Public domain | https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles.tif |
+| `io-usgs-clrmerge.jpg` | Io | USGS "Io Galileo SSI / Voyager Color Merged Global Mosaic 1km", frozen at 8192×4096 RGB, a reduction made at retrieval 2026-08-19 from the full 11445×5723 GeoTIFF (197 MB), NASA/JPL/USGS. PDS label: PositiveWest, centre 0° — build flips to positive-east | Public domain | https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km |
+| `europa-usgs-global.jpg` | Europa | USGS "Europa Voyager - Galileo SSI Global Mosaic 500m", frozen at 8192×4096 grayscale (measured chroma 0.00), a reduction made at retrieval 2026-08-19 from the full 19631×9816 GeoTIFF (193 MB), NASA/JPL/USGS. PositiveWest, centre 180° — build flips. **Un-imaged south polar band, −90° to −84.1°** (3.3% of the map, measured). Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m |
+| `ganymede-usgs-clr.jpg` | Ganymede | USGS "Ganymede Voyager - Galileo SSI Global Color Mosaic 1435m" (Kersten et al. 2021), frozen at 8192×4096 RGB, a reduction made at retrieval 2026-08-19 from the full 11520×5760 GeoTIFF (199 MB), NASA/JPL/USGS/DLR. PositiveEast, centre 180°. Genuine colour, not tinted (measured chroma 13.6). Fully imaged: the 5 black north-polar rows the 4096 reduction carried were the equirect singularity, and at 8192 they average away entirely | Public domain | https://astrogeology.usgs.gov/search/map/Ganymede/Voyager-Galileo/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m |
+| `callisto-usgs-global.jpg` | Callisto | USGS "Callisto Voyager - Galileo SSI Global Mosaic 1km", frozen at 8192×4096 grayscale (measured chroma 0.00), a reduction made at retrieval 2026-08-19 from the full 15138×7569 GeoTIFF (115 MB), NASA/JPL/USGS. PositiveWest, centre 180° — build flips. Near-neutral body: build applies half the representative chroma over the mosaic's luminance | Public domain | https://astrogeology.usgs.gov/search/map/callisto_voyager_galileo_ssi_global_mosaic_1km |
 | `mimas-pia18437.jpg` | Mimas | Cassini ISS global colour mosaic (PIA18437, 6356×3178, Schenk/LPI 2014 series, IR-G-UV enhanced colour), NASA/JPL-Caltech/SSI/LPI. Retrieved 2026-07-19. Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18437 |
 | `enceladus-pia18435.jpg` | Enceladus | Cassini ISS global colour mosaic (PIA18435, 15960×7980, same series). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18435 |
 | `tethys-pia18439.jpg` | Tethys | Cassini ISS global colour mosaic (PIA18439, 13467×6734, same series). Enhanced colour, pulled halfway to gray at build (by eye, not a measurement) | Public domain | https://photojournal.jpl.nasa.gov/catalog/PIA18439 |
@@ -50,14 +50,18 @@ The five Uranian moons also have no source: Voyager imaged their
 southern hemispheres only, and a half-empty map reads worse than the
 clean representative-colour spheroid.
 
-The four USGS `*-usgs-*.jpg` files — Io, Europa, Ganymede, Callisto —
-are 4096-px LANCZOS/JPEG-92
-reductions of 115–199 MB GeoTIFF mosaics, produced once at retrieval —
-the runtime artifact caps at 2048 px, so freezing the full GeoTIFFs
-would spend hundreds of LFS megabytes on resolution the pipeline can
-never use (the same trade the Mars row makes by freezing the 1 km/px
-browse). The refresh recipe below re-derives them from the linked
-originals.
+**A frozen master stops at 8192**, the widest rung the ladder builds
+(`scripts/textures/texture_ladder.py:MASTER_W`). That is the whole trade:
+freezing a 115–199 MB GeoTIFF, or the Moon's 518 MB original, would spend
+hundreds of LFS megabytes on resolution the pipeline cannot use, and a
+master carries no headroom past what it can. Raising the top rung is
+therefore a re-pull, not a resize.
+
+The four USGS `*-usgs-*.jpg` files — Io, Europa, Ganymede, Callisto — were
+previously frozen at 4096 for a stricter version of the same reason: the
+runtime capped every artifact at 2048. The ladder is what changed that, so
+they were re-pulled from the linked originals at 8192; `reduce_source.py`
+in the recipe below is what re-derives them.
 
 The three `*-dem-*.tif` rows make the same trade against 0.5–2.0 GB
 originals, and are stored as **uint16 metres biased by 32768** — a
@@ -124,9 +128,18 @@ What each check settles, and what it does not:
 
 These are one-shot frozen snapshots, not a `scripts/refresh/`
 pipeline. To upgrade a body: download a better map (vet the license,
-prefer NASA/USGS PD), replace the file here, update the table row and
-the `BODIES` map in `scripts/textures/build-textures.py`, rerun
-`pnpm run build:textures`, and commit both layers.
+prefer NASA/USGS PD), reduce it to a frozen master with
+`python3 scripts/textures/reduce_source.py <out-name.jpg> <downloaded…>`,
+update the table row and the `BODIES` map in
+`scripts/textures/build-textures.py`, rerun `pnpm run build:textures`,
+re-run `audit_sources.py`, and commit both layers.
+
+`reduce_source.py` takes `--grid CxR` for a tiled original and reduces
+each tile *before* placing it, so the full grid is never held in memory —
+Earth's eight 21600² BMNG tiles assemble to 86400×43200, which is 11 GB of
+RGB whole and 96 MB a tile at a time. It preserves a grayscale original's
+single channel rather than widening it to RGB, and asserts the result is
+2:1 equirectangular, so a half-world or mis-ordered mosaic fails loudly.
 
 For a **DEM**, download the original from its row's URL and run
 `python3 scripts/textures/reduce_dem.py <body> <downloaded.tif>` — it

@@ -19,9 +19,10 @@ import { webpSize } from './image-header-pure';
 
 // horizon_map.py cannot import the runtime tables, so this pins its constants
 // back against the shader's mirror of them, and both against the shipped
-// artifacts. Why it matters: data/textures/README.md § Cast shadows.
+// artifacts. Why it matters: data/textures/relief/README.md § Cast shadows.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
+const RELIEF = resolve(TEXTURES, 'relief');
 const MESH_FRAG = resolve(
   __dirname,
   '../../src/client/solar-system/planets/planet-mesh.frag.glsl',
@@ -38,7 +39,7 @@ interface HorizonRow {
 }
 
 const manifest: Record<string, { horizon?: HorizonRow }> = JSON.parse(
-  readFileSync(resolve(TEXTURES, 'relief.json'), 'utf-8'),
+  readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'),
 );
 
 const pyNumber = (name: string): number => {
@@ -49,9 +50,9 @@ const pyNumber = (name: string): number => {
 
 const HALVES = ['a', 'b'] as const;
 const planePath = (body: string, half: string) =>
-  resolve(TEXTURES, `${body}-horizon-${half}.webp`);
+  resolve(RELIEF, `${body}-horizon-${half}.webp`);
 
-const halvesOnDisk = readdirSync(TEXTURES).filter((f) =>
+const halvesOnDisk = readdirSync(RELIEF).filter((f) =>
   /-horizon-[ab]\.webp$/.test(f),
 );
 const bodiesWithAnyHalf = [

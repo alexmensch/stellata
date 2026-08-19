@@ -199,7 +199,7 @@ describe('the layer gates every relief fetch on the span table', () => {
 
   // All three planes ride the one span gate. They are two fetch statements
   // rather than one loop only because the normal map narrows to RG8 and the
-  // horizon halves cannot (data/textures/README.md § Surface relief).
+  // horizon halves cannot (data/textures/relief/README.md § Surface relief).
   const gated = layer.slice(
     layer.indexOf('if (reliefSpanOf(planet)) {'),
     layer.indexOf('if (planet.rings) {'),

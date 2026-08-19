@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cast-shadow half of surface relief: per-texel horizon elevation in
 HORIZON_AZIMUTHS directions, packed into two RGBA maps (rationale in
-data/textures/README.md § Cast shadows)."""
+data/textures/relief/README.md § Cast shadows)."""
 
 import numpy as np
 

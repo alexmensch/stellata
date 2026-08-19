@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Surface-relief half of the texture build: the frozen-DEM contract and the
 DEM -> tangent-space normal-map derivation (rationale in
-data/textures/README.md § Surface relief)."""
+data/textures/relief/README.md § Surface relief)."""
 
 import numpy as np
 from PIL import Image
@@ -19,7 +19,7 @@ DEM_TARGET_W = 4096
 # the same window, so they measure only where both derivatives are real.
 POLE_CUTOFF_DEG = 85.0
 
-# Per-body relief contract (data/textures/README.md § Surface relief).
+# Per-body relief contract (data/textures/relief/README.md § Surface relief).
 # `dtype`/`scale`/`offset`/`span_m`/`nodata` decode the DOWNLOADED original
 # for reduce_dem.py; the rest drive every build. Two fields name the thing
 # they are NOT: `map_center_lon` is the COLOUR map's centre rather than the

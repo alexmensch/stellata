@@ -70,9 +70,12 @@ src/client/solar-system/planets/
                                   and the horizon that casts its shadows.
                                   Its own README.
   emission/                       The HDR-unit normalisers — the mesh
-                                  anchor, the two disc means that divide
-                                  out, and the day map's measured mean
-                                  luminance. Its own README.
+                                  anchor and the two disc means that
+                                  divide out. Its own README.
+  textures/                       Which rung of a body's texture ladder to
+                                  hold, from the live viewport, and the
+                                  build-generated table it reads. Its own
+                                  README.
   glare/                          Reflected-glare billboard shaders: the
                                   shared star-perceptual point and the
                                   photocentre shift. Its own README.
@@ -355,9 +358,10 @@ crossfade.
   planet-scale separations share one log-depth bucket in any shadow
   map the main pass could render — and the local pass's z-buffer
   orders camera rays, not sun rays.
-- **Textures**: lazy-fetched from `public/textures/<body>.jpg`
+- **Textures**: lazy-fetched from `public/textures/<body>-<rung>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
-  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. A 404 is
+  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. Which rung is
+  § Texture tier selection. A 404 is
   expected data — texture-less bodies (Uranus, future exoplanets)
   render the representative-colour + limb-darkening base path; there
   is no separate renderer for them. Textures load with
@@ -376,6 +380,15 @@ crossfade.
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+
+### Texture tier selection
+
+`textures/` — each body ships a ladder of map widths and the renderer holds
+the smallest rung its display can actually resolve, from
+`2 · physicalPlanetSizePx · pixelRatio`. Round up, lead the swap at 0.75 of
+the resident width, never downgrade; and every rung of a body shares one
+build-measured mean luminance, or a tier swap would step the disc's
+brightness. Its own README.
 
 ### Surface relief
 

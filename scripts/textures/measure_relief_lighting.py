@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What the relief terms light: ground past the terminator against the same
 march at full DEM width, and the disc integral against phase. Manual, run by
-hand; method and results in data/textures/README.md § Cast shadows."""
+hand; method and results in data/textures/relief/README.md § Cast shadows."""
 
 import sys
 from pathlib import Path

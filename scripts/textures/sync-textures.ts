@@ -11,4 +11,7 @@ mirrorDataFolder({
   dstDir: 'public/textures',
   isPublicAsset: isTexturePublicAsset,
   label: 'texture',
+  // relief/ groups the big DEM-derived maps at rest; they still serve from
+  // public/textures/ alongside the colour rungs, so no renderer URL moves.
+  flattenSubDirs: ['relief'],
 });

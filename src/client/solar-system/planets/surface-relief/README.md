@@ -20,7 +20,7 @@ src/client/solar-system/planets/surface-relief/
 ## What ships
 
 Moon, Mercury and Mars ship a DEM-derived tangent-space normal map
-(`<body>-normal.webp`, `data/textures/README.md` § Surface relief) and a pair
+(`<body>-normal.webp`, `data/textures/relief/README.md` § Surface relief) and a pair
 of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
 map. Three planes for three of ~30 bodies, so the fetch is gated on
@@ -119,7 +119,7 @@ the point** — it is the whole 38.7 % → 9.6 % of § What the composition is w
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
-between them (`data/textures/README.md` § Cast shadows measures it — 0.32°
+between them (`data/textures/relief/README.md` § Cast shadows measures it — 0.32°
 mean at 8 azimuths). What keeps this one-sided rather than compounding is that
 the map's OWN error over flat ground runs the other way: the march never
 samples closer than its start distance, so flat ground at the reference sphere
@@ -160,8 +160,7 @@ drift.
 against the same march run at full DEM width — the reference isolates the cost
 of the output grid and the encoding, and shares the first-step floor above
 rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
-method and the width/azimuth evidence in `data/textures/README.md`
-§ Cast shadows):
+method and the width/azimuth evidence in `data/textures/relief/README.md` § Cast shadows):
 
 | solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|

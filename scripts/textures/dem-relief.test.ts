@@ -11,9 +11,10 @@ import { webpSize } from './image-header-pure';
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
 // the committed manifest and the shipped maps. Why it matters:
-// data/textures/README.md § Surface relief.
+// data/textures/relief/README.md § Surface relief.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
+const RELIEF = resolve(TEXTURES, 'relief');
 
 interface ReliefRow {
   medianTiltDeg: number;
@@ -22,7 +23,7 @@ interface ReliefRow {
 }
 
 const manifest: Record<string, ReliefRow> = JSON.parse(
-  readFileSync(resolve(TEXTURES, 'relief.json'), 'utf-8'),
+  readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'),
 );
 
 const pySource = readFileSync(resolve(__dirname, 'dem_relief.py'), 'utf-8');
@@ -67,20 +68,20 @@ const demBodies = pyDemBodies();
 const bodyOf = (name: string) =>
   SOL_BODIES.find((b) => b.name.toLowerCase() === name);
 
-const shippedNormalMaps = readdirSync(TEXTURES)
+const shippedNormalMaps = readdirSync(RELIEF)
   .filter((f) => f.endsWith('-normal.webp'))
   .map((f) => f.replace('-normal.webp', ''))
   .sort();
 
 const normalMap = (name: string) =>
-  readFileSync(resolve(TEXTURES, `${name}-normal.webp`));
+  readFileSync(resolve(RELIEF, `${name}-normal.webp`));
 
 // These maps ride LFS, and the Unit tests job does not pull it — a checkout
 // without the objects leaves pointer stubs whose first bytes are text. Anything
 // reading pixels or headers self-skips there, the way the catalogue corpora do,
 // and says so rather than passing quietly.
 const mapsArePointers = shippedNormalMaps.some(
-  (name) => !lfsContentReadable(resolve(TEXTURES, `${name}-normal.webp`)),
+  (name) => !lfsContentReadable(resolve(RELIEF, `${name}-normal.webp`)),
 );
 if (mapsArePointers) {
   console.warn(
@@ -134,7 +135,7 @@ describe('surface-relief normal maps', () => {
     const colourMaps = new Set(
       readdirSync(TEXTURES)
         .filter((f) => f.endsWith('.jpg'))
-        .map((f) => f.replace('.jpg', '')),
+        .map((f) => f.replace(/-\d+\.jpg$/, '')),
     );
     for (const name of shippedNormalMaps) {
       expect(colourMaps.has(name), `${name} colour map`).toBe(true);
@@ -143,7 +144,7 @@ describe('surface-relief normal maps', () => {
 
   it('ships none for the cloud, haze and giant bodies', () => {
     // Relief applies only where the rendered texture IS the solid surface —
-    // per-body reasoning in data/textures/README.md § Surface relief.
+    // per-body reasoning in data/textures/relief/README.md § Surface relief.
     for (const name of ['venus', 'titan', 'jupiter', 'saturn', 'uranus', 'neptune']) {
       expect(shippedNormalMaps).not.toContain(name);
     }
