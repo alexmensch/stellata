@@ -2,9 +2,17 @@
 
 The automated form of "disable it and difference `gpu.frame`": from
 wherever the camera sits, dwell on the whole-frame GPU scope, re-dwell
-with ONE pass disabled, difference the medians. Differentials are the
-only honest per-pass price on ANGLE/Metal — `../README.md` § GPU timing
-owns why the per-pass scopes cannot be ratioed or summed.
+with ONE pass disabled, difference the medians.
+
+**Differentials survive the WebGPU port, for a different reason.** On
+WebGL2 they are the only honest per-pass price because the per-pass timer
+scopes over-attribute on ANGLE/Metal. On WebGPU nothing over-attributes —
+three times every render pass truly — but those per-pass durations are
+keyed by an internal `timestampUID` and are not public API, so there are
+no per-pass rows to read. Either way the differential is the measurement,
+and on WebGPU its input is *better*: `gpu.frame` there is a sum of real
+per-pass timestamps rather than one derived elapsed span.
+`../gpu-timing/README.md` owns both halves.
 
 ## Files
 
@@ -13,17 +21,22 @@ src/client/debug/frame-cost/
   frame-cost.ts               runPriceFrame / runPriceFrameRepeat, the
                               pass toggles, the dwell loop.
   frame-cost-pure.ts (+ test) Dwell statistics, the noise floor, and the
-                              differential rows.
+                              differential rows. Owns GpuFrameMethod.
+  gpu-frame-source.ts         Which sample source a sweep gets, per
+    (+ test)                  backend, and the method label it stamps.
 ```
 
 ## Preconditions
 
-- **Debug panel CLOSED.** The run borrows the swappable perf hooks via
-  `acquireGpuFrameSampler` (`../perf-hud.ts`) — a single-scope timer that
-  samples `gpu.frame` EVERY frame, because WebGL2's one-query-per-context
-  limit is not shared with any rotating scope. Panel open → the call
-  warns and returns `[]`. Panel opened mid-run → samples dry up and the
-  run aborts rather than reporting zeros.
+- **Debug panel CLOSED — on WebGL2 only.** There the run borrows the
+  swappable perf hooks via `acquireGpuFrameSampler` (`../perf-hud.ts`) — a
+  single-scope timer that samples `gpu.frame` EVERY frame, because
+  WebGL2's one-query-per-context limit is not shared with any rotating
+  scope. Panel open → the call warns and returns `[]`. Panel opened
+  mid-run → samples dry up and the run aborts rather than reporting zeros.
+  **On WebGPU there is no such requirement**: the render loop resolves its
+  timestamps every frame whatever is listening, and the sweep just
+  subscribes alongside the HUD.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate
@@ -43,10 +56,16 @@ src/client/debug/frame-cost/
   unpinned, which is six magnitudes of extra stars. `{ pinExposure:
   false }` prices the live path. `baselineLimitMag` / `disabledLimitMag`
   stay in the output as the check that it held.
-- **A timer query.** Without one (Safari) it falls back to rAF-delta wall
-  time, where differentials under the vsync quantum read as zero unless
-  the frame is already over budget. `method` labels every row; never
-  compare the two methods' numbers.
+- **A GPU clock.** `timestamp` on WebGPU, `timer-query` on WebGL2 with
+  the extension, and `raf-delta` wall time where neither exists (WebGL2
+  Safari) — there differentials under the vsync quantum read as zero
+  unless the frame is already over budget. `method` labels every row;
+  never compare numbers across two methods.
+- **Layers that actually render.** A `#renderer=webgpu` boot draws only
+  the seam's own scene until each layer's port child lands, so a sweep
+  there prices passes that are not drawing: rows read ~0 for a reason that
+  has nothing to do with WebGPU. The plumbing is ported so the instrument
+  is ready as layers arrive; the rows mean nothing before then.
 
 ## Priced passes
 

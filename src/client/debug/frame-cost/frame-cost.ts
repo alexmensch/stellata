@@ -2,8 +2,9 @@
 // pass disabled at a time and difference the medians.
 // See README.md.
 
+import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
-import { acquireGpuFrameSampler } from '../perf-hud';
+import { acquireGpuFrameSource } from './gpu-frame-source';
 import {
   buildInterleavedRow,
   buildPriceRow,
@@ -184,9 +185,11 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
  * differentials are the only honest per-pass price on ANGLE/Metal
  * (README.md § GPU timing).
  *
- * Timer-query where the driver has one; rAF-delta fallback otherwise
- * (Safari), where a differential smaller than the vsync quantum reads as
- * zero unless the frame is already over budget.
+ * The sample source is per backend (`gpu-frame-source.ts`): the WebGPU
+ * renderer's own timestamp resolve, a WebGL2 timer query, or the rAF-delta
+ * fallback where neither exists (WebGL2 Safari) and a differential smaller
+ * than the vsync quantum reads as zero unless the frame is already over
+ * budget.
  *
  * Pauses the simulation clock for the duration and restores its rate,
  * and sizes the dwells to the time budget once the first one has shown
@@ -205,36 +208,10 @@ export async function runPriceFrame(
   const pinExposure = options.pinExposure ?? DEFAULTS.pinExposure;
   const deadline = performance.now() + (options.budgetMs ?? DEFAULTS.budgetMs);
 
-  if (stellata.rendererGL === null) {
-    console.warn(
-      'priceFrame: the pricing harness reads WebGL2 timer queries — not ' +
-      'ported to the WebGPU boot yet',
-    );
-    return [];
-  }
-  const gl = stellata.rendererGL.getContext() as WebGL2RenderingContext;
-  const hasTimerExt =
-    gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null;
-
   const sink: number[] = [];
-  const release = hasTimerExt
-    ? acquireGpuFrameSampler(gl, (ms) => sink.push(ms))
-    : null;
-  if (hasTimerExt && release === null) {
-    console.warn(
-      'priceFrame: close the debug panel first — its perf timer holds the ' +
-      "context's single TIME_ELAPSED query slot",
-    );
-    return [];
-  }
-  const method = release !== null ? 'timer-query' : 'raf-delta';
-  if (method === 'raf-delta') {
-    console.info(
-      'priceFrame: no GPU timer query on this context (Safari exposes ' +
-      'none) — using rAF-delta wall time. Differentials below the vsync ' +
-      'quantum read as zero unless the frame is already over budget.',
-    );
-  }
+  const source = acquireGpuFrameSource(stellata, (ms) => sink.push(ms));
+  if (source === null) return [];
+  const { method, release } = source;
 
   const startPos = stellata.camera.position.clone();
   const startQuat = stellata.camera.quaternion.clone();
@@ -254,7 +231,7 @@ export async function runPriceFrame(
     sink.length = 0;
     const frames = dwellFrames;
     const readbacksBefore = stellata.reduction.readbackRequests;
-    if (method === 'timer-query') {
+    if (method !== 'raf-delta') {
       for (let f = 0; f < frames; f++) await nextFrame();
     } else {
       let last = performance.now();
@@ -389,7 +366,7 @@ export async function runPriceFrame(
     }
   } finally {
     restore?.();
-    release?.();
+    release();
     releaseRenderHold();
     if (pinExposure) stellata.adaptation.setHeld(false);
     if (pauseClock && clock.getRate() !== startRate) clock.setRate(startRate);
@@ -405,11 +382,11 @@ export async function runPriceFrame(
     );
   }
 
-  const bufferMpx =
-    Number(((gl.drawingBufferWidth * gl.drawingBufferHeight) / 1e6).toFixed(3));
+  const buffer = stellata.renderer.getDrawingBufferSize(new THREE.Vector2());
+  const bufferMpx = Number(((buffer.x * buffer.y) / 1e6).toFixed(3));
   const stamped = rows.map((row) => ({ ...row, bufferMpx }));
   console.info(
-    `priceFrame: drawing buffer ${gl.drawingBufferWidth}x${gl.drawingBufferHeight} ` +
+    `priceFrame: drawing buffer ${buffer.x}x${buffer.y} ` +
     `(${bufferMpx} Mpx) — both dominant passes scale with it, so only compare ` +
     'tables at the same buffer size.',
   );

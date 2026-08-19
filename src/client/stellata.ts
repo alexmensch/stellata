@@ -40,9 +40,9 @@ import {
   frame as perfFrame,
   gpuBegin as perfGpuBegin,
   gpuEnd as perfGpuEnd,
-  gpuSampleSink as perfGpuSampleSink,
 } from './debug/perf-hud';
-import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timer';
+import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timing/gpu-timer';
+import { publishGpuFrameSample } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import { exposureCutMoved } from './render-gate/render-gate-pure';
@@ -2205,8 +2205,10 @@ export class Stellata implements FrameAnchor {
       // the timestamp query pool, and trackTimestamp allocates a pair per
       // render pass whether or not anyone reads them. Skipping it while
       // the HUD is closed overruns the 2048-query pool in ~1024 frames.
+      // The resolved figure is the summed real duration of every render
+      // pass in one frame, so it lands as the whole-frame scope.
       void this.webgpu.renderer.resolveTimestampsAsync().then((ms) => {
-        if (ms !== undefined) perfGpuSampleSink()?.('render', ms);
+        if (ms !== undefined) publishGpuFrameSample(ms);
       });
     } else {
       this.renderer.render(this.scene, this.camera);

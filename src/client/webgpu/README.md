@@ -87,7 +87,6 @@ deleting the gate is part of the port, in the same PR:
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
 | HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |
-| GPU timer rotation, frame pricing | `perfGlContext` returns null; `runPriceFrame` returns `[]` | instrumentation port (`0it.21`) |
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion
@@ -278,9 +277,14 @@ the HUD is open. The resolve is what recycles the query pool: tracking
 allocates a query pair per render pass regardless of whether anyone
 reads the result, so a gated resolve overruns the 2048-query pool after
 ~1024 frames and three logs `Maximum number of queries exceeded`, then
-stops sampling until something resolves. The milliseconds reach the HUD
-as the `gpu.render` row through `perf-hud.ts`'s `gpuSampleSink`, which
-is null while the HUD is closed — the frame still resolves, the sample
-is just dropped. The WebGL2 `gpu.*` rotation, `gpu.frame` headline, and
-the frame-pricing harness stay WebGL2-only until the instrumentation
-port child lands.
+stops sampling until something resolves.
+
+The resolved figure is the summed real duration of every render pass in
+one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
+query fills, and the perf HUD's headline reads `gpu` rather than `submit`
+on either backend. Subscribers (the HUD, a `debug.priceFrame()` sweep)
+come and go through `debug/gpu-timing/gpu-frame-samples.ts` while the
+resolve itself stays unconditional. Per-pass `gpu.*` rows have no WebGPU
+counterpart on purpose: three keys per-pass timestamps by an internal
+uid, and the pricing differential answers the same question without
+pinning three's internals. Detail in `debug/gpu-timing/README.md`.

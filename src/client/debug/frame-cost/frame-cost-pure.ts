@@ -1,6 +1,10 @@
 // Pure statistics for the frame-cost harness: dwell summaries and
 // baseline-vs-disabled differential rows. See README.md.
 
+/** How a row's milliseconds were measured. Three different instruments —
+ *  never compare numbers across two of them. */
+export type GpuFrameMethod = 'timer-query' | 'timestamp' | 'raf-delta';
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
@@ -24,7 +28,7 @@ export interface DwellContext {
 
 export interface PriceFrameRow {
   readonly pass: string;
-  readonly method: 'timer-query' | 'raf-delta';
+  readonly method: GpuFrameMethod;
   readonly baselineMs: number;
   readonly disabledMs: number;
   readonly savedMs: number;

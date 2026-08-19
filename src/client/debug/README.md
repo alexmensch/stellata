@@ -22,13 +22,12 @@ src/client/debug/
                                   level mark/measure/frame/gpuBegin/
                                   gpuEnd swapped from no-op to real on
                                   panel open.
-  gpu-timer.ts (+ test)           EXT_disjoint_timer_query_webgl2 wrapper
-                                  — real GPU execution time, one rotating
-                                  scope per frame. See § GPU timing.
+  gpu-timing/                     Where the gpu.* rows come from, per
+                                  backend: the WebGL2 rotating timer, the
+                                  WebGPU frame-sample channel, the GL test
+                                  stub. Own README.
   frame-cost/                     debug.priceFrame() — automated per-pass
                                   gpu.frame differentials. Own README.
-  fake-gl.ts                      Test-only WebGL2 timer-query stub,
-                                  shared by gpu-timer + perf-hud tests.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -78,16 +77,18 @@ up as a hot path in its own measurements.
   `1000 / frame.total`: that inverts how much work a frame does, which
   reported "347 FPS" on a 60 Hz display whenever the work was cheap and
   invited nonsense cross-browser comparisons.
-- **`gpu Xms`** is one query's measurement of a whole frame (the
-  `gpu.frame` scope), and appears only where the driver exposes a timer
-  query. It is **not** the sum of the `gpu.*` rows — those both rotate
-  across frames and over-attribute, so their total runs well above the
-  frame period (§ GPU timing). Where the extension is
-  absent (Safari exposes none), the headline says **`submit Xms`** instead
-  and reports CPU wall-time around the render calls. Submission is
-  asynchronous, so a large `submit` means the main thread is *blocking*
-  on the driver — a real symptom, but not a measure of GPU work. Never
-  compare a `submit` number against a `gpu` one.
+- **`gpu Xms`** is a whole-frame GPU measurement (the `gpu.frame` scope),
+  and appears wherever the backend can produce one: a WebGL2 timer query,
+  or the WebGPU renderer's own timestamps
+  ([`gpu-timing/`](gpu-timing/README.md)). It is **not** the sum of the
+  per-pass `gpu.*` rows — on WebGL2 those rotate across frames and
+  over-attribute, so their total runs well above the frame period.
+  Where the backend offers nothing (WebGL2 Safari exposes no timer query),
+  the headline says **`submit Xms`** instead and reports CPU wall-time
+  around the render calls. Submission is asynchronous, so a large `submit`
+  means the main thread is *blocking* on the driver — a real symptom, but
+  not a measure of GPU work. Never compare a `submit` number against a
+  `gpu` one.
 
 ## Instrumented sections
 
@@ -109,11 +110,11 @@ after exiting chart mode (otherwise the average would lag forever).
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
 | `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
-| `gpu.frame`             | timer query                      | Real GPU ms for the whole frame — one query spanning every pass. The headline's source, and the only row that prices anything. |
-| `gpu.main`              | timer query                      | Main-pass timer scope. Over-attributes — a relative signal, not a cost. See § GPU timing. |
-| `gpu.localDepth`        | timer query                      | Local-depth-pass timer scope. Same caveat. |
-| `gpu.tonemap`           | timer query                      | Fullscreen HDR resolve timer scope, **including** the rod-summation downsample it runs first (`../hdr/summation/README.md`). Same caveat. |
-| `gpu.reduction`         | timer query                      | The chain of ever-smaller weighted-mean draws down to one texel. Same caveat. |
+| `gpu.frame`             | timer query / timestamps         | Real GPU ms for the whole frame — one WebGL2 query spanning every pass, or the summed WebGPU per-pass timestamps. The headline's source, and the only row that prices anything. Both backends. |
+| `gpu.main`              | timer query (WebGL2)             | Main-pass timer scope. Over-attributes — a relative signal, not a cost. Every per-pass row below is WebGL2-only (`gpu-timing/README.md`). |
+| `gpu.localDepth`        | timer query (WebGL2)             | Local-depth-pass timer scope. Same caveat. |
+| `gpu.tonemap`           | timer query (WebGL2)             | Fullscreen HDR resolve timer scope, **including** the rod-summation downsample it runs first (`../hdr/summation/README.md`). Same caveat. |
+| `gpu.reduction`         | timer query (WebGL2)             | The chain of ever-smaller weighted-mean draws down to one texel. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |
@@ -154,60 +155,25 @@ numbers only mean something once a port child actually draws stars.
 
 ## GPU timing
 
-`gpu-timer.ts` wraps `EXT_disjoint_timer_query_webgl2`. The extension is
-feature-detected at panel open; absent it, `gpuBegin`/`gpuEnd` stay
-no-ops and no `gpu.*` rows appear at all. On a WebGPU dual-boot there is
-no GL context either — the one `gpu.*` row is `gpu.render`, fed by the
-renderer's own timestamp queries through `gpuSampleSink`
-(`../webgpu/README.md` § Timestamps), and the headline stays `submit`.
+Own folder — [`gpu-timing/README.md`](gpu-timing/README.md) covers both
+backends: the WebGL2 one-query-at-a-time rotation and why its per-pass
+rows can be neither summed nor ratioed, the WebGPU per-pass timestamps
+that make `gpu.frame` an exact total and leave no per-pass rows at all,
+and the resolve-every-frame invariant.
 
-**One query at a time — this shapes everything.** WebGL2 permits exactly
-one active `TIME_ELAPSED` query per context and exposes no timestamp
-queries, so timed scopes cannot nest or overlap within a frame. Each
-frame times a single scope and rotates to the next, so **N scopes sample
-at 1/N the frame rate**. The ring-buffer averages stay meaningful; the
-per-frame histogram is still driven by `frame.total`, never by these.
-
-**Never add the `gpu.*` rows together, and never ratio one against
-`gpu.frame`.** Two problems compound. Rotation means two scopes never
-sample the same frame, so their averages describe different work.
-Worse, the per-pass scopes **over-attribute** on ANGLE/Metal: measured
-on an M4, `gpu.main` came within 1% of `gpu.frame` while
-`gpu.localDepth` was a further 83% of the frame on top of it — a sum of
-42.7 ms against a measured frame of 23.4 ms. WebGL2 exposes no timestamp
-queries, so elapsed time is derived from pass boundaries, and on a
-tile-based deferred renderer a pass's fragment work executes when that
-pass is finalised — not necessarily inside the query that encoded it.
-
-`GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) is the only figure that prices a
-frame: one query, no cross-scope arithmetic. **To price a single pass,
-disable it and difference `gpu.frame`.** The per-pass rows are a
-relative signal — does this scope respond to this change — and nothing
-more.
-
-Because `gpu.frame` encloses the inner scopes, `begin()` refuses the
-inner ones on its turn and their `end()` calls must leave the enclosing
-query running — `endQuery` takes no handle, so closing on a label
-mismatch would stop the clock early. Pinned in `gpu-timer.test.ts`.
-
-Two further properties a reader will otherwise get wrong:
-
-- **Results are async** — a query resolves some frames after submission,
-  so `gpu.*` rows lag the scene by a frame or two.
-- **A disjoint event invalidates everything in flight.** Reading
-  `GPU_DISJOINT_EXT` clears it, so it is read exactly once per drain and
-  applied to every result in that pass; those samples are dropped, not
-  reported low.
+The two rules a reader needs before looking at any `gpu.*` row:
+`gpu.frame` is the only figure that prices a frame, and **to price a
+single pass, disable it and difference `gpu.frame`** — automated below.
 
 ## Frame pricing — `debug.priceFrame()`
 
 The automated form of "disable it and difference `gpu.frame`": dwell,
 re-dwell with one pass disabled, difference the medians. Lives in its
 own folder — `frame-cost/README.md` owns the priced-pass roster, the
-preconditions (panel CLOSED, camera still, clock paused), the drift
+preconditions (camera still, clock paused, and on WebGL2 a CLOSED panel), the drift
 bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 
-Adding a GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
+Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so
 the two are comparable when the extension is missing.
 
@@ -379,7 +345,7 @@ re-prosecuted.
    for ~5 s with hands off; then again under typical interaction.
 2. Read the section table top-down. The histogram tells you whether
    it's a sustained cost or a periodic spike.
-3. If `gpu.render` dominates, the bottleneck is in shaders /
+3. If `gpu.frame` dominates, the bottleneck is in shaders /
    overdraw — start with whichever render layer (star, milkyway,
    dust, …) is hot.
 4. If `frame.handlers` dominates and it's not chart mode, suspect a
