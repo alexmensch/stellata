@@ -36,6 +36,10 @@
 
   const zero = () => ({
     upload: 0, mipmap: 0, link: 0, readback: 0, sync: 0, n: 0, bytes: 0,
+    // Uploads counted SEPARATELY from n. n is every wrapped call of any
+    // bucket, so it cannot answer the only question the upload-rate cap turns
+    // on: how many TEXTURES landed in this one frame. Widths name them.
+    uploads: 0, widths: [],
   });
   let live = zero();
   const frames = [];
@@ -52,8 +56,11 @@
         // Source dimensions where the call carries them, so an 8192 rung is
         // distinguishable from a 1024 one in the log.
         const src = args[args.length - 1];
-        if (src && typeof src === 'object' && src.width) {
-          live.bytes = Math.max(live.bytes, src.width);
+        const w = src && typeof src === 'object' ? src.width : 0;
+        if (w) live.bytes = Math.max(live.bytes, w);
+        if (bucket === 'upload') {
+          live.uploads++;
+          if (w) live.widths.push(w);
         }
         return out;
       };
@@ -100,8 +107,9 @@
         link: round(f.link),
         readback: round(f.readback),
         sync: round(f.sync),
+        uploads: f.uploads,
+        widths: f.widths.join(' '),
         glCalls: f.n,
-        widestSrc: f.bytes || '',
         kind:
           isSlow.has(f.i - 1) || isSlow.has(f.i + 1) ? 'burst' : 'ISOLATED',
       }));
