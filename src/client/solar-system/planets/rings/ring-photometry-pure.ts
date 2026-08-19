@@ -107,23 +107,28 @@ export function effectiveRingTiltDeg(
 }
 
 /**
- * Ring flux as a fraction of the globe's own flux at the same α, from
- * the joint law minus the globe-alone curve `globe` carries. Past
- * the joint fit's `alphaMaxDeg` the ring term is anchor-scaled Lambert
- * — the same convention `empiricalPhaseFactor` uses past a globe
- * polynomial's bound — because the law's α slope is the ring opposition
- * surge, spent by ~2°, and the paper states outright that there is not
- * enough information to extend the system magnitude beyond 6.5°.
+ * Ring flux at (α, β), in units of the **globe's own flux at α = 0** —
+ * the same unit `empiricalPhaseFactor` reports the globe in, so the two
+ * simply add to give the system's φ(α). The joint law gives the system
+ * in that unit; subtracting the globe curve leaves the rings.
+ *
+ * Past the joint fit's `alphaMaxDeg` the ring flux becomes anchor-scaled
+ * Lambert — the convention `empiricalPhaseFactor` uses past a globe
+ * polynomial's bound. It extends the ring FLUX and not the ring/globe
+ * ratio, which would compound Lambert with the globe's own curve and
+ * bury the rings (3.4x too faint by α = 90°). The law's α slope is the
+ * ring opposition surge, spent by ~2°, and the paper states outright
+ * that there is not enough information to extend the system magnitude
+ * beyond 6.5°, so nothing measured is discarded.
  *
  * Floored at zero: `globeZeroPointDelta` separates two independently
  * determined zero points (2012 photometry against 2017 synthetic
  * spectrophotometry), and below β ≈ 0.94° it swamps the tilt term and
- * would make a near-edge-on system marginally fainter than its own bare
- * globe. 0.036 mag is inside the mutual uncertainty of the two
- * determinations, so it is a calibration offset to floor, not an
- * edge-on ring occultation to model.
+ * would leave the rings emitting negative flux. 0.036 mag is inside the
+ * mutual uncertainty of the two determinations, so it is a calibration
+ * offset to floor, not an edge-on ring occultation to model.
  */
-export function ringFluxRatio(
+export function ringFluxAt(
   photometry: RingSystemPhotometry,
   alphaDeg: number,
   betaDeg: number,
@@ -136,27 +141,60 @@ export function ringFluxRatio(
     photometry.tiltMag * sinB +
     photometry.alphaSlope * aCap +
     photometry.surgeMag * sinB * Math.exp(photometry.surgeDecayPerDeg * aCap);
-  const totalOverGlobe = Math.exp(
-    -(photometry.globeZeroPointDelta + dvSystem - phaseDV(globe, aCap)) * 0.4 * LOG10,
+  const system = Math.exp(
+    -(photometry.globeZeroPointDelta + dvSystem) * 0.4 * LOG10,
   );
-  let ratio = Math.max(0, totalOverGlobe - 1);
+  let flux = Math.max(0, system - Math.exp(-phaseDV(globe, aCap) * 0.4 * LOG10));
   if (alphaDeg > photometry.alphaMaxDeg) {
-    ratio *=
+    flux *=
       lambertianPhaseFactor(Math.min(alphaDeg, 180) * DEG) /
       lambertianPhaseFactor(photometry.alphaMaxDeg * DEG);
   }
-  return backlit ? ratio * RING_BACKLIT_TRANSMIT : ratio;
+  return backlit ? flux * RING_BACKLIT_TRANSMIT : flux;
 }
 
 /**
- * Multiplier on the globe's phase factor φ(α) that carries the whole
- * system's flux — the one number the apparent-magnitude formula and its
- * GPU attribute consume. The law is defined as a difference against a
- * globe curve, so a body carrying ring photometry without
- * `phaseCoefficients` gets no ring term at all; `planet-system.test.ts`
- * pins the pairing so that combination cannot ship.
+ * Ring flux for a body at a viewer, in the globe's α = 0 flux unit —
+ * the number the apparent-magnitude formula ADDS to the globe's φ(α),
+ * and the `iRingFlux` per-instance attribute. Adding rather than scaling
+ * is what keeps it finite: as α → 180° both fluxes vanish, and their
+ * ratio is 0/0.
+ *
+ * The law is a difference against a globe curve, so a body carrying ring
+ * photometry without `phaseCoefficients` gets no ring term at all;
+ * `planet-system.test.ts` pins the pairing so that cannot ship.
  */
-export function ringSystemFluxFactor(
+export function ringFluxFor(
+  photometry: RingSystemPhotometry | undefined,
+  alphaRad: number,
+  viewerElevationDeg: number,
+  hostElevationDeg: number,
+  globe: PhaseCoefficients | undefined,
+): number {
+  if (!photometry || !globe) return 0;
+  const { betaDeg, backlit } = effectiveRingTiltDeg(
+    photometry, viewerElevationDeg, hostElevationDeg,
+  );
+  return ringFluxAt(photometry, alphaRad / DEG, betaDeg, backlit, globe);
+}
+
+/**
+ * The drawn annulus's phase scalar: ring flux at α over ring flux at
+ * opposition, so **1 at α = 0** — the anchor the strip's RGB already
+ * carries, a ~0.05 particle *geometric* albedo (data/textures/README.md
+ * § Ring strips), which is by definition the zero-phase value. Without
+ * this the strip renders its opposition brightness at every phase angle.
+ *
+ * Driving it from the same law as `ringFluxFor` rather than from an
+ * independent fit is what keeps the resolvedness band stepless — inside
+ * it the billboard and the annulus both draw. The backlit factor cancels
+ * out of the quotient, and `planet-rings.frag.glsl` owns that split
+ * itself through `TRANSMIT`.
+ *
+ * 1 when there is no ring photometry, or when β is edge-on enough that
+ * the floored flux leaves no curve to normalise against.
+ */
+export function ringPhaseFactor(
   photometry: RingSystemPhotometry | undefined,
   alphaRad: number,
   viewerElevationDeg: number,
@@ -164,21 +202,24 @@ export function ringSystemFluxFactor(
   globe: PhaseCoefficients | undefined,
 ): number {
   if (!photometry || !globe) return 1;
-  const { betaDeg, backlit } = effectiveRingTiltDeg(
+  const { betaDeg } = effectiveRingTiltDeg(
     photometry, viewerElevationDeg, hostElevationDeg,
   );
-  return 1 + ringFluxRatio(photometry, alphaRad / DEG, betaDeg, backlit, globe);
+  const atOpposition = ringFluxAt(photometry, 0, betaDeg, false, globe);
+  if (atOpposition <= 0) return 1;
+  return ringFluxAt(photometry, alphaRad / DEG, betaDeg, false, globe) / atOpposition;
 }
 
 /**
- * Largest flux factor the ring term can ever reach: maximum opening at
- * opposition. The per-host distance cull reads a static bound and would
- * otherwise drop a Saturn about to brighten through a ring opening.
+ * Largest flux factor the ring system can ever multiply the globe's
+ * reflectance by: maximum opening at opposition. The per-host distance
+ * cull reads a static bound and would otherwise drop a Saturn about to
+ * brighten through a ring opening.
  */
 export function maxRingSystemFluxFactor(
   photometry: RingSystemPhotometry | undefined,
   globe: PhaseCoefficients | undefined,
 ): number {
   if (!photometry || !globe) return 1;
-  return 1 + ringFluxRatio(photometry, 0, photometry.betaMaxDeg, false, globe);
+  return 1 + ringFluxAt(photometry, 0, photometry.betaMaxDeg, false, globe);
 }

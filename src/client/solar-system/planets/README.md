@@ -418,7 +418,7 @@ with the skyline beyond it — the body's own limb included — are
 lit/transmitted faces, why rings dim a source behind them while writing no
 depth, and the joint phase-angle / ring-tilt law carrying a ring system's
 share of the *unresolved* magnitude — on a per-frame attribute
-(`iRingBoost`), unlike the phase polynomial, because β is camera-dependent.
+(`iRingFlux`), unlike the phase polynomial, because β is camera-dependent.
 
 ## Planet rotation
 

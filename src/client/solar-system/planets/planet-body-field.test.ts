@@ -23,8 +23,8 @@ import { planetApparentMagnitude } from '../perceptual-magnitude';
 import {
   SATURN_RING_PHOTOMETRY,
   maxRingSystemFluxFactor,
+  ringFluxFor,
   ringPlaneElevationDeg,
-  ringSystemFluxFactor,
 } from './rings/ring-photometry-pure';
 import { SATURN_ROTATION, poleVectorAt } from './rotation/rotation-elements-pure';
 import {
@@ -683,7 +683,7 @@ describe('PlanetBodyField lifecycle', () => {
     // bandwidth. Pin the write-gated flush: after attach (which
     // legitimately touches every attribute) a single update() tick over
     // a ringless planet only flips iLocalRel (the positions tick), and
-    // iRingBoost stays quiescent with nothing to boost.
+    // iRingFlux stays quiescent with no rings to add.
     const f = new PlanetBodyField(makeSharedUniforms(20));
     f.attachHost(
       0,
@@ -714,13 +714,13 @@ describe('PlanetBodyField lifecycle', () => {
     f.update(camera, 1, 0);
     // Only iLocalRel should have been touched. iHostLocalPos / iRadiusPc /
     // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C /
-    // iRingBoost stay quiescent.
+    // iRingFlux stay quiescent.
     expect(flagged.has('iLocalRel')).toBe(true);
     expect(flagged.size).toBe(1);
     f.dispose();
   });
 
-  it('update() flushes iRingBoost, and appMag folds the joint law', () => {
+  it('update() flushes iRingFlux, and appMag folds the joint law', () => {
     // The ring term is β-dependent, so unlike the phase polynomial it
     // cannot ride a static attribute — the CPU evaluates it per frame
     // against the live camera and ships one multiplier per instance.
@@ -738,11 +738,11 @@ describe('PlanetBodyField lifecycle', () => {
     });
     const pole = { x: 0, y: 0, z: 0 };
     poleVectorAt(SATURN_ROTATION, 0, pole);
-    // Expected factor at an arbitrary vantage, from the pole directly —
+    // Expected ring flux at an arbitrary vantage, from the pole directly —
     // the physics itself is pinned in rings/ring-photometry-pure.test.ts.
-    const expectedFactor = (cam: THREE.Vector3): number => {
+    const expectedFlux = (cam: THREE.Vector3): number => {
       const dv = planetPos.clone().sub(cam);
-      return ringSystemFluxFactor(
+      return ringFluxFor(
         SATURN_RING_PHOTOMETRY,
         phaseAngleFor(dv.x, dv.y, dv.z, -cam.x, -cam.y, -cam.z),
         ringPlaneElevationDeg(-dv.x, -dv.y, -dv.z, pole.x, pole.y, pole.z),
@@ -779,17 +779,17 @@ describe('PlanetBodyField lifecycle', () => {
       });
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bufs = (f as any).bufs as { ringBoost: Float32Array };
+    const bufs = (f as any).bufs as { ringFlux: Float32Array };
     const camera = new THREE.PerspectiveCamera();
 
     // A near-opposition viewer just outside the host: the Earth-like
     // vantage the published law was fitted from.
     camera.position.set(1 * AU_PC, 0, 0);
     f.update(camera, 0, 0);
-    expect(flagged.has('iRingBoost')).toBe(true);
-    const sameSide = bufs.ringBoost[0];
-    expect(sameSide).toBeCloseTo(expectedFactor(camera.position), 6);
-    expect(sameSide).toBeGreaterThan(1);
+    expect(flagged.has('iRingFlux')).toBe(true);
+    const sameSide = bufs.ringFlux[0];
+    expect(sameSide).toBeCloseTo(expectedFlux(camera.position), 6);
+    expect(sameSide).toBeGreaterThan(0);
 
     // appMag folds exactly the factor the attribute carries — the mirror
     // the hover formatter and the focus card read.
@@ -802,8 +802,15 @@ describe('PlanetBodyField lifecycle', () => {
         SATURN_PHASE,
       ),
     );
+    // Globe and rings are fluxes in the same unit, so the system is
+    // brighter than the bare globe by 2.5·log10((φ_globe + ringFlux)/φ_globe).
+    const globePhi = phaseFactorFor(
+      dv.x, dv.y, dv.z,
+      -camera.position.x, -camera.position.y, -camera.position.z,
+      SATURN_PHASE,
+    );
     expect(globeOnly - f.appMagFor(0, 0, camera.position)!)
-      .toBeCloseTo(2.5 * Math.log10(sameSide), 6);
+      .toBeCloseTo(2.5 * Math.log10((globePhi + sameSide) / globePhi), 6);
 
     // Move the viewer high over each face in turn. The host's own
     // elevation decides which is the lit one, so read its sign rather
@@ -815,13 +822,13 @@ describe('PlanetBodyField lifecycle', () => {
       -planetPos.x, -planetPos.y, -planetPos.z, pole.x, pole.y, pole.z);
     expect(hostElev).not.toBe(0);
     const litSign = Math.sign(hostElev);
-    const faceBoost = (sign: number): number => {
+    const faceFlux = (sign: number): number => {
       camera.position.copy(planetPos).addScaledVector(poleVec, sign * 20 * AU_PC);
       f.update(camera, 0, 0);
-      expect(bufs.ringBoost[0]).toBeCloseTo(expectedFactor(camera.position), 6);
-      return bufs.ringBoost[0];
+      expect(bufs.ringFlux[0]).toBeCloseTo(expectedFlux(camera.position), 6);
+      return bufs.ringFlux[0];
     };
-    expect(faceBoost(litSign) - 1).toBeGreaterThan(faceBoost(-litSign) - 1);
+    expect(faceFlux(litSign)).toBeGreaterThan(faceFlux(-litSign));
     f.dispose();
   });
 

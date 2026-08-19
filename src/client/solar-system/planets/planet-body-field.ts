@@ -10,8 +10,8 @@ import {
 } from '../phase-function';
 import {
   maxRingSystemFluxFactor,
+  ringFluxFor,
   ringPlaneElevationDeg,
-  ringSystemFluxFactor,
 } from './rings/ring-photometry-pure';
 import { poleVectorAt } from './rotation/rotation-elements-pure';
 import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
@@ -131,7 +131,7 @@ const INSTANCE_ATTR_SPECS = attrSpecs({
   phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
   phaseC: { attr: 'iPhaseCoefsC', dims: 4 },
   eclipseDim: { attr: 'iEclipseDim', dims: 1, dynamicUsage: true, fill: 1 },
-  ringBoost: { attr: 'iRingBoost', dims: 1, dynamicUsage: true, fill: 1 },
+  ringFlux: { attr: 'iRingFlux', dims: 1, dynamicUsage: true },
 });
 
 type InstanceBufKey = keyof typeof INSTANCE_ATTR_SPECS;
@@ -392,11 +392,11 @@ export class PlanetBodyField {
    *  to 1 (correct within one anti-strobe time constant, and
    *  attach/detach is a rare lifecycle event, not a per-frame path).
    *  The ring buffer is only ever written for a ringed body, so a
-   *  shifted slot would otherwise keep a boost belonging to another
+   *  shifted slot would otherwise keep flux belonging to another
    *  body. */
   private resetPerInstanceFactors(): void {
     this.bufs.eclipseDim.fill(1);
-    this.bufs.ringBoost.fill(1);
+    this.bufs.ringFlux.fill(0);
     this.dimActive.clear();
     this.dimTargets.clear();
   }
@@ -463,11 +463,11 @@ export class PlanetBodyField {
         touched = true;
       }
       this.collectEclipseDimTargets(host, camera.position);
-      if (this.writeRingBoosts(host, camera.position)) ringTouched = true;
+      if (this.writeRingFluxes(host, camera.position)) ringTouched = true;
     }
     if (render) {
       if (touched) this.markAttributeDirty('iLocalRel');
-      if (ringTouched) this.markAttributeDirty('iRingBoost');
+      if (ringTouched) this.markAttributeDirty('iRingFlux');
     }
 
     const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
@@ -496,13 +496,13 @@ export class PlanetBodyField {
     this.ringPoleTmp.z = this.rotateTmp.z;
   }
 
-  /** Ring-system flux multiplier on one body's globe phase factor, from
-   *  the viewer's and the host's elevation above its ring plane
-   *  (Mallama's β_E / β_S). `(dvx, dvy, dvz)` is the planet-minus-viewer
+  /** One body's ring flux in the globe's α = 0 flux unit, from the
+   *  viewer's and the host's elevation above its ring plane (Mallama's
+   *  β_E / β_S). `(dvx, dvy, dvz)` is the planet-minus-viewer
    *  displacement the phase angle was taken from; the host leg is the
-   *  body's own host-relative position, negated. 1 for every body
+   *  body's own host-relative position, negated. 0 for every body
    *  without ring photometry. */
-  private ringSystemFactor(
+  private ringFluxOf(
     host: AttachedHost,
     planetIdx: number,
     alphaRad: number,
@@ -512,11 +512,11 @@ export class PlanetBodyField {
   ): number {
     const planet = host.ps.planets[planetIdx];
     const photometry = planet.rings?.systemPhotometry;
-    if (!photometry) return 1;
+    if (!photometry) return 0;
     this.ringPoleInto(host, planet);
     const { x: px, y: py, z: pz } = this.ringPoleTmp;
     const base = (host.startInstance + planetIdx) * 3;
-    return ringSystemFluxFactor(
+    return ringFluxFor(
       photometry,
       alphaRad,
       ringPlaneElevationDeg(-dvx, -dvy, -dvz, px, py, pz),
@@ -530,10 +530,10 @@ export class PlanetBodyField {
     );
   }
 
-  /** Refresh `iRingBoost` for one host's ringed bodies against the live
+  /** Refresh `iRingFlux` for one host's ringed bodies against the live
    *  camera. Returns whether anything was written — a host with no ring
    *  photometry costs one `rings` probe per body and no upload. */
-  private writeRingBoosts(
+  private writeRingFluxes(
     host: AttachedHost,
     cameraPos: Readonly<THREE.Vector3>,
   ): boolean {
@@ -551,7 +551,7 @@ export class PlanetBodyField {
         host.hostLocalPos.y - cameraPos.y,
         host.hostLocalPos.z - cameraPos.z,
       );
-      this.bufs.ringBoost[idx] = this.ringSystemFactor(host, i, alpha, dvx, dvy, dvz);
+      this.bufs.ringFlux[idx] = this.ringFluxOf(host, i, alpha, dvx, dvy, dvz);
       wrote = true;
     }
     return wrote;
@@ -771,9 +771,11 @@ export class PlanetBodyField {
         this.localRel64[base + 2] ** 2,
     );
     const alpha = phaseAngleFor(dvx, dvy, dvz, dhx, dhy, dhz);
+    // Globe and rings are both in the globe's α = 0 flux unit, so the
+    // system's φ(α) is their sum.
     const phi =
-      phaseFactorAt(planet.phaseCoefficients, alpha) *
-      this.ringSystemFactor(host, planetIdx, alpha, dvx, dvy, dvz);
+      phaseFactorAt(planet.phaseCoefficients, alpha) +
+      this.ringFluxOf(host, planetIdx, alpha, dvx, dvy, dvz);
     const radiusPc = planet.radiusKm * KM_PC;
     const appMag = planetApparentMagnitude(
       host.hostAbsmag,

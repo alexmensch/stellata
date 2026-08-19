@@ -36,8 +36,9 @@ in vec2 aCorner;
 //                   Earth's, and every exoplanet hit.
 //   iPhaseCoefsC  — (c7,_,_,_). Only Mercury carries a degree-7 term;
 //                   the other three slots are reserved.
-//   iRingBoost    — ring-system flux multiplier on phi, from the joint
-//                   phase-angle / ring-tilt law (1 = no ring system).
+//   iRingFlux     — the ring system's flux from the joint phase-angle /
+//                   ring-tilt law, in the same unit phi carries: the
+//                   globe's own flux at alpha = 0 (0 = no ring system).
 //                   CPU-side per frame: ../rings/ring-photometry-pure.ts.
 //   iEclipseDim   — true-eclipse flux dim on a planet behind the
 //                   host's physical disc (1 = no dim).
@@ -51,7 +52,7 @@ in float iHostAbsmag;
 in vec4 iPhaseCoefsA;
 in vec4 iPhaseCoefsB;
 in vec4 iPhaseCoefsC;
-in float iRingBoost;
+in float iRingFlux;
 in float iEclipseDim;
 
 uniform vec2 uViewport;       // CSS pixels
@@ -207,10 +208,11 @@ void main() {
     // every moon but Earth's, and future exoplanet hosts).
     phi = lambertPhi(alpha);
   }
-  // A ring system's share of the unresolved flux — β-dependent, so the
-  // CPU evaluates the joint law and ships one multiplier per instance
-  // rather than a pole and a second polynomial.
-  phi *= iRingBoost;
+  // A ring system's share of the unresolved flux. β-dependent, so the
+  // CPU evaluates the joint law and ships one float per instance rather
+  // than a pole and a second polynomial. It ADDS: both terms are fluxes
+  // against the globe at α = 0, and a ratio would be 0/0 as α → 180°.
+  phi += iRingFlux;
 
   // Reflected-light apparent magnitude:
   //

@@ -11,10 +11,11 @@ src/client/solar-system/planets/rings/
   planet-rings.frag.glsl   Ring-annulus shaders (radial strip sample,
                            lit/transmitted faces, body shadow). Built and
                            driven by ../planet-mesh-layer.ts.
-  ring-photometry-pure.ts  The ring system's share of the body's
-  (+ test)                 UNRESOLVED apparent magnitude: the joint
-                           phase-angle / ring-tilt law. Pure,
-                           vitest-pinned. § Ring photometry.
+  ring-photometry-pure.ts  The joint phase-angle / ring-tilt law: the
+  (+ test)                 ring system's share of the body's unresolved
+                           magnitude, and the drawn annulus's phase
+                           scalar. Pure, vitest-pinned.
+                           § Ring photometry.
 ```
 
 `Planet.rings` adds an annulus mesh in the body's equatorial plane (IAU
@@ -76,11 +77,13 @@ back in over a shadowed ring section (`../../../hdr/summation/README.md`
 
 ## Ring photometry — the unresolved magnitude
 
-The annulus above is the *resolved* half. While the body is a billboard
-its rings still carry most of its light, and that rides
-`ring-photometry-pure.ts`: Mallama & Hilton 2018 Eq. 10 (the whole system,
-`V₁(0) = −8.914`) differenced against the globe-alone Eq. 11/12 curve
-`Planet.phaseCoefficients` holds, giving a **flux multiplier on φ(α)**.
+Both halves — the billboard's magnitude and the drawn annulus's
+brightness — run one law from `ring-photometry-pure.ts`: Mallama & Hilton
+2018 Eq. 10 (the whole system, `V₁(0) = −8.914`) differenced against the
+globe-alone Eq. 11/12 curve `Planet.phaseCoefficients` holds. That
+difference is the **ring flux, in units of the globe's own flux at
+α = 0** — the same unit `empiricalPhaseFactor` reports the globe in, so
+the system's φ(α) is simply the two added.
 
 ```
 ΔV(α, β) = −1.825·sin β + 0.026·α − 0.378·sin β·e^(−2.25·α)
@@ -98,21 +101,26 @@ long-run mean, which also left the resolved globe ~1.66× over-bright
 (the mesh's `uPhaseScale` reads the same curve, and the annulus was
 already being drawn on top).
 
-**It is a per-frame per-instance attribute, `iRingBoost`, not a static
+**It is a per-frame per-instance attribute, `iRingFlux`, not a static
 one** — β depends on where the camera is. `PlanetBodyField.update`
 evaluates the law on the CPU and ships one float per body, the same shape
 `iEclipseDim` takes; `evalPlanetView` recomputes it for the hover/pick
-viewer. Nothing in `planet.vert.glsl` knows the law, only that φ gets
-multiplied.
+viewer. Nothing in `planet.vert.glsl` knows the law, only that the float
+**adds** to φ. It adds rather than scaling for a numerical reason as much
+as a physical one: as α → 180° the globe's flux and the rings' both
+vanish, and a multiplier would be 0/0 there.
 
 ### Three places the published fit runs out, and what happens instead
 
 - **α > 6.5°.** The paper states outright that there is not enough
-  information to extend the system magnitude past it. The ring term
+  information to extend the system magnitude past it. The ring **flux**
   becomes anchor-scaled Lambert from its 6.5° value — the same
   convention `../../phase-function.ts` uses past a globe polynomial's
-  bound. The law's α slope is the ring opposition surge and is spent by
-  ~2°, so nothing measured is being discarded.
+  bound. It has to be the flux and not the ring/globe *ratio*: extending
+  the ratio compounds Lambert with the globe's own curve and buries the
+  rings, 3.4× too faint by α = 90° and 23× by 150°. The law's α slope is
+  the ring opposition surge and is spent by ~2°, so nothing measured is
+  being discarded.
 - **β > 27°.** A camera over Saturn's pole reaches β ≈ 49°, far outside
   anything an Earth-bound fit saw. Held at the 27° value: a stated
   clamp, not a silent extrapolation.
@@ -125,12 +133,17 @@ multiplied.
   source. That shared fraction is what makes resolved and unresolved
   agree that crossing the ring plane dims the rings.
 
-Below β ≈ 0.94° the term floors at zero. `globeZeroPointDelta` = 0.036
-mag separates two independently determined zero points (2012 photometry
-vs 2017 synthetic spectrophotometry) and would otherwise make a
-near-edge-on system marginally fainter than its own bare globe — inside
-the mutual uncertainty of the two, so a calibration offset to floor
-rather than an edge-on occultation to model.
+**The ring flux floors at zero**, which two separate things reach for.
+Below β ≈ 0.94° `globeZeroPointDelta` = 0.036 mag — the gap between two
+independently determined zero points (2012 photometry vs 2017 synthetic
+spectrophotometry) — swamps the tilt term and would leave the rings
+emitting negative flux; that is inside the mutual uncertainty of the two,
+so it is a calibration offset to floor rather than an edge-on
+occultation to model. Separately, at small β the 0.026 mag/deg α slope
+outruns the tilt term within the fitted α range (by α ≈ 6.5° at
+β ≈ 4.5°), because the slope was fitted where the rings dominate the
+system and is not constrained near edge-on. Rings that near the plane
+contribute little either way.
 
 **The cull reads the term's MAXIMUM** (`maxRingSystemFluxFactor`, α = 0
 at β = 27°, ≈ 2.43×), which widens Saturn's `cullDistancePc` by ≈ 1.56×.
@@ -141,8 +154,56 @@ crossing at a distance it becomes visible from once the rings open.
 true-opacity charcoal threads, and the brightness-vs-inclination Mallama
 publishes for Uranus is polar methane depletion — not a ring term.
 
-**Not modelled: the annulus's own opposition surge.** The α dependence
-above reaches the billboard only. A parked Saturn's drawn strip has no
-phase term (§ the annulus lighting model above), so the resolved regime
-still makes no photometric claim about the surge Fig. 3 of the paper
-shows — `stellata-2f6.60`.
+### The drawn annulus rides the same curve
+
+`uRingPhaseScale` is the ring flux at α over the ring flux at
+opposition, so **1 at α = 0** — which is the anchor the strip already
+carries: its RGB is pinned to a ~0.05 particle **geometric** albedo
+(`data/textures/README.md` § Ring strips), and geometric albedo is by
+definition the zero-phase value. Without the scalar the strip renders its
+opposition brightness at every phase angle.
+
+Driving it from the same law as `iRingFlux`, rather than from a ring
+phase curve fitted independently, is what keeps the resolvedness band
+stepless: inside that band the billboard and the annulus both draw, and
+a surge on one alone would step the handoff. The backlit factor cancels
+out of the quotient — `planet-rings.frag.glsl` owns that split itself
+through `TRANSMIT`.
+
+**It scales `light`, never `lit`.** `lit` gates the coverage mask as well
+as carrying the shadow term, so folding the phase factor in there would
+let the opposition surge vote on how much lit ring surface the exposure
+pin divides its masked mean by — brightness masquerading as area. Pinned.
+
+**Cassini corroborates the width, independently.** Déau et al. 2013
+(Cassini/ISS) measure the surge half-width at 0.20° in the A and B rings
+and 0.26–0.28° in the C ring and the Cassini Division. Eq. 10's own
+`exp(−2.25·α)` half-falls at `ln2/2.25` = 0.308°. An Earth-based
+disc-integrated fit and a spacecraft's resolved scans describe one
+feature at one width, which is why the annulus needs no second
+parametrisation.
+
+**The surge is strip-averaged, deliberately — a per-radius one is not
+derivable.** Déau's per-region amplitudes are 1.25 (B), 1.39 (A), 1.45
+(C) and 1.47 (Cassini Division): the two regions furthest from the B
+ring's value are also the faintest, so flux-weighting collapses the
+spread to a few percent, and matching the disc-integrated law would then
+need a build-time flux normalisation over the strip to avoid stepping
+the handoff. The large per-region spread is in the linear regime's slope
+(0.030–0.105 ̟₀P/deg, 3.5×), but that is an *absolute* slope of ̟₀P and
+the per-region ̟₀P needed to turn it into a relative steepness is
+published only in figures. The obvious cheap proxy — key the surge on
+the strip's own opacity channel — is ruled out by the paper's own
+result: amplitude correlates with optical depth *positively* below
+τ ≈ 0.5 and *negatively* above τ ≈ 1, a turnover reported as
+per-region correlation coefficients, not as a fitted τ → A law.
+
+**Still not modelled: the grazing-illumination term.** The annulus takes
+the host's irradiance with no solar-elevation factor — `lit` gates on
+`smoothstep(0, 0.02, |sunDir.z|)`, a switch fully open above 1.15° of
+elevation, not a falloff. An optically thick layer's radiance goes as
+`μ₀/(μ+μ₀)`, so at grazing solar incidence the strip should dim toward
+`sin β_S`. The billboard's `−1.825·sin β` carries exactly that, so
+annulus and billboard still disagree on β the way they used to on α —
+and β swings over the whole 29.5-yr cycle rather than a knife-edge
+0.3°, so it is the larger of the two errors. `stellata-2f6.61`.
