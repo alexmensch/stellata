@@ -15,32 +15,39 @@ export interface GpuFrameSource {
  *  whole integration shell. */
 export interface GpuFrameSourceHost {
   readonly rendererGL: THREE.WebGLRenderer | null;
+  readonly webgpu: { readonly timestampsAvailable: boolean } | null;
+}
+
+/** No sample source at all: the caller times frames itself, so the release
+ *  is a no-op. */
+function rafDelta(reason: string): GpuFrameSource {
+  console.info(
+    `priceFrame: no GPU clock — ${reason}. Falling back to rAF-delta wall ` +
+    'time, where differentials below the vsync quantum read as zero unless ' +
+    'the frame is already over budget.',
+  );
+  return { method: 'raf-delta', release: () => {} };
 }
 
 /**
  * Null when the sweep cannot proceed; the caller has already been told why
- * on the console. `raf-delta` comes back with a no-op release — that
- * method has no sample source at all and the caller times frames itself.
+ * on the console.
  */
 export function acquireGpuFrameSource(
   host: GpuFrameSourceHost,
   onSample: (ms: number) => void,
 ): GpuFrameSource | null {
   if (host.rendererGL === null) {
-    // The WebGPU render loop resolves its timestamps on every rendered
-    // frame whether or not anyone is listening, so the harness only has to
-    // subscribe. Nothing is exclusive here: the debug panel may stay open,
-    // and the WebGL2 closed-panel precondition has no counterpart.
+    if (host.webgpu?.timestampsAvailable !== true) {
+      return rafDelta('this adapter withheld the timestamp-query feature');
+    }
+    // Nothing is exclusive here: the render loop resolves for whoever is
+    // listening, so the debug panel may stay open.
     return { method: 'timestamp', release: onGpuFrameSample(onSample) };
   }
   const gl = host.rendererGL.getContext() as WebGL2RenderingContext;
   if (gl.getExtension('EXT_disjoint_timer_query_webgl2') === null) {
-    console.info(
-      'priceFrame: no GPU timer query on this context (WebGL2 Safari ' +
-      'exposes none) — using rAF-delta wall time. Differentials below the ' +
-      'vsync quantum read as zero unless the frame is already over budget.',
-    );
-    return { method: 'raf-delta', release: () => {} };
+    return rafDelta('WebGL2 exposes no timer query on this context (Safari)');
   }
   const release = acquireGpuFrameSampler(gl, onSample);
   if (release === null) {

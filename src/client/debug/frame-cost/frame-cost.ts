@@ -307,8 +307,9 @@ export async function runPriceFrame(
     fitDwellToBudget(performance.now() - baselineStartedMs);
     if (firstBaseline === null) {
       console.warn(
-        'priceFrame: no baseline samples — the query slot was taken ' +
-        'mid-run (debug panel opened?) or the context is lost',
+        `priceFrame: no baseline samples on the '${method}' clock — on ` +
+        'WebGL2 the query slot was taken mid-run (debug panel opened?); on ' +
+        'either backend a lost device stops the samples too',
       );
       return [];
     }

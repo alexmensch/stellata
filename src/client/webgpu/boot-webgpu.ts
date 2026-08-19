@@ -31,6 +31,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   return {
     renderer,
     scene: new Scene(),
+    timestampsAvailable: renderer.hasFeature('timestamp-query'),
     get uniformNodes() { return registry?.nodes ?? null; },
     bindSharedUniforms(shared: SharedUniforms) {
       registry = buildSharedUniformNodes(shared);

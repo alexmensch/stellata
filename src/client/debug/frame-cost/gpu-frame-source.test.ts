@@ -1,17 +1,23 @@
 import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { acquireGpuFrameSource } from './gpu-frame-source';
+import { acquireGpuFrameSource, type GpuFrameSourceHost } from './gpu-frame-source';
 import { publishGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
 import { FakeGl, asGl } from '../gpu-timing/fake-gl';
 
-const glHost = (fake: FakeGl) => ({
+const glHost = (fake: FakeGl): GpuFrameSourceHost => ({
   rendererGL: { getContext: () => asGl(fake) } as unknown as THREE.WebGLRenderer,
+  webgpu: null,
+});
+
+const webgpuHost = (timestampsAvailable: boolean): GpuFrameSourceHost => ({
+  rendererGL: null,
+  webgpu: { timestampsAvailable },
 });
 
 describe('the pricing sweep picks its sample source per backend', () => {
   it('subscribes to the renderer resolve on a WebGPU boot', () => {
     const samples: number[] = [];
-    const source = acquireGpuFrameSource({ rendererGL: null }, (ms) => samples.push(ms));
+    const source = acquireGpuFrameSource(webgpuHost(true), (ms) => samples.push(ms));
 
     expect(source?.method).toBe('timestamp');
     publishGpuFrameSample(9.5);
@@ -21,6 +27,24 @@ describe('the pricing sweep picks its sample source per backend', () => {
     // Released means unsubscribed — a sweep that ended must not keep
     // filling its sink from the render loop.
     expect(samples).toEqual([9.5]);
+  });
+
+  it('falls back to rAF deltas where the adapter withheld timestamp-query', () => {
+    // trackTimestamp: true is a request, not a grant — three clears it when
+    // the feature is absent and every resolve then returns undefined.
+    // Claiming 'timestamp' here would burn the whole warmup before aborting
+    // with no rows, on the one backend Safari can price at all.
+    const samples: number[] = [];
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const source = acquireGpuFrameSource(webgpuHost(false), (ms) => samples.push(ms));
+
+    expect(source?.method).toBe('raf-delta');
+    publishGpuFrameSample(9.5);
+    expect(samples).toEqual([]);
+    expect(() => source!.release()).not.toThrow();
+    expect(info).toHaveBeenCalled();
+    info.mockRestore();
   });
 
   it('takes the WebGL2 timer query where the extension exists', () => {
@@ -47,8 +71,8 @@ describe('the pricing sweep picks its sample source per backend', () => {
   it('leaves the WebGPU path unconstrained by the WebGL2 query slot', () => {
     // No exclusivity on the timestamp path: two live subscriptions are
     // fine, which is why the closed-panel precondition is WebGL2-only.
-    const first = acquireGpuFrameSource({ rendererGL: null }, () => {});
-    const second = acquireGpuFrameSource({ rendererGL: null }, () => {});
+    const first = acquireGpuFrameSource(webgpuHost(true), () => {});
+    const second = acquireGpuFrameSource(webgpuHost(true), () => {});
     expect(second?.method).toBe('timestamp');
     first!.release();
     second!.release();
