@@ -234,9 +234,13 @@ honest answer really is close to black.
 
 It is added to `col`, never folded into `dayside`. Folding it in would put it
 inside the direct term, and `dayside` is what the coverage mask below is cut
-from. The CPU mirror is `terrainViewFactor` in `surface-relief-pure.ts`, source-
-pinned to the GLSL clamp because a `max()` dropped on the shader side alone
-would brighten every plain with nothing in the TS suite noticing.
+from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
+`decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
+next section describes — and `SKY_VIEW_RANGE` lives there too, so the shader
+and `sky_view.py` are both pinned against one owner rather than against each
+other. The clamp inside `terrainViewFactor` is source-pinned to the GLSL
+because a `max()` dropped on the shader side alone would brighten every plain
+with nothing in the TS suite noticing.
 
 **No flux renormalisation**, and measured rather than assumed — the fourth
 column of `../emission/README.md`'s phase table.

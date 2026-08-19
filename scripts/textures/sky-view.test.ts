@@ -3,7 +3,11 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { HORIZON_AZIMUTHS } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
+import {
+  HORIZON_AZIMUTHS,
+  SKY_VIEW_RANGE,
+  decodeSkyView,
+} from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
 import { lfsContentReadable } from '../util/paths';
 import { webpSize } from './image-header-pure';
 
@@ -40,15 +44,21 @@ interface SkyViewRow {
 const manifest: Record<string, { skyView?: SkyViewRow; horizon?: { width: number } }> =
   JSON.parse(readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'));
 
-const SKY_VIEW_RANGE = 0.25;
-
 describe('sky view factor map', () => {
   it('shares its encoding range with the shader that decodes it', () => {
-    // A range the two disagree on scales every shadow by the ratio, which
+    // A range the three disagree on scales every shadow by the ratio, which
     // reads as "the fill term is mistuned" rather than as an encoding bug.
     expect(pySource).toContain(`SKY_VIEW_RANGE = ${SKY_VIEW_RANGE}`);
     expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
       `const float STELLATA_SKY_VIEW_RANGE = ${SKY_VIEW_RANGE};`,
+    );
+  });
+
+  it('decodes a raw channel the way the shader multiplies it', () => {
+    expect(decodeSkyView(0)).toBe(0);
+    expect(decodeSkyView(1)).toBe(SKY_VIEW_RANGE);
+    expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
+      'texture(uSkyView, vUvM).r * STELLATA_SKY_VIEW_RANGE',
     );
   });
 
@@ -94,8 +104,9 @@ describe('sky view factor map', () => {
   });
 
   it('never clamps, so the range is not throwing signal away', () => {
-    // 0.25 is well above the 0.171 maximum any body measures, and one code is
-    // 0.001 of sky — two orders under the faintest shadow the tone-map shows.
+    // 0.25 clears the Moon's 0.142 — the highest any shipped map reaches — with
+    // room to spare, and one code is 0.001 of sky, two orders under the
+    // faintest shadow the tone-map shows.
     for (const [name, row] of Object.entries(manifest)) {
       if (!row.skyView) continue;
       expect(row.skyView.clampedPct, `${name} clamped`).toBe(0);

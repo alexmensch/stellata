@@ -67,11 +67,12 @@ rather than shipping it.
   terrain fills, packed into a grayscale `<body>-skyview.webp`. Owns
   the one thing the horizon pair cannot state — that the near field it
   skips for shadowing still blocks sky, so this marches from **one DEM
-  texel** where that one starts at two OUTPUT texels — plus the
-  encoding range. `sky-view.test.ts` pins that range against the mesh
-  shader, the grid against the horizon pair's, the manifest rows
-  against the shipped maps' own headers, and the R8 upload and its
-  fallback in the layer. Rationale:
+  texel** where that one starts at two OUTPUT texels. The encoding range
+  is NOT its own: `SKY_VIEW_RANGE` is owned by
+  `surface-relief-pure.ts`, and `sky-view.test.ts` pins both this script
+  and the mesh shader against that one export, plus the grid against the
+  horizon pair's, the manifest rows against the shipped maps' own
+  headers, and the R8 upload and its fallback in the layer. Rationale:
   `data/textures/relief/README.md` § Sky view factor.
 - `horizon_map.test.py` — stdlib unittest pins for the geometry the
   TS suite can only source-pin: the flat-ground floor's closed form,

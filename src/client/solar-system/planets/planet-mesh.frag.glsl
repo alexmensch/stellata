@@ -197,11 +197,6 @@ void main() {
       enc, dot(uSunDirView, east), dot(uSunDirView, north));
     float pen = max(uSunAngRad, 1e-6);
     horizonGate = smoothstep(sinH - pen, sinH + pen, sunCos);
-    // The planes above skip the near field on purpose — a caster that close
-    // throws a shadow the colour map cannot draw — but that same near field is
-    // where a crater floor loses most of its sky. Deriving the fill from them
-    // therefore under-reads it by ~2x, so the precomputed map wins whenever it
-    // has arrived and this stays the byte-identical fallback until it does.
     terrainView = uHasSkyView > 0.5
       ? texture(uSkyView, vUvM).r * STELLATA_SKY_VIEW_RANGE
       : stellataTerrainViewFactor(enc);

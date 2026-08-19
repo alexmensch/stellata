@@ -14,12 +14,11 @@ from horizon_map import (
     search_arc,
 )
 
-# Full scale of the encoded factor. A view factor is a fraction of the sky, so
-# the encodable ceiling is 1 — but the measured maximum over all four bodies is
-# 0.171, and spending the range on values no terrain reaches would throw away
-# most of the 8 bits. One code is 0.001 of sky, which reaches the screen as
-# 0.012 % of lit ground on the Moon: two orders under the faintest shadow the
-# tone-map can show (§ What the fill term is worth).
+# Owned by src/client/solar-system/planets/surface-relief/surface-relief-pure.ts
+# and pinned against it by sky-view.test.ts, along with the mesh shader's own
+# copy. The headroom it leaves over what terrain actually reaches, and why the
+# quantisation is invisible, are
+# data/textures/relief/README.md § Sky view factor.
 SKY_VIEW_RANGE = 0.25
 
 

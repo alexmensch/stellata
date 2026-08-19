@@ -328,11 +328,14 @@ cannot serve both readings, and this map marches from **one DEM texel**,
 2.7 km against the shadow march's 10.7 on the Moon.
 
 - **Encoded value is the factor over `SKY_VIEW_RANGE` = 0.25**, mapped onto
-  [0, 1]. A view factor's ceiling is 1, but nothing measures past 0.171, and
-  spending the range where no terrain reaches would throw away most of the
-  8 bits. One code is 0.001 of sky, which reaches the screen as 0.012 % of
-  lit ground on the Moon — two orders under the faintest shadow the tone-map
-  can show, so the quantisation is invisible. Nothing clamps on any body.
+  [0, 1]. A view factor's ceiling is 1, but the roughest shipped map reaches
+  0.142 (the Moon, in the table below), and spending the range where no
+  terrain reaches would throw away most of the 8 bits. One code is 0.001 of
+  sky, which reaches the screen as 0.012 % of lit ground on the Moon — two
+  orders under the faintest shadow the tone-map can show, so the quantisation
+  is invisible. Nothing clamps on any body. The constant itself is owned by
+  `surface-relief-pure.ts`, which both `sky_view.py` and the mesh shader are
+  pinned against.
 - **Uploads as `R8`** — one channel, so **2.8 MB per body** resident with
   mips, against 22.4 for the horizon pair. Grayscale WebP stores three
   identical channels and the lossless coder removes almost all of that; the

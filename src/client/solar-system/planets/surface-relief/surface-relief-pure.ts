@@ -17,6 +17,17 @@ export const HORIZON_SIN_RANGE = 0.4;
 export const decodeSin = (raw: number): number =>
   (raw * 2 - 1) * HORIZON_SIN_RANGE;
 
+/** Full-scale of the sky view factor the `<body>-skyview.webp` map encodes —
+ *  `SKY_VIEW_RANGE` in `scripts/textures/sky_view.py` and
+ *  `STELLATA_SKY_VIEW_RANGE` in the mesh shader, both pinned against this by
+ *  `sky-view.test.ts`. */
+export const SKY_VIEW_RANGE = 0.25;
+
+/** One raw sky-view channel in [0, 1] back to the terrain view factor it
+ *  encodes — the inverse of `encode_sky_view`, and the mirror of the shipped
+ *  path `terrainViewFactor` below is only the fallback for. */
+export const decodeSkyView = (raw: number): number => raw * SKY_VIEW_RANGE;
+
 /** Each relief body's DEM elevation span in metres, `[lowest, highest]` above
  *  the reference sphere it is drawn at — `DEM_BODIES[…].span_m` in
  *  `scripts/textures/dem_relief.py`, which `dem-relief.test.ts` pins these
