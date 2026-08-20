@@ -103,11 +103,11 @@ shader.
 
 ### Every park is a gate someone has to delete
 
-Each GL-only path parks behind a `rendererGL !== null` test (or, for the
-HDR seam, a null renderer). **A port child that lands its feature but
-leaves its gate in place ships a feature that is silently dead on
-WebGPU** — tests pass, nothing warns, the code simply never runs. So
-deleting the gate is part of the port, in the same PR:
+Each GL-only path parks behind a `rendererGL !== null` test. **A port
+child that lands its feature but leaves its gate in place ships a
+feature that is silently dead on WebGPU** — tests pass, nothing warns,
+the code simply never runs. So deleting the gate is part of the port,
+in the same PR:
 
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
