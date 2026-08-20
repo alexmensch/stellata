@@ -247,20 +247,21 @@ export class BinaryOrbitField {
       // the camera. Non-chain relations gate freely — they cannot touch
       // the focal's slot.
       const onFocalChain = focalIdx !== null && this.focalChainRelIdx.has(rc.relationIdx);
+      // Primary's camera distance — the magnitude and horizon filters
+      // share it, and the cadence bound needs it on the focal chain too
+      // (which bypasses all three gates below).
+      const dx = aPx - cameraPos.x;
+      const dy = aPy - cameraPos.y;
+      const dz = aPz - cameraPos.z;
+      const dCamPc = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), 1e-30);
+      // Peak angular separation envelope. AU / pc converts to arcsec
+      // because 1 AU subtends 1″ at 1 pc by definition.
+      const peakPx = (rc.peakSepAU / dCamPc) * ARCSEC_TO_RAD * pxPerRad;
       if (!onFocalChain) {
-        // Primary's camera distance — magnitude + horizon filters share it.
-        const dx = aPx - cameraPos.x;
-        const dy = aPy - cameraPos.y;
-        const dz = aPz - cameraPos.z;
-        const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dCamPc > VISIBILITY_HORIZON_PC) continue;
         const appMag = apparentMagnitude(absMags[pIdx], dCamPc);
         if (appMag > thresholdMag + SOFT_TAPER_MARGIN_MAG) continue;
         activeCount++;
-        // Peak angular separation envelope. AU / pc converts to arcsec
-        // because 1 AU subtends 1″ at 1 pc by definition.
-        const peakArcsec = rc.peakSepAU / Math.max(dCamPc, 1e-30);
-        const peakPx = peakArcsec * ARCSEC_TO_RAD * pxPerRad;
         if (peakPx < SUB_PIXEL_THRESHOLD_PX) {
           // Composite suppression: skip Kepler, mark the secondary so the
           // close-range + depth-mask passes drop its quad. Collapse it onto
@@ -274,26 +275,16 @@ export class BinaryOrbitField {
           local[sBase + 2] = aPz + rc.baseDiffPc.z;
           continue;
         }
-        maxRatePxPerS = Math.max(
-          maxRatePxPerS,
-          pairSweepRatePxPerS(peakPx, rc.elements.P, rc.elements.e),
-        );
       } else {
         activeCount++;
-        // Focal-chain relations bypass the gates, so their peak
-        // separation wasn't computed above — the cadence bound still
-        // needs it (a resolved focused pair is exactly the case that
-        // must keep rendering).
-        const dx = aPx - cameraPos.x;
-        const dy = aPy - cameraPos.y;
-        const dz = aPz - cameraPos.z;
-        const dCamPc = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), 1e-30);
-        const peakPx = (rc.peakSepAU / dCamPc) * ARCSEC_TO_RAD * pxPerRad;
-        maxRatePxPerS = Math.max(
-          maxRatePxPerS,
-          pairSweepRatePxPerS(peakPx, rc.elements.P, rc.elements.e),
-        );
       }
+      // Every relation that reaches here is Kepler-active this frame, so
+      // its sweep enters the cadence bound. Sub-pixel-suppressed and
+      // gated-out relations `continue` above and move nothing on screen.
+      maxRatePxPerS = Math.max(
+        maxRatePxPerS,
+        pairSweepRatePxPerS(peakPx, rc.elements.P, rc.elements.e),
+      );
 
       // Barycentric split (sCoeff − pCoeff = 1): primary += −q·ΔR, secondary
       // tracks primary + baseDiffPc + ΔR. aPx carries any parent
