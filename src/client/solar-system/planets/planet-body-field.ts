@@ -280,6 +280,7 @@ export class PlanetBodyField {
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
+  private viewVecTmp = new THREE.Vector3();
   private ringPoleTmp = { x: 0, y: 0, z: 1 };
   // Model time of the last positions walk. The ring-tilt term needs the
   // body's pole at `t`, and the hover/pick entry points carry a viewer
@@ -549,6 +550,21 @@ export class PlanetBodyField {
     );
   }
 
+  /** Camera→body vector for one of the host's bodies, into `viewVecTmp`;
+   *  returns its length in pc. Valid only until the next call. */
+  private viewVectorInto(
+    host: AttachedHost,
+    planetIdx: number,
+    cameraPos: Readonly<THREE.Vector3>,
+  ): number {
+    const base = (host.startInstance + planetIdx) * 3;
+    return this.viewVecTmp.set(
+      host.hostLocalPos.x + this.localRel64[base + 0] - cameraPos.x,
+      host.hostLocalPos.y + this.localRel64[base + 1] - cameraPos.y,
+      host.hostLocalPos.z + this.localRel64[base + 2] - cameraPos.z,
+    ).length();
+  }
+
   /** Refresh `iRingFlux` for one host's ringed bodies against the live
    *  camera. Returns whether anything was written — a host with no ring
    *  photometry costs one `rings` probe per body and no upload. */
@@ -560,10 +576,8 @@ export class PlanetBodyField {
     for (let i = 0; i < host.count; i++) {
       if (!host.ps.planets[i].rings?.systemPhotometry) continue;
       const idx = host.startInstance + i;
-      const base = idx * 3;
-      const dvx = host.hostLocalPos.x + this.localRel64[base + 0] - cameraPos.x;
-      const dvy = host.hostLocalPos.y + this.localRel64[base + 1] - cameraPos.y;
-      const dvz = host.hostLocalPos.z + this.localRel64[base + 2] - cameraPos.z;
+      this.viewVectorInto(host, i, cameraPos);
+      const { x: dvx, y: dvy, z: dvz } = this.viewVecTmp;
       const alpha = phaseAngleFor(
         dvx, dvy, dvz,
         host.hostLocalPos.x - cameraPos.x,
@@ -1008,7 +1022,9 @@ export class PlanetBodyField {
    *  the camera distance) and spin (BODY_SPIN_BOUND across the resolved
    *  disc, self-gating through physDiscPx for unresolved bodies).
    *  Hosts past their cull distance contribute nothing — their bodies
-   *  cannot draw. */
+   *  cannot draw. Geometry only: the bound needs no phase angle, ring
+   *  flux or magnitude, so this runs allocation-free rather than through
+   *  `evalPlanetView`. */
   cadenceSimBudgetS(
     cameraPos: Readonly<THREE.Vector3>,
     pxPerRadian: number,
@@ -1017,11 +1033,12 @@ export class PlanetBodyField {
     for (const host of this.hosts.values()) {
       if (cameraPos.distanceTo(host.hostLocalPos) > host.cullDistance) continue;
       for (let i = 0; i < host.count; i++) {
-        const { dVp, physDiscPx } = this.evalPlanetView(host, i, cameraPos);
+        const dVp = this.viewVectorInto(host, i, cameraPos);
         if (dVp <= 0) continue;
+        const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
         const rate =
           (BODY_SPEED_BOUND_PC_PER_S / dVp) * pxPerRadian
-          + BODY_SPIN_BOUND_RAD_PER_S * 0.5 * physDiscPx;
+          + BODY_SPIN_BOUND_RAD_PER_S * 0.5 * this.physDiscPx(radiusPc, dVp);
         if (rate > maxRatePxPerS) maxRatePxPerS = rate;
       }
     }
