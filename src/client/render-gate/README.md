@@ -95,7 +95,8 @@ At live 1× almost nothing the sim clock drives moves a pixel per tick:
 planet angular motion is sub-pixel for minutes at most vantages, and
 GCVS periods run hours to years. So a nonzero rate renders on a
 **cadence**: each rendered frame stores a sim-time budget — the largest
-step nothing drawn can turn into visible change — and ticks skip until
+step nothing drawn can turn into visible change, over every driver that
+reports one — and ticks skip until
 the elapsed sim time reaches it. `clockFrameDue` is the per-tick test;
 a rate high enough (fast-forward, or a close body) collapses the budget
 below one tick's sim delta and rendering is continuous again, which is
@@ -111,14 +112,27 @@ The budget is a min over four sources (`cadenceSimBudgetS`):
   field (sampled velocity over camera distance), and the binary orbit
   field (per-Kepler-active-pair sweep bound). Each converts a
   conservative screen-motion rate through
-  `CADENCE_MOTION_THRESHOLD_PX` (0.5 px). **A new layer whose drawn
-  content the sim clock moves on screen MUST implement the hook** — the
-  miss shows as that layer freezing between cadence frames, the same
-  frozen-frame class as a missed invalidation source.
+  `cadenceBudgetFromRatePxS` (0.5 DEVICE px, so a rate in CSS px arrives
+  with the pixel ratio). **A new layer whose drawn content the sim clock
+  moves on screen MUST implement the hook** — the miss shows as that
+  layer freezing between cadence frames, the same frozen-frame class as
+  a missed invalidation source. **The star pipeline is the standing
+  exception**: it is not a scene layer at all, so its sim-clock content
+  reaches the budget through the pulsation bound below and the
+  epoch-bucket invalidate, not through a hook.
 - **The pulsation bound** — catalog-wide constant: `CADENCE_JND_MAG`
   (0.01 mag) over the fastest unsuppressed variable's brightness slope
   (A·π/P). Vantage-free because a magnitude step is a magnitude step
-  wherever the star is visible.
+  wherever the star is visible. **It bounds one of the three
+  phase-locked modulations** (`../star-pipeline/pulsation/README.md`):
+  the magnitude term. The radius swing (ρ^−0.5·cos φ) and the B−V swing
+  ride the same phase and are NOT bounded — on a point source they are
+  invisible, but on a resolved disc the radius term is the tighter of
+  the two: a focused large-amplitude variable filling ~2000 px can step
+  its disc edge a couple of pixels between cadence frames while the
+  magnitude bound still reads "nothing moved". Bounding it needs the
+  live disc size, so it belongs in a per-frame star-layer budget rather
+  than this load-time constant — `stellata-8cg.32`.
 - **`CADENCE_CAP_SIM_S` (30 s)** — the ceiling covering every
   sim-driven change WITHOUT a per-frame bound: an eclipse dip's onset
   (both dim fields evaluate on rendered frames, so a dip can start at
