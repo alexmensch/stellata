@@ -16,6 +16,16 @@ artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          silently self-skip and "npm test green" means
                          less than it reads. Self-skips on fresh clones
                          and LFS pointer stubs.
+cadence-idle-floor.test.ts
+                         Tripwire on the render gate's documented idle
+                         floor: the shipped catalogue's fastest
+                         unsuppressed variable must not pulse a JND
+                         faster than CADENCE_CAP_SIM_S, or "one frame per
+                         30 s at 1×" silently stops being true. The
+                         margin is thin (the period field quantises to
+                         0.1 d, so the amplitude on that row decides it),
+                         which is why a refresh needs to trip something.
+                         Self-skips when public/ is unbuilt.
 bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/; dust
                          assets restricted to the sync allowlist.
