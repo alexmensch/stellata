@@ -4,8 +4,6 @@ import { SOL_BODIES } from '../planet-system';
 import {
   BODY_SPEED_BOUND_PC_PER_S,
   BODY_SPIN_BOUND_RAD_PER_S,
-} from './planet-body-field';
-import {
   cullDistancePc,
   PlanetBodyField,
 } from './planet-body-field';
@@ -14,7 +12,15 @@ import type {
   PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
-import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import {
+  AU_KM,
+  AU_PC,
+  DAYS_PER_JULIAN_YEAR,
+  KM_PC,
+  R_SUN_PC,
+} from '../../util/astronomy-constants';
+import { keplerPeriodDays } from '../ephemerides/orbit-descriptor';
+import { planetPeriodYears } from '../../format/physical-format';
 import type { PlanetSystem, Planet } from '../planet-system';
 import {
   MERCURY_PHASE,
@@ -1892,8 +1898,42 @@ describe('PlanetBodyField.cadenceSimBudgetS', () => {
 
   const PX_PER_RAD = 573;
 
-  it('the speed bound is the documented 100 km/s ceiling', () => {
+  it('the speed bound covers every SOL body, planets and moons alike', () => {
     expect(BODY_SPEED_BOUND_PC_PER_S).toBe(100 * KM_PC);
+    // A Kepler orbit is fastest at periapsis: v = (2πa/P)·√((1+e)/(1−e)).
+    // Planets take the solar-mass period (a^1.5 yr), moons Kepler III off
+    // the parent's GM — and a moon's space velocity is bounded by its own
+    // peak plus its parent's, aligned worst-case. Elements here are the
+    // display-only a/e fields, which is what a bound wants: the live
+    // element source osculates around them.
+    const peakKmS = (aKm: number, periodDays: number, e: number) =>
+      ((2 * Math.PI * aKm) / (periodDays * 86400)) * Math.sqrt((1 + e) / (1 - e));
+    const planetPeak = new Map<string, number>();
+    for (const body of SOL_BODIES) {
+      if (body.parentName !== undefined) continue;
+      planetPeak.set(body.name, peakKmS(
+        body.semiMajorAxisAu * AU_KM,
+        planetPeriodYears(body.semiMajorAxisAu) * DAYS_PER_JULIAN_YEAR,
+        body.eccentricity,
+      ));
+    }
+    let fastest = 0;
+    let moons = 0;
+    for (const body of SOL_BODIES) {
+      let kmS = planetPeak.get(body.name);
+      if (body.parentName !== undefined) {
+        const parent = SOL_BODIES.find((p) => p.name === body.parentName);
+        const aKm = body.semiMajorAxisAu * AU_KM;
+        kmS = peakKmS(aKm, keplerPeriodDays(aKm, parent!.gravParamGM!), body.eccentricity)
+          + planetPeak.get(body.parentName)!;
+        moons++;
+      }
+      expect(kmS! * KM_PC).toBeLessThanOrEqual(BODY_SPEED_BOUND_PC_PER_S);
+      fastest = Math.max(fastest, kmS!);
+    }
+    expect(moons).toBe(18);
+    // Mercury at perihelion — the margin the bound actually carries.
+    expect(Math.round(fastest)).toBe(59);
   });
 
   it('the spin bound covers every SOL body with rotation elements', () => {

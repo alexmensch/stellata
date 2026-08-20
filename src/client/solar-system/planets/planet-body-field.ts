@@ -29,11 +29,14 @@ import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import { CADENCE_MOTION_THRESHOLD_PX } from '../../render-gate/clock-cadence-pure';
 
-/** Conservative ceiling on any Sol-system body's total space velocity —
- *  heliocentric plus moon-around-parent. Mercury peaks at 59 km/s at
- *  perihelion; the fastest moon composition (Jupiter's ~13 plus an inner
- *  moonlet's ~31) stays under 45. 100 leaves margin for any future
- *  attached host's bodies. Pinned in planet-body-field.test.ts. */
+/** Ceiling on an attached body's total space velocity — its own orbit
+ *  plus its parent's. Mercury's perihelion speed, 59 km/s, is the
+ *  fastest thing SOL_BODIES has; the test derives every body's
+ *  periapsis speed from its elements and fails if one crosses this.
+ *  It is NOT a general ceiling: a hot Jupiter at 0.05 AU runs ~200 km/s,
+ *  so attaching a host whose bodies orbit tighter than Mercury must
+ *  raise it — the alternative is a body that visibly freezes between
+ *  cadence frames (../../render-gate/README.md § The clock cadence). */
 export const BODY_SPEED_BOUND_PC_PER_S = 100 * KM_PC;
 
 /** Ceiling on any body's spin rate — Jupiter, the system's fastest
