@@ -72,6 +72,10 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
   private sourceHeight = 0;
   private issued = 0;
   private inFlight = false;
+  /** A readback already in flight at `dispose()` still resolves — the
+   *  WebGL twin drops its fence object and cannot be landed on, so this
+   *  is the same guarantee expressed for a promise. */
+  private disposed = false;
   private landed: Float32Array | null = null;
   private pendingExposure = 0;
   private pendingIsStale = false;
@@ -126,11 +130,14 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     this.renderer
       .readRenderTargetPixelsAsync(last.target, 0, 0, 1, 1)
       .then((pixels) => {
+        if (this.disposed) return;
         this.landed = pixels as Float32Array;
         this.inFlight = false;
       })
       .catch(() => {
+        if (this.disposed) return;
         this.inFlight = false;
+        this.pendingIsStale = false;
       });
     this.renderer.setRenderTarget(null);
   }
@@ -147,9 +154,11 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.releaseLevels();
     this.sourceWidth = 0;
     this.sourceHeight = 0;
+    this.inFlight = false;
     this.landed = null;
     this.latest = null;
     this.pendingExposure = 0;

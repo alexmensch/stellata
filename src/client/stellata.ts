@@ -2397,7 +2397,9 @@ export class Stellata implements FrameAnchor {
     this.layers.disposeAll();
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
-    this.reduction.dispose();
+    // Whoever built the chain releases it: on a WebGPU boot the pipeline
+    // constructed its own reduction and disposes it from hdr.dispose().
+    if (this.webgpu === null) this.reduction.dispose();
     this.hdr.dispose();
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
