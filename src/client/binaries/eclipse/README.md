@@ -85,6 +85,15 @@ so sub-frame events read as a soft shimmer while real-time dips
 exactly 1.0 after occlusion ends and leave the field's active set;
 frames that write nothing skip the attribute re-upload entirely.
 
+That blend runs on real seconds, so it needs real frames — which the
+render gate only supplies while something asks for them. The field
+answers `holdsVisibleEclipseDim`: an active dim whose star still puts
+ink on screen at the live `uExposure`, which the shell turns into a
+per-frame `invalidate()`. `activeDimCount` remains the debug-HUD
+readout and is deliberately NOT the hold condition — holding on the
+count pins the frame rate through every invisible eclipse in the
+catalogue (`../../render-gate/README.md` § The clock cadence).
+
 #### Shader-side wiring
 
 `iEclipseDim` is folded into appMag in the **glow pass only**

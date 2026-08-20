@@ -1671,6 +1671,7 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
   function makeMoonField(dxKm: number, yKm: number): {
     f: PlanetBodyField;
     camera: THREE.PerspectiveCamera;
+    shared: ReturnType<typeof makeSharedUniforms>;
   } {
     const ps: PlanetSystem = {
       hostStarIdx: 0,
@@ -1692,7 +1693,8 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
         out[5] = 0;
       },
     };
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const shared = makeSharedUniforms();
+    const f = new PlanetBodyField(shared);
     f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     const moonPos = new THREE.Vector3();
     f.planetLocalPositionInto(1, moonPos);
@@ -1701,7 +1703,7 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
       .crossVectors(moonPos, new THREE.Vector3(0, 0, 1))
       .normalize()
       .multiplyScalar(5 * AU_PC);
-    return { f, camera };
+    return { f, camera, shared };
   }
 
   it('a moon dead in the parent umbra dims to exactly 0', () => {
@@ -1734,6 +1736,59 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
     const { f, camera } = makeMoonField(-MOON_ORBIT_KM, 0);
     f.update(camera, 0, 0);
     expect(f.eclipseDimForInstance(1)).toBe(1);
+    f.dispose();
+  });
+});
+
+describe('PlanetBodyField.holdsVisibleEclipseDim', () => {
+  it('an off-screen shadowed moon holds no frames; the same dim on screen does', () => {
+    // Same umbral geometry as the moon-shadow suite: the dim is a fact of
+    // the sun–parent–moon line and does not care where the camera is or
+    // what the exposure does. What the render gate cares about is whether
+    // the dimmed body is on screen — the outer planets' moons cross their
+    // parents' shadows for hours at a time while sitting far under the
+    // default view's adaptation cut.
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets: [
+        makePlanet({ name: 'P', semiMajorAxisAu: 1, radiusKm: 70000 }),
+        makePlanet({
+          name: 'M', parentName: 'P', radiusKm: 1737,
+          semiMajorAxisAu: (400000 * KM_PC) / AU_PC,
+        }),
+      ],
+      positionsAt: (_t, out) => {
+        out[0] = AU_PC; out[1] = 0; out[2] = 0;
+        out[3] = AU_PC + 400000 * KM_PC; out[4] = 0; out[5] = 0;
+      },
+    };
+    const shared = makeSharedUniforms();
+    const f = new PlanetBodyField(shared);
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    const moonPos = new THREE.Vector3();
+    f.planetLocalPositionInto(1, moonPos);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position
+      .crossVectors(moonPos, new THREE.Vector3(0, 0, 1))
+      .normalize()
+      .multiplyScalar(5 * AU_PC);
+
+    f.update(camera, 0, 0);
+    expect(f.eclipseDimForInstance(1)).toBe(0);
+    expect(f.holdsVisibleEclipseDim).toBe(true);
+
+    // Deep adaptation cut — the eclipse is still happening, and still
+    // worth exactly zero frames.
+    shared.uExposure.value *= 1e-9;
+    f.update(camera, 0, 16);
+    expect(f.eclipseDimForInstance(1)).toBe(0);
+    expect(f.holdsVisibleEclipseDim).toBe(false);
+    f.dispose();
+  });
+
+  it('a field with nothing attached holds nothing', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    expect(f.holdsVisibleEclipseDim).toBe(false);
     f.dispose();
   });
 });

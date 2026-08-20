@@ -253,6 +253,7 @@ export class PlanetBodyField {
   private dimTargets = new Map<number, number>();
   private readonly tmpUmbraGlow: [number, number, number] = [0, 0, 0];
   private dimActive = new Set<number>();
+  private dimOnScreen = false;
   private lastDimNowMs: number | null = null;
   // Reverse index: flat instance → owning hostStarIdx (-1 = unused
   // slot). Rebuilt on every attach/detach so the flat-index accessors
@@ -411,6 +412,7 @@ export class PlanetBodyField {
     this.bufs.ringFlux.fill(0);
     this.dimActive.clear();
     this.dimTargets.clear();
+    this.dimOnScreen = false;
   }
 
   /**
@@ -453,6 +455,7 @@ export class PlanetBodyField {
   update(camera: THREE.PerspectiveCamera, t: number, nowMs: number): void {
     if (this.liveCount === 0) {
       this.group.visible = false;
+      this.dimOnScreen = false;
       return;
     }
     // Rendering is gated by hidden; the ephemeris walk is
@@ -488,6 +491,7 @@ export class PlanetBodyField {
       this.markAttributeDirty('eclipseDim');
     }
     this.dimTargets.clear();
+    this.dimOnScreen = this.anyActiveDimPutsInkOnScreen(camera.position);
     perfMeasure('solar.bodies');
   }
 
@@ -973,12 +977,25 @@ export class PlanetBodyField {
     return dVp <= 0 ? 0 : physDiscPx;
   }
 
-  /** Count of instances currently holding a true-eclipse dim below 1
-   *  (occluding or decaying) — while nonzero, the shell keeps frames
-   *  coming so the wall-clock anti-strobe blend can run
-   *  (../../render-gate/README.md § The clock cadence). */
-  get activeDimCount(): number {
-    return this.dimActive.size;
+  /** True while a body holding a live true-eclipse dim can still put ink
+   *  on screen at the live exposure — the shell's cue to keep frames
+   *  coming so the wall-clock anti-strobe blend can run. A dim on a body
+   *  the adaptation cut has already taken off screen must NOT hold
+   *  frames, or the shadowed moons of the outer planets pin the frame
+   *  rate for hours at a time (../../render-gate/README.md § The clock
+   *  cadence). */
+  get holdsVisibleEclipseDim(): boolean {
+    return this.dimOnScreen;
+  }
+
+  private anyActiveDimPutsInkOnScreen(cameraPosLocal: Readonly<THREE.Vector3>): boolean {
+    for (const instanceIdx of this.dimActive) {
+      const host = this.hostOfInstance(instanceIdx);
+      if (host === null) continue;
+      const view = this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal);
+      if (view.dVp > 0 && this.bodyInkVisible(view)) return true;
+    }
+    return false;
   }
 
   /** Largest sim-time step no attached body can turn into visible screen

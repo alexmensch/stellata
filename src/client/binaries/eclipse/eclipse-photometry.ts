@@ -16,12 +16,27 @@ import {
   type OrbitRelationCache,
 } from '../orbit-relation-cache';
 import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import {
+  angularRadiusPx,
+  pixelsPerRadianFromUniforms,
+  type ScreenMetricUniforms,
+} from '../../util/orbit-line';
+import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
 import { tToJDE } from '../../solar-system/time/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,
 } from '../binary-tuning';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+
+/** The shared-map slots the on-screen test reads, narrowed at the type
+ *  level the way every other consumer of that map narrows
+ *  (`../../frame/README.md` § Shared uniforms). Held by reference, so a
+ *  write anywhere reaches this field. */
+export type EclipseInkUniforms = ScreenMetricUniforms & {
+  uExposure: THREE.IUniform<number>;
+  uWhitePoint: THREE.IUniform<number>;
+};
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;
@@ -46,6 +61,7 @@ export interface EclipsePhotometryFieldOptions {
   eclipseDimBuffer: Float32Array;
   /** Three.js attribute carrier, flushed only on frames that write. */
   iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  magnitudeShared: EclipseInkUniforms;
 }
 
 interface EclipseRelationCache {
@@ -103,6 +119,7 @@ export class EclipsePhotometryField {
   /** Per-frame dim targets, keyed by back-star instance index. Reused
    *  across frames to avoid per-frame allocation. */
   private targets = new Map<number, number>();
+  private dimOnScreen = false;
   private lastNowMs: number | null = null;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
@@ -160,11 +177,57 @@ export class EclipsePhotometryField {
     if (blendDimBuffer(dimBuf, targets, this.active, blend)) {
       this.opts.iEclipseDimAttr.needsUpdate = true;
     }
+    this.dimOnScreen = this.anyActiveDimPutsInkOnScreen(cameraPos, thresholdMag);
   }
 
   /** Count of slots currently held below 1.0 (occluding or decaying). */
   get activeDimCount(): number {
     return this.active.size;
+  }
+
+  /** True while a star holding a dim (occluding or decaying) can still
+   *  put ink on screen at the live exposure — the shell's cue to keep
+   *  frames coming for the wall-clock anti-strobe blend. A dim on a star
+   *  the adaptation cut has already taken off screen must NOT hold
+   *  frames: a bright eclipser at a deep-cut vantage would pin the frame
+   *  rate for the whole hours-long event while being invisible
+   *  (`../../render-gate/README.md` § The clock cadence). */
+  get holdsVisibleEclipseDim(): boolean {
+    return this.dimOnScreen;
+  }
+
+  /** The dim rides the GLOW pass alone, so `tapered` is unconditionally
+   *  true: a star whose disc pass draws keeps drawing at any dim, and
+   *  the pair's overlap is then geometry the cadence bounds cover. Tests
+   *  the UNDIMMED magnitude — a star only visible before the dip still
+   *  changes what the frame shows when it goes. */
+  private anyActiveDimPutsInkOnScreen(
+    cameraPos: Readonly<THREE.Vector3>,
+    thresholdMag: number,
+  ): boolean {
+    const local = this.opts.localPositions;
+    const shared = this.opts.magnitudeShared;
+    const pxPerRad = pixelsPerRadianFromUniforms(shared);
+    for (const idx of this.active) {
+      const base = idx * 3;
+      const dx = local[base] - cameraPos.x;
+      const dy = local[base + 1] - cameraPos.y;
+      const dz = local[base + 2] - cameraPos.z;
+      const dCamPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (dCamPc <= 0) continue;
+      const inkVisible = emitterPutsInkOnScreen({
+        appMag: apparentMagnitude(this.opts.absoluteMags[idx], dCamPc),
+        exposure: shared.uExposure.value,
+        thresholdMag,
+        physRadiusPx: angularRadiusPx(
+          this.opts.physicalRadiusSolar[idx] * R_SUN_PC, dCamPc, pxPerRad,
+        ),
+        whitePoint: shared.uWhitePoint.value,
+        tapered: true,
+      });
+      if (inkVisible) return true;
+    }
+    return false;
   }
 
   /** Read-only re-walk for the debug HUD. `starIdx` filters to relations

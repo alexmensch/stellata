@@ -134,6 +134,21 @@ budget cannot express. And an **epoch-bucket crossing**
 (`maybeReAdvanceEpoch`) invalidates once: the star buffer was rewritten,
 so the "nothing moved" premise no longer holds.
 
+**The dim hold is gated on the dimmed body being on screen** — both
+fields answer `holdsVisibleEclipseDim`, not a count of active dims, and
+each tests its own emitter against the **live** `uExposure` (allowed
+here because the verdict is recomputed per frame and cached nowhere —
+`../hdr/exposure/README.md` § Adaptation). Without that gate the idle
+win is mostly theoretical rather than mostly real: the outer planets'
+moons cross their parents' shadows a large fraction of the time (each
+Galilean is eclipsed for 2–4 h once per orbit — Io alone ~5% of the
+time, the four together ~12%, with Saturn's inner moons adding more
+around each Saturnian equinox), and a bright eclipsing binary's dip runs
+for hours. Every one of those bodies sits far under the default view's
+adaptation cut, so holding frames for them buys nothing and costs the
+whole idle. The dims themselves still evaluate — only the frame hold is
+gated.
+
 What stays continuous regardless: any focus whose moving-focal ride
 translates the camera per frame (an orbiting binary member, a planet, a
 probe under a running clock) — the ride's camera write trips the pose

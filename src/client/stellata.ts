@@ -1000,8 +1000,9 @@ export class Stellata implements FrameAnchor {
         this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
         // A live true-eclipse dim changes the frame every time the field
         // evaluates, and it only evaluates on rendered frames — so hold
-        // the settle tail open until the event decays.
-        if (this.planetBodyField.activeDimCount > 0) this.renderGate.invalidate();
+        // the settle tail open until the event decays. Only while the
+        // dimmed body is actually on screen: see the field's getter.
+        if (this.planetBodyField.holdsVisibleEclipseDim) this.renderGate.invalidate();
       },
       cadenceSimBudgetS: (ctx) =>
         this.planetBodyField.cadenceSimBudgetS(ctx.camera.position, ctx.pxPerRadian),
@@ -1048,8 +1049,9 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
         // A live eclipse dim changes the frame every time the field
         // evaluates, and it only evaluates on rendered frames — so hold
-        // the settle tail open until the event decays.
-        if ((this.eclipsePhotometryField?.activeDimCount ?? 0) > 0) {
+        // the settle tail open until the event decays. Only while the
+        // dimmed star is actually on screen: see the field's getter.
+        if (this.eclipsePhotometryField?.holdsVisibleEclipseDim === true) {
           this.renderGate.invalidate();
         }
       },
@@ -1458,6 +1460,7 @@ export class Stellata implements FrameAnchor {
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
+      magnitudeShared: this.sharedUniforms,
     });
   }
 

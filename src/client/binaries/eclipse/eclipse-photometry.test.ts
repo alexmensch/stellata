@@ -64,6 +64,12 @@ function makeFixture(spec: FixtureSpec) {
     physicalRadiusSolar,
     eclipseDimBuffer,
     iEclipseDimAttr,
+    magnitudeShared: {
+      uViewport: { value: new THREE.Vector2(1600, 900) },
+      uFovYRad: { value: 0.9 },
+      uExposure: { value: 1 },
+      uWhitePoint: { value: 1 },
+    },
   };
 }
 
@@ -186,6 +192,30 @@ describe('EclipsePhotometryField.update — float32 position immunity', () => {
       expect(fx.eclipseDimBuffer[0]).toBe(1);
       expect(fx.eclipseDimBuffer[1]).toBe(1);
     }
+  });
+});
+
+describe('EclipsePhotometryField.holdsVisibleEclipseDim', () => {
+  it('a dim under the exposure cut holds no frames while staying active', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(field.activeDimCount).toBe(1);
+    expect(field.holdsVisibleEclipseDim).toBe(true);
+    // The eclipse does not stop; the star simply stops reaching the
+    // display. A hold here would pin the frame rate for the whole event.
+    fx.magnitudeShared.uExposure.value = 1e-12;
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 16);
+    expect(field.activeDimCount).toBe(1);
+    expect(field.holdsVisibleEclipseDim).toBe(false);
+  });
+
+  it('no dim at all holds nothing', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD), CAM, 6, 0);
+    expect(field.activeDimCount).toBe(0);
+    expect(field.holdsVisibleEclipseDim).toBe(false);
   });
 });
 
