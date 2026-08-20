@@ -1,63 +1,40 @@
-// The D4 disc split in TSL: a depth-writing core draw plus a
-// depthWrite-off halo draw over one blend state, no fragment depth.
-// README.md § The disc split is depth-honest.
+// The D4 disc pipeline in TSL: one draw, per-channel max blend, no depth
+// output of any kind — the core-mask draw stamps the depth this one
+// reads. README.md § The disc draw writes no depth.
 
-import { Discard, Fn, length } from 'three/tsl';
+import { Discard, Fn } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
-import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { applyDiscBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
-  makeStarColourMaterial, starEmissionColour, starGlowNode, starMrtStruct,
-  type StarColourMaterial,
+  discPassKernel, finishStarColourMaterial, type StarColourMaterial,
 } from './star-emission-tsl';
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
 } from './star-vertex-tsl';
 
-function buildDiscMaterial(
+export function buildStarDiscMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
-  half: 'core' | 'halo',
 ): StarColourMaterial {
   const v = buildStarVaryings();
 
-  const glowValue = Fn(() => {
-    Discard(length(v.vUv).greaterThan(0.5));
-    Discard(v.vPhysRatio.lessThan(PHYS_RATIO_THRESHOLD));
-    // The taper region is glow-only: a resolved disc at threshold would
-    // render as a sub-pixel speck and read as a hard cutoff anyway.
-    Discard(v.vAppMag.greaterThan(deps.u.uThresholdMag));
-
-    const glow = starGlowNode(deps.u, v).toVar();
+  const kernel = Fn(() => {
+    const glow = discPassKernel(deps.u, v);
     Discard(glow.lessThan(deps.u.uDiscardThreshold));
-    if (half === 'core') {
-      Discard(glow.lessThan(deps.u.uCoreThreshold));
-    } else {
-      Discard(glow.greaterThanEqual(deps.u.uCoreThreshold));
-    }
     return glow;
   });
 
   const material = new NodeMaterial();
-  material.name = `star-disc-${half}-tsl`;
+  material.name = 'star-disc-tsl';
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v);
   material.transparent = true;
   applyDiscBlendDefaults(material);
-  if (half === 'halo') material.depthWrite = false;
-
-  const singleGlow = glowValue();
-  const structGlow = glowValue();
-  return makeStarColourMaterial(
-    material,
-    Fn(() => starEmissionColour(deps.u, v, singleGlow))(),
-    starMrtStruct(deps.u, v, structGlow, gates),
-  );
+  // Overrides the helper's depthWrite. The core mask stamped every core
+  // at renderOrder −4, so a second write here would be the same value,
+  // and a halo must not write at all — which is the whole reason the
+  // GLSL build needed gl_FragDepth here (README.md).
+  material.depthWrite = false;
+  return finishStarColourMaterial(material, deps.u, v, gates, kernel);
 }
-
-export const buildStarDiscCoreMaterial = (deps: StarTslDeps, gates: EmitterGateNodes) =>
-  buildDiscMaterial(deps, gates, 'core');
-
-export const buildStarDiscHaloMaterial = (deps: StarTslDeps, gates: EmitterGateNodes) =>
-  buildDiscMaterial(deps, gates, 'halo');

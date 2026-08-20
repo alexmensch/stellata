@@ -41,24 +41,31 @@ describe('StarLayer', () => {
     expect(m.transparent).toBe(true);
   });
 
-  it('splits the disc across two draws sharing the MaxEquation blend, depth write on the core alone', () => {
+  it('draws the disc once, MaxEquation, testing depth but never writing it', () => {
     const { scene, layer } = makeLayer();
-    for (const mesh of [layer.discCoreMesh, layer.discHaloMesh]) {
-      expect(scene.children).toContain(mesh);
-      expect(mesh.frustumCulled).toBe(false);
-      const m = mesh.material as THREE.Material;
-      expect(m.blending).toBe(THREE.CustomBlending);
-      expect(m.blendEquation).toBe(THREE.MaxEquation);
-      expect(m.blendSrc).toBe(THREE.OneFactor);
-      expect(m.blendDst).toBe(THREE.OneFactor);
-      expect(m.depthTest).toBe(true);
-    }
-    expect(layer.discCoreMesh.renderOrder).toBe(0);
-    expect((layer.discCoreMesh.material as THREE.Material).depthWrite).toBe(true);
-    // The halo draws after the core's depth lands and never writes its own —
-    // the depth-honest half of the split (star-disc-tsl.ts).
-    expect(layer.discHaloMesh.renderOrder).toBe(0.5);
-    expect((layer.discHaloMesh.material as THREE.Material).depthWrite).toBe(false);
+    expect(scene.children).toContain(layer.discMesh);
+    expect(layer.discMesh.frustumCulled).toBe(false);
+    expect(layer.discMesh.renderOrder).toBe(0);
+    const m = layer.discMesh.material as THREE.Material;
+    expect(m.name).toBe('star-disc-tsl');
+    expect(m.blending).toBe(THREE.CustomBlending);
+    expect(m.blendEquation).toBe(THREE.MaxEquation);
+    expect(m.blendSrc).toBe(THREE.OneFactor);
+    expect(m.blendDst).toBe(THREE.OneFactor);
+    expect(m.depthTest).toBe(true);
+    // The core mask is where a core's depth comes from, so this draw must
+    // not write any — and a second draw for the halo would double the
+    // pass's per-corner cost (README.md § The disc draw writes no depth).
+    expect(m.depthWrite).toBe(false);
+  });
+
+  // Draw-count parity with the WebGL2 stack is part of the port contract:
+  // the migration may not cost more per frame than the renderer it
+  // replaces (../README.md § Early-z).
+  it('is three draws over one geometry, no more', () => {
+    const { scene, layer } = makeLayer();
+    expect([...scene.children].sort((a, b) => a.renderOrder - b.renderOrder))
+      .toEqual([layer.coreMaskMesh, layer.discMesh, layer.glowMesh]);
   });
 
   it('adds the core mask first, depth-only, gated invisible until the shell opens it', () => {
@@ -78,7 +85,7 @@ describe('StarLayer', () => {
 
   it('every mesh shares the one packed geometry by identity', () => {
     const { layer } = makeLayer();
-    for (const mesh of [layer.coreMaskMesh, layer.discCoreMesh, layer.discHaloMesh]) {
+    for (const mesh of [layer.coreMaskMesh, layer.discMesh]) {
       expect(mesh.geometry).toBe(layer.glowMesh.geometry);
     }
   });
@@ -88,7 +95,7 @@ describe('StarLayer', () => {
     type FragMaterial = THREE.Material & {
       fragmentNode: { isOutputStructNode?: boolean } | null; version: number;
     };
-    const colour = [layer.discCoreMesh, layer.discHaloMesh, layer.glowMesh]
+    const colour = [layer.discMesh, layer.glowMesh]
       .map((m) => m.material as FragMaterial);
     const coreMask = layer.coreMaskMesh.material as FragMaterial;
     const singles = colour.map((m) => m.fragmentNode);
@@ -177,14 +184,14 @@ describe('StarLayer', () => {
     expect(dyn.updateRanges).toHaveLength(0);
   });
 
-  it('dispose removes every mesh and releases geometry, all four materials, and the LUT', () => {
+  it('dispose removes every mesh and releases geometry, all three materials, and the LUT', () => {
     const { scene, layer } = makeLayer();
     const disposed = new Set<string>();
     const watch = (
       o: { addEventListener(type: 'dispose', listener: () => void): void },
       tag: string,
     ) => o.addEventListener('dispose', () => { disposed.add(tag); });
-    const meshes = [layer.coreMaskMesh, layer.discCoreMesh, layer.discHaloMesh, layer.glowMesh];
+    const meshes = [layer.coreMaskMesh, layer.discMesh, layer.glowMesh];
     watch(layer.glowMesh.geometry, 'geometry');
     for (const mesh of meshes) watch(mesh.material as THREE.Material, `material:${mesh.name}`);
     watch(layer.colorLut, 'lut');
@@ -192,8 +199,8 @@ describe('StarLayer', () => {
     for (const mesh of meshes) expect(scene.children).not.toContain(mesh);
     expect([...disposed].sort()).toEqual([
       'geometry', 'lut',
-      'material:star-core-mask-webgpu', 'material:star-disc-core-webgpu',
-      'material:star-disc-halo-webgpu', 'material:star-glow-webgpu',
+      'material:star-core-mask-webgpu', 'material:star-disc-webgpu',
+      'material:star-glow-webgpu',
     ]);
   });
 });

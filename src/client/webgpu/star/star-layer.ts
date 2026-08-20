@@ -1,6 +1,6 @@
-// The star layer on a WebGPU boot: packed geometry + the four TSL star
-// meshes (core mask, disc core/halo, glow), added to the seam's scene.
-// Constructed through WebGpuSeam.attachStarLayer.
+// The star layer on a WebGPU boot: packed geometry + the three TSL star
+// meshes (core mask, disc, glow), added to the seam's scene. Constructed
+// through WebGpuSeam.attachStarLayer.
 
 import * as THREE from 'three';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
@@ -17,7 +17,7 @@ import {
   type StarGeometrySources,
 } from './star-geometry';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
-import { buildStarDiscCoreMaterial, buildStarDiscHaloMaterial } from './star-disc-tsl';
+import { buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
 import type { StarColourMaterial } from './star-emission-tsl';
 import type { StarTslDeps } from './star-vertex-tsl';
@@ -32,10 +32,11 @@ interface DynamicWatcher {
 
 export class StarLayer {
   /** Depth-only member/core stamp, first in the frame (renderOrder −4);
-   *  `visible` is the shell's CPU gate, exactly as on the WebGL mesh. */
+   *  `visible` is the shell's CPU gate, exactly as on the WebGL mesh.
+   *  This is the ONLY depth a disc core gets on this backend — the disc
+   *  draw writes none (README.md § The disc draw writes no depth). */
   readonly coreMaskMesh: THREE.Mesh;
-  readonly discCoreMesh: THREE.Mesh;
-  readonly discHaloMesh: THREE.Mesh;
+  readonly discMesh: THREE.Mesh;
   readonly glowMesh: THREE.Mesh;
   /** Owned by this layer alone — the WebGL pipeline builds its own. */
   readonly colorLut: THREE.DataTexture;
@@ -44,7 +45,6 @@ export class StarLayer {
   private readonly build: StarGeometryBuild;
   private readonly dynArrays: Float32Array[];
   private readonly watchers: DynamicWatcher[];
-  private readonly materials: THREE.Material[];
   private readonly colourMaterials: StarColourMaterial[];
   /** Per-frame scratch, one slot per packed dynamic buffer — reused so the
    *  render loop allocates nothing. */
@@ -86,21 +86,20 @@ export class StarLayer {
       scene.add(m);
       return m;
     };
-    // renderOrder mirrors the WebGL stack: core mask (−4) → background
-    // layers → disc core (0) → halo (0.5, after the core's depth lands) →
-    // glow (1).
-    const discCore = buildStarDiscCoreMaterial(deps, gates);
-    const discHalo = buildStarDiscHaloMaterial(deps, gates);
+    // renderOrder mirrors the WebGL stack exactly, three draws and no
+    // more: core mask (−4) → background layers → disc (0) → glow (1).
+    const disc = buildStarDiscMaterial(deps, gates);
     const glow = buildStarGlowMaterial(deps, gates);
-    this.colourMaterials = [discCore, discHalo, glow];
+    this.colourMaterials = [disc, glow];
     this.coreMaskMesh = mesh(buildStarCoreMaskMaterial(deps), 'star-core-mask-webgpu', -4);
     this.coreMaskMesh.visible = false;
-    this.discCoreMesh = mesh(discCore.material, 'star-disc-core-webgpu', 0);
-    this.discHaloMesh = mesh(discHalo.material, 'star-disc-halo-webgpu', 0.5);
+    this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
     this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);
-    this.materials = [
-      this.coreMaskMesh, this.discCoreMesh, this.discHaloMesh, this.glowMesh,
-    ].map((m) => m.material as THREE.Material);
+  }
+
+  /** Every mesh this layer owns, in draw order. */
+  private meshes(): THREE.Mesh[] {
+    return [this.coreMaskMesh, this.discMesh, this.glowMesh];
   }
 
   /** Swap every colour material between its single-output fragment and
@@ -168,11 +167,11 @@ export class StarLayer {
   }
 
   dispose(): void {
-    for (const m of [this.coreMaskMesh, this.discCoreMesh, this.discHaloMesh, this.glowMesh]) {
+    for (const m of this.meshes()) {
       this.scene.remove(m);
+      (m.material as THREE.Material).dispose();
     }
     this.build.geometry.dispose();
-    for (const material of this.materials) material.dispose();
     this.colorLut.dispose();
     for (const w of this.watchers) w.last = -1;
   }

@@ -2,14 +2,14 @@
 // fragment, compile-time specialized (no uRenderMode), no depth output.
 // Scope and the deferred siblings: README.md.
 
-import { Discard, Fn, float, length, smoothstep } from 'three/tsl';
+import { Discard, Fn, float, smoothstep } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_GLOW } from '../../star-pipeline/star-pass';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
-  makeStarColourMaterial, starEmissionColour, starGlowNode, starMrtStruct,
+  discardOutsideKernel, finishStarColourMaterial, starGlowNode,
   type StarColourMaterial,
 } from './star-emission-tsl';
 import {
@@ -22,8 +22,8 @@ export function buildStarGlowMaterial(
 ): StarColourMaterial {
   const v = buildStarVaryings();
 
-  const glowValue = Fn(() => {
-    Discard(length(v.vUv).greaterThan(0.5));
+  const kernel = Fn(() => {
+    discardOutsideKernel(v);
     Discard(v.vPhysRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD));
 
     const glow = starGlowNode(deps.u, v).toVar();
@@ -37,12 +37,5 @@ export function buildStarGlowMaterial(
   material.name = 'star-glow-tsl';
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v);
   applyGlowBlendDefaults(material);
-
-  const singleGlow = glowValue();
-  const structGlow = glowValue();
-  return makeStarColourMaterial(
-    material,
-    Fn(() => starEmissionColour(deps.u, v, singleGlow))(),
-    starMrtStruct(deps.u, v, structGlow, gates),
-  );
+  return finishStarColourMaterial(material, deps.u, v, gates, kernel);
 }

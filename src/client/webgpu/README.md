@@ -37,9 +37,9 @@ src/client/webgpu/
   emission-tsl.ts                   TSL mirror of the emission unit's
                                     point-source peak rule.
   star/                             The star layer: packed geometry + the
-                                    four depth-honest pipelines (D1–D4)
-                                    and the MRT write side — its own
-                                    README.
+                                    three depth-honest pipelines (D2 glow,
+                                    D3 core mask, D4 disc) and the MRT
+                                    write side — its own README.
   hdr/                              The HDR chain on this backend: MRT
                                     target, summation, resolve, reduction
                                     readback, and the output-struct form
@@ -80,7 +80,7 @@ The **star field with the full app alive**: every CPU subsystem
 (catalog, star frame, focus, picker, typeahead, URL state, overlays, HUD,
 render gate) runs identically; the renderer draws the seam's own scene
 (`WebGpuSeam.scene`), which gains layers as port children land. The star
-layer (`star/README.md`) carries all four depth-honest pipelines; its
+layer (`star/README.md`) carries all three depth-honest pipelines; its
 still-missing siblings (extinction, chart, mirrors) are listed there.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
@@ -283,10 +283,17 @@ renderer or encoding: one program per pass (compile-time define replacing
 `uRenderMode`); glow carries no depth output (removal of the defensive
 write is bit-exact); the core-mask member stamp moves to the vertex stage
 (per-instance, so clip z pins to the near end of the active depth
-convention); the disc pass splits into a depth-writing core draw plus a
-depthWrite-off halo draw (a far-pinned halo write only ever re-wrote 1.0
-over 1.0, so buffer state is unchanged; a viewport-depth-range far pin is
-the bit-exact fallback if the halo's now-physical test regresses smoke).
+convention); the disc pass writes no depth at all, because the core-mask
+draw already stamped the same fragments at the same value several
+renderOrders earlier (`star/README.md` § The disc draw writes no depth
+carries the argument, what it gives up, and the fallbacks).
+
+**The contract is satisfied by removing writes, never by adding draws.**
+A port child that answers "one program per pass" with a second draw over
+the same 313k instances has made the migration cost more per frame than
+the renderer it replaces — which is the one outcome the port is not
+allowed to have. Draw count per subsystem is part of parity, alongside
+what the pixels look like.
 
 ## TSL test pattern — what a port child writes
 

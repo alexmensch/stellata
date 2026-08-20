@@ -2,11 +2,10 @@
 // writes off, member stamp in the shared vertex stage — no fragment
 // depth (../README.md § Early-z). The CPU visible gate is the shell's.
 
-import { Discard, Fn, length, vec4 } from 'three/tsl';
+import { Discard, Fn, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
-import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_CORE_MASK } from '../../star-pipeline/star-pass';
-import { starGlowNode } from './star-emission-tsl';
+import { discPassKernel } from './star-emission-tsl';
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
 } from './star-vertex-tsl';
@@ -15,12 +14,10 @@ export function buildStarCoreMaskMaterial(deps: StarTslDeps): NodeMaterial {
   const v = buildStarVaryings();
 
   const fragmentNode = Fn(() => {
-    Discard(length(v.vUv).greaterThan(0.5));
-    // The disc pass's own gates, so no depth is stamped for a star that
-    // would not render colour.
-    Discard(v.vPhysRatio.lessThan(PHYS_RATIO_THRESHOLD));
-    Discard(v.vAppMag.greaterThan(deps.u.uThresholdMag));
-    Discard(starGlowNode(deps.u, v).lessThan(deps.u.uCoreThreshold));
+    // This draw is the ONLY depth a disc core gets, so the gate has to
+    // stay the disc draw's own — hence the shared helper rather than a
+    // second copy of the three tests (star-emission-tsl.ts).
+    Discard(discPassKernel(deps.u, v).lessThan(deps.u.uCoreThreshold));
     return vec4(0.0);
   });
 
