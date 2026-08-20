@@ -23,7 +23,12 @@ src/client/render-gate/
 ```
 
 Both sentinels reset on `dispose()` — the pose snapshot back to NaN, the
-hold count to zero. A hold released *after* that zeroing floors at 0
+hold count to zero. The cadence's three live on the shell rather than
+here (the budget is composed from the layer fan-out, which the gate knows
+nothing about) and `Stellata.dispose` resets them alongside
+`lastInvalidatedDm`: sim stamp to NaN, budget to 0, pulsation bound to
+Infinity — the seeds that make the first tick after a reboot render.
+A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
 debug panel, so its release outlives the gate, and a negative count
 would silently make the next `hold()` a no-op.

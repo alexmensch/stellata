@@ -2224,7 +2224,8 @@ export class Stellata implements FrameAnchor {
       this.clock.getRate(), this.getT(), this.lastRenderedSimS, this.cadenceBudgetSimS,
     );
     if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.worldOffset, continuous, cadenceDue, nowMs,
+      this.camera, this.controls.target, this.worldOffset,
+      { continuous, cadenceDue, nowMs },
     )) {
       requestAnimationFrame(this.animate);
       return;
@@ -2437,6 +2438,9 @@ export class Stellata implements FrameAnchor {
     this.renderGate.dispose();
     this.trackballSettle.dispose();
     this.lastInvalidatedDm = Number.NaN;
+    this.lastRenderedSimS = Number.NaN;
+    this.cadenceBudgetSimS = 0;
+    this.pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.

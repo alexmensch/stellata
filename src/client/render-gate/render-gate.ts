@@ -61,9 +61,7 @@ export class RenderGate {
     camera: THREE.PerspectiveCamera,
     target: THREE.Vector3,
     worldOffset: THREE.Vector3,
-    continuous: boolean,
-    cadenceDue: boolean,
-    nowMs: number,
+    inputs: { continuous: boolean; cadenceDue: boolean; nowMs: number },
   ): boolean {
     writePose(
       this.scratchPose, camera.position, camera.quaternion, camera.fov,
@@ -72,10 +70,10 @@ export class RenderGate {
     const decision = decideRender(
       { holds: this.holds, lastActiveMs: this.lastActiveMs },
       {
-        continuous,
+        continuous: inputs.continuous,
         poseChanged: posesDiffer(this.scratchPose, this.lastRenderedPose),
-        cadenceDue,
-        nowMs,
+        cadenceDue: inputs.cadenceDue,
+        nowMs: inputs.nowMs,
       },
     );
     this.lastActiveMs = decision.lastActiveMs;

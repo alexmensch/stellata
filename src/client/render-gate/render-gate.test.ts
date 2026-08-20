@@ -29,7 +29,7 @@ function makeGate() {
   const target = new THREE.Vector3();
   const worldOffset = new THREE.Vector3();
   const tick = (nowMs: number, continuous = false, cadenceDue = false) =>
-    gate.tick(camera, target, worldOffset, continuous, cadenceDue, nowMs);
+    gate.tick(camera, target, worldOffset, { continuous, cadenceDue, nowMs });
   /** Render the seed frame, then step past the settle tail — the gate is
    *  skipping when this returns, so a later `true` is a genuine wake. */
   const settle = (t0: number) => {

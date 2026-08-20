@@ -66,6 +66,16 @@ describe('SceneLayerRegistry', () => {
     expect(reg.minCadenceBudgetS(makeCtx())).toBe(7);
   });
 
+  it('a NaN budget cannot win the min — it would freeze the clock', () => {
+    // Math.min would propagate it into the frame budget, and every
+    // `elapsed >= NaN` test is false, so the gate would never fire a
+    // cadence frame again: a frozen scene under a running clock.
+    const reg = new SceneLayerRegistry();
+    reg.register({ cadenceSimBudgetS: () => Number.NaN, dispose: () => {} });
+    reg.register({ cadenceSimBudgetS: () => 12, dispose: () => {} });
+    expect(reg.minCadenceBudgetS(makeCtx())).toBe(12);
+  });
+
   it('passes the shared FrameCtx through to each update', () => {
     const reg = new SceneLayerRegistry();
     const seen: FrameCtx[] = [];
