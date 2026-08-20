@@ -1,0 +1,85 @@
+# Vertex-stage collapse — bounding what an invisible star costs
+
+Invisible is not free: a star whose fragments write nothing still
+rasterises a full-size quad and pays read-modify-write blend bandwidth on
+every attachment its pass opens. At a deep adaptation cut that is most of
+the star field — the statistic-attachment write row measured ~50 % of the
+default Sol-view frame (`../../debug/frame-cost/README.md` § Decomposing
+the HDR chain). Two vertex-stage mechanisms in `../star.vert.glsl` (TSL
+twin: `../../webgpu/star/star-vertex-tsl.ts`) bound that cost. Neither
+touches the cull bounds themselves — `uCullMag` stays adaptation-free
+(`../../hdr/exposure/README.md` § One writer, five slots).
+
+```
+src/client/star-pipeline/collapse/
+  glow-collapse-pure.ts     The derived display floor the kernel collapse
+    (+ test)                compares against. The test pins the GLSL
+                            literal and the taper-cull bound.
+```
+
+## Taper cull — exact
+
+Past the taper's end a star contributes nothing in any pass: the glow
+taper multiplies its kernel to exactly 0, and the disc and core-mask
+passes discard every fragment past `uThresholdMag`. The vertex stage
+emits the off-screen sentinel there instead — glow at
+`appMag ≥ uThresholdMag + 0.5`, disc/core at `> uThresholdMag`, matching
+the fragment comparisons exactly (pinned).
+
+Bit-exact by construction: the bound is the LIVE `uThresholdMag`, so the
+EV trim moves it exactly as it moves the fragment taper — no population
+edge can appear that the taper would not have shown. Chart mode is
+exempt; it sizes and clips against `uLimitMag`.
+
+## Kernel collapse — flux-preserving
+
+A glow-pass star can be display-invisible through the live exposure
+(adaptation included) while its statistic flux is still real — the
+adaptation model reads the full field at base exposure, so the star must
+keep writing attachment 1 (`../../hdr/attachments/README.md`). What it
+does not need is its display kernel: the quad collapses to `uSizeMin` — a
+threshold star's footprint, the size the statistic already trusts for the
+whole faint field — and `stellataKernelFluxPeak`'s `Φ(n)·D²` renorm
+divides the collapsed size, so attachment 1 receives exactly the flux it
+did before at a fraction of the bandwidth.
+
+The predicate is `vPeakL · tap² < GLOW_COLLAPSE_FLOOR_L`. The glow pass's
+additive blend multiplies rgb by the fragment's own alpha, so the peak
+display light is kernel-squared at the centre; the floor is the operator
+inverted at half an 8-bit step (the darkest level the encode
+distinguishes from black), held `GLOW_COLLAPSE_STACK_MARGIN` (16×) under
+it so 16 collapsed stars stacked on one pixel still cannot reach the
+step. Derived, not tuned, and whitePoint-independent to first order
+(pinned) — the `DR_MAG` knob cannot move it.
+
+Reading the live exposure here is deliberate and allowed: the
+no-adaptation rule protects cached and per-frame CPU consumers from
+thrash (`../../hdr/exposure/README.md` § One writer, five slots), and
+this is a per-instance GPU computation with no cache. The win lands
+exactly at deep-cut vantages; at `dm = 0` the floor sits inside the
+taper's last scrap, where quads are minimum-size anyway.
+
+What it trades, each bounded by a case already accepted:
+
+- **Occlusion coarsens**: a foreground surface overwrites a collapsed
+  star's statistic texels all-or-nothing over `uSizeMin` instead of
+  kernel-shaped — the coarseness every threshold star already has.
+- **Discretisation** of the flux over a `uSizeMin` quad matches a
+  threshold star's exactly, and collapsed stars sit ≥ 16× under the
+  darkest visible level, so the reduction's mean moves by fractions of
+  contributions that are themselves decades under `L_ADAPT`.
+- **Dropped tails**: N overlapping collapsed kernels' summed
+  sub-quantisation tails vanish; more than 16 such stars must stack on
+  one pixel to have reconstructed half a step. The genuinely
+  sub-threshold population's integrated light is the Milky Way band
+  raymarch's job (`../../milkyway/README.md`) — the drawn tails
+  double-counted it.
+
+Resolved (disc-class, `vPhysRatio ≥ 0.5`) stars never collapse: their
+core-mask depth stamps and dark-disc silhouettes are visible occlusion,
+not display light.
+
+The CPU pick/hover mirrors need no change: `emitterPutsInkOnScreen`
+(`../../hdr/exposure/emitter-visibility-pure.ts`) already excludes every
+collapsed star at a stricter floor (half a step, no margin), so no
+collapsed star is pickable.

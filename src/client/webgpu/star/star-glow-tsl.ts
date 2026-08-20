@@ -7,6 +7,7 @@ import { NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_GLOW } from '../../star-pipeline/star-pass';
+import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
   discardOutsideKernel, finishStarColourMaterial, starGlowNode,
@@ -27,8 +28,11 @@ export function buildStarGlowMaterial(
     Discard(v.vPhysRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD));
 
     const glow = starGlowNode(deps.u, v).toVar();
-    const taper = float(1.0)
-      .sub(smoothstep(deps.u.uThresholdMag, deps.u.uThresholdMag.add(0.5), v.vAppMag));
+    const taper = float(1.0).sub(smoothstep(
+      deps.u.uThresholdMag,
+      deps.u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG),
+      v.vAppMag,
+    ));
     glow.mulAssign(taper);
     return glow;
   });

@@ -21,6 +21,10 @@ uniform float uLimitMag;
 // Population cull bound — the deepest the EV trim can reach plus the
 // soft taper, so raising the trim can never expose a population edge.
 uniform float uCullMag;
+// The taper's anchor: where the fragment stage stops emitting. Read here
+// for the taper cull and the kernel collapse (collapse/README.md); the
+// cull bound above stays the population bound.
+uniform float uThresholdMag;
 uniform float uMinDistSol;
 uniform float uMaxDistSol;
 uniform uint uSpectMask;
@@ -126,6 +130,11 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
 const float R_V = 3.1; // canonical interstellar reddening ratio: A_V / E(B-V)
+
+// GLOW_COLLAPSE_FLOOR_L (collapse/glow-collapse-pure.ts, which pins this
+// literal): the peak display light under which a glow star's kernel
+// collapses to the statistic footprint. collapse/README.md.
+const float STELLATA_GLOW_COLLAPSE_FLOOR_L = 3.1399364e-4;
 
 // Per-vertex: unit-square corner in [-0.5, +0.5] × [-0.5, +0.5], used to
 // expand each instanced quad around its projected star centre.
@@ -431,6 +440,21 @@ void main() {
         return;
     }
 
+    // Taper cull — exact: past the taper's end the fragment stage writes
+    // zeros to every attachment in every pass (the glow taper multiplies
+    // to 0; disc and core mask discard past uThresholdMag), so the quad
+    // would pay full rasterization and blend bandwidth for nothing. The
+    // bound is the LIVE uThresholdMag, so the EV trim moves it exactly as
+    // it moves the fragment taper. Chart mode sizes against uLimitMag
+    // instead and keeps its quads. collapse/README.md.
+    bool taperDead = uRenderMode == 0
+        ? appMag >= uThresholdMag + 0.5
+        : appMag > uThresholdMag;
+    if (uMonochrome < 0.5 && taperDead) {
+        emitOffscreenSentinel(appMag, softness);
+        return;
+    }
+
     vAppMag = appMag;
     vColor = ciToColor(effectiveCi);
     vUv = aCorner;
@@ -491,6 +515,20 @@ void main() {
 
         pxSize = max(appSize, physSize);
         vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+
+        // Kernel collapse: a glow star whose peak display light — the
+        // additive blend's alpha squares the kernel, so that peak is
+        // vPeakL·tap² — sits a stacking margin under the half-8-bit-step
+        // floor keeps its full statistic flux on a threshold star's
+        // footprint instead of paying the whole kernel's blend bandwidth.
+        // Reads the LIVE exposure (adaptation included) by design: nothing
+        // caches on it, and the win lands exactly at deep-cut vantages.
+        // Must precede vFluxPeakL so the renorm divides the collapsed
+        // footprint. collapse/README.md.
+        float tap = 1.0 - smoothstep(uThresholdMag, uThresholdMag + 0.5, appMag);
+        if (vPhysRatio < 0.5 && vPeakL * tap * tap < STELLATA_GLOW_COLLAPSE_FLOOR_L) {
+            pxSize = uSizeMin;
+        }
 
         // The statistic's flux channel. `pxSize` is CSS pixels, which is
         // what makes the frame mean devicePixelRatio-independent: the

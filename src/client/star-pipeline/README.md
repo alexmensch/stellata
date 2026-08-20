@@ -2,8 +2,7 @@
 
 The WebGL star renderer — instanced quads, three passes, physical-size
 scaling, the super-Gaussian intensity profile, and luminosity-class
-softness. Pulsation and the dust-extinction read live in the
-subfolders.
+softness. Pulsation and dust extinction live in the subfolders.
 
 ## Subfolders
 
@@ -21,6 +20,8 @@ subfolders.
   re-renders them inside its bracket. `MIRROR_CAPACITY` and the
   `RESOLVED_DISC_MIN_PX` / `discWindowPc` pivots the core-mask gate
   shares live there.
+- `collapse/` — the vertex-stage taper cull + kernel collapse bounding
+  what a display-invisible star's quad costs — its own README.
 - `shards/` — the population-shard contract (`StarShardTable` flat
   Target.idx mapping, per-shard SID columns, chunk-local coordinates,
   the recentre eagerness rule); the catalog is shard 0. Its § What is
@@ -79,9 +80,8 @@ subfolders.
   shader renormalises each sample to luminance 1 (§ Physical-luminance
   emission).
 - `star-pipeline-mock.ts` — zero-filled `StarPipelineOptions` for tests
-  that need a real geometry without a GL context. Shared with
-  `../webgpu/star-attribute-roster.test.ts`, which derives the port's
-  packable-attribute partition from the geometry this builds.
+  needing a real geometry without GL; `../webgpu/star-attribute-roster.test.ts`
+  derives the port's packable-attribute partition from it.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
@@ -318,7 +318,7 @@ it is `../webgpu/README.md` § Early-z.
 ## Physical-size rendering
 
 Each star's final pixel size is `max(appSize, physSize) × pixelRatio`
-in the vertex shader:
+in the vertex shader (collapsed past the visibility floor — `collapse/README.md`):
 
 - `appSize` is the brightness-based term: the `√Δm` Gaussian-PSF curve
   over the visible-population window `Δm = uLimitMag − appMag`, with

@@ -4,8 +4,8 @@
 
 import {
   Fn, If, atan, clamp, cos, distance, dot, float, fract, instanceIndex, int,
-  log, max, min, pow, select, sqrt, texture, uint, varyingProperty, vec2, vec4,
-  cameraProjectionMatrix, modelViewMatrix,
+  log, max, min, pow, select, smoothstep, sqrt, texture, uint, varyingProperty,
+  vec2, vec4, cameraProjectionMatrix, modelViewMatrix,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type * as THREE from 'three';
@@ -13,9 +13,14 @@ import {
   BALLESTEROS_BV_SCALE, BALLESTEROS_DISC_K2, BALLESTEROS_QUAD_LINEAR, BALLESTEROS_T0,
 } from '../../../../scripts/colour/blackbody-lut-pure';
 import { BV_MAX, BV_MIN } from '../../star-pipeline/blackbody-lut';
+import { GLOW_COLLAPSE_FLOOR_L } from '../../star-pipeline/collapse/glow-collapse-pure';
+import {
+  PHYS_RATIO_THRESHOLD,
+} from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import {
   STAR_PASS_CORE_MASK, STAR_PASS_GLOW, type StarPass,
 } from '../../star-pipeline/star-pass';
+import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { packedScalar } from '../attribute-packing';
 import type { Vec4PackPlan } from '../attribute-packing-pure';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
@@ -150,8 +155,15 @@ export function buildStarVertexNode(
       const distOk = distSol.greaterThanEqual(u.uMinDistSol)
         .and(distSol.lessThanEqual(u.uMaxDistSol));
       const magOk = appMag.lessThanEqual(u.uCullMag);
+      // Taper cull — exact: past the taper's end the fragment stage writes
+      // zeros / discards in every pass, so the quad would pay full
+      // rasterization and blend bandwidth for nothing. GLSL twin +
+      // rationale: ../../star-pipeline/collapse/README.md.
+      const taperAlive = pass === STAR_PASS_GLOW
+        ? appMag.lessThan(u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG))
+        : appMag.lessThanEqual(u.uThresholdMag);
 
-      If(spectOk.and(distOk).and(magOk), () => {
+      If(spectOk.and(distOk).and(magOk).and(taperAlive), () => {
         const teff = stat('iTeffApsis');
         const intrinsicBv = select(
           teff.greaterThan(0.0), ballesterosBvFromTeffTsl(teff), stat('iCi'));
@@ -175,13 +187,25 @@ export function buildStarVertexNode(
         // The peak takes the UNCLAMPED physical radius (CSS px) — the
         // clamp below is display-only (../../star-pipeline/README.md
         // § Physical-luminance emission).
-        v.vPeakL.assign(pointSourcePeakTsl(u.uExposure, appMag, physSizeRaw.mul(0.5)));
+        const peakL = pointSourcePeakTsl(
+          u.uExposure, appMag, physSizeRaw.mul(0.5)).toVar();
+        v.vPeakL.assign(peakL);
 
         const physSize = min(
           physSizeRaw, u.uMaxPhysFrac.mul(min(u.uViewport.x, u.uViewport.y)));
-        const pxSize = max(appSize, physSize);
+        const pxSize = max(appSize, physSize).toVar();
         const physRatio = clamp(physSize.div(max(pxSize, 0.001)), 0.0, 1.0).toVar();
         v.vPhysRatio.assign(physRatio);
+
+        // Kernel collapse — GLSL twin + rationale in star.vert.glsl /
+        // ../../star-pipeline/collapse/README.md. Must precede
+        // the flux renorm below so it divides the collapsed footprint.
+        const tap = float(1.0).sub(smoothstep(
+          u.uThresholdMag, u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG), appMag));
+        If(physRatio.lessThan(PHYS_RATIO_THRESHOLD)
+          .and(peakL.mul(tap).mul(tap).lessThan(GLOW_COLLAPSE_FLOOR_L)), () => {
+          pxSize.assign(u.uSizeMin);
+        });
 
         // The statistic's flux channel: the same kernel divided by its own
         // area integral so its frame integral returns the star's true flux.
