@@ -14,6 +14,10 @@ import {
   footprintRadiusPc,
   pxPerRadianFromSolidAngle,
 } from './emission-pure';
+import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import {
+  PHYS_RATIO_THRESHOLD,
+} from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import '../hdr-pipeline';
 
 const read = (name: string) =>
@@ -22,6 +26,7 @@ const read = (name: string) =>
 const tonemapChunk = read('../tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
+const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc.glsl');
 
 function lumaWeights(chunk: string): number[] {
   const m = chunk.match(
@@ -62,6 +67,22 @@ describe('shared chunk constants', () => {
     expect(m).not.toBeNull();
     expect(Number(m![1])).toBe(DITHER_IGN_SCALE);
     expect([Number(m![2]), Number(m![3])]).toEqual([...DITHER_IGN_DOT]);
+  });
+
+  // The WebGPU star stages import these two from TypeScript while the
+  // GLSL ones paste the chunk, so a drifted literal moves one backend's
+  // faint edge or pass split and leaves the other where it was.
+  it('perceptual-disc.glsl declares the taper margin and pass split TypeScript owns', () => {
+    const margin = perceptualDiscChunk.match(
+      /const float STELLATA_SOFT_TAPER_MARGIN_MAG = ([\d.]+);/,
+    );
+    const physRatio = perceptualDiscChunk.match(
+      /const float STELLATA_PHYS_RATIO_THRESHOLD = ([\d.]+);/,
+    );
+    expect(margin).not.toBeNull();
+    expect(physRatio).not.toBeNull();
+    expect(Number(margin![1])).toBe(SOFT_TAPER_MARGIN_MAG);
+    expect(Number(physRatio![1])).toBe(PHYS_RATIO_THRESHOLD);
   });
 
   it('emission.glsl clamps at the same ceiling as emission-pure', () => {

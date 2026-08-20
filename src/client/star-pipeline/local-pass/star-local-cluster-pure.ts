@@ -9,9 +9,9 @@ import { DCAM_LOG_FLOOR_PC } from '../../camera/timing';
  *  local-depth membership scan. */
 export const RESOLVED_DISC_MIN_PX = 5;
 
-/** Mirrors star.frag.glsl's PHYS_RATIO_THRESHOLD — the disc/glow pass
- *  split. A star renders as an opaque depth-writing disc when
- *  physSize ≥ this fraction of its final quad size. */
+/** Mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in perceptual-disc.glsl — the
+ *  disc/glow pass split. A star renders as an opaque depth-writing disc
+ *  when physSize ≥ this fraction of its final quad size. */
 export const PHYS_RATIO_THRESHOLD = 0.5;
 
 /** The pass split itself, with no size floor: true when the opaque disc

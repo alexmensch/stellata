@@ -155,10 +155,8 @@ export function buildStarVertexNode(
       const distOk = distSol.greaterThanEqual(u.uMinDistSol)
         .and(distSol.lessThanEqual(u.uMaxDistSol));
       const magOk = appMag.lessThanEqual(u.uCullMag);
-      // Taper cull — exact: past the taper's end the fragment stage writes
-      // zeros / discards in every pass, so the quad would pay full
-      // rasterization and blend bandwidth for nothing. GLSL twin +
-      // rationale: ../../star-pipeline/collapse/README.md.
+      // Taper cull — GLSL twin is star.vert.glsl's `starTaperDead`,
+      // rationale ../../star-pipeline/collapse/README.md.
       const taperAlive = pass === STAR_PASS_GLOW
         ? appMag.lessThan(u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG))
         : appMag.lessThanEqual(u.uThresholdMag);
@@ -197,9 +195,9 @@ export function buildStarVertexNode(
         const physRatio = clamp(physSize.div(max(pxSize, 0.001)), 0.0, 1.0).toVar();
         v.vPhysRatio.assign(physRatio);
 
-        // Kernel collapse — GLSL twin + rationale in star.vert.glsl /
-        // ../../star-pipeline/collapse/README.md. Must precede
-        // the flux renorm below so it divides the collapsed footprint.
+        // Kernel collapse — must precede the flux renorm below so it
+        // divides the collapsed footprint.
+        // ../../star-pipeline/collapse/README.md.
         const tap = float(1.0).sub(smoothstep(
           u.uThresholdMag, u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG), appMag));
         If(physRatio.lessThan(PHYS_RATIO_THRESHOLD)
