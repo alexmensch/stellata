@@ -16,6 +16,7 @@ goal is findings the author will act on, not encouragement.
    files.
 4. **Architectural fit** — judge the design, not just the changed lines.
 5. **Tests** that need adding or updating.
+6. **Epic drift** — § below, whenever the PR closes a bead under an epic.
 
 (2) and (3) are the two that block a merge.
 
@@ -97,6 +98,61 @@ notes of bead `stellata-8cg.1`; the standing perf program is epic
 
 **A perf or VRAM regression is a finding to fix in this PR, not a follow-up
 bead.**
+
+## Epic drift check — mandatory when the PR sits under an epic
+
+**Trigger:** the PR closes or advances any bead with a parent. Then the parent
+epic (and its parent, up to the root) is part of the review surface, not
+background reading.
+
+Epics drift because they are written before the work and closed beads teach
+things the plan could not know. The review is the only moment both the plan and
+the outcome are in one context — after the merge, the next session reads the
+stale plan and believes it.
+
+Read the closing bead(s), then the parent chain's description and design
+fields. Hunt for these six, in this order:
+
+1. **An accepted cost the PR removed, or a cost it added that the plan
+   forbids.** The highest-value class: a downstream child credited with
+   "retires X" when X is already gone will be scoped around a prize it no
+   longer wins.
+2. **A design the PR superseded.** The bead specified one mechanism, review
+   settled on another. Correct the bullet *in place*, marked SETTLED with the
+   date and the PR, pointing at the folder README that now owns the argument.
+   Do not leave both readings standing.
+3. **Ordering and sequencing claims** contradicted by what shipped — "X first,
+   then Y" when they landed as one PR. If the deviation was right, say why in
+   the epic so the next child does not re-litigate it.
+4. **Counts and figures** stated as fact: guard counts, draw counts, file
+   tallies, bundle sizes. Re-derive one and you will usually find it moved.
+   Replace the number with the number *plus the command that regenerates it*.
+5. **Labels cited but never defined**, and phase lists that never got a
+   landed/remaining split. Both read as authoritative and answer nothing.
+6. **Children that exist but are not in the plan** — bugs the port itself
+   discovered, beads split at authoring time. Name them, and say whether they
+   are fallout of a listed item or genuinely new scope, so a reader does not
+   take them for strays.
+
+Then `bd search <the thing you changed>` for siblings whose descriptions
+reference the superseded design. A stale spec in a bead nobody has opened yet
+is a defect with a delay fuse.
+
+**Fixing it.** In-flight epic and bead descriptions are working specs, not
+contracts — edit them, same session. Three mechanics that bite:
+
+- Pull the **raw** description (`bd show <id> --json`), never the `bd show`
+  render — it re-wraps lines and you would write the wrapping back in.
+- Stage the edited body to a file and use `--body-file` / `--design-file`.
+  Inside a worktree that is the only workable route (the guard rejects `$( )`),
+  and it cannot silently blank the field the way `--description "$(cmd)"` can.
+- Re-read with `bd show` afterwards. A line starting with `+` or `-` renders as
+  a bullet; reword rather than ship a mangled spec.
+
+The durable design record is the folder README; the epic carries the plan and
+points at it. Where they disagree after a review, the README is right and the
+epic is what gets corrected. Report the drift you found and fixed in the PR
+body alongside the code findings — it is review output, not bookkeeping.
 
 ## Disposition of findings
 

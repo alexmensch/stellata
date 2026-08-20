@@ -281,10 +281,13 @@ slew faster. Three things this has to get right:
   stops per second whatever the frame's absolute level.
 - **Warp snaps** (`blend = 1`). The camera is somewhere else by the next
   frame, so ramping from the old scene's cut is just a flash.
-- **It settles.** `slewDm` snaps inside `ADAPT_SLEW_SETTLE_MAG`, because
-  `dm === 0` is the sentinel `setAdaptation`'s skip-if-unchanged reads, and
-  an exponential never arrives. Chart's `reset()` drops `lastNowMs` too, so
-  re-entering the scene snaps.
+- **It settles — by parking the APPLIED cut, never by returning the
+  measurement.** Inside `ADAPT_SLEW_SETTLE_MAG` the applied value holds
+  bit-identical until the measurement drifts a full band away; a park
+  within the band of zero collapses to exactly 0, the skip-if-unchanged
+  sentinel. Tracking the measurement there instead hands the fp16
+  readback quantiser a unity-gain loop — mechanism and cost are
+  `slewDm`'s docstring. Chart's `reset()` drops `lastNowMs`: re-entry snaps.
 
 The readout follows the **applied** cut, not the measurement, so the
 number on screen always describes the frame on screen.

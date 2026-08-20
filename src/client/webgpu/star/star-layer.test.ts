@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
+import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { buildSharedUniformNodes } from '../shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
@@ -14,7 +15,10 @@ function makeLayer(count = 4) {
   const nodes = buildSharedUniformNodes(shared).nodes;
   const scene = new THREE.Scene();
   const { sources } = makeStarGeometrySources(count);
-  return { scene, sources, layer: new StarLayer(scene, nodes, sources) };
+  return {
+    scene, sources,
+    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes()),
+  };
 }
 
 const version = (layer: StarLayer) =>
@@ -35,6 +39,87 @@ describe('StarLayer', () => {
     expect(m.depthWrite).toBe(false);
     expect(m.depthTest).toBe(true);
     expect(m.transparent).toBe(true);
+  });
+
+  it('draws the disc once, MaxEquation, testing depth but never writing it', () => {
+    const { scene, layer } = makeLayer();
+    expect(scene.children).toContain(layer.discMesh);
+    expect(layer.discMesh.frustumCulled).toBe(false);
+    expect(layer.discMesh.renderOrder).toBe(0);
+    const m = layer.discMesh.material as THREE.Material;
+    expect(m.name).toBe('star-disc-tsl');
+    expect(m.blending).toBe(THREE.CustomBlending);
+    expect(m.blendEquation).toBe(THREE.MaxEquation);
+    expect(m.blendSrc).toBe(THREE.OneFactor);
+    expect(m.blendDst).toBe(THREE.OneFactor);
+    expect(m.depthTest).toBe(true);
+    // The core mask is where a core's depth comes from, so this draw must
+    // not write any — and a second draw for the halo would double the
+    // pass's per-corner cost (README.md § The disc draw writes no depth).
+    expect(m.depthWrite).toBe(false);
+  });
+
+  // Draw-count parity with the WebGL2 stack is part of the port contract:
+  // the migration may not cost more per frame than the renderer it
+  // replaces (../README.md § Early-z).
+  it('is three draws over one geometry, no more', () => {
+    const { scene, layer } = makeLayer();
+    expect([...scene.children].sort((a, b) => a.renderOrder - b.renderOrder))
+      .toEqual([layer.coreMaskMesh, layer.discMesh, layer.glowMesh]);
+  });
+
+  it('adds the core mask first, depth-only, gated invisible until the shell opens it', () => {
+    const { scene, layer } = makeLayer();
+    expect(scene.children).toContain(layer.coreMaskMesh);
+    expect(layer.coreMaskMesh.renderOrder).toBe(-4);
+    expect(layer.coreMaskMesh.visible).toBe(false);
+    const m = layer.coreMaskMesh.material as THREE.Material;
+    expect(m.colorWrite).toBe(false);
+    expect(m.depthWrite).toBe(true);
+    expect(m.depthTest).toBe(true);
+    layer.setCoreMaskVisible(true);
+    expect(layer.coreMaskMesh.visible).toBe(true);
+    layer.setCoreMaskVisible(false);
+    expect(layer.coreMaskMesh.visible).toBe(false);
+  });
+
+  it('every mesh shares the one packed geometry by identity', () => {
+    const { layer } = makeLayer();
+    for (const mesh of [layer.coreMaskMesh, layer.discMesh]) {
+      expect(mesh.geometry).toBe(layer.glowMesh.geometry);
+    }
+  });
+
+  it('constructs single-output (inert) and swaps every colour material to the MRT struct', () => {
+    const { layer } = makeLayer();
+    type FragMaterial = THREE.Material & {
+      fragmentNode: { isOutputStructNode?: boolean } | null; version: number;
+    };
+    const colour = [layer.discMesh, layer.glowMesh]
+      .map((m) => m.material as FragMaterial);
+    const coreMask = layer.coreMaskMesh.material as FragMaterial;
+    const singles = colour.map((m) => m.fragmentNode);
+    for (const single of singles) {
+      expect(single?.isOutputStructNode).toBeUndefined();
+    }
+
+    const versions = colour.map((m) => m.version);
+    layer.setMrtOutputs(true);
+    colour.forEach((m, i) => {
+      expect(m.fragmentNode?.isOutputStructNode).toBe(true);
+      expect(m.version).toBe(versions[i] + 1);
+    });
+    // The core mask never swaps: colorWrite off, one output is valid
+    // under either target (star-layer.ts § setMrtOutputs).
+    expect(coreMask.fragmentNode?.isOutputStructNode).toBeUndefined();
+
+    // Swapping back restores the SAME single node — no rebuild churn.
+    layer.setMrtOutputs(false);
+    colour.forEach((m, i) => expect(m.fragmentNode).toBe(singles[i]));
+    // Idempotent: repeating a state must not invalidate the pipeline.
+    const settled = colour.map((m) => m.version);
+    layer.setMrtOutputs(false);
+    colour.forEach((m, i) => expect(m.version).toBe(settled[i]));
   });
 
   it('first rendered frame re-packs unconditionally — the sentinel fails first write', () => {
@@ -99,18 +184,23 @@ describe('StarLayer', () => {
     expect(dyn.updateRanges).toHaveLength(0);
   });
 
-  it('dispose removes the mesh and releases geometry, material, and the LUT', () => {
+  it('dispose removes every mesh and releases geometry, all three materials, and the LUT', () => {
     const { scene, layer } = makeLayer();
     const disposed = new Set<string>();
     const watch = (
       o: { addEventListener(type: 'dispose', listener: () => void): void },
       tag: string,
     ) => o.addEventListener('dispose', () => { disposed.add(tag); });
+    const meshes = [layer.coreMaskMesh, layer.discMesh, layer.glowMesh];
     watch(layer.glowMesh.geometry, 'geometry');
-    watch(layer.glowMesh.material as THREE.Material, 'material');
+    for (const mesh of meshes) watch(mesh.material as THREE.Material, `material:${mesh.name}`);
     watch(layer.colorLut, 'lut');
     layer.dispose();
-    expect(scene.children).not.toContain(layer.glowMesh);
-    expect([...disposed].sort()).toEqual(['geometry', 'lut', 'material']);
+    for (const mesh of meshes) expect(scene.children).not.toContain(mesh);
+    expect([...disposed].sort()).toEqual([
+      'geometry', 'lut',
+      'material:star-core-mask-webgpu', 'material:star-disc-webgpu',
+      'material:star-glow-webgpu',
+    ]);
   });
 });

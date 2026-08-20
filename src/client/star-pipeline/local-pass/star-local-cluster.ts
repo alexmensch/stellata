@@ -34,6 +34,11 @@ export interface StarLocalClusterDeps {
 
 export interface StarLocalClusterFrame {
   monochrome: boolean;
+  /** Whether the local depth pass renders this boot. False on WebGPU
+   *  until its port child: a member's colour draws collapse expecting
+   *  the mirror repaint, so with no pass a member would render as the
+   *  bare core-mask stamp — an opaque hole where the star should be. */
+  localPassLive: boolean;
   focalIdx: number | null;
   thresholdMag: number;
 }
@@ -112,8 +117,12 @@ export class StarLocalCluster implements LocalCluster {
     this.spheres.length = 0;
 
     // Chart mode inks stars as flat main-pass discs with depth disabled;
-    // suppression and mirrors must stay out of the way entirely.
-    if (!frame.monochrome) {
+    // suppression and mirrors must stay out of the way entirely. Same
+    // park while the local depth pass is not rendering (the WebGPU boot,
+    // until its port child): reversed-z float32 main-pass depth orders
+    // resolved discs natively there, and a repaint-less collapse is a
+    // black hole.
+    if (!frame.monochrome && frame.localPassLive) {
       if (this.hostMemberIdx !== null) this.addMember(this.hostMemberIdx);
 
       const chain = this.chainStars(frame.focalIdx);

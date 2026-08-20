@@ -4,6 +4,7 @@
 
 import { LinearSRGBColorSpace, Scene, WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
+import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './shared-uniform-nodes';
 import type { StarGeometrySources, WebGpuSeam } from './seam';
 import { StarLayer } from './star/star-layer';
@@ -37,9 +38,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
   const scene = new Scene();
+  const hdr = new WebGpuHdrPipeline(renderer);
   return {
     renderer,
     scene,
+    hdr,
     timestampsAvailable: renderer.hasFeature('timestamp-query'),
     get uniformNodes() { return registry?.nodes ?? null; },
     bindSharedUniforms(shared: SharedUniforms) {
@@ -52,7 +55,18 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       if (registry === null) {
         throw new Error('attachStarLayer before bindSharedUniforms');
       }
-      return new StarLayer(scene, registry.nodes, sources);
+      const layer = new StarLayer(scene, registry.nodes, sources, hdr.gates);
+      // Registration is what keeps the layer's output count in lockstep
+      // with the pipeline's target mode; dispose must sever it or a dead
+      // layer keeps taking mode swaps.
+      const unregister = hdr.registerMrtLayer(layer);
+      return {
+        setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
+        dispose() {
+          unregister();
+          layer.dispose();
+        },
+      };
     },
   };
 }

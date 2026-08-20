@@ -8,8 +8,21 @@ export const DR_MAG = 7.5;
 export const HIGHLIGHT_DESAT = 0.35;
 export const LUMA_WEIGHTS: Rgb = [0.2126, 0.7152, 0.0722];
 
-const SRGB_ENCODE_KNEE = 0.0031308;
+/** The sRGB transfer function's piecewise knee and its linear slope —
+ *  exported because the TSL mirror composes the same encode and must not
+ *  restate the literals (`../webgpu/tonemap-tsl.ts`). */
+export const SRGB_ENCODE_KNEE = 0.0031308;
+export const SRGB_LINEAR_SLOPE = 12.92;
+export const SRGB_ENCODE_GAIN = 1.055;
+export const SRGB_ENCODE_OFFSET = 0.055;
+export const SRGB_ENCODE_EXPONENT = 1 / 2.4;
 const SRGB_DECODE_KNEE = 0.04045;
+
+/** Interleaved-gradient-noise constants of `stellataDither` — the scalar
+ *  and the fragCoord dot vector. tonemap.glsl duplicates the literals
+ *  (chunk-constant-drift pins them); the TSL resolve imports these. */
+export const DITHER_IGN_SCALE = 52.9829189;
+export const DITHER_IGN_DOT: readonly [number, number] = [0.06711056, 0.00583715];
 
 export function tonemapWhitePoint(drMag = DR_MAG, lThresh = L_THRESH): number {
   return lThresh * 10 ** (0.4 * drMag);
@@ -74,12 +87,16 @@ export function reinhardExtendedInverse(yd: number, whitePoint: number): number 
 
 export function srgbEncode(c: number): number {
   const v = Math.min(Math.max(c, 0), 1);
-  return v < SRGB_ENCODE_KNEE ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+  return v < SRGB_ENCODE_KNEE
+    ? v * SRGB_LINEAR_SLOPE
+    : SRGB_ENCODE_GAIN * v ** SRGB_ENCODE_EXPONENT - SRGB_ENCODE_OFFSET;
 }
 
 export function srgbDecode(c: number): number {
   const v = Math.min(Math.max(c, 0), 1);
-  return v < SRGB_DECODE_KNEE ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  return v < SRGB_DECODE_KNEE
+    ? v / SRGB_LINEAR_SLOPE
+    : ((v + SRGB_ENCODE_OFFSET) / SRGB_ENCODE_GAIN) ** (1 / SRGB_ENCODE_EXPONENT);
 }
 
 /** Scalar display transfer: linear luminance → encoded sRGB, the whole

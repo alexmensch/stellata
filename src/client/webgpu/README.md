@@ -37,7 +37,14 @@ src/client/webgpu/
   emission-tsl.ts                   TSL mirror of the emission unit's
                                     point-source peak rule.
   star/                             The star layer: packed geometry + the
-                                    D2 glow pipeline — its own README.
+                                    three depth-honest pipelines (D2 glow,
+                                    D3 core mask, D4 disc) and the MRT
+                                    write side — its own README.
+  hdr/                              The HDR chain on this backend: MRT
+                                    target, summation, resolve, reduction
+                                    readback, and the output-struct form
+                                    of the attachment gate — its own
+                                    README.
 ```
 
 ## The flag — `#renderer=webgpu`
@@ -69,18 +76,19 @@ user-facing "requires WebGPU" gate page is a separate concern.
 
 ## What the flag boots today
 
-The **star glow field with the full app alive**: every CPU subsystem
+The **star field with the full app alive**: every CPU subsystem
 (catalog, star frame, focus, picker, typeahead, URL state, overlays, HUD,
 render gate) runs identically; the renderer draws the seam's own scene
 (`WebGpuSeam.scene`), which gains layers as port children land. The star
-layer (`star/README.md`) is the first — glow pass only, with its
-still-missing siblings (discs, extinction, chart, MRT, mirrors) listed
-there. The shell's WebGL scene still exists and is never
-rendered on a WebGPU boot — no per-layer gating, no material ever
-reaches the wrong backend. GPU-side subsystems park on their existing
-fallbacks: the HDR seam runs in its unsupported mode (direct-to-canvas,
-`hdr/README.md` § Fallback), the reduction never fences, and the
-local-depth pass is gated off until its port child.
+layer (`star/README.md`) carries all three depth-honest pipelines; its
+still-missing siblings (extinction, chart, mirrors) are listed there.
+The HDR chain runs for real through `hdr/` — MRT target, summation,
+resolve, exposure reduction — behind the same `HdrSeam` interface the
+WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
+scene still exists and is never rendered on a WebGPU boot — no
+per-layer gating, no material ever reaches the wrong backend. The one
+GPU-side subsystem still parked is the local-depth pass, gated off
+until its port child.
 
 The dust voxel volume is the exception that already crossed: it streams
 and uploads on both backends (`loaders/README.md` § Dust voxel upload),
@@ -95,17 +103,20 @@ shader.
 
 ### Every park is a gate someone has to delete
 
-Each GL-only path parks behind a `rendererGL !== null` test (or, for the
-HDR seam, a null renderer). **A port child that lands its feature but
-leaves its gate in place ships a feature that is silently dead on
-WebGPU** — tests pass, nothing warns, the code simply never runs. So
-deleting the gate is part of the port, in the same PR:
+Each GL-only path parks behind a `rendererGL !== null` test. **A port
+child that lands its feature but leaves its gate in place ships a
+feature that is silently dead on WebGPU** — tests pass, nothing warns,
+the code simply never runs. So deleting the gate is part of the port,
+in the same PR:
 
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
-| HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |
+| Star local-pass membership collapse | `StarLocalCluster.update` parks on `localPassLive: false` — members would render as bare core-mask stamps with no mirror to repaint them | local-depth on WebGPU (`0it.12`), with the mirror clones (`0it.4.8`) |
+
+The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
+park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion
@@ -272,10 +283,17 @@ renderer or encoding: one program per pass (compile-time define replacing
 `uRenderMode`); glow carries no depth output (removal of the defensive
 write is bit-exact); the core-mask member stamp moves to the vertex stage
 (per-instance, so clip z pins to the near end of the active depth
-convention); the disc pass splits into a depth-writing core draw plus a
-depthWrite-off halo draw (a far-pinned halo write only ever re-wrote 1.0
-over 1.0, so buffer state is unchanged; a viewport-depth-range far pin is
-the bit-exact fallback if the halo's now-physical test regresses smoke).
+convention); the disc pass writes no depth at all, because the core-mask
+draw already stamped the same fragments at the same value several
+renderOrders earlier (`star/README.md` § The disc draw writes no depth
+carries the argument, what it gives up, and the fallbacks).
+
+**The contract is satisfied by removing writes, never by adding draws.**
+A port child that answers "one program per pass" with a second draw over
+the same 313k instances has made the migration cost more per frame than
+the renderer it replaces — which is the one outcome the port is not
+allowed to have. Draw count per subsystem is part of parity, alongside
+what the pixels look like.
 
 ## TSL test pattern — what a port child writes
 
@@ -295,8 +313,14 @@ generated code:
    frag-depth class of invariant ("no pipeline outside the allowlist
    writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
    TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
-   `tests/shader-frag-depth.test.ts`. `tests/webgpu-import-boundary.test.ts`
-   is the first of the family.
+   `tests/shader-frag-depth.test.ts`. The family so far:
+   `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`
+   and `tests/tsl-loop-control.test.ts` — the last pins an authoring trap
+   rather than a policy: a concise arrow returns its expression, so
+   `() => Break()` hands the jump back as the branch's output and the
+   generator emits it twice, which the browser reports as unreachable
+   WGSL on every boot. Brace the body, or express the exit as an `If()`
+   around the body and emit no jump at all.
 3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,

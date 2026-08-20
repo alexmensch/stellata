@@ -6,6 +6,7 @@ import { SceneAdaptation } from './scene-adaptation';
 import {
   adaptationDm,
   ADAPT_DISPLAY_FLOOR_DM,
+  ADAPT_SLEW_SETTLE_MAG,
   ADAPT_SLEW_TAU_S,
   DEFAULT_ADAPTATION_TUNING,
   displayFloorDm,
@@ -72,6 +73,15 @@ function settle(adaptation: SceneAdaptation, chart = false): number {
   return dm;
 }
 
+/** The slew PARKS within the settle band of the branch answer rather than
+ *  converging onto it exactly — the parked cut is a fixed point of the
+ *  applied value, which is what breaks the fp16 readback limit cycle
+ *  (`slewDm` in scene-adaptation-pure.ts). `bands` widens the tolerance
+ *  where two independently parked values are compared. */
+function expectSettled(dm: number, expected: number, bands = 1) {
+  expect(Math.abs(dm - expected)).toBeLessThanOrEqual(bands * ADAPT_SLEW_SETTLE_MAG);
+}
+
 beforeEach(() => {
   reduced = null;
   base = BASE_EXPOSURE;
@@ -90,7 +100,7 @@ describe('SceneAdaptation', () => {
   it('cuts on the reduced mean once it does', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    expect(settle(adaptation)).toBeCloseTo(eyeAdaptationDm(100 * L_ADAPT), 6);
+    expectSettled(settle(adaptation), eyeAdaptationDm(100 * L_ADAPT));
     expect(adaptation.getStatistic().meanL).toBeCloseTo(100 * L_ADAPT, 9);
   });
 
@@ -119,9 +129,10 @@ describe('SceneAdaptation', () => {
     // down — which is what stops an approach dimming it.
     reduced = frame(100 * L_ADAPT, 0.9);
     const pinned = settle(adaptation);
-    expect(pinned).toBeCloseTo(target(), 6);
+    expectSettled(pinned, target());
     expect(pinned).toBeGreaterThan(eyeAdaptationDm(reduced.meanL));
-    expect(100 * L_ADAPT * 10 ** (0.4 * pinned)).toBeCloseTo(L_TARGET, 6);
+    // The displayed disc lands on L_TARGET to the settle band, in mags.
+    expectSettled(2.5 * Math.log10((100 * L_ADAPT * 10 ** (0.4 * pinned)) / L_TARGET), 0);
   });
 
   it('leaves a surface under the target alone', () => {
@@ -139,7 +150,33 @@ describe('SceneAdaptation', () => {
     const first = adaptation.measure(false, SETTLED_MS + 16, false);
     expect(first).toBeLessThan(0);
     expect(first).toBeGreaterThan(settled);
-    expect(settle(adaptation)).toBeCloseTo(settled, 6);
+    expectSettled(settle(adaptation), settled);
+  });
+
+  it('parks bit-identical against a two-state measurement inside the band', () => {
+    // The fp16 limit cycle this contract exists for: the statistic is
+    // rendered with the exposure the cut set, and RG16F rounding hands the
+    // readback two adjacent values a fraction of the band apart. Tracking
+    // them gives that quantiser a unity-gain loop; the applied cut must
+    // park and stay bit-identical instead.
+    const adaptation = makeAdaptation();
+    const meanL = 100 * L_ADAPT / POINT_COVERAGE;
+    reduced = frame(meanL, POINT_COVERAGE);
+    settle(adaptation);
+    const wobble = (i: number) =>
+      frame(meanL * 10 ** (((i % 2 === 0 ? 1 : -1) * 7e-4) / 2.5), POINT_COVERAGE);
+    // Let the park re-anchor against the alternation first: a cut parked at
+    // the band's very edge may take a step or two to land inside BOTH states.
+    let parked = 0;
+    for (let i = 0; i < 50; i++) {
+      reduced = wobble(i);
+      parked = adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1), false);
+    }
+    for (let i = 50; i < 70; i++) {
+      reduced = wobble(i);
+      expect(adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1), false))
+        .toBe(parked);
+    }
   });
 
   it('snaps under warp instead of ramping from the old scene', () => {
@@ -333,7 +370,7 @@ describe('SceneAdaptation — the panel overrides', () => {
     const shipped = settle(makeAdaptation());
     const swept = makeAdaptation();
     swept.setLAdapt(2 * L_ADAPT);
-    expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
+    expectSettled(settle(swept), shipped + MAG_PER_STOP, 2);
   });
 
   it('applies a swept L_TARGET to a pin-governed cut', () => {
@@ -341,7 +378,7 @@ describe('SceneAdaptation — the panel overrides', () => {
     const shipped = settle(makeAdaptation());
     const swept = makeAdaptation();
     swept.setLTarget(2 * L_TARGET);
-    expect(settle(swept)).toBeCloseTo(shipped + MAG_PER_STOP, 6);
+    expectSettled(settle(swept), shipped + MAG_PER_STOP, 2);
   });
 
   it('ramps at the slew tau it was given', () => {
@@ -362,11 +399,10 @@ describe('SceneAdaptation — the panel overrides', () => {
   // reach the applied cut through the dep and not through the constant.
   it('cuts to the display floor the live white point implies', () => {
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    expect(settle(makeAdaptation())).toBeCloseTo(ADAPT_DISPLAY_FLOOR_DM, 6);
+    expectSettled(settle(makeAdaptation()), ADAPT_DISPLAY_FLOOR_DM);
     whitePoint = tonemapWhitePoint(11);
     const swept = settle(makeAdaptation());
-    expect(swept)
-      .toBeCloseTo(displayFloorDm({ ...DEFAULT_ADAPTATION_TUNING, whitePoint }), 6);
+    expectSettled(swept, displayFloorDm({ ...DEFAULT_ADAPTATION_TUNING, whitePoint }));
     expect(swept - ADAPT_DISPLAY_FLOOR_DM).toBeCloseTo(-3.5, 1);
   });
 });

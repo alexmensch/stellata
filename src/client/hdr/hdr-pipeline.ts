@@ -29,6 +29,7 @@ import {
   type GatedAttachments,
   type GateState,
 } from './attachments/attachment-gate';
+import type { HdrSeam } from './hdr-seam';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
@@ -112,6 +113,29 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
 
 export const HDR_ATTACHMENT_COUNT = 3;
 
+/** Per-attachment format and filter state both backends' targets carry —
+ *  the constructor options differ per renderer, the attachment contract
+ *  does not (README.md § Three attachments). */
+export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): void {
+  textures[0].colorSpace = THREE.LinearSRGBColorSpace;
+  if (textures.length > 1) {
+    // Half attachment 0's memory, and the reduction reads its missing
+    // alpha as 1 — which is exactly the level-0 weight
+    // (exposure/reduction/README.md § The chain).
+    textures[1].format = THREE.RGFormat;
+    textures[1].colorSpace = THREE.LinearSRGBColorSpace;
+  }
+  if (textures.length > 2) {
+    // Linear to match the downsample target, though inert at factor 1: the
+    // resolve reads this attachment directly there, at integer offsets from
+    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+    // nearest agree. It stops being inert the moment a tap is off-centre.
+    textures[2].minFilter = THREE.LinearFilter;
+    textures[2].magFilter = THREE.LinearFilter;
+    textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+  }
+}
+
 /** The seam's render target: three half-float attachments over one 24-bit
  *  depth buffer, each carrying the format and filters its own consumer needs
  *  (README.md § Three attachments). */
@@ -130,27 +154,11 @@ export function createHdrTarget(
     stencilBuffer: false,
     generateMipmaps: false,
   });
-  rt.textures[0].colorSpace = THREE.LinearSRGBColorSpace;
-  if (count > 1) {
-    // Half attachment 0's memory, and the reduction reads its missing
-    // alpha as 1 — which is exactly the level-0 weight
-    // (exposure/reduction/README.md § The chain).
-    rt.textures[1].format = THREE.RGFormat;
-    rt.textures[1].colorSpace = THREE.LinearSRGBColorSpace;
-  }
-  if (count > 2) {
-    // Linear to match the downsample target, though inert at factor 1: the
-    // resolve reads this attachment directly there, at integer offsets from
-    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
-    // nearest agree. It stops being inert the moment a tap is off-centre.
-    rt.textures[2].minFilter = THREE.LinearFilter;
-    rt.textures[2].magFilter = THREE.LinearFilter;
-    rt.textures[2].colorSpace = THREE.LinearSRGBColorSpace;
-  }
+  applyHdrAttachmentState(rt.textures);
   return rt;
 }
 
-export class HdrPipeline {
+export class HdrPipeline implements HdrSeam {
   /** False when no float-renderable colour buffer exists. The instance
    *  is inert and every layer renders straight to the canvas —
    *  README.md § Fallback. */
@@ -159,9 +167,8 @@ export class HdrPipeline {
   /** Bound by reference into every physical emitter's uniform map. */
   readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
-  /** Both null on a WebGPU boot, which parks the seam in § Fallback. */
-  private readonly rendererGL: THREE.WebGLRenderer | null;
-  private readonly gl: WebGL2RenderingContext | null;
+  private readonly rendererGL: THREE.WebGLRenderer;
+  private readonly gl: WebGL2RenderingContext;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera();
   private readonly size = new THREE.Vector2();
@@ -178,19 +185,16 @@ export class HdrPipeline {
   private summationOn = true;
   private extraAttachments = true;
 
-  /** Null renderer = the WebGPU dual boot, where no GL context exists at
-   *  all: the seam parks in § Fallback (inert bind, no target, emitters
-   *  own the operator inline) until the HDR port child replaces it. */
-  constructor(renderer: THREE.WebGLRenderer | null) {
+  /** A WebGPU boot constructs `webgpu/hdr/hdr-pipeline-webgpu.ts` behind
+   *  the import boundary instead — the shell holds either through the
+   *  `HdrSeam` interface (./hdr-seam.ts). */
+  constructor(renderer: THREE.WebGLRenderer) {
     this.rendererGL = renderer;
-    const gl = renderer === null
-      ? null
-      : (renderer.getContext() as WebGL2RenderingContext);
+    const gl = renderer.getContext() as WebGL2RenderingContext;
     this.gl = gl;
     this.supported =
-      gl !== null &&
-      (gl.getExtension('EXT_color_buffer_float') !== null ||
-        gl.getExtension('EXT_color_buffer_half_float') !== null);
+      gl.getExtension('EXT_color_buffer_float') !== null ||
+      gl.getExtension('EXT_color_buffer_half_float') !== null;
     // Before any layer is constructed, so chrome registers its colours
     // and emitters seed their branch against the right mode on a context
     // that can't take the target.
@@ -204,7 +208,7 @@ export class HdrPipeline {
    *  context that cannot render into it never pays for one. */
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
-    if (!this.supported || this.rendererGL === null) return false;
+    if (!this.supported) return false;
 
     this.rendererGL.getDrawingBufferSize(this.size);
     this.rt = createHdrTarget(
@@ -247,8 +251,8 @@ export class HdrPipeline {
    *  forever. It costs a redundant clear of attachment 0. */
   bind(): void {
     const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
-    this.rendererGL?.setRenderTarget(target);
-    if (target === null || this.rendererGL === null) return;
+    this.rendererGL.setRenderTarget(target);
+    if (target === null) return;
     this.openEveryAttachment();
     this.rendererGL.clear();
     this.closeEmitterGate();
@@ -263,7 +267,6 @@ export class HdrPipeline {
    *  disagreeing about the factor. */
   resolve(): void {
     const renderer = this.rendererGL;
-    if (renderer === null) return;
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     if (this.summationOn && this.extraAttachments) {
       this.summation.render(
@@ -286,9 +289,10 @@ export class HdrPipeline {
     renderer.render(this.scene, this.camera);
   }
 
-  /** The statistic attachment — flux-correct luminance in R, peak-correct
-   *  in G, written only by the emitters `markStatisticEmitter` admitted,
-   *  and reduced by `exposure/reduction/README.md`.
+  /** The statistic attachment — flux-correct luminance in R, the
+   *  lit-surface coverage fraction in G, written only by the emitters
+   *  `markStatisticEmitter` admitted, and reduced by
+   *  `exposure/reduction/README.md`.
    *
    *  Null whenever it does not carry this frame's light: before the target
    *  exists, under the fallback path, and in chart mode, where nothing
@@ -313,7 +317,6 @@ export class HdrPipeline {
    *  `attachments/README.md` § The gate is the table. */
   private applyGateState(state: GateState): void {
     const gl = this.gl;
-    if (gl === null) return;
     const slots = gateDrawSlots(state, {
       statisticWrites: this.statisticWrites && !this.statisticParked,
       extraAttachments: this.extraAttachments,
@@ -352,7 +355,7 @@ export class HdrPipeline {
   /** Re-derives from the renderer's drawing-buffer size, so it covers
    *  window resize and pixel-ratio changes alike. */
   syncSize(): void {
-    if (this.rt === null || this.rendererGL === null) return;
+    if (this.rt === null) return;
     this.rendererGL.getDrawingBufferSize(this.size);
     this.rt.setSize(this.size.x, this.size.y);
     this.summation?.syncSize();

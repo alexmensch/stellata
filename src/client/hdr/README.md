@@ -24,6 +24,11 @@ src/client/hdr/
                              (§ Three attachments). The class needs a live GL
                              context, so the test pins only that nothing can
                              switch the seam off (§ Ship gate).
+  hdr-seam.ts                The backend-neutral interface the shell holds:
+                             a WebGPU boot constructs the twin pipeline in
+                             src/client/webgpu/hdr/ instead of this class,
+                             and every consumer drives whichever exists
+                             through this shape.
   attachments/               The attachments past 0: the per-draw gate
                              every one of them goes through, and what may
                              write the statistic, in what unit — its own
@@ -267,24 +272,24 @@ space, which makes three recompile every built-in material's program
 is a one-time hitch on the chart transition, which already swaps
 materials anyway.
 
-## Fallback — no float-renderable buffer
+## Fallback — no float-renderable buffer (WebGL2 only)
 
-`supported` is false when neither `EXT_color_buffer_float` nor
-`EXT_color_buffer_half_float` is present. The instance is then inert:
-`bind()` binds the canvas and `resolve()` no-ops. A WebGPU dual-boot
-(`../webgpu/README.md`) parks here too: no GL context exists at all, so
-the shell constructs the pipeline with a **null renderer** and every
-path that would touch a target drops out — until the HDR chain's port
-child replaces the seam.
+On the WebGL2 build, `supported` is false when neither
+`EXT_color_buffer_float` nor `EXT_color_buffer_half_float` is present.
+The instance is then inert: `bind()` binds the canvas and `resolve()`
+no-ops. **On WebGPU this branch does not exist** — float render targets
+are core, `supported` is constant true on the twin pipeline
+(`../webgpu/hdr/README.md`), and the inline-operator path survives there
+for **chart mode alone**, never as a hardware tier.
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just
 blow out. That is why the operator lives in a chunk rather than inside the
 fullscreen shader, the same two-consumers strategy as the extinction
 prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
-Two things still reach it: this fallback, and **chart mode**, which is the
-reason the inline path cannot simply be deleted now that the seam has no
-switch.
+Two things still reach it: this WebGL2 fallback, and **chart mode** on
+either backend — which is the reason the inline path cannot simply be
+deleted now that the seam has no switch.
 
 **This path is not a calibrated build, and that is why nothing can select
 it.** A point source is fine — same `L`, same operator, same exposure, and the
@@ -315,10 +320,12 @@ against that one:
 
 Every physical emitter carries luminance in the § Unit scale — stars (H3), the
 Milky Way (H4), the planet mesh / rings / airlight / reflected glare (H5), the
-Local Group glow — so the target is the path, and `supported` is the one thing
-that can take it away. There is no `HDR_DEFAULT_ENABLED` and no setter:
-`wantsTarget()` is `supported && !chart`, and `hdr-pipeline.test.ts` pins
-that shape so a third input has to be a deliberate edit.
+Local Group glow — so the target is the path. The one thing that can take it
+away is the WebGL2 hardware verdict above; on WebGPU nothing can. There is no
+`HDR_DEFAULT_ENABLED` and no setter: `wantsTarget()` is
+`supported && !chart` on both pipelines, and `hdr-pipeline.test.ts` /
+`hdr-pipeline-webgpu.test.ts` pin that shape so a third input has to be a
+deliberate edit.
 
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its RG16F statistic attachment, its

@@ -136,6 +136,11 @@ Nothing else can reach the statistic, **including a chrome layer added
 later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.
 
+On WebGPU the same table is expressed in node-material terms — output
+structs whose masked slots write the blend's identity element
+(`src/client/webgpu/hdr/README.md` § The gate becomes the output
+struct); everything below is the WebGL2 mechanism.
+
 **Which mark a layer calls is part of its contract**, not a detail:
 
 | mark | opens | for |

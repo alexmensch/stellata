@@ -15,10 +15,13 @@ const ALLOWED = new Set<string>([]);
 
 const GUIDANCE =
   'writes fragment depth from TSL. Per-instance stamps belong in the vertex '
-  + 'stage as a clip-z pin (the D3 core-mask pattern); a per-fragment depth '
-  + 'yield belongs to a separate depthWrite-off pipeline (the D4 halo '
-  + 'pattern). If a write is genuinely unavoidable, allowlist it here with '
-  + 'the early-z cost stated.';
+  + 'stage as a clip-z pin (the D3 core-mask pattern); a draw that wanted to '
+  + 'yield depth per fragment should write none and read an earlier '
+  + "depth-only draw's stamp instead (the D4 disc pattern — "
+  + 'src/client/webgpu/star/README.md § The disc draw writes no depth). A '
+  + 'second draw over the same instances is NOT the answer: it prices the '
+  + 'port above the renderer it replaces. If a write is genuinely '
+  + 'unavoidable, allowlist it here with the early-z cost stated.';
 
 // The three ways a node material writes fragment depth: assigning its
 // depthNode, passing depthNode in a constructor/params literal, and the

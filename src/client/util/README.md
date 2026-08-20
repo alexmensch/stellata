@@ -70,7 +70,10 @@ build scripts, tests, and shader uniforms.
   matching a regex, so a nested call in an earlier slot cannot split the list
   in the wrong place, and matches a **whole identifier** — callers assert on
   argument text, so a hit inside a longer name would pin a different call and
-  still pass. The drift tests that pin what a shader passes where run on
+  still pass. It reads **TSL sources too**: a node-graph call is TypeScript,
+  and the paren walk is indifferent to the language, so a WebGPU-side pin
+  shares this parser rather than matching source text with its indentation
+  baked in. The drift tests that pin what a shader passes where run on
   it — which alpha an occluder texel dims by
   (`../solar-system/planets/planet-mesh-layer.test.ts`), which emitters may
   claim lit-surface coverage (`../hdr/attachments/statistic-mask.test.ts`).

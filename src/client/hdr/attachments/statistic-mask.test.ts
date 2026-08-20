@@ -32,6 +32,18 @@ describe('the statistic attachment mask', () => {
     });
   }
 
+  it('claims no coverage on the TSL star path either', () => {
+    // The WebGPU port's one statistic writer so far. TSL is TypeScript, so
+    // the same contract reads off the same argument walker rather than a
+    // second mechanism: mask 0, alpha 1, and a flux the park mask can zero
+    // (webgpu/hdr/README.md § The gate becomes the output struct).
+    const args = glslCallArgs(
+      read('../../webgpu/star/star-emission-tsl.ts'), 'statisticTexelTsl');
+    expect(args[1]).toBe('0.0');
+    expect(args[2]).toBe('1.0');
+    expect(args[0]).toContain('gates.statisticWrites');
+  });
+
   it('claims the lit hemisphere alone for the planet mesh', () => {
     // The night side is the one dark region big enough to move the masked
     // mean: counted as coverage it would halve D at full phase and gut it on
