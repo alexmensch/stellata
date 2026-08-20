@@ -68,8 +68,10 @@ is visible in a WebGPU A/B smoke until it lands:
 - **Local-mirror clones**: none exist yet, so local-pass membership is
   parked on this boot (`../../star-pipeline/local-pass/README.md`
   § Membership) — close-range discs render in the MAIN pass, ordered by
-  reversed-z float32 fixed-function depth, rather than collapsing into
-  a repaint that is not there. The collapse returns with the mirrors.
+  the core mask's reversed-z float32 stamps (§ The disc draw writes no
+  depth), rather than collapsing into a repaint that is not there. The
+  collapse returns with the mirrors, and the member near-pin in the
+  vertex stage is inert until then: with no members, nothing pins.
 
 The MRT emission/statistic write side is here (`starMrtStruct`,
 `setMrtOutputs`) but engages only while the HDR pipeline binds its
