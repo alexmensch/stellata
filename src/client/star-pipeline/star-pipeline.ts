@@ -9,7 +9,7 @@ import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass
 // material to MultiplyBlending. Single source of truth for the four
 // CustomBlending fields plus the depth flags so a future tweak (e.g. the
 // AddEquation -> MaxEquation switch in PR #25) only needs to touch one site.
-export function applyDiscBlendDefaults(m: THREE.ShaderMaterial) {
+export function applyDiscBlendDefaults(m: THREE.Material) {
   m.blending = THREE.CustomBlending;
   m.blendSrc = THREE.OneFactor;
   m.blendDst = THREE.OneFactor;

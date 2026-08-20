@@ -2210,8 +2210,10 @@ export class Stellata implements FrameAnchor {
     // current-frame: a member's core-mask stamp must render even when
     // the physSize-only window misses an appSize-driven member disc.
     perfMark('coreMask');
-    this.starPipeline.coreMaskMesh.visible = this.coreMaskEnabled &&
+    const coreMaskOn = this.coreMaskEnabled &&
       (this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask());
+    this.starPipeline.coreMaskMesh.visible = coreMaskOn;
+    this.webgpuStarLayer?.setCoreMaskVisible(coreMaskOn);
     perfMeasure('coreMask');
     // Also after the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw

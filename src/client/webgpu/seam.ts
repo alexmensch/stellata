@@ -13,6 +13,9 @@ export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
 export type { StarGeometrySources } from './star/star-geometry';
 
 export interface WebGpuStarLayer {
+  /** The shell's per-frame CPU gate on the depth-only core-mask draw —
+   *  the same `visible` flip it applies to the WebGL mesh. */
+  setCoreMaskVisible(on: boolean): void;
   dispose(): void;
 }
 
