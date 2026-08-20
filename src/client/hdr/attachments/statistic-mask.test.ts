@@ -32,6 +32,17 @@ describe('the statistic attachment mask', () => {
     });
   }
 
+  it('claims no coverage on the TSL star path either', () => {
+    // The WebGPU port's one statistic writer so far. TSL is TypeScript, so
+    // the same contract is read off the starMrtStruct call: flux gated by
+    // the park mask, mask 0, alpha 1 (webgpu/hdr/README.md § The gate
+    // becomes the output struct).
+    const src = read('../../webgpu/star/star-emission-tsl.ts');
+    expect(src).toContain(
+      'statisticTexelTsl(\n      v.vFluxPeakL.mul(glow).mul(gates.statisticWrites), 0.0, 1.0)',
+    );
+  });
+
   it('claims the lit hemisphere alone for the planet mesh', () => {
     // The night side is the one dark region big enough to move the masked
     // mean: counted as coverage it would halve D at full phase and gut it on

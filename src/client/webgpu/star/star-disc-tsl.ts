@@ -10,15 +10,23 @@ import { NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { applyDiscBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
-import { starEmissionColour, starGlowNode } from './star-emission-tsl';
+import type { EmitterGateNodes } from '../hdr/emitter-gates';
+import {
+  makeStarColourMaterial, starEmissionColour, starGlowNode, starMrtStruct,
+  type StarColourMaterial,
+} from './star-emission-tsl';
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
 } from './star-vertex-tsl';
 
-function buildDiscMaterial(deps: StarTslDeps, half: 'core' | 'halo'): NodeMaterial {
+function buildDiscMaterial(
+  deps: StarTslDeps,
+  gates: EmitterGateNodes,
+  half: 'core' | 'halo',
+): StarColourMaterial {
   const v = buildStarVaryings();
 
-  const fragmentNode = Fn(() => {
+  const glowValue = Fn(() => {
     Discard(length(v.vUv).greaterThan(0.5));
     Discard(v.vPhysRatio.lessThan(PHYS_RATIO_THRESHOLD));
     // The taper region is glow-only: a resolved disc at threshold would
@@ -32,21 +40,27 @@ function buildDiscMaterial(deps: StarTslDeps, half: 'core' | 'halo'): NodeMateri
     } else {
       Discard(glow.greaterThanEqual(deps.u.uCoreThreshold));
     }
-    return starEmissionColour(deps.u, v, glow);
+    return glow;
   });
 
   const material = new NodeMaterial();
   material.name = `star-disc-${half}-tsl`;
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v);
-  material.fragmentNode = fragmentNode();
   material.transparent = true;
   applyDiscBlendDefaults(material);
   if (half === 'halo') material.depthWrite = false;
-  return material;
+
+  const singleGlow = glowValue();
+  const structGlow = glowValue();
+  return makeStarColourMaterial(
+    material,
+    Fn(() => starEmissionColour(deps.u, v, singleGlow))(),
+    starMrtStruct(deps.u, v, structGlow, gates),
+  );
 }
 
-export const buildStarDiscCoreMaterial = (deps: StarTslDeps) =>
-  buildDiscMaterial(deps, 'core');
+export const buildStarDiscCoreMaterial = (deps: StarTslDeps, gates: EmitterGateNodes) =>
+  buildDiscMaterial(deps, gates, 'core');
 
-export const buildStarDiscHaloMaterial = (deps: StarTslDeps) =>
-  buildDiscMaterial(deps, 'halo');
+export const buildStarDiscHaloMaterial = (deps: StarTslDeps, gates: EmitterGateNodes) =>
+  buildDiscMaterial(deps, gates, 'halo');

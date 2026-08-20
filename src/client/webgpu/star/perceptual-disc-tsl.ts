@@ -6,6 +6,7 @@ import { Fn, exp, float, max, mix, pow, select, smoothstep, sqrt } from 'three/t
 import type { Node } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import { DM_KNEE_FLOOR, SIZE_SPAN_FLOOR } from '../../star-pipeline/perceptual-disc-pure';
+import { KERNEL_FLUX_FIT } from '../../star-pipeline/perceptual-disc-flux-pure';
 
 type NF = Node<'float'>;
 
@@ -31,6 +32,18 @@ export const perceptualDiscExponentTsl = /* @__PURE__ */ Fn(
     return distN.mul(lumBias);
   },
 );
+
+/** The kernel's area integral Φ(n) over its own quad — Horner over the
+ *  same degree-4 fit the CPU mirror and the GLSL chunk run
+ *  (../../star-pipeline/perceptual-disc-flux-pure.ts). */
+export const perceptualDiscFluxIntegralTsl = /* @__PURE__ */ Fn(([n]: [NF]) => {
+  const x = float(1.0).div(max(n, 1e-6));
+  let acc: Node<'float'> = float(KERNEL_FLUX_FIT[KERNEL_FLUX_FIT.length - 1]);
+  for (let i = KERNEL_FLUX_FIT.length - 2; i >= 0; i--) {
+    acc = acc.mul(x).add(KERNEL_FLUX_FIT[i]);
+  }
+  return acc;
+});
 
 /** The profile from a pre-derived exponent — the GLSL overload derives
  *  `n` inline; TSL callers reuse the exponent node instead. */

@@ -33,8 +33,10 @@ src/client/webgpu/star/
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
                                writes off, disc-pass gates.
   star-emission-tsl.ts         Fragment pieces the colour passes share:
-                               profile value + starEmission()'s
-                               inline-operator select.
+                               profile value, starEmission()'s
+                               inline-operator select, the MRT output
+                               struct + single↔struct mode swap
+                               (../hdr/README.md).
   perceptual-disc-tsl.ts       TSL mirror of the stellata_perceptual_disc
                                chunk (dM knee, √Δm size, exponent,
                                profile). The GLSL chunk's header owns the
@@ -61,11 +63,13 @@ is visible in a WebGPU A/B smoke until it lands:
   than WebGL2 until then.
 - **Chart mode**: under additive blending on the paper background, chart
   currently renders no stars on WebGPU.
-- **MRT emission/statistic chunks**: the fragment writes colour only;
-  the inline operator path is exact for point sources
-  (`../../hdr/README.md` § Fallback).
 - **Local-mirror clones**: a local-pass member collapses in this layer
   (as in the main WebGL pass) with no mirror to repaint it.
+
+The MRT emission/statistic write side is here (`starMrtStruct`,
+`setMrtOutputs`) but engages only while the HDR pipeline binds its
+target; single-output frames run the inline operator, which is exact
+for point sources (`../../hdr/README.md` § Fallback).
 
 ## Dynamic attributes — who uploads what
 

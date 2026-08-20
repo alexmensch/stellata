@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
+import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { buildSharedUniformNodes } from '../shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
@@ -14,7 +15,10 @@ function makeLayer(count = 4) {
   const nodes = buildSharedUniformNodes(shared).nodes;
   const scene = new THREE.Scene();
   const { sources } = makeStarGeometrySources(count);
-  return { scene, sources, layer: new StarLayer(scene, nodes, sources) };
+  return {
+    scene, sources,
+    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes()),
+  };
 }
 
 const version = (layer: StarLayer) =>
@@ -77,6 +81,38 @@ describe('StarLayer', () => {
     for (const mesh of [layer.coreMaskMesh, layer.discCoreMesh, layer.discHaloMesh]) {
       expect(mesh.geometry).toBe(layer.glowMesh.geometry);
     }
+  });
+
+  it('constructs single-output (inert) and swaps every colour material to the MRT struct', () => {
+    const { layer } = makeLayer();
+    type FragMaterial = THREE.Material & {
+      fragmentNode: { isOutputStructNode?: boolean } | null; version: number;
+    };
+    const colour = [layer.discCoreMesh, layer.discHaloMesh, layer.glowMesh]
+      .map((m) => m.material as FragMaterial);
+    const coreMask = layer.coreMaskMesh.material as FragMaterial;
+    const singles = colour.map((m) => m.fragmentNode);
+    for (const single of singles) {
+      expect(single?.isOutputStructNode).toBeUndefined();
+    }
+
+    const versions = colour.map((m) => m.version);
+    layer.setMrtOutputs(true);
+    colour.forEach((m, i) => {
+      expect(m.fragmentNode?.isOutputStructNode).toBe(true);
+      expect(m.version).toBe(versions[i] + 1);
+    });
+    // The core mask never swaps: colorWrite off, one output is valid
+    // under either target (star-layer.ts § setMrtOutputs).
+    expect(coreMask.fragmentNode?.isOutputStructNode).toBeUndefined();
+
+    // Swapping back restores the SAME single node — no rebuild churn.
+    layer.setMrtOutputs(false);
+    colour.forEach((m, i) => expect(m.fragmentNode).toBe(singles[i]));
+    // Idempotent: repeating a state must not invalidate the pipeline.
+    const settled = colour.map((m) => m.version);
+    layer.setMrtOutputs(false);
+    colour.forEach((m, i) => expect(m.version).toBe(settled[i]));
   });
 
   it('first rendered frame re-packs unconditionally — the sentinel fails first write', () => {

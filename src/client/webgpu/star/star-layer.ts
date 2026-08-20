@@ -9,6 +9,7 @@ import {
 } from '../attribute-packing-pure';
 import { STAR_DYNAMIC_SCALARS } from '../star-attribute-roster';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
   buildStarGeometry,
   dynamicScalarSourceAttrs,
@@ -18,6 +19,7 @@ import {
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { buildStarDiscCoreMaterial, buildStarDiscHaloMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
+import type { StarColourMaterial } from './star-emission-tsl';
 import type { StarTslDeps } from './star-vertex-tsl';
 
 interface DynamicWatcher {
@@ -43,12 +45,18 @@ export class StarLayer {
   private readonly dynArrays: Float32Array[];
   private readonly watchers: DynamicWatcher[];
   private readonly materials: THREE.Material[];
+  private readonly colourMaterials: StarColourMaterial[];
   /** Per-frame scratch, one slot per packed dynamic buffer — reused so the
    *  render loop allocates nothing. */
   private readonly pendingFull: boolean[];
   private readonly pendingRanges: { start: number; count: number }[][];
 
-  constructor(scene: THREE.Scene, nodes: SharedUniformNodes, sources: StarGeometrySources) {
+  constructor(
+    scene: THREE.Scene,
+    nodes: SharedUniformNodes,
+    sources: StarGeometrySources,
+    gates: EmitterGateNodes,
+  ) {
     this.scene = scene;
     this.build = buildStarGeometry(sources);
     this.dynArrays = this.build.dynAttrs.map((a) => a.array as Float32Array);
@@ -81,14 +89,27 @@ export class StarLayer {
     // renderOrder mirrors the WebGL stack: core mask (−4) → background
     // layers → disc core (0) → halo (0.5, after the core's depth lands) →
     // glow (1).
+    const discCore = buildStarDiscCoreMaterial(deps, gates);
+    const discHalo = buildStarDiscHaloMaterial(deps, gates);
+    const glow = buildStarGlowMaterial(deps, gates);
+    this.colourMaterials = [discCore, discHalo, glow];
     this.coreMaskMesh = mesh(buildStarCoreMaskMaterial(deps), 'star-core-mask-webgpu', -4);
     this.coreMaskMesh.visible = false;
-    this.discCoreMesh = mesh(buildStarDiscCoreMaterial(deps), 'star-disc-core-webgpu', 0);
-    this.discHaloMesh = mesh(buildStarDiscHaloMaterial(deps), 'star-disc-halo-webgpu', 0.5);
-    this.glowMesh = mesh(buildStarGlowMaterial(deps), 'star-glow-webgpu', 1);
+    this.discCoreMesh = mesh(discCore.material, 'star-disc-core-webgpu', 0);
+    this.discHaloMesh = mesh(discHalo.material, 'star-disc-halo-webgpu', 0.5);
+    this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);
     this.materials = [
       this.coreMaskMesh, this.discCoreMesh, this.discHaloMesh, this.glowMesh,
     ].map((m) => m.material as THREE.Material);
+  }
+
+  /** Swap every colour material between its single-output fragment and
+   *  the three-member MRT struct — driven by the HDR pipeline in
+   *  lockstep with its target mode (../hdr/README.md § The gate becomes
+   *  the output struct). The core mask never swaps: colour writes are
+   *  off, so its lone location-0 output is valid under either target. */
+  setMrtOutputs(on: boolean): void {
+    for (const m of this.colourMaterials) m.setMrtOutputs(on);
   }
 
   /** The shell's per-frame CPU gate — skip the whole depth-only draw when

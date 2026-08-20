@@ -18,12 +18,14 @@ import {
 } from '../../star-pipeline/star-pass';
 import { packedScalar } from '../attribute-packing';
 import type { Vec4PackPlan } from '../attribute-packing-pure';
-import { pointSourcePeakTsl } from '../emission-tsl';
+import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
 import { lumaWeightsTsl } from '../tonemap-tsl';
 import { attrVec2, attrVec3 } from '../tsl-shim';
 import {
   perceptualAppSizePxTsl,
+  perceptualDiscExponentTsl,
+  perceptualDiscFluxIntegralTsl,
   perceptualDmEffTsl,
 } from './perceptual-disc-tsl';
 
@@ -61,6 +63,7 @@ export function buildStarVaryings() {
     vPhysRatio: varyingProperty('float', 'vPhysRatio'),
     vSoftness: varyingProperty('float', 'vSoftness'),
     vPeakL: varyingProperty('float', 'vPeakL'),
+    vFluxPeakL: varyingProperty('float', 'vFluxPeakL'),
   };
 }
 
@@ -177,7 +180,19 @@ export function buildStarVertexNode(
         const physSize = min(
           physSizeRaw, u.uMaxPhysFrac.mul(min(u.uViewport.x, u.uViewport.y)));
         const pxSize = max(appSize, physSize);
-        v.vPhysRatio.assign(clamp(physSize.div(max(pxSize, 0.001)), 0.0, 1.0));
+        const physRatio = clamp(physSize.div(max(pxSize, 0.001)), 0.0, 1.0).toVar();
+        v.vPhysRatio.assign(physRatio);
+
+        // The statistic's flux channel: the same kernel divided by its own
+        // area integral so its frame integral returns the star's true flux.
+        // pxSize is CSS pixels, which is what keeps the frame mean
+        // devicePixelRatio-independent
+        // (../../hdr/exposure/reduction/README.md § Pixel units).
+        v.vFluxPeakL.assign(kernelFluxPeakTsl(
+          u.uExposure, appMag, pxSize,
+          perceptualDiscFluxIntegralTsl(perceptualDiscExponentTsl(
+            softness, physRatio, u.uDistNMin, u.uDistNMax,
+            u.uLumBiasMin, u.uLumBiasMax))));
 
         const centreClip = cameraProjectionMatrix
           .mul(modelViewMatrix)
