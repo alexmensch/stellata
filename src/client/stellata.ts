@@ -51,6 +51,11 @@ import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples'
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import { exposureCutMoved } from './render-gate/render-gate-pure';
+import {
+  cadenceSimBudgetS,
+  clockFrameDue,
+  pulsationCadenceBudgetS,
+} from './render-gate/clock-cadence-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
 import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
 import {
@@ -369,6 +374,12 @@ export class Stellata implements FrameAnchor {
   readonly renderGate = new RenderGate();
   private readonly trackballSettle: TrackballSettle;
   private lastInvalidatedDm = Number.NaN;
+  // Clock-cadence state (render-gate/README.md § The clock cadence).
+  // Budget seeds 0 so the first tick under a running clock is due;
+  // NaN-seeded sim stamp makes clockFrameDue's first read due too.
+  private cadenceBudgetSimS = 0;
+  private lastRenderedSimS = Number.NaN;
+  private pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -922,7 +933,13 @@ export class Stellata implements FrameAnchor {
       distFromSol: 0,
       t: 0,
       warpActive: false,
+      pxPerRadian: 1,
     };
+    // Catalog-wide constant: the fastest pulsating variable bounds how
+    // long any frame can idle before some star's brightness moves a JND.
+    this.pulsationCadenceBudgetS = pulsationCadenceBudgetS(
+      catalog.periodDays, catalog.amplitudeMag, this._suppressPulsation,
+    );
     this.registerSceneLayers();
     // Seed the declutter cycle so the imperative-push layers receive their
     // initial permission. `detailPermitted` starts all-true for the
@@ -981,7 +998,13 @@ export class Stellata implements FrameAnchor {
         // the mesh under fast scrub. That is why this update lives on
         // the shell rather than inside the planet module's layer.
         this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
+        // A live true-eclipse dim changes the frame every time the field
+        // evaluates, and it only evaluates on rendered frames — so hold
+        // the settle tail open until the event decays.
+        if (this.planetBodyField.activeDimCount > 0) this.renderGate.invalidate();
       },
+      cadenceSimBudgetS: (ctx) =>
+        this.planetBodyField.cadenceSimBudgetS(ctx.camera.position, ctx.pxPerRadian),
       dispose: () => {},
     });
     this.layers.register({
@@ -1023,7 +1046,15 @@ export class Stellata implements FrameAnchor {
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
         this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
+        // A live eclipse dim changes the frame every time the field
+        // evaluates, and it only evaluates on rendered frames — so hold
+        // the settle tail open until the event decays.
+        if ((this.eclipsePhotometryField?.activeDimCount ?? 0) > 0) {
+          this.renderGate.invalidate();
+        }
       },
+      cadenceSimBudgetS: () =>
+        this.binaryOrbitField?.cadenceSimBudgetS() ?? Number.POSITIVE_INFINITY,
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
         this.binaryOrbitField?.dispose();
@@ -1288,6 +1319,10 @@ export class Stellata implements FrameAnchor {
     const focal = this.focus.getFocusedStar();
     const d = this._epochFollowDelta;
     if (!this.starFrame.advanceEpochTo(this.getT(), focal, d)) return;
+    // The rewrite changed what the frame would draw; the clock cadence
+    // can no longer assume nothing moved, so a bucket crossing between
+    // cadence frames must repaint.
+    this.renderGate.invalidate();
     if (this.warp.isActive() || d.lengthSq() === 0) return;
     this.camera.position.add(d);
     this.controls.target.add(d);
@@ -2174,9 +2209,16 @@ export class Stellata implements FrameAnchor {
       );
     }
     perfMeasure('controls.update');
-    const continuous = this.clock.getRate() !== 0 || cameraAnimating;
+    // A running clock is no longer continuous by itself: the cadence
+    // decides when elapsed sim time could visibly move anything drawn,
+    // from the budget the layers reported on the LAST rendered frame
+    // (render-gate/README.md § The clock cadence).
+    const continuous = cameraAnimating;
+    const cadenceDue = clockFrameDue(
+      this.clock.getRate(), this.getT(), this.lastRenderedSimS, this.cadenceBudgetSimS,
+    );
     if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.worldOffset, continuous, nowMs,
+      this.camera, this.controls.target, this.worldOffset, continuous, cadenceDue, nowMs,
     )) {
       requestAnimationFrame(this.animate);
       return;
@@ -2217,7 +2259,17 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
+    this.frameCtx.pxPerRadian = this.angularToPx();
     this.layers.updateAll(this.frameCtx);
+    // Refresh the clock cadence off the state the fan-out just wrote.
+    // Valid until the next rendered frame: between frames the camera is
+    // static (a camera move renders), so every distance the budgets
+    // divide by holds.
+    this.lastRenderedSimS = this.frameCtx.t;
+    this.cadenceBudgetSimS = cadenceSimBudgetS(
+      this.layers.minCadenceBudgetS(this.frameCtx),
+      this.pulsationCadenceBudgetS,
+    );
     // After the layer fan-out so the star cluster's membership is
     // current-frame: a member's core-mask stamp must render even when
     // the physSize-only window misses an appSize-driven member disc.

@@ -92,7 +92,9 @@ describe('exposureCutMoved', () => {
 
 describe('decideRender', () => {
   const idle = { holds: 0, lastActiveMs: Number.NEGATIVE_INFINITY };
-  const quiet = { continuous: false, poseChanged: false, nowMs: 10_000 };
+  const quiet = {
+    continuous: false, poseChanged: false, cadenceDue: false, nowMs: 10_000,
+  };
 
   it('settle tail is pinned', () => {
     expect(SETTLE_MS).toBe(1500);
@@ -123,5 +125,13 @@ describe('decideRender', () => {
     const state = { holds: 0, lastActiveMs: 10_000 };
     expect(decideRender(state, { ...quiet, nowMs: 10_000 + SETTLE_MS - 1 }).render).toBe(true);
     expect(decideRender(state, { ...quiet, nowMs: 10_000 + SETTLE_MS }).render).toBe(false);
+  });
+
+  it('a cadence frame renders WITHOUT stamping activity — no settle tail rides it', () => {
+    const d = decideRender(idle, { ...quiet, cadenceDue: true });
+    expect(d.render).toBe(true);
+    expect(d.lastActiveMs).toBe(Number.NEGATIVE_INFINITY);
+    // The very next quiet tick idles again.
+    expect(decideRender(idle, { ...quiet, nowMs: 10_016 }).render).toBe(false);
   });
 });

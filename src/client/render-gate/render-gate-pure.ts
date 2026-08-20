@@ -66,15 +66,21 @@ export interface GateDecision {
   readonly lastActiveMs: number;
 }
 
+/** `cadenceDue` renders THIS tick without stamping activity: a clock-
+ *  cadence frame is a scheduled single redraw, and stamping it would drag
+ *  the whole SETTLE_MS tail behind every one — ~90 extra frames per
+ *  cadence frame at 60 Hz, which is the idleness the cadence exists to
+ *  buy (README.md § The clock cadence). */
 export function decideRender(
   state: { holds: number; lastActiveMs: number },
-  inputs: { continuous: boolean; poseChanged: boolean; nowMs: number },
+  inputs: { continuous: boolean; poseChanged: boolean; cadenceDue: boolean; nowMs: number },
 ): GateDecision {
   const active = inputs.continuous || inputs.poseChanged;
   const lastActiveMs = active ? inputs.nowMs : state.lastActiveMs;
   return {
     render:
-      state.holds > 0 || active || inputs.nowMs - lastActiveMs < SETTLE_MS,
+      state.holds > 0 || active || inputs.cadenceDue
+      || inputs.nowMs - lastActiveMs < SETTLE_MS,
     lastActiveMs,
   };
 }

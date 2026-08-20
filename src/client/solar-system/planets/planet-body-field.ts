@@ -27,6 +27,18 @@ import {
 } from '../../hdr/hdr-pipeline';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { CADENCE_MOTION_THRESHOLD_PX } from '../../render-gate/clock-cadence-pure';
+
+/** Conservative ceiling on any Sol-system body's total space velocity —
+ *  heliocentric plus moon-around-parent. Mercury peaks at 59 km/s at
+ *  perihelion; the fastest moon composition (Jupiter's ~13 plus an inner
+ *  moonlet's ~31) stays under 45. 100 leaves margin for any future
+ *  attached host's bodies. Pinned in planet-body-field.test.ts. */
+export const BODY_SPEED_BOUND_PC_PER_S = 100 * KM_PC;
+
+/** Ceiling on any body's spin rate — Jupiter, the system's fastest
+ *  rotator, turns 2π in 9.925 h (1.76e-4 rad/s). */
+export const BODY_SPIN_BOUND_RAD_PER_S = 2e-4;
 import {
   GLARE_PHOTOCENTRE_SHIFT,
   MESH_FADE_FULL_PX,
@@ -959,6 +971,43 @@ export class PlanetBodyField {
     const i = instanceIdx - host.startInstance;
     const { dVp, physDiscPx } = this.evalPlanetView(host, i, cameraPosLocal);
     return dVp <= 0 ? 0 : physDiscPx;
+  }
+
+  /** Count of instances currently holding a true-eclipse dim below 1
+   *  (occluding or decaying) — while nonzero, the shell keeps frames
+   *  coming so the wall-clock anti-strobe blend can run
+   *  (../../render-gate/README.md § The clock cadence). */
+  get activeDimCount(): number {
+    return this.dimActive.size;
+  }
+
+  /** Largest sim-time step no attached body can turn into visible screen
+   *  motion — the field's clock-cadence budget
+   *  (../../render-gate/README.md § The clock cadence). Per body, two
+   *  conservative angular-rate terms: translation (BODY_SPEED_BOUND over
+   *  the camera distance) and spin (BODY_SPIN_BOUND across the resolved
+   *  disc, self-gating through physDiscPx for unresolved bodies).
+   *  Hosts past their cull distance contribute nothing — their bodies
+   *  cannot draw. */
+  cadenceSimBudgetS(
+    cameraPos: Readonly<THREE.Vector3>,
+    pxPerRadian: number,
+  ): number {
+    let maxRatePxPerS = 0;
+    for (const host of this.hosts.values()) {
+      if (cameraPos.distanceTo(host.hostLocalPos) > host.cullDistance) continue;
+      for (let i = 0; i < host.count; i++) {
+        const { dVp, physDiscPx } = this.evalPlanetView(host, i, cameraPos);
+        if (dVp <= 0) continue;
+        const rate =
+          (BODY_SPEED_BOUND_PC_PER_S / dVp) * pxPerRadian
+          + BODY_SPIN_BOUND_RAD_PER_S * 0.5 * physDiscPx;
+        if (rate > maxRatePxPerS) maxRatePxPerS = rate;
+      }
+    }
+    return maxRatePxPerS > 0
+      ? CADENCE_MOTION_THRESHOLD_PX / maxRatePxPerS
+      : Number.POSITIVE_INFINITY;
   }
 
   /** True when the body currently renders as one on-screen point with

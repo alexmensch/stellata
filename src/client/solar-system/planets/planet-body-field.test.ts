@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
+import { SOL_BODIES } from '../planet-system';
+import {
+  BODY_SPEED_BOUND_PC_PER_S,
+  BODY_SPIN_BOUND_RAD_PER_S,
+} from './planet-body-field';
 import {
   cullDistancePc,
   PlanetBodyField,
@@ -1804,6 +1809,62 @@ describe('PlanetBodyField.isCollapsedOntoParent', () => {
   it('false for an out-of-range instance', () => {
     const f = fieldWith([JUPITER_LIKE], [[1, 0, 0]]);
     expect(f.isCollapsedOntoParent(5, cameraAtAu(0, 500, 0))).toBe(false);
+    f.dispose();
+  });
+});
+
+describe('PlanetBodyField.cadenceSimBudgetS', () => {
+  function fieldWith(planets: Planet[], positionsAu: number[][]): PlanetBodyField {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const ps: PlanetSystem = {
+      hostStarIdx: 0,
+      planets,
+      positionsAt: (_t, out) => {
+        positionsAu.forEach((p, i) => {
+          out[i * 3 + 0] = p[0] * AU_PC;
+          out[i * 3 + 1] = p[1] * AU_PC;
+          out[i * 3 + 2] = p[2] * AU_PC;
+        });
+      },
+    };
+    f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    return f;
+  }
+
+  function cameraPosAu(x: number, y: number, z: number): THREE.Vector3 {
+    return new THREE.Vector3(x * AU_PC, y * AU_PC, z * AU_PC);
+  }
+
+  const PX_PER_RAD = 573;
+
+  it('the speed bound is the documented 100 km/s ceiling', () => {
+    expect(BODY_SPEED_BOUND_PC_PER_S).toBe(100 * KM_PC);
+  });
+
+  it('the spin bound covers every SOL body with rotation elements', () => {
+    let checked = 0;
+    for (const body of SOL_BODIES) {
+      if (!body.rotation) continue;
+      const radPerS = (Math.abs(body.rotation.wDegPerDay) * Math.PI) / 180 / 86400;
+      expect(radPerS).toBeLessThanOrEqual(BODY_SPIN_BOUND_RAD_PER_S);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(20);
+  });
+
+  it('a closer body shrinks the budget; a culled host frees it', () => {
+    const f = fieldWith(
+      [makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 })],
+      [[1, 0, 0]],
+    );
+    const far = f.cadenceSimBudgetS(cameraPosAu(0, 500, 0), PX_PER_RAD);
+    const near = f.cadenceSimBudgetS(cameraPosAu(0, 2, 0), PX_PER_RAD);
+    expect(Number.isFinite(far)).toBe(true);
+    expect(near).toBeLessThan(far);
+    // 1e9 AU sits far past any host's cull distance — nothing draws, so
+    // nothing constrains the clock.
+    expect(f.cadenceSimBudgetS(cameraPosAu(0, 1e9, 0), PX_PER_RAD))
+      .toBe(Number.POSITIVE_INFINITY);
     f.dispose();
   });
 });

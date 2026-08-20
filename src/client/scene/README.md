@@ -133,7 +133,11 @@ are optional except `dispose`; a layer that doesn't participate in a
 fan-out simply omits the hook (e.g. the heliopause has no per-frame
 update — its visibility is event-driven, and `chart-labels` registers
 `dispose` alone because its per-frame work rides the `'frame'` event
-under `chart-mode.ts`'s start/stop gate).
+under `chart-mode.ts`'s start/stop gate). One optional hook carries an
+obligation the others don't: a layer whose drawn content the SIM CLOCK
+moves on screen must implement `cadenceSimBudgetS`, or its motion
+freezes between the render gate's cadence frames
+(`../render-gate/README.md` § The clock cadence).
 
 **Not every entry owns a layer.** The first inline entry owns no GPU
 resources at all (`dispose` is empty): it exists to sequence the

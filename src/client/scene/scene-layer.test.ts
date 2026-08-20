@@ -9,6 +9,7 @@ function makeCtx(warpActive = false): FrameCtx {
     distFromSol: 0,
     t: 0,
     warpActive,
+    pxPerRadian: 900,
   };
 }
 
@@ -52,6 +53,16 @@ describe('SceneLayerRegistry', () => {
     }
     reg.disposeAll();
     expect(disposed.size).toBe(5);
+  });
+
+  it('minCadenceBudgetS is the min over layers that report, Infinity otherwise', () => {
+    const reg = new SceneLayerRegistry();
+    reg.register({ dispose: () => {} });
+    expect(reg.minCadenceBudgetS(makeCtx())).toBe(Number.POSITIVE_INFINITY);
+    reg.register({ cadenceSimBudgetS: () => 40, dispose: () => {} });
+    reg.register({ cadenceSimBudgetS: () => 7, dispose: () => {} });
+    reg.register({ cadenceSimBudgetS: () => Number.POSITIVE_INFINITY, dispose: () => {} });
+    expect(reg.minCadenceBudgetS(makeCtx())).toBe(7);
   });
 
   it('passes the shared FrameCtx through to each update', () => {

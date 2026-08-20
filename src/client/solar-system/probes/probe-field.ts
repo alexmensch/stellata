@@ -16,6 +16,7 @@ import {
   type ProbeTrajectory,
 } from './probe-trajectory';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
+import { CADENCE_MOTION_THRESHOLD_PX } from '../../render-gate/clock-cadence-pure';
 import probeVert from './probe.vert.glsl?raw';
 import probeFrag from './probe.frag.glsl?raw';
 
@@ -275,6 +276,27 @@ export class ProbeField {
     if (!s || !s.sampled) return false;
     out.copy(s.localPc);
     return true;
+  }
+
+  /** Largest sim-time step no drawn marker (and so no trail tip) can turn
+   *  into visible screen motion — the field's clock-cadence budget
+   *  (../../render-gate/README.md § The clock cadence). Uses each drawn
+   *  probe's own sampled velocity over its camera distance; hidden or
+   *  unsampled probes move nothing on screen. */
+  cadenceSimBudgetS(
+    cameraPos: Readonly<THREE.Vector3>,
+    pxPerRadian: number,
+  ): number {
+    let maxRatePxPerS = 0;
+    for (const s of this.samples) {
+      if (!s.visible) continue;
+      const d = Math.max(s.localPc.distanceTo(cameraPos), 1e-30);
+      const rate = (s.velPcPerSec.length() / d) * pxPerRadian;
+      if (rate > maxRatePxPerS) maxRatePxPerS = rate;
+    }
+    return maxRatePxPerS > 0
+      ? CADENCE_MOTION_THRESHOLD_PX / maxRatePxPerS
+      : Number.POSITIVE_INFINITY;
   }
 
   /** Route the markers through the local depth pass instead of the main

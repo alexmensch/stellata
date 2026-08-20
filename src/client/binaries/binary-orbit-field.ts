@@ -18,6 +18,7 @@ import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
+import { CADENCE_MOTION_THRESHOLD_PX } from '../render-gate/clock-cadence-pure';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
 
 export interface BinaryOrbitFieldOptions {
@@ -55,6 +56,16 @@ export interface BinaryOrbitFieldOptions {
 const DELTA_OUT: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 const SYSTEM_XYZ: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 
+/** Ceiling on how fast a Kepler-active pair's rendered offset can sweep
+ *  the screen, in px per sim second. Peak orbital speed is
+ *  (2πa/P)·√((1+e)/(1−e)) at periapsis; over the camera distance and
+ *  through the plate scale that collapses onto the peak separation the
+ *  LOD gate already computed: peakPx·(2π/P)/√(1−e²). */
+function pairSweepRatePxPerS(peakPx: number, pDays: number, e: number): number {
+  const pSec = Math.max(pDays, 1e-6) * 86400;
+  return (peakPx * 2 * Math.PI) / (pSec * Math.sqrt(Math.max(1 - e * e, 1e-6)));
+}
+
 interface SlotPert { x: number; y: number; z: number }
 
 export class BinaryOrbitField {
@@ -85,6 +96,10 @@ export class BinaryOrbitField {
   private baselinesDirty = true;
   private lastKeplerCount = -1;
   private lastActiveCount = 0;
+  // Max screen-sweep rate over this frame's Kepler-active relations.
+  // Valid across static-frame skips: the skip fires only when the
+  // inputs the rate derives from are unchanged.
+  private lastMaxRatePxPerS = 0;
   private lastCamPos = new THREE.Vector3(NaN, NaN, NaN);
   private lastThresholdMag = NaN;
   private lastViewportPx = NaN;
@@ -177,6 +192,7 @@ export class BinaryOrbitField {
     const suppress = this.opts.compositeSuppress;
     const absMags = this.opts.absoluteMags;
     let activeCount = 0;
+    let maxRatePxPerS = 0;
 
     for (let i = 0; i < this.relations.length; i++) {
       const rc = this.relations[i];
@@ -258,8 +274,25 @@ export class BinaryOrbitField {
           local[sBase + 2] = aPz + rc.baseDiffPc.z;
           continue;
         }
+        maxRatePxPerS = Math.max(
+          maxRatePxPerS,
+          pairSweepRatePxPerS(peakPx, rc.elements.P, rc.elements.e),
+        );
       } else {
         activeCount++;
+        // Focal-chain relations bypass the gates, so their peak
+        // separation wasn't computed above — the cadence bound still
+        // needs it (a resolved focused pair is exactly the case that
+        // must keep rendering).
+        const dx = aPx - cameraPos.x;
+        const dy = aPy - cameraPos.y;
+        const dz = aPz - cameraPos.z;
+        const dCamPc = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), 1e-30);
+        const peakPx = (rc.peakSepAU / dCamPc) * ARCSEC_TO_RAD * pxPerRad;
+        maxRatePxPerS = Math.max(
+          maxRatePxPerS,
+          pairSweepRatePxPerS(peakPx, rc.elements.P, rc.elements.e),
+        );
       }
 
       // Barycentric split (sCoeff − pCoeff = 1): primary += −q·ΔR, secondary
@@ -289,12 +322,24 @@ export class BinaryOrbitField {
     this.baselinesDirty = false;
     this.lastKeplerCount = keplerCount;
     this.lastActiveCount = activeCount;
+    this.lastMaxRatePxPerS = maxRatePxPerS;
     this.lastCamPos.copy(cameraPos);
     this.lastThresholdMag = thresholdMag;
     this.lastViewportPx = viewportPx;
     this.lastFovYRad = fovYRad;
     this.lastFocalIdx = focalIdx;
     return activeCount;
+  }
+
+  /** Largest sim-time step no Kepler-active pair can turn into visible
+   *  screen motion — the field's clock-cadence budget
+   *  (../render-gate/README.md § The clock cadence). Sub-pixel-suppressed
+   *  and gated-out relations move nothing on screen and contribute
+   *  nothing. */
+  cadenceSimBudgetS(): number {
+    return this.lastMaxRatePxPerS > 0
+      ? CADENCE_MOTION_THRESHOLD_PX / this.lastMaxRatePxPerS
+      : Number.POSITIVE_INFINITY;
   }
 
   /** Total float64 perturbation of the focal star's slot from its catalog
@@ -361,6 +406,7 @@ export class BinaryOrbitField {
     this.slotPert.clear();
     this.baselinesDirty = true;
     this.lastKeplerCount = -1;
+    this.lastMaxRatePxPerS = 0;
     this.lastCamPos.set(NaN, NaN, NaN);
     this.positionUploader.reset();
     this.suppressUploader.reset();

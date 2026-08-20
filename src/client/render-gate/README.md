@@ -17,6 +17,9 @@ src/client/render-gate/
                                the per-tick decision.
   render-gate-pure.ts (+ test) Pose snapshot compare + the render/skip
                                decision.
+  clock-cadence-pure.ts        The motion-aware clock cadence: budget
+    (+ test)                   composition, the pulsation bound, and the
+                               per-tick due test (§ The clock cadence).
 ```
 
 Both sentinels reset on `dispose()` — the pose snapshot back to NaN, the
@@ -33,16 +36,16 @@ would silently make the next `hold()` a no-op.
    a sweep (its dwells count `gpu.frame` samples per frame — a skipped
    frame would read as the run aborting). Ref-counted; releases are
    idempotent.
-2. **Continuous conditions**, recomputed each tick by `animate()`:
-   clock rate ≠ 0 (variables pulsate, binaries orbit, and ephemeris
-   bodies move on the sim clock — note the clock's **default is live
-   1×**, so the idle win requires the clock paused), or a camera
-   transition in flight. The transition half is **not re-derived** — it
-   falls out of the controller dispatch chain that runs immediately
-   above, which already picked the branch: `cameraAnimating` defaults
-   true and only the two steady-state branches (observe look-around,
-   trackball) clear it. Re-asking the five predicates would be a second
-   definition of "camera busy" for a new transition to drift out of.
+2. **Continuous condition**, recomputed each tick by `animate()`: a
+   camera transition in flight. It is **not re-derived** — it falls out
+   of the controller dispatch chain that runs immediately above, which
+   already picked the branch: `cameraAnimating` defaults true and only
+   the two steady-state branches (observe look-around, trackball) clear
+   it. Re-asking the five predicates would be a second definition of
+   "camera busy" for a new transition to drift out of. A running clock
+   is deliberately NOT continuous any more — it renders on the cadence
+   below (§ The clock cadence), so the out-of-the-box live-1× Sol view
+   idles too.
 3. **Pose change**: a 14-slot exact-equality snapshot — camera position,
    quaternion, fov, `controls.target`, `worldOffset`. Catches every
    camera mutation whatever its source (trackball damping, observe
@@ -80,6 +83,63 @@ not that one instance. `exposureCutMoved` therefore compares against
 is the same `dm`", borrowed rather than re-picked — and anchors on the
 cut at the **last invalidate**, never the last frame's, so
 sub-threshold steps that all go one way still accumulate into a wake.
+
+## The clock cadence — how often a running clock needs a frame
+
+At live 1× almost nothing the sim clock drives moves a pixel per tick:
+planet angular motion is sub-pixel for minutes at most vantages, and
+GCVS periods run hours to years. So a nonzero rate renders on a
+**cadence**: each rendered frame stores a sim-time budget — the largest
+step nothing drawn can turn into visible change — and ticks skip until
+the elapsed sim time reaches it. `clockFrameDue` is the per-tick test;
+a rate high enough (fast-forward, or a close body) collapses the budget
+below one tick's sim delta and rendering is continuous again, which is
+how "every vantage where motion is visibly super-threshold renders
+every frame" falls out with no special case.
+
+The budget is a min over four sources (`cadenceSimBudgetS`):
+
+- **Layer budgets** — the `SceneLayer.cadenceSimBudgetS` hook
+  (`../scene/scene-layer.ts`), collected right after the update fan-out
+  so each reads the state its own update wrote. Implemented by the
+  planet body field (per-body translation + spin bounds), the probe
+  field (sampled velocity over camera distance), and the binary orbit
+  field (per-Kepler-active-pair sweep bound). Each converts a
+  conservative screen-motion rate through
+  `CADENCE_MOTION_THRESHOLD_PX` (0.5 px). **A new layer whose drawn
+  content the sim clock moves on screen MUST implement the hook** — the
+  miss shows as that layer freezing between cadence frames, the same
+  frozen-frame class as a missed invalidation source.
+- **The pulsation bound** — catalog-wide constant: `CADENCE_JND_MAG`
+  (0.01 mag) over the fastest unsuppressed variable's brightness slope
+  (A·π/P). Vantage-free because a magnitude step is a magnitude step
+  wherever the star is visible.
+- **`CADENCE_CAP_SIM_S` (30 s)** — the ceiling covering every
+  sim-driven change WITHOUT a per-frame bound: an eclipse dip's onset
+  (both dim fields evaluate on rendered frames, so a dip can start at
+  most one cap late — at 1× that is 30 real seconds into an hours-long
+  event), and anything future not yet reporting a budget. It also
+  bounds the idle floor: one frame per 30 s at 1×.
+- A **cadence frame does not stamp activity** (`decideRender`'s
+  `cadenceDue` input): stamping would drag the whole `SETTLE_MS` tail
+  behind every scheduled redraw — ~90 extra frames each — which is the
+  idleness the cadence exists to buy.
+
+Two event mechanisms ride on top rather than through the budget. A
+**live eclipse dim** (binary or planetary) invalidates on every rendered
+frame while active, so the settle tail self-sustains continuous
+rendering until the event decays — dims only change on rendered frames,
+and their wall-clock anti-strobe blends need real-time frames the sim
+budget cannot express. And an **epoch-bucket crossing**
+(`maybeReAdvanceEpoch`) invalidates once: the star buffer was rewritten,
+so the "nothing moved" premise no longer holds.
+
+What stays continuous regardless: any focus whose moving-focal ride
+translates the camera per frame (an orbiting binary member, a planet, a
+probe under a running clock) — the ride's camera write trips the pose
+snapshot every tick, exactly as before this cadence existed. The idle
+win applies to vantages where the camera itself is still, the default
+Sol view first among them.
 
 ## Invalidation sources (`invalidate()` callers)
 

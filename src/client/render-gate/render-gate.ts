@@ -62,6 +62,7 @@ export class RenderGate {
     target: THREE.Vector3,
     worldOffset: THREE.Vector3,
     continuous: boolean,
+    cadenceDue: boolean,
     nowMs: number,
   ): boolean {
     writePose(
@@ -73,6 +74,7 @@ export class RenderGate {
       {
         continuous,
         poseChanged: posesDiffer(this.scratchPose, this.lastRenderedPose),
+        cadenceDue,
         nowMs,
       },
     );

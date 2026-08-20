@@ -28,8 +28,8 @@ function makeGate() {
   const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
   const target = new THREE.Vector3();
   const worldOffset = new THREE.Vector3();
-  const tick = (nowMs: number, continuous = false) =>
-    gate.tick(camera, target, worldOffset, continuous, nowMs);
+  const tick = (nowMs: number, continuous = false, cadenceDue = false) =>
+    gate.tick(camera, target, worldOffset, continuous, cadenceDue, nowMs);
   /** Render the seed frame, then step past the settle tail — the gate is
    *  skipping when this returns, so a later `true` is a genuine wake. */
   const settle = (t0: number) => {
@@ -104,6 +104,13 @@ describe('RenderGate pose snapshot', () => {
     const { tick, settle } = makeGate();
     expect(settle(0)).toBe(false);
     expect(tick(SETTLE_MS, true)).toBe(true);
+  });
+
+  it('a cadence frame renders once and idles again the next tick', () => {
+    const { tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    expect(tick(SETTLE_MS, false, true)).toBe(true);
+    expect(tick(SETTLE_MS + 16)).toBe(false);
   });
 });
 

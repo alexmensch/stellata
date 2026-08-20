@@ -17,6 +17,8 @@ export function makeFrameCtx(
     distFromSol: 0,
     t: 0,
     warpActive: false,
+    // 900 px viewport at a 1-radian FOV — a round default for budget math.
+    pxPerRadian: 900,
     ...overrides,
   };
 }

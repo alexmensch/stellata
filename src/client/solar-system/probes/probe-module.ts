@@ -119,6 +119,8 @@ export function createProbeKindModule(): ProbeKindModule {
           // focused probe's trail draws.
           paths!.update(field!, fc.t, fc.camera, focusedProbeIdx());
         },
+        cadenceSimBudgetS: (fc) =>
+          field!.cadenceSimBudgetS(fc.camera.position, fc.pxPerRadian),
         setMonochrome: (on) => {
           field!.setMonochrome(on);
           paths!.setMonochrome(on);
