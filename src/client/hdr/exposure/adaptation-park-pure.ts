@@ -31,10 +31,11 @@ const PROBING_STATE: ParkState = { phase: 'probing' };
 
 /** No cut, to the exposure subsystem's own resolution — `ADAPT_SLEW_SETTLE_MAG`
  *  borrowed rather than re-picked, exactly as `exposureCutMoved` borrows it
- *  (`../../render-gate/README.md`). An exact test would never park at a
- *  vantage whose cut lands inside the settle band, because `slewDm` hands
- *  that cut back verbatim as the applied one — leaving the measurement
- *  running at full cost for a cut the render gate will not repaint for. */
+ *  (`../../render-gate/README.md`). `slewDm` collapses a within-band-of-zero
+ *  park to exactly 0, but a cut may PARK anywhere inside the band of a
+ *  non-zero measurement — an exact test would refuse to park at any such
+ *  vantage, leaving the measurement running at full cost for a cut the
+ *  render gate will not repaint for. */
 function noCut(dm: number): boolean {
   return Math.abs(dm) <= ADAPT_SLEW_SETTLE_MAG;
 }

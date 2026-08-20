@@ -36,16 +36,32 @@ export const ADAPT_DOT_COVERAGE = ADAPT_REF_COVERAGE / 2 ** EV_MAX_STOPS;
  *  magnitudes so the ramp is stops-per-second at any absolute level. */
 export const ADAPT_SLEW_TAU_S = 0.3;
 
-/** The slew snaps to its target inside this many magnitudes — an
- *  exponential never arrives, and exactly 0 is the sentinel the
- *  uniform's skip-if-unchanged reads. */
+/** The slew parks inside this many magnitudes — an exponential never
+ *  arrives, and the parked cut must be a genuine fixed point
+ *  (README.md § Adaptation, *It settles*). */
 export const ADAPT_SLEW_SETTLE_MAG = 1e-3;
 
-/** One frame of the slew limit: blend the applied cut toward the frame's
- *  measurement, snapping once inside `ADAPT_SLEW_SETTLE_MAG`. */
+/**
+ * One frame of the slew limit: blend the applied cut toward the frame's
+ * measurement, parking once inside `ADAPT_SLEW_SETTLE_MAG`.
+ *
+ * Inside the band the APPLIED cut is returned, never the measurement:
+ * the measurement is read back off an RG16F attachment rendered with the
+ * exposure this cut set, so returning it hands that quantiser a
+ * unity-gain loop — uExposure alternates two adjacent values forever
+ * (~7e-4 mag, permanently inside the band). Holding `applied` is real
+ * hysteresis: a bit-identical cut renders a bit-identical frame, which
+ * reduces to a bit-identical measurement, and the loop is broken at the
+ * source. A measurement itself inside the band of zero collapses to
+ * exactly 0 — the sentinel `setAdaptation`'s skip-if-unchanged reads —
+ * so a no-cut frame cannot park at an asymptote like 1e-4 and rewrite
+ * the uniform forever.
+ */
 export function slewDm(applied: number, measured: number, blend: number): number {
-  if (Math.abs(measured - applied) <= ADAPT_SLEW_SETTLE_MAG) return measured;
-  return applied + (measured - applied) * blend;
+  if (Math.abs(measured - applied) > ADAPT_SLEW_SETTLE_MAG) {
+    return applied + (measured - applied) * blend;
+  }
+  return Math.abs(measured) <= ADAPT_SLEW_SETTLE_MAG ? 0 : applied;
 }
 
 /** The three numbers one frame's reduction returns, all at the base

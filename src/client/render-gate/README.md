@@ -67,17 +67,19 @@ would silently make the next `hold()` a no-op.
 **"Moved" is not exact inequality for the cut, and must not become
 one.** Unlike the pose — a CPU value that genuinely stops — the applied
 `dm` is read back off the GPU and feeds the exposure it was measured at,
-and fp16 rounding in the statistic attachment leaves that loop
-alternating between two values ~1e-4 mag apart forever
-(`../hdr/exposure/reduction/README.md` § Measure at the base exposure
-owns why the division cannot cancel it). Close to a lit surface that
-alternation is permanent, so an `!==` test wakes the gate every frame
-and the idle win disappears at exactly the viewpoints it matters most.
-`exposureCutMoved` therefore compares against `ADAPT_SLEW_SETTLE_MAG` —
-the exposure subsystem's own "this much `dm` is the same `dm`", borrowed
-rather than re-picked — and anchors on the cut at the **last
-invalidate**, never the last frame's, so sub-threshold steps that all go
-one way still accumulate into a wake.
+and fp16 rounding in the statistic attachment turns that loop into a
+quantiser (`../hdr/exposure/reduction/README.md` § Measure at the base
+exposure owns why the division cannot cancel it). The slew now parks the
+applied cut bit-identical inside its settle band
+(`../hdr/exposure/README.md` § Adaptation, *It settles*), which broke
+the specific limit cycle that used to alternate `dm` every frame — but
+this threshold stays anyway: it guards the class (frame scheduling must
+never key on exact float equality of a GPU-read continuous quantity),
+not that one instance. `exposureCutMoved` therefore compares against
+`ADAPT_SLEW_SETTLE_MAG` — the exposure subsystem's own "this much `dm`
+is the same `dm`", borrowed rather than re-picked — and anchors on the
+cut at the **last invalidate**, never the last frame's, so
+sub-threshold steps that all go one way still accumulate into a wake.
 
 ## Invalidation sources (`invalidate()` callers)
 

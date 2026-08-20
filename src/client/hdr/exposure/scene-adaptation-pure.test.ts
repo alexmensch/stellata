@@ -20,6 +20,7 @@ import {
   ADAPT_DOT_COVERAGE,
   ADAPT_PIN_COVERAGE,
   ADAPT_REF_COVERAGE,
+  ADAPT_SLEW_SETTLE_MAG,
   adaptationBranches,
   adaptationDm,
   adaptedDiscMeanL,
@@ -29,6 +30,7 @@ import {
   L_ADAPT,
   L_TARGET,
   loneBodyStatistic,
+  slewDm,
   surfacesStatistic,
   surfaceMeanL,
   surfacePinDm,
@@ -199,6 +201,29 @@ describe('§ 3.1 contribution table', () => {
     const mustAdapt = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX) * 0.2;
     const mustNot = contribution(-4.4) + AGGREGATE_FIELD_L;
     expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.6, 1);
+  });
+});
+
+// The parked cut must be a fixed point of the APPLIED value. Returning the
+// measurement inside the band made the slew a unity-gain pass-through for
+// the fp16 readback quantiser: uExposure alternated two adjacent values
+// (~7e-4 mag apart, permanently inside the band) frame to frame forever.
+describe('slewDm', () => {
+  it('blends toward a measurement outside the band', () => {
+    expect(slewDm(0, -1, 0.5)).toBe(-0.5);
+  });
+
+  it('holds the applied cut bit-identical inside the band', () => {
+    const applied = -2.0004;
+    expect(slewDm(applied, applied + 0.7 * ADAPT_SLEW_SETTLE_MAG, 0.63)).toBe(applied);
+    expect(slewDm(applied, applied - 0.7 * ADAPT_SLEW_SETTLE_MAG, 0.63)).toBe(applied);
+  });
+
+  it('collapses a no-cut park to exactly 0 — the skip-if-unchanged sentinel', () => {
+    // An asymptote at ~1e-4 would rewrite the uniform forever on a frame
+    // no term asked a cut on.
+    expect(slewDm(-0.5 * ADAPT_SLEW_SETTLE_MAG, 0.3 * ADAPT_SLEW_SETTLE_MAG, 0.5)).toBe(0);
+    expect(slewDm(0, 0, 0.5)).toBe(0);
   });
 });
 
