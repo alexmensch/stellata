@@ -289,9 +289,10 @@ export class HdrPipeline implements HdrSeam {
     renderer.render(this.scene, this.camera);
   }
 
-  /** The statistic attachment — flux-correct luminance in R, peak-correct
-   *  in G, written only by the emitters `markStatisticEmitter` admitted,
-   *  and reduced by `exposure/reduction/README.md`.
+  /** The statistic attachment — flux-correct luminance in R, the
+   *  lit-surface coverage fraction in G, written only by the emitters
+   *  `markStatisticEmitter` admitted, and reduced by
+   *  `exposure/reduction/README.md`.
    *
    *  Null whenever it does not carry this frame's light: before the target
    *  exists, under the fallback path, and in chart mode, where nothing

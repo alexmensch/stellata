@@ -313,8 +313,14 @@ generated code:
    frag-depth class of invariant ("no pipeline outside the allowlist
    writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
    TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
-   `tests/shader-frag-depth.test.ts`. `tests/webgpu-import-boundary.test.ts`
-   is the first of the family.
+   `tests/shader-frag-depth.test.ts`. The family so far:
+   `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`
+   and `tests/tsl-loop-control.test.ts` — the last pins an authoring trap
+   rather than a policy: a concise arrow returns its expression, so
+   `() => Break()` hands the jump back as the branch's output and the
+   generator emits it twice, which the browser reports as unreachable
+   WGSL on every boot. Brace the body, or express the exit as an `If()`
+   around the body and emit no jump at all.
 3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,

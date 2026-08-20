@@ -2,10 +2,11 @@
 
 The WebGPU half of the HDR seam (`../../hdr/README.md` owns the design:
 unit, operator, attachments, pass ordering — nothing here re-decides
-those). This folder carries what the port has to express differently:
-the per-draw attachment gate (no `gl.drawBuffers` in WGSL pipelines),
-and the fence-and-readPixels readback (no pixel-pack buffers). The shell
-holds either backend through `../../hdr/hdr-seam.ts`.
+those). This folder carries the two mechanisms the port has to express
+differently: the per-draw attachment gate, since a WGSL pipeline bakes
+its attachment set and there is no `gl.drawBuffers` to flip; and the
+statistic readback, since WebGPU has no pixel-pack buffer to fence on.
+The shell holds either backend through `../../hdr/hdr-seam.ts`.
 
 ## Files in this area
 

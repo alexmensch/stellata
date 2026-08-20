@@ -5,6 +5,9 @@ subsystem. Picked up by the top-level `vitest` run alongside every
 in-tree `*.test.ts`.
 
 ```
+astronomy-constants-sync.test.ts
+                         Parity pin between util/astronomy-constants.ts
+                         and the build-script copy.
 artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          when public/catalog-manifest.json exists but
                          public/binaries.bin is missing or older than
@@ -32,6 +35,16 @@ claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
                          explains the wiki convention and the
                          CLAUDE.md → folder-README → docs/ decision
                          flow.
+commit-sweep-guard.test.ts
+                         Pins the commit-time doc-sweep hook's contract.
+folder-readme-coverage.test.ts
+                         The "every folder under src/, scripts/, data/,
+                         docs/ has a README.md" invariant (CLAUDE.md
+                         § Folder READMEs).
+prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
+readme-size.test.ts      450-line cap per folder README — length is a tax
+                         on every future session, so the answer over the
+                         cap is a folder split, not a rewording pass.
 readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          drives the hook's PreToolUse JSON contract over a
                          throwaway git repo in os.tmpdir(). Covers the
@@ -59,11 +72,28 @@ three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
                          bump of the dependency range.
+tsl-frag-depth.test.ts   The frag-depth roster's TSL half — no node
+                         material may write depthNode / frag_depth. The
+                         allowlist starts empty and should stay empty; the
+                         failure message carries the two patterns that
+                         replace a fragment depth write.
+tsl-loop-control.test.ts A TSL authoring trap, not a policy: a concise
+                         arrow returns its expression, so `() => Break()`
+                         hands the jump back as the branch's output and it
+                         emits twice — unreachable WGSL, warned on every
+                         boot. Brace the body.
+webgpu-import-boundary.test.ts
+                         No value import of three/webgpu or three/tsl
+                         outside src/client/webgpu/, so the ~1 MB second
+                         copy of three's core stays out of the WebGL2
+                         bundle (src/client/webgpu/README.md § Import
+                         boundary).
 walk-files.ts            Not a test — the recursive file walk the
                          scanners above share (code-comment-rules,
-                         bundle-content, shader-frag-depth), taking
-                         `include` / `skipDir` predicates. Follows
-                         symlinked directories, which public/ carries.
+                         bundle-content, shader-frag-depth, both TSL
+                         rosters), taking `include` / `skipDir`
+                         predicates. Follows symlinked directories, which
+                         public/ carries.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`

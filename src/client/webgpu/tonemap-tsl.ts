@@ -7,7 +7,9 @@ import {
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
-  DITHER_IGN_DOT, DITHER_IGN_SCALE, L_THRESH, LUMA_WEIGHTS, TOE_CURVATURE,
+  DITHER_IGN_DOT, DITHER_IGN_SCALE, L_THRESH, LUMA_WEIGHTS,
+  SRGB_ENCODE_EXPONENT, SRGB_ENCODE_GAIN, SRGB_ENCODE_KNEE,
+  SRGB_ENCODE_OFFSET, SRGB_LINEAR_SLOPE, TOE_CURVATURE,
 } from '../hdr/tonemap-pure';
 import { mix as mixVecT, step } from './tsl-shim';
 
@@ -21,8 +23,10 @@ export const lumaWeightsTsl = () => vec3(...LUMA_WEIGHTS);
 
 export const srgbEncodeTsl = /* @__PURE__ */ Fn(([c]: [N3]) => {
   const v = clamp(c, vec3(0.0), vec3(1.0));
-  const encoded = pow(v, vec3(1.0 / 2.4)).mul(1.055).sub(0.055);
-  return mixVecT(v.mul(12.92), encoded, step(vec3(0.0031308), v));
+  const encoded = pow(v, vec3(SRGB_ENCODE_EXPONENT))
+    .mul(SRGB_ENCODE_GAIN).sub(SRGB_ENCODE_OFFSET);
+  return mixVecT(
+    v.mul(SRGB_LINEAR_SLOPE), encoded, step(vec3(SRGB_ENCODE_KNEE), v));
 });
 
 export const tonemapUnditheredTsl = /* @__PURE__ */ Fn(
