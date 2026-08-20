@@ -1,7 +1,6 @@
 // The D3 core depth-mask in TSL: depth-only over disc-pass cores, colour
-// writes off. The member stamp lives in the shared vertex stage (near
-// pin), so no pipeline here writes fragment depth (../README.md
-// § Early-z). The CPU-side visible gate stays with the integration shell.
+// writes off, member stamp in the shared vertex stage — no fragment
+// depth (../README.md § Early-z). The CPU visible gate is the shell's.
 
 import { Discard, Fn, length, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';

@@ -52,6 +52,7 @@ import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import { exposureCutMoved } from './render-gate/render-gate-pure';
 import { HdrPipeline } from './hdr/hdr-pipeline';
+import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
 import {
   angularToPx as angularToPxPure,
   type ResolvedCandidate,
@@ -209,7 +210,7 @@ export class Stellata implements FrameAnchor {
   private webgpuStarLayer: WebGpuStarLayer | null = null;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
-  readonly hdr: HdrPipeline;
+  readonly hdr: HdrSeam;
   readonly referenceUp = new ReferenceUpController();
 
   private scene: THREE.Scene;
@@ -300,7 +301,7 @@ export class Stellata implements FrameAnchor {
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/README.md § Adaptation).
   readonly adaptation!: SceneAdaptation;
-  readonly reduction = new LuminanceReduction();
+  readonly reduction: ReductionSeam;
   private readonly drawingBufferSize = new THREE.Vector2();
 
   // Declutter cycle (scene/README.md § Detail-level declutter cycle).
@@ -425,7 +426,15 @@ export class Stellata implements FrameAnchor {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
-    this.hdr = new HdrPipeline(this.rendererGL);
+    // Each boot owns one HDR chain: the WebGPU pipeline (and its
+    // reduction) come pre-built on the seam, behind the import boundary.
+    if (this.webgpu !== null) {
+      this.hdr = this.webgpu.hdr;
+      this.reduction = this.webgpu.hdr.reduction;
+    } else {
+      this.hdr = new HdrPipeline(this.rendererGL!);
+      this.reduction = new LuminanceReduction(this.rendererGL!);
+    }
 
     this.scene = new THREE.Scene();
 
@@ -2245,11 +2254,6 @@ export class Stellata implements FrameAnchor {
       // (webgpu/README.md § What the flag boots today).
       this.webgpu.syncUniformNodes();
       this.renderer.render(this.webgpu.scene, this.camera);
-      // Every rendered frame must resolve: the resolve is what recycles
-      // the timestamp query pool, and trackTimestamp allocates a pair per
-      // render pass whether or not anyone reads them. Skipping it while
-      // the HUD is closed overruns the 2048-query pool in ~1024 frames.
-      resolveAndPublishGpuFrame(this.webgpu.renderer);
     } else {
       this.renderer.render(this.scene, this.camera);
     }
@@ -2276,6 +2280,14 @@ export class Stellata implements FrameAnchor {
     perfGpuEnd('reduction');
     perfMeasure('submit.reduction');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
+    if (this.webgpu !== null) {
+      // After the frame's LAST pass, so gpu.frame sums the whole stack.
+      // Every rendered frame must resolve: the resolve is what recycles
+      // the timestamp query pool, and trackTimestamp allocates a pair per
+      // render pass whether or not anyone reads them. Skipping it while
+      // the HUD is closed overruns the 2048-query pool in ~1024 frames.
+      resolveAndPublishGpuFrame(this.webgpu.renderer);
+    }
     perfMark('frame.handlers');
     this.bus.emit('frame');
     perfMeasure('frame.handlers');
@@ -2288,7 +2300,6 @@ export class Stellata implements FrameAnchor {
    *  fallback path render nothing into it, so the reduction is dropped
    *  rather than run over a stale attachment. */
   private measureAdaptationStatistic(parked: boolean) {
-    if (this.rendererGL === null) return;
     const statistic = this.hdr.statisticTexture();
     if (statistic === null) {
       this.reduction.reset();
@@ -2296,7 +2307,7 @@ export class Stellata implements FrameAnchor {
     }
     this.renderer.getDrawingBufferSize(this.drawingBufferSize);
     this.reduction.measure(
-      this.rendererGL, statistic,
+      statistic,
       this.drawingBufferSize.x, this.drawingBufferSize.y,
       this.hdr.emitterUniforms.uExposure.value,
       parked,

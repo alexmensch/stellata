@@ -1,18 +1,65 @@
 # HDR seam on WebGPU
 
 The WebGPU half of the HDR seam (`../../hdr/README.md` owns the design:
-unit, operator, attachments, pass ordering). This folder carries what
-the port has to express differently — starting with the per-draw
-attachment gate, which WGSL pipelines cannot drive through
-`gl.drawBuffers`.
+unit, operator, attachments, pass ordering — nothing here re-decides
+those). This folder carries what the port has to express differently:
+the per-draw attachment gate (no `gl.drawBuffers` in WGSL pipelines),
+and the fence-and-readPixels readback (no pixel-pack buffers). The shell
+holds either backend through `../../hdr/hdr-seam.ts`.
 
 ## Files in this area
 
 ```
 src/client/webgpu/hdr/
-  emitter-gates.ts    The statistic write mask as a uniform node
-                      (§ The gate becomes the output struct).
+  hdr-pipeline-webgpu.ts      WebGpuHdrPipeline — the lazy MRT target
+    (+ test)                  (RGBA16F + RG16F + RGBA16F over a
+                              Depth32Float reversed-z depth attachment),
+                              bind/resolve, chart bypass, syncMode, the
+                              dev switches, the resolve material, and
+                              ownership of the gates and the reduction.
+  emitter-gates.ts            The statistic write mask as a uniform node
+                              (§ The gate becomes the output struct).
+  summation-tsl.ts            TSL mirrors of stellata_summation and the
+                              box downsample, over summation-pure's
+                              constants.
+  summation-pass-webgpu.ts    The downsample target + per-frame factor
+    (+ test)                  choice — summation-pass.ts's contract, the
+                              resolve's inputs handed over as nodes.
+  reduction-webgpu.ts         WebGpuLuminanceReduction — the mip chain
+    (+ test)                  (reduction-pure is the spec) with
+                              readRenderTargetPixelsAsync replacing the
+                              pixel-pack fence (§ Reduction).
 ```
+
+## What the pipeline does NOT re-express
+
+Three of the WebGL pipeline's mechanisms have no WebGPU counterpart, on
+purpose:
+
+- **No explicit clear in `bind()`** — the WebGL clear exists to open the
+  drawBuffers gate for one call; WebGPU's render-pass clear writes every
+  attachment regardless, so the statistic and diffuse attachments read
+  zero (never stale) with no gate to hold open.
+- **No `WebGLState.drawBuffers` cache ride** — the whole mechanism of
+  `../../hdr/attachments/README.md` § The cache the gate rides is
+  replaced by § The gate becomes the output struct below.
+- **No float-support verdict** — `supported` is constant true; float
+  render targets are core WebGPU. The inline-operator path survives for
+  chart mode alone (`../../hdr/README.md` § Fallback).
+
+## Reduction — the readback without the fence
+
+The chain is the same halving mip pyramid, one NodeMaterial per level
+(source texture and sizes bake per level; the whole set rebuilds on
+resize, which is when they change). What replaces the pixel-pack buffer
++ fence is `renderer.readRenderTargetPixelsAsync` — a mapAsync-staged
+copy whose promise resolves frames later, which is exactly the
+frame-decoupled contract the render gate and the adaptation park rely
+on. The one-in-flight rule, the stale-drop on a parked/disabled frame,
+and the render-time-exposure pairing are all kept verbatim from
+`../../hdr/exposure/reduction/README.md`; `fenceWhileParked` keeps its
+name and behaviour for the frame-cost harness even though the ANGLE
+submission-barrier rationale has no analogue here.
 
 ## The gate becomes the output struct
 

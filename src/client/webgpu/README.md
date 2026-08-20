@@ -37,7 +37,14 @@ src/client/webgpu/
   emission-tsl.ts                   TSL mirror of the emission unit's
                                     point-source peak rule.
   star/                             The star layer: packed geometry + the
-                                    D2 glow pipeline — its own README.
+                                    four depth-honest pipelines (D1–D4)
+                                    and the MRT write side — its own
+                                    README.
+  hdr/                              The HDR chain on this backend: MRT
+                                    target, summation, resolve, reduction
+                                    readback, and the output-struct form
+                                    of the attachment gate — its own
+                                    README.
 ```
 
 ## The flag — `#renderer=webgpu`
@@ -69,18 +76,19 @@ user-facing "requires WebGPU" gate page is a separate concern.
 
 ## What the flag boots today
 
-The **star glow field with the full app alive**: every CPU subsystem
+The **star field with the full app alive**: every CPU subsystem
 (catalog, star frame, focus, picker, typeahead, URL state, overlays, HUD,
 render gate) runs identically; the renderer draws the seam's own scene
 (`WebGpuSeam.scene`), which gains layers as port children land. The star
-layer (`star/README.md`) is the first — glow pass only, with its
-still-missing siblings (discs, extinction, chart, MRT, mirrors) listed
-there. The shell's WebGL scene still exists and is never
-rendered on a WebGPU boot — no per-layer gating, no material ever
-reaches the wrong backend. GPU-side subsystems park on their existing
-fallbacks: the HDR seam runs in its unsupported mode (direct-to-canvas,
-`hdr/README.md` § Fallback), the reduction never fences, and the
-local-depth pass is gated off until its port child.
+layer (`star/README.md`) carries all four depth-honest pipelines; its
+still-missing siblings (extinction, chart, mirrors) are listed there.
+The HDR chain runs for real through `hdr/` — MRT target, summation,
+resolve, exposure reduction — behind the same `HdrSeam` interface the
+WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
+scene still exists and is never rendered on a WebGPU boot — no
+per-layer gating, no material ever reaches the wrong backend. The one
+GPU-side subsystem still parked is the local-depth pass, gated off
+until its port child.
 
 The dust voxel volume is the exception that already crossed: it streams
 and uploads on both backends (`loaders/README.md` § Dust voxel upload),
@@ -105,7 +113,9 @@ deleting the gate is part of the port, in the same PR:
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
-| HDR target, summation, reduction | `HdrPipeline` built with a null renderer; `measureAdaptationStatistic` returns early | HDR chain port (`0it.10`) |
+
+The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
+park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion

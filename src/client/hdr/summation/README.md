@@ -34,6 +34,11 @@ src/client/hdr/summation/
                              crossing without a GL context.
 ```
 
+The WebGPU boot runs the same math through its own pass and TSL chunk —
+`src/client/webgpu/hdr/` — over exactly the constants in
+`summation-pure.ts`; a change to a bound or the kernel rule lands on
+both backends through that one module.
+
 ## Where it sits in the frame
 
 The diffuse emitters write **attachment 2** of the HDR target rather than

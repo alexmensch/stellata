@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { L_THRESH, LUMA_WEIGHTS, TOE_CURVATURE } from '../tonemap-pure';
+import {
+  DITHER_IGN_DOT, DITHER_IGN_SCALE, L_THRESH, LUMA_WEIGHTS, TOE_CURVATURE,
+} from '../tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
@@ -49,6 +51,17 @@ describe('shared chunk constants', () => {
     expect(Number(knee![1])).toBe(L_THRESH);
     expect(Number(curvature![1])).toBeCloseTo(TOE_CURVATURE, 6);
     expect(Number(magPerLog2![1])).toBeCloseTo(2.5 * Math.log10(2), 6);
+  });
+
+  // The dither's literals also feed the WebGPU resolve through
+  // tonemap-pure, so both renderers must add the same noise.
+  it('tonemap.glsl dithers with the constants tonemap-pure exports', () => {
+    const m = tonemapChunk.match(
+      /fract\(([\d.]+) \* fract\(dot\(fragCoord, vec2\(([\d.]+), ([\d.]+)\)\)\)\)/,
+    );
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(DITHER_IGN_SCALE);
+    expect([Number(m![2]), Number(m![3])]).toEqual([...DITHER_IGN_DOT]);
   });
 
   it('emission.glsl clamps at the same ceiling as emission-pure', () => {

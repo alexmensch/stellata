@@ -1,9 +1,6 @@
-// The D4 disc split in TSL: two pipelines over the same geometry and
-// blend state replacing the WebGL2 disc pass and its far-plane halo
-// write. The core draw writes fixed-function depth; the halo draw writes
-// none, so it is depth-HONEST — a mesh behind the host no longer punches
-// a hole in the annulus, and neither pipeline touches fragment depth
-// (../README.md § Early-z).
+// The D4 disc split in TSL: a depth-writing core draw plus a
+// depthWrite-off halo draw over one blend state, no fragment depth.
+// README.md § The disc split is depth-honest.
 
 import { Discard, Fn, length } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';

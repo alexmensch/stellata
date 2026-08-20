@@ -5,19 +5,11 @@ import * as THREE from 'three';
 import { fullscreenTriangleGeometry } from '../../../util/fullscreen-pass';
 import fullscreenVert from '../../../util/fullscreen-pass.vert.glsl?raw';
 import reduceFrag from './reduce.frag.glsl?raw';
+import type { ReducedStatistic, ReductionSeam } from '../../hdr-seam';
 import { ReductionReadback } from './reduction-readback';
 import { reductionLevelSizes } from './reduction-pure';
 
-/** One frame's reduced statistic. The two luminance channels are still in
- *  the exposure the frame was RENDERED with — `rescaleToBaseExposure` is
- *  the caller's step, because only the caller knows the instrument's base
- *  exposure. `coverage` is a fraction and needs no rescale. */
-export interface ReducedStatistic {
-  meanL: number;
-  surfaceL: number;
-  coverage: number;
-  renderExposure: number;
-}
+export type { ReducedStatistic } from '../../hdr-seam';
 
 interface Level {
   target: THREE.WebGLRenderTarget;
@@ -25,7 +17,8 @@ interface Level {
   height: number;
 }
 
-export class LuminanceReduction {
+export class LuminanceReduction implements ReductionSeam {
+  private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera();
   private readonly geometry = fullscreenTriangleGeometry();
@@ -42,7 +35,8 @@ export class LuminanceReduction {
   // describes. Landing it would feed the cut a mismatched pair.
   private pendingIsStale = false;
 
-  constructor() {
+  constructor(renderer: THREE.WebGLRenderer) {
+    this.renderer = renderer;
     this.material = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
       uniforms: {
@@ -107,7 +101,6 @@ export class LuminanceReduction {
   }
 
   measure(
-    renderer: THREE.WebGLRenderer,
     source: THREE.Texture | null,
     width: number,
     height: number,
@@ -115,6 +108,7 @@ export class LuminanceReduction {
     parked: boolean,
   ): void {
     this.poll();
+    const renderer = this.renderer;
     const gl = renderer.getContext() as WebGL2RenderingContext;
     // The chain's last level is RGBA32F, which needs the full float
     // extension — half-float-only hardware gets no measurement at all and

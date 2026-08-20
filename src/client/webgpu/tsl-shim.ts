@@ -2,8 +2,11 @@
 // gaps live here — delete each entry when upstream types catch up
 // (README.md § TSL typing shim).
 
-import { attribute, mix as mixFloatPinnedT, step as stepFloatPinned } from 'three/tsl';
-import type { Node } from 'three/webgpu';
+import {
+  attribute, min as minIntPinned, mix as mixFloatPinnedT,
+  step as stepFloatPinned, textureSize as textureSizeBare,
+} from 'three/tsl';
+import type { Node, TextureNode } from 'three/webgpu';
 import type { Vector2, Vector3, Vector4 } from 'three';
 import type { NodeObject } from 'three/src/nodes/tsl/TSLCore.js';
 
@@ -44,3 +47,22 @@ interface MixVecT {
   (a: N4 | NF, b: N4 | NF, t: N4 | NF): Node<'vec4'>;
 }
 export const mix = mixFloatPinnedT as unknown as MixVecT;
+
+// min() is float/vec-pinned upstream (its own "TODO Allow int/uint")
+// while the runtime and WGSL min take integer vectors — the summation
+// downsample's edge clamp.
+interface MinIntCapable {
+  (x: NF, y: NF): Node<'float'>;
+  (x: N2 | NF, y: N2 | NF): Node<'vec2'>;
+  (x: N3 | NF, y: N3 | NF): Node<'vec3'>;
+  (x: N4 | NF, y: N4 | NF): Node<'vec4'>;
+  (x: Node<'ivec2'>, y: Node<'ivec2'>): Node<'ivec2'>;
+}
+export const min = minIntPinned as unknown as MinIntCapable;
+
+// textureSize() returns the bare TextureSizeNode class type, losing the
+// whole node-object surface (swizzles, operators, conversions).
+export const textureSize = textureSizeBare as unknown as (
+  texture: TextureNode,
+  level?: Node | number,
+) => Node<'ivec2'>;

@@ -1,8 +1,6 @@
-// Fragment-stage pieces the star colour passes share: the unit-peak
-// profile value at the fragment, star.frag.glsl's starEmission() colour
-// output (inline operator whenever no HDR target is bound), and the MRT
-// output struct + mode swap of ../hdr/README.md § The gate becomes the
-// output struct.
+// Fragment-stage pieces the star colour passes share: profile value,
+// starEmission()'s colour output, and the MRT output struct + mode swap
+// (../hdr/README.md § The gate becomes the output struct).
 
 import { length, outputStruct, select, vec4 } from 'three/tsl';
 import type { Node, NodeMaterial } from 'three/webgpu';

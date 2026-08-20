@@ -1,8 +1,6 @@
 // TSL mirrors of stellata_hdr_emission's point-source peak, flux-peak
-// and statistic-texel rules. Thin composition over emission-pure
-// (README.md § TSL test pattern); the unit's contract is
-// ../hdr/emission/README.md § Unit, the texel rule
-// ../hdr/attachments/README.md § The unit.
+// and statistic-texel rules, over emission-pure's constants. Contracts:
+// ../hdr/emission/README.md § Unit, ../hdr/attachments/README.md § The unit.
 
 import { Fn, clamp, max, min, pow, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';

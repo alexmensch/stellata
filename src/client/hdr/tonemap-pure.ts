@@ -11,6 +11,12 @@ export const LUMA_WEIGHTS: Rgb = [0.2126, 0.7152, 0.0722];
 const SRGB_ENCODE_KNEE = 0.0031308;
 const SRGB_DECODE_KNEE = 0.04045;
 
+/** Interleaved-gradient-noise constants of `stellataDither` — the scalar
+ *  and the fragCoord dot vector. tonemap.glsl duplicates the literals
+ *  (chunk-constant-drift pins them); the TSL resolve imports these. */
+export const DITHER_IGN_SCALE = 52.9829189;
+export const DITHER_IGN_DOT: readonly [number, number] = [0.06711056, 0.00583715];
+
 export function tonemapWhitePoint(drMag = DR_MAG, lThresh = L_THRESH): number {
   return lThresh * 10 ** (0.4 * drMag);
 }

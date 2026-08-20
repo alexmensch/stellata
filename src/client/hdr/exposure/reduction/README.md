@@ -24,6 +24,11 @@ src/client/hdr/exposure/reduction/
   reduction-readback.ts       The pixel-pack buffer + fence (§ Latency).
 ```
 
+The WebGPU boot runs the same chain through
+`src/client/webgpu/hdr/reduction-webgpu.ts` — `reduction-pure.ts` is the
+one executable spec both shaders are held to; the readback and fence
+mechanics below are the WebGL2 half only.
+
 ## Why a buffer reduction and not a source walk
 
 The statistic used to be a CPU walk over every drawn body plus the stars

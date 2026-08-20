@@ -5,6 +5,7 @@
 import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
+import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
 
@@ -19,6 +20,13 @@ export interface WebGpuStarLayer {
   dispose(): void;
 }
 
+/** The WebGPU HDR pipeline as the shell sees it: the backend-neutral seam
+ *  plus the reduction it owns (the WebGL boot constructs the two
+ *  separately). */
+export interface WebGpuHdrSeam extends HdrSeam {
+  readonly reduction: ReductionSeam;
+}
+
 export interface WebGpuSeam {
   readonly renderer: WebGPURenderer;
   /** Rendered in place of the shell's scene on a WebGPU boot — empty
@@ -28,6 +36,9 @@ export interface WebGpuSeam {
    *  is a request: three clears it silently when the feature is absent, so
    *  every GPU-timing consumer must ask here rather than assume. */
   readonly timestampsAvailable: boolean;
+  /** The HDR chain on this boot — target, resolve, reduction. The shell
+   *  drives it in place of constructing the WebGL HdrPipeline. */
+  readonly hdr: WebGpuHdrSeam;
   /** Built by the shell right after buildSharedUniforms; null before. */
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
