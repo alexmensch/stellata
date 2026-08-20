@@ -147,6 +147,11 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
       disable: () => flag((on) => stellata.hdr.setSummationEnabled(on)),
     },
     {
+      key: 'summationTaps',
+      present: () => stellata.hdr.statisticTexture() !== null,
+      disable: () => flag((on) => stellata.hdr.setSummationTapsEnabled(on)),
+    },
+    {
       key: 'mrtAttachments',
       present: () => stellata.hdr.statisticTexture() !== null,
       // Dropping to a single attachment parks the statistic, so hold the

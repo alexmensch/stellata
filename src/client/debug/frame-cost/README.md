@@ -159,6 +159,10 @@ them; read each against the aggregate.
 - **`summation`** — skips the downsample and collapses the resolve's
   kernel to one centre tap: the convolution machinery, with the diffuse
   writes still paid.
+- **`summationTaps`** — the downsample still runs; only the resolve's
+  off-centre taps drop. Prices the kernel's taps alone, so `summation`
+  minus this row is the downsample's share (both marginal against the
+  same baseline — difference them, don't sum them).
 - **`mrtAttachments`** — rebuilds the target with attachment 0 alone
   (holding the fence, as `hdrChain` does): attachments 1 and 2 outright —
   writes, load/store, the summation's source and the reduction's. What

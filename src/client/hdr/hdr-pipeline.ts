@@ -183,6 +183,7 @@ export class HdrPipeline implements HdrSeam {
   private statisticWrites = true;
   private statisticParked = false;
   private summationOn = true;
+  private summationTapsOn = true;
   private extraAttachments = true;
 
   /** A WebGPU boot constructs `webgpu/hdr/hdr-pipeline-webgpu.ts` behind
@@ -274,6 +275,12 @@ export class HdrPipeline implements HdrSeam {
         this.emitterUniforms.uOmegaSummationArcsec2.value,
         this.emitterUniforms.uOmegaPxArcsec2.value,
       );
+      // Taps lever: the downsample above ran (and chose the factor), so
+      // forcing the radius to zero afterwards drops only the resolve's
+      // off-centre taps — the finer half of the summation row's split.
+      if (!this.summationTapsOn) {
+        this.summation.uniforms.uSummationRadiusTexels.value = 0;
+      }
     } else {
       // Zero radius is a single centre tap of the raw attachment (the kernel's
       // own weight rule), so the band keeps its unconvolved level while the
@@ -432,6 +439,14 @@ export class HdrPipeline implements HdrSeam {
     this.summationOn = on;
   }
 
+  /** Frame-cost lever — the finer split of the summation row: keep the
+   *  downsample running but collapse the resolve's kernel to one centre tap
+   *  of its output. Differencing this row against `summation` is what
+   *  separates the tap cost from the downsample's. */
+  setSummationTapsEnabled(on: boolean): void {
+    this.summationTapsOn = on;
+  }
+
   /** Frame-cost lever — the MRT-vs-single-target cut: rebuild the target with
    *  attachment 0 alone. The statistic parks (hold `fenceWhileParked` across
    *  it, as the chart park does) and every diffuse write discards, so the band
@@ -496,6 +511,7 @@ export class HdrPipeline implements HdrSeam {
     this.statisticWrites = true;
     this.statisticParked = false;
     this.summationOn = true;
+    this.summationTapsOn = true;
     this.extraAttachments = true;
     this.syncMode();
     clearChromeBindings();
