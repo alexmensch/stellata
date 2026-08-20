@@ -19,6 +19,10 @@ export interface FrameCtx {
    *  layer's angular motion rate to the screen-pixel budget the clock
    *  cadence runs on (../render-gate/README.md § The clock cadence). */
   readonly pxPerRadian: number;
+  /** Device pixels per CSS pixel (`uPixelRatio`). The cadence threshold
+   *  is stated in device pixels, so a CSS-px rate needs this to reach
+   *  it — `cadenceBudgetFromRatePxS` takes both. */
+  readonly pixelRatio: number;
 }
 
 /** One scene layer's per-frame + lifecycle hooks. Every hook except

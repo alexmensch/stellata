@@ -1952,14 +1952,25 @@ describe('PlanetBodyField.cadenceSimBudgetS', () => {
       [makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 })],
       [[1, 0, 0]],
     );
-    const far = f.cadenceSimBudgetS(cameraPosAu(0, 500, 0), PX_PER_RAD);
-    const near = f.cadenceSimBudgetS(cameraPosAu(0, 2, 0), PX_PER_RAD);
+    const far = f.cadenceSimBudgetS(cameraPosAu(0, 500, 0), PX_PER_RAD, 1);
+    const near = f.cadenceSimBudgetS(cameraPosAu(0, 2, 0), PX_PER_RAD, 1);
     expect(Number.isFinite(far)).toBe(true);
     expect(near).toBeLessThan(far);
     // 1e9 AU sits far past any host's cull distance — nothing draws, so
     // nothing constrains the clock.
-    expect(f.cadenceSimBudgetS(cameraPosAu(0, 1e9, 0), PX_PER_RAD))
+    expect(f.cadenceSimBudgetS(cameraPosAu(0, 1e9, 0), PX_PER_RAD, 1))
       .toBe(Number.POSITIVE_INFINITY);
+    f.dispose();
+  });
+
+  it('a denser display halves the budget — the threshold is device pixels', () => {
+    const f = fieldWith(
+      [makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 })],
+      [[1, 0, 0]],
+    );
+    const cam = cameraPosAu(0, 500, 0);
+    expect(f.cadenceSimBudgetS(cam, PX_PER_RAD, 2))
+      .toBeCloseTo(f.cadenceSimBudgetS(cam, PX_PER_RAD, 1) / 2, 12);
     f.dispose();
   });
 });

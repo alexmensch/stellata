@@ -27,7 +27,7 @@ import {
 } from '../../hdr/hdr-pipeline';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
-import { CADENCE_MOTION_THRESHOLD_PX } from '../../render-gate/clock-cadence-pure';
+import { cadenceBudgetFromRatePxS } from '../../render-gate/clock-cadence-pure';
 
 /** Ceiling on an attached body's total space velocity — its own orbit
  *  plus its parent's. Mercury's perihelion speed, 59 km/s, is the
@@ -1028,6 +1028,7 @@ export class PlanetBodyField {
   cadenceSimBudgetS(
     cameraPos: Readonly<THREE.Vector3>,
     pxPerRadian: number,
+    pixelRatio: number,
   ): number {
     let maxRatePxPerS = 0;
     for (const host of this.hosts.values()) {
@@ -1042,9 +1043,7 @@ export class PlanetBodyField {
         if (rate > maxRatePxPerS) maxRatePxPerS = rate;
       }
     }
-    return maxRatePxPerS > 0
-      ? CADENCE_MOTION_THRESHOLD_PX / maxRatePxPerS
-      : Number.POSITIVE_INFINITY;
+    return cadenceBudgetFromRatePxS(maxRatePxPerS, pixelRatio);
   }
 
   /** True when the body currently renders as one on-screen point with

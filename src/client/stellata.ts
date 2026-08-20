@@ -933,7 +933,8 @@ export class Stellata implements FrameAnchor {
       distFromSol: 0,
       t: 0,
       warpActive: false,
-      pxPerRadian: 1,
+      pxPerRadian: this.angularToPx(),
+      pixelRatio: this.sharedUniforms.uPixelRatio.value,
     };
     // Catalog-wide constant: the fastest pulsating variable bounds how
     // long any frame can idle before some star's brightness moves a JND.
@@ -1005,7 +1006,8 @@ export class Stellata implements FrameAnchor {
         if (this.planetBodyField.holdsVisibleEclipseDim) this.renderGate.invalidate();
       },
       cadenceSimBudgetS: (ctx) =>
-        this.planetBodyField.cadenceSimBudgetS(ctx.camera.position, ctx.pxPerRadian),
+        this.planetBodyField.cadenceSimBudgetS(
+          ctx.camera.position, ctx.pxPerRadian, ctx.pixelRatio),
       dispose: () => {},
     });
     this.layers.register({
@@ -1055,8 +1057,9 @@ export class Stellata implements FrameAnchor {
           this.renderGate.invalidate();
         }
       },
-      cadenceSimBudgetS: () =>
-        this.binaryOrbitField?.cadenceSimBudgetS() ?? Number.POSITIVE_INFINITY,
+      cadenceSimBudgetS: (ctx) =>
+        this.binaryOrbitField?.cadenceSimBudgetS(ctx.pixelRatio)
+        ?? Number.POSITIVE_INFINITY,
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
         this.binaryOrbitField?.dispose();
@@ -2263,6 +2266,7 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.frameCtx.pxPerRadian = this.angularToPx();
+    this.frameCtx.pixelRatio = this.sharedUniforms.uPixelRatio.value;
     this.layers.updateAll(this.frameCtx);
     // Refresh the clock cadence off the state the fan-out just wrote.
     // Valid until the next rendered frame: between frames the camera is

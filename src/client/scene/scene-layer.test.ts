@@ -10,6 +10,7 @@ function makeCtx(warpActive = false): FrameCtx {
     t: 0,
     warpActive,
     pxPerRadian: 900,
+    pixelRatio: 1,
   };
 }
 

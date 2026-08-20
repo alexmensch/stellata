@@ -16,7 +16,7 @@ import {
   type ProbeTrajectory,
 } from './probe-trajectory';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
-import { CADENCE_MOTION_THRESHOLD_PX } from '../../render-gate/clock-cadence-pure';
+import { cadenceBudgetFromRatePxS } from '../../render-gate/clock-cadence-pure';
 import probeVert from './probe.vert.glsl?raw';
 import probeFrag from './probe.frag.glsl?raw';
 
@@ -286,6 +286,7 @@ export class ProbeField {
   cadenceSimBudgetS(
     cameraPos: Readonly<THREE.Vector3>,
     pxPerRadian: number,
+    pixelRatio: number,
   ): number {
     let maxRatePxPerS = 0;
     for (const s of this.samples) {
@@ -294,9 +295,7 @@ export class ProbeField {
       const rate = (s.velPcPerSec.length() / d) * pxPerRadian;
       if (rate > maxRatePxPerS) maxRatePxPerS = rate;
     }
-    return maxRatePxPerS > 0
-      ? CADENCE_MOTION_THRESHOLD_PX / maxRatePxPerS
-      : Number.POSITIVE_INFINITY;
+    return cadenceBudgetFromRatePxS(maxRatePxPerS, pixelRatio);
   }
 
   /** Route the markers through the local depth pass instead of the main

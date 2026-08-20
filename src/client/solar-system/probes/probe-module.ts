@@ -120,7 +120,7 @@ export function createProbeKindModule(): ProbeKindModule {
           paths!.update(field!, fc.t, fc.camera, focusedProbeIdx());
         },
         cadenceSimBudgetS: (fc) =>
-          field!.cadenceSimBudgetS(fc.camera.position, fc.pxPerRadian),
+          field!.cadenceSimBudgetS(fc.camera.position, fc.pxPerRadian, fc.pixelRatio),
         setMonochrome: (on) => {
           field!.setMonochrome(on);
           paths!.setMonochrome(on);

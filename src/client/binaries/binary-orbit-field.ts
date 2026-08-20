@@ -18,7 +18,7 @@ import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
-import { CADENCE_MOTION_THRESHOLD_PX } from '../render-gate/clock-cadence-pure';
+import { cadenceBudgetFromRatePxS } from '../render-gate/clock-cadence-pure';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
 
 export interface BinaryOrbitFieldOptions {
@@ -327,10 +327,8 @@ export class BinaryOrbitField {
    *  (../render-gate/README.md § The clock cadence). Sub-pixel-suppressed
    *  and gated-out relations move nothing on screen and contribute
    *  nothing. */
-  cadenceSimBudgetS(): number {
-    return this.lastMaxRatePxPerS > 0
-      ? CADENCE_MOTION_THRESHOLD_PX / this.lastMaxRatePxPerS
-      : Number.POSITIVE_INFINITY;
+  cadenceSimBudgetS(pixelRatio: number): number {
+    return cadenceBudgetFromRatePxS(this.lastMaxRatePxPerS, pixelRatio);
   }
 
   /** Total float64 perturbation of the focal star's slot from its catalog

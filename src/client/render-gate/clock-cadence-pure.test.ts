@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CADENCE_CAP_SIM_S,
   CADENCE_JND_MAG,
-  CADENCE_MOTION_THRESHOLD_PX,
+  CADENCE_MOTION_THRESHOLD_DEVICE_PX,
+  cadenceBudgetFromRatePxS,
   cadenceSimBudgetS,
   clockFrameDue,
   pulsationCadenceBudgetS,
@@ -11,7 +12,7 @@ import {
 describe('the constants', () => {
   it('are pinned', () => {
     expect(CADENCE_CAP_SIM_S).toBe(30);
-    expect(CADENCE_MOTION_THRESHOLD_PX).toBe(0.5);
+    expect(CADENCE_MOTION_THRESHOLD_DEVICE_PX).toBe(0.5);
     expect(CADENCE_JND_MAG).toBe(0.01);
   });
 
@@ -41,6 +42,22 @@ describe('pulsationCadenceBudgetS', () => {
 
   it('no pulsating variable → Infinity', () => {
     expect(pulsationCadenceBudgetS([0, 0], [0, 0.5])).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('cadenceBudgetFromRatePxS', () => {
+  it('a still layer constrains nothing', () => {
+    expect(cadenceBudgetFromRatePxS(0, 1)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('the threshold is device pixels: a denser display halves the budget', () => {
+    expect(cadenceBudgetFromRatePxS(0.25, 1)).toBe(2);
+    expect(cadenceBudgetFromRatePxS(0.25, 2)).toBe(1);
+    expect(cadenceBudgetFromRatePxS(0.25, 3)).toBeCloseTo(2 / 3, 12);
+  });
+
+  it('a sub-unity ratio never buys extra budget', () => {
+    expect(cadenceBudgetFromRatePxS(0.25, 0.5)).toBe(2);
   });
 });
 

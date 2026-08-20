@@ -2,10 +2,28 @@
 // running sim clock before anything drawn could visibly move. See
 // README.md § The clock cadence.
 
-/** On-screen motion below this many pixels between two rendered frames is
- *  invisible; layers convert their motion-rate bounds to sim-time budgets
- *  through it. */
-export const CADENCE_MOTION_THRESHOLD_PX = 0.5;
+/** On-screen motion below this many DEVICE pixels between two rendered
+ *  frames is invisible. Device, not CSS: a 0.5 CSS-px step is a whole
+ *  physical pixel wherever the display runs at ratio 2, which is where
+ *  a step first becomes visible. Layers reach it through
+ *  `cadenceBudgetFromRatePxS`. */
+export const CADENCE_MOTION_THRESHOLD_DEVICE_PX = 0.5;
+
+/** Sim-time budget for a layer whose drawn content moves no faster than
+ *  `maxRateCssPxPerS` on screen — the motion threshold over that rate,
+ *  or Infinity when nothing it draws moves at all. Rates come in CSS px
+ *  (the unit every screen-size calc in the client works in) and the
+ *  pixel ratio converts them to the device pixels the threshold is
+ *  stated in. */
+export function cadenceBudgetFromRatePxS(
+  maxRateCssPxPerS: number,
+  pixelRatio: number,
+): number {
+  const deviceRate = maxRateCssPxPerS * Math.max(pixelRatio, 1);
+  return deviceRate > 0
+    ? CADENCE_MOTION_THRESHOLD_DEVICE_PX / deviceRate
+    : Number.POSITIVE_INFINITY;
+}
 
 /** Just-noticeable brightness change, in magnitudes — the photometric
  *  twin of the pixel threshold (~1 % flux). */
