@@ -62,9 +62,12 @@ export function buildSummationDownsampleFragment(
     const n = float(0.0).toVar();
     Loop({ start: int(0), end: int(MAX_DOWNSAMPLE) }, ({ i }) => {
       const dy = i;
-      If(dy.greaterThanEqual(factor), () => Break());
+      // Braced so the arrow returns void: an implicit return hands the
+      // Break node back as the branch output and it emits twice — the
+      // second `break;` is WGSL-unreachable and warns on every boot.
+      If(dy.greaterThanEqual(factor), () => { Break(); });
       Loop({ start: int(0), end: int(MAX_DOWNSAMPLE) }, ({ i: dx }) => {
-        If(dx.greaterThanEqual(factor), () => Break());
+        If(dx.greaterThanEqual(factor), () => { Break(); });
         const texel = min(base.add(ivec2(dx, dy)), sourceSize.sub(ivec2(1)));
         acc.addAssign(source.load(texel).rgb);
         n.addAssign(1.0);

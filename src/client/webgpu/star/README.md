@@ -63,8 +63,11 @@ is visible in a WebGPU A/B smoke until it lands:
   than WebGL2 until then.
 - **Chart mode**: under additive blending on the paper background, chart
   currently renders no stars on WebGPU.
-- **Local-mirror clones**: a local-pass member collapses in this layer
-  (as in the main WebGL pass) with no mirror to repaint it.
+- **Local-mirror clones**: none exist yet, so local-pass membership is
+  parked on this boot (`../../star-pipeline/local-pass/README.md`
+  § Membership) — close-range discs render in the MAIN pass, ordered by
+  reversed-z float32 fixed-function depth, rather than collapsing into
+  a repaint that is not there. The collapse returns with the mirrors.
 
 The MRT emission/statistic write side is here (`starMrtStruct`,
 `setMrtOutputs`) but engages only while the HDR pipeline binds its

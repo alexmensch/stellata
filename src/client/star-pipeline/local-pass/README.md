@@ -59,6 +59,13 @@ disc-pass split × `RESOLVED_DISC_MIN_PX`, evaluated on the
 core-mask gate's sorted-distance walk
 (`StarFrame.forEachStarNearCamera` — `../frame/README.md`).
 
+Membership parks entirely while the local depth pass is not rendering
+(`localPassLive: false` — the WebGPU boot until its port child,
+`../../webgpu/README.md` § Every park is a gate): a member's collapse
+is only honest while the mirror repaints it, and that boot's
+reversed-z float32 main-pass depth orders resolved discs natively
+meanwhile.
+
 ## Core opacity is depth-gated, never paint-over
 
 The disc pass blends with per-channel MaxEquation, which cannot cover

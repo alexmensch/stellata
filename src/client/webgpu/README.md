@@ -113,6 +113,7 @@ in the same PR:
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
+| Star local-pass membership collapse | `StarLocalCluster.update` parks on `localPassLive: false` — members would render as bare core-mask stamps with no mirror to repaint them | local-depth on WebGPU (`0it.12`), with the mirror clones (`0it.4.8`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.

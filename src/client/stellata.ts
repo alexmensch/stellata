@@ -1036,6 +1036,9 @@ export class Stellata implements FrameAnchor {
       // membership reads this frame's positions and path visibility, and
       // the mirror sync re-copies the slots those fields just wrote.
       update: (ctx) => this.starLocalCluster.update(ctx.camera, {
+        // The same condition that gates localDepthPass.render below: a
+        // member's collapse is only honest while the mirror repaints it.
+        localPassLive: this.rendererGL !== null,
         monochrome: this.monochrome,
         focalIdx: this.focus.getFocusedStar(),
         thresholdMag: this.exposure.getThresholdMag(),
