@@ -91,7 +91,7 @@ export function summationMean(
   }
   // No zero-weight guard: the centre tap's own weight is
   // min(1, radiusTexels + 0.5) ≥ 0.5 for any radius ≥ 0, so the division
-  // is safe — a re-added fallback costs the GPU mirrors a dead texture
-  // sample per pixel (WGSL select evaluates both operands).
+  // is safe — and a re-added fallback costs the GPU mirrors a dead
+  // texture sample per pixel, since WGSL select evaluates both operands.
   return acc / weight;
 }

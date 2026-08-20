@@ -33,6 +33,29 @@ describe('the seam has no off switch', () => {
   });
 });
 
+// The taps lever has to zero the resolve radius AFTER the downsample chose
+// the factor, or its row prices the downsample too and differencing it
+// against `summation` returns nothing. WebGPU pins the same ordering
+// behaviourally (../webgpu/hdr/hdr-pipeline-webgpu.test.ts); this side needs
+// a live context, so the ordering is pinned in the source.
+describe('the summation taps frame-cost lever', () => {
+  const src = () => readFileSync(
+    fileURLToPath(new URL('./hdr-pipeline.ts', import.meta.url)),
+    'utf8',
+  );
+
+  it('zeroes the resolve radius only after the downsample has run', () => {
+    const render = src().indexOf('this.summation.render(');
+    const zero = src().indexOf('if (!this.summationTapsOn)');
+    expect(render).toBeGreaterThan(0);
+    expect(zero).toBeGreaterThan(render);
+  });
+
+  it('restores with the rest of the statistic state on reset', () => {
+    expect(src()).toMatch(/this\.summationTapsOn = true;/);
+  });
+});
+
 // Per-attachment format and filters are three's to keep, and a resize is where
 // it could drop them: attachment 1 falling back to RGBA would silently double
 // the statistic's memory and change what the reduction reads. The gate's other

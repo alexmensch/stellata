@@ -131,6 +131,12 @@ at a 0.007 ms bracket, `reduction` reading −0.027 ms. Sol is the positive
 control: `statisticWrites` still resolves +40.5 to +54.6 % (canon +47.7 /
 +50.2), so the park stays off wherever the cut is live.
 
+**Every `statisticWrites` figure on this page predates the vertex-stage
+collapse** (`../../star-pipeline/collapse/README.md`, 2026-08-20), which
+exists to shrink that row at exactly the deep-cut vantages it was largest
+at. Re-measure before quoting one as current; the canon above is what the
+drop is measured *against*, not what the row reads now.
+
 **These rows price the fully parked frame, not the duty cycle.** The pin
 collapses the machine to parked for the whole sweep, so no probe runs
 inside a dwell and the differential cannot see one. The steady-state cost
