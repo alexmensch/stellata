@@ -93,8 +93,7 @@ Three rows are not what they look like:
   not the resolve draw alone. The park also stops `measure()` being
   called at all, so the toggle sets `reduction.fenceWhileParked` for the
   duration: without it the row prices the loss of the frame's only
-  submission barrier on top of the chain (§ The readback cadence
-  confound).
+  submission barrier on top of the chain (§ The readback cadence).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
 - **`reduction`** keeps its readback fence while disabled and drops only
@@ -231,7 +230,7 @@ fade to zero during the warmup, so the pin captures the wide-open limit
 clean, but the scene is not comparable to unmasked runs at the same
 vantage. The `limitMag` columns are the tell.
 
-## The readback cadence — measured, and NOT the confound
+## The readback cadence — refuted at Sol, live at the LG zoom-out
 
 The reduction's `gl.flush()` is the frame's only ANGLE submission
 barrier, and the rate it fires at is emergent rather than pinned — the
@@ -240,19 +239,37 @@ disabling a pass makes the frame cheaper, the fence lands sooner, the
 barrier fires more often, and the row prices batching depth instead of
 the pass.
 
-**Measured, it does not happen.** `baselineReadback` /
-`disabledReadback` report readbacks per frame per state, and at the
-default Sol view every dwell of every row read **0.25 exactly** — one
-readback per four frames, identical in both states, across frames
-ranging 31 ms (HDR parked) to 112 ms. The latency is constant in
-*frames*, not in wall time, which is pipeline-depth buffering rather
-than GPU-drain latency: it does not care what the frame costs. Keep the
-columns as a standing check, but the hypothesis is refuted at this
-viewpoint.
+**At the default Sol view it does not happen.** `baselineReadback` /
+`disabledReadback` report readbacks per frame per state, and there every
+dwell of every row read **0.25 exactly** — one readback per four frames,
+identical in both states, across frames ranging 31 ms (HDR parked) to
+112 ms. The latency is constant in *frames*, not in wall time, which is
+pipeline-depth buffering rather than GPU-drain latency: it does not care
+what the frame costs.
 
-Both remain gates worth reading — **equal rates mean the row is clean on
-this axis** — and a viewpoint that does move them would invalidate the
-rows that moved.
+**At the LG zoom-out it does happen.** Measured 2026-08-21, Chrome
+`timer-query`, 6.774 Mpx, `priceFrameRepeat(3)` over `summation` and
+`summationTaps`: the rates diverge on all six rows — baseline
+0.342–0.379 against disabled 0.400–0.508. Neither 0.25 nor equal across
+states. So the viewpoint that "would invalidate the rows that moved" is
+not hypothetical, and it is the one where the HDR chain is largest.
+
+**Where they diverge, read `savedMs` as a lower bound.** The disabled
+state issues *more* readbacks, so it pays more submission barriers, so
+the differential understates the pass. The direction is known and the
+magnitude is not. Two rows from the same run partially cancel the bias
+when differenced, which is why `stellata-8cg.28`'s downsample-vs-taps
+split sits on softer ground than either row's own total.
+
+**The 0.25 is a WebGL2/ANGLE fact and does not carry to WebGPU**, which
+has no pixel-pack buffer to fence on at all —
+`readRenderTargetPixelsAsync` replaces it
+(`../../webgpu/hdr/README.md` § Reduction). A WebGPU sweep reading ~1.0
+in both states is that different mechanism, not counter-evidence about
+this one.
+
+Both columns stay gates worth reading — **equal rates mean the row is
+clean on this axis** — and § Reading a row owns that check.
 
 ## The instrument drifts, so the baseline is bracketed
 

@@ -47,7 +47,7 @@ export interface PriceFrameRow {
   /** Readbacks per frame in each state. The reduction's fence is the
    *  frame's only ANGLE submission barrier and its cadence is emergent, so
    *  a row whose two values differ priced a change in barrier rate on top
-   *  of the pass — README.md § The readback cadence confound. */
+   *  of the pass — README.md § The readback cadence. */
   readonly baselineReadback: number;
   readonly disabledReadback: number;
   /** Faintest magnitude rendered in each state. **These two differing is
