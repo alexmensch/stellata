@@ -66,6 +66,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
   private statisticWrites = true;
   private statisticParked = false;
   private summationOn = true;
+  private summationTapsOn = true;
   private extraAttachments = true;
 
   constructor(renderer: WebGPURenderer) {
@@ -101,6 +102,12 @@ export class WebGpuHdrPipeline implements HdrSeam {
         this.emitterUniforms.uOmegaSummationArcsec2.value,
         this.emitterUniforms.uOmegaPxArcsec2.value,
       );
+      // Taps lever: the downsample above ran (and chose the factor), so
+      // forcing the radius to zero afterwards drops only the resolve's
+      // off-centre taps — the finer half of the summation row's split.
+      if (!this.summationTapsOn) {
+        this.summation.nodes.uRadiusTexels.value = 0;
+      }
     } else {
       // Zero radius is a single centre tap of the raw attachment (the
       // kernel's own weight rule); with the attachments lever off there is
@@ -182,6 +189,13 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.summationOn = on;
   }
 
+  /** Frame-cost lever — the finer split of the summation row: keep the
+   *  downsample running but collapse the resolve's kernel to one centre tap
+   *  of its output (../../hdr/hdr-pipeline.ts). */
+  setSummationTapsEnabled(on: boolean): void {
+    this.summationTapsOn = on;
+  }
+
   /** The MRT-vs-single-target frame-cost cut. Reallocates the target both
    *  ways and swaps every registered layer to the matching output count —
    *  a three-member struct over a one-attachment target fails pipeline
@@ -205,6 +219,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.statisticWrites = true;
     this.statisticParked = false;
     this.summationOn = true;
+    this.summationTapsOn = true;
     this.extraAttachments = true;
     this.tonemapEnabledNode.value = 1;
     this.syncMode();

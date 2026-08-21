@@ -4,7 +4,7 @@
 
 import {
   Break, Fn, If, Loop, clamp, float, int, ivec2, length, max,
-  screenCoordinate, select, vec2, vec3, vec4,
+  screenCoordinate, vec2, vec3, vec4,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import {
@@ -45,8 +45,11 @@ export function summationMeanTsl(
       });
     });
   });
-  const centre = source.sample(clamp(sourceTexel, vec2(0.5), hi).mul(invSize)).rgb;
-  return select(weight.greaterThan(0.0), acc.div(weight), centre);
+  // No zero-weight guard: the centre tap's own weight is
+  // min(1, radiusTexels + 0.5) ≥ 0.5 for any radius ≥ 0, and WGSL select
+  // evaluates both operands — a guard here is a dead bilinear sample per
+  // pixel, not safety.
+  return acc.div(weight);
 }
 
 /** The box-downsample fragment (summation-downsample.frag.glsl): average

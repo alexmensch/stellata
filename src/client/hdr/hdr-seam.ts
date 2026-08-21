@@ -34,6 +34,7 @@ export interface HdrSeam {
   setStatisticWritesEnabled(on: boolean): void;
   setStatisticWritesParked(on: boolean): void;
   setSummationEnabled(on: boolean): void;
+  setSummationTapsEnabled(on: boolean): void;
   setExtraAttachmentsEnabled(on: boolean): void;
   dispose(): void;
 }

@@ -83,8 +83,6 @@ in float vFluxPeakL; // the same kernel renormalised to carry true flux
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outStatistic;
 
-const float PHYS_RATIO_THRESHOLD = 0.5;
-
 // Write a star fragment. `glow` is the unit-peak display kernel and
 // `vPeakL` the star's physical luminance, so the product is linear light
 // in the scene-wide unit — written straight into the target, or put
@@ -136,9 +134,9 @@ void main() {
     // disc≈0.5 in the middle, rendering as a faint grey rather than
     // solid black.)
     if (uMonochrome > 0.5) {
-        if (uRenderMode == 0 && vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
-        if (uRenderMode == 1 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
-        if (uRenderMode == 2 && vPhysRatio <  PHYS_RATIO_THRESHOLD) discard;
+        if (uRenderMode == 0 && vPhysRatio >= STELLATA_PHYS_RATIO_THRESHOLD) discard;
+        if (uRenderMode == 1 && vPhysRatio <  STELLATA_PHYS_RATIO_THRESHOLD) discard;
+        if (uRenderMode == 2 && vPhysRatio <  STELLATA_PHYS_RATIO_THRESHOLD) discard;
         if (vAppMag > uLimitMag) discard;
         float aa = max(vAaWidth, 1e-3);
         float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
@@ -167,7 +165,7 @@ void main() {
         // wouldn't render colour. Halo is discarded so background layers
         // can paint through it (the disc pass handles the halo's own
         // depth via gl_FragDepth = 1.0 below).
-        if (vPhysRatio < PHYS_RATIO_THRESHOLD) discard;
+        if (vPhysRatio < STELLATA_PHYS_RATIO_THRESHOLD) discard;
         if (vAppMag > uThresholdMag) discard;
         if (glow < uCoreThreshold) discard;
         // Local-depth-cluster member: stamp the nearest possible depth.
@@ -184,19 +182,20 @@ void main() {
     if (uRenderMode == 0) {
         // Glow pass — only point-dominated stars. Additive blending so
         // overlapping distant stars accumulate brightness.
-        if (vPhysRatio >= PHYS_RATIO_THRESHOLD) discard;
+        if (vPhysRatio >= STELLATA_PHYS_RATIO_THRESHOLD) discard;
         // Soft taper: fade to zero across the 0.5-mag band past the
         // just-visible threshold so the faint edge is never a hard
         // cutoff. It multiplies emitted luminance now, so the fade is
         // photometric rather than profile-only.
-        float tap = 1.0 - smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag);
+        float tap = 1.0 - smoothstep(
+            uThresholdMag, uThresholdMag + STELLATA_SOFT_TAPER_MARGIN_MAG, vAppMag);
         glow *= tap;
         starEmission(glow);
     } else {
         // Disc pass — only disc-dominated stars. Per-channel MaxEquation
         // blending (see applyDiscBlendDefaults); depth handling below
         // decides whether each fragment occludes the background.
-        if (vPhysRatio < PHYS_RATIO_THRESHOLD) discard;
+        if (vPhysRatio < STELLATA_PHYS_RATIO_THRESHOLD) discard;
         // The taper region (m_thresh, m_thresh + 0.5] is glow-only —
         // resolved discs at threshold would render as a sub-pixel speck
         // and read as a hard cutoff anyway, so keep the disc pass crisp.

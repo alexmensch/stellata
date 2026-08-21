@@ -47,9 +47,8 @@ vec3 stellataSummationMean(
             weight += w;
         }
     }
-    if (weight <= 0.0) {
-        return texture(source, clamp(sourceTexel, vec2(0.5), hi) * invSize).rgb;
-    }
+    // No zero-weight guard: the centre tap's own weight is
+    // min(1, radiusTexels + 0.5) >= 0.5 for any radius >= 0.
     return acc / weight;
 }
 

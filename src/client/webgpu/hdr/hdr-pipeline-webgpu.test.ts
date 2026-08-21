@@ -108,6 +108,26 @@ describe('the output-struct swap', () => {
   });
 });
 
+describe('the summation taps lever', () => {
+  it('zeroes the resolve radius only after the downsample ran, and restores', () => {
+    const { renderer } = fakeRenderer();
+    const hdr = new WebGpuHdrPipeline(renderer);
+    hdr.bind();
+    const { summation } = hdr as unknown as {
+      summation: { nodes: { uRadiusTexels: { value: number } } };
+    };
+    hdr.resolve();
+    const live = summation.nodes.uRadiusTexels.value;
+    expect(live).toBeGreaterThan(0);
+    hdr.setSummationTapsEnabled(false);
+    hdr.resolve();
+    expect(summation.nodes.uRadiusTexels.value).toBe(0);
+    hdr.setSummationTapsEnabled(true);
+    hdr.resolve();
+    expect(summation.nodes.uRadiusTexels.value).toBe(live);
+  });
+});
+
 describe('the statistic write mask', () => {
   it('composes the frame-cost lever and the adaptation park into one gate', () => {
     const { renderer } = fakeRenderer();

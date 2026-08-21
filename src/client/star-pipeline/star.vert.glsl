@@ -21,6 +21,9 @@ uniform float uLimitMag;
 // Population cull bound — the deepest the EV trim can reach plus the
 // soft taper, so raising the trim can never expose a population edge.
 uniform float uCullMag;
+// The taper's anchor: where the fragment stage stops emitting. The cull
+// bound above stays the population bound. collapse/README.md.
+uniform float uThresholdMag;
 uniform float uMinDistSol;
 uniform float uMaxDistSol;
 uniform uint uSpectMask;
@@ -126,6 +129,10 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
 const float R_V = 3.1; // canonical interstellar reddening ratio: A_V / E(B-V)
+
+// GLOW_COLLAPSE_FLOOR_L twin (collapse/glow-collapse-pure.ts pins this
+// literal): the peak display light a glow kernel collapses under.
+const float STELLATA_GLOW_COLLAPSE_FLOOR_L = 3.1399364e-4;
 
 // Per-vertex: unit-square corner in [-0.5, +0.5] × [-0.5, +0.5], used to
 // expand each instanced quad around its projected star centre.
@@ -259,6 +266,16 @@ void emitOffscreenSentinel(float appMag, float softness) {
     vFluxPeakL = 0.0;
 }
 
+// Past the taper's end a star writes zeros to every attachment in every
+// pass, so its quad would rasterise for nothing. Chart mode sizes and
+// clips against uLimitMag instead, and keeps its quads. collapse/README.md.
+bool starTaperDead(float appMag) {
+    if (uMonochrome > 0.5) return false;
+    return uRenderMode == 0
+        ? appMag >= uThresholdMag + STELLATA_SOFT_TAPER_MARGIN_MAG
+        : appMag > uThresholdMag;
+}
+
 void main() {
     // Off-screen-sentinel early-returns below skip <logdepthbuf_vertex>,
     // leaving vFragDepth undefined for that vertex. Safe because the
@@ -379,6 +396,10 @@ void main() {
     bool spectOk = (uSpectMask & (1u << uint(iSpectClass))) != 0u;
     bool distOk = iDistSol >= uMinDistSol && iDistSol <= uMaxDistSol;
     bool magOkPrelim = appMag <= uCullMag;
+    // The taper bound is monotonic in dust for the same reason the cull
+    // bound is, so testing it here — ahead of the extinction read — is
+    // exact, and it is what keeps the read off the culled population.
+    bool taperOkPrelim = !starTaperDead(appMag);
 
     // Luminosity-class softness: linear from white dwarf (0) → hypergiant
     // (9). Unknown (iLumClass = 255) falls back to main-sequence-dwarf
@@ -387,7 +408,7 @@ void main() {
     float lumClass = iLumClass < 100.0 ? iLumClass : 2.0;
     float softness = clamp(lumClass / 9.0, 0.0, 1.0);
 
-    if (!(spectOk && distOk && magOkPrelim)) {
+    if (!(spectOk && distOk && magOkPrelim && taperOkPrelim)) {
         emitOffscreenSentinel(appMag, softness);
         return;
     }
@@ -422,11 +443,12 @@ void main() {
     // near maximum light = bluer/hotter) both shift the same LUT input.
     float effectiveCi = intrinsicBv + absorbAV / R_V + ciMod;
 
-    // Final magnitude check with the extincted value. Everything down to
-    // the cull bound passes through; the frag shader's taper against
-    // uThresholdMag is what fades the faint edge, so the population edge
-    // sits well past anything the EV trim can reveal.
-    if (appMag > uCullMag) {
+    // Both bounds again on the extincted value: everything down to the
+    // cull bound passes through, and the population edge sits well past
+    // anything the EV trim can reveal. The taper bound is the LIVE
+    // uThresholdMag, so the trim moves it exactly as it moves the
+    // fragment taper — which is what makes the cull bit-exact.
+    if (appMag > uCullMag || starTaperDead(appMag)) {
         emitOffscreenSentinel(appMag, softness);
         return;
     }
@@ -491,6 +513,16 @@ void main() {
 
         pxSize = max(appSize, physSize);
         vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+
+        // Kernel collapse — must precede vFluxPeakL: the renorm has to
+        // divide the collapsed footprint for the flux to come out
+        // unchanged. collapse/README.md.
+        float tap = 1.0 - smoothstep(
+            uThresholdMag, uThresholdMag + STELLATA_SOFT_TAPER_MARGIN_MAG, appMag);
+        if (vPhysRatio < STELLATA_PHYS_RATIO_THRESHOLD
+                && vPeakL * tap * tap < STELLATA_GLOW_COLLAPSE_FLOOR_L) {
+            pxSize = uSizeMin;
+        }
 
         // The statistic's flux channel. `pxSize` is CSS pixels, which is
         // what makes the frame mean devicePixelRatio-independent: the

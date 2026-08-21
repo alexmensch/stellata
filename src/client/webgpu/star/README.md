@@ -146,7 +146,10 @@ Compile-time pass constants replace the `uRenderMode` branches
   fixed-function depth writes the nearest value and early-z survives.
 
 `uPinFocusToCenter` substitutes the canonical projection exactly as the
-GLSL does.
+GLSL does. Every pass also carries the taper cull, and the colour passes
+the kernel collapse — the exactness and flux-preservation arguments are
+`../../star-pipeline/collapse/README.md`'s, one mechanism on both
+backends.
 
 ## The disc draw writes no depth
 

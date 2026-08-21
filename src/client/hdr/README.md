@@ -353,6 +353,11 @@ deliberate edit.
   downsample and collapses the resolve's kernel to one centre tap. The band
   keeps its level (the uniform-field identity); M31 sharpens. Frame-cost
   lever.
+- `stellata.hdr.setSummationTapsEnabled(false)` — the finer half of that
+  split: the downsample still runs (and still picks the factor), only the
+  resolve's off-centre taps drop. Its row prices the kernel's taps alone;
+  `summation` minus it is the downsample. The band keeps its level here
+  too — the centre tap of a box-averaged uniform field is the field.
 - `stellata.hdr.setExtraAttachmentsEnabled(false)` — rebuilds the target with
   attachment 0 alone, the MRT-vs-single-target cut: the statistic parks (hold
   `reduction.fenceWhileParked` across it, as the chart park does) and every

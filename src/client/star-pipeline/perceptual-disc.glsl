@@ -62,6 +62,11 @@
 // (lumBias) so hypergiants stay fuzzier than dwarfs at equivalent
 // physRatio.
 
+// GLSL twins of the TypeScript constants of the same name, pinned
+// against them in ../hdr/emission/chunk-constant-drift.test.ts.
+const float STELLATA_SOFT_TAPER_MARGIN_MAG = 0.5; // SOFT_TAPER_MARGIN_MAG
+const float STELLATA_PHYS_RATIO_THRESHOLD = 0.5;  // PHYS_RATIO_THRESHOLD
+
 float perceptualDmEff(float appMag, float limitMag, float sizeSpan, float sizeKnee) {
   float dM = limitMag - appMag;
   if (dM <= sizeSpan) {

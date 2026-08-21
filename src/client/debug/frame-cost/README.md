@@ -131,6 +131,27 @@ at a 0.007 ms bracket, `reduction` reading −0.027 ms. Sol is the positive
 control: `statisticWrites` still resolves +40.5 to +54.6 % (canon +47.7 /
 +50.2), so the park stays off wherever the cut is live.
 
+**Every `statisticWrites` figure above predates the vertex-stage collapse**
+(`../../star-pipeline/collapse/README.md`, 2026-08-20). Re-measured after it
+on the canon's own instrument — WebGL2 in Chrome, `timer-query`, 6.774 Mpx,
+default Sol view, limit mags equal at 1.511, `noiseMs` 4.1, `bracketMs` 9.3,
+readback 0.25 in both states — the row reads **50.7 ms / 50.6 % on a 100.2 ms
+frame** (2026-08-21). Two readings, and the second is the one to carry:
+
+- **The absolute cost fell 57–68 %** (118.9 / 156.3 → 50.7 ms), and the whole
+  Sol frame fell with it — a canon-implied ~249–311 ms to 100.2 ms, 2.5–3.1×.
+- **The share did not move**: ~48–50 % of the Sol frame before, 50.6 % after.
+  Both attachments' write traffic scales with quad area, so shrinking the quad
+  cuts the display and statistic writes alike. This page's headline claim
+  survives the fix built to attack it, and the surviving 50.7 ms is a live
+  target rather than a residue.
+
+Instrument matters because two of the three combinations this machine offers
+cannot be read against the canon at all: WebGPU makes the row structurally
+null (§ Decomposing the HDR chain), and Safari's WebGL2 exposes no timer
+query, so it falls to `raf-delta` wall time — a different method, which
+§ Preconditions forbids comparing across.
+
 **These rows price the fully parked frame, not the duty cycle.** The pin
 collapses the machine to parked for the whole sweep, so no probe runs
 inside a dwell and the differential cannot see one. The steady-state cost
@@ -156,9 +177,23 @@ them; read each against the aggregate.
   the clear keeps writing it, so the reduction runs over an empty
   attachment. Prices the emitters' statistic write bandwidth — NOT the
   attachment's load/store, which only `mrtAttachments` removes.
+  **This row resolves on WebGL2 only.** There the mask puts `NONE` in
+  slot 1 and the write does not happen. On WebGPU it is a uniform
+  multiplying the statistic texel to the blend's identity element
+  (`../../webgpu/hdr/README.md` § The gate becomes the output struct):
+  the fragment still emits its three-member struct and the additive
+  blend still read-modify-writes the RG16F texel, so the row prices one
+  multiply and reads ~0 no matter how large the write bandwidth is. A
+  null row there is the lever's construction, not a finding — the
+  WebGPU-valid write-bandwidth lever is `mrtAttachments`, which rides
+  the real `setMrtOutputs` attachment swap.
 - **`summation`** — skips the downsample and collapses the resolve's
   kernel to one centre tap: the convolution machinery, with the diffuse
   writes still paid.
+- **`summationTaps`** — the downsample still runs; only the resolve's
+  off-centre taps drop. Prices the kernel's taps alone, so `summation`
+  minus this row is the downsample's share (both marginal against the
+  same baseline — difference them, don't sum them).
 - **`mrtAttachments`** — rebuilds the target with attachment 0 alone
   (holding the fence, as `hdrChain` does): attachments 1 and 2 outright —
   writes, load/store, the summation's source and the reduction's. What

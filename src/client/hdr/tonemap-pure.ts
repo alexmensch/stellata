@@ -34,7 +34,7 @@ export const TOE_BLACK_MAG = 1.5;
 
 /** The darkest level the encode can distinguish from black: half an
  *  8-bit output step, decoded through the sRGB linear segment. */
-const EIGHT_BIT_STEP_L = 0.5 / 255 / 12.92;
+export const EIGHT_BIT_STEP_L = 0.5 / 255 / SRGB_LINEAR_SLOPE;
 
 /** Displayed depth of the toe's black point, in magnitudes below the
  *  threshold's display level. */
