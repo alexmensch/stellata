@@ -10,6 +10,13 @@ twin: `../../webgpu/star/star-vertex-tsl.ts`) bound that cost. Neither
 touches the cull bounds themselves — `uCullMag` stays adaptation-free
 (`../../hdr/exposure/README.md` § One writer, five slots).
 
+**Measured after it landed** (Sol, Chrome `timer-query`, 6.774 Mpx): the frame
+2.5–3.1× cheaper, ~249–311 ms down to 100.2 ms, and the row's absolute cost
+57–68 % lower. Its **share held at 50.6 %** — both attachments' traffic scales
+with quad area, so shrinking the quad cuts the display and statistic writes
+together and the ~50 % above still describes the frame. Numbers, gates and
+instrument: `../../debug/frame-cost/README.md` § Decomposing the HDR chain.
+
 ```
 src/client/star-pipeline/collapse/
   glow-collapse-pure.ts     The derived display floor the kernel collapse
