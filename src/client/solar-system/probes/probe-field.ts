@@ -16,8 +16,10 @@ import {
   type ProbeTrajectory,
 } from './probe-trajectory';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
-import probeVert from './probe.vert.glsl?raw';
-import probeFrag from './probe.frag.glsl?raw';
+import type {
+  EmitterMaterial, SolarSystemMaterials,
+} from '../materials/emitter-material';
+import { makeGlslProbeMaterial } from '../materials/glsl-materials';
 
 /** Marker edge length in CSS pixels, and the basis for any hit radius over
  *  it. Fixed at every range: a metre-scale probe has no angular diameter to
@@ -92,14 +94,19 @@ export class ProbeField {
   private localPos = new Float32Array(0);
   private alpha = new Float32Array(0);
   private geometry: THREE.InstancedBufferGeometry;
-  private material: THREE.ShaderMaterial;
-  private localMaterial: THREE.ShaderMaterial;
+  private material: EmitterMaterial;
+  private localMaterial: EmitterMaterial;
   private mesh: THREE.Mesh;
   private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
   private shared: ProbeSharedUniforms;
 
-  constructor(shared: ProbeSharedUniforms) {
+  constructor(
+    shared: ProbeSharedUniforms,
+    /** The TSL glyph on a WebGPU boot; absent = the shipped GLSL pair
+     *  (`../materials/README.md`). */
+    materials?: Pick<SolarSystemMaterials, 'probeMarker'>,
+  ) {
     this.shared = shared;
     this.group = new THREE.Group();
     this.group.visible = false;
@@ -115,28 +122,19 @@ export class ProbeField {
     );
     this.geometry.setIndex([0, 1, 2, 1, 3, 2]);
     this.geometry.instanceCount = 0;
-    // One uniform block, two compile variants. The mirror shares the
+    // Two compile variants over one geometry. The mirror shares the
     // geometry outright — the instance buffers this.update writes are the
     // same ones it draws, so there is no attribute copy and no way for the
     // two passes to disagree about where a probe is.
-    const sharedProbeUniforms = {
-      uViewport: shared.uViewport,
-      uPixelRatio: shared.uPixelRatio,
-      uSizePx: { value: PROBE_MARKER_PX },
-      uColour: { value: setRawChromeColour(new THREE.Color(), PROBE_COLOUR) },
+    const factory = materials ?? makeGlslProbeMaterial();
+    const makeMat = (localPass = false) => {
+      const m = factory.probeMarker(shared, localPass);
+      m.uniforms.uSizePx.value = PROBE_MARKER_PX;
+      setRawChromeColour(m.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
+      return m;
     };
-    const makeMat = (localPass = false) => new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: probeVert,
-      fragmentShader: probeFrag,
-      ...(localPass ? { defines: { LOCAL_DEPTH_PASS: '' } } : {}),
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-      uniforms: sharedProbeUniforms,
-    });
-    const makeMesh = (name: string, material: THREE.ShaderMaterial, renderOrder: number) => {
-      const mesh = new THREE.Mesh(this.geometry, material);
+    const makeMesh = (name: string, material: EmitterMaterial, renderOrder: number) => {
+      const mesh = new THREE.Mesh(this.geometry, material.material);
       mesh.name = name;
       mesh.frustumCulled = false;
       mesh.renderOrder = renderOrder;

@@ -20,6 +20,9 @@ Rendering, ephemerides, and the clock live in the subfolders.
   ring systems (annulus + the ring share of appMag), per-body labels.
 - `atmosphere/` — first-principles single-scattering airlight for Venus,
   Earth, Mars, and Titan; the integrator and its CPU mirror.
+- `materials/` — which shader backend the family's surfaces are built
+  on. The layers keep their CPU logic and take a material through one
+  neutral contract, so a WebGPU boot swaps shaders and nothing else.
 - `time/` — simulation time `t`, the `VirtualClock` behind
   `Stellata.getT()`, the UTC readout, and the transport scrubber widget.
 - `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons

@@ -13,6 +13,7 @@ import {
 } from '../../phase-function';
 import {
   RING_BACKLIT_TRANSMIT,
+  RING_SHADOW_FLOOR,
   SATURN_RING_PHOTOMETRY,
   effectiveRingTiltDeg,
   maxRingSystemFluxFactor,
@@ -182,6 +183,16 @@ describe('the backlit branch', () => {
     const match = /const float TRANSMIT = ([0-9.]+);/.exec(frag);
     expect(match).not.toBeNull();
     expect(Number(match![1])).toBe(RING_BACKLIT_TRANSMIT);
+  });
+
+  it('shares the in-shadow floor with planet-rings.frag.glsl', () => {
+    // The TSL annulus reads RING_SHADOW_FLOOR from here, so the two
+    // backends' shadowed bands would drift apart silently without this.
+    const frag = readFileSync(
+      fileURLToPath(new URL('./planet-rings.frag.glsl', import.meta.url)), 'utf8');
+    const match = /const float SHADOW_FLOOR = ([0-9.]+);/.exec(frag);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBe(RING_SHADOW_FLOOR);
   });
 });
 

@@ -12,7 +12,7 @@ export const MIE_G_DEFAULT = 0.76;
 /** Golden-ratio increment used to decorrelate the light-march jitter from the
  *  view-march (and per view-sample), so the two ray-march lattices don't beat
  *  into a moiré — the residual reads as unstructured grain instead. */
-const LIGHT_JITTER_STRIDE = 0.6180339887;
+export const LIGHT_JITTER_STRIDE = 0.6180339887;
 
 const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
 const INV_4PI = 1 / (4 * Math.PI);

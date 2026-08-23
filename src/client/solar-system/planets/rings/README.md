@@ -53,8 +53,10 @@ for whichever is brighter.
 
 **`lit` is the mask's gate and the flux's shadow term at once**, which is
 why the shadow test and the edge-on fade are factored out of `light`: the
-band inside the planet's shadow sits at `SHADOW_FLOOR` and the whole annulus
-goes dark as the sun crosses the ring plane. Either counted as coverage is a
+band inside the planet's shadow sits at `SHADOW_FLOOR` — `RING_SHADOW_FLOOR`
+here, which the annulus's TSL twin reads and the drift test pins against the
+GLSL literal, exactly as it does `TRANSMIT` — and the whole annulus goes
+dark as the sun crosses the ring plane. Either counted as coverage is a
 dark vote — and the annulus runs ~3.6x the globe's own disc area face-on, so
 it outweighs every other coverage term the frame has. The **transmitted face
 still counts**: `TRANSMIT` dims real illumination rather than removing it,

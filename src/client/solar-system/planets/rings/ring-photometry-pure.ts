@@ -57,6 +57,12 @@ export const SATURN_RING_PHOTOMETRY: RingSystemPhotometry = {
  */
 export const RING_BACKLIT_TRANSMIT = 0.35;
 
+/** Residual brightness of the annulus segment inside the planet's shadow —
+ *  the annulus shader's `SHADOW_FLOOR`, pinned against the GLSL source
+ *  alongside `RING_BACKLIT_TRANSMIT` because the TSL annulus reads it from
+ *  here rather than restating the literal. */
+export const RING_SHADOW_FLOOR = 0.05;
+
 const DEG = Math.PI / 180;
 
 /**
