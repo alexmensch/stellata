@@ -172,6 +172,10 @@ export function createPlanetKindModule(): PlanetKindModule {
       }
 
       return {
+        timeBehaviour: {
+          kind: 'clock',
+          rate: (cc) => field!.cadenceReport(cc),
+        },
         update: (fc) => {
           field!.update(fc.camera, fc.t, performance.now());
           // The field's own visibility gate — chart mode, the observe

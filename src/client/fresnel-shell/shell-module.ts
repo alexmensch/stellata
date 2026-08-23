@@ -133,6 +133,8 @@ export function createShellKindModule(): ShellKindModule {
         });
       }
       return {
+        // Fixed boundary geometry; visibility is event-driven, not timed.
+        timeBehaviour: { kind: 'static' },
         setMonochrome: (on) => {
           heliopause!.setMonochrome(on);
           localBubble!.setMonochrome(on);

@@ -104,6 +104,8 @@ export function createLgKindModule(): LgKindModule {
       emission.setChartHidden(kindCtx.getMonochrome());
       kindCtx.scene.add(emission.group);
       return {
+        // Fixed extragalactic positions — no proper motion is modelled.
+        timeBehaviour: { kind: 'static' },
         update: (fc) => {
           updateWarpGatedRefLayer(layer, fc, kindCtx.detailPermits('lgWireframes'));
           emission!.update(fc.worldOffset);
