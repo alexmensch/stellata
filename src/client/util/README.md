@@ -9,7 +9,14 @@ build scripts, tests, and shader uniforms.
   wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
   a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
   clock's bounds and a loop would iterate millions of times to bring that
-  back. `wrapAngle` used to live in `kepler-solver.ts`.
+  back. `wrapAngle` used to live in `kepler-solver.ts`. Also
+  `angleBetweenRad`, the unsigned angle between two unnormalised vectors
+  as `atan2(|a×b|, a·b)` — **the small-angle-safe form, and the reason it
+  is not `phaseAngleFromLegs`**: the cosine is flat near zero, so at
+  1e-6 rad the normalised dot rounds to 1 and `acos` returns exactly 0.
+  Its callers (the render cadence's measured on-screen displacement, a
+  moon's separation from the parent disc that hides it) work in that
+  regime; a phase angle, read in degrees across a half-turn, does not.
 - `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
   `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
   `ARCSEC_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
