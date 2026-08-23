@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
 import {
   POSE_SLOTS,
+  POSE_SLOT_NAMES,
   SETTLE_MS,
   decideRender,
   exposureCutMoved,
+  firstDifferingPoseSlot,
   posesDiffer,
   rebasePoseTranslation,
   writePose,
@@ -22,6 +24,29 @@ const pose = (fov = 50) => {
   );
   return out;
 };
+
+describe('firstDifferingPoseSlot', () => {
+  it('names the slot, so a readout can say WHAT moved', () => {
+    expect(POSE_SLOT_NAMES).toHaveLength(POSE_SLOTS);
+    expect(firstDifferingPoseSlot(pose(), pose())).toBeNull();
+    const moved = pose();
+    moved[9] += 1e-12;
+    expect(firstDifferingPoseSlot(pose(), moved)).toBe('target.y');
+    const rolled = pose();
+    rolled[6] -= 1e-12;
+    expect(firstDifferingPoseSlot(pose(), rolled)).toBe('quat.w');
+    expect(firstDifferingPoseSlot(pose(), pose(51))).toBe('fov');
+  });
+
+  it('agrees with posesDiffer on every slot', () => {
+    for (let i = 0; i < POSE_SLOTS; i++) {
+      const p = pose();
+      p[i] += 1;
+      expect(posesDiffer(pose(), p)).toBe(true);
+      expect(firstDifferingPoseSlot(pose(), p)).toBe(POSE_SLOT_NAMES[i]);
+    }
+  });
+});
 
 describe('rebasePoseTranslation', () => {
   it('shifts position and target, and nothing else', () => {

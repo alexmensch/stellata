@@ -278,7 +278,7 @@ export class PlanetMeshLayer {
   // handed, and the exported constant is what the tests read.
   private readonly loader = new THREE.ImageBitmapLoader()
     .setOptions({ ...TEXTURE_DECODE_OPTIONS });
-  private readonly requestRender: () => void;
+  private readonly requestRender: (reason: string) => void;
   /** Widest texture this device accepts. Bounds the ladder, and stands in for
    *  the device tier the VRAM budget is sized on. */
   private readonly maxTextureSize: number;
@@ -318,7 +318,7 @@ export class PlanetMeshLayer {
     field: PlanetBodyField,
     textureBaseUrl: string,
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
-    requestRender: () => void,
+    requestRender: (reason: string) => void,
     maxTextureSize: number,
   ) {
     this.field = field;
@@ -1117,7 +1117,7 @@ export class PlanetMeshLayer {
     if (rung && this.requestedRung.get(rung.body) !== rung.width) {
       this.releaseTexture(key);
     }
-    this.requestRender();
+    this.requestRender('planet-texture');
   }
 
   dispose(): void {

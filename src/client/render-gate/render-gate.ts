@@ -3,7 +3,8 @@
 
 import type * as THREE from 'three';
 import {
-  POSE_SLOTS, decideRender, posesDiffer, rebasePoseTranslation, writePose,
+  POSE_SLOTS, decideRender, firstDifferingPoseSlot, posesDiffer,
+  rebasePoseTranslation, writePose,
 } from './render-gate-pure';
 
 const CANVAS_WAKE_EVENTS = [
@@ -21,17 +22,46 @@ export class RenderGate {
   private readonly scratchPose = new Float64Array(POSE_SLOTS);
   private detachDom: (() => void) | null = null;
 
-  /** Debug-scoped view of the two decision inputs the gate owns, for the
-   *  render watcher (`../debug/render-watch/README.md`). Read-only — a
-   *  caller that wants frames calls `invalidate()` or `hold()`. */
-  get debugState(): { holds: number; lastActiveMs: number } {
-    return { holds: this.holds, lastActiveMs: this.lastActiveMs };
+  private lastWake: { reason: string; atMs: number } | null = null;
+  private lastDecision: {
+    continuous: boolean; poseChanged: boolean; cadenceDue: boolean; poseSlot: string | null;
+  } | null = null;
+
+  /** Debug-scoped view of what the gate decided and why, for the render
+   *  watcher (`../debug/render-watch/README.md`). Read-only — a caller
+   *  that wants frames calls `invalidate()` or `hold()`.
+   *
+   *  `lastWake` is the most recent `invalidate()` and its reason;
+   *  `lastDecision` is the last tick's inputs, with `poseSlot` naming the
+   *  first pose slot that moved. Between them they answer "what woke it",
+   *  which the activity stamp alone cannot: every source collapses into
+   *  one timestamp by the time anything reads it. */
+  get debugState(): {
+    holds: number;
+    lastActiveMs: number;
+    lastWake: { reason: string; atMs: number } | null;
+    lastDecision: {
+      continuous: boolean; poseChanged: boolean; cadenceDue: boolean; poseSlot: string | null;
+    } | null;
+  } {
+    return {
+      holds: this.holds,
+      lastActiveMs: this.lastActiveMs,
+      lastWake: this.lastWake,
+      lastDecision: this.lastDecision,
+    };
   }
 
   /** Request frames for the settle tail — call on any mutation the pose
-   *  snapshot and the continuous conditions cannot see. */
-  invalidate(): void {
+   *  snapshot and the continuous conditions cannot see.
+   *
+   *  `reason` is required because a wake is otherwise untraceable: every
+   *  source writes the same timestamp, so a frame rate pinned by one of a
+   *  dozen callers cannot be attributed after the fact. Keep it a short
+   *  stable slug — the watcher prints it verbatim. */
+  invalidate(reason: string): void {
     this.lastActiveMs = performance.now();
+    this.lastWake = { reason, atMs: this.lastActiveMs };
   }
 
   /** Render every frame until the returned release runs (ref-counted;
@@ -68,14 +98,17 @@ export class RenderGate {
   /** Wake on canvas pointer/wheel input and window keydown, so hover,
    *  drags, and shortcuts repaint within one tick. */
   attachDom(canvas: HTMLElement): void {
-    const wake = () => this.invalidate();
+    const wakes = new Map<string, () => void>();
     for (const name of CANVAS_WAKE_EVENTS) {
+      const wake = () => this.invalidate(`dom:${name}`);
+      wakes.set(name, wake);
       canvas.addEventListener(name, wake, { passive: true });
     }
-    window.addEventListener('keydown', wake);
+    const keyWake = () => this.invalidate('dom:keydown');
+    window.addEventListener('keydown', keyWake);
     this.detachDom = () => {
-      for (const name of CANVAS_WAKE_EVENTS) canvas.removeEventListener(name, wake);
-      window.removeEventListener('keydown', wake);
+      for (const name of CANVAS_WAKE_EVENTS) canvas.removeEventListener(name, wakes.get(name)!);
+      window.removeEventListener('keydown', keyWake);
     };
   }
 
@@ -91,15 +124,24 @@ export class RenderGate {
       this.scratchPose, camera.position, camera.quaternion, camera.fov,
       target, worldOffset,
     );
+    const poseChanged = posesDiffer(this.scratchPose, this.lastRenderedPose);
     const decision = decideRender(
       { holds: this.holds, lastActiveMs: this.lastActiveMs },
       {
         continuous: inputs.continuous,
-        poseChanged: posesDiffer(this.scratchPose, this.lastRenderedPose),
+        poseChanged,
         cadenceDue: inputs.cadenceDue,
         nowMs: inputs.nowMs,
       },
     );
+    this.lastDecision = {
+      continuous: inputs.continuous,
+      poseChanged,
+      cadenceDue: inputs.cadenceDue,
+      // Only when it changed — the scan is for diagnosis, not the hot path.
+      poseSlot: poseChanged
+        ? firstDifferingPoseSlot(this.scratchPose, this.lastRenderedPose) : null,
+    };
     this.lastActiveMs = decision.lastActiveMs;
     if (decision.render) this.lastRenderedPose.set(this.scratchPose);
     return decision.render;
@@ -111,5 +153,7 @@ export class RenderGate {
     this.holds = 0;
     this.lastActiveMs = Number.NEGATIVE_INFINITY;
     this.lastRenderedPose.fill(Number.NaN);
+    this.lastWake = null;
+    this.lastDecision = null;
   }
 }

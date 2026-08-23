@@ -136,9 +136,21 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
     setReadoutText(head, verdict.reason);
     setReadoutText(sub, classifyHealth({ tickHz, skipRatio, hitches, worstGapMs }));
 
+    const d = gate.lastDecision;
+    const stampedBy = d === null ? '—'
+      : d.continuous ? 'continuous (a camera transition is running)'
+      : d.poseChanged ? `pose moved: ${d.poseSlot}`
+      : d.cadenceDue ? 'the clock cadence (a scheduled redraw)'
+      : 'nothing this tick';
+    const wake = gate.lastWake;
+
     setReadoutText(body, [
       `clock rate   ${cadence.clockRate}x    holds ${gate.holds}`
         + `    ride ${cadence.rideMoved ? 'yes' : 'no'}`,
+      '',
+      `stamped by   ${stampedBy}`,
+      `last wake    ${wake === null ? 'none' : `${wake.reason}`
+        + `  (${((now - wake.atMs) / 1000).toFixed(1)}s ago)`}`,
       '',
       `hold budget  ${fixed(cadence.budgetSimS)} sim-s`,
       '  the most model time that may pass before a redraw',

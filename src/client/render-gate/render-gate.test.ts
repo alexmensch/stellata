@@ -114,6 +114,46 @@ describe('RenderGate pose snapshot', () => {
   });
 });
 
+describe('RenderGate wake attribution', () => {
+  it('records the reason, so a pinned frame rate is attributable', () => {
+    const { gate, tick, settle } = makeGate();
+    expect(gate.debugState.lastWake).toBeNull();
+    expect(settle(0)).toBe(false);
+    gate.invalidate('exposure-cut');
+    expect(gate.debugState.lastWake?.reason).toBe('exposure-cut');
+    expect(tick(SETTLE_MS)).toBe(true);
+    // Latest wins — the readout shows what woke it most recently.
+    gate.invalidate('epoch-bucket');
+    expect(gate.debugState.lastWake?.reason).toBe('epoch-bucket');
+  });
+
+  it('the last decision names which input fired, and which pose slot', () => {
+    const { gate, camera, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    expect(gate.debugState.lastDecision).toEqual({
+      continuous: false, poseChanged: false, cadenceDue: false, poseSlot: null,
+    });
+    camera.fov += 1e-9;
+    expect(tick(SETTLE_MS)).toBe(true);
+    expect(gate.debugState.lastDecision?.poseChanged).toBe(true);
+    expect(gate.debugState.lastDecision?.poseSlot).toBe('fov');
+    // A cadence frame is distinguishable from a pose move.
+    expect(tick(SETTLE_MS + 16, false, true)).toBe(true);
+    expect(gate.debugState.lastDecision).toMatchObject({
+      poseChanged: false, cadenceDue: true, poseSlot: null,
+    });
+  });
+
+  it('dispose clears both, like every other sentinel', () => {
+    const { gate, tick } = makeGate();
+    tick(0);
+    gate.invalidate('resize');
+    gate.dispose();
+    expect(gate.debugState.lastWake).toBeNull();
+    expect(gate.debugState.lastDecision).toBeNull();
+  });
+});
+
 describe('RenderGate ride rebase', () => {
   /** One focal-ride step: camera and target translate together, exactly
    *  as `Stellata.applyRideDelta` applies it. */

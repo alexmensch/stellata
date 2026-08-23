@@ -233,6 +233,13 @@ driving.
 
 ## Invalidation sources (`invalidate()` callers)
 
+**Every caller passes a reason slug**, and the gate keeps the last one
+(`debugState.lastWake`) alongside the last tick's decision inputs. Not
+decoration: every source writes the same `lastActiveMs`, so once stamped,
+a frame rate pinned by one of a dozen callers is unattributable. The
+render watcher prints the slug (`../debug/render-watch/README.md`).
+
+
 - Bus `'state'` — focus, vector, filter (every `FilterController`
   mutation, and every `ExposureController` one through its `onChange`),
   cameraMode, pois, warp start, monochrome, and every discrete clock

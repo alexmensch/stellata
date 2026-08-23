@@ -5,6 +5,27 @@ import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
 
 export const POSE_SLOTS = 14;
 
+/** Slot names in `writePose` order, so a readout can say WHICH part of the
+ *  pose moved rather than only that something did. */
+export const POSE_SLOT_NAMES = [
+  'pos.x', 'pos.y', 'pos.z',
+  'quat.x', 'quat.y', 'quat.z', 'quat.w',
+  'fov',
+  'target.x', 'target.y', 'target.z',
+  'worldOffset.x', 'worldOffset.y', 'worldOffset.z',
+] as const;
+
+/** Name of the first slot that differs, or null when the poses match.
+ *  Diagnosis only — `posesDiffer` stays the hot path. */
+export function firstDifferingPoseSlot(
+  a: ArrayLike<number>, b: ArrayLike<number>,
+): string | null {
+  for (let i = 0; i < POSE_SLOTS; i++) {
+    if (a[i] !== b[i]) return POSE_SLOT_NAMES[i];
+  }
+  return null;
+}
+
 export const SETTLE_MS = 1500;
 
 interface Vec3Like { readonly x: number; readonly y: number; readonly z: number }

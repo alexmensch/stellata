@@ -61,8 +61,10 @@ export interface KindContext {
    *  (`../render-gate/README.md`), and the gate sees only the camera,
    *  the clock, and the bus — so anything landing between ticks that
    *  changes what a layer draws (a texture resolving, a deferred fetch)
-   *  must say so here or it renders on whatever tick happens next. */
-  requestRender(): void;
+   *  must say so here or it renders on whatever tick happens next.
+   *  `reason` is a short stable slug the render watcher prints, so a
+   *  frame rate pinned by one of these is attributable. */
+  requestRender(reason: string): void;
 }
 
 /** One kind's pick path. It IS `HoverProvider.pick` — the Picker

@@ -675,7 +675,7 @@ export class Stellata implements FrameAnchor {
       detailPermits: (id) => this.detailPermits(id),
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
-      requestRender: () => this.renderGate.invalidate(),
+      requestRender: (reason) => this.renderGate.invalidate(`kind:${reason}`),
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);
@@ -956,8 +956,8 @@ export class Stellata implements FrameAnchor {
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
     this.trackballSettle.attachDom(canvas);
-    this.bus.on('state', () => this.renderGate.invalidate());
-    this.bus.on('planetSystem', () => this.renderGate.invalidate());
+    this.bus.on('state', () => this.renderGate.invalidate('bus:state'));
+    this.bus.on('planetSystem', () => this.renderGate.invalidate('bus:planetSystem'));
     this.input = this.createInputController();
     this.animate();
   }
@@ -1005,7 +1005,9 @@ export class Stellata implements FrameAnchor {
         // evaluates, and it only evaluates on rendered frames — so hold
         // the settle tail open until the event decays. Only while the
         // dimmed body is actually on screen: see the field's getter.
-        if (this.planetBodyField.holdsVisibleEclipseDim) this.renderGate.invalidate();
+        if (this.planetBodyField.holdsVisibleEclipseDim) {
+          this.renderGate.invalidate('eclipse-dim:planet');
+        }
       },
       cadenceSimBudgetS: (ctx) =>
         this.planetBodyField.cadenceSimBudgetS(
@@ -1056,7 +1058,7 @@ export class Stellata implements FrameAnchor {
         // the settle tail open until the event decays. Only while the
         // dimmed star is actually on screen: see the field's getter.
         if (this.eclipsePhotometryField?.holdsVisibleEclipseDim === true) {
-          this.renderGate.invalidate();
+          this.renderGate.invalidate('eclipse-dim:binary');
         }
       },
       cadenceSimBudgetS: (ctx) =>
@@ -1329,7 +1331,7 @@ export class Stellata implements FrameAnchor {
     // The rewrite changed what the frame would draw; the clock cadence
     // can no longer assume nothing moved, so a bucket crossing between
     // cadence frames must repaint.
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('epoch-bucket');
     if (this.warp.isActive() || d.lengthSq() === 0) return;
     this.camera.position.add(d);
     this.controls.target.add(d);
@@ -1359,7 +1361,7 @@ export class Stellata implements FrameAnchor {
   // frame. Safe to call multiple times; the most recent dust wins. Pass
   // null to detach (e.g. to disable extinction for a mode toggle).
   attachDust(dust: DustField | null) {
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('attach:dust');
     const u = this.sharedUniforms;
     // Re-attach with a different DustField? Release the previous one's
     // ~128 MiB Data3DTexture before swapping the reference, otherwise
@@ -1396,7 +1398,7 @@ export class Stellata implements FrameAnchor {
     // cache as the texture densifies.
     dust.onProgress(() => {
       this.extinctionPrepass?.markDirty();
-      this.renderGate.invalidate();
+      this.renderGate.invalidate('dust-chunk');
     });
     // Share the same DustField with the Milky Way pass so the band's dust
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
@@ -1429,7 +1431,7 @@ export class Stellata implements FrameAnchor {
    *  frame walks the binary relation list and perturbs the relevant
    *  star-pipeline `iPosition` slots against `getT()`. */
   attachBinaries(binaries: BinariesData | null): void {
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('attach:binaries');
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
     this.binariesData = binaries;
@@ -1763,7 +1765,7 @@ export class Stellata implements FrameAnchor {
    *  readings — the chart label anchors, and the membership lookup every
    *  non-stellar focus card resolves through. */
   attachConstellationBoundaries(artifact: BoundaryArtifact): void {
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('attach:boundaries');
     this.constellationBoundaryLayer.attach(artifact, this.exposure.getLimitMag());
     this.constellationBoundaryLayer.setMonochrome(this.monochrome);
     const regions = createConstellationRegions(artifact, this.catalog.constellations);
@@ -1812,7 +1814,7 @@ export class Stellata implements FrameAnchor {
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */
   attachDustParticles(data: DustParticleData) {
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('attach:dustParticles');
     this.dustParticles.attach(data);
   }
 
@@ -1840,11 +1842,11 @@ export class Stellata implements FrameAnchor {
         if (data === null || this.disposed) return;
         this.dustParticles.attach(data);
         this.dustParticles.setStrength(this.lastParticleStrength);
-        this.renderGate.invalidate();
+        this.renderGate.invalidate('dust-particles:loaded');
       });
     }
     this.dustParticles.setStrength(x);
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('dust-particles:strength');
   }
 
 
@@ -2130,7 +2132,7 @@ export class Stellata implements FrameAnchor {
   }
 
   private onResize = () => {
-    this.renderGate.invalidate();
+    this.renderGate.invalidate('resize');
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
@@ -2340,7 +2342,7 @@ export class Stellata implements FrameAnchor {
     // otherwise.
     if (exposureCutMoved(appliedDm, this.lastInvalidatedDm)) {
       this.lastInvalidatedDm = appliedDm;
-      this.renderGate.invalidate();
+      this.renderGate.invalidate('exposure-cut');
     }
     perfMeasure('pre-render');
     perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
