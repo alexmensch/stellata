@@ -85,6 +85,34 @@ so sub-frame events read as a soft shimmer while real-time dips
 exactly 1.0 after occlusion ends and leave the field's active set;
 frames that write nothing skip the attribute re-upload entirely.
 
+#### What the render cadence reads
+
+`cadenceReport(simDtS)` is this field's declaration to the render gate
+(`../../render-gate/cadence/README.md`), and it is photometric only — the
+members' on-screen motion is `../binary-orbit-field.ts`'s to report, and
+this field deliberately shares none of its screen-pixel LOD.
+
+A dip's slope is `targets` differenced against `prevTargets` over the
+elapsed sim time; the two maps ping-pong at the top of `update`, so the
+pair costs no allocation. Exact, zero through totality on its own, and no
+model of stellar radii or shadow speeds — the planet field's dims use the
+same mechanism.
+
+Two contracts worth stating:
+
+- **A dip that ENDED this frame is still counted**, by walking the
+  previous frame's targets for keys this frame's map lacks. Missing them
+  would leave the recovery back to full brightness unbudgeted.
+- **The magnitude gate against the LIVE threshold is what keeps an
+  invisible eclipse from setting the frame rate.** Each Galilean is
+  eclipsed 2–4 h per orbit, ~12 % duty for the four, all under the
+  default view's cut; counting those held the frame rate through every
+  invisible eclipse in the model, which is how the first attempt's idle
+  win came to depend on nothing happening to be in shadow.
+
+A dip's FIRST frame differences 1 against 1 and reports nothing — onset
+is what the 30 s cap is for.
+
 #### Shader-side wiring
 
 `iEclipseDim` is folded into appMag in the **glow pass only**
