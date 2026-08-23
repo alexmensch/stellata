@@ -28,6 +28,13 @@ import {
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
+  CADENCE_REPORT_STILL,
+  fasterRate,
+  type CadenceReport,
+} from '../../render-gate/cadence/clock-cadence-pure';
+import type { CadenceCtx } from '../../scene/scene-layer';
+import { angleBetweenRad } from '../../util/angles';
+import {
   GLARE_PHOTOCENTRE_SHIFT,
   MESH_FADE_FULL_PX,
   MESH_FADE_MIN_PX,
@@ -60,7 +67,6 @@ import {
   eclipseDimFromOffsets,
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
-import { parentIndexOf } from '../ephemerides/orbit-descriptor';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
 import { relativeLuminance } from '../../hdr/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
@@ -75,6 +81,19 @@ import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
  *  separation still reads as a single blob to the eye. Iterated at
  *  smoke. */
 export const BODY_COLLAPSE_THRESHOLD_PX = 6;
+
+/** IAU prime-meridian rates are published in degrees per day; the cadence
+ *  wants radians per sim second. */
+const SPIN_DEG_PER_DAY_TO_RAD_PER_S = Math.PI / 180 / 86400;
+const DEG_TO_RAD = Math.PI / 180;
+
+/** Magnitude of a body's own surface rotation rate, rad per sim second.
+ *  Zero for a body publishing no IAU rotation elements — the mesh layer
+ *  poses no spin for one either, so nothing on its surface moves. */
+function bodySpinRadPerSimS(planet: Planet): number {
+  const w = planet.rotation?.wDegPerDay;
+  return w === undefined ? 0 : Math.abs(w) * SPIN_DEG_PER_DAY_TO_RAD_PER_S;
+}
 
 /** One planet's per-frame view geometry: apparent magnitude, world-local
  *  position, camera distance, and true angular disc. Computed once by
@@ -264,6 +283,12 @@ export class PlanetBodyField {
   // Grown, shifted, and written in lockstep with bufs.localRel.
   private localRel64!: Float64Array;
   private dimTargets = new Map<number, number>();
+  // Last rendered frame's dim targets. Ping-ponged with `dimTargets` at
+  // the top of update() so the pair costs no allocation, and read by the
+  // cadence report: a dim's own slope is the difference between the two,
+  // which is exact, goes to zero through totality on its own, and needs
+  // no model of stellar radii or shadow speeds.
+  private prevDimTargets = new Map<number, number>();
   private readonly tmpUmbraGlow: [number, number, number] = [0, 0, 0];
   private dimActive = new Set<number>();
   private lastDimNowMs: number | null = null;
@@ -287,6 +312,23 @@ export class PlanetBodyField {
   // mirror draws' member gate (opposite sense, keyed on the
   // LOCAL_DEPTH_PASS define).
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
+  // Body positions as the LAST rendered frame drew them, in the same
+  // renderer-local frame and layout as `localRel64` plus the host offset.
+  // Differencing against them gives each body its own velocity over
+  // exactly the interval the focal ride translated the camera over, so
+  // the two cancel to the bit for the ridden focal
+  // (../../render-gate/README.md § The focal ride).
+  private prevBodyLocal64 = new Float64Array(0);
+  private readonly cadenceForward = new THREE.Vector3();
+  private readonly parentGeom = {
+    sepRad: Number.NaN,
+    parentDistPc: 0,
+    parentRadiusPc: 0,
+  };
+  // Every registry entry drawing planet-anchored content shares one walk
+  // per frame — the mesh + glare, the orbit rings, the local cluster.
+  private cadenceCacheFrame = -1;
+  private cadenceCache: CadenceReport = CADENCE_REPORT_STILL;
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
   private ringPoleTmp = { x: 0, y: 0, z: 1 };
@@ -430,6 +472,8 @@ export class PlanetBodyField {
     this.bufs.ringFlux.fill(0);
     this.dimActive.clear();
     this.dimTargets.clear();
+    this.prevDimTargets.clear();
+    this.prevBodyLocal64.fill(Number.NaN);
   }
 
   /**
@@ -439,6 +483,19 @@ export class PlanetBodyField {
    */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
     if (newWorldOffset.equals(this.worldOffset)) return;
+    // The cadence snapshot is in the OLD local frame, so shift it by the
+    // same origin step the bodies take. Re-seeding it instead would read
+    // as every body jumping the origin shift on the next frame, which is
+    // a violation the safety net would report and a budget collapse
+    // nothing asked for.
+    const shiftX = this.worldOffset.x - newWorldOffset.x;
+    const shiftY = this.worldOffset.y - newWorldOffset.y;
+    const shiftZ = this.worldOffset.z - newWorldOffset.z;
+    for (let i = 0; i < this.liveCount * 3; i += 3) {
+      this.prevBodyLocal64[i + 0] += shiftX;
+      this.prevBodyLocal64[i + 1] += shiftY;
+      this.prevBodyLocal64[i + 2] += shiftZ;
+    }
     this.worldOffset.copy(newWorldOffset);
     for (const host of this.hosts.values()) {
       host.hostLocalPos.copy(host.hostAbsPos).sub(this.worldOffset);
@@ -472,6 +529,8 @@ export class PlanetBodyField {
   update(camera: THREE.PerspectiveCamera, t: number, nowMs: number): void {
     if (this.liveCount === 0) {
       this.group.visible = false;
+      this.prevDimTargets.clear();
+      this.dimTargets.clear();
       return;
     }
     // Rendering is gated by hidden; the ephemeris walk is
@@ -481,6 +540,11 @@ export class PlanetBodyField {
     // there strands the anchor's orbital motion. Only the GPU upload is
     // skipped while invisible (the CPU buffer still advances).
     perfMark('solar.bodies');
+    this.snapshotBodyPositions();
+    const swapDims = this.prevDimTargets;
+    this.prevDimTargets = this.dimTargets;
+    this.dimTargets = swapDims;
+    this.dimTargets.clear();
     this.lastT = t;
     const render = !this.hidden;
     this.group.visible = render;
@@ -506,7 +570,6 @@ export class PlanetBodyField {
     if (blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend)) {
       this.markAttributeDirty('eclipseDim');
     }
-    this.dimTargets.clear();
     perfMeasure('solar.bodies');
   }
 
@@ -1005,6 +1068,190 @@ export class PlanetBodyField {
     return dVp <= 0 ? 0 : physDiscPx;
   }
 
+  /** Freeze the positions the bodies are about to leave, in `localRel64`'s
+   *  layout plus the host offset. Runs at the top of `update`, before the
+   *  ephemeris walk overwrites them, so the difference the cadence report
+   *  takes spans exactly one rendered frame. Every live instance is
+   *  snapshotted, drawn or not — a body emerging from behind its parent
+   *  needs a previous position the moment it starts counting. */
+  private snapshotBodyPositions(): void {
+    for (const host of this.hosts.values()) {
+      for (let i = 0; i < host.count; i++) {
+        const base = (host.startInstance + i) * 3;
+        this.prevBodyLocal64[base + 0] = host.hostLocalPos.x + this.localRel64[base + 0];
+        this.prevBodyLocal64[base + 1] = host.hostLocalPos.y + this.localRel64[base + 1];
+        this.prevBodyLocal64[base + 2] = host.hostLocalPos.z + this.localRel64[base + 2];
+      }
+    }
+  }
+
+  /** Angular separation between a body and its parent as seen from the
+   *  camera, into `parentGeom`, with the parent's own camera distance and
+   *  physical radius. The parent is the parent BODY for a moon and the
+   *  host star otherwise. `sepRad` is NaN when the camera sits exactly on
+   *  the parent — observe mode parks there, and a parent with no screen
+   *  point has no separation to measure.
+   *
+   *  The two callers want opposite ends of the range — occlusion asks
+   *  about separations near 1e-4 rad, the collapse test about a few px —
+   *  which is why this rides `angleBetweenRad` rather than the phase
+   *  function's `acos` form (`../../util/README.md`). */
+  private parentGeometryInto(
+    host: AttachedHost,
+    planetIdx: number,
+    view: PlanetView,
+    camPos: Readonly<THREE.Vector3>,
+  ): void {
+    const g = this.parentGeom;
+    const pi = systemFamily(host.ps.planets).parentIdx[planetIdx];
+    let px = host.hostLocalPos.x;
+    let py = host.hostLocalPos.y;
+    let pz = host.hostLocalPos.z;
+    g.parentRadiusPc = host.hostRadiusPc;
+    if (pi >= 0) {
+      const base = (host.startInstance + pi) * 3;
+      px += this.localRel64[base + 0];
+      py += this.localRel64[base + 1];
+      pz += this.localRel64[base + 2];
+      g.parentRadiusPc = this.bufs.radius[host.startInstance + pi];
+    }
+    const ux = view.planetX - camPos.x;
+    const uy = view.planetY - camPos.y;
+    const uz = view.planetZ - camPos.z;
+    const vx = px - camPos.x;
+    const vy = py - camPos.y;
+    const vz = pz - camPos.z;
+    g.parentDistPc = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    g.sepRad = g.parentDistPc === 0
+      ? Number.NaN
+      : angleBetweenRad(ux, uy, uz, vx, vy, vz);
+  }
+
+  /** True when the parent's own disc hides this body from the camera — a
+   *  moon round the far side of its planet, or a planet behind its host
+   *  star. Such a body puts no ink on screen, so it sets no frame rate,
+   *  and it sets one again the moment it emerges (see the render gate's
+   *  README on what that handoff costs).
+   *
+   *  Occlusion BY THE PARENT is the whole of it. General occlusion would
+   *  need a depth query, and the only pairs close enough on screen to
+   *  hide each other for long are a parent and its own children. */
+  private isViewOccludedByParent(
+    host: AttachedHost,
+    planetIdx: number,
+    view: PlanetView,
+    camPos: Readonly<THREE.Vector3>,
+  ): boolean {
+    this.parentGeometryInto(host, planetIdx, view, camPos);
+    const { sepRad, parentDistPc, parentRadiusPc } = this.parentGeom;
+    if (Number.isNaN(sepRad) || view.dVp <= parentDistPc) return false;
+    return sepRad < Math.atan(parentRadiusPc / parentDistPc);
+  }
+
+  /** This frame's cadence report over the bodies actually drawn — the
+   *  render gate's README owns the design.
+   *
+   *  Per body, two motion terms and one photometric one, each from that
+   *  body's own state rather than from any bound over the population:
+   *
+   *  - TRANSLATION. The body's own velocity, differenced over the last
+   *    rendered frame, minus the camera's, projected across the line of
+   *    sight and divided by the camera distance. The subtraction is exact
+   *    rather than bounded: the ride translated the camera by precisely
+   *    the focal's displacement over this same interval, so the ridden
+   *    focal contributes zero here and only its rotation below.
+   *  - ROTATION. The body's own IAU spin rate across its own angular
+   *    radius. Self-gating: an unresolved body's angular radius is
+   *    negligible, so a distant rotator cannot bind.
+   *  - BRIGHTNESS. The eclipse dim's own slope, from differencing the
+   *    target just computed against the last — no radius-and-speed model,
+   *    exact through totality, and the same mechanism the binary field
+   *    uses.
+   *
+   *  `observedPx` is measured independently of all of that, as the angle
+   *  the body actually swept between the two frames' camera positions.
+   *  The safety net compares it against what the schedule promised, which
+   *  would be worth nothing if it re-ran the same arithmetic. */
+  cadenceReport(ctx: CadenceCtx): CadenceReport {
+    if (this.cadenceCacheFrame === ctx.frameId) return this.cadenceCache;
+    this.cadenceCacheFrame = ctx.frameId;
+    this.cadenceCache = this.walkCadenceReport(ctx);
+    return this.cadenceCache;
+  }
+
+  private walkCadenceReport(ctx: CadenceCtx): CadenceReport {
+    if (this.liveCount === 0 || this.hidden) return CADENCE_REPORT_STILL;
+    const camPos = ctx.camera.position;
+    // Half-angle to a frustum CORNER, which is the widest direction the
+    // frame reaches: tan(fovY/2)·hypot(1, aspect) is the corner's tangent
+    // in view space. A body whose whole disc sits outside it draws
+    // nothing, so it sets no frame rate — this is the other half of "only
+    // ink on screen counts", and it is what makes the budget rise and
+    // fall as a fast body enters and leaves the view.
+    const halfDiagRad = Math.atan(
+      Math.tan(0.5 * ctx.camera.fov * DEG_TO_RAD) * Math.hypot(1, ctx.camera.aspect),
+    );
+    this.cadenceForward.set(0, 0, -1).applyQuaternion(ctx.camera.quaternion);
+    const fwd = this.cadenceForward;
+    const vc = ctx.cameraVelPcPerSimS;
+    const dt = ctx.simDtS;
+    // Nothing to difference before the second rendered frame, and across a
+    // clock jump the step is not a velocity. Both leave the rotation term
+    // standing and hand the rest to the cap.
+    const differenced = Number.isFinite(dt) && dt !== 0;
+    const prevCamX = camPos.x - vc.x * dt;
+    const prevCamY = camPos.y - vc.y * dt;
+    const prevCamZ = camPos.z - vc.z * dt;
+    let screenPxPerSimS = 0;
+    let fluxFracPerSimS = 0;
+    let observedPx = 0;
+    let observedFluxFrac = 0;
+    this.forEachDrawnBodyView(camPos, (host, i, view) => {
+      if (!this.bodyInkVisible(view)) return;
+      if (this.isViewOccludedByParent(host, i, view, camPos)) return;
+      const idx = host.startInstance + i;
+      const d = view.dVp;
+      const ux = (view.planetX - camPos.x) / d;
+      const uy = (view.planetY - camPos.y) / d;
+      const uz = (view.planetZ - camPos.z) / d;
+      const angRadiusRad = Math.atan(this.bufs.radius[idx] / d);
+      if (angleBetweenRad(fwd.x, fwd.y, fwd.z, ux, uy, uz)
+        - angRadiusRad > halfDiagRad) return;
+      // The two terms ADD rather than competing for a min: a feature on
+      // the limb of a translating, spinning body carries both, and their
+      // directions are unrelated, so the scalar sum is the bound on the
+      // fastest ink. (The mandate's worked example took a min over the
+      // two, which under-counts exactly that feature.)
+      let rate = bodySpinRadPerSimS(host.ps.planets[i]) * angRadiusRad * ctx.pxPerRadian;
+      if (differenced) {
+        const base = idx * 3;
+        const qx = this.prevBodyLocal64[base + 0];
+        const qy = this.prevBodyLocal64[base + 1];
+        const qz = this.prevBodyLocal64[base + 2];
+        const vx = (view.planetX - qx) / dt - vc.x;
+        const vy = (view.planetY - qy) / dt - vc.y;
+        const vz = (view.planetZ - qz) / dt - vc.z;
+        const along = vx * ux + vy * uy + vz * uz;
+        const tx = vx - along * ux;
+        const ty = vy - along * uy;
+        const tz = vz - along * uz;
+        rate += (Math.sqrt(tx * tx + ty * ty + tz * tz) / d) * ctx.pxPerRadian;
+        observedPx = fasterRate(
+          observedPx,
+          angleBetweenRad(ux, uy, uz, qx - prevCamX, qy - prevCamY, qz - prevCamZ)
+            * ctx.pxPerRadian,
+        );
+      }
+      screenPxPerSimS = fasterRate(screenPxPerSimS, rate);
+      const dimStep = Math.abs(
+        (this.dimTargets.get(idx) ?? 1) - (this.prevDimTargets.get(idx) ?? 1),
+      );
+      observedFluxFrac = fasterRate(observedFluxFrac, dimStep);
+      if (differenced) fluxFracPerSimS = fasterRate(fluxFracPerSimS, dimStep / dt);
+    });
+    return { screenPxPerSimS, fluxFracPerSimS, observedPx, observedFluxFrac };
+  }
+
   /** True when the body currently renders as one on-screen point with
    *  its parent (host star for a planet, parent body for a moon):
    *  drawn this frame — past the same cutoff the shader applies — AND
@@ -1029,37 +1276,11 @@ export class PlanetBodyField {
     camera: THREE.PerspectiveCamera,
   ): boolean {
     if (this.hidden) return false;
-    const camPos = camera.position;
-    const { appMag, planetX, planetY, planetZ, dVp } = view;
-    if (dVp <= 0 || appMag > this.drawCutoffMag()) return false;
-
-    const planet = host.ps.planets[i];
-    const pi = planet.parentName ? parentIndexOf(host.ps.planets, planet.parentName) : -1;
-    let px = host.hostLocalPos.x;
-    let py = host.hostLocalPos.y;
-    let pz = host.hostLocalPos.z;
-    if (pi >= 0) {
-      const base = (host.startInstance + pi) * 3;
-      px += this.localRel64[base + 0];
-      py += this.localRel64[base + 1];
-      pz += this.localRel64[base + 2];
-    }
-
-    const ux = planetX - camPos.x;
-    const uy = planetY - camPos.y;
-    const uz = planetZ - camPos.z;
-    const vx = px - camPos.x;
-    const vy = py - camPos.y;
-    const vz = pz - camPos.z;
-    // Camera exactly at the parent (observe mode parks there): the
-    // parent has no screen point to collapse onto.
-    if (vx * vx + vy * vy + vz * vz === 0) return false;
-    const cx = uy * vz - uz * vy;
-    const cy = uz * vx - ux * vz;
-    const cz = ux * vy - uy * vx;
-    const angle = Math.atan2(Math.sqrt(cx * cx + cy * cy + cz * cz), ux * vx + uy * vy + uz * vz);
-    const pxPerRad = pixelsPerRadianFromUniforms(this.magShared);
-    return angle * pxPerRad < BODY_COLLAPSE_THRESHOLD_PX;
+    if (view.dVp <= 0 || view.appMag > this.drawCutoffMag()) return false;
+    this.parentGeometryInto(host, i, view, camera.position);
+    const { sepRad } = this.parentGeom;
+    if (Number.isNaN(sepRad)) return false;
+    return sepRad * pixelsPerRadianFromUniforms(this.magShared) < BODY_COLLAPSE_THRESHOLD_PX;
   }
 
   private hostOfInstance(instanceIdx: number): AttachedHost | null {
@@ -1373,6 +1594,7 @@ export class PlanetBodyField {
     }
     this.bufs = bufs;
     this.localRel64 = new Float64Array(capacity * INSTANCE_ATTR_SPECS.localRel.dims);
+    this.prevBodyLocal64 = new Float64Array(capacity * INSTANCE_ATTR_SPECS.localRel.dims);
     this.instanceHost = new Int32Array(capacity).fill(-1);
   }
 
@@ -1380,11 +1602,13 @@ export class PlanetBodyField {
     this.layoutVersion++;
     const oldBufs = this.bufs;
     const oldLocalRel64 = this.localRel64;
+    const oldPrevBodyLocal64 = this.prevBodyLocal64;
     this.allocateBuffers(this.capacity * 2);
     for (const [key] of SPEC_ENTRIES) {
       this.bufs[key].set(oldBufs[key]);
     }
     this.localRel64.set(oldLocalRel64);
+    this.prevBodyLocal64.set(oldPrevBodyLocal64);
     this.capacity *= 2;
     // Replace the geometry with a fresh one over the new buffers.
     // Materials and meshes are re-bound via three.js's normal

@@ -57,6 +57,9 @@ src/client/solar-system/planets/
                                   too, so the body the camera is parked at
                                   is unpickable rather than invisible and
                                   clickable.
+                                  cadenceReport is the field's per-frame
+                                  answer to the render gate (§ What the
+                                  render cadence reads).
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   § Planet mesh LOD. Builds its three
                                   surfaces through ../materials/, which
@@ -250,6 +253,14 @@ through. A planet in *front* (transit) dims the
 host by (R_p/R_host)² — negligible and owned by the star pipeline,
 so it is deliberately not modelled.
 
+## What the render cadence reads
+
+`cadenceReport(ctx)` is this field's declaration to the render gate: the
+fastest on-screen speed of the bodies it is actually drawing, and the
+fastest brightness slope among them. The walk, the two extra visibility
+gates it applies, why each body's velocity is differenced rather than
+modelled, and why a culled host correctly reports zero are
+`../../render-gate/cadence/README.md` § What the planet field reports.
 ## Physical-luminance emission
 
 Both layers emit into the scene-wide HDR unit
@@ -366,22 +377,11 @@ crossfade.
   orders camera rays, not sun rays.
 - **Textures**: lazy-fetched from `public/textures/<body>-<rung>.jpg`
   (pipeline: `data/textures/README.md`) when the body crosses
-  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. Which rung is
-  § Texture tier selection. A 404 is
-  expected data — texture-less bodies (Uranus, future exoplanets)
-  render the representative-colour + limb-darkening base path; there
-  is no separate renderer for them. Textures load with
-  `NoColorSpace` to match the pipeline's raw-framebuffer convention.
-  They decode through `ImageBitmapLoader` on `TEXTURE_DECODE_OPTIONS`,
-  never `TextureLoader`: the flip is baked into the bitmap, so
-  orientation never rests on `UNPACK_FLIP_Y_WEBGL`, whose tracked
-  value a raw pixel-store write elsewhere can desync from GL
-  (`../../loaders/README.md`) — a map that arrives unflipped shades
-  the mirrored hemisphere and looks like nothing else is wrong. The
-  same options forbid premultiplication, which would let each horizon
-  map's alpha-borne azimuth scale the other three.
-  Either outcome resolving requests a frame (`ctx.requestRender`): a
-  load landing between ticks changes what the body draws, and frames
+  `TEXTURE_PREFETCH_PX` on approach; first load pays zero. Which rung,
+  and the decode contract every load rides, are
+  `textures/README.md` — including why a 404 is expected data. Either
+  outcome resolving requests a frame (`ctx.requestRender('planet-texture')`):
+  a load landing between ticks changes what the body draws, and frames
   are on demand (`../../render-gate/README.md`).
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
