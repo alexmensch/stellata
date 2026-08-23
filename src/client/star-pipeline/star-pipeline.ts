@@ -46,7 +46,7 @@ export function applyGlowBlendDefaults(m: THREE.Material) {
 // material left, which is why the symptom is order-dependent (correct
 // entering chart on load, white discs toggling in) rather than a
 // consistent failure.
-export function applyMonochromeBlend(m: THREE.ShaderMaterial) {
+export function applyMonochromeBlend(m: THREE.Material) {
   m.blending = THREE.MultiplyBlending;
   m.premultipliedAlpha = true;
   m.depthWrite = false;

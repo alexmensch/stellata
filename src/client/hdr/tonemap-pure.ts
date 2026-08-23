@@ -16,7 +16,7 @@ export const SRGB_LINEAR_SLOPE = 12.92;
 export const SRGB_ENCODE_GAIN = 1.055;
 export const SRGB_ENCODE_OFFSET = 0.055;
 export const SRGB_ENCODE_EXPONENT = 1 / 2.4;
-const SRGB_DECODE_KNEE = 0.04045;
+export const SRGB_DECODE_KNEE = 0.04045;
 
 /** Interleaved-gradient-noise constants of `stellataDither` — the scalar
  *  and the fragCoord dot vector. tonemap.glsl duplicates the literals

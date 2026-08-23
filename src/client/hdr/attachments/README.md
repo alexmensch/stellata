@@ -137,7 +137,9 @@ later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.
 
 On WebGPU the same table is expressed in node-material terms — output
-structs whose masked slots write the blend's identity element
+structs whose masked slots write the blend's identity element, and a park
+mask that scales the WHOLE statistic texel rather than its flux, since an
+alpha-composited writer's identity needs alpha 0 too
 (`src/client/webgpu/hdr/README.md` § The gate becomes the output
 struct); everything below is the WebGL2 mechanism.
 

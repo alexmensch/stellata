@@ -32,14 +32,25 @@ src/client/webgpu/
                                     geometry, so a new attribute there
                                     fails CI until this is updated.
   tonemap-tsl.ts                    TSL mirror of stellata_tonemap's
-                                    undithered operator, over
-                                    tonemap-pure's constants.
+                                    undithered operator and the sRGB
+                                    transfer pair, over tonemap-pure's
+                                    constants.
   emission-tsl.ts                   TSL mirror of the emission unit's
-                                    point-source peak rule.
+                                    point-source peak, flux-peak,
+                                    statistic and occluder texel rules.
+  perceptual-disc-tsl.ts            TSL mirror of the
+                                    stellata_perceptual_disc chunk (dM
+                                    knee, √Δm size, exponent, profile).
+                                    Shared by the star field and the
+                                    planet glare, exactly as the GLSL
+                                    chunk is.
   star/                             The star layer: packed geometry + the
                                     three depth-honest pipelines (D2 glow,
                                     D3 core mask, D4 disc) and the MRT
                                     write side — its own README.
+  solar-system/                     The planet mesh, ring annulus,
+                                    atmosphere shell, reflected glare and
+                                    probe glyph — its own README.
   hdr/                              The HDR chain on this backend: MRT
                                     target, summation, resolve, reduction
                                     readback, and the output-struct form
@@ -76,12 +87,16 @@ user-facing "requires WebGPU" gate page is a separate concern.
 
 ## What the flag boots today
 
-The **star field with the full app alive**: every CPU subsystem
-(catalog, star frame, focus, picker, typeahead, URL state, overlays, HUD,
-render gate) runs identically; the renderer draws the seam's own scene
-(`WebGpuSeam.scene`), which gains layers as port children land. The star
-layer (`star/README.md`) carries all three depth-honest pipelines; its
-still-missing siblings (extinction, chart, mirrors) are listed there.
+The **star field and the solar system's main-pass surfaces, with the full
+app alive**: every CPU subsystem (catalog, star frame, focus, picker,
+typeahead, URL state, overlays, HUD, render gate) runs identically; the
+renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
+layers as port children land. The star layer (`star/README.md`) carries
+all three depth-honest pipelines; its still-missing siblings (extinction,
+chart, mirrors) are listed there. The solar-system family
+(`solar-system/README.md`) is ported whole, but only its reflected-glare
+billboards and probe glyphs *draw* — the spheroid mesh, ring annulus and
+atmosphere shell render exclusively in the parked local depth pass.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
@@ -112,7 +127,7 @@ in the same PR:
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
-| Local depth pass | `animate()` skips `localDepthPass.render` | local-depth on WebGPU (`0it.12`) |
+| Local depth pass | `animate()` skips `localDepthPass.render` — and with it the planet mesh, ring annulus, atmosphere shell and every mirror draw, none of which the main pass ever renders | local-depth on WebGPU (`0it.12`) |
 | Star local-pass membership collapse | `StarLocalCluster.update` parks on `localPassLive: false` — members would render as bare core-mask stamps with no mirror to repaint them | local-depth on WebGPU (`0it.12`), with the mirror clones (`0it.4.8`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer

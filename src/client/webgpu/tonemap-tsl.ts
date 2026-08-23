@@ -8,7 +8,7 @@ import {
 import type { Node } from 'three/webgpu';
 import {
   DITHER_IGN_DOT, DITHER_IGN_SCALE, L_THRESH, LUMA_WEIGHTS,
-  SRGB_ENCODE_EXPONENT, SRGB_ENCODE_GAIN, SRGB_ENCODE_KNEE,
+  SRGB_DECODE_KNEE, SRGB_ENCODE_EXPONENT, SRGB_ENCODE_GAIN, SRGB_ENCODE_KNEE,
   SRGB_ENCODE_OFFSET, SRGB_LINEAR_SLOPE, TOE_CURVATURE,
 } from '../hdr/tonemap-pure';
 import { mix as mixVecT, step } from './tsl-shim';
@@ -27,6 +27,17 @@ export const srgbEncodeTsl = /* @__PURE__ */ Fn(([c]: [N3]) => {
     .mul(SRGB_ENCODE_GAIN).sub(SRGB_ENCODE_OFFSET);
   return mixVecT(
     v.mul(SRGB_LINEAR_SLOPE), encoded, step(vec3(SRGB_ENCODE_KNEE), v));
+});
+
+/** sRGB-authored imagery back to linear, for a texture loaded raw. The
+ *  planet mesh's day map is the only caller — its sampled albedo has to be
+ *  linear before it multiplies a physical luminance. */
+export const srgbDecodeTsl = /* @__PURE__ */ Fn(([c]: [N3]) => {
+  const v = clamp(c, vec3(0.0), vec3(1.0));
+  return mixVecT(
+    v.div(SRGB_LINEAR_SLOPE),
+    pow(v.add(SRGB_ENCODE_OFFSET).div(SRGB_ENCODE_GAIN), vec3(1 / SRGB_ENCODE_EXPONENT)),
+    step(vec3(SRGB_DECODE_KNEE), v));
 });
 
 export const tonemapUnditheredTsl = /* @__PURE__ */ Fn(

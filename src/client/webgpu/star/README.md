@@ -39,10 +39,6 @@ src/client/webgpu/star/
                                inline-operator select, the MRT output
                                struct + single↔struct mode swap
                                (../hdr/README.md).
-  perceptual-disc-tsl.ts       TSL mirror of the stellata_perceptual_disc
-                               chunk (dM knee, √Δm size, exponent,
-                               profile). The GLSL chunk's header owns the
-                               math.
   star-layer.ts (+ test)       StarLayer: geometry + the four meshes into
                                the seam's scene, the per-frame dynamic
                                re-pack, the shell's core-mask gate,
@@ -51,9 +47,10 @@ src/client/webgpu/star/
                                StarPipeline mock, for tests.
 ```
 
-The operator and emission-unit mirrors the fragment composes live one
-level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`) — they are
-layer-agnostic and every ported emitter will take them.
+The operator, emission-unit and perceptual-disc mirrors the fragment
+composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,
+`../perceptual-disc-tsl.ts`) — they are layer-agnostic, and the planet
+glare already takes all three, exactly as it takes the GLSL chunks.
 
 ## What is deliberately NOT here yet
 
