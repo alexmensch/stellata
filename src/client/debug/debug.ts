@@ -9,6 +9,7 @@ import { buildArrowSection } from './arrow-fade-debug-hud';
 import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
 import { buildExposureSection } from '../hdr/exposure/exposure-tuning';
+import { mountRenderWatch } from './render-watch/render-watch';
 import {
   buildPassToggles,
   runPriceFrame,
@@ -42,6 +43,10 @@ export interface DebugTools {
   /** priceFrame N times over; prints per-pass savedMs ranges across
    *  runs (the repeatability check). */
   priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;
+  /** Toggle the render watcher: why is this scene rendering, or not.
+   *  Deliberately NOT a panel section — the panel holds the gate open, so
+   *  no section can observe idling (`render-watch/README.md`). */
+  renderWatch(): void;
 }
 
 /** Wrap a DebugSection in a collapsible-section and mount it on the panel.
@@ -77,6 +82,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   let panel: HTMLDivElement | null = null;
   let disposers: Array<() => void> = [];
   let releaseRenderHold: (() => void) | null = null;
+  let closeRenderWatch: (() => void) | null = null;
 
   const closePanel = () => {
     if (!panel) return;
@@ -127,6 +133,20 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       runPriceFrame(stellata, buildPassToggles(stellata), options),
     priceFrameRepeat: (runs, options) =>
       runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
+    renderWatch: () => {
+      if (closeRenderWatch !== null) {
+        closeRenderWatch();
+        closeRenderWatch = null;
+        return;
+      }
+      closeRenderWatch = mountRenderWatch(stellata);
+      if (panel !== null) {
+        console.warn(
+          'render-watch: the debug panel is open and holds the render gate, so '
+          + 'every tick renders. Close it (debug.panel()) to observe idling.',
+        );
+      }
+    },
   };
 
   (window as unknown as { debug: DebugTools }).debug = tools;

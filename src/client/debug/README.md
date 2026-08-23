@@ -28,6 +28,11 @@ src/client/debug/
                                   stub. Own README.
   frame-cost/                     debug.priceFrame() — automated per-pass
                                   gpu.frame differentials. Own README.
+  render-watch/                   debug.renderWatch() — why the render
+                                  gate is drawing, or not. Standalone
+                                  because the panel holds the gate open
+                                  and so cannot observe idling. Own
+                                  README.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /

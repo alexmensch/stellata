@@ -1586,6 +1586,26 @@ export class Stellata implements FrameAnchor {
     this.applyRideDelta(this._movingRideDelta);
   }
 
+  /** Debug-scoped view of the clock-cadence state the shell owns, for the
+   *  render watcher (`debug/render-watch/README.md`). Every field is what
+   *  the LAST rendered frame left behind, which is what the gate's next
+   *  due test reads. */
+  get cadenceDebugState(): {
+    clockRate: number;
+    budgetSimS: number;
+    lastRenderedSimS: number;
+    pulsationBudgetS: number;
+    rideMoved: boolean;
+  } {
+    return {
+      clockRate: this.clock.getRate(),
+      budgetSimS: this.cadenceBudgetSimS,
+      lastRenderedSimS: this.lastRenderedSimS,
+      pulsationBudgetS: this.pulsationCadenceBudgetS,
+      rideMoved: this._rideMovedThisFrame,
+    };
+  }
+
   /** Debug-HUD view into the eclipse field's per-relation walk for the
    *  current camera/filter/sim-time. Empty when no binaries attached. */
   eclipseDebugRows(starIdx: number | null): EclipseRelationDebugRow[] {

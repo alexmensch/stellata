@@ -21,6 +21,13 @@ export class RenderGate {
   private readonly scratchPose = new Float64Array(POSE_SLOTS);
   private detachDom: (() => void) | null = null;
 
+  /** Debug-scoped view of the two decision inputs the gate owns, for the
+   *  render watcher (`../debug/render-watch/README.md`). Read-only — a
+   *  caller that wants frames calls `invalidate()` or `hold()`. */
+  get debugState(): { holds: number; lastActiveMs: number } {
+    return { holds: this.holds, lastActiveMs: this.lastActiveMs };
+  }
+
   /** Request frames for the settle tail — call on any mutation the pose
    *  snapshot and the continuous conditions cannot see. */
   invalidate(): void {
