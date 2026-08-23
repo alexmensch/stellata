@@ -5,7 +5,9 @@ import {
   SETTLE_MS,
   decideRender,
   exposureCutMoved,
+  firstDifferingPoseSlot,
   posesDiffer,
+  rebasePoseTranslation,
   writePose,
 } from './render-gate-pure';
 
@@ -92,7 +94,9 @@ describe('exposureCutMoved', () => {
 
 describe('decideRender', () => {
   const idle = { holds: 0, lastActiveMs: Number.NEGATIVE_INFINITY };
-  const quiet = { continuous: false, poseChanged: false, nowMs: 10_000 };
+  const quiet = {
+    continuous: false, poseChanged: false, cadenceDue: false, nowMs: 10_000,
+  };
 
   it('settle tail is pinned', () => {
     expect(SETTLE_MS).toBe(1500);
@@ -123,5 +127,85 @@ describe('decideRender', () => {
     const state = { holds: 0, lastActiveMs: 10_000 };
     expect(decideRender(state, { ...quiet, nowMs: 10_000 + SETTLE_MS - 1 }).render).toBe(true);
     expect(decideRender(state, { ...quiet, nowMs: 10_000 + SETTLE_MS }).render).toBe(false);
+  });
+
+  it('a cadence frame renders WITHOUT stamping activity', () => {
+    const d = decideRender(idle, { ...quiet, cadenceDue: true });
+    expect(d.render).toBe(true);
+    // Stamping would drag the whole 1500 ms tail behind every scheduled
+    // frame — about 90 extra frames at 60 Hz for each one the cadence
+    // asked for, which is the entire idle the cadence exists to buy.
+    expect(d.lastActiveMs).toBe(Number.NEGATIVE_INFINITY);
+  });
+});
+
+describe('rebasePoseTranslation', () => {
+  it('shifts position and target, leaving orientation, fov and origin', () => {
+    const p = pose();
+    rebasePoseTranslation(p, 0.5, -1, 2);
+    expect(Array.from(p)).toEqual([1.5, 1, 5, 0, 0, 0, 1, 50, 4.5, 4, 8, 7, 8, 9]);
+  });
+
+  it('an absorbed ride step leaves the gate quiet across repeats', () => {
+    const stored = pose();
+    const live = pose();
+    for (let frame = 0; frame < 6; frame++) {
+      // The ride translates camera and target together, then hands the
+      // same delta to the gate.
+      live[0] += 0.25; live[1] += 0.25; live[2] += 0.25;
+      live[8] += 0.25; live[9] += 0.25; live[10] += 0.25;
+      rebasePoseTranslation(stored, 0.25, 0.25, 0.25);
+      expect(posesDiffer(live, stored)).toBe(false);
+    }
+  });
+
+  it('the SAME step unabsorbed wakes the gate on every ride — the regression', () => {
+    const stored = pose();
+    const live = pose();
+    let wakes = 0;
+    for (let frame = 0; frame < 6; frame++) {
+      live[0] += 0.25; live[8] += 0.25;
+      if (posesDiffer(live, stored)) wakes++;
+    }
+    expect(wakes).toBe(6);
+  });
+
+  it('a real camera move on top of an absorbed ride still wakes it', () => {
+    const stored = pose();
+    const live = pose();
+    // The ride moved 0.25; the user dragged another 0.25 on top of it.
+    live[0] += 0.5; live[8] += 0.25;
+    rebasePoseTranslation(stored, 0.25, 0, 0);
+    expect(posesDiffer(live, stored)).toBe(true);
+  });
+
+  it('touches the six translation slots and nothing else', () => {
+    const before = pose();
+    const after = pose();
+    rebasePoseTranslation(after, 1, 1, 1);
+    const moved: number[] = [];
+    for (let i = 0; i < POSE_SLOTS; i++) if (before[i] !== after[i]) moved.push(i);
+    // Orientation, fov and worldOffset stay: the only writer is the focal
+    // ride, which translates camera and target together and rotates
+    // nothing. Absorbing a rotation would hide a real camera move.
+    expect(moved).toEqual([0, 1, 2, 8, 9, 10]);
+  });
+
+  it('a NaN-seeded snapshot stays unseeded through a rebase', () => {
+    const seed = new Float64Array(POSE_SLOTS).fill(Number.NaN);
+    rebasePoseTranslation(seed, 1, 1, 1);
+    expect(posesDiffer(seed, pose())).toBe(true);
+  });
+});
+
+describe('firstDifferingPoseSlot', () => {
+  it('names the slot, in writePose order', () => {
+    expect(firstDifferingPoseSlot(pose(), pose())).toBe(null);
+    const b = pose();
+    b[7] += 1;
+    expect(firstDifferingPoseSlot(pose(), b)).toBe('fov');
+    const c = pose();
+    c[10] += 1;
+    expect(firstDifferingPoseSlot(pose(), c)).toBe('target.z');
   });
 });

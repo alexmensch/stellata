@@ -14,13 +14,18 @@ per-rAF heartbeat.
 ```
 src/client/render-gate/
   render-gate.ts (+ test)      RenderGate — holds, DOM wake listeners,
-                               the per-tick decision.
-  render-gate-pure.ts (+ test) Pose snapshot compare + the render/skip
-                               decision.
+                               pose rebase, the per-tick decision.
+  render-gate-pure.ts (+ test) Pose snapshot compare, the translation
+                               rebase, and the render/skip decision.
+  cadence/                     How long the gate may idle while the sim
+                               clock runs — the per-layer rate report,
+                               the thresholds, the safety net, and the
+                               pinned vantages. Its own README.
 ```
 
-Both sentinels reset on `dispose()` — the pose snapshot back to NaN, the
-hold count to zero. A hold released *after* that zeroing floors at 0
+Every sentinel resets on `dispose()` — the pose snapshot back to NaN, the
+hold count to zero, the cadence budget to 0 and its sim stamp to NaN, the
+trust state to whole. A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
 debug panel, so its release outlives the gate, and a negative count
 would silently make the next `hold()` a no-op.
@@ -33,16 +38,30 @@ would silently make the next `hold()` a no-op.
    a sweep (its dwells count `gpu.frame` samples per frame — a skipped
    frame would read as the run aborting). Ref-counted; releases are
    idempotent.
-2. **Continuous conditions**, recomputed each tick by `animate()`:
-   clock rate ≠ 0 (variables pulsate, binaries orbit, and ephemeris
-   bodies move on the sim clock — note the clock's **default is live
-   1×**, so the idle win requires the clock paused), or a camera
-   transition in flight. The transition half is **not re-derived** — it
-   falls out of the controller dispatch chain that runs immediately
-   above, which already picked the branch: `cameraAnimating` defaults
-   true and only the two steady-state branches (observe look-around,
-   trackball) clear it. Re-asking the five predicates would be a second
-   definition of "camera busy" for a new transition to drift out of.
+2. **Continuous conditions**, recomputed each tick by `animate()`: a
+   camera transition in flight, or a `'realtime'` layer asking for
+   wall-clock frames (there are none — § Declaring how time moves a
+   layer in `../scene/README.md`). **A running clock is NOT one of
+   them**: it schedules through the cadence below instead, which is what
+   lets the out-of-the-box live-1× view idle. The transition half is
+   **not re-derived** — it falls out of the controller dispatch chain
+   that runs immediately above, which already picked the branch:
+   `cameraAnimating` defaults true and only the two steady-state
+   branches (observe look-around, trackball) clear it. Re-asking the
+   five predicates would be a second definition of "camera busy" for a
+   new transition to drift out of.
+
+   The `'realtime'` predicate is evaluated **above** the gate, on every
+   tick, which is why `animate()` builds `frameCtx` before the decision
+   rather than after it. Asking it only on rendered frames would make a
+   layer that starts needing wall-clock frames wait one whole cap for
+   them — and wait forever with the clock paused, which fires no cadence
+   frame to be read on.
+
+2b. **The clock cadence**: the running clock has outrun the sim-time
+   budget the last rendered frame computed. A cadence frame renders THIS
+   tick without stamping activity, so no settle tail rides it (§ The
+   clock cadence).
 3. **Pose change**: a 14-slot exact-equality snapshot — camera position,
    quaternion, fov, `controls.target`, `worldOffset`. Catches every
    camera mutation whatever its source (trackball damping, observe
@@ -94,7 +113,7 @@ sub-threshold steps that all go one way still accumulate into a wake.
 - The `attach*` family (dust, binaries, dust particles, constellation
   boundaries) and each streamed dust voxel chunk landing.
 - An applied adaptation `dm` that moved this frame (see above).
-- `KindContext.requestRender()` — the seam for a kind module's own
+- `KindContext.requestRender(reason)` — the seam for a kind module's own
   async landings, which reach neither the shell nor the bus. Its one
   caller today is the planet mesh layer's lazy texture load
   (`../solar-system/planets/README.md` § Planet mesh LOD): the body
@@ -104,8 +123,15 @@ sub-threshold steps that all go one way still accumulate into a wake.
 **A missed source shows as a frozen frame, which is a worse bug than a
 slow one** — when adding a mutation that changes what the frame draws
 without moving the camera, the clock, or emitting `'state'`, call
-`stellata.renderGate.invalidate()` from it (or `ctx.requestRender()`
-from inside a kind module, which is the same call). Dev-console setters that
+`stellata.renderGate.invalidate(reason)` from it (or
+`ctx.requestRender(reason)` from inside a kind module, which is the same
+call).
+
+**`reason` is required, and it is a short stable slug.** A wake is
+otherwise untraceable: every source writes the same timestamp, so a
+frame rate pinned by one of a dozen callers cannot be attributed after
+the fact. `debug.renderWatch()` prints the last one verbatim
+(`../debug/render-watch/README.md`). Dev-console setters that
 bypass the bus (`stellata.hdr.*` switches, `setExtinctionStrength`, …)
 are covered in practice by the keydown/panel wake paths, but a console
 poke with hands off the keyboard can force a repaint with
@@ -125,3 +151,43 @@ poke with hands off the keyboard can force a repaint with
   six ticks forever. Hoisting that call above the gate to keep the cut
   current would silently undo it
   (`../hdr/exposure/README.md` § Parking the measurement).
+
+## The clock cadence
+
+A running clock no longer renders every tick; it schedules against a
+per-frame rate report from every layer. The whole design — the contract,
+the thresholds, what counts as ink on screen, how camera motion is
+subtracted, the safety net and the pinned acceptance numbers — is
+`cadence/README.md`. What stays here is the gate's own half: the
+`cadenceDue` input above, and the pose rebase below.
+
+## The focal ride
+
+Focusing a moving body — a binary member, a planet, a probe — used to pin
+the gate open for as long as the focus lasted, at any distance and any
+vantage, and not for the reason it looks like. Both rides
+(`applyFocalFrameRide`, `applyMovingFocalRide`) translate camera and
+target inside the scene-layer update fan-out, which runs BELOW the gate.
+So the write lands AFTER `tick()` captured that frame's pose snapshot;
+the next tick reads it as a fresh camera move, renders, rides again, and
+stamps activity. It is self-sustaining and never reaches a skipped tick.
+
+`Stellata.applyRideDelta` — now the single place either ride reaches the
+camera — calls `RenderGate.rebasePose(delta)`, shifting the stored
+snapshot's position and target slots by the same translation. The next
+tick compares equal and the cadence owns the schedule. **A delta that
+reaches the camera without reaching `rebasePose` reinstates the loop**,
+which is why the extraction matters as much as the call, and why the
+regression is pinned both ways: an absorbed step stays quiet across six
+consecutive rides, and the same step unabsorbed wakes the gate on every
+one.
+
+The rebase touches exactly the six translation slots. Orientation, fov
+and `worldOffset` stay, because the only writer is a ride, which
+translates camera and target together and rotates nothing — absorbing a
+rotation would hide a real camera move. A pan that moves `target` alone
+still wakes it.
+
+`applyRideDelta` also accumulates the frame's ride translation, which
+divided by the sim step IS `CadenceCtx.cameraVelPcPerSimS` (§ Camera
+motion is subtracted).

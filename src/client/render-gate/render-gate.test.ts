@@ -28,15 +28,15 @@ function makeGate() {
   const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
   const target = new THREE.Vector3();
   const worldOffset = new THREE.Vector3();
-  const tick = (nowMs: number, continuous = false) =>
-    gate.tick(camera, target, worldOffset, continuous, nowMs);
+  const tick = (nowMs: number, continuous = false, cadenceDue = false) =>
+    gate.tick(camera, target, worldOffset, { continuous, cadenceDue, nowMs });
   /** Render the seed frame, then step past the settle tail — the gate is
    *  skipping when this returns, so a later `true` is a genuine wake. */
   const settle = (t0: number) => {
     tick(t0);
     return tick(t0 + SETTLE_MS);
   };
-  return { gate, camera, tick, settle };
+  return { gate, camera, target, tick, settle };
 }
 
 afterEach(() => {
@@ -142,11 +142,138 @@ describe('RenderGate DOM wake', () => {
   });
 });
 
+describe('RenderGate cadence frames', () => {
+  it('a due cadence frame renders out of an idle gate', () => {
+    const { tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    expect(tick(SETTLE_MS, false, true)).toBe(true);
+    // And leaves no tail behind it: the very next tick is quiet again.
+    expect(tick(SETTLE_MS + 16)).toBe(false);
+  });
+
+  it('lastFrameWasCadenceScheduled is the audit gate, not just cadenceDue', () => {
+    const { gate, camera, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+
+    tick(SETTLE_MS, false, true);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(true);
+
+    // Every other route to the same frame disqualifies the audit, because
+    // on those the gate would have drawn anyway and content is free to
+    // move further than the budget promised.
+    camera.position.x += 1;
+    tick(SETTLE_MS + 16, false, true);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
+
+    tick(SETTLE_MS + 32, true, true);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
+
+    const release = gate.hold();
+    tick(2 * SETTLE_MS + 100, false, true);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
+    release();
+
+    // Inside a settle tail the schedule was not in force either.
+    gate.invalidate('test');
+    tick(performance.now(), false, true);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
+  });
+
+  it('a skipped tick never counts as scheduled', () => {
+    const { gate, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
+  });
+});
+
+describe('RenderGate ride absorption', () => {
+  it('an absorbed ride step stays quiet across six consecutive rides', () => {
+    const { gate, camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    const delta = { x: 0.25, y: -0.5, z: 1 };
+    for (let frame = 0; frame < 6; frame++) {
+      camera.position.x += delta.x;
+      camera.position.y += delta.y;
+      camera.position.z += delta.z;
+      target.x += delta.x;
+      target.y += delta.y;
+      target.z += delta.z;
+      gate.rebasePose(delta);
+      expect(tick(SETTLE_MS + frame * 16)).toBe(false);
+    }
+  });
+
+  it('the SAME step unabsorbed pins the gate open — the regression', () => {
+    const { camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    let rendered = 0;
+    for (let frame = 0; frame < 6; frame++) {
+      camera.position.x += 0.25;
+      target.x += 0.25;
+      if (tick(SETTLE_MS + frame * 16)) rendered++;
+    }
+    expect(rendered).toBe(6);
+  });
+
+  it('a pan that moves target alone still wakes it', () => {
+    const { gate, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    // The rebase shifts BOTH camera and target slots, so a write to one of
+    // them alone is a real camera change and must not be absorbed.
+    target.x += 0.25;
+    expect(tick(SETTLE_MS)).toBe(true);
+    expect(gate.debugState.lastDecision?.poseSlot).toBe('target.x');
+  });
+});
+
+describe('RenderGate wake attribution', () => {
+  it('every invalidate carries its reason through to the debug view', () => {
+    const { gate } = makeGate();
+    expect(gate.debugState.lastWake).toBe(null);
+    gate.invalidate('bus:state');
+    expect(gate.debugState.lastWake?.reason).toBe('bus:state');
+    gate.invalidate('resize');
+    expect(gate.debugState.lastWake?.reason).toBe('resize');
+  });
+
+  it('DOM wakes name the event that fired', () => {
+    const canvas = makeEventTargetStub();
+    const win = makeEventTargetStub();
+    vi.stubGlobal('window', win);
+    const { gate } = makeGate();
+    gate.attachDom(canvas as unknown as HTMLElement);
+    canvas.fire('wheel');
+    expect(gate.debugState.lastWake?.reason).toBe('dom:wheel');
+    win.fire('keydown');
+    expect(gate.debugState.lastWake?.reason).toBe('dom:keydown');
+    gate.dispose();
+  });
+
+  it('the decision trace names which pose slot moved', () => {
+    const { gate, camera, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    expect(gate.debugState.lastDecision?.poseSlot).toBe(null);
+    camera.fov += 1;
+    tick(SETTLE_MS);
+    expect(gate.debugState.lastDecision?.poseSlot).toBe('fov');
+  });
+});
+
 describe('RenderGate dispose', () => {
   it('re-seeds the pose so a reused gate renders again', () => {
     const { gate, tick, settle } = makeGate();
     expect(settle(0)).toBe(false);
     gate.dispose();
     expect(tick(SETTLE_MS)).toBe(true);
+  });
+
+  it('clears every diagnostic sentinel', () => {
+    const { gate, tick } = makeGate();
+    gate.invalidate('bus:state');
+    tick(0, false, true);
+    gate.dispose();
+    expect(gate.debugState.lastWake).toBe(null);
+    expect(gate.debugState.lastDecision).toBe(null);
+    expect(gate.lastFrameWasCadenceScheduled).toBe(false);
   });
 });
