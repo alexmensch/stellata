@@ -32,16 +32,55 @@ describe('the statistic attachment mask', () => {
     });
   }
 
-  it('claims no coverage on the TSL star path either', () => {
-    // The WebGPU port's one statistic writer so far. TSL is TypeScript, so
-    // the same contract reads off the same argument walker rather than a
-    // second mechanism: mask 0, alpha 1, and a flux the park mask can zero
-    // (webgpu/hdr/README.md § The gate becomes the output struct).
-    const args = glslCallArgs(
-      read('../../webgpu/star/star-emission-tsl.ts'), 'statisticTexelTsl');
-    expect(args[1]).toBe('0.0');
-    expect(args[2]).toBe('1.0');
-    expect(args[0]).toContain('gates.statisticWrites');
+  // TSL is TypeScript, so the ported writers read off the same argument
+  // walker rather than a second mechanism. Their helper takes the park mask
+  // FIRST and scales the whole texel by it — masking the flux alone would
+  // leave an alpha-composited emitter still compositing `dst · (1 − alpha)`
+  // over the attachment the WebGL gate would have shut
+  // (webgpu/hdr/README.md § The gate becomes the output struct).
+  const TSL_WRITERS = [
+    { label: 'star quad', src: '../../webgpu/star/star-emission-tsl.ts', mask: '0.0', alpha: '1.0' },
+    {
+      label: 'planet reflected glare',
+      src: '../../webgpu/solar-system/planet-glare-tsl.ts',
+      mask: '0.0',
+      alpha: '1.0',
+    },
+    {
+      label: 'planet mesh',
+      src: '../../webgpu/solar-system/planet-mesh-tsl.ts',
+      mask: 'lit',
+      alpha: 'p.uFade',
+    },
+    {
+      label: 'ring annulus',
+      src: '../../webgpu/solar-system/planet-rings-tsl.ts',
+      mask: 'step(0.5, lit)',
+      alpha: 'alpha',
+    },
+    {
+      label: 'atmosphere shell',
+      src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts',
+      mask: 'a.mul(litFrac)',
+      alpha: 'a',
+    },
+  ];
+
+  for (const { label, src, mask, alpha } of TSL_WRITERS) {
+    it(`carries the ${label}'s mask and park gate on the TSL path`, () => {
+      const args = glslCallArgs(read(src), 'maskedStatisticTexelTsl');
+      expect(args[0]).toBe('gates.statisticWrites');
+      expect(args[2]).toBe(mask);
+      expect(args[3]).toBe(alpha);
+    });
+  }
+
+  it('writes no statistic at all from the TSL probe glyph', () => {
+    // Chrome, so the slot takes the blend's identity element rather than a
+    // masked texel — the WebGL gate's `[0, NONE, NONE]` in node terms.
+    const src = read('../../webgpu/solar-system/probe-tsl.ts');
+    expect(src).not.toContain('maskedStatisticTexelTsl');
+    expect(src).toContain('statistic: vec4(0.0)');
   });
 
   it('claims the lit hemisphere alone for the planet mesh', () => {

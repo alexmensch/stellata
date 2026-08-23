@@ -136,6 +136,31 @@ const INSTANCE_ATTR_SPECS = attrSpecs({
 
 type InstanceBufKey = keyof typeof INSTANCE_ATTR_SPECS;
 
+/** The field's live per-instance arrays. Every one is the object this
+ *  class writes; a grow replaces all of them at once, which is what
+ *  `layoutVersion` reports. */
+export type PlanetGlareBuffers = Readonly<Record<InstanceBufKey, Float32Array>>;
+
+/**
+ * What the WebGPU glare layer reads off this field — the arrays plus the
+ * slot state its packed attributes and uniforms track
+ * (`../../webgpu/solar-system/README.md` § The glare packs).
+ *
+ * Accessors rather than a snapshot: a grow replaces every array, and the
+ * layer has to see the new ones on the frame it happens.
+ */
+export interface PlanetGlareSources {
+  buffers(): PlanetGlareBuffers;
+  /** Bumped by every attach / detach / grow — the three events that can
+   *  reallocate a buffer or move a body between slots. */
+  layoutVersion(): number;
+  instanceCount(): number;
+  /** Observe-anchor body to hide (−1 = none). */
+  hideIdx(): number;
+  /** The active local-depth cluster's (start, count) slot range. */
+  localPassRange(): Readonly<Int32Array>;
+}
+
 const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
   InstanceBufKey,
   InstanceAttrSpec,
@@ -265,6 +290,10 @@ export class PlanetBodyField {
   // Reusable scratch — avoids per-frame allocation in update().
   private rotateTmp = new THREE.Vector3();
   private ringPoleTmp = { x: 0, y: 0, z: 1 };
+  // Bumped by every attach / detach / grow — the three events that can
+  // reallocate a buffer or move a body between slots. The WebGPU glare
+  // layer rebuilds its packed attributes on a change.
+  private layoutVersion = 0;
   // Model time of the last positions walk. The ring-tilt term needs the
   // body's pole at `t`, and the hover/pick entry points carry a viewer
   // but no clock; IAU century rates move a pole by nanoarcseconds
@@ -357,6 +386,7 @@ export class PlanetBodyField {
     this.writeHostStaticAttributes(host);
     this.writeHostPositions(host, t);
     this.flushAllAttributes();
+    this.layoutVersion++;
     this.geometry.instanceCount = this.liveCount;
     this.group.visible = !this.hidden;
   }
@@ -381,6 +411,7 @@ export class PlanetBodyField {
     this.liveCount -= host.count;
     this.geometry.instanceCount = this.liveCount;
     this.flushAllAttributes();
+    this.layoutVersion++;
     this.hosts.delete(hostStarIdx);
     this.rebuildInstanceMap();
     this.resetPerInstanceFactors();
@@ -822,6 +853,19 @@ export class PlanetBodyField {
    *  — the observe-anchor body; the mesh LOD must hide it too. */
   get hiddenInstanceIdx(): number {
     return this.hideIdxUniform.value;
+  }
+
+  /** The live per-instance arrays and slot state the WebGPU glare layer
+   *  packs from — the same objects this field writes, so no writer learns
+   *  about the port (`../../webgpu/solar-system/README.md`). */
+  glareSources(): PlanetGlareSources {
+    return {
+      buffers: () => this.bufs,
+      layoutVersion: () => this.layoutVersion,
+      instanceCount: () => this.liveCount,
+      hideIdx: () => this.hideIdxUniform.value,
+      localPassRange: () => this.localPassRangeUniform.value,
+    };
   }
 
   /** Host's ICRS orbital-plane orientation, or null when unattached. */
@@ -1333,6 +1377,7 @@ export class PlanetBodyField {
   }
 
   private growCapacity(): void {
+    this.layoutVersion++;
     const oldBufs = this.bufs;
     const oldLocalRel64 = this.localRel64;
     this.allocateBuffers(this.capacity * 2);
