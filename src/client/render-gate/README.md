@@ -128,21 +128,21 @@ hold. Everything else renders as it always did.
 
 The budget is a min over four sources (`cadenceSimBudgetS`):
 
-- **Layer budgets** — the `SceneLayer.cadenceSimBudgetS` hook
-  (`../scene/scene-layer.ts`), collected right after the update fan-out
-  so each reads the state its own update wrote. Implemented by the
-  planet body field (per-body translation + spin bounds), the probe
-  field (sampled velocity over camera distance), and the binary orbit
-  field (per-Kepler-active-pair sweep bound). Each converts a
-  conservative screen-motion rate through
-  `cadenceBudgetFromRatePxS` (0.5 DEVICE px, so a rate in CSS px arrives
-  with the pixel ratio). **A new layer whose drawn content the sim clock
-  moves on screen MUST implement the hook** — the miss shows as that
-  layer freezing between cadence frames, the same frozen-frame class as
-  a missed invalidation source. **The star pipeline is the standing
-  exception**: it is not a scene layer at all, so its sim-clock content
-  reaches the budget through the pulsation bound below and the
-  epoch-bucket invalidate, not through a hook.
+- **Layer budgets** — every layer's REQUIRED `timeBehaviour`
+  declaration (`../scene/scene-layer.ts`), collected right after the
+  update fan-out so each reads the state its own update wrote. `'clock'`
+  layers supply a budget; `'static'` ones supply nothing and say so
+  explicitly. It is a required discriminated union precisely because the
+  old optional hook let a moving layer stay silent and freeze — `tsc` now
+  refuses the omission. Budgets come from the planet body field (per-body
+  translation + spin, plus a photometric term for a visible eclipse dim),
+  the probe field (sampled velocity over camera distance), and the binary
+  orbit field (per-Kepler-active-pair sweep). Each converts a
+  conservative screen-motion rate through `cadenceBudgetFromRatePxS`
+  (0.5 DEVICE px, so a rate in CSS px arrives with the pixel ratio).
+  **The star pipeline is the standing exception**: it is not a scene
+  layer at all, so its sim-clock content reaches the budget through the
+  pulsation bound below and the epoch-bucket invalidate.
 - **The pulsation bound** — catalog-wide constant: `CADENCE_JND_MAG`
   (0.01 mag) over the fastest unsuppressed variable's brightness slope
   (A·π/P). Vantage-free because a magnitude step is a magnitude step
@@ -167,29 +167,50 @@ The budget is a min over four sources (`cadenceSimBudgetS`):
   behind every scheduled redraw — ~90 extra frames each — which is the
   idleness the cadence exists to buy.
 
-Two event mechanisms ride on top rather than through the budget. A
-**live eclipse dim** (binary or planetary) invalidates on every rendered
-frame while active, so the settle tail self-sustains continuous
-rendering until the event decays — dims only change on rendered frames,
-and their wall-clock anti-strobe blends need real-time frames the sim
-budget cannot express. And an **epoch-bucket crossing**
-(`maybeReAdvanceEpoch`) invalidates once: the star buffer was rewritten,
-so the "nothing moved" premise no longer holds.
+One event mechanism rides on top rather than through the budget: an
+**epoch-bucket crossing** (`maybeReAdvanceEpoch`) invalidates once,
+because the star buffer was rewritten and the "nothing moved" premise no
+longer holds.
 
-**The dim hold is gated on the dimmed body being on screen** — both
-fields answer `holdsVisibleEclipseDim`, not a count of active dims, and
-each tests its own emitter against the **live** `uExposure` (allowed
-here because the verdict is recomputed per frame and cached nowhere —
-`../hdr/exposure/README.md` § Adaptation). Without that gate the idle
-win is mostly theoretical rather than mostly real: the outer planets'
-moons cross their parents' shadows a large fraction of the time (each
-Galilean is eclipsed for 2–4 h once per orbit — Io alone ~5% of the
-time, the four together ~12%, with Saturn's inner moons adding more
-around each Saturnian equinox), and a bright eclipsing binary's dip runs
-for hours. Every one of those bodies sits far under the default view's
-adaptation cut, so holding frames for them buys nothing and costs the
-whole idle. The dims themselves still evaluate — only the frame hold is
-gated.
+**Eclipse dims used to be a second one, and it swallowed the whole win.**
+Both dim fields invalidated on every rendered frame while a visible dim
+was live, on the reasoning that a wall-clock anti-strobe blend needs
+real-time frames. Measured, that was wrong twice over. `dimBlendFactor`
+clamps its step to 0.25 s against a τ of 0.12 s, so a 30-second gap still
+yields a blend of 0.875 — **the filter settles in two or three frames at
+any cadence** and never needed real-time frames. And ~27 of the 80
+geometrically eclipsing pairs in `multiples.tsv` are mid-eclipse at any
+instant, so the hatch was open essentially always. Both invalidates are
+gone. What replaced them:
+
+- The **binary** dim needs nothing: the tightest catalogue eclipse takes
+  48.6 sim-s to move a JND, against the 30 s cap — a 1.6× margin pinned
+  by `tests/cadence-eclipse-rate.test.ts`, which fails if a refresh
+  brings in a faster pair.
+- The **planetary** dim does need a bound, and by two orders: a moon
+  crossing its parent's shadow goes dark over its own diameter, ~0.4 s
+  per JND for Io. `PlanetBodyField` folds that term in, gated on the dim
+  actually putting ink on screen, so a visible ingress renders
+  continuously and an invisible one costs nothing.
+
+**The planet dim's term is gated on the body being on screen** — the
+field tests its emitter against the **live** `uExposure` (allowed here
+because the verdict is recomputed per frame and cached nowhere,
+`../hdr/exposure/README.md` § Adaptation). Without that gate the outer
+planets' moons would pin the frame rate a large fraction of the time:
+each Galilean is eclipsed for 2–4 h once per orbit — Io alone ~5%, the
+four together ~12%, with Saturn's inner moons adding more around each
+Saturnian equinox — and nearly all of them sit far under the default
+view's adaptation cut. The dims themselves still evaluate; only the
+budget term is gated.
+
+**`'realtime'` is the declared escape hatch, and it currently has zero
+users.** A layer that genuinely animates on wall-clock time declares it
+and names when (`needsFrames`), which enters as a continuous condition.
+The count is worth watching — `behaviourCensus()` reports it — because
+one always-on `'realtime'` layer reduces this whole mechanism to a
+no-op, which is exactly what the eclipse-dim invalidate did before it
+was declared and then removed.
 
 ### The focal ride, and the loop it used to close
 

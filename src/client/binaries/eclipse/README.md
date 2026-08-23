@@ -154,3 +154,28 @@ we can't derive.
 (via the optional `suppressPulsation` arg) so the SVG focus ring +
 distance-vector tip track the rendered (un-modulated)
 disc on suppressed primaries.
+
+## Cadence — why the dim asks for no frames
+
+The dim used to invalidate the render gate on every rendered frame while
+one was live and visible. Both halves of that reasoning were wrong.
+
+`dimBlendFactor` clamps its step to **0.25 s** against a τ of 0.12 s, so
+even a 30-second gap yields a blend of 0.875: the filter settles in two
+or three frames at *any* frame rate and never needed real-time ones. And
+of the 80 geometrically eclipsing pairs in `multiples.tsv`, ~27 are
+mid-eclipse at any instant — so the hold was open essentially always, and
+it cost the render gate's entire idle win
+(`../../render-gate/README.md` § The clock cadence).
+
+What bounds it now is the gate's own 30 s cap. The tightest catalogue
+eclipse takes **48.6 sim-s** to move a just-noticeable 0.01 mag — a 1.6×
+margin, pinned by `tests/cadence-eclipse-rate.test.ts`, which fails if a
+refresh brings in a faster pair rather than letting a stepped dip reach
+the screen. The field therefore declares no budget of its own.
+
+**A planetary shadow is the opposite case** and does need one: a moon
+crossing its parent's umbra goes dark over its own diameter rather than
+over a stellar radius, ~0.4 s per JND for Io, so `PlanetBodyField` folds
+a photometric term into its budget, gated on the body being on screen.
+The asymmetry is geometric, not a policy choice.

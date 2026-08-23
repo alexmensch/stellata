@@ -382,6 +382,9 @@ export class Stellata implements FrameAnchor {
   private lastRenderedSimS = Number.NaN;
   private pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
   private _rideMovedThisFrame = false;
+  // Read on the NEXT tick, like the budget: a 'realtime' layer's own
+  // predicate runs inside the fan-out, which sits below the gate.
+  private _realtimeFramesNeeded = false;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -990,6 +993,11 @@ export class Stellata implements FrameAnchor {
   // scene/README.md.
   private registerSceneLayers(): void {
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) => this.planetBodyField.cadenceSimBudgetS(
+          ctx.camera.position, ctx.pxPerRadian, ctx.pixelRatio),
+      },
       update: (ctx) => {
         // Ride runs right after every moving-body field wrote this
         // frame's positions — the whole module roster updates ahead of
@@ -1001,20 +1009,15 @@ export class Stellata implements FrameAnchor {
         // the mesh under fast scrub. That is why this update lives on
         // the shell rather than inside the planet module's layer.
         this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
-        // A live true-eclipse dim changes the frame every time the field
-        // evaluates, and it only evaluates on rendered frames — so hold
-        // the settle tail open until the event decays. Only while the
-        // dimmed body is actually on screen: see the field's getter.
-        if (this.planetBodyField.holdsVisibleEclipseDim) {
-          this.renderGate.invalidate('eclipse-dim:planet');
-        }
       },
-      cadenceSimBudgetS: (ctx) =>
-        this.planetBodyField.cadenceSimBudgetS(
-          ctx.camera.position, ctx.pxPerRadian, ctx.pixelRatio),
       dispose: () => {},
     });
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) => this.planetBodyField.cadenceSimBudgetS(
+          ctx.camera.position, ctx.pxPerRadian, ctx.pixelRatio),
+      },
       // AFTER the body field: a moon ring's centre is the parent's
       // live iLocalRel — reading it before the field's walk left the
       // rings one frame of sim-time behind the bodies, a visible lag
@@ -1041,6 +1044,11 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.orbitRingsLayer.dispose(),
     });
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) => this.planetBodyField.cadenceSimBudgetS(
+          ctx.camera.position, ctx.pxPerRadian, ctx.pixelRatio),
+      },
       // After the field + rings updates it reads; before the main
       // render its suppression uniforms gate. Owns no GPU resources —
       // the star mirror it feeds is disposed with the star cluster.
@@ -1048,22 +1056,18 @@ export class Stellata implements FrameAnchor {
       dispose: () => {},
     });
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) =>
+          this.binaryOrbitField?.cadenceSimBudgetS(ctx.pixelRatio)
+          ?? Number.POSITIVE_INFINITY,
+      },
       update: (ctx) => {
         this.updateBinaryOrbits();
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
         this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
-        // A live eclipse dim changes the frame every time the field
-        // evaluates, and it only evaluates on rendered frames — so hold
-        // the settle tail open until the event decays. Only while the
-        // dimmed star is actually on screen: see the field's getter.
-        if (this.eclipsePhotometryField?.holdsVisibleEclipseDim === true) {
-          this.renderGate.invalidate('eclipse-dim:binary');
-        }
       },
-      cadenceSimBudgetS: (ctx) =>
-        this.binaryOrbitField?.cadenceSimBudgetS(ctx.pixelRatio)
-        ?? Number.POSITIVE_INFINITY,
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
         this.binaryOrbitField?.dispose();
@@ -1072,6 +1076,12 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) =>
+          this.binaryOrbitField?.cadenceSimBudgetS(ctx.pixelRatio)
+          ?? Number.POSITIVE_INFINITY,
+      },
       // After the binary walk + eclipse photometry + path-layer update:
       // membership reads this frame's positions and path visibility, and
       // the mirror sync re-copies the slots those fields just wrote.
@@ -1086,6 +1096,12 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.starLocalCluster.dispose(),
     });
     this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        budgetSimS: (ctx) =>
+          this.binaryOrbitField?.cadenceSimBudgetS(ctx.pixelRatio)
+          ?? Number.POSITIVE_INFINITY,
+      },
       // After the binary + planet walks so a figure vertex that is a binary
       // member re-copies its live slot (orbital motion under scrub, epoch
       // advance, recentre — all land in localPositions with no separate signal).
@@ -1094,6 +1110,9 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.constellationFigureLayer.dispose(),
     });
     this.layers.register({
+      // B1875 boundary arcs on a Sol-centred sphere: a frozen-epoch
+      // partition, camera-anchored. No term in it is a function of t.
+      timeBehaviour: { kind: 'static' },
       // Chart-only — floor 'never' in the realistic column.
       update: (ctx) => updateWarpGatedRefLayer(
         this.constellationBoundaryLayer, ctx,
@@ -1102,12 +1121,18 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
     this.layers.register({
+      // Fixed galactic reference geometry, camera-anchored.
+      timeBehaviour: { kind: 'static' },
       update: (ctx) => updateWarpGatedRefLayer(
         this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
+      // Both spheres are camera-tracked; the only distance-dependent
+      // behaviour is a fade window, and distance only changes on a
+      // camera move, which renders anyway.
+      timeBehaviour: { kind: 'static' },
       // Both spheres are camera-tracked; a spec's optional fade window is the
       // only distance-dependent behaviour, and only the equatorial frame has
       // one (galactic/README.md § Coordinate spheres).
@@ -1140,20 +1165,34 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.layers.register({
+      // Pure projection: reads the focal position and projects arrow
+      // tips, adding no motion of its own. Whatever it points at is
+      // bounded by the layer that OWNS that object — which is why every
+      // focusable kind has to declare a budget, not just the ones that
+      // happen to be pinnable today.
+      timeBehaviour: { kind: 'static' },
       update: (ctx) => this.updateHud(ctx.warpActive),
       setMonochrome: (on) => this.hud.setMonochrome(on),
       dispose: () => this.hud.dispose(),
     });
     this.layers.register({
+      // Skybox re-anchored to camera.position; the raymarch reads the
+      // absolute camera. No t dependence.
+      timeBehaviour: { kind: 'static' },
       // Re-anchors the skybox mesh to camera.position and refreshes the
       // absolute-camera uniform for the raymarch. Visible during warp.
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
       dispose: () => this.milkyway.dispose(),
     });
     this.layers.register({
+      // Teardown leg only — the layer is shelved and draws nothing.
+      timeBehaviour: { kind: 'static' },
       dispose: () => this.dustParticles.dispose(),
     });
     this.layers.register({
+      // Teardown leg only; the per-frame work rides the 'frame' event, so
+      // it runs on rendered frames and cannot need one of its own.
+      timeBehaviour: { kind: 'static' },
       // Per-frame work rides the 'frame' event (chart-mode.ts drives
       // start / stop on the activation predicate), so only the teardown
       // leg registers here.
@@ -1467,7 +1506,6 @@ export class Stellata implements FrameAnchor {
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
-      magnitudeShared: this.sharedUniforms,
     });
   }
 
@@ -1600,6 +1638,7 @@ export class Stellata implements FrameAnchor {
     lastRenderedSimS: number;
     pulsationBudgetS: number;
     rideMoved: boolean;
+    realtimeNeeded: boolean;
   } {
     return {
       clockRate: this.clock.getRate(),
@@ -1608,6 +1647,7 @@ export class Stellata implements FrameAnchor {
       lastRenderedSimS: this.lastRenderedSimS,
       pulsationBudgetS: this.pulsationCadenceBudgetS,
       rideMoved: this._rideMovedThisFrame,
+      realtimeNeeded: this._realtimeFramesNeeded,
     };
   }
 
@@ -2252,7 +2292,10 @@ export class Stellata implements FrameAnchor {
     // decides when elapsed sim time could visibly move anything drawn,
     // from the budget the layers reported on the LAST rendered frame
     // (render-gate/README.md § The clock cadence).
-    const continuous = cameraAnimating;
+    // A 'realtime' layer needs wall-clock frames that no sim-time budget
+    // can express, so it enters as a continuous condition rather than as
+    // an invalidate (scene/scene-layer.ts, LayerTimeBehaviour).
+    const continuous = cameraAnimating || this._realtimeFramesNeeded;
     const cadenceDue = clockFrameDue(
       this.clock.getRate(), this.getT(), this.lastRenderedSimS, this.cadenceBudgetSimS,
     );
@@ -2310,6 +2353,7 @@ export class Stellata implements FrameAnchor {
     // static (a camera move renders), so every distance the budgets
     // divide by holds.
     this.lastRenderedSimS = this.frameCtx.t;
+    this._realtimeFramesNeeded = this.layers.realtimeFramesNeeded(this.frameCtx);
     this.cadenceLayerBudgetSimS = this.layers.minCadenceBudgetS(this.frameCtx);
     this.cadenceBudgetSimS = cadenceSimBudgetS(
       this.cadenceLayerBudgetSimS,
@@ -2480,6 +2524,7 @@ export class Stellata implements FrameAnchor {
     this.cadenceBudgetSimS = 0;
     this.cadenceLayerBudgetSimS = Number.POSITIVE_INFINITY;
     this.pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
+    this._realtimeFramesNeeded = false;
     this._rideMovedThisFrame = false;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is

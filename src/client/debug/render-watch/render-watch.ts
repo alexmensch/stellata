@@ -146,7 +146,8 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
 
     setReadoutText(body, [
       `clock rate   ${cadence.clockRate}x    holds ${gate.holds}`
-        + `    ride ${cadence.rideMoved ? 'yes' : 'no'}`,
+        + `    ride ${cadence.rideMoved ? 'yes' : 'no'}`
+        + `    realtime ${cadence.realtimeNeeded ? 'YES' : 'no'}`,
       '',
       `stamped by   ${stampedBy}`,
       `last wake    ${wake === null ? 'none' : `${wake.reason}`

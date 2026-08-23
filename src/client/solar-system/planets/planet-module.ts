@@ -161,6 +161,11 @@ export function createPlanetKindModule(): PlanetKindModule {
       }
 
       return {
+        timeBehaviour: {
+          kind: 'clock',
+          budgetSimS: (fc) => field!.cadenceSimBudgetS(
+            fc.camera.position, fc.pxPerRadian, fc.pixelRatio),
+        },
         update: (fc) => field!.update(fc.camera, fc.t, performance.now()),
         setMonochrome: (on) => field!.setMonochrome(on),
         recenter: (newOrigin) => field!.recenter(newOrigin),

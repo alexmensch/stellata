@@ -27,7 +27,10 @@ import {
 } from '../../hdr/hdr-pipeline';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
-import { cadenceBudgetFromRatePxS } from '../../render-gate/clock-cadence-pure';
+import {
+  CADENCE_JND_MAG,
+  cadenceBudgetFromRatePxS,
+} from '../../render-gate/clock-cadence-pure';
 
 /** Ceiling on an attached body's total space velocity — its own orbit
  *  plus its parent's. Mercury's perihelion speed, 59 km/s, is the
@@ -257,6 +260,10 @@ export class PlanetBodyField {
   private readonly tmpUmbraGlow: [number, number, number] = [0, 0, 0];
   private dimActive = new Set<number>();
   private dimOnScreen = false;
+  // Tightest sim-time budget over the visible active dims, Infinity when
+  // none is on screen. Computed beside the visibility verdict because it
+  // needs the same evalPlanetView walk.
+  private dimBudgetSimS = Number.POSITIVE_INFINITY;
   private lastDimNowMs: number | null = null;
   // Reverse index: flat instance → owning hostStarIdx (-1 = unused
   // slot). Rebuilt on every attach/detach so the flat-index accessors
@@ -417,6 +424,7 @@ export class PlanetBodyField {
     this.dimActive.clear();
     this.dimTargets.clear();
     this.dimOnScreen = false;
+    this.dimBudgetSimS = Number.POSITIVE_INFINITY;
   }
 
   /**
@@ -460,6 +468,7 @@ export class PlanetBodyField {
     if (this.liveCount === 0) {
       this.group.visible = false;
       this.dimOnScreen = false;
+      this.dimBudgetSimS = Number.POSITIVE_INFINITY;
       return;
     }
     // Rendering is gated by hidden; the ephemeris walk is
@@ -495,7 +504,8 @@ export class PlanetBodyField {
       this.markAttributeDirty('eclipseDim');
     }
     this.dimTargets.clear();
-    this.dimOnScreen = this.anyActiveDimPutsInkOnScreen(camera.position);
+    this.dimBudgetSimS = this.visibleDimCadenceBudgetS(camera.position);
+    this.dimOnScreen = Number.isFinite(this.dimBudgetSimS);
     perfMeasure('solar.bodies');
   }
 
@@ -1005,14 +1015,30 @@ export class PlanetBodyField {
     return this.dimOnScreen;
   }
 
-  private anyActiveDimPutsInkOnScreen(cameraPosLocal: Readonly<THREE.Vector3>): boolean {
+  /** Tightest sim-time budget over the dims that can put ink on screen,
+   *  Infinity when none can.
+   *
+   *  A shadow ingress is far faster than any orbital bound covers: the body
+   *  goes from lit to dark while it travels its own diameter, so the dim
+   *  sweeps 0 to 1 in `2R / v`. A just-noticeable 1% of that is `0.01`
+   *  dim units, which for Io works out near 0.4 s — two orders under the
+   *  30 s cap. Without this term a visible eclipse would step in whole
+   *  chunks between cadence frames, which is what the per-frame invalidate
+   *  used to paper over at the cost of the entire idle
+   *  (`../../render-gate/README.md` § The clock cadence). */
+  private visibleDimCadenceBudgetS(cameraPosLocal: Readonly<THREE.Vector3>): number {
+    let budget = Number.POSITIVE_INFINITY;
     for (const instanceIdx of this.dimActive) {
       const host = this.hostOfInstance(instanceIdx);
       if (host === null) continue;
-      const view = this.evalPlanetView(host, instanceIdx - host.startInstance, cameraPosLocal);
-      if (view.dVp > 0 && this.bodyInkVisible(view)) return true;
+      const i = instanceIdx - host.startInstance;
+      const view = this.evalPlanetView(host, i, cameraPosLocal);
+      if (view.dVp <= 0 || !this.bodyInkVisible(view)) continue;
+      const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
+      const own = (CADENCE_JND_MAG * 2 * radiusPc) / BODY_SPEED_BOUND_PC_PER_S;
+      if (own < budget) budget = own;
     }
-    return false;
+    return budget;
   }
 
   /** Largest sim-time step no attached body can turn into visible screen
@@ -1021,10 +1047,17 @@ export class PlanetBodyField {
    *  conservative angular-rate terms: translation (BODY_SPEED_BOUND over
    *  the camera distance) and spin (BODY_SPIN_BOUND across the resolved
    *  disc, self-gating through physDiscPx for unresolved bodies).
-   *  Hosts past their cull distance contribute nothing — their bodies
-   *  cannot draw. Geometry only: the bound needs no phase angle, ring
-   *  flux or magnitude, so this runs allocation-free rather than through
-   *  `evalPlanetView`. */
+   *  **Every attached body counts, drawn or not.** Skipping hosts past
+   *  their cull distance was a false economy: other layers delegate to
+   *  this budget for content anchored to those bodies (orbit rings ride a
+   *  parent's live position), and the skip handed them Infinity — no bound
+   *  at all. A far host costs nothing anyway, since its rate falls with
+   *  distance and never wins the min.
+   *
+   *  Geometry only, so it runs allocation-free rather than through
+   *  `evalPlanetView`; the photometric term for a visible eclipse dim is
+   *  folded in from `visibleDimCadenceBudgetS`, which the update already
+   *  computed. */
   cadenceSimBudgetS(
     cameraPos: Readonly<THREE.Vector3>,
     pxPerRadian: number,
@@ -1032,7 +1065,6 @@ export class PlanetBodyField {
   ): number {
     let maxRatePxPerS = 0;
     for (const host of this.hosts.values()) {
-      if (cameraPos.distanceTo(host.hostLocalPos) > host.cullDistance) continue;
       for (let i = 0; i < host.count; i++) {
         const dVp = this.viewVectorInto(host, i, cameraPos);
         if (dVp <= 0) continue;
@@ -1043,7 +1075,10 @@ export class PlanetBodyField {
         if (rate > maxRatePxPerS) maxRatePxPerS = rate;
       }
     }
-    return cadenceBudgetFromRatePxS(maxRatePxPerS, pixelRatio);
+    return Math.min(
+      cadenceBudgetFromRatePxS(maxRatePxPerS, pixelRatio),
+      this.dimBudgetSimS,
+    );
   }
 
   /** True when the body currently renders as one on-screen point with

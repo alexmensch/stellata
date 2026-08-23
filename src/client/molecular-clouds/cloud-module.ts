@@ -100,6 +100,8 @@ export function createCloudKindModule(): CloudKindModule {
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
       return {
+        // Clouds sit at fixed positions; nothing here rides either clock.
+        timeBehaviour: { kind: 'static' },
         update: (fc) =>
           layer!.update(fc.worldOffset, kindCtx.detailPermits('molecularCloudEllipsoids')),
         setMonochrome: (on) => layer!.setMonochrome(on),

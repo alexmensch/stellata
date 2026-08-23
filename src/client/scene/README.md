@@ -129,15 +129,44 @@ per-entry decision. This mirrors the hover subsystem's one-engine /
 many-providers pattern (`../hover/README.md`).
 
 Adding a layer = constructing it + one `register(...)` call. Hooks
-are optional except `dispose`; a layer that doesn't participate in a
-fan-out simply omits the hook (e.g. the heliopause has no per-frame
-update — its visibility is event-driven, and `chart-labels` registers
-`dispose` alone because its per-frame work rides the `'frame'` event
-under `chart-mode.ts`'s start/stop gate). One optional hook carries an
-obligation the others don't: a layer whose drawn content the SIM CLOCK
-moves on screen must implement `cadenceSimBudgetS`, or its motion
-freezes between the render gate's cadence frames
-(`../render-gate/README.md` § The clock cadence).
+are optional except `dispose` **and `timeBehaviour`** (below); a layer
+that doesn't participate in a fan-out simply omits the hook (e.g. the
+heliopause has no per-frame update — its visibility is event-driven, and
+`chart-labels` registers `dispose` alone because its per-frame work rides
+the `'frame'` event under `chart-mode.ts`'s start/stop gate).
+
+## `timeBehaviour` — the required declaration
+
+Every layer states how the passage of time changes what it draws:
+`'static'`, `'clock'` (with a sim-time budget), or `'realtime'` (with an
+activity predicate). **Required, and a discriminated union rather than an
+optional budget**, because the failure it prevents is *silence*: an
+omitted hook read as "nothing I draw moves", and a layer that did move
+then froze between the render gate's cadence frames — the worst outcome
+reached by doing nothing at all. `tsc` now refuses a layer that hasn't
+answered, so a new renderable cannot be added without the decision being
+made and reviewed. A test could only have covered the layers that existed
+when it was written.
+
+Two rules the declarations have to respect, both learned the hard way:
+
+- **Delegate only to the field that OWNS the motion.** Several entries
+  answer `'clock'` by forwarding to another layer's budget (orbit rings
+  and the solar cluster to the planet body field; the star cluster and
+  the constellation figure to the binary orbit field). That is correct
+  only when the delegate genuinely bounds the content in question — a
+  layer forwarding to the planet budget for something a *probe* moves has
+  declared a bound it does not have.
+- **A projector needs no budget of its own.** The HUD reads a focal
+  position and projects arrow tips; its screen motion IS the projected
+  object's, already bounded by that object's own layer. `'static'` is the
+  honest answer, and it is what makes "every focusable kind declares a
+  budget" load-bearing rather than incidental.
+
+`SceneLayerRegistry.behaviourCensus()` counts the declarations. A rising
+`realtime` count is a regression whatever else is green: that kind
+defeats idling for as long as its predicate holds, and the current count
+is **zero** (`../render-gate/README.md` § The clock cadence).
 
 **Not every entry owns a layer.** The first inline entry owns no GPU
 resources at all (`dispose` is empty): it exists to sequence the

@@ -1947,7 +1947,7 @@ describe('PlanetBodyField.cadenceSimBudgetS', () => {
     expect(checked).toBeGreaterThan(20);
   });
 
-  it('a closer body shrinks the budget; a culled host frees it', () => {
+  it('a closer body shrinks the budget, and distance alone never frees it', () => {
     const f = fieldWith(
       [makePlanet({ name: 'J', radiusKm: 70000, semiMajorAxisAu: 1 })],
       [[1, 0, 0]],
@@ -1956,10 +1956,14 @@ describe('PlanetBodyField.cadenceSimBudgetS', () => {
     const near = f.cadenceSimBudgetS(cameraPosAu(0, 2, 0), PX_PER_RAD, 1);
     expect(Number.isFinite(far)).toBe(true);
     expect(near).toBeLessThan(far);
-    // 1e9 AU sits far past any host's cull distance — nothing draws, so
-    // nothing constrains the clock.
-    expect(f.cadenceSimBudgetS(cameraPosAu(0, 1e9, 0), PX_PER_RAD, 1))
-      .toBe(Number.POSITIVE_INFINITY);
+    // A host past its cull distance used to be SKIPPED, which handed
+    // Infinity to every layer delegating here for content anchored to its
+    // bodies — an orbit ring rides its parent's live position and would
+    // have had no bound at all. The body still counts; it is simply so
+    // slow on screen that it cannot win the min.
+    const culled = f.cadenceSimBudgetS(cameraPosAu(0, 1e9, 0), PX_PER_RAD, 1);
+    expect(Number.isFinite(culled)).toBe(true);
+    expect(culled).toBeGreaterThan(far);
     f.dispose();
   });
 
