@@ -20,6 +20,30 @@ bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/; dust
                          assets restricted to the sync allowlist.
                          Self-skips when public/ is unbuilt.
+cadence-layer-declarations.test.ts
+                         Source scan over the SHIPPED scene-layer
+                         registrations: the `realtime` count is pinned at
+                         ZERO, the static/clock split is pinned, and every
+                         inline register({…}) in the shell must carry a
+                         timeBehaviour. A scan rather than a unit test
+                         because the live registry needs WebGL and a
+                         synthetic one proves nothing about the roster the
+                         app runs — the invariant was previously asserted
+                         in three READMEs and enforced by nothing
+                         (src/client/scene/README.md § Declaring how time
+                         moves a layer).
+cadence-pulsation-bound.test.ts
+                         Tripwire on the render cadence's 30 s cap: the
+                         shipped catalogue's fastest unsuppressed variable
+                         must not pulse a JND faster than that, or "one
+                         frame per 30 s at 1×" silently stops being true.
+                         Pinned at the measured 32.36 s, not bounded — the
+                         margin is 8 % and rests on the period field's
+                         0.1 d quantum, so a refresh has to trip
+                         something. Imports the runtime's own
+                         buildPulsationSuppressMask rather than
+                         re-deriving the eclipser rule. Self-skips when
+                         public/ is unbuilt.
 code-comment-rules.test.ts
                          Comment-hygiene scanner over `*.ts` / `*.js` /
                          `*.py` under src/ and scripts/ (CLAUDE.md
