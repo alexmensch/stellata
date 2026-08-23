@@ -93,15 +93,38 @@ sub-threshold steps that all go one way still accumulate into a wake.
 
 At live 1× almost nothing the sim clock drives moves a pixel per tick:
 planet angular motion is sub-pixel for minutes at most vantages, and
-GCVS periods run hours to years. So a nonzero rate renders on a
+GCVS periods run hours to years. So a live clock renders on a
 **cadence**: each rendered frame stores a sim-time budget — the largest
 step nothing drawn can turn into visible change, over every driver that
-reports one — and ticks skip until
-the elapsed sim time reaches it. `clockFrameDue` is the per-tick test;
-a rate high enough (fast-forward, or a close body) collapses the budget
-below one tick's sim delta and rendering is continuous again, which is
-how "every vantage where motion is visibly super-threshold renders
-every frame" falls out with no special case.
+reports one — and ticks skip until the elapsed sim time reaches it.
+`clockFrameDue` is the per-tick test.
+
+**The budget alone does not decide, and must not.** It bounds how far
+anything steps between two rendered frames — a *smoothness* measure. How
+long the picture may be stale is a *different* measure, and the two
+coincide only while frames are frequent: half a device pixel per frame is
+invisible at 60 Hz and meaningless at one frame per two seconds. Two
+guards therefore sit in front of the budget test, and either one renders
+every tick:
+
+- **Faster than live never idles** (`|rate| > 1`). A fast-forward is
+  someone asking to watch time move, so a held frame reads as a hang
+  whatever the pixel bound says — and the bound covers only the drivers
+  that report one, which is a thin guarantee to hold a frame on. This
+  replaces the old emergent story ("a high enough rate collapses the
+  budget below one tick's sim delta"): true at large rates, but it left
+  a band around 10–100× where the gap landed at seconds.
+- **A gap too short to be worth idling**
+  (`CADENCE_MIN_IDLE_GAP_REAL_S`, 2 real seconds; at live rate the budget
+  *is* the gap). Below it a hold is long enough to read as a hang and too
+  short to save anything, and it sits near one rAF tick — so the due test
+  flips between rendering and skipping tick to tick, which is judder, not
+  idle. Collapsing that band downward leaves two behaviours and no middle:
+  continuous, or a gap nobody is waiting through.
+
+Together they mean the cadence engages only at live rate or slower, and
+only where the fastest reporting driver allows at least a two-second
+hold. Everything else renders as it always did.
 
 The budget is a min over four sources (`cadenceSimBudgetS`):
 
@@ -168,12 +191,21 @@ adaptation cut, so holding frames for them buys nothing and costs the
 whole idle. The dims themselves still evaluate — only the frame hold is
 gated.
 
-What stays continuous regardless: any focus whose moving-focal ride
-translates the camera per frame (an orbiting binary member, a planet, a
-probe under a running clock) — the ride's camera write trips the pose
-snapshot every tick, exactly as before this cadence existed. The idle
-win applies to vantages where the camera itself is still, the default
-Sol view first among them.
+**A moving focus is NOT held continuous by its ride**, though it looks
+like it should be. Both rides — `applyFocalFrameRide` for a binary
+member, `applyMovingFocalRide` for a planet or probe — run inside the
+scene-layer update fan-out, which sits *below* the gate: on a skipped
+tick neither runs, so there is no camera write and the pose snapshot is
+unchanged. What actually keeps a focused close body smooth is its layer
+budget, which divides the body's own speed bound by the camera distance
+and so collapses toward zero exactly where a ride would have mattered.
+Same outcome, different mechanism. Do not move a ride above the gate to
+"restore" the pose write — it reads positions the field's walk writes
+below the gate, and the mesh LOD sizes off the post-ride camera
+(`../stellata.ts`, the planet layer's update).
+
+The idle win applies to vantages where the camera itself is still, the
+default Sol view first among them.
 
 ## Invalidation sources (`invalidate()` callers)
 

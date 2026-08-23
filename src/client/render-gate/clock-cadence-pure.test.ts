@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CADENCE_CAP_SIM_S,
   CADENCE_JND_MAG,
+  CADENCE_MIN_IDLE_GAP_REAL_S,
   CADENCE_MOTION_THRESHOLD_DEVICE_PX,
   cadenceBudgetFromRatePxS,
   cadenceSimBudgetS,
@@ -83,11 +84,51 @@ describe('clockFrameDue', () => {
   it('due exactly at the budget, either clock direction', () => {
     expect(clockFrameDue(1, 129.9, 100, 30)).toBe(false);
     expect(clockFrameDue(1, 130, 100, 30)).toBe(true);
-    expect(clockFrameDue(-2, 70, 100, 30)).toBe(true);
-    expect(clockFrameDue(-2, 71, 100, 30)).toBe(false);
+    expect(clockFrameDue(-1, 70.1, 100, 30)).toBe(false);
+    expect(clockFrameDue(-1, 70, 100, 30)).toBe(true);
   });
 
   it('a zero budget renders every tick under any running rate', () => {
     expect(clockFrameDue(1e-9, 100, 100, 0)).toBe(true);
+  });
+
+  it('faster than live never idles, whatever the budget allows', () => {
+    // The whole cap's worth of budget at 2x is a 15 s hold — bounded to
+    // half a device pixel of motion and still a hang to whoever pressed
+    // fast-forward. Every rate past live renders every tick.
+    expect(clockFrameDue(2, 100, 100, CADENCE_CAP_SIM_S)).toBe(true);
+    expect(clockFrameDue(-64, 100, 100, CADENCE_CAP_SIM_S)).toBe(true);
+    expect(clockFrameDue(1.0001, 100, 100, CADENCE_CAP_SIM_S)).toBe(true);
+    // Live itself still idles — the boundary belongs to the idling side.
+    expect(clockFrameDue(1, 100, 100, CADENCE_CAP_SIM_S)).toBe(false);
+    expect(clockFrameDue(-1, 100, 100, CADENCE_CAP_SIM_S)).toBe(false);
+  });
+
+  it('a gap too short to be worth idling renders every tick', () => {
+    expect(CADENCE_MIN_IDLE_GAP_REAL_S).toBe(2);
+    // At live rate the budget IS the gap in real seconds. A vantage whose
+    // fastest driver allows just under it renders continuously rather
+    // than holding a frame for that long.
+    expect(clockFrameDue(1, 100, 100, CADENCE_MIN_IDLE_GAP_REAL_S - 0.01)).toBe(true);
+    // At the threshold it idles, and stays skipping until the budget.
+    expect(clockFrameDue(1, 101, 100, CADENCE_MIN_IDLE_GAP_REAL_S)).toBe(false);
+    expect(clockFrameDue(1, 102, 100, CADENCE_MIN_IDLE_GAP_REAL_S)).toBe(true);
+    // Half rate doubles the real gap, so half the budget still clears it.
+    expect(clockFrameDue(0.5, 100, 100, 1)).toBe(false);
+    expect(clockFrameDue(0.5, 100, 100, 0.99)).toBe(true);
+  });
+
+  it('a NaN budget renders rather than freezing the clock', () => {
+    // The registry drops a NaN layer budget before it reaches here; this
+    // pins that the gate survives one arriving anyway. `elapsed >= NaN`
+    // is false forever, so the naive form would never fire again.
+    expect(clockFrameDue(1, 1e9, 100, Number.NaN)).toBe(true);
+  });
+
+  it('an unconstrained budget never fires a cadence frame', () => {
+    // Nothing drawn rides the clock: no layer reported, no variable
+    // pulsates. The cap normally floors this at 30 s — the gate itself
+    // must not invent a frame when it does not.
+    expect(clockFrameDue(1, 1e9, 100, Number.POSITIVE_INFINITY)).toBe(false);
   });
 });

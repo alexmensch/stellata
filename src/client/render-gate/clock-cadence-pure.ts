@@ -69,6 +69,16 @@ export function cadenceSimBudgetS(
   return Math.min(CADENCE_CAP_SIM_S, layerBudgetS, pulsationBudgetS);
 }
 
+/** Shortest gap between rendered frames, in REAL seconds, that idling is
+ *  worth. The budget bounds how far anything steps between two frames; it
+ *  says nothing about how long the picture may be stale, and those only
+ *  coincide while frames are frequent. Gaps shorter than this are the
+ *  worst of both: long enough to read as a hang, short enough to save
+ *  nothing, and close enough to one rAF tick that the due test flips
+ *  between rendering and skipping tick to tick — which is judder rather
+ *  than idle. They collapse to continuous rendering instead. */
+export const CADENCE_MIN_IDLE_GAP_REAL_S = 2;
+
 /** Whether the running clock has outrun the budget since the last
  *  rendered frame. NaN `lastRenderedSimS` (nothing rendered yet) is due.
  *  Rate 0 is never due — a paused clock moves nothing, whatever the
@@ -81,5 +91,13 @@ export function clockFrameDue(
 ): boolean {
   if (rate === 0) return false;
   if (Number.isNaN(lastRenderedSimS)) return true;
+  // Faster than live is the user asking to watch time move, so nothing
+  // idles there. Generalising the cadence past live rate is what puts a
+  // held frame in front of someone waiting for one.
+  if (Math.abs(rate) > 1) return true;
+  // Negated `>=`, not `<`: a NaN budget must render rather than freeze
+  // the clock. The registry drops NaN before it gets here and this must
+  // not come to depend on that.
+  if (!(budgetS >= CADENCE_MIN_IDLE_GAP_REAL_S * Math.abs(rate))) return true;
   return Math.abs(simNowS - lastRenderedSimS) >= budgetS;
 }
