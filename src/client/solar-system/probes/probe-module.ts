@@ -100,9 +100,12 @@ export function createProbeKindModule(): ProbeKindModule {
 
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
-      field = new ProbeField(kindCtx.sharedUniforms);
+      field = new ProbeField(kindCtx.sharedUniforms, kindCtx.webgpu?.probeMaterial);
       paths = new ProbePathLayer(kindCtx.sharedUniforms);
-      kindCtx.scene.add(field.group);
+      // The markers have ported, so on a WebGPU boot they belong in the
+      // scene that renders; the Line2 trails have not, and stay in the
+      // shell's, which that boot never draws.
+      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(field.group);
       kindCtx.scene.add(paths.group);
       field.recenter(kindCtx.getWorldOffset());
       field.attach(trajectories, kindCtx.getT());

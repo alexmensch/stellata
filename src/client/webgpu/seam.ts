@@ -6,6 +6,12 @@ import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
+import type {
+  PlanetGlareSources,
+} from '../solar-system/planets/planet-body-field';
+import type {
+  SolarSystemMaterials,
+} from '../solar-system/materials/emitter-material';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
 
@@ -50,4 +56,25 @@ export interface WebGpuSeam {
    *  bindSharedUniforms to have run — the materials take their slots
    *  from the uniform-node mirror. */
   attachStarLayer(sources: StarGeometrySources): WebGpuStarLayer;
+  /** The TSL planet surfaces, over the caller's 1×1 placeholder — the
+   *  mesh layer owns that texture on either backend, so the factory takes
+   *  it rather than the other way round. */
+  solarSystemMaterials(placeholder: THREE.Texture): SolarSystemMaterials;
+  /** The TSL probe glyph, which reads no texture and so needs no
+   *  placeholder — the split mirrors `makeGlslProbeMaterial`. */
+  readonly probeMaterial: Pick<SolarSystemMaterials, 'probeMarker'>;
+  /** Build the TSL reflected-glare billboard into the seam's scene. The
+   *  one solar-system surface that does not port as a material swap: its
+   *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it
+   *  carries its own packed geometry over the field's live arrays. */
+  attachPlanetGlare(sources: PlanetGlareSources): WebGpuPlanetGlare;
+}
+
+export interface WebGpuPlanetGlare {
+  /** Chart mode's flat-ink blend — the swap `PlanetBodyField` applies to
+   *  its own material. */
+  setMonochrome(on: boolean): void;
+  /** The field's group-visibility gate, which has no group to ride here. */
+  setVisible(on: boolean): void;
+  dispose(): void;
 }

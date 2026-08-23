@@ -663,6 +663,7 @@ export class Stellata implements FrameAnchor {
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
       requestRender: () => this.renderGate.invalidate(),
+      webgpu: this.webgpu,
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);

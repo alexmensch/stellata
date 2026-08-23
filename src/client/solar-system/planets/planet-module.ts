@@ -15,6 +15,7 @@ import type {
   ObjectKindModule,
 } from '../../kinds/kind-module';
 import type { SceneLayer } from '../../scene/scene-layer';
+import type { WebGpuPlanetGlare } from '../../webgpu/seam';
 import { KM_PC } from '../../util/astronomy-constants';
 import { loadPlanetElementTables } from '../ephemerides/element-table-loader';
 import {
@@ -56,6 +57,10 @@ export function createPlanetKindModule(): PlanetKindModule {
   let ctx: KindContext | null = null;
   let field: PlanetBodyField | null = null;
   let meshLayer: PlanetMeshLayer | null = null;
+  /** The TSL reflected-glare billboard, on a WebGPU boot only — the one
+   *  solar-system surface that needs its own packed geometry rather than
+   *  a material swap (`../../webgpu/solar-system/README.md`). */
+  let glare: WebGpuPlanetGlare | null = null;
   let hostStarNameOf: (starIdx: number) => string | null = () => null;
   let resolveSystemsReady: () => void;
   const systemsReady = new Promise<void>((resolve) => {
@@ -120,12 +125,18 @@ export function createPlanetKindModule(): PlanetKindModule {
 
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
+      const webgpu = kindCtx.webgpu;
       field = new PlanetBodyField(kindCtx.sharedUniforms);
       meshLayer = new PlanetMeshLayer(
         field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
         kindCtx.maxTextureSize,
+        webgpu ? (placeholder) => webgpu.solarSystemMaterials(placeholder) : undefined,
       );
+      // The GLSL glare meshes still hang off this group on a WebGPU boot;
+      // the shell's scene simply never renders, and the TSL billboard
+      // below draws in its place.
       kindCtx.scene.add(field.group);
+      glare = webgpu?.attachPlanetGlare(field.glareSources()) ?? null;
 
       // Horizons element tables — 1.5 MB that upgrades the ephemeris from
       // the Standish series' 0.06 AU to ~5e-6 AU across 1900–2100. Fired
@@ -161,10 +172,21 @@ export function createPlanetKindModule(): PlanetKindModule {
       }
 
       return {
-        update: (fc) => field!.update(fc.camera, fc.t, performance.now()),
-        setMonochrome: (on) => field!.setMonochrome(on),
+        update: (fc) => {
+          field!.update(fc.camera, fc.t, performance.now());
+          // The field's own visibility gate — chart mode, the observe
+          // hide, and an empty roster all land on it — has no group to
+          // ride on the TSL side.
+          glare?.setVisible(field!.group.visible);
+        },
+        setMonochrome: (on) => {
+          field!.setMonochrome(on);
+          glare?.setMonochrome(on);
+        },
         recenter: (newOrigin) => field!.recenter(newOrigin),
         dispose: () => {
+          glare?.dispose();
+          glare = null;
           field!.dispose();
           meshLayer!.dispose();
         },
