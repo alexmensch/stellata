@@ -3,6 +3,7 @@ import {
   STUCK_TAIL_MS,
   classifyHealth,
   classifyRenderWatch,
+  hudContainerCss,
   medianOf,
   type RenderWatchSample,
 } from './render-watch-pure';
@@ -19,6 +20,19 @@ const base: RenderWatchSample = {
   rideMoved: false,
 };
 const at = (patch: Partial<RenderWatchSample>) => classifyRenderWatch({ ...base, ...patch });
+
+describe('hudContainerCss', () => {
+  it('is selectable, and absorbs pointer events rather than passing them through', () => {
+    const css = hudContainerCss();
+    // `none` would let every pointer move in this corner reach the canvas,
+    // whose wake listeners would then invalidate the gate being watched.
+    expect(css).toContain('pointer-events:auto');
+    expect(css).toContain('user-select:text');
+    // Safari does not reliably inherit it — styles.css says so explicitly.
+    expect(css).toContain('-webkit-user-select:text');
+    expect(css).not.toContain('pointer-events:none');
+  });
+});
 
 describe('medianOf', () => {
   it('sorts before picking, and answers NaN for nothing', () => {

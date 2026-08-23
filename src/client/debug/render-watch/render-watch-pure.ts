@@ -16,6 +16,26 @@ export const STUCK_TAIL_MS = SETTLE_MS * 3;
  *  still count as idling on schedule. Absorbs one tick of quantisation. */
 const IDLE_TOLERANCE = 0.7;
 
+/** The HUD container's inline style.
+ *
+ *  `pointer-events: auto` is what makes the readout selectable, and it
+ *  also protects the measurement rather than threatening it: the gate's
+ *  wake listeners sit on the CANVAS, so `none` would pass every pointer
+ *  move in this corner straight through to it and wake the gate the HUD
+ *  is watching. Absorbing them is the quiet option.
+ *
+ *  Selection opt-in follows the panel's pattern — `body` sets
+ *  `user-select: none` and UI chrome opts back in, with the `-webkit-`
+ *  property set explicitly because Safari does not reliably inherit it
+ *  (`../../styles.css`). */
+export function hudContainerCss(): string {
+  return 'position:fixed;top:10px;left:10px;z-index:99999;'
+    + 'pointer-events:auto;user-select:text;-webkit-user-select:text;cursor:text;'
+    + 'font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;'
+    + 'background:rgba(0,0,0,.85);color:#e8e8e8;padding:9px 11px;'
+    + 'border-radius:6px;border:2px solid #333;min-width:330px';
+}
+
 export type RenderWatchTone =
   /** Idling on the cadence, as intended. */
   | 'idling'

@@ -19,13 +19,32 @@ This is the whole reason it is a standalone toggle rather than a tenth
 panel section. It subscribes to `'frame'`, counts rAF ticks in a loop of
 its own, and reads two debug-scoped getters
 (`RenderGate.debugState`, `Stellata.cadenceDebugState`). It calls neither
-`hold()` nor `invalidate()`, and it touches nothing on the canvas — a
-`pointermove` over the canvas would wake the gate, so the HUD is
-`pointer-events: none`. Adding any wake path to this module destroys the
-only thing it measures.
+`hold()` nor `invalidate()`. Adding any wake path to this module destroys
+the only thing it measures.
 
 Toggling it on while the panel is open logs a warning rather than
 silently reporting "every tick renders".
+
+## Why it absorbs pointer events
+
+`pointer-events: auto`, which reads like the risky choice and is the safe
+one. The gate's wake listeners are on the **canvas**
+(`../../render-gate/render-gate.ts` `attachDom`), so `none` would pass
+every pointer move in this corner straight through the HUD to the canvas
+and wake the gate being watched. Absorbing them is the quiet option, and
+it is what makes the readout selectable — worth having, because these
+numbers get copied into bug reports.
+
+Selection opt-in follows the panel's pattern: `body` sets
+`user-select: none` and UI chrome opts back in, with the `-webkit-`
+property written explicitly because Safari does not reliably inherit it
+(`../../styles.css`). `hudContainerCss` is pure so the invariant is
+pinned by test rather than by comment.
+
+Two consequences: the HUD's rectangle does not pass clicks to the scene
+(the debug panel behaves the same way), and **⌘C wakes the gate** — the
+window-level `keydown` listener is a wake path, so copying the readout
+buys a 1500 ms settle tail. The numbers you copied are from before it.
 
 ## Reading it
 

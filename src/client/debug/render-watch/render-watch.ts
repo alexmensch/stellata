@@ -6,6 +6,7 @@ import { SETTLE_MS } from '../../render-gate/render-gate-pure';
 import {
   classifyHealth,
   classifyRenderWatch,
+  hudContainerCss,
   type RenderWatchTone,
 } from './render-watch-pure';
 
@@ -24,12 +25,6 @@ const TONE_COLOUR: Record<RenderWatchTone, string> = {
   unknown: '#a3a3a3',
 };
 
-function styleHud(el: HTMLElement): void {
-  el.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;pointer-events:none;'
-    + 'font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(0,0,0,.85);'
-    + 'color:#e8e8e8;padding:9px 11px;border-radius:6px;border:2px solid #333;min-width:330px';
-}
-
 const fixed = (v: number, d = 2): string =>
   Number.isFinite(v) ? v.toFixed(d) : (v > 0 ? 'inf' : '—');
 
@@ -37,7 +32,7 @@ const fixed = (v: number, d = 2): string =>
 export function mountRenderWatch(stellata: Stellata): () => void {
   const hud = document.createElement('div');
   hud.id = 'stellata-render-watch';
-  styleHud(hud);
+  hud.style.cssText = hudContainerCss();
   const head = document.createElement('div');
   head.style.cssText = 'font-weight:700;margin-bottom:2px';
   const sub = document.createElement('div');
