@@ -9,6 +9,8 @@ import { buildArrowSection } from './arrow-fade-debug-hud';
 import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
 import { buildExposureSection } from '../hdr/exposure/exposure-tuning';
+import { mountRenderWatch } from './render-watch/render-watch';
+import { buildRenderWatchSection } from './render-watch/render-watch-section';
 import {
   buildPassToggles,
   runPriceFrame,
@@ -42,6 +44,10 @@ export interface DebugTools {
   /** priceFrame N times over; prints per-pass savedMs ranges across
    *  runs (the repeatability check). */
   priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;
+  /** Toggle the render watcher: why is this scene rendering, or not.
+   *  Deliberately NOT a panel section — the panel holds the gate open, so
+   *  no section can observe idling (`render-watch/README.md`). */
+  renderWatch(): void;
 }
 
 /** Wrap a DebugSection in a collapsible-section and mount it on the panel.
@@ -77,6 +83,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   let panel: HTMLDivElement | null = null;
   let disposers: Array<() => void> = [];
   let releaseRenderHold: (() => void) | null = null;
+  let closeRenderWatch: (() => void) | null = null;
 
   const closePanel = () => {
     if (!panel) return;
@@ -88,6 +95,15 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     releaseRenderHold = null;
   };
 
+  /** Mount the watcher if it isn't up. Its own [close] link clears the
+   *  handle through onClose, so the console toggle stays in step. */
+  const openRenderWatch = () => {
+    if (closeRenderWatch !== null) return;
+    closeRenderWatch = mountRenderWatch(stellata, {
+      onClose: () => { closeRenderWatch = null; },
+    });
+  };
+
   const togglePanel = () => {
     if (panel) { closePanel(); return; }
 
@@ -96,6 +112,11 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     releaseRenderHold = stellata.renderGate.hold();
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
+      { title: 'Render watch', storageKey: 'render-watch', build: () => buildRenderWatchSection({
+        // Panel first: its hold is exactly what the watcher cannot see past.
+        onStart: () => { closePanel(); openRenderWatch(); },
+        isRunning: () => closeRenderWatch !== null,
+      }) },
       { title: 'Exposure',   storageKey: 'exposure',   build: () => buildExposureSection(stellata) },
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkyway) },
@@ -127,6 +148,21 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       runPriceFrame(stellata, buildPassToggles(stellata), options),
     priceFrameRepeat: (runs, options) =>
       runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
+    renderWatch: () => {
+      if (closeRenderWatch !== null) {
+        const dispose = closeRenderWatch;
+        closeRenderWatch = null;
+        dispose();
+        return;
+      }
+      openRenderWatch();
+      if (panel !== null) {
+        console.warn(
+          'render-watch: the debug panel is open and holds the render gate, so '
+          + 'every tick renders. Close it (debug.panel()) to observe idling.',
+        );
+      }
+    },
   };
 
   (window as unknown as { debug: DebugTools }).debug = tools;

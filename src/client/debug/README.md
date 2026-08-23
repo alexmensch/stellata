@@ -28,6 +28,10 @@ src/client/debug/
                                   stub. Own README.
   frame-cost/                     debug.priceFrame() — automated per-pass
                                   gpu.frame differentials. Own README.
+  render-watch/                   debug.renderWatch() — why is this scene
+                                  rendering, or not. A standalone HUD
+                                  rather than a panel section, because the
+                                  panel holds the gate open. Own README.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -58,6 +62,12 @@ The HUD is an opt-in dev tool, not a user feature. Activation paths:
   **Every section opens collapsed** and each remembers its own state in
   `sessionStorage` (`stellata.debug.collapsed.<key>`), so expand what you
   need once and it stays expanded for the tab's lifetime.
+
+- **`debug.renderWatch()`** — a standalone corner HUD that names why the
+  render gate is drawing, or not. It takes **no** gate hold, which is the
+  whole point: the panel does, so no section inside it can ever observe
+  idling. `render-watch/README.md` owns it, including the panel section
+  that closes the panel before starting it.
 
 There is **no URL param and no keyboard shortcut.** Both paths existed
 during the original profiling work and were removed deliberately —
