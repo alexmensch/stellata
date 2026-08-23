@@ -10,6 +10,7 @@ import { buildEclipseSection } from './eclipse-debug-hud';
 import { buildWarpSection } from '../camera/warp/warp-tuning';
 import { buildExposureSection } from '../hdr/exposure/exposure-tuning';
 import { mountRenderWatch } from './render-watch/render-watch';
+import { buildRenderWatchSection } from './render-watch/render-watch-section';
 import {
   buildPassToggles,
   runPriceFrame,
@@ -94,6 +95,15 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     releaseRenderHold = null;
   };
 
+  /** Mount the watcher if it isn't up. Its own [close] link clears the
+   *  handle through onClose, so the console toggle stays in step. */
+  const openRenderWatch = () => {
+    if (closeRenderWatch !== null) return;
+    closeRenderWatch = mountRenderWatch(stellata, {
+      onClose: () => { closeRenderWatch = null; },
+    });
+  };
+
   const togglePanel = () => {
     if (panel) { closePanel(); return; }
 
@@ -102,6 +112,11 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     releaseRenderHold = stellata.renderGate.hold();
 
     const sections: Array<{ title: string; storageKey: string; build: () => DebugSection }> = [
+      { title: 'Render watch', storageKey: 'render-watch', build: () => buildRenderWatchSection({
+        // Panel first: its hold is exactly what the watcher cannot see past.
+        onStart: () => { closePanel(); openRenderWatch(); },
+        isRunning: () => closeRenderWatch !== null,
+      }) },
       { title: 'Exposure',   storageKey: 'exposure',   build: () => buildExposureSection(stellata) },
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkyway) },
@@ -135,11 +150,12 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
     renderWatch: () => {
       if (closeRenderWatch !== null) {
-        closeRenderWatch();
+        const dispose = closeRenderWatch;
         closeRenderWatch = null;
+        dispose();
         return;
       }
-      closeRenderWatch = mountRenderWatch(stellata);
+      openRenderWatch();
       if (panel !== null) {
         console.warn(
           'render-watch: the debug panel is open and holds the render gate, so '

@@ -378,6 +378,7 @@ export class Stellata implements FrameAnchor {
   // Budget seeds 0 so the first tick under a running clock is due;
   // NaN-seeded sim stamp makes clockFrameDue's first read due too.
   private cadenceBudgetSimS = 0;
+  private cadenceLayerBudgetSimS = Number.POSITIVE_INFINITY;
   private lastRenderedSimS = Number.NaN;
   private pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
   private _rideMovedThisFrame = false;
@@ -1593,6 +1594,7 @@ export class Stellata implements FrameAnchor {
   get cadenceDebugState(): {
     clockRate: number;
     budgetSimS: number;
+    layerBudgetS: number;
     lastRenderedSimS: number;
     pulsationBudgetS: number;
     rideMoved: boolean;
@@ -1600,6 +1602,7 @@ export class Stellata implements FrameAnchor {
     return {
       clockRate: this.clock.getRate(),
       budgetSimS: this.cadenceBudgetSimS,
+      layerBudgetS: this.cadenceLayerBudgetSimS,
       lastRenderedSimS: this.lastRenderedSimS,
       pulsationBudgetS: this.pulsationCadenceBudgetS,
       rideMoved: this._rideMovedThisFrame,
@@ -2305,8 +2308,9 @@ export class Stellata implements FrameAnchor {
     // static (a camera move renders), so every distance the budgets
     // divide by holds.
     this.lastRenderedSimS = this.frameCtx.t;
+    this.cadenceLayerBudgetSimS = this.layers.minCadenceBudgetS(this.frameCtx);
     this.cadenceBudgetSimS = cadenceSimBudgetS(
-      this.layers.minCadenceBudgetS(this.frameCtx),
+      this.cadenceLayerBudgetSimS,
       this.pulsationCadenceBudgetS,
       this._rideMovedThisFrame,
     );
@@ -2472,6 +2476,7 @@ export class Stellata implements FrameAnchor {
     this.lastInvalidatedDm = Number.NaN;
     this.lastRenderedSimS = Number.NaN;
     this.cadenceBudgetSimS = 0;
+    this.cadenceLayerBudgetSimS = Number.POSITIVE_INFINITY;
     this.pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
     this._rideMovedThisFrame = false;
     this.input.dispose();

@@ -28,11 +28,12 @@ src/client/debug/
                                   stub. Own README.
   frame-cost/                     debug.priceFrame() — automated per-pass
                                   gpu.frame differentials. Own README.
-  render-watch/                   debug.renderWatch() — why the render
-                                  gate is drawing, or not. Standalone
+  render-watch/                   Why the render gate is drawing, or not.
+                                  Its own HUD rather than a panel readout,
                                   because the panel holds the gate open
-                                  and so cannot observe idling. Own
-                                  README.
+                                  and so cannot observe idling — the panel
+                                  section starting it CLOSES the panel.
+                                  Own README.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -49,7 +50,7 @@ src/client/debug/
 The HUD is an opt-in dev tool, not a user feature. Activation paths:
 
 - **`debug.panel()`** in the dev console — opens the unified debug
-  panel; the Perf section is one of nine
+  panel; the Perf section is one of ten
   collapsible sections inside it. Opening the panel installs the
   instrumentation (one-shot, swaps the module-level no-op
   `mark`/`measure`/`frame` functions to real implementations) and
@@ -367,7 +368,9 @@ re-prosecuted.
 ## Debug panel
 
 `window.debug.panel()` toggles the unified debug panel — a draggable,
-collapsible host with nine sections:
+collapsible host with ten sections:
+Render watch (`render-watch/render-watch-section.ts` — starts the render
+watcher and closes this panel; see `render-watch/README.md`),
 Exposure (`../hdr/exposure/exposure-tuning.ts` — the exposure statistic,
 the three adaptation branches and which governs, the exposure
 decomposition, over `L_ADAPT` / `L_TARGET` / slew τ / `DR_MAG` /

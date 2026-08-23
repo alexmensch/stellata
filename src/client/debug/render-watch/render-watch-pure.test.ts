@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   STUCK_TAIL_MS,
+  bindingSourceLabel,
   classifyHealth,
   classifyRenderWatch,
   hudContainerCss,
@@ -8,7 +9,10 @@ import {
   type RenderWatchSample,
 } from './render-watch-pure';
 import { SETTLE_MS } from '../../render-gate/render-gate-pure';
-import { CADENCE_MIN_IDLE_GAP_REAL_S } from '../../render-gate/clock-cadence-pure';
+import {
+  CADENCE_CAP_SIM_S,
+  CADENCE_MIN_IDLE_GAP_REAL_S,
+} from '../../render-gate/clock-cadence-pure';
 
 const base: RenderWatchSample = {
   holds: 0,
@@ -31,6 +35,19 @@ describe('hudContainerCss', () => {
     // Safari does not reliably inherit it — styles.css says so explicitly.
     expect(css).toContain('-webkit-user-select:text');
     expect(css).not.toContain('pointer-events:none');
+  });
+});
+
+describe('bindingSourceLabel', () => {
+  it('names whichever source Math.min would have picked', () => {
+    expect(bindingSourceLabel(Number.POSITIVE_INFINITY, 32.4)).toBe('the 30s cap');
+    expect(bindingSourceLabel(0.04, 32.4)).toBe('a scene layer');
+    expect(bindingSourceLabel(Number.POSITIVE_INFINITY, 12)).toBe('the pulsation bound');
+    // Ties resolve the way Math.min does, so the label cannot contradict
+    // the number printed beside it.
+    expect(bindingSourceLabel(12, 12)).toBe('a scene layer');
+    expect(bindingSourceLabel(Number.POSITIVE_INFINITY, CADENCE_CAP_SIM_S))
+      .toBe('the pulsation bound');
   });
 });
 

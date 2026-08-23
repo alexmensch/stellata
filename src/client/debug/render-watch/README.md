@@ -8,10 +8,44 @@ it can ever observe idling.
 
 ```
 src/client/debug/render-watch/
-  render-watch-pure.ts (+ test)  The verdict table + the health line.
+  render-watch-pure.ts (+ test)  The verdict table, the binding-source
+                                 label, the health line, the container
+                                 CSS.
   render-watch.ts                HUD DOM, the 'frame' subscription, its
                                  own rAF tick counter, mount/dispose.
+  render-watch-section.ts        The panel section that hands off to it.
 ```
+
+## Starting it from the panel
+
+The **Render watch** section (first in the panel) has one button, and it
+**closes the panel** before mounting the watcher — in that order, because
+the panel's gate hold is exactly what the watcher cannot see past. The
+HUD's own `[close]` link dismisses it and does *not* reopen the panel.
+`debug.renderWatch()` remains the console toggle; all three paths share
+one handle, so the section's button label and the console toggle stay in
+step with whatever is actually on screen.
+
+## What the two budget numbers mean
+
+- **`hold budget`** — the most **model** time that may pass before the
+  frame has to be redrawn. Not wall-clock time: `sim-s` is seconds on the
+  clock the scrubber drives, so at live rate one sim-second is one real
+  second, and at 100× fast-forward the same budget elapses 100× sooner.
+  It is the largest step that nothing drawn can turn into a visible
+  change, where "visible" means half a device pixel of on-screen motion
+  or 0.01 magnitudes of brightness.
+- **`set by` / `layers · pulsation · cap`** — the budget is the smallest
+  of three, and this names which one is currently binding.
+  **`pulsation`** is the variable-star bound: stars in the catalogue that
+  cycle in brightness would, at their fastest, take this many model
+  seconds to shift by 0.01 magnitudes — the smallest brightness step a
+  viewer would notice. On the shipped catalogue it reads **32.4**, just
+  above the 30 s cap, so it never actually binds; a catalogue refresh
+  bringing in a faster variable would make it the limit, and
+  `tests/cadence-idle-floor.test.ts` fails if that happens unnoticed.
+  **`layers`** is the min over the per-layer hooks (planet bodies,
+  probes, binaries), and is what collapses near a moving body.
 
 ## The invariant: it must never hold the gate
 
@@ -40,6 +74,15 @@ Selection opt-in follows the panel's pattern: `body` sets
 property written explicitly because Safari does not reliably inherit it
 (`../../styles.css`). `hudContainerCss` is pure so the invariant is
 pinned by test rather than by comment.
+
+Selectable CSS is only half of it — a readout that rewrites its own
+`textContent` five times a second replaces the text node and collapses
+the selection every time, so dragging across it is impossible. Every
+write goes through **`setReadoutText`** (`../debug-panel.ts`), which
+holds the write while a selection touches the element and dedupes
+unchanged text. The readout therefore freezes while you have text
+selected in it, which is the desired behaviour: you are reading a
+snapshot in order to copy it.
 
 Two consequences: the HUD's rectangle does not pass clicks to the scene
 (the debug panel behaves the same way), and **⌘C wakes the gate** — the

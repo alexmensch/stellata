@@ -2,7 +2,10 @@
 // the verdict table is testable. See README.md.
 
 import { SETTLE_MS } from '../../render-gate/render-gate-pure';
-import { CADENCE_MIN_IDLE_GAP_REAL_S } from '../../render-gate/clock-cadence-pure';
+import {
+  CADENCE_CAP_SIM_S,
+  CADENCE_MIN_IDLE_GAP_REAL_S,
+} from '../../render-gate/clock-cadence-pure';
 
 /** A tail that has been continuously unexpired for this long is not
  *  settling — something is stamping activity every tick. The focal ride
@@ -122,6 +125,18 @@ export function classifyRenderWatch(s: RenderWatchSample): RenderWatchVerdict {
   return out('wrong',
     `NOT IDLING — ${Math.round(medianGapMs)}ms gaps against a `
     + `${(expectedGapMs / 1000).toFixed(2)}s budget`);
+}
+
+/** Which of the three budget sources is setting the hold, named for the
+ *  readout. The layers' min wins ties, then the pulsation bound, then the
+ *  cap — the order `Math.min` would resolve them in, so the label cannot
+ *  disagree with the number beside it. */
+export function bindingSourceLabel(layerBudgetS: number, pulsationBudgetS: number): string {
+  if (layerBudgetS <= pulsationBudgetS && layerBudgetS <= CADENCE_CAP_SIM_S) {
+    return 'a scene layer';
+  }
+  if (pulsationBudgetS <= CADENCE_CAP_SIM_S) return 'the pulsation bound';
+  return `the ${CADENCE_CAP_SIM_S}s cap`;
 }
 
 export interface RenderWatchHealth {

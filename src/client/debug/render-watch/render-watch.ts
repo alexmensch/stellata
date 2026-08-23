@@ -3,7 +3,9 @@
 
 import type { Stellata } from '../../stellata';
 import { SETTLE_MS } from '../../render-gate/render-gate-pure';
+import { setReadoutText } from '../debug-panel';
 import {
+  bindingSourceLabel,
   classifyHealth,
   classifyRenderWatch,
   hudContainerCss,
@@ -28,18 +30,34 @@ const TONE_COLOUR: Record<RenderWatchTone, string> = {
 const fixed = (v: number, d = 2): string =>
   Number.isFinite(v) ? v.toFixed(d) : (v > 0 ? 'inf' : '—');
 
-/** Mount the watcher. Returns its disposer. */
-export function mountRenderWatch(stellata: Stellata): () => void {
+export interface RenderWatchOpts {
+  /** Fired when the HUD's own close button dismisses it, so the owner can
+   *  drop its handle. Not called by the returned disposer. */
+  onClose?: () => void;
+}
+
+/** Mount the watcher. Returns an idempotent disposer. */
+export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {}): () => void {
   const hud = document.createElement('div');
   hud.id = 'stellata-render-watch';
   hud.style.cssText = hudContainerCss();
+
+  // Only this element is clickable, so dragging across the readout to copy
+  // values cannot dismiss the HUD — the pattern buildDiagnosticReadout's
+  // reset link uses.
+  const close = document.createElement('div');
+  close.textContent = '[close]';
+  close.title = 'close render watch';
+  close.style.cssText = 'position:absolute;top:8px;right:9px;cursor:pointer;color:#999;'
+    + 'user-select:none;-webkit-user-select:none;line-height:1';
+
   const head = document.createElement('div');
-  head.style.cssText = 'font-weight:700;margin-bottom:2px';
+  head.style.cssText = 'font-weight:700;margin-bottom:2px;padding-right:52px';
   const sub = document.createElement('div');
   sub.style.cssText = 'margin-bottom:6px;color:#fbbf24;min-height:1em';
   const body = document.createElement('pre');
   body.style.cssText = 'margin:0;font:inherit';
-  hud.append(head, sub, body);
+  hud.append(close, head, sub, body);
   document.body.appendChild(hud);
 
   const frameAt: number[] = [];
@@ -51,9 +69,10 @@ export function mountRenderWatch(stellata: Stellata): () => void {
   let worstGapMs = 0;
   let lastFrameAt = 0;
   let flashTimer: number | null = null;
-  // Wall-clock time the current unbroken settle tail started, so a tail
-  // that never expires is distinguishable from one that keeps restarting.
+  // Wall-clock start of the current unbroken settle tail, so a tail that
+  // never expires is distinguishable from one that keeps restarting.
   let tailSince: number | null = null;
+  let disposed = false;
 
   const offFrame = stellata.on('frame', () => {
     const now = performance.now();
@@ -72,10 +91,9 @@ export function mountRenderWatch(stellata: Stellata): () => void {
   });
 
   // Own rAF loop rather than a hook in animate(): it must keep counting on
-  // the ticks the gate skips, which is the whole point of the skip ratio.
-  let running = true;
+  // the ticks the gate skips, which is what the skip ratio is.
   const countTick = () => {
-    if (!running) return;
+    if (disposed) return;
     const now = performance.now();
     ticks++;
     tickAt.push(now);
@@ -114,35 +132,46 @@ export function mountRenderWatch(stellata: Stellata): () => void {
       / HEALTH_WINDOW_S;
     const skipRatio = ticks > 0 ? 1 - frames / ticks : 0;
 
-    head.textContent = verdict.reason;
     head.style.color = TONE_COLOUR[verdict.tone];
-    sub.textContent = classifyHealth({ tickHz, skipRatio, hitches, worstGapMs });
+    setReadoutText(head, verdict.reason);
+    setReadoutText(sub, classifyHealth({ tickHz, skipRatio, hitches, worstGapMs }));
 
-    const simStale = cadence.lastRenderedSimS;
-    body.textContent = [
-      `rate       ${cadence.clockRate}x     holds ${gate.holds}`
-        + `     ride ${cadence.rideMoved ? 'yes' : 'no'}`,
-      `budget     ${fixed(cadence.budgetSimS)} sim-s -> expect `
-        + `${fixed(verdict.expectedGapMs / 1000)}s gaps`,
-      `           pulsation ${fixed(cadence.pulsationBudgetS, 1)}`,
-      `rAF        ${tickHz.toFixed(1)}/s now    ${ticks} total`,
-      `rendered   ${renderedHz.toFixed(2)}/s now    ${frames} total`,
-      `skip ratio ${skipRatio.toFixed(4)}`,
-      `gap median ${fixed(verdict.medianGapMs / 1000, 3)}s   worst `
+    setReadoutText(body, [
+      `clock rate   ${cadence.clockRate}x    holds ${gate.holds}`
+        + `    ride ${cadence.rideMoved ? 'yes' : 'no'}`,
+      '',
+      `hold budget  ${fixed(cadence.budgetSimS)} sim-s`,
+      '  the most model time that may pass before a redraw',
+      `  set by     ${bindingSourceLabel(cadence.layerBudgetS, cadence.pulsationBudgetS)}`,
+      `  layers ${fixed(cadence.layerBudgetS, 1)} · pulsation `
+        + `${fixed(cadence.pulsationBudgetS, 1)} · cap 30`,
+      `  expect     ${fixed(verdict.expectedGapMs / 1000)}s between frames`,
+      '',
+      `rAF ticks    ${tickHz.toFixed(1)}/s now   ${ticks} total`,
+      `rendered     ${renderedHz.toFixed(2)}/s now   ${frames} total`,
+      `skip ratio   ${skipRatio.toFixed(4)}`,
+      `gap median   ${fixed(verdict.medianGapMs / 1000, 3)}s   worst `
         + `${fixed(worstGapMs / 1000, 2)}s`,
-      `since frame ${lastFrameAt === 0 ? '—' : ((now - lastFrameAt) / 1000).toFixed(1) + 's'}`,
-      `sim stale  ${Number.isNaN(simStale) ? '—' : fixed(stellata.getT() - simStale, 1)} sim-s`,
-      `elapsed    ${((now - t0) / 1000).toFixed(0)}s`,
-    ].join('\n');
+      `since frame  ${lastFrameAt === 0 ? '—' : ((now - lastFrameAt) / 1000).toFixed(1) + 's'}`,
+      `model behind ${Number.isNaN(cadence.lastRenderedSimS)
+        ? '—' : fixed(stellata.getT() - cadence.lastRenderedSimS, 1) + ' sim-s'}`,
+      `elapsed      ${((now - t0) / 1000).toFixed(0)}s`,
+    ].join('\n'));
   };
   repaint();
   const repaintTimer = window.setInterval(repaint, REPAINT_MS);
 
-  return () => {
-    running = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
     window.clearInterval(repaintTimer);
     if (flashTimer !== null) window.clearTimeout(flashTimer);
     offFrame();
     hud.remove();
   };
+  close.addEventListener('click', () => {
+    dispose();
+    opts.onClose?.();
+  });
+  return dispose;
 }
