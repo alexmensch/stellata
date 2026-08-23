@@ -34,6 +34,23 @@ export function writePose(
   out[13] = worldOffset.z;
 }
 
+/** Shift a stored snapshot's position + target slots by a translation
+ *  applied AFTER the tick that captured it. Orientation, fov and
+ *  worldOffset are untouched: the only such writer is the focal ride,
+ *  which translates camera and target together and rotates nothing. A
+ *  NaN-seeded slot stays NaN, so a snapshot that has never rendered
+ *  still differs from every real pose. */
+export function rebasePoseTranslation(
+  pose: Float64Array, dx: number, dy: number, dz: number,
+): void {
+  pose[0] += dx;
+  pose[1] += dy;
+  pose[2] += dz;
+  pose[8] += dx;
+  pose[9] += dy;
+  pose[10] += dz;
+}
+
 /** Exact inequality per slot — a NaN-seeded snapshot differs from any
  *  real pose, which is what makes the first tick render. */
 export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean {

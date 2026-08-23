@@ -59,14 +59,26 @@ export function pulsationCadenceBudgetS(
   return maxRate > 0 ? CADENCE_JND_MAG / maxRate : Number.POSITIVE_INFINITY;
 }
 
+/** Halving applied while the focal ride is translating the camera. Every
+ *  layer prices its own content's speed over the camera distance and none
+ *  of them know the camera is moving too, so each reported rate is missing
+ *  a term bounded by the same body-speed ceiling. Relative motion is
+ *  therefore at most twice what the layers reported. Exact rather than
+ *  conservative would need each layer to difference its content's velocity
+ *  against the ride's — a per-layer vector the hook does not carry. */
+export const CADENCE_RIDE_RATE_FACTOR = 2;
+
 /** The frame's clock-cadence budget: the smallest sim-time step any
  *  layer, the pulsation bound, or the cap allows. `layerBudgetS` is the
- *  registry's min over per-layer budgets (Infinity when none reported). */
+ *  registry's min over per-layer budgets (Infinity when none reported).
+ *  `rideActive` says the focal ride moved the camera this frame. */
 export function cadenceSimBudgetS(
   layerBudgetS: number,
   pulsationBudgetS: number,
+  rideActive = false,
 ): number {
-  return Math.min(CADENCE_CAP_SIM_S, layerBudgetS, pulsationBudgetS);
+  const budget = Math.min(CADENCE_CAP_SIM_S, layerBudgetS, pulsationBudgetS);
+  return rideActive ? budget / CADENCE_RIDE_RATE_FACTOR : budget;
 }
 
 /** Shortest gap between rendered frames, in REAL seconds, that idling is

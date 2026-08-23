@@ -4,6 +4,7 @@ import {
   CADENCE_JND_MAG,
   CADENCE_MIN_IDLE_GAP_REAL_S,
   CADENCE_MOTION_THRESHOLD_DEVICE_PX,
+  CADENCE_RIDE_RATE_FACTOR,
   cadenceBudgetFromRatePxS,
   cadenceSimBudgetS,
   clockFrameDue,
@@ -69,6 +70,26 @@ describe('cadenceSimBudgetS', () => {
     expect(cadenceSimBudgetS(4, 900)).toBe(4);
     expect(cadenceSimBudgetS(900, 4)).toBe(4);
     expect(cadenceSimBudgetS(0, 900)).toBe(0);
+  });
+
+  it('a live focal ride halves it, cap included', () => {
+    expect(CADENCE_RIDE_RATE_FACTOR).toBe(2);
+    // Every layer priced its own content over the camera distance without
+    // knowing the camera was moving too, so the reported rate is short by
+    // a term bounded the same way.
+    expect(cadenceSimBudgetS(4, 900, true)).toBe(2);
+    expect(cadenceSimBudgetS(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, true))
+      .toBe(CADENCE_CAP_SIM_S / 2);
+    // Default is no ride, so the existing call sites are unaffected.
+    expect(cadenceSimBudgetS(4, 900)).toBe(cadenceSimBudgetS(4, 900, false));
+  });
+
+  it('halving can drop a budget under the idle floor, which is the point', () => {
+    // A ride whose budget was just clear of the floor becomes continuous
+    // rather than idling on a bound that was missing the camera's motion.
+    const justClear = CADENCE_MIN_IDLE_GAP_REAL_S + 1;
+    expect(clockFrameDue(1, 100, 100, cadenceSimBudgetS(justClear, 900))).toBe(false);
+    expect(clockFrameDue(1, 100, 100, cadenceSimBudgetS(justClear, 900, true))).toBe(true);
   });
 });
 

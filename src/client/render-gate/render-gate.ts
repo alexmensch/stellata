@@ -2,7 +2,9 @@
 // Invalidation sources, holds, and the settle tail: README.md.
 
 import type * as THREE from 'three';
-import { POSE_SLOTS, decideRender, posesDiffer, writePose } from './render-gate-pure';
+import {
+  POSE_SLOTS, decideRender, posesDiffer, rebasePoseTranslation, writePose,
+} from './render-gate-pure';
 
 const CANVAS_WAKE_EVENTS = [
   'pointerdown',
@@ -39,6 +41,21 @@ export class RenderGate {
       // shell), and a negative count makes the NEXT hold a no-op.
       this.holds = Math.max(0, this.holds - 1);
     };
+  }
+
+  /** Absorb a camera+target translation applied after this frame's
+   *  `tick()` — the focal ride, which keeps the focused object at the
+   *  same screen position and so changes nothing the viewer can see.
+   *
+   *  Without this a moving focus can never idle, and not for the reason
+   *  it looks like: the ride runs below the gate, so the NEXT tick reads
+   *  its write as a fresh camera move, renders, rides again, and stamps
+   *  activity every tick forever. Absorbing it hands the schedule to the
+   *  clock cadence, which is the only thing that can price what the
+   *  translation actually moves — parallax on everything that is not the
+   *  focal (README.md § The clock cadence). */
+  rebasePose(delta: { x: number; y: number; z: number }): void {
+    rebasePoseTranslation(this.lastRenderedPose, delta.x, delta.y, delta.z);
   }
 
   /** Wake on canvas pointer/wheel input and window keydown, so hover,

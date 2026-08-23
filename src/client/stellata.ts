@@ -380,6 +380,7 @@ export class Stellata implements FrameAnchor {
   private cadenceBudgetSimS = 0;
   private lastRenderedSimS = Number.NaN;
   private pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
+  private _rideMovedThisFrame = false;
   private coreMaskEnabled = true;
   private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
@@ -1528,11 +1529,22 @@ export class Stellata implements FrameAnchor {
     this._rideFocalIdx = step.rideFocalIdx;
     this._lastAppliedPert.set(step.px, step.py, step.pz);
     this._rideDelta.set(step.dx, step.dy, step.dz);
-    if (this._rideDelta.lengthSq() === 0) return;
-    this.camera.position.add(this._rideDelta);
-    this.controls.target.add(this._rideDelta);
-    this.focus.translateFocusFrame(this._rideDelta);
-    this.observe.translateFocusFrame(this._rideDelta);
+    this.applyRideDelta(this._rideDelta);
+  }
+
+  /** Translate the camera, the look target and both transition caches by
+   *  one ride step, and tell the gate the step was not camera activity.
+   *  Shared by both rides — a delta that reaches the camera without
+   *  reaching `rebasePose` pins the frame rate for as long as the focus
+   *  lasts (render-gate/README.md § The clock cadence). */
+  private applyRideDelta(delta: THREE.Vector3): void {
+    if (delta.lengthSq() === 0) return;
+    this.camera.position.add(delta);
+    this.controls.target.add(delta);
+    this.focus.translateFocusFrame(delta);
+    this.observe.translateFocusFrame(delta);
+    this.renderGate.rebasePose(delta);
+    this._rideMovedThisFrame = true;
   }
 
   // Moving-body sibling of applyFocalFrameRide, over the shared
@@ -1571,11 +1583,7 @@ export class Stellata implements FrameAnchor {
     this._movingRideIdx = step.rideFocalIdx;
     this._movingRideLast.set(step.px, step.py, step.pz);
     this._movingRideDelta.set(step.dx, step.dy, step.dz);
-    if (this._movingRideDelta.lengthSq() === 0) return;
-    this.camera.position.add(this._movingRideDelta);
-    this.controls.target.add(this._movingRideDelta);
-    this.focus.translateFocusFrame(this._movingRideDelta);
-    this.observe.translateFocusFrame(this._movingRideDelta);
+    this.applyRideDelta(this._movingRideDelta);
   }
 
   /** Debug-HUD view into the eclipse field's per-relation walk for the
@@ -2268,6 +2276,9 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.warpActive = this.warp.isActive();
     this.frameCtx.pxPerRadian = this.angularToPx();
     this.frameCtx.pixelRatio = this.sharedUniforms.uPixelRatio.value;
+    // Cleared before the fan-out the rides run inside, read straight
+    // after it by the budget below.
+    this._rideMovedThisFrame = false;
     this.layers.updateAll(this.frameCtx);
     // Refresh the clock cadence off the state the fan-out just wrote.
     // Valid until the next rendered frame: between frames the camera is
@@ -2277,6 +2288,7 @@ export class Stellata implements FrameAnchor {
     this.cadenceBudgetSimS = cadenceSimBudgetS(
       this.layers.minCadenceBudgetS(this.frameCtx),
       this.pulsationCadenceBudgetS,
+      this._rideMovedThisFrame,
     );
     // After the layer fan-out so the star cluster's membership is
     // current-frame: a member's core-mask stamp must render even when
@@ -2441,6 +2453,7 @@ export class Stellata implements FrameAnchor {
     this.lastRenderedSimS = Number.NaN;
     this.cadenceBudgetSimS = 0;
     this.pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
+    this._rideMovedThisFrame = false;
     this.input.dispose();
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.

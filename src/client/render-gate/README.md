@@ -15,8 +15,8 @@ per-rAF heartbeat.
 src/client/render-gate/
   render-gate.ts (+ test)      RenderGate — holds, DOM wake listeners,
                                the per-tick decision.
-  render-gate-pure.ts (+ test) Pose snapshot compare + the render/skip
-                               decision.
+  render-gate-pure.ts (+ test) Pose snapshot compare, the ride rebase,
+                               and the render/skip decision.
   clock-cadence-pure.ts        The motion-aware clock cadence: budget
     (+ test)                   composition, the pulsation bound, and the
                                per-tick due test (§ The clock cadence).
@@ -191,21 +191,45 @@ adaptation cut, so holding frames for them buys nothing and costs the
 whole idle. The dims themselves still evaluate — only the frame hold is
 gated.
 
-**A moving focus is NOT held continuous by its ride**, though it looks
-like it should be. Both rides — `applyFocalFrameRide` for a binary
-member, `applyMovingFocalRide` for a planet or probe — run inside the
-scene-layer update fan-out, which sits *below* the gate: on a skipped
-tick neither runs, so there is no camera write and the pose snapshot is
-unchanged. What actually keeps a focused close body smooth is its layer
-budget, which divides the body's own speed bound by the camera distance
-and so collapses toward zero exactly where a ride would have mattered.
-Same outcome, different mechanism. Do not move a ride above the gate to
-"restore" the pose write — it reads positions the field's walk writes
-below the gate, and the mesh LOD sizes off the post-ride camera
-(`../stellata.ts`, the planet layer's update).
+### The focal ride, and the loop it used to close
 
-The idle win applies to vantages where the camera itself is still, the
-default Sol view first among them.
+Both rides — `applyFocalFrameRide` for a binary member,
+`applyMovingFocalRide` for a planet or probe — translate camera and
+target together so the focused object holds its screen position. They run
+inside the scene-layer update fan-out, which sits **below** the gate, so
+the write lands *after* `tick()` captured this frame's snapshot. The next
+tick reads it as a fresh camera move, renders, rides again, and stamps
+activity — a self-sustaining loop that pinned a moving focus at full
+frame rate for as long as the focus lasted, at any distance and any
+vantage. In a HUD it presents as a settle tail that never expires, which
+is a misleading symptom: nothing is settling.
+
+**The ride is not camera activity.** It keeps the focal at the same
+screen position by construction. So `applyRideDelta` — the single place
+either ride reaches the camera — calls `RenderGate.rebasePose(delta)`,
+shifting the stored snapshot's position and target slots by the same
+translation. The next tick compares equal and the clock cadence owns the
+schedule again. **A delta that reaches the camera without reaching
+`rebasePose` reinstates the loop**, which is exactly why both rides go
+through one helper rather than repeating the four writes.
+
+What the translation *does* move is parallax on everything that is not
+the focal, and no layer prices it: each divides its own content's speed
+by the camera distance without knowing the camera is moving too. Both
+terms sit under the same body-speed ceiling, so the true relative rate is
+at most twice what the layers reported — `CADENCE_RIDE_RATE_FACTOR`
+halves the budget on any frame a ride moved the camera. Exact instead of
+conservative would need each layer to difference its own content's
+velocity against the ride's, a per-layer vector the hook does not carry.
+
+Do not move a ride above the gate to make its write visible to the same
+tick: it reads positions the field's walk writes below the gate, and the
+mesh LOD sizes off the post-ride camera (`../stellata.ts`, the planet
+layer's update).
+
+The idle win therefore applies wherever the camera is still — the default
+Sol view first among them, and now a moving focus the user has stopped
+driving.
 
 ## Invalidation sources (`invalidate()` callers)
 

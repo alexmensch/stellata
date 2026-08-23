@@ -6,6 +6,7 @@ import {
   decideRender,
   exposureCutMoved,
   posesDiffer,
+  rebasePoseTranslation,
   writePose,
 } from './render-gate-pure';
 
@@ -21,6 +22,38 @@ const pose = (fov = 50) => {
   );
   return out;
 };
+
+describe('rebasePoseTranslation', () => {
+  it('shifts position and target, and nothing else', () => {
+    const p = pose();
+    rebasePoseTranslation(p, 10, 20, 30);
+    // Quaternion (3-6), fov (7) and worldOffset (11-13) must be untouched:
+    // the only writer is the focal ride, which rotates nothing and never
+    // moves the origin.
+    expect(Array.from(p)).toEqual([11, 22, 33, 0, 0, 0, 1, 50, 14, 25, 36, 7, 8, 9]);
+  });
+
+  it('a rebased snapshot matches the pose the ride produced', () => {
+    const before = pose();
+    rebasePoseTranslation(before, 1e-11, 0, 0);
+    const after = new Float64Array(POSE_SLOTS);
+    writePose(
+      after,
+      { x: 1 + 1e-11, y: 2, z: 3 },
+      { x: 0, y: 0, z: 0, w: 1 },
+      50,
+      { x: 4 + 1e-11, y: 5, z: 6 },
+      { x: 7, y: 8, z: 9 },
+    );
+    expect(posesDiffer(before, after)).toBe(false);
+  });
+
+  it('a NaN-seeded snapshot stays NaN, so it still renders', () => {
+    const p = new Float64Array(POSE_SLOTS).fill(Number.NaN);
+    rebasePoseTranslation(p, 1, 2, 3);
+    expect(posesDiffer(p, pose())).toBe(true);
+  });
+});
 
 describe('writePose / posesDiffer', () => {
   it('fills every slot', () => {

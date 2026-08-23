@@ -36,7 +36,7 @@ function makeGate() {
     tick(t0);
     return tick(t0 + SETTLE_MS);
   };
-  return { gate, camera, tick, settle };
+  return { gate, camera, target, tick, settle };
 }
 
 afterEach(() => {
@@ -111,6 +111,64 @@ describe('RenderGate pose snapshot', () => {
     expect(settle(0)).toBe(false);
     expect(tick(SETTLE_MS, false, true)).toBe(true);
     expect(tick(SETTLE_MS + 16)).toBe(false);
+  });
+});
+
+describe('RenderGate ride rebase', () => {
+  /** One focal-ride step: camera and target translate together, exactly
+   *  as `Stellata.applyRideDelta` applies it. */
+  const ride = (
+    camera: THREE.PerspectiveCamera, target: THREE.Vector3, d: number,
+  ) => {
+    camera.position.x += d;
+    target.x += d;
+  };
+
+  it('an absorbed ride step is not camera activity', () => {
+    const { gate, camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    ride(camera, target, 1e-11);
+    gate.rebasePose({ x: 1e-11, y: 0, z: 0 });
+    expect(tick(SETTLE_MS)).toBe(false);
+    // And it stays quiet across further absorbed steps — the failure this
+    // guards is self-sustaining, not one frame.
+    for (let i = 1; i <= 5; i++) {
+      ride(camera, target, 1e-11);
+      gate.rebasePose({ x: 1e-11, y: 0, z: 0 });
+      expect(tick(SETTLE_MS + i * 16)).toBe(false);
+    }
+  });
+
+  it('the SAME step unabsorbed pins the gate open forever', () => {
+    // The regression: the ride runs below the gate, so the next tick reads
+    // its write as a fresh camera move, renders, and rides again.
+    const { camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    for (let i = 1; i <= 5; i++) {
+      ride(camera, target, 1e-11);
+      expect(tick(SETTLE_MS + i * 16)).toBe(true);
+    }
+  });
+
+  it('a real camera move on top of an absorbed ride still wakes it', () => {
+    const { gate, camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    ride(camera, target, 1e-11);
+    gate.rebasePose({ x: 1e-11, y: 0, z: 0 });
+    camera.position.y += 1e-9;
+    expect(tick(SETTLE_MS)).toBe(true);
+  });
+
+  it('rebasing the camera alone leaves the target slot stale', () => {
+    // Pins that rebasePose covers BOTH translated slots: absorbing only
+    // the camera would leave target differing every tick.
+    const { gate, camera, target, tick, settle } = makeGate();
+    expect(settle(0)).toBe(false);
+    ride(camera, target, 1e-11);
+    gate.rebasePose({ x: 1e-11, y: 0, z: 0 });
+    expect(tick(SETTLE_MS)).toBe(false);
+    target.x += 1e-11;
+    expect(tick(SETTLE_MS + 16)).toBe(true);
   });
 });
 
