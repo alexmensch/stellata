@@ -154,6 +154,15 @@ from here on purpose.
 - **Signal-lost is opacity, not a separate pass.** Past `lastContactT` the
   marker's alpha drops and the label gains a `(signal lost)` suffix; the
   probe keeps moving, because it does.
+- **`cadenceReport` prices the drawn markers for the render gate**
+  (`../../render-gate/cadence/README.md`). It rides the sampler's own
+  interpolated velocity, minus the camera's, projected across the line of
+  sight — never a finite difference, for the reason § Sampler gives. A
+  hidden, decluttered or unsampled probe reports nothing. There is no
+  brightness channel: signal-lost is a step in alpha at one instant, not a
+  ramp. `prevLocalPc` exists only for the safety net's measured-displacement
+  channel, and `recenter` rebases it alongside `localPc` — the planet
+  field's `prevBodyLocal64` does the same.
 - **One observe-hide slot.** `setHiddenInstance` drops the focused
   probe's `visible` while observe parks the camera on it — the marker,
   its label, and its trail all go with it, the planet field's `uHideIdx`
