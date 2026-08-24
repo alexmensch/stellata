@@ -8,8 +8,8 @@ import {
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
-  ATMO_N_LIGHT, ATMO_N_VIEW, LIGHT_JITTER_STRIDE, MS_STRENGTH,
-  TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
+  ATMO_JITTER_COEFFS, ATMO_JITTER_SCALE, ATMO_N_LIGHT, ATMO_N_VIEW,
+  LIGHT_JITTER_STRIDE, MS_STRENGTH, TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
 } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
 
@@ -38,8 +38,8 @@ export const miePhaseTsl = /* @__PURE__ */ Fn(([mu, g]: [NF, NF]) => {
  *  offset that turns the few-sample lattice into fine grain instead of a
  *  fixed moiré. */
 export const atmoJitterTsl = /* @__PURE__ */ Fn(
-  ([fragCoord]: [N2]) => fract(fract(dot(fragCoord, vec2(0.06711056, 0.00583715)))
-    .mul(52.9829189)),
+  ([fragCoord]: [N2]) => fract(fract(dot(fragCoord, vec2(...ATMO_JITTER_COEFFS)))
+    .mul(ATMO_JITTER_SCALE)),
 );
 
 export const atmoLumaTsl = /* @__PURE__ */ Fn(

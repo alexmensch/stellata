@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
 import {
+  ATMO_JITTER_COEFFS,
+  ATMO_JITTER_SCALE,
   MS_STRENGTH,
   TWILIGHT_TAIL_AMP,
   TWILIGHT_TAIL_REACH,
@@ -43,6 +45,18 @@ describe('constants mirrored from the CPU model', () => {
   it('twilight tail amplitude and reach', () => {
     expect(glslFloat(scatter, 'STELLATA_TWILIGHT_TAIL_AMP')).toBe(TWILIGHT_TAIL_AMP);
     expect(glslFloat(scatter, 'STELLATA_TWILIGHT_TAIL_REACH')).toBe(TWILIGHT_TAIL_REACH);
+  });
+
+  it('interleaved-gradient-noise hash constants', () => {
+    // Named consts rather than literals inside the hash: the TSL twin reads
+    // the same three numbers off the pure module, and a bare literal in
+    // either shader is how the two marches start sampling different lattices.
+    const [cx, cy] = ATMO_JITTER_COEFFS;
+    expect(scatter).toContain(
+      `const vec2 STELLATA_ATMO_JITTER_COEFFS = vec2(${cx}, ${cy});`);
+    expect(glslFloat(scatter, 'STELLATA_ATMO_JITTER_SCALE')).toBe(ATMO_JITTER_SCALE);
+    expect(scatter).toContain(
+      'fract(dot(fragCoord, STELLATA_ATMO_JITTER_COEFFS))');
   });
 });
 
