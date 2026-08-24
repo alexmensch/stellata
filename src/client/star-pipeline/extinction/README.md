@@ -24,8 +24,14 @@ without breaking the cancellation.
 
 ```
 src/client/star-pipeline/extinction/
-  extinction-prepass.ts           ExtinctionPrepass — the per-star A_V cache
-                                  and its camera-displacement invalidation.
+  extinction-seam.ts              ExtinctionPrepassSeam — the contract the
+                                  integration shell holds, implemented once
+                                  per backend, plus the shared uniform
+                                  value-objects both write.
+  extinction-prepass.ts           ExtinctionPrepass — the WebGL2 per-star A_V
+                                  cache and its camera-displacement
+                                  invalidation. TSL twin:
+                                  ../../webgpu/extinction/.
   extinction-prepass.frag.glsl    The prepass draw: one fragment per star,
                                   writing raw physical A_V into R32F. Rides
                                   the shared fullscreen vertex stage +
@@ -77,11 +83,13 @@ recomputations per visible star per frame.
   once into an RGBA float texture) — binary-orbit perturbations
   (sub-AU) are ignored, as is the floating origin (both the prepass
   march and the fallback run in absolute heliocentric space).
-- **Fallback:** on contexts without `EXT_color_buffer_float` (no
+- **Fallback:** on WebGL2 contexts without `EXT_color_buffer_float` (no
   float-renderable target) the prepass is inert and the vertex shader
   runs the in-vertex camera→star raymarch, gated by the visibility
   prefilter. Both paths share the `stellata_dust_raymarch` chunk
-  (`dust-raymarch.glsl`). The march's 48 fixed samples are a
+  (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
+  render targets are core there, so the port's `supported` is constant
+  true and the fallback branch survives only as the A/B switch below. The march's 48 fixed samples are a
   pragmatic trapezoidal integration: at 1.25 kpc that's 26 pc per
   step ≈ 5 voxels of the texture's native ~5 pc resolution; more
   samples cost proportionally with marginal quality gain.
@@ -98,7 +106,11 @@ strength changes never invalidate the cache.
 ## Reading A_V back on the CPU
 
 `readAvMag(idx)` returns one star's raw A_V out of the cache texel
-`star.vert.glsl` fetches. The pick paths are the only caller: a star's
+`star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
+no synchronous readback, so its implementation answers a cold index null
+and warms the memo in the background; the caveats below are unchanged
+either way, and the divergence is
+`../../webgpu/extinction/README.md` § Cold reads. The pick paths are the only caller: a star's
 extinction decides whether the renderer puts a pixel on screen for it at
 all, and a pick gated on the intrinsic magnitude selects stars the frame
 drew black (`../../hdr/exposure/README.md` § What "visible" means to a

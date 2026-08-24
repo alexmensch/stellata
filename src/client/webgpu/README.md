@@ -47,6 +47,9 @@ src/client/webgpu/
                                     Shared by the star field and the
                                     planet glare, exactly as the GLSL
                                     chunk is.
+  extinction/                       The camera→star dust raymarch and the
+                                    per-star A_V cache that feeds the star
+                                    vertex stage — its own README.
   star/                             The star layer: packed geometry + the
                                     three depth-honest pipelines (D2 glow,
                                     D3 core mask, D4 disc) and the MRT
@@ -95,8 +98,8 @@ app alive**: every CPU subsystem (catalog, star frame, focus, picker,
 typeahead, URL state, overlays, HUD, render gate) runs identically; the
 renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
 layers as port children land. The star layer (`star/README.md`) carries
-all three depth-honest pipelines plus their local-mirror clones; its
-still-missing siblings (extinction, chart) are listed there. The
+all three depth-honest pipelines plus their local-mirror clones, dust
+extinction on both tiers, and chart mode. The
 solar-system family (`solar-system/README.md`) draws whole: glare
 billboards and probe glyphs in the main pass, the spheroid mesh, ring
 annulus and atmosphere shell in the local depth pass, which runs on
@@ -110,16 +113,17 @@ WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
 scene still exists and is never rendered on a WebGPU boot — no
 per-layer gating, no material ever reaches the wrong backend.
 
-The dust voxel volume is the exception that already crossed: it streams
-and uploads on both backends (`loaders/README.md` § Dust voxel upload),
-and nothing samples it yet. Ported first on purpose — the star raymarch,
-the band's measured stack and the extinction prepass are each smoke-blind
-without dust in the texture. Because no pixel can confirm it, that upload
-is verified numerically instead: `stellata.verifyDust()` reads voxels back
-off the GPU and compares them against the chunk files
-(`loaders/README.md` § Dust voxel readback). A port child whose layer
-renders nothing on the WebGPU boot should run it before suspecting its own
-shader.
+The dust voxel volume streams and uploads on both backends
+(`loaders/README.md` § Dust voxel upload); the star vertex stage's
+fallback march and the extinction prepass (`extinction/README.md`) are
+its first WebGPU samplers, and the band's measured stack joins them at
+`0it.5`. It was ported first on purpose, since each of those is
+smoke-blind without dust in the texture, and because no pixel could
+confirm the upload it is verified numerically instead:
+`stellata.verifyDust()` reads voxels back off the GPU and compares them
+against the chunk files (`loaders/README.md` § Dust voxel readback). A
+port child whose layer renders nothing on the WebGPU boot should run it
+before suspecting its own shader.
 
 ### Every park is a gate someone has to delete
 
@@ -131,11 +135,15 @@ in the same PR:
 
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
-| Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local-pass line layers (orbit rings, binary orbit paths, probe trails) | the shell removes their groups from the pass scene — `LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation against the HDR target's three attachments, and one invalid pipeline poisons the whole pass submit | TSL line material (`0it.27`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
+The extinction-prepass row went with `0it.20`: `attachDust` now builds
+one on either backend through `ExtinctionPrepassSeam`, so the
+`rendererGL !== null` test is gone. `extinctionPrepass` is still
+optional-chained, but on its lifecycle alone — it is null before the
+first `attachDust` and after `attachDust(null)`, on both boots.
 The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
 on both boots, the `localPassLive` flag is deleted from both clusters,
 and the TSL star mirror + glare mirror repaint what collapses.
@@ -233,7 +241,13 @@ WebGL map and never learns about the port. The contract:
 - **`uLocalMemberIdx`** (Int32Array(8)) splits into two `ivec4` nodes
   (`uLocalMemberIdx0/1`) — WGSL uniform arrays pad to a 16-byte stride.
 - **Texture slots** (`TEXTURE_SLOTS`) are not mirrored: textures bind as
-  per-layer `texture()`/`texture3D()` nodes where the texture lives.
+  per-layer `texture()`/`texture3D()` nodes where the texture lives. A
+  uniform node cannot carry a **nullable** texture, so a slot the shell
+  fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder
+  whose `.value` is swapped on attach — one node per slot for the whole
+  boot, since two consumers of the same volume must not be able to
+  diverge (`extinction/README.md` § Two nodes, one owner). `uAvPrepassTex`
+  in the shared map therefore stays null for a WebGPU boot's whole life.
 
 The mirror is a **transcription, not a loop** — `uniform()`'s node type
 comes from its overloads resolving against a concrete value, so a derived

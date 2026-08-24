@@ -85,10 +85,10 @@ themselves.
   the async renderer boot behind a dynamic-import boundary, the
   port scaffolding (shared uniform nodes, TSL shim, attribute packing,
   the TSL test pattern), and the ported TSL layers (`webgpu/star/`,
-  `webgpu/solar-system/`). Flag on renders the seam's own scene — layers
-  accumulate there as port children land — while every CPU subsystem runs
-  identically;
-  flag off leaves the shipped boot untouched.
+  `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`). Flag on
+  renders the seam's own scene — layers accumulate there as port children
+  land — while every CPU subsystem runs identically; flag off leaves the
+  shipped boot untouched.
 
 ## Public surface of `Stellata`
 
