@@ -89,10 +89,11 @@ recomputations per visible star per frame.
   prefilter. Both paths share the `stellata_dust_raymarch` chunk
   (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
   render targets are core there, so the port's `supported` is constant
-  true and the fallback branch survives only as the A/B switch below. The march's 48 fixed samples are a
-  pragmatic trapezoidal integration: at 1.25 kpc that's 26 pc per
-  step ≈ 5 voxels of the texture's native ~5 pc resolution; more
-  samples cost proportionally with marginal quality gain.
+  true and the fallback branch survives only as the A/B switch below.
+  The march's 48 fixed samples are a pragmatic trapezoidal integration:
+  at 1.25 kpc that's 26 pc per step ≈ 5 voxels of the texture's native
+  ~5 pc resolution; more samples cost proportionally with marginal
+  quality gain.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest
@@ -109,12 +110,14 @@ strength changes never invalidate the cache.
 `star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
 no synchronous readback, so its implementation answers a cold index null
 and warms the memo in the background; the caveats below are unchanged
-either way, and the divergence is
-`../../webgpu/extinction/README.md` § Cold reads. The pick paths are the only caller: a star's
-extinction decides whether the renderer puts a pixel on screen for it at
-all, and a pick gated on the intrinsic magnitude selects stars the frame
-drew black (`../../hdr/exposure/README.md` § What "visible" means to a
-pick path).
+either way, and the divergence — including how long a cold answer stands,
+which is a pointer event rather than a frame — is
+`../../webgpu/extinction/README.md` § Cold reads.
+
+The pick paths are the only caller: a star's extinction decides whether
+the renderer puts a pixel on screen for it at all, and a pick gated on
+the intrinsic magnitude selects stars the frame drew black
+(`../../hdr/exposure/README.md` § What "visible" means to a pick path).
 
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and

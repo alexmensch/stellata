@@ -125,6 +125,25 @@ against the chunk files (`loaders/README.md` § Dust voxel readback). A
 port child whose layer renders nothing on the WebGPU boot should run it
 before suspecting its own shader.
 
+### Who releases what
+
+Three tiers, and a new allocation has to pick one:
+
+- **Per-layer.** Everything `attach*` builds comes back behind a handle
+  whose `dispose()` also severs the MRT registration — a dead layer that
+  keeps taking output-mode swaps is the failure that shape prevents.
+- **Boot-scoped.** Resources `bootWebGpu` builds once and hands to
+  several layers: today the extinction texture slots
+  (`extinction/README.md` § Two nodes, one owner). `WebGpuSeam.dispose()`
+  is the *only* path that frees these, and the shell calls it after every
+  layer and the prepass, since those hand their slots back to the
+  placeholders it then releases. A boot-scoped allocation added without a
+  line there is unreachable by any teardown.
+- **Shell-held.** The renderer and the HDR pipeline are seam fields the
+  shell also holds as its own (`renderer`, `hdr`) and disposes on either
+  backend, so the seam's dispose must NOT touch them — it would
+  double-release.
+
 ### Every park is a gate someone has to delete
 
 Each GL-only path parks behind a `rendererGL !== null` test. **A port

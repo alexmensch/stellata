@@ -57,6 +57,12 @@ load-bearing in both directions:
   points it at its own target in its constructor and back to the
   placeholder on dispose. The shell holds only the seam handle.
 
+The pair is **boot-scoped**, and `WebGpuSeam.dispose()` is the only path
+that frees it — the shell calls that after every layer and the prepass,
+because those hand their slots back to these placeholders on the way out.
+Any future boot-scoped allocation in `boot-webgpu.ts` belongs on the same
+path; nothing else reaches it.
+
 Both slots bind over a **1-texel placeholder** whose `.value` is swapped
 when the real texture arrives, because a uniform node cannot carry a
 nullable texture (`../README.md` § Shared uniform nodes). The
@@ -69,6 +75,37 @@ placeholder contents never reach a pixel.
 `uAvPrepassTex` in the shared map therefore stays null for a WebGPU
 boot's whole life. It is a texture slot, and the node mirror carries
 none.
+
+## What it costs, and what it holds
+
+Both figures below are the WebGL2 pass's unchanged — the port moved no
+work and allocated nothing new, which is the claim worth having written
+down rather than re-derived. At the 313k-star catalog, `avTexHeight`
+gives 306 rows:
+
+| Resident | Size |
+| --- | --- |
+| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 306 × 4 B ≈ 1.25 MB |
+| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 306 × 16 B ≈ 5.0 MB |
+
+So ~6.3 MB of video memory for the pass's whole life, plus the ~5 MB
+`Float32Array` the position `DataTexture` keeps on the JS heap after
+upload (three does not release it, and the WebGL2 twin holds the same).
+Both survive on an integrated or mobile GPU without argument, and 1024 is
+inside every `maxTextureDimension2D` — the layout's width was chosen for
+that.
+
+**A recompute is ~15M volume samples**: one fragment per star × 48 taps,
+313k × 48. That is the whole per-recompute cost and it is paid *per
+frame* while the camera keeps moving more than `RECOMPUTE_EPSILON_PC`
+between frames — a warp pays it every frame, which is the case to
+measure, not the idle one. An idle camera costs zero, and the visibility
+prefilter never applies here: the prepass marches the full catalog
+including the ≤1023 padding texels, because the pass has no per-star
+magnitude to gate on. Unmeasured on this backend — no `gpu.frame`
+differential has been taken for it yet, so treat the parity claim as
+structural (same algorithm, same tap count, same layout) rather than
+timed.
 
 ## Cold reads — the one behaviour that is not parity
 
@@ -83,9 +120,26 @@ this implementation answers a **cold** index with `null` and warms the
 memo in the background; the next read is exact and free. `null` already
 means "no cache, not no dust" to every caller
 (`../../star-pipeline/extinction/README.md` § Reading A_V back), and
-those callers err toward *pickable*, so the degradation is that a star
-behind heavy dust can be picked for a frame or two after the camera
-settles, where WebGL2 would have rejected it.
+those callers err toward *pickable*, so a star behind heavy dust can be
+picked where WebGL2 would have rejected it.
+
+**How long that lasts is set by the pick's cadence, not by the frame's.**
+Two things make it outlive the readback:
+
+- Hover resolves on `pointermove` alone (`../../hover/hover-engine.ts`) —
+  nothing re-runs a pick per frame. The memo warms a frame or two later,
+  but the standing verdict is not revisited, so a **still cursor keeps
+  the wrong star** until the pointer moves again.
+- `pickFromCandidatesResolved` returns on the first candidate that reads
+  visible (`../../camera/controls/star-geometry.ts`), so one event warms
+  exactly one candidate. Down a sightline where several extincted stars
+  overlap, convergence takes one pointer event per candidate.
+
+Neither is a frame-scale effect, and the honest statement of the
+degradation is that scale: an event, not a frame. It is accepted here
+because chart and colour picking both already err toward pickable and
+because `0it.15` replaces the readback wholesale — its scope carries the
+closure explicitly, so the hole is not resting on this paragraph alone.
 
 Why not the alternatives: reading the whole target on each recompute is
 1.25 MB per read and a warp recomputes every frame; marching on the CPU
@@ -113,5 +167,13 @@ target drops.
 
 The target is `RedFormat` + `FloatType` (r32float): renderable, not
 blendable — `NoBlending` — and sampled without a filtering sampler,
-which the consumer's `textureLoad` satisfies by construction. Reading it
-back returns a `Float32Array`.
+which the consumer's `textureLoad` satisfies by construction. Both the
+target and its placeholder are `NearestFilter`, which is what makes three
+emit no `sampler` binding at all; an r32float bound to a filtering
+sampler fails pipeline creation outright.
+
+`update()` ends by binding the **canvas**, not by restoring whatever was
+bound on entry — the same contract `../hdr/reduction-webgpu.ts` keeps and
+pins, so no pass on this backend may run inside another's binding. The
+WebGL2 twin save/restores instead, so this is a deliberate divergence
+rather than a dropped defence, and it is pinned on both sides.
