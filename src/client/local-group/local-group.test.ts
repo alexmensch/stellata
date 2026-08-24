@@ -422,6 +422,56 @@ describe('computeVisibleLabelsInto — global apparent-size ranking', () => {
       expect([...result]).toEqual(['first']);
     });
 
+    // At topN=1 the tie above resolves through the full-buffer guard and
+    // never reaches the insertion shift. Cap 2 with a third, larger
+    // candidate is what exercises the shift's strict `>` — don't collapse
+    // this case into the one above.
+    it('evicts the later of two tied candidates when a larger one arrives', () => {
+      const ahead = eye.clone().add(new THREE.Vector3(0, 0, -50_000));
+      const cands = [
+        makeCandidate({ id: 'tied-first', centerAbs: ahead.clone(), maxAxis: 4_000 }),
+        makeCandidate({ id: 'tied-second', centerAbs: ahead.clone(), maxAxis: 4_000 }),
+        makeCandidate({ id: 'largest', centerAbs: ahead.clone(), maxAxis: 5_000 }),
+      ];
+      const result = rank(cands, makeParams(eye, target, {
+        mwInsideDiscPc: 0, topN: 2,
+      }));
+      expect([...result].sort()).toEqual(['largest', 'tied-first']);
+    });
+
+    // The production verdict Set is module-level and outlives every frame,
+    // so a clear that stops happening latches labels on permanently rather
+    // than showing a wrong one for one frame. `rank` allocates a fresh Set
+    // per call and cannot see that; these pass one Set through twice.
+    it('clears the caller Set rather than unioning into it', () => {
+      const params = makeParams(eye, target, { mwInsideDiscPc: 0, topN: 2 });
+      const out = new Set<string>();
+      computeVisibleLabelsInto(fanOfFive(eye), params, out);
+      expect([...out].sort()).toEqual(['a1', 'a3']);
+      computeVisibleLabelsInto(fanOfFive(eye).slice(0, 1), params, out);
+      expect([...out]).toEqual(['a0']);
+    });
+
+    it('empties the caller Set when the inside-MW guard fires', () => {
+      const out = new Set<string>();
+      computeVisibleLabelsInto(
+        fanOfFive(eye), makeParams(eye, target, { mwInsideDiscPc: 0, topN: 2 }), out);
+      expect(out.size).toBe(2);
+      computeVisibleLabelsInto(
+        fanOfFive(eye), makeParams(eye, target, { mwInsideDiscPc: 1e9, topN: 2 }), out);
+      expect(out.size).toBe(0);
+    });
+
+    it('empties the caller Set when topN drops to zero', () => {
+      const out = new Set<string>();
+      computeVisibleLabelsInto(
+        fanOfFive(eye), makeParams(eye, target, { mwInsideDiscPc: 0, topN: 2 }), out);
+      expect(out.size).toBe(2);
+      computeVisibleLabelsInto(
+        fanOfFive(eye), makeParams(eye, target, { mwInsideDiscPc: 0, topN: 0 }), out);
+      expect(out.size).toBe(0);
+    });
+
     it('leaks nothing from a previous, larger verdict', () => {
       const params = makeParams(eye, target, { mwInsideDiscPc: 0, topN: 4 });
       expect(rank(fanOfFive(eye), params).size).toBe(4);
