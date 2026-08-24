@@ -90,6 +90,8 @@ export interface Candidate {
   key: string;
 }
 
+const byPriority = (a: Candidate, b: Candidate): number => a.priority - b.priority;
+
 interface PooledText {
   el: SVGTextElement;
   width: number; // last measured text width
@@ -220,6 +222,21 @@ export class ChartLabels {
   private readonly pool = new Map<string, PooledText>();
   private readonly ringPool = new Map<number, PooledCircle>();
   private readonly wingPool = new Map<number, PooledLine>();
+
+  // Per-frame containers, pooled like the SVG elements above: a tick
+  // reuses the objects rather than minting a Candidate per surviving
+  // label across seven families. `candidatePool` owns the objects and is
+  // index-stable; `candidateList` is the permutable view the collision
+  // pass sorts, truncated to the live count each tick so a sparser frame
+  // cannot drag a previous, larger frame's entries into the ordering.
+  private readonly candidatePool: Candidate[] = [];
+  private readonly candidateList: Candidate[] = [];
+  private candidateCount = 0;
+  private readonly accepted: Candidate[] = [];
+  private readonly seen = new Set<number>();
+  private readonly usedKeys = new Set<string>();
+  private readonly usedRings = new Set<number>();
+  private readonly usedWings = new Set<number>();
 
   // Brightest-member cache for the constellation-label gate. Apparent
   // magnitude depends on camera position, so the walk is invalidated when the
@@ -352,6 +369,14 @@ export class ChartLabels {
     this.variableEligible = null;
     this.binaryEligible = null;
     this.distSolCache = null;
+    this.candidatePool.length = 0;
+    this.candidateList.length = 0;
+    this.accepted.length = 0;
+    this.candidateCount = 0;
+    this.seen.clear();
+    this.usedKeys.clear();
+    this.usedRings.clear();
+    this.usedWings.clear();
   }
 
   private rebuildEligible(): void {
@@ -366,6 +391,36 @@ export class ChartLabels {
       binaryIdxs, distSolCache, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
     );
     this.eligibleDirty = false;
+  }
+
+  /** Claim the next pooled Candidate and fill it. Every field is written
+   *  on every claim — `width` / `height` in particular, since constellation
+   *  labels skip `measureCandidate` and would otherwise collide against a
+   *  recycled entry's measured box instead of their bare anchor point. */
+  private addCandidate(
+    kind: Candidate['kind'],
+    text: string,
+    x: number,
+    y: number,
+    priority: number,
+    key: string,
+  ): void {
+    const n = this.candidateCount++;
+    let c = this.candidatePool[n];
+    if (!c) {
+      c = { kind, text, x, y, width: 0, height: 0, priority, key };
+      this.candidatePool[n] = c;
+    } else {
+      c.kind = kind;
+      c.text = text;
+      c.x = x;
+      c.y = y;
+      c.width = 0;
+      c.height = 0;
+      c.priority = priority;
+      c.key = key;
+    }
+    this.candidateList[n] = c;
   }
 
   private projectStarInto(
@@ -444,8 +499,9 @@ export class ChartLabels {
     const showCloudNames = stellata.detailPermits('chartCloudNames');
     const showVariableRings = stellata.detailPermits('chartVariableRings');
 
-    const candidates: Candidate[] = [];
-    const seen = new Set<number>(); // dedupe star idx across name+bayer
+    this.candidateCount = 0;
+    const seen = this.seen; // dedupe star idx across name+bayer
+    seen.clear();
 
     // ONE screen-space tuple for every projection below — seven label
     // families share it. Each reads it into a candidate's x/y before the
@@ -463,16 +519,10 @@ export class ChartLabels {
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
-      candidates.push({
-        kind: 'name',
-        text: name,
-        x: xy[0] + offset,
-        y: xy[1] - offset,
-        width: 0,
-        height: 0,
-        priority: 1 + appMag * 0.001, // brightness tie-break inside the kind
-        key: `n:${idx}`,
-      });
+      // Priority: brightness tie-break inside the kind.
+      this.addCandidate(
+        'name', name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001, `n:${idx}`,
+      );
       seen.add(idx);
     }
     perfMeasure('chart.names');
@@ -489,17 +539,11 @@ export class ChartLabels {
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
-      candidates.push({
-        kind: 'bayer',
-        text: `${info.greek}${info.suffix}`,
-        x: xy[0] + offset,
-        y: xy[1] - offset,
-        width: 0,
-        height: 0,
-        // Ranks after named stars; brightness tie-break inside the kind.
-        priority: 2 + appMag * 0.005,
-        key: `b:${idx}`,
-      });
+      // Priority: ranks after named stars; brightness tie-break inside the kind.
+      this.addCandidate(
+        'bayer', `${info.greek}${info.suffix}`,
+        xy[0] + offset, xy[1] - offset, 2 + appMag * 0.005, `b:${idx}`,
+      );
     }
     perfMeasure('chart.bayer');
 
@@ -552,20 +596,14 @@ export class ChartLabels {
         if (minAppMag > limitMag) continue;
         if (!projectVecInto(
           this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h, xy)) continue;
-        candidates.push({
-          kind: 'con',
-          text: anchor.name.toUpperCase(),
-          x: xy[0],
-          y: xy[1],
-          width: 0,
-          height: 0,
-          // Constellation Latin names skip the collision pass entirely; the
-          // priority value is purely a sort key for the order they get laid
-          // down in (matters only if two collide, but the outline-style
-          // typography accepts overlap). Brightest constellation first.
-          priority: 0 + minAppMag * 0.01,
-          key: `c:${anchor.code}`,
-        });
+        // Constellation Latin names skip the collision pass entirely; the
+        // priority value is purely a sort key for the order they get laid
+        // down in (matters only if two collide, but the outline-style
+        // typography accepts overlap). Brightest constellation first.
+        this.addCandidate(
+          'con', anchor.name.toUpperCase(),
+          xy[0], xy[1], 0 + minAppMag * 0.01, `c:${anchor.code}`,
+        );
       }
     }
     perfMeasure('chart.constellations');
@@ -578,16 +616,11 @@ export class ChartLabels {
       for (let i = 0; i < clouds.clouds.length; i++) {
         if (!stellata.focusables.cloud.localPositionInto(i, this.tmpCloudLocal)) continue;
         if (!projectVecInto(this.tmpCloudLocal, camera, w, h, xy)) continue;
-        candidates.push({
-          kind: 'cloud',
-          text: clouds.clouds[i].name,
-          x: xy[0] + CLOUD_LABEL_OFFSET_PX,
-          y: xy[1] + CLOUD_LABEL_OFFSET_PX,
-          width: 0,
-          height: 0,
-          priority: 3 + i * 0.0001,
-          key: `m:${i}`,
-        });
+        this.addCandidate(
+          'cloud', clouds.clouds[i].name,
+          xy[0] + CLOUD_LABEL_OFFSET_PX, xy[1] + CLOUD_LABEL_OFFSET_PX,
+          3 + i * 0.0001, `m:${i}`,
+        );
       }
     }
     perfMeasure('chart.clouds');
@@ -606,16 +639,10 @@ export class ChartLabels {
       const appMag = planetField.appMagForInstance(i, camera.position);
       if (appMag === null || appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
-      candidates.push({
-        kind: 'planet',
-        text: planet.name,
-        x: xy[0] + offset,
-        y: xy[1] - offset,
-        width: 0,
-        height: 0,
-        priority: 1 + appMag * 0.001, // same tier as proper-named stars
-        key: `p:${i}`,
-      });
+      // Priority: same tier as proper-named stars.
+      this.addCandidate(
+        'planet', planet.name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001, `p:${i}`,
+      );
     }
     perfMeasure('chart.planets');
 
@@ -625,7 +652,9 @@ export class ChartLabels {
     // 2000.0; see styles.css `.chart-label.kind-con`). They're laid out
     // separately below and are never excluded by competing labels.
     perfMark('chart.collision');
-    candidates.sort((a, b) => a.priority - b.priority);
+    const candidates = this.candidateList;
+    candidates.length = this.candidateCount;
+    candidates.sort(byPriority);
 
     // Greedy collision pass against star/Bayer/cloud labels only. Walks
     // the priority-ordered list, accepting any candidate whose AABB
@@ -633,24 +662,27 @@ export class ChartLabels {
     // shows everything at the current magnitude limit subject to
     // collision, which is the intent of the feature. Pool existing
     // <text> elements per key.
-    const accepted: Candidate[] = [];
+    const accepted = this.accepted;
+    let acceptedCount = 0;
     for (const cand of candidates) {
       if (cand.kind === 'con') {
         // Constellations bypass collision; they always render.
-        accepted.push(cand);
+        accepted[acceptedCount++] = cand;
         continue;
       }
       measureCandidate(cand);
-      if (collides(cand, accepted)) continue;
-      accepted.push(cand);
+      if (collides(cand, accepted, acceptedCount)) continue;
+      accepted[acceptedCount++] = cand;
     }
     perfMeasure('chart.collision');
 
     // Render: ensure each accepted candidate has a pooled <text>; drop any
     // pooled elements not in the accepted set this frame.
     perfMark('chart.dom');
-    const used = new Set<string>();
-    for (const cand of accepted) {
+    const used = this.usedKeys;
+    used.clear();
+    for (let i = 0; i < acceptedCount; i++) {
+      const cand = accepted[i];
       used.add(cand.key);
       let p = this.pool.get(cand.key);
       if (!p) {
@@ -680,8 +712,10 @@ export class ChartLabels {
     // space the GPU disc renders — `chartDiscPxForAppMag` mirrors the
     // vertex shader's chart-branch formula so the visual matches the
     // rendered disc exactly.
-    const usedRings = new Set<number>();
-    const usedWings = new Set<number>();
+    const usedRings = this.usedRings;
+    const usedWings = this.usedWings;
+    usedRings.clear();
+    usedWings.clear();
 
     // Spectral mask + Sol-distance bounds are encoded in this.variableEligible
     // and this.binaryEligible (rebuilt on filter change), so the per-frame loops
@@ -845,14 +879,21 @@ export function measureCandidate(c: Candidate): void {
   c.height = 14;
 }
 
-export function collides(c: Candidate, others: Candidate[]): boolean {
+// `others` is a pooled array whose live prefix is `count` long; entries
+// past it are last frame's and must not be compared against.
+export function collides(
+  c: Candidate,
+  others: Candidate[],
+  count = others.length,
+): boolean {
   // Convert (x, y) anchor into a centred AABB. text-anchor is 'middle'
   // for con labels (centre-anchored), 'start' for the rest (left-anchored).
   const left = c.kind === 'con' ? c.x - c.width / 2 : c.x;
   const right = left + c.width;
   const top = c.y - c.height / 2;
   const bottom = c.y + c.height / 2;
-  for (const o of others) {
+  for (let i = 0; i < count; i++) {
+    const o = others[i];
     const oLeft = o.kind === 'con' ? o.x - o.width / 2 : o.x;
     const oRight = oLeft + o.width;
     const oTop = o.y - o.height / 2;

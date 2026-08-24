@@ -245,13 +245,26 @@ into a caller-owned tuple now (`projectVecInto`), and `ChartLabels`
 owns one for all of them — safe because each caller reads it before
 the next projection runs.
 
-Both halves are about the *projector*, and neither makes this label
-engine allocation-free: `tick` still builds a candidates array, an
-accepted array, four Sets and one `Candidate` literal per surviving
-label every frame, which is the larger cost on this path and is
-`stellata-8cg.40`'s scope. Don't read this section as "chart labels
-no longer allocate" — measure chart mode and you will see that
-remaining churn, not the projector.
+### Chart-labels: pooled per-frame containers
+
+Both halves above are about the *projector*, and the larger cost on
+this path was the label engine's own churn: `tick` built a candidates
+array, an accepted array, four Sets and one `Candidate` literal per
+surviving label — hundreds per frame across seven families, each one
+strictly more bytes than the projector tuple it sat beside.
+
+All of it is pooled now, the same idiom as the `<text>` / `<circle>` /
+`<line>` element pools: `candidatePool` owns the objects and is
+index-stable, `candidateList` is the permutable view the sort walks,
+`accepted` carries an explicit live count, the four Sets are instance
+state cleared per tick, and the sort comparator is module scope. Two
+invariants make the reuse safe, and `chart-labels.test.ts` pins both:
+`candidateList` is truncated to the live count before the sort so a
+sparser frame can never rank a previous frame's entries, and
+`collides` compares only the accepted array's live prefix.
+
+What is left per tick is O(1), not O(labels): the `getChartDiscParams`
+bag and the `discPxFor` closure over it.
 
 ### Chart-labels: cached brightest constellation member
 

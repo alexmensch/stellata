@@ -147,6 +147,16 @@ describe('chart-labels / collides', () => {
     expect(collides(a, candidates)).toBe(true);
   });
 
+  it('ignores entries past the live count', () => {
+    // `others` is the engine's pooled accepted array: everything from
+    // `count` on is a previous, larger frame's leftovers and must not
+    // block this frame's labels.
+    const a = cand({ x: 100, y: 100, width: 40 });
+    const stale = cand({ x: 110, y: 100, width: 40, key: 'stale' });
+    expect(collides(a, [stale], 1)).toBe(true);
+    expect(collides(a, [stale], 0)).toBe(false);
+  });
+
   it('returns false when AABBs share only a single edge', () => {
     // Strict-less-than on the overlap test means edge-touching is not
     // a collision — two labels can sit flush next to each other.
@@ -818,6 +828,47 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       h.stellata.camera.updateMatrixWorld(true);
       h.emit('frame');
       expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
+
+    // The candidate array is pooled across frames, so a frame with fewer
+    // surviving labels must not inherit the previous frame's entries. A
+    // pool sorted or walked past its live count would rank the retained
+    // constellation names (priority tier 0) ahead of the live star name
+    // and redraw a label the engine no longer built this frame.
+    it('drops a previous frame\'s candidates when this frame builds fewer', () => {
+      const groups = installDomStubs();
+      const above = new THREE.Vector3(0, 30, -100);
+      let conNamesOn = true;
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 1, distPc: 10 },
+        ],
+        names: new Map([[0, 'Unukalhai']]),
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'ORI', name: 'Orion', conIndex: ORION, position: above.clone() },
+        ],
+        detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!))
+        .toEqual(['ORION', 'SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
+
+      // One candidate left this frame; the three constellation names are
+      // gone. Nudge the camera so the full-tick skip doesn't short-circuit.
+      conNamesOn = false;
+      h.stellata.camera.position.x += 0.01;
+      h.stellata.camera.updateMatrixWorld(true);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
       labels.dispose();
     });
   });

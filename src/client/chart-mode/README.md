@@ -293,7 +293,11 @@ adequate for current near-Earth chart-mode use.
 **Pooling.** Each `<text>` / `<circle>` / `<line>` is keyed by stable
 identity (`n:idx`, `b:idx`, `c:regionCode`, `m:cloudIdx`) so adding /
 removing nodes is free across frames. Unused entries are detached at
-the end of each tick.
+the end of each tick. `tick`'s own containers — the candidate objects,
+the accepted list, the four dedupe Sets — are pooled on the same
+principle, so a frame allocates nothing per label; the two invariants
+that keep a shrinking frame from inheriting the previous one are in
+`../debug/README.md` § Chart-labels: pooled per-frame containers.
 
 ## Picking under chart mode
 
