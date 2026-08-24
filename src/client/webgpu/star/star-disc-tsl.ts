@@ -17,6 +17,7 @@ import {
 export function buildStarDiscMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
+  localMirror = false,
 ): StarColourMaterial {
   const v = buildStarVaryings();
 
@@ -27,8 +28,8 @@ export function buildStarDiscMaterial(
   });
 
   const material = new NodeMaterial();
-  material.name = 'star-disc-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v);
+  material.name = localMirror ? 'star-disc-local-tsl' : 'star-disc-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v, localMirror);
   material.transparent = true;
   applyDiscBlendDefaults(material);
   // Overrides the helper's depthWrite. The core mask stamped every core

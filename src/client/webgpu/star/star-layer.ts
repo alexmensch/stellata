@@ -19,6 +19,7 @@ import {
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
+import { StarLocalMirrorTsl } from './star-local-mirror-tsl';
 import type { StarColourMaterial } from './star-emission-tsl';
 import type { StarTslDeps } from './star-vertex-tsl';
 
@@ -40,6 +41,10 @@ export class StarLayer {
   readonly glowMesh: THREE.Mesh;
   /** Owned by this layer alone — the WebGL pipeline builds its own. */
   readonly colorLut: THREE.DataTexture;
+  /** The local-depth-pass mirror. NOT in the seam's scene: the shell hands
+   *  it to StarLocalCluster, which parents it into the pass scene and owns
+   *  its dispose — the same split as the GLSL mirror. */
+  readonly localMirror: StarLocalMirrorTsl;
 
   private readonly scene: THREE.Scene;
   private readonly build: StarGeometryBuild;
@@ -95,6 +100,8 @@ export class StarLayer {
     this.coreMaskMesh.visible = false;
     this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
     this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);
+    this.localMirror = new StarLocalMirrorTsl(
+      this.build.geometry, deps, gates, () => this.syncDynamicAttributes());
   }
 
   /** Every mesh this layer owns, in draw order. */
@@ -105,10 +112,13 @@ export class StarLayer {
   /** Swap every colour material between its single-output fragment and
    *  the three-member MRT struct — driven by the HDR pipeline in
    *  lockstep with its target mode (../hdr/README.md § The gate becomes
-   *  the output struct). The core mask never swaps: colour writes are
-   *  off, so its lone location-0 output is valid under either target. */
+   *  the output struct). The core masks never swap: colour writes are
+   *  off, so their lone location-0 output is valid under either target.
+   *  The mirror's colour draws land in the same target, so they ride the
+   *  same swap. */
   setMrtOutputs(on: boolean): void {
     for (const m of this.colourMaterials) m.setMrtOutputs(on);
+    this.localMirror.setMrtOutputs(on);
   }
 
   /** The shell's per-frame CPU gate — skip the whole depth-only draw when

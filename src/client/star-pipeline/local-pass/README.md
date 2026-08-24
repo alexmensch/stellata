@@ -8,7 +8,9 @@ bracket. Pass mechanics and the other member layers are
 
 ## Files
 
-- `star-local-mirror.ts` — `StarLocalMirror`: the mirror draw. Owns
+- `star-local-mirror.ts` — `StarLocalMirror`: the WebGL mirror draw, and
+  the backend-neutral `StarMirror` interface the cluster drives (the TSL
+  twin is `../../webgpu/star/star-local-mirror-tsl.ts`). Owns
   `MIRROR_CAPACITY`, which is tied to the `uLocalMemberIdx` uniform
   array size (pinned in `../star-pipeline.test.ts`). Its disc and glow
   meshes are statistic emitters like the main-pass pair — a member
@@ -60,12 +62,11 @@ disc-pass split × `RESOLVED_DISC_MIN_PX`, evaluated on the
 core-mask gate's sorted-distance walk
 (`StarFrame.forEachStarNearCamera` — `../frame/README.md`).
 
-Membership parks entirely while the local depth pass is not rendering
-(`localPassLive: false` — the WebGPU boot until its port child,
-`../../webgpu/README.md` § Every park is a gate): a member's collapse
-is only honest while the mirror repaints it, and that boot's
-reversed-z float32 main-pass depth orders resolved discs natively
-meanwhile.
+Membership parks only in chart mode (flat ink discs, depth disabled —
+suppression and mirrors must stay out of the way). The pass renders on
+both boots; on WebGPU the cluster drives the TSL mirror
+(`../../webgpu/star/star-local-mirror-tsl.ts`) through the same
+`StarMirror` interface.
 
 ## Core opacity is depth-gated, never paint-over
 

@@ -11,12 +11,22 @@ import {
 
 export const MIRROR_CAPACITY = 8;
 
+/** What StarLocalCluster drives, whichever backend built the mirror —
+ *  this GLSL class or the TSL twin
+ *  (../../webgpu/star/star-local-mirror-tsl.ts). */
+export interface StarMirror {
+  readonly group: THREE.Group;
+  setMembers(members: readonly number[]): void;
+  sync(): void;
+  dispose(): void;
+}
+
 interface MirrorAttr {
   src: THREE.InstancedBufferAttribute;
   dst: THREE.InstancedBufferAttribute;
 }
 
-export class StarLocalMirror {
+export class StarLocalMirror implements StarMirror {
   readonly group: THREE.Group;
 
   private readonly geometry: THREE.InstancedBufferGeometry;
