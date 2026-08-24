@@ -416,8 +416,7 @@ const tmpProj = /*@__PURE__*/ new THREE.Vector3();
 const rankedIds: string[] = [];
 const rankedPx: number[] = [];
 
-/** Pure: given candidates + viewing params, return the set of IDs whose
- *  labels should be visible this frame.
+/** Fill `out` with the IDs whose labels should be visible this frame.
  *
  *  Filters in this order:
  *  1. Inside-MW guard — when the camera sits inside the disc, every
@@ -537,35 +536,51 @@ let stopRanking: (() => void) | null = null;
  *  reading a disposed host's `visibleLabelIds` forever. */
 function acquireRankingHandler(host: LgLabelHost): () => void {
   rankingHolders++;
-  stopRanking ??= host.onFrame(() => {
-    if (host.getMonochrome()) {
-      visibleLabelIds.clear();
-      return;
-    }
-    const c = host.camera.position;
-    const w = host.getWorldOffset();
-    tmpCamAbs.set(c.x + w.x, c.y + w.y, c.z + w.z);
-    // Make sure the camera's matrices reflect this frame's camera
-    // pose — controls.update() mutates camera.position but doesn't
-    // propagate to matrixWorld/matrixWorldInverse. The render call
-    // will refresh them anyway, but our ranking runs before render
-    // each frame (it's a 'frame' event handler), so we have to flush
-    // explicitly or we read last-frame's projection.
-    host.camera.updateMatrixWorld();
-    computeVisibleLabelsInto(candidates, {
+  if (!stopRanking) {
+    // Built once per subscription instead of as a literal per frame, so
+    // the pass allocates nothing. Every field except the first two is
+    // refreshed from the host below before each ranking call — the seeds
+    // here exist only to satisfy the type and are never read.
+    const params: RankingParams = {
       cameraAbs: tmpCamAbs,
       galacticCentreAbs: GALACTIC_CENTRE_PC,
-      worldOffset: w,
+      worldOffset: host.getWorldOffset(),
       matrixWorldInverse: host.camera.matrixWorldInverse,
       projectionMatrix: host.camera.projectionMatrix,
-      fovDeg: host.camera.fov,
-      viewportWidthPx: window.innerWidth,
-      viewportHeightPx: window.innerHeight,
-      topN,
-      minPixelSize,
-      mwInsideDiscPc,
-    }, visibleLabelIds);
-  });
+      fovDeg: 0,
+      viewportWidthPx: 0,
+      viewportHeightPx: 0,
+      topN: 0,
+      minPixelSize: 0,
+      mwInsideDiscPc: 0,
+    };
+    stopRanking = host.onFrame(() => {
+      if (host.getMonochrome()) {
+        visibleLabelIds.clear();
+        return;
+      }
+      const c = host.camera.position;
+      const w = host.getWorldOffset();
+      tmpCamAbs.set(c.x + w.x, c.y + w.y, c.z + w.z);
+      // Make sure the camera's matrices reflect this frame's camera
+      // pose — controls.update() mutates camera.position but doesn't
+      // propagate to matrixWorld/matrixWorldInverse. The render call
+      // will refresh them anyway, but our ranking runs before render
+      // each frame (it's a 'frame' event handler), so we have to flush
+      // explicitly or we read last-frame's projection.
+      host.camera.updateMatrixWorld();
+      params.worldOffset = w;
+      params.matrixWorldInverse = host.camera.matrixWorldInverse;
+      params.projectionMatrix = host.camera.projectionMatrix;
+      params.fovDeg = host.camera.fov;
+      params.viewportWidthPx = window.innerWidth;
+      params.viewportHeightPx = window.innerHeight;
+      params.topN = topN;
+      params.minPixelSize = minPixelSize;
+      params.mwInsideDiscPc = mwInsideDiscPc;
+      computeVisibleLabelsInto(candidates, params, visibleLabelIds);
+    });
+  }
   let released = false;
   return () => {
     if (released) return;
