@@ -69,6 +69,12 @@ kernel or a diffuse column writes a mask** (`../../attachments/README.md`
 field — only a real measurement sees the pin take over, which is what the
 probe is for.
 
+**The landing struct is caller-owned and reused.** `SceneAdaptation` holds
+one `ParkLanding` and refills its five fields every rendered frame rather
+than building a fresh one, so the machine costs no allocation on the render
+path. `parkTick` may therefore read the landing but must never retain it —
+the `ParkState` it returns has to stand on its own.
+
 **One read gates both halves.** `animate()` reads `isMeasurementParked()`
 once and hands it to `HdrPipeline.setStatisticWritesParked` before `bind()`
 and to `reduction.measure`'s `parked` argument after the resolve. Two reads

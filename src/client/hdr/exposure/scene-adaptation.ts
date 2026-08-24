@@ -18,6 +18,7 @@ import {
 } from './scene-adaptation-pure';
 import {
   INITIAL_PARK_STATE,
+  type ParkLanding,
   type ParkPhase,
   type ParkState,
   parkTick,
@@ -54,6 +55,9 @@ export class SceneAdaptation {
   private dm = 0;
   private stat: FrameStatistic = EMPTY_FRAME_STATISTIC;
   private park: ParkState = INITIAL_PARK_STATE;
+  private readonly landing: ParkLanding = {
+    fresh: false, measuredDm: 0, appliedDm: 0, regime: 'open', probeReady: false,
+  };
   private lastLanded: ReducedStatistic | null = null;
   private lastNowMs: number | null = null;
   private lAdapt = L_ADAPT;
@@ -90,13 +94,12 @@ export class SceneAdaptation {
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
-    this.park = parkTick(this.park, {
-      fresh: landedFresh,
-      measuredDm: measured,
-      appliedDm: this.dm,
-      regime,
-      probeReady: this.deps.measurementReady(),
-    });
+    this.landing.fresh = landedFresh;
+    this.landing.measuredDm = measured;
+    this.landing.appliedDm = this.dm;
+    this.landing.regime = regime;
+    this.landing.probeReady = this.deps.measurementReady();
+    this.park = parkTick(this.park, this.landing);
     perfMeasure('adaptation');
     return this.dm;
   }

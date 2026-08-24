@@ -73,6 +73,15 @@ describe('parkTick — engaging', () => {
     }))).toEqual(INITIAL_PARK_STATE);
   });
 
+  it('retains nothing from the landing the caller refills each frame', () => {
+    const reused = landing();
+    const parked = parkTick(landZeros(INITIAL_PARK_STATE, ADAPT_PARK_SETTLED_LANDINGS - 1), reused);
+    reused.fresh = true;
+    reused.measuredDm = -12;
+    reused.regime = 'surface';
+    expect(parked).toEqual({ phase: 'parked', framesSinceProbe: 0 });
+  });
+
   it('does not advance the streak on frames without a fresh landing', () => {
     const streak = landZeros(INITIAL_PARK_STATE, ADAPT_PARK_SETTLED_LANDINGS - 1);
     expect(idleFrames(streak, 50)).toEqual(streak);
