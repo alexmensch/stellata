@@ -6,6 +6,9 @@ import * as THREE from 'three';
 import prepassVert from '../../util/fullscreen-pass.vert.glsl?raw';
 import prepassFrag from './extinction-prepass.frag.glsl?raw';
 import { fullscreenTriangleGeometry } from '../../util/fullscreen-pass';
+import type {
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
+} from './extinction-seam';
 import {
   AV_TEX_WIDTH,
   RECOMPUTE_EPSILON_PC,
@@ -13,19 +16,6 @@ import {
   packPositionsRgba,
   movedBeyondEpsilon,
 } from './extinction-prepass-pure';
-
-/** Uniform value-objects shared by reference with the star pipeline's
- *  sharedUniforms map: the dust-field inputs the prepass march reads,
- *  and the two consumer uniforms it owns the writes to. */
-export interface ExtinctionPrepassUniforms {
-  uDustTexture: { value: THREE.Data3DTexture | null };
-  uDustBoundsPc: { value: number };
-  uDustDensityMin: { value: number };
-  uDustLogRatio: { value: number };
-  uDustAvPerDensityPc: { value: number };
-  uAvPrepassTex: { value: THREE.Texture | null };
-  uAvPrepassEnabled: { value: number };
-}
 
 export interface ExtinctionPrepassOptions {
   renderer: THREE.WebGLRenderer;
@@ -36,7 +26,7 @@ export interface ExtinctionPrepassOptions {
   uniforms: ExtinctionPrepassUniforms;
 }
 
-export class ExtinctionPrepass {
+export class ExtinctionPrepass implements ExtinctionPrepassSeam {
   /** False when EXT_color_buffer_float is unavailable — the instance is
    *  inert and star.vert stays on its in-vertex raymarch fallback. */
   readonly supported: boolean;
