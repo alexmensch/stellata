@@ -155,8 +155,10 @@ running".
 **Write it to a file and run it by path.** Inline is not an option: the loop
 needs `$( )`, and a worktree-isolated session's guard rejects any command
 containing a substitution (`bd-long-field-writes` documents the same
-constraint for `bd`). Write `/tmp/pr-watch.sh`, then hand `Monitor` the plain
-command `bash /tmp/pr-watch.sh`.
+constraint for `bd`). Write `/tmp/pr-watch-<N>.sh`, then hand `Monitor` the
+plain command `bash /tmp/pr-watch-<N>.sh`. **Put the PR number in the
+filename** — several sessions land PRs at once and a shared path silently
+leaves one of them watching the other's PR.
 
 ```bash
 PR=<N>
@@ -170,12 +172,19 @@ while true; do
     CLOSED) echo "PR $PR CLOSED WITHOUT MERGING — cleanup not run"; break ;;
   esac
   fails=$(gh pr checks $PR --json name,bucket \
-    -q '.[] | select(.bucket=="fail") | .name' 2>/dev/null | tr '\n' ' ' || true)
-  if [ -n "$fails" ]; then echo "PR $PR CHECKS FAILED: $fails"; break; fi
+    -q '.[] | select(.bucket=="fail" or .bucket=="cancel") | .name' \
+    2>/dev/null | tr '\n' ' ' || true)
+  if [ -n "$fails" ]; then echo "PR $PR CHECKS FAILED/CANCELLED: $fails"; break; fi
   if [ "$auto" != "true" ]; then echo "PR $PR auto-merge NOT ARMED"; break; fi
   sleep 30
 done
 ```
+
+`gh pr checks` sorts every check into one of five buckets — `pass`, `fail`,
+`pending`, `skipping`, `cancel`. **`cancel` is terminal and is not `fail`.**
+A cancelled required check blocks the merge for good while auto-merge stays
+armed, so matching only `fail` leaves the loop polling a PR that will never
+move, which is indistinguishable from CI still running.
 
 `Monitor` with `persistent: true` — the loop's own exit ends the watch, so no
 timeout should pre-empt it. Only the `MERGED` line continues to § Close the
