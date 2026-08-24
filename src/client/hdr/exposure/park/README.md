@@ -42,12 +42,25 @@ barrier, which chart mode may drop and scene mode must not
 
 **Why parking the floor regime is exact rather than approximate.** `eye >
 floor` iff `L̄ < Lw`, so the floor wins precisely where the frame mean sits
-at or above the operator's white point — and every emitter write the park
-stops can only **lower** `L̄`, since light is additive and non-negative
-(the glow pass blends additively, the disc pass per-channel max, and both
-are monotone non-decreasing in what is drawn). A frame that measured the
-floor keeps measuring it. Nothing here rests on a margin or on a bound on
-integrated starlight.
+at or above the operator's white point — and it is computed from `Lw` and
+the anchor alone. While it wins, the applied cut has no input the frame can
+move, so sustaining it needs no measurement: there is no drift to bound and
+no margin to carry. What ends the regime is the scene changing, in one of
+two ways — `L̄` falling under `Lw`, or coverage rising far enough that the
+pin starts to weigh — and § Wake below is what bounds how long either takes
+to be seen.
+
+**The park never reads a partial measurement**, which is what keeps that
+argument this short. A parked frame runs no reduction and lands nothing,
+and a probe opens the writes for its own frame *before* the chain runs, so
+every landing the machine ever sees is a full-frame one. The lower-bound
+argument — glow additive-blended, disc per-channel max, both monotone
+non-decreasing in what is drawn, so a partial `L̄` already at or above `Lw`
+proves the full one is too — belongs to `stellata-8cg.34`, which keeps
+measuring *while* it closes the 313k field draw. It is not load-bearing
+here, and reading it as this park's justification gets the implication
+backwards: lowering `L̄` is the direction that would take the frame *out*
+of the regime.
 
 The pin is untouched by the same argument for a different reason: `D` and
 the coverage it divides by are both mask-gated, and **nothing that draws a

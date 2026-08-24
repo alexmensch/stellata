@@ -29,7 +29,10 @@ const PARKED_STATE: ParkState = { phase: 'parked', framesSinceProbe: 0 };
 
 const PROBING_STATE: ParkState = { phase: 'probing' };
 
-/** One rendered frame's evidence, as the park machine reads it. */
+/** One rendered frame's evidence, as the park machine reads it. The caller
+ *  owns the struct and refills it every rendered frame, so `parkTick` may
+ *  read it but must never retain it — the state it returns has to stand on
+ *  its own. */
 export interface ParkLanding {
   /** A LIVE landing — a reduction of a frame whose statistic writes were
    *  open. The stale readbacks the parked fence keeps issuing never surface
@@ -49,7 +52,7 @@ export interface ParkLanding {
  *  borrowed rather than re-picked. Legitimate here because the question IS
  *  numerical ("is this cut zero to our own resolution"); the render gate
  *  asks a perceptual one and must not borrow it
- *  (`../../render-gate/README.md`). `slewDm` collapses a within-band-of-zero
+ *  (`../../../render-gate/README.md`). `slewDm` collapses a within-band-of-zero
  *  park to exactly 0, but a cut may PARK anywhere inside the band of a
  *  non-zero measurement — an exact test would refuse to park at any such
  *  vantage, leaving the measurement running at full cost for a cut the
@@ -69,9 +72,10 @@ function noCut(dm: number): boolean {
  *   the operator's white point and the adaptation anchor and nothing from the
  *   frame, so where it wins the applied cut is a CONSTANT while it keeps
  *   winning. It wins exactly where the pin's weight is zero and `eye ≤
- *   floor`, i.e. where `L̄ ≥ Lw` — and skipping emitter writes can only
- *   LOWER `L̄`, since light is additive and non-negative. A parked frame that
- *   measured the floor therefore keeps measuring it.
+ *   floor`, i.e. where `L̄ ≥ Lw`, and holding it there needs no measurement:
+ *   there is no frame-dependent input left for it to drift on. What ends the
+ *   regime is the scene changing, and the probe cadence is what bounds how
+ *   long either way of ending it takes to be seen (`README.md` § Wake).
  *
  * The settled test is on the DIFFERENCE rather than on each cut separately:
  * a floor-governed cut parks at the floor, not at zero, so "both read no
