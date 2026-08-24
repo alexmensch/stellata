@@ -48,11 +48,16 @@ describe('the target', () => {
     expect(rt.textures).toHaveLength(HDR_ATTACHMENT_COUNT);
     expect(rt.textures[1].format).toBe(THREE.RGFormat);
     expect(rt.textures[2].minFilter).toBe(THREE.LinearFilter);
-    // depthBuffer without stencil or a depth texture: what lands three on
-    // Depth32Float under reversedDepthBuffer.
+    // The reversed-z → Depth32Float inference is canvas-only: a render
+    // target's auto-created depth texture is Depth24Plus regardless, so
+    // the target must carry an explicit FloatType depth texture or the
+    // local depth pass's K = 1 bracket quantises (Saturn's rings landed
+    // inside one depth step of the body).
     expect(rt.depthBuffer).toBe(true);
     expect(rt.stencilBuffer).toBe(false);
-    expect(rt.depthTexture).toBe(null);
+    expect(rt.depthTexture).not.toBe(null);
+    expect(rt.depthTexture!.type).toBe(THREE.FloatType);
+    expect(rt.depthTexture!.format).toBe(THREE.DepthFormat);
     expect(hdr.statisticTexture()).toBe(rt.textures[1]);
   });
 

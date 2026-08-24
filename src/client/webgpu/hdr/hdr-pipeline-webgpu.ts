@@ -3,8 +3,8 @@
 // reversed-z depth attachment. See README.md.
 
 import {
-  DataTexture, HalfFloatType, NearestFilter, NoBlending,
-  NodeMaterial, QuadMesh, RGBAFormat, RenderTarget, Vector2,
+  DataTexture, DepthTexture, FloatType, HalfFloatType, NearestFilter,
+  NoBlending, NodeMaterial, QuadMesh, RGBAFormat, RenderTarget, Vector2,
   type Texture, type WebGPURenderer,
 } from 'three/webgpu';
 import { Fn, ivec2, screenCoordinate, select, texture, uniform, vec4 } from 'three/tsl';
@@ -237,10 +237,6 @@ export class WebGpuHdrPipeline implements HdrSeam {
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
     this.renderer.getDrawingBufferSize(this.size);
-    // depthBuffer without stencil or a depth texture is what lands three
-    // on Depth32Float under reversedDepthBuffer — the format the
-    // local-depth children's K = 1 precision bound re-derives from
-    // (../../hdr/README.md § Pass ordering).
     this.rt = new RenderTarget(this.size.x, this.size.y, {
       count: this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
       type: HalfFloatType,
@@ -251,15 +247,20 @@ export class WebGpuHdrPipeline implements HdrSeam {
       stencilBuffer: false,
       generateMipmaps: false,
     });
+    // The reversed-z → Depth32Float inference is CANVAS-only: for a
+    // render target three auto-creates a Depth24Plus depth texture
+    // regardless of reversedDepthBuffer, silently fixed-point — which
+    // voids the local depth pass's K = 1 bracket
+    // (../../local-depth/bracket/README.md § Precision analysis). An
+    // explicit FloatType depth texture is what lands Depth32Float; the
+    // same move three's own PassNode makes under reversedDepthBuffer.
+    const depthTexture = new DepthTexture(this.size.x, this.size.y);
+    depthTexture.type = FloatType;
+    this.rt.depthTexture = depthTexture;
     applyHdrAttachmentState(this.rt.textures as unknown as THREE.Texture[]);
-    // Guards the inference above at runtime: an explicit depth texture
-    // keeps ITS format and a stencil request diverts to
-    // depth32float-stencil8 — both silently fixed-point or optional, and
-    // either voids the local depth pass's K = 1 bracket
-    // (../../local-depth/bracket/README.md § Precision analysis).
     if (
       this.renderer.reversedDepthBuffer !== true
-      || this.rt.depthTexture !== null
+      || this.rt.depthTexture.type !== FloatType
       || this.rt.stencilBuffer
       || !this.rt.depthBuffer
     ) {
@@ -340,6 +341,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
   }
 
   private releaseTarget(): void {
+    this.rt?.depthTexture?.dispose();
     this.rt?.dispose();
     this.rt = null;
     this.summation?.dispose();

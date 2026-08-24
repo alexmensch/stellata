@@ -144,9 +144,11 @@ plan — a gate still standing then means its feature was dead for a
 release.
 
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
-[0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
-remapped, clear inverted, all upstream in three r185 — and
-`trackTimestamp: true` for the `gpu.frame` perf row (§ Timestamps).
+[0, 1] reversed clip, depth funcs remapped, clear inverted, all
+upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`
+perf row (§ Timestamps). `Depth32Float` is picked automatically for the
+CANVAS only; a render target needs an explicit `FloatType` depth
+texture (`../local-depth/bracket/README.md` § Precision analysis).
 
 ## Output colour space — pinned to the working space
 

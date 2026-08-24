@@ -85,18 +85,21 @@ world-space quantum is
 ```
 
 **Precondition: the float32 attachment is the whole argument, and
-three only ever infers it.** `reversedDepthBuffer` is what makes the
-backend pick `depth32float` (`getCurrentDepthStencilFormat`), and two
-paths silently opt out — a render target carrying its own
-`depthTexture` keeps *that* texture's format, and any target asking
-for stencil lands on `depth32float-stencil8`, an optional device
-feature that must be in `requiredFeatures`. On a 24-bit fixed-point
-attachment reversed-z gives a *uniform* `δd = 2⁻²⁴` instead, i.e.
-`δz ≈ 2⁻²⁴·z²/n` — 262 AU at Neptune's ring against the main pass's
-near, far worse than the sliced bound it replaces. Asserted, never
-assumed: `boot-webgpu.ts` refuses a boot whose renderer dropped
+three infers it for the CANVAS alone.** `reversedDepthBuffer` makes
+`getCurrentDepthStencilFormat` pick `depth32float` only when the
+render context carries no depth texture — and for any render target
+three auto-creates one, `DepthFormat`/`UnsignedIntType` =
+`depth24plus`, regardless of the reversed flag. So a target that
+merely sets `depthBuffer: true` gets FIXED-POINT depth: a uniform
+`δd = 2⁻²⁴`, i.e. `δz ≈ 2⁻²⁴·z²/n` — 262 AU at Neptune's ring against
+the main pass's near, and ~20,000 km at Saturn inside a K = 1 bracket
+whose near floored at `NEAR_MIN_PC` (the shipped bug: the whole ring
+system inside one depth step of the body). The HDR target therefore
+carries an **explicit `FloatType` depth texture** — the same move
+three's own `PassNode` makes under `reversedDepthBuffer`. Asserted,
+never assumed: `boot-webgpu.ts` refuses a boot whose renderer dropped
 `reversedDepthBuffer`, and `WebGpuHdrPipeline` throws at target
-creation if the target carries a depth texture or stencil.
+creation unless the depth texture is `FloatType` with no stencil.
 
 The bound is scale-free: it holds at every camera distance, bracket
 ratio, and epoch, so the camera-anywhere check passes structurally
