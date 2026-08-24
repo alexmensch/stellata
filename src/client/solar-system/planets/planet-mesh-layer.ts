@@ -148,6 +148,16 @@ interface AtmosphereEntry {
   shellRadiusPc: number;
 }
 
+/** The texture slots a not-ready map releases back to its build-time
+ *  stand-in. Each slot's OWN, snapshotted at entry creation: the WebGPU
+ *  factory seeds one per slot because three merges texture uniforms
+ *  whose values match at shader build — re-seeding onto one shared
+ *  placeholder before first render would fuse the slots and the losers'
+ *  writes would never reach the GPU again. */
+const TEXTURE_SLOTS = ['uMap', 'uNormalMap', 'uHorizonA', 'uHorizonB', 'uSkyView'] as const;
+
+type SlotFallbacks = Record<(typeof TEXTURE_SLOTS)[number], THREE.Texture>;
+
 interface MeshEntry {
   mesh: THREE.Mesh;
   material: EmitterMaterial;
@@ -155,6 +165,7 @@ interface MeshEntry {
    *  when present — the local-depth-pass bounding sphere. */
   boundRadiusPc: number;
   radiusPc: number;
+  slotFallbacks: SlotFallbacks;
   ring?: RingEntry;
   atmosphere?: AtmosphereEntry;
   /** Present iff the body has an atmosphere; shared by the mesh disc
@@ -492,7 +503,7 @@ export class PlanetMeshLayer {
         material.uniforms.uNormalMap.value = reliefState.tex;
         material.uniforms.uHasNormalMap.value = 1;
       } else {
-        material.uniforms.uNormalMap.value = this.placeholder;
+        material.uniforms.uNormalMap.value = entry.slotFallbacks.uNormalMap;
         material.uniforms.uHasNormalMap.value = 0;
       }
       // Half a horizon is worse than none: the shader interpolates across the
@@ -505,7 +516,7 @@ export class PlanetMeshLayer {
         material.uniforms.uSkyView.value = skyView.tex;
         material.uniforms.uHasSkyView.value = 1;
       } else {
-        material.uniforms.uSkyView.value = this.placeholder;
+        material.uniforms.uSkyView.value = entry.slotFallbacks.uSkyView;
         material.uniforms.uHasSkyView.value = 0;
       }
       if (horizonA?.state === 'ready' && horizonB?.state === 'ready') {
@@ -513,15 +524,15 @@ export class PlanetMeshLayer {
         material.uniforms.uHorizonB.value = horizonB.tex;
         material.uniforms.uHasHorizonMap.value = 1;
       } else {
-        material.uniforms.uHorizonA.value = this.placeholder;
-        material.uniforms.uHorizonB.value = this.placeholder;
+        material.uniforms.uHorizonA.value = entry.slotFallbacks.uHorizonA;
+        material.uniforms.uHorizonB.value = entry.slotFallbacks.uHorizonB;
         material.uniforms.uHasHorizonMap.value = 0;
       }
       if (texState?.state === 'ready') {
         material.uniforms.uMap.value = texState.tex;
         material.uniforms.uHasMap.value = 1;
       } else {
-        material.uniforms.uMap.value = this.placeholder;
+        material.uniforms.uMap.value = entry.slotFallbacks.uMap;
         material.uniforms.uHasMap.value = 0;
         (material.uniforms.uColour.value as THREE.Color).setRGB(
           planet.colour[0], planet.colour[1], planet.colour[2],
@@ -887,7 +898,10 @@ export class PlanetMeshLayer {
       planet.rings ? planet.rings.outerRadiusKm : 0,
       planet.radiusKm + (planet.atmosphere?.heightKm ?? 0),
     ) * KM_PC;
-    const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc };
+    const slotFallbacks = Object.fromEntries(TEXTURE_SLOTS.map(
+      (slot) => [slot, material.uniforms[slot].value as THREE.Texture],
+    )) as SlotFallbacks;
+    const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc, slotFallbacks };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
       entry.atmoBase = computeAtmoBase(
