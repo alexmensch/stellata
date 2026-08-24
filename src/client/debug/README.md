@@ -245,13 +245,29 @@ into a caller-owned tuple now (`projectVecInto`), and `ChartLabels`
 owns one for all of them — safe because each caller reads it before
 the next projection runs.
 
-Both halves are about the *projector*, and neither makes this label
-engine allocation-free: `tick` still builds a candidates array, an
-accepted array, four Sets and one `Candidate` literal per surviving
-label every frame, which is the larger cost on this path and is
-`stellata-8cg.40`'s scope. Don't read this section as "chart labels
-no longer allocate" — measure chart mode and you will see that
-remaining churn, not the projector.
+### Chart-labels: pooled per-frame containers
+
+Both halves above are about the *projector*, and the larger cost on
+this path was the label engine's own churn: `tick` built a candidates
+array, an accepted array, four Sets and one `Candidate` literal per
+surviving label — hundreds per frame across seven families, each one
+strictly more bytes than the projector tuple it sat beside.
+
+All of it is pooled now, the same idiom as the `<text>` / `<circle>` /
+`<line>` element pools, and the pool keys plus the two composed label
+texts are interned per identity rather than minted per tick.
+
+What survives is O(1) per tick — the `getChartDiscParams` bag and the
+`discPxFor` closure over it — plus one attribute string per *moved*
+label, from `setNumAttr`'s `toFixed`, which no `setAttribute` caller
+escapes. **So chart mode under a moving camera still shows string
+allocation in a sampling profile.** That residue is the DOM write, not
+the label engine's containers; read a non-zero `tick` self-size as the
+former before suspecting the latter.
+
+Pooled reuse rests on three invariants, each mutation-pinned by
+`chart-labels.test.ts` and argued in `../chart-mode/README.md`
+§ Pooling — that folder owns `chart-labels.ts`.
 
 ### Chart-labels: cached brightest constellation member
 

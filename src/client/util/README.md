@@ -26,6 +26,13 @@ build scripts, tests, and shader uniforms.
   than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
   catalogue RA column and sexagesimal boundary coordinate goes through;
   tests import it rather than restating 15.
+- `ulp.ts` (+ test) — `ulpsBetween(a, b)`, the distance between two
+  float64s in representable steps. The unit that separates a value which
+  will not converge (a handful of ULP, re-derived each frame from inputs
+  that round differently) from one that is genuinely moving (millions).
+  Scale-free, which is what makes a threshold in it admissible where a
+  world-space epsilon would not be. Consumers: the render gate's pose
+  drift readout, and the navigate derived-pose settle floors.
 - `attribute-upload.ts` (+ test) — partial GPU re-upload for an
   instanced attribute whose per-frame writes land on a small, fixed
   subset of items. `DirtyItemUploader` diffs those items against the

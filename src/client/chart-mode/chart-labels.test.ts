@@ -99,25 +99,25 @@ describe('chart-labels / collides', () => {
   }
 
   it('returns false against an empty list', () => {
-    expect(collides(cand({}), [])).toBe(false);
+    expect(collides(cand({}), [], 0)).toBe(false);
   });
 
   it('detects overlap of two start-anchored labels', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 120, y: 100, width: 40, key: 'b' }); // overlaps a in x
-    expect(collides(a, [b])).toBe(true);
+    expect(collides(a, [b], 1)).toBe(true);
   });
 
   it('returns false for non-overlapping labels with horizontal gap', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 200, y: 100, width: 40, key: 'b' });
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 
   it('returns false for non-overlapping labels with vertical gap', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 100, y: 200, width: 40, key: 'b' });
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 
   it('is symmetric for same-kind labels', () => {
@@ -125,7 +125,7 @@ describe('chart-labels / collides', () => {
     // collides with A, when both share the same anchor convention.
     const a = cand({ x: 100, y: 100, width: 50 });
     const b = cand({ x: 130, y: 100, width: 50, key: 'b' });
-    expect(collides(a, [b])).toBe(collides(b, [a]));
+    expect(collides(a, [b], 1)).toBe(collides(b, [a], 1));
   });
 
   it('honours middle-anchor for kind=con (centred AABB)', () => {
@@ -134,7 +134,7 @@ describe('chart-labels / collides', () => {
     // occupies [80, 110] — overlap.
     const con = cand({ kind: 'con', x: 100, y: 100, width: 50 });
     const name = cand({ kind: 'name', x: 80, y: 100, width: 30, key: 'b' });
-    expect(collides(con, [name])).toBe(true);
+    expect(collides(con, [name], 1)).toBe(true);
   });
 
   it('reports collision against any item in the list', () => {
@@ -144,7 +144,17 @@ describe('chart-labels / collides', () => {
       cand({ x: 1000, y: 1000, width: 40, key: 'c' }),
       cand({ x: 110, y: 100, width: 40, key: 'd' }), // collides with a
     ];
-    expect(collides(a, candidates)).toBe(true);
+    expect(collides(a, candidates, candidates.length)).toBe(true);
+  });
+
+  it('ignores entries past the live count', () => {
+    // `others` is the engine's pooled accepted array: everything from
+    // `count` on is a previous, larger frame's leftovers and must not
+    // block this frame's labels.
+    const a = cand({ x: 100, y: 100, width: 40 });
+    const stale = cand({ x: 110, y: 100, width: 40, key: 'stale' });
+    expect(collides(a, [stale], 1)).toBe(true);
+    expect(collides(a, [stale], 0)).toBe(false);
   });
 
   it('returns false when AABBs share only a single edge', () => {
@@ -152,7 +162,7 @@ describe('chart-labels / collides', () => {
     // a collision — two labels can sit flush next to each other.
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 140, y: 100, width: 40, key: 'b' }); // a ends at 140, b starts at 140
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 });
 
@@ -818,6 +828,93 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       h.stellata.camera.updateMatrixWorld(true);
       h.emit('frame');
       expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+      labels.dispose();
+    });
+
+    // The candidate array is pooled across frames, so a frame with fewer
+    // surviving labels must not inherit the previous frame's entries. A
+    // pool sorted or walked past its live count would rank the retained
+    // constellation names (priority tier 0) ahead of the live star name
+    // and redraw a label the engine no longer built this frame.
+    it('drops a previous frame\'s candidates when this frame builds fewer', () => {
+      const groups = installDomStubs();
+      const above = new THREE.Vector3(0, 30, -100);
+      let conNamesOn = true;
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 1, distPc: 10 },
+        ],
+        names: new Map([[0, 'Unukalhai']]),
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'ORI', name: 'Orion', conIndex: ORION, position: above.clone() },
+        ],
+        detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!))
+        .toEqual(['ORION', 'SERPENS', 'SERPENS']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
+
+      // One candidate left this frame; the three constellation names are
+      // gone. Nudge the camera so the full-tick skip doesn't short-circuit.
+      conNamesOn = false;
+      h.stellata.camera.position.x += 0.01;
+      h.stellata.camera.updateMatrixWorld(true);
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
+      labels.dispose();
+    });
+
+    // The other half of pooled-Candidate reuse: a recycled entry must not
+    // inherit the previous occupant's measured box. Constellation labels skip
+    // measureCandidate, so a con landing in a slot that held a measured star
+    // name would collide against that name's width instead of its own bare
+    // anchor point — and cons are accepted first, so the stale box then
+    // evicts live star names. Pool slots shift down whenever an earlier
+    // family shrinks, which is what the magnitude slider does.
+    it('clears a recycled candidate\'s measured box before a con reuses the slot', () => {
+      const groups = installDomStubs();
+      // 60 chars: a stale half-width of ~199 px reaches well past Rigel's
+      // label on the 800×600 test viewport, so the assertion is unambiguous.
+      const LONG = 'A'.repeat(60);
+      const names = new Map([[0, 'Rigel'], [1, LONG]]);
+      let conNamesOn = false;
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        // appMag 5 — inside the limit, and faint enough that the label offset
+        // sits on its 9 px floor, so the boxes overlap vertically.
+        stars: [
+          { con: ORION, absmag: 5, distPc: 10 },
+          { con: ORION, absmag: 5, distPc: 10 },
+        ],
+        names,
+        anchors: [{ code: 'ORI', name: 'Orion', conIndex: ORION, position: AHEAD.clone() }],
+        detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+
+      // Frame 1: both names claim a slot and both are measured; the long one
+      // loses the collision to Rigel (every harness star projects to centre)
+      // but leaves its 398 px width on pooled slot 1.
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Rigel']);
+
+      // Frame 2: one name left, so the con takes slot 1. 'filter' breaks the
+      // full-tick skip without perturbing any projection.
+      names.delete(1);
+      conNamesOn = true;
+      h.emit('filter');
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['ORION']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Rigel']);
       labels.dispose();
     });
   });

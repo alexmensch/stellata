@@ -21,7 +21,9 @@ gestures below toggle its `noRotate` / `noPan` flags.
   tail once a frame moves less than a tenth of a pixel. § Damping settle
   floor.
 - `trackball-settle-pure.ts` (+ test) — the on-screen motion of one
-  frame's step (`eyeSwingRad`, `trackballMotionPx`) and the floor itself.
+  frame's step (`eyeSwingRad`, `trackballMotionPx`) and the floors
+  themselves (`TRACKBALL_SETTLE_PX`, `ORIENTATION_SETTLE_ULP`,
+  `POSITION_SETTLE_ULP`). § Derived-pose settle floor.
 
 The click decision tables live in `../../../README.md` § Click-state
 machine; the ladder's pure decision function is
@@ -119,6 +121,45 @@ would settle differently at Sol and at the LMC (CLAUDE.md
 § Camera-anywhere). It is the navigate-mode sibling of observe's
 `MOMENTUM_MIN_SPEED` (`../../observe/observe-controls.ts`), which has
 floored its own momentum on the same argument from the start.
+
+## Derived-pose settle floor
+
+The damping floor above stops a tail that *decays*. This one stops a drift
+that never decays at all, and the two must not be confused —
+`../../../render-gate/README.md` § Pose change draws the distinction in
+ULP, which is the only readout that separates them.
+
+`TrackballControls.update()` rebuilds the pose from scratch every call: it
+takes `eye = position − target`, writes `position = target + eye` back, and
+re-derives the orientation with `lookAt(target)`. Both round-trips are
+identities in exact arithmetic and **neither is exact in float64** once a
+focal ride has translated camera and target together — `(t+d) − (p+d)`
+does not round to `t − p`. So the derived pose lands a few representable
+steps from the pose the ride wrote, every frame, forever. The render gate
+compares by exact equality and read that as a camera move: with a moving
+focus and the clock running, the gate woke on 28–55 % of ticks and the
+clock cadence never idled.
+
+`TrackballSettle.capture()` snapshots the pose immediately before
+`update()`; `tick()` restores any component that came back inside its
+floor. Restoring the *bits* is what makes the camera its own anchor — a
+sub-floor step is not forgiven afresh against a reference that already
+absorbed the last one.
+
+**Two floors, because a ULP means different things per slot.** The
+orientation floor is `ORIENTATION_SETTLE_ULP = 4096`: a quaternion is
+unit-norm, so its ULP maps to an angle the same way at every vantage.
+Position gets a much tighter `POSITION_SETTLE_ULP = 16`, because a
+position ULP has no fixed angular meaning — far from the local origin but
+close to the target, a wide floor would be a visible fraction of the eye
+vector. Both are sized off a measured ride walk across 1e-6 pc to 1e4 pc
+(orientation drifts 7–9 ULP, position 0–1), and the smallest rotation a
+viewer can ask for — one hundredth of a pixel — is 4.6e18 ULP, so nothing
+an input can produce falls inside either.
+
+The OBSERVE half of the same defect is not floored but removed: its look
+pin is re-derived only on rotation (`../../observe/README.md`
+§ The serialised look pin).
 
 ## Reference up axis
 

@@ -78,6 +78,7 @@ import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
+import { lookPinStale, writeLookPin } from './camera/observe/look-pin-pure';
 import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
@@ -875,7 +876,13 @@ export class Stellata implements FrameAnchor {
       this.refreshConstellationFigure();
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
-    this.on('cameraMode', () => this.refreshConstellationFigure());
+    this.on('cameraMode', () => {
+      this.refreshConstellationFigure();
+      // The observe transitions write controls.target directly, so the
+      // look pin must be re-derived on the next observe frame even if the
+      // camera never rotated across the switch.
+      this.observePinQuat.set(Number.NaN, 0, 0, 0);
+    });
     this.coordSpheres = {
       galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic),
       equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial),
@@ -2316,6 +2323,7 @@ export class Stellata implements FrameAnchor {
       this.observeUpdateTarget();
     } else {
       cameraAnimating = false;
+      this.trackballSettle.capture(this.camera);
       this.controls.update();
       this.trackballSettle.tick(
         this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
@@ -2606,17 +2614,19 @@ export class Stellata implements FrameAnchor {
   }
 
   private observeTmpFwd = new THREE.Vector3();
+  // Orientation the look pin was last derived at. x=NaN forces the first
+  // call through, since NaN never equals itself.
+  private readonly observePinQuat = new THREE.Quaternion(Number.NaN, 0, 0, 0);
   private observeUpdateTarget() {
-    // 1 pc ahead of the camera in its current look direction. Choice of 1 pc
-    // is arbitrary — controls.target is serialised but never used as an
-    // orbit pivot while OBSERVE is active. Any non-zero distance yields a
-    // valid forward direction on round-trip.
+    if (!lookPinStale(this.observePinQuat, this.camera.quaternion)) return;
+    this.observePinQuat.copy(this.camera.quaternion);
     this.observeTmpFwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
-    this.controls.target.copy(this.camera.position).add(this.observeTmpFwd);
+    writeLookPin(this.camera.position, this.observeTmpFwd, this.controls.target);
   }
 
   dispose() {
     this.disposed = true;
+    this.observePinQuat.set(Number.NaN, 0, 0, 0);
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
     this.trackballSettle.dispose();

@@ -6,7 +6,7 @@ import { targetDisplayName } from './target-name';
 import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
 import {
   buildArrowSvgPath,
-  screenDirToTarget,
+  screenDirToTargetInto,
   ARROW_HEAD_DEPTH_PX,
   ARROW_LABEL_OFFSET_PX,
   ARROW_LABEL_PADDING_PX,
@@ -175,6 +175,7 @@ export function createPoiOverlay(stellata: Stellata): void {
   const tmpAim = new THREE.Vector3();
   const tmpOrigin = new THREE.Vector3();
   const tmpAnchor: [number, number] = [0, 0];
+  const tmpScreenDir: [number, number] = [0, 0];
 
   // Position + name dispatch through the kind-generic registries so a
   // new pinnable kind needs no overlay edit (camera/focus/README.md
@@ -404,13 +405,12 @@ export function createPoiOverlay(stellata: Stellata): void {
       }
       tmpDir.multiplyScalar(1 / Math.sqrt(dirLenSq));
 
-      const sdir = screenDirToTarget(cx, cy, projected, tmpDir, camera);
-      if (!sdir) {
+      if (screenDirToTargetInto(cx, cy, projected, tmpDir, camera, tmpScreenDir) === 'none') {
         hideEntry(e);
         continue;
       }
-      const sux = sdir[0];
-      const suy = sdir[1];
+      const sux = tmpScreenDir[0];
+      const suy = tmpScreenDir[1];
 
       // Shaft length defaults to ARROW_PIXEL_LENGTH; shrunk so the tip
       // stops `targetMarginPx` short of the projected target when the

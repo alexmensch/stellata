@@ -127,7 +127,7 @@ entirely in screen space:
    one is well-defined this frame: (a) when the target projects in front
    of the camera, take the screen-space vector from the anchor to the
    target's projection (the natural direction); (b) when the target is
-   behind the camera, fall back to `viewSpaceScreenDir` from
+   behind the camera, fall back to `viewSpaceScreenDirInto` from
    `arrow-path.ts` — the camera-local `(x, -y)` of the world direction.
    View-space arithmetic sidesteps the projection divide and is
    independent of camera-to-origin distance, so a target the user must

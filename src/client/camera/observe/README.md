@@ -11,6 +11,9 @@ click handlers (single = pin a POI, double = aim-at).
 - `observe-controls.ts` — custom look-around controller: drag
   mechanics, momentum, FOV-on-wheel, single/double click handlers
   (pin POI / aim-at).
+- `look-pin-pure.ts` (+ test) — the `controls.target` value OBSERVE
+  serialises, and the single condition that invalidates it.
+  § The serialised look pin.
 - `observe-transition.ts` — navigate↔observe FSM. `setMode`,
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
@@ -238,6 +241,39 @@ at it — in whichever frame is current). Three reasons:
   along the forward ray at minDist, which is what we want lookAt to be a
   no-op against. The focal-frame ride translates `fromPos`/`toPos`
   per frame so the pull-out stays locked to the drifting star.
+
+## The serialised look pin
+
+`controls.target` has **no geometric job in OBSERVE** — TrackballControls
+is swapped out, so there is no orbit pivot. It survives as a
+*serialisation shim*: the URL blob has no field for orientation, it stores
+two points (`cam`, `tgt`) and rebuilds the look direction with `lookAt` on
+load. So the shell manufactures a `tgt` one parsec along the camera's
+forward axis (`LOOK_PIN_DIST_PC`). The distance is arbitrary — any
+non-zero value encodes the same direction — and the pin's only consumer is
+the URL writer. `scale-bar.ts` branches to angular extent in OBSERVE and
+never reads it; the galactic arrows deliberately use the focal position
+instead (`../../galactic/README.md`), since a target-based origin would
+report every distance ~1 pc off.
+
+**It is re-derived only on rotation, and that guard is load-bearing.** A
+focal ride translates camera and target together through one delta
+(`Stellata.applyRideDelta`), which is exact, so a translated pin stays
+correct for free. Re-deriving it from a translated camera instead —
+which is what the shell used to do every frame — lands
+`position + forward` a few ULP off the value the ride wrote, every frame,
+converging never. The render gate compares the pose by exact equality, so
+it read that as a camera move and the whole clock cadence stopped idling
+(`../../render-gate/README.md` § Pose change).
+
+The 1 pc distance is what makes it worst: `position + forward × 1pc`
+differences two near-equal magnitudes when the camera sits about a parsec
+from the local origin looking back toward it, and the drift there measured
+~3900 ULP per tick against ~1 elsewhere. `observePinQuat` is NaN-seeded so
+the first frame always derives, and the `'cameraMode'` handler re-seeds it
+because the transitions write `controls.target` directly — without that, a
+mode round-trip with no rotation would keep the transition's target as the
+pin.
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +

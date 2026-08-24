@@ -215,11 +215,31 @@ regression is pinned both ways: an absorbed step stays quiet across six
 consecutive rides, and the same step unabsorbed wakes the gate on every
 one.
 
-The rebase touches exactly the six translation slots. Orientation, fov
-and `worldOffset` stay, because the only writer is a ride, which
-translates camera and target together and rotates nothing — absorbing a
-rotation would hide a real camera move. A pan that moves `target` alone
-still wakes it.
+The rebase touches exactly the six translation slots. Orientation, fov and
+`worldOffset` stay: absorbing a rotation would hide a real camera move, and
+a pan that moves `target` alone still wakes the gate.
+
+**What that carve-out originally justified itself with was wrong, and cost
+the cadence.** It read "the only writer is a ride, which translates camera
+and target together and rotates nothing". The ride rotates nothing — but
+the code DOWNSTREAM of it re-derives pose components from the translated
+values, and those derivations are not exact. Three of them existed:
+`TrackballControls.update()` rebuilds `position` from `target + eye` and
+re-derives orientation with `lookAt(target)` (navigate), and the OBSERVE
+look pin recomputed `target = position + forward` every frame. Each landed
+a few ULP from what the ride wrote, every frame, forever — the § Pose
+change failure class, let in by this very paragraph. With a moving focus
+and the clock running the gate woke on 28–55 % of ticks.
+
+The fix is at the derivations, not here: the navigate pair is floored and
+restored around `update()`
+(`../camera/controls/input/README.md` § Derived-pose settle floor), and the
+OBSERVE pin is re-derived only on rotation
+(`../camera/observe/README.md` § The serialised look pin). The gate keeps
+exact equality. **Anything new that recomputes a pose slot below the gate
+inherits this defect** — the ULP column in `debug.renderWatch()` is how you
+find it, and a handful of ULP on a slot nothing should have touched is the
+signature.
 
 `applyRideDelta` also accumulates the frame's ride translation, which
 divided by the sim step IS `CadenceCtx.cameraVelPcPerSimS` (§ Camera

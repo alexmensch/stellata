@@ -293,7 +293,38 @@ adequate for current near-Earth chart-mode use.
 **Pooling.** Each `<text>` / `<circle>` / `<line>` is keyed by stable
 identity (`n:idx`, `b:idx`, `c:regionCode`, `m:cloudIdx`) so adding /
 removing nodes is free across frames. Unused entries are detached at
-the end of each tick.
+the end of each tick. `tick`'s own containers — the candidate objects,
+the accepted list, the four dedupe Sets — are pooled on the same
+principle, and the pool keys plus the two composed label texts (the
+Bayer glyph pair, the con name's uppercase) are interned per identity
+in a `StringCache`, trading a template literal per label per tick for a
+hash lookup. `stop()` drops the per-tick scratch; `dispose()` also
+drops the interned strings, which are catalog-derived and worth keeping
+across a chart exit.
+
+**The one per-label allocation left is the attribute string `setNumAttr`
+formats**, on the labels whose x/y actually moved — unavoidable through
+`setAttribute`, and it fires on exactly the frames the camera is moving.
+Don't read the pooling as "chart mode allocates nothing"; see
+`../debug/README.md` § Chart-labels: pooled per-frame containers before
+interpreting a profile.
+
+Three invariants make the reuse safe. Each is mutation-pinned in
+`chart-labels.test.ts` — dropping any one of them fails a test:
+
+1. `candidateList` is **truncated to the live count before the sort**.
+   Otherwise a sparser frame ranks the previous, larger frame's entries
+   (constellation names, priority tier 0) ahead of its own live labels
+   and redraws labels the engine never built.
+2. `collides` walks **only the accepted array's live prefix**. `count`
+   is a required argument, not defaulted to `others.length` — for the
+   one caller that matters, that default *is* the bug.
+3. `addCandidate` **rewrites `width` / `height` on every claim**.
+   Constellation labels skip `measureCandidate`, so a con recycling a
+   slot would otherwise collide against the measured box of whatever
+   star name held it — and since cons are accepted first, that stale
+   box evicts live star names. Pool slots shift down whenever an
+   earlier family shrinks, which is what the magnitude slider does.
 
 ## Picking under chart mode
 
