@@ -10,9 +10,13 @@ const EMITTER_OUTPUTS = /* @__PURE__ */ struct({
 }, 'StellataEmitterOutputs');
 
 /** The three attachments one emitter fragment writes. A slot the WebGL
- *  gate would have masked off writes `vec4(0)` — the blend's identity
- *  element under every blend the emitters use, so the destination is
- *  untouched exactly as `NONE` left it. */
+ *  gate would have masked off writes `vec4(0)`, which leaves the
+ *  destination untouched exactly as `NONE` did — but only because every
+ *  blend that reaches an MRT target treats 0 as its identity. Chart
+ *  mode's `MultiplyBlending` does NOT (its identity is 1), and it is safe
+ *  solely because chart unbinds the target, so a material in the struct
+ *  graph never draws under it (`hdr-pipeline-webgpu.ts` `wantsTarget`).
+ *  A new blend on an MRT path has to be checked against that. */
 export interface EmitterOutputs {
   colour: Node<'vec4'>;
   statistic: Node<'vec4'>;

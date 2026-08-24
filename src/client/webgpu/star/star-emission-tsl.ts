@@ -112,9 +112,13 @@ export type StarColourMaterial = MrtEmitterMaterial;
  * of the branch; `colourKernel` is the pass's remaining colour-mode gates
  * plus its kernel, which the chart side needs none of. Chart is
  * non-photometric and bypasses the HDR seam, so its statistic texel is a
- * flat zero rather than a masked flux (../../hdr/README.md § Chart mode) —
- * and the diffuse slot stays at the blend's identity element on both
- * branches.
+ * flat zero rather than a masked flux (../../hdr/README.md § Chart mode).
+ *
+ * The chart branch's zeroed statistic and diffuse slots are NOT the
+ * blend's identity under `MultiplyBlending` — 1 is. They never reach an
+ * attachment: chart unbinds the HDR target, which puts every colour
+ * material in its single-output mode, so only `colour` is written on that
+ * branch (`../hdr/mrt-material.ts`).
  *
  * Alpha 1 on the statistic attachment: one blend equation runs over every
  * attachment, so the glow pass's SrcAlpha factor would scale the flux
