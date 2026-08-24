@@ -300,6 +300,10 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
+    // Same unique-version rule as the loaded maps below: an eviction can
+    // swap a slot BACK to the placeholder, and that swap has to rebuild
+    // the bind group too.
+    this.placeholder.version = this.placeholder.id + 1;
     this.materials = materials?.(this.placeholder)
       ?? makeGlslSolarSystemMaterials({ hdr: this.hdr, placeholder: this.placeholder });
   }
@@ -977,6 +981,14 @@ export class PlanetMeshLayer {
         tex.wrapS = THREE.RepeatWrapping;
         tex.anisotropy = 4;
         tex.needsUpdate = true;
+        // Globally unique version, in place of needsUpdate's 1. The mesh
+        // materials swap texture-node VALUES as maps arrive, and three's
+        // WebGPU backend rebuilds a bind group only when the new object's
+        // version differs from the old one's — two version-1 textures
+        // alias and the draw keeps sampling the replaced GPU texture.
+        // Uploads still happen exactly once on either backend (both
+        // compare the version per texture object, not per slot).
+        tex.version = tex.id + 1;
         const bytesPerTexel = TEXEL_BYTES.get(format ?? THREE.RGBAFormat) ?? 4;
         this.resolveTexture(key, {
           state: 'ready',
