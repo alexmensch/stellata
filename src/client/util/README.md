@@ -157,6 +157,21 @@ build scripts, tests, and shader uniforms.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry). Drives canvas
   clicks in both camera modes.
+- `texture-bytes-pure.ts` (+ test) — `texelBytes(format, type)`, the one
+  table mapping a three format/type pair to bytes per texel, plus
+  `mipmapFactor(texture)` and the `MIP_CHAIN_FACTOR` (4/3) it returns.
+  Charged by two consumers that ask different questions, which is why the
+  mip halves are NOT shared: the planet-map VRAM budget
+  (`../solar-system/planets/textures/texture-budget-pure.ts`) charges the
+  chain unconditionally, because a planet map is minified over the whole
+  disc and always ships one, while `mipmapFactor` gates on the
+  minification filter, because an arbitrary texture only pays for a chain
+  the filter actually samples — and `generateMipmaps` defaults to TRUE,
+  so keying on the flag alone inflates every `NearestFilter` data texture
+  by a third. `texelBytes` returns **null**, never a guess, for a
+  compressed format or one three grew since; both callers surface that
+  rather than reading it as zero. Consumers: the budget above and the
+  memory inventory (`../debug/memory/README.md`).
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).

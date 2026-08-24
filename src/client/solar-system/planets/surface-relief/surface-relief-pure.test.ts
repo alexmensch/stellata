@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
+import { texelBytes } from '../../../util/texture-bytes-pure';
 import {
   HORIZON_AZIMUTHS,
   HORIZON_SIN_RANGE,
@@ -243,11 +244,15 @@ describe('the layer gates every relief fetch on the span table', () => {
   });
 
   // Charged from a table rather than a ternary: a narrowed map with no row
-  // would be billed RGBA8 and evict maps that actually fit.
+  // would be billed RGBA8 and evict maps that actually fit. The table is
+  // shared with the memory inventory, so this asserts the values by
+  // calling it rather than by matching its source text.
   it('charges VRAM per format from one table', () => {
-    expect(layer).toContain('TEXEL_BYTES.get(format ?? THREE.RGBAFormat) ?? 4');
-    expect(layer).toContain('[THREE.RedFormat, 1],');
-    expect(layer).toContain('[THREE.RGFormat, 2],');
+    expect(layer).toContain(
+      'texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4');
+    expect(texelBytes(THREE.RedFormat, THREE.UnsignedByteType)).toBe(1);
+    expect(texelBytes(THREE.RGFormat, THREE.UnsignedByteType)).toBe(2);
+    expect(texelBytes(THREE.RGBAFormat, THREE.UnsignedByteType)).toBe(4);
   });
 
   it('raises uHasHorizonMap only with both halves ready', () => {

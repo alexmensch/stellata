@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
+import { texelBytes } from '../../util/texture-bytes-pure';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
@@ -178,15 +179,6 @@ const RELIEF_SUFFIX = '-normal';
 const HORIZON_SUFFIXES = ['-horizon-a', '-horizon-b'] as const;
 const SKY_VIEW_SUFFIX = '-skyview';
 const RINGS_SUFFIX = '-rings';
-
-/** Resident bytes per texel of each upload format the layer narrows to. The
- *  VRAM budget is charged from this, so a map that narrows without a row here
- *  would be over-charged and evict maps that fit. */
-const TEXEL_BYTES = new Map<THREE.PixelFormat, number>([
-  [THREE.RedFormat, 1],
-  [THREE.RGFormat, 2],
-  [THREE.RGBAFormat, 4],
-]);
 
 /** The one place a body name becomes a texture key — and the one place it is
  *  lowercased, so `textures` and the fetched URL cannot disagree on case.
@@ -1003,7 +995,8 @@ export class PlanetMeshLayer {
         // Uploads still happen exactly once on either backend (both
         // compare the version per texture object, not per slot).
         tex.version = tex.id + 1;
-        const bytesPerTexel = TEXEL_BYTES.get(format ?? THREE.RGBAFormat) ?? 4;
+        const bytesPerTexel =
+          texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4;
         this.resolveTexture(key, {
           state: 'ready',
           tex,

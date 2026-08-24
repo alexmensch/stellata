@@ -32,6 +32,9 @@ src/client/debug/
                                   rendering, or not. A standalone HUD
                                   rather than a panel section, because the
                                   panel holds the gate open. Own README.
+  memory/                         debug.memory() — GPU residency + JS-heap
+                                  inventory. The perf HUD prices time;
+                                  this prices space. Own README.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
