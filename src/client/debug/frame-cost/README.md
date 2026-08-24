@@ -142,6 +142,19 @@ control: `statisticWrites` still resolved +40.5 to +54.6 % (canon +47.7 /
 +50.2) — the park of the day stayed off there, which the floor-regime park
 above changed.
 
+**Sol re-measured after the floor-regime park, 2026-08-24** (Chrome,
+timer-query, 6.774 Mpx, panel closed, 119 samples): `statisticWrites`
+`savedMs` −0.016 at a 0.125 ms bracket, i.e. the row no longer resolves at
+all, against the +40.5–54.6 % above. `baselineLimitMag` and
+`disabledLimitMag` both held at 1.511 across the sweep, so the pin did its
+job and the differential priced the pass rather than a denser star field.
+Sol has therefore joined the three dm-0 vantages: **all four now price an
+already-parked frame**, and the surviving positive control is Earth close
+approach, where the resolved-surface pin governs and the park stays off.
+The 41.4 ms baseline that sweep ran against is a *fully parked* frame — the
+hold collapses the probe for the whole dwell, so the steady-state frame at
+Sol sits above it by the duty-cycle share reasoned two paragraphs up.
+
 **Every `statisticWrites` figure above predates the vertex-stage collapse**
 (`../../star-pipeline/collapse/README.md`, 2026-08-20). Re-measured after it
 on the canon's own instrument — WebGL2 in Chrome, `timer-query`, 6.774 Mpx,
