@@ -10,6 +10,29 @@ describe('ExtinctionTextureNodes', () => {
     expect(nodes.avPrepass.value).not.toBeNull();
   });
 
+  // Both slots are BOUND every frame — the uDustEnabled / uAvPrepassEnabled
+  // gate is a runtime branch, not a binding decision — so a placeholder
+  // three has not seen marked gets replaced by its shared 1x1 2D texture
+  // and refused a resize (../../loaders/README.md § Dust voxel upload). On
+  // the volume slot that puts a 2D view on a texture_3d binding: the bind
+  // group is invalid and the whole submit dies with it. createVoxelTexture
+  // does not mark (the volume's mark belongs to the uploader), so the dust
+  // placeholder is the one that silently regresses.
+  it('marks BOTH placeholders needsUpdate, or three substitutes a 2D 1x1', () => {
+    const nodes = new ExtinctionTextureNodes();
+    expect(nodes.dust.value.version, 'dust placeholder unmarked').toBeGreaterThan(0);
+    expect(nodes.avPrepass.value.version, 'A_V placeholder unmarked').toBeGreaterThan(0);
+    nodes.dispose();
+  });
+
+  // The dimensionality the WGSL binding declares. A 2D substitute here is
+  // exactly the failure above, so pin that the placeholder really is 3D.
+  it('gives the volume slot a 3D placeholder', () => {
+    const nodes = new ExtinctionTextureNodes();
+    expect((nodes.dust.value as THREE.Data3DTexture).isData3DTexture).toBe(true);
+    nodes.dispose();
+  });
+
   // A swap to a differently-typed texture rebuilds the pipeline instead of
   // rebinding, which is why the placeholders come from the volume's own
   // factory and match the prepass target's format.

@@ -19,7 +19,20 @@ export type AvPrepassTextureNode = ReturnType<typeof texture>;
  * already share `createVoxelTexture` for that reason.
  *
  * Neither slot is read while its `uDustEnabled` / `uAvPrepassEnabled`
- * scalar is 0, so the placeholder's contents never reach a pixel.
+ * scalar is 0, so the placeholder's contents never reach a pixel. They are
+ * still BOUND every frame regardless — the gate is a runtime branch and
+ * both arms compile — so each must be a valid texture of its slot's
+ * dimensionality from the very first frame.
+ *
+ * **Every placeholder marks itself `needsUpdate` at construction.** Three's
+ * WebGPU backend substitutes a shared 1×1 **2D** texture for any texture it
+ * has not seen marked, then refuses to grow it because the version never
+ * moved (`../../loaders/README.md` § Dust voxel upload). On the volume slot
+ * that lands a 2D view on a `texture_3d` binding, which invalidates the
+ * bind group — and an invalid bind group takes the whole submit with it.
+ * `createVoxelTexture` deliberately does NOT mark: the volume's mark is the
+ * uploader's, paired with `initTexture` in an order that matters, so a
+ * placeholder built from that factory has to mark itself.
  */
 export class ExtinctionTextureNodes {
   readonly dust: DustTextureNode;
@@ -30,6 +43,7 @@ export class ExtinctionTextureNodes {
 
   constructor() {
     this.dustPlaceholder = createVoxelTexture(1, new Uint8Array(1));
+    this.dustPlaceholder.needsUpdate = true;
     this.avPlaceholder = new DataTexture(
       new Float32Array(1), 1, 1, RedFormat, FloatType);
     this.avPlaceholder.minFilter = NearestFilter;

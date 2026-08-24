@@ -138,12 +138,26 @@ three's create-on-demand path and resurrects the whole volume.
 Chunk bytes are z-major with x innermost per the Python writer, which is
 what both backends read as width/height/depth.
 
-Nothing samples the volume on a WebGPU boot yet: the star vertex
-raymarch, the band's measured dust stack and the extinction prepass are
-separate port children. A WebGPU boot therefore streams a texture no
-pixel reads — the migration's intended ordering, since each of those
-ports is smoke-blind without dust already in the texture. § Dust voxel
-readback is how that boot is verified in the meantime.
+The star vertex raymarch and the extinction prepass sample the volume on
+a WebGPU boot as of `0it.4.6` / `0it.20`
+(`../webgpu/extinction/README.md`); the band's measured dust stack joins
+them at `0it.5`. Before those landed a WebGPU boot streamed a texture no
+pixel read — the migration's intended ordering, since each port is
+smoke-blind without dust already in the texture — and § Dust voxel
+readback is still how the upload itself is verified, independently of any
+sampler.
+
+**The marking rule above binds every 3D texture bound in a TSL graph, not
+just the volume.** A `texture3D()` node over an unmarked placeholder gets
+three's shared 1×1 **2D** substitute, which puts a 2D view on a
+`texture_3d` binding: the bind group fails validation, and an invalid
+bind group takes the entire submit with it — every layer in that scene
+stops drawing, not just the sampler's own. Chrome reports it as
+`Invalid TextureView … viewDimension: TextureViewDimension::e3D` and
+recovers once a marked texture is swapped in; Safari 26 renders nothing
+and logs nothing. `createVoxelTexture` does not mark, on purpose — that
+is the uploader's job, paired with `initTexture` — so anything building a
+placeholder from it marks its own.
 
 ## Dust voxel readback
 

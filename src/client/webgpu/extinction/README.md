@@ -57,6 +57,19 @@ load-bearing in both directions:
   points it at its own target in its constructor and back to the
   placeholder on dispose. The shell holds only the seam handle.
 
+**Both placeholders are marked `needsUpdate` at construction**, and the
+volume's is the one that bites: an unmarked texture gets three's shared
+1×1 **2D** substitute, which puts a 2D view on the `texture_3d` binding
+and invalidates the bind group — taking the whole submit with it, so
+every layer in the scene goes dark rather than just the dust read. Both
+slots are bound every frame regardless of their gate (it is a runtime
+branch; both arms compile), so this has to hold from the first frame,
+before any `attachDust`. `createVoxelTexture` deliberately does not mark
+— that is the uploader's job, paired with `initTexture` in an order that
+matters (`../../loaders/README.md` § Dust voxel upload) — so a
+placeholder from that factory marks itself. Pinned in the test, which
+fails without it.
+
 The pair is **boot-scoped**, and `WebGpuSeam.dispose()` is the only path
 that frees it — the shell calls that after every layer and the prepass,
 because those hand their slots back to these placeholders on the way out.
