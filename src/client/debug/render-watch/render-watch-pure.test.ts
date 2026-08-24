@@ -14,6 +14,7 @@ import {
   classifyRenderWatch,
   hudContainerCss,
   medianOf,
+  observedAsRate,
   type RenderWatchSample,
 } from './render-watch-pure';
 
@@ -163,6 +164,30 @@ describe('bindingSourceLabel', () => {
     expect(budgetMotion).toBeLessThan(CADENCE_JND_FLUX_FRAC / 1e-9);
     expect(bindingSourceLabel(motionOnly, Number.POSITIVE_INFINITY, 2))
       .toBe('on-screen motion');
+  });
+});
+
+describe('observedAsRate', () => {
+  it('converts a per-gap observation into the rate channels\' units', () => {
+    // The readout prints this against `reported`, which is per sim second.
+    expect(observedAsRate(9.89e-6, 0.0568)).toBeCloseTo(1.7412e-4, 8);
+  });
+
+  it('the reported freeze: normalised, the declaration was accurate', () => {
+    // Copied from the bug report — 3836 frames over 218s, so a 56.8ms gap.
+    // reported 1.68e-4 flux/s, observed 9.89e-6 per gap. The two rows read
+    // three orders apart and the estimator was right to within 4%, which is
+    // exactly why the raw per-gap number must never be printed beside a rate.
+    expect(observedAsRate(9.89e-6, 218 / 3836) / 1.68e-4).toBeCloseTo(1.03588, 5);
+  });
+
+  it('a sign-flipped gap (the clock scrubbed backwards) still reads positive', () => {
+    expect(observedAsRate(4, -2)).toBe(2);
+  });
+
+  it('no gap yet, and a zero-length gap, both read as no rate', () => {
+    expect(observedAsRate(1, Number.NaN)).toBeNaN();
+    expect(observedAsRate(1, 0)).toBeNaN();
   });
 });
 

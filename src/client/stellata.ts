@@ -2493,6 +2493,11 @@ export class Stellata implements FrameAnchor {
     clockRate: number;
     budgetSimS: number;
     report: CadenceReport;
+    /** Sim seconds the report's OBSERVED channels were measured over —
+     *  without it those two numbers are per-gap while `report`'s rate
+     *  channels are per-sim-second, and a readout printing both invites
+     *  the comparison that units mismatch makes meaningless. */
+    observedSimDtS: number;
     lastRenderedSimS: number;
     pulsationBudgetS: number;
     pixelRatio: number;
@@ -2504,6 +2509,7 @@ export class Stellata implements FrameAnchor {
       clockRate: this.clock.getRate(),
       budgetSimS: this.cadenceBudgetSimS,
       report: this.cadenceLastReport,
+      observedSimDtS: this.cadenceCtx.simDtS,
       lastRenderedSimS: this.lastRenderedSimS,
       pulsationBudgetS: this.pulsationCadenceBudgetS,
       pixelRatio: this.sharedUniforms.uPixelRatio.value,

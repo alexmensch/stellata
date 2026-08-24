@@ -171,6 +171,18 @@ export function bindingSourceLabel(
   return `the ${CADENCE_CAP_SIM_S}s cap`;
 }
 
+/** The observed channels, converted to the per-sim-second units the rate
+ *  channels are already in, so the two rows sit directly against each
+ *  other. `CadenceReport`'s observations are per GAP — the interval
+ *  between the last two rendered frames — and printing them beside a rate
+ *  without this reads as the declaration over-reporting by whatever the
+ *  frame interval happens to be. NaN gap (nothing rendered yet) and a
+ *  zero-length gap both give NaN rather than Infinity, which the readout
+ *  prints as a dash. */
+export function observedAsRate(observed: number, simDtS: number): number {
+  return Number.isFinite(simDtS) && simDtS !== 0 ? observed / Math.abs(simDtS) : Number.NaN;
+}
+
 export interface RenderWatchHealth {
   tickHz: number;
   skipRatio: number;

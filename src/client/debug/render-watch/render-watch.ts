@@ -11,6 +11,7 @@ import {
   classifyHealth,
   classifyRenderWatch,
   hudContainerCss,
+  observedAsRate,
   type RenderWatchTone,
 } from './render-watch-pure';
 
@@ -30,6 +31,8 @@ const TONE_COLOUR: Record<RenderWatchTone, string> = {
 
 const fixed = (v: number, d = 2): string =>
   Number.isFinite(v) ? v.toFixed(d) : (v > 0 ? 'inf' : '—');
+
+const rate = (v: number): string => (Number.isFinite(v) ? v.toPrecision(3) : '—');
 
 export interface RenderWatchOpts {
   /** Fired when the HUD's own close button dismisses it, so the owner can
@@ -183,11 +186,17 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
       `  reported   ${r.screenPxPerSimS.toPrecision(3)} css-px/s`
         + ` · ${r.fluxFracPerSimS.toPrecision(3)} flux/s`,
       `  pulsation  ${fixed(cadence.pulsationBudgetS, 1)}   cap ${CADENCE_CAP_SIM_S}`
-        + `   trust ${fixed(cadence.trust.trust, 3)}`,
+        + `   trust ${fixed(cadence.trust.trust, 3)}`
+        // Only after a violation: it is the answer to "is the net
+        // recovering or still catching one", which trust alone cannot give
+        // — a held-down trust and a climbing one read identically.
+        + (cadence.trust.lastViolation === null
+          ? '' : `   clean ${cadence.trust.cleanFrames}`),
       `  expect     ${fixed(verdict.expectedGapMs / 1000)}s between frames`,
       '',
-      `observed     ${r.observedPx.toPrecision(3)} css-px`
-        + ` · ${r.observedFluxFrac.toPrecision(3)} flux, last gap`,
+      `observed     ${rate(observedAsRate(r.observedPx, cadence.observedSimDtS))} css-px/s`
+        + ` · ${rate(observedAsRate(r.observedFluxFrac, cadence.observedSimDtS))} flux/s`
+        + `   over ${fixed(Math.abs(cadence.observedSimDtS), 3)} sim-s`,
       `rAF ticks    ${tickHz.toFixed(1)}/s now   ${ticks} total`,
       `rendered     ${frames} total   skip ratio ${skipRatio.toFixed(4)}`,
       `gap median   ${fixed(verdict.medianGapMs / 1000, 3)}s over ${gapsMs.length}`

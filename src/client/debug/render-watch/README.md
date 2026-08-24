@@ -44,11 +44,23 @@ step with whatever is actually on screen.
 - **`reported`** — the frame's rate report itself, in the units the
   layers file it in: CSS px per sim second and flux fraction per sim
   second. Divide the threshold by it and you have the budget above.
-- **`observed`** — what actually moved over the last gap, measured
-  independently of the rate model. This is the safety net's input
+- **`observed`** — what actually moved, measured independently of the
+  rate model. This is the safety net's input
   (`../../render-gate/README.md` § The safety net); when it exceeds a
   visible step on a *scheduled* frame, `trust` drops and the headline
-  turns red.
+  turns red. **Printed as a rate, normalised over the gap it was
+  measured across**, which is the only form comparable to `reported`
+  directly above it — `CadenceReport` files the observed channels per
+  GAP, and a raw per-gap figure beside a per-second one reads as the
+  declaration over-reporting by whatever the frame interval happens to
+  be. That misreading is not hypothetical: at 57 ms gaps the two rows
+  sat three orders of magnitude apart while the estimator was accurate
+  to 4 %. The gap itself is printed alongside so the raw observation is
+  still recoverable.
+- **`clean`** — appears on the pulsation line only after a violation:
+  scheduled frames audited since the last one. Trust alone cannot say
+  whether the net is recovering or still catching violations, because a
+  held-down trust and a climbing one read identically.
 - **`trust`** — the standing correction the net applies. 1.000 means
   every declaration has held up.
 
