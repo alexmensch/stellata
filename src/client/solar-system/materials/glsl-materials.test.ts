@@ -16,7 +16,9 @@ const HDR_KEYS = Object.keys(pickHdrEmitterUniforms(hdr));
 
 const viewport = { uViewport: { value: new THREE.Vector2(800, 600) }, uPixelRatio: { value: 1 } };
 
-function makeTsl(): SolarSystemMaterials {
+function makeTsl(
+  registerMrtLayer: (l: { setMrtOutputs(on: boolean): void }) => () => void = () => () => {},
+): SolarSystemMaterials {
   const shared = buildSharedUniforms({
     pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600, hdr,
   });
@@ -24,7 +26,7 @@ function makeTsl(): SolarSystemMaterials {
     nodes: buildSharedUniformNodes(shared).nodes,
     gates: makeEmitterGateNodes(),
     placeholder,
-    registerMrtLayer: () => () => {},
+    registerMrtLayer,
   });
 }
 
@@ -155,14 +157,7 @@ describe('the solar-system material seam', () => {
     for (const surface of SURFACES) {
       const built = makeTsl()[surface]() as unknown as { material: Frag };
       const layers: { setMrtOutputs(on: boolean): void }[] = [];
-      const factory = makeTslSolarSystemMaterials({
-        nodes: buildSharedUniformNodes(buildSharedUniforms({
-          pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600, hdr,
-        })).nodes,
-        gates: makeEmitterGateNodes(),
-        placeholder,
-        registerMrtLayer: (l) => { layers.push(l); return () => {}; },
-      });
+      const factory = makeTsl((l) => { layers.push(l); return () => {}; });
       const material = factory[surface]().material as Frag;
       expect(built.material.fragmentNode?.isOutputStructNode).toBeUndefined();
       layers.forEach((l) => l.setMrtOutputs(true));
@@ -172,17 +167,55 @@ describe('the solar-system material seam', () => {
 
   it('severs a TSL material’s output-mode registration on dispose', () => {
     let registered = 0;
-    const factory = makeTslSolarSystemMaterials({
-      nodes: buildSharedUniformNodes(buildSharedUniforms({
-        pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600, hdr,
-      })).nodes,
-      gates: makeEmitterGateNodes(),
-      placeholder,
-      registerMrtLayer: () => { registered++; return () => { registered--; }; },
-    });
+    const factory = makeTsl(() => { registered++; return () => { registered--; }; });
     const built = factory.planetRings();
     expect(registered).toBe(1);
     built.dispose();
     expect(registered).toBe(0);
+  });
+
+  it('disposes the per-slot stand-ins it minted — and only those', () => {
+    // Each texture slot starts on its OWN clone of the shared placeholder,
+    // since three merges texture bindings by value uuid at shader build
+    // (webgpu/solar-system/uniform-nodes.ts). Those clones are GPU textures
+    // nothing else holds a reference to, so the material owns their release
+    // — while a loaded map swapped into a slot belongs to PlanetMeshLayer's
+    // cache, and the shared placeholder to the layer itself.
+    const built = makeTsl().planetMesh();
+    const standIns = Object.values(built.uniforms)
+      .map((u) => u.value)
+      .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
+    expect(standIns).toHaveLength(5);
+    expect(new Set(standIns.map((t) => t.uuid)).size).toBe(5);
+    expect(standIns).not.toContain(placeholder);
+
+    const disposed = new Set<string>();
+    for (const t of standIns) {
+      t.addEventListener('dispose', () => disposed.add(t.uuid));
+    }
+    const loadedMap = new THREE.DataTexture(new Uint8Array([1, 2, 3, 4]), 1, 1);
+    let loadedDisposed = false;
+    loadedMap.addEventListener('dispose', () => { loadedDisposed = true; });
+    built.uniforms.uMap.value = loadedMap;
+
+    let placeholderDisposed = false;
+    placeholder.addEventListener('dispose', () => { placeholderDisposed = true; });
+    built.dispose();
+
+    expect(disposed.size).toBe(5);
+    expect(loadedDisposed).toBe(false);
+    expect(placeholderDisposed).toBe(false);
+  });
+
+  it('gives the annulus its own stand-in too', () => {
+    const built = makeTsl().planetRings();
+    const standIns = Object.values(built.uniforms)
+      .map((u) => u.value)
+      .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
+    expect(standIns).toHaveLength(1);
+    let disposed = false;
+    standIns[0].addEventListener('dispose', () => { disposed = true; });
+    built.dispose();
+    expect(disposed).toBe(true);
   });
 });
