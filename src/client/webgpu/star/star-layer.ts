@@ -17,9 +17,7 @@ import {
   type StarGeometryBuild,
   type StarGeometrySources,
 } from './star-geometry';
-import {
-  applyGlowBlendDefaults, applyMonochromeBlend,
-} from '../../star-pipeline/star-pipeline';
+import { applyChartBlendSwap } from '../../star-pipeline/star-pipeline';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
@@ -143,22 +141,15 @@ export class StarLayer {
     this.coreMaskMesh.visible = on;
   }
 
-  /** Chart mode's blend swap, the TSL twin of `StarPipeline`'s
-   *  `setMonochromeBlend`. `uMonochrome` is a shared node the shell
-   *  writes; only the per-material blend state lives here, and swap-back
-   *  goes through the same helper construction used, so the two cannot
-   *  drift (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask needs
-   *  no swap: colour writes are off, so its blend state is unobservable. */
+  /** Chart mode's blend swap, over the same pair helper `StarPipeline`'s
+   *  `setMonochromeBlend` takes — only the disc-defaults argument differs.
+   *  `uMonochrome` is a shared node the shell writes; swap-back goes
+   *  through the construction helper, so the two cannot drift
+   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask needs no
+   *  swap: colour writes are off, so its blend state is unobservable. */
   setMonochrome(on: boolean): void {
-    if (on) {
-      applyMonochromeBlend(this.discMaterial);
-      applyMonochromeBlend(this.glowMaterial);
-    } else {
-      applyStarDiscTslBlend(this.discMaterial);
-      applyGlowBlendDefaults(this.glowMaterial);
-    }
-    this.discMaterial.needsUpdate = true;
-    this.glowMaterial.needsUpdate = true;
+    applyChartBlendSwap(
+      this.discMaterial, this.glowMaterial, on, applyStarDiscTslBlend);
   }
 
   /** Re-pack any per-frame scalar whose source attribute was flagged

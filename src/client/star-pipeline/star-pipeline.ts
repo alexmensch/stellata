@@ -53,6 +53,34 @@ export function applyMonochromeBlend(m: THREE.Material) {
   m.depthTest = false;
 }
 
+/**
+ * The disc + glow pair's whole chart-mode swap, both directions, for one
+ * backend. `discDefaults` is the only thing that differs between them:
+ * the GLSL disc writes its own `gl_FragDepth` and restores
+ * `applyDiscBlendDefaults` as-is, while the TSL disc must come back with
+ * `depthWrite` off (`../webgpu/star/star-disc-tsl.ts`).
+ *
+ * Both materials need `needsUpdate` — the blend state is compiled into
+ * the program on either backend, and a swap that skips it renders with
+ * the previous mode's blending.
+ */
+export function applyChartBlendSwap(
+  disc: THREE.Material,
+  glow: THREE.Material,
+  on: boolean,
+  discDefaults: (m: THREE.Material) => void,
+) {
+  if (on) {
+    applyMonochromeBlend(disc);
+    applyMonochromeBlend(glow);
+  } else {
+    discDefaults(disc);
+    applyGlowBlendDefaults(glow);
+  }
+  disc.needsUpdate = true;
+  glow.needsUpdate = true;
+}
+
 /** The per-vertex unit-square corner + index pair every star quad
  *  geometry starts from (main pipeline, local mirror by reference, and
  *  the WebGPU port's). Corners span [-0.5, +0.5]². */
@@ -264,21 +292,13 @@ export class StarPipeline {
     scene.add(this.glowMesh);
   }
 
-  /** Swap disc + glow blend state for chart mode. Disc-pass uses
-   *  MultiplyBlending (with depth flags off) and glow-pass also flips
-   *  to multiply / depth-off in mono mode; restored to the calibrated
-   *  defaults on swap-back. uMonochrome is a shared uniform written by
-   *  the caller — only the per-material blend state lives here. */
+  /** Swap disc + glow blend state for chart mode, over the shared pair
+   *  helper the TSL layer also takes. uMonochrome is a shared uniform
+   *  written by the caller — only the per-material blend state lives
+   *  here. */
   setMonochromeBlend(on: boolean) {
-    if (on) {
-      applyMonochromeBlend(this.discMaterial);
-      applyMonochromeBlend(this.glowMaterial);
-    } else {
-      applyDiscBlendDefaults(this.discMaterial);
-      applyGlowBlendDefaults(this.glowMaterial);
-    }
-    this.discMaterial.needsUpdate = true;
-    this.glowMaterial.needsUpdate = true;
+    applyChartBlendSwap(
+      this.discMaterial, this.glowMaterial, on, applyDiscBlendDefaults);
   }
 
   dispose() {
