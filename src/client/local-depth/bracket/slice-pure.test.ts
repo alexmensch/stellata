@@ -3,6 +3,7 @@ import { CAMERA_FAR_PC } from '../../../../scripts/local-group/build-local-group
 import { CAMERA_NEAR_PC, FOV_MIN_DEG } from '../../camera/timing';
 import { AU_KM, AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
+  computeBracket,
   computeDepthSlices,
   DEPTH_BUFFER_BITS,
   depthQuantumPc,
@@ -54,6 +55,34 @@ describe('depthQuantumPc — the sub-pixel ordering guarantee', () => {
     const quantumKm = depthQuantumPc(129_900 * KM_PC, near, far) / KM_PC;
     expect(quantumKm).toBeCloseTo(6.1, 1);
     expect(quantumKm).toBeLessThan(25_559 / 1000);
+  });
+});
+
+describe('computeBracket — the K = 1 reversed-z render range', () => {
+  it('returns null for no members', () => {
+    expect(computeBracket([])).toBeNull();
+  });
+
+  it('applies the near fraction, far margin, and near floor', () => {
+    const bracket = computeBracket([
+      sphereKm(560, 198),
+      sphereKm(185_500, 140_000),
+    ])!;
+    expect(bracket.nearPc).toBeCloseTo(362 * KM_PC * NEAR_FRACTION, 20);
+    expect(bracket.farPc).toBeCloseTo(325_500 * KM_PC * FAR_MARGIN, 18);
+    expect(computeBracket([{ distPc: 1e-5, radiusPc: 2e-5 }])!.nearPc).toBe(NEAR_MIN_PC);
+  });
+
+  it('spans exactly what the sliced partition spans — one range, two encodings', () => {
+    const spheres = [
+      { distPc: 2 * 3.24e-17, radiusPc: 3.24e-17 },
+      sphereKm(185_500, 140_000),
+      { distPc: 9.54 * AU_PC, radiusPc: 30.3 * AU_PC },
+    ];
+    const bracket = computeBracket(spheres)!;
+    const slices = computeDepthSlices(spheres, FOV_50_RAD, VIEWPORT_H);
+    expect(bracket.farPc / slices[0].farPc).toBeCloseTo(1, 12);
+    expect(bracket.nearPc).toBe(slices[slices.length - 1].nearPc);
   });
 });
 

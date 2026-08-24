@@ -6,9 +6,10 @@ import { RenderTarget, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuHdrPipeline } from './hdr-pipeline-webgpu';
 import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-pipeline';
 
-function fakeRenderer() {
+function fakeRenderer(reversedDepthBuffer = true) {
   const bound: (RenderTarget | null)[] = [];
   const renderer = {
+    reversedDepthBuffer,
     getDrawingBufferSize: (v: THREE.Vector2) => v.set(64, 32),
     getPixelRatio: () => 2,
     setRenderTarget: (t: RenderTarget | null) => bound.push(t),
@@ -47,12 +48,37 @@ describe('the target', () => {
     expect(rt.textures).toHaveLength(HDR_ATTACHMENT_COUNT);
     expect(rt.textures[1].format).toBe(THREE.RGFormat);
     expect(rt.textures[2].minFilter).toBe(THREE.LinearFilter);
-    // depthBuffer without stencil or a depth texture: what lands three on
-    // Depth32Float under reversedDepthBuffer.
+    // The reversed-z → Depth32Float inference is canvas-only: a render
+    // target's auto-created depth texture is Depth24Plus regardless, so
+    // the target must carry an explicit FloatType depth texture or the
+    // local depth pass's K = 1 bracket quantises (Saturn's rings landed
+    // inside one depth step of the body).
     expect(rt.depthBuffer).toBe(true);
     expect(rt.stencilBuffer).toBe(false);
-    expect(rt.depthTexture).toBe(null);
+    expect(rt.depthTexture).not.toBe(null);
+    expect(rt.depthTexture!.type).toBe(THREE.FloatType);
+    expect(rt.depthTexture!.format).toBe(THREE.DepthFormat);
     expect(hdr.statisticTexture()).toBe(rt.textures[1]);
+  });
+
+  it('refuses a target whose depth attachment cannot be Depth32Float reversed-z', () => {
+    // A renderer without reversedDepthBuffer lands the target on
+    // fixed-point depth, which voids the local depth pass's K = 1
+    // bracket (../../local-depth/bracket/README.md § Precision analysis).
+    const { renderer } = fakeRenderer(false);
+    const hdr = new WebGpuHdrPipeline(renderer);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
+  });
+
+  it('keeps refusing it — a rejected target is never latched', () => {
+    // ensureResources short-circuits on a non-null target, so committing
+    // one before validating would make the assert fire once and then hand
+    // the very target it rejected to every later frame.
+    const { renderer, bound } = fakeRenderer(false);
+    const hdr = new WebGpuHdrPipeline(renderer);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
+    expect(bound).toHaveLength(0);
   });
 
   it('chart mode binds the canvas and parks the statistic', () => {

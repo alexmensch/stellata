@@ -10,7 +10,10 @@ import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
 } from './star-vertex-tsl';
 
-export function buildStarCoreMaskMaterial(deps: StarTslDeps): NodeMaterial {
+export function buildStarCoreMaskMaterial(
+  deps: StarTslDeps,
+  localMirror = false,
+): NodeMaterial {
   const v = buildStarVaryings();
 
   const fragmentNode = Fn(() => {
@@ -22,8 +25,8 @@ export function buildStarCoreMaskMaterial(deps: StarTslDeps): NodeMaterial {
   });
 
   const material = new NodeMaterial();
-  material.name = 'star-core-mask-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v);
+  material.name = localMirror ? 'star-core-mask-local-tsl' : 'star-core-mask-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v, localMirror);
   material.fragmentNode = fragmentNode();
   material.colorWrite = false;
   material.depthWrite = true;

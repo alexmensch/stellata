@@ -6,7 +6,8 @@ import { makeRelation } from '../../binaries/binary-relation-fixture';
 import type { BinaryOrbitPathLayer } from '../../binaries/binary-orbit-path-layer';
 import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
-import { MIRROR_CAPACITY, StarLocalMirror } from './star-local-mirror';
+import { StarLocalMirror } from './star-local-mirror';
+import { MIRROR_CAPACITY } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
 import { RESOLVED_DISC_MIN_PX } from './star-local-cluster-pure';
 
@@ -58,7 +59,6 @@ interface Fixture {
   pathSpheres: MemberSphere[];
   frame: {
     monochrome: boolean;
-    localPassLive: boolean;
     focalIdx: number | null;
     thresholdMag: number;
   };
@@ -102,7 +102,7 @@ function makeFixture(): Fixture {
     sizes,
     pathsVisible,
     pathSpheres,
-    frame: { monochrome: false, localPassLive: true, focalIdx: null, thresholdMag: 6.5 },
+    frame: { monochrome: false, focalIdx: null, thresholdMag: 6.5 },
   };
 }
 
@@ -205,19 +205,6 @@ describe('StarLocalCluster membership', () => {
     fx.cluster.update(fx.camera, fx.frame);
     expect(members(fx)).toEqual([]);
     expect(fx.mirror.group.visible).toBe(false);
-  });
-
-  it('deactivates everything while the local pass is not rendering', () => {
-    // The WebGPU boot until the local-depth port: a member's colour
-    // draws collapse expecting the mirror repaint, so with no pass a
-    // member renders as the bare core-mask stamp — an opaque hole.
-    fx.cluster.setHostMember(7);
-    fx.nearStars.push(3);
-    resolvedDisc(fx, 3);
-    fx.frame.localPassLive = false;
-    fx.cluster.update(fx.camera, fx.frame);
-    expect(members(fx)).toEqual([]);
-    expect(fx.cluster.hasMembers()).toBe(false);
   });
 
   it('clears stale members and uniform slots on the next update', () => {

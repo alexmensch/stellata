@@ -464,7 +464,7 @@ describe('OrbitRingsLayer', () => {
 /** Renderer-local position of ring vertex `i`: line offset + baked f32
  *  vertex. The group itself stays at the origin under the anchored-line
  *  scheme. */
-function ringVertexWorld(line: THREE.LineLoop, i: number): THREE.Vector3 {
+function ringVertexWorld(line: THREE.Line, i: number): THREE.Vector3 {
   const v = (line.geometry.getAttribute('position') as THREE.BufferAttribute)
     .array as Float32Array;
   return new THREE.Vector3(v[i * 3], v[i * 3 + 1], v[i * 3 + 2])
@@ -486,7 +486,7 @@ describe('OrbitRingsLayer host centring', () => {
     ss.update(cam, 800, host, T0);
     // Circular ring (e = 0): every vertex sits exactly one semi-major
     // axis from the host, wherever the host is parked.
-    const line = ss.group.children[0] as THREE.LineLoop;
+    const line = ss.group.children[0] as THREE.Line;
     expect(ss.group.position.length()).toBe(0);
     for (const i of [0, 1000, 3000]) {
       expect(ringVertexWorld(line, i).distanceTo(host) / AU_PC)
@@ -509,7 +509,7 @@ describe('OrbitRingsLayer host centring', () => {
     };
     ss.setPlanetSystem(ps, 0, T0);
 
-    const line = ss.group.children[0] as THREE.LineLoop;
+    const line = ss.group.children[0] as THREE.Line;
     // Pre-rebase (centre-relative) float32 rounding at Pluto scale:
     // worst vertex component is off by > 30 km — the jitter amplitude
     // class the anchored rebase exists to kill.
@@ -545,7 +545,7 @@ describe('OrbitRingsLayer host centring', () => {
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
     };
     ss.setPlanetSystem(ps, 0, T0);
-    const line = ss.group.children[0] as THREE.LineLoop;
+    const line = ss.group.children[0] as THREE.Line;
     const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
 
     // Host drifting well under LINE_ANCHOR_MAX_DRIFT_PC from the baked
@@ -603,7 +603,7 @@ describe('OrbitRingsLayer host centring', () => {
     ss.update(makeCamera(5 * AU_PC), 800, host, T0);
     ss.setPlanetSystem(ps, 0, T0);
     ss.update(makeCamera(5 * AU_PC), 800, null, T0);
-    const line = ss.group.children[0] as THREE.LineLoop;
+    const line = ss.group.children[0] as THREE.Line;
     expect(ringVertexWorld(line, 0).length() / AU_PC).toBeCloseTo(1, 6);
     ss.dispose();
   });
@@ -633,8 +633,8 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     ss.setPlanetSystem(ps, 0, T0);
     // Rummage in the scene graph for the ring's position buffer.
     const ringLine = ss.group.children.find(
-      (c) => (c as THREE.LineLoop).isLineLoop,
-    ) as THREE.LineLoop | undefined;
+      (c) => (c as THREE.Line).isLine,
+    ) as THREE.Line | undefined;
     expect(ringLine).toBeDefined();
     const positions = (ringLine!.geometry as THREE.BufferGeometry)
       .getAttribute('position').array as Float32Array;
@@ -668,8 +668,8 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     };
     ss.setPlanetSystem(ps, 0, T0);
     const ringLine = ss.group.children.find(
-      (c) => (c as THREE.LineLoop).isLineLoop,
-    ) as THREE.LineLoop | undefined;
+      (c) => (c as THREE.Line).isLine,
+    ) as THREE.Line | undefined;
     expect(ringLine).toBeDefined();
     const positions = (ringLine!.geometry as THREE.BufferGeometry)
       .getAttribute('position').array as Float32Array;
@@ -825,7 +825,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     };
 
     const moonRingVerts = (ss: OrbitRingsLayer): Float32Array => {
-      const line = ss.group.children[MOON_IDX] as THREE.LineLoop;
+      const line = ss.group.children[MOON_IDX] as THREE.Line;
       const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
       return (attr.array as Float32Array).slice();
     };
@@ -984,7 +984,7 @@ describe('OrbitRingsLayer moon rings', () => {
       out.copy(parentRel);
       return true;
     });
-    const moonLine = ss.group.children[1] as THREE.LineLoop;
+    const moonLine = ss.group.children[1] as THREE.Line;
     // Circular 0.003 AU moon ring: every vertex sits one moon
     // semi-major axis from the parent's live offset.
     expect(ringVertexWorld(moonLine, 0).distanceTo(parentRel) / AU_PC)
@@ -1031,7 +1031,7 @@ describe('OrbitRingsLayer moon rings', () => {
       }],
     };
     ss.setPlanetSystem(ps, 0, T0);
-    const line = ss.group.children[0] as THREE.LineLoop;
+    const line = ss.group.children[0] as THREE.Line;
     const verts = line.geometry.getAttribute('position').array as Float32Array;
     const radiusAu = () => Math.hypot(verts[0], verts[1], verts[2]) / AU_PC;
     expect(radiusAu()).toBeCloseTo(1, 6);

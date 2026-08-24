@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { MIRROR_CAPACITY, StarLocalMirror } from './star-local-mirror';
+import { StarLocalMirror } from './star-local-mirror';
+import { MIRROR_CAPACITY, MIRROR_RENDER_ORDER } from './star-mirror-slots';
 import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from '../star-pass';
 
 const DUMMY_SHADER = 'void main(){}';
@@ -62,11 +63,11 @@ describe('StarLocalMirror construction', () => {
     expect(geom.getIndex()).toBe(source.getIndex());
   });
 
-  it('sets renderOrder mask −1 / disc 0 / glow 3.5 with frustum culling off', () => {
+  it('draws its three meshes in the shared in-pass order, frustum culling off', () => {
     const [mask, disc, glow] = meshes(makeMirror(makeSource()));
-    expect(mask.renderOrder).toBe(-1);
-    expect(disc.renderOrder).toBe(0);
-    expect(glow.renderOrder).toBe(3.5);
+    expect(mask.renderOrder).toBe(MIRROR_RENDER_ORDER.mask);
+    expect(disc.renderOrder).toBe(MIRROR_RENDER_ORDER.disc);
+    expect(glow.renderOrder).toBe(MIRROR_RENDER_ORDER.glow);
     expect(mask.frustumCulled).toBe(false);
     expect(disc.frustumCulled).toBe(false);
     expect(glow.frustumCulled).toBe(false);

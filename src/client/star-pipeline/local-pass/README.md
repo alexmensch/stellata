@@ -8,9 +8,20 @@ bracket. Pass mechanics and the other member layers are
 
 ## Files
 
-- `star-local-mirror.ts` — `StarLocalMirror`: the mirror draw. Owns
-  `MIRROR_CAPACITY`, which is tied to the `uLocalMemberIdx` uniform
-  array size (pinned in `../star-pipeline.test.ts`). Its disc and glow
+- `star-mirror-slots.ts` (+ test) — the **backend-neutral** half both
+  mirrors are built from: `MIRROR_CAPACITY` (tied to the
+  `uLocalMemberIdx` uniform array size, pinned in
+  `../star-pipeline.test.ts`), the `StarMirror` interface the cluster
+  drives, the in-pass `MIRROR_RENDER_ORDER`, and `MirrorSlots` — the
+  slot geometry, its per-frame copy and the three draws over it. The
+  slot layout is a property of the geometry being mirrored, not of the
+  shader language, which is why it is shared: a copy resolving a
+  differently-packed component on one backend reads as a silent
+  brightness bug. Survives the WebGL2 deletion; the two classes below
+  do not both.
+- `star-local-mirror.ts` — `StarLocalMirror`: the GLSL materials over
+  those slots (the TSL twin is
+  `../../webgpu/star/star-local-mirror-tsl.ts`). Its disc and glow
   meshes are statistic emitters like the main-pass pair — a member
   collapses in the main pass, so the mirror is the only draw that would
   reach the exposure statistic (`../../hdr/attachments/README.md`). The
@@ -35,13 +46,18 @@ bracket. Pass mechanics and the other member layers are
 
 A member star's main-pass instance collapses (`uLocalMemberIdx`, an
 int array of `MIRROR_CAPACITY` slots checked in all three passes) and
-`star-local-mirror.ts` re-renders it in the local depth pass: a small
+the mirror re-renders it in the local depth pass: a small
 instanced geometry whose slots re-copy the member's attributes from
-the live source arrays each frame, drawn with `LOCAL_DEPTH_PASS`
-material clones sharing the same uniform objects. Under that define
-the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
-(`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
-`uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The
+the live source arrays each frame (`MirrorSlots`), drawn with
+local-pass variants of the three star materials. Star identity comes
+from the `iSourceIdx` attribute rather than the instance index, so
+star-indexed lookups — the extinction texelFetch, `uHideFocusIdx`,
+`uPinFocusToCenter` — behave identically. **How each backend builds
+those variants differs**: GLSL compiles material clones under the
+`LOCAL_DEPTH_PASS` define (which is what swaps `gl_InstanceID` for
+`STAR_SELF_ID`), sharing the same uniform objects; the TSL twin builds
+separate materials from the same node builders with a `localMirror`
+flag, sharing uniform nodes and no define. The
 attribute-budget invariant: each compile variant must fit within 16
 attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
 `../star-pipeline.test.ts`, along with the uniform-array-size ↔
@@ -60,12 +76,11 @@ disc-pass split × `RESOLVED_DISC_MIN_PX`, evaluated on the
 core-mask gate's sorted-distance walk
 (`StarFrame.forEachStarNearCamera` — `../frame/README.md`).
 
-Membership parks entirely while the local depth pass is not rendering
-(`localPassLive: false` — the WebGPU boot until its port child,
-`../../webgpu/README.md` § Every park is a gate): a member's collapse
-is only honest while the mirror repaints it, and that boot's
-reversed-z float32 main-pass depth orders resolved discs natively
-meanwhile.
+Membership parks only in chart mode (flat ink discs, depth disabled —
+suppression and mirrors must stay out of the way). The pass renders on
+both boots; on WebGPU the cluster drives the TSL mirror
+(`../../webgpu/star/star-local-mirror-tsl.ts`) through the same
+`StarMirror` interface.
 
 ## Core opacity is depth-gated, never paint-over
 

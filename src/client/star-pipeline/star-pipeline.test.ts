@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
-import { MIRROR_CAPACITY } from './local-pass/star-local-mirror';
+import { MIRROR_CAPACITY } from './local-pass/star-mirror-slots';
 import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 import { makeStarPipelineOptions as makeOpts } from './star-pipeline-mock';
 

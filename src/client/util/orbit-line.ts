@@ -117,13 +117,25 @@ export function makeDashedOrbitLineMaterial(
   return mat;
 }
 
+/** Closed loop through `points`, as an index-closed `THREE.Line` rather
+ *  than `THREE.LineLoop` — the WebGPU renderer refuses LineLoop objects
+ *  (no line-loop primitive in WGSL), and the index keeps the position
+ *  buffer at exactly `points`, so per-frame vertex rewrites and the
+ *  anchored-line rebake stay untouched. */
 export function makeOrbitLineLoop(
   points: Float32Array,
   material: THREE.LineBasicMaterial,
   renderOrder: number,
-): THREE.LineLoop {
-  return configureLinePrimitive(
-    new THREE.LineLoop(orbitLineGeometry(points), material), renderOrder);
+): THREE.Line {
+  const geometry = orbitLineGeometry(points);
+  const vertexCount = points.length / 3;
+  const index = vertexCount > 65535
+    ? new Uint32Array(vertexCount + 1)
+    : new Uint16Array(vertexCount + 1);
+  for (let i = 0; i < vertexCount; i++) index[i] = i;
+  index[vertexCount] = 0;
+  geometry.setIndex(new THREE.BufferAttribute(index, 1));
+  return configureLinePrimitive(new THREE.Line(geometry, material), renderOrder);
 }
 
 /** Open polyline through `points` in order — the variant for a traversed

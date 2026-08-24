@@ -409,7 +409,6 @@ export class Stellata implements FrameAnchor {
   // above the gate, every tick (scene/scene-layer.ts LayerTimeBehaviour).
   private _realtimeFramesNeeded = false;
   private coreMaskEnabled = true;
-  private starLocalMirror: StarLocalMirror;
   private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
@@ -599,13 +598,6 @@ export class Stellata implements FrameAnchor {
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
     });
 
-    this.starLocalMirror = new StarLocalMirror(
-      this.starPipeline.geometry,
-      vertexShader,
-      fragmentShader,
-      sharedUniforms,
-    );
-
     // The TSL star layer renders in place of the GLSL pipeline above on a
     // WebGPU boot (the shell's scene is never rendered there). The GLSL
     // pipeline still constructs either way: its attributes are the live
@@ -637,8 +629,16 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer();
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
+    // One mirror per boot: the pass scene renders on whichever backend
+    // booted, so the mirror's materials must match it.
+    const starMirror = this.webgpuStarLayer?.localMirror ?? new StarLocalMirror(
+      this.starPipeline.geometry,
+      vertexShader,
+      fragmentShader,
+      sharedUniforms,
+    );
     this.starLocalCluster = new StarLocalCluster(
-      this.starLocalMirror,
+      starMirror,
       this.binaryOrbitPathLayer,
       sharedUniforms.uLocalMemberIdx as { value: Int32Array },
       {
@@ -717,6 +717,16 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
+    if (this.webgpu !== null) {
+      // The built-in line layers stay OUT of the pass scene on this boot:
+      // LineBasicMaterial's lone fragment output fails WGSL pipeline
+      // creation against the HDR target's three attachments, and one
+      // invalid pipeline poisons the whole pass submit. They return with
+      // the TSL line material (webgpu/README.md § Every park is a gate).
+      this.solarCluster.group.remove(this.orbitRingsLayer.group);
+      this.solarCluster.group.remove(this.kinds.probe.pathLayer.localGroup);
+      this.starLocalCluster.group.remove(this.binaryOrbitPathLayer.group);
+    }
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
@@ -1073,12 +1083,7 @@ export class Stellata implements FrameAnchor {
       // After the field + rings updates it reads; before the main
       // render its suppression uniforms gate. Owns no GPU resources —
       // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera, {
-        // The same condition that gates localDepthPass.render below, and
-        // the same one the star cluster takes: a body's collapse is only
-        // honest while the mirror repaints it.
-        localPassLive: this.rendererGL !== null,
-      }),
+      update: (ctx) => this.solarCluster.update(ctx.camera),
       dispose: () => {},
     });
     this.layers.register({
@@ -1114,9 +1119,6 @@ export class Stellata implements FrameAnchor {
       // membership reads this frame's positions and path visibility, and
       // the mirror sync re-copies the slots those fields just wrote.
       update: (ctx) => this.starLocalCluster.update(ctx.camera, {
-        // The same condition that gates localDepthPass.render below: a
-        // member's collapse is only honest while the mirror repaints it.
-        localPassLive: this.rendererGL !== null,
         monochrome: this.monochrome,
         focalIdx: this.focus.getFocusedStar(),
         thresholdMag: this.exposure.getThresholdMag(),
@@ -2399,9 +2401,7 @@ export class Stellata implements FrameAnchor {
     perfMeasure('submit.main');
     perfMark('submit.localDepth');
     perfGpuBegin('localDepth');
-    if (this.rendererGL !== null) {
-      this.localDepthPass.render(this.rendererGL, this.camera);
-    }
+    this.localDepthPass.render(this.renderer, this.camera);
     perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
     perfMark('submit.tonemap');

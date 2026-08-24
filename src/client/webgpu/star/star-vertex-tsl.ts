@@ -26,7 +26,7 @@ import type { Vec4PackPlan } from '../attribute-packing-pure';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
 import { lumaWeightsTsl } from '../tonemap-tsl';
-import { attrVec2, attrVec3 } from '../tsl-shim';
+import { attrFloat, attrVec2, attrVec3 } from '../tsl-shim';
 import {
   perceptualAppSizePxTsl,
   perceptualDiscExponentTsl,
@@ -74,10 +74,19 @@ export function buildStarVaryings() {
 
 export type StarVaryings = ReturnType<typeof buildStarVaryings>;
 
+/**
+ * `localMirror` builds the LOCAL_DEPTH_PASS variant for the mirror
+ * geometry (star-local-mirror-tsl.ts): star identity comes from the
+ * `iSourceIdx` slot attribute so hide/pin compares match the source
+ * instance, member collapse is off (the mirror draws exactly the
+ * members), and the core mask writes true bracket depth rather than the
+ * main variant's near pin.
+ */
 export function buildStarVertexNode(
   deps: StarTslDeps,
   pass: StarPass,
   v: StarVaryings,
+  localMirror = false,
 ): Node {
   const { u, staticPlan, dynamicPlan, lut } = deps;
   const stat = (name: string) => packedScalar(staticPlan, name);
@@ -93,7 +102,9 @@ export function buildStarVertexNode(
     const corner = attrVec2('aCorner');
     const localPos = attrVec3('iPosition');
     const puls = attrVec2('iPuls');
-    const self = int(instanceIndex);
+    const self = localMirror
+      ? int(attrFloat('iSourceIdx').add(0.5))
+      : int(instanceIndex);
 
     // The off-screen clip sentinel of star.vert.glsl's early returns;
     // TSL has no value-carrying return, so the draw path assigns over it.
@@ -101,21 +112,24 @@ export function buildStarVertexNode(
 
     const m0 = u.uLocalMemberIdx0;
     const m1 = u.uLocalMemberIdx1;
-    const isMember = self.equal(m0.x).or(self.equal(m0.y))
-      .or(self.equal(m0.z)).or(self.equal(m0.w))
-      .or(self.equal(m1.x)).or(self.equal(m1.y))
-      .or(self.equal(m1.z)).or(self.equal(m1.w));
+    const isMember = localMirror ? null
+      : self.equal(m0.x).or(self.equal(m0.y))
+        .or(self.equal(m0.z)).or(self.equal(m0.w))
+        .or(self.equal(m1.x)).or(self.equal(m1.y))
+        .or(self.equal(m1.z)).or(self.equal(m1.w));
     const eclipseDim = dyn('iEclipseDim');
     // A member keeps its core-mask draw (the stamp is what stops main-pass
     // background painting inside the core the local pass repaints); the two
     // colour passes collapse in favour of the mirror draws. Totality
     // collapses the glow quad alone, and iCompositeSuppress never gates
     // glow (README.md § Suppression semantics).
+    const hidden = self.equal(u.uHideFocusIdx);
     const suppressed = (pass === STAR_PASS_GLOW
-      ? self.equal(u.uHideFocusIdx).or(isMember).or(eclipseDim.lessThanEqual(0.0))
+      ? (isMember === null ? hidden : hidden.or(isMember))
+        .or(eclipseDim.lessThanEqual(0.0))
       : pass === STAR_PASS_CORE_MASK
-        ? self.equal(u.uHideFocusIdx).or(dyn('iCompositeSuppress').greaterThan(0.5))
-        : self.equal(u.uHideFocusIdx).or(isMember)
+        ? hidden.or(dyn('iCompositeSuppress').greaterThan(0.5))
+        : (isMember === null ? hidden : hidden.or(isMember))
           .or(dyn('iCompositeSuppress').greaterThan(0.5)));
 
     If(suppressed.not(), () => {
@@ -228,13 +242,14 @@ export function buildStarVertexNode(
         const ndcOffset = corner.mul(pxSize).div(u.uViewport).mul(2.0);
         clipOut.assign(centreClip.add(vec4(ndcOffset.mul(centreClip.w), 0.0, 0.0)));
 
-        if (pass === STAR_PASS_CORE_MASK) {
+        if (pass === STAR_PASS_CORE_MASK && isMember !== null) {
           // The member stamp, moved from the GLSL fragment stage
           // (gl_FragDepth = 0.0) to the vertex: per-instance, so the whole
           // quad pins to the near end of the reversed-z clip convention and
           // fixed-function depth writes the nearest value — no fragment
           // depth output, which is what keeps early-z alive
-          // (../README.md § Early-z).
+          // (../README.md § Early-z). The mirror's own mask never pins:
+          // its stamp IS the member's true bracket depth.
           If(isMember, () => {
             clipOut.assign(vec4(
               clipOut.x, clipOut.y,

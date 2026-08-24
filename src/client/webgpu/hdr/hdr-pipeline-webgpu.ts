@@ -3,8 +3,8 @@
 // reversed-z depth attachment. See README.md.
 
 import {
-  DataTexture, HalfFloatType, NearestFilter, NoBlending,
-  NodeMaterial, QuadMesh, RGBAFormat, RenderTarget, Vector2,
+  DataTexture, DepthTexture, FloatType, HalfFloatType, NearestFilter,
+  NoBlending, NodeMaterial, QuadMesh, RGBAFormat, RenderTarget, Vector2,
   type Texture, type WebGPURenderer,
 } from 'three/webgpu';
 import { Fn, ivec2, screenCoordinate, select, texture, uniform, vec4 } from 'three/tsl';
@@ -237,11 +237,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
   private ensureResources(): boolean {
     if (this.rt !== null) return true;
     this.renderer.getDrawingBufferSize(this.size);
-    // depthBuffer without stencil or a depth texture is what lands three
-    // on Depth32Float under reversedDepthBuffer — the format the
-    // local-depth children's K = 1 precision bound re-derives from
-    // (../../hdr/README.md § Pass ordering).
-    this.rt = new RenderTarget(this.size.x, this.size.y, {
+    const rt = new RenderTarget(this.size.x, this.size.y, {
       count: this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
       type: HalfFloatType,
       format: RGBAFormat,
@@ -251,7 +247,31 @@ export class WebGpuHdrPipeline implements HdrSeam {
       stencilBuffer: false,
       generateMipmaps: false,
     });
-    applyHdrAttachmentState(this.rt.textures as unknown as THREE.Texture[]);
+    // The reversed-z → Depth32Float inference is CANVAS-only: for a
+    // render target three auto-creates a Depth24Plus depth texture
+    // regardless of reversedDepthBuffer, silently fixed-point — which
+    // voids the local depth pass's K = 1 bracket
+    // (../../local-depth/bracket/README.md § Precision analysis). An
+    // explicit FloatType depth texture is what lands Depth32Float; the
+    // same move three's own PassNode makes under reversedDepthBuffer.
+    const depthTexture = new DepthTexture(this.size.x, this.size.y);
+    depthTexture.type = FloatType;
+    rt.depthTexture = depthTexture;
+    applyHdrAttachmentState(rt.textures as unknown as THREE.Texture[]);
+    // Validated before it is committed to `this.rt`: a target that failed
+    // here and stayed latched would be handed to the very next bind(),
+    // which short-circuits on a non-null field.
+    if (
+      this.renderer.reversedDepthBuffer !== true
+      || rt.depthTexture?.type !== FloatType
+      || rt.stencilBuffer
+      || !rt.depthBuffer
+    ) {
+      depthTexture.dispose();
+      rt.dispose();
+      throw new Error('HDR target must resolve to a Depth32Float reversed-z attachment');
+    }
+    this.rt = rt;
 
     const diffuseSeed = this.extraAttachments
       ? this.rt.textures[2]
@@ -327,6 +347,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
   }
 
   private releaseTarget(): void {
+    this.rt?.depthTexture?.dispose();
     this.rt?.dispose();
     this.rt = null;
     this.summation?.dispose();

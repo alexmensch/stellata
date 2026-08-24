@@ -20,9 +20,10 @@ ellipses — `../star-pipeline/local-pass/star-local-cluster.ts`).
 
 ## Files
 
-- `local-depth-pass.ts` — `LocalDepthPass`: owns the local scene,
-  cluster registration, and the per-frame slice loop
-  (`clearDepth` + bracketed render, far→near).
+- `local-depth-pass.ts` (+ test) — `LocalDepthPass`: owns the local
+  scene, cluster registration, and the per-frame render — the slice loop
+  (`clearDepth` + bracketed render, far→near) on WebGL2, one bracket on
+  a reversed-z renderer.
 - `bracket/` — the bracket math and the precision record. `MemberSphere`
   (the cluster-API input type) is defined there, in `slice-pure.ts`.
 
@@ -85,10 +86,12 @@ retiring `iDepthBias`.
 Billboards use **mirror draws**, sharing the main pipeline's uniform
 objects with cloned materials that set `LOCAL_DEPTH_PASS`:
 
-- Stars: `../star-pipeline/local-pass/star-local-mirror.ts` — a small
+- Stars: `../star-pipeline/local-pass/star-mirror-slots.ts` — a small
   `InstancedBufferGeometry` whose slots re-copy member attributes per
   frame, with an `iSourceIdx` indirection for star-indexed lookups
-  (extinction texelFetch, hide/pin compares).
+  (extinction texelFetch, hide/pin compares). Backend-neutral; the GLSL
+  and TSL materials over it are `star-local-mirror.ts` and
+  `../webgpu/star/star-local-mirror-tsl.ts`.
 - Planets: the body field redraws its own geometry with the shared
   `uLocalPassRange` uniform gating the opposite way in each pass —
   main-pass materials collapse instances inside the range, mirror
@@ -149,17 +152,27 @@ Live providers:
   and any resolved-disc star near the camera; plus
   `BinaryOrbitPathLayer` ellipses and their extent spheres.
 
+**The three LINE layers are parked on a WebGPU boot** — orbit rings,
+binary orbit paths, probe trails. `LineBasicMaterial` cannot create a
+WGSL pipeline against the HDR target's three attachments, and one
+invalid pipeline poisons the whole pass submit, so `stellata.ts`
+removes those groups from the pass scene there. They draw nowhere on
+that boot: their main-pass copies live in the shell scene, which a
+WebGPU boot never renders. Un-parked by the TSL line material
+(`stellata-0it.27`); the extent spheres they contribute are unaffected.
+
 ## Pass composition rules
 
 Within one slice, standard three.js ordering applies: opaque
 depth-writers first (meshes, disc cores), then transparent
 depth-tested non-writers (ring annuli, orbit-ring lines, additive
-glow). No core depth-mask is needed in the local pass — there are no
-background layers here to pre-fail; the disc pass's own core depth +
-halo `gl_FragDepth = 1.0` convention carries over unchanged. The
-corrupt/restore pair did not carry over — it existed only because the
-main pass's depth can't order ring vs body, which is the problem this
-pass solves.
+glow). The disc pass's own core depth + halo `gl_FragDepth = 1.0`
+convention carries over on the GLSL path; the TSL mirror has no
+successor for the halo's far-write, and stamps member cores from a
+depth-only mask draw instead (`../webgpu/star/README.md` § The disc
+draw writes no depth). The corrupt/restore pair did not carry over —
+it existed only because the main pass's depth can't order ring vs
+body, which is the problem this pass solves.
 
 Across slices the partition itself did the ordering, which is the one
 semantic K = 1 drops on WebGPU — safe here because `renderOrder` pins

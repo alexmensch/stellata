@@ -20,12 +20,14 @@ const GLARE_RENDER_ORDER = 4;
 
 export class PlanetGlareLayer implements MrtOutputLayer {
   readonly mesh: THREE.Mesh;
-  /** The local-pass mirror. Added to the seam's scene but left invisible
-   *  until the local depth pass ports — with no bracketed pass to draw it,
-   *  a visible mirror would double every body's glare. */
+  /** The local-pass mirror, parented into `mirrorParent` (the field's
+   *  localGroup, which the solar-system cluster carries into the pass
+   *  scene). Gated per instance by `uLocalPassRange`, exactly as the
+   *  GLSL mirror is — it draws nothing while no cluster is active. */
   readonly mirrorMesh: THREE.Mesh;
 
   private readonly scene: THREE.Scene;
+  private readonly mirrorParent: THREE.Object3D;
   private readonly sources: PlanetGlareSources;
   private readonly nodes: GlareUniformNodes;
   private readonly materials: ReturnType<typeof buildPlanetGlareMaterial>[];
@@ -38,8 +40,10 @@ export class PlanetGlareLayer implements MrtOutputLayer {
     u: SharedUniformNodes,
     sources: PlanetGlareSources,
     gates: EmitterGateNodes,
+    mirrorParent: THREE.Object3D,
   ) {
     this.scene = scene;
+    this.mirrorParent = mirrorParent;
     this.sources = sources;
     this.nodes = glareUniformNodes();
     const bufs = sources.buffers();
@@ -49,7 +53,7 @@ export class PlanetGlareLayer implements MrtOutputLayer {
     this.materials = [main, mirror];
     for (const m of this.materials) applyGlowBlendDefaults(m.material);
 
-    const mesh = (material: THREE.Material, name: string) => {
+    const mesh = (material: THREE.Material, name: string, parent: THREE.Object3D) => {
       const m = new THREE.Mesh(this.build.geometry, material);
       m.name = name;
       m.frustumCulled = false;
@@ -58,12 +62,11 @@ export class PlanetGlareLayer implements MrtOutputLayer {
       // the re-pack is idempotent, so a frame that draws both pays it
       // twice over tens of slots rather than needing a frame sentinel.
       m.onBeforeRender = () => this.sync();
-      scene.add(m);
+      parent.add(m);
       return m;
     };
-    this.mesh = mesh(main.material, 'planet-glare-webgpu');
-    this.mirrorMesh = mesh(mirror.material, 'planet-glare-local-webgpu');
-    this.mirrorMesh.visible = false;
+    this.mesh = mesh(main.material, 'planet-glare-webgpu', scene);
+    this.mirrorMesh = mesh(mirror.material, 'planet-glare-local-webgpu', mirrorParent);
   }
 
   setMrtOutputs(on: boolean): void {
@@ -125,8 +128,9 @@ export class PlanetGlareLayer implements MrtOutputLayer {
   }
 
   dispose(): void {
+    this.scene.remove(this.mesh);
+    this.mirrorParent.remove(this.mirrorMesh);
     for (const m of [this.mesh, this.mirrorMesh]) {
-      this.scene.remove(m);
       (m.material as THREE.Material).dispose();
     }
     this.build.geometry.dispose();

@@ -53,6 +53,22 @@ export function reversedDepthQuantumPc(zPc: number, farPc: number): number {
   return zPc * 2 ** -REVERSED_DEPTH_MANTISSA_BITS * (1 - zPc / farPc);
 }
 
+/** The members' whole [near, far] bracket — margins and floors applied,
+ *  no partition. The reversed-z Depth32Float path renders this once
+ *  (K = 1, README.md § Decision); the sliced path partitions it below.
+ *  Empty input → null (the pass skips the frame). */
+export function computeBracket(spheres: readonly MemberSphere[]): DepthSlice | null {
+  if (spheres.length === 0) return null;
+  let minSurface = Infinity;
+  let maxExtent = 0;
+  for (const s of spheres) {
+    minSurface = Math.min(minSurface, s.distPc - s.radiusPc);
+    maxExtent = Math.max(maxExtent, s.distPc + s.radiusPc);
+  }
+  const near = Math.max(NEAR_MIN_PC, NEAR_FRACTION * minSurface);
+  return { nearPc: near, farPc: Math.max(FAR_MARGIN * maxExtent, near * 2) };
+}
+
 /** Partition the members' depth range into equal-ratio slices, each
  *  within maxSliceRatio, returned far→near (the painter's render
  *  order). Empty input → no slices (the pass skips the frame). */
@@ -61,15 +77,10 @@ export function computeDepthSlices(
   fovYRad: number,
   viewportHeightPx: number,
 ): DepthSlice[] {
-  if (spheres.length === 0) return [];
-  let minSurface = Infinity;
-  let maxExtent = 0;
-  for (const s of spheres) {
-    minSurface = Math.min(minSurface, s.distPc - s.radiusPc);
-    maxExtent = Math.max(maxExtent, s.distPc + s.radiusPc);
-  }
-  const near = Math.max(NEAR_MIN_PC, NEAR_FRACTION * minSurface);
-  const far = Math.max(FAR_MARGIN * maxExtent, near * 2);
+  const bracket = computeBracket(spheres);
+  if (bracket === null) return [];
+  const near = bracket.nearPc;
+  const far = bracket.farPc;
   const rMax = maxSliceRatio(fovYRad, viewportHeightPx);
   const count = Math.max(1, Math.ceil(Math.log(far / near) / Math.log(rMax)));
   const step = (far / near) ** (1 / count);

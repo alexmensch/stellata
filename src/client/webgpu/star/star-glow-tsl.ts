@@ -20,6 +20,7 @@ import {
 export function buildStarGlowMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
+  localMirror = false,
 ): StarColourMaterial {
   const v = buildStarVaryings();
 
@@ -38,8 +39,8 @@ export function buildStarGlowMaterial(
   });
 
   const material = new NodeMaterial();
-  material.name = 'star-glow-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v);
+  material.name = localMirror ? 'star-glow-local-tsl' : 'star-glow-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v, localMirror);
   applyGlowBlendDefaults(material);
   return finishStarColourMaterial(material, deps.u, v, gates, kernel);
 }

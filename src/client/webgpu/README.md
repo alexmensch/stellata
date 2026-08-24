@@ -18,6 +18,9 @@ src/client/webgpu/
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
+  reversed-depth-sort.ts (+ test)   Render-list comparators countering
+                                    r185's reversed-depth list reversal;
+                                    retire with the three bump.
   shared-uniform-nodes.ts (+ test)  TSL uniform-node mirror of
                                     frame/shared-uniforms.ts.
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
@@ -92,18 +95,20 @@ app alive**: every CPU subsystem (catalog, star frame, focus, picker,
 typeahead, URL state, overlays, HUD, render gate) runs identically; the
 renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
 layers as port children land. The star layer (`star/README.md`) carries
-all three depth-honest pipelines; its still-missing siblings (extinction,
-chart, mirrors) are listed there. The solar-system family
-(`solar-system/README.md`) is ported whole, but only its reflected-glare
-billboards and probe glyphs *draw* — the spheroid mesh, ring annulus and
-atmosphere shell render exclusively in the parked local depth pass.
+all three depth-honest pipelines plus their local-mirror clones; its
+still-missing siblings (extinction, chart) are listed there. The
+solar-system family (`solar-system/README.md`) draws whole: glare
+billboards and probe glyphs in the main pass, the spheroid mesh, ring
+annulus and atmosphere shell in the local depth pass, which runs on
+this boot as a single reversed-z bracket (K = 1 —
+`../local-depth/bracket/README.md` § Decision). Its line layers (orbit
+rings, binary orbit paths, probe trails) do NOT draw yet — see the park
+table below.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
 scene still exists and is never rendered on a WebGPU boot — no
-per-layer gating, no material ever reaches the wrong backend. The one
-GPU-side subsystem still parked is the local-depth pass, gated off
-until its port child.
+per-layer gating, no material ever reaches the wrong backend.
 
 The dust voxel volume is the exception that already crossed: it streams
 and uploads on both backends (`loaders/README.md` § Dust voxel upload),
@@ -127,12 +132,13 @@ in the same PR:
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
-| Local depth pass | `animate()` skips `localDepthPass.render` — and with it the planet mesh, ring annulus, atmosphere shell and every mirror draw, none of which the main pass ever renders | local-depth on WebGPU (`0it.12`) |
-| Star local-pass membership collapse | `StarLocalCluster.update` parks on `localPassLive: false` — members would render as bare core-mask stamps with no mirror to repaint them | local-depth on WebGPU (`0it.12`), with the mirror clones (`0it.4.8`) |
-| Solar-system local-pass routing | `SolarSystemCluster.update` parks on the same `localPassLive: false` — an active host's `uLocalPassRange` collapses every planet glare in the main pass, and `setLocalPassActive` moves the probe markers into `localGroup`; with no pass to repaint either, both vanish outright | local-depth on WebGPU (`0it.12`) |
+| Local-pass line layers (orbit rings, binary orbit paths, probe trails) | the shell removes their groups from the pass scene — `LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation against the HDR target's three attachments, and one invalid pipeline poisons the whole pass submit | TSL line material (`0it.27`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
+The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
+on both boots, the `localPassLive` flag is deleted from both clusters,
+and the TSL star mirror + glare mirror repaint what collapses.
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion
@@ -140,10 +146,21 @@ gate becomes a permanently-false branch, so the WebGL2 deletion
 plan — a gate still standing then means its feature was dead for a
 release.
 
+**The line-layer row is gated the other way round, and the backstop
+does NOT reach it.** It parks on `webgpu !== null` (a positive test in
+`stellata.ts`'s constructor) rather than `rendererGL !== null`, because
+what it does is *remove* groups rather than skip construction. At
+cutover that branch becomes permanently TRUE, so it reads as ordinary
+unconditional code and a sweep for dead false-branches walks straight
+past it. `0it.27` must delete those three `remove()` calls by name;
+nothing else will catch them.
+
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
-[0, 1] reversed clip, `Depth32Float` picked automatically, depth funcs
-remapped, clear inverted, all upstream in three r185 — and
-`trackTimestamp: true` for the `gpu.frame` perf row (§ Timestamps).
+[0, 1] reversed clip, depth funcs remapped, clear inverted, all
+upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`
+perf row (§ Timestamps). `Depth32Float` is picked automatically for the
+CANVAS only; a render target needs an explicit `FloatType` depth
+texture (`../local-depth/bracket/README.md` § Precision analysis).
 
 ## Output colour space — pinned to the working space
 

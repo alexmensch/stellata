@@ -35,6 +35,7 @@ function wrapper(cfg: TslProbeConfig) {
   return (
     built: MrtEmitterMaterial,
     nodes: Record<string, unknown>,
+    ownedTextures: readonly THREE.Texture[] = [],
   ): EmitterMaterial => {
     // Registration is what keeps the material's output count in lockstep
     // with the pipeline's target mode; dispose must sever it or a dead
@@ -46,6 +47,10 @@ function wrapper(cfg: TslProbeConfig) {
       dispose() {
         unregister();
         built.material.dispose();
+        // The per-slot stand-ins (uniform-nodes.ts slotPlaceholder), never
+        // whatever a loaded map later swapped in — those belong to
+        // PlanetMeshLayer's texture cache, which disposes them itself.
+        for (const t of ownedTextures) t.dispose();
       },
     };
   };
@@ -92,12 +97,14 @@ export function makeTslSolarSystemMaterials(
   const wrap = wrapper(cfg);
   return {
     planetMesh() {
-      const nodes = planetMeshUniformNodes(cfg.placeholder);
-      return wrap(buildPlanetMeshMaterial(cfg.nodes, nodes, cfg.gates), nodes);
+      const owned: THREE.Texture[] = [];
+      const nodes = planetMeshUniformNodes(cfg.placeholder, owned);
+      return wrap(buildPlanetMeshMaterial(cfg.nodes, nodes, cfg.gates), nodes, owned);
     },
     planetRings() {
-      const nodes = planetRingsUniformNodes(cfg.placeholder);
-      return wrap(buildPlanetRingsMaterial(cfg.nodes, nodes, cfg.gates), nodes);
+      const owned: THREE.Texture[] = [];
+      const nodes = planetRingsUniformNodes(cfg.placeholder, owned);
+      return wrap(buildPlanetRingsMaterial(cfg.nodes, nodes, cfg.gates), nodes, owned);
     },
     planetAtmosphere() {
       const nodes = planetAtmosphereUniformNodes();

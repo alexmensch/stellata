@@ -6,8 +6,9 @@ import boundary in `../README.md`). It carries the three depth-honest
 pipelines of `../README.md` § Early-z: D2 glow (no depth output), D3
 core mask (depth-only, member stamp in the vertex stage), and D4 disc
 (colour only, no depth output either — § The disc draw writes no
-depth). No pipeline here writes fragment depth, and the draw count
-matches the WebGL2 stack one for one. The WebGL2 pipeline
+depth) — plus their local-depth-pass mirror variants (§ The local
+mirror). No pipeline here writes fragment depth, and the draw count
+matches the WebGL2 stack one for one, mirror draws included. The WebGL2 pipeline
 (`../../star-pipeline/`) stays the shipped renderer and the semantic
 reference; parity is verified by the A/B smoke, same `/v/<blob>/` with
 and without the fragment.
@@ -39,10 +40,14 @@ src/client/webgpu/star/
                                inline-operator select, the MRT output
                                struct + single↔struct mode swap
                                (../hdr/README.md).
-  star-layer.ts (+ test)       StarLayer: geometry + the four meshes into
-                               the seam's scene, the per-frame dynamic
-                               re-pack, the shell's core-mask gate,
-                               dispose.
+  star-layer.ts (+ test)       StarLayer: geometry + the three meshes into
+                               the seam's scene, the local mirror, the
+                               per-frame dynamic re-pack, the shell's
+                               core-mask gate, dispose.
+  star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
+    (+ test)                   pipelines' local variants over the shared
+                               MirrorSlots copy of the packed geometry
+                               (§ The local mirror).
   star-sources-mock.ts         StarGeometrySources over the zero-filled
                                StarPipeline mock, for tests.
 ```
@@ -62,13 +67,6 @@ is visible in a WebGPU A/B smoke until it lands:
   than WebGL2 until then.
 - **Chart mode**: under additive blending on the paper background, chart
   currently renders no stars on WebGPU.
-- **Local-mirror clones**: none exist yet, so local-pass membership is
-  parked on this boot (`../../star-pipeline/local-pass/README.md`
-  § Membership) — close-range discs render in the MAIN pass, ordered by
-  the core mask's reversed-z float32 stamps (§ The disc draw writes no
-  depth), rather than collapsing into a repaint that is not there. The
-  collapse returns with the mirrors, and the member near-pin in the
-  vertex stage is inert until then: with no members, nothing pins.
 
 The MRT emission/statistic write side is here (`starMrtStruct`,
 `setMrtOutputs`) but engages only while the HDR pipeline binds its
@@ -148,6 +146,38 @@ the kernel collapse — the exactness and flux-preservation arguments are
 `../../star-pipeline/collapse/README.md`'s, one mechanism on both
 backends.
 
+## The local mirror
+
+`star-local-mirror-tsl.ts` is the GLSL `StarLocalMirror`'s twin behind
+the shared `StarMirror` interface: `StarLocalCluster` drives whichever
+one the boot built, and never learns which. What the port changes:
+
+- **The copy is of packed buffers.** The slot geometry, the copy and the
+  three draws are the shared `MirrorSlots`
+  (`../../star-pipeline/local-pass/star-mirror-slots.ts`) — every
+  instanced attribute of the layer's geometry (`iPosition`, `iPuls`, the
+  `iPack`/`iDyn` vec4s) mirrored by name into MIRROR_CAPACITY slots, so
+  the `packedScalar` accessors resolve to the same buffer component on
+  both geometries by construction — the mismatch that would otherwise
+  read as a silent brightness bug. With `iSourceIdx` that is exactly the
+  8-buffer budget.
+- **`sync()` re-packs before it copies.** The cluster updates before the
+  frame renders, i.e. before any main mesh's `onBeforeRender` re-pack —
+  so the mirror hands the layer's dynamic re-pack to `MirrorSlots.sync`
+  as its pre-copy hook, or an eclipse dim would reach the mirror one
+  frame late.
+- **The vertex stage is the shared builder's `localMirror` variant**:
+  star identity comes from `iSourceIdx` (hide/pin compares match the
+  source instance), member collapse is off — the mirror draws exactly
+  the members — and the core mask writes true bracket depth instead of
+  the main variant's near pin.
+- **The mirror's colour draws ride `StarLayer.setMrtOutputs`** — they
+  land in the same HDR target as the main passes, so the single↔struct
+  swap covers all four colour materials at once.
+
+In-pass renderOrders mirror the GLSL stack: mask −1 → disc 0 → glow 3.5
+(after the body surfaces, before the planet glare at 4).
+
 ## The disc draw writes no depth
 
 The WebGL2 disc pass wrote `gl_FragDepth = 1.0` under its halo
@@ -180,6 +210,16 @@ the whole distance / magnitude / pulsation / colour-lookup chain to
 re-derive varyings the first draw already had. Three draws is WebGL2's
 own count; four was the migration costing more than the renderer it
 replaces.
+
+**In the local pass the same split holds with one caveat.** The mirror's
+disc draw writes no depth either — its own mask (in-pass renderOrder −1)
+stamps every member core's true bracket depth first, so the redundancy
+argument carries over. What has no successor is the GLSL local-pass
+halo's `gl_FragDepth = 1.0` write, which let a nearer member's halo
+reopen depth over a farther member's stamped core; here that stamp
+survives instead. The recorded fallback if close-pair smoke rejects the
+difference is the viewport depth-range pin — bit-exact, at the price of
+a per-draw viewport state change.
 
 **What this gives up, and where.** The mask's `visible` gate is off
 when no star's disc can reach `RESOLVED_DISC_MIN_PX` (5 px) —

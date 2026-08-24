@@ -20,7 +20,7 @@ interface Fixture {
   hostMember: (number | null)[];
 }
 
-function makeFixture(): Fixture {
+function makeFixture(monochrome = false): Fixture {
   const f: Partial<Fixture> = {
     range: [-99, -99],
     localPassActive: [],
@@ -28,7 +28,7 @@ function makeFixture(): Fixture {
   };
   const field = {
     group: { visible: true },
-    monochrome: false,
+    monochrome,
     localGroup: new THREE.Group(),
     attachedHosts: () => [{
       hostStarIdx: 0,
@@ -74,31 +74,30 @@ function makeFixture(): Fixture {
   return f as Fixture;
 }
 
-describe('SolarSystemCluster local-pass park', () => {
-  it('routes an active host into the pass when it renders', () => {
+describe('SolarSystemCluster local-pass routing', () => {
+  it('routes an active host into the pass', () => {
     const f = makeFixture();
-    f.cluster.update(f.camera, { localPassLive: true });
+    f.cluster.update(f.camera);
 
     expect(f.range).toEqual([HOST_START, HOST_COUNT]);
     expect(f.localPassActive).toEqual([true]);
     expect(f.hostMember).toEqual([0]);
   });
 
-  it('parks the whole hand-off when the pass does not render', () => {
-    const f = makeFixture();
-    f.cluster.update(f.camera, { localPassLive: false });
+  it('parks the whole hand-off in chart mode', () => {
+    // Chart inks every body as a flat main-pass disc; a suppression range
+    // there is a planet that renders nowhere at all.
+    const f = makeFixture(true);
+    f.cluster.update(f.camera);
 
-    // Every body must keep drawing in the main pass: the mirror that
-    // would repaint a collapsed slot does not exist on this boot, so a
-    // suppression range here is a planet that renders nowhere at all.
     expect(f.range).toEqual([-1, 0]);
     expect(f.localPassActive).toEqual([false]);
     expect(f.hostMember).toEqual([null]);
   });
 
   it('reports no bracket spheres while parked', () => {
-    const f = makeFixture();
-    f.cluster.update(f.camera, { localPassLive: false });
+    const f = makeFixture(true);
+    f.cluster.update(f.camera);
 
     const out: MemberSphere[] = [];
     f.cluster.collectSpheres(f.camera, out);

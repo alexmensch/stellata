@@ -299,9 +299,9 @@ export class PlanetBodyField {
   private instanceHost!: Int32Array;
   private geometry!: THREE.InstancedBufferGeometry;
   private matGlow!: THREE.ShaderMaterial;
-  private matGlowLocal!: THREE.ShaderMaterial;
+  private matGlowLocal: THREE.ShaderMaterial | null = null;
   private meshGlow!: THREE.Mesh;
-  private meshGlowLocal!: THREE.Mesh;
+  private meshGlowLocal: THREE.Mesh | null = null;
   // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
@@ -342,8 +342,13 @@ export class PlanetBodyField {
   // across the one frame this can lag.
   private lastT = 0;
 
+  /** `glslLocalMirror: false` (the WebGPU boot) skips the GLSL mirror
+   *  draw: localGroup renders in the local depth pass on that boot, and a
+   *  GLSL material there fails WGSL pipeline creation — the TSL glare
+   *  layer parents its own mirror into localGroup instead. */
   constructor(
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+    glslLocalMirror = true,
   ) {
     this.magShared = magnitudeShared;
     this.cullMag = magnitudeShared.uCullMag.value;
@@ -354,7 +359,7 @@ export class PlanetBodyField {
     // world-local origin per-instance; the shader does the rest.
     this.allocateBuffers(this.capacity);
     this.buildGeometry();
-    this.buildMaterials(magnitudeShared);
+    this.buildMaterials(magnitudeShared, glslLocalMirror);
   }
 
   /**
@@ -1581,7 +1586,7 @@ export class PlanetBodyField {
   dispose(): void {
     this.geometry.dispose();
     this.matGlow.dispose();
-    this.matGlowLocal.dispose();
+    this.matGlowLocal?.dispose();
   }
 
   // ── private ─────────────────────────────────────────────────────────
@@ -1616,7 +1621,7 @@ export class PlanetBodyField {
     const oldGeom = this.geometry;
     this.buildGeometry();
     this.meshGlow.geometry = this.geometry;
-    this.meshGlowLocal.geometry = this.geometry;
+    if (this.meshGlowLocal !== null) this.meshGlowLocal.geometry = this.geometry;
     oldGeom.dispose();
   }
 
@@ -1642,6 +1647,7 @@ export class PlanetBodyField {
 
   private buildMaterials(
     sm: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
+    glslLocalMirror: boolean,
   ): void {
     const sharedPlanetUniforms = {
       ...pickPerceptualDiscUniforms(sm),
@@ -1675,9 +1681,6 @@ export class PlanetBodyField {
     this.matGlow = makeMat();
     applyGlowBlendDefaults(this.matGlow);
 
-    this.matGlowLocal = makeMat(true);
-    applyGlowBlendDefaults(this.matGlowLocal);
-
     const makeMesh = (mat: THREE.ShaderMaterial, name: string, order: number) => {
       const m = new THREE.Mesh(this.geometry, mat);
       m.name = name;
@@ -1692,8 +1695,12 @@ export class PlanetBodyField {
     this.meshGlow = makeMesh(this.matGlow, 'glow', 4);
     this.group.add(this.meshGlow);
 
-    this.meshGlowLocal = makeMesh(this.matGlowLocal, 'glow-local', 4);
-    this.localMirrorGroup.add(this.meshGlowLocal);
+    if (glslLocalMirror) {
+      this.matGlowLocal = makeMat(true);
+      applyGlowBlendDefaults(this.matGlowLocal);
+      this.meshGlowLocal = makeMesh(this.matGlowLocal, 'glow-local', 4);
+      this.localMirrorGroup.add(this.meshGlowLocal);
+    }
   }
 
   /** One-shot fill of static per-instance attributes (radius, colour,

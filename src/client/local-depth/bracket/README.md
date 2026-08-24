@@ -12,9 +12,10 @@ with a single bracket (WebGPU). Both are derived below.
 
 ## Files
 
-- `slice-pure.ts` — the partition (`computeDepthSlices`), the near/far
-  floors, and the depth quantum of each encoding (`depthQuantumPc`,
-  `reversedDepthQuantumPc`). Pure; no three.js.
+- `slice-pure.ts` — the whole bracket (`computeBracket`, near/far floors
+  applied — the reversed-z K = 1 render range), its partition
+  (`computeDepthSlices`), and the depth quantum of each encoding
+  (`depthQuantumPc`, `reversedDepthQuantumPc`). Pure; no three.js.
 - `slice-pure.test.ts` — pins every headline number in this README,
   including a float32 sweep of the realised quantum.
 
@@ -84,18 +85,21 @@ world-space quantum is
 ```
 
 **Precondition: the float32 attachment is the whole argument, and
-three only ever infers it.** `reversedDepthBuffer` is what makes the
-backend pick `depth32float` (`getCurrentDepthStencilFormat`), and two
-paths silently opt out — a render target carrying its own
-`depthTexture` keeps *that* texture's format, and any target asking
-for stencil lands on `depth32float-stencil8`, an optional device
-feature that must be in `requiredFeatures`. On a 24-bit fixed-point
-attachment reversed-z gives a *uniform* `δd = 2⁻²⁴` instead, i.e.
-`δz ≈ 2⁻²⁴·z²/n` — 262 AU at Neptune's ring against the main pass's
-near, far worse than the sliced bound it replaces. The current stack
-qualifies (`../../hdr/hdr-pipeline.ts`: `depthBuffer: true`,
-`stencilBuffer: false`, no explicit depth texture). Assert it at boot;
-never assume it.
+three infers it for the CANVAS alone.** `reversedDepthBuffer` makes
+`getCurrentDepthStencilFormat` pick `depth32float` only when the
+render context carries no depth texture — and for any render target
+three auto-creates one, `DepthFormat`/`UnsignedIntType` =
+`depth24plus`, regardless of the reversed flag. So a target that
+merely sets `depthBuffer: true` gets FIXED-POINT depth: a uniform
+`δd = 2⁻²⁴`, i.e. `δz ≈ 2⁻²⁴·z²/n` — 262 AU at Neptune's ring against
+the main pass's near, and ~20,000 km at Saturn inside a K = 1 bracket
+whose near floored at `NEAR_MIN_PC` (the shipped bug: the whole ring
+system inside one depth step of the body). The HDR target therefore
+carries an **explicit `FloatType` depth texture** — the same move
+three's own `PassNode` makes under `reversedDepthBuffer`. Asserted,
+never assumed: `boot-webgpu.ts` refuses a boot whose renderer dropped
+`reversedDepthBuffer`, and `WebGpuHdrPipeline` throws at target
+creation unless the depth texture is `FloatType` with no stencil.
 
 The bound is scale-free: it holds at every camera distance, bracket
 ratio, and epoch, so the camera-anywhere check passes structurally
@@ -198,9 +202,16 @@ order-independent. The residual is cross-body translucent overlap
 between bodies that would have landed in different brackets — the
 K≈4 vantage. Smoke it: camera inside Neptune's orbit ring with several
 rings drawn, watching the crossings for order flicker under scrub.
+**That smoke is BLOCKED until `stellata-0it.27`** — orbit rings are the
+translucent geometry it turns on, and they do not draw on the only boot
+that takes K = 1 (the pass's line layers are parked there,
+`../README.md` § Live providers). So the residual is argued, not yet
+observed; run it as 0it.27's first check.
 
-Implementation: stellata-0it.12; the mirror machinery ports unchanged
-(0it.4 / 0it.8); the WebGL2 sliced path lives until 0it.14 deletes it.
+Shipped: `LocalDepthPass.render` takes the K = 1 branch whenever the
+renderer reports `reversedDepthBuffer` (`computeBracket`, one
+`clearDepth` + one bracketed render); the WebGL2 sliced path lives
+until 0it.14 deletes it.
 
 **Rejected encodings** (updated 2026-08-18):
 
