@@ -18,6 +18,9 @@ src/client/webgpu/
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
+  reversed-depth-sort.ts (+ test)   Render-list comparators countering
+                                    r185's reversed-depth list reversal;
+                                    retire with the three bump.
   shared-uniform-nodes.ts (+ test)  TSL uniform-node mirror of
                                     frame/shared-uniforms.ts.
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL

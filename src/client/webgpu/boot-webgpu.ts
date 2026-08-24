@@ -9,6 +9,9 @@ import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
+import {
+  reversedDepthOpaqueSort, reversedDepthTransparentSort,
+} from './reversed-depth-sort';
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './shared-uniform-nodes';
 import type { StarGeometrySources, WebGpuSeam } from './seam';
 import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
@@ -46,26 +49,10 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     renderer.dispose();
     return null;
   }
-  // r185 REVERSES every sorted render list under reversedDepthBuffer
-  // (RenderList.sort's `if (reversedDepth) ... reverse()`), inverting
-  // renderOrder contracts renderer-wide — the local pass drew its planet
-  // mesh AFTER the ring annulus, and the main pass its star glow before
-  // the disc. Upstream has deleted the reversal (dev has no reversedDepth
-  // branch in sort()), so these negated comparators pre-invert the sort
-  // and the reversal lands on three's intended order. Retire with the
-  // three bump (the sort hooks run before the reversal, custom or not).
-  interface SortItem {
-    groupOrder: number | null; renderOrder: number | null;
-    z: number | null; id: number | null;
-  }
-  renderer.setOpaqueSort((a: SortItem, b: SortItem) =>
-    (b.groupOrder ?? 0) - (a.groupOrder ?? 0)
-    || (b.renderOrder ?? 0) - (a.renderOrder ?? 0)
-    || (b.z ?? 0) - (a.z ?? 0) || (b.id ?? 0) - (a.id ?? 0));
-  renderer.setTransparentSort((a: SortItem, b: SortItem) =>
-    (b.groupOrder ?? 0) - (a.groupOrder ?? 0)
-    || (b.renderOrder ?? 0) - (a.renderOrder ?? 0)
-    || (a.z ?? 0) - (b.z ?? 0) || (b.id ?? 0) - (a.id ?? 0));
+  // Counters r185's reversed-depth render-list reversal; retire with the
+  // three bump (reversed-depth-sort.ts carries the mechanism).
+  renderer.setOpaqueSort(reversedDepthOpaqueSort);
+  renderer.setTransparentSort(reversedDepthTransparentSort);
   // Output stays in the working colour space: ported shaders own the
   // whole transfer chain (operator + sRGB encode), exactly as the GLSL
   // build's do, and any other setting makes three render the scene into
