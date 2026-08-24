@@ -2,17 +2,20 @@
 // gates, starEmission()'s colour output, and the MRT output struct + mode
 // swap (../hdr/README.md § The gate becomes the output struct).
 
-import { Discard, Fn, length, outputStruct, select, vec4 } from 'three/tsl';
+import { Discard, length, select, vec4 } from 'three/tsl';
 import type { Node, NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
-import { statisticTexelTsl } from '../emission-tsl';
+import { maskedStatisticTexelTsl } from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
+import {
+  finishMrtMaterial, type EmitterOutputs, type MrtEmitterMaterial,
+} from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
 import { tonemapUnditheredTsl } from '../tonemap-tsl';
 import {
   perceptualDiscExponentTsl,
   perceptualDiscProfileTsl,
-} from './perceptual-disc-tsl';
+} from '../perceptual-disc-tsl';
 import type { StarVaryings } from './star-vertex-tsl';
 
 /** The super-Gaussian kernel at this fragment: radius from vUv, exponent
@@ -68,37 +71,27 @@ export function starEmissionColour(
  *  statistic texel (no coverage claim — stars draw a kernel; alpha 1 so
  *  the glow blend's SrcAlpha factor cannot scale the flux a second
  *  time), and the diffuse slot's identity element in place of the WebGL
- *  gate's NONE. The park/frame-cost mask multiplies the flux to the same
- *  identity (../hdr/README.md § The gate becomes the output struct). */
-export function starMrtStruct(
+ *  gate's NONE. The park/frame-cost mask scales the whole statistic texel
+ *  to that identity (../hdr/README.md § The gate becomes the output
+ *  struct). */
+export function starMrtOutputs(
   u: SharedUniformNodes,
   v: StarVaryings,
   glow: Node<'float'>,
   gates: EmitterGateNodes,
-) {
-  return outputStruct(
-    starEmissionColour(u, v, glow),
-    statisticTexelTsl(
-      v.vFluxPeakL.mul(glow).mul(gates.statisticWrites), 0.0, 1.0),
-    vec4(0.0),
-  );
+): EmitterOutputs {
+  return {
+    colour: starEmissionColour(u, v, glow),
+    statistic: maskedStatisticTexelTsl(
+      gates.statisticWrites, v.vFluxPeakL.mul(glow), 0.0, 1.0),
+    diffuse: vec4(0.0),
+  };
 }
 
-export interface StarColourMaterial {
-  material: NodeMaterial;
-  /** Swap between the single-output fragment (rendering to the canvas —
-   *  chart mode, or no HDR target) and the three-member MRT struct (HDR
-   *  target bound). The member count must match the bound target's
-   *  attachment count or pipeline creation fails, so the HDR pipeline
-   *  drives this in lockstep with its own target mode. */
-  setMrtOutputs(on: boolean): void;
-}
+export type StarColourMaterial = MrtEmitterMaterial;
 
 /** Give a colour pass both of its fragment graphs and the swap between
- *  them. `kernel` is invoked once per graph so neither shares a node
- *  with the other; the single-output graph is installed first, so a
- *  material never reaches a one-attachment target with a 3-member
- *  struct on it. */
+ *  them, over the shared output-struct helper. */
 export function finishStarColourMaterial(
   material: NodeMaterial,
   u: SharedUniformNodes,
@@ -106,17 +99,5 @@ export function finishStarColourMaterial(
   gates: EmitterGateNodes,
   kernel: () => Node<'float'>,
 ): StarColourMaterial {
-  const single = Fn(() => starEmissionColour(u, v, kernel()))();
-  const struct = starMrtStruct(u, v, kernel(), gates);
-  let mrtOn = false;
-  material.fragmentNode = single;
-  return {
-    material,
-    setMrtOutputs(on: boolean) {
-      if (on === mrtOn) return;
-      mrtOn = on;
-      material.fragmentNode = on ? struct : single;
-      material.needsUpdate = true;
-    },
-  };
+  return finishMrtMaterial(material, () => starMrtOutputs(u, v, kernel(), gates));
 }

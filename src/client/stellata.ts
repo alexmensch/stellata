@@ -663,6 +663,7 @@ export class Stellata implements FrameAnchor {
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
       requestRender: () => this.renderGate.invalidate(),
+      webgpu: this.webgpu,
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);
@@ -1014,7 +1015,12 @@ export class Stellata implements FrameAnchor {
       // After the field + rings updates it reads; before the main
       // render its suppression uniforms gate. Owns no GPU resources —
       // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera),
+      update: (ctx) => this.solarCluster.update(ctx.camera, {
+        // The same condition that gates localDepthPass.render below, and
+        // the same one the star cluster takes: a body's collapse is only
+        // honest while the mirror repaints it.
+        localPassLive: this.rendererGL !== null,
+      }),
       dispose: () => {},
     });
     this.layers.register({

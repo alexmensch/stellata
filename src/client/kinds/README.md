@@ -50,6 +50,12 @@ its catalog load blocks first paint and may reject) — and are only
   `RosterCoversEveryKind` collapses `KindModules` to `never` when a
   kind is missing from the list. Order and no-duplicates stay pinned
   by `kind-modules.test.ts`.
+- **`KindContext.webgpu` is null on the shipped boot, and a kind that
+  ignores it stays correct.** A WebGPU boot never renders
+  `KindContext.scene`, so an unported kind's meshes are inert there
+  rather than wrong; a kind whose layers HAVE ported reads its TSL
+  surfaces — and the scene those meshes belong in — off the seam
+  (`../webgpu/README.md`). Both solar-system kinds do today.
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`

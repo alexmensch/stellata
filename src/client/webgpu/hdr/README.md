@@ -20,6 +20,9 @@ src/client/webgpu/hdr/
                               ownership of the gates and the reduction.
   emitter-gates.ts            The statistic write mask as a uniform node
                               (§ The gate becomes the output struct).
+  mrt-material.ts             finishMrtMaterial — the single-output ↔
+                              three-member-struct swap every ported
+                              emitter carries.
   summation-tsl.ts            TSL mirrors of stellata_summation and the
                               box downsample, over summation-pure's
                               constants.
@@ -82,11 +85,17 @@ node-material terms instead, two mechanisms replacing the one call:
 - **The per-frame masks ride a uniform, not a pipeline swap.** The
   statistic park flips every rendered frame, and rebuilding pipelines at
   that cadence would be the most expensive gate available — so
-  `emitter-gates.ts`'s `statisticWrites` node multiplies the statistic
-  texel's flux and mask to the identity element instead. Valid because
-  every statistic writer's blend has an identity at zero (the table
-  above); the clear needs no mask — the render-pass clear writes every
-  attachment regardless, so the attachment reads zero, never stale.
+  `emitter-gates.ts`'s `statisticWrites` node scales the statistic texel
+  to the identity element instead (`maskedStatisticTexelTsl`). Valid
+  because every statistic writer's blend has an identity at zero (the
+  table above); the clear needs no mask — the render-pass clear writes
+  every attachment regardless, so the attachment reads zero, never stale.
+
+  **It has to scale the WHOLE texel, alpha included.** Masking the flux
+  and the coverage bit alone is identity only for an additive writer; the
+  planet mesh, its ring annulus and its atmosphere shell composite, so a
+  `(0, 0, 0, alpha)` write would keep dimming the attachment by
+  `1 − alpha` while claiming to be masked off.
 
 **The struct's member count must match the bound target's attachment
 count.** A WGSL fragment output with no colour target behind it fails

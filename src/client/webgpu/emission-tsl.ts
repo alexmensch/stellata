@@ -37,3 +37,27 @@ export const statisticTexelTsl = /* @__PURE__ */ Fn(
   ([fluxL, litSurface, alpha]: [NF, NF, NF]) =>
     vec4(min(fluxL, LUMA_CEIL), clamp(litSurface, 0.0, 1.0), 0.0, alpha),
 );
+
+/**
+ * The statistic texel under the frame's write gate.
+ *
+ * The WebGL build masks attachment 1 off with `drawBuffers`; here the whole
+ * texel scales to zero instead, which is the blend's identity for every
+ * writer of that attachment — additive leaves the destination because the
+ * source is zero, and an alpha-composited one leaves it because the alpha
+ * went to zero with the rest. Masking the flux alone would be wrong for the
+ * second class: it would keep compositing `dst · (1 − alpha)`.
+ */
+export const maskedStatisticTexelTsl = /* @__PURE__ */ Fn(
+  ([gate, fluxL, litSurface, alpha]: [NF, NF, NF, NF]) =>
+    statisticTexelTsl(fluxL, litSurface, alpha).mul(gate),
+);
+
+/** One texel of the diffuse attachment for a fragment adding no diffuse
+ *  light but standing in front of some. `alpha` MUST be the alpha the same
+ *  fragment writes to attachment 0, or the object dims the band by a
+ *  different amount than it dims everything else
+ *  (../hdr/attachments/README.md § The gate). */
+export const occluderTexelTsl = /* @__PURE__ */ Fn(
+  ([alpha]: [NF]) => vec4(0.0, 0.0, 0.0, alpha),
+);

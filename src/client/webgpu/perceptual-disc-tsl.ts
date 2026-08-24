@@ -1,12 +1,12 @@
 // TSL mirror of the stellata_perceptual_disc chunk: dM soft knee, √Δm
 // disc size, super-Gaussian exponent + profile. Thin composition over
-// ../../star-pipeline/perceptual-disc-pure.ts, which carries the math.
+// ../star-pipeline/perceptual-disc-pure.ts, which carries the math.
 
 import { Fn, exp, float, max, mix, pow, select, smoothstep, sqrt } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
-import { DM_KNEE_FLOOR, SIZE_SPAN_FLOOR } from '../../star-pipeline/perceptual-disc-pure';
-import { KERNEL_FLUX_FIT } from '../../star-pipeline/perceptual-disc-flux-pure';
+import { PHYS_RATIO_THRESHOLD } from '../star-pipeline/local-pass/star-local-cluster-pure';
+import { DM_KNEE_FLOOR, SIZE_SPAN_FLOOR } from '../star-pipeline/perceptual-disc-pure';
+import { KERNEL_FLUX_FIT } from '../star-pipeline/perceptual-disc-flux-pure';
 
 type NF = Node<'float'>;
 

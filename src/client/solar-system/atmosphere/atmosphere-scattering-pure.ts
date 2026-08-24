@@ -12,7 +12,13 @@ export const MIE_G_DEFAULT = 0.76;
 /** Golden-ratio increment used to decorrelate the light-march jitter from the
  *  view-march (and per view-sample), so the two ray-march lattices don't beat
  *  into a moiré — the residual reads as unstructured grain instead. */
-const LIGHT_JITTER_STRIDE = 0.6180339887;
+export const LIGHT_JITTER_STRIDE = 0.6180339887;
+
+/** Interleaved-gradient-noise constants — the per-fragment [0,1) hash that
+ *  offsets the sample lattice so the few-sample march reads as fine grain
+ *  instead of a fixed moiré. Both shader backends read these. */
+export const ATMO_JITTER_COEFFS: readonly [number, number] = [0.06711056, 0.00583715];
+export const ATMO_JITTER_SCALE = 52.9829189;
 
 const RAYLEIGH_PHASE_K = 3 / (16 * Math.PI);
 const INV_4PI = 1 / (4 * Math.PI);

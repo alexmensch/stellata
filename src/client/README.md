@@ -84,9 +84,10 @@ themselves.
 - `webgpu/` — the WebGPU dual-boot seam: the `#renderer=webgpu` flag,
   the async renderer boot behind a dynamic-import boundary, the
   port scaffolding (shared uniform nodes, TSL shim, attribute packing,
-  the TSL test pattern), and the ported TSL layers (`webgpu/star/` so
-  far). Flag on renders the seam's own scene — layers accumulate there
-  as port children land — while every CPU subsystem runs identically;
+  the TSL test pattern), and the ported TSL layers (`webgpu/star/`,
+  `webgpu/solar-system/`). Flag on renders the seam's own scene — layers
+  accumulate there as port children land — while every CPU subsystem runs
+  identically;
   flag off leaves the shipped boot untouched.
 
 ## Public surface of `Stellata`

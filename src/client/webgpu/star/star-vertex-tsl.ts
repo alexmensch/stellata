@@ -32,7 +32,7 @@ import {
   perceptualDiscExponentTsl,
   perceptualDiscFluxIntegralTsl,
   perceptualDmEffTsl,
-} from './perceptual-disc-tsl';
+} from '../perceptual-disc-tsl';
 
 type NF = Node<'float'>;
 

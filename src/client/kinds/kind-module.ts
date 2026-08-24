@@ -2,6 +2,7 @@
 // every kind module consumes. See ./README.md.
 
 import type * as THREE from 'three';
+import type { WebGpuSeam } from '../webgpu/seam';
 import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focus-target';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
@@ -63,6 +64,12 @@ export interface KindContext {
    *  changes what a layer draws (a texture resolving, a deferred fetch)
    *  must say so here or it renders on whatever tick happens next. */
   requestRender(): void;
+  /** The WebGPU boot seam, or null on the shipped WebGL2 boot. A kind
+   *  whose layers have ported reads its TSL surfaces and its scene from
+   *  here; every other kind ignores it and keeps drawing into the scene
+   *  above, which a WebGPU boot never renders
+   *  (`../webgpu/README.md` § What the flag boots today). */
+  readonly webgpu: WebGpuSeam | null;
 }
 
 /** One kind's pick path. It IS `HoverProvider.pick` — the Picker

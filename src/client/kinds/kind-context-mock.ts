@@ -45,6 +45,9 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     } as unknown as HTMLElement,
     sharedUniforms,
     maxTextureSize: 8192,
+    // The shipped WebGL2 boot's value — a test wanting the ported layers
+    // passes a seam through the overrides.
+    webgpu: null,
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

@@ -6,10 +6,13 @@
 
 const float STELLATA_RAYLEIGH_PHASE_K = 3.0 / (16.0 * PI);
 const float STELLATA_INV_4PI = 1.0 / (4.0 * PI);
-// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / TWILIGHT_TAIL_* in
-// atmosphere-scattering-pure.ts; atmosphere-glsl-drift.test.ts pins them.
+// Mirror of MS_STRENGTH / LIGHT_JITTER_STRIDE / ATMO_JITTER_* /
+// TWILIGHT_TAIL_* in atmosphere-scattering-pure.ts;
+// atmosphere-glsl-drift.test.ts pins them.
 const float STELLATA_MS_STRENGTH = STELLATA_INV_4PI;
 const float STELLATA_LIGHT_JITTER_STRIDE = 0.6180339887;
+const vec2 STELLATA_ATMO_JITTER_COEFFS = vec2(0.06711056, 0.00583715);
+const float STELLATA_ATMO_JITTER_SCALE = 52.9829189;
 const float STELLATA_TWILIGHT_TAIL_AMP = 1.459e-4;
 const float STELLATA_TWILIGHT_TAIL_REACH = 8.95;
 // Stands in for an unbounded shadow span; only ever min/maxed against a ray
@@ -30,7 +33,8 @@ float stellata_miePhase(float mu, float g) {
 // the ray-march sample lattice so the low sample count reads as fine noise
 // rather than a fixed moiré grid.
 float stellata_atmoJitter(vec2 fragCoord) {
-  return fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715))));
+  return fract(STELLATA_ATMO_JITTER_SCALE
+      * fract(dot(fragCoord, STELLATA_ATMO_JITTER_COEFFS)));
 }
 
 const vec3 STELLATA_LUMA = vec3(0.2126, 0.7152, 0.0722); // Rec.709

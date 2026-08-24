@@ -3,10 +3,18 @@
 // three/webgpu with it) never reaches the WebGL2 bundle.
 
 import { LinearSRGBColorSpace, Scene, WebGPURenderer } from 'three/webgpu';
+import type * as THREE from 'three';
 import type { SharedUniforms } from '../frame/shared-uniforms';
+import type {
+  PlanetGlareSources,
+} from '../solar-system/planets/planet-body-field';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './shared-uniform-nodes';
 import type { StarGeometrySources, WebGpuSeam } from './seam';
+import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
+import {
+  makeTslProbeMaterial, makeTslSolarSystemMaterials,
+} from './solar-system/tsl-materials';
 import { StarLayer } from './star/star-layer';
 
 /** Null when WebGPU is unavailable or init fails — the caller falls back
@@ -39,6 +47,12 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let registry: SharedUniformNodeRegistry | null = null;
   const scene = new Scene();
   const hdr = new WebGpuHdrPipeline(renderer);
+  const nodesOrThrow = (caller: string) => {
+    if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
+    return registry.nodes;
+  };
+  const registerMrtLayer = (layer: Parameters<typeof hdr.registerMrtLayer>[0]) =>
+    hdr.registerMrtLayer(layer);
   return {
     renderer,
     scene,
@@ -51,11 +65,35 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     syncUniformNodes() {
       registry?.sync();
     },
+    solarSystemMaterials(placeholder: THREE.Texture) {
+      return makeTslSolarSystemMaterials({
+        nodes: nodesOrThrow('solarSystemMaterials'),
+        gates: hdr.gates,
+        placeholder,
+        registerMrtLayer,
+      });
+    },
+    get probeMaterial() {
+      return makeTslProbeMaterial({
+        nodes: nodesOrThrow('probeMaterial'), registerMrtLayer,
+      });
+    },
+    attachPlanetGlare(sources: PlanetGlareSources) {
+      const layer = new PlanetGlareLayer(
+        scene, nodesOrThrow('attachPlanetGlare'), sources, hdr.gates);
+      const unregister = hdr.registerMrtLayer(layer);
+      return {
+        setMonochrome: (on: boolean) => layer.setMonochrome(on),
+        setVisible: (on: boolean) => layer.setVisible(on),
+        dispose() {
+          unregister();
+          layer.dispose();
+        },
+      };
+    },
     attachStarLayer(sources: StarGeometrySources) {
-      if (registry === null) {
-        throw new Error('attachStarLayer before bindSharedUniforms');
-      }
-      const layer = new StarLayer(scene, registry.nodes, sources, hdr.gates);
+      const layer = new StarLayer(
+        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates);
       // Registration is what keeps the layer's output count in lockstep
       // with the pipeline's target mode; dispose must sever it or a dead
       // layer keeps taking mode swaps.

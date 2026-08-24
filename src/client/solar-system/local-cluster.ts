@@ -23,6 +23,15 @@ export interface HostStarMemberSink {
   setHostMember(idx: number | null): void;
 }
 
+export interface SolarSystemClusterFrame {
+  /** Whether the local depth pass renders this boot. False on WebGPU
+   *  until its port child: the bodies' main-pass draws collapse expecting
+   *  the mirror repaint, so with no pass every planet glare and probe
+   *  marker of the active host would simply vanish. The star sibling
+   *  parks on the same flag (`StarLocalClusterFrame.localPassLive`). */
+  localPassLive: boolean;
+}
+
 /**
  * Owns the "is a system locally active" decision each frame. Active =
  * any attached host inside its cull distance, or its orbit rings
@@ -71,12 +80,16 @@ export class SolarSystemCluster implements LocalCluster {
    *  (their per-frame state feeds the activation decision) and BEFORE
    *  the main render (the suppression uniforms it writes gate that
    *  render). */
-  update(camera: THREE.PerspectiveCamera): void {
+  update(camera: THREE.PerspectiveCamera, frame: SolarSystemClusterFrame): void {
     this.spheres.length = 0;
 
     // Chart mode inks every body as a flat main-pass disc; suppression
-    // and mirrors must stay out of the way entirely.
-    const fieldLive = this.field.group.visible && !this.field.monochrome;
+    // and mirrors must stay out of the way entirely. Same park while the
+    // local depth pass is not rendering (the WebGPU boot, until its port
+    // child): a collapse whose mirror never repaints is a body that
+    // simply does not draw.
+    const fieldLive = this.field.group.visible && !this.field.monochrome
+      && frame.localPassLive;
     let hostMember: number | null = null;
     if (fieldLive) {
       const ringsUp = this.orbitRings.anyOrbitRingVisible();

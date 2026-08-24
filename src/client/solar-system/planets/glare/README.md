@@ -65,6 +65,17 @@ The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
 channel (`../../../hdr/attachments/README.md`).
 
+## The one surface that does not swap materials
+
+Every other close-range surface ports to WebGPU by handing its layer a
+different material over the same geometry (`../../materials/README.md`).
+This one cannot: its **13** per-instance attributes exceed WebGPU's 8
+vertex buffers, so the TSL path builds a packed geometry of its own over
+`PlanetBodyField.glareSources()` — the field's live arrays, four of them
+shared by reference and three interleaved
+(`../../../webgpu/solar-system/README.md` § The glare packs). The field
+writes exactly what it always wrote; nothing about the WebGL path moves.
+
 **There is no gain on the peak, and adding one would break the invariant
 above.** A `uGlareGain` debug multiplier rode both channels until the
 emission rule was physical; at 1 it did nothing, and at anything else it made

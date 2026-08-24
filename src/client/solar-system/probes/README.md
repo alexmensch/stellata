@@ -192,7 +192,10 @@ slices the planet members already need.
 `probe.vert.glsl` / `probe.frag.glsl` wrap their log-depth chunks in
 `#ifndef LOCAL_DEPTH_PASS`, and the trail's mirror material takes
 `makeOrbitLineMaterial`'s `localPass` flag — the repo-wide requirement for
-anything rendering in both passes.
+anything rendering in both passes. That `#ifndef` is the pair's ONLY
+difference, which is why the marker's TSL twin needs no mirror variant at
+all: reversed-z deleted the chunks it guards
+(`../../materials/README.md`).
 
 Neither shader writes `gl_FragDepth`, and neither may: a static write
 costs the whole draw its early-z, so only `star.frag.glsl` carries one

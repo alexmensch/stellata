@@ -20,6 +20,9 @@ Rendering, ephemerides, and the clock live in the subfolders.
   ring systems (annulus + the ring share of appMag), per-body labels.
 - `atmosphere/` — first-principles single-scattering airlight for Venus,
   Earth, Mars, and Titan; the integrator and its CPU mirror.
+- `materials/` — which shader backend the family's surfaces are built
+  on. The layers keep their CPU logic and take a material through one
+  neutral contract, so a WebGPU boot swaps shaders and nothing else.
 - `time/` — simulation time `t`, the `VirtualClock` behind
   `Stellata.getT()`, the UTC readout, and the transport scrubber widget.
 - `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons
@@ -248,6 +251,13 @@ see `../local-depth/README.md` and `planets/README.md` § Planet mesh LOD.
 The probe marker field and trail layer follow the same flip
 (`probes/README.md` § Which pass draws them); everything a body could
 occlude has to be inside the pass, because the pass clears depth.
+Activation needs the pass to actually render: `update` takes
+`localPassLive` and parks the whole hand-off when it is false, because a
+collapsed main-pass slot whose mirror never repaints is a body that
+draws nowhere at all. The star cluster parks on the same flag; the
+roster of what that gate holds back is
+`../webgpu/README.md` § Every park is a gate.
+
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
 read by `../binaries/binary-orbit-path-layer.ts`.

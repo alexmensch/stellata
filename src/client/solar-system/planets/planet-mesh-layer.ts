@@ -50,40 +50,19 @@ import {
   type RotationElements,
   spinDegAt,
 } from './rotation/rotation-elements-pure';
-import meshVert from './planet-mesh.vert.glsl?raw';
-import meshFrag from './planet-mesh.frag.glsl?raw';
-import ringsVert from './rings/planet-rings.vert.glsl?raw';
-import ringsFrag from './rings/planet-rings.frag.glsl?raw';
-import atmoVert from '../atmosphere/planet-atmosphere.vert.glsl?raw';
-import atmoFrag from '../atmosphere/planet-atmosphere.frag.glsl?raw';
-import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
-import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
 import {
-  ATMO_N_LIGHT,
-  ATMO_N_VIEW,
   type AtmoDiscMeans,
   type AtmosphereParams,
-  MIE_G_DEFAULT,
   SUN_COLOUR,
   atmoDiscMeans,
   atmosphereParamsOf,
 } from '../atmosphere/atmosphere-scattering-pure';
+import type {
+  EmitterMaterial, SolarSystemMaterials,
+} from '../materials/emitter-material';
+import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
-
-// Splice the shared atmosphere GLSL — the uniform contract and the
-// single-scattering integrator — into both the mesh disc and the shell
-// fragment sources; the sample-count #defines ride each material so the GLSL
-// loop bounds track atmosphere-scattering-pure.ts.
-const ATMO_CHUNKS: Record<string, string> = {
-  '#include <stellata_atmosphere_uniforms>': atmoUniformsChunk,
-  '#include <stellata_atmosphere_scatter>': atmoScatterChunk,
-};
-const withAtmoChunks = (frag: string): string =>
-  Object.entries(ATMO_CHUNKS).reduce((src, [inc, chunk]) => src.replace(inc, chunk), frag);
-const MESH_FRAG = withAtmoChunks(meshFrag);
-const ATMO_FRAG = withAtmoChunks(atmoFrag);
-const ATMO_DEFINES = { ATMO_N_VIEW, ATMO_N_LIGHT } as const;
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -115,25 +94,6 @@ function computeAtmoBase(
     // The airlight rides the illuminant and the surface does not, so the
     // normaliser has to know which.
     discMeans: atmoDiscMeans(params, relativeLuminance(sunColour)),
-  };
-}
-
-/** The atmosphere-scatter uniforms shared by the mesh disc airlight and the
- *  atmosphere shell (values filled per frame by applyAtmoUniforms). */
-function sharedAtmoUniforms(): Record<string, THREE.IUniform> {
-  return {
-    uCenterView: { value: new THREE.Vector3() },
-    uRadiusPc: { value: 1 },
-    uAtmoRadius: { value: 1.02 },
-    uPoleView: { value: new THREE.Vector3(0, 1, 0) },
-    uPolarRadiusR: { value: 1 },
-    uScaleHeightR: { value: 0.01 },
-    uScaleHeightM: { value: 0.01 },
-    uBetaRayleigh: { value: new THREE.Vector3() },
-    uBetaMie: { value: 0 },
-    uBetaAbsorb: { value: new THREE.Vector3() },
-    uMieG: { value: MIE_G_DEFAULT },
-    uSunColour: { value: new THREE.Vector3(SUN_COLOUR[0], SUN_COLOUR[1], SUN_COLOUR[2]) },
   };
 }
 
@@ -178,19 +138,19 @@ export function iauMeshOrientationQuat(
 
 interface RingEntry {
   mesh: THREE.Mesh;
-  material: THREE.ShaderMaterial;
+  material: EmitterMaterial;
   geometry: THREE.RingGeometry;
 }
 
 interface AtmosphereEntry {
   mesh: THREE.Mesh;
-  material: THREE.ShaderMaterial;
+  material: EmitterMaterial;
   shellRadiusPc: number;
 }
 
 interface MeshEntry {
   mesh: THREE.Mesh;
-  material: THREE.ShaderMaterial;
+  material: EmitterMaterial;
   /** Body radius, extended to the ring outer edge / atmosphere shell
    *  when present — the local-depth-pass bounding sphere. */
   boundRadiusPc: number;
@@ -274,6 +234,8 @@ export class PlanetMeshLayer {
   private readonly uPixelRatio: THREE.IUniform<number> | undefined;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
+  /** Which backend's surfaces this layer builds (`../materials/README.md`). */
+  private readonly materials: SolarSystemMaterials;
   // A copy: the loader assigns its own forced options over whatever it is
   // handed, and the exported constant is what the tests read.
   private readonly loader = new THREE.ImageBitmapLoader()
@@ -320,6 +282,9 @@ export class PlanetMeshLayer {
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: () => void,
     maxTextureSize: number,
+    /** The TSL surfaces on a WebGPU boot; absent = the shipped GLSL ones
+     *  (`../materials/README.md`). */
+    materials?: (placeholder: THREE.Texture) => SolarSystemMaterials,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
@@ -335,6 +300,8 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
+    this.materials = materials?.(this.placeholder)
+      ?? makeGlslSolarSystemMaterials({ hdr: this.hdr, placeholder: this.placeholder });
   }
 
   /** Append camera-relative bounding spheres for every mesh-visible
@@ -748,7 +715,7 @@ export class PlanetMeshLayer {
    *  it is a parent (moon-on-moon events are out of scope). Returns the
    *  caster count. */
   private writeCasters(
-    material: THREE.ShaderMaterial,
+    material: EmitterMaterial,
     hp: { hostStarIdx: number; planetIdx: number },
   ): number {
     const ps = this.field.getAttachedPlanetSystem(hp.hostStarIdx);
@@ -899,45 +866,13 @@ export class PlanetMeshLayer {
   }
 
   private createEntry(idx: number, planet: Planet): MeshEntry {
-    const material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: meshVert,
-      fragmentShader: MESH_FRAG,
-      uniforms: {
-        ...pickHdrEmitterUniforms(this.hdr),
-        uMap: { value: this.placeholder },
-        uHasMap: { value: 0 },
-        uNormalMap: { value: this.placeholder },
-        uHasNormalMap: { value: 0 },
-        uReliefHorizon: { value: reliefHorizonOf(planet) },
-        uHorizonA: { value: this.placeholder },
-        uHorizonB: { value: this.placeholder },
-        uHasHorizonMap: { value: 0 },
-        uSkyView: { value: this.placeholder },
-        uHasSkyView: { value: 0 },
-        uTerrainAlbedo: { value: planet.albedo },
-        uColour: { value: new THREE.Color(1, 1, 1) },
-        uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
-        uFade: { value: 0 },
-        uPhaseScale: { value: 1 },
-        uSurfaceLuminance: { value: 0 },
-        uUmbralGlow: { value: new THREE.Vector3() },
-        uAirlightLuminance: { value: 0 },
-        uTermSoftness: { value: planet.terminatorSoftness ?? 0 },
-        uCasters: {
-          value: Array.from({ length: MAX_SHADOW_CASTERS }, () => new THREE.Vector4()),
-        },
-        uCasterCount: { value: 0 },
-        uSunAngRad: { value: 0 },
-        uHasAtmosphere: { value: 0 },
-        ...sharedAtmoUniforms(),
-      },
-      defines: { ...ATMO_DEFINES },
-      transparent: true,
-      depthWrite: true,
-      depthTest: true,
-    });
-    const mesh = new THREE.Mesh(this.geometry, material);
+    const material = this.materials.planetMesh();
+    // The per-body constants, over the factory's neutral defaults —
+    // written here so neither backend's factory needs a `Planet`.
+    material.uniforms.uReliefHorizon.value = reliefHorizonOf(planet);
+    material.uniforms.uTerrainAlbedo.value = planet.albedo;
+    material.uniforms.uTermSoftness.value = planet.terminatorSoftness ?? 0;
+    const mesh = new THREE.Mesh(this.geometry, material.material);
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
     mesh.renderOrder = 2.8;
@@ -967,32 +902,8 @@ export class PlanetMeshLayer {
   // excess discards (../atmosphere/README.md § Shell extents).
   private createAtmosphere(planet: Planet, atmo: PlanetAtmosphere): AtmosphereEntry {
     const shellRadiusPc = (planet.radiusKm + atmo.heightKm) * KM_PC;
-    const material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: atmoVert,
-      fragmentShader: ATMO_FRAG,
-      uniforms: {
-        ...pickHdrEmitterUniforms(this.hdr),
-        ...sharedAtmoUniforms(),
-        uSunDirView: { value: new THREE.Vector3(0, 0, 1) },
-        uAirlightLuminance: { value: 0 },
-        uFade: { value: 0 },
-      },
-      defines: { ...ATMO_DEFINES },
-      transparent: true,
-      // Premultiplied over (not additive): the shell adds airlight AND
-      // occludes the background by its opacity (frag alpha = 1 − view-path
-      // transmittance), so a dense limb chord that scatters no light toward
-      // the eye still extincts the stars behind it. Additive left the
-      // shadowed base transparent and leaked stars through the ring gap.
-      blending: THREE.CustomBlending,
-      blendEquation: THREE.AddEquation,
-      blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneMinusSrcAlphaFactor,
-      depthWrite: false,
-      depthTest: true,
-    });
-    const mesh = new THREE.Mesh(this.geometry, material);
+    const material = this.materials.planetAtmosphere();
+    const mesh = new THREE.Mesh(this.geometry, material.material);
     mesh.name = 'planet-atmosphere';
     mesh.frustumCulled = false;
     // After the body mesh (2.8) and rings (2.81), depth-tested so the body
@@ -1009,29 +920,13 @@ export class PlanetMeshLayer {
     const outerPc = rings.outerRadiusKm * KM_PC;
     const innerRatio = rings.innerRadiusKm / rings.outerRadiusKm;
     const geometry = new THREE.RingGeometry(innerRatio, 1, 128, 1);
-    const material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: ringsVert,
-      fragmentShader: ringsFrag,
-      uniforms: {
-        ...pickHdrEmitterUniforms(this.hdr),
-        uRingMap: { value: this.placeholder },
-        uInnerRatio: { value: innerRatio },
-        uOuterPc: { value: outerPc },
-        uEqRadiusPc: { value: planet.radiusKm * KM_PC },
-        uPolarRadiusPc: { value: planet.radiusKm * KM_PC * polarRadiusRatio(planet) },
-        uSunDirLocal: { value: new THREE.Vector3(0, 0, 1) },
-        uCamPosLocal: { value: new THREE.Vector3(0, 0, 1) },
-        uRingPhaseScale: { value: 1 },
-        uFade: { value: 0 },
-        uAirlightLuminance: { value: 0 },
-      },
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
+    const material = this.materials.planetRings();
+    material.uniforms.uInnerRatio.value = innerRatio;
+    material.uniforms.uOuterPc.value = outerPc;
+    material.uniforms.uEqRadiusPc.value = planet.radiusKm * KM_PC;
+    material.uniforms.uPolarRadiusPc.value =
+      planet.radiusKm * KM_PC * polarRadiusRatio(planet);
+    const mesh = new THREE.Mesh(geometry, material.material);
     mesh.name = 'planet-rings';
     mesh.frustumCulled = false;
     // After the body mesh (2.8) so the near-side ring segment draws
