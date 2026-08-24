@@ -70,6 +70,17 @@ describe('the target', () => {
     expect(() => hdr.bind()).toThrow(/Depth32Float/);
   });
 
+  it('keeps refusing it — a rejected target is never latched', () => {
+    // ensureResources short-circuits on a non-null target, so committing
+    // one before validating would make the assert fire once and then hand
+    // the very target it rejected to every later frame.
+    const { renderer, bound } = fakeRenderer(false);
+    const hdr = new WebGpuHdrPipeline(renderer);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
+    expect(bound).toHaveLength(0);
+  });
+
   it('chart mode binds the canvas and parks the statistic', () => {
     const { renderer, bound } = fakeRenderer();
     const hdr = new WebGpuHdrPipeline(renderer);
