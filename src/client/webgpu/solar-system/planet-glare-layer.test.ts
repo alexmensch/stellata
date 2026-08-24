@@ -150,6 +150,54 @@ describe('the WebGPU reflected-glare layer', () => {
     expect(layer.mesh.geometry).toBe(geometry);
   });
 
+  it('re-uploads only the attributes the frame actually changes', () => {
+    // The field rewrites colour / solidity / radius / albedo / hostAbsmag
+    // and the phase coefficients in writeHostStaticAttributes alone, which
+    // is exactly what layoutVersion reports. Flagging them every frame
+    // would re-upload the whole roster's constants for nothing.
+    const { layer, state } = makeLayer(8, 2);
+    draw(layer);
+    const geometry = layer.mesh.geometry;
+    // `needsUpdate` is setter-only in three — it bumps `version`, which is
+    // what the renderer reads to decide on a re-upload.
+    const versions = () => Object.fromEntries(
+      Object.entries(geometry.attributes)
+        .map(([name, attr]) => [name, (attr as THREE.BufferAttribute).version]));
+    const bumpedSince = (before: Record<string, number>) => {
+      const now = versions();
+      return Object.keys(now).filter((k) => now[k] !== before[k]).sort();
+    };
+
+    const steady = versions();
+    draw(layer);
+    // The ephemeris walk, the ring-flux / eclipse-dim blend, and the slot
+    // a floating-origin recentre rewrites with no layout bump.
+    expect(bumpedSince(steady)).toEqual(['iDyn', 'iHostLocalPos', 'iLocalRel']);
+
+    // A roster change is what puts the constants back on the wire.
+    const beforeAttach = versions();
+    state.layout++;
+    draw(layer);
+    expect(bumpedSince(beforeAttach)).toEqual([
+      'iBody', 'iColourSolidity', 'iDyn', 'iHostLocalPos', 'iLocalRel',
+      'iPhaseCoefsA', 'iPhaseCoefsB',
+    ]);
+  });
+
+  it('re-packs the constants when a body joins within capacity', () => {
+    // Same-capacity attach keeps the geometry, so the packed vec4s are the
+    // only place the new body's albedo and radius can land.
+    const { layer, state } = makeLayer(8, 1);
+    draw(layer);
+    state.bufs.radius[1] = 11;
+    state.bufs.albedo[1] = 12;
+    state.count = 2;
+    state.layout++;
+    draw(layer);
+    const body = layer.mesh.geometry.getAttribute('iBody').array as Float32Array;
+    expect([...body.slice(4, 6)]).toEqual([11, 12]);
+  });
+
   it('parks the mirror until the local depth pass ports', () => {
     // With no bracketed pass to draw it, a visible mirror would double
     // every body's glare in the main pass.

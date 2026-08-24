@@ -93,11 +93,22 @@ buffer with it. That is what brings 9 down to 8.
 `InstancedBufferAttribute`** — no copy, and a `PlanetBodyField` write
 lands in both. The other three interleave, so they cannot share.
 
-**The re-pack is unconditional, unlike the star layer's version watch.**
-A host's whole body count is tens of slots, so re-packing and re-flagging
-everything is a few kilobytes a frame — cheaper than getting a
-twelve-array dirty-track wrong. `layoutVersion` is watched for one thing
-only: a grow, which replaces every array and needs the geometry rebuilt.
+**The re-pack splits on the field's own seam, not on a dirty-track.**
+`PlanetBodyField.writeHostStaticAttributes` fires on attach / detach /
+grow — exactly what `layoutVersion` reports — while `writeHostPositions`
+and the dim / ring-flux blends fire every frame. So `iPhaseCoefsA`,
+`iPhaseCoefsB`, `iColourSolidity` and `iBody` re-pack and re-upload only
+when a body joins or leaves, and a steady frame pays three attributes:
+
+| when | attributes |
+| --- | --- |
+| every frame (`perFrame`) | `iHostLocalPos`, `iLocalRel`, `iDyn` |
+| `layoutVersion` change (`perLayout`) | `iPhaseCoefsA`, `iPhaseCoefsB`, `iColourSolidity`, `iBody` |
+
+`iHostLocalPos` is static per body and still rides the per-frame list: a
+floating-origin recentre rewrites it **without** bumping `layoutVersion`,
+so the layout signal cannot cover it. A grow is the one layout event that
+also replaces every array and needs the geometry rebuilt.
 
 ## What is deliberately NOT visible yet
 

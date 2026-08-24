@@ -8,7 +8,7 @@ import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
 import {
-  buildPlanetGlareGeometry, packGlareInstances,
+  buildPlanetGlareGeometry, packGlareFrame, packGlareLayout,
   type PlanetGlareBuild, type PlanetGlareSources,
 } from './planet-glare-geometry';
 import { buildPlanetGlareMaterial } from './planet-glare-tsl';
@@ -87,12 +87,17 @@ export class PlanetGlareLayer implements MrtOutputLayer {
   }
 
   /**
-   * Re-pack and re-flag every per-instance attribute.
+   * Re-pack and re-flag the per-instance attributes, split by how often
+   * the field actually rewrites them.
    *
-   * Unconditional rather than version-watched, unlike the star layer's:
-   * a host's whole body count is tens of slots, so the re-pack and the
-   * re-upload together are a few kilobytes a frame — far below what
-   * tracking which of twelve source arrays moved would cost to get wrong.
+   * The seam is the field's own: `writeHostStaticAttributes` fires on
+   * attach / detach / grow — exactly what `layoutVersion` reports — while
+   * `writeHostPositions` and the dim/ring-flux blends fire every frame.
+   * So the phase coefficients, colour, solidity, radius, albedo and host
+   * magnitude re-upload only when a body joins or leaves, and the frame
+   * pays three attributes rather than seven. Note `iHostLocalPos` counts
+   * as per-frame despite being static per body: a floating-origin
+   * recentre rewrites it with no `layoutVersion` bump.
    */
   private sync(): void {
     const count = this.sources.instanceCount();
@@ -107,9 +112,11 @@ export class PlanetGlareLayer implements MrtOutputLayer {
         this.mirrorMesh.geometry = this.build.geometry;
         old.geometry.dispose();
       }
+      packGlareLayout(this.build, bufs, count);
+      for (const attr of this.build.perLayout) attr.needsUpdate = true;
     }
-    packGlareInstances(this.build, this.sources.buffers(), count);
-    for (const attr of this.build.instanced) attr.needsUpdate = true;
+    packGlareFrame(this.build, this.sources.buffers(), count);
+    for (const attr of this.build.perFrame) attr.needsUpdate = true;
     this.build.geometry.instanceCount = count;
 
     this.nodes.uHideIdx.value = this.sources.hideIdx();
