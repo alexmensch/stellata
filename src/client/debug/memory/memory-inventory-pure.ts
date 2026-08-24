@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import { mipmapFactor, texelBytes } from '../../util/texture-bytes-pure';
 
-// Byte math for the GPU-residency inventory: how many bytes a texture or
-// a geometry actually occupies, and how to render the totals.
+// Row shapes for the GPU-residency inventory, the byte math that fills
+// them, and the aggregation the console print reads.
 
 export type ByteBasis = 'array' | 'format' | 'unknown';
 
@@ -14,65 +15,8 @@ export interface ResidencyRow {
    *  counted as unaccounted rather than as free. */
   basis: ByteBasis;
   detail: string;
-}
-
-const PACKED_TEXEL_BYTES = new Map<number, number>([
-  [THREE.UnsignedShort4444Type, 2],
-  [THREE.UnsignedShort5551Type, 2],
-  [THREE.UnsignedInt248Type, 4],
-  [THREE.UnsignedInt5999Type, 4],
-]);
-
-const CHANNELS = new Map<number, number>([
-  [THREE.AlphaFormat, 1],
-  [THREE.RedFormat, 1],
-  [THREE.RedIntegerFormat, 1],
-  [THREE.DepthFormat, 1],
-  [THREE.RGFormat, 2],
-  [THREE.RGIntegerFormat, 2],
-  [THREE.RGBAFormat, 4],
-  [THREE.RGBAIntegerFormat, 4],
-]);
-
-const CHANNEL_BYTES = new Map<number, number>([
-  [THREE.ByteType, 1],
-  [THREE.UnsignedByteType, 1],
-  [THREE.ShortType, 2],
-  [THREE.UnsignedShortType, 2],
-  [THREE.HalfFloatType, 2],
-  [THREE.IntType, 4],
-  [THREE.UnsignedIntType, 4],
-  [THREE.FloatType, 4],
-]);
-
-/** Bytes one texel occupies, or null for a format/type pair not in the
- *  tables — a compressed format, or one three grew after this was
- *  written. Null is reported, never silently treated as zero. */
-export function texelBytes(
-  format: THREE.AnyPixelFormat,
-  type: THREE.TextureDataType,
-): number | null {
-  const packed = PACKED_TEXEL_BYTES.get(type);
-  if (packed !== undefined) return packed;
-  const channels = CHANNELS.get(format);
-  const perChannel = CHANNEL_BYTES.get(type);
-  if (channels === undefined || perChannel === undefined) return null;
-  return channels * perChannel;
-}
-
-const MIPMAP_MIN_FILTERS = new Set<number>([
-  THREE.NearestMipmapNearestFilter,
-  THREE.NearestMipmapLinearFilter,
-  THREE.LinearMipmapNearestFilter,
-  THREE.LinearMipmapLinearFilter,
-]);
-
-/** A full mip chain adds a third again over the base level. Three uploads
- *  one only when the minification filter samples it, so `generateMipmaps`
- *  alone does not mean the memory is spent. */
-export function mipmapFactor(texture: THREE.Texture): number {
-  const chained = texture.generateMipmaps && MIPMAP_MIN_FILTERS.has(texture.minFilter);
-  return chained ? 4 / 3 : 1;
+  /** Identical resources folded into this row; `bytes` is their sum. */
+  count?: number;
 }
 
 interface TextureImage {
@@ -84,9 +28,11 @@ interface TextureImage {
 
 /** Resident bytes for one texture. Prefers the CPU-side array length,
  *  which is exact for every DataTexture the app builds; falls back to
- *  dimensions × texel size for image-backed textures, whose decoded
- *  bytes live only on the GPU. */
-export function textureBytes(texture: THREE.Texture): { bytes: number; basis: ByteBasis; detail: string } {
+ *  dimensions × texel size for image-backed textures and render-target
+ *  attachments, whose bytes live only on the GPU. */
+export function textureResidency(
+  texture: THREE.Texture,
+): { bytes: number; basis: ByteBasis; detail: string } {
   const image = texture.image as TextureImage | undefined;
   const depth = image?.depth && image.depth > 0 ? image.depth : 1;
   const dims = image?.width && image?.height
@@ -105,7 +51,11 @@ export function textureBytes(texture: THREE.Texture): { bytes: number; basis: By
 
   const texel = texelBytes(texture.format, texture.type);
   if (texel === null || !image?.width || !image?.height) {
-    return { bytes: 0, basis: 'unknown', detail: `${dims} format=${texture.format} type=${texture.type}` };
+    return {
+      bytes: 0,
+      basis: 'unknown',
+      detail: `${dims} format=${texture.format} type=${texture.type}`,
+    };
   }
   return {
     bytes: Math.round(image.width * image.height * depth * texel * mips),
@@ -145,6 +95,30 @@ export function unknownCount(rows: readonly ResidencyRow[]): number {
   let n = 0;
   for (const row of rows) if (row.basis === 'unknown') n++;
   return n;
+}
+
+/** Fold rows describing the same resource at the same size into one,
+ *  summing bytes and counting the copies.
+ *
+ *  The default view parents several hundred identically-shaped orbit
+ *  rings and boundary loops, and one row each buries the handful that
+ *  hold real memory — a table nobody can read is a table nobody re-runs.
+ *  Rows already carrying a `count` keep summing, so grouping twice is
+ *  the same as grouping once. */
+export function groupRows(rows: readonly ResidencyRow[]): ResidencyRow[] {
+  const byKey = new Map<string, ResidencyRow>();
+  for (const row of rows) {
+    const key = `${row.basis}|${row.label}|${row.detail}`;
+    const seen = byKey.get(key);
+    const count = row.count ?? 1;
+    if (seen === undefined) {
+      byKey.set(key, { ...row, count });
+      continue;
+    }
+    seen.bytes += row.bytes;
+    seen.count = (seen.count ?? 1) + count;
+  }
+  return [...byKey.values()];
 }
 
 const UNITS = ['B', 'KiB', 'MiB', 'GiB'] as const;
@@ -195,6 +169,55 @@ export function typedArrayRows(source: object, prefix: string): ResidencyRow[] {
   return rows;
 }
 
+/** Field names `typedArrayRows` could not price, so the print can say so
+ *  rather than leaving them silently absent. A `Map` of proper names or
+ *  an array of constellation records holds real heap and no row. */
+export function unpricedFields(source: object): string[] {
+  const names: string[] = [];
+  for (const [name, value] of Object.entries(source)) {
+    if (ArrayBuffer.isView(value)) continue;
+    if (value === null || typeof value !== 'object') continue;
+    names.push(name);
+  }
+  return names;
+}
+
 export function byBytesDescending(a: ResidencyRow, b: ResidencyRow): number {
   return b.bytes - a.bytes;
+}
+
+export interface ResourceCounts {
+  geometries: number;
+  textures: number;
+}
+
+export interface CrossCheck {
+  /** What three's own bookkeeping counts as uploaded. */
+  renderer: ResourceCounts;
+  /** What the scene walk reached. */
+  walked: ResourceCounts;
+  /** Uploaded but off-scene — render targets, and anything parented into
+   *  a scene the walk does not visit. */
+  offScene: ResourceCounts;
+  /** Walked but never uploaded. Three counts a geometry when the draw
+   *  path first asks for its buffers, so a scene-graph resource missing
+   *  from its count has no GPU allocation at all: the walk charges bytes
+   *  the device is not holding. Over-counting is the safe direction, but
+   *  it has to be visible or the total reads as residency. */
+  unuploaded: ResourceCounts;
+}
+
+export function crossCheck(renderer: ResourceCounts, walked: ResourceCounts): CrossCheck {
+  return {
+    renderer,
+    walked,
+    offScene: {
+      geometries: Math.max(0, renderer.geometries - walked.geometries),
+      textures: Math.max(0, renderer.textures - walked.textures),
+    },
+    unuploaded: {
+      geometries: Math.max(0, walked.geometries - renderer.geometries),
+      textures: Math.max(0, walked.textures - renderer.textures),
+    },
+  };
 }

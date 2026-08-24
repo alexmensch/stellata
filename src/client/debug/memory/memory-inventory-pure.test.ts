@@ -2,68 +2,24 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   byBytesDescending,
+  crossCheck,
   formatBytes,
   geometryBytes,
-  mipmapFactor,
-  texelBytes,
-  textureBytes,
+  groupRows,
+  textureResidency,
   totalBytes,
   typedArrayRows,
   unknownCount,
+  unpricedFields,
   type ResidencyRow,
 } from './memory-inventory-pure';
 
-describe('memory-inventory / texelBytes', () => {
-  it('sizes the HDR attachment formats', () => {
-    // The three colour attachments the frame binds: RGBA16F, RG16F, and
-    // the second RGBA16F. Getting these wrong misprices the single
-    // largest viewport-scaled allocation in the app.
-    expect(texelBytes(THREE.RGBAFormat, THREE.HalfFloatType)).toBe(8);
-    expect(texelBytes(THREE.RGFormat, THREE.HalfFloatType)).toBe(4);
-    expect(texelBytes(THREE.RedFormat, THREE.FloatType)).toBe(4);
-    expect(texelBytes(THREE.RGBAFormat, THREE.UnsignedByteType)).toBe(4);
-  });
-
-  it('reads a packed type as a whole-texel size, not per channel', () => {
-    // Depth24+stencil8 is 4 bytes for the texel, not 4 per channel.
-    expect(texelBytes(THREE.DepthStencilFormat, THREE.UnsignedInt248Type)).toBe(4);
-  });
-
-  it('returns null for a compressed format rather than guessing', () => {
-    expect(texelBytes(THREE.RGB_S3TC_DXT1_Format, THREE.UnsignedByteType)).toBeNull();
-  });
-});
-
-describe('memory-inventory / mipmapFactor', () => {
-  function texture(generateMipmaps: boolean, minFilter: THREE.MinificationTextureFilter) {
-    const t = new THREE.Texture();
-    t.generateMipmaps = generateMipmaps;
-    t.minFilter = minFilter;
-    return t;
-  }
-
-  it('charges the chain only when the filter samples it', () => {
-    expect(mipmapFactor(texture(true, THREE.LinearMipmapLinearFilter))).toBeCloseTo(4 / 3, 12);
-  });
-
-  it('charges nothing when generateMipmaps is on but the filter is not a mipmap filter', () => {
-    // three's default generateMipmaps is true, so keying on it alone
-    // would inflate every NearestFilter data texture in the app by a third.
-    expect(mipmapFactor(texture(true, THREE.LinearFilter))).toBe(1);
-    expect(mipmapFactor(texture(true, THREE.NearestFilter))).toBe(1);
-  });
-
-  it('charges nothing when mipmaps are off', () => {
-    expect(mipmapFactor(texture(false, THREE.LinearMipmapLinearFilter))).toBe(1);
-  });
-});
-
-describe('memory-inventory / textureBytes', () => {
+describe('memory-inventory / textureResidency', () => {
   it('takes the exact array length for a data texture', () => {
     const data = new Uint8Array(16 * 8 * 4);
     const tex = new THREE.DataTexture(data, 16, 8);
     tex.generateMipmaps = false;
-    const row = textureBytes(tex);
+    const row = textureResidency(tex);
     expect(row.basis).toBe('array');
     expect(row.bytes).toBe(512);
   });
@@ -71,7 +27,7 @@ describe('memory-inventory / textureBytes', () => {
   it('counts a 3D texture through its depth', () => {
     const data = new Uint8Array(4 * 4 * 4);
     const tex = new THREE.Data3DTexture(data, 4, 4, 4);
-    const row = textureBytes(tex);
+    const row = textureResidency(tex);
     expect(row.bytes).toBe(64);
     expect(row.detail).toContain('4×4×4');
   });
@@ -82,9 +38,20 @@ describe('memory-inventory / textureBytes', () => {
     tex.format = THREE.RGBAFormat;
     tex.type = THREE.UnsignedByteType;
     tex.generateMipmaps = false;
-    const row = textureBytes(tex);
+    const row = textureResidency(tex);
     expect(row.basis).toBe('format');
     expect(row.bytes).toBe(128);
+  });
+
+  it('prices a render-target attachment off the size three stamped on it', () => {
+    // An RT texture carries no CPU array, so `format` is the only basis
+    // available — and it is the one that reaches the HDR attachments a
+    // fullscreen quad samples through a uniform.
+    const rt = new THREE.WebGLRenderTarget(64, 32, { type: THREE.HalfFloatType });
+    const row = textureResidency(rt.texture);
+    expect(row.basis).toBe('format');
+    expect(row.bytes).toBe(64 * 32 * 8);
+    rt.dispose();
   });
 
   it('reports an unsizeable texture as unknown, not as zero-cost', () => {
@@ -93,7 +60,7 @@ describe('memory-inventory / textureBytes', () => {
     const tex = new THREE.Texture();
     tex.image = { width: 8, height: 4 };
     tex.format = THREE.RGB_S3TC_DXT1_Format;
-    const row = textureBytes(tex);
+    const row = textureResidency(tex);
     expect(row.basis).toBe('unknown');
     expect(row.bytes).toBe(0);
   });
@@ -134,6 +101,66 @@ describe('memory-inventory / typedArrayRows', () => {
     expect(totalBytes(rows)).toBe(64 + 16);
     expect(rows[1].bytes).toBe(0);
     expect(rows[1].detail).toContain('shares a buffer');
+  });
+});
+
+describe('memory-inventory / unpricedFields', () => {
+  it('names the object-valued fields no row can cover', () => {
+    // catalog.names is a Map of proper names and catalog.constellations an
+    // array of records: real heap, and typedArrayRows cannot see either.
+    expect(unpricedFields({
+      positions: new Float32Array(4),
+      names: new Map([[1, 'Sol']]),
+      constellations: [{ id: 'ori' }],
+      count: 313000,
+      solIndex: -1,
+    })).toEqual(['names', 'constellations']);
+  });
+});
+
+describe('memory-inventory / groupRows', () => {
+  const loop = (bytes: number): ResidencyRow =>
+    ({ label: 'LineLoop geometry', bytes, basis: 'array', detail: '1 attr' });
+
+  it('folds identical resources into one row and sums them', () => {
+    const rows = groupRows([loop(768), loop(768), loop(768)]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].bytes).toBe(2304);
+    expect(rows[0].count).toBe(3);
+  });
+
+  it('keeps rows apart when the detail or the basis differs', () => {
+    const rows = groupRows([
+      loop(768),
+      { label: 'LineLoop geometry', bytes: 1536, basis: 'array', detail: '2 attr' },
+      { label: 'LineLoop geometry', bytes: 0, basis: 'unknown', detail: '1 attr' },
+    ]);
+    expect(rows).toHaveLength(3);
+  });
+
+  it('is idempotent, so grouping a grouped table changes nothing', () => {
+    const once = groupRows([loop(768), loop(768)]);
+    const twice = groupRows(once);
+    expect(twice).toEqual(once);
+  });
+});
+
+describe('memory-inventory / crossCheck', () => {
+  it('names the uploaded resources the walk never reached', () => {
+    const cross = crossCheck({ geometries: 90, textures: 83 }, { geometries: 88, textures: 66 });
+    expect(cross.offScene).toEqual({ geometries: 2, textures: 17 });
+    expect(cross.unuploaded).toEqual({ geometries: 0, textures: 0 });
+  });
+
+  it('names the walked resources that were never uploaded', () => {
+    // The default Sol view walks ~550 geometries against 88 in three's
+    // count: several hundred parented, never drawn, and charged bytes the
+    // GPU is not holding. Clamping this direction to zero reported the
+    // opposite of what happened.
+    const cross = crossCheck({ geometries: 88, textures: 83 }, { geometries: 549, textures: 66 });
+    expect(cross.unuploaded.geometries).toBe(461);
+    expect(cross.offScene.geometries).toBe(0);
+    expect(cross.offScene.textures).toBe(17);
   });
 });
 
