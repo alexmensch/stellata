@@ -404,13 +404,19 @@ export const setMinPixelSize = (px: number): void => { minPixelSize = px; };
 export const getMwInsideDiscPc = (): number => mwInsideDiscPc;
 export const setMwInsideDiscPc = (pc: number): void => { mwInsideDiscPc = pc; };
 
-// Scratch vector for the pure helper. Lives at module scope so the
-// per-frame ranking pass allocates zero. Pure helper is single-
-// threaded (frame handler) so no aliasing concerns.
+// Scratch for the ranking helper. Lives at module scope so the per-frame
+// ranking pass allocates zero. One frame handler serves every label
+// family (§ Label engine), so there is no aliasing concern — a second
+// concurrent caller would need its own buffers.
 const tmpProj = /*@__PURE__*/ new THREE.Vector3();
+// The top-N survivors, descending, as two parallel arrays rather than
+// object literals. Grown on demand and never shrunk: `topN` is a live
+// debug slider, so the buffer sizes to the largest cap the session asks
+// for and every later frame reuses it.
+const rankedIds: string[] = [];
+const rankedPx: number[] = [];
 
-/** Pure: given candidates + viewing params, return the set of IDs whose
- *  labels should be visible this frame.
+/** Fill `out` with the IDs whose labels should be visible this frame.
  *
  *  Filters in this order:
  *  1. Inside-MW guard — when the camera sits inside the disc, every
@@ -427,20 +433,30 @@ const tmpProj = /*@__PURE__*/ new THREE.Vector3();
  *     off-screen but whose disc edge crosses the viewport still
  *     compete for a label slot.
  *
- *  Survivors are sorted by descending pxSize; the top `topN` win. */
-export function computeVisibleLabels(
+ *  Survivors are ranked by descending pxSize; the top `topN` win, ties
+ *  broken toward the earlier candidate.
+ *
+ *  Writes into a caller-owned Set rather than returning one: this runs
+ *  every frame, and the verdict is read through one long-lived Set
+ *  anyway. */
+export function computeVisibleLabelsInto(
   candidates: readonly LabelCandidate[],
   params: RankingParams,
-): Set<string> {
-  const result = new Set<string>();
+  out: Set<string>,
+): void {
+  out.clear();
   const dxGc = params.cameraAbs.x - params.galacticCentreAbs.x;
   const dyGc = params.cameraAbs.y - params.galacticCentreAbs.y;
   const dzGc = params.cameraAbs.z - params.galacticCentreAbs.z;
   const camToGc = Math.sqrt(dxGc * dxGc + dyGc * dyGc + dzGc * dzGc);
-  if (camToGc < params.mwInsideDiscPc) return result;
+  if (camToGc < params.mwInsideDiscPc) return;
+
+  const cap = Math.min(Math.max(params.topN, 0), candidates.length);
+  if (cap === 0) return;
+  while (rankedIds.length < cap) { rankedIds.push(''); rankedPx.push(0); }
 
   const pxPerRad = params.viewportHeightPx / ((params.fovDeg * Math.PI) / 180);
-  const ranked: { id: string; px: number }[] = [];
+  let count = 0;
   for (const cand of candidates) {
     // Move candidate to the renderer's local-world frame (subtract
     // worldOffset) so the camera's matrices apply.
@@ -467,12 +483,22 @@ export function computeVisibleLabels(
     const r = pxSize * 0.5;
     if (screenX + r < 0 || screenX - r > params.viewportWidthPx) continue;
     if (screenY + r < 0 || screenY - r > params.viewportHeightPx) continue;
-    ranked.push({ id: cand.id, px: pxSize });
+
+    // Insert into the descending top-N, dropping the smallest once full.
+    // The strict `>` is what preserves the stable sort's tie-break: an
+    // equal pxSize stops the shift and lands after the incumbent.
+    if (count === cap && pxSize <= rankedPx[cap - 1]) continue;
+    let i = count < cap ? count : cap - 1;
+    while (i > 0 && pxSize > rankedPx[i - 1]) {
+      rankedPx[i] = rankedPx[i - 1];
+      rankedIds[i] = rankedIds[i - 1];
+      i--;
+    }
+    rankedPx[i] = pxSize;
+    rankedIds[i] = cand.id;
+    if (count < cap) count++;
   }
-  ranked.sort((a, b) => b.px - a.px);
-  const cap = Math.min(params.topN, ranked.length);
-  for (let i = 0; i < cap; i++) result.add(ranked[i].id);
-  return result;
+  for (let i = 0; i < count; i++) out.add(rankedIds[i]);
 }
 
 /** What the shared ranking pass + both label families read per frame —
@@ -499,7 +525,7 @@ function lgLabelHostOf(stellata: Stellata): LgLabelHost {
 // the per-label handlers), and each label's predicate just queries
 // `visibleLabelIds.has(...)`.
 const candidates: LabelCandidate[] = [];
-let visibleLabelIds = new Set<string>();
+const visibleLabelIds = new Set<string>();
 const tmpCamAbs = new THREE.Vector3();
 let rankingHolders = 0;
 let stopRanking: (() => void) | null = null;
@@ -510,35 +536,51 @@ let stopRanking: (() => void) | null = null;
  *  reading a disposed host's `visibleLabelIds` forever. */
 function acquireRankingHandler(host: LgLabelHost): () => void {
   rankingHolders++;
-  stopRanking ??= host.onFrame(() => {
-    if (host.getMonochrome()) {
-      visibleLabelIds = new Set();
-      return;
-    }
-    const c = host.camera.position;
-    const w = host.getWorldOffset();
-    tmpCamAbs.set(c.x + w.x, c.y + w.y, c.z + w.z);
-    // Make sure the camera's matrices reflect this frame's camera
-    // pose — controls.update() mutates camera.position but doesn't
-    // propagate to matrixWorld/matrixWorldInverse. The render call
-    // will refresh them anyway, but our ranking runs before render
-    // each frame (it's a 'frame' event handler), so we have to flush
-    // explicitly or we read last-frame's projection.
-    host.camera.updateMatrixWorld();
-    visibleLabelIds = computeVisibleLabels(candidates, {
+  if (!stopRanking) {
+    // Built once per subscription instead of as a literal per frame, so
+    // the pass allocates nothing. Every field except the first two is
+    // refreshed from the host below before each ranking call — the seeds
+    // here exist only to satisfy the type and are never read.
+    const params: RankingParams = {
       cameraAbs: tmpCamAbs,
       galacticCentreAbs: GALACTIC_CENTRE_PC,
-      worldOffset: w,
+      worldOffset: host.getWorldOffset(),
       matrixWorldInverse: host.camera.matrixWorldInverse,
       projectionMatrix: host.camera.projectionMatrix,
-      fovDeg: host.camera.fov,
-      viewportWidthPx: window.innerWidth,
-      viewportHeightPx: window.innerHeight,
-      topN,
-      minPixelSize,
-      mwInsideDiscPc,
+      fovDeg: 0,
+      viewportWidthPx: 0,
+      viewportHeightPx: 0,
+      topN: 0,
+      minPixelSize: 0,
+      mwInsideDiscPc: 0,
+    };
+    stopRanking = host.onFrame(() => {
+      if (host.getMonochrome()) {
+        visibleLabelIds.clear();
+        return;
+      }
+      const c = host.camera.position;
+      const w = host.getWorldOffset();
+      tmpCamAbs.set(c.x + w.x, c.y + w.y, c.z + w.z);
+      // Make sure the camera's matrices reflect this frame's camera
+      // pose — controls.update() mutates camera.position but doesn't
+      // propagate to matrixWorld/matrixWorldInverse. The render call
+      // will refresh them anyway, but our ranking runs before render
+      // each frame (it's a 'frame' event handler), so we have to flush
+      // explicitly or we read last-frame's projection.
+      host.camera.updateMatrixWorld();
+      params.worldOffset = w;
+      params.matrixWorldInverse = host.camera.matrixWorldInverse;
+      params.projectionMatrix = host.camera.projectionMatrix;
+      params.fovDeg = host.camera.fov;
+      params.viewportWidthPx = window.innerWidth;
+      params.viewportHeightPx = window.innerHeight;
+      params.topN = topN;
+      params.minPixelSize = minPixelSize;
+      params.mwInsideDiscPc = mwInsideDiscPc;
+      computeVisibleLabelsInto(candidates, params, visibleLabelIds);
     });
-  });
+  }
   let released = false;
   return () => {
     if (released) return;
@@ -546,7 +588,7 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
     if (--rankingHolders > 0) return;
     stopRanking?.();
     stopRanking = null;
-    visibleLabelIds = new Set();
+    visibleLabelIds.clear();
   };
 }
 

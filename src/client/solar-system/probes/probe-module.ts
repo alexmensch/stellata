@@ -16,7 +16,7 @@ import type {
   KindSearchEntry,
   ObjectKindModule,
 } from '../../kinds/kind-module';
-import { projectToScreen } from '../../overlays/overlay-project';
+import { projectToScreenInto } from '../../overlays/overlay-project';
 import type { SceneLayer } from '../../scene/scene-layer';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PROBE_MARKER_PX, ProbeField } from './probe-field';
@@ -56,11 +56,12 @@ export function createProbeKindModule(): ProbeKindModule {
     // trail. Prime tier inside the glyph, fallback within the threshold.
     const hitRadius = discHitRadiusPx(PROBE_MARKER_PX);
     const candidates: Array<PickCandidate & { cameraDistancePc: number }> = [];
+    const screen: [number, number] = [0, 0];
     for (let idx = 0; idx < field.probeCount(); idx++) {
       const sample = field.sampleFor(idx);
       if (sample === null || !sample.visible) continue;
-      const screen = projectToScreen(sample.localPc, ctx.camera, rect.width, rect.height);
-      if (!screen) continue;
+      if (!projectToScreenInto(
+        sample.localPc, ctx.camera, rect.width, rect.height, screen)) continue;
       candidates.push({
         idx,
         pxDist: Math.hypot(cursorX - screen[0], cursorY - screen[1]),

@@ -144,7 +144,7 @@ label code earlier in this layer's PR). Each label binds to:
 - The same screen-space anchor convention as the heliopause:
   bottom-right at a constant 10 px gap.
 
-### Ranking policy — `computeVisibleLabels`
+### Ranking policy — `computeVisibleLabelsInto`
 
 One universal rule: each frame, rank every candidate (MW + every LG
 object) by apparent pixel size on screen and reveal the top N (default
@@ -166,10 +166,31 @@ Filter order, per candidate:
    whose centroid is off-screen but whose disc edge crosses the
    viewport still count (the MW disc at grazing incidence).
 
-The ranking lives in the pure `computeVisibleLabels(candidates,
-params)` helper (testable in isolation). A per-frame handler runs
-`computeVisibleLabels` and writes the result into the shared
-`visibleLabelIds` Set; per-label predicates query it.
+The ranking lives in the `computeVisibleLabelsInto(candidates, params,
+out)` helper (testable in isolation — it takes every viewing parameter as
+an argument, but it is not pure: it ranks through module-level buffers).
+A per-frame handler runs it over the shared `visibleLabelIds` Set;
+per-label predicates query that Set.
+
+**The pass allocates nothing per frame, and three separate things buy
+that.** The helper clears and refills the caller's Set rather than
+returning a new one; the survivors go into two module-level parallel
+arrays used as a fixed-size top-N by insertion, so there is no
+`{id, px}` literal per candidate and no per-frame sort; and the
+`RankingParams` object is built once per subscription in
+`acquireRankingHandler` and refreshed field by field, rather than
+re-created as a literal each frame. Ties still break toward the earlier
+candidate, which is what the stable sort it replaced did. The buffers are
+module state, so a second concurrent caller would need its own; one
+handler serves every label family (§ Label engine), which is what makes
+that safe.
+
+Three invariants here are pinned by tests rather than by inspection,
+because none of them is visible in a single call's return value: that the
+caller's Set is *cleared* and not unioned into (a missed clear latches
+labels on permanently), that the survivor buffers leak nothing past
+`count` when a later frame ranks fewer objects, and that a tie at the cap
+boundary evicts the *later* candidate.
 
 **The pass is ref-counted, not owned by either caller.** MW and the LG
 objects compete for the same top-N slots, so one handler serves both:

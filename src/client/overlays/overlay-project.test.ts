@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { projectToScreen, projectToScreenInto } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 
 function makeCamera(opts: { fov?: number; aspect?: number; near?: number; far?: number } = {}) {
   const cam = new THREE.PerspectiveCamera(
@@ -21,14 +21,22 @@ describe('overlay-project / projectToScreenInto', () => {
   const W = 800;
   const H = 600;
 
-  it('matches projectToScreen for an on-screen point', () => {
+  it('puts a point on the view axis at the viewport centre', () => {
+    // Absolute, rather than differenced against a second implementation:
+    // the allocating twin this used to compare with is gone, and one
+    // projector with no reference to check against needs a pinned value.
     const cam = makeCamera();
-    const p = new THREE.Vector3(0, 0, -10);
-    const expected = projectToScreen(p, cam, W, H);
     const out: [number, number] = [0, 0];
-    const ok = projectToScreenInto(p, cam, W, H, out);
-    expect(ok).toBe(true);
-    expect(out).toEqual(expected);
+    expect(projectToScreenInto(new THREE.Vector3(0, 0, -10), cam, W, H, out)).toBe(true);
+    expect(out).toEqual([W / 2, H / 2]);
+  });
+
+  it('maps +x right and +y up, in CSS-pixel space', () => {
+    const cam = makeCamera();
+    const out: [number, number] = [0, 0];
+    projectToScreenInto(new THREE.Vector3(1, 1, -10), cam, W, H, out);
+    expect(out[0]).toBeGreaterThan(W / 2);
+    expect(out[1]).toBeLessThan(H / 2);
   });
 
   it('returns false and leaves out untouched when at/behind the near plane', () => {

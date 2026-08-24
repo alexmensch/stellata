@@ -9,7 +9,7 @@ import {
   collides,
   measureCandidate,
   filterByDistAndSpect,
-  projectVec,
+  projectVecInto,
   starLabelOffsetPx,
   type Candidate,
 } from './chart-labels';
@@ -291,7 +291,20 @@ describe('chart-labels / filterByDistAndSpect', () => {
   });
 });
 
-describe('chart-labels / projectVec', () => {
+describe('chart-labels / projectVecInto', () => {
+  /** The helper writes into a caller-owned tuple and reports whether the
+   *  point survived the near clip and the cull margin; these cases read
+   *  more clearly as "the projection, or nothing". */
+  const project = (
+    p: THREE.Vector3,
+    cam: THREE.PerspectiveCamera,
+    w: number,
+    h: number,
+  ): [number, number] | null => {
+    const out: [number, number] = [0, 0];
+    return projectVecInto(p, cam, w, h, out) ? out : null;
+  };
+
   function makeCamera() {
     const cam = new THREE.PerspectiveCamera(50, 1, 0.01, 1000);
     cam.position.set(0, 0, 0);
@@ -305,19 +318,19 @@ describe('chart-labels / projectVec', () => {
   it('returns null for a point at the near plane', () => {
     const cam = makeCamera();
     const p = new THREE.Vector3(0, 0, -0.005); // closer than near=0.01
-    expect(projectVec(p, cam, 800, 600)).toBeNull();
+    expect(project(p, cam, 800, 600)).toBeNull();
   });
 
   it('returns null for a point behind the camera', () => {
     const cam = makeCamera();
     const p = new THREE.Vector3(0, 0, 5);
-    expect(projectVec(p, cam, 800, 600)).toBeNull();
+    expect(project(p, cam, 800, 600)).toBeNull();
   });
 
   it('projects a centered point to the viewport centre', () => {
     const cam = makeCamera();
     const p = new THREE.Vector3(0, 0, -10);
-    const xy = projectVec(p, cam, 800, 600)!;
+    const xy = project(p, cam, 800, 600)!;
     expect(xy[0]).toBeCloseTo(400, 3);
     expect(xy[1]).toBeCloseTo(300, 3);
   });
@@ -329,7 +342,7 @@ describe('chart-labels / projectVec', () => {
     // extended box.
     const cam = makeCamera();
     const p = new THREE.Vector3(1000, 0, -1);
-    expect(projectVec(p, cam, 800, 600)).toBeNull();
+    expect(project(p, cam, 800, 600)).toBeNull();
   });
 });
 

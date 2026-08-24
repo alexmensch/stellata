@@ -7,21 +7,12 @@ import * as THREE from 'three';
 // down) — every overlay uses this convention.
 const scratch = /*@__PURE__*/ new THREE.Vector3();
 
-export function projectToScreen(
-  p: THREE.Vector3,
-  camera: THREE.PerspectiveCamera,
-  w: number,
-  h: number,
-): [number, number] | null {
-  const out: [number, number] = [0, 0];
-  return projectToScreenInto(p, camera, w, h, out) ? out : null;
-}
-
-// Out-param variant for per-frame hot-path callers projecting many points
-// a frame (focus ring, HUD arrows) — reuse
-// a single caller-owned tuple across calls instead of allocating a fresh
-// one every projection. Returns false (leaving `out` untouched) when the
-// point is at or behind the near plane.
+// Every caller owns its output tuple and reuses it across calls, so the
+// projector allocates nothing: it runs per POI / per label / per pick
+// candidate, and the allocating wrapper this replaced was the dominant
+// churn on those paths. A caller that needs to hold the result past the
+// next projection has to copy it. Returns false (leaving `out` untouched)
+// when the point is at or behind the near plane.
 export function projectToScreenInto(
   p: THREE.Vector3,
   camera: THREE.PerspectiveCamera,

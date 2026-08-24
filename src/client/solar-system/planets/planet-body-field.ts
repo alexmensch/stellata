@@ -60,7 +60,7 @@ import {
   type PickCandidate,
 } from '../../camera/controls/star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
-import { projectToScreen } from '../../overlays/overlay-project';
+import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
   blendDimBuffer,
   dimBlendFactor,
@@ -1409,6 +1409,7 @@ export class PlanetBodyField {
     // returned HoverHit; no post-reduce re-projection.
     const candidates: CrossHostCandidate[] = [];
     const v = new THREE.Vector3();
+    const screen: [number, number] = [0, 0];
     this.forEachDrawnBodyView(camPos, (host, i, view) => {
       const { appMag, planetX, planetY, planetZ, dVp } = view;
       // A body collapsed onto its parent renders as one point with
@@ -1419,8 +1420,7 @@ export class PlanetBodyField {
       if (!this.bodyInkVisible(view)) return;
 
       v.set(planetX, planetY, planetZ);
-      const screen = projectToScreen(v, camera, viewportW, viewportH);
-      if (!screen) return;
+      if (!projectToScreenInto(v, camera, viewportW, viewportH, screen)) return;
       const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
 
       const radiusPc = host.ps.planets[i].radiusKm * KM_PC;
