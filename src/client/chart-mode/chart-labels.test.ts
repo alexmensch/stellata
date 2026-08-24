@@ -871,5 +871,51 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
       labels.dispose();
     });
+
+    // The other half of pooled-Candidate reuse: a recycled entry must not
+    // inherit the previous occupant's measured box. Constellation labels skip
+    // measureCandidate, so a con landing in a slot that held a measured star
+    // name would collide against that name's width instead of its own bare
+    // anchor point — and cons are accepted first, so the stale box then
+    // evicts live star names. Pool slots shift down whenever an earlier
+    // family shrinks, which is what the magnitude slider does.
+    it('clears a recycled candidate\'s measured box before a con reuses the slot', () => {
+      const groups = installDomStubs();
+      // 60 chars: a stale half-width of ~199 px reaches well past Rigel's
+      // label on the 800×600 test viewport, so the assertion is unambiguous.
+      const LONG = 'A'.repeat(60);
+      const names = new Map([[0, 'Rigel'], [1, LONG]]);
+      let conNamesOn = false;
+      const h = makeHarness({
+        constellations: CONSTELLATIONS,
+        // appMag 5 — inside the limit, and faint enough that the label offset
+        // sits on its 9 px floor, so the boxes overlap vertically.
+        stars: [
+          { con: ORION, absmag: 5, distPc: 10 },
+          { con: ORION, absmag: 5, distPc: 10 },
+        ],
+        names,
+        anchors: [{ code: 'ORI', name: 'Orion', conIndex: ORION, position: AHEAD.clone() }],
+        detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
+      });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+
+      // Frame 1: both names claim a slot and both are measured; the long one
+      // loses the collision to Rigel (every harness star projects to centre)
+      // but leaves its 398 px width on pooled slot 1.
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Rigel']);
+
+      // Frame 2: one name left, so the con takes slot 1. 'filter' breaks the
+      // full-tick skip without perturbing any projection.
+      names.delete(1);
+      conNamesOn = true;
+      h.emit('filter');
+      h.emit('frame');
+      expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['ORION']);
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Rigel']);
+      labels.dispose();
+    });
   });
 });
