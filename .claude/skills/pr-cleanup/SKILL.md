@@ -5,8 +5,19 @@ description: Land a stellata PR and finish every follow-up — rebase onto main 
 
 # Landing a stellata PR
 
-The five steps Alex asks for every time. Run them in order; stop and ask the
+The steps Alex asks for every time. Run them in order; stop and ask the
 moment anything leaves the happy path (§ Deviations).
+
+Editing this file, two rules that every bug found in it so far would have
+been caught by:
+
+- **Cross-reference sections by name, never by number.** Inserting § The
+  signature trap shifted every later number and left § Ground truth pointing
+  an already-merged PR at § Merge.
+- **Every check here must be able to fail.** State what output means *no*
+  before adding one; if there is no such output it is decoration that reads
+  like safety. `cat-file -e` (§ Worktree, branches, main) and a `fail`-only
+  bucket filter (§ The watch) both shipped because nobody asked.
 
 ## What this skill authorises — and only this
 
@@ -49,7 +60,8 @@ git fetch origin
 ```
 
 **Check `state` before anything else — it may already be merged.** Auto-merge
-can fire between two of your own commands. If `MERGED`, skip to step 4.
+can fire between two of your own commands. If `MERGED`, the work left is
+§ Close the beads and § Worktree, branches, main — never § Merge.
 
 Collect the beads: bead IDs (`stellata-<slug>` / `stellata-<slug>.<n>`) appear
 in the PR title, body, and commit subjects. Gather all three and de-duplicate:
@@ -66,7 +78,8 @@ Read each one (`bd show <id>`) rather than trusting the ID: a PR sometimes
 ## 2. Rebase onto main — always check, even when nothing suggests it
 
 ```bash
-git rev-list --count HEAD..origin/main     # 0 → already current, skip to step 3
+git status --porcelain                     # must be empty — rebase aborts on a dirty tree
+git rev-list --count HEAD..origin/main     # 0 → current; skip to § The signature trap
 git rebase origin/main
 ```
 
@@ -123,8 +136,22 @@ because re-signing rewrites every SHA and every check re-runs.
 Alex's standing rule is that CI-side verification is yours and you never poll
 it (`Never wait on PR CI checks`). So do not wait for green.
 
+Everything below turns on `mergeStateStatus`, so read it rather than inferring
+it from how the checks page looks:
+
+| | |
+|---|---|
+| `CLEAN` | mergeable, all required checks passed — merge now |
+| `BLOCKED` | required checks pending **or** § Deviations' blocked-with-no-failing-check |
+| `UNSTABLE` | mergeable, but something is failing — a § Deviation, never merge over it |
+| `BEHIND` / `DIRTY` | out of date / conflicting — back to § Rebase onto main |
+| `UNKNOWN` | GitHub has not computed it yet; re-run the query, do not act on it |
+
+`UNKNOWN` is ordinary, not a fault: GitHub computes mergeability lazily and
+the first query after a push routinely lands before it finishes.
+
 **Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
-to step 5. The merge is synchronous, so there is nothing to watch:
+to § Close the beads. The merge is synchronous, so there is nothing to watch:
 
 ```bash
 gh pr merge <N> --squash
@@ -149,8 +176,10 @@ running".
 **Write it to a file and run it by path.** Inline is not an option: the loop
 needs `$( )`, and a worktree-isolated session's guard rejects any command
 containing a substitution (`bd-long-field-writes` documents the same
-constraint for `bd`). Write `/tmp/pr-watch.sh`, then hand `Monitor` the plain
-command `bash /tmp/pr-watch.sh`.
+constraint for `bd`). Write `/tmp/pr-watch-<N>.sh`, then hand `Monitor` the
+plain command `bash /tmp/pr-watch-<N>.sh`. **Put the PR number in the
+filename** — several sessions land PRs at once and a shared path silently
+leaves one of them watching the other's PR.
 
 ```bash
 PR=<N>
@@ -164,20 +193,28 @@ while true; do
     CLOSED) echo "PR $PR CLOSED WITHOUT MERGING — cleanup not run"; break ;;
   esac
   fails=$(gh pr checks $PR --json name,bucket \
-    -q '.[] | select(.bucket=="fail") | .name' 2>/dev/null | tr '\n' ' ' || true)
-  if [ -n "$fails" ]; then echo "PR $PR CHECKS FAILED: $fails"; break; fi
+    -q '.[] | select(.bucket=="fail" or .bucket=="cancel") | .name' \
+    2>/dev/null | tr '\n' ' ' || true)
+  if [ -n "$fails" ]; then echo "PR $PR CHECKS FAILED/CANCELLED: $fails"; break; fi
   if [ "$auto" != "true" ]; then echo "PR $PR auto-merge NOT ARMED"; break; fi
   sleep 30
 done
 ```
 
+`gh pr checks` sorts every check into one of five buckets — `pass`, `fail`,
+`pending`, `skipping`, `cancel`. **`cancel` is terminal and is not `fail`.**
+A cancelled required check blocks the merge for good while auto-merge stays
+armed, so matching only `fail` leaves the loop polling a PR that will never
+move, which is indistinguishable from CI still running.
+
 `Monitor` with `persistent: true` — the loop's own exit ends the watch, so no
-timeout should pre-empt it. Only the `MERGED` line continues to step 5; every
-other exit is a § Deviation.
+timeout should pre-empt it. Only the `MERGED` line continues to § Close the
+beads; every other exit is a § Deviation.
 
 ## 5. Close the beads
 
-Only on a `MERGED` event.
+Only once the PR is actually `MERGED` — whether the watch reported it or
+§ Ground truth found it already merged.
 
 ```bash
 bd close <id> [<id>...] --reason="Shipped in PR #<N> (squash merged)."
@@ -205,13 +242,28 @@ leave depends on how you got there.**
 
   **It will refuse after a squash merge.** A squash lands a *new* commit on
   main, so the branch commit is not an ancestor and the tool reads it as
-  unmerged work. Verify the content actually landed, then re-invoke with
-  `discard_changes: true`:
+  unmerged work. That refusal is the last thing between the merge and
+  `discard_changes: true` deleting commits permanently, so whatever overrides
+  it has to be a real check:
 
   ```bash
   git fetch origin
-  git cat-file -e origin/main:<a path the PR added>   # exits 0 if it landed
+  git log --oneline -20 origin/main | grep '(#<N>)'    # the squash commit itself
+  git show origin/main:<path the PR changed> \
+    | grep -q '<a line this PR introduced>'            # its content, on main
   ```
+
+  Either one alone is sufficient; the log line is cheaper and does not depend
+  on picking a good grep string.
+
+  **Never test this with `git cat-file -e origin/main:<path>`.** `-e` asks
+  only whether the path *exists*, and most PRs modify files that already do —
+  it passes identically whether or not the PR merged. A check that cannot
+  fail is worse than no check, because it is what you lean on to discard.
+  Test for something the PR **introduced**.
+
+  Both commands avoid `$( )` on purpose — § The watch has the reason an
+  isolated session cannot run one.
 
 - **Session is not isolated** (the worktree belongs to an earlier session):
   plain `cd` to the main checkout, then `git worktree remove`.
@@ -219,7 +271,7 @@ leave depends on how you got there.**
 Then, from the main checkout:
 
 ```bash
-git fetch --prune                                    # confirms the remote branch is gone
+git fetch --prune                                    # drops the auto-deleted remote branch
 git branch -D <headRefName>                          # no-op if ExitWorktree took it
 git pull --ff-only                                   # main checkout, main branch
 pnpm run typecheck                                   # sanity-check what actually landed
@@ -244,7 +296,8 @@ Do not improvise past any of these. Say what you found, what you would do, and
 wait.
 
 **Blocked with no failing check.** Two known causes, in the order to check
-them: unsigned commits (§ 3), then an orphaned required-status context —
+them: unsigned commits (§ The signature trap), then an orphaned
+required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
 `name:` strands the old context forever (`ci-ruleset-required-contexts`,
 `RELEASING.md` § Merge gating). Compare required against reported:
@@ -261,7 +314,9 @@ Report the cause; changing a ruleset is Alex's call, never yours.
 **Anything else off the path:**
 
 - PR is a draft, has requested changes, or unresolved review threads.
-- A check actually failed, or the monitor exited `CLOSED` / not-armed.
+- A check failed or was cancelled, or the monitor exited `CLOSED` / not-armed.
+- `mergeStateStatus` is `UNSTABLE` — something is failing even though GitHub
+  would let the merge through.
 - Rebase conflicts anywhere except the `package.json` version bump.
 - Gates fail after the rebase — the rebase changed behaviour; do not push.
 - No worktree holds the branch, or the branch is checked out in the **main
