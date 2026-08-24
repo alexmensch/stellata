@@ -6,7 +6,8 @@ import { makeRelation } from '../../binaries/binary-relation-fixture';
 import type { BinaryOrbitPathLayer } from '../../binaries/binary-orbit-path-layer';
 import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
-import { MIRROR_CAPACITY, StarLocalMirror } from './star-local-mirror';
+import { StarLocalMirror } from './star-local-mirror';
+import { MIRROR_CAPACITY } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
 import { RESOLVED_DISC_MIN_PX } from './star-local-cluster-pure';
 

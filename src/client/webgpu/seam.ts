@@ -12,7 +12,7 @@ import type {
 import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/emitter-material';
-import type { StarMirror } from '../star-pipeline/local-pass/star-local-mirror';
+import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
 

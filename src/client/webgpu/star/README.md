@@ -45,9 +45,9 @@ src/client/webgpu/star/
                                per-frame dynamic re-pack, the shell's
                                core-mask gate, dispose.
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
-    (+ test)                   pipelines' local variants over a
-                               MIRROR_CAPACITY-slot copy of the packed
-                               geometry (§ The local mirror).
+    (+ test)                   pipelines' local variants over the shared
+                               MirrorSlots copy of the packed geometry
+                               (§ The local mirror).
   star-sources-mock.ts         StarGeometrySources over the zero-filled
                                StarPipeline mock, for tests.
 ```
@@ -152,16 +152,20 @@ backends.
 the shared `StarMirror` interface: `StarLocalCluster` drives whichever
 one the boot built, and never learns which. What the port changes:
 
-- **The copy is of packed buffers.** Every instanced attribute of the
-  layer's geometry (`iPosition`, `iPuls`, the `iPack`/`iDyn` vec4s) is
-  mirrored by name into MIRROR_CAPACITY slots, so the `packedScalar`
-  accessors resolve to the same buffer component on both geometries by
-  construction — the mismatch that would otherwise read as a silent
-  brightness bug. With `iSourceIdx` that is exactly the 8-buffer budget.
+- **The copy is of packed buffers.** The slot geometry, the copy and the
+  three draws are the shared `MirrorSlots`
+  (`../../star-pipeline/local-pass/star-mirror-slots.ts`) — every
+  instanced attribute of the layer's geometry (`iPosition`, `iPuls`, the
+  `iPack`/`iDyn` vec4s) mirrored by name into MIRROR_CAPACITY slots, so
+  the `packedScalar` accessors resolve to the same buffer component on
+  both geometries by construction — the mismatch that would otherwise
+  read as a silent brightness bug. With `iSourceIdx` that is exactly the
+  8-buffer budget.
 - **`sync()` re-packs before it copies.** The cluster updates before the
   frame renders, i.e. before any main mesh's `onBeforeRender` re-pack —
-  so the mirror runs the layer's dynamic re-pack itself first, or an
-  eclipse dim would reach the mirror one frame late.
+  so the mirror hands the layer's dynamic re-pack to `MirrorSlots.sync`
+  as its pre-copy hook, or an eclipse dim would reach the mirror one
+  frame late.
 - **The vertex stage is the shared builder's `localMirror` variant**:
   star identity comes from `iSourceIdx` (hide/pin compares match the
   source instance), member collapse is off — the mirror draws exactly

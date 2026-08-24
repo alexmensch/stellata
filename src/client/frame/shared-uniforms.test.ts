@@ -6,7 +6,7 @@ import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,
 } from '../star-pipeline/perceptual-disc-uniforms';
-import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-local-mirror';
+import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
 import { buildSharedUniforms } from './shared-uniforms';
 
 function build(hdr = makeHdrEmitterUniforms()) {

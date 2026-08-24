@@ -8,11 +8,20 @@ bracket. Pass mechanics and the other member layers are
 
 ## Files
 
-- `star-local-mirror.ts` — `StarLocalMirror`: the WebGL mirror draw, and
-  the backend-neutral `StarMirror` interface the cluster drives (the TSL
-  twin is `../../webgpu/star/star-local-mirror-tsl.ts`). Owns
-  `MIRROR_CAPACITY`, which is tied to the `uLocalMemberIdx` uniform
-  array size (pinned in `../star-pipeline.test.ts`). Its disc and glow
+- `star-mirror-slots.ts` (+ test) — the **backend-neutral** half both
+  mirrors are built from: `MIRROR_CAPACITY` (tied to the
+  `uLocalMemberIdx` uniform array size, pinned in
+  `../star-pipeline.test.ts`), the `StarMirror` interface the cluster
+  drives, the in-pass `MIRROR_RENDER_ORDER`, and `MirrorSlots` — the
+  slot geometry, its per-frame copy and the three draws over it. The
+  slot layout is a property of the geometry being mirrored, not of the
+  shader language, which is why it is shared: a copy resolving a
+  differently-packed component on one backend reads as a silent
+  brightness bug. Survives the WebGL2 deletion; the two classes below
+  do not both.
+- `star-local-mirror.ts` — `StarLocalMirror`: the GLSL materials over
+  those slots (the TSL twin is
+  `../../webgpu/star/star-local-mirror-tsl.ts`). Its disc and glow
   meshes are statistic emitters like the main-pass pair — a member
   collapses in the main pass, so the mirror is the only draw that would
   reach the exposure statistic (`../../hdr/attachments/README.md`). The
@@ -37,10 +46,10 @@ bracket. Pass mechanics and the other member layers are
 
 A member star's main-pass instance collapses (`uLocalMemberIdx`, an
 int array of `MIRROR_CAPACITY` slots checked in all three passes) and
-`star-local-mirror.ts` re-renders it in the local depth pass: a small
+the mirror re-renders it in the local depth pass: a small
 instanced geometry whose slots re-copy the member's attributes from
-the live source arrays each frame, drawn with `LOCAL_DEPTH_PASS`
-material clones sharing the same uniform objects. Under that define
+the live source arrays each frame (`MirrorSlots`), drawn with
+`LOCAL_DEPTH_PASS` material clones sharing the same uniform objects. Under that define
 the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
 (`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
 `uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The

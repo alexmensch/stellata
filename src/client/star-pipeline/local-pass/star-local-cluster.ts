@@ -14,7 +14,7 @@ import type { LocalCluster } from '../../local-depth/local-depth-pass';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
-import { MIRROR_CAPACITY, type StarMirror } from './star-local-mirror';
+import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
 
 export interface StarLocalClusterDeps {

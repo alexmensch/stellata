@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
-import { MIRROR_CAPACITY } from '../../star-pipeline/local-pass/star-local-mirror';
+import {
+  MIRROR_CAPACITY, MIRROR_RENDER_ORDER,
+} from '../../star-pipeline/local-pass/star-mirror-slots';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { MAX_VERTEX_BUFFERS } from '../star-attribute-roster';
 import { buildSharedUniformNodes } from '../shared-uniform-nodes';
@@ -59,12 +61,12 @@ describe('StarLocalMirrorTsl construction', () => {
     expect(geom.getIndex()).toBe(source.getIndex());
   });
 
-  it('sets in-pass renderOrder mask −1 / disc 0 / glow 3.5, uncullable, one geometry', () => {
+  it('draws in the shared in-pass order, uncullable, over one geometry', () => {
     const { layer } = makeLayer();
     const [mask, disc, glow] = meshes(layer);
-    expect(mask.renderOrder).toBe(-1);
-    expect(disc.renderOrder).toBe(0);
-    expect(glow.renderOrder).toBe(3.5);
+    expect(mask.renderOrder).toBe(MIRROR_RENDER_ORDER.mask);
+    expect(disc.renderOrder).toBe(MIRROR_RENDER_ORDER.disc);
+    expect(glow.renderOrder).toBe(MIRROR_RENDER_ORDER.glow);
     for (const m of [mask, disc, glow]) {
       expect(m.frustumCulled).toBe(false);
       expect(m.geometry).toBe(mask.geometry);
