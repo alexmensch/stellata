@@ -32,11 +32,11 @@ src/client/overlays/
                                   (sentinel-init pattern — see
                                   docs/authoring-patterns.md).
   overlay-project.ts (+ test)     Shared world → screen-space projector
-                                  with near-plane clipping. projectToScreen
-                                  allocates a fresh tuple per call;
+                                  with near-plane clipping.
                                   projectToScreenInto writes into a
-                                  caller-owned tuple for per-frame hot
-                                  paths (focus ring, HUD).
+                                  caller-owned tuple — the only variant,
+                                  since every caller is a per-frame or
+                                  per-pick-candidate loop.
   anchored-label.ts (+ test)      placeAnchoredLabel — position an SVG
                                   label at its anchor's projected point
                                   plus an offset, or hide it when the

@@ -12,7 +12,7 @@ import {
   ARROW_LABEL_PADDING_PX,
   ARROW_PIXEL_LENGTH,
 } from './arrow-path';
-import { projectToScreen } from './overlay-project';
+import { projectToScreenInto } from './overlay-project';
 import { ringRadiusPx, computeShaftStartRadius, hudAnchorInto } from './hud-overlay';
 import {
   applyFade,
@@ -171,6 +171,7 @@ export function createPoiOverlay(stellata: Stellata): void {
 
   const tmpPoiLocal = new THREE.Vector3();
   const tmpDir = new THREE.Vector3();
+  const tmpPoiScreen: [number, number] = [0, 0];
   const tmpAim = new THREE.Vector3();
   const tmpOrigin = new THREE.Vector3();
   const tmpAnchor: [number, number] = [0, 0];
@@ -349,7 +350,8 @@ export function createPoiOverlay(stellata: Stellata): void {
         hideEntry(e);
         continue;
       }
-      const projected = projectToScreen(tmpPoiLocal, camera, w, h);
+      const inFront = projectToScreenInto(tmpPoiLocal, camera, w, h, tmpPoiScreen);
+      const projected = inFront ? tmpPoiScreen : null;
       const onScreen = isPoiOnScreen(projected, w, h);
 
       const distPc = tmpPoiLocal.distanceTo(camPos);

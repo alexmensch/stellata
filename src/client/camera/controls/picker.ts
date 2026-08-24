@@ -8,7 +8,7 @@ import type { TargetKind } from '../focus/focus-target';
 import type { KindPick } from '../../kinds/kind-module';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
-import { projectToScreen } from '../../overlays/overlay-project';
+import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
   discHitRadiusPx,
   pickFromCandidatesResolved,
@@ -141,6 +141,7 @@ export class Picker {
     const { start, end } = sortedDistRange(this.deps.sortedDistFromSol, f.minDistSol, f.maxDistSol);
 
     const candidates: StarPickCandidate[] = [];
+    const screen: [number, number] = [0, 0];
     for (let k = start; k < end; k++) {
       const i = sortedIdx[k];
       const bit = 1 << (spectClass[i] | 0);
@@ -163,8 +164,7 @@ export class Picker {
       if (filterMag > cutoff) continue;
 
       v.set(x, y, z);
-      const screen = projectToScreen(v, camera, viewportW, viewportH);
-      if (!screen) continue;
+      if (!projectToScreenInto(v, camera, viewportW, viewportH, screen)) continue;
       const pxDist = Math.hypot(cursorX - screen[0], cursorY - screen[1]);
       const pxSize = this.deps.renderedSizePxFn(i);
       // Extinction-blind, so an upper bound of the resolved radius —

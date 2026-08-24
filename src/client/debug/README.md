@@ -232,7 +232,15 @@ source.
 Replaced with a module-level `projVec` scratch deliberately
 *not* aliased with the existing `tmpV3` — the latter is held
 across the projection in `projectStar`, so a shared scratch would
-clobber the input.
+clobber the input. That scratch now lives in `overlay-project.ts`,
+which `projectVecInto` calls.
+
+The **returned tuple** was the other half, and outlived the
+`Vector3`: `projectVec` handed back a fresh `[x, y]` per call, one
+per label per frame across the same four candidate sets. It writes
+into a caller-owned tuple now (`projectVecInto`), and `ChartLabels`
+owns one for all of them — safe because each caller reads it before
+the next projection runs.
 
 ### Chart-labels: cached brightest constellation member
 

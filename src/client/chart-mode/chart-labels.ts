@@ -3,7 +3,7 @@ import type { Stellata } from '../stellata';
 import type { ChartModeContext } from './chart-mode';
 import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
 import { FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING } from '../../../scripts/catalog/catalog-pure';
-import { projectToScreen } from '../overlays/overlay-project';
+import { projectToScreenInto } from '../overlays/overlay-project';
 import { setNumAttr } from '../overlays/dirty-attr';
 import { getChartDiscParams } from '../camera/controls/star-physics';
 import { chartDiscPxForAppMag } from './chart-disc-pure';
@@ -212,6 +212,10 @@ export class ChartLabels {
   private readonly tmpCloudLocal = new THREE.Vector3();
   private readonly tmpPlanetLocal = new THREE.Vector3();
   private readonly tmpV3 = new THREE.Vector3();
+  // Screen-space scratch for every projection in `tick()`. Each caller
+  // reads it before the next projection runs, which is what makes one
+  // tuple enough for four label families.
+  private readonly tmpXy: [number, number] = [0, 0];
 
   private readonly pool = new Map<string, PooledText>();
   private readonly ringPool = new Map<number, PooledCircle>();
@@ -364,15 +368,16 @@ export class ChartLabels {
     this.eligibleDirty = false;
   }
 
-  private projectStar(
+  private projectStarInto(
     idx: number,
     positions: Float32Array,
     camera: THREE.PerspectiveCamera,
     w: number,
     h: number,
-  ): [number, number] | null {
+    out: [number, number],
+  ): boolean {
     this.tmpV3.set(positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]);
-    return projectVec(this.tmpV3, camera, w, h);
+    return projectVecInto(this.tmpV3, camera, w, h, out);
   }
 
   private tick(
@@ -448,8 +453,8 @@ export class ChartLabels {
     // always wins a collision.
     perfMark('chart.names');
     if (showStarNames) for (const [idx, name] of cat.names) {
-      const xy = this.projectStar(idx, positions, camera, w, h);
-      if (!xy) continue;
+      const xy = this.tmpXy;
+      if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
@@ -475,8 +480,8 @@ export class ChartLabels {
     perfMark('chart.bayer');
     if (showBayer) for (const [idx, info] of ctx.bayerMap) {
       if (seen.has(idx)) continue;
-      const xy = this.projectStar(idx, positions, camera, w, h);
-      if (!xy) continue;
+      const xy = this.tmpXy;
+      if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
@@ -541,8 +546,9 @@ export class ChartLabels {
       for (const anchor of stellata.constellationLabelAnchors) {
         const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
-        const xy = projectVec(this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h);
-        if (!xy) continue;
+        const xy = this.tmpXy;
+        if (!projectVecInto(
+          this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h, xy)) continue;
         candidates.push({
           kind: 'con',
           text: anchor.name.toUpperCase(),
@@ -568,8 +574,8 @@ export class ChartLabels {
     if (clouds && showCloudNames) {
       for (let i = 0; i < clouds.clouds.length; i++) {
         if (!stellata.focusables.cloud.localPositionInto(i, this.tmpCloudLocal)) continue;
-        const xy = projectVec(this.tmpCloudLocal, camera, w, h);
-        if (!xy) continue;
+        const xy = this.tmpXy;
+        if (!projectVecInto(this.tmpCloudLocal, camera, w, h, xy)) continue;
         candidates.push({
           kind: 'cloud',
           text: clouds.clouds[i].name,
@@ -594,8 +600,8 @@ export class ChartLabels {
       const planet = planetField.planetAt(i);
       if (!planet) continue;
       if (!planetField.planetLocalPositionInto(i, this.tmpPlanetLocal)) continue;
-      const xy = projectVec(this.tmpPlanetLocal, camera, w, h);
-      if (!xy) continue;
+      const xy = this.tmpXy;
+      if (!projectVecInto(this.tmpPlanetLocal, camera, w, h, xy)) continue;
       const appMag = planetField.appMagForInstance(i, camera.position);
       if (appMag === null || appMag > limitMag) continue;
       const offset = starLabelOffsetPx(discPxFor(appMag));
@@ -704,8 +710,8 @@ export class ChartLabels {
         // matrix-multiply is the expensive part, so pre-rejecting saves
         // it for stars over the brightness limit.
         if (ringMag > limitMag) continue;
-        const xy = this.projectStar(idx, positions, camera, w, h);
-        if (!xy) continue;
+        const xy = this.tmpXy;
+        if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
         // Ring sits one VARIABLE_RING_MIN_GAP_PX outside the peak disc
         // radius, guaranteeing a visible gap even for low-amplitude
         // variables where the disc would otherwise grow flush with the
@@ -753,8 +759,8 @@ export class ChartLabels {
         const discPx = discPxFor(appMag);
         const ext = discPx * BINARY_WING_EXTENSION_RATIO;
         if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;
-        const xy = this.projectStar(idx, positions, camera, w, h);
-        if (!xy) continue;
+        const xy = this.tmpXy;
+        if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
         const half = discPx * 0.5 + ext;
         const x1 = xy[0] - half;
         const x2 = xy[0] + half;
@@ -788,21 +794,20 @@ export class ChartLabels {
     }
 }
 
-export function projectVec(
+export function projectVecInto(
   p: THREE.Vector3,
   camera: THREE.PerspectiveCamera,
   w: number,
   h: number,
-): [number, number] | null {
+  out: [number, number],
+): boolean {
   // Shared near-clip-safe projection (overlay-project), with chart-mode's
   // viewport-margin cull on top — labels well outside the viewport are
   // dropped here so downstream measurement cost stays off the hot path.
-  // projectToScreen owns its own module-level scratch; passing `p` as
+  // projectToScreenInto owns its own module-level scratch; passing `p` as
   // input is safe because it does scratch.copy(p) internally.
-  const xy = projectToScreen(p, camera, w, h);
-  if (!xy) return null;
-  if (xy[0] < -200 || xy[0] > w + 200 || xy[1] < -100 || xy[1] > h + 100) return null;
-  return xy;
+  if (!projectToScreenInto(p, camera, w, h, out)) return false;
+  return !(out[0] < -200 || out[0] > w + 200 || out[1] < -100 || out[1] > h + 100);
 }
 
 // Apparent magnitude from absolute magnitude + distance-modulus (no dust;
