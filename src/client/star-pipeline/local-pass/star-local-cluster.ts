@@ -14,7 +14,7 @@ import type { LocalCluster } from '../../local-depth/local-depth-pass';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
-import { MIRROR_CAPACITY, type StarLocalMirror } from './star-local-mirror';
+import { MIRROR_CAPACITY, type StarMirror } from './star-local-mirror';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
 
 export interface StarLocalClusterDeps {
@@ -34,11 +34,6 @@ export interface StarLocalClusterDeps {
 
 export interface StarLocalClusterFrame {
   monochrome: boolean;
-  /** Whether the local depth pass renders this boot. False on WebGPU
-   *  until its port child: a member's colour draws collapse expecting
-   *  the mirror repaint, so with no pass a member would render as the
-   *  bare core-mask stamp — an opaque hole where the star should be. */
-  localPassLive: boolean;
   focalIdx: number | null;
   thresholdMag: number;
 }
@@ -61,7 +56,7 @@ export interface StarLocalClusterFrame {
 export class StarLocalCluster implements LocalCluster {
   readonly group: THREE.Group;
 
-  private readonly mirror: StarLocalMirror;
+  private readonly mirror: StarMirror;
   private readonly pathLayer: BinaryOrbitPathLayer;
   private readonly localMemberIdx: { value: Int32Array };
   private readonly deps: StarLocalClusterDeps;
@@ -80,7 +75,7 @@ export class StarLocalCluster implements LocalCluster {
   };
 
   constructor(
-    mirror: StarLocalMirror,
+    mirror: StarMirror,
     pathLayer: BinaryOrbitPathLayer,
     localMemberIdxUniform: { value: Int32Array },
     deps: StarLocalClusterDeps,
@@ -117,12 +112,8 @@ export class StarLocalCluster implements LocalCluster {
     this.spheres.length = 0;
 
     // Chart mode inks stars as flat main-pass discs with depth disabled;
-    // suppression and mirrors must stay out of the way entirely. Same
-    // park while the local depth pass is not rendering (the WebGPU boot,
-    // until its port child): reversed-z float32 main-pass depth orders
-    // resolved discs natively there, and a repaint-less collapse is a
-    // black hole.
-    if (!frame.monochrome && frame.localPassLive) {
+    // suppression and mirrors must stay out of the way entirely.
+    if (!frame.monochrome) {
       if (this.hostMemberIdx !== null) this.addMember(this.hostMemberIdx);
 
       const chain = this.chainStars(frame.focalIdx);

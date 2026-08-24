@@ -31,9 +31,10 @@ src/client/webgpu/solar-system/
                               fragment graphs, main pass and mirror.
   planet-glare-geometry.ts    Its packed instanced geometry (§ The glare
                               packs).
-  planet-glare-layer.ts       PlanetGlareLayer: both meshes into the
-    (+ test)                  seam's scene, the per-frame re-pack, the
-                              chart blend swap, dispose.
+  planet-glare-layer.ts       PlanetGlareLayer: the main mesh into the
+    (+ test)                  seam's scene, the mirror into the field's
+                              localGroup (the pass scene), the per-frame
+                              re-pack, the chart blend swap, dispose.
   planet-glare-uniforms.ts    The four slots PlanetBodyField owns rather
                               than shares through the frame map.
   uniform-nodes.ts            TSL uniform-node twins of the seam's
@@ -125,16 +126,13 @@ also replaces every array and needs the geometry rebuilt.
 
 ## What is deliberately NOT visible yet
 
-The mesh, the annulus and the shell **render only in the local depth
-pass** (`../../local-depth/README.md`), which is parked on this boot
-until its own port child. So a WebGPU A/B smoke shows the ported
-billboard and glyph in the main pass, and a close-approach planet
-still has no surface. The materials are complete; the pass that draws
-them is the missing half, exactly as the star mirrors' is.
-
-The probe **trails** are `Line2` and belong to the built-ins port child,
-so they stay in the shell's scene — which a WebGPU boot never renders.
-The markers moved to the seam's scene with their material.
+Nothing structural: the mesh, the annulus and the shell render in the
+local depth pass (`../../local-depth/README.md`), which runs on this
+boot since its port child landed. What remains is an encode caveat —
+the orbit rings, binary orbit paths and probe trails in the pass are
+three built-in line materials, which render linear-dark until the
+built-ins port child restores their encode
+(`../README.md` § Output colour space).
 
 ## The probe glyph needs no mirror variant
 

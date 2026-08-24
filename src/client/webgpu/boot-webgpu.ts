@@ -37,6 +37,15 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     renderer.dispose();
     return null;
   }
+  // The local depth pass's single-bracket precision bound assumes float32
+  // reversed-z storage; on a fixed-point attachment the K = 1 bracket is
+  // wrong by ~262 AU at Neptune's ring (local-depth/bracket/README.md
+  // § Precision analysis), so a boot that lost the flag must not proceed.
+  if (renderer.reversedDepthBuffer !== true) {
+    console.warn('WebGPURenderer dropped reversedDepthBuffer; falling back');
+    renderer.dispose();
+    return null;
+  }
   // Output stays in the working colour space: ported shaders own the
   // whole transfer chain (operator + sRGB encode), exactly as the GLSL
   // build's do, and any other setting makes three render the scene into
@@ -78,9 +87,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         nodes: nodesOrThrow('probeMaterial'), registerMrtLayer,
       });
     },
-    attachPlanetGlare(sources: PlanetGlareSources) {
+    attachPlanetGlare(sources: PlanetGlareSources, mirrorParent: THREE.Object3D) {
       const layer = new PlanetGlareLayer(
-        scene, nodesOrThrow('attachPlanetGlare'), sources, hdr.gates);
+        scene, nodesOrThrow('attachPlanetGlare'), sources, hdr.gates, mirrorParent);
       const unregister = hdr.registerMrtLayer(layer);
       return {
         setMonochrome: (on: boolean) => layer.setMonochrome(on),
@@ -100,6 +109,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       const unregister = hdr.registerMrtLayer(layer);
       return {
         setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
+        localMirror: layer.localMirror,
         dispose() {
           unregister();
           layer.dispose();

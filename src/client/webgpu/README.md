@@ -92,18 +92,21 @@ app alive**: every CPU subsystem (catalog, star frame, focus, picker,
 typeahead, URL state, overlays, HUD, render gate) runs identically; the
 renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
 layers as port children land. The star layer (`star/README.md`) carries
-all three depth-honest pipelines; its still-missing siblings (extinction,
-chart, mirrors) are listed there. The solar-system family
-(`solar-system/README.md`) is ported whole, but only its reflected-glare
-billboards and probe glyphs *draw* — the spheroid mesh, ring annulus and
-atmosphere shell render exclusively in the parked local depth pass.
+all three depth-honest pipelines plus their local-mirror clones; its
+still-missing siblings (extinction, chart) are listed there. The
+solar-system family (`solar-system/README.md`) draws whole: glare
+billboards and probe glyphs in the main pass, the spheroid mesh, ring
+annulus and atmosphere shell in the local depth pass, which runs on
+this boot as a single reversed-z bracket (K = 1 —
+`../local-depth/bracket/README.md` § Decision). Its line layers (orbit
+rings, binary orbit paths, probe trails) are three built-ins, so they
+render linear-dark until the built-ins port child restores their encode
+(§ Output colour space).
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
 scene still exists and is never rendered on a WebGPU boot — no
-per-layer gating, no material ever reaches the wrong backend. The one
-GPU-side subsystem still parked is the local-depth pass, gated off
-until its port child.
+per-layer gating, no material ever reaches the wrong backend.
 
 The dust voxel volume is the exception that already crossed: it streams
 and uploads on both backends (`loaders/README.md` § Dust voxel upload),
@@ -127,12 +130,12 @@ in the same PR:
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
-| Local depth pass | `animate()` skips `localDepthPass.render` — and with it the planet mesh, ring annulus, atmosphere shell and every mirror draw, none of which the main pass ever renders | local-depth on WebGPU (`0it.12`) |
-| Star local-pass membership collapse | `StarLocalCluster.update` parks on `localPassLive: false` — members would render as bare core-mask stamps with no mirror to repaint them | local-depth on WebGPU (`0it.12`), with the mirror clones (`0it.4.8`) |
-| Solar-system local-pass routing | `SolarSystemCluster.update` parks on the same `localPassLive: false` — an active host's `uLocalPassRange` collapses every planet glare in the main pass, and `setLocalPassActive` moves the probe markers into `localGroup`; with no pass to repaint either, both vanish outright | local-depth on WebGPU (`0it.12`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
+The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
+on both boots, the `localPassLive` flag is deleted from both clusters,
+and the TSL star mirror + glare mirror repaint what collapses.
 
 At cutover (`0it.13`) `rendererGL` is null forever and every surviving
 gate becomes a permanently-false branch, so the WebGL2 deletion

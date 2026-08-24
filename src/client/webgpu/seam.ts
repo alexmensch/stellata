@@ -12,6 +12,7 @@ import type {
 import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/emitter-material';
+import type { StarMirror } from '../star-pipeline/local-pass/star-local-mirror';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
 
@@ -23,6 +24,10 @@ export interface WebGpuStarLayer {
   /** The shell's per-frame CPU gate on the depth-only core-mask draw —
    *  the same `visible` flip it applies to the WebGL mesh. */
   setCoreMaskVisible(on: boolean): void;
+  /** The local-depth-pass mirror this layer built. The shell hands it to
+   *  StarLocalCluster in place of the GLSL StarLocalMirror; the cluster
+   *  parents its group into the pass scene and owns its dispose. */
+  readonly localMirror: StarMirror;
   dispose(): void;
 }
 
@@ -68,8 +73,14 @@ export interface WebGpuSeam {
   /** Build the TSL reflected-glare billboard into the seam's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it
-   *  carries its own packed geometry over the field's live arrays. */
-  attachPlanetGlare(sources: PlanetGlareSources): WebGpuPlanetGlare;
+   *  carries its own packed geometry over the field's live arrays.
+   *  `mirrorParent` takes the local-pass mirror draw — the field's
+   *  `localGroup`, which the solar-system cluster parents into the pass
+   *  scene. */
+  attachPlanetGlare(
+    sources: PlanetGlareSources,
+    mirrorParent: THREE.Object3D,
+  ): WebGpuPlanetGlare;
 }
 
 export interface WebGpuPlanetGlare {

@@ -56,9 +56,11 @@ function makeLayer(capacity = 4, count = 2) {
     hdr: makeHdrEmitterUniforms(),
   });
   const scene = new THREE.Scene();
+  const mirrorParent = new THREE.Group();
   const layer = new PlanetGlareLayer(
-    scene, buildSharedUniformNodes(shared).nodes, sources, makeEmitterGateNodes());
-  return { layer, scene, state };
+    scene, buildSharedUniformNodes(shared).nodes, sources, makeEmitterGateNodes(),
+    mirrorParent);
+  return { layer, scene, mirrorParent, state };
 }
 
 /** The layer re-packs from its meshes' onBeforeRender hook. */
@@ -198,11 +200,13 @@ describe('the WebGPU reflected-glare layer', () => {
     expect([...body.slice(4, 6)]).toEqual([11, 12]);
   });
 
-  it('parks the mirror until the local depth pass ports', () => {
-    // With no bracketed pass to draw it, a visible mirror would double
-    // every body's glare in the main pass.
-    const { layer } = makeLayer();
-    expect(layer.mirrorMesh.visible).toBe(false);
+  it('parents the mirror into the pass-scene group, visible, out of the seam scene', () => {
+    // uLocalPassRange gates the mirror per instance (no cluster → all
+    // collapse), so it stays visible exactly as the GLSL mirror mesh does.
+    const { layer, scene, mirrorParent } = makeLayer();
+    expect(mirrorParent.children).toContain(layer.mirrorMesh);
+    expect(scene.children).not.toContain(layer.mirrorMesh);
+    expect(layer.mirrorMesh.visible).toBe(true);
     expect(layer.mesh.visible).toBe(true);
   });
 
@@ -217,10 +221,12 @@ describe('the WebGPU reflected-glare layer', () => {
     expect(blends()).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
   });
 
-  it('takes both meshes back out of the scene on dispose', () => {
-    const { layer, scene } = makeLayer();
-    expect(scene.children.length).toBe(2);
+  it('takes both meshes back out of their parents on dispose', () => {
+    const { layer, scene, mirrorParent } = makeLayer();
+    expect(scene.children.length).toBe(1);
+    expect(mirrorParent.children.length).toBe(1);
     layer.dispose();
     expect(scene.children.length).toBe(0);
+    expect(mirrorParent.children.length).toBe(0);
   });
 });

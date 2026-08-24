@@ -156,6 +156,23 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('builds the GLSL mirror draw by default, and none on a WebGPU boot', () => {
+    const glsl = new PlanetBodyField(makeSharedUniforms());
+    expect(glsl.localGroup.children.map((c) => c.name)).toEqual(['glow-local']);
+    glsl.dispose();
+    // localGroup renders in the local depth pass on that boot, where a
+    // GLSL material fails WGSL pipeline creation; the TSL glare layer
+    // parents its own mirror there instead.
+    const webgpu = new PlanetBodyField(makeSharedUniforms(), false);
+    expect(webgpu.localGroup.children).toHaveLength(0);
+    expect(() => {
+      webgpu.attachHost(
+        0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+      webgpu.setLocalPassRange(0, 3);
+      webgpu.dispose();
+    }).not.toThrow();
+  });
+
   it('attaches a host and grows the geometry instance count', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
