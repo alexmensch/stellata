@@ -99,25 +99,25 @@ describe('chart-labels / collides', () => {
   }
 
   it('returns false against an empty list', () => {
-    expect(collides(cand({}), [])).toBe(false);
+    expect(collides(cand({}), [], 0)).toBe(false);
   });
 
   it('detects overlap of two start-anchored labels', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 120, y: 100, width: 40, key: 'b' }); // overlaps a in x
-    expect(collides(a, [b])).toBe(true);
+    expect(collides(a, [b], 1)).toBe(true);
   });
 
   it('returns false for non-overlapping labels with horizontal gap', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 200, y: 100, width: 40, key: 'b' });
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 
   it('returns false for non-overlapping labels with vertical gap', () => {
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 100, y: 200, width: 40, key: 'b' });
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 
   it('is symmetric for same-kind labels', () => {
@@ -125,7 +125,7 @@ describe('chart-labels / collides', () => {
     // collides with A, when both share the same anchor convention.
     const a = cand({ x: 100, y: 100, width: 50 });
     const b = cand({ x: 130, y: 100, width: 50, key: 'b' });
-    expect(collides(a, [b])).toBe(collides(b, [a]));
+    expect(collides(a, [b], 1)).toBe(collides(b, [a], 1));
   });
 
   it('honours middle-anchor for kind=con (centred AABB)', () => {
@@ -134,7 +134,7 @@ describe('chart-labels / collides', () => {
     // occupies [80, 110] — overlap.
     const con = cand({ kind: 'con', x: 100, y: 100, width: 50 });
     const name = cand({ kind: 'name', x: 80, y: 100, width: 30, key: 'b' });
-    expect(collides(con, [name])).toBe(true);
+    expect(collides(con, [name], 1)).toBe(true);
   });
 
   it('reports collision against any item in the list', () => {
@@ -144,7 +144,7 @@ describe('chart-labels / collides', () => {
       cand({ x: 1000, y: 1000, width: 40, key: 'c' }),
       cand({ x: 110, y: 100, width: 40, key: 'd' }), // collides with a
     ];
-    expect(collides(a, candidates)).toBe(true);
+    expect(collides(a, candidates, candidates.length)).toBe(true);
   });
 
   it('ignores entries past the live count', () => {
@@ -162,7 +162,7 @@ describe('chart-labels / collides', () => {
     // a collision — two labels can sit flush next to each other.
     const a = cand({ x: 100, y: 100, width: 40 });
     const b = cand({ x: 140, y: 100, width: 40, key: 'b' }); // a ends at 140, b starts at 140
-    expect(collides(a, [b])).toBe(false);
+    expect(collides(a, [b], 1)).toBe(false);
   });
 });
 

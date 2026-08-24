@@ -879,12 +879,14 @@ export function measureCandidate(c: Candidate): void {
   c.height = 14;
 }
 
-// `others` is a pooled array whose live prefix is `count` long; entries
-// past it are last frame's and must not be compared against.
+// `others` is a pooled array whose live prefix is `count` long; entries past
+// it are last frame's and must not be compared against. Required rather than
+// defaulted to `others.length` — for the one caller that matters that default
+// is the bug, so it must not be the easy path.
 export function collides(
   c: Candidate,
   others: Candidate[],
-  count = others.length,
+  count: number,
 ): boolean {
   // Convert (x, y) anchor into a centred AABB. text-anchor is 'middle'
   // for con labels (centre-anchored), 'start' for the rest (left-anchored).
