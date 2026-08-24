@@ -49,7 +49,14 @@ src/client/overlays/
   arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)
-                                  used by hud-overlay and others.
+                                  used by hud-overlay and others, plus
+                                  the screen-direction cascade
+                                  (screenDirToTargetInto) both arrow
+                                  layers steer by. Like the projector, it
+                                  writes into a caller-owned tuple; its
+                                  ScreenDirSource return names which tier
+                                  answered, which is what the arrow-fade
+                                  debug HUD reports.
   target-name.ts                  targetDisplayName — per-kind display
                                   name for any Target; shared by the
                                   POI labels and the distance-vector

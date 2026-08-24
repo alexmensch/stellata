@@ -3,7 +3,8 @@ import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { fmtDistAuto } from '../ui/distance-util';
 import {
   buildArrowSvgPath,
-  screenDirToTarget,
+  screenDirToTargetInto,
+  type ScreenDirSource,
   ARROW_HEAD_DEPTH_PX,
   ARROW_LABEL_OFFSET_PX,
   ARROW_LABEL_PADDING_PX,
@@ -154,6 +155,7 @@ export class HudOverlay {
   private tmpGcLocal = new THREE.Vector3();
   private tmpOriginScreen: [number, number] = [0, 0];
   private tmpTargetScreen: [number, number] = [0, 0];
+  private tmpScreenDir: [number, number] = [0, 0];
 
   // Dirty-track state for Sol/GC arrows + the OBSERVE ring. See
   // ArrowState comment above.
@@ -381,8 +383,9 @@ export class HudOverlay {
     // arrow-path.ts: target's screen projection when in front + visible
     // offset, otherwise view-space xy of the world direction (robust to
     // behind-camera targets).
-    const sdir = screenDirToTarget(cx, cy, targetScreen, dir, camera);
-    if (!sdir) {
+    const sdir = this.tmpScreenDir;
+    const dirPath = screenDirToTargetInto(cx, cy, targetScreen, dir, camera, sdir);
+    if (dirPath === 'none') {
       // dir is exactly along the camera axis — no preferred screen
       // direction (measure-zero orientation).
       this.hideArrow(path, bg, label, state);
@@ -390,8 +393,7 @@ export class HudOverlay {
     }
     const sux = sdir[0];
     const suy = sdir[1];
-    debug.dirPath = targetScreen && Math.hypot(targetScreen[0] - cx, targetScreen[1] - cy) >= 1
-      ? 'targetScreen' : 'viewSpaceDir';
+    debug.dirPath = dirPath;
 
     // Shaft endpoints + chevron tip in screen pixels. Default length
     // ARROW_PIXEL_LENGTH; shrunk so the tip stays `targetMarginPx` short of
@@ -599,7 +601,7 @@ function clamp(v: number, lo: number, hi: number): number {
 export interface ArrowDebugRecord {
   hideRequested: boolean;
   behindCamera: boolean;
-  dirPath: 'none' | 'targetScreen' | 'viewSpaceDir';
+  dirPath: ScreenDirSource;
   projAlong: number;
   shrunkToTarget: boolean;
   shaftLengthPx: number;

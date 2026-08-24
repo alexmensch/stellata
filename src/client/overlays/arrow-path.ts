@@ -38,26 +38,30 @@ export const RING_HALO_GAP_PX = 4;
  * Browser screen y is inverted vs. view-space y (down-positive vs.
  * up-positive), hence the y flip.
  *
- * Returns null only when the direction is exactly along the camera axis
- * (view-space x and y both ≈ 0) — no rotation brings such a target into
+ * Writes into a caller-owned tuple and returns false — leaving `out`
+ * untouched — only when the direction is exactly along the camera axis
+ * (view-space x and y both ≈ 0), where no rotation brings the target into
  * view in any preferred direction.
  */
-// Module-scope scratch vector for viewSpaceScreenDir. Owning it inside the
-// helper keeps arrow-path symmetric with focus-ring-overlay /
+// Module-scope scratch vector for viewSpaceScreenDirInto. Owning it inside
+// the helper keeps arrow-path symmetric with focus-ring-overlay /
 // distance-vector-overlay (all of which hide their per-frame scratch
 // state) and frees call sites from threading a Vector3 through.
 const scratchVS = /*@__PURE__*/ new THREE.Vector3();
 
-export function viewSpaceScreenDir(
+export function viewSpaceScreenDirInto(
   worldDir: THREE.Vector3,
   camera: THREE.Camera,
-): [number, number] | null {
+  out: [number, number],
+): boolean {
   scratchVS.copy(worldDir).transformDirection(camera.matrixWorldInverse);
   const sx = scratchVS.x;
   const sy = -scratchVS.y;
   const len = Math.hypot(sx, sy);
-  if (len < 1e-6) return null;
-  return [sx / len, sy / len];
+  if (len < 1e-6) return false;
+  out[0] = sx / len;
+  out[1] = sy / len;
+  return true;
 }
 
 // Label placement constants — shared so the distance vector and Sol/GC
@@ -66,36 +70,50 @@ export const ARROW_LABEL_OFFSET_PX = 12;
 export const ARROW_LABEL_PADDING_PX = 50;
 
 /**
+ * Which tier of the screenDirToTargetInto cascade produced the direction.
+ * `'none'` means neither did and `out` holds no usable direction; the
+ * other two are both successes, distinguished because the arrow-fade
+ * debug HUD reports which geometry the arrow was drawn from.
+ */
+export type ScreenDirSource = 'none' | 'targetScreen' | 'viewSpaceDir';
+
+/**
  * Screen-space unit direction for an arrow originating at (cx, cy) and
- * pointing toward a world target. Two-tier cascade:
+ * pointing toward a world target, written into a caller-owned tuple.
+ * Two-tier cascade:
  *
  *   1. If the target's screen projection is non-null and is more than a
  *      pixel away from (cx, cy), use the screen-space delta directly —
  *      the natural direction.
  *   2. Otherwise (target behind the camera, or projects on top of the
- *      origin) fall back to viewSpaceScreenDir on the world direction.
+ *      origin) fall back to viewSpaceScreenDirInto on the world direction.
  *      That one is robust to behind-camera targets because view-space xy
  *      sidesteps the projection's z-divide.
  *
- * Returns null only when both paths fail — `worldDir` along the camera
+ * Returns 'none' only when both paths fail — `worldDir` along the camera
  * axis with the target either coincident with the origin or producing no
  * screen offset. No screen direction can be defined in that case and the
  * caller hides the arrow.
  */
-export function screenDirToTarget(
+export function screenDirToTargetInto(
   cx: number,
   cy: number,
   targetScreen: [number, number] | null,
   worldDir: THREE.Vector3,
   camera: THREE.Camera,
-): [number, number] | null {
+  out: [number, number],
+): ScreenDirSource {
   if (targetScreen) {
     const tdx = targetScreen[0] - cx;
     const tdy = targetScreen[1] - cy;
     const tlen = Math.hypot(tdx, tdy);
-    if (tlen >= 1) return [tdx / tlen, tdy / tlen];
+    if (tlen >= 1) {
+      out[0] = tdx / tlen;
+      out[1] = tdy / tlen;
+      return 'targetScreen';
+    }
   }
-  return viewSpaceScreenDir(worldDir, camera);
+  return viewSpaceScreenDirInto(worldDir, camera, out) ? 'viewSpaceDir' : 'none';
 }
 
 /**
