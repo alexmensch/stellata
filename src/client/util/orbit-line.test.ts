@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import { makeOrbitLineLoop, makeOrbitLineMaterial } from './orbit-line';
 
 function ring(vertexCount: number): Float32Array {
@@ -12,7 +11,7 @@ function ring(vertexCount: number): Float32Array {
   return pts;
 }
 
-const loop = (n: number) => makeOrbitLineLoop(ring(n), makeOrbitLineMaterial('#ffffff'), 3);
+const loop = (n: number) => makeOrbitLineLoop(ring(n), makeOrbitLineMaterial(0xffffff), 3);
 
 describe('makeOrbitLineLoop', () => {
   it('closes the ring through the index, not a LineLoop primitive', () => {
