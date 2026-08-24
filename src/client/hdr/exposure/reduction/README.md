@@ -159,7 +159,7 @@ refreshes every other frame at worst (~33 ms at 60 Hz), and the chain's
 cost is paid on half the frames. `readbackPending` exposes that state
 because the adaptation park has to respect it: a probe opened on a frame
 this class will sit out pays the statistic writes with nothing reducing
-what they wrote (`../README.md` § Parking the measurement).
+what they wrote (`../park/README.md`).
 
 **Before the first one lands the statistic holds its last reading**, which
 on a cold start is zero — no cut. That direction is deliberate: the
@@ -197,7 +197,7 @@ draws while FREEZING the statistic at its last reading (unlike chart
 mode's reset-and-drop) — a frame-cost measurement lever
 (`../../../debug/frame-cost/README.md`). `measure()`'s `parked` argument
 is the same skip driven per frame by the adaptation park
-(`../README.md` § Parking the measurement) instead of by a debug toggle;
+(`../park/README.md`) instead of by a debug toggle;
 everything below about the disabled path — fence kept, landing dropped —
 holds for it verbatim.
 

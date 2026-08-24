@@ -22,7 +22,7 @@ import {
   type ParkState,
   parkTick,
   parkUnderHold,
-} from './adaptation-park-pure';
+} from './park/adaptation-park-pure';
 
 export interface SceneAdaptationDeps {
   /** The instrument's own exposure — no adaptation, no trim. Measuring
@@ -86,13 +86,17 @@ export class SceneAdaptation {
         coverage: reduced.coverage,
       };
     }
-    const measured = this.branches().dm;
+    const { dm: measured, regime } = this.branches();
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
-    this.park = parkTick(
-      this.park, landedFresh, measured, this.dm, this.deps.measurementReady(),
-    );
+    this.park = parkTick(this.park, {
+      fresh: landedFresh,
+      measuredDm: measured,
+      appliedDm: this.dm,
+      regime,
+      probeReady: this.deps.measurementReady(),
+    });
     perfMeasure('adaptation');
     return this.dm;
   }
@@ -100,7 +104,7 @@ export class SceneAdaptation {
   /**
    * True while the measurement is parked: the reduction's draws and the
    * statistic-attachment emitter writes both stop, the clear and the
-   * readback fence stay (`README.md` § Parking the measurement). False on
+   * readback fence stay (`park/README.md`). False on
    * a probe frame — a probe reducing the cleared attachment would cost
    * ~3x reducing live content, so its writes must be open.
    */

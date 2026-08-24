@@ -183,7 +183,7 @@ poke with hands off the keyboard can force a repaint with
   return — which is what stops a parked static view paying a probe every
   six ticks forever. Hoisting that call above the gate to keep the cut
   current would silently undo it
-  (`../hdr/exposure/README.md` § Parking the measurement).
+  (`../hdr/exposure/park/README.md`).
 
 ## The clock cadence
 

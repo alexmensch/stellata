@@ -16,8 +16,8 @@ import {
 } from './scene-adaptation-pure';
 import {
   ADAPT_PARK_PROBE_INTERVAL_FRAMES,
-  ADAPT_PARK_ZERO_LANDINGS,
-} from './adaptation-park-pure';
+  ADAPT_PARK_SETTLED_LANDINGS,
+} from './park/adaptation-park-pure';
 
 const BASE_EXPOSURE = exposureForMagLimit(7.8);
 
@@ -249,7 +249,7 @@ describe('SceneAdaptation — the measurement park', () => {
     adaptation.measure(false, (now += 16), false);
 
   function parkIt(adaptation: SceneAdaptation): void {
-    for (let i = 0; i < ADAPT_PARK_ZERO_LANDINGS; i++) {
+    for (let i = 0; i < ADAPT_PARK_SETTLED_LANDINGS; i++) {
       reduced = darkLanding();
       step(adaptation);
     }
@@ -265,7 +265,7 @@ describe('SceneAdaptation — the measurement park', () => {
 
   it('parks after the required run of zero landings, and not before', () => {
     const adaptation = makeAdaptation();
-    for (let i = 0; i < ADAPT_PARK_ZERO_LANDINGS; i++) {
+    for (let i = 0; i < ADAPT_PARK_SETTLED_LANDINGS; i++) {
       expect(adaptation.isMeasurementParked()).toBe(false);
       reduced = darkLanding();
       step(adaptation);
@@ -277,7 +277,7 @@ describe('SceneAdaptation — the measurement park', () => {
   it('counts landings, not the frames a reading stays current for', () => {
     const adaptation = makeAdaptation();
     reduced = darkLanding();
-    idle(adaptation, 10 * ADAPT_PARK_ZERO_LANDINGS);
+    idle(adaptation, 10 * ADAPT_PARK_SETTLED_LANDINGS);
     expect(adaptation.isMeasurementParked()).toBe(false);
   });
 
@@ -316,6 +316,80 @@ describe('SceneAdaptation — the measurement park', () => {
     expect(first).toBeGreaterThan(target());
   });
 
+  /** The app default view as the reduction reports it: one saturated kernel
+   *  emitter well over the operator's white point, no lit resolved surface.
+   *  A new object per call — freshness is reference identity. */
+  function floorLanding(): ReducedStatistic {
+    return {
+      meanL: 3.4 * tonemapWhitePoint(),
+      surfaceL: 0,
+      coverage: 0,
+      renderExposure: BASE_EXPOSURE,
+    };
+  }
+
+  /** Run the applied cut onto the display floor. The first frame snaps (no
+   *  previous wall clock for the slew), so that landing is itself parkable
+   *  and banks the first of the streak; the rest of the frames re-read the
+   *  same object and land nothing. */
+  function settleAtFloor(adaptation: SceneAdaptation): void {
+    reduced = floorLanding();
+    for (let i = 0; i < 200; i++) adaptation.measure(false, (now += SETTLE_STEP_MS), false);
+  }
+
+  function landFloorFrames(adaptation: SceneAdaptation, n: number): void {
+    for (let i = 0; i < n; i++) {
+      reduced = floorLanding();
+      step(adaptation);
+    }
+  }
+
+  it('parks the floor regime, where the cut is a constant the frame cannot move', () => {
+    const adaptation = makeAdaptation();
+    settleAtFloor(adaptation);
+    expect(adaptation.branches().regime).toBe('floor');
+    expectSettled(adaptation.getDm(), ADAPT_DISPLAY_FLOOR_DM);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+
+    landFloorFrames(adaptation, ADAPT_PARK_SETTLED_LANDINGS - 2);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    landFloorFrames(adaptation, 1);
+    expect(adaptation.isMeasurementParked()).toBe(true);
+  });
+
+  it('holds the parked floor cut bit-identical — the floor reads no part of the frame', () => {
+    const adaptation = makeAdaptation();
+    settleAtFloor(adaptation);
+    landFloorFrames(adaptation, ADAPT_PARK_SETTLED_LANDINGS - 1);
+    const parked = adaptation.getDm();
+    idle(adaptation, ADAPT_PARK_PROBE_INTERVAL_FRAMES - 1);
+    expect(adaptation.getDm()).toBe(parked);
+    // A probe landing that measures the same regime re-parks and leaves the
+    // applied cut exactly where it stood: the parked and unparked cut are the
+    // same number, not merely close.
+    idle(adaptation, 1);
+    expect(adaptation.getParkPhase()).toBe('probing');
+    reduced = floorLanding();
+    step(adaptation);
+    expect(adaptation.getParkPhase()).toBe('parked');
+    expect(adaptation.getDm()).toBe(parked);
+  });
+
+  it('unparks the floor regime once the frame mean drops under the white point', () => {
+    const adaptation = makeAdaptation();
+    settleAtFloor(adaptation);
+    landFloorFrames(adaptation, ADAPT_PARK_SETTLED_LANDINGS - 1);
+    expect(adaptation.isMeasurementParked()).toBe(true);
+    idle(adaptation, ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.getParkPhase()).toBe('probing');
+    // Under the white point the eye branch clears the floor and governs, so
+    // the cut is the measurement's again.
+    reduced = frame(0.5 * tonemapWhitePoint() / POINT_COVERAGE, POINT_COVERAGE);
+    step(adaptation);
+    expect(adaptation.branches().regime).toBe('eye');
+    expect(adaptation.getParkPhase()).toBe('active');
+  });
+
   it('clears the park on chart entry', () => {
     const adaptation = makeAdaptation();
     parkIt(adaptation);
@@ -331,8 +405,10 @@ describe('SceneAdaptation — the measurement park', () => {
     adaptation.setHeld(true);
     expect(adaptation.getParkPhase()).toBe('parked');
     // Held frames never re-open a probe, so every dwell of a sweep prices
-    // the same parked frame.
-    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    // the same parked frame. The frame this releases into has to be one the
+    // measurement genuinely sets the cut for — a mean over the white point
+    // would put the release in the floor regime, which parks by design.
+    reduced = frame(10 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     idle(adaptation, 10 * ADAPT_PARK_PROBE_INTERVAL_FRAMES);
     expect(adaptation.getParkPhase()).toBe('parked');
     adaptation.setHeld(false);
