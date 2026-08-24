@@ -447,13 +447,18 @@ export class ChartLabels {
     const candidates: Candidate[] = [];
     const seen = new Set<number>(); // dedupe star idx across name+bayer
 
+    // ONE screen-space tuple for every projection below — seven label
+    // families share it. Each reads it into a candidate's x/y before the
+    // next projection overwrites it; storing it anywhere that outlives
+    // that read aliases every later label to one position.
+    const xy = this.tmpXy;
+
     // 1) Proper-named stars. Iterate the names map directly; size of the
     // map is small (~hundreds) so this is cheap. Priority sits below the
     // constellation Latin labels (priority 0) so the constellation name
     // always wins a collision.
     perfMark('chart.names');
     if (showStarNames) for (const [idx, name] of cat.names) {
-      const xy = this.tmpXy;
       if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
@@ -480,7 +485,6 @@ export class ChartLabels {
     perfMark('chart.bayer');
     if (showBayer) for (const [idx, info] of ctx.bayerMap) {
       if (seen.has(idx)) continue;
-      const xy = this.tmpXy;
       if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
       const appMag = computeAppMag(idx, positions, cat.absmag);
       if (appMag > limitMag) continue;
@@ -546,7 +550,6 @@ export class ChartLabels {
       for (const anchor of stellata.constellationLabelAnchors) {
         const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
-        const xy = this.tmpXy;
         if (!projectVecInto(
           this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h, xy)) continue;
         candidates.push({
@@ -574,7 +577,6 @@ export class ChartLabels {
     if (clouds && showCloudNames) {
       for (let i = 0; i < clouds.clouds.length; i++) {
         if (!stellata.focusables.cloud.localPositionInto(i, this.tmpCloudLocal)) continue;
-        const xy = this.tmpXy;
         if (!projectVecInto(this.tmpCloudLocal, camera, w, h, xy)) continue;
         candidates.push({
           kind: 'cloud',
@@ -600,7 +602,6 @@ export class ChartLabels {
       const planet = planetField.planetAt(i);
       if (!planet) continue;
       if (!planetField.planetLocalPositionInto(i, this.tmpPlanetLocal)) continue;
-      const xy = this.tmpXy;
       if (!projectVecInto(this.tmpPlanetLocal, camera, w, h, xy)) continue;
       const appMag = planetField.appMagForInstance(i, camera.position);
       if (appMag === null || appMag > limitMag) continue;
@@ -706,11 +707,10 @@ export class ChartLabels {
         const appMag = computeAppMag(idx, positions, absmag);
         const amp = cat.amplitudeMag[idx];
         const ringMag = appMag - amp * 0.5;
-        // Magnitude gate hoisted above the projection — projectStar's
+        // Magnitude gate hoisted above the projection — projectStarInto's
         // matrix-multiply is the expensive part, so pre-rejecting saves
         // it for stars over the brightness limit.
         if (ringMag > limitMag) continue;
-        const xy = this.tmpXy;
         if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
         // Ring sits one VARIABLE_RING_MIN_GAP_PX outside the peak disc
         // radius, guaranteeing a visible gap even for low-amplitude
@@ -759,7 +759,6 @@ export class ChartLabels {
         const discPx = discPxFor(appMag);
         const ext = discPx * BINARY_WING_EXTENSION_RATIO;
         if (ext < BINARY_WING_MIN_EXTENSION_PX) continue;
-        const xy = this.tmpXy;
         if (!this.projectStarInto(idx, positions, camera, w, h, xy)) continue;
         const half = discPx * 0.5 + ext;
         const x1 = xy[0] - half;
@@ -806,6 +805,11 @@ export function projectVecInto(
   // dropped here so downstream measurement cost stays off the hot path.
   // projectToScreenInto owns its own module-level scratch; passing `p` as
   // input is safe because it does scratch.copy(p) internally.
+  //
+  // Unlike projectToScreenInto, a false return here does NOT mean `out` is
+  // untouched: the margin cull rejects a point that already projected and
+  // wrote. Treat `out` as undefined on false rather than as the last good
+  // projection.
   if (!projectToScreenInto(p, camera, w, h, out)) return false;
   return !(out[0] < -200 || out[0] > w + 200 || out[1] < -100 || out[1] > h + 100);
 }
