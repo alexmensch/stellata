@@ -205,13 +205,28 @@ leave depends on how you got there.**
 
   **It will refuse after a squash merge.** A squash lands a *new* commit on
   main, so the branch commit is not an ancestor and the tool reads it as
-  unmerged work. Verify the content actually landed, then re-invoke with
-  `discard_changes: true`:
+  unmerged work. That refusal is the last thing between the merge and
+  `discard_changes: true` deleting commits permanently, so whatever overrides
+  it has to be a real check:
 
   ```bash
   git fetch origin
-  git cat-file -e origin/main:<a path the PR added>   # exits 0 if it landed
+  git log --oneline -20 origin/main | grep '(#<N>)'    # the squash commit itself
+  git show origin/main:<path the PR changed> \
+    | grep -q '<a line this PR introduced>'            # its content, on main
   ```
+
+  Either one alone is sufficient; the log line is cheaper and does not depend
+  on picking a good grep string.
+
+  **Never test this with `git cat-file -e origin/main:<path>`.** `-e` asks
+  only whether the path *exists*, and most PRs modify files that already do —
+  it passes identically whether or not the PR merged. A check that cannot
+  fail is worse than no check, because it is what you lean on to discard.
+  Test for something the PR **introduced**.
+
+  Both commands avoid `$( )` on purpose — § The watch has the reason an
+  isolated session cannot run one.
 
 - **Session is not isolated** (the worktree belongs to an earlier session):
   plain `cd` to the main checkout, then `git worktree remove`.
