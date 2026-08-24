@@ -143,5 +143,13 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         ...options,
       });
     },
+    dispose() {
+      extinctionTextures.dispose();
+      // The node registry holds no GPU resource — it mirrors the shell's
+      // uniform value-objects, which the shell owns. Dropping it is what
+      // makes a post-dispose attach throw rather than build against a
+      // dead boot.
+      registry = null;
+    },
   };
 }

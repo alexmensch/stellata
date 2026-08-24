@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { ExtinctionTextureNodes } from './extinction-texture-nodes';
@@ -56,5 +56,17 @@ describe('ExtinctionTextureNodes', () => {
     nodes.dispose();
     expect(nodes.dust.value).not.toBe(volume);
     volume.dispose();
+  });
+
+  // The pair is boot-scoped and only WebGpuSeam.dispose() reaches it
+  // (boot-webgpu.ts), so the placeholders' own release is the half a
+  // slot-repoint test would silently miss.
+  it('disposes the placeholders themselves, not just the slot bindings', () => {
+    const nodes = new ExtinctionTextureNodes();
+    const dustSpy = vi.spyOn(nodes.dust.value, 'dispose');
+    const avSpy = vi.spyOn(nodes.avPrepass.value, 'dispose');
+    nodes.dispose();
+    expect(dustSpy).toHaveBeenCalled();
+    expect(avSpy).toHaveBeenCalled();
   });
 });

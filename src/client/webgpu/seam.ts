@@ -91,6 +91,17 @@ export interface WebGpuSeam {
   attachExtinctionPrepass(
     options: WebGpuExtinctionPrepassSources,
   ): ExtinctionPrepassSeam;
+  /** Release the boot-scoped GPU resources the seam owns and the shell has
+   *  no handle to — today the shared extinction texture slots and their
+   *  placeholders. NOT the renderer or the HDR pipeline: the shell holds
+   *  both as its own fields (`renderer`, `hdr`) and disposes them on
+   *  either backend, so disposing them here would double-release.
+   *
+   *  Call AFTER every attached layer and the prepass, since those hand
+   *  their slots back to the placeholders this then frees. A new
+   *  boot-scoped allocation in `boot-webgpu.ts` belongs here — that is the
+   *  only path that reaches it. */
+  dispose(): void;
   /** The TSL planet surfaces, over the caller's 1×1 placeholder — the
    *  mesh layer owns that texture on either backend, so the factory takes
    *  it rather than the other way round. */

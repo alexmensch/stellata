@@ -2683,6 +2683,10 @@ export class Stellata implements FrameAnchor {
     // doesn't own it.
     this.dust?.dispose();
     this.dust = null;
+    // After every layer and the prepass: those hand their texture slots
+    // back to the seam's placeholders, which this frees. Before the
+    // renderer, so the releases go through a live device.
+    this.webgpu?.dispose();
     this.renderer.dispose();
     this.bus.clear();
   }
