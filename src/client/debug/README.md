@@ -223,7 +223,7 @@ Typical window: 50–500 candidates instead of 313k.
 
 ### Chart-labels: scratch `Vector3` for projection
 
-`chart-labels.ts:136`. `projectVec()` originally allocated a fresh
+`chart-labels.ts`. `projectVec()` originally allocated a fresh
 `Vector3` per call via `p.clone().applyMatrix4(...)`. With four
 candidate sets (proper names, Bayer, variables, binaries) that's
 5–15k Vector3 allocations per frame, the dominant GC pressure
@@ -231,9 +231,9 @@ source.
 
 Replaced with a module-level `projVec` scratch deliberately
 *not* aliased with the existing `tmpV3` — the latter is held
-across the projection in `projectStar`, so a shared scratch would
-clobber the input. That scratch now lives in `overlay-project.ts`,
-which `projectVecInto` calls.
+across the projection in `projectStarInto`, so a shared scratch
+would clobber the input. That scratch now lives in
+`overlay-project.ts`, which `projectVecInto` calls.
 
 The **returned tuple** was the other half, and outlived the
 `Vector3`: `projectVec` handed back a fresh `[x, y]` per call, one
@@ -241,6 +241,14 @@ per label per frame across the same four candidate sets. It writes
 into a caller-owned tuple now (`projectVecInto`), and `ChartLabels`
 owns one for all of them — safe because each caller reads it before
 the next projection runs.
+
+Both halves are about the *projector*, and neither makes this label
+engine allocation-free: `tick` still builds a candidates array, an
+accepted array, four Sets and one `Candidate` literal per surviving
+label every frame, which is the larger cost on this path and is
+`stellata-8cg.40`'s scope. Don't read this section as "chart labels
+no longer allocate" — measure chart mode and you will see that
+remaining churn, not the projector.
 
 ### Chart-labels: cached brightest constellation member
 

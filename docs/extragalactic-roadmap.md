@@ -197,7 +197,7 @@ for cross-referencing, never rendered). Survey IDs (SDSS J…, 2MASX…)
 are not names either. Expected named population: ~10k, heavily
 concentrated ≤ 30 Mpc.
 
-Label-rank function (extends `computeVisibleLabels` in
+Label-rank function (extends `computeVisibleLabelsInto` in
 `src/client/local-group/local-group.ts`):
 
 - Build-time: named objects only, bucketed into a spatial octree
