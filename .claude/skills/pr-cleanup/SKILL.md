@@ -5,8 +5,12 @@ description: Land a stellata PR and finish every follow-up — rebase onto main 
 
 # Landing a stellata PR
 
-The five steps Alex asks for every time. Run them in order; stop and ask the
+The steps Alex asks for every time. Run them in order; stop and ask the
 moment anything leaves the happy path (§ Deviations).
+
+Editing this file: **cross-reference sections by name, never by number.**
+Inserting § The signature trap shifted every later number and left § Ground
+truth pointing an already-merged PR at § Merge.
 
 ## What this skill authorises — and only this
 
@@ -49,7 +53,8 @@ git fetch origin
 ```
 
 **Check `state` before anything else — it may already be merged.** Auto-merge
-can fire between two of your own commands. If `MERGED`, skip to step 4.
+can fire between two of your own commands. If `MERGED`, the work left is
+§ Close the beads and § Worktree, branches, main — never § Merge.
 
 Collect the beads: bead IDs (`stellata-<slug>` / `stellata-<slug>.<n>`) appear
 in the PR title, body, and commit subjects. Gather all three and de-duplicate:
@@ -66,7 +71,8 @@ Read each one (`bd show <id>`) rather than trusting the ID: a PR sometimes
 ## 2. Rebase onto main — always check, even when nothing suggests it
 
 ```bash
-git rev-list --count HEAD..origin/main     # 0 → already current, skip to step 3
+git status --porcelain                     # must be empty — rebase aborts on a dirty tree
+git rev-list --count HEAD..origin/main     # 0 → current; skip to § The signature trap
 git rebase origin/main
 ```
 
@@ -124,7 +130,7 @@ Alex's standing rule is that CI-side verification is yours and you never poll
 it (`Never wait on PR CI checks`). So do not wait for green.
 
 **Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
-to step 5. The merge is synchronous, so there is nothing to watch:
+to § Close the beads. The merge is synchronous, so there is nothing to watch:
 
 ```bash
 gh pr merge <N> --squash
@@ -172,8 +178,8 @@ done
 ```
 
 `Monitor` with `persistent: true` — the loop's own exit ends the watch, so no
-timeout should pre-empt it. Only the `MERGED` line continues to step 5; every
-other exit is a § Deviation.
+timeout should pre-empt it. Only the `MERGED` line continues to § Close the
+beads; every other exit is a § Deviation.
 
 ## 5. Close the beads
 
@@ -259,7 +265,8 @@ Do not improvise past any of these. Say what you found, what you would do, and
 wait.
 
 **Blocked with no failing check.** Two known causes, in the order to check
-them: unsigned commits (§ 3), then an orphaned required-status context —
+them: unsigned commits (§ The signature trap), then an orphaned
+required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
 `name:` strands the old context forever (`ci-ruleset-required-contexts`,
 `RELEASING.md` § Merge gating). Compare required against reported:
