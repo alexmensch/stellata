@@ -99,9 +99,8 @@ billboards and probe glyphs in the main pass, the spheroid mesh, ring
 annulus and atmosphere shell in the local depth pass, which runs on
 this boot as a single reversed-z bracket (K = 1 —
 `../local-depth/bracket/README.md` § Decision). Its line layers (orbit
-rings, binary orbit paths, probe trails) are three built-ins, so they
-render linear-dark until the built-ins port child restores their encode
-(§ Output colour space).
+rings, binary orbit paths, probe trails) do NOT draw yet — see the park
+table below.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
@@ -130,6 +129,7 @@ in the same PR:
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
 | Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
+| Local-pass line layers (orbit rings, binary orbit paths, probe trails) | the shell removes their groups from the pass scene — `LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation against the HDR target's three attachments, and one invalid pipeline poisons the whole pass submit | TSL line material (`0it.27`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.

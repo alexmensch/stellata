@@ -717,6 +717,16 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
+    if (this.webgpu !== null) {
+      // The built-in line layers stay OUT of the pass scene on this boot:
+      // LineBasicMaterial's lone fragment output fails WGSL pipeline
+      // creation against the HDR target's three attachments, and one
+      // invalid pipeline poisons the whole pass submit. They return with
+      // the TSL line material (webgpu/README.md § Every park is a gate).
+      this.solarCluster.group.remove(this.orbitRingsLayer.group);
+      this.solarCluster.group.remove(this.kinds.probe.pathLayer.localGroup);
+      this.starLocalCluster.group.remove(this.binaryOrbitPathLayer.group);
+    }
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(

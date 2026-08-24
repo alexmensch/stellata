@@ -126,13 +126,13 @@ also replaces every array and needs the geometry rebuilt.
 
 ## What is deliberately NOT visible yet
 
-Nothing structural: the mesh, the annulus and the shell render in the
-local depth pass (`../../local-depth/README.md`), which runs on this
-boot since its port child landed. What remains is an encode caveat —
-the orbit rings, binary orbit paths and probe trails in the pass are
-three built-in line materials, which render linear-dark until the
-built-ins port child restores their encode
-(`../README.md` § Output colour space).
+The mesh, the annulus and the shell render in the local depth pass
+(`../../local-depth/README.md`), which runs on this boot since its port
+child landed. The pass's line layers — orbit rings, binary orbit paths,
+probe trails — do not: their built-in `LineBasicMaterial` cannot create
+a WGSL pipeline against the three-attachment HDR target, so the shell
+keeps their groups out of the pass scene until the TSL line material
+(`../README.md` § Every park is a gate).
 
 ## The probe glyph needs no mirror variant
 
