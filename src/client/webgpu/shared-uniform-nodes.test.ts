@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../frame/shared-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
+import { STAR_RENDER_DEFAULTS } from '../filters/filter-state';
 import { buildSharedUniformNodes, TEXTURE_SLOTS } from './shared-uniform-nodes';
 
 type SlotMap = Record<string, { value: unknown }>;
@@ -98,5 +99,45 @@ describe('buildSharedUniformNodes', () => {
     expect(registry.nodes.uSpectMask.nodeType).toBe('uint');
     expect(registry.nodes.uHideFocusIdx.nodeType).toBe('int');
     expect(registry.nodes.uLocalMemberIdx0.nodeType).toBe('ivec4');
+  });
+});
+
+// The debug panel's "Star disc" knobs are already scalar slots on the
+// shared map, so on a WebGPU boot they reach the TSL graphs through the
+// per-frame sync with no plumbing of their own. What this pins is that a
+// NEW knob cannot be added as a non-shared uniform, which would reach the
+// GLSL pipeline and silently miss the TSL one.
+describe('the debug-panel star-disc seam', () => {
+  const KNOB_SLOTS: Record<keyof typeof STAR_RENDER_DEFAULTS, readonly string[]> = {
+    // One knob, two slots: the derived -log(threshold) rides a uniform so
+    // the fragment stage does not recompute a log per fragment.
+    visibleThreshold: ['uVisibleThreshold', 'uVisibleK'],
+    coreThreshold: ['uCoreThreshold'],
+    discardThreshold: ['uDiscardThreshold'],
+    distNMin: ['uDistNMin'],
+    distNMax: ['uDistNMax'],
+    lumBiasMin: ['uLumBiasMin'],
+    lumBiasMax: ['uLumBiasMax'],
+    sizeKnee: ['uSizeKnee'],
+  };
+
+  it('covers every knob the programmatic setter accepts', () => {
+    expect(Object.keys(KNOB_SLOTS).sort())
+      .toEqual(Object.keys(STAR_RENDER_DEFAULTS).sort());
+  });
+
+  it('lands every knob slot in the node mirror, live per frame', () => {
+    const { shared, registry } = build();
+    const nodes = registry.nodes as unknown as SlotMap;
+    for (const [knob, keys] of Object.entries(KNOB_SLOTS)) {
+      for (const key of keys) {
+        expect(nodes[key], `${knob} -> ${key}`).toBeDefined();
+        setValue(shared, key, 0.125);
+      }
+    }
+    registry.sync();
+    for (const keys of Object.values(KNOB_SLOTS)) {
+      for (const key of keys) expect(nodes[key].value).toBe(0.125);
+    }
   });
 });

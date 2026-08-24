@@ -7,6 +7,7 @@ import {
 } from '../../star-pipeline/local-pass/star-mirror-slots';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { MAX_VERTEX_BUFFERS } from '../star-attribute-roster';
+import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
 import { buildSharedUniformNodes } from '../shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
@@ -20,7 +21,7 @@ function makeLayer(count = 4) {
   const { sources } = makeStarGeometrySources(count);
   return {
     sources,
-    layer: new StarLayer(new THREE.Scene(), nodes, sources, makeEmitterGateNodes()),
+    layer: new StarLayer(new THREE.Scene(), nodes, sources, makeEmitterGateNodes(), new ExtinctionTextureNodes()),
   };
 }
 
@@ -101,7 +102,7 @@ describe('StarLocalMirrorTsl construction', () => {
     });
     const nodes = buildSharedUniformNodes(shared).nodes;
     const { sources } = makeStarGeometrySources(4);
-    const layer = new StarLayer(scene, nodes, sources, makeEmitterGateNodes());
+    const layer = new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionTextureNodes());
     expect(layer.localMirror.group.parent).toBeNull();
     expect(scene.children).not.toContain(layer.localMirror.group);
   });

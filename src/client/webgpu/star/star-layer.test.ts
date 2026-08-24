@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
+import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
 import { buildSharedUniformNodes } from '../shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
@@ -17,7 +18,7 @@ function makeLayer(count = 4) {
   const { sources } = makeStarGeometrySources(count);
   return {
     scene, sources,
-    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes()),
+    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionTextureNodes()),
   };
 }
 
@@ -81,6 +82,54 @@ describe('StarLayer', () => {
     expect(layer.coreMaskMesh.visible).toBe(true);
     layer.setCoreMaskVisible(false);
     expect(layer.coreMaskMesh.visible).toBe(false);
+  });
+
+  it('swaps both colour materials to flat ink for chart mode, and back exactly', () => {
+    const { layer } = makeLayer();
+    const disc = layer.discMesh.material as THREE.Material;
+    const glow = layer.glowMesh.material as THREE.Material;
+    const mask = layer.coreMaskMesh.material as THREE.Material;
+
+    layer.setMonochrome(true);
+    for (const m of [disc, glow]) {
+      expect(m.blending).toBe(THREE.MultiplyBlending);
+      // three REFUSES MultiplyBlending without premultipliedAlpha, and the
+      // refusal leaves the previous material's blend func in place — an
+      // order-dependent symptom (../../star-pipeline/star-pipeline.ts).
+      expect(m.premultipliedAlpha).toBe(true);
+      expect(m.depthWrite).toBe(false);
+      expect(m.depthTest).toBe(false);
+    }
+    // Colour writes are off on the mask, so its blend state is
+    // unobservable and it takes no swap.
+    expect(mask.blending).toBe(THREE.NormalBlending);
+
+    layer.setMonochrome(false);
+    expect(disc.blending).toBe(THREE.CustomBlending);
+    expect(disc.blendEquation).toBe(THREE.MaxEquation);
+    expect(disc.depthTest).toBe(true);
+    // The swap-back drift this pins: losing the override would put the
+    // halo's depth write back, and with it the pipeline's early-z
+    // (README.md § The disc draw writes no depth).
+    expect(disc.depthWrite).toBe(false);
+    expect(disc.transparent).toBe(true);
+    expect(disc.premultipliedAlpha).toBe(false);
+    expect(glow.blending).toBe(THREE.AdditiveBlending);
+    expect(glow.depthWrite).toBe(false);
+    expect(glow.depthTest).toBe(true);
+    expect(glow.premultipliedAlpha).toBe(false);
+  });
+
+  // The mirror draws only local-pass members, and membership parks in
+  // chart mode — the same split StarPipeline.setMonochromeBlend makes.
+  it('leaves the mirror clones alone: they have nothing to draw on paper', () => {
+    const { layer } = makeLayer();
+    const before = layer.localMirror.group.children
+      .map((c) => ((c as THREE.Mesh).material as THREE.Material).blending);
+    layer.setMonochrome(true);
+    expect(layer.localMirror.group.children
+      .map((c) => ((c as THREE.Mesh).material as THREE.Material).blending))
+      .toEqual(before);
   });
 
   it('every mesh shares the one packed geometry by identity', () => {

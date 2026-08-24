@@ -34,16 +34,17 @@ src/client/webgpu/star/
                                no depth.
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
                                writes off, over the shared disc gate.
-  star-emission-tsl.ts         Fragment pieces the colour passes share:
-                               the kernel and the disc gate BOTH disc
-                               and core mask run, starEmission()'s
-                               inline-operator select, the MRT output
-                               struct + single↔struct mode swap
-                               (../hdr/README.md).
+  star-emission-tsl.ts         Fragment pieces the passes share: the
+                               kernel and the two halves of the disc gate
+                               BOTH disc and core mask run, chart mode's
+                               ink disc, starEmission()'s inline-operator
+                               select, the MRT output struct +
+                               single↔struct mode swap (../hdr/README.md).
   star-layer.ts (+ test)       StarLayer: geometry + the three meshes into
                                the seam's scene, the local mirror, the
                                per-frame dynamic re-pack, the shell's
-                               core-mask gate, dispose.
+                               core-mask gate, the chart blend swap,
+                               dispose.
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
     (+ test)                   pipelines' local variants over the shared
                                MirrorSlots copy of the packed geometry
@@ -57,16 +58,62 @@ composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,
 `../perceptual-disc-tsl.ts`) — they are layer-agnostic, and the planet
 glare already takes all three, exactly as it takes the GLSL chunks.
 
-## What is deliberately NOT here yet
+## Dust extinction — two tiers, one gate
 
-Each is a sibling port child of the star-pipeline epic, and its absence
-is visible in a WebGPU A/B smoke until it lands:
+The vertex stage reddens and dims every survivor of the prefilter, on the
+same two-tier shape the GLSL has: the per-star A_V cache is one
+`textureLoad` of the star's own texel when `uAvPrepassEnabled` is set,
+and the full 48-tap camera→star march otherwise. Both come from
+`../extinction/`, which owns the march, the cache and the one behaviour
+that is *not* parity (a cold CPU read of the cache). Three properties
+belong here rather than there:
 
-- **Extinction reads** (prepass texelFetch + in-vertex raymarch
-  fallback): stars toward dusty sightlines render *brighter and bluer*
-  than WebGL2 until then.
-- **Chart mode**: under additive blending on the paper background, chart
-  currently renders no stars on WebGPU.
+- **The read sits behind the prefilter, and that is exact.** A_V ≥ 0, so
+  both the cull bound and the taper bound are monotonic in dust: a star
+  already fainter than `uCullMag` unextincted cannot become visible
+  after extinction. Testing them first is what keeps a `textureLoad` —
+  or, on the fallback, the whole march — off the culled population.
+  Both bounds are then re-tested on the extincted magnitude, which is
+  why each is built as a fresh node rather than reused: a TSL comparison
+  reads its variable where the enclosing `If` emits it, so one node
+  object in two places would read two different values and only look
+  like an accident.
+- **The march runs in ABSOLUTE space** (`iPosition + uWorldOffset`,
+  camera likewise) because the dust grid is anchored to Sol, not to the
+  renderer's floating local origin.
+- **Reddening applies to whichever colour tier won** —
+  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — over the shared
+  `R_V`, exactly as `../../star-pipeline/README.md` § Colour routing
+  describes.
+
+## Chart mode
+
+Chart is a full bypass: flat hard-edged ink discs sized linearly by
+magnitude under `MultiplyBlending`, non-photometric, no HDR emission
+(`../../star-pipeline/README.md`). On this backend it is one branch on
+`uMonochrome` in the vertex stage and one in each fragment graph, plus
+the layer's blend swap. Three things the split is built around:
+
+- **The disc/glow pivot is outside the branch.** `vPhysRatio` decides
+  which pass draws a star on both render styles, so each pipeline's
+  entry gate (outside the kernel, wrong side of the pivot) runs ahead of
+  the chart test and both styles share it. Only the *remaining* gates
+  differ: colour clips at the live `uThresholdMag`, chart at the
+  instrument's `uLimitMag`, which inherits neither the scene adaptation
+  nor the EV trim.
+- **`vAaWidth` is the vertex stage's, per quad.** One CSS pixel in vUv
+  units, so the ink edge is one pixel wide at any disc size. `fwidth(r)`
+  cannot substitute — `length(vUv)`'s screen-space derivative is
+  undefined at the quad centre, and small quads came out faint grey
+  rather than solid.
+- **The core mask still stamps depth in chart mode**, over exactly the
+  fragments its disc draw inks — a different gate, the same rule that
+  binds the two in colour mode.
+
+Chart's statistic texel is a flat zero rather than a masked flux: the
+chain bypasses the HDR seam entirely, and the pipeline's chart bypass
+unbinds the target, so every colour material is already in its
+single-output mode by the time the branch runs.
 
 The MRT emission/statistic write side is here (`starMrtStruct`,
 `setMrtOutputs`) but engages only while the HDR pipeline binds its
@@ -141,7 +188,9 @@ Compile-time pass constants replace the `uRenderMode` branches
   fixed-function depth writes the nearest value and early-z survives.
 
 `uPinFocusToCenter` substitutes the canonical projection exactly as the
-GLSL does. Every pass also carries the taper cull, and the colour passes
+GLSL does. Every pass also carries the taper cull — off entirely in
+chart mode, which sizes and clips against `uLimitMag` and keeps its
+quads, and the colour passes
 the kernel collapse — the exactness and flux-preservation arguments are
 `../../star-pipeline/collapse/README.md`'s, one mechanism on both
 backends.

@@ -9,6 +9,7 @@ import {
 } from '../attribute-packing-pure';
 import { STAR_DYNAMIC_SCALARS } from '../star-attribute-roster';
 import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
   buildStarGeometry,
@@ -16,8 +17,11 @@ import {
   type StarGeometryBuild,
   type StarGeometrySources,
 } from './star-geometry';
+import {
+  applyGlowBlendDefaults, applyMonochromeBlend,
+} from '../../star-pipeline/star-pipeline';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
-import { buildStarDiscMaterial } from './star-disc-tsl';
+import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
 import { StarLocalMirrorTsl } from './star-local-mirror-tsl';
 import type { StarColourMaterial } from './star-emission-tsl';
@@ -51,6 +55,12 @@ export class StarLayer {
   private readonly dynArrays: Float32Array[];
   private readonly watchers: DynamicWatcher[];
   private readonly colourMaterials: StarColourMaterial[];
+  /** The two materials chart mode swaps to flat ink. The mirror's clones
+   *  never take the swap: local-pass membership parks in chart mode, so
+   *  they have nothing to draw — the same split the GLSL
+   *  `setMonochromeBlend` makes. */
+  private readonly discMaterial: THREE.Material;
+  private readonly glowMaterial: THREE.Material;
   /** Per-frame scratch, one slot per packed dynamic buffer — reused so the
    *  render loop allocates nothing. */
   private readonly pendingFull: boolean[];
@@ -61,6 +71,7 @@ export class StarLayer {
     nodes: SharedUniformNodes,
     sources: StarGeometrySources,
     gates: EmitterGateNodes,
+    textures: ExtinctionTextureNodes,
   ) {
     this.scene = scene;
     this.build = buildStarGeometry(sources);
@@ -77,6 +88,8 @@ export class StarLayer {
       staticPlan: this.build.staticPlan,
       dynamicPlan: this.build.dynamicPlan,
       lut: this.colorLut,
+      dust: textures.dust,
+      avPrepass: textures.avPrepass,
     };
 
     const mesh = (material: THREE.Material, name: string, renderOrder: number) => {
@@ -96,6 +109,8 @@ export class StarLayer {
     const disc = buildStarDiscMaterial(deps, gates);
     const glow = buildStarGlowMaterial(deps, gates);
     this.colourMaterials = [disc, glow];
+    this.discMaterial = disc.material;
+    this.glowMaterial = glow.material;
     this.coreMaskMesh = mesh(buildStarCoreMaskMaterial(deps), 'star-core-mask-webgpu', -4);
     this.coreMaskMesh.visible = false;
     this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
@@ -126,6 +141,24 @@ export class StarLayer {
    *  (../../star-pipeline/README.md § Star rendering). */
   setCoreMaskVisible(on: boolean): void {
     this.coreMaskMesh.visible = on;
+  }
+
+  /** Chart mode's blend swap, the TSL twin of `StarPipeline`'s
+   *  `setMonochromeBlend`. `uMonochrome` is a shared node the shell
+   *  writes; only the per-material blend state lives here, and swap-back
+   *  goes through the same helper construction used, so the two cannot
+   *  drift (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask needs
+   *  no swap: colour writes are off, so its blend state is unobservable. */
+  setMonochrome(on: boolean): void {
+    if (on) {
+      applyMonochromeBlend(this.discMaterial);
+      applyMonochromeBlend(this.glowMaterial);
+    } else {
+      applyStarDiscTslBlend(this.discMaterial);
+      applyGlowBlendDefaults(this.glowMaterial);
+    }
+    this.discMaterial.needsUpdate = true;
+    this.glowMaterial.needsUpdate = true;
   }
 
   /** Re-pack any per-frame scalar whose source attribute was flagged
