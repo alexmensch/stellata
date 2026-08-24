@@ -1,0 +1,13 @@
+diff --git a/build/three.webgpu.js b/build/three.webgpu.js
+index 2e490796d4d4aa9479b04a5c46ddbf31cc05b1a1..66d3882bc5ea25fcca7fc5da6d0c43b676a0451c 100644
+--- a/build/three.webgpu.js
++++ b/build/three.webgpu.js
+@@ -32940,7 +32940,7 @@ class Bindings extends DataMap {
+ 		const { backend } = this;
+ 
+ 		let needsBindingsUpdate = false;
+-		let cacheBindings = true;
++		let cacheBindings = false; // stellata: r185 cacheIndex hash collides (fixed upstream via string keys); disable until the three bump
+ 		let cacheIndex = 0;
+ 		let version = 0;
+ 

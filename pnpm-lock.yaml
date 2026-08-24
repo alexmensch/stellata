@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  three@0.185.1: c7c1d7a0cef988c09d4fce713b354ef1fc8f93ad82047018bf24ae578aef6ba0
+
 importers:
 
   .:
@@ -13,7 +16,7 @@ importers:
         version: 7.4.2
       three:
         specifier: ^0.185.1
-        version: 0.185.1
+        version: 0.185.1(patch_hash=c7c1d7a0cef988c09d4fce713b354ef1fc8f93ad82047018bf24ae578aef6ba0)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250101.0
@@ -1725,7 +1728,7 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  three@0.185.1: {}
+  three@0.185.1(patch_hash=c7c1d7a0cef988c09d4fce713b354ef1fc8f93ad82047018bf24ae578aef6ba0): {}
 
   tinybench@2.9.0: {}
 
