@@ -19,6 +19,11 @@ import {
   type PriceFrameRow,
 } from './frame-cost/frame-cost';
 import {
+  collectMemoryInventory,
+  printMemoryInventory,
+  type MemoryInventory,
+} from './memory/memory-inventory';
+import {
   type DecodedView,
   type IdMaps,
   currentStateOf,
@@ -48,6 +53,10 @@ export interface DebugTools {
    *  Deliberately NOT a panel section — the panel holds the gate open, so
    *  no section can observe idling (`render-watch/README.md`). */
   renderWatch(): void;
+  /** Print the GPU-residency + JS-heap inventory for the current state,
+   *  and return it. Read `memory/README.md` before quoting a number —
+   *  what the walk reaches, and what it cannot, both matter. */
+  memory(): MemoryInventory;
 }
 
 /** Wrap a DebugSection in a collapsible-section and mount it on the panel.
@@ -148,6 +157,11 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       runPriceFrame(stellata, buildPassToggles(stellata), options),
     priceFrameRepeat: (runs, options) =>
       runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
+    memory: () => {
+      const inventory = collectMemoryInventory(stellata);
+      printMemoryInventory(inventory);
+      return inventory;
+    },
     renderWatch: () => {
       if (closeRenderWatch !== null) {
         const dispose = closeRenderWatch;
