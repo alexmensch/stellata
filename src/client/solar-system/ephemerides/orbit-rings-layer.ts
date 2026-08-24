@@ -85,7 +85,7 @@ const DEG = Math.PI / 180;
 
 interface PlanetRing {
   readonly planet: Planet;
-  readonly line: THREE.LineLoop;
+  readonly line: THREE.Line;
   readonly material: THREE.LineBasicMaterial;
   // Centre-relative float64 vertices (the element-source truth); the
   // line's float32 GPU buffer is baked renderer-local from these about

@@ -41,12 +41,12 @@ interface OrbitPathPair {
    *  depth pass's slice bracket. */
   readonly extentPc: number;
   readonly group: THREE.Group;
-  readonly primaryLoop: THREE.LineLoop;
-  readonly secondaryLoop: THREE.LineLoop;
+  readonly primaryLoop: THREE.Line;
+  readonly secondaryLoop: THREE.Line;
 }
 
 /**
- * One `LineLoop` pair per Kepler relation on the focused star's chain —
+ * One closed-line pair per Kepler relation on the focused star's chain —
  * each member's barycentric ellipse. Mirrors `OrbitRingsLayer`: an
  * event-driven rebuild (`setSystem` on focus change) plus a per-frame
  * barycentre reposition from the walked local positions.
