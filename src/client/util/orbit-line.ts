@@ -133,6 +133,7 @@ export function makeOrbitLineLoop(
     ? new Uint32Array(vertexCount + 1)
     : new Uint16Array(vertexCount + 1);
   for (let i = 0; i < vertexCount; i++) index[i] = i;
+  index[vertexCount] = 0;
   geometry.setIndex(new THREE.BufferAttribute(index, 1));
   return configureLinePrimitive(new THREE.Line(geometry, material), renderOrder);
 }
