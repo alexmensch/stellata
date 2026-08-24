@@ -1,6 +1,6 @@
 ---
 name: pr-cleanup
-description: Land a stellata PR and finish every follow-up — rebase onto main if needed (force-with-lease pre-authorised), watch for the merge, close the PR's beads, remove its worktree, and fast-forward local main. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
+description: Land a stellata PR and finish every follow-up — rebase onto main if needed (force-with-lease pre-authorised), merge it (watching only if checks are still pending), close the PR's beads, remove its worktree, and fast-forward local main. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
 ---
 
 # Landing a stellata PR
@@ -102,22 +102,39 @@ git push --force-with-lease origin <headRefName>
 Do this **before** arming auto-merge. Arming first burns a full CI cycle,
 because re-signing rewrites every SHA and every check re-runs.
 
-## 4. Arm the merge — never sit on CI
+## 4. Merge — never sit on CI
 
 Alex's standing rule is that CI-side verification is yours and you never poll
-it (`Never wait on PR CI checks`). So do not wait for green; arm and move on.
+it (`Never wait on PR CI checks`). So do not wait for green.
+
+**Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
+to step 5. The merge is synchronous, so there is nothing to watch:
 
 ```bash
-gh pr merge <N> --squash          # checks already green and MERGEABLE
-gh pr merge <N> --squash --auto   # checks pending — merges itself when they pass
+gh pr merge <N> --squash
+```
+
+**Checks still pending** — arm auto-merge, then watch, because now there IS
+an outcome you do not yet know:
+
+```bash
+gh pr merge <N> --squash --auto
 ```
 
 Never pass `--delete-branch`: the remote side auto-deletes on merge, and the
 local side fails while the worktree still holds the branch.
 
-Then start the watch. **The script must exit on every terminal state** —
-a monitor that only matches success is silent through a failure, and silence
-looks identical to "still running":
+### The watch — only for the `--auto` case
+
+**The script must exit on every terminal state.** A monitor that only matches
+success is silent through a failure, and silence looks identical to "still
+running".
+
+**Write it to a file and run it by path.** Inline is not an option: the loop
+needs `$( )`, and a worktree-isolated session's guard rejects any command
+containing a substitution (`bd-long-field-writes` documents the same
+constraint for `bd`). Write `/tmp/pr-watch.sh`, then hand `Monitor` the plain
+command `bash /tmp/pr-watch.sh`.
 
 ```bash
 PR=<N>
@@ -138,9 +155,9 @@ while true; do
 done
 ```
 
-Run it through `Monitor` with `persistent: true` — the loop's own exit ends
-the watch, so no timeout should pre-empt it. Only the `MERGED` line continues
-to step 5; every other exit is a § Deviation.
+`Monitor` with `persistent: true` — the loop's own exit ends the watch, so no
+timeout should pre-empt it. Only the `MERGED` line continues to step 5; every
+other exit is a § Deviation.
 
 ## 5. Close the beads
 
@@ -157,15 +174,37 @@ bd dolt push
 
 Leave a bead open when the PR only advanced it. Say which, and why.
 
+**No beads at all is normal, not a deviation.** A tooling, CI, or docs PR
+often has none. Say so and move on.
+
 ## 6. Worktree, branches, main
 
-Order matters. `git worktree remove` fails from inside the worktree.
+Order matters — you cannot remove the worktree from inside it. **How you
+leave depends on how you got there.**
+
+- **Session is worktree-*isolated*** (you called `EnterWorktree`, or the PR's
+  branch is this session's own): `cd` is not enough — the session's working
+  directory is pinned. Use the `ExitWorktree` tool with
+  `action: "remove"`.
+
+  **It will refuse after a squash merge.** A squash lands a *new* commit on
+  main, so the branch commit is not an ancestor and the tool reads it as
+  unmerged work. Verify the content actually landed, then re-invoke with
+  `discard_changes: true`:
+
+  ```bash
+  git fetch origin
+  git cat-file -e origin/main:<a path the PR added>   # exits 0 if it landed
+  ```
+
+- **Session is not isolated** (the worktree belongs to an earlier session):
+  plain `cd` to the main checkout, then `git worktree remove`.
+
+Then, from the main checkout:
 
 ```bash
-cd <main checkout>                                   # leave the worktree first
-git worktree remove .claude/worktrees/<name>
 git fetch --prune                                    # confirms the remote branch is gone
-git branch -D <headRefName>
+git branch -D <headRefName>                          # no-op if ExitWorktree took it
 git pull --ff-only                                   # main checkout, main branch
 pnpm run typecheck                                   # sanity-check what actually landed
 ```
