@@ -10,7 +10,7 @@ import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
 import type {
-  SolarSystemMaterials,
+  ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/emitter-material';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
@@ -61,8 +61,10 @@ export interface WebGpuSeam {
    *  it rather than the other way round. */
   solarSystemMaterials(placeholder: THREE.Texture): SolarSystemMaterials;
   /** The TSL probe glyph, which reads no texture and so needs no
-   *  placeholder — the split mirrors `makeGlslProbeMaterial`. */
-  readonly probeMaterial: Pick<SolarSystemMaterials, 'probeMarker'>;
+   *  placeholder — the split mirrors `makeGlslProbeMaterial`. Read it
+   *  ONCE per field: each read is a fresh factory, and the shared-material
+   *  refcount lives inside one. */
+  readonly probeMaterial: ProbeMaterials;
   /** Build the TSL reflected-glare billboard into the seam's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it

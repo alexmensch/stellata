@@ -4,7 +4,7 @@
 
 import type * as THREE from 'three';
 import type {
-  EmitterMaterial, SolarSystemMaterials,
+  EmitterMaterial, ProbeMaterials, SolarSystemMaterials,
 } from '../../solar-system/materials/emitter-material';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
@@ -51,16 +51,37 @@ function wrapper(cfg: TslProbeConfig) {
   };
 }
 
-/** The glyph alone — it reads neither the HDR unit nor a texture, so the
- *  probe field takes it without the planet surfaces' config. */
-export function makeTslProbeMaterial(
-  cfg: TslProbeConfig,
-): Pick<SolarSystemMaterials, 'probeMarker'> {
+/**
+ * The glyph alone. Reversed-z deleted the only thing that differed
+ * between the main-pass and mirror variants, so both draws share ONE
+ * material rather than compiling two identical graphs — `localPass` is
+ * inert here (`README.md` § The probe glyph needs no mirror variant).
+ *
+ * Sharing makes dispose refcounted: the probe field builds both variants
+ * and disposes both, and the material must outlive the first of those.
+ */
+export function makeTslProbeMaterial(cfg: TslProbeConfig): ProbeMaterials {
   const wrap = wrapper(cfg);
+  let shared: EmitterMaterial | null = null;
+  let holders = 0;
   return {
-    probeMarker() {
-      const nodes = probeMarkerUniformNodes();
-      return wrap(buildProbeMarkerMaterial(cfg.nodes, nodes), nodes);
+    probeMarker(_localPass: boolean) {
+      if (shared === null) {
+        const nodes = probeMarkerUniformNodes();
+        shared = wrap(buildProbeMarkerMaterial(cfg.nodes, nodes), nodes);
+      }
+      const built = shared;
+      holders++;
+      return {
+        material: built.material,
+        uniforms: built.uniforms,
+        dispose() {
+          holders--;
+          if (holders > 0) return;
+          shared = null;
+          built.dispose();
+        },
+      };
     },
   };
 }
@@ -70,7 +91,6 @@ export function makeTslSolarSystemMaterials(
 ): SolarSystemMaterials {
   const wrap = wrapper(cfg);
   return {
-    ...makeTslProbeMaterial(cfg),
     planetMesh() {
       const nodes = planetMeshUniformNodes(cfg.placeholder);
       return wrap(buildPlanetMeshMaterial(cfg.nodes, nodes, cfg.gates), nodes);

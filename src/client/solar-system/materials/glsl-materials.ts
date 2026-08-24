@@ -18,7 +18,9 @@ import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
 import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
 import probeVert from '../probes/probe.vert.glsl?raw';
 import probeFrag from '../probes/probe.frag.glsl?raw';
-import type { EmitterMaterial, SolarSystemMaterials } from './emitter-material';
+import type {
+  EmitterMaterial, ProbeMaterials, SolarSystemMaterials, ViewportUniforms,
+} from './emitter-material';
 
 // The shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — spliced into both the mesh disc and the
@@ -116,7 +118,7 @@ export function planetAtmosphereUniforms(): Record<string, THREE.IUniform> {
 }
 
 /** The probe glyph's own slots. `uViewport` / `uPixelRatio` are the
- *  frame-shared pair and arrive by reference at the call site. */
+ *  frame-shared pair and are bound onto the factory instead. */
 export function probeMarkerUniforms(): Record<string, THREE.IUniform> {
   return {
     uSizePx: { value: 1 },
@@ -139,14 +141,9 @@ function wrap(material: THREE.ShaderMaterial): EmitterMaterial {
   };
 }
 
-/** The glyph alone — it reads neither the HDR seam nor a texture, so the
- *  probe field can build it without the planet surfaces' config. */
-export function makeGlslProbeMaterial(): Pick<SolarSystemMaterials, 'probeMarker'> {
+export function makeGlslProbeMaterial(viewport: ViewportUniforms): ProbeMaterials {
   return {
-    probeMarker: (
-      viewport: { uViewport: THREE.IUniform; uPixelRatio: THREE.IUniform },
-      localPass: boolean,
-    ) => wrap(new THREE.ShaderMaterial({
+    probeMarker: (localPass: boolean) => wrap(new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
       vertexShader: probeVert,
       fragmentShader: probeFrag,
@@ -167,7 +164,6 @@ export function makeGlslSolarSystemMaterials(
   cfg: GlslMaterialConfig,
 ): SolarSystemMaterials {
   return {
-    ...makeGlslProbeMaterial(),
     planetMesh: () => wrap(new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
       vertexShader: meshVert,

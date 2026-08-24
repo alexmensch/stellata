@@ -16,9 +16,7 @@ import {
   type ProbeTrajectory,
 } from './probe-trajectory';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
-import type {
-  EmitterMaterial, SolarSystemMaterials,
-} from '../materials/emitter-material';
+import type { EmitterMaterial, ProbeMaterials } from '../materials/emitter-material';
 import { makeGlslProbeMaterial } from '../materials/glsl-materials';
 
 /** Marker edge length in CSS pixels, and the basis for any hit radius over
@@ -105,7 +103,7 @@ export class ProbeField {
     shared: ProbeSharedUniforms,
     /** The TSL glyph on a WebGPU boot; absent = the shipped GLSL pair
      *  (`../materials/README.md`). */
-    materials?: Pick<SolarSystemMaterials, 'probeMarker'>,
+    materials?: ProbeMaterials,
   ) {
     this.shared = shared;
     this.group = new THREE.Group();
@@ -126,9 +124,9 @@ export class ProbeField {
     // geometry outright — the instance buffers this.update writes are the
     // same ones it draws, so there is no attribute copy and no way for the
     // two passes to disagree about where a probe is.
-    const factory = materials ?? makeGlslProbeMaterial();
+    const factory = materials ?? makeGlslProbeMaterial(shared);
     const makeMat = (localPass = false) => {
-      const m = factory.probeMarker(shared, localPass);
+      const m = factory.probeMarker(localPass);
       m.uniforms.uSizePx.value = PROBE_MARKER_PX;
       setRawChromeColour(m.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
       return m;

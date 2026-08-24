@@ -11,8 +11,9 @@ that. The port child that added this folder is `../../webgpu/README.md`'s.
 
 ```
 src/client/solar-system/materials/
-  emitter-material.ts       EmitterMaterial + SolarSystemMaterials: the
-                            neutral contract. Type-only.
+  emitter-material.ts       EmitterMaterial, SolarSystemMaterials and
+                            ProbeMaterials: the neutral contract.
+                            Type-only.
   glsl-materials.ts         The WebGL2 implementation — the four RawGLSL
     (+ test)                surfaces, their uniform blocks, and the
                             blend/depth state each one's contract rests
@@ -52,14 +53,26 @@ body.
 
 ## Why the probe glyph is split out
 
-`makeGlslProbeMaterial` / `makeTslProbeMaterial` build the glyph alone.
-It reads neither the HDR seam nor a texture, and the layer that owns it
-(`../probes/probe-field.ts`) is not the one that owns the planet
-surfaces, so requiring it to supply an `hdr` bundle and a placeholder it
-has no use for would be a config full of dead fields. For the same
-reason `probeMarker` takes its `uViewport` / `uPixelRatio` pair as a call
-argument: it is the only surface here that reads a frame-shared slot by
-reference.
+`ProbeMaterials` is its own interface, built by `makeGlslProbeMaterial` /
+`makeTslProbeMaterial`. The glyph reads neither the HDR seam nor a
+texture, and the layer that owns it (`../probes/probe-field.ts`) is not
+the one that owns the planet surfaces, so folding it into
+`SolarSystemMaterials` would hand the mesh layer a surface it never
+builds and the probe field a config full of dead fields.
+
+`uViewport` / `uPixelRatio` — the only frame-shared pair a surface here
+reads by reference — bind onto the **factory**, not onto each call. The
+two backends hold them in forms that cannot be swapped (an `IUniform`
+spliced into a `ShaderMaterial`'s block; a node off the shared mirror),
+so a per-call argument could only ever be honoured by one of them, and
+TypeScript would not notice the other dropping it.
+
+`probeMarker(localPass)` returns **two distinct materials on GLSL** (the
+variants differ by the `LOCAL_DEPTH_PASS` define) and **one shared
+material on TSL**, where reversed-z already deleted the only chunk that
+differed. Sharing is why the TSL factory refcounts dispose: the probe
+field builds both variants and disposes both, and the material has to
+outlive the first of those.
 
 ## The one surface that is NOT here
 

@@ -35,17 +35,27 @@ export interface SolarSystemMaterials {
   planetRings(): EmitterMaterial;
   /** The limb-halo shell, premultiplied-over. */
   planetAtmosphere(): EmitterMaterial;
+}
+
+/** The frame-shared pair the glyph sizes its quad against — the only
+ *  by-reference slots a surface here reads. Each factory binds them at
+ *  construction, in whatever form its backend can hold. */
+export interface ViewportUniforms {
+  uViewport: THREE.IUniform;
+  uPixelRatio: THREE.IUniform;
+}
+
+/**
+ * The probe glyph, built alone: it reads neither the HDR seam nor a
+ * texture, and the layer that owns it is not the one that owns the planet
+ * surfaces (`README.md` § Why the probe glyph is split out).
+ */
+export interface ProbeMaterials {
   /**
-   * The fixed-pixel probe glyph. `localPass` selects the mirror variant,
+   * The fixed-pixel diamond. `localPass` selects the mirror variant,
    * which carries no log-depth encoding — on the TSL path reversed-z
-   * already deleted that chunk, so both variants are one graph.
-   *
-   * `viewport` arrives per call rather than on the factory: it is the only
-   * frame-shared pair a surface here reads by reference, and the layer
-   * that owns the glyph is not the one that owns the planet surfaces.
+   * already deleted that chunk, so both variants are one graph and one
+   * shared material there.
    */
-  probeMarker(
-    viewport: { uViewport: THREE.IUniform; uPixelRatio: THREE.IUniform },
-    localPass: boolean,
-  ): EmitterMaterial;
+  probeMarker(localPass: boolean): EmitterMaterial;
 }

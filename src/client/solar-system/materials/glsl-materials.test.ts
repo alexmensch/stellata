@@ -48,21 +48,52 @@ describe('the solar-system material seam', () => {
     });
   }
 
+  const tslProbeFactory = () => makeTslProbeMaterial({
+    nodes: buildSharedUniformNodes(buildSharedUniforms({
+      pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600, hdr,
+    })).nodes,
+    registerMrtLayer: () => () => {},
+  });
+
   it('gives the probe glyph the same slots, less the frame-shared pair', () => {
     // uViewport / uPixelRatio ride the shared node mirror on the TSL path
-    // rather than the material's own block, which is why the glyph takes
-    // them as a call argument on the GLSL one.
+    // rather than the material's own block; the GLSL factory binds the
+    // same pair by reference at construction.
     const glslKeys = Object.keys(
-      makeGlslProbeMaterial().probeMarker(viewport, false).uniforms).sort();
+      makeGlslProbeMaterial(viewport).probeMarker(false).uniforms).sort();
     expect(glslKeys).toEqual(['uColour', 'uPixelRatio', 'uSizePx', 'uViewport']);
-    const tslProbe = makeTslProbeMaterial({
+    expect(Object.keys(tslProbeFactory().probeMarker(false).uniforms).sort())
+      .toEqual(['uColour', 'uSizePx']);
+  });
+
+  it('gives the GLSL glyph a distinct material per pass, the TSL one a shared one', () => {
+    // Reversed-z deleted the log-depth chunk the two GLSL variants differ
+    // by, so the TSL side compiles one graph for both draws. The GLSL side
+    // still needs the LOCAL_DEPTH_PASS define, hence two materials.
+    const glsl2 = makeGlslProbeMaterial(viewport);
+    expect(glsl2.probeMarker(false).material).not.toBe(glsl2.probeMarker(true).material);
+
+    const tsl2 = tslProbeFactory();
+    expect(tsl2.probeMarker(false).material).toBe(tsl2.probeMarker(true).material);
+  });
+
+  it('holds the shared TSL glyph until every variant has been disposed', () => {
+    let registered = 0;
+    const probes = makeTslProbeMaterial({
       nodes: buildSharedUniformNodes(buildSharedUniforms({
         pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600, hdr,
       })).nodes,
-      registerMrtLayer: () => () => {},
+      registerMrtLayer: () => { registered++; return () => { registered--; }; },
     });
-    expect(Object.keys(tslProbe.probeMarker(viewport, false).uniforms).sort())
-      .toEqual(['uColour', 'uSizePx']);
+    const main = probes.probeMarker(false);
+    const mirror = probes.probeMarker(true);
+    expect(registered).toBe(1);
+
+    // The field disposes both; the material must outlive the first.
+    main.dispose();
+    expect(registered).toBe(1);
+    mirror.dispose();
+    expect(registered).toBe(0);
   });
 
   it('declares every uniform its GLSL source reads', () => {
