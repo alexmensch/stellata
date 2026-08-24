@@ -104,6 +104,17 @@ describe('parkTick — the floor regime', () => {
     expect(state).toEqual(INITIAL_PARK_STATE);
   });
 
+  it('refuses to park a cut the resolved-surface pin is setting, past the floor', () => {
+    let state = INITIAL_PARK_STATE;
+    const pinned = landing({
+      measuredDm: ADAPT_DISPLAY_FLOOR_DM - 5,
+      appliedDm: ADAPT_DISPLAY_FLOOR_DM - 5,
+      regime: 'surface',
+    });
+    for (let i = 0; i < 10; i++) state = parkTick(state, pinned);
+    expect(state).toEqual(INITIAL_PARK_STATE);
+  });
+
   it('refuses to park while the applied cut is still slewing down to the floor', () => {
     const streak = landZeros(INITIAL_PARK_STATE, ADAPT_PARK_SETTLED_LANDINGS - 1);
     expect(parkTick(streak, landing({
