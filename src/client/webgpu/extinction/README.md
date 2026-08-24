@@ -80,32 +80,43 @@ none.
 
 Both figures below are the WebGL2 pass's unchanged — the port moved no
 work and allocated nothing new, which is the claim worth having written
-down rather than re-derived. At the 313k-star catalog, `avTexHeight`
-gives 306 rows:
+down rather than re-derived. **Re-derive rather than trust them**: they
+are `recordCount` (329,657 — `../../../../scripts/catalog/spine/README.md`)
+through `avTexHeight`, which gives 322 rows, and both move with the
+catalog. `debug.memory()` prices the live app
+(`../../debug/memory/README.md`), and on a WebGL2 boot it *measures* the
+A_V target rather than taking this table's word.
 
 | Resident | Size |
 | --- | --- |
-| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 306 × 4 B ≈ 1.25 MB |
-| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 306 × 16 B ≈ 5.0 MB |
+| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 322 × 4 B ≈ 1.26 MiB |
+| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 322 × 16 B ≈ 5.03 MiB |
 
-So ~6.3 MB of video memory for the pass's whole life, plus the ~5 MB
+So ~6.3 MiB of video memory for the pass's whole life, plus the ~5 MiB
 `Float32Array` the position `DataTexture` keeps on the JS heap after
 upload (three does not release it, and the WebGL2 twin holds the same).
 Both survive on an integrated or mobile GPU without argument, and 1024 is
 inside every `maxTextureDimension2D` — the layout's width was chosen for
 that.
 
-**A recompute is ~15M volume samples**: one fragment per star × 48 taps,
-313k × 48. That is the whole per-recompute cost and it is paid *per
-frame* while the camera keeps moving more than `RECOMPUTE_EPSILON_PC`
-between frames — a warp pays it every frame, which is the case to
-measure, not the idle one. An idle camera costs zero, and the visibility
-prefilter never applies here: the prepass marches the full catalog
-including the ≤1023 padding texels, because the pass has no per-star
-magnitude to gate on. Unmeasured on this backend — no `gpu.frame`
-differential has been taken for it yet, so treat the parity claim as
-structural (same algorithm, same tap count, same layout) rather than
-timed.
+**A recompute is ~15.8M volume samples**: one fragment per star × 48
+taps, 329,657 × 48. That is the whole per-recompute cost and it is paid
+*per frame* while the camera keeps moving more than
+`RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
+is the case to measure, not the idle one. An idle camera costs zero, and
+the visibility prefilter never applies here: the prepass marches every
+texel, including the 71 past the catalog, because the pass has no
+per-star magnitude to gate on. Unmeasured on this backend — no
+`gpu.frame` differential has been taken for it yet, so treat the parity
+claim as structural (same algorithm, same tap count, same layout) rather
+than timed.
+
+**On a WebGPU boot `debug.memory()` cannot price either row.** Both bind
+through TSL nodes rather than a `uniforms` slot, so the walk reaches
+neither and the star materials surface as `unknown`-basis rows instead —
+flagged, not silently dropped. Until `0it.15` or `8cg.42` changes that,
+this table is the authority on that backend, which is the reason it
+states the arithmetic and not just the totals.
 
 ## Cold reads — the one behaviour that is not parity
 

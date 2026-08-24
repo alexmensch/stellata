@@ -41,7 +41,9 @@ The GPU table walks every scene in `stellata.sceneGraphs`, deduped by
 interleaved buffers counted once) and every texture reachable from a
 material — including the ones hanging off `ShaderMaterial.uniforms`,
 which is how the dust `Data3DTexture`, the cloud bricks and the
-extinction A_V target are found.
+extinction A_V target are found **on a WebGL2 boot**. A TSL material
+holds no `uniforms` slot, so none of that reaches a ported layer — § Re-running
+it after the WebGPU port.
 
 A row's `basis` says how it was priced:
 
@@ -65,8 +67,9 @@ opposite things:
 - **Uploaded but outside the walk.** Render targets nothing samples, and
   the pass scenes the walk does not visit — the extinction prepass
   (`../../star-pipeline/extinction/extinction-prepass.ts` holds its own
-  `THREE.Scene`), the HDR tone-map quad, the summation and reduction
-  passes. Also program/uniform storage and the canvas backbuffer, which
+  `THREE.Scene`; its WebGPU twin holds no scene at all, drawing through a
+  `QuadMesh`, so it is outside the walk for a second reason), the HDR
+  tone-map quad, the summation and reduction passes. Also program/uniform storage and the canvas backbuffer, which
   no three counter exposes at all. If this grows without a target being
   added, something is holding textures the walk should have reached.
 - **Walked but never uploaded.** Three counts a geometry when the draw
@@ -100,8 +103,13 @@ size.
 | Reduction chain | quartering levels from the statistic attachment | 8 B/level, 16 B at the 1-texel tail | `../../hdr/exposure/reduction/README.md` § The chain |
 | Extinction positions | `AV_TEX_WIDTH` × ⌈stars ÷ `AV_TEX_WIDTH`⌉ | 16 B (RGBA32F), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md` |
 
-The A_V target itself is **measured**, not hand-priced — it is in the
-GPU table.
+The A_V target itself is **measured** on a WebGL2 boot, not hand-priced —
+the star pipeline samples it through a uniform, so it is in the GPU
+table. **On a WebGPU boot it is neither**: the TSL vertex stage binds it
+through a node, so the walk cannot reach it and it joins this table
+instead, alongside the position texture.
+`../../webgpu/extinction/README.md` § What it costs, and what it holds
+carries both rows with their arithmetic for exactly that reason.
 
 Worked example — a 1920×1080 window at `devicePixelRatio` 2, so a
 3840×2160 drawing buffer (8.29 Mpx):
