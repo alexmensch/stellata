@@ -12,9 +12,10 @@ with a single bracket (WebGPU). Both are derived below.
 
 ## Files
 
-- `slice-pure.ts` — the partition (`computeDepthSlices`), the near/far
-  floors, and the depth quantum of each encoding (`depthQuantumPc`,
-  `reversedDepthQuantumPc`). Pure; no three.js.
+- `slice-pure.ts` — the whole bracket (`computeBracket`, near/far floors
+  applied — the reversed-z K = 1 render range), its partition
+  (`computeDepthSlices`), and the depth quantum of each encoding
+  (`depthQuantumPc`, `reversedDepthQuantumPc`). Pure; no three.js.
 - `slice-pure.test.ts` — pins every headline number in this README,
   including a float32 sweep of the realised quantum.
 
@@ -92,10 +93,10 @@ for stencil lands on `depth32float-stencil8`, an optional device
 feature that must be in `requiredFeatures`. On a 24-bit fixed-point
 attachment reversed-z gives a *uniform* `δd = 2⁻²⁴` instead, i.e.
 `δz ≈ 2⁻²⁴·z²/n` — 262 AU at Neptune's ring against the main pass's
-near, far worse than the sliced bound it replaces. The current stack
-qualifies (`../../hdr/hdr-pipeline.ts`: `depthBuffer: true`,
-`stencilBuffer: false`, no explicit depth texture). Assert it at boot;
-never assume it.
+near, far worse than the sliced bound it replaces. Asserted, never
+assumed: `boot-webgpu.ts` refuses a boot whose renderer dropped
+`reversedDepthBuffer`, and `WebGpuHdrPipeline` throws at target
+creation if the target carries a depth texture or stencil.
 
 The bound is scale-free: it holds at every camera distance, bracket
 ratio, and epoch, so the camera-anywhere check passes structurally
@@ -199,8 +200,10 @@ between bodies that would have landed in different brackets — the
 K≈4 vantage. Smoke it: camera inside Neptune's orbit ring with several
 rings drawn, watching the crossings for order flicker under scrub.
 
-Implementation: stellata-0it.12; the mirror machinery ports unchanged
-(0it.4 / 0it.8); the WebGL2 sliced path lives until 0it.14 deletes it.
+Shipped: `LocalDepthPass.render` takes the K = 1 branch whenever the
+renderer reports `reversedDepthBuffer` (`computeBracket`, one
+`clearDepth` + one bracketed render); the WebGL2 sliced path lives
+until 0it.14 deletes it.
 
 **Rejected encodings** (updated 2026-08-18):
 

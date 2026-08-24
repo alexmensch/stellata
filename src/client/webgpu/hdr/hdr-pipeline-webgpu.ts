@@ -252,6 +252,19 @@ export class WebGpuHdrPipeline implements HdrSeam {
       generateMipmaps: false,
     });
     applyHdrAttachmentState(this.rt.textures as unknown as THREE.Texture[]);
+    // Guards the inference above at runtime: an explicit depth texture
+    // keeps ITS format and a stencil request diverts to
+    // depth32float-stencil8 — both silently fixed-point or optional, and
+    // either voids the local depth pass's K = 1 bracket
+    // (../../local-depth/bracket/README.md § Precision analysis).
+    if (
+      this.renderer.reversedDepthBuffer !== true
+      || this.rt.depthTexture !== null
+      || this.rt.stencilBuffer
+      || !this.rt.depthBuffer
+    ) {
+      throw new Error('HDR target must resolve to a Depth32Float reversed-z attachment');
+    }
 
     const diffuseSeed = this.extraAttachments
       ? this.rt.textures[2]

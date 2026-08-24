@@ -6,9 +6,10 @@ import { RenderTarget, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuHdrPipeline } from './hdr-pipeline-webgpu';
 import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-pipeline';
 
-function fakeRenderer() {
+function fakeRenderer(reversedDepthBuffer = true) {
   const bound: (RenderTarget | null)[] = [];
   const renderer = {
+    reversedDepthBuffer,
     getDrawingBufferSize: (v: THREE.Vector2) => v.set(64, 32),
     getPixelRatio: () => 2,
     setRenderTarget: (t: RenderTarget | null) => bound.push(t),
@@ -53,6 +54,15 @@ describe('the target', () => {
     expect(rt.stencilBuffer).toBe(false);
     expect(rt.depthTexture).toBe(null);
     expect(hdr.statisticTexture()).toBe(rt.textures[1]);
+  });
+
+  it('refuses a target whose depth attachment cannot be Depth32Float reversed-z', () => {
+    // A renderer without reversedDepthBuffer lands the target on
+    // fixed-point depth, which voids the local depth pass's K = 1
+    // bracket (../../local-depth/bracket/README.md § Precision analysis).
+    const { renderer } = fakeRenderer(false);
+    const hdr = new WebGpuHdrPipeline(renderer);
+    expect(() => hdr.bind()).toThrow(/Depth32Float/);
   });
 
   it('chart mode binds the canvas and parks the statistic', () => {

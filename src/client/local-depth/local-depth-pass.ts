@@ -2,8 +2,11 @@
 // Contract + design in README.md.
 
 import * as THREE from 'three';
+import type { StellataRenderer } from '../webgpu/seam';
 import {
+  computeBracket,
   computeDepthSlices,
+  type DepthSlice,
   type MemberSphere,
 } from './bracket/slice-pure';
 
@@ -42,9 +45,12 @@ export class LocalDepthPass {
 
   /** Run immediately after the main render. Renders the pass scene
    *  once per depth slice, far→near, clearing depth (never colour)
-   *  between slices. No-op when no cluster reports members. Restores
-   *  camera near/far and renderer autoClear before returning. */
-  render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera): void {
+   *  between slices. Reversed-z Depth32Float (`reversedDepthBuffer`,
+   *  the WebGPU boot) is ratio-free, so that path renders the whole
+   *  bracket as one slice — bracket/README.md § Decision. No-op when
+   *  no cluster reports members. Restores camera near/far and renderer
+   *  autoClear before returning. */
+  render(renderer: StellataRenderer, camera: THREE.PerspectiveCamera): void {
     if (!this.enabled) return;
     this.spheres.length = 0;
     for (const cluster of this.clusters) {
@@ -52,12 +58,18 @@ export class LocalDepthPass {
     }
     if (this.spheres.length === 0) return;
 
-    const viewportH = renderer.getSize(this.tmpSize).y;
-    const slices = computeDepthSlices(
-      this.spheres,
-      THREE.MathUtils.degToRad(camera.fov),
-      viewportH,
-    );
+    let slices: readonly DepthSlice[];
+    if ('reversedDepthBuffer' in renderer && renderer.reversedDepthBuffer) {
+      const bracket = computeBracket(this.spheres);
+      slices = bracket === null ? [] : [bracket];
+    } else {
+      const viewportH = renderer.getSize(this.tmpSize).y;
+      slices = computeDepthSlices(
+        this.spheres,
+        THREE.MathUtils.degToRad(camera.fov),
+        viewportH,
+      );
+    }
     const near0 = camera.near;
     const far0 = camera.far;
     const autoClear0 = renderer.autoClear;
