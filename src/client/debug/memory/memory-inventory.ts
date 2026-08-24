@@ -72,24 +72,43 @@ function textureName(texture: THREE.Texture, slot: string): string {
   return `${slot} (${texture.constructor.name})`;
 }
 
+/** A TSL material binds its textures inside the node graph, not on a
+ *  material property or a `uniforms` slot, so this walk reaches none of
+ *  them. Tested structurally rather than with `instanceof NodeMaterial`:
+ *  `three/webgpu` must never be imported into the WebGL2 bundle
+ *  (`../../webgpu/README.md`). */
+function isNodeMaterial(material: THREE.Material): boolean {
+  return (material as { isNodeMaterial?: boolean }).isNodeMaterial === true;
+}
+
 function eachTexture(
   material: THREE.Material,
   visit: (texture: THREE.Texture, slot: string) => void,
-): void {
+): number {
+  let found = 0;
   for (const [slot, value] of Object.entries(material)) {
-    if (value instanceof THREE.Texture) visit(value, slot);
+    if (value instanceof THREE.Texture) {
+      found++;
+      visit(value, slot);
+    }
   }
   const uniforms = (material as Partial<THREE.ShaderMaterial>).uniforms;
-  if (!uniforms) return;
+  if (!uniforms) return found;
   for (const [slot, uniform] of Object.entries(uniforms)) {
     const value = uniform?.value;
-    if (value instanceof THREE.Texture) visit(value, slot);
-    else if (Array.isArray(value)) {
+    if (value instanceof THREE.Texture) {
+      found++;
+      visit(value, slot);
+    } else if (Array.isArray(value)) {
       value.forEach((entry, i) => {
-        if (entry instanceof THREE.Texture) visit(entry, `${slot}[${i}]`);
+        if (entry instanceof THREE.Texture) {
+          found++;
+          visit(entry, `${slot}[${i}]`);
+        }
       });
     }
   }
+  return found;
 }
 
 /** One pass over every scene the shell draws. Dedupe spans the scenes:
@@ -101,6 +120,7 @@ function walkScenes(
   const rows: ResidencyRow[] = [];
   const seenGeometries = new Set<string>();
   const seenTextures = new Set<string>();
+  const seenNodeMaterials = new Set<string>();
   const scenePrefix = scenes.length > 1;
 
   for (const { name, scene } of scenes) {
@@ -114,7 +134,7 @@ function walkScenes(
         rows.push({ label: `${prefix}${owner} geometry`, bytes, basis: 'array', detail });
       }
       for (const material of materialsOf(object)) {
-        eachTexture(material, (texture, slot) => {
+        const found = eachTexture(material, (texture, slot) => {
           if (seenTextures.has(texture.uuid)) return;
           seenTextures.add(texture.uuid);
           const { bytes, basis, detail } = textureResidency(texture);
@@ -125,6 +145,15 @@ function walkScenes(
             detail,
           });
         });
+        if (found === 0 && isNodeMaterial(material) && !seenNodeMaterials.has(material.uuid)) {
+          seenNodeMaterials.add(material.uuid);
+          rows.push({
+            label: `${prefix}${owner} node-graph textures`,
+            bytes: 0,
+            basis: 'unknown',
+            detail: 'TSL material — textures bind inside the node graph, unreachable here',
+          });
+        }
       }
     });
   }
