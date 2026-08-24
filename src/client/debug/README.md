@@ -254,17 +254,20 @@ surviving label — hundreds per frame across seven families, each one
 strictly more bytes than the projector tuple it sat beside.
 
 All of it is pooled now, the same idiom as the `<text>` / `<circle>` /
-`<line>` element pools: `candidatePool` owns the objects and is
-index-stable, `candidateList` is the permutable view the sort walks,
-`accepted` carries an explicit live count, the four Sets are instance
-state cleared per tick, and the sort comparator is module scope. Two
-invariants make the reuse safe, and `chart-labels.test.ts` pins both:
-`candidateList` is truncated to the live count before the sort so a
-sparser frame can never rank a previous frame's entries, and
-`collides` compares only the accepted array's live prefix.
+`<line>` element pools, and the pool keys plus the two composed label
+texts are interned per identity rather than minted per tick.
 
-What is left per tick is O(1), not O(labels): the `getChartDiscParams`
-bag and the `discPxFor` closure over it.
+What survives is O(1) per tick — the `getChartDiscParams` bag and the
+`discPxFor` closure over it — plus one attribute string per *moved*
+label, from `setNumAttr`'s `toFixed`, which no `setAttribute` caller
+escapes. **So chart mode under a moving camera still shows string
+allocation in a sampling profile.** That residue is the DOM write, not
+the label engine's containers; read a non-zero `tick` self-size as the
+former before suspecting the latter.
+
+Pooled reuse rests on three invariants, each mutation-pinned by
+`chart-labels.test.ts` and argued in `../chart-mode/README.md`
+§ Pooling — that folder owns `chart-labels.ts`.
 
 ### Chart-labels: cached brightest constellation member
 

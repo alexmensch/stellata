@@ -92,6 +92,28 @@ export interface Candidate {
 
 const byPriority = (a: Candidate, b: Candidate): number => a.priority - b.priority;
 
+/** Interns a string derived from a stable id, trading an allocation for a
+ *  hash lookup. Pool keys and composed label text were the residual
+ *  per-label-per-tick allocation once the containers themselves were pooled. */
+class StringCache<K> {
+  private readonly cache = new Map<K, string>();
+
+  constructor(private readonly make: (id: K) => string) {}
+
+  get(id: K): string {
+    let s = this.cache.get(id);
+    if (s === undefined) {
+      s = this.make(id);
+      this.cache.set(id, s);
+    }
+    return s;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
 interface PooledText {
   el: SVGTextElement;
   width: number; // last measured text width
@@ -238,6 +260,21 @@ export class ChartLabels {
   private readonly usedRings = new Set<number>();
   private readonly usedWings = new Set<number>();
 
+  // Pool keys and the two composed label texts, interned per identity.
+  // Each cache is bounded by its family's addressable set — named stars,
+  // Bayer stars, IAU regions, clouds, live planet slots.
+  private readonly nameKeys = new StringCache<number>((idx) => `n:${idx}`);
+  private readonly bayerKeys = new StringCache<number>((idx) => `b:${idx}`);
+  private readonly conKeys = new StringCache<string>((code) => `c:${code}`);
+  private readonly cloudKeys = new StringCache<number>((i) => `m:${i}`);
+  private readonly planetKeys = new StringCache<number>((i) => `p:${i}`);
+  private readonly bayerTexts = new StringCache<{ greek: string; suffix: string }>(
+    (info) => `${info.greek}${info.suffix}`,
+  );
+  private readonly conTexts = new StringCache<{ name: string }>(
+    (anchor) => anchor.name.toUpperCase(),
+  );
+
   // Brightest-member cache for the constellation-label gate. Apparent
   // magnitude depends on camera position, so the walk is invalidated when the
   // camera moves more than ~0.5 pc or the filter changes (spectMask doesn't
@@ -371,8 +408,9 @@ export class ChartLabels {
 
   /** Teardown. `stop()` releases the subscriptions, the SVG pools and the
    *  per-tick scratch; dispose additionally drops the catalog-derived caches
-   *  (the distSol mirror is one float per star) that `stop()` deliberately
-   *  keeps for chart re-entry. */
+   *  (the distSol mirror is one float per star, the interned keys one string
+   *  per addressable label) that `stop()` deliberately keeps for chart
+   *  re-entry. */
   dispose(): void {
     this.stop();
     this.layer = null;
@@ -384,6 +422,13 @@ export class ChartLabels {
     this.variableEligible = null;
     this.binaryEligible = null;
     this.distSolCache = null;
+    this.nameKeys.clear();
+    this.bayerKeys.clear();
+    this.conKeys.clear();
+    this.cloudKeys.clear();
+    this.planetKeys.clear();
+    this.bayerTexts.clear();
+    this.conTexts.clear();
   }
 
   private rebuildEligible(): void {
@@ -528,7 +573,8 @@ export class ChartLabels {
       const offset = starLabelOffsetPx(discPxFor(appMag));
       // Priority: brightness tie-break inside the kind.
       this.addCandidate(
-        'name', name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001, `n:${idx}`,
+        'name', name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001,
+        this.nameKeys.get(idx),
       );
       seen.add(idx);
     }
@@ -548,8 +594,8 @@ export class ChartLabels {
       const offset = starLabelOffsetPx(discPxFor(appMag));
       // Priority: ranks after named stars; brightness tie-break inside the kind.
       this.addCandidate(
-        'bayer', `${info.greek}${info.suffix}`,
-        xy[0] + offset, xy[1] - offset, 2 + appMag * 0.005, `b:${idx}`,
+        'bayer', this.bayerTexts.get(info),
+        xy[0] + offset, xy[1] - offset, 2 + appMag * 0.005, this.bayerKeys.get(idx),
       );
     }
     perfMeasure('chart.bayer');
@@ -608,8 +654,8 @@ export class ChartLabels {
         // down in (matters only if two collide, but the outline-style
         // typography accepts overlap). Brightest constellation first.
         this.addCandidate(
-          'con', anchor.name.toUpperCase(),
-          xy[0], xy[1], 0 + minAppMag * 0.01, `c:${anchor.code}`,
+          'con', this.conTexts.get(anchor),
+          xy[0], xy[1], 0 + minAppMag * 0.01, this.conKeys.get(anchor.code),
         );
       }
     }
@@ -626,7 +672,7 @@ export class ChartLabels {
         this.addCandidate(
           'cloud', clouds.clouds[i].name,
           xy[0] + CLOUD_LABEL_OFFSET_PX, xy[1] + CLOUD_LABEL_OFFSET_PX,
-          3 + i * 0.0001, `m:${i}`,
+          3 + i * 0.0001, this.cloudKeys.get(i),
         );
       }
     }
@@ -648,7 +694,8 @@ export class ChartLabels {
       const offset = starLabelOffsetPx(discPxFor(appMag));
       // Priority: same tier as proper-named stars.
       this.addCandidate(
-        'planet', planet.name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001, `p:${i}`,
+        'planet', planet.name, xy[0] + offset, xy[1] - offset, 1 + appMag * 0.001,
+        this.planetKeys.get(i),
       );
     }
     perfMeasure('chart.planets');
