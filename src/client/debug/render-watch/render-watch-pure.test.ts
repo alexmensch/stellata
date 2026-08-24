@@ -15,6 +15,7 @@ import {
   hudContainerCss,
   medianOf,
   observedAsRate,
+  poseDriftLabel,
   type RenderWatchSample,
 } from './render-watch-pure';
 
@@ -188,6 +189,39 @@ describe('observedAsRate', () => {
   it('no gap yet, and a zero-length gap, both read as no rate', () => {
     expect(observedAsRate(1, Number.NaN)).toBeNaN();
     expect(observedAsRate(1, 0)).toBeNaN();
+  });
+});
+
+describe('poseDriftLabel', () => {
+  it('names non-convergence when the move is a few representable steps', () => {
+    const label = poseDriftLabel({ slot: 'quat.w', delta: 2.2e-16, ulps: 2 });
+    expect(label).toContain('quat.w');
+    expect(label).toContain('2 ulp');
+    expect(label).toContain('NOT CONVERGING');
+  });
+
+  it('does not cry non-convergence at real motion', () => {
+    const label = poseDriftLabel({ slot: 'pos.x', delta: 1.4e-9, ulps: 5.2e9 });
+    expect(label).toContain('pos.x');
+    expect(label).not.toContain('NOT CONVERGING');
+  });
+
+  it('the absolute delta alone cannot separate the two', () => {
+    // Why the ULP column exists: both of these are far below anything a
+    // viewer could see, and only one of them will ever settle.
+    const stuck = poseDriftLabel({ slot: 'quat.w', delta: 1e-16, ulps: 1 });
+    const moving = poseDriftLabel({ slot: 'quat.w', delta: 1e-12, ulps: 9e3 });
+    expect(stuck).toContain('NOT CONVERGING');
+    expect(moving).not.toContain('NOT CONVERGING');
+  });
+
+  it('a NaN-seeded first frame is labelled as such, not as a drift', () => {
+    expect(poseDriftLabel({ slot: 'pos.x', delta: Number.NaN, ulps: Number.NaN }))
+      .toContain('first frame');
+  });
+
+  it('no drift recorded still prints something', () => {
+    expect(poseDriftLabel(null)).toBe('unknown slot');
   });
 });
 

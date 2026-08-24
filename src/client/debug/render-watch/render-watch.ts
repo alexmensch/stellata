@@ -12,6 +12,7 @@ import {
   classifyRenderWatch,
   hudContainerCss,
   observedAsRate,
+  poseDriftLabel,
   type RenderWatchTone,
 } from './render-watch-pure';
 
@@ -163,7 +164,7 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
     const d = gate.lastDecision;
     const stampedBy = d === null ? '—'
       : d.continuous ? 'continuous (a camera transition, or a realtime layer)'
-      : d.poseChanged ? `pose moved: ${d.poseSlot}`
+      : d.poseChanged ? `pose moved: ${poseDriftLabel(d.poseDrift)}`
       : d.cadenceDue ? 'the clock cadence (a scheduled redraw)'
       : 'nothing this tick';
     const wake = gate.lastWake;

@@ -74,6 +74,18 @@ would silently make the next `hold()` a no-op.
    forever, so navigate-mode damping carries its own pixel-scale floor
    (`../camera/controls/input/README.md` § Damping settle floor), without
    which one camera nudge holds the gate open for over two minutes.
+
+   **A slot RE-DERIVED each frame never converges, and that is a distinct
+   failure from a decaying tail.** A value recomputed from inputs that
+   round differently lands a few representable steps away every frame
+   forever: no floor helps, because there is no tail to cut, and no
+   threshold on the absolute delta finds it, because the number is
+   correct to every digit a viewer could care about. `firstPoseDrift`
+   therefore reports the move in **ULP** — representable float steps —
+   alongside the raw delta, and `debug.renderWatch()` prints both. A
+   handful of ULP is this failure; millions is something genuinely
+   moving. Reading only the slot name cannot tell them apart, which is
+   what made an early diagnosis of this chase the wrong subsystem.
 4. **The settle tail**: `SETTLE_MS` (1500 ms) of frames after the last
    activity or `invalidate()`. This is what covers frame-late feedback
    and wall-clock blends with no queryable flag — the exposure

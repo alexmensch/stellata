@@ -57,6 +57,16 @@ step with whatever is actually on screen.
   sat three orders of magnitude apart while the estimator was accurate
   to 4 %. The gap itself is printed alongside so the raw observation is
   still recoverable.
+- **`stamped by … pose moved: <slot> by <delta> (<n> ulp)`** — which
+  pose slot woke the gate and how far it moved, in representable float
+  steps as well as absolute units. **`NOT CONVERGING`** appears at or
+  under `POSE_DRIFT_ULP_NOISE` (4096) steps: the slot is being
+  re-derived each frame from inputs that round differently, so it can
+  never compare equal and no amount of settling will help
+  (`../../render-gate/README.md` § The decision, in priority order).
+  Past that it is real motion, and the question becomes what is moving.
+  The absolute delta alone cannot separate the two — both are far below
+  anything visible.
 - **`clean`** — appears on the pulsation line only after a violation:
   scheduled frames audited since the last one. Trust alone cannot say
   whether the net is recovering or still catching violations, because a

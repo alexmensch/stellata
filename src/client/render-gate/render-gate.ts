@@ -3,7 +3,7 @@
 
 import type * as THREE from 'three';
 import {
-  POSE_SLOTS, SETTLE_MS, decideRender, firstDifferingPoseSlot, posesDiffer,
+  POSE_SLOTS, SETTLE_MS, type PoseDrift, decideRender, firstPoseDrift, posesDiffer,
   rebasePoseTranslation, writePose,
 } from './render-gate-pure';
 
@@ -24,7 +24,7 @@ export interface GateDecisionTrace {
   readonly continuous: boolean;
   readonly poseChanged: boolean;
   readonly cadenceDue: boolean;
-  readonly poseSlot: string | null;
+  readonly poseDrift: PoseDrift | null;
 }
 
 export class RenderGate {
@@ -53,8 +53,10 @@ export class RenderGate {
    *  that wants frames calls `invalidate()` or `hold()`.
    *
    *  `lastWake` is the most recent `invalidate()` and its reason;
-   *  `lastDecision` is the last tick's inputs, with `poseSlot` naming the
-   *  first pose slot that moved. Between them they answer "what woke it",
+   *  `lastDecision` is the last tick's inputs, with `poseDrift` naming the
+   *  first pose slot that moved and how far, in representable float steps
+   *  as well as absolute units — a few ULP is a value that will never
+   *  converge, which no amount of settling fixes. Between them they answer "what woke it",
    *  which the activity stamp alone cannot: every source collapses into
    *  one timestamp by the time anything reads it. */
   get debugState(): {
@@ -159,8 +161,8 @@ export class RenderGate {
       poseChanged,
       cadenceDue: inputs.cadenceDue,
       // Only when it changed — the scan is for diagnosis, not the hot path.
-      poseSlot: poseChanged
-        ? firstDifferingPoseSlot(this.scratchPose, this.lastRenderedPose) : null,
+      poseDrift: poseChanged
+        ? firstPoseDrift(this.scratchPose, this.lastRenderedPose) : null,
     };
     this.lastCadenceScheduled = decision.render
       && inputs.cadenceDue

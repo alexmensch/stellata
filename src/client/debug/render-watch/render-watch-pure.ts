@@ -1,7 +1,7 @@
 // Classify WHY the render gate is drawing (or not) this moment. Pure, so
 // the verdict table is testable. See README.md.
 
-import { SETTLE_MS } from '../../render-gate/render-gate-pure';
+import { SETTLE_MS, type PoseDrift } from '../../render-gate/render-gate-pure';
 import {
   CADENCE_CAP_SIM_S,
   CADENCE_JND_FLUX_FRAC,
@@ -182,6 +182,28 @@ export function bindingSourceLabel(
 export function observedAsRate(observed: number, simDtS: number): number {
   return Number.isFinite(simDtS) && simDtS !== 0 ? observed / Math.abs(simDtS) : Number.NaN;
 }
+
+/** The pose-drift line: which slot moved, how far, and — the part that
+ *  decides the diagnosis — how many representable float steps that is.
+ *
+ *  A handful of ULP means the slot is being RE-DERIVED each frame from
+ *  inputs that round differently, so it can never compare equal and the
+ *  gate can never idle. Waiting does not fix it and no threshold on the
+ *  absolute delta finds it, because the number is correct to every digit a
+ *  viewer could care about. Anything past a few thousand ULP is real
+ *  motion instead, and the question becomes what is moving. */
+export function poseDriftLabel(drift: PoseDrift | null): string {
+  if (drift === null) return 'unknown slot';
+  if (!Number.isFinite(drift.ulps)) return `${drift.slot} (first frame)`;
+  const kind = drift.ulps <= POSE_DRIFT_ULP_NOISE ? ' — NOT CONVERGING' : '';
+  return `${drift.slot} by ${drift.delta.toExponential(2)} (${drift.ulps} ulp)${kind}`;
+}
+
+/** Above this many representable steps a slot is genuinely moving; at or
+ *  under it, it is a value that will not settle. Deliberately generous:
+ *  a round-trip through a normalise or a lookAt costs a few ULP, and the
+ *  distinction being drawn is against motion that is millions. */
+export const POSE_DRIFT_ULP_NOISE = 4096;
 
 export interface RenderWatchHealth {
   tickHz: number;

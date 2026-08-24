@@ -222,7 +222,7 @@ describe('RenderGate ride absorption', () => {
     // them alone is a real camera change and must not be absorbed.
     target.x += 0.25;
     expect(tick(SETTLE_MS)).toBe(true);
-    expect(gate.debugState.lastDecision?.poseSlot).toBe('target.x');
+    expect(gate.debugState.lastDecision?.poseDrift?.slot).toBe('target.x');
   });
 });
 
@@ -252,10 +252,10 @@ describe('RenderGate wake attribution', () => {
   it('the decision trace names which pose slot moved', () => {
     const { gate, camera, tick, settle } = makeGate();
     expect(settle(0)).toBe(false);
-    expect(gate.debugState.lastDecision?.poseSlot).toBe(null);
+    expect(gate.debugState.lastDecision?.poseDrift).toBe(null);
     camera.fov += 1;
     tick(SETTLE_MS);
-    expect(gate.debugState.lastDecision?.poseSlot).toBe('fov');
+    expect(gate.debugState.lastDecision?.poseDrift?.slot).toBe('fov');
   });
 });
 
