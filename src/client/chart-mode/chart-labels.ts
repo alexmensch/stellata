@@ -352,12 +352,27 @@ export class ChartLabels {
     this.pool.clear();
     this.ringPool.clear();
     this.wingPool.clear();
+    this.resetTickState();
   }
 
-  /** Teardown. `stop()` releases the subscriptions + SVG pools; dispose
-   *  additionally drops the catalog-derived caches (the distSol mirror is
-   *  one float per star) that `stop()` deliberately keeps for chart
-   *  re-entry. */
+  /** Drop the per-tick scratch. Scoped to a chart session, not a cache: the
+   *  next tick refills it from zero either way, so holding it while chart
+   *  mode is off buys nothing. */
+  private resetTickState(): void {
+    this.candidatePool.length = 0;
+    this.candidateList.length = 0;
+    this.accepted.length = 0;
+    this.candidateCount = 0;
+    this.seen.clear();
+    this.usedKeys.clear();
+    this.usedRings.clear();
+    this.usedWings.clear();
+  }
+
+  /** Teardown. `stop()` releases the subscriptions, the SVG pools and the
+   *  per-tick scratch; dispose additionally drops the catalog-derived caches
+   *  (the distSol mirror is one float per star) that `stop()` deliberately
+   *  keeps for chart re-entry. */
   dispose(): void {
     this.stop();
     this.layer = null;
@@ -369,14 +384,6 @@ export class ChartLabels {
     this.variableEligible = null;
     this.binaryEligible = null;
     this.distSolCache = null;
-    this.candidatePool.length = 0;
-    this.candidateList.length = 0;
-    this.accepted.length = 0;
-    this.candidateCount = 0;
-    this.seen.clear();
-    this.usedKeys.clear();
-    this.usedRings.clear();
-    this.usedWings.clear();
   }
 
   private rebuildEligible(): void {
