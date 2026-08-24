@@ -23,7 +23,12 @@ function fakeRenderer() {
     readRenderTargetPixelsAsync: (_t: RenderTarget, x: number, y: number) =>
       new Promise<Float32Array>((resolve) => { reads.push({ x, y, land: resolve }); }),
   };
-  return { renderer: renderer as unknown as WebGPURenderer, rendersInto, reads };
+  return {
+    renderer: renderer as unknown as WebGPURenderer,
+    rendersInto,
+    reads,
+    boundTarget: () => current,
+  };
 }
 
 const COUNT = 2048;
@@ -96,6 +101,17 @@ describe('the displacement gate', () => {
     expect(rendersInto).toHaveLength(1);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     expect(rendersInto).toHaveLength(2);
+  });
+
+  // The same contract ../hdr/reduction-webgpu.ts keeps and pins: a pass
+  // ends at the canvas rather than restoring what was bound on entry, so
+  // none may run inside another's binding. The WebGL2 twin save/restores,
+  // which is why this needs pinning on both sides.
+  it('leaves the render target at the canvas — the contract every pass keeps', () => {
+    const { prepass, boundTarget, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    expect(boundTarget()).toBeNull();
   });
 
   it('markDirty recomputes without any camera motion — a voxel chunk landed', () => {

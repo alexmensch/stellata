@@ -143,6 +143,10 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (!this.dirty && !moved) return;
 
     this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
+    // Ends at the canvas, not at whatever was bound on entry: every pass
+    // on this backend keeps that contract, so no pass may run inside
+    // another's binding (../hdr/reduction-webgpu.ts is the twin). The
+    // WebGL2 build save/restores instead — README.md § The prepass draw.
     this.renderer.setRenderTarget(this.rt);
     this.quad.render(this.renderer);
     this.renderer.setRenderTarget(null);
