@@ -1,8 +1,6 @@
-// The port child's half of the shader-constant drift guards. The GLSL
-// sources cannot import, so their tests pin each literal against the pure
-// module (../../solar-system/atmosphere/atmosphere-glsl-drift.test.ts and
-// siblings). These files CAN import — so the guard is the mirror image:
-// the constant must be read, never restated.
+// The TSL half of the shader-constant drift guards: a pinned constant must
+// be read from its `*-pure.ts` home, never restated as a literal.
+// README.md § Constant drift runs in both directions.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

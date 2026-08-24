@@ -39,7 +39,20 @@ src/client/webgpu/solar-system/
   uniform-nodes.ts            TSL uniform-node twins of the seam's
                               uniform blocks.
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
+  tsl-drift.test.ts           § Constant drift runs in both directions.
 ```
+
+## Constant drift runs in both directions
+
+A constant both backends read is authored once in a `*-pure.ts` module.
+GLSL cannot import, so its guards pin each literal in the source text
+against that module (`atmosphere-glsl-drift.test.ts`,
+`ring-photometry-pure.test.ts`). These files **can** import, so their
+guard is the mirror image: `tsl-drift.test.ts` asserts every pinned
+constant is referenced by name across the six surfaces, and that none of
+their values reappears as a bare literal in any of them. A number copied
+out of the GLSL into a TSL twin is the drift that has no compiler to
+catch it.
 
 ## Vertex stages: three of five need none
 
