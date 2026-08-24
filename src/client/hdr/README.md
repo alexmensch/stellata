@@ -162,20 +162,27 @@ canvas — it binds its own chain of targets and restores, after the resolve
 so the measurement never delays the frame it measured
 (`exposure/reduction/README.md`).
 
-**The target's depth format is load-bearing in both renderers, and
-three infers it from exactly this parameter set.** `depthBuffer: true`
-with `stencilBuffer: false` and no depth *texture* gives
-`DEPTH_COMPONENT24` on WebGL2 (three's `getInternalDepthFormat`), and
-`depth32float` on WebGPU once `reversedDepthBuffer` is on
-(`getCurrentDepthStencilFormat`). The local depth pass derives its
-precision guarantee from each (`../local-depth/bracket/README.md`
-§ Precision analysis): the WebGL2 slice-ratio bound assumes 24 bits,
-and the WebGPU K = 1 bound assumes float32. So a 16-bit renderbuffer,
-or a depth *texture* of the wrong type, or adding stencil (which
-diverts WebGPU to `depth32float-stencil8`, an optional device feature)
-silently coarsens every close-range z-test — by 256× on WebGL2, and by
-enough on WebGPU to make a single bracket wrong by orders of magnitude
-at Neptune's ring.
+**The target's depth format is load-bearing in both renderers, and the
+two backends reach it by OPPOSITE routes.** The local depth pass
+derives its precision guarantee from the format
+(`../local-depth/bracket/README.md` § Precision analysis): the WebGL2
+slice-ratio bound assumes 24 bits, the WebGPU K = 1 bound assumes
+float32.
+
+- **WebGL2 infers it.** `depthBuffer: true`, `stencilBuffer: false`,
+  no depth *texture* gives `DEPTH_COMPONENT24` (three's
+  `getInternalDepthFormat`). A 16-bit renderbuffer would coarsen every
+  close-range z-test 256×.
+- **WebGPU must be TOLD.** `reversedDepthBuffer` makes three pick
+  `depth32float` for the CANVAS only; for a render target it
+  auto-creates a `depth24plus` depth texture regardless, which is
+  fixed-point and makes a single bracket wrong by ~262 AU at Neptune's
+  ring. So `WebGpuHdrPipeline` attaches an **explicit `FloatType`
+  `DepthTexture`** and throws unless the target resolves to one —
+  do not "simplify" that away on the strength of the WebGL2 line above.
+
+Adding stencil breaks both: it diverts WebGPU to
+`depth32float-stencil8`, an optional device feature.
 
 The target is `RGBA16F` plus its `RG16F` statistic attachment and a second
 `RGBA16F` for the diffuse emitters (§ Three attachments), sized to the

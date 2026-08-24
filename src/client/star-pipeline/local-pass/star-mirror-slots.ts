@@ -10,10 +10,11 @@ export const MIRROR_CAPACITY = 8;
  *  core's bracket depth before the disc draw, so an occluded core
  *  depth-fails instead of reaching the blender — the disc pass's
  *  MaxEquation cannot paint OVER an already-painted farther core, it can
- *  only be kept from painting at all. Glow comes after every body surface
- *  (mesh 2.8, rings 2.81, shell 2.82): it writes no depth, so drawn
+ *  only be kept from painting at all. Glow sits after every planet body
+ *  surface and before the planet glare (both ladders in
+ *  `../../solar-system/planets/README.md`): it writes no depth, so drawn
  *  EARLIER an opaque mesh would erase it wholesale instead of it
- *  depth-failing per fragment. Planet glare (4) still adds over everything. */
+ *  depth-failing per fragment. */
 export const MIRROR_RENDER_ORDER = { mask: -1, disc: 0, glow: 3.5 } as const;
 
 /** What StarLocalCluster drives, whichever backend built the mirror —

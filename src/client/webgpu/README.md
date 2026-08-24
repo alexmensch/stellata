@@ -146,6 +146,15 @@ gate becomes a permanently-false branch, so the WebGL2 deletion
 plan — a gate still standing then means its feature was dead for a
 release.
 
+**The line-layer row is gated the other way round, and the backstop
+does NOT reach it.** It parks on `webgpu !== null` (a positive test in
+`stellata.ts`'s constructor) rather than `rendererGL !== null`, because
+what it does is *remove* groups rather than skip construction. At
+cutover that branch becomes permanently TRUE, so it reads as ordinary
+unconditional code and a sweep for dead false-branches walks straight
+past it. `0it.27` must delete those three `remove()` calls by name;
+nothing else will catch them.
+
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, depth funcs remapped, clear inverted, all
 upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`

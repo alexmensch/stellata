@@ -120,7 +120,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
-| `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's per-slice renders. |
+| `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one per slice on WebGL2, one for the whole bracket under reversed-z (K = 1). |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
 | `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
 | `gpu.frame`             | timer query / timestamps         | Real GPU ms for the whole frame — one WebGL2 query spanning every pass, or the summed WebGPU per-pass timestamps. The headline's source, and the only row that prices anything. Both backends. |

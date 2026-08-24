@@ -426,8 +426,8 @@ system draws, never every catalog pair.
   it. The line material strips the log-depth chunks
   (`makeOrbitLineMaterial(..., localPass)`); `collectSpheres` reports
   each drawn pair's barycentre + apoapsis extent so the slice bracket
-  contains the ellipses. Paths drawing ⇒ the cluster is active, so
-  they always render.
+  contains the ellipses. Paths drawing ⇒ the cluster is active, so they
+  always render — WebGL2 only; WebGPU parks it until `stellata-0it.27`.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
   `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
   barycentre anchors and applies the size gate below. The two loops per

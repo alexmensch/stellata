@@ -172,7 +172,12 @@ from here on purpose.
 
 Markers and trails each carry a **local-depth-pass mirror** (`localGroup`)
 alongside their main-pass draw, and `SolarSystemCluster.setLocalPassActive`
-flips which one is visible each frame — exactly one ever is. While the
+flips which one is visible each frame — exactly one ever is. Except the
+**trail** on a WebGPU boot: its `LineBasicMaterial` cannot build a WGSL
+pipeline against the HDR target, so the shell keeps that `localGroup`
+out of the pass scene and the trail draws in NEITHER pass while the
+cluster is active (`stellata-0it.27` un-parks it). Markers are ported
+and unaffected. While the
 solar system is locally active every one of its bodies renders in the
 bracketed pass with **depth cleared**, so a main-pass probe is painted over
 by any planet disc, mesh, ring or atmosphere shell regardless of true

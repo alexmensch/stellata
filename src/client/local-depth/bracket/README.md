@@ -202,6 +202,11 @@ order-independent. The residual is cross-body translucent overlap
 between bodies that would have landed in different brackets — the
 K≈4 vantage. Smoke it: camera inside Neptune's orbit ring with several
 rings drawn, watching the crossings for order flicker under scrub.
+**That smoke is BLOCKED until `stellata-0it.27`** — orbit rings are the
+translucent geometry it turns on, and they do not draw on the only boot
+that takes K = 1 (the pass's line layers are parked there,
+`../README.md` § Live providers). So the residual is argued, not yet
+observed; run it as 0it.27's first check.
 
 Shipped: `LocalDepthPass.render` takes the K = 1 branch whenever the
 renderer reports `reversedDepthBuffer` (`computeBracket`, one

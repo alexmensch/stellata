@@ -49,10 +49,15 @@ int array of `MIRROR_CAPACITY` slots checked in all three passes) and
 the mirror re-renders it in the local depth pass: a small
 instanced geometry whose slots re-copy the member's attributes from
 the live source arrays each frame (`MirrorSlots`), drawn with
-`LOCAL_DEPTH_PASS` material clones sharing the same uniform objects. Under that define
-the shader swaps `gl_InstanceID` for the `iSourceIdx` attribute
-(`STAR_SELF_ID`) so star-indexed lookups — the extinction texelFetch,
-`uHideFocusIdx`, `uPinFocusToCenter` — behave identically. The
+local-pass variants of the three star materials. Star identity comes
+from the `iSourceIdx` attribute rather than the instance index, so
+star-indexed lookups — the extinction texelFetch, `uHideFocusIdx`,
+`uPinFocusToCenter` — behave identically. **How each backend builds
+those variants differs**: GLSL compiles material clones under the
+`LOCAL_DEPTH_PASS` define (which is what swaps `gl_InstanceID` for
+`STAR_SELF_ID`), sharing the same uniform objects; the TSL twin builds
+separate materials from the same node builders with a `localMirror`
+flag, sharing uniform nodes and no define. The
 attribute-budget invariant: each compile variant must fit within 16
 attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
 `../star-pipeline.test.ts`, along with the uniform-array-size ↔
