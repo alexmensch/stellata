@@ -263,7 +263,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
     // which short-circuits on a non-null field.
     if (
       this.renderer.reversedDepthBuffer !== true
-      || rt.depthTexture.type !== FloatType
+      || rt.depthTexture?.type !== FloatType
       || rt.stencilBuffer
       || !rt.depthBuffer
     ) {

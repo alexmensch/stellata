@@ -22,18 +22,16 @@ export interface RenderSortItem {
  * three's intended one. `id` breaks ties, so the composed order is total
  * and reversing it is exact rather than merely stable.
  */
-export function reversedDepthOpaqueSort(a: RenderSortItem, b: RenderSortItem): number {
-  return (b.groupOrder ?? 0) - (a.groupOrder ?? 0)
+function negatedSort(zSign: 1 | -1) {
+  return (a: RenderSortItem, b: RenderSortItem): number =>
+    (b.groupOrder ?? 0) - (a.groupOrder ?? 0)
     || (b.renderOrder ?? 0) - (a.renderOrder ?? 0)
-    || (b.z ?? 0) - (a.z ?? 0)
+    || zSign * ((b.z ?? 0) - (a.z ?? 0))
     || (b.id ?? 0) - (a.id ?? 0);
 }
 
+export const reversedDepthOpaqueSort = negatedSort(1);
+
 /** The transparent list's twin: three sorts it back-to-front, so only
- *  the `z` key inverts relative to the opaque comparator above. */
-export function reversedDepthTransparentSort(a: RenderSortItem, b: RenderSortItem): number {
-  return (b.groupOrder ?? 0) - (a.groupOrder ?? 0)
-    || (b.renderOrder ?? 0) - (a.renderOrder ?? 0)
-    || (a.z ?? 0) - (b.z ?? 0)
-    || (b.id ?? 0) - (a.id ?? 0);
-}
+ *  the `z` key inverts relative to the opaque comparator. */
+export const reversedDepthTransparentSort = negatedSort(-1);
