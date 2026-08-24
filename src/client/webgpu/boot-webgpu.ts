@@ -8,12 +8,16 @@ import type { SharedUniforms } from '../frame/shared-uniforms';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
+import { WebGpuExtinctionPrepass } from './extinction/extinction-prepass-webgpu';
+import { ExtinctionTextureNodes } from './extinction/extinction-texture-nodes';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import {
   reversedDepthOpaqueSort, reversedDepthTransparentSort,
 } from './reversed-depth-sort';
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './shared-uniform-nodes';
-import type { StarGeometrySources, WebGpuSeam } from './seam';
+import type {
+  StarGeometrySources, WebGpuExtinctionPrepassSources, WebGpuSeam,
+} from './seam';
 import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
 import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
@@ -63,6 +67,10 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let registry: SharedUniformNodeRegistry | null = null;
   const scene = new Scene();
   const hdr = new WebGpuHdrPipeline(renderer);
+  // One pair of texture slots for the whole boot: the star vertex stage's
+  // fallback march and the prepass march sample the SAME dust node, so
+  // `setDustTexture` cannot reach one and miss the other.
+  const extinctionTextures = new ExtinctionTextureNodes();
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
@@ -109,19 +117,31 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     attachStarLayer(sources: StarGeometrySources) {
       const layer = new StarLayer(
-        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates);
+        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionTextures);
       // Registration is what keeps the layer's output count in lockstep
       // with the pipeline's target mode; dispose must sever it or a dead
       // layer keeps taking mode swaps.
       const unregister = hdr.registerMrtLayer(layer);
       return {
         setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
+        setMonochrome: (on: boolean) => layer.setMonochrome(on),
         localMirror: layer.localMirror,
         dispose() {
           unregister();
           layer.dispose();
         },
       };
+    },
+    setDustTexture(texture: THREE.Data3DTexture | null) {
+      extinctionTextures.setDustTexture(texture);
+    },
+    attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
+      return new WebGpuExtinctionPrepass({
+        renderer,
+        nodes: nodesOrThrow('attachExtinctionPrepass'),
+        textures: extinctionTextures,
+        ...options,
+      });
     },
   };
 }
