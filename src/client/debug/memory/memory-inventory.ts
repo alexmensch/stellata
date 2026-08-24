@@ -1,31 +1,23 @@
 import * as THREE from 'three';
-import type { Stellata } from '../../stellata';
+import type { NamedScene, Stellata } from '../../stellata';
 import {
   byBytesDescending,
+  crossCheck,
   formatBytes,
   geometryBytes,
-  textureBytes,
+  groupRows,
+  textureResidency,
   totalBytes,
   typedArrayRows,
   unknownCount,
+  unpricedFields,
+  type CrossCheck,
   type ResidencyRow,
+  type ResourceCounts,
 } from './memory-inventory-pure';
 
 // debug.memory() — GPU residency + JS heap inventory. README.md owns what
 // is counted, what is not, and how to read the cross-check.
-
-export interface CrossCheck {
-  /** What three's own bookkeeping counts as uploaded. */
-  rendererGeometries: number;
-  rendererTextures: number;
-  /** What the scene walk reached. */
-  walkedGeometries: number;
-  walkedTextures: number;
-  /** Uploaded but off-scene — render targets, and anything parented into
-   *  a scene the walk does not visit. */
-  unaccountedTextures: number;
-  unaccountedGeometries: number;
-}
 
 export interface JsHeapReading {
   usedBytes: number;
@@ -35,18 +27,23 @@ export interface JsHeapReading {
 
 export interface MemoryInventory {
   gpu: { rows: ResidencyRow[]; totalBytes: number; unknownRows: number };
-  heap: { rows: ResidencyRow[]; totalBytes: number; reading: JsHeapReading | null };
+  heap: {
+    rows: ResidencyRow[];
+    totalBytes: number;
+    reading: JsHeapReading | null;
+    unpricedFields: string[];
+  };
   crossCheck: CrossCheck;
 }
 
-/** Slash-joined names of an object's named ancestors, nearest last, so a
- *  row says which layer owns the resource rather than just its type. */
-function ownerPath(object: THREE.Object3D): string {
+/** Slash-joined names of an object's named ancestors, nearest last, then
+ *  `leaf`, so a row says which layer owns the resource. */
+function ownerPath(object: THREE.Object3D, leaf: string): string {
   const parts: string[] = [];
   for (let node: THREE.Object3D | null = object; node; node = node.parent) {
     if (node.name) parts.unshift(node.name);
   }
-  parts.push(object.type);
+  parts.push(leaf);
   return parts.join('/');
 }
 
@@ -56,58 +53,92 @@ function materialsOf(object: THREE.Object3D): THREE.Material[] {
   return Array.isArray(material) ? material : [material];
 }
 
-function eachTexture(material: THREE.Material, visit: (t: THREE.Texture) => void): void {
-  for (const value of Object.values(material)) {
-    if (value instanceof THREE.Texture) visit(value);
+/** What to call a mesh when nothing up its parent chain is named. The
+ *  layers name their materials far more consistently than their objects,
+ *  and `Object3D.type` alone collapses hundreds of rows onto `Mesh`. */
+function leafName(object: THREE.Object3D): string {
+  for (const material of materialsOf(object)) {
+    if (material.name) return material.name;
+  }
+  return object.type;
+}
+
+/** `Texture.type` is the pixel DATA type — a numeric three constant, not
+ *  a readable name the way `Object3D.type` is — so a row keyed on it
+ *  prints `1009`. The slot the texture was found under is what actually
+ *  identifies it; the class name says which kind of texture it is. */
+function textureName(texture: THREE.Texture, slot: string): string {
+  if (texture.name) return `${texture.name} (${texture.constructor.name})`;
+  return `${slot} (${texture.constructor.name})`;
+}
+
+function eachTexture(
+  material: THREE.Material,
+  visit: (texture: THREE.Texture, slot: string) => void,
+): void {
+  for (const [slot, value] of Object.entries(material)) {
+    if (value instanceof THREE.Texture) visit(value, slot);
   }
   const uniforms = (material as Partial<THREE.ShaderMaterial>).uniforms;
   if (!uniforms) return;
-  for (const uniform of Object.values(uniforms)) {
+  for (const [slot, uniform] of Object.entries(uniforms)) {
     const value = uniform?.value;
-    if (value instanceof THREE.Texture) visit(value);
+    if (value instanceof THREE.Texture) visit(value, slot);
     else if (Array.isArray(value)) {
-      for (const entry of value) if (entry instanceof THREE.Texture) visit(entry);
+      value.forEach((entry, i) => {
+        if (entry instanceof THREE.Texture) visit(entry, `${slot}[${i}]`);
+      });
     }
   }
 }
 
-function walkScene(scene: THREE.Scene): { rows: ResidencyRow[]; geometries: number; textures: number } {
+/** One pass over every scene the shell draws. Dedupe spans the scenes:
+ *  a texture shared between the shell's scene and the seam's is one
+ *  allocation and gets one row. */
+function walkScenes(
+  scenes: readonly NamedScene[],
+): { rows: ResidencyRow[]; counts: ResourceCounts } {
   const rows: ResidencyRow[] = [];
   const seenGeometries = new Set<string>();
   const seenTextures = new Set<string>();
+  const scenePrefix = scenes.length > 1;
 
-  scene.traverse((object) => {
-    const geometry = (object as Partial<THREE.Mesh>).geometry;
-    if (geometry && !seenGeometries.has(geometry.uuid)) {
-      seenGeometries.add(geometry.uuid);
-      const { bytes, detail } = geometryBytes(geometry);
-      rows.push({
-        label: `${ownerPath(object)} geometry`,
-        bytes,
-        basis: 'array',
-        detail,
-      });
-    }
-    for (const material of materialsOf(object)) {
-      eachTexture(material, (texture) => {
-        if (seenTextures.has(texture.uuid)) return;
-        seenTextures.add(texture.uuid);
-        const { bytes, basis, detail } = textureBytes(texture);
-        rows.push({
-          label: `${ownerPath(object)} ${texture.name || texture.type}`,
-          bytes,
-          basis,
-          detail,
+  for (const { name, scene } of scenes) {
+    const prefix = scenePrefix ? `${name}: ` : '';
+    scene.traverse((object) => {
+      const owner = ownerPath(object, leafName(object));
+      const geometry = (object as Partial<THREE.Mesh>).geometry;
+      if (geometry && !seenGeometries.has(geometry.uuid)) {
+        seenGeometries.add(geometry.uuid);
+        const { bytes, detail } = geometryBytes(geometry);
+        rows.push({ label: `${prefix}${owner} geometry`, bytes, basis: 'array', detail });
+      }
+      for (const material of materialsOf(object)) {
+        eachTexture(material, (texture, slot) => {
+          if (seenTextures.has(texture.uuid)) return;
+          seenTextures.add(texture.uuid);
+          const { bytes, basis, detail } = textureResidency(texture);
+          rows.push({
+            label: `${prefix}${owner} ${textureName(texture, slot)}`,
+            bytes,
+            basis,
+            detail,
+          });
         });
-      });
-    }
-  });
+      }
+    });
+  }
 
-  return { rows, geometries: seenGeometries.size, textures: seenTextures.size };
+  return {
+    rows,
+    counts: { geometries: seenGeometries.size, textures: seenTextures.size },
+  };
 }
 
-function rendererMemory(stellata: Stellata): { geometries: number; textures: number } {
-  const info = (stellata.renderer as { info?: { memory?: { geometries?: number; textures?: number } } }).info;
+function rendererCounts(stellata: Stellata): ResourceCounts {
+  const info = (stellata.renderer as {
+    info?: { memory?: { geometries?: number; textures?: number } };
+  }).info;
   return {
     geometries: info?.memory?.geometries ?? 0,
     textures: info?.memory?.textures ?? 0,
@@ -130,9 +161,8 @@ function readJsHeap(): JsHeapReading | null {
 }
 
 export function collectMemoryInventory(stellata: Stellata): MemoryInventory {
-  const walked = walkScene(stellata.sceneGraph);
-  const renderer = rendererMemory(stellata);
-  const gpuRows = walked.rows.sort(byBytesDescending);
+  const walked = walkScenes(stellata.sceneGraphs);
+  const gpuRows = groupRows(walked.rows).sort(byBytesDescending);
 
   const heapRows = typedArrayRows(stellata.catalog, 'catalog');
   heapRows.push({
@@ -153,15 +183,9 @@ export function collectMemoryInventory(stellata: Stellata): MemoryInventory {
       rows: heapRows,
       totalBytes: totalBytes(heapRows),
       reading: readJsHeap(),
+      unpricedFields: unpricedFields(stellata.catalog).map((name) => `catalog.${name}`),
     },
-    crossCheck: {
-      rendererGeometries: renderer.geometries,
-      rendererTextures: renderer.textures,
-      walkedGeometries: walked.geometries,
-      walkedTextures: walked.textures,
-      unaccountedTextures: Math.max(0, renderer.textures - walked.textures),
-      unaccountedGeometries: Math.max(0, renderer.geometries - walked.geometries),
-    },
+    crossCheck: crossCheck(rendererCounts(stellata), walked.counts),
   };
 }
 
@@ -169,27 +193,40 @@ function printableRows(rows: readonly ResidencyRow[]): Array<Record<string, stri
   return rows.map((row) => ({
     resource: row.label,
     size: formatBytes(row.bytes),
+    copies: String(row.count ?? 1),
     basis: row.basis,
     detail: row.detail,
   }));
 }
 
 export function printMemoryInventory(inventory: MemoryInventory): void {
-  const { gpu, heap, crossCheck } = inventory;
-  console.log(`GPU residency (scene walk): ${formatBytes(gpu.totalBytes)} over ${gpu.rows.length} resources`);
+  const { gpu, heap, crossCheck: cross } = inventory;
+  console.log(
+    `GPU residency (scene walk): ${formatBytes(gpu.totalBytes)} over `
+    + `${cross.walked.geometries} geometries and ${cross.walked.textures} textures, `
+    + `folded into ${gpu.rows.length} rows`,
+  );
   console.table(printableRows(gpu.rows));
   if (gpu.unknownRows > 0) {
     console.warn(`${gpu.unknownRows} resource(s) reported no size — counted as 0, not as free.`);
   }
   console.log(
-    `Off-scene: ${crossCheck.unaccountedTextures} texture(s) and `
-    + `${crossCheck.unaccountedGeometries} geometr(ies) are uploaded but outside the walk `
-    + `(render targets, and any pass scene the walk does not visit). `
-    + `renderer.info: ${crossCheck.rendererTextures} textures / ${crossCheck.rendererGeometries} geometries; `
-    + `walk: ${crossCheck.walkedTextures} / ${crossCheck.walkedGeometries}.`,
+    `Off-scene (uploaded, outside the walk — render targets and pass scenes): `
+    + `${cross.offScene.textures} texture(s), ${cross.offScene.geometries} geometr(ies). `
+    + `Walked but NOT uploaded (parented, never drawn — the walk charges bytes the GPU `
+    + `does not hold): ${cross.unuploaded.textures} texture(s), `
+    + `${cross.unuploaded.geometries} geometr(ies). `
+    + `renderer.info: ${cross.renderer.textures} textures / ${cross.renderer.geometries} `
+    + `geometries; walk: ${cross.walked.textures} / ${cross.walked.geometries}.`,
   );
   console.log(`JS heap, known typed arrays: ${formatBytes(heap.totalBytes)}`);
   console.table(printableRows(heap.rows));
+  if (heap.unpricedFields.length > 0) {
+    console.log(
+      `Not priced (not typed arrays, so they hold heap with no row): `
+      + `${heap.unpricedFields.join(', ')}.`,
+    );
+  }
   if (heap.reading) {
     console.log(
       `performance.memory: used ${formatBytes(heap.reading.usedBytes)} / `

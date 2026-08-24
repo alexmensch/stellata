@@ -180,6 +180,13 @@ export interface StellataOptions {
 
 export type CameraMode = 'navigate' | 'observe';
 
+/** One of the scenes a boot draws, named so a debug read can say which
+ *  one a resource came from (`sceneGraphs`). */
+export interface NamedScene {
+  readonly name: string;
+  readonly scene: THREE.Scene;
+}
+
 // Event-bus payload map. Subscribers register via `Stellata.on(name, fn)`
 // and the compiler enforces the payload type per event. `state` and
 // `frame` are no-payload events.
@@ -1912,11 +1919,21 @@ export class Stellata implements FrameAnchor {
    *  camera transform. */
   get advancedEpochJyr(): number { return this.starFrame.advancedEpochJyr; }
 
-  /** The main-pass scene graph, for debug-scoped READS — the memory
-   *  inventory walks it (`debug/memory/README.md`). Adding or removing
-   *  objects through this handle bypasses the scene-layer registry, so
-   *  every update / monochrome / recenter / dispose fan-out misses them. */
-  get sceneGraph(): THREE.Scene { return this.scene; }
+  /** Every scene graph this boot draws, for debug-scoped READS — the
+   *  memory inventory walks them (`debug/memory/README.md`).
+   *
+   *  Plural because a dual boot renders the SEAM's scene and not the
+   *  shell's, so an inventory of either alone prices a scene that is not
+   *  on screen. Adding or removing objects through these handles bypasses
+   *  the scene-layer registry, so every update / monochrome / recenter /
+   *  dispose fan-out misses them. */
+  get sceneGraphs(): readonly NamedScene[] {
+    if (this.webgpu === null) return [{ name: 'shell', scene: this.scene }];
+    return [
+      { name: 'shell', scene: this.scene },
+      { name: 'webgpu', scene: this.webgpu.scene },
+    ];
+  }
 
   // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
   // distance vector tip) thread this through renderedSizePx so
