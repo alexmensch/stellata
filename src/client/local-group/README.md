@@ -166,10 +166,18 @@ Filter order, per candidate:
    whose centroid is off-screen but whose disc edge crosses the
    viewport still count (the MW disc at grazing incidence).
 
-The ranking lives in the pure `computeVisibleLabels(candidates,
-params)` helper (testable in isolation). A per-frame handler runs
-`computeVisibleLabels` and writes the result into the shared
-`visibleLabelIds` Set; per-label predicates query it.
+The ranking lives in the pure `computeVisibleLabelsInto(candidates,
+params, out)` helper (testable in isolation). A per-frame handler runs it
+over the shared `visibleLabelIds` Set; per-label predicates query that Set.
+
+**It allocates nothing per frame, and the shape is what buys that.** The
+helper clears and refills the caller's Set rather than returning a new one,
+and the survivors go into two module-level parallel arrays used as a
+fixed-size top-N by insertion — no `{id, px}` literal per candidate, no
+per-frame sort. Ties still break toward the earlier candidate, which is
+what the stable sort it replaced did. The buffers are module state, so a
+second concurrent caller would need its own; one handler serves every
+label family (§ Label engine), which is what makes that safe.
 
 **The pass is ref-counted, not owned by either caller.** MW and the LG
 objects compete for the same top-N slots, so one handler serves both:

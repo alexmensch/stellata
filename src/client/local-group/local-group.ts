@@ -404,10 +404,17 @@ export const setMinPixelSize = (px: number): void => { minPixelSize = px; };
 export const getMwInsideDiscPc = (): number => mwInsideDiscPc;
 export const setMwInsideDiscPc = (pc: number): void => { mwInsideDiscPc = pc; };
 
-// Scratch vector for the pure helper. Lives at module scope so the
-// per-frame ranking pass allocates zero. Pure helper is single-
-// threaded (frame handler) so no aliasing concerns.
+// Scratch for the ranking helper. Lives at module scope so the per-frame
+// ranking pass allocates zero. One frame handler serves every label
+// family (§ Label engine), so there is no aliasing concern — a second
+// concurrent caller would need its own buffers.
 const tmpProj = /*@__PURE__*/ new THREE.Vector3();
+// The top-N survivors, descending, as two parallel arrays rather than
+// object literals. Grown on demand and never shrunk: `topN` is a live
+// debug slider, so the buffer sizes to the largest cap the session asks
+// for and every later frame reuses it.
+const rankedIds: string[] = [];
+const rankedPx: number[] = [];
 
 /** Pure: given candidates + viewing params, return the set of IDs whose
  *  labels should be visible this frame.
@@ -427,20 +434,30 @@ const tmpProj = /*@__PURE__*/ new THREE.Vector3();
  *     off-screen but whose disc edge crosses the viewport still
  *     compete for a label slot.
  *
- *  Survivors are sorted by descending pxSize; the top `topN` win. */
-export function computeVisibleLabels(
+ *  Survivors are ranked by descending pxSize; the top `topN` win, ties
+ *  broken toward the earlier candidate.
+ *
+ *  Writes into a caller-owned Set rather than returning one: this runs
+ *  every frame, and the verdict is read through one long-lived Set
+ *  anyway. */
+export function computeVisibleLabelsInto(
   candidates: readonly LabelCandidate[],
   params: RankingParams,
-): Set<string> {
-  const result = new Set<string>();
+  out: Set<string>,
+): void {
+  out.clear();
   const dxGc = params.cameraAbs.x - params.galacticCentreAbs.x;
   const dyGc = params.cameraAbs.y - params.galacticCentreAbs.y;
   const dzGc = params.cameraAbs.z - params.galacticCentreAbs.z;
   const camToGc = Math.sqrt(dxGc * dxGc + dyGc * dyGc + dzGc * dzGc);
-  if (camToGc < params.mwInsideDiscPc) return result;
+  if (camToGc < params.mwInsideDiscPc) return;
+
+  const cap = Math.min(Math.max(params.topN, 0), candidates.length);
+  if (cap === 0) return;
+  while (rankedIds.length < cap) { rankedIds.push(''); rankedPx.push(0); }
 
   const pxPerRad = params.viewportHeightPx / ((params.fovDeg * Math.PI) / 180);
-  const ranked: { id: string; px: number }[] = [];
+  let count = 0;
   for (const cand of candidates) {
     // Move candidate to the renderer's local-world frame (subtract
     // worldOffset) so the camera's matrices apply.
@@ -467,12 +484,22 @@ export function computeVisibleLabels(
     const r = pxSize * 0.5;
     if (screenX + r < 0 || screenX - r > params.viewportWidthPx) continue;
     if (screenY + r < 0 || screenY - r > params.viewportHeightPx) continue;
-    ranked.push({ id: cand.id, px: pxSize });
+
+    // Insert into the descending top-N, dropping the smallest once full.
+    // The strict `>` is what preserves the stable sort's tie-break: an
+    // equal pxSize stops the shift and lands after the incumbent.
+    if (count === cap && pxSize <= rankedPx[cap - 1]) continue;
+    let i = count < cap ? count : cap - 1;
+    while (i > 0 && pxSize > rankedPx[i - 1]) {
+      rankedPx[i] = rankedPx[i - 1];
+      rankedIds[i] = rankedIds[i - 1];
+      i--;
+    }
+    rankedPx[i] = pxSize;
+    rankedIds[i] = cand.id;
+    if (count < cap) count++;
   }
-  ranked.sort((a, b) => b.px - a.px);
-  const cap = Math.min(params.topN, ranked.length);
-  for (let i = 0; i < cap; i++) result.add(ranked[i].id);
-  return result;
+  for (let i = 0; i < count; i++) out.add(rankedIds[i]);
 }
 
 /** What the shared ranking pass + both label families read per frame —
@@ -499,7 +526,7 @@ function lgLabelHostOf(stellata: Stellata): LgLabelHost {
 // the per-label handlers), and each label's predicate just queries
 // `visibleLabelIds.has(...)`.
 const candidates: LabelCandidate[] = [];
-let visibleLabelIds = new Set<string>();
+const visibleLabelIds = new Set<string>();
 const tmpCamAbs = new THREE.Vector3();
 let rankingHolders = 0;
 let stopRanking: (() => void) | null = null;
@@ -512,7 +539,7 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
   rankingHolders++;
   stopRanking ??= host.onFrame(() => {
     if (host.getMonochrome()) {
-      visibleLabelIds = new Set();
+      visibleLabelIds.clear();
       return;
     }
     const c = host.camera.position;
@@ -525,7 +552,7 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
     // each frame (it's a 'frame' event handler), so we have to flush
     // explicitly or we read last-frame's projection.
     host.camera.updateMatrixWorld();
-    visibleLabelIds = computeVisibleLabels(candidates, {
+    computeVisibleLabelsInto(candidates, {
       cameraAbs: tmpCamAbs,
       galacticCentreAbs: GALACTIC_CENTRE_PC,
       worldOffset: w,
@@ -537,7 +564,7 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
       topN,
       minPixelSize,
       mwInsideDiscPc,
-    });
+    }, visibleLabelIds);
   });
   let released = false;
   return () => {
@@ -546,7 +573,7 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
     if (--rankingHolders > 0) return;
     stopRanking?.();
     stopRanking = null;
-    visibleLabelIds = new Set();
+    visibleLabelIds.clear();
   };
 }
 

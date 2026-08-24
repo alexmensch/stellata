@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   LocalGroupLayer,
-  computeVisibleLabels,
+  computeVisibleLabelsInto,
   createLocalGroupLabels,
   type LgLabelHost,
   DEFAULT_TOP_N,
@@ -313,7 +313,19 @@ function makeParams(
   };
 }
 
-describe('computeVisibleLabels — global apparent-size ranking', () => {
+describe('computeVisibleLabelsInto — global apparent-size ranking', () => {
+  /** The helper writes into a caller-owned Set; every case wants a fresh
+   *  verdict, so allocate one here rather than keeping an allocating
+   *  variant alive in the module for tests alone. */
+  const rank = (
+    cands: readonly LabelCandidate[],
+    params: RankingParams,
+  ): Set<string> => {
+    const out = new Set<string>();
+    computeVisibleLabelsInto(cands, params, out);
+    return out;
+  };
+
   // Reset live tunables to defaults each test so cross-test mutation
   // can't introduce false signal.
   beforeEach(() => {
@@ -329,7 +341,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
       makeCandidate({ id: 'mw', centerAbs: GALACTIC_CENTRE_PC, maxAxis: 15_000 }),
       makeCandidate({ id: 'lmc', centerAbs: new THREE.Vector3(15_000, 5_000, -42_000), maxAxis: 4_500 }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target));
+    const result = rank(cands, makeParams(eye, target));
     expect(result.size).toBe(0);
   });
 
@@ -343,7 +355,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
       makeCandidate({ id: 'mid', centerAbs: target.clone(), maxAxis: 500 }),
       makeCandidate({ id: 'small', centerAbs: target.clone(), maxAxis: 50 }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, {
+    const result = rank(cands, makeParams(eye, target, {
       topN: 2, minPixelSize: 0.01,
     }));
     expect(result.size).toBe(2);
@@ -359,7 +371,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
       makeCandidate({ id: 'tiny', centerAbs: target.clone(), maxAxis: 50 }),
       makeCandidate({ id: 'mw', centerAbs: target.clone(), maxAxis: 15_000 }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target));
+    const result = rank(cands, makeParams(eye, target));
     expect(result.has('mw')).toBe(true);
     expect(result.has('tiny')).toBe(false);
   });
@@ -370,8 +382,61 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
     const cands: LabelCandidate[] = [
       makeCandidate({ id: 'a', centerAbs: target.clone(), maxAxis: 5_000 }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, { topN: 0 }));
+    const result = rank(cands, makeParams(eye, target, { topN: 0 }));
     expect(result.size).toBe(0);
+  });
+
+  // The top-N is a fixed-size insertion over reused module buffers rather
+  // than a sort of a per-frame array, so the selection, the tie-break and
+  // the reuse across calls all need pinning — none of them was observable
+  // when a stable sort did the work.
+  describe('the fixed-size top-N', () => {
+    /** Five candidates dead ahead at one distance, so apparent size is
+     *  strictly ordered by `maxAxis` alone. */
+    function fanOfFive(eye: THREE.Vector3): LabelCandidate[] {
+      const ahead = eye.clone().add(new THREE.Vector3(0, 0, -50_000));
+      return [1_000, 5_000, 2_000, 4_000, 3_000].map((maxAxis, i) =>
+        makeCandidate({ id: `a${i}`, centerAbs: ahead.clone(), maxAxis }));
+    }
+
+    const eye = GALACTIC_CENTRE_PC.clone().add(new THREE.Vector3(0, 0, 20_000));
+    const target = eye.clone().add(new THREE.Vector3(0, 0, -1));
+
+    it('keeps the largest and drops the rest, whatever order they arrive in', () => {
+      const result = rank(fanOfFive(eye), makeParams(eye, target, {
+        mwInsideDiscPc: 0, topN: 2,
+      }));
+      // maxAxis 5000 (a1) and 4000 (a3) are the two largest.
+      expect([...result].sort()).toEqual(['a1', 'a3']);
+    });
+
+    it('breaks a tie toward the earlier candidate', () => {
+      const ahead = eye.clone().add(new THREE.Vector3(0, 0, -50_000));
+      const cands = [
+        makeCandidate({ id: 'first', centerAbs: ahead.clone(), maxAxis: 4_000 }),
+        makeCandidate({ id: 'second', centerAbs: ahead.clone(), maxAxis: 4_000 }),
+      ];
+      const result = rank(cands, makeParams(eye, target, {
+        mwInsideDiscPc: 0, topN: 1,
+      }));
+      expect([...result]).toEqual(['first']);
+    });
+
+    it('leaks nothing from a previous, larger verdict', () => {
+      const params = makeParams(eye, target, { mwInsideDiscPc: 0, topN: 4 });
+      expect(rank(fanOfFive(eye), params).size).toBe(4);
+      const narrowed = rank(fanOfFive(eye).slice(0, 1), params);
+      expect([...narrowed]).toEqual(['a0']);
+    });
+
+    it('grows the buffer when the topN slider is raised between frames', () => {
+      expect(rank(fanOfFive(eye), makeParams(eye, target, {
+        mwInsideDiscPc: 0, topN: 1,
+      })).size).toBe(1);
+      expect(rank(fanOfFive(eye), makeParams(eye, target, {
+        mwInsideDiscPc: 0, topN: 5,
+      })).size).toBe(5);
+    });
   });
 
   it('mwInsideDiscPc=0 disables the inside-MW guard entirely', () => {
@@ -389,7 +454,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
         maxAxis: 15_000,
       }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, {
+    const result = rank(cands, makeParams(eye, target, {
       mwInsideDiscPc: 0,
     }));
     expect(result.has('mw')).toBe(true);
@@ -414,7 +479,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
         maxAxis: 1_000,
       }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, {
+    const result = rank(cands, makeParams(eye, target, {
       mwInsideDiscPc: 0,
     }));
     expect(result.has('front')).toBe(true);
@@ -440,7 +505,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
         maxAxis: 50,
       }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, {
+    const result = rank(cands, makeParams(eye, target, {
       mwInsideDiscPc: 0,
     }));
     expect(result.has('centre')).toBe(true);
@@ -465,7 +530,7 @@ describe('computeVisibleLabels — global apparent-size ranking', () => {
         maxAxis: 500,
       }),
     ];
-    const result = computeVisibleLabels(cands, makeParams(eye, target, {
+    const result = rank(cands, makeParams(eye, target, {
       mwInsideDiscPc: 0,
     }));
     expect(result.has('huge-edge')).toBe(true);
