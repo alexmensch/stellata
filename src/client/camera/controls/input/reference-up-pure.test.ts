@@ -7,6 +7,7 @@ import {
   cameraLocalUpInto,
   correctUpTowardReference,
   levelUpInto,
+  UP_CORRECTION_DEADBAND_RAD,
   poleConeWeight,
   signedAngleAbout,
 } from './reference-up-pure';
@@ -97,6 +98,64 @@ describe('correctUpTowardReference', () => {
     const up = new THREE.Vector3(0, 1, 0);
     expect(correctUpTowardReference(up, forward, reference, scratch)).toBeCloseTo(0, 12);
     expect(up.angleTo(new THREE.Vector3(0, 1, 0))).toBeCloseTo(0, 12);
+  });
+
+  it('is BIT-STABLE at the fixed point, not merely close to one', () => {
+    // The 2-cycle this deadband exists for. `toBeCloseTo(0)` passed happily
+    // while `up` alternated between two adjacent doubles every frame, which
+    // reached camera.quaternion through the lookAt and held the render gate
+    // open at every vantage. Exact equality is the only assertion that sees
+    // it — the gate's pose snapshot compares the same way.
+    const up = new THREE.Vector3(-0.5507687330245972, -0.040100980550050735, 0.8336940407752991);
+    const fwd = new THREE.Vector3(0.7, -0.19, 0.688).normalize();
+    const ref = up.clone();
+    correctUpTowardReference(up, fwd, ref, scratch);
+    const settled = up.clone();
+    for (let frame = 0; frame < 500; frame++) {
+      expect(correctUpTowardReference(up, fwd, ref, scratch)).toBe(0);
+      expect(up.x).toBe(settled.x);
+      expect(up.y).toBe(settled.y);
+      expect(up.z).toBe(settled.z);
+    }
+  });
+
+  it('writes nothing at all inside the deadband', () => {
+    // Not even the re-projection: that is a rounding step of its own and
+    // cycled independently of the rotation.
+    const up = new THREE.Vector3(0, 1, 0).applyAxisAngle(forward, 0.9 * UP_CORRECTION_DEADBAND_RAD);
+    const before = up.clone();
+    expect(correctUpTowardReference(up, forward, reference, scratch)).toBe(0);
+    expect(up.equals(before)).toBe(true);
+  });
+
+  it('still corrects just outside the deadband', () => {
+    const err = 1.1 * UP_CORRECTION_DEADBAND_RAD;
+    const up = new THREE.Vector3(0, 1, 0).applyAxisAngle(forward, err);
+    expect(correctUpTowardReference(up, forward, reference, scratch)).toBeCloseTo(-err, 12);
+  });
+
+  it('the deadband is invisible: sub-pixel roll at any realistic screen radius', () => {
+    // A roll displaces a feature by radius * angle. 1500 px is past the
+    // half-diagonal of a 2560x1440 window, and the cadence calls 0.25 device
+    // px the scheduling threshold.
+    expect(UP_CORRECTION_DEADBAND_RAD).toBe(1e-4);
+    expect(1500 * UP_CORRECTION_DEADBAND_RAD).toBeCloseTo(0.15, 10);
+  });
+
+  it('a residual under the band still accumulates into a correction', () => {
+    // The error is measured against the reference every frame rather than
+    // integrated, so holonomy drift smaller than the band is not discarded —
+    // it crosses the band and gets corrected. A deadband that swallowed drift
+    // permanently would trade a render-gate bug for a levelling bug.
+    const up = new THREE.Vector3(0, 1, 0);
+    const drift = 0.3 * UP_CORRECTION_DEADBAND_RAD;
+    let corrections = 0;
+    for (let frame = 0; frame < 12; frame++) {
+      up.applyAxisAngle(forward, drift);
+      if (correctUpTowardReference(up, forward, reference, scratch) !== 0) corrections++;
+    }
+    expect(corrections).toBeGreaterThan(0);
+    expect(up.angleTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(UP_CORRECTION_DEADBAND_RAD);
   });
 
   it('corrects only partially inside the cone, and never overshoots', () => {
