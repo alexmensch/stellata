@@ -88,17 +88,38 @@ one.** Unlike the pose — a CPU value that genuinely stops — the applied
 `dm` is read back off the GPU and feeds the exposure it was measured at,
 and fp16 rounding in the statistic attachment turns that loop into a
 quantiser (`../hdr/exposure/reduction/README.md` § Measure at the base
-exposure owns why the division cannot cancel it). The slew now parks the
-applied cut bit-identical inside its settle band
-(`../hdr/exposure/README.md` § Adaptation, *It settles*), which broke
-the specific limit cycle that used to alternate `dm` every frame — but
-this threshold stays anyway: it guards the class (frame scheduling must
-never key on exact float equality of a GPU-read continuous quantity),
-not that one instance. `exposureCutMoved` therefore compares against
-`ADAPT_SLEW_SETTLE_MAG` — the exposure subsystem's own "this much `dm`
-is the same `dm`", borrowed rather than re-picked — and anchors on the
-cut at the **last invalidate**, never the last frame's, so
-sub-threshold steps that all go one way still accumulate into a wake.
+exposure owns why the division cannot cancel it). The threshold guards
+the class: frame scheduling must never key on exact float equality of a
+GPU-read continuous quantity.
+
+**And the threshold is PERCEPTUAL, not the exposure subsystem's settle
+band.** `ADAPT_SLEW_SETTLE_MAG` answers "is this numerically the same
+cut", is sized against that fp16 quantiser, and is 10× tighter in
+magnitudes than anything a viewer resolves. Borrowing it here read as
+tidy — one subsystem's own resolution, re-used rather than re-picked —
+and was a category error: it made a *scheduling* decision out of a
+*numerical-equality* epsilon, and the two questions have different
+answers. The cost was the whole cadence. Each wake buys `SETTLE_MS` of
+frames, every one of those frames re-measures, and the measurement's own
+noise re-armed the tail before it could expire — so a static view at a
+vantage with any real cut rendered continuously, reporting `TAIL NEVER
+EXPIRES` with nothing stamping it. That is the focal ride's shape by
+another route (§ The focal ride), and the same lesson: a wake that
+produces the frames that produce the next wake never settles.
+
+`exposureCutMoved` therefore compares against `CADENCE_JND_MAG` — the
+same 1 % of flux every other brightness driver schedules against
+(`cadence/README.md` § The thresholds), in the magnitudes `dm` is
+already expressed in. A real slew still wakes on its first frame, since
+entering a bright scene ramps whole magnitudes.
+
+It anchors on the cut at the **last invalidate**, never the last
+frame's, so sub-threshold steps that all go one way still accumulate
+into a wake. Note what that anchor does to a threshold set too low: it
+re-seeds on every wake, so a cut *hunting* inside a band never settles
+into silence the way a converging one does — it turns a bounded
+oscillation into an accumulator. The anchor is right; it just cannot
+carry a threshold below the measurement's own noise.
 
 ## Invalidation sources (`invalidate()` callers)
 

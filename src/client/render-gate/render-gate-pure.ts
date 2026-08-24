@@ -1,7 +1,7 @@
 // Decision logic for the on-demand render gate: pose snapshot compare +
 // the render/skip decision. See README.md.
 
-import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
+import { CADENCE_JND_MAG } from './cadence/clock-cadence-pure';
 
 export const POSE_SLOTS = 14;
 
@@ -81,22 +81,30 @@ export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean
   return false;
 }
 
-/** Did the applied exposure cut move enough to be a different scene?
+/** Did the applied exposure cut move enough to be worth a frame?
  *
- *  The cut is a continuous quantity read back off the GPU, so exact
- *  inequality is not a "changed" test the way it is for the pose: the
- *  measurement feeds the exposure it was rendered at, and fp16 rounding
- *  in the statistic attachment leaves that loop alternating between two
- *  values ~1e-4 mag apart indefinitely. `ADAPT_SLEW_SETTLE_MAG` is the
- *  exposure subsystem's OWN "this much dm is the same dm" — borrowed
- *  rather than re-picked so the two cannot disagree.
+ *  **The threshold is perceptual, and must not become the exposure
+ *  subsystem's settle band.** `ADAPT_SLEW_SETTLE_MAG` answers a different
+ *  question — "is this numerically the same cut" — and is sized against
+ *  fp16 readback quantisation, an order of magnitude under anything a
+ *  viewer resolves. Waking on it hands the gate a self-sustaining loop:
+ *  each wake buys `SETTLE_MS` of frames, every one of those frames
+ *  re-measures, and the measurement's own noise re-arms the tail before
+ *  it can expire — the focal ride's shape by another route
+ *  (README.md § The focal ride). `dm` is in magnitudes, so the threshold
+ *  is `CADENCE_JND_MAG`: the same 1 % of flux every other brightness
+ *  driver schedules against (`cadence/README.md` § The thresholds).
+ *
+ *  Not exact inequality either, for the reason the band exists: the cut
+ *  is read back off the GPU and feeds the exposure it was measured at,
+ *  so equality on a continuous quantity is not a "changed" test.
  *
  *  Compare against the cut at the last invalidate, never the last
  *  frame's, or sub-threshold steps in one direction accumulate into a
  *  visible drift the gate never wakes for. NaN-seeded: unseeded reads as
  *  moved. */
 export function exposureCutMoved(dm: number, lastInvalidatedDm: number): boolean {
-  return !(Math.abs(dm - lastInvalidatedDm) <= ADAPT_SLEW_SETTLE_MAG);
+  return !(Math.abs(dm - lastInvalidatedDm) <= CADENCE_JND_MAG);
 }
 
 export interface GateDecision {

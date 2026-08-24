@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
+import { CADENCE_JND_FLUX_FRAC, CADENCE_JND_MAG } from './cadence/clock-cadence-pure';
 import {
   POSE_SLOTS,
   SETTLE_MS,
@@ -49,21 +50,33 @@ describe('writePose / posesDiffer', () => {
 });
 
 describe('exposureCutMoved', () => {
-  it('the threshold is the exposure subsystem settle band', () => {
-    expect(ADAPT_SLEW_SETTLE_MAG).toBe(1e-3);
+  it('the threshold is the cadence JND, not the exposure settle band', () => {
+    expect(CADENCE_JND_MAG).toBe(0.01);
+    // The band answers "is this numerically the same cut" and is 10.9x
+    // tighter than anything a viewer resolves. Reinstating it as the wake
+    // threshold is what pinned the gate open at a static vantage.
+    expect(CADENCE_JND_MAG / ADAPT_SLEW_SETTLE_MAG).toBeCloseTo(10, 6);
+  });
+
+  it('the JND in magnitudes is the same 1% of flux, rounded down', () => {
+    // Both constants state one perceptual claim in two units, so they
+    // cannot drift apart. 1% of flux is 0.010912 mag of dimming; the
+    // magnitudes form rounds to 0.01, which is the conservative side.
+    expect(-2.5 * Math.log10(1 - CADENCE_JND_FLUX_FRAC)).toBeCloseTo(0.010912, 6);
+    expect(CADENCE_JND_MAG).toBe(0.01);
   });
 
   it('an unseeded cut reads as moved', () => {
     expect(exposureCutMoved(-4.2, Number.NaN)).toBe(true);
   });
 
-  it('holds at the band and moves past it', () => {
+  it('holds at the JND and moves past it', () => {
     // Anchored at 0 so the boundary is exact in float64 — at a realistic
-    // cut, `dm ± band` does not round-trip to exactly the band.
-    expect(exposureCutMoved(ADAPT_SLEW_SETTLE_MAG, 0)).toBe(false);
-    expect(exposureCutMoved(-ADAPT_SLEW_SETTLE_MAG, 0)).toBe(false);
-    expect(exposureCutMoved(2 * ADAPT_SLEW_SETTLE_MAG, 0)).toBe(true);
-    expect(exposureCutMoved(-4.2 - 2 * ADAPT_SLEW_SETTLE_MAG, -4.2)).toBe(true);
+    // cut, `dm ± JND` does not round-trip to exactly the JND.
+    expect(exposureCutMoved(CADENCE_JND_MAG, 0)).toBe(false);
+    expect(exposureCutMoved(-CADENCE_JND_MAG, 0)).toBe(false);
+    expect(exposureCutMoved(2 * CADENCE_JND_MAG, 0)).toBe(true);
+    expect(exposureCutMoved(-4.2 - 2 * CADENCE_JND_MAG, -4.2)).toBe(true);
   });
 
   it('the fp16 limit cycle never wakes the gate', () => {
@@ -76,8 +89,27 @@ describe('exposureCutMoved', () => {
     }
   });
 
+  it('a settle-band random walk never wakes the gate', () => {
+    // The reported freeze: a cut hunting inside the exposure subsystem's
+    // own band re-armed the tail every ~0.5s forever, because the anchor
+    // re-seeds on each wake and turns a bounded oscillation into an
+    // accumulator. At the JND the same walk stays quiet.
+    let dm = -4.2;
+    const anchor = dm;
+    for (let frame = 0; frame < 2000; frame++) {
+      dm += (frame % 2 === 0 ? 1 : -1) * ADAPT_SLEW_SETTLE_MAG;
+      expect(exposureCutMoved(dm, anchor)).toBe(false);
+    }
+  });
+
+  it('a real slew still wakes it on the first frame', () => {
+    // Entering a bright scene ramps whole magnitudes; the wake must not
+    // wait for the JND to accumulate.
+    expect(exposureCutMoved(-0.5, 0)).toBe(true);
+  });
+
   it('sub-threshold steps all one way still wake it — the anchor is the last invalidate', () => {
-    const step = ADAPT_SLEW_SETTLE_MAG / 4;
+    const step = CADENCE_JND_MAG / 4;
     let anchor = 0;
     let dm = 0;
     let woke = 0;
