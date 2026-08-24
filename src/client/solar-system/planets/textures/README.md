@@ -134,7 +134,10 @@ rather than from physics.
 A decoded map costs `w · h · bytes-per-texel · 4/3` resident, the last factor
 being the mip chain. That is not optional — these maps are minified over
 almost the whole disc, so dropping mips would trade a third of the memory for
-aliasing everywhere.
+aliasing everywhere, which is why `textureBytes` charges the chain
+unconditionally rather than through the filter-sensitive `mipmapFactor` beside
+it. Bytes per texel comes from `../../../util/texture-bytes-pure.ts`, the one
+format table this budget and the memory inventory share.
 
 The ladder changes the scale of this completely:
 

@@ -1,6 +1,8 @@
 // Resident-texture accounting and the eviction choice over it. Why a budget
 // exists at all, and what the numbers are: README.md § Staying inside VRAM.
 
+import { MIP_CHAIN_FACTOR } from '../../../util/texture-bytes-pure';
+
 /**
  * Ceiling on resident planet-map VRAM before least-recently-drawn maps are
  * released.
@@ -43,19 +45,23 @@ export function textureVramBudgetBytes(maxTextureSize: number): number {
   return 48 * 1024 * 1024;
 }
 
-/** Bytes a decoded texture occupies once uploaded, mip chain included.
+/** Bytes a decoded planet map occupies once uploaded, mip chain included.
+ *  `bytesPerTexel` comes from `util/texture-bytes-pure.ts`, the shared
+ *  format table.
  *
- *  The full chain adds exactly 1/3 (1 + 1/4 + 1/16 + …), and it is not
- *  optional — these maps are minified almost everywhere on the disc, so
- *  dropping mips to save it would trade a third of the memory for aliasing
- *  across the whole body.
+ *  The chain is charged UNCONDITIONALLY here, which is deliberately not
+ *  what `mipmapFactor` does for an arbitrary texture: a planet map is
+ *  minified almost everywhere on the disc, so it always ships a chain and
+ *  the budget must reserve for one. Don't route this through the
+ *  filter-sensitive form to "DRY them up" — the two answer different
+ *  questions, what a map will cost against what a texture holds.
  */
 export function textureBytes(
   width: number,
   height: number,
   bytesPerTexel: number,
 ): number {
-  return Math.round((width * height * bytesPerTexel * 4) / 3);
+  return Math.round(width * height * bytesPerTexel * MIP_CHAIN_FACTOR);
 }
 
 /** What one resident map costs and when it was last drawn. */
