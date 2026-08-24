@@ -1,9 +1,67 @@
 // Decision logic for the on-demand render gate: pose snapshot compare +
 // the render/skip decision. See README.md.
 
-import { ADAPT_SLEW_SETTLE_MAG } from '../hdr/exposure/scene-adaptation-pure';
+import { CADENCE_JND_MAG } from './cadence/clock-cadence-pure';
 
 export const POSE_SLOTS = 14;
+
+/** Slot names in `writePose` order, so a readout can say WHICH part of the
+ *  pose moved rather than only that something did. */
+export const POSE_SLOT_NAMES = [
+  'pos.x', 'pos.y', 'pos.z',
+  'quat.x', 'quat.y', 'quat.z', 'quat.w',
+  'fov',
+  'target.x', 'target.y', 'target.z',
+  'worldOffset.x', 'worldOffset.y', 'worldOffset.z',
+] as const;
+
+const ULP_VIEW = new DataView(new ArrayBuffer(8));
+const F64_SIGN = 0x8000000000000000n;
+
+/** The float64's bit pattern remapped to a monotonically increasing key, so
+ *  a subtraction between two keys counts representable steps. Negatives fold
+ *  below zero and both zeros key to 0. */
+function orderedKey(v: number): bigint {
+  ULP_VIEW.setFloat64(0, v);
+  const bits = ULP_VIEW.getBigUint64(0);
+  return (bits & F64_SIGN) !== 0n ? F64_SIGN - bits : bits;
+}
+
+/** Representable float64 steps between two values — the pose snapshot's own
+ *  unit, since it compares by exact equality.
+ *
+ *  This is the number that separates the two ways a pose "moves", which look
+ *  identical in any readout printing only a slot name or a raw delta. A drift
+ *  of a few ULP is a computation that will not converge — a value re-derived
+ *  each frame from inputs that round differently — and no amount of waiting
+ *  settles it. Millions of ULP is something genuinely moving, and the right
+ *  question is then what. NaN for a non-finite operand: a NaN-seeded snapshot
+ *  is the first-frame sentinel, not a drift. */
+export function ulpsBetween(a: number, b: number): number {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return Number.NaN;
+  const d = orderedKey(a) - orderedKey(b);
+  return Number(d < 0n ? -d : d);
+}
+
+export interface PoseDrift {
+  readonly slot: string;
+  readonly delta: number;
+  readonly ulps: number;
+}
+
+/** The first slot that differs, with how far it moved in both absolute and
+ *  representable-step terms, or null when the poses match. Diagnosis only —
+ *  `posesDiffer` stays the hot path. */
+export function firstPoseDrift(
+  a: ArrayLike<number>, b: ArrayLike<number>,
+): PoseDrift | null {
+  for (let i = 0; i < POSE_SLOTS; i++) {
+    if (a[i] !== b[i]) {
+      return { slot: POSE_SLOT_NAMES[i], delta: a[i] - b[i], ulps: ulpsBetween(a[i], b[i]) };
+    }
+  }
+  return null;
+}
 
 export const SETTLE_MS = 1500;
 
@@ -34,6 +92,23 @@ export function writePose(
   out[13] = worldOffset.z;
 }
 
+/** Shift a stored snapshot's position + target slots by a translation
+ *  applied AFTER the tick that captured it. Orientation, fov and
+ *  worldOffset are untouched: the only such writer is the focal ride,
+ *  which translates camera and target together and rotates nothing. A
+ *  NaN-seeded slot stays NaN, so a snapshot that has never rendered
+ *  still differs from every real pose. */
+export function rebasePoseTranslation(
+  pose: Float64Array, dx: number, dy: number, dz: number,
+): void {
+  pose[0] += dx;
+  pose[1] += dy;
+  pose[2] += dz;
+  pose[8] += dx;
+  pose[9] += dy;
+  pose[10] += dz;
+}
+
 /** Exact inequality per slot — a NaN-seeded snapshot differs from any
  *  real pose, which is what makes the first tick render. */
 export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean {
@@ -43,22 +118,30 @@ export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean
   return false;
 }
 
-/** Did the applied exposure cut move enough to be a different scene?
+/** Did the applied exposure cut move enough to be worth a frame?
  *
- *  The cut is a continuous quantity read back off the GPU, so exact
- *  inequality is not a "changed" test the way it is for the pose: the
- *  measurement feeds the exposure it was rendered at, and fp16 rounding
- *  in the statistic attachment leaves that loop alternating between two
- *  values ~1e-4 mag apart indefinitely. `ADAPT_SLEW_SETTLE_MAG` is the
- *  exposure subsystem's OWN "this much dm is the same dm" — borrowed
- *  rather than re-picked so the two cannot disagree.
+ *  **The threshold is perceptual, and must not become the exposure
+ *  subsystem's settle band.** `ADAPT_SLEW_SETTLE_MAG` answers a different
+ *  question — "is this numerically the same cut" — and is sized against
+ *  fp16 readback quantisation, an order of magnitude under anything a
+ *  viewer resolves. Waking on it hands the gate a self-sustaining loop:
+ *  each wake buys `SETTLE_MS` of frames, every one of those frames
+ *  re-measures, and the measurement's own noise re-arms the tail before
+ *  it can expire — the focal ride's shape by another route
+ *  (README.md § The focal ride). `dm` is in magnitudes, so the threshold
+ *  is `CADENCE_JND_MAG`: the same 1 % of flux every other brightness
+ *  driver schedules against (`cadence/README.md` § The thresholds).
+ *
+ *  Not exact inequality either, for the reason the band exists: the cut
+ *  is read back off the GPU and feeds the exposure it was measured at,
+ *  so equality on a continuous quantity is not a "changed" test.
  *
  *  Compare against the cut at the last invalidate, never the last
  *  frame's, or sub-threshold steps in one direction accumulate into a
  *  visible drift the gate never wakes for. NaN-seeded: unseeded reads as
  *  moved. */
 export function exposureCutMoved(dm: number, lastInvalidatedDm: number): boolean {
-  return !(Math.abs(dm - lastInvalidatedDm) <= ADAPT_SLEW_SETTLE_MAG);
+  return !(Math.abs(dm - lastInvalidatedDm) <= CADENCE_JND_MAG);
 }
 
 export interface GateDecision {
@@ -66,15 +149,21 @@ export interface GateDecision {
   readonly lastActiveMs: number;
 }
 
+/** `cadenceDue` renders THIS tick without stamping activity: a clock-
+ *  cadence frame is a scheduled single redraw, and stamping it would drag
+ *  the whole SETTLE_MS tail behind every one — ~90 extra frames per
+ *  cadence frame at 60 Hz, which is the idleness the cadence exists to
+ *  buy (README.md § The clock cadence). */
 export function decideRender(
   state: { holds: number; lastActiveMs: number },
-  inputs: { continuous: boolean; poseChanged: boolean; nowMs: number },
+  inputs: { continuous: boolean; poseChanged: boolean; cadenceDue: boolean; nowMs: number },
 ): GateDecision {
   const active = inputs.continuous || inputs.poseChanged;
   const lastActiveMs = active ? inputs.nowMs : state.lastActiveMs;
   return {
     render:
-      state.holds > 0 || active || inputs.nowMs - lastActiveMs < SETTLE_MS,
+      state.holds > 0 || active || inputs.cadenceDue
+      || inputs.nowMs - lastActiveMs < SETTLE_MS,
     lastActiveMs,
   };
 }

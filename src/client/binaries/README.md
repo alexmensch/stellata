@@ -41,8 +41,8 @@ star catalog records.
   …)` walks `BinariesData.relations` in topological order, applies the
   LOD cascade, and rewrites the active slots of `localPositions` plus
   `compositeSuppress`; `recenter(newOrigin)` updates the cached world
-  offset. The static-frame skip and the `markBaselinesDirty()` contract
-  are in § Walk-active LOD.
+  offset. The static-frame skip, the `markBaselinesDirty()` contract and
+  `cadenceReport` each have a section below.
 - `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
   relation-index set on a focal star's slot-chain (focal as primary or
   secondary, plus `parentRelation` ancestors). Shared by
@@ -196,6 +196,10 @@ rides the focal star's perturbed position**: the integration shell
 the focal's per-frame orbital drift, so `controls.target` stays glued to
 the star and `lookAt(target) == star` keeps the pin substitution valid.
 
+Both rides reach the camera through one `applyRideDelta` helper, which
+also hands the delta to the gate and the cadence
+(`../render-gate/README.md` § The focal ride).
+
 `focalPerturbationInto(focalIdx, t, out)` supplies that drift in
 **float64**: it replays the focal's slot-chain (§ Walk-active LOD) in
 double precision and returns the focal's total displacement from its
@@ -310,6 +314,11 @@ rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
 — force the next walk, so suppressed secondaries get their `baseDiffPc`
 placement re-applied on top of the fresh baselines.
 
+## What the render cadence reads
+
+`cadenceReport(ctx)` prices the pairs the walk animated, off `ΔR`
+differenced over the last rendered frame rather than the periapsis peak
+the LOD gate holds. `../render-gate/cadence/README.md` owns it.
 ## Partial re-upload
 
 The walk can only touch the ~6.5k catalog slots that are members of a

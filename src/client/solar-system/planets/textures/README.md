@@ -22,6 +22,22 @@ requested, so a manifest arriving over the wire would leave the first
 approach picking a rung it cannot yet know exists. The table is small and
 static, so it rides the bundle.
 
+## How a map is loaded
+
+Textures load with `NoColorSpace`, to match the pipeline's
+raw-framebuffer convention, and decode through `ImageBitmapLoader` on
+`TEXTURE_DECODE_OPTIONS` — **never `TextureLoader`**. The flip is baked
+into the bitmap, so orientation never rests on `UNPACK_FLIP_Y_WEBGL`,
+whose tracked value a raw pixel-store write elsewhere can desync from GL
+(`../../../loaders/README.md`): a map that arrives unflipped shades the
+mirrored hemisphere and looks like nothing else is wrong. The same
+options forbid premultiplication, which would let each horizon map's
+alpha-borne azimuth scale the other three.
+
+**A 404 is expected data, not an error.** Texture-less bodies (Uranus,
+future exoplanets) render the representative-colour + limb-darkening base
+path; there is no separate renderer for them.
+
 ## The demand
 
 ```

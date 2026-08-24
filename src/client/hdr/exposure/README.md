@@ -366,9 +366,9 @@ readback, and `slewDm` hands a cut inside `ADAPT_SLEW_SETTLE_MAG` back as
 the applied one — so an exact test would refuse to park at any vantage
 whose cut lands in that band, keeping the measurement at full cost for a
 cut the render gate will not even repaint for. Borrowed rather than
-re-picked, the same borrow `exposureCutMoved` makes
-(`../../render-gate/README.md`); parking inside it freezes a cut the
-subsystem already calls settled.
+re-picked, and legitimate because the question is numerical: parking
+inside it freezes a cut the subsystem already calls settled. The gate
+asks a perceptual one and must not borrow it (`../../render-gate/README.md`).
 
 Wake: once `ADAPT_PARK_PROBE_INTERVAL_FRAMES` rendered frames have passed
 **and** the reduction has no readback in flight, a probe opens — writes

@@ -10,11 +10,16 @@ guarantee.
 
 ## Files
 
-- `scene-layer.ts` — `FrameCtx`, `SceneLayer`, `SceneLayerRegistry`.
-- `scene-layer.test.ts` — fan-out order + optional-hook semantics.
+- `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
+  `SceneLayer`, `SceneLayerRegistry`.
+- `scene-layer.test.ts` — fan-out order, optional-hook semantics, and the
+  cadence reduction (§ Declaring how time moves a layer).
 - `frame-ctx-mock.ts` — `makeFrameCtx`, the neutral per-frame fixture
   (camera at Sol, clock zero, no warp) every layer / kind-module suite
-  builds its `update` call from, overriding the one field under test.
+  builds its `update` call from, overriding the one field under test;
+  plus `makeCadenceCtx` and `ACCEPTANCE_PX_PER_RADIAN`, the still-camera
+  one-second-step fixture and the plate scale every pinned cadence number
+  is quoted against.
 - `scene-elements.ts` — the declutter-cycle floor table + derivation
   (§ Detail-level declutter cycle).
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
@@ -129,11 +134,64 @@ per-entry decision. This mirrors the hover subsystem's one-engine /
 many-providers pattern (`../hover/README.md`).
 
 Adding a layer = constructing it + one `register(...)` call. Hooks
-are optional except `dispose`; a layer that doesn't participate in a
-fan-out simply omits the hook (e.g. the heliopause has no per-frame
-update — its visibility is event-driven, and `chart-labels` registers
-`dispose` alone because its per-frame work rides the `'frame'` event
-under `chart-mode.ts`'s start/stop gate).
+are optional except `dispose` and `timeBehaviour`; a layer that doesn't
+participate in a fan-out simply omits the hook (e.g. the heliopause has
+no per-frame update — its visibility is event-driven, and `chart-labels`
+registers `dispose` alone because its per-frame work rides the `'frame'`
+event under `chart-mode.ts`'s start/stop gate).
+
+## Declaring how time moves a layer
+
+`timeBehaviour` is **required**, and a discriminated union rather than an
+optional hook, because the failure it prevents is **silence**: an omitted
+hook reads as "nothing I draw moves", and a layer that does move then
+freezes between the render gate's cadence frames — the worst failure mode
+arrived at by doing nothing. A new layer cannot compile without
+answering, and every answer is a claim reviewable on its own terms.
+
+Three kinds:
+
+- **`'static'`** — nothing this layer draws changes as either clock
+  advances. It still repaints on an explicit `invalidate(reason)`; this
+  is a claim about TIME, not about being immutable. Fixed geometry
+  (galactic disc, coordinate spheres, the Milky Way skybox, the B1875
+  boundary arcs), pure projection (the HUD), and teardown-only entries.
+- **`'clock'`** — content moves as SIM time advances. `rate(ctx)` reports
+  how fast, per sim second, for what the layer is drawing right now;
+  `../render-gate/cadence/README.md` owns the whole contract and the
+  reason the pixel ratio is deliberately absent from `CadenceCtx`.
+- **`'realtime'`** — animates on WALL-CLOCK time, so it needs real frames
+  even with the sim clock paused, which no sim-time rate can express.
+  **This kind defeats idling for as long as its predicate holds**, so it
+  is a last resort. Prefer converging over a count of RENDERED frames
+  instead: an N-frame blend looks the same at 60 Hz and at one frame per
+  30 s, and declares `'static'`.
+
+**There are ZERO `'realtime'` layers, and that is enforced.** The type
+can only check the layers that exist when it is written, and the live
+registry needs WebGL to build, so
+`../../../tests/cadence-layer-declarations.test.ts` scans the shipped
+source: it pins the realtime count at zero, pins the static/clock split,
+and pins that every inline `register({…})` in the shell carries a
+declaration. The invariant used to be asserted in three READMEs and
+enforced by nothing.
+
+Its predicate is evaluated **above** the gate, every tick, which is why
+`animate()` builds `FrameCtx` before the render decision rather than
+after it — a layer that starts needing wall-clock frames while the gate
+idles would otherwise wait a whole cap for one, and forever with the
+clock paused, which fires no cadence frame at all.
+
+### Anchored content declares its anchor's rate
+
+Several entries draw views of ONE subsystem's content: a moon's orbit
+ring is centred on the moon's parent, the star local cluster mirrors
+slots the binary walk wrote, a constellation figure's vertex may BE a
+binary member. Each declares the rate of the subsystem it is anchored to,
+which is not a global min in disguise —
+`../render-gate/cadence/README.md` § Anchored content carries the
+`min(a, a) = a` argument and the per-frame memo that keeps the walk to
+one pass.
 
 **Not every entry owns a layer.** The first inline entry owns no GPU
 resources at all (`dispose` is empty): it exists to sequence the

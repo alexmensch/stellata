@@ -18,6 +18,13 @@ import {
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 import type { EmitterMaterial, ProbeMaterials } from '../materials/emitter-material';
 import { makeGlslProbeMaterial } from '../materials/glsl-materials';
+import {
+  CADENCE_REPORT_STILL,
+  fasterRate,
+  type CadenceReport,
+} from '../../render-gate/cadence/clock-cadence-pure';
+import type { CadenceCtx } from '../../scene/scene-layer';
+import { angleBetweenRad } from '../../util/angles';
 
 /** Marker edge length in CSS pixels, and the basis for any hit radius over
  *  it. Fixed at every range: a metre-scale probe has no angular diameter to
@@ -80,6 +87,10 @@ export class ProbeField {
   readonly localGroup: THREE.Group;
   private trajectories: readonly ProbeTrajectory[] = [];
   private samples: ProbeFrameSample[] = [];
+  /** Each marker's position as the LAST rendered frame drew it, parallel to
+   *  `samples`. Only the cadence report's measured-displacement channel
+   *  reads it; the rate itself rides the sampler's own velocity. */
+  private prevLocalPc: THREE.Vector3[] = [];
   private permitted = true;
   private mono = false;
   private localPassActive = false;
@@ -165,6 +176,10 @@ export class ProbeField {
       localPc: new THREE.Vector3(),
       velPcPerSec: new THREE.Vector3(),
     }));
+    // Seeded on the attach sample, not at the origin: a first frame that
+    // read a zero vector would measure every marker as having crossed the
+    // sky, which the safety net would report as a violation.
+    this.prevLocalPc = trajectories.map(() => new THREE.Vector3());
     const posAttr = new THREE.InstancedBufferAttribute(this.localPos, 3);
     posAttr.setUsage(THREE.DynamicDrawUsage);
     const alphaAttr = new THREE.InstancedBufferAttribute(this.alpha, 1);
@@ -173,6 +188,7 @@ export class ProbeField {
     this.geometry.setAttribute('iAlpha', alphaAttr);
     this.geometry.instanceCount = n;
     this.resampleAt(t);
+    for (let i = 0; i < n; i++) this.prevLocalPc[i].copy(this.samples[i].localPc);
   }
 
   /**
@@ -207,6 +223,9 @@ export class ProbeField {
       this.setDrawn(false);
       return;
     }
+    for (let i = 0; i < this.samples.length; i++) {
+      if (this.samples[i].sampled) this.prevLocalPc[i].copy(this.samples[i].localPc);
+    }
     this.resampleAt(t);
     const drawn = this.permitted && !this.mono;
     this.setDrawn(drawn);
@@ -233,13 +252,77 @@ export class ProbeField {
   /** Rebase onto a new floating origin. Every sample's `localPc` moves with
    *  it: the hard-focus setter reads `localPositionInto` immediately after
    *  the recentre it just triggered, so leaving them in the old frame would
-   *  shift the camera by the whole recentre delta. */
+   *  shift the camera by the whole recentre delta. The cadence snapshot
+   *  rebases too, or the next frame reads the origin step as every marker
+   *  jumping (the planet field's `prevBodyLocal64` does the same). */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
+    const shift = this.solLocal.clone();
     this.worldOffset.copy(newWorldOffset);
     this.solLocal.copy(this.worldOffset).negate();
-    for (const s of this.samples) {
-      if (s.sampled) s.localPc.copy(this.solLocal).add(s.solRelPc);
+    shift.subVectors(this.solLocal, shift);
+    for (let i = 0; i < this.samples.length; i++) {
+      const s = this.samples[i];
+      if (!s.sampled) continue;
+      s.localPc.copy(this.solLocal).add(s.solRelPc);
+      this.prevLocalPc[i].add(shift);
     }
+  }
+
+  /** This frame's cadence report over the markers actually drawn — the
+   *  render gate's README owns the design.
+   *
+   *  One motion term per drawn marker: the sampler's own interpolated
+   *  velocity (never a finite difference — the trajectory grid spacing runs
+   *  from 88 s to six months, so a difference quotient is a different
+   *  quantity in each part of a trajectory, § Sampler), minus the camera's,
+   *  projected across the line of sight over the camera distance. A hidden,
+   *  decluttered or unsampled probe moves no ink and reports nothing.
+   *
+   *  No brightness channel: signal-lost is a step in alpha at one instant,
+   *  not a ramp, and it rides a discrete clock jump rather than the
+   *  cadence. `observedPx` differences the drawn positions, which is the
+   *  one thing here the sampler's velocity cannot audit. */
+  cadenceReport(ctx: CadenceCtx): CadenceReport {
+    const camPos = ctx.camera.position;
+    const vc = ctx.cameraVelPcPerSimS;
+    const dt = ctx.simDtS;
+    const differenced = Number.isFinite(dt) && dt !== 0;
+    let screenPxPerSimS = 0;
+    let observedPx = 0;
+    for (let i = 0; i < this.samples.length; i++) {
+      const s = this.samples[i];
+      if (!s.visible) continue;
+      const dx = s.localPc.x - camPos.x;
+      const dy = s.localPc.y - camPos.y;
+      const dz = s.localPc.z - camPos.z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d <= 0) continue;
+      const ux = dx / d;
+      const uy = dy / d;
+      const uz = dz / d;
+      const vx = s.velPcPerSec.x - vc.x;
+      const vy = s.velPcPerSec.y - vc.y;
+      const vz = s.velPcPerSec.z - vc.z;
+      const along = vx * ux + vy * uy + vz * uz;
+      const tx = vx - along * ux;
+      const ty = vy - along * uy;
+      const tz = vz - along * uz;
+      screenPxPerSimS = fasterRate(
+        screenPxPerSimS,
+        (Math.sqrt(tx * tx + ty * ty + tz * tz) / d) * ctx.pxPerRadian,
+      );
+      if (!differenced) continue;
+      const q = this.prevLocalPc[i];
+      observedPx = fasterRate(observedPx, ctx.pxPerRadian * angleBetweenRad(
+        ux, uy, uz,
+        q.x - (camPos.x - vc.x * dt),
+        q.y - (camPos.y - vc.y * dt),
+        q.z - (camPos.z - vc.z * dt),
+      ));
+    }
+    return screenPxPerSimS === 0 && observedPx === 0
+      ? CADENCE_REPORT_STILL
+      : { screenPxPerSimS, fluxFracPerSimS: 0, observedPx, observedFluxFrac: 0 };
   }
 
   /** Sol's renderer-local position into `out` — the anchor the trail layer

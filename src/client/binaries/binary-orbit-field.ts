@@ -19,6 +19,13 @@ import {
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
+import {
+  CADENCE_REPORT_STILL,
+  fasterRate,
+  type CadenceReport,
+} from '../render-gate/cadence/clock-cadence-pure';
+import type { CadenceCtx } from '../scene/scene-layer';
+import { angleBetweenRad } from '../util/angles';
 
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;
@@ -85,6 +92,31 @@ export class BinaryOrbitField {
   private baselinesDirty = true;
   private lastKeplerCount = -1;
   private lastActiveCount = 0;
+  // Cadence state, all in relation-index space and all written by the
+  // walk. `relDelta` is this frame's ΔR per relation and `prevRelDelta`
+  // the last rendered frame's, so differencing them gives the pair's own
+  // sweep rate — the quantity the walk already computed, rather than the
+  // periapsis peak the LOD gate happens to hold.
+  private relDelta: Float64Array;
+  private prevRelDelta: Float64Array;
+  /** Relations that ran Kepler this frame, in walk order. Exactly the set
+   *  that moves anything on screen: gated-out and sub-pixel-suppressed
+   *  relations never reach the split. */
+  private activeRelations: number[] = [];
+  /** Member slots' local positions as the last rendered frame drew them,
+   *  in `memberOrdinal` order. */
+  private prevMemberLocal: Float64Array;
+  private readonly memberOrdinal: Map<number, number>;
+  /** False for one frame after a wholesale rewrite of `localPositions`
+   *  (epoch re-advance, recentre): the snapshot then predates a step no
+   *  pair actually swept, and reading it would report a violation for the
+   *  gate doing its job. */
+  private memberSnapshotValid = false;
+  private observedUsable = false;
+  // Every registry entry drawing member-anchored content shares one walk
+  // per frame — the orbit paths, the star cluster mirror, the figures.
+  private cadenceCacheFrame = -1;
+  private cadenceCache: CadenceReport = CADENCE_REPORT_STILL;
   private lastCamPos = new THREE.Vector3(NaN, NaN, NaN);
   private lastThresholdMag = NaN;
   private lastViewportPx = NaN;
@@ -100,6 +132,11 @@ export class BinaryOrbitField {
     const memberSlots = orbitMemberSlots(this.relations, opts.binaries);
     this.positionUploader = new DirtyItemUploader(opts.iPositionAttr, memberSlots);
     this.suppressUploader = new DirtyItemUploader(opts.iCompositeSuppressAttr, memberSlots);
+    this.relDelta = new Float64Array(this.relations.length * 3);
+    this.prevRelDelta = new Float64Array(this.relations.length * 3);
+    this.memberOrdinal = new Map();
+    for (let i = 0; i < memberSlots.length; i++) this.memberOrdinal.set(memberSlots[i], i);
+    this.prevMemberLocal = new Float64Array(memberSlots.length * 3);
   }
 
   /** Read-only access to the cached relation list. Tests and the
@@ -117,6 +154,7 @@ export class BinaryOrbitField {
   recenter(newOrigin: Readonly<THREE.Vector3>): void {
     this.worldOffset.copy(newOrigin);
     this.baselinesDirty = true;
+    this.memberSnapshotValid = false;
   }
 
   /** Force the next update() to walk + re-upload even when the static-
@@ -127,6 +165,7 @@ export class BinaryOrbitField {
    *  `baseDiffPc` placements on top. */
   markBaselinesDirty(): void {
     this.baselinesDirty = true;
+    this.memberSnapshotValid = false;
   }
 
   /** Per-frame walk + perturbation pass.
@@ -161,6 +200,20 @@ export class BinaryOrbitField {
     ) {
       return this.lastActiveCount;
     }
+
+    // Freeze what the last rendered frame drew before the reset loop
+    // overwrites it. Both snapshots are read only by `cadenceReport`.
+    const local0 = this.opts.localPositions;
+    for (const [slot, ordinal] of this.memberOrdinal) {
+      this.prevMemberLocal[ordinal * 3 + 0] = local0[slot * 3 + 0];
+      this.prevMemberLocal[ordinal * 3 + 1] = local0[slot * 3 + 1];
+      this.prevMemberLocal[ordinal * 3 + 2] = local0[slot * 3 + 2];
+    }
+    this.prevRelDelta.set(this.relDelta);
+    const observedUsable = this.memberSnapshotValid;
+    this.memberSnapshotValid = true;
+    this.observedUsable = observedUsable;
+    this.activeRelations.length = 0;
 
     const tJd = tToJDE(t);
     this.ensureFocalChain(focalIdx);
@@ -272,6 +325,10 @@ export class BinaryOrbitField {
       const dxDelta = DELTA_OUT.x;
       const dyDelta = DELTA_OUT.y;
       const dzDelta = DELTA_OUT.z;
+      this.relDelta[i * 3 + 0] = dxDelta;
+      this.relDelta[i * 3 + 1] = dyDelta;
+      this.relDelta[i * 3 + 2] = dzDelta;
+      this.activeRelations.push(i);
       const pCoeff = -rc.elements.q;
       local[pBase + 0] = aPx + dxDelta * pCoeff;
       local[pBase + 1] = aPy + dyDelta * pCoeff;
@@ -352,6 +409,85 @@ export class BinaryOrbitField {
     return true;
   }
 
+  /** This frame's cadence report over the pairs the walk actually
+   *  animated — the render gate's README owns the design.
+   *
+   *  Per active relation, the pair's own sweep rate is `ΔR` differenced
+   *  over the last rendered frame, split by the same barycentric
+   *  coefficients the walk applied. That replaces the periapsis peak the
+   *  LOD gate holds: a pair three quarters of the way round a
+   *  0.9-eccentricity orbit is crawling, and pricing it at its periapsis
+   *  speed cost two orders of magnitude for nothing.
+   *
+   *  Camera velocity comes off each member the same way it does
+   *  everywhere else, so a focused member's ride cancels. A hierarchical
+   *  focal leaves a residual — the parent pair's own sweep, which that
+   *  relation reports on its own line — rather than cancelling to zero.
+   *
+   *  `observedPx` differences the member slots the walk WROTE, which is
+   *  the one signal here independent of the ΔR arithmetic above. */
+  cadenceReport(ctx: CadenceCtx): CadenceReport {
+    if (this.cadenceCacheFrame === ctx.frameId) return this.cadenceCache;
+    this.cadenceCacheFrame = ctx.frameId;
+    this.cadenceCache = this.walkCadenceReport(ctx);
+    return this.cadenceCache;
+  }
+
+  private walkCadenceReport(ctx: CadenceCtx): CadenceReport {
+    if (this.activeRelations.length === 0) return CADENCE_REPORT_STILL;
+    const local = this.opts.localPositions;
+    const camPos = ctx.camera.position;
+    const vc = ctx.cameraVelPcPerSimS;
+    const dt = ctx.simDtS;
+    if (!(Number.isFinite(dt) && dt !== 0)) return CADENCE_REPORT_STILL;
+    const prevCamX = camPos.x - vc.x * dt;
+    const prevCamY = camPos.y - vc.y * dt;
+    const prevCamZ = camPos.z - vc.z * dt;
+    let screenPxPerSimS = 0;
+    let observedPx = 0;
+    for (const i of this.activeRelations) {
+      const rc = this.relations[i];
+      const r = this.opts.binaries.relations[rc.relationIdx];
+      const sweepX = (this.relDelta[i * 3 + 0] - this.prevRelDelta[i * 3 + 0]) / dt;
+      const sweepY = (this.relDelta[i * 3 + 1] - this.prevRelDelta[i * 3 + 1]) / dt;
+      const sweepZ = (this.relDelta[i * 3 + 2] - this.prevRelDelta[i * 3 + 2]) / dt;
+      for (const [slot, coeff] of [
+        [r.primaryIdx, -rc.elements.q] as const,
+        [r.secondaryIdx, 1 - rc.elements.q] as const,
+      ]) {
+        const base = slot * 3;
+        const dx = local[base + 0] - camPos.x;
+        const dy = local[base + 1] - camPos.y;
+        const dz = local[base + 2] - camPos.z;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d <= 0) continue;
+        const ux = dx / d;
+        const uy = dy / d;
+        const uz = dz / d;
+        const vx = sweepX * coeff - vc.x;
+        const vy = sweepY * coeff - vc.y;
+        const vz = sweepZ * coeff - vc.z;
+        const along = vx * ux + vy * uy + vz * uz;
+        const tx = vx - along * ux;
+        const ty = vy - along * uy;
+        const tz = vz - along * uz;
+        screenPxPerSimS = fasterRate(
+          screenPxPerSimS,
+          (Math.sqrt(tx * tx + ty * ty + tz * tz) / d) * ctx.pxPerRadian,
+        );
+        const ordinal = this.memberOrdinal.get(slot);
+        if (!this.observedUsable || ordinal === undefined) continue;
+        observedPx = fasterRate(observedPx, ctx.pxPerRadian * angleBetweenRad(
+          ux, uy, uz,
+          this.prevMemberLocal[ordinal * 3 + 0] - prevCamX,
+          this.prevMemberLocal[ordinal * 3 + 1] - prevCamY,
+          this.prevMemberLocal[ordinal * 3 + 2] - prevCamZ,
+        ));
+      }
+    }
+    return { screenPxPerSimS, fluxFracPerSimS: 0, observedPx, observedFluxFrac: 0 };
+  }
+
   dispose(): void {
     // No GPU/three.js resources held internally — the star pipeline
     // owns the attribute lifecycle. Method exists for parity with the
@@ -362,6 +498,11 @@ export class BinaryOrbitField {
     this.baselinesDirty = true;
     this.lastKeplerCount = -1;
     this.lastCamPos.set(NaN, NaN, NaN);
+    this.relDelta.fill(0);
+    this.prevRelDelta.fill(0);
+    this.activeRelations.length = 0;
+    this.memberSnapshotValid = false;
+    this.observedUsable = false;
     this.positionUploader.reset();
     this.suppressUploader.reset();
   }

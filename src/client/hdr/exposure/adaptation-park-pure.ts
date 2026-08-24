@@ -30,7 +30,9 @@ const PARKED_STATE: ParkState = { phase: 'parked', framesSinceProbe: 0 };
 const PROBING_STATE: ParkState = { phase: 'probing' };
 
 /** No cut, to the exposure subsystem's own resolution — `ADAPT_SLEW_SETTLE_MAG`
- *  borrowed rather than re-picked, exactly as `exposureCutMoved` borrows it
+ *  borrowed rather than re-picked. Legitimate here because the question IS
+ *  numerical ("is this cut zero to our own resolution"); the render gate
+ *  asks a perceptual one and must not borrow it
  *  (`../../render-gate/README.md`). `slewDm` collapses a within-band-of-zero
  *  park to exactly 0, but a cut may PARK anywhere inside the band of a
  *  non-zero measurement — an exact test would refuse to park at any such

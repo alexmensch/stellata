@@ -166,6 +166,46 @@ because the correction reads the *previous* frame's view axis, a
 continuous drag leaves a sub-degree residual that settles as soon as the
 pointer stops.
 
+### The correction needs a deadband, or it 2-cycles
+
+**`UP_CORRECTION_DEADBAND_RAD` (1e-4 rad) is load-bearing, and the bug it
+fixes looks like nothing.** Without it the correction has no fixed point:
+at level it measures a residual of order 1e-18 rad, applies it, and the
+project / normalise / rotate / normalise chain lands one representable
+step away — the next frame's projection brings it back, forever. Measured:
+`camera.up` moved on 200 of 200 frames, alternating between two adjacent
+doubles.
+
+Every navigate-mode orientation source is a `lookAt` reading `camera.up`,
+so that alternation reaches `camera.quaternion`, and the render gate's
+pose snapshot compares by **exact equality** — so it saw a slot move every
+tick and the view could never idle, at any vantage, with nothing
+whatsoever moving on screen (`../../../render-gate/README.md`). The
+readout named it `pose moved: quat.y by 1.11e-16 (1 ulp)`.
+
+Declining to write below the band is the same hysteresis `slewDm` applies
+to the exposure cut, and for the same reason: a bit-identical input
+re-derives a bit-identical output, so the loop breaks at the source
+instead of being filtered downstream. Three properties the band has to
+keep, each pinned by test:
+
+- **Nothing is written inside it** — not even the re-projection, which is
+  a rounding step that cycled on its own.
+- **A sub-band residual still accumulates.** The error is measured against
+  the reference each frame rather than integrated, so holonomy drift
+  crosses the band and gets corrected. A band that swallowed drift
+  permanently would trade a render-gate bug for a levelling bug.
+- **It is invisible.** A roll displaces a feature by `radius · angle`:
+  1e-4 rad at a 1500 px screen radius is 0.15 px, under the cadence's
+  0.25 device-px scheduling threshold, and four decades below
+  `SNAP_TO_LEVEL_DEG`.
+
+The measurement is also taken against `up` directly rather than its
+projection — `levelUpInto`'s output is perpendicular to `forward` by
+construction, so up's forward-parallel component cancels out of both the
+cross and the dot and the angle is unchanged. That removes two of the
+rounding steps that drove the cycle rather than merely tolerating them.
+
 ### The slerp-endpoint rule
 
 Camera animations split into two classes, and only one needs care:

@@ -22,6 +22,11 @@ import {
   ECLIPSE_DIM_TAU_S,
 } from '../binary-tuning';
 import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import {
+  CADENCE_REPORT_STILL,
+  fasterRate,
+  type CadenceReport,
+} from '../../render-gate/cadence/clock-cadence-pure';
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;
@@ -103,6 +108,11 @@ export class EclipsePhotometryField {
   /** Per-frame dim targets, keyed by back-star instance index. Reused
    *  across frames to avoid per-frame allocation. */
   private targets = new Map<number, number>();
+  /** The last rendered frame's targets, ping-ponged with `targets` so the
+   *  pair costs no allocation. A dip's own slope is the difference between
+   *  the two over the elapsed sim time — exact, zero through totality on
+   *  its own, and the same mechanism the planet field's dims use. */
+  private prevTargets = new Map<number, number>();
   private lastNowMs: number | null = null;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
@@ -134,6 +144,9 @@ export class EclipsePhotometryField {
     this.lastNowMs = nowMs;
 
     const dimBuf = this.opts.eclipseDimBuffer;
+    const swap = this.prevTargets;
+    this.prevTargets = this.targets;
+    this.targets = swap;
     const targets = this.targets;
     targets.clear();
 
@@ -165,6 +178,42 @@ export class EclipsePhotometryField {
   /** Count of slots currently held below 1.0 (occluding or decaying). */
   get activeDimCount(): number {
     return this.active.size;
+  }
+
+  /** This frame's cadence report: the fastest dip slope over the pairs
+   *  that reached the dim walk, as a fraction of the back component's own
+   *  flux per sim second.
+   *
+   *  Photometric only — the members' on-screen motion is
+   *  `BinaryOrbitField`'s to report, and this field deliberately shares
+   *  none of its screen-pixel LOD (a sub-pixel pair still dips). The
+   *  relations reaching a target have already passed the magnitude gate
+   *  against the LIVE threshold, so a dip on a star the exposure cut has
+   *  taken off screen cannot set the frame rate: that miss held the frame
+   *  rate through every invisible eclipse in the model.
+   *
+   *  A dip's FIRST frame differences 1 against 1 and reports nothing —
+   *  onset is what `CADENCE_CAP_SIM_S` is for, and the frame after it
+   *  measures the true slope. */
+  cadenceReport(simDtS: number): CadenceReport {
+    if (!(Number.isFinite(simDtS) && simDtS !== 0)) return CADENCE_REPORT_STILL;
+    let observedFluxFrac = 0;
+    for (const [idx, dim] of this.targets) {
+      observedFluxFrac = fasterRate(
+        observedFluxFrac, Math.abs(dim - (this.prevTargets.get(idx) ?? 1)));
+    }
+    // A dip that ENDED this frame has no entry in `targets` and would
+    // otherwise be missed on the way back up.
+    for (const [idx, prev] of this.prevTargets) {
+      if (this.targets.has(idx)) continue;
+      observedFluxFrac = fasterRate(observedFluxFrac, Math.abs(1 - prev));
+    }
+    return {
+      screenPxPerSimS: 0,
+      fluxFracPerSimS: observedFluxFrac / Math.abs(simDtS),
+      observedPx: 0,
+      observedFluxFrac,
+    };
   }
 
   /** Read-only re-walk for the debug HUD. `starIdx` filters to relations
@@ -209,7 +258,11 @@ export class EclipsePhotometryField {
   dispose(): void {
     // Buffer + attribute carrier are owned by the integration shell. The
     // class holds only the relation cache, which the GC reclaims when
-    // the instance drops out of scope.
+    // the instance drops out of scope. The dim-target pair is cadence
+    // state and has to be reset like every other sentinel.
+    this.targets.clear();
+    this.prevTargets.clear();
+    this.lastNowMs = null;
   }
 
   private evaluateRelation(
