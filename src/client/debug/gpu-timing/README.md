@@ -87,7 +87,10 @@ grants the feature.
 **`trackTimestamp: true` is a request, not a grant.** three ANDs it with
 `hasFeature('timestamp-query')` at backend init and clears it silently
 where the adapter withholds the feature; every resolve then returns
-`undefined` after one `warnOnce`. So the boot records the answer once as
+`undefined` after one `warnOnce`. A granted feature is still not a working
+one, so `webgpu/timestamp-probe.ts` drives a timestamped pass through a
+validation scope at boot and clears the flag where it is refused. The boot
+records that verdict once as
 `WebGpuSeam.timestampsAvailable` (`../../webgpu/README.md` § Timestamps)
 and consumers ask that rather than assuming the flag took: with no
 timestamps the headline stays `submit` and a pricing sweep degrades to
@@ -99,8 +102,11 @@ timestamps the headline stays `submit` and a pricing sweep degrades to
 Chrome/Dawn, a whole frame comes back at ≈ **−1.7 × 10⁹ ms** — the negation
 of a raw GPU timestamp (1.7 × 10¹⁵ ns ≈ 20 days of counter), so one half of
 a pass's timestamp pair resolves unwritten while the other holds an
-absolute counter. Safari 26 grants the same feature and resolves honestly,
-so this is a backend fault, not a property of the API.
+absolute counter. Safari 26 grants the same feature and then rejects the
+query set, taking every submit down with it (`../../webgpu/README.md`
+§ Timestamps) — so of the two backends measured, one grants and lies and
+the other grants and breaks. The grant is a backend claim about itself,
+not a property of the API.
 
 Recording it produced both halves of the symptom, and neither looked like a
 bad number: the headline reads `gpu` off the row's *presence*, so it kept

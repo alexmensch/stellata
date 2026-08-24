@@ -23,6 +23,10 @@ src/client/webgpu/
                                     retire with the three bump.
   shared-uniform-nodes.ts (+ test)  TSL uniform-node mirror of
                                     frame/shared-uniforms.ts.
+  timestamp-probe.ts (+ test)       Boot-time check that timestamp
+                                    queries validate; clears
+                                    trackTimestamp where they do not
+                                    (§ Timestamps).
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
                                     surface — verified gaps only.
   attribute-packing-pure.ts         Plan + interleave N per-instance
@@ -413,10 +417,19 @@ overruns the 2048-query pool after ~1024 frames and three logs
 resolves.
 
 Two properties the seam carries for it, both in
-`debug/gpu-timing/README.md`. **The flag is a request:** three ANDs it with
-`hasFeature('timestamp-query')` and clears it silently where the adapter
-withholds the feature, so the boot records the granted answer as
-`timestampsAvailable` and consumers degrade off that instead of assuming.
+`debug/gpu-timing/README.md`. **The flag is a request, and a grant is not
+proof:** three ANDs it with `hasFeature('timestamp-query')` and clears it
+where the adapter withholds the feature — but Safari 26 grants it and then
+reports the query set's type as an unknown enum, which fails the render
+pass descriptor, invalidates the command encoder and discards the entire
+submit. Every layer stops drawing and WebKit logs nothing, since it does
+not fire `onuncapturederror`. `timestamp-probe.ts` settles it at boot by
+driving one throwaway timestamped pass inside a validation scope and
+clearing `trackTimestamp` when refused, so `timestampsAvailable` is the
+probe's answer, never `hasFeature`'s. **The probe must run before the
+first frame:** three caches the render pass descriptor per render target
+and never clears a `timestampWrites` it already attached, so a descriptor
+built while the flag was true stays poisoned for the backend's lifetime.
 **One resolve in flight:** a concurrent resolve returns the same promise and
 the same number, so `resolveAndPublishGpuFrame` publishes once per
 completion rather than once per frame the readback spanned. **And a grant is

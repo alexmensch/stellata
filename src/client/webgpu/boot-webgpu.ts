@@ -23,6 +23,7 @@ import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
 } from './solar-system/tsl-materials';
 import { StarLayer } from './star/star-layer';
+import { settleTimestampSupport, type TimestampBackend } from './timestamp-probe';
 
 /** Null when WebGPU is unavailable or init fails — the caller falls back
  *  to the shipped WebGL2 boot rather than showing a broken canvas. */
@@ -53,6 +54,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     renderer.dispose();
     return null;
   }
+  // hasFeature('timestamp-query') is true on Safari 26 and the query set
+  // is still rejected, so three's own feature gate lets it through and
+  // every submit is discarded — the probe is what settles it.
+  const timestampsLive = await settleTimestampSupport(
+    renderer.backend as unknown as TimestampBackend);
   // Counters r185's reversed-depth render-list reversal; retire with the
   // three bump (reversed-depth-sort.ts carries the mechanism).
   renderer.setOpaqueSort(reversedDepthOpaqueSort);
@@ -81,7 +87,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     renderer,
     scene,
     hdr,
-    timestampsAvailable: renderer.hasFeature('timestamp-query'),
+    timestampsAvailable: timestampsLive,
     get uniformNodes() { return registry?.nodes ?? null; },
     bindSharedUniforms(shared: SharedUniforms) {
       registry = buildSharedUniformNodes(shared);
