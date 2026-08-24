@@ -66,7 +66,7 @@ export class LuminanceReduction implements ReductionSeam {
    *
    * `parked` skips the draws exactly as `enabled = false` does — fence
    * kept, landed texel dropped — driven per frame by the adaptation park
-   * (`../README.md` § Parking the measurement) rather than by a debug
+   * (`../park/README.md`) rather than by a debug
    * toggle.
    *
    * Leaves the render target at the canvas, the same contract the local

@@ -4,7 +4,7 @@
 import { LUMA_CEIL } from '../emission/emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 import { type AdaptationRegime, ADAPT_SLEW_SETTLE_MAG } from './scene-adaptation-pure';
-import type { ParkPhase } from './adaptation-park-pure';
+import type { ParkPhase } from './park/adaptation-park-pure';
 
 export interface ExposureReadout {
   /** Both rescaled to the base instrument exposure, as the branches read

@@ -114,22 +114,46 @@ Three rows are not what they look like:
   negative at deep-cut vantages.
 
 A fourth thing to know before reading rows at a no-cut vantage: the
-adaptation park (`../../hdr/exposure/README.md` § Parking the
-measurement) stops the reduction draws and the statistic writes wherever
-the settled cut is inside the slew's settle band, and the exposure pin
-freezes it there (collapsing a mid-probe park to parked, so every dwell
-prices the same state). At those vantages the `reduction` and
-`statisticWrites` rows price an already-parked frame and should read ~0 —
-the park working, not the instrument failing. Both rows still price the
-pass wherever a cut is live.
+adaptation park (`../../hdr/exposure/park/README.md`) stops the reduction
+draws and the statistic writes wherever the cut is not the measurement's,
+and the exposure pin freezes it there (collapsing a mid-probe park to
+parked, so every dwell prices the same state). At those vantages the
+`reduction` and `statisticWrites` rows price an already-parked frame and
+should read ~0 — the park working, not the instrument failing.
+
+**Which vantages those are widened, so a stale table will disagree.** The
+park used to engage only inside the slew's settle band, i.e. at a cut of
+~0; it now also engages wherever the **display floor** governs, and the
+default Sol view is exactly that case. So the numbers below taken at Sol —
+`statisticWrites` +40.5 to +54.6 %, quoted there as the positive control
+showing "the park stays off wherever the cut is live" — describe the
+pre-park build at that vantage. The cut at Sol is live in the sense that it
+is −6.29 mag, and dead in the sense that the measurement does not set it;
+the park now reads the second. The three dm-0 vantages are unchanged, and
+the surviving positive control is any vantage where the eye branch or the
+pin governs.
 
 Measured over all five canon vantages, 3 runs each, 6.774 Mpx: neither
 row resolved at any of the three dm-0 vantages, against canon's resolved
 `reduction` of +17.6 % (MW50), +26.3 % (MW120) and +32–45 % (LG). The
 decisive row is MW-plane 120° on a settled instrument — a 29.67 ms frame
-at a 0.007 ms bracket, `reduction` reading −0.027 ms. Sol is the positive
-control: `statisticWrites` still resolves +40.5 to +54.6 % (canon +47.7 /
-+50.2), so the park stays off wherever the cut is live.
+at a 0.007 ms bracket, `reduction` reading −0.027 ms. Sol was the positive
+control: `statisticWrites` still resolved +40.5 to +54.6 % (canon +47.7 /
++50.2) — the park of the day stayed off there, which the floor-regime park
+above changed.
+
+**Sol re-measured after the floor-regime park, 2026-08-24** (Chrome,
+timer-query, 6.774 Mpx, panel closed, 119 samples): `statisticWrites`
+`savedMs` −0.016 at a 0.125 ms bracket, i.e. the row no longer resolves at
+all, against the +40.5–54.6 % above. `baselineLimitMag` and
+`disabledLimitMag` both held at 1.511 across the sweep, so the pin did its
+job and the differential priced the pass rather than a denser star field.
+Sol has therefore joined the three dm-0 vantages: **all four now price an
+already-parked frame**, and the surviving positive control is Earth close
+approach, where the resolved-surface pin governs and the park stays off.
+The 41.4 ms baseline that sweep ran against is a *fully parked* frame — the
+hold collapses the probe for the whole dwell, so the steady-state frame at
+Sol sits above it by the duty-cycle share reasoned two paragraphs up.
 
 **Every `statisticWrites` figure above predates the vertex-stage collapse**
 (`../../star-pipeline/collapse/README.md`, 2026-08-20). Re-measured after it

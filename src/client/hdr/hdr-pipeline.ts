@@ -426,7 +426,7 @@ export class HdrPipeline implements HdrSeam {
 
   /** The adaptation park's half of the same mask, held separately so the
    *  park and the frame-cost lever cannot clobber each other's restore
-   *  (`exposure/README.md` § Parking the measurement). The shell rewrites
+   *  (`exposure/park/README.md`). The shell rewrites
    *  it every rendered frame, before `bind()`. */
   setStatisticWritesParked(on: boolean): void {
     this.statisticParked = on;
