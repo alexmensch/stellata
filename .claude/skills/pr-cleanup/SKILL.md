@@ -24,6 +24,22 @@ merge anything with a failing check, or `git push --delete` a remote branch
 
 The authorisation is per-invocation. It does not carry to the next PR.
 
+### Invoked with no PR number
+
+`/pr-cleanup` on its own is common. Resolve it, do not guess:
+
+```bash
+gh pr list --state open --json number,title,headRefName -q '.[] | "#\(.number)  \(.headRefName)  \(.title)"'
+```
+
+Take it as **this session's own PR** — the branch this session created, or the
+one just discussed — when that is unambiguous, and **say which you picked and
+why** so a wrong pick is cheap to correct. Otherwise show the list and ask.
+
+**Never default to a PR another session owns**, however plausible it looks.
+Several are usually open at once and the others are someone else's in-flight
+work; merging one is not recoverable by an apology.
+
 ## 1. Ground truth first
 
 ```bash
@@ -213,8 +229,14 @@ pnpm run typecheck                                   # sanity-check what actuall
 worktree (`worktree-per-pr`), so removing it kills whatever that server was
 serving.
 
-Never remove a worktree the PR did not own, and never touch a `locked` one —
-another live session owns it.
+Never remove a worktree the PR did not own.
+
+**`locked` does not mean "hands off" on its own.** `EnterWorktree` locks the
+worktree it creates, so the PR's own worktree — the very one this step exists
+to remove — shows as `locked` whenever a session is working in it, including
+this one. What to avoid is a worktree locked by **another** session: it holds
+a different branch, and `git worktree list` naming a branch that is not this
+PR's `headRefName` is the tell.
 
 ## Deviations — stop and ask
 
