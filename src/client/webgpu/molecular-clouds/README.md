@@ -89,16 +89,55 @@ no `.value` face a layer would want.
 
 TSL has no `fwidth` node, so the chart contour's band width is
 `abs(dFdx(x)) + abs(dFdy(x))` — which is what GLSL's `fwidth` is defined
-as. The `1e-5` floor is load-bearing: a facet with zero screen-space
-gradient would give a zero-width band and drop the contour entirely.
+as. `MIN_FWIDTH` is load-bearing: a facet with zero screen-space gradient
+would give a zero-width band and drop the contour entirely. It lives in
+`../../molecular-clouds/cloud-rim-pure.ts` with the rest of the rim's
+authored numbers, and the GLSL's bare copy is pinned against it.
+
+## 96 materials are not 96 pipelines
+
+One absorption material per cloud looks like ~96 shader compiles where the
+WebGL2 build linked two programs. It is not, and the mechanism is worth
+knowing before anyone "optimises" it: three caches the compiled stage by
+the **generated WGSL source string**, and a uniform's name in that source
+is `nodeUniform<n>` off a per-builder counter rather than anything derived
+from the node's identity. Every cloud on a tier therefore generates
+byte-identical source and shares one stage; the pipeline on top of it is
+keyed by blend / depth / side / attachment format / geometry, which they
+also share. Two tiers × the single-output and struct graphs = four
+pipelines, not 192.
+
+What *is* per material is the node-graph build and the code generation that
+feeds that cache — doubled, since `finishMrtMaterial` runs the builder once
+per graph. That is CPU work at first render of each cloud, the same shape
+the per-planet materials already carry, and it is **unmeasured**: no
+`gpu.frame` differential prices it, and it would not appear in one anyway.
 
 ## One rim graph, both modes
 
 `uChart` selects between the fresnel rim and the stipple inside a single
 graph rather than swapping materials: the flip is frequent enough that a
-pipeline rebuild per chart toggle would cost more than the branch. Both
-arms are evaluated — there is no early return out of a discard — so the
-discard condition is the union of what each mode drops.
+pipeline rebuild per chart toggle would cost more than the branch.
+
+The branch is an `If().Else()` and **not** a `select`, which is the
+difference between paying for one arm and paying for both: a `select` is a
+value pick, so its operands are always evaluated, and the realistic mode
+would carry two screen-space derivatives, a `fract`, two `smoothstep`s and
+a `length` it never reads (chart mode, the fresnel `pow` and the dither).
+`uChart` is a uniform, so branching on it is *uniform* control flow —
+coherent across the whole draw, and the one kind of branch WGSL still
+allows `dFdx` / `dFdy` inside. Each arm carries its own `Discard`, which is
+also what the GLSL's early `return` out of the chart branch expresses.
+
+One deliberate difference from the GLSL: the realistic arm discards at
+`rimAlpha <= 0`, where the GLSL writes `max(alpha + dither, 0)`
+unconditionally. Under additive blending a zero-alpha fragment contributes
+nothing, so this only drops the sub-half-level dither on a rim that had no
+alpha to begin with — and it drops the fragment's blend with it.
 
 The layer still swaps `material.blending` across the chart flip, exactly
-as it did on the WebGL path.
+as it did on the WebGL path — no `needsUpdate` with it. This backend
+compares `material.blending` against the render object's recorded value on
+its own (`WebGPUBackend.needsRenderUpdate`), so the pipeline is rebuilt
+from the assignment alone; a version bump would only re-derive the cache
+key for every rim mesh sharing the material.
