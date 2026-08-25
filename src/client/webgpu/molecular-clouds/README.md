@@ -55,6 +55,17 @@ blend a zero source leaves the destination exactly as the WebGL gate's
 `NONE` did — and an absorber has no claim on the exposure statistic
 anyway.
 
+**The blend is spelled out, and the flag is the one thing this material may
+not copy from its twin.** The WebGL2 factory says `premultipliedAlpha: true`
++ `NormalBlending`; here that flag would wrap the fragment output node and
+silently demote the three-member struct to one attachment, failing the WGSL
+compile on `m0` (`../hdr/README.md` § Two material flags silently demote the
+struct — the failure this layer shipped with). So the same blend is written
+as `CustomBlending` with `OneFactor` / `OneMinusSrcAlphaFactor` on both
+colour and alpha, which is exactly what the flag selects. The texel is
+`vec4(vec3(0), alpha)`, so the shader-side premultiply the flag also implies
+is arithmetically a no-op — only the factors were ever load-bearing.
+
 ## Three WGSL rules this march lives under
 
 - **`discard` is not a return.** The invocation keeps running, so the

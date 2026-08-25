@@ -109,7 +109,11 @@ and the dimming matches per-star extinction physics. Fallback clouds
 march the calibrated Plummer profile, clipped at the mass-budget
 envelope `u = uEnv`. The draw is **alpha-only premultiplied over** (rgb = 0
 under `premultipliedAlpha: true` + `NormalBlending`), i.e. the blend is
-`background × (1 − absorption)` — nothing is added. Per § 9.1 the ray
+`background × (1 − absorption)` — nothing is added. The TSL twin reaches the
+same blend through explicit `CustomBlending` factors instead, because the
+flag itself breaks an MRT output struct
+(`../webgpu/molecular-clouds/README.md`); the two factories are meant to
+differ there. Per § 9.1 the ray
 start carries static IGN jitter (never reseeded per frame) and the
 output carries ±0.5-LSB dither.
 

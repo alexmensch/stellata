@@ -47,6 +47,11 @@ export function finishMrtMaterial(
   material: NodeMaterial,
   build: () => EmitterOutputs,
 ): MrtEmitterMaterial {
+  // Both default to wrapping the fragment output in a vec4 math node, which
+  // demotes the struct — see § The gate becomes the output struct. `fog`
+  // defaults to TRUE on every NodeMaterial and is inert only while no scene
+  // carries a fog node, so it is forced rather than asserted.
+  material.fog = false;
   const single = Fn(() => build().colour)();
   const members = Fn(() => {
     const o = build();
@@ -60,6 +65,17 @@ export function finishMrtMaterial(
     material,
     setMrtOutputs(on: boolean) {
       if (on === mrtOn) return;
+      // Checked on the way IN only: chart mode legitimately leaves
+      // premultipliedAlpha set on the star materials (MultiplyBlending
+      // needs it), and it is safe there precisely because chart unbinds the
+      // target, so those are on their single-output graph while it holds.
+      // What must never coincide is the flag and the struct.
+      if (on && material.premultipliedAlpha) {
+        throw new Error(
+          `${material.name}: premultipliedAlpha demotes the MRT output struct to one `
+          + 'attachment (three wraps the output node). Express the blend with '
+          + 'CustomBlending factors instead.');
+      }
       mrtOn = on;
       material.fragmentNode = on ? mrt : single;
       material.needsUpdate = true;

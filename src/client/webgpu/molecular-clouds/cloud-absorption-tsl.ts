@@ -1,7 +1,9 @@
 // cloud-absorption.vert.glsl / .frag.glsl on the TSL path: the jittered
 // ellipsoid raymarch that dims every diffuse layer behind the cloud.
 
-import { BackSide, NormalBlending } from 'three';
+import {
+  AddEquation, BackSide, CustomBlending, OneFactor, OneMinusSrcAlphaFactor,
+} from 'three';
 import {
   Break, Discard, If, Loop, cameraPosition, clamp, dot, exp, float, int, length,
   max, min, modelWorldMatrix, normalize, positionGeometry, pow, screenCoordinate,
@@ -28,8 +30,18 @@ export function buildCloudAbsorptionMaterial(
   material.transparent = true;
   material.depthTest = true;
   material.depthWrite = false;
-  material.blending = NormalBlending;
-  material.premultipliedAlpha = true;
+  // What `premultipliedAlpha: true` + NormalBlending means on the GLSL
+  // twin, spelled out. Setting that flag HERE would silently demote the
+  // three-member output struct to one attachment and fail the WGSL
+  // compile (`../hdr/README.md` § The gate becomes the output struct), so
+  // the flag is the one thing this material may not copy from its twin.
+  material.blending = CustomBlending;
+  material.blendSrc = OneFactor;
+  material.blendDst = OneMinusSrcAlphaFactor;
+  material.blendEquation = AddEquation;
+  material.blendSrcAlpha = OneFactor;
+  material.blendDstAlpha = OneMinusSrcAlphaFactor;
+  material.blendEquationAlpha = AddEquation;
   material.side = BackSide;
 
   // Both are per-vertex, so NodeMaterial's own MVP still writes clip space

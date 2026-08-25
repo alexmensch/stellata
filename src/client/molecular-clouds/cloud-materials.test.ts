@@ -6,10 +6,10 @@ import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
 import { makeTslCloudMaterials } from '../webgpu/molecular-clouds/tsl-cloud-materials';
 import {
   makeGlslCloudMaterials,
-  type CloudAbsorptionSpec,
   type CloudMaterials,
   type CloudSharedUniforms,
 } from './cloud-materials';
+import { MOCK_RIM_SPEC as RIM_SPEC, makeMockAbsorptionSpec as spec } from './cloud-mock';
 
 const hdr = makeHdrEmitterUniforms();
 
@@ -29,30 +29,6 @@ const FIELD_SLOTS = [
   'uBrick', 'uDensityMax', 'uCenterFromAabb', 'uRotMat', 'uUvwScale', 'uUvwBias',
 ];
 
-function spec(withField: boolean): CloudAbsorptionSpec {
-  const brick = new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2);
-  return {
-    axes: new THREE.Vector3(3, 2, 1),
-    n0Cal: 120,
-    rflatPc: 0.4,
-    p: 2.1,
-    uEnv: 0.85,
-    invQuat: new THREE.Matrix3(),
-    steps: 14,
-    field: withField
-      ? {
-        brick,
-        densityMax: 7,
-        centerFromAabb: new THREE.Vector3(1, 2, 3),
-        rotMat: new THREE.Matrix3(),
-        uvwScale: new THREE.Vector3(0.1, 0.1, 0.1),
-        uvwBias: new THREE.Vector3(0.5, 0.5, 0.5),
-      }
-      : null,
-  };
-}
-
-const RIM_SPEC = { inkHex: 0x000000, inkAlpha: 0.95, opacity: 1 };
 
 function tsl(registerMrtLayer = () => () => {}): CloudMaterials {
   const s = buildSharedUniforms({
