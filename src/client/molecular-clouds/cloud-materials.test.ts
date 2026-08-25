@@ -120,9 +120,15 @@ describe('the cloud material seam', () => {
     expect(live).toBe(0);
   });
 
-  it('gives the two tiers distinct materials, not one shared graph', () => {
+  // The tier is a builder branch, not a shader uniform, so the two tiers
+  // must come out as two graphs. The material name is the only handle on
+  // which branch ran that does not read generated code.
+  it('builds a different graph per tier', () => {
     const materials = tsl();
-    expect(materials.absorption(spec(true)).material)
-      .not.toBe(materials.absorption(spec(false)).material);
+    const traced = materials.absorption(spec(true)).material;
+    const analytic = materials.absorption(spec(false)).material;
+    expect(traced).not.toBe(analytic);
+    expect(traced.name).toBe('cloud-absorption-field-tsl');
+    expect(analytic.name).toBe('cloud-absorption-tsl');
   });
 });

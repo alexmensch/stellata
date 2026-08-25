@@ -57,9 +57,6 @@ const ABSORPTION_RENDER_ORDER = -2;
 // chrome, deliberately NOT extincted by the absorption pass.
 const RIM_RENDER_ORDER = -1;
 
-/** Star-pipeline uniforms the absorption shader shares by reference. */
-export type { CloudSharedUniforms };
-
 function localSharedUniforms(): CloudSharedUniforms {
   return {
     uFovYRad: { value: Math.PI / 3.6 },
@@ -296,7 +293,6 @@ export class MolecularClouds {
     this.absorptionGroup.visible = !on;
     this.rimSurface.uniforms.uChart.value = on ? 1 : 0;
     this.rimSurface.material.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
-    this.rimSurface.material.needsUpdate = true;
   }
 
   /**
