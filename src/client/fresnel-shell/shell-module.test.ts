@@ -6,8 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
+import type { WebGpuSeam } from '../webgpu/seam';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { HELIOPAUSE_EXTENT_PC } from '../solar-system/heliopause/heliopause';
+import { makeGlslShellMaterials } from './fresnel-shell';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { createShellKindModule } from './shell-module';
 
@@ -51,8 +53,8 @@ function stubDocument(): void {
   vi.stubGlobal('document', { getElementById: () => null });
 }
 
-function makeCtx(): KindContext {
-  const ctx = makeKindContext();
+function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+  const ctx = makeKindContext(overrides);
   ctx.camera.position.set(50, 0, 300);
   ctx.camera.lookAt(50, 0, 0);
   ctx.camera.updateMatrixWorld();
@@ -107,6 +109,32 @@ describe('shell kind module', () => {
     expect(card.kind).toBe('shell');
     expect(card.format(0).name).toBe('Local Bubble');
     expect(card.format(1).name).toBe('Heliopause');
+  });
+
+  // A ported layer has to move scenes and NOTHING warns if it does not:
+  // a shell built into the shell's scene renders on WebGL and silently
+  // nowhere on WebGPU (`../webgpu/README.md` § What the flag boots
+  // today). This is the only guard on that.
+  it('builds both shells into whichever scene the boot renders', async () => {
+    stubFetch(true);
+
+    const webgl = createShellKindModule();
+    await webgl.load('/');
+    const glCtx = makeCtx();
+    webgl.attach(glCtx);
+    expect(glCtx.scene.children).toHaveLength(2);
+
+    const seamScene = new THREE.Scene();
+    const seam = {
+      scene: seamScene,
+      shellMaterials: makeGlslShellMaterials(),
+    } as unknown as WebGpuSeam;
+    const webgpu = createShellKindModule();
+    await webgpu.load('/');
+    const gpuCtx = makeCtx({ webgpu: seam });
+    webgpu.attach(gpuCtx);
+    expect(seamScene.children).toHaveLength(2);
+    expect(gpuCtx.scene.children).toHaveLength(0);
   });
 
   it('picks the drawn silhouette once the declutter push permits it', async () => {

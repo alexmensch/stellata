@@ -1,7 +1,5 @@
-// The TSL half of the dust sprite's constant-drift guards: a pinned
-// constant must be read from dust-particle-pure.ts, never restated as a
-// literal. ../solar-system/README.md § Constant drift runs in both
-// directions.
+// The TSL half of the dust sprite's constant-drift guards. See
+// ../solar-system/README.md § Constant drift runs in both directions.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
