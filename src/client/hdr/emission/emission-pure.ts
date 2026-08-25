@@ -24,6 +24,11 @@ export const LUMA_CEIL = 4096;
  *  attenuation error into its luminosity. */
 export const SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
 
+/** Matches the second moment of a square footprint, which is the order
+ *  `footprintRadiusPc` corrects to. Shared with the TSL twin, which cannot
+ *  see the GLSL's STELLATA_SQRT12. */
+export const FOOTPRINT_SQRT12 = Math.sqrt(12);
+
 /** Linear luminance of a source at V-band apparent magnitude `m`.
  *  Unclamped — the ceiling belongs to whatever writes the fragment. */
 export function luminanceForMagnitude(exposure: number, m: number): number {
@@ -90,7 +95,7 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
  * `summation/README.md` § Footprint carries the measurement.
  */
 export function footprintRadiusPc(distancePc: number, omegaPxArcsec2: number): number {
-  return distancePc / (pxPerRadianFromSolidAngle(omegaPxArcsec2) * Math.sqrt(12));
+  return distancePc / (pxPerRadianFromSolidAngle(omegaPxArcsec2) * FOOTPRINT_SQRT12);
 }
 
 /**

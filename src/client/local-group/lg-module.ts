@@ -100,9 +100,11 @@ export function createLgKindModule(): LgKindModule {
       kindCtx.scene.add(layer.group);
       emission = new LocalGroupEmission(catalog.objects, {
         hdr: pickHdrEmitterUniforms(kindCtx.sharedUniforms),
-      });
+      }, kindCtx.webgpu?.lgEmissionMaterials);
       emission.setChartHidden(kindCtx.getMonochrome());
-      kindCtx.scene.add(emission.group);
+      // The emission has ported, so on a WebGPU boot it belongs in the
+      // scene that renders; the wireframes are Line2 chrome and have not.
+      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(emission.group);
       return {
         // Fixed extragalactic positions — no proper motion is modelled.
         timeBehaviour: { kind: 'static' },

@@ -17,8 +17,13 @@ import {
   MIN_PROJECTED_RADIUS_PX,
   DISC_COLOR_RGB,
   DISC_COLOUR_INDEX_BV,
+  EMISSION_JITTER_DOT,
+  EMISSION_JITTER_SCALE,
   EMISSION_STEPS_DISC,
   EMISSION_STEPS_SERSIC,
+  EMISSION_S_MIN_PC,
+  EMISSION_UNIT_BALL_SLACK,
+  EMISSION_U_FLOOR,
   M31_BULGE_TO_TOTAL_LIGHT,
   M31_TOTAL_COLOUR_INDEX_BV,
   SPHEROID_COLOR_RGB,
@@ -313,6 +318,41 @@ describe('surface-brightness zero point', () => {
 
   it('a unit column reads at the zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(SB_ZERO_POINT, 12);
+  });
+
+  // The march's own four literals. The TSL graph imports these constants,
+  // so it cannot drift; the GLSL spells them out and needs the pin, and the
+  // slack is the one the CPU mirror breaks on too.
+  it('the fragment shader declares the same march constants', () => {
+    const frag = readFileSync(
+      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
+      'utf8',
+    );
+    const literal = (name: string): number => {
+      const m = frag.match(new RegExp(`const float ${name} = ([\\d.e-]+);`));
+      expect(m, name).not.toBeNull();
+      return Number(m![1]);
+    };
+    expect(literal('S_MIN_PC')).toBe(EMISSION_S_MIN_PC);
+    expect(literal('U_FLOOR')).toBe(EMISSION_U_FLOOR);
+
+    const slack = frag.match(/dot\(pLocal, pLocal\) > ([\d.]+)\) break;/);
+    expect(slack).not.toBeNull();
+    expect(Number(slack![1])).toBe(EMISSION_UNIT_BALL_SLACK);
+
+    const jitter = frag.match(
+      /fract\(sin\(dot\(gl_FragCoord\.xy, vec2\(([\d.]+), ([\d.]+)\)\)\) \* ([\d.]+)\)/);
+    expect(jitter).not.toBeNull();
+    expect([Number(jitter![1]), Number(jitter![2])]).toEqual([...EMISSION_JITTER_DOT]);
+    expect(Number(jitter![3])).toBe(EMISSION_JITTER_SCALE);
+  });
+
+  it('pins the march constants themselves', () => {
+    expect(EMISSION_S_MIN_PC).toBe(0.1);
+    expect(EMISSION_U_FLOOR).toBe(1e-4);
+    expect(EMISSION_UNIT_BALL_SLACK).toBe(1.001);
+    expect(EMISSION_JITTER_SCALE).toBe(43758.5453);
+    expect([...EMISSION_JITTER_DOT]).toEqual([12.9898, 78.233]);
   });
 
   // The band's own summation anchor, which this layer used to opt out of by

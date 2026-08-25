@@ -3,15 +3,15 @@
 // § The two passes.
 
 import * as THREE from 'three';
-import emissionVert from './local-group-emission.vert.glsl?raw';
-import emissionFrag from './local-group-emission.frag.glsl?raw';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import type { EmitterMaterial } from '../../scene/emitter-material';
+import {
+  makeGlslLgEmissionMaterials, type LgEmissionMaterials,
+} from './lg-emission-materials';
 import { markDiffuseEmitter } from '../../hdr/attachments/attachment-gate';
 import type { LgObject } from '../local-group-loader';
 import {
   buildEmissionInstanceData,
-  EMISSION_STEPS_DISC,
-  EMISSION_STEPS_SERSIC,
   type DiscInstanceData,
   type SersicInstanceData,
 } from './local-group-emission-pure';
@@ -30,7 +30,7 @@ export interface LgEmissionDeps {
 interface FamilyPass {
   mesh: THREE.Mesh;
   geometry: THREE.InstancedBufferGeometry;
-  material: THREE.ShaderMaterial;
+  surface: EmitterMaterial;
 }
 
 export class LocalGroupEmission {
@@ -41,11 +41,19 @@ export class LocalGroupEmission {
   private readonly baseGeometry: THREE.SphereGeometry;
   private readonly passes: FamilyPass[] = [];
   private readonly uWorldOffset = { value: new THREE.Vector3() };
+  private readonly materials: LgEmissionMaterials;
 
   private enabled = true;
   private chartHidden = false;
 
-  constructor(objects: readonly LgObject[], deps: LgEmissionDeps) {
+  constructor(
+    objects: readonly LgObject[],
+    deps: LgEmissionDeps,
+    materials?: LgEmissionMaterials,
+  ) {
+    this.materials = materials ?? makeGlslLgEmissionMaterials({
+      uWorldOffset: this.uWorldOffset, hdr: deps.hdr,
+    });
     this.baseGeometry = new THREE.SphereGeometry(
       1,
       SPHERE_WIDTH_SEGMENTS,
@@ -55,15 +63,14 @@ export class LocalGroupEmission {
     this.group = new THREE.Group();
 
     const { sersic, disc } = this.instanceData;
-    if (sersic.count > 0) this.passes.push(this.buildPass(sersic, false, deps));
-    if (disc.count > 0) this.passes.push(this.buildPass(disc, true, deps));
+    if (sersic.count > 0) this.passes.push(this.buildPass(sersic, false));
+    if (disc.count > 0) this.passes.push(this.buildPass(disc, true));
     for (const pass of this.passes) this.group.add(pass.mesh);
   }
 
   private buildPass(
     data: SersicInstanceData | DiscInstanceData,
     isDisc: boolean,
-    deps: LgEmissionDeps,
   ): FamilyPass {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.index = this.baseGeometry.index;
@@ -84,37 +91,16 @@ export class LocalGroupEmission {
       geometry.setAttribute('aUMax', inst(s.uMax, 1));
     }
 
-    const material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: emissionVert,
-      fragmentShader: emissionFrag,
-      defines: isDisc
-        ? { FAMILY_DISC: 1, EMISSION_STEPS: EMISSION_STEPS_DISC }
-        : { EMISSION_STEPS: EMISSION_STEPS_SERSIC },
-      // Same render contract as the MilkyWay volumetric pass: BackSide
-      // gives one fragment per ray with the back face as the natural
-      // exit; entry is computed analytically in the fragment shader.
-      side: THREE.BackSide,
-      depthTest: true,
-      depthWrite: false,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        uWorldOffset: this.uWorldOffset,
-        // Exposure, pixel solid angle, and the inline-operator branch.
-        // Owned by HdrPipeline; this layer only reads them.
-        ...deps.hdr,
-      },
-    });
+    const surface = this.materials.emission(isDisc);
 
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, surface.material);
     // Instance centres span the 2 Mpc envelope while the geometry's
     // bounding sphere is the unit ball at origin — auto-culling would
     // drop everything off-centre.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
     markDiffuseEmitter(mesh);
-    return { mesh, geometry, material };
+    return { mesh, geometry, surface };
   }
 
   /** Per-frame: refresh the floating-origin offset the vertex shader
@@ -149,7 +135,7 @@ export class LocalGroupEmission {
   dispose(): void {
     for (const pass of this.passes) {
       pass.geometry.dispose();
-      pass.material.dispose();
+      pass.surface.dispose();
     }
     this.passes.length = 0;
     this.baseGeometry.dispose();
