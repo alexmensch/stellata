@@ -2,7 +2,7 @@
 // the WebGL2 implementation. See README.md § The material seam.
 
 import * as THREE from 'three';
-import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import {
   DEFAULT_FACE_ON_FLOOR, DEFAULT_FRESNEL_POWER, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,

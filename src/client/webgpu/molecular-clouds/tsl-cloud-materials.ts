@@ -2,7 +2,7 @@
 // (../../molecular-clouds/README.md § The material seam).
 
 import type { CloudMaterials } from '../../molecular-clouds/cloud-materials';
-import type { EmitterMaterial } from '../../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';

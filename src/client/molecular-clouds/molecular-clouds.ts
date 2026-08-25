@@ -14,7 +14,7 @@ import type { HoverHit } from '../hover/hover-types';
 // removing this import breaks the shader compile at first render.
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import { markAbsorber } from '../hdr/attachments/attachment-gate';
-import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import {
   makeGlslCloudMaterials,
   type CloudAbsorptionSpec,
