@@ -56,6 +56,15 @@ their values reappears as a bare literal in any of them. A number copied
 out of the GLSL into a TSL twin is the drift that has no compiler to
 catch it.
 
+The literal half compares by **value**, through the scan shared with the
+other subsystems' guards (`../tsl/README.md` § TSL test pattern) — so a
+constant restated as `30.0` is caught where a text pattern for `30` was
+not. The cost is that a number coinciding with a pinned one has to be
+excused by name: `atmosphere-scatter-tsl.ts` spells 16 in the Rayleigh
+phase normalisation `3/(16π)`, which is not `ATMO_N_VIEW`. An exemption
+also stops the real constant being caught in that file, so the list is
+meant to stay short.
+
 ## Vertex stages: three of five need none
 
 `NodeMaterial`'s own model-view-projection is exactly what

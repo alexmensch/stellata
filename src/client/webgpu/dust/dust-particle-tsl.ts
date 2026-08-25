@@ -15,8 +15,6 @@ import type { DustParticleNodes } from './dust-uniform-nodes';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { attrFloat, attrVec2, attrVec3 } from '../tsl/tsl-shim';
 
-const LOG10 = Math.log(10);
-
 export function buildDustParticleMaterial(
   u: SharedUniformNodes,
   d: DustParticleNodes,
@@ -34,11 +32,13 @@ export function buildDustParticleMaterial(
   material.vertexNode = Fn(() => {
     // Density → [0, 1] over the same log window the dust texture decode
     // uses, so the scale matches the visible range of real Edenhofer
-    // values rather than synthetic peaks.
-    const logD = log(max(attrFloat('iDensity'), u.uDustDensityMin)).div(LOG10);
-    const logMin = log(u.uDustDensityMin).div(LOG10);
-    const logSpan = u.uDustLogRatio.div(LOG10);
-    const normD = clamp(logD.sub(logMin).div(max(logSpan, 0.001)), 0.0, 1.0).toVar();
+    // values rather than synthetic peaks. The GLSL's ln→log10 conversion
+    // is dropped: uDustLogRatio is itself a natural log, so the base
+    // divides out of the ratio (README.md § Two no-ops the graph drops).
+    const logD = log(max(attrFloat('iDensity'), u.uDustDensityMin));
+    const logMin = log(u.uDustDensityMin);
+    const normD = clamp(
+      logD.sub(logMin).div(max(u.uDustLogRatio, 0.001)), 0.0, 1.0).toVar();
 
     vBrightness.assign(
       mix(float(PARTICLE_DIM_FLOOR), 1.0, normD).mul(d.uParticleStrength));

@@ -19,6 +19,9 @@ src/client/webgpu/tsl/
                                     accessor node from a pack plan.
   uniform-slots.ts                  The IUniform face a ported layer
                                     writes, over a record of TSL nodes.
+  literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
+                                    restates as a bare literal — the scan
+                                    behind every TSL-side drift guard.
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -171,6 +174,14 @@ generated code:
    the renderer), not by unit tests — executing shaders in vitest
    remains the hhaw WebGL2-test-seam epic's territory, and no port
    gates on it.
+
+The literal half of leg 1 is `literal-drift-pure.ts`, shared by the
+per-subsystem drift guards. It compares by **value, not by text**: shader
+code spells an integral constant `30.0`, and a text pattern for `30`
+rejects it on the trailing dot — which is the form a transcription
+actually drifts into, so a text scan passes on precisely the case it
+exists to catch. A number that merely coincides with a pinned value is
+excused per-source with a written reason.
 
 Node-graph introspection (walking the built node tree and asserting
 structure) was considered and rejected: it pins three's internal node

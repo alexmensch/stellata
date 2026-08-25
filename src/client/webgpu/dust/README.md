@@ -18,6 +18,8 @@ src/client/webgpu/dust/
   dust-particle-tsl.ts     The sprite's vertex and fragment graphs.
   dust-uniform-nodes.ts    uParticleStrength, the one slot the layer owns.
   tsl-dust-materials.ts    The factory implementing DustParticleMaterials.
+  dust-tsl-drift.test.ts   The TSL-side constant guard (§ Constants live
+                           in TypeScript).
 ```
 
 ## Six of its seven uniforms are not in its own record
@@ -35,20 +37,40 @@ by-reference channel.
 `uniformSlotsOf` has to expose so `setStrength` reaches either backend
 unchanged.
 
-## `uPixelRatio` cancels
+## Two no-ops the graph drops
 
-The GLSL multiplies the corner offset by `uPixelRatio` and then divides
-by `uViewport * uPixelRatio`, so the ratio cancels exactly. The TSL graph
-drops both rather than transcribing a no-op — the same simplification the
-probe glyph carries (`../solar-system/README.md`).
+The GLSL carries two quantities that divide out of their own expression,
+and the TSL transcribes neither — the same simplification the probe glyph
+carries (`../solar-system/README.md`).
+
+- **`uPixelRatio`.** The corner offset is multiplied by it and then
+  divided by `uViewport * uPixelRatio`. It cancels exactly.
+- **The base-10 conversion.** The GLSL divides `logD`, `logMin` and
+  `logSpan` by a local `LOG10`, but `uDustLogRatio` is authored as a
+  NATURAL log (`frame/shared-uniforms.ts`, `Math.log(1e3)`), so the base
+  cancels out of `(logD − logMin) / logSpan`. The one place it does not
+  cancel is the degenerate-span guard: `max(logSpan, 0.001)` floors a
+  base-10 span on the GLSL side and a natural-log one here, i.e. at
+  `uDustLogRatio` of 0.0023 versus 0.001. At the authored 6.9078 neither
+  floor is reached, and any span that low produces meaningless `normD` on
+  both backends.
+
+Dropping the conversion is also what keeps this shader's constants
+whole: a TSL-side `Math.log(10)` would be the one number here that is
+neither imported from `dust-particle-pure.ts` nor pinned against the
+GLSL, and it disagrees with the GLSL's 10-digit literal in the 11th
+digit.
 
 ## Constants live in TypeScript
 
 `PARTICLE_MIN_PX`, `PARTICLE_MAX_PX`, `PARTICLE_DIM_FLOOR` and
-`DUST_TINT` are imported from `../../dust/dust-particle-pure.ts`; the
-GLSL's copies are pinned against that module by
-`dust-particle-glsl-drift.test.ts`, since GLSL cannot import
-(`../tsl/README.md` § TSL test pattern).
+`DUST_TINT` are imported from `../../dust/dust-particle-pure.ts`, and the
+guard runs in **both** directions, as it does for the solar-system
+surfaces (`../solar-system/README.md` § Constant drift runs in both
+directions): `dust-particle-glsl-drift.test.ts` pins the GLSL's copies
+against that module, since GLSL cannot import; `dust-tsl-drift.test.ts`
+asserts this side names each constant and spells none of them as a
+literal (`../tsl/README.md` § TSL test pattern).
 
 **The tint is the one chrome colour still unmapped.** It is a shader
 constant rather than a uniform, so it never went through the inverse
