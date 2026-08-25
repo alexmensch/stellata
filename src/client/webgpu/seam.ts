@@ -60,9 +60,12 @@ export interface WebGpuSeam {
   /** Rendered in place of the shell's scene on a WebGPU boot — empty
    *  until port children add their TSL layers to it. */
   readonly scene: THREE.Scene;
-  /** Whether the adapter granted `timestamp-query`. `trackTimestamp: true`
-   *  is a request: three clears it silently when the feature is absent, so
-   *  every GPU-timing consumer must ask here rather than assume. */
+  /** The boot probe's verdict on whether timestamp queries survive
+   *  validation, NOT the adapter's grant — Safari 26 grants the feature and
+   *  then refuses the query set. Every GPU-timing consumer must ask here,
+   *  and the render loop's resolve is gated on it: with tracking off three
+   *  allocates no query pool, so resolving anyway only warns
+   *  (README.md § Timestamps). */
   readonly timestampsAvailable: boolean;
   /** The HDR chain on this boot — target, resolve, reduction. The shell
    *  drives it in place of constructing the WebGL HdrPipeline. */

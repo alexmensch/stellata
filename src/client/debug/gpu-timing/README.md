@@ -137,13 +137,20 @@ Three consequences, none of them a limitation to work around:
   gives us honestly, so **there are no per-pass `gpu.*` rows on WebGPU** —
   the `submit.*` CPU rows and `debug.priceFrame()` cover that ground.
 
-**The resolve must run on EVERY rendered frame**, not only while the HUD
-is open. Tracking allocates the query pair whether or not anyone reads the
-result, and only the resolve recycles the pool: a gated resolve overran
-the 2048-query pool after ~1024 frames (~17 s), logged
-`WebGPUTimestampQueryPool: Maximum number of queries exceeded`, and then
-stopped sampling until something resolved. `animate()` resolves
-unconditionally; the subscriber list decides only whether a sample lands.
+**The resolve must run on EVERY rendered frame that has a clock**, not only
+while the HUD is open. Tracking allocates the query pair whether or not
+anyone reads the result, and only the resolve recycles the pool: a resolve
+gated on the HUD overran the 2048-query pool after ~1024 frames (~17 s),
+logged `WebGPUTimestampQueryPool: Maximum number of queries exceeded`, and
+then stopped sampling until something resolved. So the subscriber list
+decides only whether a sample lands, never whether the resolve runs.
+
+The single admissible gate is `WebGpuSeam.timestampsAvailable`, which
+`animate()` passes to `resolveAndPublishGpuFrame`. Where the probe cleared
+`trackTimestamp`, three's `initTimestampQuery` returns before allocating a
+pool, so that frame has no queries to overrun and the resolve would only
+log `WebGPURenderer: Timestamp tracking is disabled.` — the warning Safari
+surfaced when the gate was missing.
 
 **One resolve in flight at a time — the guard is load-bearing.** A resolve
 spans the frames its `mapAsync` readback takes, and three coalesces: a

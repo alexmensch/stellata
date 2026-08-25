@@ -2471,7 +2471,8 @@ export class Stellata implements FrameAnchor {
       // the timestamp query pool, and trackTimestamp allocates a pair per
       // render pass whether or not anyone reads them. Skipping it while
       // the HUD is closed overruns the 2048-query pool in ~1024 frames.
-      resolveAndPublishGpuFrame(this.webgpu.renderer);
+      resolveAndPublishGpuFrame(
+        this.webgpu.renderer, this.webgpu.timestampsAvailable);
     }
     perfMark('frame.handlers');
     this.bus.emit('frame');

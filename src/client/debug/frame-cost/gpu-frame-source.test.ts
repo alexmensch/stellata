@@ -86,7 +86,8 @@ describe('the pricing sweep picks its sample source per backend', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const info = vi.spyOn(console, 'info').mockImplementation(() => {});
 
-    resolveAndPublishGpuFrame({ resolveTimestampsAsync: async () => -1706603456.88 });
+    resolveAndPublishGpuFrame(
+      { resolveTimestampsAsync: async () => -1706603456.88 }, true);
     await new Promise((resolve) => { setTimeout(resolve, 0); });
 
     // The grant is necessary, not sufficient: every sample is being dropped,

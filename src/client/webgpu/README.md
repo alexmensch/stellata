@@ -409,15 +409,16 @@ verifying no actual math.
 ## Timestamps
 
 The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
-**every rendered frame** — not only while the HUD is open. The resolve is
-what recycles the query pool: tracking allocates a query pair per render
-pass regardless of whether anyone reads the result, so a gated resolve
-overruns the 2048-query pool after ~1024 frames and three logs
+**every rendered frame the probe left timestamps live on** — not only while
+the HUD is open, and gated on `timestampsAvailable` alone. The resolve is
+what recycles the query pool: tracking allocates a query pair per render pass
+regardless of whether anyone reads the result, so a resolve gated on the HUD
+instead overruns the 2048-query pool after ~1024 frames and three logs
 `Maximum number of queries exceeded`, then stops sampling until something
-resolves.
+resolves. Why the probe's verdict is the one admissible gate, plus two
+properties the seam carries, all in `debug/gpu-timing/README.md`.
 
-Two properties the seam carries for it, both in
-`debug/gpu-timing/README.md`. **The flag is a request, and a grant is not
+**The flag is a request, and a grant is not
 proof:** three ANDs it with `hasFeature('timestamp-query')` and clears it
 where the adapter withholds the feature — but Safari 26 grants it and then
 reports the query set's type as an unknown enum, which fails the render
@@ -442,7 +443,7 @@ one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
 query fills, and the perf HUD's headline reads `gpu` rather than `submit`
 on either backend. Subscribers (the HUD, a `debug.priceFrame()` sweep)
 come and go through `debug/gpu-timing/gpu-frame-samples.ts` while the
-resolve itself stays unconditional. Per-pass `gpu.*` rows have no WebGPU
+resolve itself is gated on nothing but the probe's verdict. Per-pass `gpu.*` rows have no WebGPU
 counterpart on purpose: three keys per-pass timestamps by an internal
 uid, and the pricing differential answers the same question without
 pinning three's internals. Detail in `debug/gpu-timing/README.md`.
