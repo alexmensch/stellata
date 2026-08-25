@@ -924,8 +924,10 @@ export class Stellata implements FrameAnchor {
     this.milkyway = new MilkyWay({
       uLimitMag: sharedUniforms.uLimitMag,
       hdr: this.hdr.emitterUniforms,
-    });
-    this.scene.add(this.milkyway.group);
+    }, this.webgpu?.bandMaterials);
+    // The band has ported, so on a WebGPU boot it belongs in the scene
+    // that renders.
+    (this.webgpu?.scene ?? this.scene).add(this.milkyway.group);
 
     this.filters = new FilterController({
       camera: this.camera,

@@ -14,6 +14,7 @@ import {
   EMISSION_STEPS_SERSIC, EMISSION_S_MIN_PC, EMISSION_UNIT_BALL_SLACK,
   EMISSION_U_FLOOR, MIN_PROJECTED_RADIUS_PX,
 } from '../../local-group/emission/local-group-emission-pure';
+import { UNIT_BALL_SLACK } from '../../milkyway/milkyway-column-pure';
 import { SB_ZERO_POINT } from '../../hdr/emission/emission-pure';
 import {
   footprintAlongTsl, footprintPcTsl, pxPerRadianTsl, softenRadiusTsl,

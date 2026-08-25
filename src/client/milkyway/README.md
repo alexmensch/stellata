@@ -17,6 +17,9 @@ disables. Hidden in chart mode.
   meshes; owns the `setIsobar` chart-mode handoff (which hides them).
 - `milkyway.{vert,frag}.glsl` — ray-sphere intersect + log-distributed
   raymarch, additive-blended.
+- `band-materials.ts` (+ test) — the material seam: the neutral
+  `BandMaterials` contract, the `BandSharedSlots` group both components
+  hold by reference, and the WebGL2 implementation (§ The material seam).
 - `milkyway-column-pure.ts` — the density / dust profile constants the shader
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
   (`calibration/README.md`); the shader's step counts are pinned against the
@@ -33,6 +36,26 @@ disables. Hidden in chart mode.
 
 `GAL_TO_ICRS` / `GALACTIC_CENTRE_PC` live in `../galactic/galactic-coords.ts`,
 imported here for the GC-anchored mesh placement.
+
+## The material seam
+
+Both components take their material from a `BandMaterials` factory rather
+than building a `ShaderMaterial` inline, so a WebGPU boot swaps shaders
+with no second copy of the mesh placement, the per-frame galactic-centre
+rebase, the debug levers or the chart handoff. The WebGPU twin is
+`../webgpu/milkyway/README.md`; `stellata.ts` passes
+`webgpu?.bandMaterials` and adds the group to `(webgpu?.scene ?? scene)`.
+
+**The shared slots come FROM the factory.** The dust model, the galactic
+frame, the surface-brightness anchor and the chart isobar are held by
+reference between the disc and the bulge so one write reaches both draws —
+and on WebGPU those are TSL nodes, so the layer has to write through the
+factory's objects rather than its own. `MilkyWay.shared` is that handle,
+and the constructor seeds every slot from its authored constant right
+after construction, since a node starts on its declared default.
+
+`uIsBulge` does not survive the crossing: it is a uniform the GLSL
+branches on, and a builder flag on the TSL side.
 
 ## Why a volumetric mesh, not a skybox
 

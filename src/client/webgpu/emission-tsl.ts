@@ -2,7 +2,7 @@
 // and statistic-texel rules, over emission-pure's constants. Contracts:
 // ../hdr/emission/README.md § Unit, ../hdr/attachments/README.md § The unit.
 
-import { Fn, clamp, dot, float, max, min, pow, sqrt, vec4 } from 'three/tsl';
+import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { FOOTPRINT_SQRT12, LUMA_CEIL } from '../hdr/emission/emission-pure';
@@ -50,6 +50,17 @@ export const footprintPcTsl = /* @__PURE__ */ Fn(
 export const softenRadiusTsl = /* @__PURE__ */ Fn(
   ([radiusPc, footprintPc]: [NF, NF]) =>
     sqrt(radiusPc.mul(radiusPc).add(footprintPc.mul(footprintPc))),
+);
+
+/** The extended-source threshold surface brightness recovered from the rod
+ *  summation solid angle — the inverse of `rodSummationSolidAngleArcsec2`.
+ *  A consumer needing threshold back in the magnitude domain (the chart
+ *  isobar contours a surface brightness) takes it from the same solid angle
+ *  the gain runs on, so the contour and the emission cannot disagree about
+ *  where threshold is. */
+export const extendedThresholdSbTsl = /* @__PURE__ */ Fn(
+  ([omegaSummationArcsec2, limitMag]: [NF, NF]) =>
+    limitMag.add(log2(max(omegaSummationArcsec2, 1e-12)).mul(2.5 * Math.log10(2))),
 );
 
 /** How much of the footprint lies along `axis` for a ray running `dirUnit`.

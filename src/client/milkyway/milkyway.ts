@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import milkywayVert from './milkyway.vert.glsl?raw';
-import milkywayFrag from './milkyway.frag.glsl?raw';
 import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
+import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import {
+  makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
+} from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
@@ -81,11 +83,11 @@ export interface MilkywayDeps {
  *  palette the colour picker round-trips. Writing the authored value into
  *  the uniform would make a hue edit move the component's flux. */
 interface ComponentMaterials {
-  material: THREE.ShaderMaterial;
-  density0: { value: number };
-  tint: { value: THREE.Color };
+  surface: EmitterMaterial;
+  density0: THREE.IUniform;
+  tint: THREE.IUniform;
   authoredColor: THREE.Color;
-  meshScale: { value: THREE.Vector3 };
+  meshScale: THREE.Vector3;
 }
 
 function tintColor(r: number, g: number, b: number): THREE.Color {
@@ -109,60 +111,50 @@ export class MilkyWay {
   private disc: ComponentMaterials;
   private bulge: ComponentMaterials;
 
-  // Uniform objects shared across both materials (same {value:...} ref
-  // in both, so updating one place propagates to both).
-  private sharedDust: {
-    uDustAvPerDensityPc: { value: number };
-    uDustEnabled: { value: number };
-    uExtinctionStrength: { value: number };
-    uAnalyticalDustScaleLengthPc: { value: number };
-    uAnalyticalDustScaleHeightPc: { value: number };
-    uAnalyticalDustNormPerPc: { value: number };
-    uReddeningRGB: { value: THREE.Vector3 };
-  };
-  private sharedFrame: {
-    uWorldOffset: { value: THREE.Vector3 };
-    uIcrsToGal: { value: THREE.Matrix3 };
-    uGalCenter: { value: THREE.Vector3 };
-    uR0Pc: { value: number };
-  };
-  private sharedTone: {
-    uGlowMagOffset: { value: number };
-  };
-  // Chart-mode isobar uniforms — shared between disc + bulge so the
-  // contour appearance is uniform across the band. uChartInkColor is the
-  // ink tone used against the paper-aesthetic chart background.
-  private sharedChart: {
-    uChartIsobar: { value: number };
-    uChartInkColor: { value: THREE.Color };
-  };
+  /** The slots both components hold by reference to each other. They come
+   *  from the material factory rather than being built here: on WebGPU
+   *  they are TSL nodes, and a write has to reach the shader through them
+   *  (README.md § The material seam). */
+  private shared: BandSharedSlots;
+  private readonly materials: BandMaterials;
 
   private enabled = true;
   private isobar = false;
 
-  constructor(deps: MilkywayDeps) {
-    this.sharedDust = {
-      uDustAvPerDensityPc: { value: DEFAULT_DUST_AV_PER_DENSITY_PC },
-      uDustEnabled: { value: 0 },
-      uExtinctionStrength: { value: DEFAULT_EXTINCTION_STRENGTH },
-      uAnalyticalDustScaleLengthPc: { value: ANALYTICAL_DUST_SCALE_LENGTH_PC },
-      uAnalyticalDustScaleHeightPc: { value: ANALYTICAL_DUST_SCALE_HEIGHT_PC },
-      uAnalyticalDustNormPerPc: { value: ANALYTICAL_DUST_NORM_PER_PC },
-      uReddeningRGB: { value: new THREE.Vector3(...REDDENING_RGB) },
-    };
-    this.sharedFrame = {
-      uWorldOffset: { value: new THREE.Vector3() },
-      uIcrsToGal: { value: ICRS_TO_GAL_M3 },
-      uGalCenter: { value: GALACTIC_CENTRE_PC.clone() },
-      uR0Pc: { value: R0_PC },
-    };
-    this.sharedTone = {
-      uGlowMagOffset: { value: SB_ZERO_POINT },
-    };
-    this.sharedChart = {
-      uChartIsobar: { value: 0 },
-      uChartInkColor: { value: new THREE.Color(0x000000) },
-    };
+  constructor(deps: MilkywayDeps, materials?: BandMaterials) {
+    this.materials = materials ?? makeGlslBandMaterials({
+      shared: {
+        uDustAvPerDensityPc: { value: DEFAULT_DUST_AV_PER_DENSITY_PC },
+        uDustEnabled: { value: 0 },
+        uExtinctionStrength: { value: DEFAULT_EXTINCTION_STRENGTH },
+        uAnalyticalDustScaleLengthPc: { value: ANALYTICAL_DUST_SCALE_LENGTH_PC },
+        uAnalyticalDustScaleHeightPc: { value: ANALYTICAL_DUST_SCALE_HEIGHT_PC },
+        uAnalyticalDustNormPerPc: { value: ANALYTICAL_DUST_NORM_PER_PC },
+        uReddeningRGB: { value: new THREE.Vector3(...REDDENING_RGB) },
+        uWorldOffset: { value: new THREE.Vector3() },
+        uIcrsToGal: { value: ICRS_TO_GAL_M3 },
+        uGalCenter: { value: GALACTIC_CENTRE_PC.clone() },
+        uR0Pc: { value: R0_PC },
+        uGlowMagOffset: { value: SB_ZERO_POINT },
+        uChartIsobar: { value: 0 },
+        uChartInkColor: { value: new THREE.Color(0x000000) },
+      },
+      hdr: deps.hdr,
+      uLimitMag: deps.uLimitMag,
+    });
+    this.shared = this.materials.shared;
+    // A TSL node starts on its declared default, so seed every shared slot
+    // from the authored constant on whichever backend booted.
+    this.shared.uDustAvPerDensityPc.value = DEFAULT_DUST_AV_PER_DENSITY_PC;
+    this.shared.uExtinctionStrength.value = DEFAULT_EXTINCTION_STRENGTH;
+    this.shared.uAnalyticalDustScaleLengthPc.value = ANALYTICAL_DUST_SCALE_LENGTH_PC;
+    this.shared.uAnalyticalDustScaleHeightPc.value = ANALYTICAL_DUST_SCALE_HEIGHT_PC;
+    this.shared.uAnalyticalDustNormPerPc.value = ANALYTICAL_DUST_NORM_PER_PC;
+    (this.shared.uReddeningRGB.value as THREE.Vector3).set(...REDDENING_RGB);
+    (this.shared.uIcrsToGal.value as THREE.Matrix3).copy(ICRS_TO_GAL_M3);
+    (this.shared.uGalCenter.value as THREE.Vector3).copy(GALACTIC_CENTRE_PC);
+    this.shared.uR0Pc.value = R0_PC;
+    this.shared.uGlowMagOffset.value = SB_ZERO_POINT;
 
     // --- Disc -----------------------------------------------------------
     const discGeom = new THREE.SphereGeometry(1, 96, 48);
@@ -176,7 +168,6 @@ export class MilkyWay {
       density0: DISC_DENSITY0,
       authoredColor: new THREE.Color(...DISC_COLOR_RGB),
       tint: new THREE.Color(...DISC_TINT_RGB),
-      deps,
     });
     this.discMesh = this.buildMesh(discGeom, this.disc);
 
@@ -192,7 +183,6 @@ export class MilkyWay {
       density0: BULGE_DENSITY0,
       authoredColor: new THREE.Color(...BULGE_COLOR_RGB),
       tint: new THREE.Color(...BULGE_TINT_RGB),
-      deps,
     });
     this.bulgeMesh = this.buildMesh(bulgeGeom, this.bulge);
 
@@ -207,65 +197,35 @@ export class MilkyWay {
     density0: number;
     authoredColor: THREE.Color;
     tint: THREE.Color;
-    deps: MilkywayDeps;
   }): ComponentMaterials {
-    const density0 = { value: opts.density0 };
-    const tint = { value: opts.tint };
-    const meshScale = { value: opts.meshScale };
-
-    const material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: milkywayVert,
-      fragmentShader: milkywayFrag,
-      // BackSide so each ray that intersects the volume produces exactly
-      // one fragment — the back-face surface point IS the natural exit
-      // of the volumetric integration. Front-face fragments are skipped
-      // (would require a separate pass to produce entry positions; we
-      // compute entry analytically in the fragment shader).
-      side: THREE.BackSide,
-      // depthTest on so the star core depth-mask (renderOrder = -4) can
-      // occlude this layer behind close-range disc stars — without the
-      // test, the additive Milky Way bleeds through bright disc cores.
-      // depthWrite off so the mesh never occludes anything itself.
-      depthTest: true,
-      depthWrite: false,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        // Shared (same {value:...} ref in both materials).
-        ...this.sharedDust,
-        ...this.sharedFrame,
-        ...this.sharedTone,
-        ...this.sharedChart,
-        // Exposure, pixel solid angle, and the inline-operator branch.
-        // Owned by HdrPipeline; this layer only reads them.
-        ...opts.deps.hdr,
-        uLimitMag: opts.deps.uLimitMag,
-
-        // Per-component.
-        uIsBulge: { value: opts.isBulge },
-        uMeshScalePc: meshScale,
-        uDensity0: density0,
-        uColor: tint,
-        uDiscScaleLengthPc: { value: DISC_SCALE_LENGTH_PC },
-        uDiscScaleHeightPc: { value: DISC_SCALE_HEIGHT_PC },
-        uDiscThickScaleHeightPc: { value: DISC_THICK_SCALE_HEIGHT_PC },
-        uDiscThickFraction: { value: DISC_THICK_DENSITY_FRACTION },
-        uBulgeScaleRadiusPc: { value: BULGE_SCALE_RADIUS_PC },
-        uBulgeAxisRatio: { value: BULGE_AXIS_RATIO },
-      },
+    const surface = this.materials.component({
+      isBulge: opts.isBulge,
+      meshScalePc: opts.meshScale,
+      density0: opts.density0,
+      tint: opts.tint,
+      discScaleLengthPc: DISC_SCALE_LENGTH_PC,
+      discScaleHeightPc: DISC_SCALE_HEIGHT_PC,
+      discThickScaleHeightPc: DISC_THICK_SCALE_HEIGHT_PC,
+      discThickFraction: DISC_THICK_DENSITY_FRACTION,
+      bulgeScaleRadiusPc: BULGE_SCALE_RADIUS_PC,
+      bulgeAxisRatio: BULGE_AXIS_RATIO,
     });
-
-    return { material, density0, tint, authoredColor: opts.authoredColor, meshScale };
+    return {
+      surface,
+      density0: surface.uniforms.uDensity0,
+      tint: surface.uniforms.uColor,
+      authoredColor: opts.authoredColor,
+      meshScale: opts.meshScale,
+    };
   }
 
   private buildMesh(geom: THREE.SphereGeometry, comp: ComponentMaterials): THREE.Mesh {
-    const mesh = new THREE.Mesh(geom, comp.material);
+    const mesh = new THREE.Mesh(geom, comp.surface.material);
     // Mesh-local axes align with galactic axes by virtue of this
     // quaternion. mesh.scale extends the unit sphere into galactic-frame
     // pc per axis (radial, radial, vertical).
     mesh.quaternion.copy(GAL_QUAT);
-    mesh.scale.copy(comp.meshScale.value);
+    mesh.scale.copy(comp.meshScale);
     // The mesh is huge but its bounding sphere is centred on the local
     // mesh origin; per-frame we rebase mesh.position to the galactic
     // centre under the floating origin. Auto-frustum-culling would
@@ -282,7 +242,7 @@ export class MilkyWay {
    *  We keep the API for symmetry with the per-star pipeline so a
    *  single attachDust call keeps both layers in sync. */
   attachDust(dust: DustField | null) {
-    const u = this.sharedDust;
+    const u = this.shared;
     if (dust === null) {
       u.uDustEnabled.value = 0;
       return;
@@ -292,7 +252,7 @@ export class MilkyWay {
   }
 
   setExtinctionStrength(x: number) {
-    this.sharedDust.uExtinctionStrength.value = Math.max(0, x);
+    this.shared.uExtinctionStrength.value = Math.max(0, x);
   }
 
   setEnabled(on: boolean) {
@@ -311,8 +271,8 @@ export class MilkyWay {
   setIsobar(on: boolean) {
     if (this.isobar === on) return;
     this.isobar = on;
-    this.sharedChart.uChartIsobar.value = on ? 1 : 0;
-    for (const mat of [this.disc.material, this.bulge.material]) {
+    this.shared.uChartIsobar.value = on ? 1 : 0;
+    for (const mat of [this.disc.surface.material, this.bulge.surface.material]) {
       mat.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
       mat.depthWrite = false;
       mat.needsUpdate = true;
@@ -324,7 +284,7 @@ export class MilkyWay {
   }
 
   setGlowMagOffset(x: number) {
-    this.sharedTone.uGlowMagOffset.value = x;
+    this.shared.uGlowMagOffset.value = x;
   }
 
   setDiscDensity(x: number) {
@@ -343,25 +303,25 @@ export class MilkyWay {
 
   private setComponentColor(c: ComponentMaterials, r: number, g: number, b: number) {
     c.authoredColor.setRGB(r, g, b);
-    c.tint.value.copy(tintColor(r, g, b));
+    (c.tint.value as THREE.Color).copy(tintColor(r, g, b));
   }
 
   /** Set the wavelength-reddening per-channel τ multipliers. CCM
    *  default is (0.751, 1.0, 1.32). Larger spread = more dramatic
    *  reddening. */
   setReddeningRGB(r: number, g: number, b: number) {
-    this.sharedDust.uReddeningRGB.value.set(r, g, b);
+    (this.shared.uReddeningRGB.value as THREE.Vector3).set(r, g, b);
   }
 
   /** Read-only snapshot of all tunable values, for the dev tuning panel
    *  to initialise its inputs from the live state. */
   getValues() {
-    const c = this.sharedDust.uReddeningRGB.value;
+    const c = this.shared.uReddeningRGB.value as THREE.Vector3;
     return {
-      glowMagOffset: this.sharedTone.uGlowMagOffset.value,
+      glowMagOffset: this.shared.uGlowMagOffset.value,
       discDensity: this.disc.density0.value,
       bulgeDensity: this.bulge.density0.value,
-      extinctionStrength: this.sharedDust.uExtinctionStrength.value,
+      extinctionStrength: this.shared.uExtinctionStrength.value,
       discColor: rgbOf(this.disc.authoredColor),
       bulgeColor: rgbOf(this.bulge.authoredColor),
       reddening: { r: c.x, g: c.y, b: c.z },
@@ -376,18 +336,18 @@ export class MilkyWay {
 
     // Both meshes sit at the galactic centre in absolute ICRS, which
     // becomes (GALACTIC_CENTRE_PC - worldOffset) in renderer-local frame.
-    const galCenterLocal = this.sharedFrame.uGalCenter.value;
+    const galCenterLocal = this.shared.uGalCenter.value as THREE.Vector3;
     galCenterLocal.copy(GALACTIC_CENTRE_PC).sub(worldOffset);
     this.discMesh.position.copy(galCenterLocal);
     this.bulgeMesh.position.copy(galCenterLocal);
 
-    this.sharedFrame.uWorldOffset.value.copy(worldOffset);
+    (this.shared.uWorldOffset.value as THREE.Vector3).copy(worldOffset);
   }
 
   dispose() {
     this.discMesh.geometry.dispose();
     this.bulgeMesh.geometry.dispose();
-    this.disc.material.dispose();
-    this.bulge.material.dispose();
+    this.disc.surface.dispose();
+    this.bulge.surface.dispose();
   }
 }
