@@ -22,6 +22,8 @@ src/client/webgpu/tsl/
   literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
                                     restates as a bare literal — the scan
                                     behind every TSL-side drift guard.
+  jitter-tsl.ts                     Interleaved gradient noise over the
+                                    fragment position.
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -102,6 +104,20 @@ Cost is one dead store in the vertex shader. Prefer wrapping the
 expression itself — `varying(expr)`, as the probe glyph and the ring
 annulus do — whenever the value does not depend on state computed inside
 the `vertexNode` body.
+
+## Interleaved gradient noise
+
+`interleavedGradientNoiseTsl` is the ray-start offset that turns a
+few-sample lattice into fine grain, and the ±0.5-LSB output dither that
+stops a whisper-level gradient banding on 8-bit — one shape, two jobs. It
+is **static per pixel and never reseeded per frame**: animated jitter
+shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
+
+It sits here because more than one ported layer wants it. The
+solar-system atmosphere still carries its own `atmoJitterTsl` over an
+identical pair of constants under different names — consolidating those
+touches that subsystem's drift test, so it is filed rather than folded in
+here.
 
 ## TSL typing shim
 
