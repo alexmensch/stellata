@@ -10,7 +10,7 @@ import type { Node, TextureNode } from 'three/webgpu';
 import {
   MAX_DOWNSAMPLE, MAX_KERNEL_REACH_TEXELS,
 } from '../../hdr/summation/summation-pure';
-import { min, textureSize } from '../tsl-shim';
+import { min, textureSize } from '../tsl/tsl-shim';
 
 type NF = Node<'float'>;
 type N2 = Node<'vec2'>;

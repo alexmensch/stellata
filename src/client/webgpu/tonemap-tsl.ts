@@ -11,7 +11,7 @@ import {
   SRGB_DECODE_KNEE, SRGB_ENCODE_EXPONENT, SRGB_ENCODE_GAIN, SRGB_ENCODE_KNEE,
   SRGB_ENCODE_OFFSET, SRGB_LINEAR_SLOPE, TOE_CURVATURE,
 } from '../hdr/tonemap-pure';
-import { mix as mixVecT, step } from './tsl-shim';
+import { mix as mixVecT, step } from './tsl/tsl-shim';
 
 type NF = Node<'float'>;
 type N2 = Node<'vec2'>;

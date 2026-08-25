@@ -9,7 +9,7 @@ import type {
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { buildPlanetAtmosphereMaterial } from './planet-atmosphere-tsl';
 import { buildPlanetMeshMaterial } from './planet-mesh-tsl';
 import { buildPlanetRingsMaterial } from './planet-rings-tsl';

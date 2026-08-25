@@ -17,8 +17,8 @@ import {
   perceptualAppSizePxTsl, perceptualDiscExponentTsl,
   perceptualDiscFluxIntegralTsl, perceptualDiscProfileTsl, perceptualDmEffTsl,
 } from '../perceptual-disc-tsl';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
-import { attrVec2, attrVec3, attrVec4 } from '../tsl-shim';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
+import { attrVec2, attrVec3, attrVec4 } from '../tsl/tsl-shim';
 import { tonemapUnditheredTsl } from '../tonemap-tsl';
 import type { GlareUniformNodes } from './planet-glare-uniforms';
 

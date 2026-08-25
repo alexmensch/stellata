@@ -20,7 +20,7 @@ src/client/webgpu/star/
   star-geometry.ts (+ test)    Packed instanced geometry: aCorner,
                                iPosition + iPuls (both shared by object
                                identity), iPack0-2, iDyn0 — 7 of the 8
-                               vertex buffers (../README.md
+                               vertex buffers (../tsl/README.md
                                § Attribute packing).
   star-vertex-tsl.ts           The shared vertex stage, compile-time
                                specialized per pass (star-pass.ts):

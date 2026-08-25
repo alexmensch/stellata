@@ -1,11 +1,11 @@
 // Packed instanced star geometry for the WebGPU port — 7 of the 8
-// guaranteed vertex buffers (../README.md § Attribute packing).
+// guaranteed vertex buffers (../tsl/README.md § Attribute packing).
 
 import * as THREE from 'three';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-pipeline';
-import { buildPackedAttributes } from '../attribute-packing';
-import { planVec4Packing, type Vec4PackPlan } from '../attribute-packing-pure';
+import { buildPackedAttributes } from '../tsl/attribute-packing';
+import { planVec4Packing, type Vec4PackPlan } from '../tsl/attribute-packing-pure';
 import {
   STAR_DYNAMIC_SCALARS,
   STAR_PACK_PREFIX_DYNAMIC,

@@ -6,9 +6,9 @@ import * as THREE from 'three';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import {
   packedUploadRange, repackScalarInPlace, repackScalarRange,
-} from '../attribute-packing-pure';
+} from '../tsl/attribute-packing-pure';
 import { STAR_DYNAMIC_SCALARS } from '../star-attribute-roster';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import type { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {

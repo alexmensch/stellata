@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import {
   buildPlanetGlareGeometry, packGlareFrame, packGlareLayout,
   type PlanetGlareBuild, type PlanetGlareSources,

@@ -1,6 +1,6 @@
 // Which star-geometry attributes the port packs, and which it cannot.
 // Pinned against the live WebGL geometry by star-attribute-roster.test.ts;
-// the accounting is README.md § Attribute packing.
+// the accounting is tsl/README.md § Attribute packing.
 
 /** WebGPU's guaranteed `maxVertexBuffers`, and three binds one vertex
  *  buffer per BufferAttribute. */

@@ -13,7 +13,7 @@ export type AvPrepassTextureNode = ReturnType<typeof texture>;
 /**
  * A uniform node cannot carry a nullable texture, so both slots bind over
  * a 1-texel placeholder whose `.value` is swapped when the real texture
- * arrives (`../README.md` § Shared uniform nodes). The placeholders match
+ * arrives (`../tsl/README.md` § Shared uniform nodes). The placeholders match
  * their targets' format and type exactly: a swap to a differently-typed
  * texture would rebuild the pipeline, and the volume's staging copies
  * already share `createVoxelTexture` for that reason.

@@ -6,7 +6,7 @@ import { If, Loop, all, exp, float, length, texture3D, vec3 } from 'three/tsl';
 import type { Data3DTexture } from 'three';
 import type { Node } from 'three/webgpu';
 import { DUST_STEPS } from '../../star-pipeline/extinction/dust-raymarch-pure';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 
 type NF = Node<'float'>;
 type N3 = Node<'vec3'>;
@@ -16,7 +16,7 @@ export type DustTextureNode = ReturnType<typeof texture3D>;
 /** The volume as a sampling node. Not part of the shared uniform-node
  *  mirror: a uniform node cannot carry a nullable texture, so each
  *  consumer binds its own node over a placeholder and swaps `.value`
- *  when `attachDust` lands (../README.md § Shared uniform nodes). */
+ *  when `attachDust` lands (../tsl/README.md § Shared uniform nodes). */
 export function dustTextureNode(placeholder: Data3DTexture): DustTextureNode {
   return texture3D(placeholder);
 }
@@ -31,7 +31,7 @@ export function dustTextureNode(placeholder: Data3DTexture): DustTextureNode {
  * the bbox test is an optimisation and dropping it would still integrate
  * correctly. It is expressed as the branch it guards rather than the
  * GLSL's `continue`: a jump out of a concise arrow is emitted twice
- * (../README.md § TSL test pattern).
+ * (../tsl/README.md § TSL test pattern).
  */
 export function dustRaymarchAvTsl(
   u: SharedUniformNodes,
