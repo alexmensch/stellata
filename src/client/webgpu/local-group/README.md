@@ -57,6 +57,17 @@ shared map reaches the mirror instead. Same number, shorter route — but
 it means a future change that made the layer's offset differ from the
 frame's would silently diverge between backends.
 
+## The output struct is the gate, so the mesh's mark is inert
+
+Both meshes stay `markDiffuseEmitter`ed and that call reaches nothing
+here: it sets state the WebGL draw-buffer gate reads, and a WebGPU boot
+never constructs that pipeline. What opens attachments 1 and 2 on this
+backend is the fragment's own output struct (`../hdr/README.md` § The gate
+becomes the output struct) — same shape as the cloud absorption's
+`markAbsorber` (`../molecular-clouds/README.md`). Drop the diffuse member
+from the struct and the glow still draws, still sorts, and never reaches
+the resolve.
+
 ## Three early returns became one predicate
 
 The GLSL bails three times — behind the sphere, past the far root, and on
