@@ -20,7 +20,7 @@ import {
   reinhardExtended,
   relativeLuminance,
   tonemapWhitePoint,
-} from '../tonemap-pure';
+} from '../tonemap/tonemap-pure';
 import {
   DEFAULT_FILTER,
   extendedThresholdSbFor,

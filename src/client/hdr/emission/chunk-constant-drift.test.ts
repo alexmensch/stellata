@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import {
   DITHER_IGN_DOT, DITHER_IGN_SCALE, L_THRESH, LUMA_WEIGHTS, TOE_CURVATURE,
-} from '../tonemap-pure';
+} from '../tonemap/tonemap-pure';
 import {
   LUMA_CEIL,
   extendedThresholdSbFromSolidAngle,
@@ -23,7 +23,7 @@ import '../hdr-pipeline';
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
-const tonemapChunk = read('../tonemap.glsl');
+const tonemapChunk = read('../tonemap/tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
 const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc/perceptual-disc.glsl');

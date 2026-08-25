@@ -6,7 +6,7 @@ import {
   discColourIndex,
 } from './population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
-import { relativeLuminance } from '../tonemap-pure';
+import { relativeLuminance } from '../tonemap/tonemap-pure';
 
 // The population constant both volumetric layers render. Its provenance —
 // that 0.9574 is the (B−V) on the same data/bc03/ row the band's Υ*_V comes

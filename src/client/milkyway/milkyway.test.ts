@@ -80,7 +80,7 @@ import {
   displayLevel as displayTransfer,
   relativeLuminance,
   tonemapWhitePoint,
-} from '../hdr/tonemap-pure';
+} from '../hdr/tonemap/tonemap-pure';
 
 function build() {
   const hdr = makeHdrEmitterUniforms();

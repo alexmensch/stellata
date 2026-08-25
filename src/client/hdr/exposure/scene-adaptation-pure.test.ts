@@ -14,7 +14,7 @@ import {
   galacticDirection,
   sightlineSurfaceBrightness,
 } from '../../milkyway/milkyway-column-pure';
-import { tonemapWhitePoint } from '../tonemap-pure';
+import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import {
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_DOT_COVERAGE,

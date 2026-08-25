@@ -42,7 +42,7 @@ import {
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap-pure';
+import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp

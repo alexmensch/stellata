@@ -7,7 +7,7 @@ import {
   type EmitterInkArgs,
 } from './emitter-visibility-pure';
 import { sceneExposure, thresholdMagFor } from './exposure-epoch';
-import { DR_MAG, tonemapWhitePoint } from '../tonemap-pure';
+import { DR_MAG, tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
 

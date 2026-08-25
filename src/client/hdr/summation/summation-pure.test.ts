@@ -225,7 +225,7 @@ describe('one anchor for both volumetric emitters', () => {
 
 // The resolve is the only consumer, and the chunk it pastes has to be there.
 describe('the resolve composites the convolution', () => {
-  const resolveFrag = read('../tonemap.frag.glsl');
+  const resolveFrag = read('../tonemap/tonemap.frag.glsl');
 
   it('adds the patch mean to attachment 0 before the operator', () => {
     expect(resolveFrag).toContain('#include <stellata_summation>');

@@ -5,7 +5,7 @@
 import { Fn, If, dot, min, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { LUMA_CEIL } from '../hdr/emission/emission-pure';
-import { LUMA_WEIGHTS } from '../hdr/tonemap-pure';
+import { LUMA_WEIGHTS } from '../hdr/tonemap/tonemap-pure';
 import type { EmitterOutputs } from './hdr/mrt-material';
 import { statisticTexelTsl, surfaceBrightnessLuminanceTsl } from './emission-tsl';
 import { tonemapUnditheredTsl } from './tonemap-tsl';
