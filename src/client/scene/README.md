@@ -1,17 +1,20 @@
 # Scene layer registry
 
-The `SceneLayer` contract and `SceneLayerRegistry` — the seam that
-keeps `stellata.ts` from hand-maintaining four parallel per-layer
-enumerations (per-frame update fan-out, `setMonochrome`, floating-
-origin `recenter`, `dispose`). One registration per layer covers all
-four: a layer registered once cannot be silently missing from any of
-them, which is the property the old copy-everywhere lists couldn't
-guarantee.
+The contracts a render layer is built and torn down through: `SceneLayer`
++ `SceneLayerRegistry` — the seam that keeps `stellata.ts` from
+hand-maintaining four parallel per-layer enumerations (per-frame update
+fan-out, `setMonochrome`, floating-origin `recenter`, `dispose`); and
+`EmitterMaterial`, the material-level sibling (§ The material seam). One
+registration per layer covers all four: a layer registered once cannot be
+silently missing from any of them, which is the property the old
+copy-everywhere lists couldn't guarantee.
 
 ## Files
 
 - `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
   `SceneLayer`, `SceneLayerRegistry`.
+- `emitter-material.ts` — `EmitterMaterial` (§ The material seam).
+  Type-only.
 - `scene-layer.test.ts` — fan-out order, optional-hook semantics, and the
   cadence reduction (§ Declaring how time moves a layer).
 - `frame-ctx-mock.ts` — `makeFrameCtx`, the neutral per-frame fixture
@@ -23,6 +26,26 @@ guarantee.
 - `scene-elements.ts` — the declutter-cycle floor table + derivation
   (§ Detail-level declutter cycle).
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
+
+## The material seam
+
+`EmitterMaterial` pairs a `THREE.Material` with the uniform slots its
+layer drives, and that indirection is what lets a layer cross shader
+backends without a second copy of itself: a TSL `uniform()` node carries
+`.value` exactly as an `IUniform` does, so `u.uFade.value = fade` reaches
+either backend and no layer learns which one it has. `dispose()` goes
+through the handle rather than the material because on WebGPU it must
+also sever the material's MRT-mode registration.
+
+It lives here, beside `SceneLayer`, because three subsystems now build
+surfaces through it — the solar-system family
+(`../solar-system/materials/README.md`), the boundary shells
+(`../fresnel-shell/README.md`) and the dust sprite
+(`../dust/README.md`). Each subsystem's own factory interface
+(`SolarSystemMaterials`, `ShellMaterials`, `DustParticleMaterials`) stays
+with the layer that owns it; only the surface handle is shared. The
+`IUniform` face over a TSL node record is `uniformSlotsOf`
+(`../webgpu/tsl/README.md` § Uniform slots).
 
 ## Detail-level declutter cycle
 

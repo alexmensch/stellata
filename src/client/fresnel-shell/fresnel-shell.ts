@@ -8,6 +8,7 @@ import { LABEL_OFFSET_PX } from '../solar-system/planets/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
@@ -41,11 +42,36 @@ export interface FresnelShellMaterialOptions {
   fresnelPower?: number;
 }
 
+/**
+ * The renderer-neutral contract a boundary shell's surface is built
+ * through (README.md § The material seam). Each consumer builds its own —
+ * colour, limb alpha and blend are per-shell, so there is nothing to
+ * share.
+ */
+export interface ShellMaterials {
+  fresnelShell(opts: FresnelShellMaterialOptions): EmitterMaterial;
+}
+
+/** The WebGL2 implementation. A `ShaderMaterial`'s own `uniforms` map is
+ *  already the slot record the contract asks for. */
+export function makeGlslShellMaterials(): ShellMaterials {
+  return {
+    fresnelShell(opts) {
+      const material = createFresnelShellMaterial(opts);
+      return {
+        material,
+        uniforms: material.uniforms,
+        dispose: () => material.dispose(),
+      };
+    },
+  };
+}
+
 /** Build the shared Fresnel-shell `ShaderMaterial`. `FrontSide` is the
  *  hide-when-inside contract: with outward-oriented winding the shell
  *  back-face-culls when the camera sits inside it, so the near-wall glow
  *  doesn't wash the scene — it appears only from beyond the boundary. */
-export function createFresnelShellMaterial(
+function createFresnelShellMaterial(
   opts: FresnelShellMaterialOptions,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -71,7 +97,8 @@ export function createFresnelShellMaterial(
  *  gate (Sol-focus, mesh-attached, …) that AND's into visibility. */
 export abstract class FresnelShell {
   readonly group: THREE.Group;
-  protected readonly material: THREE.ShaderMaterial;
+  protected readonly material: THREE.Material;
+  private readonly surface: EmitterMaterial;
   private mono = false;
   /** Starts false so it agrees with `group.visible` below: the shell shows
    *  only once the declutter cycle has actually pushed a permission, which
@@ -81,11 +108,12 @@ export abstract class FresnelShell {
    *  level. */
   private permitted = false;
 
-  protected constructor(material: THREE.ShaderMaterial, renderOrder: number) {
+  protected constructor(surface: EmitterMaterial, renderOrder: number) {
     this.group = new THREE.Group();
     this.group.renderOrder = renderOrder;
     this.group.visible = false;
-    this.material = material;
+    this.surface = surface;
+    this.material = surface.material;
   }
 
   /** Detail-cycle permission (declutter floor). */
@@ -113,7 +141,7 @@ export abstract class FresnelShell {
   }
 
   dispose(): void {
-    this.material.dispose();
+    this.surface.dispose();
   }
 
   /** Subclass gate AND'd into visibility alongside `permitted`/`!mono`. */

@@ -17,6 +17,11 @@ src/client/webgpu/tsl/
     (+ test)                        scalars into ceil(N/4) vec4 buffers.
   attribute-packing.ts (+ test)     Geometry attributes + per-scalar
                                     accessor node from a pack plan.
+  uniform-slots.ts                  The IUniform face a ported layer
+                                    writes, over a record of TSL nodes.
+  literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
+                                    restates as a bare literal — the scan
+                                    behind every TSL-side drift guard.
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -63,6 +68,40 @@ holding its map object by identity, and a unique value per scalar proving
 `sync()`'s reflective key filter reaches all of them. Port-child materials
 take slots from `stellata.webgpu.uniformNodes` — shared node objects are
 what replaces shared uniform objects.
+
+## Uniform slots — the face a ported layer writes
+
+A layer that ports as a material swap keeps writing `uniforms`, never
+`material.uniforms`, and `uniformSlotsOf(nodes)` is what makes that reach
+this backend: a TSL `uniform()` node already carries `.value` exactly as
+an `IUniform` does, so most slots pass straight through. The one that
+cannot is a **uniform array** — it has no `.value`, so the helper puts an
+`IUniform` face over `UniformArrayNode.array`, which the layer mutates in
+place and the node re-packs every render.
+
+It lives here rather than beside any one subsystem because three of them
+now build slot records through it — the solar-system surfaces, the
+boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
+modules stay with their layers; only the face is shared.
+
+## Assigning a varying from an explicit vertex stage
+
+A layer that sets `material.vertexNode` and wants a varying computed
+inside it writes `varying(float(0), 'vName')` and `.assign(...)`s over
+it. That reads like a race — the varying carries its own node, and the
+fragment stage's reference forces that node to run in the vertex stage
+too — but it resolves correctly, and the reason is worth stating so the
+next port child does not re-derive it: `NodeBuilder` generates the vertex
+stage before the fragment one, the varying's node properties are keyed
+stage-agnostically, and the property is filled the first time it
+generates. So the vertex stage emits the seed assignment followed by the
+real one, and the fragment stage reads the interpolated result rather
+than re-emitting the seed after it.
+
+Cost is one dead store in the vertex shader. Prefer wrapping the
+expression itself — `varying(expr)`, as the probe glyph and the ring
+annulus do — whenever the value does not depend on state computed inside
+the `vertexNode` body.
 
 ## TSL typing shim
 
@@ -154,6 +193,14 @@ generated code:
    the renderer), not by unit tests — executing shaders in vitest
    remains the hhaw WebGL2-test-seam epic's territory, and no port
    gates on it.
+
+The literal half of leg 1 is `literal-drift-pure.ts`, shared by the
+per-subsystem drift guards. It compares by **value, not by text**: shader
+code spells an integral constant `30.0`, and a text pattern for `30`
+rejects it on the trailing dot — which is the form a transcription
+actually drifts into, so a text scan passes on precisely the case it
+exists to catch. A number that merely coincides with a pinned value is
+excused per-source with a written reason.
 
 Node-graph introspection (walking the built node tree and asserting
 structure) was considered and rejected: it pins three's internal node

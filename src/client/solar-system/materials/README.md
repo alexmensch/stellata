@@ -1,8 +1,11 @@
 # The solar-system material seam
 
-Which shader backend the solar-system surfaces are built on, and the one
-contract both sides implement. The layers above (`../planets/`,
-`../probes/`) keep every line of their CPU logic — ephemeris walk, LOD
+Which shader backend the solar-system surfaces are built on, and which
+surfaces the family asks for. The contract both sides implement —
+`EmitterMaterial` — is shared with the boundary shells and the dust
+sprite and lives in `../../scene/README.md` § The material seam. The
+layers above (`../planets/`, `../probes/`) keep every line of their CPU
+logic — ephemeris walk, LOD
 band, texture ladder, per-frame uniform writes — and take their materials
 from here, so a WebGPU boot swaps shaders without a second copy of any of
 that. The port child that added this folder is `../../webgpu/README.md`'s.
@@ -11,8 +14,9 @@ that. The port child that added this folder is `../../webgpu/README.md`'s.
 
 ```
 src/client/solar-system/materials/
-  emitter-material.ts       EmitterMaterial, SolarSystemMaterials and
-                            ProbeMaterials: the neutral contract.
+  solar-system-materials.ts SolarSystemMaterials, ProbeMaterials and
+                            ViewportUniforms: which surfaces this family
+                            builds, over the shared EmitterMaterial.
                             Type-only.
   glsl-materials.ts         The WebGL2 implementation — the four RawGLSL
     (+ test)                surfaces, their uniform blocks, and the
@@ -27,18 +31,19 @@ keys against each other.
 
 ## The layer writes `uniforms`, never `material.uniforms`
 
-`EmitterMaterial` pairs a `THREE.Material` with the uniform slots its
-layer drives. That indirection is the whole seam: a TSL `uniform()` node
-carries `.value` exactly as an `IUniform` does, so
-`u.uFade.value = fade` and `(u.uSunDirView.value as Vector3).copy(...)`
-reach either backend unchanged and no layer learns which one it has.
+Why the indirection is `../../scene/README.md` § The material seam; here
+it reads `u.uFade.value = fade` and
+`(u.uSunDirView.value as Vector3).copy(...)`, reaching either backend
+unchanged.
 
-Two slot kinds need a word:
+Two slot kinds need a word here:
 
 - **Textures.** A `texture()` node's `.value` is its texture, so a rung
   swap is the same assignment on both sides.
 - **`uCasters`.** WebGPU has no uniform-array-of-vec4 node carrying
-  `.value`; `uniformSlotsOf` puts an `IUniform` face over
+  `.value`; `uniformSlotsOf` (`../../webgpu/tsl/README.md` § Uniform
+  slots, shared with the boundary shells and the dust sprite) puts an
+  `IUniform` face over
   `UniformArrayNode.array`, which the layer mutates in place and the node
   re-packs every render.
 

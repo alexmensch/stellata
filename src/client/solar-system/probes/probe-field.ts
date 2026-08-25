@@ -16,7 +16,8 @@ import {
   type ProbeTrajectory,
 } from './probe-trajectory';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
-import type { EmitterMaterial, ProbeMaterials } from '../materials/emitter-material';
+import type { EmitterMaterial } from '../../scene/emitter-material';
+import type { ProbeMaterials } from '../materials/solar-system-materials';
 import { makeGlslProbeMaterial } from '../materials/glsl-materials';
 import {
   CADENCE_REPORT_STILL,

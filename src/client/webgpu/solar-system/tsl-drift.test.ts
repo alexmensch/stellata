@@ -13,6 +13,9 @@ import {
   RING_BACKLIT_TRANSMIT, RING_SHADOW_FLOOR,
 } from '../../solar-system/planets/rings/ring-photometry-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import {
+  literalDriftOffenders, type DriftExemption, type PinnedConstant,
+} from '../tsl/literal-drift-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -30,7 +33,7 @@ const ALL = Object.values(SOURCES).join('\n');
 /** Every constant whose value is authored once in a `*-pure.ts` module and
  *  read by both shader backends. `identifier` is what the TSL side must
  *  reference; `values` are the numbers that must NOT appear as literals. */
-const PINNED: readonly { identifier: string; values: readonly number[] }[] = [
+const PINNED: readonly PinnedConstant[] = [
   { identifier: 'ATMO_N_VIEW', values: [ATMO_N_VIEW] },
   { identifier: 'ATMO_N_LIGHT', values: [ATMO_N_LIGHT] },
   { identifier: 'LIGHT_JITTER_STRIDE', values: [LIGHT_JITTER_STRIDE] },
@@ -54,21 +57,19 @@ describe('the TSL surfaces read their shared constants', () => {
   }
 });
 
+/** The scan compares by value, so a number that coincides with a pinned
+ *  one has to be excused by name. Keep this list short: an entry here
+ *  also stops the real constant being caught in that file. */
+const EXEMPT: Record<string, readonly DriftExemption[]> = {
+  'atmosphere-scatter-tsl.ts': [
+    { value: 16, reason: "3/(16π) is the Rayleigh phase normalisation, not ATMO_N_VIEW" },
+  ],
+};
+
 describe('the TSL surfaces restate no pinned constant as a literal', () => {
   for (const [file, src] of Object.entries(SOURCES)) {
     it(`${file} carries no drifting copy`, () => {
-      const offenders: string[] = [];
-      for (const { identifier, values } of PINNED) {
-        for (const value of values) {
-          // Word-bounded so 16 does not match 160, and 0.25 does not match
-          // 0.256 — a literal that merely shares a prefix is a different
-          // number, not a restatement.
-          const literal = new RegExp(`(?<![\\w.])${
-            String(value).replace('.', '\\.')}(?![\\w.])`);
-          if (literal.test(src)) offenders.push(`${identifier} (${value})`);
-        }
-      }
-      expect(offenders).toEqual([]);
+      expect(literalDriftOffenders(src, PINNED, EXEMPT[file])).toEqual([]);
     });
   }
 });

@@ -1,23 +1,9 @@
-// The renderer-neutral contract the solar-system surfaces are built
-// through: a material plus the uniform slots its layer writes. See
+// Which surfaces the solar-system layers build through the shared
+// EmitterMaterial contract (`../../scene/emitter-material.ts`). See
 // README.md.
 
 import type * as THREE from 'three';
-
-/**
- * A shader surface and the slots its layer drives.
- *
- * The layer writes `uniforms`, never `material.uniforms` — a TSL uniform
- * node carries `.value` exactly as an `IUniform` does, so the same
- * per-frame write reaches either backend and no layer learns which one it
- * has.
- */
-export interface EmitterMaterial {
-  readonly material: THREE.Material;
-  readonly uniforms: Record<string, THREE.IUniform>;
-  /** Frees the material and, on WebGPU, its MRT-mode registration. */
-  dispose(): void;
-}
+import type { EmitterMaterial } from '../../scene/emitter-material';
 
 /**
  * The solar-system surfaces whose geometry crosses backends unchanged.

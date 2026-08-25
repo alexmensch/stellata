@@ -58,9 +58,8 @@ import {
   atmoDiscMeans,
   atmosphereParamsOf,
 } from '../atmosphere/atmosphere-scattering-pure';
-import type {
-  EmitterMaterial, SolarSystemMaterials,
-} from '../materials/emitter-material';
+import type { EmitterMaterial } from '../../scene/emitter-material';
+import type { SolarSystemMaterials } from '../materials/solar-system-materials';
 import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
