@@ -221,105 +221,17 @@ quaternion in place.
 
 ## Floating origin (large-world precision)
 
-Close-range orbit of a star far from Sol used to jitter visibly because
-Three.js composes its `modelViewMatrix` at float32 precision. At 1 kpc
-from Sol, the translation column quantises to ~10⁻⁴ pc — 2–3% of the
-min-orbit radius — so every frame the projected position snapped around
-by a few pixels.
+The renderer runs in a **floating local frame** whose origin tracks the
+focused object, because Three.js composes `modelViewMatrix` at float32
+and a star a kiloparsec from Sol otherwise jitters by pixels every frame.
+`frame/README.md` owns all of it — the service, the recentre fan-out
+order, the anchor policy, the focus/unfocus invariants and the URL
+`worldOffset` field.
 
-Fix: the renderer runs in a **floating local frame** whose origin tracks
-the currently focused star.
-
-- `worldOffset` — the absolute-space coordinate currently sitting at
-  the renderer's (0,0,0), starting at Sol — is owned by the
-  `FloatingOrigin` service (`frame/README.md`), together with the
-  recentre fan-out and the anchor-policy seam. The star buffer lives on
-  `StarFrame` (`star-pipeline/star-frame/README.md`): `localPositions`
-  (exposed via `stellata.localPositions`), a `Float32Array` of
-  `catalog.positions − worldOffset` bound to the `iPosition` instance
-  attribute, which is what every overlay and pick path projects
-  through.
-- `Stellata.recenterOrigin(newOrigin)` (exposed via the `FrameAnchor`
-  seam) delegates to `FloatingOrigin.recenterTo`, whose ordered
-  listener fan-out rewrites the star buffer using JS Number (= float64)
-  subtraction, then shifts `camera.position` and `controls.target` by
-  the same delta so the user sees no jump, then runs the scene-layer
-  recenter hooks. The two callers are
-  `FocusController.recenterFocusToStar` (focus mutations) and
-  `WarpController.tryMidFlyRecentre` (mid-flight pivot onto the
-  destination); the focal-drift recentre runs through the anchor
-  policy's per-frame `tick()` instead.
-- `FocusController.setFocus(idx)` calls `recenterOrigin` on focus, then
-  snaps `controls.target` onto the focal star's **live** local position
-  (catalog baseline + orbital perturbation), not the bare local origin —
-  a binary member sits at its perturbed position. For a non-orbiting star
-  that live position IS the local origin. **Unfocus does *not* recenter**
-  — `worldOffset` stays at the former focal object so
-  camera/target/iPosition all remain in their float32-clean local frame.
-  Recentering on unfocus used to cause a visible jump (the `idx===null`
-  branch shifted `target` by the focal star's full world position,
-  breaking the pin invariant below and re-introducing cancellation in the
-  projection chain).
-- **Focal-frame ride.** A focused binary member drifts along its orbit
-  each frame; the shell translates `camera.position` + `controls.target`
-  (and in-flight camera-transition pose caches) by that per-frame drift
-  so the star stays under the camera and the pin stays engaged. Focus and
-  unfocus of a pair member therefore cause no position discontinuity —
-  see `binaries/README.md` § Focal-frame ride.
-- **Default-load** (a7d.2.8) auto-engages `setFocus(catalog.solIndex)`
-  before the first frame so URL-less loads start with the pin engaged
-  and the per-Sol orbit floor in effect, matching every other entry
-  point (warp arrival, observe→navigate, search-select). The URL
-  encoder treats Sol as the canonical default focus and *omits* the
-  field when focused on Sol; "explicitly unfocused" rides a separate
-  presence bit so the three states (default-Sol / specific star /
-  cleared) round-trip unambiguously.
-
-The key precision win: the big `absolute − offset` subtractions happen
-in JS float64 on the CPU, producing small float32 deltas near zero with
-~10⁻³⁸ resolution. The GPU's modelview matrix then only carries
-kilo-parsec-scale values when the camera is far from the local origin
-(i.e. zoomed out, where pixel-level jitter is imperceptible anyway).
-
-Implications for code that reads positions:
-- **Rendering / projection math** must use `stellata.localPositions`
-  (same frame as `camera.position` and `controls.target`). The disc
-  mask, focus ring, distance vector, constellation overlay, and all
-  `Picker.pickStar` / `renderedSizePx` / `aimAtConstellation` paths
-  do this.
-- **Distance-from-Sol** (the distSol filter, the Sol locator-arrow
-  label) must use `catalog.positions` *or* must compute
-  `||localPosition + worldOffset||` in JS float64. (Hover-card and
-  focus-card distances are camera-relative by design — they read the
-  local frame directly.) The shader's
-  distSol filter consumes a precomputed per-instance `iDistSol`
-  attribute instead of `length(iPosition)`, because the latter is now
-  a local-frame value. The Sol arrow uses the float64 sum approach so
-  its distance label updates correctly under any focus.
-- `starLocalPosition(i)` (formerly `starWorldPosition`) returns the
-  local-frame vector — use it for camera math, never for Sol-distance.
-
-URL round-trip works without special handling for the focused case
-because sender and receiver both recenter on the same focus star.
-Camera/target serialise in local frame; loading the URL recenters to
-the same absolute origin and the local coordinates apply unchanged.
-
-For unfocused-but-not-at-Sol, the URL serialises a `worldOffset` field
-(FIELDS_V2 bit 20, vec3 Float32, appended to the end for forward-compat
-with older clients). The encoder emits it when `focusedStar === null`
-AND `worldOffset` isn't ≈Sol; cam/tgt then encode in the local frame
-and round-trip with full Float32 precision. The loader applies
-`setWorldOffset` *before* cam/tgt and resets cam/tgt to defaults so a
-missing `view.cam` / `view.tgt` produces a sane pose in the new local
-frame. Old URLs without `worldOffset` decode as Sol-anchored (legacy
-behaviour).
-
-The general design treats `worldOffset` as a free Float32 vec3 anchor
-(not a catalog ref): future object types (clouds, planets, probes,
-exoplanets) can each set it on focus without coupling to the star
-catalog index space. Float32 precision is sufficient at any magnitude
-because the user-visible pose is the cam/tgt offset *within* the
-local frame, stored at full Float32 precision relative to the anchor.
+The one rule every layer must respect: **projection and camera math read
+`stellata.localPositions`; distance-from-Sol reads `catalog.positions`**
+(or sums back to absolute in float64). Mixing the two frames is the
+recurring bug this design creates.
 
 ## Full render stack — front to back
 
