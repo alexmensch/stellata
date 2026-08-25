@@ -17,19 +17,8 @@ export type WebGpuVerdict =
    *  a flag left off, a headless or software context that refused. */
   | 'no-adapter';
 
-/**
- * Ask the browser, rather than inferring from its name.
- *
- * Both failure verdicts land on the same page — the bead's requirement,
- * and the right call for a reader: "your browser cannot run this and here
- * is what to do" is the same message whether the API is missing or the
- * adapter refused. They stay distinct in the return value because the
- * console line and any future telemetry want them apart.
- *
- * `requestAdapter` rejecting is treated as `no-adapter` rather than
- * propagating: this runs on the boot path, and a gate that throws leaves
- * the user with the dead canvas it exists to replace.
- */
+/** Ask the browser, never infer from its name. Why a rejection is a
+ *  verdict rather than a throw: README.md § Two ways to fail, one page. */
 export async function detectWebGpuSupport(
   nav: GpuCapableNavigator = navigator as GpuCapableNavigator,
 ): Promise<WebGpuVerdict> {
