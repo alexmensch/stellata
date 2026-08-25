@@ -9,7 +9,7 @@ import type { SharedUniforms } from '../../frame/shared-uniforms';
 /** Slots the registry does not mirror: a texture binds as a per-layer
  *  texture()/texture3D() node where the texture object lives — a uniform
  *  node cannot carry a nullable texture. */
-export const TEXTURE_SLOTS = ['uDustTexture', 'uAvPrepassTex', 'uColorLut'] as const;
+export const FRAME_TEXTURE_SLOTS = ['uDustTexture', 'uAvPrepassTex', 'uColorLut'] as const;
 
 export type SharedUniformNodes = SharedUniformNodeRegistry['nodes'];
 

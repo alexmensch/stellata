@@ -6,25 +6,23 @@ import { Color, Vector2, Vector3, Vector4, type Texture } from 'three';
 import { texture, uniform, uniformArray } from 'three/tsl';
 import { MAX_SHADOW_CASTERS } from '../../solar-system/planets/body-shadow-pure';
 import { MIE_G_DEFAULT, SUN_COLOUR } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
+import {
+  PLANET_MESH_TEXTURE_SLOTS, PLANET_RINGS_TEXTURE_SLOTS, textureSlotRecord,
+} from '../../solar-system/materials/texture-slots';
 
-/** Every texture slot gets its OWN stand-in. three keys a texture
- *  uniform's binding on its VALUE's uuid at shader build
- *  (`TextureNode.getUniformHash`), so two slots holding one shared
- *  placeholder at first render merge into a single binding — and the
- *  merged-away slot's later `.value` writes never reach the GPU (the
- *  load-order-dependent wrong-map/placeholder-stuck planet bug). The
- *  layer's per-frame release writes must keep the same per-slot
- *  identity: it snapshots these initial values rather than re-seeding
- *  slots onto one shared texture.
- *
- *  Each clone is a GPU texture this material owns; `owned` collects them
- *  for its dispose. */
+/** Each clone is a GPU texture this material owns; `owned` collects them
+ *  for its dispose. Why a clone per slot rather than one shared
+ *  placeholder: `../../solar-system/materials/texture-slots.ts`. */
 function slotPlaceholder(placeholder: Texture, owned: Texture[]): Texture {
   const tex = placeholder.clone();
   tex.needsUpdate = true;
   owned.push(tex);
   return tex;
 }
+
+const textureSlotNodes = <S extends readonly string[]>(
+  slots: S, placeholder: Texture, owned: Texture[],
+) => textureSlotRecord(slots, () => texture(slotPlaceholder(placeholder, owned)));
 
 export function sharedAtmoUniformNodes() {
   return {
@@ -47,15 +45,11 @@ export type SharedAtmoNodes = ReturnType<typeof sharedAtmoUniformNodes>;
 
 export function planetMeshUniformNodes(placeholder: Texture, owned: Texture[]) {
   return {
-    uMap: texture(slotPlaceholder(placeholder, owned)),
+    ...textureSlotNodes(PLANET_MESH_TEXTURE_SLOTS, placeholder, owned),
     uHasMap: uniform(0),
-    uNormalMap: texture(slotPlaceholder(placeholder, owned)),
     uHasNormalMap: uniform(0),
     uReliefHorizon: uniform(new Vector2()),
-    uHorizonA: texture(slotPlaceholder(placeholder, owned)),
-    uHorizonB: texture(slotPlaceholder(placeholder, owned)),
     uHasHorizonMap: uniform(0),
-    uSkyView: texture(slotPlaceholder(placeholder, owned)),
     uHasSkyView: uniform(0),
     uTerrainAlbedo: uniform(0),
     uColour: uniform(new Color(1, 1, 1)),
@@ -79,7 +73,7 @@ export type PlanetMeshNodes = ReturnType<typeof planetMeshUniformNodes>;
 
 export function planetRingsUniformNodes(placeholder: Texture, owned: Texture[]) {
   return {
-    uRingMap: texture(slotPlaceholder(placeholder, owned)),
+    ...textureSlotNodes(PLANET_RINGS_TEXTURE_SLOTS, placeholder, owned),
     uInnerRatio: uniform(0),
     uOuterPc: uniform(1),
     uEqRadiusPc: uniform(1),

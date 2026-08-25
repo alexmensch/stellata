@@ -22,6 +22,9 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 import type {
   ProbeMaterials, SolarSystemMaterials, ViewportUniforms,
 } from './solar-system-materials';
+import {
+  PLANET_MESH_TEXTURE_SLOTS, PLANET_RINGS_TEXTURE_SLOTS, textureSlotRecord,
+} from './texture-slots';
 
 // The shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — spliced into both the mesh disc and the
@@ -63,15 +66,11 @@ export function sharedAtmoUniforms(): Record<string, THREE.IUniform> {
  *  construction, so neither backend's factory needs a `Planet`. */
 export function planetMeshUniforms(placeholder: THREE.Texture): Record<string, THREE.IUniform> {
   return {
-    uMap: { value: placeholder },
+    ...textureSlotRecord(PLANET_MESH_TEXTURE_SLOTS, () => ({ value: placeholder })),
     uHasMap: { value: 0 },
-    uNormalMap: { value: placeholder },
     uHasNormalMap: { value: 0 },
     uReliefHorizon: { value: new THREE.Vector2() },
-    uHorizonA: { value: placeholder },
-    uHorizonB: { value: placeholder },
     uHasHorizonMap: { value: 0 },
-    uSkyView: { value: placeholder },
     uHasSkyView: { value: 0 },
     uTerrainAlbedo: { value: 0 },
     uColour: { value: new THREE.Color(1, 1, 1) },
@@ -96,7 +95,7 @@ export function planetRingsUniforms(
   placeholder: THREE.Texture,
 ): Record<string, THREE.IUniform> {
   return {
-    uRingMap: { value: placeholder },
+    ...textureSlotRecord(PLANET_RINGS_TEXTURE_SLOTS, () => ({ value: placeholder })),
     uInnerRatio: { value: 0 },
     uOuterPc: { value: 1 },
     uEqRadiusPc: { value: 1 },

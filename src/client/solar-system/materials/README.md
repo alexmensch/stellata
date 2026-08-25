@@ -18,6 +18,9 @@ src/client/solar-system/materials/
                             ViewportUniforms: which surfaces this family
                             builds, over the shared EmitterMaterial.
                             Type-only.
+  texture-slots.ts          Which texture slots the mesh and the annulus
+                            carry, and what each roster's slots owe
+                            (§ Texture-slot rosters).
   glsl-materials.ts         The WebGL2 implementation — the four RawGLSL
     (+ test)                surfaces, their uniform blocks, and the
                             blend/depth state each one's contract rests
@@ -46,6 +49,32 @@ Two slot kinds need a word here:
   `IUniform` face over
   `UniformArrayNode.array`, which the layer mutates in place and the node
   re-packs every render.
+
+## Texture-slot rosters
+
+`texture-slots.ts` is the ONE declaration of which slots hold a texture.
+Both factories seed theirs by spreading `textureSlotRecord(<roster>, …)`,
+so neither can carry a subset — and `planet-mesh-layer.ts` snapshots its
+release targets off the same roster, so the layer cannot look for a slot a
+factory never built. Adding a sixth map is one edit here.
+
+The two rosters differ in what a slot **owes**, which is why they are two
+constants rather than one list:
+
+- **Mesh slots are released back to their own stand-in** whenever the map
+  is absent or not yet loaded. Miss that and the slot keeps whatever
+  another body last bound — a wrong-looking planet with nothing to point
+  at.
+- **`uRingMap` is deliberately fallback-free.** An annulus has no
+  representative-colour stand-in, so an unready ring map hides the ring;
+  giving it a release path would be a visual change, not a bug fix.
+
+Both rosters still mint a stand-in **per slot** on the WebGPU side, for the
+binding-merge reason `texture-slots.ts` carries. The guard is
+`glsl-materials.test.ts`: it reads each built record for the slots actually
+holding a `THREE.Texture` and compares that against the roster, on both
+backends — a texture slot added outside the roster fails there rather than
+rendering the wrong map.
 
 ## Neutral defaults, then the body's own values
 

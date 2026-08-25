@@ -48,7 +48,7 @@ WebGL map and never learns about the port. The contract:
   from `animate()` before the render.
 - **`uLocalMemberIdx`** (Int32Array(8)) splits into two `ivec4` nodes
   (`uLocalMemberIdx0/1`) — WGSL uniform arrays pad to a 16-byte stride.
-- **Texture slots** (`TEXTURE_SLOTS`) are not mirrored: textures bind as
+- **Texture slots** (`FRAME_TEXTURE_SLOTS`) are not mirrored: textures bind as
   per-layer `texture()`/`texture3D()` nodes where the texture lives. A
   uniform node cannot carry a **nullable** texture, so a slot the shell
   fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder

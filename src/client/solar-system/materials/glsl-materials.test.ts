@@ -9,6 +9,9 @@ import {
 } from '../../webgpu/solar-system/tsl-materials';
 import type { SolarSystemMaterials } from './solar-system-materials';
 import { makeGlslProbeMaterial, makeGlslSolarSystemMaterials } from './glsl-materials';
+import {
+  PLANET_MESH_TEXTURE_SLOTS, PLANET_RINGS_TEXTURE_SLOTS,
+} from './texture-slots';
 
 const placeholder = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 const hdr = makeHdrEmitterUniforms();
@@ -35,6 +38,21 @@ const tsl = makeTsl();
 
 const SURFACES = ['planetMesh', 'planetRings', 'planetAtmosphere'] as const;
 
+/** Which slots of a built record actually hold a texture — read off the
+ *  record rather than restated, so this is a derivation of the live
+ *  factory and not a fourth copy of the roster. */
+function textureSlotsOf(built: { uniforms: Record<string, THREE.IUniform> }): string[] {
+  return Object.entries(built.uniforms)
+    .filter(([, u]) => u.value instanceof THREE.Texture)
+    .map(([k]) => k)
+    .sort();
+}
+
+const TEXTURE_ROSTERS = [
+  ['planetMesh', PLANET_MESH_TEXTURE_SLOTS],
+  ['planetRings', PLANET_RINGS_TEXTURE_SLOTS],
+] as const;
+
 describe('the solar-system material seam', () => {
   // The two factories are transcriptions of one uniform block, exactly as
   // the shared uniform-node mirror is of the frame map — so the guard is
@@ -47,6 +65,18 @@ describe('the solar-system material seam', () => {
         .sort();
       expect(Object.keys(tsl[surface]().uniforms).sort()).toEqual(glslKeys);
       expect(glslKeys.length).toBeGreaterThan(0);
+    });
+  }
+
+  // Both directions, on both backends: a slot added to a factory without a
+  // roster row never gets released to its stand-in (silent — the slot keeps
+  // whatever another body last bound), and a roster row without a factory
+  // slot throws at attach when the layer snapshots it.
+  for (const [surface, roster] of TEXTURE_ROSTERS) {
+    it(`${surface}: every texture slot is the roster's, on both backends`, () => {
+      const expected = [...roster].sort();
+      expect(textureSlotsOf(glsl[surface]())).toEqual(expected);
+      expect(textureSlotsOf(tsl[surface]())).toEqual(expected);
     });
   }
 
@@ -185,8 +215,9 @@ describe('the solar-system material seam', () => {
     const standIns = Object.values(built.uniforms)
       .map((u) => u.value)
       .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
-    expect(standIns).toHaveLength(5);
-    expect(new Set(standIns.map((t) => t.uuid)).size).toBe(5);
+    expect(standIns).toHaveLength(PLANET_MESH_TEXTURE_SLOTS.length);
+    expect(new Set(standIns.map((t) => t.uuid)).size)
+      .toBe(PLANET_MESH_TEXTURE_SLOTS.length);
     expect(standIns).not.toContain(placeholder);
 
     const disposed = new Set<string>();
@@ -202,7 +233,7 @@ describe('the solar-system material seam', () => {
     placeholder.addEventListener('dispose', () => { placeholderDisposed = true; });
     built.dispose();
 
-    expect(disposed.size).toBe(5);
+    expect(disposed.size).toBe(PLANET_MESH_TEXTURE_SLOTS.length);
     expect(loadedDisposed).toBe(false);
     expect(placeholderDisposed).toBe(false);
   });
@@ -212,7 +243,7 @@ describe('the solar-system material seam', () => {
     const standIns = Object.values(built.uniforms)
       .map((u) => u.value)
       .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
-    expect(standIns).toHaveLength(1);
+    expect(standIns).toHaveLength(PLANET_RINGS_TEXTURE_SLOTS.length);
     let disposed = false;
     standIns[0].addEventListener('dispose', () => { disposed = true; });
     built.dispose();
