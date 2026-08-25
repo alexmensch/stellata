@@ -86,6 +86,9 @@ BSC5 = VizierSlice(
 # joins the overlay directly. `Comp` is the component letter within the GJ
 # number; the "Gl 559A" / "GJ 1294A" display prefix rule is the
 # naming-authority ladder's call, not this file's.
+# `RAJ2000` names the FRAME, not the position epoch — that is the per-row
+# `Epoch` column (2016.0 on Gaia-sourced rows). Propagating from 2000.0
+# would double-count 16 years of proper motion.
 CNS5 = VizierSlice(
     table="J/A+A/670/A19/cns5",
     output=OUT_DIR / "cns5.tsv",
@@ -95,15 +98,38 @@ CNS5 = VizierSlice(
         "Comp": "gj_comp",
         "GaiaDR3": "gaia_source_id",
         "HIP": "hip",
+        "RAJ2000": "ra_deg",
+        "DEJ2000": "de_deg",
+        "Epoch": "pos_epoch",
+        "r_pos": "pos_bibcode",
+        "plx": "plx_mas",
+        "e_plx": "e_plx_mas",
+        "r_plx": "plx_bibcode",
+        "pmRA": "pm_ra",
+        "e_pmRA": "e_pm_ra",
+        "pmDE": "pm_de",
+        "e_pmDE": "e_pm_de",
+        "r_pmRA": "pm_bibcode",
     },
-    schema={"CNS5": int, "GJ": str, "Comp": str, "GaiaDR3": int, "HIP": int},
+    schema={
+        "CNS5": int, "GJ": str, "Comp": str, "GaiaDR3": int, "HIP": int,
+        "RAJ2000": float, "DEJ2000": float, "Epoch": float, "r_pos": str,
+        "plx": float, "e_plx": float, "r_plx": str,
+        "pmRA": float, "e_pmRA": float, "pmDE": float, "e_pmDE": float,
+        "r_pmRA": str,
+    },
     row_count_min=5_800,
     row_count_max=6_000,
     order_by=("CNS5",),
     spot_key="CNS5",
     spot_rows=(
         {"CNS5": 3591, "GJ": "551", "Comp": "C",
-         "GaiaDR3": 5853498713190525696, "HIP": 70890},
+         "GaiaDR3": 5853498713190525696, "HIP": 70890,
+         "RAJ2000": (217.39232147201, 1e-8),
+         "DEJ2000": (-62.67607511677, 1e-8),
+         "Epoch": (2016.0, 1e-6),
+         "plx": (768.07, 0.005),
+         "pmRA": (-3781.74, 0.005), "pmDE": (769.47, 0.005)},
     ),
 )
 

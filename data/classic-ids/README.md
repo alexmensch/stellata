@@ -11,7 +11,10 @@ tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
 cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
                                    (3,690 rows).
 bsc5.tsv                           ~136 KB, LFS. HR ↔ HD (9,110 rows).
-cns5.tsv                           ~182 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP
+cns5.tsv                           ~953 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP,
+                                   plus the astrometry re-slice —
+                                   position + its own epoch, parallax,
+                                   PM, each with its bibcode
                                    (5,909 rows).
 classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
@@ -83,6 +86,16 @@ all four; cite the paper per table.
   is why it beats hand-rolling Gliese from V/70A (CNS3, not ingested).
   5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see § Coverage.
+
+  The slice was widened with CNS5's own astrometry (`docs/catalog-driver.md`
+  § 5 routes the GJ-keyed no-Gaia cohort here): `ra_deg`/`de_deg`,
+  `pos_epoch`, `plx_mas` + `e_plx_mas`, `pm_ra`/`pm_de` + errors, and a
+  bibcode per quantity. **`RAJ2000` upstream names the FRAME, not the
+  position epoch** — that is `pos_epoch`, and it is per row: 5,244 rows
+  read 2016.0, but 406 read 2000.0, 138 read 1991.25, 36 read 2015.5 and
+  3 read 2016.55. A consumer propagating everything from 2000.0 would
+  double-count sixteen years of proper motion on the Gaia-sourced
+  majority.
 
 ## `classic_id_overlay.tsv` — the derived overlay
 
