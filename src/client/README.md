@@ -359,7 +359,7 @@ SVG mask (`constellation-figure/README.md`).
 | Heliopause label                                 | SVG     | source order                                       |       | [solar-system/heliopause/](solar-system/heliopause/README.md) |
 | Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](molecular-clouds/README.md) |
-| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/](solar-system/planets/README.md) |
+| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/labels/](solar-system/planets/labels/README.md) |
 | Probe labels                                     | SVG     | source order                                       |       | [solar-system/probes/](solar-system/probes/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI rings                                        | SVG     | source order                                       |       | [overlays/](overlays/README.md) |

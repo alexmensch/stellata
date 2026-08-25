@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createPlanetLabels } from './planet-labels';
-import type { Stellata } from '../../stellata';
+import type { Stellata } from '../../../stellata';
 
 describe('createPlanetLabels — sentinel-init', () => {
   it('writes display:none synchronously on init', () => {

@@ -2,9 +2,9 @@
 // Hidden in chart mode and during warp.
 
 import * as THREE from 'three';
-import type { Stellata } from '../../stellata';
-import { setStyle } from '../../overlays/dirty-attr';
-import { placeAnchoredLabel } from '../../overlays/anchored-label';
+import type { Stellata } from '../../../stellata';
+import { setStyle } from '../../../overlays/dirty-attr';
+import { placeAnchoredLabel } from '../../../overlays/anchored-label';
 
 // Pixel offset from the projected planet centre to the label baseline,
 // applied as both the x and y component (so the diagonal magnitude is
