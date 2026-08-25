@@ -102,6 +102,18 @@ export const EMISSION_STEPS_DISC = 64;
 export const EMISSION_S_MIN_PC = 0.1;
 /** Ellipsoidal-radius floor guarding the u^(−pn) central singularity. */
 export const EMISSION_U_FLOOR = 1e-4;
+/** Slack on the unit-ball exit test. A sample stepping past the back face
+ *  by rounding alone must not end the march, so the test is > 1 + slack
+ *  rather than > 1. */
+export const EMISSION_UNIT_BALL_SLACK = 1.001;
+
+/** The screen-space hash the march jitters its in-step sample position
+ *  with, kept rather than replaced by the shared interleaved gradient
+ *  noise: any hash uniform over the step preserves the expected column the
+ *  CPU mirror computes with deterministic midpoints, but the two produce
+ *  different grain. */
+export const EMISSION_JITTER_DOT: readonly [number, number] = [12.9898, 78.233];
+export const EMISSION_JITTER_SCALE = 43758.5453;
 
 /** One raymarched proxy volume. A Sérsic-family emission block is one
  *  component; a disc-family block is a disc component plus an optional
@@ -379,7 +391,7 @@ export function cpuRaymarchColumn(
       camLocal[1] + t * dir[1],
       camLocal[2] + t * dir[2],
     ];
-    if (p[0] * p[0] + p[1] * p[1] + p[2] * p[2] > 1.001) break;
+    if (p[0] * p[0] + p[1] * p[1] + p[2] * p[2] > EMISSION_UNIT_BALL_SLACK) break;
     const footprintPc =
       omegaPxArcsec2 > 0 ? footprintRadiusPc(sMid, omegaPxArcsec2) : 0;
     accum += cpuDensityAt(p, comp, footprintPc, footprintPc * zFootprintScale) * dsPc;

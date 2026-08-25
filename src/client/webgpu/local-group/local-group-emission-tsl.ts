@@ -10,8 +10,9 @@ import {
 } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import {
-  EMISSION_STEPS_DISC, EMISSION_STEPS_SERSIC, EMISSION_S_MIN_PC, EMISSION_U_FLOOR,
-  MIN_PROJECTED_RADIUS_PX,
+  EMISSION_JITTER_DOT, EMISSION_JITTER_SCALE, EMISSION_STEPS_DISC,
+  EMISSION_STEPS_SERSIC, EMISSION_S_MIN_PC, EMISSION_UNIT_BALL_SLACK,
+  EMISSION_U_FLOOR, MIN_PROJECTED_RADIUS_PX,
 } from '../../local-group/emission/local-group-emission-pure';
 import { SB_ZERO_POINT } from '../../hdr/emission/emission-pure';
 import {
@@ -21,16 +22,6 @@ import { emitExtendedSourceTsl, emitNothingTsl } from '../extended-emitter-tsl';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { attrFloat, attrVec3, attrVec4 } from '../tsl/tsl-shim';
-
-/** The GLSL's own screen-space hash, kept rather than replaced by the
- *  shared IGN: the two produce different noise, and the point of the
- *  jitter is that its expectation matches the CPU mirror's midpoint —
- *  which holds for any uniform hash, but a parity smoke compares grain. */
-const JITTER_DOT: readonly [number, number] = [12.9898, 78.233];
-const JITTER_SCALE = 43758.5453;
-
-/** The unit ball, with the slack the GLSL's exit test carries. */
-const UNIT_BALL_SLACK = 1.001;
 
 type NF = Node<'float'>;
 type N3 = Node<'vec3'>;
@@ -136,11 +127,14 @@ export function buildLocalGroupEmissionMaterial(
       // sampling bands the thin-disc vertical profile on grazing rays, and
       // the jitter trades the bands for fine noise while preserving the
       // expected column (the CPU mirror keeps deterministic midpoints).
-      const jitter = fract(
-        sin(dot(screenCoordinate.xy, vec2(...JITTER_DOT))).mul(JITTER_SCALE)).toVar();
+      const jitter = fract(sin(dot(screenCoordinate.xy, vec2(...EMISSION_JITTER_DOT)))
+        .mul(EMISSION_JITTER_SCALE)).toVar();
+      // Null for the Sérsic family rather than zero: its profile depends on
+      // the ellipsoidal radius alone, so there is no vertical share to
+      // project and no separable extent to soften along.
       const zFootprintScale = isDisc
         ? footprintAlongTsl(dirLocal.mul(vAxes).normalize(), vec3(0.0, 0.0, 1.0)).toVar()
-        : float(0.0).toVar();
+        : null;
 
       const prevS = sStart.toVar();
       Loop(steps, ({ i }) => {
@@ -151,9 +145,9 @@ export function buildLocalGroupEmissionMaterial(
         const pLocal = vCamLocal.add(dirLocal.mul(sSample.div(worldPerT))).toVar();
         // Braced, so the jump is not handed back as the branch's output
         // and emitted twice (`../tsl/README.md` § TSL test pattern).
-        If(dot(pLocal, pLocal).greaterThan(UNIT_BALL_SLACK), () => { Break(); });
+        If(dot(pLocal, pLocal).greaterThan(EMISSION_UNIT_BALL_SLACK), () => { Break(); });
         const footprintPc = footprintPcTsl(sSample, u.uOmegaPxArcsec2).toVar();
-        const density = isDisc
+        const density = zFootprintScale !== null
           ? discDensity(pLocal, vAxes, vDisc, footprintPc, footprintPc.mul(zFootprintScale))
           : sersicDensity(pLocal, vAxes, vSersic, vUMax, footprintPc);
         accum.addAssign(density.mul(dsPc));

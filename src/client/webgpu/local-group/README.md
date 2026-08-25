@@ -71,8 +71,21 @@ still add alpha under the additive blend.
 
 ## The jitter hash is the GLSL's own
 
-The march keeps `fract(sin(dot(fragCoord, …)) · 43758.5453)` rather than
-taking the shared interleaved gradient noise (`../tsl/README.md`). Both
-are uniform over the step, so both preserve the expected column the CPU
-mirror computes with deterministic midpoints — but they produce visibly
-different grain, and a parity smoke compares grain.
+The march keeps `fract(sin(dot(fragCoord, …)))` rather than taking the
+shared interleaved gradient noise (`../tsl/README.md`). Both are uniform
+over the step, so both preserve the expected column the CPU mirror
+computes with deterministic midpoints — but they produce visibly different
+grain, so keeping this one is what makes the two backends' noise the same
+*kind* of noise.
+
+**It is not the same noise pixel for pixel, and a smoke should not expect
+it to be.** `screenCoordinate` follows the WebGPU convention — origin
+top-left, y downward — where `gl_FragCoord` is y-up, so the hash takes a
+different argument at every fragment. Same statistics, same visual
+character, different speckle. A vertically mirrored grain pattern is
+parity, not a bug.
+
+Its constants, the unit-ball exit slack and both step counts all live in
+`../../local-group/emission/local-group-emission-pure.ts` — one home for
+the three consumers (this graph, the GLSL, the CPU mirror), with the GLSL's
+spelled-out copies pinned against it in `local-group-emission.test.ts`.
