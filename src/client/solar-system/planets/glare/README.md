@@ -11,8 +11,9 @@ src/client/solar-system/planets/glare/
   planet.frag.glsl   Instanced reflected-glare billboards (point↔bloom on
                      resolvedness, phase-gated + photocentre-shifted).
                      Imports perceptual-disc.glsl from
-                     ../../../star-pipeline/ — the shared glow profile with
-                     stars. Built and driven by ../planet-body-field.ts.
+                     ../../../star-pipeline/perceptual-disc/ — the glow
+                     profile shared with stars. Built and driven by
+                     ../planet-body-field.ts.
 ```
 
 The glare is the **shared star-perceptual point** — a planet reads

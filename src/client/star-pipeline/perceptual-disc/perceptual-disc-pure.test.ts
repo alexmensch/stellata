@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { STAR_RENDER_DEFAULTS } from '../filters/filter-state';
-import { PHYS_RATIO_THRESHOLD } from './local-pass/star-local-cluster-pure';
+import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
+import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 import {
   perceptualAppSizePx,
   perceptualDiscExponent,

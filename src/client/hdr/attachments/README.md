@@ -114,7 +114,7 @@ Pinned in `milkyway.test.ts`.
 
 **A point source's does not.** Its R divides the display kernel by the
 kernel's own area integral, `Φ(n)·D²`, where Φ is
-`perceptualDiscFluxIntegral` (`../../star-pipeline/perceptual-disc.glsl`, a
+`perceptualDiscFluxIntegral` (`../../star-pipeline/perceptual-disc/perceptual-disc.glsl`, a
 degree-4 fit in 1/n good to 0.0029 mag) and `D` is the quad's **CSS**
 diameter. `stellataKernelFluxPeak` is that renormalisation, and it is
 computed per instance in the vertex stage because the exponent morphs on

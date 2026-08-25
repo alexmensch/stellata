@@ -12,7 +12,7 @@ import {
 } from './loaders/dust-voxel-readback';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
-import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
+import perceptualDiscChunk from './star-pipeline/perceptual-disc/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import { DustParticleLayer } from './dust/dust-particle-layer';
 

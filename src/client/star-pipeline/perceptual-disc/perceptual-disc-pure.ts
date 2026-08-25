@@ -2,7 +2,7 @@
 // curve, the super-Gaussian exponent and its profile. The chunk's header
 // carries the math; every other mirror composes over this module.
 
-import { PHYS_RATIO_THRESHOLD } from './local-pass/star-local-cluster-pure';
+import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 
 /** Michaelis-Menten denominator floor — keeps the knee finite at
  *  `sizeKnee = 0`, which is the hard-clamp the knee replaced. */

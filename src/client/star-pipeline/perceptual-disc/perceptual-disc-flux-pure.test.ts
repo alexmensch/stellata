@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { STAR_RENDER_DEFAULTS } from '../filters/filter-state';
+import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
 import {
   KERNEL_FLUX_FIT,
   KERNEL_FLUX_FIT_N_MAX,

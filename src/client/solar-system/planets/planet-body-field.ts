@@ -20,7 +20,7 @@ import {
   pickPerceptualDiscUniforms,
   type ChartDiscUniforms,
   type PerceptualDiscUniforms,
-} from '../../star-pipeline/perceptual-disc-uniforms';
+} from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
@@ -49,7 +49,7 @@ import { planetApparentMagnitude } from '../perceptual-magnitude';
 import {
   perceptualAppSizePx,
   perceptualDmEff,
-} from '../../star-pipeline/perceptual-disc-pure';
+} from '../../star-pipeline/perceptual-disc/perceptual-disc-pure';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
