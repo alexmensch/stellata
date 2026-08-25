@@ -84,6 +84,25 @@ now build slot records through it — the solar-system surfaces, the
 boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
 modules stay with their layers; only the face is shared.
 
+## Assigning a varying from an explicit vertex stage
+
+A layer that sets `material.vertexNode` and wants a varying computed
+inside it writes `varying(float(0), 'vName')` and `.assign(...)`s over
+it. That reads like a race — the varying carries its own node, and the
+fragment stage's reference forces that node to run in the vertex stage
+too — but it resolves correctly, and the reason is worth stating so the
+next port child does not re-derive it: `NodeBuilder` generates the vertex
+stage before the fragment one, the varying's node properties are keyed
+stage-agnostically, and the property is filled the first time it
+generates. So the vertex stage emits the seed assignment followed by the
+real one, and the fragment stage reads the interpolated result rather
+than re-emitting the seed after it.
+
+Cost is one dead store in the vertex shader. Prefer wrapping the
+expression itself — `varying(expr)`, as the probe glyph and the ring
+annulus do — whenever the value does not depend on state computed inside
+the `vertexNode` body.
+
 ## TSL typing shim
 
 `tsl-shim.ts` carries ONLY compile-verified gaps in @types/three's TSL
