@@ -83,7 +83,7 @@ inside the region it names are `iau-geometry/README.md` § Label anchors.
 Anchors arrive in ICRS off the artifact and are baked to
 `SPHERE_RADIUS_PC` at attach, exactly as the arcs are, so a label rides
 the block it names from any camera position. The chart writes the Latin
-name there (`../chart-mode/README.md` § Label engine); the closure check
+name there (`../chart-mode/labels/README.md` § Label engine); the closure check
 on the shipped areas is `boundary-artifact-loader.ts`, which is why the
 areas ride the wire at all.
 

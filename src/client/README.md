@@ -369,7 +369,7 @@ SVG mask (`constellation-figure/README.md`).
 | Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
-| Chart labels + glyphs (chart only)               | SVG     | source order (three groups)                        |       | [chart-mode/](chart-mode/README.md) |
+| Chart labels + glyphs (chart only)               | SVG     | source order (three groups)                        |       | [chart-mode/labels/](chart-mode/labels/README.md) |
 | Coordinate-sphere edge labels                    | SVG     | source order (first SVG children)                  |       | [galactic/coord-spheres/](galactic/coord-spheres/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |

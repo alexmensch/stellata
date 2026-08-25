@@ -69,3 +69,21 @@ clears the flag. That leaves exactly one window where
 and the flush. Nothing may read the buffer inside it (the focal-drift
 recentre in that gap reads only camera + orbit target), and anything
 new landing there has to sit after the flush instead.
+
+## `forEachStarNearCamera` — sorted-distance binary-search window
+
+`star-frame.ts`. The core depth-mask gate (`shouldEnableCoreMask`) and
+the star local-depth membership scan both need "which stars sit
+within `dThresh` pc of the camera?" The original implementation
+scanned all 330k positions every frame in every mode.
+
+Build-time setup: sort the indices by distance from Sol once; store
+the sorted index and parallel distances as `Uint32Array` +
+`Float32Array`. At query time, compute
+`camDistFromSol = (camera.position + worldOffset).length()` (the
+absolute frame, not the floating-origin local frame), binary-search
+for `[camDistFromSol − dThresh, camDistFromSol + dThresh]`, and
+walk only that window. Triangle-inequality guarantees no candidate
+falls outside it.
+
+Typical window: 50–500 candidates instead of 330k.

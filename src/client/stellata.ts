@@ -34,7 +34,7 @@ import {
   coordSphereReachableAt,
 } from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
-import { ChartLabels } from './chart-mode/chart-labels';
+import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
