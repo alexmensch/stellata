@@ -3,11 +3,13 @@
 // § Trails.
 
 import * as THREE from 'three';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../../chrome-lines/chrome-line-materials';
 import {
   bakeAnchoredLineVerts,
   isFeatureLegible,
   makeOrbitLine,
-  makeOrbitLineMaterial,
   mirrorOrbitLine,
   pixelsPerRadianFromUniforms,
   trackAnchoredLine,
@@ -48,8 +50,8 @@ export class ProbePathLayer {
   /** Local-depth-pass mirror. The solar-system cluster parents this into the
    *  pass scene; exactly one of the two groups is ever visible. */
   readonly localGroup: THREE.Group;
-  private material: THREE.LineBasicMaterial;
-  private localMaterial: THREE.LineBasicMaterial;
+  private stroke: ChromeLineMaterial;
+  private localStroke: ChromeLineMaterial;
   private trails: Trail[] = [];
   private permitted = true;
   private mono = false;
@@ -57,7 +59,7 @@ export class ProbePathLayer {
   private shared: ProbeSharedUniforms;
   private solLocal = new THREE.Vector3();
 
-  constructor(shared: ProbeSharedUniforms) {
+  constructor(shared: ProbeSharedUniforms, chromeLines: ChromeLineMaterials) {
     this.shared = shared;
     this.group = new THREE.Group();
     this.group.renderOrder = TRAIL_RENDER_ORDER;
@@ -65,10 +67,8 @@ export class ProbePathLayer {
     this.localGroup = new THREE.Group();
     this.localGroup.renderOrder = TRAIL_LOCAL_RENDER_ORDER;
     this.localGroup.visible = false;
-    this.material = makeOrbitLineMaterial(TRAIL_COLOUR, ORBIT_LINE_OPACITY);
-    // The local-pass variant strips the log-depth chunks so fragments keep
-    // standard bracket depth.
-    this.localMaterial = makeOrbitLineMaterial(TRAIL_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(TRAIL_COLOUR, ORBIT_LINE_OPACITY);
+    this.localStroke = chromeLines.solid(TRAIL_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
   /** Allocate one full-capacity trail per probe, plus its local-pass mirror.
@@ -78,12 +78,13 @@ export class ProbePathLayer {
     for (const traj of trajectories) {
       const capacity = (traj.sampleT.length + 1) * 3;
       const verts = new Float32Array(capacity);
-      const line = makeOrbitLine(verts, this.material, TRAIL_RENDER_ORDER);
+      const line = makeOrbitLine(verts, this.stroke.material, TRAIL_RENDER_ORDER);
       line.geometry.setDrawRange(0, 0);
       (line.geometry.getAttribute('position') as THREE.BufferAttribute)
         .setUsage(THREE.DynamicDrawUsage);
       line.visible = false;
-      const localLine = mirrorOrbitLine(line, this.localMaterial, TRAIL_LOCAL_RENDER_ORDER);
+      const localLine =
+        mirrorOrbitLine(line, this.localStroke.material, TRAIL_LOCAL_RENDER_ORDER);
       localLine.visible = false;
       this.group.add(line);
       this.localGroup.add(localLine);
@@ -196,8 +197,8 @@ export class ProbePathLayer {
 
   dispose(): void {
     this.disposeTrails();
-    this.material.dispose();
-    this.localMaterial.dispose();
+    this.stroke.dispose();
+    this.localStroke.dispose();
   }
 
   private disposeTrails(): void {

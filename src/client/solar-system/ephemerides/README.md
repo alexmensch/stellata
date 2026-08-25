@@ -360,7 +360,9 @@ thousand km of a focused body. 8192 stays.
 
 Geometry rebuilds whenever the focused star's PlanetSystem changes; a
 per-frame tick drives the pixel-gap visibility heuristic.
-Representational only — rings hide when the host loses focus. Each ring
+Representational only — rings hide when the host loses focus. Each ring's stroke comes from the chrome line seam
+(`../../chrome-lines/README.md`) with its `localPass` flag, since the ring
+draws only in the local depth pass. Each ring
 rides its live centre (the host's renderer-local position, fed each
 frame from `PlanetBodyField.getHostLocalPositionInto`) through the
 anchored-line scheme in `../../util/orbit-line.ts`: float64

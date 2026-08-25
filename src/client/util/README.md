@@ -108,16 +108,12 @@ build scripts, tests, and shader uniforms.
   `solar-system/probes/probe-path-layer.ts`,
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
-  traversed path with two ends) / `makeOrbitLineSegments` +
-  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
-  `color` is an authored sRGB hex, mapped through the tone-map inverse so
-  the line resolves at that appearance out of the HDR pass —
-  `../hdr/README.md` § Chrome), its dashed sibling
-  `makeDashedOrbitLineMaterial(color, dash, gap, opacity?)` — dash lengths
-  in whatever unit the consumer's `material.scale` maps world distance into
-  (so a pattern can be authored in screen pixels), and the consumer owns the
-  cumulative `lineDistance` attribute because `computeLineDistances` resets
-  the phase per segment pair (`../constellation-boundaries/README.md`
+  traversed path with two ends) / `makeOrbitLineSegments` / `mirrorOrbitLine`
+  — the **geometry** half only; the materials they take come from
+  `../chrome-lines/README.md`, and `ORBIT_LINE_OPACITY` is the default alpha
+  every consumer passes it. A dashed consumer also owns the cumulative
+  `lineDistance` attribute, because `computeLineDistances` resets the phase
+  per segment pair (`../constellation-boundaries/README.md`
   § Chart-mode layer) — and the on-screen-size helpers `pixelsPerRadian`
   (+ `pixelsPerRadianFromFovRad` for callers holding the FOV in radians, and
   `pixelsPerRadianFromUniforms` for the `ScreenMetricUniforms` viewport / FOV

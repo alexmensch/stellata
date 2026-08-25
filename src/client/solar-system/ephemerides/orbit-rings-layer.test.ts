@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
+import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
   RING_GEOMETRY_DRIFT_TOLERANCE,
@@ -355,13 +356,13 @@ describe('solidityForType', () => {
 
 describe('OrbitRingsLayer', () => {
   it('returns false with no planet system attached', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
   });
 
   it('returns true after a tick that lets at least one ring through the heuristic', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ name: 'Alpha', semiMajorAxisAu: 1 })],
@@ -375,7 +376,7 @@ describe('OrbitRingsLayer', () => {
   });
 
   it('returns false after the planet system is cleared', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet()],
@@ -388,7 +389,7 @@ describe('OrbitRingsLayer', () => {
   });
 
   it('returns false when warp-hidden, even with rings still in the heuristic', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet()],
@@ -401,7 +402,7 @@ describe('OrbitRingsLayer', () => {
   });
 
   it('returns false in chart (mono) mode', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet()],
@@ -414,7 +415,7 @@ describe('OrbitRingsLayer', () => {
   });
 
   it('isOrbitRingVisible is per-planet and tracks per-ring visibility', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [
@@ -445,7 +446,7 @@ describe('OrbitRingsLayer', () => {
   it('returns false when every ring is suppressed by the pixel-gap heuristic', () => {
     // Two rings with semi-major axes very close together, viewed from far
     // enough that the projected pixel gap collapses below the threshold.
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [
@@ -473,7 +474,7 @@ function ringVertexWorld(line: THREE.Line, i: number): THREE.Vector3 {
 
 describe('OrbitRingsLayer host centring', () => {
   it('update() tracks ring vertices to the host local position', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
@@ -502,7 +503,7 @@ describe('OrbitRingsLayer host centring', () => {
     // hundreds of km at this magnitude — the rebake must land the
     // near-camera vertex within metres instead.
     const aAu = 39.5;
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: aAu, eccentricity: 0 })],
@@ -539,7 +540,7 @@ describe('OrbitRingsLayer host centring', () => {
   });
 
   it('sub-threshold centre drift moves line.position and leaves the buffer unbaked', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
@@ -573,7 +574,7 @@ describe('OrbitRingsLayer host centring', () => {
     // HOST. Origin-based distance would collapse both ring radii to
     // ~0 px (gap 0 → both suppressed); host-based distance resolves
     // them at hundreds of px apart.
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [
@@ -593,7 +594,7 @@ describe('OrbitRingsLayer host centring', () => {
   });
 
   it('setPlanetSystem resets the centre to the origin until the next update feeds a host', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ eccentricity: 0 })],
@@ -615,7 +616,7 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     // sit on a plane tilted 30° from the host plane (which for a
     // non-Sol host is the galactic plane). The ring's z-extent in
     // the host plane frame should be a·sin(30°) = 0.5·a.
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 1,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
@@ -661,7 +662,7 @@ describe('OrbitRingsLayer orbit-ring orientation)', () => {
     // defaultOrbitGeometry fallback lays the ring flat on the host
     // plane; the host-normal projection should be ~zero across all
     // vertices.
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 1,
       planets: [makePlanet({ semiMajorAxisAu: 1, eccentricity: 0 })],
@@ -831,7 +832,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     };
 
     it('rewrites the buffer — a frozen ring is byte-identical a month on', () => {
-      const ss = new OrbitRingsLayer();
+      const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
       ss.update(NEAR_MOON, 800, null, T0, originCentres);
       expectDrawn(ss);
@@ -855,7 +856,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     it.each([7, 14, 90, 365])(
       'keeps the Moon on the rendered ring after scrubbing %i days',
       (days) => {
-        const ss = new OrbitRingsLayer();
+        const ss = new OrbitRingsLayer(chromeLines());
         ss.setPlanetSystem(solSystem(), 0, T0);
         const t = T0 + days * 86400;
         ss.update(NEAR_MOON, 800, null, t, originCentres);
@@ -883,7 +884,7 @@ describe('ring geometry passes through the body (single element source)', () => 
       // rewrite 8192 vertices and re-upload the buffer every frame under
       // scrub while sub-pixel — and drag three lunar-theory evaluations
       // along per frame for a ring nothing can see.
-      const ss = new OrbitRingsLayer();
+      const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
       ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
       expect(ss.isOrbitRingVisible(MOON_IDX)).toBe(false);
@@ -897,7 +898,7 @@ describe('ring geometry passes through the body (single element source)', () => 
       // Skipping while invisible is only safe because coming back is not
       // deferred: visibility is decided first, then the geometry pass
       // runs over what survived.
-      const ss = new OrbitRingsLayer();
+      const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
       const t = T0 + 365 * 86400;
       ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
@@ -973,7 +974,7 @@ describe('OrbitRingsLayer moon rings', () => {
   }
 
   it('a moon ring rides its parent’s live host-relative offset', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const parentRel = new THREE.Vector3(5 * AU_PC, 0, 0);
     const cam = makeCamera(0);
@@ -996,7 +997,7 @@ describe('OrbitRingsLayer moon rings', () => {
   });
 
   it('a moon ring hides when no parent offset is available', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const cam = makeCamera(5 * AU_PC);
     ss.update(cam, 800, null, T0);
@@ -1008,7 +1009,7 @@ describe('OrbitRingsLayer moon rings', () => {
     // Camera 5 AU from the HOST but right next to the parent: the moon
     // ring (0.003 AU) is sub-pixel from the host but hundreds of px
     // from the parent — it must draw.
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const parentRel = new THREE.Vector3(0, 0, 5 * AU_PC);
     const cam = makeCamera(5 * AU_PC + 0.01 * AU_PC);
@@ -1021,7 +1022,7 @@ describe('OrbitRingsLayer moon rings', () => {
   });
 
   it('re-derives host-centred geometry on resolvable element drift, not on elapsed t', () => {
-    const ss = new OrbitRingsLayer();
+    const ss = new OrbitRingsLayer(chromeLines());
     let aAu = 1;
     const ps: PlanetSystem = {
       hostStarIdx: 1,

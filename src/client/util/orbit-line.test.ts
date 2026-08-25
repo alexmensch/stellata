@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { makeOrbitLineLoop, makeOrbitLineMaterial } from './orbit-line';
+import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
+import { makeOrbitLineLoop } from './orbit-line';
 
 function ring(vertexCount: number): Float32Array {
   const pts = new Float32Array(vertexCount * 3);
@@ -11,7 +12,8 @@ function ring(vertexCount: number): Float32Array {
   return pts;
 }
 
-const loop = (n: number) => makeOrbitLineLoop(ring(n), makeOrbitLineMaterial(0xffffff), 3);
+const stroke = builtinChromeLineMaterials().solid(0xffffff, 0.5);
+const loop = (n: number) => makeOrbitLineLoop(ring(n), stroke.material, 3);
 
 describe('makeOrbitLineLoop', () => {
   it('closes the ring through the index, not a LineLoop primitive', () => {

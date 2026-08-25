@@ -8,8 +8,8 @@ import { AU_PC } from '../../util/astronomy-constants';
 import { type BinariesData } from '../binaries-loader';
 import { keplerRelationParams, relationIndicesInBounds } from '../orbit-relation-cache';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';
+import type { ChromeLineMaterial, ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import {
-  makeOrbitLineMaterial,
   makeOrbitLineLoop,
   ORBIT_LINE_SEGMENTS,
   ORBIT_LINE_OPACITY,
@@ -53,7 +53,7 @@ interface OrbitPathPair {
  */
 export class BinaryOrbitPathLayer {
   readonly group: THREE.Group;
-  private material: THREE.LineBasicMaterial;
+  private stroke: ChromeLineMaterial;
   private pairs: OrbitPathPair[] = [];
   // Detail-cycle permission (floor 'representational'); false hides the
   // paths even while a system is focused.
@@ -61,11 +61,11 @@ export class BinaryOrbitPathLayer {
   // Whether the last update() left any pair above the on-screen-size gate.
   private anyVisible = false;
 
-  constructor() {
+  constructor(chromeLines: ChromeLineMaterials) {
     this.group = new THREE.Group();
     this.group.renderOrder = PATH_RENDER_ORDER;
     this.group.visible = false;
-    this.material = makeOrbitLineMaterial(PATH_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(PATH_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
   /**
@@ -97,8 +97,9 @@ export class BinaryOrbitPathLayer {
         ORBIT_LINE_SEGMENTS,
       );
       const g = new THREE.Group();
-      const primaryLoop = makeOrbitLineLoop(primary, this.material, this.group.renderOrder);
-      const secondaryLoop = makeOrbitLineLoop(secondary, this.material, this.group.renderOrder);
+      const primaryLoop = makeOrbitLineLoop(primary, this.stroke.material, this.group.renderOrder);
+      const secondaryLoop =
+        makeOrbitLineLoop(secondary, this.stroke.material, this.group.renderOrder);
       g.add(primaryLoop);
       g.add(secondaryLoop);
       this.group.add(g);
@@ -185,7 +186,7 @@ export class BinaryOrbitPathLayer {
 
   dispose(): void {
     this.disposePairs();
-    this.material.dispose();
+    this.stroke.dispose();
   }
 
   private disposePairs(): void {

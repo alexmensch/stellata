@@ -2,6 +2,7 @@
 // every kind module consumes. See ./README.md.
 
 import type * as THREE from 'three';
+import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { WebGpuSeam } from '../webgpu/seam';
 import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focus-target';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
@@ -72,6 +73,11 @@ export interface KindContext {
    *  above, which a WebGPU boot never renders
    *  (`../webgpu/README.md` § What the flag boots today). */
   readonly webgpu: WebGpuSeam | null;
+  /** The chrome line strokes for this boot, already resolved to the
+   *  backend — a kind that draws overlay lines takes them from here
+   *  rather than reading `webgpu` itself
+   *  (`../chrome-lines/README.md`). */
+  readonly chromeLines: ChromeLineMaterials;
 }
 
 /** One kind's pick path. It IS `HoverProvider.pick` — the Picker

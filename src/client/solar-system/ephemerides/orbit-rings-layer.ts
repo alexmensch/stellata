@@ -14,8 +14,10 @@ import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import { wrapAngle } from '../../util/angles';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../../chrome-lines/chrome-line-materials';
 import {
-  makeOrbitLineMaterial,
   makeOrbitLineLoop,
   bakeAnchoredLineVerts,
   trackAnchoredLine,
@@ -86,7 +88,7 @@ const DEG = Math.PI / 180;
 interface PlanetRing {
   readonly planet: Planet;
   readonly line: THREE.Line;
-  readonly material: THREE.LineBasicMaterial;
+  readonly stroke: ChromeLineMaterial;
   // Centre-relative float64 vertices (the element-source truth); the
   // line's float32 GPU buffer is baked renderer-local from these about
   // `bakedCentre` (util/orbit-line.ts trackAnchoredLine).
@@ -370,7 +372,7 @@ export class OrbitRingsLayer {
   // null feed (host not attached yet) keeps the rings where they were.
   private readonly hostLocal = new THREE.Vector3();
 
-  constructor() {
+  constructor(private readonly chromeLines: ChromeLineMaterials) {
     this.group = new THREE.Group();
     // Local-depth-pass in-pass order: after the planet disc mirrors (3)
     // so ring fragments depth-test against real body depth — near-side
@@ -412,13 +414,13 @@ export class OrbitRingsLayer {
       const master = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
       const semiMajorPc = writeRingVerts(master, g, this.hostQuat);
       const verts = new Float32Array(master);
-      const mat = makeOrbitLineMaterial(RING_COLOUR, ORBIT_LINE_OPACITY, true);
-      const line = makeOrbitLineLoop(verts, mat, this.group.renderOrder);
+      const stroke = this.chromeLines.solid(RING_COLOUR, ORBIT_LINE_OPACITY, true);
+      const line = makeOrbitLineLoop(verts, stroke.material, this.group.renderOrder);
       this.group.add(line);
       this.rings.push({
         planet: ps.planets[pIdx],
         line,
-        material: mat,
+        stroke,
         master,
         verts,
         bakedCentre: new THREE.Vector3(),
@@ -595,7 +597,7 @@ export class OrbitRingsLayer {
     for (const r of this.rings) {
       this.group.remove(r.line);
       r.line.geometry.dispose();
-      r.material.dispose();
+      r.stroke.dispose();
     }
     this.rings = [];
   }

@@ -45,6 +45,11 @@ themselves.
   draw (and the `'frame'` emit) on ticks where nothing invalidated the
   frame. Its README owns the invalidation-source inventory and the
   hold contract.
+- `chrome-lines/` — the renderer-neutral seam the line overlays take
+  their strokes from (orbit rings, binary orbit paths, probe trails, the
+  constellation figure, the IAU boundary arcs), plus the WebGL2
+  implementation. Its README carries why the local depth pass makes the
+  seam mandatory rather than tidy.
 - `hdr/` — the float render target every light-emitting layer draws
   into and the fullscreen tone-map that resolves it to the canvas.
   Owns the shared operator chunk, its CPU mirror, and the chrome
@@ -85,7 +90,8 @@ themselves.
   the async renderer boot behind a dynamic-import boundary, the
   port scaffolding (shared uniform nodes, TSL shim, attribute packing,
   the TSL test pattern), and the ported TSL layers (`webgpu/star/`,
-  `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`). Flag on
+  `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`,
+  `webgpu/chrome-lines/`). Flag on
   renders the seam's own scene — layers accumulate there as port children
   land — while every CPU subsystem runs identically; flag off leaves the
   shipped boot untouched. `webgpu/gate/` is the exception to the folder's

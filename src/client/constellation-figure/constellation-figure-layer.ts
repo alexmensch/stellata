@@ -3,7 +3,10 @@
 
 import * as THREE from 'three';
 import { type Constellation } from '../loaders/catalog-loader';
-import { makeOrbitLineMaterial, makeOrbitLineSegments } from '../util/orbit-line';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../chrome-lines/chrome-line-materials';
+import { makeOrbitLineSegments } from '../util/orbit-line';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import { collectFigureSegmentEndpoints } from './constellation-figure-pure';
 
@@ -31,17 +34,17 @@ const FIGURE_OPACITY = 0.85;
  */
 export class ConstellationFigureLayer {
   readonly group: THREE.Group;
-  private readonly material: THREE.LineBasicMaterial;
+  private readonly stroke: ChromeLineMaterial;
   private lineSegments: THREE.LineSegments | null = null;
   private positions: Float32Array | null = null;
   private endpointIdx: number[] = [];
   private permitted = true;
 
-  constructor() {
+  constructor(chromeLines: ChromeLineMaterials) {
     this.group = new THREE.Group();
     this.group.renderOrder = FIGURE_RENDER_ORDER;
     this.group.visible = false;
-    this.material = makeOrbitLineMaterial(REALISTIC_COLOUR, FIGURE_OPACITY);
+    this.stroke = chromeLines.solid(REALISTIC_COLOUR, FIGURE_OPACITY);
   }
 
   /** Rebuild the line geometry for the active constellation set (one index
@@ -61,7 +64,8 @@ export class ConstellationFigureLayer {
     }
     this.positions = new Float32Array(this.endpointIdx.length * 3);
     this.writePositions(localPositions);
-    const seg = makeOrbitLineSegments(this.positions, this.material, FIGURE_RENDER_ORDER);
+    const seg =
+      makeOrbitLineSegments(this.positions, this.stroke.material, FIGURE_RENDER_ORDER);
     this.group.add(seg);
     this.lineSegments = seg;
     this.group.visible = this.permitted;
@@ -86,13 +90,14 @@ export class ConstellationFigureLayer {
   }
 
   setMonochrome(on: boolean): void {
-    setBuiltinChromeColour(this.material.color, on ? CHART_COLOUR : REALISTIC_COLOUR, on);
-    this.material.depthTest = !on;
+    setBuiltinChromeColour(
+      this.stroke.material.color, on ? CHART_COLOUR : REALISTIC_COLOUR, on);
+    this.stroke.material.depthTest = !on;
   }
 
   dispose(): void {
     this.disposeGeometry();
-    this.material.dispose();
+    this.stroke.dispose();
   }
 
   private writePositions(localPositions: Float32Array): void {

@@ -110,7 +110,8 @@ seam between them.
 **Dotted, and the dash phase is ours.** Sky Atlas 2000.0 draws the partition
 as a fine dotted line at the same stroke weight as its solid coordinate grid,
 which is the convention this follows: `BOUNDARY_DOT_PX` / `BOUNDARY_GAP_PX`
-(1.5 px / 3 px) on a `LineDashedMaterial`.
+(1.5 px / 3 px) on the chrome line seam's dashed stroke
+(`../chrome-lines/README.md`).
 
 **Sized in screen pixels, not degrees of sky.** The paper pattern is ~0.1° per
 dot; at any FOV reachable here that is sub-pixel, and a sub-pixel stipple reads

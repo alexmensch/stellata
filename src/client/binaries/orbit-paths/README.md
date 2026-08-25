@@ -52,17 +52,17 @@ system draws, never every catalog pair.
   star cluster's pass group (`../../star-pipeline/local-pass/star-local-cluster.ts`),
   drawn after the member-star disc mirror so the bracket z-buffer hides
   far-side arcs behind a resolved disc and passes near-side arcs over
-  it. The line material strips the log-depth chunks
-  (`makeOrbitLineMaterial(..., localPass)`); `collectSpheres` reports
-  each drawn pair's barycentre + apoapsis extent so the slice bracket
-  contains the ellipses. Paths drawing ⇒ the cluster is active, so they
-  always render — WebGL2 only; WebGPU parks it until `stellata-0it.27`.
+  it. The stroke comes from the chrome line seam
+  (`../../chrome-lines/README.md`) with its `localPass` flag;
+  `collectSpheres` reports each drawn pair's barycentre + apoapsis extent
+  so the slice bracket contains the ellipses. Paths drawing ⇒ the cluster
+  is active, so they always render, on either backend.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
   `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
   barycentre anchors and applies the size gate below. The two loops per
-  pair share one alpha-blended material built by `../../util/orbit-line.ts`
-  (`makeOrbitLineLoop` / `makeOrbitLineMaterial` + shared
-  `ORBIT_LINE_SEGMENTS`) — the same primitive the planet orbit rings use.
+  pair share one stroke and `../../util/orbit-line.ts`'s
+  `makeOrbitLineLoop` + shared `ORBIT_LINE_SEGMENTS` — the same primitive
+  the planet orbit rings use.
 - **On-screen-size gate.** `update` hides a pair once its larger ellipse
   subtends less than `PATH_MIN_RADIUS_PX` (`pixelsPerRadian` /
   `angularRadiusPx` from `../../util/orbit-line.ts`), so a distant or zoomed-out
