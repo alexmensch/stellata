@@ -182,6 +182,13 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Records whose spectral classification (classIdx + subclass + lumClass)
    *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
+  /** The three SIMBAD tiers split by the namespace that found the row.
+   *  They sum to `spectralBySimbad`. `spectralSimbadByTyc` is the only
+   *  designation join of the three, and the only one reaching an object
+   *  SIMBAD holds no Gaia id for. */
+  spectralSimbadBySourceId: number;
+  spectralSimbadByHip: number;
+  spectralSimbadByTyc: number;
   /** Records that fell through to Gaia DR3 GSP-Spec's
    *  `spectraltype_esphs` enum — second-tier letter-only classification. */
   spectralByGspspec: number;

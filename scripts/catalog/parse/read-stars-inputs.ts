@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
+  emptySimbadSpectralIndex,
   parseSimbadSptypeTsv,
   type ApsisRow,
   type SimbadSpectralIndex,
@@ -144,10 +145,10 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
-  // SIMBAD sp_type indexed by Gaia DR3 source_id and by HIP. First tier
+  // SIMBAD sp_type indexed by Gaia DR3 source_id, HIP and TYC. First tier
   // of the spectral resolver; the binary defaults to GSP-Spec + unknown
   // sentinel without it.
-  let simbadSpectral: SimbadSpectralIndex = { bySource: new Map(), byHip: new Map() };
+  let simbadSpectral: SimbadSpectralIndex = emptySimbadSpectralIndex();
   if (existsSync(SRC_SIMBAD_SPTYPE)) {
     console.log('Parsing SIMBAD sp_type catalogue...');
     const t = Date.now();

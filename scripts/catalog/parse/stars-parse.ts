@@ -25,9 +25,12 @@ import {
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
+  SPECTRAL_SIMBAD_KEY_VALUES,
+  emptySimbadSpectralIndex,
   type ApsisRow,
   type DistSrcPartition,
   type SimbadSpectralIndex,
+  type SpectralSimbadKey,
 } from '../catalog-pure';
 import {
   resolveDirection,
@@ -209,7 +212,7 @@ export function readStars(
   {
     conAssignment,
     bjMap = new Map(),
-    simbadSpectral = { bySource: new Map(), byHip: new Map() },
+    simbadSpectral = emptySimbadSpectralIndex(),
     simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
     gspcMap = new Map(),
@@ -251,6 +254,7 @@ export function readStars(
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
+    spectralSimbadKey: Record<SpectralSimbadKey, number>; // which namespace found that row
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
@@ -291,6 +295,7 @@ export function readStars(
   let rvRadialRejected = 0;
   const rvRadialRejectedSample: string[] = [];
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
+  const spectralSimbadKey = emptyTallyPartition(SPECTRAL_SIMBAD_KEY_VALUES);
   let ciGspcValidatedRange = 0;
   let rvApplied = 0;
   let velocityClamped = 0;
@@ -489,12 +494,15 @@ export function readStars(
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
     const spectral = isSol
       ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
-      : resolveSpectralInfo(gaiaSourceId, hip, simbadSpectral, apsisMap);
+      : resolveSpectralInfo(
+          gaiaSourceId, hip, nonEmpty(row.tyc), simbadSpectral, apsisMap,
+        );
     const spectInfo = spectral.info;
     if (spectral.source === 'curated') spectralByCurated++;
     else if (spectral.source === 'simbad') spectralBySimbad++;
     else if (spectral.source === 'gspspec') spectralByGspspec++;
     else spectralFallback++;
+    if (spectral.simbadKey !== undefined) spectralSimbadKey[spectral.simbadKey]++;
     const apsisTeff = resolveApsisTeff(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
@@ -609,6 +617,7 @@ export function readStars(
       rvApplied,
       spectralByCurated,
       spectralBySimbad,
+      spectralSimbadKey,
       spectralByGspspec,
       spectralFallback,
       ciVia,

@@ -330,7 +330,7 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 ## Physical radius and spectral parsing
 
 `resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a five-tier
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a six-tier
 priority chain:
 
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
@@ -356,11 +356,24 @@ priority chain:
    unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
    12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
    over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
-3. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+3. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
+   SIMBAD holds no Gaia id and no HIP for, which is exactly the population
+   the values pull's TYC widening exists for. Same ladder
+   `lookupSimbadValues` walks (`../simbad-values-parse.ts`), and the same
+   caveat: a TYC names the Tycho entry, which for a close pair is the
+   system rather than the component. What reaches the file is already
+   adjudicated — the pull vetoes a widened binding SIMBAD's own Gaia
+   cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
+   widening carries its own veto) — so the risk this tier carries is a
+   system-blend spectral type on an unvetoed pair, never a wrong star.
+   Which namespace found each SIMBAD-tier row is pinned as
+   `spectralSimbadBySourceId` / `ByHip` / `ByTyc`, summing to
+   `spectralBySimbad`.
+4. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
-4. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
+5. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
    `lumClass=255` for rows no upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for

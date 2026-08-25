@@ -246,12 +246,26 @@ export function classifyFromGspspec(esphs: string | null | undefined): SpectralI
   };
 }
 
+/** Which identifier namespace found the row a SIMBAD spectral tier used.
+ *  Pinned as a partition in build-counts: the three tiers share one
+ *  `source`, but only the TYC one is a designation join. */
+export const SPECTRAL_SIMBAD_KEY_VALUES = ['source_id', 'hip', 'tyc'] as const;
+export type SpectralSimbadKey = (typeof SPECTRAL_SIMBAD_KEY_VALUES)[number];
+
+interface SimbadSpectralMatch {
+  info: SpectralInfo;
+  source: 'simbad';
+  spectDisplay: string;
+  simbadKey: SpectralSimbadKey;
+}
+
 function matchSimbadRow(
   row: SimbadSpectralRow | undefined,
-): { info: SpectralInfo; source: 'simbad'; spectDisplay: string } | null {
+  simbadKey: SpectralSimbadKey,
+): SimbadSpectralMatch | null {
   if (!row?.spType) return null;
   const info = classifyFromSimbad(row.spType);
-  return info ? { info, source: 'simbad', spectDisplay: row.spType } : null;
+  return info ? { info, source: 'simbad', spectDisplay: row.spType, simbadKey } : null;
 }
 
 /** Curated HIP → MK type for saturated stars whose SIMBAD entry is a
@@ -283,9 +297,15 @@ export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
 export function resolveSpectralInfo(
   gaiaSourceId: string | null,
   hip: number | null,
+  tyc: string | null,
   simbad: SimbadSpectralIndex,
   apsisMap: Map<string, ApsisRow>,
-): { info: SpectralInfo; source: SpectralSource; spectDisplay: string | null } {
+): {
+  info: SpectralInfo;
+  source: SpectralSource;
+  spectDisplay: string | null;
+  simbadKey?: SpectralSimbadKey;
+} {
   if (hip !== null && hip > 0) {
     const curated = CURATED_SPTYPE_BY_HIP.get(hip);
     const info = curated ? classifyFromSimbad(curated) : null;
@@ -293,10 +313,14 @@ export function resolveSpectralInfo(
       return { info, source: 'curated', spectDisplay: curated };
     }
   }
-  const bySource = gaiaSourceId ? matchSimbadRow(simbad.bySource.get(gaiaSourceId)) : null;
+  const bySource = gaiaSourceId
+    ? matchSimbadRow(simbad.bySource.get(gaiaSourceId), 'source_id') : null;
   if (bySource) return bySource;
-  const byHip = hip !== null && hip > 0 ? matchSimbadRow(simbad.byHip.get(hip)) : null;
+  const byHip = hip !== null && hip > 0
+    ? matchSimbadRow(simbad.byHip.get(hip), 'hip') : null;
   if (byHip) return byHip;
+  const byTyc = tyc ? matchSimbadRow(simbad.byTyc.get(tyc), 'tyc') : null;
+  if (byTyc) return byTyc;
   if (gaiaSourceId) {
     const apsis = apsisMap.get(gaiaSourceId);
     if (apsis?.spectraltypeEsphs) {
@@ -2097,14 +2121,20 @@ export interface SimbadSpectralRow {
   otype: string | null;
 }
 
-/** Dual-keyed SIMBAD sp_type lookup. `bySource` is keyed by Gaia DR3
- *  source_id; `byHip` by Hipparcos number. The HIP index carries the
- *  Gaia-saturated bright stars (Algol, Alsephina, ~700 others) whose
- *  SIMBAD row has a valid sp_type but no source_id — see
- *  resolveSpectralInfo's HIP tier. */
+/** SIMBAD sp_type keyed by every namespace the pull carries. `bySource` is
+ *  the Gaia DR3 source_id; `byHip` the Hipparcos number, which carries the
+ *  Gaia-saturated bright stars (Algol, Alsephina, ~700 others) whose SIMBAD
+ *  row has a valid sp_type but no source_id; `byTyc` the Tycho designation,
+ *  which is the only namespace reaching an object SIMBAD holds no Gaia id
+ *  for at all. Same ladder `lookupSimbadValues` walks. */
 export interface SimbadSpectralIndex {
   bySource: Map<string, SimbadSpectralRow>;
   byHip: Map<number, SimbadSpectralRow>;
+  byTyc: Map<string, SimbadSpectralRow>;
+}
+
+export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
+  return { bySource: new Map(), byHip: new Map(), byTyc: new Map() };
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
@@ -2117,11 +2147,13 @@ export interface SimbadSpectralIndex {
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const bySource = new Map<string, SimbadSpectralRow>();
   const byHip = new Map<number, SimbadSpectralRow>();
+  const byTyc = new Map<string, SimbadSpectralRow>();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return { bySource, byHip };
+  if (lines.length === 0) return { bySource, byHip, byTyc };
   const header = lines[0].split('\t').map((h) => h.trim());
   const idIdx = header.indexOf('source_id');
   const hipIdx = header.indexOf('hip');
+  const tycIdx = header.indexOf('tyc');
   const spTypeIdx = header.indexOf('sp_type');
   const spQualIdx = header.indexOf('sp_qual');
   const otypeIdx = header.indexOf('otype');
@@ -2140,7 +2172,8 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     const cells = line.split('\t');
     const sourceId = (cells[idIdx] ?? '').trim();
     const hipRaw = hipIdx >= 0 ? (cells[hipIdx] ?? '').trim() : '';
-    if (!sourceId && !hipRaw) continue;
+    const tyc = tycIdx >= 0 ? (cells[tycIdx] ?? '').trim() : '';
+    if (!sourceId && !hipRaw && !tyc) continue;
     const spType = (cells[spTypeIdx] ?? '').trim() || null;
     const spQual = spQualIdx >= 0 ? ((cells[spQualIdx] ?? '').trim() || null) : null;
     const otype = otypeIdx >= 0 ? ((cells[otypeIdx] ?? '').trim() || null) : null;
@@ -2150,8 +2183,9 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     if (Number.isInteger(hipNum) && hipNum > 0 && !byHip.has(hipNum)) {
       byHip.set(hipNum, row);
     }
+    if (tyc && !byTyc.has(tyc)) byTyc.set(tyc, row);
   }
-  return { bySource, byHip };
+  return { bySource, byHip, byTyc };
 }
 
 /** Apparent magnitude → absolute magnitude at given distance.
