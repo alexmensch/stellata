@@ -24,9 +24,14 @@ const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 const isClientSource = (p: string) => p.endsWith('.ts') && !p.endsWith('.test.ts');
 const isThreeWebGpuEntry = (spec: string) =>
   spec === 'three/webgpu' || spec === 'three/tsl' || spec.startsWith('three/src/');
-const isWebGpuFolderRef = (spec: string) => /(?:^|\/)webgpu\/(?!renderer-flag$)[^'"]+$/.test(spec);
+// renderer-flag and gate/ are the two exemptions: both must run on a
+// browser with no WebGPU at all, so they live in the entry bundle. The
+// gate's own guard below is what stops that exemption becoming a hole.
+const isWebGpuFolderRef = (spec: string) =>
+  /(?:^|\/)webgpu\/(?!renderer-flag$|gate\/)[^'"]+$/.test(spec);
 
-const CROSSING_NOTE = '(only renderer-flag and type-only imports cross the boundary)';
+const CROSSING_NOTE =
+  '(only renderer-flag, gate/ and type-only imports cross the boundary)';
 
 function violationsInSource(src: string, inWebGpuDir: boolean): string[] {
   if (inWebGpuDir) return [];
@@ -61,6 +66,21 @@ describe('webgpu import boundary', () => {
     const src = readFileSync(join(WEBGPU_DIR, 'boot-webgpu.ts'), 'utf8');
     expect(/import\s+\{[^}]*\}\s+from\s+'three\/webgpu'/.test(src)).toBe(true);
   });
+
+  // main.ts imports gate/ statically, so the folder is IN the entry bundle.
+  // One three/webgpu value import anywhere under it would therefore drag the
+  // whole ~1 MB duplicate core in with it — silently, since the sweep above
+  // exempts everything inside webgpu/. This is the check that makes the
+  // exemption safe rather than a hole in it.
+  it('the gate is exempt only because it carries no three/webgpu import', () => {
+    const offenders: string[] = [];
+    for (const p of walkFiles(join(WEBGPU_DIR, 'gate'), { include: isClientSource })) {
+      for (const v of violationsInSource(readFileSync(p, 'utf8'), false)) {
+        offenders.push(`${relative(ROOT, p)}: ${v}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe('the detector itself', () => {
@@ -81,6 +101,14 @@ describe('the detector itself', () => {
     expect(outside("import type { WebGPURenderer } from 'three/webgpu';")).toEqual([]);
     expect(outside("import type { WebGpuSeam } from './webgpu/seam';")).toEqual([]);
     expect(outside("import { parseRendererFlag } from './webgpu/renderer-flag';")).toEqual([]);
+    // The gate must render where WebGPU does not exist, so it is in the
+    // entry bundle by design (guarded above against pulling three in).
+    expect(outside("import { showWebGpuGate } from './webgpu/gate/gate-page';")).toEqual([]);
+    expect(outside("import { detectWebGpuSupport } from './webgpu/gate/webgpu-support';"))
+      .toEqual([]);
+    // The exemption is the gate FOLDER, not the name — a sibling that
+    // merely starts with those letters still has to go through the chunk.
+    expect(outside("import { x } from './webgpu/gatekeeper';")).toHaveLength(1);
     expect(outside("const m = await import('./webgpu/boot-webgpu');")).toEqual([]);
     expect(outside("import { Scene } from 'three';")).toEqual([]);
     expect(violationsInSource("import { WebGPURenderer } from 'three/webgpu';", true)).toEqual([]);
