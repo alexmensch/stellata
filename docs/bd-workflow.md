@@ -2,12 +2,12 @@
 
 Long-form bd procedures that apply only when a specific trigger fires,
 kept out of bd memory so they don't cost context in every session. The
-memory that references each section carries the trigger; this file
-carries the steps.
+skill or memory that references each section carries the trigger; this
+file carries the steps.
 
 Everyday bd facts — persistence, concurrent-session ownership,
-dependency direction, multi-line writes — stay in the
-`stellata-bd-operations` memory, because they apply constantly.
+prioritisation, recovery — live in the `stellata-beads` skill; generic
+`bd` command syntax lives in the `beads` skill.
 
 ## Grooming
 
@@ -68,8 +68,8 @@ Categories:
    the epic and call out the design-gate child in its description.
 4. **Orphaned children of closed epics** — reparent to the surviving
    parent.
-5. **Re-prioritisation** against the `stellata-prioritization-framework`
-   memory. Research / "investigate" tasks sitting at P1 go to P2;
+5. **Re-prioritisation** against the priorities in the `stellata-beads`
+   skill. Research / "investigate" tasks sitting at P1 go to P2;
    code-quality children default to P3 unless coupled to in-flight
    P1/P2 work.
 6. **Defer candidates** — `bd defer <ids...>`. Recurring deferrals: the
@@ -149,15 +149,15 @@ migration epic shipped 21 unlabelled children.
 
 Split a bead rather than hedging: if the design half needs Fable and the
 implementation half does not, that is the decompose-along-a-seam signal
-from the bead-authoring-scope memory, not a case for both labels.
+from the bead-sizing rule in the `beads` skill, not a case for both labels.
 
 **Do not put either label on an epic.** Children inherit parent labels
 at creation, and a roster is almost always mixed — an epic-level label
 silently mislabels every child filed under it afterwards.
 
 **Converting a task to an epic: strip its model label in the same pass**,
-before filing any child. The `bead-authoring-scope` memory makes
-`--type=epic` the trigger once a bead acquires children; the label removal
+before filing any child. The `beads` skill makes `--type=epic` the
+trigger once a bead acquires children; the label removal
 belongs at that same moment. A labelled *task* is correct right up until
 it becomes a parent, at which point every child inherits its label
 silently — and an inherited-wrong label is worse than a missing one,

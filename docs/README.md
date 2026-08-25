@@ -25,9 +25,8 @@ bd-workflow.md          Long-form bd procedures that fire on a trigger
                         rather than in every session: memory + bead
                         grooming passes, the bug-sweep handoff format,
                         and label/metadata/external-ref conventions.
-                        Reached from the routing hooks in the matching
-                        bd memories; everyday bd facts stay in the
-                        stellata-bd-operations memory.
+                        Reached from the stellata-beads skill, which
+                        carries the everyday bd facts.
 extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         epic: per-tier data inventory (Local Volume →
                         CMB), cosmology bake, manifest schema, naming
