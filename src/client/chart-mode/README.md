@@ -25,8 +25,9 @@ src/client/chart-mode/
                                   optimised.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
                                   pixel-size mapping in chart mode.
-  chart-palette.ts                Authored ink values of the paper palette,
-                                  shared by the layers that swap into it
+  chart-palette.ts (+ test)       Authored ink values of the paper palette,
+                                  shared by the layers that swap into it,
+                                  plus the paper's own clear colour
                                   (§ Chart palette).
 ```
 
@@ -43,6 +44,24 @@ how the two drift apart.
 Colours reach the GPU through `setBuiltinChromeColour`'s **chart** variant:
 chart mode bypasses the HDR resolve, so the tone-map inverse the realistic
 path applies must not be (`../hdr/README.md` § Chrome).
+
+`CHART_PAPER` (`#f5f2ea`) is the paper — the canvas clear colour, set by the
+shell's `setMonochrome`. **It is the one chart colour no shader touches**, so
+it is also the only one that has to be authored in the space the renderer
+clears in, which `paperClearColour` is for. Two backends, two spaces: WebGL
+clears the canvas through `getUnlitUniformColorSpace`, which for a null
+target is `outputColorSpace` (sRGB), while three's WebGPU backend clears with
+the working-space components verbatim and never consults `outputColorSpace`
+at all. Reading the hex in the renderer's own output space satisfies both,
+because the WebGPU boot pins output to working (`../webgpu/README.md`
+§ Output colour space) — so a space-agnostic `new Color(CHART_PAPER)` is the
+linear decode, and the WebGPU clear wrote it out as a visibly dirtier
+`#e9e2d2`. `chart-palette.test.ts` pins the value each backend writes.
+
+Every other chart colour is safe by the same reasoning inverted: the ink,
+the isobar and the stipple all leave a shader that writes its uniform
+straight out with no encode on either backend, and the star disc emits
+0 / 1, which no transfer moves.
 
 `chart-mode.ts` toggles four things on entry:
 

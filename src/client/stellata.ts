@@ -73,6 +73,7 @@ import {
 import * as starPhysics from './camera/controls/star-physics';
 import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
 import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
+import { paperClearColour } from './chart-mode/chart-palette';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
@@ -2072,7 +2073,8 @@ export class Stellata implements FrameAnchor {
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
     this.webgpuStarLayer?.setMonochrome(on);
-    this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
+    this.renderer.setClearColor(
+      on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
     this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar

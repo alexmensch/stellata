@@ -20,9 +20,10 @@ src/client/webgpu/hdr/
                               ownership of the gates and the reduction.
   emitter-gates.ts            The statistic write mask as a uniform node
                               (§ The gate becomes the output struct).
-  mrt-material.ts             finishMrtMaterial — the single-output ↔
+  mrt-material.ts (+ test)    finishMrtMaterial — the single-output ↔
                               three-member-struct swap every ported
-                              emitter carries.
+                              emitter carries, and the two material flags
+                              that would demote the struct.
   summation-tsl.ts            TSL mirrors of stellata_summation and the
                               box downsample, over summation-pure's
                               constants.
@@ -105,3 +106,40 @@ target mode flips (`StarLayer.setMrtOutputs`) — chart mode and the
 single-attachment frame-cost lever both ride the same swap. The flips
 are rare (mode changes, not frames), so the pipeline rebuild is paid
 where the WebGL build re-linked programs anyway.
+
+### Two material flags silently demote the struct
+
+`premultipliedAlpha` and `fog` both make `NodeMaterial.setupOutput` **wrap**
+the fragment output node — `premultiplyAlpha(outputNode)` and a fog mix
+respectively. `buildCode` then tests `isOutputStructNode` on the *top-level*
+node, which the wrapper is not, so three declares a one-attachment
+`OutputStruct { color }` while the `OutputStructNode` underneath still emits
+its own `output.m0/m1/m2 = …` lines. The result is a WGSL parse error
+reading `struct member m0 not found`, an invalid pipeline, and a layer that
+**still draws and still sorts** while writing nothing — it names neither
+blending nor fog, which is what makes it expensive to find. Both cloud
+absorption pipelines shipped that way at `0it.6` and extincted nothing on a
+WebGPU boot.
+
+So `finishMrtMaterial` guards both, differently on purpose:
+
+- **`fog` is forced off**, not asserted. It defaults to **true** on every
+  `NodeMaterial` and is inert only while no scene carries a fog node, so an
+  assertion would fire on every ported material and a scene fog would break
+  all of them at once.
+- **`premultipliedAlpha` throws, and only on the way INTO struct mode.**
+  Chart mode legitimately sets it on the star materials, because three
+  refuses `MultiplyBlending` without it (`../../chart-mode/README.md`), and
+  that is safe precisely because chart unbinds the target — those materials
+  are on their single-output graph while the flag holds. The illegal state is
+  the flag *and* the struct, not the flag. It also pins an ordering the shell
+  already relies on: every layer's own chart swap runs before
+  `HdrPipeline.setChartMode` reaches `syncMode`.
+
+A material wanting premultiplied blending under the struct spells the
+factors out instead — `CustomBlending` with `OneFactor` /
+`OneMinusSrcAlphaFactor`, which is what the flag would have selected.
+Flipping the flag to `false` under `NormalBlending` is **not** the same
+thing: the colour result matches wherever `src.rgb` is 0, but the alpha
+channel becomes `a² + dst·(1−a)` instead of `a + dst·(1−a)`, and
+attachment 2's alpha is what the resolve composites against.

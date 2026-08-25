@@ -10,6 +10,7 @@ import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
 import type { DustParticleMaterials } from '../dust/dust-particle-layer';
+import type { CloudMaterials } from '../molecular-clouds/cloud-materials';
 import type { ShellMaterials } from '../fresnel-shell/fresnel-shell';
 import type {
   ProbeMaterials, SolarSystemMaterials,
@@ -123,6 +124,10 @@ export interface WebGpuSeam {
    *  uniform-node mirror, so the factory takes no uniform argument of its
    *  own (`dust/tsl-dust-materials.ts`). */
   readonly dustParticleMaterials: DustParticleMaterials;
+  /** The TSL molecular-cloud surfaces: one absorption material per cloud
+   *  (the traced / analytic tier is compile-time, so they cannot share) and
+   *  one rim shell for all of them. */
+  readonly cloudMaterials: CloudMaterials;
   /** Build the TSL reflected-glare billboard into the seam's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it

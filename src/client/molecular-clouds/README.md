@@ -47,8 +47,20 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 - `cloud-loader.ts` — `clouds.json` v3 fetch/decode.
 - `cloud-surfaces-loader.ts` — `cloud-surfaces.bin` fetch/decode
   (format: `scripts/cloud-surfaces/README.md`).
+- `cloud-materials.ts` (+ test) — the material seam: the neutral
+  `CloudMaterials` contract, the per-cloud `CloudAbsorptionSpec` both
+  factories consume, and the WebGL2 implementation (§ The material seam).
 - `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
-  density, absorption alpha). Vitest-pinned.
+  density, absorption alpha) plus the constants both shader backends read
+  (`TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
+  `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
+  `MARCH_MIN_CHORD_T`). Vitest-pinned.
+- `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
+  contour width, alpha floor, `MIN_FWIDTH`), for the same reason.
+- `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
+  those modules, since GLSL cannot import. The output dither's seed offset
+  and 8-bit divisor are pinned here too, against `../hdr/tonemap-pure.ts`,
+  which owns them for every layer that dithers.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
@@ -58,6 +70,28 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   stage is the shared `../fresnel-shell/fresnel-shell.vert.glsl`.
 - `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
   (§ Labels).
+
+## The material seam
+
+Both surfaces are built through a `CloudMaterials` factory rather than
+inline `ShaderMaterial`s, so a WebGPU boot swaps shaders without a second
+copy of any cloud logic — per-cloud transforms, declutter and chart
+gating, picking, labels and focus geometry all stay as they were. The
+WebGPU twin is `../webgpu/molecular-clouds/README.md`; `cloud-module.ts`
+passes `kindCtx.webgpu?.cloudMaterials` and adds the group to
+`(webgpu?.scene ?? scene)`.
+
+The layer hands each factory a `CloudAbsorptionSpec` rather than a
+`Cloud`: it already owns the brick texture's lifetime (`brickTextures` is
+what disposes it), and the tier — traced brick versus analytic Plummer —
+is a **compile-time** choice on both backends, a `USE_FIELD` define on one
+and two builder branches on the other. So the spec's values are seeded at
+construction rather than written over neutral defaults; a material built
+for the wrong `uUEnv` marches the wrong envelope from its first frame and
+no later write would fix it.
+
+One absorption material per cloud, one rim material for all of them —
+unchanged from the WebGL layout.
 
 ## Absorption render
 
@@ -75,7 +109,11 @@ and the dimming matches per-star extinction physics. Fallback clouds
 march the calibrated Plummer profile, clipped at the mass-budget
 envelope `u = uEnv`. The draw is **alpha-only premultiplied over** (rgb = 0
 under `premultipliedAlpha: true` + `NormalBlending`), i.e. the blend is
-`background × (1 − absorption)` — nothing is added. Per § 9.1 the ray
+`background × (1 − absorption)` — nothing is added. The TSL twin reaches the
+same blend through explicit `CustomBlending` factors instead, because the
+flag itself breaks an MRT output struct
+(`../webgpu/molecular-clouds/README.md`); the two factories are meant to
+differ there. Per § 9.1 the ray
 start carries static IGN jitter (never reseeded per frame) and the
 output carries ±0.5-LSB dither.
 

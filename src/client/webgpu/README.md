@@ -54,6 +54,9 @@ src/client/webgpu/
                                     its own README.
   dust/                             The dust-particle sprite, whose layer
                                     is shelved — its own README.
+  molecular-clouds/                 The cloud absorption raymarch (both
+                                    tiers) and the rim shell — its own
+                                    README.
   extinction/                       The camera→star dust raymarch and the
                                     per-star A_V cache that feeds the star
                                     vertex stage — its own README.
@@ -115,9 +118,11 @@ this boot as a single reversed-z bracket (K = 1 —
 rings, binary orbit paths, probe trails) do NOT draw yet — see the park
 table below.
 Both boundary shells draw too — the heliopause and the Local Bubble,
-through `fresnel-shell/` — as does the dust sprite (`dust/`), though its
-layer is shelved at strength 0 so nothing of it is visible without a
-console call.
+through `fresnel-shell/` — as do the molecular clouds
+(`molecular-clouds/`), whose absorption is the first ported layer that
+*dims* the target rather than adding to it. The dust sprite (`dust/`)
+is ported as well, though its layer is shelved at strength 0 so nothing
+of it is visible without a console call.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
@@ -226,6 +231,18 @@ output transform for their encode: they render linear-dark until their
 port child restores the encode on their own path (`Line2` / chrome
 parity). Do not "fix" a dark built-in by unpinning the output space —
 that re-breaks every ported emitter and re-prices the hidden pass.
+
+**The clear colour is the second casualty, and no shader can fix that one.**
+Chart mode's paper is a `setClearColor` hex, so nothing owns its transfer;
+worse, this backend clears with the *working*-space components and never
+reads `outputColorSpace` (`Background.update` → `_clearColor.getRGB()` at
+its default space), where WebGL passes the canvas clear through
+`getUnlitUniformColorSpace`. The paper is therefore authored in the space
+the renderer clears in — `chart-mode/chart-palette.ts`'s
+`paperClearColour`, which stays correct on both backends only because
+output is pinned to working here. It shipped as a dirtier `#e9e2d2` paper
+under `#renderer=webgpu` until 0it.6; a new clear colour owes the same
+treatment.
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,

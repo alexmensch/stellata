@@ -96,9 +96,11 @@ export function createCloudKindModule(): CloudKindModule {
       layer = new MolecularClouds(catalog, surfaces, {
         uFovYRad: kindCtx.sharedUniforms.uFovYRad,
         uViewport: kindCtx.sharedUniforms.uViewport,
-      });
+      }, kindCtx.webgpu?.cloudMaterials);
       layer.setMonochrome(kindCtx.getMonochrome());
-      kindCtx.scene.add(layer.group);
+      // Both cloud components have ported, so on a WebGPU boot they belong
+      // in the scene that renders.
+      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(layer.group);
       return {
         // Clouds sit at fixed positions; nothing here rides either clock.
         timeBehaviour: { kind: 'static' },
