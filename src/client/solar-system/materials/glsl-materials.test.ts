@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeHdrEmitterUniforms, pickHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../../webgpu/hdr/emitter-gates';
-import { buildSharedUniformNodes } from '../../webgpu/shared-uniform-nodes';
+import { buildSharedUniformNodes } from '../../webgpu/tsl/shared-uniform-nodes';
 import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
 } from '../../webgpu/solar-system/tsl-materials';

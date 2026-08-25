@@ -17,7 +17,7 @@ import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import {
   perceptualAppSizePx,
   perceptualDmEff,
-} from '../../star-pipeline/perceptual-disc-pure';
+} from '../../star-pipeline/perceptual-disc/perceptual-disc-pure';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Target screen-fill fraction of the viewport minor axis at the manual-

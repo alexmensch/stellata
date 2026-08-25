@@ -153,7 +153,7 @@ lives under:
 - **A `continue` becomes an `If` around the body.** A concise arrow
   returns its expression, so `() => Continue()` hands the jump back as
   the branch's output and the generator emits it twice
-  (`../README.md` § TSL test pattern).
+  (`../tsl/README.md` § TSL test pattern).
 - **WGSL's `discard` is not a return.** The invocation keeps running, so
   the atmosphere shell guards its whole march behind the same condition
   it discards on — otherwise every disc-bound ray would pay for a march

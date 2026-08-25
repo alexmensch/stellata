@@ -4,7 +4,7 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
-import { buildSharedUniformNodes } from '../shared-uniform-nodes';
+import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
 

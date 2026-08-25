@@ -8,8 +8,8 @@ import {
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
-import { attrFloat, attrVec2, attrVec3 } from '../tsl-shim';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
+import { attrFloat, attrVec2, attrVec3 } from '../tsl/tsl-shim';
 import type { ProbeMarkerNodes } from './uniform-nodes';
 
 export function buildProbeMarkerMaterial(

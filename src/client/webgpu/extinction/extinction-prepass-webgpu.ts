@@ -16,7 +16,7 @@ import {
   movedBeyondEpsilon,
   packPositionsRgba,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionTextureNodes } from './extinction-texture-nodes';
 
@@ -197,7 +197,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** The consumer's `uAvPrepassEnabled` gate is the one shared-map write
    *  this pass owns on either backend. `uAvPrepassTex` is a texture slot,
    *  which the node mirror does not carry — the star layer binds
-   *  `avTexture` directly (../README.md § Shared uniform nodes). */
+   *  `avTexture` directly (../tsl/README.md § Shared uniform nodes). */
   private syncConsumerUniforms(): void {
     this.uniforms.uAvPrepassEnabled.value = this.isActive() ? 1 : 0;
   }

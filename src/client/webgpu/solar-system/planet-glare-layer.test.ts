@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
-import { buildSharedUniformNodes } from '../shared-uniform-nodes';
+import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import type {
   PlanetGlareBuffers, PlanetGlareSources,
 } from '../../solar-system/planets/planet-body-field';

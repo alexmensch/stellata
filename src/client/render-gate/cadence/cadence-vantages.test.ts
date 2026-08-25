@@ -17,7 +17,7 @@ import {
 import type {
   ChartDiscUniforms,
   PerceptualDiscUniforms,
-} from '../../star-pipeline/perceptual-disc-uniforms';
+} from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { makeHdrEmitterUniforms, type HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor } from '../../hdr/exposure/exposure-epoch';

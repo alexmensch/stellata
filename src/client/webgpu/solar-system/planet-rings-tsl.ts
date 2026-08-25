@@ -15,7 +15,7 @@ import {
 import { maskedStatisticTexelTsl, occluderTexelTsl } from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
-import type { SharedUniformNodes } from '../shared-uniform-nodes';
+import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { lumaWeightsTsl, tonemapUnditheredTsl } from '../tonemap-tsl';
 import type { PlanetRingsNodes } from './uniform-nodes';
 

@@ -12,7 +12,7 @@ import {
 } from './loaders/dust-voxel-readback';
 import vertexShader from './star-pipeline/star.vert.glsl?raw';
 import fragmentShader from './star-pipeline/star.frag.glsl?raw';
-import perceptualDiscChunk from './star-pipeline/perceptual-disc.glsl?raw';
+import perceptualDiscChunk from './star-pipeline/perceptual-disc/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import { DustParticleLayer } from './dust/dust-particle-layer';
 
@@ -1476,7 +1476,7 @@ export class Stellata implements FrameAnchor {
     u.uDustEnabled.value = 1;
     // Texture slots are not part of the WebGPU uniform-node mirror, so the
     // volume reaches the TSL march by call rather than by map write
-    // (webgpu/README.md § Shared uniform nodes).
+    // (webgpu/tsl/README.md § Shared uniform nodes).
     this.webgpu?.setDustTexture(dust.texture);
     if (this.extinctionPrepass === null) {
       this.extinctionPrepass = this.webgpu !== null

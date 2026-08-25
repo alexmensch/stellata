@@ -1,6 +1,6 @@
 // Apparent-magnitude math the star and planet vertex shaders use: the
 // standard formula, the reflected-light model, and the mesh's disc surface
-// brightness. The disc-size kernel is ../star-pipeline/perceptual-disc-pure.ts.
+// brightness. The disc-size kernel is ../star-pipeline/perceptual-disc/perceptual-disc-pure.ts.
 
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 

@@ -7,7 +7,7 @@ import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import {
   AV_TEX_WIDTH, RECOMPUTE_EPSILON_PC, avTexHeight,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
-import { buildSharedUniformNodes } from '../shared-uniform-nodes';
+import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionTextureNodes } from './extinction-texture-nodes';
 

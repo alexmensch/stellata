@@ -8,7 +8,7 @@ import {
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { MAX_VERTEX_BUFFERS } from '../star-attribute-roster';
 import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
-import { buildSharedUniformNodes } from '../shared-uniform-nodes';
+import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { makeStarGeometrySources } from './star-sources-mock';
 

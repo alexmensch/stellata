@@ -1,10 +1,10 @@
 // TSL uniform-node mirror of the WebGL-side shared map
-// (../frame/shared-uniforms.ts). Reference/sync contract: README.md
+// (../../frame/shared-uniforms.ts). Reference/sync contract: README.md
 // § Shared uniform nodes.
 
 import { Vector4 } from 'three';
 import { uniform } from 'three/tsl';
-import type { SharedUniforms } from '../frame/shared-uniforms';
+import type { SharedUniforms } from '../../frame/shared-uniforms';
 
 /** Slots the registry does not mirror: a texture binds as a per-layer
  *  texture()/texture3D() node where the texture object lives — a uniform

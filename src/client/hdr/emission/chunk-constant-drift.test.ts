@@ -26,7 +26,7 @@ const read = (name: string) =>
 const tonemapChunk = read('../tonemap.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
-const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc.glsl');
+const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc/perceptual-disc.glsl');
 
 function lumaWeights(chunk: string): number[] {
   const m = chunk.match(

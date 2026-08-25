@@ -5,7 +5,7 @@ import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,
-} from '../star-pipeline/perceptual-disc-uniforms';
+} from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
 import { buildSharedUniforms } from './shared-uniforms';
 

@@ -78,7 +78,7 @@ path; nothing else reaches it.
 
 Both slots bind over a **1-texel placeholder** whose `.value` is swapped
 when the real texture arrives, because a uniform node cannot carry a
-nullable texture (`../README.md` § Shared uniform nodes). The
+nullable texture (`../tsl/README.md` § Shared uniform nodes). The
 placeholders match their targets' format and type exactly — the volume's
 comes from `createVoxelTexture`, the same factory the staging copies use
 — so a swap rebinds rather than rebuilding the pipeline. Neither slot is

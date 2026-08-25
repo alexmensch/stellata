@@ -14,7 +14,7 @@ import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import {
   reversedDepthOpaqueSort, reversedDepthTransparentSort,
 } from './reversed-depth-sort';
-import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './shared-uniform-nodes';
+import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './tsl/shared-uniform-nodes';
 import type {
   StarGeometrySources, WebGpuExtinctionPrepassSources, WebGpuSeam,
 } from './seam';

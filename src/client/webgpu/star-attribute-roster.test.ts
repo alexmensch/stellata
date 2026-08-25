@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { StarPipeline } from '../star-pipeline/star-pipeline';
 import { makeStarPipelineOptions } from '../star-pipeline/star-pipeline-mock';
-import { planVec4Packing } from './attribute-packing-pure';
+import { planVec4Packing } from './tsl/attribute-packing-pure';
 import {
   MAX_VERTEX_BUFFERS,
   STAR_DYNAMIC_SCALARS,

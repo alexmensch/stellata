@@ -32,7 +32,7 @@ bracket. Pass mechanics and the other member layers are
 - `star-local-cluster-pure.ts` — `isResolvedDiscStar` membership
   predicate + `discWindowPc` camera-window bound, shared with the
   core-mask gate via `RESOLVED_DISC_MIN_PX`. `PHYS_RATIO_THRESHOLD`
-  mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in `../perceptual-disc.glsl`
+  mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in `../perceptual-disc/perceptual-disc.glsl`
   (both star stages read it there), and `isDiscDominant` is
   that split as a predicate — the **one** CPU mirror of it. Membership
   above is `isDiscDominant` plus the size floor; the star pick gate

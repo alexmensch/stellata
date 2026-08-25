@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { buildSharedUniforms } from '../frame/shared-uniforms';
-import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
-import { STAR_RENDER_DEFAULTS } from '../filters/filter-state';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { buildSharedUniforms } from '../../frame/shared-uniforms';
+import { MIRROR_CAPACITY } from '../../star-pipeline/local-pass/star-mirror-slots';
+import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
 import { buildSharedUniformNodes, TEXTURE_SLOTS } from './shared-uniform-nodes';
 
 type SlotMap = Record<string, { value: unknown }>;

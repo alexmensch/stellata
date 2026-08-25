@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { HELIOPAUSE_EXTENT_PC } from '../heliopause/heliopause';
-import type { PerceptualDiscUniforms } from '../../star-pipeline/perceptual-disc-uniforms';
+import type { PerceptualDiscUniforms } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import {
   isFeatureLegible,
   pixelsPerRadianFromUniforms,

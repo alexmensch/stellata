@@ -7,7 +7,7 @@ import {
 import type {
   ChartDiscUniforms,
   PerceptualDiscUniforms,
-} from '../../star-pipeline/perceptual-disc-uniforms';
+} from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import type { PlanetSystem, Planet } from '../planet-system';

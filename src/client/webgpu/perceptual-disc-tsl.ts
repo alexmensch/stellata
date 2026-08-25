@@ -1,12 +1,12 @@
 // TSL mirror of the stellata_perceptual_disc chunk: dM soft knee, √Δm
 // disc size, super-Gaussian exponent + profile. Thin composition over
-// ../star-pipeline/perceptual-disc-pure.ts, which carries the math.
+// ../star-pipeline/perceptual-disc/perceptual-disc-pure.ts, which carries the math.
 
 import { Fn, exp, float, max, mix, pow, select, smoothstep, sqrt } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../star-pipeline/local-pass/star-local-cluster-pure';
-import { DM_KNEE_FLOOR, SIZE_SPAN_FLOOR } from '../star-pipeline/perceptual-disc-pure';
-import { KERNEL_FLUX_FIT } from '../star-pipeline/perceptual-disc-flux-pure';
+import { DM_KNEE_FLOOR, SIZE_SPAN_FLOOR } from '../star-pipeline/perceptual-disc/perceptual-disc-pure';
+import { KERNEL_FLUX_FIT } from '../star-pipeline/perceptual-disc/perceptual-disc-flux-pure';
 
 type NF = Node<'float'>;
 
@@ -35,7 +35,7 @@ export const perceptualDiscExponentTsl = /* @__PURE__ */ Fn(
 
 /** The kernel's area integral Φ(n) over its own quad — Horner over the
  *  same degree-4 fit the CPU mirror and the GLSL chunk run
- *  (../../star-pipeline/perceptual-disc-flux-pure.ts). */
+ *  (../../star-pipeline/perceptual-disc/perceptual-disc-flux-pure.ts). */
 export const perceptualDiscFluxIntegralTsl = /* @__PURE__ */ Fn(([n]: [NF]) => {
   const x = float(1.0).div(max(n, 1e-6));
   let acc: Node<'float'> = float(KERNEL_FLUX_FIT[KERNEL_FLUX_FIT.length - 1]);

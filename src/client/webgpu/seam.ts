@@ -16,7 +16,7 @@ import type {
   ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../star-pipeline/extinction/extinction-seam';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
-import type { SharedUniformNodes } from './shared-uniform-nodes';
+import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
 
 export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
@@ -85,7 +85,7 @@ export interface WebGpuSeam {
    *  it. One node, shared by object identity between the star vertex
    *  stage's fallback march and the extinction prepass, so the shell's
    *  single `attachDust` reaches both. Textures are not part of the
-   *  uniform-node mirror (README.md § Shared uniform nodes), which is why
+   *  uniform-node mirror (tsl/README.md § Shared uniform nodes), which is why
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;
   /** Build the per-star A_V cache on this backend. It points the star
