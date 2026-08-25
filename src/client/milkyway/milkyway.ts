@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAL_TO_ICRS, ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
+import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
@@ -9,9 +9,6 @@ import {
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
 import {
-  ANALYTICAL_DUST_NORM_PER_PC,
-  ANALYTICAL_DUST_SCALE_HEIGHT_PC,
-  ANALYTICAL_DUST_SCALE_LENGTH_PC,
   BULGE_AXIS_RATIO,
   BULGE_COLOR_RGB,
   BULGE_DENSITY0,
@@ -19,8 +16,6 @@ import {
   BULGE_HALF_THICKNESS_PC,
   BULGE_RADIUS_PC,
   BULGE_SCALE_RADIUS_PC,
-  DEFAULT_DUST_AV_PER_DENSITY_PC,
-  DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
   DISC_DENSITY0,
   DISC_HALF_THICKNESS_PC,
@@ -30,7 +25,6 @@ import {
   DISC_THICK_DENSITY_FRACTION,
   DISC_THICK_SCALE_HEIGHT_PC,
   DISC_TINT_RGB,
-  REDDENING_RGB,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineColumn,
@@ -123,38 +117,10 @@ export class MilkyWay {
 
   constructor(deps: MilkywayDeps, materials?: BandMaterials) {
     this.materials = materials ?? makeGlslBandMaterials({
-      shared: {
-        uDustAvPerDensityPc: { value: DEFAULT_DUST_AV_PER_DENSITY_PC },
-        uDustEnabled: { value: 0 },
-        uExtinctionStrength: { value: DEFAULT_EXTINCTION_STRENGTH },
-        uAnalyticalDustScaleLengthPc: { value: ANALYTICAL_DUST_SCALE_LENGTH_PC },
-        uAnalyticalDustScaleHeightPc: { value: ANALYTICAL_DUST_SCALE_HEIGHT_PC },
-        uAnalyticalDustNormPerPc: { value: ANALYTICAL_DUST_NORM_PER_PC },
-        uReddeningRGB: { value: new THREE.Vector3(...REDDENING_RGB) },
-        uWorldOffset: { value: new THREE.Vector3() },
-        uIcrsToGal: { value: ICRS_TO_GAL_M3 },
-        uGalCenter: { value: GALACTIC_CENTRE_PC.clone() },
-        uR0Pc: { value: R0_PC },
-        uGlowMagOffset: { value: SB_ZERO_POINT },
-        uChartIsobar: { value: 0 },
-        uChartInkColor: { value: new THREE.Color(0x000000) },
-      },
       hdr: deps.hdr,
       uLimitMag: deps.uLimitMag,
     });
     this.shared = this.materials.shared;
-    // A TSL node starts on its declared default, so seed every shared slot
-    // from the authored constant on whichever backend booted.
-    this.shared.uDustAvPerDensityPc.value = DEFAULT_DUST_AV_PER_DENSITY_PC;
-    this.shared.uExtinctionStrength.value = DEFAULT_EXTINCTION_STRENGTH;
-    this.shared.uAnalyticalDustScaleLengthPc.value = ANALYTICAL_DUST_SCALE_LENGTH_PC;
-    this.shared.uAnalyticalDustScaleHeightPc.value = ANALYTICAL_DUST_SCALE_HEIGHT_PC;
-    this.shared.uAnalyticalDustNormPerPc.value = ANALYTICAL_DUST_NORM_PER_PC;
-    (this.shared.uReddeningRGB.value as THREE.Vector3).set(...REDDENING_RGB);
-    (this.shared.uIcrsToGal.value as THREE.Matrix3).copy(ICRS_TO_GAL_M3);
-    (this.shared.uGalCenter.value as THREE.Vector3).copy(GALACTIC_CENTRE_PC);
-    this.shared.uR0Pc.value = R0_PC;
-    this.shared.uGlowMagOffset.value = SB_ZERO_POINT;
 
     // --- Disc -----------------------------------------------------------
     const discGeom = new THREE.SphereGeometry(1, 96, 48);

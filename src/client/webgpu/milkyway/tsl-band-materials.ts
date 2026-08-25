@@ -1,8 +1,8 @@
 // The WebGPU implementation of the band material seam
 // (../../milkyway/README.md § The material seam).
 
-import type {
-  BandMaterials, BandSharedSlots,
+import {
+  seedBandSharedSlots, type BandMaterials, type BandSharedSlots,
 } from '../../milkyway/band-materials';
 import type { EmitterMaterial } from '../../solar-system/materials/emitter-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
@@ -26,6 +26,7 @@ export interface TslBandConfig {
 export function makeTslBandMaterials(cfg: TslBandConfig): BandMaterials {
   const sharedNodes = bandSharedUniformNodes();
   const sharedSlots = uniformSlotsOf(sharedNodes) as unknown as BandSharedSlots;
+  seedBandSharedSlots(sharedSlots);
 
   return {
     shared: sharedSlots,
