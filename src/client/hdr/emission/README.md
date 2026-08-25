@@ -205,9 +205,11 @@ and off-target the undithered operator. `stellataEmitNothing` is the miss
 case. Both take the attachments as `out` params, making "attachments 1 and 2
 have no default, so every branch must write them" one decision rather than
 one per early return. `milkyway.frag.glsl` keeps its own magnitude step
-because the chart isobar contours surface brightness against
+for the chart isobar, which would contour surface brightness against
 `stellataExtendedThresholdSb`, the inverse of the same pair — so contour
-and emission cannot disagree about where threshold is.
+and emission could not disagree about where threshold is. **That contour
+has never drawn** (`../../milkyway/README.md` § Chart mode + warp), so the
+magnitude step is the branch's cost and nothing else's.
 
 **Off-target there is no attachment 2 and no pass, so the anchor is gone
 entirely** and both emitters fall back to `Ω_px`. One rule rather than a

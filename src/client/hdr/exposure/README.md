@@ -76,10 +76,10 @@ function of filter state alone.
 
 | uniform | value | who reads it |
 | --- | --- | --- |
-| `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, the MW chart isobar |
+| `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, and the MW chart isobar — which has never drawn (`../../milkyway/README.md` § Chart mode + warp), so it is not a live reader |
 | `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test (§ What "visible" means to a pick path) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
-| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain, and the chart isobar |
+| `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain (and the never-drawn MW chart isobar) |
 
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
@@ -94,8 +94,9 @@ so only an instrument change may write it. The derivation is
 point-source pair ships an anchor *and* a trimmed edge; the extended side
 ships only the anchor, so the `S_lim` that `stellataExtendedThresholdSb`
 recovers is always the untrimmed 22.0. Harmless while the only consumer is
-the chart isobar, which inherits no exposure state — but a scene-mode
-isobar would need `S_lim + MAG_PER_STOP·ev`, not this.
+the MW chart isobar, which inherits no exposure state **and has never
+drawn at all** (`../../milkyway/README.md` § Chart mode + warp) — but a
+scene-mode isobar would need `S_lim + MAG_PER_STOP·ev`, not this.
 
 **The taper anchors on `uThresholdMag`, the cull on `uCullMag`.** A
 source at the threshold carries exactly `L_THRESH` at any trim, which is

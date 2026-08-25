@@ -50,9 +50,15 @@ rebase, the debug levers or the chart handoff. The WebGPU twin is
 frame, the surface-brightness anchor and the chart isobar are held by
 reference between the disc and the bulge so one write reaches both draws —
 and on WebGPU those are TSL nodes, so the layer has to write through the
-factory's objects rather than its own. `MilkyWay.shared` is that handle,
-and the constructor seeds every slot from its authored constant right
-after construction, since a node starts on its declared default.
+factory's objects rather than its own. `MilkyWay.shared` is that handle.
+
+**`seedBandSharedSlots` is the single writer of the authored defaults**,
+and each factory calls it on the record it just built — a TSL
+`uniform()` node starts on a declared literal, so without it the WebGPU
+band marches a placeholder dust model. The layer therefore holds no copy
+of the constants, and the two backends cannot start on different ones.
+Add a slot to `BandSharedSlots` and `band-materials.test.ts` fails until
+it is seeded.
 
 `uIsBulge` does not survive the crossing: it is a uniform the GLSL
 branches on, and a builder flag on the TSL side.
@@ -172,9 +178,10 @@ over the patch; one shared anchor is what makes the Galaxy from outside
 comparable with anything beside it.
 
 `uLimitMag` still arrives by reference from the star pipeline's shared
-uniform map, but **only the chart-mode isobar reads it** — the band's
-brightness is photometric now, so the exposure model reaches it through
-`uExposure` instead (`../hdr/exposure/README.md`). The band therefore
+uniform map, but **nothing the band draws reads it**: its only consumer is
+the chart-mode isobar branch, which has never rendered (§ Chart mode +
+warp). The band's brightness is photometric, so the exposure model reaches
+it through `uExposure` instead (`../hdr/exposure/README.md`). The band therefore
 brightens and dims in lockstep with the star field: a deeper instrument,
 the automatic adaptation cut and the manual EV trim all move it and the
 stars together, by construction.
@@ -301,11 +308,19 @@ are renderer-local with small magnitudes.
 
 ## Chart mode + warp
 
-**Chart mode currently renders no Milky Way at all.** `setIsobar(true)`
-sets `uChartIsobar = 1`, switches both materials to `NormalBlending`, and
-then hides both meshes — so the fragment shader's `fwidth`-normalised
-contour branch is unreachable. The branch is written and the uniforms are
-plumbed; only the draw is suppressed, pending the treatment.
+**Chart mode renders no Milky Way at all, and the isobar contour has
+NEVER been drawn — not on either backend, not in any release.** Read that
+before believing anything else here or in `../webgpu/milkyway/README.md`
+about it: the branch reads as shipped behaviour in both shaders and in
+several uniform tables, and session after session has taken it for a live
+feature. It is not one, and never has been.
+
+`setIsobar(true)` sets `uChartIsobar = 1`, switches both materials to
+`NormalBlending`, and then **hides both meshes** — so the fragment
+shader's `fwidth`-normalised contour branch is unreachable by
+construction. The branch is written and the uniforms are plumbed; no draw
+survives to reach them. Drawing it is intended work, not deferred work
+that once ran.
 
 **Its physics is settled.** The contour is evaluated on **surface
 brightness `S`** — no Ω_px term, so the line is FOV- and

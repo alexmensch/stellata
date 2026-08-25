@@ -1,10 +1,17 @@
 # Milky Way band on WebGPU
 
 The TSL half of the band: a log-distributed march through each proxy mesh
-with running per-channel dust extinction, plus the chart-mode isobar
-contour. The WebGL2 shaders (`../../milkyway/`) stay the shipped renderer
-and the semantic reference; the density profiles, the ρ₀ solve and the
-calibration are not re-decided here.
+with running per-channel dust extinction. The WebGL2 shaders
+(`../../milkyway/`) stay the shipped renderer and the semantic reference;
+the density profiles, the ρ₀ solve and the calibration are not re-decided
+here.
+
+**The chart isobar contour has never drawn, on either backend.** Chart
+mode hides both meshes, so the branch is unreachable
+(`../../milkyway/README.md` § Chart mode + warp). It is transcribed here
+because the two shaders are maintained as one artefact — not because
+anything renders it. Treat every mention of it below as describing dead
+code kept warm for a future treatment.
 
 **It ports as a material swap.** The layer keeps its two proxy meshes,
 the per-frame galactic-centre rebase, every debug-panel lever and the
@@ -32,7 +39,8 @@ other** — one slider write reaches both draws. So
 `bandSharedUniformNodes()` is called once in the factory and both
 components take the same node objects. A factory per component would give
 two independent dust models that happened to agree until the first slider
-move, which is why `WebGpuSeam.bandMaterials` says to read it once.
+move — so `bootWebGpu` caches this factory rather than rebuilding it per
+read, unlike the per-consumer ones beside it (`../README.md`).
 
 **These are deliberately NOT the shared uniform-node mirror's**, even
 where a name collides — `uDustEnabled`, `uExtinctionStrength`,
@@ -50,11 +58,25 @@ exposure controller and the HDR pipeline.
 ## Seeding, because a node starts on its declared default
 
 A `uniform()` node is constructed with a literal, not with the layer's
-authored constant, so the layer seeds every shared slot straight after
-construction. On the WebGL path that write is a no-op over the value the
-factory already set; on this one it is what puts the dust model in the
-shader at all. A slot added to `bandSharedUniformNodes` without a matching
-seed line renders with the placeholder.
+authored constant, so the placeholders in `bandSharedUniformNodes` are
+never what a shader should march. **The factory seeds them**, through
+`seedBandSharedSlots` (`../../milkyway/band-materials.ts`) — the one
+writer of the authored values, called by the WebGL factory too, so the
+two backends cannot start on different constants and the layer holds no
+copy of the list. A slot added to `BandSharedSlots` without a line there
+fails `band-materials.test.ts`.
+
+## The chart toggle rebuilds the pipeline; the clouds' does not
+
+`setIsobar` swaps `material.blending` and sets `needsUpdate`, which on this
+backend is a WGSL recompile of the march — blend state is baked into a
+WebGPU pipeline, so the swap cannot land without one. The sibling cloud
+layer deliberately refused that trade and put its chart flip in a uniform
+branch instead (`../molecular-clouds/README.md` § One rim graph, both
+modes). The band diverges because its uniform branch is the *dead* one:
+the recompile is what the blend swap costs, and it lands on chart **exit**,
+when the meshes unhide. Unmeasured, and cheap to make moot — the flip has
+nothing to show either way while the contour does not draw.
 
 ## `uIsBulge` becomes compile-time
 
@@ -66,17 +88,25 @@ fixed for the material's life, which it already was.
 
 ## Three outcomes, none of which can be a return
 
-The fragment resolves to no coverage, the isobar contour, or the emission,
-and WGSL has no value-carrying return to bail with. So coverage is one
-predicate and the three outcomes are nested selects.
+The fragment resolves to no coverage, the isobar contour (dead — § above),
+or the emission, and WGSL has no value-carrying return to bail with. So
+coverage is one predicate and the three outcomes are nested selects.
 
-**The isobar is chart ink, not light**, so it claims neither the statistic
-nor the diffuse attachment — the selects for those two exclude the isobar
-branch as well as the uncovered one.
+**The isobar would be chart ink, not light**, so it claims neither the
+statistic nor the diffuse attachment — the selects for those two exclude
+the isobar branch as well as the uncovered one. That exclusion is
+transcription of the GLSL's intent, not an observed behaviour: nothing
+draws under `uChartIsobar = 1`.
 
 **`sb` is computed outside the branch**, exactly as the GLSL comments say,
 so the screen-space derivatives stay in uniform control flow.
 `fwidth` has no TSL node and is `|dFdx| + |dFdy|` by definition.
+
+**Both arms of every `select` are evaluated** — that is what `select` is,
+in TSL and in WGSL alike — so the emitter tail and the (dead) isobar path
+are both live on every covered fragment, where the GLSL returned out of
+them. Named here because it is a real cost the crossing introduces, and
+an unmeasured one.
 
 ## What is NOT ported
 

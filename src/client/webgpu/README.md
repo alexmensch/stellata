@@ -59,8 +59,9 @@ src/client/webgpu/
                                     README.
   local-group/                      The two instanced volumetric emission
                                     raymarches — its own README.
-  milkyway/                         The band's disc + bulge march and the
-                                    chart isobar — its own README.
+  milkyway/                         The band's disc + bulge march (and a
+                                    never-drawn chart isobar branch) — its
+                                    own README.
   extended-emitter-tsl.ts           The write tail every extended-source
                                     emitter shares: column → gain → all
                                     three attachments, and the inline
