@@ -23,6 +23,14 @@ export const AV_PER_DENSITY = 2.742;
  *  `uEnv`. */
 export const ENVELOPE_TAPER_FRAC = 0.85;
 
+/** Step floor for the screen-adaptive budget: below this the jittered
+ *  lattice reads as banding rather than grain. */
+export const MARCH_MIN_STEPS = 4;
+
+/** Shortest chord worth marching, in unit-sphere t. Doubles as the divisor
+ *  floor that keeps the step count finite on a grazing ray. */
+export const MARCH_MIN_CHORD_T = 1e-6;
+
 function smoothstep(e0: number, e1: number, x: number): number {
   const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1);
   return t * t * (3 - 2 * t);

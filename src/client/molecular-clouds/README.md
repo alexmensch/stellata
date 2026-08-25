@@ -53,11 +53,14 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 - `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
   density, absorption alpha) plus the constants both shader backends read
   (`TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
-  `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`). Vitest-pinned.
+  `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
+  `MARCH_MIN_CHORD_T`). Vitest-pinned.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
-  contour width, alpha floor), for the same reason.
+  contour width, alpha floor, `MIN_FWIDTH`), for the same reason.
 - `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
-  those modules, since GLSL cannot import.
+  those modules, since GLSL cannot import. The output dither's seed offset
+  and 8-bit divisor are pinned here too, against `../hdr/tonemap-pure.ts`,
+  which owns them for every layer that dithers.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.

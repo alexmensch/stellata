@@ -17,3 +17,7 @@ export const CONTOUR_WIDTH = 2.0;
 
 /** Below this the stippled contour contributes nothing worth a draw. */
 export const STIPPLE_ALPHA_FLOOR = 0.003;
+
+/** Floor on `fwidth(n·v)`. A facet with zero screen-space gradient would
+ *  give a zero-width band and drop the contour entirely. */
+export const MIN_FWIDTH = 1e-5;
