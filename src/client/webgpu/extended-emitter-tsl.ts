@@ -2,7 +2,7 @@
 // extended-source emitter shares — column → gain → all three attachments,
 // and the inline operator off-target. ../hdr/emission/README.md § Unit.
 
-import { Fn, dot, min, select, vec3, vec4 } from 'three/tsl';
+import { Fn, If, dot, min, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { LUMA_CEIL } from '../hdr/emission/emission-pure';
 import { LUMA_WEIGHTS } from '../hdr/tonemap-pure';
@@ -62,8 +62,13 @@ export interface ExtendedEmitterInputs {
  * layers stack several fragments on one pixel and the dither keys on the
  * fragment position alone, so it would bias rather than cancel.
  *
- * The GLSL's early `return` on-target becomes a `select`: WGSL has no
- * value-carrying return out of a branch, and both arms are cheap.
+ * The GLSL's early `return` on-target becomes a branch rather than a
+ * `select`, because a select is a value pick and evaluates both operands:
+ * on-target the fragment would pay the whole operator — a `log2`, the
+ * toe's `pow`, the desaturation's `exp` and the sRGB encode's per-channel
+ * `pow` — to discard it. `hdrTarget` is a uniform, so this is uniform
+ * control flow, coherent across the draw. The var's initial value IS the
+ * on-target write, which is why there is no else.
  */
 export const emitExtendedSourceTsl = (i: ExtendedEmitterInputs): EmitterOutputs => {
   const physicalL = dot(i.column, vec3(...LUMA_WEIGHTS)).mul(
@@ -74,15 +79,14 @@ export const emitExtendedSourceTsl = (i: ExtendedEmitterInputs): EmitterOutputs 
   const diffuse = vec4(
     gainedColumnTsl(i.column, i.exposure, i.magPerArcsec2, i.omegaSummationArcsec2), 1.0);
 
-  const inline = vec4(tonemapUnditheredTsl(
-    gainedColumnTsl(i.column, i.exposure, i.magPerArcsec2, i.omegaPxArcsec2),
-    i.whitePoint, i.highlightDesat), 1.0);
+  const colour = vec4(0.0).toVar();
+  If(i.hdrTarget.lessThanEqual(0.5), () => {
+    colour.assign(vec4(tonemapUnditheredTsl(
+      gainedColumnTsl(i.column, i.exposure, i.magPerArcsec2, i.omegaPxArcsec2),
+      i.whitePoint, i.highlightDesat), 1.0));
+  });
 
-  return {
-    colour: select(i.hdrTarget.greaterThan(0.5), vec4(0.0), inline),
-    statistic: statisticTexelTsl(physicalL, 0.0, 1.0),
-    diffuse,
-  };
+  return { colour, statistic: statisticTexelTsl(physicalL, 0.0, 1.0), diffuse };
 };
 
 /** Every attachment cleared for a fragment the volume does not cover.
