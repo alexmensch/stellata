@@ -112,7 +112,7 @@ describe('memory-inventory / unpricedFields', () => {
       positions: new Float32Array(4),
       names: new Map([[1, 'Sol']]),
       constellations: [{ id: 'ori' }],
-      count: 313000,
+      count: 329657,
       solIndex: -1,
     })).toEqual(['names', 'constellations']);
   });

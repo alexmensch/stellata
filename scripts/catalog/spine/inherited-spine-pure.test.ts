@@ -90,7 +90,7 @@ describe('serializeSpine / parseSpineTsv', () => {
     expect(parseSpineTsv(SPINE_COLUMNS.join('\t'))).toEqual([]);
   });
 
-  it('walks lazily — readStars must not hold 313k rows at once', () => {
+  it('walks lazily — readStars must not hold all 313,257 rows at once', () => {
     const text = serializeSpine([row({ hip: '1' }), row({ hip: '2' })]);
     const walk = iterSpineTsv(text);
     expect(walk.next().value?.hip).toBe('1');

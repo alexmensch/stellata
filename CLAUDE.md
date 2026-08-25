@@ -7,8 +7,8 @@ restated here; this file carries what is specific to stellata.
 
 ## What this is
 
-Browser-based interactive 3D star catalog viewer. Loads the ~313k-star
-AT-HYG v3.3 catalog, cross-matched with GCVS variables, rendered on
+Browser-based interactive 3D star catalog viewer. Loads the ~330k-star
+catalog derived from AT-HYG v3.3 + GCVS variables, rendered on
 the GPU as instanced quads with three-pass shading (depth-mask /
 opaque disc for close stars / additive point-glow for distant).
 Variables pulsate; binaries with Kepler elements orbit live. Ships
