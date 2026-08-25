@@ -72,6 +72,7 @@ function baseCounts(): BuildCounts {
     spectralSimbadBySourceId: 279000,
     spectralSimbadByHip: 700,
     spectralSimbadByTyc: 300,
+    spectralSimbadByGj: 14,
     spectralByGspspec: 25000,
     spectralFallback: 8000,
     ciGaiaRelation: 280000,

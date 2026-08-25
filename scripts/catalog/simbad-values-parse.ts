@@ -3,6 +3,9 @@
 // SIMBAD values index.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
+import { normaliseGjKey } from './catalog-pure';
+
+export { normaliseGjKey };
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
@@ -43,22 +46,6 @@ export function emptySimbadValueIndex(): SimbadValueIndex {
   };
 }
 
-/** The designation part of a spine `gl` cell or a SIMBAD `gj` id, folded to
- *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
- *  sides spell the same star differently — the spine carries both catalogue
- *  words and SIMBAD stores its own spacing — so both go through this before
- *  they meet. It folds strictly more than `gl_suffix` in
- *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
- *  when composing the request: inner spacing and case are folded here because
- *  this is where the two spellings actually have to match. */
-export function normaliseGjKey(cell: string | null): string | null {
-  const text = (cell ?? '').trim();
-  if (!text) return null;
-  const [word, ...rest] = text.split(' ');
-  const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
-  const key = suffix.replace(/\s+/g, '').toUpperCase();
-  return key.length === 0 ? null : key;
-}
 
 /** SIMBAD's `rvz_radvel` is a radial velocity only where `rvz_type` reads
  *  `v`. A `z` row carries a redshift-derived quantity, which on a catalogue

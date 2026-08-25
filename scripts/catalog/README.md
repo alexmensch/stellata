@@ -70,8 +70,11 @@ scripts/catalog/
                                   each cross-match pass in order, then
                                   writes the chunked binary + manifests.
   catalog-pure.ts (+ test)        Single source of truth for the v9 binary
-                                  layout, override math, and the spectral
-                                  resolver. Pure; imported by every
+                                  layout, override math, the spectral
+                                  resolver and its four-namespace SIMBAD
+                                  index, and `normaliseGjKey` — the GJ
+                                  spelling fold both SIMBAD parsers key
+                                  through. Pure; imported by every
                                   subfolder and by src/client/loaders/.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
                                   every namespace the pull keyed on, plus the

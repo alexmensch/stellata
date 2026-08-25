@@ -330,7 +330,7 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 ## Physical radius and spectral parsing
 
 `resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a six-tier
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
 priority chain:
 
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
@@ -366,20 +366,30 @@ priority chain:
    cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
    widening carries its own veto) — so the risk this tier carries is a
    system-blend spectral type on an unvetoed pair, never a wrong star.
+   Reaches **1,940** records.
+4. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
+   (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
+   key. It closes the ladder against `lookupSimbadValues`, which walks the
+   same four namespaces; it is last because the pull's `gj` block is small
+   (3,727 keys against TYC's 317,487) and reaches only **13** records the
+   TYC tier does not. Unlike TYC, a GJ number carries its component letter,
+   so it names the component rather than the system.
+
    Which namespace found each SIMBAD-tier row is pinned as
-   `spectralSimbadBySourceId` / `ByHip` / `ByTyc`, summing to
-   `spectralBySimbad`.
-4. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+   `spectralSimbadBySourceId` / `ByHip` / `ByTyc` / `ByGj`, summing to
+   `spectralBySimbad` — so a tier that stops firing shows up as its own
+   count rather than as noise inside a 280k total.
+5. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
-5. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
+6. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
    `lumClass=255` for rows no upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts: ~89% SIMBAD / ~11% GSP-Spec / ~0.4% fallback
-against the v3.3 classic-IDs subset); it is still used as a last-resort
-hover-display fallback when both upstream sources are blank.
+classification (build-counts: ~89.5% SIMBAD / ~10.1% GSP-Spec / ~0.3%
+fallback against the v3.3 classic-IDs subset); it is still used as a
+last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
 

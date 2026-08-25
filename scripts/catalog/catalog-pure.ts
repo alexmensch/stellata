@@ -249,7 +249,7 @@ export function classifyFromGspspec(esphs: string | null | undefined): SpectralI
 /** Which identifier namespace found the row a SIMBAD spectral tier used.
  *  Pinned as a partition in build-counts: the three tiers share one
  *  `source`, but only the TYC one is a designation join. */
-export const SPECTRAL_SIMBAD_KEY_VALUES = ['source_id', 'hip', 'tyc'] as const;
+export const SPECTRAL_SIMBAD_KEY_VALUES = ['source_id', 'hip', 'tyc', 'gj'] as const;
 export type SpectralSimbadKey = (typeof SPECTRAL_SIMBAD_KEY_VALUES)[number];
 
 interface SimbadSpectralMatch {
@@ -298,6 +298,7 @@ export function resolveSpectralInfo(
   gaiaSourceId: string | null,
   hip: number | null,
   tyc: string | null,
+  gl: string | null,
   simbad: SimbadSpectralIndex,
   apsisMap: Map<string, ApsisRow>,
 ): {
@@ -321,6 +322,9 @@ export function resolveSpectralInfo(
   if (byHip) return byHip;
   const byTyc = tyc ? matchSimbadRow(simbad.byTyc.get(tyc), 'tyc') : null;
   if (byTyc) return byTyc;
+  const gjKey = normaliseGjKey(gl);
+  const byGj = gjKey ? matchSimbadRow(simbad.byGj.get(gjKey), 'gj') : null;
+  if (byGj) return byGj;
   if (gaiaSourceId) {
     const apsis = apsisMap.get(gaiaSourceId);
     if (apsis?.spectraltypeEsphs) {
@@ -2115,6 +2119,23 @@ export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
  *  (separate column — never bleeds into sp_type). Both carried for
  *  display + future filtering, but the spectral resolver consumes only
  *  spType. */
+/** The designation part of a spine `gl` cell or a SIMBAD `gj` id, folded to
+ *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
+ *  sides spell the same star differently — the spine carries both catalogue
+ *  words and SIMBAD stores its own spacing — so both go through this before
+ *  they meet. It folds strictly more than `gl_suffix` in
+ *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
+ *  when composing the request: inner spacing and case are folded here because
+ *  this is where the two spellings actually have to match. */
+export function normaliseGjKey(cell: string | null): string | null {
+  const text = (cell ?? '').trim();
+  if (!text) return null;
+  const [word, ...rest] = text.split(' ');
+  const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
+  const key = suffix.replace(/\s+/g, '').toUpperCase();
+  return key.length === 0 ? null : key;
+}
+
 export interface SimbadSpectralRow {
   spType: string | null;
   spQual: string | null;
@@ -2126,15 +2147,20 @@ export interface SimbadSpectralRow {
  *  Gaia-saturated bright stars (Algol, Alsephina, ~700 others) whose SIMBAD
  *  row has a valid sp_type but no source_id; `byTyc` the Tycho designation,
  *  which is the only namespace reaching an object SIMBAD holds no Gaia id
- *  for at all. Same ladder `lookupSimbadValues` walks. */
+ *  for at all; `byGj` the Gliese designation, folded through
+ *  `normaliseGjKey` so both sides spell it alike. Same ladder
+ *  `lookupSimbadValues` walks. */
 export interface SimbadSpectralIndex {
   bySource: Map<string, SimbadSpectralRow>;
   byHip: Map<number, SimbadSpectralRow>;
   byTyc: Map<string, SimbadSpectralRow>;
+  byGj: Map<string, SimbadSpectralRow>;
 }
 
 export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
-  return { bySource: new Map(), byHip: new Map(), byTyc: new Map() };
+  return {
+    bySource: new Map(), byHip: new Map(), byTyc: new Map(), byGj: new Map(),
+  };
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
@@ -2148,12 +2174,14 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const bySource = new Map<string, SimbadSpectralRow>();
   const byHip = new Map<number, SimbadSpectralRow>();
   const byTyc = new Map<string, SimbadSpectralRow>();
+  const byGj = new Map<string, SimbadSpectralRow>();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return { bySource, byHip, byTyc };
+  if (lines.length === 0) return { bySource, byHip, byTyc, byGj };
   const header = lines[0].split('\t').map((h) => h.trim());
   const idIdx = header.indexOf('source_id');
   const hipIdx = header.indexOf('hip');
   const tycIdx = header.indexOf('tyc');
+  const gjIdx = header.indexOf('gj');
   const spTypeIdx = header.indexOf('sp_type');
   const spQualIdx = header.indexOf('sp_qual');
   const otypeIdx = header.indexOf('otype');
@@ -2173,7 +2201,8 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     const sourceId = (cells[idIdx] ?? '').trim();
     const hipRaw = hipIdx >= 0 ? (cells[hipIdx] ?? '').trim() : '';
     const tyc = tycIdx >= 0 ? (cells[tycIdx] ?? '').trim() : '';
-    if (!sourceId && !hipRaw && !tyc) continue;
+    const gj = gjIdx >= 0 ? normaliseGjKey(cells[gjIdx] ?? null) : null;
+    if (!sourceId && !hipRaw && !tyc && !gj) continue;
     const spType = (cells[spTypeIdx] ?? '').trim() || null;
     const spQual = spQualIdx >= 0 ? ((cells[spQualIdx] ?? '').trim() || null) : null;
     const otype = otypeIdx >= 0 ? ((cells[otypeIdx] ?? '').trim() || null) : null;
@@ -2184,8 +2213,9 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
       byHip.set(hipNum, row);
     }
     if (tyc && !byTyc.has(tyc)) byTyc.set(tyc, row);
+    if (gj && !byGj.has(gj)) byGj.set(gj, row);
   }
-  return { bySource, byHip, byTyc };
+  return { bySource, byHip, byTyc, byGj };
 }
 
 /** Apparent magnitude → absolute magnitude at given distance.

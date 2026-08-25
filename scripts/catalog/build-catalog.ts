@@ -280,6 +280,7 @@ async function main() {
     spectralSimbadBySourceId: 0,
     spectralSimbadByHip: 0,
     spectralSimbadByTyc: 0,
+    spectralSimbadByGj: 0,
     spectralByGspspec: 0,
     spectralFallback: 0,
     ciGaiaRelation: 0,
@@ -488,6 +489,7 @@ async function main() {
   counts.spectralSimbadBySourceId = stats.spectralSimbadKey.source_id;
   counts.spectralSimbadByHip = stats.spectralSimbadKey.hip;
   counts.spectralSimbadByTyc = stats.spectralSimbadKey.tyc;
+  counts.spectralSimbadByGj = stats.spectralSimbadKey.gj;
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
@@ -528,7 +530,7 @@ async function main() {
     `  spectral classification: curated ${stats.spectralByCurated}, ` +
       `SIMBAD ${stats.spectralBySimbad} (${simbadPct}%; by source_id ` +
       `${stats.spectralSimbadKey.source_id}, HIP ${stats.spectralSimbadKey.hip}, ` +
-      `TYC ${stats.spectralSimbadKey.tyc}), ` +
+      `TYC ${stats.spectralSimbadKey.tyc}, GJ ${stats.spectralSimbadKey.gj}), ` +
       `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
       `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
   );
@@ -550,7 +552,7 @@ async function main() {
       backfillPrimaryIdentifiers(multiplesRows, stars, (star) => {
         if (star.spectClass !== UNKNOWN_CLASS_IDX) return;
         const spectral = resolveSpectralInfo(
-          star.gaiaSourceId, star.hip, null, simbadSpectral, apsisMap,
+          star.gaiaSourceId, star.hip, null, star.gl, simbadSpectral, apsisMap,
         );
         if (spectral.info.classIdx === UNKNOWN_CLASS_IDX) return;
         const apsisTeff = resolveApsisTeff(

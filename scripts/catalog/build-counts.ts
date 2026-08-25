@@ -189,6 +189,7 @@ export interface BuildCounts extends LabelMergeCounts {
   spectralSimbadBySourceId: number;
   spectralSimbadByHip: number;
   spectralSimbadByTyc: number;
+  spectralSimbadByGj: number;
   /** Records that fell through to Gaia DR3 GSP-Spec's
    *  `spectraltype_esphs` enum — second-tier letter-only classification. */
   spectralByGspspec: number;
