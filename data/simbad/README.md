@@ -10,10 +10,9 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~21 MB, LFS. Per-source sp_type / sp_qual /
-                           sp_bibcode / otype + HIP / Gaia DR3 IDs. The
-                           script also emits TYC / GJ; the committed file
-                           gains those two columns on its next run.
+simbad_sptype.tsv          ~22 MB, LFS. 330,141 rows. Per-source sp_type /
+                           sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
+                           TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~2.7 MB, LFS. 11,037 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the § 5 value cohort — see § The values pull.
@@ -114,7 +113,9 @@ term — **no refresh script reads the AT-HYG CSV** (`data/athyg/README.md`
 § Consumed by). The spine's `gaia_source_id` is the resolved, gate-passed
 binding rather than a raw cell, so request and record build name the same
 sources by construction; rebasing the sp_type set dropped 3,172 source_ids
-the CSV walk over-pulled and gained 193 (measured 2026-08-15).
+the CSV walk over-pulled and gained 193 (measured 2026-08-15). Realised on
+the 2026-08-25 re-pull: the committed file's `source_id`-keyed rows fell
+325,479 → 323,228, and `simbadSptypeEntries` in build-counts with them.
 
 The no-Gaia tier (1,371 rows) falls through **HIP → TYC → GJ**: 1,317
 carry a HIP, 41 only a TYC, 12 only a GJ, and Sol carries none.
@@ -138,12 +139,47 @@ why a surviving binding can never be a false veto:
 `scripts/refresh/simbad/README.md` § The TYC widening carries its own
 veto.
 
-Over the rows the committed sp_type pull left with no `sp_type` at all
-(34,849 of them carrying a TYC), the widening resolves 34,842 and
-**2,882 — 8.3% — come back with a spectral type**; the rest displays as
-unknown, which is the § 5 disposition for the spect residual. That gain
-lands on the sp_type pull's next run, not in the committed TSV, and the
-veto applies there too.
+**The sp_type pull has taken the widening** (re-pulled 2026-08-25;
+`simbad_sptype.tsv` is 330,141 rows against the previous 329,268, gains
+`tyc` / `gj` cross-ID columns, and reads 86.1% `sp_type`-filled). It had
+34,849 no-`sp_type` rows carrying a TYC; what the widening reaches and what
+reaches a RECORD are different numbers, and only the second one matters:
+
+| | |
+|---|---|
+| `spectralBySimbad` | 278,326 → **280,495** |
+| … by `source_id` | 277,014 → 277,048 |
+| … by HIP | 1,312 → 1,494 |
+| … by **TYC** | 0 → **1,940** |
+| … by **GJ** | 0 → **13** |
+| `spectralByGspspec` | 33,535 → 31,714 |
+| `spectralFallback` | 1,394 → **1,046** |
+
+The +2,169 into SIMBAD is exactly the 1,821 leaving GSP-Spec plus the 348
+leaving unknown, so no record changed tier for any other reason. 348 fewer
+stars display as unknown. The TYC and GJ rows only reach records because
+the resolver gained matching tiers in the same change — the pull's cross-ID
+columns are inert without them (`scripts/catalog/parse/README.md`
+§ Physical radius and spectral parsing).
+
+**34 records lost a spectral type**, every one of them via a vanished HIP
+key, and the pattern is uniform: the object that owned that HIP in the old
+pull carried **no `source_id`** (`HD 1209`, `[R78b] 16`, `HD 6194`, …).
+The AT-HYG-derived request set pulled those objects; the spine-derived one
+asks under the record's own resolved `source_id` and gets SIMBAD's
+Gaia-keyed object for the same star, which carries no `sp_type`. SIMBAD
+holds both, and the HIP index is first-write-wins, so which one supplied
+the type was never a decision the pipeline made. Reaching both would mean
+the request unioning namespaces instead of picking one — the same shape as
+`stellata-3bsf.30`.
+
+**7 spectral strings changed** on records that kept a type, all through
+`source_id`, all upstream re-typings rather than re-bindings: `G0V:`→`G1V`,
+`B5`→`B2V`, `G5V`→`G5`, `G0/2`→`F9`, `G0IV-V`→`G0V`, `K7`→`M0`,
+`M7`→`M7/10`. The fifth is 26 Draconis, whose `known-stars.tsv` row pinned
+the old string and is re-pinned in the same change with the reason recorded
+— SIMBAD is a living database with no citable release, so a re-typing is
+the expected cost of the tier, not a regression.
 
 ## Consumed by
 

@@ -495,7 +495,8 @@ export function readStars(
     const spectral = isSol
       ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
       : resolveSpectralInfo(
-          gaiaSourceId, hip, nonEmpty(row.tyc), simbadSpectral, apsisMap,
+          gaiaSourceId, hip, nonEmpty(row.tyc), nonEmpty(row.gl),
+          simbadSpectral, apsisMap,
         );
     const spectInfo = spectral.info;
     if (spectral.source === 'curated') spectralByCurated++;
