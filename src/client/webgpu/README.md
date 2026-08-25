@@ -11,8 +11,13 @@ reaches the WebGL2 bundle (§ Import boundary).
 
 ```
 src/client/webgpu/
-  renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 from the
-                                    URL fragment.
+  renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
+                                    #webgpu-gate=<verdict> dev switch from
+                                    the URL fragment.
+  gate/                             The user-facing "requires WebGPU" page,
+                                    landed dark until the cutover. Outside
+                                    the import boundary by necessity — its
+                                    own README.
   seam.ts                           WebGpuSeam — the type-only contract the
                                     integration shell holds when the flag
                                     is on. StellataRenderer union type.
@@ -107,8 +112,10 @@ Consequences that make the A/B smoke work:
 
 If WebGPU is unavailable or `renderer.init()` rejects, `bootWebGpu`
 returns null and `main.ts` falls back to the shipped WebGL2 boot with a
-console warning — the flag is a dev seam until the cutover; the
-user-facing "requires WebGPU" gate page is a separate concern.
+console warning — the flag is a dev seam until the cutover. The
+user-facing "requires WebGPU" gate page is built and lands dark in
+`gate/`, reachable only through `#webgpu-gate=<verdict>`; `0it.13` is what
+puts it on a real capability verdict.
 
 ## What the flag boots today
 
@@ -316,7 +323,7 @@ carries the argument, what it gives up, and the fallbacks).
 
 **The contract is satisfied by removing writes, never by adding draws.**
 A port child that answers "one program per pass" with a second draw over
-the same 313k instances has made the migration cost more per frame than
+the same 330k instances has made the migration cost more per frame than
 the renderer it replaces — which is the one outcome the port is not
 allowed to have. Draw count per subsystem is part of parity, alongside
 what the pixels look like.

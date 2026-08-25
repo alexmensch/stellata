@@ -211,7 +211,7 @@ Ordered by impact. Each item shipped as a separate commit.
 (`shouldEnableCoreMask`) and the star local-depth membership scan
 both need "which stars sit
 within `dThresh` pc of the camera?" The original implementation
-scanned all 313k positions every frame in every mode.
+scanned all 330k positions every frame in every mode.
 
 Build-time setup: sort the indices by distance from Sol once; store
 the sorted index and parallel distances as `Uint32Array` +
@@ -222,7 +222,7 @@ for `[camDistFromSol − dThresh, camDistFromSol + dThresh]`, and
 walk only that window. Triangle-inequality guarantees no candidate
 falls outside it.
 
-Typical window: 50–500 candidates instead of 313k.
+Typical window: 50–500 candidates instead of 330k.
 
 ### Chart-labels: scratch `Vector3` for projection
 

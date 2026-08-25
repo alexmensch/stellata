@@ -241,7 +241,7 @@ read shapes exist because the sinks differ, not the bytes: the AoS reader
 yields one `CatalogRecord` object per call, while the SoA loader fills
 parallel typed arrays and does so **column-at-a-time** — one kind
 dispatch per column, then a tight constant-getter loop, which decodes the
-313k-record catalog ~35% faster than a per-record pass over every field.
+330k-record catalog ~35% faster than a per-record pass over every field.
 `scripts/catalog/catalog-pure.test.ts` § record reader surface pins the
 two read shapes against each other and against the writer. Free flag bits today are `0x40`, `0x80` (see
 `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on

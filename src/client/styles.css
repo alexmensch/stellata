@@ -1857,3 +1857,56 @@ body.monochrome .modal-shortcuts kbd {
   width: calc(var(--calib-swatch) * 1.45);
   aspect-ratio: 13 / 9;
 }
+
+/* Requires-WebGPU gate — the takeover a browser without WebGPU gets
+ * instead of a dead canvas (src/client/webgpu/gate/README.md). Above the
+ * loading screen's z-index 20: it replaces that screen mid-boot. */
+.webgpu-gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  z-index: 40;
+  padding: 24px;
+}
+.webgpu-gate-inner {
+  width: min(560px, 88vw);
+}
+.webgpu-gate-label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-bottom: 18px;
+}
+.webgpu-gate-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--fg);
+  margin: 0 0 14px;
+}
+.webgpu-gate-lead {
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.webgpu-gate-action {
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+.webgpu-gate-detail {
+  color: var(--fg-dim);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+.webgpu-gate-dated {
+  color: var(--fg-dim);
+  font-size: 11px;
+  opacity: 0.7;
+  margin: 0;
+}

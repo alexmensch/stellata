@@ -13,7 +13,7 @@ The flowchart renders natively in GitHub's markdown viewer.
 flowchart TD
 
   subgraph SRC["Published astronomical datasets — frozen local copies"]
-    ATHYG["AT-HYG star catalogue<br/>the base list: ~313,000 stars with<br/>names and identifiers"]
+    ATHYG["AT-HYG star catalogue<br/>the base list: 313,257 rows with<br/>names and identifiers"]
     GAIA["Gaia DR3<br/>positions · parallaxes · motions ·<br/>brightness (G, BP, RP) ·<br/>binary-orbit fits · temperatures"]
     HIP["Hipparcos<br/>astrometry and brightness for stars<br/>too bright for Gaia<br/>+ historical double-star annotations"]
     BJ["Bailer-Jones et al.<br/>probabilistic distances from Gaia parallaxes"]

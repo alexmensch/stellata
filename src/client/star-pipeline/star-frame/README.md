@@ -55,7 +55,7 @@ re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
 passed in by the shell, which is the only thing that knows the
 attribute and the lazily-attached binary field.
 
-**One rewrite per frame.** Rewriting the 313k-star local buffer costs
+**One rewrite per frame.** Rewriting the 330k-star local buffer costs
 a full pass plus a GPU re-upload, and two of them can be provoked in
 the same frame: a fast time-scrub crosses an epoch bucket while a hard
 focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch

@@ -562,7 +562,7 @@ export function buildBoundaryPolylines(edges: IauBoundaryEdges): BoundaryPolylin
 
 /** Nearest-boundary distance for a B1875 position. Same answer as
  *  `angularDistanceToNearestEdgeDeg`, which scans all 781 arcs with 2–4 trig
- *  calls each — a catalogue sweep is ~313k × 781 of those. */
+ *  calls each — a catalogue sweep is ~330k × 781 of those. */
 export interface NearestEdgeIndex {
   distanceDeg(b1875: SkyPosition): number;
 }

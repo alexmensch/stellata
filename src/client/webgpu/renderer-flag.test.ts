@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRendererFlag } from './renderer-flag';
+import { parseGateOverride, parseRendererFlag } from './renderer-flag';
 
 describe('parseRendererFlag', () => {
   it('reads #renderer=webgpu', () => {
@@ -23,5 +23,32 @@ describe('parseRendererFlag', () => {
 
   it('finds the flag among other fragment params', () => {
     expect(parseRendererFlag('#a=b&renderer=webgpu')).toBe('webgpu');
+  });
+});
+
+describe('parseGateOverride', () => {
+  // The value picks which gate page, because the two verdicts give
+  // different advice and a supporting browser fails neither probe.
+  it('selects the verdict to show', () => {
+    expect(parseGateOverride('#webgpu-gate=no-api')).toBe('no-api');
+    expect(parseGateOverride('#webgpu-gate=no-adapter')).toBe('no-adapter');
+    expect(parseGateOverride('#renderer=webgpu&webgpu-gate=no-adapter')).toBe('no-adapter');
+  });
+
+  it('keeps force as the spelling for the commoner verdict', () => {
+    expect(parseGateOverride('#webgpu-gate=force')).toBe('no-api');
+  });
+
+  // A bare or mistyped fragment must not blank the app.
+  it('ignores every other form', () => {
+    for (const h of ['', '#', '#webgpu-gate', '#webgpu-gate=', '#webgpu-gate=1',
+      '#webgpu-gate=true', '#webgpu-gate=supported', '#renderer=webgpu']) {
+      expect(parseGateOverride(h)).toBeNull();
+    }
+  });
+
+  it('leaves the renderer flag alone', () => {
+    expect(parseRendererFlag('#webgpu-gate=force')).toBeNull();
+    expect(parseRendererFlag('#renderer=webgpu&webgpu-gate=force')).toBe('webgpu');
   });
 });

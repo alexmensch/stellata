@@ -11,6 +11,31 @@ export interface GpuFrameResolver {
   resolveTimestampsAsync(): Promise<number | undefined>;
 }
 
+/** `backend` is `unknown` because the trim reaches past what @types/three
+ *  declares. Narrow every level at runtime: a three bump that moves the
+ *  shape must leave the trim inert, never throw inside the render loop. */
+export interface TimestampPoolHost {
+  backend?: unknown;
+}
+
+function clearable(v: unknown): { clear(): void } | null {
+  return typeof (v as { clear?: unknown } | null)?.clear === 'function'
+    ? (v as { clear(): void })
+    : null;
+}
+
+/** Drop the uids a resolve just recorded — three's own Map never shrinks.
+ *  Why clearing is safe, and what it is worth: README.md § The resolved-uid
+ *  trim. */
+export function dropResolvedTimestamps(host: TimestampPoolHost): void {
+  const pools = (host.backend as { timestampQueryPool?: unknown } | null | undefined)
+    ?.timestampQueryPool;
+  if (typeof pools !== 'object' || pools === null) return;
+  for (const pool of Object.values(pools as Record<string, unknown>)) {
+    clearable((pool as { timestamps?: unknown } | null)?.timestamps)?.clear();
+  }
+}
+
 let resolveInFlight = false;
 let impossibleSeen = false;
 
@@ -61,7 +86,7 @@ function publishResolved(ms: number | undefined): void {
  * would only trip its own `warnOnce`.
  */
 export function resolveAndPublishGpuFrame(
-  renderer: GpuFrameResolver,
+  renderer: GpuFrameResolver & TimestampPoolHost,
   timestampsLive: boolean,
 ): void {
   if (!timestampsLive) return;
@@ -73,7 +98,12 @@ export function resolveAndPublishGpuFrame(
     // A lost device rejects, and three has already logged it. The flag must
     // clear regardless, or timing stops for the tab's lifetime.
     .catch(() => {})
-    .finally(() => { resolveInFlight = false; });
+    .finally(() => {
+      resolveInFlight = false;
+      // Only after the resolve settles: trimming earlier would race the
+      // write three does inside resolveQueriesAsync.
+      dropResolvedTimestamps(renderer);
+    });
 }
 
 /** Subscribe to those samples; the return value unsubscribes. Several

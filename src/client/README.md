@@ -88,7 +88,10 @@ themselves.
   `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`). Flag on
   renders the seam's own scene — layers accumulate there as port children
   land — while every CPU subsystem runs identically; flag off leaves the
-  shipped boot untouched.
+  shipped boot untouched. `webgpu/gate/` is the exception to the folder's
+  dynamic-import boundary: the "requires WebGPU" page has to render where
+  WebGPU does not exist, so `main.ts` imports it statically. It lands
+  dark — only `#webgpu-gate=<verdict>` reaches it until the cutover.
 
 ## Public surface of `Stellata`
 

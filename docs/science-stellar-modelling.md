@@ -326,7 +326,7 @@ the geometric-occlusion field, not intrinsic pulsation.
 
 GCVS rows without a parseable period, or with zero amplitude, are
 skipped at build time — that excludes constant stars, supernovae, and
-irregular variables. Typical match rate: ~4.1k of ~313k catalog stars.
+irregular variables. Typical match rate: ~4.1k of ~330k catalog stars.
 
 Implementation: `src/client/star-pipeline/star.vert.glsl` (the `iPuls`
 attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side

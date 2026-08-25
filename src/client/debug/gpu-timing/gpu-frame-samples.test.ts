@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  dropResolvedTimestamps,
   gpuFrameSamplesAreSound,
   onGpuFrameSample,
   publishGpuFrameSample,
@@ -212,5 +213,78 @@ describe('a duration no frame can have is dropped, not recorded', () => {
 
     off();
     warn.mockRestore();
+  });
+});
+
+/** three's pools, as far as the trim reaches into them. */
+function fakePools(perPool: number) {
+  const make = (): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < perPool; i++) m.set(`ctx:f${i}`, i);
+    return m;
+  };
+  return {
+    backend: {
+      timestampQueryPool: {
+        render: { timestamps: make() },
+        compute: { timestamps: make() },
+      },
+    },
+  };
+}
+
+describe('the resolved-uid trim keeps three\'s timestamp Map bounded', () => {
+  // three writes <contextUid>:f<frameId> on every resolve and never clears,
+  // and the keys are unique per frame — so without this the Map grows for
+  // the tab's whole life, one entry per render pass per frame.
+  it('clears every pool the backend carries', () => {
+    const host = fakePools(3);
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(3);
+    dropResolvedTimestamps(host);
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(0);
+    expect(host.backend.timestampQueryPool.compute.timestamps.size).toBe(0);
+  });
+
+  it('stays inert wherever a three bump moves the shape', () => {
+    // Reaching past three's public surface, so every level has to be
+    // survivable: a throw here would land inside the render loop.
+    expect(() => dropResolvedTimestamps({})).not.toThrow();
+    expect(() => dropResolvedTimestamps({ backend: null })).not.toThrow();
+    expect(() => dropResolvedTimestamps({ backend: {} })).not.toThrow();
+    expect(() => dropResolvedTimestamps(
+      { backend: { timestampQueryPool: null } })).not.toThrow();
+    // The pair three seeds before either pool is allocated.
+    expect(() => dropResolvedTimestamps(
+      { backend: { timestampQueryPool: { render: null, compute: null } } })).not.toThrow();
+    expect(() => dropResolvedTimestamps(
+      { backend: { timestampQueryPool: { render: {} } } })).not.toThrow();
+  });
+
+  it('runs after the resolve settles, on the success and the failure path', async () => {
+    const host = fakePools(2);
+    const renderer = { ...fakeResolver(), ...host };
+
+    resolveAndPublishGpuFrame(renderer, true);
+    // Still populated while the resolve is in flight: trimming early would
+    // race the write three does inside resolveQueriesAsync.
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(2);
+    renderer.settle(0, 4);
+    await flush();
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(0);
+
+    host.backend.timestampQueryPool.render.timestamps.set('ctx:f9', 9);
+    resolveAndPublishGpuFrame(renderer, true);
+    renderer.fail(1);
+    await flush();
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(0);
+  });
+
+  it('does not reach the backend at all while the probe says timestamps are off', () => {
+    const host = fakePools(2);
+    const renderer = { ...fakeResolver(), ...host };
+    resolveAndPublishGpuFrame(renderer, false);
+    // No resolve ran, so nothing was consumed and nothing is dropped.
+    expect(renderer.calls()).toBe(0);
+    expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(2);
   });
 });

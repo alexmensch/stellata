@@ -96,6 +96,42 @@ and consumers ask that rather than assuming the flag took: with no
 timestamps the headline stays `submit` and a pricing sweep degrades to
 `raf-delta` instead of claiming a clock it does not have.
 
+### The resolved duration is quantised — a floor under every differential
+
+**Chrome does not hand back a continuous number.** Measured 2026-08-25 on
+an M4 over a `#renderer=webgpu` boot: across **310 distinct resolved frame
+durations**, every one is an exact multiple of **65,536 ns** (2¹⁶,
+≈ 65.5 µs), and their greatest common divisor is exactly that. The browser
+is quantising the timestamp; it is not a property of the work measured.
+
+**Differencing `gpu.frame` is the only thing that prices a pass (above),
+so this is the floor that method runs into.** A differential under
+≈ 65.5 µs is a quantisation bucket rather than a measurement: two
+configurations whose true costs differ by less than one bucket can report
+byte-identical durations, and a pass that prices at "exactly zero cheaper"
+may simply be sub-quantum. Price passes that clear the floor by a healthy
+multiple, or accumulate across many frames — never read a single small
+differential as a result.
+
+It also explains a reading that looks like a broken timer: two resolves
+320 frames apart returning the same duration to nine significant figures
+(12.648447999999998 against 12.648448000000002 — one integer nanosecond
+delta, differing only in float64 noise). Steady-state work landing in the
+same bucket, not a frozen or cached clock.
+
+**Why 310 samples settles it.** A common divisor is strictly an upper
+bound: if the real step were half as large, the durations would still all
+divide by it. But each varied sample then has to land on a 65,536
+boundary by luck, so 310 of them agreeing is that coin flip won 309 times
+over. Reproduce by collecting unique durations across a minute of
+animating scene and taking their greatest common divisor in nanoseconds —
+more samples can only ever lower the answer, and these did not.
+
+Measured on Chrome/ANGLE-Metal. Safari exposes no GPU timer at all, so
+there is nothing to compare against there, and this figure should be
+re-derived per browser and per GPU rather than assumed. The standing
+record is `stellata-8cg.1`'s notes.
+
 ### A granted feature can still resolve garbage
 
 **Chrome grants `timestamp-query` and then resolves nonsense.** Measured on
@@ -170,6 +206,37 @@ the newest frame's total — earlier frames' passes are dropped, not summed
 into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
+
+### The resolved-uid trim — three's Map never shrinks on its own
+
+`TimestampQueryPool.timestamps` is a `Map<uid, ms>` three writes on every
+resolve and **never clears, trims or deletes** — verified in 0.185.1 across
+both implementations, where the base class only ever `get`s and `has`es it.
+Keys are `<contextUid>:f<frameId>`, unique per frame, so nothing overwrites
+an entry: the Map grows for the tab's whole life at one entry per render
+pass per frame. That is ~216k entries an hour at 60 fps for a *single*
+pass, and the post-cutover frame submits several.
+
+`dropResolvedTimestamps` clears it once each resolve settles, on the
+success and the failure path alike. Clearing is safe because **nothing
+reads it**: `resolveQueriesAsync` computes its total from the mapped result
+buffer and its own offset list, never from the Map, and the only readers
+are `Backend.getTimestamp` / `hasTimestampQuery` — which three itself never
+calls and stellata never calls either, since there are no per-pass `gpu.*`
+rows on this backend by design (above).
+
+Two properties the tests pin. It runs **after** the resolve settles, never
+before — trimming early would race the write three does inside
+`resolveQueriesAsync`. And it is **inert at every level** where a three
+bump might move the shape, because it reaches past the public surface and a
+throw would land inside the render loop.
+
+This is a stopgap: the durable fix is upstream, clearing resolved uids at
+the end of `_resolveQueries` so every WebGPU app benefits and we carry no
+divergence. Deliberately **not** folded into `patches/three@0.185.1.patch`
+— that patch exists to be deleted at the three bump, and a second hunk
+would make the bump re-verify an unrelated fix. Re-check this section
+against the three version in `package.json` when that lands.
 
 ### Watching the raw sample stream
 
