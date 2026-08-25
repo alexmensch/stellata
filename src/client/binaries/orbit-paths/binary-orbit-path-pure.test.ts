@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AU_PC } from '../util/astronomy-constants';
-import { FLAG_HAS_ORBIT, NO_PARENT, type BinariesData } from './binaries-loader';
-import { type OrbitalElements } from './binary-orbit-pure';
-import { makeRelation } from './binary-relation-fixture';
+import { AU_PC } from '../../util/astronomy-constants';
+import { FLAG_HAS_ORBIT, NO_PARENT, type BinariesData } from '../binaries-loader';
+import { type OrbitalElements } from '../binary-orbit-pure';
+import { makeRelation } from '../binary-relation-fixture';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';
 
 // Outer pair 0↔2 (relation 0) has real Kepler elements; inner pair 0↔1

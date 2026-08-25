@@ -155,7 +155,7 @@ import type {
   ExtinctionPrepassSeam,
 } from './star-pipeline/extinction/extinction-seam';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
+import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {
