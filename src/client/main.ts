@@ -65,8 +65,9 @@ async function main() {
   // what puts it on a real capability verdict rather than this override
   // (webgpu/gate/README.md § Lands dark). Ahead of the catalog fetch so a
   // gated browser downloads nothing it cannot use.
-  if (parseGateOverride(location.hash) === 'force') {
-    showWebGpuGate('no-api');
+  const forcedGate = parseGateOverride(location.hash);
+  if (forcedGate !== null) {
+    showWebGpuGate(forcedGate);
     return;
   }
 

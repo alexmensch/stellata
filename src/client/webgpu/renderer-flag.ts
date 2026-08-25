@@ -1,5 +1,8 @@
-// Parse the dual-boot renderer flag from the URL fragment — the one URL
-// slot the address-bar writers preserve verbatim (see README.md).
+// Parse the dual-boot renderer flag and the gate override from the URL
+// fragment — the one URL slot the address-bar writers preserve verbatim
+// (see README.md).
+
+import type { GateVerdict } from './gate/gate-advice-pure';
 
 export type RendererKind = 'webgl2' | 'webgpu';
 
@@ -9,16 +12,14 @@ export function parseRendererFlag(hash: string): RendererKind | null {
 }
 
 /**
- * `#webgpu-gate=force` — the dev switch that shows the requires-WebGPU
- * page on a browser that supports WebGPU perfectly well.
- *
- * It exists because the page otherwise has no way to be seen before the
- * cutover: WebGL2 is still the default, so no real user reaches it, and a
- * developer on a supporting browser never fails the capability probe. The
- * value is spelled out rather than accepting a bare `#webgpu-gate` so a
- * stray fragment cannot blank the app (`gate/README.md` § Lands dark).
+ * `#webgpu-gate=<verdict>` — the dev switch that shows the requires-WebGPU
+ * page on a browser that supports WebGPU perfectly well. The value picks
+ * WHICH page: the two verdicts give different advice, and a supporting
+ * browser fails neither probe (`gate/README.md` § Lands dark). `force`
+ * stays as the spelling for the commoner of the two.
  */
-export function parseGateOverride(hash: string): 'force' | null {
+export function parseGateOverride(hash: string): GateVerdict | null {
   const v = new URLSearchParams(hash.replace(/^#/, '')).get('webgpu-gate');
-  return v === 'force' ? 'force' : null;
+  if (v === 'no-api' || v === 'no-adapter') return v;
+  return v === 'force' ? 'no-api' : null;
 }

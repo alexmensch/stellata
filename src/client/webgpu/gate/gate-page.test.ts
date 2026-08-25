@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { GATE_ELEMENT_ID, SUPPORT_AUDIT_LABEL, showWebGpuGate } from './gate-page';
+import { GATE_ELEMENT_ID, GATE_HIDES, SUPPORT_AUDIT_LABEL, showWebGpuGate } from './gate-page';
 import type { UaHints } from './gate-advice-pure';
 
 /** Element-shaped stub — the suite runs in vitest's 'node' environment,
@@ -64,7 +66,7 @@ describe('the requires-WebGPU gate page', () => {
     expect(gate.text()).toContain(SUPPORT_AUDIT_LABEL);
   });
 
-  // Both verdicts land on the same page; only the lead sentence differs,
+  // Both verdicts land on the same page; the lead sentence differs,
   // because "supports WebGPU but no device" is a different thing to fix.
   it('separates the two failures in the lead copy', () => {
     const noApi = showWebGpuGate('no-api', hints, fakeDoc().doc) as unknown as ElStub;
@@ -72,6 +74,17 @@ describe('the requires-WebGPU gate page', () => {
     expect(noApi.text()).toContain('doesn’t support');
     expect(noAdapter.text()).toContain('couldn’t start a graphics device');
     expect(noAdapter.dataset.verdict).toBe('no-adapter');
+  });
+
+  // The lead is not enough on its own: the action line is the largest
+  // thing on the page, so a no-adapter reader seeing "update to 26" is
+  // told to install what they already have. The verdict has to reach the
+  // advice, not just the lead (README.md § What a no-adapter reader).
+  it('does not tell a no-adapter reader to install the thing they have', () => {
+    const noApi = showWebGpuGate('no-api', hints, fakeDoc().doc) as unknown as ElStub;
+    const noAdapter = showWebGpuGate('no-adapter', hints, fakeDoc().doc) as unknown as ElStub;
+    expect(noApi.text()).toContain('Update to iOS or iPadOS 26');
+    expect(noAdapter.text()).not.toMatch(/Update to iOS|version 26|Update Safari/);
   });
 
   // A caller that races — a boot failure plus an explicit force — must not
@@ -91,6 +104,16 @@ describe('the requires-WebGPU gate page', () => {
     showWebGpuGate('no-api', hints, doc);
     expect(canvas.style.display).toBe('none');
     expect(topbar.style.display).toBe('none');
+  });
+
+  // The stub above answers any selector, so the selector STRING is what
+  // needs pinning: an id renamed in the markup would hide nothing and no
+  // assertion above would notice.
+  it('hides ids that actually exist in the markup', () => {
+    const html = readFileSync(join(__dirname, '../../index.html'), 'utf8');
+    const ids = [...GATE_HIDES.matchAll(/#([\w-]+)/g)].map((m) => m[1]);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) expect(html).toContain(`id="${id}"`);
   });
 
   it('sets the accessible role and label', () => {

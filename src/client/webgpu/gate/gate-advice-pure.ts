@@ -1,6 +1,11 @@
 // Which fix to name on the gate page. Pure, so the platform table is
-// testable without a browser. See README.md § UA picks the wording, never
-// the verdict.
+// testable without a browser. See README.md § UA picks the wording and
+// § What a no-adapter reader is told.
+
+import type { WebGpuVerdict } from './webgpu-support';
+
+/** The two verdicts that can reach a page; `supported` never does. */
+export type GateVerdict = Exclude<WebGpuVerdict, 'supported'>;
 
 /** What the page can read off the browser without asking it to render.
  *  Deliberately a plain record: the caller pulls these off `navigator`,
@@ -24,64 +29,109 @@ export interface GateAdvice {
   detail: string;
 }
 
-/**
- * The support audit this table encodes is **dated** and the page says so,
- * because a browser the table calls unsupported may have shipped WebGPU
- * since. Nothing here is a guarantee — the verdict came from
- * `detectWebGpuSupport`, and this only picks how to word the fix.
- * README.md § UA picks the wording carries the two subtle branches.
- */
-export function adviceFor(hints: UaHints): GateAdvice {
+type Copy = Pick<GateAdvice, 'action' | 'detail'>;
+
+function platformFor(hints: UaHints): GateAdvice['platform'] {
   const ua = hints.userAgent;
   const isIpadOs = /Macintosh/.test(ua) && hints.maxTouchPoints > 1;
+  if (/iPhone|iPad|iPod/.test(ua) || isIpadOs) return 'ios';
+  if (/Firefox\//.test(ua)) return 'firefox';
+  if (/Android/.test(ua)) return 'android';
+  if (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return 'macos-safari';
+  return 'other';
+}
 
-  if (/iPhone|iPad|iPod/.test(ua) || isIpadOs) {
-    return {
-      platform: 'ios',
-      action: 'Update to iOS or iPadOS 26, then reload.',
-      detail: 'Safari has WebGPU switched on by default from version 26 (September 2025).',
-    };
-  }
-
-  // Firefox before its own platform's cutoff — checked ahead of macOS so a
-  // Mac Firefox gets the Firefox line rather than "use Chrome".
-  if (/Firefox\//.test(ua)) {
-    return {
-      platform: 'firefox',
-      action: 'Update Firefox, or open this page in Chrome or Edge.',
-      detail: 'Firefox has WebGPU on Windows from 141 and on Apple-silicon macOS from '
-        + 'about 145. On Linux it is still behind a flag, and on Android it has not '
-        + 'shipped.',
-    };
-  }
-
+/** Firefox ships WebGPU per operating system, so "update Firefox" is only
+ *  the fix on the two where shipping it is what happened. */
+function firefoxAdvice(ua: string): Copy {
   if (/Android/.test(ua)) {
     return {
-      platform: 'android',
-      action: 'Update Chrome, and check your Android version.',
-      detail: 'Chrome for Android has WebGPU from 121, on Android 12 and later.',
+      action: 'Open this page in Chrome for Android.',
+      detail: 'Firefox for Android has not shipped WebGPU, so updating it will not help. '
+        + 'Chrome for Android has it from version 121, on Android 12 and later.',
     };
   }
-
-  // Safari on a desktop Mac that has WebGPU nowhere: an Intel Mac, which
-  // cannot install macOS Tahoe and so cannot reach Safari 26.
-  if (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) {
-    const intel = /Intel/.test(hints.platform) || /Intel Mac OS X/.test(ua);
+  if (/Linux|X11/.test(ua)) {
     return {
-      platform: 'macos-safari',
-      action: intel
-        ? 'Open this page in Chrome or Edge.'
-        : 'Update Safari to version 26, or open this page in Chrome or Edge.',
-      detail: intel
-        ? 'Safari gets WebGPU in version 26, which needs macOS Tahoe — and Tahoe does '
-          + 'not run on Intel Macs. Chrome and Edge do support WebGPU on this machine.'
-        : 'Safari has WebGPU switched on by default from version 26 (September 2025).',
+      action: 'Open this page in Chrome, or switch on dom.webgpu.enabled in about:config.',
+      detail: 'Firefox on Linux still keeps WebGPU behind that flag, so updating alone '
+        + 'will not switch it on.',
     };
   }
-
   return {
-    platform: 'other',
-    action: 'Open this page in Chrome or Edge, version 113 or later.',
-    detail: 'Those are the desktop browsers with the widest WebGPU support today.',
+    action: 'Update Firefox, or open this page in Chrome or Edge.',
+    detail: 'Firefox has WebGPU on Windows from 141 and on Apple-silicon macOS from '
+      + 'about 145.',
+  };
+}
+
+/** No `navigator.gpu` at all, so naming a newer browser or OS is the fix. */
+function missingApiAdvice(platform: GateAdvice['platform'], hints: UaHints): Copy {
+  switch (platform) {
+    case 'ios':
+      return {
+        action: 'Update to iOS or iPadOS 26, then reload.',
+        detail: 'Safari has WebGPU switched on by default from version 26 (September 2025).',
+      };
+    case 'firefox':
+      return firefoxAdvice(hints.userAgent);
+    case 'android':
+      return {
+        action: 'Update Chrome, and check your Android version.',
+        detail: 'Chrome for Android has WebGPU from 121, on Android 12 and later.',
+      };
+    case 'macos-safari': {
+      // An Intel Mac cannot install macOS Tahoe, so it cannot reach
+      // Safari 26 — the one branch where updating Safari is not the fix.
+      const intel = /Intel/.test(hints.platform) || /Intel Mac OS X/.test(hints.userAgent);
+      return intel
+        ? {
+          action: 'Open this page in Chrome or Edge.',
+          detail: 'Safari gets WebGPU in version 26, which needs macOS Tahoe — and Tahoe '
+            + 'does not run on Intel Macs. Chrome and Edge do support WebGPU on this '
+            + 'machine.',
+        }
+        : {
+          action: 'Update Safari to version 26, or open this page in Chrome or Edge.',
+          detail: 'Safari has WebGPU switched on by default from version 26 '
+            + '(September 2025).',
+        };
+    }
+    case 'other':
+      return {
+        action: 'Open this page in Chrome or Edge, version 113 or later.',
+        detail: 'Those are the desktop browsers with the widest WebGPU support today.',
+      };
+  }
+}
+
+/** The API is present and no device started, so every "install this
+ *  browser" line is wrong by construction — this browser already has it. */
+function noDeviceAdvice(platform: GateAdvice['platform']): Copy {
+  if (platform === 'ios' || platform === 'android') {
+    return {
+      action: 'Close your other apps and reload. If it keeps failing, restart the device.',
+      detail: 'This browser has WebGPU, but no graphics device would start — on a phone '
+        + 'or tablet that usually clears on its own.',
+    };
+  }
+  return {
+    action: 'Switch hardware acceleration on in your browser settings, then reload.',
+    detail: 'This browser has WebGPU, but no graphics device would start — usually '
+      + 'hardware acceleration turned off, a graphics driver the browser blocks, or a '
+      + 'remote or virtual session with no GPU to hand out.',
+  };
+}
+
+/**
+ * The support audit behind the `no-api` table is dated and the page says
+ * so. Nothing here is a guarantee: `detectWebGpuSupport` produced the
+ * verdict, and this only picks how to word the fix.
+ */
+export function adviceFor(hints: UaHints, verdict: GateVerdict): GateAdvice {
+  const platform = platformFor(hints);
+  return {
+    platform,
+    ...(verdict === 'no-api' ? missingApiAdvice(platform, hints) : noDeviceAdvice(platform)),
   };
 }

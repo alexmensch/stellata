@@ -9,12 +9,16 @@ browser reading it.
 ```
 src/client/webgpu/gate/
   webgpu-support.ts (+ test)     detectWebGpuSupport — capability probe.
-                                 Also covers the #webgpu-gate=force switch.
-  gate-advice-pure.ts (+ test)   adviceFor — the per-platform fix copy.
+  gate-advice-pure.ts (+ test)   adviceFor — the fix copy, per platform
+                                 AND per verdict.
   gate-page.ts (+ test)          showWebGpuGate — builds and mounts the
                                  takeover. Styles: ../../styles.css
                                  `.webgpu-gate*`.
 ```
+
+The `#webgpu-gate` dev switch is **not** in this folder: it is fragment
+parsing, so `parseGateOverride` sits beside `parseRendererFlag` in
+`../renderer-flag.ts` and is tested there.
 
 ## Not behind the import boundary
 
@@ -33,14 +37,31 @@ device — a blocklisted driver, a flag left off, a context that refused).
 
 **Both failures land on the same page**, which is the bead's requirement
 and the right call for a reader: "this browser can't run it, here is what
-to do" is the same message either way. They stay distinct in the return
-value because the lead sentence differs — a browser that *has* WebGPU and
-could not start a device is not told to go and install one — and because
-the console line and any future telemetry want them apart.
+to do" is the same message either way. What differs is *which* fix that
+is — see the next section, which is the whole reason the verdicts stay
+distinct rather than collapsing to one boolean.
 
 `requestAdapter` **rejecting** is a `no-adapter`, not a propagated throw.
 This runs on the boot path, and a gate that throws leaves the user with
 exactly the dead canvas it exists to replace.
+
+## What a no-adapter reader is told
+
+**`adviceFor` takes the verdict, not just the hints.** A `no-adapter`
+browser HAS WebGPU, so every line naming a browser or an OS version to
+install is wrong by construction: "update Safari to version 26" reads as
+nonsense to someone already running 26, and that is the single largest
+sentence on the page.
+
+So `no-api` names a newer browser or OS, and `no-adapter` names whatever
+is withholding the GPU — hardware acceleration switched off, a driver the
+browser blocks, a remote or virtual session with no GPU to hand out. The
+mobile branch differs again, because a phone has neither a
+hardware-acceleration switch nor a driver to update.
+
+The parameter is **required, with no default**. A default is what let the
+verdict go unread in the first place: the lead sentence branched on it
+while the advice did not, so the page contradicted itself.
 
 ## UA picks the wording, never the verdict
 
@@ -60,6 +81,11 @@ Two branches carry the whole subtlety:
 - **Firefox is matched before macOS Safari.** A Mac Firefox UA contains
   `Macintosh`, so checking the Safari branch first would tell a Firefox
   user to update a browser they are not running.
+- **Firefox then splits again by operating system.** It shipped WebGPU on
+  Windows and Apple-silicon macOS, so "update Firefox" is the fix there —
+  but on Android it has not shipped at all and on Linux it sits behind
+  `dom.webgpu.enabled`, where updating is advice the detail sentence
+  itself contradicts. Those two get Chrome, or the flag, instead.
 
 The version numbers come from the support audit in the `stellata-0it`
 epic body, which is **dated** — the page says so in as many words, so a
@@ -74,10 +100,16 @@ failure route deliberately still falls back to WebGL2 with a console
 warning — that is a working dev affordance and this bead did not take it
 away.
 
-The one way in is `#webgpu-gate=force`, checked in `main.ts` **before** the
-catalog fetch so a gated browser downloads nothing it cannot use. The
+The one way in is `#webgpu-gate=<verdict>`, checked in `main.ts` **before**
+the catalog fetch so a gated browser downloads nothing it cannot use. The
 switch takes a spelled-out value rather than a bare `#webgpu-gate`, so a
 stray or mistyped fragment cannot blank the app.
+
+`no-api` (spelled `force` too) and `no-adapter` each show their own page.
+Both spellings exist because a developer's browser fails *neither* probe,
+so without naming the verdict the `no-adapter` copy could not be read on a
+real browser at all — which is how its advice came to contradict its own
+lead sentence for a release.
 
 **`0it.13` is what makes this live**: at cutover the boot runs
 `detectWebGpuSupport` for real and shows the page on a failing verdict.
@@ -86,6 +118,7 @@ tests carry the copy contract rather than any boot test.
 
 ## Smoke
 
-`#webgpu-gate=force` on Chrome and on Safari 26: the page renders, the
-copy matches the browser you are on, no console noise, and the app boots
-normally with the fragment removed.
+`#webgpu-gate=force` and `#webgpu-gate=no-adapter` on Chrome and on
+Safari 26: each page renders, the copy matches the browser you are on,
+the `no-adapter` page names no version to install, no console noise, and
+the app boots normally with the fragment removed.

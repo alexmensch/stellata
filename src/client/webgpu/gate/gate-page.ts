@@ -1,8 +1,7 @@
 // The "requires WebGPU" takeover, for a browser that cannot run the
 // renderer. See README.md.
 
-import { adviceFor, type UaHints } from './gate-advice-pure';
-import type { WebGpuVerdict } from './webgpu-support';
+import { adviceFor, type GateVerdict, type UaHints } from './gate-advice-pure';
 
 export const GATE_ELEMENT_ID = 'webgpu-gate';
 
@@ -10,6 +9,13 @@ export const GATE_ELEMENT_ID = 'webgpu-gate';
  *  survey. Shown on the page, so a stale claim reads as dated rather than
  *  as a guarantee. */
 export const SUPPORT_AUDIT_LABEL = 'August 2026';
+
+/** Everything a boot may already have drawn. Hidden rather than removed:
+ *  the gate is terminal for this page load, but an intact DOM keeps a
+ *  console session able to inspect what booted. Every id here is pinned
+ *  against `index.html` by the tests — a rename must not silently no-op. */
+export const GATE_HIDES =
+  'canvas, .overlay, #topbar, #panel, #loading, #ui-top-left, #meta, #tooltip';
 
 function hintsFromNavigator(): UaHints {
   return {
@@ -20,26 +26,18 @@ function hintsFromNavigator(): UaHints {
 }
 
 /**
- * Replace the page with the gate.
- *
- * Idempotent: a second call with the gate already up is a no-op, so a
- * caller that races (boot failure plus an explicit force) cannot stack two
- * copies. Returns the element either way, which is what the tests assert
- * against.
- *
- * The canvas and every UI chrome element are hidden rather than removed —
- * the gate is terminal for this page load, but leaving the DOM intact
- * keeps a console session able to inspect what booted.
+ * Replace the page with the gate. Idempotent, so a caller that races a
+ * boot failure against an explicit force cannot stack two copies.
  */
 export function showWebGpuGate(
-  verdict: Exclude<WebGpuVerdict, 'supported'>,
+  verdict: GateVerdict,
   hints: UaHints = hintsFromNavigator(),
   doc: Document = document,
 ): HTMLElement {
   const existing = doc.getElementById(GATE_ELEMENT_ID);
   if (existing !== null) return existing;
 
-  const advice = adviceFor(hints);
+  const advice = adviceFor(hints, verdict);
   const gate = doc.createElement('div');
   gate.id = GATE_ELEMENT_ID;
   gate.className = 'webgpu-gate';
@@ -86,9 +84,7 @@ export function showWebGpuGate(
   gate.append(inner);
   doc.body.append(gate);
 
-  // Terminal for this page load: nothing behind the gate is reachable, and
-  // a half-built scene under it would keep animating.
-  for (const el of doc.querySelectorAll<HTMLElement>('canvas, .overlay, #topbar, #panel')) {
+  for (const el of doc.querySelectorAll<HTMLElement>(GATE_HIDES)) {
     el.style.display = 'none';
   }
   return gate;

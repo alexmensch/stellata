@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { detectWebGpuSupport } from './webgpu-support';
-import { parseGateOverride, parseRendererFlag } from '../renderer-flag';
 
 describe('the gate asks the browser, never its name', () => {
   it('passes when an adapter comes back', async () => {
@@ -26,25 +25,5 @@ describe('the gate asks the browser, never its name', () => {
     await expect(detectWebGpuSupport({
       gpu: { requestAdapter: async () => { throw new Error('device lost'); } },
     })).resolves.toBe('no-adapter');
-  });
-});
-
-describe('the gate override is opt-in and spelled out', () => {
-  it('fires only on the exact value', () => {
-    expect(parseGateOverride('#webgpu-gate=force')).toBe('force');
-    expect(parseGateOverride('#renderer=webgpu&webgpu-gate=force')).toBe('force');
-  });
-
-  // A bare or mistyped fragment must not blank the app.
-  it('ignores every other form', () => {
-    for (const h of ['', '#', '#webgpu-gate', '#webgpu-gate=', '#webgpu-gate=1',
-      '#webgpu-gate=true', '#renderer=webgpu']) {
-      expect(parseGateOverride(h)).toBeNull();
-    }
-  });
-
-  it('leaves the renderer flag alone', () => {
-    expect(parseRendererFlag('#webgpu-gate=force')).toBeNull();
-    expect(parseRendererFlag('#renderer=webgpu&webgpu-gate=force')).toBe('webgpu');
   });
 });

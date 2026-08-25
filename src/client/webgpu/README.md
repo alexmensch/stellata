@@ -12,8 +12,8 @@ reaches the WebGL2 bundle (§ Import boundary).
 ```
 src/client/webgpu/
   renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
-                                    #webgpu-gate=force dev switch from the
-                                    URL fragment.
+                                    #webgpu-gate=<verdict> dev switch from
+                                    the URL fragment.
   gate/                             The user-facing "requires WebGPU" page,
                                     landed dark until the cutover. Outside
                                     the import boundary by necessity — its
@@ -114,7 +114,7 @@ If WebGPU is unavailable or `renderer.init()` rejects, `bootWebGpu`
 returns null and `main.ts` falls back to the shipped WebGL2 boot with a
 console warning — the flag is a dev seam until the cutover. The
 user-facing "requires WebGPU" gate page is built and lands dark in
-`gate/`, reachable only through `#webgpu-gate=force`; `0it.13` is what
+`gate/`, reachable only through `#webgpu-gate=<verdict>`; `0it.13` is what
 puts it on a real capability verdict.
 
 ## What the flag boots today
