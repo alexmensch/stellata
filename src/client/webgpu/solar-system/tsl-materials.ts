@@ -3,9 +3,10 @@
 // uniform-node record, and its registration for the output-struct swap.
 
 import type * as THREE from 'three';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import type {
-  EmitterMaterial, ProbeMaterials, SolarSystemMaterials,
-} from '../../solar-system/materials/emitter-material';
+  ProbeMaterials, SolarSystemMaterials,
+} from '../../solar-system/materials/solar-system-materials';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';

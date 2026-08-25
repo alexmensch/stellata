@@ -9,9 +9,10 @@ without the `#renderer=webgpu` fragment.
 
 **Four of the five port as a material swap, not a layer.** The CPU
 layers keep every line they had and take their surfaces through
-`../../solar-system/materials/README.md` — that README owns the
-`EmitterMaterial` contract, the neutral-defaults rule, and why the probe
-glyph is split out. Only the glare needed a layer of its own (§ The glare
+`../../solar-system/materials/README.md` — that README owns which
+surfaces this family asks for, the neutral-defaults rule, and why the
+probe glyph is split out; the `EmitterMaterial` contract they are handed
+back is `../../scene/README.md` § The material seam. Only the glare needed a layer of its own (§ The glare
 packs).
 
 ## Files in this area

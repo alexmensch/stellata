@@ -18,9 +18,10 @@ import atmoScatterChunk from '../atmosphere/atmosphere-scatter.glsl?raw';
 import atmoUniformsChunk from '../atmosphere/atmosphere-uniforms.glsl?raw';
 import probeVert from '../probes/probe.vert.glsl?raw';
 import probeFrag from '../probes/probe.frag.glsl?raw';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import type {
-  EmitterMaterial, ProbeMaterials, SolarSystemMaterials, ViewportUniforms,
-} from './emitter-material';
+  ProbeMaterials, SolarSystemMaterials, ViewportUniforms,
+} from './solar-system-materials';
 
 // The shared atmosphere GLSL — the uniform contract and the
 // single-scattering integrator — spliced into both the mesh disc and the

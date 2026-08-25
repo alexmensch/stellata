@@ -7,7 +7,7 @@ import { buildSharedUniformNodes } from '../../webgpu/tsl/shared-uniform-nodes';
 import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
 } from '../../webgpu/solar-system/tsl-materials';
-import type { SolarSystemMaterials } from './emitter-material';
+import type { SolarSystemMaterials } from './solar-system-materials';
 import { makeGlslProbeMaterial, makeGlslSolarSystemMaterials } from './glsl-materials';
 
 const placeholder = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);

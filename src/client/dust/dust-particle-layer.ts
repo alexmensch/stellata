@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
-import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import dustParticleVert from './dust-particle.vert.glsl?raw';
 import dustParticleFrag from './dust-particle.frag.glsl?raw';
 

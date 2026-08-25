@@ -13,7 +13,7 @@ import type { DustParticleMaterials } from '../dust/dust-particle-layer';
 import type { ShellMaterials } from '../fresnel-shell/fresnel-shell';
 import type {
   ProbeMaterials, SolarSystemMaterials,
-} from '../solar-system/materials/emitter-material';
+} from '../solar-system/materials/solar-system-materials';
 import type {
   ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../star-pipeline/extinction/extinction-seam';
