@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
+import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
 import dustParticleVert from './dust-particle.vert.glsl?raw';
 import dustParticleFrag from './dust-particle.frag.glsl?raw';
 
@@ -15,16 +16,63 @@ export interface DustParticleSharedUniforms {
   uDustLogRatio: { value: number };
 }
 
+/**
+ * The renderer-neutral contract the sprite surface is built through
+ * (README.md § The material seam). The geometry crosses backends
+ * unchanged — three buffers, well inside WebGPU's eight — so this ports
+ * as a material swap rather than a layer of its own.
+ */
+export interface DustParticleMaterials {
+  dustParticles(shared: DustParticleSharedUniforms): EmitterMaterial;
+}
+
+/** The WebGL2 implementation. The six shared slots bind by reference, so a
+ *  floating-origin recentre or a resize reaches the sprite pass with no
+ *  per-frame copy; `uParticleStrength` is the layer's own. */
+export function makeGlslDustParticleMaterials(): DustParticleMaterials {
+  return {
+    dustParticles(u) {
+      const material = new THREE.ShaderMaterial({
+        glslVersion: THREE.GLSL3,
+        uniforms: {
+          uPixelRatio: u.uPixelRatio,
+          uViewport: u.uViewport,
+          uWorldOffset: u.uWorldOffset,
+          uDustEnabled: u.uDustEnabled,
+          uDustDensityMin: u.uDustDensityMin,
+          uDustLogRatio: u.uDustLogRatio,
+          uParticleStrength: { value: 0.0 },
+        },
+        vertexShader: dustParticleVert,
+        fragmentShader: dustParticleFrag,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true,
+        blending: THREE.AdditiveBlending,
+      });
+      return {
+        material,
+        uniforms: material.uniforms,
+        dispose: () => material.dispose(),
+      };
+    },
+  };
+}
+
 // Currently shelved — see ./README.md. Default strength = 0 →
 // mesh.visible = false → zero per-frame cost.
 export class DustParticleLayer {
   private mesh: THREE.Mesh | null = null;
-  private material: THREE.ShaderMaterial | null = null;
+  private surface: EmitterMaterial | null = null;
+  private readonly materials: DustParticleMaterials;
 
   constructor(
     private scene: THREE.Scene,
     private sharedUniforms: DustParticleSharedUniforms,
-  ) {}
+    materials?: DustParticleMaterials,
+  ) {
+    this.materials = materials ?? makeGlslDustParticleMaterials();
+  }
 
   /** Build the particle mesh from loaded data. Idempotent — re-calling
    *  with new data replaces the existing mesh. */
@@ -45,26 +93,8 @@ export class DustParticleLayer {
     geom.instanceCount = data.count;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 60_000);
 
-    const u = this.sharedUniforms;
-    this.material = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      uniforms: {
-        uPixelRatio: u.uPixelRatio,
-        uViewport: u.uViewport,
-        uWorldOffset: u.uWorldOffset,
-        uDustEnabled: u.uDustEnabled,
-        uDustDensityMin: u.uDustDensityMin,
-        uDustLogRatio: u.uDustLogRatio,
-        uParticleStrength: { value: 0.0 },
-      },
-      vertexShader: dustParticleVert,
-      fragmentShader: dustParticleFrag,
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-    });
-    this.mesh = new THREE.Mesh(geom, this.material);
+    this.surface = this.materials.dustParticles(this.sharedUniforms);
+    this.mesh = new THREE.Mesh(geom, this.surface.material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2; // after disc + glow passes
     this.mesh.visible = false; // hidden until strength > 0
@@ -75,9 +105,9 @@ export class DustParticleLayer {
    *  additive contribution. The mesh is hidden entirely at strength 0 so
    *  the GPU draw call is skipped. No-op before attach(). */
   setStrength(x: number) {
-    if (!this.material || !this.mesh) return;
+    if (!this.surface || !this.mesh) return;
     const v = Math.max(0, x);
-    this.material.uniforms.uParticleStrength.value = v;
+    this.surface.uniforms.uParticleStrength.value = v;
     this.mesh.visible = v > 0;
   }
 
@@ -89,8 +119,8 @@ export class DustParticleLayer {
     if (!this.mesh) return;
     if (opts.removeFromScene) this.scene.remove(this.mesh);
     this.mesh.geometry.dispose();
-    this.material?.dispose();
+    this.surface?.dispose();
     this.mesh = null;
-    this.material = null;
+    this.surface = null;
   }
 }

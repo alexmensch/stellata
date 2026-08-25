@@ -7,7 +7,8 @@ import { AU_PC } from '../../util/astronomy-constants';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import {
   FresnelShell,
-  createFresnelShellMaterial,
+  makeGlslShellMaterials,
+  type ShellMaterials,
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../../fresnel-shell/fresnel-shell';
@@ -130,10 +131,11 @@ export class Heliopause extends FresnelShell {
   private readonly mesh: THREE.Mesh;
   private readonly geometry: THREE.SphereGeometry;
 
-  constructor() {
+  constructor(materials: ShellMaterials = makeGlslShellMaterials()) {
     // renderOrder = 1: shares the slot with star glow (both are dim
     // chrome). src/client/README.md carries the full cross-layer ladder.
-    super(createFresnelShellMaterial({ colourHex: COLOUR_HEX, alphaLimb: ALPHA_LIMB }), 1);
+    super(
+      materials.fresnelShell({ colourHex: COLOUR_HEX, alphaLimb: ALPHA_LIMB }), 1);
     // Rotate the entire group so its local +Z aligns with the antiapex
     // direction in ICRS. The mesh inside scales + translates within
     // that rotated frame.

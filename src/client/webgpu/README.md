@@ -49,6 +49,11 @@ src/client/webgpu/
                                     mirror, the typing shim, attribute
                                     packing, and the test pattern a ported
                                     layer is covered by — its own README.
+  fresnel-shell/                    The boundary-shell surface shared by
+                                    the heliopause and the Local Bubble —
+                                    its own README.
+  dust/                             The dust-particle sprite, whose layer
+                                    is shelved — its own README.
   extinction/                       The camera→star dust raymarch and the
                                     per-star A_V cache that feeds the star
                                     vertex stage — its own README.
@@ -109,11 +114,21 @@ this boot as a single reversed-z bracket (K = 1 —
 `../local-depth/bracket/README.md` § Decision). Its line layers (orbit
 rings, binary orbit paths, probe trails) do NOT draw yet — see the park
 table below.
+Both boundary shells draw too — the heliopause and the Local Bubble,
+through `fresnel-shell/` — as does the dust sprite (`dust/`), though its
+layer is shelved at strength 0 so nothing of it is visible without a
+console call.
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
 scene still exists and is never rendered on a WebGPU boot — no
 per-layer gating, no material ever reaches the wrong backend.
+
+**A ported layer has to move scenes, and nothing warns if it does not.**
+A layer built into the shell's scene renders on WebGL and silently
+nowhere on WebGPU, so every material swap pairs with
+`(webgpu?.scene ?? scene).add(group)` at its call site — the probe
+markers, both shells and the dust sprite all read that way.
 
 The dust voxel volume streams and uploads on both backends
 (`loaders/README.md` § Dust voxel upload); the star vertex stage's

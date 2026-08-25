@@ -630,8 +630,13 @@ export class Stellata implements FrameAnchor {
 
     // Shared uniforms passed by reference so floating-origin recenters,
     // resize updates, and dust loads propagate to the particle pass
-    // automatically.
-    this.dustParticles = new DustParticleLayer(this.scene, sharedUniforms);
+    // automatically. On a WebGPU boot the sprite takes its slots off the
+    // uniform-node mirror instead and lands in the scene that renders.
+    this.dustParticles = new DustParticleLayer(
+      this.webgpu?.scene ?? this.scene,
+      sharedUniforms,
+      this.webgpu?.dustParticleMaterials,
+    );
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the

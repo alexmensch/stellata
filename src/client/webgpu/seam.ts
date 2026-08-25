@@ -9,6 +9,8 @@ import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
+import type { DustParticleMaterials } from '../dust/dust-particle-layer';
+import type { ShellMaterials } from '../fresnel-shell/fresnel-shell';
 import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/emitter-material';
@@ -114,6 +116,13 @@ export interface WebGpuSeam {
    *  ONCE per field: each read is a fresh factory, and the shared-material
    *  refcount lives inside one. */
   readonly probeMaterial: ProbeMaterials;
+  /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
+   *  consumer builds its own — colour, limb alpha and blend are per-shell. */
+  readonly shellMaterials: ShellMaterials;
+  /** The TSL dust-particle sprite. Its six shared slots come off the
+   *  uniform-node mirror, so the factory takes no uniform argument of its
+   *  own (`dust/tsl-dust-materials.ts`). */
+  readonly dustParticleMaterials: DustParticleMaterials;
   /** Build the TSL reflected-glare billboard into the seam's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it

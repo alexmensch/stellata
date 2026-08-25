@@ -2,16 +2,10 @@
 // blocks (../../solar-system/materials/glsl-materials.ts) — transcribed
 // key-for-key, pinned by a key-parity test.
 
-import { Color, Vector2, Vector3, Vector4, type Texture, type IUniform } from 'three';
+import { Color, Vector2, Vector3, Vector4, type Texture } from 'three';
 import { texture, uniform, uniformArray } from 'three/tsl';
 import { MAX_SHADOW_CASTERS } from '../../solar-system/planets/body-shadow-pure';
 import { MIE_G_DEFAULT, SUN_COLOUR } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
-
-/** A uniform-array node behind an `IUniform` face: the layer mutates the
- *  Vector4s in place, and the node re-packs the buffer every render. */
-function arraySlot(node: ReturnType<typeof uniformArray>): IUniform {
-  return { get value() { return node.array; } };
-}
 
 /** Every texture slot gets its OWN stand-in. three keys a texture
  *  uniform's binding on its VALUE's uuid at shader build
@@ -119,16 +113,3 @@ export function probeMarkerUniformNodes() {
 }
 
 export type ProbeMarkerNodes = ReturnType<typeof probeMarkerUniformNodes>;
-
-/** The node record behind the `IUniform` face the layers write. Every node
- *  but the caster array already carries `.value`; that one needs the
- *  adapter above. */
-export function uniformSlotsOf(nodes: Record<string, unknown>): Record<string, IUniform> {
-  const slots: Record<string, IUniform> = {};
-  for (const [key, node] of Object.entries(nodes)) {
-    slots[key] = (node as { isArrayBufferNode?: boolean }).isArrayBufferNode === true
-      ? arraySlot(node as ReturnType<typeof uniformArray>)
-      : (node as IUniform);
-  }
-  return slots;
-}

@@ -25,3 +25,26 @@ while shelved — gate the mesh's visibility on it at un-shelve
 `scripts/dust/README.md`).
 
 `DustField` + `dust-loader.ts` live in `src/client/loaders/`.
+
+## The material seam
+
+The layer takes its sprite surface from a `DustParticleMaterials` factory
+rather than building a `ShaderMaterial` directly, so a WebGPU boot swaps
+shaders with no second copy of the attach / strength / dispose logic. The
+geometry crosses backends unchanged — `aCorner`, `iPosition`, `iDensity`
+is three vertex buffers, well inside WebGPU's eight — which is why this is
+a material swap rather than a layer of its own. The WebGPU twin is
+`../webgpu/dust/README.md`; `stellata.ts` passes
+`webgpu?.dustParticleMaterials` and falls back to
+`makeGlslDustParticleMaterials()`.
+
+**Six of the seven uniforms are shared-by-reference and one is the
+layer's.** On WebGL the six come straight off the shared map; on WebGPU
+they come off the uniform-node mirror and the factory ignores its
+`shared` argument entirely (`../webgpu/dust/README.md` § Six of its seven
+uniforms). Only `uParticleStrength` appears in the slot record `setStrength`
+writes, so that one call reaches either backend.
+
+`dust-particle-pure.ts` holds the footprint window, the dim floor and the
+tint, so the TSL twin imports what the GLSL can only copy;
+`dust-particle-glsl-drift.test.ts` pins the copies.

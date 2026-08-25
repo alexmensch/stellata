@@ -22,6 +22,8 @@ import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
 import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
 } from './solar-system/tsl-materials';
+import { makeTslShellMaterials } from './fresnel-shell/tsl-shell-materials';
+import { makeTslDustParticleMaterials } from './dust/tsl-dust-materials';
 import { StarLayer } from './star/star-layer';
 import { settleTimestampSupport, type TimestampBackend } from './timestamp-probe';
 
@@ -106,6 +108,14 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     get probeMaterial() {
       return makeTslProbeMaterial({
         nodes: nodesOrThrow('probeMaterial'), registerMrtLayer,
+      });
+    },
+    get shellMaterials() {
+      return makeTslShellMaterials({ registerMrtLayer });
+    },
+    get dustParticleMaterials() {
+      return makeTslDustParticleMaterials({
+        nodes: nodesOrThrow('dustParticleMaterials'), registerMrtLayer,
       });
     },
     attachPlanetGlare(sources: PlanetGlareSources, mirrorParent: THREE.Object3D) {

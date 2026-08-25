@@ -20,6 +20,8 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 - `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
+  - `ShellMaterials` + `makeGlslShellMaterials()` — the material seam
+    (§ The material seam below).
   - `createFresnelShellMaterial(opts)` — builds the `ShaderMaterial`.
   - `FresnelShell` — abstract base owning the group, material, and the
     chart-mode + detail-cycle + floating-origin plumbing.
@@ -45,6 +47,24 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 - `shell-pick.ts` — `pickShellSilhouette`, the shared silhouette-bbox +
   label-bbox hit test (fallback tier) both shells' click / hover picks
   use, keyed on a `ShellPickSurface`.
+
+## The material seam
+
+Both shells take their surface from a `ShellMaterials` factory rather
+than building a `ShaderMaterial` directly, so a WebGPU boot swaps shaders
+without a second copy of any shell logic — geometry, group, declutter and
+chart gating, recentre, labels and picking all stay as they were. The
+WebGPU twin is `../webgpu/fresnel-shell/README.md`; `shell-module.ts`
+passes `kindCtx.webgpu?.shellMaterials` and falls back to
+`makeGlslShellMaterials()`.
+
+Each consumer builds **its own** surface — colour, limb alpha and blend
+are per-shell, so there is nothing to share and no refcount to keep.
+
+`FresnelShell` holds the returned `EmitterMaterial` and exposes only its
+`.material` to subclasses (which need it for the mesh); `dispose` goes
+through the handle, because on WebGPU it must also sever the material's
+MRT-mode registration and a bare `material.dispose()` would not.
 
 ## Invariants
 

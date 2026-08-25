@@ -94,8 +94,11 @@ export function createShellKindModule(): ShellKindModule {
       // Heliopause: Sol-anchored, mesh built in its ctor — registered
       // whenever a Sol record exists. Visibility is the declutter
       // cycle's call, never focus-coupled.
-      heliopause = new Heliopause();
-      kindCtx.scene.add(heliopause.group);
+      // Both shells have ported, so on a WebGPU boot they belong in the
+      // scene that renders.
+      const renderScene = kindCtx.webgpu?.scene ?? kindCtx.scene;
+      heliopause = new Heliopause(kindCtx.webgpu?.shellMaterials);
+      renderScene.add(heliopause.group);
       if (kindCtx.solAbsInto(tmpSolAbs)) {
         const solAbs = tmpSolAbs.clone();
         registry.register('heliopause', {
@@ -113,8 +116,8 @@ export function createShellKindModule(): ShellKindModule {
       // Local Bubble: the layer exists either way; the mesh (and the
       // registry slot) only with the artifact — an absent shell leaves
       // its slot empty and every dispatch falls through to null.
-      localBubble = new LocalBubbleShell();
-      kindCtx.scene.add(localBubble.group);
+      localBubble = new LocalBubbleShell(kindCtx.webgpu?.shellMaterials);
+      renderScene.add(localBubble.group);
       localBubble.recenter(kindCtx.getWorldOffset());
       if (mesh) {
         const data = mesh;

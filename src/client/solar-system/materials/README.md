@@ -38,7 +38,9 @@ Two slot kinds need a word:
 - **Textures.** A `texture()` node's `.value` is its texture, so a rung
   swap is the same assignment on both sides.
 - **`uCasters`.** WebGPU has no uniform-array-of-vec4 node carrying
-  `.value`; `uniformSlotsOf` puts an `IUniform` face over
+  `.value`; `uniformSlotsOf` (`../../webgpu/tsl/README.md` § Uniform
+  slots, shared with the boundary shells and the dust sprite) puts an
+  `IUniform` face over
   `UniformArrayNode.array`, which the layer mutates in place and the node
   re-packs every render.
 

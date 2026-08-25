@@ -14,9 +14,10 @@ import { buildPlanetAtmosphereMaterial } from './planet-atmosphere-tsl';
 import { buildPlanetMeshMaterial } from './planet-mesh-tsl';
 import { buildPlanetRingsMaterial } from './planet-rings-tsl';
 import { buildProbeMarkerMaterial } from './probe-tsl';
+import { uniformSlotsOf } from '../tsl/uniform-slots';
 import {
   planetAtmosphereUniformNodes, planetMeshUniformNodes,
-  planetRingsUniformNodes, probeMarkerUniformNodes, uniformSlotsOf,
+  planetRingsUniformNodes, probeMarkerUniformNodes,
 } from './uniform-nodes';
 
 export interface TslProbeConfig {

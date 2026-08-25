@@ -17,6 +17,8 @@ src/client/webgpu/tsl/
     (+ test)                        scalars into ceil(N/4) vec4 buffers.
   attribute-packing.ts (+ test)     Geometry attributes + per-scalar
                                     accessor node from a pack plan.
+  uniform-slots.ts                  The IUniform face a ported layer
+                                    writes, over a record of TSL nodes.
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -63,6 +65,21 @@ holding its map object by identity, and a unique value per scalar proving
 `sync()`'s reflective key filter reaches all of them. Port-child materials
 take slots from `stellata.webgpu.uniformNodes` — shared node objects are
 what replaces shared uniform objects.
+
+## Uniform slots — the face a ported layer writes
+
+A layer that ports as a material swap keeps writing `uniforms`, never
+`material.uniforms`, and `uniformSlotsOf(nodes)` is what makes that reach
+this backend: a TSL `uniform()` node already carries `.value` exactly as
+an `IUniform` does, so most slots pass straight through. The one that
+cannot is a **uniform array** — it has no `.value`, so the helper puts an
+`IUniform` face over `UniformArrayNode.array`, which the layer mutates in
+place and the node re-packs every render.
+
+It lives here rather than beside any one subsystem because three of them
+now build slot records through it — the solar-system surfaces, the
+boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
+modules stay with their layers; only the face is shared.
 
 ## TSL typing shim
 
