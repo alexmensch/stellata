@@ -150,6 +150,9 @@ import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
+import type {
+  ExtinctionPrepassSeam,
+} from './star-pipeline/extinction/extinction-seam';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
@@ -435,9 +438,10 @@ export class Stellata implements FrameAnchor {
   // clears it.
   private dust: DustField | null = null;
 
-  // Per-star A_V cache. Constructed lazily on the first attachDust so a
-  // dust-less session pays nothing; null again after attachDust(null).
-  private extinctionPrepass: ExtinctionPrepass | null = null;
+  // Per-star A_V cache, one implementation per backend behind the shared
+  // seam. Constructed lazily on the first attachDust so a dust-less
+  // session pays nothing; null again after attachDust(null).
+  private extinctionPrepass: ExtinctionPrepassSeam | null = null;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
@@ -1458,6 +1462,7 @@ export class Stellata implements FrameAnchor {
     if (dust === null) {
       u.uDustTexture.value = null;
       u.uDustEnabled.value = 0;
+      this.webgpu?.setDustTexture(null);
       this.extinctionPrepass?.dispose();
       this.extinctionPrepass = null;
       this.milkyway.attachDust(null);
@@ -1469,13 +1474,23 @@ export class Stellata implements FrameAnchor {
     u.uDustLogRatio.value = dust.params.logRatio;
     u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
     u.uDustEnabled.value = 1;
-    if (this.extinctionPrepass === null && this.rendererGL !== null) {
-      this.extinctionPrepass = new ExtinctionPrepass({
-        renderer: this.rendererGL,
-        positions: this.catalog.positions,
-        count: this.catalog.count,
-        uniforms: u,
-      });
+    // Texture slots are not part of the WebGPU uniform-node mirror, so the
+    // volume reaches the TSL march by call rather than by map write
+    // (webgpu/README.md § Shared uniform nodes).
+    this.webgpu?.setDustTexture(dust.texture);
+    if (this.extinctionPrepass === null) {
+      this.extinctionPrepass = this.webgpu !== null
+        ? this.webgpu.attachExtinctionPrepass({
+          positions: this.catalog.positions,
+          count: this.catalog.count,
+          uniforms: u,
+        })
+        : new ExtinctionPrepass({
+          renderer: this.rendererGL!,
+          positions: this.catalog.positions,
+          count: this.catalog.count,
+          uniforms: u,
+        });
     }
     this.extinctionPrepass?.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
@@ -2051,6 +2066,7 @@ export class Stellata implements FrameAnchor {
     this.monochrome = on;
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
     this.starPipeline.setMonochromeBlend(on);
+    this.webgpuStarLayer?.setMonochrome(on);
     this.renderer.setClearColor(on ? 0xf5f2ea : 0x000000, on ? 1 : 0);
     this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
@@ -2455,7 +2471,8 @@ export class Stellata implements FrameAnchor {
       // the timestamp query pool, and trackTimestamp allocates a pair per
       // render pass whether or not anyone reads them. Skipping it while
       // the HUD is closed overruns the 2048-query pool in ~1024 frames.
-      resolveAndPublishGpuFrame(this.webgpu.renderer);
+      resolveAndPublishGpuFrame(
+        this.webgpu.renderer, this.webgpu.timestampsAvailable);
     }
     perfMark('frame.handlers');
     this.bus.emit('frame');
@@ -2667,6 +2684,10 @@ export class Stellata implements FrameAnchor {
     // doesn't own it.
     this.dust?.dispose();
     this.dust = null;
+    // After every layer and the prepass: those hand their texture slots
+    // back to the seam's placeholders, which this frees. Before the
+    // renderer, so the releases go through a live device.
+    this.webgpu?.dispose();
     this.renderer.dispose();
     this.bus.clear();
   }

@@ -12,6 +12,9 @@ import type {
 import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/emitter-material';
+import type {
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
+} from '../star-pipeline/extinction/extinction-seam';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './shared-uniform-nodes';
 import type { StarGeometrySources } from './star/star-geometry';
@@ -20,10 +23,24 @@ export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
 
 export type { StarGeometrySources } from './star/star-geometry';
 
+/** What the shell supplies for the A_V cache; the renderer, the dust node
+ *  and the uniform-node mirror are the seam's own. */
+export interface WebGpuExtinctionPrepassSources {
+  /** Absolute (heliocentric ICRS) star positions, xyz-interleaved —
+   *  catalog.positions, NOT the floating-origin local buffer. */
+  positions: Float32Array;
+  count: number;
+  uniforms: ExtinctionPrepassUniforms;
+}
+
 export interface WebGpuStarLayer {
   /** The shell's per-frame CPU gate on the depth-only core-mask draw —
    *  the same `visible` flip it applies to the WebGL mesh. */
   setCoreMaskVisible(on: boolean): void;
+  /** Chart mode's flat-ink blend swap — the TSL twin of the WebGL
+   *  pipeline's `setMonochromeBlend`, taken from the same `setMonochrome`
+   *  call site. */
+  setMonochrome(on: boolean): void;
   /** The local-depth-pass mirror this layer built. The shell hands it to
    *  StarLocalCluster in place of the GLSL StarLocalMirror; the cluster
    *  parents its group into the pass scene and owns its dispose. */
@@ -43,9 +60,12 @@ export interface WebGpuSeam {
   /** Rendered in place of the shell's scene on a WebGPU boot — empty
    *  until port children add their TSL layers to it. */
   readonly scene: THREE.Scene;
-  /** Whether the adapter granted `timestamp-query`. `trackTimestamp: true`
-   *  is a request: three clears it silently when the feature is absent, so
-   *  every GPU-timing consumer must ask here rather than assume. */
+  /** The boot probe's verdict on whether timestamp queries survive
+   *  validation, NOT the adapter's grant — Safari 26 grants the feature and
+   *  then refuses the query set. Every GPU-timing consumer must ask here,
+   *  and the render loop's resolve is gated on it: with tracking off three
+   *  allocates no query pool, so resolving anyway only warns
+   *  (README.md § Timestamps). */
   readonly timestampsAvailable: boolean;
   /** The HDR chain on this boot — target, resolve, reduction. The shell
    *  drives it in place of constructing the WebGL HdrPipeline. */
@@ -61,6 +81,30 @@ export interface WebGpuSeam {
    *  bindSharedUniforms to have run — the materials take their slots
    *  from the uniform-node mirror. */
   attachStarLayer(sources: StarGeometrySources): WebGpuStarLayer;
+  /** Bind (or release) the dust volume for every TSL consumer that samples
+   *  it. One node, shared by object identity between the star vertex
+   *  stage's fallback march and the extinction prepass, so the shell's
+   *  single `attachDust` reaches both. Textures are not part of the
+   *  uniform-node mirror (README.md § Shared uniform nodes), which is why
+   *  this is a call rather than a map write. */
+  setDustTexture(texture: THREE.Data3DTexture | null): void;
+  /** Build the per-star A_V cache on this backend. It points the star
+   *  layer's A_V texture slot at its own target, so the shell wires
+   *  nothing beyond holding the handle. */
+  attachExtinctionPrepass(
+    options: WebGpuExtinctionPrepassSources,
+  ): ExtinctionPrepassSeam;
+  /** Release the boot-scoped GPU resources the seam owns and the shell has
+   *  no handle to — today the shared extinction texture slots and their
+   *  placeholders. NOT the renderer or the HDR pipeline: the shell holds
+   *  both as its own fields (`renderer`, `hdr`) and disposes them on
+   *  either backend, so disposing them here would double-release.
+   *
+   *  Call AFTER every attached layer and the prepass, since those hand
+   *  their slots back to the placeholders this then frees. A new
+   *  boot-scoped allocation in `boot-webgpu.ts` belongs here — that is the
+   *  only path that reaches it. */
+  dispose(): void;
   /** The TSL planet surfaces, over the caller's 1×1 placeholder — the
    *  mesh layer owns that texture on either backend, so the factory takes
    *  it rather than the other way round. */

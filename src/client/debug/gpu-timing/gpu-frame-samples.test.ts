@@ -78,9 +78,9 @@ describe('resolving publishes one sample per resolve', () => {
     // concurrent caller the same promise and the same number, so publishing
     // per call would put one frame's duration in the ring three times —
     // which is what noiseMs divides its sample count by.
-    resolveAndPublishGpuFrame(renderer);
-    resolveAndPublishGpuFrame(renderer);
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
+    resolveAndPublishGpuFrame(renderer, true);
+    resolveAndPublishGpuFrame(renderer, true);
     expect(renderer.calls()).toBe(1);
 
     renderer.settle(0, 7);
@@ -88,11 +88,38 @@ describe('resolving publishes one sample per resolve', () => {
     expect(seen).toEqual([7]);
 
     // Settled means the guard cleared: the next frame measures again.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     expect(renderer.calls()).toBe(2);
     renderer.settle(1, 9);
     await flush();
     expect(seen).toEqual([7, 9]);
+
+    off();
+  });
+
+  it('never calls a backend whose timestamps the probe refused', async () => {
+    const seen: number[] = [];
+    const off = onGpuFrameSample((ms) => seen.push(ms));
+    const renderer = fakeResolver();
+
+    // Safari 26 grants timestamp-query and then rejects the query set, so
+    // the boot probe clears trackTimestamp. three then allocates no pool,
+    // which leaves nothing to recycle — and resolving anyway logs
+    // `WebGPURenderer: Timestamp tracking is disabled.` on the first frame.
+    resolveAndPublishGpuFrame(renderer, false);
+    resolveAndPublishGpuFrame(renderer, false);
+    await flush();
+
+    expect(renderer.calls()).toBe(0);
+    expect(seen).toEqual([]);
+
+    // The skip must not latch the in-flight guard: a backend that does have
+    // timestamps still measures every frame.
+    resolveAndPublishGpuFrame(renderer, true);
+    expect(renderer.calls()).toBe(1);
+    renderer.settle(0, 4);
+    await flush();
+    expect(seen).toEqual([4]);
 
     off();
   });
@@ -104,7 +131,7 @@ describe('resolving publishes one sample per resolve', () => {
 
     // An adapter without timestamp-query resolves to undefined — three
     // clears trackTimestamp itself, so the resolve is a no-op every frame.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.settle(0, undefined);
     await flush();
 
@@ -119,7 +146,7 @@ describe('resolving publishes one sample per resolve', () => {
 
     // three seeds lastValue at 0 and returns it from every early-out, so a
     // resolve that measured nothing is routine rather than a fault.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.settle(0, 0);
     await flush();
 
@@ -133,13 +160,13 @@ describe('resolving publishes one sample per resolve', () => {
     const off = onGpuFrameSample((ms) => seen.push(ms));
     const renderer = fakeResolver();
 
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.fail(0);
     await flush();
 
     // A one-off rejection must not leave the flag stuck — that would stop
     // timing for the tab's lifetime.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     expect(renderer.calls()).toBe(2);
     renderer.settle(1, 5);
     await flush();
@@ -160,7 +187,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
     // unwritten, so the frame reads as the negation of a raw GPU timestamp.
     // Recorded, it sorts gpu.frame off the bottom of the HUD's top-8 table
     // while the headline still reads `gpu`, and poisons every dwell median.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.settle(0, -1706603456.88);
     await flush();
 
@@ -169,7 +196,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
     expect(warn).toHaveBeenCalledTimes(1);
 
     // Once per tab, not once per frame.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.settle(1, Number.NaN);
     await flush();
     expect(seen).toEqual([]);
@@ -177,7 +204,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
 
     // A backend that recovers still gets its good frames recorded; only the
     // sweep's clock choice stays demoted.
-    resolveAndPublishGpuFrame(renderer);
+    resolveAndPublishGpuFrame(renderer, true);
     renderer.settle(2, 8);
     await flush();
     expect(seen).toEqual([8]);

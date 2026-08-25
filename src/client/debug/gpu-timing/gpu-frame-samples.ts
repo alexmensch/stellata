@@ -53,8 +53,18 @@ function publishResolved(ms: number | undefined): void {
  * so resolving unconditionally every frame publishes one frame's duration
  * once per coalesced caller — which inflates the sample count `noiseMs`
  * divides by (README.md § WebGPU).
+ *
+ * `timestampsLive` is the boot probe's verdict
+ * (`../../webgpu/seam.ts` `timestampsAvailable`), and false skips the
+ * backend call entirely: three's `initTimestampQuery` allocates no pool
+ * once tracking is off, so there is no pool left to recycle and a resolve
+ * would only trip its own `warnOnce`.
  */
-export function resolveAndPublishGpuFrame(renderer: GpuFrameResolver): void {
+export function resolveAndPublishGpuFrame(
+  renderer: GpuFrameResolver,
+  timestampsLive: boolean,
+): void {
+  if (!timestampsLive) return;
   if (resolveInFlight) return;
   resolveInFlight = true;
   void renderer

@@ -34,9 +34,9 @@ src/client/debug/frame-cost/
   WebGL2's one-query-per-context limit is not shared with any rotating
   scope. Panel open → the call warns and returns `[]`. Panel opened
   mid-run → samples dry up and the run aborts rather than reporting zeros.
-  **On WebGPU there is no such requirement**: the render loop resolves its
-  timestamps every frame whatever is listening, and the sweep just
-  subscribes alongside the HUD.
+  **On WebGPU there is no such requirement**: wherever the boot probe left
+  timestamps live the render loop resolves them every frame whatever is
+  listening, and the sweep just subscribes alongside the HUD.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate

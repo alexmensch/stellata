@@ -23,6 +23,10 @@ src/client/webgpu/
                                     retire with the three bump.
   shared-uniform-nodes.ts (+ test)  TSL uniform-node mirror of
                                     frame/shared-uniforms.ts.
+  timestamp-probe.ts (+ test)       Boot-time check that timestamp
+                                    queries validate; clears
+                                    trackTimestamp where they do not
+                                    (§ Timestamps).
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
                                     surface — verified gaps only.
   attribute-packing-pure.ts         Plan + interleave N per-instance
@@ -47,6 +51,9 @@ src/client/webgpu/
                                     Shared by the star field and the
                                     planet glare, exactly as the GLSL
                                     chunk is.
+  extinction/                       The camera→star dust raymarch and the
+                                    per-star A_V cache that feeds the star
+                                    vertex stage — its own README.
   star/                             The star layer: packed geometry + the
                                     three depth-honest pipelines (D2 glow,
                                     D3 core mask, D4 disc) and the MRT
@@ -95,8 +102,8 @@ app alive**: every CPU subsystem (catalog, star frame, focus, picker,
 typeahead, URL state, overlays, HUD, render gate) runs identically; the
 renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
 layers as port children land. The star layer (`star/README.md`) carries
-all three depth-honest pipelines plus their local-mirror clones; its
-still-missing siblings (extinction, chart) are listed there. The
+all three depth-honest pipelines plus their local-mirror clones, dust
+extinction on both tiers, and chart mode. The
 solar-system family (`solar-system/README.md`) draws whole: glare
 billboards and probe glyphs in the main pass, the spheroid mesh, ring
 annulus and atmosphere shell in the local depth pass, which runs on
@@ -110,16 +117,36 @@ WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
 scene still exists and is never rendered on a WebGPU boot — no
 per-layer gating, no material ever reaches the wrong backend.
 
-The dust voxel volume is the exception that already crossed: it streams
-and uploads on both backends (`loaders/README.md` § Dust voxel upload),
-and nothing samples it yet. Ported first on purpose — the star raymarch,
-the band's measured stack and the extinction prepass are each smoke-blind
-without dust in the texture. Because no pixel can confirm it, that upload
-is verified numerically instead: `stellata.verifyDust()` reads voxels back
-off the GPU and compares them against the chunk files
-(`loaders/README.md` § Dust voxel readback). A port child whose layer
-renders nothing on the WebGPU boot should run it before suspecting its own
-shader.
+The dust voxel volume streams and uploads on both backends
+(`loaders/README.md` § Dust voxel upload); the star vertex stage's
+fallback march and the extinction prepass (`extinction/README.md`) are
+its first WebGPU samplers, and the band's measured stack joins them at
+`0it.5`. It was ported first on purpose, since each of those is
+smoke-blind without dust in the texture, and because no pixel could
+confirm the upload it is verified numerically instead:
+`stellata.verifyDust()` reads voxels back off the GPU and compares them
+against the chunk files (`loaders/README.md` § Dust voxel readback). A
+port child whose layer renders nothing on the WebGPU boot should run it
+before suspecting its own shader.
+
+### Who releases what
+
+Three tiers, and a new allocation has to pick one:
+
+- **Per-layer.** Everything `attach*` builds comes back behind a handle
+  whose `dispose()` also severs the MRT registration — a dead layer that
+  keeps taking output-mode swaps is the failure that shape prevents.
+- **Boot-scoped.** Resources `bootWebGpu` builds once and hands to
+  several layers: today the extinction texture slots
+  (`extinction/README.md` § Two nodes, one owner). `WebGpuSeam.dispose()`
+  is the *only* path that frees these, and the shell calls it after every
+  layer and the prepass, since those hand their slots back to the
+  placeholders it then releases. A boot-scoped allocation added without a
+  line there is unreachable by any teardown.
+- **Shell-held.** The renderer and the HDR pipeline are seam fields the
+  shell also holds as its own (`renderer`, `hdr`) and disposes on either
+  backend, so the seam's dispose must NOT touch them — it would
+  double-release.
 
 ### Every park is a gate someone has to delete
 
@@ -131,11 +158,15 @@ in the same PR:
 
 | Parked path | Gate site | Deleted by |
 | --- | --- | --- |
-| Extinction prepass | `attachDust` skips construction; `markDirty` is optional-chained | prepass port (`0it.20`) |
 | Local-pass line layers (orbit rings, binary orbit paths, probe trails) | the shell removes their groups from the pass scene — `LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation against the HDR target's three attachments, and one invalid pipeline poisons the whole pass submit | TSL line material (`0it.27`) |
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
+The extinction-prepass row went with `0it.20`: `attachDust` now builds
+one on either backend through `ExtinctionPrepassSeam`, so the
+`rendererGL !== null` test is gone. `extinctionPrepass` is still
+optional-chained, but on its lifecycle alone — it is null before the
+first `attachDust` and after `attachDust(null)`, on both boots.
 The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
 on both boots, the `localPassLive` flag is deleted from both clusters,
 and the TSL star mirror + glare mirror repaint what collapses.
@@ -233,7 +264,13 @@ WebGL map and never learns about the port. The contract:
 - **`uLocalMemberIdx`** (Int32Array(8)) splits into two `ivec4` nodes
   (`uLocalMemberIdx0/1`) — WGSL uniform arrays pad to a 16-byte stride.
 - **Texture slots** (`TEXTURE_SLOTS`) are not mirrored: textures bind as
-  per-layer `texture()`/`texture3D()` nodes where the texture lives.
+  per-layer `texture()`/`texture3D()` nodes where the texture lives. A
+  uniform node cannot carry a **nullable** texture, so a slot the shell
+  fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder
+  whose `.value` is swapped on attach — one node per slot for the whole
+  boot, since two consumers of the same volume must not be able to
+  diverge (`extinction/README.md` § Two nodes, one owner). `uAvPrepassTex`
+  in the shared map therefore stays null for a WebGPU boot's whole life.
 
 The mirror is a **transcription, not a loop** — `uniform()`'s node type
 comes from its overloads resolving against a concrete value, so a derived
@@ -372,18 +409,28 @@ verifying no actual math.
 ## Timestamps
 
 The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
-**every rendered frame** — not only while the HUD is open. The resolve is
-what recycles the query pool: tracking allocates a query pair per render
-pass regardless of whether anyone reads the result, so a gated resolve
-overruns the 2048-query pool after ~1024 frames and three logs
+**every rendered frame the probe left timestamps live on** — not only while
+the HUD is open, and gated on `timestampsAvailable` alone. The resolve is
+what recycles the query pool: tracking allocates a query pair per render pass
+regardless of whether anyone reads the result, so a resolve gated on the HUD
+instead overruns the 2048-query pool after ~1024 frames and three logs
 `Maximum number of queries exceeded`, then stops sampling until something
-resolves.
+resolves. Why the probe's verdict is the one admissible gate, plus two
+properties the seam carries, all in `debug/gpu-timing/README.md`.
 
-Two properties the seam carries for it, both in
-`debug/gpu-timing/README.md`. **The flag is a request:** three ANDs it with
-`hasFeature('timestamp-query')` and clears it silently where the adapter
-withholds the feature, so the boot records the granted answer as
-`timestampsAvailable` and consumers degrade off that instead of assuming.
+**The flag is a request, and a grant is not
+proof:** three ANDs it with `hasFeature('timestamp-query')` and clears it
+where the adapter withholds the feature — but Safari 26 grants it and then
+reports the query set's type as an unknown enum, which fails the render
+pass descriptor, invalidates the command encoder and discards the entire
+submit. Every layer stops drawing and WebKit logs nothing, since it does
+not fire `onuncapturederror`. `timestamp-probe.ts` settles it at boot by
+driving one throwaway timestamped pass inside a validation scope and
+clearing `trackTimestamp` when refused, so `timestampsAvailable` is the
+probe's answer, never `hasFeature`'s. **The probe must run before the
+first frame:** three caches the render pass descriptor per render target
+and never clears a `timestampWrites` it already attached, so a descriptor
+built while the flag was true stays poisoned for the backend's lifetime.
 **One resolve in flight:** a concurrent resolve returns the same promise and
 the same number, so `resolveAndPublishGpuFrame` publishes once per
 completion rather than once per frame the readback spanned. **And a grant is
@@ -396,7 +443,7 @@ one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
 query fills, and the perf HUD's headline reads `gpu` rather than `submit`
 on either backend. Subscribers (the HUD, a `debug.priceFrame()` sweep)
 come and go through `debug/gpu-timing/gpu-frame-samples.ts` while the
-resolve itself stays unconditional. Per-pass `gpu.*` rows have no WebGPU
+resolve itself is gated on nothing but the probe's verdict. Per-pass `gpu.*` rows have no WebGPU
 counterpart on purpose: three keys per-pass timestamps by an internal
 uid, and the pricing differential answers the same question without
 pinning three's internals. Detail in `debug/gpu-timing/README.md`.
