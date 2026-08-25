@@ -96,6 +96,36 @@ and consumers ask that rather than assuming the flag took: with no
 timestamps the headline stays `submit` and a pricing sweep degrades to
 `raf-delta` instead of claiming a clock it does not have.
 
+### The resolved duration is quantised — a floor under every differential
+
+**Chrome does not hand back a continuous number.** Measured 2026-08-25 on
+an M4 over a `#renderer=webgpu` boot, three resolved frame durations —
+12.648448, 114.556928 and 12.910592 ms — are all **exact multiples of
+65,536 ns** (2¹⁶, ≈ 65.5 µs), and so is their greatest common divisor.
+That is the browser quantising the timestamp, not a property of the work.
+
+**Differencing `gpu.frame` is the only thing that prices a pass (above),
+so this is the floor that method runs into.** A differential under
+≈ 65.5 µs is a quantisation bucket rather than a measurement: two
+configurations whose true costs differ by less than one bucket can report
+byte-identical durations, and a pass that prices at "exactly zero cheaper"
+may simply be sub-quantum. Price passes that clear the floor by a healthy
+multiple, or accumulate across many frames — never read a single small
+differential as a result.
+
+It also explains a reading that looks like a broken timer: two resolves
+320 frames apart returning the same duration to nine significant figures
+(12.648447999999998 against 12.648448000000002 — one integer nanosecond
+delta, differing only in float64 noise). Steady-state work landing in the
+same bucket, not a frozen or cached clock.
+
+**Three samples BOUND the quantum, they do not pin it** — the true value
+divides 65,536, so it may be smaller. To tighten it, collect unique
+durations over a minute of animating scene and take their GCD in
+nanoseconds; more samples can only lower the estimate. Measured on
+Chrome/ANGLE-Metal, where Safari offers no GPU timer to compare against.
+The standing record is `stellata-8cg.1`'s notes.
+
 ### A granted feature can still resolve garbage
 
 **Chrome grants `timestamp-query` and then resolves nonsense.** Measured on
