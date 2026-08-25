@@ -3,13 +3,16 @@
 The TSL half of the dust-particle billboard. The WebGL2 shaders
 (`../../dust/`) stay the shipped renderer and the semantic reference.
 
-**The layer it belongs to is shelved** (`../../dust/README.md`): strength
-is 0, the mesh is hidden, and `particles.bin` is never fetched. So this
-port has no smoke of its own until someone calls
-`stellata.setParticleStrength(>0)` from the console — which is also the
-only way to see it on the WebGL build. Ported anyway because the shelved
-layer still constructs on both boots, and a material the seam cannot
-build is a boot that throws rather than a layer that stays dark.
+**The layer it belongs to is shelved, and this folder is slated to go
+with it** (`../../dust/README.md`): strength is 0, the mesh is hidden,
+`particles.bin` is never fetched, and the decision is to remove the
+particle layer rather than un-shelve it. So this port has no smoke of its
+own — the only way to see the sprite on either backend is
+`stellata.setParticleStrength(>0)` from the console. It was ported anyway
+because the shelved layer still constructs its material on both boots,
+and a surface the seam cannot build is a boot that throws rather than a
+layer that stays dark; the removal then deletes both halves together
+rather than leaving one backend's twin behind.
 
 ## Files in this area
 
@@ -74,7 +77,7 @@ literal (`../tsl/README.md` § TSL test pattern).
 
 **The tint is the one chrome colour still unmapped.** It is a shader
 constant rather than a uniform, so it never went through the inverse
-tone-map the other chrome layers take, on either backend. Unshelving the
-layer owes that pass a look (`../../hdr/chrome/README.md`) — this port
-carries the defect across rather than silently fixing it, so the two
-backends still agree.
+tone-map the other chrome layers take, on either backend
+(`../../hdr/chrome/README.md`). The port carries that across rather than
+silently fixing it — a one-sided fix would have split the two backends'
+look while fixing nothing visible, and the debt retires with the layer.
