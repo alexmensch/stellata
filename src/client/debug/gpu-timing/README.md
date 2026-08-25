@@ -99,10 +99,10 @@ timestamps the headline stays `submit` and a pricing sweep degrades to
 ### The resolved duration is quantised — a floor under every differential
 
 **Chrome does not hand back a continuous number.** Measured 2026-08-25 on
-an M4 over a `#renderer=webgpu` boot, three resolved frame durations —
-12.648448, 114.556928 and 12.910592 ms — are all **exact multiples of
-65,536 ns** (2¹⁶, ≈ 65.5 µs), and so is their greatest common divisor.
-That is the browser quantising the timestamp, not a property of the work.
+an M4 over a `#renderer=webgpu` boot: across **310 distinct resolved frame
+durations**, every one is an exact multiple of **65,536 ns** (2¹⁶,
+≈ 65.5 µs), and their greatest common divisor is exactly that. The browser
+is quantising the timestamp; it is not a property of the work measured.
 
 **Differencing `gpu.frame` is the only thing that prices a pass (above),
 so this is the floor that method runs into.** A differential under
@@ -119,12 +119,18 @@ It also explains a reading that looks like a broken timer: two resolves
 delta, differing only in float64 noise). Steady-state work landing in the
 same bucket, not a frozen or cached clock.
 
-**Three samples BOUND the quantum, they do not pin it** — the true value
-divides 65,536, so it may be smaller. To tighten it, collect unique
-durations over a minute of animating scene and take their GCD in
-nanoseconds; more samples can only lower the estimate. Measured on
-Chrome/ANGLE-Metal, where Safari offers no GPU timer to compare against.
-The standing record is `stellata-8cg.1`'s notes.
+**Why 310 samples settles it.** A common divisor is strictly an upper
+bound: if the real step were half as large, the durations would still all
+divide by it. But each varied sample then has to land on a 65,536
+boundary by luck, so 310 of them agreeing is that coin flip won 309 times
+over. Reproduce by collecting unique durations across a minute of
+animating scene and taking their greatest common divisor in nanoseconds —
+more samples can only ever lower the answer, and these did not.
+
+Measured on Chrome/ANGLE-Metal. Safari exposes no GPU timer at all, so
+there is nothing to compare against there, and this figure should be
+re-derived per browser and per GPU rather than assumed. The standing
+record is `stellata-8cg.1`'s notes.
 
 ### A granted feature can still resolve garbage
 
