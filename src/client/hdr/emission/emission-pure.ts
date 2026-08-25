@@ -170,12 +170,18 @@ export function rodSummationSolidAngleArcsec2(
   return 10 ** (0.4 * (thresholdMagArcsec2 - limitMag));
 }
 
+/** Magnitudes per factor of two in flux — one photographic stop, and the
+ *  same factor that carries a log₂ into the magnitude domain. A shader has
+ *  `log2` but no `log10`, so every TSL magnitude step goes through it. */
+export const MAG_PER_STOP = 2.5 * Math.log10(2);
+
 /** Inverse of `rodSummationSolidAngleArcsec2`. A consumer needing the
- *  threshold back in the magnitude domain — the chart isobar contours a
- *  surface brightness — recovers it from the same solid angle the gain
- *  runs on rather than taking a second uniform, so the contour and the
- *  emission cannot disagree about where threshold is. Mirrors
- *  `stellataExtendedThresholdSb`. */
+ *  threshold back in the magnitude domain recovers it from the same solid
+ *  angle the gain runs on rather than taking a second uniform, so the two
+ *  cannot disagree about where threshold is. Mirrors
+ *  `stellataExtendedThresholdSb`, whose only caller is the MW chart isobar
+ *  — a branch that has never drawn (`../../milkyway/README.md` § Chart
+ *  mode + warp). */
 export function extendedThresholdSbFromSolidAngle(
   omegaSummationArcsec2: number,
   limitMag: number,

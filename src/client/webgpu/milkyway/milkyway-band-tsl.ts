@@ -13,6 +13,7 @@ import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
 import {
   extendedThresholdSbTsl, footprintAlongTsl, footprintPcTsl, softenRadiusTsl,
 } from '../emission-tsl';
@@ -23,9 +24,6 @@ import type { BandComponentNodes, BandSharedNodes } from './band-uniform-nodes';
 
 type NF = Node<'float'>;
 type N3 = Node<'vec3'>;
-
-/** ln(10), for the log10 the surface-brightness domain needs. */
-const LOG10_FROM_LOG2 = Math.log10(2);
 
 export function buildMilkyWayBandMaterial(
   u: SharedUniformNodes,
@@ -164,13 +162,14 @@ export function buildMilkyWayBandMaterial(
     // round-trip as one scalar gain inside the emitter tail. Computed
     // outside the branch so the derivatives stay in uniform control flow.
     const column = max(dot(colorAccum, vec3(...LUMA_WEIGHTS)), 1e-12);
-    const sb = s.uGlowMagOffset.sub(log2(column).mul(2.5 * LOG10_FROM_LOG2)).toVar();
+    const sb = s.uGlowMagOffset.sub(log2(column).mul(MAG_PER_STOP)).toVar();
 
-    // Chart isobar: a single solid contour where the sightline's SURFACE
-    // BRIGHTNESS crosses the extended-source threshold. Surface brightness
-    // carries no Ω_px term, so the line is FOV- and viewport-invariant.
-    // `fwidth` has no TSL node — it is |dFdx| + |dFdy| by definition — and
-    // keeps the line a constant 1 px wide however steep the gradient is.
+    // Chart isobar: contour where the sightline's SURFACE BRIGHTNESS
+    // crosses the extended-source threshold. NEVER REACHED — chart mode
+    // hides both meshes, and always has (`../../milkyway/README.md`
+    // § Chart mode + warp). Transcribed to keep the two shaders one
+    // artefact, not because a pixel depends on it.
+    // `fwidth` has no TSL node — it is |dFdx| + |dFdy| by definition.
     const fw = max(abs(dFdx(sb)).add(abs(dFdy(sb))), 1e-5).toVar();
     const thresholdSb = extendedThresholdSbTsl(u.uOmegaSummationArcsec2, u.uLimitMag);
     const line = float(1.0).sub(

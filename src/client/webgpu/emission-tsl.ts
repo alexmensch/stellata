@@ -5,7 +5,7 @@
 import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { FOOTPRINT_SQRT12, LUMA_CEIL } from '../hdr/emission/emission-pure';
+import { FOOTPRINT_SQRT12, LUMA_CEIL, MAG_PER_STOP } from '../hdr/emission/emission-pure';
 
 type NF = Node<'float'>;
 type N3 = Node<'vec3'>;
@@ -54,13 +54,12 @@ export const softenRadiusTsl = /* @__PURE__ */ Fn(
 
 /** The extended-source threshold surface brightness recovered from the rod
  *  summation solid angle — the inverse of `rodSummationSolidAngleArcsec2`.
- *  A consumer needing threshold back in the magnitude domain (the chart
- *  isobar contours a surface brightness) takes it from the same solid angle
- *  the gain runs on, so the contour and the emission cannot disagree about
- *  where threshold is. */
+ *  Its one caller is the band's chart-isobar branch, which has never drawn
+ *  (`../milkyway/README.md`); taking threshold off the same solid angle the
+ *  gain runs on is what would keep contour and emission agreeing on it. */
 export const extendedThresholdSbTsl = /* @__PURE__ */ Fn(
   ([omegaSummationArcsec2, limitMag]: [NF, NF]) =>
-    limitMag.add(log2(max(omegaSummationArcsec2, 1e-12)).mul(2.5 * Math.log10(2))),
+    limitMag.add(log2(max(omegaSummationArcsec2, 1e-12)).mul(MAG_PER_STOP)),
 );
 
 /** How much of the footprint lies along `axis` for a ray running `dirUnit`.
