@@ -4,7 +4,7 @@
 import {
   seedBandSharedSlots, type BandMaterials, type BandSharedSlots,
 } from '../../milkyway/band-materials';
-import type { EmitterMaterial } from '../../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { uniformSlotsOf } from '../tsl/uniform-slots';

@@ -2,7 +2,7 @@
 // through, and the WebGL2 implementation. See README.md § The material seam.
 
 import * as THREE from 'three';
-import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';

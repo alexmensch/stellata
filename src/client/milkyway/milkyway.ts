@@ -3,7 +3,7 @@ import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
-import type { EmitterMaterial } from '../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../scene/emitter-material';
 import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
