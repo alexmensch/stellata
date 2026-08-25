@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { GATE_ELEMENT_ID, GATE_HIDES, SUPPORT_AUDIT_LABEL, showWebGpuGate } from './gate-page';
+import {
+  GATE_ELEMENT_ID, GATE_HIDES, SUPPORT_AUDIT_LABEL, showWebGpuGate, starCountPhrase,
+} from './gate-page';
 import type { UaHints } from './gate-advice-pure';
 
 /** Element-shaped stub — the suite runs in vitest's 'node' environment,
@@ -114,6 +116,14 @@ describe('the requires-WebGPU gate page', () => {
     const ids = [...GATE_HIDES.matchAll(/#([\w-]+)/g)].map((m) => m[1]);
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) expect(html).toContain(`id="${id}"`);
+  });
+
+  // The gate runs before the catalogue is fetched, so the build hands it
+  // the figure. A checkout without artifacts must still read as English.
+  it('quotes the built star count, and stays wordable without one', () => {
+    expect(starCountPhrase('329,657')).toBe('329,657 stars');
+    expect(starCountPhrase('')).toBe('hundreds of thousands of stars');
+    expect(starCountPhrase('')).not.toMatch(/\d/);
   });
 
   it('sets the accessible role and label', () => {

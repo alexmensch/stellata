@@ -166,6 +166,27 @@ The two-call-site threshold is firm. If a previous session left a
 site appears" note, treat it as a fileable defect, not precedent —
 the "premature abstraction" default is overridden here.
 
+### The star count is never a literal
+
+**Trigger: writing how many stars Stellata holds.** The catalogue is
+the only thing that knows, and it has moved — binary components are
+minted beyond the AT-HYG spine, so the shipped record count exceeds the
+spine's 313,257 and drifts again on every refresh. A number typed into
+copy is stale from the next build.
+
+- **A surface a user reads** takes it live: `catalog.count` once the
+  catalogue is loaded (the About modal), or `import.meta.env`
+  `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate,
+  `index.html`). `vite.config.ts` reads that off the built catalogue's
+  own header, and it is empty on a checkout with no artifacts — so
+  every consumer needs a wording that survives having no number.
+- **Prose cannot read anything**, so it rounds, and
+  `tests/star-count-consistency.test.ts` re-derives the rounding from
+  the header and fails when a refresh moves it.
+- **`313,257` is a different quantity** — AT-HYG's frozen spine rows,
+  documented in `catalog-driver.md`. It is not the number of stars
+  drawn, and the two are not interchangeable.
+
 ## Rename + stale-prose sweep
 
 When a PR renames or removes an API surface (function, method, event,

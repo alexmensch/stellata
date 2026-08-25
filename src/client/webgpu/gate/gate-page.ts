@@ -17,6 +17,14 @@ export const SUPPORT_AUDIT_LABEL = 'August 2026';
 export const GATE_HIDES =
   'canvas, .overlay, #topbar, #panel, #loading, #ui-top-left, #meta, #tooltip';
 
+/** The gate runs before the catalogue is fetched, so it cannot count the
+ *  stars itself — the build reads the figure off the catalogue's own
+ *  header instead. Absent that, say nothing numeric rather than a number
+ *  that would rot. */
+export function starCountPhrase(count = import.meta.env.VITE_STAR_COUNT): string {
+  return count ? `${count} stars` : 'hundreds of thousands of stars';
+}
+
 function hintsFromNavigator(): UaHints {
   return {
     userAgent: navigator.userAgent,
@@ -61,10 +69,10 @@ export function showWebGpuGate(
   const lead = doc.createElement('p');
   lead.className = 'webgpu-gate-lead';
   lead.textContent = verdict === 'no-api'
-    ? 'Stellata renders 313,000 stars with WebGPU, a graphics standard this '
+    ? `Stellata renders ${starCountPhrase()} with WebGPU, a graphics standard this `
       + 'browser doesn’t support.'
-    : 'Stellata renders 313,000 stars with WebGPU. This browser supports it, but '
-      + 'couldn’t start a graphics device — often a driver the browser '
+    : `Stellata renders ${starCountPhrase()} with WebGPU. This browser supports it, `
+      + 'but couldn’t start a graphics device — often a driver the browser '
       + 'blocks, or a setting left switched off.';
 
   const action = doc.createElement('p');
