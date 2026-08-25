@@ -22,12 +22,12 @@ export const LUMA_CEIL = 4096;
  *  tunable, and in particular it carries no dependence on dust: an emitter
  *  whose zero point moves with its own extinction has folded an
  *  attenuation error into its luminosity. */
-/** Second moment of a square footprint — the order `footprintRadiusPc`
- *  corrects to. Shared with the TSL twin, which cannot see the GLSL's
- *  STELLATA_SQRT12. */
-export const FOOTPRINT_SQRT12 = Math.sqrt(12);
-
 export const SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
+
+/** Matches the second moment of a square footprint, which is the order
+ *  `footprintRadiusPc` corrects to. Shared with the TSL twin, which cannot
+ *  see the GLSL's STELLATA_SQRT12. */
+export const FOOTPRINT_SQRT12 = Math.sqrt(12);
 
 /** Linear luminance of a source at V-band apparent magnitude `m`.
  *  Unclamped — the ceiling belongs to whatever writes the fragment. */

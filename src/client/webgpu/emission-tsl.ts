@@ -65,9 +65,8 @@ export const footprintAlongTsl = /* @__PURE__ */ Fn(
 
 export const pointSourcePeakTsl = /* @__PURE__ */ Fn(
   ([exposure, appMag, physRadiusPx]: [NF, NF, NF]) => {
-    const flux = exposure.mul(pow(10.0, appMag.mul(-0.4)));
     const spread = max(1.0, physRadiusPx.mul(physRadiusPx).mul(Math.PI));
-    return min(flux.div(spread), LUMA_CEIL);
+    return min(luminanceForMagTsl(exposure, appMag).div(spread), LUMA_CEIL);
   },
 );
 
@@ -79,8 +78,7 @@ export const pointSourcePeakTsl = /* @__PURE__ */ Fn(
 export const kernelFluxPeakTsl = /* @__PURE__ */ Fn(
   ([exposure, appMag, quadDiameterPx, fluxIntegral]: [NF, NF, NF, NF]) => {
     const area = fluxIntegral.mul(quadDiameterPx).mul(quadDiameterPx);
-    const flux = exposure.mul(pow(10.0, appMag.mul(-0.4)));
-    return min(flux.div(max(area, 1e-9)), LUMA_CEIL);
+    return min(luminanceForMagTsl(exposure, appMag).div(max(area, 1e-9)), LUMA_CEIL);
   },
 );
 
