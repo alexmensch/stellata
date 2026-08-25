@@ -171,5 +171,5 @@ There is no standing code-quality umbrella epic — a deferred finding goes unde
 whichever epic owns the code; do not create an umbrella by reflex.
 
 A file you are touching is a file you own for that PR: pre-existing rule
-violations, stale prose, and bugs in the diff's own files are in scope. See the
-`proactive-drift-correction` bd memory.
+violations, stale prose, and bugs in the diff's own files are in scope. See
+§ Correct stale context before the session ends in the user-level CLAUDE.md.

@@ -31,7 +31,7 @@ For **the PR named at invocation**, and nothing else:
 
 Still never: push or commit to `main`, merge a PR the user did not name,
 merge anything with a failing check, or `git push --delete` a remote branch
-(auto-delete-on-merge already does it — `stellata-gh-repo-settings`).
+(auto-delete-on-merge is enabled on this repo, so it already happened).
 
 The authorisation is per-invocation. It does not carry to the next PR.
 
@@ -107,7 +107,7 @@ git push --force-with-lease origin <headRefName>
 
 The ruleset carries `required_signatures`. An unsigned commit blocks the
 merge **with every check green**, which reads exactly like the orphaned-context
-failure in `ci-ruleset-required-contexts` and is a different cause.
+failure in § Deviations and is a different cause.
 
 ```bash
 git log --format='%h %G? %s' origin/main..HEAD
@@ -175,8 +175,8 @@ running".
 
 **Write it to a file and run it by path.** Inline is not an option: the loop
 needs `$( )`, and a worktree-isolated session's guard rejects any command
-containing a substitution (`bd-long-field-writes` documents the same
-constraint for `bd`). Write `/tmp/pr-watch-<N>.sh`, then hand `Monitor` the
+containing a substitution (the `beads` skill documents the same constraint
+for `bd`). Write `/tmp/pr-watch-<N>.sh`, then hand `Monitor` the
 plain command `bash /tmp/pr-watch-<N>.sh`. **Put the PR number in the
 filename** — several sessions land PRs at once and a shared path silently
 leaves one of them watching the other's PR.
@@ -222,8 +222,8 @@ bd dolt push
 ```
 
 `bd dolt push` is required here. The pre-push git hook syncs bd state on
-`git push`, and there is no `git push` left after this point —
-`stellata-bd-operations`.
+`git push`, and there is no `git push` left after this point — see the
+`stellata-beads` skill.
 
 Leave a bead open when the PR only advanced it. Say which, and why.
 
@@ -278,7 +278,7 @@ pnpm run typecheck                                   # sanity-check what actuall
 ```
 
 **Tell Alex the worktree is gone.** He runs a dev server against each branch's
-worktree (`worktree-per-pr`), so removing it kills whatever that server was
+worktree — one per PR — so removing it kills whatever that server was
 serving.
 
 Never remove a worktree the PR did not own.
@@ -299,8 +299,7 @@ wait.
 them: unsigned commits (§ The signature trap), then an orphaned
 required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
-`name:` strands the old context forever (`ci-ruleset-required-contexts`,
-`RELEASING.md` § Merge gating). Compare required against reported:
+`name:` strands the old context forever (`RELEASING.md` § Merge gating). Compare required against reported:
 
 ```bash
 gh api repos/alexmensch/stellata/rulesets/15843287 \
