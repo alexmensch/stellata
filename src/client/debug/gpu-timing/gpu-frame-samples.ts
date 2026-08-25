@@ -11,6 +11,46 @@ export interface GpuFrameResolver {
   resolveTimestampsAsync(): Promise<number | undefined>;
 }
 
+/** The renderer as far as § The resolved-uid trim reaches into it.
+ *  `backend` is `unknown` on purpose: @types/three declares no
+ *  `timestampQueryPool` on `Backend`, so this is past the typed surface and
+ *  every level is narrowed at runtime instead. A three bump that moves any
+ *  of it must leave the trim inert, never throwing inside the render loop. */
+export interface TimestampPoolHost {
+  backend?: unknown;
+}
+
+function clearable(v: unknown): { clear(): void } | null {
+  return typeof (v as { clear?: unknown } | null)?.clear === 'function'
+    ? (v as { clear(): void })
+    : null;
+}
+
+/**
+ * Drop the uids a resolve just recorded.
+ *
+ * `TimestampQueryPool.timestamps` is a `Map<uid, ms>` three writes on every
+ * resolve and never clears, trimmed or deletes. Keys are `<contextUid>:f<frameId>`
+ * — unique per frame — so nothing ever overwrites an entry and the Map grows
+ * for the tab's life: one entry per render pass per frame, ~216k/hour at 60 fps
+ * for a single pass.
+ *
+ * Clearing it is safe because **nothing reads it**. `resolveQueriesAsync`
+ * computes its total from the mapped result buffer and its own offset list,
+ * not from this Map; the only readers are `Backend.getTimestamp` /
+ * `hasTimestampQuery`, which three itself never calls and stellata never
+ * calls either — per-pass `gpu.*` rows have no WebGPU counterpart on purpose
+ * (README.md § WebGPU). Verified against three 0.185.1.
+ */
+export function dropResolvedTimestamps(host: TimestampPoolHost): void {
+  const pools = (host.backend as { timestampQueryPool?: unknown } | null | undefined)
+    ?.timestampQueryPool;
+  if (typeof pools !== 'object' || pools === null) return;
+  for (const pool of Object.values(pools as Record<string, unknown>)) {
+    clearable((pool as { timestamps?: unknown } | null)?.timestamps)?.clear();
+  }
+}
+
 let resolveInFlight = false;
 let impossibleSeen = false;
 
@@ -61,7 +101,7 @@ function publishResolved(ms: number | undefined): void {
  * would only trip its own `warnOnce`.
  */
 export function resolveAndPublishGpuFrame(
-  renderer: GpuFrameResolver,
+  renderer: GpuFrameResolver & TimestampPoolHost,
   timestampsLive: boolean,
 ): void {
   if (!timestampsLive) return;
@@ -73,7 +113,14 @@ export function resolveAndPublishGpuFrame(
     // A lost device rejects, and three has already logged it. The flag must
     // clear regardless, or timing stops for the tab's lifetime.
     .catch(() => {})
-    .finally(() => { resolveInFlight = false; });
+    .finally(() => {
+      resolveInFlight = false;
+      // After the resolve settles, every uid it recorded is consumed — we
+      // took the number it returned. Trimming here rather than before the
+      // resolve is what keeps the Map bounded by one frame's passes instead
+      // of the tab's whole history.
+      dropResolvedTimestamps(renderer);
+    });
 }
 
 /** Subscribe to those samples; the return value unsubscribes. Several

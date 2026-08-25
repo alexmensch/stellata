@@ -171,6 +171,37 @@ into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
 
+### The resolved-uid trim — three's Map never shrinks on its own
+
+`TimestampQueryPool.timestamps` is a `Map<uid, ms>` three writes on every
+resolve and **never clears, trims or deletes** — verified in 0.185.1 across
+both implementations, where the base class only ever `get`s and `has`es it.
+Keys are `<contextUid>:f<frameId>`, unique per frame, so nothing overwrites
+an entry: the Map grows for the tab's whole life at one entry per render
+pass per frame. That is ~216k entries an hour at 60 fps for a *single*
+pass, and the post-cutover frame submits several.
+
+`dropResolvedTimestamps` clears it once each resolve settles, on the
+success and the failure path alike. Clearing is safe because **nothing
+reads it**: `resolveQueriesAsync` computes its total from the mapped result
+buffer and its own offset list, never from the Map, and the only readers
+are `Backend.getTimestamp` / `hasTimestampQuery` — which three itself never
+calls and stellata never calls either, since there are no per-pass `gpu.*`
+rows on this backend by design (above).
+
+Two properties the tests pin. It runs **after** the resolve settles, never
+before — trimming early would race the write three does inside
+`resolveQueriesAsync`. And it is **inert at every level** where a three
+bump might move the shape, because it reaches past the public surface and a
+throw would land inside the render loop.
+
+This is a stopgap: the durable fix is upstream, clearing resolved uids at
+the end of `_resolveQueries` so every WebGPU app benefits and we carry no
+divergence. Deliberately **not** folded into `patches/three@0.185.1.patch`
+— that patch exists to be deleted at the three bump, and a second hunk
+would make the bump re-verify an unrelated fix. Re-check this section
+against the three version in `package.json` when that lands.
+
 ### Watching the raw sample stream
 
 **The HUD cannot show you this.** The panel displays the ring's *average*,
