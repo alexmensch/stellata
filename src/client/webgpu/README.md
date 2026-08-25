@@ -57,6 +57,12 @@ src/client/webgpu/
   molecular-clouds/                 The cloud absorption raymarch (both
                                     tiers) and the rim shell — its own
                                     README.
+  local-group/                      The two instanced volumetric emission
+                                    raymarches — its own README.
+  extended-emitter-tsl.ts           The write tail every extended-source
+                                    emitter shares: column → gain → all
+                                    three attachments, and the inline
+                                    operator off-target.
   extinction/                       The camera→star dust raymarch and the
                                     per-star A_V cache that feeds the star
                                     vertex stage — its own README.
@@ -120,7 +126,9 @@ table below.
 Both boundary shells draw too — the heliopause and the Local Bubble,
 through `fresnel-shell/` — as do the molecular clouds
 (`molecular-clouds/`), whose absorption is the first ported layer that
-*dims* the target rather than adding to it. The dust sprite (`dust/`)
+*dims* the target rather than adding to it, and the Local Group's
+volumetric glow (`local-group/`), the first to write the diffuse
+attachment the resolve convolves. The dust sprite (`dust/`)
 is ported as well, though its layer is shelved at strength 0 so nothing
 of it is visible without a console call.
 The HDR chain runs for real through `hdr/` — MRT target, summation,

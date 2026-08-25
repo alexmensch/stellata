@@ -2,11 +2,66 @@
 // and statistic-texel rules, over emission-pure's constants. Contracts:
 // ../hdr/emission/README.md § Unit, ../hdr/attachments/README.md § The unit.
 
-import { Fn, clamp, max, min, pow, vec4 } from 'three/tsl';
+import { Fn, clamp, dot, float, max, min, pow, sqrt, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { LUMA_CEIL } from '../hdr/emission/emission-pure';
+import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import { FOOTPRINT_SQRT12, LUMA_CEIL } from '../hdr/emission/emission-pure';
 
 type NF = Node<'float'>;
+type N3 = Node<'vec3'>;
+
+export const luminanceForMagTsl = /* @__PURE__ */ Fn(
+  ([exposure, appMag]: [NF, NF]) => exposure.mul(pow(10.0, appMag.mul(-0.4))),
+);
+
+/**
+ * The extended-source rule: the flux magnitude inside a solid angle Ω is
+ * `S − 2.5·log10(Ω)`, and the log round-trip collapses to one scalar gain.
+ *
+ * **Unclamped by contract** — being a single scalar is what lets a layer
+ * apply it to a coloured column without touching chromaticity, so the
+ * CALLER clamps the product rather than the factor
+ * (`../hdr/emission/README.md` § Unit).
+ */
+export const surfaceBrightnessLuminanceTsl = /* @__PURE__ */ Fn(
+  ([exposure, magPerArcsec2, omegaArcsec2]: [NF, NF, NF]) =>
+    luminanceForMagTsl(exposure, magPerArcsec2).mul(omegaArcsec2),
+);
+
+/** CSS px per radian recovered from the pixel solid angle — the inverse of
+ *  `pixelSolidAngleArcsec2`. A layer needing a plate scale takes it from
+ *  `uOmegaPxArcsec2` through this rather than carrying a second uniform, so
+ *  a resize can never leave the two disagreeing about the viewport. */
+export const pxPerRadianTsl = /* @__PURE__ */ Fn(
+  ([omegaPxArcsec2]: [NF]) =>
+    sqrt(max(omegaPxArcsec2, 1e-12)).mul(ARCSEC_TO_RAD).reciprocal(),
+);
+
+/** Radius, in pc, over which a raymarch step must smooth its profile for a
+ *  point-sampled fragment to carry the pixel's AREA average of the column.
+ *  Grows along the ray, so it is a cone rather than a cylinder. */
+export const footprintPcTsl = /* @__PURE__ */ Fn(
+  ([distancePc, omegaPxArcsec2]: [NF, NF]) =>
+    distancePc.div(pxPerRadianTsl(omegaPxArcsec2).mul(FOOTPRINT_SQRT12)),
+);
+
+/** A profile radius smoothed over the footprint — exactly TRANSVERSE
+ *  smoothing for a spherically symmetric profile. */
+export const softenRadiusTsl = /* @__PURE__ */ Fn(
+  ([radiusPc, footprintPc]: [NF, NF]) =>
+    sqrt(radiusPc.mul(radiusPc).add(footprintPc.mul(footprintPc))),
+);
+
+/** How much of the footprint lies along `axis` for a ray running `dirUnit`.
+ *  Zero when the ray runs along the axis, which is what a separable profile
+ *  needs: softening a face-on disc along z would suppress the column
+ *  instead of averaging it. */
+export const footprintAlongTsl = /* @__PURE__ */ Fn(
+  ([dirUnit, axis]: [N3, N3]) => {
+    const c = dot(dirUnit, axis);
+    return sqrt(max(float(1.0).sub(c.mul(c)), 0.0));
+  },
+);
 
 export const pointSourcePeakTsl = /* @__PURE__ */ Fn(
   ([exposure, appMag, physRadiusPx]: [NF, NF, NF]) => {

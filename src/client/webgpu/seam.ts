@@ -11,6 +11,7 @@ import type {
 } from '../solar-system/planets/planet-body-field';
 import type { DustParticleMaterials } from '../dust/dust-particle-layer';
 import type { CloudMaterials } from '../molecular-clouds/cloud-materials';
+import type { LgEmissionMaterials } from '../local-group/emission/lg-emission-materials';
 import type { ShellMaterials } from '../fresnel-shell/fresnel-shell';
 import type {
   ProbeMaterials, SolarSystemMaterials,
@@ -128,6 +129,9 @@ export interface WebGpuSeam {
    *  (the traced / analytic tier is compile-time, so they cannot share) and
    *  one rim shell for all of them. */
   readonly cloudMaterials: CloudMaterials;
+  /** The TSL Local Group emission passes, one per family. Every uniform
+   *  they read is in the node mirror, so neither carries a slot record. */
+  readonly lgEmissionMaterials: LgEmissionMaterials;
   /** Build the TSL reflected-glare billboard into the seam's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it

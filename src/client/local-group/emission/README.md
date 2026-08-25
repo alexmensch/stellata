@@ -21,6 +21,9 @@ are no Deep-field emission knobs (§ Zero free parameters).
   raymarch. Keep the mirror in lockstep with the shader.
 - `local-group-emission.{vert,frag}.glsl` — one shader pair for both
   families; the disc material defines `FAMILY_DISC`.
+- `lg-emission-materials.ts` (+ test) — the material seam: the neutral
+  `LgEmissionMaterials` contract and the WebGL2 implementation
+  (§ The material seam).
 - `local-group-emission.test.ts` — wiring, instance packing, the shader
   mirror, the tint derivation.
 - `local-group-emission-calibration.test.ts` — the epic's acceptance
@@ -71,6 +74,24 @@ during warp** — unlike the wireframe overlay, the glow is light, not
 reference chrome. No Sol-distance fade for the same reason. Hover /
 pick is untouched — the wireframe's visibility-gated pick remains the
 only pick path.
+
+## The material seam
+
+Both passes take their material from an `LgEmissionMaterials` factory
+rather than building a `ShaderMaterial` inline, so a WebGPU boot swaps
+shaders without a second copy of the instance packing, the per-frame
+rebase or the enable / chart gates. Both geometries cross unchanged — six
+buffers for the disc family, seven for the Sérsic one, inside WebGPU's
+eight. The WebGPU twin is `../../webgpu/local-group/README.md`;
+`lg-module.ts` passes `kindCtx.webgpu?.lgEmissionMaterials` and adds the
+emission group to `(webgpu?.scene ?? scene)` — the wireframes are Line2
+chrome and stay in the shell's scene, which that boot never draws.
+
+**Every uniform these shaders read is shared**, so the TSL side exposes no
+slot record at all: the six HDR emitter slots and `uWorldOffset` are in
+the uniform-node mirror. The layer's own `uWorldOffset` object is
+therefore inert on that backend — `FloatingOrigin`'s write to the shared
+map is what reaches the shader instead.
 
 ## Zero free parameters — the emission scale is derived
 
