@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
-import type { EmitterMaterial } from '../../solar-system/materials/emitter-material';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import {
   makeGlslLgEmissionMaterials, type LgEmissionMaterials,
 } from './lg-emission-materials';
