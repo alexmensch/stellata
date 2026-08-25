@@ -71,7 +71,7 @@ export function makeGlslShellMaterials(): ShellMaterials {
  *  hide-when-inside contract: with outward-oriented winding the shell
  *  back-face-culls when the camera sits inside it, so the near-wall glow
  *  doesn't wash the scene — it appears only from beyond the boundary. */
-export function createFresnelShellMaterial(
+function createFresnelShellMaterial(
   opts: FresnelShellMaterialOptions,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({

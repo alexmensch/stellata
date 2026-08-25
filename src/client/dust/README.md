@@ -47,4 +47,8 @@ writes, so that one call reaches either backend.
 
 `dust-particle-pure.ts` holds the footprint window, the dim floor and the
 tint, so the TSL twin imports what the GLSL can only copy;
-`dust-particle-glsl-drift.test.ts` pins the copies.
+`dust-particle-glsl-drift.test.ts` pins the copies, and its TSL-side
+counterpart lives with the twin (`../webgpu/dust/README.md` § Constants
+live in TypeScript). `dust-materials.test.ts` carries the seam's own
+guard — the layer-owned slot on both backends, and the TSL dispose
+severing its MRT registration.

@@ -21,8 +21,9 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
   - `ShellMaterials` + `makeGlslShellMaterials()` — the material seam
-    (§ The material seam below).
-  - `createFresnelShellMaterial(opts)` — builds the `ShaderMaterial`.
+    (§ The material seam below), and the only way in: the
+    `ShaderMaterial` builder behind it is module-private, so a consumer
+    cannot take a surface that skips the seam.
   - `FresnelShell` — abstract base owning the group, material, and the
     chart-mode + detail-cycle + floating-origin plumbing.
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
@@ -31,6 +32,10 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
     viewportHeightPx, fovYRad)` — the label legibility gate both shells'
     visibility predicates share (§ Invariants below).
+- `shell-materials.test.ts` — the seam's guard: the two factories' slot
+  keys pinned against each other, the chrome inverse landing on the same
+  mapped colour on either side, and the TSL dispose severing its MRT
+  registration.
 - `shell-module.ts` (+ test) — the shell `ObjectKindModule`
   (`../kinds/README.md`): one module whose `attach` constructs BOTH
   shell layers (heliopause + Local Bubble) and registers them into its

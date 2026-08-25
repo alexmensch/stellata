@@ -1,4 +1,4 @@
-// TSL uniform-node twins of createFresnelShellMaterial's uniform block
+// TSL uniform-node twins of the GLSL shell factory's uniform block
 // (../../fresnel-shell/fresnel-shell.ts) — transcribed key-for-key, pinned
 // by a key-parity test.
 
