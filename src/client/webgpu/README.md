@@ -232,6 +232,18 @@ port child restores the encode on their own path (`Line2` / chrome
 parity). Do not "fix" a dark built-in by unpinning the output space —
 that re-breaks every ported emitter and re-prices the hidden pass.
 
+**The clear colour is the second casualty, and no shader can fix that one.**
+Chart mode's paper is a `setClearColor` hex, so nothing owns its transfer;
+worse, this backend clears with the *working*-space components and never
+reads `outputColorSpace` (`Background.update` → `_clearColor.getRGB()` at
+its default space), where WebGL passes the canvas clear through
+`getUnlitUniformColorSpace`. The paper is therefore authored in the space
+the renderer clears in — `chart-mode/chart-palette.ts`'s
+`paperClearColour`, which stays correct on both backends only because
+output is pinned to working here. It shipped as a dirtier `#e9e2d2` paper
+under `#renderer=webgpu` until 0it.6; a new clear colour owes the same
+treatment.
+
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,
 vectors, textures) flow into the WebGPU renderer across copies. three
