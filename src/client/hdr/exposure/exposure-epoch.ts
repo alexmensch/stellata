@@ -9,11 +9,10 @@ import {
   instrumentLimitMag,
 } from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-import { rodSummationSolidAngleArcsec2 } from '../emission/emission-pure';
+import { MAG_PER_STOP, rodSummationSolidAngleArcsec2 } from '../emission/emission-pure';
 import { L_THRESH } from '../tonemap-pure';
 
-/** One photographic stop in magnitudes: 2.5·log10(2). */
-export const MAG_PER_STOP = 2.5 * Math.log10(2);
+export { MAG_PER_STOP };
 
 /** Trim range, in stops either side of EV 0. */
 export const EV_MAX_STOPS = 3;

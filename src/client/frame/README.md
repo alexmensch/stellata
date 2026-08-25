@@ -92,8 +92,9 @@ material by `StarPipeline`. Every other consumer picks slots out of the
 same object **by reference**, so a single write reaches all of them
 with no bookkeeping: `FilterController` (the filter / instrument /
 render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
-`pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, for its chart-mode
-isobar contour only — the band's own brightness is photometric),
+`pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, whose only consumer is the chart-mode isobar
+branch — which has never drawn, so nothing rendered reads it; the band's
+own brightness is photometric),
 `StarLocalMirror`, `ExtinctionPrepass`, `FloatingOrigin`
 (`uWorldOffset`), `StarFrame` (`uFovYRad` / `uViewport` for its
 windows), `DustParticleLayer`, `Picker`, and every kind module through

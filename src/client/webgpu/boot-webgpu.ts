@@ -26,6 +26,8 @@ import { makeTslShellMaterials } from './fresnel-shell/tsl-shell-materials';
 import { makeTslDustParticleMaterials } from './dust/tsl-dust-materials';
 import { makeTslCloudMaterials } from './molecular-clouds/tsl-cloud-materials';
 import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
+import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
+import type { BandMaterials } from '../milkyway/band-materials';
 import { StarLayer } from './star/star-layer';
 import { settleTimestampSupport, type TimestampBackend } from './timestamp-probe';
 
@@ -87,6 +89,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   };
   const registerMrtLayer = (layer: Parameters<typeof hdr.registerMrtLayer>[0]) =>
     hdr.registerMrtLayer(layer);
+  // Unlike the per-consumer factories below it, this one is built once and
+  // cached: the disc and the bulge share its slots by reference, so a
+  // second factory would give the layer a second, independent dust model
+  // and an MRT registration nothing disposes.
+  let bandMaterialsCache: BandMaterials | null = null;
   return {
     renderer,
     scene,
@@ -129,6 +136,12 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       return makeTslLgEmissionMaterials({
         nodes: nodesOrThrow('lgEmissionMaterials'), registerMrtLayer,
       });
+    },
+    get bandMaterials() {
+      bandMaterialsCache ??= makeTslBandMaterials({
+        nodes: nodesOrThrow('bandMaterials'), registerMrtLayer,
+      });
+      return bandMaterialsCache;
     },
     attachPlanetGlare(sources: PlanetGlareSources, mirrorParent: THREE.Object3D) {
       const layer = new PlanetGlareLayer(
@@ -176,8 +189,10 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       // The node registry holds no GPU resource — it mirrors the shell's
       // uniform value-objects, which the shell owns. Dropping it is what
       // makes a post-dispose attach throw rather than build against a
-      // dead boot.
+      // dead boot. The band cache drops with it, or a post-dispose read
+      // would hand back a factory built against one.
       registry = null;
+      bandMaterialsCache = null;
     },
   };
 }

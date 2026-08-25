@@ -102,6 +102,11 @@ export const S_MIN_PC = 1;
  *  against a converged reference march. */
 export const FOREGROUND_DUST_STEPS = 16;
 
+/** The unit ball, with the slack a log-stepped boundary sample can drift
+ *  past 1.0 by. Shared with the Local Group's march, which generalises
+ *  this scheme to N instances. */
+export const UNIT_BALL_SLACK = 1.001;
+
 // --- Profiles ----------------------------------------------------------
 
 /** Thin plus thick exponential, at an already-softened |z|. */
