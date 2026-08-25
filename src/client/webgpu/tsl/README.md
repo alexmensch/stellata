@@ -23,7 +23,8 @@ src/client/webgpu/tsl/
                                     restates as a bare literal — the scan
                                     behind every TSL-side drift guard.
   jitter-tsl.ts                     Interleaved gradient noise over the
-                                    fragment position.
+                                    fragment position, and the ±0.5-LSB
+                                    output dither over that.
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -113,11 +114,20 @@ stops a whisper-level gradient banding on 8-bit — one shape, two jobs. It
 is **static per pixel and never reseeded per frame**: animated jitter
 shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
 
-It sits here because more than one ported layer wants it. The
-solar-system atmosphere still carries its own `atmoJitterTsl` over an
-identical pair of constants under different names — consolidating those
-touches that subsystem's drift test, so it is filed rather than folded in
-here.
+Both jobs are exported, because writing the dither out as
+`noise(coord).sub(0.5).div(255)` is what let three copies of it
+accumulate: `lsbDitherTsl` is that composition, and the resolve pass reads
+it through `../tonemap-tsl.ts` rather than keeping a private twin. Its two
+constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
+when it jitters a ray start off the same noise — live with the rest of the
+dither's numbers in `../../hdr/tonemap-pure.ts`.
+
+The solar-system atmosphere still carries its own `atmoJitterTsl` over an
+identical pair of constants under **different names**, and the three
+hand-written GLSL `ign()` copies are still three. Both remain because
+retiring `ATMO_JITTER_*` trips that subsystem's drift test by name and the
+GLSL side wants a registered ShaderChunk — `0it.33`, which is now only
+those two.
 
 ## TSL typing shim
 
