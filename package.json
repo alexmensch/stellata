@@ -39,6 +39,7 @@
     "refresh:hip2": "python3 scripts/refresh/refresh-hipparcos2.py",
     "refresh:hip-vmag": "python3 scripts/refresh/refresh-hipparcos-vmag.py",
     "refresh:classic-ids": "python3 scripts/refresh/refresh-classic-ids.py",
+    "refresh:tycho2": "python3 scripts/refresh/refresh-tycho2.py",
     "refresh:simbad": "python3 scripts/refresh/refresh-simbad-sample.py",
     "refresh:simbad-values": "python3 scripts/refresh/refresh-simbad-values.py",
     "fetch:probes": "tsx scripts/probes/fetch-probe-trajectories.ts",
