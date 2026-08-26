@@ -57,6 +57,19 @@ system draws, never every catalog pair.
   `collectSpheres` reports each drawn pair's barycentre + apoapsis extent
   so the slice bracket contains the ellipses. Paths drawing ⇒ the cluster
   is active, so they always render, on either backend.
+
+  **The near-side arc IS drawn over the member, and you still cannot see
+  it.** The star mirror's additive glow sits at `renderOrder` 3.5 against
+  these paths' 3.2 (`../../star-pipeline/local-pass/star-mirror-slots.ts`),
+  writes no depth, and is deliberately drawn last so an opaque mesh cannot
+  erase it wholesale. So it adds on top of the arc in BOTH the in-front and
+  the behind case, and near a resolved bright member it saturates — the two
+  cases render identically white. The depth ordering above is correct and
+  simply unobservable there. Consequences worth knowing: don't smoke this
+  layer's depth by eye against a member disc (the planet orbit rings ride
+  the identical mechanism against an unsaturated body, and are where it
+  shows), and don't "fix" a report of a missing near-side arc by reordering
+  — 3.5 is load-bearing for the glow.
 - Geometry rebuilds on focus change (`setSystem`), mirroring
   `OrbitRingsLayer.setPlanetSystem`; the per-frame `update` moves
   barycentre anchors and applies the size gate below. The two loops per
