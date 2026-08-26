@@ -167,12 +167,16 @@ export function buildStarVertexNode(
         ciMod.assign(puls.y.mul(-0.5).mul(c));
       });
 
+      const eclipseDimMag = float(0.0).toVar();
       if (pass === STAR_PASS_GLOW) {
         // Glow pass only: the disc pass resolves an eclipse occlusion
         // geometrically in the local depth pass, so folding the dim there
-        // would dim the back disc's non-occluded fragments too.
+        // would dim the back disc's non-occluded fragments too. The
+        // magnitude is kept so the pass split can be solved without it —
+        // see the routeAppSize note below.
         If(eclipseDim.lessThan(1.0), () => {
-          appMag.addAssign(log(eclipseDim).mul(-2.5 / Math.LN10));
+          eclipseDimMag.assign(log(eclipseDim).mul(-2.5 / Math.LN10));
+          appMag.addAssign(eclipseDimMag);
         });
       }
 
@@ -277,7 +281,24 @@ export function buildStarVertexNode(
             const physSize = min(
               physSizeRaw, u.uMaxPhysFrac.mul(min(u.uViewport.x, u.uViewport.y)));
             pxSize.assign(max(appSize, physSize));
-            physRatio.assign(clamp(physSize.div(max(pxSize, 0.001)), 0.0, 1.0));
+
+            // The size the pass split routes on. Only the glow pipeline
+            // folds the eclipse dim into appMag, and a dim SHRINKS appSize,
+            // which RAISES physSize / max(appSize, physSize). Let the dim
+            // carry a star just under the split over it and glow discards it
+            // as disc-owned while disc, reading the undimmed appMag, still
+            // discards it as glow-owned — drawn by neither pipeline. Route on
+            // the undimmed size so all three agree, matching the GLSL twin
+            // and the CPU pick mirror
+            // (../../camera/controls/star-pick-visibility-pure.ts).
+            const routeAppSize = pass === STAR_PASS_GLOW
+              ? perceptualAppSizePxTsl(
+                perceptualDmEffTsl(
+                  appMag.sub(eclipseDimMag), u.uLimitMag, u.uSizeSpan, u.uSizeKnee),
+                u.uSizeMin, u.uSizeMax, u.uSizeSpan)
+              : appSize;
+            physRatio.assign(
+              clamp(physSize.div(max(max(routeAppSize, physSize), 0.001)), 0.0, 1.0));
 
             // Kernel collapse — must precede the flux renorm below so it
             // divides the collapsed footprint.

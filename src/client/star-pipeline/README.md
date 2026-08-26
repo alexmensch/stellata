@@ -187,6 +187,26 @@ to its material). The disc pass discards fragments with `vPhysRatio <
 0.5`; the glow pass discards `vPhysRatio ≥ 0.5`; the core mask
 discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
+**The three discards are complementary only while all three agree on
+`vPhysRatio`, and that is not free.** Each material runs `star.vert.glsl`
+independently, so any per-pass term reaching the size solve makes them
+disagree — and the disc/glow discards are written as a partition, so a
+disagreement drops the star from *both*, drawn nowhere while every CPU
+mirror believes it renders. One term does this: `iEclipseDim`, folded
+into `appMag` in the glow pass only, which shrinks `appSize` and thereby
+*raises* `physSize / max(appSize, physSize)`. So the ratio is solved
+from the **undimmed** `appSize` in every compilation (`routeAppSize` in
+the vertex stage) while the footprint `pxSize` still carries the dim.
+`vPhysRatio` is therefore the star's size *class*, not literally
+`physSize / pxSize` — a dim fades the star and shrinks its quad, it never
+re-tiers it. `isDiscDominant`
+(`local-pass/star-local-cluster-pure.ts`) is the CPU mirror of that
+routing and takes the undimmed size for the same reason; the pick gate
+(`../camera/controls/star-pick-visibility-pure.ts`) already routed this
+way. The WebGPU port carries the same rule in `routeAppSize`
+(`../webgpu/star/star-vertex-tsl.ts`), built glow-pass-only since no
+other pipeline folds the dim.
+
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
 collapsing its vertex to a clip-space sentinel
 (`gl_Position = vec4(2, 2, 2, 1)`) when `gl_InstanceID == uHideFocusIdx`.
@@ -212,7 +232,9 @@ viewpoint. Written by `EclipsePhotometryField` (see
 smoothing, and re-uploaded only on frames with active dims. Folded
 into `appMag` in the **glow pass only** — a resolved pair's disc
 overlap orders geometrically in the local depth pass instead
-(`local-pass/README.md`). Exactly 0 means totality: the glow quad
+(`local-pass/README.md`) — and deliberately kept out of the pass-split
+solve, since it is the one per-pass term that could make the three
+compilations disagree (§ Star rendering). Exactly 0 means totality: the glow quad
 collapses via the off-screen-sentinel pattern instead of taking a
 floored log. Integration shell initialises the buffer to 1.0 at
 allocation and on every re-attach, so the shader's

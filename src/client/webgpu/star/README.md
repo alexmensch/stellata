@@ -174,7 +174,11 @@ Compile-time pass constants replace the `uRenderMode` branches
 
 - **Glow (D2)**: the hidden focal star and local-pass members collapse to
   the clip sentinel; eclipse totality collapses; a partial `iEclipseDim`
-  folds into `appMag` before any size/brightness derivation;
+  folds into `appMag` before any size/brightness derivation — but **not**
+  before the pass split, which every pipeline solves from the undimmed
+  `appSize` (`routeAppSize`, built here only) or the three would tier the
+  same star differently and all discard it
+  (`../../star-pipeline/README.md` § Star rendering);
   `iCompositeSuppress` never gates glow (the summed pair is the point).
 - **Disc (D4, both draws)**: focal hide, members, and
   `iCompositeSuppress` collapse; `iEclipseDim` is ignored — a resolved

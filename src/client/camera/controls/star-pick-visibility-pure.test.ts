@@ -6,6 +6,8 @@ import {
 import { appSizePxForMag, type RenderedSizeComponents } from './star-physics';
 import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
 import { exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
+import { STAR_PASS_DISC, STAR_PASS_GLOW, colourPassFor } from '../../star-pipeline/star-pass';
+import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 
 // A comfortably-visible naked-eye star: glow-dominant (physSize far
 // under half the quad), a few magnitudes inside the threshold.
@@ -185,6 +187,69 @@ describe('resolveStarPickVisibility / adaptation', () => {
     // dm = -3 mag of adaptation cut.
     expect(resolveStarPickVisibility(
       args({ components: threshold, exposure: open * 10 ** (-0.4 * 3) }),
+    ).visible).toBe(false);
+  });
+});
+
+// The disc/glow split is solved independently by three separate shader
+// compilations, and only the glow one folds the eclipse dim into appMag.
+// A dim SHRINKS appSize, which RAISES physSize / max(appSize, physSize),
+// so routing on the dimmed size lets the glow material tier a star as
+// disc-owned while the disc material still tiers it as glow-owned —
+// discarded by both, drawn nowhere, with every CPU mirror believing it
+// renders. All three route on the UNDIMMED size instead; this pins the
+// band where that matters and that the pick gate agrees.
+describe('pass split is invariant under the eclipse dim', () => {
+  // physSize just under half the undimmed quad — glow-owned by a hair,
+  // which is exactly where a marginally-resolved companion sits. Bright,
+  // because a body subtending ~20 px has to be near to be resolved at all
+  // and the per-pixel ink floor is what a faint one fails first.
+  const UNDIMMED_APP_MAG = -5;
+  const undimmedAppSize = appSize(UNDIMMED_APP_MAG);
+  const physSizePx = 0.49 * undimmedAppSize;
+  const crossover = components({
+    appMag: UNDIMMED_APP_MAG,
+    appSizePx: undimmedAppSize,
+    physSizePx,
+    physSizePxUncapped: physSizePx,
+  });
+  // Deep enough to shrink appSize past 2 x physSize — the trap. The band
+  // opens at a dim of roughly 0.5 for this star, so it is not a corner.
+  const DEEP_DIM = 0.02;
+
+  it('the band is real: this dim does re-tier the star if routed on the dimmed size', () => {
+    const dimmedAppSize = appSize(UNDIMMED_APP_MAG - 2.5 * Math.log10(DEEP_DIM));
+    expect(colourPassFor(undimmedAppSize, physSizePx)).toBe(STAR_PASS_GLOW);
+    expect(colourPassFor(dimmedAppSize, physSizePx)).toBe(STAR_PASS_DISC);
+  });
+
+  it('the pick gate routes on the undimmed size, so the star stays glow-owned', () => {
+    // Glow-owned means the dim applies: it is a magnitude penalty here,
+    // never a re-tier into the pass that ignores dims entirely.
+    const dimmed = resolveStarPickVisibility(args({ components: crossover, eclipseDim: DEEP_DIM }));
+    expect(dimmed.hitRadius)
+      .toBeLessThan(resolveStarPickVisibility(args({ components: crossover })).hitRadius);
+  });
+
+  it('exactly one pass owns the star at every dim from 1 down to totality', () => {
+    // Both compilations solve the ratio from the undimmed appSize, so both
+    // reach the same verdict and the two discards stay complementary at
+    // every dim — the ratio simply does not depend on it.
+    const ratio = physSizePx / Math.max(undimmedAppSize, physSizePx);
+    const glowDraws = ratio < PHYS_RATIO_THRESHOLD;
+    expect(glowDraws).toBe(ratio < PHYS_RATIO_THRESHOLD);
+    expect(colourPassFor(undimmedAppSize, physSizePx))
+      .toBe(glowDraws ? STAR_PASS_GLOW : STAR_PASS_DISC);
+    // The dim is a magnitude penalty on the owning pass, so the star stays
+    // drawn — and pickable — until it falls under the ink floor on its own
+    // photometry, which is a different gate from the routing.
+    for (const dim of [1, 0.5, 0.2, DEEP_DIM]) {
+      expect(resolveStarPickVisibility(
+        args({ components: crossover, eclipseDim: dim }),
+      ).visible).toBe(true);
+    }
+    expect(resolveStarPickVisibility(
+      args({ components: crossover, eclipseDim: 0 }),
     ).visible).toBe(false);
   });
 });
