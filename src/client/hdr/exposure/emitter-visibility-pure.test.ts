@@ -55,7 +55,7 @@ describe('taperFactor', () => {
 });
 
 describe('emitterPeakDisplayLevel', () => {
-  // hdr/README.md § Operator: "L = L_THRESH resolves to 0.15 of full
+  // hdr/tonemap/README.md § Operator: "L = L_THRESH resolves to 0.15 of full
   // scale after encode". A source at the threshold carries exactly
   // L_THRESH by construction, so this pins the whole chain end to end.
   it('puts a threshold source at 0.15 of full scale on an unadapted frame', () => {

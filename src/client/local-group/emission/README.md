@@ -236,7 +236,7 @@ fighting it. Through the summation patch, at the base epoch and a
 50° / 900 px viewport, the profile reads **120 / 64 / 28 / 1** of 255 at
 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31 stays brighter
 than one out to ~15 arcmin, and the operator's faint-end toe
-(`../../hdr/README.md` § Operator) takes the sub-threshold outer envelope
+(`../../hdr/tonemap/README.md` § Operator) takes the sub-threshold outer envelope
 to the dither floor. A bright core trailing off over most of a degree,
 which is what the naked eye gets, and pinned.
 
