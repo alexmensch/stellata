@@ -4,6 +4,7 @@ import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
 import { makeRelation } from '../binary-relation-fixture';
 import { relationIndicesInBounds } from '../orbit-relation-cache';
 import { BinaryOrbitPathLayer } from './binary-orbit-path-layer';
+import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing
 // star 0 puts the relation on its chain.
@@ -42,14 +43,14 @@ const FAR = () => cameraAt(5);
 
 describe('BinaryOrbitPathLayer.setSystem', () => {
   it('builds one pair-group per Kepler relation on the focal chain', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
     expect(layer.group.children.length).toBe(1);
     layer.dispose();
   });
 
   it('traces nothing for a visual companion, a null system, or an unfocused star', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(VISUAL, 0, ABS);
     expect(layer.group.children.length).toBe(0);
     layer.setSystem(SINGLE, null, ABS);
@@ -60,7 +61,7 @@ describe('BinaryOrbitPathLayer.setSystem', () => {
   });
 
   it('skips a relation whose member indices fall outside the position buffer', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, new Float32Array([10, 0, 0]));
     expect(layer.group.children.length).toBe(0);
     layer.dispose();
@@ -69,7 +70,7 @@ describe('BinaryOrbitPathLayer.setSystem', () => {
 
 describe('BinaryOrbitPathLayer.update', () => {
   it('parks each pair-group at the barycentre (1−q)·primary + q·secondary', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
     layer.update(LOCAL, CLOSE(), VIEWPORT_H);
     const pos = layer.group.children[0].position;
@@ -80,7 +81,7 @@ describe('BinaryOrbitPathLayer.update', () => {
   });
 
   it('hides a pair once its orbit shrinks below the on-screen-size gate', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
     layer.update(LOCAL, CLOSE(), VIEWPORT_H);
     expect(layer.group.children[0].visible).toBe(true);
@@ -92,7 +93,7 @@ describe('BinaryOrbitPathLayer.update', () => {
 
 describe('BinaryOrbitPathLayer.anyOrbitRingVisible', () => {
   it('tracks whether a focused system draws a large-enough path this frame', () => {
-    const layer = new BinaryOrbitPathLayer();
+    const layer = new BinaryOrbitPathLayer(chromeLines());
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.setSystem(SINGLE, 0, ABS);
     layer.update(LOCAL, CLOSE(), VIEWPORT_H);

@@ -360,7 +360,19 @@ thousand km of a focused body. 8192 stays.
 
 Geometry rebuilds whenever the focused star's PlanetSystem changes; a
 per-frame tick drives the pixel-gap visibility heuristic.
-Representational only — rings hide when the host loses focus. Each ring
+Representational only — rings hide when the host loses focus. **One
+stroke covers every ring** — from the chrome line seam
+(`../../chrome-lines/README.md`) with its `localPass` flag, since the rings
+draw only in the local depth pass. Colour, alpha and that flag are the
+same constants for all of them and nothing writes the material per ring,
+so a stroke per ring bought nothing and cost its own shader build, its own
+pipeline and its own multiple-render-target registration on the WebGPU boot
+— up to 27 of them for Sol (nine planet rings, eighteen moon rows), where
+WebGL2's program cache had collapsed all 27 onto one program and hidden the
+duplication (`../../webgpu/tsl/README.md` § One program per material
+instance). It is built in the
+constructor and freed in `dispose`, NOT in `disposeRings` — that runs on
+every rebuild. Each ring
 rides its live centre (the host's renderer-local position, fed each
 frame from `PlanetBodyField.getHostLocalPositionInto`) through the
 anchored-line scheme in `../../util/orbit-line.ts`: float64

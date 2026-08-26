@@ -22,6 +22,7 @@ import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
 import {
   makeTslProbeMaterial, makeTslSolarSystemMaterials,
 } from './solar-system/tsl-materials';
+import { makeTslChromeLineMaterials } from './chrome-lines/tsl-chrome-lines';
 import { makeTslShellMaterials } from './fresnel-shell/tsl-shell-materials';
 import { makeTslDustParticleMaterials } from './dust/tsl-dust-materials';
 import { makeTslCloudMaterials } from './molecular-clouds/tsl-cloud-materials';
@@ -117,6 +118,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     get probeMaterial() {
       return makeTslProbeMaterial({
         nodes: nodesOrThrow('probeMaterial'), registerMrtLayer,
+      });
+    },
+    get chromeLineMaterials() {
+      return makeTslChromeLineMaterials({
+        nodes: nodesOrThrow('chromeLineMaterials'), registerMrtLayer,
       });
     },
     get shellMaterials() {

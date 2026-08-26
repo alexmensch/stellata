@@ -81,8 +81,8 @@ Three inputs, all pushed (no per-frame recompute):
 
 ## Styling
 
-The shared `util/orbit-line` alpha-blended material + `LineSegments` primitive
-(`makeOrbitLineMaterial` / `makeOrbitLineSegments`), 1 px (the renderer runs
+The shared alpha-blended stroke (`chrome-lines/README.md`) +
+`util/orbit-line`'s `makeOrbitLineSegments` primitive, 1 px (the renderer runs
 `antialias: false`, so linewidth is driver-pinned to 1 regardless). Sky-blue in
 navigate mode, chart ink in chart mode. If long figure spans alias worse than
 the short orbit rings do, the escalation is quad-strip segments with a soft-edge

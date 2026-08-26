@@ -3,6 +3,7 @@
 // recenter / dispose enumerations. See README.md.
 
 import type * as THREE from 'three';
+import { fanOut } from '../util/fan-out';
 import {
   CADENCE_REPORT_STILL,
   maxCadenceReport,
@@ -148,7 +149,7 @@ export class SceneLayerRegistry {
   }
 
   updateAll(ctx: FrameCtx): void {
-    for (const layer of this.layers) layer.update?.(ctx);
+    fanOut('updateAll', this.layers, (layer) => layer.update?.(ctx));
   }
 
   /** Channel-wise fastest report over every `'clock'` layer — the frame's
@@ -190,14 +191,14 @@ export class SceneLayerRegistry {
   }
 
   setMonochromeAll(on: boolean): void {
-    for (const layer of this.layers) layer.setMonochrome?.(on);
+    fanOut('setMonochromeAll', this.layers, (layer) => layer.setMonochrome?.(on));
   }
 
   recenterAll(newOrigin: Readonly<THREE.Vector3>): void {
-    for (const layer of this.layers) layer.recenter?.(newOrigin);
+    fanOut('recenterAll', this.layers, (layer) => layer.recenter?.(newOrigin));
   }
 
   disposeAll(): void {
-    for (const layer of this.layers) layer.dispose();
+    fanOut('disposeAll', this.layers, (layer) => layer.dispose());
   }
 }

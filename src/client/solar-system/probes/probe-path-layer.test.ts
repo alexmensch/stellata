@@ -8,6 +8,7 @@ import { tToJDE } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
+import { builtinChromeLineMaterials } from '../../chrome-lines/builtin-chrome-lines';
 import { buildProbeTrajectory } from './probe-trajectory';
 
 const STEP_DAYS = 30;
@@ -47,7 +48,7 @@ function makeHarness() {
     uFovYRad: { value: (50 * Math.PI) / 180 },
   };
   const field = new ProbeField(shared);
-  const layer = new ProbePathLayer(shared);
+  const layer = new ProbePathLayer(shared, builtinChromeLineMaterials());
   const t = ROSTER[0].sampleT[2];
   field.attach(ROSTER, t);
   layer.attach(ROSTER);

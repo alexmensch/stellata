@@ -164,3 +164,22 @@ silently — and an inherited-wrong label is worse than a missing one,
 because the roster looks complete and nothing prompts a re-read. Observed:
 converting the star-pipeline port to an epic propagated `needs-fable` to
 all eight children, half of which are specified implementation.
+
+### Choosing the parent epic
+
+The parent is a claim about **when the work must happen**, not about which
+folder the code sits in. Two rules cover almost every case:
+
+- **A defect reachable by a user on the shipped path** goes under
+  `stellata-uadc` (Bugs).
+- **A defect that only reproduces on a path still being migrated** goes under
+  the epic doing that migration, and its cutover bead takes a `bd dep add` on
+  it. That is what makes the graph say "this blocks cutover" instead of
+  leaving a loose bug that cutover planning has to remember.
+
+So establish which backend, renderer or vantage a report actually came from
+**before** picking the parent — "pre-existing bug" and "blocks a cutover" are
+different beads with different parents, and the difference is usually one
+question to the reporter. Observed: a chart-mode teardown crash was filed
+under Bugs on the assumption it was pre-existing, when it was WebGPU-only and
+belonged under the migration epic as a cutover blocker.

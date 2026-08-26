@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
+import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { KindContext } from './kind-module';
@@ -45,9 +46,10 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     } as unknown as HTMLElement,
     sharedUniforms,
     maxTextureSize: 8192,
-    // The shipped WebGL2 boot's value — a test wanting the ported layers
-    // passes a seam through the overrides.
+    // The shipped WebGL2 boot's values — a test wanting the ported layers
+    // passes a seam and the TSL strokes through the overrides.
     webgpu: null,
+    chromeLines: builtinChromeLineMaterials(),
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

@@ -1,9 +1,8 @@
-// Alpha-blended line primitives (loop + segments) shared by the
-// orbital-geometry overlays (planet orbit rings, binary orbit paths) and the
-// constellation figure layer.
+// Line primitives shared by the orbital-geometry overlays and the
+// constellation figure; their materials come from the chrome line seam
+// (../chrome-lines/README.md).
 
 import * as THREE from 'three';
-import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 
 // Vertices per ellipse. The binding requirement is body-on-the-line at
 // resolved-disc zoom under fast scrub: the polyline's max sagitta is
@@ -16,6 +15,12 @@ import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 // only on focus change / sim-day drift.
 export const ORBIT_LINE_SEGMENTS = 8192;
 export const ORBIT_LINE_OPACITY = 0.5;
+
+// Cool blue-white contrasting against the warm-amber galactic disc and the
+// additive Milky Way disc without competing with point-source stars. Hue
+// 210°, the same as the fresnel shells' `SHELL_RIM_BLUE` — one annotation
+// vocabulary across the chrome the local scene draws over itself.
+export const ORBIT_LINE_COLOUR = 0x88aacc;
 
 /** Screen pixels per radian of angular size, from the camera's vertical FOV
  *  and viewport height. Pair with `angularRadiusPx` for the on-screen size
@@ -65,58 +70,6 @@ export function isFeatureLegible(sizePc: number, distancePc: number, pxPerRad: n
   return angularRadiusPx(sizePc, distancePc, pxPerRad) >= FEATURE_LEGIBILITY_MIN_PX;
 }
 
-function lineMaterialParams(opacity: number) {
-  return { transparent: true, opacity, depthTest: true, depthWrite: false };
-}
-
-/** `localPass` strips the built-in log-depth chunks so fragments keep
- *  standard bracket depth — required for any line rendered in the
- *  local depth pass (src/client/local-depth/README.md). */
-export function makeOrbitLineMaterial(
-  color: number,
-  opacity: number = ORBIT_LINE_OPACITY,
-  localPass = false,
-): THREE.LineBasicMaterial {
-  const mat = new THREE.LineBasicMaterial(lineMaterialParams(opacity));
-  setBuiltinChromeColour(mat.color, color);
-  if (localPass) {
-    mat.onBeforeCompile = (shader) => {
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <logdepthbuf_pars_vertex>', '')
-        .replace('#include <logdepthbuf_vertex>', '');
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <logdepthbuf_pars_fragment>', '')
-        .replace('#include <logdepthbuf_fragment>', '');
-    };
-    mat.customProgramCacheKey = () => 'orbit-line-local-depth';
-  }
-  return mat;
-}
-
-/** Dashed sibling of `makeOrbitLineMaterial`. `dash` / `gap` are lengths in
- *  whatever unit `material.scale` maps world distance into (three shades on
- *  `scale × lineDistance`), so a layer can author its pattern in **screen
- *  pixels** and drive `scale` from the live FOV rather than re-authoring the
- *  pattern per zoom.
- *
- *  The consumer must also supply the `lineDistance` attribute itself: three's
- *  `computeLineDistances` restarts the phase at every segment pair, which on a
- *  `LineSegments` draws solid wherever a pair is shorter than one dash. */
-export function makeDashedOrbitLineMaterial(
-  color: number,
-  dash: number,
-  gap: number,
-  opacity: number = ORBIT_LINE_OPACITY,
-): THREE.LineDashedMaterial {
-  const mat = new THREE.LineDashedMaterial({
-    ...lineMaterialParams(opacity),
-    dashSize: dash,
-    gapSize: gap,
-  });
-  setBuiltinChromeColour(mat.color, color);
-  return mat;
-}
-
 /** Closed loop through `points`, as an index-closed `THREE.Line` rather
  *  than `THREE.LineLoop` — the WebGPU renderer refuses LineLoop objects
  *  (no line-loop primitive in WGSL), and the index keeps the position
@@ -124,7 +77,7 @@ export function makeDashedOrbitLineMaterial(
  *  anchored-line rebake stay untouched. */
 export function makeOrbitLineLoop(
   points: Float32Array,
-  material: THREE.LineBasicMaterial,
+  material: THREE.Material,
   renderOrder: number,
 ): THREE.Line {
   const geometry = orbitLineGeometry(points);
@@ -144,7 +97,7 @@ export function makeOrbitLineLoop(
  *  own the geometry's `setDrawRange`. */
 export function makeOrbitLine(
   points: Float32Array,
-  material: THREE.LineBasicMaterial,
+  material: THREE.Material,
   renderOrder: number,
 ): THREE.Line {
   return configureLinePrimitive(
@@ -157,7 +110,7 @@ export function makeOrbitLine(
  *  mirroring `position` (anchor drift) and `visible`. */
 export function mirrorOrbitLine(
   source: THREE.Line,
-  material: THREE.LineBasicMaterial,
+  material: THREE.Material,
   renderOrder: number,
 ): THREE.Line {
   return configureLinePrimitive(
@@ -166,7 +119,7 @@ export function mirrorOrbitLine(
 
 export function makeOrbitLineSegments(
   points: Float32Array,
-  material: THREE.LineBasicMaterial,
+  material: THREE.Material,
   renderOrder: number,
 ): THREE.LineSegments {
   return configureLinePrimitive(

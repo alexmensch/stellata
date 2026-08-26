@@ -14,11 +14,14 @@ import type { OrbitOrientationRad } from './ephemeris';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import { wrapAngle } from '../../util/angles';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../../chrome-lines/chrome-line-materials';
 import {
-  makeOrbitLineMaterial,
   makeOrbitLineLoop,
   bakeAnchoredLineVerts,
   trackAnchoredLine,
+  ORBIT_LINE_COLOUR,
   ORBIT_LINE_OPACITY,
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
@@ -44,10 +47,6 @@ export const ECLIPTIC_NORTH_POLE_ICRS = new THREE.Vector3(
 // value doubles as the inter-ring gap that suppresses the inner-rocky
 // pile-up at far framings and lets inner rings re-emerge on close approach.
 export const RING_VISIBILITY_THRESHOLD_PX = FEATURE_LEGIBILITY_MIN_PX;
-
-// Cool blue-white contrasting against the warm-amber galactic disc and the
-// additive Milky Way disc without competing with point-source stars.
-const RING_COLOUR = 0x88aacc;
 
 /**
  * Relative element drift a built ring may carry before update() rewrites its
@@ -86,7 +85,6 @@ const DEG = Math.PI / 180;
 interface PlanetRing {
   readonly planet: Planet;
   readonly line: THREE.Line;
-  readonly material: THREE.LineBasicMaterial;
   // Centre-relative float64 vertices (the element-source truth); the
   // line's float32 GPU buffer is baked renderer-local from these about
   // `bakedCentre` (util/orbit-line.ts trackAnchoredLine).
@@ -370,7 +368,10 @@ export class OrbitRingsLayer {
   // null feed (host not attached yet) keeps the rings where they were.
   private readonly hostLocal = new THREE.Vector3();
 
-  constructor() {
+  private readonly stroke: ChromeLineMaterial;
+
+  constructor(chromeLines: ChromeLineMaterials) {
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
     this.group = new THREE.Group();
     // Local-depth-pass in-pass order: after the planet disc mirrors (3)
     // so ring fragments depth-test against real body depth — near-side
@@ -384,8 +385,8 @@ export class OrbitRingsLayer {
   /**
    * Replace the active planet system. Pass null to tear the rings down
    * (e.g. when focus clears or moves to a host without planets).
-   * Geometry and materials are disposed eagerly — Three.js doesn't
-   * reclaim them otherwise. `t` is the model clock — ring geometry
+   * Geometry is disposed eagerly — Three.js doesn't reclaim it
+   * otherwise. `t` is the model clock — ring geometry
    * derives from the system's live element source at `t`, and update()
    * rewrites it once the elements drift past what the polyline resolves
    * (`RING_GEOMETRY_DRIFT_TOLERANCE`).
@@ -412,13 +413,12 @@ export class OrbitRingsLayer {
       const master = new Float64Array(ORBIT_LINE_SEGMENTS * 3);
       const semiMajorPc = writeRingVerts(master, g, this.hostQuat);
       const verts = new Float32Array(master);
-      const mat = makeOrbitLineMaterial(RING_COLOUR, ORBIT_LINE_OPACITY, true);
-      const line = makeOrbitLineLoop(verts, mat, this.group.renderOrder);
+      const line = makeOrbitLineLoop(
+        verts, this.stroke.material, this.group.renderOrder);
       this.group.add(line);
       this.rings.push({
         planet: ps.planets[pIdx],
         line,
-        material: mat,
         master,
         verts,
         bakedCentre: new THREE.Vector3(),
@@ -589,13 +589,15 @@ export class OrbitRingsLayer {
 
   dispose(): void {
     this.disposeRings();
+    this.stroke.dispose();
   }
 
+  // Runs on every rebuild, so the layer's shared stroke outlives it —
+  // only `dispose` frees that.
   private disposeRings(): void {
     for (const r of this.rings) {
       this.group.remove(r.line);
       r.line.geometry.dispose();
-      r.material.dispose();
     }
     this.rings = [];
   }

@@ -28,10 +28,21 @@ export class EventBus<M extends Record<string, unknown>> {
   // Map-authoring constraint (no `void` in a payload union) in ./README.md.
   emit<K extends NoPayloadKeys<M>>(name: K): void;
   emit<K extends WithPayloadKeys<M>>(name: K, payload: M[K]): void;
+  // Contained per handler, not collected and rethrown like the scene
+  // registry's fan-outs (`../fan-out.ts`): an emitter is not the owner of
+  // its subscribers, so one subscriber's failure must not surface as the
+  // emitter's. Subscribers are mutually anonymous — before this, a throw
+  // took every handler registered after it, for the rest of the session.
   emit(name: keyof M, payload?: unknown): void {
     const set = this.handlers.get(name);
     if (!set) return;
-    for (const h of set) (h as (p: unknown) => void)(payload);
+    for (const h of set) {
+      try {
+        (h as (p: unknown) => void)(payload);
+      } catch (err) {
+        console.warn(`EventBus: handler for '${String(name)}' threw`, err);
+      }
+    }
   }
 
   // Detach every subscriber across every event. Called from

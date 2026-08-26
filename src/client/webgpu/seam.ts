@@ -9,6 +9,7 @@ import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
+import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { DustParticleMaterials } from '../dust/dust-particle-layer';
 import type { CloudMaterials } from '../molecular-clouds/cloud-materials';
 import type { LgEmissionMaterials } from '../local-group/emission/lg-emission-materials';
@@ -119,6 +120,10 @@ export interface WebGpuSeam {
    *  ONCE per field: each read is a fresh factory, and the shared-material
    *  refcount lives inside one. */
   readonly probeMaterial: ProbeMaterials;
+  /** The TSL chrome line strokes. Read only AFTER `bindSharedUniforms`:
+   *  building the graphs resolves the shared uniform nodes, so an earlier
+   *  read throws (`../chrome-lines/README.md` § One factory per boot). */
+  readonly chromeLineMaterials: ChromeLineMaterials;
   /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
    *  consumer builds its own — colour, limb alpha and blend are per-shell. */
   readonly shellMaterials: ShellMaterials;
