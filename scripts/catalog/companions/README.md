@@ -389,7 +389,7 @@ companion never gets one without the other.
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
 | `companionIdx` | post-pass | set by geometric binary inference (`../multiplicity/README.md` § Geometric binary inference). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
-| `hd`, `hr`, `flam`, `bayer`, `gl` | unset | not carried on multiples.tsv rows. |
+| `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. |
 
 ### Component-letter stamping
 

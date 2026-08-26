@@ -50,6 +50,7 @@ import {
   compareBuildCounts,
   formatCountDiff,
   formatDistSrcPartition,
+  spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
 import {
@@ -490,6 +491,8 @@ async function main() {
   counts.spectralSimbadByHip = stats.spectralSimbadKey.hip;
   counts.spectralSimbadByTyc = stats.spectralSimbadKey.tyc;
   counts.spectralSimbadByGj = stats.spectralSimbadKey.gj;
+  const partitionError = spectralSimbadPartitionError(counts);
+  if (partitionError !== null) throw new Error(partitionError);
   counts.spectralByGspspec = stats.spectralByGspspec;
   counts.spectralFallback = stats.spectralFallback;
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
@@ -552,7 +555,11 @@ async function main() {
       backfillPrimaryIdentifiers(multiplesRows, stars, (star) => {
         if (star.spectClass !== UNKNOWN_CLASS_IDX) return;
         const spectral = resolveSpectralInfo(
-          star.gaiaSourceId, star.hip, null, star.gl, simbadSpectral, apsisMap,
+          {
+            sourceId: star.gaiaSourceId, hip: star.hip,
+            tyc: star.tyc, gl: star.gl,
+          },
+          simbadSpectral, apsisMap,
         );
         if (spectral.info.classIdx === UNKNOWN_CLASS_IDX) return;
         const apsisTeff = resolveApsisTeff(
@@ -819,7 +826,7 @@ async function main() {
     if (multiplicityStatus[i] !== MULTIPLICITY_SINGLE) continue;
     const srcId = stars[i].gaiaSourceId;
     if (!srcId) continue;
-    if (simbadSpectral.bySource.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
+    if (simbadSpectral.bySourceId.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
       multiplicityStatus[i] = MULTIPLICITY_UNRESOLVED;
     }
   }

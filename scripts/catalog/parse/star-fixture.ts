@@ -26,6 +26,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     hr: null,
     flam: null,
     gl: null,
+    tyc: null,
     gaiaSourceId: null,
     spectDisplay: null,
     companionIdx: -1,
