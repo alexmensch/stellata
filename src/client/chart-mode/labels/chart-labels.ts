@@ -335,7 +335,7 @@ export class ChartLabels {
       const pos = cat.positions;
       for (let i = 0; i < cat.count; i++) {
         // Rings are intrinsic-only; eclipsers surface via the wings glyph,
-        // not a ring. See chart-mode/README.md § Label engine — variable rings.
+        // not a ring. See README.md § Label engine + glyphs, Variable rings.
         if (
           cat.periodDays[i] > 0 &&
           cat.amplitudeMag[i] > 0 &&

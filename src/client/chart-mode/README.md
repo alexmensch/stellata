@@ -251,7 +251,8 @@ Wings are driven by `flags` bit 4. Three build-time passes set that bit:
   EA/EB/EW/ELL/E; EP eclipsing-by-planet excluded) that the two
   passes above didn't already flag. An eclipser's variability is
   the geometry of a stellar multiple, so it earns wings, not a
-  variable ring (see § Label engine — variable rings above).
+  variable ring (see `labels/README.md` § Label engine + glyphs,
+  Variable rings).
 
 All three passes hit the same flag bit, so chart-mode rendering is
 agnostic to which source flagged a given star. The build-time filter
