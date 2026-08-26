@@ -83,7 +83,7 @@ resolve, a fullscreen volume) wants the dithered `stellataTonemap`.
 `tonemap-pure.ts` mirrors the undithered variant.
 
 
-## Operator knobs and the pass-through switch
+## Operator knobs
 
 - `stellata.hdr.setTonemapEnabled(false)` — keeps the target bound but makes
   the resolve straight pass-through, isolating the target itself (depth,
@@ -115,14 +115,14 @@ colour space, not the resolve — so with the operator parked,
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
 encode. Custom-shader chrome *is* exact. There is no whole-frame comparison
-to fall back on any more — § Fallback says why the one that existed was
-worse than nothing.
+to fall back on any more — `../README.md` § Fallback says why the one that
+existed was worse than nothing.
 
 **Chrome line work reads brighter through the seam than authored, and that
-is not a bug.** § Chrome's inverse mapping is exact only for *a lone
-full-alpha fragment over black*, and line work is neither — antialiased edges
-are partial-alpha and lines cross each other — so the round trip lands on the
-bright side. The shift on thin line work is plainly visible, nothing
+is not a bug.** `../README.md` § Chrome's inverse mapping is exact only for
+*a lone full-alpha fragment over black*, and line work is neither —
+antialiased edges are partial-alpha and lines cross each other — so the
+round trip lands on the bright side. The shift on thin line work is plainly visible, nothing
 downstream depends on it, and no resolve setting fixes it.
 
 Pass-through is not bit-identical to a pre-HDR build, for two further
