@@ -92,6 +92,33 @@ subscriptions and drains its SVG pools while keeping the catalog-derived
 caches for the next entry; `dispose()` (the shell's teardown leg) drops
 those too.
 
+## Entry and exit are not mirror images
+
+Inside `Stellata.setMonochrome` two halves of the palette swap must run in
+**opposite orders per direction**, which `chart-swap-pure.ts` owns and its
+test pins. The chart blend sets `premultipliedAlpha`; a WebGPU material
+carrying that flag cannot also carry the MRT output struct, because three
+wraps the output node and demotes it to one attachment
+(`../webgpu/hdr/mrt-material.ts` throws rather than let pipeline creation
+fail). So entering takes the struct off first and leaving puts the flag
+away first.
+
+Running the entry order both ways is the shipped WebGPU bug this replaced,
+and its blast radius is the thing to remember: the throw escaped
+`setMonochrome` mid-fan-out, so `applyDetailPreset` and
+`chartLabels.stop()` — both *after* it in `chart-mode.ts` — never ran, and
+the chart labels stayed in the DOM. The half-finished `syncMode` also left
+the cloud rim's pipeline invalid, so the fresnel rim drew nothing until
+reload. **A throw anywhere in this swap strands every later step in the
+caller**, which is why the ordering is a pinned contract and not a comment.
+
+The two flag writers are `webgpu/star/star-layer.ts` and
+`webgpu/solar-system/planet-glare-layer.ts`. The star one is reached
+directly and already runs before the HDR swap in both directions; the
+glare rides the scene registry, which is the half that moved. A third
+writer added to either path inherits the contract — put it on the registry
+side, not between the two halves.
+
 > **Shelved layer.** The Milky Way isobar is disabled —
 > `Milkyway.setIsobar(true)` hard-hides the disc + bulge meshes
 > instead of emitting the contour. The blending / `uChartIsobar` switch

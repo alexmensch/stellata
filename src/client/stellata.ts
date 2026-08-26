@@ -76,6 +76,7 @@ import * as starPhysics from './camera/controls/star-physics';
 import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
 import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { paperClearColour } from './chart-mode/chart-palette';
+import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
@@ -2076,12 +2077,17 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer?.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
-    this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
     // layer's stippled chart outline rides its registry setMonochrome hook.
-    this.layers.setMonochromeAll(on);
+    // The fan-out and the HDR swap run in opposite orders per direction —
+    // chart-mode/README.md § Entry and exit are not mirror images.
+    applyChartPaletteSwap(
+      on,
+      (v) => this.hdr.setChartMode(v),
+      (v) => this.layers.setMonochromeAll(v),
+    );
     this.bus.emit('state');
   }
 
