@@ -50,13 +50,17 @@ export class ConstellationFigureLayer {
   /** Rebuild the line geometry for the active constellation set (one index
    *  when a figure is highlighted, all of them in chart mode, none to clear).
    *  `localPositions` seeds the vertex buffer so no zeroed frame renders
-   *  before the first `update`. */
+   *  before the first `update`. `excludeStarIdx` drops every segment touching
+   *  that catalog star — the observe vantage point, whose own figure lines run
+   *  straight at the camera. */
   setFigures(
     constellations: readonly Constellation[],
     conIndices: readonly number[],
     localPositions: Float32Array,
+    excludeStarIdx: number | null = null,
   ): void {
-    this.endpointIdx = collectFigureSegmentEndpoints(constellations, conIndices);
+    this.endpointIdx =
+      collectFigureSegmentEndpoints(constellations, conIndices, excludeStarIdx);
     this.disposeGeometry();
     if (this.endpointIdx.length === 0) {
       this.group.visible = false;

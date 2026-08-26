@@ -8,6 +8,7 @@ export interface FigureConstellationLike {
 export function collectFigureSegmentEndpoints(
   constellations: readonly FigureConstellationLike[],
   conIndices: readonly number[],
+  excludeStarIdx: number | null = null,
 ): number[] {
   const endpoints: number[] = [];
   for (const ci of conIndices) {
@@ -16,7 +17,10 @@ export function collectFigureSegmentEndpoints(
     if (!lines) continue;
     for (const polyline of lines) {
       for (let j = 0; j < polyline.length - 1; j++) {
-        endpoints.push(polyline[j], polyline[j + 1]);
+        const a = polyline[j];
+        const b = polyline[j + 1];
+        if (a === excludeStarIdx || b === excludeStarIdx) continue;
+        endpoints.push(a, b);
       }
     }
   }

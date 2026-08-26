@@ -877,8 +877,10 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
+    this.on('focus', () => { this.refreshConstellationFigure(); });
     // Constellation figure lines rebuild when the active set changes: the
-    // highlighted figure, or chart ↔ navigate (chart draws all 88).
+    // highlighted figure, chart ↔ navigate (chart draws all 88), or the
+    // observe anchor whose own lines are suppressed.
     // Detail-cycle permission is a separate push (buildSceneElementBinds).
     // The boundary fade window rides the same emit: it is a function of the
     // magnitude limit — a fainter limit admits stars nearer their walls —
@@ -1034,8 +1036,13 @@ export class Stellata implements FrameAnchor {
   // the active set is unchanged (filter emits fire on every slider drag).
   private refreshConstellationFigure(): void {
     const f = this.filter;
-    const chartActive = f.chart && this.focus.getCameraMode() === 'observe';
-    const sig = `${chartActive ? 1 : 0}|${f.highlightCon}`;
+    const observing = this.focus.getCameraMode() === 'observe';
+    const chartActive = f.chart && observing;
+    // getFocusedStar() is null for every non-star kind, so observing from a
+    // planet leaves its host star's lines drawn — the vantage point is the
+    // planet, not the star.
+    const observedStar = observing ? this.focus.getFocusedStar() : null;
+    const sig = `${chartActive ? 1 : 0}|${f.highlightCon}|${observedStar ?? -1}`;
     if (sig === this.conFigureSig) return;
     this.conFigureSig = sig;
     let indices: number[];
@@ -1047,7 +1054,7 @@ export class Stellata implements FrameAnchor {
       indices = [];
     }
     this.constellationFigureLayer.setFigures(
-      this.catalog.constellations, indices, this.localPositions);
+      this.catalog.constellations, indices, this.localPositions, observedStar);
   }
 
   // One adapter entry per scene layer; registration order is per-frame

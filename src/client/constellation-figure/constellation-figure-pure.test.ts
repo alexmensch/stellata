@@ -41,4 +41,34 @@ describe('collectFigureSegmentEndpoints', () => {
   it('is empty for an empty index set', () => {
     expect(collectFigureSegmentEndpoints(cons, [])).toEqual([]);
   });
+
+  describe('observe-anchor exclusion', () => {
+    it('drops both segments touching the observed star', () => {
+      expect(collectFigureSegmentEndpoints(cons, [0], 1)).toEqual([]);
+    });
+
+    it('keeps the segments that do not touch it', () => {
+      expect(collectFigureSegmentEndpoints(cons, [1], 21)).toEqual([10, 11]);
+    });
+
+    it('drops a matching endpoint in either position', () => {
+      expect(collectFigureSegmentEndpoints(cons, [1], 10)).toEqual([20, 21, 21, 22]);
+      expect(collectFigureSegmentEndpoints(cons, [1], 11)).toEqual([20, 21, 21, 22]);
+    });
+
+    it('excludes across every constellation in the set (chart mode)', () => {
+      expect(collectFigureSegmentEndpoints(cons, [0, 1], 2)).toEqual([
+        0, 1, 10, 11, 20, 21, 21, 22,
+      ]);
+    });
+
+    it('null — a planet anchor or navigate mode — suppresses nothing', () => {
+      expect(collectFigureSegmentEndpoints(cons, [0], null)).toEqual([0, 1, 1, 2]);
+      expect(collectFigureSegmentEndpoints(cons, [0])).toEqual([0, 1, 1, 2]);
+    });
+
+    it('does not treat star index 0 as "no exclusion"', () => {
+      expect(collectFigureSegmentEndpoints(cons, [0], 0)).toEqual([1, 2]);
+    });
+  });
 });

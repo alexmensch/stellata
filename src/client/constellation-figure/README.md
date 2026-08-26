@@ -15,8 +15,9 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
   a per-frame position refresh (`update`).
 - `constellation-figure-pure.ts` — `collectFigureSegmentEndpoints`: expands the
   catalog's per-constellation polylines into a flat line-segment endpoint list
-  (two star indices per segment). Vitest-pinned.
-- `constellation-figure-pure.test.ts` — endpoint-expansion pin.
+  (two star indices per segment), dropping any segment that touches
+  `excludeStarIdx`. Vitest-pinned.
+- `constellation-figure-pure.test.ts` — endpoint-expansion + exclusion pin.
 
 ## Why WebGL, not SVG
 
@@ -56,10 +57,10 @@ floating-origin frame the star instances use, so the GPU projection lines up
 with the discs automatically and **camera motion adds no CPU work** — the
 per-frame refill below is a fixed cost independent of the camera.
 
-- `setFigures(constellations, conIndices, localPositions)` — rebuild geometry.
-  The shell calls it when the active set changes: the highlighted index, or
-  chart ↔ navigate. `conIndices` is the highlighted one, all 88 (chart), or
-  empty (nothing highlighted).
+- `setFigures(constellations, conIndices, localPositions, excludeStarIdx)` —
+  rebuild geometry. The shell calls it when the active set changes: the
+  highlighted index, chart ↔ navigate, or the observe anchor. `conIndices` is
+  the highlighted one, all 88 (chart), or empty (nothing highlighted).
 - `update(localPositions)` — re-copies vertex positions from the live buffer
   every drawn frame, so a vertex tracks its star through everything that
   rewrites `localPositions` with no separate signal: proper-motion epoch
@@ -71,11 +72,18 @@ per-frame refill below is a fixed cost independent of the camera.
 
 ## Visibility gates
 
-Three inputs, all pushed (no per-frame recompute):
+Four inputs, all pushed (no per-frame recompute):
 
 - `setPermitted(on)` — the `constellationFigures` declutter floor
   (`representational`; `../scene/README.md`), pushed from the detail bind.
 - `setFigures(..., [])` — nothing highlighted outside chart mode.
+- `setFigures(..., excludeStarIdx)` — the observe vantage point. Sitting on a
+  star, its own figure lines run straight at the camera and read as noise
+  across the sky, so every segment touching it is dropped from the geometry.
+  The shell passes `focus.getFocusedStar()` only while
+  `cameraMode === 'observe'`; that accessor is null for every non-star kind, so
+  observing from a planet keeps its host star's lines — the planet is the
+  vantage point, not the star.
 - `setMonochrome(on)` — chart mode swaps the sky-blue stroke for ink and drops
   `depthTest` so the figure reads flat over the depth-disabled chart starfield.
 
