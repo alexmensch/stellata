@@ -1,4 +1,4 @@
-// Local Group wireframe layer (disc + ellipsoid LineLoop primitives).
+// Local Group wireframe layer (disc + ellipsoid ring outlines).
 // See src/client/local-group/README.md.
 
 import * as THREE from 'three';
@@ -10,7 +10,10 @@ import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel, labelHostOf } from '../ui/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
-import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../chrome-lines/chrome-line-materials';
+import { makeOrbitLineLoop } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
@@ -39,6 +42,8 @@ const SAMPLE_N_LATS = 5;
 const DARK_COLOUR = 0x8090a8;
 const DARK_BASE_OPACITY = 0.45;
 
+const WIREFRAME_RENDER_ORDER = -1;
+
 /**
  * Renderable Local Group wireframe layer. Constructed once from the
  * catalog; per-frame update only writes the group's floating-origin
@@ -47,32 +52,26 @@ const DARK_BASE_OPACITY = 0.45;
 export class LocalGroupLayer {
   readonly group: THREE.Group;
   readonly objects: LgObject[];
-  private readonly material: THREE.LineBasicMaterial;
+  private readonly stroke: ChromeLineMaterial;
   /** Per-object silhouette samples in absolute ICRS pc. Indexed
    *  `absSamples[objectIdx][sampleIdx]`. */
   private readonly absSamples: THREE.Vector3[][];
   private mono = false;
   private readonly tmpFocusableLocal = new THREE.Vector3();
 
-  constructor(catalog: LgCatalog) {
+  constructor(catalog: LgCatalog, chromeLines: ChromeLineMaterials) {
     this.objects = catalog.objects;
     this.group = new THREE.Group();
     // Behind the star pass but in front of the cloud layer (which is
-    // currently shelved). renderOrder = -1 matches GalacticDisc; the two
-    // are sibling reference overlays.
-    this.group.renderOrder = -1;
+    // currently shelved). renderOrder matches GalacticDisc; the two are
+    // sibling reference overlays.
+    this.group.renderOrder = WIREFRAME_RENDER_ORDER;
 
-    this.material = new THREE.LineBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-    });
-    setBuiltinChromeColour(this.material.color, DARK_COLOUR);
+    this.stroke = chromeLines.solid(DARK_COLOUR, 0);
 
     this.absSamples = [];
     for (const obj of this.objects) {
-      const loops = buildObjectLineLoops(obj, this.material);
+      const loops = buildObjectLineLoops(obj, this.stroke.material);
       for (const loop of loops) this.group.add(loop);
       this.absSamples.push(buildSilhouetteSamples(obj));
     }
@@ -101,7 +100,7 @@ export class LocalGroupLayer {
       return;
     }
     this.group.visible = true;
-    this.material.opacity = opacity;
+    this.stroke.material.opacity = opacity;
   }
 
   setMonochrome(on: boolean): void {
@@ -224,21 +223,20 @@ export class LocalGroupLayer {
 
   dispose(): void {
     for (const child of this.group.children) {
-      const obj = child as THREE.LineLoop;
+      const obj = child as THREE.Line;
       obj.geometry.dispose();
     }
-    this.material.dispose();
+    this.stroke.dispose();
   }
 }
 
-/** Build the LineLoop rings for one Local Group object. For discs:
- *  midplane + thickness pair. For ellipsoids: three orthogonal
- *  meridians. */
+/** Build the closed rings for one Local Group object. For discs: midplane
+ *  + thickness pair. For ellipsoids: three orthogonal meridians. */
 function buildObjectLineLoops(
   obj: LgObject,
-  material: THREE.LineBasicMaterial,
-): THREE.LineLoop[] {
-  const rings: THREE.LineLoop[] = [];
+  material: THREE.Material,
+): THREE.Line[] {
+  const rings: THREE.Line[] = [];
   if (obj.kind === 'disc') {
     // Disc-local frame: a (=axes[0]) and b (=axes[1]) span the disc
     // plane; c (=axes[2]) is the semi-thickness along disc normal.
@@ -256,7 +254,7 @@ function buildObjectLineLoops(
   return rings;
 }
 
-/** Build a single ring as a LineLoop. `plane` selects which two local
+/** Build a single closed ring. `plane` selects which two local
  *  axes carry the radial sweep:
  *   - 'xy' → axes[0] × axes[1], offset along local z by zOffset
  *   - 'xz' → axes[0] × axes[2], offset along local y by zOffset
@@ -268,8 +266,8 @@ function makeRing(
   obj: LgObject,
   plane: 'xy' | 'xz' | 'yz',
   zOffset: number,
-  material: THREE.LineBasicMaterial,
-): THREE.LineLoop {
+  material: THREE.Material,
+): THREE.Line {
   const verts = new Float32Array(RING_SEGMENTS * 3);
   const tmp = new THREE.Vector3();
   for (let i = 0; i < RING_SEGMENTS; i++) {
@@ -284,12 +282,9 @@ function makeRing(
     verts[i * 3 + 1] = tmp.y;
     verts[i * 3 + 2] = tmp.z;
   }
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-  const loop = new THREE.LineLoop(geom, material);
-  loop.frustumCulled = false; // group origin offset per frame
-  loop.renderOrder = -1;
-  return loop;
+  // frustumCulled off inside the primitive — the group origin is offset per
+  // frame, so a geometry-derived bounding sphere is miscentred.
+  return makeOrbitLineLoop(verts, material, WIREFRAME_RENDER_ORDER);
 }
 
 /** Precompute silhouette sample points in absolute ICRS pc for one
@@ -618,7 +613,7 @@ export function createMilkyWayLabel(stellata: Stellata): void {
 }
 
 /** Precompute the 32-point MW disc rim sample ring in absolute ICRS pc.
- *  Mirrors galactic-disc.ts's midplane LineLoop construction —
+ *  Mirrors galactic-disc.ts's midplane ring construction —
  *  galactic-frame circle of radius MIDPLANE_RADIUS_PC rotated to ICRS
  *  via GAL_TO_ICRS and translated by GALACTIC_CENTRE_PC. */
 function buildMwRimSamples(): THREE.Vector3[] {

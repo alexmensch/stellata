@@ -47,9 +47,11 @@ themselves.
   hold contract.
 - `chrome-lines/` — the renderer-neutral seam the line overlays take
   their strokes from (orbit rings, binary orbit paths, probe trails, the
-  constellation figure, the IAU boundary arcs), plus the WebGL2
+  constellation figure, the IAU boundary arcs, the galactic disc, both
+  coordinate spheres, the Local Group wireframe), plus the WebGL2
   implementation. Its README carries why the local depth pass makes the
-  seam mandatory rather than tidy.
+  seam mandatory rather than tidy, and why the fat stroke is the one that
+  brings its own object.
 - `hdr/` — the float render target every light-emitting layer draws
   into and the fullscreen tone-map that resolves it to the canvas.
   Owns the shared operator chunk, its CPU mirror, and the chrome

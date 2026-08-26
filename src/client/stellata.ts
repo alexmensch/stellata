@@ -545,6 +545,10 @@ export class Stellata implements FrameAnchor {
     // uniform nodes on read and throws while the registry is unbound.
     this.chromeLines =
       this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
+    // The scene this boot actually draws. A ported layer built into the
+    // shell's own scene renders on WebGL and silently nowhere on WebGPU —
+    // `webgpu/README.md` § What the flag boots today.
+    const renderScene = this.webgpu?.scene ?? this.scene;
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -642,7 +646,7 @@ export class Stellata implements FrameAnchor {
     // automatically. On a WebGPU boot the sprite takes its slots off the
     // uniform-node mirror instead and lands in the scene that renders.
     this.dustParticles = new DustParticleLayer(
-      this.webgpu?.scene ?? this.scene,
+      renderScene,
       sharedUniforms,
       this.webgpu?.dustParticleMaterials,
     );
@@ -651,8 +655,8 @@ export class Stellata implements FrameAnchor {
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
-    this.galacticDisc = new GalacticDisc();
-    this.scene.add(this.galacticDisc.group);
+    this.galacticDisc = new GalacticDisc(this.chromeLines);
+    renderScene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     // One mirror per boot: the pass scene renders on whichever backend
@@ -681,10 +685,10 @@ export class Stellata implements FrameAnchor {
     );
     this.localDepthPass.register(this.starLocalCluster);
     this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
-    this.scene.add(this.constellationFigureLayer.group);
+    renderScene.add(this.constellationFigureLayer.group);
     this.constellationBoundaryLayer =
       new ConstellationBoundaryLayer(sharedUniforms, this.chromeLines);
-    this.scene.add(this.constellationBoundaryLayer.group);
+    renderScene.add(this.constellationBoundaryLayer.group);
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
@@ -894,11 +898,11 @@ export class Stellata implements FrameAnchor {
       this.observePinQuat.set(Number.NaN, 0, 0, 0);
     });
     this.coordSpheres = {
-      galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic),
-      equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial),
+      galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic, this.chromeLines),
+      equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial, this.chromeLines),
     };
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      this.scene.add(this.coordSpheres[frame].group);
+      renderScene.add(this.coordSpheres[frame].group);
     }
     const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
     const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
@@ -927,7 +931,7 @@ export class Stellata implements FrameAnchor {
     }, this.webgpu?.bandMaterials);
     // The band has ported, so on a WebGPU boot it belongs in the scene
     // that renders.
-    (this.webgpu?.scene ?? this.scene).add(this.milkyway.group);
+    renderScene.add(this.milkyway.group);
 
     this.filters = new FilterController({
       camera: this.camera,

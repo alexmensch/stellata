@@ -3,18 +3,19 @@
 // § Coordinate spheres.
 
 import * as THREE from 'three';
-import { Line2 } from 'three/examples/jsm/lines/Line2.js';
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { CHART_REFERENCE_INK } from '../../chart-mode/chart-palette';
 import type { SolFrameFadeWindow } from '../galactic-fade';
+import type {
+  ChromeFatLine, ChromeLineMaterial, ChromeLineMaterials,
+} from '../../chrome-lines/chrome-line-materials';
+import { makeOrbitLine, makeOrbitLineLoop } from '../../util/orbit-line';
 import { setBuiltinChromeColour } from '../../hdr/chrome/chrome-colour';
 
 export const SPHERE_RADIUS_PC = 50_000;
 const EQUATOR_SEGMENTS = 256;
 const LATITUDE_SEGMENTS = 192;
 const MERIDIAN_SEGMENTS = 96;
-// Latitudes every 10° (excluding 0° = equator, which is the fat Line2).
+// Latitudes every 10° (excluding 0° = equator, which is the fat stroke).
 export const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30, 40, 50, 60, 70, 80];
 // Alternate meridians stop at ±MERIDIAN_TRIM_LATITUDE_DEG so half the set
 // thins out before the lines bunch up at the poles, whatever the spacing.
@@ -60,10 +61,12 @@ export function meridianMaxAbsLatDeg(index: number): number {
   return index % 2 === 0 ? 90 : MERIDIAN_TRIM_LATITUDE_DEG;
 }
 
-// Equator gets the fat-line treatment (Line2 + LineMaterial) for genuine
-// screen-space width on every platform — `LineBasicMaterial.linewidth`
-// silently clamps to 1 in WebGL on Chrome/Win, so it's never reliable.
+// Equator gets the chrome seam's fat stroke for genuine screen-space width
+// on every platform — `LineBasicMaterial.linewidth` silently clamps to 1 in
+// WebGL on Chrome/Win, so it's never reliable.
 const EQUATOR_LINEWIDTH_PX = 2.4;
+
+const SPHERE_RENDER_ORDER = -1;
 
 const DARK_COLOUR = 0x6688aa;
 
@@ -87,40 +90,30 @@ const DARK_LINE_OPACITY = 0.45;
  * equator/line opacity split is preserved by stroke weight rather than alpha,
  * since chart-mode fades aren't on the table. `setOpacityScale` is the one
  * exception — a sphere that must self-hide with distance from Sol keeps its
- * alpha in both styles (`equatorial-sphere.ts`).
+ * alpha in both styles (the fade window is the spec's, `coord-sphere-frames.ts`).
  */
 export class CoordSphere {
   readonly group: THREE.Group;
-  private equatorMaterial: LineMaterial;
-  private lineMaterial: THREE.LineBasicMaterial;
+  private readonly equator: ChromeFatLine;
+  private readonly stroke: ChromeLineMaterial;
   private mono = false;
   private opacityScale = 1;
 
-  constructor(spec: CoordSphereSpec) {
+  constructor(spec: CoordSphereSpec, chromeLines: ChromeLineMaterials) {
     const { dirToIcrs, meridianCount } = spec;
     this.group = new THREE.Group();
-    this.group.renderOrder = -1;
+    this.group.renderOrder = SPHERE_RENDER_ORDER;
 
-    this.equatorMaterial = new LineMaterial({
-      linewidth: EQUATOR_LINEWIDTH_PX,
-      transparent: true,
+    this.equator = chromeLines.fat({
+      colour: DARK_COLOUR,
       opacity: DARK_EQUATOR_OPACITY,
-      depthTest: true,
-      worldUnits: false,
+      widthPx: EQUATOR_LINEWIDTH_PX,
+      points: equatorPoints(dirToIcrs),
+      renderOrder: SPHERE_RENDER_ORDER,
     });
-    // depthWrite isn't on LineMaterial's typed constructor; assign directly.
-    this.equatorMaterial.depthWrite = false;
+    this.stroke = chromeLines.solid(DARK_COLOUR, DARK_LINE_OPACITY);
 
-    this.lineMaterial = new THREE.LineBasicMaterial({
-      transparent: true,
-      opacity: DARK_LINE_OPACITY,
-      depthTest: true,
-      depthWrite: false,
-    });
-    setBuiltinChromeColour(this.equatorMaterial.color, DARK_COLOUR);
-    setBuiltinChromeColour(this.lineMaterial.color, DARK_COLOUR);
-
-    this.group.add(this.makeFatEquator(dirToIcrs));
+    this.group.add(this.equator.object);
     for (const latDeg of LATITUDES_DEG) {
       this.group.add(this.makeLatitudeRing(dirToIcrs, (latDeg * Math.PI) / 180));
     }
@@ -158,8 +151,9 @@ export class CoordSphere {
   }
 
   private applyOpacity() {
-    this.equatorMaterial.opacity = (this.mono ? 1 : DARK_EQUATOR_OPACITY) * this.opacityScale;
-    this.lineMaterial.opacity = (this.mono ? 1 : DARK_LINE_OPACITY) * this.opacityScale;
+    this.equator.material.opacity =
+      (this.mono ? 1 : DARK_EQUATOR_OPACITY) * this.opacityScale;
+    this.stroke.material.opacity = (this.mono ? 1 : DARK_LINE_OPACITY) * this.opacityScale;
   }
 
   // Colour + blend state. Mono mode runs opaque with blending off for the
@@ -168,46 +162,14 @@ export class CoordSphere {
   private applyBlendState() {
     const on = this.mono;
     const opaque = on && this.opacityScale >= 1;
-    setBuiltinChromeColour(this.equatorMaterial.color, on ? CHART_REFERENCE_INK : DARK_COLOUR, on);
-    setBuiltinChromeColour(this.lineMaterial.color, on ? CHART_REFERENCE_INK : DARK_COLOUR, on);
-    this.equatorMaterial.transparent = !opaque;
-    this.lineMaterial.transparent = !opaque;
-    this.lineMaterial.blending = opaque ? THREE.NoBlending : THREE.NormalBlending;
-    this.equatorMaterial.needsUpdate = true;
-    this.lineMaterial.needsUpdate = true;
-  }
-
-  /** Build the latitude-zero equator as a fat Line2 so it stays visually
-   *  thicker than the rest of the grid regardless of platform/zoom. The loop is
-   *  closed by repeating the first vertex at the end (Line2 is an open
-   *  polyline). */
-  private makeFatEquator(dirToIcrs: DirToIcrs): Line2 {
-    const tmp = new THREE.Vector3();
-    const n = EQUATOR_SEGMENTS;
-    const positions = new Array(n * 3 + 3);
-    let firstX = 0, firstY = 0, firstZ = 0;
-    for (let i = 0; i < n; i++) {
-      const t = (i / n) * Math.PI * 2;
-      dirToIcrs(t, 0, tmp).multiplyScalar(SPHERE_RADIUS_PC);
-      positions[i * 3 + 0] = tmp.x;
-      positions[i * 3 + 1] = tmp.y;
-      positions[i * 3 + 2] = tmp.z;
-      if (i === 0) { firstX = tmp.x; firstY = tmp.y; firstZ = tmp.z; }
+    for (const handle of [this.equator, this.stroke]) {
+      setBuiltinChromeColour(
+        handle.material.color, on ? CHART_REFERENCE_INK : DARK_COLOUR, on);
+      handle.setOpaque(opaque);
     }
-    positions[n * 3 + 0] = firstX;
-    positions[n * 3 + 1] = firstY;
-    positions[n * 3 + 2] = firstZ;
-
-    const geom = new LineGeometry();
-    geom.setPositions(positions);
-    const line = new Line2(geom, this.equatorMaterial);
-    line.computeLineDistances();
-    line.frustumCulled = false;
-    line.renderOrder = -1;
-    return line;
   }
 
-  private makeLatitudeRing(dirToIcrs: DirToIcrs, latRad: number): THREE.LineLoop {
+  private makeLatitudeRing(dirToIcrs: DirToIcrs, latRad: number): THREE.Line {
     const segments = LATITUDE_SEGMENTS;
     const v = new Float32Array(segments * 3);
     const tmp = new THREE.Vector3();
@@ -218,12 +180,7 @@ export class CoordSphere {
       v[i * 3 + 1] = tmp.y;
       v[i * 3 + 2] = tmp.z;
     }
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.BufferAttribute(v, 3));
-    const loop = new THREE.LineLoop(geom, this.lineMaterial);
-    loop.frustumCulled = false;
-    loop.renderOrder = -1;
-    return loop;
+    return makeOrbitLineLoop(v, this.stroke.material, SPHERE_RENDER_ORDER);
   }
 
   private makeMeridian(
@@ -232,9 +189,9 @@ export class CoordSphere {
     latMaxAbsRad: number,
   ): THREE.Line {
     // Meridian sweeps latitude from -latMaxAbsRad to +latMaxAbsRad at fixed
-    // longitude. Drawn as a single Line (open polyline) so the south-to-north
-    // arc renders without an unwanted closing segment between poles.
-    // latMaxAbsRad < π/2 trims the meridian short of the poles.
+    // longitude. Open polyline, so the south-to-north arc renders without an
+    // unwanted closing segment between poles. latMaxAbsRad < π/2 trims the
+    // meridian short of the poles.
     const segments = MERIDIAN_SEGMENTS;
     const v = new Float32Array((segments + 1) * 3);
     const tmp = new THREE.Vector3();
@@ -245,12 +202,7 @@ export class CoordSphere {
       v[i * 3 + 1] = tmp.y;
       v[i * 3 + 2] = tmp.z;
     }
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.BufferAttribute(v, 3));
-    const line = new THREE.Line(geom, this.lineMaterial);
-    line.frustumCulled = false;
-    line.renderOrder = -1;
-    return line;
+    return makeOrbitLine(v, this.stroke.material, SPHERE_RENDER_ORDER);
   }
 
   dispose() {
@@ -258,7 +210,24 @@ export class CoordSphere {
       const g = (child as { geometry?: THREE.BufferGeometry }).geometry;
       g?.dispose();
     }
-    this.equatorMaterial.dispose();
-    this.lineMaterial.dispose();
+    this.equator.dispose();
+    this.stroke.dispose();
   }
+}
+
+/** The equator's vertices, closed by repeating the first: the fat stroke is
+ *  an open polyline on both backends. */
+function equatorPoints(dirToIcrs: DirToIcrs): Float32Array {
+  const tmp = new THREE.Vector3();
+  const n = EQUATOR_SEGMENTS;
+  const positions = new Float32Array(n * 3 + 3);
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    dirToIcrs(t, 0, tmp).multiplyScalar(SPHERE_RADIUS_PC);
+    positions[i * 3 + 0] = tmp.x;
+    positions[i * 3 + 1] = tmp.y;
+    positions[i * 3 + 2] = tmp.z;
+  }
+  positions.copyWithin(n * 3, 0, 3);
+  return positions;
 }

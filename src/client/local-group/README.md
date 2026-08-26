@@ -1,7 +1,7 @@
 # Local Group layers — wireframes + volumetric emission
 
 Two sibling renderers over one catalog: an always-on reference overlay
-rendering LineLoop outlines for the Magellanic Clouds, Sagittarius
+rendering ring outlines for the Magellanic Clouds, Sagittarius
 dSph, classical dSphs and ultra-faints within 250 kpc, plus M31, M33,
 the M31 satellite subgroup, and the outer-band dwarfs (NGC 6822,
 IC 10, IC 1613, Leo A, WLM, Sextans A/B, …) out to the canonical 2 Mpc
@@ -101,18 +101,21 @@ tradeoff § Wireframe extent is making deliberately.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
-- **disc**: midplane `LineLoop` plus a thickness pair offset ±c along
+- **disc**: a midplane ring plus a thickness pair offset ±c along
   the disc normal. Three rings total.
-- **ellipsoid**: three orthogonal meridian `LineLoop`s on the
-  principal axes (xy, xz, yz). Reads as an ellipsoid silhouette from
-  any angle.
+- **ellipsoid**: three orthogonal meridian rings on the principal axes
+  (xy, xz, yz). Reads as an ellipsoid silhouette from any angle.
+
+Each is `../util/orbit-line.ts`'s `makeOrbitLineLoop` — an index-closed
+`THREE.Line`, since the WebGPU renderer refuses `THREE.LineLoop`.
 
 Each ring's vertices are pre-rotated by the object's quaternion and
 translated by `centerAbs`, then committed to a single `BufferGeometry`
 in absolute ICRS pc. The layer's group is rebased to `-worldOffset`
 each frame so the floating origin doesn't drift the outlines. One
-shared `LineBasicMaterial` across the whole catalog — per-frame
-opacity write hits one slot.
+shared stroke from the chrome line seam (`../chrome-lines/README.md`)
+across the whole catalog — the per-frame opacity write hits one slot,
+and the wireframe draws on either backend.
 
 ## Emission layer
 

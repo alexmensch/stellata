@@ -144,6 +144,10 @@ emitters — the Local Group's glow (`local-group/`) and the Milky Way band
 (`milkyway/`), which write the diffuse attachment the resolve convolves. The dust sprite (`dust/`)
 is ported as well, though its layer is shelved at strength 0 so nothing
 of it is visible without a console call.
+Every remaining line overlay draws too — the galactic disc, both
+coordinate spheres, the constellation figure, the IAU boundary arcs and
+the Local Group wireframe — each on the chrome line seam, the equator
+through its fat stroke (`../chrome-lines/README.md`).
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
 WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
@@ -253,10 +257,14 @@ to the canvas and the shaders' encoded values land untouched — the
 WebGL2 semantics.
 
 The cost lands on three's **built-in materials**, which relied on that
-output transform for their encode: they render linear-dark until their
-port child restores the encode on their own path (`Line2` / chrome
-parity). Do not "fix" a dark built-in by unpinning the output space —
-that re-breaks every ported emitter and re-prices the hidden pass.
+output transform for their encode: one would render linear-dark on
+anything reaching the canvas. Nothing does — every line overlay is on
+the chrome line seam, whose single-output graph owns the encode and
+selects it on the `uHdrTarget` node mirror, 0 exactly in chart mode
+(`chrome-lines/README.md` § The encode the built-in path lost). Do not
+"fix" a dark built-in by unpinning the output space — that re-breaks
+every ported emitter and re-prices the hidden pass; put the material on
+the seam instead.
 
 **The clear colour is the second casualty, and no shader can fix that one.**
 Chart mode's paper is a `setClearColor` hex, so nothing owns its transfer;
