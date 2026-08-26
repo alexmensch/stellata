@@ -2,7 +2,7 @@
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § Atmospheres.
 
-import { relativeLuminance } from '../../hdr/tonemap-pure';
+import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import type { PlanetAtmosphere } from '../planet-system';
 
 export const ATMO_N_VIEW = 16;

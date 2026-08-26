@@ -17,7 +17,7 @@ import type { HdrSeam } from '../../hdr/hdr-seam';
 import {
   clearChromeBindings, setChromeOperatorActive, setChromeWhitePoint,
 } from '../../hdr/chrome/chrome-colour';
-import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from '../../hdr/tonemap-pure';
+import { DR_MAG, HIGHLIGHT_DESAT, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
 import { pixelSolidAngleArcsec2 } from '../../hdr/emission/emission-pure';
 import { tonemapTsl } from '../tonemap-tsl';
 import { makeEmitterGateNodes, type EmitterGateNodes } from './emitter-gates';

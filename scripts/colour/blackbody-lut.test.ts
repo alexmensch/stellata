@@ -15,7 +15,7 @@ import {
   BV_MIN as CONSUMER_BV_MIN,
   BV_MAX as CONSUMER_BV_MAX,
 } from '../../src/client/star-pipeline/blackbody-lut-data';
-import { srgbEncode } from '../../src/client/hdr/tonemap-pure';
+import { srgbEncode } from '../../src/client/hdr/tonemap/tonemap-pure';
 
 // The table stores linear light; the Python reference values every pin
 // below was derived from are display-encoded. Encoding on read keeps the

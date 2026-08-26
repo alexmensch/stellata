@@ -12,7 +12,7 @@ import { NodeMaterial, type Node } from 'three/webgpu';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
 import {
   extendedThresholdSbTsl, footprintAlongTsl, footprintPcTsl, softenRadiusTsl,

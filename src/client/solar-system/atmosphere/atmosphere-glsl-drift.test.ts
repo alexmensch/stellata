@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import {
   ATMO_JITTER_COEFFS,
   ATMO_JITTER_SCALE,

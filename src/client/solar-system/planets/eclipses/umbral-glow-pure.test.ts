@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../planet-system';
-import { relativeLuminance } from '../../../hdr/tonemap-pure';
+import { relativeLuminance } from '../../../hdr/tonemap/tonemap-pure';
 import {
   LIMB_REFRACTION_RAD,
   OZONE_CHAPPUIS_TAU,

@@ -12,7 +12,7 @@ import {
   greyWedgeCodes,
   srgbMatchCode,
 } from './calibration-ladders-pure';
-import { srgbDecode } from '../hdr/tonemap-pure';
+import { srgbDecode } from '../hdr/tonemap/tonemap-pure';
 
 describe('black-point ladder', () => {
   it('starts one code value above black and stays in the shadow toe', () => {

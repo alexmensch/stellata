@@ -2,7 +2,7 @@
 // adaptation branches and which governs, and the exposure decomposition.
 
 import { LUMA_CEIL } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap-pure';
+import { L_THRESH } from '../tonemap/tonemap-pure';
 import { type AdaptationRegime, ADAPT_SLEW_SETTLE_MAG } from './scene-adaptation-pure';
 import type { ParkPhase } from './park/adaptation-park-pure';
 

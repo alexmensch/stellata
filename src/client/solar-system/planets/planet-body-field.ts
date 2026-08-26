@@ -68,7 +68,7 @@ import {
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
-import { relativeLuminance } from '../../hdr/tonemap-pure';
+import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import planetVert from './glare/planet.vert.glsl?raw';
 import planetFrag from './glare/planet.frag.glsl?raw';

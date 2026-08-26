@@ -194,7 +194,7 @@ limit and the trim applies on top.
 
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
 `focusedStar === null` AND the offset isn't ≈Sol — see
-`src/client/README.md` § Floating origin for the precision-anchor
+`src/client/frame/README.md` § URL round-trip for the precision-anchor
 semantics that make this round-trip safe.
 
 **Adding a field.** Claim the next free presence bit in `FIELDS_V4`,

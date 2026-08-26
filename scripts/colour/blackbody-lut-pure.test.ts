@@ -7,7 +7,7 @@ import {
   blackbodyToLinearSrgb,
   linearSrgbFromColourIndex,
 } from './blackbody-lut-pure';
-import { srgbEncode } from '../../src/client/hdr/tonemap-pure';
+import { srgbEncode } from '../../src/client/hdr/tonemap/tonemap-pure';
 
 describe('ballesterosBvFromTeff', () => {
   it.each([

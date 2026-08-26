@@ -84,7 +84,7 @@ export function buildPlanetRingsMaterial(
     const ringL = dot(col, lumaWeightsTsl());
     const alpha = strip.a.mul(p.uFade).toVar();
     // Undithered — the annulus alpha-blends over the body mesh, so a pixel
-    // can take both fragments (../../hdr/README.md § Operator).
+    // can take both fragments (../../hdr/tonemap/README.md § Operator).
     const shown = select(
       u.uHdrTarget.lessThan(0.5),
       tonemapUnditheredTsl(col, u.uWhitePoint, u.uHighlightDesat),

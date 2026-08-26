@@ -218,7 +218,8 @@ the label engine's containers; read a non-zero `tick` self-size as the
 former before suspecting the latter.
 
 Pooled reuse rests on three invariants, each mutation-pinned by
-`chart-labels.test.ts` and argued under § Pooling above.
+`chart-labels.test.ts` and argued under § Label engine + glyphs
+(**Pooling**) above.
 
 ### Chart-labels: cached brightest constellation member
 

@@ -7,7 +7,7 @@ import {
   srgbDecode,
   tonemapWhitePoint,
   type Rgb,
-} from '../tonemap-pure';
+} from '../tonemap/tonemap-pure';
 
 type ChromeVariant = 'builtin' | 'raw';
 

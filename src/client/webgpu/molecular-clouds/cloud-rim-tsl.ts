@@ -8,7 +8,7 @@ import {
   positionView, screenCoordinate, smoothstep, vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
-import { DITHER_SEED_OFFSET } from '../../hdr/tonemap-pure';
+import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
 import {
   CONTOUR_WIDTH, MIN_FWIDTH, STIPPLE_ALPHA_FLOOR, STIPPLE_DOT_RADIUS,
   STIPPLE_DOT_SOFTNESS, STIPPLE_PERIOD_PX,

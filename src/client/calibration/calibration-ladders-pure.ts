@@ -2,7 +2,7 @@
 // and highlight ladders, the grey wedge, and the gamma match points.
 // See src/client/calibration/README.md.
 
-import { srgbEncode } from '../hdr/tonemap-pure';
+import { srgbEncode } from '../hdr/tonemap/tonemap-pure';
 
 /** Near-black patches on a code-0 field. Spaced so each is a visible
  *  step at the bottom of the transfer rather than an even code interval. */

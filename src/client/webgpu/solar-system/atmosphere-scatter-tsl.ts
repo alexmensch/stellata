@@ -11,7 +11,7 @@ import {
   ATMO_JITTER_COEFFS, ATMO_JITTER_SCALE, ATMO_N_LIGHT, ATMO_N_VIEW,
   LIGHT_JITTER_STRIDE, MS_STRENGTH, TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
 } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 
 type NF = Node<'float'>;
 type N2 = Node<'vec2'>;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { DITHER_LSB_LEVELS, DITHER_SEED_OFFSET } from '../hdr/tonemap-pure';
+import { DITHER_LSB_LEVELS, DITHER_SEED_OFFSET } from '../hdr/tonemap/tonemap-pure';
 import {
   ALPHA_CAP, AV_PER_DENSITY, AV_RATE_PER_NH, AV_SATURATED, ENVELOPE_TAPER_FRAC,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,
@@ -65,7 +65,7 @@ describe('cloud absorption GLSL constants match cloud-presence-pure', () => {
 // The dither is one shape across both cloud shaders and the resolve, so its
 // seed offset and its 8-bit divisor are pinned from the module that owns
 // them rather than per shader.
-describe('the cloud dither matches hdr/tonemap-pure', () => {
+describe('the cloud dither matches hdr/tonemap/tonemap-pure', () => {
   for (const [name, src] of [['absorption', absorption], ['rim', rim]] as const) {
     it(`pins the ${name} shader's seed offset and divisor`, () => {
       const m = src.match(/ign\(gl_FragCoord\.xy \+ ([\d.]+)\) - 0\.5\) \/ ([\d.]+);/);

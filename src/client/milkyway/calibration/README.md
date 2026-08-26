@@ -242,7 +242,7 @@ most dust. The real band behaves the same way; the dark rift is dust,
 not a gap in the stars.
 
 **Sub-threshold rows carry the operator's faint-end toe**
-(`../../hdr/README.md` § Operator): over-threshold levels are untouched,
+(`../../hdr/tonemap/README.md` § Operator): over-threshold levels are untouched,
 and 1.5 mag under threshold is black by construction — the NGP at 1.40
 under sits on the dither floor instead of 16.7/255. Nothing pins the band
 to the threshold.

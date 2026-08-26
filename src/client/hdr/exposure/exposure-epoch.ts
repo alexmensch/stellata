@@ -10,7 +10,7 @@ import {
 } from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { MAG_PER_STOP, rodSummationSolidAngleArcsec2 } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap-pure';
+import { L_THRESH } from '../tonemap/tonemap-pure';
 
 export { MAG_PER_STOP };
 
