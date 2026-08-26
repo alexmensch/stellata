@@ -16,6 +16,12 @@ import * as THREE from 'three';
 export const ORBIT_LINE_SEGMENTS = 8192;
 export const ORBIT_LINE_OPACITY = 0.5;
 
+// Cool blue-white contrasting against the warm-amber galactic disc and the
+// additive Milky Way disc without competing with point-source stars. Hue
+// 210°, the same as the fresnel shells' `SHELL_RIM_BLUE` — one annotation
+// vocabulary across the chrome the local scene draws over itself.
+export const ORBIT_LINE_COLOUR = 0x88aacc;
+
 /** Screen pixels per radian of angular size, from the camera's vertical FOV
  *  and viewport height. Pair with `angularRadiusPx` for the on-screen size
  *  visibility gate shared by the orbit overlays. */

@@ -110,8 +110,14 @@ build scripts, tests, and shader uniforms.
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
   traversed path with two ends) / `makeOrbitLineSegments` / `mirrorOrbitLine`
   — the **geometry** half only; the materials they take come from
-  `../chrome-lines/README.md`, and `ORBIT_LINE_OPACITY` is the default alpha
-  every consumer passes it. A dashed consumer also owns the cumulative
+  `../chrome-lines/README.md`, and `ORBIT_LINE_OPACITY` / `ORBIT_LINE_COLOUR`
+  are the alpha and the stroke colour every consumer passes it. The colour is
+  **one value for the whole family** — planet and moon rings, binary orbit
+  paths, probe trails — at the fresnel shells' own hue
+  (`SHELL_RIM_BLUE`, 210°), so the chrome the local scene draws over itself
+  reads as one vocabulary. Three layers each authoring their own blue is what
+  it replaced, and they had drifted to three different hues; a new line
+  overlay takes this one rather than picking a fourth. A dashed consumer also owns the cumulative
   `lineDistance` attribute, because `computeLineDistances` resets the phase
   per segment pair (`../constellation-boundaries/README.md`
   § Chart-mode layer) — and the on-screen-size helpers `pixelsPerRadian`

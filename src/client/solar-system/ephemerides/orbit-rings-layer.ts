@@ -21,6 +21,7 @@ import {
   makeOrbitLineLoop,
   bakeAnchoredLineVerts,
   trackAnchoredLine,
+  ORBIT_LINE_COLOUR,
   ORBIT_LINE_OPACITY,
   ORBIT_LINE_SEGMENTS,
   pixelsPerRadian,
@@ -46,10 +47,6 @@ export const ECLIPTIC_NORTH_POLE_ICRS = new THREE.Vector3(
 // value doubles as the inter-ring gap that suppresses the inner-rocky
 // pile-up at far framings and lets inner rings re-emerge on close approach.
 export const RING_VISIBILITY_THRESHOLD_PX = FEATURE_LEGIBILITY_MIN_PX;
-
-// Cool blue-white contrasting against the warm-amber galactic disc and the
-// additive Milky Way disc without competing with point-source stars.
-const RING_COLOUR = 0x88aacc;
 
 /**
  * Relative element drift a built ring may carry before update() rewrites its
@@ -374,7 +371,7 @@ export class OrbitRingsLayer {
   private readonly stroke: ChromeLineMaterial;
 
   constructor(chromeLines: ChromeLineMaterials) {
-    this.stroke = chromeLines.solid(RING_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
     this.group = new THREE.Group();
     // Local-depth-pass in-pass order: after the planet disc mirrors (3)
     // so ring fragments depth-test against real body depth — near-side

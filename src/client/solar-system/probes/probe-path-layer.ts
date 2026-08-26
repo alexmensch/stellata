@@ -13,12 +13,12 @@ import {
   mirrorOrbitLine,
   pixelsPerRadianFromUniforms,
   trackAnchoredLine,
+  ORBIT_LINE_COLOUR,
   ORBIT_LINE_OPACITY,
 } from '../../util/orbit-line';
 import type { ProbeField, ProbeSharedUniforms } from './probe-field';
 import { probeSampleIndexAt, type ProbeTrajectory } from './probe-trajectory';
 
-const TRAIL_COLOUR = 0xa8c4dc;
 // Just under the marker so a marker sitting on its own trail paints over
 // the line rather than being cut by it — in either pass.
 const TRAIL_RENDER_ORDER = 3.4;
@@ -67,8 +67,8 @@ export class ProbePathLayer {
     this.localGroup = new THREE.Group();
     this.localGroup.renderOrder = TRAIL_LOCAL_RENDER_ORDER;
     this.localGroup.visible = false;
-    this.stroke = chromeLines.solid(TRAIL_COLOUR, ORBIT_LINE_OPACITY);
-    this.localStroke = chromeLines.solid(TRAIL_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
+    this.localStroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
   /** Allocate one full-capacity trail per probe, plus its local-pass mirror.

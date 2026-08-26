@@ -12,12 +12,12 @@ import type { ChromeLineMaterial, ChromeLineMaterials } from '../chrome-lines/ch
 import {
   makeOrbitLineLoop,
   ORBIT_LINE_SEGMENTS,
+  ORBIT_LINE_COLOUR,
   ORBIT_LINE_OPACITY,
   pixelsPerRadian,
   angularRadiusPx,
 } from '../../util/orbit-line';
 
-const PATH_COLOUR = 0x9fc2d6;
 // In-pass order (the group lives in the local depth pass, same slot the
 // planet orbit rings use): after the member-star disc mirror (0) so the
 // bracket z-buffer hides far-side arcs behind a resolved disc and draws
@@ -65,7 +65,7 @@ export class BinaryOrbitPathLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = PATH_RENDER_ORDER;
     this.group.visible = false;
-    this.stroke = chromeLines.solid(PATH_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
   }
 
   /**
