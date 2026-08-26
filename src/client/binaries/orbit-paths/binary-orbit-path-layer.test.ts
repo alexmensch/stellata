@@ -4,7 +4,7 @@ import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
 import { makeRelation } from '../binary-relation-fixture';
 import { relationIndicesInBounds } from '../orbit-relation-cache';
 import { BinaryOrbitPathLayer } from './binary-orbit-path-layer';
-import { builtinChromeLineMaterials as chromeLines } from '../chrome-lines/builtin-chrome-lines';
+import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing
 // star 0 puts the relation on its chain.

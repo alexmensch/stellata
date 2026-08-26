@@ -8,7 +8,7 @@ import { AU_PC } from '../../util/astronomy-constants';
 import { type BinariesData } from '../binaries-loader';
 import { keplerRelationParams, relationIndicesInBounds } from '../orbit-relation-cache';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';
-import type { ChromeLineMaterial, ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
+import type { ChromeLineMaterial, ChromeLineMaterials } from '../../chrome-lines/chrome-line-materials';
 import {
   makeOrbitLineLoop,
   ORBIT_LINE_SEGMENTS,
