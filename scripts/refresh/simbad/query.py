@@ -189,16 +189,16 @@ def fetch_flux_bands(
     )
 
 
-def fetch_ident_lookups(
+def _fetch_ident_rows(
     client: rl.TapClient,
     oids: Sequence[int],
     lookups: Sequence[IdentLookup],
     *,
-    batch_size: int = DEFAULT_BATCH_SIZE,
-    progress_label: str = "ident",
-) -> dict[int, dict[str, int | str]]:
-    """For each oid resolve every cross-identifier in ``lookups``.
-    Returns {oid: {tsv_name: suffix}}. A single OR-ed LIKE clause covers
+    batch_size: int,
+    progress_label: str,
+) -> dict[int, list[tuple[str, int | str]]]:
+    """{oid: [(tsv_name, suffix), …]} for every ``ident`` row matching one of
+    ``lookups``, in the table's own order. A single OR-ed LIKE clause covers
     every lookup per batch; first matching prefix wins on collisions
     (vanishingly rare)."""
     if not lookups:
@@ -213,7 +213,7 @@ def fetch_ident_lookups(
             f"ORDER BY oidref, id"
         )
 
-    def dispatch(table, out: dict[int, dict[str, int | str]]) -> None:
+    def dispatch(table, out: dict[int, list[tuple[str, int | str]]]) -> None:
         for row in table:
             id_str = str(rl.coerce_masked(row["id"]) or "")
             for lookup in lookups:
@@ -221,7 +221,9 @@ def fetch_ident_lookups(
                     continue
                 suffix = lookup.parse_suffix(id_str)
                 if suffix is not None:
-                    out.setdefault(int(row["oidref"]), {})[lookup.tsv_name] = suffix
+                    out.setdefault(int(row["oidref"]), []).append(
+                        (lookup.tsv_name, suffix)
+                    )
                 break
 
     return _run_batched(
@@ -232,3 +234,48 @@ def fetch_ident_lookups(
         label=progress_label,
         batch_size=batch_size,
     )
+
+
+def fetch_ident_lookups(
+    client: rl.TapClient,
+    oids: Sequence[int],
+    lookups: Sequence[IdentLookup],
+    *,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    progress_label: str = "ident",
+) -> dict[int, dict[str, int | str]]:
+    """One cross-identifier per namespace per oid — {oid: {tsv_name: suffix}}.
+    Where SIMBAD holds several under one namespace the last in table order
+    wins; the shipped TSV is single-valued per column, so a winner has to be
+    picked somewhere."""
+    return {
+        oid: dict(pairs)
+        for oid, pairs in _fetch_ident_rows(
+            client, oids, lookups,
+            batch_size=batch_size, progress_label=progress_label,
+        ).items()
+    }
+
+
+def fetch_ident_sets(
+    client: rl.TapClient,
+    oids: Sequence[int],
+    lookups: Sequence[IdentLookup],
+    *,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    progress_label: str = "ident sets",
+) -> dict[int, dict[str, set[int | str]]]:
+    """Every cross-identifier per namespace per oid —
+    {oid: {tsv_name: {suffix, …}}}. The widening's corroboration asks whether
+    an id is present at all, so it may not drop the losers of a namespace
+    the way ``fetch_ident_lookups`` does."""
+    out: dict[int, dict[str, set[int | str]]] = {}
+    rows = _fetch_ident_rows(
+        client, oids, lookups,
+        batch_size=batch_size, progress_label=progress_label,
+    )
+    for oid, pairs in rows.items():
+        per_namespace = out.setdefault(oid, {})
+        for tsv_name, suffix in pairs:
+            per_namespace.setdefault(tsv_name, set()).add(suffix)
+    return out

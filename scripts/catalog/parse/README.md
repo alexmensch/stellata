@@ -335,3 +335,4 @@ the build fails until each is explicitly added to
 `KNOWN_MISSING_HIPS` with rationale. Don't relax the check to a soft
 warning — the whole point of using Stellarium's HIP-indexed data (vs.
 fuzzy RA/Dec position matching) is deterministic mapping.
+

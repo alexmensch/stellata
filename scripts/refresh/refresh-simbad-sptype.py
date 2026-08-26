@@ -44,7 +44,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
     for line in resolved.report_lines():
         print(line)
     print(f"      oids from the spine: {len(resolved.oids)} "
-          f"(+{resolved.gained_by_widening} the TYC widening reached alone)")
+          f"(+{resolved.total_gained_by_widening} the widening reached alone)")
 
     print("[2/2] simbad_wds_xids.tsv simbad_oid → direct…")
     wds_oids = list(inputs.iter_wds_xids_oids(WDS_XIDS_TSV))

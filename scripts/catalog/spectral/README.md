@@ -71,13 +71,14 @@ priority chain:
    Wins **18** — the 13 records TYC cannot reach, plus the 5 both reach.
 4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
    SIMBAD holds no Gaia id and no HIP for, which is exactly the population
-   the values pull's TYC widening exists for; same ladder
+   the values pull's widening ladder exists for; same ladder
    `lookupSimbadValues` walks (`../simbad-values-parse.ts`). What reaches
    the file is already adjudicated — the pull vetoes a widened binding
-   SIMBAD's own Gaia cross-ID contradicts
-   (`scripts/refresh/simbad/README.md` § The TYC widening carries its own
-   veto) — so the risk this tier carries is a system-blend spectral type on
-   an unvetoed pair, never a wrong star. Wins **1,935** records.
+   SIMBAD's own Gaia cross-IDs contradict
+   (`scripts/refresh/simbad/README.md` § The widening carries its own
+   corroboration rule) — so the risk this tier carries is a system-blend
+   spectral type on an unvetoed pair, never a wrong star. Wins **1,935**
+   records.
 
    Which namespace found each SIMBAD-tier row is pinned as
    `spectralSimbadBySourceId` / `ByHip` / `ByTyc` / `ByGj`, summing to

@@ -28,7 +28,8 @@ scripts/catalog/spine/
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (§ Why a guard, not a
-                                  rebuild).
+                                  rebuild), plus the stale-source_id queue
+                                  (§ Six source_ids DR3 does not publish).
   inherited-spine-parity.test.ts  Assertions against the BUILD the spine is a
                                   snapshot of — record count and designation
                                   multiset (§ Parity with the shipped build).
@@ -117,6 +118,20 @@ moved that is not a retired gate traces to these four**:
 
 `../companions/README.md` § Anchor flux conservation carries the
 consequence of the V-tier move: three records ship as unsplit blends.
+
+## Six source_ids DR3 does not publish
+
+Six rows carry a Gaia **DR2** id in the column the pipeline reads as DR3,
+so the 5p pull has no row for them however the request is composed. They
+are enumerated with their DR3 status in
+`data/athyg/stale_gaia_source_ids.tsv`, and three assertions here keep that
+queue honest: it is exactly the spine's unpublished source_ids, every one
+of them reaches the SIMBAD values pull, and no successor id it names is
+itself a spine cell — which would put two records on one SIMBAD row and
+trip the values parser's duplicate-key throw.
+
+Why the cells stay as they are, and what the widening does instead:
+`data/athyg/README.md` § Six DR2 ids in the DR3 column.
 
 ## Why a guard, not a rebuild
 

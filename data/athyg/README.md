@@ -10,6 +10,9 @@ athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows. NOT a build
 inherited-spine.tsv        ~40 MB, LFS. Generated provenance data, and the
                            record build's membership term — see § The
                            inherited spine. 313,257 rows.
+stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
+                           rows whose gaia_source_id Gaia DR3 publishes no
+                           row for — see § Six DR2 ids in the DR3 column.
 ```
 
 The two are different kinds of file: the CSV is frozen **external** data
@@ -53,13 +56,38 @@ column origins, and why nothing regenerates it in CI:
 [`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md).
 Licence follows the CSV it derives from (CC-BY-SA-4.0).
 
+## Six DR2 ids in the DR3 column
+
+AT-HYG wrote a **Gaia DR2** source_id into the cell the pipeline reads as
+DR3 on six rows, and the spine carried them forward. Gaia DR3 publishes no
+row for any of the six, so they reach no Gaia astrometry, photometry or
+parallax; SIMBAD holds each of them as `Gaia DR2 <the spine's id>`, and for
+four of the six also holds a different, genuine DR3 id — the renumbering
+AT-HYG did not follow. `stale_gaia_source_ids.tsv` enumerates all six with
+that status, and `scripts/catalog/spine/inherited-spine-guard.test.ts`
+holds the enumeration to what the committed spine and 5p pull actually say.
+
+**The cells are not repaired, and that is a decision rather than an
+omission.** § 3 makes the spine frozen and states that ids are DR3-namespace
+designations that never get rewritten; substituting the successor id would
+change four records' designation sets, which is a `docs/sid.md` § 6
+DR-reconciliation event and not a data fix. A DR2 id is a real Gaia
+designation, so the records stay addressable either way. What the rows
+needed was to stop being *unreachable*: the SIMBAD widening ladder now
+falls through to their own TYC / GJ and corroborates the binding across
+releases, so all six carry bibcoded coordinates, PM and parallax
+(`../simbad/README.md` § The widening ladder, and its corroboration rule).
+`stellata-3bsf.8` re-sources the spine from the primaries and is where the
+ids themselves would change, if they change at all.
+
 ## Consumed by
 
 `inherited-spine.tsv` → `scripts/catalog/build-catalog.ts` (`readStars` in
 `scripts/catalog/parse/stars-parse.ts`), as the membership term: every row
 is a record, and no other source adds one. Two test files in
-`scripts/catalog/spine/` also read it — the guard pins its bytes and
-committed counts, the parity gate holds it to the build it snapshots.
+`scripts/catalog/spine/` also read it — the guard pins its bytes,
+committed counts and the queue above, the parity gate holds it to the
+build it snapshots.
 `pnpm run build:classic-ids` reads it as well, as the label merge's spine
 side: its review queue has to describe the same records the record build
 labels (`scripts/catalog/classic-ids/README.md` § The label merge).
