@@ -84,11 +84,32 @@ mentions all 9,537 regions. The range scans are cheap (~2 min for the
 whole 2,539,913-row main table), so the pull transfers the table and
 keeps 15% of it.
 
+**No resume checkpoint, deliberately.** `run_in_batches` can cache each
+batch to `<output>.tsv.ckpt/` (`scripts/refresh/README.md` § Resuming a
+long pull), but here a batch is ~106k *unfiltered* upstream rows and the
+cache holds them as XML, so checkpointing this pull would spend gigabytes
+of disk to save two minutes. The filter is what makes the output small;
+the thing worth caching is the part we throw away.
+
+Nothing is written until every gate has passed — each table's fraction
+band and pinned rows, then the cross-table spine cover. A gate failure
+must leave the committed TSVs untouched, because the skip check is a
+file-modification-time comparison: a half-committed failing pull would
+look up to date to the next run and skip itself silently.
+
+## The pinned row
+
+`TYC 3694-2544-1` (HD 14039) is the highest-proper-motion row of the 43
+TYC-bearing `directionAthygPrinted` stars, so pinning it holds both the
+tier this ingest replaces and the mean epochs that replace it. Its printed
+AT-HYG cell matches this table's unpropagated mean position to 8 decimal
+places — the ~27″ staleness measured rather than asserted.
+
 ## Provenance
 
 - **Citation**: Høg E. et al. 2000, *A&A* 355, L27 (Tycho-2).
-- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), CDS TAP
-  `https://tapvizier.cds.unistra.fr/TAPVizieR/tap`.
+- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over the CDS TAP endpoint
+  `refresh_lib.CDS_TAP_URL` names.
 - **Retrieved**: 2026-08-25.
 - **Licence**: CDS/VizieR standard academic use; cite Høg et al. 2000.
 

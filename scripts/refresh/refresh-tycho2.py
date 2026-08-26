@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import sys
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
@@ -43,6 +44,13 @@ def format_tyc(tyc: Tyc) -> str:
     return "-".join(str(part) for part in tyc)
 
 
+def _display_path(path: Path) -> Path:
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
 def read_spine_tycs(spine: Path) -> set[Tyc]:
     tycs: set[Tyc] = set()
     with spine.open(encoding="utf-8") as f:
@@ -53,13 +61,7 @@ def read_spine_tycs(spine: Path) -> set[Tyc]:
 
 
 def read_mentioned_tycs(spine: Path, tyc2_hd: Path) -> set[Tyc]:
-    """The request set: every TYC a designation source names.
-
-    The spine's ``tyc`` column is the membership term; IV/25's own TYCs
-    carry the HD-bearing rows the spine could not key, which the
-    membership rework needs when it redefines the record set from the
-    primaries. Pulling their union once means neither consumer re-pulls.
-    """
+    """The request set — see data/tycho2/README.md § The request set."""
     tycs = read_spine_tycs(spine)
     with tyc2_hd.open(encoding="utf-8") as f:
         for row in csv.DictReader(f, delimiter="\t"):
@@ -67,43 +69,32 @@ def read_mentioned_tycs(spine: Path, tyc2_hd: Path) -> set[Tyc]:
     return tycs
 
 
+@dataclass(frozen=True)
 class TableSpec:
     """One I/259 table, its column slice, and the gates its pull must pass.
 
-    ``kept_fraction_bounds`` is a band on kept rows as a fraction of the
-    mentioned-TYC request set rather than an absolute count, so a spine
-    that gains or loses rows moves the gate with it instead of tripping it.
+    ``kept_fraction_bounds`` bands kept rows as a fraction of the request
+    set, so a spine that gains or loses rows moves the gate with it.
+    ``spot_rows`` are keyed on the canonical (post-rename) column names,
+    so they pin what actually reaches the TSV.
     """
 
-    def __init__(
-        self,
-        vizier_table: str,
-        output: Path,
-        column_map: dict[str, str],
-        expected_schema: dict[str, type | tuple[type, ...]],
-        kept_fraction_bounds: tuple[float, float],
-        spot_rows: Sequence[Mapping[str, Any]] = (),
-    ) -> None:
-        self.vizier_table = vizier_table
-        self.output = output
-        self.column_map = column_map
-        self.expected_schema = expected_schema
-        self.kept_fraction_bounds = kept_fraction_bounds
-        self.spot_rows = spot_rows
+    vizier_table: str
+    output: Path
+    column_map: Mapping[str, str]
+    expected_schema: Mapping[str, type | tuple[type, ...]]
+    kept_fraction_bounds: tuple[float, float]
+    spot_rows: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
 
     def adql(self, tyc1_lo: int, tyc1_hi: int) -> str:
-        cols = ", ".join(f'"{c}"' for c in self.column_map)
         return (
-            f'SELECT {cols} FROM "{self.vizier_table}" '
+            f"{rl.select_columns(self.column_map, self.vizier_table)} "
             f"WHERE TYC1 BETWEEN {tyc1_lo} AND {tyc1_hi}"
         )
 
 
-# Positions: RAmdeg/DEmdeg are the OBSERVED mean position at the per-star mean
-# epochs EpRAm/EpDEm, which is where a propagation to the scene epoch must
-# start — RA(ICRS)/DE(ICRS) is Tycho-2's own propagation to J2000 and
-# propagating that again compounds its error. RA(ICRS) is carried anyway
-# because pflag='X' rows have no mean solution and nothing else to stand on.
+# RAmdeg/DEmdeg vs RA(ICRS), and why pflag='X' rows need both:
+# data/tycho2/README.md § Which position to propagate from.
 MAIN = TableSpec(
     vizier_table="I/259/tyc2",
     output=OUT_MAIN,
@@ -138,19 +129,16 @@ MAIN = TableSpec(
         "prox": int, "HIP": int,
     },
     kept_fraction_bounds=(0.98, 1.0),
-    # HD 14039 (Gl 92.1) — the highest-PM row of the 43 TYC-bearing
-    # directionAthygPrinted stars, so the tier this ingest replaces and the
-    # mean epoch that replaces it are pinned on one row.
     spot_rows=(
         {
             "tyc": "3694-2544-1",
-            "RAmdeg": (34.60250679, 1e-6),
-            "DEmdeg": (56.55991447, 1e-6),
-            "EpRAm": (1991.07, 0.01),
-            "EpDEm": (1991.00, 0.01),
-            "pmRA": (341.5, 0.05),
-            "pmDE": (-223.6, 0.05),
-            "VTmag": (8.354, 0.001),
+            "ra_mdeg": (34.60250679, 1e-6),
+            "de_mdeg": (56.55991447, 1e-6),
+            "ep_ra": (1991.07, 0.01),
+            "ep_de": (1991.00, 0.01),
+            "pm_ra": (341.5, 0.05),
+            "pm_de": (-223.6, 0.05),
+            "vt_mag": (8.354, 0.001),
         },
     ),
 )
@@ -190,10 +178,8 @@ TABLES: tuple[TableSpec, ...] = (MAIN, SUPPL1)
 
 
 def tyc1_ranges(per_query: int = TYC1_PER_QUERY) -> list[tuple[int, int]]:
-    """The pull is range-batched over TYC1 and filtered locally because
-    VizieR can express no server-side filter on the full identifier: its
-    ADQL parser rejects CAST, and without one its Postgres backend
-    overflows int32 composing TYC1/TYC2/TYC3 into a single key."""
+    """Contiguous TYC1 scan bands — data/tycho2/README.md § Why the pull
+    is range-batched."""
     return [
         (lo, min(lo + per_query - 1, TYC1_MAX))
         for lo in range(TYC1_MIN, TYC1_MAX + 1, per_query)
@@ -217,36 +203,53 @@ def select_mentioned(
             yield tyc, row
 
 
+def assert_request_scannable(wanted: set[Tyc]) -> None:
+    """A TYC1 outside the scanned span is never queried, so without this it
+    would join the residual indistinguishable from one Tycho-2 lacks."""
+    outside = sorted(t for t in wanted if not TYC1_MIN <= t[0] <= TYC1_MAX)
+    if outside:
+        shown = ", ".join(format_tyc(t) for t in outside[:10])
+        raise SystemExit(
+            f"refresh-tycho2: {len(outside)} mentioned TYC(s) fall outside the "
+            f"scanned TYC1 span [{TYC1_MIN}, {TYC1_MAX}] ({shown}"
+            f"{' …' if len(outside) > 10 else ''}) — widen the span or fix the "
+            "request set; they would otherwise be silently unqueried."
+        )
+
+
 def pull_table(
     spec: TableSpec,
     client: rl.TapClient,
     wanted: set[Tyc],
     *,
     log: Callable[[str], None] = print,
-) -> set[Tyc]:
-    """Pull, gate and write one table; return the TYCs it reached."""
-    kept: dict[Tyc, Mapping[str, Any]] = {}
+) -> dict[Tyc, dict[str, Any]]:
+    """Pull one table, run its own gates, and return the canonical rows it
+    kept. Writing is the caller's job — every gate, this table's and the
+    cross-table spine cover, must pass before anything lands under data/.
+    """
+    kept: dict[Tyc, dict[str, Any]] = {}
     ranges = tyc1_ranges()
-
-    def query(batch: Sequence[tuple[int, int]]):
-        return client.run(spec.adql(batch[0][0], batch[-1][1]))
 
     def collect(table) -> None:
         for tyc, row in select_mentioned(table, wanted):
-            kept[tyc] = row
+            kept[tyc] = {
+                canonical: rl.coerce_masked(row[vizier])
+                for vizier, canonical in spec.column_map.items()
+            }
 
     log(f'querying CDS TAP — "{spec.vizier_table}" in {len(ranges)} TYC1 ranges …')
     t0 = time.time()
     rl.run_in_batches(
         ranges,
         1,
-        query,
+        lambda batch: client.run(spec.adql(*batch[0])),
         collect,
         schema=spec.expected_schema,
         schema_label=spec.vizier_table,
         log=log,
     )
-    fraction = len(kept) / len(wanted) if wanted else 0.0
+    fraction = len(kept) / len(wanted)
     log(
         f"  kept {len(kept)} of {len(wanted)} mentioned TYCs "
         f"({fraction:.2%}) in {time.time() - t0:.1f}s"
@@ -275,30 +278,30 @@ def pull_table(
                 "this is a request-set or ADQL regression."
             ),
         )
+    return kept
 
-    rows = (
-        {
-            canonical: rl.coerce_masked(row[vizier])
-            for vizier, canonical in spec.column_map.items()
-        }
-        for _, row in sorted(kept.items())
-    )
+
+def write_table(
+    spec: TableSpec,
+    kept: Mapping[Tyc, Mapping[str, Any]],
+    *,
+    log: Callable[[str], None] = print,
+) -> int:
     written = rl.write_tsv(
-        rows, columns=list(spec.column_map.values()), output=spec.output
+        (row for _, row in sorted(kept.items())),
+        columns=list(spec.column_map.values()),
+        output=spec.output,
     )
-    log(f"wrote {spec.output.relative_to(ROOT)} ({written} rows)")
-    return set(kept)
+    log(f"wrote {_display_path(spec.output)} ({written} rows)")
+    return written
 
 
 def assert_spine_covered(
     spine_tycs: set[Tyc], reached: set[Tyc], *, log: Callable[[str], None] = print
 ) -> None:
-    """Every TYC-bearing spine row must reach a Tycho-2 solution.
-
-    The no-Gaia astrometry cascade has no tier below this one for a
-    TYC-keyed row, so an unreached spine TYC is a record with no owned
-    direction — a § 6 membership adjudication, not a refresh that quietly
-    lands short.
+    """Every TYC-bearing spine row must reach a Tycho-2 solution — the
+    cascade has no tier below this one, so an unreached spine TYC is a § 6
+    membership adjudication rather than a refresh landing short.
     """
     missing = sorted(spine_tycs - reached)
     log(f"spine TYCs reached: {len(spine_tycs) - len(missing)}/{len(spine_tycs)}")
@@ -324,16 +327,23 @@ def main() -> None:
 
     spine_tycs = read_spine_tycs(SPINE)
     wanted = read_mentioned_tycs(SPINE, TYC2_HD)
+    if not wanted:
+        raise SystemExit(
+            f"refresh-tycho2: {SPINE.relative_to(ROOT)} and "
+            f"{TYC2_HD.relative_to(ROOT)} name no TYC between them — the "
+            "request set is empty, so there is nothing to pull."
+        )
+    assert_request_scannable(wanted)
     print(
         f"mentioned TYCs: {len(wanted)} "
         f"(spine {len(spine_tycs)} ∪ IV/25 {len(wanted) - len(spine_tycs)} new)"
     )
 
     client = rl.TapClient(backends=[rl.cds_backend()])
-    reached: set[Tyc] = set()
-    for spec in TABLES:
-        reached |= pull_table(spec, client, wanted)
-    assert_spine_covered(spine_tycs, reached)
+    kept = [pull_table(spec, client, wanted) for spec in TABLES]
+    assert_spine_covered(spine_tycs, set().union(*kept))
+    for spec, rows in zip(TABLES, kept):
+        write_table(spec, rows)
 
 
 if __name__ == "__main__":

@@ -157,9 +157,18 @@ no-partial-write guarantee against an in-memory TAP backend. Run it with
 output is a filtered subset rather than a whole table, and its gate is a
 band on kept rows as a fraction of the request set rather than an
 absolute row count, so a spine that gains or loses rows moves the gate
-with it. Its own non-network test (`refresh-tycho2.test.py`) covers the
-request-set union, the TYC1 range cover, the local filter, and the
+with it. It still shares the projection (`rl.select_columns`) and every
+gate helper. **Its pull and its write are separate calls on purpose** —
+`pull_table` gates and returns rows, `write_table` commits them, and
+nothing is written until the cross-table spine cover has also passed
+(`data/tycho2/README.md` § Why the pull is range-batched, last paragraph).
+Its non-network test (`refresh-tycho2.test.py`) covers the request-set
+union, the TYC1 range cover and scan-span assertion, the local filter,
+the fraction / spot-row gates against an in-memory TAP backend, and the
 zero-unreached-spine-TYC gate.
+
+The in-memory TAP backend both suites use (`FakeTable`, `fake_tap_client`)
+lives in `scripts/test_helpers.py`.
 
 ### Gaia TAP: synchronous endpoints only
 
