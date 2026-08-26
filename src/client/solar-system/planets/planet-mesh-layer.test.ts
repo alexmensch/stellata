@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';
+import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
 import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
@@ -266,6 +267,21 @@ describe('the layer releases what it stops drawing', () => {
     h.layer.dispose();
     expect(map.close).toHaveBeenCalledTimes(1);
   });
+});
+
+// A roster row whose release site is missing is silent: both factories still
+// build the slot and createEntry still snapshots it, so nothing throws — the
+// body just keeps whatever map another body last bound. Source-scanned because
+// each site pairs with its own readiness test and uHas* flag, so there is no
+// loop to assert over (../materials/README.md § Texture-slot rosters).
+describe('every mesh texture slot has a release site', () => {
+  const src = read('./planet-mesh-layer.ts');
+
+  for (const slot of PLANET_MESH_TEXTURE_SLOTS) {
+    it(`${slot} is released back to its stand-in`, () => {
+      expect(src).toContain(`entry.slotFallbacks.${slot}`);
+    });
+  }
 });
 
 describe('the ring annulus phase scalar', () => {

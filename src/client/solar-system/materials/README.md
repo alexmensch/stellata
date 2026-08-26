@@ -56,7 +56,9 @@ Two slot kinds need a word here:
 Both factories seed theirs by spreading `textureSlotRecord(<roster>, …)`,
 so neither can carry a subset — and `planet-mesh-layer.ts` snapshots its
 release targets off the same roster, so the layer cannot look for a slot a
-factory never built. Adding a sixth map is one edit here.
+factory never built. A sixth map is one edit here for the **slot**; the map
+itself still needs its own `uHas*` flag in both factories, shader plumbing,
+a ladder suffix (`../planets/textures/README.md`), and a release site.
 
 The two rosters differ in what a slot **owes**, which is why they are two
 constants rather than one list:
@@ -70,11 +72,20 @@ constants rather than one list:
   giving it a release path would be a visual change, not a bug fix.
 
 Both rosters still mint a stand-in **per slot** on the WebGPU side, for the
-binding-merge reason `texture-slots.ts` carries. The guard is
-`glsl-materials.test.ts`: it reads each built record for the slots actually
-holding a `THREE.Texture` and compares that against the roster, on both
-backends — a texture slot added outside the roster fails there rather than
-rendering the wrong map.
+binding-merge reason `texture-slots.ts` carries.
+
+Two guards, because the roster **moves** the omission rather than deleting
+it — the release sites are still written out one per slot, since each pairs
+with its own readiness test and `uHas*` flag:
+
+- `glsl-materials.test.ts` reads each built record for the slots actually
+  holding a `THREE.Texture` and compares that against the roster, on both
+  backends. A texture slot added outside the roster fails there rather than
+  rendering the wrong map; the atmosphere is pinned at zero slots.
+- `planet-mesh-layer.test.ts` source-scans the layer for one
+  `slotFallbacks.<slot>` write per mesh roster row. This is the direction
+  that stays silent: a roster row with no release site builds and disposes
+  correctly on both backends and throws nothing.
 
 ## Neutral defaults, then the body's own values
 
