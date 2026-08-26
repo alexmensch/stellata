@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  applyAliasMeta,
   basisToQuaternion,
   buildEmission,
   buildLvdbDefault,
@@ -9,11 +10,14 @@ import {
   filterForRendering,
   isCatalogDesignation,
   mergeRowAndOverride,
+  nameTier,
+  orderAliases,
   parseOrient,
   projectedSemiMajorPc,
   renderedWireframeAxes,
   raDecDistanceToIcrs,
   type LgEmission,
+  type LgObject,
   roundN,
   roundSig,
   skyBasis,
@@ -728,5 +732,85 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
     // ratio for a real object is pinned in
     // local-group-emission-calibration.test.ts, which has the catalogue.
     expect(roundN(u99(1), 3)).toBe(4.557);
+  });
+});
+
+describe('preferred-name precedence', () => {
+  it('tiers a designation by its catalogue prefix', () => {
+    expect(nameTier('Andromeda Galaxy')).toBe('proper');
+    expect(nameTier("Barnard's Galaxy")).toBe('proper');
+    expect(nameTier('M31')).toBe('messier');
+    expect(nameTier('M 110')).toBe('messier');
+    expect(nameTier('Messier 32')).toBe('messier');
+    expect(nameTier('NGC 224')).toBe('ngc-ic');
+    expect(nameTier('IC 4895')).toBe('ngc-ic');
+    expect(nameTier('DDO 221')).toBe('catalogue');
+    expect(nameTier('UGCA 444')).toBe('catalogue');
+  });
+
+  it('does not read a bare constellation name as a Messier designation', () => {
+    // The Messier probe needs the digit: "Mensa"/"Musca" start with M.
+    expect(nameTier('Mensa')).toBe('proper');
+    expect(nameTier('Musca')).toBe('proper');
+  });
+
+  it('orders aliases proper → Messier → NGC/IC → other catalogue', () => {
+    expect(orderAliases(['DDO 221', 'NGC 224', 'M 31', 'Andromeda Galaxy'], 'M31'))
+      .toEqual(['Andromeda Galaxy', 'M 31', 'NGC 224', 'DDO 221']);
+  });
+
+  it('keeps curation order inside a tier, and drops the display name + duplicates', () => {
+    expect(orderAliases(['NGC 598', 'NGC 224', 'M31', 'NGC 224'], 'M31'))
+      .toEqual(['NGC 598', 'NGC 224']);
+  });
+});
+
+describe('applyAliasMeta — canonical promotion', () => {
+  const objAt = (name: string): LgObject => ({
+    name,
+    id: 'x',
+    type: '',
+    center: [0, 0, 0],
+    kind: 'ellipsoid',
+    axes: [1, 1, 1],
+    quat: [0, 0, 0, 1],
+    source: 'LVDB',
+    distance: 1,
+    emission: { family: 'sersic', mV: 1, reffAxesPc: [1, 1, 1], n: 1, bn: 1, pn: 1, uMax: 1, density0: 1 },
+  });
+
+  it('promotes the canonical name and keeps the demoted one typeable', () => {
+    const out = applyAliasMeta(objAt('M31'), {
+      name: 'M31',
+      type: 'Spiral galaxy',
+      aliases: ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M 31'],
+      canonical: 'Andromeda Galaxy',
+    });
+    expect(out.name).toBe('Andromeda Galaxy');
+    expect(out.aliases).toEqual(['M31', 'Messier 31', 'M 31', 'NGC 224']);
+  });
+
+  it('leaves the derived name alone with no promotion, but still orders the aliases', () => {
+    const out = applyAliasMeta(objAt('SMC'), {
+      name: 'SMC',
+      type: 'Magellanic irregular',
+      aliases: ['SMC', 'NGC 292', 'Nubecula Minor'],
+    });
+    expect(out.name).toBe('SMC');
+    // The self-referential 'SMC' alias drops out as the display name.
+    expect(out.aliases).toEqual(['Nubecula Minor', 'NGC 292']);
+  });
+
+  it('derives the type from the pre-promotion name', () => {
+    // Without a curated type the suffix fallback decides, and the
+    // promotion strips the suffix the fallback reads.
+    const out = applyAliasMeta(objAt('LGS 3 Dwarf Spheroidal'), {
+      name: 'LGS 3',
+      type: '',
+      aliases: ['Pisces Dwarf'],
+      canonical: 'Pisces Dwarf',
+    });
+    expect(out.name).toBe('Pisces Dwarf');
+    expect(out.type).toBe('Dwarf spheroidal');
   });
 });

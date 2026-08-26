@@ -131,6 +131,39 @@ export interface AliasRow {
   name: string;
   type: string;
   aliases: string[];
+  /** Curated promotion of a higher-precedence designation to the display
+   *  name (§ Display-name rules). Empty when the derived name already
+   *  sits at the top tier. */
+  canonical?: string;
+}
+
+/** Preferred-name precedence, low value = higher precedence:
+ *  common/proper name > Messier > NGC/IC > other catalogue. The same
+ *  order the star designations (`typeahead/star-designations.ts`) and
+ *  the molecular clouds (`scripts/clouds/README.md` § Alternate names)
+ *  already use, so one object kind never orders its names differently
+ *  from another. */
+export const NAME_TIERS = ['proper', 'messier', 'ngc-ic', 'catalogue'] as const;
+export type NameTier = (typeof NAME_TIERS)[number];
+
+export function nameTier(name: string): NameTier {
+  if (/^(M|Messier)\s*\d/i.test(name)) return 'messier';
+  if (/^(NGC|IC)\s*\d/i.test(name)) return 'ngc-ic';
+  if (isCatalogDesignation(name)) return 'catalogue';
+  return 'proper';
+}
+
+/** Aliases in precedence order, deduped, with `displayName` removed —
+ *  it is already the primary label and the search corpus prepends it.
+ *  Stable within a tier, so curation order still decides between two
+ *  designations of equal rank. */
+export function orderAliases(
+  aliases: readonly string[],
+  displayName: string,
+): string[] {
+  const seen = new Set([displayName]);
+  const unique = aliases.filter((a) => !seen.has(a) && (seen.add(a), true));
+  return NAME_TIERS.flatMap((tier) => unique.filter((a) => nameTier(a) === tier));
 }
 
 /** Morphological-type string for the search dropdown + focus card.
@@ -650,11 +683,22 @@ function buildLgObjectFromOrient(
 
 /** Overlay a curated alias/type row onto a built object. The row is
  *  keyed by the source name (LVDB `name` / standalone override name),
- *  which the caller matches before the display-name rewrite. */
+ *  which the caller matches before the display-name rewrite.
+ *
+ *  A `canonical` promotion demotes the derived display name into the
+ *  alias list rather than discarding it — every name the object used to
+ *  answer to stays typeable. Type is derived from the pre-promotion name
+ *  so the suffix fallback keeps reading the name it was written for. */
 export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObject {
   if (!meta) return obj;
   obj.type = objectTypeFor(obj.name, meta.type);
-  if (meta.aliases.length > 0) obj.aliases = meta.aliases;
+  const aliases = [...meta.aliases];
+  if (meta.canonical && meta.canonical !== obj.name) {
+    aliases.unshift(obj.name);
+    obj.name = meta.canonical;
+  }
+  const ordered = orderAliases(aliases, obj.name);
+  if (ordered.length > 0) obj.aliases = ordered;
   return obj;
 }
 

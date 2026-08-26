@@ -317,16 +317,32 @@ describe('emission over the committed catalog', () => {
 });
 
 describe('parseAliases + type/alias plumbing', () => {
+  const HEADER = 'name\ttype\taliases\tcanonical\n';
+
   it('parses rows, splitting the |-separated alias list', () => {
-    const tsv = 'name\ttype\taliases\nM31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\nFornax\tDwarf spheroidal\t\n';
+    const tsv = `${HEADER}M31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\nFornax\tDwarf spheroidal\t\n`;
     expect(parseAliases(tsv)).toEqual([
       { name: 'M31', type: 'Spiral galaxy', aliases: ['Andromeda Galaxy', 'NGC 224'] },
       { name: 'Fornax', type: 'Dwarf spheroidal', aliases: [] },
     ]);
   });
+  it('reads the canonical promotion, and omits the key when the column is blank', () => {
+    const tsv = `${HEADER}M31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\tAndromeda Galaxy\n`;
+    expect(parseAliases(tsv)[0].canonical).toBe('Andromeda Galaxy');
+    expect(parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\t\n`)[0])
+      .not.toHaveProperty('canonical');
+  });
   it('throws on a malformed header or empty type', () => {
-    expect(() => parseAliases('name\twrong\taliases\nX\tY\t\n')).toThrow(/malformed header/);
-    expect(() => parseAliases('name\ttype\taliases\nX\t\t\n')).toThrow(/empty type/);
+    expect(() => parseAliases('name\twrong\taliases\tcanonical\nX\tY\t\n'))
+      .toThrow(/malformed header/);
+    // The pre-canonical 3-column header no longer parses — a stale TSV
+    // would silently ship un-promoted names.
+    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n')).toThrow(/malformed header/);
+    expect(() => parseAliases(`${HEADER}X\t\t\n`)).toThrow(/empty type/);
+  });
+  it('throws when a promotion names a designation the row does not list', () => {
+    expect(() => parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\tAndromeda Galaxy\n`))
+      .toThrow(/not one of its aliases/);
   });
   it('curated rows all match rendered objects (no orphans in the committed TSV)', () => {
     const here = dirname(fileURLToPath(import.meta.url));

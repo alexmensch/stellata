@@ -192,8 +192,12 @@ export function parseOverrides(tsv: string): OverrideRow[] {
   return out;
 }
 
-/** Parse aliases.tsv: name<TAB>type[<TAB>alias1|alias2…]. Comments and
- *  blank lines skipped; the first non-comment line is the header. */
+/** Parse aliases.tsv: name<TAB>type[<TAB>alias1|alias2…[<TAB>canonical]].
+ *  Comments and blank lines skipped; the first non-comment line is the
+ *  header. A `canonical` naming no listed alias is a curation typo — the
+ *  promoted name would be untypeable in search. */
+const ALIAS_HEADER = ['name', 'type', 'aliases', 'canonical'];
+
 export function parseAliases(tsv: string): AliasRow[] {
   const out: AliasRow[] = [];
   let headerSeen = false;
@@ -201,19 +205,28 @@ export function parseAliases(tsv: string): AliasRow[] {
     if (!raw || raw.startsWith('#')) continue;
     const fields = raw.split('\t');
     if (!headerSeen) {
-      if (fields[0].trim() !== 'name' || fields[1]?.trim() !== 'type' || fields[2]?.trim() !== 'aliases') {
-        throw new Error('aliases.tsv: malformed header (expected name<TAB>type<TAB>aliases)');
+      if (ALIAS_HEADER.some((h, i) => fields[i]?.trim() !== h)) {
+        throw new Error(`aliases.tsv: malformed header (expected ${ALIAS_HEADER.join('<TAB>')})`);
       }
       headerSeen = true;
       continue;
     }
     if (fields.length < 2) continue;
+    const name = fields[0].trim();
     const type = fields[1].trim();
-    if (!type) throw new Error(`aliases.tsv: '${fields[0].trim()}' has an empty type`);
+    if (!type) throw new Error(`aliases.tsv: '${name}' has an empty type`);
+    const aliases = (fields[2] ?? '').split('|').map((s) => s.trim()).filter(Boolean);
+    const canonical = (fields[3] ?? '').trim();
+    if (canonical && !aliases.includes(canonical)) {
+      throw new Error(
+        `aliases.tsv: '${name}' promotes '${canonical}', which is not one of its aliases`,
+      );
+    }
     out.push({
-      name: fields[0].trim(),
+      name,
       type,
-      aliases: (fields[2] ?? '').split('|').map((s) => s.trim()).filter(Boolean),
+      aliases,
+      ...(canonical ? { canonical } : {}),
     });
   }
   return out;

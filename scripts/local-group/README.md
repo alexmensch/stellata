@@ -23,9 +23,9 @@ Reads two committed source files under `data/local-group/`:
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,
   Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
   M31 and M33 which LVDB's dwarf_all table excludes.
-- `aliases.tsv` — search crosswalk (type + alias designations) merged
-  into each object's `type` / `aliases` output fields; unmatched rows
-  fail the build.
+- `aliases.tsv` — search crosswalk (type + alias designations + the
+  optional `canonical` name promotion) merged into each object's `name` /
+  `type` / `aliases` output fields; unmatched rows fail the build.
 
 Emits `public/local-group.json` with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
@@ -49,8 +49,39 @@ of the LVDB snapshot is a manual `curl` of
 
 ## Display-name rules
 
-`displayName(lvdbName)` decides the on-screen string for each object
-through three branches:
+**Precedence: common/proper name > Messier > NGC/IC > other catalogue.**
+The same order the stars (`src/client/typeahead/README.md` —
+`starDesignations`) and the molecular clouds (`scripts/clouds/README.md`
+§ Alternate names) already apply, so no object kind orders its names
+differently from another. It reaches an object in two steps:
+
+1. `displayName(lvdbName)` picks a base label from LVDB's own name
+   (three branches below). LVDB's `name` column knows nothing about the
+   proper names, so this step can only ever reach the top tier by luck.
+2. `applyAliasMeta` promotes `aliases.tsv`'s `canonical` column over
+   that base and re-sorts the whole alias list by `nameTier`. The
+   demoted base is pushed into the aliases, so every name the object
+   answered to before stays typeable in search.
+
+`nameTier` is mechanical (prefix + digit probes) and drives **ordering**
+only. The **promotion itself is curated**, exactly as the clouds' table
+is, because the tier probe cannot tell a proper name from an alternate
+designation that merely lacks a catalogue prefix: "Leo III" is Leo A's
+other designation, not its common name, and would be promoted over it by
+any purely mechanical read. Same reason the clouds carry the sub-feature
+carve-out. A `canonical` naming something absent from the row's own
+aliases fails the build.
+
+Promotions in the committed TSV: M31 → Andromeda Galaxy, M33 →
+Triangulum Galaxy, NGC 6822 → Barnard's Galaxy, WLM →
+Wolf-Lundmark-Melotte, LGS 3 → Pisces Dwarf, and — with no proper name
+in play, on the Messier-over-NGC rung — NGC 205 → M110.
+
+**The promotion never touches `id`.** The slug comes from the LVDB key
+or the standalone override's name, never the display string, so a
+canonical rename churns no SID and needs no `sameas` bridge.
+
+`displayName(lvdbName)` decides the base string through three branches:
 
 1. **DISPLAY_NAME_OVERRIDES** — explicit map entries take precedence.
    Covers Magellanic acronyms (LMC → "Large Magellanic Cloud") and
