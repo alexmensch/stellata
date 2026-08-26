@@ -38,19 +38,24 @@ const tsl = makeTsl();
 
 const SURFACES = ['planetMesh', 'planetRings', 'planetAtmosphere'] as const;
 
+type BuiltUniforms = { uniforms: Record<string, THREE.IUniform> };
+
 /** Which slots of a built record actually hold a texture — read off the
  *  record rather than restated, so this is a derivation of the live
  *  factory and not a fourth copy of the roster. */
-function textureSlotsOf(built: { uniforms: Record<string, THREE.IUniform> }): string[] {
+function textureSlotEntries(built: BuiltUniforms) {
   return Object.entries(built.uniforms)
-    .filter(([, u]) => u.value instanceof THREE.Texture)
-    .map(([k]) => k)
-    .sort();
+    .flatMap(([k, u]) => (u.value instanceof THREE.Texture ? [[k, u.value] as const] : []))
+    .sort(([a], [b]) => a.localeCompare(b));
 }
+
+const textureSlotKeys = (built: BuiltUniforms) => textureSlotEntries(built).map(([k]) => k);
+const textureStandIns = (built: BuiltUniforms) => textureSlotEntries(built).map(([, t]) => t);
 
 const TEXTURE_ROSTERS = [
   ['planetMesh', PLANET_MESH_TEXTURE_SLOTS],
   ['planetRings', PLANET_RINGS_TEXTURE_SLOTS],
+  ['planetAtmosphere', []],
 ] as const;
 
 describe('the solar-system material seam', () => {
@@ -68,15 +73,15 @@ describe('the solar-system material seam', () => {
     });
   }
 
-  // Both directions, on both backends: a slot added to a factory without a
-  // roster row never gets released to its stand-in (silent — the slot keeps
-  // whatever another body last bound), and a roster row without a factory
-  // slot throws at attach when the layer snapshots it.
+  // A factory slot outside the roster never gets released to its stand-in:
+  // silent, and the slot keeps whatever another body last bound. The
+  // atmosphere is pinned at zero because a scattering lookup is exactly the
+  // kind of slot that would arrive here without a roster to answer to.
   for (const [surface, roster] of TEXTURE_ROSTERS) {
     it(`${surface}: every texture slot is the roster's, on both backends`, () => {
       const expected = [...roster].sort();
-      expect(textureSlotsOf(glsl[surface]())).toEqual(expected);
-      expect(textureSlotsOf(tsl[surface]())).toEqual(expected);
+      expect(textureSlotKeys(glsl[surface]())).toEqual(expected);
+      expect(textureSlotKeys(tsl[surface]())).toEqual(expected);
     });
   }
 
@@ -212,9 +217,7 @@ describe('the solar-system material seam', () => {
     // — while a loaded map swapped into a slot belongs to PlanetMeshLayer's
     // cache, and the shared placeholder to the layer itself.
     const built = makeTsl().planetMesh();
-    const standIns = Object.values(built.uniforms)
-      .map((u) => u.value)
-      .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
+    const standIns = textureStandIns(built);
     expect(standIns).toHaveLength(PLANET_MESH_TEXTURE_SLOTS.length);
     expect(new Set(standIns.map((t) => t.uuid)).size)
       .toBe(PLANET_MESH_TEXTURE_SLOTS.length);
@@ -240,9 +243,7 @@ describe('the solar-system material seam', () => {
 
   it('gives the annulus its own stand-in too', () => {
     const built = makeTsl().planetRings();
-    const standIns = Object.values(built.uniforms)
-      .map((u) => u.value)
-      .filter((v): v is THREE.Texture => v instanceof THREE.Texture);
+    const standIns = textureStandIns(built);
     expect(standIns).toHaveLength(PLANET_RINGS_TEXTURE_SLOTS.length);
     let disposed = false;
     standIns[0].addEventListener('dispose', () => { disposed = true; });
