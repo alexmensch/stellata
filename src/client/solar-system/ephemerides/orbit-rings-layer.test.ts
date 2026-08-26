@@ -1098,10 +1098,12 @@ describe('the ring stroke', () => {
         const handle = inner.solid(colour, opacity, localPass);
         return {
           material: handle.material,
+          setOpaque: (on) => handle.setOpaque(on),
           dispose() { disposed++; handle.dispose(); },
         };
       },
       dashed: (colour, dash, gap, opacity) => inner.dashed(colour, dash, gap, opacity),
+      fat: (spec) => inner.fat(spec),
     };
     return { seam, counts: () => ({ built, disposed }) };
   }

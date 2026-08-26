@@ -10,9 +10,10 @@ parity is the A/B smoke, same `/v/<blob>/` with and without the
 
 ```
 src/client/webgpu/chrome-lines/
-  chrome-line-tsl.ts          The solid and dashed strokes: three's own
-                              line fragment reproduced over the MRT
-                              output struct.
+  chrome-line-tsl.ts          The solid, dashed and fat strokes: three's
+                              own line fragment reproduced over the MRT
+                              output struct (composed *after* it, for the
+                              fat one), plus its blend flip.
   tsl-chrome-lines.ts         The factory implementing ChromeLineMaterials.
 ```
 
@@ -66,12 +67,39 @@ The class is chosen for its **property surface**, not its graph:
 no `color` to resolve — `materialColor` would silently fall back to
 `vec3()` and every stroke would render black.
 
-A fat line (`Line2` / `Line2NodeMaterial`) cannot be built this way: its
+A fat line (`Line2` / `Line2NodeMaterial`) cannot be built this way — its
 fragment stage is three's own segment coverage, which `fragmentNode` would
-replace. That one needs the struct composed *after* the built-in shading
-(`material.outputNode` over the `output` property), and it must never take
-`material.transparent` — `Line2NodeMaterial` answers that flag by
-compositing against `viewportOpaqueMipTexture()` instead of blending in
-hardware, a full-frame texture read per draw of the very target it is
-drawing into. Spell `CustomBlending` factors out instead. No consumer
-needs it yet; the coordinate sphere's equator is the one that will.
+replace. That one is § The fat stroke keeps three's fragment.
+
+## The fat stroke keeps three's fragment
+
+`buildFatChromeLineMaterial` installs its two graphs on
+`material.outputNode`, not `fragmentNode`. Three runs the built-in shading
+either way, assigns the result to the `output` property, and *then* lets
+`outputNode` replace what leaves the stage — so the struct is composed
+over `output`, which already carries the segment coverage (three's round
+endcaps, and the dash discard when dashed) folded into its alpha. The
+`setMrtOutputs` swap, the `fog` force and the `premultipliedAlpha` refusal
+are the same ones every other emitter carries; only the install site
+differs (`../hdr/mrt-material.ts`).
+
+**It must never take `material.transparent`.** `Line2NodeMaterial`
+answers that flag in `setupDiffuseColor` by compositing against
+`viewportOpaqueMipTexture()` instead of blending in hardware — a
+full-frame texture read per draw of the very target it is drawing into.
+So `transparent` stays **false at every opacity** and the blend is spelled
+as `CustomBlending` with three's own `NormalBlending` factors:
+`SrcAlpha / OneMinusSrcAlpha` on colour and **`One / OneMinusSrcAlpha` on
+alpha**, which is not the same pair — letting the alpha factors default
+off `blendSrc` writes `a² + dst·(1−a)` into the channel the resolve
+composites against. Three keeps that blend state under `transparent:
+false` (only `NoBlending` and opaque-`NormalBlending` are skipped) and
+still sorts the draw as transparent, since `isOpaque()` requires
+`NormalBlending`. Chart mode's opaque flip is the same function with
+`NoBlending`; `alphaToCoverage` is forced off to match the WebGL2 stroke,
+which never defines `USE_ALPHA_TO_COVERAGE`.
+
+The class default is `blending = NoBlending` ("transparency is not
+supported, yet"), so a fat stroke that never ran the flip draws opaque
+rather than not at all — the failure mode to expect if the factors are
+ever set somewhere other than `setFatChromeLineOpaque`.

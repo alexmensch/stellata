@@ -12,6 +12,16 @@ const COLOUR = 0x9fc2d6;
 const OPACITY = 0.5;
 const DASH_PX = 1.5;
 const GAP_PX = 4;
+const WIDTH_PX = 2.4;
+const RENDER_ORDER = -1;
+
+const FAT_SPEC = {
+  colour: COLOUR,
+  opacity: OPACITY,
+  widthPx: WIDTH_PX,
+  points: new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 0]),
+  renderOrder: RENDER_ORDER,
+};
 
 function sharedNodes() {
   const shared = buildSharedUniforms({
@@ -97,9 +107,67 @@ describe('the chrome line seam', () => {
     });
     const solid = factory.solid(COLOUR, OPACITY);
     const dashed = factory.dashed(COLOUR, DASH_PX, GAP_PX, OPACITY);
-    expect(live).toBe(2);
+    const fat = factory.fat(FAT_SPEC);
+    expect(live).toBe(3);
     solid.dispose();
     dashed.dispose();
+    fat.dispose();
     expect(live).toBe(0);
+  });
+});
+
+describe('the fat chrome stroke', () => {
+  it.each(BACKENDS)('%s: authors colour, alpha and screen width alike', (_n, make) => {
+    const fat = make().fat(FAT_SPEC);
+    const expected = setBuiltinChromeColour(new THREE.Color(), COLOUR);
+    expect(fat.material.color.getHex(THREE.LinearSRGBColorSpace))
+      .toBe(expected.getHex(THREE.LinearSRGBColorSpace));
+    expect(fat.material.opacity).toBe(OPACITY);
+    expect(fat.material.linewidth).toBe(WIDTH_PX);
+    expect(fat.material.depthTest).toBe(true);
+    expect(fat.material.depthWrite).toBe(false);
+    fat.dispose();
+  });
+
+  // The seam owns the primitive here, not `../util/orbit-line.ts`: the mesh
+  // class is backend-specific and each refuses the other's material.
+  it.each(BACKENDS)('%s: hands back a drawable at the requested order', (_n, make) => {
+    const fat = make().fat(FAT_SPEC);
+    expect(fat.object.renderOrder).toBe(RENDER_ORDER);
+    expect(fat.object.frustumCulled).toBe(false);
+    expect((fat.object as THREE.Mesh).material).toBe(fat.material);
+    fat.dispose();
+  });
+
+  it('builtin: flips the blend through `transparent`, as every three material does', () => {
+    const fat = builtinChromeLineMaterials().fat(FAT_SPEC);
+    fat.setOpaque(true);
+    expect(fat.material.transparent).toBe(false);
+    expect(fat.material.blending).toBe(THREE.NoBlending);
+    fat.setOpaque(false);
+    expect(fat.material.transparent).toBe(true);
+    expect(fat.material.blending).toBe(THREE.NormalBlending);
+    fat.dispose();
+  });
+
+  // `Line2NodeMaterial` answers `transparent` by compositing against a
+  // full-frame texture read of the target it draws into, so the flag stays
+  // false at every opacity and the factors carry the blend instead
+  // (`../webgpu/chrome-lines/README.md`).
+  it('tsl: never sets `transparent`, and spells NormalBlending out instead', () => {
+    const fat = tsl().fat(FAT_SPEC);
+    fat.setOpaque(false);
+    expect(fat.material.transparent).toBe(false);
+    expect(fat.material.blending).toBe(THREE.CustomBlending);
+    // Exactly what three's own NormalBlending selects — note the alpha pair
+    // is NOT the colour pair.
+    expect(fat.material.blendSrc).toBe(THREE.SrcAlphaFactor);
+    expect(fat.material.blendDst).toBe(THREE.OneMinusSrcAlphaFactor);
+    expect(fat.material.blendSrcAlpha).toBe(THREE.OneFactor);
+    expect(fat.material.blendDstAlpha).toBe(THREE.OneMinusSrcAlphaFactor);
+    fat.setOpaque(true);
+    expect(fat.material.transparent).toBe(false);
+    expect(fat.material.blending).toBe(THREE.NoBlending);
+    fat.dispose();
   });
 });

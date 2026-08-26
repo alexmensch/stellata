@@ -24,6 +24,10 @@ src/client/webgpu/hdr/
                               three-member-struct swap every ported
                               emitter carries, and the two material flags
                               that would demote the struct.
+                              finishMrtOutputMaterial is the same swap on
+                              `outputNode` for a material whose own
+                              fragment stage must survive (§ Composing
+                              over three's fragment).
   summation-tsl.ts            TSL mirrors of stellata_summation and the
                               box downsample, over summation-pure's
                               constants.
@@ -106,6 +110,18 @@ target mode flips (`StarLayer.setMrtOutputs`) — chart mode and the
 single-attachment frame-cost lever both ride the same swap. The flips
 are rare (mode changes, not frames), so the pipeline rebuild is paid
 where the WebGL build re-linked programs anyway.
+
+### Composing over three's fragment
+
+`fragmentNode` *replaces* the fragment stage, which is right for every
+emitter authoring its own shading and wrong for a material whose shading
+is three's — a fat line's segment coverage. `finishMrtOutputMaterial`
+installs the same pair of graphs on `material.outputNode` instead: three
+runs its built-in shading, assigns the result to the `output` property,
+and only then lets `outputNode` decide what leaves the stage. The struct
+is therefore composed **over** `output` rather than in place of it, and
+`builder.stack.outputNode` still carries the `OutputStructNode` at the top
+level, which is what both backends test to emit a struct at all.
 
 ### Two material flags silently demote the struct
 
