@@ -6,7 +6,10 @@ description: >
   a field a bad write wiped, the P0–P4 prioritisation framework, and the
   grooming protocol. Use when running `bd` in this repo: filing or closing
   beads, setting a priority, triaging, picking up work, pruning memories, or
-  closing out a session. Generic `bd` command syntax lives in the `beads` skill.
+  closing out a session — including a bead filed mid-task for a bug found in
+  review or smoke, or for follow-up work. Load the `beads` skill alongside
+  this one: it carries the never-orphan filing law and dependency argument
+  order, not just CLI syntax.
 ---
 
 Stellata-specific beads operation. The `beads` skill carries CLI syntax; this
@@ -47,6 +50,31 @@ dolt sql -q "select description from issues as of '<hash>' where id='<id>'" -r c
 
 Read the result back through a CSV parser, not by eye — the `bd show` render
 re-wraps lines.
+
+## Filing — the parent is not optional
+
+`--parent <epic-id>` goes on the `bd create`, next to `--priority`. Both are
+creation-time arguments and neither is a follow-up step. The `beads` skill
+§ Never create a bead outside an epic is the law and the escalation path
+(no fitting epic → propose one and stop; never invent one, never file
+orphaned "for now"). It is repeated here because this skill's own scope line
+starts at "filing beads", so a session that reads only this one would
+otherwise never meet the rule.
+
+Picking the epic in stellata — the parent is a claim about *when the work
+must happen*, not about which folder the code lives in:
+
+- A defect that only reproduces on one backend belongs to the migration
+  epic that introduced that backend, not to `stellata-uadc` (Bugs). Its
+  cutover bead should then `bd dep add` on it, so the graph says "this
+  blocks cutover" rather than leaving it as a loose bug.
+- `stellata-uadc` (Bugs) is for defects on the shipped path, reachable by a
+  user today.
+- Before choosing, confirm the backend/vantage the report actually came
+  from. "Pre-existing" and "blocks a cutover" are different beads with
+  different parents, and the difference is one question to the reporter.
+
+Audit: `bd list --status=open --no-parent --exclude-type=epic`.
 
 ## Prioritisation
 
