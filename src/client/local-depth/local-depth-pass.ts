@@ -14,7 +14,7 @@ import {
  *  one bracket spanning probe→Neptune is only safe on a Depth32Float
  *  attachment. The flag stands in for it because the two are welded
  *  together at boot — `boot-webgpu` refuses a renderer that dropped it
- *  and `WebGpuHdrPipeline` asserts Depth32Float behind it. Reversed-z
+ *  and `WebGpuHdrPipeline` requests Depth32Float behind it. Reversed-z
  *  over FIXED-POINT depth would take this branch and put the bracket
  *  ~262 AU out at Neptune's ring (bracket/README.md § Precision
  *  analysis), so a future backend must re-establish the pairing, not

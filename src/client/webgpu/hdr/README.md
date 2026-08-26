@@ -14,7 +14,8 @@ The shell holds either backend through `../../hdr/hdr-seam.ts`.
 src/client/webgpu/hdr/
   hdr-pipeline-webgpu.ts      WebGpuHdrPipeline — the lazy MRT target
     (+ test)                  (RGBA16F + RG16F + RGBA16F over a
-                              Depth32Float reversed-z depth attachment),
+                              requested Depth32Float reversed-z depth
+                              attachment, § below),
                               bind/resolve, chart bypass, syncMode, the
                               dev switches, the resolve material, and
                               ownership of the gates and the reduction.
@@ -69,6 +70,36 @@ and the render-time-exposure pairing are all kept verbatim from
 `../../hdr/exposure/reduction/README.md`; `fenceWhileParked` keeps its
 name and behaviour for the frame-cost harness even though the ANGLE
 submission-barrier rationale has no analogue here.
+
+## The depth format is requested, not asserted
+
+The target carries an explicit `FloatType` `DepthTexture` because
+reversed-z only infers `Depth32Float` for the **canvas**; three
+auto-creates `Depth24Plus` for a render target regardless, which voids
+the local depth pass's K = 1 bracket by ~262 AU at Neptune's ring
+(`../../local-depth/bracket/README.md` § Precision analysis). That
+assignment is a **request**. Nothing here confirms it landed, and the
+wording matters — an earlier version of this file said the format was
+asserted, and the throw backing that claim tested four conditions the
+same function had just written plus one the boot had already refused on.
+It could not fire.
+
+**A real check is possible and deliberately not taken.** Three allocates
+a render target's GPU textures lazily, at first use, so the allocated
+format only becomes readable — as
+`renderer.backend.get(rt.depthTexture).texture.format` — *after* the
+first render into the target. That is one internal read of exactly the
+kind `0it.24`'s preference order argued against, and it lands past the
+only point a fallback exists: `bootWebGpu` returns the seam before any
+frame, so a refusal there could be a throw or a latched warning in an
+already-broken app, never a fallback. What defends the bracket instead is
+the pin in `hdr-pipeline-webgpu.test.ts` on the four target fields —
+because the failure that can actually happen is an edit dropping the
+explicit depth texture, not a backend quietly substituting a format.
+
+The `0it.26` three bump revisits the subject: if three starts defaulting
+the depth type under `reversedDepthBuffer`, the request itself becomes
+redundant.
 
 ## The gate becomes the output struct
 

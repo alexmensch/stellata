@@ -1,6 +1,6 @@
 // The HDR seam on WebGPU: ../../hdr/hdr-pipeline.ts's target, summation,
-// resolve and dev-switch surface over TSL materials and a Depth32Float
-// reversed-z depth attachment. See README.md.
+// resolve and dev-switch surface over TSL materials and a requested
+// Depth32Float reversed-z depth attachment. See README.md.
 
 import {
   DataTexture, DepthTexture, FloatType, HalfFloatType, NearestFilter,
@@ -252,25 +252,13 @@ export class WebGpuHdrPipeline implements HdrSeam {
     // regardless of reversedDepthBuffer, silently fixed-point — which
     // voids the local depth pass's K = 1 bracket
     // (../../local-depth/bracket/README.md § Precision analysis). An
-    // explicit FloatType depth texture is what lands Depth32Float; the
-    // same move three's own PassNode makes under reversedDepthBuffer.
+    // explicit FloatType depth texture is what REQUESTS Depth32Float; no
+    // runtime check can confirm it landed — README.md § The depth format
+    // is requested, not asserted.
     const depthTexture = new DepthTexture(this.size.x, this.size.y);
     depthTexture.type = FloatType;
     rt.depthTexture = depthTexture;
     applyHdrAttachmentState(rt.textures as unknown as THREE.Texture[]);
-    // Validated before it is committed to `this.rt`: a target that failed
-    // here and stayed latched would be handed to the very next bind(),
-    // which short-circuits on a non-null field.
-    if (
-      this.renderer.reversedDepthBuffer !== true
-      || rt.depthTexture?.type !== FloatType
-      || rt.stencilBuffer
-      || !rt.depthBuffer
-    ) {
-      depthTexture.dispose();
-      rt.dispose();
-      throw new Error('HDR target must resolve to a Depth32Float reversed-z attachment');
-    }
     this.rt = rt;
 
     const diffuseSeed = this.extraAttachments

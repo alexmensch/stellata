@@ -239,7 +239,9 @@ The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`
 perf row (§ Timestamps). `Depth32Float` is picked automatically for the
 CANVAS only; a render target needs an explicit `FloatType` depth
-texture (`../local-depth/bracket/README.md` § Precision analysis).
+texture (`../local-depth/bracket/README.md` § Precision analysis) — a
+request nothing can confirm landed, `hdr/README.md` § The depth format is
+requested, not asserted.
 
 ## Output colour space — pinned to the working space
 
