@@ -5,6 +5,10 @@ import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { KM_PC } from '../../util/astronomy-constants';
 import { texelBytes } from '../../util/texture-bytes-pure';
+import {
+  PLANET_MESH_TEXTURE_SLOTS, textureSlotRecord,
+  type PlanetMeshTextureSlot,
+} from '../materials/texture-slots';
 import { MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { hostIrradianceLuminance, meshSurfaceLuminance } from './emission/mesh-surface-pure';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
@@ -148,15 +152,11 @@ interface AtmosphereEntry {
   shellRadiusPc: number;
 }
 
-/** The texture slots a not-ready map releases back to its build-time
- *  stand-in. Each slot's OWN, snapshotted at entry creation: the WebGPU
- *  factory seeds one per slot because three merges texture uniforms
- *  whose values match at shader build — re-seeding onto one shared
- *  placeholder before first render would fuse the slots and the losers'
- *  writes would never reach the GPU again. */
-const TEXTURE_SLOTS = ['uMap', 'uNormalMap', 'uHorizonA', 'uHorizonB', 'uSkyView'] as const;
-
-type SlotFallbacks = Record<(typeof TEXTURE_SLOTS)[number], THREE.Texture>;
+/** Each slot's OWN stand-in, snapshotted at entry creation — the release
+ *  target when a map is absent or not yet loaded
+ *  (`../materials/texture-slots.ts` says why one shared placeholder
+ *  cannot serve). */
+type SlotFallbacks = Record<PlanetMeshTextureSlot, THREE.Texture>;
 
 interface MeshEntry {
   mesh: THREE.Mesh;
@@ -889,9 +889,10 @@ export class PlanetMeshLayer {
       planet.rings ? planet.rings.outerRadiusKm : 0,
       planet.radiusKm + (planet.atmosphere?.heightKm ?? 0),
     ) * KM_PC;
-    const slotFallbacks = Object.fromEntries(TEXTURE_SLOTS.map(
-      (slot) => [slot, material.uniforms[slot].value as THREE.Texture],
-    )) as SlotFallbacks;
+    const slotFallbacks = textureSlotRecord(
+      PLANET_MESH_TEXTURE_SLOTS,
+      (slot) => material.uniforms[slot].value as THREE.Texture,
+    );
     const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc, slotFallbacks };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {

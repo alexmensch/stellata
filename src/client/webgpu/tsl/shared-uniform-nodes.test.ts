@@ -3,7 +3,7 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { MIRROR_CAPACITY } from '../../star-pipeline/local-pass/star-mirror-slots';
 import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
-import { buildSharedUniformNodes, TEXTURE_SLOTS } from './shared-uniform-nodes';
+import { buildSharedUniformNodes, FRAME_TEXTURE_SLOTS } from './shared-uniform-nodes';
 
 type SlotMap = Record<string, { value: unknown }>;
 
@@ -13,7 +13,7 @@ const setValue = (shared: unknown, key: string, v: number) => { slots(shared)[ke
 
 const mirrored = (shared: unknown) =>
   Object.keys(slots(shared)).filter(
-    (k) => !(TEXTURE_SLOTS as readonly string[]).includes(k) && k !== 'uLocalMemberIdx',
+    (k) => !(FRAME_TEXTURE_SLOTS as readonly string[]).includes(k) && k !== 'uLocalMemberIdx',
   );
 
 const scalarSlotKeys = (shared: unknown) =>
@@ -37,7 +37,7 @@ describe('buildSharedUniformNodes', () => {
   it('mirrors every WebGL slot: same keys minus textures, member array split into two ivec4s', () => {
     const { shared, registry } = build();
     const expected = new Set<string>(Object.keys(shared));
-    for (const t of TEXTURE_SLOTS) expected.delete(t);
+    for (const t of FRAME_TEXTURE_SLOTS) expected.delete(t);
     expected.delete('uLocalMemberIdx');
     expected.add('uLocalMemberIdx0');
     expected.add('uLocalMemberIdx1');

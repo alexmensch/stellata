@@ -39,7 +39,10 @@ src/client/webgpu/solar-system/
   planet-glare-uniforms.ts    The four slots PlanetBodyField owns rather
                               than shares through the frame map.
   uniform-nodes.ts            TSL uniform-node twins of the seam's
-                              uniform blocks.
+                              uniform blocks, texture slots seeded from
+                              the shared roster
+                              (`../../solar-system/materials/README.md`
+                              § Texture-slot rosters).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
   tsl-drift.test.ts           § Constant drift runs in both directions.
 ```
