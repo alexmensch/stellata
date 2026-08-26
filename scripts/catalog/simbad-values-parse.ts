@@ -3,9 +3,13 @@
 // SIMBAD values index.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
-import { normaliseGjKey } from './catalog-pure';
-
-export { normaliseGjKey };
+import {
+  emptySimbadNamespaceIndex,
+  indexSimbadRow,
+  walkSimbadNamespaces,
+  type SimbadNamespaceIndex,
+  type SimbadRecordKeys,
+} from './catalog-pure';
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
@@ -26,13 +30,7 @@ export interface SimbadValueRow {
   rv: SimbadRadialVelocity | null;
 }
 
-/** The four namespaces the pull keyed its request on, indexed for the
- *  reverse join. A row is indexed under every id SIMBAD returned for it. */
-export interface SimbadValueIndex {
-  bySourceId: Map<string, SimbadValueRow>;
-  byHip: Map<number, SimbadValueRow>;
-  byTyc: Map<string, SimbadValueRow>;
-  byGj: Map<string, SimbadValueRow>;
+export interface SimbadValueIndex extends SimbadNamespaceIndex<SimbadValueRow> {
   /** Data rows read, counted at the walk rather than derived from the maps:
    *  the pull also enumerates by SIMBAD oid, so a row carrying none of the
    *  four ids is joinable by nothing and must still be counted. */
@@ -40,10 +38,7 @@ export interface SimbadValueIndex {
 }
 
 export function emptySimbadValueIndex(): SimbadValueIndex {
-  return {
-    bySourceId: new Map(), byHip: new Map(), byTyc: new Map(), byGj: new Map(),
-    rowCount: 0,
-  };
+  return { ...emptySimbadNamespaceIndex<SimbadValueRow>(), rowCount: 0 };
 }
 
 
@@ -68,33 +63,20 @@ function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelo
 export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
   const index = emptySimbadValueIndex();
   for (const { cells, idx } of dataRows(text, COLUMNS, FILE_LABEL, REFRESH_HINT)) {
-    const row: SimbadValueRow = { rv: parseRv(cells, idx) };
-    const sourceId = nonEmpty(cells[idx.source_id]);
-    const hip = parseIntOrNull(cells[idx.hip]);
-    const tyc = nonEmpty(cells[idx.tyc]);
-    const gj = normaliseGjKey(nonEmpty(cells[idx.gj]));
-    if (sourceId !== null) put(index.bySourceId, sourceId, row, 'source_id');
-    if (hip !== null) put(index.byHip, hip, row, 'hip');
-    if (tyc !== null) put(index.byTyc, tyc, row, 'tyc');
-    if (gj !== null) put(index.byGj, gj, row, 'gj');
+    const keys: SimbadRecordKeys = {
+      sourceId: nonEmpty(cells[idx.source_id]),
+      hip: parseIntOrNull(cells[idx.hip]),
+      tyc: nonEmpty(cells[idx.tyc]),
+      gl: nonEmpty(cells[idx.gj]),
+    };
+    indexSimbadRow(index, keys, { rv: parseRv(cells, idx) }, (namespace, key) => {
+      throw new Error(
+        `${FILE_LABEL} has two rows keyed ${namespace}=${key}. ${REFRESH_HINT}`,
+      );
+    });
     index.rowCount++;
   }
   return index;
-}
-
-function put<K>(map: Map<K, SimbadValueRow>, key: K, row: SimbadValueRow, ns: string): void {
-  if (map.has(key)) {
-    throw new Error(`${FILE_LABEL} has two rows keyed ${ns}=${String(key)}. ${REFRESH_HINT}`);
-  }
-  map.set(key, row);
-}
-
-/** The identifiers a spine record offers the join. */
-export interface SimbadValueKeys {
-  sourceId: string | null;
-  hip: number | null;
-  tyc: string | null;
-  gl: string | null;
 }
 
 /** The record's SIMBAD row, resolved source_id → HIP → TYC → GJ — the same
@@ -105,24 +87,7 @@ export interface SimbadValueKeys {
  *  widening carries its own veto), so what arrives here is adjudicated. */
 export function lookupSimbadValues(
   index: SimbadValueIndex,
-  keys: SimbadValueKeys,
+  keys: SimbadRecordKeys,
 ): SimbadValueRow | null {
-  if (keys.sourceId !== null) {
-    const bySource = index.bySourceId.get(keys.sourceId);
-    if (bySource !== undefined) return bySource;
-  }
-  if (keys.hip !== null) {
-    const byHip = index.byHip.get(keys.hip);
-    if (byHip !== undefined) return byHip;
-  }
-  if (keys.tyc !== null) {
-    const byTyc = index.byTyc.get(keys.tyc);
-    if (byTyc !== undefined) return byTyc;
-  }
-  const gj = normaliseGjKey(keys.gl);
-  if (gj !== null) {
-    const byGj = index.byGj.get(gj);
-    if (byGj !== undefined) return byGj;
-  }
-  return null;
+  return walkSimbadNamespaces(index, keys, (row) => row)?.value ?? null;
 }

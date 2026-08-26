@@ -71,16 +71,17 @@ scripts/catalog/
                                   writes the chunked binary + manifests.
   catalog-pure.ts (+ test)        Single source of truth for the v9 binary
                                   layout, override math, the spectral
-                                  resolver and its four-namespace SIMBAD
-                                  index, and `normaliseGjKey` — the GJ
-                                  spelling fold both SIMBAD parsers key
+                                  resolver, and the SIMBAD namespace ladder
+                                  (`SimbadNamespaceIndex`, `indexSimbadRow`,
+                                  `walkSimbadNamespaces`, `normaliseGjKey`)
+                                  that both SIMBAD pulls index and join
                                   through. Pure; imported by every
                                   subfolder and by src/client/loaders/.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
-                                  every namespace the pull keyed on, plus the
-                                  record-side source_id → HIP → TYC → GJ
-                                  lookup. The § 5 value cascades share it;
-                                  the rv one consumes it today.
+                                  every namespace the pull keyed on, over the
+                                  shared ladder in catalog-pure.ts. The § 5
+                                  value cascades share it; the rv one
+                                  consumes it today.
   catalog-lookup.ts               Reads a built catalog back (loadCatalog) —
                                   the shared reader for verify-catalog,
                                   validate-simbad-sample, and sid:allocate.
@@ -425,9 +426,9 @@ Today's downstream consumers:
   derives when a no-Apsis star has no measured B−V but a parseable class
   (`ciSpectralDerived` in build-counts), else the solar fallback.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
-  `catalog-pure.ts`) — when SIMBAD has no sp_type under either the
-  source_id or HIP key, GSP-Spec's `spectraltype_esphs` enum is the
-  tier before `SPECTRAL_UNKNOWN`.
+  `catalog-pure.ts`) — when SIMBAD has no sp_type under any of its four
+  namespaces (source_id, HIP, TYC, GJ), GSP-Spec's `spectraltype_esphs`
+  enum is the tier before `SPECTRAL_UNKNOWN`.
 - **Per-record handles** for future Phase 5 consumers (geometric
   occlusion photometry's limb-darkening Teff dependence; mass-ratio
   refinement using direct `logg_gspphot` for giant / subgiant

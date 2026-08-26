@@ -145,16 +145,15 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
-  // SIMBAD sp_type indexed by Gaia DR3 source_id, HIP and TYC. First tier
-  // of the spectral resolver; the binary defaults to GSP-Spec + unknown
-  // sentinel without it.
+  // SIMBAD sp_type under all four namespaces. First tier of the spectral
+  // resolver; the binary defaults to GSP-Spec + unknown sentinel without it.
   let simbadSpectral: SimbadSpectralIndex = emptySimbadSpectralIndex();
   if (existsSync(SRC_SIMBAD_SPTYPE)) {
     console.log('Parsing SIMBAD sp_type catalogue...');
     const t = Date.now();
     simbadSpectral = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
-    console.log(`  ${simbadSpectral.bySource.size} entries in ${Date.now() - t}ms`);
-    sizes.simbadSptypeEntries = simbadSpectral.bySource.size;
+    console.log(`  ${simbadSpectral.bySourceId.size} entries in ${Date.now() - t}ms`);
+    sizes.simbadSptypeEntries = simbadSpectral.bySourceId.size;
   } else {
     console.warn(
       `WARNING: ${SRC_SIMBAD_SPTYPE} not found — spectral classification will\n` +

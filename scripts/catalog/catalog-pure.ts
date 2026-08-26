@@ -246,26 +246,132 @@ export function classifyFromGspspec(esphs: string | null | undefined): SpectralI
   };
 }
 
-/** Which identifier namespace found the row a SIMBAD spectral tier used.
- *  Pinned as a partition in build-counts: the three tiers share one
- *  `source`, but only the TYC one is a designation join. */
-export const SPECTRAL_SIMBAD_KEY_VALUES = ['source_id', 'hip', 'tyc', 'gj'] as const;
-export type SpectralSimbadKey = (typeof SPECTRAL_SIMBAD_KEY_VALUES)[number];
+// ---- SIMBAD namespace ladder ---------------------------------------------
 
-interface SimbadSpectralMatch {
-  info: SpectralInfo;
-  source: 'simbad';
-  spectDisplay: string;
-  simbadKey: SpectralSimbadKey;
+/** The namespaces every SIMBAD pull is keyed under, in the order
+ *  `resolve_spine_keys` composed each request with and the record side walks
+ *  back. Doubles as the build-counts partition over the SIMBAD tier. */
+export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'tyc', 'gj'] as const;
+export type SimbadNamespace = (typeof SIMBAD_NAMESPACE_VALUES)[number];
+
+/** The identifiers one record offers a SIMBAD join. `gl` is the raw Gliese
+ *  cell from either side — the spine spells that column `gl` and SIMBAD `gj`
+ *  — and the ladder folds it itself, so no caller handles the two
+ *  spellings. */
+export interface SimbadRecordKeys {
+  sourceId: string | null;
+  hip: number | null;
+  tyc: string | null;
+  gl: string | null;
+}
+
+export interface SimbadNamespaceIndex<T> {
+  bySourceId: Map<string, T>;
+  byHip: Map<number, T>;
+  byTyc: Map<string, T>;
+  byGj: Map<string, T>;
+}
+
+export function emptySimbadNamespaceIndex<T>(): SimbadNamespaceIndex<T> {
+  return {
+    bySourceId: new Map(), byHip: new Map(), byTyc: new Map(), byGj: new Map(),
+  };
+}
+
+/** The designation part of a spine `gl` cell or a SIMBAD `gj` id, folded to
+ *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
+ *  sides spell the same star differently — the spine carries both catalogue
+ *  words and SIMBAD stores its own spacing — so both go through this before
+ *  they meet. It folds strictly more than `gl_suffix` in
+ *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
+ *  when composing the request: inner spacing and case are folded here because
+ *  this is where the two spellings actually have to match. */
+export function normaliseGjKey(cell: string | null): string | null {
+  const text = (cell ?? '').trim();
+  if (!text) return null;
+  const [word, ...rest] = text.split(' ');
+  const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
+  const key = suffix.replace(/\s+/g, '').toUpperCase();
+  return key.length === 0 ? null : key;
+}
+
+/** Index and lookup must agree on which HIP cells are keys at all, or a row
+ *  indexed under a bogus number becomes unreachable rather than absent. */
+function simbadHipKey(hip: number | null): number | null {
+  return hip !== null && Number.isInteger(hip) && hip > 0 ? hip : null;
+}
+
+/** Add one pull row under every namespace it carries; a row carrying none is
+ *  joinable by nothing and indexes nowhere. `onDuplicate` fires instead of
+ *  overwriting — no key repeats in either committed pull, so a collision is an
+ *  upstream schema change and not a binding to arbitrate silently. */
+export function indexSimbadRow<T>(
+  index: SimbadNamespaceIndex<T>,
+  keys: SimbadRecordKeys,
+  row: T,
+  onDuplicate: (namespace: SimbadNamespace, key: string) => void,
+): void {
+  const put = <K>(map: Map<K, T>, key: K | null, namespace: SimbadNamespace): void => {
+    if (key === null || (typeof key === 'string' && key.length === 0)) return;
+    if (map.has(key)) {
+      onDuplicate(namespace, String(key));
+      return;
+    }
+    map.set(key, row);
+  };
+  put(index.bySourceId, keys.sourceId, 'source_id');
+  put(index.byHip, simbadHipKey(keys.hip), 'hip');
+  put(index.byTyc, keys.tyc, 'tyc');
+  put(index.byGj, normaliseGjKey(keys.gl), 'gj');
+}
+
+function takeSimbadRow<T, R>(
+  row: T | undefined,
+  namespace: SimbadNamespace,
+  accept: (row: T) => R | null,
+): { value: R; namespace: SimbadNamespace } | null {
+  if (row === undefined) return null;
+  const value = accept(row);
+  return value === null ? null : { value, namespace };
+}
+
+/** Walk source_id → HIP → TYC → GJ and return the first row `accept` takes,
+ *  with the namespace that found it. `accept` returning null continues the
+ *  walk, so a row that exists but carries nothing usable does not end it —
+ *  which is why the spectral resolver can fall past a row whose sp_type will
+ *  not parse. The GJ fold only runs once the first three miss. */
+export function walkSimbadNamespaces<T, R>(
+  index: SimbadNamespaceIndex<T>,
+  keys: SimbadRecordKeys,
+  accept: (row: T) => R | null,
+): { value: R; namespace: SimbadNamespace } | null {
+  if (keys.sourceId) {
+    const hit = takeSimbadRow(index.bySourceId.get(keys.sourceId), 'source_id', accept);
+    if (hit) return hit;
+  }
+  const hip = simbadHipKey(keys.hip);
+  if (hip !== null) {
+    const hit = takeSimbadRow(index.byHip.get(hip), 'hip', accept);
+    if (hit) return hit;
+  }
+  if (keys.tyc) {
+    const hit = takeSimbadRow(index.byTyc.get(keys.tyc), 'tyc', accept);
+    if (hit) return hit;
+  }
+  const gj = normaliseGjKey(keys.gl);
+  if (gj !== null) {
+    const hit = takeSimbadRow(index.byGj.get(gj), 'gj', accept);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 function matchSimbadRow(
-  row: SimbadSpectralRow | undefined,
-  simbadKey: SpectralSimbadKey,
-): SimbadSpectralMatch | null {
-  if (!row?.spType) return null;
+  row: SimbadSpectralRow,
+): { info: SpectralInfo; spectDisplay: string } | null {
+  if (!row.spType) return null;
   const info = classifyFromSimbad(row.spType);
-  return info ? { info, source: 'simbad', spectDisplay: row.spType, simbadKey } : null;
+  return info ? { info, spectDisplay: row.spType } : null;
 }
 
 /** Curated HIP → MK type for saturated stars whose SIMBAD entry is a
@@ -279,54 +385,35 @@ export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
   [36850, 'A1.5IV'],
 ]);
 
-/** Five-tier spectral resolver — curated HIP override first, then
- *  SIMBAD `sp_type` by Gaia source_id, then SIMBAD `sp_type` by HIP,
- *  then Gaia DR3 GSP-Spec `spectraltype_esphs`, then SPECTRAL_UNKNOWN.
- *  The HIP tier rescues Gaia-saturated bright stars (Algol, Alsephina)
- *  whose SIMBAD row carries a valid MK type but no source_id, so the
- *  source_id key misses them and the radius chain would otherwise run
- *  the cool unknown-Teff fallback against a bright absmag and inflate
- *  ~4×; the curated tier covers the residue whose SIMBAD entry carries
- *  neither key (Castor).
- *  SIMBAD and GSP-Spec each separate Morgan-Keenan classification from
- *  variability-type annotation at the schema level (sp_type vs otype
- *  for SIMBAD; the dedicated enum column for GSP-Spec), so neither
- *  upstream needs the string-disambiguation defences that AT-HYG's
- *  conflated `spect` column required. */
+/** Seven-tier spectral resolver: a curated HIP override, the four SIMBAD
+ *  namespaces in ladder order, Gaia DR3 GSP-Spec, then SPECTRAL_UNKNOWN.
+ *  Which tier exists for which population is in `parse/README.md`
+ *  § Physical radius and spectral parsing. */
 export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
 export function resolveSpectralInfo(
-  gaiaSourceId: string | null,
-  hip: number | null,
-  tyc: string | null,
-  gl: string | null,
+  keys: SimbadRecordKeys,
   simbad: SimbadSpectralIndex,
   apsisMap: Map<string, ApsisRow>,
 ): {
   info: SpectralInfo;
   source: SpectralSource;
   spectDisplay: string | null;
-  simbadKey?: SpectralSimbadKey;
+  simbadKey?: SimbadNamespace;
 } {
-  if (hip !== null && hip > 0) {
+  const hip = simbadHipKey(keys.hip);
+  if (hip !== null) {
     const curated = CURATED_SPTYPE_BY_HIP.get(hip);
     const info = curated ? classifyFromSimbad(curated) : null;
     if (curated && info) {
       return { info, source: 'curated', spectDisplay: curated };
     }
   }
-  const bySource = gaiaSourceId
-    ? matchSimbadRow(simbad.bySource.get(gaiaSourceId), 'source_id') : null;
-  if (bySource) return bySource;
-  const byHip = hip !== null && hip > 0
-    ? matchSimbadRow(simbad.byHip.get(hip), 'hip') : null;
-  if (byHip) return byHip;
-  const byTyc = tyc ? matchSimbadRow(simbad.byTyc.get(tyc), 'tyc') : null;
-  if (byTyc) return byTyc;
-  const gjKey = normaliseGjKey(gl);
-  const byGj = gjKey ? matchSimbadRow(simbad.byGj.get(gjKey), 'gj') : null;
-  if (byGj) return byGj;
-  if (gaiaSourceId) {
-    const apsis = apsisMap.get(gaiaSourceId);
+  const hit = walkSimbadNamespaces(simbad, keys, matchSimbadRow);
+  if (hit) {
+    return { ...hit.value, source: 'simbad', simbadKey: hit.namespace };
+  }
+  if (keys.sourceId) {
+    const apsis = apsisMap.get(keys.sourceId);
     if (apsis?.spectraltypeEsphs) {
       const info = classifyFromGspspec(apsis.spectraltypeEsphs);
       if (info) return { info, source: 'gspspec', spectDisplay: apsis.spectraltypeEsphs };
@@ -2119,64 +2206,31 @@ export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
  *  (separate column — never bleeds into sp_type). Both carried for
  *  display + future filtering, but the spectral resolver consumes only
  *  spType. */
-/** The designation part of a spine `gl` cell or a SIMBAD `gj` id, folded to
- *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
- *  sides spell the same star differently — the spine carries both catalogue
- *  words and SIMBAD stores its own spacing — so both go through this before
- *  they meet. It folds strictly more than `gl_suffix` in
- *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
- *  when composing the request: inner spacing and case are folded here because
- *  this is where the two spellings actually have to match. */
-export function normaliseGjKey(cell: string | null): string | null {
-  const text = (cell ?? '').trim();
-  if (!text) return null;
-  const [word, ...rest] = text.split(' ');
-  const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
-  const key = suffix.replace(/\s+/g, '').toUpperCase();
-  return key.length === 0 ? null : key;
-}
-
 export interface SimbadSpectralRow {
   spType: string | null;
   spQual: string | null;
   otype: string | null;
 }
 
-/** SIMBAD sp_type keyed by every namespace the pull carries. `bySource` is
- *  the Gaia DR3 source_id; `byHip` the Hipparcos number, which carries the
+/** SIMBAD sp_type under all four namespaces. The HIP index carries the
  *  Gaia-saturated bright stars (Algol, Alsephina, ~700 others) whose SIMBAD
- *  row has a valid sp_type but no source_id; `byTyc` the Tycho designation,
- *  which is the only namespace reaching an object SIMBAD holds no Gaia id
- *  for at all; `byGj` the Gliese designation, folded through
- *  `normaliseGjKey` so both sides spell it alike. Same ladder
- *  `lookupSimbadValues` walks. */
-export interface SimbadSpectralIndex {
-  bySource: Map<string, SimbadSpectralRow>;
-  byHip: Map<number, SimbadSpectralRow>;
-  byTyc: Map<string, SimbadSpectralRow>;
-  byGj: Map<string, SimbadSpectralRow>;
-}
+ *  row has a valid sp_type but no source_id; TYC is the only namespace
+ *  reaching an object SIMBAD holds no Gaia id for at all. */
+export type SimbadSpectralIndex = SimbadNamespaceIndex<SimbadSpectralRow>;
 
 export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
-  return {
-    bySource: new Map(), byHip: new Map(), byTyc: new Map(), byGj: new Map(),
-  };
+  return emptySimbadNamespaceIndex<SimbadSpectralRow>();
 }
 
 /** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
  *  into a `SimbadSpectralIndex`. source_id is kept as a string for the
  *  same > Number.MAX_SAFE_INTEGER reason that `parseGaiaApsisTsv` uses.
- *  A row is indexed under whichever of source_id / hip it carries (the
- *  TSV's WDS-only HIP→oid joins have no source_id but a usable HIP);
- *  a row with neither is unindexable and skipped. `byHip` is
- *  first-write-wins to match the byGaia/byHip convention elsewhere. */
+ *  A row is indexed under every namespace it carries; the 1,107 rows the
+ *  pull enumerated by SIMBAD oid alone carry none and index nowhere. */
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
-  const bySource = new Map<string, SimbadSpectralRow>();
-  const byHip = new Map<number, SimbadSpectralRow>();
-  const byTyc = new Map<string, SimbadSpectralRow>();
-  const byGj = new Map<string, SimbadSpectralRow>();
+  const index = emptySimbadSpectralIndex();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return { bySource, byHip, byTyc, byGj };
+  if (lines.length === 0) return index;
   const header = lines[0].split('\t').map((h) => h.trim());
   const idIdx = header.indexOf('source_id');
   const hipIdx = header.indexOf('hip');
@@ -2198,24 +2252,24 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     const line = lines[i];
     if (!line.trim()) continue;
     const cells = line.split('\t');
-    const sourceId = (cells[idIdx] ?? '').trim();
     const hipRaw = hipIdx >= 0 ? (cells[hipIdx] ?? '').trim() : '';
-    const tyc = tycIdx >= 0 ? (cells[tycIdx] ?? '').trim() : '';
-    const gj = gjIdx >= 0 ? normaliseGjKey(cells[gjIdx] ?? null) : null;
-    if (!sourceId && !hipRaw && !tyc && !gj) continue;
     const spType = (cells[spTypeIdx] ?? '').trim() || null;
     const spQual = spQualIdx >= 0 ? ((cells[spQualIdx] ?? '').trim() || null) : null;
     const otype = otypeIdx >= 0 ? ((cells[otypeIdx] ?? '').trim() || null) : null;
-    const row: SimbadSpectralRow = { spType, spQual, otype };
-    if (sourceId) bySource.set(sourceId, row);
-    const hipNum = hipRaw ? Number(hipRaw) : NaN;
-    if (Number.isInteger(hipNum) && hipNum > 0 && !byHip.has(hipNum)) {
-      byHip.set(hipNum, row);
-    }
-    if (tyc && !byTyc.has(tyc)) byTyc.set(tyc, row);
-    if (gj && !byGj.has(gj)) byGj.set(gj, row);
+    const keys: SimbadRecordKeys = {
+      sourceId: (cells[idIdx] ?? '').trim() || null,
+      hip: hipRaw ? Number(hipRaw) : null,
+      tyc: tycIdx >= 0 ? ((cells[tycIdx] ?? '').trim() || null) : null,
+      gl: gjIdx >= 0 ? ((cells[gjIdx] ?? '').trim() || null) : null,
+    };
+    indexSimbadRow(index, keys, { spType, spQual, otype }, (namespace, key) => {
+      throw new Error(
+        `data/simbad/simbad_sptype.tsv has two rows keyed ${namespace}=${key}. ` +
+          `Re-run scripts/refresh/refresh-simbad-sptype.py.`,
+      );
+    });
   }
-  return { bySource, byHip, byTyc, byGj };
+  return index;
 }
 
 /** Apparent magnitude → absolute magnitude at given distance.

@@ -10,7 +10,7 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~22 MB, LFS. 330,141 rows. Per-source sp_type /
+simbad_sptype.tsv          ~24 MB, LFS. 330,141 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~2.7 MB, LFS. 11,037 rows. Bibcoded rv,
@@ -145,7 +145,7 @@ veto.
 34,849 no-`sp_type` rows carrying a TYC; what the widening reaches and what
 reaches a RECORD are different numbers, and only the second one matters:
 
-| | |
+| build-count | before → after |
 |---|---|
 | `spectralBySimbad` | 278,326 → **280,495** |
 | … by `source_id` | 277,014 → 277,048 |
@@ -168,10 +168,12 @@ pull carried **no `source_id`** (`HD 1209`, `[R78b] 16`, `HD 6194`, …).
 The AT-HYG-derived request set pulled those objects; the spine-derived one
 asks under the record's own resolved `source_id` and gets SIMBAD's
 Gaia-keyed object for the same star, which carries no `sp_type`. SIMBAD
-holds both, and the HIP index is first-write-wins, so which one supplied
-the type was never a decision the pipeline made. Reaching both would mean
-the request unioning namespaces instead of picking one — the same shape as
-`stellata-3bsf.30`.
+holds both, and the HIP index of the day silently kept whichever row it met
+first, so which one supplied the type was never a decision the pipeline made.
+Reaching both would mean the request unioning namespaces instead of picking
+one — the same shape as `stellata-3bsf.30`. The index no longer resolves such
+a clash quietly: `parseSimbadSptypeTsv` throws on a repeated key in any
+namespace, which the committed file has none of.
 
 **7 spectral strings changed** on records that kept a type, all through
 `source_id`, all upstream re-typings rather than re-bindings: `G0V:`→`G1V`,
@@ -180,6 +182,14 @@ the request unioning namespaces instead of picking one — the same shape as
 the old string and is re-pinned in the same change with the reason recorded
 — SIMBAD is a living database with no citable release, so a re-typing is
 the expected cost of the tier, not a regression.
+
+**A re-pull is not done when the file lands.** `simbad_sptype.tsv` feeds two
+pipelines — § Consumed by names both — and they pin separate count snapshots.
+Refreshing the file means running `pnpm run build:binaries` (which moves
+`data/binaries/multiples.tsv` and its per-component `spect` provenance),
+`pnpm run build:binaries-runtime`, and `pnpm run build:catalog`, in that order:
+the catalogue reads the regenerated `multiples.tsv`, so its own counts move
+after the binaries ones do.
 
 ## Consumed by
 

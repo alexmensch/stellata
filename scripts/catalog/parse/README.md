@@ -351,8 +351,8 @@ priority chain:
    Gaia-saturated bright stars (Algol, Alsephina, Betelgeuse, Rigel, Vega,
    Arcturus, ~700 others) whose SIMBAD row has a valid MK type but **no
    Gaia source_id**, so tier 1's source_id key misses them. `parseSimbadSptypeTsv`
-   indexes every row under whichever of source_id / HIP it carries; this
-   tier looks up the star's HIP. Without it the radius chain runs the cool
+   indexes every row under every namespace it carries, throwing rather than
+   picking a winner if a key ever repeats; this tier looks up the star's HIP. Without it the radius chain runs the cool
    unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
    12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
    over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
