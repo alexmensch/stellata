@@ -40,7 +40,7 @@ labels.
 - **Citation**: Tokovinin A. 2018, *ApJS* 235, 6 (updated MSC).
   Maintained by the author; VizieR copy tracks updates.
 - **VizieR**: `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables),
-  CDS TAP `https://tapvizier.cds.unistra.fr/TAPVizieR/tap`.
+  over the CDS TAP endpoint `refresh_lib.CDS_TAP_URL` names.
 - **Retrieved**: 2026-07-11.
 - **Licence**: CDS/VizieR standard academic use; cite Tokovinin 2018.
 

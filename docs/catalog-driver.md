@@ -330,9 +330,23 @@ Measured exposure and expected coverage (2026-08-14; pins in
 - **V** — `vCatalogued` 140: Tycho-2 reaches 123 by TYC; the GJ cohort
   (~16) routes CNS5/SIMBAD; Sol is curated.
 - **direction / PM** — `directionAthygPrinted` 61 /
-  `velocityAthygPm` 60: Tycho-2 43 (verified 42, PM on 40 — the mean
-  epochs also fix the printed cells' unpropagated staleness, ~27″ worst
-  case today), CNS5 8, SIMBAD 9, Sol 1.
+  `velocityAthygPm` 60. **Measured 2026-08-25**, once both ingests were in
+  place, over the real 61-row cohort — this supersedes the projection this
+  line carried (which read CNS5 8 and had no unreached bucket at all):
+
+  | | Tycho-2 | CNS5 | SIMBAD | curated | none |
+  |---|---|---|---|---|---|
+  | direction | 43 | 4 | 9 | 1 (Sol) | **4** |
+  | PM | 40 | 4 | 9 | — | 4 (zero tangential term) |
+
+  The mean epochs also fix the printed cells' unpropagated staleness, ~27″
+  worst case today. CNS5 measures 4 rather than the projected 8 because its
+  25 pc volume limit does not carry GJ 3775 / 3981 / 4192 / 4212; those same
+  four are the **none** bucket — no TYC, no HIP, a `gaia_source_id` DR3 has
+  no row for (they are DR2 ids — `stellata-3bsf.30`), and no row in the
+  committed SIMBAD values pull. Four rows with no owned direction is a § 6
+  membership adjudication, not a silent keep, and it is what
+  `stellata-3bsf.26` has to decide before `athyg_printed` can retire.
 - **distance** — printed tail 1,199, today **unpinned** (the only
   cascade without a routing partition; the value work pins `distVia`):
   in-tree DR3 parallax 126 · CNS5 38 · SIMBAD parallax the ~1,035
