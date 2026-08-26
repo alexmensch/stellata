@@ -13,19 +13,7 @@ import { srgbEncodeTsl } from '../tonemap-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { attrFloat } from '../tsl/tsl-shim';
 
-/**
- * `vec4(diffuse, opacity)` — what three's `LineBasicMaterial` fragment
- * emits, read off the same two material properties so a consumer's
- * `material.color` / `.opacity` write reaches this graph unchanged.
- *
- * The encode branch is what the built-in path loses to the pinned output
- * colour space (`../README.md` § Output colour space): three encodes
- * linear→sRGB for the canvas and nothing for a render target, and with
- * output pinned to the working space it now encodes for neither. `uHdrTarget`
- * is 0 exactly when the target is unbound, so the stroke owns the encode
- * there and stays linear into the target — never by unpinning the output
- * space, which would double-encode every ported emitter.
- */
+/** The encode branch: README.md § The encode the built-in path lost. */
 function strokeColour(u: SharedUniformNodes) {
   const rgb = materialColor as unknown as Node<'vec3'>;
   return select(
@@ -43,9 +31,6 @@ function strokeMaterial<M extends NodeMaterial>(material: M, opacity: number): M
   return material;
 }
 
-/** Chrome, so both extra attachments take the blend's identity element:
- *  alpha 0 under this alpha-composited blend leaves the destination exactly
- *  as the WebGL gate's `NONE` did (`../hdr/README.md`). */
 export function buildChromeLineMaterial(
   u: SharedUniformNodes, opacity: number,
 ): MrtEmitterMaterial & { material: LineBasicNodeMaterial } {
@@ -65,11 +50,6 @@ export function buildDashedChromeLineMaterial(
   material.dashSize = dash;
   material.gapSize = gap;
   const built = finishMrtMaterial(material, () => {
-    // three's own dash rule: the cumulative distance scaled into the
-    // pattern's unit — in the VERTEX stage, as three does, so the scale
-    // costs one multiply per vertex rather than per fragment — then
-    // discarded across the gap half of each period. The attribute is the
-    // consumer's (`../../chrome-lines/README.md`).
     const phase = varying(attrFloat('lineDistance').mul(materialLineScale));
     Discard(phase.mod(materialLineDashSize.add(materialLineGapSize))
       .greaterThan(materialLineDashSize));

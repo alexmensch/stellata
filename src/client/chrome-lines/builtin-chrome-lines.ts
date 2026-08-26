@@ -18,11 +18,7 @@ function handle<M extends THREE.Material & { color: THREE.Color }>(
   return { material, dispose: () => material.dispose() };
 }
 
-/**
- * `localPass` strips the built-in log-depth chunks so fragments keep
- * standard bracket depth — required for any line rendered in the local
- * depth pass (`../local-depth/README.md`).
- */
+/** `localPass` — README.md § `localPass` is a GLSL-only argument. */
 export function builtinChromeLineMaterials(): ChromeLineMaterials {
   return {
     solid(colour: number, opacity: number, localPass = false) {

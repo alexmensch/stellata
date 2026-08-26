@@ -3,11 +3,6 @@
 
 import type * as THREE from 'three';
 
-/**
- * The writable surface a chrome line consumer touches. three's own
- * `LineBasicMaterial` and its node twin both satisfy it, so a layer keeps
- * writing `.color` / `.opacity` / `.depthTest` on either backend.
- */
 export interface ChromeLineStroke extends THREE.Material {
   color: THREE.Color;
   opacity: number;
@@ -31,12 +26,8 @@ export interface ChromeLineMaterial<
   dispose(): void;
 }
 
-/**
- * `colour` is an authored sRGB hex, mapped through the tone-map inverse at
- * construction so the stroke resolves at that appearance out of the HDR
- * pass (`../hdr/chrome/README.md`). A consumer that re-authors it later
- * writes `material.color` through the same setter.
- */
+/** `colour` is an authored sRGB hex, not a linear value — README.md
+ *  § Colour is authored once, at construction. */
 export interface ChromeLineMaterials {
   solid(colour: number, opacity: number, localPass?: boolean): ChromeLineMaterial;
   dashed(

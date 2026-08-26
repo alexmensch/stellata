@@ -25,9 +25,6 @@ function wrap<M extends ChromeLineStroke>(
   colour: number,
 ): ChromeLineMaterial<M> {
   setBuiltinChromeColour(built.material.color, colour);
-  // Registration is what keeps the material's output count in lockstep with
-  // the pipeline's target mode; dispose must sever it or a dead material
-  // keeps taking mode swaps.
   const unregister = cfg.registerMrtLayer(built);
   return {
     material: built.material,
@@ -38,12 +35,8 @@ function wrap<M extends ChromeLineStroke>(
   };
 }
 
-/**
- * `localPass` is inert here: what it strips on GLSL is the built-in
- * log-depth chunks, and reversed-z deleted those — the same reasoning that
- * lets the probe glyph serve both passes from one graph
- * (`../solar-system/README.md` § The probe glyph needs no mirror variant).
- */
+/** `localPass` is inert here — `../../chrome-lines/README.md`
+ *  § `localPass` is a GLSL-only argument. */
 export function makeTslChromeLineMaterials(
   cfg: TslChromeLineConfig,
 ): ChromeLineMaterials {
