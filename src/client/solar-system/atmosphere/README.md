@@ -204,7 +204,7 @@ p/π relation above means it needs no extra factor. The twilight band reads
 when the adaptation follows a night-side-dominated frame; the day-side term
 is a ~9 % lift under the direct sun. `Planet.terminatorSoftness` is the older
 by-eye widening of the Lambert edge and is deliberately untouched here
-(`../planets/README.md` § Lighting).
+(`../planets/README.md` § Planet mesh LOD, the **Lighting** bullet).
 
 **Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
