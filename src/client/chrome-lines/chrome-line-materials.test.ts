@@ -74,12 +74,17 @@ describe('the chrome line seam', () => {
   });
 
   // Reversed-z deleted the chunks `localPass` would strip, so the flag is
-  // inert here and one graph serves both passes.
-  it('tsl: builds the same graph for both passes', () => {
+  // inert here — neither differentiator the GLSL variant above sets may
+  // appear on either TSL stroke.
+  it('tsl: leaves no pass-specific differentiator on either variant', () => {
     const factory = tsl();
     const main = factory.solid(COLOUR, OPACITY);
     const local = factory.solid(COLOUR, OPACITY, true);
-    expect(local.material.name).toBe(main.material.name);
+    // Not a cache-key compare: a NodeMaterial's key embeds a per-instance
+    // node hash, so two identically-built strokes never match
+    // (`../webgpu/tsl/README.md` § One program per material instance).
+    expect(local.material.onBeforeCompile).toBe(main.material.onBeforeCompile);
+    expect(local.material.constructor).toBe(main.material.constructor);
     main.dispose();
     local.dispose();
   });
