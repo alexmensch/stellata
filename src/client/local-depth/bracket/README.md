@@ -200,9 +200,20 @@ partition never supplied anyway. And orbit rings are
 alpha-over is commutative and a ring's own near/far self-overlap is
 order-independent. The residual is cross-body translucent overlap
 between bodies that would have landed in different brackets — the
-K≈4 vantage. Smoke it: camera inside Neptune's orbit ring with several
-rings drawn, watching the crossings for order flicker under scrub.
-**That smoke became runnable only once the pass's line layers drew on a
+K≈4 vantage.
+
+**Smoking it: a ring crossing another ring is the WRONG place to look.**
+Those share one stroke — one material, one colour, one alpha
+(`../../util/README.md`, `ORBIT_LINE_COLOUR`) — so by the commutativity
+above the two draw orders are the same pixels and a flip is invisible by
+construction. What can show is a ring against a translucent surface of a
+*different* colour: a planet's atmosphere shell, a fresnel shell. So the
+vantage is camera inside Neptune's orbit ring, several rings drawn, AND
+an atmosphere-bearing body in frame with another planet's ring passing
+close behind or in front of it — watch that over/under under scrub, not
+the ring-on-ring crossings.
+
+**The smoke became runnable only once the pass's line layers drew on a
 WebGPU boot** (`../../chrome-lines/README.md`) — orbit rings are the
 translucent geometry it turns on, and the WebGPU boot is the only one
 that takes K = 1, so before then the residual was argued and could not
