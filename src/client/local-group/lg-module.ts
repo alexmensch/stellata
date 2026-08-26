@@ -25,14 +25,6 @@ import {
   type LgCatalog,
 } from './local-group-loader';
 
-/** Static dropdown-row distance for a Local Group entry. Fixed units by
- *  scale (kpc / Mpc) rather than the live pc/ly toggle — the corpus is
- *  built once and galaxy distances read naturally in kpc either way. */
-export function formatLgSearchDistance(pc: number): string {
-  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(2)} Mpc`;
-  return `${Math.round(pc / 1000)} kpc`;
-}
-
 export interface LgKindModule extends ObjectKindModule<'lg'> {
   /** The wireframe layer, for label wiring + dev-console reads. Null
    *  before attach and when local-group.json is absent. */
@@ -168,9 +160,8 @@ export function createLgKindModule(): LgKindModule {
       if (!catalog) return [];
       const out: KindSearchEntry[] = [];
       catalog.objects.forEach((o, index) => {
-        const displayCon = `${o.type} · ${formatLgSearchDistance(o.distanceFromSol)}`;
         for (const label of [o.name, ...(o.aliases ?? [])]) {
-          out.push({ index, label, primary: o.name, displayCon });
+          out.push({ index, label, primary: o.name, displayCon: o.type });
         }
       });
       return out;

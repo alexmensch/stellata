@@ -51,8 +51,12 @@ selects against the full text. The constellation picker stays
 synchronous (cheap substring filter). LG
 entries index the display name plus every build-emitted alias
 ("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
-line carries morphological type + distance (kpc/Mpc) so "Sagittarius"
-disambiguates the dSph from star rows. The two boundary shells (Local Bubble, heliopause) enter the corpus by
+line is the morphological type alone. **No row carries a
+distance-from-Sol** — that reading belongs to the distance vector, the
+POI marker, and the focus card, and an LG-only distance made the one
+kind whose secondary line read differently from every other. The type
+is what disambiguates a "Sagittarius" dSph hit from the star rows,
+whose secondary line is their constellation. The two boundary shells (Local Bubble, heliopause) enter the corpus by
 name, secondary line = their type descriptor, index = the `SHELL_KEYS`
 Target idx. Sol's planets and moons enter the corpus
 by name (secondary line "Planet · Sol system" or "Moon · <parent>") —
