@@ -60,7 +60,9 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 - `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
   those modules, since GLSL cannot import. The output dither's seed offset
   and 8-bit divisor are pinned here too, against `../hdr/tonemap/tonemap-pure.ts`,
-  which owns them for every layer that dithers.
+  which owns them for every layer that dithers. The noise itself is not
+  copied at all — both shaders include the shared `stellata_ign` chunk
+  (`../hdr/tonemap/README.md` § One hash).
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.

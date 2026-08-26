@@ -3,6 +3,7 @@ precision highp int;
 
 #include <common>
 #include <logdepthbuf_pars_fragment>
+#include <stellata_ign>
 
 // Absorption pass: a jittered raymarch accumulates the sightline A_V and
 // emits an alpha-only premultiplied-over fragment (rgb = 0) that dims
@@ -55,12 +56,6 @@ layout(location = 0) out vec4 outColor;
 // (../hdr/summation/README.md § Everything that dims the field).
 layout(location = 2) out vec4 outDiffuse;
 
-// Interleaved gradient noise of gl_FragCoord — static per pixel, never
-// reseeded per frame (§ 9.1 rules 3–4: animated jitter shimmers).
-float ign(vec2 p) {
-  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
-}
-
 void main() {
   #include <logdepthbuf_fragment>
 
@@ -91,7 +86,7 @@ void main() {
   float dt = (t1 - t0) / float(steps);
   float stepPc = dt * dlPerT;
 
-  float jitter = ign(gl_FragCoord.xy);
+  float jitter = stellataIgn(gl_FragCoord.xy);
 
   float av = 0.0;
   for (int i = 0; i < steps; i++) {
@@ -114,7 +109,7 @@ void main() {
   float alpha = min(1.0 - exp(-TAU_PER_AV * av), ALPHA_CAP);
 
   // ±0.5-LSB output dither (§ 9.1 rule 4).
-  float dith = (ign(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
+  float dith = (stellataIgn(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
   outColor = vec4(vec3(0.0), clamp(alpha + dith, 0.0, ALPHA_CAP));
   outDiffuse = outColor;
 }

@@ -288,7 +288,7 @@ void main() {
     stellata_atmosphereRadiance(
       o, dir, tStart, tStop, uAtmoRadius, sunDirR,
       uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
-      stellata_atmoJitter(gl_FragCoord.xy),
+      stellataIgn(gl_FragCoord.xy),
       inscatter, transmittance);
     col = col * transmittance + inscatter * uSunColour * uAirlightLuminance;
   }

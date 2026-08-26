@@ -8,13 +8,12 @@ import {
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
-  ATMO_JITTER_COEFFS, ATMO_JITTER_SCALE, ATMO_N_LIGHT, ATMO_N_VIEW,
-  LIGHT_JITTER_STRIDE, MS_STRENGTH, TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
+  ATMO_N_LIGHT, ATMO_N_VIEW, LIGHT_JITTER_STRIDE, MS_STRENGTH,
+  TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
 } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 
 type NF = Node<'float'>;
-type N2 = Node<'vec2'>;
 type N3 = Node<'vec3'>;
 
 const RAYLEIGH_PHASE_K = 3.0 / (16.0 * Math.PI);
@@ -33,14 +32,6 @@ export const miePhaseTsl = /* @__PURE__ */ Fn(([mu, g]: [NF, NF]) => {
   const denom = max(g2.add(1.0).sub(g.mul(mu).mul(2.0)), 1e-6);
   return float(INV_4PI).mul(float(1.0).sub(g2)).div(denom.mul(sqrt(denom)));
 });
-
-/** Interleaved gradient noise over the fragment position — the per-fragment
- *  offset that turns the few-sample lattice into fine grain instead of a
- *  fixed moiré. */
-export const atmoJitterTsl = /* @__PURE__ */ Fn(
-  ([fragCoord]: [N2]) => fract(fract(dot(fragCoord, vec2(...ATMO_JITTER_COEFFS)))
-    .mul(ATMO_JITTER_SCALE)),
-);
 
 export const atmoLumaTsl = /* @__PURE__ */ Fn(
   ([c]: [N3]) => dot(c, vec3(...LUMA_WEIGHTS)),

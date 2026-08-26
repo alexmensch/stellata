@@ -10,6 +10,8 @@
 #ifndef STELLATA_TONEMAP
 #define STELLATA_TONEMAP
 
+#include <stellata_ign>
+
 #ifndef STELLATA_LUMA_WEIGHTS_DECLARED
 #define STELLATA_LUMA_WEIGHTS_DECLARED
 const vec3 STELLATA_LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
@@ -53,8 +55,7 @@ vec3 stellataSrgbDecode(vec3 c) {
 /** Interleaved-gradient noise, ±0.5/255 — breaks up the 8-bit banding
  *  the faint Milky Way gradient shows without it. */
 float stellataDither(vec2 fragCoord) {
-    float n = fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715))));
-    return (n - 0.5) / 255.0;
+    return (stellataIgn(fragCoord) - 0.5) / 255.0;
 }
 
 /** The operator without the dither. What an emitter applying the

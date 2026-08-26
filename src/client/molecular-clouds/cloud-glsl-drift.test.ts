@@ -68,7 +68,8 @@ describe('cloud absorption GLSL constants match cloud-presence-pure', () => {
 describe('the cloud dither matches hdr/tonemap/tonemap-pure', () => {
   for (const [name, src] of [['absorption', absorption], ['rim', rim]] as const) {
     it(`pins the ${name} shader's seed offset and divisor`, () => {
-      const m = src.match(/ign\(gl_FragCoord\.xy \+ ([\d.]+)\) - 0\.5\) \/ ([\d.]+);/);
+      const m = src.match(
+        /stellataIgn\(gl_FragCoord\.xy \+ ([\d.]+)\) - 0\.5\) \/ ([\d.]+);/);
       expect(m).not.toBeNull();
       expect(Number(m![1])).toBe(DITHER_SEED_OFFSET);
       expect(Number(m![2])).toBe(DITHER_LSB_LEVELS);

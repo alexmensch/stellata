@@ -6,13 +6,15 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
-  ATMO_JITTER_COEFFS, ATMO_JITTER_SCALE, ATMO_N_LIGHT, ATMO_N_VIEW,
-  LIGHT_JITTER_STRIDE, TWILIGHT_TAIL_AMP, TWILIGHT_TAIL_REACH,
+  ATMO_N_LIGHT, ATMO_N_VIEW, LIGHT_JITTER_STRIDE, TWILIGHT_TAIL_AMP,
+  TWILIGHT_TAIL_REACH,
 } from '../../solar-system/atmosphere/atmosphere-scattering-pure';
 import {
   RING_BACKLIT_TRANSMIT, RING_SHADOW_FLOOR,
 } from '../../solar-system/planets/rings/ring-photometry-pure';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
+import {
+  DITHER_IGN_DOT, DITHER_IGN_SCALE, LUMA_WEIGHTS,
+} from '../../hdr/tonemap/tonemap-pure';
 import {
   literalDriftOffenders, type DriftExemption, type PinnedConstant,
 } from '../tsl/literal-drift-pure';
@@ -37,8 +39,14 @@ const PINNED: readonly PinnedConstant[] = [
   { identifier: 'ATMO_N_VIEW', values: [ATMO_N_VIEW] },
   { identifier: 'ATMO_N_LIGHT', values: [ATMO_N_LIGHT] },
   { identifier: 'LIGHT_JITTER_STRIDE', values: [LIGHT_JITTER_STRIDE] },
-  { identifier: 'ATMO_JITTER_COEFFS', values: ATMO_JITTER_COEFFS },
-  { identifier: 'ATMO_JITTER_SCALE', values: [ATMO_JITTER_SCALE] },
+  // The ray-start jitter is the shared helper now, so what these surfaces
+  // must reference is the helper rather than the numbers it reads off
+  // tonemap-pure (../tsl/jitter-tsl.ts) — and the numbers must still not
+  // reappear here as literals, which is what retired ATMO_JITTER_*.
+  {
+    identifier: 'interleavedGradientNoiseTsl',
+    values: [DITHER_IGN_SCALE, ...DITHER_IGN_DOT],
+  },
   // Derived from 1/(4π) on both sides rather than rounded, so it has no
   // literal form to forbid — only the reference is pinned.
   { identifier: 'MS_STRENGTH', values: [] },

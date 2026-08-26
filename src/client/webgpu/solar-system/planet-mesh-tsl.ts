@@ -23,9 +23,10 @@ import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material'
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { lumaWeightsTsl, srgbDecodeTsl, tonemapUnditheredTsl } from '../tonemap-tsl';
 import {
-  atmoJitterTsl, atmosphereRadianceTsl, deflattenedCameraTsl, deflattenedDirTsl,
+  atmosphereRadianceTsl, deflattenedCameraTsl, deflattenedDirTsl,
   scalePolarTsl, shellEntryTsl, skyIrradianceTsl, verticalScatterTauTsl,
 } from './atmosphere-scatter-tsl';
+import { interleavedGradientNoiseTsl } from '../tsl/jitter-tsl';
 import type { PlanetMeshNodes } from './uniform-nodes';
 
 type NF = Node<'float'>;
@@ -220,7 +221,7 @@ export function buildPlanetMeshMaterial(
         o, d: dir, tStart, tStop, rAtmo: p.uAtmoRadius, sunDir: sunDirR,
         hR: p.uScaleHeightR, hM: p.uScaleHeightM, betaRs: p.uBetaRayleigh,
         betaMs: p.uBetaMie, betaA: p.uBetaAbsorb, g: p.uMieG,
-        jitter: atmoJitterTsl(screenCoordinate.xy),
+        jitter: interleavedGradientNoiseTsl(screenCoordinate.xy),
       });
       col.assign(col.mul(march.transmittance)
         .add(march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance)));

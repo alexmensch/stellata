@@ -52,7 +52,7 @@ void main() {
   stellata_atmosphereRadiance(
     o, dir, tStart, t1, uAtmoRadius, sunDir,
     uScaleHeightR, uScaleHeightM, uBetaRayleigh, uBetaMie, uBetaAbsorb, uMieG,
-    stellata_atmoJitter(gl_FragCoord.xy),
+    stellataIgn(gl_FragCoord.xy),
     inscatter, transmittance);
 
   // Share of the chord outside the shadow, over the chord as one segment. The
