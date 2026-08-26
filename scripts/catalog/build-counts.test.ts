@@ -4,6 +4,7 @@ import {
   compareBuildCounts,
   formatCountDiff,
   formatDistSrcPartition,
+  spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
 
@@ -71,7 +72,7 @@ function baseCounts(): BuildCounts {
     spectralBySimbad: 280000,
     spectralSimbadBySourceId: 279000,
     spectralSimbadByHip: 700,
-    spectralSimbadByTyc: 300,
+    spectralSimbadByTyc: 286,
     spectralSimbadByGj: 14,
     spectralByGspspec: 25000,
     spectralFallback: 8000,
@@ -271,5 +272,30 @@ describe('formatDistSrcPartition', () => {
     expect(formatDistSrcPartition(baseCounts().lmcOverriddenByDistSrc)).toBe(
       'G_R3=58, G_R2=2, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0',
     );
+  });
+});
+
+describe('spectralSimbadPartitionError', () => {
+  it('accepts a partition that exhausts the SIMBAD tier', () => {
+    const counts = baseCounts();
+    expect(
+      counts.spectralSimbadBySourceId + counts.spectralSimbadByHip
+        + counts.spectralSimbadByTyc + counts.spectralSimbadByGj,
+    ).toBe(counts.spectralBySimbad);
+    expect(spectralSimbadPartitionError(counts)).toBeNull();
+  });
+
+  it('names both sides when a namespace tally goes missing', () => {
+    const counts = { ...baseCounts(), spectralSimbadByTyc: 0 };
+    const err = spectralSimbadPartitionError(counts);
+    expect(err).toMatch(/tyc 0/);
+    expect(err).toMatch(/= 279714, but spectralBySimbad is 280000/);
+  });
+
+  it('catches a record counted under two namespaces at once', () => {
+    const counts = baseCounts();
+    expect(spectralSimbadPartitionError({
+      ...counts, spectralSimbadByGj: counts.spectralSimbadByGj + 1,
+    })).toMatch(/= 280001, but spectralBySimbad is 280000/);
   });
 });

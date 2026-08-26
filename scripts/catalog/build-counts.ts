@@ -182,10 +182,11 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Records whose spectral classification (classIdx + subclass + lumClass)
    *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
-  /** The three SIMBAD tiers split by the namespace that found the row.
-   *  They sum to `spectralBySimbad`. `spectralSimbadByTyc` is the only
-   *  designation join of the three, and the only one reaching an object
-   *  SIMBAD holds no Gaia id for. */
+  /** The four SIMBAD tiers split by the namespace that found the row, summing
+   *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
+   *  merely asserted here. `spectralSimbadByTyc` is the only designation join
+   *  of the four, and the only one reaching an object SIMBAD holds no Gaia id
+   *  for. */
   spectralSimbadBySourceId: number;
   spectralSimbadByHip: number;
   spectralSimbadByTyc: number;
@@ -551,4 +552,19 @@ export function formatCountDiff(diff: CountDiff[]): string {
     }
   }
   return lines.join('\n');
+}
+
+/** The SIMBAD namespace tallies must exhaust the SIMBAD tier: every record the
+ *  resolver credits to SIMBAD reports exactly one namespace that found it, so a
+ *  shortfall means a tier returned a row without naming its key and the
+ *  per-namespace figures understate silently. Returns the message to fail the
+ *  build with, or null when the partition holds. */
+export function spectralSimbadPartitionError(counts: BuildCounts): string | null {
+  const sum = counts.spectralSimbadBySourceId + counts.spectralSimbadByHip
+    + counts.spectralSimbadByTyc + counts.spectralSimbadByGj;
+  if (sum === counts.spectralBySimbad) return null;
+  return 'spectralSimbad namespace partition does not exhaust the SIMBAD tier: '
+    + `source_id ${counts.spectralSimbadBySourceId} + hip ${counts.spectralSimbadByHip} `
+    + `+ tyc ${counts.spectralSimbadByTyc} + gj ${counts.spectralSimbadByGj} `
+    + `= ${sum}, but spectralBySimbad is ${counts.spectralBySimbad}`;
 }
