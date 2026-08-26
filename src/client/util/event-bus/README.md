@@ -9,8 +9,16 @@ class here is the generic transport.
 The contract is intentionally minimal:
 
 - `on(name, fn)` returns an unsubscribe; call it to detach.
-- `emit(name, payload)` is synchronous; handlers must not throw
-  (caught + reported in a one-line console warning).
+- `emit(name, payload)` is synchronous; handlers must not throw, and one
+  that does is contained — caught per handler and reported in a one-line
+  `console.warn`, with every later subscriber still delivered to. That
+  containment is deliberately **unlike** the scene registry's fan-outs
+  (`../fan-out.ts`), which collect and rethrow: an emitter owns its
+  operation and must hear about a failure, while subscribers are mutually
+  anonymous and a bus has nowhere honest to propagate one subscriber's
+  failure to. This paragraph described behaviour the code did not have
+  until 2026-08; a throwing handler used to take every handler registered
+  after it, for the rest of the session.
 - `clear()` detaches every subscription — wired into `Stellata.dispose`
   so cross-session subscriptions don't leak (representative
   authoring-pattern finding; see `docs/authoring-patterns.md`

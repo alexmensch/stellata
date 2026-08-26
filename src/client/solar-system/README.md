@@ -257,7 +257,7 @@ at all); the pass itself renders on both boots.
 
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
-read by `../binaries/binary-orbit-path-layer.ts`.
+read by `../binaries/orbit-paths/binary-orbit-path-layer.ts`.
 
 ## First-load default and `minDistance` relaxation
 

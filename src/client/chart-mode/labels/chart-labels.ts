@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
-import type { ChartModeContext } from './chart-mode';
-import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
-import { FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING } from '../../../scripts/catalog/catalog-pure';
-import { projectToScreenInto } from '../overlays/overlay-project';
-import { setNumAttr } from '../overlays/dirty-attr';
-import { getChartDiscParams } from '../camera/controls/star-physics';
-import { chartDiscPxForAppMag } from './chart-disc-pure';
-import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
-import { limitMagOf } from '../filters/filter-state';
+import type { Stellata } from '../../stellata';
+import type { ChartModeContext } from '../chart-mode';
+import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import { FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING } from '../../../../scripts/catalog/catalog-pure';
+import { projectToScreenInto } from '../../overlays/overlay-project';
+import { setNumAttr } from '../../overlays/dirty-attr';
+import { getChartDiscParams } from '../../camera/controls/star-physics';
+import { chartDiscPxForAppMag } from '../chart-disc-pure';
+import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { limitMagOf } from '../../filters/filter-state';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,
@@ -335,7 +335,7 @@ export class ChartLabels {
       const pos = cat.positions;
       for (let i = 0; i < cat.count; i++) {
         // Rings are intrinsic-only; eclipsers surface via the wings glyph,
-        // not a ring. See chart-mode/README.md § Label engine — variable rings.
+        // not a ring. See README.md § Label engine + glyphs, Variable rings.
         if (
           cat.periodDays[i] > 0 &&
           cat.amplitudeMag[i] > 0 &&

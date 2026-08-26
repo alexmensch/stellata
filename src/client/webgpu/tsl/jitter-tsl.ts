@@ -5,7 +5,7 @@ import { Fn, dot, fract, vec2 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
   DITHER_IGN_DOT, DITHER_IGN_SCALE, DITHER_LSB_LEVELS,
-} from '../../hdr/tonemap-pure';
+} from '../../hdr/tonemap/tonemap-pure';
 
 type N2 = Node<'vec2'>;
 

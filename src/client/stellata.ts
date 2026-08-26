@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
 import { createBinarySystemMembership } from './binaries/binary-system-membership';
+import { builtinChromeLineMaterials } from './chrome-lines/builtin-chrome-lines';
+import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
 import type { DustField, DustParticleData } from './loaders/dust-loader';
@@ -34,7 +36,7 @@ import {
   coordSphereReachableAt,
 } from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
-import { ChartLabels } from './chart-mode/chart-labels';
+import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
@@ -74,6 +76,7 @@ import * as starPhysics from './camera/controls/star-physics';
 import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
 import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { paperClearColour } from './chart-mode/chart-palette';
+import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
 import { ReferenceUpController } from './camera/controls/input/reference-up';
@@ -155,7 +158,7 @@ import type {
   ExtinctionPrepassSeam,
 } from './star-pipeline/extinction/extinction-seam';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
+import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {
@@ -233,6 +236,7 @@ export class Stellata implements FrameAnchor {
    *  reach their scene and the shared uniform nodes through it. */
   readonly webgpu: WebGpuSeam | null;
   private webgpuStarLayer: WebGpuStarLayer | null = null;
+  private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
   readonly hdr: HdrSeam;
@@ -537,6 +541,10 @@ export class Stellata implements FrameAnchor {
     });
     this.sharedUniforms = sharedUniforms;
     this.webgpu?.bindSharedUniforms(sharedUniforms);
+    // Must follow bindSharedUniforms: the TSL factory resolves the shared
+    // uniform nodes on read and throws while the registry is unbound.
+    this.chromeLines =
+      this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -645,8 +653,8 @@ export class Stellata implements FrameAnchor {
     // styling and inherits the `body.warping` hide rule for free.
     this.galacticDisc = new GalacticDisc();
     this.scene.add(this.galacticDisc.group);
-    this.orbitRingsLayer = new OrbitRingsLayer();
-    this.binaryOrbitPathLayer = new BinaryOrbitPathLayer();
+    this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
+    this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     // One mirror per boot: the pass scene renders on whichever backend
     // booted, so the mirror's materials must match it.
     const starMirror = this.webgpuStarLayer?.localMirror ?? new StarLocalMirror(
@@ -672,9 +680,10 @@ export class Stellata implements FrameAnchor {
       },
     );
     this.localDepthPass.register(this.starLocalCluster);
-    this.constellationFigureLayer = new ConstellationFigureLayer();
+    this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
     this.scene.add(this.constellationFigureLayer.group);
-    this.constellationBoundaryLayer = new ConstellationBoundaryLayer(sharedUniforms);
+    this.constellationBoundaryLayer =
+      new ConstellationBoundaryLayer(sharedUniforms, this.chromeLines);
     this.scene.add(this.constellationBoundaryLayer.group);
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
@@ -721,6 +730,7 @@ export class Stellata implements FrameAnchor {
       onFrame: (handler) => this.bus.on('frame', handler),
       requestRender: (reason) => this.renderGate.invalidate(`kind:${reason}`),
       webgpu: this.webgpu,
+      chromeLines: this.chromeLines,
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);
@@ -735,16 +745,6 @@ export class Stellata implements FrameAnchor {
       this.starLocalCluster,
     );
     this.localDepthPass.register(this.solarCluster);
-    if (this.webgpu !== null) {
-      // The built-in line layers stay OUT of the pass scene on this boot:
-      // LineBasicMaterial's lone fragment output fails WGSL pipeline
-      // creation against the HDR target's three attachments, and one
-      // invalid pipeline poisons the whole pass submit. They return with
-      // the TSL line material (webgpu/README.md § Every park is a gate).
-      this.solarCluster.group.remove(this.orbitRingsLayer.group);
-      this.solarCluster.group.remove(this.kinds.probe.pathLayer.localGroup);
-      this.starLocalCluster.group.remove(this.binaryOrbitPathLayer.group);
-    }
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
@@ -2077,12 +2077,17 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer?.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
-    this.hdr.setChartMode(on);
     // Per-layer palette swaps fan out through the registry. The milky-way
     // layer has no monochrome hook: chart mode re-purposes it as an isobar
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
     // layer's stippled chart outline rides its registry setMonochrome hook.
-    this.layers.setMonochromeAll(on);
+    // The fan-out and the HDR swap run in opposite orders per direction —
+    // chart-mode/README.md § Entry and exit are not mirror images.
+    applyChartPaletteSwap(
+      on,
+      (v) => this.hdr.setChartMode(v),
+      (v) => this.layers.setMonochromeAll(v),
+    );
     this.bus.emit('state');
   }
 

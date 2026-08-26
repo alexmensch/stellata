@@ -40,7 +40,7 @@ import {
 } from '../../hdr/emission/population-colour-pure';
 import { DEFAULT_SUMMATION_ARCSEC2 } from '../../hdr/exposure/exposure-epoch';
 import { bindAttachmentGate } from '../../hdr/attachments/attachment-gate';
-import { relativeLuminance } from '../../hdr/tonemap-pure';
+import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 
 const SMC_EMISSION: LgEmission = {
   family: 'sersic',

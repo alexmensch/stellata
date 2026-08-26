@@ -12,7 +12,7 @@ import {
 import {
   RING_BACKLIT_TRANSMIT, RING_SHADOW_FLOOR,
 } from '../../solar-system/planets/rings/ring-photometry-pure';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap-pure';
+import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import {
   literalDriftOffenders, type DriftExemption, type PinnedConstant,
 } from '../tsl/literal-drift-pure';

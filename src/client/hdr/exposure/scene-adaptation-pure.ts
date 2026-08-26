@@ -2,7 +2,7 @@
 // statistic drives, and the cut they imply. See README.md § Adaptation.
 
 import { EV_MAX_STOPS } from './exposure-epoch';
-import { tonemapWhitePoint } from '../tonemap-pure';
+import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
  *  measured, not chosen: the geometric mean of three independently

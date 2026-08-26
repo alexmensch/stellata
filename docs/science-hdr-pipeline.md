@@ -415,7 +415,7 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   § Debug panel).
 
 The operator implementation lives in a **shared GLSL chunk**
-(`src/client/hdr/tonemap.glsl`, exported alongside a test-pinned pure
+(`src/client/hdr/tonemap/tonemap.glsl`, exported alongside a test-pinned pure
 TS mirror) consumed by both the fullscreen pass and the no-float-RT
 fallback (§ 6) — the `dust-raymarch.glsl` two-consumers pattern.
 

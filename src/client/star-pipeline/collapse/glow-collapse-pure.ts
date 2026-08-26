@@ -7,7 +7,7 @@ import {
   faintToeInverse,
   reinhardExtendedInverse,
   tonemapWhitePoint,
-} from '../../hdr/tonemap-pure';
+} from '../../hdr/tonemap/tonemap-pure';
 
 /** How many collapsed stars may stack on one pixel before their summed
  *  display light could reach the half-step the floor was derived from.

@@ -39,7 +39,10 @@ src/client/webgpu/solar-system/
   planet-glare-uniforms.ts    The four slots PlanetBodyField owns rather
                               than shares through the frame map.
   uniform-nodes.ts            TSL uniform-node twins of the seam's
-                              uniform blocks.
+                              uniform blocks, texture slots seeded from
+                              the shared roster
+                              (`../../solar-system/materials/README.md`
+                              § Texture-slot rosters).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
   tsl-drift.test.ts           § Constant drift runs in both directions.
 ```
@@ -134,15 +137,15 @@ floating-origin recentre rewrites it **without** bumping `layoutVersion`,
 so the layout signal cannot cover it. A grow is the one layout event that
 also replaces every array and needs the geometry rebuilt.
 
-## What is deliberately NOT visible yet
+## Which pass draws them
 
 The mesh, the annulus and the shell render in the local depth pass
 (`../../local-depth/README.md`), which runs on this boot since its port
-child landed. The pass's line layers — orbit rings, binary orbit paths,
-probe trails — do not: their built-in `LineBasicMaterial` cannot create
-a WGSL pipeline against the three-attachment HDR target, so the shell
-keeps their groups out of the pass scene until the TSL line material
-(`../README.md` § Every park is a gate).
+child landed. So do the pass's line layers — orbit rings, binary orbit
+paths, probe trails — through the chrome line seam
+(`../chrome-lines/README.md`), which is what gave their built-in
+`LineBasicMaterial` a fragment that can create a WGSL pipeline against the
+three-attachment HDR target.
 
 ## The probe glyph needs no mirror variant
 

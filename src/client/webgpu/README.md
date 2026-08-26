@@ -14,6 +14,9 @@ src/client/webgpu/
   renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
                                     #webgpu-gate=<verdict> dev switch from
                                     the URL fragment.
+  chrome-lines/                     The line overlays' strokes — solid
+                                    and dashed, over three's own line
+                                    fragment — its own README.
   gate/                             The user-facing "requires WebGPU" page,
                                     landed dark until the cutover. Outside
                                     the import boundary by necessity — its
@@ -130,9 +133,9 @@ solar-system family (`solar-system/README.md`) draws whole: glare
 billboards and probe glyphs in the main pass, the spheroid mesh, ring
 annulus and atmosphere shell in the local depth pass, which runs on
 this boot as a single reversed-z bracket (K = 1 —
-`../local-depth/bracket/README.md` § Decision). Its line layers (orbit
-rings, binary orbit paths, probe trails) do NOT draw yet — see the park
-table below.
+`../local-depth/bracket/README.md` § Decision), and its line layers —
+orbit rings, binary orbit paths and probe trails — through the chrome
+line seam (`../chrome-lines/README.md`).
 Both boundary shells draw too — the heliopause and the Local Bubble,
 through `fresnel-shell/` — as do the molecular clouds
 (`molecular-clouds/`), whose absorption is the first ported layer that
@@ -190,11 +193,18 @@ Each GL-only path parks behind a `rendererGL !== null` test. **A port
 child that lands its feature but leaves its gate in place ships a
 feature that is silently dead on WebGPU** — tests pass, nothing warns,
 the code simply never runs. So deleting the gate is part of the port,
-in the same PR:
+in the same PR.
 
-| Parked path | Gate site | Deleted by |
-| --- | --- | --- |
-| Local-pass line layers (orbit rings, binary orbit paths, probe trails) | the shell removes their groups from the pass scene — `LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation against the HDR target's three attachments, and one invalid pipeline poisons the whole pass submit | TSL line material (`0it.27`) |
+**Nothing is parked today.** What follows is the record of what closed
+each row, so a new park adds its own row here rather than landing silently.
+
+The line-layer row is gone: the local pass's three line layers (orbit
+rings, binary orbit paths, probe trails) drew nowhere on this boot because
+`LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation
+against the HDR target's three attachments — and one invalid pipeline
+poisons the whole pass submit — so the shell removed their groups from the
+pass scene. The chrome line seam (`../chrome-lines/README.md`) replaced
+those materials and the three `remove()` calls went with it.
 
 The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
 park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
@@ -213,14 +223,12 @@ gate becomes a permanently-false branch, so the WebGL2 deletion
 plan — a gate still standing then means its feature was dead for a
 release.
 
-**The line-layer row is gated the other way round, and the backstop
-does NOT reach it.** It parks on `webgpu !== null` (a positive test in
-`stellata.ts`'s constructor) rather than `rendererGL !== null`, because
-what it does is *remove* groups rather than skip construction. At
-cutover that branch becomes permanently TRUE, so it reads as ordinary
-unconditional code and a sweep for dead false-branches walks straight
-past it. `0it.27` must delete those three `remove()` calls by name;
-nothing else will catch them.
+**A park that REMOVES rather than skips is invisible to that backstop,
+and the line-layer row was one.** It keyed on `webgpu !== null` — a
+positive test — so at cutover the branch would have become permanently
+TRUE, reading as ordinary unconditional code while a sweep for dead
+false-branches walked straight past it. Any future park of that shape has
+to be deleted by name; nothing else will catch it.
 
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, depth funcs remapped, clear inverted, all

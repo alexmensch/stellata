@@ -104,20 +104,22 @@ build scripts, tests, and shader uniforms.
   the ring layer anchors its first vertex on; it comes out of `r` and
   `r·v` directly rather than from a second Kepler solve.
 - `orbit-line.ts` (+ test) — shared bits of the line overlays
-  (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/binary-orbit-path-layer.ts`,
+  (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/orbit-paths/binary-orbit-path-layer.ts`,
   `solar-system/probes/probe-path-layer.ts`,
   `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
-  traversed path with two ends) / `makeOrbitLineSegments` +
-  `makeOrbitLineMaterial(color, opacity?)` (default `ORBIT_LINE_OPACITY`;
-  `color` is an authored sRGB hex, mapped through the tone-map inverse so
-  the line resolves at that appearance out of the HDR pass —
-  `../hdr/README.md` § Chrome), its dashed sibling
-  `makeDashedOrbitLineMaterial(color, dash, gap, opacity?)` — dash lengths
-  in whatever unit the consumer's `material.scale` maps world distance into
-  (so a pattern can be authored in screen pixels), and the consumer owns the
-  cumulative `lineDistance` attribute because `computeLineDistances` resets
-  the phase per segment pair (`../constellation-boundaries/README.md`
+  traversed path with two ends) / `makeOrbitLineSegments` / `mirrorOrbitLine`
+  — the **geometry** half only; the materials they take come from
+  `../chrome-lines/README.md`, and `ORBIT_LINE_OPACITY` / `ORBIT_LINE_COLOUR`
+  are the alpha and the stroke colour every consumer passes it. The colour is
+  **one value for the whole family** — planet and moon rings, binary orbit
+  paths, probe trails — at the fresnel shells' own hue
+  (`SHELL_RIM_BLUE`, 210°), so the chrome the local scene draws over itself
+  reads as one vocabulary. Three layers each authoring their own blue is what
+  it replaced, and they had drifted to three different hues; a new line
+  overlay takes this one rather than picking a fourth. A dashed consumer also owns the cumulative
+  `lineDistance` attribute, because `computeLineDistances` resets the phase
+  per segment pair (`../constellation-boundaries/README.md`
   § Chart-mode layer) — and the on-screen-size helpers `pixelsPerRadian`
   (+ `pixelsPerRadianFromFovRad` for callers holding the FOV in radians, and
   `pixelsPerRadianFromUniforms` for the `ScreenMetricUniforms` viewport / FOV
@@ -179,6 +181,15 @@ build scripts, tests, and shader uniforms.
   compressed format or one three grew since; both callers surface that
   rather than reading it as zero. Consumers: the budget above and the
   memory inventory (`../debug/memory/README.md`).
+- `fan-out.ts` (+ test) — `fanOut(label, items, fn)`: run every member of a
+  fan-out, then rethrow the failures as one `AggregateError`. A bare `for`
+  loop stops at the first throw, so a fan-out that puts shared state into a
+  new mode (palette swap, recentre, teardown) strands the scene half in each
+  mode with no recovery path, and the caller's own later steps are skipped
+  too. Nothing is swallowed — a broken layer stays exactly as loud, it just
+  cannot take its siblings with it. Consumers are `SceneLayerRegistry`'s four
+  fan-outs (`../scene/README.md`). **Not** what `event-bus/` does, and the
+  difference is deliberate: see its README.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).

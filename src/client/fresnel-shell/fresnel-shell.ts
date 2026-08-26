@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { createDistanceGatedLabel, type LabelFrameHost } from '../ui/distance-gated-label';
-import { LABEL_OFFSET_PX } from '../solar-system/planets/planet-labels';
+import { LABEL_OFFSET_PX } from '../solar-system/planets/labels/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';

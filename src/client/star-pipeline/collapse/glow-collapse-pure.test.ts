@@ -6,7 +6,7 @@ import {
   GLOW_COLLAPSE_STACK_MARGIN,
   glowCollapseHalfStepL,
 } from './glow-collapse-pure';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap-pure';
+import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
 import { pointSourcePeakLuminance } from '../../hdr/emission/emission-pure';
 import {
   EV_MAX_STOPS, sceneExposure, thresholdMagFor,

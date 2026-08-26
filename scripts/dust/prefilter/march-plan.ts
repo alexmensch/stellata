@@ -16,7 +16,7 @@ import {
   type MilkywayComponent,
   type Vec3,
 } from '../../../src/client/milkyway/milkyway-column-pure';
-import { relativeLuminance } from '../../../src/client/hdr/tonemap-pure';
+import { relativeLuminance } from '../../../src/client/hdr/tonemap/tonemap-pure';
 
 export interface PlanStep {
   readonly sa: number;

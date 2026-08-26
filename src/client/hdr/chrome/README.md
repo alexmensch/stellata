@@ -3,7 +3,7 @@
 The inverse-tone-map mapping that lets authored, non-photometric layers
 render *through* the scene-wide operator and come out looking exactly as
 authored. `../README.md` is the seam this plugs into; the operator it
-inverts is `../tonemap.glsl`.
+inverts is `../tonemap/tonemap.glsl`.
 
 ```
 src/client/hdr/chrome/

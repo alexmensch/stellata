@@ -22,7 +22,7 @@ import {
 } from './calibration/diffuse-reference';
 import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
-import { type Rgb, relativeLuminance } from '../hdr/tonemap-pure';
+import { type Rgb, relativeLuminance } from '../hdr/tonemap/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
 

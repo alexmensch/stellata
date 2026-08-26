@@ -70,6 +70,7 @@ venv binary) in the shell that runs them.
 | `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades. |
 | `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
+| `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the spine and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier (`data/tycho2/README.md` § Why the pull is range-batched). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the 11,050 spine rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
@@ -151,6 +152,23 @@ Non-network dependency: `vizier_slice.test.py` covers the ADQL shape, the
 row-count / spot-row gates, the `--only` selector, and the
 no-partial-write guarantee against an in-memory TAP backend. Run it with
 `python3 scripts/refresh/vizier_slice.test.py`.
+
+`refresh-tycho2.py` deliberately does **not** use `VizierSlice`: its
+output is a filtered subset rather than a whole table, and its gate is a
+band on kept rows as a fraction of the request set rather than an
+absolute row count, so a spine that gains or loses rows moves the gate
+with it. It still shares the projection (`rl.select_columns`) and every
+gate helper. **Its pull and its write are separate calls on purpose** —
+`pull_table` gates and returns rows, `write_table` commits them, and
+nothing is written until the cross-table spine cover has also passed
+(`data/tycho2/README.md` § Why the pull is range-batched, last paragraph).
+Its non-network test (`refresh-tycho2.test.py`) covers the request-set
+union, the TYC1 range cover and scan-span assertion, the local filter,
+the fraction / spot-row gates against an in-memory TAP backend, and the
+zero-unreached-spine-TYC gate.
+
+The in-memory TAP backend both suites use (`FakeTable`, `fake_tap_client`)
+lives in `scripts/test_helpers.py`.
 
 ### Gaia TAP: synchronous endpoints only
 

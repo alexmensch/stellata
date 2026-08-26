@@ -102,12 +102,13 @@ export function createProbeKindModule(): ProbeKindModule {
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
       field = new ProbeField(kindCtx.sharedUniforms, kindCtx.webgpu?.probeMaterial);
-      paths = new ProbePathLayer(kindCtx.sharedUniforms);
-      // The markers have ported, so on a WebGPU boot they belong in the
-      // scene that renders; the Line2 trails have not, and stay in the
-      // shell's, which that boot never draws.
-      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(field.group);
-      kindCtx.scene.add(paths.group);
+      paths = new ProbePathLayer(kindCtx.sharedUniforms, kindCtx.chromeLines);
+      // Both surfaces have ported, so on a WebGPU boot both belong in the
+      // scene that renders. The trail's local-depth mirror is a third group
+      // the solar-system cluster parents into the pass scene.
+      const renderScene = kindCtx.webgpu?.scene ?? kindCtx.scene;
+      renderScene.add(field.group);
+      renderScene.add(paths.group);
       field.recenter(kindCtx.getWorldOffset());
       field.attach(trajectories, kindCtx.getT());
       paths.attach(trajectories);

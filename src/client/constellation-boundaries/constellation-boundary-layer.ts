@@ -7,11 +7,13 @@ import type {
   BoundaryFadeTableWire,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials, DashedChromeLineStroke,
+} from '../chrome-lines/chrome-line-materials';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic/galactic-fade';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
 import {
-  makeDashedOrbitLineMaterial,
   makeOrbitLineSegments,
   pixelsPerRadianFromUniforms,
   type ScreenMetricUniforms,
@@ -58,19 +60,19 @@ export const BOUNDARY_GAP_PX = 3;
 export class ConstellationBoundaryLayer {
   readonly group: THREE.Group;
   private readonly shared: ScreenMetricUniforms;
-  private readonly material: THREE.LineDashedMaterial;
+  private readonly stroke: ChromeLineMaterial<DashedChromeLineStroke>;
   private lineSegments: THREE.LineSegments | null = null;
   private fade: BoundaryFadeTableWire | null = null;
   private fadeWindow: SolFrameFadeWindow | null = null;
   // NaN so the first setMagnitudeLimit always misses and recomputes.
   private magLimit = NaN;
 
-  constructor(shared: ScreenMetricUniforms) {
+  constructor(shared: ScreenMetricUniforms, chromeLines: ChromeLineMaterials) {
     this.group = new THREE.Group();
     this.group.renderOrder = BOUNDARY_RENDER_ORDER;
     this.group.visible = false;
     this.shared = shared;
-    this.material = makeDashedOrbitLineMaterial(
+    this.stroke = chromeLines.dashed(
       CHART_REFERENCE_INK,
       BOUNDARY_DOT_PX,
       BOUNDARY_GAP_PX,
@@ -78,7 +80,7 @@ export class ConstellationBoundaryLayer {
     );
     // The chart starfield renders depth-disabled, so the arcs read flat over
     // it — the same treatment the figure takes in chart mode.
-    this.material.depthTest = false;
+    this.stroke.material.depthTest = false;
   }
 
   /** Build the arc geometry and seed the fade window from the live magnitude
@@ -88,7 +90,8 @@ export class ConstellationBoundaryLayer {
     this.fade = artifact.fade;
     const { positions, lineDistances } =
       boundaryLineAttributes(artifact.segments, SPHERE_RADIUS_PC);
-    const seg = makeOrbitLineSegments(positions, this.material, BOUNDARY_RENDER_ORDER);
+    const seg =
+      makeOrbitLineSegments(positions, this.stroke.material, BOUNDARY_RENDER_ORDER);
     // The dash phase, per polyline rather than per pair — `computeLineDistances`
     // would reset it at every subdivision node and draw the arcs solid.
     seg.geometry.setAttribute('lineDistance', new THREE.BufferAttribute(lineDistances, 1));
@@ -124,12 +127,13 @@ export class ConstellationBoundaryLayer {
       return;
     }
     this.group.position.copy(worldOffset).negate();
-    this.material.opacity = opacity;
+    this.stroke.material.opacity = opacity;
     // World arc length → screen pixels, which is what the dot pattern is
     // authored in. One scale covers the whole sphere: the arcs sit 50 kpc out
     // and the camera never leaves Sol's neighbourhood while they draw, so
     // every vertex is at effectively the same range.
-    this.material.scale = pixelsPerRadianFromUniforms(this.shared) / SPHERE_RADIUS_PC;
+    this.stroke.material.scale =
+      pixelsPerRadianFromUniforms(this.shared) / SPHERE_RADIUS_PC;
     this.group.visible = true;
   }
 
@@ -139,12 +143,12 @@ export class ConstellationBoundaryLayer {
    *  the HDR resolve, so the chart variant must skip the inverse tone-map or
    *  the ink lands at the wrong value on paper (`../hdr/README.md` § Chrome). */
   setMonochrome(on: boolean): void {
-    setBuiltinChromeColour(this.material.color, CHART_REFERENCE_INK, on);
+    setBuiltinChromeColour(this.stroke.material.color, CHART_REFERENCE_INK, on);
   }
 
   dispose(): void {
     this.disposeGeometry();
-    this.material.dispose();
+    this.stroke.dispose();
     this.fade = null;
     this.fadeWindow = null;
     this.magLimit = NaN;

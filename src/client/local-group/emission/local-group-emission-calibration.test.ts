@@ -42,7 +42,7 @@ import {
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap-pure';
+import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -825,7 +825,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
     // half the § against convolve-then-gain errors above cannot show. A
-    // threshold star lands on 38.25 (../../hdr/tonemap-pure.ts), so M31 reads
+    // threshold star lands on 38.25 (../../hdr/tonemap/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin

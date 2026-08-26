@@ -8,6 +8,10 @@ This is the **event-level** half of the shadow story. `../body-shadow-pure.ts`
 is the per-fragment half: how dark one surface point is, mirroring the
 mesh shader's caster loop. Both are consumed here.
 
+The folder also owns the two render-path eclipse claims — the whole-body
+brightness drop (§ True-eclipse dim, computed in `../planet-body-field.ts`)
+and the refracted glow that survives totality (§ Umbral glow).
+
 ## Files in this area
 
 ```
@@ -122,6 +126,49 @@ first millennium of the clamp carries no independent eclipse authority.
 The position and orientation chains underneath it are still pinned there,
 against Horizons, by `../../ephemerides/moon-vector-truth.test.ts` and
 `../rotation/earth-orientation.test.ts`.
+
+## True-eclipse dim
+
+A planet crossing behind its host's *physical disc* (superior
+conjunction inside the host's angular radius) dims by the occluded area
+fraction — the same camera-anywhere geometry the binaries eclipse
+photometry runs (`../../../binaries/eclipse/eclipse-photometry-pure.ts`:
+`eclipseDimFromOffsets` + the shared anti-strobe blend helpers).
+`PlanetBodyField.update` evaluates each in-range host's planets per
+frame (the pair-relative offset is `iLocalRel` itself — small values, no
+large-position differencing) and writes the per-instance `iEclipseDim`
+attribute.
+
+A moon composes a second, multiplicative dim: the same lens math from
+the MOON's viewpoint with the parent planet as occluder of the host
+disc — the visible host fraction IS the moon's illumination, so a
+lunar-style eclipse darkens the moon continuously through the
+penumbra (search-tested against a year of real ephemeris);
+the vertex shader applies it as a flux multiplier on the glare
+intensity in both regimes — not an appMag fold, because the
+locally-active photographic regime derives brightness from surface
+radiance rather than appMag. A FULL eclipse
+writes exactly 0 and the shader collapses the quad — a floored +7.5
+mag residual is still visible on a mag −1 Mercury, and the planet-
+scale depth buffer can't hide it — and the planet's label hides with
+it (`../labels/README.md`). **Unless the caster has an atmosphere**: Earth
+refracts sunlight into its own umbra, so the dim floors at that glow rather
+than 0 and a totally eclipsed Moon stays visible, coppery red, label and all
+(§ Umbral glow). Glare through the host's
+perceptual *halo* stays undimmed — the halo is a perceptual
+artefact, not a surface, so a body behind it correctly shines
+through. A planet in *front* (transit) dims the
+host by (R_p/R_host)² — negligible and owned by the star pipeline,
+so it is deliberately not modelled.
+
+**What schedules the frames that draw it.** The dim's one-pole blend
+(`ECLIPSE_DIM_TAU_S`) is the only wall-clock animation in a render layer,
+so it has no queryable in-flight flag for the render gate to hold frames
+on. It rides the gate's **settle tail** instead — `SETTLE_MS` of frames
+after the last activity, item 4 of `../../../render-gate/README.md`
+§ The decision, in priority order. Frames are on demand, so without that
+tail a dim that begins as the camera goes still would blend across frames
+that never render.
 
 ## Umbral glow — why a totally eclipsed Moon is red, not black
 

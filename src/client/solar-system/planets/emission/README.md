@@ -142,6 +142,6 @@ in these layers (`../rings/README.md`).
 **Both render paths.** Each planet shader applies the operator inline
 when `uHdrTarget` is 0, undithered — the mesh, ring annulus and
 atmosphere shell composite over each other, so a fragCoord-keyed dither
-would bias a pixel once per layer (`../../../hdr/README.md` § Operator).
+would bias a pixel once per layer (`../../../hdr/tonemap/README.md` § Operator).
 The shell runs the operator on its airlight *before* `uFade` premultiplies,
 since the crossfade is a compositing weight, not light.

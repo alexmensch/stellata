@@ -13,8 +13,8 @@ import {
   starLabelOffsetPx,
   type Candidate,
 } from './chart-labels';
-import type { Stellata } from '../stellata';
-import type { ChartModeContext } from './chart-mode';
+import type { Stellata } from '../../stellata';
+import type { ChartModeContext } from '../chart-mode';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -421,7 +421,7 @@ describe('chart-labels / starLabelOffsetPx', () => {
 // other test still green.
 describe('chart-labels / index.html paint order', () => {
   const markup = readFileSync(
-    fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8',
+    fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8',
   );
   const positionOf = (id: string): number => {
     const at = markup.indexOf(`id="${id}"`);

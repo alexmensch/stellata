@@ -1,10 +1,10 @@
 // Focus-gated orbital-path geometry: the Kepler pairs on the focused
 // system's chain, and each pair sampled into two barycentric ellipses.
-// See src/client/binaries/README.md § Binary orbit paths.
+// See the folder README.
 
-import { evaluateOrbitOffsetPc, type OrbitalElements, type Vec3 } from './binary-orbit-pure';
-import { FLAG_HAS_ORBIT, type BinariesData } from './binaries-loader';
-import { focalChainRelationSet } from './focal-chain';
+import { evaluateOrbitOffsetPc, type OrbitalElements, type Vec3 } from '../binary-orbit-pure';
+import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
+import { focalChainRelationSet } from '../focal-chain';
 
 /** Relation indices on the focal star's chain that carry Kepler elements
  *  (has_orbit) — the pairs with a real orbit to trace. Visual companions

@@ -10,7 +10,7 @@ import {
   smoothstep, sqrt, varying, vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
-import { DITHER_SEED_OFFSET } from '../../hdr/tonemap-pure';
+import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
 import {
   ALPHA_CAP, AV_PER_DENSITY, AV_RATE_PER_NH, AV_SATURATED, ENVELOPE_TAPER_FRAC,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,

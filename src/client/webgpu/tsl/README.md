@@ -48,7 +48,7 @@ WebGL map and never learns about the port. The contract:
   from `animate()` before the render.
 - **`uLocalMemberIdx`** (Int32Array(8)) splits into two `ivec4` nodes
   (`uLocalMemberIdx0/1`) — WGSL uniform arrays pad to a 16-byte stride.
-- **Texture slots** (`TEXTURE_SLOTS`) are not mirrored: textures bind as
+- **Texture slots** (`FRAME_TEXTURE_SLOTS`) are not mirrored: textures bind as
   per-layer `texture()`/`texture3D()` nodes where the texture lives. A
   uniform node cannot carry a **nullable** texture, so a slot the shell
   fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder
@@ -87,6 +87,27 @@ now build slot records through it — the solar-system surfaces, the
 boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
 modules stay with their layers; only the face is shared.
 
+## One program per material instance
+
+`NodeMaterial.customProgramCacheKey()` is the class name plus a hash of the
+node graph, and that hash is **per instance**: two materials built by the
+same factory from identical arguments produce different keys, so three's
+node-builder-state cache misses and each one compiles its own WGSL and its
+own pipeline. Found on the chrome line strokes, but it is a property of the
+node system rather than of that layer.
+
+The consequence a port child has to design around: **a material shared
+across N objects is worth far more here than on GLSL**, where three's
+program cache collapsed N identical materials onto one program and hid the
+duplication entirely. A per-object material that cost nothing on WebGL2 is
+N shader builds and N pipelines on this boot. Hoist it to the layer — the
+orbit rings were 27 of them (`../../solar-system/ephemerides/README.md`
+§ Orbit rings).
+
+It also rules cache-key equality out as a test: two graphs that ought to be
+identical never compare equal. Pin the observable surface instead
+(§ TSL test pattern, leg 2).
+
 ## Assigning a varying from an explicit vertex stage
 
 A layer that sets `material.vertexNode` and wants a varying computed
@@ -120,7 +141,7 @@ accumulate: `lsbDitherTsl` is that composition, and the resolve pass reads
 it through `../tonemap-tsl.ts` rather than keeping a private twin. Its two
 constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
 when it jitters a ray start off the same noise — live with the rest of the
-dither's numbers in `../../hdr/tonemap-pure.ts`.
+dither's numbers in `../../hdr/tonemap/tonemap-pure.ts`.
 
 The solar-system atmosphere still carries its own `atmoJitterTsl` over an
 identical pair of constants under **different names**, and the three

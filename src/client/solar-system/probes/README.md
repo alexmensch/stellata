@@ -172,12 +172,10 @@ from here on purpose.
 
 Markers and trails each carry a **local-depth-pass mirror** (`localGroup`)
 alongside their main-pass draw, and `SolarSystemCluster.setLocalPassActive`
-flips which one is visible each frame — exactly one ever is. Except the
-**trail** on a WebGPU boot: its `LineBasicMaterial` cannot build a WGSL
-pipeline against the HDR target, so the shell keeps that `localGroup`
-out of the pass scene and the trail draws in NEITHER pass while the
-cluster is active (`stellata-0it.27` un-parks it). Markers are ported
-and unaffected. While the
+flips which one is visible each frame — exactly one ever is. Both surfaces
+draw on either backend: the marker takes its glyph off the solar-system
+material seam and the trail its stroke off the chrome line seam
+(`../../chrome-lines/README.md`). While the
 solar system is locally active every one of its bodies renders in the
 bracketed pass with **depth cleared**, so a main-pass probe is painted over
 by any planet disc, mesh, ring or atmosphere shell regardless of true
@@ -204,12 +202,12 @@ radius. Voyager 1 at 167 AU widens the range to ~8e13, still the same four
 slices the planet members already need.
 
 `probe.vert.glsl` / `probe.frag.glsl` wrap their log-depth chunks in
-`#ifndef LOCAL_DEPTH_PASS`, and the trail's mirror material takes
-`makeOrbitLineMaterial`'s `localPass` flag — the repo-wide requirement for
-anything rendering in both passes. That `#ifndef` is the pair's ONLY
-difference, which is why the marker's TSL twin needs no mirror variant at
+`#ifndef LOCAL_DEPTH_PASS`, and the trail's mirror stroke takes the seam's
+`localPass` flag — the repo-wide requirement for anything rendering in
+both passes. That `#ifndef` is the pair's ONLY difference, which is why
+neither the marker's TSL twin nor the trail's needs a mirror variant at
 all: reversed-z deleted the chunks it guards
-(`../../materials/README.md`).
+(`../../materials/README.md`, `../../chrome-lines/README.md`).
 
 Neither shader writes `gl_FragDepth`, and neither may: a static write
 costs the whole draw its early-z, so only `star.frag.glsl` carries one
@@ -266,7 +264,7 @@ and `probe-path-layer.test.ts` can pin it without a focus controller.
 
 ## Labels
 
-`probe-labels.ts` mirrors `../planets/planet-labels.ts` and shares its
+`probe-labels.ts` mirrors `../planets/labels/planet-labels.ts` and shares its
 `LABEL_OFFSET_PX`, but has **no resolvability gate**: a planet label can
 defer to its orbit ring's pixel-gap heuristic, whereas a probe glyph is
 fixed-size and carries no name of its own, so a marker without a label is

@@ -11,7 +11,10 @@ tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
 cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
                                    (3,690 rows).
 bsc5.tsv                           ~136 KB, LFS. HR ↔ HD (9,110 rows).
-cns5.tsv                           ~182 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP
+cns5.tsv                           ~953 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP,
+                                   plus the astrometry re-slice —
+                                   position + its own epoch, parallax,
+                                   PM, each with its bibcode
                                    (5,909 rows).
 classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
@@ -83,6 +86,27 @@ all four; cite the paper per table.
   is why it beats hand-rolling Gliese from V/70A (CNS3, not ingested).
   5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see § Coverage.
+
+### The astrometry re-slice
+
+The slice was widened with CNS5's own astrometry (`docs/catalog-driver.md`
+§ 5 routes the GJ-keyed no-Gaia cohort here): `ra_deg`/`de_deg`,
+`pos_epoch`, `plx_mas` + `e_plx_mas`, `pm_ra`/`pm_de` + errors, and a
+bibcode per quantity. Upstream publishes one proper-motion reference
+(`r_pmRA`, whose own description reads *"Source of the proper motion"*)
+covering both components, so `pm_bibcode` is not a dropped `r_pmDE`.
+
+**`RAJ2000` upstream names the FRAME, not the position epoch** — that is
+`pos_epoch`, and it is per row. **Treat it as a continuous value, not an
+enumeration**: it spans 1991.25–2017.97 across **72 distinct values**. The
+five commonest are 2016.0 (5,244 rows), 2000.0 (406), 1991.25 (138),
+2015.5 (36) and 2016.55 (3); the remaining **82 rows** sit in a long tail
+of 67 further values (2017.42, 2016.53, 2016.19, …). A consumer
+propagating everything from 2000.0 would double-count sixteen years of
+proper motion on the Gaia-sourced majority; one that switches on the five
+commonest values mishandles the 82.
+
+`cns5=0` is the Sun, whose position/parallax/PM cells are all empty.
 
 ## `classic_id_overlay.tsv` — the derived overlay
 

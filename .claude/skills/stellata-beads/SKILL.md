@@ -6,7 +6,10 @@ description: >
   a field a bad write wiped, the P0–P4 prioritisation framework, and the
   grooming protocol. Use when running `bd` in this repo: filing or closing
   beads, setting a priority, triaging, picking up work, pruning memories, or
-  closing out a session. Generic `bd` command syntax lives in the `beads` skill.
+  closing out a session — including a bead filed mid-task for a bug found in
+  review or smoke, or for follow-up work. Load the `beads` skill alongside
+  this one: it carries the never-orphan filing law and dependency argument
+  order, not just CLI syntax.
 ---
 
 Stellata-specific beads operation. The `beads` skill carries CLI syntax; this
@@ -47,6 +50,34 @@ dolt sql -q "select description from issues as of '<hash>' where id='<id>'" -r c
 
 Read the result back through a CSV parser, not by eye — the `bd show` render
 re-wraps lines.
+
+## `bd create` carries three arguments, not one
+
+Every one of these is set **at creation**, and getting any of them wrong is
+silent — nothing prompts you, the bead just looks filed:
+
+- `--parent <epic-id>` — `beads` skill § Never create a bead outside an
+  epic. Includes the escalation path when no epic fits.
+- `--priority` — § Prioritisation below.
+- **one** of `needs-fable` / `opus5-ok` on any implementation bead —
+  `docs/bd-workflow.md` § Model-routing labels for which is which, and for
+  the epic rules (never on an epic; strip it when a task becomes one).
+
+Audit: `bd list --status=open --no-parent --exclude-type=epic`.
+
+The stellata-specific judgement is which epic, and `docs/bd-workflow.md`
+§ Choosing the parent epic has it — the short version is that the parent is
+a claim about *when the work must happen*, so confirm which backend or
+vantage a report came from before picking one.
+
+## Where the detail lives — read the doc, don't guess
+
+`docs/bd-workflow.md` is the reference for everything this skill only names:
+model-routing labels, choosing the parent epic, label / metadata naming,
+tagging conventions, the bug-sweep handoff format, grooming. This file
+carries triggers and obligations; that file carries specifics. When a bd
+question is not answered in the few lines here, the answer is in there —
+go and read it rather than reconstructing it from sibling beads.
 
 ## Prioritisation
 
@@ -117,8 +148,46 @@ skills for references to it.
 
 ## Keep this skill current — do this without being asked
 
-If something here is wrong, stale, or contradicted by real behaviour, or you
-had to work out a stellata-specific bd fact that is not written down, **edit
-this file in the same session.** Do not ask permission. Verify against the
-running CLI or the repo before writing, keep the register terse, and do not
-duplicate the `beads` skill or `bd prime` output. Say in one line what changed.
+**Edit this file in the same session, without asking**, whenever:
+
+- something here is wrong, stale, or contradicted by real behaviour;
+- you had to work out a stellata-specific bd fact that is not written down; or
+- **the user corrected a bd action of yours.** A correction is a defect in
+  this file until proven otherwise. Do not just fix the bead — ask why the
+  skill let you file it wrong, and fix that. Both known misses landed this
+  way: an orphaned bead and a missing model-routing label, each governed by a
+  written rule this file never pointed at.
+
+That third trigger is the one that gets skipped, because the rule usually
+*does* exist somewhere and the miss reads as carelessness rather than a
+documentation gap. If a rule was written down and still got violated, the
+pickup point is what failed.
+
+### Fix the principle, not the incident
+
+Write the rule that catches the **class**, not a note about what happened
+once. An incident is evidence that a gap exists; it is not a description of
+its shape. Ask what general rule the miss is an instance of, and whether the
+right fix is a rule change, a pointer, or different trigger wording — often
+the fix belongs somewhere else entirely, and "this file is missing a
+paragraph" is the least likely answer. A file that accretes one paragraph per
+past mistake becomes a changelog nobody reads; the incident itself belongs in
+the commit message, not here.
+
+### What to restate here, and what to point at
+
+The default is a pointer. This file is loaded whole every time it triggers,
+so every restated line is a permanent context cost plus a second copy that
+can drift out of sync with the doc.
+
+**Restate only what you must know before you know to look it up.** A
+creation-time obligation qualifies: nothing prompts you, so a session that
+has not met the rule will not go looking, and a pointer cannot save it. Name
+those in one line and point to the detail. Everything you would naturally go
+and look up — how a label is spelled, which of two values applies, a
+procedure you know exists — is a pointer, always. Adding a paragraph because
+one specific thing went wrong once is how this file stops being read.
+
+Verify against the running CLI or the repo before writing, keep the register
+terse, and do not duplicate `docs/bd-workflow.md`, the `beads` skill, or
+`bd prime` output. Say in one line what changed.

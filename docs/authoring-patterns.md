@@ -190,9 +190,10 @@ copy is stale from the next build.
 ## Rename + stale-prose sweep
 
 When a PR renames or removes an API surface (function, method, event,
-class, mechanism, named threshold) OR substantively changes the
-**semantics** of code in a folder, treat it as a sweep, not just a
-refactor.
+class, mechanism, named threshold), substantively changes the
+**semantics** of code in a folder, OR **moves a file or a README section
+into a new folder** (the § Folder READMEs split), treat it as a sweep,
+not just a refactor.
 
 1. `grep -rn "<old-name>" .` (skip `node_modules`, `.git`, `public/`)
    and triage every hit.
@@ -212,6 +213,15 @@ refactor.
    precision) need to be paste-computed themselves.
 6. `RELEASING.md` classifies version bumps. A user-visible behaviour
    change is at minimum a minor bump even if the diff is small.
+7. **A folder split's real cost is its inbound refs.** `typecheck`
+   rewrites every import and proves nothing about prose. Grep the moved
+   file's basename and every moved `## Heading` across `*.md` + `*.ts`,
+   and repoint each hit at where the content now lives. Leaving the old
+   heading behind as a pointer does not discharge this: the ref resolves,
+   the claim it was attached to is gone, and a comment quoting the moved
+   sentence now cites a file that no longer contains it. Verify the
+   heading a `§` names actually exists — a **bolded bullet** is not a
+   heading, and refs to one dangle silently from the day they are written.
 
 No test catches stale prose; the next reader is misled.
 

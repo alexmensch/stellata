@@ -90,7 +90,7 @@ carried brightness any more. `sizeMin`/`sizeMax` were K's pixel projection
 at the current viewport, so authoring them contradicted the `TARGET_PX`
 invariant above; and "Dynamic range" was never display dynamic range but
 the magnitude *window* of the footprint curve, colliding by name with the
-tone-map's `DR_MAG`, which is the real lever (`../hdr/README.md`
+tone-map's `DR_MAG`, which is the real lever (`../hdr/tonemap/README.md`
 § Operator).
 
 **The multiplier stayed where those two went, because it is

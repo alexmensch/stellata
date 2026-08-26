@@ -59,7 +59,7 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   contour width, alpha floor, `MIN_FWIDTH`), for the same reason.
 - `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
   those modules, since GLSL cannot import. The output dither's seed offset
-  and 8-bit divisor are pinned here too, against `../hdr/tonemap-pure.ts`,
+  and 8-bit divisor are pinned here too, against `../hdr/tonemap/tonemap-pure.ts`,
   which owns them for every layer that dithers.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).

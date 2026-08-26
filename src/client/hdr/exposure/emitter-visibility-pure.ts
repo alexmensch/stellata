@@ -3,7 +3,7 @@
 // the operator. See README.md § What "visible" means to a pick path.
 
 import { pointSourcePeakLuminance } from '../emission/emission-pure';
-import { displayLevel } from '../tonemap-pure';
+import { displayLevel } from '../tonemap/tonemap-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 
 /** Half an 8-bit output step: an encoded level under this rounds to

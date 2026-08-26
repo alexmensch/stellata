@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { builtinChromeLineMaterials as chromeLines } from '../chrome-lines/builtin-chrome-lines';
 import { boundaryArtifactFixture } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import type { ScreenMetricUniforms } from '../util/orbit-line';
@@ -29,7 +30,7 @@ function sharedUniforms(): ScreenMetricUniforms {
 }
 
 function attached(limitMag = 6): ConstellationBoundaryLayer {
-  const layer = new ConstellationBoundaryLayer(sharedUniforms());
+  const layer = new ConstellationBoundaryLayer(sharedUniforms(), chromeLines());
   layer.attach(ARTIFACT, limitMag);
   return layer;
 }
@@ -41,7 +42,7 @@ function positionsOf(layer: ConstellationBoundaryLayer): Float32Array {
 
 describe('ConstellationBoundaryLayer', () => {
   it('draws nothing before the artifact resolves', () => {
-    const layer = new ConstellationBoundaryLayer(sharedUniforms());
+    const layer = new ConstellationBoundaryLayer(sharedUniforms(), chromeLines());
     layer.update(ORIGIN, 0);
     expect(layer.group.visible).toBe(false);
     expect(layer.group.children.length).toBe(0);
@@ -94,7 +95,7 @@ describe('ConstellationBoundaryLayer', () => {
 
   it('follows a FOV change — zooming in must not stretch the dots', () => {
     const shared = sharedUniforms();
-    const layer = new ConstellationBoundaryLayer(shared);
+    const layer = new ConstellationBoundaryLayer(shared, chromeLines());
     layer.attach(ARTIFACT, 6);
     layer.update(ORIGIN, 0);
     const wide = (layer.group.children[0] as THREE.LineSegments)
@@ -144,7 +145,7 @@ describe('ConstellationBoundaryLayer', () => {
   // recorded the limit, attach's own seeding call reads as unchanged and the
   // layer never gets a window.
   it('survives a magnitude push that arrives before the artifact', () => {
-    const layer = new ConstellationBoundaryLayer(sharedUniforms());
+    const layer = new ConstellationBoundaryLayer(sharedUniforms(), chromeLines());
     layer.setMagnitudeLimit(8);
     layer.attach(ARTIFACT, 8);
     layer.update(ORIGIN, 0);

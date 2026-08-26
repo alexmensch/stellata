@@ -208,12 +208,11 @@ data/     Reference inputs. Per-source subfolders; LFS coverage
           frozen-external-data policy + per-source orientation.
 public/   Generated artifacts (gitignored). Built from scripts/+data/.
 src/      Worker entry (worker.ts) + client. src/client/ has one
-          subfolder per subsystem (solar-system/, local-group/,
-          milkyway/, galactic/, molecular-clouds/, chart-mode/,
-          star-pipeline/, hover/, focus-card/, format/, overlays/,
-          camera/, filters/, scene/, poi/, ui/, typeahead/, modals/,
-          debug/, util/, loaders/, dust/, binaries/, render-gate/) —
-          each with its own README.
+          subfolder per subsystem (solar-system/, local-group/, milkyway/,
+          galactic/, molecular-clouds/, chart-mode/, star-pipeline/, hover/,
+          focus-card/, format/, overlays/, camera/, filters/, scene/, poi/,
+          ui/, typeahead/, modals/, debug/, util/, loaders/, dust/, binaries/,
+          chrome-lines/, render-gate/) — each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default to "find the

@@ -33,14 +33,10 @@ src/client/hdr/
                              every one of them goes through, and what may
                              write the statistic, in what unit — its own
                              README.
-  tonemap.glsl               The operator as a shared chunk. Consumed by
-                             tonemap.frag.glsl and inline by each
-                             emitting shader when the target isn't bound.
-  tonemap.frag.glsl          The fullscreen resolve. Pairs with
-                             ../util/fullscreen-pass.vert.glsl.
-  tonemap-pure.ts (+ test)   CPU mirror of tonemap.glsl plus the exact
-                             inverse. Vitest-pinned against the design
-                             doc's worked values.
+  tonemap/                   The operator: the shared chunk, the
+                             fullscreen resolve, the CPU mirror + exact
+                             inverse, and the two shape knobs — its own
+                             README (§ Operator).
   emission/                  The unit an emitting layer writes in:
                              magnitude → luminance, the point-source peak
                              rule, the two solid angles and the footprint
@@ -198,53 +194,10 @@ why the laziness below is load-bearing rather than tidy.
 
 ## Operator
 
-Faint-end toe, then luminance-domain extended Reinhard, hue-preserving,
-then highlight desaturation, then sRGB encode, then dither — all in
-`stellata_tonemap` so the fullscreen pass and the fallback path can never
-drift (the `stellata_dust_raymarch` two-consumers pattern).
-
-| Constant | Default | Role |
-| --- | --- | --- |
-| `L_THRESH` | 0.02 | display luminance of a source at the magnitude limit |
-| `DR_MAG` | 7.5 | magnitudes of range from threshold to full white |
-| `HIGHLIGHT_DESAT` | 0.35 | strength of the mix toward white above the knee |
-| `TOE_BLACK_MAG` | 1.5 | magnitudes under threshold at which the toe lands on black |
-
-`tonemapWhitePoint()` = `L_THRESH · 10^(0.4·DR_MAG)` = **20**, and
-`reinhardExtended(20, 20) = 1` exactly — a source `DR_MAG` magnitudes
-brighter than the threshold lands on full white by construction. At the
-gentle end, `L = L_THRESH` resolves to 0.15 of full scale after encode.
-
-**The toe is the detection rolloff below threshold** — identity at and
-above `L_THRESH`, so every anchor holds, and it leaves the knee with
-**slope 1** (C1): a source `m` magnitudes under threshold displays
-`m + TOE_CURVATURE·m²` magnitudes under it, the coefficient derived so
-exactly `TOE_BLACK_MAG` under lands on half an 8-bit step. The C1 knee
-is load-bearing, not taste: the first cut was a fixed-exponent power
-(slope 3.5 at the knee), and that kink projected a visible isophote
-onto every smooth gradient crossing threshold — hard-edged molecular
-clouds, banded EV sweeps. Sub-threshold light no longer
-renders at its near-linear Reinhard value; the Milky Way pole is the
-motivating case (`../milkyway/calibration/README.md` § The gradient this
-produces).
-Exactly invertible, and `inverseTonemapConstant` composes the inverse so
-dark-authored chrome round-trips (`chrome/README.md`). The design
-argument — and why a rendered sky-background pedestal was rejected — is
-`docs/science-hdr-pipeline.md` § 2.
-
-Two testing consequences of what `docs/science-hdr-pipeline.md` § 2 says
-about hue and clipping: hue survival is pinned in `tonemap-pure.test.ts`,
-and end-to-end luminance preservation above the knee is **not** a property
-of the pipeline, so don't assert it — desaturation is luminance-neutral
-pre-clamp only.
-
-**`stellataTonemapUndithered` is the variant an overlapping emitter
-wants.** The dither is a function of `fragCoord` alone, so it is the
-same offset for every fragment landing on a pixel; N additively-blended
-star quads would add it N times — a coherent brightness bias over dense
-fields, not noise that cancels. Anything covering each pixel once (the
-resolve, a fullscreen volume) wants the dithered `stellataTonemap`.
-`tonemap-pure.ts` mirrors the undithered variant.
+The transfer function itself — the faint-end toe, the extended Reinhard,
+the constants table, the exactly-invertible round trip chrome depends on,
+and the two shape knobs — is **`tonemap/README.md`**, along with the chunk,
+the resolve shader and the CPU mirror.
 
 ## Chrome — non-physical layers keep their authored look
 
@@ -348,9 +301,10 @@ deliberate edit.
 
 ## Dev switches
 
-- `stellata.hdr.setTonemapEnabled(false)` — keeps the target bound but makes
-  the resolve straight pass-through, isolating the target itself (depth,
-  alpha, blend precision, pass order) from the operator.
+The target's own levers. The operator's — `setTonemapEnabled` and the two
+shape knobs, plus what pass-through does and does not reproduce — are
+`tonemap/README.md` § Operator knobs.
+
 - `stellata.hdr.setStatisticWritesEnabled(false)` — masks attachment 1 out of
   every emitter draw while the clear keeps writing it, so the statistic reads
   zero rather than stale and the reduction keeps running over an empty
@@ -370,57 +324,6 @@ deliberate edit.
   `reduction.fenceWhileParked` across it, as the chart park does) and every
   diffuse write discards, so the band and the Local Group vanish for the
   span. Reallocates the target both ways. Frame-cost lever.
-- `stellata.hdr.setDynamicRangeMag(x)` / `stellata.hdr.setHighlightDesat(x)` — the
-  operator's two shape knobs, live, for probing the display axis by eye.
-  Both route through `syncMode`, which is what re-authors every chrome
-  colour against the new white point (`chrome/README.md`). Both are also
-  sliders on the panel's Exposure section
-  (`exposure/README.md` § Debug panel), and `DR_MAG` reaches the display
-  floor from there — the floor is derived from the white point.
-
-**What `DR_MAG` does and does not buy.** Extended Reinhard is
-`L(1 + L/Lw²)/(1 + L)`, already at 0.95 of full scale by `L` = 20
-*whatever* `Lw` is — so raising `DR_MAG` buys hue survival at the top end
-and almost no visible gradient. Detail up there needs a longer
-**shoulder**, and any replacement must stay analytically invertible
-because `chrome/` inverts it; a piecewise log shoulder is the shape to
-reach for.
-
-**Pass-through shows the scene blown out, and that is the point of it** —
-`uHdrTarget` stays 1, so every emitter writes raw linear `L` (tens to
-thousands) and the resolve hands it to an 8-bit canvas unchanged.
-
-**It also cannot reproduce built-in-material chrome, by construction.**
-What disables their `colorspace_fragment` encode is the target's linear
-colour space, not the resolve — so with the operator parked,
-`LineBasicMaterial` / `LineMaterial` chrome (grids, orbit paths, the
-constellation figure) renders un-encoded and therefore dark. No resolve
-setting fixes it: a single fullscreen pass can't both encode and not
-encode. Custom-shader chrome *is* exact. There is no whole-frame comparison
-to fall back on any more — § Fallback says why the one that existed was
-worse than nothing.
-
-**Chrome line work reads brighter through the seam than authored, and that
-is not a bug.** § Chrome's inverse mapping is exact only for *a lone
-full-alpha fragment over black*, and line work is neither — antialiased edges
-are partial-alpha and lines cross each other — so the round trip lands on the
-bright side. The shift on thin line work is plainly visible, nothing
-downstream depends on it, and no resolve setting fixes it.
-
-Pass-through is not bit-identical to a pre-HDR build, for two further
-reasons worth knowing before chasing a diff:
-
-- Blending intermediates no longer round-trip through 8 bits, so faint
-  gradients differ by up to a quantisation step.
-- Additive accumulation clamped at 1.0 per draw on the canvas; in fp16
-  it accumulates past 1.0 and clamps once at the resolve. Additive and
-  max blends are unaffected (both are clamp-commutative), but a
-  region that additively saturated to white *before* a later
-  alpha-blended draw composites differently.
-
-Two inherent limits on the chrome mapping — exactness only for a lone
-full-alpha fragment over black, and linear-space blending — are
-`chrome/README.md`'s.
 
 Perf rows: `submit.tonemap` (CPU submission) and, where the driver
 exposes a timer query, `gpu.tonemap` — see `../debug/README.md`
@@ -431,7 +334,8 @@ convolution's taps, since `resolve()` runs them.
 ## Not here yet
 
 `DR_MAG` and the desaturation strength are on the panel as well as the
-dev console (§ Dev switches); `L_THRESH` and the extended-source threshold
+dev console (`tonemap/README.md` § Operator knobs); `L_THRESH` and the
+extended-source threshold
 appear there as **readouts, never sliders** — `L_THRESH` is the unit's own
 anchor, so a slider on it would move every layer's calibration with it
 (`exposure/README.md` § Debug panel). **`DR_MAG` has no leverage

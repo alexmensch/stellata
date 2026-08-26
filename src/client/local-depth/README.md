@@ -152,14 +152,14 @@ Live providers:
   and any resolved-disc star near the camera; plus
   `BinaryOrbitPathLayer` ellipses and their extent spheres.
 
-**The three LINE layers are parked on a WebGPU boot** — orbit rings,
-binary orbit paths, probe trails. `LineBasicMaterial` cannot create a
-WGSL pipeline against the HDR target's three attachments, and one
-invalid pipeline poisons the whole pass submit, so `stellata.ts`
-removes those groups from the pass scene there. They draw nowhere on
-that boot: their main-pass copies live in the shell scene, which a
-WebGPU boot never renders. Un-parked by the TSL line material
-(`stellata-0it.27`); the extent spheres they contribute are unaffected.
+**The three LINE layers take their strokes from the chrome line seam**
+— orbit rings, binary orbit paths, probe trails
+(`../chrome-lines/README.md`). A built-in `LineBasicMaterial` cannot
+create a WGSL pipeline against the HDR target's three attachments, and
+one invalid pipeline poisons the whole pass submit, so on a WebGPU boot
+those three groups were removed from the pass scene outright until the
+seam gave them a fragment that declares all three outputs. A new line
+layer in this pass must come through it.
 
 ## Pass composition rules
 

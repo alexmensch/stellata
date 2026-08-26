@@ -12,7 +12,7 @@ import {
   thresholdMagFor,
 } from './exposure-epoch';
 import { luminanceForMagnitude } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap-pure';
+import { L_THRESH } from '../tonemap/tonemap-pure';
 import {
   DEFAULT_FILTER,
   instrumentLimitMag,

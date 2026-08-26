@@ -10,7 +10,7 @@ import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay'
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
 import { createClickRipple } from './overlays/click-ripple';
-import { createPlanetLabels } from './solar-system/planets/planet-labels';
+import { createPlanetLabels } from './solar-system/planets/labels/planet-labels';
 import { buildKindModules, KIND_ROSTER, loadKindModules } from './kinds/kind-modules';
 import type { KindLoadProgress } from './kinds/kind-module';
 import { createScaleBar } from './ui/scale-bar';

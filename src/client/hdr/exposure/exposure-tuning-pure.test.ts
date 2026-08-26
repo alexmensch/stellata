@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tonemapWhitePoint } from '../tonemap-pure';
+import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import {
   type ExposureReadout,
   formatExposureReadout,

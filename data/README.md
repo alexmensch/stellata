@@ -15,6 +15,7 @@ this file carries only the cross-folder policies.
 | [`bailer-jones/`](bailer-jones/README.md) | Bailer-Jones 2021 Bayesian distance posteriors. |
 | [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis. |
 | [`hipparcos/`](hipparcos/README.md) | Hipparcos CCDM cross-reference + HIP2 reduction. |
+| [`tycho2/`](tycho2/README.md) | Tycho-2 mean positions + per-star mean epochs, PM, BT/VT — the first-order source for TYC-bearing rows Gaia misses. |
 | [`gcvs/`](gcvs/README.md) | GCVS 5.1 variable-star catalogue + cross-IDs. |
 | [`wds/`](wds/README.md) | Washington Double Star + ORB6 visual binary orbits. |
 | [`msc/`](msc/README.md) | Pulkovo MSC (Tokovinin) multiple-star hierarchies, orbits, per-component data. |
