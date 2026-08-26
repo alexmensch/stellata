@@ -24,9 +24,12 @@ authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
 bd-workflow.md          Long-form bd procedures that fire on a trigger
                         rather than in every session: memory + bead
                         grooming passes, the bug-sweep handoff format,
-                        and label/metadata/external-ref conventions.
-                        Reached from the stellata-beads skill, which
-                        carries the everyday bd facts.
+                        label/metadata/external-ref conventions, the
+                        model-routing labels, and how to choose a new
+                        bead's parent epic. Reached from the
+                        stellata-beads skill, which names the
+                        creation-time obligations and points here for
+                        which value applies.
 extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         epic: per-tier data inventory (Local Volume →
                         CMB), cosmology bake, manifest schema, naming
