@@ -78,6 +78,25 @@ export interface ParkArgs {
   fovMinorRad: number;
 }
 
+// Closest the manual-zoom floor may sit to the body's centre, as a
+// multiple of its radius. Above fovMinor ≈ 100° the ZOOM_FLOOR_FRACTION
+// solve returns d < R — filling 90 % of the minor axis is simply
+// unachievable from outside the body — and the FOV slider reaches 120°,
+// where the bare solve lands at 0.727 R, inside the surface.
+export const ORBIT_FLOOR_SURFACE_MARGIN = 1.05;
+
+// The manual-zoom floor: the ZOOM_FLOOR_FRACTION fill solve, held
+// outside the surface. Both hard-kind floors share it. Deliberately not
+// pushed down into distAtFillFraction — the 30 %-fill park solve is
+// already outside the surface at every reachable FOV and must keep
+// returning the bare angular distance.
+function orbitFloorAtFill(R_pc: number, fovMinorRad: number): number {
+  return Math.max(
+    distAtFillFraction(R_pc, fovMinorRad, ZOOM_FLOOR_FRACTION),
+    R_pc * ORBIT_FLOOR_SURFACE_MARGIN,
+  );
+}
+
 // Manual-zoom floor for TrackballControls when a star is focused. The
 // camera can orbit down to where the focused star's true angular disc
 // fills ZOOM_FLOOR_FRACTION of the viewport's minor axis — same on-
@@ -89,7 +108,7 @@ export interface ParkArgs {
 export function minOrbitDistForStar(args: ParkArgs): number {
   const R = Math.max(args.catalog.physicalRadius[args.idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
-  return distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
+  return orbitFloorAtFill(Reff, args.fovMinorRad);
 }
 
 // Auto-park target — composed from the generic `parkDistance` primitive
@@ -100,8 +119,7 @@ export function minOrbitDistForStar(args: ParkArgs): number {
 export function parkDistForStar(args: ParkArgs): number {
   const R = Math.max(args.catalog.physicalRadius[args.idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const Reff = R * peakAmplitudeFactor(args.catalog, args.idx);
-  const dMinFloor = distAtFillFraction(Reff, args.fovMinorRad, ZOOM_FLOOR_FRACTION);
-  return parkDistance({ R_pc: Reff, dMinFloor });
+  return parkDistance({ R_pc: Reff, dMinFloor: orbitFloorAtFill(Reff, args.fovMinorRad) });
 }
 
 // Screen-fill fraction of the viewport minor axis at a focused planet's
@@ -115,7 +133,7 @@ export const PLANET_PARK_FILL_FRACTION = 0.3;
 // as minOrbitDistForStar, keyed on the body's equatorial radius (~2.4 R
 // at the default FOV; ~15 000 km camera-to-centre for Earth).
 export function minOrbitDistForPlanet(radiusPc: number, fovMinorRad: number): number {
-  return distAtFillFraction(radiusPc, fovMinorRad, ZOOM_FLOOR_FRACTION);
+  return orbitFloorAtFill(radiusPc, fovMinorRad);
 }
 
 // Auto-park target for a focused planet (~7.6 R at the default FOV —

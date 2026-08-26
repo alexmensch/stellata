@@ -32,8 +32,8 @@ export const OBSERVE_TRANSITION_MS = 1800;
 // blob quantises its `fov` field over the same interval (that field table
 // is frozen per schema version, so it carries the bounds as literals by
 // design and must not be rewired to these constants). A wider FOV lowers
-// every angular zoom floor, so `CAMERA_NEAR_PC` is validated against
-// `FOV_MAX_DEG`.
+// every angular zoom floor until the surface clamp binds at ~100°, so
+// `CAMERA_NEAR_PC` is validated against `FOV_MAX_DEG`.
 export const FOV_MIN_DEG = 10;
 export const FOV_MAX_DEG = 120;
 

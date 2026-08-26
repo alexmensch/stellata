@@ -138,9 +138,11 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 1. **Manual-zoom floor** — `controls.minDistance =
    minOrbitDistForStar(idx)`. Solves for `d` such that the disc fills
-   `ZOOM_FLOOR_FRACTION` (= 0.9) of the viewport's minor axis:
+   `ZOOM_FLOOR_FRACTION` (= 0.9) of the viewport's minor axis, held
+   outside the body's own surface:
    ```
-   d_min = R / tan(ZOOM_FLOOR_FRACTION × fov_minor / 2)
+   d_min = max(R / tan(ZOOM_FLOOR_FRACTION × fov_minor / 2),
+               R × ORBIT_FLOOR_SURFACE_MARGIN)
    ```
    `fov_minor = min(fov_x, fov_y)` so the 90% target reads consistently
    across portrait + landscape viewports. The rule is uniform across
@@ -149,6 +151,24 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    Sirius, or any multiple system without the controls bouncing.
    `d_min` scales linearly with the star's physical radius — inspecting
    a Sol-class star vs Betelgeuse vs Sirius B looks the same on screen.
+
+   **The surface clamp is not decoration.** The bare solve drops below
+   `R` as soon as `tan(0.45 × fov_minor) > 1`, i.e. above `fov_minor ≈
+   100°` — past that, filling 90 % of the minor axis is unachievable
+   from outside the body at all, and the solve answers with the
+   mathematically correct interior distance. The FOV slider reaches
+   `FOV_MAX_DEG = 120°`, where the bare solve is `0.727 R`: the camera
+   zooms inside a focused Jupiter. `ORBIT_FLOOR_SURFACE_MARGIN` (= 1.05)
+   is the shared clamp both hard-kind floors take, and `d_min` becomes
+   FOV-invariant above the crossover. Both the auto-park solves stay
+   outside it at every reachable FOV (`star-physics.test.ts` sweeps the
+   whole slider), and the near-plane margin it leaves is pinned by
+   `../depth-range.test.ts`.
+
+   The clamp deliberately lives in the floor wrappers, **not** in
+   `distAtFillFraction` — the 30 %-fill planet park solve is outside the
+   surface at every reachable FOV (~3.1 R even at 120°) and must keep
+   returning the bare angular distance.
 
 2. **Auto-park target** — `parkDistForStar(idx)`: where the camera
    automatically lands. Used by:
@@ -173,7 +193,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    ```
    parkDistForStar = max(AU_PC + Reff, dMinFloor)
      Reff       = R_pc · peakAmplitudeFactor       (handles variables)
-     dMinFloor  = distAtFillFraction(Reff, fov_minor, ZOOM_FLOOR_FRACTION=0.9)
+     dMinFloor  = minOrbitDistForStar's surface-clamped 0.9-fill solve
    ```
    Sol parks at ~1.005 AU (just outside Earth's orbit); a supergiant
    parks at the 90 %-fill clamp.

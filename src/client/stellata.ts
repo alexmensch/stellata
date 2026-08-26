@@ -2266,9 +2266,9 @@ export class Stellata implements FrameAnchor {
     this.hdr.syncSize();
     this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.sharedUniforms.uViewport.value.set(w, h);
-    // Aspect change → fov_minor moves → orbit floor needs a refresh while
-    // a star is focused. (FOV-only changes go through setCameraFov, which
-    // does its own recompute.)
+    // Aspect change → fov_minor moves → the focused object's orbit floor
+    // needs a refresh, whatever its kind. (FOV-only changes go through
+    // setCameraFov, which does its own recompute.)
     this.focus.refreshOrbitFloor();
     this.syncPixelSolidAngle();
     // Recompute pixel sizes from the instrument's plate scale so

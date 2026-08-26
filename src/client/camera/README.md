@@ -34,11 +34,14 @@ aligned across controllers.
 
 `depth-range.test.ts` pins the near/far configuration — a numeric
 invariant no formula enforces. The binding constraint is the **smallest
-focusable body**: Mimas parks only ~4.7× above `CAMERA_NEAR_PC` at
-`FOV_MAX_DEG`. A moon ~4× smaller, or a wider `FOV_MAX_DEG`, puts a
-focused body on the clip plane where it vanishes at max zoom. That
-margin is thinner than the `1e-12` value suggests — check the test
-before moving either constant.
+focusable body**: Mimas parks only ~6.7× above `CAMERA_NEAR_PC` at
+`FOV_MAX_DEG`, where the floor is the `ORBIT_FLOOR_SURFACE_MARGIN`
+clamp rather than the fill solve (`controls/README.md` § Manual-zoom
+floor). A moon ~6× smaller, or dropping that clamp, puts a focused body
+on the clip plane where it vanishes at max zoom. Widening `FOV_MAX_DEG`
+no longer thins the margin — the clamp is FOV-invariant. That margin is
+thinner than the `1e-12` value suggests — check the test before moving
+either constant.
 
 The near plane also **decides** one focus kind's park outright rather
 than merely bounding it: a probe has no disc to solve against, so its

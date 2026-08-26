@@ -16,8 +16,10 @@ import {
   renderedDiscPxAtPeak,
   getChartDiscParams,
   ZOOM_FLOOR_FRACTION,
+  ORBIT_FLOOR_SURFACE_MARGIN,
 } from './star-physics';
 import { R_SUN_PC, AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { FOV_MIN_DEG, FOV_MAX_DEG } from '../timing';
 
 function makeCatalog(
   n: number,
@@ -483,5 +485,52 @@ describe('star-physics / planet park + orbit floor', () => {
     const earth = parkDistForPlanet(RADIUS_PC, FOV_MINOR);
     const jupiter = parkDistForPlanet(RADIUS_PC * 10.97, FOV_MINOR);
     expect(jupiter / earth).toBeCloseTo(10.97, 9);
+  });
+});
+
+describe('star-physics / orbit-floor surface clamp', () => {
+  const RADIUS_PC = 71492 * KM_PC; // Jupiter — the reported repro body
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  // tan(0.45 · fovMinor) = 1 exactly here, so the bare solve returns R.
+  const CROSSOVER_DEG = 100;
+
+  const catalog = makeCatalog(1, c => { c.physicalRadius[0] = 1; });
+  const starFloorRatio = (fovDeg: number) =>
+    minOrbitDistForStar({ catalog, idx: 0, fovMinorRad: rad(fovDeg) }) / R_SUN_PC;
+
+  it('leaves the solve untouched below the crossover', () => {
+    expect(minOrbitDistForPlanet(RADIUS_PC, rad(50)) / RADIUS_PC).toBeCloseTo(2.414, 3);
+    expect(starFloorRatio(50)).toBeCloseTo(2.414, 3);
+  });
+
+  it('holds the floor off the surface at the crossover, where the bare solve lands on it', () => {
+    expect(RADIUS_PC / Math.tan(ZOOM_FLOOR_FRACTION * rad(CROSSOVER_DEG) * 0.5) / RADIUS_PC)
+      .toBeCloseTo(1, 12);
+    expect(minOrbitDistForPlanet(RADIUS_PC, rad(CROSSOVER_DEG)) / RADIUS_PC)
+      .toBe(ORBIT_FLOOR_SURFACE_MARGIN);
+  });
+
+  it('holds the floor outside the surface at FOV_MAX_DEG (bare solve: 0.727 R)', () => {
+    expect(RADIUS_PC / Math.tan(ZOOM_FLOOR_FRACTION * rad(FOV_MAX_DEG) * 0.5) / RADIUS_PC)
+      .toBeCloseTo(0.727, 3);
+    expect(minOrbitDistForPlanet(RADIUS_PC, rad(FOV_MAX_DEG)) / RADIUS_PC)
+      .toBe(ORBIT_FLOOR_SURFACE_MARGIN);
+    expect(starFloorRatio(FOV_MAX_DEG)).toBeCloseTo(ORBIT_FLOOR_SURFACE_MARGIN, 12);
+  });
+
+  it('never lands inside the surface anywhere on the slider', () => {
+    for (let deg = FOV_MIN_DEG; deg <= FOV_MAX_DEG; deg++) {
+      expect(minOrbitDistForPlanet(RADIUS_PC, rad(deg))).toBeGreaterThan(RADIUS_PC);
+      expect(starFloorRatio(deg)).toBeGreaterThan(1);
+    }
+  });
+
+  it('keeps the auto-park solves outside the clamped floor at every FOV', () => {
+    for (let deg = FOV_MIN_DEG; deg <= FOV_MAX_DEG; deg++) {
+      expect(parkDistForPlanet(RADIUS_PC, rad(deg)))
+        .toBeGreaterThan(minOrbitDistForPlanet(RADIUS_PC, rad(deg)));
+      expect(parkDistForStar({ catalog, idx: 0, fovMinorRad: rad(deg) }))
+        .toBeGreaterThanOrEqual(minOrbitDistForStar({ catalog, idx: 0, fovMinorRad: rad(deg) }));
+    }
   });
 });
