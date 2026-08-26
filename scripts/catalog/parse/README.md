@@ -330,7 +330,7 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 ## Physical radius and spectral parsing
 
 `resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a five-tier
+`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
 priority chain:
 
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
@@ -351,22 +351,45 @@ priority chain:
    Gaia-saturated bright stars (Algol, Alsephina, Betelgeuse, Rigel, Vega,
    Arcturus, ~700 others) whose SIMBAD row has a valid MK type but **no
    Gaia source_id**, so tier 1's source_id key misses them. `parseSimbadSptypeTsv`
-   indexes every row under whichever of source_id / HIP it carries; this
-   tier looks up the star's HIP. Without it the radius chain runs the cool
+   indexes every row under every namespace it carries, throwing rather than
+   picking a winner if a key ever repeats; this tier looks up the star's HIP. Without it the radius chain runs the cool
    unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
    12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
    over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
-3. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+3. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
+   SIMBAD holds no Gaia id and no HIP for, which is exactly the population
+   the values pull's TYC widening exists for. Same ladder
+   `lookupSimbadValues` walks (`../simbad-values-parse.ts`), and the same
+   caveat: a TYC names the Tycho entry, which for a close pair is the
+   system rather than the component. What reaches the file is already
+   adjudicated — the pull vetoes a widened binding SIMBAD's own Gaia
+   cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
+   widening carries its own veto) — so the risk this tier carries is a
+   system-blend spectral type on an unvetoed pair, never a wrong star.
+   Reaches **1,940** records.
+4. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
+   (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
+   key. It closes the ladder against `lookupSimbadValues`, which walks the
+   same four namespaces; it is last because the pull's `gj` block is small
+   (3,727 keys against TYC's 317,487) and reaches only **13** records the
+   TYC tier does not. Unlike TYC, a GJ number carries its component letter,
+   so it names the component rather than the system.
+
+   Which namespace found each SIMBAD-tier row is pinned as
+   `spectralSimbadBySourceId` / `ByHip` / `ByTyc` / `ByGj`, summing to
+   `spectralBySimbad` — so a tier that stops firing shows up as its own
+   count rather than as noise inside a 280k total.
+5. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
-4. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
+6. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
    `lumClass=255` for rows no upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts: ~89% SIMBAD / ~11% GSP-Spec / ~0.4% fallback
-against the v3.3 classic-IDs subset); it is still used as a last-resort
-hover-display fallback when both upstream sources are blank.
+classification (build-counts: ~89.5% SIMBAD / ~10.1% GSP-Spec / ~0.3%
+fallback against the v3.3 classic-IDs subset); it is still used as a
+last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
 

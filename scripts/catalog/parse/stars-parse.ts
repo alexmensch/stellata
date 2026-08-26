@@ -25,8 +25,12 @@ import {
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
+  SIMBAD_NAMESPACE_VALUES,
+  emptySimbadSpectralIndex,
   type ApsisRow,
   type DistSrcPartition,
+  type SimbadNamespace,
+  type SimbadRecordKeys,
   type SimbadSpectralIndex,
 } from '../catalog-pure';
 import {
@@ -118,6 +122,10 @@ export interface Star {
   hr: number | null;
   flam: number | null;
   gl: string | null;
+  /** Tycho-2 designation. Build-time only — never written to the binary; it
+   *  exists so a record reaches the SIMBAD TYC namespace, the largest of the
+   *  four and the only one covering objects SIMBAD holds no Gaia id for. */
+  tyc: string | null;
   gaiaSourceId: string | null; // Gaia DR3 source_id as decimal string; >2^53, never coerce to number
   spectDisplay: string | null; // cleaned-up spectral string for tooltip display
   companionIdx: number;     // assigned later in inferBinaries; -1 = none
@@ -209,7 +217,7 @@ export function readStars(
   {
     conAssignment,
     bjMap = new Map(),
-    simbadSpectral = { bySource: new Map(), byHip: new Map() },
+    simbadSpectral = emptySimbadSpectralIndex(),
     simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
     gspcMap = new Map(),
@@ -251,6 +259,7 @@ export function readStars(
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
+    spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found that row
     spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
@@ -291,6 +300,7 @@ export function readStars(
   let rvRadialRejected = 0;
   const rvRadialRejectedSample: string[] = [];
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
+  const spectralSimbadKey = emptyTallyPartition(SIMBAD_NAMESPACE_VALUES);
   let ciGspcValidatedRange = 0;
   let rvApplied = 0;
   let velocityClamped = 0;
@@ -333,12 +343,13 @@ export function readStars(
     // Radial velocity through Gaia DR3 → bibcoded SIMBAD, feeding the
     // space-motion velocity's radial term.
     // See ../distance/radial-velocity/README.md.
-    const simbadRow = lookupSimbadValues(simbadValues, {
+    const simbadKeys: SimbadRecordKeys = {
       sourceId: gaiaSourceId,
       hip,
       tyc: nonEmpty(row.tyc),
       gl: nonEmpty(row.gl),
-    });
+    };
+    const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity(gaiaRow, simbadRow?.rv ?? null);
     // A radial term past the sanity ceiling on its own is rejected here rather
     // than left to the whole-vector clamp below, which would drop the row's
@@ -489,12 +500,13 @@ export function readStars(
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
     const spectral = isSol
       ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
-      : resolveSpectralInfo(gaiaSourceId, hip, simbadSpectral, apsisMap);
+      : resolveSpectralInfo(simbadKeys, simbadSpectral, apsisMap);
     const spectInfo = spectral.info;
     if (spectral.source === 'curated') spectralByCurated++;
     else if (spectral.source === 'simbad') spectralBySimbad++;
     else if (spectral.source === 'gspspec') spectralByGspspec++;
     else spectralFallback++;
+    if (spectral.simbadKey !== undefined) spectralSimbadKey[spectral.simbadKey]++;
     const apsisTeff = resolveApsisTeff(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
@@ -544,7 +556,6 @@ export function readStars(
     const flam = parseIntOrNull(row.flam);
     const hd = parseIntOrNull(row.hd);
     const hr = parseIntOrNull(row.hr);
-    const gl = nonEmpty(row.gl);
     const spectDisplay = resolveSpectDisplay(spectral.spectDisplay, row.spect ?? '');
 
     let flags = 0;
@@ -565,7 +576,9 @@ export function readStars(
       // where a designation carries one; everything else reads `conIndex`.
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
-      proper, bayer, hip, hd, hr, flam, gl,
+      proper, bayer, hip, hd, hr, flam,
+      gl: simbadKeys.gl,
+      tyc: simbadKeys.tyc,
       gaiaSourceId,
       spectDisplay,
       companionIdx: -1,
@@ -609,6 +622,7 @@ export function readStars(
       rvApplied,
       spectralByCurated,
       spectralBySimbad,
+      spectralSimbadKey,
       spectralByGspspec,
       spectralFallback,
       ciVia,

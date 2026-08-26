@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import {
   emptySimbadValueIndex,
   lookupSimbadValues,
-  normaliseGjKey,
   parseSimbadValuesTsv,
 } from './simbad-values-parse';
 
@@ -126,23 +125,5 @@ describe('lookupSimbadValues', () => {
   it('answers null for a record no namespace reaches', () => {
     expect(lookupSimbadValues(index, { ...NO_KEYS, sourceId: 'absent', hip: 404 })).toBeNull();
     expect(lookupSimbadValues(emptySimbadValueIndex(), { ...NO_KEYS, hip: 11 })).toBeNull();
-  });
-});
-
-describe('normaliseGjKey', () => {
-  // The spine spells the catalogue word both ways and SIMBAD stores its own
-  // spacing; one folded key is what lets the two meet.
-  it('folds both catalogue words and SIMBAD spacing onto one key', () => {
-    expect(normaliseGjKey('Gl 165A')).toBe('165A');
-    expect(normaliseGjKey('GJ 165A')).toBe('165A');
-    expect(normaliseGjKey('165 A')).toBe('165A');
-    expect(normaliseGjKey('gj 9728 a')).toBe('9728A');
-  });
-
-  it('keeps a bare designation and rejects an empty cell', () => {
-    expect(normaliseGjKey('4246')).toBe('4246');
-    expect(normaliseGjKey('  ')).toBeNull();
-    expect(normaliseGjKey(null)).toBeNull();
-    expect(normaliseGjKey('GJ ')).toBeNull();
   });
 });

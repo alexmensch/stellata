@@ -1641,6 +1641,7 @@ function promoteRow(
     hr: null,
     flam: null,
     gl: null,
+    tyc: null,
     gaiaSourceId: companionGaia,
     spectDisplay: spectral.display,
     companionIdx: -1,
