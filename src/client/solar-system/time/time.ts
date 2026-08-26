@@ -83,18 +83,48 @@ export function nextRewindRate(rate: number): number {
   return rate === 1 ? -1 : rate / 2;
 }
 
-/** Epoch-ms → a zoneless `datetime-local` input value in **local** time:
- *  `2030-01-01T00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
+/** The jump field's format, for the input's placeholder and the README. */
+export const LOCAL_DATETIME_FORMAT = 'YYYY-MM-DD hh:mm:ss';
+
+/** Epoch-ms → a zoneless jump-field value in **local** time:
+ *  `2030-01-01 00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
 export function toLocalDatetimeValue(ms: number): string {
   const d = new Date(ms);
   const pad = (n: number): string => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const year = d.getFullYear();
+  const y = year < 0 ? `-${String(-year).padStart(4, '0')}` : String(year).padStart(4, '0');
+  return `${y}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-/** A `datetime-local` value (zoneless → **local** time) → epoch-ms, or NaN
- *  if unparseable. Sibling of `toLocalDatetimeValue`. */
+// Either separator, seconds optional. Anchored, and every field
+// fixed-width bar the year, so a partial entry can never look complete.
+const LOCAL_DATETIME_RE =
+  /^(-?\d{1,6})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+/** A zoneless jump-field value (→ **local** time) → epoch-ms, or NaN if it
+ *  isn't `LOCAL_DATETIME_FORMAT`. Sibling of `toLocalDatetimeValue`.
+ *
+ *  Strict on purpose: `new Date(value)` accepts far more than this field
+ *  means, and silently changes scale doing it — `new Date('2030')` is a
+ *  valid **UTC** instant, so a half-typed year would jump the clock to a
+ *  different moment than the one the same digits denote in every complete
+ *  entry. It also rejects `-2999-…`, and the clock's own range reaches
+ *  3000 BC. Building from components sidesteps both. */
 export function parseLocalDatetimeValue(value: string): number {
-  return new Date(value).getTime();
+  const m = LOCAL_DATETIME_RE.exec(value.trim());
+  if (m === null) return Number.NaN;
+  const [year, month, day, hour, minute] = m.slice(1, 6).map(Number);
+  const second = m[6] === undefined ? 0 : Number(m[6]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return Number.NaN;
+  if (hour > 23 || minute > 59 || second > 59) return Number.NaN;
+  const d = new Date(year, month - 1, day, hour, minute, second, 0);
+  // Years 0-99 are the Date constructor's 1900+ shorthand; the clock's
+  // range covers them, so undo it.
+  d.setFullYear(year, month - 1, day);
+  // A rolled-over day (31 April) means the date does not exist.
+  return d.getDate() === day && d.getMonth() === month - 1
+    ? d.getTime()
+    : Number.NaN;
 }
 
 /** Virtual clock behind `Stellata.getT()`. `getT() = simT0 + rate ·

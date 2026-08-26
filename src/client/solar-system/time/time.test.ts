@@ -15,6 +15,7 @@ import {
   tToJDE,
   tToJdTdb,
   toLocalDatetimeValue,
+  LOCAL_DATETIME_FORMAT,
 } from './time';
 
 describe('tToJDE', () => {
@@ -303,23 +304,88 @@ describe('model-clock clamp (Standish window)', () => {
   });
 });
 
-describe('datetime-local value round-trip', () => {
+describe('jump-field value round-trip', () => {
+  const nan = (v: string): boolean => Number.isNaN(parseLocalDatetimeValue(v));
+
   it('round-trips a whole-second instant through local encode/decode', () => {
-    // Any timezone: encode uses local getters, decode parses zoneless as
+    // Any timezone: encode uses local getters, decode reads zoneless as
     // local, so the round-trip is TZ-independent (down to whole seconds,
-    // which is all the datetime-local format carries).
+    // which is all the field's format carries).
     const ms = Date.UTC(2030, 0, 1, 12, 34, 56);
     expect(parseLocalDatetimeValue(toLocalDatetimeValue(ms))).toBe(ms);
   });
 
-  it('encodes as a zoneless YYYY-MM-DDTHH:mm:ss string (no trailing Z)', () => {
+  it('encodes as a zoneless YYYY-MM-DD hh:mm:ss string (no trailing Z)', () => {
     expect(toLocalDatetimeValue(Date.UTC(2030, 0, 1, 0, 0, 0))).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
     );
   });
 
+  it('round-trips a BC instant, which the native input never accepted', () => {
+    const d = new Date(0);
+    d.setFullYear(-2999, 5, 15);
+    d.setHours(4, 5, 6, 0);
+    expect(parseLocalDatetimeValue(toLocalDatetimeValue(d.getTime()))).toBe(d.getTime());
+  });
+
+  it('round-trips a year inside the Date constructor 1900+ shorthand band', () => {
+    // new Date(50, ...) is 1950; the clock's range covers year 50 itself.
+    const d = new Date(0);
+    d.setFullYear(50, 0, 2);
+    d.setHours(0, 0, 0, 0);
+    expect(parseLocalDatetimeValue(toLocalDatetimeValue(d.getTime()))).toBe(d.getTime());
+  });
+
+  it('accepts either separator, and makes seconds optional', () => {
+    const withT = parseLocalDatetimeValue('2030-01-01T12:34:56');
+    expect(parseLocalDatetimeValue('2030-01-01 12:34:56')).toBe(withT);
+    expect(parseLocalDatetimeValue('2030-01-01 12:34'))
+      .toBe(new Date(2030, 0, 1, 12, 34, 0, 0).getTime());
+  });
+
   it('yields NaN for an empty or garbage value', () => {
-    expect(Number.isNaN(parseLocalDatetimeValue(''))).toBe(true);
-    expect(Number.isNaN(parseLocalDatetimeValue('not-a-date'))).toBe(true);
+    expect(nan('')).toBe(true);
+    expect(nan('not-a-date')).toBe(true);
+  });
+
+  // The whole reason the parse is strict rather than `new Date(value)`:
+  // that constructor accepts these AND reads them as UTC, so a half-typed
+  // entry would jump to a different instant than the same digits denote
+  // once complete.
+  it('rejects the partial forms new Date() would silently accept as UTC', () => {
+    expect(nan('2030')).toBe(true);
+    expect(nan('2030-01')).toBe(true);
+    expect(nan('2030-01-01')).toBe(true);
+    expect(nan('2030-01-01T12:34:56Z')).toBe(true);
+    expect(nan('Jan 1 2030')).toBe(true);
+  });
+
+  it('rejects out-of-range and non-existent components', () => {
+    expect(nan('2030-13-01 00:00:00')).toBe(true);
+    expect(nan('2030-00-01 00:00:00')).toBe(true);
+    expect(nan('2030-01-32 00:00:00')).toBe(true);
+    expect(nan('2030-01-01 24:00:00')).toBe(true);
+    expect(nan('2030-01-01 00:60:00')).toBe(true);
+    expect(nan('2030-01-01 00:00:60')).toBe(true);
+    // Rolls over to 1 May under the Date constructor, so it must not pass.
+    expect(nan('2030-04-31 00:00:00')).toBe(true);
+    expect(nan('2030-02-30 00:00:00')).toBe(true);
+    // ...but a real leap day does.
+    expect(nan('2028-02-29 00:00:00')).toBe(false);
+  });
+
+  it('rejects unpadded fields so a partial entry never reads as complete', () => {
+    expect(nan('2030-1-01 00:00:00')).toBe(true);
+    expect(nan('2030-01-01 0:00:00')).toBe(true);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseLocalDatetimeValue('  2030-01-01 12:34:56  '))
+      .toBe(parseLocalDatetimeValue('2030-01-01 12:34:56'));
+  });
+
+  it('the placeholder names the format the parser accepts', () => {
+    expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD hh:mm:ss');
+    expect(nan(toLocalDatetimeValue(Date.UTC(2030, 0, 1)))).toBe(false);
   });
 });

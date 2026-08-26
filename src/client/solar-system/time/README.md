@@ -109,14 +109,37 @@ in the exact leap-second constant keeps the function continuous; the 6 s
 costs 6 km of Moon and 1.9e-6 AU of Mercury, both under the bounds those
 chains already hold (12 km and 1e-5 AU respectively).
 
-Jump-to-date is a native `datetime-local` input whose value is
-read as **local** time (`toLocalDatetimeValue` / `parseLocalDatetimeValue`
-in `time.ts`), even though the readout displays UTC — deliberate, so it
-matches the operator's wall clock. The calendar-popup indicator is hidden
-in CSS (`.scrubber-jump input::-webkit-calendar-picker-indicator`): the
-segmented fields are typed by hand, avoiding both the out-of-place native
-picker and the format-error trap of a plain text box. Reset already snaps
-to live-now at 1×, so there is intentionally no separate "now" jump.
+Jump-to-date is a plain **text** input whose value is read as **local**
+time (`toLocalDatetimeValue` / `parseLocalDatetimeValue` in `time.ts`),
+even though the readout displays UTC — deliberate, so it matches the
+operator's wall clock. Format is `LOCAL_DATETIME_FORMAT`
+(`YYYY-MM-DD hh:mm:ss`, seconds optional, `T` accepted as the separator),
+which the field also carries as its placeholder. Reset already snaps to
+live-now at 1×, so there is intentionally no separate "now" jump.
+
+**Typed-only, and `datetime-local` cannot deliver that.** It was one
+originally, with
+`.scrubber-jump input::-webkit-calendar-picker-indicator { display: none }`
+suppressing the picker. That hides the *dropdown button*, which in Blink
+is the only way to open the popup — so Chrome and Edge behaved. WebKit
+opens its native popover from the segmented fields themselves, so Safari
+ignored the rule entirely and there is no pure-CSS way to keep those
+segments editable while suppressing it. A text field is typed-only on
+every browser by construction, and it is what makes the clock's own
+3000 BC – 3000 AD range reachable at all: `datetime-local` never accepted
+a negative year.
+
+The trade the native control was carrying — the format-error trap of a
+raw text box — is answered by validation instead. `parseLocalDatetimeValue`
+is **strict**: an anchored regex plus a component build, not
+`new Date(value)`. The lenient constructor accepts far more than this
+field means *and silently changes scale doing it* — `new Date('2030')` is
+a valid **UTC** instant, so a half-typed year would have jumped the clock
+somewhere other than where the same digits land once complete. A rejected
+entry flags the field (`.is-invalid`, `aria-invalid`) and no-ops the jump;
+the flag is set on Jump or on blur, never per keystroke, so a half-typed
+date is not marked as an error. A jump that lands writes the clock's
+*clamped* instant back into the field.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to. It mounts the collapsed `.meta` readout (`#time-readout`, a
@@ -146,7 +169,7 @@ in the bottom-right `.meta` slot. Collapsed,
 `.meta` shows the star count + live UTC readout (the readout is a button
 that opens the scrubber); the `T` shortcut and clicking the readout both
 toggle it. Opened, it replaces that with a model-time readout + transport
-controls + a `datetime-local` jump, and an `×` collapses back. Toggling
+controls + a typed jump-to-date field, and an `×` collapses back. Toggling
 open/closed never changes the clock — only **Reset** returns to live-now
 at 1×.
 
@@ -155,8 +178,8 @@ play/pause, and `Backspace` resets. These dispatch from the central
 `../../ui/keyboard-shortcuts.ts` (not a second keydown listener) through the
 widget's `stepBack` / `stepForward` / `togglePlay` / `reset` — the same
 `press(action)` path the buttons use. The dispatcher's `targetIsEditable`
-guard leaves the jump date-field's native arrow-key segment editing intact
-when it's focused.
+guard keeps those keys out of the jump field while it has focus, so
+`←`/`→` move the caret and `Space` types a space.
 
 The `.meta` slot lives in the right-hand control column's bottom group
 (`.ui-top-bottom`), so an expanding scrubber pushes the focus card up

@@ -8,6 +8,7 @@ import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
   parseLocalDatetimeValue,
+  LOCAL_DATETIME_FORMAT,
   type TransportAction,
 } from './time';
 import { formatRatePerSecond } from './time-scrubber-widget-pure';
@@ -129,27 +130,55 @@ export function createTimeScrubberWidget(
 
   const jumpRow = document.createElement('div');
   jumpRow.className = 'scrubber-jump';
+  // A plain text field, not `datetime-local`. Hiding the native picker is
+  // only possible in Blink, where the dropdown button is the sole way to
+  // open it; WebKit opens its popover from the segments themselves and no
+  // CSS reaches that. So the control is typed-only on every browser by
+  // construction, and the format-error trap a raw text box would otherwise
+  // carry is answered by the validation below.
   const jumpInput = document.createElement('input');
-  jumpInput.type = 'datetime-local';
-  jumpInput.step = '1';
+  jumpInput.type = 'text';
+  jumpInput.className = 'scrubber-jump-input';
+  jumpInput.placeholder = LOCAL_DATETIME_FORMAT;
+  jumpInput.setAttribute('aria-label', `Jump to date (${LOCAL_DATETIME_FORMAT})`);
+  jumpInput.autocomplete = 'off';
+  jumpInput.spellcheck = false;
   const jumpBtn = document.createElement('button');
   jumpBtn.type = 'button';
   jumpBtn.className = 'scrubber-jump-btn';
   jumpBtn.textContent = 'Jump';
   jumpRow.append(jumpInput, jumpBtn);
 
+  // Flagged only once the user has tried to jump or has moved on from the
+  // field — flagging every keystroke marks a half-typed date as an error.
+  const setJumpValid = (valid: boolean): void => {
+    jumpInput.classList.toggle('is-invalid', !valid);
+    jumpInput.setAttribute('aria-invalid', valid ? 'false' : 'true');
+  };
   const syncJump = (): void => {
     jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
+    setJumpValid(true);
   };
   const doJump = (): void => {
     const ms = parseLocalDatetimeValue(jumpInput.value);
-    if (Number.isNaN(ms)) return;
+    if (Number.isNaN(ms)) {
+      setJumpValid(false);
+      return;
+    }
+    setJumpValid(true);
     clock.setTimeAbsolute(ms / 1000);
     stellata.notifyClockJumped();
     refresh();
+    // The clock clamps to the ephemeris window, so echo back the instant
+    // it actually landed on rather than leaving the rejected one on screen.
+    syncJump();
   };
   jumpBtn.addEventListener('click', doJump);
   jumpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doJump(); });
+  jumpInput.addEventListener('input', () => setJumpValid(true));
+  jumpInput.addEventListener('blur', () => {
+    setJumpValid(!Number.isNaN(parseLocalDatetimeValue(jumpInput.value)));
+  });
 
   scrubber.append(header, rate, controls, jumpRow);
   meta.replaceChildren(collapsed, scrubber);
