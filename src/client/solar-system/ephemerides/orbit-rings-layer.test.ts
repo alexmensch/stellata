@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
+import type { ChromeLineMaterials } from '../../chrome-lines/chrome-line-materials';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
   RING_GEOMETRY_DRIFT_TOLERANCE,
@@ -1083,5 +1084,53 @@ describe('ringGeometryDrifted', () => {
         orientation: { ...zeroOrientation, [key]: past },
       })).toBe(true);
     }
+  });
+});
+
+describe('the ring stroke', () => {
+  function countingChromeLines() {
+    const inner = chromeLines();
+    let built = 0;
+    let disposed = 0;
+    const seam: ChromeLineMaterials = {
+      solid(colour, opacity, localPass) {
+        built++;
+        const handle = inner.solid(colour, opacity, localPass);
+        return {
+          material: handle.material,
+          dispose() { disposed++; handle.dispose(); },
+        };
+      },
+      dashed: (colour, dash, gap, opacity) => inner.dashed(colour, dash, gap, opacity),
+    };
+    return { seam, counts: () => ({ built, disposed }) };
+  }
+
+  const manyBodies: PlanetSystem = {
+    hostStarIdx: 0,
+    planets: Array.from({ length: 9 }, (_, i) =>
+      makePlanet({ name: `P${i}`, semiMajorAxisAu: 1 + i })),
+  };
+
+  it('is built once for the layer, not once per ring', () => {
+    const { seam, counts } = countingChromeLines();
+    const ss = new OrbitRingsLayer(seam);
+    ss.setPlanetSystem(manyBodies, 0, T0);
+    expect(ss.group.children.length).toBe(9);
+    expect(counts().built).toBe(1);
+    ss.dispose();
+  });
+
+  it('survives a rebuild and is freed exactly once, by dispose', () => {
+    const { seam, counts } = countingChromeLines();
+    const ss = new OrbitRingsLayer(seam);
+    ss.setPlanetSystem(manyBodies, 0, T0);
+    ss.setPlanetSystem(null, 0, T0);
+    ss.setPlanetSystem(manyBodies, 0, T0);
+    // A rebuild disposes geometry only: the shared stroke has to outlive it
+    // or every ring after the first rebuild carries a dead material.
+    expect(counts()).toEqual({ built: 1, disposed: 0 });
+    ss.dispose();
+    expect(counts()).toEqual({ built: 1, disposed: 1 });
   });
 });

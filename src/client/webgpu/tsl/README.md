@@ -87,6 +87,27 @@ now build slot records through it — the solar-system surfaces, the
 boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
 modules stay with their layers; only the face is shared.
 
+## One program per material instance
+
+`NodeMaterial.customProgramCacheKey()` is the class name plus a hash of the
+node graph, and that hash is **per instance**: two materials built by the
+same factory from identical arguments produce different keys, so three's
+node-builder-state cache misses and each one compiles its own WGSL and its
+own pipeline. Found on the chrome line strokes, but it is a property of the
+node system rather than of that layer.
+
+The consequence a port child has to design around: **a material shared
+across N objects is worth far more here than on GLSL**, where three's
+program cache collapsed N identical materials onto one program and hid the
+duplication entirely. A per-object material that cost nothing on WebGL2 is
+N shader builds and N pipelines on this boot. Hoist it to the layer — the
+orbit rings were 27 of them (`../../solar-system/ephemerides/README.md`
+§ Orbit rings).
+
+It also rules cache-key equality out as a test: two graphs that ought to be
+identical never compare equal. Pin the observable surface instead
+(§ TSL test pattern, leg 2).
+
 ## Assigning a varying from an explicit vertex stage
 
 A layer that sets `material.vertexNode` and wants a varying computed
