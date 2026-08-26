@@ -86,9 +86,7 @@ BSC5 = VizierSlice(
 # joins the overlay directly. `Comp` is the component letter within the GJ
 # number; the "Gl 559A" / "GJ 1294A" display prefix rule is the
 # naming-authority ladder's call, not this file's.
-# `RAJ2000` names the FRAME, not the position epoch — that is the per-row
-# `Epoch` column (2016.0 on Gaia-sourced rows). Propagating from 2000.0
-# would double-count 16 years of proper motion.
+# `RAJ2000` vs `Epoch`: data/classic-ids/README.md § The astrometry re-slice.
 CNS5 = VizierSlice(
     table="J/A+A/670/A19/cns5",
     output=OUT_DIR / "cns5.tsv",
@@ -128,8 +126,12 @@ CNS5 = VizierSlice(
          "RAJ2000": (217.39232147201, 1e-8),
          "DEJ2000": (-62.67607511677, 1e-8),
          "Epoch": (2016.0, 1e-6),
-         "plx": (768.07, 0.005),
-         "pmRA": (-3781.74, 0.005), "pmDE": (769.47, 0.005)},
+         "plx": (768.07, 0.005), "e_plx": (0.06, 0.005),
+         "pmRA": (-3781.74, 0.005), "e_pmRA": (0.031, 0.0005),
+         "pmDE": (769.47, 0.005), "e_pmDE": (0.051, 0.0005),
+         "r_pos": "2020yCat.1350....0G",
+         "r_plx": "2020yCat.1350....0G",
+         "r_pmRA": "2020yCat.1350....0G"},
     ),
 )
 
