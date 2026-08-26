@@ -10,31 +10,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import refresh_lib as rl  # noqa: E402
+from test_helpers import FakeTable, fake_tap_client  # noqa: E402
 from vizier_slice import VizierSlice, pull_slices  # noqa: E402
-
-
-class FakeColumn(list):
-    """A column whose `.dtype` is the Python type of its first cell, which is
-    all ``refresh_lib.validate_schema`` reads off a non-numpy table."""
-
-    @property
-    def dtype(self) -> type:
-        return type(self[0]) if self else str
-
-
-class FakeTable(list):
-    """Minimal astropy-Table stand-in: a row list plus `colnames`."""
-
-    def __init__(self, rows: list[dict], colnames: list[str]) -> None:
-        super().__init__(rows)
-        self.colnames = colnames
-
-    def __getitem__(self, key):  # noqa: ANN001, ANN204
-        if isinstance(key, str):
-            return FakeColumn(r[key] for r in self)
-        return super().__getitem__(key)
 
 
 ROWS = [
@@ -60,8 +40,7 @@ def slice_for(out: Path, **kwargs) -> VizierSlice:
 
 
 def client_for(rows: list[dict], colnames: list[str] | None = None) -> rl.TapClient:
-    table = FakeTable(rows, colnames or ["HIP", "Vmag"])
-    return rl.TapClient(backends=[rl.TapBackend(name="fake", run=lambda _q: table)])
+    return fake_tap_client(rl, FakeTable(rows, colnames or ["HIP", "Vmag"]))
 
 
 class AdqlTests(unittest.TestCase):
