@@ -83,3 +83,12 @@ kind modules read it off `KindContext.chromeLines` rather than reaching for
 the seam themselves. Each stroke is independent — the factory holds no
 slots two consumers could share — so a second factory would be harmless,
 but the single one is what keeps the injection sites uniform.
+
+**That resolve has to sit AFTER `bindSharedUniforms`.** Reading
+`webgpu.chromeLineMaterials` is what builds the TSL graphs, and they
+resolve the shared uniform nodes on the way — so the getter throws
+`chromeLineMaterials before bindSharedUniforms` while the registry is
+still unbound, in the shell's constructor, before the first frame. Nothing
+in the suite sees it: the WebGL2 boot takes the `??` branch, so typecheck
+and every test stay green while the WebGPU boot is dead. It shipped that
+way once. A new consumer of any seam factory inherits the same ordering.

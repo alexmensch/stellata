@@ -235,8 +235,6 @@ export class Stellata implements FrameAnchor {
    *  reach their scene and the shared uniform nodes through it. */
   readonly webgpu: WebGpuSeam | null;
   private webgpuStarLayer: WebGpuStarLayer | null = null;
-  /** Chrome line strokes for this boot — one factory, injected into every
-   *  overlay that draws lines (chrome-lines/README.md). */
   private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
@@ -493,12 +491,6 @@ export class Stellata implements FrameAnchor {
     }
 
     this.scene = new THREE.Scene();
-    // One chrome line factory per boot, injected into every overlay that
-    // draws lines. The TSL strokes carry the MRT output struct the local
-    // depth pass's three-attachment target needs, which is why the WebGL
-    // built-ins cannot stand in for them there (chrome-lines/README.md).
-    this.chromeLines =
-      this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
 
     // `CAMERA_FAR_PC` is paired with `MAX_DISTANCE_PC` so the build filter
     // and camera can never drift; see build-local-group-pure.ts. Near-plane
@@ -548,6 +540,10 @@ export class Stellata implements FrameAnchor {
     });
     this.sharedUniforms = sharedUniforms;
     this.webgpu?.bindSharedUniforms(sharedUniforms);
+    // Must follow bindSharedUniforms: the TSL factory resolves the shared
+    // uniform nodes on read and throws while the registry is unbound.
+    this.chromeLines =
+      this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.

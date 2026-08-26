@@ -120,9 +120,9 @@ export interface WebGpuSeam {
    *  ONCE per field: each read is a fresh factory, and the shared-material
    *  refcount lives inside one. */
   readonly probeMaterial: ProbeMaterials;
-  /** The TSL chrome line strokes (`../chrome-lines/README.md`). Every
-   *  stroke it builds is independent — it holds no slots two consumers
-   *  could share — so the shell reads it once and injects it. */
+  /** The TSL chrome line strokes. Read only AFTER `bindSharedUniforms`:
+   *  building the graphs resolves the shared uniform nodes, so an earlier
+   *  read throws (`../chrome-lines/README.md` § One factory per boot). */
   readonly chromeLineMaterials: ChromeLineMaterials;
   /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
    *  consumer builds its own — colour, limb alpha and blend are per-shell. */
