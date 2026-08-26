@@ -109,4 +109,33 @@ describe('EventBus', () => {
     bus.emit('num', 0);
     expect(seen).toEqual(['a', 'b']);
   });
+
+  // Subscribers are mutually anonymous, so one must not be able to silence
+  // the rest. Before this, a throw took every later handler for good.
+  it('delivers to the handlers after one that throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = new EventBus<TestMap>();
+    const seen: string[] = [];
+    bus.on('num', () => { seen.push('a'); });
+    bus.on('num', () => { throw new Error('boom'); });
+    bus.on('num', () => { seen.push('c'); });
+
+    expect(() => bus.emit('num', 1)).not.toThrow();
+    expect(seen).toEqual(['a', 'c']);
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  it('keeps delivering on later emits after a handler threw', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = new EventBus<TestMap>();
+    const seen: number[] = [];
+    bus.on('num', () => { throw new Error('boom'); });
+    bus.on('num', (n) => { seen.push(n); });
+
+    bus.emit('num', 1);
+    bus.emit('num', 2);
+    expect(seen).toEqual([1, 2]);
+    warn.mockRestore();
+  });
 });

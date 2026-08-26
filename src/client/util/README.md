@@ -181,6 +181,15 @@ build scripts, tests, and shader uniforms.
   compressed format or one three grew since; both callers surface that
   rather than reading it as zero. Consumers: the budget above and the
   memory inventory (`../debug/memory/README.md`).
+- `fan-out.ts` (+ test) — `fanOut(label, items, fn)`: run every member of a
+  fan-out, then rethrow the failures as one `AggregateError`. A bare `for`
+  loop stops at the first throw, so a fan-out that puts shared state into a
+  new mode (palette swap, recentre, teardown) strands the scene half in each
+  mode with no recovery path, and the caller's own later steps are skipped
+  too. Nothing is swallowed — a broken layer stays exactly as loud, it just
+  cannot take its siblings with it. Consumers are `SceneLayerRegistry`'s four
+  fan-outs (`../scene/README.md`). **Not** what `event-bus/` does, and the
+  difference is deliberate: see its README.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).

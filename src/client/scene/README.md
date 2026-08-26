@@ -9,6 +9,15 @@ registration per layer covers all four: a layer registered once cannot be
 silently missing from any of them, which is the property the old
 copy-everywhere lists couldn't guarantee.
 
+**All four fan-outs run every layer even when one throws** — they go through
+`../util/fan-out.ts`, which collects failures and rethrows them as a single
+`AggregateError` once every layer has had its call. Registration guarantees a
+layer is *reached*; this is what guarantees it is reached even when an
+earlier layer is broken. Nothing is swallowed. The failure it removes: one
+layer throwing inside `setMonochromeAll` left every later layer in the
+opposite palette permanently, because the mode flag driving the swap had
+already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
+
 ## Files
 
 - `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
