@@ -387,6 +387,19 @@ def run_in_batches(
         checkpoint.clear()
 
 
+# ─── ADQL projection ──────────────────────────────────────────────────
+
+def select_columns(columns: Iterable[str], table: str) -> str:
+    """``SELECT "a", "b" FROM "tbl"``, ready for a trailing WHERE/ORDER BY.
+
+    Every identifier is double-quoted: VizieR column names are
+    case-sensitive and several carry parentheses (``RA(ICRS)``), both of
+    which an unquoted ADQL projection mangles.
+    """
+    cols = ", ".join(f'"{c}"' for c in columns)
+    return f'SELECT {cols} FROM "{table}"'
+
+
 # ─── Row-count guard ──────────────────────────────────────────────────
 
 _ROW_COUNT_DEFAULT_HINT = (

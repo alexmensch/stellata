@@ -48,9 +48,8 @@ class VizierSlice:
 
     @property
     def adql(self) -> str:
-        cols = ", ".join(f'"{c}"' for c in self.columns)
         order = ", ".join(f'"{c}"' for c in self.order_by)
-        return f'SELECT {cols} FROM "{self.table}" ORDER BY {order}'
+        return f"{rl.select_columns(self.columns, self.table)} ORDER BY {order}"
 
 
 def pull_slices(

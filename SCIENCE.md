@@ -171,6 +171,15 @@ enough to see it.
   and the printed tier of the ci cascade below the synthetic photometry —
   the only measured colour reaching the rows with no Gaia source at all.
   Public domain via CDS.
+- **Tycho-2** (`I/259` `tyc2` + `suppl_1`, filtered to the mentioned TYCs
+  at `data/tycho2/`): Høg E. et al. 2000, *A&A* 355, L27. Retrieved
+  2026-08-25, public domain via CDS. The first-order source for the
+  TYC-bearing rows Gaia does not reach — mean positions with **per-star,
+  per-coordinate mean epochs**, proper motions, and BT/VT photometry, so
+  the direction, PM and V cascades of `docs/catalog-driver.md` § 5 route
+  here instead of to AT-HYG's printed cells. It reaches every one of the
+  312,275 TYC-bearing spine rows; the mean epochs are what fix the
+  printed cells' unpropagated staleness (~27″ worst case).
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
   http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
   Institute. `data/gcvs/gcvs5.txt` (main file) + `data/gcvs/crossid.txt`
