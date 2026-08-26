@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FLAG_HAS_ORBIT, type BinariesData } from './binaries-loader';
-import { makeRelation } from './binary-relation-fixture';
-import { relationIndicesInBounds } from './orbit-relation-cache';
+import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
+import { makeRelation } from '../binary-relation-fixture';
+import { relationIndicesInBounds } from '../orbit-relation-cache';
 import { BinaryOrbitPathLayer } from './binary-orbit-path-layer';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing

@@ -4,8 +4,8 @@
 
 import * as THREE from 'three';
 import type { BinariesData } from '../../binaries/binaries-loader';
-import { keplerChainRelationIdxs } from '../../binaries/binary-orbit-path-pure';
-import type { BinaryOrbitPathLayer } from '../../binaries/binary-orbit-path-layer';
+import { keplerChainRelationIdxs } from '../../binaries/orbit-paths/binary-orbit-path-pure';
+import type { BinaryOrbitPathLayer } from '../../binaries/orbit-paths/binary-orbit-path-layer';
 import {
   peakAmplitudeFactor,
   type RenderedSizeComponents,

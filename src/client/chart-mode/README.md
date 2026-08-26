@@ -16,13 +16,13 @@ src/client/chart-mode/
                                   chart-labels engine, and the
                                   constellation figure's
                                   draw-all-asterisms mode.
-  chart-labels.ts (+ test)        `ChartLabels` — per-frame label engine:
+  labels/                         `ChartLabels` — per-frame label engine:
                                   proper names, Bayer Greek glyphs,
-                                  constellation Latin labels, cloud labels.
-                                  Dirty-tracked SVG writes + centroid cache
-                                  + sorted apparent-size top-N — see
-                                  src/client/debug/README.md § What got
-                                  optimised.
+                                  constellation Latin labels, cloud labels,
+                                  variable rings, binary wings. Its own
+                                  README carries the glyph contract, the
+                                  pooling invariants and this folder's
+                                  optimisation ledger.
   chart-disc-pure.ts (+ test)     Pure helpers for the magnitude →
                                   pixel-size mapping in chart mode.
   chart-palette.ts (+ test)       Authored ink values of the paper palette,
@@ -187,163 +187,6 @@ inherits no exposure state at all.
   convention — via `MolecularClouds.setMonochrome` (the registry
   fan-out), not an orchestrator call. The absorption pass hides
   entirely on paper.
-
-## Label engine + glyphs (`chart-labels.ts`)
-
-Per-frame engine that fills three SVG layers under `#overlay`. Each tier is
-gated by the detail cycle — `tick()` reads `detailPermits(id)` per group
-(star names + planets → `chartStarNameLabels`, Bayer → `chartBayerGlyphs`,
-rings + wings → `chartVariableRings`, constellation names →
-`chartConstellationNames`, cloud names → `chartCloudNames`) and skips the
-group's build loop when the current level doesn't reach its chart floor.
-See `../scene/README.md` § Chart-content wiring for the couplings.
-
-- `<g id="chart-con-labels">` — `<text>` per constellation Latin name.
-- `<g id="chart-labels">` — `<text>` elements for proper-named stars,
-  Bayer-letter Greek glyphs (drawn from `bayerMap` built in
-  `search.ts`), planet names, and molecular cloud names.
-- `<g id="chart-glyphs">` — `<circle class="chart-variable-ring">`
-  per visible variable, `<line class="chart-binary-wings">` per
-  visible binary primary (catalog flag bit 4).
-
-**All three are declared in `index.html`, never minted on demand**, and
-sit *before* the HUD stack so the HUD paints over the chart. SVG has no
-z-index — paint order is document order — and the pool appends a `<text>`
-the frame its key is first seen, so DOM order within a group is the
-history of which labels have entered and left the viewport, not this
-frame's priority. That is harmless between labels that all punch a halo
-through what's behind them, and was not harmless between those and the
-`kind-con` wash (`fill: rgba(0,0,0,0.18); stroke: none`), which ate the
-halo of any star name created before it. Hence the separate con group
-rather than a per-frame re-append in priority order, which would
-reintroduce exactly the DOM churn the pool exists to avoid.
-
-The sequence is the fix, so it is pinned rather than trusted:
-`CHART_LAYER_IDS` (exported by `chart-labels.ts`) is the one authority
-for the ids **and their order**, `layerById` throws on a group the
-markup doesn't declare, and `chart-labels.test.ts` reads `index.html`
-to assert both the inter-group order and that all three precede
-`#hud-ring`.
-
-**Greedy collision pass** with axis-aligned bounding rectangles, sorted
-by priority (proper name 1 → Bayer 2 → cloud 3). Constellation names
-**bypass** the collision pass entirely — they always render at
-`.chart-label-layer .chart-label.kind-con`'s sparse semi-transparent
-outline typography, allowed to overlap small star symbols underneath à
-la Sky Atlas; see styles.css for the live size / weight / letter-spacing.
-They are never measured either, so what a star name collides against is
-the padded anchor *point*, not the 36 px block.
-
-**Star-name + Bayer label offsets** scale with the rendered disc.
-`starLabelOffsetPx(discPx) = max(STAR_LABEL_OFFSET_MIN_PX,
-discPx/2 + STAR_LABEL_GAP_PX)` so the label's bottom-left corner clears
-the disc edge across the chart-mode magnitude range (faint sub-pixel
-discs keep the floor; the brightest 28 px disc pushes the label out
-to 18 px diagonal). `discPx` comes from `chartDiscPxForAppMag` in
-`chart-disc-pure.ts`, which mirrors the vertex shader's chart-branch
-formula.
-
-**Constellation names sit at the IAU region's own centre, not at their
-stars.** The anchor is the equal-surface-weight centre of mass of the
-region the boundary layer draws — `Stellata.constellationLabelAnchors`,
-one per region, off the shipped artifact
-(`../constellation-boundaries/README.md` § Label anchors) — baked to the
-same Sol-centred sphere as the arcs, so `− worldOffset` is the whole
-per-frame projection and the name stays inside its block from any camera
-position. **Serpens therefore gets two labels**, one in Caput and one in
-Cauda; the flux-weighted centroid it replaced put a single "SERPENS" in
-the gap between them, which is Ophiuchus.
-
-Visibility still gates on the members: `min(appMag) ≤ uLimitMag` over
-every star byte 34 assigns to the constellation, so a region whose stars
-are all under the limit goes unnamed (both Serpens labels share one gate —
-one constellation, one member set). The full member walk is what fixed a
-bug where constellations with no single dominant intrinsic-brightest star
-(Vela, Pyxis, Sagittarius) silently dropped their label; it is **cached**
-under a 0.5 pc camera-translation threshold + filter version, since
-apparent magnitude barely moves under a small camera nudge.
-
-**Variable rings** are **intrinsic-only** — the ring set gates on
-`periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
-Eclipsing binaries are extrinsically variable (line-of-sight
-occlusion, not the star's own output), so they surface via the wings
-glyph instead and never draw a ring. Rings size to the bright-extreme
-magnitude (`appMag - amplitude/2`) plus a `VARIABLE_RING_MIN_GAP_PX = 1.0`
-radial gap, so the ring stays visibly outside the inner disc even at
-peak phase for low-amplitude variables. The gap means the ring no
-longer encodes "exact maximum brightness" — that's a deliberate trade
-for glyph legibility.
-
-**Binary wings** are screen-aligned horizontal `<line>`s extending
-`discPx * BINARY_WING_EXTENSION_RATIO` (0.25) past each disc edge.
-The proportional extension keeps the glyph readable across the
-full chart-mode magnitude range — 16 px discs get 4 px wings,
-6 px discs get 1.5 px wings — instead of overwhelming faint stars
-with the fixed 4 px stub the earlier implementation drew. Below a
-`BINARY_WING_MIN_EXTENSION_PX = 1.5 px` floor the wings would be
-sub-pixel and the underlying disc is too faint to register as a
-double anyway, so the glyph is skipped entirely rather than
-rendered as a degenerate stub. SVG line coordinates are in
-viewport space, so the wings stay horizontal regardless of camera
-roll by construction. Both glyph classes share the per-frame
-`renderableAppMag` filter — same spectMask + distance gates as the
-GPU disc — so a hidden inner disc takes its glyph offscreen with
-it.
-
-**CPU/GPU dust mismatch.** Dust extinction is intentionally **not**
-replicated CPU-side (per-star raymarch too expensive for the label
-loop). For stars sitting behind heavy dust (Cygnus, Ophiuchus,
-Aquila Rift) the GPU renders a much smaller disc than the CPU
-mirror computes, so wings sized to the CPU disc would dwarf the
-real rendered disc. The 1.5 px floor on the wing extension acts as
-a heuristic guard — it requires the un-extincted CPU disc to be
-≥ 6 px before wings render, which gives ~2 mag of headroom for
-dust to attenuate the GPU disc without orphaning the glyph. The
-trade is a few legitimate wings dropped on faint un-extincted
-stars near the magnitude limit. **The proper fix when needed:**
-ship a coarser (~128³ resample of Edenhofer 2023, ~2 MiB) CPU-side
-voxel grid and raymarch per CCDM-flagged binary in the per-frame
-label loop, cached by camera position. That's the right answer for
-chart-mode use from far-from-Sol viewpoints, where this heuristic
-breaks down further (dust columns change as the camera moves and
-the heuristic stays static). Left as future work; the heuristic is
-adequate for current near-Earth chart-mode use.
-
-**Pooling.** Each `<text>` / `<circle>` / `<line>` is keyed by stable
-identity (`n:idx`, `b:idx`, `c:regionCode`, `m:cloudIdx`) so adding /
-removing nodes is free across frames. Unused entries are detached at
-the end of each tick. `tick`'s own containers — the candidate objects,
-the accepted list, the four dedupe Sets — are pooled on the same
-principle, and the pool keys plus the two composed label texts (the
-Bayer glyph pair, the con name's uppercase) are interned per identity
-in a `StringCache`, trading a template literal per label per tick for a
-hash lookup. `stop()` drops the per-tick scratch; `dispose()` also
-drops the interned strings, which are catalog-derived and worth keeping
-across a chart exit.
-
-**The one per-label allocation left is the attribute string `setNumAttr`
-formats**, on the labels whose x/y actually moved — unavoidable through
-`setAttribute`, and it fires on exactly the frames the camera is moving.
-Don't read the pooling as "chart mode allocates nothing"; see
-`../debug/README.md` § Chart-labels: pooled per-frame containers before
-interpreting a profile.
-
-Three invariants make the reuse safe. Each is mutation-pinned in
-`chart-labels.test.ts` — dropping any one of them fails a test:
-
-1. `candidateList` is **truncated to the live count before the sort**.
-   Otherwise a sparser frame ranks the previous, larger frame's entries
-   (constellation names, priority tier 0) ahead of its own live labels
-   and redraws labels the engine never built.
-2. `collides` walks **only the accepted array's live prefix**. `count`
-   is a required argument, not defaulted to `others.length` — for the
-   one caller that matters, that default *is* the bug.
-3. `addCandidate` **rewrites `width` / `height` on every claim**.
-   Constellation labels skip `measureCandidate`, so a con recycling a
-   slot would otherwise collide against the measured box of whatever
-   star name held it — and since cons are accepted first, that stale
-   box evicts live star names. Pool slots shift down whenever an
-   earlier family shrinks, which is what the magnitude slider does.
 
 ## Picking under chart mode
 

@@ -266,7 +266,7 @@ and `probe-path-layer.test.ts` can pin it without a focus controller.
 
 ## Labels
 
-`probe-labels.ts` mirrors `../planets/planet-labels.ts` and shares its
+`probe-labels.ts` mirrors `../planets/labels/planet-labels.ts` and shares its
 `LABEL_OFFSET_PX`, but has **no resolvability gate**: a planet label can
 defer to its orbit ring's pixel-gap heuristic, whereas a probe glyph is
 fixed-size and carries no name of its own, so a marker without a label is

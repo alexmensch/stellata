@@ -96,11 +96,15 @@ src/client/solar-system/planets/
   eclipses/                       The event-level half of the same story:
                                   where a shadow axis meets a surface, the
                                   named-eclipse regression corpus pinning it
-                                  against NASA's Five Millennium Canon, and
-                                  the refracted glow that makes a totally
-                                  eclipsed body red. Its own README.
-  planet-labels.ts (+ test)       Per-body (planet + moon) SVG labels,
-                                  resolvability-gated. See § Labels.
+                                  against NASA's Five Millennium Canon, plus
+                                  both render-path eclipse claims — the
+                                  whole-body true-eclipse dim this field
+                                  writes, and the refracted glow that makes a
+                                  totally eclipsed body red. Its own README.
+  labels/                         Per-body (planet + moon) SVG labels,
+                                  resolvability-gated. Imports nothing from
+                                  here and stays wired in main.ts. Its own
+                                  README.
   planet-mesh.vert.glsl,
   planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
                                   host-direction Lambert terminator,
@@ -218,40 +222,6 @@ every body reaching this gate in chart mode has passed that clip — the
 branch returns true rather than restating it. Both gates read the one
 `PlanetView.physDiscPx`, derived in `evalPlanetView`, so the
 mesh-presence measure has a single source.
-
-## True-eclipse dim
-
-A planet crossing behind its host's *physical disc* (superior
-conjunction inside the host's angular radius) dims by the occluded area
-fraction — the same camera-anywhere geometry the binaries eclipse
-photometry runs (`../../binaries/eclipse/eclipse-photometry-pure.ts`:
-`eclipseDimFromOffsets` + the shared anti-strobe blend helpers).
-`PlanetBodyField.update` evaluates each in-range host's planets per
-frame (the pair-relative offset is `iLocalRel` itself — small values, no
-large-position differencing) and writes the per-instance `iEclipseDim`
-attribute.
-
-A moon composes a second, multiplicative dim: the same lens math from
-the MOON's viewpoint with the parent planet as occluder of the host
-disc — the visible host fraction IS the moon's illumination, so a
-lunar-style eclipse darkens the moon continuously through the
-penumbra (search-tested against a year of real ephemeris);
-the vertex shader applies it as a flux multiplier on the glare
-intensity in both regimes — not an appMag fold, because the
-locally-active photographic regime derives brightness from surface
-radiance rather than appMag. A FULL eclipse
-writes exactly 0 and the shader collapses the quad — a floored +7.5
-mag residual is still visible on a mag −1 Mercury, and the planet-
-scale depth buffer can't hide it — and the planet's label hides with
-it. **Unless the caster has an atmosphere**: Earth refracts sunlight into
-its own umbra, so the dim floors at that glow rather than 0 and a totally
-eclipsed Moon stays visible, coppery red, label and all
-(`eclipses/README.md` § Umbral glow). Glare through the host's
-perceptual *halo* stays undimmed — the halo is a perceptual
-artefact, not a surface, so a body behind it correctly shines
-through. A planet in *front* (transit) dims the
-host by (R_p/R_host)² — negligible and owned by the star pipeline,
-so it is deliberately not modelled.
 
 ## What the render cadence reads
 
@@ -427,21 +397,7 @@ meridian `W(t)`, the body→ICRS composition the mesh applies, and the
 `mapCenterLonDeg` texture metadata riding the same table — live in
 `rotation/README.md`.
 
-## Labels
-
-`planet-labels.ts` draws per-body-anchored SVG labels (planets **and**
-moons) above the canvas. The label engine is independent of the
-chart-mode label engine (`chart-labels.ts`); labels show when a planet
-system is attached and the detail cycle permits `planetLabels` (floor
-`all`), and are hidden in chart mode so the chart-mode glyph contract
-isn't doubled up (`../../scene/README.md` § Detail-level declutter cycle).
-
-Per-body resolvability gate: every label tracks its orbit ring
-(`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
-body is floor-clamped sub-pixel, so the label would anchor to nothing).
-Planets gate on their host-centred ring, moons on their parent-centred
-ring — a moon collapsed toward its parent's dot drops its ring (and so
-its label) rather than stacking on the parent.
+## Deferred surface detail
 
 Surface detail beyond what is listed here (banding, axial-tilt cue)
 stays **deliberately deferred** to the planet-zoom epic

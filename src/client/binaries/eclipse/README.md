@@ -26,7 +26,7 @@ src/client/binaries/eclipse/
 ```
 
 Two further consumers of the pure half. The planet field's true-eclipse
-dim (`../../solar-system/planets/README.md` § True-eclipse dim) reuses all
+dim (`../../solar-system/planets/eclipses/README.md` § True-eclipse dim) reuses all
 of it for planet-behind-host-disc occlusion; the exposure-adaptation
 statistic (`../../hdr/exposure/README.md` § Adaptation) takes
 `circleCircleLensArea` alone, in **screen pixels** rather than angular

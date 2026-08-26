@@ -34,7 +34,7 @@ import {
   coordSphereReachableAt,
 } from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
-import { ChartLabels } from './chart-mode/chart-labels';
+import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
@@ -155,7 +155,7 @@ import type {
   ExtinctionPrepassSeam,
 } from './star-pipeline/extinction/extinction-seam';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { BinaryOrbitPathLayer } from './binaries/binary-orbit-path-layer';
+import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {

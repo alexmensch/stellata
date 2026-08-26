@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';
 import { setStyle } from '../../overlays/dirty-attr';
 import { placeAnchoredLabel } from '../../overlays/anchored-label';
-import { LABEL_OFFSET_PX } from '../planets/planet-labels';
+import { LABEL_OFFSET_PX } from '../planets/labels/planet-labels';
 import type { ProbeField } from './probe-field';
 import { probeLabelText } from './probe-trajectory';
 

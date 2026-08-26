@@ -111,7 +111,7 @@ describe('visibleSet — cumulative floor derivation', () => {
   });
 });
 
-// The chart-labels engine (chart-mode/chart-labels.ts) gates each label /
+// The chart-labels engine (chart-mode/labels/chart-labels.ts) gates each label /
 // glyph tier on detailPermits(id) for these elements. Pin the exact chart
 // floors so a floor-table reorder that would silently re-tier a glyph
 // group fails here rather than in a manual chart-mode smoke.

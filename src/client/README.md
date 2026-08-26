@@ -359,7 +359,7 @@ SVG mask (`constellation-figure/README.md`).
 | Heliopause label                                 | SVG     | source order                                       |       | [solar-system/heliopause/](solar-system/heliopause/README.md) |
 | Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](local-bubble/README.md) |
 | Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](molecular-clouds/README.md) |
-| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/](solar-system/planets/README.md) |
+| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/labels/](solar-system/planets/labels/README.md) |
 | Probe labels                                     | SVG     | source order                                       |       | [solar-system/probes/](solar-system/probes/README.md) |
 | POI labels                                       | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | POI rings                                        | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
@@ -369,7 +369,7 @@ SVG mask (`constellation-figure/README.md`).
 | Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](overlays/README.md) |
 | Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
 | HUD ring                                         | SVG     | source order                                       |       | [galactic/](galactic/README.md) |
-| Chart labels + glyphs (chart only)               | SVG     | source order (three groups)                        |       | [chart-mode/](chart-mode/README.md) |
+| Chart labels + glyphs (chart only)               | SVG     | source order (three groups)                        |       | [chart-mode/labels/](chart-mode/labels/README.md) |
 | Coordinate-sphere edge labels                    | SVG     | source order (first SVG children)                  |       | [galactic/coord-spheres/](galactic/coord-spheres/README.md) |
 | *— SVG / WebGL boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
 | Planet glow mirror (cluster members)             | WebGL   | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
@@ -377,7 +377,7 @@ SVG mask (`constellation-figure/README.md`).
 | Probe marker mirror (cluster active)              | WebGL   | local depth pass (3.3 in-pass)                     |       | [solar-system/probes/](solar-system/probes/README.md), [local-depth/](local-depth/README.md) |
 | Probe trail mirror (cluster active)               | WebGL   | local depth pass (3.25 in-pass)                    |       | [solar-system/probes/](solar-system/probes/README.md), [local-depth/](local-depth/README.md) |
 | Orbit rings                                      | WebGL   | local depth pass (3.2 in-pass)                     |       | [solar-system/ephemerides/](solar-system/ephemerides/README.md), [local-depth/](local-depth/README.md) |
-| Binary orbit paths                               | WebGL   | local depth pass (3.2 in-pass)                     |       | [binaries/](binaries/README.md), [local-depth/](local-depth/README.md) |
+| Binary orbit paths                               | WebGL   | local depth pass (3.2 in-pass)                     |       | [binaries/orbit-paths/](binaries/orbit-paths/README.md), [local-depth/](local-depth/README.md) |
 | Planet atmosphere shell (Venus/Earth/Mars/Titan) | WebGL   | local depth pass; additive (2.82 in-pass)          |       | [solar-system/atmosphere/](solar-system/atmosphere/README.md), [local-depth/](local-depth/README.md) |
 | Planet ring annulus (Saturn/Uranus/Neptune)      | WebGL   | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |
 | Planet spheroid mesh (close LOD)                 | WebGL   | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/planets/](solar-system/planets/README.md), [local-depth/](local-depth/README.md) |

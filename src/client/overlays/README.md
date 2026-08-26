@@ -107,7 +107,7 @@ arrows stay tangent to whichever circle is dominant.
 `chart-labels.ts` fills three SVG layers under `#overlay` while chart
 mode is active. All three are declared in `index.html` ahead of the HUD
 stack, so the HUD paints over them and the con wash paints under the
-star names — `../chart-mode/README.md` § Label engine owns why.
+star names — `../chart-mode/labels/README.md` § Label engine owns why.
 
 - `<g id="chart-con-labels">` — constellation Latin names. Bypass the
   collision pass entirely (outline-style typography that reads as a
@@ -242,3 +242,16 @@ using either:
 - `element.style.display = 'none'` (used for the focus ring circle), or
 - `path.setAttribute('d', '')` (used for the chevron path), or
 - `polygon.setAttribute('points', '')` (used for the constellation hull).
+
+## Per-frame cost — the self-gating fast-path
+
+`distance-vector-overlay.ts`, `poi-overlay.ts`,
+`focus-ring-overlay.ts`. Each overlay subscribes to `'frame'` and
+runs every frame regardless of state. The empty-state path (no
+focus / no vector) bails in <10 ns before doing any DOM work.
+Visibility transitions are tracked via a local boolean so
+`hide()` / `show()` are idempotent — no redundant `display`
+mutations or `setAttribute` sweeps when the state didn't change.
+
+Don't unsubscribe / resubscribe — the on/off churn is fragile
+and the static fast-path is enough.
