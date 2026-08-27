@@ -221,6 +221,13 @@ docs/     Genuinely cross-cutting docs that don't belong to one
 tests/    Repo-meta tests (CLAUDE.md size guard, etc.).
 ```
 
+Harness configuration is deliberately absent from that table. `.claude/`,
+`.omp/` and `WATCHDOG.md` exist so a coding harness reads the rest of the repo
+correctly; they carry no project architecture, so the index does not list them
+and adding one is not a "new top-level surface". `.omp/README.md` covers what
+differs between the two harnesses, `scripts/hooks/README.md` the shared
+tool-call guards.
+
 `SCIENCE.md` carries scope principles, data sources, and non-goals;
 per-subsystem physics splits into `docs/science-*.md` (see its own
 index). A vitest size guard (`tests/claude-md-size.test.ts`) holds
@@ -245,12 +252,27 @@ and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
 are documented in `scripts/refresh/README.md` and `RELEASING.md`
 § Catalogue refresh policy.
 
+### Non-interactive flags — commands that would otherwise hang
+
+`cp`, `mv` and `rm` are aliased to `-i` on some systems, which hangs the
+session on a y/n prompt it cannot answer. Always force: `cp -f`, `mv -f`,
+`rm -f`, `rm -rf`, `cp -rf`. Same failure elsewhere: `scp` and `ssh` need
+`-o BatchMode=yes`, `apt-get` needs `-y`, `brew` needs
+`HOMEBREW_NO_AUTO_UPDATE=1`.
+
 ## Git workflow — stellata gates
 
 The worktree → feature branch → `push -u` → PR → approval-gated-merge flow is
 a standing global rule; **never push or commit to main**, and diff size is
 never a justification. What this project adds:
 
+- **The trunk gate is executed, not just written.** Under omp,
+  `scripts/hooks/omp-bridge.ts` refuses a `git commit` or `git push` whose
+  current branch is `main`/`master`, and refuses any edit resolving into a
+  repo's main worktree; under Claude Code that second rule is
+  `~/.claude/hooks/worktree-guard.sh`. GitHub branch protection rejects a
+  direct push server-side — an admin can override it, so it is the backstop,
+  never the licence to try.
 - **`skip-version-bump` label** on `gh pr create` for pure docs / CI /
   `.beads` / repo-config changes — see `RELEASING.md` § Version policy, the
   "live-app consumer" test.

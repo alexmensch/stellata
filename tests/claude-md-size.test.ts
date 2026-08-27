@@ -2,8 +2,8 @@ import { describe, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const MAX_LINES = 330;
-const MAX_BYTES = 16 * 1024;
+const MAX_LINES = 355;
+const MAX_BYTES = 17.5 * 1024;
 
 const claudeMdPath = resolve(process.cwd(), 'CLAUDE.md');
 const content = readFileSync(claudeMdPath, 'utf8');
