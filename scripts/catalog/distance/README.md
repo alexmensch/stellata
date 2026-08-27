@@ -5,8 +5,9 @@ distance-override stack that refines AT-HYG's parallax-inverted distances.
 The authoring discipline for adding an override layer is the load-bearing
 part of this file — read it before touching the stack.
 
-The **radial** term of the space-motion velocity has its own subfolder:
-`radial-velocity/`. This one owns the tangential term and the assembly.
+The space-motion velocity's two fall-back cascades have their own subfolders:
+`radial-velocity/` and `pm-rescue/`. This one owns the assembly, and the
+proper motion each direction tier supplies alongside its own position.
 
 ## Files in this area
 
@@ -15,9 +16,17 @@ scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
                                   precision each carries) plus the
-                                  space-motion velocity assembly. Owns
-                                  `gaiaHas5pSolution`, which radial-velocity/
-                                  shares.
+                                  space-motion velocity assembly.
+  gaia-distrust.ts (+ test)       `gaiaHas5pSolution` and
+                                  `isGaiaCatalogueBibcode` — one predicate per
+                                  way this build refuses a Gaia value on a
+                                  blended row. Both terms of the velocity
+                                  import them, so the radial and the tangential
+                                  distrust a row for the same reason and a DR4
+                                  release is one edit.
+  pm-rescue/                      The proper motion for a row whose direction
+                                  tier carries none — velocity only, moving no
+                                  position. Its own README.
   radial-velocity/                The radial-velocity cascade and the
                                   Gaia-bibcode skip rule, with its own
                                   README.
@@ -81,7 +90,7 @@ which is a 1° tangent-plane error seen on the sphere after renormalisation.
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | per star and per coordinate, `ep_ra` / `ep_de` (1967.77–1991.74 across the cohort) |
-| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has, and those rows carry no PM either. 3 of the 43, pinned `directionTycho2FromIcrs` |
+| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, which leaves the position where it is. 3 of the 43, pinned `directionTycho2FromIcrs` |
 | `cns5` | the row's own `pos_epoch` (2016.0 on 5,244 rows, 2000.0 on 406, 1991.25 on 138, 2015.5 on 36, 2016.55 on 3) |
 | `simbad` | J2000.0 — **measured, not assumed**: over the 673 catalogue rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one back-propagated to J2000 to a median 0.000″, and not one row is closer to J2016 |
 
@@ -131,6 +140,19 @@ records are by construction the ones Gaia and HIP2 both miss, and not one
 of the 43 carries a HIP, a Gaia source_id or a proper name — the only
 three things `parseRef` addresses a record by. Its split-epoch
 propagation is pinned at unit level instead.
+
+## The proper-motion rescue cascade
+
+The direction cascade leaves **276** rows without a PM — 273 on a Gaia 2p
+(position-only) solution with no HIP2 cover, 3 on a Tycho-2 row with no mean
+solution. `pm-rescue/` re-keys those on the record's own designations rather
+than shipping them static, supplying the tangential term alone and moving no
+position. Its README carries the routing, why an owned PM on a blend is
+admissible at all, and the Gaia-bibcode skip rule's 13-row cost.
+
+`velocityVia` credits the catalogue rather than the route to it, so
+`velocityTycho2Pm` **282** counts this cascade's 242 rows alongside the
+direction tier's 40.
 
 ## Build-time de-extinction
 

@@ -165,9 +165,13 @@ propagate every position to `getT()`. Full design:
 `docs/science-catalog-ingestion.md` § Current-epoch star positions.
 
 `velocityPcPerYr` (`direction-cascade.ts`) assembles
-`v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the SAME tier solution
-`resolveDirection` selected (`DirectionResolution.src*` fields), so
-position and velocity always come from one astrometric solution. The
+`v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
+`resolveDirection` selected (`DirectionResolution.src*` fields), so position
+and velocity come from one astrometric solution wherever that solution states
+both. Where it states only a position, the PM comes from a designation-keyed
+tier instead and the pairing rests on both quantities describing the same
+object — `../distance/pm-rescue/README.md` § Why an owned PM on a blended row
+is admissible at all. The
 east/north tangent basis is `equatorialTangentBasis`
 (`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
 `companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
@@ -175,15 +179,23 @@ sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ
 
 Velocity source per row (pinned in build-counts as `velocity*`):
 
-| PM source | Rows routed | Zero-velocity fall-through |
-| --- | --- | --- |
-| Gaia DR3 5p PM | gaia_5p / gaia_nss_systemic tiers | 2p rows (PM null) |
-| HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers | HIP2 row, null PM |
-| Tycho-2 PM | tycho2 tier | `pflag='X'` rows, which have no mean solution and so no PM |
-| CNS5 PM | cns5 tier | CNS5 row with null pm cells |
-| SIMBAD bibcoded PM | simbad tier | a position whose PM is absent or unbibcoded |
+| PM source | Rows routed |
+| --- | --- |
+| Gaia DR3 5p PM | gaia_5p / gaia_nss_systemic tiers |
+| HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers |
+| Tycho-2 PM | tycho2 tier, plus the rescue cascade's 242 |
+| CNS5 PM | cns5 tier, plus 2 |
+| SIMBAD bibcoded PM | simbad tier, plus 17 |
 
-The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**.
+**A tier with no PM of its own does not end the search.** The 276 rows whose
+direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
+solution — re-key on the record's own designations through
+`../distance/pm-rescue/`, which supplies the tangential term without moving
+the position. `velocityZero` is what survives that: Sol, 8 clamped artifact
+rows, and the 15 the rescue leaves.
+
+The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**, and
+routing these rows to it is exactly what the rescue cascade exists to avoid.
 Its one remaining consumer is the LMC override's bulk-PM gate.
 
 `velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
@@ -194,8 +206,9 @@ thresholds.
 Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
 row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
 (`../distance/radial-velocity/README.md`) — and is zero where neither tier
-carries one. The 5p condition is the same one the PM table above turns on: a 2p
-row's RVS spectrum is as blended as its astrometry. **Sol** carries
+carries one. The 5p condition is the same one the PM rescue turns on: a 2p
+row's RVS spectrum is as blended as its astrometry, and both cascades read it
+off `../distance/gaia-distrust.ts`. **Sol** carries
 no PM row and sits at the origin, so its velocity is forced to exactly zero
 (the advance pass must leave the world origin fixed).
 

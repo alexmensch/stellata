@@ -237,7 +237,7 @@ being retired; the tier after each is its replacement:
 | Field | Cascade (first hit wins) |
 |---|---|
 | direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
-| space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; zero tangential term where that tier carries no PM |
+| space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term without moving the position; zero where that too finds nothing |
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
 | V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
@@ -376,17 +376,44 @@ Measured exposure and expected coverage (2026-08-14; pins in
   widening ladder reaches all four on their own GJ, so the SIMBAD tier
   takes them and the none bucket empties — no § 6 adjudication.
 
-  The **PM none of 4 is a different set** from the direction none of 0,
-  and is not a gap the cascade can close: three are Tycho-2 `pflag='X'`
-  rows, which carry no mean solution and so no proper motion at all (they
-  take their `ra_icrs` cell at J2000, unpropagated), and the fourth is Sol,
-  which is curated at zero velocity by construction. Those three are pinned
-  as `directionTycho2FromIcrs`, and a further **2** of the 43 are
-  `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the position
-  is an unresolved double's light-centre rather than one star's place. Both
-  are counted rather than gated: no tier sits below this one for a TYC-keyed
-  row, so gating either would cost the record. The V side of a `P` row is
-  marked a system blend for the same reason.
+  The **PM none of 4 was a different set** from the direction none of 0 —
+  three Tycho-2 rows with no mean solution and so no proper motion of their
+  own, plus Sol, curated at zero by construction. It was called a gap the
+  cascade could not close, and that was wrong on the three: `stellata-13dx`'s
+  rescue cascade reaches all of them on a bibcoded SIMBAD PM, leaving Sol
+  alone. It also mis-stated the shape — one of the three is a supplement
+  `flag='T'` row, not a `pflag='X'` one. Their positions do stay at J2000
+  unpropagated (`stellata-3bsf.33`).
+
+  Those three are pinned as `directionTycho2FromIcrs`, and a further **2** of
+  the 43 are `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the
+  position is an unresolved double's light-centre rather than one star's place.
+  Both are counted rather than gated: no tier sits below this one for a
+  TYC-keyed row, so gating either would cost the record. The V side of a `P`
+  row is marked a system blend for the same reason.
+
+- **the tangential term on rows no direction tier states a PM for** — SHIPPED
+  (`stellata-13dx`). A separate defect from the retirement above, and a
+  smaller one than it was filed as: of the **1,537** rows on a Gaia 2p
+  (position-only) solution, 1,264 route `hip2_saturated` and already took
+  HIP2's motion, so the cohort shipping static was **273**, not 1,537 — 23 of
+  them inside 25 pc. With the 3 Tycho-2 rows above that is **276**, routed
+  `pmRescueTycho2` **242** · `pmRescueCns5` **2** · `pmRescueSimbad` **17**,
+  residual `pmRescueGaiaBibcodeSkipped` **13** · `pmRescueNone` **2**.
+  `velocityZero` 285 → **24** (Sol + 8 clamped + those 15).
+
+  **The DR2 question this section left open is answered the same way the rv
+  cascade answered it, and the measurement is what settles it.** For **241**
+  of the 273 the spine's retired `pm_src` reads `G_R2`, and the printed cell
+  matches the SIMBAD value to the digit on **253** — reading the printed cell
+  back in and taking a DR2-bibcoded tier are the same number under different
+  labels. CNS5 is no escape: 87% of its proper motions cite a Gaia release
+  too. The cost is stated rather than hidden — 13 rows stay static, Gl 1245A
+  (4.69 pc) and Gl 791.2 (7.47 pc) the nearest. Tycho-2 carries the cohort
+  instead, and its ~90-yr baseline on an unresolved pair measures the light
+  centre's mean motion, which is nearer the systemic motion than a converged
+  short-baseline fit would be. Full detail:
+  `scripts/catalog/distance/pm-rescue/README.md`.
 
   The per-tier epochs also fix the printed cells' unpropagated staleness.
   Worst case in the cohort is **Gl 863.1A at 49.2″** — and that number
@@ -443,13 +470,18 @@ Rules:
   validation of that field (`validate:simbad`, the sample suites) — a
   value cannot verify itself, and including it would bias the accuracy
   metric toward artificial agreement.
-- **rv Gaia-bibcode skip rule.** The 5p gate withholds Gaia rv for a
-  physical reason (blended-RVS distrust), and SIMBAD frequently serves
-  the same Gaia value under a Gaia DR bibcode. On rows where the
-  record's own gate withheld Gaia rv, the SIMBAD tier skips values
-  whose `rvz_bibcode` is a Gaia DR bibcode — falling to older
-  literature or zero — so the pull cannot launder a withheld value back
-  in. |Δrv| by bibcode class is measured at implementation.
+- **Gaia-bibcode skip rule, both terms of the velocity.** The 5p gate
+  withholds Gaia rv for a physical reason (blended-RVS distrust), and a
+  second-order index frequently serves the same Gaia value back under a Gaia
+  DR bibcode. On a row whose own solution is 2p, the SIMBAD rv tier skips
+  values whose `rvz_bibcode` names a Gaia release, and the PM rescue skips a
+  CNS5 or SIMBAD `pm_bibcode` that does — falling to older literature or to
+  zero, so the pull cannot launder back the value Gaia withheld or the motion
+  it declined to fit. Tycho-2 needs no check: no Gaia reduction hides behind
+  a 1997 publication. Where no Gaia solution stands behind the row there is no
+  blend to distrust and the citation is ordinary, so the rule gates on the 2p
+  solution rather than on the tier. |Δrv| by bibcode class is measured at
+  implementation.
 - **Bright tier** = rows the direction cascade already routes to
   HIP2/printed, plus rows whose Gaia photometry is missing or outside
   the Riello validity range: printed `I/239` V applies. The validity

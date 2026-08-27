@@ -32,6 +32,8 @@ divided by cos δ again.
 `ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no
 mean solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings
 are all empty there and the J2000 cell is the only position the row has.
+(That 1,537 and the 1,537 Gaia 2p rows in the spine are unrelated counts
+that happen to match — see the PM rescue's README.)
 `pflag='P'` (3,953 rows) means the mean solution is the photocentre of an
 unresolved double, not one star's place.
 
@@ -123,6 +125,14 @@ republish; a re-pull is warranted only when the request set moves.
   **123** V rows. That is the whole no-Gaia astrometry cohort minus the
   Gliese-numbered remainder, which has no TYC and routes CNS5 / SIMBAD /
   Gliese instead (`docs/catalog-driver.md` § 5).
+- The same parse feeds the **PM rescue cascade**
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **242** rows —
+  its widest reach in this build. These carry a Gaia position but a 2p
+  solution Gaia fitted no proper motion to, and Tycho-2 is the tier admitted
+  without a bibcode check, because a 1997 publication cannot be Gaia's own
+  reduction returning. **2** are `pflag='P'` (ξ UMa A and B), where the light
+  centre's motion is the quantity wanted and the flag's warning is about the
+  position.
 
 The parser resolves § Which position to propagate from at parse time, so
 no consumer re-decides it: a row with a mean solution exposes

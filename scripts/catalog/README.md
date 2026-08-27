@@ -50,8 +50,8 @@ subfolders.
   cascade, and system distance coherence.
 - `distance/` — direction resolution, build-time de-extinction, and the
   multi-layer distance-refinement override stack with its authoring
-  discipline and post-build regression check. Its `radial-velocity/`
-  subfolder owns the rv cascade and the Gaia-bibcode skip rule.
+  discipline and post-build regression check. Its `radial-velocity/` and
+  `pm-rescue/` subfolders own the velocity's two fall-back cascades.
 - `photometry/` — the published Gaia broadband relations and the two
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
@@ -90,7 +90,7 @@ scripts/catalog/
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
-                                  direction, PM and V cascades.
+                                  direction, PM-rescue and V cascades.
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet

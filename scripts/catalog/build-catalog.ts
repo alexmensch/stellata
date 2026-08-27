@@ -362,6 +362,11 @@ async function main() {
     velocityCns5Pm: 0,
     velocitySimbadPm: 0,
     velocityZero: 0,
+    pmRescueTycho2: 0,
+    pmRescueCns5: 0,
+    pmRescueSimbad: 0,
+    pmRescueGaiaBibcodeSkipped: 0,
+    pmRescueNone: 0,
     velocityClamped: 0,
     velocityAboveEscape: 0,
     velocityRvApplied: 0,
@@ -440,6 +445,13 @@ async function main() {
       `simbad_pm ${vv.simbad_pm}, zero ${vv.zero} ` +
       `(clamped ${stats.velocityClamped}); rv applied ${stats.rvApplied}`,
   );
+  const pmr = stats.pmRescueVia;
+  console.log(
+    `  PM rescue (direction tier carries none): tycho2 ${pmr.tycho2}, ` +
+      `cns5 ${pmr.cns5}, simbad ${pmr.simbad}, ` +
+      `${pmr.gaia_bibcode_skipped} Gaia-bibcoded values skipped on 2p rows, ` +
+      `${pmr.none} with no owned PM`,
+  );
   const rv = stats.rvVia;
   const rvErr = stats.rvGaiaErrorBand;
   console.log(
@@ -509,6 +521,12 @@ async function main() {
   counts.velocityCns5Pm = vv.cns5_pm;
   counts.velocitySimbadPm = vv.simbad_pm;
   counts.velocityZero = vv.zero;
+  const pr = stats.pmRescueVia;
+  counts.pmRescueTycho2 = pr.tycho2;
+  counts.pmRescueCns5 = pr.cns5;
+  counts.pmRescueSimbad = pr.simbad;
+  counts.pmRescueGaiaBibcodeSkipped = pr.gaia_bibcode_skipped;
+  counts.pmRescueNone = pr.none;
   counts.velocityClamped = stats.velocityClamped;
   counts.velocityAboveEscape = stats.velocityAboveEscape;
   counts.velocityRvApplied = stats.rvApplied;

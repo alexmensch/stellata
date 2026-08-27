@@ -459,18 +459,37 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Space-motion velocity: rows whose PM came from HIP2 (the
    *  hip2_saturated + hip2_pm_discrepant tiers with a usable HIP2 PM). */
   velocityHip2Pm: number;
-  /** Space-motion velocity: tycho2-tier rows whose PM came from Tycho-2's
-   *  own solution. */
+  /** Space-motion velocity: rows whose PM came from Tycho-2 — its own
+   *  direction tier plus the rescue cascade's `pmRescueTycho2`. */
   velocityTycho2Pm: number;
-  /** Space-motion velocity: cns5-tier rows whose PM came from CNS5. */
+  /** Space-motion velocity: rows whose PM came from CNS5, both routes. */
   velocityCns5Pm: number;
-  /** Space-motion velocity: simbad-tier rows whose PM came from a bibcoded
-   *  SIMBAD `pmra`/`pmdec`. */
+  /** Space-motion velocity: rows whose PM came from a bibcoded SIMBAD
+   *  `pmra`/`pmdec`, both routes. */
   velocitySimbadPm: number;
   /** Space-motion velocity: rows with no usable PM from any source —
-   *  zero tangential velocity (2p Gaia rows, Tycho-2 `pflag='X'` rows,
-   *  Sol, and the artifact rows the sanity ceiling zeroed). */
+   *  zero tangential velocity (Sol, the rows the rescue cascade leaves at
+   *  `pmRescueGaiaBibcodeSkipped` / `pmRescueNone`, and the artifact rows the
+   *  sanity ceiling zeroed). */
   velocityZero: number;
+  /** PM rescue: rows the direction tier left without a proper motion whose
+   *  own TYC reaches a Tycho-2 mean solution. The cascade's top tier and its
+   *  only one needing no bibcode check — Tycho-2 predates Gaia
+   *  (`distance/README.md` § The proper-motion rescue cascade). */
+  pmRescueTycho2: number;
+  /** PM rescue: rows reached by CNS5 on their own GJ, whose PM cites the
+   *  literature rather than a Gaia release. */
+  pmRescueCns5: number;
+  /** PM rescue: rows reached by a bibcoded SIMBAD PM citing the literature —
+   *  the second-order bottom tier. */
+  pmRescueSimbad: number;
+  /** PM rescue: 2p rows whose only owned PM cites a Gaia release, refused so
+   *  the pull cannot return the motion DR3 declined to fit. They take a zero
+   *  tangential term; the cost is enumerated in the README. */
+  pmRescueGaiaBibcodeSkipped: number;
+  /** PM rescue: rows no owned PM source reaches at all. Distinct from the
+   *  skipped bucket — nothing was refused, there is nothing there. */
+  pmRescueNone: number;
   /** Rows whose computed space velocity exceeded VELOCITY_SANITY_CEILING
    *  (PM×distance artifact) and was zeroed — a subset of velocityZero. */
   velocityClamped: number;
