@@ -112,8 +112,12 @@ export interface Cns5Astrometry {
   decDeg: number;
   posEpoch: number;
   plxMas: number | null;
+  /** μ_α*, cos δ already applied. Admitted only with the bibcode that sourced
+   *  it: 87% of CNS5's proper motions are Gaia's own republished, and the PM
+   *  rescue's skip rule cannot see that without the citation. */
   pmRaMasyr: number | null;
   pmDecMasyr: number | null;
+  pmBibcode: string | null;
 }
 
 /** One CNS5 row. `gaiaSourceId` is an EDR3 id, which shares DR3's
@@ -131,8 +135,22 @@ export interface Cns5Row {
 
 const CNS5_COLUMNS = [
   'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
+
+/** An unbibcoded motion is dropped whole, the same rule the SIMBAD values pull
+ *  applies at write time: the bibcode is the source. Every committed CNS5 row
+ *  carries one, so this guards a re-pull rather than this file. */
+function cns5ProperMotion(
+  cells: string[], idx: Record<string, number>,
+): Pick<Cns5Astrometry, 'pmRaMasyr' | 'pmDecMasyr' | 'pmBibcode'> {
+  const pmRaMasyr = parseFloatOrNull(cells[idx.pm_ra]);
+  const pmDecMasyr = parseFloatOrNull(cells[idx.pm_de]);
+  const pmBibcode = nonEmpty(cells[idx.pm_bibcode]);
+  return pmRaMasyr !== null && pmDecMasyr !== null && pmBibcode !== null
+    ? { pmRaMasyr, pmDecMasyr, pmBibcode }
+    : { pmRaMasyr: null, pmDecMasyr: null, pmBibcode: null };
+}
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
   const out: Cns5Row[] = [];
@@ -156,13 +174,22 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
         ? {
             raDeg, decDeg, posEpoch,
             plxMas: parseFloatOrNull(cells[idx.plx_mas]),
-            pmRaMasyr: parseFloatOrNull(cells[idx.pm_ra]),
-            pmDecMasyr: parseFloatOrNull(cells[idx.pm_de]),
+            ...cns5ProperMotion(cells, idx),
           }
         : null,
     });
   }
   return out;
+}
+
+/** {@link cns5AstrometryByGj}'s index read the way a record asks for it, so the
+ *  direction cascade and the PM rescue fold the `gl` cell identically. */
+export function lookupCns5Astrometry(
+  index: ReadonlyMap<string, Cns5Astrometry>,
+  gl: string | null,
+): Cns5Astrometry | null {
+  const key = gl === null ? null : normaliseGjKey(gl);
+  return key === null ? null : index.get(key) ?? null;
 }
 
 /** CNS5's astrometry keyed the way a record asks for it: on its own `gl`

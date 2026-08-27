@@ -44,13 +44,21 @@ scripts/catalog/classic-ids/
                                   with the V cascade's bright tier. CNS5's row
                                   also carries the astrometry half of the
                                   slice, which `cns5AstrometryByGj` keys on the
-                                  record's own GJ for the direction cascade's
-                                  `cns5` tier — this folder parses that file,
-                                  ../distance/ routes on it.
-  cns5-fixture.ts                 Test-only Cns5Row builder. A module, not an
-                                  export from a test file: two suites here
-                                  build these rows, so a column added to the
-                                  interface lands in one place.
+                                  record's own GJ and `lookupCns5Astrometry`
+                                  reads back — one GJ fold for the direction
+                                  cascade's `cns5` tier and the PM rescue
+                                  alike. This folder parses that file,
+                                  ../distance/ routes on it. Its PM carries
+                                  `pmBibcode` because 87% of CNS5's motions are
+                                  Gaia's own republished and the rescue's skip
+                                  rule needs the citation to see that; an
+                                  unbibcoded motion is dropped whole, position
+                                  intact.
+  cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
+                                  A module, not an export from a test file:
+                                  four suites across two folders build these,
+                                  so a column added to either interface lands
+                                  in one place.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).
                                   Pure.

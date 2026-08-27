@@ -26,10 +26,12 @@ const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
   'cns5\tgj\tgj_comp\tgaia_source_id\thip'
-    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de',
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de\tpm_bibcode',
   '3591\t551\tC\t5853498713190525696\t70890'
-    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47',
-  '0\tSun\t\t\t\t\t\t\t\t\t',
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47'
+    + '\t2020yCat.1350....0G',
+  '0\tSun\t\t\t\t\t\t\t\t\t\t',
+  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t-10\t20\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
@@ -96,6 +98,17 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
     expect(rows[1].gj).toBe('Sun');
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
+  });
+
+  it('carries the PM bibcode, and drops an unbibcoded motion whole', () => {
+    const rows = parseCns5Tsv(CNS5);
+    expect(rows[0].astrometry?.pmBibcode).toBe('2020yCat.1350....0G');
+    expect(rows[0].astrometry?.pmRaMasyr).toBe(-3781.74);
+    // The position survives the drop; only the motion needed the citation.
+    expect(rows[2].astrometry?.plxMas).toBe(100);
+    expect(rows[2].astrometry?.pmRaMasyr).toBeNull();
+    expect(rows[2].astrometry?.pmDecMasyr).toBeNull();
+    expect(rows[2].astrometry?.pmBibcode).toBeNull();
   });
 });
 
