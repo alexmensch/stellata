@@ -6,7 +6,11 @@ import { describe, it, expect } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
-import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import {
+  CATALOG_SCENE_EPOCH,
+  type DirectionSources,
+  type GaiaAstrometryCatalogRow,
+} from '../distance/direction-cascade';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import {
   SPINE_COLUMNS,
@@ -32,10 +36,40 @@ function writeSpineTsv(rows: readonly Partial<SpineRow>[]): string {
   return path;
 }
 
-// ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). mag 10 at 100 pc is absmag 5.
+// The spine's printed ra/dec and `mag` cells are no longer tiers of any
+// cascade, so a fixture row needs a real source to be both placed and lit or
+// the walk drops it. Tycho-2 serves both terms at once, and BT = VT puts the
+// reduced Johnson V at exactly VT.
+const ORIGIN_TYC = '1-1-1';
+const RHO_AQL_TYC = '2-2-1';
+
+function tycho2Sources(
+  rows: ReadonlyArray<{ tyc: string; raDeg: number; decDeg: number; vMag: number }>,
+  overrides: Partial<DirectionSources> = {},
+): DirectionSources {
+  return {
+    gaiaAstrometry: new Map(),
+    hip2: new Map(),
+    nssSourceIds: new Set(),
+    cns5: new Map(),
+    tycho2: new Map(rows.map((r) => [r.tyc, {
+      raDeg: r.raDeg, decDeg: r.decDeg,
+      epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
+      pmRaMasyr: 0, pmDecMasyr: 0,
+      btMag: r.vMag, vtMag: r.vMag,
+      flag: null, fromIcrs: false,
+    }])),
+    ...overrides,
+  };
+}
+
+// ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
 const AT_ORIGIN_SIGHTLINE: Partial<SpineRow> = {
-  ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V', mag: '10.0',
+  ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
+  tyc: ORIGIN_TYC,
 };
+const AT_ORIGIN_DIRECTIONS = (): DirectionSources =>
+  tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 }]);
 
 // Constant density everywhere (logRatio 0 collapses the exponential
 // decode), so any sightline inside the cube accumulates non-zero A_V.
@@ -66,6 +100,7 @@ describe('readStars build-time de-extinction of ci', () => {
         conAssignment: CON_ASSIGNMENT,
         dustGrid: grid,
         hipBv: new Map([[11111, 0.5]]),
+        directions: AT_ORIGIN_DIRECTIONS(),
       },
     );
     expect(stars).toHaveLength(2);
@@ -100,11 +135,16 @@ describe('readStars Gaia source_id', () => {
     ]);
     const { stars } = readStars(
       writeSpineTsv([{
-        ...AT_ORIGIN_SIGHTLINE, mag: '1.33', gaia_source_id: sourceId,
+        ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId,
       }]),
       {
         conAssignment: CON_ASSIGNMENT,
-        directions: { gaiaAstrometry, hip2: new Map(), nssSourceIds: new Set() },
+        // Gaia places it (outranking Tycho-2); Tycho-2 still has to light it,
+        // since this Gaia row carries no BP/RP for the Riello transform.
+        directions: tycho2Sources(
+          [{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 1.33 }],
+          { gaiaAstrometry },
+        ),
       },
     );
     expect(stars[0].gaiaSourceId).toBe(sourceId);
@@ -119,12 +159,18 @@ describe('readStars constellation assignment', () => {
   const RHO_AQL: Partial<SpineRow> = {
     dist: '46.5', dist_src: 'OTHER', ci: '0.08', spect: 'A2V', bayer: 'Rho',
     flam: '67', hip: '99742', hd: '192425', hr: '7724',
-    ra: '20.23796', dec: '15.1975', mag: '4.94',
+    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC,
   };
+  // 20.23796 h × 15 = 303.5694°.
+  const RHO_AQL_DIRECTIONS = (): DirectionSources => tycho2Sources([
+    { tyc: RHO_AQL_TYC, raDeg: 303.5694, decDeg: 15.1975, vMag: 4.94 },
+    { tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 },
+  ]);
 
   it('resolves byte 34 positionally', () => {
     const { stars } = readStars(
-      writeSpineTsv([RHO_AQL]), { conAssignment: CON_ASSIGNMENT },
+      writeSpineTsv([RHO_AQL]),
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
@@ -137,7 +183,7 @@ describe('readStars constellation assignment', () => {
     // the positional index until the overlay supplies one.
     const { stars } = readStars(
       writeSpineTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
-      { conAssignment: CON_ASSIGNMENT },
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
     );
     expect(stars.map((s) => s.desigConIndex))
       .toEqual([NO_CONSTELLATION_INDEX, NO_CONSTELLATION_INDEX]);
@@ -147,7 +193,7 @@ describe('readStars constellation assignment', () => {
     const { stars } = readStars(
       writeSpineTsv([{
         ra: '0', dec: '0', dist: '0', dist_src: 'OTHER', ci: '0.656',
-        spect: 'G2V', proper: 'Sol', mag: '-26.7',
+        spect: 'G2V', proper: 'Sol',
       }]),
       { conAssignment: CON_ASSIGNMENT },
     );

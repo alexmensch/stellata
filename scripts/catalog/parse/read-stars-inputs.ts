@@ -34,6 +34,13 @@ import {
   parseSimbadValuesTsv,
   type SimbadValueIndex,
 } from '../simbad-values-parse';
+import { parseTycho2Tsvs } from '../tycho2-parse';
+import { cns5AstrometryByGj, parseCns5Tsv } from '../classic-ids/classic-ids-parse';
+import {
+  emptyGlieseIndex,
+  parseGlieseTsv,
+  type GlieseIndex,
+} from '../gliese-parse';
 import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
@@ -48,6 +55,10 @@ const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 const SRC_SIMBAD_VALUES = resolve(ROOT, 'data/simbad/simbad_values.tsv');
+const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
+const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
+const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
+const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
 const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 
@@ -56,7 +67,8 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
   INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
-  SRC_SIMBAD_VALUES, SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
+  SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
+  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
 ];
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
@@ -73,6 +85,9 @@ export type ReadStarsInputSizes = Pick<
   | 'hipVMagEntries'
   | 'hipBvEntries'
   | 'nssSourceIdEntries'
+  | 'tycho2Entries'
+  | 'cns5AstrometryEntries'
+  | 'glieseEntries'
 >;
 
 /** The loaded form of `ReadStarsOptions`: every table present, none optional,
@@ -98,6 +113,9 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     hipVMagEntries: 0,
     hipBvEntries: 0,
     nssSourceIdEntries: 0,
+    tycho2Entries: 0,
+    cns5AstrometryEntries: 0,
+    glieseEntries: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -193,6 +211,8 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
     nssSourceIds: new Set(),
+    tycho2: new Map(),
+    cns5: new Map(),
   };
   if (existsSync(SRC_GAIA_ASTROMETRY)) {
     console.log('Parsing Gaia DR3 5p astrometry (full catalog)...');
@@ -254,6 +274,63 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
+  // Tycho-2 mean positions, PM and BT/VT — the direction, PM and V cascades'
+  // tier for TYC-bearing rows Gaia and HIP2 both miss. Both tables are read
+  // together because the main one wins on the identifiers they share.
+  if (existsSync(SRC_TYCHO2_MAIN) && existsSync(SRC_TYCHO2_SUPPL1)) {
+    console.log('Parsing Tycho-2 astrometry and BT/VT photometry...');
+    const t = Date.now();
+    directions.tycho2 = parseTycho2Tsvs(
+      readFileSync(SRC_TYCHO2_MAIN, 'utf8'),
+      readFileSync(SRC_TYCHO2_SUPPL1, 'utf8'),
+    );
+    console.log(`  ${directions.tycho2.size} entries in ${Date.now() - t}ms`);
+    sizes.tycho2Entries = directions.tycho2.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_TYCHO2_MAIN} not found — the direction, PM and V\n` +
+      `         cascades lose their Tycho-2 tier; its rows fall through and\n` +
+      `         those with no tier below lose their record. Re-run\n` +
+      `         \`pnpm run refresh:tycho2\`.`,
+    );
+  }
+
+  // CNS5's own astrometry, keyed on the record's GJ — the direction tier
+  // under Tycho-2 for the Gliese cohort.
+  if (existsSync(SRC_CNS5)) {
+    console.log('Parsing CNS5 astrometry...');
+    const t = Date.now();
+    directions.cns5 = cns5AstrometryByGj(parseCns5Tsv(readFileSync(SRC_CNS5, 'utf8')));
+    console.log(`  ${directions.cns5.size} entries in ${Date.now() - t}ms`);
+    sizes.cns5AstrometryEntries = directions.cns5.size;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_CNS5} not found — the direction cascade's CNS5 tier is\n` +
+      `         unavailable; its rows fall to SIMBAD. Re-run\n` +
+      `         \`pnpm run refresh:classic-ids\`.`,
+    );
+  }
+
+  // Printed Gliese V/70A values — the V cascade's tier under Tycho-2, and the
+  // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
+  // for those rows). Absent costs each of them its V, and V is a membership
+  // gate, so this shows up as `spineDroppedNoVMagnitude` rather than a
+  // routing drift.
+  let gliese: GlieseIndex = emptyGlieseIndex();
+  if (existsSync(SRC_GLIESE)) {
+    console.log('Parsing printed Gliese V/70A values...');
+    const t = Date.now();
+    gliese = parseGlieseTsv(readFileSync(SRC_GLIESE, 'utf8'));
+    console.log(`  ${gliese.rowCount} rows in ${Date.now() - t}ms`);
+    sizes.glieseEntries = gliese.rowCount;
+  } else {
+    console.warn(
+      `WARNING: ${SRC_GLIESE} not found — the V cascade's Gliese tier is\n` +
+      `         unavailable and the GJ-only cohort loses its records.\n` +
+      `         Re-run \`pnpm run refresh:gliese\`.`,
+    );
+  }
+
   // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
   // the Bailer-Jones soft-continue): a soft-continue would carry
   // extincted absmags into a runtime that assumes de-extincted, silently
@@ -273,6 +350,6 @@ export function loadReadStarsInputs(): ReadStarsInputs {
 
   return {
     bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
-    hipVMag, hipBv, dustGrid, conAssignment, sizes,
+    hipVMag, hipBv, gliese, dustGrid, conAssignment, sizes,
   };
 }

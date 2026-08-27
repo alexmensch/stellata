@@ -957,6 +957,16 @@ export const SOL_PROPER_NAME = 'Sol';
  *  drift fix, and moves the pinned radius. */
 export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
 
+/** Sol's apparent V, curated for the same reason its direction is: it carries
+ *  no identifier any cascade can key on, so every machine tier misses it and
+ *  V is a membership gate.
+ *
+ *  −26.7 is the value the AT-HYG-driven build carried. It reaches no shipped
+ *  byte — absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above rather than deriving
+ *  from this, because Sol sits at distance zero — so it exists to satisfy the
+ *  gate with a defensible number rather than to be read. */
+export const SOL_APPARENT_V_MAGNITUDE = -26.7;
+
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.
  *  The reservation is pinned by a regression test: drifting RESERVED into

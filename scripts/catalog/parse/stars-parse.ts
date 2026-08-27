@@ -13,6 +13,7 @@ import {
   tallyDistSrc,
   DIST_SRC_HIP,
   SOL_ABSOLUTE_V_MAGNITUDE,
+  SOL_APPARENT_V_MAGNITUDE,
   SOL_PROPER_NAME,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -68,9 +69,16 @@ import {
 } from '../simbad-values-parse';
 import {
   resolveVMagnitude,
+  tycho2ColourOutsideRange,
+  tycho2VMagnitude,
   V_VIA_VALUES,
   type VVia,
 } from '../photometry/v-magnitude-pure';
+import {
+  emptyGlieseIndex,
+  lookupGliese,
+  type GlieseIndex,
+} from '../gliese-parse';
 import {
   resolveColourIndex,
   CI_VIA_VALUES,
@@ -216,6 +224,10 @@ export interface ReadStarsOptions {
   /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
    *  only measured colour reaching rows with no Gaia source at all. */
   hipBv?: Map<number, number>;
+  /** Printed Gliese V/70A values keyed on the record's own `gl` — the V
+   *  cascade's tier below Tycho-2, and the only one reaching the GJ-only
+   *  cohort. Absent costs those rows their V, hence their record. */
+  gliese?: GlieseIndex;
   dustGrid?: DustGrid | null;
 }
 
@@ -232,9 +244,12 @@ export function readStars(
       gaiaAstrometry: new Map(),
       hip2: new Map(),
       nssSourceIds: new Set(),
+      tycho2: new Map(),
+      cns5: new Map(),
     },
     hipVMag = new Map(),
     hipBv = new Map(),
+    gliese = emptyGlieseIndex(),
     dustGrid = null,
   }: ReadStarsOptions,
 ): {
@@ -251,6 +266,7 @@ export function readStars(
     lmcOverriddenByDistSrc: DistSrcPartition;  // lmcOverridden split by AT-HYG dist_src
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
+    vTycho2OutsideBtVtRange: number; // tycho2-tier rows outside SP-1200's published BT−VT range
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
@@ -309,6 +325,7 @@ export function readStars(
   const ciVia = emptyTallyPartition(CI_VIA_VALUES);
   const spectralSimbadKey = emptyTallyPartition(SIMBAD_NAMESPACE_VALUES);
   let ciGspcValidatedRange = 0;
+  let vTycho2OutsideBtVtRange = 0;
   let rvApplied = 0;
   let velocityClamped = 0;
   const velocityClampedSample: string[] = [];
@@ -334,9 +351,9 @@ export function readStars(
     }
 
     const hip = parseIntOrNull(row.hip);
-    const mag = parseFloatOrNull(row.mag);
-    // Printed proper motion (mas/yr, cos δ-applied). Feeds the LMC PM gate and
-    // the athyg_printed velocity tier.
+    // Printed proper motion (mas/yr, cos δ-applied). Its only remaining
+    // consumer is the LMC override's bulk-PM gate — the velocity assembly
+    // takes its PM from whichever tier the direction cascade selected.
     const athygPmRa = parseFloatOrNull(row.pm_ra);
     const athygPmDec = parseFloatOrNull(row.pm_dec);
     // Read off the spine column, never re-derived: the native → HIP-cross-walk
@@ -426,11 +443,15 @@ export function readStars(
       continue;
     }
 
-    // Sky direction through the Gaia 5p → HIP2 → AT-HYG cascade;
-    // position is direction × distance, both float64 until the
+    const proper = nonEmpty(row.proper);
+    const isSol = proper === SOL_PROPER_NAME;
+
+    // Sky direction through the Gaia 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD
+    // cascade; position is direction × distance, both float64 until the
     // float32 pack at write time.
     const dirRes = resolveDirection(
-      gaiaSourceId, hip, ra, dec, directions, athygPmRa, athygPmDec,
+      { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
+      directions,
     );
     if (dirRes === null) {
       dropped.noDirection++;
@@ -441,15 +462,29 @@ export function readStars(
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
 
-    const proper = nonEmpty(row.proper);
-    const isSol = proper === SOL_PROPER_NAME;
-
-    // V through the Riello transform → printed HIP V → catalogued cell, then
-    // absmag from that V and the distance the whole override stack settled on.
-    // See ../photometry/README.md. Sol is the one record this cannot reach:
-    // it sits at distance zero, where the modulus is undefined.
-    const vRes = resolveVMagnitude(gaiaRow, printedByHip(hipVMag, hip), mag);
+    // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
+    // Gliese's printed Vmag, then absmag from that V and the distance the
+    // whole override stack settled on. See ../photometry/README.md. Sol is
+    // the one record this cannot reach: it sits at distance zero, where the
+    // modulus is undefined.
+    const tycho2Row = simbadKeys.tyc !== null
+      ? directions.tycho2.get(simbadKeys.tyc) ?? null
+      : null;
+    const glieseRow = lookupGliese(gliese, simbadKeys.gl);
+    const vRes = resolveVMagnitude(
+      gaiaRow,
+      printedByHip(hipVMag, hip),
+      tycho2VMagnitude(tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null),
+      glieseRow?.vMag ?? null,
+      isSol ? SOL_APPARENT_V_MAGNITUDE : null,
+    );
     vVia[vRes.via]++;
+    if (
+      vRes.via === 'tycho2'
+      && tycho2ColourOutsideRange(tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null)
+    ) {
+      vTycho2OutsideBtVtRange++;
+    }
     if (vRes.v === null) {
       dropped.noVMagnitude++;
       continue;
@@ -634,6 +669,7 @@ export function readStars(
       spectralFallback,
       ciVia,
       ciGspcValidatedRange,
+      vTycho2OutsideBtVtRange,
     },
   };
 }

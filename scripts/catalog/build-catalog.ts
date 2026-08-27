@@ -335,19 +335,30 @@ async function main() {
     hipVMagEntries: 0,
     hipBvEntries: 0,
     nssSourceIdEntries: 0,
+    tycho2Entries: 0,
+    cns5AstrometryEntries: 0,
+    glieseEntries: 0,
     hipDistFullPrecision: 0,
     directionGaia5p: 0,
     directionGaiaNssSystemic: 0,
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
-    directionAthygPrinted: 0,
+    directionTycho2: 0,
+    directionCns5: 0,
+    directionSimbad: 0,
+    directionCurated: 0,
     vGaiaRiello: 0,
     vPrintedHip: 0,
-    vCatalogued: 0,
+    vTycho2: 0,
+    vTycho2OutsideBtVtRange: 0,
+    vGliese: 0,
+    vCurated: 0,
     vNone: 0,
     velocityGaiaPm: 0,
     velocityHip2Pm: 0,
-    velocityAthygPm: 0,
+    velocityTycho2Pm: 0,
+    velocityCns5Pm: 0,
+    velocitySimbadPm: 0,
     velocityZero: 0,
     velocityClamped: 0,
     velocityAboveEscape: 0,
@@ -401,12 +412,15 @@ async function main() {
       `gaia_nss_systemic ${dv.gaia_nss_systemic}, ` +
       `hip2_saturated ${dv.hip2_saturated}, ` +
       `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
-      `athyg_printed ${dv.athyg_printed}`,
+      `tycho2 ${dv.tycho2}, cns5 ${dv.cns5}, simbad ${dv.simbad}, ` +
+      `curated ${dv.curated}`,
   );
   const mv = stats.vVia;
   console.log(
     `  V cascade: gaia_riello ${mv.gaia_riello}, printed_hip ${mv.printed_hip}, ` +
-      `catalogued ${mv.catalogued}, none ${mv.none}`,
+      `tycho2 ${mv.tycho2} (${stats.vTycho2OutsideBtVtRange} outside the ` +
+      `published BT−VT range), gliese ${mv.gliese}, ` +
+      `curated ${mv.curated}, none ${mv.none}`,
   );
   const cv = stats.ciVia;
   console.log(
@@ -418,8 +432,9 @@ async function main() {
   const vv = stats.velocityVia;
   console.log(
     `  velocity cascade: gaia_pm ${vv.gaia_pm}, hip2_pm ${vv.hip2_pm}, ` +
-      `athyg_pm ${vv.athyg_pm}, zero ${vv.zero} (clamped ${stats.velocityClamped}); ` +
-      `rv applied ${stats.rvApplied}`,
+      `tycho2_pm ${vv.tycho2_pm}, cns5_pm ${vv.cns5_pm}, ` +
+      `simbad_pm ${vv.simbad_pm}, zero ${vv.zero} ` +
+      `(clamped ${stats.velocityClamped}); rv applied ${stats.rvApplied}`,
   );
   const rv = stats.rvVia;
   const rvErr = stats.rvGaiaErrorBand;
@@ -471,14 +486,22 @@ async function main() {
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
-  counts.directionAthygPrinted = dv.athyg_printed;
+  counts.directionTycho2 = dv.tycho2;
+  counts.directionCns5 = dv.cns5;
+  counts.directionSimbad = dv.simbad;
+  counts.directionCurated = dv.curated;
   counts.vGaiaRiello = stats.vVia.gaia_riello;
   counts.vPrintedHip = stats.vVia.printed_hip;
-  counts.vCatalogued = stats.vVia.catalogued;
+  counts.vTycho2 = stats.vVia.tycho2;
+  counts.vTycho2OutsideBtVtRange = stats.vTycho2OutsideBtVtRange;
+  counts.vGliese = stats.vVia.gliese;
+  counts.vCurated = stats.vVia.curated;
   counts.vNone = stats.vVia.none;
   counts.velocityGaiaPm = vv.gaia_pm;
   counts.velocityHip2Pm = vv.hip2_pm;
-  counts.velocityAthygPm = vv.athyg_pm;
+  counts.velocityTycho2Pm = vv.tycho2_pm;
+  counts.velocityCns5Pm = vv.cns5_pm;
+  counts.velocitySimbadPm = vv.simbad_pm;
   counts.velocityZero = vv.zero;
   counts.velocityClamped = stats.velocityClamped;
   counts.velocityAboveEscape = stats.velocityAboveEscape;

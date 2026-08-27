@@ -8,7 +8,9 @@ import {
   HIP2_PM_DELTA_THRESHOLD_MASYR,
   HIP2_REF_EPOCH,
   KM_S_TO_PC_YR,
+  SIMBAD_REF_EPOCH,
   directionAtEpoch,
+  directionAtEpochSplit,
   gaia5pUnreliable,
   hip2PmDisagrees,
   parseGaiaAstrometryCatalogTsv,
@@ -16,10 +18,12 @@ import {
   parseNssSourceIdSet,
   resolveDirection,
   velocityPcPerYr,
+  type DirectionInputs,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
 } from './direction-cascade';
+import type { Tycho2Row } from '../tycho2-parse';
 import { gaiaAstrometryRow } from './astrometry-fixture';
 import {
   equatorialTangentBasis,
@@ -53,12 +57,34 @@ function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow 
   };
 }
 
+const TYC = '3694-2544-1';
+
+function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
+  return {
+    raDeg: 33.5, decDeg: 12.25,
+    epochRa: 1991.07, epochDec: 1991.00,
+    pmRaMasyr: 10, pmDecMasyr: -10,
+    btMag: 9.5, vtMag: 8.9,
+    flag: null, fromIcrs: false,
+    ...overrides,
+  };
+}
+
 function sources(overrides: Partial<DirectionSources> = {}): DirectionSources {
   return {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
     nssSourceIds: new Set(),
+    tycho2: new Map(),
+    cns5: new Map(),
     ...overrides,
+  };
+}
+
+function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
+  return {
+    sourceId: null, hip: null, tyc: null, gl: null, simbad: null,
+    isSol: false, ...overrides,
   };
 }
 
@@ -198,7 +224,7 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('clean Gaia 5p routes gaia_5p with the Gaia direction', () => {
     const g = gaiaRow();
-    const res = resolveDirection(SID, null, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
     expect(res?.via).toBe('gaia_5p');
@@ -211,19 +237,19 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('NSS + unreliable 5p routes gaia_nss_systemic and keeps the Gaia direction', () => {
     const g = gaiaRow({ ruwe: 2.0 });
-    const res = resolveDirection(SID, null, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
       nssSourceIds: new Set([SID]),
     }));
     expect(res?.via).toBe('gaia_nss_systemic');
-    const gaia5p = resolveDirection(SID, null, 1, 2, sources({
+    const gaia5p = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
     expect(angSepArcsec(res!.dir, gaia5p!.dir)).toBe(0);
   });
 
   it('NSS membership alone (clean 5p) stays gaia_5p', () => {
-    const res = resolveDirection(SID, null, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow()]]),
       nssSourceIds: new Set([SID]),
     }));
@@ -232,7 +258,7 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('HIP2 PM discrepancy routes hip2_pm_discrepant with the HIP2 direction', () => {
     const h = hip2Row({ pmRaMasyr: 10 + HIP2_PM_DELTA_THRESHOLD_MASYR + 1 });
-    const res = resolveDirection(SID, 42, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID, hip: 42 }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow()]]),
       hip2: new Map([[42, h]]),
     }));
@@ -251,7 +277,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   });
 
   it('gaia_nss_systemic outranks hip2_pm_discrepant (stage3 priority order)', () => {
-    const res = resolveDirection(SID, 42, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID, hip: 42 }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow({ ruwe: 2.0 })]]),
       hip2: new Map([[42, hip2Row({ pmRaMasyr: 500 })]]),
       nssSourceIds: new Set([SID]),
@@ -260,14 +286,14 @@ describe('direction-cascade / resolveDirection routing', () => {
   });
 
   it('no Gaia source → hip2_saturated', () => {
-    const res = resolveDirection(null, 42, 1, 2, sources({
+    const res = resolveDirection(inputs({ hip: 42 }), sources({
       hip2: new Map([[42, hip2Row()]]),
     }));
     expect(res?.via).toBe('hip2_saturated');
   });
 
   it('2p Gaia row (parallax null) with HIP2 cover → hip2_saturated', () => {
-    const res = resolveDirection(SID, 42, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID, hip: 42 }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow({ parallaxMas: null })]]),
       hip2: new Map([[42, hip2Row()]]),
     }));
@@ -276,22 +302,114 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('2p Gaia row without HIP2 falls through to gaia_5p, unpropagated when PM is null', () => {
     const g = gaiaRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });
-    const res = resolveDirection(SID, null, 1, 2, sources({
+    const res = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
     expect(res?.via).toBe('gaia_5p');
     expect(angSepArcsec(res!.dir, unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
   });
 
-  it('nothing resolves → athyg_printed from the row ra (hours) / dec', () => {
-    const res = resolveDirection(null, null, 6, -30, sources());
-    expect(res?.via).toBe('athyg_printed');
-    expect(angSepArcsec(res!.dir, unitVectorFromRaDec(90, -30))).toBe(0);
+  it('Tycho-2 takes the row Gaia and HIP2 both miss, on its own TYC', () => {
+    const t = tycho2Row();
+    const res = resolveDirection(inputs({ tyc: TYC }), sources({
+      tycho2: new Map([[TYC, t]]),
+    }));
+    expect(res?.via).toBe('tycho2');
+    expect(res?.velVia).toBe('tycho2_pm');
+    expect(res?.srcRaDeg).toBe(t.raDeg);
   });
 
-  it('no source data and no printed ra/dec → null', () => {
-    expect(resolveDirection(null, null, null, -30, sources())).toBeNull();
-    expect(resolveDirection(null, null, 6, null, sources())).toBeNull();
+  it('Tycho-2 advances each coordinate over its OWN mean epoch', () => {
+    // ep_ra and ep_de differ by a year, so collapsing them onto one epoch
+    // moves Dec over the wrong baseline — the failure this tier's split
+    // propagation exists to prevent.
+    const t = tycho2Row({
+      epochRa: 1990.0, epochDec: 1991.0,
+      pmRaMasyr: 0, pmDecMasyr: 3600_000,   // 1°/yr in Dec, none in RA
+    });
+    const res = resolveDirection(inputs({ tyc: TYC }), sources({
+      tycho2: new Map([[TYC, t]]),
+    }))!;
+    const expected = directionAtEpochSplit(
+      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr,
+      1990.0, 1991.0, CATALOG_SCENE_EPOCH,
+    );
+    expect(res.dir.z).toBeCloseTo(expected.z, 12);
+    // Against the single-epoch form the Dec advance is a whole degree out.
+    const collapsed = directionAtEpoch(
+      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1990.0, CATALOG_SCENE_EPOCH,
+    );
+    expect(angSepArcsec(res.dir, collapsed)).toBeGreaterThan(3000);
+  });
+
+  it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {
+    const res = resolveDirection(inputs({ tyc: TYC }), sources({
+      tycho2: new Map([[TYC, tycho2Row({ pmRaMasyr: null, pmDecMasyr: null })]]),
+    }));
+    expect(res?.via).toBe('tycho2');
+    expect(res?.velVia).toBe('zero');
+  });
+
+  it('CNS5 takes a TYC-less Gliese row, propagating from its own pos_epoch', () => {
+    const res = resolveDirection(inputs({ gl: 'Gl 165A' }), sources({
+      cns5: new Map([['165A', {
+        raDeg: 70, decDeg: -7, posEpoch: 2000.0,
+        plxMas: 100, pmRaMasyr: 50, pmDecMasyr: -20,
+      }]]),
+    }));
+    expect(res?.via).toBe('cns5');
+    expect(res?.velVia).toBe('cns5_pm');
+  });
+
+  it('Tycho-2 outranks CNS5 on a row carrying both', () => {
+    const res = resolveDirection(inputs({ tyc: TYC, gl: 'Gl 165A' }), sources({
+      tycho2: new Map([[TYC, tycho2Row()]]),
+      cns5: new Map([['165A', {
+        raDeg: 70, decDeg: -7, posEpoch: 2000.0,
+        plxMas: 100, pmRaMasyr: 50, pmDecMasyr: -20,
+      }]]),
+    }));
+    expect(res?.via).toBe('tycho2');
+  });
+
+  it('SIMBAD is the bottom tier and propagates from J2000', () => {
+    const simbad = {
+      raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
+      pmRaMasyr: 200, pmDecMasyr: -100, pmBibcode: '2020yCat.1350....0G',
+    };
+    const res = resolveDirection(inputs({ simbad }), sources())!;
+    expect(res.via).toBe('simbad');
+    expect(res.velVia).toBe('simbad_pm');
+    const expected = directionAtEpoch(
+      simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+      SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
+    );
+    expect(res.dir.x).toBeCloseTo(expected.x, 12);
+    expect(res.dir.y).toBeCloseTo(expected.y, 12);
+    expect(res.dir.z).toBeCloseTo(expected.z, 12);
+  });
+
+  it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
+    const res = resolveDirection(inputs({
+      simbad: {
+        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
+        pmRaMasyr: null, pmDecMasyr: null, pmBibcode: null,
+      },
+    }), sources())!;
+    expect(res.via).toBe('simbad');
+    expect(res.velVia).toBe('zero');
+    // Component-wise: angSepArcsec's acos floors near 0.004″ for a unit
+    // vector against itself, as the hip2_pm_discrepant case above notes.
+    const unpropagated = unitVectorFromRaDec(120, 40);
+    expect(res.dir.x).toBeCloseTo(unpropagated.x, 12);
+    expect(res.dir.y).toBeCloseTo(unpropagated.y, 12);
+    expect(res.dir.z).toBeCloseTo(unpropagated.z, 12);
+  });
+
+  it('no tier reaches the row → null, which the walk counts as a dropped record', () => {
+    expect(resolveDirection(inputs(), sources())).toBeNull();
+    expect(resolveDirection(inputs({ tyc: 'not-a-tyc', gl: 'Gl 9999' }), sources()))
+      .toBeNull();
   });
 
   it('DIRECTION_VIA_VALUES covers every emitted tag', () => {
@@ -300,7 +418,10 @@ describe('direction-cascade / resolveDirection routing', () => {
       'gaia_nss_systemic',
       'hip2_saturated',
       'hip2_pm_discrepant',
-      'athyg_printed',
+      'tycho2',
+      'cns5',
+      'simbad',
+      'curated',
     ]);
   });
 });
@@ -460,8 +581,9 @@ describe('resolveDirection velocity solution', () => {
     const sources: DirectionSources = {
       gaiaAstrometry: new Map([['1', gaiaRow]]),
       hip2: new Map(), nssSourceIds: new Set(),
+      tycho2: new Map(), cns5: new Map(),
     };
-    const r = resolveDirection('1', null, 0.5, 20, sources)!;
+    const r = resolveDirection(inputs({ sourceId: '1' }), sources)!;
     expect(r.via).toBe('gaia_5p');
     expect(r.srcRaDeg).toBe(10);
     expect(r.srcPmraMasyr).toBe(100);
@@ -475,21 +597,21 @@ describe('resolveDirection velocity solution', () => {
     const sources: DirectionSources = {
       gaiaAstrometry: new Map([['1', twoP]]),
       hip2: new Map(), nssSourceIds: new Set(),
+      tycho2: new Map(), cns5: new Map(),
     };
-    const r = resolveDirection('1', null, 0.5, 20, sources)!;
+    const r = resolveDirection(inputs({ sourceId: '1' }), sources)!;
     expect(r.velVia).toBe('zero');
   });
 
-  it('athyg_printed tier carries AT-HYG PM + athyg_pm velVia', () => {
+  it('the Tycho-2 tier carries its own solution + tycho2_pm velVia', () => {
     const sources: DirectionSources = {
       gaiaAstrometry: new Map(), hip2: new Map(), nssSourceIds: new Set(),
+      tycho2: new Map([[TYC, tycho2Row({ pmRaMasyr: 12, pmDecMasyr: -8 })]]),
+      cns5: new Map(),
     };
-    const r = resolveDirection(null, null, 6.0, -30, sources, 12, -8)!;
-    expect(r.via).toBe('athyg_printed');
-    expect(r.srcRaDeg).toBe(90);       // 6.0 h × 15
+    const r = resolveDirection(inputs({ tyc: TYC }), sources)!;
+    expect(r.via).toBe('tycho2');
     expect(r.srcPmraMasyr).toBe(12);
-    expect(r.velVia).toBe('athyg_pm');
-    const bare = resolveDirection(null, null, 6.0, -30, sources)!;
-    expect(bare.velVia).toBe('zero');  // no AT-HYG PM passed
+    expect(r.velVia).toBe('tycho2_pm');
   });
 });
