@@ -60,6 +60,11 @@ import {
   type BuildCounts,
 } from './build-counts';
 import {
+  DIST_VIA_VALUES,
+  DIST_VIA_COUNT_KEY,
+  PARKED_RECORDS_FILE,
+} from './distance/parallax/parallax-cascade';
+import {
   buildRegressionReport,
   compareRegressionReports,
   formatRegressionDiff,
@@ -110,7 +115,7 @@ import {
   CLASSIC_ID_LABEL_INPUT_PATHS,
 } from './classic-ids/apply-classic-id-labels';
 import { emptyLabelMergeCounts, LABEL_FIELDS } from './classic-ids/label-merge-pure';
-import { readStars, type Star } from './parse/stars-parse';
+import { readStars, type ParkedRecord, type Star } from './parse/stars-parse';
 import {
   INHERITED_SPINE_TSV,
   READ_STARS_INPUT_PATHS,
@@ -193,6 +198,24 @@ function isUpToDate(): boolean {
 
 // Clear a prior build's chunk set so a shrunk chunk count can't strand stale
 // higher-index chunks the manifest no longer lists.
+/** The § 6.1 dropped list. A record that reaches no owned parallax cannot be
+ *  placed, so it does not ship — and unlike the low-precision rows, which stay
+ *  in the catalogue and are recomputable from it, nothing else records that
+ *  these existed. Committed so the set is diffable: a refresh that moves it is
+ *  a membership change, and Gaia DR4 should empty most of it. */
+async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void> {
+  const path = resolve(ROOT, PARKED_RECORDS_FILE);
+  const sorted = [...parked].sort((a, b) => (a.tyc ?? '').localeCompare(b.tyc ?? ''));
+  const lines = sorted.map((p) => [
+    p.tyc ?? '', p.hip ?? '', p.hd ?? '', p.gl ?? '', p.gaiaSourceId ?? '', p.reason,
+  ].join('\t'));
+  await writeFile(
+    path,
+    ['tyc\thip\thd\tgl\tgaia_source_id\treason', ...lines].join('\n') + '\n',
+  );
+  console.log(`  parked (no owned parallax): ${parked.length} → ${PARKED_RECORDS_FILE}`);
+}
+
 async function removeStaleCatalogChunks(dir: string): Promise<void> {
   for (const name of await readdir(dir)) {
     if (/^catalog\.bin\.\d+$/.test(name)) {
@@ -338,7 +361,17 @@ async function main() {
     tycho2Entries: 0,
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
-    hipDistFullPrecision: 0,
+    distBailerJones: 0,
+    distLmcKinematic: 0,
+    distGaiaDr3Inversion: 0,
+    distHip2Parallax: 0,
+    distCns5Plx: 0,
+    distGliesePlx: 0,
+    distSimbadPlx: 0,
+    distCurated: 0,
+    distNone: 0,
+    distLowPrecisionParallax: 0,
+    distRefusedNoOwnedParallax: 0,
     directionGaia5p: 0,
     directionGaiaNssSystemic: 0,
     directionHip2Saturated: 0,
@@ -479,11 +512,17 @@ async function main() {
       `— sample (first ${stats.velocityAboveEscapeSample.length}):`,
   );
   for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);
-  if (stats.hipDistFullPrecision > 0) {
+  console.log(
+    '  distance by tier: '
+    + DIST_VIA_VALUES.map((v) => `${v}=${stats.distVia[v]}`).join(' · '),
+  );
+  if (stats.distLowPrecisionParallax > 0) {
     console.log(
-      `  HIP2 full-precision distances: ${stats.hipDistFullPrecision} dist_src=HIP rows`,
+      `  parallaxes admitted below 20% precision: ${stats.distLowPrecisionParallax}`
+      + ' (ship, biased inversion — revisit at Gaia DR4)',
     );
   }
+  await writeParkedRecords(stats.parked);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
   counts.spineDroppedNoRaDec = stats.dropped.noRaDec;
@@ -494,7 +533,9 @@ async function main() {
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.bjOverriddenByDistSrc = stats.bjOverriddenByDistSrc;
-  counts.hipDistFullPrecision = stats.hipDistFullPrecision;
+  counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
+  counts.distRefusedNoOwnedParallax = stats.distRefusedNoOwnedParallax;
+  for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
   counts.lmcOverriddenByDistSrc = stats.lmcOverriddenByDistSrc;

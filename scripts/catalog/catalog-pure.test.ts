@@ -1,3 +1,4 @@
+import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -826,7 +827,7 @@ describe('catalog-pure / isOpticalDoublePrimary', () => {
   function make(overrides: Partial<OpticalDoubleStar>[] = []): OpticalDoubleStar[] {
     const base: OpticalDoubleStar = {
       absmag: 0, x: 0, y: 0, z: 0, hip: null, gaiaSourceId: null,
-      athygDistSrc: 'G_R3', varType: VAR_TYPE_UNKNOWN,
+      distVia: 'bailer_jones', varType: VAR_TYPE_UNKNOWN,
     };
     const stars: OpticalDoubleStar[] = [
       { ...base, hip: 100 },
@@ -859,18 +860,18 @@ describe('catalog-pure / isOpticalDoublePrimary', () => {
     expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('keeps when the primary lacks a Gaia-quality distance', () => {
-    const stars = make([{ athygDistSrc: 'HIP' }]);
+    const stars = make([{ distVia: 'hip2_parallax' }]);
     expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('keeps when no sibling has a Gaia-quality distance to measure against', () => {
-    const stars = make([{}, { x: 3, athygDistSrc: 'HIP' }]);
+    const stars = make([{}, { x: 3, distVia: 'hip2_parallax' }]);
     expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('measures the NEAREST sibling — a near Gaia-quality partner keeps the wings even beside a far one', () => {
     const stars: OpticalDoubleStar[] = [
-      { absmag: 0, x: 0, y: 0, z: 0, hip: 100, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 },
-      { absmag: 1, x: 0.3, y: 0, z: 0, hip: 200, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 }, // bound
-      { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, athygDistSrc: 'G_R3', varType: 0 }, // background
+      { absmag: 0, x: 0, y: 0, z: 0, hip: 100, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 },
+      { absmag: 1, x: 0.3, y: 0, z: 0, hip: 200, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // bound
+      { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // background
     ];
     expect(isOpticalDoublePrimary(0, [0, 1, 2], stars, ctx())).toBe(false);
   });
@@ -1488,30 +1489,28 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
 });
 
 describe('catalog-pure / isBailerJonesEligible', () => {
-  it('admits only Gaia-inverse dist_src values when a source_id is present', () => {
-    expect(isBailerJonesEligible('123', 'G_R3')).toBe(true);
-    expect(isBailerJonesEligible('123', 'G_R2')).toBe(true);
-    expect(isBailerJonesEligible('123', 'HIP')).toBe(false);
-    expect(isBailerJonesEligible('123', 'GJ')).toBe(false);
-    expect(isBailerJonesEligible('123', 'N')).toBe(false);
-    expect(isBailerJonesEligible('123', 'OTHER')).toBe(false);
+  it('admits only the tier whose parallax B-J is a posterior over', () => {
+    expect(isBailerJonesEligible('123', 'gaia_dr3_inversion')).toBe(true);
   });
 
-  it('rejects rows without a Gaia source_id even if dist_src is Gaia-inverse', () => {
-    expect(isBailerJonesEligible(null, 'G_R3')).toBe(false);
-    expect(isBailerJonesEligible('', 'G_R3')).toBe(false);
+  it('refuses every non-Gaia parallax tier — B-J would substitute its Galactic '
+    + 'prior for a measurement', () => {
+    for (const via of DIST_VIA_VALUES) {
+      if (via === 'gaia_dr3_inversion') continue;
+      expect(isBailerJonesEligible('123', via)).toBe(false);
+    }
   });
 
-  it('rejects rows without a dist_src even if a source_id is present', () => {
-    expect(isBailerJonesEligible('123', null)).toBe(false);
-    expect(isBailerJonesEligible('123', '')).toBe(false);
+  it('rejects rows without a Gaia source_id even on the Gaia tier', () => {
+    expect(isBailerJonesEligible(null, 'gaia_dr3_inversion')).toBe(false);
+    expect(isBailerJonesEligible('', 'gaia_dr3_inversion')).toBe(false);
   });
 
-  it('BJ_ELIGIBLE_DIST_SRCS is exactly {G_R3, G_R2} — guards against namespace drift', () => {
-    expect(BJ_ELIGIBLE_DIST_SRCS.size).toBe(2);
-    expect(BJ_ELIGIBLE_DIST_SRCS.has('G_R3')).toBe(true);
-    expect(BJ_ELIGIBLE_DIST_SRCS.has('G_R2')).toBe(true);
-    expect(BJ_ELIGIBLE_DIST_SRCS.has('HIP')).toBe(false);
+  it('does not consult the spine dist_src cell at all — the AT-HYG editorial '
+    + 'value that used to gate it steers nothing now', () => {
+    // Both rows carry dist_src=G_R3 upstream; only the resolved tier decides.
+    expect(isBailerJonesEligible('123', 'hip2_parallax')).toBe(false);
+    expect(isBailerJonesEligible('123', 'gaia_dr3_inversion')).toBe(true);
   });
 });
 

@@ -17,6 +17,7 @@ import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
+import type { GlieseIndex } from '../gliese-parse';
 import {
   SPINE_COLUMNS,
   serializeSpine,
@@ -47,6 +48,24 @@ function writeSpineTsv(rows: readonly Partial<SpineRow>[]): string {
 // reduced Johnson V at exactly VT.
 const ORIGIN_TYC = '1-1-1';
 const RHO_AQL_TYC = '2-2-1';
+// Distance now inverts a parallax too, and Tycho-2 publishes none. Gliese is
+// the one parallax tier the DIRECTION cascade never reads, so seeding it places
+// the fixture rows without moving which tier resolves their position.
+const ORIGIN_GL = '901';
+const RHO_AQL_GL = '902';
+
+function glieseParallaxes(
+  rows: ReadonlyArray<{ gl: string; distPc: number }>,
+): GlieseIndex {
+  return {
+    byKey: new Map(rows.map((r) => [r.gl, {
+      name: `Gl ${r.gl}`, comp: '',
+      vMag: null, bMinusV: null, spectral: null,
+      plxMas: 1000 / r.distPc, plxErrMas: 0.001,
+    }])),
+    rowCount: rows.length,
+  };
+}
 
 function tycho2Sources(
   rows: ReadonlyArray<{ tyc: string; raDeg: number; decDeg: number; vMag: number }>,
@@ -71,7 +90,7 @@ function tycho2Sources(
 // ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
 const AT_ORIGIN_SIGHTLINE: Partial<SpineRow> = {
   ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
-  tyc: ORIGIN_TYC,
+  tyc: ORIGIN_TYC, gl: ORIGIN_GL,
 };
 const AT_ORIGIN_DIRECTIONS = (): DirectionSources =>
   tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 }]);
@@ -106,6 +125,7 @@ describe('readStars build-time de-extinction of ci', () => {
         dustGrid: grid,
         hipBv: new Map([[11111, 0.5]]),
         directions: AT_ORIGIN_DIRECTIONS(),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
     );
     expect(stars).toHaveLength(2);
@@ -164,18 +184,22 @@ describe('readStars constellation assignment', () => {
   const RHO_AQL: Partial<SpineRow> = {
     dist: '46.5', dist_src: 'OTHER', ci: '0.08', spect: 'A2V', bayer: 'Rho',
     flam: '67', hip: '99742', hd: '192425', hr: '7724',
-    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC,
+    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
   // 20.23796 h × 15 = 303.5694°.
   const RHO_AQL_DIRECTIONS = (): DirectionSources => tycho2Sources([
     { tyc: RHO_AQL_TYC, raDeg: 303.5694, decDeg: 15.1975, vMag: 4.94 },
     { tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 },
   ]);
+  const RHO_AQL_GLIESE = (): GlieseIndex => glieseParallaxes([
+    { gl: RHO_AQL_GL, distPc: 46.5 },
+    { gl: ORIGIN_GL, distPc: 100 },
+  ]);
 
   it('resolves byte 34 positionally', () => {
     const { stars } = readStars(
       writeSpineTsv([RHO_AQL]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
@@ -188,7 +212,7 @@ describe('readStars constellation assignment', () => {
     // the positional index until the overlay supplies one.
     const { stars } = readStars(
       writeSpineTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars.map((s) => s.desigConIndex))
       .toEqual([NO_CONSTELLATION_INDEX, NO_CONSTELLATION_INDEX]);
