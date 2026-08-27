@@ -74,7 +74,14 @@ if [ "$tool" = "Grep" ] && [ -d "$abs" ]; then
   exit 0
 fi
 
-dir="$(dirname "$abs")"
+# A directory target (an ast_edit path, or the literal prefix the bridge
+# derives from a wildcard rewrite) owns its own README rather than its
+# parent's.
+if [ -d "$abs" ]; then
+  dir="$abs"
+else
+  dir="$(dirname "$abs")"
+fi
 
 # A folder whose README has never existed — none on disk, nothing tracked
 # in git — is one this session is creating, so there is no prior context to

@@ -5,15 +5,11 @@
 extensions:
   - ./scripts/hooks/omp-bridge.ts
 
-bash:
-  patterns:
-    - match: "git push* origin main*"
-      approval: deny
-    - match: "git push* origin master*"
-      approval: deny
-    - match: "git push origin HEAD:main*"
-      approval: deny
+# omp-bridge.ts enforces the worktree rule itself, sharing one tested path
+# extractor with the README guard. The machine-wide extension is the fallback
+# for repos that carry no bridge; two copies running here would drift.
+disabledExtensions:
+  - extension-module:worktree-guard
 
 advisor:
   enabled: true
-  syncBacklog: off

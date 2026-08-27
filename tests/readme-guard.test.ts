@@ -31,11 +31,13 @@ interface Decision {
   reason: string;
 }
 
-function hook(tool: string, rel: string): Decision {
+function hook(tool: string, rel: string, session?: string): Decision {
+  const env: NodeJS.ProcessEnv = { ...process.env, TMPDIR: stateDir };
+  if (session !== undefined) env.GUARD_SESSION = session;
   const stdout = execFileSync('bash', [HOOK], {
     cwd: repo,
     input: JSON.stringify({ tool_name: tool, tool_input: { file_path: join(repo, rel) } }),
-    env: { ...process.env, TMPDIR: stateDir },
+    env,
     encoding: 'utf-8',
   });
   if (stdout.trim() === '') return { allowed: true, reason: '' };
@@ -120,5 +122,37 @@ describe('readme-guard', () => {
     const decision = hook('Write', 'src/client/legacy/other.ts');
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toContain('src/client/README.md');
+  });
+
+  it('charges a directory target to its own README, not its parent', () => {
+    write('src/client/hdr/README.md', '# hdr\n');
+    write('src/client/hdr/tone.ts');
+    git('add', '-A');
+    git('commit', '-qm', 'hdr folder');
+    const decision = hook('Edit', 'src/client/hdr');
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain('src/client/hdr/README.md');
+  });
+});
+
+// omp spawns a fresh shell per guard call, so $PPID identifies that shell
+// rather than the session and the seen-set would reset on every call. A
+// regression here denies every code read for a whole omp session.
+describe('readme-guard session scoping', () => {
+  it('carries the seen-set across calls sharing a GUARD_SESSION', () => {
+    expect(hook('Read', 'src/client/README.md', 'omp-a').allowed).toBe(true);
+    expect(hook('Edit', 'src/client/thing.ts', 'omp-a').allowed).toBe(true);
+  });
+
+  it('keeps two concurrent sessions from sharing a seen-set', () => {
+    expect(hook('Read', 'src/client/README.md', 'omp-a').allowed).toBe(true);
+    expect(hook('Edit', 'src/client/thing.ts', 'omp-b').allowed).toBe(false);
+  });
+
+  it('falls back to the parent process when no session is supplied', () => {
+    expect(hook('Read', 'src/client/README.md', 'omp-a').allowed).toBe(true);
+    expect(hook('Edit', 'src/client/thing.ts').allowed).toBe(false);
+    expect(hook('Read', 'src/client/README.md').allowed).toBe(true);
+    expect(hook('Edit', 'src/client/thing.ts').allowed).toBe(true);
   });
 });

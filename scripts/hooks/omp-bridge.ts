@@ -1,14 +1,17 @@
-// omp extension that runs the Claude Code guard scripts in this folder.
-// Translates omp tool_call / session_start events into the stdin JSON the
-// .sh guards read, and their deny verdicts back into an omp block.
+// omp extension that runs the Claude Code guard scripts in this folder, and
+// natively enforces the two rules no .sh guard covers under omp: edits belong
+// in a secondary worktree, and main/master takes no commit or push.
 
 import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { existsSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import {
   buildPayload,
+  gitHistoryOp,
+  isProtectedBranch,
   needsCommitSweep,
   parseVerdict,
-  targetPaths,
+  toolTargets,
 } from './omp-bridge-pure';
 
 const HOOK_DIR = dirname(new URL(import.meta.url).pathname);
@@ -42,11 +45,18 @@ interface BridgeApi {
       customType: string;
       content: string;
       display: boolean;
-      attribution: string;
+      attribution: 'agent';
     },
     options: { deliverAs: 'nextTurn' },
   ): void;
   logger: { warn(message: string): void };
+}
+
+function git(cwd: string, args: string[]): string | undefined {
+  const result = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf-8' });
+  if (result.status !== 0) return undefined;
+  const out = (result.stdout ?? '').trim();
+  return out === '' ? undefined : out;
 }
 
 /**
@@ -70,6 +80,76 @@ function runGuard(
     throw new Error(`omp-bridge: cannot run ${script}: ${result.error.message}`);
   }
   return parseVerdict(result.stdout ?? '');
+}
+
+/** Deepest existing ancestor, so a write to a not-yet-created file resolves. */
+function existingAncestorDir(path: string): string | undefined {
+  let probe = path;
+  while (!existsSync(probe)) {
+    const parent = dirname(probe);
+    if (parent === probe) return undefined;
+    probe = parent;
+  }
+  return statSync(probe).isDirectory() ? probe : dirname(probe);
+}
+
+function mainWorktreeBlock(
+  rawPath: string,
+  cwd: string,
+): string | undefined {
+  const probe = existingAncestorDir(
+    isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath),
+  );
+  if (probe === undefined) return undefined;
+
+  const toplevel = git(probe, ['rev-parse', '--show-toplevel']);
+  if (toplevel === undefined) return undefined;
+
+  const gitDir = git(toplevel, ['rev-parse', '--absolute-git-dir']);
+  const commonRaw = git(toplevel, ['rev-parse', '--git-common-dir']);
+  if (gitDir === undefined || commonRaw === undefined) return undefined;
+
+  // A secondary worktree's git-dir is <common>/worktrees/<name>; only the main
+  // worktree has the two equal.
+  const commonDir = isAbsolute(commonRaw)
+    ? commonRaw
+    : resolve(toplevel, commonRaw);
+  if (gitDir !== commonDir) return undefined;
+
+  return `Refusing to edit ${rawPath} in the main worktree of ${toplevel}.
+
+Code edits belong in a fresh git worktree so parallel sessions sharing this
+checkout do not collide on the index lock, clobber each other's edits, or move
+the branch under a running dev server.
+
+Fix: create one, then redo the edit against the path inside it.
+
+  git -C ${toplevel} worktree add .claude/worktrees/<name> -b worktree-<name>
+
+Read-only investigation in the main worktree is fine; only edits are blocked.`;
+}
+
+/**
+ * The branch, not the command text, decides whether a push is allowed — which
+ * is why this is a handler and not a `bash.patterns` glob.
+ */
+function protectedBranchBlock(
+  op: 'commit' | 'push',
+  cwd: string,
+): string | undefined {
+  const branch = git(cwd, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
+  if (branch === undefined || !isProtectedBranch(branch)) return undefined;
+
+  return `Refusing to ${op} on ${branch}.
+
+CLAUDE.md § Git workflow: never commit or push to main, and never to a branch
+this session did not create. Diff size is never a justification.
+
+Fix: move the work onto a feature branch in its own worktree, then ${op} there.
+
+  git worktree add .claude/worktrees/<name> -b worktree-<name>
+
+If this ${op} is genuinely intended, the operator can run it.`;
 }
 
 export default function ompBridge(pi: BridgeApi): void {
@@ -96,10 +176,15 @@ export default function ompBridge(pi: BridgeApi): void {
 
   pi.on('tool_call', async (event, ctx) => {
     const sessionId = ctx.sessionManager.getSessionId();
+    const target = toolTargets(event.toolName, event.input);
 
-    for (const path of targetPaths(event.toolName, event.input)) {
+    for (const path of target.paths) {
+      if (target.mutates) {
+        const worktree = mainWorktreeBlock(path, ctx.cwd);
+        if (worktree !== undefined) return { block: true, reason: worktree };
+      }
       const payload = buildPayload({
-        ompTool: event.toolName,
+        tool: target.tool,
         sessionId,
         cwd: ctx.cwd,
         filePath: path,
@@ -112,9 +197,14 @@ export default function ompBridge(pi: BridgeApi): void {
     if (event.toolName === 'bash') {
       const command =
         typeof event.input.command === 'string' ? event.input.command : '';
+      const op = gitHistoryOp(command);
+      if (op !== undefined) {
+        const branch = protectedBranchBlock(op, ctx.cwd);
+        if (branch !== undefined) return { block: true, reason: branch };
+      }
       if (needsCommitSweep(command)) {
         const payload = buildPayload({
-          ompTool: 'bash',
+          tool: 'bash',
           sessionId,
           cwd: ctx.cwd,
           command,

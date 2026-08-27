@@ -33,12 +33,14 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
-  omp-bridge.ts            omp extension that replays the two PreToolUse
-                           guards below and injects `bd prime` at session
-                           start. See § The omp bridge.
-  omp-bridge-pure.ts       Pure tool-name / path extraction for the
-                           bridge. Behaviour pinned by
-                           tests/omp-bridge.test.ts.
+  omp-bridge.ts            omp extension. Replays the two PreToolUse
+                           guards below, enforces the worktree and
+                           trunk rules natively, and injects
+                           `bd prime` at session start. See § The omp
+                           bridge.
+  omp-bridge-pure.ts       Pure tool-name / path extraction and git
+                           command classification for the bridge.
+                           Behaviour pinned by tests/omp-bridge.test.ts.
 ```
 
 ## How readme-guard works
@@ -83,7 +85,10 @@ with `commit-sweep-guard`.
 
 Grep over a *directory* (the broad-search case) is allowed; Grep
 into a single file is gated like Read. Glob isn't gated at all
-(it lists paths, doesn't read content).
+(it lists paths, doesn't read content). A directory target under any
+other tool — an `ast_edit` path, or the literal prefix the bridge
+derives from a wildcard rewrite — is charged to that directory's own
+README rather than its parent's.
 
 ## Why a hook and not just CLAUDE.md text
 
@@ -187,21 +192,32 @@ git commit` flow Claude uses is covered correctly.
 
 ## The omp bridge
 
-omp does not read Claude Code's hook wire protocol at all: its
-Claude-compatibility layer looks for TypeScript modules under
-`.claude/hooks/pre/`, and the binary carries none of `hook_event_name`,
-`permissionDecision`, or `CLAUDE_PROJECT_DIR`. Without a bridge every
-guard in this folder is inert under omp.
+omp does not read Claude Code's hook wire protocol at all. It does load
+`.claude/settings.json` as settings and TypeScript modules from
+`.claude/hooks/pre/`, but the `hooks` block Claude Code registers there
+is not in omp's schema, and the binary carries no `hook_event_name`,
+`permissionDecision`, `hookSpecificOutput` or `CLAUDE_PROJECT_DIR`
+(`strings` over `$(which omp)` returns zero hits for each). Without a
+bridge every guard in this folder is inert under omp.
 
 `omp-bridge.ts` is that bridge. It registers two handlers:
 
-- **`tool_call`** — extracts each repo path the call would touch, feeds
-  one `PreToolUse` payload per path to `readme-guard.sh`, and turns a
-  `deny` verdict into an omp `{ block, reason }`. A `bash` call whose
-  command is a `git commit` additionally goes to
-  `commit-sweep-guard.sh`. First deny wins.
+- **`tool_call`** — resolves the call to its effective tool and every
+  repo path it would touch, then for each path: blocks a *write*
+  resolving into a repo's main worktree, and feeds one `PreToolUse`
+  payload to `readme-guard.sh`, turning a `deny` verdict into an omp
+  `{ block, reason }`. A `bash` call running `git commit` or `git push`
+  is refused outright when HEAD is on `main`/`master`, and a `git commit`
+  additionally goes to `commit-sweep-guard.sh`. First deny wins.
 - **`session_start`** — runs `bd prime --full` and injects the whole
   output as a `nextTurn` message.
+
+The worktree and trunk checks are native rather than shell guards
+because both need state no PreToolUse payload carries — which worktree a
+path resolves into, and which branch HEAD is on. `.omp/README.md`
+§ Who enforces the worktree and trunk rules covers why the trunk check
+cannot be a `bash.patterns` glob, and why the machine-wide worktree
+extension is disabled in this repo rather than running alongside.
 
 ### Why prime-guard has no bridge handler
 
@@ -215,17 +231,29 @@ are all unnecessary. The script stays for Claude Code.
 
 omp's tool surface is wider than Claude's and its arguments differ in
 shape, so a tool missing from `CLAUDE_TOOL_NAME` in `omp-bridge-pure.ts`
-is silently ungated rather than loudly broken. Non-obvious cases:
+is silently ungated rather than loudly broken. `toolTargets` returns the
+*effective* tool alongside the paths and whether the call writes, which
+is what lets one extractor serve three checks. Non-obvious cases:
 
 - `edit` carries no path — the paths are the `[path#TAG]` section
-  headers inside its hashline body.
-- `ast_edit` and `lsp` are reachable as a `write` to `xd://<tool>`,
+  headers inside its hashline body, plus any `MV DEST` destination,
+  which names a folder no header mentions.
+- `ast_edit` and `lsp` are reachable only as a `write` to `xd://<tool>`,
   whose `content` is that tool's own JSON arguments, so extraction
-  recurses through it.
+  recurses through it and reports the device as the effective tool — a
+  device write is gated as `Edit`, not as `Write`.
+- `lsp` writes only for `rename`, `rename_file`, and a `code_actions`
+  with `apply: true`; a lookup is a read, so read-only navigation in a
+  main worktree stays allowed.
+- `read` and `grep` take several roots as one semicolon-delimited
+  string, and each root is gated separately.
 - `read` paths carry selectors (`file.ts:20-40`, `db.sqlite:users:42`);
   gating keys on the container file.
-- Internal URL schemes (`omp://`, `skill://`, `artifact://`, …) and
-  globs name no single repo file and are skipped.
+- A wildcard path is skipped for a read, which merely lists paths, but
+  charged to its deepest wildcard-free folder for a rewrite, which does
+  not. `ast_edit` over `src/client/**/*.ts` is charged `src/client`.
+- Internal URL schemes (`omp://`, `skill://`, `artifact://`, …) name no
+  repo file and are skipped.
 
 `eval` is the known hole: a cell can open a file directly and no static
 argument names it. `tests/omp-bridge.test.ts` pins the map and every
@@ -238,11 +266,14 @@ throwing `tool_call` handler closed, so a wrong path blocks tool calls
 immediately instead of leaving the session ungated. A guard that runs
 and exits without output means allow, matching Claude Code.
 
-### Subagents are not gated
+### Subagents may not be gated
 
-omp `task` subagents get their own extension runtime and load none of
-their own, so none of these guards apply inside one. Claude Code's
-hooks did gate subagent tool calls; no omp setting restores that.
+omp `task` subagents get their own extension runtime. omp's own
+documentation states that a subagent spawned with *restricted* tools
+loads no extensions and does not settle the unrestricted case, so treat
+delegated work as possibly ungated rather than provably either way.
+Claude Code's hooks did gate subagent tool calls; no omp setting is
+documented to restore that.
 
 ## Disabling
 
@@ -258,8 +289,13 @@ Two paths:
    the `rm` isn't itself blocked.
 2. **Across the session.** Under Claude Code, remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array. Under omp, drop
-   `omp-bridge.ts` from `extensions` in `.omp/config.yml`. Either way,
+   `omp-bridge.ts` from `extensions` in `.omp/config.yml` — which also
+   drops the worktree and trunk checks, and re-exposes the machine-wide
+   worktree extension that `disabledExtensions` suppresses. Either way,
    temporarily moving the hook script aside also works.
+
+The worktree and trunk checks have no per-call escape hatch on purpose:
+every legitimate case is "work somewhere else", not "do it here anyway".
 
 Disabling is the right call when investigating a folder that
 genuinely has no subsystem ownership (e.g. ad-hoc scratch) — but the
