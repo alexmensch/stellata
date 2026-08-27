@@ -18,6 +18,7 @@ const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
 const COLUMNS = [
   'rvz_radvel', 'rvz_type', 'rvz_bibcode',
   'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
+  'plx_value', 'plx_err', 'plx_bibcode',
   'hip', 'source_id', 'tyc', 'gj',
 ] as const;
 
@@ -25,6 +26,16 @@ const COLUMNS = [
  *  source. */
 export interface SimbadRadialVelocity {
   kmS: number;
+  bibcode: string;
+}
+
+/** One SIMBAD row's parallax. A third independently-bibcoded quantity rather
+ *  than part of the astrometry: SIMBAD routinely holds a parallax for a row
+ *  whose position it sources elsewhere, and the distance cascade's skip rules
+ *  turn on this bibcode alone. */
+export interface SimbadParallax {
+  mas: number;
+  errMas: number | null;
   bibcode: string;
 }
 
@@ -41,6 +52,7 @@ export interface SimbadAstrometry {
 
 export interface SimbadValueRow {
   rv: SimbadRadialVelocity | null;
+  parallax: SimbadParallax | null;
   astrometry: SimbadAstrometry | null;
 }
 
@@ -68,6 +80,17 @@ function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelo
   const bibcode = nonEmpty(cells[idx.rvz_bibcode]);
   if (kmS === null || bibcode === null) return null;
   return { kmS, bibcode };
+}
+
+/** Dropped whole without its bibcode, the same rule the rv and the position
+ *  follow: the bibcode is the source, SIMBAD the index that found it. The error
+ *  is admitted separately because it is what the cascade's precision floor
+ *  reads, and SIMBAD does not always publish one. */
+function parseParallax(cells: string[], idx: Record<string, number>): SimbadParallax | null {
+  const mas = parseFloatOrNull(cells[idx.plx_value]);
+  const bibcode = nonEmpty(cells[idx.plx_bibcode]);
+  if (mas === null || bibcode === null) return null;
+  return { mas, errMas: parseFloatOrNull(cells[idx.plx_err]), bibcode };
 }
 
 /** A position is consumable only with the bibcode that sourced it — the
@@ -112,6 +135,7 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
     };
     const row: SimbadValueRow = {
       rv: parseRv(cells, idx),
+      parallax: parseParallax(cells, idx),
       astrometry: parseAstrometry(cells, idx),
     };
     indexSimbadRow(index, keys, row, (namespace, key) => {

@@ -26,12 +26,12 @@ const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
   'cns5\tgj\tgj_comp\tgaia_source_id\thip'
-    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de\tpm_bibcode',
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tplx_bibcode\tpm_ra\tpm_de\tpm_bibcode',
   '3591\t551\tC\t5853498713190525696\t70890'
-    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47'
-    + '\t2020yCat.1350....0G',
-  '0\tSun\t\t\t\t\t\t\t\t\t\t',
-  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t-10\t20\t',
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t2020yCat.1350....0G'
+    + '\t-3781.74\t769.47\t2020yCat.1350....0G',
+  '0\tSun\t\t\t\t\t\t\t\t\t\t\t\t',
+  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t\t-10\t20\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
@@ -106,8 +106,18 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
       pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G',
     });
     // The position survives the drop; only the motion needed the citation.
-    expect(rows[2].astrometry?.plxMas).toBe(100);
+    expect(rows[2].astrometry?.raDeg).toBe(217.4);
     expect(rows[2].astrometry?.pm).toBeNull();
+  });
+
+  it('drops an unbibcoded PARALLAX whole too — the distance cascade\'s skip '
+    + 'rules read that bibcode, so a value without one cannot be weighed', () => {
+    const rows = parseCns5Tsv(CNS5);
+    expect(rows[0].astrometry?.plxMas).toBe(768.07);
+    expect(rows[0].astrometry?.plxBibcode).toBe('2020yCat.1350....0G');
+    // Row 3 states plx_mas=100 and no citation: both cells go.
+    expect(rows[2].astrometry?.plxMas).toBeNull();
+    expect(rows[2].astrometry?.plxBibcode).toBeNull();
   });
 });
 
@@ -141,10 +151,23 @@ describe('classic-ids-parse / cns5AstrometryByGj', () => {
     expect(cns5AstrometryByGj([cns5Row({ gj: '42' })]).size).toBe(0);
   });
 
-  it('throws on a repeated key rather than keeping whichever came first', () => {
-    expect(() => cns5AstrometryByGj([
+  // gj_comp is one COMBINED string per entry, so the exact key reaches no
+  // record: every record's own cell names a single component.
+  it('aliases each letter of a combined gj_comp onto the row', () => {
+    const index = cns5AstrometryByGj([
+      cns5Row({ gj: '423', gjComp: 'ABCD', astrometry }),
+    ]);
+    for (const letter of 'ABCD') {
+      expect(index.get(`423${letter}`)?.raDeg).toBe(10);
+    }
+    expect(index.get('423')?.raDeg).toBe(10);
+  });
+
+  it('keeps the first write on a repeated key rather than throwing', () => {
+    const index = cns5AstrometryByGj([
       cns5Row({ cns5: 1, gj: '42', astrometry }),
-      cns5Row({ cns5: 2, gj: '42.0', astrometry }),
-    ])).toThrow(/two rows keyed gj=42/);
+      cns5Row({ cns5: 2, gj: '42.0', astrometry: { ...astrometry, raDeg: 11 } }),
+    ]);
+    expect(index.get('42')?.raDeg).toBe(10);
   });
 });

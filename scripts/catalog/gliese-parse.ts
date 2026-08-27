@@ -8,7 +8,7 @@ import { normaliseGjKey } from './catalog-pure';
 const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';
 
-const COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp'] as const;
+const COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas'] as const;
 
 export interface GlieseRow {
   /** The catalogue entry's own name, prefix included (`Gl 559`, `NN 3417`). */
@@ -18,6 +18,11 @@ export interface GlieseRow {
   vMag: number | null;
   bMinusV: number | null;
   spectral: string | null;
+  /** V/70A's own printed parallax — ground-based trigonometric astrometry
+   *  predating Hipparcos, so it is the one nearby-star tier no Gaia release
+   *  stands behind and the skip rule never touches. */
+  plxMas: number | null;
+  plxErrMas: number | null;
 }
 
 export interface GlieseIndex {
@@ -63,6 +68,8 @@ export function parseGlieseTsv(text: string): GlieseIndex {
       vMag: parseFloatOrNull(cells[idx.vmag]),
       bMinusV: parseFloatOrNull(cells[idx.bv]),
       spectral: nonEmpty(cells[idx.sp]),
+      plxMas: parseFloatOrNull(cells[idx.plx_mas]),
+      plxErrMas: parseFloatOrNull(cells[idx.e_plx_mas]),
     };
     if (index.byKey.has(key)) {
       throw new Error(`${FILE_LABEL} has two rows keyed ${key}. ${REFRESH_HINT}`);

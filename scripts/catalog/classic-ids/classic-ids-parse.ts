@@ -111,7 +111,11 @@ export interface Cns5Astrometry {
   raDeg: number;
   decDeg: number;
   posEpoch: number;
+  /** Admitted only with the bibcode that sourced it, for the reason the motion
+   *  is: CNS5 republishes Gaia's own parallax on most rows, and the distance
+   *  cascade's skip rule cannot see that without the citation. */
   plxMas: number | null;
+  plxBibcode: string | null;
   /** 87% of CNS5's proper motions are Gaia's own republished, so the PM
    *  rescue's skip rule cannot weigh one without its citation. Null where the
    *  row states no motion, or states it uncited — the position stands either
@@ -134,8 +138,22 @@ export interface Cns5Row {
 
 const CNS5_COLUMNS = [
   'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de', 'pm_bibcode',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'plx_bibcode',
+  'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
+
+/** An unbibcoded parallax is dropped whole, the same rule the SIMBAD values
+ *  pull applies at write time: the bibcode is the source. Every committed CNS5
+ *  row carries one, so this guards a re-pull rather than this file. */
+function cns5Parallax(
+  cells: string[], idx: Record<string, number>,
+): Pick<Cns5Astrometry, 'plxMas' | 'plxBibcode'> {
+  const plxMas = parseFloatOrNull(cells[idx.plx_mas]);
+  const plxBibcode = nonEmpty(cells[idx.plx_bibcode]);
+  return plxMas !== null && plxBibcode !== null
+    ? { plxMas, plxBibcode }
+    : { plxMas: null, plxBibcode: null };
+}
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
   const out: Cns5Row[] = [];
@@ -158,7 +176,7 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
       astrometry: raDeg !== null && decDeg !== null && posEpoch !== null
         ? {
             raDeg, decDeg, posEpoch,
-            plxMas: parseFloatOrNull(cells[idx.plx_mas]),
+            ...cns5Parallax(cells, idx),
             pm: citedProperMotion(
               parseFloatOrNull(cells[idx.pm_ra]),
               parseFloatOrNull(cells[idx.pm_de]),
@@ -176,23 +194,33 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
  *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
  *  ladder's GJ namespace uses. The component letter is part of the key because
  *  a GJ number carries one, so this names the component rather than the system.
+ *  First write wins: CNS5 is keyed on its own `cns5` number and two rows
+ *  sharing a GJ number are the same star's components, whose letters keep them
+ *  apart anyway.
  *
- *  A repeat throws, as it does in every other index over a committed table
- *  here: two rows sharing a GJ number would be one star's components, which
- *  their letters keep apart, so a collision is an upstream change rather than
- *  a binding to arbitrate silently. */
+ *  **`gj_comp` states the letters COMBINED, not one per row** — Gl 423 reads
+ *  `ABCD` on a single entry — so the exact key alone reaches no record, whose
+ *  own cell names one component (`Gl 423A`). Each letter therefore aliases onto
+ *  its row, and the bare number closes the fold. Both are the same reduction
+ *  `parseGlieseTsv` performs on V/70A's `comp`, and both name a value measured
+ *  for the system: for a parallax that is exact rather than approximate, since
+ *  a bound pair's components share a distance. */
 export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
   const out = new Map<string, Cns5Astrometry>();
   for (const row of rows) {
     if (row.astrometry === null) continue;
     const key = normaliseGjKey(`${row.gj}${row.gjComp ?? ''}`);
-    if (key === null) continue;
-    if (out.has(key)) {
-      throw new Error(
-        `data/classic-ids/cns5.tsv has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
-      );
+    if (key !== null && !out.has(key)) out.set(key, row.astrometry);
+  }
+  for (const row of rows) {
+    if (row.astrometry === null) continue;
+    const bare = normaliseGjKey(row.gj);
+    if (bare === null) continue;
+    for (const letter of row.gjComp ?? '') {
+      const alias = `${bare}${letter}`.toUpperCase();
+      if (!out.has(alias)) out.set(alias, row.astrometry);
     }
-    out.set(key, row.astrometry);
+    if (!out.has(bare)) out.set(bare, row.astrometry);
   }
   return out;
 }
