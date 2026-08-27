@@ -12,6 +12,14 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Harness config
+
+Claude Code settings live in `.claude/settings.json`; omp settings live in
+`.omp/`. Both read this repo — see `.omp/README.md` for what differs
+between them, and `scripts/hooks/README.md` for the shared tool-call
+guards. CLAUDE.md § Repo layout does not list `.omp/`: that file sits one
+byte under its CI size cap.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
