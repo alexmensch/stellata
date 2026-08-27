@@ -23,9 +23,11 @@ const CROSS_INDEX = [
 const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
-  'cns5\tgj\tgj_comp\tgaia_source_id\thip',
-  '3591\t551\tC\t5853498713190525696\t70890',
-  '0\tSun\t\t\t',
+  'cns5\tgj\tgj_comp\tgaia_source_id\thip'
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de',
+  '3591\t551\tC\t5853498713190525696\t70890'
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47',
+  '0\tSun\t\t\t\t\t\t\t\t\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {

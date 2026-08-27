@@ -6,18 +6,12 @@ import {
   buildClassicIdOverlay,
   type OverlayInput,
 } from './classic-id-overlay-pure';
-import type { Cns5Row } from './classic-ids-parse';
+import { cns5Row } from './cns5-fixture';
 
 const HIP_SRC = '111111111111111111';
 const TYC_ONLY_SRC = '222222222222222222';
 const CNS5_SRC = '333333333333333333';
 const NO_VMAG_SRC = '444444444444444444';
-
-function cns5Row(overrides: Partial<Cns5Row>): Cns5Row {
-  return {
-    cns5: 1, gj: '1', gjComp: null, hip: null, gaiaSourceId: null, ...overrides,
-  };
-}
 
 /** Every route at once, so the candidate set has to discriminate between them:
  *  one source reached by HIP, one only by TYC→HD, one by a CNS5 row's own

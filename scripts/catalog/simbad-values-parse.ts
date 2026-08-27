@@ -16,6 +16,7 @@ const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
 
 const COLUMNS = [
   'rvz_radvel', 'rvz_type', 'rvz_bibcode',
+  'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
   'hip', 'source_id', 'tyc', 'gj',
 ] as const;
 
@@ -26,8 +27,23 @@ export interface SimbadRadialVelocity {
   bibcode: string;
 }
 
+/** One SIMBAD row's position and proper motion, each with the bibcode that is
+ *  its actual source. Coordinates are ICRS at {@link SIMBAD_REF_EPOCH}; the
+ *  PM is carried separately because SIMBAD bibcodes the two quantities
+ *  independently and a row can hold a coordinate without a motion.
+ *  `pmRaMasyr` is μ_α*, cos δ already applied. */
+export interface SimbadAstrometry {
+  raDeg: number;
+  decDeg: number;
+  cooBibcode: string;
+  pmRaMasyr: number | null;
+  pmDecMasyr: number | null;
+  pmBibcode: string | null;
+}
+
 export interface SimbadValueRow {
   rv: SimbadRadialVelocity | null;
+  astrometry: SimbadAstrometry | null;
 }
 
 export interface SimbadValueIndex extends SimbadNamespaceIndex<SimbadValueRow> {
@@ -56,6 +72,35 @@ function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelo
   return { kmS, bibcode };
 }
 
+/** A position is consumable only with the bibcode that sourced it — the
+ *  bibcode is the source and SIMBAD the index that found it — so an
+ *  unbibcoded coordinate is dropped whole. The pull already drops it at write
+ *  time, so this guards a re-pulled file rather than this one.
+ *
+ *  The proper motion is admitted separately and may be absent under a present
+ *  coordinate: the two carry independent bibcodes upstream, and a row with a
+ *  position but no motion is a real shape (the tier keeps the position and
+ *  takes a zero tangential term). A PM missing its own bibcode is dropped the
+ *  same way, leaving the position standing. */
+function parseAstrometry(
+  cells: string[], idx: Record<string, number>,
+): SimbadAstrometry | null {
+  const raDeg = parseFloatOrNull(cells[idx.ra]);
+  const decDeg = parseFloatOrNull(cells[idx.dec]);
+  const cooBibcode = nonEmpty(cells[idx.coo_bibcode]);
+  if (raDeg === null || decDeg === null || cooBibcode === null) return null;
+  const pmRaMasyr = parseFloatOrNull(cells[idx.pmra]);
+  const pmDecMasyr = parseFloatOrNull(cells[idx.pmdec]);
+  const pmBibcode = nonEmpty(cells[idx.pm_bibcode]);
+  const hasPm = pmRaMasyr !== null && pmDecMasyr !== null && pmBibcode !== null;
+  return {
+    raDeg, decDeg, cooBibcode,
+    pmRaMasyr: hasPm ? pmRaMasyr : null,
+    pmDecMasyr: hasPm ? pmDecMasyr : null,
+    pmBibcode: hasPm ? pmBibcode : null,
+  };
+}
+
 /** Index the values pull by every identifier namespace it keyed on. No key
  *  in any namespace collides in the committed file, so a duplicate is an
  *  upstream schema change and throws rather than silently overwriting a
@@ -69,7 +114,11 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
       tyc: nonEmpty(cells[idx.tyc]),
       gl: nonEmpty(cells[idx.gj]),
     };
-    indexSimbadRow(index, keys, { rv: parseRv(cells, idx) }, (namespace, key) => {
+    const row: SimbadValueRow = {
+      rv: parseRv(cells, idx),
+      astrometry: parseAstrometry(cells, idx),
+    };
+    indexSimbadRow(index, keys, row, (namespace, key) => {
       throw new Error(
         `${FILE_LABEL} has two rows keyed ${namespace}=${key}. ${REFRESH_HINT}`,
       );
