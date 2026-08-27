@@ -1,10 +1,11 @@
 # Sky-position regression corpus for the direction cascade: the
 # canonical high-PM set (tier-1 Gaia) plus one pin per non-Gaia tier —
-# Sirius/Vega for tier 2 (hip2_saturated, the Gaia-saturated bright
-# set), Gl 863.1A for tier 3 (athyg_printed).
+# Sirius/Vega for hip2_saturated (the Gaia-saturated bright set),
+# Gl 863.1A for simbad (the cascade's bottom tier).
 #
-# Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH), with
-# the tier-3 row the one deliberate exception:
+# Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH). There is
+# no longer an unpropagated row: every tier now advances its own solution
+# to the scene epoch, which is what retiring the printed cell bought.
 # - Gaia tier: the raw Gaia DR3 catalog ra/dec, whose native epoch IS
 #   J2016.0 — so the cascade's propagation is a Δt=0 no-op here. These
 #   rows therefore pin source-id selection, tier routing, and xyz
@@ -12,26 +13,40 @@
 #   NOT the propagation formula. That formula (PM sign / cos delta /
 #   Δt direction) is exercised by the 24.75-yr HIP2 tier below and
 #   pinned independently against SIMBAD J2000 in direction-cascade.test.ts.
-# - Sirius/Vega (tier 2): van-Leeuwen-2007 J1991.25 PM-propagated 24.75
-#   yr forward to J2016.0 — this DOES exercise the propagation.
-# - Gl 863.1A (tier 3, athyg_printed): AT-HYG's printed ra/dec is used
-#   UNPROPAGATED (no Gaia source, and HIP 111293 is absent from HIP2), so
-#   it sits at AT-HYG's native ~J2000 epoch REGARDLESS of the scene epoch.
-#   That staleness is the tier, not a defect in the pin: at 1372 mas/yr the
-#   printed cell is ~27" from where the star is now, and SIMBAD's BD+53 2911
-#   coordinate is exactly that far away along the PM direction — it
-#   back-propagates onto this row to 0.7" over the ~20 yr between the two
-#   epochs. So the row pins tier routing and xyz assembly (a tier change
-#   moves it ~22"), at 3.0" for the printed cell's own error.
-# - xi UMa: WAS the tier-3 pin, for the same reason, until its spine row's
-#   backfilled source_id reached a Gaia row. It now routes tier 1 as a 2p
+# - Sirius/Vega (hip2_saturated): van-Leeuwen-2007 J1991.25 PM-propagated
+#   24.75 yr forward to J2016.0 — this DOES exercise the propagation.
+# - Gl 863.1A (simbad): no Gaia source, and HIP 111293 is absent from
+#   HIP2, so the bottom tier places it — SIMBAD's bibcoded J2000
+#   coordinate (2MASS, 2003yCat.2246....0C) advanced 16 yr on SIMBAD's own
+#   bibcoded PM (1368.0, 111.0 mas/yr, 2005AJ....129.1483L). RE-PINNED
+#   DELIBERATELY when the printed cell retired, and the move is the point:
+#   this row used to hold that cell UNPROPAGATED, and the new value is
+#   49.2" away. That splits into two separate corrections — the printed
+#   cell sat 27.3" from SIMBAD's J2000 place (~20 yr of this star's motion,
+#   so the cell was never really J2000), and the remaining 22.0" is the
+#   J2000 → J2016 propagation the tier now performs. Tolerance 1.0" states
+#   the confidence of a 2MASS coordinate plus a literature PM, not the
+#   build's reproducibility, which is exact.
+# - xi UMa: WAS the athyg_printed pin, until its spine row's backfilled
+#   source_id reached a Gaia row. It now routes tier 1 as a 2p
 #   (position-only) anchor and this row pins that Gaia J2016.0 coord — worth
 #   ~11" of staleness against the printed cell it left, its 730 mas/yr over
 #   the 16 yr from J2000. The 2p fit is blended (ipd_frac_multi_peak 24 on a
 #   ~2" pair), so the coord is the pair photocentre rather than A alone —
 #   good to ~1", which is why it stays looser than the 0.5" Gaia rows above.
 #
-# lookup: hip where the AT-HYG row carries one. xi UMa's row carries HIP
+# NO ROW PINS THE tycho2 TIER, and not for want of trying: a tycho2-tier
+# record is by construction one Gaia and HIP2 both miss, and not one of the
+# 43 carries a HIP, a Gaia source_id or a proper name — the only three
+# things `parseRef` can address a record by. HD 14039 (TYC 3694-2544-1) is
+# the row that would go here, the tier's highest-PM member at 408 mas/yr
+# and a 10.2" propagation off its 1991.07 / 1991.00 mean epochs. The tier's
+# split-epoch propagation is pinned at unit level in
+# ../distance/direction-cascade.test.ts instead. Reaching it from a corpus
+# needs an `hd:` ref kind, and so an HD index built off the search index —
+# the binary carries no HD column.
+#
+# lookup: hip where the spine row carries one. xi UMa's row carries HIP
 # 55203, but that Hipparcos entry is the unresolved AB pair and xi UMa B
 # holds its own record, so the row is addressed by proper name instead and
 # its hip cell is left blank to keep the lookup unambiguous.
@@ -45,7 +60,9 @@
 # would miss badly at a 34 yr baseline). Blank = skip (velocity magnitude
 # not pinned for that row) — xi UMa's 2p Gaia row fits no PM at all, so its
 # record bakes no velocity and there is nothing to advance. Gl 863.1A is the
-# only row pinning the athyg_pm velocity tier, off the printed pm cells.
+# only row pinning the simbad velocity tier, off SIMBAD's bibcoded PM —
+# which is the same 1368.0 / 111.0 the printed cell carried, so the tier
+# swap moved this star's velocity not at all.
 name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec	total_pm_masyr
 Barnard's Star		87937	269.4485025250	4.739420051	0.5	10392.8
 Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5	8670.5
@@ -53,7 +70,7 @@ Groombridge 1830		57939	178.2673532080	37.692826947	0.5	7058.4
 61 Cyg A		104214	316.7484792940	38.763862446	0.5	5281.0
 61 Cyg B		104217	316.7536627530	38.756072772	0.5	5172.0
 Keid		19849	63.8079530060	-7.668077815	0.5	4088.0
-Gl 863.1A		111293	338.2238100000	53.793808000	3.0	1372.5
+Gl 863.1A		111293	338.2468515815	53.795091576	1.0	1372.5
 Sirius		32349	101.2846216628	-16.721551666	0.5	1339.4
 Vega		91262	279.2358804374	38.784961091	0.5	350.8
 xi UMa	Alula Australis		169.543285282	31.526916852	1.5

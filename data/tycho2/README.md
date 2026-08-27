@@ -118,9 +118,17 @@ republish; a re-pull is warranted only when the request set moves.
 
 ## Consumed by
 
-- Nothing yet — this is the ingest half. The no-Gaia astrometry cohort
-  (`docs/catalog-driver.md` § 5: `directionAthygPrinted`,
-  `velocityAthygPm`, `vCatalogued`) is the first consumer.
+- `scripts/catalog/tycho2-parse.ts` → the direction, PM and V cascades'
+  `tycho2` tier, on **43** direction rows (40 of them with a PM) and
+  **123** V rows. That is the whole no-Gaia astrometry cohort minus the
+  Gliese-numbered remainder, which has no TYC and routes CNS5 / SIMBAD /
+  Gliese instead (`docs/catalog-driver.md` § 5).
+
+The parser resolves § Which position to propagate from at parse time, so
+no consumer re-decides it: a row with a mean solution exposes
+`ra_mdeg`/`de_mdeg` and its two epochs, a `pflag='X'` row exposes
+`ra_icrs` at J2000 and `fromIcrs: true`, and the main table's row wins on
+the 254 identifiers both tables carry.
 
 ## Refresh
 

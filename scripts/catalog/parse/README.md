@@ -114,7 +114,10 @@ never re-derived).
    (`stars-parse.ts`). Drops rows still beyond LMC depth.
 5. **Direction resolution** (`resolveDirection` in
    `direction-cascade.ts`) and `xyz = direction × distance` in
-   float64. See `../distance/README.md` § Direction resolution.
+   float64. See `../distance/README.md` § Direction resolution. Every
+   tier now propagates its own solution to the scene epoch, so a row
+   no tier reaches resolves to null and the walk drops it —
+   `spineDroppedNoDirection`, pinned at 0.
 6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See `../spectral/README.md`.
@@ -123,7 +126,8 @@ never re-derived).
    DESIGNATION's constellation: the spine carries no editorial `con` cell.
 8. **Johnson V and absmag** (`resolveVMagnitude`, then
    `apparentToAbsoluteMagnitude` on the distance the whole override stack
-   settled). See `../photometry/README.md` § The V cascade. The tier that
+   settled). See `../photometry/README.md` § The V cascade. The spine's
+   printed `mag` cell is no longer read by anything. The tier that
    won is kept on the record as `vVia`, because it decides whether the
    magnitude is the system's blend or one component's — companion
    promotion's flux conservation may only subtract a companion's light
@@ -175,7 +179,12 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 | --- | --- | --- |
 | Gaia DR3 5p PM | gaia_5p / gaia_nss_systemic tiers | 2p rows (PM null) |
 | HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers | HIP2 row, null PM |
-| AT-HYG `pm_ra`/`pm_dec` | athyg_printed tier | blank pm cells |
+| Tycho-2 PM | tycho2 tier | `pflag='X'` rows, which have no mean solution and so no PM |
+| CNS5 PM | cns5 tier | CNS5 row with null pm cells |
+| SIMBAD bibcoded PM | simbad tier | a position whose PM is absent or unbibcoded |
+
+The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**.
+Its one remaining consumer is the LMC override's bulk-PM gate.
 
 `velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
 published-but-wrong velocity is what these thresholds are for, and which rows

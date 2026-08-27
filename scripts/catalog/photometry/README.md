@@ -68,13 +68,43 @@ relation then applies its own colour range on top.
 ```
 V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
-  → catalogued mag     the driver's own printed cell
+  → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 § 1.3, on the record's TYC
+  → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ
+  → curated            Sol alone
 ```
+
+Per-tier routing, pinned in build-counts: `gaia_riello` **311,071** ·
+`printed_hip` **2,046** · `tycho2` **123** · `gliese` **16** · `curated`
+**1**, residual `none` **0**.
 
 `resolveVMagnitude` returns the value **and** the tier that produced it, so
 `vVia` routing counts are pinned in build-counts the same way the direction
 cascade pins `directionVia`. The tier also rides on the record, because it
 answers a question no consumer can answer from the magnitude alone.
+
+**There is no SIMBAD tier**, though `docs/catalog-driver.md` § 5 projected
+one. Gliese reaches every row Tycho-2 misses, and for the nine that would
+have fallen through to SIMBAD the pull holds fluxes in `B`, `J`, `H`, `K`,
+`R`, `g`, `r`, `i` and `G` and no `V` at all — so the § 5 rule that a SIMBAD
+tier serves only cohorts no first-order catalogue reaches leaves it nothing
+to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
+(`data/gliese/README.md`).
+
+### The Tycho-2 tier runs outside its published colour range
+
+SP-1200 states `V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
+**5** of the tier's 123 rows sit outside it — four red out to 2.69 and one
+blue at −0.282 — where the linear form runs ~0.19–0.24 mag bright against
+the printed cell it replaces. `tycho2VMagnitude` transforms them anyway and
+`vTycho2OutsideBtVtRange` pins the count.
+
+That is the opposite call from § Where the colour bound comes from, which
+refuses to extend Table 5.9 past its note (k). The difference is what sits
+underneath: the ci cascade has three more tiers, so a refused row still gets
+a colour, while **none of these five carries a `gl`** — nothing is below
+them, and V is a membership gate, so gating would cost each row its record
+rather than its precision. A tier with no fall-through cannot afford the
+same conservatism as one with three.
 
 ## The ci cascade
 

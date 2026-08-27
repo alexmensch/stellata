@@ -41,7 +41,16 @@ scripts/catalog/classic-ids/
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-photometry-parse.ts, shared
-                                  with the V cascade's bright tier.
+                                  with the V cascade's bright tier. CNS5's row
+                                  also carries the astrometry half of the
+                                  slice, which `cns5AstrometryByGj` keys on the
+                                  record's own GJ for the direction cascade's
+                                  `cns5` tier — this folder parses that file,
+                                  ../distance/ routes on it.
+  cns5-fixture.ts                 Test-only Cns5Row builder. A module, not an
+                                  export from a test file: two suites here
+                                  build these rows, so a column added to the
+                                  interface lands in one place.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).
                                   Pure.
