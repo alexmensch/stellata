@@ -4,17 +4,17 @@
 # docs/** until the containing folder's README.md has been Read this
 # session. Forces the "scout pass" CLAUDE.md § Folder READMEs mandates.
 #
-# State scope: keyed on $PPID (the long-lived Claude process), so all
-# tool calls in one session share the seen-set and a Claude restart
-# starts fresh. Concurrent Claude sessions run in different worktrees
-# per project policy, each with their own parent process, hence their
-# own seen-set.
+# State scope: $GUARD_SESSION when the caller supplies one, else $PPID.
+# Under Claude Code every tool call shares the long-lived parent process, so
+# $PPID alone gives the seen-set session lifetime. omp calls this script from
+# a fresh shell per tool call, making $PPID useless there, so its bridge
+# passes the session id instead.
 
 set -euo pipefail
 
 STATE_DIR="${TMPDIR:-/tmp}/claude-readme-guard"
 mkdir -p "$STATE_DIR"
-STATE_FILE="$STATE_DIR/seen-$PPID.txt"
+STATE_FILE="$STATE_DIR/seen-${GUARD_SESSION:-$PPID}.txt"
 
 input="$(cat)"
 tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"

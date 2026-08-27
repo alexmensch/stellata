@@ -1,9 +1,10 @@
-# Claude Code hooks
+# Tool-call guards
 
-PreToolUse / SessionStart shell hooks the harness fires around tool
-calls. Registered in `.claude/settings.json` at the repo root; this
-folder holds the hook bodies so the registration stays a one-line
-path reference.
+PreToolUse / SessionStart shell hooks fired around tool calls, plus the
+adapter that runs them under a second harness. Claude Code registers the
+`.sh` bodies in `.claude/settings.json` at the repo root; omp loads
+`omp-bridge.ts` from `.omp/config.yml`. This folder holds the bodies so
+both registrations stay one-line path references.
 
 ## Files in this area
 
@@ -32,16 +33,28 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
+  omp-bridge.ts            omp extension that replays the two PreToolUse
+                           guards below and injects `bd prime` at session
+                           start. See § The omp bridge.
+  omp-bridge-pure.ts       Pure tool-name / path extraction for the
+                           bridge. Behaviour pinned by
+                           tests/omp-bridge.test.ts.
 ```
 
 ## How readme-guard works
 
-State lives in `${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`.
+State lives in
+`${TMPDIR:-/tmp}/claude-readme-guard/seen-${GUARD_SESSION:-$PPID}.txt`.
 Keying on `$PPID` (the parent Claude process) gives the seen-set
 session lifetime: every tool call in one Claude session has the same
 parent PID, a Claude restart starts a fresh PID, concurrent sessions
 run under different parents and never collide. No SessionStart hook
 needed — process lifetime is the natural scope.
+
+`$GUARD_SESSION` overrides that key when the caller sets it. omp spawns
+a fresh shell per guard call, so `$PPID` there identifies that shell
+rather than the session and the seen-set would reset on every call; its
+bridge passes the session id instead.
 
 The hook walks up from the tool's `file_path` to the nearest
 `README.md` inside the repo. If that README is in the session's
@@ -172,20 +185,81 @@ Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&
 git commit` flow Claude uses is covered correctly.
 
+## The omp bridge
+
+omp does not read Claude Code's hook wire protocol at all: its
+Claude-compatibility layer looks for TypeScript modules under
+`.claude/hooks/pre/`, and the binary carries none of `hook_event_name`,
+`permissionDecision`, or `CLAUDE_PROJECT_DIR`. Without a bridge every
+guard in this folder is inert under omp.
+
+`omp-bridge.ts` is that bridge. It registers two handlers:
+
+- **`tool_call`** — extracts each repo path the call would touch, feeds
+  one `PreToolUse` payload per path to `readme-guard.sh`, and turns a
+  `deny` verdict into an omp `{ block, reason }`. A `bash` call whose
+  command is a `git commit` additionally goes to
+  `commit-sweep-guard.sh`. First deny wins.
+- **`session_start`** — runs `bd prime --full` and injects the whole
+  output as a `nextTurn` message.
+
+### Why prime-guard has no bridge handler
+
+`prime-guard.sh` exists because Claude Code inlines only 2 KB of
+SessionStart output and persists the rest, so the memories sit past the
+cutoff. omp has no such truncation, so the bridge injects the full
+output directly and the sentinel, the pointer, and the PreToolUse gate
+are all unnecessary. The script stays for Claude Code.
+
+### Path extraction is the load-bearing part
+
+omp's tool surface is wider than Claude's and its arguments differ in
+shape, so a tool missing from `CLAUDE_TOOL_NAME` in `omp-bridge-pure.ts`
+is silently ungated rather than loudly broken. Non-obvious cases:
+
+- `edit` carries no path — the paths are the `[path#TAG]` section
+  headers inside its hashline body.
+- `ast_edit` and `lsp` are reachable as a `write` to `xd://<tool>`,
+  whose `content` is that tool's own JSON arguments, so extraction
+  recurses through it.
+- `read` paths carry selectors (`file.ts:20-40`, `db.sqlite:users:42`);
+  gating keys on the container file.
+- Internal URL schemes (`omp://`, `skill://`, `artifact://`, …) and
+  globs name no single repo file and are skipped.
+
+`eval` is the known hole: a cell can open a file directly and no static
+argument names it. `tests/omp-bridge.test.ts` pins the map and every
+case above.
+
+### A missing guard script is loud, not silent
+
+`runGuard` throws when the script cannot be spawned. omp fails a
+throwing `tool_call` handler closed, so a wrong path blocks tool calls
+immediately instead of leaving the session ungated. A guard that runs
+and exits without output means allow, matching Claude Code.
+
+### Subagents are not gated
+
+omp `task` subagents get their own extension runtime and load none of
+their own, so none of these guards apply inside one. Claude Code's
+hooks did gate subagent tool calls; no omp setting restores that.
+
 ## Disabling
 
 Two paths:
 
 1. **One call only.** For `readme-guard`: clear the seen-state file
-   (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
+   (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-<session>.txt`, where
+   `<session>` is `$GUARD_SESSION` or the parent PID).
    For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
    commit message (covers the README check; comment violations still
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked.
-2. **Across the session.** Remove the entry from
-   `.claude/settings.json`'s `hooks.PreToolUse` array, or
-   temporarily move the hook script aside.
+2. **Across the session.** Under Claude Code, remove the entry from
+   `.claude/settings.json`'s `hooks.PreToolUse` array. Under omp, drop
+   `omp-bridge.ts` from `extensions` in `.omp/config.yml`. Either way,
+   temporarily moving the hook script aside also works.
 
 Disabling is the right call when investigating a folder that
 genuinely has no subsystem ownership (e.g. ad-hoc scratch) — but the
