@@ -105,6 +105,15 @@ of arcsec. The propagation formula itself (PM sign / cos δ /
 Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
 
+**§ 5's validation-independence rule has nothing to exclude here.** It
+bites where a SIMBAD tier and a SIMBAD-based validator meet the same
+field, and no validator reads a position: `simbad_sample.tsv` carries
+`ra` / `dec` / `pmra` / `pmdec` columns, but `validate-simbad-sample.ts`
+compares distance alone and the build-time regression check compares a
+parallax-derived distance. So the 13 simbad-tier rows verify themselves
+against nothing. That changes when the distance cascade takes its own
+SIMBAD tier, under validators that do check distance.
+
 **The tycho2 tier has no corpus row, and cannot have one today.** Its
 records are by construction the ones Gaia and HIP2 both miss, and not one
 of the 43 carries a HIP, a Gaia source_id or a proper name — the only
