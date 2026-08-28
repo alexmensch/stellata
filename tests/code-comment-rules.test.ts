@@ -1,4 +1,4 @@
-// Enforces the comment-rule "law" section of CLAUDE.md across src/ and
+// Enforces the comment-rule "law" section of AGENTS.md across src/ and
 // scripts/ TS/Py source. Fails CI when bead-IDs, PR references, memory-
 // key wikilinks, or oversized module docstrings appear — see
 // docs/authoring-patterns.md § Code-comment hygiene for the rules.
@@ -231,7 +231,7 @@ describe('forbidden code-comment patterns', () => {
       .join('\n');
     throw new Error(
       `\nForbidden code-comment patterns found (${violations.length}):\n\n${formatted}\n\n` +
-      'See CLAUDE.md § "Code comments — what CI enforces here" for the rules.\n' +
+      'See AGENTS.md § "Code comments — what CI enforces here" for the rules.\n' +
       'Substitutions: credit a bead → commit subject (not the code). ' +
       'Reference a memory → no link in code (memories are invisible to readers). ' +
       'Cite a PR → drop it; git blame carries the history.\n'
@@ -265,7 +265,7 @@ describe('module docstring length', () => {
       .join('\n');
     throw new Error(
       `\nModule docstrings exceed the ${MAX_LINES}-line cap (${offenders.length} files):\n\n${formatted}\n\n` +
-      'CLAUDE.md says: "Module docstrings: 1–3 lines, no exceptions." ' +
+      'AGENTS.md says: "Module docstrings: 1–3 lines, no exceptions." ' +
       'Move detail to the folder README.md with a one-line code-side pointer.\n\n' +
       'If the file is pre-existing tech-debt, add it to ' +
       'tests/code-comment-rules-allowlist.txt — but the goal is for the ' +
