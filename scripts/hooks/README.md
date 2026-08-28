@@ -13,18 +13,18 @@ scripts/hooks/
                            NotebookEdit against files under src/**,
                            scripts/**, data/**, docs/** until the
                            containing folder's README.md has been seen
-                           this session. Enforces CLAUDE.md § Folder
+                           this session. Enforces AGENTS.md § Folder
                            READMEs (the scout pass) as a hard gate.
                            Behaviour pinned by tests/readme-guard.test.ts.
   prime-guard.sh           SessionStart: persists the full `bd prime`
                            output and emits a ~460-byte pointer to it.
-                           PreToolUse: blocks every tool call until
-                           that file is Read. Enforces CLAUDE.md
-                           § Session-start hook output. Behaviour
-                           pinned by tests/prime-guard.test.ts.
+                           PreToolUse: blocks every tool call until that
+                           file is Read. Enforces ~/.claude/CLAUDE.md
+                           § Session-start hook output. Behaviour pinned
+                           by tests/prime-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
-                           without updating its README.md (CLAUDE.md
+                           without updating its README.md (AGENTS.md
                            § Folder READMEs trigger 4 — "At commit
                            time, update"), and/or when the staged
                            diff introduces forbidden code-comment
@@ -72,9 +72,9 @@ Grep over a *directory* (the broad-search case) is allowed; Grep
 into a single file is gated like Read. Glob isn't gated at all
 (it lists paths, doesn't read content).
 
-## Why a hook and not just CLAUDE.md text
+## Why a hook and not just AGENTS.md text
 
-CLAUDE.md already mandates the scout pass in strong language. The
+AGENTS.md already mandates the scout pass in strong language. The
 trouble is text-level rules rely on the model self-checking against
 them, and self-checks lose to momentum on long debugging sessions
 — exactly when the rule matters most. A PreToolUse hook is the
@@ -118,16 +118,17 @@ session that can't call a tool. `PRIME_GUARD_BD` overrides the binary
 Re-arming is deliberate: SessionStart fires on compact and resume too,
 and those are exactly the moments the context was just lost.
 
-### Why a gate and not just the CLAUDE.md rule
+### Why a gate and not just the prose rule
 
-The global CLAUDE.md already mandates this read in strong language,
-and it was still skipped in every session — the notice arrives *after*
-the user's first message, buried in harness boilerplate (deferred-tool
-names, agent types, skills), where it reads as environment inventory
-rather than an instruction. bd's own line is conditional ("**If** this
-output is truncated by your host…"), and the host's truncation banner
-reads as plumbing metadata. Same conclusion as readme-guard: the
-harness executing the rule beats the model self-checking against it.
+The user-level `~/.claude/CLAUDE.md` already mandates this read in
+strong language, and it was still skipped in every session — the
+notice arrives *after* the user's first message, buried in harness
+boilerplate (deferred-tool names, agent types, skills), where it reads
+as environment inventory rather than an instruction. bd's own line is
+conditional ("**If** this output is truncated by your host…"), and the
+host's truncation banner reads as plumbing metadata. Same conclusion
+as readme-guard: the harness executing the rule beats the model
+self-checking against it.
 
 ## How commit-sweep-guard works
 
@@ -166,7 +167,7 @@ matched commit:
    violations don't block unrelated commits.
 
 Either check fires a `permissionDecision: "deny"` with a per-finding
-breakdown and the relevant CLAUDE.md substitution rule.
+breakdown and the relevant AGENTS.md § Code comments substitution.
 
 Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&

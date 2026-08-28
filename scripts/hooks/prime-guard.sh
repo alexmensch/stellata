@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # prime-guard: SessionStart persists the full `bd prime` output and emits a
 # short pointer to it; PreToolUse then blocks every tool call until that file
-# has been Read. Enforces CLAUDE.md § Session-start hook output.
+# has been Read. Enforces ~/.claude/CLAUDE.md § Session-start hook output.
 
 set -euo pipefail
 
@@ -87,7 +87,7 @@ The SessionStart hook output is far larger than the host inlines, so the
 persistent project memories and workflow rules are not in your context. They
 are in that file. Reading it is one call, and it is the whole of the fix.
 
-CLAUDE.md § Session-start hook output makes this law; the gate exists because
+~/.claude/CLAUDE.md § Session-start hook output makes this law; the gate exists because
 the prose rule loses to momentum on the first turn, every time.
 
 Genuinely need to bypass: delete $SENTINEL."

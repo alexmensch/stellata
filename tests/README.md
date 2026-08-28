@@ -5,6 +5,14 @@ subsystem. Picked up by the top-level `vitest` run alongside every
 in-tree `*.test.ts`.
 
 ```
+agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file at
+                         360 lines / 17.5 KB so it stays load-once-per-
+                         session affordable; the failure message
+                         explains the wiki convention and the
+                         AGENTS.md → folder-README → docs/ decision
+                         flow. Also asserts CLAUDE.md is still the
+                         symlink to AGENTS.md that keeps Claude Code
+                         and every other harness on one file.
 astronomy-constants-sync.test.ts
                          Parity pin between util/astronomy-constants.ts
                          and the build-script copy.
@@ -46,24 +54,18 @@ cadence-pulsation-bound.test.ts
                          public/ is unbuilt.
 code-comment-rules.test.ts
                          Comment-hygiene scanner over `*.ts` / `*.js` /
-                         `*.py` under src/ and scripts/ (CLAUDE.md
+                         `*.py` under src/ and scripts/ (AGENTS.md
                          § Code comments): forbidden bead IDs, PR
                          numbers and [[wikilinks]], plus the 3-line
                          module-docstring cap, whose pre-existing
                          offenders sit in the sibling allowlist .txt and
                          are meant to shrink. `.glsl` is NOT scanned, so
                          shader comments rest on review alone.
-claude-md-size.test.ts   Size guard for CLAUDE.md. Holds the file at
-                         380 lines / 18 KB so it stays load-once-per-
-                         session affordable; the failure message
-                         explains the wiki convention and the
-                         CLAUDE.md → folder-README → docs/ decision
-                         flow.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
-                         docs/ has a README.md" invariant (CLAUDE.md
+                         docs/ has a README.md" invariant (AGENTS.md
                          § Folder READMEs).
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax

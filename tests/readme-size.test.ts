@@ -1,6 +1,6 @@
 // Caps folder README size. Companion to folder-readme-coverage.test.ts:
 // that one enforces "every folder has a README", this one enforces "no
-// README is too long to be worth reading." See CLAUDE.md § Folder READMEs.
+// README is too long to be worth reading." See AGENTS.md § Folder READMEs.
 
 import { describe, it } from 'vitest';
 import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs';

@@ -17,7 +17,7 @@ const MYTHOS = /\b313,000\b|\b313000\b|\b313k\b/;
 
 function scannedFiles(): string[] {
   return execFileSync('git', ['ls-files', 'src', 'docs', 'scripts', 'tests',
-    'CLAUDE.md', 'README.md', 'SCIENCE.md'], { cwd: ROOT, encoding: 'utf8' })
+    'AGENTS.md', 'README.md', 'SCIENCE.md'], { cwd: ROOT, encoding: 'utf8' })
     .trim().split('\n')
     .filter((f) => /\.(ts|js|md|html|css)$/.test(f))
     .filter((f) => f !== 'tests/star-count-consistency.test.ts');

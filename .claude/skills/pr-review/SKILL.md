@@ -28,7 +28,7 @@ goal is findings the author will act on, not encouragement.
   which beats re-fetching and lets you run gates against it.
 - Read the folder `README.md` of every folder the diff touches. In this repo the
   README carries the invariants — uniform pins, sentinels, overrides — that the
-  code cannot tell you. See CLAUDE.md § Folder READMEs.
+  code cannot tell you. See AGENTS.md § Folder READMEs.
 - Scan adjacent code paths and sibling implementations for coverage gaps, not
   only what the diff changed.
 
@@ -49,7 +49,7 @@ is a leak. Per-frame CPU allocation in the render loop (arrays, objects, `Set`s,
 sorts) is a GC-jank finding in its own right.
 
 `bus.on(...)` without a matching unsub in dispose is the same defect class —
-CLAUDE.md § Lifecycle pairing.
+AGENTS.md § Lifecycle pairing.
 
 ### 2. Name what the cost scales with, and its bound
 
@@ -85,7 +85,7 @@ argument. Occluded fragments still shade wherever early-z is defeated.
 A cost claim names the device class it holds for. "Imperceptible on my M4" is
 not a claim — the budget that matters belongs to a low-end integrated or mobile
 GPU, measured against its VRAM ceiling and max-texture-size limit. This is the
-performance face of CLAUDE.md § Camera-anywhere, any-epoch: state the vantage
+performance face of AGENTS.md § Camera-anywhere, any-epoch: state the vantage
 and the epoch offset, at the extremes the model allows.
 
 ### 6. Measured, or labelled unmeasured
@@ -172,4 +172,4 @@ whichever epic owns the code; do not create an umbrella by reflex.
 
 A file you are touching is a file you own for that PR: pre-existing rule
 violations, stale prose, and bugs in the diff's own files are in scope. See
-§ Correct stale context before the session ends in the user-level CLAUDE.md.
+§ Correct stale context before the session ends in the user-level ~/.claude/CLAUDE.md.

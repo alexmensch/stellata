@@ -25,9 +25,9 @@ Categorise each memory into drop / trim / consolidate / keep.
 
 - **Drop** when the content lives elsewhere: a relevant bead (search bd
   first), canonical docs (`SCIENCE.md`, `RELEASING.md`, `docs/*`,
-  `CLAUDE.md`), or a time-bound note that has aged out. Dropping without
+  `AGENTS.md`), or a time-bound note that has aged out. Dropping without
   leaving a hook is only safe when retrieval is already covered by
-  something that loads every session — CLAUDE.md text, the readme-guard
+  something that loads every session — AGENTS.md text, the readme-guard
   hook, or a CI test that fails on violations.
 - **Trim** by keeping rule + why + how-to-apply. Cut historical incident
   logs, exact dates, sub-task IDs, and `file:line` paths that belong in

@@ -112,7 +112,7 @@ Three things a change here has to know:
 bulge sits behind 4.6 τ_V from here, so it is 0.02 % of the GC column and
 13.9 % of the b = 5 one; every sightline row below moves under 0.09 mag.
 Where it shows is the face-on external view, which the camera can reach
-(`CLAUDE.md` § Camera-anywhere, any-epoch): the centre pixel goes from
+(`AGENTS.md` § Camera-anywhere, any-epoch): the centre pixel goes from
 48 % bulge to **31 %**, and the integrated bulge/disc luminance ratio from
 0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
 rather than an S0, and it is pinned in `../milkyway.test.ts` alongside the

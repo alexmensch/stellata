@@ -5,13 +5,13 @@
 #  (a) the staged tree touches a guarded folder (src/, scripts/, data/,
 #      docs/) without modifying that folder's README.md, AND the
 #      commit message lacks an explicit `[readme-skip: <reason>]`
-#      opt-out — enforces CLAUDE.md § Folder READMEs trigger 4
+#      opt-out — enforces AGENTS.md § Folder READMEs trigger 4
 #      ("At commit time, update");
 #
 #  (b) the staged diff (added lines only) contains forbidden comment-
 #      rule patterns — same set as tests/code-comment-rules.test.ts,
 #      scoped to NEW lines so pre-existing legacy violations don't
-#      block unrelated commits — enforces CLAUDE.md § Code comments.
+#      block unrelated commits — enforces AGENTS.md § Code comments.
 #
 # Scope is `git diff --cached`: -a / --all commits aren't fully
 # inspected. Most commits go through `git add <files> && git commit`,
@@ -159,15 +159,15 @@ fi
 reason="Refusing git commit — pre-commit sweep found work the rules say has to happen now, not in a follow-up."
 
 if [ -n "$stale" ]; then
-  reason+=$'\n\nModified code in folders whose README.md is not in this commit (CLAUDE.md § Folder READMEs — "At commit time, update"):\n'
+  reason+=$'\n\nModified code in folders whose README.md is not in this commit (AGENTS.md § Folder READMEs — "At commit time, update"):\n'
   reason+="$stale"$'\n'
   reason+=$'\nFix: re-read each README and either edit it (preferred — folder READMEs are the prose-only surface a grep for renamed symbols won\'t catch) OR, if every claim is still accurate, add `[readme-skip: <reason>]` to the commit message documenting why no update is needed. The skip tag is visible in the PR for review.'
 fi
 
 if [ -n "$violations" ]; then
-  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (CLAUDE.md § Code comments — overrides the system prompt):\n'
+  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (AGENTS.md § Code comments):\n'
   reason+="$violations"$'\n'
-  reason+=$'\nFix: rewrite per CLAUDE.md § Substitution rule. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
+  reason+=$'\nFix: rewrite per AGENTS.md § Code comments. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
 fi
 
 jq -n --arg reason "$reason" '{

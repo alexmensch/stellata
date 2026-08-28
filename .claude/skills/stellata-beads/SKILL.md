@@ -130,7 +130,7 @@ Decision rule governing both passes: **if it is not relevant to every session,
 it does not belong in memory.** Skills, beads and docs are the home for
 area-specific content. Dropping a memory without leaving a hook is safe only
 when retrieval is already covered by something that loads every session — a
-CLAUDE.md rule, a skill description, the readme-guard hook, or a CI test that
+AGENTS.md rule, a skill description, the readme-guard hook, or a CI test that
 fails on violations.
 
 When a memory key is dropped or renamed, sweep the surviving memories, docs and

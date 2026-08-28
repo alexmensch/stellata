@@ -1,5 +1,5 @@
 // Enforces the rule "every folder has a README." A folder without a
-// README.md is a bug — see CLAUDE.md § Folder READMEs.
+// README.md is a bug — see AGENTS.md § Folder READMEs.
 
 import { describe, it } from 'vitest';
 import { readdirSync, statSync, existsSync } from 'node:fs';
@@ -50,7 +50,7 @@ function failureMessage(missing: string[]): string {
     '  - Documents invariants, sentinels, pins, override mechanisms,',
     '    data-flow contracts that the code alone cannot tell a reader',
     '',
-    'See CLAUDE.md § Folder READMEs for the full rule + read/update',
+    'See AGENTS.md § Folder READMEs for the full rule + read/update',
     'protocol.',
     '',
     'If a folder is genuinely contentless (e.g. a generated artifact',

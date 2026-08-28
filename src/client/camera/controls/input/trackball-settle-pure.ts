@@ -7,7 +7,7 @@ import { ulpsBetween } from '../../../util/ulp';
 /** Per-frame on-screen motion under which the navigate-mode damping tail
  *  is stopped, in CSS pixels. A pixel is a pixel from any vantage at any
  *  epoch, which is what makes this threshold admissible where a
- *  world-space one would not be (CLAUDE.md § Camera-anywhere). */
+ *  world-space one would not be (AGENTS.md § Camera-anywhere). */
 export const TRACKBALL_SETTLE_PX = 0.1;
 
 /** Per-frame quaternion drift under which the orientation `lookAt`

@@ -296,7 +296,7 @@ expensive to retrofit:
    near me" — as a separate service, not the precision mechanism.)
 2. **Shard positions are chunk-local.** Float32 absolute coordinates at
    Gly range quantise to ~10² pc — useless when the camera flies in
-   (camera-anywhere principle, `CLAUDE.md`). Each shard stores positions
+   (camera-anywhere principle, `AGENTS.md`). Each shard stores positions
    relative to its own float64 chunk origin (the dust layer's existing
    pattern), so float32 per-vertex is exact at every scale.
 3. **Recentring is shard/LOD-aware.** A recentre eagerly rewrites near

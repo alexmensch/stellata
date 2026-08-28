@@ -117,7 +117,7 @@ frame it crosses the floor.
 
 The floor is in **pixels** deliberately: a pixel means the same thing
 from any vantage at any epoch, where a world-space or per-parsec cut-off
-would settle differently at Sol and at the LMC (CLAUDE.md
+would settle differently at Sol and at the LMC (AGENTS.md
 § Camera-anywhere). It is the navigate-mode sibling of observe's
 `MOMENTUM_MIN_SPEED` (`../../observe/observe-controls.ts`), which has
 floored its own momentum on the same argument from the start.
