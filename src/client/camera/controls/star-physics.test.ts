@@ -19,6 +19,7 @@ import {
   ORBIT_FLOOR_SURFACE_MARGIN,
 } from './star-physics';
 import { R_SUN_PC, AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { SOL_BODIES } from '../../solar-system/planet-system';
 import { FOV_MIN_DEG, FOV_MAX_DEG } from '../timing';
 
 function makeCatalog(
@@ -489,10 +490,14 @@ describe('star-physics / planet park + orbit floor', () => {
 });
 
 describe('star-physics / orbit-floor surface clamp', () => {
-  const RADIUS_PC = 71492 * KM_PC; // Jupiter — the reported repro body
+  // The reported repro body, at the radius the app actually draws it.
+  const JUPITER = SOL_BODIES.find(b => b.name === 'Jupiter')!;
+  const RADIUS_PC = JUPITER.radiusKm * KM_PC;
   const rad = (deg: number) => (deg * Math.PI) / 180;
   // tan(0.45 · fovMinor) = 1 exactly here, so the bare solve returns R.
   const CROSSOVER_DEG = 100;
+  // Where the clamp starts binding: the bare solve reaches the margin itself.
+  const CLAMP_BINDS_DEG = 96.895;
 
   const catalog = makeCatalog(1, c => { c.physicalRadius[0] = 1; });
   const starFloorRatio = (fovDeg: number) =>
@@ -523,6 +528,26 @@ describe('star-physics / orbit-floor surface clamp', () => {
       expect(minOrbitDistForPlanet(RADIUS_PC, rad(deg))).toBeGreaterThan(RADIUS_PC);
       expect(starFloorRatio(deg)).toBeGreaterThan(1);
     }
+  });
+
+  it('starts binding below the 100 deg solve crossover, not at it', () => {
+    const justUnder = minOrbitDistForPlanet(RADIUS_PC, rad(CLAMP_BINDS_DEG - 0.05)) / RADIUS_PC;
+    const justOver = minOrbitDistForPlanet(RADIUS_PC, rad(CLAMP_BINDS_DEG + 0.05)) / RADIUS_PC;
+    expect(justUnder).toBeGreaterThan(ORBIT_FLOOR_SURFACE_MARGIN);
+    expect(justOver).toBe(ORBIT_FLOOR_SURFACE_MARGIN);
+  });
+
+  it('stops reaching ZOOM_FLOOR_FRACTION once the clamp binds', () => {
+    // The clamp costs screen fill: the body subtends 2·atan(R/d) at the
+    // floor, so past the crossover max zoom frames it smaller than the
+    // 90 % the fill solve targets. This is the trade, and it is visible.
+    const fillAtFloor = (fovDeg: number) => {
+      const fov = rad(fovDeg);
+      return (2 * Math.atan(RADIUS_PC / minOrbitDistForPlanet(RADIUS_PC, fov))) / fov;
+    };
+    expect(fillAtFloor(50)).toBeCloseTo(ZOOM_FLOOR_FRACTION, 12);
+    expect(fillAtFloor(CROSSOVER_DEG)).toBeCloseTo(0.872, 3);
+    expect(fillAtFloor(FOV_MAX_DEG)).toBeCloseTo(0.727, 3);
   });
 
   it('keeps the auto-park solves outside the clamped floor at every FOV', () => {

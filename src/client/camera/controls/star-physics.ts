@@ -20,12 +20,12 @@ import {
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-pure';
 import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
-// Target screen-fill fraction of the viewport minor axis at the manual-
-// zoom orbit floor. The shader reads this as `uMaxPhysFrac` and clamps
-// the per-star disc to it; the auto-park calibration uses the same value
-// so a star's pulse peak lands at exactly this fraction at closest
-// approach. Hoisted here so stellata.ts seeds the uniform from the same
-// constant the orbit-floor + park-distance math reads.
+// Screen-fill fraction of the viewport minor axis the manual-zoom orbit
+// floor solves for, and the `uMaxPhysFrac` per-star disc clamp the shader
+// applies. Hoisted here so stellata.ts seeds the uniform from the same
+// constant the orbit-floor + park-distance math reads. Above the surface
+// clamp the floor no longer reaches this fraction — README.md
+// § Manual-zoom floor.
 export const ZOOM_FLOOR_FRACTION = 0.9;
 
 // Subset of the star-shader uniforms read by renderedSizePx /
@@ -78,18 +78,13 @@ export interface ParkArgs {
   fovMinorRad: number;
 }
 
-// Closest the manual-zoom floor may sit to the body's centre, as a
-// multiple of its radius. Above fovMinor ≈ 100° the ZOOM_FLOOR_FRACTION
-// solve returns d < R — filling 90 % of the minor axis is simply
-// unachievable from outside the body — and the FOV slider reaches 120°,
-// where the bare solve lands at 0.727 R, inside the surface.
+// Closest the manual-zoom floor may sit to a body's centre, as a multiple
+// of its equatorial radius. README.md § Manual-zoom floor derives it.
 export const ORBIT_FLOOR_SURFACE_MARGIN = 1.05;
 
-// The manual-zoom floor: the ZOOM_FLOOR_FRACTION fill solve, held
-// outside the surface. Both hard-kind floors share it. Deliberately not
-// pushed down into distAtFillFraction — the 30 %-fill park solve is
-// already outside the surface at every reachable FOV and must keep
-// returning the bare angular distance.
+// The manual-zoom floor both hard kinds take: the ZOOM_FLOOR_FRACTION fill
+// solve, held outside the surface. Deliberately not pushed down into
+// distAtFillFraction, which the park solves must keep bare.
 function orbitFloorAtFill(R_pc: number, fovMinorRad: number): number {
   return Math.max(
     distAtFillFraction(R_pc, fovMinorRad, ZOOM_FLOOR_FRACTION),

@@ -110,7 +110,11 @@ viewport-derived shader uniform that drives
 `physSize`. There is no per-pixel-range cap — a max-radius supergiant
 at the orbit floor fills `ZOOM_FLOOR_FRACTION` (= 0.9) of the
 viewport's minor axis purely because `minOrbitDistForStar` solves for
-that distance. Smaller stars land closer to fill the same 90%; the
+that distance. That holds below the floor's surface-clamp crossover
+(`fov_minor` 96.895°); above it the clamp sets the floor instead and the
+fill falls to 0.727 at `FOV_MAX_DEG`
+(`../../camera/controls/README.md` § Manual-zoom floor).
+Smaller stars land closer to fill the same 90%; the
 camera near plane (`1e-12`) gives several orders of magnitude of
 headroom even for white dwarfs and Sirius B-class radii.
 

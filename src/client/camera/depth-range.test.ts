@@ -31,13 +31,11 @@ describe('camera depth range / near-plane configuration', () => {
     expect(CAMERA_NEAR_PC).toBeLessThan(GLOBAL_MIN_DIST_PC);
   });
 
-  // minOrbitDistForPlanet solves d = R / tan(0.9 · fovMinor / 2) held at
-  // ORBIT_FLOOR_SURFACE_MARGIN · R, so a wider FOV lowers the floor until
-  // the clamp binds at fovMinor ≈ 100°: FOV_MAX_DEG is still the worst
-  // case, but the clamp — not the solve — sets it. Aspect enters through
-  // fovMinor = min(fovX, fovY), and a landscape viewport leaves
-  // fovMinor = fovY, so a square-ish aspect is the tightest realistic
-  // configuration.
+  // A wider FOV lowers the floor until the surface clamp binds at fovMinor
+  // 96.895°, so FOV_MAX_DEG is still the worst case but the clamp — not the
+  // fill solve — sets it. Aspect enters through fovMinor = min(fovX, fovY),
+  // and a landscape viewport leaves fovMinor = fovY, so a square-ish aspect
+  // is the tightest realistic configuration.
   function tightestZoomFloorPc(fovDeg: number): number {
     const camera = new THREE.PerspectiveCamera(fovDeg, 1, CAMERA_NEAR_PC, CAMERA_FAR_PC);
     const fovMinor = fovMinorRad(camera);
@@ -50,20 +48,16 @@ describe('camera depth range / near-plane configuration', () => {
     expect(CAMERA_NEAR_PC).toBeLessThan(tightestZoomFloorPc(FOV_MAX_DEG));
   });
 
-  it('keeps the smallest-moon margin above 6×, and pins how thin it is', () => {
-    // The margin is the whole reason the near plane sits at 1e-12 rather
-    // than 1e-10. It is NOT comfortable: Mimas (R ≈ 198 km, the smallest
-    // body in SOL_BODIES) parks ~6.7× above the near plane at FOV_MAX_DEG.
-    // Adding a moon roughly 6× smaller — or dropping the surface clamp —
-    // puts a focused body ON the clip plane, where it vanishes at max zoom.
-    // Pinned so that change fails here instead of in the browser.
-    //
-    // Widening FOV_MAX_DEG no longer thins this margin: past fovMinor ≈
-    // 100° the floor is the surface clamp, which is FOV-invariant.
+  it('pins the smallest-moon margin exactly — the clamp made it FOV-invariant', () => {
+    // The margin is the whole reason the near plane sits at 1e-12 rather than
+    // 1e-10, and it is NOT comfortable. Adding a moon roughly 6× smaller than
+    // Mimas (R ≈ 198 km, the smallest body in SOL_BODIES) — or dropping the
+    // surface clamp — puts a focused body ON the clip plane, where it vanishes
+    // at max zoom. Pinned so that change fails here instead of in the browser.
     const marginAtWidest = tightestZoomFloorPc(FOV_MAX_DEG) / CAMERA_NEAR_PC;
-    expect(marginAtWidest).toBeGreaterThan(6);
-    expect(marginAtWidest).toBeLessThan(7);
-    // At the default FOV the solve still binds and the same body sits ~15.5× up.
+    expect(marginAtWidest).toBeCloseTo(6.7444, 4);
+    // At the default FOV the fill solve still binds and the same body sits
+    // ~15.5× up.
     expect(tightestZoomFloorPc(DEFAULT_FOV) / CAMERA_NEAR_PC).toBeGreaterThan(15);
   });
 

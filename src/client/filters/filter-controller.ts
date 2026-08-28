@@ -58,8 +58,9 @@ export interface FilterControllerDeps {
   /** Layer side-effects of a filter patch (planet-field cull refresh,
    *  milkyway / LG-emission enable) — the shell owns layer identity. */
   onFilterApplied: (f: Readonly<FilterState>) => void;
-  /** The focused star's orbit floor depends on FOV — re-solve when the
-   *  FOV changes. Wired to FocusController.refreshOrbitFloor. */
+  /** The focused object's orbit floor is an angular solve for every hard
+   *  kind — re-solve when the FOV changes. Wired to
+   *  FocusController.refreshOrbitFloor. */
   refreshOrbitFloor: () => void;
   /** Per-element visibility adapters, exhaustive over SceneElementId.
    *  applyDetailPreset / setSceneElementVisible drive these; each folds

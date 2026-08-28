@@ -32,17 +32,17 @@ export const OBSERVE_TRANSITION_MS = 1800;
 // blob quantises its `fov` field over the same interval (that field table
 // is frozen per schema version, so it carries the bounds as literals by
 // design and must not be rewired to these constants). A wider FOV lowers
-// every angular zoom floor until the surface clamp binds at ~100°, so
-// `CAMERA_NEAR_PC` is validated against `FOV_MAX_DEG`.
+// every angular zoom floor until the surface clamp binds at fovMinor
+// 96.895°, so `CAMERA_NEAR_PC` is validated against `FOV_MAX_DEG`.
 export const FOV_MIN_DEG = 10;
 export const FOV_MAX_DEG = 120;
 
 // Perspective near plane, in parsecs. Must stay strictly below every
 // orbit distance the camera can reach, or a maximally-zoomed-in body
 // lands on the clip plane and disappears. The binding floor is a focused
-// small moon: minOrbitDistForPlanet(Mimas, R ≈ 198 km) ≈ 1.5e-11 pc — a
-// larger 1e-10 pc near plane clipped every sub-Pluto moon at its park
-// distance. `logarithmicDepthBuffer` on the renderer is what keeps depth
+// small moon: minOrbitDistForPlanet(Mimas, R ≈ 198 km) is 1.5e-11 pc at
+// the default FOV and 6.7e-12 at FOV_MAX_DEG, its worst case — a larger
+// 1e-10 pc near plane clipped every sub-Pluto moon at its park distance. `logarithmicDepthBuffer` on the renderer is what keeps depth
 // precision intact across the resulting near→far range; the pairing is
 // load-bearing (controls/README.md § Camera near plane vs controls
 // minDistance) and pinned by depth-range.test.ts.
