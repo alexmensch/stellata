@@ -6,10 +6,9 @@ import { RenderTarget, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuHdrPipeline } from './hdr-pipeline-webgpu';
 import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-pipeline';
 
-function fakeRenderer(reversedDepthBuffer = true) {
+function fakeRenderer() {
   const bound: (RenderTarget | null)[] = [];
   const renderer = {
-    reversedDepthBuffer,
     getDrawingBufferSize: (v: THREE.Vector2) => v.set(64, 32),
     getPixelRatio: () => 2,
     setRenderTarget: (t: RenderTarget | null) => bound.push(t),
