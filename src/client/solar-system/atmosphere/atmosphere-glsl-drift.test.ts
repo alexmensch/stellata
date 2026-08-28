@@ -5,7 +5,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
+import {
+  DITHER_IGN_DOT, DITHER_IGN_SCALE, LUMA_WEIGHTS,
+} from '../../hdr/tonemap/tonemap-pure';
 import {
   MS_STRENGTH,
   TWILIGHT_TAIL_AMP,
@@ -52,8 +54,8 @@ describe('constants mirrored from the CPU model', () => {
     // different lattices.
     expect(scatter).toContain('#include <stellata_ign>');
     expect(scatter).not.toMatch(/float stellata_atmoJitter/);
-    expect(scatter).not.toContain('52.9829189');
-    expect(scatter).not.toContain('0.06711056');
+    expect(scatter).not.toContain(String(DITHER_IGN_SCALE));
+    for (const c of DITHER_IGN_DOT) expect(scatter).not.toContain(String(c));
   });
 });
 
