@@ -234,8 +234,9 @@ export function pickFromCandidatesResolved<T extends PickCandidate>(
 // at the current FOV. Symbolically:
 //   targetFrac · fovMinor = 2·atan(R / d)
 //   d = R / tan(targetFrac · fovMinor / 2)
-// Used both for the manual-zoom orbit floor (targetFrac = 0.9) and the
-// auto-park distance (targetFrac = 0.10).
+// The bare angular solve, which the park distances take directly. It is
+// NOT the manual-zoom floor: that is `orbitFloorAtFill` in star-physics.ts,
+// which holds this result outside the body's surface.
 export function distAtFillFraction(
   R_pc: number,
   fovMinorRad: number,

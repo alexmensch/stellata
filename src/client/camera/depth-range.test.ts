@@ -31,11 +31,11 @@ describe('camera depth range / near-plane configuration', () => {
     expect(CAMERA_NEAR_PC).toBeLessThan(GLOBAL_MIN_DIST_PC);
   });
 
-  // minOrbitDistForPlanet solves d = R / tan(0.9 · fovMinor / 2), so a
-  // wider FOV lowers the floor: FOV_MAX_DEG is the worst case, not the
-  // default. Aspect enters through fovMinor = min(fovX, fovY), and a
-  // landscape viewport leaves fovMinor = fovY, so a square-ish aspect is
-  // the tightest realistic configuration.
+  // A wider FOV lowers the floor until the surface clamp binds at fovMinor
+  // 96.895°, so FOV_MAX_DEG is still the worst case but the clamp — not the
+  // fill solve — sets it. Aspect enters through fovMinor = min(fovX, fovY),
+  // and a landscape viewport leaves fovMinor = fovY, so a square-ish aspect
+  // is the tightest realistic configuration.
   function tightestZoomFloorPc(fovDeg: number): number {
     const camera = new THREE.PerspectiveCamera(fovDeg, 1, CAMERA_NEAR_PC, CAMERA_FAR_PC);
     const fovMinor = fovMinorRad(camera);
@@ -48,17 +48,16 @@ describe('camera depth range / near-plane configuration', () => {
     expect(CAMERA_NEAR_PC).toBeLessThan(tightestZoomFloorPc(FOV_MAX_DEG));
   });
 
-  it('keeps the smallest-moon margin above 4×, and pins how thin it is', () => {
-    // The margin is the whole reason the near plane sits at 1e-12 rather
-    // than 1e-10. It is NOT comfortable: Mimas (R ≈ 198 km, the smallest
-    // body in SOL_BODIES) parks ~4.7× above the near plane at FOV_MAX_DEG.
-    // Adding a moon roughly 4× smaller — or widening FOV_MAX_DEG — puts a
-    // focused body ON the clip plane, where it vanishes at max zoom. Pinned
-    // so that change fails here instead of in the browser.
+  it('pins the smallest-moon margin exactly — the clamp made it FOV-invariant', () => {
+    // The margin is the whole reason the near plane sits at 1e-12 rather than
+    // 1e-10, and it is NOT comfortable. Adding a moon roughly 6× smaller than
+    // Mimas (R ≈ 198 km, the smallest body in SOL_BODIES) — or dropping the
+    // surface clamp — puts a focused body ON the clip plane, where it vanishes
+    // at max zoom. Pinned so that change fails here instead of in the browser.
     const marginAtWidest = tightestZoomFloorPc(FOV_MAX_DEG) / CAMERA_NEAR_PC;
-    expect(marginAtWidest).toBeGreaterThan(4);
-    expect(marginAtWidest).toBeLessThan(5);
-    // At the default FOV the same body sits ~15.5× up.
+    expect(marginAtWidest).toBeCloseTo(6.7444, 4);
+    // At the default FOV the fill solve still binds and the same body sits
+    // ~15.5× up.
     expect(tightestZoomFloorPc(DEFAULT_FOV) / CAMERA_NEAR_PC).toBeGreaterThan(15);
   });
 

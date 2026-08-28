@@ -15,8 +15,12 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
   a per-frame position refresh (`update`).
 - `constellation-figure-pure.ts` — `collectFigureSegmentEndpoints`: expands the
   catalog's per-constellation polylines into a flat line-segment endpoint list
-  (two star indices per segment). Vitest-pinned.
-- `constellation-figure-pure.test.ts` — endpoint-expansion pin.
+  (two star indices per segment), dropping any segment that touches
+  `excludeStarIdx`. Plus `selectFigures`: the active-set + anchor rule and the
+  rebuild signature, so the whole decision is testable without a shell. Both
+  vitest-pinned.
+- `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion, and
+  selection pins.
 
 ## Why WebGL, not SVG
 
@@ -56,10 +60,13 @@ floating-origin frame the star instances use, so the GPU projection lines up
 with the discs automatically and **camera motion adds no CPU work** — the
 per-frame refill below is a fixed cost independent of the camera.
 
-- `setFigures(constellations, conIndices, localPositions)` — rebuild geometry.
-  The shell calls it when the active set changes: the highlighted index, or
-  chart ↔ navigate. `conIndices` is the highlighted one, all 88 (chart), or
-  empty (nothing highlighted).
+- `setFigures(constellations, conIndices, localPositions, excludeStarIdx)` —
+  rebuild geometry. `conIndices` is the highlighted one, all 88 (chart), or
+  empty (nothing highlighted). The shell pushes it off `'state'` and skips the
+  rebuild on an unchanged `selectFigures` signature: every fine-grained
+  mutation the set reads (focus, filter, cameraMode) pairs with `'state'`
+  (`../README.md` § Event bus), and so does the observe transition's landing,
+  which no fine-grained event covers.
 - `update(localPositions)` — re-copies vertex positions from the live buffer
   every drawn frame, so a vertex tracks its star through everything that
   rewrites `localPositions` with no separate signal: proper-motion epoch
@@ -71,13 +78,58 @@ per-frame refill below is a fixed cost independent of the camera.
 
 ## Visibility gates
 
-Three inputs, all pushed (no per-frame recompute):
+Four inputs, all pushed (no per-frame recompute):
 
 - `setPermitted(on)` — the `constellationFigures` declutter floor
   (`representational`; `../scene/README.md`), pushed from the detail bind.
 - `setFigures(..., [])` — nothing highlighted outside chart mode.
+- `setFigures(..., excludeStarIdx)` — the observe vantage point (§ The observe
+  anchor). Every segment touching that star drops out of the geometry.
 - `setMonochrome(on)` — chart mode swaps the sky-blue stroke for ink and drops
   `depthTest` so the figure reads flat over the depth-disabled chart starfield.
+
+## The observe anchor
+
+**The settled pose was never the problem.** OBSERVE parks the camera at the
+focal object's live local position (`../camera/observe/observe-transition.ts`),
+which is the same `localPositions` slot a figure vertex reads — so the camera
+sits exactly *on* the anchor's own vertex. Every point of a segment leaving that
+vertex then lies on the view ray through its far endpoint, so the whole segment
+projects to one screen point and renders as a zero-length line. Near-plane
+clipping does not change it: the surviving remainder is on the same ray. There
+is nothing to see, with or without the suppression.
+
+**The visible window is the glide.** Entry and exit each translate the camera
+between the park distance and the star over `OBSERVE_TRANSITION_MS`. While one
+endpoint is approaching the camera the segment's projected direction runs away,
+and it whips across the sky before collapsing to a point on arrival — the
+"lines read as noise" report. Nothing gates this WebGL layer on the observe
+transition (the `body.focus-lerping` class hides only the SVG overlay), so the
+glide draws every frame. Hence `selectFigures` keys the suppression on
+`inObserve || observeGlideActive` (`ObserveTransition.isActive` — enter/exit,
+never the navigate-mode `unfocus` kind): the mode flag alone covers entry and
+leaves the identical smear on the way out, since exit emits
+`cameraMode='navigate'` at glide *start*.
+
+**The same geometry bites any line layer.** OBSERVE parks the camera on the
+focal object, so ANY line geometry with a vertex there is degenerate — and a
+curve that merely passes through the eye point is worse than one that ends
+there, because near-plane clipping makes it whip under rotation instead of
+collapsing to a point. The binary orbit paths hit exactly that: a star sits on
+its own barycentric ellipse by construction (`../binaries/orbit-paths/README.md`),
+so observing from it puts the camera on the curve (stellata-uadc.31).
+
+**A non-star anchor keeps its host's lines, and that is not a geometric
+argument.** `focus.getFocusedStar()` is null for every non-star kind, so a
+planet or probe anchor suppresses nothing. Today that is unreachable rather
+than correct: Sol is the only attached planet host and carries no figure vertex
+(figures resolve from Stellarium HIP lists, `scripts/catalog/parse/constellations.ts`).
+It is not defensible on geometry — a planet sits ~5×10⁻⁶ pc from its host
+against parsec-scale segments, so an exoplanet anchor's host lines would
+converge on the camera to within microradians and smear exactly as a star
+anchor's do. When exoplanet hosts land, the anchor has to resolve through the
+host (`focusedStar ?? focusedPlanetSystem.hostStarIdx`, which covers probes for
+free).
 
 ## Styling
 

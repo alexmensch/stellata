@@ -138,9 +138,11 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 1. **Manual-zoom floor** — `controls.minDistance =
    minOrbitDistForStar(idx)`. Solves for `d` such that the disc fills
-   `ZOOM_FLOOR_FRACTION` (= 0.9) of the viewport's minor axis:
+   `ZOOM_FLOOR_FRACTION` (= 0.9) of the viewport's minor axis, held
+   outside the body's own surface:
    ```
-   d_min = R / tan(ZOOM_FLOOR_FRACTION × fov_minor / 2)
+   d_min = max(R / tan(ZOOM_FLOOR_FRACTION × fov_minor / 2),
+               R × ORBIT_FLOOR_SURFACE_MARGIN)
    ```
    `fov_minor = min(fov_x, fov_y)` so the 90% target reads consistently
    across portrait + landscape viewports. The rule is uniform across
@@ -149,6 +151,53 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    Sirius, or any multiple system without the controls bouncing.
    `d_min` scales linearly with the star's physical radius — inspecting
    a Sol-class star vs Betelgeuse vs Sirius B looks the same on screen.
+
+   **The surface clamp is not decoration.** The bare solve drops below `R`
+   once `tan(0.45 × fov_minor) > 1` — filling 90 % of the minor axis is
+   then unachievable from outside the body at all, and the solve answers
+   with the mathematically correct interior distance. The FOV slider
+   reaches `FOV_MAX_DEG = 120°`, where the bare solve is `0.727 R`: the
+   camera zooms inside a focused Jupiter. `ORBIT_FLOOR_SURFACE_MARGIN`
+   (= 1.05) is the shared clamp both hard-kind floors take.
+
+   **Two thresholds, three degrees apart — don't conflate them.** The bare
+   solve reaches exactly `R` at `fov_minor = 100°`; the *clamp* starts
+   binding at **96.895°**, where the bare solve reaches `1.05 R`. Above
+   that second angle `d_min` is FOV-invariant, which is why widening
+   `FOV_MAX_DEG` no longer thins the near-plane margin.
+
+   **The clamp costs screen fill, by design.** At the floor the body
+   subtends `2·atan(R/d)`, so past the crossover it stops reaching
+   `ZOOM_FLOOR_FRACTION`:
+
+   | `fov_minor` | bare solve | floor | fill at the floor |
+   |---|---|---|---|
+   | 50° | 2.414 R | 2.414 R | 0.900 |
+   | 100° | 1.000 R | 1.050 R | 0.872 |
+   | 120° | 0.727 R | 1.050 R | 0.727 |
+
+   Max zoom at the wide end therefore frames a body ~19 % smaller than the
+   pre-clamp build did — the trade for not being inside it. The
+   `../../star-pipeline/perceptual-disc/README.md` claim that a max-radius
+   star at the floor fills 0.9 holds only below the crossover.
+
+   **1.05 specifically.** The mesh's equatorial radius *is* `radiusKm`
+   (flattening only shortens the polar axis), so 5 % clears the giants'
+   oblateness — Saturn's f = 0.098 is the worst case — everywhere on the
+   body, and it leaves the smallest focusable moon 6.744× above
+   `CAMERA_NEAR_PC` (`../depth-range.test.ts`). It clamps against the
+   **solid surface**, not the drawn extent: a thick haze shell still
+   reaches past it (Titan's tops out at 1.117 R), which the scattering
+   march handles — it starts at `max(t0, 0)` for a camera inside the shell.
+   Rings are deliberately not covered either; flying between the rings and
+   the cloud tops is a legitimate vantage.
+
+   Both auto-park solves stay outside the clamped floor at every reachable
+   FOV (`star-physics.test.ts` sweeps the whole slider). The clamp
+   deliberately lives in the floor wrappers, **not** in
+   `distAtFillFraction` — the 30 %-fill planet park solve is outside the
+   surface at every reachable FOV (~3.1 R even at 120°) and must keep
+   returning the bare angular distance.
 
 2. **Auto-park target** — `parkDistForStar(idx)`: where the camera
    automatically lands. Used by:
@@ -173,7 +222,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    ```
    parkDistForStar = max(AU_PC + Reff, dMinFloor)
      Reff       = R_pc · peakAmplitudeFactor       (handles variables)
-     dMinFloor  = distAtFillFraction(Reff, fov_minor, ZOOM_FLOOR_FRACTION=0.9)
+     dMinFloor  = minOrbitDistForStar's surface-clamped 0.9-fill solve
    ```
    Sol parks at ~1.005 AU (just outside Earth's orbit); a supergiant
    parks at the 90 %-fill clamp.

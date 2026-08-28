@@ -326,11 +326,13 @@ snap the focal star to NDC origin while the camera is mid-rotation,
 making the star appear pasted at screen centre instead of following
 the rotation naturally.
 
-`#overlay` (HUD arrows + ring, focus ring, distance vector,
-constellation lines, POI labels, etc.) is hidden for the lerp's
+`#overlay` (HUD arrows + ring, focus ring, distance vector, POI labels,
+etc.) is hidden for the lerp's
 duration via a `body.focus-lerping` class — same mechanism the warp
 uses (`body.warping`). Stellata fires the `'focusLerp'` event on
-start / end edges; `main.ts` toggles the body class.
+start / end edges; `main.ts` toggles the body class. The class reaches
+the SVG overlay only — the constellation figure is WebGL line geometry
+and draws throughout every lerp (`../../constellation-figure/README.md`).
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
