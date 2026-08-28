@@ -160,6 +160,7 @@ import type {
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
+import { selectFigures } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
 import {
   createConstellationRegions,
@@ -877,23 +878,19 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
-    this.on('focus', () => { this.refreshConstellationFigure(); });
-    // Constellation figure lines rebuild when the active set changes: the
-    // highlighted figure, chart ↔ navigate (chart draws all 88), or the
-    // observe anchor whose own lines are suppressed.
-    // Detail-cycle permission is a separate push (buildSceneElementBinds).
-    // The boundary fade window rides the same emit: it is a function of the
-    // magnitude limit — a fainter limit admits stars nearer their walls —
-    // pushed rather than read per frame so the table interpolation runs once
-    // per instrument change. The layer draws in chart only, which hard-clips
-    // at the instrument limit and inherits no exposure state, so the EV trim
-    // must not move the window.
+    // Every fine-grained mutation the figure's active set reads — focus,
+    // filter, cameraMode — pairs with 'state', and so does the observe
+    // transition's landing, which no fine-grained event covers.
+    this.on('state', () => { this.refreshConstellationFigure(); });
+    // The boundary fade window is a function of the magnitude limit — a
+    // fainter limit admits stars nearer their walls — pushed rather than read
+    // per frame so the table interpolation runs once per instrument change.
+    // The layer draws in chart only, which hard-clips at the instrument limit
+    // and inherits no exposure state, so the EV trim must not move the window.
     this.on('filter', () => {
-      this.refreshConstellationFigure();
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => {
-      this.refreshConstellationFigure();
       // The observe transitions write controls.target directly, so the
       // look pin must be re-derived on the next observe frame even if the
       // camera never rotated across the switch.
@@ -1031,30 +1028,24 @@ export class Stellata implements FrameAnchor {
     this.animate();
   }
 
-  // Rebuild the constellation figure geometry for the active set: the
-  // highlighted figure, all 88 in chart mode, or none. Skips the rebuild when
-  // the active set is unchanged (filter emits fire on every slider drag).
+  // Push the figure's active set, skipping the rebuild when it is unchanged
+  // ('state' fires on every discrete mutation, filter emits on every slider
+  // drag). The selection rule itself is `selectFigures`.
   private refreshConstellationFigure(): void {
     const f = this.filter;
-    const observing = this.focus.getCameraMode() === 'observe';
-    const chartActive = f.chart && observing;
-    // getFocusedStar() is null for every non-star kind, so observing from a
-    // planet leaves its host star's lines drawn — the vantage point is the
-    // planet, not the star.
-    const observedStar = observing ? this.focus.getFocusedStar() : null;
-    const sig = `${chartActive ? 1 : 0}|${f.highlightCon}|${observedStar ?? -1}`;
-    if (sig === this.conFigureSig) return;
-    this.conFigureSig = sig;
-    let indices: number[];
-    if (chartActive) {
-      indices = this.catalog.constellations.map((_, i) => i);
-    } else if (f.highlightCon >= 0) {
-      indices = [f.highlightCon];
-    } else {
-      indices = [];
-    }
+    const sel = selectFigures({
+      chart: f.chart,
+      highlightCon: f.highlightCon,
+      constellationCount: this.catalog.constellations.length,
+      inObserve: this.focus.getCameraMode() === 'observe',
+      observeGlideActive: this.observe.isActive(),
+      focusedStar: this.focus.getFocusedStar(),
+    });
+    if (sel.signature === this.conFigureSig) return;
+    this.conFigureSig = sel.signature;
     this.constellationFigureLayer.setFigures(
-      this.catalog.constellations, indices, this.localPositions, observedStar);
+      this.catalog.constellations, sel.conIndices, this.localPositions,
+      sel.excludeStarIdx);
   }
 
   // One adapter entry per scene layer; registration order is per-frame
