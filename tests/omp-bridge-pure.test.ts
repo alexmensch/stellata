@@ -8,7 +8,7 @@ import {
   buildPayload,
   claudeToolName,
   githubPushBranches,
-  gitHistoryOp,
+  gitHistoryOps,
   hashlinePaths,
   isProtectedBranch,
   literalPrefixDir,
@@ -140,6 +140,22 @@ describe('toolTargets', () => {
     expect(target).toMatchObject({ tool: 'ast_edit', paths: ['src/a.ts'], mutates: true });
   });
 
+  it('gates an xd:// device against the roster before parsing its body', () => {
+    // The roster check sat after JSON.parse, so an unrecognised device passed
+    // ungated on any prose body and blocked only when the body parsed.
+    for (const content of ['some prose', '{}']) {
+      expect(toolTargets('write', { path: 'xd://not_a_device', content }, HOME))
+        .toMatchObject({ tool: 'not_a_device', unclassified: true });
+    }
+  });
+
+  it('lets the prose devices through, whatever their body', () => {
+    for (const device of ['resolve', 'reject', 'propose', 'report_issue', 'goal']) {
+      expect(toolTargets('write', { path: `xd://${device}`, content: 'a reason' }, HOME))
+        .toMatchObject({ tool: device, paths: [], unclassified: false });
+    }
+  });
+
   it('gates an edit by its hashline headers', () => {
     const target = toolTargets('edit', { input: '[src/a.ts#1A2B]\nPUT 1.=1:\n+x' }, HOME);
     expect(target).toMatchObject({ paths: ['src/a.ts'], mutates: true });
@@ -204,6 +220,28 @@ describe('toolTargets', () => {
         .toBe(true);
     });
 
+    it('gates a raw request by the document its payload names', () => {
+      const target = toolTargets('lsp', {
+        action: 'request',
+        query: 'textDocument/rename',
+        payload: JSON.stringify({ textDocument: { uri: 'file:///repo/src/a.ts' } }),
+      }, HOME);
+      expect(target).toMatchObject({ paths: ['/repo/src/a.ts'], mutates: true });
+    });
+
+    it('gates every document in an applyEdit payload', () => {
+      const target = toolTargets('lsp', {
+        action: 'request',
+        query: 'workspace/applyEdit',
+        payload: JSON.stringify({
+          edit: {
+            documentChanges: [{ textDocument: { uri: 'file:///repo/src/b.ts' } }],
+          },
+        }),
+      }, HOME);
+      expect(target.paths).toEqual(['/repo/src/b.ts']);
+    });
+
     it('blocks a write action that resolves no path', () => {
       expect(toolTargets('lsp', { action: 'request' }, HOME).unclassified).toBe(true);
     });
@@ -214,7 +252,7 @@ describe('toolTargets', () => {
   });
 });
 
-describe('gitHistoryOp', () => {
+describe('gitHistoryOps', () => {
   it('matches every push spelling', () => {
     for (const command of [
       'git push',
@@ -224,37 +262,92 @@ describe('gitHistoryOp', () => {
       'git push origin +main',
       'ls && git push',
     ]) {
-      expect(gitHistoryOp(command)?.op).toBe('push');
+      expect(gitHistoryOps(command)[0]?.op).toBe('push');
+    }
+  });
+
+  it('sees a git call a following operator terminates', () => {
+    // `(?:\s|$)` after the subcommand missed every one of these, so a push on
+    // main went through whenever the command did not end on the word `push`.
+    for (const command of [
+      'git push; echo done',
+      '(cd /repo/main; git push)',
+      '{ git push; }',
+      'for d in a b; do git -C $d push; done',
+      'git push|tee log',
+    ]) {
+      expect(gitHistoryOps(command).map((entry) => entry.op)).toContain('push');
     }
   });
 
   it('rejects a longer subcommand', () => {
-    expect(gitHistoryOp('git commit-tree abc')).toBeUndefined();
-    expect(gitHistoryOp('git pushx')).toBeUndefined();
+    expect(gitHistoryOps('git commit-tree abc')).toEqual([]);
+    expect(gitHistoryOps('git pushx')).toEqual([]);
   });
 
   it('reports the -C target as the directory that decides', () => {
-    expect(gitHistoryOp('git -C /repo/main push')).toMatchObject({
+    expect(gitHistoryOps('git -C /repo/main push')[0]).toMatchObject({
       op: 'push',
       dir: '/repo/main',
     });
-    expect(gitHistoryOp('git -c commit.gpgsign=false -C /repo/main commit -m x'))
+    expect(gitHistoryOps('git -c commit.gpgsign=false -C /repo/main commit -m x')[0])
       .toMatchObject({ op: 'commit', dir: '/repo/main' });
   });
 
-  it('reports a leading cd, which omp rewrites into cwd after this hook runs', () => {
-    expect(gitHistoryOp('cd /repo/main && git push')).toMatchObject({
+  it('reads a -C path containing a space', () => {
+    // `-C\s+\S+` consumed the opening quote and half the path, then failed to
+    // reach the subcommand at all — the branch check never ran.
+    expect(gitHistoryOps('git -C "/repo/my main" push')[0]).toMatchObject({
+      op: 'push',
+      dir: '/repo/my main',
+    });
+  });
+
+  it('follows a cd anywhere in the chain, not only a leading one', () => {
+    expect(gitHistoryOps('cd /repo/main && git push')[0]).toMatchObject({
       op: 'push',
       dir: '/repo/main',
     });
-    expect(gitHistoryOp('cd "/repo/with space" && git commit -m x')).toMatchObject({
-      dir: '/repo/with space',
-    });
+    expect(gitHistoryOps('cd "/repo/with space" && git commit -m x')[0])
+      .toMatchObject({ dir: '/repo/with space' });
+    expect(gitHistoryOps('true && cd /repo/main && git push')[0])
+      .toMatchObject({ dir: '/repo/main' });
+    expect(gitHistoryOps('cd /repo && cd main && git push')[0])
+      .toMatchObject({ dir: '/repo/main' });
+  });
+
+  it('unwinds a cd when its subshell closes', () => {
+    const ops = gitHistoryOps('(cd /repo/main; git push) && git push');
+    expect(ops.map((entry) => entry.dir)).toEqual(['/repo/main', undefined]);
+  });
+
+  it('reports every history op in one command', () => {
+    expect(gitHistoryOps('git add -A && git commit -m x && git push')
+      .map((entry) => entry.op)).toEqual(['commit', 'push']);
+  });
+
+  it('names the refspec destination a push would write', () => {
+    expect(gitHistoryOps('git push origin HEAD:main')[0]?.destinations)
+      .toEqual(['main']);
+    expect(gitHistoryOps('git push origin feature:refs/heads/main')[0]?.destinations)
+      .toEqual(['main']);
+    expect(gitHistoryOps('git push origin +main')[0]?.destinations).toEqual(['main']);
+    expect(gitHistoryOps('git push --delete origin main')[0]?.destinations)
+      .toEqual(['main']);
+    expect(gitHistoryOps('git push -u origin worktree-x')[0]?.destinations)
+      .toEqual(['worktree-x']);
+    expect(gitHistoryOps('git push')[0]?.destinations).toEqual([]);
+    expect(gitHistoryOps('git push origin')[0]?.destinations).toEqual([]);
+  });
+
+  it('ignores an environment prefix', () => {
+    expect(gitHistoryOps('GIT_TRACE=1 git push')[0]?.op).toBe('push');
   });
 
   it('drives the commit-sweep filter', () => {
     expect(needsCommitSweep('git commit -m x')).toBe(true);
     expect(needsCommitSweep('git push')).toBe(false);
+    expect(needsCommitSweep('git commit -m x; git push')).toBe(true);
   });
 });
 
@@ -275,17 +368,32 @@ describe('bashWriteTargets', () => {
     expect(bashWriteTargets("awk -i inplace '{print}' src/a.ts")).toEqual(['src/a.ts']);
   });
 
+  it('finds an in-place flag that is not the first one', () => {
+    // The flag had to follow the command name directly, so this ordinary
+    // spelling wrote into the main worktree unseen.
+    expect(bashWriteTargets("sed -e 's/a/b/' -i src/a.ts")).toEqual(['src/a.ts']);
+    expect(bashWriteTargets("perl -pi -e 's/a/b/' src/a.ts")).toEqual(['src/a.ts']);
+    expect(bashWriteTargets("sed -E -i '' -e 's/a/b/' src/a.ts")).toEqual(['src/a.ts']);
+  });
+
   it('finds redirections and tee', () => {
     expect(bashWriteTargets('echo hi > src/a.ts')).toEqual(['src/a.ts']);
     expect(bashWriteTargets('echo hi >> src/a.ts')).toEqual(['src/a.ts']);
     expect(bashWriteTargets('echo hi | tee -a src/a.ts')).toEqual(['src/a.ts']);
   });
 
+  it('finds a descriptor-prefixed redirect, which still writes a file', () => {
+    expect(bashWriteTargets('run 2> src/a.ts')).toEqual(['src/a.ts']);
+    expect(bashWriteTargets('run 2>> src/a.ts')).toEqual(['src/a.ts']);
+  });
+
   it('ignores a read, a pipe, and a descriptor redirect', () => {
     expect(bashWriteTargets('cat src/a.ts')).toEqual([]);
     expect(bashWriteTargets('grep x src/a.ts | head')).toEqual([]);
     expect(bashWriteTargets('run 2>&1')).toEqual([]);
+    expect(bashWriteTargets('run >&2')).toEqual([]);
     expect(bashWriteTargets("sed 's/a/b/' src/a.ts")).toEqual([]);
+    expect(bashWriteTargets('perl -Ilib -e print')).toEqual([]);
   });
 });
 

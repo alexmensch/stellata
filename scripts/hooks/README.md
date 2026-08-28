@@ -72,6 +72,11 @@ seen-set, the call passes through. If not, the hook returns a
 `permissionDecision: "deny"` with a message naming the README to
 read and quoting the rule.
 
+The path is resolved with `pwd -P` before any of that, because
+`git rev-parse --show-toplevel` reports a realpath: a checkout reached
+through a symlink otherwise failed the guarded-prefix test and the
+hook exited silent. macOS `/tmp` is one such symlink.
+
 A `Read` of a `README.md` itself is always allowed and adds it to the
 seen-set, so the reading flow ("Read the folder's README, then read
 its files") works without intervention.
@@ -229,6 +234,15 @@ and `tests/omp-tool-roster.test.ts` fails when the installed omp grows
 a tool the map has not triaged. `STELLATA_OMP_ALLOW_UNKNOWN_TOOLS=1`
 unblocks a session while that edit is being made.
 
+**`xd://` devices are a fourth roster**, and the only one no
+completion list or `--help` section carries: `resolve`, `reject`,
+`propose`, `report_issue`, `goal`. They arrive as a `write` whose path
+names them, and they face the same roster gate a top-level call does —
+checking only after parsing the body meant an unrecognised device
+passed on prose and blocked on JSON, which is the fail-open the
+inversion exists to prevent. The roster test scrapes them from the
+installed binary, since the published source tree is behind it.
+
 Per-tool notes that are not obvious from the schemas:
 
 - `edit` carries its paths as `[path#TAG]` hashline headers plus any
@@ -243,8 +257,11 @@ Per-tool notes that are not obvious from the schemas:
 - `lsp` mutates for `rename`, `rename_file`, `code_actions` and
   `request` — omp's own write-approval set. `request` is included
   because a raw LSP method can return a `workspace/applyEdit` the
-  client applies. `rename_file` gates `new_name` as well as `file`:
-  the destination can land in a folder no other argument names.
+  client applies; its document comes from the `payload`, which is
+  walked for `uri`-shaped keys rather than one fixed shape, so an
+  ordinary request gates on the file it names instead of blocking.
+  `rename_file` gates `new_name` as well as `file`: the destination
+  can land in a folder no other argument names.
 - `grep` splits several roots out of one `;`-delimited string; a
   `read` path containing `;` stays literal.
 - A wildcard read is a listing and gates nothing; a wildcard rewrite
@@ -255,9 +272,25 @@ Per-tool notes that are not obvious from the schemas:
 Whether a push is allowed depends on where HEAD is, not on the text of
 the command, so no pattern over command text can express it. Four
 directories can decide, and the bridge resolves them in this order:
-`git -C <path>`, a leading `cd <path> &&` (omp rewrites that into the
-structured `cwd` field, but only *after* this hook has run), the bash
-tool's own `cwd` argument, then the session cwd.
+`git -C <path>`, a `cd <path>` earlier in the chain (omp rewrites a
+*leading* one into the structured `cwd` field, but only after this hook
+has run, and only when `cwd` was not already set), the bash tool's own
+`cwd` argument, then the session cwd.
+
+`gitHistoryOps` walks shell segments rather than matching one regex,
+because a regex could not see any of these: `git push; echo done`,
+`(cd main; git push)`, `{ git push; }`, a loop body's `do git -C $d
+push`, a `-C` path containing a space, or a `cd` that is not the first
+word. Quotes are honoured, `(` and `)` scope a `cd` the way the shell
+does, and one command reports every op it carries, so
+`git commit && git push` is two checks and not one.
+
+**The destination is checked, not only the checked-out branch.**
+`git push origin HEAD:main` writes trunk from a feature worktree, and
+`symbolic-ref` cannot see it. Every refspec's right-hand side is
+resolved — `main`, `HEAD:main`, `+feature:refs/heads/main`,
+`--delete origin main` all name `main` — and a protected destination
+blocks whatever branch is checked out.
 
 A repo whose HEAD names no branch blocks. `git symbolic-ref` returns
 nothing on a detached HEAD, which reads as "unknown", not "not main".
@@ -286,26 +319,38 @@ summarisation prompt, and `preserveData` is stored on the compaction
 entry rather than re-entering the context, so neither guarantees the
 content survives. Re-arming the gate does.
 
+Once the gate clears, the verdict is remembered for the session:
+the sentinel is gone and the guard can only allow until a compaction
+re-arms it. Every `tool_call` handler here runs `spawnSync` on omp's
+event loop, so a spawn that cannot change the answer is a freeze the
+user sees. That one cache is most of the per-call floor.
+
 ## What the omp bridge cannot reach
 
-Documented rather than pretended away.
+Documented rather than pretended away — and where omp's own approval
+layer reaches further than a `tool_call` handler can, it is used
+instead: `.omp/config.yml` routes `eval` and `hub` to an operator
+prompt, because `tools.approval.<tool>` is honoured in every mode.
 
 - **`bash` writing through a route the classifier misses.**
-  `bashWriteTargets` covers `sed -i`, `perl -i`, `awk -i inplace`,
-  `tee`, and `>`/`>>` redirection — every form that names its target
-  as a literal argument. A write reached through command substitution,
-  a heredoc, a script file, `cp`/`mv`, or a compiled program is not
-  seen. omp's `bashInterceptor` covers some of the same commands but
-  is explicitly best-effort routing rather than a security boundary —
-  a rule goes inert when its target tool is disabled — so it is not
-  used here.
-- **`eval` and `debug`** can open a file with no static argument
-  naming it, and `eval` can spawn a shell.
+  `bashWriteTargets` covers `sed`/`perl` with an in-place flag anywhere
+  in the cluster, `awk -i inplace`, `tee`, and `>`/`>>` redirection
+  including a descriptor prefix — every form that names its target as
+  a literal argument. A write reached through command substitution, a
+  heredoc with no redirect on the same line, a script file, `cp`/`mv`,
+  `sort -o`, `dd`, `install`, or a compiled program is not seen. omp's
+  `bashInterceptor` covers some of the same commands but is explicitly
+  best-effort routing rather than a security boundary — a rule goes
+  inert when its target tool is disabled — so it is not used here.
+- **`debug`** can open a file with no static argument naming it.
 - **`task` subagents** run as separate processes, and a subagent
   spawned with restricted tools loads no extensions at all. Treat
   delegated work as possibly ungated.
 - **`browser` and `computer`** drive software that can write files.
-- **`hub`** can start a long-running process.
+- **`eval` and `hub`** reach the filesystem through a persistent kernel
+  and an arbitrary `application` + `args`. Neither is classifiable
+  here, so both are routed to approval in `.omp/config.yml` rather
+  than listed as unreachable.
 
 ## Disabling
 

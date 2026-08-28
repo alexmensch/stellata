@@ -9,18 +9,22 @@ const NON_FILE_PREFIXES = [
 ];
 
 /**
- * Every omp tool this bridge classifies. An id absent from here blocks rather
- * than passing ungated, so a tool omp adds must be triaged into one of the
- * tables below before sessions can call it.
+ * Every omp tool this bridge classifies, including the `xd://` write devices
+ * that arrive as a `write` rather than a tool call of their own. An id absent
+ * from here blocks rather than passing ungated, so a tool omp adds must be
+ * triaged into one of the tables below before sessions can call it.
  */
-export const KNOWN_TOOLS: ReadonlySet<string> = new Set([
-  'read', 'grep', 'glob', 'bash', 'edit', 'apply_patch', 'write', 'ast_grep',
-  'ast_edit', 'lsp', 'debug', 'eval', 'github', 'ask', 'inspect_image',
-  'browser', 'computer', 'checkpoint', 'rewind', 'security_scan', 'task',
-  'hub', 'todo', 'web_search', 'memory_edit', 'retain', 'recall', 'reflect',
-  'learn', 'manage_skill', 'python', 'notebook', 'generate_image', 'tts',
-  'vibe_spawn', 'yield', 'resolve', 'skill',
-]);
+export const KNOWN_TOOLS: Record<string, true> = {
+  read: true, grep: true, glob: true, bash: true, edit: true,
+  apply_patch: true, write: true, ast_grep: true, ast_edit: true, lsp: true,
+  debug: true, eval: true, github: true, ask: true, inspect_image: true,
+  browser: true, computer: true, checkpoint: true, rewind: true,
+  security_scan: true, task: true, hub: true, todo: true, web_search: true,
+  memory_edit: true, retain: true, recall: true, reflect: true, learn: true,
+  manage_skill: true, python: true, notebook: true, generate_image: true,
+  tts: true, vibe_spawn: true, yield: true, skill: true,
+  resolve: true, reject: true, propose: true, report_issue: true, goal: true,
+};
 
 /** Effective omp tool name -> the Claude tool name the .sh guards branch on. */
 export const CLAUDE_TOOL_NAME: Record<string, string> = {
@@ -42,9 +46,9 @@ export const CLAUDE_TOOL_NAME: Record<string, string> = {
  * omp's own write-approval set for `lsp`. `request` is included because a raw
  * LSP method can come back as a `workspace/applyEdit` the client applies.
  */
-const LSP_MUTATING_ACTIONS = new Set([
-  'rename', 'rename_file', 'code_actions', 'request',
-]);
+const LSP_MUTATING_ACTIONS: Record<string, true> = {
+  rename: true, rename_file: true, code_actions: true, request: true,
+};
 
 const WILDCARD = /[*?[\]{}]/;
 
@@ -123,6 +127,41 @@ export function hashlinePaths(input: string): string[] {
   return found;
 }
 
+/**
+ * Every document a raw `lsp` `request` payload names. LSP puts the file under
+ * a `uri` key at every nesting level it uses — `textDocument.uri`, an
+ * `applyEdit`'s `changes` map, `documentChanges[].textDocument.uri` — so the
+ * payload is walked for `uri`-shaped keys rather than one fixed shape.
+ */
+export function requestDocuments(payload: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    return [];
+  }
+
+  const found: string[] = [];
+  const walk = (node: unknown, key: string): void => {
+    if (typeof node === 'string') {
+      if (/^uri$|Uri$/.test(key) || node.startsWith('file://')) found.push(node);
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const entry of node) walk(entry, key);
+      return;
+    }
+    if (node === null || typeof node !== 'object') return;
+    for (const [childKey, value] of Object.entries(node)) {
+      // An `applyEdit` keys its `changes` map by document URI.
+      if (key === 'changes' && childKey.startsWith('file://')) found.push(childKey);
+      walk(value, childKey);
+    }
+  };
+  walk(parsed, '');
+  return found;
+}
+
 export interface ToolTarget {
   /** The effective tool: the `xd://` device when the call is a device write. */
   tool: string;
@@ -168,7 +207,7 @@ export function toolTargets(
   input: Record<string, unknown>,
   home: string,
 ): ToolTarget {
-  if (!KNOWN_TOOLS.has(ompTool)) {
+  if (KNOWN_TOOLS[ompTool] !== true) {
     return { tool: ompTool, paths: [], mutates: false, unclassified: true };
   }
 
@@ -193,11 +232,18 @@ export function toolTargets(
       const path = stripHashlineWrapper(str(input.path));
       if (path.startsWith('xd://')) {
         const device = path.slice('xd://'.length);
+        // The device is the effective tool, so it faces the same roster gate a
+        // top-level call does. Checking it only after a successful JSON parse
+        // let an unrecognised device through on any prose body.
+        if (KNOWN_TOOLS[device] !== true) {
+          return { tool: device, paths: [], mutates: false, unclassified: true };
+        }
         let args: Record<string, unknown>;
         try {
           args = asRecord(JSON.parse(str(input.content)));
         } catch {
-          // A malformed device payload names no path; the tool rejects it.
+          // `resolve` / `reject` / `propose` / `report_issue` take prose, and a
+          // payload the device cannot parse names no path either way.
           return { tool: device, paths: [], mutates: false, unclassified: false };
         }
         return toolTargets(device, args, home);
@@ -230,10 +276,15 @@ export function toolTargets(
 
     case 'lsp': {
       const action = str(input.action);
-      const mutates = LSP_MUTATING_ACTIONS.has(action);
+      const mutates = LSP_MUTATING_ACTIONS[action] === true;
       // `rename_file` moves the source to `new_name`, which may land in a
-      // folder no other argument names.
-      const raw = [str(input.file), mutates ? str(input.new_name) : ''];
+      // folder no other argument names. A raw `request` names its document in
+      // the LSP params instead, where every method that can edit one puts it.
+      const raw = [
+        str(input.file),
+        mutates ? str(input.new_name) : '',
+        ...(action === 'request' ? requestDocuments(str(input.payload)) : []),
+      ];
       const target = gather(raw, mutates, ompTool, home);
       if (mutates && target.paths.length === 0 && action !== 'reload') {
         return { ...target, unclassified: true };
@@ -287,33 +338,197 @@ export function buildPayload(args: {
 
 export interface GitHistoryOp {
   op: 'commit' | 'push';
-  /** The `-C` argument or a leading `cd`, whichever names the repo it runs in. */
+  /** Directory the invocation runs in: `-C`, an enclosing `cd`, or undefined. */
   dir?: string;
+  /** Destination side of every refspec a push writes, `refs/heads/` stripped. */
+  destinations: string[];
 }
 
-const GIT_GLOBAL_FLAG = String.raw`(?:\s+(?:-c\s+\S+|--git-dir=\S+|--work-tree=\S+|-C\s+\S+))*`;
+/** Shell operators that end a simple command; `(` and `)` also scope `cd`. */
+const OPERATORS: Record<string, true> = {
+  ';': true, '&&': true, '||': true, '|': true, '&': true,
+  '(': true, ')': true, '{': true, '}': true, '\n': true,
+};
 
 /**
- * The git subcommand a Bash call runs, if it is one that moves history, plus
- * the directory it runs in. Matches inside a compound command and rejects
- * longer subcommands such as `git commit-tree`.
+ * Split a command into shell words and operators, honouring quotes. Quotes are
+ * stripped from the word they wrap, so a `cd "/two words"` target survives as
+ * one token instead of truncating the scan the way `\S+` did.
  */
-export function gitHistoryOp(command: string): GitHistoryOp | undefined {
-  const match = new RegExp(
-    String.raw`\bgit${GIT_GLOBAL_FLAG}\s+(commit|push)(?:\s|$)`,
-  ).exec(command);
-  if (match === null) return undefined;
+export function shellTokens(command: string): string[] {
+  const tokens: string[] = [];
+  let word = '';
+  let quote: '"' | "'" | undefined;
+  let started = false;
 
-  const op = match[1] as 'commit' | 'push';
-  const dashC = /\bgit(?:\s+(?:-c\s+\S+|--git-dir=\S+|--work-tree=\S+))*\s+-C\s+(\S+)/
-    .exec(command);
-  if (dashC) return { op, dir: unquote(dashC[1]) };
+  const flush = (): void => {
+    if (started) tokens.push(word);
+    word = '';
+    started = false;
+  };
 
-  const leadingCd = /^\s*cd\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*&&/.exec(command);
-  if (leadingCd) {
-    return { op, dir: leadingCd[1] ?? leadingCd[2] ?? leadingCd[3] };
+  for (let i = 0; i < command.length; i += 1) {
+    const ch = command[i];
+    if (quote !== undefined) {
+      if (ch === quote) quote = undefined;
+      else {
+        word += ch;
+        started = true;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      started = true;
+      continue;
+    }
+    if (ch === '\\' && i + 1 < command.length) {
+      word += command[i + 1];
+      started = true;
+      i += 1;
+      continue;
+    }
+    if (ch === ' ' || ch === '\t' || ch === '\r') {
+      flush();
+      continue;
+    }
+    const pair = command.slice(i, i + 2);
+    if (pair === '&&' || pair === '||') {
+      flush();
+      tokens.push(pair);
+      i += 1;
+      continue;
+    }
+    if (OPERATORS[ch] === true) {
+      flush();
+      tokens.push(ch);
+      continue;
+    }
+    word += ch;
+    started = true;
   }
-  return { op };
+  flush();
+  return tokens;
+}
+
+/** Compose a `cd` target onto the directory already in effect. */
+function chdir(current: string | undefined, target: string): string {
+  if (target.startsWith('/') || target.startsWith('~') || current === undefined) {
+    return target;
+  }
+  return `${current.replace(/\/+$/, '')}/${target}`;
+}
+
+/** git's own flags that swallow the token after them. */
+const GIT_GLOBAL_VALUE_FLAGS: Record<string, true> = {
+  '-c': true, '-C': true, '--namespace': true, '--exec-path': true,
+};
+
+/** `git push` flags that swallow the token after them. */
+const PUSH_VALUE_FLAGS: Record<string, true> = {
+  '-o': true, '--push-option': true, '--repo': true,
+  '--receive-pack': true, '--exec': true,
+};
+
+/**
+ * Every ref a `git push` word list would write. `main`, `HEAD:main`,
+ * `+feature:refs/heads/main` and `--delete main` all name `main`; the local
+ * branch alone never reveals them, so a refspec push to trunk needs this.
+ */
+function pushDestinations(words: string[]): string[] {
+  const found: string[] = [];
+  let sawRemote = false;
+  for (let i = 0; i < words.length; i += 1) {
+    const word = words[i];
+    if (word.startsWith('-')) {
+      if (PUSH_VALUE_FLAGS[word] === true) i += 1;
+      continue;
+    }
+    if (!sawRemote) {
+      sawRemote = true;
+      continue;
+    }
+    const spec = word.replace(/^\+/, '');
+    const colon = spec.indexOf(':');
+    const dst = colon === -1 ? spec : spec.slice(colon + 1);
+    const ref = dst.replace(/^refs\/heads\//, '');
+    if (ref !== '') found.push(ref);
+  }
+  return found;
+}
+
+/** Keywords and wrappers that sit in front of the real command word. */
+const SEGMENT_PREFIXES: Record<string, true> = {
+  do: true, then: true, else: true, elif: true, '!': true,
+  time: true, exec: true, sudo: true, nohup: true, command: true, eval: true,
+};
+
+/**
+ * Every git invocation in a Bash command that moves history, with the
+ * directory it runs in. Walks shell segments rather than matching one regex:
+ * a `cd` anywhere in the chain decides the repository, `(` scopes it, and a
+ * `git push` ending a segment is still a push.
+ */
+export function gitHistoryOps(command: string): GitHistoryOp[] {
+  const ops: GitHistoryOp[] = [];
+  const scopes: (string | undefined)[] = [];
+  let dir: string | undefined;
+  let words: string[] = [];
+
+  const endSegment = (): void => {
+    if (words.length === 0) return;
+    let start = 0;
+    // Skip `FOO=bar` environment prefixes and the keywords a compound
+    // statement puts in front of the command word — `do git push` in a loop
+    // body is still a push.
+    while (
+      start < words.length &&
+      (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[start]) ||
+        SEGMENT_PREFIXES[words[start]] === true)
+    ) {
+      start += 1;
+    }
+    const argv = words.slice(start);
+    words = [];
+    if (argv.length === 0) return;
+
+    if (argv[0] === 'cd') {
+      const target = argv.find((word, index) => index > 0 && !word.startsWith('-'));
+      if (target !== undefined) dir = chdir(dir, target);
+      return;
+    }
+    if (argv[0] !== 'git') return;
+
+    let here = dir;
+    let i = 1;
+    for (; i < argv.length; i += 1) {
+      const word = argv[i];
+      if (!word.startsWith('-')) break;
+      if (GIT_GLOBAL_VALUE_FLAGS[word] === true) {
+        if (word === '-C') here = chdir(here, argv[i + 1] ?? '');
+        i += 1;
+      }
+    }
+    const sub = argv[i];
+    if (sub !== 'commit' && sub !== 'push') return;
+    ops.push({
+      op: sub,
+      ...(here === undefined ? {} : { dir: here }),
+      destinations: sub === 'push' ? pushDestinations(argv.slice(i + 1)) : [],
+    });
+  };
+
+  for (const token of shellTokens(command)) {
+    if (OPERATORS[token] !== true) {
+      words.push(token);
+      continue;
+    }
+    endSegment();
+    if (token === '(') scopes.push(dir);
+    else if (token === ')') dir = scopes.length > 0 ? scopes.pop() : dir;
+  }
+  endSegment();
+  return ops;
 }
 
 function unquote(raw: string): string {
@@ -323,13 +538,21 @@ function unquote(raw: string): string {
 
 /** `git commit` is the only Bash shape commit-sweep-guard inspects. */
 export function needsCommitSweep(command: string): boolean {
-  return gitHistoryOp(command)?.op === 'commit';
+  return gitHistoryOps(command).some((entry) => entry.op === 'commit');
 }
 
 /** Branches a session must never commit to or push, whatever the remote ref. */
 export function isProtectedBranch(branch: string): boolean {
   return branch === 'main' || branch === 'master';
 }
+
+/** `sed` / `perl` flags that consume the next token as their value. */
+const SCRIPT_VALUE_FLAGS: Record<string, true> = {
+  '-e': true, '-f': true, '--expression': true, '--file': true,
+};
+
+/** An in-place flag on `sed` / `perl`, wherever it sits in the flag cluster. */
+const IN_PLACE_FLAG = /^(?:--in-place(?:=\S*)?|-[A-Za-z]*i(?:\.\S+)?)$/;
 
 /**
  * Paths a shell command rewrites in place. Narrow by design: every form here
@@ -339,10 +562,9 @@ export function isProtectedBranch(branch: string): boolean {
 export function bashWriteTargets(command: string): string[] {
   const found: string[] = [];
 
-  const inPlace =
-    /\b(?:sed|perl)\s+(?:-[A-Za-z]*i[A-Za-z]*(?:\.\S+)?|--in-place\S*)\b([^|;&<>]*)/g;
-  for (const match of command.matchAll(inPlace)) {
-    found.push(...operands(match[1], true));
+  const stream = /\b(?:sed|perl)\b([^|;&<>]*)/g;
+  for (const match of command.matchAll(stream)) {
+    found.push(...scriptOperands(match[1]));
   }
 
   const awkInPlace = /\bawk\s+-i\s+inplace\b([^|;&<>]*)/g;
@@ -355,7 +577,9 @@ export function bashWriteTargets(command: string): string[] {
     found.push(...operands(match[1], false));
   }
 
-  const redirect = /(?:^|[^<>&\d])>{1,2}\s*(?!&)(?:"([^"]+)"|'([^']+)'|([^\s|;&<>]+))/g;
+  // A digit before `>` is a file descriptor, not part of the target, and `2>
+  // log` is still a write; only `>&` names a descriptor rather than a file.
+  const redirect = /(?:^|[^<>&])>{1,2}\s*(?!&)(?:"([^"]+)"|'([^']+)'|([^\s|;&<>]+))/g;
   for (const match of command.matchAll(redirect)) {
     const target = match[1] ?? match[2] ?? match[3];
     if (target !== undefined && target !== '') found.push(target);
@@ -365,15 +589,47 @@ export function bashWriteTargets(command: string): string[] {
 }
 
 /**
- * Literal file operands in a command fragment. `sed`/`perl`/`awk` take their
- * program as the first non-flag token; everything after it is a file.
+ * File operands of a `sed` / `perl` invocation, empty unless it rewrites in
+ * place. The in-place flag can sit anywhere in the cluster — `sed -e … -i f`
+ * edits `f` exactly as `sed -i … f` does — so the whole cluster is scanned.
+ */
+function scriptOperands(fragment: string): string[] {
+  const tokens = fragment.trim().split(/\s+/).filter((token) => token !== '');
+  if (!tokens.some((token) => IN_PLACE_FLAG.test(token))) return [];
+
+  const out: string[] = [];
+  let program = false;
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token.startsWith('-')) {
+      // `-e <script>` supplies the program, so the next bare word is a file.
+      if (SCRIPT_VALUE_FLAGS[token] === true) {
+        program = true;
+        i += 1;
+      }
+      continue;
+    }
+    const value = unquote(token);
+    // BSD `sed -i ''` carries its backup suffix as a separate empty argument.
+    if (value === '') continue;
+    if (!program) {
+      program = true;
+      continue;
+    }
+    out.push(value);
+  }
+  return out;
+}
+
+/**
+ * Literal file operands in a command fragment. `awk` takes its program as the
+ * first non-flag token; everything after it is a file.
  */
 function operands(fragment: string, skipProgram: boolean): string[] {
   const out: string[] = [];
   let pending = skipProgram;
   for (const token of fragment.trim().split(/\s+/)) {
     if (token === '' || token.startsWith('-')) continue;
-    // BSD `sed -i ''` carries its backup suffix as a separate empty argument.
     const value = unquote(token);
     if (value === '') continue;
     if (pending) {

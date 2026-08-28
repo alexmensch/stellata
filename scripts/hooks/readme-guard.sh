@@ -45,6 +45,13 @@ done
 if [ -z "$probe" ]; then exit 0; fi
 if [ ! -d "$probe" ]; then probe="$(dirname "$probe")"; fi
 
+# git reports a realpath'd toplevel, so compare like with like: a checkout
+# reached through a symlink (macOS /tmp, a symlinked worktree root) otherwise
+# fails every prefix test below and the hook silently allows the call.
+probe_real="$(cd "$probe" && pwd -P)"
+abs="$probe_real${abs#"$probe"}"
+probe="$probe_real"
+
 toplevel="$(git -C "$probe" rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$toplevel" ]; then exit 0; fi
 

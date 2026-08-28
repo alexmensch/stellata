@@ -143,11 +143,40 @@ describe('trunk rule', () => {
       'git push',
       'git push -f',
       'git push origin HEAD',
-      'git push -u origin HEAD:main',
+      'git push; echo done',
+      '{ git push; }',
     ]) {
       const verdict = await call('bash', { command }, main);
       expect(verdict?.reason, command).toMatch(/Refusing to (commit|push) on main/);
     }
+  });
+
+  it('blocks a refspec push to trunk from a feature branch', async () => {
+    // The local branch is `worktree-wt`, so only the destination reveals it.
+    for (const command of [
+      'git push origin HEAD:main',
+      'git push origin worktree-wt:refs/heads/main',
+      'git push origin +master',
+      'git push --delete origin main',
+    ]) {
+      const verdict = await call('bash', { command });
+      expect(verdict?.reason, command).toMatch(/refspec names a protected branch/);
+    }
+  });
+
+  it('allows a refspec push to an ordinary branch', async () => {
+    expect(await call('bash', { command: 'git push origin HEAD:worktree-wt' }))
+      .toBeUndefined();
+  });
+
+  it('blocks a push behind a cd that is not the first word', async () => {
+    const verdict = await call('bash', { command: `true && cd ${main} && git push` });
+    expect(verdict?.reason).toMatch(/Refusing to push on main/);
+  });
+
+  it('blocks a push inside a subshell that cds into main', async () => {
+    const verdict = await call('bash', { command: `(cd ${main}; git push)` });
+    expect(verdict?.reason).toMatch(/Refusing to push on main/);
   });
 
   it('blocks git -C <main> push issued from a feature worktree', async () => {

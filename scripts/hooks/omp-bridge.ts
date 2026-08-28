@@ -6,12 +6,13 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   bashWriteTargets,
   buildPayload,
   claudeToolName,
   githubPushBranches,
-  gitHistoryOp,
+  gitHistoryOps,
   isProtectedBranch,
   needsCommitSweep,
   normalizeToolPath,
@@ -19,7 +20,9 @@ import {
   toolTargets,
 } from './omp-bridge-pure';
 
-const HOOK_DIR = dirname(new URL(import.meta.url).pathname);
+// `URL.pathname` stays percent-encoded, so a checkout path containing a space
+// resolved to a directory that does not exist and every guard spawn threw.
+const HOOK_DIR = dirname(fileURLToPath(import.meta.url));
 const README_GUARD = join(HOOK_DIR, 'readme-guard.sh');
 const COMMIT_SWEEP_GUARD = join(HOOK_DIR, 'commit-sweep-guard.sh');
 const PRIME_GUARD = join(HOOK_DIR, 'prime-guard.sh');
@@ -135,14 +138,27 @@ Read-only investigation in the main worktree is fine; only writes are blocked.`;
 }
 
 /**
- * The branch, not the command text, decides whether a push is allowed — which
- * is why this is a handler and not a `bash.patterns` glob. A repo whose HEAD
- * names no branch is unknown, not safe, so it blocks.
+ * Where HEAD is, not the command text, decides whether a push is allowed —
+ * which is why this is a handler and not a `bash.patterns` glob. A repo whose
+ * HEAD names no branch is unknown, not safe, so it blocks. `destinations`
+ * carries the refspec targets, because `git push origin HEAD:main` writes
+ * trunk from a feature branch and the local branch never reveals it.
  */
 function protectedBranchBlock(
   op: 'commit' | 'push',
   dir: string,
+  destinations: string[],
 ): string | undefined {
+  const remote = destinations.find(isProtectedBranch);
+  if (remote !== undefined) {
+    return `Refusing to push ${remote}: the refspec names a protected branch.
+
+AGENTS.md § Git workflow protects main and master whatever branch is checked
+out locally, so a refspec push to trunk is refused the same as a direct one.
+
+Fix: push the feature branch to its own ref and open a PR.`;
+  }
+
   const probe = existingAncestorDir(dir);
   if (probe === undefined) return undefined;
   if (git(probe, ['rev-parse', '--show-toplevel']) === undefined) return undefined;
@@ -176,6 +192,7 @@ function prHeadRef(cwd: string, branch: string): string | undefined {
 }
 
 const primed = new Set<string>();
+const primeCleared = new Set<string>();
 
 /**
  * Arm prime-guard for this session. Driven from tool_call rather than
@@ -183,7 +200,8 @@ const primed = new Set<string>();
  * compaction, when the prime text has just been summarised away.
  */
 function ensurePrimeArmed(cwd: string, sessionId: string, force: boolean): void {
-  if (!force && primed.has(sessionId)) return;
+  if (force) primeCleared.delete(sessionId);
+  else if (primed.has(sessionId)) return;
   primed.add(sessionId);
   const result = spawnSync(PRIME_GUARD, {
     input: JSON.stringify({
@@ -199,6 +217,11 @@ function ensurePrimeArmed(cwd: string, sessionId: string, force: boolean): void 
   }
 }
 
+/**
+ * Once the prime file has been read the sentinel is gone and the guard can
+ * only allow, until a compaction re-arms it. Remembering that spares every
+ * later call a shell spawn on omp's event loop — the whole per-call floor.
+ */
 function primeBlock(
   toolName: string,
   cwd: string,
@@ -206,13 +229,16 @@ function primeBlock(
   filePath: string | undefined,
   command: string | undefined,
 ): string | undefined {
+  if (primeCleared.has(sessionId)) return undefined;
   ensurePrimeArmed(cwd, sessionId, false);
-  return runGuard(
+  const reason = runGuard(
     PRIME_GUARD,
     buildPayload({ toolName, sessionId, cwd, filePath, command }),
     cwd,
     sessionId,
   );
+  if (reason === undefined) primeCleared.add(sessionId);
+  return reason;
 }
 
 export default function ompBridge(pi: BridgeApi): void {
@@ -238,15 +264,18 @@ export default function ompBridge(pi: BridgeApi): void {
     if (prime !== undefined) return { block: true, reason: prime };
 
     if (target.unclassified && !ALLOW_UNKNOWN) {
+      // `target.tool` is the effective tool: for a device write it is the
+      // `xd://` device, which is what has to be triaged, not `write`.
+      const unknown = target.tool;
       return {
         block: true,
-        reason: `Refusing ${event.toolName}: this bridge cannot tell which files the call touches.
+        reason: `Refusing ${unknown}: this bridge cannot tell which files the call touches.
 
 An unclassified tool blocks rather than passing ungated, so a tool omp added
 since this bridge was written cannot slip past the worktree and scout-pass
 gates.
 
-Fix: add "${event.toolName}" to KNOWN_TOOLS in scripts/hooks/omp-bridge-pure.ts
+Fix: add "${unknown}" to KNOWN_TOOLS in scripts/hooks/omp-bridge-pure.ts
 and give it a case in toolTargets naming the paths it touches. To unblock a
 session while doing that, set STELLATA_OMP_ALLOW_UNKNOWN_TOOLS=1.`,
       };
@@ -301,11 +330,12 @@ AGENTS.md § Git workflow protects main and master whatever tool does the push.`
         if (worktree !== undefined) return { block: true, reason: worktree };
       }
 
-      const history = gitHistoryOp(command);
-      if (history !== undefined) {
-        const base = explicitCwd ?? ctx.cwd;
+      // One command can carry several: `git commit && git push`, or a `cd`
+      // between two repositories. Each is checked where it actually runs.
+      const base = explicitCwd ?? ctx.cwd;
+      for (const history of gitHistoryOps(command)) {
         const dir = history.dir === undefined ? base : absolute(history.dir, base);
-        const branch = protectedBranchBlock(history.op, dir);
+        const branch = protectedBranchBlock(history.op, dir, history.destinations);
         if (branch !== undefined) return { block: true, reason: branch };
       }
 

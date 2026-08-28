@@ -81,13 +81,33 @@ const fish = prefix === undefined ? undefined : fishRoster(prefix);
 const help = helpRoster();
 const installed = zsh !== undefined && fish !== undefined && help !== undefined;
 
+/**
+ * `xd://` write devices are a fourth roster, and the one no completion list
+ * or `--help` section carries: they arrive as a `write` whose path names them.
+ * Scraped from the installed binary so a device omp adds fails here.
+ */
+function deviceRoster(): string[] | undefined {
+  let binary: string;
+  try {
+    binary = realpathSync(execFileSync('which', ['omp'], { encoding: 'utf-8' }).trim());
+  } catch {
+    return undefined;
+  }
+  if (!existsSync(binary)) return undefined;
+  const found = readFileSync(binary, 'latin1').match(/xd:\/\/[a-z_]+/g);
+  return found === null ? undefined : sorted(found.map((url) => url.slice(5)));
+}
+
+const devices = deviceRoster();
+const known = Object.keys(KNOWN_TOOLS);
+
 describe.skipIf(!installed)('omp tool roster', () => {
   it('classifies every tool the shell completions offer', () => {
-    expect(difference(zsh as string[], [...KNOWN_TOOLS])).toEqual([]);
+    expect(difference(zsh as string[], known)).toEqual([]);
   });
 
   it('classifies every tool --help lists', () => {
-    expect(difference(help as string[], [...KNOWN_TOOLS])).toEqual([]);
+    expect(difference(help as string[], known)).toEqual([]);
   });
 
   it('keeps the zsh and fish completions identical', () => {
@@ -100,11 +120,23 @@ describe.skipIf(!installed)('omp tool roster', () => {
   });
 });
 
+describe.skipIf(devices === undefined)('omp xd:// device roster', () => {
+  it('classifies every device the installed binary names', () => {
+    // A device absent from KNOWN_TOOLS took whichever branch its body's JSON
+    // validity chose: prose passed ungated, JSON blocked. Both were wrong.
+    expect(difference(devices as string[], known)).toEqual([]);
+  });
+
+  it('holds the devices that exist as literals rather than tool mounts', () => {
+    expect(devices).toEqual(['goal', 'propose', 'reject', 'report_issue', 'resolve']);
+  });
+});
+
 describe('omp tool roster (harness-independent)', () => {
   it('classifies apply_patch, which no roster lists', () => {
     // `edit` under `edit.mode: apply_patch` arrives on the wire as
     // `apply_patch`; it takes the same hashline payload and must gate alike.
-    expect(KNOWN_TOOLS.has('apply_patch')).toBe(true);
+    expect(KNOWN_TOOLS.apply_patch).toBe(true);
   });
 
   it('reads the installed rosters rather than a literal in this file', () => {
@@ -113,7 +145,7 @@ describe('omp tool roster (harness-independent)', () => {
       'utf-8',
     );
     for (const id of [...COMPLETIONS_ONLY, ...HELP_ONLY]) {
-      expect(guardSource).toContain(`'${id}'`);
+      expect(guardSource).toContain(`${id}: true`);
     }
   });
 });
