@@ -248,10 +248,17 @@ export function classifyFromGspspec(esphs: string | null | undefined): SpectralI
 
 // ---- SIMBAD namespace ladder ---------------------------------------------
 
-/** The namespaces every SIMBAD pull is keyed under, in the order
- *  `resolve_spine_keys` composed each request with and the record side walks
- *  back. Doubles as the build-counts partition over the SIMBAD tier. */
-export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'tyc', 'gj'] as const;
+/** The namespaces every SIMBAD pull is keyed under, in the order the record
+ *  side walks them. Doubles as the build-counts partition over the SIMBAD tier.
+ *
+ *  **Ordered by what an identifier names, not by how many keys it holds.** A GJ
+ *  number carries its component letter (`Gl 165A`) and so names one star; a TYC
+ *  names the Tycho-2 entry, which for a close pair is the system. Where both
+ *  reach a row the component-naming one wins, so a system blend never displaces
+ *  a component value. This deliberately no longer mirrors the request order
+ *  `spine_request_keys` composes with — see `parse/README.md` § Physical radius
+ *  and spectral parsing for why the pull's order is the load-bearing one. */
+export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
 export type SimbadNamespace = (typeof SIMBAD_NAMESPACE_VALUES)[number];
 
 /** The identifiers one record offers a SIMBAD join. `gl` is the raw Gliese
@@ -335,11 +342,11 @@ function takeSimbadRow<T, R>(
   return value === null ? null : { value, namespace };
 }
 
-/** Walk source_id → HIP → TYC → GJ and return the first row `accept` takes,
- *  with the namespace that found it. `accept` returning null continues the
- *  walk, so a row that exists but carries nothing usable does not end it —
- *  which is why the spectral resolver can fall past a row whose sp_type will
- *  not parse. The GJ fold only runs once the first three miss. */
+/** Walk `SIMBAD_NAMESPACE_VALUES` — source_id → HIP → GJ → TYC — and return
+ *  the first row `accept` takes, with the namespace that found it. `accept`
+ *  returning null continues the walk, so a row that exists but carries nothing
+ *  usable does not end it — which is why the spectral resolver can fall past a
+ *  row whose sp_type will not parse. */
 export function walkSimbadNamespaces<T, R>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
@@ -354,13 +361,13 @@ export function walkSimbadNamespaces<T, R>(
     const hit = takeSimbadRow(index.byHip.get(hip), 'hip', accept);
     if (hit) return hit;
   }
-  if (keys.tyc) {
-    const hit = takeSimbadRow(index.byTyc.get(keys.tyc), 'tyc', accept);
-    if (hit) return hit;
-  }
   const gj = normaliseGjKey(keys.gl);
   if (gj !== null) {
     const hit = takeSimbadRow(index.byGj.get(gj), 'gj', accept);
+    if (hit) return hit;
+  }
+  if (keys.tyc) {
+    const hit = takeSimbadRow(index.byTyc.get(keys.tyc), 'tyc', accept);
     if (hit) return hit;
   }
   return null;

@@ -580,8 +580,10 @@ describe('catalog-pure / resolveSpectralInfo — tier priority', () => {
       resolveSpectralInfo(keys(sid, hip, tyc, gl), simbad, new Map()).simbadKey;
     expect(key(GAIA_ID, HIP, '1-2-1', 'Gl 165A')).toBe('source_id');
     expect(key(null, HIP, '1-2-1', 'Gl 165A')).toBe('hip');
-    expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('tyc');
-    expect(key(null, null, null, 'Gl 165A')).toBe('gj');
+    // GJ names the component, TYC the Tycho entry — the system on a close
+    // pair — so a record holding both takes the component type, not the blend.
+    expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('gj');
+    expect(key(null, null, '1-2-1', null)).toBe('tyc');
     expect(key(null, null, null, null)).toBeUndefined();
   });
 

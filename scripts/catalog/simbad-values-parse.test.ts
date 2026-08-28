@@ -105,21 +105,28 @@ describe('lookupSimbadValues', () => {
     row({ oid: '4', rv: '4', bibcode: 'D', gj: '165 A' }),
   ));
 
-  // The pull resolved source_id → HIP → TYC → GJ; the join walks it in
-  // reverse, so a record carrying several ids lands on the same row.
   it('prefers source_id over every designation namespace', () => {
     expect(lookupSimbadValues(index, {
       sourceId: '99', hip: 22, tyc: '1-2-1', gl: 'GJ 165A',
     })?.rv?.bibcode).toBe('A');
   });
 
-  it('falls through HIP, then TYC, then GJ', () => {
+  it('falls through HIP, then GJ, then TYC', () => {
     expect(lookupSimbadValues(index, { ...NO_KEYS, sourceId: 'absent', hip: 22 })?.rv?.bibcode)
       .toBe('B');
-    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 404, tyc: '1-2-1' })?.rv?.bibcode)
-      .toBe('C');
-    expect(lookupSimbadValues(index, { ...NO_KEYS, tyc: 'absent', gl: 'Gl 165A' })?.rv?.bibcode)
+    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 404, gl: 'Gl 165A' })?.rv?.bibcode)
       .toBe('D');
+    expect(lookupSimbadValues(index, { ...NO_KEYS, gl: 'Gl absent', tyc: '1-2-1' })?.rv?.bibcode)
+      .toBe('C');
+  });
+
+  it('takes the component-naming GJ over the system-naming TYC', () => {
+    // The whole point of the order: a GJ carries its component letter and
+    // names one star, where a TYC names the Tycho entry — the system on a
+    // close pair. A record holding both must not take the blend.
+    expect(lookupSimbadValues(index, {
+      ...NO_KEYS, tyc: '1-2-1', gl: 'GJ 165A',
+    })?.rv?.bibcode).toBe('D');
   });
 
   it('answers null for a record no namespace reaches', () => {

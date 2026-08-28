@@ -79,12 +79,13 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
   return index;
 }
 
-/** The record's SIMBAD row, resolved source_id → HIP → TYC → GJ — the same
- *  fall-through `resolve_spine_keys` composed the request with, walked in
- *  reverse. A row reached only by TYC is one the Gaia namespace could not
- *  reach; the pull already dropped the widened bindings SIMBAD's own Gaia
- *  cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
- *  widening carries its own veto), so what arrives here is adjudicated. */
+/** The record's SIMBAD row, resolved source_id → HIP → GJ → TYC — the shared
+ *  ladder, ordered by what each identifier names (`catalog-pure.ts`
+ *  § SIMBAD_NAMESPACE_VALUES). A row reached only by TYC is one the Gaia
+ *  namespace could not reach; the pull already dropped the widened bindings
+ *  SIMBAD's own Gaia cross-ID contradicts (`scripts/refresh/simbad/README.md`
+ *  § The TYC widening carries its own veto), so what arrives here is
+ *  adjudicated. */
 export function lookupSimbadValues(
   index: SimbadValueIndex,
   keys: SimbadRecordKeys,

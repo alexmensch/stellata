@@ -356,24 +356,19 @@ priority chain:
    unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
    12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
    over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
-3. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
-   SIMBAD holds no Gaia id and no HIP for, which is exactly the population
-   the values pull's TYC widening exists for. Same ladder
-   `lookupSimbadValues` walks (`../simbad-values-parse.ts`), and the same
-   caveat: a TYC names the Tycho entry, which for a close pair is the
-   system rather than the component. What reaches the file is already
-   adjudicated — the pull vetoes a widened binding SIMBAD's own Gaia
-   cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
-   widening carries its own veto) — so the risk this tier carries is a
-   system-blend spectral type on an unvetoed pair, never a wrong star.
-   Reaches **1,940** records.
-4. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
+3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
    (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
-   key. It closes the ladder against `lookupSimbadValues`, which walks the
-   same four namespaces; it is last because the pull's `gj` block is small
-   (3,727 keys against TYC's 317,487) and reaches only **13** records the
-   TYC tier does not. Unlike TYC, a GJ number carries its component letter,
-   so it names the component rather than the system.
+   key. Above TYC per § The ladder is ordered by what an identifier names.
+   Wins **18** — the 13 records TYC cannot reach, plus the 5 both reach.
+4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
+   SIMBAD holds no Gaia id and no HIP for, which is exactly the population
+   the values pull's TYC widening exists for; same ladder
+   `lookupSimbadValues` walks (`../simbad-values-parse.ts`). What reaches
+   the file is already adjudicated — the pull vetoes a widened binding
+   SIMBAD's own Gaia cross-ID contradicts
+   (`scripts/refresh/simbad/README.md` § The TYC widening carries its own
+   veto) — so the risk this tier carries is a system-blend spectral type on
+   an unvetoed pair, never a wrong star. Wins **1,935** records.
 
    Which namespace found each SIMBAD-tier row is pinned as
    `spectralSimbadBySourceId` / `ByHip` / `ByTyc` / `ByGj`, summing to
@@ -415,3 +410,40 @@ corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
 sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
 absmag doesn't translate reliably for them); Wolf-Rayets ride their
 own Teff/BC ramps and ignore Apsis.
+
+### The ladder is ordered by what an identifier names
+
+`SIMBAD_NAMESPACE_VALUES` walks **source_id → HIP → GJ → TYC**: prefer the
+identifier naming the component (tier 3) over the one naming the system (tier
+4), so a system blend can never displace a component value. Block size (TYC
+317,487 keys against GJ's 3,727) is a throughput argument, not an argument
+about which value is right. Both joins share this walk, so the spectral
+resolver and the values cascade move together — the point, not a side effect.
+
+**No record's value changes, on either join** (measured 2026-08-28 against the
+committed `simbad_sptype.tsv` / `simbad_values.tsv`). Under the old order the
+`sp_type` join's TYC tier won 1,940 records, 5 of them also reachable by GJ,
+with **0** where the two strings differ; the values join won 121, 5 also
+reachable, **0** differing because all 5 resolve to the *identical* row under
+both keys — SIMBAD itself says the TYC and the GJ name one object.
+
+**Two build counts still move — the credit, not the value.**
+`spectralSimbadByTyc` 1,940 → **1,935**, `spectralSimbadByGj` 13 → **18**: the
+same 5 records, re-credited, resolving the same type. `spectralBySimbad` holds
+at 280,495 and the other 183 counts are untouched; a delta past this ±5, or any
+movement downstream, means the measurement above has gone stale.
+
+**The load-bearing order is the pull's, not this one.** `spine_request_keys`
+(`scripts/refresh/simbad/inputs.py`) is a strict fall-through — `elif tyc …
+elif gl` — so a no-Gaia row carrying **both** ids is requested by TYC alone and
+its GJ is never asked for; no record-side reorder can reach a row the pull did
+not fetch. Of the 54 spine rows with neither source_id nor HIP, 41 go by TYC and
+5 of those also carry a GJ (TYC 3694-2544-1 / Gl 92.1 · 1269-128-1 / GJ 3281 ·
+2409-737-1 / GJ 3363 · 2488-121-1 / GJ 3516 · 1043-1399-1 / Gl 734A) — the same
+5 as above, reachable by GJ only because the TYC-keyed request returned an
+object carrying a GJ cross-id.
+
+So this order is correct-by-policy and cheap insurance for the day two distinct
+rows exist; it does not close the component-vs-system exposure. That needs the
+pull to ask every namespace a record reaches — the union `stellata-3bsf.34`
+already needs.

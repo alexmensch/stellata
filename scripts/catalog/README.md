@@ -427,7 +427,7 @@ Today's downstream consumers:
   (`ciSpectralDerived` in build-counts), else the solar fallback.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
   `catalog-pure.ts`) — when SIMBAD has no sp_type under any of its four
-  namespaces (source_id, HIP, TYC, GJ), GSP-Spec's `spectraltype_esphs`
+  namespaces (source_id, HIP, GJ, TYC), GSP-Spec's `spectraltype_esphs`
   enum is the tier before `SPECTRAL_UNKNOWN`.
 - **Per-record handles** for future Phase 5 consumers (geometric
   occlusion photometry's limb-darkening Teff dependence; mass-ratio
