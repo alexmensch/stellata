@@ -452,7 +452,7 @@ docs/science-multiple-star-pipeline.md Binary/multiple detection
 ## Modelling decisions deliberately not made
 
 These are the science-flavoured items from the project-wide scope list
-in `CLAUDE.md`. Restated here so the rationale lives alongside the
+in `AGENTS.md`. Restated here so the rationale lives alongside the
 science it relates to.
 
 - **Constellation boundaries as 3D structures.** The IAU (Delporte

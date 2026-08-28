@@ -3,9 +3,9 @@
 A bundle of consistency rules that catch a recurring class of subtle
 bugs in stellata code. Each is the codified version of a retrospective
 code-review finding; apply at write time, not at review time. These
-patterns sit alongside the DRY override in `CLAUDE.md` § "Code
-conventions" — together they define the write-time bar this codebase
-holds itself to.
+patterns sit alongside the DRY override in `~/.claude/CLAUDE.md` § DRY
+— together they define the write-time bar this codebase holds itself
+to.
 
 ## Lifecycle pairing
 
@@ -75,7 +75,7 @@ The comment rule is law — a comment earns its keep only when its absence
 would cause a wrong call — and the forbidden patterns (bead-IDs, PR
 references, "extracted from" history, `[[memory-key]]` wikilinks, oversized
 module docstrings) rot fastest, with future sessions acting on them.
-CLAUDE.md § Code comments lists the literal forms CI catches. The
+AGENTS.md § Code comments lists the literal forms CI catches. The
 recurring failure mode is "small leftover breadcrumb you didn't think
 mattered" landing in a PR and then misleading every reader downstream.
 
@@ -201,10 +201,10 @@ not just a refactor.
    as if seeing it the first time. Folder READMEs are the prose-only
    surface where grep alone misses stale claims — they describe data
    flow, file rosters, "X feeds Y", "X doesn't ingest Y." See
-   CLAUDE.md § Folder READMEs for the read/update protocol; this
+   AGENTS.md § Folder READMEs for the read/update protocol; this
    section is its commit-time enforcement leg.
 3. Open every other doc in the diff context (`docs/*.md`,
-   `SCIENCE.md`, `CLAUDE.md`, `RELEASING.md`) and re-read. Stale
+   `SCIENCE.md`, `AGENTS.md`, `RELEASING.md`) and re-read. Stale
    prose is the most common drift class.
 4. When changing semantics of a quantity referenced in a docblock,
    open the docblock and re-read its rationale. If your change
@@ -265,7 +265,7 @@ explicitly in the PR description AND verify the implementation
 covers each.** One missed peer = the headline claim is false.
 
 1. Before starting the refactor, write the explicit peer list in
-   the PR description. Skim CLAUDE.md § Repo layout + the layer's
+   the PR description. Skim AGENTS.md § Repo layout + the layer's
    folder README for the canonical peer list.
 2. After implementing, `grep` for the OLD pattern and confirm ZERO
    remaining call sites in scope. If non-zero, convert them or call
@@ -280,7 +280,7 @@ covers each.** One missed peer = the headline claim is false.
 
 ## Defer doc updates
 
-Don't edit `CLAUDE.md`, `README.md`, `docs/`, or `SCIENCE.md` while
+Don't edit `AGENTS.md`, `README.md`, `docs/`, or `SCIENCE.md` while
 implementing a feature — treat code as the only deliverable until
 commit time.
 

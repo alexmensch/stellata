@@ -116,5 +116,5 @@ screenshots/            Marketing + README hero images.
 ```
 
 For project conventions and the top-level folder layout, see
-[`CLAUDE.md`](../CLAUDE.md). For science / data / formula citations,
+[`AGENTS.md`](../AGENTS.md). For science / data / formula citations,
 see [`SCIENCE.md`](../SCIENCE.md).

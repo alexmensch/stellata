@@ -386,7 +386,7 @@ describe('MilkyWay luminosity solve', () => {
   // and the Sol sightlines barely can either, because the bulge sits behind
   // 4.6 τ_V from here. Where a mass-for-light substitution actually shows
   // is the face-on external view, which is the one the camera can reach
-  // (CLAUDE.md § Camera-anywhere perception): it is the bulge/disc contrast
+  // (AGENTS.md § Camera-anywhere perception): it is the bulge/disc contrast
   // that makes the model read as an Sbc rather than an S0.
   //
   // Edge-on is pinned alongside as the opposite extreme: the bulge sits

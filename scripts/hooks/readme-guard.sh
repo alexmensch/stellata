@@ -2,7 +2,7 @@
 # readme-guard: PreToolUse hook on Read / Grep / Edit / Write /
 # NotebookEdit. Blocks code-file access in src/**, scripts/**, data/**,
 # docs/** until the containing folder's README.md has been Read this
-# session. Forces the "scout pass" CLAUDE.md § Folder READMEs mandates.
+# session. Forces the "scout pass" AGENTS.md § Folder READMEs mandates.
 #
 # State scope: keyed on $PPID (the long-lived Claude process), so all
 # tool calls in one session share the seen-set and a Claude restart
@@ -110,7 +110,7 @@ rel_readme="${readme#"$toplevel"/}"
 rel_file="${abs#"$toplevel"/}"
 reason="Refusing $tool on $rel_file — Read $rel_readme first this session.
 
-CLAUDE.md § Folder READMEs makes the scout pass law: every folder under src/, scripts/, data/, docs/ carries load-bearing context (invariants, sentinels, uniform pins, override mechanisms, file-roster ownership) that the code alone cannot tell you. The README sentence describing a shader uniform / sentinel / override is frequently the entire explanation of a bug whose symptom looks unrelated.
+AGENTS.md § Folder READMEs makes the scout pass law: every folder under src/, scripts/, data/, docs/ carries load-bearing context (invariants, sentinels, uniform pins, override mechanisms, file-roster ownership) that the code alone cannot tell you. The README sentence describing a shader uniform / sentinel / override is frequently the entire explanation of a bug whose symptom looks unrelated.
 
 Fix: Read $rel_readme, then retry. If you're about to touch several folders, batch the README reads up front — the per-file impulse is exactly when the read gets skipped.
 
