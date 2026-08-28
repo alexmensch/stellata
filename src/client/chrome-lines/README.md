@@ -22,6 +22,9 @@ src/client/chrome-lines/
                              LineBasicMaterial / LineDashedMaterial /
                              LineMaterial + Line2, the log-depth strip,
                              and the chrome mapping.
+  chrome-line-parts.ts       The two parts neither backend varies: the
+                             fat line's object assembly and the plain
+                             blend flip. Both implementations call it.
   chrome-line-materials      Both backends against each other: the chrome
     .test.ts                 mapping, the blend/depth contract, the dash
                              slots, and the MRT registration's lifetime.
@@ -77,6 +80,13 @@ other's material. A thin line's class is shared, which is why
 `../util/orbit-line.ts` keeps those. The geometry the spec's `points`
 build stays with the layer's own child sweep, exactly as a thin line's
 does; the handle frees the material and the registration.
+
+**Only the constructor differs, so only the constructor is duplicated.**
+`chrome-line-parts.ts`'s `assembleFatChromeLine` owns the geometry build,
+`computeLineDistances`, the frustum-cull opt-out and the render order for
+both backends, and takes `geom => new Line2(geom, mat)` as the caller's
+half — the seam exists to stop the two sides drifting, so the parts that
+are not backend-specific may not be copies.
 
 **Nothing writes the fat stroke's screen-space width divisor.** Since
 r185 both `LineSegments2` variants set it from `renderer.getViewport()`

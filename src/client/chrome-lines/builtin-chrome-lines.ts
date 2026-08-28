@@ -3,9 +3,9 @@
 
 import * as THREE from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
+import { assembleFatChromeLine, setStrokeOpaque } from './chrome-line-parts';
 import type {
   ChromeFatLine, ChromeLineMaterial, ChromeLineMaterials, DashedChromeLineStroke,
   FatChromeLineSpec, FatChromeLineStroke,
@@ -15,21 +15,13 @@ function strokeParams(opacity: number) {
   return { transparent: true, opacity, depthTest: true, depthWrite: false };
 }
 
-/** The blend flip both stroke shapes share here — the WebGPU fat stroke is
- *  the one that cannot express it this way. */
-function setBuiltinOpaque(material: THREE.Material, on: boolean) {
-  material.transparent = !on;
-  material.blending = on ? THREE.NoBlending : THREE.NormalBlending;
-  material.needsUpdate = true;
-}
-
 function handle<M extends THREE.Material & { color: THREE.Color }>(
   material: M, colour: number,
 ): ChromeLineMaterial<M> {
   setBuiltinChromeColour(material.color, colour);
   return {
     material,
-    setOpaque: (on) => setBuiltinOpaque(material, on),
+    setOpaque: (on) => setStrokeOpaque(material, on),
     dispose: () => material.dispose(),
   };
 }
@@ -60,18 +52,12 @@ export function builtinChromeLineMaterials(): ChromeLineMaterials {
     },
     fat(spec: FatChromeLineSpec): ChromeFatLine {
       // `resolution` is three's own to write — README.md § The fat stroke
-      // sizes itself.
+      // brings its own object.
       const mat = new LineMaterial({
-        transparent: true, opacity: spec.opacity, depthTest: true,
+        ...strokeParams(spec.opacity),
         linewidth: spec.widthPx, worldUnits: false,
       });
-      mat.depthWrite = false;
-      const geom = new LineGeometry();
-      geom.setPositions(spec.points);
-      const line = new Line2(geom, mat);
-      line.computeLineDistances();
-      line.frustumCulled = false;
-      line.renderOrder = spec.renderOrder;
+      const line = assembleFatChromeLine(spec, (geom) => new Line2(geom, mat));
       return {
         ...handle<FatChromeLineStroke>(mat, spec.colour), object: line,
       };
