@@ -120,6 +120,15 @@ is what the 30 s cap is for.
 dim the back disc's non-occluded fragments. The integration shell
 initialises the buffer to 1.0 at allocation and on every re-attach.
 
+**It is kept out of the disc/glow pass-split solve entirely**, on both
+backends. Being glow-only is exactly what makes it dangerous there: the
+three star materials are separate compilations of one vertex stage and
+their discards form a partition, so a term only one of them applies can
+tier the same star two ways and have every pass discard it. The split
+routes on an undimmed magnitude carried alongside `appMag`
+(`star-pipeline/README.md` § Star rendering); the dim still shrinks the
+quad and fades the star, it just cannot re-tier it.
+
 A resolved pair's overlapping disc cores order **geometrically in the
 local depth pass**: both members mirror into the bracketed pass
 (chain membership — `star-pipeline/local-pass/README.md`), whose

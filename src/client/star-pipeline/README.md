@@ -76,6 +76,11 @@ softness. Pulsation and dust extinction live in the subfolders.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
+- `star-pass-split-drift.test.ts` — pins both backends' vertex stages to
+  routing the disc/glow split on the undimmed magnitude (§ Star
+  rendering). Source-level, because no behavioural suite can reach it:
+  the CPU mirror takes resolved size terms and agrees with itself
+  whichever value the shaders route on.
 
 ## Physical-luminance emission
 
@@ -204,8 +209,27 @@ re-tiers it. `isDiscDominant`
 routing and takes the undimmed size for the same reason; the pick gate
 (`../camera/controls/star-pick-visibility-pure.ts`) already routed this
 way. The WebGPU port carries the same rule in `routeAppSize`
-(`../webgpu/star/star-vertex-tsl.ts`), built glow-pass-only since no
-other pipeline folds the dim.
+(`../webgpu/star/star-vertex-tsl.ts`).
+
+**`appMagRoute` is carried, never reconstructed.** The undimmed
+magnitude is captured before the eclipse fold and takes the dust add
+alongside `appMag`, so it is the identical sequence of adds the disc and
+core-mask compilations run — equal bit for bit. Rebuilding it as
+`appMag − eclipseDimMag` instead does not round-trip in float32 and puts
+the glow pass back on a value the other two never compute, for any star
+within ~1.6 × 10⁻³ px of the split. Both backends are pinned against
+that in `star-pass-split-drift.test.ts`, which is the only thing that
+can catch it: `colourPassFor` takes size terms already resolved, so the
+CPU mirror agrees with itself whatever the shaders do.
+
+**`vPhysRatio` is not only the router**, so this reaches more than the
+vanish band. It also drives `perceptualDiscExponent`
+(`distN = mix(distNMin, distNMax, smoothstep(0, 0.5, physRatio))`) and
+the kernel-collapse gate, so an eclipsed glow star now keeps the
+intensity profile its *resolved* size implies rather than flattening
+toward disc-like as the dim deepens, and stays collapse-eligible when it
+dims under the floor. `vFluxPeakL` stays exact either way — the fragment
+paints from the same varying the flux integral is taken over.
 
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
 collapsing its vertex to a clip-space sentinel

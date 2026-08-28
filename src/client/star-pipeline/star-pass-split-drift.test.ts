@@ -1,14 +1,6 @@
-// The disc / glow / core-mask discards are written as a partition over
-// `vPhysRatio`, so the three compilations have to solve it from the same
-// input. Only the glow one folds `iEclipseDim`, which means that input
-// must be the UNDIMMED apparent magnitude on both backends —
-// ./README.md § Star rendering.
-//
-// Nothing downstream can catch a regression here. `colourPassFor` is the
-// single CPU mirror and takes size terms that are already resolved, so it
-// agrees with itself whatever the shaders do; reverting either shader
-// leaves every other suite green. The invariant lives in the shader
-// sources and has to be pinned there.
+// Both vertex stages must route the disc/glow split on the undimmed
+// magnitude, or the three compilations tier a star differently and every
+// one of them discards it. ./README.md § Star rendering.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
