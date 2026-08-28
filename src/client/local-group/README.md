@@ -238,7 +238,15 @@ label reads is settled at build time** (`scripts/local-group/README.md`
 then `aliases.tsv`'s `canonical` column promotes a common name over a
 catalogue designation where one exists — M31 labels as "Andromeda
 Galaxy", NGC 6822 as "Barnard's Galaxy". The demoted designation stays
-in `aliases`, which is also emitted in precedence order.
+in `aliases`, which is also emitted in precedence order and in
+conventional written form, one entry per designation ("M31 · NGC 224").
+
+`designationVariants` (`lg-module.ts`) is the one naming rule that runs
+at runtime rather than at build time: it re-expands each conventional
+Messier form into the spellings a user might type ("M 31", "Messier 31")
+as the search corpus is assembled. Those spellings are deliberately
+absent from the catalog — storing three spellings of one designation is
+what made the focus card's alias row repeat itself.
 
 ## What's deliberately out of scope
 

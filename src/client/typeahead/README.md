@@ -50,7 +50,10 @@ typing; Enter flushes a pending query first, so fast-type-then-enter
 selects against the full text. The constellation picker stays
 synchronous (cheap substring filter). LG
 entries index the display name plus every build-emitted alias
-("Andromeda Galaxy", "NGC 224", "M 110", …); the dropdown secondary
+("Andromeda Galaxy", "M31", "NGC 224", …), plus the Messier spellings
+`designationVariants` regenerates for each of those ("M 31", "Messier
+31") — the catalog stores one conventional form per designation, so the
+variants exist only in the corpus; the dropdown secondary
 line is the morphological type alone. **No row carries a
 distance-from-Sol** — that reading belongs to the distance vector, the
 POI marker, and the focus card, and an LG-only distance made the one

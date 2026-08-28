@@ -25,6 +25,14 @@ import {
   type LgCatalog,
 } from './local-group-loader';
 
+/** Spellings of a designation a user might type that the catalog doesn't
+ *  carry — it emits one conventional form per designation ("M31"), and
+ *  the spaced and long Messier forms only ever exist here. */
+export function designationVariants(label: string): string[] {
+  const messier = /^M(\d+)$/.exec(label);
+  return messier ? [`M ${messier[1]}`, `Messier ${messier[1]}`] : [];
+}
+
 export interface LgKindModule extends ObjectKindModule<'lg'> {
   /** The wireframe layer, for label wiring + dev-console reads. Null
    *  before attach and when local-group.json is absent. */
@@ -160,7 +168,8 @@ export function createLgKindModule(): LgKindModule {
       if (!catalog) return [];
       const out: KindSearchEntry[] = [];
       catalog.objects.forEach((o, index) => {
-        for (const label of [o.name, ...(o.aliases ?? [])]) {
+        const names = [o.name, ...(o.aliases ?? [])];
+        for (const label of [...names, ...names.flatMap(designationVariants)]) {
           out.push({ index, label, primary: o.name, displayCon: o.type });
         }
       });
