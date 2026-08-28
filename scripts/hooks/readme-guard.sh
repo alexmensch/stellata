@@ -8,13 +8,14 @@
 # tool calls in one session share the seen-set and a Claude restart
 # starts fresh. Concurrent Claude sessions run in different worktrees
 # per project policy, each with their own parent process, hence their
-# own seen-set.
+# own seen-set. $GUARD_SESSION overrides that key for a harness that
+# spawns a fresh shell per call, where $PPID differs every time.
 
 set -euo pipefail
 
 STATE_DIR="${TMPDIR:-/tmp}/claude-readme-guard"
 mkdir -p "$STATE_DIR"
-STATE_FILE="$STATE_DIR/seen-$PPID.txt"
+STATE_FILE="$STATE_DIR/seen-${GUARD_SESSION:-$PPID}.txt"
 
 input="$(cat)"
 tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"
@@ -54,15 +55,23 @@ case "$abs" in
 esac
 
 # Reading a README.md marks its folder as seen and is always allowed.
-# Write / Edit mark it too: the harness refuses to overwrite or edit a
-# file the session hasn't Read, so a call reaching here either authored
-# the README this session or already read it.
+# Write / Edit mark it too, but only where the harness refuses to modify
+# a file the session hasn't Read — there, a call reaching here already
+# read it. A harness without that rule sets GUARD_NO_READ_BEFORE_WRITE,
+# because a write to an unopened README would otherwise disarm the gate
+# for every file in that folder.
 basename="$(basename "$abs")"
 if [ "$basename" = "README.md" ]; then
   case "$tool" in
-    Read|Write|Edit)
+    Read)
       printf '%s\n' "$abs" >> "$STATE_FILE"
       exit 0
+      ;;
+    Write|Edit)
+      if [ -z "${GUARD_NO_READ_BEFORE_WRITE:-}" ]; then
+        printf '%s\n' "$abs" >> "$STATE_FILE"
+        exit 0
+      fi
       ;;
   esac
 fi
