@@ -9,6 +9,7 @@ import { parse } from 'csv-parse/sync';
 import { describe, expect, it } from 'vitest';
 import { parseAliases, parseLvdb, parseOverrides } from './build-local-group';
 import {
+  applyAliasMeta,
   buildStandaloneOverride,
   DISPLAY_NAME_OVERRIDES,
   filterForRendering,
@@ -17,6 +18,7 @@ import {
   roundN,
   type LgObject,
 } from './build-local-group-pure';
+import { lgObjectStub } from './lg-object-mock';
 
 describe('parseOverrides', () => {
   const HEADER =
@@ -344,6 +346,11 @@ describe('parseAliases + type/alias plumbing', () => {
     expect(() => parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\tAndromeda Galaxy\n`))
       .toThrow(/not one of its aliases/);
   });
+  it('normalises designations on the way in, so column spellings need not match', () => {
+    const rows = parseAliases(`${HEADER}NGC 205\tDwarf elliptical\tMessier 110|NGC221\tM 110\n`);
+    expect(rows[0].aliases).toEqual(['M110', 'NGC 221']);
+    expect(rows[0].canonical).toBe('M110');
+  });
   it('curated rows all match rendered objects (no orphans in the committed TSV)', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const aliasRows = parseAliases(
@@ -358,5 +365,27 @@ describe('parseAliases + type/alias plumbing', () => {
     const orphans = aliasRows.filter((a) => !names.has(a.name));
     expect(orphans).toEqual([]);
     expect(aliasRows.length).toBe(27);
+  });
+  it('the committed promotions resolve to their proper names + conventional aliases', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const rows = parseAliases(
+      readFileSync(join(here, '..', '..', 'data', 'local-group', 'aliases.tsv'), 'utf8'),
+    );
+    const promoted = (key: string, derived: string) => {
+      const row = rows.find((r) => r.name === key);
+      if (!row) throw new Error(`no aliases.tsv row for '${key}'`);
+      const obj = applyAliasMeta(lgObjectStub(derived), row);
+      return [obj.name, obj.aliases];
+    };
+    expect(promoted('M31', 'M31')).toEqual(['Andromeda Galaxy', ['M31', 'NGC 224']]);
+    expect(promoted('M33', 'M33')).toEqual(['Triangulum Galaxy', ['M33', 'NGC 598']]);
+    expect(promoted('NGC 6822', 'NGC 6822'))
+      .toEqual(["Barnard's Galaxy", ['NGC 6822', 'IC 4895']]);
+    expect(promoted('WLM', 'WLM'))
+      .toEqual(['Wolf-Lundmark-Melotte', ['WLM', 'DDO 221', 'UGCA 444']]);
+    expect(promoted('LGS 3', 'LGS 3')).toEqual(['Pisces Dwarf', ['LGS 3', 'Pisces I']]);
+    // No proper name in play — the Messier-over-NGC rung decides.
+    expect(promoted('NGC 205', 'NGC 205')).toEqual(['M110', ['NGC 205']]);
+    expect(rows.filter((r) => r.canonical).length).toBe(6);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { lgObjectStub } from './lg-object-mock';
 import {
   applyAliasMeta,
   basisToQuaternion,
@@ -6,6 +7,7 @@ import {
   buildLvdbDefault,
   buildOrientationQuat,
   buildStandaloneOverride,
+  canonicalDesignation,
   displayName,
   filterForRendering,
   isCatalogDesignation,
@@ -17,7 +19,6 @@ import {
   renderedWireframeAxes,
   raDecDistanceToIcrs,
   type LgEmission,
-  type LgObject,
   roundN,
   roundSig,
   skyBasis,
@@ -338,7 +339,8 @@ describe('displayName overrides + default type suffix', () => {
     expect(displayName('NGC 6822')).toBe('NGC 6822');
     expect(displayName('IC 10')).toBe('IC 10');
     expect(displayName('IC 1613')).toBe('IC 1613');
-    // LVDB's SIMBAD-spaced shortform normalises to match M31 / M33.
+    // No override entry: the conventional-form rule closes up LVDB's
+    // SIMBAD-spaced shortform on its own.
     expect(displayName('M 32')).toBe('M32');
     expect(displayName('M31')).toBe('M31');
     expect(displayName('M33')).toBe('M33');
@@ -369,7 +371,6 @@ describe('displayName overrides + default type suffix', () => {
       'LMC',
       'Leo A',
       'Leo P',
-      'M 32',
       'Pegasus W',
       'Pegasus dIrr',
       'Phoenix',
@@ -755,8 +756,8 @@ describe('preferred-name precedence', () => {
   });
 
   it('orders aliases proper → Messier → NGC/IC → other catalogue', () => {
-    expect(orderAliases(['DDO 221', 'NGC 224', 'M 31', 'Andromeda Galaxy'], 'M31'))
-      .toEqual(['Andromeda Galaxy', 'M 31', 'NGC 224', 'DDO 221']);
+    expect(orderAliases(['DDO 221', 'NGC 224', 'M31', 'Andromeda Galaxy'], 'M110'))
+      .toEqual(['Andromeda Galaxy', 'M31', 'NGC 224', 'DDO 221']);
   });
 
   it('keeps curation order inside a tier, and drops the display name + duplicates', () => {
@@ -765,29 +766,46 @@ describe('preferred-name precedence', () => {
   });
 });
 
-describe('applyAliasMeta — canonical promotion', () => {
-  const objAt = (name: string): LgObject => ({
-    name,
-    id: 'x',
-    type: '',
-    center: [0, 0, 0],
-    kind: 'ellipsoid',
-    axes: [1, 1, 1],
-    quat: [0, 0, 0, 1],
-    source: 'LVDB',
-    distance: 1,
-    emission: { family: 'sersic', mV: 1, reffAxesPc: [1, 1, 1], n: 1, bn: 1, pn: 1, uMax: 1, density0: 1 },
+describe('canonicalDesignation — conventional written form', () => {
+  it('closes up Messier numbers and spaces every other catalogue', () => {
+    // Wikipedia's Andromeda infobox: "M31, NGC 224, UGC 454, PGC 2557".
+    expect(canonicalDesignation('M 31')).toBe('M31');
+    expect(canonicalDesignation('Messier 31')).toBe('M31');
+    expect(canonicalDesignation('M31')).toBe('M31');
+    expect(canonicalDesignation('NGC224')).toBe('NGC 224');
+    expect(canonicalDesignation('ngc 224')).toBe('NGC 224');
+    expect(canonicalDesignation('IC4895')).toBe('IC 4895');
+    expect(canonicalDesignation('UGCA444')).toBe('UGCA 444');
+    expect(canonicalDesignation('DDO 221')).toBe('DDO 221');
   });
+
+  it('leaves compound catalogue numbers and non-designations alone', () => {
+    expect(canonicalDesignation('ESO 410-G005')).toBe('ESO 410-G005');
+    expect(canonicalDesignation('Andromeda Galaxy')).toBe('Andromeda Galaxy');
+    expect(canonicalDesignation('Leo A')).toBe('Leo A');
+    expect(canonicalDesignation('Mensa')).toBe('Mensa');
+  });
+
+  it('collapses the three spellings of one designation to a single alias', () => {
+    expect(orderAliases(
+      ['M 31', 'Messier 31', 'M31', 'NGC 224'].map(canonicalDesignation),
+      'Andromeda Galaxy',
+    )).toEqual(['M31', 'NGC 224']);
+  });
+});
+
+describe('applyAliasMeta — canonical promotion', () => {
+  const objAt = lgObjectStub;
 
   it('promotes the canonical name and keeps the demoted one typeable', () => {
     const out = applyAliasMeta(objAt('M31'), {
       name: 'M31',
       type: 'Spiral galaxy',
-      aliases: ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M 31'],
+      aliases: ['Andromeda Galaxy', 'NGC 224'],
       canonical: 'Andromeda Galaxy',
     });
     expect(out.name).toBe('Andromeda Galaxy');
-    expect(out.aliases).toEqual(['M31', 'Messier 31', 'M 31', 'NGC 224']);
+    expect(out.aliases).toEqual(['M31', 'NGC 224']);
   });
 
   it('leaves the derived name alone with no promotion, but still orders the aliases', () => {

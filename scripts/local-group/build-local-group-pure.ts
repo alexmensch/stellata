@@ -137,33 +137,58 @@ export interface AliasRow {
   canonical?: string;
 }
 
-/** Preferred-name precedence, low value = higher precedence:
- *  common/proper name > Messier > NGC/IC > other catalogue. The same
- *  order the star designations (`typeahead/star-designations.ts`) and
- *  the molecular clouds (`scripts/clouds/README.md` § Alternate names)
- *  already use, so one object kind never orders its names differently
- *  from another. */
+/** Display precedence, best first. `proper` is the residual rung — a name
+ *  no catalogue pattern below claims — so acronyms ("SMC", "LGS 3") land
+ *  there too. See `scripts/local-group/README.md` § Display-name rules. */
 export const NAME_TIERS = ['proper', 'messier', 'ngc-ic', 'catalogue'] as const;
 export type NameTier = (typeof NAME_TIERS)[number];
 
+const designationRe = (prefixes: readonly string[]) =>
+  new RegExp(`^(${prefixes.join('|')})\\s*(\\d.*)$`, 'i');
+
+const spaced = (m: RegExpExecArray) => `${m[1].toUpperCase()} ${m[2]}`;
+
+/** The one catalogue-prefix roster: what counts as a designation, which
+ *  rung it sits on, and how it is conventionally written. Longest prefix
+ *  first so "UGCA 444" can't be read as UGC. */
+const DESIGNATION_FORMS: readonly {
+  tier: NameTier;
+  re: RegExp;
+  write: (m: RegExpExecArray) => string;
+}[] = [
+  { tier: 'messier', re: /^(?:M|Messier)\s*(\d+)$/i, write: (m) => `M${m[1]}` },
+  { tier: 'ngc-ic', re: designationRe(['NGC', 'IC']), write: spaced },
+  {
+    tier: 'catalogue',
+    re: designationRe(['UGCA', 'UGC', 'DDO', 'ESO', 'AGC', 'KKR', 'KKH', 'KK', 'KDG', 'PGC', 'HIPASS']),
+    write: spaced,
+  },
+];
+
 export function nameTier(name: string): NameTier {
-  if (/^(M|Messier)\s*\d/i.test(name)) return 'messier';
-  if (/^(NGC|IC)\s*\d/i.test(name)) return 'ngc-ic';
-  if (isCatalogDesignation(name)) return 'catalogue';
-  return 'proper';
+  return DESIGNATION_FORMS.find((f) => f.re.test(name))?.tier ?? 'proper';
 }
 
-/** Aliases in precedence order, deduped, with `displayName` removed —
- *  it is already the primary label and the search corpus prepends it.
- *  Stable within a tier, so curation order still decides between two
- *  designations of equal rank. */
+/** A designation in its conventional written form — Messier numbers close
+ *  up ("M 31" → "M31"), every other catalogue takes one space ("NGC224" →
+ *  "NGC 224"). Anything that isn't a designation passes through. */
+export function canonicalDesignation(name: string): string {
+  for (const form of DESIGNATION_FORMS) {
+    const m = form.re.exec(name);
+    if (m) return form.write(m);
+  }
+  return name;
+}
+
+/** Aliases in precedence order with `displayName` dropped — the search
+ *  corpus prepends that separately. `sort` is stable, so curation order
+ *  still decides between two designations of equal rank. */
 export function orderAliases(
   aliases: readonly string[],
   displayName: string,
 ): string[] {
-  const seen = new Set([displayName]);
-  const unique = aliases.filter((a) => !seen.has(a) && (seen.add(a), true));
-  return NAME_TIERS.flatMap((tier) => unique.filter((a) => nameTier(a) === tier));
+  const unique = [...new Set(aliases)].filter((a) => a !== displayName);
+  return unique.sort((a, b) => NAME_TIERS.indexOf(nameTier(a)) - NAME_TIERS.indexOf(nameTier(b)));
 }
 
 /** Morphological-type string for the search dropdown + focus card.
@@ -427,10 +452,6 @@ export function filterForRendering(rows: LvdbRow[]): LvdbRow[] {
  *  type is not the default dSph — dIrrs, dwarf transitions, and one-
  *  word proper names that read fine without a suffix. */
 export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
-  // LVDB's shortform is the SIMBAD-spaced "M 32"; the hand-curated
-  // M31 / M33 rows carry no space, so normalise for consistency
-  // across the three Messier members.
-  'M 32': 'M32',
   LMC: 'Large Magellanic Cloud',
   SMC: 'Small Magellanic Cloud',
   'Leo A': 'Leo A',
@@ -457,20 +478,16 @@ export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
  *  matches how astronomers refer to these objects in papers. */
 export const DEFAULT_TYPE_SUFFIX = 'Dwarf Spheroidal';
 
-/** True if the name reads as a galaxy-catalog designation — a recognised
- *  prefix (NGC, IC, UGC, UGCA, DDO, ESO, M, AGC, KK, KKR, KKH, KDG, PGC,
- *  HIPASS) followed by a digit, with optional whitespace. Catalog
+/** True if the name reads as a galaxy-catalog designation. Catalog
  *  designations already self-identify and don't need a type suffix
  *  ("NGC 205" reads cleaner than "NGC 205 Dwarf Spheroidal"). */
 export function isCatalogDesignation(name: string): boolean {
-  return /^(NGC|IC|UGC|UGCA|DDO|ESO|M|AGC|KKR|KKH|KK|KDG|PGC|HIPASS)\s*\d/i.test(
-    name,
-  );
+  return nameTier(name) !== 'proper';
 }
 
 export function displayName(lvdbName: string): string {
   if (lvdbName in DISPLAY_NAME_OVERRIDES) return DISPLAY_NAME_OVERRIDES[lvdbName];
-  if (isCatalogDesignation(lvdbName)) return lvdbName;
+  if (isCatalogDesignation(lvdbName)) return canonicalDesignation(lvdbName);
   return `${lvdbName} ${DEFAULT_TYPE_SUFFIX}`;
 }
 
@@ -683,12 +700,9 @@ function buildLgObjectFromOrient(
 
 /** Overlay a curated alias/type row onto a built object. The row is
  *  keyed by the source name (LVDB `name` / standalone override name),
- *  which the caller matches before the display-name rewrite.
- *
- *  A `canonical` promotion demotes the derived display name into the
- *  alias list rather than discarding it — every name the object used to
- *  answer to stays typeable. Type is derived from the pre-promotion name
- *  so the suffix fallback keeps reading the name it was written for. */
+ *  which the caller matches before the display-name rewrite. Type must be
+ *  derived before the promotion renames `obj` — the suffix fallback reads
+ *  the name it was written for. */
 export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObject {
   if (!meta) return obj;
   obj.type = objectTypeFor(obj.name, meta.type);

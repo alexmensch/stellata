@@ -8,17 +8,22 @@
 # Table 1 cross-IDs + NED common names.
 #
 # `canonical` promotes one of the row's own aliases to the display name,
-# per the precedence common/proper name > Messier > NGC/IC > other
-# catalogue (scripts/local-group/README.md § Display-name rules). Leave
-# empty when the derived name is already top-tier. The demoted name is
-# kept as an alias automatically — don't list it here.
+# per the precedence in scripts/local-group/README.md § Display-name
+# rules. Leave empty when the derived name is already top-tier. The
+# demoted name is kept as an alias automatically — don't list it here.
+#
+# List each designation ONCE, in its conventional written form: Messier
+# numbers close up ("M31"), every other catalogue prefix takes a single
+# space ("NGC 224", "UGC 5364"). The build normalises what it reads, so
+# the spelling variants a user might type ("M 31", "Messier 31") are
+# regenerated into the search corpus and must not be listed here.
 name	type	aliases	canonical
-M31	Spiral galaxy	Andromeda Galaxy|NGC 224|Messier 31|M 31	Andromeda Galaxy
-M33	Spiral galaxy	Triangulum Galaxy|NGC 598|Messier 33|M 33	Triangulum Galaxy
+M31	Spiral galaxy	Andromeda Galaxy|NGC 224	Andromeda Galaxy
+M33	Spiral galaxy	Triangulum Galaxy|NGC 598	Triangulum Galaxy
 LMC	Magellanic irregular	LMC|Nubecula Major
 SMC	Magellanic irregular	SMC|NGC 292|Nubecula Minor
-M 32	Dwarf elliptical	NGC 221|Messier 32|M32
-NGC 205	Dwarf elliptical	M 110|M110|Messier 110	M110
+M 32	Dwarf elliptical	NGC 221
+NGC 205	Dwarf elliptical	M110	M110
 NGC 185	Dwarf elliptical
 NGC 147	Dwarf elliptical	DDO 3
 NGC 6822	Dwarf irregular	Barnard's Galaxy|IC 4895	Barnard's Galaxy

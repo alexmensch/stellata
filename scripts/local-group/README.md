@@ -49,11 +49,17 @@ of the LVDB snapshot is a manual `curl` of
 
 ## Display-name rules
 
-**Precedence: common/proper name > Messier > NGC/IC > other catalogue.**
-The same order the stars (`src/client/typeahead/README.md` —
-`starDesignations`) and the molecular clouds (`scripts/clouds/README.md`
-§ Alternate names) already apply, so no object kind orders its names
-differently from another. It reaches an object in two steps:
+**Precedence: common/proper name > Messier > NGC/IC > other catalogue** —
+the four rungs of `NAME_TIERS`. The *principle* is uniform across object
+kinds; the rungs are not, because the catalogues aren't. The molecular
+clouds run the same chain over a longer list — `scripts/clouds/README.md`
+§ Alternate names owns the shared statement and adds Sh2/RCW/LBN/LDN/
+Caldwell and Zucker-region rungs no Local Group object carries. The stars
+order proper name first too, but over identifier catalogues with no
+Messier or NGC/IC rung at all, since neither lists stars
+(`src/client/typeahead/README.md` — `starDesignations`).
+
+It reaches an object in two steps:
 
 1. `displayName(lvdbName)` picks a base label from LVDB's own name
    (three branches below). LVDB's `name` column knows nothing about the
@@ -63,14 +69,20 @@ differently from another. It reaches an object in two steps:
    demoted base is pushed into the aliases, so every name the object
    answered to before stays typeable in search.
 
-`nameTier` is mechanical (prefix + digit probes) and drives **ordering**
-only. The **promotion itself is curated**, exactly as the clouds' table
-is, because the tier probe cannot tell a proper name from an alternate
+`nameTier` is mechanical — prefix + digit probes over the one
+`DESIGNATION_FORMS` roster, which also backs `isCatalogDesignation` and
+`canonicalDesignation` — and drives **ordering** only. `proper` is its
+residual rung, whatever no catalogue pattern claimed, so acronyms land
+there too ("SMC", "LGS 3"); harmless, since the rung only sorts.
+
+The **promotion itself is curated**, exactly as the clouds' table is,
+because the tier probe cannot tell a proper name from an alternate
 designation that merely lacks a catalogue prefix: "Leo III" is Leo A's
 other designation, not its common name, and would be promoted over it by
 any purely mechanical read. Same reason the clouds carry the sub-feature
 carve-out. A `canonical` naming something absent from the row's own
-aliases fails the build.
+aliases fails the build, and so does any promotion that would leave two
+objects sharing a display name.
 
 Promotions in the committed TSV: M31 → Andromeda Galaxy, M33 →
 Triangulum Galaxy, NGC 6822 → Barnard's Galaxy, WLM →
@@ -81,6 +93,23 @@ in play, on the Messier-over-NGC rung — NGC 205 → M110.
 or the standalone override's name, never the display string, so a
 canonical rename churns no SID and needs no `sameas` bridge.
 
+### Conventional written form
+
+`canonicalDesignation` normalises every designation — as `aliases.tsv` is
+parsed, and wherever `displayName` passes one through: **Messier numbers
+close up ("M31"); every other catalogue prefix takes a single space
+("NGC 224", "UGC 5364")**. That is the convention Wikipedia's designation
+lists and `scripts/clouds/build-clouds.py`'s alias table both follow, and
+it is why `DISPLAY_NAME_OVERRIDES` no longer carries an `M 32` → `M32`
+entry: LVDB's SIMBAD-spaced shortform closes up under the general rule.
+
+The emitted `aliases` therefore carry **one entry per designation, not
+one per spelling** — Andromeda reads `M31 · NGC 224`. The spellings a
+user might type instead ("M 31", "Messier 31") are regenerated into the
+search corpus at runtime by `designationVariants`
+(`src/client/local-group/lg-module.ts`) rather than stored, so dropping
+them from the table costs no searchability.
+
 `displayName(lvdbName)` decides the base string through three branches:
 
 1. **DISPLAY_NAME_OVERRIDES** — explicit map entries take precedence.
@@ -89,8 +118,8 @@ canonical rename churns no SID and needs no `sameas` bridge.
    (WLM, Leo A, Phoenix, Sextans A/B, Pegasus dIrr, …).
 2. **`isCatalogDesignation`** — names matching catalog prefixes
    (NGC / IC / UGC / DDO / M / KK / PGC / HIPASS …) followed by digits
-   bypass the suffix and render as-is. "NGC 205", "M 32", "M31" all
-   pass through unchanged.
+   bypass the suffix and render in conventional form. "NGC 205" and
+   "M31" pass through unchanged; "M 32" closes up to "M32".
 3. **Default** — append "Dwarf Spheroidal". Used for bare constellation
    names ("Sculptor", "Draco") and Roman-numeral satellites
    ("Andromeda I", "Bootes II") where the suffix disambiguates from
