@@ -30,35 +30,55 @@ describe('colourPassFor', () => {
 });
 
 describe('starPassRouting', () => {
-  // A star just under the split undimmed (physSize 0.49 of the quad), and
-  // the dimmed quad a deep eclipse shrinks it to. This is the band the
-  // split used to drop the star in — both passes discarded it.
+  // A star just under the split undimmed (physSize 0.49 of the quad) —
+  // where a marginally-resolved companion sits, and the band the split
+  // used to drop the star in. `appSize` shrinks as the square root of a
+  // dim's magnitude penalty, close enough to the real curve's shape for
+  // the threshold solve to be exercised rather than mocked flat.
   const APP = 40;
   const PHYS = 0.49 * APP;
+  const FLOOR = 0.001;
+  const sizeAt = (dim: number) => APP * Math.sqrt(Math.max(dim, FLOOR));
 
-  it('flags the band where a dimmed appSize would pick the other pass', () => {
-    const r = starPassRouting(APP, PHYS, PHYS * 1.9);
+  it('flags the band once the current dim crosses the split', () => {
+    const r = starPassRouting(APP, PHYS, 0.5, FLOOR, sizeAt);
     expect(r.routed).toBe(STAR_PASS_GLOW);
     expect(r.dimmed).toBe(STAR_PASS_DISC);
     expect(r.trap).toBe(true);
   });
 
-  it('reports no trap while the dim leaves the star on the same side', () => {
-    const r = starPassRouting(APP, PHYS, APP * 0.99);
-    expect(r.routed).toBe(STAR_PASS_GLOW);
+  it('stays clear while the dim leaves the star on the same side', () => {
+    const r = starPassRouting(APP, PHYS, 0.99, FLOOR, sizeAt);
     expect(r.dimmed).toBe(STAR_PASS_GLOW);
     expect(r.trap).toBe(false);
   });
 
-  it('reports the ratio from the undimmed quad, which is what the shaders use', () => {
-    expect(starPassRouting(APP, PHYS, PHYS).physRatio).toBeCloseTo(0.49, 10);
+  it('solves the dim the band opens at, and it agrees with the flag', () => {
+    // sizeAt(d) = 2·PHYS at d = (2 × 0.49)² = 0.9604.
+    const r = starPassRouting(APP, PHYS, 1, FLOOR, sizeAt);
+    expect(r.trapBelowDim).toBeCloseTo(0.9604, 4);
+    expect(starPassRouting(APP, PHYS, 0.96, FLOOR, sizeAt).trap).toBe(true);
+    expect(starPassRouting(APP, PHYS, 0.97, FLOOR, sizeAt).trap).toBe(false);
   });
 
-  it('never reports a disc-dominant star as trapped — the dim cannot reach it', () => {
+  it('reports the ratio from the undimmed quad, which is what the shaders use', () => {
+    expect(starPassRouting(APP, PHYS, 1, FLOOR, sizeAt).physRatio).toBeCloseTo(0.49, 10);
+  });
+
+  it('gives a disc-routed star no threshold — that pass ignores the dim', () => {
     // physSize already wins max(appSize, physSize), so shrinking appSize
-    // cannot move the ratio at all.
-    const r = starPassRouting(10, 40, 1);
+    // cannot move the ratio at all. The camera has to back off.
+    const r = starPassRouting(10, 40, 0.02, FLOOR, sizeAt);
     expect(r.routed).toBe(STAR_PASS_DISC);
     expect(r.trap).toBe(false);
+    expect(r.trapBelowDim).toBeNull();
+  });
+
+  it('gives a deeply glow-dominated star no threshold — totality cannot reach it', () => {
+    // physSize far under half the quad: even the dim floor leaves the
+    // shrunken appSize above 2 x physSize.
+    const r = starPassRouting(APP, 0.001 * APP, 0.02, FLOOR, sizeAt);
+    expect(r.routed).toBe(STAR_PASS_GLOW);
+    expect(r.trapBelowDim).toBeNull();
   });
 });

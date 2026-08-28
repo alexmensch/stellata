@@ -277,33 +277,59 @@ edge with only a hidden horizontal scrollbar to reach it.
 
 ### Eclipse routing — finding a band you cannot see
 
-Under each relation the Eclipse section prints the disc/glow verdict for
-both members:
+Under each relation the Eclipse section prints a routing verdict per
+member. **`>` marks the back member** — the only one carrying a dim, so
+the only one whose verdict is live. The other line is the front star and
+reads `no dim`; its threshold is what it *would* need half an orbit
+later, when the two swap.
 
-```
-  pri=GLOW ratio=0.486 <TRAP>  sec=DISC ratio=0.914
-```
+A dim can only move a **glow-routed** star, so the verdict leads with
+whichever of those two conditions is missing:
 
-`ratio` is `vPhysRatio` as the vertex stages compute it — from the
+| Verdict | Means | Do |
+| --- | --- | --- |
+| `>pri DISC r=0.545  disc ignores the dim, back off` | The back star is a resolved disc. The disc pass never folds `iEclipseDim`, so the eclipse has **no photometric effect at all** here — overlap orders geometrically in the local depth pass. | Back off until `r` falls under 0.5. |
+| `>sec GLOW r=0.486  now 0.372, trap<0.003` | Reachable, but the dim is nowhere near deep enough yet. | Scrub deeper, or widen the band — below. |
+| `>sec GLOW r=0.486  <TRAP>` | **In the band now.** | Look: the star must still be drawn, no pop in treatment. |
+| `>sec GLOW r=0.080  unreachable, close in` | Too far — even totality cannot shrink the quad past the split. | Close in until `r` climbs toward 0.5. |
+
+`r` is `vPhysRatio` as the vertex stages compute it — from the
 **undimmed** quad, which is what makes all three compilations agree
-(`../star-pipeline/README.md` § Star rendering). `<TRAP>` marks a member
-whose *dimmed* quad would have been routed to the other pass. That is
-the band where the split used to tier one star two ways and every pass
-discarded it, so the star drew nowhere.
+(`../star-pipeline/README.md` § Star rendering).
 
 **`<TRAP>` is not a fault report.** Past the undimmed-routing fix the
 star stays drawn right through it; the marker exists because the band is
-otherwise impossible to find. It renders identically on both sides, it
-is narrow, and no smoke has ever hit it by accident.
+otherwise impossible to find.
 
-To smoke an eclipse-routing change: focus an eclipsing pair with a
-renderable orbit, open the panel's Eclipse section, and scrub the clock
-until `<TRAP>` appears on a member. Confirm the star is still on screen
-and its treatment does not pop. Camera distance moves `ratio` (it drives
-`physSize`), so back off or close in until a member sits near 0.5 —
-that is where any dim at all can cross it.
+### Widening the band
 
-Exposure does **not** move `ratio`: the split is solved from `appSize`
+Camera distance alone is a poor lever: it has to put the **back** member
+just under `r` = 0.5, and a real pair will happily sit with one member
+either side of the split while the dimmed one is the wrong one. Two
+better knobs, both in the panel's Star disc section:
+
+- **`sizeKnee`** is the one that matters. It sets how far past the
+  visible-population window a bright star keeps growing before
+  saturating, so it decides how much a magnitude of dimming actually
+  shrinks `appSize`. A bright star high on the saturated part of the
+  curve barely moves — which is why a `trap<0.003` reads as
+  unreachable in practice. Drop `sizeKnee` and the same dim shrinks the
+  quad much harder, pulling the threshold up into a scrubbable range.
+- **`sizeMin` / `sizeMax`** move `appSize` bodily, so they reposition `r`
+  against a fixed `physSize` without touching the camera.
+
+Neither changes what is under test: both feed `appSize`, which is
+exactly the term the split is *supposed* to route on, undimmed. Tuning
+them relocates the band, it does not fake it.
+
+So the procedure is: focus an eclipsing pair with a renderable orbit,
+open the Eclipse section, get `>` onto a `GLOW` member (camera distance,
+or wait half an orbit for the pair to swap), then pull `sizeKnee` down
+until `trap<` rises past the dim the eclipse actually reaches. Confirm
+the star holds through `<TRAP>`. Repeat once resolved (`DISC`), where
+the dim must not touch either member at all.
+
+Exposure does **not** move `r`: the split is solved from `appSize`
 and `physSize`, and exposure only scales `vPeakL`. So the Exposure
 section's knobs are free to use to get a blown-out disc back under
 control without perturbing what is being tested — the one coupling is

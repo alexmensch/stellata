@@ -32,28 +32,56 @@ export function colourPassFor(appSizePx: number, physSizePx: number): ColourPass
 export interface StarPassRouting {
   /** Solved from the undimmed quad — what every compilation agrees on. */
   routed: ColourPass;
-  /** What a dimmed `appSize` would pick instead. */
+  /** What the star's current dim would pick instead. */
   dimmed: ColourPass;
   trap: boolean;
   /** `vPhysRatio` as the vertex stages compute it: undimmed. */
   physRatio: number;
-  appSizePx: number;
-  physSizePx: number;
+  /** The dim this star would have to reach to enter the trap band, or
+   *  null when no dim can take it there. Null covers both dead ends, and
+   *  they are not the same vantage problem: a disc-routed star
+   *  (`routed === STAR_PASS_DISC`) ignores the dim entirely and the
+   *  camera has to back off, while a deeply glow-dominated one is simply
+   *  too far for even totality to shrink its quad past the split. */
+  trapBelowDim: number | null;
 }
+
+/** Bisection depth: `DIM_FLOOR`..1 to within ~1e-6, which is finer than
+ *  the readout prints and costs nothing off the render path. */
+const TRAP_SOLVE_STEPS = 20;
 
 export function starPassRouting(
   appSizePx: number,
   physSizePx: number,
-  dimmedAppSizePx: number,
+  dim: number,
+  dimFloor: number,
+  appSizeAtDim: (dim: number) => number,
 ): StarPassRouting {
   const routed = colourPassFor(appSizePx, physSizePx);
-  const dimmed = colourPassFor(dimmedAppSizePx, physSizePx);
+  const dimmed = colourPassFor(appSizeAtDim(dim), physSizePx);
+
+  // A dim only ever shrinks appSize, so "is disc-routed at this dim" is
+  // monotone: true everywhere below one threshold. Bisect for it, and
+  // only when the star is glow-routed now and totality would flip it —
+  // otherwise there is no crossing in range to find.
+  let trapBelowDim: number | null = null;
+  if (routed === STAR_PASS_GLOW
+    && colourPassFor(appSizeAtDim(dimFloor), physSizePx) === STAR_PASS_DISC) {
+    let lo = dimFloor;
+    let hi = 1;
+    for (let i = 0; i < TRAP_SOLVE_STEPS; i++) {
+      const mid = 0.5 * (lo + hi);
+      if (colourPassFor(appSizeAtDim(mid), physSizePx) === STAR_PASS_DISC) lo = mid;
+      else hi = mid;
+    }
+    trapBelowDim = lo;
+  }
+
   return {
     routed,
     dimmed,
     trap: routed !== dimmed,
     physRatio: Math.min(physSizePx / Math.max(appSizePx, physSizePx, 0.001), 1),
-    appSizePx,
-    physSizePx,
+    trapBelowDim,
   };
 }

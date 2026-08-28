@@ -114,6 +114,7 @@ import {
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/local-pass/star-local-cluster-pure';
 import { type StarPassRouting, starPassRouting } from './star-pipeline/star-pass';
+import { DIM_FLOOR } from './binaries/eclipse/eclipse-photometry-pure';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
 import { uploadFull } from './util/attribute-upload';
@@ -1729,14 +1730,16 @@ export class Stellata implements FrameAnchor {
    *  identically either side of it. */
   starPassRoutingFor(idx: number, eclipseDim: number): StarPassRouting {
     const c = this.renderedSizeComponentsFor(idx, this.passDebugScratch);
-    const dimmedAppSizePx = eclipseDim > 0 && eclipseDim < 1
-      ? starPhysics.appSizePxForMag(
-        c.appMag - 2.5 * Math.log10(eclipseDim),
+    const appSizeAtDim = (dim: number) => (dim >= 1
+      ? c.appSizePx
+      : starPhysics.appSizePxForMag(
+        c.appMag - 2.5 * Math.log10(Math.max(dim, DIM_FLOOR)),
         this.filter,
         this.sharedUniforms.uSizeKnee.value,
-      )
-      : c.appSizePx;
-    return starPassRouting(c.appSizePx, c.physSizePx, dimmedAppSizePx);
+      ));
+    return starPassRouting(
+      c.appSizePx, c.physSizePx, eclipseDim, DIM_FLOOR, appSizeAtDim,
+    );
   }
 
   /** Rendered disc diameter (px) for one instance — the CPU mirror of the
