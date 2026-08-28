@@ -82,9 +82,11 @@ const help = helpRoster();
 const installed = zsh !== undefined && fish !== undefined && help !== undefined;
 
 /**
- * `xd://` write devices are a fourth roster, and the one no completion list
- * or `--help` section carries: they arrive as a `write` whose path names them.
- * Scraped from the installed binary so a device omp adds fails here.
+ * `xd://` names are a fourth roster no completion list or `--help` section
+ * carries: they arrive as a `write` whose path names them. Two kinds share
+ * the namespace — four hardcoded resolution devices, and every tool whose
+ * loadMode is `discoverable`, mounted at `xd://<tool>`. Scraped from the
+ * installed binary, which is the only place the set is enumerable.
  */
 function deviceRoster(): string[] | undefined {
   let binary: string;
@@ -100,6 +102,9 @@ function deviceRoster(): string[] | undefined {
 
 const devices = deviceRoster();
 const known = Object.keys(KNOWN_TOOLS);
+
+/** Hardcoded in the resolve/report tools; not tools in their own right. */
+const RESOLUTION_DEVICES = ['propose', 'reject', 'report_issue', 'resolve'];
 
 describe.skipIf(!installed)('omp tool roster', () => {
   it('classifies every tool the shell completions offer', () => {
@@ -127,8 +132,18 @@ describe.skipIf(devices === undefined)('omp xd:// device roster', () => {
     expect(difference(devices as string[], known)).toEqual([]);
   });
 
-  it('holds the devices that exist as literals rather than tool mounts', () => {
-    expect(devices).toEqual(['goal', 'propose', 'reject', 'report_issue', 'resolve']);
+  it('pins the resolution devices, which are not tools and appear nowhere else', () => {
+    for (const device of RESOLUTION_DEVICES) {
+      expect(devices, device).toContain(device);
+      expect(KNOWN_TOOLS[device], device).toBe(true);
+    }
+  });
+
+  it('does not assume the mounted set is fixed', () => {
+    // Anything discoverable mounts, including a custom or MCP tool, so the
+    // scan is a lower bound rather than the whole namespace. An unclassified
+    // one blocks — the fail-closed trade, taken knowingly.
+    expect(devices?.length).toBeGreaterThanOrEqual(RESOLUTION_DEVICES.length);
   });
 });
 

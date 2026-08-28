@@ -242,8 +242,8 @@ export function toolTargets(
         try {
           args = asRecord(JSON.parse(str(input.content)));
         } catch {
-          // `resolve` / `reject` / `propose` / `report_issue` take prose, and a
-          // payload the device cannot parse names no path either way.
+          // `resolve` / `reject` / `propose` take prose, and a payload the
+          // device cannot parse names no path either way.
           return { tool: device, paths: [], mutates: false, unclassified: false };
         }
         return toolTargets(device, args, home);
@@ -256,8 +256,13 @@ export function toolTargets(
       const hashline = hashlinePaths(str(input.input));
       if (hashline.length > 0) return gather(hashline, true, ompTool, home);
       // `edit.mode` can be `replace`/`patch`, whose payload names its file
-      // directly. An edit naming no file at all is unclassified, not harmless.
-      const direct = [str(input.path), str(input.file)].filter((p) => p !== '');
+      // directly, and omp's normalized event view adds derived `path`/`paths`
+      // gate fields. An edit naming no file at all is unclassified.
+      const direct = [
+        str(input.path),
+        str(input.file),
+        ...(Array.isArray(input.paths) ? input.paths.map((entry) => str(entry)) : []),
+      ].filter((p) => p !== '');
       if (direct.length === 0) {
         return { tool: ompTool, paths: [], mutates: true, unclassified: true };
       }
