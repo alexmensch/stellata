@@ -18,11 +18,10 @@ scripts/hooks/
                            Behaviour pinned by tests/readme-guard.test.ts.
   prime-guard.sh           SessionStart: persists the full `bd prime`
                            output and emits a ~460-byte pointer to it.
-                           PreToolUse: blocks every tool call until
-                           that file is Read. Enforces
-                           ~/.claude/CLAUDE.md § Session-start hook
-                           output. Behaviour
-                           pinned by tests/prime-guard.test.ts.
+                           PreToolUse: blocks every tool call until that
+                           file is Read. Enforces ~/.claude/CLAUDE.md
+                           § Session-start hook output. Behaviour pinned
+                           by tests/prime-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
                            without updating its README.md (AGENTS.md

@@ -14,11 +14,6 @@ import { steppedEv } from '../hdr/exposure/exposure-epoch';
 import { toggleFullscreen } from './fullscreen';
 import { toggleControlsHidden } from './controls-hidden';
 
-// Single global keydown listener with a small dispatch table. Every
-// shortcut is a thin wrapper over an existing public API so future
-// behavioural changes propagate automatically — see AGENTS.md and the
-// plan for the rationale.
-
 // Keys that drive the time scrubber while it's open → the widget method
 // each fires. Handled ahead of the main switch since they share one
 // open-gate (and Space defers to an active warp).
