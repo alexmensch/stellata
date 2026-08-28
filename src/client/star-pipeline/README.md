@@ -57,7 +57,10 @@ softness. Pulsation and dust extinction live in the subfolders.
   `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
   values) and `colourPassFor`, the size-terms → colour-pass routing the
   pick mirror shares. The WebGPU port keys its compile-time pass
-  specialization on the same constants.
+  specialization on the same constants. `starPassRouting` reads the
+  split both ways — undimmed and dimmed — for the eclipse debug HUD
+  (`../debug/README.md` § Eclipse routing); nothing in the render path
+  calls it.
 - `star-color-routing-pure.ts` (+ test) — `bestApsisTeff`: picks
   gspphot over gspspec for the per-instance `iTeffApsis` attribute.
   See § Colour routing.

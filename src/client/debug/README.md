@@ -247,7 +247,8 @@ Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,
 rendered pair separation vs disc-radius sum, θ/Σα ratio, front/back,
 target and buffered dim; the fastest way to see WHY a pair is or
-isn't dimming from the current vantage). Drag the
+isn't dimming from the current vantage, and § Eclipse routing for the
+per-member line under it). Drag the
 title bar to move it, click any section header to fold/unfold; both the
 position and per-section collapse state persist in `sessionStorage`
 (resets on reload, since calibration state shouldn't survive between
@@ -273,3 +274,38 @@ too, so a section keeping its own `last` cache is duplicating it.
 Readouts wrap rather than scroll (`white-space: pre-wrap`): the panel is
 `PANEL_WIDTH` = 300 px, and a row wider than that used to run under the
 edge with only a hidden horizontal scrollbar to reach it.
+
+### Eclipse routing — finding a band you cannot see
+
+Under each relation the Eclipse section prints the disc/glow verdict for
+both members:
+
+```
+  pri=GLOW ratio=0.486 <TRAP>  sec=DISC ratio=0.914
+```
+
+`ratio` is `vPhysRatio` as the vertex stages compute it — from the
+**undimmed** quad, which is what makes all three compilations agree
+(`../star-pipeline/README.md` § Star rendering). `<TRAP>` marks a member
+whose *dimmed* quad would have been routed to the other pass. That is
+the band where the split used to tier one star two ways and every pass
+discarded it, so the star drew nowhere.
+
+**`<TRAP>` is not a fault report.** Past the undimmed-routing fix the
+star stays drawn right through it; the marker exists because the band is
+otherwise impossible to find. It renders identically on both sides, it
+is narrow, and no smoke has ever hit it by accident.
+
+To smoke an eclipse-routing change: focus an eclipsing pair with a
+renderable orbit, open the panel's Eclipse section, and scrub the clock
+until `<TRAP>` appears on a member. Confirm the star is still on screen
+and its treatment does not pop. Camera distance moves `ratio` (it drives
+`physSize`), so back off or close in until a member sits near 0.5 —
+that is where any dim at all can cross it.
+
+Exposure does **not** move `ratio`: the split is solved from `appSize`
+and `physSize`, and exposure only scales `vPeakL`. So the Exposure
+section's knobs are free to use to get a blown-out disc back under
+control without perturbing what is being tested — the one coupling is
+`uThresholdMag`, which can taper a *faint* star out entirely, so keep to
+a bright pair.

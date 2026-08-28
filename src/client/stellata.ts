@@ -113,6 +113,7 @@ import {
   PHYS_RATIO_THRESHOLD,
   RESOLVED_DISC_MIN_PX,
 } from './star-pipeline/local-pass/star-local-cluster-pure';
+import { type StarPassRouting, starPassRouting } from './star-pipeline/star-pass';
 import { VirtualClock, tToJDE } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
 import { uploadFull } from './util/attribute-upload';
@@ -449,6 +450,10 @@ export class Stellata implements FrameAnchor {
   // session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepassSeam | null = null;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
+    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
+  // Separate from pickSizeScratch: the debug panel reads every frame and
+  // must not clobber a pick walk mid-flight.
+  private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
   // Pure target resolver; the click FSM in onPointerUp + the observe
@@ -1715,6 +1720,23 @@ export class Stellata implements FrameAnchor {
   /** Active eclipse-dim slot count (occluding or decaying). */
   get eclipseActiveDimCount(): number {
     return this.eclipsePhotometryField?.activeDimCount ?? 0;
+  }
+
+  /** Debug-HUD view of the disc/glow routing for one star at a given
+   *  eclipse dim: the pass the shaders route it to, and the pass a
+   *  dimmed quad would have picked (`star-pipeline/README.md` § Star
+   *  rendering). The only way to see the trap band, which draws
+   *  identically either side of it. */
+  starPassRoutingFor(idx: number, eclipseDim: number): StarPassRouting {
+    const c = this.renderedSizeComponentsFor(idx, this.passDebugScratch);
+    const dimmedAppSizePx = eclipseDim > 0 && eclipseDim < 1
+      ? starPhysics.appSizePxForMag(
+        c.appMag - 2.5 * Math.log10(eclipseDim),
+        this.filter,
+        this.sharedUniforms.uSizeKnee.value,
+      )
+      : c.appSizePx;
+    return starPassRouting(c.appSizePx, c.physSizePx, dimmedAppSizePx);
   }
 
   /** Rendered disc diameter (px) for one instance — the CPU mirror of the

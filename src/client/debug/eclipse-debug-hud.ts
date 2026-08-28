@@ -2,6 +2,7 @@
 // readout for the focused star (or all active dims when unfocused).
 
 import type { Stellata } from '../stellata';
+import { STAR_PASS_DISC } from '../star-pipeline/star-pass';
 import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
 import { AU_PC } from '../util/astronomy-constants';
 
@@ -14,6 +15,16 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
   const { root, body } = buildDiagnosticReadout({ onResetLatches: () => {} });
 
   const au = (pc: number) => (pc / AU_PC).toPrecision(3);
+
+  // The disc/glow routing both members resolve to, and whether a dimmed
+  // quad would have picked the other pass — the band a partially
+  // eclipsed star used to vanish in, and the only way to find it, since
+  // it renders identically either side.
+  const route = (label: string, idx: number, dim: number) => {
+    const r = stellata.starPassRoutingFor(idx, dim);
+    return `${label}=${r.routed === STAR_PASS_DISC ? 'DISC' : 'GLOW'}`
+      + ` ratio=${r.physRatio.toFixed(3)}${r.trap ? ' <TRAP>' : ''}`;
+  };
 
   const onFrame = () => {
     if (!visible || frameCount++ % UPDATE_EVERY_N_FRAMES !== 0) return;
@@ -43,6 +54,10 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
         + ` front=${res.front === 'primary' ? 'pri' : 'sec'}`
         + ` dim→${res.dim.toFixed(3)}`
         + ` buf=${r.bufPrimary.toFixed(3)}/${r.bufSecondary.toFixed(3)}`,
+      );
+      lines.push(
+        `  ${route('pri', r.primaryIdx, r.bufPrimary)}`
+        + `  ${route('sec', r.secondaryIdx, r.bufSecondary)}`,
       );
     }
     if (rows.length > 12) lines.push(`… +${rows.length - 12} more`);
