@@ -1,8 +1,7 @@
 # Stellata working rules
 
-Restates rules `AGENTS.md` carries in full. Nothing here may be the only copy
-of a rule: a user-level `~/.omp/agent/RULES.md` would shadow this file outright
-rather than concatenate with it. See `.omp/README.md`.
+Restates rules `AGENTS.md` carries in full, so the session keeps them after a
+long conversation has pushed the opening context out of reach.
 
 ## Git
 

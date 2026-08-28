@@ -21,14 +21,16 @@ type Lifecycle = (
   ctx: { cwd: string; sessionManager: { getSessionId(): string } },
 ) => Promise<void>;
 
+/** Every event id the bridge subscribed to, so a stray one is visible. */
+let subscribed: string[];
+
 let main: string;
 let feature: string;
 let state: string;
 let sessions = 0;
 let sessionId: string;
-let handlers: { toolCall?: ToolCall; compact?: Lifecycle };
+let handlers: { toolCall?: ToolCall };
 let originalTmp: string | undefined;
-let originalBd: string | undefined;
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], {
@@ -46,10 +48,11 @@ function write(root: string, rel: string, body = 'placeholder\n'): string {
 
 function register(): void {
   handlers = {};
+  subscribed = [];
   ompBridge({
     on(event: string, handler: ToolCall | Lifecycle) {
+      subscribed.push(event);
       if (event === 'tool_call') handlers.toolCall = handler as ToolCall;
-      if (event === 'session_compact') handlers.compact = handler as Lifecycle;
     },
     logger: { warn() {} },
   } as never);
@@ -66,12 +69,6 @@ async function call(
   );
 }
 
-/** Satisfy the prime gate the way a session does: read the persisted file. */
-async function readPrime(cwd = feature): Promise<void> {
-  const primeFile = join(state, 'claude-prime-guard', `prime-${sessionId}.md`);
-  const verdict = await call('read', { path: primeFile }, cwd);
-  expect(verdict).toBeUndefined();
-}
 
 beforeEach(() => {
   main = realpathSync(mkdtempSync(join(tmpdir(), 'omp-bridge-main-')));
@@ -89,53 +86,34 @@ beforeEach(() => {
   feature = join(main, '.claude/worktrees/wt');
   git(main, 'worktree', 'add', '-q', '-b', 'worktree-wt', feature);
 
-  const bd = join(state, 'bd-stub.sh');
-  writeFileSync(bd, '#!/bin/sh\nprintf "Persistent Memories (3)\\nstub prime\\n"\n');
-  chmodSync(bd, 0o755);
 
   originalTmp = process.env.TMPDIR;
-  originalBd = process.env.PRIME_GUARD_BD;
   process.env.TMPDIR = state;
-  process.env.PRIME_GUARD_BD = bd;
   register();
 });
 
 afterEach(() => {
   if (originalTmp === undefined) delete process.env.TMPDIR;
   else process.env.TMPDIR = originalTmp;
-  if (originalBd === undefined) delete process.env.PRIME_GUARD_BD;
-  else process.env.PRIME_GUARD_BD = originalBd;
   git(main, 'worktree', 'remove', '--force', feature);
   rmSync(main, { recursive: true, force: true });
   rmSync(state, { recursive: true, force: true });
 });
 
-describe('prime gate', () => {
-  it('blocks every call until the persisted prime file is read', async () => {
-    const blocked = await call('todo', { action: 'list' });
-    expect(blocked?.reason).toMatch(/has not read its bd prime context/);
-    await readPrime();
-    expect(await call('todo', { action: 'list' })).toBeUndefined();
+describe('prime context', () => {
+  it('gates nothing — the bd context is an always-apply rule, not a sentinel', () => {
+    // Claude Code needs prime-guard because its SessionStart payload is
+    // truncated to 2KB. omp injects .omp/rules/bd-prime.md into the system
+    // prompt, which compaction rebuilds, so there is nothing to re-arm.
+    expect(subscribed).toEqual(['tool_call']);
   });
 
-  it('re-arms after a compaction, which summarises the prime text away', async () => {
-    await readPrime();
+  it('lets the first call of a session straight through', async () => {
     expect(await call('todo', { action: 'list' })).toBeUndefined();
-
-    await handlers.compact?.(
-      {},
-      { cwd: feature, sessionManager: { getSessionId: () => sessionId } },
-    );
-
-    const blocked = await call('todo', { action: 'list' });
-    expect(blocked?.reason).toMatch(/has not read its bd prime context/);
   });
 });
 
 describe('trunk rule', () => {
-  beforeEach(async () => {
-    await readPrime();
-  });
 
   it('blocks a commit and every push spelling on main', async () => {
     for (const command of [
@@ -216,9 +194,6 @@ describe('trunk rule', () => {
 });
 
 describe('github pr_push', () => {
-  beforeEach(async () => {
-    await readPrime();
-  });
 
   it('blocks when the recorded PR head ref is protected', async () => {
     git(feature, 'config', 'branch.worktree-wt.ompPrHeadRef', 'main');
@@ -243,7 +218,6 @@ describe('github pr_push', () => {
 
 describe('main-worktree rule', () => {
   beforeEach(async () => {
-    await readPrime();
     await call('read', { path: join(main, 'src/thing/README.md') });
   });
 
@@ -315,9 +289,6 @@ describe('main-worktree rule', () => {
 });
 
 describe('scout pass', () => {
-  beforeEach(async () => {
-    await readPrime();
-  });
 
   it('blocks a read into a folder whose README is unread, then allows it', async () => {
     const target = join(feature, 'src/thing/thing.ts');
@@ -337,9 +308,6 @@ describe('scout pass', () => {
 });
 
 describe('unclassified tools', () => {
-  beforeEach(async () => {
-    await readPrime();
-  });
 
   it('blocks a tool the bridge has never heard of', async () => {
     const verdict = await call('teleport', { path: 'src/thing/thing.ts' });
@@ -355,7 +323,6 @@ describe('unclassified tools', () => {
 
 describe('guard failure', () => {
   it('throws when a guard cannot be spawned, so omp fails the call closed', async () => {
-    await readPrime();
     const guard = join(__dirname, '../scripts/hooks/readme-guard.sh');
     const mode = statSync(guard).mode;
     chmodSync(guard, 0o000);

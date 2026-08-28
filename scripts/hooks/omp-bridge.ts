@@ -25,7 +25,6 @@ import {
 const HOOK_DIR = dirname(fileURLToPath(import.meta.url));
 const README_GUARD = join(HOOK_DIR, 'readme-guard.sh');
 const COMMIT_SWEEP_GUARD = join(HOOK_DIR, 'commit-sweep-guard.sh');
-const PRIME_GUARD = join(HOOK_DIR, 'prime-guard.sh');
 
 const ALLOW_UNKNOWN = process.env.STELLATA_OMP_ALLOW_UNKNOWN_TOOLS === '1';
 
@@ -191,60 +190,11 @@ function prHeadRef(cwd: string, branch: string): string | undefined {
   return git(cwd, ['config', '--get', `branch.${branch}.ompPrHeadRef`]);
 }
 
-const primed = new Set<string>();
-const primeCleared = new Set<string>();
-
-/**
- * Arm prime-guard for this session. Driven from tool_call rather than
- * session_start, which does not fire on a resumed session; re-armed after a
- * compaction, when the prime text has just been summarised away.
- */
-function ensurePrimeArmed(cwd: string, sessionId: string, force: boolean): void {
-  if (force) primeCleared.delete(sessionId);
-  else if (primed.has(sessionId)) return;
-  primed.add(sessionId);
-  const result = spawnSync(PRIME_GUARD, {
-    input: JSON.stringify({
-      hook_event_name: 'SessionStart',
-      session_id: sessionId,
-      cwd,
-    }),
-    cwd,
-    encoding: 'utf-8',
-  });
-  if (result.error !== undefined) {
-    throw new Error(`omp-bridge: cannot run ${PRIME_GUARD}: ${result.error.message}`);
-  }
-}
-
-/**
- * Once the prime file has been read the sentinel is gone and the guard can
- * only allow, until a compaction re-arms it. Remembering that spares every
- * later call a shell spawn on omp's event loop — the whole per-call floor.
- */
-function primeBlock(
-  toolName: string,
-  cwd: string,
-  sessionId: string,
-  filePath: string | undefined,
-  command: string | undefined,
-): string | undefined {
-  if (primeCleared.has(sessionId)) return undefined;
-  ensurePrimeArmed(cwd, sessionId, false);
-  const reason = runGuard(
-    PRIME_GUARD,
-    buildPayload({ toolName, sessionId, cwd, filePath, command }),
-    cwd,
-    sessionId,
-  );
-  if (reason === undefined) primeCleared.add(sessionId);
-  return reason;
-}
-
 export default function ompBridge(pi: BridgeApi): void {
-  pi.on('session_compact', async (_event, ctx) => {
-    ensurePrimeArmed(ctx.cwd, ctx.sessionManager.getSessionId(), true);
-  });
+  // No prime gate here. Claude Code needs one because its SessionStart
+  // payload is truncated to 2KB; omp injects `.omp/rules/bd-prime.md` into
+  // the system prompt as an always-apply rule, which compaction rebuilds
+  // rather than summarises, so the context is simply always present.
 
   pi.on('tool_call', async (event, ctx) => {
     const sessionId = ctx.sessionManager.getSessionId();
@@ -253,15 +203,6 @@ export default function ompBridge(pi: BridgeApi): void {
       event.toolName === 'bash' && typeof event.input.command === 'string'
         ? event.input.command
         : undefined;
-
-    const prime = primeBlock(
-      claudeToolName(target.tool) ?? event.toolName,
-      ctx.cwd,
-      sessionId,
-      target.paths[0],
-      command,
-    );
-    if (prime !== undefined) return { block: true, reason: prime };
 
     if (target.unclassified && !ALLOW_UNKNOWN) {
       // `target.tool` is the effective tool: for a device write it is the

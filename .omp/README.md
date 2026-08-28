@@ -12,11 +12,21 @@ repo is worked in. Claude Code's equivalent lives in `.claude/`.
                         scripts/hooks/omp-bridge.ts. omp auto-discovers
                         .ts under .omp/extensions with no config entry,
                         so this file is the whole wiring.
+  rules/
+    bd-prime.md         `bd prime --full` as an always-apply rule, so
+                        the memories are in the system prompt every
+                        turn instead of behind a gate.
+    code-comments.md    TTSR trigger: the forbidden comment patterns,
+                        refused as an edit is written.
   config.yml            Per-tool approval routing for the two tools the
                         bridge cannot classify. Nothing else.
   RULES.md              Sticky prose rules, re-injected every turn.
   README.md             This file.
 ```
+
+Both files under `rules/` are generated — `pnpm run build:omp-rules`.
+They are committed because rule discovery applies gitignore filtering,
+and because a rule set that only exists on one machine is not a rule.
 
 ## Why the entry point is a re-export
 

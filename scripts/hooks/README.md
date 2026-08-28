@@ -33,23 +33,37 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
-  omp-bridge.ts            omp extension factory. Replays the three
-                           guards above against omp's `tool_call`
-                           event, and natively enforces the two rules
-                           no .sh guard covers: writes belong in a
-                           secondary worktree, and main/master takes
-                           no commit or push. Behaviour pinned by
-                           tests/omp-bridge.test.ts.
+  omp-bridge.ts            omp extension factory. Replays readme-guard
+                           and commit-sweep-guard against omp's
+                           `tool_call` event, and natively enforces the
+                           two rules no .sh guard covers: writes belong
+                           in a secondary worktree, and main/master
+                           takes no commit or push. No prime gate —
+                           see § There is no prime gate under omp.
+                           Pinned by tests/omp-bridge.test.ts.
   omp-bridge-pure.ts       Path extraction and command classification
                            for the bridge — no I/O. Pinned by
                            tests/omp-bridge-pure.test.ts, with the
                            tool roster held against the installed omp
                            by tests/omp-tool-roster.test.ts.
+  comment-rules.json       The forbidden comment patterns, once. Read
+                           by tests/code-comment-rules.test.ts, by
+                           commit-sweep-guard.sh, and by the generator
+                           below. The two hand-copied sets that
+                           preceded it had already drifted apart.
+  comment-rules.ts         Typed reader for that file.
+  comment-rule-body.md     Prose the generated TTSR rule shows the
+                           model. A separate file so the generator
+                           carries no literal the rules forbid.
+  build-omp-rules.ts       Writes .omp/rules/*.md. `--check` verifies
+                           the deterministic one; see § Regenerating
+                           the rules.
 ```
 
 `.omp/extensions/stellata-guards.ts` re-exports the bridge factory;
-that is the whole of omp's wiring. See `.omp/README.md` for why the
-entry point sits there rather than in `.omp/hooks/pre/`.
+that plus `.omp/rules/` and `.omp/config.yml` is the whole of omp's
+wiring. See `.omp/README.md` for why the entry point sits there rather
+than in `.omp/hooks/pre/`.
 
 ## How readme-guard works
 
@@ -302,28 +316,35 @@ separately, on the `branch` argument and on the `ompPrHeadRef` that
 `pr_checkout` recorded in branch config — the remote ref the push
 actually writes.
 
-### The prime gate does not depend on a session event
+### There is no prime gate under omp
 
-Under Claude Code, SessionStart persists `bd prime --full` and re-arms
-on compact and resume. Under omp, `session_start` **does not fire on a
-resumed session**, so arming from it would leave a resumed session
-ungated. The bridge instead arms lazily from `tool_call`, which always
-fires: the first call of a session runs prime-guard's SessionStart
-branch, then its PreToolUse branch. The deny message names the file to
-read, so no separate notification is needed.
+Under Claude Code there has to be one: `bd prime --hook-json` emits more
+SessionStart context than the host will inline, so prime-guard persists
+the rest and blocks until it is read.
 
-`session_compact` re-arms it, because compaction is what summarises
-the prime text away. Injecting the text back was considered and
-rejected: `session.compacting`'s `context` return only feeds the
-summarisation prompt, and `preserveData` is stored on the compaction
-entry rather than re-entering the context, so neither guarantees the
-content survives. Re-arming the gate does.
+omp has no such limit. `.omp/rules/bd-prime.md` carries the same
+`bd prime --full` output as an **always-apply rule**, which omp renders
+into the system prompt's `<generic-rules>` block every turn. Compaction
+rebuilds the system prompt rather than summarising it, so the content
+cannot be lost — there is nothing to re-arm, no sentinel, and no
+`session_compact` handler. The bead proposed stashing the text in
+`preserveData`; both that and the gate are answers to a problem this
+harness does not have.
 
-Once the gate clears, the verdict is remembered for the session:
-the sentinel is gone and the guard can only allow until a compaction
-re-arms it. Every `tool_call` handler here runs `spawnSync` on omp's
-event loop, so a spawn that cannot change the answer is a freeze the
-user sees. That one cache is most of the per-call floor.
+A rule carrying a `condition` is routed to TTSR *instead of* the
+always-apply bucket, so `bd-prime.md` must never grow one.
+
+### Regenerating the rules
+
+`pnpm run build:omp-rules` writes both files in `.omp/rules/`:
+
+- `code-comments.md` — deterministic, generated from
+  `comment-rules.json`. `tests/code-comment-rules.test.ts` runs the
+  generator with `--check` and fails when it is stale.
+- `bd-prime.md` — `bd prime --full`, so it cannot be checked in CI,
+  which has no bd. Staleness here is soft: an out-of-date memory list,
+  not the missing one the Claude-side gate exists to prevent. Re-run
+  after `bd remember` / `bd forget`.
 
 ## What the omp bridge cannot reach
 
@@ -331,10 +352,22 @@ Documented rather than pretended away — and where omp's own approval
 layer reaches further than a `tool_call` handler can, it is used
 instead: `.omp/config.yml` routes `eval` and `hub` to an operator
 prompt, because `tools.approval.<tool>` is honoured in every mode.
+- **`debug`** can open a file with no static argument naming it.
+- **`browser` and `computer`** drive software that can write files.
+- **`eval` and `hub`** reach the filesystem through a persistent kernel
+  and an arbitrary `application` + `args`. Neither is classifiable
+  here, so both are routed to approval in `.omp/config.yml` rather
+  than listed as unreachable.
+- **An MCP or custom tool** mounts under `xd://<name>` as soon as its
+  `loadMode` is `discoverable`, so the device namespace is not a fixed
+  list. `KNOWN_TOOLS` cannot enumerate one ahead of time and it will
+  block until triaged. That is the fail-closed trade taken knowingly.
 
-- **`bash` writing through a route the classifier misses.**
-  `bashWriteTargets` covers `sed`/`perl` with an in-place flag anywhere
-  in the cluster, `awk -i inplace`, `tee`, and `>`/`>>` redirection
+`task` subagents are **not** on this list. They were, on the belief that
+they load no extensions; the source says otherwise — the task executor
+initialises an `extensionRunner` and emits `tool_call` on it, and
+re-initialises after a revive precisely so the fail-closed gate keeps
+working. Delegated work is gated by the same bridge.
   including a descriptor prefix — every form that names its target as
   a literal argument. A write reached through command substitution, a
   heredoc with no redirect on the same line, a script file, `cp`/`mv`,

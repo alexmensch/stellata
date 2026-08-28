@@ -4,9 +4,11 @@
 // docs/authoring-patterns.md § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
+import { loadCommentRules } from '../scripts/hooks/comment-rules';
 
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'scripts'];
@@ -33,61 +35,15 @@ interface Pattern {
   re: RegExp;
 }
 
-// Stellata bead IDs follow the shape `<epic>.<NN>[.<MM>]` where the
-// epic is a short alphanumeric token. Mostly 3 characters (`9mm`,
-// `dch`, `lmh`, `1ui`) but bd mints longer ones too (`xypg`, `3bsf`,
-// `o6nx`, `t2u5`, `uadc`, `zau1`) — pinning the length to exactly 3
-// silently exempted every ID built on those, which is most of the
-// epics in active use. Matching the shape rather than an enumerated
-// list keeps the regex future-proof: new epics auto-covered without
-// test edits.
-//
-// The 5-char ceiling is what keeps the bare-ID pattern from reading an
-// ordinary lowercase word before a decimal (`chunk.0`) as a bead ID.
-// No epic has exceeded it; raise it if one does.
-//
-// The negative lookahead `(?![0-9]{3,}\b)` rejects pure-numeric
-// prefixes so decimal numbers like `365.25`, `180.0`, `100.5`
-// don't false-fire. Every real stellata epic contains at least one
-// letter, so this preserves coverage without enumerating epics.
-const EPIC_SHAPE = '(?![0-9]{3,}\\b)[a-z0-9]{3,5}';
-
-const FORBIDDEN: Pattern[] = [
-  {
-    name: 'bead-ID with stellata- prefix',
-    // Trailing `(?:\.\d+)*` so a sub-sub-issue like
-    // `stellata-a7d.2.11` matches in full (better diagnostic snippet);
-    // the trailing `\b` keeps filename-style references like
-    // `stellata-events.test.ts` from matching as `stellata-eve`.
-    re: new RegExp(`\\bstellata-${EPIC_SHAPE}(?:\\.\\d+)*\\b`),
-  },
-  {
-    name: 'bare bead-ID (<epic>.NN[.MM…])',
-    // Lookbehind excludes word char (preceding identifier), hyphen
-    // (e.g. `hip-2.5`), backslash (Python `\t20.85` TSV escapes would
-    // otherwise read as `t20.8`), AND dot — a dotted path segment before
-    // a numeric one (`public/catalog.bin.0`) is otherwise indistinguishable
-    // from `<epic>.NN`. Trailing `(?:\.\d+)+` keeps sub-sub-issues like
-    // `a7d.2.11` in the match span.
-    re: new RegExp(`(?<![\\w\\\\.-])${EPIC_SHAPE}(?:\\.\\d+)+\\b`),
-  },
-  {
-    name: 'bead-relative time (pre-/post-/since-<epic>.NN)',
-    // The `.NN` suffix is required to distinguish bead-relative refs
-    // (`pre-dch.5`, `post-9mm.43`) from legitimate English compounds
-    // (`pre-fix`, `pre-cap`, `post-build`) that happen to follow a
-    // 3-char word.
-    re: new RegExp(`(?<![\\w\\\\-])(?:pre|post|since)-${EPIC_SHAPE}\\.\\d`),
-  },
-  {
-    name: 'memory-key wikilink [[name]]',
-    re: /\[\[[a-z][a-z0-9-]+\]\]/,
-  },
-  {
-    name: 'PR reference (see PR # / extracted in PR)',
-    re: /\b(?:see PR\s*#\s*\d|extracted in PR\b)/i,
-  },
-];
+// scripts/hooks/comment-rules.json is the single source of truth: this suite,
+// commit-sweep-guard.sh and the generated TTSR rule all read it. It drifted
+// once already — the shell copy pinned the epic slug to three characters after
+// this file widened it to five, so every bead on a four- or five-character
+// epic stopped being caught at commit time.
+const FORBIDDEN: Pattern[] = loadCommentRules(ROOT).map((entry) => ({
+  name: entry.name,
+  re: new RegExp(entry.pattern, entry.flags),
+}));
 
 const walk = (dir: string): Generator<string> =>
   walkFiles(dir, {
@@ -295,5 +251,18 @@ describe('module docstring length', () => {
       'allowlist exists to shrink over time, and stale entries hide real ' +
       'progress.\n'
     );
+  });
+});
+
+describe('generated omp rule', () => {
+  it('matches the pattern source it is generated from', () => {
+    // .omp/rules/code-comments.md is the TTSR trigger omp fires as an edit is
+    // written. It is generated from the same comment-rules.json this suite
+    // reads, so a pattern change that skips the regen would silently leave
+    // omp enforcing the old set.
+    execFileSync('npx', ['tsx', 'scripts/hooks/build-omp-rules.ts', '--check'], {
+      cwd: ROOT,
+      encoding: 'utf-8',
+    });
   });
 });

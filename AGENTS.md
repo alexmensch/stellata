@@ -245,6 +245,7 @@ pnpm run build           # full production build
 pnpm run typecheck       # tsc --noEmit over src/ and scripts/
 pnpm test                # vitest (regression-prevention suite)
 pnpm run deploy          # wrangler deploy (requires auth)
+pnpm run build:omp-rules # regenerate .omp/rules/ (after bd remember/forget)
 ```
 
 Watch/coverage variants of `pnpm test`, the catalogue verify script,
