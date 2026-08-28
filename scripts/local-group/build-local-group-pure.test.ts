@@ -1,14 +1,19 @@
 import { describe, it, expect } from 'vitest';
+import { lgObjectStub } from './lg-object-mock';
 import {
+  applyAliasMeta,
   basisToQuaternion,
   buildEmission,
   buildLvdbDefault,
   buildOrientationQuat,
   buildStandaloneOverride,
+  canonicalDesignation,
   displayName,
   filterForRendering,
   isCatalogDesignation,
   mergeRowAndOverride,
+  nameTier,
+  orderAliases,
   parseOrient,
   projectedSemiMajorPc,
   renderedWireframeAxes,
@@ -334,7 +339,8 @@ describe('displayName overrides + default type suffix', () => {
     expect(displayName('NGC 6822')).toBe('NGC 6822');
     expect(displayName('IC 10')).toBe('IC 10');
     expect(displayName('IC 1613')).toBe('IC 1613');
-    // LVDB's SIMBAD-spaced shortform normalises to match M31 / M33.
+    // No override entry: the conventional-form rule closes up LVDB's
+    // SIMBAD-spaced shortform on its own.
     expect(displayName('M 32')).toBe('M32');
     expect(displayName('M31')).toBe('M31');
     expect(displayName('M33')).toBe('M33');
@@ -365,7 +371,6 @@ describe('displayName overrides + default type suffix', () => {
       'LMC',
       'Leo A',
       'Leo P',
-      'M 32',
       'Pegasus W',
       'Pegasus dIrr',
       'Phoenix',
@@ -728,5 +733,102 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
     // ratio for a real object is pinned in
     // local-group-emission-calibration.test.ts, which has the catalogue.
     expect(roundN(u99(1), 3)).toBe(4.557);
+  });
+});
+
+describe('preferred-name precedence', () => {
+  it('tiers a designation by its catalogue prefix', () => {
+    expect(nameTier('Andromeda Galaxy')).toBe('proper');
+    expect(nameTier("Barnard's Galaxy")).toBe('proper');
+    expect(nameTier('M31')).toBe('messier');
+    expect(nameTier('M 110')).toBe('messier');
+    expect(nameTier('Messier 32')).toBe('messier');
+    expect(nameTier('NGC 224')).toBe('ngc-ic');
+    expect(nameTier('IC 4895')).toBe('ngc-ic');
+    expect(nameTier('DDO 221')).toBe('catalogue');
+    expect(nameTier('UGCA 444')).toBe('catalogue');
+  });
+
+  it('does not read a bare constellation name as a Messier designation', () => {
+    // The Messier probe needs the digit: "Mensa"/"Musca" start with M.
+    expect(nameTier('Mensa')).toBe('proper');
+    expect(nameTier('Musca')).toBe('proper');
+  });
+
+  it('orders aliases proper → Messier → NGC/IC → other catalogue', () => {
+    expect(orderAliases(['DDO 221', 'NGC 224', 'M31', 'Andromeda Galaxy'], 'M110'))
+      .toEqual(['Andromeda Galaxy', 'M31', 'NGC 224', 'DDO 221']);
+  });
+
+  it('keeps curation order inside a tier, and drops the display name + duplicates', () => {
+    expect(orderAliases(['NGC 598', 'NGC 224', 'M31', 'NGC 224'], 'M31'))
+      .toEqual(['NGC 598', 'NGC 224']);
+  });
+});
+
+describe('canonicalDesignation — conventional written form', () => {
+  it('closes up Messier numbers and spaces every other catalogue', () => {
+    // Wikipedia's Andromeda infobox: "M31, NGC 224, UGC 454, PGC 2557".
+    expect(canonicalDesignation('M 31')).toBe('M31');
+    expect(canonicalDesignation('Messier 31')).toBe('M31');
+    expect(canonicalDesignation('M31')).toBe('M31');
+    expect(canonicalDesignation('NGC224')).toBe('NGC 224');
+    expect(canonicalDesignation('ngc 224')).toBe('NGC 224');
+    expect(canonicalDesignation('IC4895')).toBe('IC 4895');
+    expect(canonicalDesignation('UGCA444')).toBe('UGCA 444');
+    expect(canonicalDesignation('DDO 221')).toBe('DDO 221');
+  });
+
+  it('leaves compound catalogue numbers and non-designations alone', () => {
+    expect(canonicalDesignation('ESO 410-G005')).toBe('ESO 410-G005');
+    expect(canonicalDesignation('Andromeda Galaxy')).toBe('Andromeda Galaxy');
+    expect(canonicalDesignation('Leo A')).toBe('Leo A');
+    expect(canonicalDesignation('Mensa')).toBe('Mensa');
+  });
+
+  it('collapses the three spellings of one designation to a single alias', () => {
+    expect(orderAliases(
+      ['M 31', 'Messier 31', 'M31', 'NGC 224'].map(canonicalDesignation),
+      'Andromeda Galaxy',
+    )).toEqual(['M31', 'NGC 224']);
+  });
+});
+
+describe('applyAliasMeta — canonical promotion', () => {
+  const objAt = lgObjectStub;
+
+  it('promotes the canonical name and keeps the demoted one typeable', () => {
+    const out = applyAliasMeta(objAt('M31'), {
+      name: 'M31',
+      type: 'Spiral galaxy',
+      aliases: ['Andromeda Galaxy', 'NGC 224'],
+      canonical: 'Andromeda Galaxy',
+    });
+    expect(out.name).toBe('Andromeda Galaxy');
+    expect(out.aliases).toEqual(['M31', 'NGC 224']);
+  });
+
+  it('leaves the derived name alone with no promotion, but still orders the aliases', () => {
+    const out = applyAliasMeta(objAt('SMC'), {
+      name: 'SMC',
+      type: 'Magellanic irregular',
+      aliases: ['SMC', 'NGC 292', 'Nubecula Minor'],
+    });
+    expect(out.name).toBe('SMC');
+    // The self-referential 'SMC' alias drops out as the display name.
+    expect(out.aliases).toEqual(['Nubecula Minor', 'NGC 292']);
+  });
+
+  it('derives the type from the pre-promotion name', () => {
+    // Without a curated type the suffix fallback decides, and the
+    // promotion strips the suffix the fallback reads.
+    const out = applyAliasMeta(objAt('LGS 3 Dwarf Spheroidal'), {
+      name: 'LGS 3',
+      type: '',
+      aliases: ['Pisces Dwarf'],
+      canonical: 'Pisces Dwarf',
+    });
+    expect(out.name).toBe('Pisces Dwarf');
+    expect(out.type).toBe('Dwarf spheroidal');
   });
 });

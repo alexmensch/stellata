@@ -14,9 +14,14 @@ overrides.tsv       hand-curated structural detail for LMC, SMC,
 aliases.tsv         search crosswalk + morphological type for notable
                     objects: name → type + |-separated alias
                     designations (Messier/NGC/IC cross-IDs, common
-                    names). Objects without a row default their type
-                    from the display-name suffix; an alias row naming
-                    no rendered object fails the build.
+                    names) + an optional `canonical` promotion. Each
+                    designation is listed once, in conventional form
+                    (M31, NGC 224); the build normalises what it reads
+                    and regenerates typeable variants at search time.
+                    Objects without a row default their type from the
+                    display-name suffix; an alias row naming no rendered
+                    object fails the build, and so does a `canonical`
+                    naming a designation the row itself doesn't list.
 ```
 
 Refresh of `lvdb-snapshot.csv` is a manual step — the build never

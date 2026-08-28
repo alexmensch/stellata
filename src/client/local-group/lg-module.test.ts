@@ -7,7 +7,7 @@ import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
-import { createLgKindModule, formatLgSearchDistance } from './lg-module';
+import { createLgKindModule, designationVariants } from './lg-module';
 
 function rawObject(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -84,6 +84,15 @@ describe('lg kind module', () => {
     expect(() => m.setEmissionEnabled(false)).not.toThrow();
   });
 
+  it('regenerates the Messier spellings the catalog does not carry', () => {
+    expect(designationVariants('M31')).toEqual(['M 31', 'Messier 31']);
+    expect(designationVariants('M110')).toEqual(['M 110', 'Messier 110']);
+    expect(designationVariants('NGC 224')).toEqual([]);
+    expect(designationVariants('Andromeda Galaxy')).toEqual([]);
+    // "Mensa" starts with M but carries no number.
+    expect(designationVariants('Mensa')).toEqual([]);
+  });
+
   it('answers every leg from the loaded catalog after attach', async () => {
     stubFetch(true);
     const m = createLgKindModule();
@@ -96,9 +105,12 @@ describe('lg kind module', () => {
 
     expect(m.sids()).toEqual([1, 2]);
     expect(m.searchEntries().map((e) => e.label))
-      .toEqual(['M31', 'Andromeda Galaxy', 'NGC 224', 'Sculptor Dwarf Spheroidal']);
-    expect(m.searchEntries()[0].displayCon).toBe('Spiral galaxy · 776 kpc');
-    expect(m.searchEntries()[3].displayCon).toBe('Dwarf spheroidal · 84 kpc');
+      .toEqual([
+        'M31', 'Andromeda Galaxy', 'NGC 224', 'M 31', 'Messier 31',
+        'Sculptor Dwarf Spheroidal',
+      ]);
+    expect(m.searchEntries()[0].displayCon).toBe('Spiral galaxy');
+    expect(m.searchEntries()[5].displayCon).toBe('Dwarf spheroidal');
     expect(m.displayName(1)).toBe('Sculptor Dwarf Spheroidal');
     expect(m.pinnable(0)).toBe(true);
     expect(m.pinnable(5)).toBe(false);
@@ -145,11 +157,5 @@ describe('lg kind module', () => {
     // Warp hides the reference wireframe — and with it the pick.
     sceneLayer.update?.(makeFrameCtx(ctx.camera, { distFromSol: 10_000, warpActive: true }));
     expect(pick(400, 300, 14)).toBeNull();
-  });
-
-  it('formatLgSearchDistance switches kpc → Mpc at 1 Mpc', () => {
-    expect(formatLgSearchDistance(84_000)).toBe('84 kpc');
-    expect(formatLgSearchDistance(776_000)).toBe('776 kpc');
-    expect(formatLgSearchDistance(1_200_000)).toBe('1.20 Mpc');
   });
 });
