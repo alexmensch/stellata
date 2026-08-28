@@ -167,16 +167,20 @@ export function buildStarVertexNode(
         ciMod.assign(puls.y.mul(-0.5).mul(c));
       });
 
-      const eclipseDimMag = float(0.0).toVar();
+      // appMagRoute stays undimmed all the way to the size solve: it is
+      // what the disc/glow split routes on, and D3/D4 never fold the dim
+      // at all (../../star-pipeline/README.md § Star rendering). Carrying
+      // it — rather than subtracting the dim back off later — is what
+      // makes it bit-equal to the appMag those pipelines derive, since it
+      // sees the identical sequence of adds.
+      const appMagRoute = float(0.0).toVar();
+      appMagRoute.assign(appMag);
       if (pass === STAR_PASS_GLOW) {
         // Glow pass only: the disc pass resolves an eclipse occlusion
         // geometrically in the local depth pass, so folding the dim there
-        // would dim the back disc's non-occluded fragments too. The
-        // magnitude is kept so the pass split can be solved without it —
-        // see the routeAppSize note below.
+        // would dim the back disc's non-occluded fragments too.
         If(eclipseDim.lessThan(1.0), () => {
-          eclipseDimMag.assign(log(eclipseDim).mul(-2.5 / Math.LN10));
-          appMag.addAssign(eclipseDimMag);
+          appMag.addAssign(log(eclipseDim).mul(-2.5 / Math.LN10));
         });
       }
 
@@ -226,6 +230,7 @@ export function buildStarVertexNode(
           });
         });
         appMag.addAssign(absorbAV);
+        appMagRoute.addAssign(absorbAV);
 
         const teff = stat('iTeffApsis');
         const intrinsicBv = select(
@@ -290,13 +295,19 @@ export function buildStarVertexNode(
             // discards it as glow-owned — drawn by neither pipeline. Route on
             // the undimmed size so all three agree, matching the GLSL twin
             // and the CPU pick mirror
-            // (../../camera/controls/star-pick-visibility-pure.ts).
-            const routeAppSize = pass === STAR_PASS_GLOW
-              ? perceptualAppSizePxTsl(
-                perceptualDmEffTsl(
-                  appMag.sub(eclipseDimMag), u.uLimitMag, u.uSizeSpan, u.uSizeKnee),
-                u.uSizeMin, u.uSizeMax, u.uSizeSpan)
-              : appSize;
+            // (../../camera/controls/star-pick-visibility-pure.ts). The
+            // re-solve sits behind the same dim test the GLSL ternary uses,
+            // so an undimmed star reuses appSize on both backends.
+            const routeAppSize = float(0.0).toVar();
+            routeAppSize.assign(appSize);
+            if (pass === STAR_PASS_GLOW) {
+              If(eclipseDim.lessThan(1.0), () => {
+                routeAppSize.assign(perceptualAppSizePxTsl(
+                  perceptualDmEffTsl(
+                    appMagRoute, u.uLimitMag, u.uSizeSpan, u.uSizeKnee),
+                  u.uSizeMin, u.uSizeMax, u.uSizeSpan));
+              });
+            }
             physRatio.assign(
               clamp(physSize.div(max(max(routeAppSize, physSize), 0.001)), 0.0, 1.0));
 

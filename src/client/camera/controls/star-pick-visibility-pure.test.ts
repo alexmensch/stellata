@@ -7,7 +7,6 @@ import { appSizePxForMag, type RenderedSizeComponents } from './star-physics';
 import { DEFAULT_FILTER, STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
 import { exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 import { STAR_PASS_DISC, STAR_PASS_GLOW, colourPassFor } from '../../star-pipeline/star-pass';
-import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
 
 // A comfortably-visible naked-eye star: glow-dominant (physSize far
 // under half the quad), a few magnitudes inside the threshold.
@@ -231,18 +230,11 @@ describe('pass split is invariant under the eclipse dim', () => {
       .toBeLessThan(resolveStarPickVisibility(args({ components: crossover })).hitRadius);
   });
 
-  it('exactly one pass owns the star at every dim from 1 down to totality', () => {
-    // Both compilations solve the ratio from the undimmed appSize, so both
-    // reach the same verdict and the two discards stay complementary at
-    // every dim — the ratio simply does not depend on it.
-    const ratio = physSizePx / Math.max(undimmedAppSize, physSizePx);
-    const glowDraws = ratio < PHYS_RATIO_THRESHOLD;
-    expect(glowDraws).toBe(ratio < PHYS_RATIO_THRESHOLD);
-    expect(colourPassFor(undimmedAppSize, physSizePx))
-      .toBe(glowDraws ? STAR_PASS_GLOW : STAR_PASS_DISC);
-    // The dim is a magnitude penalty on the owning pass, so the star stays
-    // drawn — and pickable — until it falls under the ink floor on its own
-    // photometry, which is a different gate from the routing.
+  it('a dim fades the star without unrendering it, until totality collapses it', () => {
+    // The routing input never sees the dim, so the owning pass cannot
+    // change; the dim lands as a magnitude penalty on that pass alone.
+    // Whether the star then survives is the photometric gate's call — a
+    // different question from which pass draws it.
     for (const dim of [1, 0.5, 0.2, DEEP_DIM]) {
       expect(resolveStarPickVisibility(
         args({ components: crossover, eclipseDim: dim }),

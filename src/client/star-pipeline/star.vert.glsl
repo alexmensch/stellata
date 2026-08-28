@@ -382,14 +382,20 @@ void main() {
     // a floored +7.5 mag residual is still visible on a bright
     // close-range back body, and the depth buffer can't hide it (the
     // pair's separation sits inside one log-depth bucket).
-    float eclipseDimMag = 0.0;
-    if (uRenderMode == 0 && iEclipseDim < 1.0) {
+    // appMagRoute stays undimmed all the way to the size solve: it is
+    // what the disc/glow split routes on, and the disc and core-mask
+    // compilations never fold the dim at all (README.md § Star
+    // rendering). Carrying it — rather than subtracting the dim back
+    // off later — is what makes it bit-equal to the appMag those two
+    // derive, since it sees the identical sequence of adds.
+    bool eclipseDimmed = uRenderMode == 0 && iEclipseDim < 1.0;
+    float appMagRoute = appMag;
+    if (eclipseDimmed) {
         if (iEclipseDim <= 0.0) {
             emitOffscreenSentinel(0.0, 0.0);
             return;
         }
-        eclipseDimMag = -2.5 * log(iEclipseDim) / STELLATA_LOG10;
-        appMag += eclipseDimMag;
+        appMag += -2.5 * log(iEclipseDim) / STELLATA_LOG10;
     }
 
     // Visibility prefilter — dust-independent. Spectral mask and distance
@@ -438,6 +444,7 @@ void main() {
         }
     }
     appMag += absorbAV;
+    appMagRoute += absorbAV;
     // Intrinsic B-V from the Apsis-first routing priority. Tier 1/2
     // (Apsis gspphot ∪ gspspec) walks back through Ballesteros⁻¹; tier 3
     // (Ballesteros via catalog ci, with stars-parse's 0.65 solar fallback
@@ -502,9 +509,9 @@ void main() {
         // drawn by neither. Routing on the undimmed size keeps all three
         // compilations in agreement, and matches how the CPU pick mirror
         // already routes (`camera/controls/star-pick-visibility-pure.ts`).
-        float routeAppSize = eclipseDimMag > 0.0
+        float routeAppSize = eclipseDimmed
             ? perceptualAppSizePx(
-                perceptualDmEff(appMag - eclipseDimMag, uLimitMag, uSizeSpan, uSizeKnee),
+                perceptualDmEff(appMagRoute, uLimitMag, uSizeSpan, uSizeKnee),
                 uSizeMin, uSizeMax, uSizeSpan)
             : appSize;
 
