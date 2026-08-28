@@ -5,7 +5,8 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { makeTslCloudMaterials } from '../molecular-clouds/tsl-cloud-materials';
-import { finishMrtMaterial } from './mrt-material';
+import { makeTslChromeLineMaterials } from '../chrome-lines/tsl-chrome-lines';
+import { finishMrtMaterial, finishMrtOutputMaterial } from './mrt-material';
 import type { MrtOutputLayer } from './hdr-pipeline-webgpu';
 import { MOCK_RIM_SPEC, makeMockAbsorptionSpec } from '../../molecular-clouds/cloud-mock';
 
@@ -70,5 +71,70 @@ describe('an MRT emitter may not carry an output-node wrapper', () => {
     // THREE.Material, which does not declare it.
     for (const s of built) expect(s.material.premultipliedAlpha).toBe(false);
     for (const layer of layers) expect(() => layer.setMrtOutputs(true)).not.toThrow();
+  });
+});
+
+// The sibling swap, for a material whose own fragment stage has to survive.
+// `fragmentNode` REPLACES that stage, so installing there would silently drop
+// a fat line's segment coverage — three's round endcaps and the dash discard
+// — leaving a stroke that still draws and still sorts. No GPU-less test sees
+// the pixels, so the install site is what gets pinned.
+describe('the swap that composes over three\'s own fragment', () => {
+  it('installs on outputNode and leaves fragmentNode alone', () => {
+    const m = new NodeMaterial();
+    finishMrtOutputMaterial(m, () => outputs());
+    expect(m.outputNode).not.toBeNull();
+    expect(m.fragmentNode).toBeNull();
+  });
+
+  it('swaps outputNode between the two graphs, and keeps fragmentNode null', () => {
+    const m = new NodeMaterial();
+    const built = finishMrtOutputMaterial(m, () => outputs());
+    const single = m.outputNode;
+    built.setMrtOutputs(true);
+    expect(m.outputNode).not.toBe(single);
+    expect(m.fragmentNode).toBeNull();
+    built.setMrtOutputs(false);
+    expect(m.outputNode).toBe(single);
+  });
+
+  it('forces fog off here too, since it wraps the output node either way', () => {
+    const m = new NodeMaterial();
+    expect(m.fog).toBe(true);
+    finishMrtOutputMaterial(m, () => outputs());
+    expect(m.fog).toBe(false);
+  });
+
+  it('refuses to enter MRT mode with premultipliedAlpha set', () => {
+    const m = new NodeMaterial();
+    m.name = 'test-output-emitter';
+    const built = finishMrtOutputMaterial(m, () => outputs());
+    m.premultipliedAlpha = true;
+    expect(() => built.setMrtOutputs(true)).toThrow(/premultipliedAlpha/);
+  });
+
+  // The live consumer, driven through the same registration syncMode uses.
+  it('lets the fat chrome stroke reach MRT mode with its own stage intact', () => {
+    const layers: MrtOutputLayer[] = [];
+    const fat = makeTslChromeLineMaterials({
+      nodes: nodes(),
+      registerMrtLayer: (layer) => { layers.push(layer); return () => {}; },
+    }).fat({
+      colour: 0x9fc2d6,
+      opacity: 0.7,
+      widthPx: 2.4,
+      points: new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 0]),
+      renderOrder: -1,
+    });
+    // The seam's stroke type is renderer-neutral on purpose, so the node
+    // fields need narrowing to be read at all.
+    const mat = fat.material as unknown as NodeMaterial;
+    expect(layers).toHaveLength(1);
+    expect(mat.fragmentNode).toBeNull();
+    expect(mat.outputNode).not.toBeNull();
+    expect(mat.premultipliedAlpha).toBe(false);
+    expect(() => layers[0].setMrtOutputs(true)).not.toThrow();
+    expect(mat.fragmentNode).toBeNull();
+    fat.dispose();
   });
 });

@@ -22,8 +22,12 @@ const BARE_IMPORT_RE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
 const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 const isClientSource = (p: string) => p.endsWith('.ts') && !p.endsWith('.test.ts');
+// An addon under a webgpu/ segment (three/examples/jsm/lines/webgpu/Line2.js)
+// imports three/webgpu itself, so it lands the duplicate core just as surely
+// as the entry does — and its specifier names neither entry.
 const isThreeWebGpuEntry = (spec: string) =>
-  spec === 'three/webgpu' || spec === 'three/tsl' || spec.startsWith('three/src/');
+  spec === 'three/webgpu' || spec === 'three/tsl' || spec.startsWith('three/src/')
+  || (spec.startsWith('three/') && spec.includes('/webgpu/'));
 // renderer-flag and gate/ are the two exemptions: both must run on a
 // browser with no WebGPU at all, so they live in the entry bundle. The
 // gate's own guard below is what stops that exemption becoming a hole.
@@ -95,6 +99,8 @@ describe('the detector itself', () => {
     expect(outside("await import('three/tsl');")).toHaveLength(1);
     expect(outside("import { bootWebGpu } from './webgpu/boot-webgpu';")).toHaveLength(1);
     expect(outside("import './webgpu/boot-webgpu';")).toHaveLength(1);
+    expect(outside("import { Line2 } from 'three/examples/jsm/lines/webgpu/Line2.js';"))
+      .toHaveLength(1);
   });
 
   it('leaves the forms that cost the WebGL2 bundle nothing', () => {
@@ -111,6 +117,8 @@ describe('the detector itself', () => {
     expect(outside("import { x } from './webgpu/gatekeeper';")).toHaveLength(1);
     expect(outside("const m = await import('./webgpu/boot-webgpu');")).toEqual([]);
     expect(outside("import { Scene } from 'three';")).toEqual([]);
+    // The WebGL2 twin of that addon costs the entry nothing.
+    expect(outside("import { Line2 } from 'three/examples/jsm/lines/Line2.js';")).toEqual([]);
     expect(violationsInSource("import { WebGPURenderer } from 'three/webgpu';", true)).toEqual([]);
   });
 });

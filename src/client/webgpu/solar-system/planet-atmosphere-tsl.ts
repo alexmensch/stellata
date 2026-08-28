@@ -16,10 +16,11 @@ import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material'
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { lumaWeightsTsl, tonemapUnditheredTsl } from '../tonemap-tsl';
 import {
-  atmoJitterTsl, atmoLumaTsl, atmosphereRadianceTsl, deflattenedCameraTsl,
+  atmoLumaTsl, atmosphereRadianceTsl, deflattenedCameraTsl,
   deflattenedDirTsl, hitsBodyAheadTsl, litFractionTsl, shadowSpanTsl,
   shellEntryTsl,
 } from './atmosphere-scatter-tsl';
+import { interleavedGradientNoiseTsl } from '../tsl/jitter-tsl';
 import type { PlanetAtmosphereNodes } from './uniform-nodes';
 
 export function buildPlanetAtmosphereMaterial(
@@ -73,7 +74,7 @@ export function buildPlanetAtmosphereMaterial(
         o, d: dir, tStart, tStop: shell.z, rAtmo: p.uAtmoRadius, sunDir,
         hR: p.uScaleHeightR, hM: p.uScaleHeightM, betaRs: p.uBetaRayleigh,
         betaMs: p.uBetaMie, betaA: p.uBetaAbsorb, g: p.uMieG,
-        jitter: atmoJitterTsl(screenCoordinate.xy),
+        jitter: interleavedGradientNoiseTsl(screenCoordinate.xy),
       });
 
       // Share of the chord outside the shadow, over the chord as one

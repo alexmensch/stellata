@@ -14,7 +14,8 @@ The shell holds either backend through `../../hdr/hdr-seam.ts`.
 src/client/webgpu/hdr/
   hdr-pipeline-webgpu.ts      WebGpuHdrPipeline — the lazy MRT target
     (+ test)                  (RGBA16F + RG16F + RGBA16F over a
-                              Depth32Float reversed-z depth attachment),
+                              requested Depth32Float reversed-z depth
+                              attachment, § below),
                               bind/resolve, chart bypass, syncMode, the
                               dev switches, the resolve material, and
                               ownership of the gates and the reduction.
@@ -24,6 +25,10 @@ src/client/webgpu/hdr/
                               three-member-struct swap every ported
                               emitter carries, and the two material flags
                               that would demote the struct.
+                              finishMrtOutputMaterial is the same swap on
+                              `outputNode` for a material whose own
+                              fragment stage must survive (§ Composing
+                              over three's fragment).
   summation-tsl.ts            TSL mirrors of stellata_summation and the
                               box downsample, over summation-pure's
                               constants.
@@ -66,6 +71,36 @@ and the render-time-exposure pairing are all kept verbatim from
 name and behaviour for the frame-cost harness even though the ANGLE
 submission-barrier rationale has no analogue here.
 
+## The depth format is requested, not asserted
+
+The target carries an explicit `FloatType` `DepthTexture` because
+reversed-z only infers `Depth32Float` for the **canvas**; three
+auto-creates `Depth24Plus` for a render target regardless, which voids
+the local depth pass's K = 1 bracket by ~262 AU at Neptune's ring
+(`../../local-depth/bracket/README.md` § Precision analysis). That
+assignment is a **request**. Nothing here confirms it landed, and the
+wording matters — an earlier version of this file said the format was
+asserted, and the throw backing that claim tested four conditions the
+same function had just written plus one the boot had already refused on.
+It could not fire.
+
+**A real check is possible and deliberately not taken.** Three allocates
+a render target's GPU textures lazily, at first use, so the allocated
+format only becomes readable — as
+`renderer.backend.get(rt.depthTexture).texture.format` — *after* the
+first render into the target. That is one internal read of exactly the
+kind `0it.24`'s preference order argued against, and it lands past the
+only point a fallback exists: `bootWebGpu` returns the seam before any
+frame, so a refusal there could be a throw or a latched warning in an
+already-broken app, never a fallback. What defends the bracket instead is
+the pin in `hdr-pipeline-webgpu.test.ts` on the four target fields —
+because the failure that can actually happen is an edit dropping the
+explicit depth texture, not a backend quietly substituting a format.
+
+The `0it.26` three bump revisits the subject: if three starts defaulting
+the depth type under `reversedDepthBuffer`, the request itself becomes
+redundant.
+
 ## The gate becomes the output struct
 
 WebGL2's gate opens attachments per draw with `gl.drawBuffers`
@@ -106,6 +141,18 @@ target mode flips (`StarLayer.setMrtOutputs`) — chart mode and the
 single-attachment frame-cost lever both ride the same swap. The flips
 are rare (mode changes, not frames), so the pipeline rebuild is paid
 where the WebGL build re-linked programs anyway.
+
+### Composing over three's fragment
+
+`fragmentNode` *replaces* the fragment stage, which is right for every
+emitter authoring its own shading and wrong for a material whose shading
+is three's — a fat line's segment coverage. `finishMrtOutputMaterial`
+installs the same pair of graphs on `material.outputNode` instead: three
+runs its built-in shading, assigns the result to the `output` property,
+and only then lets `outputNode` decide what leaves the stage. The struct
+is therefore composed **over** `output` rather than in place of it, and
+`builder.stack.outputNode` still carries the `OutputStructNode` at the top
+level, which is what both backends test to emit a struct at all.
 
 ### Two material flags silently demote the struct
 

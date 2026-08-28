@@ -1,7 +1,7 @@
 // The single-output ↔ MRT-struct swap every ported emitter carries. See
 // README.md § The gate becomes the output struct.
 
-import { Fn, outputStruct, struct } from 'three/tsl';
+import { Fn, output, outputStruct, struct } from 'three/tsl';
 import type { Node, NodeMaterial } from 'three/webgpu';
 import type { MrtOutputLayer } from './hdr-pipeline-webgpu';
 
@@ -47,6 +47,30 @@ export function finishMrtMaterial(
   material: NodeMaterial,
   build: () => EmitterOutputs,
 ): MrtEmitterMaterial {
+  return installMrtGraphs(material, build, (node) => { material.fragmentNode = node; });
+}
+
+/**
+ * As `finishMrtMaterial`, for a material whose fragment stage is three's
+ * own and must survive — a fat line's segment coverage. `build` receives
+ * that stage's finished `vec4` and composes the attachments over it, and
+ * the graphs install on `outputNode`, which three applies AFTER the
+ * built-in shading where `fragmentNode` would replace it.
+ */
+export function finishMrtOutputMaterial(
+  material: NodeMaterial,
+  build: (shaded: Node<'vec4'>) => EmitterOutputs,
+): MrtEmitterMaterial {
+  const shaded = output as unknown as Node<'vec4'>;
+  return installMrtGraphs(
+    material, () => build(shaded), (node) => { material.outputNode = node; });
+}
+
+function installMrtGraphs(
+  material: NodeMaterial,
+  build: () => EmitterOutputs,
+  install: (node: Node) => void,
+): MrtEmitterMaterial {
   // Both default to wrapping the fragment output in a vec4 math node, which
   // demotes the struct — see § The gate becomes the output struct. `fog`
   // defaults to TRUE on every NodeMaterial and is inert only while no scene
@@ -60,7 +84,7 @@ export function finishMrtMaterial(
   const mrt = outputStruct(
     members.get('colour'), members.get('statistic'), members.get('diffuse'));
   let mrtOn = false;
-  material.fragmentNode = single;
+  install(single);
   return {
     material,
     setMrtOutputs(on: boolean) {
@@ -77,7 +101,7 @@ export function finishMrtMaterial(
           + 'CustomBlending factors instead.');
       }
       mrtOn = on;
-      material.fragmentNode = on ? mrt : single;
+      install(on ? mrt : single);
       material.needsUpdate = true;
     },
   };

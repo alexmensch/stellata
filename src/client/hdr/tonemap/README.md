@@ -15,6 +15,8 @@ mode on either backend, plus the WebGL2 no-float-buffer fallback —
 
 ```
 src/client/hdr/tonemap/
+  ign.glsl                   Interleaved gradient noise as a shared
+                             chunk (stellata_ign) — § One hash.
   tonemap.glsl               The operator as a shared chunk. Consumed by
                              tonemap.frag.glsl and inline by each
                              emitting shader when the target isn't bound.
@@ -82,6 +84,25 @@ fields, not noise that cancels. Anything covering each pixel once (the
 resolve, a fullscreen volume) wants the dithered `stellataTonemap`.
 `tonemap-pure.ts` mirrors the undithered variant.
 
+
+## One hash
+
+`stellata_ign` is the interleaved gradient noise every layer that jitters
+rides — the operator's ±0.5-LSB output dither here, the ray starts of both
+molecular-cloud raymarches, and the atmosphere march's sample lattice. One
+chunk, `DITHER_IGN_SCALE` / `DITHER_IGN_DOT` in `tonemap-pure.ts` behind
+it, and the TSL twin `interleavedGradientNoiseTsl` over the same two
+constants (`../../webgpu/tsl/README.md` § Interleaved gradient noise). It
+replaced four hand-written copies of one expression, two of them under
+different constant names — the drift a `*-pure.ts` module exists to stop,
+and one nothing would have failed on.
+
+**Its include guard is load-bearing on two stages.** The planet mesh and
+the atmosphere shell paste it twice — their own jitter through
+`stellata_atmosphere_scatter`, the dither through `stellata_tonemap` — and
+an unguarded second paste is a redefinition error at program build, which
+no test without a GPU reaches. `../emission/chunk-constant-drift.test.ts`
+pins the guard and both paste paths instead.
 
 ## Operator knobs
 

@@ -6,10 +6,9 @@ import { RenderTarget, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuHdrPipeline } from './hdr-pipeline-webgpu';
 import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-pipeline';
 
-function fakeRenderer(reversedDepthBuffer = true) {
+function fakeRenderer() {
   const bound: (RenderTarget | null)[] = [];
   const renderer = {
-    reversedDepthBuffer,
     getDrawingBufferSize: (v: THREE.Vector2) => v.set(64, 32),
     getPixelRatio: () => 2,
     setRenderTarget: (t: RenderTarget | null) => bound.push(t),
@@ -52,7 +51,11 @@ describe('the target', () => {
     // target's auto-created depth texture is Depth24Plus regardless, so
     // the target must carry an explicit FloatType depth texture or the
     // local depth pass's K = 1 bracket quantises (Saturn's rings landed
-    // inside one depth step of the body).
+    // inside one depth step of the body). These four lines are the ONLY
+    // guard on that — the format three actually allocates is unreadable
+    // until after the first render into the target, so what can be
+    // defended is the request, and the edit worth catching is one that
+    // drops it (README.md § The depth format is requested, not asserted).
     expect(rt.depthBuffer).toBe(true);
     expect(rt.stencilBuffer).toBe(false);
     expect(rt.depthTexture).not.toBe(null);
@@ -61,24 +64,22 @@ describe('the target', () => {
     expect(hdr.statisticTexture()).toBe(rt.textures[1]);
   });
 
-  it('refuses a target whose depth attachment cannot be Depth32Float reversed-z', () => {
-    // A renderer without reversedDepthBuffer lands the target on
-    // fixed-point depth, which voids the local depth pass's K = 1
-    // bracket (../../local-depth/bracket/README.md § Precision analysis).
-    const { renderer } = fakeRenderer(false);
-    const hdr = new WebGpuHdrPipeline(renderer);
-    expect(() => hdr.bind()).toThrow(/Depth32Float/);
-  });
-
-  it('keeps refusing it — a rejected target is never latched', () => {
-    // ensureResources short-circuits on a non-null target, so committing
-    // one before validating would make the assert fire once and then hand
-    // the very target it rejected to every later frame.
-    const { renderer, bound } = fakeRenderer(false);
-    const hdr = new WebGpuHdrPipeline(renderer);
-    expect(() => hdr.bind()).toThrow(/Depth32Float/);
-    expect(() => hdr.bind()).toThrow(/Depth32Float/);
-    expect(bound).toHaveLength(0);
+  // The boot is what refuses a renderer that lost the flag — it falls back
+  // to WebGL2 before any seam exists, so a WebGPU pipeline that got built
+  // at all is on a reversed-z renderer by construction. A re-check here
+  // could only ever read back `true`, which is what made the throw it
+  // replaced unreachable.
+  it('leaves the reversed-z refusal to the boot, where a fallback exists', () => {
+    const boot = readFileSync(
+      fileURLToPath(new URL('../boot-webgpu.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(boot).toContain('renderer.reversedDepthBuffer !== true');
+    const src = readFileSync(
+      fileURLToPath(new URL('./hdr-pipeline-webgpu.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(src).not.toMatch(/reversedDepthBuffer\s*!==/);
   });
 
   it('chart mode binds the canvas and parks the statistic', () => {

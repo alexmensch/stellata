@@ -24,6 +24,7 @@ const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
 const tonemapChunk = read('../tonemap/tonemap.glsl');
+const ignChunk = read('../tonemap/ign.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
 const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc/perceptual-disc.glsl');
@@ -58,15 +59,21 @@ describe('shared chunk constants', () => {
     expect(Number(magPerLog2![1])).toBeCloseTo(2.5 * Math.log10(2), 6);
   });
 
-  // The dither's literals also feed the WebGPU resolve through
-  // tonemap-pure, so both renderers must add the same noise.
-  it('tonemap.glsl dithers with the constants tonemap-pure exports', () => {
-    const m = tonemapChunk.match(
-      /fract\(([\d.]+) \* fract\(dot\(fragCoord, vec2\(([\d.]+), ([\d.]+)\)\)\)\)/,
+  // The one hash in the tree: the cloud raymarches and the atmosphere
+  // march include this chunk too, and it also feeds the WebGPU side through
+  // tonemap-pure, so every backend and every layer jitters off one lattice.
+  it('ign.glsl hashes with the constants tonemap-pure exports', () => {
+    const scale = ignChunk.match(/const float STELLATA_IGN_SCALE = ([\d.]+);/);
+    expect(scale).not.toBeNull();
+    expect(Number(scale![1])).toBe(DITHER_IGN_SCALE);
+    const dot = ignChunk.match(
+      /const vec2 STELLATA_IGN_DOT = vec2\(([\d.]+), ([\d.]+)\);/,
     );
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(DITHER_IGN_SCALE);
-    expect([Number(m![2]), Number(m![3])]).toEqual([...DITHER_IGN_DOT]);
+    expect(dot).not.toBeNull();
+    expect([Number(dot![1]), Number(dot![2])]).toEqual([...DITHER_IGN_DOT]);
+    // And the operator composes over it rather than keeping a twin.
+    expect(tonemapChunk).toContain('#include <stellata_ign>');
+    expect(tonemapChunk).not.toContain(String(DITHER_IGN_SCALE));
   });
 
   // The WebGPU star stages import these two from TypeScript while the
@@ -175,6 +182,21 @@ describe('include guards', () => {
     expect(guarded(tonemapChunk, 'STELLATA_TONEMAP')).toBe(true);
     expect(guarded(emissionChunk, 'STELLATA_HDR_EMISSION')).toBe(true);
     expect(guarded(extendedEmitterChunk, 'STELLATA_EXTENDED_EMITTER')).toBe(true);
+    expect(guarded(ignChunk, 'STELLATA_IGN')).toBe(true);
+  });
+
+  // The planet mesh and the atmosphere shell reach stellata_ign down two
+  // paths at once — their own ray-start jitter through
+  // stellata_atmosphere_scatter, and the operator's dither through
+  // stellata_tonemap — so its guard is load-bearing on those two stages,
+  // not defensive. Unguarded it is a redefinition error at program build,
+  // which CI has no GPU to reach.
+  it('two chunks both pull the noise in, which is what its guard is for', () => {
+    expect(tonemapChunk).toContain('#include <stellata_ign>');
+    expect(read('../../solar-system/atmosphere/atmosphere-scatter.glsl'))
+      .toContain('#include <stellata_ign>');
+    expect(read('../../solar-system/planets/planet-mesh.frag.glsl'))
+      .toContain('#include <stellata_tonemap>');
   });
 
   it('shares one guard for the duplicated luma-weight declaration', () => {
@@ -184,7 +206,7 @@ describe('include guards', () => {
   });
 
   it('closes every #ifndef it opens', () => {
-    for (const chunk of [tonemapChunk, emissionChunk, extendedEmitterChunk]) {
+    for (const chunk of [tonemapChunk, emissionChunk, extendedEmitterChunk, ignChunk]) {
       const opens = chunk.match(/^#ifndef /gm)?.length ?? 0;
       const closes = chunk.match(/^#endif/gm)?.length ?? 0;
       expect(closes).toBe(opens);

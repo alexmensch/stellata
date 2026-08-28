@@ -17,8 +17,9 @@ src/client/galactic/
                                   volumetric layer (src/client/milkyway/README.md).
   galactic-disc.ts                15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
-                                  wireframe; always-on in dark mode,
-                                  hidden in chart mode.
+                                  wireframe, on one seam stroke;
+                                  always-on in dark mode, hidden in
+                                  chart mode.
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
                                   (§ Distance fades): the far-field
                                   reveal FADE_INNER_PC / FADE_OUTER_PC
@@ -64,9 +65,10 @@ vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
 component (`../milkyway/README.md` § Density profiles).
 
-Each ring is a basic
-`LineLoop` whose vertices are pre-baked once into absolute ICRS via
-`GAL_TO_ICRS` plus the GC offset; per frame `discGroup.position` is
+Each ring takes the chrome line seam's solid stroke
+(`../chrome-lines/README.md`) over `../util/orbit-line.ts`'s
+`makeOrbitLineLoop`, and its vertices are pre-baked once into absolute ICRS
+via `GAL_TO_ICRS` plus the GC offset; per frame `discGroup.position` is
 rebased to `-worldOffset` (via `.copy(worldOffset).negate()` on the
 group's own position vector so the shared `worldOffset` is never
 mutated). Opacity smoothsteps from 0 to 0.55 between

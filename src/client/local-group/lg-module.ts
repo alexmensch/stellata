@@ -95,16 +95,17 @@ export function createLgKindModule(): LgKindModule {
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
       if (!catalog || catalog.objects.length === 0) return null;
-      layer = new LocalGroupLayer(catalog);
+      // Both halves have ported — the wireframe onto the chrome line seam —
+      // so on a WebGPU boot both belong in the scene that renders.
+      const renderScene = kindCtx.webgpu?.scene ?? kindCtx.scene;
+      layer = new LocalGroupLayer(catalog, kindCtx.chromeLines);
       layer.setMonochrome(kindCtx.getMonochrome());
-      kindCtx.scene.add(layer.group);
+      renderScene.add(layer.group);
       emission = new LocalGroupEmission(catalog.objects, {
         hdr: pickHdrEmitterUniforms(kindCtx.sharedUniforms),
       }, kindCtx.webgpu?.lgEmissionMaterials);
       emission.setChartHidden(kindCtx.getMonochrome());
-      // The emission has ported, so on a WebGPU boot it belongs in the
-      // scene that renders; the wireframes are Line2 chrome and have not.
-      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(emission.group);
+      renderScene.add(emission.group);
       return {
         // Fixed extragalactic positions — no proper motion is modelled.
         timeBehaviour: { kind: 'static' },
@@ -119,8 +120,8 @@ export function createLgKindModule(): LgKindModule {
         dispose: () => {
           disposeLabels?.();
           disposeLabels = null;
-          kindCtx.scene.remove(layer!.group);
-          kindCtx.scene.remove(emission!.group);
+          renderScene.remove(layer!.group);
+          renderScene.remove(emission!.group);
           layer!.dispose();
           emission!.dispose();
         },

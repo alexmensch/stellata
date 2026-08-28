@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from './galactic-fade';
-import { setBuiltinChromeColour } from '../hdr/chrome/chrome-colour';
+import type {
+  ChromeLineMaterial, ChromeLineMaterials,
+} from '../chrome-lines/chrome-line-materials';
+import { makeOrbitLineLoop } from '../util/orbit-line';
 import {
   BULGE_HALF_THICKNESS_PC,
   BULGE_RADIUS_PC,
@@ -32,6 +35,8 @@ const DARK_COLOUR = 0xa08660;
 
 const DARK_BASE_OPACITY = 0.55;
 
+const DISC_RENDER_ORDER = -1;
+
 /**
  * Always-on Milky Way disc reference. Three concentric line components live
  * in absolute equatorial space centred on the galactic centre:
@@ -54,23 +59,16 @@ const DARK_BASE_OPACITY = 0.55;
  */
 export class GalacticDisc {
   readonly group: THREE.Group;
-  // Single shared material across all 6 rings — they're visually identical
-  // and the per-frame fade writes to one .opacity, not six. Replaces the
-  // prior per-ring LineBasicMaterial allocations.
-  private readonly material: THREE.LineBasicMaterial;
+  // Single shared stroke across all 6 rings — they're visually identical and
+  // the per-frame fade writes to one .opacity, not six.
+  private readonly stroke: ChromeLineMaterial;
   private mono = false;
 
-  constructor() {
+  constructor(chromeLines: ChromeLineMaterials) {
     this.group = new THREE.Group();
-    this.group.renderOrder = -1;
+    this.group.renderOrder = DISC_RENDER_ORDER;
 
-    this.material = new THREE.LineBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-    });
-    setBuiltinChromeColour(this.material.color, DARK_COLOUR);
+    this.stroke = chromeLines.solid(DARK_COLOUR, 0);
 
     const midplane = this.makeRing(
       MIDPLANE_RADIUS_PC,
@@ -130,7 +128,7 @@ export class GalacticDisc {
       return;
     }
     this.group.visible = true;
-    this.material.opacity = opacity;
+    this.stroke.material.opacity = opacity;
   }
 
   setMonochrome(on: boolean) {
@@ -153,7 +151,7 @@ export class GalacticDisc {
     zOffset: number,
     segments: number,
     plane: 'xy' | 'xz' | 'yz',
-  ): THREE.LineLoop {
+  ): THREE.Line {
     const v = new Float32Array(segments * 3);
     const tmp = new THREE.Vector3();
     for (let i = 0; i < segments; i++) {
@@ -168,22 +166,17 @@ export class GalacticDisc {
       v[i * 3 + 1] = tmp.y;
       v[i * 3 + 2] = tmp.z;
     }
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.BufferAttribute(v, 3));
-    // Bounding sphere drawn from the geometry would be huge and miscentred
-    // (group origin is offset per frame); turn off frustum culling so the
-    // disc never disappears at extreme camera positions.
-    const loop = new THREE.LineLoop(geom, this.material);
-    loop.frustumCulled = false;
-    loop.renderOrder = -1;
-    return loop;
+    // A bounding sphere drawn from the geometry would be huge and miscentred
+    // (group origin is offset per frame), so the primitive turns frustum
+    // culling off and the disc never disappears at extreme camera positions.
+    return makeOrbitLineLoop(v, this.stroke.material, DISC_RENDER_ORDER);
   }
 
   dispose() {
     for (const child of this.group.children) {
-      const obj = child as THREE.LineLoop;
+      const obj = child as THREE.Line;
       obj.geometry.dispose();
     }
-    this.material.dispose();
+    this.stroke.dispose();
   }
 }

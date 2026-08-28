@@ -78,25 +78,31 @@ each other: `coord-sphere-frames.test.ts` takes four naked-eye stars' catalogue
 node. A frame that were subtly wrong would still look like a plausible grid, so
 external coordinates are the only check that bites.
 
-- The **equator** is a `Line2` with `LineMaterial` (from
-  `three/examples/jsm/lines/`) at 2.4 px screen-space width — basic
-  `LineBasicMaterial.linewidth` silently clamps to 1 in WebGL on most
-  platforms, so Line2 is the only reliable way to get a thicker stroke.
-  256 segments around the full loop; the small joint-wedge "ticks" you
-  may notice are an inherent artefact of fat-line miters at non-trivial
-  angles. Bumping segment count to 1024 hides the ticks but was rejected
-  as visually similar; we kept 256.
-  **Nothing here writes `LineMaterial.resolution`, and nothing should.**
-  The screen-space width divides by that uniform, so it has to track the
-  canvas — but since r185 `LineSegments2.onBeforeRender` sets it from
-  `renderer.getViewport()` before every draw. That is the same number an
-  app-side write could supply (the renderer is sized in CSS pixels and
-  nothing calls `renderer.setViewport`), so a resize hook here would be a
-  second writer of a uniform three already owns, going stale the moment
-  either side changed. `tests/README.md` § The three upgrade audit carries
-  it as a line to re-check on the next bump.
-- **Latitude rings + meridians** are basic `LineLoop` / `Line` at 0.45
-  opacity. Polar bunching is eased by trimming every *odd-indexed*
+- The **equator** is the chrome line seam's **fat stroke**
+  (`../../chrome-lines/README.md` § The fat stroke brings its own object)
+  at 2.4 px screen-space width — basic `LineBasicMaterial.linewidth`
+  silently clamps to 1 in WebGL on most platforms, so a fat line is the
+  only reliable way to get a thicker stroke, and the object class differs
+  per backend, which is why the seam hands one back rather than a
+  material. 256 segments around the full loop, closed by repeating the
+  first vertex (a fat line is an open polyline); the small joint-wedge
+  "ticks" you may notice are an inherent artefact of fat-line miters at
+  non-trivial angles. Bumping segment count to 1024 hides the ticks but
+  was rejected as visually similar; we kept 256.
+  **Nothing here writes the screen-space width's resolution divisor, and
+  nothing should.** The width divides by it, so it has to track the
+  canvas — but since r185 `LineSegments2` sets it from
+  `renderer.getViewport()` before every draw, on both backends. That is
+  the same number an app-side write could supply (the renderer is sized in
+  CSS pixels and nothing calls `renderer.setViewport`), so a resize hook
+  here would be a second writer of a value three already owns, going stale
+  the moment either side changed. `tests/README.md` § The three upgrade
+  audit carries it as a line to re-check on the next bump.
+- **Latitude rings + meridians** take the seam's solid stroke at 0.45
+  opacity, over `../../util/orbit-line.ts`'s `makeOrbitLineLoop` /
+  `makeOrbitLine` — an index-closed `THREE.Line` rather than
+  `THREE.LineLoop`, which the WebGPU renderer refuses outright. Polar
+  bunching is eased by trimming every *odd-indexed*
   meridian to ±80° latitude (`meridianMaxAbsLatDeg`) — the even set still
   goes pole-to-pole unbroken, so 36 galactic lines ease to 18 and 24
   equatorial ones to 12.
@@ -114,9 +120,13 @@ external coordinates are the only check that bites.
   strokes opaque with blending off for the paper aesthetic, which would
   discard a fade entirely — so `setOpacityScale` keeps alpha blending on
   whenever the scale is below 1, in both styles. The scale writes are plain
-  uniform assignments; the blend-state reconfigure (a program recompile via
+  material assignments; the blend-state reconfigure (a program recompile via
   `needsUpdate`) fires only when the sphere crosses into or out of being
-  faded, never per frame.
+  faded, never per frame. **The flip goes through the seam handle's
+  `setOpaque`, never `material.transparent`** — the fat stroke's WebGPU
+  material answers that flag with a full-frame texture read of the target
+  it is drawing into (`../../chrome-lines/README.md` § The layer writes
+  `material`, never a wrapper).
 
 ### The equatorial sphere is Sol-only
 

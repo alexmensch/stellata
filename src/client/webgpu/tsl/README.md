@@ -143,12 +143,15 @@ constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
 when it jitters a ray start off the same noise — live with the rest of the
 dither's numbers in `../../hdr/tonemap/tonemap-pure.ts`.
 
-The solar-system atmosphere still carries its own `atmoJitterTsl` over an
-identical pair of constants under **different names**, and the three
-hand-written GLSL `ign()` copies are still three. Both remain because
-retiring `ATMO_JITTER_*` trips that subsystem's drift test by name and the
-GLSL side wants a registered ShaderChunk — `0it.33`, which is now only
-those two.
+**One helper, one hash, both backends.** The solar-system atmosphere's
+`atmoJitterTsl` and its `ATMO_JITTER_*` constants are gone — the planet
+mesh and the atmosphere shell call `interleavedGradientNoiseTsl` like
+every other layer, and `webgpu/solar-system/tsl-drift.test.ts` pins the
+helper's name in their place while still forbidding the numbers as
+literals. The GLSL side is the registered `stellata_ign` chunk
+(`../../hdr/tonemap/ign.glsl`), included by the operator, both cloud
+raymarches and the atmosphere integrator; the two stages that reach it
+down both paths at once are what its include guard is for.
 
 ## TSL typing shim
 

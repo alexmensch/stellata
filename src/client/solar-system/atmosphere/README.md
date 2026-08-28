@@ -315,7 +315,8 @@ Three sources, three fixes.
    faceted interpolated position.
 2. *Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`)
    jitters its sample lattice per fragment by an interleaved-gradient-noise
-   offset (`stellata_atmoJitter(gl_FragCoord)`), and the light march offsets by
+   offset (`stellataIgn(gl_FragCoord)`, the shared `stellata_ign` chunk —
+   `../../hdr/tonemap/README.md`), and the light march offsets by
    a further golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the
    view and light lattices stay **decorrelated** — otherwise the two beat into a
    moiré rather than dissolving into fine grain. The CPU mirror uses the

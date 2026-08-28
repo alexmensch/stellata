@@ -2,12 +2,14 @@
 
 Which shader backend the line overlays' strokes are built on. The layers
 above — planet orbit rings, binary orbit paths, probe trails, the
-constellation figure, the IAU boundary arcs — keep every line of their own
-logic (geometry rebuilds, anchored-line rebakes, visibility gates,
+constellation figure, the IAU boundary arcs, the galactic disc, both
+coordinate spheres, the Local Group wireframe — keep every line of their
+own logic (geometry rebuilds, anchored-line rebakes, visibility gates,
 per-frame dash scale) and take their material from here, so a WebGPU boot
 swaps shaders without a second copy of any of it. The primitives those
 materials are handed to (`makeOrbitLineLoop` / `makeOrbitLine` /
-`makeOrbitLineSegments` / `mirrorOrbitLine`) stay in `../util/orbit-line.ts`.
+`makeOrbitLineSegments` / `mirrorOrbitLine`) stay in `../util/orbit-line.ts`
+— except the fat one (§ The fat stroke brings its own object).
 
 ## Files in this area
 
@@ -17,8 +19,12 @@ src/client/chrome-lines/
                              handle, and the two stroke shapes both
                              backends satisfy. Type-only.
   builtin-chrome-lines.ts    The WebGL2 implementation — three's own
-                             LineBasicMaterial / LineDashedMaterial, the
-                             log-depth strip, and the chrome mapping.
+                             LineBasicMaterial / LineDashedMaterial /
+                             LineMaterial + Line2, the log-depth strip,
+                             and the chrome mapping.
+  chrome-line-parts.ts       The two parts neither backend varies: the
+                             fat line's object assembly and the plain
+                             blend flip. Both implementations call it.
   chrome-line-materials      Both backends against each other: the chrome
     .test.ts                 mapping, the blend/depth contract, the dash
                              slots, and the MRT registration's lifetime.
@@ -42,16 +48,50 @@ took their groups out of it until this seam existed.
 
 ## The layer writes `material`, never a wrapper
 
-The handle carries `material` and `dispose()`, and nothing else: three's
-built-in line materials and their node twins expose the same writable
-surface (`color`, `opacity`, `depthTest`, and the dashed trio `dashSize` /
-`gapSize` / `scale`), so a per-frame `stroke.material.opacity = a` reaches
-either backend unchanged and no layer learns which one it has.
-`ChromeLineStroke` / `DashedChromeLineStroke` are exactly that surface.
+The handle carries `material`, `setOpaque()` and `dispose()`, and nothing
+else: three's built-in line materials and their node twins expose the same
+writable surface (`color`, `opacity`, `depthTest`, the dashed trio
+`dashSize` / `gapSize` / `scale`, the fat one's `linewidth`), so a
+per-frame `stroke.material.opacity = a` reaches either backend unchanged
+and no layer learns which one it has. `ChromeLineStroke` /
+`DashedChromeLineStroke` / `FatChromeLineStroke` are exactly that surface.
 
 `dispose()` goes through the handle rather than the material because on
 WebGPU it must also sever the material's MRT-mode registration — the same
 reason `../scene/README.md` § The material seam gives.
+
+**`setOpaque()` is on the handle for a different reason: the flag it looks
+like is unusable on one backend.** Chart mode runs the coordinate spheres'
+strokes opaque with blending off, which on every other material is
+`transparent = false`; a WebGPU fat stroke answers that same flag with a
+full-frame texture read (`../webgpu/chrome-lines/README.md` § Why
+`LineBasicNodeMaterial`…), so it spells `CustomBlending` factors out
+instead. A layer writing `material.transparent` itself would be correct on
+three of the four combinations and quietly ruinous on the fourth.
+
+## The fat stroke brings its own object
+
+`fat(spec)` is the one factory that returns a drawable as well as a
+material, because the **mesh class is backend-specific too**:
+`three/addons/lines/Line2.js` reads `material.uniforms` in its
+`onBeforeRender` and `.../lines/webgpu/Line2.js` writes its own
+`_resolution` instead, so each throws or silently draws nothing on the
+other's material. A thin line's class is shared, which is why
+`../util/orbit-line.ts` keeps those. The geometry the spec's `points`
+build stays with the layer's own child sweep, exactly as a thin line's
+does; the handle frees the material and the registration.
+
+**Only the constructor differs, so only the constructor is duplicated.**
+`chrome-line-parts.ts`'s `assembleFatChromeLine` owns the geometry build,
+`computeLineDistances`, the frustum-cull opt-out and the render order for
+both backends, and takes `geom => new Line2(geom, mat)` as the caller's
+half — the seam exists to stop the two sides drifting, so the parts that
+are not backend-specific may not be copies.
+
+**Nothing writes the fat stroke's screen-space width divisor.** Since
+r185 both `LineSegments2` variants set it from `renderer.getViewport()`
+before every draw, so an app-side resize hook would be a second writer of
+a number three already owns (`../galactic/coord-spheres/README.md`).
 
 ## Colour is authored once, at construction
 

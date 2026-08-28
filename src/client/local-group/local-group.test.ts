@@ -19,6 +19,7 @@ import { FADE_INNER_PC, FADE_OUTER_PC } from '../galactic/galactic-fade';
 import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIN_DISC_HIT_RADIUS_PX } from '../camera/controls/star-geometry';
 import { makeLabelDom } from '../ui/label-dom-mock';
+import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
 
 function makeObject(o: Partial<LgObject>): LgObject {
   return {
@@ -54,7 +55,7 @@ describe('LocalGroupLayer', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'ellipsoid' }),
       makeObject({ kind: 'ellipsoid', id: 'b' }),
-    ]));
+    ]), builtinChromeLineMaterials());
     // 2 objects × 3 rings = 6 LineLoops.
     expect(layer.group.children.length).toBe(6);
     layer.dispose();
@@ -63,27 +64,27 @@ describe('LocalGroupLayer', () => {
   it('builds three LineLoops per disc object (midplane + thickness pair)', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'disc' }),
-    ]));
+    ]), builtinChromeLineMaterials());
     expect(layer.group.children.length).toBe(3);
     layer.dispose();
   });
 
   it('starts hidden with material opacity = 0 — fades in via update()', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBe(0);
     layer.dispose();
   });
 
   it('update() at distFromSol < FADE_INNER_PC keeps the layer hidden', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_INNER_PC - 100);
     expect(layer.group.visible).toBe(false);
     layer.dispose();
   });
 
   it('update() at distFromSol > FADE_OUTER_PC shows the layer at full base opacity', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(true);
     const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
@@ -92,7 +93,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('update() applies -worldOffset to the group position (floating origin)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     const wo = new THREE.Vector3(1234, -5678, 9012);
     layer.update(wo, FADE_OUTER_PC + 1000);
     expect(layer.group.position.x).toBe(-1234);
@@ -102,7 +103,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('setMonochrome(true) hides the layer in chart mode (no chart-mode treatment yet)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     layer.setMonochrome(true);
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(false);
@@ -110,7 +111,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('per-object silhouette samples include 12*5 + 2 = 62 points', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]));
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     expect(layer.sampleCount(0)).toBe(62);
     layer.dispose();
   });
@@ -120,7 +121,7 @@ describe('LocalGroupLayer', () => {
     const axes: [number, number, number] = [3730, 4960, 6000];
     const layer = new LocalGroupLayer(makeCatalog([makeObject({
       centerAbs: center, axes, kind: 'ellipsoid',
-    })]));
+    })]), builtinChromeLineMaterials());
     const tmp = new THREE.Vector3();
     const maxAxis = Math.max(...axes);
     for (let i = 0; i < layer.sampleCount(0); i++) {
@@ -138,7 +139,7 @@ describe('LocalGroupLayer', () => {
       makeObject({ kind: 'ellipsoid' }),
       makeObject({ kind: 'ellipsoid', id: 'b' }),
       makeObject({ kind: 'disc', id: 'c' }),
-    ]));
+    ]), builtinChromeLineMaterials());
     const materials = new Set(layer.group.children.map(
       (c) => (c as THREE.LineLoop).material as THREE.LineBasicMaterial,
     ));
@@ -181,14 +182,16 @@ function projectToPickScreen(p: THREE.Vector3, camera: THREE.PerspectiveCamera):
 }
 
 function makeVisibleLayer(objects: LgObject[]): LocalGroupLayer {
-  const layer = new LocalGroupLayer(makeCatalog(objects));
+  const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
   layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
   return layer;
 }
 
 describe('LocalGroupLayer.pick', () => {
   it('returns null immediately when the layer is not visible', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({ centerAbs: new THREE.Vector3() })]));
+    const layer = new LocalGroupLayer(
+      makeCatalog([makeObject({ centerAbs: new THREE.Vector3() })]),
+      builtinChromeLineMaterials());
     // Push distFromSol below FADE_INNER_PC so update() sets group.visible
     // = false (the Object3D default is visible = true pre-update()).
     layer.update(new THREE.Vector3(), FADE_INNER_PC - 100);
@@ -625,7 +628,7 @@ describe('createLocalGroupLabels teardown', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ id: 'a', name: 'A' }),
       makeObject({ id: 'b', name: 'B' }),
-    ]));
+    ]), builtinChromeLineMaterials());
 
     const teardown = createLocalGroupLabels(fake.host, layer);
     // One ranking handler + one label engine per object.

@@ -3,6 +3,7 @@ precision highp float;
 #include <common>
 #include <logdepthbuf_pars_fragment>
 #include <stellata_fresnel_rim>
+#include <stellata_ign>
 
 // Rim-shell pass on the per-cloud isosurface meshes: the Local-Bubble
 // fresnel-rim treatment in realistic mode, a stippled silhouette contour
@@ -30,10 +31,6 @@ const float STIPPLE_DOT_RADIUS = 0.30;
 // pixel-width silhouette line across mesh curvature.
 const float CONTOUR_WIDTH = 2.0;
 
-float ign(vec2 p) {
-  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
-}
-
 void main() {
   #include <logdepthbuf_fragment>
 
@@ -56,6 +53,6 @@ void main() {
   float alpha = uOpacity * fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower);
   // ±0.5-LSB output dither — the whisper-level rim spans only a handful
   // of 8-bit levels, so quantisation bands even on a smooth mesh.
-  float dith = (ign(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
+  float dith = (stellataIgn(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
   outColor = vec4(uColour, max(alpha + dith, 0.0));
 }

@@ -6,6 +6,7 @@ import { fullscreenTriangleGeometry } from '../util/fullscreen-pass';
 import fullscreenVert from '../util/fullscreen-pass.vert.glsl?raw';
 import tonemapFrag from './tonemap/tonemap.frag.glsl?raw';
 import tonemapChunk from './tonemap/tonemap.glsl?raw';
+import ignChunk from './tonemap/ign.glsl?raw';
 import emissionChunk from './emission/emission.glsl?raw';
 import extendedEmitterChunk from './emission/extended-emitter.glsl?raw';
 import summationChunk from './summation/summation.glsl?raw';
@@ -31,6 +32,7 @@ import {
 } from './attachments/attachment-gate';
 import type { HdrSeam } from './hdr-seam';
 
+(THREE.ShaderChunk as Record<string, string>)['stellata_ign'] = ignChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_tonemap'] = tonemapChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_hdr_emission'] = emissionChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_extended_emitter'] =
