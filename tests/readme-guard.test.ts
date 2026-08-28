@@ -3,7 +3,9 @@
 // a folder whose README has never existed.
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -120,5 +122,23 @@ describe('readme-guard', () => {
     const decision = hook('Write', 'src/client/legacy/other.ts');
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toContain('src/client/README.md');
+  });
+
+  it('gates a path reached through a symlink to the checkout', () => {
+    // `git rev-parse --show-toplevel` reports a realpath, so an unresolved
+    // `$abs` failed every guarded-prefix test and the hook exited silent.
+    // macOS `/tmp` is such a symlink, which is where this was found.
+    const link = join(stateDir, 'link');
+    symlinkSync(repo, link);
+    const stdout = execFileSync('bash', [HOOK], {
+      cwd: repo,
+      input: JSON.stringify({
+        tool_name: 'Write',
+        tool_input: { file_path: join(link, 'src/client/thing.ts') },
+      }),
+      env: { ...process.env, TMPDIR: stateDir },
+      encoding: 'utf-8',
+    });
+    expect(stdout).toContain('src/client/README.md');
   });
 });

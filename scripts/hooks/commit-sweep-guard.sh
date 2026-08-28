@@ -9,9 +9,10 @@
 #      ("At commit time, update");
 #
 #  (b) the staged diff (added lines only) contains forbidden comment-
-#      rule patterns — same set as tests/code-comment-rules.test.ts,
-#      scoped to NEW lines so pre-existing legacy violations don't
-#      block unrelated commits — enforces AGENTS.md § Code comments.
+#      rule patterns from comment-rules.json — the same file
+#      tests/code-comment-rules.test.ts reads, scoped to NEW lines so
+#      pre-existing legacy violations don't block unrelated commits —
+#      enforces AGENTS.md § Code comments.
 #
 # Scope is `git diff --cached`: -a / --all commits aren't fully
 # inspected. Most commits go through `git add <files> && git commit`,
@@ -119,26 +120,32 @@ if [ "$opt_out" = 0 ]; then
   fi
 fi
 
-# Comment-rule sweep — added lines only. Same forbidden set as
-# tests/code-comment-rules.test.ts.
+# Comment-rule sweep — added lines only. Patterns come from
+# comment-rules.json so this cannot drift from the vitest suite; the
+# hand-copied set that lived here did, pinning the epic slug to three
+# characters after the suite widened it to five.
+RULES_JSON="$(dirname "$0")/comment-rules.json"
+RULE_NAMES="$(jq -r '.patterns[].name' "$RULES_JSON")"
+RULE_PATTERNS="$(jq -r '.patterns[].pattern' "$RULES_JSON")"
+RULE_FLAGS="$(jq -r '.patterns[].flags' "$RULES_JSON")"
+export RULE_NAMES RULE_PATTERNS RULE_FLAGS
+
 violations="$(
   git -C "$toplevel" diff --cached -U0 -- '*.ts' '*.py' 2>/dev/null \
   | grep -E '^\+' \
   | grep -vE '^\+\+\+ ' \
   | perl -nE '
       BEGIN {
-        our @patterns = (
-          ["bead-ID with stellata- prefix",
-           qr/\bstellata-(?![0-9]{3}\b)[a-z0-9]{3}(?:\.\d+)*\b/],
-          ["bare bead-ID (<epic>.NN[.MM…])",
-           qr/(?<![\w\\\-])(?![0-9]{3}\b)[a-z0-9]{3}(?:\.\d+)+\b/],
-          ["bead-relative time (pre-/post-/since-<epic>.NN)",
-           qr/(?<![\w\\\-])(?:pre|post|since)-(?![0-9]{3}\b)[a-z0-9]{3}\.\d/],
-          ["memory-key wikilink [[name]]",
-           qr/\[\[[a-z][a-z0-9-]+\]\]/],
-          ["PR reference (see PR # / extracted in PR)",
-           qr/\b(?:see PR\s*#\s*\d|extracted in PR\b)/i],
-        );
+        # jq -r keeps backslashes literal, and no pattern contains a
+        # newline, so one pattern per line needs no escaping.
+        my @names = split /\n/, $ENV{RULE_NAMES};
+        my @pats  = split /\n/, $ENV{RULE_PATTERNS};
+        my @flags = split /\n/, $ENV{RULE_FLAGS}, -1;
+        our @patterns;
+        for my $i (0 .. $#pats) {
+          my $src = ($flags[$i] // "") =~ /i/ ? "(?i)$pats[$i]" : $pats[$i];
+          push @patterns, [$names[$i], qr/$src/];
+        }
       }
       chomp;
       my $line = $_;

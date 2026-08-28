@@ -1,0 +1,30 @@
+{
+  "$comment": "Single source of truth for the forbidden code-comment patterns. Consumed by tests/code-comment-rules.test.ts, scripts/hooks/commit-sweep-guard.sh, and the generated TTSR rule .omp/rules/code-comments.md. Regex dialect is the intersection of JavaScript, Perl and Rust-free PCRE: \\b, \\d, \\w, (?:), (?=), (?!), (?<!). Rationale for the epic shape is in scripts/hooks/README.md.",
+  "patterns": [
+    {
+      "name": "bead-ID with stellata- prefix",
+      "pattern": "\\bstellata-(?![0-9]{3,}\\b)[a-z0-9]{3,5}(?:\\.\\d+)*\\b",
+      "flags": ""
+    },
+    {
+      "name": "bare bead-ID (<epic>.NN[.MM…])",
+      "pattern": "(?<![\\w\\\\.-])(?![0-9]{3,}\\b)[a-z0-9]{3,5}(?:\\.\\d+)+\\b",
+      "flags": ""
+    },
+    {
+      "name": "bead-relative time (pre-/post-/since-<epic>.NN)",
+      "pattern": "(?<![\\w\\\\-])(?:pre|post|since)-(?![0-9]{3,}\\b)[a-z0-9]{3,5}\\.\\d",
+      "flags": ""
+    },
+    {
+      "name": "memory-key wikilink [[name]]",
+      "pattern": "\\[\\[[a-z][a-z0-9-]+\\]\\]",
+      "flags": ""
+    },
+    {
+      "name": "PR reference (see PR # / extracted in PR)",
+      "pattern": "\\b(?:see PR\\s*#\\s*\\d|extracted in PR\\b)",
+      "flags": "i"
+    }
+  ]
+}
