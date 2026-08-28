@@ -331,8 +331,15 @@ cannot be lost — there is nothing to re-arm, no sentinel, and no
 `preserveData`; both that and the gate are answers to a problem this
 harness does not have.
 
-A rule carrying a `condition` is routed to TTSR *instead of* the
-always-apply bucket, so `bd-prime.md` must never grow one.
+A rule carrying a `condition` is sorted into the TTSR bucket *instead
+of* the always-apply one — `bucketRules` tests `condition` first and
+`continue`s on a hit, so `alwaysApply: true` is never read. Adding a
+condition to `bd-prime.md` would therefore stop the memories reaching
+the system prompt while the file still reads as though they do, with no
+error anywhere. `tests/omp-rules.test.ts` fails if one appears, and
+pins the two frontmatter choices in `code-comments.md` that are equally
+silent when wrong: `interruptMode: tool-only`, and path-shaped globs
+rather than `*.ts`, which matches on basename.
 
 ### Regenerating the rules
 
