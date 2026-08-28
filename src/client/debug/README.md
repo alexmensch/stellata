@@ -333,6 +333,34 @@ they are measuring. The source-level pin
 holds that invariant; this panel is for confirming it with your eyes
 once, not for regression.
 
+#### The one reproduction anybody has hit — Algol
+
+Found by hand, and worth not re-deriving. Focus **Algol**, take the
+`Aa1 → Aa2` relation (B8V primary eclipsed by the K0IV subgiant; the
+third line is Algol Ab and the plane prefilter skips it from most
+vantages), and park the camera at **≈5.84 AU** at a phase where `Aa1`
+is in front, so `Aa2` is the back member:
+
+```
+61434→263692 T1 d=5.84AU
+  θ/Σα=0.235 front=pri dim→0.193 buf=1.000/0.193
+ pri DISC r=0.569  no dim
+>sec GLOW r=0.498  <TRAP>
+```
+
+`Aa2` lands at `r` = 0.498 — two thousandths under the split — which a
+dim of 0.193 is just enough to carry over. Against a build without the
+undimmed-routing fix, the same vantage and clock draws **only the
+primary's disc**: the secondary is discarded by both colour passes and
+contributes nothing. With the fix its glow reappears as a bulge on the
+primary's flank. That difference is the whole test.
+
+Getting there: `r ≈ physSize / appSize` falls as roughly `1/d`, so scale
+the distance by the ratio of the `r` you have to the `need r>` printed —
+6.83 AU at `r` = 0.426 targeting 0.494 predicts 5.9 AU, and 5.84 is
+where it actually fired. Star indices are catalog-order and move when
+the catalog is rebuilt; the names and the geometry do not.
+
 ### Widening the band
 
 Camera distance alone is a poor lever: it has to put the **back** member
