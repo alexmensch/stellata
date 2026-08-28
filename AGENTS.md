@@ -75,7 +75,7 @@ here is the always-loaded hook pointing to which section to open.
   have network access. Never scope a design around it or hand the
   fetch back. `scripts/refresh/README.md` § Who runs a refresh.
 
-## Folder READMEs — read before editing, debugging, planning; update at commit
+## Folder READMEs — read before you touch the folder; update at commit
 
 **Law.** Every folder under `src/`, `scripts/`, `data/`, `docs/` has a
 `README.md` — a folder without one is a bug; file it or write it
@@ -111,10 +111,12 @@ own to move and the split would be README-only.
 
 ### Four triggers — when to read or update
 
-1. **Before editing.** Read the README of every folder you're about
-   to edit (or the bead names as a target) if not already read this
-   session. Batch pre-edit reads beat just-in-time — per-file is
-   exactly when the read gets skipped.
+1. **Before reading a folder's code — for any reason.** Editing it,
+   reviewing a diff that lands in it, or answering a question about
+   it: read that folder's README first if not already read this
+   session. Batch the reads up front — per-file is exactly when the
+   read gets skipped, and a well-written diff or PR body is the
+   likeliest thing to convince you the read is redundant.
 2. **Before debugging.** A bug report or unexpected behaviour
    triggers the scout pass *before* the first grep — investigation
    grep counts as a code read, not a free action. **Stop-rule:**
@@ -135,7 +137,7 @@ own to move and the split would be README-only.
 While reading, tag **uniform / sentinel / pin / override / "kept at" /
 "regardless of" / "substitutes"** phrasing — these mask the obvious
 explanation and are a README's highest-value content. Discover a
-folder without one during edit/debug/plan → **stop**: write it now
+folder without one during edit/review/debug/plan → **stop**: write it now
 (preferred when small) or file a bead before proceeding past it.
 
 ## Folder & module conventions — where new code lands

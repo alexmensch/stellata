@@ -198,10 +198,15 @@ in float iSourceIdx;
 out float vAppMag;
 out vec3 vColor;
 out vec2 vUv;          // (-0.5..+0.5) passed to frag for the disk mask
-out float vPhysRatio;  // physSize / pxSize, in [0,1] — 1 means the physical
-                       // term is driving the size (close range, resolve as a
-                       // disc); 0 means the apparent-mag term is driving
-                       // (distant, render as a soft glow)
+out float vPhysRatio;  // physSize / max(appSize, physSize), in [0,1] — 1 means
+                       // the physical term is driving the size (close range,
+                       // resolve as a disc); 0 means the apparent-mag term is
+                       // driving (distant, render as a soft glow). Solved from
+                       // the UNDIMMED appSize, so it is identical in all three
+                       // material compilations — it routes the passes, and the
+                       // three of them must agree on the routing. Equals
+                       // physSize / pxSize except under an eclipse dim, which
+                       // shrinks the footprint without re-tiering the star.
 out float vSoftness;   // 0 = crisp (white dwarf), 1 = fuzzy (hypergiant) —
                        // drives halo falloff and disc-edge AA width
 // Chart-mode anti-aliasing. Width of the disc edge in vUv units, computed
@@ -377,7 +382,15 @@ void main() {
     // a floored +7.5 mag residual is still visible on a bright
     // close-range back body, and the depth buffer can't hide it (the
     // pair's separation sits inside one log-depth bucket).
-    if (uRenderMode == 0 && iEclipseDim < 1.0) {
+    // appMagRoute stays undimmed all the way to the size solve: it is
+    // what the disc/glow split routes on, and the disc and core-mask
+    // compilations never fold the dim at all (README.md § Star
+    // rendering). Carrying it — rather than subtracting the dim back
+    // off later — is what makes it bit-equal to the appMag those two
+    // derive, since it sees the identical sequence of adds.
+    bool eclipseDimmed = uRenderMode == 0 && iEclipseDim < 1.0;
+    float appMagRoute = appMag;
+    if (eclipseDimmed) {
         if (iEclipseDim <= 0.0) {
             emitOffscreenSentinel(0.0, 0.0);
             return;
@@ -431,6 +444,7 @@ void main() {
         }
     }
     appMag += absorbAV;
+    appMagRoute += absorbAV;
     // Intrinsic B-V from the Apsis-first routing priority. Tier 1/2
     // (Apsis gspphot ∪ gspspec) walks back through Ballesteros⁻¹; tier 3
     // (Ballesteros via catalog ci, with stars-parse's 0.65 solar fallback
@@ -486,6 +500,21 @@ void main() {
         float dMEff = perceptualDmEff(appMag, uLimitMag, uSizeSpan, uSizeKnee);
         float appSize = perceptualAppSizePx(dMEff, uSizeMin, uSizeMax, uSizeSpan);
 
+        // The size the pass split routes on. Only mode 0 folds the eclipse
+        // dim into appMag, and a dim SHRINKS appSize, which RAISES
+        // physSize / max(appSize, physSize). A star sitting just under the
+        // split undimmed is glow-owned; let the dim carry it over and the
+        // glow material discards it as disc-owned while the disc material,
+        // reading the undimmed appMag, still discards it as glow-owned —
+        // drawn by neither. Routing on the undimmed size keeps all three
+        // compilations in agreement, and matches how the CPU pick mirror
+        // already routes (`camera/controls/star-pick-visibility-pure.ts`).
+        float routeAppSize = eclipseDimmed
+            ? perceptualAppSizePx(
+                perceptualDmEff(appMagRoute, uLimitMag, uSizeSpan, uSizeKnee),
+                uSizeMin, uSizeMax, uSizeSpan)
+            : appSize;
+
         // Physical-size term. True angular diameter projected to pixels:
         // 2·atan(R/d) is the angle the disc subtends at the camera,
         // multiplied by viewport.y/fov_y to convert radians to pixels.
@@ -512,7 +541,7 @@ void main() {
         physSize = min(physSize, uMaxPhysFrac * min(uViewport.x, uViewport.y));
 
         pxSize = max(appSize, physSize);
-        vPhysRatio = clamp(physSize / max(pxSize, 0.001), 0.0, 1.0);
+        vPhysRatio = clamp(physSize / max(max(routeAppSize, physSize), 0.001), 0.0, 1.0);
 
         // Kernel collapse — must precede vFluxPeakL: the renorm has to
         // divide the collapsed footprint for the flux to come out

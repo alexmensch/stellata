@@ -22,13 +22,24 @@ goal is findings the author will act on, not encouragement.
 
 ## Getting the diff
 
-- `gh pr view <N>`, `gh pr diff <N>`. Read **full files, not just hunks** —
-  a hunk hides the dispose path, the caller, and the loop it sits in.
-- Check `git worktree list` first: the PR may already be checked out locally,
-  which beats re-fetching and lets you run gates against it.
-- Read the folder `README.md` of every folder the diff touches. In this repo the
-  README carries the invariants — uniform pins, sentinels, overrides — that the
-  code cannot tell you. See AGENTS.md § Folder READMEs.
+- `gh pr view <N>`, `gh pr diff <N>` — take the **file list** from these first.
+- **Read the folder `README.md` of every folder in that list before any source
+  file in it.** Not after, not on demand. The README carries the invariants —
+  uniform pins, sentinels, overrides — that the code cannot tell you, and a
+  finding reachable only from it is one you never learn you missed. AGENTS.md
+  § Folder READMEs. Cover the folders the diff *implicates* as well as the ones
+  it edits: a README arriving as a diff hunk has been read as an artifact, not
+  as context.
+- **A strong PR body is not that context, and substitutes for it invisibly.** A
+  body naming the mechanism, the file:line and the alternative not taken leaves
+  you feeling oriented — which is exactly when the README read gets skipped. It
+  is the author's model of the system, so a review sourced from it can only
+  check internal consistency, never whether that model matches what the folder
+  asserts is true.
+- Check `git worktree list`: the PR may already be checked out locally, which
+  beats re-fetching and lets you run gates against it.
+- Then read **full files, not just hunks** — a hunk hides the dispose path, the
+  caller, and the loop it sits in.
 - Scan adjacent code paths and sibling implementations for coverage gaps, not
   only what the diff changed.
 

@@ -247,7 +247,8 @@ Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,
 rendered pair separation vs disc-radius sum, θ/Σα ratio, front/back,
 target and buffered dim; the fastest way to see WHY a pair is or
-isn't dimming from the current vantage). Drag the
+isn't dimming from the current vantage, and § Eclipse routing for the
+per-member line under it). Drag the
 title bar to move it, click any section header to fold/unfold; both the
 position and per-section collapse state persist in `sessionStorage`
 (resets on reload, since calibration state shouldn't survive between
@@ -273,3 +274,124 @@ too, so a section keeping its own `last` cache is duplicating it.
 Readouts wrap rather than scroll (`white-space: pre-wrap`): the panel is
 `PANEL_WIDTH` = 300 px, and a row wider than that used to run under the
 edge with only a hidden horizontal scrollbar to reach it.
+
+### Eclipse routing — finding a band you cannot see
+
+Under each relation the Eclipse section prints a routing verdict per
+member. **`>` marks the back member** — the only one carrying a dim, so
+the only one whose verdict is live. The other line is the front star and
+reads `no dim`; its threshold is what it *would* need half an orbit
+later, when the two swap.
+
+A dim can only move a **glow-routed** star, so the verdict leads with
+whichever of those two conditions is missing:
+
+| Verdict | Means | Do |
+| --- | --- | --- |
+| `>pri DISC r=0.545  disc ignores the dim, back off` | The back star is a resolved disc. The disc pass never folds `iEclipseDim`, so the eclipse has **no photometric effect at all** here — overlap orders geometrically in the local depth pass. | Back off until `r` falls under 0.5. |
+| `>sec GLOW r=0.426  need r>0.494 at dim 0.139, or trap<0.002` | Glow-routed and dimmed, but the quad is too small a fraction of the split. | Close in until `r` passes the stated target. |
+| `>sec GLOW r=0.494  <TRAP>` | **In the band now.** | Look — § What the eye has to settle. |
+| `>sec GLOW r=0.426  need r>0.494 at dim 0.139; no dim reaches it here` | Same, and scrubbing will not help either: even totality leaves the quad above the split. | Close in; distance is the only lever left. |
+
+`r` is `vPhysRatio` as the vertex stages compute it — from the
+**undimmed** quad, which is what makes all three compilations agree
+(`../star-pipeline/README.md` § Star rendering). `need r>` is the value
+`r` must reach for the dim the star *already has* to tier it disc-owned:
+the camera-side target, against `trap<`'s clock-side one.
+
+**Camera distance is a clean control here.** A dim only shrinks
+`appSize`, so `r ≈ physSize / appSize` falls as roughly `1/d` — while the
+dim itself is scale-invariant (the occlusion solves from angular
+quantities, and separation and disc radii both scale as `1/d`, so their
+ratio does not move). Park at the eclipse phase you want, then slide the
+camera until `r` crosses `need r>`; the dim will sit still while you do.
+
+**`<TRAP>` is not a fault report.** Past the undimmed-routing fix the
+star stays drawn right through it; the marker exists because the band is
+otherwise impossible to find.
+
+### What the eye has to settle — the HUD cannot
+
+**This readout cannot validate a routing fix, only locate where one
+would show.** Every number in it comes from the CPU mirror
+(`renderedSizeComponents`), which has always solved the split from the
+undimmed quad. It reads identically against a correct shader and a
+broken one. Watching `r` hold steady while the dim swings proves only
+that the mirror is undimmed, which was never in doubt.
+
+What the shaders route on is observable in exactly one place: whether
+the star is **drawn** while `<TRAP>` is up. So the check is a negative
+control, not an inspection — park inside the band, then load a build
+without the fix and confirm the star *disappears*. A star that looks
+fine in one build is not evidence; a star that vanishes in the other is.
+
+Corollary for anything that changes the sizing curve: this band moves
+with `sizeMin`/`sizeMax`/`sizeSpan`/`sizeKnee`, and a star can only fall
+into it when the pass split and the footprint disagree about which quad
+they are measuring. The source-level pin
+(`../star-pipeline/star-pass-split-drift.test.ts`) is what actually
+holds that invariant; this panel is for confirming it with your eyes
+once, not for regression.
+
+#### The one reproduction anybody has hit — Algol
+
+Found by hand, and worth not re-deriving. Focus **Algol**, take the
+`Aa1 → Aa2` relation (B8V primary eclipsed by the K0IV subgiant; the
+third line is Algol Ab and the plane prefilter skips it from most
+vantages), and park the camera at **≈5.84 AU** at a phase where `Aa1`
+is in front, so `Aa2` is the back member:
+
+```
+61434→263692 T1 d=5.84AU
+  θ/Σα=0.235 front=pri dim→0.193 buf=1.000/0.193
+ pri DISC r=0.569  no dim
+>sec GLOW r=0.498  <TRAP>
+```
+
+`Aa2` lands at `r` = 0.498 — two thousandths under the split — which a
+dim of 0.193 is just enough to carry over. Against a build without the
+undimmed-routing fix, the same vantage and clock draws **only the
+primary's disc**: the secondary is discarded by both colour passes and
+contributes nothing. With the fix its glow reappears as a bulge on the
+primary's flank. That difference is the whole test.
+
+Getting there: `r ≈ physSize / appSize` falls as roughly `1/d`, so scale
+the distance by the ratio of the `r` you have to the `need r>` printed —
+6.83 AU at `r` = 0.426 targeting 0.494 predicts 5.9 AU, and 5.84 is
+where it actually fired. Star indices are catalog-order and move when
+the catalog is rebuilt; the names and the geometry do not.
+
+### Widening the band
+
+Camera distance alone is a poor lever: it has to put the **back** member
+just under `r` = 0.5, and a real pair will happily sit with one member
+either side of the split while the dimmed one is the wrong one. Two
+better knobs, both in the panel's Star disc section:
+
+- **`sizeKnee`** is the one that matters. It sets how far past the
+  visible-population window a bright star keeps growing before
+  saturating, so it decides how much a magnitude of dimming actually
+  shrinks `appSize`. A bright star high on the saturated part of the
+  curve barely moves — which is why a `trap<0.003` reads as
+  unreachable in practice. Drop `sizeKnee` and the same dim shrinks the
+  quad much harder, pulling the threshold up into a scrubbable range.
+- **`sizeMin` / `sizeMax`** move `appSize` bodily, so they reposition `r`
+  against a fixed `physSize` without touching the camera.
+
+Neither changes what is under test: both feed `appSize`, which is
+exactly the term the split is *supposed* to route on, undimmed. Tuning
+them relocates the band, it does not fake it.
+
+So the procedure is: focus an eclipsing pair with a renderable orbit,
+open the Eclipse section, get `>` onto a `GLOW` member (camera distance,
+or wait half an orbit for the pair to swap), then pull `sizeKnee` down
+until `trap<` rises past the dim the eclipse actually reaches. Confirm
+the star holds through `<TRAP>`. Repeat once resolved (`DISC`), where
+the dim must not touch either member at all.
+
+Exposure does **not** move `r`: the split is solved from `appSize`
+and `physSize`, and exposure only scales `vPeakL`. So the Exposure
+section's knobs are free to use to get a blown-out disc back under
+control without perturbing what is being tested — the one coupling is
+`uThresholdMag`, which can taper a *faint* star out entirely, so keep to
+a bright pair.

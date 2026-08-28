@@ -17,9 +17,14 @@ export const PHYS_RATIO_THRESHOLD = 0.5;
 /** The pass split itself, with no size floor: true when the opaque disc
  *  pass owns the star, false when the glow pass does. Mirrors
  *  `star.frag.glsl`'s `vPhysRatio` test on the same
- *  `pxSize = max(appSize, physSize)` the vertex stage divides by. The one
- *  CPU mirror of that split — the local-depth membership test below and
- *  the pick gate's taper / eclipse-dim branches all read it. */
+ *  `max(appSize, physSize)` the vertex stage divides by. The one CPU
+ *  mirror of that split — the local-depth membership test below and the
+ *  pick gate's taper / eclipse-dim branches all read it.
+ *
+ *  `appSizePx` must be the **undimmed** size. The three star materials
+ *  are separate compilations and only the glow one folds `iEclipseDim`
+ *  into `appMag`; routing on a dimmed size would let them disagree, and a
+ *  star both discard. */
 export function isDiscDominant(appSizePx: number, physSizePx: number): boolean {
   return physSizePx >= PHYS_RATIO_THRESHOLD * Math.max(appSizePx, physSizePx);
 }

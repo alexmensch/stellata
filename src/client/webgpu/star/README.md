@@ -174,7 +174,16 @@ Compile-time pass constants replace the `uRenderMode` branches
 
 - **Glow (D2)**: the hidden focal star and local-pass members collapse to
   the clip sentinel; eclipse totality collapses; a partial `iEclipseDim`
-  folds into `appMag` before any size/brightness derivation;
+  folds into `appMag` before any size/brightness derivation — but **not**
+  before the pass split, which every pipeline solves from the undimmed
+  `appSize` or the three would tier the same star differently and all
+  discard it (`../../star-pipeline/README.md` § Star rendering). Every
+  pipeline carries `routeAppSize`; only this one can diverge from
+  `appSize`, and only behind a runtime test on the dim, so an undimmed
+  star never pays the re-solve. The undimmed magnitude it re-solves from
+  (`appMagRoute`) is carried from before the fold rather than recovered
+  by subtracting the dim back off — that subtraction does not round-trip
+  in float32, and the carried value is bit-equal to what D3/D4 derive.
   `iCompositeSuppress` never gates glow (the summed pair is the point).
 - **Disc (D4, both draws)**: focal hide, members, and
   `iCompositeSuppress` collapse; `iEclipseDim` is ignored — a resolved
@@ -274,7 +283,9 @@ a per-draw viewport state change.
 when no star's disc can reach `RESOLVED_DISC_MIN_PX` (5 px) —
 `../../star-pipeline/README.md` § Star rendering. A disc *can* render
 below that (the pass split has no pixel floor, only
-`physSize ≥ 0.5 · pxSize`), and in that band a core now takes no part
+`physSize ≥ 0.5 · max(appSize, physSize)` on the **undimmed** `appSize`
+— not on `pxSize`, which an eclipse dim shrinks without re-tiering the
+star), and in that band a core now takes no part
 in depth in either direction: nothing behind it is occluded by it.
 That band is already the one where the same gate accepts the whole
 Milky Way band, the molecular clouds and the galactic grid painting

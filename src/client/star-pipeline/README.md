@@ -57,7 +57,10 @@ softness. Pulsation and dust extinction live in the subfolders.
   `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
   values) and `colourPassFor`, the size-terms → colour-pass routing the
   pick mirror shares. The WebGPU port keys its compile-time pass
-  specialization on the same constants.
+  specialization on the same constants. `starPassRouting` reads the
+  split both ways — undimmed and dimmed — for the eclipse debug HUD
+  (`../debug/README.md` § Eclipse routing); nothing in the render path
+  calls it.
 - `star-color-routing-pure.ts` (+ test) — `bestApsisTeff`: picks
   gspphot over gspspec for the per-instance `iTeffApsis` attribute.
   See § Colour routing.
@@ -76,6 +79,11 @@ softness. Pulsation and dust extinction live in the subfolders.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
 - `disc-blend.test.ts` — disc/glow blend-equation parity.
+- `star-pass-split-drift.test.ts` — pins both backends' vertex stages to
+  routing the disc/glow split on the undimmed magnitude (§ Star
+  rendering). Source-level, because no behavioural suite can reach it:
+  the CPU mirror takes resolved size terms and agrees with itself
+  whichever value the shaders route on.
 
 ## Physical-luminance emission
 
@@ -187,6 +195,45 @@ to its material). The disc pass discards fragments with `vPhysRatio <
 0.5`; the glow pass discards `vPhysRatio ≥ 0.5`; the core mask
 discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
+**The three discards are complementary only while all three agree on
+`vPhysRatio`, and that is not free.** Each material runs `star.vert.glsl`
+independently, so any per-pass term reaching the size solve makes them
+disagree — and the disc/glow discards are written as a partition, so a
+disagreement drops the star from *both*, drawn nowhere while every CPU
+mirror believes it renders. One term does this: `iEclipseDim`, folded
+into `appMag` in the glow pass only, which shrinks `appSize` and thereby
+*raises* `physSize / max(appSize, physSize)`. So the ratio is solved
+from the **undimmed** `appSize` in every compilation (`routeAppSize` in
+the vertex stage) while the footprint `pxSize` still carries the dim.
+`vPhysRatio` is therefore the star's size *class*, not literally
+`physSize / pxSize` — a dim fades the star and shrinks its quad, it never
+re-tiers it. `isDiscDominant`
+(`local-pass/star-local-cluster-pure.ts`) is the CPU mirror of that
+routing and takes the undimmed size for the same reason; the pick gate
+(`../camera/controls/star-pick-visibility-pure.ts`) already routed this
+way. The WebGPU port carries the same rule in `routeAppSize`
+(`../webgpu/star/star-vertex-tsl.ts`).
+
+**`appMagRoute` is carried, never reconstructed.** The undimmed
+magnitude is captured before the eclipse fold and takes the dust add
+alongside `appMag`, so it is the identical sequence of adds the disc and
+core-mask compilations run — equal bit for bit. Rebuilding it as
+`appMag − eclipseDimMag` instead does not round-trip in float32 and puts
+the glow pass back on a value the other two never compute, for any star
+within ~1.6 × 10⁻³ px of the split. Both backends are pinned against
+that in `star-pass-split-drift.test.ts`, which is the only thing that
+can catch it: `colourPassFor` takes size terms already resolved, so the
+CPU mirror agrees with itself whatever the shaders do.
+
+**`vPhysRatio` is not only the router**, so this reaches more than the
+vanish band. It also drives `perceptualDiscExponent`
+(`distN = mix(distNMin, distNMax, smoothstep(0, 0.5, physRatio))`) and
+the kernel-collapse gate, so an eclipsed glow star now keeps the
+intensity profile its *resolved* size implies rather than flattening
+toward disc-like as the dim deepens, and stays collapse-eligible when it
+dims under the floor. `vFluxPeakL` stays exact either way — the fragment
+paints from the same varying the flux integral is taken over.
+
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
 collapsing its vertex to a clip-space sentinel
 (`gl_Position = vec4(2, 2, 2, 1)`) when `gl_InstanceID == uHideFocusIdx`.
@@ -212,7 +259,9 @@ viewpoint. Written by `EclipsePhotometryField` (see
 smoothing, and re-uploaded only on frames with active dims. Folded
 into `appMag` in the **glow pass only** — a resolved pair's disc
 overlap orders geometrically in the local depth pass instead
-(`local-pass/README.md`). Exactly 0 means totality: the glow quad
+(`local-pass/README.md`) — and deliberately kept out of the pass-split
+solve, since it is the one per-pass term that could make the three
+compilations disagree (§ Star rendering). Exactly 0 means totality: the glow quad
 collapses via the off-screen-sentinel pattern instead of taking a
 floored log. Integration shell initialises the buffer to 1.0 at
 allocation and on every re-attach, so the shader's
