@@ -6,6 +6,13 @@ import {
   resolveAndPublishGpuFrame,
 } from '../gpu-timing/gpu-frame-samples';
 import { FakeGl, asGl } from '../gpu-timing/fake-gl';
+import type * as PerfHud from '../perf-hud';
+
+const perfState = vi.hoisted(() => ({ panelOpen: false }));
+vi.mock('../perf-hud', async (importOriginal) => ({
+  ...(await importOriginal<typeof PerfHud>()),
+  perfInstrumentationInstalled: () => perfState.panelOpen,
+}));
 
 const glHost = (fake: FakeGl): GpuFrameSourceHost => ({
   rendererGL: { getContext: () => asGl(fake) } as unknown as THREE.WebGLRenderer,
@@ -121,6 +128,48 @@ describe('the pricing sweep picks its sample source per backend', () => {
     expect(acquireGpuFrameSource(glHost(noExtension), () => {}, 'timer-query')).toBeNull();
 
     expect(warn).toHaveBeenCalledTimes(4);
+    warn.mockRestore();
+  });
+
+  it('pins raf-delta on a WebGL2 boot without touching the GL context', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const host: GpuFrameSourceHost = {
+      rendererGL: {
+        getContext: () => {
+          throw new Error('the raf-delta pin reached the GL context');
+        },
+      } as unknown as THREE.WebGLRenderer,
+      webgpu: null,
+    };
+
+    // Chrome WebGL2 is the cross-backend recipe's own boot, so the pin has
+    // to short-circuit ahead of the timer-query slot rather than fall into
+    // it — which is also what leaves the closed-panel refusal unreachable.
+    const source = acquireGpuFrameSource(host, () => {}, 'raf-delta');
+
+    expect(source?.method).toBe('raf-delta');
+    expect(() => source!.release()).not.toThrow();
+    info.mockRestore();
+  });
+
+  it('warns that an open debug panel contaminates rAF-delta wall time', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Under a GPU clock the panel's per-tick cost sits outside the measured
+    // scope; under wall time it lands inside it.
+    perfState.panelOpen = true;
+    expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'raf-delta')?.method)
+      .toBe('raf-delta');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('debug panel is open'));
+
+    perfState.panelOpen = false;
+    warn.mockClear();
+    expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'raf-delta')?.method)
+      .toBe('raf-delta');
+    expect(warn).not.toHaveBeenCalled();
+
+    info.mockRestore();
     warn.mockRestore();
   });
 

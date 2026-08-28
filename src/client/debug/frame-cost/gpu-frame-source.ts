@@ -2,7 +2,7 @@
 // backend. See README.md § Preconditions.
 
 import type * as THREE from 'three';
-import { acquireGpuFrameSampler } from '../perf-hud';
+import { acquireGpuFrameSampler, perfInstrumentationInstalled } from '../perf-hud';
 import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
 import type { GpuFrameMethod } from './frame-cost-pure';
 
@@ -18,15 +18,28 @@ export interface GpuFrameSourceHost {
   readonly webgpu: { readonly timestampsAvailable: boolean } | null;
 }
 
+const VSYNC_CAVEAT =
+  'Differentials below the vsync quantum read as zero unless the frame is ' +
+  'already over budget.';
+
 /** No sample source at all: the caller times frames itself, so the release
  *  is a no-op. */
-function rafDelta(reason: string): GpuFrameSource {
-  console.info(
-    `priceFrame: no GPU clock — ${reason}. Falling back to rAF-delta wall ` +
-    'time, where differentials below the vsync quantum read as zero unless ' +
-    'the frame is already over budget.',
-  );
+function rafDeltaSource(lead: string): GpuFrameSource {
+  console.info(`priceFrame: ${lead}. ${VSYNC_CAVEAT}`);
+  if (perfInstrumentationInstalled()) {
+    console.warn(
+      'priceFrame: the debug panel is open and rAF deltas are wall time, so ' +
+      "its per-tick ring fills and DOM writes land inside the sweep's own " +
+      'samples. They largely cancel in a differential but widen the spread, ' +
+      'and absolute frame times are biased outright — close it before ' +
+      'recording a cross-backend table.',
+    );
+  }
   return { method: 'raf-delta', release: () => {} };
+}
+
+function rafDelta(reason: string): GpuFrameSource {
+  return rafDeltaSource(`no GPU clock — ${reason}. Falling back to rAF-delta wall time`);
 }
 
 function refusePinned(method: GpuFrameMethod, reason: string): null {
@@ -52,13 +65,10 @@ export function acquireGpuFrameSource(
   pinned?: GpuFrameMethod,
 ): GpuFrameSource | null {
   if (pinned === 'raf-delta') {
-    console.info(
-      'priceFrame: method pinned to raf-delta wall time — the one clock ' +
-      'every backend shares, so cross-backend tables compare. Differentials ' +
-      'below the vsync quantum read as zero unless the frame is already ' +
-      'over budget.',
+    return rafDeltaSource(
+      'method pinned to raf-delta wall time — the one clock every backend ' +
+      'shares, so cross-backend tables compare',
     );
-    return { method: 'raf-delta', release: () => {} };
   }
   if (host.rendererGL === null) {
     if (pinned === 'timer-query') {

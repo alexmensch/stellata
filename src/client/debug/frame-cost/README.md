@@ -37,6 +37,13 @@ src/client/debug/frame-cost/
   **On WebGPU there is no such requirement**: wherever the boot probe left
   timestamps live the render loop resolves them every frame whatever is
   listening, and the sweep just subscribes alongside the HUD.
+  **A pinned `raf-delta` sweep escapes that refusal on every backend** — it
+  never calls `acquireGpuFrameSampler`, so nothing consults the panel. It is
+  also the one mode where an open panel corrupts the number rather than
+  merely holding the slot: rAF deltas are wall time, so the panel's per-tick
+  ring fills and DOM writes sit inside the measurement. They largely cancel
+  in a differential and surface as a wider spread; an absolute frame time is
+  biased outright. The sweep warns, but closing the panel is still on you.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate
