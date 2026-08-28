@@ -48,7 +48,7 @@ The famous-star radius and colour claims are pinned end-to-end against
 
 Implementation: `physicalRadius` / `resolveApsisTeff` in
 `scripts/catalog/catalog-pure.ts`, wired in `stars-parse.ts`; see
-`scripts/catalog/parse/README.md` § Physical radius and spectral parsing for
+`scripts/catalog/spectral/README.md` § The resolver and the radius chain for
 the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model

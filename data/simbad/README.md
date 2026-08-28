@@ -164,7 +164,7 @@ leaving unknown, so no record changed tier for any other reason. 348 fewer
 stars display as unknown. The TYC and GJ rows only reach records because
 the resolver gained matching tiers in the same change — the pull's cross-ID
 columns are inert without them (`scripts/catalog/parse/README.md`
-§ Physical radius and spectral parsing).
+§ The resolver and the radius chain).
 
 **34 records lost a spectral type**, every one of them via a vanished HIP
 key, and the pattern is uniform: the object that owned that HIP in the old

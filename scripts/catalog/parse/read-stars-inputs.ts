@@ -7,11 +7,13 @@ import { resolve } from 'node:path';
 import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
+  type ApsisRow,
+} from '../catalog-pure';
+import {
+  type SimbadSpectralIndex,
   emptySimbadSpectralIndex,
   parseSimbadSptypeTsv,
-  type ApsisRow,
-  type SimbadSpectralIndex,
-} from '../catalog-pure';
+} from '../spectral/spectral-resolve';
 import type { BuildCounts } from '../build-counts';
 import {
   parseGaiaAstrometryCatalogTsv,

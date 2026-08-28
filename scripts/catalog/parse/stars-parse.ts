@@ -4,11 +4,6 @@
 import { readFileSync } from 'node:fs';
 
 import {
-  classifyFromSimbad,
-  resolveSpectralInfo,
-  resolveSpectDisplay,
-  resolveApsisTeff,
-  physicalRadius,
   isBailerJonesEligible,
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
@@ -17,8 +12,6 @@ import {
   emptyDistSrcPartition,
   tallyDistSrc,
   DIST_SRC_HIP,
-  spectralClassCi,
-  spectralClassColorIsDerivable,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_PROPER_NAME,
   FLAG_HAS_NAME,
@@ -26,13 +19,26 @@ import {
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
   SIMBAD_NAMESPACE_VALUES,
-  emptySimbadSpectralIndex,
   type ApsisRow,
   type DistSrcPartition,
   type SimbadNamespace,
   type SimbadRecordKeys,
-  type SimbadSpectralIndex,
 } from '../catalog-pure';
+import {
+  classifyFromSimbad,
+  resolveSpectDisplay,
+} from '../spectral/spectral-classify';
+import {
+  type SimbadSpectralIndex,
+  emptySimbadSpectralIndex,
+  resolveSpectralInfo,
+} from '../spectral/spectral-resolve';
+import {
+  physicalRadius,
+  resolveApsisTeff,
+  spectralClassCi,
+  spectralClassColorIsDerivable,
+} from '../spectral/physical-radius';
 import {
   resolveDirection,
   velocityPcPerYr,

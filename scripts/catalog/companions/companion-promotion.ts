@@ -8,21 +8,25 @@ import {
   FLAG_HAS_NAME,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  SPECTRAL_UNKNOWN,
   NO_CONSTELLATION_INDEX,
   OPTICAL_DOUBLE_MIN_SEP_PC,
-  absmagFromSpectral,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-  classifyFromSimbad,
   designationConIndex,
+  parseGaiaSourceIdStr,
+} from '../catalog-pure';
+import {
+  SPECTRAL_UNKNOWN,
+  type SpectralInfo,
+  classifyFromSimbad,
+  resolveSpectDisplay,
+} from '../spectral/spectral-classify';
+import {
+  absmagFromSpectral,
+  physicalRadius,
   spectralClassCi,
   spectralFromAbsmag,
-  parseGaiaSourceIdStr,
-  physicalRadius,
-  resolveSpectDisplay,
-  type SpectralInfo,
-} from '../catalog-pure';
+} from '../spectral/physical-radius';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import {
   RIELLO_G_MINUS_V_SIGMA,

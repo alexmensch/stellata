@@ -8,13 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import {
-  classifyFromSimbad,
   encodeAmpUnits,
   encodePeriodUnits,
   MULTIPLICITY_RESOLVED,
   MULTIPLICITY_SINGLE,
   MULTIPLICITY_UNRESOLVED,
-  SPECTRAL_UNKNOWN,
   VAR_TYPE_ECLIPSING,
   VAR_TYPE_OTHER,
   VAR_TYPE_PULSATING,
@@ -24,8 +22,12 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-  type SpectralInfo,
 } from '../catalog-pure';
+import {
+  SPECTRAL_UNKNOWN,
+  type SpectralInfo,
+  classifyFromSimbad,
+} from '../spectral/spectral-classify';
 import {
   DEFAULT_CATALOG_MANIFEST,
   type Catalog,

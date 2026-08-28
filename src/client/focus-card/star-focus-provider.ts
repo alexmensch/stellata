@@ -2,11 +2,15 @@
 // rows only. See ./README.md § Frame-of-reference principle.
 
 import {
-  classifyFromSimbad,
-  tempKelvin,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  UNKNOWN_CLASS_IDX,
 } from '../../../scripts/catalog/catalog-pure';
+import {
+  UNKNOWN_CLASS_IDX,
+  classifyFromSimbad,
+} from '../../../scripts/catalog/spectral/spectral-classify';
+import {
+  tempKelvin,
+} from '../../../scripts/catalog/spectral/physical-radius';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { BinariesData } from '../binaries/binaries-loader';
 import type { SearchEntry } from '../typeahead/search';
