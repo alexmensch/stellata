@@ -12,6 +12,8 @@ repo is worked in. Claude Code's equivalent lives in `.claude/`.
                         scripts/hooks/omp-bridge.ts. omp auto-discovers
                         .ts under .omp/extensions with no config entry,
                         so this file is the whole wiring.
+  config.yml            Per-tool approval routing for the two tools the
+                        bridge cannot classify. Nothing else.
   RULES.md              Sticky prose rules, re-injected every turn.
   README.md             This file.
 ```
@@ -23,9 +25,14 @@ tests, and one README sit together; `.omp/extensions/` only needs to name it.
 
 `.omp/extensions/*.ts` is a native discovery root: omp imports it and runs its
 default export as an extension factory with no `extensions:` entry in
-`config.yml`. Discovery is cwd-only and does not walk ancestors, so it works in
-a worktree because `.omp/` is committed, and it applies gitignore filtering, so
-the directory must stay tracked.
+`config.yml`. It applies gitignore filtering, so the directory must stay
+tracked.
+
+**Discovery is cwd-only and does not walk ancestors.** That is why a worktree
+works — `.omp/` is committed, so every worktree has its own copy at its own
+root. It is also the one way the whole thing goes silently inert: launch `omp`
+from `src/client/` or any other subdirectory and no extension loads, no guard
+runs, and nothing says so. Start sessions at the repository root.
 
 Two properties made this the entry point over `.omp/hooks/pre/*.ts`, which also
 auto-loads as an extension factory:
@@ -38,17 +45,26 @@ auto-loads as an extension factory:
 
 ## What is deliberately absent
 
-- **No `config.yml`.** Nothing project-specific is left to configure once the
-  extension auto-loads. A machine-wide `~/.omp/agent/config.yml` still applies.
 - **No `tools.approvalMode`.** It would override the operator's machine-wide
-  choice. The bridge blocks outright rather than requesting approval, so its
-  protection does not depend on the mode.
+  choice. `tools.approval.<tool>` in `config.yml` does not: omp honours it in
+  every mode, `yolo` included, which is what makes the `eval` / `hub` routing
+  above possible without touching the mode.
 - **No `bash.patterns` glob for the trunk rule.** The rule depends on where
   HEAD is, not on the text of the command, so no pattern over command text can
   express it. An earlier attempt denied a fully spelled
   `git push origin main` while allowing `git push`, `git push -f`,
-  `git push origin HEAD`, and `git -C <path> push origin main`.
+  `git push origin HEAD`, and `git -C <path> push origin main`. `bash.patterns`
+  also feeds only the `bash` tool's approval decision, so a `deny` there does
+  nothing about the same command run through `eval`.
 - **No `bashInterceptor` rules.** omp documents the interceptor as best-effort
   routing toward dedicated tools, not a security boundary: a rule goes inert
   when its target tool is disabled. In-place-write commands are classified in
   the bridge instead, where a match actually blocks.
+
+## Why `RULES.md` stays short
+
+A user-level `~/.omp/agent/RULES.md` would shadow this file outright rather
+than concatenating with it — both synthesize under the fixed rule name `RULES`
+and dedup is by name. No such file exists on the current machine, so this one
+is live; it is kept to rules `AGENTS.md` also carries in full so that adding
+one later degrades the session rather than breaking it.

@@ -1,9 +1,8 @@
 # Stellata working rules
 
-Restates rules `AGENTS.md` carries in full. Kept short deliberately: a
-`~/.omp/agent/RULES.md` silently shadows this file (both synthesize under the
-fixed rule name `RULES`, and dedup is by name rather than concatenation), so
-nothing here may be the only copy of a rule.
+Restates rules `AGENTS.md` carries in full. Nothing here may be the only copy
+of a rule: a user-level `~/.omp/agent/RULES.md` would shadow this file outright
+rather than concatenate with it. See `.omp/README.md`.
 
 ## Git
 
