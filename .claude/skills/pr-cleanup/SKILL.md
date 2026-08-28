@@ -113,10 +113,22 @@ failure in § Deviations and is a different cause.
 git log --format='%h %G? %s' origin/main..HEAD
 ```
 
-Every commit must show `G`. An `N` means unsigned. **The cause is almost
-always a history rewrite done with plumbing** — `git commit-tree` does not
-honour `commit.gpgsign`, so rebuilding a chain to reword one commit silently
-unsigns every commit it touches, including ones you did not write.
+Every commit must show `G`. An `N` means unsigned. Two causes, and the one
+listed second is the one that has actually happened here:
+
+- **A history rewrite done with plumbing.** `git commit-tree` does not honour
+  `commit.gpgsign`, so rebuilding a chain to reword one commit silently
+  unsigns every commit it touches, including ones you did not write.
+- **`-c commit.gpgsign=false` carried onto a real commit.** Four suites under
+  `tests/` pass exactly that flag, and are right to — their fixtures are
+  throwaway repos where signing fails. A session that has been reading them,
+  or driving its own scratch repos, stops seeing the flag as a decision and
+  starts treating it as how `git commit` is spelled. Pass no signing flag on
+  a branch that will be merged; let the repo's config decide.
+
+The second is invisible at commit time and surfaces four steps later as a
+blocked merge with every check green, which reads like the orphaned-context
+failure in § Deviations.
 
 Fix, and verify the fix changed nothing but signatures:
 
