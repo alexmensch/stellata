@@ -8,16 +8,9 @@ description: Land a stellata PR and finish every follow-up — rebase onto main 
 The steps Alex asks for every time. Run them in order; stop and ask the
 moment anything leaves the happy path (§ Deviations).
 
-Editing this file, two rules that every bug found in it so far would have
-been caught by:
-
-- **Cross-reference sections by name, never by number.** Inserting § The
-  signature trap shifted every later number and left § Ground truth pointing
-  an already-merged PR at § Merge.
-- **Every check here must be able to fail.** State what output means *no*
-  before adding one; if there is no such output it is decoration that reads
-  like safety. `cat-file -e` (§ Worktree, branches, main) and a `fail`-only
-  bucket filter (§ The watch) both shipped because nobody asked.
+Editing this file: cross-reference sections by **name**, never by number, and
+**every check must be able to fail** — state what output means *no* before
+adding one. Both rules are here because their absence shipped bugs.
 
 ## What this skill authorises — and only this
 
@@ -113,10 +106,10 @@ failure in § Deviations and is a different cause.
 git log --format='%h %G? %s' origin/main..HEAD
 ```
 
-Every commit must show `G`. An `N` means unsigned. **The cause is almost
-always a history rewrite done with plumbing** — `git commit-tree` does not
-honour `commit.gpgsign`, so rebuilding a chain to reword one commit silently
-unsigns every commit it touches, including ones you did not write.
+Every commit must show `G`. An `N` comes from a plumbing rewrite (`git
+commit-tree` ignores `commit.gpgsign`) or from `-c commit.gpgsign=false`
+carried over from the test suites that legitimately pass it. Pass no signing
+flag on a branch that will be merged.
 
 Fix, and verify the fix changed nothing but signatures:
 
@@ -128,16 +121,14 @@ git log --format='%h %G?' origin/main..HEAD      # all G now
 git push --force-with-lease origin <headRefName>
 ```
 
-Do this **before** arming auto-merge. Arming first burns a full CI cycle,
-because re-signing rewrites every SHA and every check re-runs.
+Do this **before** arming auto-merge: re-signing rewrites every SHA, so every
+check re-runs.
 
 ## 4. Merge — never sit on CI
 
-Alex's standing rule is that CI-side verification is yours and you never poll
-it (`Never wait on PR CI checks`). So do not wait for green.
-
-Everything below turns on `mergeStateStatus`, so read it rather than inferring
-it from how the checks page looks:
+CI-side verification is yours and you never poll it (`Never wait on PR CI
+checks`), so do not wait for green. Everything below turns on
+`mergeStateStatus` — read it, do not infer it from the checks page:
 
 | | |
 |---|---|
@@ -145,10 +136,7 @@ it from how the checks page looks:
 | `BLOCKED` | required checks pending **or** § Deviations' blocked-with-no-failing-check |
 | `UNSTABLE` | mergeable, but something is failing — a § Deviation, never merge over it |
 | `BEHIND` / `DIRTY` | out of date / conflicting — back to § Rebase onto main |
-| `UNKNOWN` | GitHub has not computed it yet; re-run the query, do not act on it |
-
-`UNKNOWN` is ordinary, not a fault: GitHub computes mergeability lazily and
-the first query after a push routinely lands before it finishes.
+| `UNKNOWN` | not computed yet — ordinary after a push; re-query, do not act |
 
 **Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
 to § Close the beads. The merge is synchronous, so there is nothing to watch:
@@ -169,17 +157,12 @@ local side fails while the worktree still holds the branch.
 
 ### The watch — only for the `--auto` case
 
-**The script must exit on every terminal state.** A monitor that only matches
+**The script must exit on every terminal state** — a monitor that only matches
 success is silent through a failure, and silence looks identical to "still
-running".
-
-**Write it to a file and run it by path.** Inline is not an option: the loop
-needs `$( )`, and a worktree-isolated session's guard rejects any command
-containing a substitution (the `beads` skill documents the same constraint
-for `bd`). Write `/tmp/pr-watch-<N>.sh`, then hand `Monitor` the
-plain command `bash /tmp/pr-watch-<N>.sh`. **Put the PR number in the
-filename** — several sessions land PRs at once and a shared path silently
-leaves one of them watching the other's PR.
+running". Write it to `/tmp/pr-watch-<N>.sh` and hand `Monitor` the plain
+command `bash /tmp/pr-watch-<N>.sh`: the loop needs `$( )`, which an isolated
+session's guard rejects inline, and the PR number in the filename stops two
+concurrent landings sharing one watcher.
 
 ```bash
 PR=<N>
@@ -201,15 +184,11 @@ while true; do
 done
 ```
 
-`gh pr checks` sorts every check into one of five buckets — `pass`, `fail`,
-`pending`, `skipping`, `cancel`. **`cancel` is terminal and is not `fail`.**
-A cancelled required check blocks the merge for good while auto-merge stays
-armed, so matching only `fail` leaves the loop polling a PR that will never
-move, which is indistinguishable from CI still running.
-
-`Monitor` with `persistent: true` — the loop's own exit ends the watch, so no
-timeout should pre-empt it. Only the `MERGED` line continues to § Close the
-beads; every other exit is a § Deviation.
+`cancel` is a terminal bucket and is **not** `fail` — a cancelled required
+check blocks the merge for good while auto-merge stays armed, so a
+`fail`-only filter polls a PR that will never move. `Monitor` with
+`persistent: true`. Only `MERGED` continues to § Close the beads; every other
+exit is a § Deviation.
 
 ## 5. Close the beads
 
@@ -240,30 +219,19 @@ leave depends on how you got there.**
   directory is pinned. Use the `ExitWorktree` tool with
   `action: "remove"`.
 
-  **It will refuse after a squash merge.** A squash lands a *new* commit on
-  main, so the branch commit is not an ancestor and the tool reads it as
-  unmerged work. That refusal is the last thing between the merge and
-  `discard_changes: true` deleting commits permanently, so whatever overrides
-  it has to be a real check:
+  **It will refuse after a squash merge** — the squash is a *new* commit, so
+  the branch is not an ancestor and the tool reads it as unmerged work. That
+  refusal is the last thing between the merge and `discard_changes: true`
+  deleting commits permanently, so override it only on a check that can fail:
 
   ```bash
   git fetch origin
-  git log --oneline -20 origin/main | grep '(#<N>)'    # the squash commit itself
-  git show origin/main:<path the PR changed> \
-    | grep -q '<a line this PR introduced>'            # its content, on main
+  git log --oneline -20 origin/main | grep '(#<N>)'    # the squash commit
   ```
 
-  Either one alone is sufficient; the log line is cheaper and does not depend
-  on picking a good grep string.
-
-  **Never test this with `git cat-file -e origin/main:<path>`.** `-e` asks
-  only whether the path *exists*, and most PRs modify files that already do —
-  it passes identically whether or not the PR merged. A check that cannot
-  fail is worse than no check, because it is what you lean on to discard.
-  Test for something the PR **introduced**.
-
-  Both commands avoid `$( )` on purpose — § The watch has the reason an
-  isolated session cannot run one.
+  Never substitute `git cat-file -e origin/main:<path>`: `-e` asks only
+  whether the path exists, which it did before the PR too. Test for something
+  the PR **introduced**.
 
 - **Session is not isolated** (the worktree belongs to an earlier session):
   plain `cd` to the main checkout, then `git worktree remove`.
@@ -283,12 +251,10 @@ serving.
 
 Never remove a worktree the PR did not own.
 
-**`locked` does not mean "hands off" on its own.** `EnterWorktree` locks the
-worktree it creates, so the PR's own worktree — the very one this step exists
-to remove — shows as `locked` whenever a session is working in it, including
-this one. What to avoid is a worktree locked by **another** session: it holds
-a different branch, and `git worktree list` naming a branch that is not this
-PR's `headRefName` is the tell.
+**`locked` does not mean "hands off".** `EnterWorktree` locks what it creates,
+so the PR's own worktree is locked whenever a session is in it. The one to
+avoid is locked by *another* session — the tell is `git worktree list` naming
+a branch that is not this PR's `headRefName`.
 
 ## Deviations — stop and ask
 
