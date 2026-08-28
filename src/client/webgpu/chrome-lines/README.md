@@ -93,11 +93,30 @@ as `CustomBlending` with three's own `NormalBlending` factors:
 alpha**, which is not the same pair — letting the alpha factors default
 off `blendSrc` writes `a² + dst·(1−a)` into the channel the resolve
 composites against. Three keeps that blend state under `transparent:
-false` (only `NoBlending` and opaque-`NormalBlending` are skipped) and
-still sorts the draw as transparent, since `isOpaque()` requires
-`NormalBlending`. Chart mode's opaque flip is the same function with
-`NoBlending`; `alphaToCoverage` is forced off to match the WebGL2 stroke,
-which never defines `USE_ALPHA_TO_COVERAGE`.
+false`: `WebGPUPipelineUtils.createRenderPipeline` skips only `NoBlending`
+and opaque-`NormalBlending`, and `CustomBlending` is neither. Chart mode's
+opaque flip is the same function with `NoBlending`.
+
+`alphaToCoverage` is forced off to match the WebGL2 stroke, which never
+defines `USE_ALPHA_TO_COVERAGE`. What keeps the stroke's alpha alive
+through that is `NodeBuilder.isOpaque()` — it requires `NormalBlending`,
+so a `CustomBlending` or `NoBlending` stroke reads false and
+`NodeMaterial.setupDiffuseColor` leaves the alpha rather than forcing it
+to 1.
+
+**`transparent: false` does move the draw into the opaque list, and that
+is the one asymmetry the flag buys.** `isOpaque()` decides the alpha
+force above and nothing else; the render list buckets on
+`material.transparent` alone (`RenderList.push`), and the renderer draws
+the opaque list before the transparent one. So the WebGL2 fat stroke
+sorts as transparent and this one does not. It costs nothing today
+because the only consumer is the coordinate spheres' equator at
+`renderOrder = -1`: it draws ahead of every transparent layer on both
+backends either way, and opaque geometry simply overwrites the fragments
+WebGL2's depth test would have discarded instead. **A fat stroke at a
+render order that interleaves with transparent layers would composite
+differently on the two backends** — check that before adding the second
+consumer.
 
 The class default is `blending = NoBlending` ("transparency is not
 supported, yet"), so a fat stroke that never ran the flip draws opaque
