@@ -20,8 +20,9 @@ scripts/catalog/distance/pm-rescue/
 ## What reaches it, and where it goes
 
 `resolvePmRescue` fires only where the winning direction tier's own solution
-carries no PM, and it supplies the **tangential term alone** — no position
-moves. It reaches **276** rows in two shapes:
+carries no PM. The motion it supplies then carries **both** terms: the velocity,
+and the tier's position forward to the scene epoch (§ The rescued motion
+advances the position too). It reaches **276** rows in two shapes:
 
 - **273** resolve to a Gaia row with a 2p (position-only) solution and have no
   HIP2 cover, so they take the `gaia_5p` route's PM-less anchor. The 1,264
@@ -99,12 +100,38 @@ cohort — ξ UMa A and B — are the case in point: the flag warns that the mea
 both components the one Tycho-2 motion is what stops the advance shearing the
 pair apart. They ship a tangential 36.81 km/s each.
 
-**The position keeps its own tier's epoch.** The 3 Tycho-2-shaped rows now
-carry a velocity while their `ra_icrs` stays at J2000 unpropagated, so they
-track the right rate from a place ~16 yr stale — under 1.5″ at this cohort's
-motions, and better than the frozen place they had. Advancing the position on
-a foreign PM is the coherence break with a visible consequence, and is
-`stellata-3bsf.33`.
+## The rescued motion advances the position too
+
+`directionOnPm` (`../direction-cascade.ts`) re-advances the tier's position over
+the rescued PM, so a row never tracks the right rate from a place its own tier
+left stale. Only the **3** Tycho-2-shaped rows move: their `ra_icrs` is stated at
+J2000 and everything else in the cohort is a Gaia 2p row already native to
+J2016.0, where the advance is a zero-Δt no-op.
+
+| Row | Distance | \|μ\| | Moves |
+|---|---|---|---|
+| TYC 1269-128-1 (HD 285742) | 52.6 pc | 94.4 mas/yr | **1.511″** |
+| TYC 158-2314-1 | 546.7 pc | 6.0 mas/yr | 0.095″ |
+| TYC 1867-2317-1 | 835.9 pc | 4.4 mas/yr | 0.070″ |
+
+**What says the advance is right is an identity, not the residual.** The rescued
+PM is SIMBAD's on all three, and SIMBAD states its own J2000 position, so
+advancing *that* over the same 16 yr is an independent J2016 estimate. After the
+change each row sits exactly the two catalogues' J2000 disagreement away from it
+— 0.948″ / 0.395″ / 0.077″ — because the epoch term has cancelled and nothing
+but the frame offset survives. Before, that offset was compounded with a full
+16 yr of uncorrected motion: HD 285742 was **2.457″** out and is now 0.948″.
+
+Two consequences worth stating rather than discovering:
+
+- **The residual is now a positional disagreement, not an epoch error**, and on
+  HD 285742 it is the larger of the two terms. Tycho-2 supplement 1's J2000 cell
+  is a Tycho-1-era position; SIMBAD's is Gaia EDR3 back-propagated. Preferring
+  SIMBAD's *position* where its PM is what rescued the row would close it, at
+  the cost of moving these rows off the `tycho2` tier — `stellata-3bsf.35`.
+- **TYC 1867-2317-1 gets 0.038″ worse** (0.039″ → 0.077″), because its two error
+  terms used to partly cancel by luck. Sub-0.1″ on an 836 pc star, and a
+  systematic correction is preferred over an accidental one.
 
 ## The Gaia-bibcode skip rule, and what it costs
 

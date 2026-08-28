@@ -237,7 +237,7 @@ being retired; the tier after each is its replacement:
 | Field | Cascade (first hit wins) |
 |---|---|
 | direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
-| space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term without moving the position; zero where that too finds nothing |
+| space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term, and carries that tier's position to J2016.0 as well so the two read one motion; zero where that too finds nothing |
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
 | V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
@@ -382,8 +382,11 @@ Measured exposure and expected coverage (2026-08-14; pins in
   cascade could not close, and that was wrong on the three: `stellata-13dx`'s
   rescue cascade reaches all of them on a bibcoded SIMBAD PM, leaving Sol
   alone. It also mis-stated the shape — one of the three is a supplement
-  `flag='T'` row, not a `pflag='X'` one. Their positions do stay at J2000
-  unpropagated (`stellata-3bsf.33`).
+  `flag='T'` row, not a `pflag='X'` one. Their J2000 positions now advance on
+  that rescued PM like any other tier's, the largest by 1.511″; what is left is
+  a positional disagreement between Tycho-2's J2000 cell and SIMBAD's, not an
+  epoch error (`scripts/catalog/distance/pm-rescue/README.md` § The rescued
+  motion advances the position too).
 
   Those three are pinned as `directionTycho2FromIcrs`, and a further **2** of
   the 43 are `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the

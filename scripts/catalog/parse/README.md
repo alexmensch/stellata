@@ -169,8 +169,10 @@ propagate every position to `getT()`. Full design:
 `resolveDirection` selected (`DirectionResolution.src*` fields), so position
 and velocity come from one astrometric solution wherever that solution states
 both. Where it states only a position, the PM comes from a designation-keyed
-tier instead and the pairing rests on both quantities describing the same
-object — `../distance/pm-rescue/README.md` § Why an owned PM on a blended row
+tier instead — and carries that position to the scene epoch as well as the
+velocity, so the two still read one motion. The pairing rests on both
+quantities describing the same object:
+`../distance/pm-rescue/README.md` § Why an owned PM on a blended row
 is admissible at all. The
 east/north tangent basis is `equatorialTangentBasis`
 (`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
@@ -190,9 +192,11 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 **A tier with no PM of its own does not end the search.** The 276 rows whose
 direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
 solution — re-key on the record's own designations through
-`../distance/pm-rescue/`, which supplies the tangential term without moving
-the position. `velocityZero` is what survives that: Sol, 8 clamped artifact
-rows, and the 15 the rescue leaves.
+`../distance/pm-rescue/`. `velocityZero` is what survives that: Sol, 8 clamped
+artifact rows, and the 15 the rescue leaves. The rescued motion then advances
+the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating a
+J2000 position stop tracking their rate from a 16-yr-stale place; the 273 Gaia
+rows are already at J2016.0 and do not move.
 
 The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**, and
 routing these rows to it is exactly what the rescue cascade exists to avoid.

@@ -42,6 +42,7 @@ import {
 } from '../spectral/physical-radius';
 import {
   resolveDirection,
+  directionOnPm,
   velocityPcPerYr,
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
@@ -481,9 +482,6 @@ export function readStars(
       if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
       if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
     }
-    const x = dirRes.dir.x * dist;
-    const y = dirRes.dir.y * dist;
-    const z = dirRes.dir.z * dist;
 
     // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
     // Gliese's printed Vmag → curated. See ../photometry/README.md. absmag
@@ -530,6 +528,19 @@ export function readStars(
     const velVia = pmRescue === null
       ? dirRes.velVia
       : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
+    const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
+    const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
+
+    // The rescued motion carries the position to the scene epoch as well as
+    // the velocity, so a tier stating a pre-J2016 position does not track the
+    // right rate from a stale place. Only the tiers whose own solution has no
+    // PM reach this, and only those stating a pre-scene epoch actually move —
+    // the 2p Gaia cohort is already at J2016.0, a zero-Δt no-op.
+    const dir = pmRescue === null ? dirRes.dir
+      : directionOnPm(dirRes, pmRaMasyr, pmDecMasyr);
+    const x = dir.x * dist;
+    const y = dir.y * dist;
+    const z = dir.z * dist;
 
     // Space-motion velocity from the direction tier's own position + the PM
     // resolved above + the final stack distance + the rv cascade's radial
@@ -538,10 +549,7 @@ export function readStars(
     let vel = isSol
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
-          dirRes.srcRaDeg, dirRes.srcDecDeg,
-          pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr,
-          pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr,
-          dist, rvKmS,
+          dirRes.srcRaDeg, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, dist, rvKmS,
         );
     // Physical sanity: a space velocity past the ceiling is a PM×distance
     // artifact (spurious PM on a faint distant star). Drop to zero — kept

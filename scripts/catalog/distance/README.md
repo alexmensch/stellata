@@ -28,8 +28,8 @@ scripts/catalog/distance/
                                   a record with no Gaia row as NOT 2p — there
                                   is no fit behind it to distrust.
   pm-rescue/                      The proper motion for a row whose direction
-                                  tier carries none — velocity only, moving no
-                                  position. Its own README.
+                                  tier carries none, carrying both the velocity
+                                  and that tier's epoch advance. Its own README.
   radial-velocity/                The radial-velocity cascade and the
                                   Gaia-bibcode skip rule, with its own
                                   README.
@@ -89,17 +89,16 @@ wrong interval — the unit test pins that failure at **3004.792″** (0.8347°)
 which is a 1° tangent-plane error seen on the sphere after renormalisation.
 
 Every tier reaches that form through **`directionOnPm`**, which pairs the
-solution's own epochs with a proper motion supplied by the caller rather than
-read off the solution. That is the module's one propagation call site, and
-taking the PM as an argument is what lets a row be advanced over a motion its
-own tier did not state.
+solution's own epochs with whichever proper motion the row ends up carrying —
+its tier's, or the rescue cascade's. That is what keeps the position and the
+velocity reading one motion (§ The proper-motion rescue cascade).
 
 | Tier | Epoch of the position it reads |
 |---|---|
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | per star and per coordinate, `ep_ra` / `ep_de` (1967.77–1991.74 across the cohort) |
-| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, which leaves the position where it is. 3 of the 43, pinned `directionTycho2FromIcrs` |
+| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. 3 of the 43, pinned `directionTycho2FromIcrs` |
 | `cns5` | the row's own `pos_epoch` (2016.0 on 5,244 rows, 2000.0 on 406, 1991.25 on 138, 2015.5 on 36, 2016.55 on 3) |
 | `simbad` | J2000.0 — **measured, not assumed**: over the 673 catalogue rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one back-propagated to J2000 to a median 0.000″, and not one row is closer to J2016 |
 
@@ -155,9 +154,15 @@ propagation is pinned at unit level instead.
 The direction cascade leaves **276** rows without a PM — 273 on a Gaia 2p
 (position-only) solution with no HIP2 cover, 3 on a Tycho-2 row with no mean
 solution. `pm-rescue/` re-keys those on the record's own designations rather
-than shipping them static, supplying the tangential term alone and moving no
-position. Its README carries the routing, why an owned PM on a blend is
-admissible at all, and the Gaia-bibcode skip rule's 13-row cost.
+than shipping them static. Its README carries the routing, why an owned PM on a
+blend is admissible at all, and the Gaia-bibcode skip rule's 13-row cost.
+
+**The rescued motion advances the position as well as the velocity**, through
+the same `directionOnPm` every tier's own PM goes through, so no row tracks a
+rate from a place its tier left stale. Only the 3 Tycho-2 rows move (1.511″ /
+0.095″ / 0.070″); the 273 Gaia rows are native J2016.0 and the advance is a
+zero-Δt no-op. `pm-rescue/README.md` § The rescued motion advances the position
+too carries the check that says it lands right.
 
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **282** counts this cascade's 242 rows alongside the
