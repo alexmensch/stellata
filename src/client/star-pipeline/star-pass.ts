@@ -44,6 +44,12 @@ export interface StarPassRouting {
    *  camera has to back off, while a deeply glow-dominated one is simply
    *  too far for even totality to shrink its quad past the split. */
   trapBelowDim: number | null;
+  /** The `physRatio` this star would have to reach for its CURRENT dim
+   *  to tier it disc-owned — i.e. where to put the camera, rather than
+   *  how deep to scrub. A dim shrinks `appSize` by some factor k, and
+   *  the split then flips at `physRatio ≥ k/2`, so this is exactly k/2.
+   *  Meaningless for a disc-routed star, which ignores the dim. */
+  needRatio: number;
 }
 
 /** Bisection depth: `DIM_FLOOR`..1 to within ~1e-6, which is finer than
@@ -82,6 +88,7 @@ export function starPassRouting(
     dimmed,
     trap: routed !== dimmed,
     physRatio: Math.min(physSizePx / Math.max(appSizePx, physSizePx, 0.001), 1),
+    needRatio: 0.5 * appSizeAtDim(dim) / Math.max(appSizePx, 0.001),
     trapBelowDim,
   };
 }

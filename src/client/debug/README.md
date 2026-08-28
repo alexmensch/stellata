@@ -289,17 +289,49 @@ whichever of those two conditions is missing:
 | Verdict | Means | Do |
 | --- | --- | --- |
 | `>pri DISC r=0.545  disc ignores the dim, back off` | The back star is a resolved disc. The disc pass never folds `iEclipseDim`, so the eclipse has **no photometric effect at all** here — overlap orders geometrically in the local depth pass. | Back off until `r` falls under 0.5. |
-| `>sec GLOW r=0.486  now 0.372, trap<0.003` | Reachable, but the dim is nowhere near deep enough yet. | Scrub deeper, or widen the band — below. |
-| `>sec GLOW r=0.486  <TRAP>` | **In the band now.** | Look: the star must still be drawn, no pop in treatment. |
-| `>sec GLOW r=0.080  unreachable, close in` | Too far — even totality cannot shrink the quad past the split. | Close in until `r` climbs toward 0.5. |
+| `>sec GLOW r=0.426  need r>0.494 at dim 0.139, or trap<0.002` | Glow-routed and dimmed, but the quad is too small a fraction of the split. | Close in until `r` passes the stated target. |
+| `>sec GLOW r=0.494  <TRAP>` | **In the band now.** | Look — § What the eye has to settle. |
+| `>sec GLOW r=0.426  need r>0.494 at dim 0.139; no dim reaches it here` | Same, and scrubbing will not help either: even totality leaves the quad above the split. | Close in; distance is the only lever left. |
 
 `r` is `vPhysRatio` as the vertex stages compute it — from the
 **undimmed** quad, which is what makes all three compilations agree
-(`../star-pipeline/README.md` § Star rendering).
+(`../star-pipeline/README.md` § Star rendering). `need r>` is the value
+`r` must reach for the dim the star *already has* to tier it disc-owned:
+the camera-side target, against `trap<`'s clock-side one.
+
+**Camera distance is a clean control here.** A dim only shrinks
+`appSize`, so `r ≈ physSize / appSize` falls as roughly `1/d` — while the
+dim itself is scale-invariant (the occlusion solves from angular
+quantities, and separation and disc radii both scale as `1/d`, so their
+ratio does not move). Park at the eclipse phase you want, then slide the
+camera until `r` crosses `need r>`; the dim will sit still while you do.
 
 **`<TRAP>` is not a fault report.** Past the undimmed-routing fix the
 star stays drawn right through it; the marker exists because the band is
 otherwise impossible to find.
+
+### What the eye has to settle — the HUD cannot
+
+**This readout cannot validate a routing fix, only locate where one
+would show.** Every number in it comes from the CPU mirror
+(`renderedSizeComponents`), which has always solved the split from the
+undimmed quad. It reads identically against a correct shader and a
+broken one. Watching `r` hold steady while the dim swings proves only
+that the mirror is undimmed, which was never in doubt.
+
+What the shaders route on is observable in exactly one place: whether
+the star is **drawn** while `<TRAP>` is up. So the check is a negative
+control, not an inspection — park inside the band, then load a build
+without the fix and confirm the star *disappears*. A star that looks
+fine in one build is not evidence; a star that vanishes in the other is.
+
+Corollary for anything that changes the sizing curve: this band moves
+with `sizeMin`/`sizeMax`/`sizeSpan`/`sizeKnee`, and a star can only fall
+into it when the pass split and the footprint disagree about which quad
+they are measuring. The source-level pin
+(`../star-pipeline/star-pass-split-drift.test.ts`) is what actually
+holds that invariant; this panel is for confirming it with your eyes
+once, not for regression.
 
 ### Widening the band
 

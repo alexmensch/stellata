@@ -35,9 +35,10 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
     }
     if (r.routed === STAR_PASS_DISC) return `${head}  disc ignores the dim, back off`;
     if (r.trap) return `${head}  <TRAP>`;
-    return threshold === null
-      ? `${head}  unreachable, close in`
-      : `${head}  now ${dim.toFixed(3)}, ${threshold}`;
+    // Where to put the camera, then how deep to scrub — in that order,
+    // because distance is the control that actually moves r.
+    return `${head}  need r>${r.needRatio.toFixed(3)} at dim ${dim.toFixed(3)}`
+      + (threshold === null ? '; no dim reaches it here' : `, or ${threshold}`);
   };
 
   const onFrame = () => {

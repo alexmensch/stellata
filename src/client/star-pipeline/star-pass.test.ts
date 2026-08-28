@@ -65,6 +65,16 @@ describe('starPassRouting', () => {
     expect(starPassRouting(APP, PHYS, 1, FLOOR, sizeAt).physRatio).toBeCloseTo(0.49, 10);
   });
 
+  it('names the ratio the camera must reach for the current dim to flip it', () => {
+    // sizeAt(0.64) shrinks the quad to 0.8 x, so the split moves to
+    // physRatio 0.4 — and a star sitting there does flip, one just under
+    // does not. This is the camera-side answer to trapBelowDim's
+    // clock-side one.
+    expect(starPassRouting(APP, PHYS, 0.64, FLOOR, sizeAt).needRatio).toBeCloseTo(0.4, 10);
+    expect(starPassRouting(APP, 0.401 * APP, 0.64, FLOOR, sizeAt).trap).toBe(true);
+    expect(starPassRouting(APP, 0.399 * APP, 0.64, FLOOR, sizeAt).trap).toBe(false);
+  });
+
   it('gives a disc-routed star no threshold — that pass ignores the dim', () => {
     // physSize already wins max(appSize, physSize), so shrinking appSize
     // cannot move the ratio at all. The camera has to back off.
