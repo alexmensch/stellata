@@ -74,10 +74,9 @@ vantage a report came from before picking one.
 
 `docs/bd-workflow.md` is the reference for everything this skill only names:
 model-routing labels, choosing the parent epic, label / metadata naming,
-tagging conventions, the bug-sweep handoff format, grooming. This file
-carries triggers and obligations; that file carries specifics. When a bd
-question is not answered in the few lines here, the answer is in there —
-go and read it rather than reconstructing it from sibling beads.
+tagging conventions, the bug-sweep handoff format, grooming. When a bd
+question is not answered here, read it rather than reconstructing the answer
+from sibling beads.
 
 ## Prioritisation
 
@@ -148,46 +147,22 @@ skills for references to it.
 
 ## Keep this skill current — do this without being asked
 
-**Edit this file in the same session, without asking**, whenever:
+**Edit this file in the same session, without asking**, whenever something
+here is wrong or stale, you had to work out an undocumented stellata-specific
+bd fact, or — the trigger that gets skipped — **the user corrected a bd action
+of yours.** A correction is a defect in this file until proven otherwise: fix
+the bead, then ask what let you file it wrong. If a rule was written down and
+still got violated, the pickup point is what failed.
 
-- something here is wrong, stale, or contradicted by real behaviour;
-- you had to work out a stellata-specific bd fact that is not written down; or
-- **the user corrected a bd action of yours.** A correction is a defect in
-  this file until proven otherwise. Do not just fix the bead — ask why the
-  skill let you file it wrong, and fix that. Both known misses landed this
-  way: an orphaned bead and a missing model-routing label, each governed by a
-  written rule this file never pointed at.
+Write the rule that catches the **class**, not a note about the incident; the
+incident belongs in the commit message. Often the right fix is a pointer or
+different trigger wording somewhere else, and "this file is missing a
+paragraph" is the least likely answer.
 
-That third trigger is the one that gets skipped, because the rule usually
-*does* exist somewhere and the miss reads as carelessness rather than a
-documentation gap. If a rule was written down and still got violated, the
-pickup point is what failed.
-
-### Fix the principle, not the incident
-
-Write the rule that catches the **class**, not a note about what happened
-once. An incident is evidence that a gap exists; it is not a description of
-its shape. Ask what general rule the miss is an instance of, and whether the
-right fix is a rule change, a pointer, or different trigger wording — often
-the fix belongs somewhere else entirely, and "this file is missing a
-paragraph" is the least likely answer. A file that accretes one paragraph per
-past mistake becomes a changelog nobody reads; the incident itself belongs in
-the commit message, not here.
-
-### What to restate here, and what to point at
-
-The default is a pointer. This file is loaded whole every time it triggers,
-so every restated line is a permanent context cost plus a second copy that
-can drift out of sync with the doc.
-
-**Restate only what you must know before you know to look it up.** A
-creation-time obligation qualifies: nothing prompts you, so a session that
-has not met the rule will not go looking, and a pointer cannot save it. Name
-those in one line and point to the detail. Everything you would naturally go
-and look up — how a label is spelled, which of two values applies, a
-procedure you know exists — is a pointer, always. Adding a paragraph because
-one specific thing went wrong once is how this file stops being read.
+Default to a pointer. Restate only what you must know *before* you know to
+look it up — a creation-time obligation qualifies, because nothing prompts
+you. Anything you would naturally go and look up is a pointer, always.
 
 Verify against the running CLI or the repo before writing, keep the register
-terse, and do not duplicate `docs/bd-workflow.md`, the `beads` skill, or
-`bd prime` output. Say in one line what changed.
+terse, do not duplicate `docs/bd-workflow.md`, the `beads` skill or `bd prime`
+output, and say in one line what changed.

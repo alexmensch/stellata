@@ -30,12 +30,10 @@ goal is findings the author will act on, not encouragement.
   § Folder READMEs. Cover the folders the diff *implicates* as well as the ones
   it edits: a README arriving as a diff hunk has been read as an artifact, not
   as context.
-- **A strong PR body is not that context, and substitutes for it invisibly.** A
-  body naming the mechanism, the file:line and the alternative not taken leaves
-  you feeling oriented — which is exactly when the README read gets skipped. It
-  is the author's model of the system, so a review sourced from it can only
+- **A strong PR body is not that context, and substitutes for it invisibly.**
+  It is the author's model of the system, so a review sourced from it can only
   check internal consistency, never whether that model matches what the folder
-  asserts is true.
+  asserts. Feeling oriented is exactly when the README read gets skipped.
 - Check `git worktree list`: the PR may already be checked out locally, which
   beats re-fetching and lets you run gates against it.
 - Then read **full files, not just hunks** — a hunk hides the dispose path, the
@@ -45,9 +43,8 @@ goal is findings the author will act on, not encouragement.
 
 ## GPU and memory cost — scrutinise every PR for it
 
-Stellata is GPU-limited and now carries a lot of detail. Treat *"the device has
-limitless GPU compute and VRAM"* as the default false assumption present in any
-diff, and hunt for it explicitly. Six probes:
+Stellata is GPU-limited. Treat *"the device has limitless GPU compute and
+VRAM"* as the default false assumption in any diff. Six probes:
 
 ### 1. Every allocation names its release
 
@@ -116,10 +113,8 @@ bead.**
 epic (and its parent, up to the root) is part of the review surface, not
 background reading.
 
-Epics drift because they are written before the work and closed beads teach
-things the plan could not know. The review is the only moment both the plan and
-the outcome are in one context — after the merge, the next session reads the
-stale plan and believes it.
+The review is the only moment the plan and the outcome are both in context;
+after the merge the next session reads the stale plan and believes it.
 
 Read the closing bead(s), then the parent chain's description and design
 fields. Hunt for these six, in this order:
