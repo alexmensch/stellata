@@ -4,7 +4,7 @@
 import type * as THREE from 'three';
 import { acquireGpuFrameSampler, perfInstrumentationInstalled } from '../perf-hud';
 import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
-import type { GpuFrameMethod } from './frame-cost-pure';
+import { GPU_FRAME_METHODS, type GpuFrameMethod } from './frame-cost-pure';
 
 export interface GpuFrameSource {
   readonly method: GpuFrameMethod;
@@ -64,6 +64,16 @@ export function acquireGpuFrameSource(
   onSample: (ms: number) => void,
   pinned?: GpuFrameMethod,
 ): GpuFrameSource | null {
+  if (pinned !== undefined && !GPU_FRAME_METHODS.includes(pinned)) {
+    console.warn(
+      `priceFrame: { method: '${pinned}' } is not a clock — expected one of ` +
+      `${GPU_FRAME_METHODS.map((m) => `'${m}'`).join(', ')}. Refusing: the ` +
+      'console is untyped, so falling through to the backend preference ' +
+      'order would leave a typo looking like an honoured pin and rebuild ' +
+      'the mixed-method table pinning exists to prevent.',
+    );
+    return null;
+  }
   if (pinned === 'raf-delta') {
     return rafDeltaSource(
       'method pinned to raf-delta wall time — the one clock every backend ' +

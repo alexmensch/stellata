@@ -6,6 +6,7 @@ import {
   resolveAndPublishGpuFrame,
 } from '../gpu-timing/gpu-frame-samples';
 import { FakeGl, asGl } from '../gpu-timing/fake-gl';
+import type { GpuFrameMethod } from './frame-cost-pure';
 import type * as PerfHud from '../perf-hud';
 
 const perfState = vi.hoisted(() => ({ panelOpen: false }));
@@ -128,6 +129,20 @@ describe('the pricing sweep picks its sample source per backend', () => {
     expect(acquireGpuFrameSource(glHost(noExtension), () => {}, 'timer-query')).toBeNull();
 
     expect(warn).toHaveBeenCalledTimes(4);
+    warn.mockRestore();
+  });
+
+  it('refuses a method string the union does not name', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // The console is untyped, so a typo arrives here as a plain string.
+    // Falling through would run the preference order behind a pin the
+    // caller believes was honoured.
+    const typo = 'rafdelta' as GpuFrameMethod;
+    expect(acquireGpuFrameSource(glHost(new FakeGl()), () => {}, typo)).toBeNull();
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("'rafdelta'"));
     warn.mockRestore();
   });
 
