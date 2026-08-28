@@ -88,6 +88,12 @@ Collapsing Tycho-2's pair onto a single epoch would advance Dec over the
 wrong interval — the unit test pins that failure at **3004.792″** (0.8347°),
 which is a 1° tangent-plane error seen on the sphere after renormalisation.
 
+Every tier reaches that form through **`directionOnPm`**, which pairs the
+solution's own epochs with a proper motion supplied by the caller rather than
+read off the solution. That is the module's one propagation call site, and
+taking the PM as an argument is what lets a row be advanced over a motion its
+own tier did not state.
+
 | Tier | Epoch of the position it reads |
 |---|---|
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |

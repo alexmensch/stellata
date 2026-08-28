@@ -4,7 +4,6 @@
 
 import {
   equatorialTangentBasis,
-  unitVectorFromRaDec,
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 import { headerIndex } from '../parse/corpus-tsv';
@@ -138,19 +137,26 @@ export const VELOCITY_VIA_VALUES = [
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
 
-export interface DirectionResolution {
+/** The astrometric solution one tier selected, before it is advanced to the
+ *  scene epoch: position (deg) at the epoch that tier states — per coordinate,
+ *  because a Tycho-2 mean solution observes the two over different intervals —
+ *  and the PM (mas/yr, cos δ-applied) the same solution carries, if any. Fed
+ *  to `velocityPcPerYr` alongside the final stack distance + RV. */
+export interface DirectionSolution {
   via: DirectionVia;
-  dir: UnitVector;
-  /** The astrometric solution the tier selected — position (deg) and PM
-   *  (mas/yr, cos δ-applied) at its native epoch. Fed to `velocityPcPerYr`
-   *  alongside the final stack distance + RV so position and velocity come
-   *  from one solution. */
   srcRaDeg: number;
   srcDecDeg: number;
+  srcEpochRa: number;
+  srcEpochDec: number;
   srcPmraMasyr: number | null;
   srcPmdecMasyr: number | null;
   velVia: VelocityVia;
 }
+
+export interface DirectionResolution extends DirectionSolution {
+  dir: UnitVector;
+}
+
 
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the
@@ -196,6 +202,23 @@ export function directionAtEpochSplit(
   const z = u.z + dEast * east.z + dNorth * north.z;
   const norm = Math.hypot(x, y, z);
   return { x: x / norm, y: y / norm, z: z / norm };
+}
+
+/** A tier's position advanced to the scene epoch on the motion the row ends up
+ *  with — the tier's own where its solution states one, `pm-rescue/`'s where it
+ *  does not. Routing the position through the same PM the velocity assembles
+ *  from is what keeps the two consistent: a row given a rescued motion but left
+ *  at its tier's epoch would track the right rate from the wrong place. Every
+ *  tier reaching the scene epoch already (Gaia's J2016.0) is a zero-Δt no-op. */
+export function directionOnPm(
+  solution: DirectionSolution,
+  pmraMasyr: number | null,
+  pmdecMasyr: number | null,
+): UnitVector {
+  return directionAtEpochSplit(
+    solution.srcRaDeg, solution.srcDecDeg, pmraMasyr, pmdecMasyr,
+    solution.srcEpochRa, solution.srcEpochDec, CATALOG_SCENE_EPOCH,
+  );
 }
 
 // 1 km/s in pc/yr: (1 km/s)·(1 Julian yr in s) / (1 pc in km)
@@ -310,123 +333,87 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
 
-  const gaiaVelVia = (): VelocityVia => gaia === undefined
-    ? 'zero'
-    : pmVelVia(gaia.pmraMasyr, gaia.pmdecMasyr, 'gaia_pm');
+  const resolved = (solution: DirectionSolution): DirectionResolution => ({
+    ...solution,
+    dir: directionOnPm(solution, solution.srcPmraMasyr, solution.srcPmdecMasyr),
+  });
+
+  const gaiaSolution = (via: DirectionVia, g: GaiaAstrometryCatalogRow): DirectionSolution => ({
+    via,
+    srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
+    srcEpochRa: GAIA_DR3_REF_EPOCH, srcEpochDec: GAIA_DR3_REF_EPOCH,
+    srcPmraMasyr: g.pmraMasyr, srcPmdecMasyr: g.pmdecMasyr,
+    velVia: pmVelVia(g.pmraMasyr, g.pmdecMasyr, 'gaia_pm'),
+  });
+  const hip2Solution = (via: DirectionVia, h: Hip2AstrometryRow): DirectionSolution => ({
+    via,
+    srcRaDeg: h.raDeg, srcDecDeg: h.decDeg,
+    srcEpochRa: HIP2_REF_EPOCH, srcEpochDec: HIP2_REF_EPOCH,
+    srcPmraMasyr: h.pmRaMasyr, srcPmdecMasyr: h.pmDeMasyr,
+    velVia: pmVelVia(h.pmRaMasyr, h.pmDeMasyr, 'hip2_pm'),
+  });
 
   if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
-    const fromGaia = (via: DirectionVia): DirectionResolution => ({
-      via,
-      dir: directionAtEpoch(
-        gaia.raDeg, gaia.decDeg, gaia.pmraMasyr, gaia.pmdecMasyr,
-        GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
-      ),
-      srcRaDeg: gaia.raDeg, srcDecDeg: gaia.decDeg,
-      srcPmraMasyr: gaia.pmraMasyr, srcPmdecMasyr: gaia.pmdecMasyr,
-      velVia: gaiaVelVia(),
-    });
     if (
       sourceId !== null
       && sources.nssSourceIds.has(sourceId)
       && gaia5pUnreliable(gaia)
     ) {
-      return fromGaia('gaia_nss_systemic');
+      return resolved(gaiaSolution('gaia_nss_systemic', gaia));
     }
     if (hip2 !== undefined && hip2PmDisagrees(gaia, hip2)) {
-      return {
-        via: 'hip2_pm_discrepant',
-        dir: directionAtEpoch(
-          hip2.raDeg, hip2.decDeg, hip2.pmRaMasyr, hip2.pmDeMasyr,
-          HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
-        ),
-        srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
-        srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-        velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
-      };
+      return resolved(hip2Solution('hip2_pm_discrepant', hip2));
     }
-    return fromGaia('gaia_5p');
+    return resolved(gaiaSolution('gaia_5p', gaia));
   }
 
-  if (hip2 !== undefined) {
-    return {
-      via: 'hip2_saturated',
-      dir: directionAtEpoch(
-        hip2.raDeg, hip2.decDeg, hip2.pmRaMasyr, hip2.pmDeMasyr,
-        HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
-      ),
-      srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
-      srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-      velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
-    };
-  }
+  if (hip2 !== undefined) return resolved(hip2Solution('hip2_saturated', hip2));
 
   // 2p (position-only) Gaia row with no HIP2 cover: keep the Gaia
   // positional anchor, unpropagated when PM is absent — mirrors
   // stage3's gaia_5p fall-through.
-  if (gaia !== undefined) {
-    return {
-      via: 'gaia_5p',
-      dir: directionAtEpoch(
-        gaia.raDeg, gaia.decDeg, gaia.pmraMasyr, gaia.pmdecMasyr,
-        GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
-      ),
-      srcRaDeg: gaia.raDeg, srcDecDeg: gaia.decDeg,
-      srcPmraMasyr: gaia.pmraMasyr, srcPmdecMasyr: gaia.pmdecMasyr,
-      velVia: gaiaVelVia(),
-    };
-  }
+  if (gaia !== undefined) return resolved(gaiaSolution('gaia_5p', gaia));
 
   // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
   // joins on the record's OWN identifier — a value join, never positional —
-  // and each propagates from its own stated epoch, so the tier that supplies
-  // the position supplies the proper motion that carries it forward.
+  // and each states its own epoch, so a tier supplying the position supplies
+  // the proper motion that carries it forward wherever its solution has one.
   const tycho2 = tyc !== null ? sources.tycho2.get(tyc) : undefined;
   if (tycho2 !== undefined) {
-    return {
+    return resolved({
       via: 'tycho2',
-      dir: directionAtEpochSplit(
-        tycho2.raDeg, tycho2.decDeg, tycho2.pmRaMasyr, tycho2.pmDecMasyr,
-        tycho2.epochRa, tycho2.epochDec, CATALOG_SCENE_EPOCH,
-      ),
       srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
+      srcEpochRa: tycho2.epochRa, srcEpochDec: tycho2.epochDec,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-    };
+    });
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
   if (cns5 !== null) {
-    return {
+    return resolved({
       via: 'cns5',
-      dir: directionAtEpoch(
-        cns5.raDeg, cns5.decDeg,
-        cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null,
-        cns5.posEpoch, CATALOG_SCENE_EPOCH,
-      ),
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
+      srcEpochRa: cns5.posEpoch, srcEpochDec: cns5.posEpoch,
       srcPmraMasyr: cns5.pm?.pmRaMasyr ?? null,
       srcPmdecMasyr: cns5.pm?.pmDecMasyr ?? null,
       velVia: pmVelVia(
         cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
       ),
-    };
+    });
   }
 
   if (simbad !== null) {
-    return {
+    return resolved({
       via: 'simbad',
-      dir: directionAtEpoch(
-        simbad.raDeg, simbad.decDeg,
-        simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null,
-        SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
-      ),
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
+      srcEpochRa: SIMBAD_REF_EPOCH, srcEpochDec: SIMBAD_REF_EPOCH,
       srcPmraMasyr: simbad.pm?.pmRaMasyr ?? null,
       srcPmdecMasyr: simbad.pm?.pmDecMasyr ?? null,
       velVia: pmVelVia(
         simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
       ),
-    };
+    });
   }
 
   // Sol carries no source_id, HIP, TYC or GJ, so every tier above misses it
@@ -434,13 +421,13 @@ export function resolveDirection(
   // The vector is arbitrary and unobservable: Sol's distance is zero, so the
   // walk multiplies it to the origin whatever it points at.
   if (isSol) {
-    return {
+    return resolved({
       via: 'curated',
-      dir: unitVectorFromRaDec(0, 0),
       srcRaDeg: 0, srcDecDeg: 0,
+      srcEpochRa: CATALOG_SCENE_EPOCH, srcEpochDec: CATALOG_SCENE_EPOCH,
       srcPmraMasyr: null, srcPmdecMasyr: null,
       velVia: 'zero',
-    };
+    });
   }
 
   return null;
