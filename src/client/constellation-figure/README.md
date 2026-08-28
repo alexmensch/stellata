@@ -111,6 +111,14 @@ never the navigate-mode `unfocus` kind): the mode flag alone covers entry and
 leaves the identical smear on the way out, since exit emits
 `cameraMode='navigate'` at glide *start*.
 
+**The same geometry bites any line layer.** OBSERVE parks the camera on the
+focal object, so ANY line geometry with a vertex there is degenerate — and a
+curve that merely passes through the eye point is worse than one that ends
+there, because near-plane clipping makes it whip under rotation instead of
+collapsing to a point. The binary orbit paths hit exactly that: a star sits on
+its own barycentric ellipse by construction (`../binaries/orbit-paths/README.md`),
+so observing from it puts the camera on the curve (stellata-uadc.31).
+
 **A non-star anchor keeps its host's lines, and that is not a geometric
 argument.** `focus.getFocusedStar()` is null for every non-star kind, so a
 planet or probe anchor suppresses nothing. Today that is unreachable rather
