@@ -29,31 +29,65 @@ function rafDelta(reason: string): GpuFrameSource {
   return { method: 'raf-delta', release: () => {} };
 }
 
+function refusePinned(method: GpuFrameMethod, reason: string): null {
+  console.warn(
+    `priceFrame: { method: '${method}' } pinned, but ${reason}. Refusing ` +
+    'rather than silently switching clocks — a silent fallback rebuilds the ' +
+    "mixed-method table pinning exists to prevent. 'raf-delta' is the one " +
+    'method every backend can supply.',
+  );
+  return null;
+}
+
 /**
  * Null when the sweep cannot proceed; the caller has already been told why
  * on the console.
+ *
+ * `pinned` forces a method instead of taking the backend's best. A pinned
+ * method the backend cannot supply refuses (null) — never falls back.
  */
 export function acquireGpuFrameSource(
   host: GpuFrameSourceHost,
   onSample: (ms: number) => void,
+  pinned?: GpuFrameMethod,
 ): GpuFrameSource | null {
+  if (pinned === 'raf-delta') {
+    console.info(
+      'priceFrame: method pinned to raf-delta wall time — the one clock ' +
+      'every backend shares, so cross-backend tables compare. Differentials ' +
+      'below the vsync quantum read as zero unless the frame is already ' +
+      'over budget.',
+    );
+    return { method: 'raf-delta', release: () => {} };
+  }
   if (host.rendererGL === null) {
+    if (pinned === 'timer-query') {
+      return refusePinned(pinned, 'a WebGPU boot has no WebGL2 timer query');
+    }
     if (host.webgpu?.timestampsAvailable !== true) {
-      return rafDelta('this adapter withheld the timestamp-query feature');
+      const reason = 'this adapter withheld the timestamp-query feature';
+      if (pinned === 'timestamp') return refusePinned(pinned, reason);
+      return rafDelta(reason);
     }
     if (!gpuFrameSamplesAreSound()) {
-      return rafDelta(
+      const reason =
         'this backend granted timestamp-query but resolves durations no ' +
-        'frame can have, so every sample is being dropped',
-      );
+        'frame can have, so every sample is being dropped';
+      if (pinned === 'timestamp') return refusePinned(pinned, reason);
+      return rafDelta(reason);
     }
     // Nothing is exclusive here: the render loop resolves for whoever is
     // listening, so the debug panel may stay open.
     return { method: 'timestamp', release: onGpuFrameSample(onSample) };
   }
+  if (pinned === 'timestamp') {
+    return refusePinned(pinned, 'WebGPU timestamps do not exist on a WebGL2 boot');
+  }
   const gl = host.rendererGL.getContext() as WebGL2RenderingContext;
   if (gl.getExtension('EXT_disjoint_timer_query_webgl2') === null) {
-    return rafDelta('WebGL2 exposes no timer query on this context (Safari)');
+    const reason = 'WebGL2 exposes no timer query on this context (Safari)';
+    if (pinned === 'timer-query') return refusePinned(pinned, reason);
+    return rafDelta(reason);
   }
   const release = acquireGpuFrameSampler(gl, onSample);
   if (release === null) {

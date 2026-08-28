@@ -68,7 +68,12 @@ src/client/debug/frame-cost/
   compare numbers across two methods. The sweep picks the source itself and
   says which on the console — it never claims a clock the backend does not
   have, since that would spend the whole warmup before aborting with no
-  rows.
+  rows. **That preference order picks each backend's BEST clock, not a
+  comparable one** — the four browser × backend combinations land on three
+  different methods — so a cross-backend table has to pin the method by
+  hand: `debug.priceFrame({ method: 'raf-delta' })`, the one clock all of
+  them share. A pinned method the backend cannot supply refuses the sweep
+  outright rather than silently switching clocks.
 - **Layers that actually render.** A `#renderer=webgpu` boot draws only
   the seam's own scene until each layer's port child lands, so a sweep
   there prices passes that are not drawing: rows read ~0 for a reason that

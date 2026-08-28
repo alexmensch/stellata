@@ -81,6 +81,49 @@ describe('the pricing sweep picks its sample source per backend', () => {
     second!.release();
   });
 
+  it('pins raf-delta on any backend without subscribing to a GPU clock', () => {
+    // The caller times frames itself under raf-delta, so a subscription
+    // left live would double-count every dwell sample.
+    const samples: number[] = [];
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const source = acquireGpuFrameSource(
+      webgpuHost(true), (ms) => samples.push(ms), 'raf-delta');
+
+    expect(source?.method).toBe('raf-delta');
+    publishGpuFrameSample(9.5);
+    expect(samples).toEqual([]);
+    expect(() => source!.release()).not.toThrow();
+    expect(info).toHaveBeenCalled();
+    info.mockRestore();
+  });
+
+  it('honours a pinned method the backend can supply', () => {
+    const timestamp = acquireGpuFrameSource(webgpuHost(true), () => {}, 'timestamp');
+    expect(timestamp?.method).toBe('timestamp');
+    timestamp!.release();
+
+    const timerQuery = acquireGpuFrameSource(glHost(new FakeGl()), () => {}, 'timer-query');
+    expect(timerQuery?.method).toBe('timer-query');
+    timerQuery!.release();
+  });
+
+  it('refuses a pinned method the backend cannot supply, never falls back', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const noExtension = new FakeGl();
+    noExtension.hasExtension = false;
+
+    // A silent fallback would rebuild exactly the mixed-method table
+    // pinning exists to prevent, so each of these must return null.
+    expect(acquireGpuFrameSource(glHost(new FakeGl()), () => {}, 'timestamp')).toBeNull();
+    expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'timer-query')).toBeNull();
+    expect(acquireGpuFrameSource(webgpuHost(false), () => {}, 'timestamp')).toBeNull();
+    expect(acquireGpuFrameSource(glHost(noExtension), () => {}, 'timer-query')).toBeNull();
+
+    expect(warn).toHaveBeenCalledTimes(4);
+    warn.mockRestore();
+  });
+
   // Last: latching the channel unsound is a one-way door for the module.
   it('falls back to rAF deltas where a granted feature resolves garbage', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -95,6 +138,11 @@ describe('the pricing sweep picks its sample source per backend', () => {
     const source = acquireGpuFrameSource(webgpuHost(true), () => {});
     expect(source?.method).toBe('raf-delta');
     expect(info).toHaveBeenCalled();
+
+    // Pinning timestamp on the unsound channel refuses too — the grant is
+    // there, the samples are not.
+    expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'timestamp')).toBeNull();
+    expect(warn).toHaveBeenCalled();
 
     warn.mockRestore();
     info.mockRestore();

@@ -11,6 +11,7 @@ import {
   fitDwellFrames,
   summarizeDwell,
   type DwellStats,
+  type GpuFrameMethod,
   type PriceFrameRow,
 } from './frame-cost-pure';
 
@@ -57,6 +58,13 @@ export interface PriceFrameOptions {
    *  when toggled, and the differential then prices a different star
    *  population instead of the pass. Set false to price the live path. */
   pinExposure?: boolean;
+  /** Pin the sample clock instead of taking the backend's best. The
+   *  per-backend preference order picks a different method per browser ×
+   *  backend, and numbers from two methods must never be compared — so a
+   *  cross-backend table pins 'raf-delta', the one clock all of them
+   *  share. A pinned method the backend cannot supply refuses the sweep
+   *  (console says why) rather than silently switching clocks. */
+  method?: GpuFrameMethod;
 }
 
 const DEFAULTS = {
@@ -214,7 +222,7 @@ export async function runPriceFrame(
   const deadline = performance.now() + (options.budgetMs ?? DEFAULTS.budgetMs);
 
   const sink: number[] = [];
-  const source = acquireGpuFrameSource(stellata, (ms) => sink.push(ms));
+  const source = acquireGpuFrameSource(stellata, (ms) => sink.push(ms), options.method);
   if (source === null) return [];
   const { method, release } = source;
 
