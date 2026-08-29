@@ -1,7 +1,9 @@
-// UTC timestamp readout for the current `t`. See
-// src/client/solar-system/README.md § Time.
+// Two-line time readout for the current `t`: UT date line + JD(TT)/ΔT
+// line. See src/client/solar-system/README.md § Time.
 
 import type { Stellata } from '../../stellata';
+import { tToJdUt } from './time';
+import { deltaTSeconds } from './delta-t-pure';
 
 
 const MONTHS = [
@@ -9,11 +11,14 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const;
 
-/** Format a Unix-seconds value as `D MMM YYYY, HH:MM:SS UTC` (e.g.
- *  `7 May 2026, 18:23:45 UTC`). Locale-independent so the output is
- *  identical across browsers — month names use the en-US short form
- *  the user picked over numeric date order to avoid DD/MM vs MM/DD
- *  ambiguity. The `UTC` suffix removes any timezone confusion. */
+/** Format a Unix-seconds value as `D MMM YYYY, HH:MM:SS UT (Gregorian)`
+ *  (e.g. `7 May 2026, 18:23:45 UT (Gregorian)`). Locale-independent so the
+ *  output is identical across browsers — month names use the en-US short
+ *  form the user picked over numeric date order to avoid DD/MM vs MM/DD
+ *  ambiguity. Both suffixes are load-bearing: the model's day count is UT
+ *  (leap-second-free; UTC did not exist before 1972), and the calendar
+ *  stays proleptic Gregorian in every era while the eclipse canons label
+ *  pre-1582 events in the Julian calendar — 18 days apart at 2000 BC. */
 export function formatTimeReadout(t: number): string {
   const d = new Date(t * 1000);
   const day = d.getUTCDate();
@@ -22,15 +27,52 @@ export function formatTimeReadout(t: number): string {
   const hh = String(d.getUTCHours()).padStart(2, '0');
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
   const ss = String(d.getUTCSeconds()).padStart(2, '0');
-  return `${day} ${mon} ${year}, ${hh}:${mm}:${ss} UTC`;
+  return `${day} ${mon} ${year}, ${hh}:${mm}:${ss} UT (Gregorian)`;
 }
+
+/** ΔT as a signed human offset: `+12h 54m`, `+1m 4s`, `-3s`. Rounds
+ *  before branching so a value at a unit boundary rolls up (`+1m 0s`,
+ *  `+1h 0m`) instead of printing `+60s` / `+60m`. */
+export function formatDeltaT(seconds: number): string {
+  const sign = seconds < 0 ? '-' : '+';
+  const s = Math.round(Math.abs(seconds));
+  if (s >= 3600) {
+    const m = Math.round(Math.abs(seconds) / 60);
+    return `${sign}${Math.floor(m / 60)}h ${m % 60}m`;
+  }
+  if (s >= 60) return `${sign}${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${sign}${s}s`;
+}
+
+/** The readout's second line: `JD 991085.638470 TT · dT +12h 54m`. TT
+ *  because that is the scale every eclipse canon publishes JD against, so
+ *  the number is directly matchable — and a bare `JD` is ambiguous. Six
+ *  decimals (0.086 s) so it agrees with the date line at the seconds
+ *  resolution displayed. The two lines legitimately name different
+ *  calendar days — the JD is ΔT later than the UT line, which is exactly
+ *  the reconciliation this line exists to expose. */
+export function formatJdReadout(t: number): string {
+  const jdUt = tToJdUt(t);
+  const dT = deltaTSeconds(jdUt);
+  return `JD ${(jdUt + dT / 86400).toFixed(6)} TT · dT ${formatDeltaT(dT)}`;
+}
+
+/** Both readout lines, `\n`-joined — rendered by `white-space: pre-line`
+ *  on `.time-readout`. */
+export function formatFullTimeReadout(t: number): string {
+  return `${formatTimeReadout(t)}\n${formatJdReadout(t)}`;
+}
+
+export const DELTA_T_TOOLTIP =
+  'dT is how far Earth\'s rotation has drifted behind uniform time: '
+  + 'TT = UT + dT. Catalogues label events in TT; the clock reads UT.';
 
 export interface TimeReadoutDeps {
   el: HTMLElement;
   stellata: Stellata;
 }
 
-/** Mount a live UTC readout into `el`: unhide it and tick
+/** Mount a live time readout into `el`: unhide it and tick
  *  `Stellata.getT()` once per second. Orbital evolution ticks against
  *  `getT()` in every mode (chart, warp, observe, free fly), so the current
  *  model time is worth showing throughout. Returns a teardown that stops
@@ -39,7 +81,7 @@ export interface TimeReadoutDeps {
  *  and tests / HMR dispose it. */
 export function createTimeReadout({ el, stellata }: TimeReadoutDeps): () => void {
   const tick = () => {
-    el.textContent = formatTimeReadout(stellata.getT());
+    el.textContent = formatFullTimeReadout(stellata.getT());
   };
   el.hidden = false;
   tick();

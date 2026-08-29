@@ -399,6 +399,7 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
  * per-second tick doesn't jitter the layout. */
 .time-readout {
   font-variant-numeric: tabular-nums;
+  white-space: pre-line;
 }
 
 /* Time-scrubber widget (promoted from the debug panel). Collapsed, the

@@ -1,9 +1,9 @@
 // First-class time-scrubber widget in the bottom-right meta slot: collapsed
-// star-count + live-UTC readout ⇄ app-styled transport controls (T key /
+// star-count + live-UT readout ⇄ app-styled transport controls (T key /
 // click the readout). See ./README.md § Time scrubber widget.
 
 import type { Stellata } from '../../stellata';
-import { createTimeReadout, formatTimeReadout } from './time-readout';
+import { DELTA_T_TOOLTIP, createTimeReadout, formatFullTimeReadout } from './time-readout';
 import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
@@ -68,7 +68,7 @@ export function createTimeScrubberWidget(
 ): TimeScrubberWidget {
   const clock = stellata.timeClock;
 
-  // Collapsed view: star count + live UTC readout (the readout doubles as the
+  // Collapsed view: star count + live UT readout (the readout doubles as the
   // open trigger).
   const collapsed = document.createElement('div');
   collapsed.className = 'meta-collapsed';
@@ -91,6 +91,7 @@ export function createTimeScrubberWidget(
   header.className = 'scrubber-header';
   const clockReadout = document.createElement('div');
   clockReadout.className = 'time-readout scrubber-time';
+  clockReadout.title = DELTA_T_TOOLTIP;
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'scrubber-close';
@@ -197,7 +198,7 @@ export function createTimeScrubberWidget(
     pauseBtn.disabled = r === 0;
   };
   const tickExpanded = (): void => {
-    clockReadout.textContent = formatTimeReadout(stellata.getT());
+    clockReadout.textContent = formatFullTimeReadout(stellata.getT());
   };
 
   const open = (): void => {
