@@ -6,7 +6,10 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.18);
   --accent: #7dd3fc;
-  --warm: #fde68a;
+  /* Rejected-input flag, set for the dark panel. The chart palette must
+     override it — on the light page this red falls under the contrast floor
+     for text. */
+  --danger: #f2777a;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
 
   /* Page margins every fixed chrome container sits at. The hover engine
@@ -488,10 +491,11 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
   font-size: 11px;
   padding: 3px;
 }
-/* Hide the native calendar-popup button — it's visually out of place. The
- * segmented fields stay editable, so the instant is typed by hand rather
- * than via the picker (or the free-text box that mis-typed formats break). */
-.scrubber-jump input::-webkit-calendar-picker-indicator { display: none; }
+.scrubber-jump input::placeholder { color: var(--fg-dim); opacity: 0.8; }
+.scrubber-jump input.is-invalid {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .scrubber-jump-btn {
   border: 1px solid var(--border);
   background: transparent;
@@ -1296,6 +1300,7 @@ body.monochrome {
   --border: rgba(0, 0, 0, 0.15);
   --border-strong: rgba(0, 0, 0, 0.3);
   --accent: #1e40af;
+  --danger: #b91c1c;
   background:
     radial-gradient(ellipse at center, #ffffff 0%, #ece7d8 70%) fixed,
     var(--bg);

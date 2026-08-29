@@ -1,6 +1,6 @@
 // First-class time-scrubber widget in the bottom-right meta slot: collapsed
 // star-count + live-UTC readout ⇄ app-styled transport controls (T key /
-// click the readout). See src/client/solar-system/README.md § Time scrubber widget.
+// click the readout). See ./README.md § Time scrubber widget.
 
 import type { Stellata } from '../../stellata';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
@@ -8,6 +8,8 @@ import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
   parseLocalDatetimeValue,
+  clampT,
+  LOCAL_DATETIME_FORMAT,
   type TransportAction,
 } from './time';
 import { formatRatePerSecond } from './time-scrubber-widget-pure';
@@ -103,11 +105,8 @@ export function createTimeScrubberWidget(
   controls.className = 'scrubber-controls';
   const press = (action: TransportAction): void => {
     clock[action]();
-    if (action === 'reset') {
-      syncJump();
-      stellata.notifyClockJumped();
-    }
-    refresh();
+    if (action === 'reset') afterClockJump(stellata.getT());
+    else refresh();
   };
 
   // play / pause flip enabled state on every rate change; the rest are
@@ -129,27 +128,58 @@ export function createTimeScrubberWidget(
 
   const jumpRow = document.createElement('div');
   jumpRow.className = 'scrubber-jump';
+  // Text, not `datetime-local` — see ./README.md § Time `t` and the readout.
   const jumpInput = document.createElement('input');
-  jumpInput.type = 'datetime-local';
-  jumpInput.step = '1';
+  jumpInput.type = 'text';
+  jumpInput.placeholder = LOCAL_DATETIME_FORMAT;
+  jumpInput.setAttribute('aria-label', `Jump to date (${LOCAL_DATETIME_FORMAT})`);
+  jumpInput.autocomplete = 'off';
+  jumpInput.spellcheck = false;
   const jumpBtn = document.createElement('button');
   jumpBtn.type = 'button';
   jumpBtn.className = 'scrubber-jump-btn';
   jumpBtn.textContent = 'Jump';
   jumpRow.append(jumpInput, jumpBtn);
 
-  const syncJump = (): void => {
-    jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
+  const setJumpValid = (valid: boolean): void => {
+    jumpInput.classList.toggle('is-invalid', !valid);
+    jumpInput.setAttribute('aria-invalid', valid ? 'false' : 'true');
   };
-  const doJump = (): void => {
-    const ms = parseLocalDatetimeValue(jumpInput.value);
-    if (Number.isNaN(ms)) return;
-    clock.setTimeAbsolute(ms / 1000);
+  const setJumpField = (seconds: number): void => {
+    jumpInput.value = toLocalDatetimeValue(seconds * 1000);
+    setJumpValid(true);
+  };
+  // Jump and Reset both move `t` discontinuously and owe this epilogue —
+  // ./README.md § Time `t` and the readout.
+  const afterClockJump = (seconds: number): void => {
     stellata.notifyClockJumped();
+    setJumpField(seconds);
     refresh();
   };
+  /** True when the entry parsed and the clock moved. */
+  const doJump = (): boolean => {
+    const ms = parseLocalDatetimeValue(jumpInput.value);
+    if (Number.isNaN(ms)) {
+      setJumpValid(false);
+      return false;
+    }
+    // Echo the clamped target, not a re-read of the clock: `notifyClockJumped`
+    // walks every kind, and at a high rate that elapsed wall-time is a
+    // visible slice of model time.
+    const seconds = clampT(ms / 1000);
+    clock.setTimeAbsolute(seconds);
+    afterClockJump(seconds);
+    return true;
+  };
   jumpBtn.addEventListener('click', doJump);
-  jumpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doJump(); });
+  jumpInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && doJump()) jumpInput.blur();
+  });
+  jumpInput.addEventListener('input', () => setJumpValid(true));
+  jumpInput.addEventListener('blur', () => {
+    const entry = jumpInput.value.trim();
+    setJumpValid(entry === '' || !Number.isNaN(parseLocalDatetimeValue(entry)));
+  });
 
   scrubber.append(header, rate, controls, jumpRow);
   meta.replaceChildren(collapsed, scrubber);
@@ -175,7 +205,7 @@ export function createTimeScrubberWidget(
     collapsed.hidden = true;
     scrubber.hidden = false;
     stopCollapsedTick();
-    syncJump();
+    setJumpField(stellata.getT());
     refresh();
     tickExpanded();
     expandedTimer = window.setInterval(tickExpanded, 1000);

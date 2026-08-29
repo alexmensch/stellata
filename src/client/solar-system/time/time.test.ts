@@ -6,6 +6,7 @@ import {
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
   VirtualClock,
+  clampT,
   isLive,
   jdTdbToT,
   julianEpochYearToT,
@@ -15,6 +16,7 @@ import {
   tToJDE,
   tToJdTdb,
   toLocalDatetimeValue,
+  LOCAL_DATETIME_FORMAT,
 } from './time';
 
 describe('tToJDE', () => {
@@ -303,23 +305,129 @@ describe('model-clock clamp (Standish window)', () => {
   });
 });
 
-describe('datetime-local value round-trip', () => {
+describe('jump-field value round-trip', () => {
+  const nan = (v: string): boolean => Number.isNaN(parseLocalDatetimeValue(v));
+
   it('round-trips a whole-second instant through local encode/decode', () => {
-    // Any timezone: encode uses local getters, decode parses zoneless as
+    // Any timezone: encode uses local getters, decode reads zoneless as
     // local, so the round-trip is TZ-independent (down to whole seconds,
-    // which is all the datetime-local format carries).
+    // which is all the field's format carries).
     const ms = Date.UTC(2030, 0, 1, 12, 34, 56);
     expect(parseLocalDatetimeValue(toLocalDatetimeValue(ms))).toBe(ms);
   });
 
-  it('encodes as a zoneless YYYY-MM-DDTHH:mm:ss string (no trailing Z)', () => {
+  it('encodes as a zoneless YYYY-MM-DD HH:MM:SS string (no trailing Z)', () => {
     expect(toLocalDatetimeValue(Date.UTC(2030, 0, 1, 0, 0, 0))).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
     );
   });
 
+  it('round-trips a BC instant, which the native input never accepted', () => {
+    const d = new Date(0);
+    d.setFullYear(-2999, 5, 15);
+    d.setHours(4, 5, 6, 0);
+    expect(parseLocalDatetimeValue(toLocalDatetimeValue(d.getTime()))).toBe(d.getTime());
+  });
+
+  it('round-trips a year inside the Date constructor 1900+ shorthand band', () => {
+    // new Date(50, ...) is 1950; the clock's range covers year 50 itself.
+    const d = new Date(0);
+    d.setFullYear(50, 0, 2);
+    d.setHours(0, 0, 0, 0);
+    expect(parseLocalDatetimeValue(toLocalDatetimeValue(d.getTime()))).toBe(d.getTime());
+  });
+
+  it('accepts either separator, and makes seconds optional', () => {
+    const withT = parseLocalDatetimeValue('2030-01-01T12:34:56');
+    expect(parseLocalDatetimeValue('2030-01-01 12:34:56')).toBe(withT);
+    expect(parseLocalDatetimeValue('2030-01-01 12:34'))
+      .toBe(new Date(2030, 0, 1, 12, 34, 0, 0).getTime());
+  });
+
   it('yields NaN for an empty or garbage value', () => {
-    expect(Number.isNaN(parseLocalDatetimeValue(''))).toBe(true);
-    expect(Number.isNaN(parseLocalDatetimeValue('not-a-date'))).toBe(true);
+    expect(nan('')).toBe(true);
+    expect(nan('not-a-date')).toBe(true);
+  });
+
+  // The whole reason the parse is strict rather than `new Date(value)`:
+  // that constructor accepts these AND reads them as UTC, so a half-typed
+  // entry would jump to a different instant than the same digits denote
+  // once complete.
+  it('rejects the partial forms new Date() would silently accept as UTC', () => {
+    expect(nan('2030')).toBe(true);
+    expect(nan('2030-01')).toBe(true);
+    expect(nan('2030-01-01')).toBe(true);
+    expect(nan('2030-01-01T12:34:56Z')).toBe(true);
+    expect(nan('Jan 1 2030')).toBe(true);
+  });
+
+  it('rejects out-of-range and non-existent components', () => {
+    expect(nan('2030-13-01 00:00:00')).toBe(true);
+    expect(nan('2030-00-01 00:00:00')).toBe(true);
+    expect(nan('2030-01-32 00:00:00')).toBe(true);
+    expect(nan('2030-01-01 24:00:00')).toBe(true);
+    expect(nan('2030-01-01 00:60:00')).toBe(true);
+    expect(nan('2030-01-01 00:00:60')).toBe(true);
+    // Rolls over to 1 May under the Date constructor, so it must not pass.
+    expect(nan('2030-04-31 00:00:00')).toBe(true);
+    expect(nan('2030-02-30 00:00:00')).toBe(true);
+    // ...but a real leap day does.
+    expect(nan('2028-02-29 00:00:00')).toBe(false);
+  });
+
+  it('accepts every field unpadded', () => {
+    expect(parseLocalDatetimeValue('2030-1-1 1:2:3'))
+      .toBe(parseLocalDatetimeValue('2030-01-01 01:02:03'));
+    expect(parseLocalDatetimeValue('78-4-1 1:20:0'))
+      .toBe(parseLocalDatetimeValue('0078-04-01 01:20:00'));
+    expect(parseLocalDatetimeValue('78-4-1 1:20'))
+      .toBe(parseLocalDatetimeValue('0078-04-01 01:20:00'));
+  });
+
+  it('reads a 2-digit year as that year, never windowed into the 1900s', () => {
+    const d = new Date(0);
+    d.setFullYear(78, 3, 1);
+    d.setHours(1, 20, 0, 0);
+    expect(parseLocalDatetimeValue('78-4-1 1:20')).toBe(d.getTime());
+    expect(toLocalDatetimeValue(parseLocalDatetimeValue('78-4-1 1:20')))
+      .toBe('0078-04-01 01:20:00');
+  });
+
+  it('caps the year at 4 digits so a mistyped one cannot run on', () => {
+    expect(nan('99999-01-01 00:00:00')).toBe(true);
+  });
+
+  it('rejects a zero day, which rolls back into the previous month', () => {
+    expect(nan('2030-01-00 00:00:00')).toBe(true);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseLocalDatetimeValue('  2030-01-01 12:34:56  '))
+      .toBe(parseLocalDatetimeValue('2030-01-01 12:34:56'));
+  });
+
+  it('the placeholder names the format the parser accepts', () => {
+    expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD HH:MM:SS');
+    expect(nan(toLocalDatetimeValue(Date.UTC(2030, 0, 1)))).toBe(false);
+  });
+});
+
+// What the widget echoes back after a jump: the clamped *target*, never a
+// re-read of the clock — at a high rate the work between the two is a
+// visible slice of model time.
+describe('jump-field echo-back', () => {
+  const echo = (entry: string): string =>
+    toLocalDatetimeValue(clampT(parseLocalDatetimeValue(entry) / 1000) * 1000);
+
+  it('echoes an in-range entry back unchanged', () => {
+    expect(echo('2030-01-01 12:34:56')).toBe('2030-01-01 12:34:56');
+  });
+
+  it('echoes the upper bound for an entry past 3000 AD', () => {
+    expect(echo('9999-01-01 00:00:00')).toBe(toLocalDatetimeValue(T_CLAMP_MAX_S * 1000));
+  });
+
+  it('echoes the lower bound for an entry before 3000 BC', () => {
+    expect(echo('-9999-01-01 00:00:00')).toBe(toLocalDatetimeValue(T_CLAMP_MIN_S * 1000));
   });
 });
