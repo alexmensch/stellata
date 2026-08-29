@@ -1,6 +1,6 @@
 // First-class time-scrubber widget in the bottom-right meta slot: collapsed
 // star-count + live-UTC readout ⇄ app-styled transport controls (T key /
-// click the readout). See src/client/solar-system/README.md § Time scrubber widget.
+// click the readout). See ./README.md § Time scrubber widget.
 
 import type { Stellata } from '../../stellata';
 import { createTimeReadout, formatTimeReadout } from './time-readout';
@@ -130,15 +130,9 @@ export function createTimeScrubberWidget(
 
   const jumpRow = document.createElement('div');
   jumpRow.className = 'scrubber-jump';
-  // A plain text field, not `datetime-local`. Hiding the native picker is
-  // only possible in Blink, where the dropdown button is the sole way to
-  // open it; WebKit opens its popover from the segments themselves and no
-  // CSS reaches that. So the control is typed-only on every browser by
-  // construction, and the format-error trap a raw text box would otherwise
-  // carry is answered by the validation below.
+  // Text, not `datetime-local` — see ./README.md § Time `t` and the readout.
   const jumpInput = document.createElement('input');
   jumpInput.type = 'text';
-  jumpInput.className = 'scrubber-jump-input';
   jumpInput.placeholder = LOCAL_DATETIME_FORMAT;
   jumpInput.setAttribute('aria-label', `Jump to date (${LOCAL_DATETIME_FORMAT})`);
   jumpInput.autocomplete = 'off';
@@ -149,8 +143,6 @@ export function createTimeScrubberWidget(
   jumpBtn.textContent = 'Jump';
   jumpRow.append(jumpInput, jumpBtn);
 
-  // Flagged only once the user has tried to jump or has moved on from the
-  // field — flagging every keystroke marks a half-typed date as an error.
   const setJumpValid = (valid: boolean): void => {
     jumpInput.classList.toggle('is-invalid', !valid);
     jumpInput.setAttribute('aria-invalid', valid ? 'false' : 'true');

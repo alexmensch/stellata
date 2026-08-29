@@ -178,8 +178,8 @@ play/pause, and `Backspace` resets. These dispatch from the central
 `../../ui/keyboard-shortcuts.ts` (not a second keydown listener) through the
 widget's `stepBack` / `stepForward` / `togglePlay` / `reset` — the same
 `press(action)` path the buttons use. The dispatcher's `targetIsEditable`
-guard keeps those keys out of the jump field while it has focus, so
-`←`/`→` move the caret and `Space` types a space.
+guard suppresses those transport actions while the jump field has focus,
+so `←`/`→` move the caret and `Space` types a space.
 
 The `.meta` slot lives in the right-hand control column's bottom group
 (`.ui-top-bottom`), so an expanding scrubber pushes the focus card up

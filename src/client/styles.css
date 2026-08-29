@@ -6,10 +6,10 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.18);
   --accent: #7dd3fc;
-  --warm: #fde68a;
-  /* Rejected-input flag. Overridden for the chart palette, where the pale
-     tokens sit on a light page. */
-  --warn: #f2777a;
+  /* Rejected-input flag, set for the dark panel. The chart palette must
+     override it — on the light page this red falls under the contrast floor
+     for text. */
+  --danger: #f2777a;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
 
   /* Page margins every fixed chrome container sits at. The hover engine
@@ -492,11 +492,9 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
   padding: 3px;
 }
 .scrubber-jump input::placeholder { color: var(--fg-dim); opacity: 0.8; }
-/* Flagged on Jump or on blur, never per keystroke — a half-typed date is
- * not an error yet. See solar-system/time/README.md § Time t. */
 .scrubber-jump input.is-invalid {
-  border-color: var(--warn);
-  color: var(--warn);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .scrubber-jump-btn {
   border: 1px solid var(--border);
@@ -1302,7 +1300,7 @@ body.monochrome {
   --border: rgba(0, 0, 0, 0.15);
   --border-strong: rgba(0, 0, 0, 0.3);
   --accent: #1e40af;
-  --warn: #b91c1c;
+  --danger: #b91c1c;
   background:
     radial-gradient(ellipse at center, #ffffff 0%, #ece7d8 70%) fixed,
     var(--bg);

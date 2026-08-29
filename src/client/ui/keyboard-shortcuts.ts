@@ -140,8 +140,8 @@ export function bindKeyboardShortcuts(
     // behaviour. Space is special: during a warp it belongs to
     // warp-button.ts (skip-warp), so we bow out and let that bubble-phase
     // handler take it — the scrubber only claims Space when no warp is
-    // running. The jump date-field is covered by the targetIsEditable guard
-    // above (arrows edit its segments when focused).
+    // running. The jump field is covered by the targetIsEditable guard above,
+    // so its text takes the arrows and Space while it has focus.
     if (e.key === ' ' && stellata.warp.isActive()) return;
     const transport = TRANSPORT_KEY_ACTIONS[e.key];
     if (transport) {
