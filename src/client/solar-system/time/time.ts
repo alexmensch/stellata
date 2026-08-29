@@ -130,7 +130,7 @@ export function parseLocalDatetimeValue(value: string): number {
 
 // Optional "JD" prefix and TT/UT suffix around the number itself. An
 // unprefixed integer needs >= 6 digits (a decimal point also qualifies):
-// the clock's window is JD ~990574-2817152, so every reachable JD has six
+// the clock's window is JD ~625661-2817160, so every reachable JD has six
 // or seven, and the floor keeps a lone typed year from reading as one.
 const JULIAN_DATE_RE = /^(jd\s*)?(\d{1,7}(?:\.\d+)?)\s*(tt|ut)?$/i;
 

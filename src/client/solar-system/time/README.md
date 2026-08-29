@@ -208,7 +208,7 @@ Two lines, in every era (`\n`-joined; `white-space: pre-line` on
 
 ```
 25 May -1999, 14:20:26 UT (Gregorian)
-JD 991085.635000 TT · dT +12h 54m
+JD 991085.635000 TT · ΔT +12h 54m
 ```
 
 Line 1 is plain-English UT, locale-independent — month abbreviations are
@@ -220,13 +220,17 @@ label pre-1582 dates in the **Julian** calendar (18 days apart at
 the Moon nowhere near the Sun), but the Gregorian label is the one that
 tracks the seasons; the Julian/TT string is a catalogue lookup key, not
 a truer date. Deliberately NOT Stellarium's switch-at-1582 behaviour.
+The ` (Gregorian)` suffix shows only on the collapsed readout
+(`showCalendar` in `formatTimeReadout`) — the expanded scrubber header
+has no room for it.
 
 Line 2 is the reconciliation: the JD in **TT**, the scale every canon
 publishes against, so a catalogue's number is directly matchable — plus
-ΔT, with a tooltip (`DELTA_T_TOOLTIP`) on both readout surfaces. The two
+ΔT. The two
 lines legitimately name different calendar days (the JD is ΔT later);
 that is the point, not a defect. Six JD decimals (0.086 s) so the lines
-agree at the seconds resolution displayed.
+agree at the seconds resolution displayed. No tooltip explains ΔT —
+Stellata deliberately carries no tooltips.
 
 **Variable-star pulsation runs on `t`.** It was once driven by a separate
 cosmetic `uTime` real-seconds clock, deliberately decoupled from `t`; that

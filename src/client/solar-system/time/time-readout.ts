@@ -11,15 +11,17 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const;
 
-/** Format a Unix-seconds value as `D MMM YYYY, HH:MM:SS UT (Gregorian)`
- *  (e.g. `7 May 2026, 18:23:45 UT (Gregorian)`). Locale-independent so the
- *  output is identical across browsers — month names use the en-US short
- *  form the user picked over numeric date order to avoid DD/MM vs MM/DD
- *  ambiguity. Both suffixes are load-bearing: the model's day count is UT
- *  (leap-second-free; UTC did not exist before 1972), and the calendar
- *  stays proleptic Gregorian in every era while the eclipse canons label
- *  pre-1582 events in the Julian calendar — 18 days apart at 2000 BC. */
-export function formatTimeReadout(t: number): string {
+/** Format a Unix-seconds value as `D MMM YYYY, HH:MM:SS UT`, with a
+ *  ` (Gregorian)` suffix when `showCalendar` is set (the collapsed
+ *  readout; the expanded scrubber has no room for it). Locale-independent
+ *  so the output is identical across browsers — month names use the en-US
+ *  short form the user picked over numeric date order to avoid DD/MM vs
+ *  MM/DD ambiguity. Both suffixes are load-bearing: the model's day count
+ *  is UT (leap-second-free; UTC did not exist before 1972), and the
+ *  calendar stays proleptic Gregorian in every era while the eclipse
+ *  canons label pre-1582 events in the Julian calendar — 18 days apart at
+ *  2000 BC. */
+export function formatTimeReadout(t: number, showCalendar = false): string {
   const d = new Date(t * 1000);
   const day = d.getUTCDate();
   const mon = MONTHS[d.getUTCMonth()];
@@ -27,7 +29,8 @@ export function formatTimeReadout(t: number): string {
   const hh = String(d.getUTCHours()).padStart(2, '0');
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
   const ss = String(d.getUTCSeconds()).padStart(2, '0');
-  return `${day} ${mon} ${year}, ${hh}:${mm}:${ss} UT (Gregorian)`;
+  const calendar = showCalendar ? ' (Gregorian)' : '';
+  return `${day} ${mon} ${year}, ${hh}:${mm}:${ss} UT${calendar}`;
 }
 
 /** ΔT as a signed human offset: `+12h 54m`, `+1m 4s`, `-3s`. Rounds
@@ -44,7 +47,7 @@ export function formatDeltaT(seconds: number): string {
   return `${sign}${s}s`;
 }
 
-/** The readout's second line: `JD 991085.638470 TT · dT +12h 54m`. TT
+/** The readout's second line: `JD 991085.635000 TT · ΔT +12h 54m`. TT
  *  because that is the scale every eclipse canon publishes JD against, so
  *  the number is directly matchable — and a bare `JD` is ambiguous. Six
  *  decimals (0.086 s) so it agrees with the date line at the seconds
@@ -54,18 +57,14 @@ export function formatDeltaT(seconds: number): string {
 export function formatJdReadout(t: number): string {
   const jdUt = tToJdUt(t);
   const dT = deltaTSeconds(jdUt);
-  return `JD ${(jdUt + dT / 86400).toFixed(6)} TT · dT ${formatDeltaT(dT)}`;
+  return `JD ${(jdUt + dT / 86400).toFixed(6)} TT · ΔT ${formatDeltaT(dT)}`;
 }
 
 /** Both readout lines, `\n`-joined — rendered by `white-space: pre-line`
- *  on `.time-readout`. */
-export function formatFullTimeReadout(t: number): string {
-  return `${formatTimeReadout(t)}\n${formatJdReadout(t)}`;
+ *  on `.time-readout`. `showCalendar` follows the date line's rule. */
+export function formatFullTimeReadout(t: number, showCalendar = false): string {
+  return `${formatTimeReadout(t, showCalendar)}\n${formatJdReadout(t)}`;
 }
-
-export const DELTA_T_TOOLTIP =
-  'dT is how far Earth\'s rotation has drifted behind uniform time: '
-  + 'TT = UT + dT. Catalogues label events in TT; the clock reads UT.';
 
 export interface TimeReadoutDeps {
   el: HTMLElement;
@@ -81,7 +80,7 @@ export interface TimeReadoutDeps {
  *  and tests / HMR dispose it. */
 export function createTimeReadout({ el, stellata }: TimeReadoutDeps): () => void {
   const tick = () => {
-    el.textContent = formatFullTimeReadout(stellata.getT());
+    el.textContent = formatFullTimeReadout(stellata.getT(), true);
   };
   el.hidden = false;
   tick();

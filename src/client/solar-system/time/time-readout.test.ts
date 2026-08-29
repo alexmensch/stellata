@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  DELTA_T_TOOLTIP,
   createTimeReadout,
   formatDeltaT,
   formatFullTimeReadout,
@@ -11,25 +10,25 @@ import { jdTdbToT } from './time';
 import type { Stellata } from '../../stellata';
 
 describe('formatTimeReadout', () => {
-  it('formats a known Unix-seconds value as plain-English UT, calendar labelled', () => {
+  it('formats a known Unix-seconds value as plain-English UT', () => {
     // 2026-05-07T18:23:45Z = Unix-seconds 1778264625.
     const t = Date.UTC(2026, 4, 7, 18, 23, 45) / 1000;
-    expect(formatTimeReadout(t)).toBe('7 May 2026, 18:23:45 UT (Gregorian)');
+    expect(formatTimeReadout(t)).toBe('7 May 2026, 18:23:45 UT');
   });
 
   it('zero-pads single-digit hours / minutes / seconds', () => {
     const t = Date.UTC(2026, 0, 1, 3, 4, 5) / 1000;
-    expect(formatTimeReadout(t)).toBe('1 Jan 2026, 03:04:05 UT (Gregorian)');
+    expect(formatTimeReadout(t)).toBe('1 Jan 2026, 03:04:05 UT');
   });
 
   it('does NOT zero-pad the day-of-month (matches the chosen plain-English style)', () => {
     const t = Date.UTC(2026, 0, 9, 12, 0, 0) / 1000;
-    expect(formatTimeReadout(t)).toBe('9 Jan 2026, 12:00:00 UT (Gregorian)');
+    expect(formatTimeReadout(t)).toBe('9 Jan 2026, 12:00:00 UT');
   });
 
   it('handles year boundaries in UTC (no off-by-one from local timezone)', () => {
     const t = Date.UTC(2025, 11, 31, 23, 59, 59) / 1000;
-    expect(formatTimeReadout(t)).toBe('31 Dec 2025, 23:59:59 UT (Gregorian)');
+    expect(formatTimeReadout(t)).toBe('31 Dec 2025, 23:59:59 UT');
   });
 
   it('renders all 12 month abbreviations correctly', () => {
@@ -39,20 +38,20 @@ describe('formatTimeReadout', () => {
     ];
     for (let m = 0; m < 12; m++) {
       const t = Date.UTC(2026, m, 15, 0, 0, 0) / 1000;
-      expect(formatTimeReadout(t)).toBe(`15 ${expected[m]} 2026, 00:00:00 UT (Gregorian)`);
+      expect(formatTimeReadout(t)).toBe(`15 ${expected[m]} 2026, 00:00:00 UT`);
     }
   });
 
   it('handles fractional Unix-seconds (truncates to integer second)', () => {
     const t = Date.UTC(2026, 4, 7, 18, 23, 45) / 1000 + 0.7;
-    expect(formatTimeReadout(t)).toBe('7 May 2026, 18:23:45 UT (Gregorian)');
+    expect(formatTimeReadout(t)).toBe('7 May 2026, 18:23:45 UT');
   });
 
   it('locale-independent — same output regardless of the browser timezone', () => {
     // J2000 epoch: 2000-01-01T12:00:00 UTC. Has been a common gotcha
     // for naive local-timezone formatters in the past.
     const j2000Unix = 946728000;
-    expect(formatTimeReadout(j2000Unix)).toBe('1 Jan 2000, 12:00:00 UT (Gregorian)');
+    expect(formatTimeReadout(j2000Unix)).toBe('1 Jan 2000, 12:00:00 UT');
   });
 
   it('keeps the proleptic Gregorian calendar in the deep past, astronomical year numbering', () => {
@@ -62,7 +61,11 @@ describe('formatTimeReadout', () => {
     const d = new Date(0);
     d.setUTCFullYear(-1999, 4, 25);
     d.setUTCHours(14, 20, 26, 0);
-    expect(formatTimeReadout(d.getTime() / 1000)).toBe('25 May -1999, 14:20:26 UT (Gregorian)');
+    expect(formatTimeReadout(d.getTime() / 1000)).toBe('25 May -1999, 14:20:26 UT');
+  });
+
+  it('labels the calendar only when asked — the collapsed readout, not the scrubber', () => {
+    expect(formatTimeReadout(946728000, true)).toBe('1 Jan 2000, 12:00:00 UT (Gregorian)');
   });
 });
 
@@ -90,9 +93,9 @@ describe('formatDeltaT', () => {
 });
 
 describe('formatJdReadout', () => {
-  it('labels the JD with its TT scale and carries dT, at J2000', () => {
+  it('labels the JD with its TT scale and carries ΔT, at J2000', () => {
     // JD(TT) = JD(UT) + ΔT/86400; ΔT at J2000 is 63.834 s = 0.000739 d.
-    expect(formatJdReadout(946728000)).toBe('JD 2451545.000739 TT · dT +1m 4s');
+    expect(formatJdReadout(946728000)).toBe('JD 2451545.000739 TT · ΔT +1m 4s');
   });
 
   it('round-trips a canon-published JD(TT): entering it reads the same JD back', () => {
@@ -100,15 +103,18 @@ describe('formatJdReadout', () => {
     // eclipse): greatest eclipse JD 991085.63500 TT. The whole point of
     // the line is that this catalogue number is directly matchable.
     const t = jdTdbToT(991085.63500);
-    expect(formatJdReadout(t)).toBe('JD 991085.635000 TT · dT +12h 54m');
-    expect(formatTimeReadout(t)).toBe('25 May -1999, 14:20:26 UT (Gregorian)');
+    expect(formatJdReadout(t)).toBe('JD 991085.635000 TT · ΔT +12h 54m');
+    expect(formatTimeReadout(t)).toBe('25 May -1999, 14:20:26 UT');
   });
 });
 
 describe('formatFullTimeReadout', () => {
   it('joins the two lines with a newline for white-space: pre-line', () => {
     expect(formatFullTimeReadout(946728000)).toBe(
-      '1 Jan 2000, 12:00:00 UT (Gregorian)\nJD 2451545.000739 TT · dT +1m 4s',
+      '1 Jan 2000, 12:00:00 UT\nJD 2451545.000739 TT · ΔT +1m 4s',
+    );
+    expect(formatFullTimeReadout(946728000, true)).toBe(
+      '1 Jan 2000, 12:00:00 UT (Gregorian)\nJD 2451545.000739 TT · ΔT +1m 4s',
     );
   });
 });
@@ -129,7 +135,7 @@ describe('createTimeReadout', () => {
     const stellata = makeMockStellata();
     const teardown = createTimeReadout({ el, stellata });
     expect(el.hidden).toBe(false);
-    expect(el.textContent).toBe(formatFullTimeReadout(946728000));
+    expect(el.textContent).toBe(formatFullTimeReadout(946728000, true));
     teardown();
   });
 
@@ -148,11 +154,5 @@ describe('createTimeReadout', () => {
     t += 60;
     vi.advanceTimersByTime(5000);
     expect(el.textContent).toBe(afterTeardown);
-  });
-});
-
-describe('DELTA_T_TOOLTIP', () => {
-  it('explains the TT = UT + dT reconciliation the second line exposes', () => {
-    expect(DELTA_T_TOOLTIP).toContain('TT = UT + dT');
   });
 });

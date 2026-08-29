@@ -3,7 +3,7 @@
 // click the readout). See ./README.md § Time scrubber widget.
 
 import type { Stellata } from '../../stellata';
-import { DELTA_T_TOOLTIP, createTimeReadout, formatFullTimeReadout } from './time-readout';
+import { createTimeReadout, formatFullTimeReadout } from './time-readout';
 import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
@@ -81,7 +81,7 @@ export function createTimeScrubberWidget(
   readout.type = 'button';
   readout.id = 'time-readout';
   readout.className = 'time-readout time-readout-btn';
-  readout.title = 'Open time scrubber';
+  readout.setAttribute('aria-label', 'Open time scrubber');
   collapsed.append(count, readout);
 
   // Expanded view: the scrubber, hidden until opened.
@@ -93,7 +93,6 @@ export function createTimeScrubberWidget(
   header.className = 'scrubber-header';
   const clockReadout = document.createElement('div');
   clockReadout.className = 'time-readout scrubber-time';
-  clockReadout.title = DELTA_T_TOOLTIP;
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'scrubber-close';
@@ -135,9 +134,6 @@ export function createTimeScrubberWidget(
   const jumpInput = document.createElement('input');
   jumpInput.type = 'text';
   jumpInput.placeholder = JUMP_FIELD_PLACEHOLDER;
-  jumpInput.title =
-    `${LOCAL_DATETIME_FORMAT} (local time), or a Julian Date — `
-    + '"991085.635", "JD 2451545.0 UT" (TT assumed)';
   jumpInput.setAttribute(
     'aria-label',
     `Jump to date (${LOCAL_DATETIME_FORMAT}, or a Julian Date, TT assumed)`,
