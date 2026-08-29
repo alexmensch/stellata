@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
-import { tToJDE } from '../solar-system/time/time';
+import { tToJdUt } from '../solar-system/time/time';
 import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
 import { type BinariesData, type BinaryRelation } from './binaries-loader';
 import { focalChainRelationSet } from './focal-chain';
@@ -215,7 +215,7 @@ export class BinaryOrbitField {
     this.observedUsable = observedUsable;
     this.activeRelations.length = 0;
 
-    const tJd = tToJDE(t);
+    const tJd = tToJdUt(t);
     this.ensureFocalChain(focalIdx);
     let keplerCount = 0;
     const pxPerRad = viewportPx / Math.max(fovYRad, 1e-9);
@@ -369,7 +369,7 @@ export class BinaryOrbitField {
     this.ensureFocalChain(focalIdx);
     out.set(0, 0, 0);
     if (this.focalChainRelIdx.size === 0) return false;
-    const tJd = tToJDE(t);
+    const tJd = tToJdUt(t);
     const abs = this.opts.absolutePositions;
     this.slotPert.clear();
     for (let i = 0; i < this.relations.length; i++) {

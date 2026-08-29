@@ -16,16 +16,16 @@ const UNIX_EPOCH_JD = 2440587.5;
 const LIVE_TOLERANCE_SEC = 1;
 
 /** Unix-seconds → Julian Date, **UTC** scale — the scale `t` itself runs in. */
-export function tToJDE(t: number): number {
+export function tToJdUt(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
 
 /** Unix-seconds → Julian Date in the **TDB** scale the JPL element tables and
  *  the Standish series are both defined against. Every ephemeris evaluation
- *  reads through here; `tToJDE` is the universal-time sibling, ΔT earlier.
+ *  reads through here; `tToJdUt` is the universal-time sibling, ΔT earlier.
  *  TDB departs from TT by under 2 ms, which no ephemeris here resolves. */
 export function tToJdTdb(t: number): number {
-  const jdUt = tToJDE(t);
+  const jdUt = tToJdUt(t);
   return jdUt + deltaTSeconds(jdUt) / 86400;
 }
 
@@ -35,17 +35,17 @@ export function tToJdTdb(t: number): number {
 export function jdTdbToT(jdTdb: number): number {
   let jdUt = jdTdb;
   for (let i = 0; i < 3; i++) jdUt = jdTdb - deltaTSeconds(jdUt) / 86400;
-  return jdeToT(jdUt);
+  return jdUtToT(jdUt);
 }
 
-/** Julian Date → Unix-seconds. Inverse of `tToJDE`. */
-export function jdeToT(jde: number): number {
+/** Julian Date → Unix-seconds. Inverse of `tToJdUt`. */
+export function jdUtToT(jde: number): number {
   return (jde - UNIX_EPOCH_JD) * 86400;
 }
 
 /** Julian epoch year (e.g. 2016.0) → Unix-seconds. */
 export function julianEpochYearToT(jyr: number): number {
-  return jdeToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
+  return jdUtToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
 }
 
 // Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;

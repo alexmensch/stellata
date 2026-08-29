@@ -16,10 +16,10 @@ import { getPlanetPositions } from '../../ephemerides/ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from '../../ephemerides/moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../ephemerides/orbit-rings-layer';
 import { SOL_MOONS } from '../../planet-system';
-import { jdeToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../../time/time';
+import { jdUtToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../../time/time';
 import { J2000_JD, J2000_OBLIQUITY_RAD } from '../../../util/astronomy-constants';
 
-const T_J2000 = jdeToT(J2000_JD);
+const T_J2000 = jdUtToT(J2000_JD);
 
 /** Planet→Sun unit vector in ICRS at Unix-seconds `t`, from the same
  *  ephemeris + ecliptic→ICRS rotation the renderer applies. */
@@ -265,7 +265,7 @@ describe('periodic libration terms', () => {
   it('leaves a body without terms exactly where the linear rows put it', () => {
     const io = MOON_ROTATION_BY_NAME.get('Io')!;
     const T = 0.37;
-    const t = jdeToT(J2000_JD + T * 36525);
+    const t = jdUtToT(J2000_JD + T * 36525);
     expect(poleRaDecDegAt(io, t).raDeg).toBeCloseTo(
       io.poleRaDeg + io.poleRaDegPerCty * T, 9);
   });

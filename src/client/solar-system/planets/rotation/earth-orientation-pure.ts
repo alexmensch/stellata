@@ -7,7 +7,7 @@ import {
   longTermEquatorPole,
   longTermEquinox,
 } from '../../../util/precession';
-import { tToJDE, tToJdTdb } from '../../time/time';
+import { tToJdUt, tToJdTdb } from '../../time/time';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
@@ -46,7 +46,7 @@ export function earthPoleRaDecDeg(t: number): { raDeg: number; decDeg: number } 
  *  carries the equinox's own motion along the equator. */
 export function greenwichSiderealDeg(t: number): number {
   const era = 360 * (ERA_AT_J2000_REV
-    + ERA_REV_PER_UT1_DAY * (tToJDE(t) - J2000_JD));
+    + ERA_REV_PER_UT1_DAY * (tToJdUt(t) - J2000_JD));
   const T = (tToJdTdb(t) - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
   let arcsec = 0;
   for (let i = GMST_MINUS_ERA_ARCSEC.length - 1; i >= 0; i--) {

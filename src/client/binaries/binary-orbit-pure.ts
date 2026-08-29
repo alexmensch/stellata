@@ -30,7 +30,7 @@ export interface OrbitalElements {
   q: number;
 }
 
-/** Separation of B relative to A at JDE `tJd`, AU. North=+X, east=+Y on
+/** Separation of B relative to A at Julian Date `tJd`, AU. North=+X, east=+Y on
  *  the sky tangent plane; `radialAU` is the line-of-sight component,
  *  positive = receding from Sol (Z = r·sin(ν+ω)·sin i). Thiele-Innes;
  *  single Kepler solve. Tier 1 only — requires a published inclination.
@@ -130,7 +130,7 @@ export function projectGalacticPlaneToICRS(
   return { x: gal4.x, y: gal4.y, z: gal4.z };
 }
 
-/** Full relative ICRS offset R(t) in pc — B relative to A at JDE `tJd`,
+/** Full relative ICRS offset R(t) in pc — B relative to A at Julian Date `tJd`,
  *  the rendered pair offset (elements-alone; no baked-catalog term). Tier 1
  *  projects the sky separation through the system's tangent basis; Tier 2
  *  rides the galactic plane. One Kepler solve. The runtime caches R(epoch)
@@ -183,7 +183,7 @@ export function evaluateOrbitDeltaPcTier2(
   return projectGalacticPlaneToICRS(dxPc, dyPc);
 }
 
-/** Tier 1 per-component ICRS Δxyz (pc) for `elements` at JDE `tJd`. The
+/** Tier 1 per-component ICRS Δxyz (pc) for `elements` at Julian Date `tJd`. The
  *  stored catalog xyz encodes the pair configuration at `refJd` (the
  *  sep+PA measurement epoch), so the offset is R(t) − R(refJd), split
  *  q : (1−q) between A and B.
@@ -204,7 +204,7 @@ export function evaluateBinaryOffsetTier1(
   return { x: delta.x * sign, y: delta.y * sign, z: delta.z * sign };
 }
 
-/** Tier 2 per-component ICRS Δxyz (pc) for `elements` at JDE `tJd`.
+/** Tier 2 per-component ICRS Δxyz (pc) for `elements` at Julian Date `tJd`.
  *  Galactic-plane fallback when inclination is unknown. */
 export function evaluateBinaryOffsetTier2(
   elements: OrbitalElements,

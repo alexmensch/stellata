@@ -11,13 +11,13 @@ import { makeKindContext } from '../../kinds/kind-context-mock';
 import { makeFrameCtx } from '../../scene/frame-ctx-mock';
 import type { FrameCtx } from '../../scene/scene-layer';
 import { AU_PC } from '../../util/astronomy-constants';
-import { tToJDE } from '../time/time';
+import { tToJdUt } from '../time/time';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PROBE_MARKER_PX } from './probe-field';
 import { createProbeKindModule } from './probe-module';
 
 const STEP_DAYS = 30;
-const FIRST_JD = tToJDE(0);
+const FIRST_JD = tToJdUt(0);
 
 function makeFile(id: string, label: string): ProbeTrajectoryFile {
   return {

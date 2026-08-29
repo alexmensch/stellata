@@ -11,7 +11,7 @@ import {
 } from '../binaries-loader';
 import { J2000_JD, AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
 
-/** Sim-time t (Unix seconds) for a Julian date — inverse of tToJDE. */
+/** Sim-time t (Unix seconds) for a Julian date — inverse of tToJdUt. */
 const tForJd = (jd: number) => (jd - 2440587.5) * 86400;
 
 interface FixtureSpec {

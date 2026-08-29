@@ -17,7 +17,7 @@ import {
   subObserverLongitudeEastDeg,
   type RotationElements,
 } from './rotation-elements-pure';
-import { jdeToT } from '../../time/time';
+import { jdUtToT } from '../../time/time';
 import { KM_PC } from '../../../util/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -143,7 +143,7 @@ describe('texture orientation vs Horizons sub-observer truth', () => {
 
     it(`${row.body} @ JD ${row.jdUt}: rendered map point under the observer matches Horizons`, () => {
       const rot = rotationFor(row.body);
-      const t = jdeToT(row.jdUt);
+      const t = jdUtToT(row.jdUt);
       const { dir, distPc } = bodyToEarthIcrs(row.body, t);
       // Horizons evaluates the target state at emission; retard the
       // spin by one light time (Io turns ~4°/lt at opposition).
@@ -162,7 +162,7 @@ describe('texture orientation vs Horizons sub-observer truth', () => {
 
     it(`${row.body} @ JD ${row.jdUt}: scalar sub-observer inverse agrees with the quaternion+UV chain`, () => {
       const rot = rotationFor(row.body);
-      const t = jdeToT(row.jdUt);
+      const t = jdUtToT(row.jdUt);
       const { dir } = bodyToEarthIcrs(row.body, t);
       const scalar = subObserverLongitudeEastDeg(rot, t, dir);
       const uv = sampledMapLonLat(rot, t, dir);

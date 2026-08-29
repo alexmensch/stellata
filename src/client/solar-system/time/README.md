@@ -72,7 +72,7 @@ it immediately. See SCIENCE.md § Solar system for the decision record.
 
 ## Timescales
 
-`t` runs in **UTC**, and `tToJDE` / `jdeToT` are the exact inverse pair
+`t` runs in **UTC**, and `tToJdUt` / `jdUtToT` are the exact inverse pair
 that carry it to and from a Julian Date in that same scale. Everything
 whose epoch argument is a wall-clock instant — the readout, the scrubber,
 the star-catalogue epoch advance, binary orbits — reads that pair.

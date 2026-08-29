@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { AU_PC } from '../../util/astronomy-constants';
-import { tToJDE } from '../time/time';
+import { tToJdUt } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
@@ -12,7 +12,7 @@ import { builtinChromeLineMaterials } from '../../chrome-lines/builtin-chrome-li
 import { buildProbeTrajectory } from './probe-trajectory';
 
 const STEP_DAYS = 30;
-const FIRST_JD = tToJDE(0);
+const FIRST_JD = tToJdUt(0);
 
 // Two probes marching out along ICRS x at 1 AU per 30 days, far enough out
 // that both the fleet cull and the per-trail legibility gate clear.

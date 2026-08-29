@@ -24,7 +24,7 @@ export interface CompanionFormatContext extends StarNameContext {
   // Parsed binaries.bin, or null when the artifact is absent — the
   // companion lines simply drop out in that case.
   binaries: BinariesData | null;
-  // Current sim time as JD (tToJDE(getT())), injected fresh per card by
+  // Current sim time as JD (tToJdUt(getT())), injected fresh per card by
   // the caller. Drives the Tier-1 live separation.
   nowJd: number;
 }

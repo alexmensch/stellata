@@ -25,7 +25,7 @@ import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
-import { tToJDE } from '../solar-system/time/time';
+import { tToJdUt } from '../solar-system/time/time';
 import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
@@ -184,7 +184,7 @@ export function createStarKindModule(): StarKindModule {
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
           : 0),
-        nowJd: () => tToJDE(attached.getT()),
+        nowJd: () => tToJdUt(attached.getT()),
       });
     },
 
@@ -205,7 +205,7 @@ export function createStarKindModule(): StarKindModule {
           periodDays: catalog.periodDays,
           amplitudeMag: catalog.amplitudeMag,
           binaries: runtime?.getBinaries() ?? null,
-          nowJd: tToJDE(ctx.getT()),
+          nowJd: tToJdUt(ctx.getT()),
           membership: ctx.systemMembership,
         })
         : null),

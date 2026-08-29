@@ -13,19 +13,19 @@ import {
   nextFastForwardRate,
   nextRewindRate,
   parseLocalDatetimeValue,
-  tToJDE,
+  tToJdUt,
   tToJdTdb,
   toLocalDatetimeValue,
   LOCAL_DATETIME_FORMAT,
 } from './time';
 
-describe('tToJDE', () => {
+describe('tToJdUt', () => {
   it('maps the Unix epoch to JD 2440587.5', () => {
-    expect(tToJDE(0)).toBe(2440587.5);
+    expect(tToJdUt(0)).toBe(2440587.5);
   });
 
   it('maps the UTC instant 2000-01-01T12:00:00Z to JD 2451545.0 exactly', () => {
-    expect(tToJDE(946728000)).toBe(2451545.0);
+    expect(tToJdUt(946728000)).toBe(2451545.0);
   });
 
   it('round-trips a JD back to seconds within sub-millisecond float64 noise for typical scrubber values', () => {
@@ -34,21 +34,21 @@ describe('tToJDE', () => {
     // 86400 that lands round-trip noise around 1e-4 sec — well below VSOP87
     // sensitivity, but coarser than toBeCloseTo's machine-precision threshold.
     const tIn = 1.78e9; // ~2026
-    const jd = tToJDE(tIn);
+    const jd = tToJdUt(tIn);
     const back = (jd - 2440587.5) * 86400;
     expect(Math.abs(back - tIn)).toBeLessThan(1e-3);
   });
 
   it('advances by exactly one day for a 86400-second delta', () => {
-    expect(tToJDE(86400) - tToJDE(0)).toBe(1);
+    expect(tToJdUt(86400) - tToJdUt(0)).toBe(1);
   });
 });
 
 describe('tToJdTdb', () => {
   it('runs ΔT ahead of the universal-time sibling', () => {
     // Differencing two ~2.44e6 Julian Dates leaves ~1e-5 s of float64 noise.
-    const gap = (tToJdTdb(0) - tToJDE(0)) * 86400;
-    expect(gap).toBeCloseTo(deltaTSeconds(tToJDE(0)), 4);
+    const gap = (tToJdTdb(0) - tToJdUt(0)) * 86400;
+    expect(gap).toBeCloseTo(deltaTSeconds(tToJdUt(0)), 4);
     // 1970 sat at ΔT ≈ 40 s, well clear of today's ~69 s: a regression to
     // a fixed TT−UTC constant reads the same at every epoch.
     expect(gap).toBeGreaterThan(38);
