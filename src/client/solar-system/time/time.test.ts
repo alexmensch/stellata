@@ -6,6 +6,7 @@ import {
   T_CLAMP_MAX_S,
   T_CLAMP_MIN_S,
   VirtualClock,
+  clampT,
   isLive,
   jdTdbToT,
   julianEpochYearToT,
@@ -315,7 +316,7 @@ describe('jump-field value round-trip', () => {
     expect(parseLocalDatetimeValue(toLocalDatetimeValue(ms))).toBe(ms);
   });
 
-  it('encodes as a zoneless YYYY-MM-DD hh:mm:ss string (no trailing Z)', () => {
+  it('encodes as a zoneless YYYY-MM-DD HH:MM:SS string (no trailing Z)', () => {
     expect(toLocalDatetimeValue(Date.UTC(2030, 0, 1, 0, 0, 0))).toMatch(
       /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
     );
@@ -377,6 +378,15 @@ describe('jump-field value round-trip', () => {
   it('rejects unpadded fields so a partial entry never reads as complete', () => {
     expect(nan('2030-1-01 00:00:00')).toBe(true);
     expect(nan('2030-01-01 0:00:00')).toBe(true);
+    // The year is fixed-width too: the parser takes exactly what the
+    // encoder emits, so a half-typed year is never a valid early year.
+    expect(nan('203-01-01 00:00:00')).toBe(true);
+    expect(nan('2-01-01 00:00:00')).toBe(true);
+    expect(nan('99999-01-01 00:00:00')).toBe(true);
+  });
+
+  it('rejects a zero day, which rolls back into the previous month', () => {
+    expect(nan('2030-01-00 00:00:00')).toBe(true);
   });
 
   it('tolerates surrounding whitespace', () => {
@@ -385,7 +395,27 @@ describe('jump-field value round-trip', () => {
   });
 
   it('the placeholder names the format the parser accepts', () => {
-    expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD hh:mm:ss');
+    expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD HH:MM:SS');
     expect(nan(toLocalDatetimeValue(Date.UTC(2030, 0, 1)))).toBe(false);
+  });
+});
+
+// What the widget echoes back after a jump: the clamped *target*, never a
+// re-read of the clock — at a high rate the work between the two is a
+// visible slice of model time.
+describe('jump-field echo-back', () => {
+  const echo = (entry: string): string =>
+    toLocalDatetimeValue(clampT(parseLocalDatetimeValue(entry) / 1000) * 1000);
+
+  it('echoes an in-range entry back unchanged', () => {
+    expect(echo('2030-01-01 12:34:56')).toBe('2030-01-01 12:34:56');
+  });
+
+  it('echoes the upper bound for an entry past 3000 AD', () => {
+    expect(echo('9999-01-01 00:00:00')).toBe(toLocalDatetimeValue(T_CLAMP_MAX_S * 1000));
+  });
+
+  it('echoes the lower bound for an entry before 3000 BC', () => {
+    expect(echo('-9999-01-01 00:00:00')).toBe(toLocalDatetimeValue(T_CLAMP_MIN_S * 1000));
   });
 });

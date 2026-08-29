@@ -8,6 +8,7 @@ import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
   parseLocalDatetimeValue,
+  clampT,
   LOCAL_DATETIME_FORMAT,
   type TransportAction,
 } from './time';
@@ -104,11 +105,8 @@ export function createTimeScrubberWidget(
   controls.className = 'scrubber-controls';
   const press = (action: TransportAction): void => {
     clock[action]();
-    if (action === 'reset') {
-      syncJump();
-      stellata.notifyClockJumped();
-    }
-    refresh();
+    if (action === 'reset') afterClockJump(stellata.getT());
+    else refresh();
   };
 
   // play / pause flip enabled state on every rate change; the rest are
@@ -147,29 +145,40 @@ export function createTimeScrubberWidget(
     jumpInput.classList.toggle('is-invalid', !valid);
     jumpInput.setAttribute('aria-invalid', valid ? 'false' : 'true');
   };
-  const syncJump = (): void => {
-    jumpInput.value = toLocalDatetimeValue(stellata.getT() * 1000);
+  const setJumpField = (seconds: number): void => {
+    jumpInput.value = toLocalDatetimeValue(seconds * 1000);
     setJumpValid(true);
   };
-  const doJump = (): void => {
+  // Jump and Reset both move `t` discontinuously and owe this epilogue —
+  // ./README.md § Time `t` and the readout.
+  const afterClockJump = (seconds: number): void => {
+    stellata.notifyClockJumped();
+    setJumpField(seconds);
+    refresh();
+  };
+  /** True when the entry parsed and the clock moved. */
+  const doJump = (): boolean => {
     const ms = parseLocalDatetimeValue(jumpInput.value);
     if (Number.isNaN(ms)) {
       setJumpValid(false);
-      return;
+      return false;
     }
-    setJumpValid(true);
-    clock.setTimeAbsolute(ms / 1000);
-    stellata.notifyClockJumped();
-    refresh();
-    // The clock clamps to the ephemeris window, so echo back the instant
-    // it actually landed on rather than leaving the rejected one on screen.
-    syncJump();
+    // Echo the clamped target, not a re-read of the clock: `notifyClockJumped`
+    // walks every kind, and at a high rate that elapsed wall-time is a
+    // visible slice of model time.
+    const seconds = clampT(ms / 1000);
+    clock.setTimeAbsolute(seconds);
+    afterClockJump(seconds);
+    return true;
   };
   jumpBtn.addEventListener('click', doJump);
-  jumpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doJump(); });
+  jumpInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && doJump()) jumpInput.blur();
+  });
   jumpInput.addEventListener('input', () => setJumpValid(true));
   jumpInput.addEventListener('blur', () => {
-    setJumpValid(!Number.isNaN(parseLocalDatetimeValue(jumpInput.value)));
+    const entry = jumpInput.value.trim();
+    setJumpValid(entry === '' || !Number.isNaN(parseLocalDatetimeValue(entry)));
   });
 
   scrubber.append(header, rate, controls, jumpRow);
@@ -196,7 +205,7 @@ export function createTimeScrubberWidget(
     collapsed.hidden = true;
     scrubber.hidden = false;
     stopCollapsedTick();
-    syncJump();
+    setJumpField(stellata.getT());
     refresh();
     tickExpanded();
     expandedTimer = window.setInterval(tickExpanded, 1000);

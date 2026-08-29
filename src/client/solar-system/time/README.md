@@ -53,8 +53,10 @@ owe `Stellata.notifyClockJumped()`.** They write the `VirtualClock`
 directly rather than through `setT`, which would force rate 0 and so
 lose a jump made while playing; the epilogue is what reseeds every
 kind's t-sampled state at the new instant and repaints a jump made with
-the clock paused (`../../render-gate/README.md`). A rate change is not a
-jump — FF/RW/play/pause snapshot `t` and need nothing.
+the clock paused (`../../render-gate/README.md`). Both reach it through
+the widget's single `afterClockJump`, so the debt is paid structurally
+rather than remembered at each call site. A rate change is not a jump —
+FF/RW/play/pause snapshot `t` and need nothing.
 
 `t` itself is clamped to the Standish ephemeris validity window
 (3000 BC – 3000 AD; `T_CLAMP_MIN_S` / `T_CLAMP_MAX_S`) — every clock
@@ -113,9 +115,9 @@ Jump-to-date is a plain **text** input whose value is read as **local**
 time (`toLocalDatetimeValue` / `parseLocalDatetimeValue` in `time.ts`),
 even though the readout displays UTC — deliberate, so it matches the
 operator's wall clock. Format is `LOCAL_DATETIME_FORMAT`
-(`YYYY-MM-DD hh:mm:ss`, seconds optional, `T` accepted as the separator),
-which the field also carries as its placeholder. Reset already snaps to
-live-now at 1×, so there is intentionally no separate "now" jump.
+(`YYYY-MM-DD HH:MM:SS`, 24-hour, seconds optional, `T` accepted as the
+separator), which the field also carries as its placeholder. Reset already
+snaps to live-now at 1×, so there is intentionally no separate "now" jump.
 
 **Typed-only, and `datetime-local` cannot deliver that.** It was one
 originally, with
@@ -135,11 +137,27 @@ is **strict**: an anchored regex plus a component build, not
 `new Date(value)`. The lenient constructor accepts far more than this
 field means *and silently changes scale doing it* — `new Date('2030')` is
 a valid **UTC** instant, so a half-typed year would have jumped the clock
-somewhere other than where the same digits land once complete. A rejected
-entry flags the field (`.is-invalid`, `aria-invalid`) and no-ops the jump;
-the flag is set on Jump or on blur, never per keystroke, so a half-typed
-date is not marked as an error. A jump that lands writes the clock's
-*clamped* instant back into the field.
+somewhere other than where the same digits land once complete. Every field
+including the year is fixed-width, so the parser takes exactly what
+`toLocalDatetimeValue` emits and nothing partial. Only the *time* fields
+carry an explicit range check: an out-of-range month or day moves the date,
+which the parser's rolled-over-date comparison already catches, but an
+out-of-range minute or second can roll forward inside the same day, where
+it would not.
+
+A rejected entry flags the field (`.is-invalid`, `aria-invalid`) and
+no-ops the jump; the flag is set on Jump or on blur, never per keystroke,
+so a half-typed date is not marked as an error. An **empty** field is
+absent rather than malformed and is never flagged. Enter jumps and then
+blurs the field — but only when the entry parsed, so a rejected one keeps
+focus to be corrected.
+
+A jump that lands writes the **clamped target** back into the field, not a
+re-read of the clock. The two differ: `notifyClockJumped()` reseeds every
+kind before the read would happen, and at a high rate that elapsed
+wall-clock is a visible slice of model time (at 86400× a millisecond of it
+is a minute and a half). `clampT` is exported for exactly this, so the
+widget never re-derives the window bounds.
 
 `time-readout.ts` renders the live UTC timestamp the rendered positions
 correspond to. It mounts the collapsed `.meta` readout (`#time-readout`, a

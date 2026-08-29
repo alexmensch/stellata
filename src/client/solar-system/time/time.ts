@@ -54,7 +54,7 @@ export function julianEpochYearToT(jyr: number): number {
 export const T_CLAMP_MIN_S = julianEpochYearToT(-2999.0);
 export const T_CLAMP_MAX_S = julianEpochYearToT(3001.0);
 
-function clampT(secs: number): number {
+export function clampT(secs: number): number {
   return Math.min(Math.max(secs, T_CLAMP_MIN_S), T_CLAMP_MAX_S);
 }
 
@@ -84,7 +84,7 @@ export function nextRewindRate(rate: number): number {
 }
 
 /** The jump field's format, for the input's placeholder and the README. */
-export const LOCAL_DATETIME_FORMAT = 'YYYY-MM-DD hh:mm:ss';
+export const LOCAL_DATETIME_FORMAT = 'YYYY-MM-DD HH:MM:SS';
 
 /** Epoch-ms → a zoneless jump-field value in **local** time:
  *  `2030-01-01 00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
@@ -96,26 +96,23 @@ export function toLocalDatetimeValue(ms: number): string {
   return `${y}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-// Either separator, seconds optional. Anchored, and every field
-// fixed-width bar the year, so a partial entry can never look complete.
+// Either separator, seconds optional. Anchored, and every field fixed-width,
+// so the parser accepts exactly what `toLocalDatetimeValue` emits and a
+// partial entry can never look complete.
 const LOCAL_DATETIME_RE =
-  /^(-?\d{1,6})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
+  /^(-?\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 /** A zoneless jump-field value (→ **local** time) → epoch-ms, or NaN if it
  *  isn't `LOCAL_DATETIME_FORMAT`. Sibling of `toLocalDatetimeValue`.
- *
- *  Strict on purpose: `new Date(value)` accepts far more than this field
- *  means, and silently changes scale doing it — `new Date('2030')` is a
- *  valid **UTC** instant, so a half-typed year would jump the clock to a
- *  different moment than the one the same digits denote in every complete
- *  entry. It also rejects `-2999-…`, and the clock's own range reaches
- *  3000 BC. Building from components sidesteps both. */
+ *  Strict rather than `new Date(value)` — see ./README.md § Time `t`. */
 export function parseLocalDatetimeValue(value: string): number {
   const m = LOCAL_DATETIME_RE.exec(value.trim());
   if (m === null) return Number.NaN;
   const [year, month, day, hour, minute] = m.slice(1, 6).map(Number);
   const second = m[6] === undefined ? 0 : Number(m[6]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return Number.NaN;
+  // Only the time fields need a range check. An out-of-range month or day
+  // moves the date, so the equality check below catches it; an out-of-range
+  // minute or second can roll forward inside the same day, where it can't.
   if (hour > 23 || minute > 59 || second > 59) return Number.NaN;
   const d = new Date(year, month - 1, day, hour, minute, second, 0);
   // Years 0-99 are the Date constructor's 1900+ shorthand; the clock's
