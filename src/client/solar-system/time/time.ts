@@ -96,11 +96,12 @@ export function toLocalDatetimeValue(ms: number): string {
   return `${y}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-// Either separator, seconds optional. Anchored, and every field fixed-width,
-// so the parser accepts exactly what `toLocalDatetimeValue` emits and a
-// partial entry can never look complete.
+// Either separator, seconds optional, every field acceptable unpadded. The
+// year caps at 4 digits so it can't swallow a mistyped one; a 2-digit year is
+// that year, never windowed into the 1900s — years 0-99 are inside the clock's
+// range and reachable no other way.
 const LOCAL_DATETIME_RE =
-  /^(-?\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
+  /^(-?\d{1,4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/;
 
 /** A zoneless jump-field value (→ **local** time) → epoch-ms, or NaN if it
  *  isn't `LOCAL_DATETIME_FORMAT`. Sibling of `toLocalDatetimeValue`.

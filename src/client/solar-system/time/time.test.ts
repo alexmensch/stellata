@@ -375,13 +375,25 @@ describe('jump-field value round-trip', () => {
     expect(nan('2028-02-29 00:00:00')).toBe(false);
   });
 
-  it('rejects unpadded fields so a partial entry never reads as complete', () => {
-    expect(nan('2030-1-01 00:00:00')).toBe(true);
-    expect(nan('2030-01-01 0:00:00')).toBe(true);
-    // The year is fixed-width too: the parser takes exactly what the
-    // encoder emits, so a half-typed year is never a valid early year.
-    expect(nan('203-01-01 00:00:00')).toBe(true);
-    expect(nan('2-01-01 00:00:00')).toBe(true);
+  it('accepts every field unpadded', () => {
+    expect(parseLocalDatetimeValue('2030-1-1 1:2:3'))
+      .toBe(parseLocalDatetimeValue('2030-01-01 01:02:03'));
+    expect(parseLocalDatetimeValue('78-4-1 1:20:0'))
+      .toBe(parseLocalDatetimeValue('0078-04-01 01:20:00'));
+    expect(parseLocalDatetimeValue('78-4-1 1:20'))
+      .toBe(parseLocalDatetimeValue('0078-04-01 01:20:00'));
+  });
+
+  it('reads a 2-digit year as that year, never windowed into the 1900s', () => {
+    const d = new Date(0);
+    d.setFullYear(78, 3, 1);
+    d.setHours(1, 20, 0, 0);
+    expect(parseLocalDatetimeValue('78-4-1 1:20')).toBe(d.getTime());
+    expect(toLocalDatetimeValue(parseLocalDatetimeValue('78-4-1 1:20')))
+      .toBe('0078-04-01 01:20:00');
+  });
+
+  it('caps the year at 4 digits so a mistyped one cannot run on', () => {
     expect(nan('99999-01-01 00:00:00')).toBe(true);
   });
 

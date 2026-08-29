@@ -137,11 +137,21 @@ is **strict**: an anchored regex plus a component build, not
 `new Date(value)`. The lenient constructor accepts far more than this
 field means *and silently changes scale doing it* — `new Date('2030')` is
 a valid **UTC** instant, so a half-typed year would have jumped the clock
-somewhere other than where the same digits land once complete. Every field
-including the year is fixed-width, so the parser takes exactly what
-`toLocalDatetimeValue` emits and nothing partial. Only the *time* fields
-carry an explicit range check: an out-of-range month or day moves the date,
-which the parser's rolled-over-date comparison already catches, but an
+somewhere other than where the same digits land once complete.
+
+**Every field may be typed unpadded** — `78-4-1 1:20` is `0078-04-01
+01:20:00` — and seconds may be dropped. Padding is what the encoder emits,
+not what the parser demands: the field is typed by hand and the flag only
+fires on Jump or blur, so a partial entry is never acted on mid-typing, and
+a jump that lands echoes the canonical padded form back where a mis-parse
+is visible. The year caps at 4 digits so a mistyped one cannot run on, and
+a 2-digit year is **that** year — never windowed into the 1900s. Windowing
+would put years 0–99 out of reach by their own digits, which is why the
+parser calls `setFullYear` to undo the `Date` constructor's 1900+ shorthand
+in the first place.
+
+Only the *time* fields carry an explicit range check: an out-of-range month
+or day moves the date, which the rolled-over-date comparison catches, but an
 out-of-range minute or second can roll forward inside the same day, where
 it would not.
 
