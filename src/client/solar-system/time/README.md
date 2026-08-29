@@ -87,9 +87,14 @@ which was the dominant term left once the element tables landed.
 **ΔT is not a constant, and at this clock's range it is not small.**
 `delta-t-pure.ts` is the Espenak & Meeus polynomial set (−1999 to +3000),
 thirteen fitted intervals with the Morrison & Stephenson long-term
-parabola carrying each tail. It is 69 s today and **20.6 hours at 3000 BC** —
-310° of Earth rotation. A fixed offset put every ancient eclipse track
-most of a hemisphere from where it belongs.
+parabola carrying each tail, plus NASA's lunar-secular-acceleration
+correction −0.000012932·(y−1955)² s: the polynomials assume the Moon's
+secular acceleration is −26″/cy², the eclipse canons and the ELP/DE
+lunar ephemerides the model is pinned against use −25.858, and without
+the reconciling term ΔT reads 202 s high at 2000 BC. It is 69 s today
+and **20.6 hours at 3000 BC** — 310° of Earth rotation. A fixed offset
+put every ancient eclipse track most of a hemisphere from where it
+belongs.
 
 The split that makes eclipses work is therefore:
 

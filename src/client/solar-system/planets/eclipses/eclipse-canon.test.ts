@@ -193,8 +193,14 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
   });
 
   it('puts greatest eclipse on the right part of the globe', () => {
+    // The deep-time worst case (246 km, -1977) is the truncated lunar
+    // theory's along-track floor projected onto the ground. It measured
+    // 163 km before the ΔT lunar-acceleration correction landed — not
+    // because the Moon was better, but because the ΔT bias rotated Earth
+    // partway under the mislaid shadow. See README.md § Where the
+    // remaining error is.
     for (const r of solarResults) {
-      expect(r.offsetKm, r.row.date).toBeLessThan(200);
+      expect(r.offsetKm, r.row.date).toBeLessThan(250);
     }
   });
 
@@ -301,16 +307,19 @@ describe('lunar eclipses vs the Five Millennium Canon', () => {
 });
 
 describe('ΔT against the canon\'s own column', () => {
-  it('agrees within 2 % at every canon epoch, from 2000 BC on', () => {
+  it('agrees within 2 s at every canon epoch, from 2000 BC on', () => {
     // Espenak tabulates the ΔT he used per eclipse. Reproducing it is a
     // direct check on delta-t-pure.ts against the same authority the
-    // ground tracks are being checked against — and the residual is the
-    // calendar-year vs Julian-year argument, not the polynomials.
+    // ground tracks are being checked against. The bound is absolute:
+    // a relative one (this test shipped at 2 %) cannot tell "reproduces
+    // Espenak" from "reproduces Espenak minus a systematic 200 s" — which
+    // is exactly what it hid until the lunar-secular-acceleration term
+    // landed. What is left (≤1.2 s measured) is the canon column's
+    // integer rounding plus the calendar-year vs Julian-year argument.
     for (const row of [...SOLAR, ...LUNAR]) {
       const canon = Number(row.delta_t_s);
       const model = deltaTSeconds(Number(row.jd_tt));
-      const tolerance = Math.max(2, Math.abs(canon) * 0.02);
-      expect(Math.abs(model - canon), row.date).toBeLessThan(tolerance);
+      expect(Math.abs(model - canon), row.date).toBeLessThan(2);
     }
   });
 });
