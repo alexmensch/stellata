@@ -64,13 +64,12 @@ reproduces each event end-to-end and asserts:
 - greatest eclipse lands within **10 s across 1900–2100**, 70 s back to
   600 BC, and 7 minutes over the whole corpus;
 - the sub-shadow ground point lands within **70 km in the modern era** and
-  250 km over the corpus;
+  200 km over the corpus;
 - lunar umbral magnitude matches to 0.04, with the Moon fully inside the
   umbra at every canon total;
-- ΔT reproduces the canon's own per-eclipse column to **2 s, absolute**. A
-  relative bound (this shipped at 2 %) cannot tell "reproduces Espenak"
-  from "reproduces Espenak minus a systematic 200 s", which is what it hid
-  until the lunar-secular-acceleration term landed in `delta-t-pure.ts`.
+- ΔT reproduces the canon's own per-eclipse column to **2 s, absolute** —
+  a relative bound cannot tell "reproduces Espenak" from "reproduces
+  Espenak minus a systematic 200 s".
 
 The corpus is deliberately central (|γ| < 0.95): a grazing event would
 satisfy every assertion above without saying anything about the shadow
@@ -116,22 +115,21 @@ user scrubbing to 1200 BC.
 
 ## Where the remaining error is
 
-At the 2000 BC end the residual is the lunar theory's own along-track
-error (`../../ephemerides/README.md` § Mean-longitude recalibration), not
-Earth's orientation, which holds 0.076° across the whole clamp. Seven
-minutes of dynamical time there is far inside the uncertainty on the real
-event: ΔT itself is known only to ±hours that far back, so the *observed*
-local circumstances of a 2000 BC eclipse are far less certain than the
-model's reproduction of them.
-
-The deep-time ground bound reads that floor honestly. Before the ΔT
-lunar-secular-acceleration correction, the worst corpus ground offset
-measured 163 km rather than 246 km — the 200 s ΔT bias rotated Earth
-partway back under the mislaid shadow, an accidental cancellation of two
-independent errors. Do not chase the smaller number by re-tuning either
-half: the lunar mean-longitude recalibration is fit against TT-keyed
-DE441 vectors, a chain ΔT never enters, so its coefficients owe nothing
-to ΔT and cannot legitimately absorb a ΔT change.
+At the 2000 BC end the residual is the canon's own vintage, not the
+model. Measured at the two worst canon epochs (−1977, −1912): the model's
+geocentric Moon sits within 4–20 km of DE441 and its Moon−Sun elongation
+within 6″ — about 12 s of eclipse timing — while the canon's
+greatest-eclipse instants sit ~325 s of TT away, because the Five
+Millennium Canon's ELP2000-85 Moon (tidal acceleration −25.858″/cy²)
+drifts that far from DE441 over four millennia. Matching the canon
+tighter would mean degrading the model toward the older ephemeris, so
+the 200 km / 7-minute corpus bounds are the canon-agreement floor, not
+the model's accuracy (`../../ephemerides/README.md`
+§ DE441 recalibration has the model-vs-DE441 figures). Earth's
+orientation holds 0.076° across the whole clamp, and ΔT itself is known
+only to ±hours that far back — the *observed* local circumstances of a
+2000 BC eclipse are far less certain than either model's reproduction of
+them.
 
 The canon spans −1999 to +3000 and the model clock reaches −2999, so the
 first millennium of the clamp carries no independent eclipse authority.

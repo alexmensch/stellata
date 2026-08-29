@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/moon-vector-truth.tsv');
 
 interface TruthRow {
-  set: 'fit' | 'check';
+  set: 'fit' | 'fit2' | 'check';
   jdTt: number;
   x: number;
   y: number;
@@ -31,7 +31,7 @@ const TRUTH: TruthRow[] = readFileSync(TRUTH_TSV, 'utf-8')
   .map((line) => {
     const [set, jd, x, y, z] = line.split('\t');
     return {
-      set: set as 'fit' | 'check',
+      set: set as TruthRow['set'],
       jdTt: Number(jd),
       x: Number(x),
       y: Number(y),
@@ -80,33 +80,35 @@ describe('truncated ELP series', () => {
     expect(g.distKm).toBeCloseTo(368409.7, 1);
   });
 
-  it('the mean-longitude recalibration stays under Meeus\'s own print precision', () => {
-    // The T²/T³ correction is fitted across ±30 centuries; at T = −0.077
-    // it must stay below the worked example's 1e-6° rounding (0.0036″),
-    // or the two assertions above stop checking the untouched series.
+  it('the DE441 recalibration stays under Meeus\'s own print precision', () => {
+    // The mean-longitude and D/M′/F argument corrections are fitted
+    // across ±50 centuries; at T = −0.077 they must stay below the worked
+    // example's 1e-6° rounding (0.0036″), or the two assertions above
+    // stop checking the untouched series.
     const g = moonGeocentricOfDate(JDE_47A);
     expect(Math.abs(g.lonDeg - 133.162655) * 3600).toBeLessThan(0.0036);
   });
 });
 
 describe('geocentric position vs JPL Horizons across the model clock', () => {
-  it('holds 150 km over the whole 3000 BC – 3000 AD span', () => {
+  it('holds 45 km over the whole 3000 BC – 3000 AD span', () => {
     const worst = worstError(() => true);
-    expect(worst.km).toBeLessThan(150);
+    expect(worst.km).toBeLessThan(45);
   });
 
   it('holds 20 km over the epochs the recalibration was NOT fitted to', () => {
-    // The `check` rows are an independent 150-year grid; the `fit` rows
-    // are the irregular sample the T²/T³ coefficients were least-squared
-    // over. A regression that re-tuned the fit without improving the
-    // model would pass the combined bound and fail this one.
+    // The `check` rows are an independent 150-year grid; the `fit` and
+    // `fit2` rows are the samples the mean-longitude and D/M′/F argument
+    // corrections were least-squared over. A regression that re-tuned the
+    // fit without improving the model would pass the combined bound and
+    // fail this one.
     const worst = worstError((r) => r.set === 'check' && Math.abs(r.jdTt - J2000_JD) < 25 * 36525);
     expect(worst.km).toBeLessThan(20);
   });
 
-  it('holds 12 km across 1900–2100, where eclipse circumstances are checked hardest', () => {
+  it('holds 20 km across 1900–2100 — the truncation floor Meeus quotes as ~10″', () => {
     const worst = worstError((r) => Math.abs(r.jdTt - J2000_JD) < 36525);
-    expect(worst.km).toBeLessThan(12);
+    expect(worst.km).toBeLessThan(20);
   });
 
   it('the corpus spans both clamp bounds', () => {

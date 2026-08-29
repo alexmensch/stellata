@@ -10,12 +10,20 @@ const DAYS_PER_JULIAN_CENTURY = 36525;
 /** Mean geocentric distance the Σr sum is a correction to, km. */
 const MEAN_DISTANCE_KM = 385000.56;
 
-// Recalibration of the series' mean longitude against DE441 (arcsec, T in
-// Julian centuries). Without it the along-track error reaches 518″ at the
+// Recalibration of the series against DE441 (arcsec, T in Julian
+// centuries): T²/T³ on the mean longitude, and on the D / M′ / F
+// fundamental arguments, which the largest periodic terms amplify
+// coherently. Without the set, the along-track error reaches 518″ at the
 // clock's lower bound — a full umbra width of eclipse-path displacement.
 // Derivation and the residual it leaves: README.md § Moon ephemeris.
-const MEAN_LON_T2_ARCSEC = 3.59135e-2;
-const MEAN_LON_T3_ARCSEC = -3.71558e-3;
+const MEAN_LON_T2_ARCSEC = 2.501823e-2;
+const MEAN_LON_T3_ARCSEC = -3.983848e-3;
+const ARG_D_T2_ARCSEC = -1.842598e-2;
+const ARG_D_T3_ARCSEC = 4.166853e-3;
+const ARG_MP_T2_ARCSEC = -3.764895e-2;
+const ARG_MP_T3_ARCSEC = 2.327369e-3;
+const ARG_F_T2_ARCSEC = -1.987338e-2;
+const ARG_F_T3_ARCSEC = 5.602035e-3;
 
 // Table 47.A: D, M, M′, F, Σl (1e-6 deg), Σr (1e-3 km).
 const LON_DIST_TERMS = [
@@ -232,16 +240,18 @@ export function lunarArgumentsDeg(jdTt: number): {
   const T3 = T2 * T;
   const T4 = T3 * T;
   const wrap = (x: number) => ((x % 360) + 360) % 360;
+  const corr = (t2Arcsec: number, t3Arcsec: number) =>
+    (t2Arcsec * T2 + t3Arcsec * T3) / 3600;
   return {
     lp: wrap(218.3164477 + 481267.88123421 * T - 0.0015786 * T2
       + T3 / 538841 - T4 / 65194000),
     d: wrap(297.8501921 + 445267.1114034 * T - 0.0018819 * T2
-      + T3 / 545868 - T4 / 113065000),
+      + T3 / 545868 - T4 / 113065000) + corr(ARG_D_T2_ARCSEC, ARG_D_T3_ARCSEC),
     m: wrap(357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000),
     mp: wrap(134.9633964 + 477198.8675055 * T + 0.0087414 * T2
-      + T3 / 69699 - T4 / 14712000),
+      + T3 / 69699 - T4 / 14712000) + corr(ARG_MP_T2_ARCSEC, ARG_MP_T3_ARCSEC),
     f: wrap(93.2720950 + 483202.0175233 * T - 0.0036539 * T2
-      - T3 / 3526000 + T4 / 863310000),
+      - T3 / 3526000 + T4 / 863310000) + corr(ARG_F_T2_ARCSEC, ARG_F_T3_ARCSEC),
     e: 1 - 0.002516 * T - 0.0000074 * T2,
   };
 }

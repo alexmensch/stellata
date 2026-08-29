@@ -184,23 +184,22 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
   });
 
   it('lands greatest eclipse within 7 minutes over the whole corpus', () => {
-    // At the 2000 BC end the residual is the lunar theory's own
-    // along-track error. It is far inside the uncertainty on the real
-    // event: ΔT itself is good to only ±hours that far back.
+    // At the 2000 BC end the residual is the canon's distance from DE441
+    // (README.md § Where the remaining error is), far inside the ±hours
+    // ΔT uncertainty on the real event.
     for (const r of solarResults) {
       expect(Math.abs(r.offsetS), r.row.date).toBeLessThan(420);
     }
   });
 
   it('puts greatest eclipse on the right part of the globe', () => {
-    // The deep-time worst case (246 km, -1977) is the truncated lunar
-    // theory's along-track floor projected onto the ground. It measured
-    // 163 km before the ΔT lunar-acceleration correction landed — not
-    // because the Moon was better, but because the ΔT bias rotated Earth
-    // partway under the mislaid shadow. See README.md § Where the
-    // remaining error is.
+    // The deep-time worst case (198 km, -1977) is the canon-agreement
+    // floor, not the model's accuracy: at that epoch the chain sits
+    // within 6″ of DE441 in Moon−Sun elongation while the canon's
+    // ELP2000-85 Moon drifts ~160″ from DE441 by 2000 BC. See README.md
+    // § Where the remaining error is.
     for (const r of solarResults) {
-      expect(r.offsetKm, r.row.date).toBeLessThan(250);
+      expect(r.offsetKm, r.row.date).toBeLessThan(200);
     }
   });
 
@@ -311,11 +310,10 @@ describe('ΔT against the canon\'s own column', () => {
     // Espenak tabulates the ΔT he used per eclipse. Reproducing it is a
     // direct check on delta-t-pure.ts against the same authority the
     // ground tracks are being checked against. The bound is absolute:
-    // a relative one (this test shipped at 2 %) cannot tell "reproduces
-    // Espenak" from "reproduces Espenak minus a systematic 200 s" — which
-    // is exactly what it hid until the lunar-secular-acceleration term
-    // landed. What is left (≤1.2 s measured) is the canon column's
-    // integer rounding plus the calendar-year vs Julian-year argument.
+    // a relative one cannot tell "reproduces Espenak" from "reproduces
+    // Espenak minus a systematic 200 s". What is left (≤1.2 s measured)
+    // is the canon column's integer rounding plus the calendar-year vs
+    // Julian-year argument.
     for (const row of [...SOLAR, ...LUNAR]) {
       const canon = Number(row.delta_t_s);
       const model = deltaTSeconds(Number(row.jd_tt));

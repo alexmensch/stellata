@@ -218,28 +218,33 @@ Nutation is deliberately omitted: mean-of-date → mean-of-J2000 is exactly
 the precession-only chain, and the Sun's position carries no nutation
 either, so the pair stays consistent.
 
-### Mean-longitude recalibration
+### DE441 recalibration
 
 ELP-2000/82 was fitted over a few centuries around J2000. Measured
-against DE441 across the model clock, its error is **entirely
-along-track**: latitude holds to 62″ and distance to 42 km at the bounds,
-while longitude drifts to +518″ (≈1000 km) by 3000 BC — a full umbra
-width of eclipse-path displacement and ~17 minutes of timing.
+against DE441 across the model clock, the raw series' error is dominated
+by mean-element drift: latitude holds to 62″ and distance to 42 km at
+the bounds, while longitude drifts to +518″ (≈1000 km) by 3000 BC — a
+full umbra width of eclipse-path displacement and ~17 minutes of timing.
 
-The series' mean longitude therefore carries a T²/T³ recalibration,
-least-squared over the 134 irregularly-spaced Horizons epochs tagged
-`fit` in `data/horizons/moon-vector-truth.tsv`. It is the same kind of
+The series therefore carries a T²/T³ recalibration, least-squared over
+the 1596 TT-keyed Horizons epochs tagged `fit`/`fit2` in
+`data/horizons/moon-vector-truth.tsv`: one correction on the output mean
+longitude, and one on each of the **D / M′ / F fundamental arguments**,
+which every periodic term amplifies coherently. That coherence is why
+four small pairs beat any deeper polynomial on the mean longitude alone
+(a T⁴ term there raises the worst residual), and it pulls latitude along
+for free — the arguments feed both sums. A correction to M (the Sun's
+mean anomaly) fits only noise and is left out. It is the same kind of
 correction Espenak's eclipse canons apply for the lunar tidal
 acceleration, and the same kind of measured fit Triton's node rate and
-Mimas's libration amplitude already carry in `MOON_ELEMENTS`. Deeper
-polynomials do not help — T⁴ raises the worst residual — because what
-remains is the truncation floor. Latitude gets no such term: a secular
-fit moves its worst case only from 62″ to 58″.
+Mimas's libration amplitude already carry in `MOON_ELEMENTS`.
 
 Resulting geocentric accuracy vs Horizons/DE441, pinned in
-`moon-vector-truth.test.ts`: **≲12 km across 1900–2100, ≲20 km over the
-independent `check` grid, ≲150 km at the clamp bounds** (was ~1000 km
-before the recalibration, and tens of thousands from the element row).
+`moon-vector-truth.test.ts`: **≲20 km across 1900–2100** (the truncation
+floor — Meeus quotes ~10″ ≈ 19 km near the present), **≲20 km over the
+independent `check` grid inside ±25 centuries, ≲45 km over the whole
+3000 BC – 3000 AD span** (≲150 km with the mean-longitude term alone,
+~1000 km with none, tens of thousands from the element row).
 
 ### Every other moon
 

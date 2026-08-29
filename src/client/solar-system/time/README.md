@@ -229,8 +229,7 @@ publishes against, so a catalogue's number is directly matchable — plus
 ΔT. The two
 lines legitimately name different calendar days (the JD is ΔT later);
 that is the point, not a defect. Six JD decimals (0.086 s) so the lines
-agree at the seconds resolution displayed. No tooltip explains ΔT —
-Stellata deliberately carries no tooltips.
+agree at the seconds resolution displayed.
 
 **Variable-star pulsation runs on `t`.** It was once driven by a separate
 cosmetic `uTime` real-seconds clock, deliberately decoupled from `t`; that
