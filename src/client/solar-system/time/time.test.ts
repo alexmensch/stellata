@@ -12,10 +12,13 @@ import {
   julianEpochYearToT,
   nextFastForwardRate,
   nextRewindRate,
+  parseJulianDateValue,
   parseLocalDatetimeValue,
   tToJdUt,
   tToJdTdb,
   toLocalDatetimeValue,
+  jdUtToT,
+  JUMP_FIELD_PLACEHOLDER,
   LOCAL_DATETIME_FORMAT,
 } from './time';
 
@@ -408,7 +411,68 @@ describe('jump-field value round-trip', () => {
 
   it('the placeholder names the format the parser accepts', () => {
     expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD HH:MM:SS');
+    expect(JUMP_FIELD_PLACEHOLDER).toBe('YYYY-MM-DD HH:MM:SS or JD');
     expect(nan(toLocalDatetimeValue(Date.UTC(2030, 0, 1)))).toBe(false);
+  });
+});
+
+describe('parseJulianDateValue', () => {
+  const nan = (v: string): boolean => Number.isNaN(parseJulianDateValue(v));
+
+  it('reads a bare number as a Julian Date in TT — the scale canons publish', () => {
+    // NASA Five Millennium Canon, -1999 Jun 12: greatest eclipse
+    // JD 991085.63500 TT. Entering the published number must land the
+    // clock on the event with no hand ΔT arithmetic.
+    expect(parseJulianDateValue('991085.63500')).toBe(jdTdbToT(991085.63500));
+  });
+
+  it('accepts an optional JD prefix and TT suffix, case-insensitive', () => {
+    const t = parseJulianDateValue('991085.63500');
+    expect(parseJulianDateValue('JD 991085.63500 TT')).toBe(t);
+    expect(parseJulianDateValue('jd991085.63500tt')).toBe(t);
+  });
+
+  it('a UT suffix overrides the TT default, ΔT apart — 13 h at 2000 BC', () => {
+    const jd = 991085.63500;
+    const gap = parseJulianDateValue(`${jd} UT`) - parseJulianDateValue(`${jd}`);
+    // The TT read resolves ΔT at the UT epoch (fixed point), the reference
+    // here at the TT one — ΔT itself moves ~0.04 s across its own 13 h span
+    // this deep, so the comparison holds to tenths, not milliseconds.
+    expect(gap).toBeCloseTo(deltaTSeconds(jd), 0);
+    expect(gap).toBeGreaterThan(12 * 3600);
+  });
+
+  it('maps a modern UT-tagged JD exactly', () => {
+    expect(parseJulianDateValue('JD 2451545.0 UT')).toBe(946728000);
+    expect(parseJulianDateValue('JD 2451545.0 UT')).toBe(jdUtToT(2451545.0));
+  });
+
+  it('requires 6 digits of an unprefixed integer, so a lone year never reads as a JD', () => {
+    expect(nan('2030')).toBe(true);
+    expect(nan('12345')).toBe(true);
+    expect(nan('991085')).toBe(false);
+    // A decimal point or the JD prefix marks the intent explicitly.
+    expect(nan('2030.5')).toBe(false);
+    expect(nan('JD 2030')).toBe(false);
+  });
+
+  it('rejects garbage, other scale tags, and trailing text', () => {
+    expect(nan('')).toBe(true);
+    expect(nan('not-a-date')).toBe(true);
+    expect(nan('991085.635 TDB')).toBe(true);
+    expect(nan('991085.635x')).toBe(true);
+    expect(nan('991085.')).toBe(true);
+    expect(nan('-991085.635')).toBe(true);
+  });
+
+  it('never collides with the datetime form — dashes disqualify it', () => {
+    expect(nan('2030-01-01 12:34:56')).toBe(true);
+    expect(Number.isNaN(parseLocalDatetimeValue('991085.63500'))).toBe(true);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseJulianDateValue('  991085.63500  '))
+      .toBe(parseJulianDateValue('991085.63500'));
   });
 });
 

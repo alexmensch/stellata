@@ -123,8 +123,27 @@ time (`toLocalDatetimeValue` / `parseLocalDatetimeValue` in `time.ts`),
 even though the readout displays UT — deliberate, so it matches the
 operator's wall clock. Format is `LOCAL_DATETIME_FORMAT`
 (`YYYY-MM-DD HH:MM:SS`, 24-hour, seconds optional, `T` accepted as the
-separator), which the field also carries as its placeholder. Reset already
+separator); the placeholder is `JUMP_FIELD_PLACEHOLDER`, that format plus
+the JD escape below. Reset already
 snaps to live-now at 1×, so there is intentionally no separate "now" jump.
+
+The field's second form is a bare **Julian Date**
+(`parseJulianDateValue`): `991085.635`, `JD 2451545.0 UT`. It exists
+because astronomically-pinned events are published as a JD, and retyping
+one as a calendar date means doing the ΔT arithmetic by hand — the
+arithmetic the readout's JD line exists to remove. The scale defaults to
+**TT** (what catalogues publish, and what the readout shows, so a canon
+value round-trips verbatim); a `UT` suffix overrides — the two are ΔT
+apart, 13 hours at 2000 BC. An unprefixed integer needs ≥ 6 digits
+(every JD the clock can reach has six or seven), so a lone typed year is
+rejected rather than read as a deep-past JD; a decimal point or the `JD`
+prefix marks the intent explicitly. No collision with the datetime form:
+its dashes disqualify it as a number, and a digits-only partial datetime
+was never acted on mid-typing anyway (validation fires on Jump or blur).
+An out-of-window JD clamps-and-echoes exactly like the datetime path,
+and the echo is always the canonical **local datetime** — one canonical
+echo rather than per-entry-form state, with the readout's JD line as the
+JD-scale confirmation of where the clock landed.
 
 **Typed-only, and `datetime-local` cannot deliver that.** It was one
 originally, with

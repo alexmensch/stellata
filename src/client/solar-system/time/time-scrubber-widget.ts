@@ -8,7 +8,9 @@ import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
   parseLocalDatetimeValue,
+  parseJulianDateValue,
   clampT,
+  JUMP_FIELD_PLACEHOLDER,
   LOCAL_DATETIME_FORMAT,
   type TransportAction,
 } from './time';
@@ -132,8 +134,14 @@ export function createTimeScrubberWidget(
   // Text, not `datetime-local` — see ./README.md § Time `t` and the readout.
   const jumpInput = document.createElement('input');
   jumpInput.type = 'text';
-  jumpInput.placeholder = LOCAL_DATETIME_FORMAT;
-  jumpInput.setAttribute('aria-label', `Jump to date (${LOCAL_DATETIME_FORMAT})`);
+  jumpInput.placeholder = JUMP_FIELD_PLACEHOLDER;
+  jumpInput.title =
+    `${LOCAL_DATETIME_FORMAT} (local time), or a Julian Date — `
+    + '"991085.635", "JD 2451545.0 UT" (TT assumed)';
+  jumpInput.setAttribute(
+    'aria-label',
+    `Jump to date (${LOCAL_DATETIME_FORMAT}, or a Julian Date, TT assumed)`,
+  );
   jumpInput.autocomplete = 'off';
   jumpInput.spellcheck = false;
   const jumpBtn = document.createElement('button');
@@ -157,17 +165,24 @@ export function createTimeScrubberWidget(
     setJumpField(seconds);
     refresh();
   };
+  // Either accepted form → Unix-seconds, or NaN. Datetime first; a bare
+  // number falls through to the Julian Date form.
+  const parseJumpEntry = (value: string): number => {
+    const ms = parseLocalDatetimeValue(value);
+    return Number.isNaN(ms) ? parseJulianDateValue(value) : ms / 1000;
+  };
   /** True when the entry parsed and the clock moved. */
   const doJump = (): boolean => {
-    const ms = parseLocalDatetimeValue(jumpInput.value);
-    if (Number.isNaN(ms)) {
+    const target = parseJumpEntry(jumpInput.value);
+    if (Number.isNaN(target)) {
       setJumpValid(false);
       return false;
     }
     // Echo the clamped target, not a re-read of the clock: `notifyClockJumped`
     // walks every kind, and at a high rate that elapsed wall-time is a
-    // visible slice of model time.
-    const seconds = clampT(ms / 1000);
+    // visible slice of model time. A JD entry echoes as the canonical local
+    // datetime too — the readout's own JD line confirms where it landed.
+    const seconds = clampT(target);
     clock.setTimeAbsolute(seconds);
     afterClockJump(seconds);
     return true;
@@ -179,7 +194,7 @@ export function createTimeScrubberWidget(
   jumpInput.addEventListener('input', () => setJumpValid(true));
   jumpInput.addEventListener('blur', () => {
     const entry = jumpInput.value.trim();
-    setJumpValid(entry === '' || !Number.isNaN(parseLocalDatetimeValue(entry)));
+    setJumpValid(entry === '' || !Number.isNaN(parseJumpEntry(entry)));
   });
 
   scrubber.append(header, rate, controls, jumpRow);
