@@ -1,5 +1,5 @@
-// Global instanced planet-body field across every attached host. See
-// src/client/solar-system/README.md § Planet rendering.
+// Global instanced planet-body field across every attached host.
+// See ./README.md § The two layers.
 
 import * as THREE from 'three';
 import { systemFamily, type Planet, type PlanetSystem } from '../planet-system';

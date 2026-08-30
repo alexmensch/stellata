@@ -1,5 +1,5 @@
-// Simulation time `t` (Unix-seconds double) + UTC ↔ Julian-day helpers.
-// See src/client/solar-system/README.md § Time.
+// Simulation time `t` (Unix-seconds double) + UT ↔ Julian-day helpers.
+// See ./README.md § Timescales.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
@@ -10,22 +10,26 @@ const UNIX_EPOCH_JD = 2440587.5;
 
 // Tolerance (seconds) under which a value of `t` is considered "live"
 // — i.e. tracking wall-clock now rather than a scrubber-pinned point.
-// Driven by the readout to label "Live" vs an
-// explicit timestamp; small enough that the per-second tick still
-// reads as live, large enough to absorb scheduler jitter.
+// Drives URL-state encoding: a live `t` is omitted from the blob so a
+// shared link opens at the reader's now, while a scrubbed one is pinned
+// (`../../util/url-state/README.md`). Small enough that the per-second
+// tick still reads as live, large enough to absorb scheduler jitter.
 const LIVE_TOLERANCE_SEC = 1;
 
-/** Unix-seconds → Julian Date, **UTC** scale — the scale `t` itself runs in. */
-export function tToJDE(t: number): number {
+/** Unix-seconds → Julian Date, **UT** scale — the scale `t` itself runs in.
+ *  Not UTC: the model's day is a uniform 86400 s with no leap seconds, and
+ *  UTC did not exist before 1972. Not JDE either — Meeus's JDE is
+ *  conventionally TT; `tToJdTdb` is the sibling that carries ΔT. */
+export function tToJdUt(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
 
 /** Unix-seconds → Julian Date in the **TDB** scale the JPL element tables and
  *  the Standish series are both defined against. Every ephemeris evaluation
- *  reads through here; `tToJDE` is the universal-time sibling, ΔT earlier.
+ *  reads through here; `tToJdUt` is the universal-time sibling, ΔT earlier.
  *  TDB departs from TT by under 2 ms, which no ephemeris here resolves. */
 export function tToJdTdb(t: number): number {
-  const jdUt = tToJDE(t);
+  const jdUt = tToJdUt(t);
   return jdUt + deltaTSeconds(jdUt) / 86400;
 }
 
@@ -35,17 +39,17 @@ export function tToJdTdb(t: number): number {
 export function jdTdbToT(jdTdb: number): number {
   let jdUt = jdTdb;
   for (let i = 0; i < 3; i++) jdUt = jdTdb - deltaTSeconds(jdUt) / 86400;
-  return jdeToT(jdUt);
+  return jdUtToT(jdUt);
 }
 
-/** Julian Date → Unix-seconds. Inverse of `tToJDE`. */
-export function jdeToT(jde: number): number {
-  return (jde - UNIX_EPOCH_JD) * 86400;
+/** Julian Date UT → Unix-seconds. Inverse of `tToJdUt`. */
+export function jdUtToT(jdUt: number): number {
+  return (jdUt - UNIX_EPOCH_JD) * 86400;
 }
 
 /** Julian epoch year (e.g. 2016.0) → Unix-seconds. */
 export function julianEpochYearToT(jyr: number): number {
-  return jdeToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
+  return jdUtToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
 }
 
 // Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;
@@ -83,8 +87,11 @@ export function nextRewindRate(rate: number): number {
   return rate === 1 ? -1 : rate / 2;
 }
 
-/** The jump field's format, for the input's placeholder and the README. */
+/** The jump field's datetime format, for the placeholder and the README. */
 export const LOCAL_DATETIME_FORMAT = 'YYYY-MM-DD HH:MM:SS';
+
+/** The jump field's placeholder: the datetime format plus the JD escape. */
+export const JUMP_FIELD_PLACEHOLDER = `${LOCAL_DATETIME_FORMAT} or JD`;
 
 /** Epoch-ms → a zoneless jump-field value in **local** time:
  *  `2030-01-01 00:00:00`. Round-trips through `parseLocalDatetimeValue`. */
@@ -123,6 +130,44 @@ export function parseLocalDatetimeValue(value: string): number {
   return d.getDate() === day && d.getMonth() === month - 1
     ? d.getTime()
     : Number.NaN;
+}
+
+// Optional "JD" prefix and TT/UT suffix around the number itself. An
+// unprefixed integer needs >= 6 digits (a decimal point also qualifies):
+// the clock's window is JD ~625661-2817160, so every reachable JD has six
+// or seven, and the floor keeps a lone typed year from reading as one.
+const JULIAN_DATE_RE = /^(jd\s*)?(\d{1,7}(?:\.\d+)?)\s*(tt|ut)?$/i;
+
+/** A jump-field Julian Date entry → Unix-seconds `t`, or NaN if it isn't
+ *  one. Sibling of `parseLocalDatetimeValue` — the second form the field
+ *  accepts, because astronomically-pinned events are published as a JD and
+ *  retyping one as a calendar date means doing the ΔT arithmetic by hand.
+ *  The scale defaults to **TT** — what catalogues publish and what the
+ *  readout's JD line shows — so a canon value round-trips verbatim; a
+ *  `UT` suffix overrides (the two differ by ΔT: 13 hours at 2000 BC). */
+export function parseJulianDateValue(value: string): number {
+  const m = JULIAN_DATE_RE.exec(value.trim());
+  if (m === null) return Number.NaN;
+  const [, prefix, digits, scale] = m;
+  if (prefix === undefined && !digits.includes('.') && digits.length < 6) {
+    return Number.NaN;
+  }
+  const jd = Number(digits);
+  // The TT default resolves through the TDB inverse: the two scales differ
+  // by under 2 ms, which is four orders below the second this field's
+  // shortest round-trip resolves, and one fixed-point solve serves both.
+  return scale?.toUpperCase() === 'UT' ? jdUtToT(jd) : jdTdbToT(jd);
+}
+
+/** A jump-field entry in either accepted form → Unix-seconds `t`, or NaN.
+ *  Datetime first; a bare number falls through to the Julian Date form,
+ *  whose dashes-free shape is what keeps the two from colliding. **The two
+ *  parsers do not share a unit** — `parseLocalDatetimeValue` answers in
+ *  epoch-milliseconds and `parseJulianDateValue` in seconds — so the
+ *  reconciliation lives here rather than at the widget's call site. */
+export function parseJumpEntry(value: string): number {
+  const ms = parseLocalDatetimeValue(value);
+  return Number.isNaN(ms) ? parseJulianDateValue(value) : ms / 1000;
 }
 
 /** Virtual clock behind `Stellata.getT()`. `getT() = simT0 + rate ·

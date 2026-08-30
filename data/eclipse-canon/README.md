@@ -18,8 +18,10 @@ globe.
   100-year catalogue pages, retrieved 2026-08-15.
 - Espenak's own computation uses VSOP87/ELP-2000-85 with a lunar tidal
   acceleration of −25.858″/cy², and the same ΔT polynomial set the model
-  carries in `src/client/solar-system/time/delta-t-pure.ts` — so the
-  `delta_t_s` column doubles as a check on that module.
+  carries in `src/client/solar-system/time/delta-t-pure.ts` — including
+  the −0.000012932·(y−1955)² s correction reconciling the polynomials'
+  assumed −26″/cy² with that −25.858, so the `delta_t_s` column checks
+  that module to ~1 s across the whole corpus.
 
 ## `solar-eclipse-canon.tsv`
 

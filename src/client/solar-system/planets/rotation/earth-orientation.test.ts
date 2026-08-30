@@ -21,7 +21,7 @@ import {
   MOON_ELEMENTS,
   moonOffsetEcliptic,
 } from '../../ephemerides/moon-ephemeris';
-import { jdeToT, julianEpochYearToT } from '../../time/time';
+import { jdUtToT, julianEpochYearToT } from '../../time/time';
 import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../util/astronomy-constants';
 import { wrapDegrees } from '../../../util/angles';
 import { eclipticToIcrs } from '../../../util/ecliptic-frame';
@@ -51,7 +51,7 @@ const TRUTH: TruthRow[] = readFileSync(TRUTH_TSV, 'utf-8')
  *  one light time — the same convention texture-orientation.test.ts
  *  applies to Mars, Ganymede and Io. */
 function modelSubSolarLonDeg(jdUt: number): number {
-  const t = jdeToT(jdUt);
+  const t = jdUtToT(jdUt);
   resetPositionCache();
   const bary = getPlanetPositions(t).earth;
   const geo = { x: 0, y: 0, z: 0 };

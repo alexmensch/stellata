@@ -21,7 +21,7 @@ import {
 import { MOON_ELEMENTS, earthMoonSplit, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
-import { jdeToT } from '../time/time';
+import { jdUtToT } from '../time/time';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/planet-radec-truth.tsv');
@@ -100,7 +100,7 @@ function heliocentricAt(body: TruthRow['body'], t: number): Vec3 {
  * 1e-4 AU over a light time, three orders below what the tolerance resolves.
  */
 function geocentricIcrsDir(body: TruthRow['body'], jdUt: number): THREE.Vector3 {
-  const t = jdeToT(jdUt);
+  const t = jdUtToT(jdUt);
   const observer = earthCentreAt(t);
   const geometric = heliocentricAt(body, t);
   const rangeAu = Math.hypot(

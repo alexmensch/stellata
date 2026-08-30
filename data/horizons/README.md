@@ -50,8 +50,9 @@ here that pins a body's *rotation* rather than its position. See its own
 section below.
 
 A sixth table, `moon-vector-truth.tsv`, freezes **geocentric ecliptic
-state vectors for the Moon** at 174 epochs spanning the model clock's
-whole 3000 BC – 3000 AD clamp — by far the widest corpus here. Consumed
+state vectors for the Moon** at 1636 epochs spanning the model clock's
+whole 3000 BC – 3000 AD clamp — by far the widest corpus here, and the
+only one split into fit and held-out sets. Consumed
 by `src/client/solar-system/ephemerides/moon-vector-truth.test.ts`. See
 its own section below.
 
@@ -129,16 +130,21 @@ Query shape: `COMMAND='301'`, `EPHEM_TYPE=VECTORS`, `CENTER='500@399'`,
 `REF_PLANE='ECLIPTIC'`, `VEC_TABLE='1'`, `OUT_UNITS='KM-S'`,
 `TLIST_TYPE='JD'`. Retrieved 2026-08-15, DE441.
 
-The two sets exist because the lunar theory's mean-longitude
-recalibration was **derived from** part of this corpus, and a test that
-only checked the fit against its own basis would prove nothing:
+The sets exist because the lunar theory's DE441 recalibration (mean
+longitude + D/M′/F arguments) was **derived from** part of this corpus,
+and a test that only checked the fit against its own basis would prove
+nothing:
 
 - **`fit`** — 134 epochs at a 16033.7-day step from T = −49.5 to +9.2
   centuries. The step is deliberately non-commensurate with the synodic
   (29.53 d), anomalistic (27.55 d) and draconic (27.21 d) months, so the
   sample cannot alias a periodic term into a secular fit.
-- **`check`** — 40 epochs on a plain 150-year grid, never used in the
-  fit. `moon-vector-truth.test.ts` bounds these separately and tighter.
+- **`fit2`** — 1462 epochs at a uniform 1499-day step spanning the whole
+  clamp (retrieved 2026-08-30, DE441; same query shape). A second, much
+  denser fit basis whose different cadence aliases differently from
+  `fit`, so a correction cannot hide in one grid's blind spots.
+- **`check`** — 40 epochs on a plain 150-year grid, never used in any
+  fit. `moon-vector-truth.test.ts` bounds these separately.
 
 ## `earth-orientation-truth.tsv`
 

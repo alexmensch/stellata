@@ -16,7 +16,7 @@ import {
   type OrbitRelationCache,
 } from '../orbit-relation-cache';
 import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
-import { tToJDE } from '../../solar-system/time/time';
+import { tToJdUt } from '../../solar-system/time/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,
@@ -139,7 +139,7 @@ export class EclipsePhotometryField {
     thresholdMag: number,
     nowMs: number,
   ): void {
-    const tJd = tToJDE(t);
+    const tJd = tToJdUt(t);
     const blend = dimBlendFactor(nowMs, this.lastNowMs, ECLIPSE_DIM_TAU_S);
     this.lastNowMs = nowMs;
 
@@ -226,7 +226,7 @@ export class EclipsePhotometryField {
     thresholdMag: number,
     starIdx: number | null,
   ): EclipseRelationDebugRow[] {
-    const tJd = tToJDE(t);
+    const tJd = tToJdUt(t);
     const dimBuf = this.opts.eclipseDimBuffer;
     const rows: EclipseRelationDebugRow[] = [];
     for (const rc of this.relations) {

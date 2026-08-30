@@ -29,8 +29,8 @@ assume. Earth is the exception on **both** counts, and each failure is
 worth most of a hemisphere at the clock's bounds:
 
 - **Its spin is not uniform in dynamical time.** ΔT *is* the accumulated
-  lag of Earth's rotation behind uniform time, and it reaches 20.6 h —
-  310° of rotation — at 3000 BC. So the spin runs on the Earth rotation
+  lag of Earth's rotation behind uniform time, and it reaches 20.5 h —
+  308° of rotation — at 3000 BC. So the spin runs on the Earth rotation
   angle, which is linear in UT1 by definition, and every other body keeps
   the TT argument (`../../time/README.md` § Timescales).
 - **Its prime meridian is not linear in any timescale.** W is measured

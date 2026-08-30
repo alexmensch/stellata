@@ -1,5 +1,5 @@
-// Heliopause asymmetric-ellipsoid shell + apex SVG label. See
-// src/client/solar-system/README.md § Heliopause boundary.
+// Heliopause asymmetric-ellipsoid shell + apex SVG label.
+// See ./README.md.
 
 import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';

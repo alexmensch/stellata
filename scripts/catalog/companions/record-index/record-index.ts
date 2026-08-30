@@ -20,7 +20,7 @@ export interface CatalogRowIndexMap {
   /** Hipparcos catalog number → catalog.bin record index. */
   byHip: Record<string, number>;
   /** Synthetic identifier → catalog.bin record index. See
-   *  scripts/catalog/README.md § Companion promotion. */
+   *  ../README.md § Companion promotion from `data/binaries/multiples.tsv`. */
   bySynth: Record<string, number>;
 }
 
@@ -154,8 +154,7 @@ function resolvePairComponents(
  *  plus every resolved multiples.tsv member index — the record set the
  *  MULTIPLICITY_RESOLVED status covers (a blended primary whose members all
  *  collapse onto it counts: the row exists for it even with nothing
- *  rendered apart). See scripts/catalog/README.md § Renderable-companion
- *  wings. */
+ *  rendered apart). See ./README.md § Renderable-companion wings. */
 export function wingRenderablePrimaries(
   rows: MultiplesTsvRow[],
   stars: Star[],

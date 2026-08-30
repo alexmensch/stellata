@@ -1,7 +1,7 @@
 # Simulation time
 
 Simulation time `t`, the `VirtualClock` behind `Stellata.getT()`, the
-UTC readout, and the transport scrubber widget. This folder is the
+UT readout, and the transport scrubber widget. This folder is the
 **single source of truth for wall-clock sampling** — nothing else in the
 codebase reads `Date.now()` for the model clock.
 
@@ -18,8 +18,8 @@ src/client/solar-system/time/
                                   transitions, rate label, and the
                                   TRANSPORT_BUTTONS action spec. Single
                                   source of truth for the scrubber.
-  time-readout.ts (+ test)        UTC readout display next to the time
-                                  scrubber.
+  time-readout.ts (+ test)        Two-line time readout next to the time
+                                  scrubber: UT date + JD(TT)/ΔT.
   time-scrubber-widget.ts         First-class scrubber in the bottom-right
     (+ -pure, + pure test)        meta slot (T key / click the readout).
                                   Transport controls (play/pause/FF/RW/reset)
@@ -72,7 +72,9 @@ it immediately. See SCIENCE.md § Solar system for the decision record.
 
 ## Timescales
 
-`t` runs in **UTC**, and `tToJDE` / `jdeToT` are the exact inverse pair
+`t` runs in **UT** — the model's day count is a uniform 86400 s with no
+leap seconds, which is UT, not UTC (UTC did not exist before 1972) —
+and `tToJdUt` / `jdUtToT` are the exact inverse pair
 that carry it to and from a Julian Date in that same scale. Everything
 whose epoch argument is a wall-clock instant — the readout, the scrubber,
 the star-catalogue epoch advance, binary orbits — reads that pair.
@@ -87,9 +89,14 @@ which was the dominant term left once the element tables landed.
 **ΔT is not a constant, and at this clock's range it is not small.**
 `delta-t-pure.ts` is the Espenak & Meeus polynomial set (−1999 to +3000),
 thirteen fitted intervals with the Morrison & Stephenson long-term
-parabola carrying each tail. It is 69 s today and **20.6 hours at 3000 BC** —
-310° of Earth rotation. A fixed offset put every ancient eclipse track
-most of a hemisphere from where it belongs.
+parabola carrying each tail, plus NASA's lunar-secular-acceleration
+correction −0.000012932·(y−1955)² s: the polynomials assume the Moon's
+secular acceleration is −26″/cy², the eclipse canons and the ELP/DE
+lunar ephemerides the model is pinned against use −25.858, and without
+the reconciling term ΔT reads 202 s high at 2000 BC. It is 69 s today
+and **20.5 hours at 3000 BC** — 308° of Earth rotation. A fixed offset
+put every ancient eclipse track most of a hemisphere from where it
+belongs.
 
 The split that makes eclipses work is therefore:
 
@@ -113,11 +120,38 @@ chains already hold (12 km and 1e-5 AU respectively).
 
 Jump-to-date is a plain **text** input whose value is read as **local**
 time (`toLocalDatetimeValue` / `parseLocalDatetimeValue` in `time.ts`),
-even though the readout displays UTC — deliberate, so it matches the
+even though the readout displays UT — deliberate, so it matches the
 operator's wall clock. Format is `LOCAL_DATETIME_FORMAT`
 (`YYYY-MM-DD HH:MM:SS`, 24-hour, seconds optional, `T` accepted as the
-separator), which the field also carries as its placeholder. Reset already
+separator); the placeholder is `JUMP_FIELD_PLACEHOLDER`, that format plus
+the JD escape below. Reset already
 snaps to live-now at 1×, so there is intentionally no separate "now" jump.
+
+The field's second form is a bare **Julian Date**
+(`parseJulianDateValue`): `991085.635`, `JD 2451545.0 UT`. It exists
+because astronomically-pinned events are published as a JD, and retyping
+one as a calendar date means doing the ΔT arithmetic by hand — the
+arithmetic the readout's JD line exists to remove. The scale defaults to
+**TT** (what catalogues publish, and what the readout shows, so a canon
+value round-trips verbatim); a `UT` suffix overrides — the two are ΔT
+apart, 13 hours at 2000 BC. An unprefixed integer needs ≥ 6 digits
+(every JD the clock can reach has six or seven), so a lone typed year is
+rejected rather than read as a deep-past JD; a decimal point or the `JD`
+prefix marks the intent explicitly. No collision with the datetime form:
+its dashes disqualify it as a number, and a digits-only partial datetime
+was never acted on mid-typing anyway (validation fires on Jump or blur).
+An out-of-window JD clamps-and-echoes exactly like the datetime path,
+and the echo is always the canonical **local datetime** — one canonical
+echo rather than per-entry-form state, with the readout's JD line as the
+JD-scale confirmation of where the clock landed.
+
+`parseJumpEntry` is the two forms' single dispatcher, and it lives in
+`time.ts` beside them rather than in the widget because **the two parsers
+do not share a unit**: `parseLocalDatetimeValue` answers in
+epoch-milliseconds (it is the `toLocalDatetimeValue` inverse) and
+`parseJulianDateValue` in Unix-seconds. A dispatcher that forwards one
+of them unconverted is wrong by a factor of 1000, which at this clock's
+scale lands in the deep past instead of failing visibly.
 
 **Typed-only, and `datetime-local` cannot deliver that.** It was one
 originally, with
@@ -169,7 +203,7 @@ wall-clock is a visible slice of model time (at 86400× a millisecond of it
 is a minute and a half). `clampT` is exported for exactly this, so the
 widget never re-derives the window bounds.
 
-`time-readout.ts` renders the live UTC timestamp the rendered positions
+`time-readout.ts` renders the live timestamp the rendered positions
 correspond to. It mounts the collapsed `.meta` readout (`#time-readout`, a
 button that opens the scrubber); while the scrubber is expanded, that
 readout is hidden and the scrubber's own readout takes over. Either way the
@@ -177,10 +211,40 @@ current model time stays on screen in every mode (free fly, chart, warp,
 observe) — binary orbital evolution ticks against `getT()` throughout, so
 the user always benefits from knowing which moment is being rendered.
 
-Format is plain-English UTC: `D MMM YYYY, HH:MM:SS UTC`
-(e.g. `7 May 2026, 18:23:45 UTC`). Locale-independent — month
-abbreviations are hard-coded en-US to avoid DD/MM vs MM/DD ambiguity
-across browsers.
+Two lines, in every era (`\n`-joined; `white-space: pre-line` on
+`.time-readout` renders the break):
+
+```
+25 May -1999, 14:20:26 UT (Gregorian)
+JD 991085.635000 TT · ΔT +12h 54m
+```
+
+Line 1 is plain-English UT, locale-independent — month abbreviations are
+hard-coded en-US to avoid DD/MM vs MM/DD ambiguity across browsers. Both
+suffixes are load-bearing. **The calendar stays proleptic Gregorian in
+every era, and says so**: eclipse canons and ancient observation records
+label pre-1582 dates in the **Julian** calendar (18 days apart at
+2000 BC — half a lunation, so a canon date typed into the jump field put
+the Moon nowhere near the Sun), but the Gregorian label is the one that
+tracks the seasons; the Julian/TT string is a catalogue lookup key, not
+a truer date. Deliberately NOT Stellarium's switch-at-1582 behaviour.
+The ` (Gregorian)` suffix shows only on the collapsed readout
+(`showCalendar` in `formatTimeReadout`) — the expanded scrubber header
+has no room for it.
+
+The collapsed readout is a button, and its **accessible name is that
+timestamp** — the text itself, carried by `aria-describedby` pointing at
+a visually-hidden "Open time scrubber" hint that sits *outside* the
+button (`createTimeReadout` writes `textContent` and would erase a
+child). An `aria-label` here replaces the name rather than adding to it,
+which silences the one place the model clock is announced at all.
+
+Line 2 is the reconciliation: the JD in **TT**, the scale every canon
+publishes against, so a catalogue's number is directly matchable — plus
+ΔT. The two
+lines legitimately name different calendar days (the JD is ΔT later);
+that is the point, not a defect. Six JD decimals (0.086 s) so the lines
+agree at the seconds resolution displayed.
 
 **Variable-star pulsation runs on `t`.** It was once driven by a separate
 cosmetic `uTime` real-seconds clock, deliberately decoupled from `t`; that
@@ -194,7 +258,7 @@ responds to the time-warp exactly like binary orbital motion — see
 
 `time-scrubber-widget.ts` is the scrubber — a first-class control living
 in the bottom-right `.meta` slot. Collapsed,
-`.meta` shows the star count + live UTC readout (the readout is a button
+`.meta` shows the star count + live UT readout (the readout is a button
 that opens the scrubber); the `T` shortcut and clicking the readout both
 toggle it. Opened, it replaces that with a model-time readout + transport
 controls + a typed jump-to-date field, and an `×` collapses back. Toggling

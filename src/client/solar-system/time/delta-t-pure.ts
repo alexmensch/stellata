@@ -17,13 +17,27 @@ function longTermParabola(y: number): number {
   return -20 + 32 * u * u;
 }
 
+// The polynomial set assumes the Moon's secular acceleration is −26″/cy²;
+// the eclipse canons and the ELP/DE lunar ephemerides the model is pinned
+// against use −25.858. NASA's own correction reconciles the two — dropping
+// it reads 202 s high at 2000 BC, which is 0.84° of Earth rotation under
+// every deep-time eclipse ground point.
+export function lunarSecularAccelerationCorrection(y: number): number {
+  return -0.000012932 * (y - 1955) * (y - 1955);
+}
+
 /**
  * ΔT in seconds at decimal year `y`. Fifteen intervals — thirteen
- * fitted, plus the long-term parabola on each tail; each fitted one is a
- * polynomial in its own re-centred argument, so the branch order below
- * is load-bearing.
+ * fitted, plus the long-term parabola on each tail — plus the
+ * lunar-secular-acceleration correction above.
  */
 export function deltaTSecondsAtYear(y: number): number {
+  return espenakPolynomialSeconds(y) + lunarSecularAccelerationCorrection(y);
+}
+
+// Each fitted interval is a polynomial in its own re-centred argument, so
+// the branch order below is load-bearing.
+function espenakPolynomialSeconds(y: number): number {
   if (y < -500) return longTermParabola(y);
   if (y < 500) {
     return poly(y / 100, [

@@ -1,5 +1,5 @@
 // Per-planet orbit-ring ellipses for the focused host's planet system.
-// See src/client/solar-system/README.md § Orbit rings.
+// See ./README.md § Orbit rings.
 
 import * as THREE from 'three';
 import {

@@ -12,20 +12,24 @@ import {
   julianEpochYearToT,
   nextFastForwardRate,
   nextRewindRate,
+  parseJulianDateValue,
+  parseJumpEntry,
   parseLocalDatetimeValue,
-  tToJDE,
+  tToJdUt,
   tToJdTdb,
   toLocalDatetimeValue,
+  jdUtToT,
+  JUMP_FIELD_PLACEHOLDER,
   LOCAL_DATETIME_FORMAT,
 } from './time';
 
-describe('tToJDE', () => {
+describe('tToJdUt', () => {
   it('maps the Unix epoch to JD 2440587.5', () => {
-    expect(tToJDE(0)).toBe(2440587.5);
+    expect(tToJdUt(0)).toBe(2440587.5);
   });
 
   it('maps the UTC instant 2000-01-01T12:00:00Z to JD 2451545.0 exactly', () => {
-    expect(tToJDE(946728000)).toBe(2451545.0);
+    expect(tToJdUt(946728000)).toBe(2451545.0);
   });
 
   it('round-trips a JD back to seconds within sub-millisecond float64 noise for typical scrubber values', () => {
@@ -34,21 +38,21 @@ describe('tToJDE', () => {
     // 86400 that lands round-trip noise around 1e-4 sec — well below VSOP87
     // sensitivity, but coarser than toBeCloseTo's machine-precision threshold.
     const tIn = 1.78e9; // ~2026
-    const jd = tToJDE(tIn);
+    const jd = tToJdUt(tIn);
     const back = (jd - 2440587.5) * 86400;
     expect(Math.abs(back - tIn)).toBeLessThan(1e-3);
   });
 
   it('advances by exactly one day for a 86400-second delta', () => {
-    expect(tToJDE(86400) - tToJDE(0)).toBe(1);
+    expect(tToJdUt(86400) - tToJdUt(0)).toBe(1);
   });
 });
 
 describe('tToJdTdb', () => {
   it('runs ΔT ahead of the universal-time sibling', () => {
     // Differencing two ~2.44e6 Julian Dates leaves ~1e-5 s of float64 noise.
-    const gap = (tToJdTdb(0) - tToJDE(0)) * 86400;
-    expect(gap).toBeCloseTo(deltaTSeconds(tToJDE(0)), 4);
+    const gap = (tToJdTdb(0) - tToJdUt(0)) * 86400;
+    expect(gap).toBeCloseTo(deltaTSeconds(tToJdUt(0)), 4);
     // 1970 sat at ΔT ≈ 40 s, well clear of today's ~69 s: a regression to
     // a fixed TT−UTC constant reads the same at every epoch.
     expect(gap).toBeGreaterThan(38);
@@ -64,7 +68,7 @@ describe('tToJdTdb', () => {
   });
 
   it('round-trips through jdTdbToT, at both clamp bounds', () => {
-    // ΔT reaches 20.6 h at the lower bound, so the inverse is a fixed
+    // ΔT reaches 20.5 h at the lower bound, so the inverse is a fixed
     // point rather than a subtraction; a single-pass version still lands
     // inside a millisecond, and this is what catches it going missing.
     for (const t of [1.78e9, T_CLAMP_MIN_S, T_CLAMP_MAX_S]) {
@@ -408,7 +412,101 @@ describe('jump-field value round-trip', () => {
 
   it('the placeholder names the format the parser accepts', () => {
     expect(LOCAL_DATETIME_FORMAT).toBe('YYYY-MM-DD HH:MM:SS');
+    expect(JUMP_FIELD_PLACEHOLDER).toBe('YYYY-MM-DD HH:MM:SS or JD');
     expect(nan(toLocalDatetimeValue(Date.UTC(2030, 0, 1)))).toBe(false);
+  });
+});
+
+describe('parseJulianDateValue', () => {
+  const nan = (v: string): boolean => Number.isNaN(parseJulianDateValue(v));
+
+  it('reads a bare number as a Julian Date in TT — the scale canons publish', () => {
+    // NASA Five Millennium Canon, -1999 Jun 12: greatest eclipse
+    // JD 991085.63500 TT. Entering the published number must land the
+    // clock on the event with no hand ΔT arithmetic.
+    expect(parseJulianDateValue('991085.63500')).toBe(jdTdbToT(991085.63500));
+  });
+
+  it('accepts an optional JD prefix and TT suffix, case-insensitive', () => {
+    const t = parseJulianDateValue('991085.63500');
+    expect(parseJulianDateValue('JD 991085.63500 TT')).toBe(t);
+    expect(parseJulianDateValue('jd991085.63500tt')).toBe(t);
+  });
+
+  it('a UT suffix overrides the TT default, ΔT apart — 13 h at 2000 BC', () => {
+    const jd = 991085.63500;
+    const gap = parseJulianDateValue(`${jd} UT`) - parseJulianDateValue(`${jd}`);
+    // The TT read resolves ΔT at the UT epoch (fixed point), the reference
+    // here at the TT one — ΔT itself moves ~0.04 s across its own 13 h span
+    // this deep, so the comparison holds to tenths, not milliseconds.
+    expect(gap).toBeCloseTo(deltaTSeconds(jd), 0);
+    expect(gap).toBeGreaterThan(12 * 3600);
+  });
+
+  it('maps a modern UT-tagged JD exactly', () => {
+    expect(parseJulianDateValue('JD 2451545.0 UT')).toBe(946728000);
+    expect(parseJulianDateValue('JD 2451545.0 UT')).toBe(jdUtToT(2451545.0));
+  });
+
+  it('requires 6 digits of an unprefixed integer, so a lone year never reads as a JD', () => {
+    expect(nan('2030')).toBe(true);
+    expect(nan('12345')).toBe(true);
+    expect(nan('991085')).toBe(false);
+    // A decimal point or the JD prefix marks the intent explicitly.
+    expect(nan('2030.5')).toBe(false);
+    expect(nan('JD 2030')).toBe(false);
+  });
+
+  it('rejects garbage, other scale tags, and trailing text', () => {
+    expect(nan('')).toBe(true);
+    expect(nan('not-a-date')).toBe(true);
+    expect(nan('991085.635 TDB')).toBe(true);
+    expect(nan('991085.635x')).toBe(true);
+    expect(nan('991085.')).toBe(true);
+    expect(nan('-991085.635')).toBe(true);
+  });
+
+  it('never collides with the datetime form — dashes disqualify it', () => {
+    expect(nan('2030-01-01 12:34:56')).toBe(true);
+    expect(Number.isNaN(parseLocalDatetimeValue('991085.63500'))).toBe(true);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseJulianDateValue('  991085.63500  '))
+      .toBe(parseJulianDateValue('991085.63500'));
+  });
+});
+
+describe('parseJumpEntry', () => {
+  it('answers in SECONDS for both forms, though the two parsers do not', () => {
+    // The defect this exists to make impossible: parseLocalDatetimeValue
+    // returns epoch-ms and parseJulianDateValue returns Unix-seconds, so a
+    // dispatcher that forwards one of them unconverted is wrong by 1000 —
+    // which at the clock's scale lands somewhere in the deep past rather
+    // than failing visibly.
+    const t = parseJumpEntry('2030-01-01 00:00:00');
+    expect(t).toBe(parseLocalDatetimeValue('2030-01-01 00:00:00') / 1000);
+    expect(t).toBeGreaterThan(1.8e9);
+    expect(t).toBeLessThan(2.0e9);
+  });
+
+  it('falls through to the Julian Date form for a bare number', () => {
+    expect(parseJumpEntry('991085.63500')).toBe(parseJulianDateValue('991085.63500'));
+    expect(parseJumpEntry('JD 2451545.0 UT')).toBe(946728000);
+  });
+
+  it('prefers the datetime form where both could look plausible', () => {
+    // Dashes disqualify the JD form, so the order is not load-bearing for
+    // any currently accepted string — pinned so a looser JD regex cannot
+    // quietly start winning entries the datetime parser already handles.
+    expect(parseJumpEntry('2030-01-01 12:34:56'))
+      .toBe(parseLocalDatetimeValue('2030-01-01 12:34:56') / 1000);
+  });
+
+  it('is NaN when neither form matches', () => {
+    for (const bad of ['', 'not-a-date', '2030', '991085.635 TDB', '31 Dec 2030']) {
+      expect(Number.isNaN(parseJumpEntry(bad)), bad).toBe(true);
+    }
   });
 });
 

@@ -115,7 +115,7 @@ import {
 } from './star-pipeline/local-pass/star-local-cluster-pure';
 import { type StarPassRouting, starPassRouting } from './star-pipeline/star-pass';
 import { DIM_FLOOR } from './binaries/eclipse/eclipse-photometry-pure';
-import { VirtualClock, tToJDE } from './solar-system/time/time';
+import { VirtualClock, tToJdUt } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
 import { uploadFull } from './util/attribute-upload';
 import { apparentMagnitude } from './solar-system/perceptual-magnitude';
@@ -2422,7 +2422,7 @@ export class Stellata implements FrameAnchor {
     // Advance the variability clock on the model time base (shared with the
     // glow material via sharedUniforms). Days since J2000 from getT(), plus
     // the warp rate in model-days/real-second for the anti-strobe floor.
-    this.sharedUniforms.uModelDays.value = tToJDE(this.getT()) - J2000_JD;
+    this.sharedUniforms.uModelDays.value = tToJdUt(this.getT()) - J2000_JD;
     this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
     if (this.extinctionPrepass !== null) {
       // Absolute camera position in JS float64 — same frame convention as

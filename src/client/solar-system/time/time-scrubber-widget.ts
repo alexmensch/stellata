@@ -1,14 +1,15 @@
 // First-class time-scrubber widget in the bottom-right meta slot: collapsed
-// star-count + live-UTC readout ⇄ app-styled transport controls (T key /
+// star-count + live-UT readout ⇄ app-styled transport controls (T key /
 // click the readout). See ./README.md § Time scrubber widget.
 
 import type { Stellata } from '../../stellata';
-import { createTimeReadout, formatTimeReadout } from './time-readout';
+import { createTimeReadout, formatFullTimeReadout } from './time-readout';
 import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
-  parseLocalDatetimeValue,
+  parseJumpEntry,
   clampT,
+  JUMP_FIELD_PLACEHOLDER,
   LOCAL_DATETIME_FORMAT,
   type TransportAction,
 } from './time';
@@ -68,7 +69,7 @@ export function createTimeScrubberWidget(
 ): TimeScrubberWidget {
   const clock = stellata.timeClock;
 
-  // Collapsed view: star count + live UTC readout (the readout doubles as the
+  // Collapsed view: star count + live UT readout (the readout doubles as the
   // open trigger).
   const collapsed = document.createElement('div');
   collapsed.className = 'meta-collapsed';
@@ -79,8 +80,17 @@ export function createTimeScrubberWidget(
   readout.type = 'button';
   readout.id = 'time-readout';
   readout.className = 'time-readout time-readout-btn';
-  readout.title = 'Open time scrubber';
-  collapsed.append(count, readout);
+  // Described, not labelled. An aria-label REPLACES the accessible name, so
+  // labelling this button hides the clock text it exists to show — and this
+  // is the only place the model time appears. The name stays the timestamp;
+  // the action rides a description. The hint lives outside the button
+  // because `createTimeReadout` writes `textContent` and would erase a child.
+  const readoutHint = document.createElement('span');
+  readoutHint.id = 'time-readout-hint';
+  readoutHint.className = 'visually-hidden';
+  readoutHint.textContent = 'Open time scrubber';
+  readout.setAttribute('aria-describedby', readoutHint.id);
+  collapsed.append(count, readout, readoutHint);
 
   // Expanded view: the scrubber, hidden until opened.
   const scrubber = document.createElement('div');
@@ -131,8 +141,11 @@ export function createTimeScrubberWidget(
   // Text, not `datetime-local` — see ./README.md § Time `t` and the readout.
   const jumpInput = document.createElement('input');
   jumpInput.type = 'text';
-  jumpInput.placeholder = LOCAL_DATETIME_FORMAT;
-  jumpInput.setAttribute('aria-label', `Jump to date (${LOCAL_DATETIME_FORMAT})`);
+  jumpInput.placeholder = JUMP_FIELD_PLACEHOLDER;
+  jumpInput.setAttribute(
+    'aria-label',
+    `Jump to date (${LOCAL_DATETIME_FORMAT}, or a Julian Date, TT assumed)`,
+  );
   jumpInput.autocomplete = 'off';
   jumpInput.spellcheck = false;
   const jumpBtn = document.createElement('button');
@@ -158,15 +171,16 @@ export function createTimeScrubberWidget(
   };
   /** True when the entry parsed and the clock moved. */
   const doJump = (): boolean => {
-    const ms = parseLocalDatetimeValue(jumpInput.value);
-    if (Number.isNaN(ms)) {
+    const target = parseJumpEntry(jumpInput.value);
+    if (Number.isNaN(target)) {
       setJumpValid(false);
       return false;
     }
     // Echo the clamped target, not a re-read of the clock: `notifyClockJumped`
     // walks every kind, and at a high rate that elapsed wall-time is a
-    // visible slice of model time.
-    const seconds = clampT(ms / 1000);
+    // visible slice of model time. A JD entry echoes as the canonical local
+    // datetime too — the readout's own JD line confirms where it landed.
+    const seconds = clampT(target);
     clock.setTimeAbsolute(seconds);
     afterClockJump(seconds);
     return true;
@@ -178,7 +192,7 @@ export function createTimeScrubberWidget(
   jumpInput.addEventListener('input', () => setJumpValid(true));
   jumpInput.addEventListener('blur', () => {
     const entry = jumpInput.value.trim();
-    setJumpValid(entry === '' || !Number.isNaN(parseLocalDatetimeValue(entry)));
+    setJumpValid(entry === '' || !Number.isNaN(parseJumpEntry(entry)));
   });
 
   scrubber.append(header, rate, controls, jumpRow);
@@ -197,7 +211,7 @@ export function createTimeScrubberWidget(
     pauseBtn.disabled = r === 0;
   };
   const tickExpanded = (): void => {
-    clockReadout.textContent = formatTimeReadout(stellata.getT());
+    clockReadout.textContent = formatFullTimeReadout(stellata.getT());
   };
 
   const open = (): void => {

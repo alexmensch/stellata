@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AU_PC } from '../../util/astronomy-constants';
-import { jdTdbToT, T_CLAMP_MAX_S, tToJDE } from '../time/time';
+import { jdTdbToT, T_CLAMP_MAX_S, tToJdUt } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import {
   buildProbeTrajectory,
@@ -14,7 +14,7 @@ import {
 const STEP_DAYS = 30;
 // Launch sits at the Unix epoch; the first ephemeris sample lands 30 days
 // later, the exaggerated form of Voyager 1's one-day SPK-after-launch gap.
-const LAUNCH_JD = tToJDE(0);
+const LAUNCH_JD = tToJdUt(0);
 const FIRST_JD = LAUNCH_JD + STEP_DAYS;
 
 // Three samples marching +1 AU along ICRS x every 30 days at a matching

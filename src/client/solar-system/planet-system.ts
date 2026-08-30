@@ -115,7 +115,7 @@ export interface Planet {
   readonly rings?: PlanetRings;
   // Optional atmosphere shell (mesh-LOD regime only): day-side limb
   // glow + back-lit forward-scatter halo. Gas giants deliberately
-  // carry none — see src/client/solar-system/README.md § Atmospheres.
+  // carry none — see ./atmosphere/README.md.
   readonly atmosphere?: PlanetAtmosphere;
 }
 

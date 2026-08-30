@@ -1,6 +1,6 @@
 // Reads data/binaries/multiples.tsv and promotes physical-pair
 // secondaries not in AT-HYG into first-class catalog.bin records.
-// See scripts/catalog/README.md § Companion promotion.
+// See ./README.md § Companion promotion from `data/binaries/multiples.tsv`.
 
 import { readFileSync } from 'node:fs';
 
@@ -447,8 +447,8 @@ export function emptyPromotionStats(): PromotionStats {
   };
 }
 
-/** Compose `synth-<wds_id>-<comp>`. See scripts/catalog/README.md
- *  § Companion promotion for when this fires. */
+/** Compose `synth-<wds_id>-<comp>`. See ./README.md § Companion promotion
+ *  from `data/binaries/multiples.tsv` for when this fires. */
 export function composeSyntheticId(
   systemId: string,
   comp: string,

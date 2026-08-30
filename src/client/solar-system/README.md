@@ -24,7 +24,7 @@ Rendering, ephemerides, and the clock live in the subfolders.
   on. The layers keep their CPU logic and take a material through one
   neutral contract, so a WebGPU boot swaps shaders and nothing else.
 - `time/` — simulation time `t`, the `VirtualClock` behind
-  `Stellata.getT()`, the UTC readout, and the transport scrubber widget.
+  `Stellata.getT()`, the UT readout, and the transport scrubber widget.
 - `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons
   element tables across 1900–2100, the Standish series outside them),
   orbit-descriptor breadcrumbs, the orbit-ring layer, and the frozen

@@ -399,6 +399,18 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
  * per-second tick doesn't jitter the layout. */
 .time-readout {
   font-variant-numeric: tabular-nums;
+  white-space: pre-line;
+}
+
+/* Reachable by assistive tech, painted nowhere. Clipped rather than
+ * `display: none`, which would drop it from the accessibility tree. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Time-scrubber widget (promoted from the debug panel). Collapsed, the

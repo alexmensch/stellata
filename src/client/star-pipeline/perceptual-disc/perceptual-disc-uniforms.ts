@@ -1,6 +1,6 @@
 // Canonical uniform shape for the perceptual-disc.glsl chunk. See
-// star-pipeline/README.md § Star intensity profile for the chunk's
-// role and src/client/solar-system/README.md § Planet rendering.
+// ./README.md for the kernel, and ../../solar-system/planets/README.md
+// § The two layers for the planet-glare consumer.
 
 import * as THREE from 'three';
 

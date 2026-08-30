@@ -11,7 +11,7 @@ import {
   jdeToJulianEpochYear,
   maxSpeedPcPerYr,
 } from '../../loaders/epoch-advance-pure';
-import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJDE } from '../../solar-system/time/time';
+import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJdUt } from '../../solar-system/time/time';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { bestApsisTeff } from '../star-color-routing-pure';
 import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';
@@ -110,7 +110,7 @@ export class StarFrame {
     // eclipse photometry all inherit current-epoch positions by construction.
     // See docs/science-catalog-ingestion.md § Current-epoch star positions.
     this.basePositions = new Float32Array(catalog.positions);
-    this._advancedEpochJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJDE(t)));
+    this._advancedEpochJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
     advancePositionsToEpoch(
       this.basePositions,
       catalog.velocities,
@@ -121,8 +121,8 @@ export class StarFrame {
     // clamped scrub range — the widening the load-time sortedDistFromSol
     // windows need to stay correct at any scrubbed t.
     this.maxEpochDriftPc = maxSpeedPcPerYr(catalog.velocities) * Math.max(
-      this._advancedEpochJyr - jdeToJulianEpochYear(tToJDE(T_CLAMP_MIN_S)),
-      jdeToJulianEpochYear(tToJDE(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
+      this._advancedEpochJyr - jdeToJulianEpochYear(tToJdUt(T_CLAMP_MIN_S)),
+      jdeToJulianEpochYear(tToJdUt(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
     );
 
     this.logRadii = new Float32Array(catalog.count);
@@ -193,7 +193,7 @@ export class StarFrame {
     focalIdx: number | null,
     outDelta: THREE.Vector3,
   ): boolean {
-    const targetJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJDE(t)));
+    const targetJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
     if (targetJyr === this._advancedEpochJyr) return false;
     const abs = this.catalog.positions;
     const fx = focalIdx === null ? 0 : abs[focalIdx * 3];
