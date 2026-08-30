@@ -151,7 +151,13 @@ bit order, so mode isn't known until the field loop completes).
   the vector:** the field is dropped when the view is galactic-LEVEL, since
   up is the pole's image-plane projection and therefore equals the pole
   itself from no viewpoint at all. A share from a level camera omits it
-  entirely, as it always did. It is applied
+  entirely, as it always did.
+  **An omission therefore has to be applied, not skipped** — the receiver
+  restores `DEFAULT_UP`, the pole itself, and the `lookAt` below re-projects
+  it against the pose this blob carries. Leaving `camera.up` alone keeps
+  whatever the session last held; at boot that is the pole projected into the
+  *default* view axis, which renders level from that vantage and no other, so
+  a level share from elsewhere came back rolled by up to 66°. It is applied
   **before** focus/orbit dispatch because `focusStar` / `setOrbitTarget`
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after

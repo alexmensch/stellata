@@ -71,9 +71,10 @@ const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
 const DEFAULT_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
-// Roll off galactic level under which the `up` field is omitted. Two decades
-// below SNAP_TO_LEVEL_RAD and far above the float noise of the projection, so
-// only a camera the user levelled elides it.
+// Roll off galactic level under which the `up` field is omitted, and the
+// receiver reproduces it from DEFAULT_UP instead. Three and a half decades
+// below SNAP_TO_LEVEL_RAD (0.0349) and far above the float noise of the
+// projection, so only a camera the user levelled elides it.
 const LEVEL_UP_EPS_RAD = 1e-5;
 // v3's frozen default. A v3 blob was written when world +Y was the reference,
 // so its elided components have to fill from that value or the decode isn't
@@ -1265,10 +1266,15 @@ export function applyDecodedView(
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
 
-  if (view.up) {
-    stellata.roll.restore(stellata.camera, view.up[0], view.up[1], view.up[2]);
-    controlsDirty = true;
-  }
+  // An omitted `up` is a positive statement — the sender was galactic-LEVEL
+  // — so the receiver restores the pole itself and lets the `lookAt` below
+  // project it. Leaving `camera.up` alone instead restores the roll of
+  // whatever pose this session last held: at boot that is the pole projected
+  // into the DEFAULT view axis, which renders level from that vantage and no
+  // other. A level share from +X came back rolled 66 degrees.
+  const up = view.up ?? DEFAULT_UP;
+  stellata.roll.restore(stellata.camera, up[0], up[1], up[2]);
+  controlsDirty = true;
 
   const hasCam = view.cam !== undefined;
   const hasTgt = view.tgt !== undefined;

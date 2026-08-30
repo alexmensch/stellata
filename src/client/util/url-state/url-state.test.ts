@@ -408,6 +408,25 @@ describe('url-state', () => {
       expect(view.up).toBeUndefined();
     });
 
+    // The other half of that elision, and the half that broke: an omitted
+    // `up` says "the sender was level", so the receiver has to restore the
+    // POLE rather than keep whatever its own camera holds. Its own value is
+    // the pole already projected into some other view axis, which renders
+    // level from that vantage alone. Wiring only — the geometry that makes
+    // the projection vantage-specific is pinned in roll-controller.test.ts.
+    it('restores the pole when the blob carries no up', () => {
+      const { stellata } = makeStatefulStellata();
+      stellata.camera.up.x = 0;
+      stellata.camera.up.y = 1;
+      stellata.camera.up.z = 0;
+      const view = decodeBlob(encodeBlob({ cam: [30, 0, 0], tgt: [0, 0, 0] })).view;
+      expect(view.up).toBeUndefined();
+      applyDecodedView(stellata, view, makeFixtureBuild());
+      expect(stellata.camera.up.x).toBeCloseTo(GN_UP[0], 12);
+      expect(stellata.camera.up.y).toBeCloseTo(GN_UP[1], 12);
+      expect(stellata.camera.up.z).toBeCloseTo(GN_UP[2], 12);
+    });
+
     it('elides tgt when it matches the default [0, 0, 0]', () => {
       const { view } = roundtrip({ tgt: [0, 0, 0] });
       expect(view.tgt).toBeUndefined();

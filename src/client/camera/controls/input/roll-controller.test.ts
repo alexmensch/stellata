@@ -198,4 +198,45 @@ describe('RollController', () => {
     roll.restore(camera, 0, 0, 0);
     expect(camera.up.angleTo(kept)).toBe(0);
   });
+
+  // Why a link that OMITS `up` still has to write one. `camera.up` is the
+  // pole's image-plane projection, so it is specific to the view axis it was
+  // projected against: carrying one vantage's value to another reproduces
+  // level at neither. The URL layer restores the pole itself and lets the
+  // lookAt re-project it (`../../../util/url-state/README.md`).
+  it('reproduces level from the pole, never from another vantage’s up', () => {
+    const roll = new RollController();
+    const { camera, target } = makeCamera();
+
+    // Boot: level at the default pose. This is the value a receiver holds
+    // before a link moves its camera.
+    roll.levelTo(camera, GALACTIC_NORTH_POLE_ICRS);
+    camera.lookAt(target);
+    const bootUp = camera.up.clone();
+    expect(roll.upRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+    // It is NOT the pole — it is the pole flattened into the default image
+    // plane, and the two differ by the pole's own declination.
+    expect(bootUp.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeGreaterThan(0.4);
+
+    // The pose a level share from +X restores.
+    camera.position.set(30, 0, 0);
+
+    // Keeping the boot value rolls the view hard.
+    camera.up.copy(bootUp);
+    camera.lookAt(target);
+    roll.adoptFromCamera(camera);
+    expect(Math.abs(roll.upRollError(camera, GALACTIC_NORTH_POLE_ICRS)))
+      .toBeGreaterThan(1);
+
+    // Restoring the pole raw, then projecting, lands exactly level.
+    roll.restore(
+      camera,
+      GALACTIC_NORTH_POLE_ICRS.x,
+      GALACTIC_NORTH_POLE_ICRS.y,
+      GALACTIC_NORTH_POLE_ICRS.z,
+    );
+    camera.lookAt(target);
+    roll.adoptFromCamera(camera);
+    expect(roll.upRollError(camera, GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 9);
+  });
 });
