@@ -19,6 +19,7 @@ import {
   type OrbitalElements,
 } from '../binaries/binary-orbit-pure';
 import { innermostRelationOf } from '../binaries/focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
 import {
   makeBinaries,
@@ -230,30 +231,42 @@ describe('binary orbit normals', () => {
     }
   });
 
-  // Every member of a Tier-1 pair takes the OTHER one as its datum.
-  it('hands back the pair’s other member as the longitude datum', () => {
-    const b = algol();
-    const system = { x: 0, y: 0, z: 30 };
-    const partner = (idx: number) => starOrbitNormalIcrs(b, idx, system)!.partnerIdx;
-    expect(partner(OUTER_SECONDARY)).toBe(OUTER_PRIMARY);
-    expect(partner(INNER_SECONDARY)).toBe(OUTER_PRIMARY);
-    expect(partner(OUTER_PRIMARY)).toBe(INNER_SECONDARY); // its innermost pair
-  });
-
   it('declines a star in no pair', () => {
     expect(starOrbitNormalIcrs(algol(), 999, { x: 0, y: 0, z: 30 })).toBeNull();
   });
 
-  // Tier 2's plane is the galactic-plane fallback, not a measurement, so
-  // it must not surface as an orbit normal at all — offering it would let
-  // a level-on-orbit gesture pass a convention off as an observation.
-  it('declines a Tier-2 pair with no published inclination', () => {
+  // Tier 2 has no published inclination, so the runtime draws its orbit in
+  // the galactic plane — and this answers with that same plane. Gating ORB
+  // on the tier instead would make the frame come and go on a distinction
+  // nothing on screen exposes: both tiers draw a ring.
+  it('answers a Tier-2 pair with the galactic plane it is drawn in', () => {
     const b = makeBinaries([
       makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN }),
     ]);
-    expect(starOrbitNormalIcrs(b, 2, { x: 0, y: 0, z: 30 })).toBeNull();
+    for (const idx of [1, 2]) {
+      const plane = starOrbitNormalIcrs(b, idx, { x: 12, y: -5, z: 8 });
+      expect(plane, `star ${idx}`).not.toBeNull();
+      expect(plane!.relationIdx).toBe(0);
+      const n = new THREE.Vector3(plane!.normal.x, plane!.normal.y, plane!.normal.z);
+      expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+      expect(n.length()).toBeCloseTo(1, 12);
+    }
   });
 
+  // The fallback plane is a property of the pair, not of where it is seen
+  // from — unlike a Tier-1 normal, which projects through the system's own
+  // sky tangent basis.
+  it('gives the same Tier-2 plane from any vantage', () => {
+    const b = makeBinaries([
+      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN }),
+    ]);
+    const a = starOrbitNormalIcrs(b, 2, { x: 100, y: 0, z: 0 })!.normal;
+    const c = starOrbitNormalIcrs(b, 2, { x: 0, y: -40, z: 9 })!.normal;
+    expect(a).toEqual(c);
+  });
+
+  // No elements at all means no orbit is evaluated and no ring is drawn, so
+  // there is nothing to level on and the absence is visible on screen.
   it('declines a Tier-3 pair with no orbit', () => {
     const b = makeBinaries([
       makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0 }),
@@ -261,11 +274,10 @@ describe('binary orbit normals', () => {
     expect(starOrbitNormalIcrs(b, 2, { x: 0, y: 0, z: 30 })).toBeNull();
   });
 
-  // Dabih's shape, and the bug it surfaced: a Tier-1 outer pair carrying a
-  // tight spectroscopic inner one with no published inclination. Both
-  // members of that inner pair ride the measured outer orbit, so refusing
-  // at the innermost pair left them with no ORB frame while the outer
-  // primary had one. Numbers are beta Cap's, from data/binaries/multiples.tsv.
+  // Dabih's shape: a Tier-1 outer pair carrying a tight spectroscopic inner
+  // one with no published inclination. Every member gets ORB — Aa on the
+  // measured Aa-Ab plane, Ab and Ab2 on the plane their own inner pair is
+  // drawn in. Numbers are beta Cap's, from data/binaries/multiples.tsv.
   const DABIH_AA = 20;
   const DABIH_AB = 21;   // = Ab1: shared node, secondary of the outer pair
   const DABIH_AB2 = 22;
@@ -288,71 +300,33 @@ describe('binary orbit normals', () => {
     }),
   ]);
 
-  it('rides the measured ancestor when the innermost pair is Tier 2', () => {
+  it('offers ORB to every member of a mixed-tier hierarchy', () => {
     const b = dabih();
     const system = { x: 0, y: 0, z: 30 };
-    const los = new THREE.Vector3(0, 0, 1);
-    for (const idx of [DABIH_AB, DABIH_AB2]) {
-      const plane = starOrbitNormalIcrs(b, idx, system);
-      expect(plane, `star ${idx} must reach the outer pair`).not.toBeNull();
-      expect(plane!.relationIdx).toBe(0);
-      // The datum is the outer pair's OTHER side, never a star inside the
-      // focused one's own subsystem.
-      expect(plane!.partnerIdx).toBe(DABIH_AA);
-      const n = plane!.normal;
-      expect(new THREE.Vector3(n.x, n.y, n.z).angleTo(los) / DEG)
-        .toBeCloseTo(OUTER_INC_DEG, 6);
+    for (const idx of [DABIH_AA, DABIH_AB, DABIH_AB2]) {
+      expect(starOrbitNormalIcrs(b, idx, system), `star ${idx}`).not.toBeNull();
     }
   });
 
-  // The innermost pair still wins when it IS measured — walking outward is
-  // a fallback, not a new preference for the wider orbit.
-  it('still prefers the innermost pair when that one is Tier 1', () => {
-    const b = algol();
-    expect(starOrbitNormalIcrs(b, OUTER_PRIMARY, { x: 0, y: 0, z: 30 })!.relationIdx)
-      .toBe(1);
-  });
+  it('answers each member on the orbit it is itself on', () => {
+    const b = dabih();
+    const system = { x: 0, y: 0, z: 30 };
+    const los = new THREE.Vector3(0, 0, 1);
 
-  it('walks out through a Tier-3 innermost pair too', () => {
-    const b = makeBinaries([
-      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: TIER_1, iRad: 35 * DEG }),
-      makeRelation({ primaryIdx: 2, secondaryIdx: 3, flags: 0, parentRelation: 0 }),
-    ]);
-    const plane = starOrbitNormalIcrs(b, 3, { x: 0, y: 0, z: 30 });
-    expect(plane!.relationIdx).toBe(0);
-    expect(plane!.partnerIdx).toBe(1);
-  });
+    // Aa rides only the outer pair, whose plane is measured.
+    const aa = starOrbitNormalIcrs(b, DABIH_AA, system)!;
+    expect(aa.relationIdx).toBe(0);
+    expect(new THREE.Vector3(aa.normal.x, aa.normal.y, aa.normal.z).angleTo(los) / DEG)
+      .toBeCloseTo(OUTER_INC_DEG, 6);
 
-  // binaries.bin reaches two hops (14 stars); the walk must not stop at one.
-  it('walks more than one hop to reach a measured pair', () => {
-    const b = makeBinaries([
-      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: TIER_1, iRad: 50 * DEG }),
-      makeRelation({ primaryIdx: 2, secondaryIdx: 3, flags: FLAG_HAS_ORBIT, iRad: NaN, parentRelation: 0 }),
-      makeRelation({ primaryIdx: 3, secondaryIdx: 4, flags: FLAG_HAS_ORBIT, iRad: NaN, parentRelation: 1 }),
-    ]);
-    const plane = starOrbitNormalIcrs(b, 4, { x: 0, y: 0, z: 30 });
-    expect(plane!.relationIdx).toBe(0);
-    expect(plane!.partnerIdx).toBe(1);
-  });
-
-  // The whole chain unmeasured is still a silent no-op: the only plane on
-  // offer would be the galactic fallback.
-  it('declines when no pair on the chain carries a plane', () => {
-    const b = makeBinaries([
-      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN }),
-      makeRelation({ primaryIdx: 2, secondaryIdx: 3, flags: 0, parentRelation: 0 }),
-    ]);
-    expect(starOrbitNormalIcrs(b, 3, { x: 0, y: 0, z: 30 })).toBeNull();
-  });
-
-  // A parentRelation cycle is malformed data, not a reachable state — but
-  // the walk must terminate rather than hang the frame that levels.
-  it('terminates on a parentRelation cycle', () => {
-    const b = makeBinaries([
-      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN, parentRelation: 1 }),
-      makeRelation({ primaryIdx: 2, secondaryIdx: 3, flags: FLAG_HAS_ORBIT, iRad: NaN, parentRelation: 0 }),
-    ]);
-    expect(starOrbitNormalIcrs(b, 3, { x: 0, y: 0, z: 30 })).toBeNull();
+    // Ab and Ab2 ride the inner pair — the orbit they are actually on, and
+    // the one drawn around them, not the wider one their subsystem rides.
+    for (const idx of [DABIH_AB, DABIH_AB2]) {
+      const plane = starOrbitNormalIcrs(b, idx, system)!;
+      expect(plane.relationIdx, `star ${idx}`).toBe(1);
+      const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z);
+      expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+    }
   });
 });
 
@@ -519,42 +493,25 @@ describe('focusedOrbitInto', () => {
     expect(o.normal.dot(o.toCentre.clone().normalize())).toBeCloseTo(0, 6);
   });
 
-  // The Dabih case end to end: focusing a member of an unmeasured inner
-  // pair must still fill both legs off the measured outer orbit, and aim
-  // the datum OUT of its own subsystem — at the far member, not at the
-  // sibling sitting a fraction of the outer separation away.
-  it('fills both legs for a member of an unmeasured inner pair', () => {
-    const AA = 1;
-    const AB = 4;   // shared node: outer secondary, inner primary
-    const AB2 = 7;
+  // A pair whose plane is the galactic fallback still fills both legs: the
+  // orbit is drawn, so it can be levelled on. The centre direction is the
+  // partner's, exactly as for a measured pair.
+  it('fills both legs for a pair with no published inclination', () => {
     const b = makeBinaries([
-      makeRelation({ primaryIdx: AA, secondaryIdx: AB, flags: TIER_1, iRad: 40 * DEG }),
       makeRelation({
-        primaryIdx: AB, secondaryIdx: AB2, flags: FLAG_HAS_ORBIT, iRad: NaN, parentRelation: 0,
+        primaryIdx: PRIMARY, secondaryIdx: SECONDARY, flags: FLAG_HAS_ORBIT, iRad: NaN,
       }),
     ]);
-    const positions = new Float32Array(30);
-    for (const idx of [AA, AB, AB2]) positions[idx * 3 + 2] = 30;
-    // AA at x=1, AB at x=3, AB2 a hair off AB — the inner pair is nested
-    // well inside the outer separation, as a real hierarchy is.
-    const local = new Float32Array(30).fill(100);
-    local[AA * 3] = 1; local[AA * 3 + 1] = 0; local[AA * 3 + 2] = 0;
-    local[AB * 3] = 3; local[AB * 3 + 1] = 0; local[AB * 3 + 2] = 0;
-    local[AB2 * 3] = 3.01; local[AB2 * 3 + 1] = 0; local[AB2 * 3 + 2] = 0;
-    const s = {
-      kinds: {},
-      getT: () => 0,
-      getBinaries: () => b,
-      catalog: { positions },
-      localPositions: local,
-    } as unknown as Stellata;
+    const s = starHarness(b);
+    const fromSecondary = out();
+    expect(focusedOrbitInto(fromSecondary, s, { kind: 'star', idx: SECONDARY })).toBe(true);
+    const fromPrimary = out();
+    expect(focusedOrbitInto(fromPrimary, s, { kind: 'star', idx: PRIMARY })).toBe(true);
 
-    for (const idx of [AB, AB2]) {
-      const o = out();
-      expect(focusedOrbitInto(o, s, { kind: 'star', idx }), `star ${idx}`).toBe(true);
-      // Toward AA: -x from either member of the AB subsystem.
-      expect(o.toCentre.clone().normalize().x).toBeCloseTo(-1, 6);
-      expect(o.normal.length()).toBeCloseTo(1, 12);
+    expect(fromSecondary.toCentre.clone().normalize().x).toBeCloseTo(-1, 6);
+    expect(fromPrimary.toCentre.clone().normalize().x).toBeCloseTo(1, 6);
+    for (const o of [fromSecondary, fromPrimary]) {
+      expect(o.normal.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
     }
   });
 

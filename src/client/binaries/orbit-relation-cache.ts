@@ -11,6 +11,7 @@ import {
   type Vec3,
 } from './binary-orbit-pure';
 import { innermostRelationOf } from './focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
@@ -84,71 +85,44 @@ export function keplerRelationParams(
   return { tier, elements: relationToElements(r) };
 }
 
-/** The innermost Tier-1 pair `starIdx` rides, with the member of it on the
- *  far side of the orbit — null when no pair on its chain carries a measured
- *  plane (README § Which pair a star rides).
+/** The plane of the pair `starIdx` rides, with the pair it came from — null
+ *  only when the star is in no pair, or its pair carries no orbital elements
+ *  (README § Which pair a star rides).
  *
- *  The walk starts at the innermost pair naming the star and steps outward
- *  through `parentRelation`, because a Tier-2 or Tier-3 inner pair must not
- *  hide a measured outer one the star genuinely rides: refusing there is what
- *  left both Dabih companions with no ORB frame while Dabih itself had one.
- *  A chain with no Tier-1 pair anywhere still declines — the plane on offer
- *  would be a convention dressed as a measurement.
+ *  **The tier is not a gate.** Tier 2 has no published inclination, so the
+ *  whole runtime places its orbit in the galactic plane; this answers with
+ *  that same plane rather than refusing. Both tiers draw an orbit ring, so a
+ *  tier-conditional ORB frame would appear and disappear on a distinction
+ *  nothing on screen exposes. A pair with no elements draws no ring at all —
+ *  that no-op is the one the user can see.
  *
- *  `member` tracks which star represents the walked subsystem in the pair
- *  under test. A hierarchical pair's PRIMARY is the node its parent also
- *  moves (`binary-orbit-field` anchors the secondary on the primary's slot),
- *  so stepping outward carries `primaryIdx` up; taking the other side of
- *  the ancestor without it would answer with a star on the focused one's own
- *  branch and put zero longitude inside the subsystem. */
-function innermostMeasuredOrbitOf(
-  binaries: BinariesData,
-  starIdx: number,
-): { relationIdx: number; partnerIdx: number } | null {
-  let relationIdx = innermostRelationOf(binaries, starIdx);
-  let member = starIdx;
-  const walked = new Set<number>();
-  while (relationIdx !== NO_PARENT && !walked.has(relationIdx)) {
-    walked.add(relationIdx);
-    const r = binaries.relations[relationIdx];
-    const params = keplerRelationParams(r);
-    if (params !== null && params.tier === 1) {
-      return {
-        relationIdx,
-        partnerIdx: r.primaryIdx === member ? r.secondaryIdx : r.primaryIdx,
-      };
-    }
-    member = r.primaryIdx;
-    relationIdx = r.parentRelation;
-  }
-  return null;
-}
-
-/** The plane `starIdx` rides, with the pair it came from and that pair's
- *  other member — null when nothing on its chain carries a measured plane.
- *
- *  Both indices are returned so a caller wanting the longitude datum reads
- *  them off this answer rather than resolving the pair a second time and
- *  trusting the two to agree. `partnerIdx` is NOT derivable from
- *  `relationIdx` and the focused star alone: an ancestor pair does not name
- *  the star at all.
+ *  `relationIdx` is returned so a caller wanting the same pair's other
+ *  member reads it off this answer rather than resolving the innermost
+ *  relation a second time and trusting the two to agree.
  *
  *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
- *  basis the sky-frame normal projects through. */
+ *  basis a Tier-1 normal projects through; Tier 2 needs no vantage. */
 export function starOrbitNormalIcrs(
   binaries: BinariesData,
   starIdx: number,
   systemXyzPc: Vec3,
-): { normal: Vec3; relationIdx: number; partnerIdx: number } | null {
-  const ride = innermostMeasuredOrbitOf(binaries, starIdx);
-  if (ride === null) return null;
-  const params = keplerRelationParams(binaries.relations[ride.relationIdx]);
+): { normal: Vec3; relationIdx: number } | null {
+  const relationIdx = innermostRelationOf(binaries, starIdx);
+  if (relationIdx === NO_PARENT) return null;
+  const params = keplerRelationParams(binaries.relations[relationIdx]);
   if (params === null) return null;
+  if (params.tier === 2) {
+    // `projectGalacticPlaneToICRS` rides the pair's in-plane (x, y) into the
+    // galactic XY basis, so the normal of what it draws is galactic +Z — the
+    // same vector, by construction of that basis. The fallback carries no
+    // sense of its own: an inclination past 90° is exactly what is missing.
+    const p = GALACTIC_NORTH_POLE_ICRS;
+    return { normal: { x: p.x, y: p.y, z: p.z }, relationIdx };
+  }
   const n = orbitNormalSky(params.elements);
   return {
     normal: projectSkyToICRS(systemXyzPc, n.north, n.east, n.radial),
-    relationIdx: ride.relationIdx,
-    partnerIdx: ride.partnerIdx,
+    relationIdx,
   };
 }
 
