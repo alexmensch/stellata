@@ -1279,7 +1279,6 @@ body.monochrome .poi-label {
 
 /* Spike: gyro-sphere attitude indicator, drawn in attitude/. */
 .attitude {
-  width: 144px;
   margin-bottom: 8px;
   color: var(--fg);
   font-size: 10.5px;
@@ -1307,15 +1306,18 @@ body.monochrome .poi-label {
   stroke-width: 1.25;
 }
 .ai-chrome .ai-bank-tick {
-  stroke: var(--fg-dim);
-  stroke-width: 1.25;
+  stroke: var(--fg);
+  opacity: 0.75;
 }
 .ai-chrome .ai-bank-pointer {
-  fill: #f2f4f8;
+  fill: var(--fg);
+}
+.ai-chrome .ai-bank-pointer-inset {
+  fill: #070912;
 }
 .ai-chrome .ai-symbol line {
   stroke: #ffd24a;
-  stroke-width: 2;
+  stroke-width: 2.2;
 }
 .ai-chrome .ai-symbol circle {
   fill: #ffd24a;

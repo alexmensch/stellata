@@ -15,14 +15,16 @@ import {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-const BALL_PX = 128;
-const BOX = 144;
+const BALL_PX = 160;
+const BOX = 192;
 const C = BOX / 2;
 // The sphere's silhouette in the mini-renderer: half-angle asin(1/6) against a
 // half-FOV of 10°, scaled to the canvas. Every ring below is placed off it.
 const BALL_R = (BALL_PX / 2) * (Math.tan(Math.asin(1 / 6)) / Math.tan((10 * Math.PI) / 180));
 
-const BANK_TICKS_DEG = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60];
+// Roll is unbounded out here, so the scale runs the whole way round rather
+// than covering the shallow band an aircraft lives in.
+const BANK_TICK_STEP_DEG = 5;
 const POLE_WARN_SIN = Math.sin((15 * Math.PI) / 180);
 const FRAME_CYCLE: ReferenceFrameKey[] = ['equatorial', 'ecliptic', 'galactic'];
 
@@ -64,19 +66,27 @@ function buildShading() {
   return g;
 }
 
+function bankTick(deg: number) {
+  if (deg % 90 === 0) return { len: 12, width: 2.4 };
+  if (deg % 30 === 0) return { len: 8.5, width: 2 };
+  if (deg % 10 === 0) return { len: 5.5, width: 1.5 };
+  return { len: 3.5, width: 1.2 };
+}
+
 function buildBezel() {
   const g = el('g');
-  for (const d of BANK_TICKS_DEG) {
+  const inner = BALL_R + 2.5;
+  for (let d = 0; d < 360; d += BANK_TICK_STEP_DEG) {
+    const { len, width } = bankTick(d);
     const rad = ((d - 90) * Math.PI) / 180;
-    const inner = BALL_R + 2;
-    const outer = inner + (d % 30 === 0 ? 6 : 3.5);
     g.appendChild(
       el('line', {
         x1: C + Math.cos(rad) * inner,
         y1: C + Math.sin(rad) * inner,
-        x2: C + Math.cos(rad) * outer,
-        y2: C + Math.sin(rad) * outer,
+        x2: C + Math.cos(rad) * (inner + len),
+        y2: C + Math.sin(rad) * (inner + len),
         class: 'ai-bank-tick',
+        'stroke-width': width,
       }),
     );
   }
@@ -84,11 +94,46 @@ function buildBezel() {
   return g;
 }
 
+/** A cross rather than aircraft wings: four arms and a centre point, scaled
+ *  off the ball and trimmed 5%. */
 function buildSymbol() {
   const g = el('g', { class: 'ai-symbol' });
-  g.appendChild(el('line', { x1: C - 30, y1: C, x2: C - 10, y2: C }));
-  g.appendChild(el('line', { x1: C + 10, y1: C, x2: C + 30, y2: C }));
-  g.appendChild(el('circle', { cx: C, cy: C, r: 2 }));
+  const inner = BALL_R * 0.163;
+  const outer = inner + (BALL_R * 0.489 - inner) * 0.95;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    g.appendChild(
+      el('line', {
+        x1: C + dx * inner,
+        y1: C + dy * inner,
+        x2: C + dx * outer,
+        y2: C + dy * outer,
+      }),
+    );
+  }
+  g.appendChild(el('circle', { cx: C, cy: C, r: 2.4 }));
+  return g;
+}
+
+/** The FDAI roll caret: a light triangle carrying a dark one inset inside it,
+ *  stopping short of the tip so a bright wedge survives against either
+ *  hemisphere passing underneath. */
+function buildBankPointer() {
+  const g = el('g');
+  const tip = C - BALL_R + 1;
+  const base = tip + 14;
+  const half = 7;
+  g.appendChild(
+    el('polygon', {
+      points: `${C},${tip} ${C - half},${base} ${C + half},${base}`,
+      class: 'ai-bank-pointer',
+    }),
+  );
+  g.appendChild(
+    el('polygon', {
+      points: `${C},${tip + 4.6} ${C - half * 0.56},${base - 2.6} ${C + half * 0.56},${base - 2.6}`,
+      class: 'ai-bank-pointer-inset',
+    }),
+  );
   return g;
 }
 
@@ -105,6 +150,7 @@ export function createAttitudeIndicator(stellata: Stellata) {
   const ball = createAttitudeBall(BALL_PX);
   ball.setFrame(frame);
 
+  host.style.width = `${BOX}px`;
   const stage = document.createElement('div');
   stage.className = 'attitude-stage';
   stage.style.width = `${BOX}px`;
@@ -117,10 +163,7 @@ export function createAttitudeIndicator(stellata: Stellata) {
   const svg = el('svg', { class: 'ai-chrome', viewBox: `0 0 ${BOX} ${BOX}` });
   svg.appendChild(buildShading());
   svg.appendChild(buildBezel());
-  const bankPointer = el('polygon', {
-    points: `${C},${C - BALL_R + 1} ${C - 5.5},${C - BALL_R + 11} ${C + 5.5},${C - BALL_R + 11}`,
-    class: 'ai-bank-pointer',
-  });
+  const bankPointer = buildBankPointer();
   svg.appendChild(bankPointer);
   svg.appendChild(buildSymbol());
   stage.appendChild(svg);

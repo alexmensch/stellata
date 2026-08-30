@@ -68,6 +68,33 @@ The dynamics come out right in all three axes regardless, and the tests pin
 each one: pitching up drives the old centre *down* the ball, yawing right
 drives it *left*, banking right tips the pole *left* by the bank angle.
 
+## Markings and palette
+
+Everything is drawn from the app's own two tones — `--fg` `#e6edf7` for the
+light hemisphere, the settings panel's `#070912` for the dark one — with each
+hemisphere's markings in the other's colour. **The mid-tone orbit-ring blue
+(`../util/orbit-line.ts`'s `ORBIT_LINE_COLOUR`) was considered for the light
+and rejected:** the equator carries a tick per degree, and a hairline at that
+pitch needs the full contrast range against its ground. Amber survives only on
+the centre cross, which is the one thing that must never be mistaken for a
+grid line.
+
+The graticule follows the FDAI rather than a map: solid lines every 30°, and on
+the 15° offsets **no line at all** — a track of ticks every 5°, drawn
+perpendicular to the line they stand in for. The equator is the exception and
+carries a real scale: a light belt (which is why the dark hemisphere starts at
+−3° rather than 0°), a solid line on it, and a tick per degree stepped up at 5°
+and 10°.
+
+**A tick per degree is finer than the ball's own pixels.** The visible half of
+the equator spans 180° across roughly the ball's diameter, so the comb lands
+under a pixel per tick and will read as a textured band rather than countable
+ticks. That is faithful to the instrument and deliberate; coarsening the step
+is a one-line change in `paintEquator` if it reads as mush.
+
+No red polar zone. The real ball wore one to warn of gimbal lock approaching,
+which is a mechanical failure this has no analogue for.
+
 ## Rendering
 
 `attitude-ball.ts` owns a **second `THREE.WebGLRenderer`** on its own small
@@ -79,6 +106,22 @@ chrome out of the physical light path.
 It redraws only on ticks where `camera.quaternion` actually changed, so a
 static view costs nothing. The grid texture is rebuilt only when the frame
 chip changes, since only its labels differ.
+
+## Case chrome
+
+The fixed chrome over the canvas is SVG, and two pieces of it are deliberately
+un-aviation:
+
+- **The roll scale runs the full 360°** — ticks every 5°, stepping up at 10°,
+  30° and 90°. An aircraft indicator marks only the shallow band either side of
+  level because that is where an aircraft lives; roll here is unbounded, so a
+  scale that ran out would be worse than none.
+- **The centre index is a cross, not a pair of wings** — four arms and a point,
+  sized off `BALL_R` so it tracks the ball's size, then trimmed 5%.
+
+The roll caret is the FDAI's: a light triangle carrying a dark one inset inside
+it, stopping short of the tip. The surviving bright wedge is what keeps it
+legible whichever hemisphere happens to be passing underneath.
 
 ## Levelling
 

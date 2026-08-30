@@ -1,22 +1,23 @@
-// The 8-ball itself: an equirectangular grid painted to a canvas, wrapped on a
-// sphere, and rendered by a small standalone WebGL renderer of its own.
+// The 8-ball itself: an FDAI-style equirectangular grid painted to a canvas,
+// wrapped on a sphere, and rendered by a small standalone WebGL renderer.
 
 import * as THREE from 'three';
 import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 
-const TEX_W = 2048;
-const TEX_H = 1024;
+const TEX_W = 4096;
+const TEX_H = 2048;
 
-const NORTH_FILL = '#c3cedb';
-const SOUTH_FILL = '#20262e';
-const NORTH_INK = '#3c4a59';
-const SOUTH_INK = '#94a2b1';
-const EQUATOR_INK = '#e8a93c';
+const LIGHT = '#e6edf7';
+const DARK = '#070912';
+const FONT = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
-const PARALLEL_STEP_DEG = 10;
-const MERIDIAN_STEP_DEG = 30;
-const LABEL_STEP_DEG = 30;
+const SOLID_STEP_DEG = 30;
+const TICK_STEP_DEG = 5;
+// The light belt runs south of the equator, so the dark hemisphere starts
+// here rather than at 0° and every marking above it is drawn in dark ink.
+const BELT_DEG = 3;
 
+const PX_PER_DEG = TEX_W / 360;
 const lonToX = (deg: number) => TEX_W * (deg / 360 + 0.5);
 const latToY = (deg: number) => TEX_H * (0.5 - deg / 180);
 
@@ -35,61 +36,87 @@ function mirroredText(
   ctx.restore();
 }
 
-function paintHemisphere(
+function segment(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+/** Solid graticule every 30°, and between them a track of perpendicular ticks
+ *  every 5° on the 15° offsets — the FDAI's way of carrying a scale without
+ *  drawing a line for it. */
+function paintGraticule(ctx: CanvasRenderingContext2D) {
+  const tick = 1.4 * PX_PER_DEG;
+
+  ctx.lineWidth = 3.2;
+  for (let lat = -60; lat <= 60; lat += SOLID_STEP_DEG) {
+    if (lat === 0) continue;
+    segment(ctx, 0, latToY(lat), TEX_W, latToY(lat));
+  }
+  for (let lon = -180; lon <= 180; lon += SOLID_STEP_DEG) {
+    segment(ctx, lonToX(lon), 0, lonToX(lon), TEX_H);
+  }
+
+  ctx.lineWidth = 2.6;
+  for (let lat = -75; lat <= 75; lat += SOLID_STEP_DEG) {
+    const y = latToY(lat);
+    for (let lon = -180; lon < 180; lon += TICK_STEP_DEG) {
+      const x = lonToX(lon);
+      segment(ctx, x, y - tick, x, y + tick);
+    }
+  }
+  for (let lon = -165; lon <= 165; lon += SOLID_STEP_DEG) {
+    const x = lonToX(lon);
+    for (let lat = -75; lat <= 75; lat += TICK_STEP_DEG) {
+      if (lat === 0) continue;
+      const y = latToY(lat);
+      segment(ctx, x - tick, y, x + tick, y);
+    }
+  }
+}
+
+/** The equator carries its own fine scale: a solid line on the light belt with
+ *  a tick per degree, stepped up every 5° and 10° so the comb stays readable. */
+function paintEquator(ctx: CanvasRenderingContext2D) {
+  const y = latToY(0);
+  ctx.lineWidth = 1.6;
+  for (let lon = -180; lon < 180; lon += 1) {
+    const len = (lon % 10 === 0 ? 2.4 : lon % 5 === 0 ? 1.7 : 1.0) * PX_PER_DEG;
+    const x = lonToX(lon);
+    segment(ctx, x, y, x, y + len);
+  }
+  ctx.lineWidth = 4;
+  segment(ctx, 0, y, TEX_W, y);
+}
+
+function paintLabels(
   ctx: CanvasRenderingContext2D,
   frame: ReferenceFrame,
   north: boolean,
 ) {
-  const ink = north ? NORTH_INK : SOUTH_INK;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, north ? 0 : TEX_H / 2, TEX_W, TEX_H / 2);
-  ctx.clip();
-
-  ctx.strokeStyle = ink;
-  ctx.fillStyle = ink;
-
-  for (let lat = -80; lat <= 80; lat += PARALLEL_STEP_DEG) {
-    if (lat === 0) continue;
-    ctx.lineWidth = lat % MERIDIAN_STEP_DEG === 0 ? 3 : 1.5;
-    ctx.globalAlpha = lat % MERIDIAN_STEP_DEG === 0 ? 0.85 : 0.4;
-    ctx.beginPath();
-    ctx.moveTo(0, latToY(lat));
-    ctx.lineTo(TEX_W, latToY(lat));
-    ctx.stroke();
-  }
-
-  ctx.lineWidth = 3;
-  ctx.globalAlpha = 0.8;
-  for (let lon = -180; lon <= 180; lon += MERIDIAN_STEP_DEG) {
-    ctx.beginPath();
-    ctx.moveTo(lonToX(lon), 0);
-    ctx.lineTo(lonToX(lon), TEX_H);
-    ctx.stroke();
-  }
-
-  ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  ctx.font = '600 34px ui-sans-serif, system-ui, sans-serif';
-  for (let lon = -180; lon < 180; lon += LABEL_STEP_DEG) {
+  ctx.font = `600 ${2.1 * PX_PER_DEG}px ${FONT}`;
+  for (let lon = -180; lon < 180; lon += SOLID_STEP_DEG) {
     const label = frame.formatLonTick((lon * Math.PI) / 180);
-    mirroredText(ctx, label, lonToX(lon), latToY(north ? 7 : -7));
+    mirroredText(ctx, label, lonToX(lon + 15), latToY(north ? 8 : -10));
   }
 
-  ctx.font = '600 30px ui-sans-serif, system-ui, sans-serif';
+  ctx.font = `600 ${1.9 * PX_PER_DEG}px ${FONT}`;
   for (const lat of north ? [30, 60] : [-30, -60]) {
     for (const lon of [-90, 90]) {
       const sign = lat > 0 ? '+' : '−';
-      mirroredText(ctx, `${sign}${Math.abs(lat)}`, lonToX(lon), latToY(lat) - 26);
+      mirroredText(ctx, `${sign}${Math.abs(lat)}`, lonToX(lon + 15), latToY(lat + 4));
     }
   }
-
-  ctx.font = '700 64px ui-sans-serif, system-ui, sans-serif';
-  mirroredText(ctx, north ? 'N' : 'S', lonToX(0), latToY(north ? 82 : -82));
-
-  ctx.restore();
 }
 
 export function buildBallTexture(frame: ReferenceFrame): THREE.CanvasTexture {
@@ -97,21 +124,24 @@ export function buildBallTexture(frame: ReferenceFrame): THREE.CanvasTexture {
   canvas.width = TEX_W;
   canvas.height = TEX_H;
   const ctx = canvas.getContext('2d')!;
+  const belt = latToY(-BELT_DEG);
 
-  ctx.fillStyle = NORTH_FILL;
-  ctx.fillRect(0, 0, TEX_W, TEX_H / 2);
-  ctx.fillStyle = SOUTH_FILL;
-  ctx.fillRect(0, TEX_H / 2, TEX_W, TEX_H / 2);
+  ctx.fillStyle = LIGHT;
+  ctx.fillRect(0, 0, TEX_W, belt);
+  ctx.fillStyle = DARK;
+  ctx.fillRect(0, belt, TEX_W, TEX_H - belt);
 
-  paintHemisphere(ctx, frame, true);
-  paintHemisphere(ctx, frame, false);
-
-  ctx.strokeStyle = EQUATOR_INK;
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.moveTo(0, TEX_H / 2);
-  ctx.lineTo(TEX_W, TEX_H / 2);
-  ctx.stroke();
+  for (const north of [true, false]) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, north ? 0 : belt, TEX_W, north ? belt : TEX_H - belt);
+    ctx.clip();
+    ctx.strokeStyle = ctx.fillStyle = north ? DARK : LIGHT;
+    paintGraticule(ctx);
+    if (north) paintEquator(ctx);
+    paintLabels(ctx, frame, north);
+    ctx.restore();
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -137,7 +167,7 @@ export function createAttitudeBall(sizePx: number): AttitudeBall {
   view.position.set(0, 0, 6);
 
   const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), material);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), material);
   mesh.matrixAutoUpdate = false;
   mesh.frustumCulled = false;
   scene.add(mesh);
