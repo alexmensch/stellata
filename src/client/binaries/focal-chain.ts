@@ -33,10 +33,8 @@ export function focalChainRelationSet(
  *  `parentRelation` always below the child's index, so the highest index
  *  among the ones naming this star directly is the deepest.
  *
- *  Ancestors are deliberately excluded, unlike `focalChainRelationSet`:
- *  the orbit a star is ON is the pair it belongs to. Focus Algol Aa2 and
- *  that is the tight Aa1-Aa2 pair; focus Ab and it is the wide Aa-Ab one,
- *  which Aa2's own orbit says nothing about. */
+ *  Ancestors are excluded, unlike `focalChainRelationSet` — README
+ *  § Which pair a star rides. */
 export function innermostRelationOf(
   binaries: BinariesData,
   starIdx: number,

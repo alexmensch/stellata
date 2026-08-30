@@ -135,11 +135,9 @@ export class BinaryOrbitPathLayer {
    * `PATH_MIN_RADIUS_PX` (zoom-out / distant system), mirroring the planet
    * orbit rings' pixel gate.
    *
-   * The barycentre comes off the secondary's slot and the walk's own
-   * `R(t)`, NOT the mass-weighted average of the two slots: a hierarchical
-   * outer pair shares its primary slot with an inner pair that splits it
-   * again, and that average inherits the inner wobble the secondary never
-   * saw. See README § Anchor.
+   * The barycentre must come off the secondary's slot and the walk's own
+   * `R(t)`, never the mass-weighted average of the two slots — README
+   * § Anchor.
    */
   update(
     offsets: RelationOffsetSource | null,

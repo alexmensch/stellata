@@ -74,20 +74,12 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
   return makeFrame('reference', 'REF', pole, boresight);
 }
 
-/** A frame on the focused object's own orbital plane. `normal` is the
- *  orbit's angular-momentum direction, so a retrograde orbit reads
- *  inverted — that is the plane's real sense, not a display choice.
+/** A frame on the focused object's own orbital plane, seeding zero
+ *  longitude on `toCentre` — README.md § Levelling on an orbit.
  *
- *  Zero longitude points from the object to the centre of its orbit — its
- *  host star, its parent body, or its pair's barycentre — so the ball's
- *  longitude reads the object's own position on the orbit and is the same
- *  datum however the camera happened to be pointing. Unlike REF's, the
- *  seed already lies in the plane, so `makeFrame`'s projection is a
- *  formality.
- *
- *  `toCentre` collapsing to nothing would leave no direction to project;
- *  the boresight takes over, and the camera's up after that if the
- *  boresight is down the pole. */
+ *  Two fallbacks in order, both for degenerate cases a real orbit does not
+ *  produce: a `toCentre` collapsing to nothing hands the seed to the
+ *  boresight, and a boresight down the pole hands it to the camera's up. */
 export function captureOrbitFrame(
   camera: THREE.Camera,
   normal: THREE.Vector3,
