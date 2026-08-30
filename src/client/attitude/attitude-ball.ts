@@ -4,8 +4,11 @@
 import * as THREE from 'three';
 import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 
-const TEX_W = 4096;
-const TEX_H = 2048;
+// The ball spans `BALL_PX` CSS pixels at a device ratio of at most 2, so its
+// centre resolves under 3 texels per degree. This is still ~2x that; every
+// stroke below is measured in degrees so the size stays a free parameter.
+const TEX_W = 2048;
+const TEX_H = 1024;
 
 const LIGHT = '#e6edf7';
 const DARK = '#070912';
@@ -14,6 +17,10 @@ const FONT = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 const SOLID_STEP_DEG = 30;
 const TRACK_STEP_DEG = 5;
 const SCALE_STEP_DEG = 2;
+
+const GRATICULE_W_DEG = 0.281;
+const TRACK_TICK_W_DEG = 0.229;
+const SCALE_TICK_W_DEG = 0.211;
 
 const PX_PER_DEG = TEX_W / 360;
 const deg = (d: number) => d * PX_PER_DEG;
@@ -73,27 +80,27 @@ function segment(
 function paintGraticule(ctx: CanvasRenderingContext2D) {
   const tick = deg(1.4);
 
-  ctx.lineWidth = 3.2;
+  ctx.lineWidth = deg(GRATICULE_W_DEG);
   for (let lat = -60; lat <= 60; lat += SOLID_STEP_DEG) {
     if (lat === 0) continue;
     segment(ctx, 0, latToY(lat), TEX_W, latToY(lat));
   }
   for (let lon = -180; lon <= 180; lon += SOLID_STEP_DEG) {
     if (lon === 0) continue;
-    meridianRibbon(ctx, lon, 1.6);
+    meridianRibbon(ctx, lon, deg(GRATICULE_W_DEG) / 2);
   }
 
   for (let lat = -75; lat <= 75; lat += SOLID_STEP_DEG) {
     const y = latToY(lat);
     // A vertical tick's *thickness* runs east-west, so it thins toward the
     // poles unless it widens along with everything else.
-    ctx.lineWidth = 2.6 * lonStretch(lat);
+    ctx.lineWidth = deg(TRACK_TICK_W_DEG) * lonStretch(lat);
     for (let lon = -180; lon < 180; lon += TRACK_STEP_DEG) {
       const x = lonToX(lon);
       segment(ctx, x, y - tick, x, y + tick);
     }
   }
-  ctx.lineWidth = 2.6;
+  ctx.lineWidth = deg(TRACK_TICK_W_DEG);
   for (let lon = -165; lon <= 165; lon += SOLID_STEP_DEG) {
     const x = lonToX(lon);
     for (let lat = -75; lat <= 75; lat += TRACK_STEP_DEG) {
@@ -116,7 +123,7 @@ const PRIME_HALF_DEG = PRIME_BANDS_DEG[0] / 2;
  *  They start outside the painted band rather than crossing it. */
 function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
   const x = lonToX(0);
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = deg(SCALE_TICK_W_DEG);
   for (let lat = -88; lat <= 88; lat += SCALE_STEP_DEG) {
     const stretch = lonStretch(lat);
     const gap = deg(PRIME_HALF_DEG) * stretch;
@@ -140,7 +147,7 @@ function paintPrimeRails(ctx: CanvasRenderingContext2D) {
  *  hemispheres. It carries a scale instead, ticking north into the light. */
 function paintEquatorTicks(ctx: CanvasRenderingContext2D) {
   const y = latToY(0);
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = deg(SCALE_TICK_W_DEG);
   for (let lon = -180; lon < 180; lon += SCALE_STEP_DEG) {
     const len = deg(lon % 10 === 0 ? 2.1 : 1.3);
     const x = lonToX(lon);
@@ -299,8 +306,11 @@ export function createAttitudeBall(sizePx: number): AttitudeBall {
 
   const map = buildBallTexture();
   map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  const material = new THREE.MeshBasicMaterial({ map, side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), material);
+  // Front-facing, despite the reflected model matrix: three.js reads the world
+  // matrix's determinant and flips the winding itself, so the near hemisphere
+  // is the one that survives culling and the far one costs nothing.
+  const material = new THREE.MeshBasicMaterial({ map });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), material);
   mesh.matrixAutoUpdate = false;
   mesh.frustumCulled = false;
   scene.add(mesh);
