@@ -1,5 +1,5 @@
-// Simulation time `t` (Unix-seconds double) + UTC ↔ Julian-day helpers.
-// See src/client/solar-system/README.md § Time.
+// Simulation time `t` (Unix-seconds double) + UT ↔ Julian-day helpers.
+// See ./README.md § Timescales.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
@@ -10,12 +10,16 @@ const UNIX_EPOCH_JD = 2440587.5;
 
 // Tolerance (seconds) under which a value of `t` is considered "live"
 // — i.e. tracking wall-clock now rather than a scrubber-pinned point.
-// Driven by the readout to label "Live" vs an
-// explicit timestamp; small enough that the per-second tick still
-// reads as live, large enough to absorb scheduler jitter.
+// Drives URL-state encoding: a live `t` is omitted from the blob so a
+// shared link opens at the reader's now, while a scrubbed one is pinned
+// (`../../util/url-state/README.md`). Small enough that the per-second
+// tick still reads as live, large enough to absorb scheduler jitter.
 const LIVE_TOLERANCE_SEC = 1;
 
-/** Unix-seconds → Julian Date, **UTC** scale — the scale `t` itself runs in. */
+/** Unix-seconds → Julian Date, **UT** scale — the scale `t` itself runs in.
+ *  Not UTC: the model's day is a uniform 86400 s with no leap seconds, and
+ *  UTC did not exist before 1972. Not JDE either — Meeus's JDE is
+ *  conventionally TT; `tToJdTdb` is the sibling that carries ΔT. */
 export function tToJdUt(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
@@ -38,9 +42,9 @@ export function jdTdbToT(jdTdb: number): number {
   return jdUtToT(jdUt);
 }
 
-/** Julian Date → Unix-seconds. Inverse of `tToJdUt`. */
-export function jdUtToT(jde: number): number {
-  return (jde - UNIX_EPOCH_JD) * 86400;
+/** Julian Date UT → Unix-seconds. Inverse of `tToJdUt`. */
+export function jdUtToT(jdUt: number): number {
+  return (jdUt - UNIX_EPOCH_JD) * 86400;
 }
 
 /** Julian epoch year (e.g. 2016.0) → Unix-seconds. */
@@ -149,6 +153,9 @@ export function parseJulianDateValue(value: string): number {
     return Number.NaN;
   }
   const jd = Number(digits);
+  // The TT default resolves through the TDB inverse: the two scales differ
+  // by under 2 ms, which is four orders below the second this field's
+  // shortest round-trip resolves, and one fixed-point solve serves both.
   return scale?.toUpperCase() === 'UT' ? jdUtToT(jd) : jdTdbToT(jd);
 }
 

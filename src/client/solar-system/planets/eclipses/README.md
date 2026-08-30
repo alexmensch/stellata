@@ -125,7 +125,11 @@ drifts that far from DE441 over four millennia. Matching the canon
 tighter would mean degrading the model toward the older ephemeris, so
 the 200 km / 7-minute corpus bounds are the canon-agreement floor, not
 the model's accuracy (`../../ephemerides/README.md`
-§ DE441 recalibration has the model-vs-DE441 figures). Earth's
+§ DE441 recalibration has the model-vs-DE441 figures). **The ground
+bound has 1.7 km of headroom** — 198.3 km at −1977 against 200 — and
+that thinness is deliberate: it is a floor set by the canon, so an
+ephemeris change that pushes through it wants explaining, not a wider
+number. Nothing here is stochastic, so it cannot flake into failing. Earth's
 orientation holds 0.076° across the whole clamp, and ΔT itself is known
 only to ±hours that far back — the *observed* local circumstances of a
 2000 BC eclipse are far less certain than either model's reproduction of

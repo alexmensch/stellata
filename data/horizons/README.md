@@ -50,8 +50,9 @@ here that pins a body's *rotation* rather than its position. See its own
 section below.
 
 A sixth table, `moon-vector-truth.tsv`, freezes **geocentric ecliptic
-state vectors for the Moon** at 174 epochs spanning the model clock's
-whole 3000 BC – 3000 AD clamp — by far the widest corpus here. Consumed
+state vectors for the Moon** at 1636 epochs spanning the model clock's
+whole 3000 BC – 3000 AD clamp — by far the widest corpus here, and the
+only one split into fit and held-out sets. Consumed
 by `src/client/solar-system/ephemerides/moon-vector-truth.test.ts`. See
 its own section below.
 
