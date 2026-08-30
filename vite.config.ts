@@ -37,6 +37,10 @@ export default defineConfig(() => ({
     outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
     target: 'es2022',
+    // Sits above the entry chunk on purpose. JS is ~1% of the bytes before
+    // first frame (the catalogue fetch dominates), and a three/app vendor
+    // split leaves both halves near 500 kB, so it silences nothing.
+    chunkSizeWarningLimit: 1600,
     rollupOptions: {
       input: resolve(import.meta.dirname, 'src/client/index.html'),
     },
