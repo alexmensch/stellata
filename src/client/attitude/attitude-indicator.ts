@@ -15,7 +15,7 @@ import {
   type FocusFrameInputs,
   type ReferenceFrame,
 } from './attitude-pure';
-import { focusedOrbitNormalInto } from './orbit-plane';
+import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
   DBL_CLICK_DIST_PX_SQ,
@@ -251,11 +251,14 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     draw();
   }
 
-  const orbitNormal = new THREE.Vector3();
+  const orbit: FocusedOrbit = {
+    normal: new THREE.Vector3(),
+    toCentre: new THREE.Vector3(),
+  };
 
   function levelOnOrbit() {
-    if (!focusedOrbitNormalInto(orbitNormal, stellata, focused)) return;
-    setFrame(captureOrbitFrame(stellata.camera, orbitNormal));
+    if (!focusedOrbitInto(orbit, stellata, focused)) return;
+    setFrame(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
     level();
   }
 

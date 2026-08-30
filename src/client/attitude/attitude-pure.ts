@@ -78,19 +78,27 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
  *  orbit's angular-momentum direction, so a retrograde orbit reads
  *  inverted — that is the plane's real sense, not a display choice.
  *
- *  Zero longitude seeds off the boresight, as REF does, giving the same
- *  "level from where you are" read. Sighting straight down the pole makes
- *  that seed degenerate, and the camera's up takes over: it is
- *  perpendicular to the boresight, hence to the pole in exactly that
- *  case. */
+ *  Zero longitude points from the object to the centre of its orbit — its
+ *  host star, its parent body, or its pair's barycentre — so the ball's
+ *  longitude reads the object's own position on the orbit and is the same
+ *  datum however the camera happened to be pointing. Unlike REF's, the
+ *  seed already lies in the plane, so `makeFrame`'s projection is a
+ *  formality.
+ *
+ *  `toCentre` collapsing to nothing would leave no direction to project;
+ *  the boresight takes over, and the camera's up after that if the
+ *  boresight is down the pole. */
 export function captureOrbitFrame(
   camera: THREE.Camera,
   normal: THREE.Vector3,
+  toCentre: THREE.Vector3,
 ): ReferenceFrame {
   const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  const seed = Math.abs(boresight.dot(normal)) > DEGENERATE_SEED_COS
+  const fallback = Math.abs(boresight.dot(normal)) > DEGENERATE_SEED_COS
     ? new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
     : boresight;
+  const inPlane = toCentre.clone().addScaledVector(normal, -toCentre.dot(normal));
+  const seed = inPlane.lengthSq() > 0 ? inPlane : fallback;
   return makeFrame('orbit', 'ORB', normal, seed);
 }
 

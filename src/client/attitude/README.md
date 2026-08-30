@@ -22,8 +22,9 @@ attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
 attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
                            corner frame flag, and the level affordances.
-orbit-plane.ts             The focused object's own orbit normal, dispatched
-                           to whichever subsystem holds its elements.
+orbit-plane.ts             The focused object's own orbit — plane normal
+                           and the direction to the orbit's centre —
+                           dispatched to whichever subsystem holds it.
 ```
 
 ## Which frame, and who chooses
@@ -236,6 +237,17 @@ whose pole is the normal of the orbit the focused object *itself* rides. It
 is a captured datum like REF, planted from `orbit-plane.ts`'s answer rather
 than from the current attitude, and `level()` then runs unchanged.
 
+**Zero longitude points at the centre of the orbit** — the host star, the
+parent body, or the pair's barycentre — which is the same point each
+subsystem anchors the drawn orbit ring on. That is the one difference from
+REF, whose datum is the boresight: ORB's is a property of the orbit, so the
+same object levelled from anywhere reads the same longitude, and the ball's
+longitude reads where the object sits on its own orbit. It is a direction,
+not a distance, so the focus-versus-geometric-centre distinction the ellipse
+carries does not arise. The centre direction already lies in the orbital
+plane, leaving the boresight to seed a degenerate case that a real orbit
+does not produce.
+
 Capturing rather than only rolling is what makes it legible: rolling to a
 plane the instrument is not displaying leaves the caret reading un-level
 against the *old* frame, so the gesture would look like it had failed.
@@ -243,9 +255,10 @@ against the *old* frame, so the gesture would look like it had failed.
 **Always the innermost orbit the object is on.** Luna levels on its orbit
 about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
 on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
-from its own elements — `PlanetBodyField.orbitPlaneNormalOf` for a body
-(`../solar-system/ephemerides/README.md` § Orbit rings), `starOrbitNormalIcrs`
-for a pair (`../binaries/README.md` § Tier mapping).
+from its own elements — `PlanetBodyField.orbitPlaneNormalOf` /
+`orbitCentreOffsetInto` for a body (`../solar-system/ephemerides/README.md`
+§ Orbit rings), `starOrbitNormalIcrs` plus `innermostRelationOf`'s partner
+slot for a pair (`../binaries/README.md` § Which pair a star rides).
 
 **The obvious shortcut is wrong and must stay unused here.**
 `orbitalPlaneNormalFor()` answers per HOST STAR — the ecliptic for Sol,

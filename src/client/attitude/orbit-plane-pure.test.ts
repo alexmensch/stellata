@@ -247,16 +247,17 @@ describe('captureOrbitFrame', () => {
   };
 
   const normal = new THREE.Vector3(0, 1, 0);
+  const toCentre = new THREE.Vector3(3, 0, 0);
 
   it('plants the pole on the orbit normal', () => {
-    const f = captureOrbitFrame(cameraLookingAt(new THREE.Vector3(1, 0, 0)), normal);
+    const f = captureOrbitFrame(cameraLookingAt(new THREE.Vector3(1, 0, 0)), normal, toCentre);
     expect(f.key).toBe('orbit');
     expect(f.label).toBe('ORB');
     expect(f.pole.angleTo(normal)).toBeCloseTo(0, 12);
   });
 
   it('returns an orthonormal right-handed basis', () => {
-    const f = captureOrbitFrame(cameraLookingAt(new THREE.Vector3(1, 0, 0)), normal);
+    const f = captureOrbitFrame(cameraLookingAt(new THREE.Vector3(1, 0, 0)), normal, toCentre);
     expect(f.pole.dot(f.zeroLon)).toBeCloseTo(0, 12);
     expect(f.east.length()).toBeCloseTo(1, 12);
     expect(
@@ -264,11 +265,36 @@ describe('captureOrbitFrame', () => {
     ).toBeCloseTo(0, 12);
   });
 
+  // The datum is the orbit's own geometry, not the camera's: the same
+  // object levelled from anywhere reads the same longitude.
+  it('aims zero longitude at the centre of the orbit, whatever the camera faces', () => {
+    for (const boresight of [
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(-1, 0, -1),
+    ]) {
+      const f = captureOrbitFrame(cameraLookingAt(boresight), normal, toCentre);
+      expect(f.zeroLon.angleTo(toCentre)).toBeCloseTo(0, 12);
+    }
+  });
+
+  // A centre direction out of the plane (a normal read at a slightly
+  // different t than the positions) still has to land IN it.
+  it('projects an off-plane centre direction onto the orbital plane', () => {
+    const f = captureOrbitFrame(
+      cameraLookingAt(new THREE.Vector3(1, 0, 0)),
+      normal,
+      new THREE.Vector3(3, 7, 0),
+    );
+    expect(f.zeroLon.angleTo(new THREE.Vector3(1, 0, 0))).toBeCloseTo(0, 12);
+    expect(f.pole.dot(f.zeroLon)).toBeCloseTo(0, 12);
+  });
+
   // Sighting straight down the pole leaves the boresight with no
   // component in the plane, so seeding zero longitude off it would
   // normalise a zero vector into NaN and take the whole ball with it.
-  it('survives a boresight down the pole', () => {
-    const f = captureOrbitFrame(cameraLookingAt(normal), normal);
+  it('survives a boresight down the pole with no centre direction', () => {
+    const f = captureOrbitFrame(cameraLookingAt(normal), normal, new THREE.Vector3());
     for (const v of [f.pole, f.zeroLon, f.east]) {
       expect(Number.isFinite(v.x + v.y + v.z)).toBe(true);
       expect(v.length()).toBeCloseTo(1, 12);

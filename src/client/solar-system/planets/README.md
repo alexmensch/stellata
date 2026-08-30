@@ -153,7 +153,10 @@ buffer; `bufs.localRel` is its float32 bake, and exists only to feed the
 `iLocalRel` GPU attribute. Every CPU consumer —
 `planetLocalPositionInto`, `planetAbsolutePositionInto`,
 `planetHostRelPositionInto`, `getHostLocalPositions`, `evalPlanetView`,
-the eclipse-dim walk — reads the float64 master. `PlanetSystem.positionsAt`
+`orbitCentreOffsetInto` (the attitude indicator's ORB datum —
+`../../attitude/README.md` § Levelling on an orbit; a moon's centre is its
+parent's slot, not the host's), the eclipse-dim walk — reads the float64
+master. `PlanetSystem.positionsAt`
 writes a `Float64Array` for the same reason; moons compose
 `parent_ecliptic + moonOffsetEcliptic` through the same buffer and
 inherit it.

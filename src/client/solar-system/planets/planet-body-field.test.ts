@@ -10,7 +10,7 @@ import type {
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
-import type { PlanetSystem, Planet } from '../planet-system';
+import { getPlanetSystem, SOL_BODIES, type PlanetSystem, type Planet } from '../planet-system';
 import {
   MERCURY_PHASE,
   SATURN_PHASE,
@@ -149,6 +149,37 @@ describe('PlanetBodyField lifecycle', () => {
         })),
     };
   }
+
+  it('aims a body at the centre of its OWN ring — its parent, not the host', async () => {
+    // The ORB frame's zero-longitude datum (`../../attitude/README.md`
+    // § Levelling on an orbit). A moon answering with the host's
+    // direction would read the same as its parent's, which is the
+    // failure this pins.
+    const f = new PlanetBodyField(makeSharedUniforms());
+    const sol = await getPlanetSystem(0, 0);
+    expect(sol).not.toBeNull();
+    f.attachHost(0, sol!, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    const camera = new THREE.PerspectiveCamera(60, 1, 1e-9, 1);
+    f.update(camera, 0, 0);
+    const earth = SOL_BODIES.findIndex((b) => b.name === 'Earth');
+    const moon = SOL_BODIES.findIndex((b) => b.name === 'Moon');
+    const toCentre = new THREE.Vector3();
+    const hostRel = new THREE.Vector3();
+
+    // A planet's ring is centred on the host, so the two are opposites.
+    expect(f.orbitCentreOffsetInto(earth, toCentre)).toBe(true);
+    expect(f.planetHostRelPositionInto(earth, hostRel)).toBe(true);
+    expect(toCentre.distanceTo(hostRel.clone().negate())).toBeCloseTo(0, 15);
+
+    // The Moon's is centred on Earth: ~1 lunar distance long, and pointing
+    // nothing like the ~1 AU run back to Sol.
+    expect(f.orbitCentreOffsetInto(moon, toCentre)).toBe(true);
+    expect(f.planetHostRelPositionInto(moon, hostRel)).toBe(true);
+    expect(toCentre.length() / AU_PC).toBeGreaterThan(0.0023);
+    expect(toCentre.length() / AU_PC).toBeLessThan(0.0028);
+    expect(toCentre.angleTo(hostRel.negate())).toBeGreaterThan(0.05);
+    f.dispose();
+  });
 
   it('starts empty and stays hidden', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
