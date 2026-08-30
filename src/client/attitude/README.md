@@ -21,8 +21,12 @@ attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic,
                            ball's model matrix.
 attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
-attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
-                           corner frame flag, and the level affordances.
+attitude-layout.ts (+ test) The mini-renderer's view geometry, the sphere's
+                           silhouette that follows from it, the design box
+                           the chrome is drawn in, and what the instrument
+                           measures on the page.
+attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the two
+                           corner chips, and the level affordances.
 orbit-plane.ts             The focused object's own orbit — plane normal
                            and the direction to the orbit's centre —
                            dispatched to whichever subsystem holds it.
@@ -37,15 +41,25 @@ already thinks in, and **galactic** beyond, the only frame out there still
 defined by something real.
 
 Two overrides, both outranking the rule until the focus next changes: the
-corner flag cycles EQU → ECL → GAL, and **right-clicking the ball captures
-REF** — a datum planted on the attitude held right now, so the ball reads 0/0
-level from here. That is the Shuttle's ATT REF button, and it is the answer to
-"what is level outside the galaxy", where no inherited frame means anything.
+corner flag cycles ORB → EQU → ECL → GAL, and **right-clicking the ball
+captures REF** — a datum planted on the attitude held right now, so the ball
+reads 0/0 level from here. That is the Shuttle's ATT REF button, and it is the
+answer to "what is level outside the galaxy", where no inherited frame means
+anything.
 
-`nextFrameKey` rotates the cycle so the focus default leads. Rotating a cycle
-leaves every successor unchanged, so this only bites **on the way out of REF**:
-a captured datum sits outside the cycle and has no successor of its own, and
-falling back to a fixed first entry would strand you on a frame that means
+**ORB is in the cycle but conditional**, present only while the focused object
+rides an orbit the model has elements for — the entry is a property of what is
+focused, not of the instrument, and `nextFrameKey` skips it when the answer is
+no. Skipping one entry is enough, because ORB appears exactly once. Cycling
+into it captures the plane exactly as the gesture does but **does not level**:
+the flag chooses what the ball reads against, and levelling is the gesture's
+own half of the job (§ Levelling on an orbit).
+
+REF is the frame that stays outside the rotation — a datum planted on the
+attitude being held right now has no fixed place in one, so it is only ever
+reached by the gesture that captures it. Leaving it is therefore the one step
+with no successor to take, and it lands on whatever the focused object implies
+rather than a fixed first entry, which would strand you on a frame that means
 nothing where you are.
 
 `level()` — a click on the ball, or `L` — zeroes **roll only**. Levelling
@@ -55,6 +69,9 @@ target rather than turning in place.
 A third override joins them: **double-clicking the ball, or `Shift`+`L`,
 captures ORB** — a frame on the orbital plane of whatever is focused — and
 levels on it. § Levelling on an orbit.
+
+The **REV chip** in the opposite corner is not a frame at all; it moves the
+camera rather than choosing what to read it against. § Inverting the view.
 
 ## What it reads
 
@@ -193,9 +210,41 @@ objects are released by the page unload that ends them.
 
 The grid is painted at `TEX_W` × `TEX_H`, and every stroke in `attitude-ball.ts`
 is measured in **degrees** rather than texture pixels, so that pair is a free
-parameter. It is sized off what the ball can actually resolve: `BALL_PX` CSS
-pixels at a device ratio of at most 2 puts under 3 texels per degree at the
-ball's centre, and the texture carries about twice that.
+parameter. It is sized off what the ball can actually resolve.
+
+The ball's centre is where the sphere resolves most finely: there its surface
+faces the viewer square-on, so a degree of arc spans `BALL_R` × π/180 pixels
+and nothing on the ball is denser. At a device ratio of at most 2 that is
+**~2.7 device pixels per degree**, against the texture's 5.7 — so the texture
+out-resolves the screen by ~2.1×, and mip selection lands near the top level
+with anisotropy carrying the oblique periphery.
+
+That margin is the number to re-check whenever the instrument is resized.
+
+## Sizing
+
+`attitude-layout.ts` owns every number the instrument is built from, and the
+split that makes resizing one edit is between **design units** and **rendered
+pixels**.
+
+The SVG chrome is drawn in a fixed 192-unit design space and CSS stretches it
+to `RENDERED_BOX_PX`. Nothing in the drawing code knows the instrument's real
+size, so strokes, tick lengths, the caret and the index cross all scale
+together — a larger instrument is genuinely larger rather than a bigger ball
+inside the same hairlines.
+
+Two numbers cross into CSS, set on the host as `--ai-box` and `--ai-ball`;
+every rule consuming them is a class in `../styles.css`. The invariant holding
+the two spaces together is that **`BALL_RASTER_PX / RENDERED_BOX_PX` equals
+`BALL_PX / BOX`** — the canvas is placed by CSS while the bezel around it is
+drawn in design units, and a bezel that no longer hugs the ball is what
+breaking that ratio looks like. `attitude-layout.test.ts` pins it.
+
+**The box's edge is not the instrument's edge.** A round face in a square box
+leaves `CHROME_INSET` between the two, and the outermost ink is the 90° bank
+ticks rather than the bezel. Anything aligning to the instrument aligns to
+that inset, not to the box — which is what the scale bar underneath does
+(`../ui/README.md` § Bottom-left widget).
 
 ## Case chrome
 
@@ -211,10 +260,11 @@ un-aviation:
 
 **The stage is clipped to its own disc** (`clip-path: circle(50%)`), which
 clips hit-testing as well as paint. The instrument is round and its box is
-square, so the corners are 44px clear of the outermost tick; without the clip
-they would swallow a click meant for the sky and level the camera instead. The
-frame flag sits in one of those corners and is therefore a sibling of the
-stage, not a child of it.
+square, so the corners are clear of the outermost tick; without the clip they
+would swallow a click meant for the sky and level the camera instead. The two
+corner chips sit in those corners and are therefore siblings of the stage, not
+children of it — the frame flag bottom-left, the REV chip bottom-right. They
+share `.attitude-chip` and differ only in which edge they hang from.
 
 `U` hides the instrument along with the rest of the controls
 (`../ui/README.md` § Hide-controls toggle). No focus ring ever appears on it:
@@ -237,6 +287,11 @@ Double-click the ball (or `Shift`+`L`) and the active frame becomes **ORB**,
 whose pole is the normal of the orbit the focused object *itself* rides. It
 is a captured datum like REF, planted from `orbit-plane.ts`'s answer rather
 than from the current attitude, and `level()` then runs unchanged.
+
+The frame flag reaches the same frame without the levelling (§ Which frame,
+and who chooses). Both routes capture through `captureOrbitFrame`, so the two
+never disagree about what ORB means — they differ only in whether the camera
+moves afterwards.
 
 **Zero longitude points at the centre of the orbit** — the host star, the
 parent body, or the pair's barycentre — which is the same point each
@@ -306,3 +361,34 @@ rolls the view again, and the ball is what tells you so.
 `coordSphereNorthPole(filter.coordSphere)` — the *displayed* grid — while this
 instrument levels against whichever frame the flag holds. Pick `ECL` here and
 the 2° guide during a Shift-drag still sticks to galactic or equatorial.
+
+## Inverting the view
+
+The **REV chip** reflects the camera through whatever it is looking at, and
+the two camera modes reach that from opposite starting points:
+
+- **NAVIGATE** — the camera orbits the focused object, so the offset from the
+  pivot is negated. The far side comes into view at the same distance, still
+  looking at the object. Aim the HUD arrow at Sol from Earth, then invert, and
+  you are reading Earth from Sol's direction instead of Sol from Earth's.
+- **OBSERVE** — the camera sits *on* the object and there is no orbit to
+  swing through, so the position is held and it turns to face the reciprocal
+  direction.
+
+**A half turn has no unique axis.** Every plane containing the two poses is an
+equally valid path, so the endpoint is well defined while the route is not,
+and left to a bare quaternion slerp the camera tumbles through whichever plane
+the arithmetic happens to pick. The sweep is therefore pinned about the
+camera's **own up**, which reads as a horizontal swing. That the camera's
+local up is perpendicular to the boresight by construction is also what makes
+the half turn land exactly on the reciprocal rather than near it.
+
+The motion itself is `AimController.invert`
+(`../camera/controls/README.md` § Aim controller); the chip calls
+`Stellata.invertView`, which carries the same busy gates as `aimAt`. Both
+modes compose the same half-turn quaternion onto their own start pose, so
+there is one definition of "inverted" rather than a per-mode approximation.
+
+It is not gated on having a focus: with none, navigate swings around whatever
+`controls.target` currently holds, which is the point the camera was already
+orbiting.

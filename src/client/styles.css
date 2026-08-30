@@ -1279,8 +1279,14 @@ body.monochrome .poi-label {
 }
 
 /* Gyro-sphere attitude indicator, drawn in attitude/. Stacks above the
-   scale bar; the frame flag sits in the instrument's own bottom-left
-   corner, the way a mode flag sits on an aircraft AI.
+   scale bar; the frame flag and the invert chip sit in the instrument's own
+   bottom corners, the way a mode flag sits on an aircraft AI.
+
+   The instrument's size arrives as --ai-box / --ai-ball, set on the host by
+   attitude-indicator.ts from the constants its SVG is drawn against. Those
+   two are the whole contract: the drawing keeps its own 192-unit design
+   space and the rules below scale it, so the instrument resizes from one
+   number — attitude/README.md § Sizing.
 
    Only the chrome OUTSIDE the ball is styled here. The caret and the index
    cross are read against the ball's own fixed two tones rather than the page,
@@ -1296,6 +1302,7 @@ body.monochrome .poi-label {
 .bottom-left-stack > * { pointer-events: auto; }
 .attitude {
   position: relative;
+  width: var(--ai-box);
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -1306,6 +1313,8 @@ body.monochrome .poi-label {
 }
 .attitude-stage {
   position: relative;
+  width: var(--ai-box);
+  height: var(--ai-box);
   cursor: pointer;
   pointer-events: auto;
   /* Clips the hit area as well as the paint — the whole point. The outermost
@@ -1320,17 +1329,21 @@ body.monochrome .poi-label {
 .attitude-stage,
 .attitude-stage:focus,
 .attitude-stage:focus-visible,
-.attitude-frame:focus,
-.attitude-frame:focus-visible {
+.attitude-chip:focus,
+.attitude-chip:focus-visible {
   outline: none;
 }
 .attitude-stage,
-.attitude-frame {
+.attitude-chip {
   -webkit-tap-highlight-color: transparent;
 }
 .attitude-stage .ai-canvas {
   position: absolute;
   display: block;
+  width: var(--ai-ball);
+  height: var(--ai-ball);
+  left: calc((var(--ai-box) - var(--ai-ball)) / 2);
+  top: calc((var(--ai-box) - var(--ai-ball)) / 2);
 }
 .attitude-stage .ai-chrome {
   position: absolute;
@@ -1349,9 +1362,11 @@ body.monochrome .poi-label {
   stroke: var(--fg);
   opacity: 0.75;
 }
-.attitude-frame {
+/* Both corner chips: the frame flag and the invert control. They sit in the
+   square's free corners, which the disc-clipped stage leaves clear of the
+   outermost tick, so neither steals a click meant for the sky. */
+.attitude-chip {
   position: absolute;
-  left: 0;
   bottom: 0;
   pointer-events: auto;
   background: rgba(7, 9, 18, 0.72);
@@ -1364,8 +1379,10 @@ body.monochrome .poi-label {
   padding: 1px 5px;
   cursor: pointer;
 }
-.attitude-frame:hover,
-.attitude-frame:focus-visible {
+.attitude-frame { left: 0; }
+.attitude-invert { right: 0; }
+.attitude-chip:hover,
+.attitude-chip:focus-visible {
   border-color: var(--fg);
 }
 
@@ -1414,7 +1431,7 @@ body.monochrome .tooltip,
 body.monochrome .search-row,
 body.monochrome .search-results,
 body.monochrome .card-strips,
-body.monochrome .attitude-frame,
+body.monochrome .attitude-chip,
 body.monochrome select {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);

@@ -139,26 +139,38 @@ export function autoFrameFor(focus: FocusFrameInputs): AutoFrameKey {
   return 'galactic';
 }
 
-export const FRAME_CYCLE: AutoFrameKey[] = [
+/** Every frame the flag itself can reach. REF is the one that stays outside:
+ *  a datum planted on the attitude being held right now has no fixed place in
+ *  a rotation, so it is only ever reached by the gesture that captures it. */
+export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
+
+export const FRAME_CYCLE: CycleFrameKey[] = [
+  'orbit',
   'equatorial',
   'ecliptic',
   'galactic',
 ];
 
-/** The flag's next stop, with the cycle rotated so the focus default leads.
+/** The flag's next stop.
  *
- *  Rotating a cycle leaves every successor unchanged, so this only bites on the
- *  way **out of a captured frame** (REF or ORB) — a captured datum sits outside
- *  the cycle and has no successor of its own, and dropping back to a fixed first
- *  entry would strand you on a frame that means nothing where you are. Leaving
- *  one therefore lands on whatever the focused object implies. */
+ *  ORB is in the rotation but conditional on the focused object riding an
+ *  orbit the model has elements for, and it is skipped when it does not —
+ *  the entry is a property of what is focused, not of the instrument.
+ *  Skipping one entry is enough because ORB appears exactly once.
+ *
+ *  Leaving REF is the one case with no successor to step to, and it lands on
+ *  whatever the focused object implies rather than a fixed first entry, which
+ *  would strand you on a frame that means nothing where you are. */
 export function nextFrameKey(
   current: ReferenceFrameKey,
   focusDefault: AutoFrameKey,
-): AutoFrameKey {
+  orbitAvailable: boolean,
+): CycleFrameKey {
   const at = (FRAME_CYCLE as readonly ReferenceFrameKey[]).indexOf(current);
   if (at < 0) return focusDefault;
-  return FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
+  const next = FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
+  if (next !== 'orbit' || orbitAvailable) return next;
+  return FRAME_CYCLE[(at + 2) % FRAME_CYCLE.length];
 }
 
 /** Bank is the angle to a level up that shrinks to nothing on the pole, so

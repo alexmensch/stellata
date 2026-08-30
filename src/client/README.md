@@ -83,8 +83,10 @@ themselves.
   reading the camera quaternion against a reference frame that follows the
   focused object (ecliptic / equatorial / galactic, plus a captured REF
   datum and an ORB one on the focused object's own orbital plane), with
-  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances.
-  Draws on its own
+  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances,
+  plus two corner chips — the frame flag, whose cycle ORB joins whenever the
+  focused object rides one, and REV, which swings the camera to the
+  reciprocal of the direction it holds. Draws on its own
   small WebGL context rather than the main one, to stay clear of the HDR
   target and its exposure.
 - `calibration/` — the display-calibration screen: authored sRGB step
